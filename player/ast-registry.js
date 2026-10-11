@@ -152,25 +152,43 @@
     }
   };
 
+  const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
+
+  // Harden registry backing store against prototype pollution.
+  // Keep object-style access to avoid changing existing call sites.
+  if (scenes && Object.getPrototypeOf(scenes) !== null) {
+    const safeScenes = Object.create(null);
+    Object.keys(scenes).forEach((k) => {
+      safeScenes[k] = scenes[k];
+    });
+    scenes = safeScenes;
+  }
+
   const SceneRegistry = {
+    isUnsafeKey(key) {
+      return typeof key === 'string' && UNSAFE_KEYS.has(key);
+    },
+
     register(id, scene) {
       if (!id) return;
       const norm = this.normalizeId(id);
+      if (!norm || this.isUnsafeKey(norm) || this.isUnsafeKey(id)) return null;
       scenes[norm] = Object.assign({ id: norm }, scene);
       if (norm !== id) scenes[id] = scenes[norm];
       return scenes[norm];
     },
 
     get(id) {
-      if (!id) return null;
+      if (!id || this.isUnsafeKey(id)) return null;
       const norm = this.normalizeId(id);
+      if (!norm || this.isUnsafeKey(norm)) return null;
       
       // If found in catalog but missing embedded markup, check fallback
       if (scenes[norm] && !scenes[norm].svgMarkup && !scenes[norm].svgText && EMBEDDED_FALLBACKS[norm]) {
         Object.assign(scenes[norm], EMBEDDED_FALLBACKS[norm]);
       }
       if (scenes[norm] && (scenes[norm].svgMarkup || scenes[norm].svgText)) return scenes[norm];
-      if (scenes[id] && (scenes[id].svgMarkup || scenes[id].svgText)) return scenes[id];
+      if (!this.isUnsafeKey(id) && scenes[id] && (scenes[id].svgMarkup || scenes[id].svgText)) return scenes[id];
 
       // Check decentralized localStorage for custom or imported PhET cartridges
       if (typeof localStorage !== 'undefined') {
@@ -210,9 +228,10 @@
     },
 
     has(id) {
-      if (!id) return false;
+      if (!id || this.isUnsafeKey(id)) return false;
       const norm = this.normalizeId(id);
-      return Boolean(scenes[norm] || scenes[id] || EMBEDDED_FALLBACKS[norm]);
+      if (!norm || this.isUnsafeKey(norm)) return false;
+      return Boolean(scenes[norm] || (!this.isUnsafeKey(id) && scenes[id]) || EMBEDDED_FALLBACKS[norm]);
     },
 
     list() {
@@ -243,6 +262,7 @@
       const clean = id.toLowerCase().trim()
         .replace(/^(demo-|scene-|preset-)/, '')
         .replace(/\.(ast|svg|json)$/, '');
+      if (this.isUnsafeKey(clean)) return '';
       const aliases = {
         'pythagorus': 'pythagoras',
         'pythagoras-theorem': 'pythagoras',
