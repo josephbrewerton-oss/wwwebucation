@@ -4106,15 +4106,17 @@
       let clean = rawSvg.trim();
 
       // 1. Mitigate XML Bomb (CWE-776): Neutralize DOCTYPE and ENTITY expansion
-      if (/<!doctype|<!entity/i.test(clean)) {
+      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
+      let prevClean;
+      do {
+        prevClean = clean;
         clean = clean
-          .replace(/<!DOCTYPE[\s\S]*?]>(\r?\n)?/gi, '')
+          .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
           .replace(/<!ENTITY[\s\S]*?>/gi, '');
-      }
+      } while (clean !== prevClean);
 
       // 2. Strip dangerous executable containers from raw string prior to DOM reinterpretation
       //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
-      let prevClean;
       do {
         prevClean = clean;
         clean = clean
