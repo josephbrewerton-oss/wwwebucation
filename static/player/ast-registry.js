@@ -154,6 +154,16 @@
 
   const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
 
+  // Harden registry backing store against prototype pollution.
+  // Keep object-style access to avoid changing existing call sites.
+  if (scenes && Object.getPrototypeOf(scenes) !== null) {
+    const safeScenes = Object.create(null);
+    Object.keys(scenes).forEach((k) => {
+      safeScenes[k] = scenes[k];
+    });
+    scenes = safeScenes;
+  }
+
   const SceneRegistry = {
     isUnsafeKey(key) {
       return typeof key === 'string' && UNSAFE_KEYS.has(key);
