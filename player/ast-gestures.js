@@ -2573,9 +2573,9 @@ ${strokeLines.join('\n')}
     // Math Fishing Pond Fish School Setup
     // =========================================================================
     setupMathFishingFish() {
-      const fishGroup = this.stageSvg && this.stageSvg.querySelector('#fish-school-group');
+      const fishGroup = this.stageSvg && this.stageSvg.querySelector("#fish-school-group");
       if (!fishGroup) return;
-      fishGroup.innerHTML = '';
+      fishGroup.innerHTML = "";
 
       if (!this.engine._cachedElements) {
         this.engine._cachedElements = {};
@@ -2584,54 +2584,93 @@ ${strokeLines.join('\n')}
       this.engine._cachedElements.caughtList = [];
 
       const values = [3, 7, 4, 6, 2, 8, 5, 1, 9];
-      const fishColors = ['#f97316', '#38bdf8', '#ec4899', '#10b981', '#a855f7', '#eab308', '#06b6d4', '#f43f5e', '#84cc16'];
+      const fishColors = ["#f97316", "#38bdf8", "#ec4899", "#10b981", "#a855f7", "#eab308", "#06b6d4", "#f43f5e", "#84cc16"];
 
       values.forEach((val, idx) => {
         const color = fishColors[idx % fishColors.length];
-        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        g.style.cursor = 'pointer';
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.style.cursor = "pointer";
+        g.style.willChange = "transform";
         g.innerHTML = `
-          <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" />
-          <polygon points="-22,0 -34,-10 -34,10" fill="${color}" />
+          <polygon class="fish-tail" points="-22,0 -34,-10 -34,10" fill="${color}" />
+          <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
           <circle cx="12" cy="-4" r="3" fill="#ffffff" />
           <circle cx="13" cy="-4" r="1.5" fill="#000000" />
-          <text x="0" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">${val}</text>
+          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.75" />
+          <text x="0" y="4.5" fill="#ffffff" font-size="13" font-weight="900" text-anchor="middle">${val}</text>
         `;
         fishGroup.appendChild(g);
 
         const startX = 140 + (idx % 3) * 200 + (Math.random() * 40 - 20);
         const startY = 220 + Math.floor(idx / 3) * 65 + (Math.random() * 20 - 10);
-
+        const dir = Math.random() > 0.5 ? 1 : -1;
         const fishObj = {
           el: g,
+          tailEl: g.querySelector(".fish-tail"),
           val,
           x: startX,
           y: startY,
           curX: startX,
           curY: startY,
+          vx: (30 + Math.random() * 32) * dir,
+          vy: (Math.random() - 0.5) * 8,
           caught: false,
-          speed: 0.6 + Math.random() * 0.5,
-          offset: Math.random() * Math.PI * 2
+          swimPhase: Math.random() * Math.PI * 2,
+          tailPhase: Math.random() * Math.PI * 2
         };
         this.engine._cachedElements.fishEls.push(fishObj);
       });
 
       if (this._fishSwimId) cancelAnimationFrame(this._fishSwimId);
 
-      let swimT = 0;
-      const swimTick = () => {
+      let lastStamp = performance.now();
+      const pondMinX = 50;
+      const pondMaxX = 750;
+      const pondMinY = 190;
+      const pondMaxY = 430;
+
+      const swimTick = (now) => {
         if (!this.stageSvg || !this.stageSvg.contains(fishGroup)) return;
-        swimT += 0.02;
+        const dt = Math.min((now - lastStamp) / 1000, 0.05) || 0.016;
+        lastStamp = now;
 
         const fishList = this.engine && this.engine._cachedElements && this.engine._cachedElements.fishEls;
         if (fishList) {
-          fishList.forEach(fish => {
-            if (fish.caught || fish.isHooked) return;
-            fish.curX = fish.x + Math.sin(swimT * fish.speed + fish.offset) * 25;
-            fish.curY = fish.y + Math.cos(swimT * 0.8 + fish.offset) * 10;
-            const dir = Math.cos(swimT * fish.speed + fish.offset) >= 0 ? 1 : -1;
-            fish.el.setAttribute('transform', `translate(${fish.curX.toFixed(1)}, ${fish.curY.toFixed(1)}) scale(${dir}, 1)`);
-          });
+          for (let i = 0; i < fishList.length; i++) {
+            const fish = fishList[i];
+            if (fish.caught || fish.isHooked) continue;
+
+            fish.swimPhase += dt * 3.5;
+            fish.tailPhase += dt * 8.0;
+
+            // Continuous organic kinematics
+            fish.curX += fish.vx * dt;
+            fish.curY += (fish.vy + Math.sin(fish.swimPhase) * 6) * dt;
+
+            // Soft boundary turnaround
+            if (fish.curX < pondMinX && fish.vx < 0) {
+              fish.curX = pondMinX;
+              fish.vx = Math.abs(fish.vx);
+            } else if (fish.curX > pondMaxX && fish.vx > 0) {
+              fish.curX = pondMaxX;
+              fish.vx = -Math.abs(fish.vx);
+            }
+
+            if (fish.curY < pondMinY && fish.vy < 0) {
+              fish.vy = Math.abs(fish.vy);
+            } else if (fish.curY > pondMaxY && fish.vy > 0) {
+              fish.vy = -Math.abs(fish.vy);
+            }
+
+            const faceDir = fish.vx >= 0 ? 1 : -1;
+            const tilt = (fish.vy / 25).toFixed(2);
+            fish.el.setAttribute("transform", "translate(" + fish.curX.toFixed(2) + ", " + fish.curY.toFixed(2) + ") scale(" + faceDir + ", 1) rotate(" + tilt + ")");
+
+            if (fish.tailEl) {
+              const tailWiggle = Math.sin(fish.tailPhase) * 6;
+              fish.tailEl.setAttribute("points", "-22,0 -34," + (-10 + tailWiggle).toFixed(1) + " -34," + (10 - tailWiggle).toFixed(1));
+            }
+          }
         }
         this._fishSwimId = requestAnimationFrame(swimTick);
       };
