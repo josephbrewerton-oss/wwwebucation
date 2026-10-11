@@ -43,10 +43,13 @@
   <rect width="800" height="480" fill="url(#dna-bg-glow)" />
 
   <!-- Top Glassmorphic Base Pairing Legend Banner -->
-  <g transform="translate(130, 16)">
-    <rect width="540" height="42" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1.5" />
-    <text x="270" y="26" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="sans-serif">
-      <tspan fill="#ef4444">Adenine (A)</tspan> = <tspan fill="#10b981">Thymine (T)</tspan> [2 H-Bonds] | <tspan fill="#3b82f6">Cytosine (C)</tspan> ≡ <tspan fill="#f59e0b">Guanine (G)</tspan> [3 H-Bonds]
+  <g transform="translate(100, 14)">
+    <rect width="600" height="46" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1.5" />
+    <text x="300" y="22" fill="#f8fafc" font-size="13" font-weight="800" text-anchor="middle" font-family="sans-serif">
+      <tspan fill="#ef4444">Adenine (A)</tspan> = <tspan fill="#10b981">Thymine (T)</tspan> [2 H-Bonds] &nbsp;|&nbsp; <tspan fill="#3b82f6">Cytosine (C)</tspan> ≡ <tspan fill="#f59e0b">Guanine (G)</tspan> [3 H-Bonds]
+    </text>
+    <text x="300" y="38" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">
+      <tspan fill="#38bdf8">Strand A 5'→3' Backbone</tspan> &nbsp;•&nbsp; <tspan fill="#f472b6">Strand B 3'→5' Backbone</tspan> &nbsp;•&nbsp; Watson-Crick Double Helix
     </text>
   </g>
 
@@ -60,6 +63,9 @@
 
   <!-- DNA Base Rungs (0-17) with 3D Depth Fog -->
   <g id="dna-strands" filter="url(#dna-glow)">
+    <!-- Antiparallel Sugar-Phosphate Backbones -->
+    <path id="dna-backbone-a" fill="none" stroke="#38bdf8" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
+    <path id="dna-backbone-b" fill="none" stroke="#f472b6" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" opacity="0.85" />
     <line id="dna-line-0" x1="300" y1="60" x2="500" y2="60" stroke="#94a3b8" stroke-width="2.5" />
     <circle id="dna-ca-0" cx="300" cy="60" r="8" fill="url(#grad-adenine)" stroke="#ffffff" stroke-width="1" />
     <circle id="dna-cb-0" cx="500" cy="60" r="8" fill="url(#grad-thymine)" stroke="#ffffff" stroke-width="1" />

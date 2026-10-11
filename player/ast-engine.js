@@ -2778,6 +2778,28 @@
     }
 
     /**
+     * Converts an array of 2D points [{x, y}] into a smooth Catmull-Rom cubic Bezier SVG path
+     */
+    _pointsToSpline(pts) {
+      if (!pts || pts.length < 2) return "";
+      const valid = pts.filter(p => p && typeof p.x === "number" && typeof p.y === "number");
+      if (valid.length < 2) return "";
+      let d = `M ${valid[0].x.toFixed(1)} ${valid[0].y.toFixed(1)}`;
+      for (let i = 0; i < valid.length - 1; i++) {
+        const p0 = valid[Math.max(0, i - 1)];
+        const p1 = valid[i];
+        const p2 = valid[i + 1];
+        const p3 = valid[Math.min(valid.length - 1, i + 2)];
+        const cp1x = p1.x + (p2.x - p0.x) / 6;
+        const cp1y = p1.y + (p2.y - p0.y) / 6;
+        const cp2x = p2.x - (p3.x - p1.x) / 6;
+        const cp2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${cp1x.toFixed(1)} ${cp1y.toFixed(1)}, ${cp2x.toFixed(1)} ${cp2y.toFixed(1)}, ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+      }
+      return d;
+    }
+
+    /**
      * Parses S-Expression (.ast) into structured scene configuration
      * Supports :camera, :keyframes, :subtitles, 2D bindings, and 3D nodes/lines/rings/polygons
      */
@@ -4529,14 +4551,14 @@
       // Dynamic camera yaw if expression
       if (typeof camera.yaw === 'string') {
         try {
-          const yawFn = new Function('t', 'Math', `"use strict"; return (${camera.yaw});`);
-          camera.yaw = yawFn(t, Math);
+          const yawFn = new Function('t', 'Math', 'vars', `"use strict"; return (${camera.yaw});`);
+          camera.yaw = yawFn(t, Math, this.vars || {});
         } catch {}
       }
       if (typeof camera.pitch === 'string') {
         try {
-          const pitchFn = new Function('t', 'Math', `"use strict"; return (${camera.pitch});`);
-          camera.pitch = pitchFn(t, Math);
+          const pitchFn = new Function('t', 'Math', 'vars', `"use strict"; return (${camera.pitch});`);
+          camera.pitch = pitchFn(t, Math, this.vars || {});
         } catch {}
       }
 
@@ -4548,11 +4570,18 @@
       const totalScale = Math.max(0.2, Math.min(4.0, (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0)));
 
       // Apply hardware-accelerated 3D spatial transformation to the scene stage container
+      // NOTE: Scenes with active software 3D items (3d-node, 3d-line, 3d-ring, 3d-polygon)
+      // are ALREADY projected in true 3D perspective by project3D at 60 FPS.
+      // Applying CSS rotateY to the container itself causes double-rotation and catastrophic
+      // flattening at 90 degrees edge-on! Container transform is ONLY for flat 2D scenes with subtle orbit dragging.
+      const hasSoftware3D = Boolean(this.active3DItems && this.active3DItems.length > 0);
       if (this._container && this._container.style) {
-        if (this.has3D() || (this.cameraOrbit && (this.cameraOrbit.yawOffset !== 0 || this.cameraOrbit.pitchOffset !== 0 || this.cameraOrbit.distanceScale !== 1.0))) {
+        if (!hasSoftware3D && (this.cameraOrbit && (this.cameraOrbit.yawOffset !== 0 || this.cameraOrbit.pitchOffset !== 0 || this.cameraOrbit.distanceScale !== 1.0))) {
+          const orbitYaw = Math.max(-45, Math.min(45, this.cameraOrbit.yawOffset));
+          const orbitPitch = Math.max(-45, Math.min(45, this.cameraOrbit.pitchOffset));
           this._container.style.transformOrigin = '400px 240px';
           this._container.style.transformBox = 'view-box';
-          this._container.style.transform = `perspective(800px) rotateX(${totalPitch.toFixed(1)}deg) rotateY(${totalYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
+          this._container.style.transform = `perspective(800px) rotateX(${orbitPitch.toFixed(1)}deg) rotateY(${orbitYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
           this._container.style.transition = this.isOrbitDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
         } else {
           this._container.style.transform = '';
@@ -4562,6 +4591,8 @@
 
       // 1. Process 3D Items (Nodes, Lines, Rings, Polygons)
       if (this.active3DItems && this.active3DItems.length) {
+        let dnaStrandA = null;
+        let dnaStrandB = null;
         for (let i = 0; i < this.active3DItems.length; i++) {
           const item = this.active3DItems[i];
 
@@ -4599,16 +4630,48 @@
             const y2 = item.evalY2(t, Math);
             const z2 = item.evalZ2(t, Math);
 
-            const p1 = this.project3D(x1, y1, z1, camera, 400, 240);
-            const p2 = this.project3D(x2, y2, z2, camera, 400, 240);
+            // Support Helicase unzipping interaction for DNA strands
+            const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
+            let unzipOffset = 0;
+            let isUnzipped = false;
+            if (item.target && item.target.startsWith('#dna-line-')) {
+              const idxMatch = item.target.match(/\d+/);
+              if (idxMatch) {
+                const idx = parseInt(idxMatch[0], 10);
+                if (unzip > 0 && (idx / 18) <= unzip) {
+                  isUnzipped = true;
+                  unzipOffset = (unzip - (idx / 18) + 0.1) * 35;
+                }
+                if (!dnaStrandA) dnaStrandA = [];
+                if (!dnaStrandB) dnaStrandB = [];
+              }
+            }
+
+            const p1 = this.project3D(x1 - unzipOffset, y1, z1, camera, 400, 240);
+            const p2 = this.project3D(x2 + unzipOffset, y2, z2, camera, 400, 240);
             item.meanZ = (p1.z + p2.z) / 2;
+
+            if (item.target && item.target.startsWith('#dna-line-')) {
+              const idxMatch = item.target.match(/\d+/);
+              if (idxMatch) {
+                const idx = parseInt(idxMatch[0], 10);
+                dnaStrandA[idx] = p1;
+                dnaStrandB[idx] = p2;
+              }
+            }
 
             if (item.domNode) {
               item.domNode.setAttribute('x1', p1.x.toFixed(1));
               item.domNode.setAttribute('y1', p1.y.toFixed(1));
               item.domNode.setAttribute('x2', p2.x.toFixed(1));
               item.domNode.setAttribute('y2', p2.y.toFixed(1));
-              item.domNode.setAttribute('opacity', ((p1.opacity + p2.opacity) / 2).toFixed(2));
+              if (isUnzipped) {
+                item.domNode.setAttribute('opacity', '0.15');
+                item.domNode.setAttribute('stroke-dasharray', '3,4');
+              } else {
+                item.domNode.setAttribute('opacity', ((p1.opacity + p2.opacity) / 2).toFixed(2));
+                item.domNode.removeAttribute('stroke-dasharray');
+              }
             }
             if (item.cap1) {
               item.cap1.setAttribute('cx', p1.x.toFixed(1));
@@ -4712,6 +4775,20 @@
                 }
               }
             }
+          }
+        }
+
+        // Update continuous DNA sugar-phosphate backbones if present
+        if (dnaStrandA && dnaStrandA.length > 1) {
+          const bbA = this._container && this._container.querySelector('#dna-backbone-a');
+          if (bbA) {
+            bbA.setAttribute('d', this._pointsToSpline(dnaStrandA));
+          }
+        }
+        if (dnaStrandB && dnaStrandB.length > 1) {
+          const bbB = this._container && this._container.querySelector('#dna-backbone-b');
+          if (bbB) {
+            bbB.setAttribute('d', this._pointsToSpline(dnaStrandB));
           }
         }
 
