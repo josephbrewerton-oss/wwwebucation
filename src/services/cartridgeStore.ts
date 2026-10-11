@@ -376,66 +376,177 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
 // Fallback embedded SVG & AST for core cartridges when running completely air-gapped
 export const EMBEDDED_CORE_CARTRIDGES: Record<string, { svg: string; ast: string }> = {
   pythagoras: {
-    svg: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+    svg: `<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <radialGradient id="pyth-bg-glow" cx="50%" cy="55%" r="70%">
-      <stop offset="0%" stop-color="#1e293b" />
-      <stop offset="50%" stop-color="#0f172a" />
+    <!-- Background Blueprint Vignette -->
+    <radialGradient id="pyth-bg-glow" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#090d16" />
       <stop offset="100%" stop-color="#020617" />
     </radialGradient>
-    <linearGradient id="pyth-grad-a" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#34d399" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#059669" stop-opacity="0.7" />
-    </linearGradient>
-    <linearGradient id="pyth-grad-b" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.7" />
-    </linearGradient>
-    <linearGradient id="pyth-grad-c" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.85" />
-      <stop offset="100%" stop-color="#d97706" stop-opacity="0.7" />
-    </linearGradient>
+
+    <!-- Blueprint Grid Pattern (28px unit grid matching simulation scale) -->
+    <pattern id="pyth-blueprint-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.6" />
+      <circle cx="28" cy="28" r="1" fill="#334155" fill-opacity="0.8" />
+    </pattern>
+
+    <!-- Precision Drop Shadows and Neon Halos -->
     <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
       <feMerge>
         <feMergeNode in="blur" />
         <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>
+
+    <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+
+    <!-- Color Gradients -->
+    <!-- Leg a: Emerald -->
+    <linearGradient id="pyth-grad-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#059669" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- Leg b: Sapphire -->
+    <linearGradient id="pyth-grad-b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- Hypotenuse c: Amber / Gold -->
+    <linearGradient id="pyth-grad-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- HUD Glass Gradient -->
+    <linearGradient id="pyth-hud-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#1e293b" stop-opacity="0.90" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+    </linearGradient>
   </defs>
+
+  <!-- Stage Background & Engineering Grid -->
   <rect width="800" height="480" fill="url(#pyth-bg-glow)" />
-  <g transform="translate(180, 20)">
-    <rect width="440" height="44" rx="10" fill="#0f172a" fill-opacity="0.9" stroke="#38bdf8" stroke-width="1.5" />
-    <text x="220" y="28" fill="#f8fafc" font-size="16" font-weight="800" text-anchor="middle">
+  <rect width="800" height="480" fill="url(#pyth-blueprint-grid)" />
+
+  <!-- Technical Axis Origin Guides -->
+  <g opacity="0.35">
+    <line x1="40" y1="280" x2="760" y2="280" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 3" />
+    <line x1="360" y1="40" x2="360" y2="440" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 3" />
+  </g>
+
+  <!-- Interactive Precision Formula Header HUD -->
+  <g id="pyth-hud-banner" transform="translate(130, 16)" filter="url(#pyth-shadow)">
+    <rect width="540" height="52" rx="14" fill="url(#pyth-hud-glass)" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.8" />
+    <!-- Subtle Top Rim Highlight -->
+    <path d="M 14 1 L 526 1" stroke="#ffffff" stroke-width="1" stroke-opacity="0.25" />
+    
+    <text x="270" y="33" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
       <tspan fill="#34d399">a² (9)</tspan> + <tspan fill="#60a5fa">b² (16)</tspan> = <tspan fill="#fbbf24">c² (25)</tspan> ➔ 3² + 4² = 5²
     </text>
   </g>
+
+  <!-- Square a² (Emerald Leg A) -->
   <g id="pyth-group-a">
-    <rect id="pyth-rect-a" x="360" y="190" width="0" height="90" fill="url(#pyth-grad-a)" stroke="#10b981" stroke-width="2" rx="4" data-draggable="pyth-handle-a" style="cursor:ns-resize;" />
-    <g id="pyth-grid-a" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-    <text id="pyth-txt-a" x="315" y="240" fill="#ffffff" font-size="16" font-weight="800" text-anchor="middle" opacity="1" filter="url(#pyth-glow)" pointer-events="none">a² = 9</text>
+    <rect id="pyth-rect-a" x="276" y="196" width="84" height="84" rx="6" fill="url(#pyth-grad-a)" stroke="#10b981" stroke-width="2.5" filter="url(#pyth-shadow)" data-draggable="pyth-handle-a" style="cursor:ns-resize;" />
+    <!-- Pre-rendered 3x3 Unit Tiles for immediate cold-start pedagogical proof -->
+    <g id="pyth-grid-a" opacity="0.5" stroke="#ffffff" stroke-width="1" pointer-events="none">
+      <line x1="304" y1="196" x2="304" y2="280" />
+      <line x1="332" y1="196" x2="332" y2="280" />
+      <line x1="276" y1="224" x2="360" y2="224" />
+      <line x1="276" y1="252" x2="360" y2="252" />
+    </g>
+    <!-- Square Area Badge -->
+    <rect id="pyth-badge-a" x="286" y="226" width="64" height="26" rx="6" fill="#064e3b" fill-opacity="0.9" stroke="#34d399" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-a" x="318" y="244" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">a² = 9</text>
   </g>
+
+  <!-- Square b² (Sapphire Leg B) -->
   <g id="pyth-group-b">
-    <rect id="pyth-rect-b" x="360" y="280" width="120" height="0" fill="url(#pyth-grad-b)" stroke="#3b82f6" stroke-width="2" rx="4" data-draggable="pyth-handle-b" style="cursor:ew-resize;" />
-    <g id="pyth-grid-b" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-    <text id="pyth-txt-b" x="420" y="345" fill="#ffffff" font-size="16" font-weight="800" text-anchor="middle" opacity="1" filter="url(#pyth-glow)" pointer-events="none">b² = 16</text>
+    <rect id="pyth-rect-b" x="360" y="280" width="112" height="112" rx="6" fill="url(#pyth-grad-b)" stroke="#3b82f6" stroke-width="2.5" filter="url(#pyth-shadow)" data-draggable="pyth-handle-b" style="cursor:ew-resize;" />
+    <!-- Pre-rendered 4x4 Unit Tiles for immediate cold-start pedagogical proof -->
+    <g id="pyth-grid-b" opacity="0.5" stroke="#ffffff" stroke-width="1" pointer-events="none">
+      <line x1="388" y1="280" x2="388" y2="392" />
+      <line x1="416" y1="280" x2="416" y2="392" />
+      <line x1="444" y1="280" x2="444" y2="392" />
+      <line x1="360" y1="308" x2="472" y2="308" />
+      <line x1="360" y1="336" x2="472" y2="336" />
+      <line x1="360" y1="364" x2="472" y2="364" />
+    </g>
+    <!-- Square Area Badge -->
+    <rect id="pyth-badge-b" x="382" y="323" width="68" height="26" rx="6" fill="#1e3a8a" fill-opacity="0.9" stroke="#60a5fa" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-b" x="416" y="341" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">b² = 16</text>
   </g>
-  <g id="pyth-group-c">
-    <g id="pyth-rot-c" transform="translate(360, 190) rotate(-36.87)">
-      <rect id="pyth-rect-c" x="0" y="-150" width="150" height="150" fill="url(#pyth-grad-c)" stroke="#f59e0b" stroke-width="2" rx="4" />
-      <g id="pyth-grid-c" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-      <text id="pyth-txt-c" x="75" y="-70" fill="#ffffff" font-size="18" font-weight="900" text-anchor="middle" filter="url(#pyth-glow)" pointer-events="none">c² = 25</text>
+
+  <!-- Square c² (Amber Hypotenuse C) -->
+  <g id="pyth-group-c" transform="translate(360, 196) rotate(36.87)">
+    <g id="pyth-rot-c">
+      <rect id="pyth-rect-c" x="0" y="-140" width="140" height="140" rx="6" fill="url(#pyth-grad-c)" stroke="#f59e0b" stroke-width="2.5" filter="url(#pyth-shadow)" />
+      <!-- Pre-rendered 5x5 Unit Tiles for immediate cold-start pedagogical proof -->
+      <g id="pyth-grid-c" opacity="0.5" stroke="#ffffff" stroke-width="1" pointer-events="none">
+        <line x1="28" y1="-140" x2="28" y2="0" />
+        <line x1="56" y1="-140" x2="56" y2="0" />
+        <line x1="84" y1="-140" x2="84" y2="0" />
+        <line x1="112" y1="-140" x2="112" y2="0" />
+        <line x1="0" y1="-112" x2="140" y2="-112" />
+        <line x1="0" y1="-84" x2="140" y2="-84" />
+        <line x1="0" y1="-56" x2="140" y2="-56" />
+        <line x1="0" y1="-28" x2="140" y2="-28" />
+      </g>
+      <!-- Square Area Badge -->
+      <rect id="pyth-badge-c" x="15" y="-83" width="110" height="28" rx="6" fill="#78350f" fill-opacity="0.9" stroke="#fbbf24" stroke-width="1.5" pointer-events="none" />
+      <text id="pyth-txt-c" x="70" y="-64" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">c² = 25 (c = 5)</text>
     </g>
   </g>
-  <polygon id="pyth-triangle" points="360,280 472,280 360,196" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="3.5" stroke-linejoin="round" />
-  <rect id="pyth-right-angle" x="360" y="262" width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" />
-  <g id="pyth-handle-a" transform="translate(360, 196)" data-draggable="pyth-handle-a" style="cursor:ns-resize;">
-    <circle cx="0" cy="0" r="14" fill="#10b981" stroke="#ffffff" stroke-width="3" filter="url(#pyth-glow)" />
-    <text x="0" y="4" fill="#ffffff" font-size="11" font-weight="900" text-anchor="middle" pointer-events="none">a</text>
+
+  <!-- Central Euclidean Right Triangle -->
+  <polygon id="pyth-triangle" points="360,280 472,280 360,196" fill="#0e7490" fill-opacity="0.25" stroke="#38bdf8" stroke-width="3.5" stroke-linejoin="round" filter="url(#pyth-glow)" />
+
+  <!-- Precision Drafting Right-Angle Symbol -->
+  <g id="pyth-right-angle-group">
+    <rect id="pyth-right-angle" x="360" y="262" width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" />
+    <circle cx="369" cy="271" r="2" fill="#38bdf8" />
   </g>
+
+  <!-- Side Dimension Badges -->
+  <g id="pyth-labels-group" pointer-events="none" font-family="system-ui, -apple-system, sans-serif">
+    <!-- Leg a Label -->
+    <rect x="365" y="226" width="46" height="22" rx="4" fill="#0f172a" fill-opacity="0.8" stroke="#10b981" stroke-width="1" />
+    <text id="pyth-label-a" x="388" y="242" fill="#34d399" font-size="12" font-weight="900" text-anchor="middle">a = 3</text>
+
+    <!-- Leg b Label -->
+    <rect x="400" y="252" width="46" height="22" rx="4" fill="#0f172a" fill-opacity="0.8" stroke="#3b82f6" stroke-width="1" />
+    <text id="pyth-label-b" x="423" y="268" fill="#60a5fa" font-size="12" font-weight="900" text-anchor="middle">b = 4</text>
+
+    <!-- Hypotenuse c Label -->
+    <rect x="425" y="218" width="56" height="22" rx="4" fill="#0f172a" fill-opacity="0.8" stroke="#f59e0b" stroke-width="1" />
+    <text id="pyth-label-c" x="453" y="234" fill="#fbbf24" font-size="12" font-weight="900" text-anchor="middle">c = 5.00</text>
+  </g>
+
+  <!-- Manipulator Handle A (Top Vertex / Leg a Controller) -->
+  <g id="pyth-handle-a" transform="translate(360, 196)" data-draggable="pyth-handle-a" style="cursor:ns-resize;">
+    <!-- Pulse Ring -->
+    <circle cx="0" cy="0" r="22" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" stroke-dasharray="3 3" />
+    <!-- Tactile Handle Bead -->
+    <circle cx="0" cy="0" r="15" fill="#10b981" stroke="#ffffff" stroke-width="2.5" filter="url(#pyth-glow)" />
+    <!-- Vertical Drag Icon & Label -->
+    <text x="0" y="5" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" pointer-events="none">↕</text>
+  </g>
+
+  <!-- Manipulator Handle B (Right Vertex / Leg b Controller) -->
   <g id="pyth-handle-b" transform="translate(472, 280)" data-draggable="pyth-handle-b" style="cursor:ew-resize;">
-    <circle cx="0" cy="0" r="14" fill="#3b82f6" stroke="#ffffff" stroke-width="3" filter="url(#pyth-glow)" />
-    <text x="0" y="4" fill="#ffffff" font-size="11" font-weight="900" text-anchor="middle" pointer-events="none">b</text>
+    <!-- Pulse Ring -->
+    <circle cx="0" cy="0" r="22" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3 3" />
+    <!-- Tactile Handle Bead -->
+    <circle cx="0" cy="0" r="15" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" filter="url(#pyth-glow)" />
+    <!-- Horizontal Drag Icon & Label -->
+    <text x="0" y="5" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" pointer-events="none">↔</text>
   </g>
 </svg>`,
     ast: `(:scene :id "pythagoras" :title "Pythagoras Theorem: Area Conservation" :stage "KS3 GEOMETRY" :duration 11.0

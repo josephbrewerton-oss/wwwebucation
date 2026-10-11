@@ -1277,9 +1277,11 @@ export const ZeroBloatVectorStudio: React.FC<ZeroBloatVectorStudioProps> = ({
         </g>
 
         {/* Hypotenuse Square c² (Hypotenuse length 150) */}
-        {/* Tilted along hypotenuse vector */}
+        {/* Tilted along hypotenuse vector extending cleanly outward */}
         <g transform={`translate(${ox}, ${oy - 90}) rotate(36.87)`}>
           <rect
+            x="0"
+            y="-150"
             width="150"
             height="150"
             fill={morph > 0.5 ? '#6366f1' : 'none'}
@@ -1288,7 +1290,7 @@ export const ZeroBloatVectorStudio: React.FC<ZeroBloatVectorStudioProps> = ({
             strokeDasharray={morph < 0.5 ? '4 3' : 'none'}
             opacity={0.3 + morph * 0.7}
           />
-          <text x="75" y="80" textAnchor="middle" fill={morph > 0.5 ? '#ffffff' : '#4338ca'} fontSize="15" fontWeight="bold">
+          <text x="75" y="-70" textAnchor="middle" fill={morph > 0.5 ? '#ffffff' : '#4338ca'} fontSize="15" fontWeight="bold">
             {morph > 0.8 ? 'c² = 25 (Filled!)' : 'c² (Hypotenuse Square)'}
           </text>
         </g>

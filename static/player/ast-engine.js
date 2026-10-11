@@ -525,6 +525,16 @@
 
     mount(container) {
       if (!container) return;
+      // If mounting the gas molecules emitter in a chamber with static placeholder seed dots, clean them up
+      if (this.id === 'gas-molecules') {
+        const staticGroup = container.querySelector('#gas-particles-group');
+        if (staticGroup) {
+          // Keep brownian grain tracer if present, remove static seed placeholder dots
+          const staticCircles = staticGroup.querySelectorAll('circle:not(#brownian-grain)');
+          staticCircles.forEach(c => c.remove());
+        }
+      }
+
       let g = container.querySelector(`#emitter-${this.id}`);
       if (!g) {
         g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -545,6 +555,78 @@
         circle.setAttribute('opacity', '0.85');
         g.appendChild(circle);
         p.node = circle;
+      }
+    }
+
+    /**
+     * Dynamically adjust the number of active particle entities / gas atoms
+     */
+    setCount(newCount) {
+      const c = Math.max(5, Math.min(600, parseInt(newCount, 10) || 80));
+      if (this.count === c) return;
+      this.count = c;
+      const eff = this.getEffectiveBounds();
+      const bw = Math.max(20, eff.maxX - eff.minX);
+      const bh = Math.max(20, eff.maxY - eff.minY);
+
+      while (this.pool.length < c) {
+        const angle = Math.random() * Math.PI * 2;
+        const spd = this.speed * (0.6 + Math.random() * 0.8);
+        const p = {
+          x: eff.minX + Math.random() * bw,
+          y: eff.minY + Math.random() * bh,
+          vx: Math.cos(angle) * spd,
+          vy: Math.sin(angle) * spd,
+          radius: this.radius,
+          node: null
+        };
+        if (this.group) {
+          const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          circle.setAttribute('cx', p.x.toFixed(1));
+          circle.setAttribute('cy', p.y.toFixed(1));
+          circle.setAttribute('r', p.radius);
+          circle.setAttribute('fill', this.fill);
+          circle.setAttribute('opacity', '0.85');
+          this.group.appendChild(circle);
+          p.node = circle;
+        }
+        this.pool.push(p);
+      }
+
+      while (this.pool.length > c) {
+        const removed = this.pool.pop();
+        if (removed && removed.node && removed.node.parentNode) {
+          removed.node.parentNode.removeChild(removed.node);
+        }
+      }
+    }
+
+    /**
+     * Dynamically adjusts particle velocity (e.g. thermal temperature change v_rms = sqrt(3kT/m))
+     */
+    setSpeed(newSpeed) {
+      const s = Math.max(10, Math.min(1000, Number(newSpeed) || 120));
+      const ratio = s / (this.speed || 1);
+      this.speed = s;
+      this.pool.forEach(p => {
+        p.vx *= ratio;
+        p.vy *= ratio;
+      });
+    }
+
+    /**
+     * Clamps all chamber particles to stay within the compressed volume of a moving piston face
+     */
+    clampToPistonX(pistonFaceX) {
+      if (typeof pistonFaceX !== 'number' || isNaN(pistonFaceX)) return;
+      const limit = Math.min(494, pistonFaceX - this.radius);
+      this.bounds.maxX = limit;
+      for (let i = 0; i < this.pool.length; i++) {
+        const p = this.pool[i];
+        if (p.x > limit) {
+          p.x = limit - Math.random() * 15;
+          p.vx = -Math.abs(p.vx);
+        }
       }
     }
 
@@ -2171,6 +2253,22 @@
       this.vars[name] = val;
       this.updateComputedVars();
       this.syncBindInputs(name, val);
+
+      // Synchronize vector particle emitters with thermodynamic state variables
+      if (this.emitters && this.emitters.size > 0) {
+        const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
+        if (gasEm) {
+          if (name === 'particleCount' || name === 'count' || name === 'atoms') {
+            gasEm.setCount(val);
+          } else if (name === 'temp' || name === 'temperature') {
+            gasEm.setSpeed(160 * Math.sqrt(Math.max(50, val) / 300));
+          } else if (name === 'volume') {
+            const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
+            gasEm.clampToPistonX(pX);
+          }
+        }
+      }
+
       this.applyBindings(this.progress);
       this.emit('varchange', { name, value: val, vars: { ...this.vars } });
       if (!isAi) {
@@ -3307,7 +3405,10 @@
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
           actors: (parsedAst && parsedAst.actors) || registryScene.actors || [],
-          staticElements: (parsedAst && parsedAst.staticElements) || registryScene.staticElements || []
+          staticElements: (parsedAst && parsedAst.staticElements) || registryScene.staticElements || [],
+          emitters: (parsedAst && parsedAst.emitters) || registryScene.emitters || [],
+          bindInputs: (parsedAst && parsedAst.bindInputs) || registryScene.bindInputs || [],
+          stateMachines: (parsedAst && parsedAst.stateMachines) || registryScene.stateMachines || []
         };
 
         this.sceneCache[presetId] = scene;
@@ -5194,19 +5295,27 @@
         }
         if (elBtnQuizResume) elBtnQuizResume.style.display = 'none';
 
-        (cp.options || []).forEach((opt, idx) => {
+        const origOpts = cp.options || [];
+        const origAns = cp.answerKey !== undefined ? cp.answerKey : (cp.answer !== undefined ? cp.answer : 0);
+        const mapped = origOpts.map((text, idx) => ({ text, isCorrect: idx === origAns }));
+        for (let i = mapped.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          const t = mapped[i]; mapped[i] = mapped[j]; mapped[j] = t;
+        }
+
+        mapped.forEach((item, idx) => {
           const g = document.getElementById('quiz-opt-' + idx);
           const txt = document.getElementById('quiz-opt-txt-' + idx);
           if (g && txt) {
             g.style.display = 'block';
-            txt.textContent = String.fromCharCode(65 + idx) + ') ' + opt;
+            txt.textContent = String.fromCharCode(65 + idx) + ') ' + item.text;
             const rect = g.querySelector('rect');
             if (rect) {
               rect.setAttribute('fill', '#1e293b');
               rect.setAttribute('stroke', '#334155');
             }
             g.onclick = function () {
-              const isCorrect = (idx === cp.answerKey);
+              const isCorrect = item.isCorrect;
               if (rect) {
                 rect.setAttribute('fill', isCorrect ? '#064e3b' : '#7f1d1d');
                 rect.setAttribute('stroke', isCorrect ? '#10b981' : '#ef4444');
@@ -5245,6 +5354,10 @@
         if (elTxtVoice) elTxtVoice.textContent = voiceEnabled ? '🔊 Voice ON' : '🎙️ Voice';
       };
       if (elBtnQuiz) elBtnQuiz.onclick = function () {
+        if (elQuizModal && elQuizModal.style.display === 'block') {
+          elQuizModal.style.display = 'none';
+          return;
+        }
         const cp = (data.checkpoints && data.checkpoints[0]) || {
           question: "What core rule governs this concept?",
           options: ["The primary invariant definition", "Reversed condition", "Unrelated property"],
@@ -5406,8 +5519,25 @@
           break;
         case 'TRIGGER_CHECKPOINT':
         case 'TAKE_QUIZ':
-          if (uiController && typeof uiController.triggerFirstCheckpoint === 'function') {
+          if (uiController && typeof uiController.toggleCheckpointView === 'function') {
+            uiController.toggleCheckpointView();
+          } else if (uiController && typeof uiController.triggerFirstCheckpoint === 'function') {
             uiController.triggerFirstCheckpoint();
+          }
+          break;
+        case 'TOGGLE_CHECKPOINT':
+          if (uiController && typeof uiController.toggleCheckpointView === 'function') {
+            uiController.toggleCheckpointView();
+          }
+          break;
+        case 'TOGGLE_INTERACTIVE_MODE':
+          if (uiController && typeof uiController.toggleInteractiveMode === 'function') {
+            uiController.toggleInteractiveMode();
+          }
+          break;
+        case 'CLOSE_CHECKPOINT':
+          if (uiController && typeof uiController.closeInteractiveCard === 'function') {
+            uiController.closeInteractiveCard(false);
           }
           break;
         case 'SET_THEME':

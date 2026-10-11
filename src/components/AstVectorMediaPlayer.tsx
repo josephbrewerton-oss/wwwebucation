@@ -103,6 +103,8 @@ export interface AstVectorMediaPlayerHandle {
   prevSlide: () => void;
   goToSlide: (progress: number) => void;
   takeQuiz: () => void;
+  toggleCheckpoint: () => void;
+  toggleInteractiveMode: () => void;
 }
 
 export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVectorMediaPlayerProps>(({
@@ -409,6 +411,8 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     prevSlide: () => postToPlayer({ type: 'STEP_PREV_KEYFRAME' }),
     goToSlide: (progress: number) => postToPlayer({ type: 'STEP_TO_KEYFRAME', progress }),
     takeQuiz: () => postToPlayer({ type: 'TRIGGER_CHECKPOINT' }),
+    toggleCheckpoint: () => postToPlayer({ type: 'TOGGLE_CHECKPOINT' }),
+    toggleInteractiveMode: () => postToPlayer({ type: 'TOGGLE_INTERACTIVE_MODE' }),
     injectCheckpoint: (checkpoint: {
       prompt: string;
       options: string[];
@@ -442,6 +446,11 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       if ((e.key === 'v' || e.key === 'V') && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         postToPlayer({ type: 'TOGGLE_VOICE_COMMANDS' });
+      }
+
+      if ((e.key === 'q' || e.key === 'Q') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        postToPlayer({ type: 'TOGGLE_CHECKPOINT' });
       }
 
       if ((e.key === 'p' || e.key === 'P') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
@@ -1019,7 +1028,7 @@ const playerSrc = useMemo(() => {
             {hasInteractive && displayConfig.showInteractiveCheckpoints && (
               <button
                 type="button"
-                onClick={() => postToPlayer({ type: 'TRIGGER_CHECKPOINT' })}
+                onClick={() => postToPlayer({ type: 'TOGGLE_CHECKPOINT' })}
                 className="stj-badge stj-badge-success stj-pill"
                 style={{
                   fontSize: '0.72rem',
@@ -1033,9 +1042,9 @@ const playerSrc = useMemo(() => {
                   fontWeight: 700,
                   padding: '3px 8px'
                 }}
-                title="Click to take interactive checkpoint challenge right now"
+                title="Toggle Checkpoint Question On/Off (Press [Q] or click to show/hide)"
               >
-                <span>🎯 Take Checkpoint Quiz</span>
+                <span>🎯 Toggle Question [Q]</span>
               </button>
             )}
           </div>

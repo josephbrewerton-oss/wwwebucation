@@ -501,6 +501,27 @@ export default function AstInteractiveLabDrawer({
               </div>
             </div>
 
+            {/* Particle / Atom Count Slider */}
+            <div style={{ marginBottom: '14px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
+                <span>Molecules / Atoms (N):</span>
+                <span style={{ color: '#38bdf8' }}>{gasParticlesCount} particles</span>
+              </div>
+              <input
+                type="range"
+                min="15"
+                max="150"
+                step="5"
+                value={gasParticlesCount}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setGasParticlesCount(val);
+                  postVarToPlayer('particleCount', val);
+                }}
+                style={{ width: '100%', accentColor: '#38bdf8' }}
+              />
+            </div>
+
             {/* Mathematical Readouts */}
             {(() => {
               const pressure = (101.3 * (gasTempK / 300)) / Math.max(0.25, gasVolumeRatio);
@@ -729,9 +750,13 @@ export default function AstInteractiveLabDrawer({
               <input
                 type="range"
                 min="1"
-                max="12"
+                max="10"
                 value={pythA}
-                onChange={(e) => setPythA(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setPythA(val);
+                  postVarToPlayer('sideA', val);
+                }}
                 style={{ width: '100%', accentColor: '#38bdf8' }}
               />
             </div>
@@ -744,9 +769,13 @@ export default function AstInteractiveLabDrawer({
               <input
                 type="range"
                 min="1"
-                max="12"
+                max="10"
                 value={pythB}
-                onChange={(e) => setPythB(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setPythB(val);
+                  postVarToPlayer('sideB', val);
+                }}
                 style={{ width: '100%', accentColor: '#f59e0b' }}
               />
             </div>

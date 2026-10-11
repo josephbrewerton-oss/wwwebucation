@@ -1,0 +1,208 @@
+# St Joseph's Curriculum Portal — Comprehensive LLM Architecture Dossier (llms-full.txt)
+
+> Deterministic, privacy-first, on-device AI educational portal running via in-browser WebRTC loopback channels, Chrome Prompt API (Gemini Nano), WebLLM, and autonomous 60 FPS vector media engines. Perpetually free for schools, Catholic organisations, and developing nations.
+
+---
+
+## 1. System Vision & Foundational Tenets
+1. **Education Should Be Free**: The portal is perpetually free and open-source under a dual-licensing humanitarian model (GNU AGPLv3 for public and humanitarian use, commercial dual-licence for proprietary deployments).
+2. **Zero Cloud Leakage**: Student logs, responses, voice transcripts, and mastery progress remain strictly client-side in browser IndexedDB (`services/dbStore.ts`). No student data egresses to remote cloud servers.
+3. **Bandwidth & Hardware Sovereignty**: Designed to operate flawlessly on $30 legacy hardware, Chromebooks, and metered mobile 2G/3G connections. The core vector engine is strictly < 35 KB gzipped (< 150 KB uncompressed) with zero external npm runtime dependencies.
+4. **Air-Gap Classroom Readiness**: Standalone HTML cartridges and the full portal can be bundled as an air-gapped single file (`exportAirgapHtmlBundle.ts`), bootable directly from USB thumb drives in off-grid rural schools with zero internet connection.
+5. **Classroom Smartboard First**: Built-in quadratic Bézier ink whiteboard layer (`#annotation-ink-root`) optimized for stylus pen interaction on Promethean, SMART, ViewSonic boards, and iPads.
+
+---
+
+## 2. Full Route & Resource Map
+
+### User-Facing Routes
+- `/` : Portal Home, Subject Hub, Quick Practice Starters, and System Diagnostics.
+- `/media-player` : Full-featured AST Vector Media Player with interactive simulation stage, 3D camera controls, parameter sliders, teacher HUD, and audio sonification.
+- `/player` : Alias to `/media-player`.
+- `/player.html` : Lightweight zero-dependency embeddable vector stage, OBS studio broadcast controller, and developer inspection lathe.
+- `/practice-lab` : Formative assessment arena featuring interactive AST cartridges, AI hints (Professor Turing persona), and misconception diagnostics.
+- `/learning-zone` : National curriculum lesson player aligned with Oak National Academy learning objectives.
+- `/curriculum-studio` : Visual curriculum authoring workspace, S-Expression graph generator, and prompt hydrator.
+- `/catholic-life` : Catholic life, 3D Sanctuary explorer, liturgical calendar, and sacramental catechesis.
+- `/first-communion` : Catechetical module for First Holy Communion preparation.
+- `/teacher-beacon` : Teacher broadcast console, real-time classroom sync, and Smartboard remote presenter.
+- `/profile` : Learner mastery passport, streak history, diagnostic records, and achievement badges stored in IndexedDB.
+- `/settings` : Neural hardware probe, WebGPU check, Gemini Nano Prompt API toggles, and audio settings.
+- `/news` & `/blog` : Technical dispatches, pedagogical essays, and system release announcements.
+- `/licensing` : Humanitarian Commons charter, GNU AGPLv3 terms, and educational covenant.
+- `/privacy` : GDPR-compliant zero-cloud sovereign privacy guarantee.
+- `/child-safety` : Safeguarding and on-device student safety standards.
+
+### Machine-Readable Endpoints & Manifests
+- `/llms.txt` : Concise machine-readable context file following the llms.txt standard.
+- `/llms-full.txt` : Comprehensive full-system briefing file for large-context models.
+- `/robots.txt` : Web robot and AI bot discovery policy.
+- `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
+- `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
+- `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
+- `/player/scenes.manifest.json` : Index of all 17 production vector simulation cartridges.
+- `/player/scenes-config.json` : Timeline keyframes, bilingual subtitles (EN/ES/LA), and pause checkpoints.
+- `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
+- `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
+- `/nano-map.ast` : Compact curriculum domain schema parsed by `sexprParser.ts`.
+
+---
+
+## 3. Production Curriculum Cartridges (17 Scenes)
+
+1. **Calculus Curves (`calculus-curves`)**:
+   - Level: GCSE / A-Level Mathematics.
+   - Core Concepts: Tangent slope derivative $dy/dx$, stationary turning points ($dy/dx = 0$), numerical Simpson's 1/3 integration polygons $\int_a^b f(x)dx$.
+   - Interactive Elements: Tangent slope probe slider, function selector, and Riemann area accumulator.
+
+2. **Kinetic Gas Theory (`kinetic-gas`)**:
+   - Level: KS3 / KS4 Physics & Chemistry.
+   - Core Concepts: Kinetic molecular theory, Boyle's Law ($PV = \text{constant}$), Gay-Lussac's Law ($P \propto T$), elastic particle-wall collisions calculating wall momentum impulse ($\Delta p = 2mv$), and states of matter phase changes (Solid, Liquid, Gas).
+   - Interactive Elements: Grab-and-drag piston cylinder, temperature burner, particle count selector.
+
+3. **Pythagoras Geometric Proof (`pythagoras`)**:
+   - Level: KS3 Mathematics.
+   - Core Concepts: Euclidean shear proof of $a^2 + b^2 = c^2$, dynamic area conservation shearing, square decomposition, and algebraic step verification.
+   - Interactive Elements: Triangle vertex handle dragging, proof animation step buttons, and Pythagorean triple sliders.
+
+4. **Aquarium Living Ecosystem (`fish-tank`)**:
+   - Level: KS2 / KS3 Biology & Ecology.
+   - Core Concepts: Closed aquatic ecosystem balance, multi-species trophic interactions (producers, consumers, decomposers), nitrogen cycle (Ammonia $\to$ Nitrite $\to$ Nitrate), photosynthesis/respiration gas balance ($O_2 / CO_2$), and water quality monitoring.
+   - Interactive Elements: Sunlight level slider, feeding button, plant density control, filter aerator toggle.
+
+5. **Electric Circuits Lab (`electric-circuits`)**:
+   - Level: KS3 Physics.
+   - Core Concepts: Ohm's Law ($V = IR$), series vs parallel circuits, electrical resistance, and current conservation.
+   - Interactive Elements: Draggable knife switches, bulb resistance sliders, battery cell connectors, live ammeter/voltmeter probes.
+
+6. **Sacred Church Tour (`church-tour`)**:
+   - Level: Catholic Life & Religious Education.
+   - Core Concepts: Catholic church anatomy, Altar, Tabernacle, Sanctuary Lamp, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Stations of the Cross.
+   - Interactive Elements: 3D perspective camera panning, hotspot information overlays, liturgical vestment colour selector.
+
+7. **Solar System 3D (`solar-system`)**:
+   - Level: KS3 Astronomy & Physics.
+   - Core Concepts: Heliocentric planetary orbits, Kepler's laws of planetary motion, relative orbital velocities, and 3D inclination angles.
+   - Interactive Elements: Orbital speed slider, 3D tilt camera drag, celestial body focus selector.
+
+8. **Photosynthesis Solar Engine (`photosynthesis`)**:
+   - Level: KS3 Biology.
+   - Core Concepts: Chloroplast structure, thylakoid membrane light-dependent reactions, Calvin cycle, ATP/NADPH synthesis, and glucose production.
+   - Interactive Elements: Light photon intensity slider, carbon dioxide flux toggle, stomata pore aperture control.
+
+9. **Water Cycle Continuous Engine (`water-cycle`)**:
+   - Level: KS2 Geography & Science.
+   - Core Concepts: Continuous hydrological cycle: solar evaporation, transpiration from flora, condensation into cloud vapor, precipitation, and groundwater percolation.
+   - Interactive Elements: Heat index slider, terrain wind vector slider, cloud accumulation trigger.
+
+10. **Bohr Atom & Electron Shells (`atom`)**:
+    - Level: KS3 Chemistry.
+    - Core Concepts: Atomic structure, protons, neutrons, electrons, electron shell energy levels ($2, 8, 8$), and periodic table elements (Hydrogen through Argon).
+    - Interactive Elements: Element selector, electron addition probe, 3D electron cloud rotation.
+
+11. **Kinematics & Velocity Vectors (`velocity`)**:
+    - Level: KS3 Physics.
+    - Core Concepts: Scalar speed vs vector velocity, distance-time graphs, acceleration vectors, and displacement integrals.
+    - Interactive Elements: Velocity throttle lever, acceleration curves, real-time graph plotting.
+
+12. **DNA Watson-Crick Double Helix (`dna-helix`)**:
+    - Level: KS3 / KS4 Genetics.
+    - Core Concepts: Double helix architecture, complementary base pairing (Adenine-Thymine, Cytosine-Guanine), hydrogen bonds, and sugar-phosphate backbones.
+    - Interactive Elements: 3D helical rotation, base pair unzipping slider, mutation inspector.
+
+13. **BODMAS Order of Operations (`bodmas`)**:
+    - Level: KS2 / KS3 Mathematics.
+    - Core Concepts: Arithmetic precedence: Brackets, Orders (indices), Division/Multiplication, Addition/Subtraction.
+    - Interactive Elements: Forcefield bracket clamps, step-by-step operand collapsible evaluator.
+
+14. **Phonics Laboratory (`phonics-lab`)**:
+    - Level: EYFS / KS1 English.
+    - Core Concepts: Systematic synthetic phonics, grapheme-to-phoneme correspondence, sound blending buttons, and phoneme manipulation.
+    - Interactive Elements: Tap-to-sound buttons, tactile blending slider, procedural audio speech synthesizer.
+
+15. **Times Tables 2D Array (`times-tables`)**:
+    - Level: KS1 / KS2 Mathematics.
+    - Core Concepts: Array models of multiplication, distributive property $a \times (b + c) = ab + ac$, and commutativity $a \times b = b \times a$.
+    - Interactive Elements: Resizable 2D grid matrix, partition splitters, array highlight modes.
+
+16. **Maths Fishing Number Bonds (`math-fishing`)**:
+    - Level: KS1 Mathematics.
+    - Core Concepts: Number bonds to 10 and 20, addition complements, and part-whole arithmetic models.
+    - Interactive Elements: Gamified rod cast, fish complement pairing, score tracking.
+
+17. **Mountain Elevation Trigonometry (`mountain-elevation`)**:
+    - Level: KS2 / KS3 Geography & Mathematics.
+    - Core Concepts: Right-angled trigonometry ($\sin, \cos, \tan$), hypotenuse calculation, clinometer angle measuring, and altitude barometric pressure drops.
+    - Interactive Elements: Clinometer angle drag arm, distance base marker, boiling point gauge.
+
+---
+
+## 4. AST S-Expression Language Grammar
+
+The AST language is a Lisp-inspired declarative grammar that describes interactive vector scenes, dynamic property bindings, 3D projections, and formative assessment checkpoints.
+
+```lisp
+(:scene
+  (:id "kinetic-gas")
+  (:title "Kinetic Gas Theory & Boyle's Law")
+  (:stage (:width 800) (:height 480) (:viewBox "0 0 800 480"))
+  (:duration 60)
+  (:easing "cubic-bezier(0.4, 0.0, 0.2, 1)")
+
+  (:camera
+    (:fov 60)
+    (:position 0 0 500)
+    (:target 0 0 0))
+
+  (:bindings
+    (:target "piston-handle")
+    (:attr "transform")
+    (:expr "translate(0, $dragY)"))
+
+  (:gestures
+    (:draggable "piston-handle"
+      (:axis "y")
+      (:min 40)
+      (:max 280)))
+
+  (:interactive
+    (:checkpoint
+      (:time 15.0)
+      (:prompt "If the gas volume is halved at constant temperature, what happens to the gas pressure?")
+      (:options
+        "It doubles (P ∝ 1/V)"
+        "It remains constant"
+        "It is cut in half"
+        "It drops to zero")
+      (:answer 0)
+      (:explanation "According to Boyle's Law (P₁V₁ = P₂V₂), pressure is inversely proportional to volume. Halving the volume doubles the frequency of particle collisions against the container walls.")))
+)
+```
+
+### Checkpoint Runtime Behavior
+- **Automatic Option Shuffling**: The engine uses Fisher-Yates randomization at runtime to shuffle options so Option A is not always correct.
+- **Answer Key Integrity**: The system tracks the true option index regardless of display permutation.
+- **Card Toggling**: Students or teachers can hide the question, minimize it to a persistent floating pill (`🎯 Show Question`), dismiss it, or toggle interactive pausing entirely with shortcut `Q`.
+
+---
+
+## 5. Architectural Superiority Over PhET Simulations
+
+| Metric | Legacy PhET Simulation | St Joseph's AST Engine |
+| :--- | :--- | :--- |
+| **Runtime Footprint** | 2,000 – 5,000 KB (Monolithic Scenery/Kite/Dot bundle) | **< 35 KB gzipped** (< 150 KB uncompressed) |
+| **Dependencies** | Dozens of npm packages & heavy build scripts | **0 runtime dependencies** (Native SVG DOM + Web Audio) |
+| **Cold Boot Time** | 1,200 – 2,500 ms | **< 15 ms** (Instant First Paint) |
+| **RAM Utilization** | 45 – 90 MB | **< 8 MB** |
+| **AI Generation** | Impossible at runtime (imperative JavaScript code) | **Declarative S-Expressions** generated by Gemini Nano in ~500 ms |
+| **Smartboard Ink** | Requires third-party screen capture software | **Native in-stage quadratic Bézier ink overlay** |
+| **Single-File Portability** | 12 MB monolithic HTML files | **12 KB self-running `.ast.svg` living capsules** |
+| **Offline Air-Gap Delivery** | Impractical across large fleets | **1-click single-file air-gap export** (`exportAirgapHtmlBundle.ts`) |
+
+---
+
+## 6. Integration & Development Guidelines for AI Models
+- **Grammar Compliance**: Validate S-Expressions against `/player/grammar/ast-sexpr.gbnf`.
+- **Coordinate Spaces**: Standardize on `viewBox="0 0 800 480"` for optimal classroom smartboard 16:9 projection.
+- **Audio Synthesis**: Never reference external MP3/WAV audio files. Use the procedural synth hooks (`VectorProceduralAudioSynth`).
+- **Data Persistence**: Always route learner data through `src/services/dbStore.ts` to uphold the zero-cloud egress sovereign covenant.

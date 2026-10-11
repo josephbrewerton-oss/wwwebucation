@@ -485,11 +485,56 @@ export default function MediaPlayerPage(): React.JSX.Element {
 
         {/* Embedded AST Player or Dedicated Interactive Lab Stage */}
         {activePreset === 'mountain-elevation' ? (
-          <MountainClimberGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          <div>
+            <AstVectorMediaPlayer
+              ref={playerRef}
+              preset="mountain-elevation"
+              autoPlay={true}
+              allowPresetSwitch={false}
+              embedded={true}
+              height="min(540px, 60vh)"
+              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
+              onTelemetry={(t) => setLatestTelemetry(t)}
+              onAiDemoStart={() => setIsAiDemonstrating(true)}
+              onAiDemoComplete={() => setIsAiDemonstrating(false)}
+              onPupilPreemption={() => setIsAiDemonstrating(false)}
+            />
+            <MountainClimberGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          </div>
         ) : activePreset === 'math-fishing' ? (
-          <MathFishingGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          <div>
+            <AstVectorMediaPlayer
+              ref={playerRef}
+              preset="math-fishing"
+              autoPlay={true}
+              allowPresetSwitch={false}
+              embedded={true}
+              height="min(540px, 60vh)"
+              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
+              onTelemetry={(t) => setLatestTelemetry(t)}
+              onAiDemoStart={() => setIsAiDemonstrating(true)}
+              onAiDemoComplete={() => setIsAiDemonstrating(false)}
+              onPupilPreemption={() => setIsAiDemonstrating(false)}
+            />
+            <MathFishingGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          </div>
         ) : activePreset === 'fish-tank' ? (
-          <AquariumSimulationLab playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          <div>
+            <AstVectorMediaPlayer
+              ref={playerRef}
+              preset="fish-tank"
+              autoPlay={true}
+              allowPresetSwitch={false}
+              embedded={true}
+              height="min(540px, 60vh)"
+              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
+              onTelemetry={(t) => setLatestTelemetry(t)}
+              onAiDemoStart={() => setIsAiDemonstrating(true)}
+              onAiDemoComplete={() => setIsAiDemonstrating(false)}
+              onPupilPreemption={() => setIsAiDemonstrating(false)}
+            />
+            <AquariumSimulationLab playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
+          </div>
         ) : activePreset === 'shakespeare' ? (
           <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
             <ShakespeareGlobeLab onClose={() => handleSelectPreset('kinetic-gas')} />
