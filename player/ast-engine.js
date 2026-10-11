@@ -4155,6 +4155,12 @@
           );
       } while (clean !== prevClean);
 
+      // 5. Final hardening: neutralize tag delimiters so no HTML/SVG element can be interpreted.
+      //    This prevents any residual or re-formed multi-character payloads (e.g., "<script") from executing.
+      clean = clean
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
       return clean;
     }
 
