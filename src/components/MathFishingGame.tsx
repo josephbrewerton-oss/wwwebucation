@@ -39,10 +39,13 @@ interface SwimmingFish {
   y: number;
   vx: number;
   vy: number;
+  targetVx: number;
+  targetVy: number;
   size: number;
   speciesIdx: number;
   hooked: boolean;
   wigglePhase: number;
+  swimPhase: number;
 }
 
 const FISH_COLORS = [
@@ -308,17 +311,22 @@ export const MathFishingGame: React.FC<MathFishingGameProps> = ({
     for (let i = 0; i < fishCount; i++) {
       const val = candidateValues[Math.floor(Math.random() * candidateValues.length)];
       const direction = Math.random() > 0.5 ? 1 : -1;
+      const initVx = (28 + Math.random() * 32) * direction;
+      const initVy = (Math.random() - 0.5) * 10;
       newFish.push({
         id: Date.now() + i,
         val,
-        x: Math.random() * 700 + 50,
-        y: 190 + Math.random() * 220, // Swimming below waterline (y=160 to y=420)
-        vx: (30 + Math.random() * 45) * direction,
-        vy: (Math.random() - 0.5) * 15,
+        x: Math.random() * 660 + 70,
+        y: 195 + Math.random() * 215, // Swimming smoothly within water bounds
+        vx: initVx,
+        vy: initVy,
+        targetVx: initVx,
+        targetVy: initVy,
         size: 0.85 + Math.random() * 0.3,
         speciesIdx: Math.floor(Math.random() * FISH_COLORS.length),
         hooked: false,
         wigglePhase: Math.random() * Math.PI * 2,
+        swimPhase: Math.random() * Math.PI * 2,
       });
     }
     fishListRef.current = newFish;
@@ -417,24 +425,41 @@ export const MathFishingGame: React.FC<MathFishingGameProps> = ({
     };
   }, [castState, hookPos, playSfx, speakText]);
 
-  // Cast Action: Launch hook to target X, Y
+  // Smooth Cast Action: Parabolic line trajectory & responsive splash
   const castTo = useCallback((targetX: number, targetY: number) => {
     if (castState === 'reeling') return;
 
     const clampedX = Math.max(80, Math.min(720, targetX));
     const clampedY = Math.max(180, Math.min(420, targetY));
 
-    setRodAngle(clampedX);
+    setRodAngle(80 + (clampedX - 80) * 0.45);
     setCastState('casting');
     playSfx('cast');
 
-    // Simulate flight & water plop
-    setTimeout(() => {
-      setHookPos({ x: clampedX, y: clampedY });
-      setCastState('in-water');
-      playSfx('plop');
-    }, 280);
-  }, [castState, playSfx]);
+    // Instant graceful line unspool followed by water plop
+    const startX = hookPos.x;
+    const startY = hookPos.y;
+    const startTime = performance.now();
+    const duration = 220; // 220ms flight
+
+    const animateCastFlight = (now: number) => {
+      const progress = Math.min((now - startTime) / duration, 1);
+      // Quad ease out
+      const ease = 1 - Math.pow(1 - progress, 2);
+      const curX = startX + (clampedX - startX) * ease;
+      const curY = startY + (clampedY - startY) * ease - Math.sin(progress * Math.PI) * 40;
+      setHookPos({ x: curX, y: curY });
+
+      if (progress < 1) {
+        requestAnimationFrame(animateCastFlight);
+      } else {
+        setHookPos({ x: clampedX, y: clampedY });
+        setCastState('in-water');
+        playSfx('plop');
+      }
+    };
+    requestAnimationFrame(animateCastFlight);
+  }, [castState, hookPos, playSfx]);
 
   // Reel In Action: Lift fish to boat and evaluate math addition
   const reelIn = useCallback(() => {
@@ -466,17 +491,23 @@ export const MathFishingGame: React.FC<MathFishingGameProps> = ({
       // Add replacement fish at edge
       const candidateVals = mode === 'bonds-10' ? [1,2,3,4,5,6,7,8,9] : [2,4,5,6,7,8,10,12,14];
       const repVal = candidateVals[Math.floor(Math.random() * candidateVals.length)];
+      const repDir = Math.random() > 0.5 ? 1 : -1;
+      const repVx = (28 + Math.random() * 32) * repDir;
+      const repVy = (Math.random() - 0.5) * 8;
       fishListRef.current.push({
         id: Date.now() + Math.random(),
         val: repVal,
-        x: Math.random() > 0.5 ? 40 : 760,
-        y: 190 + Math.random() * 220,
-        vx: (30 + Math.random() * 40) * (Math.random() > 0.5 ? 1 : -1),
-        vy: (Math.random() - 0.5) * 12,
+        x: repDir > 0 ? 50 : 750,
+        y: 195 + Math.random() * 215,
+        vx: repVx,
+        vy: repVy,
+        targetVx: repVx,
+        targetVy: repVy,
         size: 0.85 + Math.random() * 0.3,
         speciesIdx: Math.floor(Math.random() * FISH_COLORS.length),
         hooked: false,
-        wigglePhase: 0,
+        wigglePhase: Math.random() * Math.PI * 2,
+        swimPhase: Math.random() * Math.PI * 2,
       });
 
       setCastState('idle');
@@ -1020,9 +1051,10 @@ export const MathFishingGame: React.FC<MathFishingGameProps> = ({
             const isHookedThis = hookedFishId === fish.id;
             const species = FISH_COLORS[fish.speciesIdx];
             const direction = fish.vx >= 0 ? 1 : -1;
-            const wiggle = Math.sin(fish.wigglePhase) * 4;
+            const wiggle = Math.sin(fish.wigglePhase) * 5;
+            const tiltDeg = ((fish.vy / 20) * 12).toFixed(1);
 
-            // Tail coordinates
+            // Tail coordinates with organic quadratic flex
             const tailX = -20 * direction * fish.size;
             const tailY1 = (-10 * fish.size) + wiggle;
             const tailY2 = (10 * fish.size) - wiggle;
@@ -1030,9 +1062,10 @@ export const MathFishingGame: React.FC<MathFishingGameProps> = ({
             return (
               <g
                 key={fish.id}
-                transform={`translate(${fish.x.toFixed(1)}, ${fish.y.toFixed(1)})`}
+                transform={`translate(${fish.x.toFixed(2)}, ${fish.y.toFixed(2)}) rotate(${tiltDeg})`}
                 style={{
-                  transition: isHookedThis ? 'transform 0.15s ease-out' : 'none',
+                  willChange: 'transform',
+                  transition: isHookedThis ? 'transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1)' : 'none',
                   filter: isHookedThis ? 'url(#pond-glow)' : 'none',
                 }}
               >
