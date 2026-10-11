@@ -4133,10 +4133,25 @@
       } while (clean !== prevClean);
 
       // 4. Strip dangerous URI schemes in href / xlink:href / src attributes
-      clean = clean.replace(
-        /\s+(?:xlink:)?href\s*=\s*['"]\s*(?:javascript|vbscript|data:(?!image\/)):?[^'"]*['"]/gi,
-        ' href=""'
-      );
+      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
+      do {
+        prevClean = clean;
+        clean = clean
+          // Quoted attribute values
+          .replace(
+            /\s+((?:xlink:)?href|src)\s*=\s*"\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^"]*"/gi,
+            ' $1=""'
+          )
+          .replace(
+            /\s+((?:xlink:)?href|src)\s*=\s*'\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^']*'/gi,
+            ' $1=""'
+          )
+          // Unquoted attribute values
+          .replace(
+            /\s+((?:xlink:)?href|src)\s*=\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^\s>]+/gi,
+            ' $1=""'
+          );
+      } while (clean !== prevClean);
 
       return clean;
     }
