@@ -1,49 +1,106 @@
 User-agent: *
 Allow: /
 Allow: /media-player
+Allow: /player
 Allow: /player.html
 Allow: /practice-lab
 Allow: /learning-zone
 Allow: /curriculum-studio
 Allow: /catholic-life
+Allow: /first-communion
+Allow: /teacher-beacon
+Allow: /privacy
+Allow: /child-safety
 Allow: /news
 Allow: /blog
 Allow: /licensing
 Allow: /profile
 Allow: /settings
 Allow: /llms.txt
+Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /manifests/
 Allow: /player/scenes.manifest.json
+Allow: /player/scenes-config.json
+Allow: /nano-map.ast
 
 # Disallow internal raw workers and test fixtures
 Disallow: /worker.html
 Disallow: /scripts/
 
-# AI, LLM & Web Agent Discovery
+# AI, LLM & Web Agent Discovery (Open crawl for educational assistance & edge retrieval)
 User-agent: GPTBot
 Allow: /
 Allow: /llms.txt
-Allow: /player/scenes.manifest.json
-Allow: /player/ast-phet-bridge.js
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /manifests/
 Allow: /player/
+
+User-agent: ChatGPT-User
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 User-agent: ClaudeBot
 Allow: /
 Allow: /llms.txt
-Allow: /player/scenes.manifest.json
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /manifests/
 Allow: /player/
+
+User-agent: Claude-Web
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
 
 User-agent: PerplexityBot
 Allow: /
 Allow: /llms.txt
-Allow: /player/scenes.manifest.json
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /manifests/
 Allow: /player/
 
 User-agent: Google-Extended
 Allow: /
 Allow: /llms.txt
-Allow: /player/scenes.manifest.json
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /manifests/
 Allow: /player/
 
-# Sitemap
+User-agent: GoogleOther
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Applebot-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: cohere-ai
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Amazonbot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: CCBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+# Sitemap & Machine Briefings
 Sitemap: /sitemap.xml
+

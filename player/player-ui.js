@@ -61,6 +61,9 @@
         interactiveBody: document.getElementById('interactive-body'),
         interactiveBadge: document.getElementById('interactive-badge'),
         interactiveClose: document.getElementById('interactive-close'),
+        interactiveToggleMin: document.getElementById('interactive-toggle-min'),
+        checkpointMinimizedPill: document.getElementById('checkpoint-minimized-pill'),
+        btnRestoreCheckpoint: document.getElementById('btn-restore-checkpoint'),
         astToast: document.getElementById('ast-toast'),
         presetSelector: document.getElementById('preset-selector'),
         speedSelector: document.getElementById('speed-selector'),
@@ -182,6 +185,7 @@
       this.interactiveMode = true;
       this.completedCheckpoints = new Set();
       this.activeCheckpoint = null;
+      this.minimizedCheckpoint = null;
       this.stepMode = false;
       this.targetStop = null;
       this.toastTimeout = null;
@@ -440,28 +444,117 @@
       }, 2200);
     }
 
-    closeInteractiveCard() {
+    minimizeInteractiveCard() {
+      if (!this.elements.interactiveCard) return;
+      this.elements.interactiveCard.classList.add('hidden');
+      if (this.activeCheckpoint !== null) {
+        this.minimizedCheckpoint = this.activeCheckpoint;
+      }
+      if (this.elements.checkpointMinimizedPill) {
+        this.elements.checkpointMinimizedPill.classList.remove('hidden');
+        this.elements.checkpointMinimizedPill.style.display = 'flex';
+      }
+      this.showToast('👁️ Question minimized. Press [Q] or badge to restore.');
+    }
+
+    restoreInteractiveCard() {
+      if (!this.elements.interactiveCard) return;
+      if (this.minimizedCheckpoint !== null && this.activeCheckpoint === null) {
+        this.activeCheckpoint = this.minimizedCheckpoint;
+      }
+      this.elements.interactiveCard.classList.remove('hidden');
+      if (this.elements.checkpointMinimizedPill) {
+        this.elements.checkpointMinimizedPill.classList.add('hidden');
+        this.elements.checkpointMinimizedPill.style.display = 'none';
+      }
+      this.showToast('🎯 Question restored');
+    }
+
+    closeInteractiveCard(resumePlayback = false) {
       if (this.elements.interactiveCard) {
         this.elements.interactiveCard.classList.add('hidden');
       }
+      if (this.elements.checkpointMinimizedPill) {
+        this.elements.checkpointMinimizedPill.classList.add('hidden');
+        this.elements.checkpointMinimizedPill.style.display = 'none';
+      }
+      this.minimizedCheckpoint = null;
       this.activeCheckpoint = null;
+      if (resumePlayback && this.engine) {
+        this.engine.play();
+      }
+    }
+
+    toggleCheckpointView() {
+      if (!this.elements.interactiveCard) return;
+      if (!this.elements.interactiveCard.classList.contains('hidden')) {
+        this.minimizeInteractiveCard();
+      } else if (this.minimizedCheckpoint !== null) {
+        this.restoreInteractiveCard();
+      } else if (this.activeCheckpoint !== null) {
+        this.restoreInteractiveCard();
+      } else {
+        this.triggerFirstCheckpoint();
+      }
+    }
+
+    toggleInteractiveMode() {
+      this.interactiveMode = !this.interactiveMode;
+      this.displayConfig.showInteractiveCheckpoints = this.interactiveMode;
+      if (this.elements.btnInteractive) {
+        this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
+        this.elements.btnInteractive.title = this.interactiveMode
+          ? '🎯 Checkpoint Questions: ON (Pauses for quizzes) • Shift-click to turn OFF'
+          : '🎯 Checkpoint Questions: OFF (Uninterrupted lecture mode) • Shift-click to turn ON';
+      }
+      if (this.elements.cfgCheckpoints) {
+        this.elements.cfgCheckpoints.checked = this.interactiveMode;
+      }
+      this.saveDisplayConfig(this.displayConfig);
+      this.showToast(this.interactiveMode ? '🎯 Questions Auto-Pause: ON' : '🎯 Questions Auto-Pause: OFF (Lecture Mode)');
     }
 
     triggerCheckpoint(checkpoint, index) {
       if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
       this.activeCheckpoint = index;
+      this.minimizedCheckpoint = null;
+      if (this.elements.checkpointMinimizedPill) {
+        this.elements.checkpointMinimizedPill.classList.add('hidden');
+        this.elements.checkpointMinimizedPill.style.display = 'none';
+      }
       this.engine.pause();
 
       if (this.elements.interactiveBadge) {
         this.elements.interactiveBadge.textContent = checkpoint.title || 'CHECKPOINT CHALLENGE';
       }
 
+      // Dynamic option shuffling:
+      // Map options with their original indices and shuffle so correct answer is NOT always option A!
+      const rawOptions = Array.isArray(checkpoint.options) && checkpoint.options.length > 0
+        ? checkpoint.options
+        : ['Correct', 'Incorrect'];
+      const correctOriginalIndex = typeof checkpoint.answer === 'number' ? checkpoint.answer : 0;
+
+      const indexedOptions = rawOptions.map((opt, i) => ({
+        text: opt,
+        originalIndex: i,
+        isCorrect: i === correctOriginalIndex
+      }));
+
+      // Fisher-Yates shuffle to randomize placement of options
+      for (let i = indexedOptions.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        const temp = indexedOptions[i];
+        indexedOptions[i] = indexedOptions[j];
+        indexedOptions[j] = temp;
+      }
+
       const bodyHtml = `
         <div class="interactive-prompt">${checkpoint.prompt}</div>
         <div class="interactive-options">
-          ${checkpoint.options.map((opt, i) => `
-            <button type="button" class="interactive-opt-btn" data-opt-idx="${i}">
-              ${String.fromCharCode(65 + i)}. ${opt}
+          ${indexedOptions.map((item, i) => `
+            <button type="button" class="interactive-opt-btn" data-opt-idx="${item.originalIndex}" data-is-correct="${item.isCorrect}">
+              <span style="font-weight:700; color:#38bdf8; margin-right:6px;">${String.fromCharCode(65 + i)}.</span> ${item.text}
             </button>
           `).join('')}
         </div>
@@ -476,17 +569,17 @@
 
       optBtns.forEach(btn => {
         btn.addEventListener('click', () => {
-          const chosenIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
-          const isCorrect = chosenIdx === checkpoint.answer;
+          const isCorrect = btn.getAttribute('data-is-correct') === 'true';
+          const chosenOrigIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
 
           if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
             window.parent.postMessage({
               type: 'CHECKPOINT_ANSWERED',
               index,
-              chosenIdx,
+              chosenIdx: chosenOrigIdx,
               isCorrect,
               prompt: checkpoint.prompt,
-              answer: checkpoint.answer,
+              answer: correctOriginalIndex,
             }, '*');
           }
 
@@ -504,14 +597,13 @@
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Correct! ${checkpoint.explanation || ''}`);
             }
-            // Resume after 2 seconds
+            // Resume after 2.2 seconds
             setTimeout(() => {
-              this.closeInteractiveCard();
-              this.engine.play();
+              this.closeInteractiveCard(true);
             }, 2200);
           } else {
             btn.classList.add('incorrect');
-            const correctBtn = this.elements.interactiveBody.querySelector(`[data-opt-idx="${checkpoint.answer}"]`);
+            const correctBtn = this.elements.interactiveBody.querySelector('[data-is-correct="true"]');
             if (correctBtn) correctBtn.classList.add('correct');
             this.playChime(220, 'sawtooth'); // Error buzz
             if (resultBox) {
@@ -522,10 +614,9 @@
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Remember: ${checkpoint.explanation || ''}`);
             }
-            // Allow retry or resume after 3 seconds
+            // Allow retry or resume after 3.2 seconds
             setTimeout(() => {
-              this.closeInteractiveCard();
-              this.engine.play();
+              this.closeInteractiveCard(true);
             }, 3200);
           }
         });
@@ -533,6 +624,16 @@
     }
 
     triggerFirstCheckpoint() {
+      // If a question card is currently visible, toggle it minimized
+      if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
+        this.minimizeInteractiveCard();
+        return;
+      }
+      // If a question was minimized, restore it
+      if (this.minimizedCheckpoint !== null) {
+        this.restoreInteractiveCard();
+        return;
+      }
       const scene = this.engine && this.engine.scene;
       if (!scene || !scene.interactive || !Array.isArray(scene.interactive.checkpoints) || scene.interactive.checkpoints.length === 0) {
         this.showToast('ℹ️ No checkpoint quizzes found for this scene');
@@ -1466,19 +1567,16 @@
       // Interactive Toggle Button
       if (el.btnInteractive) {
         el.btnInteractive.classList.toggle('active', this.interactiveMode);
-        el.btnInteractive.addEventListener('click', () => {
-          if (this.activeCheckpoint !== null) {
-            this.closeInteractiveCard();
+        el.btnInteractive.addEventListener('click', (e) => {
+          if (e && e.shiftKey) {
+            this.toggleInteractiveMode();
             return;
           }
-          const scene = this.engine && this.engine.scene;
-          if (scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0) {
-            this.triggerFirstCheckpoint();
-          } else {
-            this.interactiveMode = !this.interactiveMode;
-            el.btnInteractive.classList.toggle('active', this.interactiveMode);
-            this.showToast(this.interactiveMode ? '🎯 Interactive Mode: ON' : '🎯 Interactive Mode: OFF');
-          }
+          this.toggleCheckpointView();
+        });
+        el.btnInteractive.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          this.toggleInteractiveMode();
         });
       }
 
@@ -1611,11 +1709,21 @@ window.addEventListener('message', (e) => {
         });
       }
 
-      // Interactive Card Close Button
+      // Interactive Card Close Button & Minimize Toggle
       if (el.interactiveClose) {
         el.interactiveClose.addEventListener('click', () => {
-          this.closeInteractiveCard();
-          this.engine.play();
+          this.closeInteractiveCard(false);
+          this.showToast('🎯 Question dismissed. Press [Q] to re-open.');
+        });
+      }
+      if (el.interactiveToggleMin) {
+        el.interactiveToggleMin.addEventListener('click', () => {
+          this.minimizeInteractiveCard();
+        });
+      }
+      if (el.btnRestoreCheckpoint) {
+        el.btnRestoreCheckpoint.addEventListener('click', () => {
+          this.restoreInteractiveCard();
         });
       }
 
@@ -2204,6 +2312,10 @@ window.addEventListener('message', (e) => {
           inputEl.addEventListener('change', () => {
             this.displayConfig.mode = 'custom';
             this.displayConfig[key] = inputEl.checked;
+            if (key === 'showInteractiveCheckpoints') {
+              this.interactiveMode = Boolean(inputEl.checked);
+              if (el.btnInteractive) el.btnInteractive.classList.toggle('active', this.interactiveMode);
+            }
             this.applyDisplayConfig(this.displayConfig);
             this.saveDisplayConfig(this.displayConfig);
           });
@@ -2236,6 +2348,9 @@ window.addEventListener('message', (e) => {
           } else {
             this.engine.step(0.05);
           }
+        } else if (e.code === 'KeyQ' && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          this.toggleCheckpointView();
         } else if (e.code === 'KeyL' && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           if (el.btnLoop) el.btnLoop.click();
@@ -2278,7 +2393,9 @@ window.addEventListener('message', (e) => {
           e.preventDefault();
           this.toggleDevMode();
         } else if (e.code === 'Escape') {
-          if (this.elements.shortcutsModal && !this.elements.shortcutsModal.classList.contains('hidden')) {
+          if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
+            this.minimizeInteractiveCard();
+          } else if (this.elements.shortcutsModal && !this.elements.shortcutsModal.classList.contains('hidden')) {
             this.closeShortcutsModal();
           } else if (this.elements.settingsDrawer && !this.elements.settingsDrawer.classList.contains('hidden')) {
             this.closeSettingsDrawer();
@@ -2437,7 +2554,13 @@ window.addEventListener('message', (e) => {
       // Top action buttons
       if (el.presetSelector) el.presetSelector.style.display = c.showPresetSelector !== false ? '' : 'none';
       if (el.badgeStage) el.badgeStage.style.display = c.showStageBadge !== false ? '' : 'none';
-      if (el.btnInteractive) el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
+      if (el.btnInteractive) {
+        el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
+        if (c.showInteractiveCheckpoints !== undefined) {
+          this.interactiveMode = Boolean(c.showInteractiveCheckpoints);
+          el.btnInteractive.classList.toggle('active', this.interactiveMode);
+        }
+      }
       
       if (el.btn3DOrbit) {
         if (c.show3DControls === false) {

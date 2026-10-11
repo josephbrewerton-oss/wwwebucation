@@ -81,20 +81,23 @@
     </text>
   </g>
   <g id="pyth-group-a">
-    <rect id="pyth-rect-a" x="360" y="190" width="0" height="90" fill="url(#pyth-grad-a)" stroke="#10b981" stroke-width="2" rx="4" data-draggable="pyth-handle-a" style="cursor:ns-resize;" />
+    <rect id="pyth-rect-a" x="276" y="196" width="84" height="84" fill="url(#pyth-grad-a)" stroke="#10b981" stroke-width="2.5" rx="6" filter="url(#pyth-shadow)" data-draggable="pyth-handle-a" style="cursor:ns-resize;" />
     <g id="pyth-grid-a" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-    <text id="pyth-txt-a" x="315" y="240" fill="#ffffff" font-size="16" font-weight="800" text-anchor="middle" opacity="1" filter="url(#pyth-glow)" pointer-events="none">a² = 9</text>
+    <rect id="pyth-badge-a" x="286" y="226" width="64" height="26" rx="6" fill="#064e3b" fill-opacity="0.9" stroke="#34d399" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-a" x="318" y="244" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" opacity="1" pointer-events="none">a² = 9</text>
   </g>
   <g id="pyth-group-b">
-    <rect id="pyth-rect-b" x="360" y="280" width="120" height="0" fill="url(#pyth-grad-b)" stroke="#3b82f6" stroke-width="2" rx="4" data-draggable="pyth-handle-b" style="cursor:ew-resize;" />
+    <rect id="pyth-rect-b" x="360" y="280" width="112" height="112" fill="url(#pyth-grad-b)" stroke="#3b82f6" stroke-width="2.5" rx="6" filter="url(#pyth-shadow)" data-draggable="pyth-handle-b" style="cursor:ew-resize;" />
     <g id="pyth-grid-b" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-    <text id="pyth-txt-b" x="420" y="345" fill="#ffffff" font-size="16" font-weight="800" text-anchor="middle" opacity="1" filter="url(#pyth-glow)" pointer-events="none">b² = 16</text>
+    <rect id="pyth-badge-b" x="382" y="323" width="68" height="26" rx="6" fill="#1e3a8a" fill-opacity="0.9" stroke="#60a5fa" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-b" x="416" y="341" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" opacity="1" pointer-events="none">b² = 16</text>
   </g>
   <g id="pyth-group-c">
-    <g id="pyth-rot-c" transform="translate(360, 190) rotate(-36.87)">
-      <rect id="pyth-rect-c" x="0" y="-150" width="150" height="150" fill="url(#pyth-grad-c)" stroke="#f59e0b" stroke-width="2" rx="4" />
+    <g id="pyth-rot-c" transform="translate(360, 196) rotate(36.87)">
+      <rect id="pyth-rect-c" x="0" y="-140" width="140" height="140" fill="url(#pyth-grad-c)" stroke="#f59e0b" stroke-width="2.5" rx="6" filter="url(#pyth-shadow)" />
       <g id="pyth-grid-c" opacity="0.4" stroke="#ffffff" stroke-width="0.8" pointer-events="none"></g>
-      <text id="pyth-txt-c" x="75" y="-70" fill="#ffffff" font-size="18" font-weight="900" text-anchor="middle" filter="url(#pyth-glow)" pointer-events="none">c² = 25</text>
+      <rect id="pyth-badge-c" x="15" y="-83" width="110" height="28" rx="6" fill="#78350f" fill-opacity="0.9" stroke="#fbbf24" stroke-width="1.5" pointer-events="none" />
+      <text id="pyth-txt-c" x="70" y="-64" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">c² = 25 (c = 5)</text>
     </g>
   </g>
   <polygon id="pyth-triangle" points="360,280 472,280 360,196" fill="#0f172a" fill-opacity="0.85" stroke="#38bdf8" stroke-width="3.5" stroke-linejoin="round" />

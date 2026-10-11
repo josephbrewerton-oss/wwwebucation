@@ -277,9 +277,20 @@
     <div id="interactive-card" class="interactive-card hidden">
       <div class="interactive-header">
         <span id="interactive-badge" class="interactive-badge">CHECKPOINT CHALLENGE</span>
-        <button type="button" id="interactive-close" class="interactive-close" title="Close Checkpoint">&times;</button>
+        <div class="interactive-header-actions">
+          <button type="button" id="interactive-toggle-min" class="interactive-min-btn" title="Hide/Minimize Question to view simulation [Q]">👁️ Hide Question</button>
+          <button type="button" id="interactive-close" class="interactive-close" title="Close Checkpoint">&times;</button>
+        </div>
       </div>
       <div id="interactive-body"></div>
+    </div>
+
+    <!-- Floating Checkpoint Question Toggle Pill (visible when question is minimized/hidden) -->
+    <div id="checkpoint-minimized-pill" class="checkpoint-minimized-pill hidden">
+      <button type="button" id="btn-restore-checkpoint" class="btn-restore-checkpoint" title="Click to show question or press 'Q'">
+        <span>🎯 Show Question (Resume Quiz)</span>
+        <span style="font-size: 10px; opacity: 0.85;">[Q]</span>
+      </button>
     </div>
 
     <!-- OBS Studio Broadcast Drawer -->
