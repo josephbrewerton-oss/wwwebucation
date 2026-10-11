@@ -3325,14 +3325,14 @@
 
         stateBlocks.forEach(stText => {
           const stName = extractSlot.call(null, stText, /:name\s+"([^"]+)"/i) || extractSlot.call(null, stText, /:name\s+([^\s\)]+)/i) || 'state';
-          const attrs = {};
+          const attrs = Object.create(null);
           const attrBlocks = extractSexprBlocks(stText, ':attr');
           attrBlocks.forEach(atText => {
             const target = extractSlot.call(null, atText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, atText, /:target\s+([^\s\)]+)/i);
             const attr = extractSlot.call(null, atText, /:attr\s+"([^"]+)"/i) || extractSlot.call(null, atText, /:attr\s+([^\s\)]+)/i) || 'fill';
             const val = extractSlot.call(null, atText, /:val\s+"([^"]+)"/i) || extractSlot.call(null, atText, /:val\s+([^\s\)]+)/i);
             if (target && attr) {
-              if (!attrs[target]) attrs[target] = {};
+              if (!attrs[target]) attrs[target] = Object.create(null);
               attrs[target][attr] = val !== null ? val : '#38bdf8';
             }
           });
