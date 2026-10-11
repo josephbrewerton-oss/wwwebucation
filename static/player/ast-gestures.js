@@ -442,17 +442,29 @@
     }
 
     /**
-     * Primary PointerMove Handler
+     * Primary PointerMove Handler with Native Browser C++ Hardware Event Coalescing
+     * Leverages e.getCoalescedEvents() to extract all 120Hz-240Hz digitizer points
+     * from Promethean, SMART, Apple Pencil, and Surface digitizers instead of dropping intermediate coordinates.
      */
     handlePointerMove(e) {
-      const svgPt = this.screenToSvg(e.clientX, e.clientY);
+      // 1. Extract coalesced hardware points if provided by browser C++ engine; fallback to single event
+      const rawEvents = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
+      const eventsToProcess = (rawEvents && rawEvents.length > 0) ? rawEvents : [e];
 
-      // A. Whiteboard Pen Drawing
+      // A. Whiteboard Pen Drawing: Process every hardware coordinate
       if (this.isDrawing && this.currentStroke) {
         e.preventDefault();
-        this.continueInkStroke(svgPt);
+        for (let i = 0; i < eventsToProcess.length; i++) {
+          const subEv = eventsToProcess[i];
+          const svgPt = this.screenToSvg(subEv.clientX, subEv.clientY);
+          this.continueInkStroke(svgPt);
+        }
         return;
       }
+
+      // For standard gesture dragging, use the latest coalesced position
+      const latestEv = eventsToProcess[eventsToProcess.length - 1];
+      const svgPt = this.screenToSvg(latestEv.clientX, latestEv.clientY);
 
       // B. Direct Canvas Dragging
       if (this.isDragging && this.dragTarget) {

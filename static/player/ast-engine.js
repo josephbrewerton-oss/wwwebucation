@@ -124,100 +124,174 @@
       }
     }
 
+    _ensureBuffers() {
+      const n = this.bodies.length;
+      if (!this._bufferCapacity || this._bufferCapacity < n) {
+        this._bufferCapacity = Math.max(32, Math.pow(2, Math.ceil(Math.log2(Math.max(1, n)))));
+        this._bufX = new Float32Array(this._bufferCapacity);
+        this._bufY = new Float32Array(this._bufferCapacity);
+        this._bufVx = new Float32Array(this._bufferCapacity);
+        this._bufVy = new Float32Array(this._bufferCapacity);
+        this._bufRadius = new Float32Array(this._bufferCapacity);
+        this._bufMass = new Float32Array(this._bufferCapacity);
+        this._bufBounce = new Float32Array(this._bufferCapacity);
+        this._bufFriction = new Float32Array(this._bufferCapacity);
+        this._bufGroundY = new Float32Array(this._bufferCapacity);
+        this._bufFlags = new Uint8Array(this._bufferCapacity); // bit 0: isStatic, bit 1: isGrounded
+      }
+
+      for (let i = 0; i < n; i++) {
+        const b = this.bodies[i];
+        this._bufX[i] = b.x;
+        this._bufY[i] = b.y;
+        this._bufVx[i] = b.vx;
+        this._bufVy[i] = b.vy;
+        this._bufRadius[i] = b.radius;
+        this._bufMass[i] = b.mass;
+        this._bufBounce[i] = b.bounce;
+        this._bufFriction[i] = b.friction;
+        this._bufGroundY[i] = b.groundY !== undefined ? b.groundY : this.groundY;
+        this._bufFlags[i] = (b.isStatic ? 1 : 0) | (b.isGrounded ? 2 : 0);
+      }
+    }
+
     update(dt) {
       if (!this.enabled || dt <= 0 || this.bodies.length === 0) return;
       const root = (this.engine && this.engine.container) || (typeof document !== 'undefined' ? document : null);
       if (!root) return;
 
-      for (let i = 0; i < this.bodies.length; i++) {
-        const b = this.bodies[i];
-        if (b.isStatic) continue;
+      const n = this.bodies.length;
+      this._ensureBuffers();
 
-        if (!b.element) {
-          b.element = root.querySelector ? root.querySelector(b.target) : null;
-        }
+      const bufX = this._bufX;
+      const bufY = this._bufY;
+      const bufVx = this._bufVx;
+      const bufVy = this._bufVy;
+      const bufRadius = this._bufRadius;
+      const bufMass = this._bufMass;
+      const bufBounce = this._bufBounce;
+      const bufFriction = this._bufFriction;
+      const bufGroundY = this._bufGroundY;
+      const bufFlags = this._bufFlags;
 
-        // 1. Acceleration from gravity
-        b.vy += this.gravity * dt;
+      const g = this.gravity;
+      const minXBound = this.bounds.minX;
+      const maxXBound = this.bounds.maxX;
+
+      // --- PASS 1: Native Contiguous Integration (SIMD Cache Friendly) ---
+      for (let i = 0; i < n; i++) {
+        if ((bufFlags[i] & 1) !== 0) continue; // static
+
+        // 1. Gravity acceleration
+        bufVy[i] += g * dt;
 
         // 2. Air resistance damping
-        const drag = Math.pow(b.friction, dt * 60);
-        b.vx *= drag;
-        b.vy *= drag;
+        const drag = Math.pow(bufFriction[i], dt * 60);
+        bufVx[i] *= drag;
+        bufVy[i] *= drag;
 
         // 3. Integrate position
-        b.x += b.vx * dt;
-        b.y += b.vy * dt;
+        bufX[i] += bufVx[i] * dt;
+        bufY[i] += bufVy[i] * dt;
 
         // 4. Ground collision
-        const effectiveGround = b.groundY !== undefined ? b.groundY : this.groundY;
-        if (b.y >= effectiveGround) {
-          b.y = effectiveGround;
-          b.vy = -b.vy * b.bounce;
-          // Surface friction
-          b.vx *= 0.92;
-          if (Math.abs(b.vy) < 20) {
-            b.vy = 0;
-            b.isGrounded = true;
+        const effectiveGround = bufGroundY[i];
+        const r = bufRadius[i];
+        const bounce = bufBounce[i];
+
+        if (bufY[i] >= effectiveGround) {
+          bufY[i] = effectiveGround;
+          bufVy[i] = -bufVy[i] * bounce;
+          bufVx[i] *= 0.92;
+          if (Math.abs(bufVy[i]) < 20) {
+            bufVy[i] = 0;
+            bufFlags[i] |= 2; // isGrounded
+          } else {
+            bufFlags[i] &= ~2;
           }
         } else {
-          b.isGrounded = false;
+          bufFlags[i] &= ~2;
         }
 
         // 5. Canvas horizontal boundaries bounce
-        if (b.x < this.bounds.minX + b.radius) {
-          b.x = this.bounds.minX + b.radius;
-          b.vx = -b.vx * b.bounce;
-        } else if (b.x > this.bounds.maxX - b.radius) {
-          b.x = this.bounds.maxX - b.radius;
-          b.vx = -b.vx * b.bounce;
+        if (bufX[i] < minXBound + r) {
+          bufX[i] = minXBound + r;
+          bufVx[i] = -bufVx[i] * bounce;
+        } else if (bufX[i] > maxXBound - r) {
+          bufX[i] = maxXBound - r;
+          bufVx[i] = -bufVx[i] * bounce;
         }
+      }
 
-        // 6. Inter-body circle collisions
-        for (let j = i + 1; j < this.bodies.length; j++) {
-          const b2 = this.bodies[j];
-          const dx = b2.x - b.x;
-          const dy = b2.y - b.y;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          const minDist = b.radius + b2.radius;
+      // --- PASS 2: Contiguous Circle Collision Physics Resolution ---
+      for (let i = 0; i < n; i++) {
+        const isStatic1 = (bufFlags[i] & 1) !== 0;
+        const r1 = bufRadius[i];
+        const m1 = bufMass[i];
+        const bnc1 = bufBounce[i];
 
-          if (dist < minDist && dist > 0.001) {
+        for (let j = i + 1; j < n; j++) {
+          const isStatic2 = (bufFlags[j] & 1) !== 0;
+          if (isStatic1 && isStatic2) continue;
+
+          const dx = bufX[j] - bufX[i];
+          const dy = bufY[j] - bufY[i];
+          const distSq = dx * dx + dy * dy;
+          const minDist = r1 + bufRadius[j];
+
+          if (distSq < minDist * minDist && distSq > 0.00001) {
+            const dist = Math.sqrt(distSq);
             const nx = dx / dist;
             const ny = dy / dist;
             const overlap = minDist - dist;
 
             // Separate overlapping bodies
-            if (!b.isStatic && !b2.isStatic) {
-              b.x -= nx * overlap * 0.5;
-              b.y -= ny * overlap * 0.5;
-              b2.x += nx * overlap * 0.5;
-              b2.y += ny * overlap * 0.5;
-            } else if (!b.isStatic) {
-              b.x -= nx * overlap;
-              b.y -= ny * overlap;
-            } else if (!b2.isStatic) {
-              b2.x += nx * overlap;
-              b2.y += ny * overlap;
+            if (!isStatic1 && !isStatic2) {
+              const half = overlap * 0.5;
+              bufX[i] -= nx * half;
+              bufY[i] -= ny * half;
+              bufX[j] += nx * half;
+              bufY[j] += ny * half;
+            } else if (!isStatic1) {
+              bufX[i] -= nx * overlap;
+              bufY[i] -= ny * overlap;
+            } else {
+              bufX[j] += nx * overlap;
+              bufY[j] += ny * overlap;
             }
 
-            // Normal impulse exchange
-            const kx = b.vx - b2.vx;
-            const ky = b.vy - b2.vy;
-            const p = 2 * (nx * kx + ny * ky) / (b.mass + b2.mass);
-            const restitution = Math.min(b.bounce, b2.bounce);
+            // Impulse exchange
+            const kx = bufVx[i] - bufVx[j];
+            const ky = bufVy[i] - bufVy[j];
+            const m2 = bufMass[j];
+            const p = 2 * (nx * kx + ny * ky) / (m1 + m2);
+            const restitution = Math.min(bnc1, bufBounce[j]);
 
-            if (!b.isStatic) {
-              b.vx -= p * b2.mass * nx * (1 + restitution);
-              b.vy -= p * b2.mass * ny * (1 + restitution);
+            if (!isStatic1) {
+              bufVx[i] -= p * m2 * nx * (1 + restitution);
+              bufVy[i] -= p * m2 * ny * (1 + restitution);
             }
-            if (!b2.isStatic) {
-              b2.vx += p * b.mass * nx * (1 + restitution);
-              b2.vy += p * b.mass * ny * (1 + restitution);
+            if (!isStatic2) {
+              bufVx[j] += p * m1 * nx * (1 + restitution);
+              bufVy[j] += p * m1 * ny * (1 + restitution);
             }
           }
         }
+      }
 
-        // 7. Render directly to SVG transform attribute
+      // --- PASS 3: Writeback and Direct C++ DOM Transform Patching ---
+      for (let i = 0; i < n; i++) {
+        const b = this.bodies[i];
+        b.x = bufX[i];
+        b.y = bufY[i];
+        b.vx = bufVx[i];
+        b.vy = bufVy[i];
+        b.isGrounded = (bufFlags[i] & 2) !== 0;
+
+        if (!b.element) {
+          b.element = root.querySelector ? root.querySelector(b.target) : null;
+        }
+
         if (b.element) {
           b.element.setAttribute('transform', `translate(${b.x.toFixed(2)}, ${b.y.toFixed(2)})`);
         }
@@ -276,13 +350,68 @@
     return `rgba(${r}, ${g}, ${b}, ${a})`;
   }
 
+  /**
+   * Cartoon Animation & Disney Motion Primitives (< 0.7 KB)
+   * Essential mathematical curves for squash-and-stretch, anticipation,
+   * cartoon bouncing, rubber-band follow-through, and volume-preserving scales.
+   */
+  function astEaseBack(t, overshoot = 1.70158) {
+    const p = Math.max(0, Math.min(1, t)) - 1;
+    return p * p * ((overshoot + 1) * p + overshoot) + 1;
+  }
+
+  function astEaseBounce(t) {
+    let p = Math.max(0, Math.min(1, t));
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    if (p < 1 / d1) {
+      return n1 * p * p;
+    } else if (p < 2 / d1) {
+      p -= 1.5 / d1;
+      return n1 * p * p + 0.75;
+    } else if (p < 2.5 / d1) {
+      p -= 2.25 / d1;
+      return n1 * p * p + 0.9375;
+    } else {
+      p -= 2.625 / d1;
+      return n1 * p * p + 0.984375;
+    }
+  }
+
+  function astEaseElastic(t, amplitude = 1, period = 0.3) {
+    const p = Math.max(0, Math.min(1, t));
+    if (p === 0) return 0;
+    if (p === 1) return 1;
+    const s = (period / (2 * Math.PI)) * Math.asin(1 / Math.max(1, amplitude));
+    return amplitude * Math.pow(2, -10 * p) * Math.sin(((p - s) * (2 * Math.PI)) / period) + 1;
+  }
+
+  /**
+   * Volume-preserving squash & stretch transform string helper.
+   * Maintains 2D area (sx * sy = 1) for Disney's Principle #1.
+   */
+  function astSquashStretch(t, intensity = 0.25) {
+    const factor = Math.sin(t * Math.PI * 2) * intensity;
+    const sx = (1 + factor).toFixed(3);
+    const sy = (1 / (1 + factor)).toFixed(3);
+    return `scale(${sx}, ${sy})`;
+  }
+
   if (typeof globalThis !== 'undefined') {
     globalThis.astMorphPath = astMorphPath;
     globalThis.astMorphColor = astMorphColor;
+    globalThis.astEaseBack = astEaseBack;
+    globalThis.astEaseBounce = astEaseBounce;
+    globalThis.astEaseElastic = astEaseElastic;
+    globalThis.astSquashStretch = astSquashStretch;
   }
   if (typeof window !== 'undefined') {
     window.astMorphPath = astMorphPath;
     window.astMorphColor = astMorphColor;
+    window.astEaseBack = astEaseBack;
+    window.astEaseBounce = astEaseBounce;
+    window.astEaseElastic = astEaseElastic;
+    window.astSquashStretch = astSquashStretch;
   }
 
   /**
@@ -425,6 +554,12 @@
           eased = progress < 0.5 ? 2 * progress * progress : 1 - Math.pow(-2 * progress + 2, 2) / 2;
         } else if (tr.easing === 'easeOut') {
           eased = 1 - Math.pow(1 - progress, 3);
+        } else if (tr.easing === 'bounce') {
+          eased = astEaseBounce(progress);
+        } else if (tr.easing === 'elastic') {
+          eased = astEaseElastic(progress);
+        } else if (tr.easing === 'backOut' || tr.easing === 'anticipation') {
+          eased = astEaseBack(progress);
         }
 
         for (const [targetSelector, toProps] of Object.entries(tr.toAttrs)) {
@@ -1267,6 +1402,93 @@
           this.humGain = null;
         }
       }
+    }
+
+    playBoing(baseFreq = 220) {
+      if (this.muted || !this.ensureContext()) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(baseFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.4, now + 0.12);
+        osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, now + 0.28);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.31);
+      } catch (e) {}
+    }
+
+    playSlideWhistle(startFreq = 280, endFreq = 840, duration = 0.35) {
+      if (this.muted || !this.ensureContext()) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(startFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.16, now + 0.03);
+        gain.gain.setValueAtTime(0.16, now + duration - 0.04);
+        gain.gain.linearRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      } catch (e) {}
+    }
+
+    playPop(freq = 620) {
+      if (this.muted || !this.ensureContext()) return;
+      try {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const now = this.ctx.currentTime;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now);
+        osc.frequency.exponentialRampToValueAtTime(freq * 0.25, now + 0.04);
+        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.045);
+      } catch (e) {}
+    }
+
+    playWhoosh() {
+      if (this.muted || !this.ensureContext()) return;
+      try {
+        const bufferSize = Math.floor(this.ctx.sampleRate * 0.25);
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = buffer;
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'bandpass';
+        filter.Q.value = 3.0;
+        const now = this.ctx.currentTime;
+        filter.frequency.setValueAtTime(200, now);
+        filter.frequency.exponentialRampToValueAtTime(1400, now + 0.12);
+        filter.frequency.exponentialRampToValueAtTime(300, now + 0.24);
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.25, now + 0.1);
+        gain.gain.linearRampToValueAtTime(0.001, now + 0.24);
+        noise.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+        noise.start(now);
+        noise.stop(now + 0.25);
+      } catch (e) {}
     }
   }
 
@@ -4136,7 +4358,7 @@
             if (node) {
               let evalFn = () => 0;
               try {
-                evalFn = new Function('t', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor', `"use strict"; return (${b.expr});`);
+                evalFn = new Function('t', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor', 'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch', `"use strict"; return (${b.expr});`);
               } catch (e) {
                 console.warn('[AST Engine] Failed compiling expr:', b.expr, e);
               }
@@ -4521,7 +4743,7 @@
           const b = this.activeBindings[i];
           if (b.node) {
             try {
-              const val = b.evalFn(t, v, Math, v, astMorphPath, astMorphColor);
+              const val = b.evalFn(t, v, Math, v, astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch);
               if (b.lastVal !== val) {
                 b.lastVal = val;
                 if (b.attr === 'textContent') {
@@ -5573,6 +5795,18 @@
           break;
         case 'AUDIO_PLAY_SPRING':
           if (engine.audioSynth) engine.audioSynth.playSpring(data.freq || 440);
+          break;
+        case 'AUDIO_PLAY_BOING':
+          if (engine.audioSynth) engine.audioSynth.playBoing(data.freq || 220);
+          break;
+        case 'AUDIO_PLAY_WHISTLE':
+          if (engine.audioSynth) engine.audioSynth.playSlideWhistle(data.startFreq || 280, data.endFreq || 840, data.duration || 0.35);
+          break;
+        case 'AUDIO_PLAY_POP':
+          if (engine.audioSynth) engine.audioSynth.playPop(data.freq || 620);
+          break;
+        case 'AUDIO_PLAY_WHOOSH':
+          if (engine.audioSynth) engine.audioSynth.playWhoosh();
           break;
         case 'AUDIO_SET_HUM':
           if (engine.audioSynth) engine.audioSynth.setHum(data.freq || 60, data.volume || 0.05);
