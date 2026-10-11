@@ -4119,6 +4119,8 @@
         prevClean = clean;
         clean = clean
           .replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, '')
+          .replace(/<script\b[^>]*>/gi, '')
+          .replace(/<script\b/gi, '')
           .replace(/<foreignObject\b[\s\S]*?<\/foreignObject\b[^>]*>/gi, '')
           .replace(/<iframe\b[\s\S]*?<\/iframe\b[^>]*>/gi, '')
           .replace(/<object\b[\s\S]*?<\/object\b[^>]*>/gi, '')
