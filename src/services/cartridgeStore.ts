@@ -16,6 +16,22 @@
 
 import { transpilePhetFile, isPhetBundle, extractPhetMetadata } from '../utils/phetBridge';
 import { transpileSwfToAst } from '../utils/swfAstParser';
+import {
+  putVaultCartridge,
+  getVaultCartridge,
+  getAllVaultCartridges,
+  deleteVaultCartridge,
+  countVaultCartridges,
+  hasVaultCartridge,
+  type VaultCartridgeRecord,
+} from './dbStore';
+import {
+  compressCartridge,
+  decompressCartridge,
+  compressCartridgeBundle,
+  decompressCartridgeBundle,
+  type CompressedCartridgeMetadata,
+} from '../utils/cartridgeCompression';
 
 export interface CartridgeDefinition {
   id: string;
@@ -590,19 +606,122 @@ export const EMBEDDED_CORE_CARTRIDGES: Record<string, { svg: string; ast: string
   }
 };
 
-// In-memory cache
+// In-memory cache for 60 FPS zero-disk live access
 let inMemoryCartridgesCache: CartridgeDefinition[] | null = null;
+let isVaultInitialized = false;
+let vaultInitPromise: Promise<void> | null = null;
 
 /**
- * Returns all custom & PhET imported cartridges stored in browser localStorage
+ * Initializes the decentralized IndexedDB cartridge vault:
+ * 1. Loads all expanded cartridges from IndexedDB into RAM.
+ * 2. Migrates legacy localStorage cartridges to IndexedDB.
+ * 3. Pre-expands core embedded cartridges so zero network requests are needed offline.
+ */
+export async function initCartridgeVault(): Promise<void> {
+  if (isVaultInitialized) return;
+  if (vaultInitPromise) return vaultInitPromise;
+
+  vaultInitPromise = (async () => {
+    try {
+      // 1. Read existing cartridges from IndexedDB vault
+      const vaultItems = await getAllVaultCartridges();
+
+      // 2. Read legacy localStorage items
+      let localItems: CartridgeDefinition[] = [];
+      if (typeof window !== 'undefined') {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CARTRIDGES);
+          if (raw) localItems = JSON.parse(raw);
+        } catch {}
+      }
+
+      // 3. Merge and migrate into IndexedDB
+      const mergedMap = new Map<string, CartridgeDefinition>();
+      vaultItems.forEach((v) => mergedMap.set(v.id, v as CartridgeDefinition));
+
+      for (const item of localItems) {
+        if (!mergedMap.has(item.id)) {
+          mergedMap.set(item.id, item);
+          await putVaultCartridge(item as VaultCartridgeRecord);
+        }
+      }
+
+      // 4. Pre-expand embedded core simulations (e.g. Pythagoras) into vault if not present
+      for (const [id, core] of Object.entries(EMBEDDED_CORE_CARTRIDGES)) {
+        if (!mergedMap.has(id)) {
+          const coreDef: CartridgeDefinition = {
+            id,
+            title: id.charAt(0).toUpperCase() + id.slice(1),
+            stage: 'CURRICULUM',
+            category: 'STEM',
+            desc: 'Pre-expanded offline core vector simulation.',
+            icon: '📐',
+            source: 'builtin',
+            svgMarkup: core.svg,
+            astSource: core.ast,
+            updatedAt: Date.now(),
+          };
+          mergedMap.set(id, coreDef);
+          await putVaultCartridge(coreDef as VaultCartridgeRecord);
+        }
+      }
+
+      inMemoryCartridgesCache = Array.from(mergedMap.values());
+
+      // 5. Synchronize into runtime ASTSceneRegistry if present in global scope
+      if (typeof window !== 'undefined') {
+        const g = window as any;
+        if (g.ASTSceneRegistry && typeof g.ASTSceneRegistry.register === 'function') {
+          for (const cart of inMemoryCartridgesCache) {
+            if (cart.svgMarkup && cart.astSource) {
+              g.ASTSceneRegistry.register(cart.id, {
+                id: cart.id,
+                title: cart.title,
+                stage: cart.stage,
+                svgMarkup: cart.svgMarkup,
+                astSource: cart.astSource,
+              });
+            }
+          }
+        }
+      }
+
+      isVaultInitialized = true;
+    } catch (err) {
+      console.warn('[cartridgeStore] Failed to initialize cartridge vault:', err);
+    }
+  })();
+
+  return vaultInitPromise;
+}
+
+// Auto-bootstrap vault in browser environments
+if (typeof window !== 'undefined') {
+  initCartridgeVault().catch(() => {});
+}
+
+/**
+ * Returns all custom & PhET imported cartridges.
+ * Uses in-memory Tier 0 cache first, falling back to localStorage if IndexedDB is still booting.
  */
 export function getCustomCartridges(): CartridgeDefinition[] {
   if (typeof window === 'undefined') return [];
+  if (inMemoryCartridgesCache !== null) {
+    return inMemoryCartridgesCache;
+  }
+
+  // Trigger background vault expansion if not yet initialized
+  if (!isVaultInitialized) {
+    initCartridgeVault().catch(() => {});
+  }
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CARTRIDGES);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    const result = Array.isArray(parsed) ? parsed : [];
+    inMemoryCartridgesCache = result;
+    return result;
   } catch (err) {
     console.warn('[cartridgeStore] Failed to read custom cartridges:', err);
     return [];
@@ -702,50 +821,131 @@ export function getCartridge(idOrAlias: string): CartridgeDefinition | null {
 }
 
 /**
- * Saves or updates a custom cartridge to decentralized storage
+ * Saves or updates a cartridge to decentralized storage (IndexedDB Vault + RAM)
  */
 export function saveCustomCartridge(cartridge: CartridgeDefinition): void {
   if (typeof window === 'undefined') return;
   const existing = getCustomCartridges().filter((c) => c.id !== cartridge.id);
-  const updated = [{ ...cartridge, updatedAt: Date.now() }, ...existing];
+  const updatedItem: CartridgeDefinition = { ...cartridge, updatedAt: Date.now() };
+  const updated = [updatedItem, ...existing];
+
+  // 1. Update Tier 0 in-memory cache instantly
+  inMemoryCartridgesCache = updated;
+
+  // 2. Asynchronously persist to IndexedDB Vault (non-blocking)
+  putVaultCartridge(updatedItem as VaultCartridgeRecord).catch((err) => {
+    console.warn('[cartridgeStore] IndexedDB vault save error:', err);
+  });
+
+  // 3. Fallback write to localStorage
   try {
     localStorage.setItem(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(updated));
-    inMemoryCartridgesCache = null;
-
-    // Synchronize into runtime ASTSceneRegistry if available
-    const g = window as any;
-    if (g.ASTSceneRegistry && typeof g.ASTSceneRegistry.register === 'function') {
-      g.ASTSceneRegistry.register(cartridge.id, {
-        id: cartridge.id,
-        title: cartridge.title,
-        stage: cartridge.stage,
-        svgMarkup: cartridge.svgMarkup,
-        astSource: cartridge.astSource,
-      });
-    }
-
-    window.dispatchEvent(new Event('cartridges_updated'));
-    window.dispatchEvent(new Event('storage'));
-  } catch (err) {
-    console.error('[cartridgeStore] Storage quota error saving cartridge:', err);
+  } catch {
+    // If quota exceeded in localStorage, IndexedDB still holds the record!
   }
+
+  // 4. Synchronize into runtime ASTSceneRegistry if available
+  const g = window as any;
+  if (g.ASTSceneRegistry && typeof g.ASTSceneRegistry.register === 'function') {
+    g.ASTSceneRegistry.register(cartridge.id, {
+      id: cartridge.id,
+      title: cartridge.title,
+      stage: cartridge.stage,
+      svgMarkup: cartridge.svgMarkup,
+      astSource: cartridge.astSource,
+    });
+  }
+
+  window.dispatchEvent(new Event('cartridges_updated'));
+  window.dispatchEvent(new Event('storage'));
 }
 
 /**
- * Deletes a custom cartridge from decentralized storage
+ * Deletes a custom cartridge from decentralized storage (IndexedDB Vault + RAM)
  */
 export function deleteCustomCartridge(cartridgeId: string): void {
   if (typeof window === 'undefined') return;
   const canonicalId = normalizeCartridgeId(cartridgeId);
   const filtered = getCustomCartridges().filter((c) => c.id !== canonicalId && c.id !== cartridgeId);
+
+  // 1. Update in-memory cache
+  inMemoryCartridgesCache = filtered;
+
+  // 2. Asynchronously delete from IndexedDB vault
+  deleteVaultCartridge(canonicalId).catch((err) => {
+    console.warn('[cartridgeStore] IndexedDB vault delete error:', err);
+  });
+
+  // 3. Update localStorage fallback
   try {
     localStorage.setItem(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(filtered));
-    inMemoryCartridgesCache = null;
-    window.dispatchEvent(new Event('cartridges_updated'));
-    window.dispatchEvent(new Event('storage'));
   } catch (err) {
-    console.error('[cartridgeStore] Failed to delete cartridge:', err);
+    console.error('[cartridgeStore] Failed to delete cartridge from localStorage:', err);
   }
+
+  window.dispatchEvent(new Event('cartridges_updated'));
+  window.dispatchEvent(new Event('storage'));
+}
+
+/**
+ * Expands a compressed cartridge (Uint8Array gzip or Base64 string) directly into the IndexedDB Vault
+ */
+export async function expandCompressedCartridgeToVault(
+  compressedData: Uint8Array | string
+): Promise<CartridgeDefinition> {
+  const cartridge = await decompressCartridge(compressedData);
+  saveCustomCartridge(cartridge);
+  return cartridge;
+}
+
+/**
+ * Expands a compressed cartridge bundle directly into the IndexedDB Vault
+ */
+export async function expandCompressedBundleToVault(
+  compressedPayload: string | Uint8Array
+): Promise<CartridgeDefinition[]> {
+  const cartridges = await decompressCartridgeBundle(compressedPayload);
+  for (const c of cartridges) {
+    saveCustomCartridge(c);
+  }
+  return cartridges;
+}
+
+/**
+ * Compresses an existing cartridge into a compact gzip binary or Base64 capsule for optical QR or P2P mesh
+ */
+export async function exportCompressedCartridge(cartridgeId: string): Promise<{
+  cartridge: CartridgeDefinition;
+  compressedBytes: Uint8Array;
+  base64: string;
+  metadata: CompressedCartridgeMetadata;
+}> {
+  const cartridge = getCartridge(cartridgeId);
+  if (!cartridge) {
+    throw new Error(`Cartridge [${cartridgeId}] not found in store`);
+  }
+  const result = await compressCartridge(cartridge);
+  return {
+    cartridge,
+    ...result,
+  };
+}
+
+/**
+ * Returns current metrics on the offline IndexedDB Cartridge Vault
+ */
+export async function getVaultStats(): Promise<{
+  isInitialized: boolean;
+  vaultCount: number;
+  memoryCount: number;
+}> {
+  const vaultCount = await countVaultCartridges();
+  const memoryCount = inMemoryCartridgesCache ? inMemoryCartridgesCache.length : 0;
+  return {
+    isInitialized: isVaultInitialized,
+    vaultCount,
+    memoryCount,
+  };
 }
 
 /**

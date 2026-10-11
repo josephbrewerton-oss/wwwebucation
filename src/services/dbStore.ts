@@ -2,7 +2,7 @@
 import { DomainManifest } from '../types/learning-ast';
 
 const DB_NAME = 'EdgeLearningEngineDB';
-const DB_VERSION = 4; // Version 4: In-Context Lesson Schemas & Logic Inflation
+const DB_VERSION = 5; // Version 5: Decentralized Cartridge Vault & Zero-Disk Expansion
 
 const STORE_MANIFESTS = 'manifests';
 const STORE_PROGRESS = 'student_progress';
@@ -10,6 +10,7 @@ export const STORE_VIEWS = 'vfs_views';
 const STORE_ADAPTERS = 'dynamic_adapters';
 const STORE_AST_BANK = 'ast_bank';
 const STORE_LESSONS = 'lessons';
+export const STORE_CARTRIDGES_VAULT = 'cartridges_vault';
 
 export interface StudentRecord {
   cohortCode: string;
@@ -152,6 +153,15 @@ export function openLocalDB(): Promise<IDBDatabase> {
       // 6. Cached Pedagogical Lessons & Logic Point Inflations
       if (!db.objectStoreNames.contains(STORE_LESSONS)) {
         db.createObjectStore(STORE_LESSONS, { keyPath: 'key' });
+      }
+
+      // 7. Decentralized Cartridge Vault (Zero-Disk Hot Expansion)
+      if (!db.objectStoreNames.contains(STORE_CARTRIDGES_VAULT)) {
+        const cartStore = db.createObjectStore(STORE_CARTRIDGES_VAULT, { keyPath: 'id' });
+        cartStore.createIndex('category', 'category', { unique: false });
+        cartStore.createIndex('stage', 'stage', { unique: false });
+        cartStore.createIndex('source', 'source', { unique: false });
+        cartStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
     };
 
@@ -750,4 +760,125 @@ export async function purgeInactiveManifests(
 
     keysReq.onerror = () => reject(keysReq.error);
   });
+}
+
+// =========================================================================
+// DECENTRALIZED CARTRIDGE VAULT OPERATIONS (IndexedDB Zero-Disk Expansion)
+// =========================================================================
+
+export interface VaultCartridgeRecord {
+  id: string;
+  title: string;
+  stage: string;
+  category: string;
+  type?: 'Sim' | 'Slide' | 'App';
+  desc: string;
+  icon: string;
+  source: 'builtin' | 'phet' | 'user' | 'imported';
+  svgMarkup?: string;
+  astSource?: string;
+  svgFile?: string;
+  astFile?: string;
+  author?: string;
+  version?: string;
+  invariants?: string[];
+  createdAt?: number;
+  updatedAt?: number;
+  compressedBytes?: number;
+}
+
+/**
+ * Persists an expanded cartridge into the local IndexedDB vault.
+ * Once stored, this cartridge runs completely offline with ZERO network downloads.
+ */
+export async function putVaultCartridge(cartridge: VaultCartridgeRecord): Promise<void> {
+  const db = await openLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CARTRIDGES_VAULT, 'readwrite');
+    const store = tx.objectStore(STORE_CARTRIDGES_VAULT);
+    const req = store.put({
+      ...cartridge,
+      updatedAt: cartridge.updatedAt || Date.now(),
+    });
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Retrieves a single expanded cartridge from IndexedDB vault by canonical ID
+ */
+export async function getVaultCartridge(id: string): Promise<VaultCartridgeRecord | null> {
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_CARTRIDGES_VAULT, 'readonly');
+      const store = tx.objectStore(STORE_CARTRIDGES_VAULT);
+      const req = store.get(id);
+      req.onsuccess = () => resolve((req.result as VaultCartridgeRecord) || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to retrieve vault cartridge:', err);
+    return null;
+  }
+}
+
+/**
+ * Retrieves all expanded cartridges currently in the IndexedDB vault
+ */
+export async function getAllVaultCartridges(): Promise<VaultCartridgeRecord[]> {
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_CARTRIDGES_VAULT, 'readonly');
+      const store = tx.objectStore(STORE_CARTRIDGES_VAULT);
+      const req = store.getAll();
+      req.onsuccess = () => resolve((req.result as VaultCartridgeRecord[]) || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to get all vault cartridges:', err);
+    return [];
+  }
+}
+
+/**
+ * Removes a cartridge from the IndexedDB vault
+ */
+export async function deleteVaultCartridge(id: string): Promise<void> {
+  const db = await openLocalDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_CARTRIDGES_VAULT, 'readwrite');
+    const store = tx.objectStore(STORE_CARTRIDGES_VAULT);
+    const req = store.delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+/**
+ * Returns total count of cartridges cached offline in the IndexedDB vault
+ */
+export async function countVaultCartridges(): Promise<number> {
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_CARTRIDGES_VAULT, 'readonly');
+      const store = tx.objectStore(STORE_CARTRIDGES_VAULT);
+      const req = store.count();
+      req.onsuccess = () => resolve(req.result || 0);
+      req.onerror = () => resolve(0);
+    });
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * Checks whether a cartridge is already expanded in the IndexedDB vault
+ */
+export async function hasVaultCartridge(id: string): Promise<boolean> {
+  const found = await getVaultCartridge(id);
+  return found !== null;
 }
