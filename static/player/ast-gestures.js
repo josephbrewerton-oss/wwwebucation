@@ -282,6 +282,43 @@
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
+      // 9d. DNA Double Helix Base-Pair Rung Inspection (Zero-Bloat Harmonic Discovery)
+      const dnaStrands = this.stageSvg.querySelector('#dna-strands');
+      if (dnaStrands) {
+        for (let i = 0; i < 18; i++) {
+          const line = this.stageSvg.querySelector(`#dna-line-${i}`);
+          const ca = this.stageSvg.querySelector(`#dna-ca-${i}`);
+          const cb = this.stageSvg.querySelector(`#dna-cb-${i}`);
+          const isAT = (i % 2 === 0);
+          const baseName = isAT ? 'Adenine = Thymine (2 Hydrogen Bonds)' : 'Cytosine ≡ Guanine (3 Hydrogen Bonds)';
+          const targets = [line, ca, cb].filter(Boolean);
+          targets.forEach(node => {
+            node.style.cursor = 'pointer';
+            node.setAttribute('data-pedagogical', `dna-rung-${i}`);
+            node.setAttribute('data-pedagogical-label', baseName);
+            if (!node._hasDnaClick) {
+              node._hasDnaClick = true;
+              node.addEventListener('pointerdown', (ev) => {
+                ev.stopPropagation();
+                if (isAT) {
+                  this.playAudioTone(523.25, 'sine', 0.12, 0.18);
+                  setTimeout(() => this.playAudioTone(659.25, 'sine', 0.14, 0.2), 60);
+                } else {
+                  this.playAudioTone(440.0, 'sine', 0.12, 0.18);
+                  setTimeout(() => this.playAudioTone(554.37, 'sine', 0.12, 0.2), 60);
+                  setTimeout(() => this.playAudioTone(659.25, 'sine', 0.16, 0.22), 120);
+                }
+                const statusEl = this.stageSvg.querySelector('#dna-status-text');
+                if (statusEl) {
+                  statusEl.textContent = `Inspected Rung #${i + 1}: ${baseName}`;
+                  statusEl.setAttribute('fill', isAT ? '#f87171' : '#60a5fa');
+                }
+              });
+            }
+          });
+        }
+      }
+
       // 10. Dynamic Declarative Scene Gestures
       const scene = this.engine && this.engine.scene;
       if (scene && scene.gestures && Array.isArray(scene.gestures)) {

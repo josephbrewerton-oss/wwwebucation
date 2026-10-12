@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T08:09:33.180Z",
+  "generatedAt": "2026-10-12T09:36:41.802Z",
   "totalScenes": 21,
   "inputDirs": [
     "static/player/scenes",
@@ -253,7 +253,7 @@
     },
     {
       "id": "dna-helix",
-      "type": "Slide",
+      "type": "Sim",
       "title": "Genetics: DNA Base Pairing & Transcription",
       "stage": "KS3 GENETICS",
       "duration": 12,
@@ -263,7 +263,7 @@
       "astFile": "scenes/dna-helix.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 18
+      "bindingsCount": 19
     },
     {
       "id": "algebra-balance",

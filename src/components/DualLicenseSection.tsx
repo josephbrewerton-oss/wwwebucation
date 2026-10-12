@@ -56,6 +56,16 @@ export default function DualLicenseSection(): React.JSX.Element {
       details:
         'Because GNU AGPLv3 requires reciprocal open-sourcing of network services, closed-source commercial platforms must obtain a Track B Commercial License. 100% of commercial proceeds fund free school hardware and translations.',
     },
+    {
+      id: 'signage_adtech',
+      label: 'Digital Signage (DOOH) / Advertising Network / Kiosks',
+      desc: 'Deploying the AST engine across digital billboards, retail kiosks, menu boards, or IAB rich-media ad networks.',
+      track: 'B',
+      verdict: 'Track B: Enterprise Commercial License',
+      cost: 'Enterprise Fleet / AdTech License',
+      details:
+        'Commercial DOOH operators, programmatic ad platforms, and interactive kiosk OEMs obtain full closed-source deployment rights, zero-telemetry hardware binaries, and enterprise indemnity. 100% of license proceeds cross-subsidise free classroom hardware for disadvantaged pupils.',
+    },
   ];
 
   const activeScenario = scenarios.find((s) => s.id === selectedScenario) || scenarios[0];

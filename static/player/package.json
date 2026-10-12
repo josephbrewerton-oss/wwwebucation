@@ -1,7 +1,7 @@
 {
   "name": "@stjosephs/ast-vector-player",
   "version": "2.5.0",
-  "description": "AST-Guided Low-Bloat Vector Motion Player & Media Suite in Sandboxed iFrame",
+  "description": "AST-Guided Low-Bloat Vector Motion & Interactive Graphics Player (<35 KB) for Curriculum, Digital Signage, DOOH, and Programmatic Rich-Media Advertising",
   "main": "ast-engine.js",
   "module": "ast-engine.js",
   "style": "player.css",
@@ -13,6 +13,7 @@
     "./micro": "./micro-vector-player.js",
     "./compiler": "./ast-compiler.js",
     "./obs": "./obs-controller.js",
+    "./webrtc": "./ast-webrtc-bus.js",
     "./player.css": "./player.css"
   },
   "files": [
@@ -20,6 +21,7 @@
     "player.css",
     "ast-engine.js",
     "ast-compiler.js",
+    "ast-webrtc-bus.js",
     "obs-controller.js",
     "ast-registry.js",
     "player-ui.js",
@@ -41,6 +43,12 @@
     "svg-player",
     "iframe-player",
     "zero-bloat",
+    "digital-signage",
+    "dooh",
+    "rich-media-advertising",
+    "iab-display-ads",
+    "dynamic-creative-optimization",
+    "interactive-kiosks",
     "educational-manipulative",
     "lms-embed",
     "web-speech",

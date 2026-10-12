@@ -1,3 +1,7 @@
+# St Joseph's Curriculum Portal & AST Vector Player Suite
+# Architecture: Dual-Market (Track A: Open Humanitarian Education, Track B: Enterprise Digital Signage, DOOH & AdTech)
+# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /docs/AST_PLAYER_SPECIFICATION.md
+
 User-agent: *
 Allow: /
 Allow: /media-player

@@ -125,6 +125,24 @@
         qbExplanation: document.getElementById('qb-explanation'),
         qbBtnInsert: document.getElementById('qb-btn-insert'),
         qbExistingList: document.getElementById('qb-existing-list'),
+        btnWebRtcLink: document.getElementById('btn-webrtc-link'),
+        webrtcStatusDot: document.getElementById('webrtc-status-dot'),
+        webrtcDrawer: document.getElementById('webrtc-drawer'),
+        webrtcDrawerBadge: document.getElementById('webrtc-drawer-badge'),
+        webrtcDrawerClose: document.getElementById('webrtc-drawer-close'),
+        btnWebRtcLoopback: document.getElementById('btn-webrtc-loopback'),
+        btnWebRtcCreateOffer: document.getElementById('btn-webrtc-create-offer'),
+        btnWebRtcJoinRoom: document.getElementById('btn-webrtc-join-room'),
+        webrtcRoleReadout: document.getElementById('webrtc-role-readout'),
+        webrtcLatencyReadout: document.getElementById('webrtc-latency-readout'),
+        webrtcExchangeArea: document.getElementById('webrtc-exchange-area'),
+        webrtcExchangeLabel: document.getElementById('webrtc-exchange-label'),
+        webrtcTokenBox: document.getElementById('webrtc-token-box'),
+        btnWebRtcCopyToken: document.getElementById('btn-webrtc-copy-token'),
+        btnWebRtcConfirmToken: document.getElementById('btn-webrtc-confirm-token'),
+        webrtcAiInput: document.getElementById('webrtc-ai-input'),
+        btnWebRtcAiAsk: document.getElementById('btn-webrtc-ai-ask'),
+        webrtcAiOutput: document.getElementById('webrtc-ai-output'),
         btnObsLink: document.getElementById('btn-obs-link'),
         obsStatusDot: document.getElementById('obs-status-dot'),
         obsDrawer: document.getElementById('obs-drawer'),
@@ -2176,6 +2194,140 @@ window.addEventListener('message', (e) => {
         });
       }
 
+      // WebRTC P2P Mesh & AI Link Controls
+      if (el.btnWebRtcLink) {
+        el.btnWebRtcLink.addEventListener('click', () => {
+          this.toggleWebRtcDrawer();
+        });
+      }
+
+      if (el.webrtcDrawerClose) {
+        el.webrtcDrawerClose.addEventListener('click', () => {
+          this.closeWebRtcDrawer();
+        });
+      }
+
+      if (el.btnWebRtcLoopback) {
+        el.btnWebRtcLoopback.addEventListener('click', async () => {
+          if (!window.AST_WEBRTC) {
+            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
+          }
+          const bus = window.AST_WEBRTC;
+          this.showToast('⚡ Connecting Local On-Device AI Loopback...');
+          const ok = await bus.initLoopback();
+          if (ok) {
+            this.updateWebRtcStatusUI(true, 'loopback_ai');
+            this.showToast('✅ WebRTC Local Loopback Online');
+            if (el.webrtcAiOutput) {
+              el.webrtcAiOutput.innerHTML = '✨ <strong>Loopback Bus Active</strong> (0 ms UDP). Chrome Prompt API &amp; Gemini Nano linked.';
+            }
+          }
+        });
+      }
+
+      if (el.btnWebRtcCreateOffer) {
+        el.btnWebRtcCreateOffer.addEventListener('click', async () => {
+          if (!window.AST_WEBRTC) {
+            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
+          }
+          const bus = window.AST_WEBRTC;
+          this.showToast('📡 Gathering ICE candidates for Host Room...');
+          try {
+            const token = await bus.createRoomOffer();
+            if (el.webrtcExchangeArea && el.webrtcTokenBox) {
+              el.webrtcExchangeArea.style.display = 'flex';
+              if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Room Offer Token (Share with follower):';
+              el.webrtcTokenBox.value = token;
+              this.updateWebRtcStatusUI(true, 'host');
+              this.showToast('📋 Room Offer Token Ready — copy to share');
+            }
+          } catch (err) {
+            this.showToast('⚠️ Failed to generate room offer: ' + err.message);
+          }
+        });
+      }
+
+      if (el.btnWebRtcJoinRoom) {
+        el.btnWebRtcJoinRoom.addEventListener('click', () => {
+          if (el.webrtcExchangeArea && el.webrtcTokenBox) {
+            el.webrtcExchangeArea.style.display = 'flex';
+            if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Paste Host Room Token below:';
+            el.webrtcTokenBox.value = '';
+            el.webrtcTokenBox.focus();
+            this.showToast('🔗 Paste host token and click Connect Peer');
+          }
+        });
+      }
+
+      if (el.btnWebRtcCopyToken) {
+        el.btnWebRtcCopyToken.addEventListener('click', () => {
+          if (el.webrtcTokenBox && el.webrtcTokenBox.value) {
+            navigator.clipboard.writeText(el.webrtcTokenBox.value).then(() => {
+              this.showToast('✓ Token Copied to Clipboard!');
+            }).catch(() => {});
+          }
+        });
+      }
+
+      if (el.btnWebRtcConfirmToken) {
+        el.btnWebRtcConfirmToken.addEventListener('click', async () => {
+          if (!window.AST_WEBRTC) {
+            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
+          }
+          const bus = window.AST_WEBRTC;
+          const rawToken = el.webrtcTokenBox ? el.webrtcTokenBox.value.trim() : '';
+          if (!rawToken) {
+            this.showToast('⚠️ Please paste a connection token first');
+            return;
+          }
+          try {
+            if (bus.role === 'host') {
+              // Consume client's answer
+              await bus.completeHandshake(rawToken);
+              this.updateWebRtcStatusUI(true, 'host');
+              this.showToast('🎉 Peer Handshake Complete! Broadcasting master clock.');
+            } else {
+              // Join as client and generate answer
+              const answer = await bus.acceptOfferAndCreateAnswer(rawToken);
+              if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Send this Answer Token back to Host:';
+              el.webrtcTokenBox.value = answer;
+              this.updateWebRtcStatusUI(true, 'follower');
+              this.showToast('📋 Answer token generated! Share back with host.');
+            }
+          } catch (err) {
+            this.showToast('⚠️ Handshake error: ' + err.message);
+          }
+        });
+      }
+
+      // Edge AI Query input
+      if (el.btnWebRtcAiAsk && el.webrtcAiInput) {
+        const askAiFn = () => {
+          const query = el.webrtcAiInput.value.trim();
+          if (!query) return;
+          if (!window.AST_WEBRTC) {
+            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
+          }
+          const bus = window.AST_WEBRTC;
+          if (el.webrtcAiOutput) {
+            el.webrtcAiOutput.innerHTML = '<span class="ai-dot-pulse"></span> <em>Gemini Nano is evaluating...</em>';
+          }
+          bus.on('aiToken', ({ token }) => {
+            if (el.webrtcAiOutput) el.webrtcAiOutput.innerText += token;
+          });
+          bus.on('aiComplete', ({ fullText }) => {
+            if (el.webrtcAiOutput) el.webrtcAiOutput.innerHTML = `🤖 <strong>Tutor:</strong> ${fullText}`;
+          });
+          bus.processAiPrompt(query);
+          el.webrtcAiInput.value = '';
+        };
+
+        el.btnWebRtcAiAsk.addEventListener('click', askAiFn);
+        el.webrtcAiInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') askAiFn();
+        });
+      }
+
       if (el.btnObsLink) {
         el.btnObsLink.addEventListener('click', () => {
           this.toggleObsDrawer();
@@ -3627,6 +3779,41 @@ window.addEventListener('message', (e) => {
       if (el.btnObsRecordToggle) {
         el.btnObsRecordToggle.textContent = isRecording ? '⏹ Stop OBS Recording' : '⏺ Start OBS Recording';
         el.btnObsRecordToggle.className = 'obs-btn ' + (isRecording ? 'danger' : 'primary');
+      }
+    }
+
+    toggleWebRtcDrawer() {
+      const el = this.elements;
+      if (!el.webrtcDrawer) return;
+      const isHidden = el.webrtcDrawer.classList.contains('hidden');
+      if (isHidden) {
+        this.closeObsDrawer();
+        this.closeSettingsDrawer();
+        el.webrtcDrawer.classList.remove('hidden');
+        if (el.btnWebRtcLink) el.btnWebRtcLink.classList.add('active');
+      } else {
+        this.closeWebRtcDrawer();
+      }
+    }
+
+    closeWebRtcDrawer() {
+      const el = this.elements;
+      if (el.webrtcDrawer) el.webrtcDrawer.classList.add('hidden');
+      if (el.btnWebRtcLink) el.btnWebRtcLink.classList.remove('active');
+    }
+
+    updateWebRtcStatusUI(isConnected, role = 'peer') {
+      const el = this.elements;
+      if (el.webrtcStatusDot) {
+        el.webrtcStatusDot.className = 'obs-status-dot ' + (isConnected ? 'connected' : 'disconnected');
+        el.webrtcStatusDot.style.background = isConnected ? '#10b981' : '#64748b';
+      }
+      if (el.webrtcDrawerBadge) {
+        el.webrtcDrawerBadge.className = 'obs-drawer-badge ' + (isConnected ? 'connected' : 'disconnected');
+        el.webrtcDrawerBadge.textContent = isConnected ? `CONNECTED (${role.toUpperCase()})` : 'DISCONNECTED';
+      }
+      if (el.webrtcRoleReadout) {
+        el.webrtcRoleReadout.textContent = isConnected ? role.toUpperCase() : 'Standalone';
       }
     }
 

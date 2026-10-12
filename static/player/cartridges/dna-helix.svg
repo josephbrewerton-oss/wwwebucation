@@ -48,8 +48,8 @@
     <text x="300" y="22" fill="#f8fafc" font-size="13" font-weight="800" text-anchor="middle" font-family="sans-serif">
       <tspan fill="#ef4444">Adenine (A)</tspan> = <tspan fill="#10b981">Thymine (T)</tspan> [2 H-Bonds] &nbsp;|&nbsp; <tspan fill="#3b82f6">Cytosine (C)</tspan> ≡ <tspan fill="#f59e0b">Guanine (G)</tspan> [3 H-Bonds]
     </text>
-    <text x="300" y="38" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">
-      <tspan fill="#38bdf8">Strand A 5'→3' Backbone</tspan> &nbsp;•&nbsp; <tspan fill="#f472b6">Strand B 3'→5' Backbone</tspan> &nbsp;•&nbsp; Watson-Crick Double Helix
+    <text id="dna-status-text" x="300" y="38" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle" font-family="sans-serif">
+      <tspan fill="#38bdf8">Strand A 5'→3'</tspan> • <tspan fill="#f472b6">Strand B 3'→5'</tspan> • 45 Hydrogen Bonds (100% Intact)
     </text>
   </g>
 

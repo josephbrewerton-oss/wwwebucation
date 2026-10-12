@@ -115,7 +115,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "dna-helix",
-    "type": "Slide",
+    "type": "Sim",
     "label": "Genetics: DNA Base Pairing & Transcription",
     "stage": "KS3 GENETICS"
   },

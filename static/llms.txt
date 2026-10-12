@@ -1,6 +1,6 @@
 # St Joseph's Curriculum Portal — LLM & Edge Inference Map
 
-> Deterministic, privacy-first, on-device AI educational portal running via in-browser WebRTC loopback channels, Chrome Prompt API (Gemini Nano), WebLLM, and autonomous 60 FPS vector media engines. Perpetually free for schools, Catholic organisations, and developing nations.
+> Deterministic, privacy-first, on-device AI educational portal running via in-browser WebRTC loopback channels, Chrome Prompt API (Gemini Nano), WebLLM, and the autonomous <35 KB AST Vector Media Engine. The AST player serves a dual-market architecture: perpetually free for schools and humanitarian commons (Track A), and commercially licensed for enterprise Digital Signage (DOOH), Programmatic Display Advertising, and Interactive Kiosks (Track B).
 
 ## Core Portal Endpoints & Route Map
 - [Portal Home](/) - Overview, Quick Starters, and Subject Hub
@@ -56,6 +56,15 @@
 - **PhET Simulation Ingestion (`ast-phet-bridge.js` & `phetBridge.ts`)**: Distills 12 MB legacy PhET HTML5/JSON bundles down into < 4 KB AST S-Expressions (99.8% payload reduction).
 - **GeoGebra & Desmos Calculus Plotter (`calculusPlotter.ts`)**: Numerical derivative tangent lines, Simpson's 1/3 integration polygons, and stationary point detection.
 - **Micro-SCORM 1.2 / 2004 & xAPI Gradebook Bridge (`MicroSCORMBridge`)**: Zero-dependency gradebook sync for Canvas, Moodle, and Blackboard.
+
+## Cross-Industry Applications: Digital Signage (DOOH) & Programmatic Advertising
+- **Standalone Engine Package (`@stjosephs/ast-vector-player`)**: Standalone < 35 KB gzipped (< 150 KB uncompressed) runtime, decoupled from the school portal and embeddable anywhere via `<micro-vector-player>` Web Component or sandboxed iframe.
+- **IAB Ad-Tech Compliance (< 45 KB Total Ad Weight)**: IAB and Google Display Network mandate initial display ad loads under 150 KB. An entire AST interactive 3D, physics, or particle banner loads under 45 KB total payload (engine + scene), completely bypassing the heavy runtimes of Lottie (~150 KB), GSAP, and Three.js (> 600 KB).
+- **24/7 Digital Signage & DOOH Hardware Reliability**: Consumes < 8 MB RAM with zero garbage collection thrashing. Operates continuously 24/7/365 without memory leaks or crashes on low-cost ARM media players (Raspberry Pi CM4, Rockchip, Android 11 sticks, LG webOS, Samsung Tizen).
+- **Dynamic Creative Optimization (DCO)**: Real-time localized pricing, countdown timers, and weather-driven ad creatives update at 60 FPS via reactive `:vars` without re-rendering video blobs.
+- **Infinite DPI Resolution Independence**: Pure mathematical SVG vector projection scales from a 2-inch supermarket electronic shelf label (ESL) to a 100-foot 8K Times Square LED billboard with zero pixelation and zero bandwidth increase.
+- **Interactive Retail Kiosks & Wayfinding**: Sub-pixel PointerCapture touch/stylus dragging (`ast-gestures.js`) with quadratic Bézier pen smoothing and 0 KB procedural Web Audio UI sonification.
+- **Commercial Dual-Licensing (Track B)**: Enterprise DOOH networks, ad tech providers, and kiosk OEMs license proprietary closed-source rights under Track B (`LICENSING.md`), directly funding humanitarian classroom hardware.
 
 ## Structured Substrates & Machine Manifests
 - [Master Curriculum Catalog](/manifests/catalog.json) - Machine-readable Oak-aligned curriculum manifest
