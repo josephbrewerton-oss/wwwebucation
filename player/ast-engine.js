@@ -631,6 +631,7 @@
       this.radius = Number(config.radius) || 4;
       this.fill = config.fill || '#38bdf8';
       this.wrapMode = config.wrapMode || 'bounce';
+      this.phaseState = config.phaseState || 'gas';
       this.obstacles = [];
       this.cachedSegments = [];
       this.lastAudioImpactTime = 0;
@@ -653,7 +654,9 @@
           vx: Math.cos(angle) * spd,
           vy: Math.sin(angle) * spd,
           radius: this.radius,
-          node: null
+          node: null,
+          latticeX: null,
+          latticeY: null
         });
       }
     }
@@ -761,6 +764,83 @@
         if (p.x > limit) {
           p.x = limit - Math.random() * 15;
           p.vx = -Math.abs(p.vx);
+        }
+      }
+    }
+
+    /**
+     * Dynamically switches particle physical state between Gas, Liquid, and Solid
+     */
+    setPhaseState(state) {
+      const s = String(state || 'gas').toLowerCase();
+      if (this.phaseState === s) return;
+      this.phaseState = s;
+
+      if (s === 'solid') {
+        this.fill = '#a7f3d0';
+        this.speed = 18;
+        this.gravity = 0;
+        this.wrapMode = 'bounce';
+        // Compute lattice anchor coordinates in a stable crystal grid
+        const cols = Math.min(15, Math.ceil(Math.sqrt(this.pool.length * 1.8)));
+        const rows = Math.ceil(this.pool.length / cols);
+        const startX = 80;
+        const startY = 160;
+        const spacingX = Math.min(24, 200 / Math.max(1, cols - 1));
+        const spacingY = Math.min(24, 180 / Math.max(1, rows - 1));
+
+        for (let i = 0; i < this.pool.length; i++) {
+          const col = i % cols;
+          const row = Math.floor(i / cols);
+          const p = this.pool[i];
+          p.latticeX = startX + col * spacingX;
+          p.latticeY = startY + row * spacingY;
+          p.vx = 0;
+          p.vy = 0;
+          if (p.node) {
+            p.node.setAttribute('fill', '#a7f3d0');
+            p.node.setAttribute('r', '4');
+          }
+        }
+      } else if (s === 'liquid') {
+        this.fill = '#06b6d4';
+        this.speed = 65;
+        this.gravity = 140;
+        this.wrapMode = 'bounce';
+        this.bounds.minY = 220;
+        this.bounds.maxY = 374;
+        for (let i = 0; i < this.pool.length; i++) {
+          const p = this.pool[i];
+          p.latticeX = null;
+          p.latticeY = null;
+          if (p.y < 220) p.y = 220 + Math.random() * 80;
+          const angle = Math.random() * Math.PI * 2;
+          p.vx = Math.cos(angle) * 65;
+          p.vy = Math.sin(angle) * 65;
+          if (p.node) {
+            p.node.setAttribute('fill', '#06b6d4');
+            p.node.setAttribute('r', '4.5');
+          }
+        }
+      } else {
+        // Gas state: elastic chaos filling the entire volume
+        this.fill = '#38bdf8';
+        this.speed = 160;
+        this.gravity = 0;
+        this.wrapMode = 'bounce';
+        this.bounds.minY = 86;
+        this.bounds.maxY = 374;
+        for (let i = 0; i < this.pool.length; i++) {
+          const p = this.pool[i];
+          p.latticeX = null;
+          p.latticeY = null;
+          const angle = Math.random() * Math.PI * 2;
+          p.vx = Math.cos(angle) * 160;
+          p.vy = Math.sin(angle) * 160;
+          if (p.node) {
+            p.node.setAttribute('fill', '#38bdf8');
+            p.node.setAttribute('r', '4.5');
+          }
         }
       }
     }
@@ -1041,6 +1121,22 @@
     }
 
     update(dt) {
+      if (this.phaseState === 'solid') {
+        const time = (this.engine && this.engine.realtimeSec != null) ? this.engine.realtimeSec : (performance.now() / 1000);
+        for (let i = 0; i < this.pool.length; i++) {
+          const p = this.pool[i];
+          if (p.latticeX != null && p.latticeY != null) {
+            p.x = p.latticeX + Math.sin(time * 16 + i * 1.6) * 1.5;
+            p.y = p.latticeY + Math.cos(time * 20 + i * 2.2) * 1.5;
+            if (p.node) {
+              p.node.setAttribute('cx', p.x.toFixed(1));
+              p.node.setAttribute('cy', p.y.toFixed(1));
+            }
+          }
+        }
+        return;
+      }
+
       const bounds = this.getEffectiveBounds();
       const minX = bounds.minX;
       const maxX = bounds.maxX;
@@ -2483,7 +2579,15 @@
           if (name === 'particleCount' || name === 'count' || name === 'atoms') {
             gasEm.setCount(val);
           } else if (name === 'temp' || name === 'temperature') {
-            gasEm.setSpeed(160 * Math.sqrt(Math.max(50, val) / 300));
+            const numT = Number(val);
+            gasEm.setSpeed(160 * Math.sqrt(Math.max(50, numT) / 300));
+            if (!this.vars.state) {
+              if (numT <= 140) gasEm.setPhaseState('solid');
+              else if (numT <= 273) gasEm.setPhaseState('liquid');
+              else gasEm.setPhaseState('gas');
+            }
+          } else if (name === 'state' || name === 'phase') {
+            gasEm.setPhaseState(String(val).toLowerCase());
           } else if (name === 'volume') {
             const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
             gasEm.clampToPistonX(pX);
@@ -4835,7 +4939,49 @@
         }
       }
 
-      // 3. Procedural update hook if present
+      // 3. Thermodynamic Gas Emitter Synchronization across timeline & state transitions
+      if (this.activePresetId === 'kinetic-gas' && this.emitters && (this.emitters.has('gas-molecules') || this.emitters.size > 0)) {
+        const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
+        if (gasEm) {
+          const manualState = this.vars && this.vars.state;
+          const manualTemp = this.vars && this.vars.temp;
+          let currentPhase = 'gas';
+          if (manualState) {
+            currentPhase = String(manualState).toLowerCase();
+          } else if (manualTemp !== undefined) {
+            if (manualTemp <= 140) currentPhase = 'solid';
+            else if (manualTemp <= 273) currentPhase = 'liquid';
+            else currentPhase = 'gas';
+          } else {
+            // Auto-play timeline progression:
+            // 0.00 - 0.74: Gas state (isothermal compression & Gay-Lussac heating)
+            // 0.74 - 0.87: Liquid condensation (thermal energy drops below 220 K)
+            // 0.87 - 1.00: Solid cryogenic crystal lattice (85 K)
+            if (t >= 0.87) currentPhase = 'solid';
+            else if (t >= 0.74) currentPhase = 'liquid';
+            else currentPhase = 'gas';
+          }
+
+          gasEm.setPhaseState(currentPhase);
+
+          // Piston limit synchronization
+          let pX = 430;
+          if (this.vars && this.vars.volume !== undefined && this.vars.volume !== null) {
+            pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, this.vars.volume)) - 0.35) / 0.65;
+          } else {
+            pX = t < 0.25 ? 430 : (t < 0.51 ? (430 - 180 * Math.min(1, (t - 0.25) / 0.26)) : (t < 0.74 ? 250 : (250 + 180 * Math.min(1, (t - 0.74) / 0.13))));
+          }
+          gasEm.clampToPistonX(pX);
+
+          // Speed synchronization when in gas state
+          if (currentPhase === 'gas') {
+            const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
+            gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
+          }
+        }
+      }
+
+      // 4. Procedural update hook if present
       if (this.scene && typeof this.scene.update === 'function' && this._cachedElements) {
         this.scene.update(t, this._cachedElements, this, dt);
       }
