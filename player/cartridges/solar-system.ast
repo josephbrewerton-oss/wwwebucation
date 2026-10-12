@@ -1,5 +1,5 @@
 (:scene :id "solar-system" :type "Sim" :title "Solar System: Heliocentric Planetary Motion" :stage "KS3 SCIENCE" :duration 14.0
-  (:camera :distance 450 :pitch 28 :yaw "t * 60" :fov 55)
+  (:camera :distance 580 :pitch 24 :yaw "t * 40" :fov 60)
   (:vars (
     (:var :name "warpSpeed" :val 1.0 :min 0.2 :max 5.0 :step 0.2 :label "Time Dilation Warp")
     (:var :name "showOrbits" :val true :label "Display Orbital Rings")
@@ -36,66 +36,66 @@
     (:target "#sun-body" :type "3d-node" :x "0" :y "0" :z "0" :base-r 26 :depth-fog false)
     (:target "#sun-corona" :type "3d-node" :x "0" :y "0" :z "0" :base-r 38 :depth-fog false)
     
-    (:target "#orbit-mercury" :type "3d-ring" :r "65" :depth-fog true)
-    (:target "#orbit-venus" :type "3d-ring" :r "105" :depth-fog true)
-    (:target "#orbit-earth" :type "3d-ring" :r "155" :depth-fog true)
-    (:target "#orbit-mars" :type "3d-ring" :r "205" :depth-fog true)
-    (:target "#orbit-jupiter" :type "3d-ring" :r "265" :depth-fog true)
-    (:target "#orbit-saturn" :type "3d-ring" :r "330" :depth-fog true)
+    (:target "#orbit-mercury" :type "3d-ring" :r "55" :depth-fog true)
+    (:target "#orbit-venus" :type "3d-ring" :r "90" :depth-fog true)
+    (:target "#orbit-earth" :type "3d-ring" :r "135" :depth-fog true)
+    (:target "#orbit-mars" :type "3d-ring" :r "175" :depth-fog true)
+    (:target "#orbit-jupiter" :type "3d-ring" :r "230" :depth-fog true)
+    (:target "#orbit-saturn" :type "3d-ring" :r "290" :depth-fog true)
 
     (:target "#planet-mercury" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 4.15) * 65"
-      :y "Math.sin(t * Math.PI * 2 * 4.15 * 0.12) * 12"
-      :z "Math.sin(t * Math.PI * 2 * 4.15) * 65"
+      :x "Math.cos(t * Math.PI * 2 * 4.15) * 55"
+      :y "Math.sin(t * Math.PI * 2 * 4.15 * 0.12) * 10"
+      :z "Math.sin(t * Math.PI * 2 * 4.15) * 55"
       :base-r 5
       :label "#label-mercury"
     )
     (:target "#planet-venus" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.62) * 105"
-      :y "Math.sin(t * Math.PI * 2 * 1.62 * 0.15) * 16"
-      :z "Math.sin(t * Math.PI * 2 * 1.62) * 105"
+      :x "Math.cos(t * Math.PI * 2 * 1.62) * 90"
+      :y "Math.sin(t * Math.PI * 2 * 1.62 * 0.15) * 14"
+      :z "Math.sin(t * Math.PI * 2 * 1.62) * 90"
       :base-r 8
       :label "#label-venus"
     )
     (:target "#planet-earth" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.00) * 155"
-      :y "Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 18"
-      :z "Math.sin(t * Math.PI * 2 * 1.00) * 155"
+      :x "Math.cos(t * Math.PI * 2 * 1.00) * 135"
+      :y "Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 16"
+      :z "Math.sin(t * Math.PI * 2 * 1.00) * 135"
       :base-r 9
       :label "#label-earth"
     )
     (:target "#moon-earth" :type "3d-node"
-      :x "(Math.cos(t * Math.PI * 2 * 1.00) * 155) + Math.cos(t * Math.PI * 2 * 12) * 20"
-      :y "(Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 18) + Math.sin(t * Math.PI * 2 * 12) * 6"
-      :z "(Math.sin(t * Math.PI * 2 * 1.00) * 155) + Math.sin(t * Math.PI * 2 * 12) * 20"
+      :x "(Math.cos(t * Math.PI * 2 * 1.00) * 135) + Math.cos(t * Math.PI * 2 * 12) * 18"
+      :y "(Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 16) + Math.sin(t * Math.PI * 2 * 12) * 5"
+      :z "(Math.sin(t * Math.PI * 2 * 1.00) * 135) + Math.sin(t * Math.PI * 2 * 12) * 18"
       :base-r 2.5
     )
     (:target "#planet-mars" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.53) * 205"
-      :y "Math.sin(t * Math.PI * 2 * 0.53 * 0.18) * 22"
-      :z "Math.sin(t * Math.PI * 2 * 0.53) * 205"
+      :x "Math.cos(t * Math.PI * 2 * 0.53) * 175"
+      :y "Math.sin(t * Math.PI * 2 * 0.53 * 0.18) * 18"
+      :z "Math.sin(t * Math.PI * 2 * 0.53) * 175"
       :base-r 6
       :label "#label-mars"
     )
     (:target "#planet-jupiter" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.24) * 265"
-      :y "Math.sin(t * Math.PI * 2 * 0.24 * 0.08) * 24"
-      :z "Math.sin(t * Math.PI * 2 * 0.24) * 265"
+      :x "Math.cos(t * Math.PI * 2 * 0.24) * 230"
+      :y "Math.sin(t * Math.PI * 2 * 0.24 * 0.08) * 20"
+      :z "Math.sin(t * Math.PI * 2 * 0.24) * 230"
       :base-r 14
       :label "#label-jupiter"
     )
     (:target "#planet-saturn" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.10) * 330"
-      :y "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 28"
-      :z "Math.sin(t * Math.PI * 2 * 0.10) * 330"
+      :x "Math.cos(t * Math.PI * 2 * 0.10) * 290"
+      :y "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 24"
+      :z "Math.sin(t * Math.PI * 2 * 0.10) * 290"
       :base-r 11
       :label "#label-saturn"
     )
     (:target "#saturn-ring" :type "3d-ring"
-      :cx "Math.cos(t * Math.PI * 2 * 0.10) * 330"
-      :cy "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 28"
-      :cz "Math.sin(t * Math.PI * 2 * 0.10) * 330"
-      :r "22"
+      :cx "Math.cos(t * Math.PI * 2 * 0.10) * 290"
+      :cy "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 24"
+      :cz "Math.sin(t * Math.PI * 2 * 0.10) * 290"
+      :r "20"
       :tilt-x "25"
       :tilt-z "15"
       :depth-fog true

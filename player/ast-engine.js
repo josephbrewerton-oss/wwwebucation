@@ -2765,7 +2765,7 @@
       const scale = focalLength / safeZ;
       const projX = cx + x3 * scale;
       const projY = cy + y3 * scale;
-      const depthOpacity = Math.min(1.0, Math.max(0.12, 0.35 + 0.65 * (scale / (focalLength / totalDist))));
+      const depthOpacity = Math.min(1.0, Math.max(0.45, 0.55 + 0.45 * (scale / (focalLength / totalDist))));
 
       return {
         x: projX,
@@ -4783,20 +4783,32 @@
 
         // Unified Painter's Algorithm: Sort furthest to closest in SVG DOM
         if (this.active3DItems.length > 1) {
-          const sorted = [...this.active3DItems].sort((a, b) => b.meanZ - a.meanZ);
+          const sorted = [...this.active3DItems].sort((a, b) => {
+            // Orbital guide rings belong in the background layer so dashed lines never cut through solid planet spheres or labels
+            const isOrbitA = a.type === '3d-ring' && a.target && a.target.includes('orbit');
+            const isOrbitB = b.type === '3d-ring' && b.target && b.target.includes('orbit');
+            if (isOrbitA && !isOrbitB) return 1; // Orbit guide rings sort first (rendered into background)
+            if (!isOrbitA && isOrbitB) return -1;
+
+            // Stabilize Saturn ring relative to Saturn body so the ring smoothly surrounds the globe without flickering
+            if (a.target === '#saturn-ring' && b.target === '#planet-saturn') return 1;
+            if (a.target === '#planet-saturn' && b.target === '#saturn-ring') return -1;
+
+            return b.meanZ - a.meanZ;
+          });
           sorted.forEach(item => {
             const cont = this._container;
             if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
               item.domNode.parentNode.appendChild(item.domNode);
-            }
-            if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
-              item.labelNode.parentNode.appendChild(item.labelNode);
             }
             if (item.cap1 && item.cap1.parentNode && cont && cont.contains(item.cap1)) {
               item.cap1.parentNode.appendChild(item.cap1);
             }
             if (item.cap2 && item.cap2.parentNode && cont && cont.contains(item.cap2)) {
               item.cap2.parentNode.appendChild(item.cap2);
+            }
+            if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
+              item.labelNode.parentNode.appendChild(item.labelNode);
             }
           });
         }
