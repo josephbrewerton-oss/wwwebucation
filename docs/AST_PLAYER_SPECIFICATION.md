@@ -224,3 +224,53 @@ While AST was perfected on high-rigour mathematical curriculum simulations, its 
 - Sub-pixel touch gesture capture (`ast-gestures.js`) with quadratic Bézier smoothing provides instant feedback on touch glass.
 - Native procedural Web Audio API synthesizes UI feedback, chimes, and clicks with **0 KB external audio files**.
 
+---
+
+## 6. Formal Standards Conformance Matrix
+
+The AST Vector Player runtime complies strictly with open, normative web standards, ensuring decades of forward compatibility with zero dependency on proprietary plugins or deprecated browser APIs:
+
+| Standards Body | Standard & Level | Compliance Mechanism in AST Engine |
+| :--- | :--- | :--- |
+| **W3C** | **SVG 1.1 (2nd Ed) & SVG 2.0** | Native SVG DOM tree rendering (`<svg>`, `<g>`, `<path>`, `<circle>`, `<text>`, `<defs>`). Dynamic matrix transformation via standard `SVGGraphicsElement.getScreenCTM()` and inverse matrix multiplication $\mathbf{M}_{\text{CTM}}^{-1}$ for sub-pixel pointer tracking. |
+| **W3C** | **Pointer Events Level 2 & Level 3** | Unified hardware digitizer handling (`pointerdown`, `pointermove`, `pointerup`, `setPointerCapture`). Full stylus pressure and touch palm-rejection on Promethean, SMART, ViewSonic, and iPad screens. |
+| **W3C** | **Web Audio API (Recommendation)** | Zero-asset procedural synthesis (`AudioContext`, `OscillatorNode`, `GainNode`, `BiquadFilterNode`). Dynamic envelope shaping with zero external audio assets or network requests. |
+| **W3C** | **WCAG 2.1 & 2.2 (Level AA)** | Keyboard navigation (`Space` play/pause, `S` / `PageDown` clicker step mode, scrub keys), high-contrast projection modes, and synchronized multilingual subtitle cues (`:subtitles`). |
+| **WHATWG** | **HTML5 Living Standard** | Native ES2022 JavaScript, DOM Custom Events, `requestAnimationFrame`, `FileReader`, and cross-origin `window.postMessage` RPC bridge. |
+| **ADL / IMS Global** | **SCORM 1.2 & SCORM 2004** | Automatic LMS CMI bridge (`cmi.core.lesson_status`, `cmi.score.raw`, `cmi.suspend_data`) reporting simulation engagement and formative quiz completion. |
+| **IAB** | **HTML5 Rich Media (150 KB Cap)** | Total standalone player + scene payload is strictly < 35 KB gzipped (< 150 KB uncompressed), completely within standard programmatic ad display limits. |
+
+---
+
+## 7. Cartridge Dual-Nature & Packaging Specification
+
+An AST Cartridge embodies a **dual nature** across both file storage and execution dynamics:
+
+### 7.1. Packaging Formats
+
+1. **Single-File Hybrid Capsule (`.ast.svg`)**:
+   - **Static Identity:** 100% compliant standard W3C SVG vector graphic. Can be rendered in `<img>` tags, previewed in OS file managers, and imported into Figma, Illustrator, or Inkscape.
+   - **Executable Identity:** Embeds the declarative AST S-Expression inside `<metadata type="application/ast-sexpr">` or `<script type="application/ast-sexpr">`. When dragged or opened in the AST Player, it executes as a 60 FPS interactive physics apparatus.
+
+2. **Companion Dual-File Pair (`.svg` + `.ast`)**:
+   - **Visual Artwork Stage (`scene.svg`):** Pure visual DOM structure with semantic element IDs.
+   - **Cognitive / Physics Script (`scene.ast`):** Pure mathematical S-Expressions containing variables, bindings, keyframes, subtitles, and checkpoints.
+   - **Multi-File Ingestion:** The AST Player supports multi-file selection and simultaneous drag-and-drop. Dropping both files simultaneously automatically pairs and boots the simulation.
+
+### 7.2. Execution Dynamics
+
+- **Narrative Motion Mode:** 60 FPS keyframed timeline, bilingual subtitles, and guided teacher checkpoints.
+- **Direct Manipulation Mode:** Live pointer capture and inverse CTM dragging on apparatus components (pistons, levers, burners, switches), permitting freeform laboratory exploration without resetting timeline state.
+- **Classroom Smartboard Whiteboard:** In-stage quadratic Bézier ink overlay (`#annotation-ink-root`) for interactive teaching.
+
+---
+
+## 8. Normative References & MIME Types
+
+- **`image/svg+xml`**: W3C Scalable Vector Graphics (SVG) 2 Recommendation.
+- **`application/ast-sexpr`**: AST Vector Scene S-Expression grammar (GGML constrained).
+- **`application/ast-slidescript`**: SlideScript human-readable markdown curriculum notation.
+- **`application/json`**: AST serialized scene graph interchange format.
+- **W3C Web Audio API**: W3C Recommendation 17 June 2021.
+- **W3C Pointer Events**: W3C Pointer Events Level 3 Working Draft / Level 2 Recommendation.
+

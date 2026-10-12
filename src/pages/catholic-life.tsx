@@ -11,12 +11,16 @@ import RosaryMysteryWalk from '../components/RosaryMysteryWalk';
 import AstVectorMediaPlayer from '../components/AstVectorMediaPlayer';
 import SanctuaryPilgrimQuest from '../components/SanctuaryPilgrimQuest';
 import CatholicRitesExplorer from '../components/CatholicRitesExplorer';
+import AltarAnatomyExplorer from '../components/AltarAnatomyExplorer';
+import HolyOilsExplorer from '../components/HolyOilsExplorer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
 export type CatholicLifeTab =
   | 'overview'
   | 'church-tour'
+  | 'altar'
+  | 'holy-oils'
   | 'rites'
   | 'mass'
   | 'sacraments'
@@ -49,6 +53,8 @@ export default function CatholicLifePage(): React.JSX.Element {
       [
         'overview',
         'church-tour',
+        'altar',
+        'holy-oils',
         'rites',
         'mass',
         'sacraments',
@@ -79,6 +85,8 @@ export default function CatholicLifePage(): React.JSX.Element {
         [
           'overview',
           'church-tour',
+          'altar',
+          'holy-oils',
           'rites',
           'mass',
           'sacraments',
@@ -113,6 +121,24 @@ export default function CatholicLifePage(): React.JSX.Element {
       color: '#0284c7',
       bg: '#f0f9ff',
       badge: 'Interactive Tour (< 4 KB)',
+    },
+    {
+      tab: 'altar' as CatholicLifeTab,
+      icon: '✝️',
+      title: 'The Catholic Altar & Types of Altars',
+      desc: 'Versus Populum, High Altar, Altar Stone with martyr relics, Mensa, Corporal, Chalice, Missal & sacristan dressing lab.',
+      color: '#b45309',
+      bg: '#fffbeb',
+      badge: 'Interactive Anatomy & Types',
+    },
+    {
+      tab: 'holy-oils' as CatholicLifeTab,
+      icon: '🏺',
+      title: 'The Three Holy Oils & Sacred Ambry',
+      desc: 'Sacred Chrism (S.C.), Oil of Catechumens (O.C.), Oil of the Sick (O.I.), the Ambry cabinet, Chrism Mass, and pocket oil stocks.',
+      color: '#d97706',
+      bg: '#fef3c7',
+      badge: 'Olea Sancta & Ambry',
     },
     {
       tab: 'rites' as CatholicLifeTab,
@@ -466,6 +492,8 @@ export default function CatholicLifePage(): React.JSX.Element {
           {[
             { id: 'overview', label: '🏠 Overview' },
             { id: 'church-tour', label: '⛪ Church Tour' },
+            { id: 'altar', label: '✝️ The Catholic Altar' },
+            { id: 'holy-oils', label: '🏺 The Holy Oils' },
             { id: 'rites', label: '🌍 6 Rites & 24 Churches' },
             { id: 'mass', label: '⛪ The Mass' },
             { id: 'sacraments', label: '🕊️ 7 Sacraments' },
@@ -1079,6 +1107,108 @@ export default function CatholicLifePage(): React.JSX.Element {
                     </div>
                   </div>
                 </div>
+
+                {/* Dedicated Altar Deep Dive Card */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)',
+                    borderRadius: '16px',
+                    border: '2px solid #facc15',
+                    padding: '1.5rem',
+                    marginTop: '2rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ maxWidth: '680px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>✝️</span>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#92400e', margin: 0 }}>
+                        Deep-Dive: The Sacred Anatomy &amp; Types of the Catholic Altar
+                      </h4>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#78350f', lineHeight: 1.45 }}>
+                      Examine the 4 historical types of altars (Versus Populum, High Altar, Altar Stone with martyr relics, and Side Altars), inspect the sacred linens and vessels, and step through the interactive Sacristan Dressing Lab.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('altar')}
+                    style={{
+                      background: '#b45309',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 18px',
+                      fontWeight: 800,
+                      fontSize: '0.86rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(180, 83, 9, 0.3)',
+                    }}
+                  >
+                    Open Altar Explorer &rarr;
+                  </button>
+                </div>
+
+                {/* Dedicated Holy Oils Ambry Deep Dive Card */}
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%)',
+                    borderRadius: '16px',
+                    border: '2px solid #38bdf8',
+                    padding: '1.5rem',
+                    marginTop: '1.25rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ maxWidth: '680px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                      <span style={{ fontSize: '1.4rem' }}>🏺</span>
+                      <h4 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0369a1', margin: 0 }}>
+                        The Three Holy Oils (Olea Sancta) &amp; The Sacred Ambry
+                      </h4>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.84rem', color: '#0f766e', lineHeight: 1.45 }}>
+                      Explore the sanctuary Ambry housing the three silver and crystal ampullae: Sacred Chrism (S.C.), Oil of Catechumens (O.C.), and Oil of the Sick (O.I.), the annual Chrism Mass, and priestly pocket oil stocks.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('holy-oils')}
+                    style={{
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '10px 18px',
+                      fontWeight: 800,
+                      fontSize: '0.86rem',
+                      cursor: 'pointer',
+                      boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)',
+                    }}
+                  >
+                    Explore Holy Oils &rarr;
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'altar' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <AltarAnatomyExplorer />
+              </div>
+            )}
+
+            {activeTab === 'holy-oils' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <HolyOilsExplorer />
               </div>
             )}
 

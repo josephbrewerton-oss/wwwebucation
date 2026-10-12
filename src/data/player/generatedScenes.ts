@@ -132,9 +132,21 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "stage": "KS2/KS3 MFL"
   },
   {
+    "id": "altar-anatomy",
+    "type": "Slide",
+    "label": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
+    "stage": "CATHOLIC LIFE"
+  },
+  {
     "id": "shakespeare",
     "type": "Slide",
     "label": "The Globe Theatre: Shakespeare & Iambic Pentameter",
     "stage": "KS3/KS4 ENGLISH LITERATURE"
+  },
+  {
+    "id": "holy-oils",
+    "type": "Slide",
+    "label": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
+    "stage": "CATHOLIC LIFE"
   }
 ];

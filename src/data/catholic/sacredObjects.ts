@@ -138,5 +138,87 @@ export const SACRED_OBJECTS: SacredObject[] = [
     description: 'A rich silk shawl worn over the shoulders and hands of the priest when holding the Monstrance during Eucharistic Adoration and Benediction.',
     spiritualMeaning: 'Hides the priest’s human hands so the faithful recognize that it is Jesus Himself in the Blessed Sacrament Who is blessing them.',
     catechismRef: 'CCC 1378'
+  },
+  {
+    id: 'mensa',
+    name: 'The Consecrated Mensa',
+    icon: '🪵',
+    category: 'Sanctuary',
+    description: 'The flat stone table of the altar, anointed with holy chrism, upon which the Eucharistic Sacrifice of the Mass is offered.',
+    spiritualMeaning: 'Represents Christ Himself, the living Cornerstone. Whenever the priest approaches the mensa, he kisses it in reverence to Christ.',
+    catechismRef: 'CCC 1182'
+  },
+  {
+    id: 'altar-stone',
+    name: 'The Altar Stone & Relics',
+    icon: '🪨',
+    category: 'Sanctuary',
+    description: 'A consecrated marble slab inset into the altar, incised with five crosses for Christ’s wounds and sealing relics of the martyrs.',
+    spiritualMeaning: 'Honours the ancient tradition of the Roman catacombs where early Christians celebrated Mass directly on the tombs of martyrs.',
+    catechismRef: 'CIC Can. 1237, Rev 6:9'
+  },
+  {
+    id: 'pall',
+    name: 'The Sacred Pall',
+    icon: '🛡️',
+    category: 'Linen',
+    description: 'A stiffened linen square placed directly over the chalice and paten to protect the Precious Blood from dust and insects.',
+    spiritualMeaning: 'Symbolizes the stone rolled in front of Christ’s tomb, and safeguards the holy mysteries with utmost vigilance.',
+    catechismRef: 'GIRM 118'
+  },
+  {
+    id: 'roman-missal',
+    name: 'The Roman Missal',
+    icon: '📖',
+    category: 'Sanctuary',
+    description: 'The liturgical volume on the altar containing all the official prayers, prefaces, and Eucharistic Prayers for the celebration of Mass.',
+    spiritualMeaning: 'Preserves the unbroken apostolic prayer of the universal Catholic Church across two millennia in one liturgical voice.',
+    catechismRef: 'CCC 1154'
+  },
+  {
+    id: 'altar-crucifix',
+    name: 'The Altar Crucifix',
+    icon: '✝️',
+    category: 'Sanctuary',
+    description: 'The crucifix positioned centrally on or beside the altar, clearly visible to both the celebrating priest and the congregation.',
+    spiritualMeaning: 'Reminds all that the Sacrifice of the Mass is one and the same sacrifice as Calvary—Christ’s once-for-all offering of love.',
+    catechismRef: 'GIRM 308, CCC 1366'
+  },
+  {
+    id: 'antependium',
+    name: 'The Altar Frontal (Antependium)',
+    icon: '🎨',
+    category: 'Linen',
+    description: 'An embroidered fabric hanging covering the front of the altar in the liturgical colour of the season (Green, Purple, White, Red).',
+    spiritualMeaning: 'Clothes the altar of Christ in royal vesture, visually proclaiming the spiritual rhythm of the Catholic liturgical year.',
+    catechismRef: 'CCC 1155'
+  },
+  {
+    id: 'sanctus-bells',
+    name: 'Sanctuary Bells (Sanctus Chimes)',
+    icon: '🔔',
+    category: 'Sanctuary',
+    description: 'Handheld bells rung by the altar server at the Sanctus, Epiclesis, and the high elevations of the Sacred Host and Chalice.',
+    spiritualMeaning: 'Calls our attention to the supreme moment of Transubstantiation, bidding all to kneel and adore the Eucharistic Lord.',
+    catechismRef: 'GIRM 150'
+  },
+  {
+    id: 'holy-ambry',
+    name: 'The Holy Ambry (Ambriarium)',
+    icon: '🏺',
+    category: 'Sanctuary',
+    description: 'A consecrated wall niche or glass-fronted cabinet in the sanctuary or baptistery, reverently securing the three Holy Oils (O.I., O.C., S.C.).',
+    spiritualMeaning: 'Marks the continuous sacramental presence of the Holy Spirit’s healing, strengthening, and consecrating grace within the parish church.',
+    catechismRef: 'CCC 1183, 1241'
+  },
+  {
+    id: 'oil-stocks',
+    name: 'Holy Oil Stocks (Chrismarium)',
+    icon: '⚱️',
+    category: 'Vessel',
+    description: 'A three-tiered silver pocket cylinder carried by priests for sick calls and emergencies, marked with I (Sick), B (Catechumens), and CHR (Chrism).',
+    spiritualMeaning: 'Allows the priest to bring sacramental grace and the anointing of salvation directly to hospital beds and the homes of the dying.',
+    catechismRef: 'CCC 1513'
   }
 ];
+

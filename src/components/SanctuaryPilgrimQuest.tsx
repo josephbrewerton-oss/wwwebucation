@@ -508,6 +508,44 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                 {activeQuest.actionGuidance}
               </span>
             </div>
+            {activeQuest.id === 'altar' && (
+              <div
+                style={{
+                  gridColumn: '1 / -1',
+                  background: '#fef3c7',
+                  border: '1px solid #fde68a',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  flexWrap: 'wrap',
+                  gap: '8px',
+                  marginTop: '4px',
+                }}
+              >
+                <div style={{ fontSize: '0.8rem', color: '#92400e' }}>
+                  <strong>Sacred Anatomy Deep Dive:</strong> Consecrated Altar Stone (Ara) with 5 Sacred Wounds crosses, Martyrs' Relics, Mensa, Linens, Chalice, Missal &amp; Beeswax Candles.
+                </div>
+                <a
+                  href="/catholic-life?tab=altar"
+                  style={{
+                    background: '#b45309',
+                    color: '#ffffff',
+                    padding: '4px 10px',
+                    borderRadius: '6px',
+                    fontSize: '0.75rem',
+                    fontWeight: 700,
+                    textDecoration: 'none',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                  }}
+                >
+                  ✝️ Open Altar Explorer &rarr;
+                </a>
+              </div>
+            )}
           </div>
 
           {/* Station Checkpoint Quiz */}

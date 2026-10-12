@@ -12,3 +12,5 @@ export * from './sevenSacraments';
 export * from './liturgicalCalendar';
 export * from './reCurriculumKnowledge';
 export * from './reKs3CurriculumKnowledge';
+export * from './altarData';
+export * from './holyOilsData';
