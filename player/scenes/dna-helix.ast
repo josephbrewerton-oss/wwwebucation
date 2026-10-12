@@ -1,5 +1,5 @@
-(:scene :id "dna-helix" :type "Slide" :title "Genetics: DNA Base Pairing & Transcription" :stage "KS3 GENETICS" :duration 12.0
-  (:camera :distance 440 :pitch 18 :yaw "((vars.rotSpeed != null ? vars.rotSpeed : 1.0) * t * 360)" :fov 60)
+(:scene :id "dna-helix" :type "Sim" :title "Genetics: DNA Base Pairing & Transcription" :stage "KS3 GENETICS" :duration 12.0
+  (:camera :distance 440 :pitch 18 :yaw "((vars.rotSpeed != null ? vars.rotSpeed : 1.0) * (clock != null ? clock : (t * 12.0)) * 25.0)" :fov 60)
   (:vars (
     (:var :name "rotSpeed" :val 1.0 :min 0.2 :max 3.0 :step 0.2 :label "Helix Spin Rate")
     (:var :name "unzipProgress" :val 0.0 :min 0.0 :max 1.0 :step 0.05 :label "Helicase Unzip Progress")
@@ -33,6 +33,7 @@
       :explanation "In double-stranded DNA, Adenine (A) always pairs specifically with Thymine (T) via 2 hydrogen bonds, while Guanine (G) pairs with Cytosine (C) via 3 hydrogen bonds.")
   ))
   (:bindings (
+    (:target "#dna-status-text" :attr "textContent" :expr "vars.unzipProgress > 0 ? ('Replication Fork: Helicase Active! ' + computed.hydrogenBonds + ' / 45 H-Bonds Intact (' + Math.round((1 - vars.unzipProgress) * 100) + '%)') : 'Strand A 5\\'→3\\' • Strand B 3\\'→5\\' • 45 Hydrogen Bonds (100% Intact)'")
     (:target "#dna-line-0" :type "3d-line"
       :x1 "-110 * Math.cos((0/18)*Math.PI*3)" :y1 "(0/18)*360 - 180" :z1 "-110 * Math.sin((0/18)*Math.PI*3)"
       :x2 "110 * Math.cos((0/18)*Math.PI*3)" :y2 "(0/18)*360 - 180" :z2 "110 * Math.sin((0/18)*Math.PI*3)"

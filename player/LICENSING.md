@@ -17,8 +17,11 @@ The **AST Vector Media Player & SlideScript Suite** is distributed under an expl
 ├───────────────────────────────────┬────────────────────────────────────┤
 │ Track A: Humanitarian Commons     │ Track B: Commercial License        │
 │ • GNU AGPLv3 (Free in perpetuity) │ • Proprietary Closed-Source        │
-│ • State schools, charities, pupils│ • Commercial LMS / EdTech vendors  │
-│ • Copyleft network reciprocity    │ • Cross-subsidizes free hardware   │
+│ • State schools, charities, pupils│ • Commercial LMS & EdTech vendors  │
+│ • Copyleft network reciprocity    │ • Digital Signage & DOOH Networks  │
+│                                   │ • Interactive AdTech & Display Ads │
+│                                   │ • Kiosk Hardware & Automotive OEM  │
+│                                   │ • Cross-subsidizes free hardware   │
 └───────────────────────────────────┴────────────────────────────────────┘
 ```
 
@@ -29,6 +32,11 @@ The **AST Vector Media Player & SlideScript Suite** is distributed under an expl
 
 ### Track B: Enterprise Commercial License
 - For commercial organizations wishing to integrate this player into closed-source, proprietary platforms without being bound by the AGPLv3 copyleft or source-disclosure requirements.
+- **Target Commercial Verticals**:
+  1. **Digital Signage & DOOH Networks**: Low-power ARM / Android / Raspberry Pi / BrightSign display players, digital menu boards, transit arrival screens, and giant 8K LED billboards running 24/7 without memory leaks.
+  2. **Programmatic AdTech & Rich-Media Networks**: Sub-45 KB interactive, IAB-compliant HTML5 display banners with real-time Dynamic Creative Optimization (DCO) and localized feed injection.
+  3. **Interactive Retail Kiosks & Wayfinding**: Touchscreen directories, product configurators, and automated checkout terminals requiring zero-latency touch and zero-asset audio synthesis.
+  4. **Commercial LMS & EdTech Platforms**: Closed-source proprietary courseware and commercial textbook publishers.
 - 100% of commercial license revenues fund Chromebooks and offline solar-powered digital education equipment for disadvantaged pupils.
 - Enquiries: `joseph.brewerton@gmail.com`
 

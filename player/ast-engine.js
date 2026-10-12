@@ -2842,11 +2842,44 @@
       const durationStr = extractSlot(/:duration\s+([\d\.]+)/i);
       const duration = durationStr ? parseFloat(durationStr) : 10.0;
 
-      // Camera definition
-      const camMatch = astContent.match(/\(:camera\s+([\s\S]*?)\)/i);
+      // Helper to extract S-expression blocks with balanced parentheses and string quote protection
+      const extractSexprBlocks = (text, tag) => {
+        const blocks = [];
+        const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const startRegex = new RegExp('\\(' + safeTag + '[\\s)]', 'gi');
+        let m;
+        while ((m = startRegex.exec(text)) !== null) {
+          const startIdx = m.index;
+          let depth = 0;
+          let inString = false;
+          let endIdx = -1;
+          for (let i = startIdx; i < text.length; i++) {
+            const char = text[i];
+            if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
+              inString = !inString;
+            } else if (!inString) {
+              if (char === '(') depth++;
+              else if (char === ')') {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 1;
+                  break;
+                }
+              }
+            }
+          }
+          if (endIdx !== -1) {
+            blocks.push(text.slice(startIdx, endIdx));
+          }
+        }
+        return blocks;
+      };
+
+      // Camera definition with balanced parenthesis S-expression extraction
+      const camBlocks = extractSexprBlocks(astContent, ':camera');
       let camera = { distance: 500, pitch: 20, yaw: 0, fov: 60 };
-      if (camMatch) {
-        const cBody = camMatch[1];
+      if (camBlocks.length > 0) {
+        const cBody = camBlocks[0];
         const getCamVal = (key) => {
           const m = cBody.match(new RegExp(`:${key}\\s+("[^"]+"|[\\d\\.-]+)`, 'i'));
           return m ? m[1].replace(/^"|"$/g, '') : null;
@@ -2882,39 +2915,6 @@
         if (match[5]) subObj.la = match[5];
         subtitles.push(subObj);
       }
-
-      // Helper to extract S-expression blocks with balanced parentheses
-      const extractSexprBlocks = (text, tag) => {
-        const blocks = [];
-        const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-        const startRegex = new RegExp('\\(' + safeTag + '[\\s)]', 'gi');
-        let m;
-        while ((m = startRegex.exec(text)) !== null) {
-          const startIdx = m.index;
-          let depth = 0;
-          let inString = false;
-          let endIdx = -1;
-          for (let i = startIdx; i < text.length; i++) {
-            const char = text[i];
-            if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
-              inString = !inString;
-            } else if (!inString) {
-              if (char === '(') depth++;
-              else if (char === ')') {
-                depth--;
-                if (depth === 0) {
-                  endIdx = i + 1;
-                  break;
-                }
-              }
-            }
-          }
-          if (endIdx !== -1) {
-            blocks.push(text.slice(startIdx, endIdx));
-          }
-        }
-        return blocks;
-      };
 
       // Bindings (2D, 3D nodes, 3D lines, 3D rings, 3D polygons)
       const bindings = [];
@@ -3380,7 +3380,7 @@
         });
       });
 
-      const has3D = Boolean(camMatch || bindings.some(b => b.type && b.type.startsWith('3d-')));
+      const has3D = Boolean((camBlocks && camBlocks.length > 0) || bindings.some(b => b.type && b.type.startsWith('3d-')));
 
       return {
         id: id || 'custom-scene',
@@ -3389,7 +3389,7 @@
         type,
         cartridgeType: type,
         duration,
-        camera: camMatch ? camera : null,
+        camera: (camBlocks && camBlocks.length > 0) ? camera : null,
         has3D,
         keyframes,
         subtitles,
@@ -4528,14 +4528,16 @@
       // Dynamic camera yaw if expression
       if (typeof camera.yaw === 'string') {
         try {
-          const yawFn = new Function('t', 'Math', 'vars', `"use strict"; return (${camera.yaw});`);
-          camera.yaw = yawFn(t, Math, this.vars || {});
+          const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
+          const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.yaw});`);
+          camera.yaw = yawFn(t, Math, this.vars || {}, clock);
         } catch {}
       }
       if (typeof camera.pitch === 'string') {
         try {
-          const pitchFn = new Function('t', 'Math', 'vars', `"use strict"; return (${camera.pitch});`);
-          camera.pitch = pitchFn(t, Math, this.vars || {});
+          const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
+          const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.pitch});`);
+          camera.pitch = pitchFn(t, Math, this.vars || {}, clock);
         } catch {}
       }
 
@@ -4855,6 +4857,7 @@
       if (this.lastTimestamp !== null) {
         const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
         const deltaSec = Math.min(rawDeltaSec, 0.1);
+        this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
 
         // Micro-Physics Subsystem Tick (< 1.5 KB zero-bloat)
         if (this.physics && this.physics.enabled && this.physics.bodies.length > 0) {
