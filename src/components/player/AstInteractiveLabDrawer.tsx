@@ -71,7 +71,7 @@ export default function AstInteractiveLabDrawer({
     preset === 'calculus-curves' ? 'calculus' : preset === 'kinetic-gas' ? 'kinetic-gas' : 'preset'
   );
 
-  const postVarToPlayer = (name: string, val: number) => {
+  const postVarToPlayer = (name: string, val: string | number) => {
     if (typeof window !== 'undefined') {
       const iframes = document.querySelectorAll('iframe');
       iframes.forEach((f) => {
@@ -400,9 +400,13 @@ export default function AstInteractiveLabDrawer({
                     type="button"
                     onClick={() => {
                       setGasState(item.id as any);
-                      if (item.id === 'solid') setGasTempK(80);
-                      else if (item.id === 'liquid') setGasTempK(220);
-                      else if (item.id === 'gas') setGasTempK(300);
+                      let targetTemp = 300;
+                      if (item.id === 'solid') targetTemp = 80;
+                      else if (item.id === 'liquid') targetTemp = 220;
+                      else if (item.id === 'gas') targetTemp = 300;
+                      setGasTempK(targetTemp);
+                      postVarToPlayer('state', item.id);
+                      postVarToPlayer('temp', targetTemp);
                       if (typeof window !== 'undefined') {
                         window.postMessage({ type: 'AUDIO_PLAY_CLICK', freq: 880 }, '*');
                       }
@@ -465,23 +469,35 @@ export default function AstInteractiveLabDrawer({
                   const val = Number(e.target.value);
                   setGasTempK(val);
                   postVarToPlayer('temp', val);
+                  if (val <= 140) {
+                    setGasState('solid');
+                    postVarToPlayer('state', 'solid');
+                  } else if (val <= 273) {
+                    setGasState('liquid');
+                    postVarToPlayer('state', 'liquid');
+                  } else {
+                    setGasState('gas');
+                    postVarToPlayer('state', 'gas');
+                  }
                 }}
                 style={{ width: '100%', accentColor: '#ef4444' }}
               />
               <div style={{ display: 'flex', gap: '4px', marginTop: '6px' }}>
                 {[
-                  { label: '❄️ 77K', temp: 77 },
-                  { label: '🧊 273K', temp: 273 },
-                  { label: '☕ 298K', temp: 298 },
-                  { label: '🔥 373K', temp: 373 },
-                  { label: '🌋 650K', temp: 650 },
+                  { label: '❄️ 77K', temp: 77, state: 'solid' },
+                  { label: '🧊 273K', temp: 273, state: 'liquid' },
+                  { label: '☕ 298K', temp: 298, state: 'gas' },
+                  { label: '🔥 373K', temp: 373, state: 'gas' },
+                  { label: '🌋 650K', temp: 650, state: 'gas' },
                 ].map((preset) => (
                   <button
                     key={preset.label}
                     type="button"
                     onClick={() => {
                       setGasTempK(preset.temp);
+                      setGasState(preset.state as any);
                       postVarToPlayer('temp', preset.temp);
+                      postVarToPlayer('state', preset.state);
                     }}
                     style={{
                       flex: 1,

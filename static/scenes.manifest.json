@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T09:36:41.802Z",
+  "generatedAt": "2026-10-12T11:07:43.459Z",
   "totalScenes": 21,
   "inputDirs": [
     "static/player/scenes",
@@ -51,9 +51,9 @@
       "nodes3DCount": 0,
       "svgFile": "scenes/kinetic-gas.svg",
       "astFile": "scenes/kinetic-gas.ast",
-      "keyframeCount": 4,
-      "subtitleCount": 4,
-      "bindingsCount": 11
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 17
     },
     {
       "id": "electric-circuits",

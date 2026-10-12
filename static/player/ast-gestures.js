@@ -373,9 +373,33 @@
       }
 
       // B. Check for interactive direct-grab targets or action buttons
-      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber');
+      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas');
 
       if (target) {
+        // Direct Phase State Indicator Click Check (Solid, Liquid, Gas)
+        const stateNode = (target.id && (target.id.includes('ind-') || target.id.includes('txt-'))) ? target : target.closest('#ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, [data-interactive="gas-state"]');
+        if (stateNode) {
+          e.preventDefault();
+          let st = 'gas';
+          const nid = stateNode.id || stateNode.getAttribute('data-gas-state') || '';
+          if (nid.includes('solid')) st = 'solid';
+          else if (nid.includes('liquid')) st = 'liquid';
+          else if (nid.includes('gas')) st = 'gas';
+
+          let temp = 300;
+          if (st === 'solid') temp = 85;
+          else if (st === 'liquid') temp = 220;
+          else if (st === 'gas') temp = 300;
+
+          if (this.engine && typeof this.engine.setVar === 'function') {
+            this.engine.setVar('state', st);
+            this.engine.setVar('temp', temp);
+          }
+          this.playAudioTone(st === 'solid' ? 220 : (st === 'liquid' ? 440 : 660), 'sine', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
         // Direct Knife Switch Click Toggle Check
         const switchNode = target.id === 'circuit-switch' ? target : target.closest('#circuit-switch');
         if (switchNode || target.getAttribute('data-interactive') === 'switch' || target.getAttribute('data-action') === 'toggle-switch') {
