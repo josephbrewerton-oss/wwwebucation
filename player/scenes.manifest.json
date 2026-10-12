@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T07:56:15.127Z",
+  "generatedAt": "2026-10-12T09:10:04.806Z",
   "totalScenes": 21,
   "scenes": [
     {
@@ -29,7 +29,7 @@
       "astFile": "scenes/atom.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 15
+      "bindingsCount": 117
     },
     {
       "id": "bodmas",

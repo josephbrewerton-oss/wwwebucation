@@ -54,44 +54,99 @@
   <rect x="0" y="0" width="800" height="480" fill="url(#atom-space-glow)" />
 
   <!-- Top Glassmorphic Chemistry Legend Banner -->
-  <g transform="translate(140, 16)">
-    <rect width="520" height="44" rx="10" fill="#0f172a" fill-opacity="0.88" stroke="#6366f1" stroke-width="1.5" />
-    <text x="260" y="27" fill="#f8fafc" font-size="15" font-weight="800" text-anchor="middle" font-family="sans-serif">
-      <tspan fill="#f87171">● 6 Protons (+)</tspan> | <tspan fill="#94a3b8">● 6 Neutrons (0)</tspan> | <tspan fill="#38bdf8">● 6 Electrons (-)</tspan> ➔ Carbon-12
+  <g transform="translate(100, 12)">
+    <rect width="600" height="54" rx="10" fill="#0f172a" fill-opacity="0.92" stroke="#6366f1" stroke-width="1.5" />
+    <text id="atom-legend-text" x="300" y="24" fill="#f8fafc" font-size="13.5" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">
+      ● 6 Protons (+) | ● 6 Neutrons (0) | ● 6 Electrons (-) ➔ Carbon (C-12)
+    </text>
+    <text id="atom-config-text" x="300" y="44" fill="#38bdf8" font-size="11.5" font-weight="600" text-anchor="middle" font-family="system-ui, sans-serif">
+      Bohr Shell Distribution: K: 2 | L: 4 | M: 0 (Valence Electrons: 4)
     </text>
   </g>
 
   <!-- Central Strong-Force Nuclear Core Glow -->
-  <circle cx="400" cy="240" r="32" fill="#ef4444" opacity="0.18" filter="url(#nucleus-glow)" />
+  <circle cx="400" cy="240" r="36" fill="#ef4444" opacity="0.22" filter="url(#nucleus-glow)" />
 
   <!-- 3D Inclined Bohr Electron Shell Trajectories -->
   <g filter="url(#glow)">
+    <!-- K-Shell (n=1) -->
     <path id="atom-ring-k" fill="none" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4 3" opacity="0.85" />
+    <!-- L-Shell (n=2) Dual Inclined Rings -->
     <path id="atom-ring-l1" fill="none" stroke="#818cf8" stroke-width="1.8" stroke-dasharray="5 4" opacity="0.75" />
     <path id="atom-ring-l2" fill="none" stroke="#c084fc" stroke-width="1.8" stroke-dasharray="5 4" opacity="0.75" />
+    <!-- M-Shell (n=3) Outer Valence Rings -->
+    <path id="atom-ring-m1" fill="none" stroke="#34d399" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.75" display="none" />
+    <path id="atom-ring-m2" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="6 4" opacity="0.75" display="none" />
   </g>
 
-  <!-- 3D Dense Central Nucleus Particles (Carbon Nucleus) -->
+  <!-- 3D Dense Central Nucleus Particles (Up to 18 Protons & 18 Neutrons) -->
   <g id="nucleus-cluster">
-    <circle id="nucleus-p1" cx="400" cy="240" r="10" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
-    <circle id="nucleus-n1" cx="400" cy="240" r="10" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
-    <circle id="nucleus-p2" cx="400" cy="240" r="10" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
-    <circle id="nucleus-n2" cx="400" cy="240" r="10" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
-    <circle id="nucleus-p3" cx="400" cy="240" r="10" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
-    <circle id="nucleus-n3" cx="400" cy="240" r="10" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <!-- Protons -->
+    <circle id="nucleus-p1" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p2" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p3" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p4" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p5" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p6" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" />
+    <circle id="nucleus-p7" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p8" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p9" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p10" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p11" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p12" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p13" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p14" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p15" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p16" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p17" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+    <circle id="nucleus-p18" cx="400" cy="240" r="9" fill="url(#proton-grad)" stroke="#fca5a5" stroke-width="1" display="none" />
+
+    <!-- Neutrons -->
+    <circle id="nucleus-n1" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n2" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n3" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n4" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n5" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n6" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" />
+    <circle id="nucleus-n7" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n8" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n9" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n10" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n11" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n12" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n13" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n14" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n15" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n16" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n17" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
+    <circle id="nucleus-n18" cx="400" cy="240" r="9" fill="url(#neutron-grad)" stroke="#e2e8f0" stroke-width="1" display="none" />
   </g>
 
   <!-- Quantized Orbiting 3D Electrons -->
   <g id="electrons" filter="url(#glow)">
-    <!-- Inner K-Shell (n=1) Pair -->
-    <circle id="atom-e1" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
-    <circle id="atom-e2" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <!-- Inner K-Shell (n=1, max 2) -->
+    <circle id="atom-e1" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <circle id="atom-e2" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
 
-    <!-- Outer L-Shell (n=2) Valence Quad -->
-    <circle id="atom-oe-0" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
-    <circle id="atom-oe-1" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
-    <circle id="atom-oe-2" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
-    <circle id="atom-oe-3" cx="400" cy="240" r="6.5" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <!-- L-Shell (n=2, max 8) -->
+    <circle id="atom-oe-0" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <circle id="atom-oe-1" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <circle id="atom-oe-2" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <circle id="atom-oe-3" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" />
+    <circle id="atom-oe-4" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-oe-5" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-oe-6" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-oe-7" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+
+    <!-- M-Shell (n=3, max 8) -->
+    <circle id="atom-me-0" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-1" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-2" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-3" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-4" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-5" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-6" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
+    <circle id="atom-me-7" cx="400" cy="240" r="6" fill="url(#electron-grad)" stroke="#ffffff" stroke-width="1.5" display="none" />
   </g>
 
   <!-- Interactive 3D Spatial Compass Hint -->

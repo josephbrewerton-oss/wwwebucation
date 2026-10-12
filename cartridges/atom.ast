@@ -9,23 +9,29 @@
     (:slider :var "orbitSpeed" :label "Electron Orbital Velocity" :min 0.2 :max 3.0 :step 0.1)
   ))
   (:computed (
-    (:name "massNumber" :expr "vars.atomicNumber * 2")
-    (:name "electronsK" :expr "Math.min(2, vars.atomicNumber)")
-    (:name "electronsL" :expr "Math.min(8, Math.max(0, vars.atomicNumber - 2))")
+    (:name "z" :expr "Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))")
+    (:name "neutrons" :expr "[0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))]")
+    (:name "massNumber" :expr "Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) + [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))]")
+    (:name "elName" :expr "['', 'Hydrogen (H)', 'Helium (He)', 'Lithium (Li)', 'Beryllium (Be)', 'Boron (B)', 'Carbon (C)', 'Nitrogen (N)', 'Oxygen (O)', 'Fluorine (F)', 'Neon (Ne)', 'Sodium (Na)', 'Magnesium (Mg)', 'Aluminium (Al)', 'Silicon (Si)', 'Phosphorus (P)', 'Sulfur (S)', 'Chlorine (Cl)', 'Argon (Ar)'][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))]")
+    (:name "electronsK" :expr "Math.min(2, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))))")
+    (:name "electronsL" :expr "Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 2))")
+    (:name "electronsM" :expr "Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 10))")
+    (:name "legendText" :expr="'● ' + Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) + ' Protons (+) | ● ' + [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))] + ' Neutrons (0) | ● ' + Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) + ' Electrons (-) ➔ ' + ['', 'Hydrogen (H)', 'Helium (He)', 'Lithium (Li)', 'Beryllium (Be)', 'Boron (B)', 'Carbon (C)', 'Nitrogen (N)', 'Oxygen (O)', 'Fluorine (F)', 'Neon (Ne)', 'Sodium (Na)', 'Magnesium (Mg)', 'Aluminium (Al)', 'Silicon (Si)', 'Phosphorus (P)', 'Sulfur (S)', 'Chlorine (Cl)', 'Argon (Ar)'][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))] + '-' + (Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) + [0, 0, 2, 4, 5, 6, 6, 7, 8, 10, 10, 12, 12, 14, 14, 16, 16, 18, 22][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))])")
+    (:name "configText" :expr="'Bohr Shell Distribution: K: ' + Math.min(2, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))) + ' | L: ' + Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 2)) + ' | M: ' + Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 10)) + ' (Valence Electrons: ' + (Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 10)) || Math.min(8, Math.max(0, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))) - 2)) || Math.min(2, Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6))))) + ')'")
   ))
   (:gestures (
     (:draggable :target "#nucleus-p1" :axis "xy" :min -30 :max 30)
   ))
   (:subtitles (
     (:start 0.00 :end 0.33 :en "At the center is the dense nucleus made of positively charged protons and neutral neutrons." :es "En el centro está el núcleo denso con protones positivos y neutrones neutros.")
-    (:start 0.33 :end 0.66 :en "Electrons orbit in quantized 3D shells. The first shell (K) holds 2 electrons; outer shell (L) holds 4." :es "Los electrones orbitan en capas cuánticas 3D. La primera capa (K) contiene 2; la externa (L) contiene 4.")
-    (:start 0.66 :end 1.00 :en "Carbon has 6 protons, 6 neutrons, and 6 electrons. Drag anywhere to orbit this atom in 3D!" :es "El carbono tiene 6 protones, 6 neutrones y 6 electrones. ¡Arrastra para rotar este átomo en 3D!")
+    (:start 0.33 :end 0.66 :en "Electrons orbit in quantized 3D shells: K holds 2, L holds 8, M holds 8 according to 2n² rules." :es "Los electrones orbitan en capas cuánticas: K tiene 2, L tiene 8, M tiene 8 según 2n².")
+    (:start 0.66 :end 1.00 :en "Adjust the Atomic Number slider to observe all elements from Hydrogen (Z=1) to Argon (Z=18)!" :es "¡Ajusta el control de Número Atómico para explorar desde el Hidrógeno (Z=1) hasta el Argón (Z=18)!")
   ))
   (:keyframes (
     (:t 0.00 :title "Dense Nucleus" :rule "Protons (+) and Neutrons (0) tightly bound in the atomic core.")
     (:t 0.33 :title "Inner K-Shell (n=1)" :rule "Holds a maximum of 2 electrons in the lowest ground energy state.")
-    (:t 0.66 :title "Outer L-Shell (n=2)" :rule "Holds up to 8 electrons (Carbon has 4 valence electrons).")
-    (:t 1.00 :title "Chemical Valence" :rule "Valence electrons dictate bonding affinity with other elements.")
+    (:t 0.66 :title "L-Shell (n=2)" :rule "Holds up to 8 electrons (Carbon has 4 valence electrons; Neon has full 8).")
+    (:t 1.00 :title "M-Shell (n=3)" :rule "Holds up to 8 electrons (Sodium Z=11 starts M-shell; Argon Z=18 completes octet).")
   ))
   (:interactive (
     (:checkpoint :t 0.50
@@ -35,52 +41,233 @@
       :explanation "The Pauli exclusion principle and Bohr orbital rules dictate that shell n holds up to 2n² electrons. For n=1, maximum capacity is 2(1)² = 2 electrons.")
   ))
   (:bindings (
+    <!-- Dynamic HUD Telemetry Text Bindings -->
+    (:target "#atom-legend-text" :attr "textContent" :expr "computed.legendText")
+    (:target "#atom-config-text" :attr "textContent" :expr "computed.configText")
+
+    <!-- 3D Inclined Rings -->
     (:target "#atom-ring-k" :type "3d-ring" :r "75" :tilt-x "20" :depth-fog true)
     (:target "#atom-ring-l1" :type "3d-ring" :r "145" :tilt-x "-40" :tilt-z "30" :depth-fog true)
     (:target "#atom-ring-l2" :type "3d-ring" :r "145" :tilt-x "45" :tilt-z "-25" :depth-fog true)
+    (:target "#atom-ring-m1" :type "3d-ring" :r "215" :tilt-x "-30" :tilt-z "45" :depth-fog true)
+    (:target "#atom-ring-m2" :type "3d-ring" :r "215" :tilt-x "35" :tilt-z "-35" :depth-fog true)
 
-    (:target "#nucleus-p1" :type "3d-node" :x "7" :y "5" :z "4" :base-r 10 :depth-fog true)
-    (:target "#nucleus-n1" :type "3d-node" :x "-6" :y "-5" :z "5" :base-r 10 :depth-fog true)
-    (:target "#nucleus-p2" :type "3d-node" :x "-5" :y "6" :z "-5" :base-r 10 :depth-fog true)
-    (:target "#nucleus-n2" :type "3d-node" :x "6" :y "-4" :z "-6" :base-r 10 :depth-fog true)
-    (:target "#nucleus-p3" :type "3d-node" :x "0" :y "-7" :z "6" :base-r 10 :depth-fog true)
-    (:target "#nucleus-n3" :type "3d-node" :x "0" :y "7" :z "-5" :base-r 10 :depth-fog true)
+    <!-- M-Shell Rings Visibility -->
+    (:target "#atom-ring-m1" :attr "display" :expr "vars.atomicNumber >= 11 ? 'inline' : 'none'")
+    (:target "#atom-ring-m2" :attr "display" :expr "vars.atomicNumber >= 11 ? 'inline' : 'none'")
 
+    <!-- 3D Protons in Nucleus -->
+    (:target "#nucleus-p1" :type "3d-node" :x "7" :y "5" :z "4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p2" :type "3d-node" :x "-5" :y "6" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p3" :type "3d-node" :x "0" :y "-7" :z "6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p4" :type "3d-node" :x "6" :y "6" :z "-6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p5" :type "3d-node" :x "-7" :y "-6" :z "5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p6" :type "3d-node" :x "5" :y "-6" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p7" :type "3d-node" :x "-6" :y "5" :z "6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p8" :type "3d-node" :x "8" :y "0" :z "4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p9" :type "3d-node" :x "-8" :y "2" :z "-4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p10" :type "3d-node" :x "0" :y "8" :z "-4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p11" :type "3d-node" :x "4" :y "-8" :z "3" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p12" :type "3d-node" :x "-4" :y "-8" :z "-3" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p13" :type "3d-node" :x "8" :y "-4" :z "0" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p14" :type "3d-node" :x "-8" :y "4" :z "2" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p15" :type "3d-node" :x "3" :y "7" :z "5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p16" :type "3d-node" :x "-3" :y "7" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p17" :type "3d-node" :x "7" :y "-3" :z "6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-p18" :type "3d-node" :x "-7" :y "-3" :z "-6" :base-r 9 :depth-fog true)
+
+    <!-- Proton Display Bindings -->
+    (:target "#nucleus-p1" :attr "display" :expr "vars.atomicNumber >= 1 ? 'inline' : 'none'")
+    (:target "#nucleus-p2" :attr "display" :expr "vars.atomicNumber >= 2 ? 'inline' : 'none'")
+    (:target "#nucleus-p3" :attr "display" :expr "vars.atomicNumber >= 3 ? 'inline' : 'none'")
+    (:target "#nucleus-p4" :attr "display" :expr "vars.atomicNumber >= 4 ? 'inline' : 'none'")
+    (:target "#nucleus-p5" :attr "display" :expr "vars.atomicNumber >= 5 ? 'inline' : 'none'")
+    (:target "#nucleus-p6" :attr "display" :expr "vars.atomicNumber >= 6 ? 'inline' : 'none'")
+    (:target "#nucleus-p7" :attr "display" :expr "vars.atomicNumber >= 7 ? 'inline' : 'none'")
+    (:target "#nucleus-p8" :attr "display" :expr "vars.atomicNumber >= 8 ? 'inline' : 'none'")
+    (:target "#nucleus-p9" :attr "display" :expr "vars.atomicNumber >= 9 ? 'inline' : 'none'")
+    (:target "#nucleus-p10" :attr "display" :expr "vars.atomicNumber >= 10 ? 'inline' : 'none'")
+    (:target "#nucleus-p11" :attr "display" :expr "vars.atomicNumber >= 11 ? 'inline' : 'none'")
+    (:target "#nucleus-p12" :attr "display" :expr "vars.atomicNumber >= 12 ? 'inline' : 'none'")
+    (:target "#nucleus-p13" :attr "display" :expr "vars.atomicNumber >= 13 ? 'inline' : 'none'")
+    (:target "#nucleus-p14" :attr "display" :expr "vars.atomicNumber >= 14 ? 'inline' : 'none'")
+    (:target "#nucleus-p15" :attr "display" :expr "vars.atomicNumber >= 15 ? 'inline' : 'none'")
+    (:target "#nucleus-p16" :attr "display" :expr "vars.atomicNumber >= 16 ? 'inline' : 'none'")
+    (:target "#nucleus-p17" :attr "display" :expr "vars.atomicNumber >= 17 ? 'inline' : 'none'")
+    (:target "#nucleus-p18" :attr "display" :expr "vars.atomicNumber >= 18 ? 'inline' : 'none'")
+
+    <!-- 3D Neutrons in Nucleus -->
+    (:target "#nucleus-n1" :type "3d-node" :x "-6" :y "-5" :z "5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n2" :type "3d-node" :x "6" :y "-4" :z "-6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n3" :type "3d-node" :x "0" :y "7" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n4" :type "3d-node" :x "-5" :y "7" :z "4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n5" :type "3d-node" :x "7" :y "3" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n6" :type "3d-node" :x "-7" :y "2" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n7" :type "3d-node" :x "5" :y "-7" :z "4" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n8" :type "3d-node" :x "-4" :y "-7" :z "-5" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n9" :type "3d-node" :x "8" :y "4" :z "2" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n10" :type "3d-node" :x "-8" :y "-4" :z "3" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n11" :type "3d-node" :x "2" :y "8" :z "-6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n12" :type "3d-node" :x "-2" :y "8" :z "6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n13" :type "3d-node" :x "6" :y "-2" :z "7" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n14" :type "3d-node" :x "-6" :y "-2" :z "-7" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n15" :type "3d-node" :x "4" :y "6" :z "-6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n16" :type "3d-node" :x "-4" :y "6" :z "6" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n17" :type "3d-node" :x "7" :y "5" :z "2" :base-r 9 :depth-fog true)
+    (:target "#nucleus-n18" :type "3d-node" :x "-7" :y "5" :z "-2" :base-r 9 :depth-fog true)
+
+    <!-- Neutron Display Bindings -->
+    (:target "#nucleus-n1" :attr "display" :expr "computed.neutrons >= 1 ? 'inline' : 'none'")
+    (:target "#nucleus-n2" :attr "display" :expr "computed.neutrons >= 2 ? 'inline' : 'none'")
+    (:target "#nucleus-n3" :attr "display" :expr "computed.neutrons >= 3 ? 'inline' : 'none'")
+    (:target "#nucleus-n4" :attr "display" :expr "computed.neutrons >= 4 ? 'inline' : 'none'")
+    (:target "#nucleus-n5" :attr "display" :expr "computed.neutrons >= 5 ? 'inline' : 'none'")
+    (:target "#nucleus-n6" :attr "display" :expr "computed.neutrons >= 6 ? 'inline' : 'none'")
+    (:target "#nucleus-n7" :attr "display" :expr "computed.neutrons >= 7 ? 'inline' : 'none'")
+    (:target "#nucleus-n8" :attr "display" :expr "computed.neutrons >= 8 ? 'inline' : 'none'")
+    (:target "#nucleus-n9" :attr "display" :expr "computed.neutrons >= 9 ? 'inline' : 'none'")
+    (:target "#nucleus-n10" :attr "display" :expr "computed.neutrons >= 10 ? 'inline' : 'none'")
+    (:target "#nucleus-n11" :attr "display" :expr "computed.neutrons >= 11 ? 'inline' : 'none'")
+    (:target "#nucleus-n12" :attr "display" :expr "computed.neutrons >= 12 ? 'inline' : 'none'")
+    (:target "#nucleus-n13" :attr "display" :expr "computed.neutrons >= 13 ? 'inline' : 'none'")
+    (:target "#nucleus-n14" :attr "display" :expr "computed.neutrons >= 14 ? 'inline' : 'none'")
+    (:target "#nucleus-n15" :attr "display" :expr "computed.neutrons >= 15 ? 'inline' : 'none'")
+    (:target "#nucleus-n16" :attr "display" :expr "computed.neutrons >= 16 ? 'inline' : 'none'")
+    (:target "#nucleus-n17" :attr "display" :expr "computed.neutrons >= 17 ? 'inline' : 'none'")
+    (:target "#nucleus-n18" :attr "display" :expr "computed.neutrons >= 18 ? 'inline' : 'none'")
+
+    <!-- K-Shell Electrons (n=1) -->
     (:target "#atom-e1" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 3) * 75"
-      :y "Math.sin(t * Math.PI * 2 * 3) * 35"
-      :z "Math.sin(t * Math.PI * 2 * 3) * 75"
+      :x "Math.cos(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 75"
+      :y "Math.sin(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 35"
+      :z "Math.sin(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 75"
       :base-r 6
     )
     (:target "#atom-e2" :type "3d-node"
-      :x "-Math.cos(t * Math.PI * 2 * 3) * 75"
-      :y "-Math.sin(t * Math.PI * 2 * 3) * 35"
-      :z "-Math.sin(t * Math.PI * 2 * 3) * 75"
+      :x "-Math.cos(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 75"
+      :y "-Math.sin(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 35"
+      :z "-Math.sin(t * Math.PI * 2 * 3 * (vars.orbitSpeed || 1)) * 75"
       :base-r 6
     )
+    (:target "#atom-e1" :attr "display" :expr "vars.atomicNumber >= 1 ? 'inline' : 'none'")
+    (:target "#atom-e2" :attr "display" :expr "vars.atomicNumber >= 2 ? 'inline' : 'none'")
+
+    <!-- L-Shell Electrons (n=2, 8 positions) -->
     (:target "#atom-oe-0" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.2 + 0 * Math.PI / 2) * 145"
-      :y "Math.sin(t * Math.PI * 2 * 1.2 + 0 * Math.PI / 2) * 80"
-      :z "Math.sin(t * Math.PI * 2 * 1.2 + 0 * Math.PI / 2) * 145"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 145"
       :base-r 6
     )
     (:target "#atom-oe-1" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.2 + 1 * Math.PI / 2) * 145"
-      :y "Math.sin(t * Math.PI * 2 * 1.2 + 1 * Math.PI / 2) * 80"
-      :z "Math.sin(t * Math.PI * 2 * 1.2 + 1 * Math.PI / 2) * 145"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 145"
       :base-r 6
     )
     (:target "#atom-oe-2" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.2 + 2 * Math.PI / 2) * 145"
-      :y "Math.sin(t * Math.PI * 2 * 1.2 + 2 * Math.PI / 2) * 80"
-      :z "Math.sin(t * Math.PI * 2 * 1.2 + 2 * Math.PI / 2) * 145"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 145"
       :base-r 6
     )
     (:target "#atom-oe-3" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.2 + 3 * Math.PI / 2) * 145"
-      :y "Math.sin(t * Math.PI * 2 * 1.2 + 3 * Math.PI / 2) * 80"
-      :z "Math.sin(t * Math.PI * 2 * 1.2 + 3 * Math.PI / 2) * 145"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 145"
       :base-r 6
     )
+    (:target "#atom-oe-4" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 145"
+      :base-r 6
+    )
+    (:target "#atom-oe-5" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 145"
+      :base-r 6
+    )
+    (:target "#atom-oe-6" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 145"
+      :base-r 6
+    )
+    (:target "#atom-oe-7" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 145"
+      :y "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 80"
+      :z "Math.sin(t * Math.PI * 2 * 1.5 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 145"
+      :base-r 6
+    )
+
+    (:target "#atom-oe-0" :attr "display" :expr "vars.atomicNumber >= 3 ? 'inline' : 'none'")
+    (:target "#atom-oe-1" :attr "display" :expr "vars.atomicNumber >= 4 ? 'inline' : 'none'")
+    (:target "#atom-oe-2" :attr "display" :expr "vars.atomicNumber >= 5 ? 'inline' : 'none'")
+    (:target "#atom-oe-3" :attr "display" :expr "vars.atomicNumber >= 6 ? 'inline' : 'none'")
+    (:target "#atom-oe-4" :attr "display" :expr "vars.atomicNumber >= 7 ? 'inline' : 'none'")
+    (:target "#atom-oe-5" :attr "display" :expr "vars.atomicNumber >= 8 ? 'inline' : 'none'")
+    (:target "#atom-oe-6" :attr "display" :expr "vars.atomicNumber >= 9 ? 'inline' : 'none'")
+    (:target "#atom-oe-7" :attr "display" :expr "vars.atomicNumber >= 10 ? 'inline' : 'none'")
+
+    <!-- M-Shell Electrons (n=3, 8 positions) -->
+    (:target "#atom-me-0" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 0 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-1" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 1 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-2" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 2 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-3" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 3 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-4" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 4 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-5" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 5 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-6" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 6 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+    (:target "#atom-me-7" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 215"
+      :y "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 110"
+      :z "Math.sin(t * Math.PI * 2 * 0.9 * (vars.orbitSpeed || 1) + 7 * Math.PI / 4) * 215"
+      :base-r 6
+    )
+
+    (:target "#atom-me-0" :attr "display" :expr "vars.atomicNumber >= 11 ? 'inline' : 'none'")
+    (:target "#atom-me-1" :attr "display" :expr "vars.atomicNumber >= 12 ? 'inline' : 'none'")
+    (:target "#atom-me-2" :attr "display" :expr "vars.atomicNumber >= 13 ? 'inline' : 'none'")
+    (:target "#atom-me-3" :attr "display" :expr "vars.atomicNumber >= 14 ? 'inline' : 'none'")
+    (:target "#atom-me-4" :attr "display" :expr "vars.atomicNumber >= 15 ? 'inline' : 'none'")
+    (:target "#atom-me-5" :attr "display" :expr "vars.atomicNumber >= 16 ? 'inline' : 'none'")
+    (:target "#atom-me-6" :attr "display" :expr "vars.atomicNumber >= 17 ? 'inline' : 'none'")
+    (:target "#atom-me-7" :attr "display" :expr "vars.atomicNumber >= 18 ? 'inline' : 'none'")
   ))
 )

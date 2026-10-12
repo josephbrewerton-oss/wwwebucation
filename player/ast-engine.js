@@ -4260,9 +4260,9 @@
             const node = container.querySelector(b.target);
             if (node) {
               let evalX = () => 0, evalY = () => 0, evalZ = () => 0;
-              try { evalX = new Function('t', 'Math', `"use strict"; return (${b.x});`); } catch {}
-              try { evalY = new Function('t', 'Math', `"use strict"; return (${b.y});`); } catch {}
-              try { evalZ = new Function('t', 'Math', `"use strict"; return (${b.z});`); } catch {}
+              try { evalX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x});`); } catch {}
+              try { evalY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y});`); } catch {}
+              try { evalZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z});`); } catch {}
               const labelNode = b.label ? container.querySelector(b.label) : null;
               
               const item = {
@@ -4283,12 +4283,12 @@
             if (line) {
               let evalX1 = () => 0, evalY1 = () => 0, evalZ1 = () => 0;
               let evalX2 = () => 0, evalY2 = () => 0, evalZ2 = () => 0;
-              try { evalX1 = new Function('t', 'Math', `"use strict"; return (${b.x1});`); } catch {}
-              try { evalY1 = new Function('t', 'Math', `"use strict"; return (${b.y1});`); } catch {}
-              try { evalZ1 = new Function('t', 'Math', `"use strict"; return (${b.z1});`); } catch {}
-              try { evalX2 = new Function('t', 'Math', `"use strict"; return (${b.x2});`); } catch {}
-              try { evalY2 = new Function('t', 'Math', `"use strict"; return (${b.y2});`); } catch {}
-              try { evalZ2 = new Function('t', 'Math', `"use strict"; return (${b.z2});`); } catch {}
+              try { evalX1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x1});`); } catch {}
+              try { evalY1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y1});`); } catch {}
+              try { evalZ1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z1});`); } catch {}
+              try { evalX2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x2});`); } catch {}
+              try { evalY2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y2});`); } catch {}
+              try { evalZ2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z2});`); } catch {}
               const cap1 = b.cap1 ? container.querySelector(b.cap1) : null;
               const cap2 = b.cap2 ? container.querySelector(b.cap2) : null;
 
@@ -4310,13 +4310,13 @@
             if (ringNode) {
               let evalR = () => 100, evalCX = () => 0, evalCY = () => 0, evalCZ = () => 0;
               let evalTiltX = () => 0, evalTiltY = () => 0, evalTiltZ = () => 0;
-              try { evalR = new Function('t', 'Math', `"use strict"; return (${b.r});`); } catch {}
-              try { evalCX = new Function('t', 'Math', `"use strict"; return (${b.cx});`); } catch {}
-              try { evalCY = new Function('t', 'Math', `"use strict"; return (${b.cy});`); } catch {}
-              try { evalCZ = new Function('t', 'Math', `"use strict"; return (${b.cz});`); } catch {}
-              try { evalTiltX = new Function('t', 'Math', `"use strict"; return (${b.tiltX});`); } catch {}
-              try { evalTiltY = new Function('t', 'Math', `"use strict"; return (${b.tiltY});`); } catch {}
-              try { evalTiltZ = new Function('t', 'Math', `"use strict"; return (${b.tiltZ});`); } catch {}
+              try { evalR = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.r});`); } catch {}
+              try { evalCX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cx});`); } catch {}
+              try { evalCY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cy});`); } catch {}
+              try { evalCZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cz});`); } catch {}
+              try { evalTiltX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltX});`); } catch {}
+              try { evalTiltY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltY});`); } catch {}
+              try { evalTiltZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltZ});`); } catch {}
 
               const item = {
                 type: '3d-ring',
@@ -4336,7 +4336,7 @@
             if (polyNode) {
               let evalPts = () => [];
               try {
-                evalPts = new Function('t', 'Math', `"use strict"; return (${b.pointsExpr});`);
+                evalPts = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.pointsExpr});`);
               } catch {}
 
               const item = {
@@ -4570,13 +4570,23 @@
       if (this.active3DItems && this.active3DItems.length) {
         let dnaStrandA = null;
         let dnaStrandB = null;
+        const v = this.vars || {};
+        const comp = v;
         for (let i = 0; i < this.active3DItems.length; i++) {
           const item = this.active3DItems[i];
 
+          // Check if element is hidden by reactive binding
+          if (item.domNode && (item.domNode.getAttribute('display') === 'none' || item.domNode.style.display === 'none')) {
+            if (item.labelNode) item.labelNode.setAttribute('opacity', '0');
+            if (item.cap1) item.cap1.setAttribute('opacity', '0');
+            if (item.cap2) item.cap2.setAttribute('opacity', '0');
+            continue;
+          }
+
           if (item.type === '3d-node') {
-            const wx = item.evalX(t, Math);
-            const wy = item.evalY(t, Math);
-            const wz = item.evalZ(t, Math);
+            const wx = item.evalX(t, v, Math, comp);
+            const wy = item.evalY(t, v, Math, comp);
+            const wz = item.evalZ(t, v, Math, comp);
             const proj = this.project3D(wx, wy, wz, camera, 400, 240);
             item.meanZ = proj.z;
 
@@ -4600,12 +4610,12 @@
               }
             }
           } else if (item.type === '3d-line') {
-            const x1 = item.evalX1(t, Math);
-            const y1 = item.evalY1(t, Math);
-            const z1 = item.evalZ1(t, Math);
-            const x2 = item.evalX2(t, Math);
-            const y2 = item.evalY2(t, Math);
-            const z2 = item.evalZ2(t, Math);
+            const x1 = item.evalX1(t, v, Math, comp);
+            const y1 = item.evalY1(t, v, Math, comp);
+            const z1 = item.evalZ1(t, v, Math, comp);
+            const x2 = item.evalX2(t, v, Math, comp);
+            const y2 = item.evalY2(t, v, Math, comp);
+            const z2 = item.evalZ2(t, v, Math, comp);
 
             // Support Helicase unzipping interaction for DNA strands
             const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
@@ -4663,13 +4673,13 @@
               if (item.baseR) item.cap2.setAttribute('r', Math.max(1, item.baseR * p2.scale).toFixed(1));
             }
           } else if (item.type === '3d-ring') {
-            const r = item.evalR(t, Math);
-            const cx = item.evalCX(t, Math);
-            const cy = item.evalCY(t, Math);
-            const cz = item.evalCZ(t, Math);
-            const tiltXDeg = item.evalTiltX(t, Math);
-            const tiltYDeg = item.evalTiltY(t, Math);
-            const tiltZDeg = item.evalTiltZ(t, Math);
+            const r = item.evalR(t, v, Math, comp);
+            const cx = item.evalCX(t, v, Math, comp);
+            const cy = item.evalCY(t, v, Math, comp);
+            const cz = item.evalCZ(t, v, Math, comp);
+            const tiltXDeg = item.evalTiltX(t, v, Math, comp);
+            const tiltYDeg = item.evalTiltY(t, v, Math, comp);
+            const tiltZDeg = item.evalTiltZ(t, v, Math, comp);
 
             const rxRad = tiltXDeg * (Math.PI / 180);
             const ryRad = tiltYDeg * (Math.PI / 180);
@@ -4725,7 +4735,7 @@
               }
             }
           } else if (item.type === '3d-polygon') {
-            const rawPts = item.evalPts(t, Math);
+            const rawPts = item.evalPts(t, v, Math, comp);
             if (Array.isArray(rawPts) && rawPts.length >= 3) {
               let pathD = '';
               let totalZ = 0;

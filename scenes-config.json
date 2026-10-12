@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T07:56:12.824Z",
+  "generatedAt": "2026-10-12T09:10:02.134Z",
   "totalScenes": 21,
   "inputDirs": [
     "static/player/scenes",
@@ -230,12 +230,12 @@
       "stage": "KS3 CHEMISTRY",
       "duration": 12,
       "has3D": true,
-      "nodes3DCount": 15,
+      "nodes3DCount": 59,
       "svgFile": "scenes/atom.svg",
       "astFile": "scenes/atom.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 15
+      "bindingsCount": 117
     },
     {
       "id": "velocity",
