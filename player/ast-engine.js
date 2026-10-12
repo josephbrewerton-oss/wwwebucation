@@ -4052,6 +4052,149 @@
     }
 
     /**
+     * Reads a File or Blob as UTF-8 text using a Promise.
+     * @param {File|Blob} file
+     * @returns {Promise<string>}
+     */
+    readFileAsText(file) {
+      if (!file) return Promise.resolve('');
+      if (typeof file.text === 'function') {
+        return file.text();
+      }
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || '').trim());
+        reader.onerror = () => reject(new Error(`Failed to read file "${file.name}": ${reader.error?.message}`));
+        reader.readAsText(file);
+      });
+    }
+
+    /**
+     * Loads one or multiple simulation files.
+     * Intelligently accepts and merges the dual nature of cartridges:
+     * 1. Companion Dual-Nature Pairs: Drops of both `.svg` vector artwork + `.ast` logic script simultaneously.
+     * 2. Single-File Hybrid Capsules (`.ast.svg`): Vector SVG with embedded executable AST metadata.
+     * 3. Single AST, JSON, SlideScript, or translated PhET bundles.
+     * @param {FileList|File[]} fileList
+     * @param {boolean} shouldPlay
+     */
+    async loadFiles(fileList, shouldPlay = false) {
+      if (!fileList) {
+        throw new Error('[AST Engine] loadFiles requires a valid file list');
+      }
+      const files = Array.from(fileList);
+      if (files.length === 0) return null;
+      if (files.length === 1) {
+        return this.loadFromFile(files[0], shouldPlay);
+      }
+
+      // Dual-nature companion pair detection: one .svg and one .ast (or .json / .slidescript)
+      const svgFile = files.find(f => {
+        const name = (f.name || '').toLowerCase();
+        return name.endsWith('.svg') && !name.endsWith('.ast.svg');
+      }) || files.find(f => (f.name || '').toLowerCase().endsWith('.svg'));
+
+      const astFile = files.find(f => {
+        const name = (f.name || '').toLowerCase();
+        return name.endsWith('.ast') || name.endsWith('.json') || name.endsWith('.slidescript');
+      });
+
+      if (svgFile && astFile) {
+        const [svgContent, astContent] = await Promise.all([
+          this.readFileAsText(svgFile),
+          this.readFileAsText(astFile)
+        ]);
+
+        const astExt = (astFile.name || '').split('.').pop().toLowerCase();
+        let parsed = null;
+        let interactive = null;
+        let gestures = null;
+        let stateMachines = null;
+        let emitters = null;
+        let bindInputs = null;
+        let keyframes = [];
+        let subtitles = [];
+        let rawBindings = [];
+        let duration = 10.0;
+        let title = astFile.name.replace(/\.[^/.]+$/, '');
+        let id = title.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+        if (astExt === 'json') {
+          const json = JSON.parse(astContent);
+          id = json.id || id;
+          title = json.title || title;
+          duration = json.duration || duration;
+          keyframes = json.keyframes || [];
+          subtitles = json.subtitles || [];
+          rawBindings = json.bindings || json.rawBindings || [];
+          interactive = json.interactive || null;
+          gestures = json.gestures || null;
+          stateMachines = json.stateMachines || null;
+          emitters = json.emitters || null;
+          bindInputs = json.bindInputs || null;
+        } else if (astExt === 'slidescript') {
+          if (global.ASTSlideScriptCompiler) {
+            const compiled = global.ASTSlideScriptCompiler.compile(astContent);
+            parsed = compiled.scene;
+            id = parsed.id || id;
+            title = parsed.title || title;
+            duration = parsed.duration || duration;
+            keyframes = parsed.keyframes || [];
+            subtitles = parsed.subtitles || [];
+            rawBindings = parsed.rawBindings || [];
+          }
+        } else {
+          // Standard AST S-Expression file
+          parsed = this.parseAst(astContent);
+          if (parsed) {
+            id = parsed.id || id;
+            title = parsed.title || title;
+            duration = parsed.duration || duration;
+            keyframes = parsed.keyframes || [];
+            subtitles = parsed.subtitles || [];
+            rawBindings = parsed.bindings || [];
+            interactive = parsed.interactive || null;
+            gestures = parsed.gestures || null;
+            stateMachines = parsed.stateMachines || null;
+            emitters = parsed.emitters || null;
+            bindInputs = parsed.bindInputs || null;
+          }
+        }
+
+        const scene = {
+          id,
+          title,
+          stage: `DUAL PAIR (${astFile.name} + ${svgFile.name})`,
+          duration,
+          camera: (parsed && parsed.camera) || null,
+          has3D: Boolean(parsed && parsed.has3D),
+          keyframes,
+          subtitles,
+          rawBindings,
+          interactive,
+          gestures,
+          stateMachines,
+          emitters,
+          bindInputs,
+          svgText: svgContent
+        };
+
+        const loaded = this.loadSceneData(scene, shouldPlay);
+        this.emit('fileloaded', {
+          filename: `${astFile.name} + ${svgFile.name}`,
+          type: 'companion-pair',
+          id: scene.id,
+          dualNature: true
+        });
+        return loaded;
+      }
+
+      // If multiple files dropped without an explicit svg+ast pair, load the primary simulation file
+      const primaryFile = files.find(f => /\.(ast|svg|json|html|slidescript)$/i.test(f.name)) || files[0];
+      return this.loadFromFile(primaryFile, shouldPlay);
+    }
+
+    /**
      * Loads a simulation directly from a zero-server URL payload string or base64 payload.
      * Supports S-expressions (#ast=...), SlideScript markdown (#script=...), or JSON (#data=...).
      * @param {string} payload

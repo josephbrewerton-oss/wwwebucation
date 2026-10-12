@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T11:12:38.088Z",
-  "totalScenes": 21,
+  "generatedAt": "2026-10-12T13:56:13.805Z",
+  "totalScenes": 23,
   "inputDirs": [
     "static/player/scenes",
     "static/player/cartridges",
@@ -294,6 +294,20 @@
       "bindingsCount": 2
     },
     {
+      "id": "altar-anatomy",
+      "type": "Slide",
+      "title": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
+      "stage": "CATHOLIC LIFE",
+      "duration": 18,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/altar-anatomy.svg",
+      "astFile": "scenes/altar-anatomy.ast",
+      "keyframeCount": 6,
+      "subtitleCount": 6,
+      "bindingsCount": 7
+    },
+    {
       "id": "shakespeare",
       "type": "Slide",
       "title": "The Globe Theatre: Shakespeare & Iambic Pentameter",
@@ -306,6 +320,20 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 2
+    },
+    {
+      "id": "holy-oils",
+      "type": "Slide",
+      "title": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
+      "stage": "CATHOLIC LIFE",
+      "duration": 18,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/holy-oils.svg",
+      "astFile": "scenes/holy-oils.ast",
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 8
     }
   ]
 }

@@ -1288,8 +1288,13 @@
           e.stopPropagation();
           stageWrap.classList.remove('drag-drop-active');
           if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-            const file = e.dataTransfer.files[0];
-            this.engine.loadFromFile(file, true).catch((err) => {
+            const files = e.dataTransfer.files;
+            const loader = (this.engine.loadFiles ? this.engine.loadFiles(files, true) : this.engine.loadFromFile(files[0], true));
+            loader.then((scene) => {
+              if (files.length > 1) {
+                this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
+              }
+            }).catch((err) => {
               this.showToast('❌ ' + err.message, 4500);
             });
           }
@@ -1305,8 +1310,13 @@
         });
         fileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files.length) {
-            const file = e.target.files[0];
-            this.engine.loadFromFile(file, true).catch((err) => {
+            const files = e.target.files;
+            const loader = (this.engine.loadFiles ? this.engine.loadFiles(files, true) : this.engine.loadFromFile(files[0], true));
+            loader.then((scene) => {
+              if (files.length > 1) {
+                this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
+              }
+            }).catch((err) => {
               this.showToast('❌ ' + err.message, 4500);
             });
             fileInput.value = '';
