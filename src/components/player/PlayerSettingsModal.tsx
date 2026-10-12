@@ -51,7 +51,7 @@ export const PlayerSettingsModal: React.FC<PlayerSettingsModalProps> = ({
             <span style={{ fontSize: '1.2rem' }}>⚙️</span>
             <strong style={{ fontSize: '0.95rem' }}>Player Display &amp; Controls Configuration</strong>
             <span
-              className="stj-badge stj-badge-primary stj-pill"
+              className="stj-badge stj-badge-primary"
               style={{ fontSize: '0.68rem', textTransform: 'uppercase' }}
             >
               {displayConfig.mode} MODE

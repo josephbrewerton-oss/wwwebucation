@@ -202,7 +202,7 @@ export const SwfTranspilerDrawer: React.FC<SwfTranspilerDrawerProps> = ({
         <div style={{ background: 'var(--stj-canvas)', border: '1px solid var(--stj-border)', borderRadius: '12px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="stj-badge stj-badge-success stj-pill" style={{ fontWeight: 800 }}>✓ TRANSPILED</span>
+              <span className="stj-badge stj-badge-success" style={{ fontWeight: 700 }}>✓ Transpiled</span>
               <strong style={{ fontSize: '0.86rem', color: 'var(--stj-text)' }}>
                 Legacy Flash SWF v{swfResult.metadata.version} ({swfResult.metadata.signature})
               </strong>

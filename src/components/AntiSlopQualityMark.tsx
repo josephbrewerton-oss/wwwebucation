@@ -91,38 +91,37 @@ export default function AntiSlopQualityMark(): React.JSX.Element {
 
   return (
     <>
-      {/* Discreet Quality Mark Trigger Pill in Footer */}
-      <div
+      {/* Discreet Architectural Verification Trigger in Footer */}
+      <button
+        type="button"
         style={{
           display: 'inline-flex',
           alignItems: 'center',
           gap: '8px',
-          background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
-          border: '1px solid rgba(16, 185, 129, 0.35)',
-          padding: '5px 12px',
-          borderRadius: '20px',
-          fontSize: '0.78rem',
-          color: '#cbd5e1',
+          background: 'rgba(15, 23, 42, 0.6)',
+          border: '1px solid rgba(255, 255, 255, 0.1)',
+          padding: '6px 12px',
+          borderRadius: '6px',
+          fontSize: '0.8rem',
+          color: '#e2e8f0',
           cursor: 'pointer',
-          transition: 'all 0.2s ease',
+          transition: 'all 0.18s ease',
           userSelect: 'none',
         }}
         onClick={() => setIsOpen(true)}
-        title="Click to inspect live Anti-Slop Telemetry & Pedagogical Verification"
+        title="Inspect Local Edge AI Verification & Privacy Guarantee"
       >
-        <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
-        <span style={{ color: '#6ee7b7', fontWeight: 800 }}>🛡️ AI Quality Mark:</span>
-        <span style={{ color: '#f8fafc', fontWeight: 600 }}>Human-Led &bull; Anti-Slop Verified</span>
-        <span style={{ color: '#94a3b8' }}>|</span>
-        <span style={{ color: '#6ee7b7', fontWeight: 700 }}>
-          {metrics.heapUsedMb ? `${metrics.heapUsedMb} MB Heap` : '< 20 MB'}
+        <span style={{ fontWeight: 600, color: '#f8fafc' }}>
+          🛡️ Privacy &amp; Data Safeguards
         </span>
-        <span style={{ color: '#94a3b8' }}>&bull;</span>
-        <span style={{ color: '#38bdf8', fontWeight: 700 }}>0 Cloud Egress</span>
-        <span style={{ fontSize: '0.72rem', background: '#064e3b', color: '#a7f3d0', padding: '1px 6px', borderRadius: '6px', fontWeight: 700 }}>
-          Inspect ↗
+        <span style={{ color: '#64748b' }} aria-hidden="true">·</span>
+        <span style={{ color: '#94a3b8', fontSize: '0.76rem' }}>
+          Zero Cloud Egress • Bounded Runtime
         </span>
-      </div>
+        <span style={{ fontSize: '0.72rem', color: '#60a5fa', marginLeft: '4px', fontWeight: 600 }}>
+          Verify ↗
+        </span>
+      </button>
 
       {/* Detailed Telemetry & Provenance Modal */}
       {isOpen && (
@@ -130,77 +129,44 @@ export default function AntiSlopQualityMark(): React.JSX.Element {
           role="dialog"
           aria-modal="true"
           aria-labelledby="quality-mark-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(2, 6, 23, 0.85)',
-            backdropFilter: 'blur(8px)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 9999,
-            padding: '1rem',
-          }}
+          className="stj-modal-backdrop"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsOpen(false);
           }}
         >
-          <div
-            style={{
-              backgroundColor: '#090d16',
-              border: '1px solid #1e293b',
-              borderRadius: '16px',
-              maxWidth: '760px',
-              width: '100%',
-              maxHeight: '90vh',
-              overflowY: 'auto',
-              color: '#f8fafc',
-              padding: '24px',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.65)',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '20px',
-            }}
-          >
+          <div className="stj-modal-shell" style={{ maxWidth: '760px' }}>
             {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid #1e293b', paddingBottom: '14px' }}>
+            <div className="stj-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div
                   style={{
                     width: '42px',
                     height: '42px',
-                    borderRadius: '12px',
+                    borderRadius: 'var(--stj-radius-md)',
                     background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     fontSize: '1.4rem',
-                    boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                    boxShadow: 'var(--stj-shadow-xs)',
                   }}
                 >
                   🛡️
                 </div>
                 <div>
-                  <h3 id="quality-mark-title" style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#f8fafc' }}>
+                  <h3 id="quality-mark-title" style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: 'var(--stj-text)' }}>
                     Human-Led Educational AI Quality Mark
                   </h3>
-                  <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--stj-text-muted)', marginTop: '2px' }}>
                     Empirical Proof of Anti-Slop Engineering &bull; DfE Curriculum Grounding &bull; Zero Student Surveillance
                   </div>
                 </div>
               </div>
               <button
                 type="button"
+                className="stj-modal-close-btn"
                 onClick={() => setIsOpen(false)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#94a3b8',
-                  fontSize: '1.4rem',
-                  cursor: 'pointer',
-                  padding: '4px 8px',
-                  borderRadius: '6px',
-                }}
+                aria-label="Close dialog"
               >
                 ✕
               </button>
@@ -210,8 +176,8 @@ export default function AntiSlopQualityMark(): React.JSX.Element {
             <div
               style={{
                 background: 'linear-gradient(135deg, rgba(6, 78, 59, 0.25) 0%, rgba(15, 23, 42, 0.6) 100%)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                borderRadius: '12px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                borderRadius: 'var(--stj-radius-lg)',
                 padding: '16px',
                 display: 'flex',
                 gap: '12px',
@@ -233,50 +199,50 @@ export default function AntiSlopQualityMark(): React.JSX.Element {
 
             {/* Live Browser Telemetry HUD */}
             <div>
-              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--stj-text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '8px' }}>
                 Live Browser Telemetry (Verifiable Right Now)
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '10px' }}>
+              <div className="stj-stat-grid">
                 {/* JS Heap Memory */}
-                <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>JS HEAP USAGE</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#10b981', marginTop: '4px' }}>
+                <div className="stj-stat-card">
+                  <div className="stj-stat-label">JS HEAP USAGE</div>
+                  <div className="stj-stat-value" style={{ color: '#10b981' }}>
                     {metrics.heapUsedMb ? `${metrics.heapUsedMb} MB` : '< 20 MB'}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#6ee7b7', marginTop: '2px' }}>
+                  <div className="stj-stat-desc" style={{ color: '#6ee7b7' }}>
                     ✓ Target &lt; 25 MB (Ultra-Lean)
                   </div>
                 </div>
 
                 {/* Cloud Data Egress */}
-                <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>STUDENT DATA EGRESS</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#38bdf8', marginTop: '4px' }}>
+                <div className="stj-stat-card">
+                  <div className="stj-stat-label">STUDENT DATA EGRESS</div>
+                  <div className="stj-stat-value" style={{ color: '#38bdf8' }}>
                     0 Bytes
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#7dd3fc', marginTop: '2px' }}>
+                  <div className="stj-stat-desc" style={{ color: '#7dd3fc' }}>
                     ✓ 100% On-Device Local IDB
                   </div>
                 </div>
 
                 {/* DOM Node Complexity */}
-                <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>DOM NODE COUNT</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#f59e0b', marginTop: '4px' }}>
+                <div className="stj-stat-card">
+                  <div className="stj-stat-label">DOM NODE COUNT</div>
+                  <div className="stj-stat-value" style={{ color: '#f59e0b' }}>
                     {metrics.domNodeCount}
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#fde68a', marginTop: '2px' }}>
+                  <div className="stj-stat-desc" style={{ color: '#fde68a' }}>
                     ✓ Zero Leaking Trees
                   </div>
                 </div>
 
                 {/* Tracking Pixels */}
-                <div style={{ background: '#0f172a', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px' }}>
-                  <div style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700 }}>EXTERNAL TRACKERS</div>
-                  <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#a855f7', marginTop: '4px' }}>
+                <div className="stj-stat-card">
+                  <div className="stj-stat-label">EXTERNAL TRACKERS</div>
+                  <div className="stj-stat-value" style={{ color: '#a855f7' }}>
                     0 Trackers
                   </div>
-                  <div style={{ fontSize: '0.7rem', color: '#d8b4fe', marginTop: '2px' }}>
+                  <div className="stj-stat-desc" style={{ color: '#d8b4fe' }}>
                     ✓ Zero Cookies / Ad Pixels
                   </div>
                 </div>

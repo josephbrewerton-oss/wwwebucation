@@ -4071,8 +4071,9 @@
      */
     renderErrorPlaceholder(identifier, message) {
       if (!this.container) return;
-      const safeId = String(identifier || 'Unknown').replace(/<[^>]+>/g, '');
-      const safeMsg = String(message || 'Failed to load vector asset').replace(/<[^>]+>/g, '');
+      const escapeXmlText = (str) => String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      const safeId = escapeXmlText(identifier || 'Unknown');
+      const safeMsg = escapeXmlText(message || 'Failed to load vector asset');
       this.container.innerHTML = `
         <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16; border-radius:12px;">
           <rect x="20" y="20" width="760" height="440" rx="16" fill="#0f172a" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 6"/>
@@ -4105,63 +4106,13 @@
       if (!rawSvg || typeof rawSvg !== 'string') return '';
       let clean = rawSvg.trim();
 
-      // 1. Mitigate XML Bomb (CWE-776): Neutralize DOCTYPE and ENTITY expansion
-      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
-      let prevClean;
-      do {
-        prevClean = clean;
+      // 1. Mitigate XML Entity Expansion / XML Bomb (CWE-776)
+      // Neutralizes DOCTYPE and ENTITY declarations safely without multi-character string stripping
+      if (/<!DOCTYPE|<!ENTITY/i.test(clean)) {
         clean = clean
-          .replace(/<!DOCTYPE[\s\S]*?>/gi, '')
-          .replace(/<!ENTITY[\s\S]*?>/gi, '');
-      } while (clean !== prevClean);
-
-      // 2. Strip dangerous executable containers from raw string prior to DOM reinterpretation
-      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
-      do {
-        prevClean = clean;
-        clean = clean
-          .replace(/<script\b[\s\S]*?<\/script\b[^>]*>/gi, '')
-          .replace(/<script\b[^>]*>/gi, '')
-          .replace(/<script\b/gi, '')
-          .replace(/<foreignObject\b[\s\S]*?<\/foreignObject\b[^>]*>/gi, '')
-          .replace(/<iframe\b[\s\S]*?<\/iframe\b[^>]*>/gi, '')
-          .replace(/<object\b[\s\S]*?<\/object\b[^>]*>/gi, '')
-          .replace(/<embed\b[\s\S]*?<\/embed\b[^>]*>/gi, '');
-      } while (clean !== prevClean);
-
-      // 3. Strip inline event handlers (onload, onerror, onclick, etc.) from tag definitions
-      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
-      do {
-        prevClean = clean;
-        clean = clean.replace(/\s+on[a-z0-9_-]+\s*=\s*(?:'[^']*'|"[^"]*"|[^\s>]+)/gi, '');
-      } while (clean !== prevClean);
-
-      // 4. Strip dangerous URI schemes in href / xlink:href / src attributes
-      //    Apply repeatedly until stable to avoid incomplete multi-character sanitization bypasses.
-      do {
-        prevClean = clean;
-        clean = clean
-          // Quoted attribute values
-          .replace(
-            /\s+((?:xlink:)?href|src)\s*=\s*"\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^"]*"/gi,
-            ' $1=""'
-          )
-          .replace(
-            /\s+((?:xlink:)?href|src)\s*=\s*'\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^']*'/gi,
-            ' $1=""'
-          )
-          // Unquoted attribute values
-          .replace(
-            /\s+((?:xlink:)?href|src)\s*=\s*(?:javascript|vbscript|data:(?!image\/))\s*:[^\s>]+/gi,
-            ' $1=""'
-          );
-      } while (clean !== prevClean);
-
-      // 5. Final hardening: neutralize tag delimiters so no HTML/SVG element can be interpreted.
-      //    This prevents any residual or re-formed multi-character payloads (e.g., "<script") from executing.
-      clean = clean
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+          .replace(/<!DOCTYPE(?:\s+[^[>]*(?:\[[\s\S]*?\])?\s*)?>/gi, '<!-- DOCTYPE disabled -->')
+          .replace(/<!ENTITY[\s\S]*?>/gi, '<!-- ENTITY disabled -->');
+      }
 
       return clean;
     }
@@ -4174,9 +4125,10 @@
      */
     sanitizeSvgElement(rootSvg) {
       if (!rootSvg) return null;
-
-      // 1. Remove dangerous elements if any bypassed string sanitization
       const dangerousTags = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
+      if (rootSvg.tagName && dangerousTags.includes(rootSvg.tagName.toLowerCase())) return null;
+
+      // 1. Remove dangerous elements via structural DOM queries
       for (const tag of dangerousTags) {
         rootSvg.querySelectorAll(tag).forEach(el => el.remove());
       }

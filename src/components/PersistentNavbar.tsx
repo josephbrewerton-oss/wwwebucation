@@ -332,9 +332,11 @@ export default function PersistentNavbar(): React.JSX.Element {
       role="navigation"
       aria-label="Main Navigation"
       style={{
-        backgroundColor: colorMode === 'dark' ? '#0f172a' : '#ffffff',
-        borderBottom: `1px solid ${colorMode === 'dark' ? '#1e293b' : '#e2e8f0'}`,
-        boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.05)',
+        backgroundColor: colorMode === 'dark' ? 'rgba(17, 24, 39, 0.92)' : 'rgba(255, 255, 255, 0.92)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
+        borderBottom: `1px solid var(--stj-border)`,
+        boxShadow: 'var(--stj-shadow-xs)',
         transition: 'background-color 0.2s ease',
         width: '100%',
       }}
@@ -382,21 +384,10 @@ export default function PersistentNavbar(): React.JSX.Element {
             </span>
           </Link>
           <span
-            className="hidden md:inline-flex items-center gap-1"
-            title="Education should be free — 100% free in perpetuity for schools and developing nations"
-            style={{
-              fontSize: '0.74rem',
-              fontWeight: 700,
-              color: colorMode === 'dark' ? '#4ade80' : '#15803d',
-              background: colorMode === 'dark' ? 'rgba(74, 222, 128, 0.12)' : '#f0fdf4',
-              border: `1px solid ${colorMode === 'dark' ? 'rgba(74, 222, 128, 0.3)' : '#bbf7d0'}`,
-              padding: '2px 9px',
-              borderRadius: '9999px',
-              letterSpacing: '0.01em',
-              whiteSpace: 'nowrap',
-            }}
+            className="hidden lg:inline-flex items-center text-xs text-slate-500 font-medium"
+            style={{ color: 'var(--stj-text-muted)' }}
           >
-            🕊️ Education should be free
+            Education should be free
           </span>
         </div>
 
@@ -416,20 +407,16 @@ export default function PersistentNavbar(): React.JSX.Element {
               fontSize: '0.88rem',
               fontWeight: isActive ? 600 : 500,
               color: isActive
-                ? '#2563eb'
-                : colorMode === 'dark'
-                ? '#94a3b8'
-                : '#475569',
+                ? 'var(--stj-primary)'
+                : 'var(--stj-text-muted)',
               backgroundColor: isActive
-                ? colorMode === 'dark'
-                  ? 'rgba(37, 99, 235, 0.15)'
-                  : '#eff6ff'
+                ? 'var(--stj-primary-surface)'
                 : 'transparent',
-              borderRadius: '6px',
+              borderRadius: 'var(--stj-radius-sm)',
               transition: 'all 0.15s ease',
             })}
           >
-            🏠 Home
+            Home
           </NavLink>
 
           {/* 2. Catholic Life & Faith (Dedicated, Not Key Staged) */}
@@ -443,30 +430,19 @@ export default function PersistentNavbar(): React.JSX.Element {
               fontSize: '0.88rem',
               fontWeight: isActive ? 700 : 600,
               color: isActive
-                ? '#4338ca'
-                : colorMode === 'dark'
-                ? '#c7d2fe'
-                : '#3730a3',
+                ? 'var(--stj-text)'
+                : 'var(--stj-text-muted)',
               backgroundColor: isActive
-                ? colorMode === 'dark'
-                  ? 'rgba(99, 102, 241, 0.25)'
-                  : '#eef2ff'
-                : colorMode === 'dark'
-                ? 'rgba(238, 242, 255, 0.05)'
-                : 'rgba(238, 242, 255, 0.6)',
-              border: `1px solid ${isActive ? '#818cf8' : colorMode === 'dark' ? 'rgba(129, 140, 248, 0.3)' : '#e0e7ff'}`,
-              borderRadius: '6px',
+                ? 'var(--stj-canvas)'
+                : 'transparent',
+              borderRadius: 'var(--stj-radius-sm)',
               transition: 'all 0.15s ease',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
             })}
           >
-            <span>✝️</span>
-            <span>Catholic Life</span>
+            Catholic Life
           </NavLink>
 
-          {/* 2.5. PhET / Flash Style Simulators */}
+          {/* 2.5. Simulators */}
           <NavLink
             to="/simulator"
             title="Interactive STEM & Humanities Simulators (PhET / Flash Style)"
@@ -475,29 +451,18 @@ export default function PersistentNavbar(): React.JSX.Element {
               whiteSpace: 'nowrap',
               padding: '0.4rem 0.65rem',
               fontSize: '0.88rem',
-              fontWeight: isActive ? 700 : 600,
+              fontWeight: isActive ? 600 : 500,
               color: isActive
-                ? '#0284c7'
-                : colorMode === 'dark'
-                ? '#7dd3fc'
-                : '#0369a1',
+                ? 'var(--stj-primary)'
+                : 'var(--stj-text-muted)',
               backgroundColor: isActive
-                ? colorMode === 'dark'
-                  ? 'rgba(2, 132, 199, 0.25)'
-                  : '#f0f9ff'
-                : colorMode === 'dark'
-                ? 'rgba(2, 132, 199, 0.08)'
-                : 'rgba(224, 242, 254, 0.5)',
-              border: `1px solid ${isActive ? '#38bdf8' : colorMode === 'dark' ? 'rgba(56, 189, 248, 0.3)' : '#bae6fd'}`,
-              borderRadius: '6px',
+                ? 'var(--stj-primary-surface)'
+                : 'transparent',
+              borderRadius: 'var(--stj-radius-sm)',
               transition: 'all 0.15s ease',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
             })}
           >
-            <span>🎮</span>
-            <span>Simulators</span>
+            Simulators
           </NavLink>
 
           {/* 3. Learning Dropdown */}
@@ -516,32 +481,30 @@ export default function PersistentNavbar(): React.JSX.Element {
               aria-controls="nav-learning-dropdown"
               style={{
                 background: isLearningActive
-                  ? colorMode === 'dark' ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff'
+                  ? 'var(--stj-primary-surface)'
                   : openDropdown === 'learning'
-                  ? colorMode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#f1f5f9'
+                  ? 'var(--stj-canvas)'
                   : 'transparent',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: 'var(--stj-radius-sm)',
                 padding: '0.4rem 0.65rem',
                 fontSize: '0.88rem',
                 fontWeight: isLearningActive ? 600 : 500,
                 color: isLearningActive
-                  ? '#2563eb'
-                  : colorMode === 'dark'
-                  ? '#94a3b8'
-                  : '#475569',
+                  ? 'var(--stj-primary)'
+                  : 'var(--stj-text-muted)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap',
               }}
             >
-              <span>📖 Learning</span>
+              <span>Learning</span>
               <span
                 style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.62rem',
                   opacity: 0.7,
                   display: 'inline-block',
                   transform: openDropdown === 'learning' ? 'rotate(180deg)' : 'none',
@@ -628,32 +591,30 @@ export default function PersistentNavbar(): React.JSX.Element {
               aria-controls="nav-admin-dropdown"
               style={{
                 background: isAdminActive
-                  ? colorMode === 'dark' ? 'rgba(37, 99, 235, 0.15)' : '#eff6ff'
+                  ? 'var(--stj-primary-surface)'
                   : openDropdown === 'admin'
-                  ? colorMode === 'dark' ? 'rgba(255, 255, 255, 0.06)' : '#f1f5f9'
+                  ? 'var(--stj-canvas)'
                   : 'transparent',
                 border: 'none',
-                borderRadius: '6px',
+                borderRadius: 'var(--stj-radius-sm)',
                 padding: '0.4rem 0.65rem',
                 fontSize: '0.88rem',
                 fontWeight: isAdminActive ? 600 : 500,
                 color: isAdminActive
-                  ? '#2563eb'
-                  : colorMode === 'dark'
-                  ? '#94a3b8'
-                  : '#475569',
+                  ? 'var(--stj-primary)'
+                  : 'var(--stj-text-muted)',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.3rem',
+                gap: '0.35rem',
                 transition: 'all 0.15s ease',
                 whiteSpace: 'nowrap',
               }}
             >
-              <span>🏫 Educator & Admin</span>
+              <span>Educator &amp; Admin</span>
               <span
                 style={{
-                  fontSize: '0.68rem',
+                  fontSize: '0.62rem',
                   opacity: 0.7,
                   display: 'inline-block',
                   transform: openDropdown === 'admin' ? 'rotate(180deg)' : 'none',
@@ -770,20 +731,20 @@ export default function PersistentNavbar(): React.JSX.Element {
                     title="On-Device Gemini Nano AI Status"
                     style={{
                       background: hasNanoConsent
-                        ? colorMode === 'dark' ? '#064e3b' : '#ecfdf5'
-                        : colorMode === 'dark' ? '#1e293b' : '#f8fafc',
+                        ? 'var(--stj-success-surface)'
+                        : 'var(--stj-surface)',
                       color: hasNanoConsent
-                        ? colorMode === 'dark' ? '#6ee7b7' : '#065f46'
-                        : colorMode === 'dark' ? '#94a3b8' : '#475569',
+                        ? 'var(--stj-success)'
+                        : 'var(--stj-text-muted)',
                       border: `1px solid ${
                         hasNanoConsent
-                          ? colorMode === 'dark' ? '#10b981' : '#a7f3d0'
-                          : colorMode === 'dark' ? '#334155' : '#cbd5e1'
+                          ? 'var(--stj-success-border)'
+                          : 'var(--stj-border)'
                       }`,
                       borderRadius: '6px',
                       padding: '0.35rem 0.65rem',
                       fontSize: '0.8rem',
-                      fontWeight: 700,
+                      fontWeight: 600,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',

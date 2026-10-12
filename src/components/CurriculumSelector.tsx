@@ -357,7 +357,7 @@ export const CurriculumSelector: React.FC<Props> = ({
       <span
         role="status"
         aria-live="polite"
-        className={`stj-badge ${isReady ? 'stj-badge-success' : 'stj-badge-warning'} stj-pill`}
+        className={`stj-badge ${isReady ? 'stj-badge-success' : 'stj-badge-warning'}`}
       >
         <span style={{ fontSize: '0.65rem' }}>●</span>
         {isReady ? 'Ready' : 'Thinking...'}

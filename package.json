@@ -16,7 +16,6 @@
     "test:ink": "npx tsx scripts/simulate-whiteboard-ink.ts",
     "test:invariants": "npx tsx scripts/simulate-sim-engine-invariants.ts",
     "ingest:oak": "npx tsx scripts/ingest-oak.ts",
-    "ingest:bulk": "npx tsx scripts/ingest-bulk-oak.ts",
     "export:dist": "npx tsx scripts/export-distribution.ts",
     "lint": "tsc --noEmit",
     "mine:watch": "npx tsx scripts/watchSubstrates.ts"

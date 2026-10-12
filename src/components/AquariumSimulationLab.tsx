@@ -250,20 +250,12 @@ export default function AquariumSimulationLab({
         }}
       >
         {/* Panel 1: Live Interactive Tank Apparatus */}
-        <div
-          style={{
-            background: '#0f172a',
-            padding: '1rem',
-            borderRadius: '12px',
-            border: '1px solid #334155',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          }}
-        >
+        <div className="stj-sim-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.04em' }}>
               🎛️ HABITAT CONTROLS &amp; FEEDING
             </span>
-            <span style={{ fontSize: '0.7rem', color: '#64748b' }}>Interactive Physics</span>
+            <span style={{ fontSize: '0.7rem', color: 'var(--stj-text-muted)' }}>Interactive Physics</span>
           </div>
 
           {/* Quick Action Buttons */}
@@ -273,19 +265,19 @@ export default function AquariumSimulationLab({
               onClick={handleFeedFish}
               style={{
                 padding: '10px',
-                borderRadius: '8px',
+                borderRadius: 'var(--stj-radius-md)',
                 background: 'linear-gradient(135deg, #d97706 0%, #f59e0b 100%)',
                 color: '#ffffff',
                 border: 'none',
-                fontWeight: 800,
+                fontWeight: 700,
                 fontSize: '0.82rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxShadow: '0 2px 6px rgba(245, 158, 11, 0.3)',
-                transition: 'all 0.1s ease',
+                boxShadow: 'var(--stj-shadow-xs)',
+                transition: 'all 0.15s ease',
               }}
             >
               <span>🍞</span> Drop Food Flakes ({fedCount})
@@ -296,19 +288,19 @@ export default function AquariumSimulationLab({
               onClick={handleTapGlass}
               style={{
                 padding: '10px',
-                borderRadius: '8px',
+                borderRadius: 'var(--stj-radius-md)',
                 background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
                 color: '#0f172a',
                 border: 'none',
-                fontWeight: 800,
+                fontWeight: 700,
                 fontSize: '0.82rem',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '6px',
-                boxShadow: '0 2px 6px rgba(56, 189, 248, 0.3)',
-                transition: 'all 0.1s ease',
+                boxShadow: 'var(--stj-shadow-xs)',
+                transition: 'all 0.15s ease',
               }}
             >
               <span>👋</span> Tap Tank Glass
@@ -316,10 +308,10 @@ export default function AquariumSimulationLab({
           </div>
 
           {/* Slider 1: School Size Density */}
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>Active Fish Density (Boid Load):</span>
-              <span style={{ fontSize: '0.78rem', color: '#38bdf8', fontWeight: 800 }}>{schoolDensity} Fish</span>
+          <div className="stj-range-group">
+            <div className="stj-range-header">
+              <span style={{ color: 'var(--stj-text-muted)' }}>Active Fish Density (Boid Load):</span>
+              <span style={{ color: '#38bdf8', fontWeight: 800 }}>{schoolDensity} Fish</span>
             </div>
             <input
               type="range"
@@ -328,9 +320,10 @@ export default function AquariumSimulationLab({
               step="1"
               value={schoolDensity}
               onChange={(e) => handleDensityChange(parseInt(e.target.value, 10))}
-              style={{ width: '100%', accentColor: '#38bdf8', cursor: 'pointer' }}
+              className="stj-range-input"
+              aria-label="Fish Density"
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+            <div className="stj-range-labels">
               <span>4 Fish (Calm Reef)</span>
               <span>12 Baseline</span>
               <span>30 Fish (Stress Test)</span>
@@ -338,10 +331,10 @@ export default function AquariumSimulationLab({
           </div>
 
           {/* Slider 2: Water Current Flow */}
-          <div style={{ marginBottom: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-              <span style={{ fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600 }}>Hydrodynamic Current Flow:</span>
-              <span style={{ fontSize: '0.78rem', color: '#34d399', fontWeight: 800 }}>{waterFlow.toFixed(1)}x Speed</span>
+          <div className="stj-range-group">
+            <div className="stj-range-header">
+              <span style={{ color: 'var(--stj-text-muted)' }}>Hydrodynamic Current Flow:</span>
+              <span style={{ color: '#34d399', fontWeight: 800 }}>{waterFlow.toFixed(1)}x Speed</span>
             </div>
             <input
               type="range"
@@ -350,9 +343,11 @@ export default function AquariumSimulationLab({
               step="0.2"
               value={waterFlow}
               onChange={(e) => handleFlowChange(parseFloat(e.target.value))}
-              style={{ width: '100%', accentColor: '#34d399', cursor: 'pointer' }}
+              className="stj-range-input"
+              style={{ accentColor: '#34d399' }}
+              aria-label="Water Flow Speed"
             />
-            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.66rem', color: '#64748b', marginTop: '2px' }}>
+            <div className="stj-range-labels">
               <span>0.2x Lagoon Still</span>
               <span>1.0x Tidal Drift</span>
               <span>3.0x Surge Rapids</span>
@@ -361,7 +356,7 @@ export default function AquariumSimulationLab({
 
           {/* Lighting Mode Selector */}
           <div>
-            <span style={{ display: 'block', fontSize: '0.78rem', color: '#cbd5e1', fontWeight: 600, marginBottom: '6px' }}>
+            <span style={{ display: 'block', fontSize: '0.78rem', color: 'var(--stj-text-muted)', fontWeight: 600, marginBottom: '6px' }}>
               Reef Lighting Spectrum:
             </span>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -380,13 +375,14 @@ export default function AquariumSimulationLab({
                   style={{
                     flex: 1,
                     padding: '6px 8px',
-                    borderRadius: '6px',
-                    background: lightingMode === mode.id ? 'rgba(56, 189, 248, 0.2)' : '#1e293b',
-                    border: lightingMode === mode.id ? '1px solid #38bdf8' : '1px solid #334155',
-                    color: lightingMode === mode.id ? '#ffffff' : '#94a3b8',
+                    borderRadius: 'var(--stj-radius-sm)',
+                    background: lightingMode === mode.id ? 'var(--stj-primary-surface)' : 'var(--stj-surface)',
+                    border: lightingMode === mode.id ? '1px solid var(--stj-primary)' : '1px solid var(--stj-border)',
+                    color: lightingMode === mode.id ? 'var(--stj-primary)' : 'var(--stj-text-muted)',
                     fontSize: '0.72rem',
-                    fontWeight: 700,
+                    fontWeight: 600,
                     cursor: 'pointer',
+                    transition: 'all 0.15s ease',
                   }}
                 >
                   {mode.label}
@@ -397,15 +393,7 @@ export default function AquariumSimulationLab({
         </div>
 
         {/* Panel 2: Species Field Guide & Pedagogical Identification */}
-        <div
-          style={{
-            background: '#0f172a',
-            padding: '1rem',
-            borderRadius: '12px',
-            border: '1px solid #334155',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
-          }}
-        >
+        <div className="stj-sim-panel">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.04em' }}>
               📖 REEF SPECIES FIELD GUIDE

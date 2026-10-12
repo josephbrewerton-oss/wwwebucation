@@ -49,23 +49,23 @@ export default function PersistentFooter(): React.JSX.Element {
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li>
-              <Link to="/practice-lab" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                ⚡ Interactive Practice Lab
+              <Link to="/practice-lab" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Interactive Practice Lab
               </Link>
             </li>
             <li>
-              <Link to="/learning-zone" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                📖 Curriculum Lessons
+              <Link to="/learning-zone" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Curriculum Lessons
               </Link>
             </li>
             <li>
-              <Link to="/profile" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                ⭐ Learner Passport & Badges
+              <Link to="/profile" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Learner Passport &amp; Badges
               </Link>
             </li>
             <li>
-              <Link to="/curriculum-studio" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                🌍 Curriculum Studio
+              <Link to="/curriculum-studio" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Curriculum Studio
               </Link>
             </li>
           </ul>
@@ -73,37 +73,37 @@ export default function PersistentFooter(): React.JSX.Element {
 
         <div>
           <p style={{ color: '#f8fafc', fontSize: '0.92rem', fontWeight: 600, marginBottom: '0.75rem', margin: '0 0 0.75rem 0' }}>
-            Mission & Standards
+            Mission &amp; Standards
           </p>
           <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
             <li>
-              <Link to="/teacher-beacon" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 600 }}>
-                📡 Classroom Beacon (Teacher Console)
+              <Link to="/teacher-beacon" style={{ color: '#38bdf8', textDecoration: 'none', fontWeight: 500 }} className="hover:underline">
+                Classroom Beacon (Teacher Console)
               </Link>
             </li>
             <li>
-              <Link to="/licensing" style={{ color: '#86efac', textDecoration: 'none', fontWeight: 600 }}>
-                🕊️ Mission &amp; Global Licensing
+              <Link to="/licensing" style={{ color: '#86efac', textDecoration: 'none', fontWeight: 500 }} className="hover:underline">
+                Mission &amp; Global Licensing
               </Link>
             </li>
             <li>
-              <Link to="/settings" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                ⚙️ Neural Engine Settings
+              <Link to="/settings" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Neural Engine Settings
               </Link>
             </li>
             <li>
-              <Link to="/child-safety" style={{ color: '#4ade80', textDecoration: 'none', fontWeight: 600 }}>
-                🛡️ Child Safety &amp; Safeguarding (KCSIE)
+              <Link to="/child-safety" style={{ color: '#4ade80', textDecoration: 'none', fontWeight: 500 }} className="hover:underline">
+                Child Safety &amp; Safeguarding (KCSIE)
               </Link>
             </li>
             <li>
-              <Link to="/privacy" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                🔒 Privacy, GDPR &amp; Cookies
+              <Link to="/privacy" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Privacy, GDPR &amp; Cookies
               </Link>
             </li>
             <li>
-              <Link to="/news" style={{ color: '#cbd5e1', textDecoration: 'none' }}>
-                📰 Curriculum News &amp; Releases
+              <Link to="/news" style={{ color: '#cbd5e1', textDecoration: 'none' }} className="hover:text-white transition-colors">
+                Curriculum News &amp; Releases
               </Link>
             </li>
             <li>
@@ -112,23 +112,24 @@ export default function PersistentFooter(): React.JSX.Element {
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: '#cbd5e1', textDecoration: 'none' }}
+                className="hover:text-white transition-colors"
               >
-                📦 Open Source Repository ↗
+                Open Source Repository ↗
               </a>
             </li>
           </ul>
         </div>
       </div>
 
-      {/* Human-Led Anti-Slop AI Quality Mark & Live Telemetry Strip */}
+      {/* Human-Led Edge AI Verification & Data Privacy Strip */}
       <div
         style={{
           maxWidth: '1200px',
           margin: '0 auto 1.5rem',
           padding: '0.65rem 1rem',
-          background: 'rgba(2, 6, 23, 0.4)',
-          border: '1px solid rgba(16, 185, 129, 0.25)',
-          borderRadius: '12px',
+          background: 'rgba(15, 23, 42, 0.4)',
+          border: '1px solid rgba(255, 255, 255, 0.08)',
+          borderRadius: '8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -138,7 +139,7 @@ export default function PersistentFooter(): React.JSX.Element {
       >
         <AntiSlopQualityMark />
         <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
-          Human-Directed • Bounded AST Compilation • DfE &amp; Catholic CES Grounded
+          Human-Directed • Bounded AST Runtime • DfE &amp; Catholic CES Grounded
         </span>
       </div>
 

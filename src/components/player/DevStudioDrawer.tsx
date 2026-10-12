@@ -140,7 +140,7 @@ export const DevStudioDrawer: React.FC<DevStudioDrawerProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
           {hotReloadFlash && (
             <span
-              className="stj-badge stj-badge-success stj-pill"
+              className="stj-badge stj-badge-success"
               style={{ fontSize: '0.72rem' }}
             >
               ✓ Hot-Reloaded!

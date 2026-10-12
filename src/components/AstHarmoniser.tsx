@@ -76,7 +76,7 @@ function AstHarmoniserClient(): React.JSX.Element {
     const cleanTargetLabel = resolution.targetLabel.replace(/["\\]/g, '');
     const cleanReason = resolution.reason.replace(/["\\]/g, '');
 
-    return `(view :className "card padding--lg shadow--md margin-vert--md"
+    return `(view :className "stj-card my-4"
   (header :level 2 "🛡️ Sovereign AST Route Harmoniser")
   (badge :variant "success" "Zero-404 AST Protocol Active")
   (callout :variant "info" "Reconciled route: \\"${cleanDisplayPath}\\" ➔ ${cleanTargetLabel}")
@@ -84,9 +84,9 @@ function AstHarmoniserClient(): React.JSX.Element {
     (step (text "Original Requested Route: ${cleanDisplayPath}"))
     (step (text "Harmonised Category: ${resolution.category}"))
     (step (text "AST Decision Engine: ${cleanReason}")))
-  (box :className "margin-vert--md"
-    (button :className "button button--primary button--lg" :action "navigate:target" "⚡ Proceed to Harmonised Arena")
-    (button :className "button button--secondary button--lg margin-left--sm" :action "navigate:home" "🏠 Portal Home"))
+  (box :className "my-4 flex flex-wrap gap-3"
+    (button :className "stj-btn stj-btn-primary" :action "navigate:target" "⚡ Proceed to Harmonised Arena")
+    (button :className "stj-btn stj-btn-secondary" :action "navigate:home" "🏠 Portal Home"))
   (ai-tutor :persona "Curriculum Governor" :engine "Gemini Nano" :greeting "Hello! You have reached a sovereign node. The AST router intercepted this link and harmonised it with your curriculum."))`;
   }, [rawPath, resolution]);
 
