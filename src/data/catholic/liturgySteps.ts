@@ -99,7 +99,7 @@ export const LITURGY_STEPS: LiturgyStep[] = [
     id: 'holy-communion-reception',
     part: 'Liturgy of the Eucharist',
     title: 'Receiving Holy Communion & Thanksgiving',
-    gesture: 'Walking forward with hands joined. When approaching, bow reverently. Place left hand over right hand as a "throne for the King". Say a clear "Amen!", receive the Host, consume it immediately, and return to your pew to kneel in quiet thanksgiving.',
+    gesture: 'Walk forward with hands joined. When approaching, make a profound bow of reverence. You may receive ON THE TONGUE (universal norm: open mouth wide, extend tongue over lower lip) or IN THE HAND (by indult: left hand flat upon right hand as a "throne for the King"). Proclaim a clear "Amen!", receive the Sacred Host, consume It IMMEDIATELY in front of the priest, check palms for fragments, and return to your pew to kneel in silent thanksgiving.',
     mystery: 'Jesus unites Himself to us intimately, dwelling in our heart and feeding our soul with eternal life.',
     dialogue: {
       priest: 'The Body of Christ.',

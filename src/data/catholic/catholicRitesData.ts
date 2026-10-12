@@ -540,6 +540,38 @@ export const LITURGICAL_COMPARISONS: LiturgicalComparisonTopic[] = [
     },
     socraticSynthesis: 'Both pastoral approaches stem from legitimate apostolic authority. The Eastern practice reminds us that grace is an unearned gift from God; the Western practice emphasizes conscious mature discipleship.',
   },
+  {
+    id: 'eucharistic-reception-method',
+    title: 'Receiving Holy Communion: On the Tongue vs. Hand vs. Liturgical Spoon (Labis)',
+    category: 'Eucharist',
+    westernLatinPractice: {
+      title: 'On the Tongue (Universal Norm) or In the Hand (by Indult)',
+      description: 'The universal norm of the Roman Rite is reception directly on the tongue (GIRM 161, kneeling or standing with a bow). Where permitted by bishops\' conference indult, communicants may receive in the hand (left hand resting upon right as a throne for the King, St. Cyril of Jerusalem), consuming the Host immediately in front of the priest and checking for fragments.',
+      theologicalMeaning: 'Emphasizes receiving Christ as pure gift without grasping, or reverencing the King with clean hands made a throne. Never self-intinction; never walking away with the Sacred Host in hand.',
+    },
+    easternCatholicPractice: {
+      title: 'Via Liturgical Spoon (Labis) Directly into the Mouth',
+      description: 'In all 14 Byzantine Catholic Churches (Ukrainian, Melkite, Ruthenian), communion is NEVER given in the hand. Consecrated leavened bread and Precious Blood are combined in the chalice and administered by the priest using a golden spoon (Labis). The faithful stand with arms crossed over their chest in St. Andrew’s Cross (❌), tilt their head back, open wide, KEEP THEIR TONGUE IN, and DO NOT touch the spoon with lips or teeth.',
+      theologicalMeaning: 'The spoon represents the Seraph’s burning coal from Isaiah 6:6 touching Isaiah’s lips to purge sins. St. Andrew’s crossed arms symbolize humble submission to the Crucified and Risen King.',
+    },
+    socraticSynthesis: 'Each tradition guards the Real Presence with extreme reverence! In the West, individual species are received with bow and "Amen"; in the East, both species are united in the chalice and spoon, prohibiting any personal touching of the Holy Gifts by the laity.',
+  },
+  {
+    id: 'our-father-hand-postures',
+    title: 'The Our Father: Priestly Orans Posture vs. Joined Hands vs. Holding Hands',
+    category: 'Prayer & Devotion',
+    westernLatinPractice: {
+      title: 'Priest: Orans Posture | Faithful: Hands Joined (Junctis Manibus)',
+      description: 'In the Roman Missal (GIRM 237), the priest ALONE extends his hands in the Orans posture (manibus extensis) because he acts in persona Christi capitis, interceding for the flock. For the congregation, the universal posture of prayer is hands joined (palms together, thumbs crossed). Holding hands across pews is an informal modern custom not found in any liturgical book.',
+      theologicalMeaning: 'The priest’s extended arms mirror Christ hanging on the Cross interceding with the Father. The faithful’s folded hands express humble filial submission and interior contemplation. (Holding hands anticipates the Sign of Peace and shifts focus horizontally).',
+    },
+    easternCatholicPractice: {
+      title: 'Hands Crossed on Breast or at Sides with Solemn Bows (Metanies)',
+      description: 'Eastern Catholics (Byzantine, Maronite, Chaldean) NEVER hold hands or use the Orans gesture during the Lord’s Prayer. Faithful stand at attention with arms crossed over their chest or hands held at their sides, chanting the prayer in solemn unison, followed by a profound metany (bow) at the priest’s doxology.',
+      theologicalMeaning: 'In Eastern spirituality, the Liturgy is a courtly encounter with the King of Glory. Faithful stand as royal subjects and adopted children before the Father of Lights with undivided reverence.',
+    },
+    socraticSynthesis: 'Liturgical posture is not about personal preference, but liturgical theology! The priest represents Christ the Head to the Father (Orans); the faithful represent the humble Body of Christ united in reverence (Hands joined or crossed).',
+  },
 ];
 
 export const CONSECRATION_VOICES: ConsecrationVoiceSample[] = [

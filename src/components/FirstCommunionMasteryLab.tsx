@@ -6,6 +6,7 @@ import LatinMassPrayersChapel from './LatinMassPrayersChapel';
 import CreedExplorer from './CreedExplorer';
 import CommandmentsMoralGuide from './CommandmentsMoralGuide';
 import RosaryMysteryWalk from './RosaryMysteryWalk';
+import LiturgicalMisconceptionsExplorer from './LiturgicalMisconceptionsExplorer';
 import {
   playSuccessChime,
   playIncorrectTone,
@@ -38,6 +39,7 @@ export default function FirstCommunionMasteryLab() {
     | 'sacred-objects'
     | 'prayers'
     | 'latin-prayers'
+    | 'postures'
     | 'journal'
   >('mass-walk');
 
@@ -446,6 +448,30 @@ export default function FirstCommunionMasteryLab() {
 
         <button
           type="button"
+          id="fc-tab-postures"
+          onClick={() => setActiveTab('postures')}
+          style={{
+            padding: '8px 16px',
+            borderRadius: '8px',
+            border: 'none',
+            background: activeTab === 'postures' ? '#7c3aed' : 'transparent',
+            color: activeTab === 'postures' ? '#ffffff' : '#6d28d9',
+            fontWeight: 800,
+            fontSize: '0.88rem',
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '6px',
+            borderBottom: activeTab === 'postures' ? '2px solid #a855f7' : 'none',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <span>🕊️</span>
+          <span>How to Receive &amp; Postures</span>
+        </button>
+
+        <button
+          type="button"
           id="fc-tab-journal"
           onClick={() => setActiveTab('journal')}
           style={{
@@ -493,26 +519,49 @@ export default function FirstCommunionMasteryLab() {
                 The Mass is divided into four sacred movements. Explore each step below to learn what the priest says, what we answer, and how to hold our bodies in reverence.
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => handleListen("The Mass has four movements: Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites.")}
-              style={{
-                background: '#ffffff',
-                border: '1px solid #ca8a04',
-                color: '#854d0e',
-                borderRadius: '8px',
-                padding: '5px 12px',
-                fontSize: '0.8rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <span>🔊</span>
-              <span>Listen Summary</span>
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => setActiveTab('postures')}
+                style={{
+                  background: '#7c3aed',
+                  border: 'none',
+                  color: '#ffffff',
+                  borderRadius: '8px',
+                  padding: '6px 14px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
+                }}
+              >
+                <span>🕊️</span>
+                <span>Reception &amp; Postures Guide &rarr;</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleListen("The Mass has four movements: Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites.")}
+                style={{
+                  background: '#ffffff',
+                  border: '1px solid #ca8a04',
+                  color: '#854d0e',
+                  borderRadius: '8px',
+                  padding: '5px 12px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+              >
+                <span>🔊</span>
+                <span>Listen Summary</span>
+              </button>
+            </div>
           </div>
 
           {/* Liturgy Steps Grid */}
@@ -1431,6 +1480,13 @@ export default function FirstCommunionMasteryLab() {
               )}
             </div>
           </form>
+        </div>
+      )}
+
+      {/* TAB: HOW TO RECEIVE & POSTURES */}
+      {activeTab === 'postures' && (
+        <div style={{ padding: '1.5rem' }}>
+          <LiturgicalMisconceptionsExplorer />
         </div>
       )}
     </section>

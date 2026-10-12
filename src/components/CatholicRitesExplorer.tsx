@@ -1,5 +1,6 @@
 // src/components/CatholicRitesExplorer.tsx
 import React, { useState } from 'react';
+import LiturgicalMisconceptionsExplorer from './LiturgicalMisconceptionsExplorer';
 import {
   LITURGICAL_RITE_FAMILIES,
   SUI_IURIS_CHURCHES,
@@ -21,7 +22,7 @@ export default function CatholicRitesExplorer({
   const [selectedRiteId, setSelectedRiteId] = useState<string>('all');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [activeTab, setActiveTab] = useState<'churches' | 'comparisons' | 'consecration' | 'quiz'>('churches');
+  const [activeTab, setActiveTab] = useState<'churches' | 'comparisons' | 'postures' | 'consecration' | 'quiz'>('churches');
   
   // Interactive Comparison Selection
   const [selectedComparisonId, setSelectedComparisonId] = useState<string>(LITURGICAL_COMPARISONS[0].id);
@@ -190,6 +191,26 @@ export default function CatholicRitesExplorer({
           }}
         >
           <span>⚖️</span> East vs. West Liturgical Matrix
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('postures')}
+          style={{
+            padding: '10px 16px',
+            fontWeight: 800,
+            fontSize: '0.92rem',
+            border: 'none',
+            background: 'none',
+            borderBottom: activeTab === 'postures' ? '3px solid #7c3aed' : '3px solid transparent',
+            color: activeTab === 'postures' ? '#6d28d9' : '#64748b',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+          }}
+        >
+          <span>🕊️</span> Postures &amp; Misconceptions
         </button>
 
         <button
@@ -499,6 +520,13 @@ export default function CatholicRitesExplorer({
               </p>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TAB: LITURGICAL POSTURES & MISCONCEPTIONS */}
+      {activeTab === 'postures' && (
+        <div style={{ marginTop: '0.5rem', marginBottom: '1.5rem' }}>
+          <LiturgicalMisconceptionsExplorer theme={theme} />
         </div>
       )}
 

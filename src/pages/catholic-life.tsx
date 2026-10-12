@@ -13,6 +13,7 @@ import SanctuaryPilgrimQuest from '../components/SanctuaryPilgrimQuest';
 import CatholicRitesExplorer from '../components/CatholicRitesExplorer';
 import AltarAnatomyExplorer from '../components/AltarAnatomyExplorer';
 import HolyOilsExplorer from '../components/HolyOilsExplorer';
+import LiturgicalMisconceptionsExplorer from '../components/LiturgicalMisconceptionsExplorer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
@@ -22,6 +23,7 @@ export type CatholicLifeTab =
   | 'altar'
   | 'holy-oils'
   | 'rites'
+  | 'postures'
   | 'mass'
   | 'sacraments'
   | 'first-communion'
@@ -56,6 +58,7 @@ export default function CatholicLifePage(): React.JSX.Element {
         'altar',
         'holy-oils',
         'rites',
+        'postures',
         'mass',
         'sacraments',
         'first-communion',
@@ -88,6 +91,7 @@ export default function CatholicLifePage(): React.JSX.Element {
           'altar',
           'holy-oils',
           'rites',
+          'postures',
           'mass',
           'sacraments',
           'first-communion',
@@ -148,6 +152,15 @@ export default function CatholicLifePage(): React.JSX.Element {
       color: '#047857',
       bg: '#ecfdf5',
       badge: 'Global South & Eastern Rites',
+    },
+    {
+      tab: 'postures' as CatholicLifeTab,
+      icon: '🕊️',
+      title: 'Liturgical Postures & Misconceptions',
+      desc: 'Receiving the Eucharist (Tongue, Hand, Byzantine Spoon), Our Father hand postures (Priestly Orans vs. Joined Hands), and Liturgy Mythbusters.',
+      color: '#7c3aed',
+      bg: '#f5f3ff',
+      badge: 'Rubrics & Cross-Rite Guide',
     },
     {
       tab: 'mass' as CatholicLifeTab,
@@ -495,6 +508,7 @@ export default function CatholicLifePage(): React.JSX.Element {
             { id: 'altar', label: '✝️ The Catholic Altar' },
             { id: 'holy-oils', label: '🏺 The Holy Oils' },
             { id: 'rites', label: '🌍 6 Rites & 24 Churches' },
+            { id: 'postures', label: '🕊️ Postures & Misconceptions' },
             { id: 'mass', label: '⛪ The Mass' },
             { id: 'sacraments', label: '🕊️ 7 Sacraments' },
             { id: 'first-communion', label: '🍞 First Communion' },
@@ -1215,6 +1229,12 @@ export default function CatholicLifePage(): React.JSX.Element {
             {activeTab === 'rites' && (
               <div style={{ marginBottom: '2.5rem' }}>
                 <CatholicRitesExplorer />
+              </div>
+            )}
+
+            {activeTab === 'postures' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <LiturgicalMisconceptionsExplorer />
               </div>
             )}
 
