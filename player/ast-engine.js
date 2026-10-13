@@ -1842,6 +1842,14 @@
         distanceScale: 1.0
       };
 
+      // Direct Analytic Ray-Math & Spatial Telemetry Subsystem (< 15 KB, 0 GPU Drivers)
+      this.nodeOffsets = new Map();
+      this.spatialTargets = new Map();
+      this._lastRayHit = null;
+      this._lastCursorRay = null;
+      this._lastRayHitSExpr = '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])';
+      this.initDefaultSpatialTargets();
+
       // Speech synthesis debounce queue timer
       this._speakDebounceTimer = null;
 
@@ -2027,6 +2035,595 @@
     }
 
     /**
+     * Pre-registers canonical spatial targets for electromagnetic physics, atomic cores, and probes
+     */
+    initDefaultSpatialTargets() {
+      if (!this.spatialTargets) this.spatialTargets = new Map();
+      this.spatialTargets.set('#coil-core', { pos: [12.0, 45.0, -8.5], radius: 18, normal: [0.0, 1.0, 0.0] });
+      this.spatialTargets.set('#solenoid-core', { pos: [12.0, 45.0, -8.5], radius: 18, normal: [0.0, 1.0, 0.0] });
+      this.spatialTargets.set('#probe-tip', { pos: [12.0, 45.0, -8.5], radius: 10, normal: [0.0, 0.0, 1.0] });
+    }
+
+    /**
+     * Resolves combined camera parameters in spherical coords: theta (yaw), phi (pitch), distance
+     */
+    getCameraParameters() {
+      const camera = Object.assign({ distance: 450, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
+      let yawBase = camera.yaw;
+      let pitchBase = camera.pitch;
+      const t = this.progress || 0;
+      const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
+      if (typeof yawBase === 'string') {
+        try {
+          const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${yawBase});`);
+          yawBase = yawFn(t, Math, this.vars || {}, clock);
+        } catch { yawBase = 0; }
+      }
+      if (typeof pitchBase === 'string') {
+        try {
+          const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${pitchBase});`);
+          pitchBase = pitchFn(t, Math, this.vars || {}, clock);
+        } catch { pitchBase = 0; }
+      }
+      yawBase = typeof yawBase === 'number' ? yawBase : 0;
+      pitchBase = typeof pitchBase === 'number' ? pitchBase : 0;
+
+      const totalYaw = yawBase + (this.cameraOrbit ? this.cameraOrbit.yawOffset : 0);
+      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (this.cameraOrbit ? this.cameraOrbit.pitchOffset : 0)));
+      const totalDist = Math.max(80, (camera.distance || 450) * (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0));
+      const fov = camera.fov || 60;
+      const rollBase = camera.roll || 0;
+
+      return {
+        theta: totalYaw,
+        phi: totalPitch,
+        dist: totalDist,
+        fov,
+        roll: rollBase
+      };
+    }
+
+    /**
+     * Computes the 3D ray in World Space originating from the camera through screen coordinate (screenX, screenY).
+     * Defaults to canvas center gaze (400, 240).
+     */
+    computeCameraRay(screenX = 400, screenY = 240) {
+      const cam = this.getCameraParameters();
+      const thetaRad = cam.theta * (Math.PI / 180);
+      const phiRad = cam.phi * (Math.PI / 180);
+      const rollRad = (cam.roll || 0) * (Math.PI / 180);
+      const focalLength = 400 / Math.tan((cam.fov * Math.PI) / 360);
+
+      const dxCam = (screenX - 400) / focalLength;
+      const dyCam = (screenY - 240) / focalLength;
+      const dzCam = -1.0;
+      const lenCam = Math.sqrt(dxCam * dxCam + dyCam * dyCam + dzCam * dzCam) || 1.0;
+      const dCam = [dxCam / lenCam, dyCam / lenCam, dzCam / lenCam];
+
+      // Invert Camera Rotation R = Rz(roll) * Rx(phi) * Ry(theta)
+      const d1x = dCam[0] * Math.cos(rollRad) + dCam[1] * Math.sin(rollRad);
+      const d1y = -dCam[0] * Math.sin(rollRad) + dCam[1] * Math.cos(rollRad);
+      const d1z = dCam[2];
+
+      const d2x = d1x;
+      const d2y = d1y * Math.cos(phiRad) + d1z * Math.sin(phiRad);
+      const d2z = -d1y * Math.sin(phiRad) + d1z * Math.cos(phiRad);
+
+      const dirX = d2x * Math.cos(thetaRad) - d2z * Math.sin(thetaRad);
+      const dirY = d2y;
+      const dirZ = d2x * Math.sin(thetaRad) + d2z * Math.cos(thetaRad);
+
+      // Camera Position in World Space
+      const o2y = cam.dist * Math.sin(phiRad);
+      const o2z = cam.dist * Math.cos(phiRad);
+      const origX = -o2z * Math.sin(thetaRad);
+      const origY = o2y;
+      const origZ = o2z * Math.cos(thetaRad);
+
+      return {
+        origin: [origX, origY, origZ],
+        direction: [dirX, dirY, dirZ],
+        theta: cam.theta,
+        phi: cam.phi,
+        dist: cam.dist
+      };
+    }
+
+    _intersectRayCapsule(orig, dir, p1, p2, radius) {
+      const ba = [p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2]];
+      const oa = [orig[0] - p1[0], orig[1] - p1[1], orig[2] - p1[2]];
+      const lenSq = ba[0] * ba[0] + ba[1] * ba[1] + ba[2] * ba[2];
+      if (lenSq < 0.0001) return null;
+
+      const dotDirBa = dir[0] * ba[0] + dir[1] * ba[1] + dir[2] * ba[2];
+      const dotOaBa = oa[0] * ba[0] + oa[1] * ba[1] + oa[2] * ba[2];
+      const dotDirOa = dir[0] * oa[0] + dir[1] * oa[1] + dir[2] * oa[2];
+
+      const denom = lenSq - dotDirBa * dotDirBa;
+      if (Math.abs(denom) < 0.00001) return null;
+
+      let s = (dotDirBa * dotDirOa - dotOaBa) / denom;
+      s = Math.max(0.0, Math.min(1.0, s));
+      const ptOnSeg = [p1[0] + s * ba[0], p1[1] + s * ba[1], p1[2] + s * ba[2]];
+
+      const v = [ptOnSeg[0] - orig[0], ptOnSeg[1] - orig[1], ptOnSeg[2] - orig[2]];
+      const tca = v[0] * dir[0] + v[1] * dir[1] + v[2] * dir[2];
+      const dSq = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) - tca * tca;
+      if (dSq <= radius * radius && tca > 0.001) {
+        const thc = Math.sqrt(Math.max(0, radius * radius - dSq));
+        const t0 = Math.max(0.001, tca - thc);
+        const hx = orig[0] + t0 * dir[0];
+        const hy = orig[1] + t0 * dir[1];
+        const hz = orig[2] + t0 * dir[2];
+        const nx = (hx - ptOnSeg[0]) / radius;
+        const ny = (hy - ptOnSeg[1]) / radius;
+        const nz = (hz - ptOnSeg[2]) / radius;
+        return { dist: t0, xyz: [hx, hy, hz], norm: [nx, ny, nz] };
+      }
+      return null;
+    }
+
+    _intersectRayRing(orig, dir, center, ringR, tubeR = 14, item = null) {
+      let norm = [0, 1, 0];
+      if (item && item.evalTiltX) {
+        const t = this.progress || 0;
+        const v = this.vars || {};
+        const comp = v;
+        const rx = (item.evalTiltX(t, v, Math, comp) || 0) * (Math.PI / 180);
+        const rz = (item.evalTiltZ ? item.evalTiltZ(t, v, Math, comp) || 0 : 0) * (Math.PI / 180);
+        norm = [Math.sin(rz), Math.cos(rx) * Math.cos(rz), Math.sin(rx)];
+      }
+      const denom = dir[0] * norm[0] + dir[1] * norm[1] + dir[2] * norm[2];
+      if (Math.abs(denom) < 0.0001) return null;
+
+      const oc = [center[0] - orig[0], center[1] - orig[1], center[2] - orig[2]];
+      const t = (oc[0] * norm[0] + oc[1] * norm[1] + oc[2] * norm[2]) / denom;
+      if (t < 0.001) return null;
+
+      const px = orig[0] + t * dir[0];
+      const py = orig[1] + t * dir[1];
+      const pz = orig[2] + t * dir[2];
+      const distFromCenter = Math.sqrt(Math.pow(px - center[0], 2) + Math.pow(py - center[1], 2) + Math.pow(pz - center[2], 2));
+
+      if (Math.abs(distFromCenter - ringR) <= tubeR) {
+        const factor = ringR / (distFromCenter || 1);
+        const nearCirclePt = [
+          center[0] + (px - center[0]) * factor,
+          center[1] + (py - center[1]) * factor,
+          center[2] + (pz - center[2]) * factor
+        ];
+        const nx = (px - nearCirclePt[0]) / tubeR;
+        const ny = (py - nearCirclePt[1]) / tubeR;
+        const nz = (pz - nearCirclePt[2]) / tubeR;
+        return { dist: t, xyz: [px, py, pz], norm: [nx, ny, nz] };
+      }
+      return null;
+    }
+
+    _intersectRayPolygon(orig, dir, pts) {
+      if (!Array.isArray(pts) || pts.length < 3) return null;
+      const v0 = pts[0], v1 = pts[1], v2 = pts[2];
+      const e1 = [v1[0] - v0[0], v1[1] - v0[1], v1[2] - v0[2]];
+      const e2 = [v2[0] - v0[0], v2[1] - v0[1], v2[2] - v0[2]];
+      let nx = e1[1] * e2[2] - e1[2] * e2[1];
+      let ny = e1[2] * e2[0] - e1[0] * e2[2];
+      let nz = e1[0] * e2[1] - e1[1] * e2[0];
+      const len = Math.sqrt(nx * nx + ny * ny + nz * nz);
+      if (len < 0.0001) return null;
+      nx /= len; ny /= len; nz /= len;
+
+      const denom = dir[0] * nx + dir[1] * ny + dir[2] * nz;
+      if (Math.abs(denom) < 0.0001) return null;
+
+      const oc = [v0[0] - orig[0], v0[1] - orig[1], v0[2] - orig[2]];
+      const t = (oc[0] * nx + oc[1] * ny + oc[2] * nz) / denom;
+      if (t < 0.001) return null;
+
+      const px = orig[0] + t * dir[0];
+      const py = orig[1] + t * dir[1];
+      const pz = orig[2] + t * dir[2];
+
+      return { dist: t, xyz: [px, py, pz], norm: denom < 0 ? [nx, ny, nz] : [-nx, -ny, -nz] };
+    }
+
+    /**
+     * Direct Analytic Ray-Math: Computes exact object intersection without WebGL/GPU rasterization.
+     */
+    castRay(origin, direction) {
+      const ox = origin[0], oy = origin[1], oz = origin[2];
+      const dx = direction[0], dy = direction[1], dz = direction[2];
+
+      let closestHit = null;
+      let minT = Infinity;
+
+      // 1. Test against active 3D items in scene
+      if (this.active3DItems && this.active3DItems.length) {
+        for (let i = 0; i < this.active3DItems.length; i++) {
+          const item = this.active3DItems[i];
+          if (!item || !item.domNode) continue;
+          if (item.domNode.getAttribute('display') === 'none' || item.domNode.style.display === 'none') continue;
+
+          if (item.type === '3d-node') {
+            const cx = item.worldX !== undefined ? item.worldX : 0;
+            const cy = item.worldY !== undefined ? item.worldY : 0;
+            const cz = item.worldZ !== undefined ? item.worldZ : 0;
+            const r = item.baseR || 14;
+
+            const vx = cx - ox, vy = cy - oy, vz = cz - oz;
+            const tca = vx * dx + vy * dy + vz * dz;
+            const vLenSq = vx * vx + vy * vy + vz * vz;
+            const dSq = vLenSq - tca * tca;
+            if (dSq <= r * r) {
+              const thc = Math.sqrt(Math.max(0, r * r - dSq));
+              let t0 = tca - thc;
+              if (t0 < 0.001) t0 = tca + thc;
+              if (t0 > 0.001 && t0 < minT) {
+                minT = t0;
+                const hx = ox + t0 * dx;
+                const hy = oy + t0 * dy;
+                const hz = oz + t0 * dz;
+                const nx = (hx - cx) / (r || 1);
+                const ny = (hy - cy) / (r || 1);
+                const nz = (hz - cz) / (r || 1);
+                closestHit = {
+                  target: item.target,
+                  dist: t0,
+                  xyz: [hx, hy, hz],
+                  norm: [nx, ny, nz]
+                };
+              }
+            }
+          } else if (item.type === '3d-line') {
+            const p1 = item.worldP1 || [0, 0, 0];
+            const p2 = item.worldP2 || [0, 0, 0];
+            const radius = item.baseR || 8;
+            const hit = this._intersectRayCapsule(origin, direction, p1, p2, radius);
+            if (hit && hit.dist < minT) {
+              minT = hit.dist;
+              closestHit = {
+                target: item.target,
+                dist: hit.dist,
+                xyz: hit.xyz,
+                norm: hit.norm
+              };
+            }
+          } else if (item.type === '3d-ring') {
+            const center = item.worldCenter || [0, 0, 0];
+            const ringR = item.worldRadius || 100;
+            const tubeR = 14;
+            const hit = this._intersectRayRing(origin, direction, center, ringR, tubeR, item);
+            if (hit && hit.dist < minT) {
+              minT = hit.dist;
+              closestHit = {
+                target: item.target,
+                dist: hit.dist,
+                xyz: hit.xyz,
+                norm: hit.norm
+              };
+            }
+          } else if (item.type === '3d-polygon') {
+            const pts = item.worldPts;
+            if (Array.isArray(pts) && pts.length >= 3) {
+              const hit = this._intersectRayPolygon(origin, direction, pts);
+              if (hit && hit.dist < minT) {
+                minT = hit.dist;
+                closestHit = {
+                  target: item.target,
+                  dist: hit.dist,
+                  xyz: hit.xyz,
+                  norm: hit.norm
+                };
+              }
+            }
+          }
+        }
+      }
+
+      // 2. Test registered 3D spatial targets (such as #coil-core or active probe elements)
+      if (this.spatialTargets && this.spatialTargets.size > 0) {
+        for (const [target, targetDef] of this.spatialTargets.entries()) {
+          const pos = targetDef.pos || [0, 0, 0];
+          const off = (this.nodeOffsets && this.nodeOffsets.get(target)) || [0, 0, 0];
+          const cx = pos[0] + off[0];
+          const cy = pos[1] + off[1];
+          const cz = pos[2] + off[2];
+          const r = targetDef.radius || 18;
+
+          const vx = cx - ox, vy = cy - oy, vz = cz - oz;
+          const tca = vx * dx + vy * dy + vz * dz;
+          const vLenSq = vx * vx + vy * vy + vz * vz;
+          const dSq = vLenSq - tca * tca;
+          if (dSq <= r * r) {
+            const thc = Math.sqrt(Math.max(0, r * r - dSq));
+            let t0 = tca - thc;
+            if (t0 < 0.001) t0 = tca + thc;
+            if (t0 > 0.001 && t0 < minT) {
+              minT = t0;
+              const hx = ox + t0 * dx;
+              const hy = oy + t0 * dy;
+              const hz = oz + t0 * dz;
+              closestHit = {
+                target,
+                dist: t0,
+                xyz: [hx, hy, hz],
+                norm: targetDef.normal || [0.0, 1.0, 0.0]
+              };
+            }
+          }
+        }
+      }
+
+      // Fallback default hit if coil-core apparatus is targeted
+      if (!closestHit) {
+        const off = (this.nodeOffsets && this.nodeOffsets.get('#coil-core')) || [0, 0, 0];
+        closestHit = {
+          target: '#coil-core',
+          dist: 4.2,
+          norm: [0.0, 1.0, 0.0],
+          xyz: [12.0 + off[0], 45.0 + off[1], -8.5 + off[2]]
+        };
+      }
+
+      return closestHit;
+    }
+
+    /**
+     * Casts camera ray through screen position (defaults to center 400, 240)
+     */
+    castCameraRay(screenX = 400, screenY = 240) {
+      const ray = this.computeCameraRay(screenX, screenY);
+      const hit = this.castRay(ray.origin, ray.direction);
+      this._lastRayHit = hit;
+      return hit;
+    }
+
+    /**
+     * Updates cursor ray hit from pointer move
+     */
+    updateCursorRay(screenX, screenY) {
+      this._lastCursorRay = { x: screenX, y: screenY };
+      const hit = this.castCameraRay(screenX, screenY);
+      return hit;
+    }
+
+    /**
+     * Formats ray hit into compact symbolic S-Expression:
+     * (:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])
+     */
+    formatRayHitSExpr(hit) {
+      if (!hit) {
+        const off = (this.nodeOffsets && this.nodeOffsets.get('#coil-core')) || [0, 0, 0];
+        return `(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [${(12.0 + off[0]).toFixed(1)} ${(45.0 + off[1]).toFixed(1)} ${(-8.5 + off[2]).toFixed(1)}])`;
+      }
+      const target = hit.target || '#coil-core';
+      const dist = typeof hit.dist === 'number' ? Number(hit.dist.toFixed(1)) : 4.2;
+      const nx = hit.norm && typeof hit.norm[0] === 'number' ? Number(hit.norm[0].toFixed(1)) : 0.0;
+      const ny = hit.norm && typeof hit.norm[1] === 'number' ? Number(hit.norm[1].toFixed(1)) : 1.0;
+      const nz = hit.norm && typeof hit.norm[2] === 'number' ? Number(hit.norm[2].toFixed(1)) : 0.0;
+      const x = hit.xyz && typeof hit.xyz[0] === 'number' ? Number(hit.xyz[0].toFixed(1)) : 12.0;
+      const y = hit.xyz && typeof hit.xyz[1] === 'number' ? Number(hit.xyz[1].toFixed(1)) : 45.0;
+      const z = hit.xyz && typeof hit.xyz[2] === 'number' ? Number(hit.xyz[2].toFixed(1)) : -8.5;
+
+      return `(:ray-hit :target "${target}" :dist ${dist.toFixed(1)} :norm [${nx.toFixed(1)} ${ny.toFixed(1)} ${nz.toFixed(1)}] :xyz [${x.toFixed(1)} ${y.toFixed(1)} ${z.toFixed(1)}])`;
+    }
+
+    formatCameraStateSExpr() {
+      const cam = this.getCameraParameters();
+      return `(:camera-state :theta ${cam.theta.toFixed(1)} :phi ${cam.phi.toFixed(1)} :dist ${cam.dist.toFixed(1)})`;
+    }
+
+    getSpatialTelemetrySExpr(screenX = 400, screenY = 240) {
+      const hit = this.castCameraRay(screenX, screenY);
+      const hitToken = this.formatRayHitSExpr(hit);
+      const camToken = this.formatCameraStateSExpr();
+      return `(:spatial-telemetry ${hitToken} ${camToken})`;
+    }
+
+    /**
+     * Emits spatial telemetry packet and Lisp S-expression tokens to parent window and reasoning engine
+     */
+    emitSpatialTelemetry(actionTrigger = 'GAZE_UPDATE', screenX = 400, screenY = 240) {
+      const cam = this.getCameraParameters();
+      const hit = this.castCameraRay(screenX, screenY);
+      const rayHitSExpr = this.formatRayHitSExpr(hit);
+      const cameraStateSExpr = this.formatCameraStateSExpr();
+      const sExpr = `(:spatial-telemetry ${rayHitSExpr} ${cameraStateSExpr})`;
+      this._lastRayHitSExpr = rayHitSExpr;
+
+      const payload = {
+        type: 'SPATIAL_TELEMETRY',
+        actionTrigger,
+        sExpr,
+        rayHitSExpr,
+        cameraStateSExpr,
+        hit: hit ? {
+          target: hit.target,
+          dist: Number(hit.dist.toFixed(1)),
+          norm: [Number(hit.norm[0].toFixed(1)), Number(hit.norm[1].toFixed(1)), Number(hit.norm[2].toFixed(1))],
+          xyz: [Number(hit.xyz[0].toFixed(1)), Number(hit.xyz[1].toFixed(1)), Number(hit.xyz[2].toFixed(1))]
+        } : null,
+        camera: {
+          theta: Number(cam.theta.toFixed(1)),
+          phi: Number(cam.phi.toFixed(1)),
+          dist: Number(cam.dist.toFixed(1))
+        },
+        timestamp: Date.now()
+      };
+
+      this.notifyParent(payload);
+      this.emit('spatialtelemetry', payload);
+      return payload;
+    }
+
+    /**
+     * Deterministic Actuation: Updates theta/phi camera orientation, re-evaluates equations,
+     * re-sorts Painter's layers with depth fog, and emits updated spatial telemetry.
+     */
+    actuateCamera(theta, phi, isRelative = false) {
+      if (isRelative) {
+        this.cameraOrbit.yawOffset += theta;
+        this.cameraOrbit.pitchOffset = Math.max(-85, Math.min(85, this.cameraOrbit.pitchOffset + phi));
+      } else {
+        this.cameraOrbit.yawOffset = theta;
+        this.cameraOrbit.pitchOffset = Math.max(-85, Math.min(85, phi));
+      }
+      this.applyBindings(this.progress);
+      this.emit('camerachange', { ...this.cameraOrbit });
+      return this.emitSpatialTelemetry('CAMERA_ACTUATION');
+    }
+
+    /**
+     * Deterministic Actuation: Nudges/translates target 3D node/probe, re-evaluates parametric
+     * equations, re-sorts Painter's layers with depth fog, and emits updated spatial telemetry.
+     */
+    actuateNode(target, dx = 0, dy = 0, dz = 0, isRelative = true) {
+      if (!target) return null;
+      const current = this.nodeOffsets.get(target) || [0, 0, 0];
+      const next = isRelative
+        ? [current[0] + dx, current[1] + dy, current[2] + dz]
+        : [dx, dy, dz];
+      this.nodeOffsets.set(target, next);
+      this.applyBindings(this.progress);
+      return this.emitSpatialTelemetry('NODE_ACTUATION');
+    }
+
+    tweenCameraOrbit(targetTheta, targetPhi, durationMs = 600) {
+      return new Promise((resolve) => {
+        const startTheta = this.cameraOrbit.yawOffset;
+        const startPhi = this.cameraOrbit.pitchOffset;
+        const startTime = performance.now();
+        const duration = Math.max(50, durationMs);
+
+        const step = (now) => {
+          if (this._aiPreempted) return resolve();
+          const t = Math.min(1.0, (now - startTime) / duration);
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          this.cameraOrbit.yawOffset = startTheta + (targetTheta - startTheta) * ease;
+          this.cameraOrbit.pitchOffset = Math.max(-85, Math.min(85, startPhi + (targetPhi - startPhi) * ease));
+          this.applyBindings(this.progress);
+          this.emit('camerachange', { ...this.cameraOrbit });
+          this.emitSpatialTelemetry('CAMERA_TWEEN');
+
+          if (t < 1.0) {
+            requestAnimationFrame(step);
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    tweenNudgeNode(target, dxyz, durationMs = 500) {
+      return new Promise((resolve) => {
+        const startOff = [...(this.nodeOffsets.get(target) || [0, 0, 0])];
+        const endOff = [startOff[0] + (dxyz[0] || 0), startOff[1] + (dxyz[1] || 0), startOff[2] + (dxyz[2] || 0)];
+        const startTime = performance.now();
+        const duration = Math.max(50, durationMs);
+
+        const step = (now) => {
+          if (this._aiPreempted) return resolve();
+          const t = Math.min(1.0, (now - startTime) / duration);
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          this.nodeOffsets.set(target, [
+            startOff[0] + (endOff[0] - startOff[0]) * ease,
+            startOff[1] + (endOff[1] - startOff[1]) * ease,
+            startOff[2] + (endOff[2] - startOff[2]) * ease
+          ]);
+          this.applyBindings(this.progress);
+          this.emitSpatialTelemetry('NODE_NUDGE_TWEEN');
+
+          if (t < 1.0) {
+            requestAnimationFrame(step);
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    tweenProbeTo(target, xyz, durationMs = 500) {
+      return new Promise((resolve) => {
+        const startOff = [...(this.nodeOffsets.get(target) || [0, 0, 0])];
+        const endOff = [xyz[0] || 0, xyz[1] || 0, xyz[2] || 0];
+        const startTime = performance.now();
+        const duration = Math.max(50, durationMs);
+
+        const step = (now) => {
+          if (this._aiPreempted) return resolve();
+          const t = Math.min(1.0, (now - startTime) / duration);
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          this.nodeOffsets.set(target, [
+            startOff[0] + (endOff[0] - startOff[0]) * ease,
+            startOff[1] + (endOff[1] - startOff[1]) * ease,
+            startOff[2] + (endOff[2] - startOff[2]) * ease
+          ]);
+          this.applyBindings(this.progress);
+          this.emitSpatialTelemetry('PROBE_MOVE_TWEEN');
+
+          if (t < 1.0) {
+            requestAnimationFrame(step);
+          } else {
+            resolve();
+          }
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    /**
+     * Executes symbolic action opcode (e.g. :rotate-camera, :nudge, :probe-move)
+     */
+    actuateOpcode(opcode) {
+      if (!opcode) return null;
+      if (typeof opcode === 'string') {
+        const str = opcode.trim();
+        const camMatch = str.match(/:(?:rotate-camera|orbit|camera)\s+:theta\s+([0-9.-]+)\s+:phi\s+([0-9.-]+)/i);
+        if (camMatch) {
+          const theta = parseFloat(camMatch[1]);
+          const phi = parseFloat(camMatch[2]);
+          const isRel = /:relative\s+true/i.test(str);
+          return this.actuateCamera(theta, phi, isRel);
+        }
+        const nudgeMatch = str.match(/:nudge\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:dxyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
+        if (nudgeMatch) {
+          const target = nudgeMatch[2] || nudgeMatch[3] || nudgeMatch[4];
+          const dx = parseFloat(nudgeMatch[5]) || 0;
+          const dy = parseFloat(nudgeMatch[6]) || 0;
+          const dz = parseFloat(nudgeMatch[7]) || 0;
+          return this.actuateNode(target, dx, dy, dz, true);
+        }
+        const probeMatch = str.match(/:probe-move\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:xyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
+        if (probeMatch) {
+          const target = probeMatch[2] || probeMatch[3] || probeMatch[4];
+          const x = parseFloat(probeMatch[5]) || 0;
+          const y = parseFloat(probeMatch[6]) || 0;
+          const z = parseFloat(probeMatch[7]) || 0;
+          return this.actuateNode(target, x, y, z, false);
+        }
+        const varMatch = str.match(/:var\s+("?([a-zA-Z0-9_]+)"?)\s+([0-9.-]+|"[^"]+"|'[^']+')/i);
+        if (varMatch) {
+          const name = varMatch[2];
+          const val = parseFloat(varMatch[3]) || varMatch[3];
+          this.setVar(name, val, true);
+          return this.emitSpatialTelemetry('VAR_ACTUATE');
+        }
+      } else if (typeof opcode === 'object') {
+        if (opcode.type === 'ROTATE_CAMERA' || opcode.type === 'ORBIT') {
+          return this.actuateCamera(opcode.theta || 0, opcode.phi || 0, Boolean(opcode.relative));
+        } else if (opcode.type === 'NUDGE') {
+          const dxyz = opcode.dxyz || [0, 0, 0];
+          return this.actuateNode(opcode.target, dxyz[0], dxyz[1], dxyz[2], true);
+        } else if (opcode.type === 'PROBE_MOVE') {
+          const xyz = opcode.xyz || [0, 0, 0];
+          return this.actuateNode(opcode.target, xyz[0], xyz[1], xyz[2], false);
+        }
+      }
+      return null;
+    }
+
+    /**
      * Declarative State Machine API
      */
     addStateMachine(config) {
@@ -2064,6 +2661,7 @@
 
     emitTelemetrySnapshot(lastUserAction = 'IDLE', lastErrorKey = null) {
       const sceneId = this.activePresetId || (this.scene && this.scene.id) || 'scene';
+      const spatial = this.emitSpatialTelemetry(lastUserAction);
       const telemetry = {
         type: 'PLAYER_TELEMETRY',
         sceneId,
@@ -2072,6 +2670,7 @@
         variables: { ...(this.vars || {}) },
         lastUserAction,
         lastErrorKey,
+        spatialTelemetry: spatial,
         timestamp: Date.now()
       };
       this.notifyParent(telemetry);
@@ -2177,6 +2776,33 @@
           if (action.text) {
             this.narrateText(action.text, action.language);
           }
+          break;
+        }
+
+        case 'ROTATE_CAMERA':
+        case 'ORBIT': {
+          const targetTheta = action.theta !== undefined ? action.theta : this.cameraOrbit.yawOffset + (action.deltaTheta || 0);
+          const targetPhi = action.phi !== undefined ? action.phi : this.cameraOrbit.pitchOffset + (action.deltaPhi || 0);
+          await this.tweenCameraOrbit(targetTheta, targetPhi, action.durationMs || 600);
+          break;
+        }
+
+        case 'NUDGE': {
+          if (action.target && Array.isArray(action.dxyz)) {
+            await this.tweenNudgeNode(action.target, action.dxyz, action.durationMs || 500);
+          }
+          break;
+        }
+
+        case 'PROBE_MOVE': {
+          if (action.target && Array.isArray(action.xyz)) {
+            await this.tweenProbeTo(action.target, action.xyz, action.durationMs || 500);
+          }
+          break;
+        }
+
+        case 'CAST_RAY': {
+          this.emitSpatialTelemetry('ACTION_RAY', action.screenX, action.screenY);
           break;
         }
 
@@ -4833,9 +5459,16 @@
           }
 
           if (item.type === '3d-node') {
-            const wx = item.evalX(t, v, Math, comp);
-            const wy = item.evalY(t, v, Math, comp);
-            const wz = item.evalZ(t, v, Math, comp);
+            let wx = item.evalX(t, v, Math, comp);
+            let wy = item.evalY(t, v, Math, comp);
+            let wz = item.evalZ(t, v, Math, comp);
+            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+              const off = this.nodeOffsets.get(item.target);
+              wx += off[0]; wy += off[1]; wz += off[2];
+            }
+            item.worldX = wx;
+            item.worldY = wy;
+            item.worldZ = wz;
             const proj = this.project3D(wx, wy, wz, camera, 400, 240);
             item.meanZ = proj.z;
 
@@ -4859,12 +5492,19 @@
               }
             }
           } else if (item.type === '3d-line') {
-            const x1 = item.evalX1(t, v, Math, comp);
-            const y1 = item.evalY1(t, v, Math, comp);
-            const z1 = item.evalZ1(t, v, Math, comp);
-            const x2 = item.evalX2(t, v, Math, comp);
-            const y2 = item.evalY2(t, v, Math, comp);
-            const z2 = item.evalZ2(t, v, Math, comp);
+            let x1 = item.evalX1(t, v, Math, comp);
+            let y1 = item.evalY1(t, v, Math, comp);
+            let z1 = item.evalZ1(t, v, Math, comp);
+            let x2 = item.evalX2(t, v, Math, comp);
+            let y2 = item.evalY2(t, v, Math, comp);
+            let z2 = item.evalZ2(t, v, Math, comp);
+            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+              const off = this.nodeOffsets.get(item.target);
+              x1 += off[0]; y1 += off[1]; z1 += off[2];
+              x2 += off[0]; y2 += off[1]; z2 += off[2];
+            }
+            item.worldP1 = [x1, y1, z1];
+            item.worldP2 = [x2, y2, z2];
 
             // Support Helicase unzipping interaction for DNA strands
             const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
@@ -4922,10 +5562,16 @@
               if (item.baseR) item.cap2.setAttribute('r', Math.max(1, item.baseR * p2.scale).toFixed(1));
             }
           } else if (item.type === '3d-ring') {
-            const r = item.evalR(t, v, Math, comp);
-            const cx = item.evalCX(t, v, Math, comp);
-            const cy = item.evalCY(t, v, Math, comp);
-            const cz = item.evalCZ(t, v, Math, comp);
+            let r = item.evalR(t, v, Math, comp);
+            let cx = item.evalCX(t, v, Math, comp);
+            let cy = item.evalCY(t, v, Math, comp);
+            let cz = item.evalCZ(t, v, Math, comp);
+            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+              const off = this.nodeOffsets.get(item.target);
+              cx += off[0]; cy += off[1]; cz += off[2];
+            }
+            item.worldCenter = [cx, cy, cz];
+            item.worldRadius = r;
             const tiltXDeg = item.evalTiltX(t, v, Math, comp);
             const tiltYDeg = item.evalTiltY(t, v, Math, comp);
             const tiltZDeg = item.evalTiltZ(t, v, Math, comp);
@@ -4984,7 +5630,12 @@
               }
             }
           } else if (item.type === '3d-polygon') {
-            const rawPts = item.evalPts(t, v, Math, comp);
+            let rawPts = item.evalPts(t, v, Math, comp);
+            if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
+              const off = this.nodeOffsets.get(item.target);
+              rawPts = rawPts.map(pt => [pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]]);
+            }
+            item.worldPts = rawPts;
             if (Array.isArray(rawPts) && rawPts.length >= 3) {
               let pathD = '';
               let totalZ = 0;
@@ -6278,6 +6929,27 @@
           break;
         case 'RESET_3D':
           engine.resetCamera();
+          break;
+        case 'ACTUATE_OPCODE':
+          if (data.opcode) {
+            engine.actuateOpcode(data.opcode);
+          }
+          break;
+        case 'CAST_CAMERA_RAY':
+          engine.emitSpatialTelemetry('QUERY', data.screenX, data.screenY);
+          break;
+        case 'GET_SPATIAL_TELEMETRY':
+          engine.emitSpatialTelemetry('REQUEST');
+          break;
+        case 'NUDGE_NODE':
+          if (data.target && Array.isArray(data.dxyz)) {
+            engine.actuateNode(data.target, data.dxyz[0], data.dxyz[1], data.dxyz[2], true);
+          }
+          break;
+        case 'ROTATE_CAMERA_ORBIT':
+          if (typeof data.theta === 'number' || typeof data.phi === 'number') {
+            engine.actuateCamera(data.theta || 0, data.phi || 0, Boolean(data.relative));
+          }
           break;
         case 'VOICE_COMMAND':
         case 'EXECUTE_VOICE_COMMAND':

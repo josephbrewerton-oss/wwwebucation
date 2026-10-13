@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-12T14:15:21.001Z",
+  "generatedAt": "2026-10-13T08:25:54.866Z",
   "totalScenes": 23,
   "inputDirs": [
     "static/player/scenes",
@@ -303,7 +303,7 @@
       "nodes3DCount": 0,
       "svgFile": "scenes/altar-anatomy.svg",
       "astFile": "scenes/altar-anatomy.ast",
-      "keyframeCount": 6,
+      "keyframeCount": 7,
       "subtitleCount": 6,
       "bindingsCount": 7
     },
