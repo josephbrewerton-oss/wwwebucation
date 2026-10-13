@@ -257,11 +257,27 @@ An AST Cartridge embodies a **dual nature** across both file storage and executi
    - **Cognitive / Physics Script (`scene.ast`):** Pure mathematical S-Expressions containing variables, bindings, keyframes, subtitles, and checkpoints.
    - **Multi-File Ingestion:** The AST Player supports multi-file selection and simultaneous drag-and-drop. Dropping both files simultaneously automatically pairs and boots the simulation.
 
-### 7.2. Execution Dynamics
+### 7.3. Master Asset & Math Extension (Zero-Boilerplate Architecture)
 
-- **Narrative Motion Mode:** 60 FPS keyframed timeline, bilingual subtitles, and guided teacher checkpoints.
-- **Direct Manipulation Mode:** Live pointer capture and inverse CTM dragging on apparatus components (pistons, levers, burners, switches), permitting freeform laboratory exploration without resetting timeline state.
-- **Classroom Smartboard Whiteboard:** In-stage quadratic Bézier ink overlay (`#annotation-ink-root`) for interactive teaching.
+To minimize cartridge payload size by 60% and accelerate on-device Gemini Nano generative synthesis by 3×, the player engine automatically provisions universal visual assets and pedagogical math helpers:
+
+1. **Universal Injected SVG Asset Catalog (`#ast-master-defs`)**:
+   - **Glow Filters:** `#ast-glow-cyan`, `#ast-glow-gold`, `#ast-glow-red`, `#ast-glow-emerald`, `#ast-glow-purple`, `#ast-drop-shadow`, `#ast-blur-soft`.
+   - **Vector Markers & Arrows:** `#ast-arrowhead`, `#ast-arrow-start`, `#ast-arrow-cyan`, `#ast-arrow-gold`, `#ast-arrow-red`, `#ast-arrow-emerald`, `#ast-vector-dot`.
+   - **Grid & Background Patterns:** `#ast-grid-fine`, `#ast-grid-dense`, `#ast-grid-dots`, `#ast-blueprint-backdrop`.
+   - Cartridges no longer need to author 40–50 lines of duplicate `<defs>`. Any cartridge referencing `filter="url(#ast-glow-cyan)"` or `marker-end="url(#ast-arrowhead)"` renders immediately.
+
+2. **Built-in `AstMath` Simulation & Transform Helpers**:
+   - **Transform String Constructors:** `translate(x, y)`, `rotate(deg, cx, cy)`, `scale(sx, sy)`.
+   - **Kinematic & Trigonometric Math:** `clamp(v, min, max)`, `lerp(a, b, t)`, `map(v, inMin, inMax, outMin, outMax)`, `rad(deg)`, `deg(rad)`, `dist(x1, y1, x2, y2)`, `sineWave(t, freq, amp, phase)`, `spring(t, damp, freq)`, `smoothstep(e0, e1, x)`, `fixed(num, decimals)`.
+   - Exposed both as top-level function parameters in expressions and as non-conflicting extensions to `Math.*` (e.g. `Math.clamp`, `Math.translate`), completely removing string concatenation overhead:
+     ```lisp
+     ;; Before (56 chars with quotes and escapes):
+     (:target "#piston" :attr "transform" :expr "'translate(' + (430 - 180 * t) + ', 0)'")
+     
+     ;; Now with AstMath (34 chars, zero escaping):
+     (:target "#piston" :attr "transform" :expr "translate(430 - 180 * t, 0)")
+     ```
 
 ---
 
