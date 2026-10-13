@@ -140,8 +140,9 @@ export const NanoAiTutorDrawer: React.FC<NanoAiTutorDrawerProps> = ({
       case 'electric-circuits':
         return [
           "Explain Ohm's Law: V = I × R with this circuit",
+          'What object is my ray hitting right now?',
+          'Nudge the #coil-core into the magnetic field',
           'Why do electrons drift slower when resistance increases?',
-          'What is electromotive force in the battery?',
         ];
       case 'fractions':
         return [
@@ -506,6 +507,140 @@ Feedback: 2 sentences identifying conceptual strengths and one area for mastery 
               </button>
             </div>
           )}
+
+          {/* Spatial Telemetry & Proprioceptive Gaze Stream (Zero-Raster Token Stream) */}
+          <div
+            style={{
+              padding: '10px 14px',
+              background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.85) 100%)',
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+              borderRadius: '10px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.0rem' }}>🎯</span>
+                <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#38bdf8', letterSpacing: '0.02em' }}>
+                  Spatial Telemetry Emission &bull; Proprioceptive Awareness
+                </span>
+                <span
+                  style={{
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    borderRadius: '4px',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#7dd3fc',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                  }}
+                >
+                  Zero-Raster Token Stream
+                </span>
+              </div>
+
+              {/* Deterministic Actuation Buttons */}
+              <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  title="Deterministic Actuation: Rotate camera around theta and phi, re-evaluating equations and Painter's Z-sorting"
+                  onClick={() => {
+                    postToPlayer({
+                      type: 'ACTUATE_OPCODE',
+                      opcode: '(:rotate-camera :theta 20.0 :phi -10.0 :relative true)',
+                    });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    color: '#38bdf8',
+                    border: '1px solid rgba(56, 189, 248, 0.4)',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🔭 Orbit View (Δθ:+20°, Δϕ:-10°)
+                </button>
+                <button
+                  type="button"
+                  title="Deterministic Actuation: Nudge probe/node coordinates, re-evaluate parametric equations, and re-sort layers via Painter's algorithm with depth fog"
+                  onClick={() => {
+                    const target = latestTelemetry?.spatialTelemetry?.hit?.target || '#coil-core';
+                    postToPlayer({
+                      type: 'ACTUATE_OPCODE',
+                      opcode: `(:nudge :target "${target}" :dxyz [0.0 5.0 0.0])`,
+                    });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(234, 179, 8, 0.15)',
+                    color: '#facc15',
+                    border: '1px solid rgba(234, 179, 8, 0.4)',
+                    fontSize: '0.68rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  ⚡ Nudge Core/Probe ([0, 5, 0])
+                </button>
+                <button
+                  type="button"
+                  title="Cast analytic gaze ray from camera through center or cursor"
+                  onClick={() => {
+                    postToPlayer({ type: 'CAST_CAMERA_RAY' });
+                  }}
+                  style={{
+                    padding: '3px 8px',
+                    borderRadius: '6px',
+                    background: 'rgba(148, 163, 184, 0.15)',
+                    color: '#cbd5e1',
+                    border: '1px solid rgba(148, 163, 184, 0.3)',
+                    fontSize: '0.68rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                  }}
+                >
+                  🎯 Cast Ray
+                </button>
+              </div>
+            </div>
+
+            {/* S-Expression Telemetry Tokens Pill */}
+            <div
+              style={{
+                background: '#090d16',
+                padding: '6px 10px',
+                borderRadius: '6px',
+                border: '1px solid #1e293b',
+                fontFamily: 'monospace',
+                fontSize: '0.74rem',
+                color: '#4ade80',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '4px',
+                userSelect: 'all',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#94a3b8', fontSize: '0.68rem' }}>RAY INTERSECTION TOKEN:</span>
+                <span style={{ color: '#38bdf8', fontSize: '0.68rem' }}>Analytic Ray-Math (Zero GPU Drivers)</span>
+              </div>
+              <div style={{ fontWeight: 700, overflowX: 'auto', whiteSpace: 'nowrap' }}>
+                {latestTelemetry?.spatialTelemetry?.rayHitSExpr ||
+                  '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])'}
+              </div>
+              {latestTelemetry?.spatialTelemetry?.cameraStateSExpr && (
+                <div style={{ color: '#38bdf8', fontSize: '0.70rem', overflowX: 'auto', whiteSpace: 'nowrap' }}>
+                  {latestTelemetry.spatialTelemetry.cameraStateSExpr}
+                </div>
+              )}
+            </div>
+          </div>
 
           {/* Quick Prompts Bar */}
           <div style={{ display: 'flex', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>

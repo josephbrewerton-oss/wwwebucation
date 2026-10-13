@@ -14,17 +14,18 @@
     (:start 0.00 :end 0.16 :en "The Mensa is the consecrated stone table representing Jesus Christ Himself, the living Cornerstone of the Church." :es "La Mensa es la mesa de piedra consagrada que representa a Jesucristo, la Piedra Angular de la Iglesia." :la "Mensa altaris est Christus lapis angularis: hic sacrificium eucharisticum perenne celebratur.")
     (:start 0.16 :end 0.32 :en "Inset into the mensa lies the Altar Stone, marked with five crosses for Christ's Sacred Wounds and sealing relics of the holy martyrs." :es "Incrustada en la mensa se encuentra el Ara de piedra, con cinco cruces por las Llagas de Cristo y reliquias de los mártires." :la "Petra sacra cum quinque vulneribus Christi et sanctorum martyrum reliquiis consecrata.")
     (:start 0.32 :end 0.48 :en "Pure white linens cover the mensa to recall Christ's clean burial shroud, while the front is adorned with the seasonal Antependium." :es "El mantel de lino blanco recuerda la sábana santa del sepulcro, y el frontal o antependio muestra el color litúrgico." :la "Linteum album sepulcrum Christi significat; antependium sacrum colorem temporis praefert.")
-    (:start 0.48 :end 0.64 :en "The central Crucifix reminds all that the Mass is the very same sacrifice as Calvary, flanked by pure beeswax candles." :es "El crucifijo central recuerda que la Misa es el mismo sacrificio del Calvario, acompañado de cirios de cera virgen." :la "Crux altaris unum idemque sacrificium Calvariae proclamat; candelae lumen Christi effundunt.")
+    (:start 0.48 :end 0.64 :en "The central Crucifix is flanked by pure beeswax candles: 2 for daily Mass, 6 for Sunday, and 7 whenever the Diocesan Bishop celebrates." :es "El crucifijo central está flanqueado por cirios de cera: 2 para misa diaria, 6 para domingo y 7 cuando el obispo celebra." :la "Crux altaris candelis cingitur: duae feriales, sex dominicales, septem cum episcopo dioecesano.")
     (:start 0.64 :end 0.80 :en "Upon the unfolded Corporal rest the golden Chalice, Paten with host, Purificator, and protective linen Pall." :es "Sobre el Corporal desplegado reposan el Cáliz dorado, la Patena con la hostia, el Purificador y la Pala." :la "In corporali calix, patena cum hostia, purificatorium et palla ad sanctissima mysteria parantur.")
-    (:start 0.80 :end 1.00 :en "On the left stands the Roman Missal; on the right, the Credence Table holds the water and wine cruets, lavabo basin, and sanctus bells." :es "A la izquierda se coloca el Misal Romano; a la derecha, la credencia con vinajeras, lavabo y campanillas." :la "Missale Romanum preces ecclesiae continet; abacus ampullas, pelvim et campanas sanctuarii sustinet.")
+    (:start 0.80 :end 1.00 :en "On the left stands the Roman Missal; on the right, the Credence Table; and in the elevated apse sits the Sacred Tabernacle watched by the burning red lamp (GIRM 314)." :es "A la izquierda el Misal Romano, a la derecha la credencia, y en el ábside se alza el Sagrario custodiado por la lámpara roja (OGMR 314)." :la "Missale, abacus et in sanctuario eminenti Tabernaculum Domini cum lampade perpetua custoditum.")
   ))
   (:keyframes (
     (:t 0.00 :title "1. Consecrated Mensa (Stone Table)" :rule "Mensa Altaris: Anointed with Sacred Chrism, representing Christ the Cornerstone.")
     (:t 0.16 :title "2. Altar Stone & Relics of Martyrs" :rule "Ara Sacra: Sealed sepulchrum with martyrs' relics and five engraved crosses for Christ's wounds.")
     (:t 0.32 :title "3. Altar Linens & Seasonal Antependium" :rule "Lintea & Frontale: White burial shroud linen and seasonal liturgical color frontal.")
-    (:t 0.48 :title "4. Central Crucifix & Beeswax Candles" :rule "Crux & Candelae: Reminds us of Calvary; beeswax candles signify the Light of Christ.")
+    (:t 0.48 :title "4. Crucifix & Beeswax Candles (2, 6, 7 Rule)" :rule "Crux & Candelae: 2 for weekday Mass, 6 for Sunday, 7 when the Bishop celebrates (GIRM 117 / Caeremoniale Episcoporum 125).")
     (:t 0.64 :title "5. The Corporal, Chalice, Paten & Pall" :rule "Vasa Sacra: Unfolded nine-square corporal catching every sacred particle of the Eucharist.")
     (:t 0.80 :title "6. Roman Missal & Credence Appointments" :rule "Missale & Abacus: Order of Mass book, water and wine cruets, lavabo dish and sanctus bells.")
+    (:t 0.92 :title "7. Sacred Tabernacle & Red Lamp" :rule "Tabernaculum: Noble sanctuary place of Eucharistic reservation (GIRM 314-317) with undying red flame (Canon 940).")
   ))
   (:interactive (
     (:checkpoint :t 0.20
@@ -32,6 +33,11 @@
       :options ("To represent the Five Wounds of Christ on the Cross, echoing Revelation 6:9 where Mass was celebrated on the tombs of martyrs" "To indicate the four cardinal directions plus Rome" "As architectural measurement markers for the stone mason" "To mark where the four Gospels and the Acts of the Apostles sit")
       :answer 0
       :explanation "The five crosses cut into the altar stone represent the Five Sacred Wounds of Jesus (hands, feet, side). In the catacombs, early Christians celebrated Mass on the tombs of martyrs, fulfilled in Revelation 6:9.")
+    (:checkpoint :t 0.54
+      :prompt "How many candles are lit on the altar for Sunday Mass versus when the Diocesan Bishop celebrates?"
+      :options ("6 for Sunday Mass, and 7 when the Diocesan Bishop celebrates (2 for weekday normal Mass)" "Always 2 candles for every celebration" "12 candles for Sunday and 24 for the Bishop" "3 candles representing the Holy Trinity on all days")
+      :answer 0
+      :explanation "Under GIRM 117 and Ceremonial of Bishops §125, at least 2 candles are lit for weekday Mass, 4 or 6 for Sunday Mass, and 7 when the Diocesan Bishop celebrates, symbolizing the fullness of Holy Orders and Revelation 1:12.")
   ))
   (:bindings (
     (:target "#altar-candle-glow-1" :attr "opacity" :expr "(0.80 + Math.sin(t * Math.PI * 12) * 0.20) * (vars.candleGlow || 1.0)")

@@ -31,6 +31,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
   const [showCertificate, setShowCertificate] = useState<boolean>(false);
   const [audioMuted, setAudioMuted] = useState<boolean>(false);
   const [hintOpen, setHintOpen] = useState<boolean>(false);
+  const [touchScrollLocked, setTouchScrollLocked] = useState<boolean>(false);
 
   const activeQuest = SANCTUARY_QUESTS[activeStationIndex];
 
@@ -349,22 +350,162 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
         </div>
       </div>
 
-      {/* Main 3D Vector Stage Window */}
-      <div style={{ position: 'relative' }}>
-        <AstVectorMediaPlayer
-          preset="church-tour"
-          autoPlay={gameMode === 'tour'}
-          height="520px"
-          allowPresetSwitch={true}
-        />
+      {/* Mobile Touch & Viewport Bar */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          background: '#0f172a',
+          padding: '6px 12px',
+          borderRadius: '12px 12px 0 0',
+          border: '1px solid #334155',
+          borderBottom: 'none',
+          fontSize: '0.78rem',
+          color: '#94a3b8',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span>⛪</span>
+          <span style={{ fontWeight: 700, color: '#f8fafc' }}>Church Sanctuary Tour</span>
+          <span style={{ color: '#64748b' }}>&bull;</span>
+          <span style={{ color: '#38bdf8' }}>3D Vector Stage</span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setTouchScrollLocked(prev => !prev)}
+          style={{
+            background: touchScrollLocked ? 'rgba(234, 179, 8, 0.15)' : 'rgba(56, 189, 248, 0.15)',
+            color: touchScrollLocked ? '#facc15' : '#38bdf8',
+            border: `1px solid ${touchScrollLocked ? '#eab308' : '#0284c7'}`,
+            borderRadius: '6px',
+            padding: '3px 10px',
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            cursor: 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+          title="Toggle between smooth page scrolling and interactive 3D rotation"
+        >
+          <span>{touchScrollLocked ? '👆 3D Orbit Active' : '🔒 Page Scroll Safe'}</span>
+        </button>
       </div>
 
-      {/* Quest Stations Stepper / Relic Shelf */}
+      {/* Main 3D Vector Stage Window (Responsive Height) */}
+      <div style={{ position: 'relative', borderRadius: '0 0 12px 12px', overflow: 'hidden', border: '1px solid #334155' }}>
+        <div style={{ pointerEvents: touchScrollLocked ? 'auto' : 'none' }}>
+          <AstVectorMediaPlayer
+            preset="church-tour"
+            autoPlay={gameMode === 'tour'}
+            height="clamp(260px, 45vh, 520px)"
+            allowPresetSwitch={true}
+          />
+        </div>
+        {!touchScrollLocked && (
+          <div
+            onClick={() => setTouchScrollLocked(true)}
+            style={{
+              position: 'absolute',
+              bottom: '12px',
+              right: '12px',
+              background: 'rgba(15, 23, 42, 0.85)',
+              backdropFilter: 'blur(4px)',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              color: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '0.72rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              zIndex: 10,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+            }}
+          >
+            <span>👆 Tap to Enable 3D Orbit / Pan</span>
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Quick-Step Station Controls Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          background: '#090d16',
+          border: '1px solid #1e293b',
+          borderRadius: '12px',
+          padding: '8px 12px',
+          gap: '8px',
+          margin: '0.75rem 0',
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => handleSelectStation(Math.max(0, activeStationIndex - 1))}
+          disabled={activeStationIndex === 0}
+          style={{
+            background: activeStationIndex === 0 ? '#1e293b' : '#334155',
+            color: activeStationIndex === 0 ? '#64748b' : '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            cursor: activeStationIndex === 0 ? 'not-allowed' : 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <span>◀</span>
+          <span className="hidden sm:inline">Prev Station</span>
+        </button>
+
+        <div style={{ textAlign: 'center', minWidth: 0 }}>
+          <div style={{ fontSize: '0.7rem', color: '#facc15', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            Station {activeQuest.stationNum} of 6 &bull; {activeQuest.latinName}
+          </div>
+          <div style={{ fontSize: '0.88rem', color: '#f8fafc', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {activeQuest.relicIcon} {activeQuest.name}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => handleSelectStation(Math.min(SANCTUARY_QUESTS.length - 1, activeStationIndex + 1))}
+          disabled={activeStationIndex === SANCTUARY_QUESTS.length - 1}
+          style={{
+            background: activeStationIndex === SANCTUARY_QUESTS.length - 1 ? '#1e293b' : '#0284c7',
+            color: activeStationIndex === SANCTUARY_QUESTS.length - 1 ? '#64748b' : '#ffffff',
+            border: 'none',
+            borderRadius: '8px',
+            padding: '8px 14px',
+            fontWeight: 700,
+            fontSize: '0.8rem',
+            cursor: activeStationIndex === SANCTUARY_QUESTS.length - 1 ? 'not-allowed' : 'pointer',
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}
+        >
+          <span className="hidden sm:inline">Next Station</span>
+          <span>▶</span>
+        </button>
+      </div>
+
+      {/* Quest Stations Stepper / Relic Shelf (Responsive Grid for Mobile & Tablets) */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(6, 1fr)',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
           gap: '8px',
+          marginBottom: '1rem',
         }}
       >
         {SANCTUARY_QUESTS.map((quest, idx) => {
@@ -394,11 +535,11 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                 <span style={{ fontSize: '1.15rem' }}>{quest.relicIcon}</span>
                 {isDone && <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 900 }}>✓</span>}
               </div>
-              <span style={{ fontSize: '0.7rem', color: isCurrent ? '#fef08a' : isDone ? '#a7f3d0' : '#94a3b8', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>
+              <span style={{ fontSize: '0.74rem', color: isCurrent ? '#fef08a' : isDone ? '#a7f3d0' : '#94a3b8', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>
                 Station {quest.stationNum}
               </span>
-              <span style={{ fontSize: '0.64rem', color: '#64748b', fontStyle: 'italic', textAlign: 'center' }}>
-                {quest.relicName}
+              <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
+                {quest.name}
               </span>
             </button>
           );

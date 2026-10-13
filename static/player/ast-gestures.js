@@ -556,6 +556,15 @@
           this.hideXRayPopup();
         }
       }
+
+      // C. Direct Analytic Ray-Math: Update cursor ray hit for spatial proprioception
+      if (this.engine && typeof this.engine.updateCursorRay === 'function' && !this.isDrawing && !this.isDragging) {
+        const now = performance.now();
+        if (!this._lastRayCastTime || (now - this._lastRayCastTime > 120)) {
+          this._lastRayCastTime = now;
+          this.engine.updateCursorRay(svgPt.x, svgPt.y);
+        }
+      }
     }
 
     /**

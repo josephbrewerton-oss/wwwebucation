@@ -105,6 +105,10 @@ export interface AstVectorMediaPlayerHandle {
   takeQuiz: () => void;
   toggleCheckpoint: () => void;
   toggleInteractiveMode: () => void;
+  actuateOpcode: (opcode: string | Record<string, any>) => void;
+  castCameraRay: () => void;
+  rotateCameraOrbit: (theta: number, phi: number, relative?: boolean) => void;
+  nudgeNode: (target: string, dxyz: [number, number, number]) => void;
 }
 
 export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVectorMediaPlayerProps>(({
@@ -193,6 +197,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const pipWindowRef = useRef<Window | null>(null);
   const playerContainerRef = useRef<HTMLDivElement>(null);
   const latestTelemetryRef = useRef<PlayerTelemetryEvent | null>(null);
+  const [latestTelemetry, setLatestTelemetry] = useState<PlayerTelemetryEvent | null>(null);
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [inkNotice, setInkNotice] = useState<string | null>(null);
 
@@ -413,6 +418,10 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     takeQuiz: () => postToPlayer({ type: 'TRIGGER_CHECKPOINT' }),
     toggleCheckpoint: () => postToPlayer({ type: 'TOGGLE_CHECKPOINT' }),
     toggleInteractiveMode: () => postToPlayer({ type: 'TOGGLE_INTERACTIVE_MODE' }),
+    actuateOpcode: (opcode: string | Record<string, any>) => postToPlayer({ type: 'ACTUATE_OPCODE', opcode }),
+    castCameraRay: () => postToPlayer({ type: 'CAST_CAMERA_RAY' }),
+    rotateCameraOrbit: (theta: number, phi: number, relative = false) => postToPlayer({ type: 'ROTATE_CAMERA_ORBIT', theta, phi, relative }),
+    nudgeNode: (target: string, dxyz: [number, number, number]) => postToPlayer({ type: 'NUDGE_NODE', target, dxyz }),
     injectCheckpoint: (checkpoint: {
       prompt: string;
       options: string[];
@@ -606,8 +615,26 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           break;
         case 'PLAYER_TELEMETRY':
           latestTelemetryRef.current = data;
+          setLatestTelemetry(data);
           onTelemetry?.(data);
           break;
+        case 'SPATIAL_TELEMETRY': {
+          const spatialEvent: PlayerTelemetryEvent = {
+            type: 'PLAYER_TELEMETRY',
+            sceneId: selectedPreset,
+            progress: 0,
+            activeKeyframe: 0,
+            variables: {},
+            lastUserAction: data.actionTrigger || 'SPATIAL_UPDATE',
+            timestamp: data.timestamp || Date.now(),
+            ...(latestTelemetryRef.current || {}),
+            spatialTelemetry: data,
+          };
+          latestTelemetryRef.current = spatialEvent;
+          setLatestTelemetry(spatialEvent);
+          onTelemetry?.(spatialEvent);
+          break;
+        }
         case 'AI_DEMO_START':
           setIsAiDemonstrating(true);
           onAiDemoStart?.(data);
@@ -1680,7 +1707,7 @@ const playerSrc = useMemo(() => {
             postToPlayer={postToPlayer}
             currentProgress={currentProgress}
             activeKeyframe={activeKeyframe}
-            latestTelemetry={latestTelemetryRef.current}
+            latestTelemetry={latestTelemetry || latestTelemetryRef.current}
             isAiDemonstrating={isAiDemonstrating}
             onCancelDemonstration={() => {
               postToPlayer({ type: 'PUPIL_INTERRUPT' });

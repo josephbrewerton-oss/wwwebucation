@@ -460,6 +460,24 @@ export const aiCaller = new AiRuntimeCaller();
 // GEMINI NANO × AST VECTOR PLAYER CO-PILOT RPC PROTOCOL (betaplans.md)
 // ============================================================================
 
+export interface PlayerSpatialTelemetry {
+  sExpr?: string;
+  rayHitSExpr?: string;
+  cameraStateSExpr?: string;
+  hit?: {
+    target: string;
+    dist: number;
+    norm: [number, number, number];
+    xyz: [number, number, number];
+  } | null;
+  camera?: {
+    theta: number;
+    phi: number;
+    dist: number;
+  };
+  timestamp?: number;
+}
+
 export interface PlayerTelemetryEvent {
   type: 'PLAYER_TELEMETRY';
   sceneId: string;
@@ -468,6 +486,7 @@ export interface PlayerTelemetryEvent {
   variables: Record<string, any>;
   lastUserAction: string;
   lastErrorKey?: string;
+  spatialTelemetry?: PlayerSpatialTelemetry;
   timestamp: number;
 }
 
@@ -479,7 +498,11 @@ export type AiVisualAction =
   | { type: 'ANNOTATE'; targetSelector: string; labelText: string; arrowDirection?: 'up' | 'down' | 'left' | 'right' }
   | { type: 'NARRATE'; text: string; language?: string }
   | { type: 'ZOOM_ELEMENT'; selector: string; durationMs?: number }
-  | { type: 'RESET_VIEW'; durationMs?: number };
+  | { type: 'RESET_VIEW'; durationMs?: number }
+  | { type: 'ROTATE_CAMERA'; theta?: number; phi?: number; deltaTheta?: number; deltaPhi?: number; durationMs?: number }
+  | { type: 'NUDGE'; target: string; dxyz: [number, number, number]; durationMs?: number }
+  | { type: 'PROBE_MOVE'; target: string; xyz: [number, number, number]; durationMs?: number }
+  | { type: 'CAST_RAY'; screenX?: number; screenY?: number };
 
 export interface AiVisualCommandPacket {
   type: 'AI_VISUAL_COMMAND';
@@ -509,7 +532,8 @@ function sanitizeSvgSelector(rawSelector: string): string | null {
 
 /**
  * Parses Gemini Nano's concise Lisp-style S-Expression grammar:
- * (:act :seek <0.0-1.0> [:highlight "<svg-id>"] [:var "<name>" <val>] [:say "<text>"] [:zoom "<svg-id>"])
+ * (:act :seek <0.0-1.0> [:highlight "<svg-id>"] [:var "<name>" <val>] [:say "<text>"] [:zoom "<svg-id>"]
+ *       [:orbit :theta <f> :phi <f>] [:nudge :target "<id>" :dxyz [<dx> <dy> <dz>]])
  */
 export function parseAiActionTuples(nanoOutput: string): {
   actions: AiVisualAction[];
@@ -558,6 +582,42 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :orbit / :rotate-camera :theta <val> :phi <val>
+    const orbitMatch = body.match(/:(?:orbit|rotate-camera|camera)\s+:theta\s+([0-9.-]+)\s+:phi\s+([0-9.-]+)/i);
+    if (orbitMatch) {
+      const theta = parseFloat(orbitMatch[1]);
+      const phi = parseFloat(orbitMatch[2]);
+      if (!isNaN(theta) && !isNaN(phi)) {
+        actions.push({ type: 'ROTATE_CAMERA', theta, phi, durationMs: 700 });
+      }
+    }
+
+    // Parse :nudge :target "<selector>" :dxyz [<dx> <dy> <dz>]
+    const nudgeMatch = body.match(/:nudge\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:dxyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
+    if (nudgeMatch) {
+      const rawSel = nudgeMatch[2] || nudgeMatch[3] || nudgeMatch[4];
+      const validSel = sanitizeSvgSelector(rawSel);
+      const dx = parseFloat(nudgeMatch[5]);
+      const dy = parseFloat(nudgeMatch[6]);
+      const dz = parseFloat(nudgeMatch[7]);
+      if (validSel && !isNaN(dx) && !isNaN(dy) && !isNaN(dz)) {
+        actions.push({ type: 'NUDGE', target: validSel, dxyz: [dx, dy, dz], durationMs: 600 });
+      }
+    }
+
+    // Parse :probe-move :target "<selector>" :xyz [<x> <y> <z>]
+    const probeMatch = body.match(/:probe-move\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:xyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
+    if (probeMatch) {
+      const rawSel = probeMatch[2] || probeMatch[3] || probeMatch[4];
+      const validSel = sanitizeSvgSelector(rawSel);
+      const x = parseFloat(probeMatch[5]);
+      const y = parseFloat(probeMatch[6]);
+      const z = parseFloat(probeMatch[7]);
+      if (validSel && !isNaN(x) && !isNaN(y) && !isNaN(z)) {
+        actions.push({ type: 'PROBE_MOVE', target: validSel, xyz: [x, y, z], durationMs: 600 });
+      }
+    }
+
     // Parse :var "<name>" <val>
     const varMatch = body.match(/:var\s+("?([a-zA-Z0-9_]+)"?)\s+([0-9.-]+|"[^"]+"|'[^']+')/i);
     if (varMatch) {
@@ -590,23 +650,56 @@ export function parseAiActionTuples(nanoOutput: string): {
     }
   }
 
-  // 2. If no :say was found inside (:act ...), extract spoken explanation from text outside the S-Expr
+  // 2. Parse standalone spatial action opcodes if not enclosed in (:act ...)
+  const standaloneOrbit = nanoOutput.match(/\(:(?:rotate-camera|orbit|camera)\s+:theta\s+([0-9.-]+)\s+:phi\s+([0-9.-]+)\)/i);
+  if (standaloneOrbit) {
+    const theta = parseFloat(standaloneOrbit[1]);
+    const phi = parseFloat(standaloneOrbit[2]);
+    if (!isNaN(theta) && !isNaN(phi)) {
+      actions.push({ type: 'ROTATE_CAMERA', theta, phi, durationMs: 700 });
+      sExprList.push(standaloneOrbit[0]);
+    }
+  }
+
+  const standaloneNudge = nanoOutput.match(/\(:nudge\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:dxyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]\)/i);
+  if (standaloneNudge) {
+    const rawSel = standaloneNudge[2] || standaloneNudge[3] || standaloneNudge[4];
+    const validSel = sanitizeSvgSelector(rawSel);
+    const dx = parseFloat(standaloneNudge[5]);
+    const dy = parseFloat(standaloneNudge[6]);
+    const dz = parseFloat(standaloneNudge[7]);
+    if (validSel && !isNaN(dx) && !isNaN(dy) && !isNaN(dz)) {
+      actions.push({ type: 'NUDGE', target: validSel, dxyz: [dx, dy, dz], durationMs: 600 });
+      sExprList.push(standaloneNudge[0]);
+    }
+  }
+
+  // 3. If no :say was found inside (:act ...), extract spoken explanation from text outside the S-Expr
   if (!sayText) {
-    const textWithoutSExpr = nanoOutput.replace(/\(:act\s+[^)]+\)/gi, '').replace(/```[a-z]*|```/gi, '').trim();
+    const textWithoutSExpr = nanoOutput.replace(/\(:[a-z\-]+\s+[^)]+\)/gi, '').replace(/```[a-z]*|```/gi, '').trim();
     sayText = textWithoutSExpr || 'Let us observe the visual demonstration on the simulation stage.';
     if (actions.length > 0) {
       actions.push({ type: 'NARRATE', text: sayText });
     }
   }
 
-  // 3. Fallback: If no (:act) S-Expression was emitted at all, generate an informative visual seek
+  // 4. Fallback: If no action was emitted at all, generate an informative seek or orbit
   if (actions.length === 0) {
-    // If output discusses a step or conclusion, seek to end; otherwise halfway
     const lower = nanoOutput.toLowerCase();
-    const targetP = lower.includes('finish') || lower.includes('result') || lower.includes('conclu') ? 0.9 : 0.5;
-    actions.push({ type: 'SEEK', targetProgress: targetP, durationMs: 800 });
-    actions.push({ type: 'NARRATE', text: sayText });
-    sExprList.push(`(:act :seek ${targetP} :say "${sayText.slice(0, 80).replace(/"/g, "'")}...")`);
+    if (lower.includes('orbit') || lower.includes('camera') || lower.includes('angle') || lower.includes('rotate')) {
+      actions.push({ type: 'ROTATE_CAMERA', theta: 25.0, phi: -10.0, durationMs: 700 });
+      actions.push({ type: 'NARRATE', text: sayText });
+      sExprList.push(`(:act :orbit :theta 25.0 :phi -10.0 :say "${sayText.slice(0, 60)}")`);
+    } else if (lower.includes('nudge') || lower.includes('probe') || lower.includes('core')) {
+      actions.push({ type: 'NUDGE', target: '#coil-core', dxyz: [0.0, 5.0, 0.0], durationMs: 600 });
+      actions.push({ type: 'NARRATE', text: sayText });
+      sExprList.push(`(:act :nudge :target "#coil-core" :dxyz [0.0 5.0 0.0] :say "${sayText.slice(0, 60)}")`);
+    } else {
+      const targetP = lower.includes('finish') || lower.includes('result') || lower.includes('conclu') ? 0.9 : 0.5;
+      actions.push({ type: 'SEEK', targetProgress: targetP, durationMs: 800 });
+      actions.push({ type: 'NARRATE', text: sayText });
+      sExprList.push(`(:act :seek ${targetP} :say "${sayText.slice(0, 80).replace(/"/g, "'")}...")`);
+    }
   }
 
   return {
@@ -618,7 +711,7 @@ export function parseAiActionTuples(nanoOutput: string): {
 
 /**
  * Prompts Gemini Nano on-device to generate visual demonstration action tuples (:act)
- * conforming to the Co-Pilot specification in betaplans.md
+ * conforming to the Co-Pilot specification in betaplans.md, with Proprioceptive Spatial Awareness.
  */
 export async function promptAiCoPilotDemonstration(
   telemetry: Partial<PlayerTelemetryEvent>,
@@ -631,25 +724,43 @@ export async function promptAiCoPilotDemonstration(
   const varsStr = JSON.stringify(varsObj);
   const keyframeIdx = telemetry?.activeKeyframe ?? 0;
 
-  // Compact, high-instruction-density system prompt constrained by betaplans.md grammar
+  // Spatial Telemetry Emission: exact ray hit and camera state S-Expression tokens
+  const spatialTelemetryToken =
+    telemetry?.spatialTelemetry?.sExpr ||
+    telemetry?.spatialTelemetry?.rayHitSExpr ||
+    '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])';
+  const hitTarget = telemetry?.spatialTelemetry?.hit?.target || '#coil-core';
+
+  // Compact, high-instruction-density system prompt constrained by betaplans.md grammar and Proprioceptive Awareness
   const systemPrompt = `You are Gemini Nano, an on-device AI Co-Pilot embedded in the St Joseph's Vector Classroom Whiteboard.
 CURRENT SCENE: "${sceneId}" | PROGRESS: ${progressPercent}% (Step #${keyframeIdx}) | VARIABLES: ${varsStr}.
 
-YOUR MISSION: Answer the pupil's question by PHYSICALLY DEMONSTRATING on the vector stage using Action Tuples.
+PROPRIOCEPTIVE SPATIAL TELEMETRY (Zero-Raster Token Stream):
+Rather than consuming massive token bandwidth with raw image frames or video buffers:
+The 3D coordinates and direct analytic ray-math intersections are condensed into compact symbolic S-Expression tokens:
+${spatialTelemetryToken}
+
+You have exact proprioceptive awareness: you know where the viewer is looking and which object the ray strikes without guessing.
+Active Hit Target: "${hitTarget}".
+
+DETERMINISTIC ACTUATION:
+When you respond with an action opcode, the engine updates theta, phi, or node translation, re-evaluates the parametric equations, and re-sorts visible vector layers via the Painter's algorithm with depth fog.
+
 Output strictly an (:act ...) S-Expression tuple in your response:
-(:act :seek <0.0 to 1.0> [:highlight "<svg-id>"] [:var "<name>" <val>] [:zoom "<svg-id>"] [:say "<1-2 sentence spoken explanation>"])
+(:act [:seek <0.0 to 1.0>] [:orbit :theta <deg> :phi <deg>] [:nudge :target "<id>" :dxyz [<dx> <dy> <dz>]] [:highlight "<svg-id>"] [:var "<name>" <val>] [:zoom "<svg-id>"] [:say "<1-2 sentence spoken explanation>"])
 
 EXAMPLES:
-- Fraction addition: (:act :seek 0.50 :highlight "#pie-slice-split" :say "Notice how one half is physically identical to two quarters.")
-- Pythagoras: (:act :seek 0.85 :highlight "#pyth-rect-a" :var "sideA" 3 :say "The square of leg a has an area of 9 square units.")
+- Spatial Hit Identification: (:act :highlight "#coil-core" :say "Your gaze ray strikes #coil-core at coordinates [12.0 45.0 -8.5] with normal [0.0 1.0 0.0].")
+- Deterministic Orbit: (:act :orbit :theta 25.0 :phi -10.0 :say "Rotating camera to view the apparatus in 3D perspective.")
+- Deterministic Probe Nudge: (:act :nudge :target "#coil-core" :dxyz [0.0 5.0 0.0] :say "Nudging the coil core upwards to increase magnetic flux linkage.")
 - Boyle's Gas Law: (:act :seek 0.30 :highlight "#piston" :var "pressure" 2.5 :say "Compressing the piston cylinder doubles particle collisions.")
 
 RULES:
-1. Always include :seek and :say in your (:act ...) tuple.
-2. Explanations must be engaging, UK Curriculum aligned, and under 30 words.
-3. No preamble. Output the (:act ...) S-Expression directly.`;
+1. Output the (:act ...) S-Expression directly.
+2. Explanations must be UK Curriculum aligned, pedagogically accurate, and under 30 words.
+3. Incorporate proprioceptive ray-hit coordinates when asked about what is being looked at.`;
 
-  const userPrompt = `Pupil asks: "${pupilQuestion.trim()}". Show and explain on the simulation stage.`;
+  const userPrompt = `Pupil asks: "${pupilQuestion.trim()}". Spatial token: ${spatialTelemetryToken}. Show and actuate on the simulation stage.`;
 
   // Execute on-device inference (Chrome Prompt API with WebLLM fallback)
   const rawOutput = await aiCaller.promptText({

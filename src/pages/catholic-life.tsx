@@ -79,6 +79,8 @@ export default function CatholicLifePage(): React.JSX.Element {
 
   const [selectedCst, setSelectedCst] = useState<CSTPrinciple>(CST_PRINCIPLES[0]);
   const [selectedVirtue, setSelectedVirtue] = useState<SchoolVirtue>(SCHOOL_VIRTUES[0]);
+  const [overviewPlayerExpanded, setOverviewPlayerExpanded] = useState<boolean>(false);
+  const [overviewTouchLock, setOverviewTouchLock] = useState<boolean>(true);
 
   // Keep state synced with URL search params
   useEffect(() => {
@@ -632,7 +634,7 @@ export default function CatholicLifePage(): React.JSX.Element {
               </div>
             </div>
 
-            {/* Featured Church Tour Vector Player on Overview */}
+            {/* Featured Church Tour Vector Player on Overview - Responsive & Mobile-Optimized */}
             <div
               style={{
                 background: '#090d16',
@@ -650,33 +652,180 @@ export default function CatholicLifePage(): React.JSX.Element {
                       Featured: Interactive Tour of a Catholic Church
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                      Narthex, Nave, Ambo, Altar, Tabernacle &amp; Lady Chapel &bull; Continuous vector motion &amp; hotspots
+                      Narthex, Nave, Ambo, Altar, Tabernacle &amp; Lady Chapel &bull; 6 Sacred Stations
                     </p>
                   </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('church-tour')}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* Mobile Preview Toggle Button */}
+                  <button
+                    type="button"
+                    onClick={() => setOverviewPlayerExpanded(prev => !prev)}
+                    className="md:hidden"
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '8px',
+                      background: overviewPlayerExpanded ? '#334155' : 'rgba(56, 189, 248, 0.15)',
+                      color: overviewPlayerExpanded ? '#cbd5e1' : '#38bdf8',
+                      border: `1px solid ${overviewPlayerExpanded ? '#475569' : '#0284c7'}`,
+                      fontWeight: 700,
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <span>{overviewPlayerExpanded ? '⏹️ Hide 3D Stage' : '▶️ Preview 3D Stage'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('church-tour')}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      background: '#0284c7',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    Full Tour &amp; Stations &rarr;
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Compact Hero Preview when collapsed */}
+              <div className={`md:hidden ${overviewPlayerExpanded ? 'hidden' : 'block'}`}>
+                <div
                   style={{
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    background: '#0284c7',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
+                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
+                    borderRadius: '12px',
+                    padding: '1rem',
+                    border: '1px solid #334155',
+                    marginBottom: '0.5rem',
                   }}
                 >
-                  Full Tour &amp; Stations &rarr;
-                </button>
+                  <p style={{ margin: '0 0 10px 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.45 }}>
+                    📱 <strong>Mobile Viewport Notice:</strong> To ensure fast page scrolling across all 16 Catholic modules, the heavy 3D canvas is docked in the dedicated <strong>Church Tour</strong> tab.
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
+                    {[
+                      '1. 💧 Holy Water Font',
+                      '2. ⛪ Nave & Pew Pliant',
+                      '3. 📖 Pulpit / Ambo',
+                      '4. ✝️ High Altar of Sacrifice',
+                      '5. ✨ Tabernacle & Red Lamp',
+                      '6. 🕊️ Lady Chapel',
+                    ].map((st) => (
+                      <span
+                        key={st}
+                        style={{
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          color: '#f8fafc',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                        }}
+                      >
+                        {st}
+                      </span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => handleTabChange('church-tour')}
+                      style={{
+                        background: '#facc15',
+                        color: '#0f172a',
+                        fontWeight: 800,
+                        fontSize: '0.8rem',
+                        padding: '8px 14px',
+                        borderRadius: '8px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      ⛪ Open Full Interactive Tour &rarr;
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOverviewPlayerExpanded(true)}
+                      style={{
+                        background: 'transparent',
+                        color: '#38bdf8',
+                        fontWeight: 700,
+                        fontSize: '0.8rem',
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: '1px solid #0284c7',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      ▶️ Expand 3D Player Here
+                    </button>
+                  </div>
+                </div>
               </div>
-              <AstVectorMediaPlayer
-                preset="church-tour"
-                autoPlay={true}
-                height="480px"
-                allowPresetSwitch={true}
-              />
+
+              {/* Live Vector Player (Always visible on desktop md+, toggleable on mobile) */}
+              <div className={`relative ${overviewPlayerExpanded ? 'block' : 'hidden md:block'}`}>
+                {/* Touch Safeguard Bar for Mobile */}
+                <div
+                  className="md:hidden"
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    background: '#0f172a',
+                    padding: '6px 10px',
+                    borderRadius: '8px 8px 0 0',
+                    border: '1px solid #334155',
+                    borderBottom: 'none',
+                    fontSize: '0.74rem',
+                    color: '#94a3b8',
+                  }}
+                >
+                  <span>Touch interaction mode:</span>
+                  <button
+                    type="button"
+                    onClick={() => setOverviewTouchLock(prev => !prev)}
+                    style={{
+                      background: overviewTouchLock ? 'rgba(56, 189, 248, 0.2)' : 'rgba(234, 179, 8, 0.2)',
+                      color: overviewTouchLock ? '#38bdf8' : '#facc15',
+                      border: `1px solid ${overviewTouchLock ? '#0284c7' : '#eab308'}`,
+                      borderRadius: '4px',
+                      padding: '2px 8px',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {overviewTouchLock ? '🔒 Page Scroll Safe' : '👆 3D Interactive'}
+                  </button>
+                </div>
+
+                <div style={{ pointerEvents: overviewTouchLock ? 'auto' : 'auto', position: 'relative' }}>
+                  <AstVectorMediaPlayer
+                    preset="church-tour"
+                    autoPlay={true}
+                    height="clamp(260px, 42vh, 460px)"
+                    allowPresetSwitch={true}
+                  />
+                </div>
+              </div>
             </div>
 
             {/* Grid of All Sanctuary Modules */}
