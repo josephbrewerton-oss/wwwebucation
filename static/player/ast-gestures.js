@@ -409,10 +409,11 @@
           return;
         }
 
-        // Direct Action Buttons (e.g. Pythagoras steppers, presets, toggles)
-        if (target.hasAttribute('data-action')) {
+        // Direct Action Buttons (e.g. Pythagoras steppers, presets, toggles, pond actions)
+        const actionTarget = target.hasAttribute('data-action') ? target : target.closest('[data-action]');
+        if (actionTarget) {
           e.preventDefault();
-          this.handleActionClick(target.getAttribute('data-action'));
+          this.handleActionClick(actionTarget.getAttribute('data-action'), actionTarget);
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
@@ -455,6 +456,11 @@
           target.style.cursor = 'grabbing';
           this.playAudioTone(440, 'sine', 0.08);
         } else if (target.id === 'fishing-hook' || target.id === 'fishing-bobber' || target.id === 'fishing-bobber-rig' || target.getAttribute('data-draggable') === 'fishing-hook' || target.closest('#fishing-rod-group')) {
+          if (this._hookedFish) {
+            this.reelHookToSurface();
+            this.createTouchRipple(svgPt.x, svgPt.y);
+            return;
+          }
           this.dragMode = 'fishing-hook';
           target.style.cursor = 'grabbing';
           if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
@@ -938,9 +944,15 @@
     }
 
     /**
-     * Direct Manipulation of Math Fishing Hook & Bobber
-     * Provides real-time pointer capture, rod flexion, fish collision & bond resolution
+     * Direct Manipulation & Logic for Math Pond Apparatus
+     * Dynamic target bounds (5, 10, 20), concrete Ten-Frame visualization,
+     * subitising representations, and tactile sonification.
      */
+    getMathPondTargetSum() {
+      const v = this.engine && this.engine.vars && Number(this.engine.vars.targetSum);
+      return (v && v >= 2 && v <= 100) ? v : 10;
+    }
+
     handleFishingHookDrag(svgPt) {
       const el = this.engine && this.engine._cachedElements;
       if (!this.stageSvg) return;
@@ -951,18 +963,17 @@
       const clampedY = Math.max(120, Math.min(440, svgPt.y));
 
       const hook = this.stageSvg.querySelector('#fishing-hook');
-      const bobber = this.stageSvg.querySelector('#fishing-bobber');
       const bobberRig = this.stageSvg.querySelector('#fishing-bobber-rig');
       const line = this.stageSvg.querySelector('#fishing-line');
       const eqText = this.stageSvg.querySelector('#math-hud-equation');
       const rod = this.stageSvg.querySelector('#fishing-rod');
+      const releaseBtn = this.stageSvg.querySelector('#hook-release-btn');
 
       // 1. Dynamic rod bending towards pointer
       if (rod) {
-        const rodTipX = 80 + (clampedX - 80) * 0.35;
-        const rodTipY = 30 + Math.min(45, (clampedY - 120) * 0.15);
-        rod.setAttribute('x2', rodTipX.toFixed(1));
-        rod.setAttribute('y2', rodTipY.toFixed(1));
+        const rodTipX = 330 + (clampedX - 330) * 0.28;
+        const rodTipY = 126 - Math.max(0, 126 - clampedY) * 0.45;
+        rod.setAttribute('d', `M 330,126 Q ${(330 + (rodTipX - 330) * 0.5).toFixed(1)},${(126 - 48).toFixed(1)} ${rodTipX.toFixed(1)},${rodTipY.toFixed(1)}`);
 
         if (line) {
           line.setAttribute('x1', rodTipX.toFixed(1));
@@ -979,50 +990,344 @@
         line.setAttribute('y2', clampedY.toFixed(1));
       }
 
-      // 3. Bobber floats at waterline unless submerged by drag
-      const bobberY = Math.min(160, Math.max(130, clampedY));
-      if (bobber) {
-        bobber.setAttribute('cx', clampedX.toFixed(1));
-        bobber.setAttribute('cy', bobberY.toFixed(1));
-      }
+      // 3. Bobber floats at waterline (y ~ 155) unless submerged
+      const bobberY = Math.min(160, Math.max(140, clampedY));
       if (bobberRig) {
-        bobberRig.setAttribute('transform', `translate(${(clampedX - 320).toFixed(1)}, ${(bobberY - 140).toFixed(1)})`);
+        bobberRig.setAttribute('transform', `translate(${clampedX.toFixed(1)}, ${bobberY.toFixed(1)})`);
       }
 
       // 4. Fish collision detection in the pond
       if (el && el.fishEls && el.fishEls.length) {
         if (!this._hookedFish) {
+          if (releaseBtn) releaseBtn.style.display = 'none';
           for (let i = 0; i < el.fishEls.length; i++) {
             const fish = el.fishEls[i];
-            if (fish.caught) continue;
-            // Get current fish coordinate
+            if (fish.caught || fish.isHooked) continue;
             let fx = fish.curX !== undefined ? fish.curX : fish.x;
             let fy = fish.curY !== undefined ? fish.curY : fish.y;
             const dist = Math.hypot(clampedX - fx, clampedY - fy);
-            if (dist < 34) {
+            if (dist < 36) {
               // NIBBLE & HOOK!
               this._hookedFish = fish;
               fish.isHooked = true;
               this.playAudioTone(540, 'sine', 0.08, 0.2);
               setTimeout(() => this.playAudioTone(680, 'sine', 0.08, 0.25), 60);
 
+              if (releaseBtn) releaseBtn.style.display = 'block';
+
+              const targetSum = this.getMathPondTargetSum();
+              const lang = (window.AST_ENGINE_ACTIVE_LANG || window.STJ_CURRENT_LANG || 'en').toLowerCase();
               if (eqText) {
-                const lang = (window.AST_ENGINE_ACTIVE_LANG || window.STJ_CURRENT_LANG || 'en').toLowerCase();
-                if (lang.startsWith('es')) eqText.textContent = `¡Enganchaste un ${fish.val}! ¡Llévalo arriba!`;
-                else if (lang.startsWith('fr')) eqText.textContent = `Accroché ${fish.val} ! Remontez-le !`;
-                else if (lang.startsWith('la')) eqText.textContent = `Piscis ${fish.val} captus! Attolle!`;
-                else eqText.textContent = `Hooked ${fish.val}! Pull above surface!`;
+                if (lang.startsWith('es')) eqText.textContent = `¡Enganchaste un ${fish.val}! Llévalo hacia la superficie.`;
+                else if (lang.startsWith('fr')) eqText.textContent = `Accroché ${fish.val} ! Remontez-le vers la surface.`;
+                else if (lang.startsWith('la')) eqText.textContent = `Piscis ${fish.val} captus! Attolle ad superficiem.`;
+                else eqText.textContent = `Hooked ${fish.val}! Pull up to surface or tap hook to reel in!`;
               }
               break;
             }
           }
         } else {
           // Move hooked fish with the hook
+          if (releaseBtn) releaseBtn.style.display = 'block';
           if (this._hookedFish.el) {
-            this._hookedFish.el.setAttribute('transform', `translate(${clampedX.toFixed(1)}, ${(clampedY + 12).toFixed(1)})`);
+            this._hookedFish.el.setAttribute('transform', `translate(${clampedX.toFixed(1)}, ${(clampedY + 12).toFixed(1)}) rotate(15)`);
           }
         }
       }
+    }
+
+    releaseCurrentFish() {
+      if (!this._hookedFish) return;
+      const fish = this._hookedFish;
+      fish.isHooked = false;
+      this._hookedFish = null;
+      fish.curY = Math.min(380, (fish.curY || 240) + 40);
+      const releaseBtn = this.stageSvg && this.stageSvg.querySelector('#hook-release-btn');
+      if (releaseBtn) releaseBtn.style.display = 'none';
+
+      this.playAudioTone(380, 'sine', 0.12, 0.15);
+      const eqText = this.stageSvg && this.stageSvg.querySelector('#math-hud-equation');
+      if (eqText) {
+        const lang = (window.AST_ENGINE_ACTIVE_LANG || window.STJ_CURRENT_LANG || 'en').toLowerCase();
+        if (lang.startsWith('es')) eqText.textContent = `Pez liberado. ¡Encuentra el vínculo numérico correcto!`;
+        else if (lang.startsWith('fr')) eqText.textContent = `Poisson relâché. Cherchez le bon complément !`;
+        else if (lang.startsWith('la')) eqText.textContent = `Piscis liberatus. Requiras vinculum congruum!`;
+        else eqText.textContent = `Fish released back to pond. Find the complement!`;
+      }
+    }
+
+    castToFishIndex(idx) {
+      const el = this.engine && this.engine._cachedElements;
+      if (!el || !el.fishEls || !el.fishEls[idx]) return;
+      const fish = el.fishEls[idx];
+      if (fish.caught || fish.isHooked) return;
+
+      if (this._hookedFish) {
+        this.reelHookToSurface();
+        return;
+      }
+
+      el.isUserControlled = true;
+      const targetX = fish.curX || fish.x;
+      const targetY = fish.curY || fish.y;
+
+      this.handleFishingHookDrag({ x: targetX, y: targetY });
+      this.createPondSplash(targetX, 155);
+      this.playAudioTone(440, 'triangle', 0.08, 0.2);
+      setTimeout(() => this.playAudioTone(660, 'sine', 0.08, 0.25), 80);
+    }
+
+    reelHookToSurface() {
+      if (!this._hookedFish) return;
+      const hook = this.stageSvg && this.stageSvg.querySelector('#fishing-hook');
+      const ctm = hook ? hook.getAttribute('transform') : null;
+      let hookX = 440;
+      if (ctm) {
+        const match = ctm.match(/translate\(\s*([\d.-]+)/);
+        if (match) hookX = parseFloat(match[1]);
+      }
+      this.handleFishingHookDrag({ x: hookX, y: 155 });
+      this.finishFishingHookDrag();
+    }
+
+    createPondSplash(x, y) {
+      const fxLayer = this.stageSvg && this.stageSvg.querySelector('#pond-fx-layer');
+      if (!fxLayer) return;
+
+      // Concentric ripple ring
+      const ring = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      ring.setAttribute('cx', x.toFixed(1));
+      ring.setAttribute('cy', y.toFixed(1));
+      ring.setAttribute('rx', '8');
+      ring.setAttribute('ry', '3');
+      ring.setAttribute('fill', 'none');
+      ring.setAttribute('stroke', '#bae6fd');
+      ring.setAttribute('stroke-width', '2');
+      ring.setAttribute('opacity', '0.9');
+      fxLayer.appendChild(ring);
+
+      let frame = 0;
+      const animRing = () => {
+        frame++;
+        ring.setAttribute('rx', (8 + frame * 3.5).toFixed(1));
+        ring.setAttribute('ry', (3 + frame * 1.4).toFixed(1));
+        ring.setAttribute('opacity', Math.max(0, 0.9 - frame * 0.07).toFixed(2));
+        if (frame < 14) {
+          requestAnimationFrame(animRing);
+        } else {
+          ring.remove();
+        }
+      };
+      requestAnimationFrame(animRing);
+    }
+
+    updateTenFrameHud(sum, targetSum, caughtList) {
+      const tfGroup = this.stageSvg && this.stageSvg.querySelector('#ten-frame-group');
+      if (!tfGroup) return;
+
+      tfGroup.innerHTML = '';
+      const totalSlots = Math.min(20, Math.max(5, targetSum));
+
+      // Build color map for catches
+      const catchColors = ['#fb923c', '#38bdf8', '#34d399', '#f472b6', '#a855f7'];
+      let slotColors = [];
+      let currentVal = 0;
+      if (Array.isArray(caughtList)) {
+        caughtList.forEach((cVal, cIdx) => {
+          const col = catchColors[cIdx % catchColors.length];
+          for (let k = 0; k < cVal; k++) {
+            slotColors.push(col);
+          }
+        });
+      }
+
+      if (totalSlots <= 10) {
+        // Single row of slots
+        const slotWidth = Math.floor(410 / totalSlots) - 4;
+        const slotHeight = 22;
+        for (let i = 0; i < totalSlots; i++) {
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          const isFilled = i < sum;
+          const col = slotColors[i] || '#38bdf8';
+          const x = i * (slotWidth + 4);
+
+          g.innerHTML = `
+            <rect x="${x}" y="0" width="${slotWidth}" height="${slotHeight}" rx="4"
+                  fill="${isFilled ? col : '#1e293b'}"
+                  fill-opacity="${isFilled ? '0.9' : '0.6'}"
+                  stroke="${isFilled ? '#ffffff' : '#334155'}"
+                  stroke-width="${isFilled ? '1.5' : '1'}"
+                  stroke-dasharray="${isFilled ? 'none' : '3 2'}" />
+            ${isFilled ? `<circle cx="${x + slotWidth / 2}" cy="11" r="5" fill="#ffffff" />` : `<text x="${x + slotWidth / 2}" y="15" fill="#64748b" font-size="9" font-weight="700" text-anchor="middle">${i + 1}</text>`}
+          `;
+          tfGroup.appendChild(g);
+        }
+
+        // Summary readout
+        const info = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        info.setAttribute('x', '435');
+        info.setAttribute('y', '15');
+        info.setAttribute('fill', sum === targetSum ? '#facc15' : '#38bdf8');
+        info.setAttribute('font-size', '10.5');
+        info.setAttribute('font-weight', '800');
+        info.textContent = `${sum} / ${targetSum}`;
+        tfGroup.appendChild(info);
+
+      } else {
+        // Double Ten-Frame (2 rows of 10 for target = 20)
+        const slotWidth = 36;
+        const slotHeight = 11;
+        for (let i = 0; i < totalSlots; i++) {
+          const row = Math.floor(i / 10);
+          const colIdx = i % 10;
+          const x = colIdx * 40;
+          const y = row * 14;
+          const isFilled = i < sum;
+          const col = slotColors[i] || '#38bdf8';
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.innerHTML = `
+            <rect x="${x}" y="${y}" width="${slotWidth}" height="${slotHeight}" rx="3"
+                  fill="${isFilled ? col : '#1e293b'}"
+                  stroke="${isFilled ? '#ffffff' : '#334155'}"
+                  stroke-width="${isFilled ? '1.2' : '1'}" />
+            ${isFilled ? `<circle cx="${x + slotWidth / 2}" cy="${y + 5.5}" r="3.5" fill="#ffffff" />` : ''}
+          `;
+          tfGroup.appendChild(g);
+        }
+
+        const info = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        info.setAttribute('x', '425');
+        info.setAttribute('y', '18');
+        info.setAttribute('fill', sum === targetSum ? '#facc15' : '#38bdf8');
+        info.setAttribute('font-size', '10.5');
+        info.setAttribute('font-weight', '800');
+        info.textContent = `${sum} / ${targetSum}`;
+        tfGroup.appendChild(info);
+      }
+    }
+
+    updateScorePlaque() {
+      if (!this._mathFishingScore) this._mathFishingScore = { bonds: 0, streak: 0 };
+      const bondsEl = this.stageSvg && this.stageSvg.querySelector('#score-bonds-count');
+      const streakEl = this.stageSvg && this.stageSvg.querySelector('#score-streak-text');
+      if (bondsEl) bondsEl.textContent = String(this._mathFishingScore.bonds);
+      if (streakEl) streakEl.textContent = `Streak: ${this._mathFishingScore.streak} 🔥`;
+    }
+
+    animateFishToTackleBucket(caughtFish) {
+      if (!caughtFish || !caughtFish.el) return;
+      const fishEl = caughtFish.el;
+
+      // Arc jump towards tackle bucket on left bank (x ~ 50, y ~ 100)
+      let tStep = 0;
+      const startX = 340;
+      const startY = 150;
+      const targetX = 54;
+      const targetY = 104;
+
+      const jumpTick = () => {
+        tStep += 0.05;
+        const progress = Math.min(1.0, tStep);
+        const curX = startX + (targetX - startX) * progress;
+        const curY = startY + (targetY - startY) * progress - Math.sin(progress * Math.PI) * 55;
+        const scale = 0.85 - progress * 0.45;
+
+        fishEl.setAttribute('transform', `translate(${curX.toFixed(1)}, ${curY.toFixed(1)}) scale(${scale.toFixed(2)})`);
+
+        if (progress < 1.0) {
+          requestAnimationFrame(jumpTick);
+        } else {
+          fishEl.remove();
+          this.createPondSplash(54, 114);
+          this.playAudioTone(880, 'sine', 0.1, 0.2);
+
+          // Wiggle tackle bucket
+          const bucket = this.stageSvg && this.stageSvg.querySelector('#tackle-bucket');
+          if (bucket) {
+            bucket.setAttribute('transform', 'rotate(6, 50, 40)');
+            setTimeout(() => bucket.setAttribute('transform', 'rotate(-4, 50, 40)'), 100);
+            setTimeout(() => bucket.removeAttribute('transform'), 220);
+          }
+        }
+      };
+      requestAnimationFrame(jumpTick);
+    }
+
+    respawnFishPair(targetSum) {
+      const fishGroup = this.stageSvg && this.stageSvg.querySelector('#fish-school-group');
+      const el = this.engine && this.engine._cachedElements;
+      if (!fishGroup || !el || !el.fishEls) return;
+
+      // Remove inactive caught fish
+      el.fishEls = el.fishEls.filter(f => !f.caught);
+
+      // Generate a new pair that makes targetSum
+      let a = Math.floor(Math.random() * (targetSum - 1)) + 1;
+      let b = targetSum - a;
+      const newVals = [a, b];
+
+      const fishColors = ['#f97316', '#38bdf8', '#ec4899', '#10b981', '#a855f7', '#eab308', '#06b6d4', '#f43f5e', '#84cc16'];
+
+      newVals.forEach((val) => {
+        const color = fishColors[Math.floor(Math.random() * fishColors.length)];
+        const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        g.style.cursor = 'pointer';
+        g.style.willChange = 'transform';
+        g.setAttribute('data-action', 'cast-to-fish');
+        const newIdx = el.fishEls.length;
+        g.setAttribute('data-fish-idx', String(newIdx));
+
+        const dots = this.getSubitisingDotPoints(val);
+        const dotsSvg = dots.length > 0
+          ? `<g transform="translate(-1, 0)" opacity="0.85">${dots.map(d => `<circle cx="${d.cx}" cy="${d.cy}" r="1.5" fill="#ffffff" />`).join('')}</g>`
+          : '';
+
+        g.innerHTML = `
+          <polygon class="fish-tail" points="-22,0 -34,-10 -34,10" fill="${color}" />
+          <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
+          <circle cx="12" cy="-4" r="3" fill="#ffffff" />
+          <circle cx="13" cy="-4" r="1.5" fill="#000000" />
+          ${dotsSvg}
+          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.8" />
+          <text x="0" y="4" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle">${val}</text>
+        `;
+        fishGroup.appendChild(g);
+
+        const startX = Math.random() > 0.5 ? 70 : 730;
+        const startY = 220 + Math.random() * 180;
+        const dir = startX < 400 ? 1 : -1;
+
+        el.fishEls.push({
+          el: g,
+          tailEl: g.querySelector('.fish-tail'),
+          val,
+          x: startX,
+          y: startY,
+          curX: startX,
+          curY: startY,
+          vx: (30 + Math.random() * 30) * dir,
+          vy: (Math.random() - 0.5) * 8,
+          caught: false,
+          isHooked: false,
+          swimPhase: Math.random() * Math.PI * 2,
+          tailPhase: Math.random() * Math.PI * 2
+        });
+      });
+    }
+
+    getSubitisingDotPoints(n) {
+      if (n === 1) return [{ cx: 0, cy: 0 }];
+      if (n === 2) return [{ cx: -4, cy: 0 }, { cx: 4, cy: 0 }];
+      if (n === 3) return [{ cx: -5, cy: -3 }, { cx: 0, cy: 0 }, { cx: 5, cy: 3 }];
+      if (n === 4) return [{ cx: -4, cy: -4 }, { cx: 4, cy: -4 }, { cx: -4, cy: 4 }, { cx: 4, cy: 4 }];
+      if (n === 5) return [{ cx: -4, cy: -4 }, { cx: 4, cy: -4 }, { cx: 0, cy: 0 }, { cx: -4, cy: 4 }, { cx: 4, cy: 4 }];
+      if (n === 6) return [{ cx: -5, cy: -4 }, { cx: 0, cy: -4 }, { cx: 5, cy: -4 }, { cx: -5, cy: 4 }, { cx: 0, cy: 4 }, { cx: 5, cy: 4 }];
+      if (n === 7) return [{ cx: -5, cy: -4 }, { cx: 0, cy: -4 }, { cx: 5, cy: -4 }, { cx: 0, cy: 0 }, { cx: -5, cy: 4 }, { cx: 0, cy: 4 }, { cx: 5, cy: 4 }];
+      if (n === 8) return [{ cx: -6, cy: -4 }, { cx: -2, cy: -4 }, { cx: 2, cy: -4 }, { cx: 6, cy: -4 }, { cx: -6, cy: 4 }, { cx: -2, cy: 4 }, { cx: 2, cy: 4 }, { cx: 6, cy: 4 }];
+      if (n === 9) return [{ cx: -5, cy: -5 }, { cx: 0, cy: -5 }, { cx: 5, cy: -5 }, { cx: -5, cy: 0 }, { cx: 0, cy: 0 }, { cx: 5, cy: 0 }, { cx: -5, cy: 5 }, { cx: 0, cy: 5 }, { cx: 5, cy: 5 }];
+      if (n === 10) return [{ cx: -8, cy: -4 }, { cx: -4, cy: -4 }, { cx: 0, cy: -4 }, { cx: 4, cy: -4 }, { cx: 8, cy: -4 }, { cx: -8, cy: 4 }, { cx: -4, cy: 4 }, { cx: 0, cy: 4 }, { cx: 4, cy: 4 }, { cx: 8, cy: 4 }];
+      return [];
     }
 
     finishFishingHookDrag() {
@@ -1030,71 +1335,154 @@
 
       const hook = this.stageSvg.querySelector('#fishing-hook');
       const eqText = this.stageSvg.querySelector('#math-hud-equation');
+      const releaseBtn = this.stageSvg.querySelector('#hook-release-btn');
       const el = this.engine && this.engine._cachedElements;
       const lang = (window.AST_ENGINE_ACTIVE_LANG || window.STJ_CURRENT_LANG || 'en').toLowerCase();
+      const targetSum = this.getMathPondTargetSum();
 
-      // Check if dragged above surface (y < 200)
+      // Check if dragged above surface (y < 185)
       const ctm = hook ? hook.getAttribute('transform') : null;
       let hookY = 240;
+      let hookX = 440;
       if (ctm) {
-        const match = ctm.match(/translate\(\s*[\d.-]+,\s*([\d.-]+)\)/);
-        if (match) hookY = parseFloat(match[1]);
+        const match = ctm.match(/translate\(\s*([\d.-]+),\s*([\d.-]+)\)/);
+        if (match) {
+          hookX = parseFloat(match[1]);
+          hookY = parseFloat(match[2]);
+        }
       }
 
-      if (hookY < 200) {
+      if (hookY < 185) {
         // Reeled In!
         const caughtFish = this._hookedFish;
         this._hookedFish = null;
+        if (releaseBtn) releaseBtn.style.display = 'none';
+
         if (!el.caughtList) el.caughtList = [];
         el.caughtList.push(caughtFish.val);
         caughtFish.caught = true;
 
-        if (el.caughtList.length === 1) {
-          const needed = 10 - caughtFish.val;
-          this.playAudioTone(440, 'triangle', 0.12, 0.2);
-          if (eqText) {
-            if (lang.startsWith('es')) eqText.textContent = `Pescado: ${caughtFish.val}. ¡Busca un ${needed} para hacer 10!`;
-            else if (lang.startsWith('fr')) eqText.textContent = `Pêché : ${caughtFish.val}. Trouvez un ${needed} pour faire 10 !`;
-            else if (lang.startsWith('la')) eqText.textContent = `Captus: ${caughtFish.val}. Requiris ${needed} ad decem!`;
-            else eqText.textContent = `Caught ${caughtFish.val}! Need ${needed} to make 10!`;
-          }
-        } else {
-          const sum = el.caughtList.reduce((a, b) => a + b, 0);
-          if (sum === 10) {
-            // Perfect Bond! Ascending Pentatonic Fanfare (C5 - E5 - G5 - C6)
-            this.playAudioTone(523.25, 'triangle', 0.15, 0.25);
-            setTimeout(() => this.playAudioTone(659.25, 'triangle', 0.15, 0.25), 140);
-            setTimeout(() => this.playAudioTone(783.99, 'triangle', 0.15, 0.25), 280);
-            setTimeout(() => this.playAudioTone(1046.50, 'sine', 0.40, 0.35), 420);
+        this.createPondSplash(hookX, 155);
 
-            if (eqText) {
-              eqText.textContent = `🌟 ${el.caughtList.join(' + ')} = 10 (Bond Mastered!)`;
-            }
-            el.caughtList = [];
-          } else {
-            // Misconception / overshoot
-            this.playAudioTone(180, 'sawtooth', 0.2, 0.2);
-            if (eqText) {
-              if (lang.startsWith('es')) eqText.textContent = `Total: ${sum} (≠ 10). ¡Intentémoslo de nuevo!`;
-              else if (lang.startsWith('fr')) eqText.textContent = `Total : ${sum} (≠ 10). Réessayons !`;
-              else if (lang.startsWith('la')) eqText.textContent = `Summa: ${sum}. Iterum conemur!`;
-              else eqText.textContent = `Sum ${sum} != 10. Let's try again!`;
-            }
-            el.caughtList = [];
+        const sum = el.caughtList.reduce((a, b) => a + b, 0);
+
+        if (sum === targetSum) {
+          // PERFECT NUMBER BOND!
+          this.playAudioTone(523.25, 'triangle', 0.15, 0.25);
+          setTimeout(() => this.playAudioTone(659.25, 'triangle', 0.15, 0.25), 120);
+          setTimeout(() => this.playAudioTone(783.99, 'triangle', 0.15, 0.25), 240);
+          setTimeout(() => this.playAudioTone(1046.50, 'sine', 0.40, 0.35), 380);
+
+          if (!this._mathFishingScore) this._mathFishingScore = { bonds: 0, streak: 0 };
+          this._mathFishingScore.bonds += 1;
+          this._mathFishingScore.streak += 1;
+          this.updateScorePlaque();
+
+          this.updateTenFrameHud(sum, targetSum, el.caughtList);
+          this.animateFishToTackleBucket(caughtFish);
+
+          if (eqText) {
+            if (lang.startsWith('es')) eqText.textContent = `🌟 ¡Vínculo perfecto! ${el.caughtList.join(' + ')} = ${targetSum} (¡Guardado en la cubeta!)`;
+            else if (lang.startsWith('fr')) eqText.textContent = `🌟 Liaison parfaite ! ${el.caughtList.join(' + ')} = ${targetSum} (Dans le seau !)`;
+            else if (lang.startsWith('la')) eqText.textContent = `🌟 Vinculum perfectum! ${el.caughtList.join(' + ')} = ${targetSum} (In situla repositum!)`;
+            else eqText.textContent = `🌟 Perfect Bond! ${el.caughtList.join(' + ')} = ${targetSum} (Stored in Tackle Bucket!)`;
           }
+
+          // Reset haul and respawn replacement fish
+          el.caughtList = [];
+          setTimeout(() => {
+            this.respawnFishPair(targetSum);
+            this.updateTenFrameHud(0, targetSum, []);
+          }, 1800);
+
+        } else if (sum < targetSum) {
+          // Partial haul - need complement
+          const needed = targetSum - sum;
+          this.playAudioTone(440, 'triangle', 0.12, 0.2);
+          this.updateTenFrameHud(sum, targetSum, el.caughtList);
+
+          if (eqText) {
+            const chain = el.caughtList.join(' + ');
+            if (lang.startsWith('es')) eqText.textContent = `Llevas: ${chain} = ${sum}. ¡Pesca un ${needed} para hacer ${targetSum}!`;
+            else if (lang.startsWith('fr')) eqText.textContent = `Pris : ${chain} = ${sum}. Pêchez ${needed} pour faire ${targetSum} !`;
+            else if (lang.startsWith('la')) eqText.textContent = `Captum: ${chain} = ${sum}. Requiris ${needed} ad ${targetSum}!`;
+            else eqText.textContent = `Haul: ${chain} = ${sum}! Catch a ${needed} fish to reach ${targetSum}!`;
+          }
+
+          if (caughtFish.el) {
+            caughtFish.el.setAttribute('transform', `translate(340, 150) scale(0.85)`);
+          }
+
+        } else {
+          // Exceeded target
+          this.playAudioTone(220, 'sawtooth', 0.25, 0.2);
+          if (!this._mathFishingScore) this._mathFishingScore = { bonds: 0, streak: 0 };
+          this._mathFishingScore.streak = 0;
+          this.updateScorePlaque();
+
+          if (eqText) {
+            if (lang.startsWith('es')) eqText.textContent = `Total: ${sum} (> ${targetSum}). ¡Supera la meta! Liberando al agua...`;
+            else if (lang.startsWith('fr')) eqText.textContent = `Total : ${sum} (> ${targetSum}). Dépasse l'objectif ! Retour à l'eau...`;
+            else if (lang.startsWith('la')) eqText.textContent = `Summa: ${sum} > ${targetSum}. Pisces ad stagnum revertuntur.`;
+            else eqText.textContent = `Sum ${sum} exceeds ${targetSum}! Releasing fish back into pond...`;
+          }
+
+          if (caughtFish) {
+            caughtFish.caught = false;
+            caughtFish.isHooked = false;
+            caughtFish.curY = 320;
+          }
+          el.caughtList = [];
+          setTimeout(() => {
+            this.updateTenFrameHud(0, targetSum, []);
+          }, 1200);
         }
+
       } else {
-        // Released back into water
-        this._hookedFish.isHooked = false;
-        this._hookedFish = null;
+        this.releaseCurrentFish();
       }
     }
 
-    handleActionClick(action) {
+    handleActionClick(action, targetNode) {
       const el = this.engine && this.engine._cachedElements;
       if (!el) return;
 
       el.isUserControlled = true;
+
+      // -----------------------------------------------------------------------
+      // Math Pond Apparatus Actions
+      // -----------------------------------------------------------------------
+      if (action && (action.startsWith('pond-') || action === 'cast-to-fish')) {
+        if (action === 'pond-target-10') {
+          if (this.engine) this.engine.setVar('targetSum', 10);
+          this.setupMathFishingFish();
+          this.playAudioTone(523.25, 'triangle', 0.08);
+          return;
+        } else if (action === 'pond-target-20') {
+          if (this.engine) this.engine.setVar('targetSum', 20);
+          this.setupMathFishingFish();
+          this.playAudioTone(659.25, 'triangle', 0.08);
+          return;
+        } else if (action === 'pond-target-5') {
+          if (this.engine) this.engine.setVar('targetSum', 5);
+          this.setupMathFishingFish();
+          this.playAudioTone(440, 'triangle', 0.08);
+          return;
+        } else if (action === 'pond-restock') {
+          this.setupMathFishingFish();
+          this.playAudioTone(784, 'sine', 0.12);
+          return;
+        } else if (action === 'pond-release') {
+          this.releaseCurrentFish();
+          return;
+        } else if (action === 'cast-to-fish') {
+          const fishIdx = targetNode ? parseInt(targetNode.getAttribute('data-fish-idx') || targetNode.closest('[data-fish-idx]')?.getAttribute('data-fish-idx'), 10) : NaN;
+          if (!isNaN(fishIdx)) {
+            this.castToFishIndex(fishIdx);
+            return;
+          }
+        }
+      }
 
       // -----------------------------------------------------------------------
       // Mountain Altitude & Trigonometry Apparatus Actions
@@ -2640,7 +3028,7 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // Math Fishing Pond Fish School Setup
+    // Math Fishing Pond Fish School Setup & Dynamic Ten-Frame Apparatus
     // =========================================================================
     setupMathFishingFish() {
       const fishGroup = this.stageSvg && this.stageSvg.querySelector("#fish-school-group");
@@ -2653,7 +3041,77 @@ ${strokeLines.join('\n')}
       this.engine._cachedElements.fishEls = [];
       this.engine._cachedElements.caughtList = [];
 
-      const values = [3, 7, 4, 6, 2, 8, 5, 1, 9];
+      const targetSum = this.getMathPondTargetSum();
+
+      // Update HUD Title and Equation
+      const titleEl = this.stageSvg.querySelector("#math-hud-title");
+      const eqText = this.stageSvg.querySelector("#math-hud-equation");
+      const lang = (window.AST_ENGINE_ACTIVE_LANG || window.STJ_CURRENT_LANG || 'en').toLowerCase();
+
+      if (titleEl) {
+        if (lang.startsWith('es')) titleEl.textContent = `VÍNCULOS NUMÉRICOS: META ${targetSum}`;
+        else if (lang.startsWith('fr')) titleEl.textContent = `LIAISONS NUMÉRIQUES : OBJECTIF ${targetSum}`;
+        else if (lang.startsWith('la')) titleEl.textContent = `VINCULA NUMERORUM: META ${targetSum}`;
+        else titleEl.textContent = `NUMBER BONDS TARGET: ${targetSum}`;
+      }
+
+      if (eqText) {
+        if (lang.startsWith('es')) eqText.textContent = `Pesca peces para sumar ${targetSum}. (Arrastra o toca un pez)`;
+        else if (lang.startsWith('fr')) eqText.textContent = `Pêchez des poissons pour faire ${targetSum}. (Glissez ou touchez)`;
+        else if (lang.startsWith('la')) eqText.textContent = `Cape pisces ad summam ${targetSum} conficiendam.`;
+        else eqText.textContent = `Catch fish to make ${targetSum}! (Drag hook or tap fish)`;
+      }
+
+      // Update Preset Button active highlights
+      const presetBtns = this.stageSvg.querySelectorAll('.pond-preset-btn');
+      presetBtns.forEach(btn => {
+        const action = btn.getAttribute('data-action');
+        const rect = btn.querySelector('rect');
+        const txt = btn.querySelector('text');
+        if (rect && txt) {
+          const isTarget10 = action === 'pond-target-10' && targetSum === 10;
+          const isTarget20 = action === 'pond-target-20' && targetSum === 20;
+          const isTarget5 = action === 'pond-target-5' && targetSum === 5;
+          const isActive = isTarget10 || isTarget20 || isTarget5;
+          rect.setAttribute('fill', isActive ? '#0284c7' : '#1e293b');
+          rect.setAttribute('stroke', isActive ? '#38bdf8' : '#475569');
+          txt.setAttribute('fill', isActive ? '#ffffff' : '#94a3b8');
+        }
+      });
+
+      // Initialize Visual Ten-Frame HUD
+      this.updateTenFrameHud(0, targetSum, []);
+      this.updateScorePlaque();
+
+      // Spawn Rising Water Bubbles
+      const bubblesGroup = this.stageSvg.querySelector('#pond-bubbles-group');
+      if (bubblesGroup) {
+        bubblesGroup.innerHTML = '';
+        for (let b = 0; b < 7; b++) {
+          const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+          const bx = 90 + b * 100 + Math.random() * 40;
+          const by = 260 + Math.random() * 180;
+          const br = 2.5 + Math.random() * 3.5;
+          bubble.setAttribute('cx', bx.toFixed(1));
+          bubble.setAttribute('cy', by.toFixed(1));
+          bubble.setAttribute('r', br.toFixed(1));
+          bubble.setAttribute('fill', '#ffffff');
+          bubble.setAttribute('opacity', '0.25');
+          bubblesGroup.appendChild(bubble);
+        }
+      }
+
+      // Generate fish numbers tailored to targetSum
+      let values = [];
+      if (targetSum === 5) {
+        values = [1, 4, 2, 3, 3, 2, 4, 1, 5, 2];
+      } else if (targetSum === 20) {
+        values = [12, 8, 15, 5, 14, 6, 11, 9, 7, 13, 16, 4, 10, 10];
+      } else {
+        // Target 10
+        values = [4, 6, 3, 7, 2, 8, 5, 5, 1, 9, 6, 4];
+      }
+
       const fishColors = ["#f97316", "#38bdf8", "#ec4899", "#10b981", "#a855f7", "#eab308", "#06b6d4", "#f43f5e", "#84cc16"];
 
       values.forEach((val, idx) => {
@@ -2661,18 +3119,27 @@ ${strokeLines.join('\n')}
         const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
         g.style.cursor = "pointer";
         g.style.willChange = "transform";
+        g.setAttribute('data-action', 'cast-to-fish');
+        g.setAttribute('data-fish-idx', String(idx));
+
+        const dots = this.getSubitisingDotPoints(val);
+        const dotsSvg = dots.length > 0
+          ? `<g transform="translate(-1, 0)" opacity="0.85">${dots.map(d => `<circle cx="${d.cx}" cy="${d.cy}" r="1.5" fill="#ffffff" />`).join('')}</g>`
+          : '';
+
         g.innerHTML = `
           <polygon class="fish-tail" points="-22,0 -34,-10 -34,10" fill="${color}" />
           <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
           <circle cx="12" cy="-4" r="3" fill="#ffffff" />
           <circle cx="13" cy="-4" r="1.5" fill="#000000" />
-          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.75" />
-          <text x="0" y="4.5" fill="#ffffff" font-size="13" font-weight="900" text-anchor="middle">${val}</text>
+          ${dotsSvg}
+          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.8" />
+          <text x="0" y="4" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle">${val}</text>
         `;
         fishGroup.appendChild(g);
 
-        const startX = 140 + (idx % 3) * 200 + (Math.random() * 40 - 20);
-        const startY = 220 + Math.floor(idx / 3) * 65 + (Math.random() * 20 - 10);
+        const startX = 110 + (idx % 4) * 160 + (Math.random() * 40 - 20);
+        const startY = 220 + Math.floor(idx / 4) * 65 + (Math.random() * 20 - 10);
         const dir = Math.random() > 0.5 ? 1 : -1;
         const fishObj = {
           el: g,
@@ -2682,9 +3149,10 @@ ${strokeLines.join('\n')}
           y: startY,
           curX: startX,
           curY: startY,
-          vx: (30 + Math.random() * 32) * dir,
+          vx: (26 + Math.random() * 30) * dir,
           vy: (Math.random() - 0.5) * 8,
           caught: false,
+          isHooked: false,
           swimPhase: Math.random() * Math.PI * 2,
           tailPhase: Math.random() * Math.PI * 2
         };
@@ -3014,6 +3482,12 @@ ${strokeLines.join('\n')}
             const curB = this.engine.vars && this.engine.vars.sideB;
             if (curA && curB && (!this._pythState || curA !== this._pythState.a || curB !== this._pythState.b)) {
               this.renderPythagorasGeometry(curA, curB);
+            }
+          }
+
+          if (this.engine.scene && this.engine.scene.id === 'math-fishing') {
+            if (data.name === 'targetSum' || data.name === '*') {
+              this.setupMathFishingFish();
             }
           }
         });
