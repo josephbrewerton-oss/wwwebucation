@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-13T08:25:57.290Z",
+  "generatedAt": "2026-10-13T10:17:34.691Z",
   "totalScenes": 23,
   "scenes": [
     {
@@ -260,14 +260,14 @@
       "type": "Slide",
       "title": "The Globe Theatre: Shakespeare & Iambic Pentameter",
       "stage": "KS3/KS4 ENGLISH LITERATURE",
-      "duration": 15,
-      "has3D": false,
-      "nodes3DCount": 0,
+      "duration": 16,
+      "has3D": true,
+      "nodes3DCount": 1,
       "svgFile": "scenes/shakespeare.svg",
       "astFile": "scenes/shakespeare.ast",
       "keyframeCount": 4,
-      "subtitleCount": 3,
-      "bindingsCount": 2
+      "subtitleCount": 4,
+      "bindingsCount": 16
     },
     {
       "id": "solar-system",

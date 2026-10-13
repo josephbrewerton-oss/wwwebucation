@@ -27,6 +27,8 @@ Allow: /manifests/
 Allow: /player/scenes.manifest.json
 Allow: /player/scenes-config.json
 Allow: /nano-map.ast
+Allow: /cartridges/
+Allow: /docs/
 
 # Disallow internal raw workers and test fixtures
 Disallow: /worker.html
