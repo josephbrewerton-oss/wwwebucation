@@ -81,7 +81,7 @@
   <!-- Main Vector Canvas Stage -->
   <main id="player-stage">
     <svg id="stage-svg" viewBox="0 0 800 480" preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg">
-      <defs>
+      <defs id="ast-master-defs">
         <!-- Gradients & Glow Filters -->
         <linearGradient id="grad-sun" x1="0" y1="0" x2="1" y2="1">
           <stop offset="0%" stop-color="#fef08a" />
@@ -106,6 +106,101 @@
             <feMergeNode in="SourceGraphic" />
           </feMerge>
         </filter>
+
+        <!-- Master Visual Filter Glows -->
+        <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ast-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feComponentTransfer in="blur" result="cb">
+            <feFuncR type="linear" slope="1.2" />
+            <feFuncG type="linear" slope="0.9" />
+            <feFuncB type="linear" slope="0.2" />
+          </feComponentTransfer>
+          <feMerge><feMergeNode in="cb" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ast-glow-red" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ast-glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ast-glow-purple" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+        <filter id="ast-drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55" />
+        </filter>
+        <filter id="ast-blur-soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="5" />
+        </filter>
+
+        <!-- Master Directional & Vector Markers -->
+        <marker id="ast-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+        </marker>
+        <marker id="ast-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+          <polygon points="8 0, 0 3, 8 6" fill="#38bdf8" />
+        </marker>
+        <marker id="ast-arrow-cyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+        </marker>
+        <marker id="ast-arrow-gold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" />
+        </marker>
+        <marker id="ast-arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
+        </marker>
+        <marker id="ast-arrow-emerald" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+          <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
+        </marker>
+        <marker id="ast-vector-dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
+          <circle cx="3" cy="3" r="2.5" fill="#38bdf8" />
+        </marker>
+
+        <!-- Master Grids & Backdrop Patterns -->
+        <pattern id="ast-grid-fine" width="20" height="20" patternUnits="userSpaceOnUse">
+          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5" />
+        </pattern>
+        <pattern id="ast-grid-dense" width="40" height="40" patternUnits="userSpaceOnUse">
+          <rect width="40" height="40" fill="none" />
+          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" stroke-width="1.2" stroke-opacity="0.6" />
+          <path d="M 20 0 L 20 40 M 0 20 L 40 20" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4" />
+        </pattern>
+        <pattern id="ast-grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="2" cy="2" r="1" fill="#475569" fill-opacity="0.6" />
+        </pattern>
+
+        <!-- Master Linear Gradients -->
+        <linearGradient id="ast-grad-cyan" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#38bdf8" />
+          <stop offset="100%" stop-color="#0284c7" />
+        </linearGradient>
+        <linearGradient id="ast-grad-gold" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fef08a" />
+          <stop offset="100%" stop-color="#f59e0b" />
+        </linearGradient>
+        <linearGradient id="ast-grad-emerald" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#34d399" />
+          <stop offset="100%" stop-color="#059669" />
+        </linearGradient>
+        <linearGradient id="ast-grad-purple" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#c084fc" />
+          <stop offset="100%" stop-color="#7c3aed" />
+        </linearGradient>
+        <linearGradient id="ast-grad-crimson" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#f87171" />
+          <stop offset="100%" stop-color="#dc2626" />
+        </linearGradient>
+        <linearGradient id="ast-blueprint-backdrop" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#070e1b" />
+          <stop offset="100%" stop-color="#020617" />
+        </linearGradient>
       </defs>
       <!-- Dynamic Vector Layer is generated here -->
       <g id="scene-root"></g>
