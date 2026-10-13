@@ -1,0 +1,83 @@
+;; ==============================================================================
+;; St Joseph's Curriculum Portal — Canonical AST Site Map (Single Point of Truth)
+;; ==============================================================================
+;; This AST S-Expression serves as the authoritative, deterministic URI & path 
+;; resolver for browser routing, Service Worker offline caching, and on-device 
+;; Gemini Nano Edge AI agents.
+;;
+;; Conventions:
+;; - True/Canonical paths start with "/" from root.
+;; - Every cartridge maps unambiguously to both its AST description and SVG visual stage.
+;; ==============================================================================
+
+(:sitemap :version "2.6.0" :base "/"
+  (:routes
+    (:route :id "home" :path "/" :title "Home Portal" :category "Core")
+    (:route :id "media-player" :path "/media-player" :title "Lumina Vector Player" :category "Interactive")
+    (:route :id "practice-lab" :path "/practice-lab" :title "Curriculum Practice Lab" :category "Assessment")
+    (:route :id "learning-zone" :path "/learning-zone" :title "Subject Learning Zone" :category "Curriculum")
+    (:route :id "catholic-life" :path "/catholic-life" :title "Catholic Sanctuary & Liturgy" :category "Faith")
+    (:route :id "first-communion" :path "/first-communion" :title "Sacraments: First Holy Communion" :category "Faith")
+    (:route :id "curriculum-studio" :path "/curriculum-studio" :title "AST Curriculum Studio" :category "Tools")
+    (:route :id "teacher-beacon" :path "/teacher-beacon" :title "Teacher Whiteboard Beacon" :category "Classroom")
+    (:route :id "profile" :path "/profile" :title "Pupil Knowledge Vault" :category "User")
+    (:route :id "settings" :path "/settings" :title "Portal Accessibility Settings" :category "Preferences")
+    (:route :id "news" :path "/news" :title "Parish & School Bulletins" :category "Community"))
+
+  (:player
+    (:engine :path "/player/ast-engine.js" :runtime "vanilla-js" :budget "<35KB")
+    (:shell  :path "/player/index.html"    :css "/player/player.css")
+    (:manifest :path "/scenes.manifest.json"))
+
+  (:cartridges :directory "/cartridges/"
+    ;; Catholic Life
+    (:cartridge :id "altar-anatomy" :type "Slide" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/altar-anatomy.ast" :svg "/cartridges/altar-anatomy.svg")
+    (:cartridge :id "church-tour" :type "Slide" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/church-tour.ast" :svg "/cartridges/church-tour.svg")
+    (:cartridge :id "holy-oils" :type "Slide" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/holy-oils.ast" :svg "/cartridges/holy-oils.svg")
+
+    ;; STEM Simulations & Manipulatives
+    (:cartridge :id "kinetic-gas" :type "Sim" :stage "KS3/KS4 PHYSICS"
+      :ast "/cartridges/kinetic-gas.ast" :svg "/cartridges/kinetic-gas.svg")
+    (:cartridge :id "electric-circuits" :type "Sim" :stage "KS2/KS3 PHYSICS"
+      :ast "/cartridges/electric-circuits.ast" :svg "/cartridges/electric-circuits.svg")
+    (:cartridge :id "algebra-balance" :type "Sim" :stage "KS2/KS3 MATHS"
+      :ast "/cartridges/algebra-balance.ast" :svg "/cartridges/algebra-balance.svg")
+    (:cartridge :id "calculus-curves" :type "Sim" :stage "GCSE/A-LEVEL MATHS"
+      :ast "/cartridges/calculus-curves.ast" :svg "/cartridges/calculus-curves.svg")
+    (:cartridge :id "atom" :type "Sim" :stage "KS3 CHEMISTRY"
+      :ast "/cartridges/atom.ast" :svg "/cartridges/atom.svg")
+    (:cartridge :id "solar-system" :type "Sim" :stage "KS3 SCIENCE"
+      :ast "/cartridges/solar-system.ast" :svg "/cartridges/solar-system.svg")
+    (:cartridge :id "velocity" :type "Sim" :stage "KS3 PHYSICS"
+      :ast "/cartridges/velocity.ast" :svg "/cartridges/velocity.svg")
+    (:cartridge :id "pythagoras" :type "Sim" :stage "KS3 GEOMETRY"
+      :ast "/cartridges/pythagoras.ast" :svg "/cartridges/pythagoras.svg")
+    (:cartridge :id "mountain-elevation" :type "Sim" :stage "KS2/KS3 MATHS"
+      :ast "/cartridges/mountain-elevation.ast" :svg "/cartridges/mountain-elevation.svg")
+    (:cartridge :id "math-fishing" :type "Sim" :stage "KS1/KS2 MATHS"
+      :ast "/cartridges/math-fishing.ast" :svg "/cartridges/math-fishing.svg")
+    (:cartridge :id "fractions" :type "Slide" :stage "KS2 MATHS"
+      :ast "/cartridges/fractions.ast" :svg "/cartridges/fractions.svg")
+    (:cartridge :id "times-tables" :type "Slide" :stage "KS1/KS2 MATHS"
+      :ast "/cartridges/times-tables.ast" :svg "/cartridges/times-tables.svg")
+    (:cartridge :id "bodmas" :type "Slide" :stage "KS2/KS3 MATHS"
+      :ast "/cartridges/bodmas.ast" :svg "/cartridges/bodmas.svg")
+    (:cartridge :id "dna-helix" :type "Slide" :stage "KS3 GENETICS"
+      :ast "/cartridges/dna-helix.ast" :svg "/cartridges/dna-helix.svg")
+    (:cartridge :id "photosynthesis" :type "Slide" :stage "KS3 BIOLOGY"
+      :ast "/cartridges/photosynthesis.ast" :svg "/cartridges/photosynthesis.svg")
+    (:cartridge :id "water-cycle" :type "Slide" :stage "KS2 GEOGRAPHY"
+      :ast "/cartridges/water-cycle.ast" :svg "/cartridges/water-cycle.svg")
+
+    ;; English & Humanities
+    (:cartridge :id "shakespeare" :type "Slide" :stage "KS3/KS4 ENGLISH"
+      :ast "/cartridges/shakespeare.ast" :svg "/cartridges/shakespeare.svg")
+    (:cartridge :id "phonics-lab" :type "App" :stage "EYFS/KS1 ENGLISH"
+      :ast "/cartridges/phonics-lab.ast" :svg "/cartridges/phonics-lab.svg")
+    (:cartridge :id "languages" :type "App" :stage "KS2/KS3 MFL"
+      :ast "/cartridges/languages.ast" :svg "/cartridges/languages.svg")
+    (:cartridge :id "fish-tank" :type "App" :stage "BENCHMARK"
+      :ast "/cartridges/fish-tank.ast" :svg "/cartridges/fish-tank.svg")))

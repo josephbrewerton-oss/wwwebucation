@@ -23,6 +23,7 @@ Allow: /settings
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /sitemap.ast
 Allow: /manifests/
 Allow: /player/scenes.manifest.json
 Allow: /player/scenes-config.json
