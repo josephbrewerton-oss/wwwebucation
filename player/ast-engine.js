@@ -4325,22 +4325,31 @@
                 ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
                 : './';
 
-              const candidateUrls = [
+              const candidateUrls = Array.from(new Set([
                 ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                `${currentDir}scenes/${sceneId}.${ext}`,
+                `/cartridges/${sceneId}.${ext}`,
+                `/player/cartridges/${sceneId}.${ext}`,
+                `/player/scenes/${sceneId}.${ext}`,
+                `/scenes/${sceneId}.${ext}`,
                 `${currentDir}cartridges/${sceneId}.${ext}`,
-                `scenes/${sceneId}.${ext}`,
+                `${currentDir}scenes/${sceneId}.${ext}`,
                 `cartridges/${sceneId}.${ext}`,
-                `./scenes/${sceneId}.${ext}`,
+                `scenes/${sceneId}.${ext}`,
                 `./cartridges/${sceneId}.${ext}`,
+                `./scenes/${sceneId}.${ext}`,
+                `../cartridges/${sceneId}.${ext}`,
+                `../player/cartridges/${sceneId}.${ext}`,
+                `../player/scenes/${sceneId}.${ext}`,
+                `../scenes/${sceneId}.${ext}`,
+                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...(customBase ? [
-                  `${customBase.replace(/\/$/, '')}/player/scenes/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
                   `${customBase.replace(/\/$/, '')}/player/cartridges/${sceneId}.${ext}`,
                   `${customBase.replace(/\/$/, '')}/scenes/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/player/scenes/${sceneId}.${ext}`,
                 ] : [])
-              ];
+              ])).filter(Boolean);
 
     for (const url of candidateUrls) {
       try {
@@ -6691,14 +6700,14 @@
           const val = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)));
           return val * val * (3 - 2 * val);
         },
-        translate: (x, y = 0) => `translate(${(Number(x) || 0).toFixed(2)}, ${(Number(y) || 0).toFixed(2)})`,
+        translate: (x, y = 0) => 'translate(' + (Number(x) || 0).toFixed(2) + ', ' + (Number(y) || 0).toFixed(2) + ')',
         rotate: (deg, cx, cy) => {
           const d = (Number(deg) || 0).toFixed(2);
-          return cx != null && cy != null ? `rotate(${d} ${(Number(cx) || 0).toFixed(2)} ${(Number(cy) || 0).toFixed(2)})` : `rotate(${d})`;
+          return cx != null && cy != null ? 'rotate(' + d + ' ' + (Number(cx) || 0).toFixed(2) + ' ' + (Number(cy) || 0).toFixed(2) + ')' : 'rotate(' + d + ')';
         },
         scale: (sx, sy) => {
           const x = (Number(sx) || 1).toFixed(3);
-          return sy != null ? `scale(${x}, ${(Number(sy) || 1).toFixed(3)})` : `scale(${x})`;
+          return sy != null ? 'scale(' + x + ', ' + (Number(sy) || 1).toFixed(3) + ')' : 'scale(' + x + ')';
         },
         fixed: (num, decimals = 2) => (Number(num) || 0).toFixed(decimals)
       };
