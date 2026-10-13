@@ -320,6 +320,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
       >
         {/* Player Header Banner */}
         <div
+          className="ast-media-player-page-banner"
           style={{
             padding: '12px 18px',
             background: 'linear-gradient(90deg, #0f172a 0%, #1e293b 100%)',
@@ -356,9 +357,9 @@ export default function MediaPlayerPage(): React.JSX.Element {
             </div>
           </div>
 
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+          <div className="ast-player-mobile-btn-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
             {/* Physical Dropdown Selector on Simulators */}
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', flex: '1 1 auto', maxWidth: '100%' }}>
               <label
                 htmlFor="main-sim-dropdown-selector"
                 style={{
@@ -385,7 +386,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                   fontWeight: 700,
                   cursor: 'pointer',
                   outline: 'none',
-                  minWidth: '220px',
+                  minWidth: 'min(220px, 100%)',
                   maxWidth: '340px',
                   pointerEvents: 'auto',
                   userSelect: 'auto',
@@ -608,8 +609,23 @@ export default function MediaPlayerPage(): React.JSX.Element {
             <AquariumSimulationLab playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
           </div>
         ) : activePreset === 'shakespeare' ? (
-          <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
-            <ShakespeareGlobeLab onClose={() => handleSelectPreset('kinetic-gas')} />
+          <div>
+            <AstVectorMediaPlayer
+              ref={playerRef}
+              preset="shakespeare"
+              autoPlay={true}
+              allowPresetSwitch={false}
+              embedded={true}
+              height="min(540px, 60vh)"
+              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
+              onTelemetry={(t) => setLatestTelemetry(t)}
+              onAiDemoStart={() => setIsAiDemonstrating(true)}
+              onAiDemoComplete={() => setIsAiDemonstrating(false)}
+              onPupilPreemption={() => setIsAiDemonstrating(false)}
+            />
+            <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
+              <ShakespeareGlobeLab onClose={() => handleSelectPreset('kinetic-gas')} />
+            </div>
           </div>
         ) : activePreset === 'languages' ? (
           <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>

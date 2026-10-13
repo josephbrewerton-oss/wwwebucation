@@ -817,7 +817,7 @@ const playerSrc = useMemo(() => {
               AST Vector Motion Suite
             </strong>
             <span
-              className="stj-badge stj-badge-primary stj-pill"
+              className="stj-badge stj-badge-primary stj-pill player-toolbar-desktop-only"
               style={{ fontSize: '0.72rem' }}
             >
               Sandboxed iFrame &bull; 0% Main Thread
@@ -841,6 +841,7 @@ const playerSrc = useMemo(() => {
                   outline: 'none',
                   pointerEvents: 'auto',
                   userSelect: 'auto',
+                  maxWidth: 'min(200px, 45vw)',
                 }}
                 title="Switch Curriculum Scene"
               >
@@ -1239,7 +1240,7 @@ const playerSrc = useMemo(() => {
               <button
                 type="button"
                 onClick={() => setShowCartridgeMenu((prev) => !prev)}
-                className={`stj-btn ${showCartridgeMenu ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+                className={`stj-btn ${showCartridgeMenu ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',
@@ -1266,6 +1267,7 @@ const playerSrc = useMemo(() => {
                     borderRadius: '8px',
                     boxShadow: '0 10px 25px rgba(0,0,0,0.5)',
                     width: '310px',
+                    maxWidth: 'calc(100vw - 32px)',
                     zIndex: 70,
                     padding: '8px',
                     color: '#f8fafc',
@@ -1409,7 +1411,7 @@ const playerSrc = useMemo(() => {
                     postToPlayer({ type: 'GET_STAGE_SVG' });
                   }
                 }}
-                className={`stj-btn ${showDevStudio ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+                className={`stj-btn ${showDevStudio ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',
@@ -1428,7 +1430,7 @@ const playerSrc = useMemo(() => {
                 onClick={() => {
                   postToPlayer({ type: 'EXPORT_STANDALONE_APPLET' });
                 }}
-                className={`stj-btn ${exportSuccessNotice ? 'stj-btn-success' : 'stj-btn-secondary'} stj-btn-sm`}
+                className={`stj-btn ${exportSuccessNotice ? 'stj-btn-success' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',
@@ -1447,7 +1449,7 @@ const playerSrc = useMemo(() => {
               <button
                 type="button"
                 onClick={openStandalone}
-                className="stj-btn stj-btn-secondary stj-btn-sm"
+                className="stj-btn stj-btn-secondary stj-btn-sm player-toolbar-desktop-only"
                 style={{
                   padding: '4px 9px',
                   minHeight: '32px',
@@ -1484,7 +1486,7 @@ const playerSrc = useMemo(() => {
                 onClick={() => {
                   postToPlayer({ type: 'TOGGLE_OBS_DRAWER' });
                 }}
-                className="stj-btn stj-btn-secondary stj-btn-sm"
+                className="stj-btn stj-btn-secondary stj-btn-sm player-toolbar-desktop-only"
                 style={{
                   padding: '4px 9px',
                   minHeight: '32px',
@@ -1500,7 +1502,7 @@ const playerSrc = useMemo(() => {
               <button
                 type="button"
                 onClick={() => setShowEmbedCode(!showEmbedCode)}
-                className="stj-btn stj-btn-secondary stj-btn-sm"
+                className="stj-btn stj-btn-secondary stj-btn-sm player-toolbar-desktop-only"
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',
@@ -1535,7 +1537,7 @@ const playerSrc = useMemo(() => {
         />
 
         {/* Sandboxed iFrame Element or Dual Comparative Viewports */}
-        <div style={{ position: 'relative', width: '100%', height: typeof height === 'number' ? `${height}px` : height, overflow: 'hidden', borderRadius: '12px' }}>
+        <div className="ast-player-iframe-stage-wrapper" style={{ position: 'relative', width: '100%', height: typeof height === 'number' ? `${height}px` : height, overflow: 'hidden', borderRadius: '12px' }}>
           {comparisonPreset ? (
             <div
               style={{
@@ -1543,7 +1545,7 @@ const playerSrc = useMemo(() => {
                 width: '100%',
                 height: '100%',
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))',
                 gap: '8px',
                 background: '#090d16',
                 overflow: 'hidden',
@@ -1753,7 +1755,7 @@ const playerSrc = useMemo(() => {
             </div>
 
             {showConceptTrail && (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '10px' }}>
                 {relatedConcepts.map((rel) => (
                   <div
                     key={rel.id}
