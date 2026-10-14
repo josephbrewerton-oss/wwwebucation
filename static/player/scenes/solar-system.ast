@@ -1,15 +1,15 @@
 (:scene :id "solar-system" :type "Sim" :title "Solar System: Heliocentric Planetary Motion" :stage "KS3 SCIENCE" :duration 14.0
-  (:camera :distance 580 :pitch 24 :yaw "t * 40" :fov 60)
+  (:camera :distance 580 :pitch 24 :yaw "((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 2.8) % 360" :fov 60)
   (:vars (
-    (:var :name "warpSpeed" :val 1.0 :min 0.2 :max 5.0 :step 0.2 :label "Time Dilation Warp")
+    (:var :name "warpSpeed" :val 1.0 :min 0.2 :max 10.0 :step 0.2 :label "Time Dilation Warp")
     (:var :name "showOrbits" :val true :label "Display Orbital Rings")
   ))
   (:inputs (
-    (:slider :var "warpSpeed" :label "Orbital Speed Multiplier" :min 0.2 :max 5.0 :step 0.2)
+    (:slider :var "warpSpeed" :label "Orbital Speed Multiplier" :min 0.2 :max 10.0 :step 0.2)
     (:switch :var "showOrbits" :label "Orbital Paths")
   ))
   (:computed (
-    (:name "earthDays" :expr "Math.round(vars.warpSpeed * 365)")
+    (:name "earthDays" :expr "Math.round((vars.warpSpeed || 1) * 365)")
   ))
   (:gestures (
     (:draggable :target "#sun-body" :axis "xy" :min -30 :max 30)
@@ -46,82 +46,82 @@
     (:target "#orbit-neptune" :type "3d-ring" :r "370" :depth-fog true)
 
     (:target "#planet-mercury" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1)) * 50"
-      :y "Math.sin(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1) * 0.12) * 8"
-      :z "Math.sin(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1)) * 50"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.3714) * Math.PI * 2) * 50"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.3714) * Math.PI * 2 * 0.12) * 8"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.3714) * Math.PI * 2) * 50"
       :base-r 4.8
       :label "#label-mercury"
     )
     (:target "#planet-venus" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1)) * 80"
-      :y "Math.sin(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1) * 0.15) * 12"
-      :z "Math.sin(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1)) * 80"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.2000) * Math.PI * 2) * 80"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.2000) * Math.PI * 2 * 0.15) * 12"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.2000) * Math.PI * 2) * 80"
       :base-r 7.2
       :label "#label-venus"
     )
     (:target "#planet-earth" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118"
-      :y "Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1) * 0.10) * 14"
-      :z "Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2) * 118"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2 * 0.10) * 14"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2) * 118"
       :base-r 8.2
       :label "#label-earth"
     )
     (:target "#moon-earth" :type "3d-node"
-      :x "(Math.cos(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118) + Math.cos(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 16"
-      :y "(Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1) * 0.10) * 14) + Math.sin(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 5"
-      :z "(Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118) + Math.sin(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 16"
+      :x "(Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2) * 118) + Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 1.2857) * Math.PI * 2) * 16"
+      :y "(Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2 * 0.10) * 14) + Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 1.2857) * Math.PI * 2) * 5"
+      :z "(Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.1286) * Math.PI * 2) * 118) + Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 1.2857) * Math.PI * 2) * 16"
       :base-r 2.6
     )
     (:target "#planet-mars" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1)) * 155"
-      :y "Math.sin(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1) * 0.18) * 16"
-      :z "Math.sin(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1)) * 155"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0893) * Math.PI * 2) * 155"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0893) * Math.PI * 2 * 0.18) * 16"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0893) * Math.PI * 2) * 155"
       :base-r 5.8
       :label "#label-mars"
     )
     (:target "#planet-jupiter" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1)) * 210"
-      :y "Math.sin(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1) * 0.08) * 18"
-      :z "Math.sin(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1)) * 210"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0643) * Math.PI * 2) * 210"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0643) * Math.PI * 2 * 0.08) * 18"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0643) * Math.PI * 2) * 210"
       :base-r 13.5
       :label "#label-jupiter"
     )
     (:target "#planet-saturn" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
-      :y "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1) * 0.06) * 20"
-      :z "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2) * 265"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2 * 0.06) * 20"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2) * 265"
       :base-r 10.5
       :label "#label-saturn"
     )
     (:target "#saturn-ring" :type "3d-ring"
-      :cx "Math.cos(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
-      :cy "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1) * 0.06) * 20"
-      :cz "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :cx "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2) * 265"
+      :cy "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2 * 0.06) * 20"
+      :cz "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0486) * Math.PI * 2) * 265"
       :r "19"
       :tilt-x "25"
       :tilt-z "15"
       :depth-fog true
     )
     (:target "#planet-uranus" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
-      :y "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1) * 0.05) * 22"
-      :z "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2) * 320"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2 * 0.05) * 22"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2) * 320"
       :base-r 8.5
       :label "#label-uranus"
     )
     (:target "#uranus-ring" :type "3d-ring"
-      :cx "Math.cos(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
-      :cy "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1) * 0.05) * 22"
-      :cz "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :cx "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2) * 320"
+      :cy "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2 * 0.05) * 22"
+      :cz "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2) * 320"
       :r "14.5"
       :tilt-x "85"
       :tilt-z "10"
       :depth-fog true
     )
     (:target "#planet-neptune" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1)) * 370"
-      :y "Math.sin(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1) * 0.04) * 24"
-      :z "Math.sin(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1)) * 370"
+      :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0300) * Math.PI * 2) * 370"
+      :y "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0300) * Math.PI * 2 * 0.04) * 24"
+      :z "Math.sin(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0300) * Math.PI * 2) * 370"
       :base-r 8.0
       :label "#label-neptune"
     )

@@ -286,7 +286,13 @@
         'photosynth': 'photosynthesis',
         'leaf': 'photosynthesis',
         'stars': 'solar-system',
-        'space': 'solar-system'
+        'space': 'solar-system',
+        'atom': 'atom',
+        'atomic-structure': 'atom',
+        'bohr': 'atom',
+        'spelling': 'spelling-bee',
+        'spelling-bee': 'spelling-bee',
+        'bee': 'spelling-bee'
       };
       return aliases[clean] || clean;
     },
