@@ -1,22 +1,16 @@
 // src/components/GlobalChallengeModal.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   subscribeToChallengeCalls,
   closeChallengeModal,
   ChallengeCallOptions,
 } from '../services/challengeLauncher';
-import MathFishingGame from './MathFishingGame';
-import { MountainClimberGame } from './MountainClimberGame';
 import FirstCommunionMasteryLab from './FirstCommunionMasteryLab';
 import NeuralLabCanvas from './NeuralLabCanvas';
-import ShakespeareGlobeLab from './ShakespeareGlobeLab';
-import MflLanguageLab from './MflLanguageLab';
-import EarlyPhonicsLab from './EarlyPhonicsLab';
-import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 
 export default function GlobalChallengeModal(): React.JSX.Element | null {
   const [callOptions, setCallOptions] = useState<ChallengeCallOptions | null>(null);
-  const dummyPlayerRef = useRef<AstVectorMediaPlayerHandle | null>(null);
 
   useEffect(() => {
     const unsub = subscribeToChallengeCalls((options) => {
@@ -181,24 +175,11 @@ export default function GlobalChallengeModal(): React.JSX.Element | null {
             background: '#090d16',
           }}
         >
-          {challenge.type === 'math-fishing' && (
-            <MathFishingGame onCloseGameMode={closeChallengeModal} />
-          )}
-
-          {challenge.type === 'mountain-climber' && (
-            <MountainClimberGame
-              playerRef={dummyPlayerRef}
-              onCloseGameMode={closeChallengeModal}
-            />
-          )}
-
-          {challenge.type === 'liturgy-sequence' && (
+          {challenge.type === 'liturgy-sequence' ? (
             <div style={{ background: '#ffffff', borderRadius: '12px', overflow: 'hidden' }}>
               <FirstCommunionMasteryLab />
             </div>
-          )}
-
-          {challenge.type === 'neural-logic' && (
+          ) : challenge.type === 'neural-logic' ? (
             <div style={{ background: '#0b1120', borderRadius: '12px', padding: '8px' }}>
               <NeuralLabCanvas
                 initialKeyStage={challenge.keyStage}
@@ -206,24 +187,22 @@ export default function GlobalChallengeModal(): React.JSX.Element | null {
                 initialUnit={challenge.unit}
               />
             </div>
-          )}
-
-          {challenge.type === 'shakespeare-theatre' && (
-            <ShakespeareGlobeLab onClose={closeChallengeModal} />
-          )}
-
-          {challenge.type === 'language-mastery' && (
-            <MflLanguageLab onClose={closeChallengeModal} />
-          )}
-
-          {challenge.type === 'early-phonics' && (
-            <EarlyPhonicsLab onClose={closeChallengeModal} />
-          )}
-
-          {challenge.type === 'vector-lab' && (
+          ) : (
             <div style={{ minHeight: '520px' }}>
               <AstVectorMediaPlayer
-                preset={challenge.preset || 'fractions'}
+                preset={
+                  challenge.preset ||
+                  (challenge.type === 'math-fishing' ? 'math-fishing' :
+                   challenge.type === 'mountain-climber' ? 'mountain-elevation' :
+                   challenge.type === 'early-phonics' ? 'phonics-lab' :
+                   challenge.type === 'language-mastery' ? 'languages' :
+                   challenge.type === 'shakespeare-theatre' ? 'shakespeare' :
+                   'fractions')
+                }
+                autoPlay={true}
+                showQuestions={true}
+                embedded={true}
+                height="min(560px, 70vh)"
               />
             </div>
           )}

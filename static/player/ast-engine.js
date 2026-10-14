@@ -3801,8 +3801,13 @@
 
       // Checkpoints (Interactive Formative Assessment)
       const checkpoints = [];
-      const cpEntryBlocks = extractSexprBlocks(astContent, ':checkpoint');
-      cpEntryBlocks.forEach(cpText => {
+      const isInteractiveExplicitlyDisabled = /:interactive\s+(false|nil|none)\b/i.test(astContent) ||
+        /:questions\s+(false|nil|none)\b/i.test(astContent) ||
+        extractSexprBlocks(astContent, ':interactive').some(b => /:(?:enabled|active|questions)\s+(false|nil)\b/i.test(b));
+
+      if (!isInteractiveExplicitlyDisabled) {
+        const cpEntryBlocks = extractSexprBlocks(astContent, ':checkpoint');
+        cpEntryBlocks.forEach(cpText => {
         const tMatch = cpText.match(/:t\s+([\d\.]+)/i);
         const cpTitle = extractSlot.call(null, cpText, /:title\s+"([^"]+)"/i) || 'Checkpoint';
         const prompt = extractSlot.call(null, cpText, /:prompt\s+"([^"]+)"/i) || '';
@@ -3854,6 +3859,7 @@
           });
         }
       });
+      }
 
       // Micro-physics block parsing (:physics (:gravity 980 ...) (:body ...))
       const physicsBlocks = extractSexprBlocks(astContent, ':physics');
@@ -4428,6 +4434,8 @@
           (registryScene && registryScene.has3D)
         );
 
+        const isInteractiveExplicitlyDisabled = astText ? (/:interactive\s+(false|nil|none)\b/i.test(astText) || /:questions\s+(false|nil|none)\b/i.test(astText) || (/:enabled\s+(false|nil)\b/i.test(astText) && /:interactive/i.test(astText))) : false;
+
         scene = {
           id: presetId,
           type: (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim',
@@ -4437,7 +4445,7 @@
           duration: (parsedAst && parsedAst.duration) || registryScene.duration || 10.0,
           camera: has3D ? ((parsedAst && parsedAst.camera) || registryScene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }) : null,
           has3D: has3D,
-          interactive: (parsedAst && parsedAst.interactive) || registryScene.interactive || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null),
+          interactive: isInteractiveExplicitlyDisabled ? null : ((parsedAst && parsedAst.interactive) || registryScene.interactive || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null)),
           keyframes: (parsedAst && parsedAst.keyframes && parsedAst.keyframes.length) ? parsedAst.keyframes : (registryScene.keyframes || []),
           subtitles: (parsedAst && parsedAst.subtitles && parsedAst.subtitles.length) ? parsedAst.subtitles : (registryScene.subtitles || []),
           rawBindings: (parsedAst && parsedAst.bindings) || [],
@@ -7094,6 +7102,13 @@
         case 'TOGGLE_INTERACTIVE_MODE':
           if (uiController && typeof uiController.toggleInteractiveMode === 'function') {
             uiController.toggleInteractiveMode();
+          }
+          break;
+        case 'SET_QUESTIONS':
+        case 'SET_INTERACTIVE_MODE':
+          if (uiController && typeof uiController.setInteractiveMode === 'function') {
+            const isEnabled = typeof data.enabled === 'boolean' ? data.enabled : (typeof data.value === 'boolean' ? data.value : true);
+            uiController.setInteractiveMode(isEnabled);
           }
           break;
         case 'CLOSE_CHECKPOINT':

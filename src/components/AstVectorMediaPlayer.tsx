@@ -56,6 +56,7 @@ export interface AstVectorMediaPlayerProps {
   height?: string | number;
   className?: string;
   allowPresetSwitch?: boolean;
+  showQuestions?: boolean;
   defaultMode?: PlayerDisplayMode;
   initialConfig?: Partial<PlayerDisplayConfig>;
   onPresetChange?: (preset: VectorPresetType) => void;
@@ -109,6 +110,7 @@ export interface AstVectorMediaPlayerHandle {
   castCameraRay: () => void;
   rotateCameraOrbit: (theta: number, phi: number, relative?: boolean) => void;
   nudgeNode: (target: string, dxyz: [number, number, number]) => void;
+  setQuestions: (enabled: boolean) => void;
 }
 
 export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVectorMediaPlayerProps>(({
@@ -120,6 +122,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   height = '520px',
   className = '',
   allowPresetSwitch = false,
+  showQuestions = true,
   defaultMode,
   initialConfig,
   onPresetChange,
@@ -258,6 +261,13 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     });
     return unsub;
   }, [postToPlayer]);
+
+  // Synchronize showQuestions boolean flag with player
+  useEffect(() => {
+    if (showQuestions !== undefined) {
+      postToPlayer({ type: 'SET_QUESTIONS', enabled: showQuestions });
+    }
+  }, [showQuestions, postToPlayer]);
 
   const handleSwitchPreset = useCallback((nextPreset: string) => {
     const canonical = normalizeCartridgeId(nextPreset);
@@ -418,6 +428,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     takeQuiz: () => postToPlayer({ type: 'TRIGGER_CHECKPOINT' }),
     toggleCheckpoint: () => postToPlayer({ type: 'TOGGLE_CHECKPOINT' }),
     toggleInteractiveMode: () => postToPlayer({ type: 'TOGGLE_INTERACTIVE_MODE' }),
+    setQuestions: (enabled: boolean) => postToPlayer({ type: 'SET_QUESTIONS', enabled }),
     actuateOpcode: (opcode: string | Record<string, any>) => postToPlayer({ type: 'ACTUATE_OPCODE', opcode }),
     castCameraRay: () => postToPlayer({ type: 'CAST_CAMERA_RAY' }),
     rotateCameraOrbit: (theta: number, phi: number, relative = false) => postToPlayer({ type: 'ROTATE_CAMERA_ORBIT', theta, phi, relative }),
@@ -682,8 +693,8 @@ const rawBase = import.meta.env.BASE_URL || '/';
 const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 const effectiveMode = embedded ? 'embedded' : displayConfig.mode;
 const playerSrc = useMemo(() => {
-  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&autoplay=${autoPlay ? '1' : '0'}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
-}, [cleanBase, currentLang, autoPlay, activeTheme, effectiveMode, embedded]);
+  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&autoplay=${autoPlay ? '1' : '0'}&questions=${showQuestions ? '1' : '0'}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
+}, [cleanBase, currentLang, autoPlay, showQuestions, activeTheme, effectiveMode, embedded]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const embedCode = `<iframe src="${origin}${cleanBase}player/index.html?preset=${encodeURIComponent(selectedPreset)}&lang=${encodeURIComponent(currentLang)}&mode=${encodeURIComponent(embedTargetMode)}" width="100%" height="480" frameborder="0" allow="fullscreen" loading="lazy" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:1px solid #1e293b;"></iframe>`;

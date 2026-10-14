@@ -3,13 +3,6 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import AstVectorMediaPlayer, { VectorPresetType, AstVectorMediaPlayerHandle } from '../components/AstVectorMediaPlayer';
-import MountainClimberGame from '../components/MountainClimberGame';
-import MathFishingGame from '../components/MathFishingGame';
-import ShakespeareGlobeLab from '../components/ShakespeareGlobeLab';
-import MflLanguageLab from '../components/MflLanguageLab';
-import EarlyPhonicsLab from '../components/EarlyPhonicsLab';
-import MathsFundamentalsLab from '../components/MathsFundamentalsLab';
-import AquariumSimulationLab from '../components/AquariumSimulationLab';
 import { resolvePresetForTopic } from '../services/playerLauncher';
 import { promptAiCoPilotDemonstration, type PlayerTelemetryEvent } from '../engine/aicaller';
 import {
@@ -82,6 +75,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSimStopped, setIsSimStopped] = useState(false);
+  const [showQuestions, setShowQuestions] = useState(true);
   const [latestTelemetry, setLatestTelemetry] = useState<PlayerTelemetryEvent | null>(null);
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [isNanoLoadingDemo, setIsNanoLoadingDemo] = useState(false);
@@ -486,6 +480,34 @@ export default function MediaPlayerPage(): React.JSX.Element {
 
             <button
               type="button"
+              onClick={() => {
+                setShowQuestions((prev) => {
+                  const next = !prev;
+                  playerRef.current?.setQuestions(next);
+                  return next;
+                });
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: showQuestions ? 'rgba(56, 189, 248, 0.12)' : '#1e293b',
+                color: showQuestions ? '#38bdf8' : '#94a3b8',
+                border: showQuestions ? '1px solid #38bdf8' : '1px solid #475569',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Toggle formative quiz checkpoints on or off (prevents auto-pausing)"
+            >
+              <span>🎯</span> Questions: {showQuestions ? 'ON' : 'OFF'}
+            </button>
+
+            <button
+              type="button"
               onClick={handleShowMeHow}
               disabled={isNanoLoadingDemo}
               style={{
@@ -556,107 +578,21 @@ export default function MediaPlayerPage(): React.JSX.Element {
           </div>
         </div>
 
-        {/* Embedded AST Player or Dedicated Interactive Lab Stage */}
-        {activePreset === 'mountain-elevation' ? (
-          <div>
-            <AstVectorMediaPlayer
-              ref={playerRef}
-              preset="mountain-elevation"
-              autoPlay={true}
-              allowPresetSwitch={false}
-              embedded={true}
-              height="min(540px, 60vh)"
-              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
-              onTelemetry={(t) => setLatestTelemetry(t)}
-              onAiDemoStart={() => setIsAiDemonstrating(true)}
-              onAiDemoComplete={() => setIsAiDemonstrating(false)}
-              onPupilPreemption={() => setIsAiDemonstrating(false)}
-            />
-            <MountainClimberGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
-          </div>
-        ) : activePreset === 'math-fishing' ? (
-          <div>
-            <AstVectorMediaPlayer
-              ref={playerRef}
-              preset="math-fishing"
-              autoPlay={true}
-              allowPresetSwitch={false}
-              embedded={true}
-              height="min(540px, 60vh)"
-              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
-              onTelemetry={(t) => setLatestTelemetry(t)}
-              onAiDemoStart={() => setIsAiDemonstrating(true)}
-              onAiDemoComplete={() => setIsAiDemonstrating(false)}
-              onPupilPreemption={() => setIsAiDemonstrating(false)}
-            />
-            <MathFishingGame playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
-          </div>
-        ) : activePreset === 'fish-tank' ? (
-          <div>
-            <AstVectorMediaPlayer
-              ref={playerRef}
-              preset="fish-tank"
-              autoPlay={true}
-              allowPresetSwitch={false}
-              embedded={true}
-              height="min(540px, 60vh)"
-              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
-              onTelemetry={(t) => setLatestTelemetry(t)}
-              onAiDemoStart={() => setIsAiDemonstrating(true)}
-              onAiDemoComplete={() => setIsAiDemonstrating(false)}
-              onPupilPreemption={() => setIsAiDemonstrating(false)}
-            />
-            <AquariumSimulationLab playerRef={playerRef} onCloseGameMode={() => handleSelectPreset('kinetic-gas')} />
-          </div>
-        ) : activePreset === 'shakespeare' ? (
-          <div>
-            <AstVectorMediaPlayer
-              ref={playerRef}
-              preset="shakespeare"
-              autoPlay={true}
-              allowPresetSwitch={false}
-              embedded={true}
-              height="min(540px, 60vh)"
-              onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
-              onTelemetry={(t) => setLatestTelemetry(t)}
-              onAiDemoStart={() => setIsAiDemonstrating(true)}
-              onAiDemoComplete={() => setIsAiDemonstrating(false)}
-              onPupilPreemption={() => setIsAiDemonstrating(false)}
-            />
-            <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
-              <ShakespeareGlobeLab onClose={() => handleSelectPreset('kinetic-gas')} />
-            </div>
-          </div>
-        ) : activePreset === 'languages' ? (
-          <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
-            <MflLanguageLab onClose={() => handleSelectPreset('kinetic-gas')} />
-          </div>
-        ) : activePreset === 'phonics-lab' ? (
-          <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
-            <EarlyPhonicsLab onClose={() => handleSelectPreset('kinetic-gas')} />
-          </div>
-        ) : (activePreset === 'bodmas' || activePreset === 'times-tables') ? (
-          <div style={{ padding: '16px', background: '#090d16', borderTop: '1px solid #1e293b' }}>
-            <MathsFundamentalsLab
-              initialTab={activePreset === 'times-tables' ? 'times-tables' : 'bodmas'}
-              onClose={() => handleSelectPreset('kinetic-gas')}
-            />
-          </div>
-        ) : (
-          <AstVectorMediaPlayer
-            ref={playerRef}
-            preset={activePreset}
-            autoPlay={true}
-            allowPresetSwitch={false}
-            embedded={true}
-            height="min(540px, 60vh)"
-            onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
-            onTelemetry={(t) => setLatestTelemetry(t)}
-            onAiDemoStart={() => setIsAiDemonstrating(true)}
-            onAiDemoComplete={() => setIsAiDemonstrating(false)}
-            onPupilPreemption={() => setIsAiDemonstrating(false)}
-          />
-        )}
+        {/* Single Universal Execution Pipeline: 100% of Cartridges Run Through the AST Vector Player */}
+        <AstVectorMediaPlayer
+          ref={playerRef}
+          preset={activePreset}
+          autoPlay={true}
+          showQuestions={showQuestions}
+          allowPresetSwitch={false}
+          embedded={true}
+          height="min(540px, 60vh)"
+          onPresetChange={(newPreset) => handleSelectPreset(newPreset)}
+          onTelemetry={(t) => setLatestTelemetry(t)}
+          onAiDemoStart={() => setIsAiDemonstrating(true)}
+          onAiDemoComplete={() => setIsAiDemonstrating(false)}
+          onPupilPreemption={() => setIsAiDemonstrating(false)}
+        />
       </div>
 
       {/* Interactive SVG Developer Workstation Quick Guide */}
