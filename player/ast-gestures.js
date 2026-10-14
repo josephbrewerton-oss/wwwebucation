@@ -511,7 +511,11 @@
           this.dragTarget = genTarget;
           this.dragMode = 'generic';
           genTarget.style.cursor = 'grabbing';
-          if (this.engine) this.engine.pause();
+          this._wasPlayingBeforeDrag = Boolean(this.engine && this.engine.isPlaying);
+          const isContinuousScene = this.engine && this.engine.scene && (this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas');
+          if (this.engine && !isContinuousScene && genTarget.id !== 'sun-body') {
+            this.engine.pause();
+          }
           let initX = 0;
           let initY = 0;
           const tr = genTarget.getAttribute('transform') || '';
@@ -676,11 +680,15 @@
           const axis = this.dragTarget.getAttribute('data-gesture-axis') || 'xy';
           this.dragTarget.style.cursor = axis === 'y' ? 'ns-resize' : (axis === 'x' ? 'ew-resize' : 'grab');
           this.playAudioTone(440, 'sine', 0.05);
+          if (this.engine && !this.engine.isPlaying && this._wasPlayingBeforeDrag) {
+            this.engine.play();
+          }
         }
 
         this.isDragging = false;
         this.dragTarget = null;
         this.dragMode = null;
+        this._wasPlayingBeforeDrag = false;
       }
     }
 

@@ -540,7 +540,10 @@
         this.elements.checkpointMinimizedPill.classList.add('hidden');
         this.elements.checkpointMinimizedPill.style.display = 'none';
       }
-      this.engine.pause();
+      const isContinuousSim = this.engine && (this.engine.activePresetId === 'solar-system' || this.engine.activePresetId === 'kinetic-gas');
+      if (!isContinuousSim) {
+        this.engine.pause();
+      }
 
       if (this.elements.interactiveBadge) {
         this.elements.interactiveBadge.textContent = checkpoint.title || 'CHECKPOINT CHALLENGE';

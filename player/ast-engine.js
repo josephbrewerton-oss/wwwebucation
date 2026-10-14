@@ -6016,7 +6016,7 @@
         }
 
         // Dynamic continuous simulation check:
-        const isDynamicScene = this.isDynamicSim || (this.scene && typeof this.scene.mount === 'function');
+        const isDynamicScene = this.isDynamicSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || this.scene.id === 'solar-system' || typeof this.scene.mount === 'function'));
 
         if (this.isPlaying) {
           this.progress += (deltaSec / this.durationSec) * this.speed;
@@ -6033,6 +6033,11 @@
           }
 
           this.updateActiveKeyframeAndSpeech(false);
+
+          // Advance continuous astronomical orbital clock for infinite, smooth orbital simulations
+          if (!this.vars) this.vars = {};
+          const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : 1.0;
+          this.vars._solarClock = (this.vars._solarClock || 0) + (deltaSec * Math.max(0.1, warp) * this.speed);
         }
 
         // PhET-Grade Continuous 60 FPS Render Loop:
