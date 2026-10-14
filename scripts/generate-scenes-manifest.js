@@ -26,72 +26,36 @@ function extractSlot(content, regex) {
 }
 
 /**
- * Normalizes cartridge type to one of the 3 canonical types: "Sim", "Slide", "App"
+ * Infers cartridge type purely from AST header or AST structural nodes.
+ * Zero hard-coded lists of IDs.
  */
-export function normalizeCartridgeType(rawType, id = '') {
+export function inferCartridgeType(rawType, astContent) {
+  // 1. Explicit declaration takes absolute priority
   if (rawType) {
     const clean = rawType.replace(/^"|"$/g, '').trim().toLowerCase();
     if (clean === 'sim' || clean === 'simulation' || clean === 'interactive') return 'Sim';
     if (clean === 'slide' || clean === 'slides' || clean === 'presentation') return 'Slide';
     if (clean === 'app' || clean === 'application' || clean === 'tool' || clean === 'lab') return 'App';
   }
-  // Canonical inference based on curriculum purpose
-  const apps = ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee', 'math-fishing'];
-  const slides = [
-    'church-tour',
-    'photosynthesis',
-    'water-cycle',
-    'shakespeare',
-    'fractions',
-    'bodmas',
-    'altar-anatomy',
-    'holy-oils'
-  ];
-  if (apps.includes(id)) return 'App';
-  if (slides.includes(id)) return 'Slide';
-  return 'Sim';
-}
 
-/**
- * Resolves controlled input directories from options, CLI flags, env vars, or defaults.
- */
-export function getControlledInputDirs(options = {}) {
-  // 1. Explicit options
-  if (options.inputDirs && Array.isArray(options.inputDirs) && options.inputDirs.length > 0) {
-    return options.inputDirs.map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
+  // 2. Structural Inference (Pure AST inspection, NO ID checking)
+  const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
+  const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
+  const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
+  const hasPhysics = /:physics\s*\(/i.test(astContent) || /:emitter\s+/i.test(astContent);
+
+  // If it's a narrated presentation with no direct pointer grabbing:
+  if (hasSubtitles && !hasGestures && !hasPhysics) {
+    return 'Slide';
   }
 
-  // 2. Command-line args --input-dirs=dir1,dir2 or --dirs=dir1,dir2
-  const cliDirsArg = process.argv.find(
-    (arg) => arg.startsWith('--input-dirs=') || arg.startsWith('--dirs=') || arg.startsWith('--input-dir=')
-  );
-  if (cliDirsArg) {
-    const raw = cliDirsArg.split('=')[1];
-    return raw
-      .split(',')
-      .map((d) => d.trim())
-      .filter(Boolean)
-      .map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
+  // If it has direct physical manipulation, emitters, or formative checkpoints:
+  if (hasGestures || hasPhysics || hasCheckpoints) {
+    return 'Sim';
   }
 
-  // 3. Environment variables CARTRIDGE_DIRS or INPUT_DIRS
-  const envDirs = process.env.CARTRIDGE_DIRS || process.env.INPUT_DIRS;
-  if (envDirs) {
-    return envDirs
-      .split(',')
-      .map((d) => d.trim())
-      .filter(Boolean)
-      .map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
-  }
-
-  // 4. Default controlled search paths
-  const defaultCandidates = [
-    path.join(rootDir, 'static', 'player', 'scenes'),
-    path.join(rootDir, 'static', 'player', 'cartridges'),
-    path.join(rootDir, 'static', 'cartridges')
-  ];
-
-  return defaultCandidates.filter((d) => fs.existsSync(d));
+  // Standalone game/utility/unclassified tool:
+  return 'App';
 }
 
 function parseAstHeader(astContent, filename) {

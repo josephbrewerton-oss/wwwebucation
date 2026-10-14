@@ -53,16 +53,15 @@ export type VectorPresetType = string;
  * interactive experiences where the user IS the active player. They strictly do NOT
  * require pop-up checkpoint questions, which would intrude on gameplay.
  */
-export const isCartridgeWithoutQuestions = (preset: string): boolean => {
-  const p = (preset || '').toLowerCase();
-  return (
-    p === 'spelling-bee' ||
-    p === 'math-fishing' ||
-    p === 'phonics-lab' ||
-    p === 'languages' ||
-    p === 'fish-tank' ||
-    p === 'times-tables'
-  );
+/**
+ * Cartridge Type Taxonomy:
+ * Driven directly by the generated manifest PRESET_OPTIONS.
+ * Cartridges classified as 'App' (interactive games, drills, manipulatives)
+ * suppress pop-up checkpoint quizzes.
+ */
+export const isCartridgeWithoutQuestions = (presetId: string): boolean => {
+  const scene = PRESET_OPTIONS.find((opt) => opt.id === presetId);
+  return scene?.type === 'App';
 };
 
 export interface AstVectorMediaPlayerProps {
@@ -877,27 +876,27 @@ const playerSrc = useMemo(() => {
                 }}
                 title="Switch Curriculum Scene"
               >
-                <optgroup label="🎮 Simulations (Sim)" style={{ background: '#0f172a', color: '#38bdf8' }}>
-                  {PRESET_OPTIONS.filter((o) => o.type === 'Sim').map((opt) => (
-                    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                      {opt.label} ({opt.stage})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="📑 Interactive Slides (Slide)" style={{ background: '#0f172a', color: '#34d399' }}>
-                  {PRESET_OPTIONS.filter((o) => o.type === 'Slide').map((opt) => (
-                    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                      {opt.label} ({opt.stage})
-                    </option>
-                  ))}
-                </optgroup>
-                <optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
-                  {PRESET_OPTIONS.filter((o) => o.type === 'App').map((opt) => (
-                    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                      {opt.label} ({opt.stage})
-                    </option>
-                  ))}
-                </optgroup>
+<optgroup label="🎮 Simulations (Sim)" style={{ background: '#0f172a', color: '#38bdf8' }}>
+  {PRESET_OPTIONS.filter((o) => o.type === 'Sim').map((opt) => (
+    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+      {opt.label} ({opt.stage})
+    </option>
+  ))}
+</optgroup>
+<optgroup label="📑 Interactive Slides (Slide)" style={{ background: '#0f172a', color: '#34d399' }}>
+  {PRESET_OPTIONS.filter((o) => o.type === 'Slide').map((opt) => (
+    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+      {opt.label} ({opt.stage})
+    </option>
+  ))}
+</optgroup>
+<optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
+  {PRESET_OPTIONS.filter((o) => o.type === 'App').map((opt) => (
+    <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+      {opt.label} ({opt.stage})
+    </option>
+  ))}
+</optgroup>
               </select>
             )}
 
