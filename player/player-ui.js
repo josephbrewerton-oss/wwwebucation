@@ -532,6 +532,25 @@
       this.showToast(this.interactiveMode ? '🎯 Questions Auto-Pause: ON' : '🎯 Questions Auto-Pause: OFF (Lecture Mode)');
     }
 
+    setInteractiveMode(enabled) {
+      this.interactiveMode = Boolean(enabled);
+      this.displayConfig.showInteractiveCheckpoints = this.interactiveMode;
+      if (this.elements.btnInteractive) {
+        this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
+        this.elements.btnInteractive.title = this.interactiveMode
+          ? '🎯 Checkpoint Questions: ON (Pauses for quizzes) • Shift-click to turn OFF'
+          : '🎯 Checkpoint Questions: OFF (Uninterrupted lecture mode) • Shift-click to turn ON';
+      }
+      if (this.elements.cfgCheckpoints) {
+        this.elements.cfgCheckpoints.checked = this.interactiveMode;
+      }
+      if (!this.interactiveMode) {
+        this.closeInteractiveCard(false);
+      }
+      this.saveDisplayConfig(this.displayConfig);
+      this.showToast(this.interactiveMode ? '🎯 Questions: ON' : '🎯 Questions: OFF (Uninterrupted Mode)');
+    }
+
     triggerCheckpoint(checkpoint, index) {
       if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
       this.activeCheckpoint = index;
@@ -2595,14 +2614,37 @@ window.addEventListener('message', (e) => {
         }
         if (urlParams.get('scrubber') === '0') profile.showTimelineScrubber = false;
         if (urlParams.get('subtitles') === '0') profile.showSubtitles = false;
+        if (urlParams.get('questions') === '0' || urlParams.get('questions') === 'false' ||
+            urlParams.get('checkpoints') === '0' || urlParams.get('checkpoints') === 'false' ||
+            urlParams.get('interactive') === '0' || urlParams.get('interactive') === 'false') {
+          profile.showInteractiveCheckpoints = false;
+        } else if (urlParams.get('questions') === '1' || urlParams.get('questions') === 'true' ||
+                   urlParams.get('checkpoints') === '1' || urlParams.get('checkpoints') === 'true' ||
+                   urlParams.get('interactive') === '1' || urlParams.get('interactive') === 'true') {
+          profile.showInteractiveCheckpoints = true;
+        }
         return profile;
       }
 
+      const applyUrlFlags = (prof) => {
+        if (!prof) return prof;
+        if (urlParams.get('questions') === '0' || urlParams.get('questions') === 'false' ||
+            urlParams.get('checkpoints') === '0' || urlParams.get('checkpoints') === 'false' ||
+            urlParams.get('interactive') === '0' || urlParams.get('interactive') === 'false') {
+          prof.showInteractiveCheckpoints = false;
+        } else if (urlParams.get('questions') === '1' || urlParams.get('questions') === 'true' ||
+                   urlParams.get('checkpoints') === '1' || urlParams.get('checkpoints') === 'true' ||
+                   urlParams.get('interactive') === '1' || urlParams.get('interactive') === 'true') {
+          prof.showInteractiveCheckpoints = true;
+        }
+        return prof;
+      };
+
       if (urlMode && ['suite', 'classroom', 'student', 'broadcast', 'developer', 'embed', 'embedded'].includes(urlMode)) {
-        return this.getPresetProfile(urlMode);
+        return applyUrlFlags(this.getPresetProfile(urlMode));
       }
       if (urlParams.get('clean') === '1' || urlParams.get('suite') === '1') {
-        return this.getPresetProfile('suite');
+        return applyUrlFlags(this.getPresetProfile('suite'));
       }
 
       // Check if current active scene is an interactive simulation apparatus
@@ -2615,14 +2657,14 @@ window.addEventListener('message', (e) => {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
             const base = parsed.mode ? this.getPresetProfile(parsed.mode) : this.getPresetProfile(isInteractiveSimulation ? 'suite' : 'classroom');
-            return Object.assign({}, base, parsed);
+            return applyUrlFlags(Object.assign({}, base, parsed));
           }
         }
       } catch (err) {
         console.warn('[AST-PlayerUI] Error reading saved display config:', err);
       }
 
-      return this.getPresetProfile(isInteractiveSimulation ? 'suite' : 'classroom');
+      return applyUrlFlags(this.getPresetProfile(isInteractiveSimulation ? 'suite' : 'classroom'));
     }
 
     getPresetProfile(mode) {
