@@ -1519,10 +1519,13 @@
     }
 
     handleActionClick(action, targetNode) {
-      const el = this.engine && this.engine._cachedElements;
-      if (!el) return;
-
-      el.isUserControlled = true;
+      if (this.engine) {
+        if (!this.engine._cachedElements) {
+          this.engine._cachedElements = {};
+        }
+        this.engine._cachedElements.isUserControlled = true;
+      }
+      const el = (this.engine && this.engine._cachedElements) || {};
 
       // -----------------------------------------------------------------------
       // Math Pond Apparatus Actions
@@ -4827,6 +4830,7 @@ ${strokeLines.join('\n')}
       this._beeTypedLetters = [];
 
       this.renderSpellingBeeKeyboard();
+      this.attachSpellingBeeDirectListeners();
       this.pickNewSpellingBeeWord(false);
 
       // Attach physical keyboard listener once
@@ -4850,6 +4854,40 @@ ${strokeLines.join('\n')}
         };
         window.addEventListener('keydown', this._beeKeyHandler);
       }
+
+      // Ensure window focus on stage interaction
+      const root = this.stageSvg.querySelector('#bee-root');
+      if (root && !root._hasFocusHandler) {
+        root._hasFocusHandler = true;
+        root.addEventListener('pointerdown', () => {
+          try { window.focus(); } catch {}
+        });
+      }
+    }
+
+    attachSpellingBeeDirectListeners() {
+      if (!this.stageSvg) return;
+      const beeActions = this.stageSvg.querySelectorAll('[data-action^="bee-"]');
+      beeActions.forEach(btn => {
+        if (!btn._hasBeeDirect) {
+          btn._hasBeeDirect = true;
+          btn.style.cursor = 'pointer';
+          const trigger = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            try { window.focus(); } catch {}
+            const action = btn.getAttribute('data-action');
+            if (action) {
+              this.handleSpellingBeeAction(action, btn);
+              const rect = btn.getBoundingClientRect();
+              const svgPt = this.screenToSvg(rect.left + rect.width / 2, rect.top + rect.height / 2);
+              this.createTouchRipple(svgPt.x, svgPt.y);
+            }
+          };
+          btn.addEventListener('pointerdown', trigger);
+          btn.addEventListener('click', trigger);
+        }
+      });
     }
 
     pickNewSpellingBeeWord(speak = true) {
@@ -4861,6 +4899,7 @@ ${strokeLines.join('\n')}
       this._beeTypedLetters = [];
 
       this.renderSpellingBeeUI();
+      this.attachSpellingBeeDirectListeners();
       if (speak) {
         setTimeout(() => this.speakSpellingWord('word'), 150);
       }
@@ -5022,6 +5061,15 @@ ${strokeLines.join('\n')}
         `;
       }
 
+      try {
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${html}</svg>`, 'image/svg+xml');
+        const svg = doc.querySelector('svg');
+        if (svg && !doc.querySelector('parsererror')) {
+          slotsRoot.replaceChildren(...svg.childNodes);
+          return;
+        }
+      } catch {}
       slotsRoot.innerHTML = html;
     }
 

@@ -28,13 +28,8 @@
     (:t 0.70 :title "Step 3: Partial Products" :rule "Evaluate friendly partial blocks with ease.")
     (:t 1.00 :title "Step 4: Recombination" :rule "Combine partial products for instant arithmetic mastery.")
   ))
-  (:interactive (
-    (:checkpoint :t 0.50
-      :prompt "How does the Distributive Property help solve difficult times tables like 7 × 8?"
-      :options ("Split 8 into 5 + 3: (7 × 5 = 35) + (7 × 3 = 21) = 56" "Subtract 8 from 70" "Divide 56 by 2" "Add 7 + 8 to get 15")
-      :answer 0
-      :explanation "The distributive property states a(b + c) = ab + ac. Splitting into friendly 5s and 2s makes mental multiplication effortless.")
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     (:target "#tt-equation-badge" :attr "textContent" :expr "`${vars.table || 7} × ${vars.multiplier || 8} = ${(vars.table || 7) * (vars.multiplier || 8)}`")
   ))

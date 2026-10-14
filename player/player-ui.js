@@ -675,8 +675,9 @@
         return;
       }
       const scene = this.engine && this.engine.scene;
-      if (!scene || !scene.interactive || !Array.isArray(scene.interactive.checkpoints) || scene.interactive.checkpoints.length === 0) {
-        this.showToast('ℹ️ No checkpoint quizzes found for this scene');
+      const isAppCartridge = scene && (scene.type === 'App' || ['spelling-bee', 'math-fishing', 'phonics-lab', 'languages', 'fish-tank', 'times-tables'].includes(scene.id));
+      if (!scene || isAppCartridge || !scene.interactive || !Array.isArray(scene.interactive.checkpoints) || scene.interactive.checkpoints.length === 0) {
+        this.showToast('ℹ️ No checkpoint quizzes found for this interactive cartridge');
         return;
       }
       let targetIdx = 0;
@@ -695,6 +696,8 @@
       if (!this.interactiveMode || this.activeCheckpoint !== null) return;
       const scene = this.engine.scene;
       if (!scene || !scene.interactive || !Array.isArray(scene.interactive.checkpoints)) return;
+      const isAppCartridge = scene.type === 'App' || ['spelling-bee', 'math-fishing', 'phonics-lab', 'languages', 'fish-tank', 'times-tables'].includes(scene.id);
+      if (isAppCartridge || scene.interactive === false || (scene.interactive && scene.interactive.disabled)) return;
 
       const curT = this.engine.progress;
       const prevT = this._lastCheckedT !== undefined ? this._lastCheckedT : curT;

@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-14T15:21:53.710Z",
+  "generatedAt": "2026-10-14T16:05:37.561Z",
   "totalScenes": 24,
   "scenes": [
     {
@@ -187,7 +187,7 @@
     },
     {
       "id": "math-fishing",
-      "type": "Sim",
+      "type": "App",
       "title": "Math Pond: Number Bonds Fishing Game",
       "stage": "KS1/KS2 MATHS",
       "duration": 14,
