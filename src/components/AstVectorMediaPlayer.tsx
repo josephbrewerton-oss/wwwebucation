@@ -47,6 +47,24 @@ export { PRESET_OPTIONS, type ScenePresetOption };
 
 export type VectorPresetType = string;
 
+/**
+ * Cartridge Type Taxonomy:
+ * Some cartridges (Apps, Games, Benchmarks, Manipulative Splitters) are self-contained
+ * interactive experiences where the user IS the active player. They strictly do NOT
+ * require pop-up checkpoint questions, which would intrude on gameplay.
+ */
+export const isCartridgeWithoutQuestions = (preset: string): boolean => {
+  const p = (preset || '').toLowerCase();
+  return (
+    p === 'spelling-bee' ||
+    p === 'math-fishing' ||
+    p === 'phonics-lab' ||
+    p === 'languages' ||
+    p === 'fish-tank' ||
+    p === 'times-tables'
+  );
+};
+
 export interface AstVectorMediaPlayerProps {
   preset?: VectorPresetType;
   embedded?: boolean;
@@ -265,9 +283,10 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   // Synchronize showQuestions boolean flag with player
   useEffect(() => {
     if (showQuestions !== undefined) {
-      postToPlayer({ type: 'SET_QUESTIONS', enabled: showQuestions });
+      const disableQuestions = isCartridgeWithoutQuestions(selectedPreset);
+      postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQuestions ? false : showQuestions });
     }
-  }, [showQuestions, postToPlayer]);
+  }, [showQuestions, postToPlayer, selectedPreset]);
 
   const handleSwitchPreset = useCallback((nextPreset: string) => {
     const canonical = normalizeCartridgeId(nextPreset);
@@ -692,9 +711,11 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
 const rawBase = import.meta.env.BASE_URL || '/';
 const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 const effectiveMode = embedded ? 'embedded' : displayConfig.mode;
+const disableInitialQuestions = isCartridgeWithoutQuestions(initialPlayerPresetRef.current);
+const effectiveQuestions = disableInitialQuestions ? '0' : (showQuestions ? '1' : '0');
 const playerSrc = useMemo(() => {
-  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&autoplay=${autoPlay ? '1' : '0'}&questions=${showQuestions ? '1' : '0'}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
-}, [cleanBase, currentLang, autoPlay, showQuestions, activeTheme, effectiveMode, embedded]);
+  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&autoplay=${autoPlay ? '1' : '0'}&questions=${effectiveQuestions}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
+}, [cleanBase, currentLang, autoPlay, effectiveQuestions, activeTheme, effectiveMode, embedded]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const embedCode = `<iframe src="${origin}${cleanBase}player/index.html?preset=${encodeURIComponent(selectedPreset)}&lang=${encodeURIComponent(currentLang)}&mode=${encodeURIComponent(embedTargetMode)}" width="100%" height="480" frameborder="0" allow="fullscreen" loading="lazy" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:1px solid #1e293b;"></iframe>`;

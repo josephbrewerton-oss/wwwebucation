@@ -36,15 +36,16 @@ export function normalizeCartridgeType(rawType, id = '') {
     if (clean === 'app' || clean === 'application' || clean === 'tool' || clean === 'lab') return 'App';
   }
   // Canonical inference based on curriculum purpose
-  const apps = ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee'];
+  const apps = ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee', 'math-fishing'];
   const slides = [
     'church-tour',
     'photosynthesis',
     'water-cycle',
-    'dna-helix',
     'shakespeare',
     'fractions',
-    'bodmas'
+    'bodmas',
+    'altar-anatomy',
+    'holy-oils'
   ];
   if (apps.includes(id)) return 'App';
   if (slides.includes(id)) return 'Slide';

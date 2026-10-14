@@ -3803,6 +3803,7 @@
       const checkpoints = [];
       const isInteractiveExplicitlyDisabled = /:interactive\s+(false|nil|none)\b/i.test(astContent) ||
         /:questions\s+(false|nil|none)\b/i.test(astContent) ||
+        /:type\s+"App"/i.test(astContent) ||
         extractSexprBlocks(astContent, ':interactive').some(b => /:(?:enabled|active|questions)\s+(false|nil)\b/i.test(b));
 
       if (!isInteractiveExplicitlyDisabled) {

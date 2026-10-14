@@ -23,13 +23,8 @@
     (:t 0.66 :title "Orthographic Recall" :rule "Construct the target word using on-screen letter tiles or physical keyboard entry.")
     (:t 1.00 :title "Mastery Validation" :rule "Submit spelling to earn honey drops, streak multipliers, and instant formative feedback.")
   ))
-  (:interactive (
-    (:checkpoint :t 0.50
-      :prompt "Which spelling rule applies to words ending in '-cious' vs '-tious'?"
-      :options ("'-cious' often follows root nouns ending in 'ce' (grace -> gracious)" "They are completely random" "'-tious' is only used in verbs" "'-cious' is never used in English")
-      :answer 0
-      :explanation "In National Curriculum KS2/KS3 morphology, root words ending in /s/ sound spelled '-ce' usually take the '-cious' suffix, such as grace -> gracious, space -> spacious.")
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     (:target "#bee-score-txt" :attr "textContent" :expr "computed.scoreDisplay")
     (:target "#bee-streak-txt" :attr "textContent" :expr "computed.streakDisplay")

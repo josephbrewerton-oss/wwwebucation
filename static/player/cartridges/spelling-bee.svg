@@ -26,6 +26,21 @@
 
     <!-- Honeycomb Hexagon Definition -->
     <polygon id="bee-hex-cell" points="14,0 28,8 28,24 14,32 0,24 0,8" />
+
+    <style>
+      .bee-key-btn, .bee-audio-btn, .bee-ks-btn, .bee-hint-btn, .bee-skip-btn, .bee-speed-toggle {
+        cursor: pointer;
+        user-select: none;
+      }
+      .bee-key-btn:hover rect { fill: #334155; stroke: #38bdf8; stroke-width: 1.5; }
+      .bee-key-btn:active rect { fill: #0284c7; }
+      .bee-audio-btn:hover rect { filter: brightness(1.2); }
+      .bee-audio-btn:active rect { filter: brightness(0.9); }
+      .bee-ks-btn:hover rect { stroke: #eab308; stroke-width: 1.5; }
+      .bee-hint-btn:hover rect { fill: #4338ca; }
+      .bee-skip-btn:hover rect { fill: #334155; }
+      .bee-speed-toggle:hover rect { stroke: #38bdf8; }
+    </style>
   </defs>
 
   <!-- Deep Cosmic Canvas -->
@@ -174,12 +189,86 @@
 
       <!-- Keyboard Row 1: Q W E R T Y U I O P -->
       <g id="kb-row-1" transform="translate(24, 12)">
-        <!-- Rendered with 10 standard key buttons -->
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="Q" cursor="pointer" transform="translate(0, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">Q</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="W" cursor="pointer" transform="translate(72, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">W</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="E" cursor="pointer" transform="translate(144, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">E</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="R" cursor="pointer" transform="translate(216, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">R</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="T" cursor="pointer" transform="translate(288, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">T</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="Y" cursor="pointer" transform="translate(360, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">Y</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="U" cursor="pointer" transform="translate(432, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">U</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="I" cursor="pointer" transform="translate(504, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">I</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="O" cursor="pointer" transform="translate(576, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">O</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="P" cursor="pointer" transform="translate(648, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">P</text>
+        </g>
       </g>
 
       <!-- Keyboard Row 2: A S D F G H J K L -->
       <g id="kb-row-2" transform="translate(58, 52)">
-        <!-- Rendered with 9 standard key buttons -->
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="A" cursor="pointer" transform="translate(0, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">A</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="S" cursor="pointer" transform="translate(72, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">S</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="D" cursor="pointer" transform="translate(144, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">D</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="F" cursor="pointer" transform="translate(216, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">F</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="G" cursor="pointer" transform="translate(288, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">G</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="H" cursor="pointer" transform="translate(360, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">H</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="J" cursor="pointer" transform="translate(432, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">J</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="K" cursor="pointer" transform="translate(504, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">K</text>
+        </g>
+        <g class="bee-key-btn" data-action="bee-press-key" data-key="L" cursor="pointer" transform="translate(576, 0)">
+          <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+          <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">L</text>
+        </g>
       </g>
 
       <!-- Keyboard Row 3: Backspace, Z X C V B N M, Clear, Submit -->
@@ -192,7 +281,34 @@
 
         <!-- Letters Z to M (translate X starts at 92) -->
         <g id="kb-row-3-letters" transform="translate(92, 0)">
-          <!-- Rendered by JS or default keys -->
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="Z" cursor="pointer" transform="translate(0, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">Z</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="X" cursor="pointer" transform="translate(66, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">X</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="C" cursor="pointer" transform="translate(132, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">C</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="V" cursor="pointer" transform="translate(198, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">V</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="B" cursor="pointer" transform="translate(264, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">B</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="N" cursor="pointer" transform="translate(330, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">N</text>
+          </g>
+          <g class="bee-key-btn" data-action="bee-press-key" data-key="M" cursor="pointer" transform="translate(396, 0)">
+            <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle" font-family="system-ui, sans-serif">M</text>
+          </g>
         </g>
 
         <!-- Clear Button -->

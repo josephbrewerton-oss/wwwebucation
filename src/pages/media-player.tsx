@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
-import AstVectorMediaPlayer, { VectorPresetType, AstVectorMediaPlayerHandle } from '../components/AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { VectorPresetType, AstVectorMediaPlayerHandle, isCartridgeWithoutQuestions } from '../components/AstVectorMediaPlayer';
 import { resolvePresetForTopic } from '../services/playerLauncher';
 import { promptAiCoPilotDemonstration, type PlayerTelemetryEvent } from '../engine/aicaller';
 import {
@@ -478,33 +478,53 @@ export default function MediaPlayerPage(): React.JSX.Element {
               <span>{isSimStopped ? '▶' : '⏹'}</span> {isSimStopped ? 'Resume Sim' : 'Stop Sim'}
             </button>
 
-            <button
-              type="button"
-              onClick={() => {
-                setShowQuestions((prev) => {
-                  const next = !prev;
-                  playerRef.current?.setQuestions(next);
-                  return next;
-                });
-              }}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                background: showQuestions ? 'rgba(56, 189, 248, 0.12)' : '#1e293b',
-                color: showQuestions ? '#38bdf8' : '#94a3b8',
-                border: showQuestions ? '1px solid #38bdf8' : '1px solid #475569',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease',
-              }}
-              title="Toggle formative quiz checkpoints on or off (prevents auto-pausing)"
-            >
-              <span>🎯</span> Questions: {showQuestions ? 'ON' : 'OFF'}
-            </button>
+            {isCartridgeWithoutQuestions(activePreset) ? (
+              <span
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: 'rgba(234, 179, 8, 0.12)',
+                  color: '#facc15',
+                  border: '1px solid rgba(234, 179, 8, 0.3)',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                }}
+                title="This cartridge is a direct interactive application / game (no pop-up quiz checkpoints)"
+              >
+                <span>🎮</span> App Mode: Direct Play (No Popups)
+              </span>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  setShowQuestions((prev) => {
+                    const next = !prev;
+                    playerRef.current?.setQuestions(next);
+                    return next;
+                  });
+                }}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '8px',
+                  background: showQuestions ? 'rgba(56, 189, 248, 0.12)' : '#1e293b',
+                  color: showQuestions ? '#38bdf8' : '#94a3b8',
+                  border: showQuestions ? '1px solid #38bdf8' : '1px solid #475569',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  transition: 'all 0.15s ease',
+                }}
+                title="Toggle formative quiz checkpoints on or off (prevents auto-pausing)"
+              >
+                <span>🎯</span> Questions: {showQuestions ? 'ON' : 'OFF'}
+              </button>
+            )}
 
             <button
               type="button"

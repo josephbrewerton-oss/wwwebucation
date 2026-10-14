@@ -25,18 +25,8 @@
     (:t 0.66 :title "Vertex Stress Test" :rule "Measuring composite reflow limits across hardware threads")
     (:t 1.00 :title "Hardware Safe Limit" :rule "Optimal ceiling calculated and stored in local configuration")
   ))
-  (:interactive (
-    (:checkpoint :t 0.50
-      :prompt "Why does an SVG player have a practical limit on the number of animated points and nodes?"
-      :options (
-        "Because browsers evaluate the DOM tree and re-rasterize vector bezier curves on each frame"
-        "Because SVG files expire after 60 seconds of playback"
-        "Because vector math only works on computers with a dedicated liquid cooler"
-      )
-      :answer 0
-      :explanation "Unlike flat pixel video, SVG vector rendering recalculates geometry and patches DOM element attributes every 16.6ms. Finding the point limit allows us to govern scenes safely for smooth 60 FPS on any Chromebook, mobile device, or PC."
-    )
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     (:target "#kelp-1" :attr "d" :expr "'M 60,450 Q ' + (80 + Math.sin(t * Math.PI * 4 * (vars.kelpTurbulence || 1)) * 14) + ',340 50,240 T ' + (70 + Math.cos(t * Math.PI * 4 * (vars.kelpTurbulence || 1)) * 12) + ',120 T 40,30'")
     (:target "#kelp-2" :attr "d" :expr "'M 90,460 Q ' + (120 + Math.cos(t * Math.PI * 3.5 * (vars.kelpTurbulence || 1)) * 16) + ',360 85,260 T ' + (110 + Math.sin(t * Math.PI * 3.5 * (vars.kelpTurbulence || 1)) * 14) + ',150 T 80,50'")
