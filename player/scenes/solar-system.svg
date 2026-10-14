@@ -2,12 +2,12 @@
   <defs>
     <!-- Deep Space Cosmic Vignette -->
     <radialGradient id="space-bg-grad" cx="50%" cy="50%" r="75%">
-      <stop offset="0%" stop-color="#090d1a" />
+      <stop offset="0%" stop-color="#0a0f1d" />
       <stop offset="65%" stop-color="#030712" />
       <stop offset="100%" stop-color="#010308" />
     </radialGradient>
 
-    <!-- Solar Core &amp; Photosphere Gradient -->
+    <!-- Solar Core & Photosphere Gradient -->
     <radialGradient id="sun-plasma" cx="42%" cy="40%" r="60%">
       <stop offset="0%" stop-color="#ffffff" />
       <stop offset="20%" stop-color="#fef08a" />
@@ -18,15 +18,15 @@
 
     <!-- Solar Corona Outer Plasma Halo -->
     <radialGradient id="sun-corona-rad" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.8" />
-      <stop offset="45%" stop-color="#f59e0b" stop-opacity="0.4" />
-      <stop offset="80%" stop-color="#ef4444" stop-opacity="0.15" />
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.85" />
+      <stop offset="45%" stop-color="#f59e0b" stop-opacity="0.45" />
+      <stop offset="80%" stop-color="#ef4444" stop-opacity="0.18" />
       <stop offset="100%" stop-color="#000000" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Intense Solar Flare &amp; Glow Filter -->
+    <!-- Solar Flare Filter -->
     <filter id="solar-flare" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="8" result="heavyBlur" />
+      <feGaussianBlur stdDeviation="7" result="heavyBlur" />
       <feGaussianBlur stdDeviation="3" result="tightBlur" />
       <feMerge>
         <feMergeNode in="heavyBlur" />
@@ -35,15 +35,15 @@
       </feMerge>
     </filter>
 
-    <!-- 3D Planet Mercury: Rocky Silicate Sphere -->
+    <!-- 1. Mercury: Rocky Silicate Sphere -->
     <radialGradient id="planet-grad-mercury" cx="35%" cy="35%" r="65%">
-      <stop offset="0%" stop-color="#e2e8f0" />
+      <stop offset="0%" stop-color="#f1f5f9" />
       <stop offset="40%" stop-color="#94a3b8" />
       <stop offset="80%" stop-color="#475569" />
       <stop offset="100%" stop-color="#1e293b" />
     </radialGradient>
 
-    <!-- 3D Planet Venus: Thick Sulfuric Atmosphere -->
+    <!-- 2. Venus: Thick Golden Sulfuric Atmosphere -->
     <radialGradient id="planet-grad-venus" cx="35%" cy="35%" r="65%">
       <stop offset="0%" stop-color="#fef9c3" />
       <stop offset="45%" stop-color="#fde047" />
@@ -51,7 +51,7 @@
       <stop offset="100%" stop-color="#713f12" />
     </radialGradient>
 
-    <!-- 3D Planet Earth: Blue Marble Globe -->
+    <!-- 3. Earth: Blue Marble Globe -->
     <radialGradient id="planet-grad-earth" cx="35%" cy="32%" r="68%">
       <stop offset="0%" stop-color="#e0f2fe" />
       <stop offset="25%" stop-color="#38bdf8" />
@@ -67,7 +67,7 @@
       <stop offset="100%" stop-color="#64748b" />
     </radialGradient>
 
-    <!-- 3D Planet Mars: Iron Oxide Rust Red -->
+    <!-- 4. Mars: Iron Oxide Rust Red -->
     <radialGradient id="planet-grad-mars" cx="35%" cy="35%" r="65%">
       <stop offset="0%" stop-color="#fca5a5" />
       <stop offset="40%" stop-color="#ef4444" />
@@ -75,7 +75,7 @@
       <stop offset="100%" stop-color="#450a0a" />
     </radialGradient>
 
-    <!-- 3D Planet Jupiter: Jovian Atmosphere Bands -->
+    <!-- 5. Jupiter: Jovian Atmosphere Bands -->
     <radialGradient id="planet-grad-jupiter" cx="38%" cy="32%" r="68%">
       <stop offset="0%" stop-color="#ffedd5" />
       <stop offset="30%" stop-color="#fed7aa" />
@@ -84,7 +84,7 @@
       <stop offset="100%" stop-color="#431407" />
     </radialGradient>
 
-    <!-- 3D Planet Saturn: Golden Ringed Gas Giant -->
+    <!-- 6. Saturn: Golden Ringed Gas Giant -->
     <radialGradient id="planet-grad-saturn" cx="36%" cy="34%" r="66%">
       <stop offset="0%" stop-color="#fefce8" />
       <stop offset="35%" stop-color="#fef08a" />
@@ -95,70 +95,342 @@
 
     <!-- Saturn Ring Gradient -->
     <linearGradient id="saturn-ring-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9" />
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.95" />
       <stop offset="50%" stop-color="#ca8a04" stop-opacity="0.4" />
-      <stop offset="100%" stop-color="#fef08a" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#fef08a" stop-opacity="0.95" />
     </linearGradient>
 
-    <!-- Celestial Label Shadow -->
+    <!-- 7. Uranus: Pale Aquamarine Ice Giant -->
+    <radialGradient id="planet-grad-uranus" cx="36%" cy="34%" r="66%">
+      <stop offset="0%" stop-color="#ecfeff" />
+      <stop offset="40%" stop-color="#a5f3fc" />
+      <stop offset="75%" stop-color="#06b6d4" />
+      <stop offset="100%" stop-color="#083344" />
+    </radialGradient>
+
+    <!-- Uranus Ring Gradient -->
+    <linearGradient id="uranus-ring-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a5f3fc" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#0891b2" stop-opacity="0.3" />
+      <stop offset="100%" stop-color="#a5f3fc" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- 8. Neptune: Deep Cobalt Supersonic Ice Giant -->
+    <radialGradient id="planet-grad-neptune" cx="36%" cy="34%" r="66%">
+      <stop offset="0%" stop-color="#bfdbfe" />
+      <stop offset="35%" stop-color="#3b82f6" />
+      <stop offset="70%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#030712" />
+    </radialGradient>
+
+    <!-- Top Trumps Holographic Header Gradient -->
+    <linearGradient id="trumps-header-grad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#c084fc" />
+    </linearGradient>
+
+    <!-- Top Trumps Card Slate Gradient -->
+    <linearGradient id="trumps-card-bg" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.97" />
+      <stop offset="100%" stop-color="#020617" stop-opacity="0.98" />
+    </linearGradient>
+
+    <!-- Label Shadow Filter -->
     <filter id="planet-label-shadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="1.5" stdDeviation="1.5" flood-color="#000000" flood-opacity="0.9" />
     </filter>
   </defs>
 
-  <!-- Cosmic Canvas -->
+  <!-- Cosmic Background -->
   <rect x="0" y="0" width="800" height="480" fill="url(#space-bg-grad)" />
 
-  <!-- Twinkling Ambient Starfield Particles -->
-  <g opacity="0.6">
-    <circle cx="85" cy="45" r="1" fill="#ffffff" opacity="0.8" />
+  <!-- Twinkling Ambient Starfield -->
+  <g opacity="0.65">
+    <circle cx="85" cy="45" r="1.1" fill="#ffffff" opacity="0.8" />
     <circle cx="140" cy="115" r="0.8" fill="#93c5fd" opacity="0.6" />
-    <circle cx="210" cy="65" r="1.2" fill="#ffffff" opacity="0.9" />
+    <circle cx="210" cy="65" r="1.3" fill="#ffffff" opacity="0.9" />
     <circle cx="310" cy="35" r="0.7" fill="#fde047" opacity="0.7" />
     <circle cx="480" cy="40" r="1.1" fill="#ffffff" opacity="0.85" />
     <circle cx="620" cy="70" r="0.8" fill="#93c5fd" opacity="0.6" />
-    <circle cx="720" cy="50" r="1.3" fill="#ffffff" opacity="0.9" />
+    <circle cx="720" cy="50" r="1.4" fill="#ffffff" opacity="0.9" />
     <circle cx="770" cy="130" r="0.9" fill="#fde047" opacity="0.7" />
     <circle cx="65" cy="220" r="0.7" fill="#ffffff" opacity="0.5" />
-    <circle cx="45" cy="380" r="1" fill="#ffffff" opacity="0.8" />
+    <circle cx="45" cy="380" r="1.1" fill="#ffffff" opacity="0.8" />
     <circle cx="160" cy="430" r="0.8" fill="#93c5fd" opacity="0.6" />
     <circle cx="280" cy="450" r="1.2" fill="#ffffff" opacity="0.75" />
     <circle cx="510" cy="440" r="0.9" fill="#fde047" opacity="0.8" />
     <circle cx="640" cy="420" r="1.4" fill="#ffffff" opacity="0.9" />
     <circle cx="750" cy="370" r="0.8" fill="#93c5fd" opacity="0.6" />
     <circle cx="780" cy="280" r="1.1" fill="#ffffff" opacity="0.8" />
+    <circle cx="390" cy="460" r="0.8" fill="#ffffff" opacity="0.7" />
+    <circle cx="30" cy="90" r="1.2" fill="#bae6fd" opacity="0.7" />
   </g>
 
-  <!-- Central Sun System -->
-  <circle id="sun-corona" cx="400" cy="240" r="42" fill="url(#sun-corona-rad)" opacity="0.5" filter="url(#solar-flare)" />
-  <circle id="sun-body" cx="400" cy="240" r="26" fill="url(#sun-plasma)" stroke="#ffedd5" stroke-width="1.5" />
+  <!-- Central Sun System (Clickable) -->
+  <g id="sun-group" style="cursor: pointer;" data-action="inspect-planet" data-planet="sun">
+    <circle id="sun-corona" cx="400" cy="240" r="42" fill="url(#sun-corona-rad)" opacity="0.65" filter="url(#solar-flare)" />
+    <circle id="sun-body" cx="400" cy="240" r="26" fill="url(#sun-plasma)" stroke="#ffedd5" stroke-width="1.5" />
+  </g>
 
   <!-- Dynamic 3D Planetary Orbits (Luminescent Trails) -->
-  <path id="orbit-mercury" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.7" />
-  <path id="orbit-venus" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.7" />
-  <path id="orbit-earth" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="4 6" opacity="0.5" />
-  <path id="orbit-mars" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.7" />
-  <path id="orbit-jupiter" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.7" />
-  <path id="orbit-saturn" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.7" />
+  <path id="orbit-mercury" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-venus" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-earth" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="4 6" opacity="0.55" />
+  <path id="orbit-mars" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-jupiter" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-saturn" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-uranus" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
+  <path id="orbit-neptune" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
 
-  <!-- Planets (3D Specular Orbs) -->
-  <circle id="planet-mercury" cx="455" cy="240" r="5" fill="url(#planet-grad-mercury)" stroke="#cbd5e1" stroke-width="0.5" />
-  <text id="label-mercury" x="455" y="258" fill="#e2e8f0" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Mercury</text>
+  <!-- Planetary Bodies & Labels (All Clickable for Top Trumps) -->
+  <!-- 1. Mercury -->
+  <circle id="planet-mercury" cx="450" cy="240" r="4.5" fill="url(#planet-grad-mercury)" stroke="#cbd5e1" stroke-width="0.5" style="cursor: pointer;" data-action="inspect-planet" data-planet="mercury" />
+  <text id="label-mercury" x="450" y="256" fill="#e2e8f0" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="mercury">Mercury</text>
 
-  <circle id="planet-venus" cx="490" cy="240" r="8" fill="url(#planet-grad-venus)" stroke="#fef08a" stroke-width="0.7" />
-  <text id="label-venus" x="490" y="261" fill="#fef08a" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Venus</text>
+  <!-- 2. Venus -->
+  <circle id="planet-venus" cx="480" cy="240" r="7" fill="url(#planet-grad-venus)" stroke="#fef08a" stroke-width="0.7" style="cursor: pointer;" data-action="inspect-planet" data-planet="venus" />
+  <text id="label-venus" x="480" y="259" fill="#fef08a" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="venus">Venus</text>
 
-  <circle id="planet-earth" cx="535" cy="240" r="9" fill="url(#planet-grad-earth)" stroke="#93c5fd" stroke-width="0.8" />
-  <text id="label-earth" x="535" y="262" fill="#7dd3fc" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Earth</text>
-  <circle id="moon-earth" cx="553" cy="240" r="2.5" fill="url(#moon-grad)" stroke="#ffffff" stroke-width="0.4" />
+  <!-- 3. Earth & Moon -->
+  <circle id="planet-earth" cx="518" cy="240" r="8" fill="url(#planet-grad-earth)" stroke="#93c5fd" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth" />
+  <text id="label-earth" x="518" y="260" fill="#7dd3fc" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth">Earth</text>
+  <circle id="moon-earth" cx="534" cy="240" r="2.2" fill="url(#moon-grad)" stroke="#ffffff" stroke-width="0.4" style="cursor: pointer;" data-action="inspect-planet" data-planet="moon" />
 
-  <circle id="planet-mars" cx="575" cy="240" r="6" fill="url(#planet-grad-mars)" stroke="#fca5a5" stroke-width="0.6" />
-  <text id="label-mars" x="575" y="259" fill="#fca5a5" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Mars</text>
+  <!-- 4. Mars -->
+  <circle id="planet-mars" cx="555" cy="240" r="5.5" fill="url(#planet-grad-mars)" stroke="#fca5a5" stroke-width="0.6" style="cursor: pointer;" data-action="inspect-planet" data-planet="mars" />
+  <text id="label-mars" x="555" y="257" fill="#fca5a5" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="mars">Mars</text>
 
-  <circle id="planet-jupiter" cx="630" cy="240" r="14" fill="url(#planet-grad-jupiter)" stroke="#ea580c" stroke-width="1" />
-  <text id="label-jupiter" x="630" y="266" fill="#fed7aa" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Jupiter</text>
+  <!-- 5. Jupiter -->
+  <circle id="planet-jupiter" cx="610" cy="240" r="13" fill="url(#planet-grad-jupiter)" stroke="#ea580c" stroke-width="1" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter" />
+  <text id="label-jupiter" x="610" y="265" fill="#fed7aa" font-size="10.5" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter">Jupiter</text>
 
-  <path id="saturn-ring" fill="none" stroke="url(#saturn-ring-grad)" stroke-width="3" opacity="0.9" />
-  <circle id="planet-saturn" cx="690" cy="240" r="11" fill="url(#planet-grad-saturn)" stroke="#ca8a04" stroke-width="0.8" />
-  <text id="label-saturn" x="690" y="264" fill="#fef08a" font-size="11" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)">Saturn</text>
+  <!-- 6. Saturn & Rings -->
+  <path id="saturn-ring" fill="none" stroke="url(#saturn-ring-grad)" stroke-width="3.5" opacity="0.9" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn" />
+  <circle id="planet-saturn" cx="665" cy="240" r="10" fill="url(#planet-grad-saturn)" stroke="#ca8a04" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn" />
+  <text id="label-saturn" x="665" y="263" fill="#fef08a" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn">Saturn</text>
+
+  <!-- 7. Uranus & Ring -->
+  <path id="uranus-ring" fill="none" stroke="url(#uranus-ring-grad)" stroke-width="2" opacity="0.85" style="cursor: pointer;" data-action="inspect-planet" data-planet="uranus" />
+  <circle id="planet-uranus" cx="720" cy="240" r="8" fill="url(#planet-grad-uranus)" stroke="#22d3ee" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="uranus" />
+  <text id="label-uranus" x="720" y="261" fill="#a5f3fc" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="uranus">Uranus</text>
+
+  <!-- 8. Neptune -->
+  <circle id="planet-neptune" cx="770" cy="240" r="7.5" fill="url(#planet-grad-neptune)" stroke="#60a5fa" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="neptune" />
+  <text id="label-neptune" x="770" y="260" fill="#93c5fd" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="neptune">Neptune</text>
+
+  <!-- Dynamic Targeting Reticle (Attaches to selected planet) -->
+  <g id="planet-target-reticle" display="none" pointer-events="none">
+    <circle cx="0" cy="0" r="22" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.8" />
+    <circle cx="0" cy="0" r="30" fill="none" stroke="#facc15" stroke-width="1" opacity="0.4" />
+    <line x1="-26" y1="0" x2="-16" y2="0" stroke="#38bdf8" stroke-width="1.5" />
+    <line x1="16" y1="0" x2="26" y2="0" stroke="#38bdf8" stroke-width="1.5" />
+    <line x1="0" y1="-26" x2="0" y2="-16" stroke="#38bdf8" stroke-width="1.5" />
+    <line x1="0" y1="16" x2="0" y2="26" stroke="#38bdf8" stroke-width="1.5" />
+  </g>
+
+  <!-- Top Simulation HUD & Quick Controls -->
+  <g id="solar-hud" transform="translate(18, 14)">
+    <rect width="460" height="36" rx="8" fill="#0f172a" fill-opacity="0.92" stroke="#334155" stroke-width="1" />
+    <text id="solar-hud-banner" x="14" y="22" fill="#38bdf8" font-size="11" font-weight="800">🪐 Tap any planet to reveal its Cosmic Top Trumps card!</text>
+
+    <!-- Speed Warp Chips -->
+    <g transform="translate(330, 6)">
+      <g style="cursor: pointer;" data-action="solar-warp-1">
+        <rect width="28" height="24" rx="4" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+        <text x="14" y="16" fill="#ffffff" font-size="10" font-weight="900" text-anchor="middle">1×</text>
+      </g>
+      <g transform="translate(31, 0)" style="cursor: pointer;" data-action="solar-warp-2">
+        <rect width="28" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text x="14" y="16" fill="#94a3b8" font-size="10" font-weight="900" text-anchor="middle">2×</text>
+      </g>
+      <g transform="translate(62, 0)" style="cursor: pointer;" data-action="solar-warp-5">
+        <rect width="28" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text x="14" y="16" fill="#94a3b8" font-size="10" font-weight="900" text-anchor="middle">5×</text>
+      </g>
+      <g transform="translate(93, 0)" style="cursor: pointer;" data-action="solar-warp-10">
+        <rect width="30" height="24" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text x="15" y="16" fill="#94a3b8" font-size="10" font-weight="900" text-anchor="middle">10×</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- Bottom Cosmic Planetary Quick-Select Ribbon (Guaranteed 1-Tap Access for Touch & Smartboard) -->
+  <g id="solar-planet-ribbon" transform="translate(18, 432)">
+    <!-- Backdrop Pill -->
+    <rect width="470" height="38" rx="10" fill="#0b1120" fill-opacity="0.94" stroke="#1e293b" stroke-width="1.2" />
+
+    <!-- Planet Ribbon Buttons -->
+    <!-- Sun -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="sun" transform="translate(6, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">☀️</text>
+      <text x="21" y="26" fill="#facc15" font-size="8" font-weight="800" text-anchor="middle">Sun</text>
+    </g>
+
+    <!-- Mercury -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="mercury" transform="translate(52, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">☿</text>
+      <text x="21" y="26" fill="#cbd5e1" font-size="8" font-weight="800" text-anchor="middle">Merc</text>
+    </g>
+
+    <!-- Venus -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="venus" transform="translate(98, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">♀</text>
+      <text x="21" y="26" fill="#fde047" font-size="8" font-weight="800" text-anchor="middle">Venus</text>
+    </g>
+
+    <!-- Earth -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth" transform="translate(144, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">🌍</text>
+      <text x="21" y="26" fill="#38bdf8" font-size="8" font-weight="800" text-anchor="middle">Earth</text>
+    </g>
+
+    <!-- Moon -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="moon" transform="translate(190, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">🌕</text>
+      <text x="21" y="26" fill="#e2e8f0" font-size="8" font-weight="800" text-anchor="middle">Moon</text>
+    </g>
+
+    <!-- Mars -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="mars" transform="translate(236, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">♂</text>
+      <text x="21" y="26" fill="#f87171" font-size="8" font-weight="800" text-anchor="middle">Mars</text>
+    </g>
+
+    <!-- Jupiter -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter" transform="translate(282, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">♃</text>
+      <text x="21" y="26" fill="#fb923c" font-size="8" font-weight="800" text-anchor="middle">Jup</text>
+    </g>
+
+    <!-- Saturn -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn" transform="translate(328, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">🪐</text>
+      <text x="21" y="26" fill="#facc15" font-size="8" font-weight="800" text-anchor="middle">Saturn</text>
+    </g>
+
+    <!-- Uranus -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="uranus" transform="translate(374, 4)">
+      <rect width="42" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="21" y="15" font-size="11" text-anchor="middle">♅</text>
+      <text x="21" y="26" fill="#22d3ee" font-size="8" font-weight="800" text-anchor="middle">Uranus</text>
+    </g>
+
+    <!-- Neptune -->
+    <g class="ribbon-btn" style="cursor: pointer;" data-action="inspect-planet" data-planet="neptune" transform="translate(420, 4)">
+      <rect width="44" height="30" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="22" y="15" font-size="11" text-anchor="middle">♆</text>
+      <text x="22" y="26" fill="#60a5fa" font-size="8" font-weight="800" text-anchor="middle">Nept</text>
+    </g>
+  </g>
+
+  <!-- Interactive Top Trumps Card Dock (Appears when planet is clicked) -->
+  <g id="solar-top-trumps-card" transform="translate(506, 16)" display="none">
+    <!-- Card Frame & Drop Shadow -->
+    <rect width="278" height="448" rx="14" fill="url(#trumps-card-bg)" stroke="#38bdf8" stroke-width="2" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.8))" />
+
+    <!-- Card Top Holographic Header Bar -->
+    <path d="M 0,14 A 14 14 0 0 1 14,0 L 264,0 A 14 14 0 0 1 278,14 L 278,38 L 0,38 Z" fill="url(#trumps-header-grad)" />
+    <text id="tt-card-header" x="139" y="24" fill="#090d16" font-size="12" font-weight="900" text-anchor="middle" letter-spacing="1">COSMIC TOP TRUMPS</text>
+
+    <!-- Planet Title & Classification -->
+    <text id="tt-planet-title" x="139" y="62" fill="#f8fafc" font-size="18" font-weight="900" text-anchor="middle">🪐 SATURN</text>
+    <rect id="tt-class-pill" x="59" y="70" width="160" height="18" rx="9" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <text id="tt-planet-class" x="139" y="83" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" letter-spacing="0.5">RINGED GAS GIANT</text>
+
+    <!-- Top Trumps Comparative Stats Deck -->
+    <g id="tt-stats-container" transform="translate(16, 98)">
+      <!-- Stat 1: Diameter -->
+      <g transform="translate(0, 0)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">📏 Diameter:</text>
+        <text id="tt-val-diameter" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">120,536 km (9.5×)</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-diameter" x="0" y="16" width="200" height="6" rx="3" fill="#38bdf8" />
+      </g>
+
+      <!-- Stat 2: Mass -->
+      <g transform="translate(0, 28)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">⚖️ Mass:</text>
+        <text id="tt-val-mass" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">95.2 Earths</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-mass" x="0" y="16" width="180" height="6" rx="3" fill="#818cf8" />
+      </g>
+
+      <!-- Stat 3: Distance from Sun -->
+      <g transform="translate(0, 56)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">☀️ Distance from Sun:</text>
+        <text id="tt-val-distance" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">9.54 AU (1.43B km)</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-distance" x="0" y="16" width="165" height="6" rx="3" fill="#facc15" />
+      </g>
+
+      <!-- Stat 4: Day Length / Axial Spin -->
+      <g transform="translate(0, 84)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">⏳ Day Length (Spin):</text>
+        <text id="tt-val-day" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">10h 33m</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-day" x="0" y="16" width="220" height="6" rx="3" fill="#34d399" />
+      </g>
+
+      <!-- Stat 5: Year Length / Orbit Period -->
+      <g transform="translate(0, 112)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">🗓️ Year (Orbit Period):</text>
+        <text id="tt-val-year" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">29.5 Earth Years</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-year" x="0" y="16" width="170" height="6" rx="3" fill="#f472b6" />
+      </g>
+
+      <!-- Stat 6: Moons Count -->
+      <g transform="translate(0, 140)">
+        <text x="0" y="12" fill="#94a3b8" font-size="9.5" font-weight="700">🌕 Known Moons:</text>
+        <text id="tt-val-moons" x="246" y="12" fill="#f8fafc" font-size="10" font-weight="900" text-anchor="end">146 Moons</text>
+        <rect x="0" y="16" width="246" height="6" rx="3" fill="#1e293b" />
+        <rect id="tt-bar-moons" x="0" y="16" width="246" height="6" rx="3" fill="#fb923c" />
+      </g>
+    </g>
+
+    <!-- Cosmic Superpower / Fun Fact Box -->
+    <g transform="translate(16, 274)">
+      <rect width="246" height="74" rx="8" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
+      <text x="10" y="18" fill="#facc15" font-size="10" font-weight="900">⚡ COSMIC SUPERPOWER FACT:</text>
+      <text id="tt-fact-line1" x="10" y="36" fill="#cbd5e1" font-size="9" font-weight="600">Density is less than water! If you had a</text>
+      <text id="tt-fact-line2" x="10" y="50" fill="#cbd5e1" font-size="9" font-weight="600">bathtub big enough, Saturn would float!</text>
+      <text id="tt-fact-line3" x="10" y="64" fill="#38bdf8" font-size="8.5" font-style="italic">Rings span 282,000 km but are just 10m thin.</text>
+    </g>
+
+    <!-- Power Rating Score -->
+    <g transform="translate(16, 356)">
+      <rect width="246" height="26" rx="6" fill="#0284c7" fill-opacity="0.25" stroke="#0284c7" stroke-width="1" />
+      <text id="tt-power-score" x="123" y="17" fill="#facc15" font-size="11" font-weight="900" text-anchor="middle">⭐ COSMIC TRUMP RATING: 96 / 100</text>
+    </g>
+
+    <!-- Deck Navigation & Dismissal Controls -->
+    <g transform="translate(16, 394)">
+      <!-- Prev Planet Button -->
+      <g style="cursor: pointer;" data-action="tt-prev">
+        <rect width="70" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text x="35" y="17" fill="#cbd5e1" font-size="10" font-weight="800" text-anchor="middle">◀ Prev</text>
+      </g>
+
+      <!-- Close Card Button -->
+      <g transform="translate(78, 0)" style="cursor: pointer;" data-action="tt-close">
+        <rect width="90" height="26" rx="6" fill="#dc2626" fill-opacity="0.8" stroke="#ef4444" stroke-width="1" />
+        <text x="45" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">✕ Close Card</text>
+      </g>
+
+      <!-- Next Planet Button -->
+      <g transform="translate(176, 0)" style="cursor: pointer;" data-action="tt-next">
+        <rect width="70" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text x="35" y="17" fill="#cbd5e1" font-size="10" font-weight="800" text-anchor="middle">Next ▶</text>
+      </g>
+    </g>
+  </g>
 </svg>

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-13T13:33:15.520Z",
-  "totalScenes": 23,
+  "generatedAt": "2026-10-14T07:47:14.901Z",
+  "totalScenes": 24,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -43,7 +43,7 @@
       "astFile": "scenes/atom.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 117
+      "bindingsCount": 123
     },
     {
       "id": "bodmas",
@@ -281,21 +281,35 @@
       "astFile": "scenes/solar-system.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 16
+      "bindingsCount": 21
+    },
+    {
+      "id": "spelling-bee",
+      "type": "App",
+      "title": "Spelling Bee Championship: KS1 to KS3 Orthography",
+      "stage": "KS1/KS2/KS3 ENGLISH",
+      "duration": 14,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/spelling-bee.svg",
+      "astFile": "scenes/spelling-bee.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 2
     },
     {
       "id": "times-tables",
-      "type": "Slide",
-      "title": "Times Tables: 2D Array & Distributive Splitter",
+      "type": "Sim",
+      "title": "Times Tables: 2× to 12× Array & Distributive Splitter",
       "stage": "KS1/KS2 MATHS",
       "duration": 14,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "scenes/times-tables.svg",
       "astFile": "scenes/times-tables.ast",
-      "keyframeCount": 5,
+      "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 7
+      "bindingsCount": 1
     },
     {
       "id": "velocity",

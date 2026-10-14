@@ -61,7 +61,7 @@
       :ast "/cartridges/math-fishing.ast" :svg "/cartridges/math-fishing.svg")
     (:cartridge :id "fractions" :type "Slide" :stage "KS2 MATHS"
       :ast "/cartridges/fractions.ast" :svg "/cartridges/fractions.svg")
-    (:cartridge :id "times-tables" :type "Slide" :stage "KS1/KS2 MATHS"
+    (:cartridge :id "times-tables" :type "Sim" :stage "KS1/KS2 MATHS"
       :ast "/cartridges/times-tables.ast" :svg "/cartridges/times-tables.svg")
     (:cartridge :id "bodmas" :type "Slide" :stage "KS2/KS3 MATHS"
       :ast "/cartridges/bodmas.ast" :svg "/cartridges/bodmas.svg")
@@ -77,6 +77,8 @@
       :ast "/cartridges/shakespeare.ast" :svg "/cartridges/shakespeare.svg")
     (:cartridge :id "phonics-lab" :type "App" :stage "EYFS/KS1 ENGLISH"
       :ast "/cartridges/phonics-lab.ast" :svg "/cartridges/phonics-lab.svg")
+    (:cartridge :id "spelling-bee" :type "App" :stage "KS1/KS2/KS3 ENGLISH"
+      :ast "/cartridges/spelling-bee.ast" :svg "/cartridges/spelling-bee.svg")
     (:cartridge :id "languages" :type "App" :stage "KS2/KS3 MFL"
       :ast "/cartridges/languages.ast" :svg "/cartridges/languages.svg")
     (:cartridge :id "fish-tank" :type "App" :stage "BENCHMARK"
