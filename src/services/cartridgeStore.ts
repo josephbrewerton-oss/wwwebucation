@@ -89,6 +89,10 @@ export const CARTRIDGE_ALIASES: Record<string, string> = {
   'space': 'solar-system',
   'balance': 'algebra-balance',
   'algebra': 'algebra-balance',
+  'spelling': 'spelling-bee',
+  'spelling-bee': 'spelling-bee',
+  'bee': 'spelling-bee',
+  'spell': 'spelling-bee',
 };
 
 // Built-in Core Curriculum Cartridge Catalog
@@ -330,6 +334,20 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     astFile: 'scenes/phonics-lab.ast',
     version: '2.6.0',
     invariants: ['Phoneme-Grapheme Correspondence', 'Synthetic Blending'],
+  },
+  {
+    id: 'spelling-bee',
+    type: 'App',
+    title: 'Spelling Bee Championship: KS1 to KS3 Orthography',
+    stage: 'KS1/KS2/KS3 ENGLISH',
+    category: 'English & Literacy',
+    desc: 'UK National Curriculum statutory spelling lists, Web Speech API auditory synthesis, interactive touch letter tiles, phonics breakdown, and streak multipliers.',
+    icon: '🐝',
+    source: 'builtin',
+    svgFile: 'scenes/spelling-bee.svg',
+    astFile: 'scenes/spelling-bee.ast',
+    version: '2.6.0',
+    invariants: ['National Curriculum Statutory Spellings', 'Auditory Memory & Phonics'],
   },
   {
     id: 'church-tour',

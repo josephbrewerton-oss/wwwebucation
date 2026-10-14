@@ -15,90 +15,115 @@
     (:draggable :target "#sun-body" :axis "xy" :min -30 :max 30)
   ))
   (:subtitles (
-    (:start 0.00 :end 0.33 :en "At the center sits our Sun. Watch how Mercury speeds around much faster than Earth." :es "En el centro se encuentra el Sol. Observa cómo Mercurio gira mucho más rápido que la Tierra.")
-    (:start 0.33 :end 0.66 :en "Kepler's Law: The closer a planet is to the Sun, the faster it travels in its orbit." :es "Ley de Kepler: Cuanto más cerca está un planeta del Sol, más rápido orbita.")
-    (:start 0.66 :end 1.00 :en "Outer gas giants Jupiter and Saturn glide on immense orbits. Drag stage to orbit in 3D!" :es "Los gigantes gaseosos Júpiter y Saturno siguen órbitas inmensas. ¡Arrastra para rotar en 3D!")
+    (:start 0.00 :end 0.30 :en "At the focal center sits our Sun. Click any planet or use the Cosmic Ribbon to reveal its Top Trumps card!" :es "En el centro se encuentra el Sol. ¡Haz clic en cualquier planeta o en la barra cósmica para ver su tarjeta Top Trumps!")
+    (:start 0.30 :end 0.65 :en "Kepler's Harmonic Law: Planets closer to the Sun experience higher orbital velocities. Inner rocky worlds complete rapid orbits." :es "Ley armónica de Kepler: Los planetas cercanos al Sol experimentan mayores velocidades orbitales.")
+    (:start 0.65 :end 1.00 :en "Outer gas and ice giants Jupiter, Saturn, Uranus, and Neptune sweep through vast cosmic orbits. Tap any world to inspect its cosmic superpowers!" :es "Los gigantes gaseosos y de hielo Júpiter, Saturno, Urano y Neptuno recorren amplias órbitas. ¡Toca cualquier mundo para ver sus superpoderes!")
   ))
   (:keyframes (
-    (:t 0.00 :title "Heliocentric Sun" :rule "The Sun sits at the focal center, providing gravitational attraction.")
-    (:t 0.33 :title "Planetary Orbits" :rule "Inner planets orbit faster than outer planets (Kepler's 3rd Law).")
-    (:t 0.66 :title "Earth Axial Tilt" :rule "Earth's 23.5° tilt causes seasonal changes, not distance from the Sun!")
-    (:t 1.00 :title "Harmonic Alignment" :rule "Deterministic orbital resonance across the solar system.")
+    (:t 0.00 :title "Heliocentric Center" :rule "The Sun contains 99.86% of the solar system's mass, generating gravitational curvature.")
+    (:t 0.30 :title "Inner Terrestrial Worlds" :rule "Mercury, Venus, Earth, and Mars orbit rapidly due to intense gravitational acceleration.")
+    (:t 0.65 :title "The Gas Giants" :rule "Jupiter and ringed Saturn rule the middle solar system with dozens of orbiting moons.")
+    (:t 1.00 :title "Outer Ice Giants" :rule "Uranus and supersonic Neptune complete the 8-planet planetary harmony.")
   ))
   (:interactive (
     (:checkpoint :t 0.40
       :prompt "According to Kepler's Third Law (T² ∝ r³), which planet takes the least time to complete one full revolution around the Sun?"
-      :options ("Mercury (closest orbital radius)" "Earth" "Jupiter" "Saturn")
+      :options ("Mercury (closest orbital radius, 88 days)" "Earth (365 days)" "Jupiter (12 Earth years)" "Neptune (165 Earth years)")
       :answer 0
       :explanation "Planets closest to the Sun experience the strongest gravitational pull and have the smallest orbital circumference, resulting in the shortest orbital period (Mercury orbits in just 88 Earth days).")
   ))
   (:bindings (
     (:target "#sun-body" :type "3d-node" :x "0" :y "0" :z "0" :base-r 26 :depth-fog false)
-    (:target "#sun-corona" :type "3d-node" :x "0" :y "0" :z "0" :base-r 38 :depth-fog false)
+    (:target "#sun-corona" :type "3d-node" :x "0" :y "0" :z "0" :base-r 42 :depth-fog false)
     
-    (:target "#orbit-mercury" :type "3d-ring" :r "55" :depth-fog true)
-    (:target "#orbit-venus" :type "3d-ring" :r "90" :depth-fog true)
-    (:target "#orbit-earth" :type "3d-ring" :r "135" :depth-fog true)
-    (:target "#orbit-mars" :type "3d-ring" :r "175" :depth-fog true)
-    (:target "#orbit-jupiter" :type "3d-ring" :r "230" :depth-fog true)
-    (:target "#orbit-saturn" :type "3d-ring" :r "290" :depth-fog true)
+    (:target "#orbit-mercury" :type "3d-ring" :r "50" :depth-fog true)
+    (:target "#orbit-venus" :type "3d-ring" :r "80" :depth-fog true)
+    (:target "#orbit-earth" :type "3d-ring" :r "118" :depth-fog true)
+    (:target "#orbit-mars" :type "3d-ring" :r "155" :depth-fog true)
+    (:target "#orbit-jupiter" :type "3d-ring" :r "210" :depth-fog true)
+    (:target "#orbit-saturn" :type "3d-ring" :r "265" :depth-fog true)
+    (:target "#orbit-uranus" :type "3d-ring" :r "320" :depth-fog true)
+    (:target "#orbit-neptune" :type "3d-ring" :r "370" :depth-fog true)
 
     (:target "#planet-mercury" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 4.15) * 55"
-      :y "Math.sin(t * Math.PI * 2 * 4.15 * 0.12) * 10"
-      :z "Math.sin(t * Math.PI * 2 * 4.15) * 55"
-      :base-r 5
+      :x "Math.cos(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1)) * 50"
+      :y "Math.sin(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1) * 0.12) * 8"
+      :z "Math.sin(t * Math.PI * 2 * 5.20 * (vars.warpSpeed || 1)) * 50"
+      :base-r 4.8
       :label "#label-mercury"
     )
     (:target "#planet-venus" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.62) * 90"
-      :y "Math.sin(t * Math.PI * 2 * 1.62 * 0.15) * 14"
-      :z "Math.sin(t * Math.PI * 2 * 1.62) * 90"
-      :base-r 8
+      :x "Math.cos(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1)) * 80"
+      :y "Math.sin(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1) * 0.15) * 12"
+      :z "Math.sin(t * Math.PI * 2 * 2.80 * (vars.warpSpeed || 1)) * 80"
+      :base-r 7.2
       :label "#label-venus"
     )
     (:target "#planet-earth" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 1.00) * 135"
-      :y "Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 16"
-      :z "Math.sin(t * Math.PI * 2 * 1.00) * 135"
-      :base-r 9
+      :x "Math.cos(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118"
+      :y "Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1) * 0.10) * 14"
+      :z "Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118"
+      :base-r 8.2
       :label "#label-earth"
     )
     (:target "#moon-earth" :type "3d-node"
-      :x "(Math.cos(t * Math.PI * 2 * 1.00) * 135) + Math.cos(t * Math.PI * 2 * 12) * 18"
-      :y "(Math.sin(t * Math.PI * 2 * 1.00 * 0.10) * 16) + Math.sin(t * Math.PI * 2 * 12) * 5"
-      :z "(Math.sin(t * Math.PI * 2 * 1.00) * 135) + Math.sin(t * Math.PI * 2 * 12) * 18"
-      :base-r 2.5
+      :x "(Math.cos(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118) + Math.cos(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 16"
+      :y "(Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1) * 0.10) * 14) + Math.sin(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 5"
+      :z "(Math.sin(t * Math.PI * 2 * 1.80 * (vars.warpSpeed || 1)) * 118) + Math.sin(t * Math.PI * 2 * 18 * (vars.warpSpeed || 1)) * 16"
+      :base-r 2.6
     )
     (:target "#planet-mars" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.53) * 175"
-      :y "Math.sin(t * Math.PI * 2 * 0.53 * 0.18) * 18"
-      :z "Math.sin(t * Math.PI * 2 * 0.53) * 175"
-      :base-r 6
+      :x "Math.cos(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1)) * 155"
+      :y "Math.sin(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1) * 0.18) * 16"
+      :z "Math.sin(t * Math.PI * 2 * 1.25 * (vars.warpSpeed || 1)) * 155"
+      :base-r 5.8
       :label "#label-mars"
     )
     (:target "#planet-jupiter" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.24) * 230"
-      :y "Math.sin(t * Math.PI * 2 * 0.24 * 0.08) * 20"
-      :z "Math.sin(t * Math.PI * 2 * 0.24) * 230"
-      :base-r 14
+      :x "Math.cos(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1)) * 210"
+      :y "Math.sin(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1) * 0.08) * 18"
+      :z "Math.sin(t * Math.PI * 2 * 0.90 * (vars.warpSpeed || 1)) * 210"
+      :base-r 13.5
       :label "#label-jupiter"
     )
     (:target "#planet-saturn" :type "3d-node"
-      :x "Math.cos(t * Math.PI * 2 * 0.10) * 290"
-      :y "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 24"
-      :z "Math.sin(t * Math.PI * 2 * 0.10) * 290"
-      :base-r 11
+      :x "Math.cos(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :y "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1) * 0.06) * 20"
+      :z "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :base-r 10.5
       :label "#label-saturn"
     )
     (:target "#saturn-ring" :type "3d-ring"
-      :cx "Math.cos(t * Math.PI * 2 * 0.10) * 290"
-      :cy "Math.sin(t * Math.PI * 2 * 0.10 * 0.06) * 24"
-      :cz "Math.sin(t * Math.PI * 2 * 0.10) * 290"
-      :r "20"
+      :cx "Math.cos(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :cy "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1) * 0.06) * 20"
+      :cz "Math.sin(t * Math.PI * 2 * 0.68 * (vars.warpSpeed || 1)) * 265"
+      :r "19"
       :tilt-x "25"
       :tilt-z "15"
       :depth-fog true
+    )
+    (:target "#planet-uranus" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :y "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1) * 0.05) * 22"
+      :z "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :base-r 8.5
+      :label "#label-uranus"
+    )
+    (:target "#uranus-ring" :type "3d-ring"
+      :cx "Math.cos(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :cy "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1) * 0.05) * 22"
+      :cz "Math.sin(t * Math.PI * 2 * 0.52 * (vars.warpSpeed || 1)) * 320"
+      :r "14.5"
+      :tilt-x "85"
+      :tilt-z "10"
+      :depth-fog true
+    )
+    (:target "#planet-neptune" :type "3d-node"
+      :x "Math.cos(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1)) * 370"
+      :y "Math.sin(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1) * 0.04) * 24"
+      :z "Math.sin(t * Math.PI * 2 * 0.42 * (vars.warpSpeed || 1)) * 370"
+      :base-r 8.0
+      :label "#label-neptune"
     )
   ))
 )

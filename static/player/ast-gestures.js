@@ -279,6 +279,26 @@
         this.startCircuitElectronsLoop();
       }
 
+      // 9bb. Solar System Cosmic Top Trumps & Reticle Tracker
+      if (this.stageSvg.querySelector('#solar-top-trumps-card') || this.stageSvg.querySelector('#planet-earth') || this.stageSvg.querySelector('#orbit-mercury')) {
+        this.setupSolarSystemInteractivity();
+      }
+
+      // 9bc. Times Tables (2x to 12x) Dynamic 2D Array & Distributive Splitter
+      if (this.stageSvg.querySelector('#tt-table-strip') || this.stageSvg.querySelector('#tt-stage-array') || this.stageSvg.querySelector('#tt-laser-splitter')) {
+        this.setupTimesTablesInteractivity();
+      }
+
+      // 9bd. Atomic Structure Bohr Shells & 18-Element Periodic Table Ribbon
+      if (this.stageSvg.querySelector('#atom-periodic-card') || this.stageSvg.querySelector('#atom-periodic-ribbon') || this.stageSvg.querySelector('#nucleus-cluster')) {
+        this.setupAtomInteractivity();
+      }
+
+      // 9be. Spelling Bee Interactive KS1-KS3 Orthography & Speech Synthesis Subsystem
+      if (this.stageSvg.querySelector('#bee-root') || this.stageSvg.querySelector('#bee-header') || (this.engine.scene && this.engine.scene.id === 'spelling-bee')) {
+        this.setupSpellingBeeInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -373,9 +393,30 @@
       }
 
       // B. Check for interactive direct-grab targets or action buttons
-      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas');
+      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, #tt-laser-splitter');
 
       if (target) {
+        // Direct Cosmic Planet Click / Top Trumps Trigger
+        const planetNode = target.hasAttribute('data-planet') ? target : target.closest('[data-planet]');
+        if (planetNode) {
+          e.preventDefault();
+          this.showPlanetTopTrump(planetNode.getAttribute('data-planet'));
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        // Direct Times Tables Laser Splitter Drag Mode
+        if (target.id === 'tt-laser-splitter' || target.closest('#tt-laser-splitter') || target.getAttribute('data-draggable') === 'splitter') {
+          e.preventDefault();
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          this.isDragging = true;
+          this.dragTarget = this.stageSvg.querySelector('#tt-laser-splitter') || target;
+          this.dragMode = 'tt-splitter';
+          this.playAudioTone(480, 'sine', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
         // Direct Phase State Indicator Click Check (Solid, Liquid, Gas)
         const stateNode = (target.id && (target.id.includes('ind-') || target.id.includes('txt-'))) ? target : target.closest('#ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, [data-interactive="gas-state"]');
         if (stateNode) {
@@ -409,7 +450,7 @@
           return;
         }
 
-        // Direct Action Buttons (e.g. Pythagoras steppers, presets, toggles, pond actions)
+        // Direct Action Buttons (e.g. Pythagoras steppers, presets, toggles, pond actions, times-table chips)
         const actionTarget = target.hasAttribute('data-action') ? target : target.closest('[data-action]');
         if (actionTarget) {
           e.preventDefault();
@@ -505,6 +546,30 @@
         if (pedNode) {
           this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y);
         }
+      } else {
+        // Proximity selection for Solar System planets when clicking anywhere near orbiting worlds
+        if (this.engine && this.engine.scene && this.engine.scene.id === 'solar-system') {
+          const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'sun'];
+          let closestKey = null;
+          let minDist = 38;
+          for (const p of planets) {
+            const el = this.stageSvg.querySelector(p === 'sun' ? '#sun-body' : `#planet-${p}`);
+            if (el) {
+              const px = parseFloat(el.getAttribute('cx') || el.getAttribute('x') || 0);
+              const py = parseFloat(el.getAttribute('cy') || el.getAttribute('y') || 0);
+              const dist = Math.hypot(svgPt.x - px, svgPt.y - py);
+              if (dist < minDist) {
+                minDist = dist;
+                closestKey = p;
+              }
+            }
+          }
+          if (closestKey) {
+            this.showPlanetTopTrump(closestKey);
+            this.createTouchRipple(svgPt.x, svgPt.y);
+            return;
+          }
+        }
       }
     }
 
@@ -551,6 +616,8 @@
           this.handlePythagorasDragB(svgPt.x);
         } else if (this.dragMode === 'fishing-hook') {
           this.handleFishingHookDrag(svgPt);
+        } else if (this.dragMode === 'tt-splitter') {
+          this.handleTimesTablesSplitterDrag(svgPt.x);
         } else if (this.dragMode === 'generic') {
           this.handleGenericDrag(this.dragTarget, svgPt);
         }
@@ -1482,6 +1549,82 @@
             return;
           }
         }
+      }
+
+      // -----------------------------------------------------------------------
+      // Solar System & Cosmic Top Trumps Actions
+      // -----------------------------------------------------------------------
+      if (action && (action === 'inspect-planet' || action === 'tt-next' || action === 'tt-prev' || action === 'tt-close' || action.startsWith('solar-warp-'))) {
+        if (action === 'inspect-planet') {
+          const planetKey = targetNode ? (targetNode.getAttribute('data-planet') || targetNode.closest('[data-planet]')?.getAttribute('data-planet')) : 'earth';
+          this.showPlanetTopTrump(planetKey || 'earth');
+          return;
+        } else if (action === 'tt-next') {
+          this.nextPlanetTopTrump();
+          return;
+        } else if (action === 'tt-prev') {
+          this.prevPlanetTopTrump();
+          return;
+        } else if (action === 'tt-close') {
+          this.closePlanetTopTrump();
+          return;
+        } else if (action === 'solar-warp-1') {
+          if (this.engine) this.engine.setVar('warpSpeed', 1.0);
+          this.updateWarpChips(1.0);
+          this.playAudioTone(440, 'sine', 0.08);
+          return;
+        } else if (action === 'solar-warp-2') {
+          if (this.engine) this.engine.setVar('warpSpeed', 2.0);
+          this.updateWarpChips(2.0);
+          this.playAudioTone(554, 'sine', 0.08);
+          return;
+        } else if (action === 'solar-warp-5') {
+          if (this.engine) this.engine.setVar('warpSpeed', 5.0);
+          this.updateWarpChips(5.0);
+          this.playAudioTone(659, 'sine', 0.08);
+          return;
+        } else if (action === 'solar-warp-10') {
+          if (this.engine) this.engine.setVar('warpSpeed', 10.0);
+          this.updateWarpChips(10.0);
+          this.playAudioTone(880, 'sine', 0.08);
+          return;
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Times Tables Master (2x to 12x) Actions
+      // -----------------------------------------------------------------------
+      if (action && (action.startsWith('tt-set-') || action.startsWith('tt-inc-') || action.startsWith('tt-dec-') || action === 'tt-flip' || action.startsWith('tt-split-') || action.startsWith('tt-mode-') || action === 'tt-play-scale' || action === 'tt-quiz-answer')) {
+        this.handleTimesTablesAction(action, targetNode);
+        return;
+      }
+
+      // -----------------------------------------------------------------------
+      // Atomic Structure & 18-Element Periodic Table Actions
+      // -----------------------------------------------------------------------
+      if (action && (action === 'atom-set-z' || action === 'atom-prev-z' || action === 'atom-next-z')) {
+        if (action === 'atom-set-z') {
+          const zAttr = targetNode ? (targetNode.getAttribute('data-z') || targetNode.closest('[data-z]')?.getAttribute('data-z')) : null;
+          const z = parseInt(zAttr, 10);
+          if (!isNaN(z)) this.setAtomZ(z);
+          return;
+        } else if (action === 'atom-prev-z') {
+          const curZ = (this.engine.vars && Number(this.engine.vars.atomicNumber)) || 6;
+          this.setAtomZ(curZ - 1);
+          return;
+        } else if (action === 'atom-next-z') {
+          const curZ = (this.engine.vars && Number(this.engine.vars.atomicNumber)) || 6;
+          this.setAtomZ(curZ + 1);
+          return;
+        }
+      }
+
+      // -----------------------------------------------------------------------
+      // Spelling Bee Championship (KS1 to KS3) Actions
+      // -----------------------------------------------------------------------
+      if (action && action.startsWith('bee-')) {
+        this.handleSpellingBeeAction(action, targetNode);
+        return;
       }
 
       // -----------------------------------------------------------------------
@@ -3330,6 +3473,14 @@ ${strokeLines.join('\n')}
         hud.style.display = 'block';
       }
 
+      if (this.engine.scene && this.engine.scene.id === 'atom') {
+        hud.style.top = '96px';
+        hud.style.right = '14px';
+      } else {
+        hud.style.top = '14px';
+        hud.style.right = '14px';
+      }
+
       const currentVars = this.engine.vars || {};
 
       let html = `
@@ -3401,6 +3552,12 @@ ${strokeLines.join('\n')}
           const newA = vName === 'sideA' ? val : (curVars.sideA || 3);
           const newB = vName === 'sideB' ? val : (curVars.sideB || 4);
           this.renderPythagorasGeometry(newA, newB);
+        }
+
+        if (this.engine.scene && this.engine.scene.id === 'atom') {
+          if (vName === 'atomicNumber') {
+            this.updateAtomElementUI(val, false);
+          }
         }
       };
 
@@ -3485,13 +3642,1543 @@ ${strokeLines.join('\n')}
             }
           }
 
-          if (this.engine.scene && this.engine.scene.id === 'math-fishing') {
-            if (data.name === 'targetSum' || data.name === '*') {
-              this.setupMathFishingFish();
+          if (this.engine.scene && this.engine.scene.id === 'solar-system') {
+            if (data.name === 'warpSpeed' || data.name === '*') {
+              const ws = (data.vars && data.vars.warpSpeed !== undefined) ? data.vars.warpSpeed : data.value;
+              if (ws !== undefined) this.updateWarpChips(parseFloat(ws));
+            }
+          }
+
+          if (this.engine.scene && this.engine.scene.id === 'times-tables') {
+            if (data.name === 'table' || data.name === 'multiplier' || data.name === 'splitCol' || data.name === '*') {
+              const curTable = (data.vars && data.vars.table !== undefined) ? Number(data.vars.table) : (data.name === 'table' ? Number(data.value) : this._ttTable);
+              const curMult = (data.vars && data.vars.multiplier !== undefined) ? Number(data.vars.multiplier) : (data.name === 'multiplier' ? Number(data.value) : this._ttMultiplier);
+              const curSplit = (data.vars && data.vars.splitCol !== undefined) ? Number(data.vars.splitCol) : (data.name === 'splitCol' ? Number(data.value) : this._ttSplitCol);
+              if (curTable) this._ttTable = curTable;
+              if (curMult) this._ttMultiplier = curMult;
+              if (curSplit) this._ttSplitCol = curSplit;
+              this.renderTimesTablesGrid();
             }
           }
         });
       }
+    }
+
+    // =========================================================================
+    // Solar System: Cosmic Top Trumps & Dynamic Targeting Reticle Subsystem
+    // =========================================================================
+    getSolarTopTrumpsDeck() {
+      return {
+        sun: {
+          title: '☀️ THE SUN',
+          type: 'YELLOW DWARF STAR (G2V)',
+          diameter: '1,392,700 km (109×)',
+          diameterBar: 246,
+          mass: '333,000 Earths',
+          massBar: 246,
+          distance: '0.00 AU (Center)',
+          distBar: 10,
+          day: '27 Days (Differential)',
+          dayBar: 70,
+          year: '230 Million Yrs (Orbit)',
+          yearBar: 246,
+          moons: '8 Planets + 5 Dwarfs',
+          moonsBar: 246,
+          fact1: 'Contains 99.86% of all mass in the Solar System!',
+          fact2: 'Nuclear fusion burns 600M tons of H every second.',
+          fact3: 'Surface temp: 5,500°C • Core temp: 15,000,000°C.',
+          power: '100 / 100',
+          freq: 110,
+          color: '#f59e0b'
+        },
+        mercury: {
+          title: '☿ MERCURY',
+          type: 'ROCKY TERRESTRIAL WORLD',
+          diameter: '4,879 km (0.38×)',
+          diameterBar: 35,
+          mass: '0.055 Earths',
+          massBar: 20,
+          distance: '0.39 AU (57.9M km)',
+          distBar: 30,
+          day: '59 Earth Days',
+          dayBar: 130,
+          year: '88 Days (Fastest!)',
+          yearBar: 35,
+          moons: '0 Moons',
+          moonsBar: 10,
+          fact1: 'Closest world to Sun with extreme temperature swings:',
+          fact2: '+430°C by day, plunging to -180°C in nighttime shadow!',
+          fact3: 'Giant iron core makes up 85% of its planetary radius.',
+          power: '68 / 100',
+          freq: 784,
+          color: '#cbd5e1'
+        },
+        venus: {
+          title: '♀ VENUS',
+          type: 'GREENHOUSE HELLSCAPE',
+          diameter: '12,104 km (0.95×)',
+          diameterBar: 70,
+          mass: '0.815 Earths',
+          massBar: 65,
+          distance: '0.72 AU (108.2M km)',
+          distBar: 55,
+          day: '243 Days (Retrograde)',
+          dayBar: 240,
+          year: '225 Earth Days',
+          yearBar: 60,
+          moons: '0 Moons',
+          moonsBar: 10,
+          fact1: 'Hottest planet in the Solar System (+465°C)!',
+          fact2: 'Runaway greenhouse atmosphere crushes with 92 atm.',
+          fact3: 'Spins backwards: Sun rises in West and sets in East!',
+          power: '79 / 100',
+          freq: 659.25,
+          color: '#fde047'
+        },
+        earth: {
+          title: '🌍 EARTH',
+          type: 'OCEANIC LIVING OASIS',
+          diameter: '12,742 km (1.0× Baseline)',
+          diameterBar: 75,
+          mass: '1.00 Earth (5.97×10²⁴ kg)',
+          massBar: 75,
+          distance: '1.00 AU (149.6M km)',
+          distBar: 75,
+          day: '23h 56m 04s',
+          dayBar: 45,
+          year: '365.25 Earth Days',
+          yearBar: 80,
+          moons: '1 Moon (Luna)',
+          moonsBar: 25,
+          fact1: 'The only known haven for living biology in the cosmos!',
+          fact2: 'Oceans cover 71% of surface; nitrogen-oxygen shield.',
+          fact3: 'Geodynamo molten iron core creates magnetosphere.',
+          power: '94 / 100',
+          freq: 523.25,
+          color: '#38bdf8'
+        },
+        moon: {
+          title: '🌕 THE MOON (LUNA)',
+          type: 'NATURAL ROCKY SATELLITE',
+          diameter: '3,474 km (0.27×)',
+          diameterBar: 25,
+          mass: '0.012 Earths',
+          massBar: 15,
+          distance: '384,400 km from Earth',
+          distBar: 15,
+          day: '27.3 Days (Locked)',
+          dayBar: 80,
+          year: '27.3 Days around Earth',
+          yearBar: 20,
+          moons: '0 (Orbits Earth)',
+          moonsBar: 10,
+          fact1: 'Tidally locked: identical face always points to Earth!',
+          fact2: 'Lunar gravitational pull stabilizes Earth axial tilt.',
+          fact3: 'Footprints left by astronauts will last millions of years.',
+          power: '72 / 100',
+          freq: 587.33,
+          color: '#f1f5f9'
+        },
+        mars: {
+          title: '♂ MARS',
+          type: 'RUST RED DESERT WORLD',
+          diameter: '6,779 km (0.53×)',
+          diameterBar: 45,
+          mass: '0.107 Earths',
+          massBar: 30,
+          distance: '1.52 AU (227.9M km)',
+          distBar: 95,
+          day: '24h 37m (Earth-like)',
+          dayBar: 48,
+          year: '687 Earth Days (1.88 yrs)',
+          yearBar: 110,
+          moons: '2 Moons (Phobos, Deimos)',
+          moonsBar: 35,
+          fact1: 'Host to Olympus Mons: 22 km volcano (nearly 3× Everest)!',
+          fact2: 'Iron oxide (rust) dust blankets entire planetary crust.',
+          fact3: 'Features Valles Marineris canyon spanning 4,000 km.',
+          power: '84 / 100',
+          freq: 440,
+          color: '#ef4444'
+        },
+        jupiter: {
+          title: '♃ JUPITER',
+          type: 'KING OF GAS GIANTS',
+          diameter: '139,820 km (11.0×)',
+          diameterBar: 235,
+          mass: '317.8 Earths (Monster)',
+          massBar: 246,
+          distance: '5.20 AU (778.5M km)',
+          distBar: 140,
+          day: '9h 55m (Fastest Spin!)',
+          dayBar: 30,
+          year: '11.86 Earth Years',
+          yearBar: 160,
+          moons: '95 Moons (Europa, Io)',
+          moonsBar: 210,
+          fact1: 'Great Red Spot is an anticyclone storm raging >350 yrs!',
+          fact2: 'Possesses strongest planetary magnetic field in system.',
+          fact3: 'Subsurface ocean on moon Europa has more water than Earth.',
+          power: '98 / 100',
+          freq: 146.83,
+          color: '#fb923c'
+        },
+        saturn: {
+          title: '🪐 SATURN',
+          type: 'GOLDEN RINGED GAS GIANT',
+          diameter: '120,536 km (9.5×)',
+          diameterBar: 200,
+          mass: '95.2 Earths',
+          massBar: 180,
+          distance: '9.54 AU (1.43B km)',
+          distBar: 175,
+          day: '10h 33m (Super Fast)',
+          dayBar: 35,
+          year: '29.45 Earth Years',
+          yearBar: 195,
+          moons: '146 Moons (Record!)',
+          moonsBar: 246,
+          fact1: 'Density is less than water: Saturn would float in a bathtub!',
+          fact2: 'Majestic rings span 282,000 km wide but are only ~10m thin.',
+          fact3: 'Moon Titan has thick atmosphere and liquid methane lakes.',
+          power: '96 / 100',
+          freq: 220,
+          color: '#eab308'
+        },
+        uranus: {
+          title: '♅ URANUS',
+          type: 'SIDEWAYS ICE GIANT',
+          diameter: '50,724 km (4.0×)',
+          diameterBar: 130,
+          mass: '14.5 Earths',
+          massBar: 110,
+          distance: '19.2 AU (2.87B km)',
+          distBar: 215,
+          day: '17h 14m (Retrograde)',
+          dayBar: 55,
+          year: '84.0 Earth Years',
+          yearBar: 220,
+          moons: '28 Moons',
+          moonsBar: 85,
+          fact1: 'Tilted 98° on its side: rolls like a cosmic bowling ball!',
+          fact2: 'Coldest planetary atmosphere recorded at -224°C.',
+          fact3: 'Methane in upper atmosphere absorbs red light, glowing cyan.',
+          power: '88 / 100',
+          freq: 329.63,
+          color: '#06b6d4'
+        },
+        neptune: {
+          title: '♆ NEPTUNE',
+          type: 'SUPERSONIC ICE GIANT',
+          diameter: '49,244 km (3.9×)',
+          diameterBar: 125,
+          mass: '17.1 Earths',
+          massBar: 125,
+          distance: '30.1 AU (4.50B km)',
+          distBar: 246,
+          day: '16h 06m',
+          dayBar: 50,
+          year: '164.8 Earth Years',
+          yearBar: 246,
+          moons: '16 Moons (Triton)',
+          moonsBar: 65,
+          fact1: 'Supersonic storm winds roar over 2,100 km/h (Mach 1.7)!',
+          fact2: 'Took 165 Earth years to complete its first orbit since discovery.',
+          fact3: 'Moon Triton orbits retrograde with nitrogen ice geysers.',
+          power: '92 / 100',
+          freq: 246.94,
+          color: '#3b82f6'
+        }
+      };
+    }
+
+    setupSolarSystemInteractivity() {
+      if (!this.stageSvg) return;
+
+      // Ensure Top Trumps action nodes are styled with grab pointer
+      const clickablePlanets = this.stageSvg.querySelectorAll('[data-planet], [data-action="inspect-planet"]');
+      clickablePlanets.forEach(node => {
+        node.style.cursor = 'pointer';
+        if (!node._hasPlanetClick) {
+          node._hasPlanetClick = true;
+          node.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation();
+            const pKey = node.getAttribute('data-planet') || node.closest('[data-planet]')?.getAttribute('data-planet');
+            if (pKey) {
+              this.showPlanetTopTrump(pKey);
+              this.createTouchRipple(ev.clientX, ev.clientY);
+            }
+          });
+        }
+      });
+
+      // Update warp buttons to match current warpSpeed
+      const curWarp = (this.engine && this.engine.vars && Number(this.engine.vars.warpSpeed)) || 1.0;
+      this.updateWarpChips(curWarp);
+
+      // Start 60 FPS Reticle tracking loop
+      if (this._solarReticleLoopId) cancelAnimationFrame(this._solarReticleLoopId);
+
+      const reticle = this.stageSvg.querySelector('#planet-target-reticle');
+
+      const tickReticle = () => {
+        if (!this.stageSvg || !this.stageSvg.contains(reticle)) return;
+
+        if (this._activePlanetNode && reticle && reticle.getAttribute('display') !== 'none') {
+          const cxStr = this._activePlanetNode.getAttribute('cx') || this._activePlanetNode.getAttribute('x');
+          const cyStr = this._activePlanetNode.getAttribute('cy') || this._activePlanetNode.getAttribute('y');
+          if (cxStr && cyStr) {
+            const cx = parseFloat(cxStr);
+            const cy = parseFloat(cyStr);
+            reticle.setAttribute('transform', `translate(${cx.toFixed(1)}, ${cy.toFixed(1)})`);
+          }
+        }
+
+        this._solarReticleLoopId = requestAnimationFrame(tickReticle);
+      };
+
+      this._solarReticleLoopId = requestAnimationFrame(tickReticle);
+    }
+
+    showPlanetTopTrump(planetKey) {
+      if (!this.stageSvg) return;
+      const deck = this.getSolarTopTrumpsDeck();
+      const data = deck[planetKey] || deck.earth;
+      this._activePlanetKey = planetKey;
+
+      const card = this.stageSvg.querySelector('#solar-top-trumps-card');
+      const reticle = this.stageSvg.querySelector('#planet-target-reticle');
+      if (!card) return;
+
+      // Locate target node for reticle
+      let targetNode = null;
+      if (planetKey === 'sun') {
+        targetNode = this.stageSvg.querySelector('#sun-body');
+      } else if (planetKey === 'moon') {
+        targetNode = this.stageSvg.querySelector('#moon-earth');
+      } else {
+        targetNode = this.stageSvg.querySelector(`#planet-${planetKey}`);
+      }
+      this._activePlanetNode = targetNode;
+
+      // Populate Top Trumps Card Data
+      const setTitle = this.stageSvg.querySelector('#tt-planet-title');
+      const setClass = this.stageSvg.querySelector('#tt-planet-class');
+      const classPill = this.stageSvg.querySelector('#tt-class-pill');
+
+      if (setTitle) setTitle.textContent = data.title;
+      if (setClass) setClass.textContent = data.type;
+      if (classPill && data.color) classPill.setAttribute('stroke', data.color);
+
+      // Populate Stats Values & Progress Bars
+      const setVal = (id, val) => { const el = this.stageSvg.querySelector(id); if (el) el.textContent = val; };
+      const setBar = (id, width, col) => {
+        const el = this.stageSvg.querySelector(id);
+        if (el) {
+          el.setAttribute('width', String(Math.max(4, Math.min(246, width))));
+          if (col) el.setAttribute('fill', col);
+        }
+      };
+
+      setVal('#tt-val-diameter', data.diameter);
+      setBar('#tt-bar-diameter', data.diameterBar, data.color);
+
+      setVal('#tt-val-mass', data.mass);
+      setBar('#tt-bar-mass', data.massBar, data.color);
+
+      setVal('#tt-val-distance', data.distance);
+      setBar('#tt-bar-distance', data.distBar, data.color);
+
+      setVal('#tt-val-day', data.day);
+      setBar('#tt-bar-day', data.dayBar, data.color);
+
+      setVal('#tt-val-year', data.year);
+      setBar('#tt-bar-year', data.yearBar, data.color);
+
+      setVal('#tt-val-moons', data.moons);
+      setBar('#tt-bar-moons', data.moonsBar, data.color);
+
+      // Populate Facts & Power Score
+      setVal('#tt-fact-line1', data.fact1);
+      setVal('#tt-fact-line2', data.fact2);
+      setVal('#tt-fact-line3', data.fact3);
+      setVal('#tt-power-score', `⭐ COSMIC POWER: ${data.power}`);
+
+      // Display card & reticle
+      card.setAttribute('display', 'block');
+      if (reticle && targetNode) {
+        reticle.setAttribute('display', 'block');
+        const cxStr = targetNode.getAttribute('cx') || targetNode.getAttribute('x');
+        const cyStr = targetNode.getAttribute('cy') || targetNode.getAttribute('y');
+        if (cxStr && cyStr) {
+          reticle.setAttribute('transform', `translate(${parseFloat(cxStr).toFixed(1)}, ${parseFloat(cyStr).toFixed(1)})`);
+        }
+      }
+
+      // Highlight selected planet in the bottom ribbon
+      const ribbonBtns = this.stageSvg.querySelectorAll('#solar-planet-ribbon .ribbon-btn');
+      ribbonBtns.forEach(btn => {
+        const p = btn.getAttribute('data-planet');
+        const rect = btn.querySelector('rect');
+        if (rect) {
+          if (p === planetKey) {
+            rect.setAttribute('fill', '#0284c7');
+            rect.setAttribute('stroke', '#38bdf8');
+            rect.setAttribute('stroke-width', '1.5');
+          } else {
+            rect.setAttribute('fill', '#1e293b');
+            rect.setAttribute('stroke', '#475569');
+            rect.setAttribute('stroke-width', '1');
+          }
+        }
+      });
+
+      // Play procedural frequency tone
+      if (data.freq) {
+        this.playAudioTone(data.freq, 'triangle', 0.16, 0.22);
+      }
+    }
+
+    nextPlanetTopTrump() {
+      const order = ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
+      const curIdx = order.indexOf(this._activePlanetKey || 'earth');
+      const nextIdx = (curIdx + 1) % order.length;
+      this.showPlanetTopTrump(order[nextIdx]);
+    }
+
+    prevPlanetTopTrump() {
+      const order = ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
+      const curIdx = order.indexOf(this._activePlanetKey || 'earth');
+      const prevIdx = (curIdx - 1 + order.length) % order.length;
+      this.showPlanetTopTrump(order[prevIdx]);
+    }
+
+    closePlanetTopTrump() {
+      const card = this.stageSvg && this.stageSvg.querySelector('#solar-top-trumps-card');
+      const reticle = this.stageSvg && this.stageSvg.querySelector('#planet-target-reticle');
+      if (card) card.setAttribute('display', 'none');
+      if (reticle) reticle.setAttribute('display', 'none');
+      this._activePlanetNode = null;
+      if (this.stageSvg) {
+        const ribbonBtns = this.stageSvg.querySelectorAll('#solar-planet-ribbon .ribbon-btn rect');
+        ribbonBtns.forEach(r => {
+          r.setAttribute('fill', '#1e293b');
+          r.setAttribute('stroke', '#475569');
+        });
+      }
+      this.playAudioTone(330, 'sine', 0.08, 0.15);
+    }
+
+    updateWarpChips(speed) {
+      if (!this.stageSvg) return;
+      const chips = [
+        { action: 'solar-warp-1', val: 1.0 },
+        { action: 'solar-warp-2', val: 2.0 },
+        { action: 'solar-warp-5', val: 5.0 },
+        { action: 'solar-warp-10', val: 10.0 }
+      ];
+      chips.forEach(c => {
+        const btn = this.stageSvg.querySelector(`[data-action="${c.action}"]`);
+        if (btn) {
+          const rect = btn.querySelector('rect');
+          const txt = btn.querySelector('text');
+          const isActive = Math.abs(c.val - speed) < 0.2;
+          if (rect) {
+            rect.setAttribute('fill', isActive ? '#0284c7' : '#1e293b');
+            rect.setAttribute('stroke', isActive ? '#38bdf8' : '#475569');
+          }
+          if (txt) {
+            txt.setAttribute('fill', isActive ? '#ffffff' : '#94a3b8');
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // Times Tables: 2x to 12x Dynamic 2D Array & Distributive Splitter Subsystem
+    // =========================================================================
+    setupTimesTablesInteractivity() {
+      if (!this.stageSvg) return;
+      this._ttTable = (this.engine && this.engine.vars && Number(this.engine.vars.table)) || 7;
+      this._ttMultiplier = (this.engine && this.engine.vars && Number(this.engine.vars.multiplier)) || 8;
+      this._ttSplitCol = (this.engine && this.engine.vars && Number(this.engine.vars.splitCol)) || 5;
+      this._ttMode = 'array';
+      this._ttQuizStreak = 0;
+
+      this.renderTimesTablesGrid();
+    }
+
+    renderTimesTablesGrid() {
+      if (!this.stageSvg) return;
+      const table = Math.max(2, Math.min(12, this._ttTable || 7));
+      const mult = Math.max(1, Math.min(12, this._ttMultiplier || 8));
+      const splitCol = Math.max(1, Math.min(mult, this._ttSplitCol || 5));
+      this._ttTable = table;
+      this._ttMultiplier = mult;
+      this._ttSplitCol = splitCol;
+
+      // Update Header & Multiplier display
+      const multDisplay = this.stageSvg.querySelector('#tt-multiplier-display');
+      if (multDisplay) multDisplay.textContent = `× ${mult} Multiplier`;
+
+      const flipLabel = this.stageSvg.querySelector('#tt-flip-label');
+      if (flipLabel) flipLabel.textContent = `🔄 Flip: ${table}×${mult} ⇄ ${mult}×${table}`;
+
+      // Highlight Table chips (2x to 12x)
+      const chips = this.stageSvg.querySelectorAll('.table-chip');
+      chips.forEach(chip => {
+        const tVal = Number(chip.getAttribute('data-table'));
+        const rect = chip.querySelector('rect');
+        const text = chip.querySelector('text');
+        const isActive = tVal === table;
+        if (rect) {
+          rect.setAttribute('fill', isActive ? '#059669' : '#1e293b');
+          rect.setAttribute('stroke', isActive ? '#10b981' : '#334155');
+          rect.setAttribute('stroke-width', isActive ? '1.5' : '1');
+        }
+        if (text) {
+          text.setAttribute('fill', isActive ? '#ffffff' : '#cbd5e1');
+          text.setAttribute('font-weight', isActive ? '900' : '800');
+        }
+      });
+
+      // Update Array Dimensions Banner
+      const banner = this.stageSvg.querySelector('#tt-array-banner');
+      if (banner) {
+        banner.textContent = `${table} Rows × ${mult} Columns = ${table * mult} Total Area Units`;
+      }
+
+      // Compute Tile Layout
+      const availW = 422;
+      const availH = 210;
+      const gapX = Math.max(2, Math.min(5, Math.floor(40 / mult)));
+      const gapY = Math.max(2, Math.min(4, Math.floor(30 / table)));
+      const tileW = Math.max(18, Math.min(38, Math.floor((availW - (mult - 1) * gapX) / mult)));
+      const tileH = Math.max(12, Math.min(26, Math.floor((availH - (table - 1) * gapY) / table)));
+
+      const totalGridW = mult * tileW + (mult - 1) * gapX;
+      const startX = Math.max(0, Math.floor((availW - totalGridW) / 2));
+      this._ttGridStartX = startX;
+      this._ttTileW = tileW;
+      this._ttGapX = gapX;
+
+      // Build Dynamic Grid SVG
+      const gridContainer = this.stageSvg.querySelector('#tt-array-grid');
+      if (gridContainer) {
+        gridContainer.innerHTML = '';
+        let tileNum = 1;
+
+        for (let r = 0; r < table; r++) {
+          for (let c = 0; c < mult; c++) {
+            const x = startX + c * (tileW + gapX);
+            const y = r * (tileH + gapY);
+            const isLeft = (c < splitCol);
+
+            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            g.setAttribute('transform', `translate(${x}, ${y})`);
+            g.style.cursor = 'pointer';
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('width', String(tileW));
+            rect.setAttribute('height', String(tileH));
+            rect.setAttribute('rx', '4');
+            rect.setAttribute('fill', isLeft ? 'url(#tt-tile-emerald)' : 'url(#tt-tile-amber)');
+            rect.setAttribute('stroke', isLeft ? '#10b981' : '#f59e0b');
+            rect.setAttribute('stroke-width', '0.8');
+
+            g.appendChild(rect);
+
+            // Tile Number / Multiple Text
+            if (tileW >= 22 && tileH >= 16) {
+              const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              txt.setAttribute('x', String(tileW / 2));
+              txt.setAttribute('y', String(tileH / 2 + 3.5));
+              txt.setAttribute('fill', '#ffffff');
+              txt.setAttribute('font-size', tileW > 28 ? '9' : '7.5');
+              txt.setAttribute('font-weight', '800');
+              txt.setAttribute('text-anchor', 'middle');
+              txt.setAttribute('pointer-events', 'none');
+              txt.textContent = String(tileNum);
+              g.appendChild(txt);
+            }
+
+            // Click listener for procedural musical note!
+            const thisNum = tileNum;
+            g.addEventListener('pointerdown', (ev) => {
+              ev.stopPropagation();
+              const pentatonicFreqs = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
+              const noteFreq = pentatonicFreqs[(thisNum - 1) % pentatonicFreqs.length];
+              this.playAudioTone(noteFreq, 'sine', 0.1, 0.2);
+              this.createTouchRipple(ev.clientX, ev.clientY);
+
+              // Flash tile
+              rect.setAttribute('fill', '#38bdf8');
+              setTimeout(() => {
+                rect.setAttribute('fill', isLeft ? 'url(#tt-tile-emerald)' : 'url(#tt-tile-amber)');
+              }, 180);
+            });
+
+            gridContainer.appendChild(g);
+            tileNum++;
+          }
+        }
+      }
+
+      // Position Laser Splitter
+      const splitter = this.stageSvg.querySelector('#tt-laser-splitter');
+      if (splitter) {
+        if (splitCol >= mult) {
+          splitter.setAttribute('display', 'none');
+        } else {
+          splitter.setAttribute('display', 'block');
+          const splitX = 26 + startX + splitCol * (tileW + gapX) - (gapX / 2);
+          splitter.setAttribute('transform', `translate(${splitX}, 68)`);
+          const line = splitter.querySelector('line');
+          if (line) line.setAttribute('y2', String(table * (tileH + gapY) + 10));
+          const botGrip = splitter.querySelectorAll('g')[1];
+          if (botGrip) botGrip.setAttribute('transform', `translate(0, ${table * (tileH + gapY) + 14})`);
+        }
+      }
+
+      // Update Column Bracket Pills
+      const leftW = splitCol * (tileW + gapX) - gapX;
+      const rightW = (mult - splitCol) * (tileW + gapX) - gapX;
+
+      const leftRect = this.stageSvg.querySelector('#tt-col-left-rect');
+      const leftText = this.stageSvg.querySelector('#tt-col-left-text');
+      if (leftRect) {
+        leftRect.setAttribute('x', String(startX));
+        leftRect.setAttribute('width', String(Math.max(40, leftW)));
+      }
+      if (leftText) {
+        leftText.setAttribute('x', String(startX + Math.max(40, leftW) / 2));
+        leftText.textContent = `${splitCol} COLS (${table} × ${splitCol} = ${table * splitCol})`;
+      }
+
+      const rightPill = this.stageSvg.querySelector('#tt-col-right-pill');
+      const rightRect = this.stageSvg.querySelector('#tt-col-right-rect');
+      const rightText = this.stageSvg.querySelector('#tt-col-right-text');
+      if (splitCol >= mult) {
+        if (rightPill) rightPill.setAttribute('display', 'none');
+      } else {
+        if (rightPill) rightPill.setAttribute('display', 'block');
+        const rX = startX + splitCol * (tileW + gapX);
+        if (rightRect) {
+          rightRect.setAttribute('x', String(rX));
+          rightRect.setAttribute('width', String(Math.max(40, rightW)));
+        }
+        if (rightText) {
+          rightText.setAttribute('x', String(rX + Math.max(40, rightW) / 2));
+          rightText.textContent = `${mult - splitCol} COLS (${table} × ${mult - splitCol} = ${table * (mult - splitCol)})`;
+        }
+      }
+
+      // Update Right Stage Cards
+      const setTxt = (id, str) => { const el = this.stageSvg.querySelector(id); if (el) el.textContent = str; };
+      setTxt('#tt-card-target-eq', `${table} × ${mult} = ${table * mult}`);
+      setTxt('#tt-card-step1-title', `FRIENDLY CHUNK 1 (${splitCol}s)`);
+      setTxt('#tt-card-step1-eq', `${table} × ${splitCol} = ${table * splitCol}`);
+      setTxt('#tt-card-step2-title', `REMAINING CHUNK 2 (${mult - splitCol}s)`);
+      setTxt('#tt-card-step2-eq', `${table} × ${mult - splitCol} = ${table * (mult - splitCol)}`);
+      setTxt('#tt-card-step3-eq', `${table * splitCol} + ${table * (mult - splitCol)} = ${table * mult}`);
+      setTxt('#tt-card-family-1', `${mult} × ${table} = ${table * mult} • Commutative Law`);
+      setTxt('#tt-card-family-2', `${table * mult} ÷ ${table} = ${mult} • ${table * mult} ÷ ${mult} = ${table} (Inverse)`);
+
+      // Update Bottom Banner
+      const bannerTxt = this.stageSvg.querySelector('#tt-banner-txt');
+      if (bannerTxt) {
+        if (splitCol === mult) {
+          bannerTxt.textContent = `Complete Array: ${table} rows × ${mult} columns = ${table * mult} total area units.`;
+        } else {
+          bannerTxt.textContent = `The Distributive Property: ${table} × ${mult} = ${table} × (${splitCol} + ${mult - splitCol}) = ${table * splitCol} + ${table * (mult - splitCol)} = ${table * mult}.`;
+        }
+      }
+
+      // If in skip-counting or quiz mode, update those views too
+      if (this._ttMode === 'skip') this.renderTimesTablesSkipCounting();
+    }
+
+    handleTimesTablesAction(action, targetNode) {
+      if (!this.stageSvg) return;
+
+      if (action === 'tt-set-table') {
+        const tableVal = targetNode ? Number(targetNode.getAttribute('data-table') || targetNode.closest('[data-table]')?.getAttribute('data-table')) : 7;
+        if (tableVal) {
+          this._ttTable = tableVal;
+          if (this.engine) this.engine.setVar('table', tableVal);
+          this.playAudioTone(330 + tableVal * 30, 'triangle', 0.12, 0.2);
+          this.renderTimesTablesGrid();
+        }
+      } else if (action === 'tt-inc-mult') {
+        this._ttMultiplier = Math.min(12, (this._ttMultiplier || 8) + 1);
+        if (this.engine) this.engine.setVar('multiplier', this._ttMultiplier);
+        this.playAudioTone(400 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-dec-mult') {
+        this._ttMultiplier = Math.max(1, (this._ttMultiplier || 8) - 1);
+        if (this.engine) this.engine.setVar('multiplier', this._ttMultiplier);
+        this.playAudioTone(400 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-flip') {
+        const tmp = this._ttTable;
+        this._ttTable = this._ttMultiplier;
+        this._ttMultiplier = tmp;
+        if (this.engine) {
+          this.engine.setVar('table', this._ttTable);
+          this.engine.setVar('multiplier', this._ttMultiplier);
+        }
+        this.playAudioTone(523.25, 'triangle', 0.14, 0.22);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-split-5') {
+        this._ttSplitCol = Math.min(5, this._ttMultiplier);
+        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
+        this.playAudioTone(587.33, 'triangle', 0.1, 0.2);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-split-half') {
+        this._ttSplitCol = Math.max(1, Math.floor(this._ttMultiplier / 2));
+        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
+        this.playAudioTone(520, 'triangle', 0.1, 0.2);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-split-none') {
+        this._ttSplitCol = this._ttMultiplier;
+        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
+        this.playAudioTone(440, 'triangle', 0.1, 0.2);
+        this.renderTimesTablesGrid();
+      } else if (action === 'tt-play-scale') {
+        this.playMultiplesScale();
+      } else if (action === 'tt-mode-array') {
+        this._ttMode = 'array';
+        this.updateTimesTablesModeView('array');
+      } else if (action === 'tt-mode-skip') {
+        this._ttMode = 'skip';
+        this.updateTimesTablesModeView('skip');
+        this.renderTimesTablesSkipCounting();
+      } else if (action === 'tt-mode-quiz') {
+        this._ttMode = 'quiz';
+        this.updateTimesTablesModeView('quiz');
+        this.setupTimesTablesQuiz();
+      } else if (action === 'tt-quiz-answer') {
+        const idx = targetNode ? Number(targetNode.getAttribute('data-idx') || targetNode.closest('[data-idx]')?.getAttribute('data-idx')) : 0;
+        this.handleQuizAnswer(idx, targetNode);
+      }
+    }
+
+    updateTimesTablesModeView(mode) {
+      if (!this.stageSvg) return;
+      const stageArray = this.stageSvg.querySelector('#tt-stage-array');
+      const stageSkip = this.stageSvg.querySelector('#tt-stage-skip');
+      const stageQuiz = this.stageSvg.querySelector('#tt-stage-quiz');
+
+      if (stageArray) stageArray.setAttribute('display', mode === 'array' ? 'block' : 'none');
+      if (stageSkip) stageSkip.setAttribute('display', mode === 'skip' ? 'block' : 'none');
+      if (stageQuiz) stageQuiz.setAttribute('display', mode === 'quiz' ? 'block' : 'none');
+
+      const tabs = [
+        { id: '#tab-mode-array', mode: 'array' },
+        { id: '#tab-mode-skip', mode: 'skip' },
+        { id: '#tab-mode-quiz', mode: 'quiz' }
+      ];
+      tabs.forEach(t => {
+        const el = this.stageSvg.querySelector(t.id);
+        if (el) {
+          const rect = el.querySelector('rect');
+          const txt = el.querySelector('text');
+          const isActive = t.mode === mode;
+          if (rect) {
+            rect.setAttribute('fill', isActive ? '#0284c7' : '#1e293b');
+            rect.setAttribute('stroke', isActive ? '#38bdf8' : '#334155');
+          }
+          if (txt) {
+            txt.setAttribute('fill', isActive ? '#ffffff' : '#94a3b8');
+          }
+        }
+      });
+      this.playAudioTone(440, 'sine', 0.08);
+    }
+
+    handleTimesTablesSplitterDrag(svgX) {
+      if (!this.stageSvg) return;
+      const mult = this._ttMultiplier || 8;
+      const startX = this._ttGridStartX || 0;
+      const tileW = this._ttTileW || 38;
+      const gapX = this._ttGapX || 4;
+
+      const relX = svgX - 26 - startX;
+      const colStep = tileW + gapX;
+      let newSplit = Math.round(relX / colStep);
+      newSplit = Math.max(1, Math.min(mult, newSplit));
+
+      if (newSplit !== this._ttSplitCol) {
+        this._ttSplitCol = newSplit;
+        if (this.engine) this.engine.setVar('splitCol', newSplit);
+        this.renderTimesTablesGrid();
+        this.playAudioTone(320 + newSplit * 40, 'triangle', 0.05, 0.15);
+      }
+    }
+
+    renderTimesTablesSkipCounting() {
+      if (!this.stageSvg) return;
+      const canvas = this.stageSvg.querySelector('#tt-numberline-canvas');
+      if (!canvas) return;
+      canvas.innerHTML = '';
+
+      const table = this._ttTable || 7;
+      const mult = this._ttMultiplier || 8;
+
+      const sub = this.stageSvg.querySelector('#tt-skip-subtitle');
+      if (sub) {
+        const seq = [];
+        for (let i = 1; i <= mult; i++) seq.push(i * table);
+        sub.textContent = `Skip counting by ${table}s: ${seq.join(', ')}`;
+      }
+
+      const lineW = 426;
+      const lineY = 160;
+      const stepW = lineW / mult;
+
+      // Draw baseline
+      const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      baseLine.setAttribute('x1', '0');
+      baseLine.setAttribute('y1', String(lineY));
+      baseLine.setAttribute('x2', String(lineW));
+      baseLine.setAttribute('y2', String(lineY));
+      baseLine.setAttribute('stroke', '#334155');
+      baseLine.setAttribute('stroke-width', '2');
+      canvas.appendChild(baseLine);
+
+      // Draw jumping arches
+      for (let i = 0; i < mult; i++) {
+        const x1 = i * stepW;
+        const x2 = (i + 1) * stepW;
+        const midX = (x1 + x2) / 2;
+        const archH = Math.min(84, 26 + stepW * 0.7);
+        const topY = lineY - archH;
+
+        // Quadratic bezier arc
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', `M ${x1} ${lineY} Q ${midX} ${topY} ${x2} ${lineY}`);
+        path.setAttribute('fill', 'none');
+        path.setAttribute('stroke', '#10b981');
+        path.setAttribute('stroke-width', '2');
+        path.setAttribute('stroke-dasharray', '4 2');
+        canvas.appendChild(path);
+
+        // Jump label +Table
+        const jumpTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        jumpTxt.setAttribute('x', String(midX));
+        jumpTxt.setAttribute('y', String(topY - 4));
+        jumpTxt.setAttribute('fill', '#34d399');
+        jumpTxt.setAttribute('font-size', '9');
+        jumpTxt.setAttribute('font-weight', '800');
+        jumpTxt.setAttribute('text-anchor', 'middle');
+        jumpTxt.textContent = `+${table}`;
+        canvas.appendChild(jumpTxt);
+
+        // Multiple peg
+        const peg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        peg.setAttribute('transform', `translate(${x2}, ${lineY})`);
+        peg.style.cursor = 'pointer';
+
+        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        dot.setAttribute('cx', '0');
+        dot.setAttribute('cy', '0');
+        dot.setAttribute('r', '8');
+        dot.setAttribute('fill', '#0284c7');
+        dot.setAttribute('stroke', '#38bdf8');
+        dot.setAttribute('stroke-width', '1.5');
+        peg.appendChild(dot);
+
+        const valTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        valTxt.setAttribute('x', '0');
+        valTxt.setAttribute('y', '20');
+        valTxt.setAttribute('fill', '#f8fafc');
+        valTxt.setAttribute('font-size', '10');
+        valTxt.setAttribute('font-weight', '900');
+        valTxt.setAttribute('text-anchor', 'middle');
+        valTxt.textContent = String((i + 1) * table);
+        peg.appendChild(valTxt);
+
+        const curStep = i + 1;
+        peg.addEventListener('pointerdown', (ev) => {
+          ev.stopPropagation();
+          this.playAudioTone(260 + curStep * 40, 'triangle', 0.15, 0.22);
+          this.createTouchRipple(ev.clientX, ev.clientY);
+        });
+
+        canvas.appendChild(peg);
+      }
+    }
+
+    setupTimesTablesQuiz() {
+      if (!this.stageSvg) return;
+      const table = this._ttTable || 7;
+      const mult = Math.floor(Math.random() * 11) + 2; // 2 to 12
+      const correctAns = table * mult;
+
+      this._ttQuizQuestion = { table, mult, correctAns };
+
+      const prompt = this.stageSvg.querySelector('#tt-quiz-prompt');
+      if (prompt) prompt.textContent = `${table} × ${mult} = ?`;
+
+      const streakEl = this.stageSvg.querySelector('#tt-quiz-streak');
+      if (streakEl) streakEl.textContent = `🔥 Streak: ${this._ttQuizStreak || 0}`;
+
+      // Distractors
+      const set = new Set([correctAns]);
+      while (set.size < 4) {
+        const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? table : (Math.random() > 0.5 ? 2 : 10));
+        const val = Math.max(2, correctAns + offset);
+        set.add(val);
+      }
+      const options = Array.from(set).sort(() => Math.random() - 0.5);
+      this._ttQuizOptions = options;
+
+      for (let i = 0; i < 4; i++) {
+        const valEl = this.stageSvg.querySelector(`#tt-quiz-val-${i}`);
+        if (valEl) valEl.textContent = String(options[i]);
+        const btn = this.stageSvg.querySelector(`[data-action="tt-quiz-answer"][data-idx="${i}"]`);
+        if (btn) {
+          const rect = btn.querySelector('rect');
+          if (rect) {
+            rect.setAttribute('fill', '#1e293b');
+            rect.setAttribute('stroke', '#475569');
+          }
+        }
+      }
+
+      const msg = this.stageSvg.querySelector('#tt-quiz-msg');
+      if (msg) {
+        msg.textContent = 'Select the correct product to score!';
+        msg.setAttribute('fill', '#38bdf8');
+      }
+    }
+
+    handleQuizAnswer(idx, targetNode) {
+      if (!this._ttQuizQuestion || !this._ttQuizOptions) return;
+      const chosen = this._ttQuizOptions[idx];
+      const isCorrect = (chosen === this._ttQuizQuestion.correctAns);
+
+      const msg = this.stageSvg.querySelector('#tt-quiz-msg');
+      const rect = targetNode ? targetNode.querySelector('rect') : null;
+
+      if (isCorrect) {
+        this._ttQuizStreak = (this._ttQuizStreak || 0) + 1;
+        if (rect) {
+          rect.setAttribute('fill', '#059669');
+          rect.setAttribute('stroke', '#10b981');
+        }
+        if (msg) {
+          msg.textContent = `⭐ Correct! ${this._ttQuizQuestion.table} × ${this._ttQuizQuestion.mult} = ${this._ttQuizQuestion.correctAns}!`;
+          msg.setAttribute('fill', '#34d399');
+        }
+        this.playAudioTone(523.25, 'sine', 0.1, 0.2);
+        setTimeout(() => this.playAudioTone(659.25, 'sine', 0.12, 0.2), 80);
+        setTimeout(() => this.playAudioTone(783.99, 'sine', 0.16, 0.22), 160);
+
+        setTimeout(() => {
+          this.setupTimesTablesQuiz();
+        }, 900);
+      } else {
+        this._ttQuizStreak = 0;
+        if (rect) {
+          rect.setAttribute('fill', '#991b1b');
+          rect.setAttribute('stroke', '#ef4444');
+        }
+        if (msg) {
+          msg.textContent = `Almost! Remember: ${this._ttQuizQuestion.table} × ${this._ttQuizQuestion.mult} = ${this._ttQuizQuestion.correctAns}`;
+          msg.setAttribute('fill', '#f87171');
+        }
+        this.playAudioTone(220, 'sawtooth', 0.15, 0.2);
+      }
+
+      const streakEl = this.stageSvg.querySelector('#tt-quiz-streak');
+      if (streakEl) streakEl.textContent = `🔥 Streak: ${this._ttQuizStreak || 0}`;
+    }
+
+    playMultiplesScale() {
+      if (!this.stageSvg) return;
+      const table = this._ttTable || 7;
+      const mult = this._ttMultiplier || 8;
+      const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
+
+      for (let i = 0; i < mult; i++) {
+        setTimeout(() => {
+          const freq = pentatonic[i % pentatonic.length];
+          this.playAudioTone(freq, 'sine', 0.12, 0.2);
+        }, i * 140);
+      }
+    }
+
+    // =========================================================================
+    // Atomic Structure Bohr Shells & 18-Element Periodic Table Subsystem
+    // =========================================================================
+    setupAtomInteractivity() {
+      if (!this.stageSvg) return;
+      const z = (this.engine && this.engine.vars && Number(this.engine.vars.atomicNumber)) || 6;
+      this.updateAtomElementUI(z, false);
+
+      if (this.engine && typeof this.engine.on === 'function') {
+        if (this._atomVarChangeHandler) {
+          this.engine.off('varchange', this._atomVarChangeHandler);
+        }
+        this._atomVarChangeHandler = (data) => {
+          if (data && (data.name === 'atomicNumber' || data.name === '*')) {
+            const curZ = (this.engine.vars && Number(this.engine.vars.atomicNumber)) || 6;
+            this.updateAtomElementUI(curZ, false);
+          }
+        };
+        this.engine.on('varchange', this._atomVarChangeHandler);
+      }
+    }
+
+    setAtomZ(newZ) {
+      const z = Math.max(1, Math.min(18, Math.round(Number(newZ) || 1)));
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        this.engine.setVar('atomicNumber', z);
+      }
+      this.updateAtomElementUI(z, true);
+    }
+
+    updateAtomElementUI(zVal, playSound = false) {
+      if (!this.stageSvg) return;
+      const z = Math.max(1, Math.min(18, Math.round(Number(zVal) || 6)));
+
+      const ELEMENTS = [
+        null,
+        { sym: 'H', name: 'Hydrogen', mass: '1.008 u', cat: 'Reactive Non-metal (Gr 1)', shells: '1', val: 1, n: 0, color: '#38bdf8' },
+        { sym: 'He', name: 'Helium', mass: '4.003 u', cat: 'Noble Gas (Gr 18)', shells: '2', val: 2, n: 2, color: '#c084fc' },
+        { sym: 'Li', name: 'Lithium', mass: '6.940 u', cat: 'Alkali Metal (Gr 1)', shells: '2, 1', val: 1, n: 4, color: '#f87171' },
+        { sym: 'Be', name: 'Beryllium', mass: '9.012 u', cat: 'Alkaline Earth (Gr 2)', shells: '2, 2', val: 2, n: 5, color: '#fb923c' },
+        { sym: 'B', name: 'Boron', mass: '10.81 u', cat: 'Metalloid (Gr 13)', shells: '2, 3', val: 3, n: 6, color: '#34d399' },
+        { sym: 'C', name: 'Carbon', mass: '12.011 u', cat: 'Reactive Nonmetal (Gr 14)', shells: '2, 4', val: 4, n: 6, color: '#38bdf8' },
+        { sym: 'N', name: 'Nitrogen', mass: '14.007 u', cat: 'Reactive Nonmetal (Gr 15)', shells: '2, 5', val: 5, n: 7, color: '#38bdf8' },
+        { sym: 'O', name: 'Oxygen', mass: '15.999 u', cat: 'Reactive Nonmetal (Gr 16)', shells: '2, 6', val: 6, n: 8, color: '#38bdf8' },
+        { sym: 'F', name: 'Fluorine', mass: '18.998 u', cat: 'Halogen (Gr 17)', shells: '2, 7', val: 7, n: 10, color: '#facc15' },
+        { sym: 'Ne', name: 'Neon', mass: '20.180 u', cat: 'Noble Gas (Gr 18)', shells: '2, 8', val: 8, n: 10, color: '#c084fc' },
+        { sym: 'Na', name: 'Sodium', mass: '22.990 u', cat: 'Alkali Metal (Gr 1)', shells: '2, 8, 1', val: 1, n: 12, color: '#f87171' },
+        { sym: 'Mg', name: 'Magnesium', mass: '24.305 u', cat: 'Alkaline Earth (Gr 2)', shells: '2, 8, 2', val: 2, n: 12, color: '#fb923c' },
+        { sym: 'Al', name: 'Aluminium', mass: '26.982 u', cat: 'Post-Transition Metal (Gr 13)', shells: '2, 8, 3', val: 3, n: 14, color: '#93c5fd' },
+        { sym: 'Si', name: 'Silicon', mass: '28.085 u', cat: 'Metalloid (Gr 14)', shells: '2, 8, 4', val: 4, n: 14, color: '#34d399' },
+        { sym: 'P', name: 'Phosphorus', mass: '30.974 u', cat: 'Reactive Nonmetal (Gr 15)', shells: '2, 8, 5', val: 5, n: 16, color: '#38bdf8' },
+        { sym: 'S', name: 'Sulfur', mass: '32.06 u', cat: 'Reactive Nonmetal (Gr 16)', shells: '2, 8, 6', val: 6, n: 16, color: '#38bdf8' },
+        { sym: 'Cl', name: 'Chlorine', mass: '35.45 u', cat: 'Halogen (Gr 17)', shells: '2, 8, 7', val: 7, n: 18, color: '#facc15' },
+        { sym: 'Ar', name: 'Argon', mass: '39.948 u', cat: 'Noble Gas (Gr 18)', shells: '2, 8, 8', val: 8, n: 22, color: '#c084fc' }
+      ];
+
+      const el = ELEMENTS[z] || ELEMENTS[6];
+
+      // 1. Update Card Texts
+      const cardZ = this.stageSvg.querySelector('#atom-card-z');
+      if (cardZ) cardZ.textContent = String(z);
+
+      const cardSym = this.stageSvg.querySelector('#atom-card-symbol');
+      if (cardSym) {
+        cardSym.textContent = el.sym;
+        cardSym.setAttribute('fill', el.color);
+      }
+
+      const symBg = this.stageSvg.querySelector('#atom-symbol-bg');
+      if (symBg) symBg.setAttribute('stroke', el.color);
+
+      const cardName = this.stageSvg.querySelector('#atom-card-name');
+      if (cardName) cardName.textContent = el.name;
+
+      const cardMass = this.stageSvg.querySelector('#atom-card-mass');
+      if (cardMass) cardMass.textContent = `Atomic Mass: ${el.mass}`;
+
+      const cardShells = this.stageSvg.querySelector('#atom-card-shells');
+      if (cardShells) cardShells.textContent = `Shells: ${el.shells} • Valence: ${el.val}`;
+
+      const cardCat = this.stageSvg.querySelector('#atom-card-cat');
+      if (cardCat) {
+        cardCat.textContent = el.cat;
+        cardCat.setAttribute('fill', el.color);
+      }
+
+      const catPill = this.stageSvg.querySelector('#atom-card-cat-pill');
+      if (catPill) catPill.setAttribute('fill', el.color);
+
+      // 2. Update Top Banner Legend
+      const legendText = this.stageSvg.querySelector('#atom-legend-text');
+      if (legendText) {
+        legendText.textContent = `● ${z} Protons (+) | ● ${el.n} Neutrons (0) | ● ${z} Electrons (-) ➔ ${el.name} (${el.sym}-${Math.round(z + el.n)})`;
+      }
+
+      const kElectrons = Math.min(2, z);
+      const lElectrons = Math.min(8, Math.max(0, z - 2));
+      const mElectrons = Math.min(8, Math.max(0, z - 10));
+      const configText = this.stageSvg.querySelector('#atom-config-text');
+      if (configText) {
+        configText.textContent = `Bohr Shell Distribution: K: ${kElectrons} | L: ${lElectrons} | M: ${mElectrons} (Valence Electrons: ${el.val})`;
+      }
+
+      // 3. Highlight Ribbon Chips
+      const chips = this.stageSvg.querySelectorAll('.atom-elem-chip');
+      chips.forEach(chip => {
+        const cZ = Number(chip.getAttribute('data-z'));
+        const rect = chip.querySelector('rect');
+        const isCurrent = cZ === z;
+        if (rect) {
+          if (isCurrent) {
+            rect.setAttribute('fill', '#0284c7');
+            rect.setAttribute('stroke', '#38bdf8');
+            rect.setAttribute('stroke-width', '2');
+          } else {
+            rect.setAttribute('fill', '#1e293b');
+            rect.setAttribute('stroke', '#334155');
+            rect.setAttribute('stroke-width', '1');
+          }
+        }
+      });
+
+      // 4. Update Particle Displays
+      for (let p = 1; p <= 18; p++) {
+        const pEl = this.stageSvg.querySelector(`#nucleus-p${p}`);
+        if (pEl) pEl.setAttribute('display', p <= z ? 'inline' : 'none');
+        const nEl = this.stageSvg.querySelector(`#nucleus-n${p}`);
+        if (nEl) nEl.setAttribute('display', p <= el.n ? 'inline' : 'none');
+      }
+
+      // 5. Update Electron Displays
+      const e1 = this.stageSvg.querySelector('#atom-e1');
+      if (e1) e1.setAttribute('display', z >= 1 ? 'inline' : 'none');
+      const e2 = this.stageSvg.querySelector('#atom-e2');
+      if (e2) e2.setAttribute('display', z >= 2 ? 'inline' : 'none');
+
+      for (let i = 0; i < 8; i++) {
+        const oe = this.stageSvg.querySelector(`#atom-oe-${i}`);
+        if (oe) oe.setAttribute('display', z >= 3 + i ? 'inline' : 'none');
+        const me = this.stageSvg.querySelector(`#atom-me-${i}`);
+        if (me) me.setAttribute('display', z >= 11 + i ? 'inline' : 'none');
+      }
+
+      // 6. Update M-Shell Rings
+      const rm1 = this.stageSvg.querySelector('#atom-ring-m1');
+      const rm2 = this.stageSvg.querySelector('#atom-ring-m2');
+      if (rm1) rm1.setAttribute('display', z >= 11 ? 'inline' : 'none');
+      if (rm2) rm2.setAttribute('display', z >= 11 ? 'inline' : 'none');
+
+      // 7. Audio sonification tone
+      if (playSound) {
+        const baseFreq = 220 + z * 32;
+        this.playAudioTone(baseFreq, 'sine', 0.04, 0.12);
+      }
+    }
+
+    // =========================================================================
+    // Spelling Bee Championship (KS1 to KS3) Interactive Subsystem
+    // =========================================================================
+    setupSpellingBeeInteractivity() {
+      if (!this.stageSvg) return;
+
+      this._beeWordBank = {
+        KS1: [
+          { word: 'friend', type: 'Noun • Common Exception Word', def: 'A person you know well and regard with affection and trust.', sentence: 'He walked to school with his best friend every morning.', phonics: 'f · r · i · e · n · d', hint: 'Mnemonic: A fri-end is with you to the end!' },
+          { word: 'because', type: 'Conjunction • Phonics Rule', def: 'For the reason that; since.', sentence: 'She stayed inside because it was raining heavily.', phonics: 'be · cause', hint: 'Big Elephants Can Always Understand Small Elephants.' },
+          { word: 'beautiful', type: 'Adjective • Suffix Rule', def: 'Pleasing the senses or mind aesthetically.', sentence: 'The garden was filled with beautiful blooming roses.', phonics: 'beau · ti · ful', hint: "French root 'beau' with suffix '-ful' (only one 'l')." },
+          { word: 'climb', type: 'Verb • Silent Letter', def: 'Go or come up a slope or height.', sentence: 'The children love to climb the tall oak tree in the park.', phonics: 'c · l · i · m · b', hint: "Silent 'b' at the end of the word!" },
+          { word: 'could', type: 'Modal Verb • National Curriculum', def: 'Used to express possibility or past ability.', sentence: 'They could hear the cathedral bells ringing across the town.', phonics: 'c · o · u · l · d', hint: 'O-U-L-D group (Oh U Lucky Duck) matches would and should.' },
+          { word: 'school', type: 'Noun • Greek Root', def: 'An institution for educating children and pupils.', sentence: "St Joseph's is a welcoming and vibrant primary school.", phonics: 's · ch · oo · l', hint: "Spelled with 'ch' for the hard /k/ sound." },
+          { word: 'thought', type: 'Noun/Verb • Trigraph Pattern', def: 'An idea or opinion produced by thinking.', sentence: 'She thought carefully before writing her final answer.', phonics: 'th · ough · t', hint: "Contains the 'ought' trigraph, like brought and bought." },
+          { word: 'water', type: 'Noun • Common Exception', def: 'Clear liquid essential for all plant and animal life.', sentence: 'Remember to drink plenty of fresh water during sports day.', phonics: 'wa · ter', hint: "'a' makes an /aw/ sound following the 'w'." }
+        ],
+        KS2L: [
+          { word: 'accident', type: 'Noun • Statutory Year 3/4', def: 'An unfortunate incident that happens unexpectedly and unintentionally.', sentence: 'He spilled his paint entirely by accident.', phonics: 'ac · ci · dent', hint: "Double 'c': hard /k/ followed by soft /s/ before 'i'." },
+          { word: 'believe', type: 'Verb • Statutory Year 3/4', def: 'Accept that something is true, especially without proof.', sentence: 'We believe kindness makes our whole classroom community thrive.', phonics: 'be · lieve', hint: "'i' before 'e' except after 'c' rule applies here!" },
+          { word: 'calendar', type: 'Noun • Statutory Year 3/4', def: 'A chart or series of pages showing days, weeks, and months.', sentence: 'Mark the upcoming Christmas feast on your school calendar.', phonics: 'cal · en · dar', hint: "Watch out for the ending: it ends in '-ar', not '-er'!" },
+          { word: 'decide', type: 'Verb • Statutory Year 3/4', def: 'Come or bring to a resolution in the mind as a result of consideration.', sentence: 'Take a quiet moment to decide which library book to read.', phonics: 'de · cide', hint: "Soft 'c' followed by split vowel digraph 'i-e'." },
+          { word: 'famous', type: 'Adjective • Statutory Year 3/4', def: 'Known about by many people across nations.', sentence: 'The famous astronomer studied the moons of Jupiter.', phonics: 'fa · mous', hint: "Root 'fame' drops the 'e' before adding suffix '-ous'." },
+          { word: 'grammar', type: 'Noun • Statutory Year 3/4', def: 'The whole system and structure of a language.', sentence: 'Accurate grammar helps you communicate your ideas persuasively.', phonics: 'gram · mar', hint: "Double 'm' and ends in '-ar' (like calendar)!" },
+          { word: 'island', type: 'Noun • Statutory Year 3/4', def: 'A piece of land entirely surrounded by water.', sentence: 'The historic Celtic abbey stood proudly on a tidal island.', phonics: 'is · land', hint: "Silent 's'! From Old English 'igland', influenced by Latin 'insula'." },
+          { word: 'notice', type: 'Verb/Noun • Statutory Year 3/4', def: 'Become aware of or give attention to.', sentence: 'Did you notice the intricate geometric mosaic on the wall?', phonics: 'no · tice', hint: "Ends with '-ice', like practice and service." }
+        ],
+        KS2U: [
+          { word: 'accommodate', type: 'Verb • Statutory Year 5/6', def: 'Provide lodging or sufficient space for; adapt or fit.', sentence: 'The hotel could accommodate up to two hundred wedding guests.', phonics: 'ac · com · mo · date', hint: "Double 'c' AND double 'm' (two cots, two mattresses)!" },
+          { word: 'embarrass', type: 'Verb • Statutory Year 5/6', def: 'Cause someone to feel awkward, self-conscious, or ashamed.', sentence: 'Good leaders never embarrass others when they make a slip.', phonics: 'em · bar · rass', hint: "Double 'r' AND double 's' (two red roses, two sweet smiles)!" },
+          { word: 'hierarchy', type: 'Noun • Statutory Year 5/6', def: 'A system in which members of an organization are ranked by status.', sentence: 'The feudal hierarchy placed the monarch at the very summit.', phonics: 'hier · ar · chy', hint: "From Greek 'hieros' (sacred) + 'arche' (rule). Starts with 'hier-'!" },
+          { word: 'mischievous', type: 'Adjective • Statutory Year 5/6', def: 'Causing or showing a fondness for causing trouble in a playful way.', sentence: 'The mischievous kitten untangled the ball of knitting wool.', phonics: 'mis · chie · vous', hint: "Strictly 3 syllables: 'mis-chuh-vus' (never say or write 'mischievious')!" },
+          { word: 'necessary', type: 'Adjective • Statutory Year 5/6', def: 'Required to be done, achieved, or present; needed; essential.', sentence: 'Consistent practice is necessary to master long division.', phonics: 'nec · es · sary', hint: "One Collar, two Sleeves (one 'c', double 's')!" },
+          { word: 'rhythm', type: 'Noun • Statutory Year 5/6', def: 'A strong, regular repeated pattern of movement or sound.', sentence: 'The orchestra kept a triumphant rhythm throughout the movement.', phonics: 'rhy · thm', hint: 'No conventional vowels except y! (Rhythm Helps Your Two Mice).' },
+          { word: 'privilege', type: 'Noun • Statutory Year 5/6', def: 'A special right, advantage, or immunity granted to a person or group.', sentence: 'It was a distinct privilege to represent our school in the finals.', phonics: 'priv · i · lege', hint: "Ends in '-lege' (not '-ledge') with two 'i' vowels!" },
+          { word: 'conscious', type: 'Adjective • Statutory Year 5/6', def: 'Aware of and responding to one\'s surroundings; deliberate.', sentence: 'She made a conscious effort to include the new student at break.', phonics: 'con · scious', hint: "Latin 'scire' (to know) provides the 'sc' in 'conscious'." }
+        ],
+        KS3: [
+          { word: 'photosynthesis', type: 'Noun • KS3 Science Academic', def: 'The biochemical process by which green plants synthesize glucose using sunlight.', sentence: 'Chloroplasts absorb photons to drive the reactions of photosynthesis.', phonics: 'pho · to · syn · the · sis', hint: "Greek 'photo' (light) + 'syn' (together) + 'thesis' (placing)." },
+          { word: 'parliamentary', type: 'Adjective • KS3 Humanities', def: 'Relating to, enacted by, or suitable for a parliament.', sentence: 'The constitutional reform was passed after intense parliamentary debate.', phonics: 'par · lia · men · ta · ry', hint: "From French 'parler' (to speak); remember the 'ia' in parliament!" },
+          { word: 'conscientious', type: 'Adjective • KS3 English/Etymology', def: 'Wishing to do one\'s work or duty thoroughly and diligently.', sentence: 'A conscientious student checks every science calculation twice.', phonics: 'con · sci · en · tious', hint: "Contains 'sc' in 'consci' followed by '-entious'!" },
+          { word: 'questionnaire', type: 'Noun • KS3 English/French Root', def: 'A set of printed or written questions devised for a survey or study.', sentence: 'Each pupil completed the anonymous pastoral questionnaire.', phonics: 'ques · tion · naire', hint: "Double 'n' before the French suffix '-aire'!" },
+          { word: 'metamorphosis', type: 'Noun • KS3 Biology/Literature', def: 'A change of the form or nature of a thing or person into a completely different one.', sentence: 'The tadpole undergoes a remarkable metamorphosis into an adult frog.', phonics: 'met · a · mor · pho · sis', hint: "Greek 'meta' (change) + 'morphe' (form) + '-osis'." },
+          { word: 'ubiquitous', type: 'Adjective • KS3 Advanced Vocabulary', def: 'Present, appearing, or found everywhere simultaneously.', sentence: 'In the modern era, digital learning tools have become ubiquitous.', phonics: 'u · biq · ui · tous', hint: "From Latin 'ubique' (everywhere) -> 'ubiquit-' + '-ous'." }
+        ]
+      };
+
+      this._beeKeyStage = this._beeKeyStage || 'KS2U';
+      this._beeScore = this._beeScore || 0;
+      this._beeStreak = this._beeStreak || 0;
+      this._beeSpeechRate = this._beeSpeechRate || 0.95;
+      this._beeTypedLetters = [];
+
+      this.renderSpellingBeeKeyboard();
+      this.pickNewSpellingBeeWord(false);
+
+      // Attach physical keyboard listener once
+      if (!this._beeKeyHandler) {
+        this._beeKeyHandler = (e) => {
+          if (!this.stageSvg || !this.stageSvg.querySelector('#bee-root')) return;
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+          const key = e.key;
+          if (/^[a-zA-Z]$/.test(key)) {
+            e.preventDefault();
+            this.handleSpellingBeeAction('bee-press-key', null, key.toUpperCase());
+          } else if (key === 'Backspace') {
+            e.preventDefault();
+            this.handleSpellingBeeAction('bee-backspace');
+          } else if (key === 'Enter') {
+            e.preventDefault();
+            this.handleSpellingBeeAction('bee-submit');
+          } else if (key === 'Escape') {
+            this.handleSpellingBeeAction('bee-clear');
+          }
+        };
+        window.addEventListener('keydown', this._beeKeyHandler);
+      }
+    }
+
+    pickNewSpellingBeeWord(speak = true) {
+      if (!this._beeWordBank) return;
+      const list = this._beeWordBank[this._beeKeyStage] || this._beeWordBank.KS2U;
+      const prevWord = this._beeCurrentWord ? this._beeCurrentWord.word : '';
+      const pool = list.filter(w => w.word !== prevWord);
+      this._beeCurrentWord = (pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : list[0]) || list[0];
+      this._beeTypedLetters = [];
+
+      this.renderSpellingBeeUI();
+      if (speak) {
+        setTimeout(() => this.speakSpellingWord('word'), 150);
+      }
+    }
+
+    renderSpellingBeeKeyboard() {
+      if (!this.stageSvg) return;
+
+      const r1 = this.stageSvg.querySelector('#kb-row-1');
+      if (r1 && !r1.children.length) {
+        const letters1 = ['Q','W','E','R','T','Y','U','I','O','P'];
+        let html1 = '';
+        letters1.forEach((ch, idx) => {
+          const x = idx * 72;
+          html1 += `
+            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
+              <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+              <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
+            </g>
+          `;
+        });
+        r1.innerHTML = html1;
+      }
+
+      const r2 = this.stageSvg.querySelector('#kb-row-2');
+      if (r2 && !r2.children.length) {
+        const letters2 = ['A','S','D','F','G','H','J','K','L'];
+        let html2 = '';
+        letters2.forEach((ch, idx) => {
+          const x = idx * 72;
+          html2 += `
+            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
+              <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+              <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
+            </g>
+          `;
+        });
+        r2.innerHTML = html2;
+      }
+
+      const r3 = this.stageSvg.querySelector('#kb-row-3-letters');
+      if (r3 && !r3.children.length) {
+        const letters3 = ['Z','X','C','V','B','N','M'];
+        let html3 = '';
+        letters3.forEach((ch, idx) => {
+          const x = idx * 66;
+          html3 += `
+            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
+              <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+              <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
+            </g>
+          `;
+        });
+        r3.innerHTML = html3;
+      }
+    }
+
+    renderSpellingBeeUI() {
+      if (!this.stageSvg || !this._beeCurrentWord) return;
+      const w = this._beeCurrentWord;
+
+      // 1. Key Stage Buttons Highlight
+      const ksBtns = this.stageSvg.querySelectorAll('.bee-ks-btn');
+      ksBtns.forEach(btn => {
+        const ksVal = btn.getAttribute('data-ks');
+        const isActive = ksVal === this._beeKeyStage;
+        const rect = btn.querySelector('rect');
+        const text = btn.querySelector('text');
+        if (rect) {
+          rect.setAttribute('fill', isActive ? '#eab308' : '#1e293b');
+          rect.setAttribute('stroke', isActive ? '#facc15' : '#334155');
+          rect.setAttribute('stroke-width', isActive ? '1.5' : '1');
+        }
+        if (text) {
+          text.setAttribute('fill', isActive ? '#0f172a' : '#cbd5e1');
+          text.setAttribute('font-weight', isActive ? '900' : '800');
+        }
+      });
+
+      // 2. Score & Streak Displays
+      const scoreTxt = this.stageSvg.querySelector('#bee-score-txt');
+      if (scoreTxt) scoreTxt.textContent = `Score: ${this._beeScore || 0}`;
+
+      const streakTxt = this.stageSvg.querySelector('#bee-streak-txt');
+      if (streakTxt) streakTxt.textContent = `🍯 Streak: ${this._beeStreak || 0}`;
+
+      // 3. Clue & Definition Deck
+      const typeEl = this.stageSvg.querySelector('#bee-clue-type');
+      if (typeEl) typeEl.textContent = w.type;
+
+      const defEl = this.stageSvg.querySelector('#bee-clue-definition');
+      if (defEl) defEl.textContent = `"${w.def}"`;
+
+      const sentEl = this.stageSvg.querySelector('#bee-clue-sentence-preview');
+      if (sentEl) {
+        const blanked = w.sentence.replace(new RegExp(w.word, 'gi'), '________');
+        sentEl.textContent = `Sentence: "${blanked}"`;
+      }
+
+      const lCountEl = this.stageSvg.querySelector('#bee-letter-count');
+      if (lCountEl) lCountEl.textContent = `${w.word.length} Letters`;
+
+      const sCountEl = this.stageSvg.querySelector('#bee-syllable-count');
+      if (sCountEl) {
+        const syls = w.phonics.split('·').length;
+        sCountEl.textContent = `${syls} Syllables`;
+      }
+
+      // 4. Feedback Banner reset
+      const fb = this.stageSvg.querySelector('#bee-feedback-banner');
+      if (fb) fb.style.display = 'none';
+
+      // 5. Honeycomb Streak Meter (5 cells)
+      for (let c = 1; c <= 5; c++) {
+        const cell = this.stageSvg.querySelector(`#bee-cell-${c}`);
+        if (cell) {
+          const isFilled = (this._beeStreak || 0) >= c;
+          cell.setAttribute('fill', isFilled ? '#facc15' : '#1e293b');
+          cell.setAttribute('filter', isFilled ? 'url(#bee-amber-glow)' : '');
+        }
+      }
+
+      // 6. Render Letter Slots
+      this.renderSpellingBeeLetterSlots();
+    }
+
+    renderSpellingBeeLetterSlots() {
+      if (!this.stageSvg || !this._beeCurrentWord) return;
+      const slotsRoot = this.stageSvg.querySelector('#bee-letter-slots');
+      if (!slotsRoot) return;
+
+      const targetLen = this._beeCurrentWord.word.length;
+      const typed = this._beeTypedLetters || [];
+      const totalAvailW = 740;
+      const slotW = Math.max(28, Math.min(46, Math.floor((totalAvailW - (targetLen - 1) * 6) / targetLen)));
+      const gap = 6;
+      const totalRowW = targetLen * slotW + (targetLen - 1) * gap;
+      const startX = Math.max(0, Math.floor((totalAvailW - totalRowW) / 2));
+
+      let html = '';
+      for (let i = 0; i < targetLen; i++) {
+        const x = startX + i * (slotW + gap);
+        const letter = typed[i] || '';
+        const isCurrent = i === typed.length;
+        const isFilled = i < typed.length;
+
+        const fill = isFilled ? '#1e293b' : (isCurrent ? '#0f172a' : '#090d16');
+        const stroke = isFilled ? '#eab308' : (isCurrent ? '#38bdf8' : '#334155');
+        const strokeWidth = isFilled || isCurrent ? '1.8' : '1';
+        const dash = isCurrent ? 'stroke-dasharray="3 2"' : '';
+
+        html += `
+          <g transform="translate(${x}, 6)">
+            <rect width="${slotW}" height="42" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${dash} />
+            <text x="${slotW / 2}" y="28" fill="${isFilled ? '#ffffff' : '#475569'}" font-size="${slotW > 36 ? '20' : '16'}" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">
+              ${letter}
+            </text>
+          </g>
+        `;
+      }
+
+      slotsRoot.innerHTML = html;
+    }
+
+    handleSpellingBeeAction(action, targetNode, extraData) {
+      if (action === 'bee-set-ks') {
+        const ks = targetNode ? (targetNode.getAttribute('data-ks') || targetNode.closest('[data-ks]')?.getAttribute('data-ks')) : 'KS2U';
+        if (ks) {
+          this._beeKeyStage = ks;
+          this.pickNewSpellingBeeWord(true);
+          this.playAudioTone(440, 'triangle', 0.08);
+        }
+        return;
+      }
+
+      if (action === 'bee-speak-word') {
+        this.speakSpellingWord('word');
+        return;
+      }
+
+      if (action === 'bee-speak-sentence') {
+        this.speakSpellingWord('sentence');
+        return;
+      }
+
+      if (action === 'bee-speak-phonics') {
+        this.speakSpellingWord('phonics');
+        return;
+      }
+
+      if (action === 'bee-hint') {
+        this.speakSpellingWord('hint');
+        const fb = this.stageSvg.querySelector('#bee-feedback-banner');
+        if (fb && this._beeCurrentWord) {
+          fb.textContent = `💡 Hint: ${this._beeCurrentWord.hint}`;
+          fb.setAttribute('fill', '#c084fc');
+          fb.style.display = 'block';
+        }
+        return;
+      }
+
+      if (action === 'bee-skip') {
+        this._beeStreak = 0;
+        this.pickNewSpellingBeeWord(true);
+        this.playAudioTone(330, 'sine', 0.08);
+        return;
+      }
+
+      if (action === 'bee-toggle-speed') {
+        this._beeSpeechRate = this._beeSpeechRate >= 1.0 ? 0.75 : 1.0;
+        const lbl = this.stageSvg.querySelector('#bee-speed-lbl');
+        if (lbl) lbl.textContent = `Speed: ${this._beeSpeechRate.toFixed(2)}× ${this._beeSpeechRate < 1 ? 'Slow' : 'Normal'}`;
+        this.playAudioTone(520, 'sine', 0.05);
+        this.speakSpellingWord('word');
+        return;
+      }
+
+      if (action === 'bee-press-key') {
+        const key = extraData || (targetNode ? (targetNode.getAttribute('data-key') || targetNode.closest('[data-key]')?.getAttribute('data-key')) : '');
+        if (key && this._beeCurrentWord) {
+          if (this._beeTypedLetters.length < this._beeCurrentWord.word.length) {
+            this._beeTypedLetters.push(key.toUpperCase());
+            this.renderSpellingBeeLetterSlots();
+            this.playAudioTone(380 + this._beeTypedLetters.length * 28, 'sine', 0.03, 0.06);
+          }
+        }
+        return;
+      }
+
+      if (action === 'bee-backspace') {
+        if (this._beeTypedLetters.length > 0) {
+          this._beeTypedLetters.pop();
+          this.renderSpellingBeeLetterSlots();
+          this.playAudioTone(280, 'sine', 0.04, 0.06);
+        }
+        return;
+      }
+
+      if (action === 'bee-clear') {
+        this._beeTypedLetters = [];
+        this.renderSpellingBeeLetterSlots();
+        this.playAudioTone(240, 'triangle', 0.05);
+        return;
+      }
+
+      if (action === 'bee-submit') {
+        this.checkSpellingBeeAnswer();
+        return;
+      }
+    }
+
+    checkSpellingBeeAnswer() {
+      if (!this._beeCurrentWord) return;
+      const target = this._beeCurrentWord.word.trim().toLowerCase();
+      const entered = (this._beeTypedLetters || []).join('').trim().toLowerCase();
+      const fb = this.stageSvg.querySelector('#bee-feedback-banner');
+
+      if (entered === target) {
+        // Correct Answer!
+        const earned = 20 + (this._beeStreak || 0) * 5;
+        this._beeScore = (this._beeScore || 0) + earned;
+        this._beeStreak = (this._beeStreak || 0) + 1;
+
+        if (fb) {
+          fb.textContent = `🌟 Brilliant! "${this._beeCurrentWord.word}" is spelled correctly! +${earned} Points!`;
+          fb.setAttribute('fill', '#34d399');
+          fb.style.display = 'block';
+        }
+
+        // Celebratory Audio Fanfare
+        this.playAudioTone(523.25, 'sine', 0.1, 0.2);
+        setTimeout(() => this.playAudioTone(659.25, 'sine', 0.12, 0.2), 70);
+        setTimeout(() => this.playAudioTone(783.99, 'sine', 0.14, 0.2), 140);
+        setTimeout(() => this.playAudioTone(1046.50, 'sine', 0.18, 0.35), 220);
+
+        this.renderSpellingBeeUI();
+
+        // Advance to next word
+        setTimeout(() => {
+          this.pickNewSpellingBeeWord(true);
+        }, 1300);
+      } else {
+        // Misspelled
+        this._beeStreak = 0;
+        if (fb) {
+          fb.textContent = `Almost! Target spelling: "${this._beeCurrentWord.word}" (${this._beeCurrentWord.phonics}). Try again!`;
+          fb.setAttribute('fill', '#f87171');
+          fb.style.display = 'block';
+        }
+
+        this.playAudioTone(220, 'sawtooth', 0.12, 0.2);
+        this.renderSpellingBeeUI();
+      }
+    }
+
+    speakSpellingWord(type = 'word') {
+      if (typeof window === 'undefined') return;
+      const wordObj = this._beeCurrentWord;
+      if (!wordObj) return;
+
+      let textToSpeak = '';
+      if (type === 'word') {
+        textToSpeak = wordObj.word;
+      } else if (type === 'sentence') {
+        textToSpeak = wordObj.sentence;
+      } else if (type === 'phonics') {
+        textToSpeak = wordObj.phonics.replace(/·/g, ', ');
+      } else if (type === 'hint') {
+        textToSpeak = wordObj.hint;
+      }
+
+      if ('speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(textToSpeak);
+          utter.rate = this._beeSpeechRate || 0.95;
+          utter.pitch = 1.05;
+          const voices = window.speechSynthesis.getVoices();
+          const gbVoice = voices.find(v => v.lang.startsWith('en-GB') || v.lang.startsWith('en_GB'));
+          if (gbVoice) utter.voice = gbVoice;
+          else utter.lang = 'en-GB';
+          window.speechSynthesis.speak(utter);
+        } catch {}
+      }
+
+      this.playAudioTone(type === 'word' ? 523.25 : 440, 'sine', 0.06, 0.12);
     }
   }
 

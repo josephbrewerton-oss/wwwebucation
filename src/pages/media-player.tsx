@@ -414,7 +414,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                 </optgroup>
                 <optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
                   {cartridges
-                    .filter((c) => (c.type === 'App' || (!c.type && ['phonics-lab', 'languages', 'fish-tank'].includes(c.id))) && c.source === 'builtin')
+                    .filter((c) => (c.type === 'App' || (!c.type && ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee'].includes(c.id))) && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
                         {c.icon} {c.title} ({c.stage})

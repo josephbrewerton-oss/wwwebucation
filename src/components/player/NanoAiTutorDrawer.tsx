@@ -150,6 +150,30 @@ export const NanoAiTutorDrawer: React.FC<NanoAiTutorDrawerProps> = ({
           'What does the numerator vs denominator represent geometrically?',
           'How do equivalent fractions preserve identical area?',
         ];
+      case 'spelling-bee':
+        return [
+          'What is the etymology and Latin origin of this statutory spelling?',
+          'Explain the phonics rule for words ending in -cious vs -tious',
+          'Give me a mnemonic to remember the spelling of accommodation and embarrass',
+        ];
+      case 'atom':
+        return [
+          'How does the Bohr electron shell formula 2n² determine orbital capacities?',
+          'Why does increasing atomic number (Z) change an element’s chemical family?',
+          'Explain the difference between atomic number and mass number',
+        ];
+      case 'times-tables':
+        return [
+          'Explain how the distributive property 7×8 = (7×5)+(7×3) simplifies mental arithmetic',
+          'Why does rotating a 2D array by 90° prove the commutative law a×b = b×a?',
+          'What patterns emerge on the 100-square when skip counting by 9s?',
+        ];
+      case 'solar-system':
+        return [
+          'Why do outer planets like Neptune take vastly longer to orbit than Mercury?',
+          'Explain Kepler’s 3rd Law of planetary motion simply',
+          'What are the key Top Trumps differences between gas giants and rocky planets?',
+        ];
       default:
         return [
           'Explain the physics and math principles shown in this lab',

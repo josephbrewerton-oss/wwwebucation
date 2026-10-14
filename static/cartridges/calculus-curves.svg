@@ -1,6 +1,6 @@
 <svg id="stage-svg" viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16;">
   <defs>
-    <!-- Curve Glow & Gradients -->
+    <!-- Curve Glow &amp; Gradients -->
     <linearGradient id="curve-gradient" x1="0" y1="0" x2="1" y2="0">
       <stop offset="0%" stop-color="#38bdf8"/>
       <stop offset="50%" stop-color="#818cf8"/>
@@ -10,6 +10,13 @@
       <stop offset="0%" stop-color="rgba(34, 197, 94, 0.45)"/>
       <stop offset="100%" stop-color="rgba(34, 197, 94, 0.08)"/>
     </linearGradient>
+    <filter id="glow-tangent" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
   <!-- Background Canvas -->
@@ -71,7 +78,7 @@
     <!-- Tangent Slope Line dy/dx -->
     <g id="tangent-assembly" transform="translate(300, 180)">
       <!-- Tangent Extended Line -->
-      <line id="tangent-line" x1="-90" y1="45" x2="90" y2="-45" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" filter="url(#ast-glow-red)"/>
+      <line id="tangent-line" x1="-90" y1="45" x2="90" y2="-45" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" filter="url(#glow-tangent)"/>
       <!-- Normal Line (Perpendicular) -->
       <line id="normal-line" x1="-30" y1="-60" x2="30" y2="60" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 4" opacity="0.6"/>
       <!-- Rise/Run Triangle -->

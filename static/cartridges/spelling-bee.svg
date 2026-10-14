@@ -1,0 +1,242 @@
+<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Radial Warm Glow -->
+    <radialGradient id="bee-bg-grad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#1e1b4b" stop-opacity="0.75" />
+      <stop offset="50%" stop-color="#0f172a" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Honey Gold Gradient for Highlights -->
+    <linearGradient id="bee-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="40%" stop-color="#facc15" />
+      <stop offset="85%" stop-color="#eab308" />
+      <stop offset="100%" stop-color="#ca8a04" />
+    </linearGradient>
+
+    <!-- Amber Glow Filter -->
+    <filter id="bee-amber-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Honeycomb Hexagon Definition -->
+    <polygon id="bee-hex-cell" points="14,0 28,8 28,24 14,32 0,24 0,8" />
+  </defs>
+
+  <!-- Deep Cosmic Canvas -->
+  <rect width="800" height="480" fill="url(#bee-bg-grad)" />
+
+  <!-- Root Subsystem Container -->
+  <g id="bee-root">
+
+    <!-- Top Header Bar (Y=10 to Y=54) -->
+    <g id="bee-header" transform="translate(16, 10)">
+      <rect width="768" height="44" rx="10" fill="#0b1120" fill-opacity="0.92" stroke="#334155" stroke-width="1.2" />
+
+      <!-- Title & Mascot -->
+      <text x="16" y="27" fill="#facc15" font-size="14" font-weight="900" font-family="system-ui, sans-serif">
+        🐝 SPELLING BEE
+      </text>
+      <text x="142" y="27" fill="#94a3b8" font-size="11" font-weight="700" font-family="system-ui, sans-serif">
+        UK National Curriculum
+      </text>
+
+      <!-- Key Stage Switcher Buttons -->
+      <g transform="translate(290, 6)">
+        <!-- KS1 -->
+        <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS1" cursor="pointer" transform="translate(0, 0)">
+          <rect width="66" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text x="33" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS1 (Y1/2)</text>
+        </g>
+        <!-- KS2 Lower -->
+        <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS2L" cursor="pointer" transform="translate(72, 0)">
+          <rect width="72" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text x="36" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS2L (Y3/4)</text>
+        </g>
+        <!-- KS2 Upper (Active by default) -->
+        <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS2U" cursor="pointer" transform="translate(150, 0)">
+          <rect width="72" height="32" rx="6" fill="#eab308" stroke="#facc15" stroke-width="1.5" />
+          <text x="36" y="20" fill="#0f172a" font-size="11" font-weight="900" text-anchor="middle">KS2U (Y5/6)</text>
+        </g>
+        <!-- KS3 Academic -->
+        <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS3" cursor="pointer" transform="translate(228, 0)">
+          <rect width="70" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text x="35" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS3 (Y7-9)</text>
+        </g>
+      </g>
+
+      <!-- Telemetry Counters: Score & Streak -->
+      <g transform="translate(605, 8)">
+        <rect width="150" height="28" rx="6" fill="#1e293b" stroke="#ca8a04" stroke-width="1" />
+        <text id="bee-score-txt" x="42" y="19" fill="#facc15" font-size="11" font-weight="900" text-anchor="middle">Score: 0</text>
+        <line x1="82" y1="4" x2="82" y2="24" stroke="#475569" stroke-width="1" />
+        <text id="bee-streak-txt" x="116" y="19" fill="#fbbf24" font-size="11" font-weight="800" text-anchor="middle">🍯 Streak: 0</text>
+      </g>
+    </g>
+
+    <!-- Main Word Prompt & Audio Action Arena (Y=62 to Y=196) -->
+    <g id="bee-prompt-stage" transform="translate(16, 62)">
+      <rect width="768" height="136" rx="12" fill="#0b1120" fill-opacity="0.95" stroke="#475569" stroke-width="1.2" />
+
+      <!-- Left Column: Audio Trigger Control Deck -->
+      <g transform="translate(16, 14)">
+        <!-- 1. Pronounce Word (Primary Hero Button) -->
+        <g class="bee-audio-btn" data-action="bee-speak-word" cursor="pointer" transform="translate(0, 0)">
+          <rect width="180" height="34" rx="8" fill="#eab308" stroke="#facc15" stroke-width="1.5" />
+          <text x="90" y="22" fill="#0f172a" font-size="12" font-weight="900" text-anchor="middle">
+            🔊 Pronounce Word
+          </text>
+        </g>
+
+        <!-- 2. Example Sentence -->
+        <g class="bee-audio-btn" data-action="bee-speak-sentence" cursor="pointer" transform="translate(0, 40)">
+          <rect width="180" height="30" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1" />
+          <text x="90" y="19" fill="#e2e8f0" font-size="11" font-weight="700" text-anchor="middle">
+            📖 Say in a Sentence
+          </text>
+        </g>
+
+        <!-- 3. Syllable / Phonics Audio Breakdown -->
+        <g class="bee-audio-btn" data-action="bee-speak-phonics" cursor="pointer" transform="translate(0, 76)">
+          <rect width="180" height="30" rx="6" fill="#1e293b" stroke="#64748b" stroke-width="1" />
+          <text x="90" y="19" fill="#e2e8f0" font-size="11" font-weight="700" text-anchor="middle">
+            🧩 Phonics Syllables
+          </text>
+        </g>
+      </g>
+
+      <!-- Right Column: Clue Definition & Grammatical Properties Deck -->
+      <g transform="translate(212, 14)">
+        <!-- Definition Box -->
+        <rect width="540" height="74" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        
+        <text id="bee-clue-type" x="14" y="20" fill="#38bdf8" font-size="10" font-weight="800" text-transform="uppercase">
+          VERB • STATUTORY NATIONAL CURRICULUM
+        </text>
+
+        <text id="bee-clue-definition" x="14" y="42" fill="#f8fafc" font-size="13" font-weight="700" font-family="system-ui, sans-serif">
+          "To provide lodging or sufficient space for; to adapt or make room for."
+        </text>
+
+        <text id="bee-clue-sentence-preview" x="14" y="62" fill="#94a3b8" font-size="11" font-style="italic">
+          Sentence: "The hotel could ________ up to two hundred wedding guests."
+        </text>
+
+        <!-- Word Telemetry Badges -->
+        <g transform="translate(0, 82)">
+          <rect width="115" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="bee-letter-count" x="57" y="16" fill="#facc15" font-size="10.5" font-weight="800" text-anchor="middle">11 Letters</text>
+
+          <rect x="122" y="0" width="130" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="bee-syllable-count" x="187" y="16" fill="#38bdf8" font-size="10.5" font-weight="800" text-anchor="middle">4 Syllables</text>
+
+          <!-- Origin / Etymology Hint Pill -->
+          <g class="bee-hint-btn" data-action="bee-hint" cursor="pointer" transform="translate(260, 0)">
+            <rect width="140" height="24" rx="5" fill="#312e81" stroke="#6366f1" stroke-width="1" />
+            <text x="70" y="16" fill="#c7d2fe" font-size="10.5" font-weight="800" text-anchor="middle">💡 Etymology Hint</text>
+          </g>
+
+          <!-- Skip / Next Word Button -->
+          <g class="bee-skip-btn" data-action="bee-skip" cursor="pointer" transform="translate(410, 0)">
+            <rect width="130" height="24" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1" />
+            <text x="65" y="16" fill="#cbd5e1" font-size="10.5" font-weight="700" text-anchor="middle">⏭️ Skip Word</text>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- Word Orthography Letters Construction Stage (Y=206 to Y=272) -->
+    <g id="bee-letter-assembly" transform="translate(16, 206)">
+      <rect width="768" height="66" rx="10" fill="#0b1120" fill-opacity="0.94" stroke="#ca8a04" stroke-width="1.5" />
+
+      <!-- Letter Display Slots Root (Populated Dynamically by JS Engine) -->
+      <g id="bee-letter-slots" transform="translate(14, 11)">
+        <!-- Placeholder fallback letters -->
+        <text id="bee-slots-empty-hint" x="370" y="30" fill="#64748b" font-size="13" font-weight="600" text-anchor="middle" font-style="italic">
+          Click the letter tiles below or type on your keyboard...
+        </text>
+      </g>
+
+      <!-- Feedback / Result Banner Overlay -->
+      <text id="bee-feedback-banner" x="384" y="58" fill="#34d399" font-size="11.5" font-weight="800" text-anchor="middle" display="none">
+        🌟 Brilliant! +20 Points • Spelling Mastered!
+      </text>
+    </g>
+
+    <!-- Interactive Letter Keyboard / Touch Tray (Y=280 to Y=424) -->
+    <g id="bee-keyboard-tray" transform="translate(16, 280)">
+      <rect width="768" height="142" rx="12" fill="#0f172a" fill-opacity="0.92" stroke="#334155" stroke-width="1.2" />
+
+      <!-- Keyboard Row 1: Q W E R T Y U I O P -->
+      <g id="kb-row-1" transform="translate(24, 12)">
+        <!-- Rendered with 10 standard key buttons -->
+      </g>
+
+      <!-- Keyboard Row 2: A S D F G H J K L -->
+      <g id="kb-row-2" transform="translate(58, 52)">
+        <!-- Rendered with 9 standard key buttons -->
+      </g>
+
+      <!-- Keyboard Row 3: Backspace, Z X C V B N M, Clear, Submit -->
+      <g id="kb-row-3" transform="translate(24, 92)">
+        <!-- Backspace Button -->
+        <g class="bee-key-btn" data-action="bee-backspace" cursor="pointer" transform="translate(0, 0)">
+          <rect width="84" height="36" rx="6" fill="#334155" stroke="#64748b" stroke-width="1" />
+          <text x="42" y="23" fill="#ffffff" font-size="12" font-weight="800" text-anchor="middle">⌫ Delete</text>
+        </g>
+
+        <!-- Letters Z to M (translate X starts at 92) -->
+        <g id="kb-row-3-letters" transform="translate(92, 0)">
+          <!-- Rendered by JS or default keys -->
+        </g>
+
+        <!-- Clear Button -->
+        <g class="bee-key-btn" data-action="bee-clear" cursor="pointer" transform="translate(562, 0)">
+          <rect width="70" height="36" rx="6" fill="#334155" stroke="#64748b" stroke-width="1" />
+          <text x="35" y="23" fill="#cbd5e1" font-size="11.5" font-weight="800" text-anchor="middle">↺ Clear</text>
+        </g>
+
+        <!-- Submit Button (Hero Action) -->
+        <g class="bee-key-btn" data-action="bee-submit" cursor="pointer" transform="translate(640, 0)">
+          <rect width="80" height="36" rx="6" fill="#16a34a" stroke="#22c55e" stroke-width="1.5" />
+          <text x="40" y="23" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle">✨ Check</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Bottom Honeycomb Streak Meter & Audio Status (Y=428 to Y=474) -->
+    <g id="bee-footer" transform="translate(16, 430)">
+      <rect width="768" height="42" rx="8" fill="#0b1120" fill-opacity="0.92" stroke="#334155" stroke-width="1" />
+
+      <!-- Honeycomb Hexagonal Streak Cells -->
+      <g transform="translate(18, 5)">
+        <text x="0" y="22" fill="#facc15" font-size="11" font-weight="800">Honey Cells:</text>
+        <!-- 5 Honeycomb cells -->
+        <g transform="translate(82, 0)">
+          <use id="bee-cell-1" href="#bee-hex-cell" x="0" y="0" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+          <use id="bee-cell-2" href="#bee-hex-cell" x="32" y="0" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+          <use id="bee-cell-3" href="#bee-hex-cell" x="64" y="0" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+          <use id="bee-cell-4" href="#bee-hex-cell" x="96" y="0" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+          <use id="bee-cell-5" href="#bee-hex-cell" x="128" y="0" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+        </g>
+      </g>
+
+      <!-- Speech Rate Speed Toggle -->
+      <g class="bee-speed-toggle" data-action="bee-toggle-speed" cursor="pointer" transform="translate(320, 7)">
+        <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+        <text id="bee-speed-lbl" x="65" y="18" fill="#cbd5e1" font-size="10.5" font-weight="700" text-anchor="middle">Speed: 1.0× Normal</text>
+      </g>
+
+      <!-- Keyboard Shortcut Helper -->
+      <text x="750" y="26" fill="#64748b" font-size="10.5" font-weight="600" text-anchor="end" font-family="system-ui, sans-serif">
+        ⌨️ Tip: You can type letters directly with your computer keyboard &amp; press Enter!
+      </text>
+    </g>
+
+  </g>
+</svg>

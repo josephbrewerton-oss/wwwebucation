@@ -36,7 +36,7 @@ export function normalizeCartridgeType(rawType, id = '') {
     if (clean === 'app' || clean === 'application' || clean === 'tool' || clean === 'lab') return 'App';
   }
   // Canonical inference based on curriculum purpose
-  const apps = ['phonics-lab', 'languages', 'fish-tank'];
+  const apps = ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee'];
   const slides = [
     'church-tour',
     'photosynthesis',
@@ -44,7 +44,6 @@ export function normalizeCartridgeType(rawType, id = '') {
     'dna-helix',
     'shakespeare',
     'fractions',
-    'times-tables',
     'bodmas'
   ];
   if (apps.includes(id)) return 'App';

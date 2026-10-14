@@ -43,8 +43,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "times-tables",
-    "type": "Slide",
-    "label": "Times Tables: 2D Array & Distributive Splitter",
+    "type": "Sim",
+    "label": "Times Tables: 2× to 12× Array & Distributive Splitter",
     "stage": "KS1/KS2 MATHS"
   },
   {
@@ -130,6 +130,12 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "MFL & Polyglot Studio: Spanish, French & Latin",
     "stage": "KS2/KS3 MFL"
+  },
+  {
+    "id": "spelling-bee",
+    "type": "App",
+    "label": "Spelling Bee Championship: KS1 to KS3 Orthography",
+    "stage": "KS1/KS2/KS3 ENGLISH"
   },
   {
     "id": "altar-anatomy",

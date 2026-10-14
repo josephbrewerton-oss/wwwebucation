@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-13T08:44:18.732Z",
-  "totalScenes": 23,
+  "generatedAt": "2026-10-14T07:43:38.534Z",
+  "totalScenes": 24,
   "inputDirs": [
     "static/player/scenes",
     "static/player/cartridges",
@@ -85,17 +85,17 @@
     },
     {
       "id": "times-tables",
-      "type": "Slide",
-      "title": "Times Tables: 2D Array & Distributive Splitter",
+      "type": "Sim",
+      "title": "Times Tables: 2× to 12× Array & Distributive Splitter",
       "stage": "KS1/KS2 MATHS",
       "duration": 14,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "scenes/times-tables.svg",
       "astFile": "scenes/times-tables.ast",
-      "keyframeCount": 5,
+      "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 7
+      "bindingsCount": 1
     },
     {
       "id": "phonics-lab",
@@ -174,12 +174,12 @@
       "stage": "KS3 SCIENCE",
       "duration": 14,
       "has3D": true,
-      "nodes3DCount": 16,
+      "nodes3DCount": 21,
       "svgFile": "scenes/solar-system.svg",
       "astFile": "scenes/solar-system.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 16
+      "bindingsCount": 21
     },
     {
       "id": "photosynthesis",
@@ -235,7 +235,7 @@
       "astFile": "scenes/atom.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 117
+      "bindingsCount": 123
     },
     {
       "id": "velocity",
@@ -289,6 +289,20 @@
       "nodes3DCount": 0,
       "svgFile": "scenes/languages.svg",
       "astFile": "scenes/languages.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 2
+    },
+    {
+      "id": "spelling-bee",
+      "type": "App",
+      "title": "Spelling Bee Championship: KS1 to KS3 Orthography",
+      "stage": "KS1/KS2/KS3 ENGLISH",
+      "duration": 14,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/spelling-bee.svg",
+      "astFile": "scenes/spelling-bee.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 2
