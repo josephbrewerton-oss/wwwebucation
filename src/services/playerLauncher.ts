@@ -20,7 +20,14 @@ export type VectorPresetId =
   | 'mountain-elevation'
   | 'shakespeare'
   | 'languages'
-  | 'phonics-lab';
+  | 'phonics-lab'
+  | 'spelling-bee'
+  | 'kinetic-gas'
+  | 'electric-circuits'
+  | 'math-fishing'
+  | 'calculus-curves'
+  | 'algebra-balance'
+  | (string & {});
 
 export interface PlayerCheckpointOption {
   prompt: string;

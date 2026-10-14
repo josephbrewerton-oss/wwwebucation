@@ -17,7 +17,8 @@ export type ChallengeType =
   | 'vector-lab'         // Interactive Vector Lab with Socratic Checkpoints
   | 'shakespeare-theatre' // 1599 Globe Theatre, Iambic Scansion & Soliloquy Director
   | 'language-mastery'  // MFL & Polyglot Studio: Phonics, Conjugation & Vocab
-  | 'early-phonics';     // EYFS & KS1 Synthetic Systematic Phonics & Screening Check
+  | 'early-phonics'      // EYFS & KS1 Synthetic Systematic Phonics & Screening Check
+  | 'spelling-bee';      // UK National Curriculum Statutory Orthography & Speech Synthesis
 
 export interface ChallengeMetadata {
   type: ChallengeType;
@@ -161,6 +162,31 @@ export function resolveChallengeForTopic(
       subject: subject || 'English & Early Literacy',
       unit: unit || 'Systematic Synthetic Phonics',
       keyStage: keyStage || 'Key Stage 1 / EYFS',
+    };
+  }
+
+  // 1e. Spelling Bee Championship & National Curriculum Statutory Orthography (KS1 to KS3)
+  if (
+    combined.includes('spelling') ||
+    combined.includes('spelling bee') ||
+    combined.includes('orthography') ||
+    combined.includes('statutory spelling') ||
+    combined.includes('honey streak') ||
+    combined.includes('spelling list') ||
+    combined.includes('trigraph') ||
+    combined.includes('silent letter')
+  ) {
+    return {
+      type: 'spelling-bee',
+      title: 'Spelling Bee Championship: KS1 to KS3 Orthography',
+      badge: 'National Curriculum Orthography & Speech Synthesis',
+      badgeColor: '#eab308',
+      icon: '🐝',
+      description: 'Master statutory spelling lists across Key Stages 1 to 3 with Web Speech API audio pronunciation, interactive letter tiles, and honey streaks.',
+      preset: 'spelling-bee',
+      subject: subject || 'English',
+      unit: unit || 'Orthography & Statutory Spellings',
+      keyStage: keyStage || 'KS1/KS2/KS3',
     };
   }
 

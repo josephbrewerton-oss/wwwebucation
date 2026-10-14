@@ -392,6 +392,56 @@ export default function PracticeLabPage() {
               </div>
             </div>
 
+            {/* Spelling Bee Championship Booster Card */}
+            <div
+              style={{
+                marginTop: '12px',
+                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(161, 98, 7, 0.22) 100%)',
+                border: '1px solid rgba(250, 204, 21, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem' }}>🐝</span>
+                <div>
+                  <span style={{ fontSize: '0.86rem', color: '#fef08a', fontWeight: 700 }}>
+                    Spelling Bee Championship (KS1–KS3):
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
+                    UK National Curriculum statutory spelling lists, speech synthesis pronunciation, touch letter tiles &amp; honey streaks.
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link
+                  to="/player?preset=spelling-bee&mode=game"
+                  style={{
+                    background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
+                    color: '#0f172a',
+                    textDecoration: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    fontSize: '0.8rem',
+                    fontWeight: 900,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)',
+                  }}
+                >
+                  <span>🚀 Launch Spelling Bee</span>
+                  <span>➔</span>
+                </Link>
+              </div>
+            </div>
+
             <ComponentGuard label="NeuralLabCanvas">
               <NeuralLabCanvas
                 initialKeyStage={activeStage}

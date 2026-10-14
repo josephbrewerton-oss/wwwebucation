@@ -59,6 +59,17 @@ export const DEFAULT_CARTRIDGE_PACKAGES: CartridgePackage[] = [
       { id: 'solar-system', title: '🪐 Solar System Orbits', category: 'Astronomy' },
     ],
   },
+  {
+    id: 'english-literacy',
+    title: 'English & Literacy Master Cartridge (4-in-1)',
+    description: 'Spelling Bee Championship, Phonics Lab, Shakespeare Globe Theatre, and Polyglot Languages.',
+    scenes: [
+      { id: 'spelling-bee', title: '🐝 Spelling Bee Championship (KS1–KS3)', category: 'English' },
+      { id: 'phonics-lab', title: '🔤 Early Phonics Sound Buttons (EYFS/KS1)', category: 'Literacy' },
+      { id: 'shakespeare', title: '🎭 Shakespeare Globe Theatre', category: 'Literature' },
+      { id: 'languages', title: '🌍 Polyglot Language Studio', category: 'Languages' },
+    ],
+  },
 ];
 
 export const AVAILABLE_CARTRIDGES: CartridgePackage[] = DEFAULT_CARTRIDGE_PACKAGES;
