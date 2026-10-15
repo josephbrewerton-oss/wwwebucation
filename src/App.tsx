@@ -48,6 +48,8 @@ const ChildSafetyPage = lazyRetry(() => import('./pages/child-safety'));
 const LicensingPage = lazyRetry(() => import('./pages/licensing'));
 const TeacherBeaconPage = lazyRetry(() => import('./pages/teacher-beacon'));
 const MediaPlayerPage = lazyRetry(() => import('./pages/media-player'));
+const PhonicsSuitePage = lazyRetry(() => import('./pages/phonics-suite'));
+const LanguagesSuitePage = lazyRetry(() => import('./pages/languages-suite'));
 const NotFoundPage = lazyRetry(() => import('./pages/not-found'));
 
 export default function App(): React.JSX.Element {
@@ -65,6 +67,11 @@ export default function App(): React.JSX.Element {
             <Route path="media-player" element={<MediaPlayerPage />} />
             <Route path="simulator" element={<MediaPlayerPage />} />
             <Route path="cartridges" element={<MediaPlayerPage />} />
+            <Route path="phonics" element={<PhonicsSuitePage />} />
+            <Route path="early-phonics" element={<PhonicsSuitePage />} />
+            <Route path="languages" element={<LanguagesSuitePage />} />
+            <Route path="mfl" element={<LanguagesSuitePage />} />
+            <Route path="polyglot" element={<LanguagesSuitePage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="curriculum-studio" element={<CurriculumStudioPage />} />
             <Route path="settings" element={<SettingsPage />} />

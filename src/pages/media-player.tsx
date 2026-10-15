@@ -865,6 +865,105 @@ export default function MediaPlayerPage(): React.JSX.Element {
           </button>
         </div>
 
+        {/* Full Sheet Curriculum Suite Callout Banner for Phonics and Languages */}
+        {activePreset === 'phonics-lab' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.22) 0%, rgba(4, 120, 87, 0.35) 100%)',
+              border: '2px solid #059669',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(5, 150, 105, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.6rem' }}>🔤</span>
+              <div>
+                <div style={{ fontWeight: 900, color: '#34d399', fontSize: '0.92rem' }}>
+                  Looking for the Full Phonics Curriculum Teaching Suite?
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '0.8rem', marginTop: '2px' }}>
+                  Complete Phases 2–5 soundboard (44+ sounds), interactive sound button blending mat, Year 1 Alien Words Screening Check &amp; Tricky Words wall.
+                </div>
+              </div>
+            </div>
+            <Link
+              to="/phonics"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: '#059669',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: '0.84rem',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(5, 150, 105, 0.4)',
+              }}
+            >
+              <span>📋 Open Full Phonics Sheet</span>
+              <span>➔</span>
+            </Link>
+          </div>
+        )}
+
+        {activePreset === 'languages' && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.22) 0%, rgba(180, 83, 9, 0.35) 100%)',
+              border: '2px solid #d97706',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(217, 119, 6, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.6rem' }}>🌍</span>
+              <div>
+                <div style={{ fontWeight: 900, color: '#fde68a', fontSize: '0.92rem' }}>
+                  Looking for the Full MFL &amp; Polyglot Language Teaching Suite?
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '0.8rem', marginTop: '2px' }}>
+                  Spanish, French &amp; Latin comparative soundboards, dynamic verb conjugation wheels (Hablar, Comer, Parler, Amare) &amp; Latin root cognate trees.
+                </div>
+              </div>
+            </div>
+            <Link
+              to="/languages"
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: '#d97706',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: '0.84rem',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(217, 119, 6, 0.4)',
+              }}
+            >
+              <span>📋 Open Full Languages Sheet</span>
+              <span>➔</span>
+            </Link>
+          </div>
+        )}
+
         {/* Search Input & Category Filter Pills */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
           <div style={{ position: 'relative' }}>

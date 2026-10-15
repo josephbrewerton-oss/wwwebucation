@@ -675,6 +675,44 @@ export default function LearningZonePage() {
               >
                 <span>✝️</span> Catholic Sanctuary
               </Link>
+              <Link
+                to="/phonics"
+                title="Early Years & KS1 Systematic Synthetic Phonics Teaching Suite"
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  background: '#f0fdf4',
+                  color: '#065f46',
+                  border: '1px solid #a7f3d0',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>🔤</span> Phonics Suite
+              </Link>
+              <Link
+                to="/languages"
+                title="MFL & Polyglot Language Teaching Suite (Spanish, French, Latin)"
+                style={{
+                  padding: '4px 10px',
+                  borderRadius: '6px',
+                  textDecoration: 'none',
+                  background: '#fffbeb',
+                  color: '#92400e',
+                  border: '1px solid #fde68a',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>🌍</span> Languages Suite
+              </Link>
             </div>
 
             {/* Quick Practice shortcut button */}

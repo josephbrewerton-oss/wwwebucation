@@ -40,7 +40,7 @@ const EXPRESS_LESSONS: ExpressLessonItem[] = [
     hook: 'Press the sound buttons for s, a, t, p, i, n and blend your first decodable words.',
     specialTool: {
       label: 'Open Phonics Lab & Soundboard',
-      url: '/player?preset=phonics-lab&mode=game',
+      url: '/phonics',
       icon: '🔤',
     },
   },
@@ -77,7 +77,7 @@ const EXPRESS_LESSONS: ExpressLessonItem[] = [
     hook: 'Practice decoding 40 real and alien pseudo-words with audio feedback and threshold tracking.',
     specialTool: {
       label: 'Launch Screening Check Simulator',
-      url: '/player?preset=phonics-lab&mode=game',
+      url: '/phonics?tab=screening',
       icon: '👾',
     },
   },
@@ -373,9 +373,9 @@ const EXPRESS_LESSONS: ExpressLessonItem[] = [
     lessonTitle: 'Spanish & French Pronunciation & Verb Conjugation',
     hook: 'Listen to native speakers and master regular -ar/-er/-ir verb endings with speech recognition.',
     specialTool: {
-      label: 'Launch MFL Interactive Player',
-      url: '/player?preset=languages&mode=game',
-      icon: '🇪🇸',
+      label: 'Open Modern Languages & Polyglot Studio',
+      url: '/languages',
+      icon: '🌍',
     },
   },
 

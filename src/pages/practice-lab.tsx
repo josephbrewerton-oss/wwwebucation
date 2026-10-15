@@ -321,7 +321,7 @@ export default function PracticeLabPage() {
                 </button>
 
                 <Link
-                  to="/player?preset=languages&mode=game"
+                  to="/languages"
                   style={{
                     background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
                     color: '#ffffff',
@@ -371,7 +371,7 @@ export default function PracticeLabPage() {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <Link
-                  to="/player?preset=phonics-lab&mode=game"
+                  to="/phonics"
                   style={{
                     background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
                     color: '#ffffff',
@@ -386,7 +386,57 @@ export default function PracticeLabPage() {
                     boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)',
                   }}
                 >
-                  <span>🚀 Launch Phonics Lab</span>
+                  <span>🚀 Open Phonics Suite</span>
+                  <span>➔</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* MFL & Polyglot Languages Booster Card */}
+            <div
+              style={{
+                marginTop: '12px',
+                background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(180, 83, 9, 0.22) 100%)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '1.25rem' }}>🌍</span>
+                <div>
+                  <span style={{ fontSize: '0.86rem', color: '#fde68a', fontWeight: 700 }}>
+                    MFL &amp; Polyglot Studio (Spanish, French &amp; Latin):
+                  </span>
+                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
+                    Comparative phonology, verb conjugation paradigms, pro-drop syntax &amp; English etymology cognate trees.
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link
+                  to="/languages"
+                  style={{
+                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                    color: '#ffffff',
+                    textDecoration: 'none',
+                    borderRadius: '8px',
+                    padding: '6px 14px',
+                    fontSize: '0.8rem',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.3)',
+                  }}
+                >
+                  <span>🚀 Open Languages Suite</span>
                   <span>➔</span>
                 </Link>
               </div>

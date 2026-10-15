@@ -252,13 +252,13 @@ export default function PersistentNavbar(): React.JSX.Element {
       desc: 'Parametric curriculum visual models, synchronized narration & 3D simulations',
     },
     {
-      to: '/player?preset=languages&mode=game',
+      to: '/languages',
       icon: '🌍',
       title: 'MFL & Polyglot Studio',
       desc: 'Spanish, French & Latin phonics soundboard, verb wheels & vocab sprints',
     },
     {
-      to: '/player?preset=phonics-lab&mode=game',
+      to: '/phonics',
       icon: '🔤',
       title: 'EYFS & KS1 Phonics Lab',
       desc: 'DfE Phases 2–5 soundboard, sound buttons blending mat & screening check',

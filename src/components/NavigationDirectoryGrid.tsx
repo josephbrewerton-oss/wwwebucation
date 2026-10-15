@@ -32,6 +32,66 @@ export const NavigationDirectoryGrid: React.FC<NavigationDirectoryGridProps> = (
         }}
       >
         <Link
+          to="/phonics"
+          className="stj-card stj-card-interactive"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>🔤</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>EYFS &amp; KS1 Phonics Sounds Suite</div>
+          <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+            DfE Phases 2–5 interactive soundboard, sound buttons blending mat, Alien Words screening check &amp; printable flashcard mats.
+          </p>
+        </Link>
+
+        <Link
+          to="/languages"
+          className="stj-card stj-card-interactive"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>🌍</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>MFL &amp; Polyglot Studio</div>
+          <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+            Spanish, French &amp; Latin comparative phonics, regular/irregular verb conjugation wheels, etymology bridges &amp; speed vocab sprints.
+          </p>
+        </Link>
+
+        <Link
+          to="/catholic-life"
+          className="stj-card stj-card-interactive"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>⛪</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>Catholic Life &amp; Sacraments</div>
+          <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+            18 interactive sanctuaries: 3D Church Tour, Altar Anatomy, Holy Oils, Seven Sacraments, First Communion Lab &amp; Rosary Walk.
+          </p>
+        </Link>
+
+        <Link
+          to="/player"
+          className="stj-card stj-card-interactive"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>🎮</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>AST Vector Simulator &amp; Vault</div>
+          <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+            Zero-bloat Flash-caliber vector simulations, PhET HTML5/JSON/iO ingestion bridge, Smartboard stylus ink &amp; IndexedDB vault.
+          </p>
+        </Link>
+
+        <Link
           to="/practice-lab"
           className="stj-card stj-card-interactive"
           style={{
@@ -62,6 +122,21 @@ export const NavigationDirectoryGrid: React.FC<NavigationDirectoryGridProps> = (
         </Link>
 
         <Link
+          to="/teacher-beacon"
+          className="stj-card stj-card-interactive"
+          style={{
+            display: 'block',
+            textDecoration: 'none',
+          }}
+        >
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>📡</div>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>Teacher Beacon P2P Sync</div>
+          <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
+            Zero-cloud classroom synchronization over local WebRTC data channels for live student progress and lesson broadcast.
+          </p>
+        </Link>
+
+        <Link
           to="/curriculum-studio"
           className="stj-card stj-card-interactive"
           style={{
@@ -69,7 +144,7 @@ export const NavigationDirectoryGrid: React.FC<NavigationDirectoryGridProps> = (
             textDecoration: 'none',
           }}
         >
-          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>🌍</div>
+          <div style={{ fontSize: '1.75rem', marginBottom: '6px' }}>🛠️</div>
           <div style={{ fontWeight: 700, fontSize: '1.05rem', color: 'var(--stj-text)' }}>Curriculum Studio</div>
           <p style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', margin: '4px 0 0 0', lineHeight: 1.4 }}>
             Import custom CSV spreadsheets or activate national syllabi (Kenya, India, Ghana, Philippines).
