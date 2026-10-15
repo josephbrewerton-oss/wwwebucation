@@ -46,6 +46,16 @@
     <priority>0.75</priority>
   </url>
   <url>
+    <loc>/profile</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.75</priority>
+  </url>
+  <url>
+    <loc>/settings</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>/news</loc>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
@@ -77,6 +87,11 @@
   </url>
   <url>
     <loc>/llms-full.txt</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>/sitemap.ast</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>

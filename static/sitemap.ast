@@ -22,7 +22,11 @@
     (:route :id "teacher-beacon" :path "/teacher-beacon" :title "Teacher Whiteboard Beacon" :category "Classroom")
     (:route :id "profile" :path "/profile" :title "Pupil Knowledge Vault" :category "User")
     (:route :id "settings" :path "/settings" :title "Portal Accessibility Settings" :category "Preferences")
-    (:route :id "news" :path "/news" :title "Parish & School Bulletins" :category "Community"))
+    (:route :id "news" :path "/news" :title "Parish & School Bulletins" :category "Community")
+    (:route :id "blog" :path "/blog" :title "Technical & Pedagogical Blog" :category "Community")
+    (:route :id "licensing" :path "/licensing" :title "Dual-Licensing Charter & Covenant" :category "Legal")
+    (:route :id "privacy" :path "/privacy" :title "Sovereign Zero-Cloud Privacy Policy" :category "Legal")
+    (:route :id "child-safety" :path "/child-safety" :title "Child Safety & Safeguarding" :category "Legal"))
 
   (:player
     (:engine :path "/player/ast-engine.js" :runtime "vanilla-js" :budget "<35KB")

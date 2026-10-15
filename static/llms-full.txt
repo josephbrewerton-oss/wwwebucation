@@ -40,7 +40,7 @@
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 17 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of all 24 production vector simulation cartridges.
 - `/player/scenes-config.json` : Timeline keyframes, bilingual subtitles (EN/ES/LA), and pause checkpoints.
 - `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
 - `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
@@ -48,7 +48,7 @@
 
 ---
 
-## 3. Production Curriculum Cartridges (17 Scenes)
+## 3. Production Curriculum Cartridges (24 Scenes)
 
 1. **Calculus Curves (`calculus-curves`)**:
    - Level: GCSE / A-Level Mathematics.
@@ -78,62 +78,97 @@
 6. **Sacred Church Tour (`church-tour`)**:
    - Level: Catholic Life & Religious Education.
    - Core Concepts: Catholic church anatomy, Altar, Tabernacle, Sanctuary Lamp, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Stations of the Cross.
-   - Interactive Elements: 3D perspective camera panning, hotspot information overlays, liturgical vestment colour selector.
+   - Interactive Elements: 3D perspective camera panning, Pedagogical X-Ray discovery tool, sacred architecture audio sonification, pilgrim path tracking, and formative liturgical checkpoints.
 
-7. **Solar System 3D (`solar-system`)**:
+7. **Sacred Altar Anatomy (`altar-anatomy`)**:
+   - Level: Catholic Life & Sacramental Liturgy.
+   - Core Concepts: Consecrated stone Mensa, embedded Altar Stone with Five Sacred Wounds, sealed martyrs' relics, Roman Missal GIRM 117 beeswax candle rules (2/4/6 Sunday/Solemnity, 7 Pontifical), seasonal Antependium paraments, and Credence table vessels.
+   - Interactive Elements: Draggable liturgical candles, parament seasonal color switcher, X-Ray relic exploration, and GIRM rubric checkpoints.
+
+8. **Holy Oils & Sacred Ambry (`holy-oils`)**:
+   - Level: Catholic Life & Sacramental Catechesis.
+   - Core Concepts: The Sacred Ambry cabinet, Chrism Mass consecration, three holy oils: Oleum Infirmorum (OI) for Anointing of the Sick, Oleum Catechumenorum (OC) for Baptismal preparation, and Sanctum Chrisma (SC) perfumed with balsam for Baptism, Confirmation, and Holy Orders.
+   - Interactive Elements: Vessel selection, liturgical Latin inscription inspector, and sacramental application matrix.
+
+9. **Solar System 3D (`solar-system`)**:
    - Level: KS3 Astronomy & Physics.
    - Core Concepts: Heliocentric planetary orbits, Kepler's laws of planetary motion, relative orbital velocities, and 3D inclination angles.
-   - Interactive Elements: Orbital speed slider, 3D tilt camera drag, celestial body focus selector.
+   - Interactive Elements: Orbital speed slider, 3D tilt camera drag, celestial body focus selector, and planet property comparator modal.
 
-8. **Photosynthesis Solar Engine (`photosynthesis`)**:
-   - Level: KS3 Biology.
-   - Core Concepts: Chloroplast structure, thylakoid membrane light-dependent reactions, Calvin cycle, ATP/NADPH synthesis, and glucose production.
-   - Interactive Elements: Light photon intensity slider, carbon dioxide flux toggle, stomata pore aperture control.
+10. **Photosynthesis Solar Engine (`photosynthesis`)**:
+    - Level: KS3 Biology.
+    - Core Concepts: Chloroplast structure, thylakoid membrane light-dependent reactions, Calvin cycle, ATP/NADPH synthesis, and glucose production.
+    - Interactive Elements: Light photon intensity slider, carbon dioxide flux toggle, stomata pore aperture control.
 
-9. **Water Cycle Continuous Engine (`water-cycle`)**:
-   - Level: KS2 Geography & Science.
-   - Core Concepts: Continuous hydrological cycle: solar evaporation, transpiration from flora, condensation into cloud vapor, precipitation, and groundwater percolation.
-   - Interactive Elements: Heat index slider, terrain wind vector slider, cloud accumulation trigger.
+11. **Water Cycle Continuous Engine (`water-cycle`)**:
+    - Level: KS2 Geography & Science.
+    - Core Concepts: Continuous hydrological cycle: solar evaporation, transpiration from flora, condensation into cloud vapor, precipitation, and groundwater percolation.
+    - Interactive Elements: Heat index slider, terrain wind vector slider, cloud accumulation trigger.
 
-10. **Bohr Atom & Electron Shells (`atom`)**:
+12. **Bohr Atom & Electron Shells (`atom`)**:
     - Level: KS3 Chemistry.
     - Core Concepts: Atomic structure, protons, neutrons, electrons, electron shell energy levels ($2, 8, 8$), and periodic table elements (Hydrogen through Argon).
     - Interactive Elements: Element selector, electron addition probe, 3D electron cloud rotation.
 
-11. **Kinematics & Velocity Vectors (`velocity`)**:
+13. **Kinematics & Velocity Vectors (`velocity`)**:
     - Level: KS3 Physics.
     - Core Concepts: Scalar speed vs vector velocity, distance-time graphs, acceleration vectors, and displacement integrals.
     - Interactive Elements: Velocity throttle lever, acceleration curves, real-time graph plotting.
 
-12. **DNA Watson-Crick Double Helix (`dna-helix`)**:
+14. **DNA Watson-Crick Double Helix (`dna-helix`)**:
     - Level: KS3 / KS4 Genetics.
     - Core Concepts: Double helix architecture, complementary base pairing (Adenine-Thymine, Cytosine-Guanine), hydrogen bonds, and sugar-phosphate backbones.
     - Interactive Elements: 3D helical rotation, base pair unzipping slider, mutation inspector.
 
-13. **BODMAS Order of Operations (`bodmas`)**:
+15. **BODMAS Order of Operations (`bodmas`)**:
     - Level: KS2 / KS3 Mathematics.
     - Core Concepts: Arithmetic precedence: Brackets, Orders (indices), Division/Multiplication, Addition/Subtraction.
     - Interactive Elements: Forcefield bracket clamps, step-by-step operand collapsible evaluator.
 
-14. **Phonics Laboratory (`phonics-lab`)**:
+16. **Phonics Laboratory (`phonics-lab`)**:
     - Level: EYFS / KS1 English.
     - Core Concepts: Systematic synthetic phonics, grapheme-to-phoneme correspondence, sound blending buttons, and phoneme manipulation.
     - Interactive Elements: Tap-to-sound buttons, tactile blending slider, procedural audio speech synthesizer.
 
-15. **Times Tables 2D Array (`times-tables`)**:
+17. **Times Tables 2D Array (`times-tables`)**:
     - Level: KS1 / KS2 Mathematics.
     - Core Concepts: Array models of multiplication, distributive property $a \times (b + c) = ab + ac$, and commutativity $a \times b = b \times a$.
     - Interactive Elements: Resizable 2D grid matrix, partition splitters, array highlight modes.
 
-16. **Maths Fishing Number Bonds (`math-fishing`)**:
+18. **Maths Fishing Number Bonds (`math-fishing`)**:
     - Level: KS1 Mathematics.
     - Core Concepts: Number bonds to 10 and 20, addition complements, and part-whole arithmetic models.
     - Interactive Elements: Gamified rod cast, fish complement pairing, score tracking.
 
-17. **Mountain Elevation Trigonometry (`mountain-elevation`)**:
+19. **Mountain Elevation Trigonometry (`mountain-elevation`)**:
     - Level: KS2 / KS3 Geography & Mathematics.
     - Core Concepts: Right-angled trigonometry ($\sin, \cos, \tan$), hypotenuse calculation, clinometer angle measuring, and altitude barometric pressure drops.
     - Interactive Elements: Clinometer angle drag arm, distance base marker, boiling point gauge.
+
+20. **Algebra Balance Lab (`algebra-balance`)**:
+    - Level: KS2 / KS3 Mathematics.
+    - Core Concepts: Linear equations balance, algebraic weight balancing, inverse operations, and zero-pair eliminations.
+    - Interactive Elements: Draggable variable weights and constant blocks, balancing pan beam physics, equation solver.
+
+21. **Fraction Wall & Slicing (`fractions`)**:
+    - Level: KS2 Mathematics.
+    - Core Concepts: Fractional equivalencies ($1/2 = 2/4 = 4/8$), numerator and denominator relationships, and dynamic interval partition slicing.
+    - Interactive Elements: Interactive fraction wall layer toggles, slice comparator slider, decimal/percentage conversion preview.
+
+22. **Shakespeare Globe Theatre (`shakespeare`)**:
+    - Level: KS3 / KS4 English Literature.
+    - Core Concepts: Elizabethan playhouse architecture, apron stage, the heavens, trapdoor 'hell', iambic pentameter rhythm, and dramatic soliloquies.
+    - Interactive Elements: Stage viewpoint camera switcher, meter rhythm pulse, dramatic soliloquy actor prompt.
+
+23. **Modern Foreign Languages (`languages`)**:
+    - Level: KS2 / KS3 MFL (French & Spanish).
+    - Core Concepts: Conversational vocabulary, pronoun and verb conjugation matrices, and phonetic pronunciation guide.
+    - Interactive Elements: Language toggle, interactive conversation dialogue tree, procedural text-to-speech accent synthesis.
+
+24. **Spelling Bee Arena (`spelling-bee`)**:
+    - Level: KS1 / KS2 / KS3 English.
+    - Core Concepts: National Curriculum tiered spelling lists, etymology root words, silent letters, and morphology patterns.
+    - Interactive Elements: Difficulty tiers, audio-assisted letter bank input, streak scoring, and misconception hints.
 
 ---
 
