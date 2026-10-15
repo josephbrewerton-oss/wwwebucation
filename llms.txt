@@ -26,6 +26,7 @@
 - **Micro-Payload Vector Substrate**: AST Vector Media Player (`/static/player/ast-engine.js`) replaces heavy 50–100 MB video streaming with 3.5 KB – 68 KB declarative S-Expression AST vector cartridges. Sub-15 ms boot time, < 8 MB RAM footprint.
 - **Smartboard & Stylus Pen Overlay**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
 - **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset Web Audio synthesis.
+- **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
 - **Humanitarian Air-Gap Bundling**: Single-file HTML offline bundles (`exportAirgapHtmlBundle.ts`) enabling full academic curriculum delivery on flash drives in off-grid classrooms with zero internet.
 
 ## Production AST Vector Simulations (24 Curriculum Cartridges)

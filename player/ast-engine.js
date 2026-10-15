@@ -4756,7 +4756,16 @@
                     rawBindings: (parsed && parsed.bindings) || []
                   };
                   const loaded = this.loadSceneData(scene, shouldPlay);
-                  this.emit('fileloaded', { filename, type: 'phet-transpiled', id: scene.id, metadata: result.metadata });
+                  this.emit('fileloaded', {
+                    filename,
+                    type: 'phet-transpiled',
+                    id: scene.id,
+                    title: scene.title,
+                    stage: scene.stage,
+                    metadata: result.metadata,
+                    svgMarkup: result.svgText,
+                    astSource: result.astSource
+                  });
                   resolve(loaded);
                 } else {
                   throw new Error(`PhET bundle detected but ASTPhetBridge is not loaded.`);
