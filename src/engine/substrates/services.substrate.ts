@@ -1,5 +1,5 @@
 // Auto-generated Domain Substrate: SERVICES
-export const SERVICES_AST_STRING = ";; Domain AST Manifest: services\n(:domain-substrate :services\n  (:symbol \"FOLDER_MANIFEST\" :from \"hooks/engine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: 1787937755214; readonly totalModules: 4; readonly exports: readonly [{ readonly name: \"HOOKS_MANIFEST\"; readonly isType: false; readonly sourceFile: \"hookengine\"; }, ... 4 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOOKS_MANIFEST\" :from \"hooks/engine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: number; readonly capabilities: readonly [{ readonly name: \"useCurriculumStandard\"; readonly type: \"state-syncer\"; readonly description: \"Cross-tab local storage state for UK Oak vs International\"; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/engine.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/engine.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/engine.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOOKS_MANIFEST\" :from \"hooks/hookengine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: number; readonly capabilities: readonly [{ readonly name: \"useCurriculumStandard\"; readonly type: \"state-syncer\"; readonly description: \"Cross-tab local storage state for UK Oak vs International\"; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/hookengine.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/hookengine.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/hookengine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/hookengine.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/hookengine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/useCurriculumStandard.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/useKnowledgeStage.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/useKnowledgeStage.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"usePWAInstall\" :from \"hooks/usePWAInstall.ts\" :kind :function :return \"{ isInstallable: boolean; isInstalled: boolean; isIOS: boolean; install: () => Promise<boolean>; }\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/useWebRTCNeuralBus.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/useWebRTCNeuralBus.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"initCurriculumDB\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"syncCurriculumIndex\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"db\" :type \"IDBDatabase\")))\n  (:symbol \"searchCurriculum\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<RAGMatch[]>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"query\" :type \"string\") (:param \"topK\" :type \"number\")))\n  (:symbol \"getLessonManifest\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<any>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"id\" :type \"string\") (:param \"manifestPath\" :type \"string\")))\n  (:symbol \"RAGMatch\" :from \"lib/browser-rag.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"lib/engine.ts\" :kind :const :return \"{ readonly folder: \"src/lib\"; readonly timestamp: 1787937755144; readonly totalModules: 1; readonly exports: readonly [{ readonly name: \"RAGMatch\"; readonly isType: true; readonly sourceFile: \"browser-rag\"; }, { ...; }, { ...; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"lib/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"initCurriculumDB\" :from \"lib/engine.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"syncCurriculumIndex\" :from \"lib/engine.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"db\" :type \"IDBDatabase\")))\n  (:symbol \"searchCurriculum\" :from \"lib/engine.ts\" :kind :function :return \"Promise<RAGMatch[]>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"query\" :type \"string\") (:param \"topK\" :type \"number\")))\n  (:symbol \"getLessonManifest\" :from \"lib/engine.ts\" :kind :function :return \"Promise<any>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"id\" :type \"string\") (:param \"manifestPath\" :type \"string\")))\n  (:symbol \"RAGMatch\" :from \"lib/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"resolveChallengeForTopic\" :from \"services/challengeLauncher.ts\" :kind :function :return \"ChallengeMetadata\" :params ((:param \"subject\" :type \"string\") (:param \"unit\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"keyStage\" :type \"string\")))\n  (:symbol \"openChallengeModal\" :from \"services/challengeLauncher.ts\" :kind :function :return \"void\" :params ((:param \"options\" :type \"ChallengeCallOptions\")))\n  (:symbol \"closeChallengeModal\" :from \"services/challengeLauncher.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"subscribeToChallengeCalls\" :from \"services/challengeLauncher.ts\" :kind :function :return \"() => void\" :params ((:param \"listener\" :type \"ChallengeListener\")))\n  (:symbol \"ChallengeType\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ChallengeMetadata\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ChallengeCallOptions\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"validateStudentInput\" :from \"services/childSafetyFilter.ts\" :kind :function :return \"SafetyCheckResult\" :params ((:param \"input\" :type \"string\")))\n  (:symbol \"sanitizeAiOutput\" :from \"services/childSafetyFilter.ts\" :kind :function :return \"string\" :params ((:param \"output\" :type \"string\") (:param \"fallbackContext\" :type \"string\")))\n  (:symbol \"SafetyCheckResult\" :from \"services/childSafetyFilter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CHILD_SAFEGUARDING_SYSTEM_PROMPT\" :from \"services/childSafetyFilter.ts\" :kind :const :return \"\"\\nCRITICAL CHILD SAFEGUARDING & SAFETY MANDATE:\\n1. You are speaking directly to primary or secondary school children (ages 5 to 16).\\n2. You MUST always maintain a warm, gentle, encouraging, and 100% wholesome tone.\\n3. NEVER produce or discuss: violence, weapons, adult content, profanity, drugs, romantic relation...\" :params ())\n  (:symbol \"StudentBeaconTelemetry\" :from \"services/classroomBeacon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TeacherBroadcastCommand\" :from \"services/classroomBeacon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"classroomBeacon\" :from \"services/classroomBeacon.ts\" :kind :const :return \"ClassroomBeaconManager\" :params ())\n  (:symbol \"default\" :from \"services/classroomBeacon.ts\" :kind :const :return \"ClassroomBeaconManager\" :params ())\n  (:symbol \"getInstalledCurriculumPacks\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack[]\" :params ())\n  (:symbol \"saveCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"pack\" :type \"CustomCurriculumPack\")))\n  (:symbol \"removeCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"packId\" :type \"string\")))\n  (:symbol \"findCustomTopicKnowledge\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CurriculumTopicKnowledge\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"saveAxiomAnchorTopic\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack\" :params ((:param \"data\" :type \"{ keyStage: string; subject: string; topic: string; axiom: string; trap: string; hook?: string; guidedStep?: string; socraticPivot?: string; questions?: CustomQuestionItem[]; }\")))\n  (:symbol \"deleteAxiomAnchorTopic\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"lessonId\" :type \"string\")))\n  (:symbol \"getCustomStandardStages\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"Record<string, StandardStage>\" :params ())\n  (:symbol \"generateSampleCsvTemplate\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"generateSampleJsonTemplate\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"parseCsvToCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack\" :params ((:param \"csvContent\" :type \"string\") (:param \"metadata\" :type \"{ packId?: string; packTitle?: string; countryOrRegion?: string; authorOrMinistry?: string; description?: string; }\")))\n  (:symbol \"CustomQuestionDistractor\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomQuestionItem\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomCurriculumLesson\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OVERSEAS_PACKS\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"CustomCurriculumPack[]\" :params ())\n  (:symbol \"isDataSaverActive\" :from \"services/dataSaverStore.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setDataSaverMode\" :from \"services/dataSaverStore.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"applyDataSaverToDOM\" :from \"services/dataSaverStore.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToDataSaverChanges\" :from \"services/dataSaverStore.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"isConstrainedEnvironment\" :from \"services/dataSaverStore.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"isCoreSyllabusPinned\" :from \"services/dbStore.ts\" :kind :function :return \"boolean\" :params ((:param \"keyOrDomain\" :type \"string\")))\n  (:symbol \"openLocalDB\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"getBufferedLesson\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<CachedLessonRecord>\" :params ((:param \"key\" :type \"string\")))\n  (:symbol \"putBufferedLesson\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"lesson\" :type \"CachedLessonRecord\")))\n  (:symbol \"saveManifest\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"manifest\" :type \"DomainManifest\")))\n  (:symbol \"getManifest\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<DomainManifest>\" :params ((:param \"domainId\" :type \"string\")))\n  (:symbol \"logProgress\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"record\" :type \"StudentRecord\")))\n  (:symbol \"getAllProgressRecords\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StudentRecord[]>\" :params ())\n  (:symbol \"clearAllStudentProgress\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"getTuringDiagnosticSummary\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<{ accuracy: number; commonErrors: string[]; }>\" :params ((:param \"topicId\" :type \"string\")))\n  (:symbol \"saveTopicAdapter\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"adapter\" :type \"TopicAdapterRecord\")))\n  (:symbol \"getTopicAdapter\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<TopicAdapterRecord>\" :params ((:param \"topicKey\" :type \"string\")))\n  (:symbol \"bootstrapTopicAdapters\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"saveVerifiedAST\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"topicKey\" :type \"string\") (:param \"rawAST\" :type \"string\")))\n  (:symbol \"getBufferedQuestion\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"topicKey\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"checkAndReplenishBuffer\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"topicKey\" :type \"string\") (:param \"minThreshold\" :type \"number\") (:param \"triggerWorker\" :type \"(key: string) => Promise<void>\")))\n  (:symbol \"getRandomCachedAST\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"topicKey\" :type \"string\")))\n  (:symbol \"saveVfsView\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"path\" :type \"string\") (:param \"content\" :type \"string\")))\n  (:symbol \"getVfsView\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"path\" :type \"string\")))\n  (:symbol \"bootstrapVfsViews\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"defaultViews\" :type \"Record<string, string>\")))\n  (:symbol \"enforceStorageQuotaLRU\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StorageQuotaLRUMetrics>\" :params ())\n  (:symbol \"getStorageQuotaMetrics\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StorageQuotaLRUMetrics>\" :params ())\n  (:symbol \"purgeInactiveManifests\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"activeDomainId\" :type \"string\") (:param \"preservedDomains\" :type \"string[]\")))\n  (:symbol \"STORE_VIEWS\" :from \"services/dbStore.ts\" :kind :const :return \"\"vfs_views\"\" :params ())\n  (:symbol \"StudentRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"VfsViewRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TopicAdapterRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CachedASTRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CachedLessonRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PINNED_CORE_MANIFESTS\" :from \"services/dbStore.ts\" :kind :const :return \"Set<string>\" :params ())\n  (:symbol \"getDB\" :from \"services/dbStore.ts\" :kind :const :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"DEFAULT_TOPIC_ADAPTERS\" :from \"services/dbStore.ts\" :kind :const :return \"TopicAdapterRecord[]\" :params ())\n  (:symbol \"StorageQuotaLRUMetrics\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MAX_UNPINNED_LESSON_TRACES\" :from \"services/dbStore.ts\" :kind :const :return \"35\" :params ())\n  (:symbol \"TARGET_UNPINNED_LESSON_TRACES\" :from \"services/dbStore.ts\" :kind :const :return \"25\" :params ())\n  (:symbol \"MAX_UNPINNED_AST_ITEMS\" :from \"services/dbStore.ts\" :kind :const :return \"60\" :params ())\n  (:symbol \"TARGET_UNPINNED_AST_ITEMS\" :from \"services/dbStore.ts\" :kind :const :return \"40\" :params ())\n  (:symbol \"openJotterDB\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"appendJotter\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"entry\" :type \"Omit<JotterEntry, \"timestamp\">\")))\n  (:symbol \"getRecentJotterEntries\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<JotterEntry[]>\" :params ((:param \"sessionId\" :type \"string\") (:param \"limit\" :type \"number\")))\n  (:symbol \"clearJotterDB\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"JotterEntry\" :from \"services/jotter-db.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getActiveManifestCacheName\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<string>\" :params ())\n  (:symbol \"isOfflineSyncComplete\" :from \"services/offlineSync.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"getOfflineSyncDate\" :from \"services/offlineSync.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"checkDeviceStorageSupport\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<{ supported: boolean; persisted: boolean; quotaMb?: number; usageMb?: number; }>\" :params ())\n  (:symbol \"syncEntireCurriculumOffline\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<boolean>\" :params ((:param \"onProgress\" :type \"(progress: SyncProgress) => void\")))\n  (:symbol \"CORE_OFFLINE_URLS\" :from \"services/offlineSync.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"SyncProgress\" :from \"services/offlineSync.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getOfflineStatus\" :from \"services/offlineSyncService.ts\" :kind :function :return \"Promise<OfflineStatus>\" :params ())\n  (:symbol \"downloadCurriculumForOffline\" :from \"services/offlineSyncService.ts\" :kind :function :return \"Promise<{ success: boolean; count: number; error?: string; }>\" :params ((:param \"onProgress\" :type \"(progress: SyncProgress) => void\")))\n  (:symbol \"SyncProgress\" :from \"services/offlineSyncService.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OfflineStatus\" :from \"services/offlineSyncService.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"resolvePresetForTopic\" :from \"services/playerLauncher.ts\" :kind :function :return \"VectorPresetId\" :params ((:param \"subject\" :type \"string\") (:param \"unit\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"openPlayerModal\" :from \"services/playerLauncher.ts\" :kind :function :return \"void\" :params ((:param \"options\" :type \"PlayerCallOptions\")))\n  (:symbol \"closePlayerModal\" :from \"services/playerLauncher.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"subscribeToPlayerCalls\" :from \"services/playerLauncher.ts\" :kind :function :return \"() => void\" :params ((:param \"listener\" :type \"PlayerListener\")))\n  (:symbol \"VectorPresetId\" :from \"services/playerLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerCallOptions\" :from \"services/playerLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"isStrictAirGapMode\" :from \"services/privacyGuard.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setStrictAirGapMode\" :from \"services/privacyGuard.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToAirGapChanges\" :from \"services/privacyGuard.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"isSoundEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setSoundEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"isHapticsEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setHapticsEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"playSuccessChime\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playIncorrectTone\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playClickTone\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playCelebrationFanfare\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticSuccess\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticError\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticClick\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"generateRandomAlias\" :from \"services/studentProfileStore.ts\" :kind :function :return \"{ alias: string; avatar: string; }\" :params ())\n  (:symbol \"getLearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :function :return \"LearnerProfile\" :params ())\n  (:symbol \"saveLearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :function :return \"LearnerProfile\" :params ((:param \"updates\" :type \"Partial<LearnerProfile>\")))\n  (:symbol \"formatTopicTitle\" :from \"services/studentProfileStore.ts\" :kind :function :return \"string\" :params ((:param \"rawTopicId\" :type \"string\")))\n  (:symbol \"getLearnerAnalytics\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<LearnerAnalytics>\" :params ())\n  (:symbol \"purgeAllLearnerData\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"exportLearnerPassportJson\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"downloadLearnerCertificateHtml\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"LearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TopicMasteryStat\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LearnerAnalytics\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n)\n";
+export const SERVICES_AST_STRING = ";; Domain AST Manifest: services\n(:domain-substrate :services\n  (:symbol \"FOLDER_MANIFEST\" :from \"hooks/engine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: 1787937755214; readonly totalModules: 4; readonly exports: readonly [{ readonly name: \"HOOKS_MANIFEST\"; readonly isType: false; readonly sourceFile: \"hookengine\"; }, ... 4 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOOKS_MANIFEST\" :from \"hooks/engine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: number; readonly capabilities: readonly [{ readonly name: \"useCurriculumStandard\"; readonly type: \"state-syncer\"; readonly description: \"Cross-tab local storage state for UK Oak vs International\"; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/engine.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/engine.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/engine.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOOKS_MANIFEST\" :from \"hooks/hookengine.ts\" :kind :const :return \"{ readonly folder: \"src/hooks\"; readonly timestamp: number; readonly capabilities: readonly [{ readonly name: \"useCurriculumStandard\"; readonly type: \"state-syncer\"; readonly description: \"Cross-tab local storage state for UK Oak vs International\"; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/hookengine.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/hookengine.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/hookengine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/hookengine.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/hookengine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"useCurriculumStandard\" :from \"hooks/useCurriculumStandard.ts\" :kind :function :return \"[CurriculumProviderKey, (val: CurriculumProviderKey) => void]\" :params ())\n  (:symbol \"useKnowledgeStage\" :from \"hooks/useKnowledgeStage.ts\" :kind :function :return \"{ activeProps: Record<string, any>; isReady: boolean; }\" :params ((:param \"keyStage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"fallbackRegistry\" :type \"any\")))\n  (:symbol \"StagePayload\" :from \"hooks/useKnowledgeStage.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"usePWAInstall\" :from \"hooks/usePWAInstall.ts\" :kind :function :return \"{ isInstallable: boolean; isInstalled: boolean; isIOS: boolean; install: () => Promise<boolean>; }\" :params ())\n  (:symbol \"useWebRTCNeuralBus\" :from \"hooks/useWebRTCNeuralBus.ts\" :kind :function :return \"{ isReady: boolean; status: string; instanceState: GuestVMState; metrics: HypervisorMetrics; sendIntent: (keyStage: string, subject: string, unit: string, ksId?: string, subId?: string, unitId?: string, curriculum?: string) => Promise<...>; resetInstance: () => void; reconnect: (reason?: string) => void; }\" :params ((:param \"onQuestionReady\" :type \"(payload: QuestionPayload) => void\") (:param \"onTokenChunk\" :type \"(chunk: string) => void\")))\n  (:symbol \"QuestionPayload\" :from \"hooks/useWebRTCNeuralBus.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"initCurriculumDB\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"syncCurriculumIndex\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"db\" :type \"IDBDatabase\")))\n  (:symbol \"searchCurriculum\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<RAGMatch[]>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"query\" :type \"string\") (:param \"topK\" :type \"number\")))\n  (:symbol \"getLessonManifest\" :from \"lib/browser-rag.ts\" :kind :function :return \"Promise<any>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"id\" :type \"string\") (:param \"manifestPath\" :type \"string\")))\n  (:symbol \"RAGMatch\" :from \"lib/browser-rag.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"lib/engine.ts\" :kind :const :return \"{ readonly folder: \"src/lib\"; readonly timestamp: 1787937755144; readonly totalModules: 1; readonly exports: readonly [{ readonly name: \"RAGMatch\"; readonly isType: true; readonly sourceFile: \"browser-rag\"; }, { ...; }, { ...; }, { ...; }, { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"lib/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"initCurriculumDB\" :from \"lib/engine.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"syncCurriculumIndex\" :from \"lib/engine.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"db\" :type \"IDBDatabase\")))\n  (:symbol \"searchCurriculum\" :from \"lib/engine.ts\" :kind :function :return \"Promise<RAGMatch[]>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"query\" :type \"string\") (:param \"topK\" :type \"number\")))\n  (:symbol \"getLessonManifest\" :from \"lib/engine.ts\" :kind :function :return \"Promise<any>\" :params ((:param \"db\" :type \"IDBDatabase\") (:param \"id\" :type \"string\") (:param \"manifestPath\" :type \"string\")))\n  (:symbol \"RAGMatch\" :from \"lib/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"initCartridgeVault\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"getCustomCartridges\" :from \"services/cartridgeStore.ts\" :kind :function :return \"CartridgeDefinition[]\" :params ())\n  (:symbol \"normalizeCartridgeId\" :from \"services/cartridgeStore.ts\" :kind :function :return \"string\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"getAllCartridges\" :from \"services/cartridgeStore.ts\" :kind :function :return \"CartridgeDefinition[]\" :params ())\n  (:symbol \"getCartridge\" :from \"services/cartridgeStore.ts\" :kind :function :return \"CartridgeDefinition\" :params ((:param \"idOrAlias\" :type \"string\")))\n  (:symbol \"saveCustomCartridge\" :from \"services/cartridgeStore.ts\" :kind :function :return \"void\" :params ((:param \"cartridge\" :type \"CartridgeDefinition\")))\n  (:symbol \"deleteCustomCartridge\" :from \"services/cartridgeStore.ts\" :kind :function :return \"void\" :params ((:param \"cartridgeId\" :type \"string\")))\n  (:symbol \"expandCompressedCartridgeToVault\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<CartridgeDefinition>\" :params ((:param \"compressedData\" :type \"string | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"expandCompressedBundleToVault\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<CartridgeDefinition[]>\" :params ((:param \"compressedPayload\" :type \"string | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"exportCompressedCartridge\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<{ cartridge: CartridgeDefinition; compressedBytes: Uint8Array<ArrayBufferLike>; base64: string; metadata: CompressedCartridgeMetadata; }>\" :params ((:param \"cartridgeId\" :type \"string\")))\n  (:symbol \"getVaultStats\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<{ isInitialized: boolean; vaultCount: number; memoryCount: number; }>\" :params ())\n  (:symbol \"importCartridgeFile\" :from \"services/cartridgeStore.ts\" :kind :function :return \"Promise<CartridgeDefinition>\" :params ((:param \"file\" :type \"File\")))\n  (:symbol \"createCustomCartridge\" :from \"services/cartridgeStore.ts\" :kind :function :return \"CartridgeDefinition\" :params ((:param \"input\" :type \"{ title: string; category: string; stage: string; desc?: string; icon?: string; svgMarkup?: string; astSource?: string; }\")))\n  (:symbol \"CartridgeDefinition\" :from \"services/cartridgeStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeBundle\" :from \"services/cartridgeStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CARTRIDGE_ALIASES\" :from \"services/cartridgeStore.ts\" :kind :const :return \"Record<string, string>\" :params ())\n  (:symbol \"BUILTIN_CARTRIDGES\" :from \"services/cartridgeStore.ts\" :kind :const :return \"CartridgeDefinition[]\" :params ())\n  (:symbol \"EMBEDDED_CORE_CARTRIDGES\" :from \"services/cartridgeStore.ts\" :kind :const :return \"Record<string, { svg: string; ast: string; }>\" :params ())\n  (:symbol \"resolveChallengeForTopic\" :from \"services/challengeLauncher.ts\" :kind :function :return \"ChallengeMetadata\" :params ((:param \"subject\" :type \"string\") (:param \"unit\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"keyStage\" :type \"string\")))\n  (:symbol \"openChallengeModal\" :from \"services/challengeLauncher.ts\" :kind :function :return \"void\" :params ((:param \"options\" :type \"ChallengeCallOptions\")))\n  (:symbol \"closeChallengeModal\" :from \"services/challengeLauncher.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"subscribeToChallengeCalls\" :from \"services/challengeLauncher.ts\" :kind :function :return \"() => void\" :params ((:param \"listener\" :type \"ChallengeListener\")))\n  (:symbol \"ChallengeType\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ChallengeMetadata\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ChallengeCallOptions\" :from \"services/challengeLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"validateStudentInput\" :from \"services/childSafetyFilter.ts\" :kind :function :return \"SafetyCheckResult\" :params ((:param \"input\" :type \"string\")))\n  (:symbol \"sanitizeAiOutput\" :from \"services/childSafetyFilter.ts\" :kind :function :return \"string\" :params ((:param \"output\" :type \"string\") (:param \"fallbackContext\" :type \"string\")))\n  (:symbol \"SafetyCheckResult\" :from \"services/childSafetyFilter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CHILD_SAFEGUARDING_SYSTEM_PROMPT\" :from \"services/childSafetyFilter.ts\" :kind :const :return \"\"\\nCRITICAL CHILD SAFEGUARDING & SAFETY MANDATE:\\n1. You are speaking directly to primary or secondary school children (ages 5 to 16).\\n2. You MUST always maintain a warm, gentle, encouraging, and 100% wholesome tone.\\n3. NEVER produce or discuss: violence, weapons, adult content, profanity, drugs, romantic relation...\" :params ())\n  (:symbol \"StudentBeaconTelemetry\" :from \"services/classroomBeacon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TeacherBroadcastCommand\" :from \"services/classroomBeacon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"classroomBeacon\" :from \"services/classroomBeacon.ts\" :kind :const :return \"ClassroomBeaconManager\" :params ())\n  (:symbol \"default\" :from \"services/classroomBeacon.ts\" :kind :const :return \"ClassroomBeaconManager\" :params ())\n  (:symbol \"getInstalledCurriculumPacks\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack[]\" :params ())\n  (:symbol \"saveCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"pack\" :type \"CustomCurriculumPack\")))\n  (:symbol \"removeCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"packId\" :type \"string\")))\n  (:symbol \"findCustomTopicKnowledge\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CurriculumTopicKnowledge\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"saveAxiomAnchorTopic\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack\" :params ((:param \"data\" :type \"{ keyStage: string; subject: string; topic: string; axiom: string; trap: string; hook?: string; guidedStep?: string; socraticPivot?: string; questions?: CustomQuestionItem[]; }\")))\n  (:symbol \"deleteAxiomAnchorTopic\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"void\" :params ((:param \"lessonId\" :type \"string\")))\n  (:symbol \"getCustomStandardStages\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"Record<string, StandardStage>\" :params ())\n  (:symbol \"generateSampleCsvTemplate\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"generateSampleJsonTemplate\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"parseCsvToCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :function :return \"CustomCurriculumPack\" :params ((:param \"csvContent\" :type \"string\") (:param \"metadata\" :type \"{ packId?: string; packTitle?: string; countryOrRegion?: string; authorOrMinistry?: string; description?: string; }\")))\n  (:symbol \"CustomQuestionDistractor\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomQuestionItem\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomCurriculumLesson\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CustomCurriculumPack\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OVERSEAS_PACKS\" :from \"services/curriculumPackStore.ts\" :kind :const :return \"CustomCurriculumPack[]\" :params ())\n  (:symbol \"isDataSaverActive\" :from \"services/dataSaverStore.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setDataSaverMode\" :from \"services/dataSaverStore.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"applyDataSaverToDOM\" :from \"services/dataSaverStore.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToDataSaverChanges\" :from \"services/dataSaverStore.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"isConstrainedEnvironment\" :from \"services/dataSaverStore.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"isCoreSyllabusPinned\" :from \"services/dbStore.ts\" :kind :function :return \"boolean\" :params ((:param \"keyOrDomain\" :type \"string\")))\n  (:symbol \"openLocalDB\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"getBufferedLesson\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<CachedLessonRecord>\" :params ((:param \"key\" :type \"string\")))\n  (:symbol \"putBufferedLesson\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"lesson\" :type \"CachedLessonRecord\")))\n  (:symbol \"saveManifest\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"manifest\" :type \"DomainManifest\")))\n  (:symbol \"getManifest\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<DomainManifest>\" :params ((:param \"domainId\" :type \"string\")))\n  (:symbol \"logProgress\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"record\" :type \"StudentRecord\")))\n  (:symbol \"getAllProgressRecords\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StudentRecord[]>\" :params ())\n  (:symbol \"clearAllStudentProgress\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"getTuringDiagnosticSummary\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<{ accuracy: number; commonErrors: string[]; }>\" :params ((:param \"topicId\" :type \"string\")))\n  (:symbol \"saveTopicAdapter\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"adapter\" :type \"TopicAdapterRecord\")))\n  (:symbol \"getTopicAdapter\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<TopicAdapterRecord>\" :params ((:param \"topicKey\" :type \"string\")))\n  (:symbol \"bootstrapTopicAdapters\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"saveVerifiedAST\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"topicKey\" :type \"string\") (:param \"rawAST\" :type \"string\")))\n  (:symbol \"getBufferedQuestion\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"topicKey\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"checkAndReplenishBuffer\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"topicKey\" :type \"string\") (:param \"minThreshold\" :type \"number\") (:param \"triggerWorker\" :type \"(key: string) => Promise<void>\")))\n  (:symbol \"getRandomCachedAST\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"topicKey\" :type \"string\")))\n  (:symbol \"saveVfsView\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"path\" :type \"string\") (:param \"content\" :type \"string\")))\n  (:symbol \"getVfsView\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"path\" :type \"string\")))\n  (:symbol \"bootstrapVfsViews\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"defaultViews\" :type \"Record<string, string>\")))\n  (:symbol \"enforceStorageQuotaLRU\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StorageQuotaLRUMetrics>\" :params ())\n  (:symbol \"getStorageQuotaMetrics\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<StorageQuotaLRUMetrics>\" :params ())\n  (:symbol \"purgeInactiveManifests\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"activeDomainId\" :type \"string\") (:param \"preservedDomains\" :type \"string[]\")))\n  (:symbol \"putVaultCartridge\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"cartridge\" :type \"VaultCartridgeRecord\")))\n  (:symbol \"getVaultCartridge\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<VaultCartridgeRecord>\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"getAllVaultCartridges\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<VaultCartridgeRecord[]>\" :params ())\n  (:symbol \"deleteVaultCartridge\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"countVaultCartridges\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<number>\" :params ())\n  (:symbol \"hasVaultCartridge\" :from \"services/dbStore.ts\" :kind :function :return \"Promise<boolean>\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"STORE_VIEWS\" :from \"services/dbStore.ts\" :kind :const :return \"\"vfs_views\"\" :params ())\n  (:symbol \"STORE_CARTRIDGES_VAULT\" :from \"services/dbStore.ts\" :kind :const :return \"\"cartridges_vault\"\" :params ())\n  (:symbol \"StudentRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"VfsViewRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TopicAdapterRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CachedASTRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CachedLessonRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PINNED_CORE_MANIFESTS\" :from \"services/dbStore.ts\" :kind :const :return \"Set<string>\" :params ())\n  (:symbol \"getDB\" :from \"services/dbStore.ts\" :kind :const :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"DEFAULT_TOPIC_ADAPTERS\" :from \"services/dbStore.ts\" :kind :const :return \"TopicAdapterRecord[]\" :params ())\n  (:symbol \"StorageQuotaLRUMetrics\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MAX_UNPINNED_LESSON_TRACES\" :from \"services/dbStore.ts\" :kind :const :return \"35\" :params ())\n  (:symbol \"TARGET_UNPINNED_LESSON_TRACES\" :from \"services/dbStore.ts\" :kind :const :return \"25\" :params ())\n  (:symbol \"MAX_UNPINNED_AST_ITEMS\" :from \"services/dbStore.ts\" :kind :const :return \"60\" :params ())\n  (:symbol \"TARGET_UNPINNED_AST_ITEMS\" :from \"services/dbStore.ts\" :kind :const :return \"40\" :params ())\n  (:symbol \"VaultCartridgeRecord\" :from \"services/dbStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"openJotterDB\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<IDBDatabase>\" :params ())\n  (:symbol \"appendJotter\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"entry\" :type \"Omit<JotterEntry, \"timestamp\">\")))\n  (:symbol \"getRecentJotterEntries\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<JotterEntry[]>\" :params ((:param \"sessionId\" :type \"string\") (:param \"limit\" :type \"number\")))\n  (:symbol \"clearJotterDB\" :from \"services/jotter-db.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"JotterEntry\" :from \"services/jotter-db.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"sendMflChatMessage\" :from \"services/mflConversationEngine.ts\" :kind :function :return \"Promise<{ targetText: string; translation: string; coachingTip?: string; isAiGenerated: boolean; }>\" :params ((:param \"userInput\" :type \"string\") (:param \"lang\" :type \"string\") (:param \"previousHistory\" :type \"MflChatMessage[]\")))\n  (:symbol \"MflPartnerPersona\" :from \"services/mflConversationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MflChatMessage\" :from \"services/mflConversationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MFL_PERSONAS\" :from \"services/mflConversationEngine.ts\" :kind :const :return \"Record<string, MflPartnerPersona>\" :params ())\n  (:symbol \"getActiveManifestCacheName\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<string>\" :params ())\n  (:symbol \"isOfflineSyncComplete\" :from \"services/offlineSync.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"getOfflineSyncDate\" :from \"services/offlineSync.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"checkDeviceStorageSupport\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<{ supported: boolean; persisted: boolean; quotaMb?: number; usageMb?: number; }>\" :params ())\n  (:symbol \"syncEntireCurriculumOffline\" :from \"services/offlineSync.ts\" :kind :function :return \"Promise<boolean>\" :params ((:param \"onProgress\" :type \"(progress: SyncProgress) => void\")))\n  (:symbol \"CORE_OFFLINE_URLS\" :from \"services/offlineSync.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"SyncProgress\" :from \"services/offlineSync.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getOfflineStatus\" :from \"services/offlineSyncService.ts\" :kind :function :return \"Promise<OfflineStatus>\" :params ())\n  (:symbol \"downloadCurriculumForOffline\" :from \"services/offlineSyncService.ts\" :kind :function :return \"Promise<{ success: boolean; count: number; error?: string; }>\" :params ((:param \"onProgress\" :type \"(progress: SyncProgress) => void\")))\n  (:symbol \"SyncProgress\" :from \"services/offlineSyncService.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OfflineStatus\" :from \"services/offlineSyncService.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"resolvePresetForTopic\" :from \"services/playerLauncher.ts\" :kind :function :return \"VectorPresetId\" :params ((:param \"subject\" :type \"string\") (:param \"unit\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"openPlayerModal\" :from \"services/playerLauncher.ts\" :kind :function :return \"void\" :params ((:param \"options\" :type \"PlayerCallOptions\")))\n  (:symbol \"closePlayerModal\" :from \"services/playerLauncher.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"subscribeToPlayerCalls\" :from \"services/playerLauncher.ts\" :kind :function :return \"() => void\" :params ((:param \"listener\" :type \"PlayerListener\")))\n  (:symbol \"VectorPresetId\" :from \"services/playerLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerCheckpointOption\" :from \"services/playerLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerCallOptions\" :from \"services/playerLauncher.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"isStrictAirGapMode\" :from \"services/privacyGuard.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setStrictAirGapMode\" :from \"services/privacyGuard.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToAirGapChanges\" :from \"services/privacyGuard.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"isSoundEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setSoundEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"isHapticsEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setHapticsEnabled\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"playSuccessChime\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playIncorrectTone\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playClickTone\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"playCelebrationFanfare\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticSuccess\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticError\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerHapticClick\" :from \"services/soundHaptics.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"generateRandomAlias\" :from \"services/studentProfileStore.ts\" :kind :function :return \"{ alias: string; avatar: string; }\" :params ())\n  (:symbol \"getLearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :function :return \"LearnerProfile\" :params ())\n  (:symbol \"saveLearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :function :return \"LearnerProfile\" :params ((:param \"updates\" :type \"Partial<LearnerProfile>\")))\n  (:symbol \"formatTopicTitle\" :from \"services/studentProfileStore.ts\" :kind :function :return \"string\" :params ((:param \"rawTopicId\" :type \"string\")))\n  (:symbol \"getLearnerAnalytics\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<LearnerAnalytics>\" :params ())\n  (:symbol \"purgeAllLearnerData\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"exportLearnerPassportJson\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"exportLearnerArborCsv\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"downloadLearnerCertificateHtml\" :from \"services/studentProfileStore.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"LearnerProfile\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TopicMasteryStat\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LearnerAnalytics\" :from \"services/studentProfileStore.ts\" :kind :const :return \"any\" :params ())\n)\n";
 export const SERVICES_EXPORT_CATALOG = [
   {
     "name": "FOLDER_MANIFEST",
@@ -384,6 +384,195 @@ export const SERVICES_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "engine.ts",
     "relPath": "lib/engine.ts"
+  },
+  {
+    "name": "initCartridgeVault",
+    "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "getCustomCartridges",
+    "kind": "function",
+    "returnType": "CartridgeDefinition[]",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "normalizeCartridgeId",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "getAllCartridges",
+    "kind": "function",
+    "returnType": "CartridgeDefinition[]",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "getCartridge",
+    "kind": "function",
+    "returnType": "CartridgeDefinition",
+    "params": [
+      {
+        "name": "idOrAlias",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "saveCustomCartridge",
+    "kind": "function",
+    "returnType": "void",
+    "params": [
+      {
+        "name": "cartridge",
+        "type": "CartridgeDefinition"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "deleteCustomCartridge",
+    "kind": "function",
+    "returnType": "void",
+    "params": [
+      {
+        "name": "cartridgeId",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "expandCompressedCartridgeToVault",
+    "kind": "function",
+    "returnType": "Promise<CartridgeDefinition>",
+    "params": [
+      {
+        "name": "compressedData",
+        "type": "string | Uint8Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "expandCompressedBundleToVault",
+    "kind": "function",
+    "returnType": "Promise<CartridgeDefinition[]>",
+    "params": [
+      {
+        "name": "compressedPayload",
+        "type": "string | Uint8Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "exportCompressedCartridge",
+    "kind": "function",
+    "returnType": "Promise<{ cartridge: CartridgeDefinition; compressedBytes: Uint8Array<ArrayBufferLike>; base64: string; metadata: CompressedCartridgeMetadata; }>",
+    "params": [
+      {
+        "name": "cartridgeId",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "getVaultStats",
+    "kind": "function",
+    "returnType": "Promise<{ isInitialized: boolean; vaultCount: number; memoryCount: number; }>",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "importCartridgeFile",
+    "kind": "function",
+    "returnType": "Promise<CartridgeDefinition>",
+    "params": [
+      {
+        "name": "file",
+        "type": "File"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "createCustomCartridge",
+    "kind": "function",
+    "returnType": "CartridgeDefinition",
+    "params": [
+      {
+        "name": "input",
+        "type": "{ title: string; category: string; stage: string; desc?: string; icon?: string; svgMarkup?: string; astSource?: string; }"
+      }
+    ],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "CartridgeDefinition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "CartridgeBundle",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "CARTRIDGE_ALIASES",
+    "kind": "const",
+    "returnType": "Record<string, string>",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "BUILTIN_CARTRIDGES",
+    "kind": "const",
+    "returnType": "CartridgeDefinition[]",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
+  },
+  {
+    "name": "EMBEDDED_CORE_CARTRIDGES",
+    "kind": "const",
+    "returnType": "Record<string, { svg: string; ast: string; }>",
+    "params": [],
+    "sourceFile": "cartridgeStore.ts",
+    "relPath": "services/cartridgeStore.ts"
   },
   {
     "name": "resolveChallengeForTopic",
@@ -1057,9 +1246,85 @@ export const SERVICES_EXPORT_CATALOG = [
     "relPath": "services/dbStore.ts"
   },
   {
+    "name": "putVaultCartridge",
+    "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [
+      {
+        "name": "cartridge",
+        "type": "VaultCartridgeRecord"
+      }
+    ],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "getVaultCartridge",
+    "kind": "function",
+    "returnType": "Promise<VaultCartridgeRecord>",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "getAllVaultCartridges",
+    "kind": "function",
+    "returnType": "Promise<VaultCartridgeRecord[]>",
+    "params": [],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "deleteVaultCartridge",
+    "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "countVaultCartridges",
+    "kind": "function",
+    "returnType": "Promise<number>",
+    "params": [],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "hasVaultCartridge",
+    "kind": "function",
+    "returnType": "Promise<boolean>",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
     "name": "STORE_VIEWS",
     "kind": "const",
     "returnType": "\"vfs_views\"",
+    "params": [],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
+    "name": "STORE_CARTRIDGES_VAULT",
+    "kind": "const",
+    "returnType": "\"cartridges_vault\"",
     "params": [],
     "sourceFile": "dbStore.ts",
     "relPath": "services/dbStore.ts"
@@ -1169,6 +1434,14 @@ export const SERVICES_EXPORT_CATALOG = [
     "relPath": "services/dbStore.ts"
   },
   {
+    "name": "VaultCartridgeRecord",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "dbStore.ts",
+    "relPath": "services/dbStore.ts"
+  },
+  {
     "name": "openJotterDB",
     "kind": "function",
     "returnType": "Promise<IDBDatabase>",
@@ -1221,6 +1494,51 @@ export const SERVICES_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "jotter-db.ts",
     "relPath": "services/jotter-db.ts"
+  },
+  {
+    "name": "sendMflChatMessage",
+    "kind": "function",
+    "returnType": "Promise<{ targetText: string; translation: string; coachingTip?: string; isAiGenerated: boolean; }>",
+    "params": [
+      {
+        "name": "userInput",
+        "type": "string"
+      },
+      {
+        "name": "lang",
+        "type": "string"
+      },
+      {
+        "name": "previousHistory",
+        "type": "MflChatMessage[]"
+      }
+    ],
+    "sourceFile": "mflConversationEngine.ts",
+    "relPath": "services/mflConversationEngine.ts"
+  },
+  {
+    "name": "MflPartnerPersona",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "mflConversationEngine.ts",
+    "relPath": "services/mflConversationEngine.ts"
+  },
+  {
+    "name": "MflChatMessage",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "mflConversationEngine.ts",
+    "relPath": "services/mflConversationEngine.ts"
+  },
+  {
+    "name": "MFL_PERSONAS",
+    "kind": "const",
+    "returnType": "Record<string, MflPartnerPersona>",
+    "params": [],
+    "sourceFile": "mflConversationEngine.ts",
+    "relPath": "services/mflConversationEngine.ts"
   },
   {
     "name": "getActiveManifestCacheName",
@@ -1377,6 +1695,14 @@ export const SERVICES_EXPORT_CATALOG = [
   },
   {
     "name": "VectorPresetId",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "playerLauncher.ts",
+    "relPath": "services/playerLauncher.ts"
+  },
+  {
+    "name": "PlayerCheckpointOption",
     "kind": "const",
     "returnType": "any",
     "params": [],
@@ -1583,6 +1909,14 @@ export const SERVICES_EXPORT_CATALOG = [
   },
   {
     "name": "exportLearnerPassportJson",
+    "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [],
+    "sourceFile": "studentProfileStore.ts",
+    "relPath": "services/studentProfileStore.ts"
+  },
+  {
+    "name": "exportLearnerArborCsv",
     "kind": "function",
     "returnType": "Promise<void>",
     "params": [],

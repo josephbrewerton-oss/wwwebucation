@@ -9,7 +9,7 @@
 - [Practice Arena](/practice-lab) - Interactive AST questions, Professor Turing AI hints, instant mistake diagnostics
 - [Curriculum Lessons](/learning-zone) - Oak National Academy aligned interactive lesson viewer
 - [International Curriculum Studio](/curriculum-studio) - Visual AST S-Expression graph generator and prompt hydrator
-- [Sacred Spaces & Catholic Life](/catholic-life) - 3D Sanctuary, liturgy explorer, and sacred architecture tours
+- [Sacred Spaces & Catholic Life](/catholic-life) - 3D Sanctuary, Holy Water & Thurifer simulator, liturgy explorer, and sacred architecture tours
 - [First Holy Communion](/first-communion) - Catechetical sacraments explorer and liturgical preparation
 - [Teacher Beacon](/teacher-beacon) - Classroom synchronization, live telemetry, and Smartboard broadcast controller
 - [Learner Passport & Badges](/profile) - IndexedDB mastery log, streak tracker, diagnostic reports

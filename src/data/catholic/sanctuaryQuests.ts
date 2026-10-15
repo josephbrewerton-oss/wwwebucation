@@ -109,7 +109,7 @@ export const SANCTUARY_QUESTS: StationQuest[] = [
     relicIcon: '🕯️',
     themeColor: '#d97706',
     riddle: 'This is the sacred heart of the sanctuary, consecrated with holy chrism and representing Christ Himself. Find the table where bread and wine become the Real Body and Blood of Jesus.',
-    theologicalSignificance: 'The Altar is both a sacrificial altar on which Christ’s sacrifice on Calvary is made present, and the banquet table of the Lord where the faithful receive Holy Communion.',
+    theologicalSignificance: 'The Altar is both a sacrificial altar on which Christ’s sacrifice on Calvary is made present, and the banquet table of the Lord where the faithful receive Holy Communion. At Solemn Mass, the Thurifer leads the procession with the smoking censer, and the altar is reverenced with sweet incense rising like our prayers (Psalm 141:2).',
     actionGuidance: 'Whenever we walk past the Altar of Sacrifice outside of Mass, we make a profound bow of the body (from the waist) to reverence Christ represented by the altar stone.',
     question: {
       prompt: 'Why does the priest kiss the Altar of Sacrifice at the start and conclusion of the Holy Mass?',

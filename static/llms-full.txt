@@ -23,7 +23,7 @@
 - `/practice-lab` : Formative assessment arena featuring interactive AST cartridges, AI hints (Professor Turing persona), and misconception diagnostics.
 - `/learning-zone` : National curriculum lesson player aligned with Oak National Academy learning objectives.
 - `/curriculum-studio` : Visual curriculum authoring workspace, S-Expression graph generator, and prompt hydrator.
-- `/catholic-life` : Catholic life, 3D Sanctuary explorer, liturgical calendar, and sacramental catechesis.
+- `/catholic-life` : Catholic life, 3D Sanctuary explorer, Holy Water & Thurifer altar server simulator, liturgical calendar, and sacramental catechesis.
 - `/first-communion` : Catechetical module for First Holy Communion preparation.
 - `/teacher-beacon` : Teacher broadcast console, real-time classroom sync, and Smartboard remote presenter.
 - `/profile` : Learner mastery passport, streak history, diagnostic records, and achievement badges stored in IndexedDB.

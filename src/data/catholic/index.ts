@@ -15,3 +15,4 @@ export * from './reKs3CurriculumKnowledge';
 export * from './altarData';
 export * from './holyOilsData';
 export * from './liturgicalPosturesData';
+export * from './holyWaterThuriferData';

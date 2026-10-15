@@ -1,6 +1,46 @@
 // Auto-generated Domain Substrate: UI
-export const UI_AST_STRING = ";; Domain AST Manifest: ui\n(:domain-substrate :ui\n  (:symbol \"default\" :from \"components/AstHarmoniser.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"resolveHarmonisedRoute\" :from \"components/AstHarmoniser.tsx\" :kind :const :return \"RouteResolution\" :params ((:param \"rawPath\" :type \"string\") (:param \"search\" :type \"string\")))\n  (:symbol \"RouteResolution\" :from \"components/AstHarmoniser.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"VectorPresetType\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstVectorMediaPlayerProps\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstVectorMediaPlayerHandle\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OPTIONS\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"{ id: string; label: string; stage: string; }[]\" :params ())\n  (:symbol \"AstVectorMediaPlayer\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"ReactNode\" :params ((:param \"props\" :type \"AstVectorMediaPlayerProps & RefAttributes<AstVectorMediaPlayerHandle>\")))\n  (:symbol \"default\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"ReactNode\" :params ((:param \"props\" :type \"AstVectorMediaPlayerProps & RefAttributes<AstVectorMediaPlayerHandle>\")))\n  (:symbol \"default\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"Commandment\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"Beatitude\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/ConceptConstellation.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"ConceptConstellationProps\")))\n  (:symbol \"default\" :from \"components/CreedExplorer.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"CreedArticle\" :from \"components/CreedExplorer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumSelector\" :from \"components/CurriculumSelector.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/CurriculumSelector.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/DualLicenseSection.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/DynamicLessonViewer.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"EngineProps\")))\n  (:symbol \"default\" :from \"components/ErrorBoundary.tsx\" :kind :class :return \"typeof ErrorBoundary\" :params ())\n  (:symbol \"default\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacredObject\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/GlobalChallengeModal.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/GlobalPlayerModal.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/HomeLearnerGuidedCard.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/InteractiveEdgeSandbox.tsx\" :kind :function :return \"any\" :params ((:param \"props\" :type \"SandboxProps\")))\n  (:symbol \"default\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/LocalKeyGuard.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"LocalKeyGuardProps\")))\n  (:symbol \"default\" :from \"components/MatSlaSection.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"MathFishingGameProps\" :from \"components/MathFishingGame.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"GameMode\" :from \"components/MathFishingGame.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathFishingGame\" :from \"components/MathFishingGame.tsx\" :kind :const :return \"React.FC<MathFishingGameProps>\" :params ())\n  (:symbol \"default\" :from \"components/MathFishingGame.tsx\" :kind :const :return \"React.FC<MathFishingGameProps>\" :params ())\n  (:symbol \"MathRenderer\" :from \"components/MathRenderer.tsx\" :kind :const :return \"React.FC<MathRendererProps>\" :params ())\n  (:symbol \"default\" :from \"components/MathRenderer.tsx\" :kind :const :return \"React.FC<MathRendererProps>\" :params ())\n  (:symbol \"MathsFishingGameProps\" :from \"components/MathsFishingGame.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathsFishingGame\" :from \"components/MathsFishingGame.tsx\" :kind :const :return \"React.FC<MathsFishingGameProps>\" :params ())\n  (:symbol \"default\" :from \"components/MathsFishingGame.tsx\" :kind :const :return \"React.FC<MathsFishingGameProps>\" :params ())\n  (:symbol \"default\" :from \"components/MflLanguageLab.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"MflLanguageLabProps\")))\n  (:symbol \"MflLanguageLabProps\" :from \"components/MflLanguageLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DialogueTurnOption\" :from \"components/MflLanguageLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DialogueTurn\" :from \"components/MflLanguageLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DialogueScenario\" :from \"components/MflLanguageLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/MobileBottomNav.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"MountainClimberGameProps\" :from \"components/MountainClimberGame.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"MountainClimberGame\" :from \"components/MountainClimberGame.tsx\" :kind :const :return \"React.FC<MountainClimberGameProps>\" :params ())\n  (:symbol \"default\" :from \"components/MountainClimberGame.tsx\" :kind :const :return \"React.FC<MountainClimberGameProps>\" :params ())\n  (:symbol \"TuringTutor\" :from \"components/NanoAssistantPanel.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"default\" :from \"components/NanoAssistantPanel.tsx\" :kind :const :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"NavigationDirectoryGridProps\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NavigationDirectoryGrid\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"React.FC<NavigationDirectoryGridProps>\" :params ())\n  (:symbol \"default\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"React.FC<NavigationDirectoryGridProps>\" :params ())\n  (:symbol \"default\" :from \"components/NeuralAstCanvasTopology.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"NeuralAstCanvasTopologyProps\")))\n  (:symbol \"NeuralNode\" :from \"components/NeuralAstCanvasTopology.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/NeuralLabCanvas.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"NeuralLabCanvasProps\")))\n  (:symbol \"useOnlineStatus\" :from \"components/OfflineIndicator.tsx\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"OfflineIndicator\" :from \"components/OfflineIndicator.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"OfflineStorageManager\" :from \"components/OfflineStorageManager.tsx\" :kind :const :return \"React.FC<OfflineStorageManagerProps>\" :params ())\n  (:symbol \"default\" :from \"components/PageMeta.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"PageMetaProps\")))\n  (:symbol \"PageMetaProps\" :from \"components/PageMeta.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/PersistentAppShell.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/PersistentFooter.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/PersistentNavbar.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"ProceduralManipulative\" :from \"components/ProceduralManipulative.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"QuestionCard\" :from \"components/QuestionCard.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/RosaryMysteryWalk.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"Mystery\" :from \"components/RosaryMysteryWalk.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"MysteryCycle\" :from \"components/RosaryMysteryWalk.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/SExprViewRenderer.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"Props\")))\n  (:symbol \"SANCTUARY_QUESTS\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"StationQuest\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SanctuaryPilgrimQuest\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/SeedInflationStudio.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"SettingsModal\" :from \"components/SettingsModal.tsx\" :kind :const :return \"React.FC<SettingsModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/SevenSacramentsGuide.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"components/SevenSacramentsGuide.tsx\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SacramentData\" :from \"components/SevenSacramentsGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/ShakespeareGlobeLab.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"ShakespeareGlobeLabProps\")))\n  (:symbol \"ShakespeareGlobeLabProps\" :from \"components/ShakespeareGlobeLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/UniversalTranslatorBar.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/ViewportSkeleton.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/VirtualAstNodeList.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"Props\")))\n  (:symbol \"VectorPresetId\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ZeroBloatVectorStudioProps\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ZeroBloatVectorStudio\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"React.FC<ZeroBloatVectorStudioProps>\" :params ())\n  (:symbol \"default\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"React.FC<ZeroBloatVectorStudioProps>\" :params ())\n  (:symbol \"FlowCurriculumState\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoSessionConfig\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GroundedContextResult\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ComponentsFlow\" :from \"components/componentsFlow.ts\" :kind :class :return \"typeof ComponentsFlow\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"components/engine.ts\" :kind :const :return \"{ readonly folder: \"src/components\"; readonly timestamp: 1787937755135; readonly totalModules: 9; readonly exports: readonly [{ readonly name: \"FlowCurriculumState\"; readonly isType: true; readonly sourceFile: \"componentsFlow\"; }, ... 10 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FlowCurriculumState\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoSessionConfig\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GroundedContextResult\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ComponentsFlow\" :from \"components/engine.ts\" :kind :class :return \"typeof ComponentsFlow\" :params ())\n  (:symbol \"CurriculumSelector\" :from \"components/engine.ts\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"TuringTutor\" :from \"components/engine.ts\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"QuestionCard\" :from \"components/engine.ts\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"SettingsModal\" :from \"components/engine.ts\" :kind :const :return \"React.FC<SettingsModalProps>\" :params ())\n  (:symbol \"StudioTabType\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawerProps\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawer\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"PlayerEmbedModalProps\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerEmbedModal\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"PlayerSettingsModalProps\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerSettingsModal\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"InspectedElementData\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawerProps\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawer\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"SwfTranspilerDrawerProps\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspilerDrawer\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"PlayerSettingsModal\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"PlayerSettingsModalProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerEmbedModal\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"PlayerEmbedModalProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"SvgInspectorDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InspectedElementData\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspilerDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"SwfTranspilerDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"DevStudioDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StudioTabType\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/blog.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/catholic-life.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"CatholicLifeTab\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"pages/catholic-life.tsx\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"pages/catholic-life.tsx\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/child-safety.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/curriculum-studio.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/index.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/learning-zone.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"pages/learning-zone.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/licensing.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/media-player.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/not-found.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/practice-lab.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/privacy.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/profile.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/settings.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/teacher-beacon.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n)\n";
+export const UI_AST_STRING = ";; Domain AST Manifest: ui\n(:domain-substrate :ui\n  (:symbol \"AltarTabMode\" :from \"components/AltarAnatomyExplorer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CandleMode\" :from \"components/AltarAnatomyExplorer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarAnatomyExplorer\" :from \"components/AltarAnatomyExplorer.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/AltarAnatomyExplorer.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/AntiSlopQualityMark.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/AstHarmoniser.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"resolveHarmonisedRoute\" :from \"components/AstHarmoniser.tsx\" :kind :const :return \"RouteResolution\" :params ((:param \"rawPath\" :type \"string\") (:param \"search\" :type \"string\")))\n  (:symbol \"RouteResolution\" :from \"components/AstHarmoniser.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OPTIONS\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"ScenePresetOption[]\" :params ())\n  (:symbol \"ScenePresetOption\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"VectorPresetType\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"isCartridgeWithoutQuestions\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"boolean\" :params ((:param \"presetId\" :type \"string\")))\n  (:symbol \"AstVectorMediaPlayerProps\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstVectorMediaPlayerHandle\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstVectorMediaPlayer\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"ReactNode\" :params ((:param \"props\" :type \"AstVectorMediaPlayerProps & RefAttributes<AstVectorMediaPlayerHandle>\")))\n  (:symbol \"default\" :from \"components/AstVectorMediaPlayer.tsx\" :kind :const :return \"ReactNode\" :params ((:param \"props\" :type \"AstVectorMediaPlayerProps & RefAttributes<AstVectorMediaPlayerHandle>\")))\n  (:symbol \"default\" :from \"components/CatholicRitesExplorer.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"CatholicRitesExplorerProps\")))\n  (:symbol \"default\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"Commandment\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"Beatitude\" :from \"components/CommandmentsMoralGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/ConceptConstellation.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"ConceptConstellationProps\")))\n  (:symbol \"default\" :from \"components/CreedExplorer.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"CreedArticle\" :from \"components/CreedExplorer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumSelector\" :from \"components/CurriculumSelector.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/CurriculumSelector.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/DualLicenseSection.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"buildManifestLessonAst\" :from \"components/DynamicLessonViewer.tsx\" :kind :function :return \"string\" :params ((:param \"title\" :type \"string\") (:param \"axiom\" :type \"string\") (:param \"trap\" :type \"string\") (:param \"prompt\" :type \"string\") (:param \"keyConcept\" :type \"string\") (:param \"subject\" :type \"string\")))\n  (:symbol \"buildEngineFlowLessonAst\" :from \"components/DynamicLessonViewer.tsx\" :kind :function :return \"string\" :params ((:param \"title\" :type \"string\") (:param \"axiom\" :type \"string\") (:param \"trap\" :type \"string\") (:param \"hook\" :type \"string\") (:param \"guidedStep\" :type \"string\") (:param \"socraticCheck\" :type \"string\") (:param \"subject\" :type \"string\")))\n  (:symbol \"default\" :from \"components/DynamicLessonViewer.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"EngineProps\")))\n  (:symbol \"GENERATING_PLACEHOLDER_VIEW\" :from \"components/DynamicLessonViewer.tsx\" :kind :const :return \"\"(view :className \\\"card padding--md margin-vert--md\\\"\\n  (header :level 3 \\\"⚡ Synthesizing Practice Node...\\\")\\n  (callout :variant \\\"warning\\\" \\\"Formulating pedagogical distractors and verifying AST constraints.\\\")\\n  (stepper\\n    (step (text \\\"Selecting curriculum domain...\\\"))\\n    (step (text \\\"Dispatching pro...\" :params ())\n  (:symbol \"default\" :from \"components/ErrorBoundary.tsx\" :kind :class :return \"typeof ErrorBoundary\" :params ())\n  (:symbol \"default\" :from \"components/ExpressLessonLaunchpad.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"ExpressLessonItem\" :from \"components/ExpressLessonLaunchpad.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacredObject\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"components/FirstCommunionMasteryLab.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/GlobalChallengeModal.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/GlobalPlayerModal.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"HolyOilsExplorer\" :from \"components/HolyOilsExplorer.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/HolyOilsExplorer.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/HolyWaterAndThuriferExplorer.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"ExplorerTab\" :from \"components/HolyWaterAndThuriferExplorer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/HomeLearnerGuidedCard.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/InteractiveEdgeSandbox.tsx\" :kind :function :return \"any\" :params ((:param \"props\" :type \"SandboxProps\")))\n  (:symbol \"default\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"components/LatinMassPrayersChapel.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"components/LiturgicalCalendarGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/LiturgicalMisconceptionsExplorer.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"LiturgicalMisconceptionsExplorerProps\")))\n  (:symbol \"default\" :from \"components/LocalKeyGuard.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"LocalKeyGuardProps\")))\n  (:symbol \"default\" :from \"components/MatSlaSection.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"MathRenderer\" :from \"components/MathRenderer.tsx\" :kind :const :return \"React.FC<MathRendererProps>\" :params ())\n  (:symbol \"default\" :from \"components/MathRenderer.tsx\" :kind :const :return \"React.FC<MathRendererProps>\" :params ())\n  (:symbol \"default\" :from \"components/MobileBottomNav.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"TuringTutor\" :from \"components/NanoAssistantPanel.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"default\" :from \"components/NanoAssistantPanel.tsx\" :kind :const :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"NavigationDirectoryGridProps\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NavigationDirectoryGrid\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"React.FC<NavigationDirectoryGridProps>\" :params ())\n  (:symbol \"default\" :from \"components/NavigationDirectoryGrid.tsx\" :kind :const :return \"React.FC<NavigationDirectoryGridProps>\" :params ())\n  (:symbol \"default\" :from \"components/NeuralAstCanvasTopology.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"NeuralAstCanvasTopologyProps\")))\n  (:symbol \"NeuralNode\" :from \"components/NeuralAstCanvasTopology.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/NeuralLabCanvas.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"NeuralLabCanvasProps\")))\n  (:symbol \"useOnlineStatus\" :from \"components/OfflineIndicator.tsx\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"OfflineIndicator\" :from \"components/OfflineIndicator.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"OfflineStorageManager\" :from \"components/OfflineStorageManager.tsx\" :kind :const :return \"React.FC<OfflineStorageManagerProps>\" :params ())\n  (:symbol \"default\" :from \"components/PageMeta.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"PageMetaProps\")))\n  (:symbol \"PageMetaProps\" :from \"components/PageMeta.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/PersistentAppShell.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/PersistentFooter.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/PersistentNavbar.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"ProceduralManipulative\" :from \"components/ProceduralManipulative.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"QuestionCard\" :from \"components/QuestionCard.tsx\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"default\" :from \"components/RosaryMysteryWalk.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"Mystery\" :from \"components/RosaryMysteryWalk.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"MysteryCycle\" :from \"components/RosaryMysteryWalk.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/SExprViewRenderer.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"Props\")))\n  (:symbol \"SANCTUARY_QUESTS\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"StationQuest\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SanctuaryPilgrimQuest\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/SanctuaryPilgrimQuest.tsx\" :kind :const :return \"React.FC\" :params ())\n  (:symbol \"default\" :from \"components/SeedInflationStudio.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"SettingsModal\" :from \"components/SettingsModal.tsx\" :kind :const :return \"React.FC<SettingsModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/SevenSacramentsGuide.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"components/SevenSacramentsGuide.tsx\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SacramentData\" :from \"components/SevenSacramentsGuide.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/UniversalTranslatorBar.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"components/ViewportSkeleton.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"components/VirtualAstNodeList.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"Props\")))\n  (:symbol \"VectorPresetId\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ZeroBloatVectorStudioProps\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ZeroBloatVectorStudio\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"React.FC<ZeroBloatVectorStudioProps>\" :params ())\n  (:symbol \"default\" :from \"components/ZeroBloatVectorStudio.tsx\" :kind :const :return \"React.FC<ZeroBloatVectorStudioProps>\" :params ())\n  (:symbol \"FlowCurriculumState\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoSessionConfig\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GroundedContextResult\" :from \"components/componentsFlow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ComponentsFlow\" :from \"components/componentsFlow.ts\" :kind :class :return \"typeof ComponentsFlow\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"components/engine.ts\" :kind :const :return \"{ readonly folder: \"src/components\"; readonly timestamp: 1787937755135; readonly totalModules: 9; readonly exports: readonly [{ readonly name: \"FlowCurriculumState\"; readonly isType: true; readonly sourceFile: \"componentsFlow\"; }, ... 10 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FlowCurriculumState\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoSessionConfig\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GroundedContextResult\" :from \"components/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ComponentsFlow\" :from \"components/engine.ts\" :kind :class :return \"typeof ComponentsFlow\" :params ())\n  (:symbol \"CurriculumSelector\" :from \"components/engine.ts\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"buildManifestLessonAst\" :from \"components/engine.ts\" :kind :function :return \"string\" :params ((:param \"title\" :type \"string\") (:param \"axiom\" :type \"string\") (:param \"trap\" :type \"string\") (:param \"prompt\" :type \"string\") (:param \"keyConcept\" :type \"string\") (:param \"subject\" :type \"string\")))\n  (:symbol \"buildEngineFlowLessonAst\" :from \"components/engine.ts\" :kind :function :return \"string\" :params ((:param \"title\" :type \"string\") (:param \"axiom\" :type \"string\") (:param \"trap\" :type \"string\") (:param \"hook\" :type \"string\") (:param \"guidedStep\" :type \"string\") (:param \"socraticCheck\" :type \"string\") (:param \"subject\" :type \"string\")))\n  (:symbol \"GENERATING_PLACEHOLDER_VIEW\" :from \"components/engine.ts\" :kind :const :return \"\"(view :className \\\"card padding--md margin-vert--md\\\"\\n  (header :level 3 \\\"⚡ Synthesizing Practice Node...\\\")\\n  (callout :variant \\\"warning\\\" \\\"Formulating pedagogical distractors and verifying AST constraints.\\\")\\n  (stepper\\n    (step (text \\\"Selecting curriculum domain...\\\"))\\n    (step (text \\\"Dispatching pro...\" :params ())\n  (:symbol \"TuringTutor\" :from \"components/engine.ts\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"TuringTutorProps\")))\n  (:symbol \"QuestionCard\" :from \"components/engine.ts\" :kind :const :return \"React.FC<Props>\" :params ())\n  (:symbol \"SettingsModal\" :from \"components/engine.ts\" :kind :const :return \"React.FC<SettingsModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/AstChalkboardOverlay.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"AstChalkboardOverlayProps\")))\n  (:symbol \"default\" :from \"components/player/AstInteractiveLabDrawer.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"AstInteractiveLabDrawerProps\")))\n  (:symbol \"StudioTabType\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawerProps\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawer\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/DevStudioDrawer.tsx\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"NanoAiTutorDrawerProps\" :from \"components/player/NanoAiTutorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ContextSnapshot\" :from \"components/player/NanoAiTutorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"ChatLogItem\" :from \"components/player/NanoAiTutorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoAiTutorDrawer\" :from \"components/player/NanoAiTutorDrawer.tsx\" :kind :const :return \"React.FC<NanoAiTutorDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/NanoAiTutorDrawer.tsx\" :kind :const :return \"React.FC<NanoAiTutorDrawerProps>\" :params ())\n  (:symbol \"PhetTranspilerDrawerProps\" :from \"components/player/PhetTranspilerDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PhetTranspilerDrawer\" :from \"components/player/PhetTranspilerDrawer.tsx\" :kind :const :return \"React.FC<PhetTranspilerDrawerProps>\" :params ())\n  (:symbol \"PlayerEmbedModalProps\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerEmbedModal\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/PlayerEmbedModal.tsx\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"PlayerSettingsModalProps\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerSettingsModal\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/PlayerSettingsModal.tsx\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"InspectedElementData\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawerProps\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawer\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/SvgInspectorDrawer.tsx\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"SwfTranspilerDrawerProps\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspilerDrawer\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"default\" :from \"components/player/SwfTranspilerDrawer.tsx\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"PlayerSettingsModal\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<PlayerSettingsModalProps>\" :params ())\n  (:symbol \"PlayerSettingsModalProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerEmbedModal\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<PlayerEmbedModalProps>\" :params ())\n  (:symbol \"PlayerEmbedModalProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SvgInspectorDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<SvgInspectorDrawerProps>\" :params ())\n  (:symbol \"SvgInspectorDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InspectedElementData\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspilerDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<SwfTranspilerDrawerProps>\" :params ())\n  (:symbol \"SwfTranspilerDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DevStudioDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<DevStudioDrawerProps>\" :params ())\n  (:symbol \"DevStudioDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StudioTabType\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NanoAiTutorDrawer\" :from \"components/player/index.ts\" :kind :const :return \"React.FC<NanoAiTutorDrawerProps>\" :params ())\n  (:symbol \"NanoAiTutorDrawerProps\" :from \"components/player/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/blog.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/catholic-life.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"CatholicLifeTab\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"pages/catholic-life.tsx\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"pages/catholic-life.tsx\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"pages/catholic-life.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/child-safety.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/curriculum-studio.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/index.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/learning-zone.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"pages/learning-zone.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/licensing.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/media-player.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/not-found.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/practice-lab.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/privacy.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"default\" :from \"pages/profile.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/settings.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"default\" :from \"pages/teacher-beacon.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n)\n";
 export const UI_EXPORT_CATALOG = [
+  {
+    "name": "AltarTabMode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "AltarAnatomyExplorer.tsx",
+    "relPath": "components/AltarAnatomyExplorer.tsx"
+  },
+  {
+    "name": "CandleMode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "AltarAnatomyExplorer.tsx",
+    "relPath": "components/AltarAnatomyExplorer.tsx"
+  },
+  {
+    "name": "AltarAnatomyExplorer",
+    "kind": "const",
+    "returnType": "React.FC",
+    "params": [],
+    "sourceFile": "AltarAnatomyExplorer.tsx",
+    "relPath": "components/AltarAnatomyExplorer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "const",
+    "returnType": "React.FC",
+    "params": [],
+    "sourceFile": "AltarAnatomyExplorer.tsx",
+    "relPath": "components/AltarAnatomyExplorer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "React.JSX.Element",
+    "params": [],
+    "sourceFile": "AntiSlopQualityMark.tsx",
+    "relPath": "components/AntiSlopQualityMark.tsx"
+  },
   {
     "name": "default",
     "kind": "function",
@@ -35,10 +75,39 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/AstHarmoniser.tsx"
   },
   {
+    "name": "PRESET_OPTIONS",
+    "kind": "const",
+    "returnType": "ScenePresetOption[]",
+    "params": [],
+    "sourceFile": "AstVectorMediaPlayer.tsx",
+    "relPath": "components/AstVectorMediaPlayer.tsx"
+  },
+  {
+    "name": "ScenePresetOption",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "AstVectorMediaPlayer.tsx",
+    "relPath": "components/AstVectorMediaPlayer.tsx"
+  },
+  {
     "name": "VectorPresetType",
     "kind": "const",
     "returnType": "any",
     "params": [],
+    "sourceFile": "AstVectorMediaPlayer.tsx",
+    "relPath": "components/AstVectorMediaPlayer.tsx"
+  },
+  {
+    "name": "isCartridgeWithoutQuestions",
+    "kind": "const",
+    "returnType": "boolean",
+    "params": [
+      {
+        "name": "presetId",
+        "type": "string"
+      }
+    ],
     "sourceFile": "AstVectorMediaPlayer.tsx",
     "relPath": "components/AstVectorMediaPlayer.tsx"
   },
@@ -54,14 +123,6 @@ export const UI_EXPORT_CATALOG = [
     "name": "AstVectorMediaPlayerHandle",
     "kind": "const",
     "returnType": "any",
-    "params": [],
-    "sourceFile": "AstVectorMediaPlayer.tsx",
-    "relPath": "components/AstVectorMediaPlayer.tsx"
-  },
-  {
-    "name": "PRESET_OPTIONS",
-    "kind": "const",
-    "returnType": "{ id: string; label: string; stage: string; }[]",
     "params": [],
     "sourceFile": "AstVectorMediaPlayer.tsx",
     "relPath": "components/AstVectorMediaPlayer.tsx"
@@ -91,6 +152,19 @@ export const UI_EXPORT_CATALOG = [
     ],
     "sourceFile": "AstVectorMediaPlayer.tsx",
     "relPath": "components/AstVectorMediaPlayer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "React.JSX.Element",
+    "params": [
+      {
+        "name": "__0",
+        "type": "CatholicRitesExplorerProps"
+      }
+    ],
+    "sourceFile": "CatholicRitesExplorer.tsx",
+    "relPath": "components/CatholicRitesExplorer.tsx"
   },
   {
     "name": "default",
@@ -170,6 +244,76 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/DualLicenseSection.tsx"
   },
   {
+    "name": "buildManifestLessonAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "axiom",
+        "type": "string"
+      },
+      {
+        "name": "trap",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "keyConcept",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "DynamicLessonViewer.tsx",
+    "relPath": "components/DynamicLessonViewer.tsx"
+  },
+  {
+    "name": "buildEngineFlowLessonAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "axiom",
+        "type": "string"
+      },
+      {
+        "name": "trap",
+        "type": "string"
+      },
+      {
+        "name": "hook",
+        "type": "string"
+      },
+      {
+        "name": "guidedStep",
+        "type": "string"
+      },
+      {
+        "name": "socraticCheck",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "DynamicLessonViewer.tsx",
+    "relPath": "components/DynamicLessonViewer.tsx"
+  },
+  {
     "name": "default",
     "kind": "function",
     "returnType": "React.JSX.Element",
@@ -183,12 +327,36 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/DynamicLessonViewer.tsx"
   },
   {
+    "name": "GENERATING_PLACEHOLDER_VIEW",
+    "kind": "const",
+    "returnType": "\"(view :className \\\"card padding--md margin-vert--md\\\"\\n  (header :level 3 \\\"⚡ Synthesizing Practice Node...\\\")\\n  (callout :variant \\\"warning\\\" \\\"Formulating pedagogical distractors and verifying AST constraints.\\\")\\n  (stepper\\n    (step (text \\\"Selecting curriculum domain...\\\"))\\n    (step (text \\\"Dispatching pro...",
+    "params": [],
+    "sourceFile": "DynamicLessonViewer.tsx",
+    "relPath": "components/DynamicLessonViewer.tsx"
+  },
+  {
     "name": "default",
     "kind": "class",
     "returnType": "typeof ErrorBoundary",
     "params": [],
     "sourceFile": "ErrorBoundary.tsx",
     "relPath": "components/ErrorBoundary.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "React.JSX.Element",
+    "params": [],
+    "sourceFile": "ExpressLessonLaunchpad.tsx",
+    "relPath": "components/ExpressLessonLaunchpad.tsx"
+  },
+  {
+    "name": "ExpressLessonItem",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "ExpressLessonLaunchpad.tsx",
+    "relPath": "components/ExpressLessonLaunchpad.tsx"
   },
   {
     "name": "default",
@@ -261,6 +429,38 @@ export const UI_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "GlobalPlayerModal.tsx",
     "relPath": "components/GlobalPlayerModal.tsx"
+  },
+  {
+    "name": "HolyOilsExplorer",
+    "kind": "const",
+    "returnType": "React.FC",
+    "params": [],
+    "sourceFile": "HolyOilsExplorer.tsx",
+    "relPath": "components/HolyOilsExplorer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "const",
+    "returnType": "React.FC",
+    "params": [],
+    "sourceFile": "HolyOilsExplorer.tsx",
+    "relPath": "components/HolyOilsExplorer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "React.JSX.Element",
+    "params": [],
+    "sourceFile": "HolyWaterAndThuriferExplorer.tsx",
+    "relPath": "components/HolyWaterAndThuriferExplorer.tsx"
+  },
+  {
+    "name": "ExplorerTab",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "HolyWaterAndThuriferExplorer.tsx",
+    "relPath": "components/HolyWaterAndThuriferExplorer.tsx"
   },
   {
     "name": "default",
@@ -354,6 +554,19 @@ export const UI_EXPORT_CATALOG = [
     "params": [
       {
         "name": "__0",
+        "type": "LiturgicalMisconceptionsExplorerProps"
+      }
+    ],
+    "sourceFile": "LiturgicalMisconceptionsExplorer.tsx",
+    "relPath": "components/LiturgicalMisconceptionsExplorer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "React.JSX.Element",
+    "params": [
+      {
+        "name": "__0",
         "type": "LocalKeyGuardProps"
       }
     ],
@@ -367,38 +580,6 @@ export const UI_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "MatSlaSection.tsx",
     "relPath": "components/MatSlaSection.tsx"
-  },
-  {
-    "name": "MathFishingGameProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MathFishingGame.tsx",
-    "relPath": "components/MathFishingGame.tsx"
-  },
-  {
-    "name": "GameMode",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MathFishingGame.tsx",
-    "relPath": "components/MathFishingGame.tsx"
-  },
-  {
-    "name": "MathFishingGame",
-    "kind": "const",
-    "returnType": "React.FC<MathFishingGameProps>",
-    "params": [],
-    "sourceFile": "MathFishingGame.tsx",
-    "relPath": "components/MathFishingGame.tsx"
-  },
-  {
-    "name": "default",
-    "kind": "const",
-    "returnType": "React.FC<MathFishingGameProps>",
-    "params": [],
-    "sourceFile": "MathFishingGame.tsx",
-    "relPath": "components/MathFishingGame.tsx"
   },
   {
     "name": "MathRenderer",
@@ -417,105 +598,12 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/MathRenderer.tsx"
   },
   {
-    "name": "MathsFishingGameProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MathsFishingGame.tsx",
-    "relPath": "components/MathsFishingGame.tsx"
-  },
-  {
-    "name": "MathsFishingGame",
-    "kind": "const",
-    "returnType": "React.FC<MathsFishingGameProps>",
-    "params": [],
-    "sourceFile": "MathsFishingGame.tsx",
-    "relPath": "components/MathsFishingGame.tsx"
-  },
-  {
-    "name": "default",
-    "kind": "const",
-    "returnType": "React.FC<MathsFishingGameProps>",
-    "params": [],
-    "sourceFile": "MathsFishingGame.tsx",
-    "relPath": "components/MathsFishingGame.tsx"
-  },
-  {
-    "name": "default",
-    "kind": "function",
-    "returnType": "any",
-    "params": [
-      {
-        "name": "__0",
-        "type": "MflLanguageLabProps"
-      }
-    ],
-    "sourceFile": "MflLanguageLab.tsx",
-    "relPath": "components/MflLanguageLab.tsx"
-  },
-  {
-    "name": "MflLanguageLabProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MflLanguageLab.tsx",
-    "relPath": "components/MflLanguageLab.tsx"
-  },
-  {
-    "name": "DialogueTurnOption",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MflLanguageLab.tsx",
-    "relPath": "components/MflLanguageLab.tsx"
-  },
-  {
-    "name": "DialogueTurn",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MflLanguageLab.tsx",
-    "relPath": "components/MflLanguageLab.tsx"
-  },
-  {
-    "name": "DialogueScenario",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MflLanguageLab.tsx",
-    "relPath": "components/MflLanguageLab.tsx"
-  },
-  {
     "name": "default",
     "kind": "function",
     "returnType": "React.JSX.Element",
     "params": [],
     "sourceFile": "MobileBottomNav.tsx",
     "relPath": "components/MobileBottomNav.tsx"
-  },
-  {
-    "name": "MountainClimberGameProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "MountainClimberGame.tsx",
-    "relPath": "components/MountainClimberGame.tsx"
-  },
-  {
-    "name": "MountainClimberGame",
-    "kind": "const",
-    "returnType": "React.FC<MountainClimberGameProps>",
-    "params": [],
-    "sourceFile": "MountainClimberGame.tsx",
-    "relPath": "components/MountainClimberGame.tsx"
-  },
-  {
-    "name": "default",
-    "kind": "const",
-    "returnType": "React.FC<MountainClimberGameProps>",
-    "params": [],
-    "sourceFile": "MountainClimberGame.tsx",
-    "relPath": "components/MountainClimberGame.tsx"
   },
   {
     "name": "TuringTutor",
@@ -799,27 +887,6 @@ export const UI_EXPORT_CATALOG = [
     "name": "default",
     "kind": "function",
     "returnType": "any",
-    "params": [
-      {
-        "name": "__0",
-        "type": "ShakespeareGlobeLabProps"
-      }
-    ],
-    "sourceFile": "ShakespeareGlobeLab.tsx",
-    "relPath": "components/ShakespeareGlobeLab.tsx"
-  },
-  {
-    "name": "ShakespeareGlobeLabProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "ShakespeareGlobeLab.tsx",
-    "relPath": "components/ShakespeareGlobeLab.tsx"
-  },
-  {
-    "name": "default",
-    "kind": "function",
-    "returnType": "any",
     "params": [],
     "sourceFile": "UniversalTranslatorBar.tsx",
     "relPath": "components/UniversalTranslatorBar.tsx"
@@ -966,6 +1033,84 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/engine.ts"
   },
   {
+    "name": "buildManifestLessonAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "axiom",
+        "type": "string"
+      },
+      {
+        "name": "trap",
+        "type": "string"
+      },
+      {
+        "name": "prompt",
+        "type": "string"
+      },
+      {
+        "name": "keyConcept",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "engine.ts",
+    "relPath": "components/engine.ts"
+  },
+  {
+    "name": "buildEngineFlowLessonAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "axiom",
+        "type": "string"
+      },
+      {
+        "name": "trap",
+        "type": "string"
+      },
+      {
+        "name": "hook",
+        "type": "string"
+      },
+      {
+        "name": "guidedStep",
+        "type": "string"
+      },
+      {
+        "name": "socraticCheck",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "engine.ts",
+    "relPath": "components/engine.ts"
+  },
+  {
+    "name": "GENERATING_PLACEHOLDER_VIEW",
+    "kind": "const",
+    "returnType": "\"(view :className \\\"card padding--md margin-vert--md\\\"\\n  (header :level 3 \\\"⚡ Synthesizing Practice Node...\\\")\\n  (callout :variant \\\"warning\\\" \\\"Formulating pedagogical distractors and verifying AST constraints.\\\")\\n  (stepper\\n    (step (text \\\"Selecting curriculum domain...\\\"))\\n    (step (text \\\"Dispatching pro...",
+    "params": [],
+    "sourceFile": "engine.ts",
+    "relPath": "components/engine.ts"
+  },
+  {
     "name": "TuringTutor",
     "kind": "function",
     "returnType": "any",
@@ -995,6 +1140,32 @@ export const UI_EXPORT_CATALOG = [
     "relPath": "components/engine.ts"
   },
   {
+    "name": "default",
+    "kind": "function",
+    "returnType": "any",
+    "params": [
+      {
+        "name": "__0",
+        "type": "AstChalkboardOverlayProps"
+      }
+    ],
+    "sourceFile": "AstChalkboardOverlay.tsx",
+    "relPath": "components/player/AstChalkboardOverlay.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "function",
+    "returnType": "any",
+    "params": [
+      {
+        "name": "__0",
+        "type": "AstInteractiveLabDrawerProps"
+      }
+    ],
+    "sourceFile": "AstInteractiveLabDrawer.tsx",
+    "relPath": "components/player/AstInteractiveLabDrawer.tsx"
+  },
+  {
     "name": "StudioTabType",
     "kind": "const",
     "returnType": "any",
@@ -1025,6 +1196,62 @@ export const UI_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "DevStudioDrawer.tsx",
     "relPath": "components/player/DevStudioDrawer.tsx"
+  },
+  {
+    "name": "NanoAiTutorDrawerProps",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "NanoAiTutorDrawer.tsx",
+    "relPath": "components/player/NanoAiTutorDrawer.tsx"
+  },
+  {
+    "name": "ContextSnapshot",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "NanoAiTutorDrawer.tsx",
+    "relPath": "components/player/NanoAiTutorDrawer.tsx"
+  },
+  {
+    "name": "ChatLogItem",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "NanoAiTutorDrawer.tsx",
+    "relPath": "components/player/NanoAiTutorDrawer.tsx"
+  },
+  {
+    "name": "NanoAiTutorDrawer",
+    "kind": "const",
+    "returnType": "React.FC<NanoAiTutorDrawerProps>",
+    "params": [],
+    "sourceFile": "NanoAiTutorDrawer.tsx",
+    "relPath": "components/player/NanoAiTutorDrawer.tsx"
+  },
+  {
+    "name": "default",
+    "kind": "const",
+    "returnType": "React.FC<NanoAiTutorDrawerProps>",
+    "params": [],
+    "sourceFile": "NanoAiTutorDrawer.tsx",
+    "relPath": "components/player/NanoAiTutorDrawer.tsx"
+  },
+  {
+    "name": "PhetTranspilerDrawerProps",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "PhetTranspilerDrawer.tsx",
+    "relPath": "components/player/PhetTranspilerDrawer.tsx"
+  },
+  {
+    "name": "PhetTranspilerDrawer",
+    "kind": "const",
+    "returnType": "React.FC<PhetTranspilerDrawerProps>",
+    "params": [],
+    "sourceFile": "PhetTranspilerDrawer.tsx",
+    "relPath": "components/player/PhetTranspilerDrawer.tsx"
   },
   {
     "name": "PlayerEmbedModalProps",
@@ -1220,6 +1447,22 @@ export const UI_EXPORT_CATALOG = [
   },
   {
     "name": "StudioTabType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "components/player/index.ts"
+  },
+  {
+    "name": "NanoAiTutorDrawer",
+    "kind": "const",
+    "returnType": "React.FC<NanoAiTutorDrawerProps>",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "components/player/index.ts"
+  },
+  {
+    "name": "NanoAiTutorDrawerProps",
     "kind": "const",
     "returnType": "any",
     "params": [],

@@ -474,6 +474,34 @@ export const ALTAR_APPOINTMENTS: AltarAppointment[] = [
     icon: '✨',
     hotspot: { x: 400, y: 80, r: 16 },
   },
+  {
+    id: 'thurible-navicula',
+    name: 'The Thurible (Censer) & Incense Boat',
+    latinName: 'Thuribulum & Navicula Incensi',
+    category: 'Credence',
+    placement: 'On the incense stand or credence table near the sanctuary; carried by the Thurifer',
+    description:
+      'The chained metal censer containing glowing charcoal onto which fragrant grains of frankincense are spooned from the ship-shaped boat (navicula). Used by the priest and the thurifer during solemn processions, at the Gospel, at the Offertory, and at the high elevations of the Consecration.',
+    spiritualMeaning:
+      'Symbolizes our prayers rising into heaven like sweet perfume before the throne of God: "Let my prayer rise before you like incense, the lifting up of my hands like the evening sacrifice" (Psalm 141:2, Revelation 8:3–4). Honours Christ\'s Real Presence, purifies the sanctuary, and sanctifies the congregation.',
+    catechismRef: 'CCC 1154, GIRM 276–277',
+    icon: '🏺',
+    hotspot: { x: 480, y: 170, r: 16 },
+  },
+  {
+    id: 'aspersorium-aspergillum',
+    name: 'The Aspersorium & Aspergillum (Holy Water Vat & Sprinkler)',
+    latinName: 'Aspersorium cum Aspergillo',
+    category: 'Credence',
+    placement: 'Credence table or entrance stoup, carried during the Sunday Sprinkling Rite (Asperges)',
+    description:
+      'The portable metal bucket (situla / aspersorium) containing holy water and the hyssop sprinkler (aspergillum). Used on Sundays for the Asperges / Vidi Aquam rite replacing the Penitential Act, as well as for liturgical blessings of people and objects.',
+    spiritualMeaning:
+      'Drawn from Psalm 51: "Purge me with hyssop, and I shall be clean; wash me, and I shall be whiter than snow." Sprinkling with holy water recalls our Holy Baptism, washes away venial faults, and renews our baptismal dignity as beloved sons and daughters of God.',
+    catechismRef: 'GIRM 51, CCC 1668, CCC 1213',
+    icon: '🌿',
+    hotspot: { x: 450, y: 170, r: 15 },
+  },
 ];
 
 export const ALTAR_DRESSING_STEPS: AltarDressingStep[] = [

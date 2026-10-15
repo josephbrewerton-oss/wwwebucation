@@ -832,7 +832,7 @@ export default function FirstCommunionMasteryLab() {
               </p>
             </div>
             <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#166534' }}>
-              10 Liturgical Objects Included
+              {SACRED_OBJECTS.length} Sacred &amp; Liturgical Objects Included
             </div>
           </div>
 

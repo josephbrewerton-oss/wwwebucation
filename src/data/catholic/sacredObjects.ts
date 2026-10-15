@@ -219,6 +219,51 @@ export const SACRED_OBJECTS: SacredObject[] = [
     description: 'A three-tiered silver pocket cylinder carried by priests for sick calls and emergencies, marked with I (Sick), B (Catechumens), and CHR (Chrism).',
     spiritualMeaning: 'Allows the priest to bring sacramental grace and the anointing of salvation directly to hospital beds and the homes of the dying.',
     catechismRef: 'CCC 1513'
+  },
+  {
+    id: 'holy-water-stoup',
+    name: 'Holy Water Stoup (Pila Aquae Benedictae)',
+    icon: '💧',
+    category: 'Sanctuary',
+    description: 'The stone, marble, or bronze basin situated at church entrances containing sanctified water blessed with exorcised salt.',
+    spiritualMeaning: 'Recalls our Holy Baptism. Dipping our right hand and tracing the Sign of the Cross washes away venial faults and cleanses our hearts as we cross into God’s temple.',
+    catechismRef: 'CCC 1668, CCC 1213'
+  },
+  {
+    id: 'aspersorium-aspergillum',
+    name: 'The Aspersorium & Aspergillum',
+    icon: '🌿',
+    category: 'Vessel',
+    description: 'The portable holy water bucket (situla / aspersorium) and sprinkler (aspergillum) used by the priest for the Sunday Asperges and blessing of persons and objects.',
+    spiritualMeaning: 'Echoes Psalm 51: "Purge me with hyssop, and I shall be clean; wash me, and I shall be whiter than snow." Sprinkles divine protection over the faithful.',
+    catechismRef: 'GIRM 51, CCC 1668'
+  },
+  {
+    id: 'thurible',
+    name: 'The Thurible (Censer / Thuribulum)',
+    icon: '🏺',
+    category: 'Vessel',
+    description: 'The metal censer suspended on chains containing burning charcoal onto which pure grains of frankincense and aromatic gums are placed to produce sweet clouds of smoke.',
+    spiritualMeaning: 'Symbolizes the prayers of the saints rising straight to the throne of God (Psalm 141:2, Rev 8:3–4). The fragrant smoke honours Christ\'s Real Presence, purifies the sanctuary, and sanctifies the people.',
+    catechismRef: 'CCC 1154, GIRM 276–277'
+  },
+  {
+    id: 'incense-boat',
+    name: 'The Incense Boat & Spoon (Navicula)',
+    icon: '⛵',
+    category: 'Vessel',
+    description: 'A small ship-shaped vessel containing the grains of incense (frankincense / olibanum) and the small spoon (cochlear) used by the priest to charge the glowing coals of the thurible.',
+    spiritualMeaning: 'The ship shape recalls the Barque of Peter (the Church). Unburnt grains await the spark of divine fire, symbolizing hearts ready to be transformed by God\'s love.',
+    catechismRef: 'GIRM 100, GIRM 276'
+  },
+  {
+    id: 'thurifer-server',
+    name: 'The Thurifer & Boat Bearer',
+    icon: '🧑‍🤝‍🧑',
+    category: 'Sanctuary',
+    description: 'The leading liturgical altar servers appointed to carry the smoking thurible and boat, guiding the entrance procession and incensing the priest, people, and Blessed Sacrament.',
+    spiritualMeaning: 'Leads the Christian assembly in reverence and awe, guiding the sacred liturgy like the biblical pillar of cloud and standing vigil during the consecration elevations.',
+    catechismRef: 'GIRM 100, GIRM 120'
   }
 ];
 

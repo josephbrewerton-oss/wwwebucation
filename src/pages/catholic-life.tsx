@@ -14,6 +14,7 @@ import CatholicRitesExplorer from '../components/CatholicRitesExplorer';
 import AltarAnatomyExplorer from '../components/AltarAnatomyExplorer';
 import HolyOilsExplorer from '../components/HolyOilsExplorer';
 import LiturgicalMisconceptionsExplorer from '../components/LiturgicalMisconceptionsExplorer';
+import HolyWaterAndThuriferExplorer from '../components/HolyWaterAndThuriferExplorer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
@@ -21,6 +22,7 @@ export type CatholicLifeTab =
   | 'overview'
   | 'church-tour'
   | 'altar'
+  | 'holy-water-thurifer'
   | 'holy-oils'
   | 'rites'
   | 'postures'
@@ -56,6 +58,7 @@ export default function CatholicLifePage(): React.JSX.Element {
         'overview',
         'church-tour',
         'altar',
+        'holy-water-thurifer',
         'holy-oils',
         'rites',
         'postures',
@@ -91,6 +94,7 @@ export default function CatholicLifePage(): React.JSX.Element {
           'overview',
           'church-tour',
           'altar',
+          'holy-water-thurifer',
           'holy-oils',
           'rites',
           'postures',
@@ -136,6 +140,15 @@ export default function CatholicLifePage(): React.JSX.Element {
       color: '#b45309',
       bg: '#fffbeb',
       badge: 'Interactive Anatomy & Types',
+    },
+    {
+      tab: 'holy-water-thurifer' as CatholicLifeTab,
+      icon: '💧',
+      title: 'Holy Water & The Thurifer',
+      desc: 'Aqua Benedicta, the Sunday Asperges sprinkling rite, the Thurifer & Boat Bearer, Thurible anatomy, and the 7 Mass incensations.',
+      color: '#0284c7',
+      bg: '#f0f9ff',
+      badge: 'Sacramentals & Incense',
     },
     {
       tab: 'holy-oils' as CatholicLifeTab,
@@ -240,7 +253,7 @@ export default function CatholicLifePage(): React.JSX.Element {
       tab: 'sacred-objects' as CatholicLifeTab,
       icon: '🏺',
       title: 'Sacred Objects & Vestments',
-      desc: 'Chalice, Monstrance, Ciborium, Tabernacle, Alb, Stole, Chasuble & 10-question recognition quiz.',
+      desc: 'Chalice, Monstrance, Ciborium, Tabernacle, Holy Water Stoup, Thurible, Aspergillum, Alb, Stole, Chasuble & recognition quiz.',
       color: '#d97706',
       bg: '#fffbeb',
       badge: 'Sanctuary Tour',
@@ -508,6 +521,7 @@ export default function CatholicLifePage(): React.JSX.Element {
             { id: 'overview', label: '🏠 Overview' },
             { id: 'church-tour', label: '⛪ Church Tour' },
             { id: 'altar', label: '✝️ The Catholic Altar' },
+            { id: 'holy-water-thurifer', label: '💧 Holy Water & Thurifer' },
             { id: 'holy-oils', label: '🏺 The Holy Oils' },
             { id: 'rites', label: '🌍 6 Rites & 24 Churches' },
             { id: 'postures', label: '🕊️ Postures & Misconceptions' },
@@ -1366,6 +1380,12 @@ export default function CatholicLifePage(): React.JSX.Element {
             {activeTab === 'altar' && (
               <div style={{ marginBottom: '2.5rem' }}>
                 <AltarAnatomyExplorer />
+              </div>
+            )}
+
+            {activeTab === 'holy-water-thurifer' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <HolyWaterAndThuriferExplorer />
               </div>
             )}
 
