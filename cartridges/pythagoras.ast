@@ -30,6 +30,8 @@
     (:t 0.70 :title "Vector Area Sum" :rule "Total square units: a² + b² = c²")
     (:t 1.00 :title "Hypotenuse Square c²" :rule "c = √(a² + b²) preserved across continuous geometry")
   ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     (:target "#pyth-txt-a" :attr "opacity" :expr "1")
     (:target "#pyth-txt-b" :attr "opacity" :expr "1")

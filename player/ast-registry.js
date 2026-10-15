@@ -20,13 +20,13 @@
     { id: "calculus-curves", type: "Sim", title: "Calculus: Tangent Slopes & Definite Integrals", stage: "GCSE & A-LEVEL MATHS", duration: 14, svgFile: "scenes/calculus-curves.svg", astFile: "scenes/calculus-curves.ast" },
     { id: "church-tour", type: "Slide", title: "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces", stage: "CATHOLIC LIFE", duration: 16, svgFile: "scenes/church-tour.svg", astFile: "scenes/church-tour.ast" },
     { id: "holy-oils", type: "Slide", title: "The Three Holy Oils & The Sacred Ambry (Olea Sancta)", stage: "CATHOLIC LIFE", duration: 18, svgFile: "scenes/holy-oils.svg", astFile: "scenes/holy-oils.ast" },
-    { id: "dna-helix", type: "Slide", title: "Genetics: DNA Base Pairing & Transcription", stage: "KS3 GENETICS", duration: 12, has3D: true, svgFile: "scenes/dna-helix.svg", astFile: "scenes/dna-helix.ast" },
+    { id: "dna-helix", type: "Sim", title: "Genetics: DNA Base Pairing & Transcription", stage: "KS3 GENETICS", duration: 12, has3D: true, svgFile: "scenes/dna-helix.svg", astFile: "scenes/dna-helix.ast" },
     { id: "electric-circuits", type: "Sim", title: "💡 Electrical Circuits & Ohm's Law (V = I × R)", stage: "KS2/KS3 PHYSICS", duration: 12, svgFile: "scenes/electric-circuits.svg", astFile: "scenes/electric-circuits.ast" },
     { id: "fish-tank", type: "App", title: "Aquarium Stress Benchmark: Vector Point & FPS Limiter", stage: "BENCHMARK & STRESS LAB", duration: 12, svgFile: "scenes/fish-tank.svg", astFile: "scenes/fish-tank.ast" },
     { id: "fractions", type: "Slide", title: "Fractions: Why Common Denominators Rule", stage: "KS2 MATHS", duration: 12, svgFile: "scenes/fractions.svg", astFile: "scenes/fractions.ast" },
     { id: "kinetic-gas", type: "Sim", title: "Kinetic Gas Theory & Boyle's Law", stage: "KS3/KS4 PHYSICS & CHEMISTRY", duration: 14, svgFile: "scenes/kinetic-gas.svg", astFile: "scenes/kinetic-gas.ast" },
     { id: "languages", type: "App", title: "MFL & Polyglot Studio: Spanish, French & Latin", stage: "KS2/KS3 MFL", duration: 15, svgFile: "scenes/languages.svg", astFile: "scenes/languages.ast" },
-    { id: "math-fishing", type: "Sim", title: "Math Pond: Number Bonds Fishing Game", stage: "KS1/KS2 MATHS", duration: 14, svgFile: "scenes/math-fishing.svg", astFile: "scenes/math-fishing.ast" },
+    { id: "math-fishing", type: "App", title: "Math Pond: Number Bonds Fishing Game", stage: "KS1/KS2 MATHS", duration: 14, svgFile: "scenes/math-fishing.svg", astFile: "scenes/math-fishing.ast" },
     { id: "mountain-elevation", type: "Sim", title: "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science", stage: "KS2/KS3 MATHS & GEOGRAPHY", duration: 16, svgFile: "scenes/mountain-elevation.svg", astFile: "scenes/mountain-elevation.ast" },
     { id: "phonics-lab", type: "App", title: "Early Phonics: Sound Buttons & Blending Mat", stage: "EYFS/KS1 ENGLISH", duration: 12, svgFile: "scenes/phonics-lab.svg", astFile: "scenes/phonics-lab.ast" },
     { id: "photosynthesis", type: "Slide", title: "Photosynthesis: The Green Solar Engine", stage: "KS3 BIOLOGY", duration: 10, svgFile: "scenes/photosynthesis.svg", astFile: "scenes/photosynthesis.ast" },
@@ -307,9 +307,17 @@
         else if (norm === 'app') type = 'App';
         else type = 'Sim';
       } else {
-        if (['phonics-lab', 'languages', 'fish-tank'].includes(id)) type = 'App';
-        else if (['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(id)) type = 'Slide';
-        else type = 'Sim';
+        const hasSubtitles = /:subtitles\s*\(/i.test(content);
+        const hasGestures = /:gestures\s*\(/i.test(content) || /:draggable\s+/i.test(content);
+        const hasCheckpoints = /:interactive\s*\(/i.test(content) || /:checkpoint\s+/i.test(content);
+        const hasPhysics = /:physics\s*\(/i.test(content) || /:emitter\s+/i.test(content);
+        if (hasSubtitles && !hasGestures && !hasPhysics) {
+          type = 'Slide';
+        } else if (hasGestures || hasPhysics || hasCheckpoints) {
+          type = 'Sim';
+        } else {
+          type = 'App';
+        }
       }
       const titleMatch = content.match(/:title\s+"([^"]+)"/i);
       const stageMatch = content.match(/:stage\s+"([^"]+)"/i);

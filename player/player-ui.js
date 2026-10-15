@@ -675,9 +675,10 @@
         return;
       }
       const scene = this.engine && this.engine.scene;
-      const isAppCartridge = scene && (scene.type === 'App' || ['spelling-bee', 'math-fishing', 'phonics-lab', 'languages', 'fish-tank', 'times-tables'].includes(scene.id));
-      if (!scene || isAppCartridge || !scene.interactive || !Array.isArray(scene.interactive.checkpoints) || scene.interactive.checkpoints.length === 0) {
-        this.showToast('ℹ️ No checkpoint quizzes found for this interactive cartridge');
+      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
+
+      if (!hasCheckpoints) {
+        this.showToast('ℹ️ No checkpoint quizzes defined in this cartridge');
         return;
       }
       let targetIdx = 0;
@@ -694,10 +695,9 @@
 
     checkInteractiveCheckpoints() {
       if (!this.interactiveMode || this.activeCheckpoint !== null) return;
-      const scene = this.engine.scene;
-      if (!scene || !scene.interactive || !Array.isArray(scene.interactive.checkpoints)) return;
-      const isAppCartridge = scene.type === 'App' || ['spelling-bee', 'math-fishing', 'phonics-lab', 'languages', 'fish-tank', 'times-tables'].includes(scene.id);
-      if (isAppCartridge || scene.interactive === false || (scene.interactive && scene.interactive.disabled)) return;
+      const scene = this.engine && this.engine.scene;
+      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
+      if (!hasCheckpoints) return;
 
       const curT = this.engine.progress;
       const prevT = this._lastCheckedT !== undefined ? this._lastCheckedT : curT;
@@ -942,24 +942,18 @@
       const builtInItems = list.filter(item => item._source === 'builtin');
       
       const simItems = builtInItems.filter(item => {
-        const t = (item.type || '').toLowerCase();
-        if (t === 'sim') return true;
-        if (t === 'slide' || t === 'app') return false;
-        return !['phonics-lab', 'languages', 'fish-tank', 'church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(item.id);
+        const t = (item.type || 'Sim').toLowerCase();
+        return t === 'sim' || t === 'simulation';
       });
 
       const slideItems = builtInItems.filter(item => {
         const t = (item.type || '').toLowerCase();
-        if (t === 'slide') return true;
-        if (t === 'sim' || t === 'app') return false;
-        return ['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(item.id);
+        return t === 'slide' || t === 'slides' || t === 'presentation';
       });
 
       const appItems = builtInItems.filter(item => {
         const t = (item.type || '').toLowerCase();
-        if (t === 'app') return true;
-        if (t === 'sim' || t === 'slide') return false;
-        return ['phonics-lab', 'languages', 'fish-tank'].includes(item.id);
+        return t === 'app' || t === 'application' || t === 'game' || t === 'tool';
       });
 
       const appendCategoryGroup = (label, color, items) => {
@@ -2765,10 +2759,16 @@ window.addEventListener('message', (e) => {
       if (el.presetSelector) el.presetSelector.style.display = c.showPresetSelector !== false ? '' : 'none';
       if (el.badgeStage) el.badgeStage.style.display = c.showStageBadge !== false ? '' : 'none';
       if (el.btnInteractive) {
-        el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
-        if (c.showInteractiveCheckpoints !== undefined) {
-          this.interactiveMode = Boolean(c.showInteractiveCheckpoints);
-          el.btnInteractive.classList.toggle('active', this.interactiveMode);
+        const scene = this.engine && this.engine.scene;
+        const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
+        if (!hasCheckpoints) {
+          el.btnInteractive.style.display = 'none';
+        } else {
+          el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
+          if (c.showInteractiveCheckpoints !== undefined) {
+            this.interactiveMode = Boolean(c.showInteractiveCheckpoints);
+            el.btnInteractive.classList.toggle('active', this.interactiveMode);
+          }
         }
       }
       
@@ -3125,6 +3125,17 @@ window.addEventListener('message', (e) => {
         this.closeQuestMode();
         this.setupKeyframeMarkers();
         this.update3DStatus();
+
+        const scene = this.engine && this.engine.scene;
+        const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
+        if (!hasCheckpoints) {
+          this.interactiveMode = false;
+          if (this.elements.btnInteractive) this.elements.btnInteractive.style.display = 'none';
+        } else if (this.elements.btnInteractive) {
+          this.elements.btnInteractive.style.display = this.displayConfig.showInteractiveCheckpoints !== false ? '' : 'none';
+          this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
+        }
+
         this.updateView();
       });
 
