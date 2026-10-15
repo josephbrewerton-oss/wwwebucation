@@ -11,6 +11,7 @@ import { getLearnerProfile } from '../services/studentProfileStore';
 import { hypervisor } from '../engine/hypervisor';
 import { playSuccessChime, playIncorrectTone, triggerHapticSuccess, triggerHapticError } from '../services/soundHaptics';
 import { triggerMasteryConfetti } from '../utils/confetti';
+import { initWebMcpBridge } from '../services/webMcpBridge';
 
 const GlobalPlayerModal = React.lazy(() => import('./GlobalPlayerModal'));
 const GlobalChallengeModal = React.lazy(() => import('./GlobalChallengeModal'));
@@ -51,6 +52,12 @@ export default function PersistentAppShell(): React.JSX.Element {
     document.documentElement.setAttribute('data-font-size', storedFont);
     document.documentElement.setAttribute('data-high-contrast', storedContrast ? 'true' : 'false');
   }, []);
+
+  // Register W3C WebMCP tools on document.modelContext for in-browser AI agents
+  useEffect(() => {
+    const cleanup = initWebMcpBridge(navigate);
+    return cleanup;
+  }, [navigate]);
 
   // Connect pupil device to local classroom beacon (peer-to-peer over local school network)
   useEffect(() => {

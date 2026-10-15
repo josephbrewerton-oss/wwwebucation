@@ -264,3 +264,16 @@ While originally forged in the demanding crucible of rigorous educational simula
 - **Track A (Humanitarian Commons - AGPLv3)**: State schools, educational charities, and pupils enjoy free, perpetual access with copyleft reciprocity.
 - **Track B (Enterprise Commercial License)**: Commercial DOOH operators, ad-tech platforms, and kiosk OEMs license closed-source proprietary distribution rights, with 100% of license revenues directly funding free hardware and solar-powered devices for disadvantaged schools.
 
+---
+
+## 8. W3C WebMCP (Web Model Context Protocol) Specification Compliance
+
+In accordance with the emerging W3C Web Machine Learning Community Group standard incubated by Google Chrome and Microsoft (`github.com/webmachinelearning/webmcp-types`), St Joseph's Curriculum Portal registers client-side tool schemas directly on `document.modelContext.registerTool(...)`.
+
+### Available In-Browser WebMCP Tools:
+1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
+2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via React Router.
+3. `launch_simulation` (Consequential): Programmatically open and render any of the 17+ interactive AST vector cartridges on the stage with autoPlay.
+4. `list_ast_simulations` (Read-Only): Enumerate all 17+ vector cartridges with learning invariants, subjects, and runtimes.
+5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
+

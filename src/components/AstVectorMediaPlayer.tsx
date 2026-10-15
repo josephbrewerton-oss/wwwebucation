@@ -38,7 +38,7 @@ import AstInteractiveLabDrawer from './player/AstInteractiveLabDrawer';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { exportSubjectCartridge, AVAILABLE_CARTRIDGES } from '../utils/exportSubjectCartridge';
 import { getRelatedConcepts } from '../data/player/astConceptGraph';
-import { getCartridge, normalizeCartridgeId } from '../services/cartridgeStore';
+import { getCartridge, normalizeCartridgeId, saveCustomCartridge } from '../services/cartridgeStore';
 import { classroomBeacon } from '../services/classroomBeacon';
 
 // 1. Single Source of Truth: Import presets compiled from static/player/scenes/
@@ -715,6 +715,31 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           });
           setInkNotice('📥 Teacher whiteboard ink synchronized');
           setTimeout(() => setInkNotice(null), 3000);
+          break;
+        case 'FILELOADED':
+        case 'FILE_LOADED':
+          if (data.id && (data.svgMarkup || data.astSource)) {
+            const isPhet = data.type === 'phet-transpiled' || data.filename?.toLowerCase().includes('phet');
+            saveCustomCartridge({
+              id: data.id,
+              title: data.title || data.id,
+              stage: data.stage || (isPhet ? 'PhET INTERACTIVE APPARATUS' : 'IMPORTED CARTRIDGE'),
+              category: isPhet ? 'Science' : 'Imported',
+              desc: isPhet
+                ? `Distilled from PhET bundle down to clean AST vector physics with zero cloud leakage.`
+                : `Imported decentralized vector cartridge.`,
+              icon: isPhet ? '🧪' : '📦',
+              source: isPhet ? 'phet' : 'imported',
+              svgMarkup: data.svgMarkup,
+              astSource: data.astSource,
+              author: isPhet ? 'University of Colorado Boulder (PhET)' : 'Educator',
+              version: data.metadata?.version || '1.0.0',
+              invariants: data.metadata?.detectedInvariants || (isPhet ? ['Physical Conservation Law'] : []),
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+            });
+            onPresetChange?.(data.id);
+          }
           break;
         default:
           break;
