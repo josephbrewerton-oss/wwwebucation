@@ -172,7 +172,7 @@ export const NanoAiTutorDrawer: React.FC<NanoAiTutorDrawerProps> = ({
         return [
           'Why do outer planets like Neptune take vastly longer to orbit than Mercury?',
           'Explain Kepler’s 3rd Law of planetary motion simply',
-          'What are the key Top Trumps differences between gas giants and rocky planets?',
+          'What are the key planetary differences between gas giants and rocky planets?',
         ];
       default:
         return [

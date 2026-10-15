@@ -27,6 +27,16 @@
     (:t 0.92 :title "6. Lady Chapel & Baptismal Font" :rule "Fons & Sacellum: Devotional side chapel of Our Lady and the waters of new birth.")
   ))
   (:interactive (
+    (:checkpoint :t 0.20
+      :prompt "Why do Catholics genuflect on the right knee toward the Tabernacle when entering the Nave?"
+      :options ("To adore Jesus Christ truly and substantially present in the Blessed Sacrament" "As a greeting to the choir in the loft" "To test the church kneeler alignment" "To stretch before long liturgies")
+      :answer 0
+      :explanation "Genuflecting on our right knee is a sacred act of adoration directed specifically to Jesus Christ physically and divinely present in the consecrated Eucharist within the Tabernacle.")
+    (:checkpoint :t 0.60
+      :prompt "What does the High Altar represent in Catholic sacred architecture?"
+      :options ("Christ Himself, the living stone and center of the Eucharistic Sacrifice" "A podium for secular parish announcements" "A storage table exclusively for liturgical books" "A commemorative plaque to ancient benefactors")
+      :answer 0
+      :explanation "The altar represents Christ Himself, who is Priest, Altar, and Lamb of Sacrifice. The General Instruction of the Roman Missal emphasizes that the altar is the center of the thanksgiving accomplished through the Eucharist.")
     (:checkpoint :t 0.81
       :prompt "Why does a red Sanctuary Lamp burn day and night beside the Catholic Tabernacle?"
       :options ("To signify the Real Presence of Jesus Christ in the Blessed Sacrament" "To provide night illumination for the sacristan" "To mark where incense is stored" "As an architectural fire exit indicator")

@@ -30,7 +30,7 @@
   <path d="M 310 390 L 490 390 M 310 340 L 490 340 M 310 290 L 490 290 M 310 240 L 490 240" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="2 4" />
 
   <!-- 2. Nave Central Royal Carpet &amp; Pews -->
-  <g class="ast-hotspot" data-target-t="0.20" data-label="2. The Nave &amp; Central Aisle" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.20" data-label="2. The Nave &amp; Central Aisle" data-pedagogical="church-nave" style="cursor: pointer;">
     <rect x="375" y="180" width="50" height="260" fill="#7f1d1d" opacity="0.85" rx="2" />
     <line x1="375" y1="180" x2="375" y2="440" stroke="#dc2626" stroke-width="1.5" />
     <line x1="425" y1="180" x2="425" y2="440" stroke="#dc2626" stroke-width="1.5" />
@@ -64,7 +64,7 @@
   <!-- 3. Elevated Sanctuary Platform &amp; Altar of Sacrifice -->
   <path d="M 310 180 L 490 180 L 490 60 Q 400 45, 310 60 Z" fill="#1e293b" stroke="#475569" stroke-width="2" />
   <path d="M 325 170 L 475 170 L 475 70 Q 400 58, 325 70 Z" fill="#0f172a" stroke="#64748b" stroke-width="1.5" />
-  <g class="ast-hotspot" data-target-t="0.60" data-label="4. The Altar of Sacrifice" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.60" data-label="4. The Altar of Sacrifice" data-pedagogical="church-altar" style="cursor: pointer;">
     <rect x="360" y="115" width="80" height="34" rx="4" fill="#e2e8f0" stroke="#f8fafc" stroke-width="2" />
     <rect x="366" y="119" width="68" height="26" rx="2" fill="#cbd5e1" />
     <circle cx="372" cy="128" r="3.5" fill="#facc15" filter="url(#glow)" />
@@ -75,25 +75,25 @@
   </g>
 
   <!-- 4. Tabernacle of the Blessed Sacrament &amp; Red Sanctuary Lamp -->
-  <g class="ast-hotspot" data-target-t="0.80" data-label="5. The Tabernacle &amp; Sanctuary Lamp" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.80" data-label="5. The Tabernacle &amp; Sanctuary Lamp" data-pedagogical="church-tabernacle" style="cursor: pointer;">
     <rect x="382" y="58" width="36" height="28" rx="3" fill="#eab308" stroke="#fef08a" stroke-width="2" filter="url(#glow)" />
     <line x1="400" y1="62" x2="400" y2="76" stroke="#78350f" stroke-width="2" />
     <line x1="392" y1="68" x2="408" y2="68" stroke="#78350f" stroke-width="1.5" />
     <text x="400" y="82" fill="#78350f" font-size="7" font-weight="900" text-anchor="middle">IHS</text>
-    <circle id="church-lamp" cx="432" cy="72" r="7.5" fill="#ef4444" filter="url(#glow)" />
+    <circle id="church-lamp" cx="432" cy="72" r="7.5" fill="#ef4444" filter="url(#glow)" data-pedagogical="church-lamp" />
     <circle cx="432" cy="72" r="4" fill="#fee2e2" />
     <line x1="432" y1="52" x2="432" y2="66" stroke="#94a3b8" stroke-width="1" />
   </g>
 
   <!-- 5. Ambo (Table of the Word) -->
-  <g class="ast-hotspot" data-target-t="0.40" data-label="3. The Ambo (Lectern)" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.40" data-label="3. The Ambo (Lectern)" data-pedagogical="church-ambo" style="cursor: pointer;">
     <rect x="330" y="125" width="22" height="24" rx="2" fill="#2563eb" stroke="#60a5fa" stroke-width="1.5" />
     <path d="M 333 130 L 341 127 L 349 130" stroke="#ffffff" stroke-width="1.5" fill="none" />
     <text x="341" y="145" fill="#ffffff" font-size="7" font-weight="800" text-anchor="middle">AMBO</text>
   </g>
 
   <!-- 6. Lady Chapel Devotional Shrine (North Transept) -->
-  <g class="ast-hotspot" data-target-t="0.94" data-label="6A. Lady Chapel" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.94" data-label="6A. Lady Chapel" data-pedagogical="church-lady-chapel" style="cursor: pointer;">
     <rect x="175" y="175" width="120" height="50" rx="4" fill="#172554" stroke="#2563eb" stroke-width="1.5" />
     <circle cx="205" cy="200" r="10" fill="#38bdf8" filter="url(#glow)" />
     <text x="205" y="204" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">★</text>
@@ -102,7 +102,7 @@
   </g>
 
   <!-- 7. Baptismal Font (South Transept) -->
-  <g class="ast-hotspot" data-target-t="1.00" data-label="6B. Baptismal Font" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="1.00" data-label="6B. Baptismal Font" data-pedagogical="church-font" style="cursor: pointer;">
     <rect x="505" y="175" width="120" height="50" rx="4" fill="#14532d" stroke="#16a34a" stroke-width="1.5" />
     <polygon points="535,190 545,190 552,197 552,205 545,212 535,212 528,205 528,197" fill="#0284c7" stroke="#38bdf8" stroke-width="2" filter="url(#glow)" />
     <circle cx="540" cy="201" r="4" fill="#e0f2fe" />
@@ -111,7 +111,7 @@
   </g>
 
   <!-- 8. Narthex &amp; Holy Water Stoup (Entrance) -->
-  <g class="ast-hotspot" data-target-t="0.00" data-label="1. Narthex &amp; Holy Water Stoup" style="cursor: pointer;">
+  <g class="ast-hotspot" data-target-t="0.00" data-label="1. Narthex &amp; Holy Water Stoup" data-pedagogical="church-narthex" style="cursor: pointer;">
     <rect x="310" y="415" width="180" height="30" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
     <circle cx="330" cy="430" r="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
     <circle cx="470" cy="430" r="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5" />
@@ -119,9 +119,11 @@
   </g>
 
   <!-- 9. Moving Pilgrim Spotlight &amp; Avatar -->
-  <circle id="spot-halo" cx="400" cy="430" r="38" fill="rgba(56, 189, 248, 0.14)" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" filter="url(#glow)" />
-  <circle id="spot-dot" cx="400" cy="430" r="8" fill="#38bdf8" filter="url(#glow)" />
-  <circle id="spot-core" cx="400" cy="430" r="4" fill="#ffffff" />
+  <g id="spot-avatar" data-pedagogical="church-pilgrim" style="cursor: grab;">
+    <circle id="spot-halo" cx="400" cy="430" r="38" fill="rgba(56, 189, 248, 0.14)" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" filter="url(#glow)" />
+    <circle id="spot-dot" cx="400" cy="430" r="8" fill="#38bdf8" filter="url(#glow)" />
+    <circle id="spot-core" cx="400" cy="430" r="4" fill="#ffffff" />
+  </g>
 
   <!-- 10. Architectural Station HUD Banner -->
   <rect x="110" y="12" width="580" height="42" rx="8" fill="#090d16" stroke="#38bdf8" stroke-width="1.5" />

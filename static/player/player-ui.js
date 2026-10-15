@@ -2574,7 +2574,9 @@ window.addEventListener('message', (e) => {
           e.preventDefault();
           this.toggleDevMode();
         } else if (e.code === 'Escape') {
-          if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
+          if (this.elements.questDrawer && !this.elements.questDrawer.classList.contains('hidden')) {
+            this.closeQuestMode();
+          } else if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
             this.minimizeInteractiveCard();
           } else if (this.elements.shortcutsModal && !this.elements.shortcutsModal.classList.contains('hidden')) {
             this.closeShortcutsModal();

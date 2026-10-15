@@ -19,7 +19,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "label": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
     "stage": "CATHOLIC LIFE",
     "hasCheckpoints": true,
-    "checkpointCount": 1
+    "checkpointCount": 3
   },
   {
     "id": "calculus-curves",
