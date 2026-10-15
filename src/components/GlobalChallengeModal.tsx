@@ -7,7 +7,7 @@ import {
 } from '../services/challengeLauncher';
 import FirstCommunionMasteryLab from './FirstCommunionMasteryLab';
 import NeuralLabCanvas from './NeuralLabCanvas';
-import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { isCartridgeWithoutQuestions } from './AstVectorMediaPlayer';
 
 export default function GlobalChallengeModal(): React.JSX.Element | null {
   const [callOptions, setCallOptions] = useState<ChallengeCallOptions | null>(null);
@@ -200,7 +200,15 @@ export default function GlobalChallengeModal(): React.JSX.Element | null {
                    'fractions')
                 }
                 autoPlay={true}
-                showQuestions={true}
+                showQuestions={!isCartridgeWithoutQuestions(
+                  challenge.preset ||
+                  (challenge.type === 'math-fishing' ? 'math-fishing' :
+                   challenge.type === 'mountain-climber' ? 'mountain-elevation' :
+                   challenge.type === 'early-phonics' ? 'phonics-lab' :
+                   challenge.type === 'language-mastery' ? 'languages' :
+                   challenge.type === 'shakespeare-theatre' ? 'shakespeare' :
+                   'fractions')
+                )}
                 embedded={true}
                 height="min(560px, 70vh)"
               />

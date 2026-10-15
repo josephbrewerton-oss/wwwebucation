@@ -187,7 +187,7 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
   },
   {
     id: 'times-tables',
-    type: 'Slide',
+    type: 'Sim',
     title: 'Times Tables Arrays & Distributive Splitter (12×12)',
     stage: 'KS1/KS2 MATHS',
     category: 'Mathematics',
@@ -299,7 +299,7 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
   },
   {
     id: 'math-fishing',
-    type: 'Sim',
+    type: 'App',
     title: 'Math Pond: Number Bonds Fishing Game',
     stage: 'KS1/KS2 MATHS',
     category: 'Games & Simulations',
@@ -313,7 +313,7 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
   },
   {
     id: 'dna-helix',
-    type: 'Slide',
+    type: 'Sim',
     title: 'DNA Double Helix & Base Pairs',
     stage: 'KS3 GENETICS',
     category: 'Science',

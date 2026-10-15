@@ -52,16 +52,40 @@ export type VectorPresetType = string;
  * Some cartridges (Apps, Games, Benchmarks, Manipulative Splitters) are self-contained
  * interactive experiences where the user IS the active player. They strictly do NOT
  * require pop-up checkpoint questions, which would intrude on gameplay.
- */
-/**
- * Cartridge Type Taxonomy:
- * Driven directly by the generated manifest PRESET_OPTIONS.
- * Cartridges classified as 'App' (interactive games, drills, manipulatives)
- * suppress pop-up checkpoint quizzes.
+ *
+ * Taxonomical Rules:
+ * 1. All cartridges of type 'App' (spelling-bee, math-fishing, phonics-lab, fish-tank, languages, etc.)
+ * 2. Self-contained manipulatives that have no quiz questions (pythagoras, times-tables)
+ * 3. Any cartridge explicitly specifying (:interactive false) or (:questions false)
  */
 export const isCartridgeWithoutQuestions = (presetId: string): boolean => {
-  const scene = PRESET_OPTIONS.find((opt) => opt.id === presetId);
-  return scene?.type === 'App';
+  const canonical = normalizeCartridgeId(presetId) || presetId;
+
+  // 1. Check generated preset options directly derived from cartridge AST definition
+  const scene = PRESET_OPTIONS.find((opt) => opt.id === canonical || opt.id === presetId);
+  if (scene) {
+    if (scene.type === 'App') return true;
+    if (typeof scene.hasCheckpoints === 'boolean') return !scene.hasCheckpoints;
+  }
+
+  // 2. Check dynamic cartridge store (decentralized / user / phet cartridges)
+  const cart = getCartridge(canonical);
+  if (cart) {
+    if (cart.type === 'App') return true;
+    if (cart.astSource) {
+      if (
+        /:interactive\s+(false|nil|none)\b/i.test(cart.astSource) ||
+        /:questions\s+(false|nil|none)\b/i.test(cart.astSource) ||
+        /:type\s+"App"/i.test(cart.astSource)
+      ) {
+        return true;
+      }
+      const hasCps = /\(:checkpoint\s+/i.test(cart.astSource);
+      return !hasCps;
+    }
+  }
+
+  return false;
 };
 
 export interface AstVectorMediaPlayerProps {
@@ -463,7 +487,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
 
   // Automatically inject checkpoint into player stage when provided
   useEffect(() => {
-    if (initialCheckpoint) {
+    if (initialCheckpoint && !isCartridgeWithoutQuestions(selectedPreset)) {
       const timer = setTimeout(() => {
         postToPlayer({
           type: 'INJECT_CHECKPOINT',

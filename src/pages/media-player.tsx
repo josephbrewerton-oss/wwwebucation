@@ -218,7 +218,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
       filterCategory === 'All'
         ? true
         : filterCategory === 'Sim' || filterCategory === 'Slide' || filterCategory === 'App'
-        ? (p.type || (['phonics-lab', 'languages', 'fish-tank'].includes(p.id) ? 'App' : ['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(p.id) ? 'Slide' : 'Sim')) === filterCategory
+        ? (p.type || 'Sim') === filterCategory
         : filterCategory === 'PhET Distilled'
         ? p.source === 'phet'
         : filterCategory === 'User Created'
@@ -390,7 +390,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
               >
                 <optgroup label="🎮 Simulations (Sim)" style={{ background: '#0f172a', color: '#38bdf8' }}>
                   {cartridges
-                    .filter((c) => (c.type === 'Sim' || (!c.type && ['algebra-balance', 'electric-circuits', 'kinetic-gas', 'calculus-curves', 'solar-system', 'atom', 'velocity', 'mountain-elevation', 'math-fishing'].includes(c.id))) && c.source === 'builtin')
+                    .filter((c) => (c.type || 'Sim') === 'Sim' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
                         {c.icon} {c.title} ({c.stage})
@@ -399,7 +399,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                 </optgroup>
                 <optgroup label="📑 Interactive Slides (Slide)" style={{ background: '#0f172a', color: '#34d399' }}>
                   {cartridges
-                    .filter((c) => (c.type === 'Slide' || (!c.type && ['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(c.id))) && c.source === 'builtin')
+                    .filter((c) => c.type === 'Slide' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
                         {c.icon} {c.title} ({c.stage})
@@ -408,7 +408,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                 </optgroup>
                 <optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
                   {cartridges
-                    .filter((c) => (c.type === 'App' || (!c.type && ['phonics-lab', 'languages', 'fish-tank', 'spelling-bee'].includes(c.id))) && c.source === 'builtin')
+                    .filter((c) => c.type === 'App' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
                         {c.icon} {c.title} ({c.stage})
@@ -944,7 +944,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
           {filteredPresets.map((p) => {
             const isSelected = p.id === activePreset;
             const isCustom = p.source === 'user' || p.source === 'imported' || p.source === 'phet';
-            const cardType = p.type || (['phonics-lab', 'languages', 'fish-tank'].includes(p.id) ? 'App' : ['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(p.id) ? 'Slide' : 'Sim');
+            const cardType = p.type || 'Sim';
             return (
               <div
                 key={p.id}

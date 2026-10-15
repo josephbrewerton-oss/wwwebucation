@@ -8,6 +8,8 @@ export interface ScenePresetOption {
   type: CartridgeType;
   label: string;
   stage: string;
+  hasCheckpoints?: boolean;
+  checkpointCount?: number;
 }
 
 export const PRESET_OPTIONS: ScenePresetOption[] = [
@@ -15,144 +17,192 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "id": "church-tour",
     "type": "Slide",
     "label": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
-    "stage": "CATHOLIC LIFE"
+    "stage": "CATHOLIC LIFE",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "calculus-curves",
     "type": "Sim",
     "label": "Calculus: Tangent Slopes & Definite Integrals",
-    "stage": "GCSE & A-LEVEL MATHS"
+    "stage": "GCSE & A-LEVEL MATHS",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "kinetic-gas",
     "type": "Sim",
     "label": "Kinetic Gas Theory & Boyle's Law",
-    "stage": "KS3/KS4 PHYSICS & CHEMISTRY"
+    "stage": "KS3/KS4 PHYSICS & CHEMISTRY",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "electric-circuits",
     "type": "Sim",
     "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
-    "stage": "KS2/KS3 PHYSICS"
+    "stage": "KS2/KS3 PHYSICS",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "bodmas",
     "type": "Slide",
     "label": "BODMAS / BIDMAS: Forcefield Clamping & Area Physics",
-    "stage": "KS2/KS3 MATHS"
+    "stage": "KS2/KS3 MATHS",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "times-tables",
     "type": "Sim",
     "label": "Times Tables: 2× to 12× Array & Distributive Splitter",
-    "stage": "KS1/KS2 MATHS"
+    "stage": "KS1/KS2 MATHS",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "phonics-lab",
     "type": "App",
     "label": "Early Phonics: Sound Buttons & Blending Mat",
-    "stage": "EYFS/KS1 ENGLISH"
+    "stage": "EYFS/KS1 ENGLISH",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "math-fishing",
-    "type": "Sim",
+    "type": "App",
     "label": "Math Pond: Number Bonds Fishing Game",
-    "stage": "KS1/KS2 MATHS"
+    "stage": "KS1/KS2 MATHS",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "mountain-elevation",
     "type": "Sim",
     "label": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
-    "stage": "KS2/KS3 MATHS & GEOGRAPHY"
+    "stage": "KS2/KS3 MATHS & GEOGRAPHY",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "fish-tank",
     "type": "App",
     "label": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
-    "stage": "BENCHMARK & STRESS LAB"
+    "stage": "BENCHMARK & STRESS LAB",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "fractions",
     "type": "Slide",
     "label": "Fractions: Why Common Denominators Rule",
-    "stage": "KS2 MATHS"
+    "stage": "KS2 MATHS",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "solar-system",
     "type": "Sim",
     "label": "Solar System: Heliocentric Planetary Motion",
-    "stage": "KS3 SCIENCE"
+    "stage": "KS3 SCIENCE",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "photosynthesis",
     "type": "Slide",
     "label": "Photosynthesis: The Green Solar Engine",
-    "stage": "KS3 BIOLOGY"
+    "stage": "KS3 BIOLOGY",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "pythagoras",
     "type": "Sim",
     "label": "Pythagoras' Theorem (a² + b² = c²)",
-    "stage": "KS3 GEOMETRY"
+    "stage": "KS3 GEOMETRY",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "water-cycle",
     "type": "Slide",
     "label": "Water Cycle: Continuous Earth Cycle",
-    "stage": "KS2 GEOGRAPHY"
+    "stage": "KS2 GEOGRAPHY",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "atom",
     "type": "Sim",
     "label": "Atomic Structure: Bohr Electron Shells",
-    "stage": "KS3 CHEMISTRY"
+    "stage": "KS3 CHEMISTRY",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "velocity",
     "type": "Sim",
     "label": "Kinematics: Velocity & Distance-Time Vectors",
-    "stage": "KS3 PHYSICS"
+    "stage": "KS3 PHYSICS",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "dna-helix",
     "type": "Sim",
     "label": "Genetics: DNA Base Pairing & Transcription",
-    "stage": "KS3 GENETICS"
+    "stage": "KS3 GENETICS",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   },
   {
     "id": "algebra-balance",
     "type": "Sim",
     "label": "⚖️ Algebraic Balance Scale: Preserving Equality (2x + 5 = 15)",
-    "stage": "KS2/KS3 MATHS"
+    "stage": "KS2/KS3 MATHS",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "languages",
     "type": "App",
     "label": "MFL & Polyglot Studio: Spanish, French & Latin",
-    "stage": "KS2/KS3 MFL"
+    "stage": "KS2/KS3 MFL",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "spelling-bee",
     "type": "App",
     "label": "Spelling Bee Championship: KS1 to KS3 Orthography",
-    "stage": "KS1/KS2/KS3 ENGLISH"
+    "stage": "KS1/KS2/KS3 ENGLISH",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "altar-anatomy",
     "type": "Slide",
     "label": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
-    "stage": "CATHOLIC LIFE"
+    "stage": "CATHOLIC LIFE",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "shakespeare",
     "type": "Slide",
     "label": "The Globe Theatre: Shakespeare & Iambic Pentameter",
-    "stage": "KS3/KS4 ENGLISH LITERATURE"
+    "stage": "KS3/KS4 ENGLISH LITERATURE",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "holy-oils",
     "type": "Slide",
     "label": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
-    "stage": "CATHOLIC LIFE"
+    "stage": "CATHOLIC LIFE",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
   }
 ];

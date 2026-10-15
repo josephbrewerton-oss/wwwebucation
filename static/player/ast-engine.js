@@ -3626,9 +3626,17 @@
         else if (norm === 'app') type = 'App';
         else type = 'Sim';
       } else {
-        if (['phonics-lab', 'languages', 'fish-tank'].includes(id)) type = 'App';
-        else if (['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(id)) type = 'Slide';
-        else type = 'Sim';
+        const hasSubtitles = /:subtitles\s*\(/i.test(text);
+        const hasGestures = /:gestures\s*\(/i.test(text) || /:draggable\s+/i.test(text);
+        const hasCheckpoints = /:interactive\s*\(/i.test(text) || /:checkpoint\s+/i.test(text);
+        const hasPhysics = /:physics\s*\(/i.test(text) || /:emitter\s+/i.test(text);
+        if (hasSubtitles && !hasGestures && !hasPhysics) {
+          type = 'Slide';
+        } else if (hasGestures || hasPhysics || hasCheckpoints) {
+          type = 'Sim';
+        } else {
+          type = 'App';
+        }
       }
       const title = extractSlot(/:title\s+"([^"]+)"/i);
       const stage = extractSlot(/:stage\s+"([^"]+)"/i) || 'CURRICULUM';
@@ -4435,18 +4443,30 @@
           (registryScene && registryScene.has3D)
         );
 
-        const isInteractiveExplicitlyDisabled = astText ? (/:interactive\s+(false|nil|none)\b/i.test(astText) || /:questions\s+(false|nil|none)\b/i.test(astText) || (/:enabled\s+(false|nil)\b/i.test(astText) && /:interactive/i.test(astText))) : false;
+        const isInteractiveExplicitlyDisabled = astText ? (
+          /:interactive\s+(false|nil|none)\b/i.test(astText) ||
+          /:questions\s+(false|nil|none)\b/i.test(astText) ||
+          /:type\s+"App"/i.test(astText) ||
+          (/:enabled\s+(false|nil)\b/i.test(astText) && /:interactive/i.test(astText))
+        ) : false;
+
+        const resolvedType = (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim';
+        const hasAstCheckpoints = Boolean(
+          (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length > 0) ||
+          (parsedAst && parsedAst.interactive && parsedAst.interactive.checkpoints && parsedAst.interactive.checkpoints.length > 0)
+        );
+        const shouldHaveQuestions = !isInteractiveExplicitlyDisabled && resolvedType !== 'App' && hasAstCheckpoints;
 
         scene = {
           id: presetId,
-          type: (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim',
-          cartridgeType: (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim',
+          type: resolvedType,
+          cartridgeType: resolvedType,
           title: (parsedAst && parsedAst.title) || registryScene.title || presetId,
           stage: (parsedAst && parsedAst.stage) || registryScene.stage || 'CURRICULUM',
           duration: (parsedAst && parsedAst.duration) || registryScene.duration || 10.0,
           camera: has3D ? ((parsedAst && parsedAst.camera) || registryScene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }) : null,
           has3D: has3D,
-          interactive: isInteractiveExplicitlyDisabled ? null : ((parsedAst && parsedAst.interactive) || registryScene.interactive || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null)),
+          interactive: shouldHaveQuestions ? ((parsedAst && parsedAst.interactive) || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null)) : null,
           keyframes: (parsedAst && parsedAst.keyframes && parsedAst.keyframes.length) ? parsedAst.keyframes : (registryScene.keyframes || []),
           subtitles: (parsedAst && parsedAst.subtitles && parsedAst.subtitles.length) ? parsedAst.subtitles : (registryScene.subtitles || []),
           rawBindings: (parsedAst && parsedAst.bindings) || [],
@@ -6211,132 +6231,22 @@
     }
 
     /**
-     * Curriculum-aligned Socratic Checkpoints for interactive active recall
+     * Curriculum-aligned Socratic Checkpoints for interactive active recall.
+     * Purely declarative: extracts checkpoints from the active scene's AST definition.
+     * Never injects hard-coded or generic fallback questions into cartridges that do not have them.
      */
     getDefaultCheckpoints(presetId) {
-      const pid = (presetId || '').toLowerCase();
-      if (pid.includes('frac')) {
-        return [
-          {
-            t: 0.35,
-            question: "Why does the laser slice 1/2 into two quarters (2/4) before adding?",
-            options: [
-              "To establish a common denominator so all pieces are equal size",
-              "To make the total fraction twice as large as the original",
-              "Because 1 + 2 = 3 in standard addition"
-            ],
-            answerKey: 0,
-            hint: "Look at the slices: can you count parts that are different sizes?",
-            explanation: "Fractions cannot be added until they share a common denominator representing identical part sizes."
-          }
-        ];
+      if (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints)) {
+        return this.scene.interactive.checkpoints;
       }
-      if (pid.includes('pythag')) {
-        return [
-          {
-            t: 0.50,
-            question: "In Pythagoras' theorem (a² + b² = c²), what does 'c' represent?",
-            options: [
-              "The hypotenuse (the longest side opposite the right angle)",
-              "The shortest horizontal leg of the triangle",
-              "The total geometric perimeter of the three squares"
-            ],
-            answerKey: 0,
-            hint: "It is always the side facing the 90° right angle.",
-            explanation: "c is the hypotenuse; its square equals the combined areas of the squares on the other two orthogonal sides."
-          }
-        ];
-      }
-      if (pid.includes('photo')) {
-        return [
-          {
-            t: 0.40,
-            question: "What is the primary role of chlorophyll during photosynthesis?",
-            options: [
-              "To absorb sunlight energy to drive the conversion of CO₂ and water into glucose",
-              "To absorb nitrogen gas directly from atmospheric air",
-              "To block sunlight to keep the leaf from drying out"
-            ],
-            answerKey: 0,
-            hint: "Think of solar panels capturing photon energy.",
-            explanation: "Chlorophyll pigments absorb light energy, powering the chemical synthesis of glucose and releasing oxygen."
-          }
-        ];
-      }
-      if (pid.includes('solar')) {
-        return [
-          {
-            t: 0.35,
-            question: "According to Kepler's orbital laws, which planet travels fastest in its orbit?",
-            options: [
-              "Mercury (closest to the Sun's gravitational field)",
-              "Neptune (furthest from the central star)",
-              "All planets orbit at exactly the same linear speed"
-            ],
-            answerKey: 0,
-            hint: "Gravitational pull is strongest nearest to the massive central star.",
-            explanation: "Inner planets orbit faster because gravity is strongest nearer the Sun, requiring higher velocities for orbital equilibrium."
-          }
-        ];
-      }
-      if (pid.includes('church') || pid.includes('sanctuary')) {
-        return [
-          {
-            t: 0.50,
-            question: "In Catholic basilica architecture, what is the golden Tabernacle reserved for?",
-            options: [
-              "The Real Presence of Christ in the consecrated Blessed Sacrament",
-              "Archiving historic parish parchment documents",
-              "A decorative candlestick holder"
-            ],
-            answerKey: 0,
-            hint: "Think of Eucharistic adoration and the Sanctuary Lamp burning nearby.",
-            explanation: "The Tabernacle is the sacred dwelling place reserved for the consecrated Eucharist (the Body of Christ) (CCC 1379)."
-          }
-        ];
-      }
-      if (pid.includes('atom')) {
-        return [
-          {
-            t: 0.45,
-            question: "What subatomic particles make up the central nucleus of an atom?",
-            options: [
-              "Protons and Neutrons bound by the strong nuclear force",
-              "Electrons and Photons orbiting empty space",
-              "Pure energy with no mass or electrical charge"
-            ],
-            answerKey: 0,
-            hint: "Electrons orbit on the outside shells; the dense core is inside.",
-            explanation: "The nucleus contains positively charged protons and neutral neutrons, surrounded by electron orbitals."
-          }
-        ];
-      }
-      // Generic fallback checkpoint
-      return [
-        {
-          t: 0.50,
-          question: `What primary invariant rule is demonstrated at this milestone in ${this.scene?.title || 'this lesson'}?`,
-          options: [
-            "The foundational principle defined by the active AST bindings",
-            "An inverted contradictory outcome violating physical laws",
-            "A static decorative effect with no mathematical relationship"
-          ],
-          answerKey: 0,
-          hint: "Observe how the vector variables transform continuously across time.",
-          explanation: "The continuous mathematical rules preserve structural, geometric, and physical invariants.",
-          branches: [
-            { label: "▶ Continue Exploration", targetTime: 0.55, explanation: "Proceeding through the invariant transformation." },
-            { label: "↺ Replay Core Demonstration", targetTime: 0.05, explanation: "Reviewing the foundational setup from step 1." }
-          ]
-        }
-      ];
+      return [];
     }
 
     /**
      * Non-Linear Branching Decision Tree Handler
      */
     selectBranch(branchIndex) {
-      const cp = this.activeCheckpoint || (this.getDefaultCheckpoints && this.getDefaultCheckpoints(this.activePresetId)[0]);
+      const cp = this.activeCheckpoint || (this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints[0]) || null;
       if (!cp) return;
       const branches = cp.branches || [];
       const branch = branches[branchIndex];
@@ -6388,9 +6298,9 @@
       const rawBindings = this.scene?.rawBindings || [];
       const has3D = this.has3D();
       const camera = this.scene?.camera || { yaw: 0, pitch: 0, distance: 1.0 };
-      const checkpoints = (this.scene && this.scene.checkpoints && this.scene.checkpoints.length)
-        ? this.scene.checkpoints
-        : this.getDefaultCheckpoints(sceneId);
+      const checkpoints = (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints))
+        ? this.scene.interactive.checkpoints
+        : ((this.scene && Array.isArray(this.scene.checkpoints)) ? this.scene.checkpoints : []);
 
       const manifestData = {
         id: sceneId,
@@ -6924,16 +6834,14 @@
         if (elTxtVoice) elTxtVoice.textContent = voiceEnabled ? '🔊 Voice ON' : '🎙️ Voice';
       };
       if (elBtnQuiz) elBtnQuiz.onclick = function () {
+        if (!data.checkpoints || !data.checkpoints.length) {
+          return;
+        }
         if (elQuizModal && elQuizModal.style.display === 'block') {
           elQuizModal.style.display = 'none';
           return;
         }
-        const cp = (data.checkpoints && data.checkpoints[0]) || {
-          question: "What core rule governs this concept?",
-          options: ["The primary invariant definition", "Reversed condition", "Unrelated property"],
-          answerKey: 0,
-          explanation: "Observe the vector coordinates and mathematical bindings."
-        };
+        const cp = data.checkpoints[0];
         pause();
         showQuizCheckpoint(cp);
       };
