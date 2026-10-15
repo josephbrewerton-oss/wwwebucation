@@ -15,7 +15,7 @@
     (:draggable :target "#sun-body" :axis "xy" :min -30 :max 30)
   ))
   (:subtitles (
-    (:start 0.00 :end 0.30 :en "At the focal center sits our Sun. Click any planet or use the Cosmic Ribbon to reveal its Top Trumps card!" :es "En el centro se encuentra el Sol. ¡Haz clic en cualquier planeta o en la barra cósmica para ver su tarjeta Top Trumps!")
+    (:start 0.00 :end 0.30 :en "At the focal center sits our Sun. Click any planet or use the Cosmic Ribbon to reveal its Cosmic Fact Card!" :es "En el centro se encuentra el Sol. ¡Haz clic en cualquier planeta o en la barra cósmica para ver su tarjeta cósmica de datos!")
     (:start 0.30 :end 0.65 :en "Kepler's Harmonic Law: Planets closer to the Sun experience higher orbital velocities. Inner rocky worlds complete rapid orbits." :es "Ley armónica de Kepler: Los planetas cercanos al Sol experimentan mayores velocidades orbitales.")
     (:start 0.65 :end 1.00 :en "Outer gas and ice giants Jupiter, Saturn, Uranus, and Neptune sweep through vast cosmic orbits. Tap any world to inspect its cosmic superpowers!" :es "Los gigantes gaseosos y de hielo Júpiter, Saturno, Urano y Neptuno recorren amplias órbitas. ¡Toca cualquier mundo para ver sus superpoderes!")
   ))

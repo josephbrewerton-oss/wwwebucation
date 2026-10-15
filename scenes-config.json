@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-15T08:18:33.744Z",
+  "generatedAt": "2026-10-15T10:14:00.332Z",
   "totalScenes": 24,
   "inputDirs": [
     "static/player/scenes",
@@ -27,7 +27,7 @@
       "subtitleCount": 6,
       "bindingsCount": 9,
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 3
     },
     {
       "id": "calculus-curves",

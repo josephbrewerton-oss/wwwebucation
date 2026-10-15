@@ -232,7 +232,7 @@
   <!-- Top Simulation HUD & Quick Controls -->
   <g id="solar-hud" transform="translate(18, 14)">
     <rect width="460" height="36" rx="8" fill="#0f172a" fill-opacity="0.92" stroke="#334155" stroke-width="1" />
-    <text id="solar-hud-banner" x="14" y="22" fill="#38bdf8" font-size="11" font-weight="800">🪐 Tap any planet to reveal its Cosmic Top Trumps card!</text>
+    <text id="solar-hud-banner" x="14" y="22" fill="#38bdf8" font-size="11" font-weight="800">🪐 Tap any planet to explore its Cosmic Fact Card!</text>
 
     <!-- Speed Warp Chips -->
     <g transform="translate(330, 6)">
@@ -339,7 +339,13 @@
 
     <!-- Card Top Holographic Header Bar -->
     <path d="M 0,14 A 14 14 0 0 1 14,0 L 264,0 A 14 14 0 0 1 278,14 L 278,38 L 0,38 Z" fill="url(#trumps-header-grad)" />
-    <text id="tt-card-header" x="139" y="24" fill="#090d16" font-size="12" font-weight="900" text-anchor="middle" letter-spacing="1">COSMIC TOP TRUMPS</text>
+    <text id="tt-card-header" x="126" y="24" fill="#090d16" font-size="12" font-weight="900" text-anchor="middle" letter-spacing="1">COSMIC FACT CARD</text>
+
+    <!-- Top-Right Prominent Close [✕] Button -->
+    <g id="tt-close-x-btn" transform="translate(242, 7)" style="cursor: pointer;" data-action="tt-close" aria-label="Close card">
+      <rect width="24" height="24" rx="12" fill="#0f172a" fill-opacity="0.8" stroke="#ef4444" stroke-width="1.2" />
+      <text x="12" y="16.5" fill="#f8fafc" font-size="13" font-weight="900" text-anchor="middle">✕</text>
+    </g>
 
     <!-- Planet Title & Classification -->
     <text id="tt-planet-title" x="139" y="62" fill="#f8fafc" font-size="18" font-weight="900" text-anchor="middle">🪐 SATURN</text>
@@ -409,7 +415,7 @@
     <!-- Power Rating Score -->
     <g transform="translate(16, 356)">
       <rect width="246" height="26" rx="6" fill="#0284c7" fill-opacity="0.25" stroke="#0284c7" stroke-width="1" />
-      <text id="tt-power-score" x="123" y="17" fill="#facc15" font-size="11" font-weight="900" text-anchor="middle">⭐ COSMIC TRUMP RATING: 96 / 100</text>
+      <text id="tt-power-score" x="123" y="17" fill="#facc15" font-size="11" font-weight="900" text-anchor="middle">⭐ COSMIC POWER RATING: 96 / 100</text>
     </g>
 
     <!-- Deck Navigation & Dismissal Controls -->

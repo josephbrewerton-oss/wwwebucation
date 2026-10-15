@@ -396,11 +396,18 @@
       const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, #tt-laser-splitter');
 
       if (target) {
-        // Direct Cosmic Planet Click / Top Trumps Trigger
+        // Direct Cosmic Planet Click / Fact Card Trigger (Tap again to toggle closed)
         const planetNode = target.hasAttribute('data-planet') ? target : target.closest('[data-planet]');
         if (planetNode) {
           e.preventDefault();
-          this.showPlanetTopTrump(planetNode.getAttribute('data-planet'));
+          const pKey = planetNode.getAttribute('data-planet');
+          if (pKey) {
+            if (this._activePlanetKey === pKey) {
+              this.closePlanetFactCard();
+            } else {
+              this.showPlanetFactCard(pKey);
+            }
+          }
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
@@ -551,7 +558,7 @@
           this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y);
         }
       } else {
-        // Proximity selection for Solar System planets when clicking anywhere near orbiting worlds
+        // Solar System: Proximity selection and backdrop dismissal
         if (this.engine && this.engine.scene && this.engine.scene.id === 'solar-system') {
           const planets = ['mercury', 'venus', 'earth', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune', 'sun'];
           let closestKey = null;
@@ -569,9 +576,21 @@
             }
           }
           if (closestKey) {
-            this.showPlanetTopTrump(closestKey);
+            if (this._activePlanetKey === closestKey) {
+              this.closePlanetFactCard();
+            } else {
+              this.showPlanetFactCard(closestKey);
+            }
             this.createTouchRipple(svgPt.x, svgPt.y);
             return;
+          } else if (this._activePlanetKey) {
+            // Clicked empty background space away from planets: dismiss the fact card
+            const card = this.stageSvg.querySelector('#solar-top-trumps-card');
+            const isInsideCard = card && (card === e.target || card.contains(e.target));
+            if (!isInsideCard) {
+              this.closePlanetFactCard();
+              return;
+            }
           }
         }
       }
@@ -1563,21 +1582,25 @@
       }
 
       // -----------------------------------------------------------------------
-      // Solar System & Cosmic Top Trumps Actions
+      // Solar System & Cosmic Fact Card Actions
       // -----------------------------------------------------------------------
-      if (action && (action === 'inspect-planet' || action === 'tt-next' || action === 'tt-prev' || action === 'tt-close' || action.startsWith('solar-warp-'))) {
+      if (action && (action === 'inspect-planet' || action === 'tt-next' || action === 'tt-prev' || action === 'tt-close' || action === 'card-close' || action === 'card-next' || action === 'card-prev' || action.startsWith('solar-warp-'))) {
         if (action === 'inspect-planet') {
           const planetKey = targetNode ? (targetNode.getAttribute('data-planet') || targetNode.closest('[data-planet]')?.getAttribute('data-planet')) : 'earth';
-          this.showPlanetTopTrump(planetKey || 'earth');
+          if (this._activePlanetKey === planetKey) {
+            this.closePlanetFactCard();
+          } else {
+            this.showPlanetFactCard(planetKey || 'earth');
+          }
           return;
-        } else if (action === 'tt-next') {
-          this.nextPlanetTopTrump();
+        } else if (action === 'tt-next' || action === 'card-next') {
+          this.nextPlanetFactCard();
           return;
-        } else if (action === 'tt-prev') {
-          this.prevPlanetTopTrump();
+        } else if (action === 'tt-prev' || action === 'card-prev') {
+          this.prevPlanetFactCard();
           return;
-        } else if (action === 'tt-close') {
-          this.closePlanetTopTrump();
+        } else if (action === 'tt-close' || action === 'card-close') {
+          this.closePlanetFactCard();
           return;
         } else if (action === 'solar-warp-1') {
           if (this.engine) this.engine.setVar('warpSpeed', 1.0);
@@ -2438,6 +2461,51 @@ ${strokeLines.join('\n')}
           title: 'Environmental Lapse Rate',
           eq: 'T = T_0 - (h / 1000) × 6.5°C',
           desc: 'Tropospheric cooling with altitude. Atmospheric pressure drops exponentially with elevation, causing temperature and water boiling point to fall.'
+        },
+        'church-narthex': {
+          title: 'Narthex & Holy Water Stoup (Vestibulum)',
+          eq: 'Signum Crucis • In Nomine Patris et Filii et Spiritus Sancti',
+          desc: 'Sacred entrance threshold. Blessing ourselves with Holy Water recalls our Baptism and cleanses our thoughts as we enter God\'s holy sanctuary.'
+        },
+        'church-nave': {
+          title: 'The Nave & Central Aisle (Navis Ecclesiae)',
+          eq: 'Genuflexio • Adoration of the Eucharistic Presence',
+          desc: 'Assembly space symbolizing the Pilgrim Church navigating earthly life like a ship. Faithful genuflect on the right knee toward the Tabernacle.'
+        },
+        'church-ambo': {
+          title: 'Ambo / Lectern (Mensa Verbi Dei)',
+          eq: 'Verbum Domini • Proclamatio Evangelii',
+          desc: 'The Table of the Word from which the Sacred Scriptures and Holy Gospel are proclaimed and the homily is preached.'
+        },
+        'church-altar': {
+          title: 'High Altar of Sacrifice (Altare Christi)',
+          eq: 'Sacrificium Eucharisticum • Corpus et Sanguis Christi',
+          desc: 'The sacred focal center representing Christ Himself. Here bread and wine become His Body and Blood during the Holy Sacrifice of the Mass.'
+        },
+        'church-tabernacle': {
+          title: 'The Tabernacle (Tabernaculum Domini)',
+          eq: 'Praesentia Realis • Sanctissimum Sacramentum',
+          desc: 'The sacred golden dwelling housing the consecrated Blessed Sacrament, venerated with prayers of Eucharistic adoration.'
+        },
+        'church-lamp': {
+          title: 'Sanctuary Lamp (Lux Aeterna)',
+          eq: 'Canon Law 940 • Semper Ardens',
+          desc: 'A special candle or oil lamp burning day and night beside the Tabernacle to honor and signify the Eucharistic Real Presence of Christ.'
+        },
+        'church-lady-chapel': {
+          title: 'Lady Chapel (Sacellum Beatae Mariae Virginis)',
+          eq: 'Ave Maria • Devotio Mariana',
+          desc: 'Devotional side chapel in the north transept dedicated to Our Lady, Mother of the Church, for quiet intercessory prayer and contemplation.'
+        },
+        'church-font': {
+          title: 'Baptismal Font (Fons Regenerationis)',
+          eq: 'Aqua et Spiritu Sancto • Sacramentum Initiationis',
+          desc: 'Octagonal stone basin holding the waters of Holy Baptism, where original sin is washed away and new eternal life in Christ begins.'
+        },
+        'church-pilgrim': {
+          title: 'Pilgrim Avatar (Homo Viator)',
+          eq: 'Iter ad Deum • Walk of Faith',
+          desc: 'Follows the liturgical journey of the faithful through the sacred architecture of the basilica, from entrance to the Table of the Lord.'
         }
       };
 
@@ -3676,9 +3744,13 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // Solar System: Cosmic Top Trumps & Dynamic Targeting Reticle Subsystem
+    // Solar System: Cosmic Fact Card & Dynamic Targeting Reticle Subsystem
     // =========================================================================
     getSolarTopTrumpsDeck() {
+      return this.getSolarFactCardDeck();
+    }
+
+    getSolarFactCardDeck() {
       return {
         sun: {
           title: '☀️ THE SUN',
@@ -3906,28 +3978,104 @@ ${strokeLines.join('\n')}
     setupSolarSystemInteractivity() {
       if (!this.stageSvg) return;
 
-      // Ensure Top Trumps action nodes are styled with grab pointer
+      // 1. Direct Planet Click & Ribbon Click Handlers (Supports 1-Tap Toggle Close)
       const clickablePlanets = this.stageSvg.querySelectorAll('[data-planet], [data-action="inspect-planet"]');
       clickablePlanets.forEach(node => {
         node.style.cursor = 'pointer';
         if (!node._hasPlanetClick) {
           node._hasPlanetClick = true;
-          node.addEventListener('pointerdown', (ev) => {
+          const onPlanetClick = (ev) => {
             ev.stopPropagation();
+            ev.preventDefault();
             const pKey = node.getAttribute('data-planet') || node.closest('[data-planet]')?.getAttribute('data-planet');
             if (pKey) {
-              this.showPlanetTopTrump(pKey);
+              if (this._activePlanetKey === pKey) {
+                this.closePlanetFactCard();
+              } else {
+                this.showPlanetFactCard(pKey);
+              }
               this.createTouchRipple(ev.clientX, ev.clientY);
             }
-          });
+          };
+          node.addEventListener('pointerdown', onPlanetClick);
+          node.addEventListener('click', onPlanetClick);
         }
       });
 
-      // Update warp buttons to match current warpSpeed
+      // 2. Direct Close Buttons (Top-Right [✕] and Bottom [✕ Close Card])
+      const closeButtons = this.stageSvg.querySelectorAll('[data-action="tt-close"], [data-action="card-close"], #tt-close-x-btn, #tt-close-bottom-btn');
+      closeButtons.forEach(btn => {
+        btn.style.cursor = 'pointer';
+        if (!btn._hasCloseClick) {
+          btn._hasCloseClick = true;
+          const onClose = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            this.closePlanetFactCard();
+            this.createTouchRipple(ev.clientX, ev.clientY);
+          };
+          btn.addEventListener('pointerdown', onClose);
+          btn.addEventListener('click', onClose);
+        }
+      });
+
+      // 3. Next / Prev Planet Deck Navigation Buttons
+      const nextButtons = this.stageSvg.querySelectorAll('[data-action="tt-next"], [data-action="card-next"]');
+      nextButtons.forEach(btn => {
+        btn.style.cursor = 'pointer';
+        if (!btn._hasNextClick) {
+          btn._hasNextClick = true;
+          const onNext = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            this.nextPlanetFactCard();
+            this.createTouchRipple(ev.clientX, ev.clientY);
+          };
+          btn.addEventListener('pointerdown', onNext);
+          btn.addEventListener('click', onNext);
+        }
+      });
+
+      const prevButtons = this.stageSvg.querySelectorAll('[data-action="tt-prev"], [data-action="card-prev"]');
+      prevButtons.forEach(btn => {
+        btn.style.cursor = 'pointer';
+        if (!btn._hasPrevClick) {
+          btn._hasPrevClick = true;
+          const onPrev = (ev) => {
+            ev.stopPropagation();
+            ev.preventDefault();
+            this.prevPlanetFactCard();
+            this.createTouchRipple(ev.clientX, ev.clientY);
+          };
+          btn.addEventListener('pointerdown', onPrev);
+          btn.addEventListener('click', onPrev);
+        }
+      });
+
+      // 4. Stop Propagation Inside Card (Prevents Accidental 3D Drag While Reading)
+      const card = this.stageSvg.querySelector('#solar-top-trumps-card');
+      if (card && !card._hasCardStop) {
+        card._hasCardStop = true;
+        card.addEventListener('pointerdown', (ev) => {
+          ev.stopPropagation();
+        });
+      }
+
+      // 5. Global Escape Key Handler for Instant Dismissal
+      if (!this._hasSolarEscapeListener) {
+        this._hasSolarEscapeListener = true;
+        window.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape' && this._activePlanetKey) {
+            this.closePlanetFactCard();
+          }
+        });
+      }
+
+      // 6. Update warp buttons to match current warpSpeed
       const curWarp = (this.engine && this.engine.vars && Number(this.engine.vars.warpSpeed)) || 1.0;
       this.updateWarpChips(curWarp);
 
-      // Start 60 FPS Reticle tracking loop
+      // 7. Start 60 FPS Reticle tracking loop
       if (this._solarReticleLoopId) cancelAnimationFrame(this._solarReticleLoopId);
 
       const reticle = this.stageSvg.querySelector('#planet-target-reticle');
@@ -3951,9 +4099,9 @@ ${strokeLines.join('\n')}
       this._solarReticleLoopId = requestAnimationFrame(tickReticle);
     }
 
-    showPlanetTopTrump(planetKey) {
+    showPlanetFactCard(planetKey) {
       if (!this.stageSvg) return;
-      const deck = this.getSolarTopTrumpsDeck();
+      const deck = this.getSolarFactCardDeck();
       const data = deck[planetKey] || deck.earth;
       this._activePlanetKey = planetKey;
 
@@ -3972,11 +4120,13 @@ ${strokeLines.join('\n')}
       }
       this._activePlanetNode = targetNode;
 
-      // Populate Top Trumps Card Data
+      // Populate Fact Card Data
       const setTitle = this.stageSvg.querySelector('#tt-planet-title');
       const setClass = this.stageSvg.querySelector('#tt-planet-class');
       const classPill = this.stageSvg.querySelector('#tt-class-pill');
+      const setCardHeader = this.stageSvg.querySelector('#tt-card-header');
 
+      if (setCardHeader) setCardHeader.textContent = 'COSMIC FACT CARD';
       if (setTitle) setTitle.textContent = data.title;
       if (setClass) setClass.textContent = data.type;
       if (classPill && data.color) classPill.setAttribute('stroke', data.color);
@@ -4050,26 +4200,27 @@ ${strokeLines.join('\n')}
       }
     }
 
-    nextPlanetTopTrump() {
+    nextPlanetFactCard() {
       const order = ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
       const curIdx = order.indexOf(this._activePlanetKey || 'earth');
       const nextIdx = (curIdx + 1) % order.length;
-      this.showPlanetTopTrump(order[nextIdx]);
+      this.showPlanetFactCard(order[nextIdx]);
     }
 
-    prevPlanetTopTrump() {
+    prevPlanetFactCard() {
       const order = ['sun', 'mercury', 'venus', 'earth', 'moon', 'mars', 'jupiter', 'saturn', 'uranus', 'neptune'];
       const curIdx = order.indexOf(this._activePlanetKey || 'earth');
       const prevIdx = (curIdx - 1 + order.length) % order.length;
-      this.showPlanetTopTrump(order[prevIdx]);
+      this.showPlanetFactCard(order[prevIdx]);
     }
 
-    closePlanetTopTrump() {
+    closePlanetFactCard() {
       const card = this.stageSvg && this.stageSvg.querySelector('#solar-top-trumps-card');
       const reticle = this.stageSvg && this.stageSvg.querySelector('#planet-target-reticle');
       if (card) card.setAttribute('display', 'none');
       if (reticle) reticle.setAttribute('display', 'none');
       this._activePlanetNode = null;
+      this._activePlanetKey = null;
       if (this.stageSvg) {
         const ribbonBtns = this.stageSvg.querySelectorAll('#solar-planet-ribbon .ribbon-btn rect');
         ribbonBtns.forEach(r => {
@@ -4079,6 +4230,12 @@ ${strokeLines.join('\n')}
       }
       this.playAudioTone(330, 'sine', 0.08, 0.15);
     }
+
+    // Backward-compatibility aliases for Top Trumps naming
+    showPlanetTopTrump(planetKey) { return this.showPlanetFactCard(planetKey); }
+    closePlanetTopTrump() { return this.closePlanetFactCard(); }
+    nextPlanetTopTrump() { return this.nextPlanetFactCard(); }
+    prevPlanetTopTrump() { return this.prevPlanetFactCard(); }
 
     updateWarpChips(speed) {
       if (!this.stageSvg) return;
