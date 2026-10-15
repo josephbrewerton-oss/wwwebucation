@@ -299,6 +299,11 @@
         this.setupSpellingBeeInteractivity();
       }
 
+      // 9bf. Phonics Laboratory Sound Buttons & Blending Mat Interactive Subsystem
+      if (this.stageSvg.querySelector('#ph-card-c') || this.stageSvg.querySelector('#ph-btn-c') || (this.engine.scene && this.engine.scene.id === 'phonics-lab')) {
+        this.setupPhonicsLabInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -5392,6 +5397,267 @@ ${strokeLines.join('\n')}
       }
 
       this.playAudioTone(type === 'word' ? 523.25 : 440, 'sine', 0.06, 0.12);
+    }
+
+    // =========================================================================
+    // Phonics Laboratory (EYFS/KS1) Interactive Sound Buttons & Blending Mat
+    // =========================================================================
+    setupPhonicsLabInteractivity() {
+      if (!this.stageSvg) return;
+
+      const WORDS = [
+        {
+          word: 'cat',
+          emoji: '🐱',
+          tokens: [
+            { g: 'c', p: '/k/', speech: 'k', soundName: 'k', tone: 520, isDigraph: false },
+            { g: 'a', p: '/æ/', speech: 'ah', soundName: 'short a', tone: 440, isDigraph: false },
+            { g: 't', p: '/t/', speech: 't', soundName: 't', tone: 580, isDigraph: false }
+          ],
+          explanation: 'Short vowel /a/ with crisp unvoiced stops /k/ and /t/.'
+        },
+        {
+          word: 'dog',
+          emoji: '🐶',
+          tokens: [
+            { g: 'd', p: '/d/', speech: 'd', soundName: 'd', tone: 480, isDigraph: false },
+            { g: 'o', p: '/ɒ/', speech: 'o', soundName: 'short o', tone: 420, isDigraph: false },
+            { g: 'g', p: '/g/', speech: 'g', soundName: 'g', tone: 460, isDigraph: false }
+          ],
+          explanation: 'Voiced stop /d/, open short /o/, and voiced velar /g/.'
+        },
+        {
+          word: 'sun',
+          emoji: '☀️',
+          tokens: [
+            { g: 's', p: '/s/', speech: 's', soundName: 's', tone: 620, isDigraph: false },
+            { g: 'u', p: '/ʌ/', speech: 'uh', soundName: 'short u', tone: 440, isDigraph: false },
+            { g: 'n', p: '/n/', speech: 'n', soundName: 'n', tone: 500, isDigraph: false }
+          ],
+          explanation: 'Continuous fricative /s/, short /u/, and nasal /n/.'
+        },
+        {
+          word: 'ship',
+          emoji: '🚢',
+          tokens: [
+            { g: 'sh', p: '/ʃ/', speech: 'sh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true },
+            { g: 'i', p: '/ɪ/', speech: 'i', soundName: 'short i', tone: 460, isDigraph: false },
+            { g: 'p', p: '/p/', speech: 'p', soundName: 'p', tone: 540, isDigraph: false }
+          ],
+          explanation: 'Consonant digraph "sh" (two letters, one sound — digraph dash!) with short /i/ and /p/.'
+        },
+        {
+          word: 'rain',
+          emoji: '🌧️',
+          tokens: [
+            { g: 'r', p: '/r/', speech: 'r', soundName: 'r', tone: 490, isDigraph: false },
+            { g: 'ai', p: '/eɪ/', speech: 'ay', soundName: 'vowel digraph ai', tone: 580, isDigraph: true },
+            { g: 'n', p: '/n/', speech: 'n', soundName: 'n', tone: 500, isDigraph: false }
+          ],
+          explanation: 'Vowel digraph "ai" makes the long /ay/ sound — represented with a sound dash.'
+        },
+        {
+          word: 'fish',
+          emoji: '🐟',
+          tokens: [
+            { g: 'f', p: '/f/', speech: 'f', soundName: 'f', tone: 600, isDigraph: false },
+            { g: 'i', p: '/ɪ/', speech: 'i', soundName: 'short i', tone: 460, isDigraph: false },
+            { g: 'sh', p: '/ʃ/', speech: 'sh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true }
+          ],
+          explanation: 'Continuous /f/, short /i/, and consonant digraph "sh" at the end of the word.'
+        }
+      ];
+
+      this._phWords = WORDS;
+      this._phWordIdx = 0;
+
+      const speakPhoneme = (text, rate = 0.9) => {
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+          try {
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(text);
+            u.rate = rate;
+            u.pitch = 1.05;
+            const voices = window.speechSynthesis.getVoices();
+            const gb = voices.find(v => v.lang.startsWith('en-GB') || v.lang.startsWith('en_GB'));
+            if (gb) u.voice = gb;
+            else u.lang = 'en-GB';
+            window.speechSynthesis.speak(u);
+          } catch (_) {}
+        }
+      };
+
+      const setBanner = (txt, color = '#38bdf8') => {
+        const b = this.stageSvg.querySelector('#ph-banner-txt');
+        if (b) {
+          b.textContent = txt;
+          b.setAttribute('fill', color);
+        }
+      };
+
+      const renderCurrentWord = () => {
+        const cur = WORDS[this._phWordIdx];
+        if (!cur) return;
+
+        const ids = ['c', 'a', 't'];
+        cur.tokens.forEach((tok, idx) => {
+          const letterId = ids[idx];
+          const card = this.stageSvg.querySelector(`#ph-card-${letterId}`);
+          const btn = this.stageSvg.querySelector(`#ph-btn-${letterId}`);
+
+          if (card && card.parentNode) {
+            const cardText = card.parentNode.querySelector('text:not([font-size="10"])');
+            if (cardText) {
+              cardText.textContent = tok.g;
+              cardText.setAttribute('font-size', tok.g.length > 1 ? '50' : '64');
+            }
+          }
+          if (btn && btn.parentNode) {
+            const btnText = btn.parentNode.querySelector('text[font-size="10"]');
+            if (btnText) btnText.textContent = tok.p;
+            if (tok.isDigraph) {
+              btn.setAttribute('r', '17');
+              btn.setAttribute('stroke', '#a855f7');
+              btn.setAttribute('fill', '#6b21a8');
+            } else {
+              btn.setAttribute('r', '14');
+              btn.setAttribute('stroke', '#38bdf8');
+              btn.setAttribute('fill', '#0284c7');
+            }
+          }
+        });
+
+        const res = this.stageSvg.querySelector('#ph-blended-result text');
+        if (res) res.textContent = `"${cur.word}" ${cur.emoji}`;
+
+        setBanner(`Sound Buttons: Press each pure sound button, then sweep across the arrow to blend into "${cur.word}"!`);
+      };
+
+      // Sound button click handlers
+      const ids = ['c', 'a', 't'];
+      ids.forEach((letterId, idx) => {
+        const card = this.stageSvg.querySelector(`#ph-card-${letterId}`);
+        const btn = this.stageSvg.querySelector(`#ph-btn-${letterId}`);
+        const group = (card && card.parentNode) || (btn && btn.parentNode);
+
+        if (group) {
+          group.style.cursor = 'pointer';
+          const onTrigger = (e) => {
+            e.stopPropagation();
+            const cur = WORDS[this._phWordIdx] || WORDS[0];
+            const tok = cur.tokens[idx];
+            if (!tok) return;
+
+            if (btn) {
+              btn.setAttribute('fill', '#38bdf8');
+              setTimeout(() => {
+                btn.setAttribute('fill', tok.isDigraph ? '#6b21a8' : '#0284c7');
+              }, 300);
+            }
+            if (card) {
+              card.setAttribute('stroke', '#4ade80');
+              setTimeout(() => card.setAttribute('stroke', '#38bdf8'), 300);
+            }
+
+            this.playAudioTone(tok.tone, 'sine', 0.08, 0.15);
+            speakPhoneme(tok.speech, 0.85);
+            setBanner(`Pure sound: ${tok.p} (${tok.soundName}) — no schwa!`, '#4ade80');
+          };
+
+          group.addEventListener('pointerdown', onTrigger);
+        }
+      });
+
+      // Blending Arrow & Finger Cursor click handler
+      const finger = this.stageSvg.querySelector('#ph-finger-cursor');
+      const arrowLine = finger && finger.parentNode;
+      if (arrowLine) {
+        arrowLine.style.cursor = 'pointer';
+        arrowLine.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          const cur = WORDS[this._phWordIdx] || WORDS[0];
+
+          let step = 0;
+          const sweepInterval = setInterval(() => {
+            if (step < cur.tokens.length) {
+              const tok = cur.tokens[step];
+              const letterId = ids[step];
+              const btn = this.stageSvg.querySelector(`#ph-btn-${letterId}`);
+              if (btn) {
+                btn.setAttribute('fill', '#38bdf8');
+                setTimeout(() => {
+                  btn.setAttribute('fill', tok.isDigraph ? '#6b21a8' : '#0284c7');
+                }, 220);
+              }
+              if (finger) {
+                finger.setAttribute('cx', String(45 + step * 115));
+              }
+              this.playAudioTone(tok.tone, 'sine', 0.06, 0.12);
+              step++;
+            } else {
+              clearInterval(sweepInterval);
+              if (finger) finger.setAttribute('cx', '300');
+              const res = this.stageSvg.querySelector('#ph-blended-result');
+              if (res) res.setAttribute('opacity', '1');
+
+              speakPhoneme(`${cur.word}! ${cur.word}!`, 0.95);
+              setBanner(`🎉 Blended! /${cur.tokens.map(t => t.g).join('/ - /')}/ = "${cur.word}" ${cur.emoji}!`, '#4ade80');
+
+              this.playAudioTone(523.25, 'sine', 0.1, 0.2);
+              setTimeout(() => this.playAudioTone(659.25, 'sine', 0.12, 0.2), 70);
+              setTimeout(() => this.playAudioTone(783.99, 'sine', 0.16, 0.28), 140);
+            }
+          }, 280);
+        });
+      }
+
+      // Blended Result click -> cycles to next decodable word!
+      const blendedRes = this.stageSvg.querySelector('#ph-blended-result');
+      if (blendedRes) {
+        blendedRes.style.cursor = 'pointer';
+        blendedRes.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          this._phWordIdx = (this._phWordIdx + 1) % WORDS.length;
+          renderCurrentWord();
+          this.playAudioTone(600, 'triangle', 0.08, 0.15);
+        });
+      }
+
+      // Tricky Word card click handler
+      const trickyCard = this.stageSvg.querySelector('text[fill="#fb7185"]')?.closest('g');
+      if (trickyCard) {
+        trickyCard.style.cursor = 'pointer';
+        trickyCard.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          this.playAudioTone(380, 'sine', 0.1, 0.2);
+          speakPhoneme('said. Tricky word! The letters a-i make a short e sound: said!');
+          setBanner("Tricky Word: 'said' contains 'ai' making the short /e/ sound (sounds like 'sed')!", '#fb7185');
+        });
+      }
+
+      // Sound Button notation rule card
+      const rule1Card = this.stageSvg.querySelector('text[fill="#38bdf8"]')?.closest('g');
+      if (rule1Card) {
+        rule1Card.style.cursor = 'pointer';
+        rule1Card.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          this.playAudioTone(440, 'sine', 0.08, 0.15);
+          speakPhoneme('Sound button notation: A dot is for a single sound. A dash is for a digraph where two letters make one sound!');
+          setBanner('Notation: Dot = Single phoneme (c, a, t). Dash = Digraph (sh, ch, ai).', '#38bdf8');
+        });
+      }
+
+      // Pure Sounds rule card
+      const rule2Card = this.stageSvg.querySelector('text[fill="#22d3ee"]')?.closest('g');
+      if (rule2Card) {
+        rule2Card.style.cursor = 'pointer';
+        rule2Card.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          this.playAudioTone(480, 'sine', 0.08, 0.15);
+          speakPhoneme('Pure sounds: Never add uh at the end. Say crisp k instead of kuh, and sharp t instead of tuh!');
+          setBanner("Pure Sounds Invariant: Eliminate schwa (/uh/) to enable seamless synthetic blending!", '#22d3ee');
+        });
+      }
     }
   }
 
