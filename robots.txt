@@ -7,6 +7,8 @@ Allow: /
 Allow: /media-player
 Allow: /player
 Allow: /player.html
+Allow: /simulator
+Allow: /cartridges
 Allow: /practice-lab
 Allow: /learning-zone
 Allow: /curriculum-studio
