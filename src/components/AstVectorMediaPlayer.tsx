@@ -709,7 +709,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           }
           break;
         case 'HOTSPOT_SELECTED':
-          setActiveKeyframe({ title: data.label || 'Station Selected', rule: `Interactively inspected station at ${(data.targetT * 100).toFixed(0)}%` });
+          setActiveKeyframe({ title: data.label || 'Sacred Space Selected', rule: `Interactively inspected sacred space at ${(data.targetT * 100).toFixed(0)}%` });
           break;
         case 'TOGGLE_PLAY_MODE':
           onPlayModeToggle?.();

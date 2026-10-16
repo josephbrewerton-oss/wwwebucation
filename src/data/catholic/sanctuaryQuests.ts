@@ -1,10 +1,11 @@
 // src/data/catholic/sanctuaryQuests.ts
 // St Joseph's Catholic Life & Faith Sanctuary
-// 3D Sanctuary Tour Stations & Pilgrim Quests
+// 3D Sanctuary Tour Sacred Spaces & Pilgrim Quests
 
 export interface StationQuest {
   id: string;
   stationNum: number;
+  stopNum?: number;
   targetT: number;
   name: string;
   latinName: string;
@@ -27,6 +28,7 @@ export const SANCTUARY_QUESTS: StationQuest[] = [
   {
     id: 'narthex',
     stationNum: 1,
+    stopNum: 1,
     targetT: 0.00,
     name: 'The Narthex & Holy Water Stoup',
     latinName: 'Vestibulum & Aqua Benedicta',

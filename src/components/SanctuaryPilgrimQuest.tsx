@@ -309,7 +309,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                 Sacred Relics Discovered
               </span>
               <strong style={{ color: '#f8fafc' }}>
-                {completedStations.size} / 6 Stations Completed
+                {completedStations.size} / 6 Sacred Spaces Explored
               </strong>
             </div>
           </div>
@@ -464,12 +464,12 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
           }}
         >
           <span>◀</span>
-          <span className="hidden sm:inline">Prev Station</span>
+          <span className="hidden sm:inline">Prev Space</span>
         </button>
 
         <div style={{ textAlign: 'center', minWidth: 0 }}>
           <div style={{ fontSize: '0.7rem', color: '#facc15', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            Station {activeQuest.stationNum} of 6 &bull; {activeQuest.latinName}
+            Sacred Space {activeQuest.stationNum} of 6 &bull; {activeQuest.latinName}
           </div>
           <div style={{ fontSize: '0.88rem', color: '#f8fafc', fontWeight: 800, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {activeQuest.relicIcon} {activeQuest.name}
@@ -494,7 +494,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
             gap: '4px',
           }}
         >
-          <span className="hidden sm:inline">Next Station</span>
+          <span className="hidden sm:inline">Next Space</span>
           <span>▶</span>
         </button>
       </div>
@@ -536,7 +536,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                 {isDone && <span style={{ color: '#34d399', fontSize: '0.75rem', fontWeight: 900 }}>✓</span>}
               </div>
               <span style={{ fontSize: '0.74rem', color: isCurrent ? '#fef08a' : isDone ? '#a7f3d0' : '#94a3b8', fontWeight: 700, textAlign: 'center', lineHeight: 1.1 }}>
-                Station {quest.stationNum}
+                Space {quest.stationNum}
               </span>
               <span style={{ fontSize: '0.66rem', color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>
                 {quest.name}
@@ -594,7 +594,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                 gap: '6px',
               }}
             >
-              🌐 Orbit 3D Camera to Station
+              🌐 Orbit 3D Camera to Sacred Space
             </button>
           </div>
 
@@ -812,7 +812,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
                       cursor: 'pointer',
                     }}
                   >
-                    Proceed to Station {activeStationIndex + 2} &rarr;
+                    Proceed to Space {activeStationIndex + 2} &rarr;
                   </button>
                 )}
               </div>

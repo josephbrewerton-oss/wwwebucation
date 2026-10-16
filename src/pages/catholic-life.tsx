@@ -666,7 +666,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                       Featured: Interactive Tour of a Catholic Church
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                      Narthex, Nave, Ambo, Altar, Tabernacle &amp; Lady Chapel &bull; 6 Sacred Stations
+                      Narthex, Nave, Ambo, Altar, Tabernacle &amp; Lady Chapel &bull; 6 Sacred Spaces
                     </p>
                   </div>
                 </div>
@@ -711,7 +711,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                       gap: '4px',
                     }}
                   >
-                    Full Tour &amp; Stations &rarr;
+                    Full Tour &amp; Sacred Spaces &rarr;
                   </button>
                 </div>
               </div>
