@@ -50,6 +50,7 @@ const TeacherBeaconPage = lazyRetry(() => import('./pages/teacher-beacon'));
 const MediaPlayerPage = lazyRetry(() => import('./pages/media-player'));
 const PhonicsSuitePage = lazyRetry(() => import('./pages/phonics-suite'));
 const LanguagesSuitePage = lazyRetry(() => import('./pages/languages-suite'));
+const ShakespeareTheatrePage = lazyRetry(() => import('./pages/shakespeare-theatre'));
 const NotFoundPage = lazyRetry(() => import('./pages/not-found'));
 
 export default function App(): React.JSX.Element {
@@ -67,11 +68,16 @@ export default function App(): React.JSX.Element {
             <Route path="media-player" element={<MediaPlayerPage />} />
             <Route path="simulator" element={<MediaPlayerPage />} />
             <Route path="cartridges" element={<MediaPlayerPage />} />
+            <Route path="curriculum/*" element={<MediaPlayerPage />} />
+            <Route path="c/:cartridgeId" element={<MediaPlayerPage />} />
             <Route path="phonics" element={<PhonicsSuitePage />} />
             <Route path="early-phonics" element={<PhonicsSuitePage />} />
             <Route path="languages" element={<LanguagesSuitePage />} />
             <Route path="mfl" element={<LanguagesSuitePage />} />
             <Route path="polyglot" element={<LanguagesSuitePage />} />
+            <Route path="shakespeare" element={<ShakespeareTheatrePage />} />
+            <Route path="theatre" element={<ShakespeareTheatrePage />} />
+            <Route path="globe" element={<ShakespeareTheatrePage />} />
             <Route path="profile" element={<ProfilePage />} />
             <Route path="curriculum-studio" element={<CurriculumStudioPage />} />
             <Route path="settings" element={<SettingsPage />} />

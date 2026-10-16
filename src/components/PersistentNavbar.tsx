@@ -264,6 +264,12 @@ export default function PersistentNavbar(): React.JSX.Element {
       desc: 'DfE Phases 2–5 soundboard, sound buttons blending mat & screening check',
     },
     {
+      to: '/shakespeare',
+      icon: '🎭',
+      title: 'Shakespeare Globe Theatre',
+      desc: '6 GCSE plays, 5-act play-throughs, blank verse audio & 1599 staging secrets',
+    },
+    {
       to: '/practice-lab',
       icon: '⚡',
       title: 'Practice Lab',

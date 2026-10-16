@@ -36,7 +36,11 @@
     { id: "spelling-bee", type: "App", title: "Spelling Bee Championship: KS1 to KS3 Orthography", stage: "KS1/KS2/KS3 ENGLISH", duration: 14, svgFile: "scenes/spelling-bee.svg", astFile: "scenes/spelling-bee.ast" },
     { id: "times-tables", type: "Sim", title: "Times Tables: 2× to 12× Array & Distributive Splitter", stage: "KS1/KS2 MATHS", duration: 14, svgFile: "scenes/times-tables.svg", astFile: "scenes/times-tables.ast" },
     { id: "velocity", type: "Sim", title: "Kinematics: Velocity & Distance-Time Vectors", stage: "KS3 PHYSICS", duration: 10, svgFile: "scenes/velocity.svg", astFile: "scenes/velocity.ast" },
-    { id: "water-cycle", type: "Slide", title: "Water Cycle: Continuous Earth Cycle", stage: "KS2 GEOGRAPHY", duration: 10, svgFile: "scenes/water-cycle.svg", astFile: "scenes/water-cycle.ast" }
+    { id: "water-cycle", type: "Slide", title: "Water Cycle: Continuous Earth Cycle", stage: "KS2 GEOGRAPHY", duration: 10, svgFile: "scenes/water-cycle.svg", astFile: "scenes/water-cycle.ast" },
+    { id: "bsl-fingerspelling", type: "Sim", title: "BSL: 3D British Sign Language Two-Handed Fingerspelling", stage: "ACCESSIBILITY & LANGUAGES", duration: 14, has3D: true, svgFile: "scenes/bsl-fingerspelling.svg", astFile: "scenes/bsl-fingerspelling.ast" },
+    { id: "phonics-screening", type: "Sim", title: "Year 1 Phonics Screening Check & Alien Words", stage: "EYFS/KS1 PHONICS", duration: 12, svgFile: "scenes/phonics-screening.svg", astFile: "scenes/phonics-screening.ast" },
+    { id: "shakespeare-macbeth", type: "Slide", title: "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall", stage: "KS3/KS4 ENGLISH LITERATURE", duration: 16, svgFile: "scenes/shakespeare-macbeth.svg", astFile: "scenes/shakespeare-macbeth.ast" },
+    { id: "rosary-mysteries", type: "Sim", title: "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries", stage: "CATHOLIC LIFE", duration: 16, has3D: true, svgFile: "scenes/rosary-mysteries.svg", astFile: "scenes/rosary-mysteries.ast" }
   ];
 
   const scenes = {};
@@ -355,9 +359,10 @@
      * 3. Falls back to pre-compiled manifest
      */
     async autoDiscover(basePath = './') {
-      if (Object.keys(scenes).length >= 20) {
+      if (this._hasDiscovered) {
         return { totalScenes: Object.keys(scenes).length, scenes: SceneRegistry.list() };
       }
+      this._hasDiscovered = true;
       const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
         ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
         : './';

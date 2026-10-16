@@ -1,5 +1,4 @@
-// src/pages/phonics-suite.tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import {
@@ -18,6 +17,17 @@ type PhonicsTab = 'soundboard' | 'blending' | 'screening' | 'tricky' | 'print';
 
 export default function PhonicsSuitePage() {
   const [activeTab, setActiveTab] = useState<PhonicsTab>('soundboard');
+
+  // Cancel any ongoing speech when unmounting to free audio resources
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Soundboard State
   const [selectedPhase, setSelectedPhase] = useState<number | 'all'>('all');

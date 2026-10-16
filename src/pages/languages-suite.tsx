@@ -1,5 +1,4 @@
-// src/pages/languages-suite.tsx
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import {
@@ -16,6 +15,17 @@ type LangTab = 'soundboard' | 'conjugation' | 'etymology' | 'sprint';
 
 export default function LanguagesSuitePage() {
   const [activeTab, setActiveTab] = useState<LangTab>('soundboard');
+
+  // Cancel any ongoing speech when unmounting to free audio resources
+  useEffect(() => {
+    return () => {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Soundboard state
   const [selectedLang, setSelectedLang] = useState<'all' | 'es' | 'fr' | 'la'>('all');

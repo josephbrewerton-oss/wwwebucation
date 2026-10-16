@@ -8,6 +8,10 @@ export interface ScenePresetOption {
   type: CartridgeType;
   label: string;
   stage: string;
+  isCore?: boolean;
+  tier?: string;
+  mount?: string;
+  section?: string;
   hasCheckpoints?: boolean;
   checkpointCount?: number;
 }
@@ -18,6 +22,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
     "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/church-tour",
+    "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 3
   },
@@ -26,6 +34,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Calculus: Tangent Slopes & Definite Integrals",
     "stage": "GCSE & A-LEVEL MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/calculus/tangent-slopes",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -34,6 +46,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Kinetic Gas Theory & Boyle's Law",
     "stage": "KS3/KS4 PHYSICS & CHEMISTRY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/physics/kinetic-gas",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -42,6 +58,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
     "stage": "KS2/KS3 PHYSICS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/physics/electric-circuits",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 2
   },
@@ -50,6 +70,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "BODMAS / BIDMAS: Forcefield Clamping & Area Physics",
     "stage": "KS2/KS3 MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/algebra/bodmas",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -58,6 +82,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Times Tables: 2× to 12× Array & Distributive Splitter",
     "stage": "KS1/KS2 MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/arithmetic/times-tables",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -66,6 +94,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "Early Phonics: Sound Buttons & Blending Mat",
     "stage": "EYFS/KS1 ENGLISH",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/english/phonics/phonics-lab",
+    "section": "English Literature & Phonics",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -74,6 +106,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "Math Pond: Number Bonds Fishing Game",
     "stage": "KS1/KS2 MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/arithmetic/number-bonds",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -82,6 +118,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
     "stage": "KS2/KS3 MATHS & GEOGRAPHY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/geography/mountain-elevation",
+    "section": "Curriculum Cartridges",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -90,6 +130,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
     "stage": "BENCHMARK & STRESS LAB",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/computing/stress-benchmark",
+    "section": "Curriculum Cartridges",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -98,6 +142,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "Fractions: Why Common Denominators Rule",
     "stage": "KS2 MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/arithmetic/fractions",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -106,6 +154,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Solar System: Heliocentric Planetary Motion",
     "stage": "KS3 SCIENCE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/physics/solar-system",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -114,6 +166,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "Photosynthesis: The Green Solar Engine",
     "stage": "KS3 BIOLOGY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/biology/photosynthesis",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -122,6 +178,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Pythagoras' Theorem (a² + b² = c²)",
     "stage": "KS3 GEOMETRY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/geometry/pythagoras",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -130,6 +190,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "Water Cycle: Continuous Earth Cycle",
     "stage": "KS2 GEOGRAPHY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/geography/water-cycle",
+    "section": "Curriculum Cartridges",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -138,6 +202,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Atomic Structure: Bohr Electron Shells",
     "stage": "KS3 CHEMISTRY",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/chemistry/atomic-structure",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -146,6 +214,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Kinematics: Velocity & Distance-Time Vectors",
     "stage": "KS3 PHYSICS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/physics/velocity-vectors",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -154,6 +226,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "Genetics: DNA Base Pairing & Transcription",
     "stage": "KS3 GENETICS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/biology/dna-helix",
+    "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
     "checkpointCount": 1
   },
@@ -162,6 +238,34 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Sim",
     "label": "⚖️ Algebraic Balance Scale: Preserving Equality (2x + 5 = 15)",
     "stage": "KS2/KS3 MATHS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/maths/algebra/balance-scale",
+    "section": "Mathematics & Geometry",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
+    "id": "bsl-fingerspelling",
+    "type": "Sim",
+    "label": "BSL: 3D British Sign Language Two-Handed Fingerspelling",
+    "stage": "ACCESSIBILITY & LANGUAGES",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/languages/bsl-fingerspelling",
+    "section": "English Literature & Phonics",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
+    "id": "shakespeare-macbeth",
+    "type": "Slide",
+    "label": "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall",
+    "stage": "KS3/KS4 ENGLISH LITERATURE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/english/theatre/macbeth",
+    "section": "English Literature & Phonics",
     "hasCheckpoints": true,
     "checkpointCount": 2
   },
@@ -170,6 +274,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "MFL & Polyglot Studio: Spanish, French & Latin",
     "stage": "KS2/KS3 MFL",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/languages/mfl-polyglot",
+    "section": "Languages & Inclusion",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -178,6 +286,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "App",
     "label": "Spelling Bee Championship: KS1 to KS3 Orthography",
     "stage": "KS1/KS2/KS3 ENGLISH",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/english/spelling/spelling-bee",
+    "section": "English Literature & Phonics",
     "hasCheckpoints": false,
     "checkpointCount": 0
   },
@@ -186,6 +298,10 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
     "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/altar-anatomy",
+    "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 2
   },
@@ -194,6 +310,22 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "The Globe Theatre: Shakespeare & Iambic Pentameter",
     "stage": "KS3/KS4 ENGLISH LITERATURE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/english/theatre/globe",
+    "section": "English Literature & Phonics",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
+    "id": "rosary-mysteries",
+    "type": "Sim",
+    "label": "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries",
+    "stage": "CATHOLIC LIFE & RE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/rosary-mysteries",
+    "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 2
   },
@@ -202,7 +334,23 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "type": "Slide",
     "label": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
     "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/holy-oils",
+    "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 1
+  },
+  {
+    "id": "phonics-screening",
+    "type": "Sim",
+    "label": "Year 1 Phonics Screening Check & Alien Words",
+    "stage": "EARLY YEARS & KS1 PHONICS",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/english/phonics/screening-check",
+    "section": "English Literature & Phonics",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   }
 ];

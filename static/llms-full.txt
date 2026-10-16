@@ -40,7 +40,7 @@
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 24 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of all 28 production vector simulation cartridges.
 - `/player/scenes-config.json` : Timeline keyframes, bilingual subtitles (EN/ES/LA), and pause checkpoints.
 - `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
 - `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
@@ -48,7 +48,7 @@
 
 ---
 
-## 3. Production Curriculum Cartridges (24 Scenes)
+## 3. Production Curriculum Cartridges (28 Scenes)
 
 1. **Calculus Curves (`calculus-curves`)**:
    - Level: GCSE / A-Level Mathematics.
@@ -170,6 +170,26 @@
     - Core Concepts: National Curriculum tiered spelling lists, etymology root words, silent letters, and morphology patterns.
     - Interactive Elements: Difficulty tiers, audio-assisted letter bank input, streak scoring, and misconception hints.
 
+25. **3D British Sign Language Fingerspelling (`bsl-fingerspelling`)**:
+    - Level: Inclusion / MFL / Whole-School Communication.
+    - Core Concepts: Two-handed manual BSL alphabet, A-E-I-O-U fingertip vowel tap positions, Signer POV vs Receiver POV camera orbits.
+    - Interactive Elements: 360° rotatable 3D dual-hand rig, letter scrubber, fingertip glow highlights, speed control.
+
+26. **Shakespeare's Macbeth: 5-Act Dramatic Soliloquy (`shakespeare-macbeth`)**:
+    - Level: KS3 / KS4 English Literature.
+    - Core Concepts: 5-act dramatic tragedy structure, blank verse meter, dagger soliloquy, character psychology, and canon vs what-if branches.
+    - Interactive Elements: Act-by-act stage navigator, spoken verse audio sonification, stage direction tags, soliloquy analysis.
+
+27. **Year 1 Phonics Screening Check (`phonics-screening`)**:
+    - Level: EYFS / KS1 Early Literacy.
+    - Core Concepts: DfE official 40-word screening check simulator, alien pseudo-words vs real words, sound button dots and dashes, grapheme blending.
+    - Interactive Elements: 40-item word card carousel, alien creature illustrations, sound button taps, passing threshold diagnostics.
+
+28. **The Holy Rosary: 3D Mysteries Chaplet (`rosary-mysteries`)**:
+    - Level: Catholic Life / RE.
+    - Core Concepts: 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), Our Father / Hail Mary / Glory Be chaplet prayer sequence, contemplative meditation.
+    - Interactive Elements: 3D rotatable bead chaplet with depth fog, mystery selector, Latin and English prayer texts, audio chime cues.
+
 ---
 
 ## 4. AST S-Expression Language Grammar
@@ -273,7 +293,20 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 ### Available In-Browser WebMCP Tools:
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
 2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via React Router.
-3. `launch_simulation` (Consequential): Programmatically open and render any of the 17+ interactive AST vector cartridges on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all 17+ vector cartridges with learning invariants, subjects, and runtimes.
+3. `launch_simulation` (Consequential): Programmatically open and render any of the 28 interactive AST vector cartridges on the stage with autoPlay.
+4. `list_ast_simulations` (Read-Only): Enumerate all 28 vector cartridges with learning invariants, subjects, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
+
+---
+
+## 9. Decentralized Virtual Console & Self-Mounting Cartridge Architecture
+
+The portal is designed around a radical, zero-bloat inversion of traditional database-driven web architecture:
+1. **Zero Central Data Storage**: The site holds 0 student or user data on servers. The portal acts as an air-gapped, stateless execution console (`#ast-persistent-viewport`).
+2. **Autonomous Self-Mounting Cartridges**: Each curriculum cartridge (`.ast` and `.svg`) declares where it lives and what slots it occupies via metadata tags:
+   - `:mount "/curriculum/..."` - Canonical route where the cartridge mounts itself in the site viewport.
+   - `:section "Maths" | "Science" | "English" | "Faith"` - Curriculum category for automatic directory aggregation.
+   - `:tier "core" | "extended"` - Core curriculum cartridges are protected, foundational ROMs; extended cartridges provide specialized labs.
+3. **Dynamic Site Synthesis**: Rather than hardcoded pages, the portal dynamically queries `SceneRegistry.list()` and `getAllCartridges()` to construct routes, navigation grids, and interactive stages.
+4. **Offline Air-Gap Portability**: Cartridges are 2.5 KB to 25 KB living vector files that can be copied to a USB drive or saved in client-side IndexedDB, running completely offline with sub-15 ms cold starts and zero cloud dependencies.
 

@@ -42,6 +42,11 @@ export interface CartridgeDefinition {
   desc: string;
   icon: string;
   source: 'builtin' | 'phet' | 'user' | 'imported';
+  tier?: 'core' | 'phet' | 'user' | 'imported';
+  isCore?: boolean;
+  mount?: string;
+  section?: string;
+  order?: number;
   svgMarkup?: string;
   astSource?: string;
   svgFile?: string;
@@ -409,6 +414,62 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     version: '2.6.0',
     invariants: ['Iambic Pentameter Metre', 'Elizabethan Theatrical Proportions'],
   },
+  {
+    id: 'bsl-fingerspelling',
+    type: 'Sim',
+    title: 'BSL: 3D British Sign Language Two-Handed Fingerspelling',
+    stage: 'ACCESSIBILITY & LANGUAGES',
+    category: 'Modern & Classical Languages',
+    desc: '3D rotatable two-handed BSL manual alphabet rig, A-E-I-O-U vowel fingertip tap positions, Signer POV vs Receiver POV camera orbit, and speed slider.',
+    icon: '🖐️',
+    source: 'builtin',
+    svgFile: 'scenes/bsl-fingerspelling.svg',
+    astFile: 'scenes/bsl-fingerspelling.ast',
+    version: '2.6.0',
+    invariants: ['BSL Manual Alphabet', 'Two-Handed Signing Anatomy', '3D Spatial Orientation'],
+  },
+  {
+    id: 'phonics-screening',
+    type: 'Sim',
+    title: 'Year 1 Phonics Screening Check & Alien Words',
+    stage: 'EYFS/KS1 PHONICS',
+    category: 'Early Literacy & Phonics',
+    desc: 'Official statutory 40-word screening check simulator with monster alien cards, tactile sound button dots & dashes, animated sweep bar, and pass diagnostics.',
+    icon: '👾',
+    source: 'builtin',
+    svgFile: 'scenes/phonics-screening.svg',
+    astFile: 'scenes/phonics-screening.ast',
+    version: '2.6.0',
+    invariants: ['DfE Statutory Screening Check', 'Pseudo-Word Phonetic Decoding', 'Sound Buttons'],
+  },
+  {
+    id: 'shakespeare-macbeth',
+    type: 'Slide',
+    title: 'Macbeth: 5-Act Dramatic Soliloquy & Moral Fall',
+    stage: 'KS3/KS4 ENGLISH LITERATURE',
+    category: 'English Literature',
+    desc: '5-Act play-through on the 1599 Globe stage: blasted heath prophecy, floating bloody dagger, Banquo ghost feast, and Dunsinane catastrophe.',
+    icon: '👑',
+    source: 'builtin',
+    svgFile: 'scenes/shakespeare-macbeth.svg',
+    astFile: 'scenes/shakespeare-macbeth.ast',
+    version: '2.6.0',
+    invariants: ['Shakespearean Tragedy', 'Iambic Pentameter Blank Verse', 'Canon vs What-If Drama'],
+  },
+  {
+    id: 'rosary-mysteries',
+    type: 'Sim',
+    title: 'The Holy Rosary: 3D Beads & 20 Scriptural Mysteries',
+    stage: 'CATHOLIC LIFE',
+    category: 'Catholic Faith',
+    desc: 'Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.',
+    icon: '📿',
+    source: 'builtin',
+    svgFile: 'scenes/rosary-mysteries.svg',
+    astFile: 'scenes/rosary-mysteries.ast',
+    version: '2.6.0',
+    invariants: ['Scriptural Contemplation', 'Marian Devotion', 'Ecclesiastical Latin Prayers'],
+  },
 ];
 
 // Fallback embedded SVG & AST for core cartridges when running completely air-gapped
@@ -773,20 +834,136 @@ export function getAllCartridges(): CartridgeDefinition[] {
   const merged: CartridgeDefinition[] = [];
   const seen = new Set<string>();
 
-  // Custom first so user updates take priority
   custom.forEach((c) => {
-    merged.push(c);
+    const isCore = c.isCore ?? (c.source === 'builtin');
+    const tier = c.tier || (c.source === 'builtin' ? 'core' : (c.source as any));
+    merged.push({
+      ...c,
+      isCore,
+      tier,
+      mount: c.mount || getDefaultMountForCartridge(c.id),
+      section: c.section || getDefaultSectionForCartridge(c.id, c.category),
+    });
     seen.add(c.id);
   });
 
   BUILTIN_CARTRIDGES.forEach((b) => {
     if (!seen.has(b.id)) {
-      merged.push(b);
+      merged.push({
+        ...b,
+        isCore: true,
+        tier: 'core',
+        mount: b.mount || getDefaultMountForCartridge(b.id),
+        section: b.section || getDefaultSectionForCartridge(b.id, b.category),
+      });
       seen.add(b.id);
     }
   });
 
   return merged;
+}
+
+/**
+ * Canonical default mount address for a cartridge
+ */
+export function getDefaultMountForCartridge(id: string): string {
+  const map: Record<string, string> = {
+    'pythagoras': '/curriculum/maths/geometry/pythagoras',
+    'kinetic-gas': '/curriculum/science/physics/kinetic-gas',
+    'electric-circuits': '/curriculum/science/physics/electric-circuits',
+    'church-tour': '/curriculum/catholic-life/church-tour',
+    'altar-anatomy': '/curriculum/catholic-life/altar-anatomy',
+    'holy-oils': '/curriculum/catholic-life/holy-oils',
+    'rosary-mysteries': '/curriculum/catholic-life/rosary-mysteries',
+    'phonics-lab': '/curriculum/english/phonics/phonics-lab',
+    'phonics-screening': '/curriculum/english/phonics/screening-check',
+    'spelling-bee': '/curriculum/english/spelling/spelling-bee',
+    'shakespeare': '/curriculum/english/theatre/globe',
+    'shakespeare-macbeth': '/curriculum/english/theatre/macbeth',
+    'languages': '/curriculum/languages/mfl-polyglot',
+    'bsl-fingerspelling': '/curriculum/languages/bsl-fingerspelling',
+    'bodmas': '/curriculum/maths/algebra/bodmas',
+    'times-tables': '/curriculum/maths/arithmetic/times-tables',
+    'math-fishing': '/curriculum/maths/arithmetic/number-bonds',
+    'fractions': '/curriculum/maths/arithmetic/fractions',
+    'calculus-curves': '/curriculum/maths/calculus/tangent-slopes',
+    'algebra-balance': '/curriculum/maths/algebra/balance-scale',
+    'atom': '/curriculum/science/chemistry/atomic-structure',
+    'photosynthesis': '/curriculum/science/biology/photosynthesis',
+    'dna-helix': '/curriculum/science/biology/dna-helix',
+    'solar-system': '/curriculum/science/physics/solar-system',
+    'velocity': '/curriculum/science/physics/velocity-vectors',
+    'water-cycle': '/curriculum/geography/water-cycle',
+    'mountain-elevation': '/curriculum/geography/mountain-elevation',
+    'fish-tank': '/curriculum/computing/stress-benchmark',
+  };
+  return map[id] || `/curriculum/${id}`;
+}
+
+export function getDefaultSectionForCartridge(id: string, category?: string): string {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || category === 'Catholic Faith') {
+    return 'Catholic Life & Faith Formation';
+  }
+  if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times') || category === 'Mathematics') {
+    return 'Mathematics & Geometry';
+  }
+  if (id.includes('gas') || id.includes('circuit') || id.includes('atom') || id.includes('photo') || id.includes('dna') || id.includes('solar') || id.includes('velocity') || category === 'Science') {
+    return 'Natural Sciences & Physics';
+  }
+  if (id.includes('phonics') || id.includes('spelling') || id.includes('shakespeare') || category === 'English Literature') {
+    return 'English Literature & Phonics';
+  }
+  if (id.includes('language') || id.includes('bsl') || category === 'Modern & Classical Languages') {
+    return 'Languages & Inclusion';
+  }
+  return 'Curriculum Cartridges';
+}
+
+/**
+ * Resolves a cartridge by its self-declared :mount address or route
+ */
+export function getCartridgeByMount(mountPath: string): CartridgeDefinition | null {
+  if (!mountPath) return null;
+  const cleanPath = mountPath.toLowerCase().trim().replace(/\/+$/, '');
+  const all = getAllCartridges();
+  
+  // Exact mount match
+  const exact = all.find((c) => c.mount && c.mount.toLowerCase().replace(/\/+$/, '') === cleanPath);
+  if (exact) return exact;
+
+  // Path suffix match (e.g. /curriculum/geometry/pythagoras -> pythagoras)
+  const segments = cleanPath.split('/').filter(Boolean);
+  const lastSegment = segments[segments.length - 1];
+  if (lastSegment) {
+    const byId = getCartridge(lastSegment);
+    if (byId) return byId;
+  }
+  
+  return null;
+}
+
+/**
+ * Generates self-assembling navigation sections directly from the cartridges
+ */
+export function getCartridgeNavigationSections(): { section: string; icon: string; cartridges: CartridgeDefinition[] }[] {
+  const all = getAllCartridges();
+  const map = new Map<string, { section: string; icon: string; cartridges: CartridgeDefinition[] }>();
+
+  all.forEach((c) => {
+    const secName = c.section || getDefaultSectionForCartridge(c.id, c.category);
+    if (!map.has(secName)) {
+      let icon = '📚';
+      if (secName.includes('Catholic')) icon = '⛪';
+      else if (secName.includes('Mathematics')) icon = '📐';
+      else if (secName.includes('Sciences')) icon = '🔬';
+      else if (secName.includes('English')) icon = '🎭';
+      else if (secName.includes('Languages')) icon = '🌍';
+      map.set(secName, { section: secName, icon, cartridges: [] });
+    }
+    map.get(secName)!.cartridges.push(c);
+  });
+
+  return Array.from(map.values());
 }
 
 /**

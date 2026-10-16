@@ -358,8 +358,8 @@ const EXPRESS_LESSONS: ExpressLessonItem[] = [
     lessonTitle: 'Shakespeare’s Globe & Dramatic Irony',
     hook: 'Step onto the stage of Elizabethan London and decode iambic pentameter in Macbeth and Romeo & Juliet.',
     specialTool: {
-      label: 'Step Inside Globe Theatre Lab',
-      url: '/player?preset=shakespeare&mode=game',
+      label: 'Step Inside Globe Theatre & Plays',
+      url: '/shakespeare',
       icon: '🎭',
     },
   },

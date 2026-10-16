@@ -1,6 +1,5 @@
-// src/pages/media-player.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams, useLocation, Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import AstVectorMediaPlayer, { VectorPresetType, AstVectorMediaPlayerHandle, isCartridgeWithoutQuestions } from '../components/AstVectorMediaPlayer';
 import { resolvePresetForTopic } from '../services/playerLauncher';
@@ -8,6 +7,7 @@ import { promptAiCoPilotDemonstration, type PlayerTelemetryEvent } from '../engi
 import {
   getAllCartridges,
   getCartridge,
+  getCartridgeByMount,
   normalizeCartridgeId,
   importCartridgeFile,
   createCustomCartridge,
@@ -19,6 +19,8 @@ import {
 } from '../services/cartridgeStore';
 import { type CompressedCartridgeMetadata } from '../utils/cartridgeCompression';
 import { exportSubjectCartridge, exportCustomCartridgeBundle } from '../utils/exportSubjectCartridge';
+
+const ShakespearePlayExplorer = React.lazy(() => import('../components/ShakespearePlayExplorer'));
 
 export default function MediaPlayerPage(): React.JSX.Element {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -62,8 +64,18 @@ export default function MediaPlayerPage(): React.JSX.Element {
     };
   }, []);
 
+  const location = useLocation();
+
+  // Self-Mounting Cartridge Resolution: Matches cartridge declared :mount path or /c/:cartridgeId
+  const pathCartridgeId = location.pathname.startsWith('/c/')
+    ? location.pathname.slice(3).replace(/\/.*$/, '')
+    : null;
+  const mountMatch =
+    getCartridgeByMount(location.pathname) ||
+    (pathCartridgeId ? getCartridge(pathCartridgeId) : null);
+
   // Fault-tolerant preset resolution with alias mapping (e.g. pythagorus -> kinetic-gas, or user/phet cartridge)
-  const resolvedPreset = urlPreset ? getCartridge(urlPreset) : null;
+  const resolvedPreset = urlPreset ? getCartridge(urlPreset) : mountMatch;
   const initialPreset: VectorPresetType =
     resolvedPreset
       ? resolvedPreset.id
@@ -72,6 +84,17 @@ export default function MediaPlayerPage(): React.JSX.Element {
       : 'kinetic-gas';
 
   const [activePreset, setActivePreset] = useState<VectorPresetType>(initialPreset);
+
+  // React to dynamic route/mount changes
+  useEffect(() => {
+    const directId = location.pathname.startsWith('/c/')
+      ? location.pathname.slice(3).replace(/\/.*$/, '')
+      : null;
+    const match = getCartridgeByMount(location.pathname) || (directId ? getCartridge(directId) : null);
+    if (match && match.id !== activePreset) {
+      setActivePreset(match.id);
+    }
+  }, [location.pathname]);
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSimStopped, setIsSimStopped] = useState(false);
@@ -217,6 +240,8 @@ export default function MediaPlayerPage(): React.JSX.Element {
     const matchesCategory =
       filterCategory === 'All'
         ? true
+        : filterCategory === '⭐ Core' || filterCategory === 'Core'
+        ? Boolean(p.isCore || p.tier === 'core' || p.source === 'builtin')
         : filterCategory === 'Sim' || filterCategory === 'Slide' || filterCategory === 'App'
         ? (p.type || 'Sim') === filterCategory
         : filterCategory === 'PhET Distilled'
@@ -615,6 +640,30 @@ export default function MediaPlayerPage(): React.JSX.Element {
         />
       </div>
 
+      {/* If active preset is Shakespeare: Show the 5-Act interactive Play-Through Explorer */}
+      {(activePreset === 'shakespeare' || activePreset === 'shakespeare-macbeth') && (
+        <div style={{ marginTop: '1.5rem', marginBottom: '2rem' }}>
+          <React.Suspense fallback={<div style={{ padding: '2rem', textAlign: 'center', color: 'var(--stj-text-muted)' }}>Loading Shakespeare Play Parts...</div>}>
+            <ShakespearePlayExplorer
+              initialPlayId={activePreset === 'shakespeare-macbeth' ? 'macbeth' : 'macbeth'}
+              onSelectPlay={(playId) => {
+                if (playId === 'macbeth') {
+                  handleSelectPreset('shakespeare-macbeth');
+                } else {
+                  handleSelectPreset('shakespeare');
+                }
+              }}
+              onFocusGlobeStage={(target) => {
+                if (target === 'hell-trapdoor') playerRef.current?.seek(0.15);
+                else if (target === 'thrust-stage') playerRef.current?.seek(0.4);
+                else if (target === 'heavens-roof') playerRef.current?.seek(0.7);
+                else playerRef.current?.seek(0.5);
+              }}
+            />
+          </React.Suspense>
+        </div>
+      )}
+
       {/* Interactive SVG Developer Workstation Quick Guide */}
       <div
         className="stj-card"
@@ -1008,7 +1057,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
           </div>
 
           <div style={{ display: 'flex', gap: '6px', background: '#f1f5f9', padding: '4px', borderRadius: '10px', flexWrap: 'wrap' }}>
-            {['All', 'Sim', 'Slide', 'App', 'Mathematics', 'Science', 'PhET Distilled', 'User Created', 'Games & Simulations', 'Languages & MFL', 'Catholic Faith'].map((cat) => (
+            {['All', '⭐ Core', 'Sim', 'Slide', 'App', 'Mathematics', 'Science', 'PhET Distilled', 'User Created', 'Games & Simulations', 'Languages & MFL', 'Catholic Faith'].map((cat) => (
               <button
                 key={cat}
                 type="button"
@@ -1026,7 +1075,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                   transition: 'all 0.15s ease',
                 }}
               >
-                {cat === 'Sim' ? '🎮 Sims' : cat === 'Slide' ? '📑 Slides' : cat === 'App' ? '💻 Apps' : cat === 'Languages & MFL' ? '🌍 Languages & MFL' : cat === 'Games & Simulations' ? '🎮 Games & Sims' : cat === 'PhET Distilled' ? '🧪 PhET Distilled' : cat === 'User Created' ? '✨ User Created' : cat}
+                {cat === '⭐ Core' ? '⭐ Core Cartridges' : cat === 'Sim' ? '🎮 Sims' : cat === 'Slide' ? '📑 Slides' : cat === 'App' ? '💻 Apps' : cat === 'Languages & MFL' ? '🌍 Languages & MFL' : cat === 'Games & Simulations' ? '🎮 Games & Sims' : cat === 'PhET Distilled' ? '🧪 PhET Distilled' : cat === 'User Created' ? '✨ User Created' : cat}
               </button>
             ))}
           </div>
@@ -1084,12 +1133,12 @@ export default function MediaPlayerPage(): React.JSX.Element {
                           fontWeight: 800,
                           padding: '2px 6px',
                           borderRadius: '4px',
-                          background: p.source === 'phet' ? '#f0fdf4' : p.source === 'user' ? '#fdf2f8' : isSelected ? '#0284c7' : '#f1f5f9',
-                          color: p.source === 'phet' ? '#166534' : p.source === 'user' ? '#9d174d' : isSelected ? '#ffffff' : '#475569',
-                          border: `1px solid ${p.source === 'phet' ? '#bbf7d0' : p.source === 'user' ? '#fbcfe8' : 'transparent'}`,
+                          background: p.isCore || p.source === 'builtin' ? '#ecfdf5' : p.source === 'phet' ? '#f0fdf4' : p.source === 'user' ? '#fdf2f8' : isSelected ? '#0284c7' : '#f1f5f9',
+                          color: p.isCore || p.source === 'builtin' ? '#047857' : p.source === 'phet' ? '#166534' : p.source === 'user' ? '#9d174d' : isSelected ? '#ffffff' : '#475569',
+                          border: `1px solid ${p.isCore || p.source === 'builtin' ? '#a7f3d0' : p.source === 'phet' ? '#bbf7d0' : p.source === 'user' ? '#fbcfe8' : 'transparent'}`,
                         }}
                       >
-                        {p.source === 'phet' ? 'PhET Distilled' : p.source === 'user' ? 'User Authored' : p.source === 'imported' ? 'Imported' : 'Built-in'}
+                        {p.isCore || p.source === 'builtin' ? '⭐ Core' : p.source === 'phet' ? 'PhET Distilled' : p.source === 'user' ? 'User Authored' : p.source === 'imported' ? 'Imported' : 'Built-in'}
                       </span>
                       <span
                         style={{

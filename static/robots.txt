@@ -9,6 +9,13 @@ Allow: /player
 Allow: /player.html
 Allow: /simulator
 Allow: /cartridges
+Allow: /curriculum/
+Allow: /c/
+Allow: /phonics
+Allow: /languages
+Allow: /shakespeare
+Allow: /theatre
+Allow: /globe
 Allow: /practice-lab
 Allow: /learning-zone
 Allow: /curriculum-studio

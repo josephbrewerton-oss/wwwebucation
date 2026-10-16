@@ -5,7 +5,11 @@
 ## Core Portal Endpoints & Route Map
 - [Portal Home](/) - Overview, Quick Starters, and Subject Hub
 - [AST Vector Media Player](/media-player) - Interactive curriculum vector slides, formative checkpoints, 3D viewpoints, smartboard chalkboard overlay, and parameter sandboxes
+- [Decentralized Cartridge Vault](/cartridges) - Offline curriculum ROM repository, PhET/SWF transpiler bridge, and cartridge compressor
 - [Standalone Micro-Vector Player](/player.html) - Zero-dependency embeddable vector stage, OBS studio broadcaster, and Developer Studio
+- [EYFS & KS1 Phonics Sounds Suite](/phonics) - DfE Phases 2–5 soundboard, sound buttons blending mat, Alien Words screening check & flashcards
+- [MFL & Polyglot Languages Studio](/languages) - Spanish, French & Latin comparative phonics, verb wheels, etymology bridges & vocab sprints
+- [Shakespeare Globe Theatre Suite](/shakespeare) - 1599 Wooden O 3D stage geometry, 5-Act dramatic play-throughs, spoken blank verse & metronomes
 - [Practice Arena](/practice-lab) - Interactive AST questions, Professor Turing AI hints, instant mistake diagnostics
 - [Curriculum Lessons](/learning-zone) - Oak National Academy aligned interactive lesson viewer
 - [International Curriculum Studio](/curriculum-studio) - Visual AST S-Expression graph generator and prompt hydrator
@@ -21,39 +25,44 @@
 - [Child Safety Policy](/child-safety) - Strict safeguarding standards, local AI inference, and student data protection
 
 ## Architectural Overview
-- **Zero Cloud Leakage**: Student logs, answers, voice inputs, and progress records remain exclusively within client-side IndexedDB (`services/dbStore.ts`, `services/jotter-db.ts`). Zero student data egress to cloud servers.
+- **Zero Cloud Leakage & Zero Server Data**: The site holds 0 student or user data on remote servers. All logs, answers, voice inputs, and progress records remain exclusively within client-side IndexedDB (`services/dbStore.ts`, `services/jotter-db.ts`).
+- **Autonomous Self-Mounting Cartridges**: Cartridges carry their own address coordinates (`:mount "/curriculum/..."`), subject section (`:section`), and tier (`:tier "core"`). The portal dynamically constructs its navigation hierarchy from the cartridges itself.
 - **Inference Engine**: In-browser Chrome Prompt API / Gemini Nano (`window.ai.languageModel` / `LanguageModel`), local Ollama endpoints, or WebLLM via WebGPU.
-- **Micro-Payload Vector Substrate**: AST Vector Media Player (`/static/player/ast-engine.js`) replaces heavy 50–100 MB video streaming with 3.5 KB – 68 KB declarative S-Expression AST vector cartridges. Sub-15 ms boot time, < 8 MB RAM footprint.
+- **Micro-Payload Vector Substrate**: AST Vector Media Player (`/static/player/ast-engine.js`) replaces heavy 50–100 MB video streaming with 2.5 KB – 25 KB declarative S-Expression AST vector cartridges. Sub-15 ms boot time, < 8 MB RAM footprint.
 - **Smartboard & Stylus Pen Overlay**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
 - **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset Web Audio synthesis.
 - **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
 - **Humanitarian Air-Gap Bundling**: Single-file HTML offline bundles (`exportAirgapHtmlBundle.ts`) enabling full academic curriculum delivery on flash drives in off-grid classrooms with zero internet.
 
-## Production AST Vector Simulations (24 Curriculum Cartridges)
-- [Sacred Altar Anatomy](/media-player?scene=altar-anatomy) - Catholic Life: Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
-- [Sacred Church Tour](/media-player?scene=church-tour) - Catholic Life: 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
-- [Holy Oils & Sacred Ambry](/media-player?scene=holy-oils) - Catholic Life: Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
-- [Calculus Curves](/media-player?scene=calculus-curves) - GCSE/A-Level Calculus: Tangent Slopes dy/dx, Stationary Turning Points & Riemann Integrals with GeoGebra/Desmos formula evaluation.
-- [Kinetic Gas Theory](/media-player?scene=kinetic-gas) - KS3/KS4 Molecular Gas Theory: Boyle's Law PV = nRT, Gay-Lussac's Law, impulse momentum pressure gauge, and solid/liquid/gas phase changes.
-- [Pythagoras Geometric Proof](/media-player?scene=pythagoras) - KS3 Geometry: High-fidelity Euclidean shear proof, dynamic square slicing, area conservation, and algebraic a² + b² = c² step-by-step verification.
-- [Aquarium Living Ecosystem](/media-player?scene=fish-tank) - KS2/KS3 Biology: Dynamic multi-species aquatic food web, nitrogen cycle (ammonia → nitrite → nitrate), photosynthesis/respiration balance, and water chemistry parameters.
-- [Electric Circuits Lab](/media-player?scene=electric-circuits) - KS3 Physics: Interactive knife switches, Ohm's law V = IR, series/parallel branches, and live ammeter/voltmeter readings.
-- [Algebra Balance Lab](/media-player?scene=algebra-balance) - KS2/KS3 Mathematics: Two-pan balance scale, algebraic balancing equations, and zero-pair cancelations.
-- [Fraction Wall & Slicing](/media-player?scene=fractions) - KS2 Mathematics: Visual fraction wall, dynamic denominator slicing, equivalent fractions, and part-whole arithmetic.
-- [Solar System 3D](/media-player?scene=solar-system) - KS3 Astronomy: Heliocentric planetary orbits, Keplerian velocities, and 3D inclination angles.
-- [Photosynthesis Solar Engine](/media-player?scene=photosynthesis) - KS3 Biology: Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
-- [Water Cycle Continuous Engine](/media-player?scene=water-cycle) - KS2 Geography/Science: Evaporation, transpiration, condensation, precipitation, and percolation cycle.
-- [Bohr Atom & Electron Shells](/media-player?scene=atom) - KS3 Chemistry: 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell tilt.
-- [Kinematics & Velocity Vectors](/media-player?scene=velocity) - KS3 Physics: Distance-time and velocity-time graphs with synchronized vector sprites.
-- [DNA Watson-Crick Double Helix](/media-player?scene=dna-helix) - KS3/KS4 Genetics: Hydrogen bonded base pairing (A-T, C-G) in 3D projected helical twist.
-- [BODMAS Order of Operations](/media-player?scene=bodmas) - KS2/KS3 Mathematics: Visual forcefield brackets, operation precedence clamps, and interactive evaluation steps.
-- [Phonics Laboratory](/media-player?scene=phonics-lab) - EYFS/KS1 Early Reading: Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
-- [Spelling Bee Arena](/media-player?scene=spelling-bee) - KS1/KS2/KS3 English: Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
-- [Times Tables 2D Array](/media-player?scene=times-tables) - KS1/KS2 Mathematics: Multiplication arrays, distributive property slicing, and commuter proofs.
-- [Maths Fishing Bonds to 10/20](/media-player?scene=math-fishing) - KS1 Mathematics: Gamified number bond rods and complement calculations.
-- [Mountain Elevation Trigonometry](/media-player?scene=mountain-elevation) - KS2/KS3 Geography/Maths: Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
-- [Shakespeare Globe Theatre](/media-player?scene=shakespeare) - KS3 English Literature: Globe Theatre stage anatomy, dramatic tension meters, and soliloquy vector pacing.
-- [Modern Foreign Languages (Spanish/French)](/media-player?scene=languages) - KS2/KS3 MFL: Conversational speech synthesis, phonetic breakdowns, and verb conjugation matrices.
+## Production AST Vector Simulations (28 Self-Mounting Curriculum Cartridges)
+- [Sacred Altar Anatomy](/curriculum/catholic-life/altar-anatomy) - Catholic Life: Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
+- [Sacred Church Tour](/curriculum/catholic-life/church-tour) - Catholic Life: 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
+- [Holy Oils & Sacred Ambry](/curriculum/catholic-life/holy-oils) - Catholic Life: Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
+- [The Holy Rosary 3D Mysteries](/curriculum/catholic-life/rosary-mysteries) - Catholic Life: Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
+- [Calculus Curves](/curriculum/maths/calculus/tangent-slopes) - GCSE/A-Level Calculus: Tangent Slopes dy/dx, Stationary Turning Points & Riemann Integrals with GeoGebra/Desmos formula evaluation.
+- [Kinetic Gas Theory](/curriculum/science/physics/kinetic-gas) - KS3/KS4 Molecular Gas Theory: Boyle's Law PV = nRT, Gay-Lussac's Law, impulse momentum pressure gauge, and solid/liquid/gas phase changes.
+- [Pythagoras Geometric Proof](/curriculum/maths/geometry/pythagoras) - KS3 Geometry: High-fidelity Euclidean shear proof, dynamic square slicing, area conservation, and algebraic a² + b² = c² step-by-step verification.
+- [Aquarium Living Ecosystem](/curriculum/computing/stress-benchmark) - Benchmark & Biology: Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
+- [Electric Circuits Lab](/curriculum/science/physics/electric-circuits) - KS3 Physics: Interactive knife switches, Ohm's law V = IR, series/parallel branches, and live ammeter/voltmeter readings.
+- [Algebra Balance Lab](/curriculum/maths/algebra/balance-scale) - KS2/KS3 Mathematics: Two-pan balance scale, algebraic balancing equations, and zero-pair cancelations.
+- [Fraction Wall & Slicing](/curriculum/maths/arithmetic/fractions) - KS2 Mathematics: Visual fraction wall, dynamic denominator slicing, equivalent fractions, and part-whole arithmetic.
+- [Solar System 3D](/curriculum/science/physics/solar-system) - KS3 Astronomy: Heliocentric planetary orbits, Keplerian velocities, and 3D inclination angles.
+- [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) - KS3 Biology: Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
+- [Water Cycle Continuous Engine](/curriculum/geography/water-cycle) - KS2 Geography/Science: Evaporation, transpiration, condensation, precipitation, and percolation cycle.
+- [Bohr Atom & Electron Shells](/curriculum/science/chemistry/atomic-structure) - KS3 Chemistry: 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell tilt.
+- [Kinematics & Velocity Vectors](/curriculum/science/physics/velocity-vectors) - KS3 Physics: Distance-time and velocity-time graphs with synchronized vector sprites.
+- [DNA Watson-Crick Double Helix](/curriculum/science/biology/dna-helix) - KS3/KS4 Genetics: Hydrogen bonded base pairing (A-T, C-G) in 3D projected helical twist.
+- [BODMAS Order of Operations](/curriculum/maths/algebra/bodmas) - KS2/KS3 Mathematics: Visual forcefield brackets, operation precedence clamps, and interactive evaluation steps.
+- [Phonics Laboratory](/curriculum/english/phonics/phonics-lab) - EYFS/KS1 Early Reading: Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
+- [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) - EYFS/KS1 Early Literacy: DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
+- [Spelling Bee Arena](/curriculum/english/spelling/spelling-bee) - KS1/KS2/KS3 English: Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
+- [Times Tables 2D Array](/curriculum/maths/arithmetic/times-tables) - KS1/KS2 Mathematics: Multiplication arrays, distributive property slicing, and commuter proofs.
+- [Maths Fishing Bonds to 10/20](/curriculum/maths/arithmetic/number-bonds) - KS1 Mathematics: Gamified number bond rods and complement calculations.
+- [Mountain Elevation Trigonometry](/curriculum/geography/mountain-elevation) - KS2/KS3 Geography/Maths: Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
+- [Shakespeare Globe Theatre](/curriculum/english/theatre/globe) - KS3/KS4 English Literature: 1599 Globe Theatre stage anatomy, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
+- [Macbeth 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) - KS3/KS4 English Literature: 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
+- [Modern Foreign Languages (Spanish/French/Latin)](/curriculum/languages/mfl-polyglot) - KS2/KS3 MFL: Conversational speech synthesis, phonetic soundboard, and regular verb conjugation wheels.
+- [3D British Sign Language (BSL) Fingerspelling](/curriculum/languages/bsl-fingerspelling) - Inclusion & Languages: 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
 
 ## Formative Assessment & Checkpoint Control Subsystem
 - **Randomized Option Shuffling**: Every formative checkpoint dynamically randomizes answer choice order via Fisher-Yates shuffle at runtime, decoupling correct answers from index 0/Option A and tracking the true answer key transparently.

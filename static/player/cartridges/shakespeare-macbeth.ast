@@ -1,0 +1,56 @@
+(:scene :id "shakespeare-macbeth" :type "Slide" :title "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall" :stage "KS3/KS4 ENGLISH LITERATURE" :duration 20.0
+  (:camera :distance 520 :pitch 24 :yaw "t * 40" :fov 60)
+  (:vars (
+    (:var :name "tempo" :val 72 :min 40 :max 140 :step 2 :unit "BPM" :label "Heartbeat Metronome")
+    (:var :name "actProgress" :val 0.0 :min 0.0 :max 1.0 :step 0.05 :label "5-Act Timeline")
+  ))
+  (:inputs (
+    (:slider :var "tempo" :label "Iambic Rhythm Heartbeat (BPM)" :min 40 :max 140 :step 2)
+  ))
+  (:gestures (
+    (:draggable :target "#dagger-vision" :axis "xy" :min -60 :max 60)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.20 :en "Act I: On the blasted heath, three weird sisters hail Macbeth as future King, sparking the fatal seed of ambition." :es "Acto I: En el brezal, tres hermanas profetizan que Macbeth será rey, sembrando la ambición fatal.")
+    (:start 0.20 :end 0.40 :en "Act II: 'Is this a dagger which I see before me?' Macbeth hallucinates a bloody blade leading him to assassinate King Duncan." :es "Acto II: '¿Es esto una daga que veo ante mí?' Macbeth alucina una hoja ensangrentada antes de asesinar a Duncan.")
+    (:start 0.40 :end 0.60 :en "Act III: Crowned King of Scotland, paranoia consumes Macbeth. At his royal feast, the bloodied ghost of Banquo sits in his chair." :es "Acto III: Coronado rey, la paranoia consume a Macbeth. En el banquete real, el fantasma ensangrentado de Banquo ocupa su trono.")
+    (:start 0.60 :end 0.80 :en "Act IV: Lady Macbeth unravels: 'Out, damned spot! out, I say!' No ocean can wash the guilt from her sleeping hands." :es "Acto IV: Lady Macbeth colapsa: '¡Fuera, mancha maldita!' Ningún océano puede lavar la culpa de sus manos sonámbulas.")
+    (:start 0.80 :end 1.00 :en "Act V: Birnam Wood marches on Dunsinane. 'Tomorrow, and tomorrow, and tomorrow, creeps in this petty pace from day to day.'" :es "Acto V: El bosque de Birnam avanza sobre Dunsinane. 'Mañana, y mañana, y mañana, se arrastra a paso lento día tras día.'")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Act I: The Blasted Heath Prophecy" :rule "Fair is foul, and foul is fair: Hover through the fog and filthy air.")
+    (:t 0.20 :title "Act II: The Floating Dagger & Regicide" :rule "Macbeth murders Duncan. Neptune's ocean cannot wash the blood clean.")
+    (:t 0.40 :title "Act III: Banquo's Ghost at the Feast" :rule "Blood will have blood. Tyranny replaces rightful rule.")
+    (:t 0.60 :title "Act IV: Sleepwalking & Lady Macbeth's Guilt" :rule "Psychological collapse under unrepented sin.")
+    (:t 0.80 :title "Act V: The Tragic Catastrophe at Dunsinane" :rule "Life's but a walking shadow, a poor player that struts and frets his hour upon the stage.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.30
+      :prompt "When Macbeth hallucinates the dagger in Act II, what does Shakespeare's broken 11-beat iambic meter symbolize?"
+      :options ("His moral mind collapsing under the weight of premeditated murder" "That Macbeth forgot his lines on stage" "That King Duncan was already awake" "Elizabethan musical tuning")
+      :answer 0
+      :explanation "Shakespeare frequently adds an 11th unstressed syllable (a feminine ending) when characters experience severe moral disintegration or psychological conflict.")
+    (:checkpoint :t 0.75
+      :prompt "What is Lady Macbeth trying to wash from her hands during her sleepwalking scene in Act V?"
+      :options ("Symbolic bloodguilt that water cannot cleanse" "Real ink from Duncan's letters" "Poison from the witches' cauldron" "Dirt from the castle courtyard")
+      :answer 0
+      :explanation "Her compulsive hand-washing externalizes her inescapable psychological torment and bloodguilt following the murders.")
+  ))
+  (:bindings (
+    <!-- 3D Amphitheatre & Cosmological Levels -->
+    (:target "#globe-gallery-ring" :type "3d-ring" :r "220" :tilt-x "22" :depth-fog true)
+    (:target "#globe-yard-ring" :type "3d-ring" :r "160" :tilt-x "22" :depth-fog true)
+    (:target "#globe-heavens-roof" :type "3d-polygon" :pts "[[-120, -110, -40], [120, -110, -40], [100, -110, 50], [-100, -110, 50]]" :depth-fog true)
+    (:target "#globe-stage-platform" :type "3d-polygon" :pts "[[-100, 30, -40], [100, 30, -40], [115, 30, 85], [-115, 30, 85]]" :depth-fog true)
+
+    <!-- 3D Nodes: Hell Trapdoor, Banquo's Ghost & The Hallucinated Dagger -->
+    (:target "#hell-trapdoor" :type "3d-node" :x "0" :y "28" :z "35" :base-r 18 :depth-fog true)
+    (:target "#dagger-vision" :type "3d-node" :x "Math.sin(t * Math.PI * 4) * 35" :y "-20" :z "50" :base-r 14 :depth-fog true)
+    (:target "#actor-macbeth" :type "3d-node" :x "0" :y "18" :z "70" :base-r 15 :depth-fog true)
+
+    <!-- Dynamic Pulse Animations -->
+    (:target "#macbeth-act-status" :attr "textContent" :expr "t < 0.2 ? 'ACT I: The Blasted Heath Prophecy' : (t < 0.4 ? 'ACT II: The Dagger Soliloquy & Regicide' : (t < 0.6 ? 'ACT III: Banquo\'s Ghost at the Feast' : (t < 0.8 ? 'ACT IV: Lady Macbeth Sleepwalking' : 'ACT V: Birnam Wood & Dunsinane Fall')))")
+    (:target "#dagger-pulse" :attr "opacity" :expr "t >= 0.2 && t < 0.4 ? '1' : '0.1'")
+    (:target "#hell-sulfur-glow" :attr "opacity" :expr "0.3 + Math.sin(t * Math.PI * 6) * 0.3")
+  ))
+)

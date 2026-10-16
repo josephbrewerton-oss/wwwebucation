@@ -102,6 +102,59 @@ export function getControlledInputDirs(options = {}) {
 
 export const normalizeCartridgeType = inferCartridgeType;
 
+function getDefaultMountForCartridge(id) {
+  const map = {
+    'pythagoras': '/curriculum/maths/geometry/pythagoras',
+    'kinetic-gas': '/curriculum/science/physics/kinetic-gas',
+    'electric-circuits': '/curriculum/science/physics/electric-circuits',
+    'church-tour': '/curriculum/catholic-life/church-tour',
+    'altar-anatomy': '/curriculum/catholic-life/altar-anatomy',
+    'holy-oils': '/curriculum/catholic-life/holy-oils',
+    'rosary-mysteries': '/curriculum/catholic-life/rosary-mysteries',
+    'phonics-lab': '/curriculum/english/phonics/phonics-lab',
+    'phonics-screening': '/curriculum/english/phonics/screening-check',
+    'spelling-bee': '/curriculum/english/spelling/spelling-bee',
+    'shakespeare': '/curriculum/english/theatre/globe',
+    'shakespeare-macbeth': '/curriculum/english/theatre/macbeth',
+    'languages': '/curriculum/languages/mfl-polyglot',
+    'bsl-fingerspelling': '/curriculum/languages/bsl-fingerspelling',
+    'bodmas': '/curriculum/maths/algebra/bodmas',
+    'times-tables': '/curriculum/maths/arithmetic/times-tables',
+    'math-fishing': '/curriculum/maths/arithmetic/number-bonds',
+    'fractions': '/curriculum/maths/arithmetic/fractions',
+    'calculus-curves': '/curriculum/maths/calculus/tangent-slopes',
+    'algebra-balance': '/curriculum/maths/algebra/balance-scale',
+    'atom': '/curriculum/science/chemistry/atomic-structure',
+    'photosynthesis': '/curriculum/science/biology/photosynthesis',
+    'dna-helix': '/curriculum/science/biology/dna-helix',
+    'solar-system': '/curriculum/science/physics/solar-system',
+    'velocity': '/curriculum/science/physics/velocity-vectors',
+    'water-cycle': '/curriculum/geography/water-cycle',
+    'mountain-elevation': '/curriculum/geography/mountain-elevation',
+    'fish-tank': '/curriculum/computing/stress-benchmark'
+  };
+  return map[id] || `/curriculum/${id}`;
+}
+
+function getDefaultSectionForCartridge(id) {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary')) {
+    return 'Catholic Life & Faith Formation';
+  }
+  if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times')) {
+    return 'Mathematics & Geometry';
+  }
+  if (id.includes('gas') || id.includes('circuit') || id.includes('atom') || id.includes('photo') || id.includes('dna') || id.includes('solar') || id.includes('velocity')) {
+    return 'Natural Sciences & Physics';
+  }
+  if (id.includes('phonics') || id.includes('spelling') || id.includes('shakespeare')) {
+    return 'English Literature & Phonics';
+  }
+  if (id.includes('language') || id.includes('bsl')) {
+    return 'Languages & Inclusion';
+  }
+  return 'Curriculum Cartridges';
+}
+
 function parseAstHeader(astContent, filename) {
   const id = extractSlot(astContent, /:id\s+("[^"]+"|[^\s\)]+)/i);
   const rawType = extractSlot(astContent, /:type\s+("Sim"|"Slide"|"App"|"[^"]+"|[^\s\)]+)/i);
@@ -139,6 +192,18 @@ function parseAstHeader(astContent, filename) {
   const has3D = /:camera\s+|:type\s+"3d-/i.test(astContent);
   const nodes3DCount = (astContent.match(/:type\s+"3d-/gi) || []).length;
 
+  // Core Cartridge Tier (:core true or :tier "core")
+  const tierMatch = extractSlot(astContent, /:tier\s+("Core"|"core"|"phet"|"user"|"[^"]+"|[^\s\)]+)/i);
+  const coreExplicit = /:core\s+(true|t)\b/i.test(astContent);
+  const tier = tierMatch ? tierMatch.toLowerCase() : 'core';
+  const isCore = coreExplicit || tier === 'core';
+
+  // Self-mounting address declared by cartridge (:mount "/curriculum/...")
+  const declaredMount = extractSlot(astContent, /:mount\s+"([^"]+)"/i);
+  const declaredSection = extractSlot(astContent, /:section\s+"([^"]+)"/i);
+  const mount = declaredMount || getDefaultMountForCartridge(id);
+  const section = declaredSection || getDefaultSectionForCartridge(id);
+
   return {
     id,
     type,
@@ -148,6 +213,10 @@ function parseAstHeader(astContent, filename) {
     duration,
     has3D,
     nodes3DCount,
+    isCore,
+    tier,
+    mount,
+    section,
     keyframeCount,
     subtitleCount,
     bindingsCount,
@@ -257,6 +326,10 @@ export function generateScenesManifest(options = {}) {
         nodes3DCount: meta.nodes3DCount,
         svgFile: `scenes/${svgFile}`,
         astFile: `scenes/${astFile}`,
+        isCore: Boolean(meta.isCore),
+        tier: meta.tier || 'core',
+        mount: meta.mount,
+        section: meta.section,
         keyframeCount: meta.keyframeCount,
         subtitleCount: meta.subtitleCount,
         bindingsCount: meta.bindingsCount,
@@ -351,6 +424,10 @@ export function generateScenesManifest(options = {}) {
     type: m.type, // 'Sim' | 'Slide' | 'App'
     label: `${m.title}`,
     stage: m.stage,
+    isCore: m.isCore ?? true,
+    tier: m.tier || 'core',
+    mount: m.mount,
+    section: m.section,
     hasCheckpoints: Boolean(m.hasCheckpoints),
     checkpointCount: m.checkpointCount || 0
   }));
@@ -365,6 +442,10 @@ export interface ScenePresetOption {
   type: CartridgeType;
   label: string;
   stage: string;
+  isCore?: boolean;
+  tier?: string;
+  mount?: string;
+  section?: string;
   hasCheckpoints?: boolean;
   checkpointCount?: number;
 }
