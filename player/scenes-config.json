@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-16T08:14:44.429Z",
+  "generatedAt": "2026-10-16T08:40:10.730Z",
   "totalScenes": 28,
   "scenes": [
     {
@@ -71,7 +71,7 @@
       "astFile": "scenes/bsl-fingerspelling.ast",
       "keyframeCount": 4,
       "subtitleCount": 4,
-      "bindingsCount": 18
+      "bindingsCount": 20
     },
     {
       "id": "calculus-curves",

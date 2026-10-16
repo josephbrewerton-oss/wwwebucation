@@ -8,7 +8,7 @@
     (:slider :var "wordIdx" :label "Screening Pool Word (1 to 40)" :min 0 :max 39 :step 1)
   ))
   (:gestures (
-    (:draggable :target "#blend-sweep-pointer" :axis "x" :min -130 :max 130 :var "sweepProgress")
+    (:draggable :target "#blend-sweep-pointer" :axis "x" :min -165 :max 165 :var "sweepProgress")
   ))
   (:subtitles (
     (:start 0.00 :end 0.25 :en "The official Year 1 Phonics Screening Check assesses whether pupils have learned phonic decoding to an age-appropriate standard (32/40 threshold)." :es "La prueba oficial de fonética de Year 1 evalúa si los alumnos dominan la decodificación fonética (umbral de 32/40).")
@@ -36,7 +36,7 @@
   ))
   (:bindings (
     (:target "#alien-monster-badge" :attr "opacity" :expr "t < 0.5 ? '1' : '0.15'")
-    (:target "#blend-sweep-pointer" :attr "cx" :expr "String(-120 + ((t * 4) % 1) * 240)")
+    (:target "#blend-sweep-pointer" :attr "cx" :expr "String(-165 + ((t * 4) % 1) * 330)")
     (:target "#sound-dot-1" :attr "fill" :expr "((t * 4) % 1) < 0.33 ? '#10b981' : '#38bdf8'")
     (:target "#sound-dot-2" :attr "fill" :expr "((t * 4) % 1) >= 0.33 && ((t * 4) % 1) < 0.66 ? '#10b981' : '#38bdf8'")
     (:target "#sound-dot-3" :attr "fill" :expr "((t * 4) % 1) >= 0.66 ? '#10b981' : '#38bdf8'")

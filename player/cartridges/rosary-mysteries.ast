@@ -46,7 +46,7 @@
 
     <!-- Dynamic Prayer Title & Active Bead Highlight -->
     (:target "#rosary-prayer-status" :attr "textContent" :expr "t < 0.25 ? 'CRUCIFIX: Credo in Deum (Apostles\' Creed)' : (t < 0.5 ? 'LARGE BEAD: Pater Noster (The Lord\'s Prayer)' : (t < 0.75 ? '10 SMALL BEADS: Ave Maria (Contemplating the Mystery)' : 'GLORIA PATRI: Glory be to the Father'))")
-    (:target "#active-bead-halo" :attr "cx" :expr "String(Math.cos(t * Math.PI * 4) * 130)")
-    (:target "#active-bead-halo" :attr "cy" :expr "String(-20 + Math.sin(t * Math.PI * 4) * 55)")
+    (:target "#active-bead-halo" :attr "cx" :expr "String(400 + Math.cos(t * Math.PI * 4) * 140)")
+    (:target "#active-bead-halo" :attr "cy" :expr "String(235 + Math.sin(t * Math.PI * 4) * 60)")
   ))
 )
