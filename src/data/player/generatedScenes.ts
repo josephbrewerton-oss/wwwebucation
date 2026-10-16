@@ -254,8 +254,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/languages/bsl-fingerspelling",
     "section": "English Literature & Phonics",
-    "hasCheckpoints": true,
-    "checkpointCount": 2
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "shakespeare-macbeth",
@@ -326,8 +326,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/catholic-life/rosary-mysteries",
     "section": "Catholic Life & Faith Formation",
-    "hasCheckpoints": true,
-    "checkpointCount": 2
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   },
   {
     "id": "holy-oils",
@@ -350,7 +350,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/english/phonics/screening-check",
     "section": "English Literature & Phonics",
-    "hasCheckpoints": true,
-    "checkpointCount": 2
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   }
 ];

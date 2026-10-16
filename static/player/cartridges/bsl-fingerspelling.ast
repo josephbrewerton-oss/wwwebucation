@@ -25,18 +25,8 @@
     (:t 0.50 :title "3. Continuous Touch Contact" :rule "Point of contact must be firm and clearly oriented toward the conversation partner.")
     (:t 0.75 :title "4. Spatial Fluency & 360° Orientation" :rule "Keep hands at chest height. Never block facial expressions or mouth lip patterns.")
   ))
-  (:interactive (
-    (:checkpoint :t 0.35
-      :prompt "In British Sign Language (BSL), which finger on the base hand represents the vowel 'E'?"
-      :options ("Index finger" "Thumb" "Middle finger" "Ring finger")
-      :answer 0
-      :explanation "In BSL, the five vowels progress across the fingertips from thumb to pinky: Thumb=A, Index=E, Middle=I, Ring=O, Pinky=U.")
-    (:checkpoint :t 0.70
-      :prompt "Why does BSL fingerspelling keep hands at upper chest height rather than waist height?"
-      :options ("So the receiver can see the hands and facial expression simultaneously in one field of view" "To rest the signer's forearms on a desk" "Because low signs are forbidden by grammar" "To hide the hands from background light")
-      :answer 0
-      :explanation "Deaf signers read facial expressions and lip patterns at the same time as hand shapes. Keeping hands at chest height allows both to be seen together in central vision.")
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     <!-- 3D Base Hand (Non-Dominant Open Palm) -->
     (:target "#base-wrist" :type "3d-node" :x "-60" :y "80" :z "0" :base-r 18 :depth-fog true)
