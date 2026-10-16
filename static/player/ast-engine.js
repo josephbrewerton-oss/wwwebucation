@@ -3464,6 +3464,22 @@
             en: 'en-GB'
           };
           utterance.lang = langMap[this.currentLang] || 'en-GB';
+          utterance.onboundary = (e) => {
+            if (e.name === 'word') {
+              const word = text.slice(e.charIndex).split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
+              this.notifyParent({ type: 'SPEECH_BOUNDARY', word, fullText: text, charIndex: e.charIndex });
+            }
+          };
+          utterance.onstart = () => {
+            this.notifyParent({ type: 'SPEECH_START', text });
+          };
+          utterance.onend = () => {
+            this.notifyParent({ type: 'SPEECH_END' });
+          };
+          utterance.onerror = () => {
+            this.notifyParent({ type: 'SPEECH_END' });
+          };
+          this.notifyParent({ type: 'SUBTITLE_UPDATE', text });
           window.speechSynthesis.speak(utterance);
         } catch (err) {
           console.warn('SpeechSynthesis error:', err);

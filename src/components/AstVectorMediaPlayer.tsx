@@ -35,6 +35,7 @@ import {
 } from './player';
 import AstChalkboardOverlay from './player/AstChalkboardOverlay';
 import AstInteractiveLabDrawer from './player/AstInteractiveLabDrawer';
+import BslInterpreterOverlay from './BslInterpreterOverlay';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { exportSubjectCartridge, AVAILABLE_CARTRIDGES } from '../utils/exportSubjectCartridge';
 import { getRelatedConcepts } from '../data/player/astConceptGraph';
@@ -125,6 +126,8 @@ export interface AstVectorMediaPlayerProps {
   onAiDemoStart?: (data: { transactionId: string; actions: any[] }) => void;
   onAiDemoComplete?: (data: { transactionId: string }) => void;
   onPupilPreemption?: (reason: string) => void;
+  bslEnabled?: boolean;
+  onBslToggle?: (enabled: boolean) => void;
   initialCheckpoint?: {
     prompt: string;
     options: string[];
@@ -146,6 +149,8 @@ export interface AstVectorMediaPlayerHandle {
   stopVoiceCommands: () => void;
   executeVoiceCommand: (command: string) => void;
   togglePictureInPicture: () => void;
+  toggleBsl: () => void;
+  setBslEnabled: (enabled: boolean) => void;
   sendAiVisualCommand: (packet: AiVisualCommandPacket) => void;
   preemptAiDemo: () => void;
   getTelemetrySnapshot: () => PlayerTelemetryEvent | null;
@@ -192,6 +197,8 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   onAiDemoComplete,
   onPupilPreemption,
   initialCheckpoint,
+  bslEnabled: bslEnabledProp,
+  onBslToggle,
 }, ref) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const normalizedInitialPreset = normalizeCartridgeId(preset) || 'kinetic-gas';
@@ -210,6 +217,24 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [showEmbedCode, setShowEmbedCode] = useState(false);
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [embedTargetMode, setEmbedTargetMode] = useState<PlayerDisplayMode>('classroom');
+
+  // British Sign Language (BSL) In-Vision State
+  const [bslEnabled, setBslEnabled] = useState<boolean>(() => {
+    if (typeof bslEnabledProp === 'boolean') return bslEnabledProp;
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('stj_bsl_enabled') === 'true';
+    }
+    return false;
+  });
+  const [bslActiveWord, setBslActiveWord] = useState<string>('');
+  const [bslActiveSubtitle, setBslActiveSubtitle] = useState<string>('');
+  const [bslIsSpeaking, setBslIsSpeaking] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (typeof bslEnabledProp === 'boolean') {
+      setBslEnabled(bslEnabledProp);
+    }
+  }, [bslEnabledProp]);
 
   // Display Configuration & Profile Mode State
   const [displayConfig, setDisplayConfig] = useState<PlayerDisplayConfig>(() => {
@@ -482,6 +507,23 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     stopVoiceCommands: () => postToPlayer({ type: 'STOP_VOICE_COMMANDS' }),
     executeVoiceCommand: (command: string) => postToPlayer({ type: 'VOICE_COMMAND', command }),
     togglePictureInPicture: () => togglePictureInPicture(),
+    toggleBsl: () => {
+      setBslEnabled((prev) => {
+        const next = !prev;
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+        }
+        onBslToggle?.(next);
+        return next;
+      });
+    },
+    setBslEnabled: (enabled: boolean) => {
+      setBslEnabled(enabled);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('stj_bsl_enabled', enabled ? 'true' : 'false');
+      }
+      onBslToggle?.(enabled);
+    },
     sendAiVisualCommand: (packet: AiVisualCommandPacket) => postToPlayer({ type: 'AI_VISUAL_COMMAND', packet }),
     preemptAiDemo: () => postToPlayer({ type: 'PUPIL_INTERRUPT' }),
     getTelemetrySnapshot: () => latestTelemetryRef.current,
@@ -539,6 +581,18 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       if ((e.key === 'p' || e.key === 'P') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
         togglePictureInPicture();
+      }
+
+      if ((e.key === 'b' || e.key === 'B') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        e.preventDefault();
+        setBslEnabled((prev) => {
+          const next = !prev;
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+          }
+          onBslToggle?.(next);
+          return next;
+        });
       }
     };
 
@@ -626,9 +680,33 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           setCurrentProgress(data.progress || 0);
           onTimeUpdate?.(data.progress || 0);
           break;
+        case 'SPEECH_BOUNDARY':
+          if (data.word) setBslActiveWord(data.word);
+          if (data.fullText) setBslActiveSubtitle(data.fullText);
+          break;
+        case 'SPEECH_START':
+          setBslIsSpeaking(true);
+          if (data.text) {
+            setBslActiveSubtitle(data.text);
+            const firstW = data.text.trim().split(/\s+/)[0];
+            if (firstW) setBslActiveWord(firstW);
+          }
+          break;
+        case 'SPEECH_END':
+          setBslIsSpeaking(false);
+          break;
+        case 'SUBTITLE_UPDATE':
+          if (data.text) setBslActiveSubtitle(data.text);
+          break;
         case 'KEYFRAME_REACHED':
           setActiveKeyframe({ title: data.title, rule: data.rule });
           onKeyframeReached?.({ title: data.title, rule: data.rule, progress: data.progress });
+          if (data.title) {
+            const combined = `${data.title}: ${data.rule || ''}`.trim();
+            setBslActiveSubtitle(combined);
+            const firstW = data.title.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/)[0];
+            if (firstW) setBslActiveWord(firstW);
+          }
           break;
         case 'HOTSPOT_SELECTED':
           setActiveKeyframe({ title: data.label || 'Station Selected', rule: `Interactively inspected station at ${(data.targetT * 100).toFixed(0)}%` });
@@ -1030,6 +1108,38 @@ const playerSrc = useMemo(() => {
                 🎙️ {voiceFeedback}
               </span>
             )}
+
+            {/* Accessible BSL In-Vision Interpreter Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setBslEnabled((prev) => {
+                  const next = !prev;
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+                  }
+                  onBslToggle?.(next);
+                  return next;
+                });
+              }}
+              className={`stj-btn ${bslEnabled ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              style={{
+                padding: '3px 9px',
+                minHeight: '32px',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                fontWeight: 700,
+                fontSize: '0.76rem',
+                backgroundColor: bslEnabled ? 'rgba(56, 189, 248, 0.18)' : undefined,
+                color: bslEnabled ? '#38bdf8' : undefined,
+                borderColor: bslEnabled ? '#38bdf8' : undefined,
+              }}
+              title="Toggle British Sign Language (BSL) In-Vision Vector Interpreter (Shortcut: Shift + B)"
+            >
+              <span>🖐️</span>
+              <span>BSL: {bslEnabled ? 'ON' : 'OFF'}</span>
+            </button>
 
             {has3D && displayConfig.show3DControls && (
               <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
@@ -1792,6 +1902,22 @@ const playerSrc = useMemo(() => {
                 allow="fullscreen; microphone"
               />
             </div>
+          )}
+
+          {/* Real-Time Procedural BSL In-Vision Interpreter */}
+          {bslEnabled && (
+            <BslInterpreterOverlay
+              activeWord={bslActiveWord}
+              activeSubtitle={bslActiveSubtitle}
+              isSpeaking={bslIsSpeaking}
+              onClose={() => {
+                setBslEnabled(false);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('stj_bsl_enabled', 'false');
+                }
+                onBslToggle?.(false);
+              }}
+            />
           )}
 
           {/* Live Chalkboard & Annotation Layer */}

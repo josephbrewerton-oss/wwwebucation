@@ -99,6 +99,12 @@ export default function MediaPlayerPage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSimStopped, setIsSimStopped] = useState(false);
   const [showQuestions, setShowQuestions] = useState(true);
+  const [bslEnabled, setBslEnabled] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('stj_bsl_enabled') === 'true';
+    }
+    return false;
+  });
   const [latestTelemetry, setLatestTelemetry] = useState<PlayerTelemetryEvent | null>(null);
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [isNanoLoadingDemo, setIsNanoLoadingDemo] = useState(false);
@@ -551,6 +557,38 @@ export default function MediaPlayerPage(): React.JSX.Element {
               </button>
             )}
 
+            {/* BSL In-Vision Interpreter Accessible Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setBslEnabled((prev) => {
+                  const next = !prev;
+                  playerRef.current?.setBslEnabled(next);
+                  if (typeof window !== 'undefined') {
+                    localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+                  }
+                  return next;
+                });
+              }}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '8px',
+                background: bslEnabled ? 'rgba(56, 189, 248, 0.16)' : '#1e293b',
+                color: bslEnabled ? '#38bdf8' : '#94a3b8',
+                border: bslEnabled ? '1.5px solid #38bdf8' : '1px solid #475569',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: 'all 0.15s ease',
+              }}
+              title="Toggle British Sign Language (BSL) In-Vision Vector Interpreter (Shortcut: Shift + B)"
+            >
+              <span>🖐️</span> BSL Signing: {bslEnabled ? 'ON' : 'OFF'}
+            </button>
+
             <button
               type="button"
               onClick={handleShowMeHow}
@@ -629,6 +667,8 @@ export default function MediaPlayerPage(): React.JSX.Element {
           preset={activePreset}
           autoPlay={true}
           showQuestions={showQuestions}
+          bslEnabled={bslEnabled}
+          onBslToggle={(val) => setBslEnabled(val)}
           allowPresetSwitch={false}
           embedded={true}
           height="min(540px, 60vh)"
