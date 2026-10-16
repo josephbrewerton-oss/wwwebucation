@@ -6168,6 +6168,8 @@
           this.scene.interactive = parsed.interactive;
         } else if (parsed.checkpoints && parsed.checkpoints.length > 0) {
           this.scene.interactive = { checkpoints: parsed.checkpoints, hotspots: [] };
+        } else {
+          this.scene.interactive = null;
         }
         if (parsed.camera) this.scene.camera = parsed.camera;
         if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
