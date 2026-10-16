@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-16T09:50:15.254Z",
+  "generatedAt": "2026-10-16T10:07:15.180Z",
   "totalScenes": 28,
   "inputDirs": [
     "static/player/scenes",
@@ -410,8 +410,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 20,
-      "hasCheckpoints": true,
-      "checkpointCount": 2
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     },
     {
       "id": "shakespeare-macbeth",
@@ -530,8 +530,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 8,
-      "hasCheckpoints": true,
-      "checkpointCount": 2
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     },
     {
       "id": "holy-oils",
@@ -570,8 +570,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 7,
-      "hasCheckpoints": true,
-      "checkpointCount": 2
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     }
   ]
 }

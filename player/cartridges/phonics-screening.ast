@@ -22,18 +22,8 @@
     (:t 0.50 :title "3. Section 2: Phase 5 Alternative Graphemes" :rule "Split digraphs (a-e, i-e) and vowel digraphs (ea, oi, igh, oy).")
     (:t 0.75 :title "4. The 32/40 Mastery Threshold" :rule "Achieving 32 or more out of 40 confirms secure phonetic decoding skills.")
   ))
-  (:interactive (
-    (:checkpoint :t 0.35
-      :prompt "Why does the Department for Education include 'alien words' (pseudo-words) with pictures of monsters in the Phonics Screening Check?"
-      :options ("To test whether pupils can decode pure sounds without relying on visual word memorization" "To test pupil imagination" "Because real English words are too difficult for Year 1" "To assess handwriting ability")
-      :answer 0
-      :explanation "Alien words ensure children use phonic decoding rather than simply recognizing familiar words by sight memory. The monster image tells the child that the word will not make real-world sense.")
-    (:checkpoint :t 0.70
-      :prompt "What does a sound button 'dash' (—) under two letters represent in synthetic phonics?"
-      :options ("A digraph: two letters working together to make one single sound (e.g. 'sh', 'ch', 'th')" "A pause or break in the word" "A silent letter that must not be pronounced" "A capital letter")
-      :answer 0
-      :explanation "In synthetic phonics, a single dot (.) represents a single-letter phoneme, while a dash (—) represents a digraph where two letters represent one sound.")
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     (:target "#alien-monster-badge" :attr "opacity" :expr "t < 0.5 ? '1' : '0.15'")
     (:target "#blend-sweep-pointer" :attr "cx" :expr "String(-165 + ((t * 4) % 1) * 330)")
