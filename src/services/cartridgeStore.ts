@@ -648,7 +648,7 @@ export const EMBEDDED_CORE_CARTRIDGES: Record<string, { svg: string; ast: string
     <text x="0" y="5" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" pointer-events="none">↔</text>
   </g>
 </svg>`,
-    ast: `(:scene :id "pythagoras" :title "Pythagoras Theorem: Area Conservation" :stage "KS3 GEOMETRY" :duration 11.0
+    ast: `(:scene :id "pythagoras" :type "Sim" :title "Pythagoras' Theorem (a² + b² = c²)" :stage "KS3 GEOMETRY" :duration 11.0
   (:vars (
     (:var :name "sideA" :val 3 :min 1 :max 8 :step 1 :unit "units" :label "Leg a")
     (:var :name "sideB" :val 4 :min 1 :max 8 :step 1 :unit "units" :label "Leg b")
