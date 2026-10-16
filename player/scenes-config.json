@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-15T17:41:51.947Z",
-  "totalScenes": 24,
+  "generatedAt": "2026-10-16T08:14:44.429Z",
+  "totalScenes": 28,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -58,6 +58,20 @@
       "keyframeCount": 5,
       "subtitleCount": 3,
       "bindingsCount": 8
+    },
+    {
+      "id": "bsl-fingerspelling",
+      "type": "Sim",
+      "title": "BSL: 3D British Sign Language Two-Handed Fingerspelling",
+      "stage": "ACCESSIBILITY & LANGUAGES",
+      "duration": 16,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/bsl-fingerspelling.svg",
+      "astFile": "scenes/bsl-fingerspelling.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 18
     },
     {
       "id": "calculus-curves",
@@ -228,6 +242,20 @@
       "bindingsCount": 6
     },
     {
+      "id": "phonics-screening",
+      "type": "Sim",
+      "title": "Year 1 Phonics Screening Check & Alien Words",
+      "stage": "EARLY YEARS & KS1 PHONICS",
+      "duration": 18,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/phonics-screening.svg",
+      "astFile": "scenes/phonics-screening.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 7
+    },
+    {
       "id": "photosynthesis",
       "type": "Slide",
       "title": "Photosynthesis: The Green Solar Engine",
@@ -254,6 +282,34 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 3
+    },
+    {
+      "id": "rosary-mysteries",
+      "type": "Sim",
+      "title": "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries",
+      "stage": "CATHOLIC LIFE & RE",
+      "duration": 20,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/rosary-mysteries.svg",
+      "astFile": "scenes/rosary-mysteries.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 8
+    },
+    {
+      "id": "shakespeare-macbeth",
+      "type": "Slide",
+      "title": "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall",
+      "stage": "KS3/KS4 ENGLISH LITERATURE",
+      "duration": 20,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/shakespeare-macbeth.svg",
+      "astFile": "scenes/shakespeare-macbeth.ast",
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 10
     },
     {
       "id": "shakespeare",

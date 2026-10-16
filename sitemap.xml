@@ -11,6 +11,61 @@
     <priority>0.95</priority>
   </url>
   <url>
+    <loc>/cartridges</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>/phonics</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>/languages</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>/shakespeare</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.92</priority>
+  </url>
+  <url>
+    <loc>/curriculum/languages/bsl-fingerspelling</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/english/theatre/macbeth</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/english/phonics/screening-check</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/catholic-life/rosary-mysteries</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/maths/geometry/pythagoras</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/science/physics/kinetic-gas</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>/curriculum/catholic-life/church-tour</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
     <loc>/player.html</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>

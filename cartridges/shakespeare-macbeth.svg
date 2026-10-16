@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="-240 -160 480 320" width="100%" height="100%">
+  <defs>
+    <radialGradient id="theatre-wood-glow" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#451a03" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#1c1917" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#09090b" stop-opacity="1" />
+    </radialGradient>
+    <radialGradient id="dagger-crimson-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#991b1b" stop-opacity="0" />
+    </radialGradient>
+    <filter id="theatre-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Elizabethan Oak Background -->
+  <rect x="-240" y="-160" width="480" height="320" fill="url(#theatre-wood-glow)" />
+
+  <!-- 3D 1599 Globe Amphitheatre Tiers -->
+  <g id="globe-3d-amphitheatre" stroke="rgba(217, 119, 6, 0.25)" stroke-width="1.5">
+    <ellipse id="globe-gallery-ring" cx="0" cy="30" rx="200" ry="60" fill="none" />
+    <ellipse id="globe-yard-ring" cx="0" cy="35" rx="150" ry="45" fill="rgba(0, 0, 0, 0.4)" stroke="rgba(217, 119, 6, 0.4)" />
+    <!-- Pillars of Hercules Supporting Heavens -->
+    <line x1="-80" y1="-95" x2="-80" y2="35" stroke="#78350f" stroke-width="5" />
+    <line x1="80" y1="-95" x2="80" y2="35" stroke="#78350f" stroke-width="5" />
+    <!-- The Heavens Canopy Roof -->
+    <polygon id="globe-heavens-roof" points="-110,-95 110,-95 90,-125 -90,-125" fill="#1e293b" stroke="#f59e0b" stroke-width="2" />
+    <text x="0" y="-105" text-anchor="middle" fill="#fde68a" font-size="8" font-family="system-ui, sans-serif" font-weight="800">
+      THE HEAVENS (STARS &amp; CANOPY)
+    </text>
+  </g>
+
+  <!-- Thrust Stage Platform (Earth) -->
+  <g id="globe-thrust-stage">
+    <polygon id="globe-stage-platform" points="-100,30 100,30 115,85 -115,85" fill="#292524" stroke="#d97706" stroke-width="2" />
+    
+    <!-- Trapdoor to Hell with Sulfur Mist -->
+    <ellipse id="hell-trapdoor" cx="0" cy="45" rx="22" ry="10" fill="#0c0a09" stroke="#ef4444" stroke-width="1.5" />
+    <ellipse id="hell-sulfur-glow" cx="0" cy="45" rx="30" ry="14" fill="url(#dagger-crimson-glow)" opacity="0.4" pointer-events="none" />
+    <text x="0" y="48" text-anchor="middle" fill="#fca5a5" font-size="7" font-weight="700">HELL TRAPDOOR</text>
+
+    <!-- Actor Macbeth on Stage -->
+    <g id="actor-macbeth" transform="translate(0, 68)">
+      <circle cx="0" cy="-14" r="7" fill="#fbbf24" stroke="#d97706" stroke-width="1" />
+      <path d="M-6,-6 L6,-6 L8,10 L-8,10 Z" fill="#b91c1c" />
+      <text x="0" y="20" text-anchor="middle" fill="#fde68a" font-size="8" font-weight="800">MACBETH</text>
+    </g>
+
+    <!-- Floating Hallucinated Dagger (Act II) -->
+    <g id="dagger-vision" transform="translate(0, -10)" filter="url(#theatre-shadow)">
+      <circle id="dagger-pulse" cx="0" cy="0" r="18" fill="url(#dagger-crimson-glow)" opacity="0.8" />
+      <!-- Dagger Blade & Hilt -->
+      <path d="M0,-16 L4,-2 L0,2 L-4,-2 Z" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1" />
+      <line x1="-6" y1="2" x2="6" y2="2" stroke="#d97706" stroke-width="2" />
+      <line x1="0" y1="2" x2="0" y2="9" stroke="#78350f" stroke-width="2" />
+      <circle cx="0" cy="10" r="2" fill="#d97706" />
+      <!-- Blood Drop -->
+      <circle cx="0" cy="-6" r="2" fill="#dc2626" />
+    </g>
+  </g>
+
+  <!-- Act Progress Banner -->
+  <g transform="translate(0, -135)">
+    <rect x="-190" y="-12" width="380" height="24" rx="6" fill="rgba(15, 23, 42, 0.85)" stroke="rgba(220, 38, 38, 0.4)" stroke-width="1" />
+    <text id="macbeth-act-status" x="0" y="4" text-anchor="middle" fill="#fca5a5" font-size="10" font-weight="800" font-family="system-ui, sans-serif" letter-spacing="0.5">
+      ACT I: The Blasted Heath Prophecy
+    </text>
+  </g>
+
+  <!-- Interactive Control Prompt -->
+  <g transform="translate(0, 135)">
+    <rect x="-190" y="-12" width="380" height="24" rx="6" fill="rgba(15, 23, 42, 0.7)" stroke="rgba(255, 255, 255, 0.12)" stroke-width="1" />
+    <text x="0" y="3" text-anchor="middle" fill="#cbd5e1" font-size="9" font-family="system-ui, sans-serif">
+      ⚔️ Drag floating dagger &bull; Slider controls iambic heartbeat rhythm on the 1599 Globe stage
+    </text>
+  </g>
+</svg>

@@ -18,6 +18,10 @@
     (:route :id "learning-zone" :path "/learning-zone" :title "Subject Learning Zone" :category "Curriculum")
     (:route :id "catholic-life" :path "/catholic-life" :title "Catholic Sanctuary & Liturgy" :category "Faith")
     (:route :id "first-communion" :path "/first-communion" :title "Sacraments: First Holy Communion" :category "Faith")
+    (:route :id "cartridges" :path "/cartridges" :title "Decentralized Cartridge Vault" :category "Vault")
+    (:route :id "phonics" :path "/phonics" :title "Phonics Sounds & Screening Suite" :category "Curriculum")
+    (:route :id "languages" :path "/languages" :title "Polyglot Languages Studio" :category "Curriculum")
+    (:route :id "shakespeare" :path "/shakespeare" :title "Shakespeare Globe Theatre" :category "Curriculum")
     (:route :id "curriculum-studio" :path "/curriculum-studio" :title "AST Curriculum Studio" :category "Tools")
     (:route :id "teacher-beacon" :path "/teacher-beacon" :title "Teacher Whiteboard Beacon" :category "Classroom")
     (:route :id "profile" :path "/profile" :title "Pupil Knowledge Vault" :category "User")
@@ -79,11 +83,19 @@
     ;; English & Humanities
     (:cartridge :id "shakespeare" :type "Slide" :stage "KS3/KS4 ENGLISH"
       :ast "/cartridges/shakespeare.ast" :svg "/cartridges/shakespeare.svg")
+    (:cartridge :id "shakespeare-macbeth" :type "Sim" :stage "KS3/KS4 ENGLISH"
+      :ast "/cartridges/shakespeare-macbeth.ast" :svg "/cartridges/shakespeare-macbeth.svg")
     (:cartridge :id "phonics-lab" :type "App" :stage "EYFS/KS1 ENGLISH"
       :ast "/cartridges/phonics-lab.ast" :svg "/cartridges/phonics-lab.svg")
+    (:cartridge :id "phonics-screening" :type "App" :stage "EYFS/KS1 ENGLISH"
+      :ast "/cartridges/phonics-screening.ast" :svg "/cartridges/phonics-screening.svg")
     (:cartridge :id "spelling-bee" :type "App" :stage "KS1/KS2/KS3 ENGLISH"
       :ast "/cartridges/spelling-bee.ast" :svg "/cartridges/spelling-bee.svg")
     (:cartridge :id "languages" :type "App" :stage "KS2/KS3 MFL"
       :ast "/cartridges/languages.ast" :svg "/cartridges/languages.svg")
+    (:cartridge :id "bsl-fingerspelling" :type "Sim" :stage "LANGUAGES/INCLUSION"
+      :ast "/cartridges/bsl-fingerspelling.ast" :svg "/cartridges/bsl-fingerspelling.svg")
+    (:cartridge :id "rosary-mysteries" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/rosary-mysteries.ast" :svg "/cartridges/rosary-mysteries.svg")
     (:cartridge :id "fish-tank" :type "App" :stage "BENCHMARK"
       :ast "/cartridges/fish-tank.ast" :svg "/cartridges/fish-tank.svg")))
