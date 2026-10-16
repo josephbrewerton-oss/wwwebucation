@@ -531,11 +531,9 @@ export default function MediaPlayerPage(): React.JSX.Element {
               <button
                 type="button"
                 onClick={() => {
-                  setShowQuestions((prev) => {
-                    const next = !prev;
-                    playerRef.current?.setQuestions(next);
-                    return next;
-                  });
+                  const next = !showQuestions;
+                  setShowQuestions(next);
+                  playerRef.current?.setQuestions(next);
                 }}
                 style={{
                   padding: '6px 14px',
@@ -561,14 +559,12 @@ export default function MediaPlayerPage(): React.JSX.Element {
             <button
               type="button"
               onClick={() => {
-                setBslEnabled((prev) => {
-                  const next = !prev;
-                  playerRef.current?.setBslEnabled(next);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-                  }
-                  return next;
-                });
+                const next = !bslEnabled;
+                setBslEnabled(next);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+                }
+                playerRef.current?.setBslEnabled(next);
               }}
               style={{
                 padding: '6px 14px',

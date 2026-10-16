@@ -45,6 +45,7 @@
         slideDeckBar: document.getElementById('slide-deck-bar'),
         slideDeckPills: document.getElementById('slide-deck-pills'),
         btnNarrate: document.getElementById('btn-narrate'),
+        btnBsl: document.getElementById('btn-bsl'),
         btnVoiceCmd: document.getElementById('btn-voice-cmd'),
         voiceCmdOverlay: document.getElementById('voice-cmd-overlay'),
         voiceCmdText: document.getElementById('voice-cmd-text'),
@@ -209,6 +210,12 @@
       this.targetStop = null;
       this.toastTimeout = null;
       this._orbitHintTimeout = null;
+      this.bslEnabled = false;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          this.bslEnabled = localStorage.getItem('stj_bsl_enabled') === 'true';
+        }
+      } catch (_) {}
 
       // Voice Command SpeechRecognition State
       this.isListeningVoice = false;
@@ -1109,6 +1116,7 @@
       if (this.elements.badgeStage) {
         this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
       }
+      this.updateBslButton();
 
       // Highlight active slide pill
       if (this.elements.slideDeckPills && scene && Array.isArray(scene.keyframes)) {
@@ -1205,6 +1213,34 @@
 
     toggleTheme() {
       this.setTheme(this.theme === 'dark' ? 'light' : 'dark');
+    }
+
+    toggleBsl(forceState, notify = true) {
+      if (typeof forceState === 'boolean') {
+        this.bslEnabled = forceState;
+      } else {
+        this.bslEnabled = !this.bslEnabled;
+      }
+      try {
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('stj_bsl_enabled', this.bslEnabled ? 'true' : 'false');
+        }
+      } catch (_) {}
+      this.updateBslButton();
+      if (notify) {
+        this.engine.notifyParent({ type: 'TOGGLE_BSL', enabled: this.bslEnabled });
+      }
+      this.showToast(this.bslEnabled ? '🖐️ BSL Signing: ON' : '🖐️ BSL Signing: OFF');
+    }
+
+    updateBslButton() {
+      if (this.elements.btnBsl) {
+        this.elements.btnBsl.classList.toggle('active', Boolean(this.bslEnabled));
+        const label = this.elements.btnBsl.querySelector('.btn-label');
+        if (label) {
+          label.textContent = this.bslEnabled ? 'BSL: ON' : 'BSL';
+        }
+      }
     }
 
     handleScrubberClick(e) {
@@ -1572,6 +1608,12 @@
           const enabled = this.engine.toggleVoice();
           el.btnNarrate.classList.toggle('active', enabled);
           el.btnNarrate.textContent = enabled ? '🔊 Voice: ON' : '🔊 Voice';
+        });
+      }
+
+      if (el.btnBsl) {
+        el.btnBsl.addEventListener('click', () => {
+          this.toggleBsl();
         });
       }
 
@@ -2575,6 +2617,9 @@ window.addEventListener('message', (e) => {
         } else if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {
           e.preventDefault();
           this.toggleShortcutsModal();
+        } else if ((e.code === 'KeyB' || e.key === 'b' || e.key === 'B') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          this.toggleBsl();
         } else if (e.code === 'KeyI' && (e.ctrlKey || e.metaKey)) {
           e.preventDefault();
           this.toggleDevMode();

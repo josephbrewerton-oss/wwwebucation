@@ -109,9 +109,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
   // Kinematic render loop (60 FPS Hermite interpolation)
   useEffect(() => {
-    let t = transitionProgress;
-    let fromPose = prevPose;
-    let toPose = currentPose;
+    let t = 1;
+    let fromPose = REST_POSE;
+    let toPose = REST_POSE;
 
     const frameStep = (now: number) => {
       const dt = (now - lastTimeRef.current) / 1000;
@@ -146,7 +146,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         cancelAnimationFrame(animFrameRef.current);
       }
     };
-  }, [speedMultiplier, prevPose, currentPose, transitionProgress]);
+  }, [speedMultiplier]);
 
   // Current interpolated dominant pointer points
   const interpolatedTip: Point3D = useMemo(() => {

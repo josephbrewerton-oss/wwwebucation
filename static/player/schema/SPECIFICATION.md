@@ -108,7 +108,7 @@ An AST Payload may be expressed in either **JSON** or **Lisp-like S-Expression**
 | `render` | `Function / string`| No | Custom JS procedural SVG string generator function |
 
 ### Interactive Object (Hotspots & Checkpoints)
-- `hotspots`: Array of clickable regions with `{ id, label, targetT, hint }`. Clicking on these elements jumps the player directly to `targetT`, plays a Web Audio chime, and narrates the station.
+- `hotspots`: Array of clickable regions with `{ id, label, targetT, hint }`. Clicking on these elements jumps the player directly to `targetT`, plays a Web Audio chime, and narrates the sacred space or pedagogical waypoint.
 - `checkpoints`: Array of active recall gates with `{ t, title, prompt, options, answer, explanation }`. When playback reaches `t`, the player automatically pauses, displays a zero-bloat vector modal with multiple choice options, and resumes on correct answer.
 
 ### Keyframe Object

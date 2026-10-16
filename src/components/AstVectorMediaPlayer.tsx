@@ -218,23 +218,44 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [copiedEmbed, setCopiedEmbed] = useState(false);
   const [embedTargetMode, setEmbedTargetMode] = useState<PlayerDisplayMode>('classroom');
 
+  // Post message helper with strict targetOrigin
+  const getVerifiedTargetOrigin = useCallback(() => {
+    if (typeof window === 'undefined') return '*';
+    const origin = window.location.origin;
+    return origin && origin !== 'null' ? origin : '*';
+  }, []);
+
+  const postToPlayer = useCallback((payload: Record<string, any>) => {
+    if (iframeRef.current && iframeRef.current.contentWindow) {
+      // Use '*' so GitHub Pages subpaths (/schoolsample/) never drop postMessage packets
+      iframeRef.current.contentWindow.postMessage(payload, '*');
+    }
+  }, []);
+
   // British Sign Language (BSL) In-Vision State
-  const [bslEnabled, setBslEnabled] = useState<boolean>(() => {
+  const [localBslEnabled, setLocalBslEnabled] = useState<boolean>(() => {
     if (typeof bslEnabledProp === 'boolean') return bslEnabledProp;
     if (typeof window !== 'undefined') {
       return localStorage.getItem('stj_bsl_enabled') === 'true';
     }
     return false;
   });
+  const bslEnabled = typeof bslEnabledProp === 'boolean' ? bslEnabledProp : localBslEnabled;
   const [bslActiveWord, setBslActiveWord] = useState<string>('');
   const [bslActiveSubtitle, setBslActiveSubtitle] = useState<string>('');
   const [bslIsSpeaking, setBslIsSpeaking] = useState<boolean>(false);
 
-  useEffect(() => {
-    if (typeof bslEnabledProp === 'boolean') {
-      setBslEnabled(bslEnabledProp);
+  const handleToggleBsl = useCallback((forced?: boolean) => {
+    const next = typeof forced === 'boolean' ? forced : !bslEnabled;
+    if (typeof bslEnabledProp !== 'boolean') {
+      setLocalBslEnabled(next);
     }
-  }, [bslEnabledProp]);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+    }
+    postToPlayer({ type: 'SET_BSL', enabled: next });
+    onBslToggle?.(next);
+  }, [bslEnabled, bslEnabledProp, onBslToggle, postToPlayer]);
 
   // Display Configuration & Profile Mode State
   const [displayConfig, setDisplayConfig] = useState<PlayerDisplayConfig>(() => {
@@ -285,20 +306,6 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [latestTelemetry, setLatestTelemetry] = useState<PlayerTelemetryEvent | null>(null);
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [inkNotice, setInkNotice] = useState<string | null>(null);
-
-  // Post message helper with strict targetOrigin
-  const getVerifiedTargetOrigin = useCallback(() => {
-    if (typeof window === 'undefined') return '*';
-    const origin = window.location.origin;
-    return origin && origin !== 'null' ? origin : '*';
-  }, []);
-
-  const postToPlayer = useCallback((payload: Record<string, any>) => {
-    if (iframeRef.current && iframeRef.current.contentWindow) {
-      // Use '*' so GitHub Pages subpaths (/schoolsample/) never drop postMessage packets
-      iframeRef.current.contentWindow.postMessage(payload, '*');
-    }
-  }, []);
 
   // Sync internal selected preset if external preset prop changes
   useEffect(() => {
@@ -508,21 +515,16 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     executeVoiceCommand: (command: string) => postToPlayer({ type: 'VOICE_COMMAND', command }),
     togglePictureInPicture: () => togglePictureInPicture(),
     toggleBsl: () => {
-      setBslEnabled((prev) => {
-        const next = !prev;
-        if (typeof window !== 'undefined') {
-          localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-        }
-        onBslToggle?.(next);
-        return next;
-      });
+      handleToggleBsl();
     },
     setBslEnabled: (enabled: boolean) => {
-      setBslEnabled(enabled);
+      if (typeof bslEnabledProp !== 'boolean') {
+        setLocalBslEnabled(enabled);
+      }
       if (typeof window !== 'undefined') {
         localStorage.setItem('stj_bsl_enabled', enabled ? 'true' : 'false');
       }
-      onBslToggle?.(enabled);
+      postToPlayer({ type: 'SET_BSL', enabled });
     },
     sendAiVisualCommand: (packet: AiVisualCommandPacket) => postToPlayer({ type: 'AI_VISUAL_COMMAND', packet }),
     preemptAiDemo: () => postToPlayer({ type: 'PUPIL_INTERRUPT' }),
@@ -585,14 +587,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
 
       if ((e.key === 'b' || e.key === 'B') && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
         e.preventDefault();
-        setBslEnabled((prev) => {
-          const next = !prev;
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-          }
-          onBslToggle?.(next);
-          return next;
-        });
+        handleToggleBsl();
       }
     };
 
@@ -627,6 +622,11 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     postToPlayer({ type: 'SET_THEME', theme: activeTheme });
   }, [activeTheme, postToPlayer]);
 
+  // Sync BSL signing state to player iframe
+  useEffect(() => {
+    postToPlayer({ type: 'SET_BSL', enabled: bslEnabled });
+  }, [bslEnabled, postToPlayer]);
+
   // Listen for telemetry and events from iframe player
   useEffect(() => {
  const handleMessage = (event: MessageEvent) => {
@@ -639,6 +639,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       switch (data.type) {
         case 'PLAYER_READY':
           setIsPlayerReady(true);
+          postToPlayer({ type: 'SET_BSL', enabled: bslEnabled });
           // Always ensure questions are disabled if current cartridge does not have questions
           {
             const disableQ = isCartridgeWithoutQuestions(selectedPresetRef.current);
@@ -680,6 +681,15 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           setCurrentProgress(data.progress || 0);
           onTimeUpdate?.(data.progress || 0);
           break;
+        case 'TOGGLE_BSL': {
+          const next = Boolean(data.enabled);
+          setLocalBslEnabled(next);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
+          }
+          onBslToggle?.(next);
+          break;
+        }
         case 'SPEECH_BOUNDARY':
           if (data.word) setBslActiveWord(data.word);
           if (data.fullText) setBslActiveSubtitle(data.fullText);
@@ -1112,16 +1122,7 @@ const playerSrc = useMemo(() => {
             {/* Accessible BSL In-Vision Interpreter Toggle */}
             <button
               type="button"
-              onClick={() => {
-                setBslEnabled((prev) => {
-                  const next = !prev;
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-                  }
-                  onBslToggle?.(next);
-                  return next;
-                });
-              }}
+              onClick={() => handleToggleBsl()}
               className={`stj-btn ${bslEnabled ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
               style={{
                 padding: '3px 9px',
@@ -1555,11 +1556,9 @@ const playerSrc = useMemo(() => {
               <button
                 type="button"
                 onClick={() => {
-                  setBilingualSubtitles((prev) => {
-                    const next = !prev;
-                    postToPlayer({ type: 'SET_BILINGUAL_SUBTITLES', enabled: next });
-                    return next;
-                  });
+                  const next = !bilingualSubtitles;
+                  setBilingualSubtitles(next);
+                  postToPlayer({ type: 'SET_BILINGUAL_SUBTITLES', enabled: next });
                 }}
                 className={`stj-btn ${bilingualSubtitles ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
                 style={{
@@ -1910,13 +1909,7 @@ const playerSrc = useMemo(() => {
               activeWord={bslActiveWord}
               activeSubtitle={bslActiveSubtitle}
               isSpeaking={bslIsSpeaking}
-              onClose={() => {
-                setBslEnabled(false);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('stj_bsl_enabled', 'false');
-                }
-                onBslToggle?.(false);
-              }}
+              onClose={() => handleToggleBsl(false)}
             />
           )}
 
@@ -2110,5 +2103,7 @@ const playerSrc = useMemo(() => {
     </>
   );
 });
+
+AstVectorMediaPlayer.displayName = 'AstVectorMediaPlayer';
 
 export default AstVectorMediaPlayer;

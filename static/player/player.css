@@ -108,6 +108,13 @@ header {
   flex-shrink: 0;
 }
 
+#btn-bsl.active {
+  background: rgba(56, 189, 248, 0.22) !important;
+  color: #38bdf8 !important;
+  border-color: #38bdf8 !important;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.45);
+}
+
 /* Main Viewport Stage */
 main {
   flex: 1 1 0%;
