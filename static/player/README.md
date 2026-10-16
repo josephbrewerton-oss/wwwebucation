@@ -11,6 +11,8 @@ An ultra-lightweight, zero-dependency sandboxed vector animation and interactive
 6. **Zero-Latency In-Stage Touch & Stylus Dragging**: Direct pointer capture and quadratic Bézier smoothing for interactive kiosks, smartboards, and wayfinding displays.
 7. **Zero-Asset Procedural Audio**: Mathematical Web Audio synthesis (clicks, chimes, confirmation beeps) with 0 KB audio assets.
 8. **Universal LMS & Web Embed**: Directly embeds into Canvas, Google Classroom, Moodle, digital signage CMSs, and ad servers.
+9. **Real-Time British Sign Language (BSL) In-Vision Interpreter**: Zero-video procedural 3D two-handed fingerspelling overlay (< 12 KB) synchronized to narrative speech boundaries and subtitles, featuring dual camera POV (Signer vs Receiver) and W3C Document Picture-in-Picture.
+10. **Headless & Autonomous**: Completely decoupled from any web portal or UI framework; ships with its own `package.json` (`@stjosephs/ast-vector-player`) for headless Node/browser usage or standalone `<micro-vector-player>` Web Component.
 
 ## Directory Structure
 ```
@@ -68,6 +70,7 @@ static/player/
 | `speed`   | `1.0`   | Playback speed multiplier (`0.5`, `1.0`, `1.5`, `2.0`) |
 | `autoplay`| `0`     | Autoplay on load (`1` = yes, `0` = no) |
 | `theme`   | `dark`  | Visual theme (`dark` or `light`) |
+| `bsl`     | `0`     | Toggle British Sign Language (BSL) In-Vision interpreter overlay (`1` = on, `0` = off) |
 
 ## Bi-Directional postMessage API Protocol
 ### Send Commands to iFrame:
@@ -84,6 +87,10 @@ playerWindow.postMessage({ type: 'SET_PRESET', preset: 'solar-system' }, '*');
 playerWindow.postMessage({ type: 'SET_LANG', lang: 'es' }, '*');
 playerWindow.postMessage({ type: 'SET_SPEED', speed: 1.5 }, '*');
 playerWindow.postMessage({ type: 'SET_THEME', theme: 'light' }, '*');
+
+// Toggle British Sign Language (BSL) In-Vision Interpreter
+playerWindow.postMessage({ type: 'SET_BSL', enabled: true }, '*');
+playerWindow.postMessage({ type: 'TOGGLE_BSL' }, '*');
 
 // Inject dynamic AST scene
 playerWindow.postMessage({ 

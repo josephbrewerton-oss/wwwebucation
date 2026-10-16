@@ -1,6 +1,8 @@
 # St Joseph's Curriculum Portal & AST Vector Player Suite
 # Architecture: Dual-Market (Track A: Open Humanitarian Education, Track B: Enterprise Digital Signage, DOOH & AdTech)
-# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /docs/AST_PLAYER_SPECIFICATION.md
+# Decoupled Engine: Headless, Zero-Bloat (<35 KB) AST Vector Player embeddable in ANY site via <micro-vector-player> Web Component, NPM @stjosephs/ast-vector-player, or LMS iframe.
+# Accessibility: Real-time 3D British Sign Language (BSL) In-Vision Vector Interpreter overlay with dual POV (Signer vs Receiver) and speech boundary sync.
+# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
 
 User-agent: *
 Allow: /
@@ -117,6 +119,29 @@ Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
 
+User-agent: OAI-SearchBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /player/
+
+User-agent: bingbot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /player/
+
+User-agent: Bytespider
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
+User-agent: DuckDuckBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+
 # Sitemap & Machine Briefings
 Sitemap: /sitemap.xml
+
 

@@ -82,8 +82,18 @@ The **St Joseph's Engine** flips this paradigm. By running quantized neural infe
   - Replaces multi-megabyte vision frames and video streaming with compact S-expression tokens (`(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])`).
   - Driver-independent CPU analytic geometry (< 15 KB JS, 0 WebGL dependencies) feeding mathematically exact spatial hits directly into Gemini Nano.
   - Closed-loop deterministic actuation opcodes (`:rotate-camera`, `:nudge`, `:var`) re-sorting vector layers via Painter's algorithm with depth fog in 60 FPS real-time.
-- **Decoupled AST Vector Media Player**: Procedural, resolution-independent SVG timeline animation running in an isolated browsing context. Delivers interactive physics simulations, 3D spatial orbit controls, and active recall quizzes in 3.5 KB payloads instead of 40 MB video streams.
-- **3D British Sign Language (BSL) Fingerspelling Studio**: Real-time 360° rotatable 3D two-handed manual alphabet rig with A-E-I-O-U fingertip vowel tap positions and Signer vs Receiver POV camera orbits in under 6 KB.
+- **Decoupled, Headless AST Vector Player (< 35 KB)**:
+  - **Zero Framework Coupling**: The vector player engine is fully autonomous from the React web portal, located in `static/player/` with its own `package.json` (`@stjosephs/ast-vector-player`).
+  - **4 Universal Distribution Formats**:
+    1. **Headless Engine**: `import { AstEngine } from '@stjosephs/ast-vector-player'` for custom UIs and node runtimes.
+    2. **Drop-in Web Component**: `<script src="micro-vector-player.js"></script><micro-vector-player preset="kinetic-gas" autoplay></micro-vector-player>` for WordPress, Webflow, Shopify, or plain HTML.
+    3. **LMS Iframe**: Embeddable responsive iframe for Canvas, Moodle, Blackboard, and Google Classroom with bidirectional `postMessage` telemetry.
+    4. **Air-Gap Single-File HTML**: Self-contained `.html` bundles (< 45 KB) running offline via `file://` or USB drives with zero internet.
+- **Real-Time British Sign Language (BSL) "In-Vision" Vector Interpreter**:
+  - **In-Stage Overlay**: Procedural, zero-video 3D signing overlay rendering on top of the vector stage, synchronized with narrative speech synthesis word boundaries and subtitles.
+  - **Authentic BANZSL 2-Handed Alphabet**: Anatomically accurate non-dominant "Paper" base hand with A-E-I-O-U fingertip vowel markers and dominant "Pen" pointer hand with 60 FPS Hermite spline co-articulation.
+  - **Dual Perspective & PiP**: Instant toggle between Signer POV (first-person looking down from chest) and Receiver POV (facing conversational partner), with W3C Document Picture-in-Picture undocking.
+- **3D British Sign Language (BSL) Fingerspelling Studio**: Dedicated interactive curriculum cartridge (`/curriculum/languages/bsl-fingerspelling`) for learning the manual alphabet, vowel rules, and interactive typing drills in under 6 KB.
 - **5-Act Shakespeare Globe Theatre Suite**: 1599 Bankside Globe Theatre 3D stage geometry (Heavens canopy, Hell trapdoor, thrust stage) with spoken blank verse soliloquies, iambic pentameter metronomes, and canon vs what-if branches.
 - **Smartboard & Stylus Whiteboard Layer**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
 - **Legacy SWF / Flash Transcompiler**: Built-in client-side decompiler that takes legacy Flash binaries (FWS/CWS), parses twips geometry, and emits clean SVG paths and parametric S-expressions.
