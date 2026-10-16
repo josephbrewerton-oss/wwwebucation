@@ -5263,6 +5263,11 @@
       try {
         this._mountedContainer = container;
         this._mountedSceneId = scene.id;
+        const stage = this.getStageSvg();
+        if (stage) {
+          stage.setAttribute('viewBox', '0 0 800 480');
+          this._defaultViewBox = '0 0 800 480';
+        }
         this.ensureMasterDefs(container);
         this.activeBindings = [];
         this.active3DNodes = [];

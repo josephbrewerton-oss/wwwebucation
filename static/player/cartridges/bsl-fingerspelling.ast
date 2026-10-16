@@ -62,6 +62,8 @@
 
     <!-- Active Vowel Target Beacon Pulse -->
     (:target "#vowel-indicator-label" :attr "textContent" :expr "t < 0.25 ? 'ACTIVE SIGN: Vowel A (Thumb Tap)' : (t < 0.50 ? 'ACTIVE SIGN: Vowel E (Index Tap)' : (t < 0.75 ? 'ACTIVE SIGN: Vowel I (Middle Tap)' : 'ACTIVE SIGN: Vowel O (Ring Tap)'))")
+    (:target "#active-vowel-glow" :attr "cx" :expr "t < 0.25 ? '305' : (t < 0.5 ? '325' : (t < 0.75 ? '350' : '372'))")
+    (:target "#active-vowel-glow" :attr "cy" :expr "t < 0.25 ? '250' : (t < 0.5 ? '200' : (t < 0.75 ? '190' : '198'))")
     (:target "#active-vowel-glow" :attr "opacity" :expr "0.5 + Math.sin(t * Math.PI * 8) * 0.4")
   ))
 )

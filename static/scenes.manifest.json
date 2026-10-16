@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-16T08:00:03.472Z",
+  "generatedAt": "2026-10-16T08:37:15.315Z",
   "totalScenes": 28,
   "inputDirs": [
     "static/player/scenes",
@@ -409,7 +409,7 @@
       "section": "English Literature & Phonics",
       "keyframeCount": 4,
       "subtitleCount": 4,
-      "bindingsCount": 18,
+      "bindingsCount": 20,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
