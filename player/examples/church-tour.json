@@ -17,7 +17,7 @@
     "checkpoints": [
       {
         "t": 0.38,
-        "title": "Pilgrim Station Check",
+        "title": "Pilgrim Sacred Space Check",
         "prompt": "Why do Catholics genuflect on the right knee when entering our pew in the Nave?",
         "options": [
           "To show polite respect to the priest",

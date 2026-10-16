@@ -7027,6 +7027,16 @@
             }
           }
           break;
+        case 'TOGGLE_BSL':
+          if (uiController && typeof uiController.toggleBsl === 'function') {
+            uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
+          }
+          break;
+        case 'SET_BSL':
+          if (uiController && typeof uiController.toggleBsl === 'function') {
+            uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
+          }
+          break;
         case 'TRIGGER_CHECKPOINT':
         case 'TAKE_QUIZ':
           if (uiController && typeof uiController.toggleCheckpointView === 'function') {
