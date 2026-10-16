@@ -744,18 +744,7 @@ ${inputsSexpr}
     (:t 1.00 :title "Harmonic Steady-State" :rule "Conservation principles verified mathematically")
   ))
 
-  (:interactive (
-    (:checkpoint :t 0.50
-      :prompt "Which physical conservation invariant governs this ${domain} simulation?"
-      :options (
-        "${invariants[0]}"
-        "Random thermodynamic entropy destruction without external work"
-        "Arbitrary disconnected pixel rasterization"
-      )
-      :answer 0
-      :explanation "This simulation strictly conserves ${invariants[0]}, guaranteeing consistent physical behavior regardless of hardware performance."
-    )
-  ))
+  (:interactive false)
 
   (:bindings (
     (:target "#primary-path" :attr "d" :expr "'M 80,260 Q 240,' + (260 - Math.sin(t * Math.PI * 2) * (vars.${p0.name} || ${p0.defaultValue}) * 4) + ' 400,260 T 720,260'")

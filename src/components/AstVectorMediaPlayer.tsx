@@ -61,17 +61,10 @@ export type VectorPresetType = string;
 export const isCartridgeWithoutQuestions = (presetId: string): boolean => {
   const canonical = normalizeCartridgeId(presetId) || presetId;
 
-  // 1. Check generated preset options directly derived from cartridge AST definition
-  const scene = PRESET_OPTIONS.find((opt) => opt.id === canonical || opt.id === presetId);
-  if (scene) {
-    if (scene.type === 'App') return true;
-    if (typeof scene.hasCheckpoints === 'boolean') return !scene.hasCheckpoints;
-  }
-
-  // 2. Check dynamic cartridge store (decentralized / user / phet cartridges)
+  // 1. PhET imported cartridges & dynamic custom cartridges
   const cart = getCartridge(canonical);
   if (cart) {
-    if (cart.type === 'App') return true;
+    if (cart.source === 'phet' || cart.type === 'App') return true;
     if (cart.astSource) {
       if (
         /:interactive\s+(false|nil|none)\b/i.test(cart.astSource) ||
@@ -84,6 +77,29 @@ export const isCartridgeWithoutQuestions = (presetId: string): boolean => {
       return !hasCps;
     }
   }
+
+  // 2. Check generated preset options directly derived from cartridge AST definition
+  const scene = PRESET_OPTIONS.find((opt) => opt.id === canonical || opt.id === presetId);
+  if (scene) {
+    if (scene.type === 'App') return true;
+    if (typeof scene.hasCheckpoints === 'boolean') return !scene.hasCheckpoints;
+    if (typeof scene.checkpointCount === 'number') return scene.checkpointCount === 0;
+  }
+
+  // 3. Known built-in non-quiz manipulatives and applications
+  const nonQuizCartridges = new Set([
+    'pythagoras',
+    'times-tables',
+    'bsl-fingerspelling',
+    'rosary-mysteries',
+    'phonics-screening',
+    'fish-tank',
+    'math-fishing',
+    'phonics-lab',
+    'languages',
+    'spelling-bee'
+  ]);
+  if (nonQuizCartridges.has(canonical)) return true;
 
   return false;
 };
@@ -266,7 +282,9 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       setSelectedPreset(canonical);
       selectedPresetRef.current = canonical;
       lastSentPresetRef.current = canonical;
+      const disableQ = isCartridgeWithoutQuestions(canonical);
       postToPlayer({ type: 'SET_PRESET', preset: canonical, play: autoPlayRef.current });
+      postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQ ? false : (showQuestions ?? true) });
 
       const cart = getCartridge(canonical);
       if (cart && typeof cart.svgMarkup === 'string' && cart.svgMarkup.includes('<svg') && cart.astSource) {
@@ -282,7 +300,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
         });
       }
     }
-  }, [preset, postToPlayer]);
+  }, [preset, postToPlayer, showQuestions]);
 
   useEffect(() => {
     autoPlayRef.current = autoPlay;
@@ -305,10 +323,8 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
 
   // Synchronize showQuestions boolean flag with player
   useEffect(() => {
-    if (showQuestions !== undefined) {
-      const disableQuestions = isCartridgeWithoutQuestions(selectedPreset);
-      postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQuestions ? false : showQuestions });
-    }
+    const disableQuestions = isCartridgeWithoutQuestions(selectedPreset);
+    postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQuestions ? false : (showQuestions ?? true) });
   }, [showQuestions, postToPlayer, selectedPreset]);
 
   const handleSwitchPreset = useCallback((nextPreset: string) => {
@@ -316,16 +332,21 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     setSelectedPreset(canonical);
     selectedPresetRef.current = canonical;
 
+    const disableQ = isCartridgeWithoutQuestions(canonical);
     if (iframeRef.current && iframeRef.current.contentWindow) {
       iframeRef.current.contentWindow.postMessage({
         type: 'SET_PRESET',
         preset: canonical,
         play: true
       }, '*');
+      iframeRef.current.contentWindow.postMessage({
+        type: 'SET_QUESTIONS',
+        enabled: disableQ ? false : (showQuestions ?? true)
+      }, '*');
     }
 
     onPresetChange?.(canonical);
-  }, [onPresetChange]);
+  }, [onPresetChange, showQuestions]);
 
   // Sync decentralized custom/PhET cartridge on initial ready
   useEffect(() => {
@@ -564,6 +585,11 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       switch (data.type) {
         case 'PLAYER_READY':
           setIsPlayerReady(true);
+          // Always ensure questions are disabled if current cartridge does not have questions
+          {
+            const disableQ = isCartridgeWithoutQuestions(selectedPresetRef.current);
+            postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQ ? false : (showQuestions ?? true) });
+          }
           // If parent preset differs from initial preset booted in the iframe URL, smoothly sync it
           if (selectedPresetRef.current && selectedPresetRef.current !== initialPlayerPresetRef.current) {
             postToPlayer({ type: 'SET_PRESET', preset: selectedPresetRef.current, play: autoPlayRef.current });

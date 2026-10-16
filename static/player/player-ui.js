@@ -200,7 +200,8 @@
       this.isDragging = false;
       this.isOrbitDragging = false;
       this.theme = document.body.getAttribute('data-theme') || 'dark';
-      this.interactiveMode = true;
+      this.displayConfig = this.initDisplayConfig();
+      this.interactiveMode = this.displayConfig.showInteractiveCheckpoints !== false;
       this.completedCheckpoints = new Set();
       this.activeCheckpoint = null;
       this.minimizedCheckpoint = null;
@@ -208,7 +209,6 @@
       this.targetStop = null;
       this.toastTimeout = null;
       this._orbitHintTimeout = null;
-      this.displayConfig = this.initDisplayConfig();
 
       // Voice Command SpeechRecognition State
       this.isListeningVoice = false;
@@ -553,6 +553,11 @@
 
     triggerCheckpoint(checkpoint, index) {
       if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
+      if (!this.interactiveMode) return;
+      const scene = this.engine && this.engine.scene;
+      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
+      if (!hasCheckpoints) return;
+
       this.activeCheckpoint = index;
       this.minimizedCheckpoint = null;
       if (this.elements.checkpointMinimizedPill) {
@@ -3123,7 +3128,7 @@ window.addEventListener('message', (e) => {
           this.elements.presetSelector.value = data.preset;
         }
         this.completedCheckpoints.clear();
-        this.closeInteractiveCard();
+        this.closeInteractiveCard(false);
         this.closeQuestMode();
         this.setupKeyframeMarkers();
         this.update3DStatus();
@@ -3134,6 +3139,7 @@ window.addEventListener('message', (e) => {
           this.interactiveMode = false;
           if (this.elements.btnInteractive) this.elements.btnInteractive.style.display = 'none';
         } else if (this.elements.btnInteractive) {
+          this.interactiveMode = this.displayConfig.showInteractiveCheckpoints !== false;
           this.elements.btnInteractive.style.display = this.displayConfig.showInteractiveCheckpoints !== false ? '' : 'none';
           this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
         }
