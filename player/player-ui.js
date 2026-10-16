@@ -654,7 +654,7 @@
             if (resultBox) {
               resultBox.style.display = 'block';
               resultBox.style.color = '#f87171';
-              resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the previous station!'}`;
+              resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the previous sacred space!'}`;
             }
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Remember: ${checkpoint.explanation || ''}`);
@@ -1871,7 +1871,7 @@ window.addEventListener('message', (e) => {
           const hotspot = e.target.closest('[data-target-t]');
           if (hotspot) {
             const targetT = parseFloat(hotspot.getAttribute('data-target-t'));
-            const label = hotspot.getAttribute('data-label') || 'Station';
+            const label = hotspot.getAttribute('data-label') || 'Sacred Space';
             if (!isNaN(targetT)) {
               this.engine.seek(targetT);
               this.playChime(660, 'triangle');
@@ -3396,7 +3396,7 @@ window.addEventListener('message', (e) => {
         </div>
         <div style="color: #e2e8f0; margin-bottom: 8px;">${activeQ.explanation}</div>
         <button type="button" class="quest-action-btn" id="btn-next-mission">
-          ${this.questState.missionIndex + 1 < this.questMissions.length ? 'Next Sacred Station ➜' : 'View Master Results 🏆'}
+          ${this.questState.missionIndex + 1 < this.questMissions.length ? 'Next Sacred Space ➜' : 'View Master Results 🏆'}
         </button>
       `;
       this.elements.questBody.appendChild(feedbackDiv);
