@@ -1,18 +1,14 @@
-# 1. Force GitHub to recognize your AST S-Expression cartridges as Common Lisp
-*.ast linguist-language=Common\ Lisp
+# Map AST cartridges to Common Lisp (hyphen required by Linguist for spaces)
+*.ast linguist-language=Common-Lisp
 *.ast linguist-detectable=true
+*.ast linguist-vendored=false
 
-# 2. Tell Linguist that your Cartridge SVGs are actual code, not generic assets
+# Lisp views in sys/views/
+*.lisp linguist-language=Common-Lisp
+*.lisp linguist-detectable=true
+
+# Keep SVG detection active for vector stages
 static/player/scenes/*.svg linguist-language=SVG
 static/player/scenes/*.svg linguist-detectable=true
 static/cartridges/*.svg linguist-language=SVG
 static/cartridges/*.svg linguist-detectable=true
-
-# 3. Mark auto-generated substrate manifests so they don't bloat stats
-src/engine/*.generated.ts linguist-generated=true
-src/engine/substrates/*.substrate.ts linguist-generated=true
-
-# 4. Exclude test simulation harnesses and compiled static bundles
-scripts/simulate-*.ts linguist-documentation=true
-dist/** linguist-vendored=true
-dist-public-release/** linguist-vendored=true
