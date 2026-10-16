@@ -3626,10 +3626,10 @@
         else if (norm === 'app') type = 'App';
         else type = 'Sim';
       } else {
-        const hasSubtitles = /:subtitles\s*\(/i.test(text);
-        const hasGestures = /:gestures\s*\(/i.test(text) || /:draggable\s+/i.test(text);
-        const hasCheckpoints = /:interactive\s*\(/i.test(text) || /:checkpoint\s+/i.test(text);
-        const hasPhysics = /:physics\s*\(/i.test(text) || /:emitter\s+/i.test(text);
+        const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
+        const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
+        const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
+        const hasPhysics = /:physics\s*\(/i.test(astContent) || /:emitter\s+/i.test(astContent);
         if (hasSubtitles && !hasGestures && !hasPhysics) {
           type = 'Slide';
         } else if (hasGestures || hasPhysics || hasCheckpoints) {
@@ -4517,7 +4517,7 @@
                        document.getElementById('loading') ||
                        document.querySelector('.loading-badge') ||
                        (this.container && this.container.parentElement && this.container.parentElement.querySelector('[id*="load"]'));
-      if (loaderEl) {
+      if (loaderEl && loaderEl.style) {
         loaderEl.style.display = 'none';
       }
 

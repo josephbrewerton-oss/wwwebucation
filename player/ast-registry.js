@@ -43,7 +43,7 @@
     { id: "rosary-mysteries", type: "Sim", title: "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries", stage: "CATHOLIC LIFE", duration: 16, has3D: true, svgFile: "scenes/rosary-mysteries.svg", astFile: "scenes/rosary-mysteries.ast" }
   ];
 
-  const scenes = {};
+  const scenes = Object.create(null);
   BUILTIN_CATALOG.forEach(s => { scenes[s.id] = s; });
 
   // Embedded Zero-Network Fallback for Core Cartridges (guarantees 100% determinism on GitHub Pages)
@@ -118,7 +118,7 @@
     <text x="0" y="4" fill="#ffffff" font-size="11" font-weight="900" text-anchor="middle" pointer-events="none">b</text>
   </g>
 </svg>`,
-      astSource: `(:scene :id "pythagoras" :title "Pythagoras Theorem: Area Conservation" :stage "KS3 GEOMETRY" :duration 11.0
+      astSource: `(:scene :id "pythagoras" :type "Sim" :title "Pythagoras' Theorem (a² + b² = c²)" :stage "KS3 GEOMETRY" :duration 11.0
   (:vars (
     (:var :name "sideA" :val 3 :min 1 :max 8 :step 1 :unit "units" :label "Leg a")
     (:var :name "sideB" :val 4 :min 1 :max 8 :step 1 :unit "units" :label "Leg b")
@@ -160,16 +160,6 @@
   };
 
   const UNSAFE_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-
-  // Harden registry backing store against prototype pollution.
-  // Keep object-style access to avoid changing existing call sites.
-  if (scenes && Object.getPrototypeOf(scenes) !== null) {
-    const safeScenes = Object.create(null);
-    Object.keys(scenes).forEach((k) => {
-      safeScenes[k] = scenes[k];
-    });
-    scenes = safeScenes;
-  }
 
   const SceneRegistry = {
     isUnsafeKey(key) {
