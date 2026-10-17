@@ -161,6 +161,26 @@
       if (!root) return;
 
       const n = this.bodies.length;
+
+      // ⚡ High-Performance WebAssembly MicroPhysics Acceleration (docs/WASM_ARCHITECTURE_CONTRACT.md Page 3)
+      if (typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
+        if (window.ASTWasmBridge.microPhysicsStep(this.bodies, dt, this.gravity, this.bounds)) {
+          for (let i = 0; i < n; i++) {
+            const b = this.bodies[i];
+            let el = b.element;
+            if (!el && b.target) {
+              el = typeof b.target === 'string' ? root.querySelector(b.target) : b.target;
+              b.element = el;
+            }
+            if (el) {
+              el.setAttribute('cx', b.x.toFixed(1));
+              el.setAttribute('cy', b.y.toFixed(1));
+              el.setAttribute('transform', `translate(${b.x.toFixed(1)}, ${b.y.toFixed(1)})`);
+            }
+          }
+          return;
+        }
+      }
       this._ensureBuffers();
 
       const bufX = this._bufX;
@@ -1211,6 +1231,20 @@
       const segments = this.cachedSegments;
       const hasSegments = segments && segments.length > 0;
 
+      // ⚡ High-Performance WebAssembly Particle Step (docs/WASM_ARCHITECTURE_CONTRACT.md Pages 1 & 2)
+      if (!hasSegments && typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
+        if (window.ASTWasmBridge.particleStep(this.pool, dt, this.gravity, bounds)) {
+          for (let i = 0; i < this.pool.length; i++) {
+            const p = this.pool[i];
+            if (p.node) {
+              p.node.setAttribute('cx', p.x.toFixed(1));
+              p.node.setAttribute('cy', p.y.toFixed(1));
+            }
+          }
+          return;
+        }
+      }
+
       for (let i = 0; i < this.pool.length; i++) {
         const p = this.pool[i];
         const x0 = p.x;
@@ -1709,6 +1743,13 @@
     step(dt) {
       if (!this.enabled || dt <= 0) return;
       const clampedDt = Math.min(dt, 0.05);
+
+      // ⚡ High-Performance WebAssembly Verlet Acceleration (docs/WASM_ARCHITECTURE_CONTRACT.md Page 3)
+      if (typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
+        if (window.ASTWasmBridge.verletStep(this.points, this.constraints, this.iterations, clampedDt, this.gravity, this.drag)) {
+          return;
+        }
+      }
 
       // 1. Verlet position update
       for (let i = 0; i < this.points.length; i++) {
@@ -3536,6 +3577,12 @@
      * Incorporates interactive camera orbit (yawOffset, pitchOffset, distanceScale)
      */
     project3D(x, y, z, camera, cx = 400, cy = 240) {
+      // ⚡ High-performance WebAssembly 3D Kernel (docs/WASM_ARCHITECTURE_CONTRACT.md Page 4)
+      if (typeof window !== 'undefined' && window.AST3DWasmBridge && window.AST3DWasmBridge.isReady) {
+        const wasmRes = window.AST3DWasmBridge.projectPoint(x, y, z, camera, cx, cy, this.cameraOrbit);
+        if (wasmRes) return wasmRes;
+      }
+
       const yawBase = (camera && camera.yaw) || 0;
       const pitchBase = (camera && camera.pitch) || 0;
       const rollBase = (camera && camera.roll) || 0;
@@ -5179,6 +5226,13 @@
       const defsEl = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
       defsEl.setAttribute('id', 'ast-master-defs');
       defsEl.innerHTML = `
+        <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
+        </filter>
+        <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
         <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
           <feGaussianBlur stdDeviation="3.5" result="blur" />
           <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>

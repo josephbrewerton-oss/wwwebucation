@@ -97,6 +97,17 @@
           <feGaussianBlur stdDeviation="3" result="blur" />
           <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
+        <!-- Pythagoras Precision Shadow & Glow Filters -->
+        <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
+        </filter>
+        <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3.5" result="blur" />
+          <feMerge>
+            <feMergeNode in="blur" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
         <!-- Gemini Nano Co-Pilot Focus Halo Glow Filter -->
         <filter id="ai-spotlight-glow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur in="SourceGraphic" stdDeviation="6" result="blur" />
@@ -759,6 +770,7 @@
   </footer>
 
   <!-- Modular Scripts with Cache-Busting Version -->
+  <script src="./wasm/ast-wasm-bridge.js?v=1.0.0"></script>
   <script src="./ast-phet-bridge.js?v=2.6.0"></script>
   <script src="./ast-registry.js?v=2.6.0"></script>
   <script src="./ast-engine.js?v=2.6.0"></script>
