@@ -21,6 +21,7 @@
         "@vitejs/plugin-react": "^6.1.1",
         "typescript": "^5.6.3",
         "vite": "^8.3.0",
+        "wabt": "^1.0.39",
         "webmcp-types": "^0.1.10",
       },
     },
@@ -104,6 +105,8 @@
     "undici-types": ["undici-types@8.9.0", "", {}, "sha512-KTDyRTYX8sWmKXAikPHHSyc63CRPETMctyjKFupcC6OBLXT3xsN0e9aF7m+mIXutFWpUXuedtowG7iLOzp0kQg=="],
 
     "vite": ["vite@8.3.0", "", { "dependencies": { "lightningcss": "^1.33.0", "picomatch": "^4.0.7", "postcss": "^8.5.28", "rolldown": "~1.2.6", "tinyglobby": "^0.2.17" }, "optionalDependencies": { "fsevents": "~2.3.3" }, "peerDependencies": { "@types/node": "^20.19.0 || >=22.12.0", "@vitejs/devtools": "^0.7.1", "esbuild": "^0.27.0 || ^0.28.0", "jiti": ">=1.21.0", "less": "^4.0.0", "sass": "^1.70.0", "sass-embedded": "^1.70.0", "stylus": ">=0.54.8", "sugarss": "^5.0.0", "terser": "^5.16.0", "tsx": "^4.8.1", "yaml": "^2.4.2" }, "optionalPeers": ["@types/node", "@vitejs/devtools", "esbuild", "jiti", "less", "sass", "sass-embedded", "stylus", "sugarss", "terser", "tsx", "yaml"], "bin": "bin/vite.js" }, ""],
+
+    "wabt": ["wabt@1.0.39", "", { "bin": { "wasm2c": "bin/wasm2c", "wasm2wat": "bin/wasm2wat", "wat2wasm": "bin/wat2wasm", "wasm-stats": "bin/wasm-stats", "wasm-strip": "bin/wasm-strip", "wasm-interp": "bin/wasm-interp", "wasm-objdump": "bin/wasm-objdump", "wasm-validate": "bin/wasm-validate", "wasm-decompile": "bin/wasm-decompile" } }, "sha512-ba+dRL/75VQQY7RkU/CgriGbkoWAfS8TDyUlJfJhJ8KhtXgMl5dhNvoPNUcQ9IWRhW8u41glMSuZeTvsYq2rRg=="],
 
     "webmcp-types": ["webmcp-types@0.1.10", "", {}, "sha512-U4GQ1RpJ0tqCUt2ALMV9Pnhi+hsy8L31f/Q1v4mLVhW64r5sYhh+2+SjP/Lq4/9jP33vZgNkuRZARJl65A/ZIg=="],
   }

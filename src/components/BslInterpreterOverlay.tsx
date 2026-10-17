@@ -6,9 +6,13 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Commercial-License
  *
  * Procedural, zero-video, real-time 3D vector BSL signing overlay.
- * Synchronizes with narrative speech synthesis boundaries, keyframes, and subtitles.
- * Features 360° perspective orbit (Signer POV vs Receiver POV), W3C Document PiP undocking,
- * and zero external runtime dependencies (< 12 KB uncompressed, 60 FPS, < 2 MB RAM).
+ * Features:
+ * 1. High-Performance WebAssembly 3D Kernel Acceleration (conforming to docs/WASM_ARCHITECTURE_CONTRACT.md).
+ * 2. Draggable floating window with pointer capture, window bounds clamping, and persistent position.
+ * 3. Interactive 3D Camera Orbit & Pan Controls: Direct drag-to-orbit on stage, mouse wheel zoom,
+ *    and on-screen D-Pad pan controls (Up, Down, Left, Right, Zoom, and Reset).
+ * 4. Quick Corner Docking (Top-Left, Top-Right, Bottom-Left, Bottom-Right).
+ * 5. Synchronized with speech boundaries, keyframes, and subtitles.
  */
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
@@ -19,11 +23,11 @@ import {
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
   DOMINANT_REST_WRIST,
-  BSL_ALPHABET_POSES,
-  interpolatePoint3D,
   decomposeTextToBslStream,
   project3DToSvg,
+  interpolatePoint3D,
 } from '../utils/bslAlphabet';
+import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
 
 export interface BslInterpreterOverlayProps {
   activeWord?: string;
@@ -55,6 +59,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
   const [customInput, setCustomInput] = useState<string>('');
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
+  const [showPanControls, setShowPanControls] = useState<boolean>(false);
 
   // Active signing state
   const [currentLetter, setCurrentLetter] = useState<string>('');
@@ -69,16 +74,198 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const lastTimeRef = useRef<number>(performance.now());
   const pipWindowRef = useRef<Window | null>(null);
 
-  // Camera angles
-  const cameraConfig = useMemo(() => {
-    if (viewAngle === 'signer') {
-      // Looking down from chest / pupil first-person view
-      return { yaw: 0, pitch: 26, distance: 360, fov: 60 };
-    } else {
-      // Looking face-to-face across table at conversation partner
-      return { yaw: 180, pitch: -8, distance: 360, fov: 60 };
+  // 1. Draggable Window State (Persistent in localStorage)
+  const [windowPos, setWindowPos] = useState<{ x: number; y: number } | null>(() => {
+    try {
+      const saved = localStorage.getItem('stj_bsl_window_pos');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          return parsed;
+        }
+      }
+    } catch (_) {}
+    return null;
+  });
+
+  const isDraggingWindowRef = useRef(false);
+  const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
+    mouseX: 0,
+    mouseY: 0,
+    startX: 0,
+    startY: 0,
+  });
+  const windowRef = useRef<HTMLDivElement | null>(null);
+
+  // 2. Interactive 3D Camera Orbit & Pan State
+  const [orbitOffset, setOrbitOffset] = useState<{
+    yaw: number;
+    pitch: number;
+    distanceDelta: number;
+    panX: number;
+    panY: number;
+  }>({
+    yaw: 0,
+    pitch: 0,
+    distanceDelta: 0,
+    panX: 0,
+    panY: 0,
+  });
+
+  const is3DDraggingRef = useRef(false);
+  const drag3DStartRef = useRef<{ x: number; y: number; startYaw: number; startPitch: number }>({
+    x: 0,
+    y: 0,
+    startYaw: 0,
+    startPitch: 0,
+  });
+
+  // Check if WASM 3D Kernel is initialized
+  const [isWasmActive, setIsWasmActive] = useState<boolean>(() => {
+    return Boolean(typeof window !== 'undefined' && (window as any).AST3DWasmBridge?.isReady);
+  });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      if (typeof window !== 'undefined' && (window as any).AST3DWasmBridge?.isReady) {
+        setIsWasmActive(true);
+        clearInterval(timer);
+      }
+    }, 150);
+    return () => clearInterval(timer);
+  }, []);
+
+  // Window Pointer Drag Handlers
+  const handleHeaderPointerDown = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('button, input, form, select')) return;
+    e.preventDefault();
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+
+    const rect = windowRef.current?.getBoundingClientRect();
+    const currentX = rect ? rect.left : 100;
+    const currentY = rect ? rect.top : 100;
+
+    isDraggingWindowRef.current = true;
+    dragStartRef.current = {
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      startX: currentX,
+      startY: currentY,
+    };
+  };
+
+  const handleHeaderPointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingWindowRef.current) return;
+    const dx = e.clientX - dragStartRef.current.mouseX;
+    const dy = e.clientY - dragStartRef.current.mouseY;
+
+    const parentW = window.innerWidth;
+    const parentH = window.innerHeight;
+    const winW = 270;
+    const winH = 260;
+
+    const newX = Math.max(8, Math.min(parentW - winW - 8, dragStartRef.current.startX + dx));
+    const newY = Math.max(8, Math.min(parentH - winH - 8, dragStartRef.current.startY + dy));
+
+    setWindowPos({ x: newX, y: newY });
+  };
+
+  const handleHeaderPointerUp = (e: React.PointerEvent) => {
+    if (isDraggingWindowRef.current) {
+      isDraggingWindowRef.current = false;
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+      } catch (_) {}
+      if (windowPos) {
+        try {
+          localStorage.setItem('stj_bsl_window_pos', JSON.stringify(windowPos));
+        } catch (_) {}
+      }
     }
-  }, [viewAngle]);
+  };
+
+  // Corner Docking Shortcuts
+  const handleDockCorner = (corner: 'tl' | 'tr' | 'bl' | 'br') => {
+    const parentW = window.innerWidth;
+    const parentH = window.innerHeight;
+    const winW = 270;
+    const winH = 270;
+    let pos = { x: parentW - winW - 16, y: parentH - winH - 16 };
+    if (corner === 'tl') pos = { x: 16, y: 70 };
+    if (corner === 'tr') pos = { x: parentW - winW - 16, y: 70 };
+    if (corner === 'bl') pos = { x: 16, y: parentH - winH - 16 };
+    if (corner === 'br') pos = { x: parentW - winW - 16, y: parentH - winH - 16 };
+    setWindowPos(pos);
+    try {
+      localStorage.setItem('stj_bsl_window_pos', JSON.stringify(pos));
+    } catch (_) {}
+  };
+
+  const handleResetWindowPos = () => {
+    setWindowPos(null);
+    try {
+      localStorage.removeItem('stj_bsl_window_pos');
+    } catch (_) {}
+  };
+
+  // 3D Stage Direct Drag Handlers (Orbit Hands)
+  const handleStagePointerDown = (e: React.PointerEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    try {
+      (e.currentTarget as unknown as Element).setPointerCapture(e.pointerId);
+    } catch (_) {}
+    is3DDraggingRef.current = true;
+    drag3DStartRef.current = {
+      x: e.clientX,
+      y: e.clientY,
+      startYaw: orbitOffset.yaw,
+      startPitch: orbitOffset.pitch,
+    };
+  };
+
+  const handleStagePointerMove = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (!is3DDraggingRef.current) return;
+    const dx = e.clientX - drag3DStartRef.current.x;
+    const dy = e.clientY - drag3DStartRef.current.y;
+    setOrbitOffset((prev) => ({
+      ...prev,
+      yaw: drag3DStartRef.current.startYaw + dx * 0.9,
+      pitch: Math.max(-75, Math.min(75, drag3DStartRef.current.startPitch + dy * 0.7)),
+    }));
+  };
+
+  const handleStagePointerUp = (e: React.PointerEvent<SVGSVGElement>) => {
+    if (is3DDraggingRef.current) {
+      is3DDraggingRef.current = false;
+      try {
+        (e.currentTarget as unknown as Element).releasePointerCapture(e.pointerId);
+      } catch (_) {}
+    }
+  };
+
+  const handleStageWheel = (e: React.WheelEvent<SVGSVGElement>) => {
+    e.preventDefault();
+    const delta = e.deltaY * 0.35;
+    setOrbitOffset((prev) => ({
+      ...prev,
+      distanceDelta: Math.max(-160, Math.min(260, prev.distanceDelta + delta)),
+    }));
+  };
+
+  // Camera angles with interactive orbit offset
+  const cameraConfig = useMemo(() => {
+    const base =
+      viewAngle === 'signer'
+        ? { yaw: 0, pitch: 26, distance: 360, fov: 60 }
+        : { yaw: 180, pitch: -8, distance: 360, fov: 60 };
+
+    return {
+      yaw: base.yaw + orbitOffset.yaw,
+      pitch: Math.max(-85, Math.min(85, base.pitch + orbitOffset.pitch)),
+      distance: Math.max(120, base.distance + orbitOffset.distanceDelta),
+      fov: base.fov,
+    };
+  }, [viewAngle, orbitOffset]);
 
   // Enqueue new word for fingerspelling
   const enqueueWord = useCallback((word: string) => {
@@ -89,7 +276,6 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     setActiveWordDisplay(cleanWord);
     const poses = decomposeTextToBslStream(cleanWord);
     if (poses.length > 0) {
-      // Append a small rest pose at the end of word
       queueRef.current = [...poses, REST_POSE];
     }
   }, []);
@@ -99,8 +285,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     if (activeWord && activeWord.trim()) {
       enqueueWord(activeWord);
     } else if (activeSubtitle && activeSubtitle.trim()) {
-      // If no discrete word provided, pick first significant word of subtitle
-      const words = activeSubtitle.trim().split(/\s+/).filter(w => w.length > 1);
+      const words = activeSubtitle.trim().split(/\s+/).filter((w) => w.length > 1);
       if (words.length > 0) {
         enqueueWord(words[0]);
       }
@@ -117,12 +302,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       const dt = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
 
-      const duration = 0.38 / speedMultiplier; // seconds per letter transition
+      const duration = 0.36 / speedMultiplier;
       t += dt / duration;
 
       if (t >= 1) {
         t = 1;
-        // Finished moving to toPose, check if queue has next
         if (queueRef.current.length > 0) {
           const next = queueRef.current.shift()!;
           fromPose = toPose;
@@ -162,10 +346,10 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   }, [prevPose.targetWrist, currentPose.targetWrist, transitionProgress]);
 
   // Canvas dimension: 220 x 170
-  const originX = 110;
-  const originY = 95;
+  const originX = 110 + orbitOffset.panX;
+  const originY = 95 + orbitOffset.panY;
 
-  // Project non-dominant hand (The Paper)
+  // Project non-dominant hand (The Paper) using WASM 3D Kernel
   const baseWrist = project3DToSvg(BSL_BASE_HAND.wrist, cameraConfig, originX, originY);
   const basePalm = project3DToSvg(BSL_BASE_HAND.palm, cameraConfig, originX, originY);
   const baseFingertips = useMemo(() => {
@@ -174,12 +358,130 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       idx,
       proj: project3DToSvg(tip, cameraConfig, originX, originY),
     }));
-  }, [cameraConfig]);
+  }, [cameraConfig, originX, originY]);
 
-  // Project dominant hand (The Pen)
-  const domTip = project3DToSvg(interpolatedTip, cameraConfig, originX, originY);
-  const domKnuckle = project3DToSvg(interpolatedKnuckle, cameraConfig, originX, originY);
-  const domWrist = project3DToSvg(interpolatedWrist, cameraConfig, originX, originY);
+  // Project dominant hand (The Pen) complete anatomical landmarks using WASM 3D Kernel
+  const domHand3D = useMemo(() => {
+    const w = interpolatedWrist;
+    const k = interpolatedKnuckle;
+    const t = interpolatedTip;
+
+    // Direction along index pointing axis
+    const fx = k.x - w.x;
+    const fy = k.y - w.y;
+    const fz = k.z - w.z;
+    const fLen = Math.hypot(fx, fy, fz) || 1;
+    const ufx = fx / fLen;
+    const ufy = fy / fLen;
+    const ufz = fz / fLen;
+
+    // Lateral vector across palm toward pinky (perpendicular to finger and vertical)
+    const latX = -ufy * 0.9;
+    const latY = ufx * 0.9;
+    const latZ = 0.4;
+    const latLen = Math.hypot(latX, latY, latZ) || 1;
+    const ulx = latX / latLen;
+    const uly = latY / latLen;
+    const ulz = latZ / latLen;
+
+    // Palm center of dominant hand
+    const palm: Point3D = {
+      x: w.x * 0.5 + k.x * 0.5 + ulx * 12,
+      y: w.y * 0.5 + k.y * 0.5 + uly * 12,
+      z: w.z * 0.5 + k.z * 0.5 + ulz * 12,
+    };
+
+    // Knuckles for middle, ring, pinky
+    const kMid: Point3D = {
+      x: k.x + ulx * 14 - ufx * 3,
+      y: k.y + uly * 14 - ufy * 3,
+      z: k.z + ulz * 14 - ufz * 3,
+    };
+    const kRing: Point3D = {
+      x: k.x + ulx * 25 - ufx * 7,
+      y: k.y + uly * 25 - ufy * 7,
+      z: k.z + ulz * 25 - ufz * 7,
+    };
+    const kPinky: Point3D = {
+      x: k.x + ulx * 35 - ufx * 12,
+      y: k.y + uly * 35 - ufy * 12,
+      z: k.z + ulz * 35 - ufz * 12,
+    };
+
+    // Curled fingertips tucked into the palm (pointing hand posture)
+    const tipMidCurled: Point3D = {
+      x: palm.x + ulx * 6 - ufx * 4,
+      y: palm.y + uly * 6 - ufy * 4,
+      z: palm.z + 8,
+    };
+    const tipRingCurled: Point3D = {
+      x: palm.x + ulx * 16 - ufx * 6,
+      y: palm.y + uly * 16 - ufy * 6,
+      z: palm.z + 6,
+    };
+    const tipPinkyCurled: Point3D = {
+      x: palm.x + ulx * 24 - ufx * 8,
+      y: palm.y + uly * 24 - ufy * 8,
+      z: palm.z + 4,
+    };
+
+    // Thumb base, knuckle, and tip (folded across knuckles)
+    const thumbBase: Point3D = {
+      x: w.x * 0.65 + k.x * 0.35 - ulx * 10,
+      y: w.y * 0.65 + k.y * 0.35 - uly * 10,
+      z: w.z * 0.65 + k.z * 0.35 + 4,
+    };
+    const thumbKnuckle: Point3D = {
+      x: thumbBase.x + ufx * 12 - ulx * 5,
+      y: thumbBase.y + ufy * 12 - uly * 5,
+      z: thumbBase.z + 6,
+    };
+    const thumbTip: Point3D = {
+      x: k.x * 0.6 + kMid.x * 0.4 - ufx * 4,
+      y: k.y * 0.6 + kMid.y * 0.4 - ufy * 4,
+      z: k.z + 8,
+    };
+
+    // Forearm entry point
+    const forearm: Point3D = {
+      x: w.x - ufx * 36 + ulx * 6,
+      y: w.y - ufy * 36 + uly * 6 + 28,
+      z: w.z - 20,
+    };
+
+    return {
+      wrist: w,
+      knuckleIndex: k,
+      tipIndex: t,
+      palm,
+      kMid,
+      kRing,
+      kPinky,
+      tipMidCurled,
+      tipRingCurled,
+      tipPinkyCurled,
+      thumbBase,
+      thumbKnuckle,
+      thumbTip,
+      forearm,
+    };
+  }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip]);
+
+  // Project all dominant hand landmarks to 2D SVG stage
+  const domWrist = project3DToSvg(domHand3D.wrist, cameraConfig, originX, originY);
+  const domKnuckle = project3DToSvg(domHand3D.knuckleIndex, cameraConfig, originX, originY);
+  const domTip = project3DToSvg(domHand3D.tipIndex, cameraConfig, originX, originY);
+  const domPalm = project3DToSvg(domHand3D.palm, cameraConfig, originX, originY);
+  const domKMid = project3DToSvg(domHand3D.kMid, cameraConfig, originX, originY);
+  const domKRing = project3DToSvg(domHand3D.kRing, cameraConfig, originX, originY);
+  const domKPinky = project3DToSvg(domHand3D.kPinky, cameraConfig, originX, originY);
+  const domTipMid = project3DToSvg(domHand3D.tipMidCurled, cameraConfig, originX, originY);
+  const domTipRing = project3DToSvg(domHand3D.tipRingCurled, cameraConfig, originX, originY);
+  const domTipPinky = project3DToSvg(domHand3D.tipPinkyCurled, cameraConfig, originX, originY);
+  const domThumbBase = project3DToSvg(domHand3D.thumbBase, cameraConfig, originX, originY);
+  const domThumbKnuckle = project3DToSvg(domHand3D.thumbKnuckle, cameraConfig, originX, originY);
+  const domThumbTip = project3DToSvg(domHand3D.thumbTip, cameraConfig, originX, originY);
+  const domForearm = project3DToSvg(domHand3D.forearm, cameraConfig, originX, originY);
 
   // W3C Document Picture-in-Picture Undocking
   const handleTogglePip = async () => {
@@ -232,8 +534,6 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       } catch (err) {
         console.warn('Document PiP could not be opened:', err);
       }
-    } else {
-      alert('Document Picture-in-Picture is not supported in this browser version. Docked view remains active!');
     }
   };
 
@@ -245,16 +545,31 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }
   };
 
+  // Button styling helper
+  const panBtnStyle: React.CSSProperties = {
+    background: 'rgba(30, 41, 59, 0.85)',
+    border: '1px solid rgba(56, 189, 248, 0.3)',
+    borderRadius: '4px',
+    color: '#38bdf8',
+    padding: '2px 6px',
+    fontSize: '0.66rem',
+    fontWeight: 700,
+    cursor: 'pointer',
+    userSelect: 'none',
+  };
+
   // Render minimized floating pill
   if (isMinimized) {
     return (
       <div
         className={`bsl-interpreter-minimized ${className}`}
         style={{
-          position: 'absolute',
-          bottom: '12px',
-          right: '12px',
-          zIndex: 40,
+          position: 'fixed',
+          bottom: windowPos ? undefined : '12px',
+          right: windowPos ? undefined : '12px',
+          left: windowPos ? `${windowPos.x}px` : undefined,
+          top: windowPos ? `${windowPos.y}px` : undefined,
+          zIndex: 60,
           background: 'rgba(15, 23, 42, 0.94)',
           backdropFilter: 'blur(10px)',
           border: '1.5px solid rgba(56, 189, 248, 0.4)',
@@ -275,6 +590,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       >
         <span style={{ fontSize: '1.1rem' }}>🖐️</span>
         <span>BSL Interpreter</span>
+        {isWasmActive && (
+          <span style={{ fontSize: '0.62rem', background: 'rgba(34, 197, 94, 0.25)', color: '#4ade80', padding: '1px 4px', borderRadius: '4px' }}>
+            WASM
+          </span>
+        )}
         {currentLetter && (
           <span
             style={{
@@ -295,55 +615,128 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
   return (
     <div
+      ref={windowRef}
       className={`bsl-interpreter-dock ${className}`}
       style={{
-        position: 'absolute',
-        bottom: '12px',
-        right: '12px',
-        width: '260px',
-        zIndex: 40,
-        background: 'rgba(15, 23, 42, 0.94)',
-        backdropFilter: 'blur(12px)',
-        border: '1.5px solid rgba(56, 189, 248, 0.35)',
-        boxShadow: '0 12px 32px rgba(0, 0, 0, 0.6), 0 0 16px rgba(56, 189, 248, 0.15)',
+        position: 'fixed',
+        bottom: windowPos ? undefined : '16px',
+        right: windowPos ? undefined : '16px',
+        left: windowPos ? `${windowPos.x}px` : undefined,
+        top: windowPos ? `${windowPos.y}px` : undefined,
+        width: '270px',
+        zIndex: 60,
+        background: 'rgba(15, 23, 42, 0.95)',
+        backdropFilter: 'blur(14px)',
+        border: '1.5px solid rgba(56, 189, 248, 0.4)',
+        boxShadow: '0 14px 36px rgba(0, 0, 0, 0.65), 0 0 20px rgba(56, 189, 248, 0.18)',
         borderRadius: '12px',
         overflow: 'hidden',
         color: '#f8fafc',
         fontFamily: 'system-ui, -apple-system, sans-serif',
         userSelect: 'none',
-        transition: 'transform 0.2s ease, opacity 0.2s ease',
+        touchAction: 'none',
       }}
     >
-      {/* Header bar */}
+      {/* Draggable Header Bar */}
       <div
+        onPointerDown={handleHeaderPointerDown}
+        onPointerMove={handleHeaderPointerMove}
+        onPointerUp={handleHeaderPointerUp}
+        onPointerCancel={handleHeaderPointerUp}
         style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '6px 10px',
-          background: 'rgba(30, 41, 59, 0.8)',
-          borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+          padding: '7px 10px',
+          background: 'rgba(30, 41, 59, 0.9)',
+          borderBottom: '1px solid rgba(56, 189, 248, 0.25)',
           fontSize: '0.75rem',
+          cursor: isDraggingWindowRef.current ? 'grabbing' : 'grab',
         }}
+        title="Drag header to move window anywhere on screen"
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 800, color: '#38bdf8' }}>
+          <span style={{ cursor: 'grab', opacity: 0.8 }} title="Drag Handle">⠿</span>
           <span>🖐️</span>
           <span>BSL In-Vision</span>
-          <span
-            style={{
-              fontSize: '0.65rem',
-              padding: '1px 5px',
-              borderRadius: '4px',
-              background: isSpeaking ? 'rgba(34, 197, 94, 0.2)' : 'rgba(148, 163, 184, 0.2)',
-              color: isSpeaking ? '#4ade80' : '#94a3b8',
-              border: `1px solid ${isSpeaking ? 'rgba(34, 197, 94, 0.4)' : 'rgba(148, 163, 184, 0.3)'}`,
-            }}
-          >
-            {isSpeaking ? 'SYNCED' : 'READY'}
-          </span>
+          {isWasmActive && (
+            <span
+              style={{
+                fontSize: '0.6rem',
+                padding: '1px 4px',
+                borderRadius: '3px',
+                background: 'rgba(34, 197, 94, 0.25)',
+                color: '#4ade80',
+                fontWeight: 900,
+                border: '1px solid rgba(34, 197, 94, 0.4)',
+              }}
+              title="3D perspective vector projection accelerated by WebAssembly"
+            >
+              ⚡ WASM 3D
+            </span>
+          )}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+          {/* 3D Pan / Orbit Controls Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowPanControls((prev) => !prev)}
+            style={{
+              background: showPanControls ? '#0284c7' : 'transparent',
+              border: `1px solid ${showPanControls ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
+              color: showPanControls ? '#ffffff' : '#94a3b8',
+              cursor: 'pointer',
+              padding: '2px 5px',
+              borderRadius: '4px',
+              fontSize: '0.68rem',
+              fontWeight: 700,
+            }}
+            title="Toggle 3D Camera Orbit & Pan D-Pad"
+          >
+            🌐 Orbit
+          </button>
+
+          {/* Quick Corner Dock Dropdown / Cycle */}
+          <div style={{ display: 'flex', gap: '1px' }}>
+            <button
+              type="button"
+              onClick={() => handleDockCorner('tl')}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '1px 2px', fontSize: '0.7rem' }}
+              title="Dock Top-Left"
+            >
+              ↖
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDockCorner('tr')}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '1px 2px', fontSize: '0.7rem' }}
+              title="Dock Top-Right"
+            >
+              ↗
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDockCorner('br')}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '1px 2px', fontSize: '0.7rem' }}
+              title="Dock Bottom-Right"
+            >
+              ↘
+            </button>
+          </div>
+
+          {/* Reset Position Button */}
+          {windowPos && (
+            <button
+              type="button"
+              onClick={handleResetWindowPos}
+              style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem' }}
+              title="Reset window to default dock"
+            >
+              ↺
+            </button>
+          )}
+
           {/* PiP Button */}
           {typeof window !== 'undefined' && 'documentPictureInPicture' in window && (
             <button
@@ -356,7 +749,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 cursor: 'pointer',
                 padding: '2px 4px',
                 borderRadius: '4px',
-                fontSize: '0.8rem',
+                fontSize: '0.78rem',
               }}
               title="Undock to Picture-in-Picture window"
             >
@@ -407,10 +800,24 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         </div>
       </div>
 
-      {/* 3D Skeletal Vector Stage */}
-      <div style={{ position: 'relative', width: '100%', height: '150px', background: 'radial-gradient(ellipse at center, #1e293b 0%, #090d16 100%)' }}>
+      {/* 3D Skeletal Vector Stage with Pointer Drag Orbit */}
+      <div
+        style={{
+          position: 'relative',
+          width: '100%',
+          height: '150px',
+          background: 'radial-gradient(ellipse at center, #1e293b 0%, #090d16 100%)',
+          cursor: is3DDraggingRef.current ? 'grabbing' : 'grab',
+          touchAction: 'none',
+        }}
+      >
         <svg
           viewBox="0 0 220 170"
+          onPointerDown={handleStagePointerDown}
+          onPointerMove={handleStagePointerMove}
+          onPointerUp={handleStagePointerUp}
+          onPointerCancel={handleStagePointerUp}
+          onWheel={handleStageWheel}
           style={{
             width: '100%',
             height: '100%',
@@ -429,13 +836,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </radialGradient>
           </defs>
 
+          {/* Clear Visual Two-Hand Architecture Headers */}
+          <text x="50" y="13" fill="#94a3b8" fontSize="6.8" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
+          <text x="168" y="13" fill="#38bdf8" fontSize="6.8" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
+
           {/* Grid lines floor reference */}
           <line x1="20" y1="150" x2="200" y2="150" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
           <line x1="110" y1="130" x2="110" y2="160" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
 
           {/* NON-DOMINANT HAND (The Paper) */}
           <g id="bsl-base-hand" opacity="0.95">
-            {/* Base Palm polygon */}
             <polygon
               points={`${baseWrist.x},${baseWrist.y} ${baseFingertips[0].proj.x},${baseFingertips[0].proj.y} ${baseFingertips[1].proj.x},${baseFingertips[1].proj.y} ${baseFingertips[4].proj.x},${baseFingertips[4].proj.y}`}
               fill="rgba(56, 189, 248, 0.08)"
@@ -443,118 +853,118 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               strokeWidth="1.2"
             />
 
-            {/* Fingers connecting wrist to fingertips */}
             {baseFingertips.map((tip) => {
               const isSelectedVowel = currentPose.activeVowelIndex === tip.idx;
               return (
                 <g key={`base-finger-${tip.id}`}>
-                  {/* Skeletal ray */}
                   <line
                     x1={basePalm.x}
                     y1={basePalm.y}
                     x2={tip.proj.x}
                     y2={tip.proj.y}
                     stroke={isSelectedVowel ? '#f59e0b' : '#38bdf8'}
-                    strokeWidth={isSelectedVowel ? 2.5 : 1.5}
+                    strokeWidth={isSelectedVowel ? 3 : 2}
                     strokeLinecap="round"
+                    opacity={isSelectedVowel ? 1 : 0.75}
                   />
-
-                  {/* Active Vowel Pulse aura */}
+                  <circle
+                    cx={tip.proj.x}
+                    cy={tip.proj.y}
+                    r={isSelectedVowel ? 5.5 * tip.proj.scale : 4 * tip.proj.scale}
+                    fill={isSelectedVowel ? '#f59e0b' : '#0ea5e9'}
+                    stroke="#ffffff"
+                    strokeWidth={isSelectedVowel ? 1.5 : 1}
+                  />
                   {isSelectedVowel && (
                     <circle
                       cx={tip.proj.x}
                       cy={tip.proj.y}
-                      r={14 * tip.proj.scale}
+                      r={11 * tip.proj.scale}
                       fill="url(#bslVowelGlow)"
+                      opacity="0.8"
                     />
                   )}
-
-                  {/* Fingertip joint marker */}
-                  <circle
-                    cx={tip.proj.x}
-                    cy={tip.proj.y}
-                    r={isSelectedVowel ? 6 * tip.proj.scale : 4 * tip.proj.scale}
-                    fill={isSelectedVowel ? '#fbbf24' : '#0284c7'}
-                    stroke="#ffffff"
-                    strokeWidth="1"
-                  />
-
-                  {/* Vowel Letter Label on Fingertip (A, E, I, O, U) */}
                   <text
                     x={tip.proj.x}
-                    y={tip.proj.y + (viewAngle === 'signer' ? -6 : 10)}
+                    y={tip.proj.y - 7}
+                    fill={isSelectedVowel ? '#f59e0b' : '#94a3b8'}
+                    fontSize="7"
+                    fontWeight="800"
                     textAnchor="middle"
-                    fill={isSelectedVowel ? '#fef08a' : '#94a3b8'}
-                    fontSize={isSelectedVowel ? '9px' : '7.5px'}
-                    fontWeight={isSelectedVowel ? 900 : 700}
                   >
-                    {tip.id}
+                    {tip.name || tip.id}
                   </text>
                 </g>
               );
             })}
 
-            {/* Base Wrist joint */}
-            <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill="#1e293b" stroke="#38bdf8" strokeWidth="1.5" />
+            <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+            <circle cx={basePalm.x} cy={basePalm.y} r={4 * basePalm.scale} fill="#38bdf8" opacity="0.6" />
           </g>
 
-          {/* DOMINANT HAND (The Pen - Moving Pointer) */}
+          {/* DOMINANT HAND (The Pen - Full Anatomical Right Hand) */}
           <g id="bsl-dominant-hand">
-            {/* Forearm segment */}
+            {/* 1. Forearm connecting to wrist */}
             <line
-              x1={domWrist.x + 35}
-              y1={domWrist.y + 40}
+              x1={domForearm.x}
+              y1={domForearm.y}
               x2={domWrist.x}
               y2={domWrist.y}
-              stroke="#64748b"
-              strokeWidth="3.5"
+              stroke="#475569"
+              strokeWidth="4"
               strokeLinecap="round"
-              opacity="0.6"
+              opacity="0.55"
             />
 
-            {/* Hand / Knuckle segment */}
-            <line
-              x1={domWrist.x}
-              y1={domWrist.y}
-              x2={domKnuckle.x}
-              y2={domKnuckle.y}
-              stroke="#38bdf8"
-              strokeWidth="3"
-              strokeLinecap="round"
+            {/* 2. Palm body polygon */}
+            <polygon
+              points={`${domWrist.x},${domWrist.y} ${domThumbBase.x},${domThumbBase.y} ${domKnuckle.x},${domKnuckle.y} ${domKMid.x},${domKMid.y} ${domKRing.x},${domKRing.y} ${domKPinky.x},${domKPinky.y}`}
+              fill="rgba(56, 189, 248, 0.12)"
+              stroke="rgba(56, 189, 248, 0.45)"
+              strokeWidth="1.2"
+              strokeLinejoin="round"
             />
 
-            {/* Pointer finger segment */}
-            <line
-              x1={domKnuckle.x}
-              y1={domKnuckle.y}
-              x2={domTip.x}
-              y2={domTip.y}
-              stroke="#0ea5e9"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            />
+            {/* 3. Wrist and Palm center */}
+            <circle cx={domWrist.x} cy={domWrist.y} r={5 * domWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+            <circle cx={domPalm.x} cy={domPalm.y} r={4 * domPalm.scale} fill="#38bdf8" opacity="0.5" />
 
-            {/* Pointer Knuckle joint */}
+            {/* 4. Curled Middle Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
+            <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke="#0ea5e9" strokeWidth="2.2" strokeLinecap="round" opacity="0.85" />
+            <circle cx={domKMid.x} cy={domKMid.y} r={3.5 * domKMid.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={domTipMid.x} cy={domTipMid.y} r={3 * domTipMid.scale} fill="#38bdf8" />
+
+            {/* 5. Curled Ring Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" />
+            <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+            <circle cx={domKRing.x} cy={domKRing.y} r={3.2 * domKRing.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={domTipRing.x} cy={domTipRing.y} r={2.8 * domTipRing.scale} fill="#38bdf8" />
+
+            {/* 6. Curled Pinky Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+            <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke="#0ea5e9" strokeWidth="1.8" strokeLinecap="round" opacity="0.75" />
+            <circle cx={domKPinky.x} cy={domKPinky.y} r={3 * domKPinky.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={domTipPinky.x} cy={domTipPinky.y} r={2.5 * domTipPinky.scale} fill="#38bdf8" />
+
+            {/* 7. Thumb (folded/cupped) */}
+            <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
+            <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx={domThumbKnuckle.x} cy={domThumbKnuckle.y} r={3.8 * domThumbKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
+
+            {/* 8. Active Extended Pointer (Index Finger) */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="#38bdf8" strokeWidth="3.2" strokeLinecap="round" />
+            <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
             <circle cx={domKnuckle.x} cy={domKnuckle.y} r={4.5 * domKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
-
-            {/* Dominant Tip (Contact Beacon) */}
-            <circle
-              cx={domTip.x}
-              cy={domTip.y}
-              r={5 * domTip.scale}
-              fill="#38bdf8"
-              stroke="#ffffff"
-              strokeWidth="1.5"
-            />
-
-            {/* Target Touch Pulse Ripple */}
+            <circle cx={domTip.x} cy={domTip.y} r={5.2 * domTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
             {currentLetter && (
               <circle
                 cx={domTip.x}
                 cy={domTip.y}
                 r={10 * domTip.scale}
                 fill="url(#bslTouchPulse)"
-                opacity="0.8"
+                opacity="0.85"
               />
             )}
           </g>
@@ -569,10 +979,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             display: 'flex',
             alignItems: 'center',
             gap: '6px',
-            background: 'rgba(15, 23, 42, 0.85)',
+            background: 'rgba(15, 23, 42, 0.88)',
             border: '1px solid rgba(56, 189, 248, 0.3)',
             borderRadius: '6px',
             padding: '3px 8px',
+            pointerEvents: 'none',
           }}
         >
           <span
@@ -620,7 +1031,103 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         >
           <span>{viewAngle === 'signer' ? '👤 Signer POV' : '👥 Receiver POV'}</span>
         </button>
+
+        {/* Orbit Hint badge */}
+        <div
+          style={{
+            position: 'absolute',
+            bottom: '8px',
+            right: '8px',
+            fontSize: '0.6rem',
+            color: '#64748b',
+            background: 'rgba(15, 23, 42, 0.7)',
+            padding: '1px 5px',
+            borderRadius: '4px',
+            pointerEvents: 'none',
+          }}
+        >
+          Drag to 3D Orbit • Scroll to Zoom
+        </div>
       </div>
+
+      {/* On-Screen 3D Camera Pan / Orbit Control Pad */}
+      {showPanControls && (
+        <div
+          style={{
+            padding: '6px 10px',
+            background: 'rgba(15, 23, 42, 0.98)',
+            borderTop: '1px solid rgba(56, 189, 248, 0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}
+        >
+          {/* D-Pad Orbit */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <span style={{ fontSize: '0.62rem', color: '#94a3b8', marginRight: '2px' }}>Orbit:</span>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, pitch: Math.min(75, p.pitch + 12) }))}
+              title="Tilt Camera Up"
+              style={panBtnStyle}
+            >
+              ▲
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, pitch: Math.max(-75, p.pitch - 12) }))}
+              title="Tilt Camera Down"
+              style={panBtnStyle}
+            >
+              ▼
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, yaw: p.yaw - 15 }))}
+              title="Orbit Camera Left"
+              style={panBtnStyle}
+            >
+              ◀
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, yaw: p.yaw + 15 }))}
+              title="Orbit Camera Right"
+              style={panBtnStyle}
+            >
+              ▶
+            </button>
+          </div>
+
+          {/* Zoom and Reset */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, distanceDelta: Math.max(-160, p.distanceDelta - 30) }))}
+              title="Zoom In (+)"
+              style={panBtnStyle}
+            >
+              +
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset((p) => ({ ...p, distanceDelta: Math.min(260, p.distanceDelta + 30) }))}
+              title="Zoom Out (-)"
+              style={panBtnStyle}
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={() => setOrbitOffset({ yaw: 0, pitch: 0, distanceDelta: 0, panX: 0, panY: 0 })}
+              title="Reset 3D Camera Orbit & Pan"
+              style={{ ...panBtnStyle, color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.4)' }}
+            >
+              ⟲ Reset
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Rule & Kinematic Description */}
       <div
@@ -631,7 +1138,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           fontSize: '0.68rem',
           color: '#cbd5e1',
           lineHeight: 1.3,
-          minHeight: '34px',
+          minHeight: '32px',
         }}
       >
         <strong style={{ color: '#38bdf8' }}>BSL Rule: </strong>
@@ -645,7 +1152,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '6px 10px',
-          background: 'rgba(30, 41, 59, 0.6)',
+          background: 'rgba(30, 41, 59, 0.65)',
           borderTop: '1px solid rgba(255, 255, 255, 0.05)',
           fontSize: '0.68rem',
         }}
@@ -712,4 +1219,5 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     </div>
   );
 };
+
 export default BslInterpreterOverlay;

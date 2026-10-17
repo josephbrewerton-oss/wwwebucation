@@ -340,6 +340,19 @@ export function project3DToSvg(
   originX = 400,
   originY = 240
 ): { x: number; y: number; scale: number; depth: number } {
+  // ⚡ High-performance WebAssembly 3D Kernel (docs/WASM_ARCHITECTURE_CONTRACT.md Page 4)
+  if (typeof window !== 'undefined' && (window as any).AST3DWasmBridge?.isReady) {
+    const wasmRes = (window as any).AST3DWasmBridge.projectPoint(point.x, point.y, point.z, camera, originX, originY);
+    if (wasmRes) {
+      return {
+        x: wasmRes.x,
+        y: wasmRes.y,
+        scale: wasmRes.scale,
+        depth: wasmRes.z,
+      };
+    }
+  }
+
   const radYaw = (camera.yaw * Math.PI) / 180;
   const radPitch = (camera.pitch * Math.PI) / 180;
 
