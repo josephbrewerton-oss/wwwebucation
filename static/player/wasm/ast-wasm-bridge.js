@@ -130,7 +130,8 @@
       const yawRad = totalYaw * (Math.PI / 180);
       const pitchRad = totalPitch * (Math.PI / 180);
       const rollRad = rollBase * (Math.PI / 180);
-      const focalLength = 400 / Math.tan((fov * Math.PI) / 360);
+      // Focal length matches camera distance so that scale=1.0 at subject plane (z=0)
+      const focalLength = totalDist;
 
       this.exports.set_camera_uniforms(
         Math.cos(yawRad), Math.sin(yawRad),

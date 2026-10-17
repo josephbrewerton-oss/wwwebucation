@@ -345,8 +345,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     return interpolatePoint3D(prevPose.targetWrist, currentPose.targetWrist, transitionProgress);
   }, [prevPose.targetWrist, currentPose.targetWrist, transitionProgress]);
 
-  // Canvas dimension: 220 x 170
-  const originX = 110 + orbitOffset.panX;
+  // Canvas dimension: 240 x 170 (comfortably framing both left and right hands in 3D perspective)
+  const originX = 120 + orbitOffset.panX;
   const originY = 95 + orbitOffset.panY;
 
   // Project non-dominant hand (The Paper) using WASM 3D Kernel
@@ -812,7 +812,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         }}
       >
         <svg
-          viewBox="0 0 220 170"
+          viewBox="0 0 240 170"
           onPointerDown={handleStagePointerDown}
           onPointerMove={handleStagePointerMove}
           onPointerUp={handleStagePointerUp}
@@ -837,12 +837,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           </defs>
 
           {/* Clear Visual Two-Hand Architecture Headers */}
-          <text x="50" y="13" fill="#94a3b8" fontSize="6.8" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
-          <text x="168" y="13" fill="#38bdf8" fontSize="6.8" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
+          <text x="60" y="13" fill="#94a3b8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
+          <text x="180" y="13" fill="#38bdf8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
 
           {/* Grid lines floor reference */}
-          <line x1="20" y1="150" x2="200" y2="150" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
-          <line x1="110" y1="130" x2="110" y2="160" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
+          <line x1="15" y1="150" x2="225" y2="150" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
+          <line x1="120" y1="130" x2="120" y2="160" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
 
           {/* NON-DOMINANT HAND (The Paper) */}
           <g id="bsl-base-hand" opacity="0.95">
