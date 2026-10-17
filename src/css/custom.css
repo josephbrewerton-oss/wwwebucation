@@ -1090,12 +1090,24 @@ body {
 /* 4. Native Accessibility: Prefers-Reduced-Motion Honor */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
 }
+
+/* 5. British Sign Language (BSL) Floating In-Vision Docking */
+.bsl-interpreter-dock,
+.bsl-interpreter-minimized {
+  z-index: 9995 !important;
+}
+
+@media (max-width: 640px) {
+  .bsl-interpreter-dock:not([style*="top:"]),
+  .bsl-interpreter-minimized:not([style*="top:"]) {
+    bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
 
 
 

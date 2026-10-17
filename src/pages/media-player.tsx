@@ -18,6 +18,7 @@ import {
   type CartridgeDefinition,
 } from '../services/cartridgeStore';
 import { type CompressedCartridgeMetadata } from '../utils/cartridgeCompression';
+import { getBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
 import { exportSubjectCartridge, exportCustomCartridgeBundle } from '../utils/exportSubjectCartridge';
 
 const ShakespearePlayExplorer = React.lazy(() => import('../components/ShakespearePlayExplorer'));
@@ -99,12 +100,14 @@ export default function MediaPlayerPage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSimStopped, setIsSimStopped] = useState(false);
   const [showQuestions, setShowQuestions] = useState(true);
-  const [bslEnabled, setBslEnabled] = useState<boolean>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('stj_bsl_enabled') === 'true';
-    }
-    return false;
-  });
+  const [bslEnabled, setBslEnabled] = useState<boolean>(() => getBslEnabled());
+
+  useEffect(() => {
+    const unsubscribe = subscribeBsl((enabled) => {
+      setBslEnabled(enabled);
+    });
+    return unsubscribe;
+  }, []);
   const [latestTelemetry, setLatestTelemetry] = useState<PlayerTelemetryEvent | null>(null);
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [isNanoLoadingDemo, setIsNanoLoadingDemo] = useState(false);
@@ -558,14 +561,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
             {/* BSL In-Vision Interpreter Accessible Toggle */}
             <button
               type="button"
-              onClick={() => {
-                const next = !bslEnabled;
-                setBslEnabled(next);
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-                }
-                playerRef.current?.setBslEnabled(next);
-              }}
+              onClick={() => toggleBsl()}
               style={{
                 padding: '6px 14px',
                 borderRadius: '8px',

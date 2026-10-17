@@ -19,9 +19,11 @@ import {
   enableUniversalObserver,
   speakCurrentPage,
 } from '../engine/universalDomTranslator';
+import { getBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
 
 export default function UniversalTranslatorBar() {
   const [currentLang, setCurrentLang] = useState<string>('en');
+  const [bslEnabled, setBslEnabled] = useState<boolean>(() => getBslEnabled());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isTranslated, setIsTranslated] = useState<boolean>(false);
   const [isCollapsed, setIsCollapsed] = useState<boolean>(false);
@@ -31,6 +33,14 @@ export default function UniversalTranslatorBar() {
 
   // Ensure CSS variable --universal-bar-height is set once or on actual height changes without triggering forced synchronous reflow
   const lastHeightRef = useRef<number>(-1);
+
+  // Synchronize global British Sign Language (BSL) state
+  useEffect(() => {
+    const unsubscribe = subscribeBsl((enabled) => {
+      setBslEnabled(enabled);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -487,6 +497,33 @@ export default function UniversalTranslatorBar() {
             >
               <span>🔊</span>
               <span className="hidden sm:inline">Listen</span>
+            </button>
+
+            {/* British Sign Language (BSL) In-Vision Interpreter Accessible Button */}
+            <button
+              type="button"
+              id="universal-bsl-toggle-btn"
+              onClick={() => toggleBsl()}
+              style={{
+                background: bslEnabled ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.8)',
+                color: bslEnabled ? '#38bdf8' : '#cbd5e1',
+                border: `1.5px solid ${bslEnabled ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)'}`,
+                borderRadius: '6px',
+                padding: '0.22rem 0.6rem',
+                fontSize: '0.76rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '5px',
+                transition: 'all 0.15s ease',
+                boxShadow: bslEnabled ? '0 0 10px rgba(56, 189, 248, 0.35)' : undefined,
+                whiteSpace: 'nowrap',
+              }}
+              title="Toggle British Sign Language (BSL) In-Vision Vector Interpreter (Shortcut: Shift + B)"
+            >
+              <span>🖐️</span>
+              <span>BSL: {bslEnabled ? 'ON' : 'OFF'}</span>
             </button>
 
             {/* Permanent hidden container for automated Google Web Translation Engine */}

@@ -16,6 +16,7 @@
  */
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Point3D,
   BslHandPose,
@@ -28,6 +29,7 @@ import {
   interpolatePoint3D,
 } from '../utils/bslAlphabet';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
+import { subscribeBslSpeech } from '../services/bslGlobalStore';
 
 export interface BslInterpreterOverlayProps {
   activeWord?: string;
@@ -74,19 +76,44 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const lastTimeRef = useRef<number>(performance.now());
   const pipWindowRef = useRef<Window | null>(null);
 
-  // 1. Draggable Window State (Persistent in localStorage)
+  // 1. Draggable Window State (Persistent in localStorage with safe viewport bounds)
   const [windowPos, setWindowPos] = useState<{ x: number; y: number } | null>(() => {
     try {
       const saved = localStorage.getItem('stj_bsl_window_pos');
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed.x === 'number' && typeof parsed.y === 'number') {
+          if (typeof window !== 'undefined') {
+            const maxX = Math.max(0, window.innerWidth - 280);
+            const maxY = Math.max(0, window.innerHeight - 200);
+            if (parsed.x < 0 || parsed.x > maxX || parsed.y < 0 || parsed.y > maxY) {
+              return null; // Reset to safe default dock if off-screen
+            }
+          }
           return parsed;
         }
       }
     } catch (_) {}
     return null;
   });
+
+  // Keep window within viewport bounds when window resizes
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const handleResize = () => {
+      setWindowPos((prev) => {
+        if (!prev) return null;
+        const maxX = Math.max(0, window.innerWidth - 280);
+        const maxY = Math.max(0, window.innerHeight - 200);
+        if (prev.x > maxX || prev.y > maxY || prev.x < 0 || prev.y < 0) {
+          return null; // Return to safe docked corner
+        }
+        return prev;
+      });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const isDraggingWindowRef = useRef(false);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; startX: number; startY: number }>({
@@ -291,6 +318,21 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       }
     }
   }, [activeWord, activeSubtitle, enqueueWord]);
+
+  // Subscribe to universal speech bus for full-portal coordination
+  useEffect(() => {
+    const unsubscribe = subscribeBslSpeech((payload) => {
+      if (payload.word && payload.word.trim()) {
+        enqueueWord(payload.word);
+      } else if (payload.subtitle && payload.subtitle.trim()) {
+        const words = payload.subtitle.trim().split(/\s+/).filter((w) => w.length > 1);
+        if (words.length > 0) {
+          enqueueWord(words[0]);
+        }
+      }
+    });
+    return unsubscribe;
+  }, [enqueueWord]);
 
   // Kinematic render loop (60 FPS Hermite interpolation)
   useEffect(() => {
@@ -560,16 +602,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
   // Render minimized floating pill
   if (isMinimized) {
-    return (
+    const pill = (
       <div
         className={`bsl-interpreter-minimized ${className}`}
         style={{
           position: 'fixed',
-          bottom: windowPos ? undefined : '12px',
-          right: windowPos ? undefined : '12px',
+          bottom: windowPos ? undefined : '16px',
+          right: windowPos ? undefined : '16px',
           left: windowPos ? `${windowPos.x}px` : undefined,
           top: windowPos ? `${windowPos.y}px` : undefined,
-          zIndex: 60,
+          zIndex: 9995,
           background: 'rgba(15, 23, 42, 0.94)',
           backdropFilter: 'blur(10px)',
           border: '1.5px solid rgba(56, 189, 248, 0.4)',
@@ -611,9 +653,10 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         )}
       </div>
     );
+    return typeof document !== 'undefined' && document.body ? createPortal(pill, document.body) : pill;
   }
 
-  return (
+  const overlayWindow = (
     <div
       ref={windowRef}
       className={`bsl-interpreter-dock ${className}`}
@@ -624,7 +667,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         left: windowPos ? `${windowPos.x}px` : undefined,
         top: windowPos ? `${windowPos.y}px` : undefined,
         width: '270px',
-        zIndex: 60,
+        zIndex: 9995,
         background: 'rgba(15, 23, 42, 0.95)',
         backdropFilter: 'blur(14px)',
         border: '1.5px solid rgba(56, 189, 248, 0.4)',
@@ -1218,6 +1261,10 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       </div>
     </div>
   );
+
+  return typeof document !== 'undefined' && document.body
+    ? createPortal(overlayWindow, document.body)
+    : overlayWindow;
 };
 
 export default BslInterpreterOverlay;

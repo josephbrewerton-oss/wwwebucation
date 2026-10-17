@@ -35,12 +35,17 @@ import {
 } from './player';
 import AstChalkboardOverlay from './player/AstChalkboardOverlay';
 import AstInteractiveLabDrawer from './player/AstInteractiveLabDrawer';
-import BslInterpreterOverlay from './BslInterpreterOverlay';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { exportSubjectCartridge, AVAILABLE_CARTRIDGES } from '../utils/exportSubjectCartridge';
 import { getRelatedConcepts } from '../data/player/astConceptGraph';
 import { getCartridge, normalizeCartridgeId, saveCustomCartridge } from '../services/cartridgeStore';
 import { classroomBeacon } from '../services/classroomBeacon';
+import {
+  getBslEnabled,
+  setBslEnabled as setGlobalBslEnabled,
+  subscribeBsl,
+  broadcastBslSpeech,
+} from '../services/bslGlobalStore';
 
 // 1. Single Source of Truth: Import presets compiled from static/player/scenes/
 import { PRESET_OPTIONS, type ScenePresetOption } from '../data/player/generatedScenes';
@@ -235,12 +240,19 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   // British Sign Language (BSL) In-Vision State
   const [localBslEnabled, setLocalBslEnabled] = useState<boolean>(() => {
     if (typeof bslEnabledProp === 'boolean') return bslEnabledProp;
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('stj_bsl_enabled') === 'true';
-    }
-    return false;
+    return getBslEnabled();
   });
   const bslEnabled = typeof bslEnabledProp === 'boolean' ? bslEnabledProp : localBslEnabled;
+
+  useEffect(() => {
+    const unsubscribe = subscribeBsl((enabled) => {
+      if (typeof bslEnabledProp !== 'boolean') {
+        setLocalBslEnabled(enabled);
+      }
+    });
+    return unsubscribe;
+  }, [bslEnabledProp]);
+
   const [bslActiveWord, setBslActiveWord] = useState<string>('');
   const [bslActiveSubtitle, setBslActiveSubtitle] = useState<string>('');
   const [bslIsSpeaking, setBslIsSpeaking] = useState<boolean>(false);
@@ -250,9 +262,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     if (typeof bslEnabledProp !== 'boolean') {
       setLocalBslEnabled(next);
     }
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
-    }
+    setGlobalBslEnabled(next);
     postToPlayer({ type: 'SET_BSL', enabled: next });
     onBslToggle?.(next);
   }, [bslEnabled, bslEnabledProp, onBslToggle, postToPlayer]);
@@ -693,6 +703,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
         case 'SPEECH_BOUNDARY':
           if (data.word) setBslActiveWord(data.word);
           if (data.fullText) setBslActiveSubtitle(data.fullText);
+          broadcastBslSpeech({ word: data.word, subtitle: data.fullText, isSpeaking: true });
           break;
         case 'SPEECH_START':
           setBslIsSpeaking(true);
@@ -700,13 +711,18 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
             setBslActiveSubtitle(data.text);
             const firstW = data.text.trim().split(/\s+/)[0];
             if (firstW) setBslActiveWord(firstW);
+            broadcastBslSpeech({ word: firstW, subtitle: data.text, isSpeaking: true });
           }
           break;
         case 'SPEECH_END':
           setBslIsSpeaking(false);
+          broadcastBslSpeech({ isSpeaking: false });
           break;
         case 'SUBTITLE_UPDATE':
-          if (data.text) setBslActiveSubtitle(data.text);
+          if (data.text) {
+            setBslActiveSubtitle(data.text);
+            broadcastBslSpeech({ subtitle: data.text });
+          }
           break;
         case 'KEYFRAME_REACHED':
           setActiveKeyframe({ title: data.title, rule: data.rule });
@@ -715,7 +731,10 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
             const combined = `${data.title}: ${data.rule || ''}`.trim();
             setBslActiveSubtitle(combined);
             const firstW = data.title.replace(/[^a-zA-Z\s]/g, '').trim().split(/\s+/)[0];
-            if (firstW) setBslActiveWord(firstW);
+            if (firstW) {
+              setBslActiveWord(firstW);
+              broadcastBslSpeech({ word: firstW, subtitle: combined, isSpeaking: false });
+            }
           }
           break;
         case 'HOTSPOT_SELECTED':
@@ -1901,16 +1920,6 @@ const playerSrc = useMemo(() => {
                 allow="fullscreen; microphone"
               />
             </div>
-          )}
-
-          {/* Real-Time Procedural BSL In-Vision Interpreter */}
-          {bslEnabled && (
-            <BslInterpreterOverlay
-              activeWord={bslActiveWord}
-              activeSubtitle={bslActiveSubtitle}
-              isSpeaking={bslIsSpeaking}
-              onClose={() => handleToggleBsl(false)}
-            />
           )}
 
           {/* Live Chalkboard & Annotation Layer */}

@@ -12,14 +12,17 @@ import { hypervisor } from '../engine/hypervisor';
 import { playSuccessChime, playIncorrectTone, triggerHapticSuccess, triggerHapticError } from '../services/soundHaptics';
 import { triggerMasteryConfetti } from '../utils/confetti';
 import { initWebMcpBridge } from '../services/webMcpBridge';
+import { getBslEnabled, setBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
 
 const GlobalPlayerModal = React.lazy(() => import('./GlobalPlayerModal'));
 const GlobalChallengeModal = React.lazy(() => import('./GlobalChallengeModal'));
+const BslInterpreterOverlay = React.lazy(() => import('./BslInterpreterOverlay'));
 
 export default function PersistentAppShell(): React.JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
   const [incomingBroadcast, setIncomingBroadcast] = useState<TeacherBroadcastCommand | null>(null);
+  const [bslActive, setBslActive] = useState<boolean>(() => getBslEnabled());
 
   // Scroll restoration on route transition (batched via requestAnimationFrame to prevent forced synchronous reflow)
   useEffect(() => {
@@ -51,6 +54,30 @@ export default function PersistentAppShell(): React.JSX.Element {
     const storedContrast = localStorage.getItem('app_high_contrast') === 'true';
     document.documentElement.setAttribute('data-font-size', storedFont);
     document.documentElement.setAttribute('data-high-contrast', storedContrast ? 'true' : 'false');
+  }, []);
+
+  // Synchronize global British Sign Language (BSL) overlay state
+  useEffect(() => {
+    const unsubscribe = subscribeBsl((enabled) => {
+      setBslActive(enabled);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Global accessibility shortcut: Shift + B toggles BSL In-Vision Interpreter anywhere
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.shiftKey && (e.key === 'B' || e.key === 'b')) {
+        const activeEl = document.activeElement;
+        if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA' || activeEl.tagName === 'SELECT')) {
+          return;
+        }
+        e.preventDefault();
+        toggleBsl();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
   // Register W3C WebMCP tools on document.modelContext for in-browser AI agents
@@ -223,6 +250,13 @@ export default function PersistentAppShell(): React.JSX.Element {
         <GlobalPlayerModal />
         <GlobalChallengeModal />
       </Suspense>
+
+      {/* Global Procedural British Sign Language (BSL) In-Vision Interpreter */}
+      {bslActive && (
+        <Suspense fallback={null}>
+          <BslInterpreterOverlay onClose={() => setBslEnabled(false)} />
+        </Suspense>
+      )}
 
       {/* 6. Off-Main-Thread Neural WebRTC Guest VM Daemon */}
       <iframe
