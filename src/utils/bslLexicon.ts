@@ -12,15 +12,10 @@
  * - Seamless hybrid fallback to BANZSL 2-handed manual alphabet fingerspelling
  */
 
-import { Point3D, BslHandPose, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import { Point3D, BslHandPose, BslNmf, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
 
+export type { BslNmf };
 export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation';
-
-export interface BslNmf {
-  eyebrows?: 'neutral' | 'raised' | 'furrowed';
-  mouth?: string;
-  headTilt?: 'neutral' | 'nod' | 'tilt-left' | 'tilt-right';
-}
 
 export interface BslSignKeyframe {
   label: string;
@@ -1043,6 +1038,7 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     targetTip: kf.targetTip,
     targetKnuckle: kf.targetKnuckle,
     targetWrist: kf.targetWrist,
+    nmf: kf.nmf,
   };
 }
 

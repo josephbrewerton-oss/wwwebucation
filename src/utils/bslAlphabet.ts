@@ -14,6 +14,12 @@ export interface Point3D {
   z: number;
 }
 
+export interface BslNmf {
+  eyebrows?: 'neutral' | 'raised' | 'furrowed';
+  mouth?: string;
+  headTilt?: 'neutral' | 'nod' | 'tilt-left' | 'tilt-right';
+}
+
 export interface BslHandPose {
   letter: string;
   label: string;
@@ -23,6 +29,7 @@ export interface BslHandPose {
   targetKnuckle: Point3D;
   targetWrist: Point3D;
   activeVowelIndex?: number; // 0=A (Thumb), 1=E (Index), 2=I (Middle), 3=O (Ring), 4=U (Pinky)
+  nmf?: BslNmf;
 }
 
 // Fixed anatomical non-dominant base hand coordinates (The "Paper")

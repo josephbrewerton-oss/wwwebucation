@@ -14,7 +14,8 @@
 
 import { Point3D } from './bslAlphabet';
 import { BslSign, BslSignKeyframe, BslCategory, BslNmf } from './bslLexicon';
-import { parseSExpr, SExprNode } from './sexprParser';
+import { parseSExpr } from './sexprParser';
+import { SExprNode } from '../types/sexpr';
 
 /**
  * Serializes a 3D Point to a compact AST coordinate vector: [x y z]

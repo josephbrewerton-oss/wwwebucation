@@ -20,6 +20,7 @@ import { createPortal } from 'react-dom';
 import {
   Point3D,
   BslHandPose,
+  BslNmf,
   BSL_BASE_HAND,
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
@@ -79,12 +80,13 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   onClose,
   className = '',
 }) => {
-  const [viewAngle, setViewAngle] = useState<'signer' | 'receiver'>('signer');
+  const [viewAngle, setViewAngle] = useState<'signer' | 'receiver'>('receiver');
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
   const [customInput, setCustomInput] = useState<string>('');
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
   const [showPanControls, setShowPanControls] = useState<boolean>(false);
+  const [showFacialFeatures, setShowFacialFeatures] = useState<boolean>(true);
 
   // Active signing state
   const [currentLetter, setCurrentLetter] = useState<string>('');
@@ -414,12 +416,110 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const originX = 120 + orbitOffset.panX;
   const originY = 95 + orbitOffset.panY;
 
+  // Active Non-Manual Feature (NMF) grammatical state
+  const activeNmf = currentPose.nmf;
+  const eyebrowState = activeNmf?.eyebrows || 'neutral';
+  const mouthPattern = activeNmf?.mouth || '';
+  const headTilt = activeNmf?.headTilt || 'neutral';
+
+  // 3D Head Center & Tilt Dynamics
+  const headCenter3D: Point3D = useMemo(() => {
+    let dx = 0;
+    let dy = -72;
+    let dz = -15;
+    if (headTilt === 'nod') {
+      dy += 4 * Math.sin(transitionProgress * Math.PI); // subtle rhythmic nod
+      dz += 2;
+    } else if (headTilt === 'tilt-right') {
+      dx += 4;
+      dy -= 2;
+    } else if (headTilt === 'tilt-left') {
+      dx -= 4;
+      dy -= 2;
+    }
+    return { x: dx, y: dy, z: dz };
+  }, [headTilt, transitionProgress]);
+
   // Upper Torso & Head Reference Frame (Anatomical Loci for BSL Signs)
-  const torsoHead = useMemo(() => project3DToSvg({ x: 0, y: -72, z: -15 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
-  const torsoChin = useMemo(() => project3DToSvg({ x: 0, y: -45, z: -10 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoHead = useMemo(() => project3DToSvg(headCenter3D, cameraConfig, originX, originY), [headCenter3D, cameraConfig, originX, originY]);
+  const torsoChin = useMemo(() => project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }, cameraConfig, originX, originY), [headCenter3D, cameraConfig, originX, originY]);
   const torsoChest = useMemo(() => project3DToSvg({ x: 0, y: 15, z: -15 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
   const torsoLeftShoulder = useMemo(() => project3DToSvg({ x: -95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
   const torsoRightShoulder = useMemo(() => project3DToSvg({ x: 95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+
+  // 3D Projected Facial Feature Landmarks (Eyes, Eyebrows, Nose, Mouth)
+  const facialLandmarks = useMemo(() => {
+    let browInnerDy = 0;
+    let browOuterDy = 0;
+    if (eyebrowState === 'raised') {
+      browInnerDy = -5;
+      browOuterDy = -4;
+    } else if (eyebrowState === 'furrowed') {
+      browInnerDy = 3;
+      browOuterDy = -1;
+    }
+
+    let mouthW = 6;
+    let mouthH = 2;
+    let mouthCurvature = 0;
+    const lowerMouth = mouthPattern.toLowerCase();
+    if (lowerMouth.includes('o') || lowerMouth.includes('u')) {
+      mouthW = 4;
+      mouthH = 5;
+    } else if (
+      lowerMouth.includes('a') ||
+      lowerMouth.includes('e') ||
+      lowerMouth.includes('good') ||
+      lowerMouth.includes('yes') ||
+      lowerMouth.includes('friend') ||
+      lowerMouth.includes('thank')
+    ) {
+      mouthW = 7.5;
+      mouthH = 2.5;
+      mouthCurvature = 3;
+    } else if (lowerMouth.includes('no') || lowerMouth.includes('question')) {
+      mouthW = 6;
+      mouthH = 3.5;
+      mouthCurvature = -1.5;
+    }
+
+    const zFace = headCenter3D.z + 14;
+    const zNose = headCenter3D.z + 18;
+
+    const leftBrowOut = project3DToSvg({ x: headCenter3D.x - 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace }, cameraConfig, originX, originY);
+    const leftBrowIn = project3DToSvg({ x: headCenter3D.x - 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 }, cameraConfig, originX, originY);
+    const rightBrowIn = project3DToSvg({ x: headCenter3D.x + 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 }, cameraConfig, originX, originY);
+    const rightBrowOut = project3DToSvg({ x: headCenter3D.x + 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace }, cameraConfig, originX, originY);
+
+    const leftEye = project3DToSvg({ x: headCenter3D.x - 7, y: headCenter3D.y - 5, z: zFace }, cameraConfig, originX, originY);
+    const rightEye = project3DToSvg({ x: headCenter3D.x + 7, y: headCenter3D.y - 5, z: zFace }, cameraConfig, originX, originY);
+
+    const noseBridge = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y - 3, z: zNose - 2 }, cameraConfig, originX, originY);
+    const noseTip = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 4, z: zNose }, cameraConfig, originX, originY);
+
+    const mouthLeft = project3DToSvg({ x: headCenter3D.x - mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace }, cameraConfig, originX, originY);
+    const mouthCenter = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 14, z: zFace + 2 }, cameraConfig, originX, originY);
+    const mouthRight = project3DToSvg({ x: headCenter3D.x + mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace }, cameraConfig, originX, originY);
+
+    return {
+      leftBrowOut,
+      leftBrowIn,
+      rightBrowIn,
+      rightBrowOut,
+      leftEye,
+      rightEye,
+      noseBridge,
+      noseTip,
+      mouthLeft,
+      mouthCenter,
+      mouthRight,
+      mouthW,
+      mouthH,
+      eyebrowState,
+      mouthPattern,
+      headTilt,
+    };
+  }, [headCenter3D, cameraConfig, originX, originY, eyebrowState, mouthPattern, headTilt]);
 
   // Project non-dominant hand (The Paper) using WASM 3D Kernel
   const baseWrist = project3DToSvg(BSL_BASE_HAND.wrist, cameraConfig, originX, originY);
@@ -927,32 +1027,123 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <text x="60" y="13" fill="#94a3b8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
           <text x="180" y="13" fill="#38bdf8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
 
-          {/* UPPER TORSO & ANATOMICAL LOCI (Subtle Neon Architectural Wireframe) */}
-          <g id="bsl-upper-torso" opacity="0.35">
+          {/* UPPER TORSO & ANATOMICAL LOCI */}
+          <g id="bsl-upper-torso">
             {/* Shoulders & Collar line */}
             <path
               d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y} Q ${torsoChest.x} ${torsoChest.y} ${torsoRightShoulder.x} ${torsoRightShoulder.y}`}
               fill="none"
-              stroke="#64748b"
+              stroke="#475569"
               strokeWidth="2"
               strokeDasharray="3 3"
+              opacity="0.35"
             />
             {/* Chest Center Cross/Anchor */}
-            <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.4" />
+            <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.35" />
             
-            {/* Head Contour & Facial Reference */}
+            {/* Head Silhouette Base */}
             <ellipse
               cx={torsoHead.x}
               cy={torsoHead.y}
-              rx={20 * torsoHead.scale}
-              ry={26 * torsoHead.scale}
-              fill="rgba(30, 41, 59, 0.2)"
-              stroke="#64748b"
-              strokeWidth="1.2"
-              strokeDasharray="2 2"
+              rx={19 * torsoHead.scale}
+              ry={25 * torsoHead.scale}
+              fill="rgba(15, 23, 42, 0.7)"
+              stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#64748b')}
+              strokeWidth={eyebrowState !== 'neutral' ? '1.8' : '1.2'}
             />
+
             {/* Chin Locus Indicator */}
-            <circle cx={torsoChin.x} cy={torsoChin.y} r={2.5 * torsoChin.scale} fill="#94a3b8" opacity="0.5" />
+            <circle cx={torsoChin.x} cy={torsoChin.y} r={2.5 * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
+
+            {/* BSL NON-MANUAL FEATURES (NMF) 3D FACIAL RIG */}
+            {showFacialFeatures && (
+              <g id="bsl-face-nmf" opacity={0.95}>
+                {/* Eyebrows: Dynamic Grammatical NMF (Raised = Yes/No question, Furrowed = Wh-question) */}
+                <line
+                  x1={facialLandmarks.leftBrowOut.x}
+                  y1={facialLandmarks.leftBrowOut.y}
+                  x2={facialLandmarks.leftBrowIn.x}
+                  y2={facialLandmarks.leftBrowIn.y}
+                  stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
+                  strokeWidth={2.4 * torsoHead.scale}
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={facialLandmarks.rightBrowIn.x}
+                  y1={facialLandmarks.rightBrowIn.y}
+                  x2={facialLandmarks.rightBrowOut.x}
+                  y2={facialLandmarks.rightBrowOut.y}
+                  stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
+                  strokeWidth={2.4 * torsoHead.scale}
+                  strokeLinecap="round"
+                />
+
+                {/* Left Eye */}
+                <ellipse
+                  cx={facialLandmarks.leftEye.x}
+                  cy={facialLandmarks.leftEye.y}
+                  rx={2.8 * torsoHead.scale}
+                  ry={1.8 * torsoHead.scale}
+                  fill="#0f172a"
+                  stroke="#38bdf8"
+                  strokeWidth="0.8"
+                />
+                <circle
+                  cx={facialLandmarks.leftEye.x}
+                  cy={facialLandmarks.leftEye.y}
+                  r={1.2 * torsoHead.scale}
+                  fill="#38bdf8"
+                />
+
+                {/* Right Eye */}
+                <ellipse
+                  cx={facialLandmarks.rightEye.x}
+                  cy={facialLandmarks.rightEye.y}
+                  rx={2.8 * torsoHead.scale}
+                  ry={1.8 * torsoHead.scale}
+                  fill="#0f172a"
+                  stroke="#38bdf8"
+                  strokeWidth="0.8"
+                />
+                <circle
+                  cx={facialLandmarks.rightEye.x}
+                  cy={facialLandmarks.rightEye.y}
+                  r={1.2 * torsoHead.scale}
+                  fill="#38bdf8"
+                />
+
+                {/* Nose Bridge */}
+                <line
+                  x1={facialLandmarks.noseBridge.x}
+                  y1={facialLandmarks.noseBridge.y}
+                  x2={facialLandmarks.noseTip.x}
+                  y2={facialLandmarks.noseTip.y}
+                  stroke="#64748b"
+                  strokeWidth="1.2"
+                  strokeLinecap="round"
+                  opacity="0.8"
+                />
+
+                {/* Mouth & Lips (Dynamic Mouthing Aperture & Lip Pattern) */}
+                {mouthPattern ? (
+                  <path
+                    d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                    fill="rgba(56, 189, 248, 0.25)"
+                    stroke="#38bdf8"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                  />
+                ) : (
+                  <path
+                    d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeWidth="1.3"
+                    strokeLinecap="round"
+                  />
+                )}
+              </g>
+            )}
           </g>
 
           {/* Grid lines floor reference */}
@@ -1122,30 +1313,90 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           </div>
         </div>
 
-        {/* Camera Angle Toggle Badge */}
-        <button
-          type="button"
-          onClick={() => setViewAngle((prev) => (prev === 'signer' ? 'receiver' : 'signer'))}
-          style={{
-            position: 'absolute',
-            bottom: '8px',
-            left: '8px',
-            background: 'rgba(15, 23, 42, 0.85)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            borderRadius: '6px',
-            padding: '2px 8px',
-            fontSize: '0.65rem',
-            fontWeight: 700,
-            color: '#38bdf8',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}
-          title="Toggle between Signer POV (first-person) and Receiver POV (conversation partner)"
-        >
-          <span>{viewAngle === 'signer' ? '👤 Signer POV' : '👥 Receiver POV'}</span>
-        </button>
+        {/* BSL Non-Manual Features (NMF) Live Badge */}
+        {showFacialFeatures && (activeNmf?.eyebrows || activeNmf?.mouth || activeNmf?.headTilt) && (
+          <div
+            style={{
+              position: 'absolute',
+              top: '8px',
+              right: '8px',
+              background: 'rgba(15, 23, 42, 0.92)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              borderRadius: '6px',
+              padding: '2px 7px',
+              fontSize: '0.62rem',
+              color: '#38bdf8',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+              pointerEvents: 'none',
+              zIndex: 5,
+            }}
+          >
+            <span>😊 NMF:</span>
+            {activeNmf.eyebrows && activeNmf.eyebrows !== 'neutral' && (
+              <span style={{ color: activeNmf.eyebrows === 'raised' ? '#38bdf8' : '#f59e0b', fontWeight: 800 }}>
+                {activeNmf.eyebrows === 'raised' ? 'Brows Raised' : 'Brows Furrowed'}
+              </span>
+            )}
+            {activeNmf.mouth && (
+              <span style={{ color: '#f1f5f9', fontStyle: 'italic', fontWeight: 600 }}>
+                👄 &ldquo;{activeNmf.mouth}&rdquo;
+              </span>
+            )}
+            {activeNmf.headTilt && activeNmf.headTilt !== 'neutral' && (
+              <span style={{ color: '#a78bfa', fontWeight: 700 }}>
+                {activeNmf.headTilt === 'nod' ? '✓ Nod' : 'Tilt'}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Camera Angle & Face Toggle Bar */}
+        <div style={{ position: 'absolute', bottom: '8px', left: '8px', display: 'flex', gap: '4px' }}>
+          <button
+            type="button"
+            onClick={() => setViewAngle((prev) => (prev === 'signer' ? 'receiver' : 'signer'))}
+            style={{
+              background: 'rgba(15, 23, 42, 0.85)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              borderRadius: '6px',
+              padding: '2px 7px',
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              color: '#38bdf8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
+            title="Toggle between Signer POV (first-person) and Receiver POV (conversation partner)"
+          >
+            <span>{viewAngle === 'signer' ? '👤 Signer' : '👥 Receiver'}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowFacialFeatures((prev) => !prev)}
+            style={{
+              background: showFacialFeatures ? 'rgba(56, 189, 248, 0.18)' : 'rgba(15, 23, 42, 0.85)',
+              border: `1px solid ${showFacialFeatures ? '#38bdf8' : 'rgba(148, 163, 184, 0.3)'}`,
+              borderRadius: '6px',
+              padding: '2px 7px',
+              fontSize: '0.65rem',
+              fontWeight: 700,
+              color: showFacialFeatures ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '3px',
+            }}
+            title="Toggle 3D Non-Manual Facial Features (Eyebrows, Eyes, Lip Patterns, Head Tilts)"
+          >
+            <span>{showFacialFeatures ? '😊 Face: ON' : '😶 Face: OFF'}</span>
+          </button>
+        </div>
 
         {/* Orbit Hint badge */}
         <div
