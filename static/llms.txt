@@ -36,9 +36,10 @@
 - **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
 - **Humanitarian Air-Gap Bundling**: Single-file HTML offline bundles (`exportAirgapHtmlBundle.ts`) enabling full academic curriculum delivery on flash drives in off-grid classrooms with zero internet.
 
-## Production AST Vector Simulations (28 Self-Mounting Curriculum Cartridges)
+## Production AST Vector Simulations (29 Self-Mounting Curriculum Cartridges)
 - [Sacred Altar Anatomy](/curriculum/catholic-life/altar-anatomy) - Catholic Life: Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
 - [Sacred Church Tour](/curriculum/catholic-life/church-tour) - Catholic Life: 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
+- [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) - Catholic Life: The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
 - [Holy Oils & Sacred Ambry](/curriculum/catholic-life/holy-oils) - Catholic Life: Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
 - [The Holy Rosary 3D Mysteries](/curriculum/catholic-life/rosary-mysteries) - Catholic Life: Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
 - [Calculus Curves](/curriculum/maths/calculus/tangent-slopes) - GCSE/A-Level Calculus: Tangent Slopes dy/dx, Stationary Turning Points & Riemann Integrals with GeoGebra/Desmos formula evaluation.

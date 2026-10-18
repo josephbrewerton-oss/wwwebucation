@@ -14,7 +14,10 @@ Allow: /cartridges
 Allow: /curriculum/
 Allow: /c/
 Allow: /phonics
+Allow: /early-phonics
 Allow: /languages
+Allow: /mfl
+Allow: /polyglot
 Allow: /shakespeare
 Allow: /theatre
 Allow: /globe
@@ -141,7 +144,30 @@ Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
 
+User-agent: anthropic-ai
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /player/
+
+User-agent: DeepSeekBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+
+User-agent: MistralAI
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+
 # Sitemap & Machine Briefings
 Sitemap: /sitemap.xml
+Sitemap: /sitemap.ast
 
 
