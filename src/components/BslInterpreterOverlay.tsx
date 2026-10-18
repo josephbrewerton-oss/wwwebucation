@@ -21,7 +21,9 @@ import {
   Point3D,
   BslHandPose,
   BslNmf,
+  BslBaseHandMode,
   BSL_BASE_HAND,
+  BSL_BASE_REST_HAND,
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
   DOMINANT_REST_WRIST,
@@ -97,6 +99,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [windowOpacity, setWindowOpacity] = useState<number>(1.0);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
+  const [signMode, setSignMode] = useState<'concept' | 'fingerspell'>('concept');
   const [customInput, setCustomInput] = useState<string>('');
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
   const [showPanControls, setShowPanControls] = useState<boolean>(false);
@@ -396,45 +399,45 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [viewAngle, orbitOffset, cameraMode]);
 
-  // Enqueue new word for fingerspelling or whole-word BSL sign
-  const enqueueWord = useCallback((word: string) => {
-    if (!word || typeof word !== 'string') return;
-    const cleanWord = word.trim().toUpperCase();
-    if (!cleanWord) return;
+  // Enqueue new word or phrase for conceptual BSL signing or fingerspelling
+  const enqueueText = useCallback((text: string, overrideMode?: 'concept' | 'fingerspell') => {
+    if (!text || typeof text !== 'string') return;
+    const clean = text.trim();
+    if (!clean) return;
 
-    setActiveWordDisplay(cleanWord);
-    const poses = decomposeTextToBslStreamWithLexicon(cleanWord);
+    setActiveWordDisplay(clean.toUpperCase());
+    const effectiveMode = overrideMode || signMode;
+    const poses = decomposeTextToBslStreamWithLexicon(clean, { mode: effectiveMode });
     if (poses.length > 0) {
       queueRef.current = [...poses, REST_POSE];
     }
-  }, []);
+  }, [signMode]);
+
+  const enqueueWord = useCallback((word: string) => {
+    enqueueText(word);
+  }, [enqueueText]);
 
   // React to parent speech boundary or subtitle changes
   useEffect(() => {
-    if (activeWord && activeWord.trim()) {
-      enqueueWord(activeWord);
-    } else if (activeSubtitle && activeSubtitle.trim()) {
-      const words = activeSubtitle.trim().split(/\s+/).filter((w) => w.length > 1);
-      if (words.length > 0) {
-        enqueueWord(words[0]);
-      }
+    if (activeSubtitle && activeSubtitle.trim()) {
+      enqueueText(activeSubtitle);
+    } else if (activeWord && activeWord.trim()) {
+      enqueueText(activeWord);
     }
-  }, [activeWord, activeSubtitle, enqueueWord]);
+  }, [activeWord, activeSubtitle, enqueueText]);
 
   // Subscribe to universal speech bus for full-portal coordination
   useEffect(() => {
     const unsubscribe = subscribeBslSpeech((payload) => {
-      if (payload.word && payload.word.trim()) {
-        enqueueWord(payload.word);
-      } else if (payload.subtitle && payload.subtitle.trim()) {
-        const words = payload.subtitle.trim().split(/\s+/).filter((w) => w.length > 1);
-        if (words.length > 0) {
-          enqueueWord(words[0]);
-        }
+      // Prioritize full subtitle sentences for natural BSL topic-comment grammar & concept signs
+      if (payload.subtitle && payload.subtitle.trim()) {
+        enqueueText(payload.subtitle);
+      } else if (payload.word && payload.word.trim()) {
+        enqueueText(payload.word);
       }
     });
     return unsubscribe;
-  }, [enqueueWord]);
+  }, [enqueueText]);
 
   // Kinematic render loop (60 FPS Hermite interpolation)
   useEffect(() => {
@@ -610,17 +613,6 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       headTilt,
     };
   }, [headCenter3D, projPoint, eyebrowState, mouthPattern, headTilt, cameraMode]);
-
-  // Project non-dominant hand (The Paper) using WASM 3D Kernel
-  const baseWrist = projPoint(BSL_BASE_HAND.wrist);
-  const basePalm = projPoint(BSL_BASE_HAND.palm);
-  const baseFingertips = useMemo(() => {
-    return BSL_BASE_HAND.fingertips.map((tip, idx) => ({
-      ...tip,
-      idx,
-      proj: projPoint(tip),
-    }));
-  }, [projPoint]);
 
   // Project dominant hand (The Pen) complete anatomical landmarks with dynamic shape solving
   const domHand3D = useMemo(() => {
@@ -893,6 +885,116 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const domThumbKnuckle = projPoint(domHand3D.thumbKnuckle);
   const domThumbTip = projPoint(domHand3D.thumbTip);
   const domForearm = projPoint(domHand3D.forearm);
+
+  // Project non-dominant hand (The Base / Left Hand) dynamically adapting to BSL linguistic mode
+  const baseHand3D = useMemo(() => {
+    const mode: BslBaseHandMode = currentPose.baseHandMode || (currentPose.isWholeWordSign ? 'rest' : 'vowel-board');
+    const override = currentPose.baseHandOverride;
+
+    if (mode === 'mirror') {
+      // Symmetrical 2-Handed Signs (PRAY, CHURCH, BIBLE, FORCE, LOVE, PEACE, EARTH, EQUAL, etc.)
+      // Left hand mirrors the dominant hand across the sagittal plane (X -> -X)
+      return {
+        mode: 'mirror' as const,
+        wrist: { x: -domHand3D.wrist.x, y: domHand3D.wrist.y, z: domHand3D.wrist.z },
+        knuckleIndex: { x: -domHand3D.knuckleIndex.x, y: domHand3D.knuckleIndex.y, z: domHand3D.knuckleIndex.z },
+        tipIndex: { x: -domHand3D.tipIndex.x, y: domHand3D.tipIndex.y, z: domHand3D.tipIndex.z },
+        palm: { x: -domHand3D.palm.x, y: domHand3D.palm.y, z: domHand3D.palm.z },
+        kMid: { x: -domHand3D.kMid.x, y: domHand3D.kMid.y, z: domHand3D.kMid.z },
+        kRing: { x: -domHand3D.kRing.x, y: domHand3D.kRing.y, z: domHand3D.kRing.z },
+        kPinky: { x: -domHand3D.kPinky.x, y: domHand3D.kPinky.y, z: domHand3D.kPinky.z },
+        tipMid: { x: -domHand3D.tipMid.x, y: domHand3D.tipMid.y, z: domHand3D.tipMid.z },
+        tipRing: { x: -domHand3D.tipRing.x, y: domHand3D.tipRing.y, z: domHand3D.tipRing.z },
+        tipPinky: { x: -domHand3D.tipPinky.x, y: domHand3D.tipPinky.y, z: domHand3D.tipPinky.z },
+        thumbBase: { x: -domHand3D.thumbBase.x, y: domHand3D.thumbBase.y, z: domHand3D.thumbBase.z },
+        thumbKnuckle: { x: -domHand3D.thumbKnuckle.x, y: domHand3D.thumbKnuckle.y, z: domHand3D.thumbKnuckle.z },
+        thumbTip: { x: -domHand3D.thumbTip.x, y: domHand3D.thumbTip.y, z: domHand3D.thumbTip.z },
+        forearm: { x: -domHand3D.forearm.x, y: domHand3D.forearm.y, z: domHand3D.forearm.z },
+        shape: domHand3D.shape,
+      };
+    }
+
+    if (mode === 'rest') {
+      // One-Handed Signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY)
+      // Left hand rests comfortably down at the lower waist/torso
+      const rw = BSL_BASE_REST_HAND.wrist;
+      const rp = BSL_BASE_REST_HAND.palm;
+      return {
+        mode: 'rest' as const,
+        wrist: rw,
+        knuckleIndex: { x: rp.x + 8, y: rp.y - 12, z: rp.z + 5 },
+        tipIndex: BSL_BASE_REST_HAND.fingertips[1],
+        palm: rp,
+        kMid: { x: rp.x + 18, y: rp.y - 10, z: rp.z + 5 },
+        kRing: { x: rp.x + 28, y: rp.y - 8, z: rp.z + 5 },
+        kPinky: { x: rp.x + 36, y: rp.y - 6, z: rp.z + 4 },
+        tipMid: BSL_BASE_REST_HAND.fingertips[2],
+        tipRing: BSL_BASE_REST_HAND.fingertips[3],
+        tipPinky: BSL_BASE_REST_HAND.fingertips[4],
+        thumbBase: { x: rw.x * 0.5 + rp.x * 0.5, y: rw.y * 0.5 + rp.y * 0.5, z: rw.z },
+        thumbKnuckle: { x: rp.x - 8, y: rp.y - 5, z: rp.z + 8 },
+        thumbTip: BSL_BASE_REST_HAND.fingertips[0],
+        forearm: { x: rw.x - 25, y: rw.y + 35, z: rw.z - 15 },
+        shape: 'flat' as const,
+      };
+    }
+
+    // Mode 'vowel-board' or 'override'
+    const sx = override?.shiftX || 0;
+    const sy = override?.shiftY || 0;
+    const sz = override?.shiftZ || 0;
+
+    const bw: Point3D = override?.wrist || { x: BSL_BASE_HAND.wrist.x + sx, y: BSL_BASE_HAND.wrist.y + sy, z: BSL_BASE_HAND.wrist.z + sz };
+    const bp: Point3D = override?.palm || { x: BSL_BASE_HAND.palm.x + sx, y: BSL_BASE_HAND.palm.y + sy, z: BSL_BASE_HAND.palm.z + sz };
+
+    return {
+      mode: mode,
+      wrist: bw,
+      knuckleIndex: { x: bp.x + 5, y: bp.y - 15, z: bp.z + 4 },
+      tipIndex: { x: BSL_BASE_HAND.fingertips[1].x + sx, y: BSL_BASE_HAND.fingertips[1].y + sy, z: BSL_BASE_HAND.fingertips[1].z + sz },
+      palm: bp,
+      kMid: { x: bp.x + 15, y: bp.y - 18, z: bp.z + 4 },
+      kRing: { x: bp.x + 25, y: bp.y - 15, z: bp.z + 4 },
+      kPinky: { x: bp.x + 34, y: bp.y - 10, z: bp.z + 4 },
+      tipMid: { x: BSL_BASE_HAND.fingertips[2].x + sx, y: BSL_BASE_HAND.fingertips[2].y + sy, z: BSL_BASE_HAND.fingertips[2].z + sz },
+      tipRing: { x: BSL_BASE_HAND.fingertips[3].x + sx, y: BSL_BASE_HAND.fingertips[3].y + sy, z: BSL_BASE_HAND.fingertips[3].z + sz },
+      tipPinky: { x: BSL_BASE_HAND.fingertips[4].x + sx, y: BSL_BASE_HAND.fingertips[4].y + sy, z: BSL_BASE_HAND.fingertips[4].z + sz },
+      thumbBase: { x: bw.x * 0.6 + bp.x * 0.4, y: bw.y * 0.6 + bp.y * 0.4, z: bw.z },
+      thumbKnuckle: { x: bp.x - 15, y: bp.y + 5, z: bp.z + 6 },
+      thumbTip: { x: BSL_BASE_HAND.fingertips[0].x + sx, y: BSL_BASE_HAND.fingertips[0].y + sy, z: BSL_BASE_HAND.fingertips[0].z + sz },
+      forearm: { x: bw.x - 30, y: bw.y + 35, z: bw.z - 15 },
+      shape: 'flat' as const,
+    };
+  }, [currentPose.baseHandMode, currentPose.baseHandOverride, currentPose.isWholeWordSign, domHand3D]);
+
+  // Project all non-dominant base hand landmarks to 2D SVG stage
+  const baseWrist = projPoint(baseHand3D.wrist);
+  const baseKnuckle = projPoint(baseHand3D.knuckleIndex);
+  const baseTip = projPoint(baseHand3D.tipIndex);
+  const basePalm = projPoint(baseHand3D.palm);
+  const baseKMid = projPoint(baseHand3D.kMid);
+  const baseKRing = projPoint(baseHand3D.kRing);
+  const baseKPinky = projPoint(baseHand3D.kPinky);
+  const baseTipMid = projPoint(baseHand3D.tipMid);
+  const baseTipRing = projPoint(baseHand3D.tipRing);
+  const baseTipPinky = projPoint(baseHand3D.tipPinky);
+  const baseThumbBase = projPoint(baseHand3D.thumbBase);
+  const baseThumbKnuckle = projPoint(baseHand3D.thumbKnuckle);
+  const baseThumbTip = projPoint(baseHand3D.thumbTip);
+  const baseForearm = projPoint(baseHand3D.forearm);
+
+  const baseFingertips = useMemo(() => {
+    return [
+      { id: 'A', name: 'Thumb', proj: baseThumbTip, idx: 0 },
+      { id: 'E', name: 'Index', proj: baseTip, idx: 1 },
+      { id: 'I', name: 'Middle', proj: baseTipMid, idx: 2 },
+      { id: 'O', name: 'Ring', proj: baseTipRing, idx: 3 },
+      { id: 'U', name: 'Pinky', proj: baseTipPinky, idx: 4 },
+    ];
+  }, [baseThumbTip, baseTip, baseTipMid, baseTipRing, baseTipPinky]);
+
+  const isDomExtended = domHand3D.shape === 'flat' || domHand3D.shape === 'spread' || domHand3D.shape === 'claw';
+  const isLeftExtended = baseHand3D.shape === 'flat' || baseHand3D.shape === 'spread' || baseHand3D.shape === 'claw';
 
   // W3C Document Picture-in-Picture Undocking
   const handleTogglePip = async () => {
@@ -1292,28 +1394,45 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         }}
       >
         {/* Left: Active Letter / Sign Badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <span
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div
             style={{
-              fontSize: currentLetter.length > 2 ? '0.85rem' : '1.15rem',
-              fontWeight: 900,
-              color: currentLetter.includes('[') ? '#fbbf24' : currentPose.isVowel ? '#f59e0b' : '#38bdf8',
+              padding: '2px 8px',
+              borderRadius: '5px',
+              background: currentPose.isWholeWordSign ? 'rgba(245, 158, 11, 0.2)' : 'rgba(56, 189, 248, 0.2)',
+              border: `1px solid ${currentPose.isWholeWordSign ? '#f59e0b' : '#38bdf8'}`,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
             }}
           >
-            {currentLetter || '—'}
-          </span>
+            <span style={{ fontSize: '0.85rem' }}>
+              {currentPose.isWholeWordSign ? '✨' : '🔤'}
+            </span>
+            <span
+              style={{
+                fontSize: '0.85rem',
+                fontWeight: 900,
+                color: currentPose.isWholeWordSign ? '#fbbf24' : '#38bdf8',
+                letterSpacing: '0.3px',
+              }}
+            >
+              {currentPose.isWholeWordSign
+                ? currentLetter.replace(/\s*\[.*\]/, '')
+                : currentLetter || '—'}
+            </span>
+          </div>
+
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
               <span
                 style={{
-                  fontSize: '0.58rem',
-                  color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.4px',
+                  fontSize: '0.6rem',
+                  color: currentPose.isWholeWordSign ? '#fbbf24' : '#94a3b8',
                   fontWeight: 700,
                 }}
               >
-                {currentLetter.includes('[') ? '✨ BSL Sign' : currentPose.label || 'Ready'}
+                {currentPose.isWholeWordSign ? 'BSL Concept Sign' : 'BANZSL Fingerspelling'}
               </span>
               {currentPose.shape && (
                 <span
@@ -1332,10 +1451,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   :{currentPose.shape}
                 </span>
               )}
+              {currentPose.isWholeWordSign && (
+                <span
+                  style={{
+                    fontSize: '0.55rem',
+                    fontWeight: 700,
+                    color: '#38bdf8',
+                    background: 'rgba(56, 189, 248, 0.15)',
+                    border: '1px solid rgba(56, 189, 248, 0.3)',
+                    padding: '0px 4px',
+                    borderRadius: '3px',
+                  }}
+                  title={`Base Hand: ${baseHand3D.mode}`}
+                >
+                  {baseHand3D.mode === 'mirror' ? '2-Handed' : baseHand3D.mode === 'rest' ? '1-Hand' : 'Base'}
+                </span>
+              )}
             </div>
             {activeWordDisplay && (
-              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#f8fafc' }}>
-                {activeWordDisplay}
+              <span style={{ fontSize: '0.64rem', fontWeight: 700, color: '#cbd5e1' }}>
+                &ldquo;{activeWordDisplay}&rdquo;
               </span>
             )}
           </div>
@@ -1430,12 +1565,21 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </radialGradient>
           </defs>
 
-          {/* Hand Guides: positioned at sides to NEVER obstruct the head */}
+          {/* Stage Status Indicator: Shows Concept Sign or Fingerspelling mode */}
           {cameraMode !== 'face' && (
-            <>
-              <text x="45" y="14" fill="#64748b" fontSize="6.5" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ BASE (LEFT)</text>
-              <text x="195" y="14" fill="#0284c7" fontSize="6.5" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 SIGNER (RIGHT)</text>
-            </>
+            <text
+              x="120"
+              y="13"
+              fill={currentPose.isWholeWordSign ? '#f59e0b' : '#38bdf8'}
+              fontSize="6"
+              fontWeight="800"
+              textAnchor="middle"
+              letterSpacing="0.4"
+            >
+              {currentPose.isWholeWordSign
+                ? `✨ BSL SIGN • ${baseHand3D.mode === 'mirror' ? '2-HANDED MIRROR' : baseHand3D.mode === 'rest' ? '1-HANDED GESTURE' : 'CONTACT BASE'}`
+                : '🔤 BANZSL MANUAL ALPHABET FINGERSPELLING'}
+            </text>
           )}
 
           {/* UPPER TORSO & ANATOMICAL LOCI */}
@@ -1561,62 +1705,92 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <line x1="15" y1="150" x2="225" y2="150" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
           <line x1="120" y1="130" x2="120" y2="160" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
 
-          {/* NON-DOMINANT HAND (The Paper) */}
-          <g id="bsl-base-hand" opacity="0.95">
-            <polygon
-              points={`${baseWrist.x},${baseWrist.y} ${baseFingertips[0].proj.x},${baseFingertips[0].proj.y} ${baseFingertips[1].proj.x},${baseFingertips[1].proj.y} ${baseFingertips[4].proj.x},${baseFingertips[4].proj.y}`}
-              fill="rgba(56, 189, 248, 0.08)"
-              stroke="rgba(56, 189, 248, 0.4)"
-              strokeWidth="1.2"
+          {/* NON-DOMINANT HAND (The Base / Left Hand) */}
+          <g id="bsl-base-hand" opacity={0.95}>
+            {/* 1. Forearm connecting to wrist */}
+            <line
+              x1={baseForearm.x}
+              y1={baseForearm.y}
+              x2={baseWrist.x}
+              y2={baseWrist.y}
+              stroke="#475569"
+              strokeWidth="4"
+              strokeLinecap="round"
+              opacity={baseHand3D.mode === 'rest' ? 0.35 : 0.55}
             />
 
-            {baseFingertips.map((tip) => {
-              const isSelectedVowel = currentPose.activeVowelIndex === tip.idx;
-              return (
-                <g key={`base-finger-${tip.id}`}>
-                  <line
-                    x1={basePalm.x}
-                    y1={basePalm.y}
-                    x2={tip.proj.x}
-                    y2={tip.proj.y}
-                    stroke={isSelectedVowel ? '#f59e0b' : '#38bdf8'}
-                    strokeWidth={isSelectedVowel ? 3 : 2}
-                    strokeLinecap="round"
-                    opacity={isSelectedVowel ? 1 : 0.75}
-                  />
-                  <circle
-                    cx={tip.proj.x}
-                    cy={tip.proj.y}
-                    r={isSelectedVowel ? 5.5 * tip.proj.scale : 4 * tip.proj.scale}
-                    fill={isSelectedVowel ? '#f59e0b' : '#0ea5e9'}
-                    stroke="#ffffff"
-                    strokeWidth={isSelectedVowel ? 1.5 : 1}
-                  />
-                  {isSelectedVowel && (
-                    <circle
-                      cx={tip.proj.x}
-                      cy={tip.proj.y}
-                      r={11 * tip.proj.scale}
-                      fill="url(#bslVowelGlow)"
-                      opacity="0.8"
-                    />
-                  )}
-                  <text
-                    x={tip.proj.x}
-                    y={tip.proj.y - 7}
-                    fill={isSelectedVowel ? '#f59e0b' : '#94a3b8'}
-                    fontSize="7"
-                    fontWeight="800"
-                    textAnchor="middle"
-                  >
-                    {tip.name || tip.id}
-                  </text>
-                </g>
-              );
-            })}
+            {/* 2. Palm body polygon */}
+            <polygon
+              points={`${baseWrist.x},${baseWrist.y} ${baseThumbBase.x},${baseThumbBase.y} ${baseKnuckle.x},${baseKnuckle.y} ${baseKMid.x},${baseKMid.y} ${baseKRing.x},${baseKRing.y} ${baseKPinky.x},${baseKPinky.y}`}
+              fill={baseHand3D.mode === 'rest' ? 'rgba(71, 85, 105, 0.12)' : 'rgba(56, 189, 248, 0.12)'}
+              stroke={baseHand3D.mode === 'rest' ? 'rgba(100, 116, 139, 0.3)' : 'rgba(56, 189, 248, 0.45)'}
+              strokeWidth="1.2"
+              strokeLinejoin="round"
+            />
 
-            <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
-            <circle cx={basePalm.x} cy={basePalm.y} r={4 * basePalm.scale} fill="#38bdf8" opacity="0.6" />
+            {/* 3. Wrist and Palm center */}
+            <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
+            <circle cx={basePalm.x} cy={basePalm.y} r={4 * basePalm.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} opacity={0.5} />
+
+            {/* 4. Middle Finger */}
+            <line x1={basePalm.x} y1={basePalm.y} x2={baseKMid.x} y2={baseKMid.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.5} strokeLinecap="round" />
+            <line x1={baseKMid.x} y1={baseKMid.y} x2={baseTipMid.x} y2={baseTipMid.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.85} />
+            <circle cx={baseKMid.x} cy={baseKMid.y} r={3.5 * baseKMid.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 4.8 : 3) * baseTipMid.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+            {/* 5. Ring Finger */}
+            <line x1={basePalm.x} y1={basePalm.y} x2={baseKRing.x} y2={baseKRing.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" />
+            <line x1={baseKRing.x} y1={baseKRing.y} x2={baseTipRing.x} y2={baseTipRing.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.8} />
+            <circle cx={baseKRing.x} cy={baseKRing.y} r={3.2 * baseKRing.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 4.5 : 2.8) * baseTipRing.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+            {/* 6. Pinky Finger */}
+            <line x1={basePalm.x} y1={basePalm.y} x2={baseKPinky.x} y2={baseKPinky.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 2.8 : 2} strokeLinecap="round" />
+            <line x1={baseKPinky.x} y1={baseKPinky.y} x2={baseTipPinky.x} y2={baseTipPinky.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.75} />
+            <circle cx={baseKPinky.x} cy={baseKPinky.y} r={3 * baseKPinky.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 4 : 2.5) * baseTipPinky.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+            {/* 7. Thumb */}
+            <line x1={baseThumbBase.x} y1={baseThumbBase.y} x2={baseThumbKnuckle.x} y2={baseThumbKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="2.8" strokeLinecap="round" />
+            <line x1={baseThumbKnuckle.x} y1={baseThumbKnuckle.y} x2={baseThumbTip.x} y2={baseThumbTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#0ea5e9'} strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx={baseThumbKnuckle.x} cy={baseThumbKnuckle.y} r={3.8 * baseThumbKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+            <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.5 * baseThumbTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="0.8" />
+
+            {/* 8. Index Finger */}
+            <line x1={basePalm.x} y1={basePalm.y} x2={baseKnuckle.x} y2={baseKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="3.2" strokeLinecap="round" />
+            <line x1={baseKnuckle.x} y1={baseKnuckle.y} x2={baseTip.x} y2={baseTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#38bdf8'} strokeWidth="3" strokeLinecap="round" />
+            <circle cx={baseKnuckle.x} cy={baseKnuckle.y} r={4.5 * baseKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
+            <circle cx={baseTip.x} cy={baseTip.y} r={5.2 * baseTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="1.5" />
+
+            {/* Vowel Labels: ONLY rendered during BANZSL fingerspelling, NEVER during whole-word signs! */}
+            {!currentPose.isWholeWordSign && (
+              baseFingertips.map((tip) => {
+                const isSelectedVowel = currentPose.activeVowelIndex === tip.idx;
+                return (
+                  <g key={`base-vowel-${tip.id}`}>
+                    {isSelectedVowel && (
+                      <circle
+                        cx={tip.proj.x}
+                        cy={tip.proj.y}
+                        r={11 * tip.proj.scale}
+                        fill="url(#bslVowelGlow)"
+                        opacity="0.8"
+                      />
+                    )}
+                    <text
+                      x={tip.proj.x}
+                      y={tip.proj.y - 7}
+                      fill={isSelectedVowel ? '#f59e0b' : '#94a3b8'}
+                      fontSize="7"
+                      fontWeight="800"
+                      textAnchor="middle"
+                    >
+                      {tip.name || tip.id}
+                    </text>
+                  </g>
+                );
+              })
+            )}
           </g>
 
           {/* DOMINANT HAND (The Pen - Full Anatomical Right Hand) */}
@@ -1646,36 +1820,36 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             <circle cx={domWrist.x} cy={domWrist.y} r={5 * domWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
             <circle cx={domPalm.x} cy={domPalm.y} r={4 * domPalm.scale} fill="#38bdf8" opacity="0.5" />
 
-            {/* 4. Curled Middle Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" />
-            <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke="#0ea5e9" strokeWidth="2.2" strokeLinecap="round" opacity="0.85" />
+            {/* 4. Middle Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.5} strokeLinecap="round" />
+            <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.85} />
             <circle cx={domKMid.x} cy={domKMid.y} r={3.5 * domKMid.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipMid.x} cy={domTipMid.y} r={3 * domTipMid.scale} fill="#38bdf8" />
+            <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 4.8 : 3) * domTipMid.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
 
-            {/* 5. Curled Ring Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="#38bdf8" strokeWidth="2.2" strokeLinecap="round" />
-            <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke="#0ea5e9" strokeWidth="2" strokeLinecap="round" opacity="0.8" />
+            {/* 5. Ring Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" />
+            <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.8} />
             <circle cx={domKRing.x} cy={domKRing.y} r={3.2 * domKRing.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipRing.x} cy={domTipRing.y} r={2.8 * domTipRing.scale} fill="#38bdf8" />
+            <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 4.5 : 2.8) * domTipRing.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
 
-            {/* 6. Curled Pinky Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
-            <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke="#0ea5e9" strokeWidth="1.8" strokeLinecap="round" opacity="0.75" />
+            {/* 6. Pinky Finger */}
+            <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 2.8 : 2} strokeLinecap="round" />
+            <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.75} />
             <circle cx={domKPinky.x} cy={domKPinky.y} r={3 * domKPinky.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipPinky.x} cy={domTipPinky.y} r={2.5 * domTipPinky.scale} fill="#38bdf8" />
+            <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 4 : 2.5) * domTipPinky.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
 
-            {/* 7. Thumb (folded/cupped) */}
+            {/* 7. Thumb */}
             <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
             <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
             <circle cx={domThumbKnuckle.x} cy={domThumbKnuckle.y} r={3.8 * domThumbKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
             <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
 
-            {/* 8. Active Extended Pointer (Index Finger) */}
+            {/* 8. Active Pointer / Index Finger */}
             <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="#38bdf8" strokeWidth="3.2" strokeLinecap="round" />
             <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
             <circle cx={domKnuckle.x} cy={domKnuckle.y} r={4.5 * domKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
             <circle cx={domTip.x} cy={domTip.y} r={5.2 * domTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
-            {currentLetter && (
+            {(!currentPose.isWholeWordSign || domHand3D.shape === 'point') && (
               <circle
                 cx={domTip.x}
                 cy={domTip.y}
@@ -1919,9 +2093,27 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           fontSize: '0.68rem',
         }}
       >
-        {/* Speed pills */}
+        {/* Speed pills and Mode Toggle */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <span style={{ color: '#94a3b8', fontSize: '0.65rem' }}>Speed:</span>
+          <button
+            type="button"
+            onClick={() => setSignMode((m) => (m === 'concept' ? 'fingerspell' : 'concept'))}
+            style={{
+              background: signMode === 'concept' ? 'rgba(245, 158, 11, 0.22)' : 'rgba(56, 189, 248, 0.22)',
+              border: `1px solid ${signMode === 'concept' ? '#f59e0b' : '#38bdf8'}`,
+              borderRadius: '4px',
+              color: signMode === 'concept' ? '#fbbf24' : '#38bdf8',
+              padding: '1px 6px',
+              fontSize: '0.62rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+            }}
+            title={signMode === 'concept' ? 'Active: BSL Concept Signs (uses whole-word signs). Click to switch to manual alphabet.' : 'Active: BANZSL Fingerspelling (spells letter-by-letter). Click to switch to concept signs.'}
+          >
+            {signMode === 'concept' ? '🤟 Concept Signs' : '🔤 Fingerspelling'}
+          </button>
+
+          <span style={{ color: '#94a3b8', fontSize: '0.62rem', marginLeft: '2px' }}>Speed:</span>
           {[1.0, 1.5, 2.0].map((s) => (
             <button
               key={s}
@@ -1932,8 +2124,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 border: `1px solid ${speedMultiplier === s ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
                 borderRadius: '4px',
                 color: speedMultiplier === s ? '#ffffff' : '#94a3b8',
-                padding: '1px 5px',
-                fontSize: '0.62rem',
+                padding: '1px 4px',
+                fontSize: '0.6rem',
                 fontWeight: 700,
                 cursor: 'pointer',
               }}
@@ -1949,10 +2141,10 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             type="text"
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
-            placeholder="Try word..."
-            maxLength={20}
+            placeholder="Sign word/phrase..."
+            maxLength={60}
             style={{
-              width: '74px',
+              width: '95px',
               padding: '2px 5px',
               fontSize: '0.65rem',
               borderRadius: '4px',
@@ -1964,7 +2156,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <button
             type="submit"
             style={{
-              padding: '2px 6px',
+              padding: '2px 7px',
               fontSize: '0.65rem',
               borderRadius: '4px',
               background: '#0284c7',

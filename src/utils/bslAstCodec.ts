@@ -12,7 +12,7 @@
  * - Zero external dependencies, pure O(n) streaming parsing and serialization.
  */
 
-import { Point3D, BslHandShape } from './bslAlphabet';
+import { Point3D, BslHandShape, BslBaseHandMode } from './bslAlphabet';
 import { BslSign, BslSignKeyframe, BslCategory, BslNmf } from './bslLexicon';
 import { parseSExpr } from './sexprParser';
 import { SExprNode } from '../types/sexpr';
@@ -55,6 +55,7 @@ export function serializeSignToAst(sign: BslSign): string {
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
     const shapeStr = kf.shape ? ` :shape :${kf.shape}` : '';
+    const baseModeStr = kf.baseHandMode ? ` :base-mode :${kf.baseHandMode}` : '';
     const nmfStr = kf.nmf
       ? ` :nmf (nmf :mouth "${kf.nmf.mouth || ''}" :brows "${kf.nmf.eyebrows || 'neutral'}"${kf.nmf.headTilt ? ` :tilt "${kf.nmf.headTilt}"` : ''})`
       : '';
@@ -66,7 +67,7 @@ export function serializeSignToAst(sign: BslSign): string {
     lines.push(
       `    (kf :idx ${i + 1} :label "${kf.label.replace(/"/g, '\\"')}" :rule "${kf.rule.replace(/"/g, '\\"')}"` +
       ` :tip ${point3DToAstVector(kf.targetTip)} :knuckle ${point3DToAstVector(kf.targetKnuckle)} :wrist ${point3DToAstVector(kf.targetWrist)}` +
-      `${shapeStr}${vowelStr}${shiftStr}${nmfStr})`
+      `${shapeStr}${baseModeStr}${vowelStr}${shiftStr}${nmfStr})`
     );
   }
 
@@ -151,6 +152,14 @@ export function parseAstNodeToSign(node: any): BslSign | null {
       };
     }
 
+    let baseHandMode: BslBaseHandMode | undefined = undefined;
+    if (kfProps['base-mode']) {
+      const rawMode = String(kfProps['base-mode']).replace(/^:/, '').toLowerCase();
+      if (['rest', 'vowel-board', 'mirror', 'override'].includes(rawMode)) {
+        baseHandMode = rawMode as BslBaseHandMode;
+      }
+    }
+
     keyframes.push({
       label: kfProps.label || 'Pose',
       rule: kfProps.rule || '',
@@ -158,6 +167,7 @@ export function parseAstNodeToSign(node: any): BslSign | null {
       targetKnuckle: knuckle,
       targetWrist: wrist,
       shape,
+      baseHandMode,
       activeVowelIndex: kfProps.vowel !== undefined ? Number(kfProps.vowel) : undefined,
       baseHandOverride,
       nmf,

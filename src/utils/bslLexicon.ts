@@ -12,9 +12,9 @@
  * - Seamless hybrid fallback to BANZSL 2-handed manual alphabet fingerspelling
  */
 
-import { Point3D, BslHandPose, BslNmf, BslHandShape, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import { Point3D, BslHandPose, BslNmf, BslHandShape, BslBaseHandMode, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
 
-export type { BslNmf, BslHandShape };
+export type { BslNmf, BslHandShape, BslBaseHandMode };
 export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation';
 
 export interface BslSignKeyframe {
@@ -25,6 +25,7 @@ export interface BslSignKeyframe {
   targetKnuckle: Point3D;
   targetWrist: Point3D;
   shape?: BslHandShape;
+  baseHandMode?: BslBaseHandMode;
   activeVowelIndex?: number;
   baseHandOverride?: {
     wrist?: Point3D;
@@ -1372,15 +1373,47 @@ export function registerBslSigns(signs: Record<string, BslSign>): number {
 }
 
 /**
- * Looks up a BSL whole-word sign by word or phrase
+ * Looks up a BSL whole-word sign by word or phrase with lemmatization & inflection rules
  */
 export function lookupBslSign(word: string): BslSign | null {
   if (!word || typeof word !== 'string') return null;
   const clean = word.trim().toUpperCase().replace(/[^A-Z\s-]/g, '');
-  const id = ALIAS_MAP[clean];
-  if (id && BSL_CURRICULUM_LEXICON[id]) {
-    return BSL_CURRICULUM_LEXICON[id];
+  if (!clean) return null;
+
+  // 1. Exact match in canonical IDs or alias index
+  const directId = ALIAS_MAP[clean];
+  if (directId && BSL_CURRICULUM_LEXICON[directId]) {
+    return BSL_CURRICULUM_LEXICON[directId];
   }
+
+  // 2. English Lemmatization / Inflection normalization
+  // -S / -ES (plurals & 3rd-person: PLANETS -> PLANET, ORBITS -> ORBIT, STARS -> STAR)
+  if (clean.length > 3 && clean.endsWith('S')) {
+    const root = clean.endsWith('ES') ? clean.slice(0, -2) : clean.slice(0, -1);
+    const id = ALIAS_MAP[root];
+    if (id && BSL_CURRICULUM_LEXICON[id]) return BSL_CURRICULUM_LEXICON[id];
+  }
+
+  // -ING (continuous participle: PRAYING -> PRAY, LEARNING -> LEARN, ORBITING -> ORBIT)
+  if (clean.length > 4 && clean.endsWith('ING')) {
+    const root = clean.slice(0, -3);
+    const id = ALIAS_MAP[root];
+    if (id && BSL_CURRICULUM_LEXICON[id]) return BSL_CURRICULUM_LEXICON[id];
+    // Double consonant check (e.g. TAPPING -> TAP)
+    if (root.length > 2 && root[root.length - 1] === root[root.length - 2]) {
+      const single = root.slice(0, -1);
+      const id2 = ALIAS_MAP[single];
+      if (id2 && BSL_CURRICULUM_LEXICON[id2]) return BSL_CURRICULUM_LEXICON[id2];
+    }
+  }
+
+  // -ED (past tense: PRAYED -> PRAY, ORBITED -> ORBIT, LEARNED -> LEARN)
+  if (clean.length > 3 && clean.endsWith('ED')) {
+    const root = clean.slice(0, -2);
+    const id = ALIAS_MAP[root];
+    if (id && BSL_CURRICULUM_LEXICON[id]) return BSL_CURRICULUM_LEXICON[id];
+  }
+
   return null;
 }
 
@@ -1388,6 +1421,20 @@ export function lookupBslSign(word: string): BslSign | null {
  * Converts a BSL Sign Keyframe into a standardized BslHandPose for the render loop
  */
 export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index: number, total: number): BslHandPose {
+  // Determine anatomical role of the non-dominant hand in natural BSL
+  let baseHandMode: BslBaseHandMode = kf.baseHandMode || 'rest';
+  if (!kf.baseHandMode) {
+    if (kf.baseHandOverride) {
+      baseHandMode = 'override';
+    } else if (['PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST'].includes(sign.word)) {
+      baseHandMode = 'mirror';
+    } else if (['SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS'].includes(sign.word)) {
+      baseHandMode = 'vowel-board';
+    } else {
+      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY)
+    }
+  }
+
   return {
     letter: `${sign.word} [${index + 1}/${total}]`,
     label: `${sign.englishLabel} • ${kf.label}`,
@@ -1399,25 +1446,83 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     targetWrist: kf.targetWrist,
     nmf: kf.nmf,
     shape: kf.shape,
+    isWholeWordSign: true,
+    baseHandMode,
+    baseHandOverride: kf.baseHandOverride,
   };
 }
 
+// Grammatical English function words dropped in natural BSL spatial topic-comment structure
+const BSL_GRAMMAR_PARTICLES = new Set([
+  'THE', 'A', 'AN', 'IS', 'ARE', 'AM', 'WAS', 'WERE', 'BE', 'BEEN', 'BEING',
+  'OF', 'TO', 'IN', 'ON', 'AT', 'IT', 'ITS', 'THAT', 'THIS', 'THESE', 'THOSE',
+  'WITH', 'AS', 'FOR', 'BY', 'FROM', 'AND', 'BUT', 'OR', 'NOR', 'SO', 'YET',
+  'INTO', 'OVER', 'UNDER', 'ABOUT', 'THROUGH', 'DURING', 'BEFORE', 'AFTER',
+  'WILL', 'WOULD', 'SHALL', 'SHOULD', 'CAN', 'COULD', 'MAY', 'MIGHT', 'MUST',
+  'HAVE', 'HAS', 'HAD', 'DO', 'DOES', 'DID', 'THERE', 'HERE', 'THEIR', 'THEIRS',
+  'THEM', 'THEY', 'WE', 'US', 'OUR', 'OURS', 'YOU', 'YOUR', 'YOURS', 'HE', 'HIM',
+  'HIS', 'SHE', 'HER', 'HERS', 'MY', 'MINE', 'ME', 'I'
+]);
+
 /**
- * Intelligent BSL Stream Decomposer (Phase 1 Hybrid Engine):
- * 1. Matches whole-word signs from the BSL Curriculum Lexicon.
- * 2. If a word has a designated sign, generates its fluid 3D keyframe sequence.
- * 3. If unknown, gracefully falls back to 2-handed fingerspelling letter by letter.
+ * Intelligent BSL Stream Decomposer:
+ * 1. Greedy Multi-Word Phrase Matching (e.g. "THANK YOU", "HOLY BOOK", "SOLAR SYSTEM").
+ * 2. Stemming and inflection resolution (e.g. "ORBITS" -> ORBIT, "PLANETS" -> PLANET).
+ * 3. Natural BSL grammatical particle omission (avoids tedious spelling of 'T-H-E', 'I-S').
+ * 4. Mode toggle: 'concept' (prioritizes whole-word conceptual signs) vs 'fingerspell' (manual alphabet).
+ * 5. Fallback: Letter-by-letter manual alphabet fingerspelling for unknown proper nouns.
  */
-export function decomposeTextToBslStreamWithLexicon(text: string): BslHandPose[] {
+export function decomposeTextToBslStreamWithLexicon(
+  text: string,
+  options?: { mode?: 'concept' | 'fingerspell' }
+): BslHandPose[] {
   if (!text || typeof text !== 'string') return [];
   const words = text.trim().split(/\s+/).filter(Boolean);
   const stream: BslHandPose[] = [];
+  const isExplicitFingerspell = options?.mode === 'fingerspell';
 
   for (let wIdx = 0; wIdx < words.length; wIdx++) {
     const rawWord = words[wIdx];
     const cleanWord = rawWord.toUpperCase().replace(/[^A-Z-]/g, '');
     if (!cleanWord) continue;
 
+    // Explicit fingerspelling mode: spell every letter
+    if (isExplicitFingerspell) {
+      for (const char of cleanWord) {
+        if (BSL_ALPHABET_POSES[char]) {
+          stream.push(BSL_ALPHABET_POSES[char]);
+        }
+      }
+      if (wIdx < words.length - 1) {
+        stream.push({
+          letter: ' ',
+          label: 'Word Boundary',
+          rule: 'Neutral transition between words',
+          isVowel: false,
+          targetTip: DOMINANT_REST_POSE,
+          targetKnuckle: DOMINANT_REST_KNUCKLE,
+          targetWrist: DOMINANT_REST_WRIST,
+        });
+      }
+      continue;
+    }
+
+    // 1. Try Greedy 2-word phrase lookup (e.g. "THANK YOU", "SOLAR SYSTEM", "HOLY BOOK")
+    if (wIdx < words.length - 1) {
+      const nextClean = words[wIdx + 1].toUpperCase().replace(/[^A-Z-]/g, '');
+      const twoWordPhrase = `${cleanWord} ${nextClean}`;
+      const twoWordSign = lookupBslSign(twoWordPhrase);
+      if (twoWordSign && twoWordSign.keyframes.length > 0) {
+        const totalKf = twoWordSign.keyframes.length;
+        twoWordSign.keyframes.forEach((kf, kfIdx) => {
+          stream.push(signKeyframeToHandPose(twoWordSign, kf, kfIdx, totalKf));
+        });
+        wIdx++; // Consume next word as part of phrase
+        continue;
+      }
+    }
+
+    // 2. Single word lookup
     const matchedSign = lookupBslSign(cleanWord);
 
     if (matchedSign && matchedSign.keyframes.length > 0) {
@@ -1426,26 +1531,36 @@ export function decomposeTextToBslStreamWithLexicon(text: string): BslHandPose[]
       matchedSign.keyframes.forEach((kf, kfIdx) => {
         stream.push(signKeyframeToHandPose(matchedSign, kf, kfIdx, totalKf));
       });
+    } else if (BSL_GRAMMAR_PARTICLES.has(cleanWord)) {
+      // Natural BSL Grammatical Particle: skip English articles/auxiliaries in sentence flow
+      continue;
     } else {
-      // Fallback: BANZSL Fingerspelling
-      for (const char of cleanWord) {
-        if (BSL_ALPHABET_POSES[char]) {
-          stream.push(BSL_ALPHABET_POSES[char]);
+      // Un-lexiconed word:
+      // If single isolated test word or short noun, fingerspell it.
+      // If inside continuous narration sentence, fingerspell only if short (<= 6 chars) to avoid lagging behind speech
+      if (words.length === 1 || cleanWord.length <= 6) {
+        for (const char of cleanWord) {
+          if (BSL_ALPHABET_POSES[char]) {
+            stream.push(BSL_ALPHABET_POSES[char]);
+          }
         }
       }
     }
 
     // Add brief neutral transition between words
-    if (wIdx < words.length - 1) {
-      stream.push({
-        letter: ' ',
-        label: 'Word Boundary',
-        rule: 'Neutral transition between signs',
-        isVowel: false,
-        targetTip: DOMINANT_REST_POSE,
-        targetKnuckle: DOMINANT_REST_KNUCKLE,
-        targetWrist: DOMINANT_REST_WRIST,
-      });
+    if (wIdx < words.length - 1 && stream.length > 0) {
+      const lastPose = stream[stream.length - 1];
+      if (lastPose && lastPose.letter !== ' ') {
+        stream.push({
+          letter: ' ',
+          label: 'Word Boundary',
+          rule: 'Neutral transition between signs',
+          isVowel: false,
+          targetTip: DOMINANT_REST_POSE,
+          targetKnuckle: DOMINANT_REST_KNUCKLE,
+          targetWrist: DOMINANT_REST_WRIST,
+        });
+      }
     }
   }
 

@@ -22,6 +22,8 @@ export interface BslNmf {
 
 export type BslHandShape = 'point' | 'flat' | 'fist' | 'claw' | 'spread' | 'v';
 
+export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override';
+
 export interface BslHandPose {
   letter: string;
   label: string;
@@ -33,9 +35,18 @@ export interface BslHandPose {
   activeVowelIndex?: number; // 0=A (Thumb), 1=E (Index), 2=I (Middle), 3=O (Ring), 4=U (Pinky)
   nmf?: BslNmf;
   shape?: BslHandShape;
+  isWholeWordSign?: boolean;
+  baseHandMode?: BslBaseHandMode;
+  baseHandOverride?: {
+    wrist?: Point3D;
+    palm?: Point3D;
+    shiftX?: number;
+    shiftY?: number;
+    shiftZ?: number;
+  };
 }
 
-// Fixed anatomical non-dominant base hand coordinates (The "Paper")
+// Fixed anatomical non-dominant base hand coordinates (The "Paper" for BANZSL fingerspelling)
 export const BSL_BASE_HAND = {
   wrist: { x: -60, y: 80, z: 0 },
   palm: { x: -50, y: 30, z: 10 },
@@ -46,6 +57,19 @@ export const BSL_BASE_HAND = {
     { id: 'O', name: 'Ring', x: -28, y: -42, z: 16 },
     { id: 'U', name: 'Pinky', x: -10, y: -25, z: 12 },
   ]
+};
+
+// Relaxed resting coordinates for the non-dominant hand when not used as a base
+export const BSL_BASE_REST_HAND = {
+  wrist: { x: -85, y: 110, z: -10 },
+  palm: { x: -70, y: 85, z: -5 },
+  fingertips: [
+    { id: 'A', name: 'Thumb', x: -80, y: 70, z: 0 },
+    { id: 'E', name: 'Index', x: -65, y: 60, z: 0 },
+    { id: 'I', name: 'Middle', x: -50, y: 62, z: 0 },
+    { id: 'O', name: 'Ring', x: -38, y: 68, z: 0 },
+    { id: 'U', name: 'Pinky', x: -28, y: 75, z: 0 },
+  ],
 };
 
 // Dominant pointer hand neutral rest position (The "Pen")
