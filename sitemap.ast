@@ -43,6 +43,8 @@
       :ast "/cartridges/altar-anatomy.ast" :svg "/cartridges/altar-anatomy.svg")
     (:cartridge :id "church-tour" :type "Slide" :stage "CATHOLIC LIFE"
       :ast "/cartridges/church-tour.ast" :svg "/cartridges/church-tour.svg")
+    (:cartridge :id "stations-of-the-cross" :type "Slide" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/stations-of-the-cross.ast" :svg "/cartridges/stations-of-the-cross.svg")
     (:cartridge :id "holy-oils" :type "Slide" :stage "CATHOLIC LIFE"
       :ast "/cartridges/holy-oils.ast" :svg "/cartridges/holy-oils.svg")
 

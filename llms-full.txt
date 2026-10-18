@@ -40,7 +40,7 @@
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 28 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of all 29 production vector simulation cartridges.
 - `/player/scenes-config.json` : Timeline keyframes, bilingual subtitles (EN/ES/LA), and pause checkpoints.
 - `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
 - `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
@@ -48,7 +48,7 @@
 
 ---
 
-## 3. Production Curriculum Cartridges (28 Scenes)
+## 3. Production Curriculum Cartridges (29 Scenes)
 
 1. **Calculus Curves (`calculus-curves`)**:
    - Level: GCSE / A-Level Mathematics.
@@ -190,6 +190,11 @@
     - Core Concepts: 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), Our Father / Hail Mary / Glory Be chaplet prayer sequence, contemplative meditation.
     - Interactive Elements: 3D rotatable bead chaplet with depth fog, mystery selector, Latin and English prayer texts, audio chime cues.
 
+29. **The Stations of the Cross (`stations-of-the-cross`)**:
+    - Level: Catholic Life & Sacramental Catechesis (Via Crucis).
+    - Core Concepts: The 14 traditional stations of the Via Dolorosa, Pilate's praetorium condemnation, Simon of Cyrene carrying the Cross, Veronica's veil, Golgotha Calvary hill, the Holy Sepulchre tomb, and the glorious Easter Resurrection.
+    - Interactive Elements: Station-by-station carousel navigation (Stations I through XIV), scriptural prayers and traditional Latin invocations ("Adoramus te, Christe..."), contemplative reflection cards, and formative resurrection checkpoints.
+
 ---
 
 ## 4. AST S-Expression Language Grammar
@@ -330,8 +335,8 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 ### Available In-Browser WebMCP Tools:
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
 2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via React Router.
-3. `launch_simulation` (Consequential): Programmatically open and render any of the 28 interactive AST vector cartridges on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all 28 vector cartridges with learning invariants, subjects, and runtimes.
+3. `launch_simulation` (Consequential): Programmatically open and render any of the 29 interactive AST vector cartridges on the stage with autoPlay.
+4. `list_ast_simulations` (Read-Only): Enumerate all 29 vector cartridges with learning invariants, subjects, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
 
 ---
