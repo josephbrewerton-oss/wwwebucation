@@ -73,6 +73,16 @@ const QUICK_SIGNS = [
   { label: '🕊️ Peace', word: 'PEACE' },
   { label: '👍 Good', word: 'GOOD' },
   { label: '🤲 Thank You', word: 'THANK YOU' },
+  { label: '☀️ Sun', word: 'SUN' },
+  { label: '🪐 Planet', word: 'PLANET' },
+  { label: '🔄 Orbit', word: 'ORBIT' },
+  { label: '🌍 Earth', word: 'EARTH' },
+  { label: '🌙 Moon', word: 'MOON' },
+  { label: '🍎 Gravity', word: 'GRAVITY' },
+  { label: '⚡ Energy', word: 'ENERGY' },
+  { label: '💨 Fast', word: 'FAST' },
+  { label: '⏱️ Time', word: 'TIME' },
+  { label: '💥 Force', word: 'FORCE' },
 ];
 
 export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
@@ -93,6 +103,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [showFacialFeatures, setShowFacialFeatures] = useState<boolean>(true);
   const [importNotice, setImportNotice] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [availableSigns, setAvailableSigns] = useState<{ label: string; word: string }[]>(() => {
+    return Object.values(BSL_CURRICULUM_LEXICON).map((s) => ({
+      label: s.englishLabel || s.word,
+      word: s.word,
+    }));
+  });
 
   // Active signing state
   const [currentLetter, setCurrentLetter] = useState<string>('');
@@ -115,6 +131,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       const imported = parseAstToLexicon(text);
       const count = registerBslSigns(imported);
       if (count > 0) {
+        setAvailableSigns(
+          Object.values(BSL_CURRICULUM_LEXICON).map((s) => ({
+            label: s.englishLabel || s.word,
+            word: s.word,
+          }))
+        );
         const firstKey = Object.keys(imported)[0];
         setImportNotice(`+${count} sign${count > 1 ? 's' : ''}`);
         setTimeout(() => setImportNotice(''), 3500);
@@ -216,6 +238,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       }
     }, 150);
     return () => clearInterval(timer);
+  }, []);
+
+  // Auto-sync signs from static/lexicons/bsl-signs.ast
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    fetch('/lexicons/bsl-signs.ast')
+      .then((res) => (res.ok ? res.text() : ''))
+      .then((astContent) => {
+        if (astContent && astContent.trim()) {
+          const diskSigns = parseAstToLexicon(astContent);
+          registerBslSigns(diskSigns);
+          setAvailableSigns(
+            Object.values(BSL_CURRICULUM_LEXICON).map((s) => ({
+              label: s.englishLabel || s.word,
+              word: s.word,
+            }))
+          );
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Window Pointer Drag Handlers
@@ -1814,7 +1856,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#38bdf8', whiteSpace: 'nowrap', paddingRight: '2px' }}>
           Signs:
         </span>
-        {QUICK_SIGNS.map((s) => (
+        {availableSigns.map((s) => (
           <button
             key={s.word}
             type="button"
