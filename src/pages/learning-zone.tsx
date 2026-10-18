@@ -883,6 +883,9 @@ export default function LearningZonePage() {
                   preset={(() => {
                     const s = selectedSubject.toLowerCase();
                     const u = selectedUnit.toLowerCase();
+                    if (u.includes('station') || u.includes('cross') || u.includes('passion') || u.includes('calvary') || u.includes('easter')) {
+                      return 'stations-of-the-cross';
+                    }
                     if (s.includes('relig') || s.includes('catholic') || u.includes('church') || u.includes('sanctuary')) {
                       return 'church-tour';
                     }

@@ -16,3 +16,5 @@ export * from './altarData';
 export * from './holyOilsData';
 export * from './liturgicalPosturesData';
 export * from './holyWaterThuriferData';
+export * from './stationsOfTheCrossData';
+export * from './liturgyOfTheHoursData';

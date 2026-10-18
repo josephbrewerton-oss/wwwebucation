@@ -287,7 +287,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [swfDragActive, setSwfDragActive] = useState(false);
   const [isVoiceListening, setIsVoiceListening] = useState(false);
   const [voiceFeedback, setVoiceFeedback] = useState<string | null>(null);
-  const [showConceptTrail, setShowConceptTrail] = useState(true);
+  const [showConceptTrail, setShowConceptTrail] = useState(false);
   const [comparisonPreset, setComparisonPreset] = useState<string | null>(null);
   const [showChalkboard, setShowChalkboard] = useState(false);
   const [inStagePenActive, setInStagePenActive] = useState(() => {
@@ -1013,6 +1013,7 @@ const playerSrc = useMemo(() => {
 
         {/* Top Banner Toolbar */}
         <div
+          className="ast-player-top-toolbar"
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -1022,6 +1023,8 @@ const playerSrc = useMemo(() => {
             borderBottom: '1px solid var(--stj-border)',
             flexWrap: 'wrap',
             gap: '8px',
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
@@ -1185,7 +1188,7 @@ const playerSrc = useMemo(() => {
                 </button>
 
                 {selectedPreset === 'church-tour' && (
-                  <>
+                  <span className="player-toolbar-desktop-only" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
                     <button
                       type="button"
                       onClick={() => {
@@ -1248,7 +1251,7 @@ const playerSrc = useMemo(() => {
                     >
                       🕯️ Tabernacle
                     </button>
-                  </>
+                  </span>
                 )}
 
                 <button
@@ -1318,7 +1321,7 @@ const playerSrc = useMemo(() => {
             <button
               type="button"
               onClick={() => setShowChalkboard((prev) => !prev)}
-              className={`stj-btn ${showChalkboard ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${showChalkboard ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1344,7 +1347,7 @@ const playerSrc = useMemo(() => {
                 setInStagePenActive(next);
                 postToPlayer({ type: 'TOGGLE_PEN', enabled: next });
               }}
-              className={`stj-btn ${inStagePenActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${inStagePenActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1364,7 +1367,7 @@ const playerSrc = useMemo(() => {
 
             {/* Quick In-Stage Whiteboard Ink Actions */}
             {inStagePenActive && (
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+              <div className="player-toolbar-desktop-only" style={{ display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
                 <button
                   type="button"
                   onClick={() => postToPlayer({ type: 'UNDO_WHITEBOARD_INK' })}
@@ -1396,7 +1399,7 @@ const playerSrc = useMemo(() => {
             )}
 
             {inkNotice && (
-              <span style={{ fontSize: '0.72rem', background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '8px', fontWeight: 700 }}>
+              <span className="player-toolbar-desktop-only" style={{ fontSize: '0.72rem', background: '#0284c7', color: '#ffffff', padding: '3px 8px', borderRadius: '8px', fontWeight: 700 }}>
                 {inkNotice}
               </span>
             )}
@@ -1409,7 +1412,7 @@ const playerSrc = useMemo(() => {
                 setInStageXRayActive(next);
                 postToPlayer({ type: 'TOGGLE_XRAY', enabled: next });
               }}
-              className={`stj-btn ${inStageXRayActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${inStageXRayActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1431,7 +1434,7 @@ const playerSrc = useMemo(() => {
             <button
               type="button"
               onClick={() => setShowLabDrawer((prev) => !prev)}
-              className={`stj-btn ${showLabDrawer ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${showLabDrawer ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1453,7 +1456,7 @@ const playerSrc = useMemo(() => {
             <button
               type="button"
               onClick={() => setShowNanoAi((prev) => !prev)}
-              className={`stj-btn ${showNanoAi ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${showNanoAi ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1599,7 +1602,7 @@ const playerSrc = useMemo(() => {
             <button
               type="button"
               onClick={() => setShowSettingsModal((prev) => !prev)}
-              className={`stj-btn ${showSettingsModal ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+              className={`stj-btn ${showSettingsModal ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
               style={{
                 padding: '4px 10px',
                 minHeight: '32px',
@@ -1622,7 +1625,7 @@ const playerSrc = useMemo(() => {
                   setIsDevMode(next);
                   postToPlayer({ type: 'SET_DEV_MODE', enabled: next });
                 }}
-                className={`stj-btn ${isDevMode ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+                className={`stj-btn ${isDevMode ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',
@@ -1699,7 +1702,7 @@ const playerSrc = useMemo(() => {
               <button
                 type="button"
                 onClick={togglePictureInPicture}
-                className={`stj-btn ${isPipActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm`}
+                className={`stj-btn ${isPipActive ? 'stj-btn-primary' : 'stj-btn-secondary'} stj-btn-sm player-toolbar-desktop-only`}
                 style={{
                   padding: '4px 10px',
                   minHeight: '32px',

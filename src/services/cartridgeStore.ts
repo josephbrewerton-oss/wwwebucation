@@ -102,6 +102,12 @@ export const CARTRIDGE_ALIASES: Record<string, string> = {
   'spelling-bee': 'spelling-bee',
   'bee': 'spelling-bee',
   'spell': 'spelling-bee',
+  'stations': 'stations-of-the-cross',
+  'stations-of-the-cross': 'stations-of-the-cross',
+  'stations-cross': 'stations-of-the-cross',
+  'via-crucis': 'stations-of-the-cross',
+  'way-of-the-cross': 'stations-of-the-cross',
+  'passion': 'stations-of-the-cross',
 };
 
 // Built-in Core Curriculum Cartridge Catalog
@@ -371,6 +377,20 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     astFile: 'scenes/church-tour.ast',
     version: '2.6.0',
     invariants: ['Sacred Architecture', 'Latin Cross Basilica Proportions'],
+  },
+  {
+    id: 'stations-of-the-cross',
+    type: 'Slide',
+    title: 'The Stations of the Cross (Via Crucis)',
+    stage: 'CATHOLIC LIFE',
+    category: 'Catholic Faith',
+    desc: 'The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.',
+    icon: '✝️',
+    source: 'builtin',
+    svgFile: 'scenes/stations-of-the-cross.svg',
+    astFile: 'scenes/stations-of-the-cross.ast',
+    version: '2.6.0',
+    invariants: ['14 Traditional Stations of the Cross', 'Via Dolorosa Sacred Pilgrimage', 'Scriptural Passion'],
   },
   {
     id: 'water-cycle',

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-16T08:37:15.315Z",
-  "totalScenes": 28,
+  "generatedAt": "2026-10-18T07:15:41.882Z",
+  "totalScenes": 29,
   "inputDirs": [
     "static/player/scenes",
     "static/player/cartridges",
@@ -410,8 +410,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 20,
-      "hasCheckpoints": true,
-      "checkpointCount": 2
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     },
     {
       "id": "shakespeare-macbeth",
@@ -530,8 +530,28 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 8,
+      "hasCheckpoints": false,
+      "checkpointCount": 0
+    },
+    {
+      "id": "stations-of-the-cross",
+      "type": "Slide",
+      "title": "The Stations of the Cross: Via Crucis & Sacred Passion",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/stations-of-the-cross.svg",
+      "astFile": "scenes/stations-of-the-cross.ast",
+      "isCore": true,
+      "tier": "core",
+      "mount": "/curriculum/catholic-life/stations-of-the-cross",
+      "section": "Catholic Life & Faith Formation",
+      "keyframeCount": 15,
+      "subtitleCount": 15,
+      "bindingsCount": 9,
       "hasCheckpoints": true,
-      "checkpointCount": 2
+      "checkpointCount": 3
     },
     {
       "id": "holy-oils",
@@ -570,8 +590,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 7,
-      "hasCheckpoints": true,
-      "checkpointCount": 2
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     }
   ]
 }

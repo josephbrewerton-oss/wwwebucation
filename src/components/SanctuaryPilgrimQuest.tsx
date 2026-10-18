@@ -283,11 +283,11 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-            gap: '12px',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 140px), 1fr))',
+            gap: '10px',
             background: 'rgba(15, 23, 42, 0.6)',
             borderRadius: '10px',
-            padding: '10px 14px',
+            padding: '10px 12px',
             border: '1px solid #1e293b',
             fontSize: '0.82rem',
           }}
@@ -399,8 +399,9 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
           <AstVectorMediaPlayer
             preset="church-tour"
             autoPlay={gameMode === 'tour'}
-            height="clamp(260px, 45vh, 520px)"
-            allowPresetSwitch={true}
+            height="clamp(210px, 46vw + 40px, 440px)"
+            allowPresetSwitch={false}
+            embedded={true}
           />
         </div>
         {!touchScrollLocked && (
@@ -503,7 +504,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 95px), 1fr))',
           gap: '8px',
           marginBottom: '1rem',
         }}

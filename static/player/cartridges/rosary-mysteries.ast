@@ -22,18 +22,8 @@
     (:t 0.50 :title "3. The 10 Hail Marys (Ave Maria)" :rule "Ave Maria, gratia plena, Dominus tecum. Benedicta tu in mulieribus.")
     (:t 0.75 :title "4. The Glory Be & Fatima Prayer" :rule "Gloria Patri, et Filio, et Spiritui Sancto. Sicut erat in principio.")
   ))
-  (:interactive (
-    (:checkpoint :t 0.35
-      :prompt "Which Pope introduced the Luminous Mysteries (Mysteries of Light) focusing on Christ's public ministry?"
-      :options ("Pope Saint John Paul II in 2002 (Rosarium Virginis Mariae)" "Pope Francis in 2015" "Pope Saint John XXIII in 1962" "Pope Leo XIII in 1883")
-      :answer 0
-      :explanation "In October 2002, Pope St John Paul II published the apostolic letter Rosarium Virginis Mariae, adding the 5 Luminous Mysteries (Baptism in the Jordan, Wedding at Cana, Proclamation of the Kingdom, Transfiguration, Institution of the Eucharist).")
-    (:checkpoint :t 0.70
-      :prompt "What is the primary spiritual purpose of holding the physical beads while reciting the vocal prayers?"
-      :options ("To provide a tactile rhythm that quiets the senses so the heart can meditate on the Gospel mysteries" "To count exactly how many minutes have passed" "Because silent prayer without beads is invalid" "To measure finger dexterity")
-      :answer 0
-      :explanation "The repetition of vocal prayers combined with the tactile beads provides a calming contemplative rhythm, freeing the intellect and heart to meditate deeply on Christ's life.")
-  ))
+  (:interactive false)
+  (:questions false)
   (:bindings (
     <!-- 3D Bead Circle (Chaplet Decades) -->
     (:target "#rosary-ring" :type "3d-ring" :r "130" :tilt-x "25" :depth-fog true)

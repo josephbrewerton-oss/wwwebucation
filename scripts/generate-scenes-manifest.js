@@ -108,6 +108,7 @@ function getDefaultMountForCartridge(id) {
     'kinetic-gas': '/curriculum/science/physics/kinetic-gas',
     'electric-circuits': '/curriculum/science/physics/electric-circuits',
     'church-tour': '/curriculum/catholic-life/church-tour',
+    'stations-of-the-cross': '/curriculum/catholic-life/stations-of-the-cross',
     'altar-anatomy': '/curriculum/catholic-life/altar-anatomy',
     'holy-oils': '/curriculum/catholic-life/holy-oils',
     'rosary-mysteries': '/curriculum/catholic-life/rosary-mysteries',
@@ -137,7 +138,7 @@ function getDefaultMountForCartridge(id) {
 }
 
 function getDefaultSectionForCartridge(id) {
-  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary')) {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross')) {
     return 'Catholic Life & Faith Formation';
   }
   if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times')) {

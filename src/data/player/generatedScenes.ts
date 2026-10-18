@@ -330,6 +330,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "stations-of-the-cross",
+    "type": "Slide",
+    "label": "The Stations of the Cross: Via Crucis & Sacred Passion",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/stations-of-the-cross",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
+  },
+  {
     "id": "holy-oils",
     "type": "Slide",
     "label": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",

@@ -15,12 +15,16 @@ import AltarAnatomyExplorer from '../components/AltarAnatomyExplorer';
 import HolyOilsExplorer from '../components/HolyOilsExplorer';
 import LiturgicalMisconceptionsExplorer from '../components/LiturgicalMisconceptionsExplorer';
 import HolyWaterAndThuriferExplorer from '../components/HolyWaterAndThuriferExplorer';
+import StationsOfTheCrossGuide from '../components/StationsOfTheCrossGuide';
+import LiturgyOfTheHoursGuide from '../components/LiturgyOfTheHoursGuide';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
 export type CatholicLifeTab =
   | 'overview'
   | 'church-tour'
+  | 'stations-of-the-cross'
+  | 'liturgy-of-the-hours'
   | 'altar'
   | 'holy-water-thurifer'
   | 'holy-oils'
@@ -57,6 +61,8 @@ export default function CatholicLifePage(): React.JSX.Element {
       [
         'overview',
         'church-tour',
+        'stations-of-the-cross',
+        'liturgy-of-the-hours',
         'altar',
         'holy-water-thurifer',
         'holy-oils',
@@ -93,6 +99,8 @@ export default function CatholicLifePage(): React.JSX.Element {
         [
           'overview',
           'church-tour',
+          'stations-of-the-cross',
+          'liturgy-of-the-hours',
           'altar',
           'holy-water-thurifer',
           'holy-oils',
@@ -131,6 +139,24 @@ export default function CatholicLifePage(): React.JSX.Element {
       color: '#0284c7',
       bg: '#f0f9ff',
       badge: 'Interactive Tour (< 4 KB)',
+    },
+    {
+      tab: 'stations-of-the-cross' as CatholicLifeTab,
+      icon: '✝️',
+      title: 'The Stations of the Cross (Via Crucis)',
+      desc: '14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection with live AST vector cartridge.',
+      color: '#b91c1c',
+      bg: '#fef2f2',
+      badge: 'Via Dolorosa & Easter Cartridge',
+    },
+    {
+      tab: 'liturgy-of-the-hours' as CatholicLifeTab,
+      icon: '🕰️',
+      title: 'The Liturgy of the Hours (Divine Office)',
+      desc: 'Sanctifying day & night: Office of Readings, Lauds, Daytime Hours (Terce, Sext, None), Vespers, Compline, Gospel Canticles & 4-Week Psalter.',
+      color: '#4f46e5',
+      bg: '#eef2ff',
+      badge: 'Live Canonical Clock & Breviary',
     },
     {
       tab: 'altar' as CatholicLifeTab,
@@ -520,6 +546,8 @@ export default function CatholicLifePage(): React.JSX.Element {
           {[
             { id: 'overview', label: '🏠 Overview' },
             { id: 'church-tour', label: '⛪ Church Tour' },
+            { id: 'stations-of-the-cross', label: '✝️ Stations of the Cross' },
+            { id: 'liturgy-of-the-hours', label: '🕰️ Liturgy of the Hours' },
             { id: 'altar', label: '✝️ The Catholic Altar' },
             { id: 'holy-water-thurifer', label: '💧 Holy Water & Thurifer' },
             { id: 'holy-oils', label: '🏺 The Holy Oils' },
@@ -650,12 +678,16 @@ export default function CatholicLifePage(): React.JSX.Element {
 
             {/* Featured Church Tour Vector Player on Overview - Responsive & Mobile-Optimized */}
             <div
+              className="catholic-life-overview-player-card"
               style={{
                 background: '#090d16',
                 border: '1px solid #1e293b',
                 borderRadius: '16px',
                 padding: '1.25rem',
                 marginBottom: '2.5rem',
+                maxWidth: '100%',
+                boxSizing: 'border-box',
+                overflow: 'hidden',
               }}
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
@@ -831,13 +863,42 @@ export default function CatholicLifePage(): React.JSX.Element {
                   </button>
                 </div>
 
-                <div style={{ pointerEvents: overviewTouchLock ? 'auto' : 'auto', position: 'relative' }}>
+                <div style={{ pointerEvents: overviewTouchLock ? 'none' : 'auto', position: 'relative', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                   <AstVectorMediaPlayer
                     preset="church-tour"
                     autoPlay={true}
-                    height="clamp(260px, 42vh, 460px)"
-                    allowPresetSwitch={true}
+                    height="clamp(210px, 45vw + 40px, 380px)"
+                    allowPresetSwitch={false}
+                    embedded={true}
                   />
+                  {overviewTouchLock && (
+                    <div
+                      onClick={() => setOverviewTouchLock(false)}
+                      style={{
+                        position: 'absolute',
+                        bottom: '12px',
+                        right: '12px',
+                        background: 'rgba(15, 23, 42, 0.92)',
+                        backdropFilter: 'blur(4px)',
+                        border: '1px solid rgba(250, 204, 21, 0.5)',
+                        color: '#fef08a',
+                        padding: '6px 12px',
+                        borderRadius: '8px',
+                        fontSize: '0.74rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        zIndex: 10,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+                        pointerEvents: 'auto',
+                      }}
+                      title="Tap to enable 3D Orbit touch interactions"
+                    >
+                      <span>👆 Tap to Enable 3D Orbit</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -846,9 +907,11 @@ export default function CatholicLifePage(): React.JSX.Element {
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 280px), 1fr))',
                 gap: '1.25rem',
                 marginBottom: '3rem',
+                width: '100%',
+                boxSizing: 'border-box',
               }}
             >
               {navCards.map((card) => (
@@ -1374,6 +1437,18 @@ export default function CatholicLifePage(): React.JSX.Element {
                     Explore Holy Oils &rarr;
                   </button>
                 </div>
+              </div>
+            )}
+
+            {activeTab === 'stations-of-the-cross' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <StationsOfTheCrossGuide />
+              </div>
+            )}
+
+            {activeTab === 'liturgy-of-the-hours' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <LiturgyOfTheHoursGuide />
               </div>
             )}
 

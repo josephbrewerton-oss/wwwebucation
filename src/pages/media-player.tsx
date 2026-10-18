@@ -370,7 +370,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                     fontWeight: 800,
                     padding: '2px 7px',
                     borderRadius: '9999px',
-                    background: currentPresetMeta.id === 'church-tour' ? '#831843' : '#0369a1',
+                    background: currentPresetMeta.id === 'church-tour' || currentPresetMeta.id === 'stations-of-the-cross' ? '#831843' : '#0369a1',
                     color: '#ffffff',
                     letterSpacing: '0.04em',
                   }}

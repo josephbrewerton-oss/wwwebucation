@@ -930,10 +930,58 @@ iframe {
 }
 
 @media (max-width: 640px) {
-  /* Fluid 16:9 + Header/Footer Responsive Height on Mobile Screens */
+  /* Fluid 16:9 + Header/Footer Responsive Height on Mobile Screens (Prevents Overrunning Screen) */
+  .ast-vector-media-player-container {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
   .ast-player-iframe-stage-wrapper {
-    height: clamp(260px, 56.25vw + 72px, 390px) !important;
-    min-height: 260px !important;
+    height: clamp(210px, 45vw + 40px, 360px) !important;
+    min-height: 200px !important;
+    max-height: 380px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Mobile Responsive Player Toolbar - Smooth horizontal scroll, zero multi-line blowout */
+  .ast-player-top-toolbar {
+    padding: 6px 8px !important;
+    gap: 6px !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none !important;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  .ast-player-top-toolbar::-webkit-scrollbar {
+    display: none !important;
+  }
+  .ast-player-top-toolbar > div {
+    flex-wrap: nowrap !important;
+    flex-shrink: 0 !important;
+    gap: 5px !important;
+  }
+  .ast-player-top-toolbar button,
+  .ast-player-top-toolbar .stj-btn,
+  .ast-player-top-toolbar select {
+    flex-shrink: 0 !important;
+  }
+
+  /* Catholic Life Overview Player Card Mobile Protection */
+  .catholic-life-overview-player-card {
+    padding: 0.85rem 0.65rem !important;
+    border-radius: 12px !important;
+    margin-bottom: 1.5rem !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    overflow: hidden !important;
   }
 
   /* Hide verbose desktop-only buttons in the player wrapper toolbar */
