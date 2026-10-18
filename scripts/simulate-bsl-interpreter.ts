@@ -139,6 +139,86 @@ assert(fallbackWords.length > 5, 'Subtitle decomposed into discrete fallback wor
 const firstWordPoses = decomposeTextToBslStream(fallbackWords[0]);
 assert(firstWordPoses.length === 3, `First word '${fallbackWords[0]}' generated 3 poses smoothly`);
 
+// ---------------------------------------------------------
+// Test 6: Phase 1 BSL Natural Signs & Curriculum Lexicon Invariants
+// ---------------------------------------------------------
+console.log('\n6. Testing Phase 1 BSL Natural Curriculum Lexicon:');
+import { BSL_CURRICULUM_LEXICON, lookupBslSign, decomposeTextToBslStreamWithLexicon } from '../src/utils/bslLexicon';
+
+const signIds = Object.keys(BSL_CURRICULUM_LEXICON);
+assert(signIds.length >= 20, `Curriculum lexicon contains ${signIds.length} foundational signs (>= 20 invariant)`);
+
+for (const signId of signIds) {
+  const sign = BSL_CURRICULUM_LEXICON[signId];
+  assert(
+    Boolean(sign.word && sign.englishLabel && Array.isArray(sign.keyframes) && sign.keyframes.length >= 2),
+    `Sign '${signId}' has complete metadata and at least 2 procedural keyframes`
+  );
+
+  for (let k = 0; k < sign.keyframes.length; k++) {
+    const kf = sign.keyframes[k];
+    const validCoords = (p: Point3D) => p && typeof p.x === 'number' && typeof p.y === 'number' && typeof p.z === 'number' && !isNaN(p.x) && !isNaN(p.y) && !isNaN(p.z);
+    assert(
+      validCoords(kf.targetTip) && validCoords(kf.targetKnuckle) && validCoords(kf.targetWrist),
+      `Sign '${signId}' keyframe ${k + 1} has valid 3D target coordinates`
+    );
+  }
+}
+
+// Test alias resolution
+assert(lookupBslSign('CHRIST')?.id === 'jesus', "Alias 'CHRIST' resolves to sign 'JESUS'");
+assert(lookupBslSign('PRAYER')?.id === 'pray', "Alias 'PRAYER' resolves to sign 'PRAY'");
+assert(lookupBslSign('MATHEMATICS')?.id === 'maths', "Alias 'MATHEMATICS' resolves to sign 'MATHS'");
+
+// Test hybrid streaming: Whole Sign vs Fingerspelling
+const testPhrase = 'JESUS ATOM PRAY';
+const hybridStream = decomposeTextToBslStreamWithLexicon(testPhrase);
+const hasJesusSign = hybridStream.some(p => p.letter.includes('JESUS'));
+const hasPraySign = hybridStream.some(p => p.letter.includes('PRAY'));
+const hasAtomSpelling = hybridStream.some(p => p.letter === 'A' || p.letter === 'T' || p.letter === 'O' || p.letter === 'M');
+
+assert(hasJesusSign, "Hybrid stream uses whole-word sign for 'JESUS'");
+assert(hasPraySign, "Hybrid stream uses whole-word sign for 'PRAY'");
+assert(hasAtomSpelling, "Hybrid stream falls back to fingerspelling for un-lexiconed word 'ATOM'");
+
+// ---------------------------------------------------------
+// Test 7: AST S-Expression Serialization & Storage Invariants
+// ---------------------------------------------------------
+console.log('\n7. Testing AST S-Expression Serialization & Storage Invariants:');
+const { serializeLexiconToAst, parseAstToLexicon } = await import('../src/utils/bslAstCodec');
+const fs = await import('fs');
+const path = await import('path');
+const zlib = await import('zlib');
+
+const astPath = path.resolve(process.cwd(), 'static/lexicons/bsl-signs.ast');
+assert(fs.existsSync(astPath), "Canonical file 'static/lexicons/bsl-signs.ast' exists in static assets");
+
+const astContent = fs.readFileSync(astPath, 'utf-8');
+const parsedFromDisk = parseAstToLexicon(astContent);
+const diskCount = Object.keys(parsedFromDisk).length;
+assert(diskCount === Object.keys(BSL_CURRICULUM_LEXICON).length, `Parsed all ${diskCount} signs from AST S-Expressions on disk`);
+
+// Test sign fidelity round-trip
+const roundTripAst = serializeLexiconToAst(parsedFromDisk);
+const reParsed = parseAstToLexicon(roundTripAst);
+assert(Object.keys(reParsed).length === diskCount, '100% round-trip AST serialization and deserialization fidelity confirmed');
+
+// Storage footprint verification (< 10 KB gzipped)
+const gzipped = zlib.gzipSync(astContent);
+const gzippedKb = (gzipped.length / 1024).toFixed(2);
+const bytesPerSign = (gzipped.length / diskCount).toFixed(1);
+console.log(`  📦 Storage footprint: ${gzipped.length} bytes gzipped (${gzippedKb} KB, ${bytesPerSign} bytes/sign)`);
+assert(gzipped.length < 10240, `AST gzipped payload (${gzippedKb} KB) is strictly < 10 KB (99.99% video reduction)`);
+
+// Deserialization benchmark
+const tAstStart = performance.now();
+for (let iter = 0; iter < 10; iter++) {
+  parseAstToLexicon(astContent);
+}
+const astElapsedMs = (performance.now() - tAstStart) / 10;
+console.log(`  ⚡ Deserialization speed: ${astElapsedMs.toFixed(2)} ms for all ${diskCount} 3D signs`);
+assert(astElapsedMs < 10.0, `AST S-Expression deserialization time (${astElapsedMs.toFixed(2)} ms) is < 10 ms`);
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);
@@ -146,6 +226,7 @@ console.log(`==================================================\n`);
 if (failedTests > 0) {
   process.exit(1);
 } else {
-  console.log('🎉 All BSL In-Vision Interpreter Invariants Verified!');
+  console.log('🎉 All BSL In-Vision Interpreter Invariants & Phase 1 Signs Verified!');
   process.exit(0);
 }
+

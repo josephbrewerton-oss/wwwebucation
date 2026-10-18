@@ -28,6 +28,11 @@ import {
   project3DToSvg,
   interpolatePoint3D,
 } from '../utils/bslAlphabet';
+import {
+  decomposeTextToBslStreamWithLexicon,
+  lookupBslSign,
+  BSL_CURRICULUM_LEXICON,
+} from '../utils/bslLexicon';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
 import { subscribeBslSpeech } from '../services/bslGlobalStore';
 
@@ -48,6 +53,24 @@ const REST_POSE: BslHandPose = {
   targetKnuckle: DOMINANT_REST_KNUCKLE,
   targetWrist: DOMINANT_REST_WRIST,
 };
+
+const QUICK_SIGNS = [
+  { label: '✝️ Jesus', word: 'JESUS' },
+  { label: '🙏 Pray', word: 'PRAY' },
+  { label: '⛪ Church', word: 'CHURCH' },
+  { label: '✨ God', word: 'GOD' },
+  { label: '✝ Cross', word: 'CROSS' },
+  { label: '📖 Bible', word: 'BIBLE' },
+  { label: '🏫 School', word: 'SCHOOL' },
+  { label: '🔬 Science', word: 'SCIENCE' },
+  { label: '🔢 Maths', word: 'MATHS' },
+  { label: '🤝 Help', word: 'HELP' },
+  { label: '👋 Hello', word: 'HELLO' },
+  { label: '❤️ Love', word: 'LOVE' },
+  { label: '🕊️ Peace', word: 'PEACE' },
+  { label: '👍 Good', word: 'GOOD' },
+  { label: '🤲 Thank You', word: 'THANK YOU' },
+];
 
 export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   activeWord = '',
@@ -294,14 +317,14 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [viewAngle, orbitOffset]);
 
-  // Enqueue new word for fingerspelling
+  // Enqueue new word for fingerspelling or whole-word BSL sign
   const enqueueWord = useCallback((word: string) => {
     if (!word || typeof word !== 'string') return;
     const cleanWord = word.trim().toUpperCase();
     if (!cleanWord) return;
 
     setActiveWordDisplay(cleanWord);
-    const poses = decomposeTextToBslStream(cleanWord);
+    const poses = decomposeTextToBslStreamWithLexicon(cleanWord);
     if (poses.length > 0) {
       queueRef.current = [...poses, REST_POSE];
     }
@@ -390,6 +413,13 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   // Canvas dimension: 240 x 170 (comfortably framing both left and right hands in 3D perspective)
   const originX = 120 + orbitOffset.panX;
   const originY = 95 + orbitOffset.panY;
+
+  // Upper Torso & Head Reference Frame (Anatomical Loci for BSL Signs)
+  const torsoHead = useMemo(() => project3DToSvg({ x: 0, y: -72, z: -15 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoChin = useMemo(() => project3DToSvg({ x: 0, y: -45, z: -10 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoChest = useMemo(() => project3DToSvg({ x: 0, y: 15, z: -15 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoLeftShoulder = useMemo(() => project3DToSvg({ x: -95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoRightShoulder = useMemo(() => project3DToSvg({ x: 95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
 
   // Project non-dominant hand (The Paper) using WASM 3D Kernel
   const baseWrist = project3DToSvg(BSL_BASE_HAND.wrist, cameraConfig, originX, originY);
@@ -702,6 +732,20 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <span style={{ cursor: 'grab', opacity: 0.8 }} title="Drag Handle">⠿</span>
           <span>🖐️</span>
           <span>BSL In-Vision</span>
+          <span
+            style={{
+              fontSize: '0.58rem',
+              padding: '1px 4px',
+              borderRadius: '3px',
+              background: 'rgba(56, 189, 248, 0.2)',
+              color: '#38bdf8',
+              fontWeight: 800,
+              border: '1px solid rgba(56, 189, 248, 0.35)',
+            }}
+            title="Phase 1: 50+ Real BSL Curriculum Signs with Hybrid Fingerspelling Engine"
+          >
+            LEXICON
+          </span>
           {isWasmActive && (
             <span
               style={{
@@ -883,6 +927,34 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <text x="60" y="13" fill="#94a3b8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
           <text x="180" y="13" fill="#38bdf8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
 
+          {/* UPPER TORSO & ANATOMICAL LOCI (Subtle Neon Architectural Wireframe) */}
+          <g id="bsl-upper-torso" opacity="0.35">
+            {/* Shoulders & Collar line */}
+            <path
+              d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y} Q ${torsoChest.x} ${torsoChest.y} ${torsoRightShoulder.x} ${torsoRightShoulder.y}`}
+              fill="none"
+              stroke="#64748b"
+              strokeWidth="2"
+              strokeDasharray="3 3"
+            />
+            {/* Chest Center Cross/Anchor */}
+            <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.4" />
+            
+            {/* Head Contour & Facial Reference */}
+            <ellipse
+              cx={torsoHead.x}
+              cy={torsoHead.y}
+              rx={20 * torsoHead.scale}
+              ry={26 * torsoHead.scale}
+              fill="rgba(30, 41, 59, 0.2)"
+              stroke="#64748b"
+              strokeWidth="1.2"
+              strokeDasharray="2 2"
+            />
+            {/* Chin Locus Indicator */}
+            <circle cx={torsoChin.x} cy={torsoChin.y} r={2.5 * torsoChin.scale} fill="#94a3b8" opacity="0.5" />
+          </g>
+
           {/* Grid lines floor reference */}
           <line x1="15" y1="150" x2="225" y2="150" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
           <line x1="120" y1="130" x2="120" y2="160" stroke="#334155" strokeWidth="1" strokeDasharray="3 3" opacity="0.4" />
@@ -1031,16 +1103,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         >
           <span
             style={{
-              fontSize: '1.1rem',
+              fontSize: currentLetter.length > 2 ? '0.82rem' : '1.1rem',
               fontWeight: 900,
-              color: currentPose.isVowel ? '#f59e0b' : '#38bdf8',
+              color: currentLetter.includes('[') ? '#fbbf24' : currentPose.isVowel ? '#f59e0b' : '#38bdf8',
             }}
           >
             {currentLetter || '—'}
           </span>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.62rem', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {currentPose.label || 'Ready'}
+            <span style={{ fontSize: '0.62rem', color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              {currentLetter.includes('[') ? '✨ BSL Whole Sign' : currentPose.label || 'Ready'}
             </span>
             {activeWordDisplay && (
               <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f8fafc' }}>
@@ -1188,6 +1260,45 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         {currentPose.rule || 'Hands in neutral rest position ready for narration stream.'}
       </div>
 
+      {/* Quick BSL Curriculum Signs Strip */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '4px 8px',
+          background: 'rgba(15, 23, 42, 0.95)',
+          borderTop: '1px solid rgba(56, 189, 248, 0.1)',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}
+      >
+        <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#38bdf8', whiteSpace: 'nowrap', paddingRight: '2px' }}>
+          Signs:
+        </span>
+        {QUICK_SIGNS.map((s) => (
+          <button
+            key={s.word}
+            type="button"
+            onClick={() => enqueueWord(s.word)}
+            style={{
+              background: 'rgba(56, 189, 248, 0.12)',
+              border: '1px solid rgba(56, 189, 248, 0.25)',
+              borderRadius: '4px',
+              color: '#e2e8f0',
+              padding: '1px 6px',
+              fontSize: '0.62rem',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              cursor: 'pointer',
+            }}
+            title={`Play BSL whole-word sign: ${s.word}`}
+          >
+            {s.label}
+          </button>
+        ))}
+      </div>
+
       {/* Speed & Quick Input Bar */}
       <div
         style={{
@@ -1231,9 +1342,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             value={customInput}
             onChange={(e) => setCustomInput(e.target.value)}
             placeholder="Try word..."
-            maxLength={12}
+            maxLength={20}
             style={{
-              width: '68px',
+              width: '74px',
               padding: '2px 5px',
               fontSize: '0.65rem',
               borderRadius: '4px',

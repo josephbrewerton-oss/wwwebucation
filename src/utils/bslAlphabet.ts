@@ -6,7 +6,6 @@
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Commercial-License
  *
  * Complete 3D skeletal target coordinates for the BSL two-handed manual alphabet (A–Z).
- * Employs Hermite spline interpolation for human-like signing fluidity without robotic snapping.
  */
 
 export interface Point3D {
@@ -305,7 +304,7 @@ export function lerp3D(a: Point3D, b: Point3D, t: number): Point3D {
 export const interpolatePoint3D = lerp3D;
 
 /**
- * Decomposes text into a stream of BSL fingerspelling target keyframes
+ * Pure 2-handed fingerspelling letter stream generator (BANZSL manual alphabet)
  */
 export function decomposeTextToBslStream(text: string): BslHandPose[] {
   if (!text || typeof text !== 'string') return [];

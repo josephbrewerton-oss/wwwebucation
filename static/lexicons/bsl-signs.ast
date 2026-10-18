@@ -1,0 +1,234 @@
+;; =============================================================================
+;; St Joseph's Curriculum Portal — British Sign Language (BSL) AST Lexicon
+;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)
+;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories
+;; =============================================================================
+(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 32
+  (sign :id "jesus" :word "JESUS" :cat "faith" :gloss "JESUS"
+    :label "Jesus Christ"
+    :desc "Index touches center of non-dominant palm, then dominant palm (the crucifixion nails in the hands)." :aliases ("CHRIST" "LORD" "SAVIOUR" "SAVIOR")
+    (kf :idx 1 :label "Nail in Left Palm" :rule "Dominant index touches center of non-dominant open palm" :tip [-50 30 12] :knuckle [5 40 5] :wrist [65 75 -10] :nmf (nmf :mouth "Jesus" :brows "neutral"))
+    (kf :idx 2 :label "Nail in Right Palm" :rule "Hands cross: index touches opposite palm center" :tip [35 25 14] :knuckle [60 45 5] :wrist [100 80 -10] :base-shift [20 -10 0] :nmf (nmf :mouth "Christ" :brows "neutral"))
+  )
+
+  (sign :id "god" :word "GOD" :cat "faith" :gloss "GOD"
+    :label "God the Father"
+    :desc "Dominant index points reverently upward toward heaven with upward gaze." :aliases ("FATHER" "ALMIGHTY" "CREATOR")
+    (kf :idx 1 :label "Raise Pointing Hand" :rule "Dominant index points upward at upper chest level" :tip [25 -50 25] :knuckle [45 -15 15] :wrist [75 35 0] :nmf (nmf :mouth "God" :brows "raised"))
+    (kf :idx 2 :label "Reverent Point to Heaven" :rule "Dominant index extends higher toward the heavens" :tip [30 -85 35] :knuckle [50 -40 20] :wrist [80 10 5] :nmf (nmf :mouth "God" :brows "raised"))
+  )
+
+  (sign :id "pray" :word "PRAY" :cat "faith" :gloss "PRAY"
+    :label "Pray / Prayer"
+    :desc "Both flat palms join together at chest level in prayer steeple, bowing slightly." :aliases ("PRAYER" "PRAYING" "PRAYS" "AMEN")
+    (kf :idx 1 :label "Palms Together at Chest" :rule "Both flat hands press palms together pointing upward in front of heart" :tip [-15 -15 25] :knuckle [20 20 12] :wrist [55 65 0] :nmf (nmf :mouth "pray" :brows "neutral"))
+    (kf :idx 2 :label "Reverent Dip" :rule "Prayer steeple hands dip forward in reverent contemplation" :tip [-15 5 30] :knuckle [20 35 18] :wrist [55 75 5] :nmf (nmf :mouth "Amen" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "church" :word "CHURCH" :cat "faith" :gloss "CHURCH"
+    :label "Church / Cathedral"
+    :desc "Both hands form a peaked steeple/roof above chest, tapping together twice." :aliases ("CHAPEL" "CATHEDRAL" "SANCTUARY" "BASILICA")
+    (kf :idx 1 :label "Form Steeples" :rule "Fingertips join in a triangular church roof spire" :tip [-5 -40 22] :knuckle [35 -5 12] :wrist [75 45 0] :nmf (nmf :mouth "church" :brows "neutral"))
+    (kf :idx 2 :label "Steeple Tap" :rule "Roof tap confirms the consecrated sacred architecture" :tip [-5 -30 22] :knuckle [35 5 12] :wrist [75 55 0] :nmf (nmf :mouth "church" :brows "neutral"))
+  )
+
+  (sign :id "cross" :word "CROSS" :cat "faith" :gloss "CROSS"
+    :label "Cross / Crucifix"
+    :desc "Dominant index traces the vertical and horizontal beams of the Cross." :aliases ("CRUCIFIX" "CRUCIFIXION")
+    (kf :idx 1 :label "Vertical Top" :rule "Index finger begins at top of cross near forehead" :tip [0 -60 25] :knuckle [25 -25 15] :wrist [65 25 0] :nmf (nmf :mouth "cross" :brows "neutral"))
+    (kf :idx 2 :label "Vertical Base" :rule "Index finger traces downward to base at lower chest" :tip [0 35 25] :knuckle [25 65 15] :wrist [65 95 0] :nmf (nmf :mouth "cross" :brows "neutral"))
+    (kf :idx 3 :label "Horizontal Beam Left" :rule "Index draws crossbeam starting from left" :tip [-45 -15 22] :knuckle [-10 15 12] :wrist [40 55 0] :nmf (nmf :mouth "cross" :brows "neutral"))
+    (kf :idx 4 :label "Horizontal Beam Right" :rule "Index draws across to right shoulder" :tip [45 -15 22] :knuckle [75 15 12] :wrist [110 55 0] :nmf (nmf :mouth "cross" :brows "neutral"))
+  )
+
+  (sign :id "bible" :word "BIBLE" :cat "faith" :gloss "HOLY BOOK"
+    :label "Bible / Holy Scripture"
+    :desc "Hands join together and open like a book, indicating Sacred Scripture." :aliases ("SCRIPTURE" "GOSPEL" "TESTAMENT")
+    (kf :idx 1 :label "Closed Book" :rule "Palms pressed together vertically" :tip [-10 15 20] :knuckle [25 45 10] :wrist [65 80 0] :nmf (nmf :mouth "holy" :brows "neutral"))
+    (kf :idx 2 :label "Open Scripture Book" :rule "Palms open upward side by side like pages of the Bible" :tip [25 20 15] :knuckle [55 50 10] :wrist [95 85 0] :base-shift [-30 0 0] :nmf (nmf :mouth "book" :brows "neutral"))
+  )
+
+  (sign :id "holy" :word "HOLY" :cat "faith" :gloss "HOLY"
+    :label "Holy / Sacred"
+    :desc "Flat open hand brushes upward from heart in a pure elevating gesture." :aliases ("SACRED" "BLESSED" "SANCTUS")
+    (kf :idx 1 :label "At Heart" :rule "Open flat hand rests near heart" :tip [-10 0 20] :knuckle [30 35 10] :wrist [75 70 0] :nmf (nmf :mouth "holy" :brows "raised"))
+    (kf :idx 2 :label "Elevate Upward" :rule "Hand sweeps upward in divine radiance" :tip [15 -45 30] :knuckle [50 -10 15] :wrist [90 35 0] :nmf (nmf :mouth "holy" :brows "raised"))
+  )
+
+  (sign :id "love" :word "LOVE" :cat "faith" :gloss "LOVE"
+    :label "Love / Charity"
+    :desc "Fists crossed over heart in a warm embracing cross." :aliases ("CHARITY" "LOVING" "LOVES")
+    (kf :idx 1 :label "Fists at Shoulders" :rule "Both hands loosely closed in front of chest" :tip [10 10 15] :knuckle [45 40 8] :wrist [85 75 0] :nmf (nmf :mouth "love" :brows "neutral"))
+    (kf :idx 2 :label "Crossed Over Heart" :rule "Fists cross snugly over chest" :tip [-25 -5 22] :knuckle [15 25 12] :wrist [60 65 0] :nmf (nmf :mouth "love" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "peace" :word "PEACE" :cat "faith" :gloss "PEACE"
+    :label "Peace / Pax"
+    :desc "Both palms touch center then glide smoothly outward and downward." :aliases ("PAX" "CALM" "SERENITY")
+    (kf :idx 1 :label "Joined Center" :rule "Open hands touch palms together in center" :tip [-10 5 20] :knuckle [25 35 10] :wrist [65 70 0] :nmf (nmf :mouth "peace" :brows "neutral"))
+    (kf :idx 2 :label "Glide Outward" :rule "Hands smooth outward into serene open space" :tip [55 30 20] :knuckle [85 55 10] :wrist [120 85 0] :base-shift [-40 20 0] :nmf (nmf :mouth "peace" :brows "neutral"))
+  )
+
+  (sign :id "school" :word "SCHOOL" :cat "school" :gloss "SCHOOL"
+    :label "School"
+    :desc "Dominant flat palm claps twice across non-dominant palm." :aliases ("CLASSROOM" "COLLEGE" "ACADEMY")
+    (kf :idx 1 :label "First Palm Clap" :rule "Dominant flat hand claps down onto non-dominant palm" :tip [-45 20 12] :knuckle [5 35 5] :wrist [65 70 -10] :nmf (nmf :mouth "school" :brows "neutral"))
+    (kf :idx 2 :label "Lift" :rule "Hand rebounds upward slightly" :tip [-35 -10 25] :knuckle [15 15 15] :wrist [75 50 0] :nmf (nmf :mouth "school" :brows "neutral"))
+    (kf :idx 3 :label "Second Palm Clap" :rule "Second rhythmic clap confirming school activity" :tip [-45 20 12] :knuckle [5 35 5] :wrist [65 70 -10] :nmf (nmf :mouth "school" :brows "neutral"))
+  )
+
+  (sign :id "teacher" :word "TEACHER" :cat "school" :gloss "TEACH PERSON"
+    :label "Teacher / Educator"
+    :desc "Pinched fingers move forward from temples (teaching) then hands move down (person)." :aliases ("TEACH" "TEACHING" "EDUCATOR" "INSTRUCTOR")
+    (kf :idx 1 :label "From Mind" :rule "Pinched hands positioned near temples" :tip [50 -65 28] :knuckle [70 -35 15] :wrist [95 10 0] :nmf (nmf :mouth "teach" :brows "neutral"))
+    (kf :idx 2 :label "Extend Knowledge Out" :rule "Hands extend forward sharing knowledge with pupils" :tip [30 -20 65] :knuckle [55 10 45] :wrist [85 50 20] :nmf (nmf :mouth "teacher" :brows "neutral"))
+  )
+
+  (sign :id "learn" :word "LEARN" :cat "school" :gloss "LEARN"
+    :label "Learn / Student"
+    :desc "Hand gathers knowledge from open palm book and places it into the mind/forehead." :aliases ("LEARNING" "STUDENT" "PUPIL" "STUDY")
+    (kf :idx 1 :label "Gather from Book" :rule "Fingertips take knowledge from flat non-dominant palm" :tip [-45 25 14] :knuckle [0 35 5] :wrist [60 70 -10] :nmf (nmf :mouth "learn" :brows "neutral"))
+    (kf :idx 2 :label "Place into Forehead" :rule "Hand moves up and touches forehead with knowledge" :tip [15 -65 30] :knuckle [45 -30 15] :wrist [80 15 0] :nmf (nmf :mouth "learn" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "book" :word "BOOK" :cat "school" :gloss "BOOK"
+    :label "Book / Text"
+    :desc "Palms pressed together vertically then opened like a book." :aliases ("TEXTBOOK" "READER" "PAGES")
+    (kf :idx 1 :label "Closed Book" :rule "Palms pressed together" :tip [-10 15 20] :knuckle [25 45 10] :wrist [65 80 0] :nmf (nmf :mouth "book" :brows "neutral"))
+    (kf :idx 2 :label "Open Pages" :rule "Palms swing open upward" :tip [25 20 15] :knuckle [55 50 10] :wrist [95 85 0] :base-shift [-30 0 0] :nmf (nmf :mouth "book" :brows "neutral"))
+  )
+
+  (sign :id "read" :word "READ" :cat "school" :gloss "READ"
+    :label "Read / Reading"
+    :desc "V-fingers (eyes) scan down the non-dominant flat palm page." :aliases ("READING" "READS")
+    (kf :idx 1 :label "Scan Top of Page" :rule "V-fingers point to top of non-dominant palm page" :tip [-60 -25 20] :knuckle [-10 -5 10] :wrist [50 40 -10] :nmf (nmf :mouth "read" :brows "neutral"))
+    (kf :idx 2 :label "Scan Down Page" :rule "V-fingers scan down to bottom of palm page" :tip [-50 35 18] :knuckle [0 50 8] :wrist [60 85 -10] :nmf (nmf :mouth "read" :brows "neutral"))
+  )
+
+  (sign :id "write" :word "WRITE" :cat "school" :gloss "WRITE"
+    :label "Write / Writing"
+    :desc "Dominant pinched fingers pretend to write a pen stroke across non-dominant palm." :aliases ("WRITING" "PEN" "PENCIL")
+    (kf :idx 1 :label "Pen Start" :rule "Pinched writing fingers touch left side of palm" :tip [-70 20 14] :knuckle [-20 30 8] :wrist [45 65 -10] :nmf (nmf :mouth "write" :brows "neutral"))
+    (kf :idx 2 :label "Pen Stroke Across" :rule "Fingers scribble across to right side of palm" :tip [-30 25 14] :knuckle [15 35 8] :wrist [75 70 -10] :nmf (nmf :mouth "write" :brows "neutral"))
+  )
+
+  (sign :id "question" :word "QUESTION" :cat "school" :gloss "QUESTION"
+    :label "Question / Ask"
+    :desc "Dominant index traces a question mark hook in the air and dots it." :aliases ("ASK" "QUERY" "QUIZ")
+    (kf :idx 1 :label "Hook Top" :rule "Index finger curves upper hook in air" :tip [25 -35 30] :knuckle [45 -5 18] :wrist [80 40 0] :nmf (nmf :mouth "question" :brows "furrowed"))
+    (kf :idx 2 :label "Stem" :rule "Index curves down straight" :tip [25 -5 30] :knuckle [45 25 18] :wrist [80 65 0] :nmf (nmf :mouth "question" :brows "furrowed"))
+    (kf :idx 3 :label "Question Dot" :rule "Index jabs dot cleanly underneath" :tip [25 25 30] :knuckle [45 55 18] :wrist [80 90 0] :nmf (nmf :mouth "question" :brows "raised"))
+  )
+
+  (sign :id "listen" :word "LISTEN" :cat "school" :gloss "LISTEN"
+    :label "Listen / Hear"
+    :desc "Dominant cupped hand placed near ear, tilting head to listen attentively." :aliases ("HEAR" "HEARING" "LISTENING")
+    (kf :idx 1 :label "Cup Ear" :rule "Cupped hand brought alongside right ear" :tip [75 -55 25] :knuckle [95 -20 15] :wrist [120 25 0] :nmf (nmf :mouth "listen" :brows "raised" :tilt "tilt-right"))
+    (kf :idx 2 :label "Attentive Ear" :rule "Hand cups closer focusing sound" :tip [65 -55 22] :knuckle [85 -20 12] :wrist [110 25 0] :nmf (nmf :mouth "listen" :brows "raised" :tilt "tilt-right"))
+  )
+
+  (sign :id "look" :word "LOOK" :cat "school" :gloss "LOOK"
+    :label "Look / See / Watch"
+    :desc "Two fingers (V-shape) point outward from eyes toward the subject." :aliases ("SEE" "WATCH" "VIEW" "OBSERVE")
+    (kf :idx 1 :label "From Eyes" :rule "V-fingers start pointing near eyes" :tip [35 -45 25] :knuckle [60 -15 15] :wrist [90 25 0] :nmf (nmf :mouth "look" :brows "raised"))
+    (kf :idx 2 :label "Direct Outward" :rule "V-fingers thrust forward directing gaze" :tip [25 -25 65] :knuckle [50 5 45] :wrist [80 45 20] :nmf (nmf :mouth "look" :brows "raised"))
+  )
+
+  (sign :id "help" :word "HELP" :cat "school" :gloss "HELP"
+    :label "Help / Support"
+    :desc "Dominant closed fist with thumb up rests on open non-dominant palm, lifting forward." :aliases ("ASSIST" "SUPPORT")
+    (kf :idx 1 :label "Rest on Palm" :rule "Dominant thumbs-up fist rests on flat non-dominant palm" :tip [-40 30 14] :knuckle [-5 40 5] :wrist [55 75 -10] :nmf (nmf :mouth "help" :brows "raised"))
+    (kf :idx 2 :label "Lift Forward Together" :rule "Both hands move forward together offering supportive help" :tip [-25 5 45] :knuckle [10 15 35] :wrist [70 50 15] :base-shift [15 -20 30] :nmf (nmf :mouth "help" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "science" :word "SCIENCE" :cat "stem" :gloss "SCIENCE"
+    :label "Science / Lab"
+    :desc "Alternating pouring gestures of two imaginary beaker test tubes." :aliases ("SCIENTIFIC" "CHEMISTRY" "BIOLOGY" "PHYSICS")
+    (kf :idx 1 :label "Pour Right Beaker" :rule "Dominant hand tilts down pouring test tube" :tip [30 -10 25] :knuckle [60 15 15] :wrist [95 50 0] :nmf (nmf :mouth "science" :brows "neutral"))
+    (kf :idx 2 :label "Pour Left Beaker" :rule "Hands alternate pouring into opposite vessel" :tip [-30 0 25] :knuckle [10 25 15] :wrist [60 60 0] :base-shift [20 -15 10] :nmf (nmf :mouth "science" :brows "neutral"))
+  )
+
+  (sign :id "maths" :word "MATHS" :cat "stem" :gloss "MATHS"
+    :label "Maths / Arithmetic"
+    :desc "M-letter fingers tapping rhythmically across palm." :aliases ("MATH" "MATHEMATICS" "ARITHMETIC")
+    (kf :idx 1 :label "Tap M Fingers" :rule "Three fingers of dominant hand tap non-dominant palm" :tip [-50 25 12] :knuckle [0 35 5] :wrist [60 70 -10] :nmf (nmf :mouth "maths" :brows "neutral"))
+    (kf :idx 2 :label "Tap Second Stroke" :rule "Second tap calculation rhythm" :tip [-40 20 12] :knuckle [10 30 5] :wrist [70 65 -10] :nmf (nmf :mouth "maths" :brows "neutral"))
+  )
+
+  (sign :id "number" :word "NUMBER" :cat "stem" :gloss "NUMBER"
+    :label "Number / Count"
+    :desc "Fingertips tap together counting rhythmically." :aliases ("NUMBERS" "COUNT" "COUNTING")
+    (kf :idx 1 :label "Fingertip Pinch" :rule "Dominant thumb and index pinch tapping non-dominant index" :tip [-65 -10 18] :knuckle [-10 15 8] :wrist [50 60 -10] :nmf (nmf :mouth "number" :brows "neutral"))
+    (kf :idx 2 :label "Count Step" :rule "Rebound count tap" :tip [-55 10 18] :knuckle [0 25 8] :wrist [60 65 -10] :nmf (nmf :mouth "count" :brows "neutral"))
+  )
+
+  (sign :id "equal" :word "EQUAL" :cat "stem" :gloss "EQUAL"
+    :label "Equals / Same"
+    :desc "Both index fingers held parallel horizontally like an equals sign (=)." :aliases ("EQUALS" "SAME" "EQUIVALENT")
+    (kf :idx 1 :label "Parallel Index Bars" :rule "Dominant index placed parallel just above non-dominant index" :tip [-35 0 20] :knuckle [15 10 10] :wrist [75 45 0] :nmf (nmf :mouth "equal" :brows "neutral"))
+    (kf :idx 2 :label "Press Equality" :rule "Both horizontal fingers tap together confirming equality" :tip [-35 15 20] :knuckle [15 25 10] :wrist [75 55 0] :nmf (nmf :mouth "equal" :brows "neutral"))
+  )
+
+  (sign :id "water" :word "WATER" :cat "stem" :gloss "WATER"
+    :label "Water / Liquid"
+    :desc "Index finger taps side of chin twice (BSL water sign)." :aliases ("LIQUID" "DRINK")
+    (kf :idx 1 :label "Tap Chin 1" :rule "Index finger touches right side of chin" :tip [25 -45 22] :knuckle [55 -15 12] :wrist [90 25 0] :nmf (nmf :mouth "water" :brows "neutral"))
+    (kf :idx 2 :label "Tap Chin 2" :rule "Index finger taps chin second time" :tip [25 -45 22] :knuckle [55 -15 12] :wrist [90 25 0] :nmf (nmf :mouth "water" :brows "neutral"))
+  )
+
+  (sign :id "light" :word "LIGHT" :cat "stem" :gloss "LIGHT"
+    :label "Light / Shine"
+    :desc "Pinched hand near temple opens outward into bright radiating fingers." :aliases ("SUNLIGHT" "SHINE" "BRIGHT")
+    (kf :idx 1 :label "Spark Point" :rule "Fingers pinched near temple" :tip [50 -55 25] :knuckle [75 -25 15] :wrist [105 15 0] :nmf (nmf :mouth "light" :brows "raised"))
+    (kf :idx 2 :label "Radiate Light Rays" :rule "Fingers splay open wide projecting light downward and outward" :tip [30 -10 55] :knuckle [55 20 35] :wrist [85 60 15] :nmf (nmf :mouth "light" :brows "raised"))
+  )
+
+  (sign :id "hello" :word "HELLO" :cat "conversation" :gloss "HELLO"
+    :label "Hello / Welcome"
+    :desc "Dominant open flat hand waves warmly from temple forward." :aliases ("HI" "WELCOME" "GREETINGS")
+    (kf :idx 1 :label "Temple Salute" :rule "Open flat hand near right temple" :tip [60 -55 28] :knuckle [85 -25 15] :wrist [110 15 0] :nmf (nmf :mouth "hello" :brows "raised"))
+    (kf :idx 2 :label "Wave Forward" :rule "Hand sweeps warmly forward with open welcome" :tip [85 -40 50] :knuckle [110 -10 30] :wrist [135 30 10] :nmf (nmf :mouth "hello" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "thank-you" :word "THANK YOU" :cat "conversation" :gloss "THANK-YOU"
+    :label "Thank You / Thanks"
+    :desc "Flat hand fingertips touch chin and move forward toward conversational partner." :aliases ("THANKS" "THANK" "GRATITUDE")
+    (kf :idx 1 :label "Touch Chin" :rule "Fingertips of flat dominant hand touch chin/lips" :tip [0 -45 24] :knuckle [35 -10 12] :wrist [80 35 0] :nmf (nmf :mouth "thank you" :brows "raised"))
+    (kf :idx 2 :label "Extend Gratitude Forward" :rule "Hand moves smoothly forward toward receiver" :tip [0 5 65] :knuckle [25 35 45] :wrist [70 70 20] :nmf (nmf :mouth "thank you" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "please" :word "PLEASE" :cat "conversation" :gloss "PLEASE"
+    :label "Please"
+    :desc "Flat hand fingertips touch chin and move forward (identical root to thank you with please mouthing)." :aliases ("PRAY-THEE")
+    (kf :idx 1 :label "Touch Lips/Chin" :rule "Flat fingertips rest at lips/chin" :tip [0 -45 24] :knuckle [35 -10 12] :wrist [80 35 0] :nmf (nmf :mouth "please" :brows "raised"))
+    (kf :idx 2 :label "Extend Forward" :rule "Hand moves forward gracefully" :tip [0 15 60] :knuckle [25 45 40] :wrist [70 80 15] :nmf (nmf :mouth "please" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "yes" :word "YES" :cat "conversation" :gloss "YES"
+    :label "Yes / Agree"
+    :desc "Dominant fist nods up and down like an agreeing head." :aliases ("AGREE" "CORRECT" "TRUE")
+    (kf :idx 1 :label "Fist Up" :rule "Closed fist tilts back ready to nod" :tip [35 -10 25] :knuckle [60 15 15] :wrist [95 55 0] :nmf (nmf :mouth "yes" :brows "raised"))
+    (kf :idx 2 :label "Fist Nod Down" :rule "Fist nods down decisively like a head nod" :tip [35 30 25] :knuckle [60 55 15] :wrist [95 85 0] :nmf (nmf :mouth "yes" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "no" :word "NO" :cat "conversation" :gloss "NO"
+    :label "No / Disagree"
+    :desc "Index and middle fingers snap shut against thumb twice." :aliases ("DISAGREE" "INCORRECT" "FALSE")
+    (kf :idx 1 :label "Beak Open" :rule "Index and middle fingers extend open from thumb" :tip [35 -25 25] :knuckle [60 5 15] :wrist [95 45 0] :nmf (nmf :mouth "no" :brows "furrowed"))
+    (kf :idx 2 :label "Snap Shut" :rule "Fingers snap closed against thumb" :tip [35 0 25] :knuckle [60 25 15] :wrist [95 65 0] :nmf (nmf :mouth "no" :brows "furrowed"))
+  )
+
+  (sign :id "good" :word "GOOD" :cat "conversation" :gloss "GOOD"
+    :label "Good / Well"
+    :desc "Dominant thumbs up rests on flat non-dominant palm with affirmation." :aliases ("WELL" "EXCELLENT" "FINE")
+    (kf :idx 1 :label "Thumb Up at Chest" :rule "Thumbs up gesture held in front of heart" :tip [25 0 25] :knuckle [50 25 15] :wrist [85 65 0] :nmf (nmf :mouth "good" :brows "raised"))
+    (kf :idx 2 :label "Affirmative Thrust" :rule "Thumbs up moves forward with bright affirmation" :tip [20 10 50] :knuckle [45 35 35] :wrist [80 70 15] :nmf (nmf :mouth "good" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "friend" :word "FRIEND" :cat "conversation" :gloss "FRIEND"
+    :label "Friend / Companionship"
+    :desc "Dominant index hooks into non-dominant index in an affectionate interlocking clasp." :aliases ("FRIENDS" "COMPANION" "PARTNER")
+    (kf :idx 1 :label "Approach Hook" :rule "Dominant hooked index approaches non-dominant hooked index" :tip [-45 -10 20] :knuckle [5 15 10] :wrist [65 55 -10] :nmf (nmf :mouth "friend" :brows "raised"))
+    (kf :idx 2 :label "Interlock Clasp" :rule "Both index fingers lock together warmly" :tip [-55 5 16] :knuckle [-10 20 8] :wrist [50 65 -10] :nmf (nmf :mouth "friend" :brows "raised" :tilt "nod"))
+  )
+)
