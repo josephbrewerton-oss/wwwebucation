@@ -395,7 +395,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
 
       {/* Main 3D Vector Stage Window (Responsive Height) */}
       <div style={{ position: 'relative', borderRadius: '0 0 12px 12px', overflow: 'hidden', border: '1px solid #334155' }}>
-        <div style={{ pointerEvents: touchScrollLocked ? 'auto' : 'none' }}>
+        <div style={{ pointerEvents: 'auto' }}>
           <AstVectorMediaPlayer
             preset="church-tour"
             autoPlay={gameMode === 'tour'}

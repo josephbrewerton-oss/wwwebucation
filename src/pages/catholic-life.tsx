@@ -863,7 +863,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                   </button>
                 </div>
 
-                <div style={{ pointerEvents: overviewTouchLock ? 'none' : 'auto', position: 'relative', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
+                <div style={{ pointerEvents: 'auto', position: 'relative', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                   <AstVectorMediaPlayer
                     preset="church-tour"
                     autoPlay={true}

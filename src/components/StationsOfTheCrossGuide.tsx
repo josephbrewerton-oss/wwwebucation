@@ -18,7 +18,6 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
   const [showPlayer, setShowPlayer] = useState<boolean>(true);
   const [showLatin, setShowLatin] = useState<boolean>(false);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
-  const [stationsTouchLock, setStationsTouchLock] = useState<boolean>(true);
   const [completedStations, setCompletedStations] = useState<number[]>(() => {
     try {
       const saved = localStorage.getItem('stj_stations_completed');
@@ -128,17 +127,14 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
               <span>AST Simulation: stations-of-the-cross</span>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setStationsTouchLock((prev) => !prev)}
-                className="px-2.5 py-1 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[11px] font-semibold hover:bg-slate-700 sm:hidden"
-              >
-                {stationsTouchLock ? '🔒 Page Scroll Safe' : '👆 Touch Active'}
-              </button>
-              <span className="text-slate-400 hidden sm:inline">Touch Draggable Cross · 60 FPS</span>
+              <span className="text-amber-400 font-semibold text-[11px] flex items-center gap-1.5">
+                <span>✝️ 14 Sacred Stations</span>
+                <span className="text-slate-500 hidden sm:inline">&bull;</span>
+                <span className="text-slate-300 hidden sm:inline">Interactive Checkpoints &amp; Drag</span>
+              </span>
             </div>
           </div>
-          <div style={{ position: 'relative', width: '100%', pointerEvents: stationsTouchLock ? 'none' : 'auto' }}>
+          <div style={{ position: 'relative', width: '100%', pointerEvents: 'auto' }}>
             <AstVectorMediaPlayer
               preset="stations-of-the-cross"
               height="clamp(210px, 45vw + 40px, 380px)"
@@ -146,15 +142,6 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
               embedded={true}
               bslEnabled={false}
             />
-            {stationsTouchLock && (
-              <div
-                onClick={() => setStationsTouchLock(false)}
-                className="sm:hidden absolute bottom-3 right-3 bg-slate-950/90 backdrop-blur border border-amber-400/40 text-amber-300 text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg cursor-pointer flex items-center gap-1.5 pointer-events-auto"
-                title="Tap to enable interactive drag and click"
-              >
-                <span>👆 Tap to Interact / Drag</span>
-              </div>
-            )}
           </div>
         </div>
       )}
