@@ -219,6 +219,36 @@ const astElapsedMs = (performance.now() - tAstStart) / 10;
 console.log(`  ⚡ Deserialization speed: ${astElapsedMs.toFixed(2)} ms for all ${diskCount} 3D signs`);
 assert(astElapsedMs < 10.0, `AST S-Expression deserialization time (${astElapsedMs.toFixed(2)} ms) is < 10 ms`);
 
+// ---------------------------------------------------------
+// Test 8: Handshape Opcode Invariants (:shape :flat | :fist | :point | :claw | :spread | :v)
+// ---------------------------------------------------------
+console.log('\n8. Testing Handshape Opcode Invariants (:shape opcode):');
+const { serializeSignToAst } = await import('../src/utils/bslAstCodec');
+const sampleAstShape = `(sign :id "test-shape" :word "TEST" :cat "stem" :gloss "TEST" :label "Test Shape" :desc "Testing opcode"
+  (kf :idx 1 :label "Flat Hand" :rule "Flat handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :flat)
+  (kf :idx 2 :label "Fist Hand" :rule "Fist handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :fist)
+  (kf :idx 3 :label "Claw Hand" :rule "Claw handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :claw)
+  (kf :idx 4 :label "Spread Hand" :rule "Spread handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :spread)
+  (kf :idx 5 :label "V Hand" :rule "V handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :v)
+  (kf :idx 6 :label "Point Hand" :rule "Point handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :point)
+)`;
+const parsedTest = parseAstToLexicon(sampleAstShape);
+assert(Boolean(parsedTest['TEST']), "Parsed AST sign with :shape opcodes");
+assert(parsedTest['TEST'].keyframes[0].shape === 'flat', "Parsed :shape :flat");
+assert(parsedTest['TEST'].keyframes[1].shape === 'fist', "Parsed :shape :fist");
+assert(parsedTest['TEST'].keyframes[2].shape === 'claw', "Parsed :shape :claw");
+assert(parsedTest['TEST'].keyframes[3].shape === 'spread', "Parsed :shape :spread");
+assert(parsedTest['TEST'].keyframes[4].shape === 'v', "Parsed :shape :v");
+assert(parsedTest['TEST'].keyframes[5].shape === 'point', "Parsed :shape :point");
+
+const serializedTest = serializeSignToAst(parsedTest['TEST']);
+assert(serializedTest.includes(':shape :flat'), "Serialized :shape :flat correctly");
+assert(serializedTest.includes(':shape :fist'), "Serialized :shape :fist correctly");
+assert(serializedTest.includes(':shape :claw'), "Serialized :shape :claw correctly");
+assert(serializedTest.includes(':shape :spread'), "Serialized :shape :spread correctly");
+assert(serializedTest.includes(':shape :v'), "Serialized :shape :v correctly");
+assert(serializedTest.includes(':shape :point'), "Serialized :shape :point correctly");
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

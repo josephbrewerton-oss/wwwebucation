@@ -20,6 +20,8 @@ export interface BslNmf {
   headTilt?: 'neutral' | 'nod' | 'tilt-left' | 'tilt-right';
 }
 
+export type BslHandShape = 'point' | 'flat' | 'fist' | 'claw' | 'spread' | 'v';
+
 export interface BslHandPose {
   letter: string;
   label: string;
@@ -30,6 +32,7 @@ export interface BslHandPose {
   targetWrist: Point3D;
   activeVowelIndex?: number; // 0=A (Thumb), 1=E (Index), 2=I (Middle), 3=O (Ring), 4=U (Pinky)
   nmf?: BslNmf;
+  shape?: BslHandShape;
 }
 
 // Fixed anatomical non-dominant base hand coordinates (The "Paper")

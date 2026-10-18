@@ -33,7 +33,9 @@ import {
   decomposeTextToBslStreamWithLexicon,
   lookupBslSign,
   BSL_CURRICULUM_LEXICON,
+  registerBslSigns,
 } from '../utils/bslLexicon';
+import { parseAstToLexicon } from '../utils/bslAstCodec';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
 import { subscribeBslSpeech } from '../services/bslGlobalStore';
 
@@ -89,6 +91,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
   const [showPanControls, setShowPanControls] = useState<boolean>(false);
   const [showFacialFeatures, setShowFacialFeatures] = useState<boolean>(true);
+  const [importNotice, setImportNotice] = useState<string>('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Active signing state
   const [currentLetter, setCurrentLetter] = useState<string>('');
@@ -102,6 +106,31 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const animFrameRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(performance.now());
   const pipWindowRef = useRef<Window | null>(null);
+
+  const handleImportAstFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const imported = parseAstToLexicon(text);
+      const count = registerBslSigns(imported);
+      if (count > 0) {
+        const firstKey = Object.keys(imported)[0];
+        setImportNotice(`+${count} sign${count > 1 ? 's' : ''}`);
+        setTimeout(() => setImportNotice(''), 3500);
+        if (firstKey) {
+          enqueueWord(firstKey);
+        }
+      } else {
+        setImportNotice('0 signs');
+        setTimeout(() => setImportNotice(''), 3000);
+      }
+    } catch (_) {
+      setImportNotice('Error');
+      setTimeout(() => setImportNotice(''), 3000);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   // 1. Draggable Window State (Persistent in localStorage with safe viewport bounds)
   const [windowPos, setWindowPos] = useState<{ x: number; y: number } | null>(() => {
@@ -551,11 +580,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }));
   }, [projPoint]);
 
-  // Project dominant hand (The Pen) complete anatomical landmarks using WASM 3D Kernel
+  // Project dominant hand (The Pen) complete anatomical landmarks with dynamic shape solving
   const domHand3D = useMemo(() => {
     const w = interpolatedWrist;
     const k = interpolatedKnuckle;
     const t = interpolatedTip;
+    const shape = currentPose.shape || 'point';
 
     // Direction along index pointing axis
     const fx = k.x - w.x;
@@ -574,6 +604,15 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     const ulx = latX / latLen;
     const uly = latY / latLen;
     const ulz = latZ / latLen;
+
+    // Palmar / dorsal normal vector (uf x ul)
+    const unx = ufy * ulz - ufz * uly;
+    const uny = ufz * ulx - ufx * ulz;
+    const unz = ufx * uly - ufy * ulx;
+    const unLen = Math.hypot(unx, uny, unz) || 1;
+    const unormX = unx / unLen;
+    const unormY = uny / unLen;
+    const unormZ = unz / unLen;
 
     // Palm center of dominant hand
     const palm: Point3D = {
@@ -599,7 +638,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       z: k.z + ulz * 35 - ufz * 12,
     };
 
-    // Curled fingertips tucked into the palm (pointing hand posture)
+    // Passive curled fingertips tucked into the palm (pointing hand posture)
     const tipMidCurled: Point3D = {
       x: palm.x + ulx * 6 - ufx * 4,
       y: palm.y + uly * 6 - ufy * 4,
@@ -616,7 +655,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       z: palm.z + 4,
     };
 
-    // Thumb base, knuckle, and tip (folded across knuckles)
+    // Thumb base & knuckle
     const thumbBase: Point3D = {
       x: w.x * 0.65 + k.x * 0.35 - ulx * 10,
       y: w.y * 0.65 + k.y * 0.35 - uly * 10,
@@ -627,11 +666,6 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       y: thumbBase.y + ufy * 12 - uly * 5,
       z: thumbBase.z + 6,
     };
-    const thumbTip: Point3D = {
-      x: k.x * 0.6 + kMid.x * 0.4 - ufx * 4,
-      y: k.y * 0.6 + kMid.y * 0.4 - ufy * 4,
-      z: k.z + 8,
-    };
 
     // Forearm entry point
     const forearm: Point3D = {
@@ -640,23 +674,167 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       z: w.z - 20,
     };
 
+    // Dynamic handshape digit solver (:point | :flat | :fist | :claw | :spread | :v)
+    let tipIndex: Point3D = t;
+    let tipMid: Point3D = tipMidCurled;
+    let tipRing: Point3D = tipRingCurled;
+    let tipPinky: Point3D = tipPinkyCurled;
+    let thumbTip: Point3D = {
+      x: k.x * 0.6 + kMid.x * 0.4 - ufx * 4,
+      y: k.y * 0.6 + kMid.y * 0.4 - ufy * 4,
+      z: k.z + 8,
+    };
+
+    switch (shape) {
+      case 'flat':
+        // All fingers extended, closed together (B-hand)
+        tipIndex = t;
+        tipMid = {
+          x: kMid.x + ufx * 27,
+          y: kMid.y + ufy * 27,
+          z: kMid.z + ufz * 27,
+        };
+        tipRing = {
+          x: kRing.x + ufx * 24,
+          y: kRing.y + ufy * 24,
+          z: kRing.z + ufz * 24,
+        };
+        tipPinky = {
+          x: kPinky.x + ufx * 19,
+          y: kPinky.y + ufy * 19,
+          z: kPinky.z + ufz * 19,
+        };
+        thumbTip = {
+          x: k.x - ulx * 7 - ufx * 2,
+          y: k.y - uly * 7 - ufy * 2,
+          z: k.z + 4,
+        };
+        break;
+
+      case 'fist':
+        // S-hand / A-hand: all fingers tightly curled including index
+        tipIndex = {
+          x: palm.x - ulx * 3 - ufx * 4,
+          y: palm.y - uly * 3 - ufy * 4,
+          z: palm.z + 8,
+        };
+        tipMid = tipMidCurled;
+        tipRing = tipRingCurled;
+        tipPinky = tipPinkyCurled;
+        thumbTip = {
+          x: k.x + ulx * 6 + ufx * 2,
+          y: k.y + uly * 6 + ufy * 2,
+          z: k.z + 10,
+        };
+        break;
+
+      case 'claw':
+        // Curved 5-hand: all fingers bent into curved hooks
+        tipIndex = {
+          x: k.x + ufx * 14 - unormX * 12,
+          y: k.y + ufy * 14 - unormY * 12,
+          z: k.z + ufz * 14 - unormZ * 12,
+        };
+        tipMid = {
+          x: kMid.x + ufx * 15 - unormX * 12,
+          y: kMid.y + ufy * 15 - unormY * 12,
+          z: kMid.z + ufz * 15 - unormZ * 12,
+        };
+        tipRing = {
+          x: kRing.x + ufx * 14 - unormX * 12,
+          y: kRing.y + ufy * 14 - unormY * 12,
+          z: kRing.z + ufz * 14 - unormZ * 12,
+        };
+        tipPinky = {
+          x: kPinky.x + ufx * 11 - unormX * 12,
+          y: kPinky.y + ufy * 11 - unormY * 12,
+          z: kPinky.z + ufz * 11 - unormZ * 12,
+        };
+        thumbTip = {
+          x: thumbKnuckle.x + ufx * 10 - unormX * 10,
+          y: thumbKnuckle.y + ufy * 10 - unormY * 10,
+          z: thumbKnuckle.z + ufz * 10 - unormZ * 10,
+        };
+        break;
+
+      case 'spread':
+        // Open 5-hand: all fingers extended and splayed laterally
+        tipIndex = {
+          x: k.x + ufx * 25 - ulx * 8,
+          y: k.y + ufy * 25 - uly * 8,
+          z: k.z + ufz * 25,
+        };
+        tipMid = {
+          x: kMid.x + ufx * 28,
+          y: kMid.y + ufy * 28,
+          z: kMid.z + ufz * 28,
+        };
+        tipRing = {
+          x: kRing.x + ufx * 25 + ulx * 8,
+          y: kRing.y + ufy * 25 + uly * 8,
+          z: kRing.z + ufz * 25,
+        };
+        tipPinky = {
+          x: kPinky.x + ufx * 21 + ulx * 16,
+          y: kPinky.y + ufy * 21 + uly * 16,
+          z: kPinky.z + ufz * 21,
+        };
+        thumbTip = {
+          x: thumbKnuckle.x + ufx * 12 - ulx * 14,
+          y: thumbKnuckle.y + ufy * 12 - uly * 14,
+          z: thumbKnuckle.z + 8,
+        };
+        break;
+
+      case 'v':
+        // V-hand: Index + Middle extended with spread, ring and pinky curled
+        tipIndex = {
+          x: k.x + ufx * 25 - ulx * 6,
+          y: k.y + ufy * 25 - uly * 6,
+          z: k.z + ufz * 25,
+        };
+        tipMid = {
+          x: kMid.x + ufx * 26 + ulx * 6,
+          y: kMid.y + ufy * 26 + uly * 6,
+          z: kMid.z + ufz * 26,
+        };
+        tipRing = tipRingCurled;
+        tipPinky = tipPinkyCurled;
+        thumbTip = {
+          x: kRing.x - ufx * 2,
+          y: kRing.y - ufy * 2,
+          z: kRing.z + 8,
+        };
+        break;
+
+      case 'point':
+      default:
+        // Only index extended (1-hand / G-hand)
+        tipIndex = t;
+        tipMid = tipMidCurled;
+        tipRing = tipRingCurled;
+        tipPinky = tipPinkyCurled;
+        break;
+    }
+
     return {
       wrist: w,
       knuckleIndex: k,
-      tipIndex: t,
+      tipIndex,
       palm,
       kMid,
       kRing,
       kPinky,
-      tipMidCurled,
-      tipRingCurled,
-      tipPinkyCurled,
+      tipMid,
+      tipRing,
+      tipPinky,
       thumbBase,
       thumbKnuckle,
       thumbTip,
       forearm,
+      shape,
     };
-  }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip]);
+  }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip, currentPose.shape]);
 
   // Project all dominant hand landmarks to 2D SVG stage
   const domWrist = projPoint(domHand3D.wrist);
@@ -666,9 +844,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const domKMid = projPoint(domHand3D.kMid);
   const domKRing = projPoint(domHand3D.kRing);
   const domKPinky = projPoint(domHand3D.kPinky);
-  const domTipMid = projPoint(domHand3D.tipMidCurled);
-  const domTipRing = projPoint(domHand3D.tipRingCurled);
-  const domTipPinky = projPoint(domHand3D.tipPinkyCurled);
+  const domTipMid = projPoint(domHand3D.tipMid);
+  const domTipRing = projPoint(domHand3D.tipRing);
+  const domTipPinky = projPoint(domHand3D.tipPinky);
   const domThumbBase = projPoint(domHand3D.thumbBase);
   const domThumbKnuckle = projPoint(domHand3D.thumbKnuckle);
   const domThumbTip = projPoint(domHand3D.thumbTip);
@@ -1083,17 +1261,36 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             {currentLetter || '—'}
           </span>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span
-              style={{
-                fontSize: '0.58rem',
-                color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8',
-                textTransform: 'uppercase',
-                letterSpacing: '0.4px',
-                fontWeight: 700,
-              }}
-            >
-              {currentLetter.includes('[') ? '✨ BSL Sign' : currentPose.label || 'Ready'}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span
+                style={{
+                  fontSize: '0.58rem',
+                  color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.4px',
+                  fontWeight: 700,
+                }}
+              >
+                {currentLetter.includes('[') ? '✨ BSL Sign' : currentPose.label || 'Ready'}
+              </span>
+              {currentPose.shape && (
+                <span
+                  style={{
+                    fontSize: '0.55rem',
+                    fontWeight: 800,
+                    color: '#f59e0b',
+                    background: 'rgba(245, 158, 11, 0.15)',
+                    border: '1px solid rgba(245, 158, 11, 0.35)',
+                    padding: '0px 4px',
+                    borderRadius: '3px',
+                    fontFamily: 'monospace',
+                  }}
+                  title={`Handshape Opcode: :shape :${currentPose.shape}`}
+                >
+                  :{currentPose.shape}
+                </span>
+              )}
+            </div>
             {activeWordDisplay && (
               <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#f8fafc' }}>
                 {activeWordDisplay}
@@ -1638,6 +1835,34 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             {s.label}
           </button>
         ))}
+
+        {/* Hidden file input for runtime .ast sign import */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".ast,.lisp,.txt"
+          onChange={handleImportAstFile}
+          style={{ display: 'none' }}
+        />
+
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          style={{
+            background: importNotice ? 'rgba(34, 197, 94, 0.25)' : 'rgba(245, 158, 11, 0.15)',
+            border: `1px solid ${importNotice ? '#22c55e' : 'rgba(245, 158, 11, 0.4)'}`,
+            borderRadius: '4px',
+            color: importNotice ? '#4ade80' : '#fbbf24',
+            padding: '1px 6px',
+            fontSize: '0.62rem',
+            fontWeight: 700,
+            whiteSpace: 'nowrap',
+            cursor: 'pointer',
+          }}
+          title="Import custom signs from any .ast S-Expression file"
+        >
+          {importNotice ? `✓ ${importNotice}` : '📂 Import .ast'}
+        </button>
       </div>
 
       {/* Speed & Quick Input Bar */}

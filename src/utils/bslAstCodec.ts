@@ -12,7 +12,7 @@
  * - Zero external dependencies, pure O(n) streaming parsing and serialization.
  */
 
-import { Point3D } from './bslAlphabet';
+import { Point3D, BslHandShape } from './bslAlphabet';
 import { BslSign, BslSignKeyframe, BslCategory, BslNmf } from './bslLexicon';
 import { parseSExpr } from './sexprParser';
 import { SExprNode } from '../types/sexpr';
@@ -54,6 +54,7 @@ export function serializeSignToAst(sign: BslSign): string {
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
+    const shapeStr = kf.shape ? ` :shape :${kf.shape}` : '';
     const nmfStr = kf.nmf
       ? ` :nmf (nmf :mouth "${kf.nmf.mouth || ''}" :brows "${kf.nmf.eyebrows || 'neutral'}"${kf.nmf.headTilt ? ` :tilt "${kf.nmf.headTilt}"` : ''})`
       : '';
@@ -65,7 +66,7 @@ export function serializeSignToAst(sign: BslSign): string {
     lines.push(
       `    (kf :idx ${i + 1} :label "${kf.label.replace(/"/g, '\\"')}" :rule "${kf.rule.replace(/"/g, '\\"')}"` +
       ` :tip ${point3DToAstVector(kf.targetTip)} :knuckle ${point3DToAstVector(kf.targetKnuckle)} :wrist ${point3DToAstVector(kf.targetWrist)}` +
-      `${vowelStr}${shiftStr}${nmfStr})`
+      `${shapeStr}${vowelStr}${shiftStr}${nmfStr})`
     );
   }
 
@@ -123,6 +124,14 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     const knuckle = astVectorToPoint3D(kfProps.knuckle);
     const wrist = astVectorToPoint3D(kfProps.wrist);
 
+    let shape: BslHandShape | undefined = undefined;
+    if (kfProps.shape) {
+      const rawShape = String(kfProps.shape).replace(/^:/, '').toLowerCase();
+      if (['point', 'flat', 'fist', 'claw', 'spread', 'v'].includes(rawShape)) {
+        shape = rawShape as BslHandShape;
+      }
+    }
+
     let nmf: BslNmf | undefined = undefined;
     if (kfProps.nmf) {
       const nmfProps = typeof kfProps.nmf === 'object' && kfProps.nmf.props ? kfProps.nmf.props : kfProps.nmf;
@@ -148,6 +157,7 @@ export function parseAstNodeToSign(node: any): BslSign | null {
       targetTip: tip,
       targetKnuckle: knuckle,
       targetWrist: wrist,
+      shape,
       activeVowelIndex: kfProps.vowel !== undefined ? Number(kfProps.vowel) : undefined,
       baseHandOverride,
       nmf,
@@ -180,6 +190,15 @@ export function parseAstToLexicon(astContent: string): Record<string, BslSign> {
   const result: Record<string, BslSign> = {};
 
   if (!astRoot || typeof astRoot !== 'object') return result;
+
+  // Handle single (sign ...) root node as well as (bsl-lexicon ...) collection
+  if (!Array.isArray(astRoot) && ((astRoot as SExprNode).tag === 'sign' || (astRoot as SExprNode).tag === ':sign')) {
+    const singleSign = parseAstNodeToSign(astRoot);
+    if (singleSign) {
+      result[singleSign.word] = singleSign;
+      return result;
+    }
+  }
 
   // Root node can be (bsl-lexicon ...) or array of signs
   const children = Array.isArray(astRoot)

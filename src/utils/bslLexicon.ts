@@ -12,9 +12,9 @@
  * - Seamless hybrid fallback to BANZSL 2-handed manual alphabet fingerspelling
  */
 
-import { Point3D, BslHandPose, BslNmf, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import { Point3D, BslHandPose, BslNmf, BslHandShape, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
 
-export type { BslNmf };
+export type { BslNmf, BslHandShape };
 export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation';
 
 export interface BslSignKeyframe {
@@ -24,6 +24,7 @@ export interface BslSignKeyframe {
   targetTip: Point3D;
   targetKnuckle: Point3D;
   targetWrist: Point3D;
+  shape?: BslHandShape;
   activeVowelIndex?: number;
   baseHandOverride?: {
     wrist?: Point3D;
@@ -1013,6 +1014,27 @@ for (const [canonicalId, sign] of Object.entries(BSL_CURRICULUM_LEXICON)) {
 }
 
 /**
+ * Registers new signs into the active in-memory curriculum lexicon at runtime
+ */
+export function registerBslSigns(signs: Record<string, BslSign>): number {
+  let count = 0;
+  for (const [id, sign] of Object.entries(signs)) {
+    if (!sign || !sign.word) continue;
+    const key = sign.word.toUpperCase();
+    BSL_CURRICULUM_LEXICON[key] = sign;
+    ALIAS_MAP[key] = key;
+    if (sign.id) ALIAS_MAP[sign.id.toUpperCase()] = key;
+    if (sign.aliases) {
+      for (const alias of sign.aliases) {
+        ALIAS_MAP[alias.toUpperCase()] = key;
+      }
+    }
+    count++;
+  }
+  return count;
+}
+
+/**
  * Looks up a BSL whole-word sign by word or phrase
  */
 export function lookupBslSign(word: string): BslSign | null {
@@ -1039,6 +1061,7 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     targetKnuckle: kf.targetKnuckle,
     targetWrist: kf.targetWrist,
     nmf: kf.nmf,
+    shape: kf.shape,
   };
 }
 
