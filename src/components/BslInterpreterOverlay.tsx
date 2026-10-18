@@ -81,6 +81,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   className = '',
 }) => {
   const [viewAngle, setViewAngle] = useState<'signer' | 'receiver'>('receiver');
+  const [cameraMode, setCameraMode] = useState<'body' | 'face'>('body');
+  const [windowOpacity, setWindowOpacity] = useState<number>(1.0);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
   const [customInput, setCustomInput] = useState<string>('');
@@ -304,20 +306,24 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }));
   };
 
-  // Camera angles with interactive orbit offset
+  // Camera angles with interactive orbit offset and Face Focus mode
   const cameraConfig = useMemo(() => {
-    const base =
-      viewAngle === 'signer'
-        ? { yaw: 0, pitch: 26, distance: 360, fov: 60 }
-        : { yaw: 180, pitch: -8, distance: 360, fov: 60 };
+    let baseYaw = viewAngle === 'signer' ? 0 : 180;
+    let basePitch = viewAngle === 'signer' ? 24 : -6;
+    let baseDistance = 360;
+
+    if (cameraMode === 'face') {
+      basePitch = 0;
+      baseDistance = 210; // Zoomed in for crystal-clear focus on face, eyebrows, eyes, and mouth
+    }
 
     return {
-      yaw: base.yaw + orbitOffset.yaw,
-      pitch: Math.max(-85, Math.min(85, base.pitch + orbitOffset.pitch)),
-      distance: Math.max(120, base.distance + orbitOffset.distanceDelta),
-      fov: base.fov,
+      yaw: baseYaw + orbitOffset.yaw,
+      pitch: Math.max(-85, Math.min(85, basePitch + orbitOffset.pitch)),
+      distance: Math.max(120, baseDistance + orbitOffset.distanceDelta),
+      fov: cameraMode === 'face' ? 55 : 60,
     };
-  }, [viewAngle, orbitOffset]);
+  }, [viewAngle, orbitOffset, cameraMode]);
 
   // Enqueue new word for fingerspelling or whole-word BSL sign
   const enqueueWord = useCallback((word: string) => {
@@ -412,9 +418,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     return interpolatePoint3D(prevPose.targetWrist, currentPose.targetWrist, transitionProgress);
   }, [prevPose.targetWrist, currentPose.targetWrist, transitionProgress]);
 
-  // Canvas dimension: 240 x 170 (comfortably framing both left and right hands in 3D perspective)
+  // Canvas dimension: 240 x 180 (comfortably framing both left and right hands in 3D perspective with generous headroom)
   const originX = 120 + orbitOffset.panX;
-  const originY = 95 + orbitOffset.panY;
+  const originY = (cameraMode === 'face' ? 88 : 106) + orbitOffset.panY;
 
   // Active Non-Manual Feature (NMF) grammatical state
   const activeNmf = currentPose.nmf;
@@ -440,12 +446,25 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     return { x: dx, y: dy, z: dz };
   }, [headTilt, transitionProgress]);
 
+  // When in Face Focus mode, shift 3D frame to center on the head and face
+  const projPoint = useCallback(
+    (pt: Point3D) => {
+      const yShift = cameraMode === 'face' ? headCenter3D.y : 0;
+      const zShift = cameraMode === 'face' ? headCenter3D.z : 0;
+      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, originX, originY);
+    },
+    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, originX, originY]
+  );
+
   // Upper Torso & Head Reference Frame (Anatomical Loci for BSL Signs)
-  const torsoHead = useMemo(() => project3DToSvg(headCenter3D, cameraConfig, originX, originY), [headCenter3D, cameraConfig, originX, originY]);
-  const torsoChin = useMemo(() => project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }, cameraConfig, originX, originY), [headCenter3D, cameraConfig, originX, originY]);
-  const torsoChest = useMemo(() => project3DToSvg({ x: 0, y: 15, z: -15 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
-  const torsoLeftShoulder = useMemo(() => project3DToSvg({ x: -95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
-  const torsoRightShoulder = useMemo(() => project3DToSvg({ x: 95, y: 15, z: -25 }, cameraConfig, originX, originY), [cameraConfig, originX, originY]);
+  const torsoHead = useMemo(() => projPoint(headCenter3D), [projPoint, headCenter3D]);
+  const torsoChin = useMemo(
+    () => projPoint({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }),
+    [projPoint, headCenter3D]
+  );
+  const torsoChest = useMemo(() => projPoint({ x: 0, y: 15, z: -15 }), [projPoint]);
+  const torsoLeftShoulder = useMemo(() => projPoint({ x: -95, y: 15, z: -25 }), [projPoint]);
+  const torsoRightShoulder = useMemo(() => projPoint({ x: 95, y: 15, z: -25 }), [projPoint]);
 
   // 3D Projected Facial Feature Landmarks (Eyes, Eyebrows, Nose, Mouth)
   const facialLandmarks = useMemo(() => {
@@ -459,13 +478,13 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       browOuterDy = -1;
     }
 
-    let mouthW = 6;
-    let mouthH = 2;
+    let mouthW = cameraMode === 'face' ? 8 : 6;
+    let mouthH = cameraMode === 'face' ? 3 : 2;
     let mouthCurvature = 0;
     const lowerMouth = mouthPattern.toLowerCase();
     if (lowerMouth.includes('o') || lowerMouth.includes('u')) {
-      mouthW = 4;
-      mouthH = 5;
+      mouthW = cameraMode === 'face' ? 5.5 : 4;
+      mouthH = cameraMode === 'face' ? 7 : 5;
     } else if (
       lowerMouth.includes('a') ||
       lowerMouth.includes('e') ||
@@ -474,32 +493,32 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       lowerMouth.includes('friend') ||
       lowerMouth.includes('thank')
     ) {
-      mouthW = 7.5;
-      mouthH = 2.5;
-      mouthCurvature = 3;
+      mouthW = cameraMode === 'face' ? 9.5 : 7.5;
+      mouthH = cameraMode === 'face' ? 3.5 : 2.5;
+      mouthCurvature = cameraMode === 'face' ? 4 : 3;
     } else if (lowerMouth.includes('no') || lowerMouth.includes('question')) {
-      mouthW = 6;
-      mouthH = 3.5;
-      mouthCurvature = -1.5;
+      mouthW = cameraMode === 'face' ? 8 : 6;
+      mouthH = cameraMode === 'face' ? 5 : 3.5;
+      mouthCurvature = -2;
     }
 
     const zFace = headCenter3D.z + 14;
     const zNose = headCenter3D.z + 18;
 
-    const leftBrowOut = project3DToSvg({ x: headCenter3D.x - 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace }, cameraConfig, originX, originY);
-    const leftBrowIn = project3DToSvg({ x: headCenter3D.x - 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 }, cameraConfig, originX, originY);
-    const rightBrowIn = project3DToSvg({ x: headCenter3D.x + 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 }, cameraConfig, originX, originY);
-    const rightBrowOut = project3DToSvg({ x: headCenter3D.x + 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace }, cameraConfig, originX, originY);
+    const leftBrowOut = projPoint({ x: headCenter3D.x - 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
+    const leftBrowIn = projPoint({ x: headCenter3D.x - 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
+    const rightBrowIn = projPoint({ x: headCenter3D.x + 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
+    const rightBrowOut = projPoint({ x: headCenter3D.x + 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
 
-    const leftEye = project3DToSvg({ x: headCenter3D.x - 7, y: headCenter3D.y - 5, z: zFace }, cameraConfig, originX, originY);
-    const rightEye = project3DToSvg({ x: headCenter3D.x + 7, y: headCenter3D.y - 5, z: zFace }, cameraConfig, originX, originY);
+    const leftEye = projPoint({ x: headCenter3D.x - 7, y: headCenter3D.y - 5, z: zFace });
+    const rightEye = projPoint({ x: headCenter3D.x + 7, y: headCenter3D.y - 5, z: zFace });
 
-    const noseBridge = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y - 3, z: zNose - 2 }, cameraConfig, originX, originY);
-    const noseTip = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 4, z: zNose }, cameraConfig, originX, originY);
+    const noseBridge = projPoint({ x: headCenter3D.x, y: headCenter3D.y - 3, z: zNose - 2 });
+    const noseTip = projPoint({ x: headCenter3D.x, y: headCenter3D.y + 4, z: zNose });
 
-    const mouthLeft = project3DToSvg({ x: headCenter3D.x - mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace }, cameraConfig, originX, originY);
-    const mouthCenter = project3DToSvg({ x: headCenter3D.x, y: headCenter3D.y + 14, z: zFace + 2 }, cameraConfig, originX, originY);
-    const mouthRight = project3DToSvg({ x: headCenter3D.x + mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace }, cameraConfig, originX, originY);
+    const mouthLeft = projPoint({ x: headCenter3D.x - mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
+    const mouthCenter = projPoint({ x: headCenter3D.x, y: headCenter3D.y + 14, z: zFace + 2 });
+    const mouthRight = projPoint({ x: headCenter3D.x + mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
 
     return {
       leftBrowOut,
@@ -519,18 +538,18 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       mouthPattern,
       headTilt,
     };
-  }, [headCenter3D, cameraConfig, originX, originY, eyebrowState, mouthPattern, headTilt]);
+  }, [headCenter3D, projPoint, eyebrowState, mouthPattern, headTilt, cameraMode]);
 
   // Project non-dominant hand (The Paper) using WASM 3D Kernel
-  const baseWrist = project3DToSvg(BSL_BASE_HAND.wrist, cameraConfig, originX, originY);
-  const basePalm = project3DToSvg(BSL_BASE_HAND.palm, cameraConfig, originX, originY);
+  const baseWrist = projPoint(BSL_BASE_HAND.wrist);
+  const basePalm = projPoint(BSL_BASE_HAND.palm);
   const baseFingertips = useMemo(() => {
     return BSL_BASE_HAND.fingertips.map((tip, idx) => ({
       ...tip,
       idx,
-      proj: project3DToSvg(tip, cameraConfig, originX, originY),
+      proj: projPoint(tip),
     }));
-  }, [cameraConfig, originX, originY]);
+  }, [projPoint]);
 
   // Project dominant hand (The Pen) complete anatomical landmarks using WASM 3D Kernel
   const domHand3D = useMemo(() => {
@@ -640,20 +659,20 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip]);
 
   // Project all dominant hand landmarks to 2D SVG stage
-  const domWrist = project3DToSvg(domHand3D.wrist, cameraConfig, originX, originY);
-  const domKnuckle = project3DToSvg(domHand3D.knuckleIndex, cameraConfig, originX, originY);
-  const domTip = project3DToSvg(domHand3D.tipIndex, cameraConfig, originX, originY);
-  const domPalm = project3DToSvg(domHand3D.palm, cameraConfig, originX, originY);
-  const domKMid = project3DToSvg(domHand3D.kMid, cameraConfig, originX, originY);
-  const domKRing = project3DToSvg(domHand3D.kRing, cameraConfig, originX, originY);
-  const domKPinky = project3DToSvg(domHand3D.kPinky, cameraConfig, originX, originY);
-  const domTipMid = project3DToSvg(domHand3D.tipMidCurled, cameraConfig, originX, originY);
-  const domTipRing = project3DToSvg(domHand3D.tipRingCurled, cameraConfig, originX, originY);
-  const domTipPinky = project3DToSvg(domHand3D.tipPinkyCurled, cameraConfig, originX, originY);
-  const domThumbBase = project3DToSvg(domHand3D.thumbBase, cameraConfig, originX, originY);
-  const domThumbKnuckle = project3DToSvg(domHand3D.thumbKnuckle, cameraConfig, originX, originY);
-  const domThumbTip = project3DToSvg(domHand3D.thumbTip, cameraConfig, originX, originY);
-  const domForearm = project3DToSvg(domHand3D.forearm, cameraConfig, originX, originY);
+  const domWrist = projPoint(domHand3D.wrist);
+  const domKnuckle = projPoint(domHand3D.knuckleIndex);
+  const domTip = projPoint(domHand3D.tipIndex);
+  const domPalm = projPoint(domHand3D.palm);
+  const domKMid = projPoint(domHand3D.kMid);
+  const domKRing = projPoint(domHand3D.kRing);
+  const domKPinky = projPoint(domHand3D.kPinky);
+  const domTipMid = projPoint(domHand3D.tipMidCurled);
+  const domTipRing = projPoint(domHand3D.tipRingCurled);
+  const domTipPinky = projPoint(domHand3D.tipPinkyCurled);
+  const domThumbBase = projPoint(domHand3D.thumbBase);
+  const domThumbKnuckle = projPoint(domHand3D.thumbKnuckle);
+  const domThumbTip = projPoint(domHand3D.thumbTip);
+  const domForearm = projPoint(domHand3D.forearm);
 
   // W3C Document Picture-in-Picture Undocking
   const handleTogglePip = async () => {
@@ -717,7 +736,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }
   };
 
-  // Button styling helper
+  // Button styling helpers
   const panBtnStyle: React.CSSProperties = {
     background: 'rgba(30, 41, 59, 0.85)',
     border: '1px solid rgba(56, 189, 248, 0.3)',
@@ -728,6 +747,29 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     fontWeight: 700,
     cursor: 'pointer',
     userSelect: 'none',
+  };
+
+  const stageBtnStyle: React.CSSProperties = {
+    background: 'rgba(15, 23, 42, 0.85)',
+    border: '1px solid rgba(56, 189, 248, 0.3)',
+    borderRadius: '5px',
+    padding: '2px 6px',
+    fontSize: '0.62rem',
+    fontWeight: 700,
+    color: '#38bdf8',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '3px',
+    userSelect: 'none',
+  };
+
+  const handleCycleOpacity = () => {
+    setWindowOpacity((prev) => {
+      if (prev === 1.0) return 0.85;
+      if (prev === 0.85) return 0.65;
+      return 1.0;
+    });
   };
 
   // Render minimized floating pill
@@ -798,6 +840,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         top: windowPos ? `${windowPos.y}px` : undefined,
         width: '270px',
         zIndex: 9995,
+        opacity: windowOpacity,
+        transition: 'opacity 0.2s ease',
         background: 'rgba(15, 23, 42, 0.95)',
         backdropFilter: 'blur(14px)',
         border: '1.5px solid rgba(56, 189, 248, 0.4)',
@@ -865,26 +909,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '3px' }}>
-          {/* 3D Pan / Orbit Controls Toggle */}
-          <button
-            type="button"
-            onClick={() => setShowPanControls((prev) => !prev)}
-            style={{
-              background: showPanControls ? '#0284c7' : 'transparent',
-              border: `1px solid ${showPanControls ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
-              color: showPanControls ? '#ffffff' : '#94a3b8',
-              cursor: 'pointer',
-              padding: '2px 5px',
-              borderRadius: '4px',
-              fontSize: '0.68rem',
-              fontWeight: 700,
-            }}
-            title="Toggle 3D Camera Orbit & Pan D-Pad"
-          >
-            🌐 Orbit
-          </button>
-
-          {/* Quick Corner Dock Dropdown / Cycle */}
+          {/* Quick Corner Dock Buttons (All 4 Corners) */}
           <div style={{ display: 'flex', gap: '1px' }}>
             <button
               type="button"
@@ -904,6 +929,14 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </button>
             <button
               type="button"
+              onClick={() => handleDockCorner('bl')}
+              style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '1px 2px', fontSize: '0.7rem' }}
+              title="Dock Bottom-Left"
+            >
+              ↙
+            </button>
+            <button
+              type="button"
               onClick={() => handleDockCorner('br')}
               style={{ background: 'transparent', border: 'none', color: '#64748b', cursor: 'pointer', padding: '1px 2px', fontSize: '0.7rem' }}
               title="Dock Bottom-Right"
@@ -912,12 +945,50 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </button>
           </div>
 
+          {/* Opacity Cycle Button */}
+          <button
+            type="button"
+            onClick={handleCycleOpacity}
+            style={{
+              background: windowOpacity < 1.0 ? 'rgba(56, 189, 248, 0.2)' : 'transparent',
+              border: `1px solid ${windowOpacity < 1.0 ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
+              color: windowOpacity < 1.0 ? '#38bdf8' : '#94a3b8',
+              cursor: 'pointer',
+              padding: '1px 3px',
+              borderRadius: '3px',
+              fontSize: '0.62rem',
+              fontWeight: 700,
+            }}
+            title={`Toggle window opacity (currently ${Math.round(windowOpacity * 100)}%)`}
+          >
+            👁️
+          </button>
+
+          {/* 3D Pan / Orbit Controls Toggle */}
+          <button
+            type="button"
+            onClick={() => setShowPanControls((prev) => !prev)}
+            style={{
+              background: showPanControls ? '#0284c7' : 'transparent',
+              border: `1px solid ${showPanControls ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)'}`,
+              color: showPanControls ? '#ffffff' : '#94a3b8',
+              cursor: 'pointer',
+              padding: '2px 4px',
+              borderRadius: '4px',
+              fontSize: '0.66rem',
+              fontWeight: 700,
+            }}
+            title="Toggle 3D Camera Orbit & Pan D-Pad"
+          >
+            🌐
+          </button>
+
           {/* Reset Position Button */}
           {windowPos && (
             <button
               type="button"
               onClick={handleResetWindowPos}
-              style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '2px 4px', fontSize: '0.75rem' }}
+              style={{ background: 'transparent', border: 'none', color: '#f59e0b', cursor: 'pointer', padding: '2px 3px', fontSize: '0.72rem' }}
               title="Reset window to default dock"
             >
               ↺
@@ -934,9 +1005,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 border: 'none',
                 color: '#94a3b8',
                 cursor: 'pointer',
-                padding: '2px 4px',
+                padding: '2px 3px',
                 borderRadius: '4px',
-                fontSize: '0.78rem',
+                fontSize: '0.75rem',
               }}
               title="Undock to Picture-in-Picture window"
             >
@@ -953,7 +1024,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               border: 'none',
               color: '#94a3b8',
               cursor: 'pointer',
-              padding: '2px 4px',
+              padding: '2px 3px',
               borderRadius: '4px',
               fontSize: '0.85rem',
               lineHeight: 1,
@@ -973,7 +1044,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 border: 'none',
                 color: '#ef4444',
                 cursor: 'pointer',
-                padding: '2px 4px',
+                padding: '2px 3px',
                 borderRadius: '4px',
                 fontSize: '0.85rem',
                 lineHeight: 1,
@@ -987,19 +1058,116 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         </div>
       </div>
 
+      {/* Dedicated Sign & Non-Manual Features (NMF) Live Info Strip - NEVER covers the face! */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '4px 10px',
+          background: 'rgba(15, 23, 42, 0.98)',
+          borderBottom: '1px solid rgba(56, 189, 248, 0.2)',
+          fontSize: '0.68rem',
+          minHeight: '28px',
+        }}
+      >
+        {/* Left: Active Letter / Sign Badge */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <span
+            style={{
+              fontSize: currentLetter.length > 2 ? '0.85rem' : '1.15rem',
+              fontWeight: 900,
+              color: currentLetter.includes('[') ? '#fbbf24' : currentPose.isVowel ? '#f59e0b' : '#38bdf8',
+            }}
+          >
+            {currentLetter || '—'}
+          </span>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span
+              style={{
+                fontSize: '0.58rem',
+                color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8',
+                textTransform: 'uppercase',
+                letterSpacing: '0.4px',
+                fontWeight: 700,
+              }}
+            >
+              {currentLetter.includes('[') ? '✨ BSL Sign' : currentPose.label || 'Ready'}
+            </span>
+            {activeWordDisplay && (
+              <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#f8fafc' }}>
+                {activeWordDisplay}
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Right: Live NMF Linguistic Expressions Indicator */}
+        {showFacialFeatures ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.62rem' }}>
+            {activeNmf?.eyebrows && activeNmf.eyebrows !== 'neutral' && (
+              <span
+                style={{
+                  background: activeNmf.eyebrows === 'raised' ? 'rgba(56, 189, 248, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                  border: `1px solid ${activeNmf.eyebrows === 'raised' ? '#38bdf8' : '#f59e0b'}`,
+                  color: activeNmf.eyebrows === 'raised' ? '#38bdf8' : '#f59e0b',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  fontWeight: 800,
+                }}
+              >
+                {activeNmf.eyebrows === 'raised' ? 'Raised Brows' : 'Furrowed'}
+              </span>
+            )}
+            {activeNmf?.mouth && (
+              <span
+                style={{
+                  color: '#f1f5f9',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  padding: '1px 5px',
+                  borderRadius: '4px',
+                  fontWeight: 700,
+                  fontStyle: 'italic',
+                }}
+              >
+                👄 &ldquo;{activeNmf.mouth}&rdquo;
+              </span>
+            )}
+            {activeNmf?.headTilt && activeNmf.headTilt !== 'neutral' && (
+              <span
+                style={{
+                  color: '#a78bfa',
+                  background: 'rgba(167, 139, 250, 0.2)',
+                  padding: '1px 4px',
+                  borderRadius: '4px',
+                  fontWeight: 700,
+                }}
+              >
+                {activeNmf.headTilt === 'nod' ? '✓ Nod' : 'Tilt'}
+              </span>
+            )}
+            {(!activeNmf || (!activeNmf.eyebrows && !activeNmf.mouth && !activeNmf.headTilt)) && (
+              <span style={{ color: '#64748b', fontSize: '0.6rem' }}>Neutral</span>
+            )}
+          </div>
+        ) : (
+          <span style={{ color: '#64748b', fontSize: '0.6rem' }}>Face Off</span>
+        )}
+      </div>
+
       {/* 3D Skeletal Vector Stage with Pointer Drag Orbit */}
       <div
         style={{
           position: 'relative',
           width: '100%',
-          height: '150px',
+          height: '165px',
           background: 'radial-gradient(ellipse at center, #1e293b 0%, #090d16 100%)',
           cursor: is3DDraggingRef.current ? 'grabbing' : 'grab',
           touchAction: 'none',
         }}
       >
         <svg
-          viewBox="0 0 240 170"
+          viewBox="0 0 240 180"
           onPointerDown={handleStagePointerDown}
           onPointerMove={handleStagePointerMove}
           onPointerUp={handleStagePointerUp}
@@ -1023,9 +1191,13 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </radialGradient>
           </defs>
 
-          {/* Clear Visual Two-Hand Architecture Headers */}
-          <text x="60" y="13" fill="#94a3b8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ LEFT HAND (BASE / VOWELS)</text>
-          <text x="180" y="13" fill="#38bdf8" fontSize="7" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 RIGHT HAND (SIGNER / PEN)</text>
+          {/* Hand Guides: positioned at sides to NEVER obstruct the head */}
+          {cameraMode !== 'face' && (
+            <>
+              <text x="45" y="14" fill="#64748b" fontSize="6.5" fontWeight="800" textAnchor="middle" letterSpacing="0.3">✋ BASE (LEFT)</text>
+              <text x="195" y="14" fill="#0284c7" fontSize="6.5" fontWeight="800" textAnchor="middle" letterSpacing="0.3">👉 SIGNER (RIGHT)</text>
+            </>
+          )}
 
           {/* UPPER TORSO & ANATOMICAL LOCI */}
           <g id="bsl-upper-torso">
@@ -1041,19 +1213,19 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             {/* Chest Center Cross/Anchor */}
             <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.35" />
             
-            {/* Head Silhouette Base */}
+            {/* Head Silhouette Base with generous headroom */}
             <ellipse
               cx={torsoHead.x}
               cy={torsoHead.y}
-              rx={19 * torsoHead.scale}
-              ry={25 * torsoHead.scale}
+              rx={(cameraMode === 'face' ? 24 : 19) * torsoHead.scale}
+              ry={(cameraMode === 'face' ? 32 : 25) * torsoHead.scale}
               fill="rgba(15, 23, 42, 0.7)"
               stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#64748b')}
-              strokeWidth={eyebrowState !== 'neutral' ? '1.8' : '1.2'}
+              strokeWidth={eyebrowState !== 'neutral' ? '2' : '1.3'}
             />
 
             {/* Chin Locus Indicator */}
-            <circle cx={torsoChin.x} cy={torsoChin.y} r={2.5 * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
+            <circle cx={torsoChin.x} cy={torsoChin.y} r={(cameraMode === 'face' ? 3.5 : 2.5) * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
 
             {/* BSL NON-MANUAL FEATURES (NMF) 3D FACIAL RIG */}
             {showFacialFeatures && (
@@ -1065,7 +1237,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={facialLandmarks.leftBrowIn.x}
                   y2={facialLandmarks.leftBrowIn.y}
                   stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
-                  strokeWidth={2.4 * torsoHead.scale}
+                  strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
                   strokeLinecap="round"
                 />
                 <line
@@ -1074,7 +1246,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={facialLandmarks.rightBrowOut.x}
                   y2={facialLandmarks.rightBrowOut.y}
                   stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
-                  strokeWidth={2.4 * torsoHead.scale}
+                  strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
                   strokeLinecap="round"
                 />
 
@@ -1082,16 +1254,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 <ellipse
                   cx={facialLandmarks.leftEye.x}
                   cy={facialLandmarks.leftEye.y}
-                  rx={2.8 * torsoHead.scale}
-                  ry={1.8 * torsoHead.scale}
+                  rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
+                  ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
                   fill="#0f172a"
                   stroke="#38bdf8"
-                  strokeWidth="0.8"
+                  strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
                 />
                 <circle
                   cx={facialLandmarks.leftEye.x}
                   cy={facialLandmarks.leftEye.y}
-                  r={1.2 * torsoHead.scale}
+                  r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
                   fill="#38bdf8"
                 />
 
@@ -1099,16 +1271,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 <ellipse
                   cx={facialLandmarks.rightEye.x}
                   cy={facialLandmarks.rightEye.y}
-                  rx={2.8 * torsoHead.scale}
-                  ry={1.8 * torsoHead.scale}
+                  rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
+                  ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
                   fill="#0f172a"
                   stroke="#38bdf8"
-                  strokeWidth="0.8"
+                  strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
                 />
                 <circle
                   cx={facialLandmarks.rightEye.x}
                   cy={facialLandmarks.rightEye.y}
-                  r={1.2 * torsoHead.scale}
+                  r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
                   fill="#38bdf8"
                 />
 
@@ -1119,7 +1291,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={facialLandmarks.noseTip.x}
                   y2={facialLandmarks.noseTip.y}
                   stroke="#64748b"
-                  strokeWidth="1.2"
+                  strokeWidth={cameraMode === 'face' ? '1.6' : '1.2'}
                   strokeLinecap="round"
                   opacity="0.8"
                 />
@@ -1128,9 +1300,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 {mouthPattern ? (
                   <path
                     d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
-                    fill="rgba(56, 189, 248, 0.25)"
+                    fill="rgba(56, 189, 248, 0.28)"
                     stroke="#38bdf8"
-                    strokeWidth="1.8"
+                    strokeWidth={cameraMode === 'face' ? '2.4' : '1.8'}
                     strokeLinecap="round"
                   />
                 ) : (
@@ -1138,7 +1310,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                     d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
                     fill="none"
                     stroke="#94a3b8"
-                    strokeWidth="1.3"
+                    strokeWidth={cameraMode === 'face' ? '1.8' : '1.3'}
                     strokeLinecap="round"
                   />
                 )}
@@ -1276,101 +1448,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           </g>
         </svg>
 
-        {/* Active Letter Badge Over Stage */}
-        <div
-          style={{
-            position: 'absolute',
-            top: '8px',
-            left: '8px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'rgba(15, 23, 42, 0.88)',
-            border: '1px solid rgba(56, 189, 248, 0.3)',
-            borderRadius: '6px',
-            padding: '3px 8px',
-            pointerEvents: 'none',
-          }}
-        >
-          <span
-            style={{
-              fontSize: currentLetter.length > 2 ? '0.82rem' : '1.1rem',
-              fontWeight: 900,
-              color: currentLetter.includes('[') ? '#fbbf24' : currentPose.isVowel ? '#f59e0b' : '#38bdf8',
-            }}
-          >
-            {currentLetter || '—'}
-          </span>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '0.62rem', color: currentLetter.includes('[') ? '#fbbf24' : '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              {currentLetter.includes('[') ? '✨ BSL Whole Sign' : currentPose.label || 'Ready'}
-            </span>
-            {activeWordDisplay && (
-              <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#f8fafc' }}>
-                {activeWordDisplay}
-              </span>
-            )}
-          </div>
-        </div>
-
-        {/* BSL Non-Manual Features (NMF) Live Badge */}
-        {showFacialFeatures && (activeNmf?.eyebrows || activeNmf?.mouth || activeNmf?.headTilt) && (
-          <div
-            style={{
-              position: 'absolute',
-              top: '8px',
-              right: '8px',
-              background: 'rgba(15, 23, 42, 0.92)',
-              border: '1px solid rgba(56, 189, 248, 0.4)',
-              borderRadius: '6px',
-              padding: '2px 7px',
-              fontSize: '0.62rem',
-              color: '#38bdf8',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
-              pointerEvents: 'none',
-              zIndex: 5,
-            }}
-          >
-            <span>😊 NMF:</span>
-            {activeNmf.eyebrows && activeNmf.eyebrows !== 'neutral' && (
-              <span style={{ color: activeNmf.eyebrows === 'raised' ? '#38bdf8' : '#f59e0b', fontWeight: 800 }}>
-                {activeNmf.eyebrows === 'raised' ? 'Brows Raised' : 'Brows Furrowed'}
-              </span>
-            )}
-            {activeNmf.mouth && (
-              <span style={{ color: '#f1f5f9', fontStyle: 'italic', fontWeight: 600 }}>
-                👄 &ldquo;{activeNmf.mouth}&rdquo;
-              </span>
-            )}
-            {activeNmf.headTilt && activeNmf.headTilt !== 'neutral' && (
-              <span style={{ color: '#a78bfa', fontWeight: 700 }}>
-                {activeNmf.headTilt === 'nod' ? '✓ Nod' : 'Tilt'}
-              </span>
-            )}
-          </div>
-        )}
-
-        {/* Camera Angle & Face Toggle Bar */}
-        <div style={{ position: 'absolute', bottom: '8px', left: '8px', display: 'flex', gap: '4px' }}>
+        {/* Camera Angle & Face Focus Control Bar - Positioned at bottom floor so stage and face are 100% unobstructed */}
+        <div style={{ position: 'absolute', bottom: '6px', left: '8px', display: 'flex', gap: '4px' }}>
           <button
             type="button"
             onClick={() => setViewAngle((prev) => (prev === 'signer' ? 'receiver' : 'signer'))}
-            style={{
-              background: 'rgba(15, 23, 42, 0.85)',
-              border: '1px solid rgba(56, 189, 248, 0.3)',
-              borderRadius: '6px',
-              padding: '2px 7px',
-              fontSize: '0.65rem',
-              fontWeight: 700,
-              color: '#38bdf8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
-            }}
+            style={stageBtnStyle}
             title="Toggle between Signer POV (first-person) and Receiver POV (conversation partner)"
           >
             <span>{viewAngle === 'signer' ? '👤 Signer' : '👥 Receiver'}</span>
@@ -1378,19 +1461,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
           <button
             type="button"
+            onClick={() => setCameraMode((prev) => (prev === 'body' ? 'face' : 'body'))}
+            style={{
+              ...stageBtnStyle,
+              background: cameraMode === 'face' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(15, 23, 42, 0.85)',
+              borderColor: cameraMode === 'face' ? '#38bdf8' : 'rgba(56, 189, 248, 0.3)',
+              color: cameraMode === 'face' ? '#38bdf8' : '#e2e8f0',
+            }}
+            title="Toggle between full upper body and zoomed-in Face Focus to clearly see eyebrows, eyes, and mouth shapes"
+          >
+            <span>{cameraMode === 'face' ? '🔍 Face Focus' : '👤 Body View'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={() => setShowFacialFeatures((prev) => !prev)}
             style={{
+              ...stageBtnStyle,
               background: showFacialFeatures ? 'rgba(56, 189, 248, 0.18)' : 'rgba(15, 23, 42, 0.85)',
-              border: `1px solid ${showFacialFeatures ? '#38bdf8' : 'rgba(148, 163, 184, 0.3)'}`,
-              borderRadius: '6px',
-              padding: '2px 7px',
-              fontSize: '0.65rem',
-              fontWeight: 700,
+              borderColor: showFacialFeatures ? '#38bdf8' : 'rgba(148, 163, 184, 0.3)',
               color: showFacialFeatures ? '#38bdf8' : '#94a3b8',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '3px',
             }}
             title="Toggle 3D Non-Manual Facial Features (Eyebrows, Eyes, Lip Patterns, Head Tilts)"
           >
@@ -1402,7 +1492,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         <div
           style={{
             position: 'absolute',
-            bottom: '8px',
+            bottom: '6px',
             right: '8px',
             fontSize: '0.6rem',
             color: '#64748b',
@@ -1412,7 +1502,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             pointerEvents: 'none',
           }}
         >
-          Drag to 3D Orbit • Scroll to Zoom
+          Drag 3D Orbit
         </div>
       </div>
 
