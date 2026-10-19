@@ -6024,6 +6024,7 @@ if (item.type === '3d-node') {
             bbB.setAttribute('d', this._pointsToSpline(dnaStrandB));
           }
         }
+        }
 
         // Unified Painter's Algorithm: Sort furthest to closest in SVG DOM
         if (this.active3DItems.length > 1) {
