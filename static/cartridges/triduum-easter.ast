@@ -1,0 +1,52 @@
+(:scene :id "triduum-easter" :type "Sim" :title "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi" :stage "CATHOLIC LIFE" :duration 30.0
+  (:vars (
+    (:var :name "candleGlow" :val 1.0 :min 0.1 :max 2.0 :step 0.1 :label "Paschal Candle Radiance")
+    (:var :name "elevationStep" :val 3.0 :min 1.0 :max 3.0 :step 1.0 :label "Lumen Christi Elevation")
+    (:var :name "carillonBells" :val 1.0 :min 0.0 :max 1.0 :step 1.0 :label "Easter Gloria Carillon")
+  ))
+  (:inputs (
+    (:slider :var "candleGlow" :label "Paschal Fire Radiance" :min 0.1 :max 2.0 :step 0.1)
+    (:slider :var "elevationStep" :label "Elevation (Door / Nave / Altar)" :min 1.0 :max 3.0 :step 1.0)
+    (:slider :var "carillonBells" :label "Easter Gloria Carillon" :min 0.0 :max 1.0 :step 1.0)
+  ))
+  (:gestures (
+    (:draggable :target "#paschal-candle-beacon" :axis "xy" :min 80 :max 720)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.20 :en "Holy Thursday (Coena Domini): The Lord institutes the Holy Eucharist and Priesthood, washes the disciples' feet (Mandatum), and enters the Garden of Gethsemane as the altar is stripped bare." :es "Jueves Santo: El Señor instituye la Sagrada Eucaristía y el Sacerdocio, lava los pies de los apóstoles y entra en Getsemaní mientras el altar es despojado." :la "Feria Quinta in Coena Domini: Mandatum novum do vobis: ut diligatis invicem, sicut dilexi vos. Pange lingua gloriosi Corporis mysterium.")
+    (:start 0.20 :end 0.40 :en "Good Friday (Passio Domini): The Lamb is slain on Calvary. The Cross is venerated ('Ecce lignum Crucis'), the church falls silent without organ or bells, and the wood clapper (Crotalus) echoes in the shadows." :es "Viernes Santo: El Cordero es inmolado en el Calvario. Se adora la Santa Cruz ('Mirad el árbol de la Cruz'), la iglesia guarda silencio sin campanas y resuena la matraca." :la "Feria Sexta in Passione Domini: Ecce lignum Crucis, in quo salus mundi pependit: Venite, adoremus. Popule meus, quid feci tibi?")
+    (:start 0.40 :end 0.55 :en "Holy Saturday (Sabbatum Sanctum): The Church keeps solemn vigil at Christ's tomb. The cosmos waits in sacred silence as Christ descends into the realm of the dead to break the chains of death." :es "Sábado Santo: La Iglesia vela junto al sepulcro en silencio sagrado mientras Cristo desciende a los infiernos para liberar a los justos." :la "Sabbatum Sanctum: Christus descendit ad inferos ut vinceret mortem et spem resurrectionis daret.")
+    (:start 0.55 :end 0.75 :en "The Easter Vigil & Lumen Christi: From the New Fire blazing in darkness, the Paschal Candle is inscribed (Alpha & Omega, the Year, 5 wound-grains). Chanted three times with rising pitch: 'Lumen Christi!' — 'Deo gratias!' The Exsultet rings out!" :es "La Vigilia Pascual y Lumen Christi: Del Fuego Nuevo se enciende el Cirio Pascual (Alfa y Omega, el Año, 5 llagas). Tres elevaciones: '¡Luz de Cristo!' — '¡Demos gracias a Dios!' ¡El pregón Exsultet resuena!" :la "Vigilia Paschalis: Lumen Christi! Deo gratias! Exsultet iam angelica turba caelorum: gaudeat se tantis decoratam fulgoribus! O felix culpa, quae talem ac tantum meruit habere Redemptorem!")
+    (:start 0.75 :end 1.00 :en "Easter Sunday & The 50-Day Glory: Christ is Risen! Alleluia! The Gloria blazes, church bells ring wildly, the triple Alleluia sounds, and the Paschal season shines from the Empty Tomb through Ascension to Pentecost!" :es "Domingo de Resurrección y la Gloria Pascual: ¡Cristo ha resucitado! ¡Aleluya! Suenan todas las campanas, se canta el triple Aleluya y la luz brilla hasta Pentecostés." :la "Dominica Paschatis in Resurrectione Domini: Resurrexi, et adhuc tecum sum, alleluia. Victimae paschali laudes immolent Christiani. Surrexit Christus spes mea! Alleluia, alleluia, alleluia!")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "I. Holy Thursday: Upper Room & Mandatum" :rule "Coena Domini • Institution of the Eucharist and Priesthood; foot washing; altar stripped in silence.")
+    (:t 0.20 :title "II. Good Friday: Passion & Cross Adoration" :rule "Passio Domini • 'Ecce lignum Crucis'; silent bells; solemn intercessions; wood crotalus.")
+    (:t 0.40 :title "III. Holy Saturday: Tomb & Descensus" :rule "Sabbatum Sanctum • Cosmic silence at the rock-hewn sepulchre; descent to the holy souls.")
+    (:t 0.55 :title "IV. The Easter Vigil: New Fire & Lumen Christi" :rule "Lucernarium • 3 elevations of 'Lumen Christi'; Alpha and Omega candle; the golden Exsultet hymn.")
+    (:t 0.75 :title "V. Resurrectio Domini: Triple Alleluia" :rule "Pascha Domini • Carillon bells peal; baptismal water blessed; 50 days of joy to Pentecost.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.18
+      :prompt "Why does the Holy Thursday Mass not end with a normal dismissal or blessing?"
+      :options ("Because Holy Thursday, Good Friday, and the Easter Vigil form ONE single, unbroken three-day liturgy" "Because the priest must rush to the Garden of Olives" "Because the Roman Missal misprinted the final rubric" "Because blessings are forbidden on Thursdays in Lent")
+      :answer 0
+      :explanation "The Church teaches that the Sacred Triduum (Holy Thursday, Good Friday, Holy Saturday/Vigil) is NOT three separate services, but one continuous liturgical action of Christ's Paschal Mystery. The dismissal is only given at the conclusion of the Easter Vigil.")
+    (:checkpoint :t 0.52
+      :prompt "What do the Greek letters Alpha (A) and Omega (Ω) inscribed upon the Paschal Candle proclaim?"
+      :options ("Christ is the beginning and the end, the Lord of all time, ages, and cosmic glory (Rev 22:13)" "The initials of Saint Augustine and the Origen school" "A reminder that the liturgy was translated from ancient Alexandria" "Symbols denoting autumn and spring equinoxes")
+      :answer 0
+      :explanation "During the preparation of the Paschal Candle at the New Fire, the priest cuts a cross and traces the Greek letters Alpha and Omega, praying: 'Christ yesterday and today, the Beginning and the End, the Alpha and the Omega. All time belongs to Him and all the ages.'")
+    (:checkpoint :t 0.74
+      :prompt "Why does the deacon chant 'Lumen Christi' three times at progressively higher musical pitches as he carries the Paschal Candle into the dark church?"
+      :options ("To dramatize the progressive conquest of spiritual darkness as Christ's light fills the world" "To check if the church acoustics are working properly" "Because the choir needs three attempts to find the correct note" "To wake up the congregation after the long vigil")
+      :answer 0
+      :explanation "At the church entrance (low pitch), in the middle of the nave (middle pitch), and before the altar (high pitch), the cry 'Lumen Christi' rises in key. As the assembly lights their individual tapers from the single flame, the darkness is systematically replaced by the radiant light of the Risen Christ.")
+  ))
+  (:bindings (
+    (:target "#paschal-candle-flame" :attr "r" :expr "(12 + Math.sin(t * Math.PI * 14) * 3) * (vars.candleGlow || 1.0)")
+    (:target "#lucernarium-glow" :attr "opacity" :expr "t >= 0.55 ? (0.35 + (vars.elevationStep || 3) * 0.22) : (t >= 0.20 && t < 0.55 ? 0.08 : 0.45)")
+    (:target "#glory-cross-rays" :attr "opacity" :expr "t >= 0.75 ? (0.85 + Math.sin(t * Math.PI * 18) * 0.15) : 0.0")
+    (:target "#easter-carillon-wave" :attr "stroke-width" :expr "t >= 0.75 ? (2 + Math.sin(t * 20) * 2) : 0")
+  ))
+)

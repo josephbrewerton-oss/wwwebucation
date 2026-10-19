@@ -22,12 +22,15 @@ import {
   IncensationMoment,
 } from '../data/catholic/holyWaterThuriferData';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { playSuccessChime, triggerHapticSuccess, triggerHapticError } from '../services/soundHaptics';
 
 export type ExplorerTab = 'holy-water' | 'thurifer-incense' | 'simulator' | 'quiz';
 
 export default function HolyWaterAndThuriferExplorer(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<ExplorerTab>('holy-water');
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [selectedWaterFact, setSelectedWaterFact] = useState<HolyWaterFact>(HOLY_WATER_CATECHESIS[0]);
   const [selectedThuriferFact, setSelectedThuriferFact] = useState<ThuriferRoleFact>(THURIFER_AND_INCENSE_CATECHESIS[0]);
   const [selectedMoment, setSelectedMoment] = useState<IncensationMoment>(INCENSATION_MOMENTS[0]);
@@ -276,8 +279,68 @@ export default function HolyWaterAndThuriferExplorer(): React.JSX.Element {
             <span>🔊</span>
             <span>Listen Overview</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#0284c7' : 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              color: '#ffffff',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=holy-water-thurifer"
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              color: '#ffffff',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Holy Water & Thurifer */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #0284c7', background: '#0b101b', marginBottom: '1.5rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#0f172a', padding: '10px 16px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#38bdf8' }}>
+              <span>💨</span>
+              <span>AST Vector Interactive Engine: Holy Water &amp; The Thurible (Thuribulum)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>Cartridge: holy-water-thurifer.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="holy-water-thurifer"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Tabs */}
       <div

@@ -258,6 +258,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "holy-water-thurifer",
+    "type": "Sim",
+    "label": "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/holy-water-thurifer",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
+  },
+  {
     "id": "shakespeare-macbeth",
     "type": "Slide",
     "label": "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall",
@@ -280,6 +292,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Languages & Inclusion",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "liturgical-postures",
+    "type": "Sim",
+    "label": "Sacred Postures & Gestures: Praying with Mind, Heart & Body",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/liturgical-postures",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
   },
   {
     "id": "spelling-bee",
@@ -306,6 +330,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 2
   },
   {
+    "id": "liturgical-calendar",
+    "type": "Sim",
+    "label": "The Catholic Liturgical Year: Sacred Seasons & Colors",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/liturgical-calendar",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
+  },
+  {
     "id": "shakespeare",
     "type": "Slide",
     "label": "The Globe Theatre: Shakespeare & Iambic Pentameter",
@@ -328,6 +364,42 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "liturgy-of-the-hours",
+    "type": "Sim",
+    "label": "The Liturgy of the Hours: Sanctifying Time Through the Divine Office",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/liturgy-of-the-hours",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
+  },
+  {
+    "id": "triduum-easter",
+    "type": "Sim",
+    "label": "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/triduum-easter",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
+  },
+  {
+    "id": "seven-sacraments",
+    "type": "Sim",
+    "label": "The Seven Holy Sacraments: Visible Signs of Invisible Grace",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/seven-sacraments",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 3
   },
   {
     "id": "stations-of-the-cross",

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { speakInLanguage } from '../engine/translationService';
 
 import {
@@ -14,6 +16,7 @@ export type { LiturgicalSeason };
 export default function LiturgicalCalendarGuide(): React.JSX.Element {
   const currentSeason = getCurrentSeasonByDate();
   const [selectedSeasonId, setSelectedSeasonId] = useState<string>(currentSeason.id);
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
 
   // Quiz state
   const [quizIndex, setQuizIndex] = useState(0);
@@ -102,33 +105,94 @@ export default function LiturgicalCalendarGuide(): React.JSX.Element {
           and glory of Jesus Christ—culminating in the Sacred Paschal Triduum and Easter Sunday!
         </p>
 
-        <button
-          type="button"
-          onClick={() =>
-            speakInLanguage(
-              'The Catholic Liturgical Year unfolds the whole mystery of Christ from Advent and Christmas to Lent, the Sacred Paschal Triduum, Easter, and Pentecost.',
-              'en'
-            )
-          }
-          style={{
-            marginTop: '1rem',
-            background: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
-            borderRadius: '9999px',
-            color: '#ffffff',
-            padding: '6px 14px',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <span>🔊</span>
-          <span>Listen Overview</span>
-        </button>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() =>
+              speakInLanguage(
+                'The Catholic Liturgical Year unfolds the whole mystery of Christ from Advent and Christmas to Lent, the Sacred Paschal Triduum, Easter, and Pentecost.',
+                'en'
+              )
+            }
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>🔊</span>
+            <span>Listen Overview</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#22c55e' : 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: showPlayer ? '#052e16' : '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=liturgical-calendar"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Liturgical Calendar */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #22c55e', background: '#040711', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#0f172a', padding: '10px 16px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#4ade80' }}>
+              <span>📅</span>
+              <span>AST Vector Interactive Engine: The Catholic Liturgical Year (Annus Liturgicus)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>Cartridge: liturgical-calendar.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="liturgical-calendar"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Liturgical Seasons Horizontal Wheel Selector */}
       <div style={{ marginBottom: '1.75rem' }}>

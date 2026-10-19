@@ -17,6 +17,8 @@
  */
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import {
   EUCHARISTIC_RECEPTION_METHODS,
   OUR_FATHER_POSTURES,
@@ -45,6 +47,7 @@ export default function LiturgicalMisconceptionsExplorer({
   initialSection = 'eucharist',
 }: LiturgicalMisconceptionsExplorerProps): React.JSX.Element {
   const [activeSection, setActiveSection] = useState<'eucharist' | 'our-father' | 'mythbusters'>(initialSection);
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
 
   // Eucharistic Reception state
   const [selectedMethodId, setSelectedMethodId] = useState<string>('on-the-tongue-roman');
@@ -193,8 +196,73 @@ export default function LiturgicalMisconceptionsExplorer({
               <span>{tab.label}</span>
             </button>
           ))}
+
+          <button
+            type="button"
+            onClick={() => {
+              playClickTone();
+              triggerHapticClick();
+              setShowPlayer(!showPlayer);
+            }}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.55rem 1rem',
+              borderRadius: '9999px',
+              fontSize: '0.85rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              border: showPlayer ? '2px solid #38bdf8' : '1px solid rgba(255,255,255,0.3)',
+              background: showPlayer ? '#38bdf8' : 'rgba(56, 189, 248, 0.2)',
+              color: showPlayer ? '#0f172a' : '#ffffff',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=liturgical-postures"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.4rem',
+              padding: '0.55rem 1rem',
+              borderRadius: '9999px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              border: '1px solid rgba(255,255,255,0.2)',
+              background: 'rgba(255,255,255,0.1)',
+              color: '#ffffff',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Liturgical Postures */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #38bdf8', background: '#050814', marginBottom: '1.75rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#0f172a', padding: '10px 16px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#38bdf8' }}>
+              <span>🙇</span>
+              <span>AST Vector Interactive Engine: Sacred Postures &amp; Gestures (Gestus Sacri)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontFamily: 'monospace' }}>Cartridge: liturgical-postures.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="liturgical-postures"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* SECTION 1: RECEIVING THE HOLY EUCHARIST */}
       {activeSection === 'eucharist' && (

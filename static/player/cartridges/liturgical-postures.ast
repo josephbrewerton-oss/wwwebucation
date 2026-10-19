@@ -1,0 +1,51 @@
+(:scene :id "liturgical-postures" :type "Sim" :title "Sacred Postures & Gestures: Praying with Mind, Heart & Body" :stage "CATHOLIC LIFE" :duration 24.0
+  (:vars (
+    (:var :name "postureStep" :val 0.0 :min 0.0 :max 4.0 :step 1.0 :label "Sacred Posture Selector")
+    (:var :name "reverenceAngle" :val 0.0 :min 0.0 :max 90.0 :step 5.0 :label "Incline / Bow Angle")
+    (:var :name "crossSignProgress" :val 1.0 :min 0.0 :max 1.0 :step 0.25 :label "Sign of the Cross Sequence")
+  ))
+  (:inputs (
+    (:slider :var "postureStep" :label "Posture (Stand, Kneel, Genuflect, Bow, Sign of Cross)" :min 0.0 :max 4.0 :step 1.0)
+    (:slider :var "reverenceAngle" :label "Inclination Angle (Simple Bow vs Profound Bow)" :min 0.0 :max 90.0 :step 5.0)
+    (:slider :var "crossSignProgress" :label "Sign of the Cross Motion" :min 0.0 :max 1.0 :step 0.25)
+  ))
+  (:gestures (
+    (:draggable :target "#posture-figure-beacon" :axis "xy" :min 100 :max 700)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.22 :en "Standing (Stare): The posture of the Risen Christian. Standing expresses freedom, active readiness, joyful thanksgiving, and royal priesthood in prayer (e.g. during the Gospel and Eucharistic Prayer preface)." :es "Estar de pie: Postura del cristiano resucitado. Expresa dignidad, atención, libertad filial y alabanza durante el Evangelio y la oración." :la "Status: Stare in conspectu tuo et tibi ministrare. Dignitas filiorum Dei et laus paschalis.")
+    (:start 0.22 :end 0.44 :en "Kneeling (Flectere genua): The posture of adoration, total humility, and repentance before God's majesty. We kneel during the Eucharistic Consecration as Christ becomes truly present on the altar." :es "De rodillas: Postura de adoración y humilde alabanza. Nos arrodillamos durante la Consagración eucarística ante la Presencia Real." :la "Genuflexio gemina: In nomine Iesu omne genu flectatur, caelestium, terrestrium et infernorum.")
+    (:start 0.44 :end 0.65 :en "Genuflecting (Genuflectere): Bending the right knee down to the floor toward the Blessed Sacrament reserved in the Tabernacle. A profound act of personal faith and adoration: 'My Lord and my God!'" :es "Genuflexión: Doblar la rodilla derecha hasta el suelo hacia el Sagrario con el Santísimo Sacramento como acto de fe y amor vivo." :la "Genuflexio simplex: Adoro te devote, latens Deitas: quae sub his figuris vere latitas.")
+    (:start 0.65 :end 0.82 :en "Bowing (Inclinatio): Reverence of the head or profound bow of the whole body. We bow to the Altar, at the Holy Name of Jesus, and during the Creed at the words of the Incarnation ('et incarnatus est')." :es "Inclinación: Reverencia de cabeza o inclinación profunda del cuerpo al Altar, ante el Santo Nombre de Jesús y en el Credo al confesar la Encarnación." :la "Inclinatio profunda: Et incarnatus est de Spiritu Sancto ex Maria Virgine, et homo factus est.")
+    (:start 0.82 :end 1.00 :en "The Sign of the Cross (Signum Crucis): Tracing Christ's redemption on forehead, breast, and shoulders: 'In the name of the Father, and of the Son, and of the Holy Spirit.' The badge and armour of the Christian." :es "La Señal de la Cruz: Trazando la salvación en frente, pecho y hombros. El sello sagrado y distintivo del cristiano." :la "Signum Sanctae Crucis: In nomine Patris, et Filii, et Spiritus Sancti. Amen. Per signum sanctae crucis de inimicis nostris libera nos, Deus noster.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "I. Standing (Dignity & Resurrection)" :rule "Stare • Gospel listening; royal priesthood; active readiness; thanksgiving.")
+    (:t 0.22 :title "II. Kneeling (Adoration & Consecration)" :rule "Kneeling • Eucharistic consecration; 'Holy, Holy, Holy'; profound supplication.")
+    (:t 0.44 :title "III. Genuflecting to the Tabernacle" :rule "Genuflexio • Right knee to floor; reverencing the Real Presence of Christ.")
+    (:t 0.65 :title "IV. The Profound Bow (Altar & Creed)" :rule "Inclinatio • Honoring the altar of sacrifice and the Incarnation of the Word.")
+    (:t 0.82 :title "V. The Sign of the Cross (Trinitarian Seal)" :rule "Signum Crucis • Father, Son, Holy Spirit; shield against temptation and sin.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.40
+      :prompt "Which knee touches the floor when making a proper genuflection to the Blessed Sacrament in the Tabernacle?"
+      :options ("The RIGHT knee touches the ground" "The left knee touches the ground" "Both knees must always drop together" "Whichever knee the person prefers")
+      :answer 0
+      :explanation "Under Roman Catholic rubrics (Caeremoniale Episcoporum §69), a genuflection is made by bending the RIGHT knee until it touches the ground near the left foot, keeping the torso upright in adoration.")
+    (:checkpoint :t 0.62
+      :prompt "During the recitation of the Nicene Creed at Sunday Mass, what gesture of reverence is prescribed when professing the Incarnation?"
+      :options ("A profound bow of the body at the words 'and by the Holy Spirit was incarnate of the Virgin Mary, and became man' (GIRM 137)" "All sit down quietly" "A high wave of the hand" "Closing both eyes until the Creed ends")
+      :answer 0
+      :explanation "Under GIRM 137, during the Creed, all make a profound bow from the waist at the words 'by the Holy Spirit was incarnate...' to express awe and thanksgiving for God becoming man.")
+    (:checkpoint :t 0.88
+      :prompt "What three parts of the body are signed with small crosses by the thumb before the Gospel is proclaimed at Mass?"
+      :options ("Forehead, lips, and heart ('May Christ's word be on my mind, on my lips, and in my heart')" "Left ear, right ear, and eyes" "Chest, shoulders, and hands" "Hands, feet, and knees")
+      :answer 0
+      :explanation "At the announcement of the Gospel, priest and people trace the Sign of the Cross with the thumb on the forehead, lips, and chest, praying silently: 'May the Word of the Lord be on my mind, on my lips, and in my heart.'")
+  ))
+  (:bindings (
+    (:target "#pilgrim-figure-torso" :attr "transform" :expr "t >= 0.65 && t < 0.82 ? 'rotate(' + (35 + (vars.reverenceAngle || 0) * 0.4) + ' 400 240)' : (t >= 0.22 && t < 0.65 ? 'translate(0, 30)' : 'none')")
+    (:target "#pilgrim-knees-group" :attr "transform" :expr "t >= 0.22 && t < 0.65 ? 'scale(1, 0.75) translate(0, 45)' : 'none'")
+    (:target "#cross-trace-stroke" :attr "opacity" :expr "t >= 0.82 ? (0.85 + Math.sin(t * 20) * 0.15) : 0.05")
+  ))
+)

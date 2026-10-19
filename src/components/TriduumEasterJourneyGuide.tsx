@@ -13,6 +13,8 @@ import {
   LumenChristiStep,
 } from '../data/catholic/triduumEasterData';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import {
   playSuccessChime,
   triggerHapticSuccess,
@@ -33,6 +35,7 @@ export default function TriduumEasterJourneyGuide(): React.JSX.Element {
   const [lumenIllumination, setLumenIllumination] = useState<number>(1); // 1 = Door (30%), 2 = Nave (65%), 3 = Sanctuary (100%)
   const [readerScale, setReaderScale] = useState<ReaderScale>('comfortable');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('bilingual');
+  const [showPlayer, setShowPlayer] = useState<boolean>(true);
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [completedMovements, setCompletedMovements] = useState<string[]>(() => {
     try {
@@ -180,6 +183,24 @@ export default function TriduumEasterJourneyGuide(): React.JSX.Element {
               <span>🪵</span>
               <span>Crotalus</span>
             </button>
+
+            <button
+              onClick={() => {
+                triggerHapticClick();
+                setShowPlayer(!showPlayer);
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-serif font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/50 hover:bg-amber-500/30 transition-all shadow"
+            >
+              <span>{showPlayer ? '▲ Hide Simulation' : '🎮 Vector Simulation'}</span>
+            </button>
+
+            <Link
+              to="/media-player?preset=triduum-easter"
+              title="Open full theatre vector media player"
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-serif font-semibold bg-stone-800 text-stone-300 border border-stone-600 hover:text-white hover:bg-stone-700 transition-all shadow"
+            >
+              <span>📺 Full Player</span>
+            </Link>
           </div>
         </div>
 
@@ -208,6 +229,26 @@ export default function TriduumEasterJourneyGuide(): React.JSX.Element {
           ))}
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Triduum & Easter */}
+      {showPlayer && (
+        <div className="rounded-2xl overflow-hidden border border-amber-500/30 bg-stone-950 shadow-2xl relative mb-6">
+          <div className="bg-stone-900/90 px-4 py-2.5 border-b border-stone-800 flex items-center justify-between text-xs">
+            <span className="flex items-center gap-2 font-serif font-semibold text-amber-300">
+              <span>🔥</span>
+              <span>AST Vector Interactive Engine: The Sacred Triduum &amp; Easter Glory</span>
+            </span>
+            <span className="text-[11px] text-amber-400/80 font-mono">Cartridge: triduum-easter.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="triduum-easter"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Sub-View 1: The 5 Liturgical Movements */}
       {activeSubView === 'movements' && (

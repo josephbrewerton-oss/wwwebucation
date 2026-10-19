@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { speakInLanguage } from '../engine/translationService';
 
 import {
@@ -13,6 +15,7 @@ export type { SacramentData };
 export default function SevenSacramentsGuide(): React.JSX.Element {
   const [filterCategory, setFilterCategory] = useState<'All' | 'Initiation' | 'Healing' | 'Service'>('All');
   const [selectedSacramentId, setSelectedSacramentId] = useState<string>('eucharist');
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
 
   // Quiz State
   const [quizIndex, setQuizIndex] = useState(0);
@@ -98,28 +101,89 @@ export default function SevenSacramentsGuide(): React.JSX.Element {
           <strong> Service of Communion</strong> (Holy Orders, Holy Matrimony).
         </p>
 
-        <button
-          type="button"
-          onClick={() => handleListen('A sacrament is an outward sign instituted by Jesus Christ to give inward sanctifying grace. The Catholic Church celebrates seven sacraments: Baptism, Confirmation, Holy Eucharist, Penance and Reconciliation, Anointing of the Sick, Holy Orders, and Holy Matrimony.')}
-          style={{
-            marginTop: '1rem',
-            background: 'rgba(255, 255, 255, 0.2)',
-            border: '1px solid rgba(255, 255, 255, 0.4)',
-            borderRadius: '9999px',
-            color: '#ffffff',
-            padding: '6px 14px',
-            fontSize: '0.82rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '6px',
-          }}
-        >
-          <span>🔊</span>
-          <span>Listen Catechism Definition</span>
-        </button>
+        <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => handleListen('A sacrament is an outward sign instituted by Jesus Christ to give inward sanctifying grace. The Catholic Church celebrates seven sacraments: Baptism, Confirmation, Holy Eucharist, Penance and Reconciliation, Anointing of the Sick, Holy Orders, and Holy Matrimony.')}
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>🔊</span>
+            <span>Listen Definition</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#facc15' : 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: showPlayer ? '#1e1b4b' : '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=seven-sacraments"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Seven Sacraments */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #4338ca', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#1e1b4b', padding: '10px 16px', borderBottom: '1px solid #312e81', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: The Seven Holy Sacraments (Septem Sacramenta)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontFamily: 'monospace' }}>Cartridge: seven-sacraments.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="seven-sacraments"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Category Filter Pills */}
       <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>

@@ -1,0 +1,16 @@
+;; =============================================================================
+;; St Joseph's Curriculum Portal — Canonical AST Curriculum Cartridge
+;; Cartridge ID: pipeline-sample | Category: STEM
+;; Title: Sample Physics Knowledge Nodes
+;; Zero-Cloud Invariant: 100% Client-Side Decoupled Knowledge Substrate
+;; =============================================================================
+(:cartridge :id "pipeline-sample" :category "STEM" :title "Sample Physics Knowledge Nodes" :version "1.0.0" :count 3
+  (topic :code "PHYS-01" :title "Boyle's Law" :law "P1V1 = P2V2" :stage "KS3" :interactiveTarget "#piston" :summary "At constant temperature, pressure is inversely proportional to volume."
+  )
+
+  (topic :code "PHYS-02" :title "Hooke's Law" :law "F = kx" :stage "KS3" :interactiveTarget "#spring" :summary "The extension of a spring is directly proportional to the force applied."
+  )
+
+  (topic :code "PHYS-03" :title "Ohm's Law" :law "V = IR" :stage "KS3" :interactiveTarget "#circuit-resistor" :summary "Current through a conductor is directly proportional to potential difference."
+  )
+)

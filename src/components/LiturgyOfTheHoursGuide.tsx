@@ -13,6 +13,8 @@ import {
   MarianAntiphon,
 } from '../data/catholic/liturgyOfTheHoursData';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
 export default function LiturgyOfTheHoursGuide(): React.JSX.Element {
@@ -20,6 +22,7 @@ export default function LiturgyOfTheHoursGuide(): React.JSX.Element {
     return getCurrentCanonicalHour().id;
   });
   const [showLatin, setShowLatin] = useState<boolean>(false);
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [selectedAntiphonId, setSelectedAntiphonId] = useState<string>('salve-regina');
   const [isSpeaking, setIsSpeaking] = useState<boolean>(false);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -110,8 +113,41 @@ export default function LiturgyOfTheHoursGuide(): React.JSX.Element {
             >
               {showLatin ? 'Latin / English' : 'Show Latin'}
             </button>
+            <button
+              type="button"
+              onClick={() => setShowPlayer(!showPlayer)}
+              className="px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-indigo-500/20 hover:bg-indigo-500/30 text-indigo-300 border border-indigo-500/40 transition-colors flex items-center gap-1.5"
+            >
+              <span>{showPlayer ? '▲ Hide Simulation' : '🎮 Vector Simulation'}</span>
+            </button>
+            <Link
+              to="/media-player?preset=liturgy-of-the-hours"
+              className="px-3 py-2.5 rounded-xl text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 hover:text-white transition-colors flex items-center gap-1.5"
+            >
+              <span>📺 Full Player</span>
+            </Link>
           </div>
         </div>
+
+        {/* Embedded AST Vector Media Player for Divine Office */}
+        {showPlayer && (
+          <div className="mt-5 rounded-2xl overflow-hidden border border-indigo-500/30 bg-slate-950 shadow-2xl relative">
+            <div className="bg-slate-900/90 px-4 py-2.5 border-b border-slate-800 flex items-center justify-between text-xs">
+              <span className="flex items-center gap-2 font-serif font-semibold text-indigo-300">
+                <span>🕰️</span>
+                <span>AST Vector Interactive Engine: Liturgia Horarum &amp; Celestial Clock</span>
+              </span>
+              <span className="text-[11px] text-indigo-400/80 font-mono">Cartridge: liturgy-of-the-hours.ast</span>
+            </div>
+            <AstVectorMediaPlayer
+              preset="liturgy-of-the-hours"
+              height="clamp(240px, 45vw + 40px, 420px)"
+              allowPresetSwitch={false}
+              embedded={true}
+              bslEnabled={false}
+            />
+          </div>
+        )}
 
         {/* Live Clock & Liturgical Sanctuary Banner */}
         <div className="mt-5 p-4 rounded-xl bg-slate-950/60 border border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">

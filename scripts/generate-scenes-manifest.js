@@ -112,6 +112,12 @@ function getDefaultMountForCartridge(id) {
     'altar-anatomy': '/curriculum/catholic-life/altar-anatomy',
     'holy-oils': '/curriculum/catholic-life/holy-oils',
     'rosary-mysteries': '/curriculum/catholic-life/rosary-mysteries',
+    'triduum-easter': '/curriculum/catholic-life/triduum-easter',
+    'holy-water-thurifer': '/curriculum/catholic-life/holy-water-thurifer',
+    'liturgy-of-the-hours': '/curriculum/catholic-life/liturgy-of-the-hours',
+    'seven-sacraments': '/curriculum/catholic-life/seven-sacraments',
+    'liturgical-calendar': '/curriculum/catholic-life/liturgical-calendar',
+    'liturgical-postures': '/curriculum/catholic-life/liturgical-postures',
     'phonics-lab': '/curriculum/english/phonics/phonics-lab',
     'phonics-screening': '/curriculum/english/phonics/screening-check',
     'spelling-bee': '/curriculum/english/spelling/spelling-bee',
@@ -138,7 +144,7 @@ function getDefaultMountForCartridge(id) {
 }
 
 function getDefaultSectionForCartridge(id) {
-  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross')) {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross') || id.includes('triduum') || id.includes('easter') || id.includes('liturgy') || id.includes('sacrament') || id.includes('posture') || id.includes('calendar')) {
     return 'Catholic Life & Faith Formation';
   }
   if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times')) {
@@ -463,4 +469,5 @@ export const PRESET_OPTIONS: ScenePresetOption[] = ${JSON.stringify(presetEntrie
 // Run when executed directly
 if (process.argv[1] && process.argv[1].endsWith('generate-scenes-manifest.js')) {
   generateScenesManifest();
+  process.exit(0);
 }

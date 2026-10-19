@@ -47,6 +47,18 @@
       :ast "/cartridges/stations-of-the-cross.ast" :svg "/cartridges/stations-of-the-cross.svg")
     (:cartridge :id "holy-oils" :type "Slide" :stage "CATHOLIC LIFE"
       :ast "/cartridges/holy-oils.ast" :svg "/cartridges/holy-oils.svg")
+    (:cartridge :id "triduum-easter" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/triduum-easter.ast" :svg "/cartridges/triduum-easter.svg")
+    (:cartridge :id "holy-water-thurifer" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/holy-water-thurifer.ast" :svg "/cartridges/holy-water-thurifer.svg")
+    (:cartridge :id "liturgy-of-the-hours" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/liturgy-of-the-hours.ast" :svg "/cartridges/liturgy-of-the-hours.svg")
+    (:cartridge :id "seven-sacraments" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/seven-sacraments.ast" :svg "/cartridges/seven-sacraments.svg")
+    (:cartridge :id "liturgical-calendar" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/liturgical-calendar.ast" :svg "/cartridges/liturgical-calendar.svg")
+    (:cartridge :id "liturgical-postures" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/liturgical-postures.ast" :svg "/cartridges/liturgical-postures.svg")
 
     ;; STEM Simulations & Manipulatives
     (:cartridge :id "kinetic-gas" :type "Sim" :stage "KS3/KS4 PHYSICS"
