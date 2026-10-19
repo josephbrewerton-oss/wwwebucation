@@ -23,7 +23,8 @@
     "mine:watch": "npx tsx scripts/watchSubstrates.ts"
   },
   "overrides": {
-    "esbuild": "^0.28.1"
+    "esbuild": "^0.28.1",
+    "source-map-js": "^1.2.2"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

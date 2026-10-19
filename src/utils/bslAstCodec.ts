@@ -40,24 +40,37 @@ export function astVectorToPoint3D(vec: any): Point3D {
 }
 
 /**
+ * Safely escapes string literals for AST S-Expression serialization.
+ * Always escapes backslashes before escaping double quotes (CodeQL: js/incomplete-sanitization)
+ * to guarantee complete immunity against injection and malformed escape sequences.
+ */
+export function escapeAstString(str?: string): string {
+  if (!str) return '';
+  return String(str)
+    .replace(/\\/g, '\\\\')
+    .replace(/"/g, '\\"')
+    .replace(/\r?\n/g, ' ');
+}
+
+/**
  * Serializes a single BSL sign into an AST S-Expression node.
  */
 export function serializeSignToAst(sign: BslSign): string {
   const lines: string[] = [];
   const aliasesStr = sign.aliases && sign.aliases.length > 0
-    ? ` :aliases (${sign.aliases.map(a => `"${a}"`).join(' ')})`
+    ? ` :aliases (${sign.aliases.map(a => `"${escapeAstString(a)}"`).join(' ')})`
     : '';
 
-  lines.push(`  (sign :id "${sign.id}" :word "${sign.word}" :cat "${sign.category}" :gloss "${sign.gloss}"`);
-  lines.push(`    :label "${sign.englishLabel.replace(/"/g, '\\"')}"`);
-  lines.push(`    :desc "${sign.description.replace(/"/g, '\\"')}"${aliasesStr}`);
+  lines.push(`  (sign :id "${escapeAstString(sign.id)}" :word "${escapeAstString(sign.word)}" :cat "${escapeAstString(sign.category)}" :gloss "${escapeAstString(sign.gloss)}"`);
+  lines.push(`    :label "${escapeAstString(sign.englishLabel)}"`);
+  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}`);
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
     const shapeStr = kf.shape ? ` :shape :${kf.shape}` : '';
     const baseModeStr = kf.baseHandMode ? ` :base-mode :${kf.baseHandMode}` : '';
     const nmfStr = kf.nmf
-      ? ` :nmf (nmf :mouth "${kf.nmf.mouth || ''}" :brows "${kf.nmf.eyebrows || 'neutral'}"${kf.nmf.headTilt ? ` :tilt "${kf.nmf.headTilt}"` : ''})`
+      ? ` :nmf (nmf :mouth "${escapeAstString(kf.nmf.mouth || '')}" :brows "${escapeAstString(kf.nmf.eyebrows || 'neutral')}"${kf.nmf.headTilt ? ` :tilt "${escapeAstString(kf.nmf.headTilt)}"` : ''})`
       : '';
     const vowelStr = kf.activeVowelIndex !== undefined ? ` :vowel ${kf.activeVowelIndex}` : '';
     const shiftStr = kf.baseHandOverride
@@ -65,7 +78,7 @@ export function serializeSignToAst(sign: BslSign): string {
       : '';
 
     lines.push(
-      `    (kf :idx ${i + 1} :label "${kf.label.replace(/"/g, '\\"')}" :rule "${kf.rule.replace(/"/g, '\\"')}"` +
+      `    (kf :idx ${i + 1} :label "${escapeAstString(kf.label)}" :rule "${escapeAstString(kf.rule)}"` +
       ` :tip ${point3DToAstVector(kf.targetTip)} :knuckle ${point3DToAstVector(kf.targetKnuckle)} :wrist ${point3DToAstVector(kf.targetWrist)}` +
       `${shapeStr}${baseModeStr}${vowelStr}${shiftStr}${nmfStr})`
     );
@@ -92,13 +105,14 @@ export function serializeLexiconToAst(
     `;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)`,
     `;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories`,
     `;; =============================================================================`,
-    `(bsl-lexicon :version "${version}" :standard "${standard}" :title "${title}" :signs-count ${Object.keys(lexicon).length}`,
+    `(bsl-lexicon :version "${escapeAstString(version)}" :standard "${escapeAstString(standard)}" :title "${escapeAstString(title)}" :signs-count ${Object.keys(lexicon).length}`,
   ];
 
   const signEntries = Object.values(lexicon).map(sign => serializeSignToAst(sign));
 
   return `${header.join('\n')}\n${signEntries.join('\n\n')}\n)\n`;
 }
+
 
 /**
  * Parses an AST S-Expression node representing a BSL sign into a structured BslSign.
