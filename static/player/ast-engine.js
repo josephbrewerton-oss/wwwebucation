@@ -6054,7 +6054,7 @@ if (item.type === '3d-node') {
             if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
               item.labelNode.parentNode.appendChild(item.labelNode);
             }
-          });
+});
         }
       }
 
@@ -6076,7 +6076,8 @@ if (item.type === '3d-node') {
                 if (b.attr === 'textContent') {
                   b.node.textContent = String(val);
                 } else {
-                  b.node.setAttribute(b.attr, String(val));
+                  const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
+                  b.node.setAttribute(b.attr, String(safeVal));
                 }
               }
             } catch (err) {}
@@ -6098,10 +6099,6 @@ if (item.type === '3d-node') {
             else if (manualTemp <= 273) currentPhase = 'liquid';
             else currentPhase = 'gas';
           } else {
-            // Auto-play timeline progression:
-            // 0.00 - 0.74: Gas state (isothermal compression & Gay-Lussac heating)
-            // 0.74 - 0.87: Liquid condensation (thermal energy drops below 220 K)
-            // 0.87 - 1.00: Solid cryogenic crystal lattice (85 K)
             if (t >= 0.87) currentPhase = 'solid';
             else if (t >= 0.74) currentPhase = 'liquid';
             else currentPhase = 'gas';
@@ -6109,7 +6106,6 @@ if (item.type === '3d-node') {
 
           gasEm.setPhaseState(currentPhase);
 
-          // Piston limit synchronization
           let pX = 430;
           if (this.vars && this.vars.volume !== undefined && this.vars.volume !== null) {
             pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, this.vars.volume)) - 0.35) / 0.65;
@@ -6118,7 +6114,6 @@ if (item.type === '3d-node') {
           }
           gasEm.clampToPistonX(pX);
 
-          // Speed synchronization when in gas state
           if (currentPhase === 'gas') {
             const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
             gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
@@ -6127,12 +6122,15 @@ if (item.type === '3d-node') {
       }
 
       // 4. Procedural update hook if present
-// 4. Procedural update hook if present
       if (this.scene && typeof this.scene.update === 'function' && this._cachedElements) {
         this.scene.update(t, this._cachedElements, this, dt);
       }
-    }    renderCurrentVector(container) {
-      const target = container || this.container;
+    }
+
+    /**
+     * Direct Element Attribute Patching (Decoupled render)
+     */
+    renderCurrentVector(container) {      const target = container || this.container;
       if (target) {
         if (!this._isMounting && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== target)) {
           if (this.scene) {
