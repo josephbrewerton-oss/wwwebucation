@@ -977,38 +977,6 @@ export default function PersistentNavbar(): React.JSX.Element {
             </button>
           )}
 
-          {/* Standalone Player Quick Launcher (Desktop only; on mobile accessible via bottom dock) */}
-          <NavLink
-            to="/player"
-            id="navbar-player-btn"
-            className="navbar-action-desktop-only"
-            title="Launch Interactive Visual Lab & Simulations"
-            style={({ isActive }) => ({
-              background: isActive
-                ? colorMode === 'dark' ? '#0369a1' : '#e0f2fe'
-                : colorMode === 'dark' ? 'rgba(30, 41, 59, 0.7)' : '#f8fafc',
-              color: isActive
-                ? colorMode === 'dark' ? '#ffffff' : '#0369a1'
-                : colorMode === 'dark' ? '#38bdf8' : '#0284c7',
-              border: `1px solid ${
-                isActive
-                  ? '#0284c7'
-                  : colorMode === 'dark' ? 'rgba(56, 189, 248, 0.3)' : 'rgba(2, 132, 199, 0.3)'
-              }`,
-              borderRadius: '6px',
-              padding: '0.35rem 0.6rem',
-              fontSize: '0.8rem',
-              fontWeight: 700,
-              textDecoration: 'none',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-              transition: 'all 0.15s ease',
-            })}
-          >
-            <span>🎬</span>
-            <span>Visual Lab</span>
-          </NavLink>
 
           {/* Standalone Settings Button (Desktop only; on mobile accessible via bottom dock drawer) */}
           <NavLink

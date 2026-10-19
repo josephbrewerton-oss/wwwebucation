@@ -16,6 +16,7 @@ import HolyOilsExplorer from '../components/HolyOilsExplorer';
 import LiturgicalMisconceptionsExplorer from '../components/LiturgicalMisconceptionsExplorer';
 import HolyWaterAndThuriferExplorer from '../components/HolyWaterAndThuriferExplorer';
 import StationsOfTheCrossGuide from '../components/StationsOfTheCrossGuide';
+import TriduumEasterJourneyGuide from '../components/TriduumEasterJourneyGuide';
 import LiturgyOfTheHoursGuide from '../components/LiturgyOfTheHoursGuide';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
@@ -24,6 +25,7 @@ export type CatholicLifeTab =
   | 'overview'
   | 'church-tour'
   | 'stations-of-the-cross'
+  | 'triduum-easter'
   | 'liturgy-of-the-hours'
   | 'altar'
   | 'holy-water-thurifer'
@@ -62,6 +64,7 @@ export default function CatholicLifePage(): React.JSX.Element {
         'overview',
         'church-tour',
         'stations-of-the-cross',
+        'triduum-easter',
         'liturgy-of-the-hours',
         'altar',
         'holy-water-thurifer',
@@ -100,6 +103,7 @@ export default function CatholicLifePage(): React.JSX.Element {
           'overview',
           'church-tour',
           'stations-of-the-cross',
+          'triduum-easter',
           'liturgy-of-the-hours',
           'altar',
           'holy-water-thurifer',
@@ -148,6 +152,15 @@ export default function CatholicLifePage(): React.JSX.Element {
       color: '#b91c1c',
       bg: '#fef2f2',
       badge: 'Via Dolorosa & Easter Cartridge',
+    },
+    {
+      tab: 'triduum-easter' as CatholicLifeTab,
+      icon: '🔥',
+      title: 'The Sacred Triduum & Easter (Lumen Christi)',
+      desc: 'The unbroken three-day liturgy: Holy Thursday Upper Room, Good Friday Calvary, Holy Saturday Great Silence, Lumen Christi Easter Vigil & the 50-day glory of Eastertide.',
+      color: '#d97706',
+      bg: '#fffbeb',
+      badge: 'Unbroken Liturgy & Lumen Christi',
     },
     {
       tab: 'liturgy-of-the-hours' as CatholicLifeTab,
@@ -547,6 +560,7 @@ export default function CatholicLifePage(): React.JSX.Element {
             { id: 'overview', label: '🏠 Overview' },
             { id: 'church-tour', label: '⛪ Church Tour' },
             { id: 'stations-of-the-cross', label: '✝️ Stations of the Cross' },
+            { id: 'triduum-easter', label: '🔥 Sacred Triduum & Easter' },
             { id: 'liturgy-of-the-hours', label: '🕰️ Liturgy of the Hours' },
             { id: 'altar', label: '✝️ The Catholic Altar' },
             { id: 'holy-water-thurifer', label: '💧 Holy Water & Thurifer' },
@@ -1443,6 +1457,12 @@ export default function CatholicLifePage(): React.JSX.Element {
             {activeTab === 'stations-of-the-cross' && (
               <div style={{ marginBottom: '2.5rem' }}>
                 <StationsOfTheCrossGuide />
+              </div>
+            )}
+
+            {activeTab === 'triduum-easter' && (
+              <div style={{ marginBottom: '2.5rem' }}>
+                <TriduumEasterJourneyGuide />
               </div>
             )}
 

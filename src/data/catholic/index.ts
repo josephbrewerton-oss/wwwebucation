@@ -18,3 +18,4 @@ export * from './liturgicalPosturesData';
 export * from './holyWaterThuriferData';
 export * from './stationsOfTheCrossData';
 export * from './liturgyOfTheHoursData';
+export * from './triduumEasterData';

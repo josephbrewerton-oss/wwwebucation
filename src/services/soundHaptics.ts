@@ -211,3 +211,161 @@ export function triggerHapticClick(): void {
     navigator.vibrate(8);
   } catch {}
 }
+
+/**
+ * Procedural chant synthesis for the three elevations of "Lumen Christi" -> "Deo gratias"
+ * Elevation 1 (Entrance): Lower pitch (F4 / G4 / A4)
+ * Elevation 2 (Nave): Mid pitch (G4 / A4 / B4)
+ * Elevation 3 (Sanctuary): High triumphant pitch (A4 / B4 / C#5)
+ * 0 KB download, pure Web Audio mathematical synthesis.
+ */
+export function playLumenChristiChant(elevation: 1 | 2 | 3 = 1): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const baseFreqs = {
+      1: [349.23, 392.00, 440.00], // F4, G4, A4
+      2: [392.00, 440.00, 493.88], // G4, A4, B4
+      3: [440.00, 493.88, 554.37], // A4, B4, C#5
+    }[elevation];
+
+    const now = ctx.currentTime;
+
+    // Deacon chant: "Lu - men - Chri-sti"
+    baseFreqs.forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      const startTime = now + idx * 0.32;
+      const duration = idx === 2 ? 0.75 : 0.32;
+
+      osc.frequency.setValueAtTime(freq, startTime);
+
+      // Warm chant vocal envelope
+      gain.gain.setValueAtTime(0.001, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.06);
+      gain.gain.setValueAtTime(0.12, startTime + duration - 0.1);
+      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(startTime);
+      osc.stop(startTime + duration);
+    });
+
+    // Assembly response after pause: "De - o   gra - ti - as" (harmonic chord)
+    const responseStart = now + 1.25;
+    const responseNotes = [
+      [baseFreqs[1], baseFreqs[2]], // De-
+      [baseFreqs[0], baseFreqs[1]], // o
+      [baseFreqs[0], baseFreqs[2]], // gra-
+      [baseFreqs[0] * 0.75, baseFreqs[0], baseFreqs[2]], // ti-as (full warm resolution)
+    ];
+
+    responseNotes.forEach((chord, step) => {
+      const stepStart = responseStart + step * 0.35;
+      const stepDuration = step === 3 ? 0.95 : 0.35;
+
+      chord.forEach((note) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'triangle';
+
+        osc.frequency.setValueAtTime(note, stepStart);
+        gain.gain.setValueAtTime(0.001, stepStart);
+        gain.gain.exponentialRampToValueAtTime(0.07, stepStart + 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.0001, stepStart + stepDuration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(stepStart);
+        osc.stop(stepStart + stepDuration);
+      });
+    });
+  } catch (err) {
+    console.warn('[Sound Engine] Lumen Christi chant error:', err);
+  }
+}
+
+/**
+ * Procedural synthesis of glorious Easter carillon / campanile bells.
+ * Simulates real bronze church bells with non-harmonic overtones and rich decays.
+ */
+export function playEasterBells(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const bellPitches = [659.25, 830.61, 987.77, 1108.73, 1318.51]; // E5, G#5, B5, C#6, E6
+    const now = ctx.currentTime;
+
+    // Change ringing pattern: 6 cascading strikes
+    const strikeDelays = [0.0, 0.18, 0.36, 0.54, 0.74, 0.96, 1.2];
+    strikeDelays.forEach((delay, i) => {
+      const pitch = bellPitches[i % bellPitches.length];
+      const strikeTime = now + delay;
+      const duration = 1.4;
+
+      // Strike note + strike overtone
+      [pitch, pitch * 2.01, pitch * 2.76].forEach((f, overtoneIdx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = overtoneIdx === 0 ? 'sine' : 'triangle';
+        osc.frequency.setValueAtTime(f, strikeTime);
+
+        const amp = overtoneIdx === 0 ? 0.12 : 0.05;
+        gain.gain.setValueAtTime(0.001, strikeTime);
+        gain.gain.exponentialRampToValueAtTime(amp, strikeTime + 0.015);
+        gain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + duration);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(strikeTime);
+        osc.stop(strikeTime + duration);
+      });
+    });
+  } catch (err) {
+    console.warn('[Sound Engine] Easter bells error:', err);
+  }
+}
+
+/**
+ * Procedural wooden clapper (crotalus / strepitu) sound used when bells are silenced during Triduum.
+ */
+export function playCrotalusClapper(): void {
+  if (!isSoundEnabled()) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    const now = ctx.currentTime;
+    // 3 rapid dry wooden knocks
+    [0.0, 0.09, 0.18].forEach((offset) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(240, now + offset);
+      osc.frequency.exponentialRampToValueAtTime(80, now + offset + 0.025);
+
+      gain.gain.setValueAtTime(0.001, now + offset);
+      gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.035);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start(now + offset);
+      osc.stop(now + offset + 0.035);
+    });
+  } catch (err) {}
+}
+
