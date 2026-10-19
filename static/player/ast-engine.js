@@ -3575,28 +3575,40 @@
      * Perspective 3D Projection Pipeline
      * Projects world space (X, Y, Z) to 2D SVG canvas (x, y, scale, depthOpacity)
      * Incorporates interactive camera orbit (yawOffset, pitchOffset, distanceScale)
+     *//**
+     * Perspective 3D Projection Pipeline
+     * Projects world space (X, Y, Z) to 2D SVG canvas (x, y, scale, depthOpacity)
+     * Incorporates interactive camera orbit (yawOffset, pitchOffset, distanceScale)
      */
     project3D(x, y, z, camera, cx = 400, cy = 240) {
+      // Numerical sanitization: ensure coordinates are finite numbers
+      x = Number.isFinite(Number(x)) ? Number(x) : 0;
+      y = Number.isFinite(Number(y)) ? Number(y) : 0;
+      z = Number.isFinite(Number(z)) ? Number(z) : 0;
+      cx = Number.isFinite(Number(cx)) ? Number(cx) : 400;
+      cy = Number.isFinite(Number(cy)) ? Number(cy) : 240;
+
       // ⚡ High-performance WebAssembly 3D Kernel (docs/WASM_ARCHITECTURE_CONTRACT.md Page 4)
       if (typeof window !== 'undefined' && window.AST3DWasmBridge && window.AST3DWasmBridge.isReady) {
         const wasmRes = window.AST3DWasmBridge.projectPoint(x, y, z, camera, cx, cy, this.cameraOrbit);
-        if (wasmRes) return wasmRes;
+        if (wasmRes && Number.isFinite(wasmRes.x) && Number.isFinite(wasmRes.y)) return wasmRes;
       }
 
-      const yawBase = (camera && camera.yaw) || 0;
-      const pitchBase = (camera && camera.pitch) || 0;
-      const rollBase = (camera && camera.roll) || 0;
-      const distBase = (camera && camera.distance) || 450;
-      const fov = (camera && camera.fov) || 60;
+      const yawBase = Number(camera && camera.yaw) || 0;
+      const pitchBase = Number(camera && camera.pitch) || 0;
+      const rollBase = Number(camera && camera.roll) || 0;
+      const distBase = Number(camera && camera.distance) || 450;
+      const fov = Number(camera && camera.fov) || 60;
 
-      const totalYaw = yawBase + (this.cameraOrbit ? this.cameraOrbit.yawOffset : 0);
-      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (this.cameraOrbit ? this.cameraOrbit.pitchOffset : 0)));
-      const totalDist = Math.max(80, distBase * (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0));
+      const totalYaw = yawBase + (this.cameraOrbit ? (Number(this.cameraOrbit.yawOffset) || 0) : 0);
+      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (this.cameraOrbit ? (Number(this.cameraOrbit.pitchOffset) || 0) : 0)));
+      const totalDist = Math.max(80, distBase * (this.cameraOrbit ? (Number(this.cameraOrbit.distanceScale) || 1.0) : 1.0));
 
       const yawRad = totalYaw * (Math.PI / 180);
       const pitchRad = totalPitch * (Math.PI / 180);
       const rollRad = rollBase * (Math.PI / 180);
-      const focalLength = 400 / Math.tan((fov * Math.PI) / 360);
+      const tanFov = Math.tan((fov * Math.PI) / 360) || 0.577;
+      const focalLength = 400 / tanFov;
 
       // 1. Yaw rotation (around Y axis)
       const x1 = x * Math.cos(yawRad) + z * Math.sin(yawRad);
@@ -3613,22 +3625,23 @@
       const y3 = x2 * Math.sin(rollRad) + y2 * Math.cos(rollRad);
       const z3 = z2;
 
-      // 4. Camera distance offset
+      // 4. Camera distance offset & safe divide guard
       const zCam = z3 + totalDist;
-      const safeZ = Math.max(20, zCam);
+      const safeZ = Math.max(20, Number.isFinite(zCam) ? zCam : 20);
 
-      // 5. Perspective projection
-      const scale = focalLength / safeZ;
-      const projX = cx + x3 * scale;
-      const projY = cy + y3 * scale;
-      const depthOpacity = Math.min(1.0, Math.max(0.45, 0.55 + 0.45 * (scale / (focalLength / totalDist))));
+      // 5. Perspective projection with NaN immunity
+      const scale = Number.isFinite(focalLength / safeZ) ? (focalLength / safeZ) : 1.0;
+      const projX = Number.isFinite(cx + x3 * scale) ? (cx + x3 * scale) : cx;
+      const projY = Number.isFinite(cy + y3 * scale) ? (cy + y3 * scale) : cy;
+      const depthRatio = totalDist > 0 ? (scale / (focalLength / totalDist)) : 1.0;
+      const depthOpacity = Math.min(1.0, Math.max(0.45, 0.55 + 0.45 * (Number.isFinite(depthRatio) ? depthRatio : 1.0)));
 
       return {
         x: projX,
         y: projY,
-        z: z3, // for Z-sorting (higher z means further back in camera space)
-        scale,
-        opacity: depthOpacity,
+        z: Number.isFinite(z3) ? z3 : 0,
+        scale: Number.isFinite(scale) ? scale : 1.0,
+        opacity: Number.isFinite(depthOpacity) ? depthOpacity : 1.0,
         safeZ
       };
     }
@@ -5755,50 +5768,60 @@
             continue;
           }
 
-          if (item.type === '3d-node') {
-            let wx = item.evalX(t, v, Math, comp);
-            let wy = item.evalY(t, v, Math, comp);
-            let wz = item.evalZ(t, v, Math, comp);
+if (item.type === '3d-node') {
+            let wx = Number(item.evalX(t, v, Math, comp)) || 0;
+            let wy = Number(item.evalY(t, v, Math, comp)) || 0;
+            let wz = Number(item.evalZ(t, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
-              wx += off[0]; wy += off[1]; wz += off[2];
+              wx += (off[0] || 0); wy += (off[1] || 0); wz += (off[2] || 0);
             }
             item.worldX = wx;
             item.worldY = wy;
             item.worldZ = wz;
             const proj = this.project3D(wx, wy, wz, camera, 400, 240);
-            item.meanZ = proj.z;
+            item.meanZ = Number.isFinite(proj.z) ? proj.z : 0;
 
             if (item.domNode) {
-              item.domNode.setAttribute('cx', proj.x.toFixed(1));
-              item.domNode.setAttribute('cy', proj.y.toFixed(1));
-              if (item.baseR) {
-                item.domNode.setAttribute('r', Math.max(1, item.baseR * proj.scale).toFixed(1));
-              }
+              const cx = Number.isFinite(proj.x) ? proj.x : 400;
+              const cy = Number.isFinite(proj.y) ? proj.y : 240;
+              const baseR = Number(item.baseR) || 8;
+              const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
+              const r = Math.max(1, baseR * scale);
+
+              item.domNode.setAttribute('cx', cx.toFixed(1));
+              item.domNode.setAttribute('cy', cy.toFixed(1));
+              item.domNode.setAttribute('r', r.toFixed(1));
               if (item.depthFog) {
-                item.domNode.setAttribute('opacity', proj.opacity.toFixed(2));
+                const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+                item.domNode.setAttribute('opacity', op.toFixed(2));
               }
             }
 
             if (item.labelNode) {
-              item.labelNode.setAttribute('x', proj.x.toFixed(1));
-              const r = item.baseR ? item.baseR * proj.scale : 8;
-              item.labelNode.setAttribute('y', (proj.y + r + 14).toFixed(1));
+              const lx = Number.isFinite(proj.x) ? proj.x : 400;
+              const ly = Number.isFinite(proj.y) ? proj.y : 240;
+              const baseR = Number(item.baseR) || 8;
+              const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
+              const r = baseR * scale;
+              item.labelNode.setAttribute('x', lx.toFixed(1));
+              item.labelNode.setAttribute('y', (ly + r + 14).toFixed(1));
               if (item.depthFog) {
-                item.labelNode.setAttribute('opacity', proj.opacity.toFixed(2));
+                const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+                item.labelNode.setAttribute('opacity', op.toFixed(2));
               }
             }
           } else if (item.type === '3d-line') {
-            let x1 = item.evalX1(t, v, Math, comp);
-            let y1 = item.evalY1(t, v, Math, comp);
-            let z1 = item.evalZ1(t, v, Math, comp);
-            let x2 = item.evalX2(t, v, Math, comp);
-            let y2 = item.evalY2(t, v, Math, comp);
-            let z2 = item.evalZ2(t, v, Math, comp);
+            let x1 = Number(item.evalX1(t, v, Math, comp)) || 0;
+            let y1 = Number(item.evalY1(t, v, Math, comp)) || 0;
+            let z1 = Number(item.evalZ1(t, v, Math, comp)) || 0;
+            let x2 = Number(item.evalX2(t, v, Math, comp)) || 0;
+            let y2 = Number(item.evalY2(t, v, Math, comp)) || 0;
+            let z2 = Number(item.evalZ2(t, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
-              x1 += off[0]; y1 += off[1]; z1 += off[2];
-              x2 += off[0]; y2 += off[1]; z2 += off[2];
+              x1 += (off[0] || 0); y1 += (off[1] || 0); z1 += (off[2] || 0);
+              x2 += (off[0] || 0); y2 += (off[1] || 0); z2 += (off[2] || 0);
             }
             item.worldP1 = [x1, y1, z1];
             item.worldP2 = [x2, y2, z2];
@@ -5822,7 +5845,9 @@
 
             const p1 = this.project3D(x1 - unzipOffset, y1, z1, camera, 400, 240);
             const p2 = this.project3D(x2 + unzipOffset, y2, z2, camera, 400, 240);
-            item.meanZ = (p1.z + p2.z) / 2;
+            const z1Val = Number.isFinite(p1.z) ? p1.z : 0;
+            const z2Val = Number.isFinite(p2.z) ? p2.z : 0;
+            item.meanZ = (z1Val + z2Val) / 2;
 
             if (item.target && item.target.startsWith('#dna-line-')) {
               const idxMatch = item.target.match(/\d+/);
@@ -5834,62 +5859,77 @@
             }
 
             if (item.domNode) {
-              item.domNode.setAttribute('x1', p1.x.toFixed(1));
-              item.domNode.setAttribute('y1', p1.y.toFixed(1));
-              item.domNode.setAttribute('x2', p2.x.toFixed(1));
-              item.domNode.setAttribute('y2', p2.y.toFixed(1));
+              const px1 = Number.isFinite(p1.x) ? p1.x : 0;
+              const py1 = Number.isFinite(p1.y) ? p1.y : 0;
+              const px2 = Number.isFinite(p2.x) ? p2.x : 0;
+              const py2 = Number.isFinite(p2.y) ? p2.y : 0;
+              const op1 = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
+              const op2 = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
+
+              item.domNode.setAttribute('x1', px1.toFixed(1));
+              item.domNode.setAttribute('y1', py1.toFixed(1));
+              item.domNode.setAttribute('x2', px2.toFixed(1));
+              item.domNode.setAttribute('y2', py2.toFixed(1));
               if (isUnzipped) {
                 item.domNode.setAttribute('opacity', '0.15');
                 item.domNode.setAttribute('stroke-dasharray', '3,4');
               } else {
-                item.domNode.setAttribute('opacity', ((p1.opacity + p2.opacity) / 2).toFixed(2));
+                item.domNode.setAttribute('opacity', ((op1 + op2) / 2).toFixed(2));
                 item.domNode.removeAttribute('stroke-dasharray');
               }
             }
             if (item.cap1) {
-              item.cap1.setAttribute('cx', p1.x.toFixed(1));
-              item.cap1.setAttribute('cy', p1.y.toFixed(1));
-              item.cap1.setAttribute('opacity', p1.opacity.toFixed(2));
-              if (item.baseR) item.cap1.setAttribute('r', Math.max(1, item.baseR * p1.scale).toFixed(1));
+              const c1x = Number.isFinite(p1.x) ? p1.x : 0;
+              const c1y = Number.isFinite(p1.y) ? p1.y : 0;
+              const c1op = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
+              const baseR = Number(item.baseR) || 8;
+              const scale = Number.isFinite(p1.scale) ? p1.scale : 1.0;
+              item.cap1.setAttribute('cx', c1x.toFixed(1));
+              item.cap1.setAttribute('cy', c1y.toFixed(1));
+              item.cap1.setAttribute('opacity', c1op.toFixed(2));
+              item.cap1.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
             }
             if (item.cap2) {
-              item.cap2.setAttribute('cx', p2.x.toFixed(1));
-              item.cap2.setAttribute('cy', p2.y.toFixed(1));
-              item.cap2.setAttribute('opacity', p2.opacity.toFixed(2));
-              if (item.baseR) item.cap2.setAttribute('r', Math.max(1, item.baseR * p2.scale).toFixed(1));
+              const c2x = Number.isFinite(p2.x) ? p2.x : 0;
+              const c2y = Number.isFinite(p2.y) ? p2.y : 0;
+              const c2op = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
+              const baseR = Number(item.baseR) || 8;
+              const scale = Number.isFinite(p2.scale) ? p2.scale : 1.0;
+              item.cap2.setAttribute('cx', c2x.toFixed(1));
+              item.cap2.setAttribute('cy', c2y.toFixed(1));
+              item.cap2.setAttribute('opacity', c2op.toFixed(2));
+              item.cap2.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
             }
           } else if (item.type === '3d-ring') {
-            let r = item.evalR(t, v, Math, comp);
-            let cx = item.evalCX(t, v, Math, comp);
-            let cy = item.evalCY(t, v, Math, comp);
-            let cz = item.evalCZ(t, v, Math, comp);
+            let r = Number(item.evalR(t, v, Math, comp)) || 100;
+            let cx = Number(item.evalCX(t, v, Math, comp)) || 0;
+            let cy = Number(item.evalCY(t, v, Math, comp)) || 0;
+            let cz = Number(item.evalCZ(t, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
-              cx += off[0]; cy += off[1]; cz += off[2];
+              cx += (off[0] || 0); cy += (off[1] || 0); cz += (off[2] || 0);
             }
             item.worldCenter = [cx, cy, cz];
             item.worldRadius = r;
-            const tiltXDeg = item.evalTiltX(t, v, Math, comp);
-            const tiltYDeg = item.evalTiltY(t, v, Math, comp);
-            const tiltZDeg = item.evalTiltZ(t, v, Math, comp);
+            const tiltXDeg = Number(item.evalTiltX(t, v, Math, comp)) || 0;
+            const tiltYDeg = Number(item.evalTiltY(t, v, Math, comp)) || 0;
+            const tiltZDeg = Number(item.evalTiltZ(t, v, Math, comp)) || 0;
 
             const rxRad = tiltXDeg * (Math.PI / 180);
             const ryRad = tiltYDeg * (Math.PI / 180);
             const rzRad = tiltZDeg * (Math.PI / 180);
 
-            const n = item.segments;
+            const n = Math.max(3, item.segments || 24);
             let pathD = '';
             let totalZ = 0;
             let totalOpacity = 0;
 
             for (let k = 0; k < n; k++) {
               const theta = (k / n) * Math.PI * 2;
-              // Base circle in X-Z plane
               let px = r * Math.cos(theta);
               let py = 0;
               let pz = r * Math.sin(theta);
 
-              // Apply local tilts
               if (tiltXDeg !== 0) {
                 const py1 = py * Math.cos(rxRad) - pz * Math.sin(rxRad);
                 const pz1 = py * Math.sin(rxRad) + pz * Math.cos(rxRad);
@@ -5907,13 +5947,18 @@
               }
 
               const proj = this.project3D(cx + px, cy + py, cz + pz, camera, 400, 240);
-              totalZ += proj.z;
-              totalOpacity += proj.opacity;
+              const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
+              const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+              totalZ += pzVal;
+              totalOpacity += popVal;
+
+              const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
+              const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
 
               if (k === 0) {
-                pathD += `M ${proj.x.toFixed(1)} ${proj.y.toFixed(1)}`;
+                pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
               } else {
-                pathD += ` L ${proj.x.toFixed(1)} ${proj.y.toFixed(1)}`;
+                pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
               }
             }
             pathD += ' Z';
@@ -5930,7 +5975,7 @@
             let rawPts = item.evalPts(t, v, Math, comp);
             if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
               const off = this.nodeOffsets.get(item.target);
-              rawPts = rawPts.map(pt => [pt[0] + off[0], pt[1] + off[1], pt[2] + off[2]]);
+              rawPts = rawPts.map(pt => [(pt[0] || 0) + (off[0] || 0), (pt[1] || 0) + (off[1] || 0), (pt[2] || 0) + (off[2] || 0)]);
             }
             item.worldPts = rawPts;
             if (Array.isArray(rawPts) && rawPts.length >= 3) {
@@ -5940,13 +5985,19 @@
 
               for (let k = 0; k < rawPts.length; k++) {
                 const pt = rawPts[k];
-                const proj = this.project3D(pt[0], pt[1], pt[2], camera, 400, 240);
-                totalZ += proj.z;
-                totalOpacity += proj.opacity;
+                const proj = this.project3D(pt[0] || 0, pt[1] || 0, pt[2] || 0, camera, 400, 240);
+                const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
+                const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+                totalZ += pzVal;
+                totalOpacity += popVal;
+
+                const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
+                const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
+
                 if (k === 0) {
-                  pathD += `M ${proj.x.toFixed(1)} ${proj.y.toFixed(1)}`;
+                  pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
                 } else {
-                  pathD += ` L ${proj.x.toFixed(1)} ${proj.y.toFixed(1)}`;
+                  pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
                 }
               }
               pathD += ' Z';
@@ -5960,8 +6011,6 @@
               }
             }
           }
-        }
-
         // Update continuous DNA sugar-phosphate backbones if present
         if (dnaStrandA && dnaStrandA.length > 1) {
           const bbA = this._container && this._container.querySelector('#dna-backbone-a');
