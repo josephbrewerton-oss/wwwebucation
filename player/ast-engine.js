@@ -6114,6 +6114,7 @@ if (item.type === '3d-node') {
           }
           gasEm.clampToPistonX(pX);
 
+// Speed synchronization when in gas state
           if (currentPhase === 'gas') {
             const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
             gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
