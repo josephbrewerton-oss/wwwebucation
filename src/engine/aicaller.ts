@@ -12,8 +12,16 @@ export interface AiInferenceOptions {
   onDownloadProgress?: (loaded: number, total: number) => void;
   /** Maximum inference timeout in milliseconds. Defaults to 12000ms. */
   timeoutMs?: number;
+  /**
+   * W3C Prompt API constrained sampling:
+   * Accepts a RegExp object or JSON Schema to constrain token sampling logits directly.
+   */
+  responseConstraint?: RegExp | any;
+  /**
+   * Prevents the constraint definition itself from eating into Nano's context window.
+   */
+  omitResponseConstraintInput?: boolean;
 }
-
 export interface ModelAvailability {
   status: 'readily' | 'after-download' | 'no';
   maxTokens?: number;
@@ -200,7 +208,31 @@ class AiRuntimeCaller {
     if (!hasUserGrantedAiConsent()) {
       throw new Error('User has not consented to in-browser AI model execution/download.');
     }
-
+const createPromise = (async () => {
+      // 1. Try modern W3C Prompt API with samplingMode
+      try {
+        return await lm.create(createOptions);
+      } catch {
+        // 2. Fall back to numeric temperature/topK for older Chromium revisions
+        try {
+          return await lm.create({
+            systemPrompt,
+            temperature: 0.1,
+            topK: 1,
+            outputLanguage: 'en',
+            expectedInputLanguages: ['en'],
+            expectedOutputLanguages: ['en'],
+          });
+        } catch {
+          // 3. Minimal fallback
+          return await lm.create({
+            systemPrompt,
+            expectedInputLanguages: ['en'],
+            expectedOutputLanguages: ['en'],
+          });
+        }
+      }
+    })();
     const lm = this.getAiRoot();
     if (!lm) {
       throw new Error('W3C LanguageModel API not supported in this environment.');
@@ -209,17 +241,16 @@ class AiRuntimeCaller {
     const systemPrompt = opts?.systemPrompt || 'You are an elite UK Curriculum Socratic educator.';
 
     // Fully-specified W3C Prompt API configuration
-    const createOptions: any = {
-      systemPrompt,
-      temperature: opts?.temperature ?? 0.2,
-      topK: opts?.topK ?? 3,
-      expectedInputs: [{ type: 'text', languages: ['en'] }],
-      expectedOutputs: [{ type: 'text', languages: ['en'] }],
-      outputLanguage: 'en',
-      expectedInputLanguages: ['en'],
-      expectedOutputLanguages: ['en'],
-    };
-
+const createOptions: any = {
+  systemPrompt,
+  // Modern W3C spec: replaces numeric temperature/topK
+  samplingMode: 'most-predictable',
+  expectedInputs: [{ type: 'text', languages: ['en'] }],
+  expectedOutputs: [{ type: 'text', languages: ['en'] }],
+  outputLanguage: 'en',
+  expectedInputLanguages: ['en'],
+  expectedOutputLanguages: ['en'],
+};
     if (opts?.onDownloadProgress) {
       createOptions.monitor = (m: any) => {
         m.addEventListener('downloadprogress', (e: any) => {
@@ -302,19 +333,72 @@ class AiRuntimeCaller {
       let session = await this.getSession(opts);
       const timeoutMs = opts.timeoutMs ?? 25000;
 
-      const executeCall = async (s: any) => {
-        try {
-          return await s.prompt(opts.prompt, { outputLanguage: 'en' });
-        } catch (err: any) {
-          if (err?.name === 'InvalidStateError' || String(err?.message || '').toLowerCase().includes('destroyed')) {
-            this.destroy();
-            session = await this.getSession(opts);
-            return await session.prompt(opts.prompt);
-          }
-          return await s.prompt(opts.prompt);
-        }
-      };
+const executeCall = async (s: any) => {
+  let activeSession = s;
 
+  const buildArgs = (includeConstraint: boolean) => {
+    const args: any = { outputLanguage: 'en' };
+    if (includeConstraint && opts.responseConstraint) {
+      args.responseConstraint = opts.responseConstraint;
+      if (opts.omitResponseConstraintInput !== undefined) {
+        args.omitResponseConstraintInput = opts.omitResponseConstraintInput;
+      }
+    }
+    return args;
+  };
+
+  const attemptPrompt = async (targetSession: any, useConstraint: boolean) => {
+    const args = buildArgs(useConstraint);
+    try {
+      return await targetSession.prompt(opts.prompt, args);
+    } catch (err: any) {
+      // Fallback for older Chromium builds that reject options objects entirely
+      if (err?.name === 'TypeError' || String(err?.message || '').includes('parameter')) {
+        return await targetSession.prompt(opts.prompt);
+      }
+      throw err;
+    }
+  };
+
+  try {
+    return await attemptPrompt(activeSession, true);
+  } catch (err: any) {
+    const isDestroyed =
+      err?.name === 'InvalidStateError' ||
+      String(err?.message || '').toLowerCase().includes('destroyed');
+
+    // Case 1: Session died / invalidated -> Reinitialize and retry
+    if (isDestroyed) {
+      if (isEphemeral) {
+        try { activeSession?.destroy?.(); } catch {}
+      } else {
+        this.destroy();
+      }
+
+      activeSession = await this.getSession(opts);
+      session = activeSession; // keep outer reference in sync for final cleanup
+
+      try {
+        return await attemptPrompt(activeSession, true);
+      } catch (retryErr: any) {
+        // If it failed again specifically on constraints, drop down to unconstrained
+        if (opts.responseConstraint) {
+          console.warn('[AiCaller] Reinitialized session failed on constraint; falling back unconstrained:', retryErr);
+          return await attemptPrompt(activeSession, false);
+        }
+        throw retryErr;
+      }
+    }
+
+    // Case 2: Constraint unsupported by runtime -> Retry unconstrained on same session
+    if (opts.responseConstraint) {
+      console.warn('[AiCaller] Prompt with responseConstraint failed, retrying unconstrained:', err);
+      return await attemptPrompt(activeSession, false);
+    }
+
+    throw err;
+  }
+};
       const inferencePromise = executeCall(session);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`[AiCaller] Inference prompt timed out after ${timeoutMs}ms`)), timeoutMs)
@@ -713,6 +797,13 @@ export function parseAiActionTuples(nanoOutput: string): {
  * Prompts Gemini Nano on-device to generate visual demonstration action tuples (:act)
  * conforming to the Co-Pilot specification in betaplans.md, with Proprioceptive Spatial Awareness.
  */
+/**
+ * Canonical regular expression constraining Gemini Nano's sampling logits directly
+ * to single-level (:act ...) S-expression action tuples (Kenji / W3C Prompt API test case).
+ */
+export const NANO_ACT_TUPLE_REGEX =
+  /^\s*\(:act(\s+:(seek\s+[0-1](\.\d+)?|highlight\s+"#[a-zA-Z0-9_\-:]+"|zoom\s+"#[a-zA-Z0-9_\-:]+"|orbit\s+:theta\s+-?\d+(\.\d+)?\s+:phi\s+-?\d+(\.\d+)?|nudge\s+:target\s+"#[a-zA-Z0-9_\-:]+"\s+:dxyz\s+\[-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\]|probe-move\s+:target\s+"#[a-zA-Z0-9_\-:]+"\s+:xyz\s+\[-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\]|var\s+"[a-zA-Z0-9_]+"\s+(-?\d+(\.\d+)?|"[^"]*")|step\s+\d+|reset|say\s+"[^"]*"))+\)\s*$/;
+
 export async function promptAiCoPilotDemonstration(
   telemetry: Partial<PlayerTelemetryEvent>,
   pupilQuestion: string,
@@ -763,13 +854,14 @@ RULES:
   const userPrompt = `Pupil asks: "${pupilQuestion.trim()}". Spatial token: ${spatialTelemetryToken}. Show and actuate on the simulation stage.`;
 
   // Execute on-device inference (Chrome Prompt API with WebLLM fallback)
+// Execute on-device inference with RegExp sampling constraint
   const rawOutput = await aiCaller.promptText({
     prompt: userPrompt,
     systemPrompt,
-    temperature: 0.2,
     timeoutMs: 16000,
+    responseConstraint: NANO_ACT_TUPLE_REGEX,
+    omitResponseConstraintInput: true,
   });
-
   const parsed = parseAiActionTuples(rawOutput);
 
   return {
