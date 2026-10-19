@@ -6058,7 +6058,7 @@ if (item.type === '3d-node') {
         }
       }
 
-      // 2. Direct 2D AST Math & User Interaction Variable Bindings
+// 2. Direct 2D AST Math & User Interaction Variable Bindings
       if (this.activeBindings && this.activeBindings.length) {
         const v = this.vars || {};
         for (let i = 0; i < this.activeBindings.length; i++) {
@@ -6114,7 +6114,6 @@ if (item.type === '3d-node') {
           }
           gasEm.clampToPistonX(pX);
 
-// Speed synchronization when in gas state
           if (currentPhase === 'gas') {
             const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
             gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
@@ -6131,7 +6130,8 @@ if (item.type === '3d-node') {
     /**
      * Direct Element Attribute Patching (Decoupled render)
      */
-    renderCurrentVector(container) {      const target = container || this.container;
+    renderCurrentVector(container) {
+      const target = container || this.container;
       if (target) {
         if (!this._isMounting && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== target)) {
           if (this.scene) {
@@ -6142,6 +6142,11 @@ if (item.type === '3d-node') {
         return '';
       }
 
+      if (this.scene && typeof this.scene.render === 'function') {
+        return this.scene.render(this.progress);
+      }
+      return '';
+    }
       if (this.scene && typeof this.scene.render === 'function') {
         return this.scene.render(this.progress);
       }
