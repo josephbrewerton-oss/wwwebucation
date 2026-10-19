@@ -3,7 +3,7 @@
  * Edge Cognitive Engine — Multi-Tier On-Device Neural Execution Substrate
  * 
  * Supports:
- * Tier 1: Native Chrome Prompt API (window.ai.languageModel / Gemini Nano)
+ * Tier 1: Native Chrome Prompt API (window.LanguageModel / Gemini Nano)
  * Tier 2: WebLLM / WebGPU Neural Pipeline (@mlc-ai/web-llm for Safari 18+, Firefox, and non-Chromium)
  * Tier 3: WebAssembly / Neural Worker Daemon fallback for locked-down school devices
  * Tier 4: Self-correcting Socratic rule-engine AST synthesizer
@@ -94,9 +94,8 @@ export class EdgeCognitiveEngine {
     if (typeof window === 'undefined') return;
 
     this.hasChromeAI = Boolean(
-      (window as any).LanguageModel || 
-      (window as any).ai?.languageModel || 
-      (window as any).ai?.assistant
+      (window as any).LanguageModel ||
+      (typeof self !== 'undefined' && (self as any).LanguageModel)
     );
 
     this.hasWebGPU = typeof navigator !== 'undefined' && 'gpu' in navigator;
@@ -465,7 +464,7 @@ export class EdgeCognitiveEngine {
     if (this.hasChromeAI) {
       try {
         const win = window as any;
-        const lm = win.LanguageModel || win.ai?.languageModel || win.ai?.assistant;
+        const lm = win.LanguageModel || (typeof self !== 'undefined' ? (self as any).LanguageModel : null);
         if (lm) {
           const session = await lm.create({
             systemPrompt: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.',
@@ -532,7 +531,7 @@ export class EdgeCognitiveEngine {
     if (this.hasChromeAI) {
       try {
         const win = window as any;
-        const lm = win.LanguageModel || win.ai?.languageModel || win.ai?.assistant;
+        const lm = win.LanguageModel || (typeof self !== 'undefined' ? (self as any).LanguageModel : null);
         if (lm) {
           const session = await lm.create({
             systemPrompt: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.',

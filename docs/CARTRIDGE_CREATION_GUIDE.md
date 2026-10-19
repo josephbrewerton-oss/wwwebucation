@@ -211,7 +211,7 @@ The engine automatically computes perspective scale, depth-fog opacity, and z-in
 
 ## 7. Edge AI Generation with Gemini Nano
 
-You can generate complete AST cartridges directly on-device using Chrome's Prompt API (`window.ai.languageModel`).
+You can generate complete AST cartridges directly on-device using Chrome's Prompt API (`window.LanguageModel`).
 
 ### Recommended System Prompt for Nano
 ```text

@@ -2,7 +2,7 @@
 /**
  * St Joseph's Gemini Nano Edge AI Co-Pilot & Lab Synthesizer
  * 
- * Powered by Chrome Prompt API (window.ai.languageModel) with WebLLM fallback.
+ * Powered by Chrome Prompt API (window.LanguageModel) with WebLLM fallback.
  * Strictly 0% cloud egress: 100% on-device local execution for complete student privacy (GDPR / UK DfE).
  */
 

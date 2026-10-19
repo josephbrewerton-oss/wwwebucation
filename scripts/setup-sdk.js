@@ -349,20 +349,24 @@ export class EdgeCognitiveEngine {
   }
 
   async infer(prompt: string, systemPrompt?: string): Promise<{ text: string; source: BackendTier }> {
-    // 1. Built-in Gemini Nano / Prompt API
-    if (typeof window !== "undefined" && (window as any).ai?.languageModel) {
-      try {
-        const capabilities = await (window as any).ai.languageModel.capabilities?.();
-        if (!capabilities || capabilities.available !== "no") {
-          const session = await (window as any).ai.languageModel.create({
+    // 1. Built-in Gemini Nano / Prompt API (W3C standard LanguageModel)
+    if (typeof window !== "undefined") {
+      const LM = (window as any).LanguageModel || (typeof self !== "undefined" ? (self as any).LanguageModel : null);
+      if (LM) {
+        try {
+          if (typeof LM.availability === "function") {
+            const avail = await LM.availability();
+            if (avail === "no") throw new Error("LanguageModel unavailable");
+          }
+          const session = await LM.create({
             systemPrompt: systemPrompt || "You are an educational AST generator."
           });
           const result = await session.prompt(prompt);
           if (session.destroy) session.destroy();
           return { text: result, source: "chrome-nano" };
+        } catch (e) {
+          console.warn("LanguageModel invocation failed:", e);
         }
-      } catch (e) {
-        console.warn("Chrome AI invocation failed:", e);
       }
     }
 

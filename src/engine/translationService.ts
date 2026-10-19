@@ -460,10 +460,10 @@ export async function translateText(
     }
   }
 
-  // Tier 3: Chromium Native Translator API
+  // Tier 3: Chromium Native Translator API (W3C translation specification)
   if (typeof window !== 'undefined') {
     const win = window as any;
-    const transApi = win.translation || (self as any).translation || win.ai?.translator;
+    const transApi = win.translation || (typeof self !== 'undefined' ? (self as any).translation : null);
     if (transApi && typeof transApi.canTranslate === 'function') {
       try {
         const availability = await transApi.canTranslate({

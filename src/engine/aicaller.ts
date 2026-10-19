@@ -53,7 +53,9 @@ class AiRuntimeCaller {
   private availabilityPromise: Promise<ModelAvailability> | null = null;
 
   /**
-   * Safe accessor for the Prompt API root across Chromium revisions
+   * Safe accessor for the Prompt API root across modern Chromium revisions.
+   * Standard W3C Prompt API: window.LanguageModel or self.LanguageModel.
+   * Deprecated window.ai namespace has been retired.
    */
   private getAiRoot(): any {
     if (typeof window === 'undefined') return null;
@@ -62,15 +64,12 @@ class AiRuntimeCaller {
 
     if (typeof win.LanguageModel !== 'undefined') return win.LanguageModel;
     if (typeof scope.LanguageModel !== 'undefined') return scope.LanguageModel;
-    if (win.ai?.languageModel) return win.ai.languageModel;
-    if (scope.ai?.languageModel) return scope.ai.languageModel;
-    if (win.ai?.assistant) return win.ai.assistant;
 
     return null;
   }
 
   /**
-   * Synchronous check for native Prompt API presence (window.ai / LanguageModel).
+   * Synchronous check for native Prompt API presence (LanguageModel).
    * 0ms, zero overhead, safe for low-spec Chromebooks.
    */
   public hasNativePromptApi(): boolean {

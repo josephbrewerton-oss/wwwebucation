@@ -41,7 +41,7 @@ The St Joseph's Curriculum Portal is an enterprise-grade, edge-native learning p
 2.1 The 3-Tier Edge Cognitive Engine (@school-ai/edge-runtime)
 To guarantee universal availability across heterogeneous school hardware (from M-series iPads to legacy 2GB Celeron Chromebooks), inference automatically negotiates three execution tiers:
 
-Tier 1: Native Chromium Prompt API (window.ai.languageModel): High-speed, zero-heap Gemini Nano neural inference.
+Tier 1: Native Chromium Prompt API (window.LanguageModel): High-speed, zero-heap Gemini Nano neural inference.
 
 Tier 2: WebLLM Compute Pipeline (@mlc-ai/web-llm): In-browser WebGPU shader execution (SmolLM2-360M-Instruct-q4f16_1-MLC) protected by an automated memory heuristic guard (navigator.deviceMemory, core count, buffer binding checks) to prevent tab termination under iOS/iPadOS Jetsam limits.
 

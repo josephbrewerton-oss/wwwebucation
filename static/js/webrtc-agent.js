@@ -261,11 +261,16 @@
     let fullText = "";
     const wrappedPrompt = await buildContextualPrompt(payload.topic, rawPrompt, payload.isCustomInput);
 
-    if (window.ai && window.ai.languageModel) {
+    const LM = window.LanguageModel || (typeof self !== 'undefined' ? self.LanguageModel : null);
+    if (LM) {
       try {
-        const capabilities = await window.ai.languageModel.capabilities();
-        if (capabilities.available === "readily") {
-          const session = await window.ai.languageModel.create({
+        let isAvailable = true;
+        if (typeof LM.availability === 'function') {
+          const avail = await LM.availability();
+          isAvailable = (avail === 'readily' || avail === 'after-download');
+        }
+        if (isAvailable) {
+          const session = await LM.create({
             systemPrompt: PEDAGOGICAL_SYSTEM_PROMPT,
             outputLanguage: 'en',
             expectedOutputLanguages: ['en'],

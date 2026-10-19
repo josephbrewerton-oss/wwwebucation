@@ -38,7 +38,7 @@
 ## On-Device Edge AI & Gemini Nano Guidelines
 - **Zero Cloud Leakage**: Student logs, answers, and voice inputs never egress to cloud LLMs.
 - **Inference Engine**:
-  - Primary: Chrome Prompt API / Gemini Nano via `window.ai.languageModel` or `LanguageModel` (`src/engine/aicaller.ts`).
+  - - Primary: Chrome Prompt API / Gemini Nano via `window.LanguageModel` or `self.LanguageModel` (`src/engine/aicaller.ts`). Legacy `window.ai` namespace is retired.
   - Secondary: WebLLM / local WebRTC data channels (`static/js/webrtc-agent.js`).
 - **Data Substrates**:
   - Curriculum structures use Lisp-like S-Expressions defined in `static/nano-map.ast` and parsed by `src/utils/sexprParser.ts`.

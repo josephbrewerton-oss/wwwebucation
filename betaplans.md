@@ -131,7 +131,7 @@ To prevent token exhaustion on low-memory NPUs, Gemini Nano is instructed using 
    * In-browser LLM inference + 60 FPS vector animation can cause thermal throttling on older Celeron/MediaTek Chromebooks.
    * **Rule**: When Nano is actively generating tokens, the vector player locks its internal clock to 30 FPS. Once generation completes, full 60–120 FPS interpolation resumes.
 4. **Strict Air-Gap & Zero Cloud Egress**:
-   * In accordance with `AGENTS.md` and the ICO Children's Code, all prompt generation, state inspection, and speech synthesis occur purely on `localhost` / `window.ai`.
+   * In accordance with `AGENTS.md` and the ICO Children's Code, all prompt generation, state inspection, and speech synthesis occur purely on `localhost` / `window.LanguageModel`.
 
 ---
 
