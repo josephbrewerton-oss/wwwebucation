@@ -6131,6 +6131,9 @@ if (item.type === '3d-node') {
     /**
      * Direct Element Attribute Patching (Decoupled render)
      */
+/**
+     * Direct Element Attribute Patching (Decoupled render)
+     */
     renderCurrentVector(container) {
       const target = container || this.container;
       if (target) {
@@ -6148,17 +6151,11 @@ if (item.type === '3d-node') {
       }
       return '';
     }
-      if (this.scene && typeof this.scene.render === 'function') {
-        return this.scene.render(this.progress);
-      }
-      return '';
-    }
 
     /**
      * Main Animation Tick Loop with Delta-Time Clamping
      */
-    tick(currentTimestamp) {
-      if (this.lastTimestamp !== null) {
+    tick(currentTimestamp) {      if (this.lastTimestamp !== null) {
         const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
         const deltaSec = Math.min(rawDeltaSec, 0.1);
         this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
