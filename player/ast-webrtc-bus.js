@@ -16,7 +16,7 @@
  * 
  * 2. On-Device Edge AI Co-Pilot & Tutor Link:
  *    - High-throughput binary / JSON token streaming over RTCDataChannel.
- *    - Connects directly to Chrome Prompt API (`window.ai.languageModel` / Gemini Nano)
+ *    - Connects directly to Chrome Prompt API (`window.LanguageModel` / Gemini Nano)
  *      or local loopback model without cloud leakage.
  *    - Bidirectional AI control: AI agent sends AST S-Expressions or state triggers
  *      directly into the player engine to demonstrate scientific concepts live.
@@ -474,29 +474,23 @@
     async initAiModel() {
       if (typeof window === 'undefined') return false;
 
-      // 1. Check Chrome Prompt API (Gemini Nano)
-      if (window.ai && window.ai.languageModel) {
+      // Chrome Prompt API (Gemini Nano) via standard W3C LanguageModel interface
+      const LM = window.LanguageModel || (typeof self !== 'undefined' ? self.LanguageModel : null);
+      if (LM) {
         try {
-          const capabilities = await window.ai.languageModel.capabilities();
-          if (capabilities.available !== 'no') {
-            this.aiSession = await window.ai.languageModel.create({
-              systemPrompt: "You are an on-device AI physics & mathematics tutor. " +
-                "When asked to demonstrate a phenomenon, respond with concise explanations (under 2 sentences) " +
-                "and you may suggest AST variable settings such as (:var :name \"temperature\" :val 400)."
-            });
-            return true;
+          if (typeof LM.availability === 'function') {
+            const avail = await LM.availability();
+            if (avail === 'no') return false;
           }
+          this.aiSession = await LM.create({
+            systemPrompt: "You are an on-device AI physics & mathematics tutor. " +
+              "When asked to demonstrate a phenomenon, respond with concise explanations (under 2 sentences) " +
+              "and you may suggest AST variable settings such as (:var :name \"temperature\" :val 400)."
+          });
+          return true;
         } catch (e) {
           console.warn('[AST WebRTC AI] Gemini Nano init skipped:', e);
         }
-      }
-
-      // 2. Check window.LanguageModel
-      if (typeof window.LanguageModel === 'function') {
-        try {
-          this.aiSession = await window.LanguageModel.create();
-          return true;
-        } catch (e) {}
       }
 
       return false;

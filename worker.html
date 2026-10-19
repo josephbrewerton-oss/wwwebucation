@@ -282,9 +282,7 @@
 
     // Session Management with Warm Session Pool adhering to W3C Prompt API
     async function getOrCreateWarmSession(systemInstruction) {
-      const aiHost = window.ai || self.ai || window.parent?.ai || (typeof ai !== 'undefined' ? ai : null);
-      const GlobalLM = window.LanguageModel || window.parent?.LanguageModel;
-      const target = aiHost?.languageModel || GlobalLM;
+      const target = window.LanguageModel || self.LanguageModel || window.parent?.LanguageModel || (typeof LanguageModel !== 'undefined' ? LanguageModel : null);
 
       if (!target?.create) return null;
 
