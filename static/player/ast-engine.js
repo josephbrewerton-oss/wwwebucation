@@ -6127,15 +6127,11 @@ if (item.type === '3d-node') {
       }
 
       // 4. Procedural update hook if present
+// 4. Procedural update hook if present
       if (this.scene && typeof this.scene.update === 'function' && this._cachedElements) {
         this.scene.update(t, this._cachedElements, this, dt);
       }
-    }
-
-    /**
-     * Direct Element Attribute Patching (Decoupled render)
-     */
-    renderCurrentVector(container) {
+    }    renderCurrentVector(container) {
       const target = container || this.container;
       if (target) {
         if (!this._isMounting && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== target)) {
