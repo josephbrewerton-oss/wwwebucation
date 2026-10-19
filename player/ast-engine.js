@@ -5173,6 +5173,23 @@
           .replace(/<!ENTITY[\s\S]*?>/gi, '<!-- ENTITY disabled -->');
       }
 
+      // 2. Strip executable and embedding tags before parsing (CodeQL: js/xss-through-dom)
+      clean = clean
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/<script\b[^>]*\/?>/gi, '')
+        .replace(/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/gi, '')
+        .replace(/<foreignObject\b[^>]*\/?>/gi, '')
+        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
+        .replace(/<iframe\b[^>]*\/?>/gi, '')
+        .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
+        .replace(/<embed\b[^>]*\/?>/gi, '');
+
+      // 3. Strip all inline on* event handler attributes
+      clean = clean.replace(/\s+on[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+
+      // 4. Neutralize javascript: and vbscript: URIs in href / xlink:href / src
+      clean = clean.replace(/\s+(?:xlink:)?href\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|[^\s>]*javascript:[^\s>]*)/gi, ' href="#"');
+
       return clean;
     }
 
@@ -5385,7 +5402,11 @@
                 const rootSvg = doc.querySelector('svg');
                 if (rootSvg) {
                   this.sanitizeSvgElement(rootSvg);
-                  container.innerHTML = rootSvg.innerHTML;
+                  if (typeof container.replaceChildren === 'function') {
+                    container.replaceChildren(...rootSvg.childNodes);
+                  } else {
+                    container.innerHTML = rootSvg.innerHTML;
+                  }
                   mounted = true;
                 }
               }
@@ -5396,7 +5417,11 @@
                 const rootSvg = htmlDoc.querySelector('svg');
                 if (rootSvg) {
                   this.sanitizeSvgElement(rootSvg);
-                  container.innerHTML = rootSvg.innerHTML;
+                  if (typeof container.replaceChildren === 'function') {
+                    container.replaceChildren(...rootSvg.childNodes);
+                  } else {
+                    container.innerHTML = rootSvg.innerHTML;
+                  }
                   mounted = true;
                 }
               }
@@ -6224,37 +6249,21 @@ if (item.type === '3d-node') {
      * Hot-reloads raw SVG markup directly onto the stage container
      * Rebinds active AST expressions without losing clock state or timeline position
      */
-/**
-     * Hot-reloads raw SVG markup directly onto the stage container
-     * Rebinds active AST expressions without losing clock state or timeline position
-     */
     hotReloadSvg(svgMarkup) {
       if (!svgMarkup || typeof svgMarkup !== 'string') return false;
       try {
         if (!this.scene) {
           this.scene = { id: 'custom-scene', title: 'Custom SVG Scene', stage: 'DEVELOPER', duration: 10.0 };
         }
-        this.scene.svgText = svgMarkup;
+        this.scene.svgText = this.sanitizeSvg(svgMarkup);
 
         if (this._container) {
-          const safeSvg = this.sanitizeSvg(svgMarkup);
-
-          if (safeSvg && typeof DOMParser !== 'undefined') {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(safeSvg, 'image/svg+xml');
-            const rootSvg = doc.querySelector('svg');
-            if (rootSvg && !doc.querySelector('parsererror')) {
-              this.sanitizeSvgElement(rootSvg);
-              this._container.replaceChildren(...rootSvg.childNodes);
-            }
-          }
-
-          // Recompile AST bindings to match newly mounted DOM nodes
+          // Mount sanitized scene asset and recompile AST bindings
           this.mountSceneAsset(this.scene, this._container);
           this.applyBindings(this.progress);
         }
 
-        this.emit('svghotreloaded', { svg: svgMarkup, progress: this.progress });
+        this.emit('svghotreloaded', { svg: this.scene.svgText, progress: this.progress });
         this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'svg' });
         return true;
       } catch (err) {
