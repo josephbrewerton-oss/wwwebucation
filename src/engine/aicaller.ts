@@ -208,7 +208,33 @@ class AiRuntimeCaller {
     if (!hasUserGrantedAiConsent()) {
       throw new Error('User has not consented to in-browser AI model execution/download.');
     }
-const createPromise = (async () => {
+    const lm = this.getAiRoot();
+    if (!lm) {
+      throw new Error('W3C LanguageModel API not supported in this environment.');
+    }
+
+    const systemPrompt = opts?.systemPrompt || 'You are an elite UK Curriculum Socratic educator.';
+
+    // Fully-specified W3C Prompt API configuration
+    const createOptions: any = {
+      systemPrompt,
+      // Modern W3C spec: replaces numeric temperature/topK
+      samplingMode: 'most-predictable',
+      expectedInputs: [{ type: 'text', languages: ['en'] }],
+      expectedOutputs: [{ type: 'text', languages: ['en'] }],
+      outputLanguage: 'en',
+      expectedInputLanguages: ['en'],
+      expectedOutputLanguages: ['en'],
+    };
+    if (opts?.onDownloadProgress) {
+      createOptions.monitor = (m: any) => {
+        m.addEventListener('downloadprogress', (e: any) => {
+          opts.onDownloadProgress?.(e.loaded, e.total);
+        });
+      };
+    }
+
+    const createPromise = (async () => {
       // 1. Try modern W3C Prompt API with samplingMode
       try {
         return await lm.create(createOptions);
@@ -225,52 +251,6 @@ const createPromise = (async () => {
           });
         } catch {
           // 3. Minimal fallback
-          return await lm.create({
-            systemPrompt,
-            expectedInputLanguages: ['en'],
-            expectedOutputLanguages: ['en'],
-          });
-        }
-      }
-    })();
-    const lm = this.getAiRoot();
-    if (!lm) {
-      throw new Error('W3C LanguageModel API not supported in this environment.');
-    }
-
-    const systemPrompt = opts?.systemPrompt || 'You are an elite UK Curriculum Socratic educator.';
-
-    // Fully-specified W3C Prompt API configuration
-const createOptions: any = {
-  systemPrompt,
-  // Modern W3C spec: replaces numeric temperature/topK
-  samplingMode: 'most-predictable',
-  expectedInputs: [{ type: 'text', languages: ['en'] }],
-  expectedOutputs: [{ type: 'text', languages: ['en'] }],
-  outputLanguage: 'en',
-  expectedInputLanguages: ['en'],
-  expectedOutputLanguages: ['en'],
-};
-    if (opts?.onDownloadProgress) {
-      createOptions.monitor = (m: any) => {
-        m.addEventListener('downloadprogress', (e: any) => {
-          opts.onDownloadProgress?.(e.loaded, e.total);
-        });
-      };
-    }
-
-    const createPromise = (async () => {
-      try {
-        return await lm.create(createOptions);
-      } catch {
-        try {
-          return await lm.create({
-            systemPrompt,
-            outputLanguage: 'en',
-            expectedInputLanguages: ['en'],
-            expectedOutputLanguages: ['en'],
-          });
-        } catch {
           return await lm.create({
             systemPrompt,
             expectedInputLanguages: ['en'],
