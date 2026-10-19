@@ -5173,23 +5173,6 @@
           .replace(/<!ENTITY[\s\S]*?>/gi, '<!-- ENTITY disabled -->');
       }
 
-      // 2. Strip executable and embedding tags before parsing (CodeQL: js/xss-through-dom)
-      clean = clean
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/<script\b[^>]*\/?>/gi, '')
-        .replace(/<foreignObject\b[^<]*(?:(?!<\/foreignObject>)<[^<]*)*<\/foreignObject>/gi, '')
-        .replace(/<foreignObject\b[^>]*\/?>/gi, '')
-        .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
-        .replace(/<iframe\b[^>]*\/?>/gi, '')
-        .replace(/<object\b[^<]*(?:(?!<\/object>)<[^<]*)*<\/object>/gi, '')
-        .replace(/<embed\b[^>]*\/?>/gi, '');
-
-      // 3. Strip all inline on* event handler attributes
-      clean = clean.replace(/\s+on[a-z0-9_-]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-
-      // 4. Neutralize javascript: and vbscript: URIs in href / xlink:href / src
-      clean = clean.replace(/\s+(?:xlink:)?href\s*=\s*(?:"\s*javascript:[^"]*"|'\s*javascript:[^']*'|[^\s>]*javascript:[^\s>]*)/gi, ' href="#"');
-
       return clean;
     }
 
@@ -5428,10 +5411,7 @@
             }
 
             if (!mounted && container) {
-              const innerMatch = safeSvg.match(/<svg[^>]*>([\s\S]*)<\/svg>/i);
-              if (innerMatch) {
-                container.innerHTML = innerMatch[1];
-              }
+              console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
             }
           } catch (err) {
             console.warn('SVG mount bypassed due to parse failure:', err);
@@ -5447,11 +5427,9 @@
               const svgEl = doc.querySelector('svg');
               if (svgEl && !doc.querySelector('parsererror')) {
                 container.replaceChildren(...svgEl.childNodes);
-              } else {
-                container.innerHTML = rendered;
               }
             } catch (e) {
-              container.innerHTML = rendered;
+              console.warn('[AST Engine] Rendered SVG string failed to parse safely:', e);
             }
           }
         }
