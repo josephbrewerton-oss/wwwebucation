@@ -75,6 +75,8 @@
       :ast "/cartridges/sacred-objects.ast" :svg "/cartridges/sacred-objects.svg")
     (:cartridge :id "first-communion" :type "Sim" :stage "CATHOLIC LIFE"
       :ast "/cartridges/first-communion.ast" :svg "/cartridges/first-communion.svg")
+    (:cartridge :id "eucharistic-procession-film" :type "Film" :video "/media/eucharistic-procession.mp4" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/eucharistic-procession-film.ast" :svg "/cartridges/eucharistic-procession-film.svg")
 
     ;; STEM Simulations & Manipulatives
     (:cartridge :id "kinetic-gas" :type "Sim" :stage "KS3/KS4 PHYSICS"

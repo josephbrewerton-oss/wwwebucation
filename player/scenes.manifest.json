@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-20T07:51:48.233Z",
-  "totalScenes": 44,
+  "generatedAt": "2026-10-20T14:12:22.482Z",
+  "totalScenes": 45,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -156,6 +156,20 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 3
+    },
+    {
+      "id": "eucharistic-procession-film",
+      "type": "Sim",
+      "title": "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors",
+      "stage": "CATHOLIC LIFE",
+      "duration": 26,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/eucharistic-procession-film.svg",
+      "astFile": "scenes/eucharistic-procession-film.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 7
     },
     {
       "id": "first-communion",

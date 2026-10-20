@@ -40,7 +40,8 @@
     { id: "bsl-fingerspelling", type: "Sim", title: "BSL: 3D British Sign Language Two-Handed Fingerspelling", stage: "ACCESSIBILITY & LANGUAGES", duration: 14, has3D: true, svgFile: "scenes/bsl-fingerspelling.svg", astFile: "scenes/bsl-fingerspelling.ast" },
     { id: "phonics-screening", type: "Sim", title: "Year 1 Phonics Screening Check & Alien Words", stage: "EYFS/KS1 PHONICS", duration: 12, svgFile: "scenes/phonics-screening.svg", astFile: "scenes/phonics-screening.ast" },
     { id: "shakespeare-macbeth", type: "Slide", title: "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall", stage: "KS3/KS4 ENGLISH LITERATURE", duration: 16, svgFile: "scenes/shakespeare-macbeth.svg", astFile: "scenes/shakespeare-macbeth.ast" },
-    { id: "rosary-mysteries", type: "Sim", title: "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries", stage: "CATHOLIC LIFE", duration: 16, has3D: true, svgFile: "scenes/rosary-mysteries.svg", astFile: "scenes/rosary-mysteries.ast" }
+    { id: "rosary-mysteries", type: "Sim", title: "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries", stage: "CATHOLIC LIFE", duration: 16, has3D: true, svgFile: "scenes/rosary-mysteries.svg", astFile: "scenes/rosary-mysteries.ast" },
+    { id: "eucharistic-procession-film", type: "Film", video: "/media/eucharistic-procession.mp4", videoFit: "contain", title: "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors", stage: "CATHOLIC LIFE", duration: 26, svgFile: "scenes/eucharistic-procession-film.svg", astFile: "scenes/eucharistic-procession-film.ast" }
   ];
 
   const scenes = Object.create(null);
