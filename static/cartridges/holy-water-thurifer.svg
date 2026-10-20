@@ -125,13 +125,13 @@
 
     <!-- The Censer Basin & Reticulated Cover (Vessel Body) -->
     <g transform="translate(400, 280)">
-      <!-- Rising Clouds of Sweet Incense Smoke (bound to AST) -->
+      <!-- Rising Clouds of Sweet Incense Smoke (bound to AST for trailing fluid billow & spread) -->
       <g id="incense-smoke-cloud" filter="url(#soft-glow)" opacity="0.6">
-        <circle cx="0" cy="-60" r="28" fill="url(#smoke-radial)" />
-        <circle cx="-18" cy="-90" r="34" fill="url(#smoke-radial)" />
-        <circle cx="15" cy="-115" r="42" fill="url(#smoke-radial)" />
-        <circle cx="-10" cy="-150" r="50" fill="url(#smoke-radial)" />
-        <circle cx="12" cy="-190" r="60" fill="url(#smoke-radial)" />
+        <circle id="smoke-puff-1" cx="0" cy="-60" r="28" fill="url(#smoke-radial)" />
+        <circle id="smoke-puff-2" cx="-18" cy="-90" r="34" fill="url(#smoke-radial)" />
+        <circle id="smoke-puff-3" cx="15" cy="-115" r="42" fill="url(#smoke-radial)" />
+        <circle id="smoke-puff-4" cx="-10" cy="-150" r="50" fill="url(#smoke-radial)" />
+        <circle id="smoke-puff-5" cx="12" cy="-190" r="60" fill="url(#smoke-radial)" />
       </g>
 
       <!-- Charcoal Glowing Briquette inside -->

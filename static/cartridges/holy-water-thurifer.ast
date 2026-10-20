@@ -44,6 +44,11 @@
   (:bindings (
     (:target "#thurible-swing-group" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 8) * (vars.swingArc || 25)) + ' 400 60)'")
     (:target "#incense-smoke-cloud" :attr "opacity" :expr "(0.35 + Math.sin(t * 12) * 0.15) * (vars.smokeDensity || 1.0)")
+    (:target "#smoke-puff-2" :attr "transform" :expr "'translate(' + (-Math.sin(t * Math.PI * 8 - 0.3) * ((vars.swingArc || 25) * 0.35)) + ', ' + (Math.cos(t * 12) * 6) + ')'")
+    (:target "#smoke-puff-3" :attr "transform" :expr "'translate(' + (-Math.sin(t * Math.PI * 8 - 0.6) * ((vars.swingArc || 25) * 0.7)) + ', ' + (Math.sin(t * 10) * 10 - 10 * (vars.smokeDensity || 1.0)) + ')'")
+    (:target "#smoke-puff-4" :attr "transform" :expr "'translate(' + (-Math.sin(t * Math.PI * 8 - 0.9) * ((vars.swingArc || 25) * 1.1)) + ', ' + (Math.cos(t * 8) * 14 - 20 * (vars.smokeDensity || 1.0)) + ')'")
+    (:target "#smoke-puff-5" :attr "transform" :expr "'translate(' + (-Math.sin(t * Math.PI * 8 - 1.2) * ((vars.swingArc || 25) * 1.5)) + ', ' + (Math.sin(t * 6) * 18 - 30 * (vars.smokeDensity || 1.0)) + ')'")
+    (:target "#smoke-puff-5" :attr "r" :expr "50 + 20 * (vars.smokeDensity || 1.0) + 8 * Math.sin(t * 8)")
     (:target "#water-droplet-burst" :attr "opacity" :expr "t >= 0.28 && t < 0.55 ? (0.85 + Math.sin(t * 30) * 0.15) : 0.05")
   ))
 )
