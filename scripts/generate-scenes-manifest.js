@@ -36,6 +36,12 @@ export function inferCartridgeType(rawType, astContent) {
     if (clean === 'sim' || clean === 'simulation' || clean === 'interactive') return 'Sim';
     if (clean === 'slide' || clean === 'slides' || clean === 'presentation') return 'Slide';
     if (clean === 'app' || clean === 'application' || clean === 'tool' || clean === 'lab') return 'App';
+    if (clean === 'film' || clean === 'video' || clean === 'movie') return 'Film';
+  }
+
+  // 1b. Explicit video or film slot declaration
+  if (/:video\s+|:film\s+/i.test(astContent)) {
+    return 'Film';
   }
 
   // 2. Structural Inference (Pure AST inspection, NO ID checking)
@@ -126,6 +132,7 @@ function getDefaultMountForCartridge(id) {
     'order-of-the-mass': '/curriculum/catholic-life/mass',
     'sacred-objects': '/curriculum/catholic-life/sacred-objects',
     'first-communion': '/curriculum/catholic-life/first-communion',
+    'eucharistic-procession-film': '/curriculum/catholic-life/film',
     'phonics-lab': '/curriculum/english/phonics/phonics-lab',
     'phonics-screening': '/curriculum/english/phonics/screening-check',
     'spelling-bee': '/curriculum/english/spelling/spelling-bee',
@@ -152,7 +159,7 @@ function getDefaultMountForCartridge(id) {
 }
 
 function getDefaultSectionForCartridge(id) {
-  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross') || id.includes('triduum') || id.includes('easter') || id.includes('liturgy') || id.includes('sacrament') || id.includes('posture') || id.includes('calendar') || id.includes('rite') || id.includes('cst') || id.includes('virtue') || id.includes('latin') || id.includes('prayer') || id.includes('creed') || id.includes('commandment') || id.includes('mass') || id.includes('sacred') || id.includes('communion')) {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross') || id.includes('triduum') || id.includes('easter') || id.includes('liturgy') || id.includes('sacrament') || id.includes('posture') || id.includes('calendar') || id.includes('rite') || id.includes('cst') || id.includes('virtue') || id.includes('latin') || id.includes('prayer') || id.includes('creed') || id.includes('commandment') || id.includes('mass') || id.includes('sacred') || id.includes('communion') || id.includes('eucharistic') || id.includes('film')) {
     return 'Catholic Life & Faith Formation';
   }
   if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times')) {
@@ -219,6 +226,10 @@ function parseAstHeader(astContent, filename) {
   const mount = declaredMount || getDefaultMountForCartridge(id);
   const section = declaredSection || getDefaultSectionForCartridge(id);
 
+  // Video/Film backdrop capabilities
+  const video = extractSlot(astContent, /:video\s+"([^"]+)"/i) || extractSlot(astContent, /:film\s+"([^"]+)"/i);
+  const videoFit = extractSlot(astContent, /:video-?fit\s+"([^"]+)"/i) || extractSlot(astContent, /:videoFit\s+"([^"]+)"/i) || 'contain';
+
   return {
     id,
     type,
@@ -232,6 +243,9 @@ function parseAstHeader(astContent, filename) {
     tier,
     mount,
     section,
+    video,
+    videoFit,
+    hasVideo: Boolean(video),
     keyframeCount,
     subtitleCount,
     bindingsCount,
@@ -241,11 +255,11 @@ function parseAstHeader(astContent, filename) {
 }
 
 /**
- * Ensures the .ast content explicitly declares :type ("Sim", "Slide", "App")
+ * Ensures the .ast content explicitly declares :type ("Sim", "Slide", "App", "Film")
  */
 function ensureTypeCalledInAst(astContent, type) {
-  // If already calls :type "Sim"|"Slide"|"App", preserve
-  if (/:type\s+"(Sim|Slide|App)"/i.test(astContent)) {
+  // If already calls :type "Sim"|"Slide"|"App"|"Film", preserve
+  if (/:type\s+"(Sim|Slide|App|Film)"/i.test(astContent)) {
     return astContent;
   }
 

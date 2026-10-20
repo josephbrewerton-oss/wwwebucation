@@ -27,6 +27,9 @@ AST scenes are authored in token-efficient Lisp-like S-Expressions (`.ast`) or s
 ```ebnf
 SceneDeclaration ::= "(:scene" ws 
                      ":id" ws String ws 
+                     (":type" ws ("\"Sim\"" | "\"Slide\"" | "\"App\"" | "\"Film\"") ws)?
+                     (":video" ws String ws)?
+                     (":video-fit" ws ("\"contain\"" | "\"cover\"" | "\"fill\"") ws)?
                      ":title" ws String ws 
                      ":stage" ws String ws 
                      ":duration" ws Number ws
@@ -149,6 +152,18 @@ Gesture          ::= "(:draggable" ws ":target" ws String ws
 * Directly links on-stage SVG interactive slider handles, knobs, and levers (`ast-gestures.js`) to reactive state variables.
 * Supports linear axes (`x`, `y`) and rotational dials (`rotary`).
 * Full two-way synchronisation: dragging the SVG handle mutates the variable; programmatic or state machine variable changes smoothly translate the handle in real time.
+
+### 3.10. Synchronized Film & Video Driving Subsystem (:video / :video-fit)
+* Drives hardware-accelerated HTML5 `<video>` backdrops behind live SVG vector stages in zero-latency frame lockstep.
+* **Header Slots**:
+  - `:video "[url|path]"`: Links local or streaming video asset (H.264, WebM, MP4, AV1).
+  - `:video-fit ("contain" | "cover" | "fill")`: Aspect-ratio fitting mode.
+  - `:type "Film"`: Cartridge archetype for educational films and documentaries with interactive vector overlays.
+* **Unified Control Bus**:
+  - Scrubbing or seeking the AST timeline automatically seeks video frames with sub-frame accuracy.
+  - Formative checkpoints (`:checkpoint`) pause video playback instantaneously, locking the active frame while pupils engage with vector questions on the overlay.
+  - Interactive smartboard in-stage stylus ink (`#annotation-ink-root`) draws directly over live or paused video frames.
+  - Synchronized multilingual subtitles, speech synthesis, and audio cues float seamlessly over the film layer.
 
 ---
 

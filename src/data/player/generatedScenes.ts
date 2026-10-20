@@ -354,6 +354,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 2
   },
   {
+    "id": "eucharistic-procession-film",
+    "type": "Film",
+    "label": "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/film",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "spelling-bee",
     "type": "App",
     "label": "Spelling Bee Championship: KS1 to KS3 Orthography",

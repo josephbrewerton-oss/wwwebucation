@@ -3167,12 +3167,18 @@
       }
       this.lastTimestamp = null;
       this.cancelSpeech();
+      if (this.backdropVideo) {
+        this.backdropVideo.pause();
+      }
     }
 
     play() {
       if (!this.isPlaying) {
         this.isPlaying = true;
         this.lastTimestamp = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
+        if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo)) {
+          this.backdropVideo.play().catch(() => {});
+        }
         this.emit('statechange', { isPlaying: true, speed: this.speed });
       }
     }
@@ -3180,6 +3186,9 @@
     pause() {
       if (this.isPlaying) {
         this.isPlaying = false;
+        if (this.backdropVideo) {
+          this.backdropVideo.pause();
+        }
         this.emit('statechange', { isPlaying: false, speed: this.speed });
       }
     }
@@ -3195,6 +3204,14 @@
 
     seek(newProgress, skipTelemetry = false) {
       this.progress = Math.max(0, Math.min(1, newProgress));
+      if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo)) {
+        const vDur = (Number.isFinite(this.backdropVideo.duration) && this.backdropVideo.duration > 0)
+          ? this.backdropVideo.duration
+          : this.durationSec;
+        if (Number.isFinite(vDur) && vDur > 0) {
+          this.backdropVideo.currentTime = this.progress * vDur;
+        }
+      }
       this.updateActiveKeyframeAndSpeech(true);
       this.applyBindings(this.progress);
       this.emit('timeupdate', {
@@ -3214,6 +3231,9 @@
 
     setSpeed(newSpeed) {
       this.speed = Math.max(0.2, Math.min(5.0, parseFloat(newSpeed) || 1.0));
+      if (this.backdropVideo) {
+        this.backdropVideo.playbackRate = this.speed;
+      }
       this.emit('statechange', { isPlaying: this.isPlaying, speed: this.speed });
     }
 
@@ -3694,13 +3714,18 @@
       };
 
       const id = extractSlot(/:id\s+("[^"]+"|[^\s\)]+)/i);
-      const rawType = extractSlot(/:type\s+("Sim"|"Slide"|"App"|"[^"]+"|[^\s\)]+)/i);
+      const rawType = extractSlot(/:type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)/i);
+      const video = extractSlot(/:video\s+("((?:[^"\\]|\\.)*)"|[^\s\)]+)/i) || extractQuoted(astContent, 'video') || extractSlot(/:film\s+("((?:[^"\\]|\\.)*)"|[^\s\)]+)/i) || extractQuoted(astContent, 'film');
+      const videoFit = extractSlot(/:video-?fit\s+("((?:[^"\\]|\\.)*)"|[^\s\)]+)/i) || extractQuoted(astContent, 'video-fit') || extractQuoted(astContent, 'videoFit') || 'contain';
       let type = 'Sim';
       if (rawType) {
         const norm = rawType.toLowerCase();
-        if (norm === 'slide') type = 'Slide';
+        if (norm === 'film' || norm === 'video' || norm === 'movie') type = 'Film';
+        else if (norm === 'slide') type = 'Slide';
         else if (norm === 'app') type = 'App';
         else type = 'Sim';
+      } else if (video) {
+        type = 'Film';
       } else {
         const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
         const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
@@ -4273,6 +4298,9 @@
         type,
         cartridgeType: type,
         duration,
+        video: video || null,
+        videoFit: videoFit || 'contain',
+        hasVideo: Boolean(video),
         camera: (camBlocks && camBlocks.length > 0) ? camera : null,
         has3D,
         keyframes,
@@ -4540,6 +4568,9 @@
           title: (parsedAst && parsedAst.title) || registryScene.title || presetId,
           stage: (parsedAst && parsedAst.stage) || registryScene.stage || 'CURRICULUM',
           duration: (parsedAst && parsedAst.duration) || registryScene.duration || 10.0,
+          video: (parsedAst && parsedAst.video) || registryScene.video || null,
+          videoFit: (parsedAst && parsedAst.videoFit) || registryScene.videoFit || 'contain',
+          hasVideo: Boolean((parsedAst && parsedAst.video) || registryScene.video),
           camera: has3D ? ((parsedAst && parsedAst.camera) || registryScene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }) : null,
           has3D: has3D,
           interactive: shouldHaveQuestions ? ((parsedAst && parsedAst.interactive) || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null)) : null,
@@ -5338,6 +5369,94 @@
     }
 
     /**
+     * Synchronized Film & Video Backdrop Subsystem
+     * Mounts, configures, and synchronizes real HTML5 video elements behind vector stages.
+     */
+    setupBackdropVideo(scene) {
+      if (typeof document === 'undefined') return;
+
+      const stageSvg = this.getStageSvg();
+      const parentContainer = (stageSvg && stageSvg.parentElement) || this.container || document.getElementById('player-stage');
+
+      let videoEl = document.getElementById('ast-backdrop-video');
+      if (!videoEl && parentContainer) {
+        videoEl = document.createElement('video');
+        videoEl.id = 'ast-backdrop-video';
+        videoEl.setAttribute('playsinline', '');
+        videoEl.setAttribute('webkit-playsinline', '');
+        videoEl.setAttribute('preload', 'auto');
+        videoEl.controls = false;
+        videoEl.muted = false;
+        videoEl.style.position = 'absolute';
+        videoEl.style.top = '0';
+        videoEl.style.left = '0';
+        videoEl.style.width = '100%';
+        videoEl.style.height = '100%';
+        videoEl.style.zIndex = '1';
+        videoEl.style.pointerEvents = 'none';
+        videoEl.style.background = '#000000';
+        videoEl.style.display = 'none';
+
+        if (stageSvg && stageSvg.parentNode === parentContainer) {
+          parentContainer.insertBefore(videoEl, stageSvg);
+        } else {
+          parentContainer.appendChild(videoEl);
+        }
+      }
+
+      this.backdropVideo = videoEl;
+
+      if (stageSvg) {
+        stageSvg.style.position = 'relative';
+        stageSvg.style.zIndex = '2';
+        stageSvg.style.background = 'transparent';
+      }
+
+      if (scene && (scene.video || scene.hasVideo)) {
+        const videoSrc = scene.video;
+        if (videoEl && videoSrc) {
+          const currentSrc = videoEl.getAttribute('src');
+          if (currentSrc !== videoSrc) {
+            videoEl.src = videoSrc;
+            videoEl.load();
+          }
+          videoEl.style.objectFit = scene.videoFit || 'contain';
+          videoEl.style.display = 'block';
+
+          const onLoadedMeta = () => {
+            if (videoEl.duration && Number.isFinite(videoEl.duration) && (!scene.duration || scene.duration === 10.0)) {
+              scene.duration = videoEl.duration;
+              this.durationSec = videoEl.duration;
+            }
+            if (this.isPlaying) {
+              videoEl.play().catch(() => {});
+            }
+          };
+          videoEl.onloadedmetadata = onLoadedMeta;
+
+          if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+            videoEl.currentTime = this.progress * videoEl.duration;
+          }
+
+          videoEl.onended = () => {
+            if (this.loop) {
+              videoEl.currentTime = 0;
+              videoEl.play().catch(() => {});
+            } else {
+              this.pause();
+            }
+          };
+        }
+      } else if (videoEl) {
+        videoEl.pause();
+        videoEl.removeAttribute('src');
+        videoEl.style.display = 'none';
+        videoEl.onloadedmetadata = null;
+        videoEl.onended = null;
+      }
+    }
+
+    /**
      * Mounts SVG template and compiles AST bindings to DOM nodes
      */
     mountSceneAsset(scene, container) {
@@ -5346,6 +5465,7 @@
       try {
         this._mountedContainer = container;
         this._mountedSceneId = scene.id;
+        this.setupBackdropVideo(scene);
         const stage = this.getStageSvg();
         if (stage) {
           stage.setAttribute('viewBox', '0 0 800 480');
@@ -6201,6 +6321,14 @@ if (item.type === '3d-node') {
           if (!this.vars) this.vars = {};
           const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : 1.0;
           this.vars._solarClock = (this.vars._solarClock || 0) + (deltaSec * Math.max(0.1, warp) * this.speed);
+
+          // Synchronize backdrop film video clock if running
+          if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {
+            const expectedSec = this.progress * this.durationSec;
+            if (Math.abs(this.backdropVideo.currentTime - expectedSec) > 0.35) {
+              this.backdropVideo.currentTime = expectedSec;
+            }
+          }
         }
 
         // PhET-Grade Continuous 60 FPS Render Loop:

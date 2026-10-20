@@ -37,8 +37,9 @@ export interface CartridgeDefinition {
   id: string;
   title: string;
   stage: string;
-  category: string;
-  type?: 'Sim' | 'Slide' | 'App';
+  type?: 'Sim' | 'Slide' | 'App' | 'Film';
+  video?: string;
+  videoFit?: 'contain' | 'cover' | 'fill';
   desc: string;
   icon: string;
   source: 'builtin' | 'phet' | 'user' | 'imported';
@@ -183,6 +184,10 @@ export const CARTRIDGE_ALIASES: Record<string, string> = {
   'first-communion': 'first-communion',
   'holy-communion': 'first-communion',
   'eucharistic-adoration': 'first-communion',
+  'eucharistic-procession-film': 'eucharistic-procession-film',
+  'procession-film': 'eucharistic-procession-film',
+  'liturgical-film': 'eucharistic-procession-film',
+  'procession': 'eucharistic-procession-film',
 };
 
 // Built-in Core Curriculum Cartridge Catalog
@@ -690,6 +695,22 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     astFile: 'scenes/first-communion.ast',
     version: '2.6.0',
     invariants: ['Amen Real Presence Oath', '1-Hour Eucharistic Fast', 'Reverent Reception Posture'],
+  },
+  {
+    id: 'eucharistic-procession-film',
+    type: 'Film',
+    video: '/media/eucharistic-procession.mp4',
+    videoFit: 'contain',
+    title: 'Solemn Eucharistic Procession (Educational Film & Vector HUD)',
+    stage: 'CATHOLIC LIFE',
+    category: 'Catholic Faith',
+    desc: 'Synchronized liturgical film driving: Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil blessing with interactive vector checkpoints.',
+    icon: '🎬',
+    source: 'builtin',
+    svgFile: 'scenes/eucharistic-procession-film.svg',
+    astFile: 'scenes/eucharistic-procession-film.ast',
+    version: '2.6.0',
+    invariants: ['Film Synchronized Timeline', 'Sub-Frame Scrubbing', 'Over-Film Stylus Whiteboard', 'Checkpoints Pause Film'],
   },
   {
     id: 'water-cycle',
@@ -1590,16 +1611,23 @@ export async function importCartridgeFile(file: File): Promise<CartridgeDefiniti
     const cleanId = file.name.replace(/\.ast$/i, '').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
     const titleMatch = text.match(/:title\s+"([^"]+)"/i);
     const stageMatch = text.match(/:stage\s+"([^"]+)"/i);
+    const typeMatch = text.match(/:type\s+"(Sim|Slide|App|Film)"/i);
+    const videoMatch = text.match(/:video\s+"([^"]+)"/i) || text.match(/:film\s+"([^"]+)"/i);
+    const videoFitMatch = text.match(/:video-?fit\s+"([^"]+)"/i);
+    const resolvedType: 'Sim' | 'Slide' | 'App' | 'Film' = (typeMatch?.[1] as any) || (videoMatch ? 'Film' : 'Sim');
 
     const cart: CartridgeDefinition = {
       id: cleanId,
       title: titleMatch ? titleMatch[1] : cleanId,
       stage: stageMatch ? stageMatch[1] : 'CURRICULUM',
-      category: 'Mathematics',
-      desc: 'Imported declarative AST vector logic cartridge.',
-      icon: '📜',
+      type: resolvedType,
+      video: videoMatch ? videoMatch[1] : undefined,
+      videoFit: (videoFitMatch ? videoFitMatch[1] : 'contain') as any,
+      category: resolvedType === 'Film' ? 'Educational Film' : 'Mathematics',
+      desc: resolvedType === 'Film' ? 'Synchronized educational film with interactive vector stage overlays.' : 'Imported declarative AST vector logic cartridge.',
+      icon: resolvedType === 'Film' ? '🎬' : '📜',
       source: 'imported',
-      svgMarkup: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16"/><text x="400" y="240" fill="#38bdf8" font-size="20" font-weight="800" text-anchor="middle">${cleanId}</text></svg>`,
+      svgMarkup: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16" fill-opacity="${resolvedType === 'Film' ? '0' : '1'}"/><text x="400" y="240" fill="#38bdf8" font-size="20" font-weight="800" text-anchor="middle">${cleanId}</text></svg>`,
       astSource: text,
       createdAt: Date.now(),
       updatedAt: Date.now(),

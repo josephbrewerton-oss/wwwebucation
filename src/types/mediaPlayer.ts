@@ -53,8 +53,12 @@ export interface ASTSceneDefinition {
   stage: string;
   /** Lesson title */
   title: string;
-  /** Full duration of one loop cycle in seconds, e.g. 12.0 */
-  duration: number;
+  /** Cartridge archetype: Sim, Slide, App, or Film */
+  type?: 'Sim' | 'Slide' | 'App' | 'Film';
+  /** Optional video or film backdrop path (e.g. /media/archive.mp4) */
+  video?: string;
+  /** Video object-fit mode (contain, cover, fill) */
+  videoFit?: 'contain' | 'cover' | 'fill';
   /** SVG coordinate system boundaries (defaults to '0 0 800 480') */
   viewBox?: string;
   /** Master easing curve for parametric interpolation */

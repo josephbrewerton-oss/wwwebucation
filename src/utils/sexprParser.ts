@@ -312,6 +312,92 @@ export function parseAstNode(input: string | SExprAST): ParsedAstNode {
   return { route, calc, prompt, options, answerKey };
 }
 
+export interface CartridgeHeaderMetadata {
+  id: string;
+  type: 'Sim' | 'Slide' | 'App' | 'Film';
+  title: string;
+  stage: string;
+  duration: number;
+  video?: string;
+  videoFit: 'contain' | 'cover' | 'fill';
+  hasVideo: boolean;
+  has3D: boolean;
+  hasCheckpoints: boolean;
+  hasSubtitles: boolean;
+}
+
+/**
+ * Parses and verifies top-level AST cartridge headers (:id, :type, :title, :stage, :duration, :video, :video-fit).
+ * Supports the Film archetype and synchronized video driving.
+ */
+export function parseCartridgeHeader(astContent: string): CartridgeHeaderMetadata {
+  if (!astContent || typeof astContent !== 'string') {
+    throw new Error('Empty or invalid AST content');
+  }
+
+  const idMatch = astContent.match(/:id\s+("([^"]+)"|([^\s\)]+))/i);
+  const id = idMatch ? (idMatch[2] || idMatch[3]) : 'unnamed-scene';
+
+  const typeMatch = astContent.match(/:type\s+("([^"]+)"|([^\s\)]+))/i);
+  const rawType = typeMatch ? (typeMatch[2] || typeMatch[3]) : null;
+
+  const videoMatch = astContent.match(/:video\s+("([^"]+)"|([^\s\)]+))/i) || astContent.match(/:film\s+("([^"]+)"|([^\s\)]+))/i);
+  const video = videoMatch ? (videoMatch[2] || videoMatch[3]) : undefined;
+
+  const videoFitMatch = astContent.match(/:video-?fit\s+("([^"]+)"|([^\s\)]+))/i);
+  const videoFit: 'contain' | 'cover' | 'fill' = (videoFitMatch ? (videoFitMatch[2] || videoFitMatch[3]).toLowerCase() : 'contain') as any;
+
+  let type: 'Sim' | 'Slide' | 'App' | 'Film' = 'Sim';
+  if (rawType) {
+    const norm = rawType.toLowerCase();
+    if (norm === 'film' || norm === 'video' || norm === 'movie') type = 'Film';
+    else if (norm === 'slide') type = 'Slide';
+    else if (norm === 'app') type = 'App';
+    else type = 'Sim';
+  } else if (video) {
+    type = 'Film';
+  } else {
+    const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
+    const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
+    const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
+    const hasPhysics = /:physics\s*\(/i.test(astContent) || /:emitter\s+/i.test(astContent);
+    if (hasSubtitles && !hasGestures && !hasPhysics) {
+      type = 'Slide';
+    } else if (hasGestures || hasPhysics || hasCheckpoints) {
+      type = 'Sim';
+    } else {
+      type = 'App';
+    }
+  }
+
+  const titleMatch = astContent.match(/:title\s+"([^"]+)"/i);
+  const title = titleMatch ? titleMatch[1] : id;
+
+  const stageMatch = astContent.match(/:stage\s+"([^"]+)"/i);
+  const stage = stageMatch ? stageMatch[1] : 'CURRICULUM';
+
+  const durationMatch = astContent.match(/:duration\s+([\d\.]+)/i);
+  const duration = durationMatch ? parseFloat(durationMatch[1]) : 10.0;
+
+  const has3D = /:camera\s+|:type\s+"3d-/i.test(astContent);
+  const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
+  const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
+
+  return {
+    id,
+    type,
+    title,
+    stage,
+    duration,
+    video,
+    videoFit,
+    hasVideo: Boolean(video),
+    has3D,
+    hasCheckpoints,
+    hasSubtitles,
+  };
+}
+
 export class AstParser {
   /**
    * Parses S-Expression into ParsedAstNode using robust recursive tokenizer.
@@ -319,5 +405,12 @@ export class AstParser {
    */
   static parse(sExpr: string): ParsedAstNode {
     return parseAstNode(sExpr);
+  }
+
+  /**
+   * Extracts verified cartridge header metadata including Film & Video attributes.
+   */
+  static parseHeader(sExpr: string): CartridgeHeaderMetadata {
+    return parseCartridgeHeader(sExpr);
   }
 }
