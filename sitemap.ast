@@ -59,6 +59,22 @@
       :ast "/cartridges/liturgical-calendar.ast" :svg "/cartridges/liturgical-calendar.svg")
     (:cartridge :id "liturgical-postures" :type "Sim" :stage "CATHOLIC LIFE"
       :ast "/cartridges/liturgical-postures.ast" :svg "/cartridges/liturgical-postures.svg")
+    (:cartridge :id "catholic-rites" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/catholic-rites.ast" :svg "/cartridges/catholic-rites.svg")
+    (:cartridge :id "cst-virtues" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/cst-virtues.ast" :svg "/cartridges/cst-virtues.svg")
+    (:cartridge :id "latin-mass-prayers" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/latin-mass-prayers.ast" :svg "/cartridges/latin-mass-prayers.svg")
+    (:cartridge :id "nicene-creed" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/nicene-creed.ast" :svg "/cartridges/nicene-creed.svg")
+    (:cartridge :id "ten-commandments" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/ten-commandments.ast" :svg "/cartridges/ten-commandments.svg")
+    (:cartridge :id "order-of-the-mass" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/order-of-the-mass.ast" :svg "/cartridges/order-of-the-mass.svg")
+    (:cartridge :id "sacred-objects" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/sacred-objects.ast" :svg "/cartridges/sacred-objects.svg")
+    (:cartridge :id "first-communion" :type "Sim" :stage "CATHOLIC LIFE"
+      :ast "/cartridges/first-communion.ast" :svg "/cartridges/first-communion.svg")
 
     ;; STEM Simulations & Manipulatives
     (:cartridge :id "kinetic-gas" :type "Sim" :stage "KS3/KS4 PHYSICS"

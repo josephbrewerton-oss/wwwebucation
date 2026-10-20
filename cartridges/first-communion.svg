@@ -1,0 +1,194 @@
+<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Sanctuary Eucharistic Sky Gradient -->
+    <radialGradient id="communion-sanctuary-bg" cx="50%" cy="32%" r="80%">
+      <stop offset="0%" stop-color="#431407" />
+      <stop offset="35%" stop-color="#1e1b4b" />
+      <stop offset="75%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020408" />
+    </radialGradient>
+
+    <!-- Eucharistic Monstrance Divine Radiance -->
+    <radialGradient id="host-divine-radiance" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(255, 255, 255, 1.0)" />
+      <stop offset="30%" stop-color="rgba(254, 240, 138, 0.9)" />
+      <stop offset="65%" stop-color="rgba(234, 179, 8, 0.45)" />
+      <stop offset="100%" stop-color="rgba(180, 83, 9, 0)" />
+    </radialGradient>
+
+    <!-- Golden Altar Gradient -->
+    <linearGradient id="communion-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#eab308" />
+      <stop offset="70%" stop-color="#ca8a04" />
+      <stop offset="100%" stop-color="#78350f" />
+    </linearGradient>
+
+    <!-- Light Cone from Monstrance -->
+    <linearGradient id="monstrance-light-beam" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="rgba(254, 240, 138, 0.5)" />
+      <stop offset="50%" stop-color="rgba(250, 204, 21, 0.2)" />
+      <stop offset="100%" stop-color="rgba(234, 179, 8, 0)" />
+    </linearGradient>
+
+    <filter id="divine-glow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="480" fill="url(#communion-sanctuary-bg)" />
+
+  <!-- Cathedral Gothic Arches in Background -->
+  <g opacity="0.3">
+    <path d="M 100,420 L 100,200 Q 400,60 700,200 L 700,420 Z" fill="none" stroke="#eab308" stroke-width="2" />
+    <path d="M 220,420 L 220,240 Q 400,120 580,240 L 580,420 Z" fill="none" stroke="#ca8a04" stroke-width="1.5" />
+    <!-- Rosette Stained Glass Behind Altar -->
+    <circle cx="400" cy="110" r="44" fill="none" stroke="#ca8a04" stroke-width="2" />
+    <circle cx="400" cy="110" r="22" fill="none" stroke="#fef08a" stroke-width="1.5" />
+  </g>
+
+  <!-- Heavenly Beam of Light Streaming Down on Altar -->
+  <polygon id="adoration-light-cone" points="380,80 420,80 560,370 240,370" fill="url(#monstrance-light-beam)" opacity="0.4" />
+
+  <!-- Sanctuary Floor & Steps -->
+  <path d="M 60,400 L 740,400 L 780,440 L 20,440 Z" fill="#1e293b" stroke="#334155" stroke-width="2" />
+  <path d="M 120,370 L 680,370 L 710,400 L 90,400 Z" fill="#334155" stroke="#475569" stroke-width="1.5" />
+
+  <!-- High Altar of Sacrifice & Adoration (Center) -->
+  <g transform="translate(400, 290)">
+    <!-- Altar Stone Base -->
+    <rect x="-170" y="0" width="340" height="80" rx="4" fill="#475569" stroke="#64748b" stroke-width="2" />
+    <!-- White Linen Altar Cloth Overhanging -->
+    <rect x="-185" y="-5" width="370" height="20" rx="3" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.5" />
+    <line x1="-180" y1="12" x2="180" y2="12" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6,4" />
+
+    <!-- Altar Cross in center front -->
+    <text x="0" y="45" text-anchor="middle" font-family="serif" font-size="28" font-weight="900" fill="#ca8a04">✝</text>
+
+    <!-- Altar Candles (Left and Right) -->
+    <g transform="translate(-130, -55)">
+      <rect x="-4" y="15" width="8" height="35" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+      <ellipse cx="0" cy="15" rx="4" ry="2" fill="#e2e8f0" />
+      <path d="M 0,0 Q 4,8 0,14 Q -4,8 0,0 Z" fill="#facc15" filter="url(#divine-glow)" />
+      <circle cx="0" cy="8" r="8" fill="rgba(250, 204, 21, 0.4)" />
+    </g>
+    <g transform="translate(130, -55)">
+      <rect x="-4" y="15" width="8" height="35" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1" />
+      <ellipse cx="0" cy="15" rx="4" ry="2" fill="#e2e8f0" />
+      <path d="M 0,0 Q 4,8 0,14 Q -4,8 0,0 Z" fill="#facc15" filter="url(#divine-glow)" />
+      <circle cx="0" cy="8" r="8" fill="rgba(250, 204, 21, 0.4)" />
+    </g>
+
+    <!-- Chalice & Paten on Corporal (Left of center) -->
+    <g transform="translate(-55, -45)">
+      <!-- Chalice -->
+      <path d="M -15,40 L 15,40 L 10,35 L 4,35 L 4,18 L -4,18 L -4,35 L -10,35 Z" fill="url(#communion-gold)" stroke="#854d0e" stroke-width="1" />
+      <circle cx="0" cy="18" r="4" fill="url(#communion-gold)" />
+      <path d="M -12,5 Q -12,20 0,20 Q 12,20 12,5 Z" fill="url(#communion-gold)" stroke="#854d0e" stroke-width="1" />
+      <!-- Small Paten & Host beside chalice -->
+      <ellipse cx="26" cy="38" rx="14" ry="4" fill="url(#communion-gold)" stroke="#854d0e" stroke-width="1" />
+      <circle cx="26" cy="32" r="9" fill="#ffffff" stroke="#fef08a" stroke-width="1.5" />
+      <text x="26" y="35" text-anchor="middle" font-family="serif" font-size="6" font-weight="900" fill="#ca8a04">IHS</text>
+    </g>
+
+    <!-- Wheat Stalks & Grapes Emblems on Altar -->
+    <g transform="translate(60, -30)" opacity="0.8">
+      <!-- Grapes (Clusters) -->
+      <circle cx="5" cy="15" r="4" fill="#701a75" />
+      <circle cx="12" cy="15" r="4" fill="#701a75" />
+      <circle cx="9" cy="21" r="4" fill="#581c87" />
+      <!-- Wheat Head -->
+      <path d="M 22,25 L 30,5 M 26,18 L 32,15 M 24,14 L 30,10" stroke="#facc15" stroke-width="1.5" />
+    </g>
+  </g>
+
+  <!-- THE EXALTED MONSTRANCE FOR EUCHARISTIC ADORATION (Center Sanctuary) -->
+  <g id="eucharistic-monstrance-group" transform="translate(400, 170)">
+    <!-- Living Glow Aura -->
+    <circle id="host-living-glow" cx="0" cy="0" r="85" fill="url(#host-divine-radiance)" />
+
+    <!-- Rotating Golden Sunburst Rays -->
+    <g id="eucharistic-monstrance-rays">
+      <line x1="0" y1="-72" x2="0" y2="72" stroke="#fef08a" stroke-width="3" />
+      <line x1="-72" y1="0" x2="72" y2="0" stroke="#fef08a" stroke-width="3" />
+      <line x1="-51" y1="-51" x2="51" y2="51" stroke="#facc15" stroke-width="2.5" />
+      <line x1="51" y1="-51" x2="-51" y2="51" stroke="#facc15" stroke-width="2.5" />
+      <!-- Wave-flame rays -->
+      <line x1="0" y1="-60" x2="0" y2="60" stroke="#eab308" stroke-width="1.5" transform="rotate(30)" />
+      <line x1="0" y1="-60" x2="0" y2="60" stroke="#eab308" stroke-width="1.5" transform="rotate(60)" />
+      <line x1="0" y1="-60" x2="0" y2="60" stroke="#eab308" stroke-width="1.5" transform="rotate(120)" />
+      <line x1="0" y1="-60" x2="0" y2="60" stroke="#eab308" stroke-width="1.5" transform="rotate(150)" />
+    </g>
+
+    <!-- Heavy Gold Monstrance Ring & Stand -->
+    <circle cx="0" cy="0" r="42" fill="none" stroke="url(#communion-gold)" stroke-width="6" />
+    <circle cx="0" cy="0" r="34" fill="rgba(255, 255, 255, 0.2)" stroke="#fef08a" stroke-width="1.5" />
+
+    <!-- Sacred Consecrated Host in the Luna -->
+    <circle cx="0" cy="0" r="26" fill="#ffffff" stroke="#fef08a" stroke-width="2" filter="url(#divine-glow)" />
+    <text x="0" y="6" text-anchor="middle" font-family="serif" font-weight="900" font-size="14" fill="#a16207">IHS</text>
+    <line x1="0" y1="-10" x2="0" y2="-5" stroke="#a16207" stroke-width="1.5" />
+    <line x1="-3" y1="-7" x2="3" y2="-7" stroke="#a16207" stroke-width="1.5" />
+
+    <!-- Stem & Base resting on Thabor Altar Stand -->
+    <path d="M -8,42 L 8,42 L 5,95 L -5,95 Z" fill="url(#communion-gold)" stroke="#854d0e" stroke-width="1.5" />
+    <path d="M -24,108 L 24,108 L 16,95 L -16,95 Z" fill="url(#communion-gold)" stroke="#854d0e" stroke-width="1.5" />
+    <!-- Top Crown & Cross -->
+    <line x1="0" y1="-42" x2="0" y2="-62" stroke="#fef08a" stroke-width="3.5" />
+    <line x1="-9" y1="-54" x2="9" y2="-54" stroke="#fef08a" stroke-width="3.5" />
+  </g>
+
+  <!-- FIRST COMMUNICANT PUPIL (Left Foreground - Reverent Bow / Hands in Prayer) -->
+  <g id="communicant-bow" transform="translate(250, 310)">
+    <!-- White First Communion Garment / Robe -->
+    <path d="M 0,40 L -18,100 L 18,100 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <!-- Gold Sash / Cross Ribbon -->
+    <path d="M -8,40 L 4,100" stroke="#facc15" stroke-width="2" />
+    <!-- Communicant Head & Hair -->
+    <circle cx="0" cy="18" r="14" fill="#fed7aa" stroke="#f97316" stroke-width="1" />
+    <path d="M -12,14 Q 0,4 12,14 Q 8,4 0,4 Q -8,4 -12,14 Z" fill="#78350f" />
+    <!-- Hands Folded in Prayer (Palm to Palm pointing up to God) -->
+    <path d="M 4,46 L 14,34 L 16,42 L 6,52 Z" fill="#ffedd5" stroke="#fb923c" stroke-width="1" />
+    <!-- Pure White Rosary Beads in Hands -->
+    <circle cx="10" cy="48" r="2" fill="#ffffff" />
+    <circle cx="14" cy="52" r="2" fill="#ffffff" />
+    <circle cx="12" cy="56" r="2" fill="#ffffff" />
+    <!-- Reverent Halo -->
+    <circle cx="0" cy="18" r="20" fill="none" stroke="#fef08a" stroke-width="1" stroke-dasharray="3,3" opacity="0.6" />
+  </g>
+
+  <!-- PRIESTLY HANDS / THE EUCHARISTIC MINISTER (Right Foreground - Extending Body of Christ) -->
+  <g transform="translate(520, 310)">
+    <!-- White Alb Sleeve with Gold Border -->
+    <path d="M 30,30 L -10,38 L -10,48 L 30,52 Z" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    <line x1="0" y1="36" x2="0" y2="50" stroke="#ca8a04" stroke-width="2" />
+    <!-- Priest's Hand Elevating Host -->
+    <ellipse cx="-15" cy="42" rx="7" ry="5" fill="#fed7aa" />
+    <circle cx="-25" cy="38" r="11" fill="#ffffff" stroke="#fef08a" stroke-width="2" filter="url(#divine-glow)" />
+    <text x="-25" y="41" text-anchor="middle" font-family="serif" font-size="7" font-weight="900" fill="#ca8a04">IHS</text>
+    <!-- Speech Banner "Corpus Christi - The Body of Christ" -->
+    <rect x="-85" y="0" width="130" height="24" rx="12" fill="#1e1b4b" stroke="#facc15" stroke-width="1.5" />
+    <text x="-20" y="16" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="900" fill="#fef08a">"The Body of Christ"</text>
+  </g>
+
+  <!-- INTERACTIVE MILESTONE TIMELINE SLIDER (Bottom) -->
+  <g transform="translate(60, 425)">
+    <!-- Rail -->
+    <rect x="0" y="8" width="680" height="10" rx="5" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
+    <!-- Milestone Labels -->
+    <g font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle">
+      <text x="60" y="-3" fill="#38bdf8">1. Clean Heart</text>
+      <text x="200" y="-3" fill="#facc15">2. 1-Hr Fast</text>
+      <text x="340" y="-3" fill="#cbd5e1">3. Reverent Bow</text>
+      <text x="480" y="-3" fill="#4ade80">4. Receive "Amen!"</text>
+      <text x="620" y="-3" fill="#f472b6">5. Adoration &amp; Thanks</text>
+    </g>
+    <!-- Draggable Golden Knob -->
+    <g id="communion-steps-slider" transform="translate(60, 13)" cursor="ew-resize">
+      <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="3" filter="url(#divine-glow)" />
+      <polygon points="-4,-4 4,0 -4,4" fill="#431407" transform="translate(-1, 0) scale(0.8)" />
+    </g>
+  </g>
+</svg>

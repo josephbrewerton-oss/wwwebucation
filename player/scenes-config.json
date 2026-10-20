@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-19T14:02:43.531Z",
-  "totalScenes": 36,
+  "generatedAt": "2026-10-20T07:33:10.995Z",
+  "totalScenes": 44,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -88,6 +88,20 @@
       "bindingsCount": 5
     },
     {
+      "id": "catholic-rites",
+      "type": "Sim",
+      "title": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/catholic-rites.svg",
+      "astFile": "scenes/catholic-rites.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
+    },
+    {
       "id": "church-tour",
       "type": "Slide",
       "title": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
@@ -100,6 +114,20 @@
       "keyframeCount": 6,
       "subtitleCount": 6,
       "bindingsCount": 9
+    },
+    {
+      "id": "cst-virtues",
+      "type": "Sim",
+      "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/cst-virtues.svg",
+      "astFile": "scenes/cst-virtues.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
     },
     {
       "id": "dna-helix",
@@ -128,6 +156,20 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 3
+    },
+    {
+      "id": "first-communion",
+      "type": "Sim",
+      "title": "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/first-communion.svg",
+      "astFile": "scenes/first-communion.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
     },
     {
       "id": "fish-tank",
@@ -214,6 +256,20 @@
       "bindingsCount": 2
     },
     {
+      "id": "latin-mass-prayers",
+      "type": "Sim",
+      "title": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/latin-mass-prayers.svg",
+      "astFile": "scenes/latin-mass-prayers.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
+    },
+    {
       "id": "liturgical-calendar",
       "type": "Sim",
       "title": "The Catholic Liturgical Year: Sacred Seasons & Colors",
@@ -284,6 +340,34 @@
       "bindingsCount": 15
     },
     {
+      "id": "nicene-creed",
+      "type": "Sim",
+      "title": "The Nicene & Apostles' Creed: Credo in Unum Deum",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/nicene-creed.svg",
+      "astFile": "scenes/nicene-creed.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
+    },
+    {
+      "id": "order-of-the-mass",
+      "type": "Sim",
+      "title": "The Order of the Holy Mass: Source & Summit of Catholic Life",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/order-of-the-mass.svg",
+      "astFile": "scenes/order-of-the-mass.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
+    },
+    {
       "id": "phonics-lab",
       "type": "App",
       "title": "Early Phonics: Sound Buttons & Blending Mat",
@@ -352,6 +436,20 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 8
+    },
+    {
+      "id": "sacred-objects",
+      "type": "Sim",
+      "title": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/sacred-objects.svg",
+      "astFile": "scenes/sacred-objects.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 4
     },
     {
       "id": "seven-sacraments",
@@ -436,6 +534,20 @@
       "keyframeCount": 15,
       "subtitleCount": 15,
       "bindingsCount": 9
+    },
+    {
+      "id": "ten-commandments",
+      "type": "Sim",
+      "title": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
+      "stage": "CATHOLIC LIFE",
+      "duration": 28,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "scenes/ten-commandments.svg",
+      "astFile": "scenes/ten-commandments.ast",
+      "keyframeCount": 0,
+      "subtitleCount": 6,
+      "bindingsCount": 5
     },
     {
       "id": "times-tables",

@@ -1,0 +1,57 @@
+(:scene :id "latin-mass-prayers" :type "Sim" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "selectedPrayer" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Selected Latin Prayer (1: Pater Noster, 2: Ave Maria, 3: Sanctus, 4: Agnus Dei)")
+    (:var :name "candleFlicker" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Monastery Chapel Candle Illumination")
+    (:var :name "neumePosition" :val 0.0 :min 0.0 :max 100.0 :step 1.0 :label "Gregorian Neume Scan Position")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 660
+      (:bind-var "selectedPrayer" :map "linear" :from-min 140 :from-max 660 :to-min 1.0 :to-max 4.0)
+    )
+    (:draggable :target "#cantor-quill-node" :axis "x" :min 200 :max 600
+      (:bind-var "neumePosition" :map "linear" :from-min 200 :from-max 600 :to-min 0.0 :to-max 100.0)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.5 :text "Latin has been the universal mother tongue of the Roman Catholic Church for nearly two thousand years.")
+    (:start 4.5 :end 9.0 :text "Praying in Latin unites Catholics across every country, culture, and continent in one voice of prayer.")
+    (:start 9.0 :end 14.0 :text "Gregorian Chant, written on a 4-line musical staff with square neumes, is the Church's native sacred music.")
+    (:start 14.0 :end 19.5 :text "From the 'Pater Noster' taught by Christ to the 'Agnus Dei' chanted before Holy Communion, each prayer is steeped in Scripture.")
+    (:start 19.5 :end 24.5 :text "Illuminated manuscripts crafted by medieval monks preserved the Word of God with gold leaf, lapis lazuli, and sacred chant.")
+    (:start 24.5 :end 28.0 :text "By learning these foundational prayers, we step into the living river of Catholic sacred tradition.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "What does the Latin phrase 'Pater Noster, qui es in caelis' translate to in English?")
+      (:options
+        ("Our Father, who art in heaven" :correct true)
+        ("Hail Mary, full of grace" :correct false)
+        ("Glory be to the Father" :correct false)
+        ("Lamb of God, who takest away the sins of the world" :correct false)
+      )
+      (:explanation "'Pater Noster' is the Latin title and opening of the Lord's Prayer given by Jesus Christ in the Gospel of Matthew.")
+    )
+    (:checkpoint :at 0.72
+      (:prompt "How many lines are traditionally used in a medieval Gregorian Chant musical staff?")
+      (:options
+        ("4 lines (with square neume notation)" :correct true)
+        ("5 lines (modern musical staff)" :correct false)
+        ("12 lines" :correct false)
+        ("Chant had no written notes at all" :correct false)
+      )
+      (:explanation "Gregorian chant is historically written on a 4-line staff with Do or Fa clefs and square notes called neumes (developed by Guido d'Arezzo).")
+    )
+  ))
+
+  (:bindings (
+    (:target "#candle-halo" :attr "opacity" :expr "0.4 + 0.35 * candleFlicker")
+    (:target "#candle-halo" :attr "r" :expr "35 + 15 * candleFlicker")
+    (:target "#chant-tracker" :attr "transform" :expr "'translate(' + (neumePosition * 3.5) + ', 0)'")
+    (:target "#quill-glow" :attr "opacity" :expr "0.5 + 0.4 * sin(t * 3.0)")
+  ))
+)

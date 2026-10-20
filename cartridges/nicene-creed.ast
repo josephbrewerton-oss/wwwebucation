@@ -1,0 +1,57 @@
+(:scene :id "nicene-creed" :type "Sim" :title "The Nicene & Apostles' Creed: Credo in Unum Deum" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "trinityPillar" :val 1.0 :min 1.0 :max 3.0 :step 1.0 :label "Trinitarian Pillar (1: Father & Creation, 2: Son & Redemption, 3: Holy Spirit & Church)")
+    (:var :name "creedGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Divine Light of Faith Intensity")
+    (:var :name "crossElevation" :val 1.0 :min 0.5 :max 1.5 :step 0.1 :label "Incarnation & Resurrection Cross Elevation")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#creed-trinity-slider" :axis "x" :min 160 :max 640
+      (:bind-var "trinityPillar" :map "linear" :from-min 160 :from-max 640 :to-min 1.0 :to-max 3.0)
+    )
+    (:draggable :target "#resurrection-cross-node" :axis "y" :min 100 :max 260
+      (:bind-var "crossElevation" :map "linear" :from-min 260 :from-max 100 :to-min 0.5 :to-max 1.5)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.5 :text "The Creed (from Latin 'Credo' — 'I believe') is the foundational summary of Catholic apostolic faith.")
+    (:start 4.5 :end 9.0 :text "First: We profess God the Father Almighty, Creator of heaven and earth, of all things visible and invisible.")
+    (:start 9.0 :end 14.0 :text "Second: We profess Jesus Christ, Only-Begotten Son of God, Light from Light, True God from True God, consubstantial with the Father.")
+    (:start 14.0 :end 19.5 :text "For us and our salvation He came down from heaven: by the Holy Spirit was incarnate of the Virgin Mary, and became man.")
+    (:start 19.5 :end 24.5 :text "Third: We profess the Holy Spirit, Lord and Giver of Life, who proceeds from the Father and the Son.")
+    (:start 24.5 :end 28.0 :text "We confess One, Holy, Catholic, and Apostolic Church, one Baptism for the forgiveness of sins, and the resurrection of the dead.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "What does the Latin word 'Credo' mean when we stand to profess our faith?")
+      (:options
+        ("I believe / I entrust my whole heart to God" :correct true)
+        ("I hope for good weather" :correct false)
+        ("A song of ancient kings" :correct false)
+        ("A rulebook of school laws" :correct false)
+      )
+      (:explanation "'Credo' means 'I believe'—a heartfelt personal and communal pledge of total trust and fidelity to God.")
+    )
+    (:checkpoint :at 0.72
+      (:prompt "What are the four essential Marks of the Church professed in the Nicene Creed?")
+      (:options
+        ("One, Holy, Catholic, and Apostolic" :correct true)
+        ("Ancient, Modern, Global, and Local" :correct false)
+        ("Silent, Chanted, Written, and Printed" :correct false)
+        ("Roman, Greek, English, and Latin" :correct false)
+      )
+      (:explanation "The Catechism (CCC 811) teaches that the Church is One (unified), Holy (set apart by Christ), Catholic (universal), and Apostolic (founded on the Apostles).")
+    )
+  ))
+
+  (:bindings (
+    (:target "#trinity-halo" :attr "opacity" :expr "0.3 + 0.35 * creedGlow")
+    (:target "#trinity-halo" :attr "r" :expr "40 + 20 * creedGlow")
+    (:target "#resurrection-cross-node" :attr "transform" :expr "'translate(0, ' + (-30 * (crossElevation - 1.0)) + ')'")
+    (:target "#alpha-omega-glow" :attr "opacity" :expr "0.5 + 0.4 * sin(t * 2.0)")
+  ))
+)

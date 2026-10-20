@@ -1,0 +1,57 @@
+(:scene :id "catholic-rites" :type "Sim" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "selectedRite" :val 1.0 :min 1.0 :max 6.0 :step 1.0 :label "Selected Liturgical Rite (1: Roman, 2: Byzantine, 3: Alexandrian, 4: Antiochene, 5: Chaldean, 6: Armenian)")
+    (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with the Holy See Beacon Intensity")
+    (:var :name "iconShimmer" :val 0.8 :min 0.0 :max 1.5 :step 0.1 :label "Iconostasis & Mosaic Shimmer")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#rite-selector-knob" :axis "x" :min 120 :max 680
+      (:bind-var "selectedRite" :map "linear" :from-min 120 :from-max 680 :to-min 1.0 :to-max 6.0)
+    )
+    (:draggable :target "#communion-beacon-core" :axis "y" :min 80 :max 220
+      (:bind-var "communionGlow" :map "linear" :from-min 220 :from-max 80 :to-min 0.2 :to-max 2.0)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.5 :text "The Catholic Church is a global communion of 24 autonomous (sui iuris) Churches united under the Bishop of Rome.")
+    (:start 4.5 :end 9.0 :text "The Latin (Western) Church shares full communion with 23 ancient Eastern Catholic Churches spanning 6 Liturgical Traditions.")
+    (:start 9.0 :end 14.0 :text "From the Byzantine Divine Liturgy with icons, to the Alexandrian Ge'ez chant, Christ's Church breathes with two lungs: East and West.")
+    (:start 14.0 :end 19.5 :text "Ancient Eastern traditions use leavened prosphora bread symbolizing the Resurrection, alongside holy icons and incense.")
+    (:start 19.5 :end 24.5 :text "Churches like the Maronites of Lebanon have maintained unbroken communion with the Holy See across two millennia.")
+    (:start 24.5 :end 28.0 :text "In all 24 Churches, the same true Sacraments, apostolic faith, and communion with the Successor of Peter are fully preserved.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "How many autonomous (sui iuris) Churches make up the one Universal Catholic Church in full communion with the Pope?")
+      (:options
+        ("Only 1 (The Roman Church)" :correct false)
+        ("6 regional dioceses" :correct false)
+        ("24 autonomous Churches across 6 Liturgical Traditions" :correct true)
+        ("Over 500 divided denominations" :correct false)
+      )
+      (:explanation "The Catholic Church is a communion of 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic Churches) all united in one faith under the Pope.")
+    )
+    (:checkpoint :at 0.75
+      (:prompt "Why do Byzantine and Eastern Catholic Churches use leavened bread (Prosphora) for the Holy Eucharist?")
+      (:options
+        ("Because yeast represents the Risen Life of Christ and the breath of the Holy Spirit" :correct true)
+        ("Because unleavened bread is forbidden in the East" :correct false)
+        ("Because flat wafers were invented only recently" :correct false)
+        ("Only to make the bread softer for the priest" :correct false)
+      )
+      (:explanation "Leaven symbolizes Christ rising from the dead and the Holy Spirit breathing life into the bread! Both leavened and unleavened traditions are holy, ancient, and fully valid.")
+    )
+  ))
+
+  (:bindings (
+    (:target "#beacon-pulse" :attr "opacity" :expr "0.3 + 0.4 * communionGlow")
+    (:target "#beacon-halo" :attr "r" :expr "30 + 20 * communionGlow")
+    (:target "#icon-gold-glow" :attr "opacity" :expr "0.4 + 0.5 * iconShimmer")
+    (:target "#dome-cross" :attr "transform" :expr "'rotate(' + (sin(t * 1.5) * 2) + ', 400, 110)'")
+  ))
+)
