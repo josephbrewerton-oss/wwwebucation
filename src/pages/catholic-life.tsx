@@ -18,6 +18,7 @@ import HolyWaterAndThuriferExplorer from '../components/HolyWaterAndThuriferExpl
 import StationsOfTheCrossGuide from '../components/StationsOfTheCrossGuide';
 import TriduumEasterJourneyGuide from '../components/TriduumEasterJourneyGuide';
 import LiturgyOfTheHoursGuide from '../components/LiturgyOfTheHoursGuide';
+import SacredObjectsExplorer from '../components/SacredObjectsExplorer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
@@ -93,6 +94,9 @@ export default function CatholicLifePage(): React.JSX.Element {
   const [selectedVirtue, setSelectedVirtue] = useState<SchoolVirtue>(SCHOOL_VIRTUES[0]);
   const [overviewPlayerExpanded, setOverviewPlayerExpanded] = useState<boolean>(false);
   const [overviewTouchLock, setOverviewTouchLock] = useState<boolean>(true);
+  const [cstPlayerExpanded, setCstPlayerExpanded] = useState<boolean>(false);
+  const [massPlayerExpanded, setMassPlayerExpanded] = useState<boolean>(false);
+  const [firstCommunionPlayerExpanded, setFirstCommunionPlayerExpanded] = useState<boolean>(false);
 
   // Keep state synced with URL search params
   useEffect(() => {
@@ -1058,17 +1062,82 @@ export default function CatholicLifePage(): React.JSX.Element {
         {/* 2. CATHOLIC SOCIAL TEACHING & SCHOOL VIRTUES */}
         {activeTab === 'cst-virtues' && (
           <div>
-            <div style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                <span style={{ fontSize: '1.8rem' }}>🤝</span>
-                <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Catholic Social Teaching (CST) &amp; St Joseph's Virtues
-                </h2>
+            <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                  <span style={{ fontSize: '1.8rem' }}>🤝</span>
+                  <h2 style={{ fontSize: '1.65rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    Catholic Social Teaching (CST) &amp; St Joseph's Virtues
+                  </h2>
+                </div>
+                <p style={{ fontSize: '0.95rem', color: '#64748b', margin: 0 }}>
+                  How we put the Gospel into daily action: our 7 CST Pillars and our school patron virtues.
+                </p>
               </div>
-              <p style={{ fontSize: '0.95rem', color: '#64748b', margin: 0 }}>
-                How we put the Gospel into daily action: our 7 CST Pillars and our school patron virtues.
-              </p>
+
+              {/* Vector Sim Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={() => setCstPlayerExpanded(!cstPlayerExpanded)}
+                  style={{
+                    background: cstPlayerExpanded ? '#15803d' : '#f0fdf4',
+                    border: '1.5px solid #16a34a',
+                    borderRadius: '9999px',
+                    color: cstPlayerExpanded ? '#ffffff' : '#166534',
+                    padding: '6px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                  }}
+                >
+                  <span>{cstPlayerExpanded ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+                </button>
+
+                <Link
+                  to="/media-player?preset=cst-virtues"
+                  style={{
+                    background: '#f8fafc',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '9999px',
+                    color: '#334155',
+                    padding: '6px 14px',
+                    fontSize: '0.82rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    textDecoration: 'none',
+                  }}
+                >
+                  <span>📺 Full Player</span>
+                </Link>
+              </div>
             </div>
+
+            {/* Embedded AST Vector Media Player for CST & Virtues */}
+            {cstPlayerExpanded && (
+              <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #15803d', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                <div style={{ background: '#064e3b', padding: '10px 16px', borderBottom: '1px solid #047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+                    <span>✨</span>
+                    <span>AST Vector Interactive Engine: Catholic Social Teaching &amp; Virtues</span>
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#a7f3d0', fontFamily: 'monospace' }}>Cartridge: cst-virtues.ast</span>
+                </div>
+                <AstVectorMediaPlayer
+                  preset="cst-virtues"
+                  height="clamp(240px, 45vw + 40px, 420px)"
+                  allowPresetSwitch={false}
+                  embedded={true}
+                  bslEnabled={false}
+                />
+              </div>
+            )}
 
             {/* CST Principles Selector */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
@@ -1503,46 +1572,212 @@ export default function CatholicLifePage(): React.JSX.Element {
             )}
 
             {activeTab === 'sacred-objects' && (
-              <div
-                style={{
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
-                  borderRadius: '10px',
-                  padding: '10px 14px',
-                  marginBottom: '1.25rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '8px',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.2rem' }}>⛪</span>
-                  <span style={{ fontSize: '0.85rem', color: '#0369a1', fontWeight: 600 }}>
-                    Looking for a full walkthrough of the sanctuary and sacred spaces?
-                  </span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleTabChange('church-tour')}
-                  style={{
-                    background: '#0284c7',
-                    color: '#ffffff',
-                    border: 'none',
-                    borderRadius: '6px',
-                    padding: '4px 10px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                  }}
-                >
-                  Explore Church Tour &rarr;
-                </button>
+              <div style={{ marginBottom: '2.5rem' }}>
+                <SacredObjectsExplorer />
               </div>
             )}
 
-            {(activeTab === 'mass' || activeTab === 'first-communion' || activeTab === 'sacred-objects' || activeTab === 'journal') && (
+            {activeTab === 'first-communion' && (
+              <div style={{ marginBottom: '2rem' }}>
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #431407 0%, #1e1b4b 60%, #090d16 100%)',
+                    borderRadius: '16px',
+                    padding: '1.75rem',
+                    color: '#ffffff',
+                    marginBottom: '1.5rem',
+                    border: '2px solid #f59e0b',
+                    boxShadow: '0 8px 24px rgba(67, 20, 7, 0.3)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ maxWidth: '680px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>🍞</span>
+                      <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fef08a', margin: 0 }}>
+                        First Holy Communion &amp; Eucharistic Adoration
+                      </h3>
+                      <span style={{ background: '#f59e0b', color: '#451a03', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>
+                        Real Presence
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                      Prepare heart and soul to welcome the Lord Jesus: the Sacrament of Reconciliation, the 1-hour Eucharistic fast, reverent reception on the tongue or hand with a devout &apos;Amen&apos;, and silent thanksgiving before the Blessed Sacrament in the Monstrance.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setFirstCommunionPlayerExpanded(!firstCommunionPlayerExpanded)}
+                      style={{
+                        background: firstCommunionPlayerExpanded ? '#facc15' : 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.4)',
+                        borderRadius: '9999px',
+                        color: firstCommunionPlayerExpanded ? '#1e1b4b' : '#ffffff',
+                        padding: '6px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span>{firstCommunionPlayerExpanded ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+                    </button>
+
+                    <Link
+                      to="/media-player?preset=first-communion"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.4)',
+                        borderRadius: '9999px',
+                        color: '#ffffff',
+                        padding: '6px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <span>📺 Full Player</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Embedded AST Vector Media Player for First Communion */}
+                {firstCommunionPlayerExpanded && (
+                  <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #ca8a04', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                    <div style={{ background: '#431407', padding: '10px 16px', borderBottom: '1px solid #78350f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+                        <span>✨</span>
+                        <span>AST Vector Interactive Engine: First Holy Communion &amp; Eucharistic Adoration</span>
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: first-communion.ast</span>
+                    </div>
+                    <AstVectorMediaPlayer
+                      preset="first-communion"
+                      height="clamp(240px, 45vw + 40px, 420px)"
+                      allowPresetSwitch={false}
+                      embedded={true}
+                      bslEnabled={false}
+                    />
+                  </div>
+                )}
+
+                <FirstCommunionMasteryLab />
+              </div>
+            )}
+
+            {activeTab === 'mass' && (
+              <div style={{ marginBottom: '2rem' }}>
+                <div
+                  style={{
+                    background: 'linear-gradient(135deg, #311042 0%, #1e1b4b 60%, #0f172a 100%)',
+                    borderRadius: '16px',
+                    padding: '1.75rem',
+                    color: '#ffffff',
+                    marginBottom: '1.5rem',
+                    border: '2px solid #854d0e',
+                    boxShadow: '0 8px 24px rgba(49, 16, 66, 0.25)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '1rem',
+                  }}
+                >
+                  <div style={{ maxWidth: '680px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                      <span style={{ fontSize: '1.8rem' }}>🍷</span>
+                      <h3 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fef08a', margin: 0 }}>
+                        The Order of the Holy Mass (Ordo Missae)
+                      </h3>
+                      <span style={{ background: '#f59e0b', color: '#451a03', padding: '2px 8px', borderRadius: '9999px', fontSize: '0.72rem', fontWeight: 800 }}>
+                        Source &amp; Summit
+                      </span>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.92rem', color: '#cbd5e1', lineHeight: 1.5 }}>
+                      Step through the 4 movements of the Holy Sacrifice of the Mass: Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist (Transubstantiation, Epiclesis &amp; Elevation), and Concluding Rites.
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={() => setMassPlayerExpanded(!massPlayerExpanded)}
+                      style={{
+                        background: massPlayerExpanded ? '#facc15' : 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.4)',
+                        borderRadius: '9999px',
+                        color: massPlayerExpanded ? '#1e1b4b' : '#ffffff',
+                        padding: '6px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                      }}
+                    >
+                      <span>{massPlayerExpanded ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+                    </button>
+
+                    <Link
+                      to="/media-player?preset=order-of-the-mass"
+                      style={{
+                        background: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.4)',
+                        borderRadius: '9999px',
+                        color: '#ffffff',
+                        padding: '6px 14px',
+                        fontSize: '0.82rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        textDecoration: 'none',
+                      }}
+                    >
+                      <span>📺 Full Player</span>
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Embedded AST Vector Media Player for Order of the Mass */}
+                {massPlayerExpanded && (
+                  <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #ca8a04', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+                    <div style={{ background: '#311042', padding: '10px 16px', borderBottom: '1px solid #581c87', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+                        <span>✨</span>
+                        <span>AST Vector Interactive Engine: The Order of the Holy Mass (Ordo Missae)</span>
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: order-of-the-mass.ast</span>
+                    </div>
+                    <AstVectorMediaPlayer
+                      preset="order-of-the-mass"
+                      height="clamp(240px, 45vw + 40px, 420px)"
+                      allowPresetSwitch={false}
+                      embedded={true}
+                      bslEnabled={false}
+                    />
+                  </div>
+                )}
+                
+                <FirstCommunionMasteryLab />
+              </div>
+            )}
+
+            {activeTab === 'journal' && (
               <div style={{ marginBottom: '2rem' }}>
                 <FirstCommunionMasteryLab />
               </div>

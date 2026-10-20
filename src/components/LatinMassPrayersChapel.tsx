@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { speakInLanguage } from '../engine/translationService';
 
 import {
@@ -11,6 +13,7 @@ export { LATIN_PRAYERS_DATA };
 export type { LatinPrayerItem, LatinPrayerVerse };
 
 export default function LatinMassPrayersChapel() {
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [selectedPrayerId, setSelectedPrayerId] = useState<string>('pater-noster');
   const [displayMode, setDisplayMode] = useState<'both' | 'latin' | 'english'>('both');
   const [showPhonetics, setShowPhonetics] = useState<boolean>(true);
@@ -159,8 +162,68 @@ export default function LatinMassPrayersChapel() {
             <span>🎯</span>
             <span>{matchGameActive ? 'Close Matcher' : 'Latin Match Game'}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#f59e0b' : 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '8px',
+              color: showPlayer ? '#451a03' : '#ffffff',
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=latin-mass-prayers"
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              padding: '8px 14px',
+              fontSize: '0.84rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Latin Mass Prayers */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #b45309', background: '#090e1a', marginBottom: '1.5rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#451a03', padding: '10px 16px', borderBottom: '1px solid #78350f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: Latin Mass Prayers &amp; Gregorian Chant (Vox Ecclesiae)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: latin-mass-prayers.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="latin-mass-prayers"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Interactive Match Mini Game */}
       {matchGameActive && (

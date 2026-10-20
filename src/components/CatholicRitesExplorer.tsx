@@ -1,5 +1,6 @@
-// src/components/CatholicRitesExplorer.tsx
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import LiturgicalMisconceptionsExplorer from './LiturgicalMisconceptionsExplorer';
 import {
   LITURGICAL_RITE_FAMILIES,
@@ -19,6 +20,7 @@ interface CatholicRitesExplorerProps {
 export default function CatholicRitesExplorer({
   theme = 'light',
 }: CatholicRitesExplorerProps): React.JSX.Element {
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [selectedRiteId, setSelectedRiteId] = useState<string>('all');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -149,7 +151,70 @@ export default function CatholicRitesExplorer({
             <div style={{ fontSize: '0.68rem', color: '#cbd5e1' }}>One Faith &bull; Valid Sacraments</div>
           </div>
         </div>
+
+        {/* Vector Simulation Action Buttons */}
+        <div style={{ marginTop: '1.25rem', display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#facc15' : 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: showPlayer ? '#1e1b4b' : '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=catholic-rites"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '9999px',
+              color: '#ffffff',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Catholic Rites */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #2563eb', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#1e1b4b', padding: '10px 16px', borderBottom: '1px solid #312e81', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: The 24 Catholic Rites &amp; Churches (Omnes Gentes)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontFamily: 'monospace' }}>Cartridge: catholic-rites.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="catholic-rites"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', marginBottom: '1.5rem', flexWrap: 'wrap' }}>

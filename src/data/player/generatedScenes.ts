@@ -258,6 +258,30 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "cst-virtues",
+    "type": "Sim",
+    "label": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/cst-virtues",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
+    "id": "first-communion",
+    "type": "Sim",
+    "label": "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/first-communion",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "holy-water-thurifer",
     "type": "Sim",
     "label": "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification",
@@ -268,6 +292,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 3
+  },
+  {
+    "id": "latin-mass-prayers",
+    "type": "Sim",
+    "label": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/prayers-latin",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "shakespeare-macbeth",
@@ -306,6 +342,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 3
   },
   {
+    "id": "sacred-objects",
+    "type": "Sim",
+    "label": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/sacred-objects",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "spelling-bee",
     "type": "App",
     "label": "Spelling Bee Championship: KS1 to KS3 Orthography",
@@ -316,6 +364,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "English Literature & Phonics",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "catholic-rites",
+    "type": "Sim",
+    "label": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/rites",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "altar-anatomy",
@@ -378,6 +438,30 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 3
   },
   {
+    "id": "nicene-creed",
+    "type": "Sim",
+    "label": "The Nicene & Apostles' Creed: Credo in Unum Deum",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/creed",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
+    "id": "order-of-the-mass",
+    "type": "Sim",
+    "label": "The Order of the Holy Mass: Source & Summit of Catholic Life",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/mass",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "triduum-easter",
     "type": "Sim",
     "label": "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi",
@@ -412,6 +496,18 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": true,
     "checkpointCount": 3
+  },
+  {
+    "id": "ten-commandments",
+    "type": "Sim",
+    "label": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
+    "stage": "CATHOLIC LIFE",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/catholic-life/commandments",
+    "section": "Catholic Life & Faith Formation",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "holy-oils",

@@ -118,6 +118,14 @@ function getDefaultMountForCartridge(id) {
     'seven-sacraments': '/curriculum/catholic-life/seven-sacraments',
     'liturgical-calendar': '/curriculum/catholic-life/liturgical-calendar',
     'liturgical-postures': '/curriculum/catholic-life/liturgical-postures',
+    'catholic-rites': '/curriculum/catholic-life/rites',
+    'cst-virtues': '/curriculum/catholic-life/cst-virtues',
+    'latin-mass-prayers': '/curriculum/catholic-life/prayers-latin',
+    'nicene-creed': '/curriculum/catholic-life/creed',
+    'ten-commandments': '/curriculum/catholic-life/commandments',
+    'order-of-the-mass': '/curriculum/catholic-life/mass',
+    'sacred-objects': '/curriculum/catholic-life/sacred-objects',
+    'first-communion': '/curriculum/catholic-life/first-communion',
     'phonics-lab': '/curriculum/english/phonics/phonics-lab',
     'phonics-screening': '/curriculum/english/phonics/screening-check',
     'spelling-bee': '/curriculum/english/spelling/spelling-bee',
@@ -144,7 +152,7 @@ function getDefaultMountForCartridge(id) {
 }
 
 function getDefaultSectionForCartridge(id) {
-  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross') || id.includes('triduum') || id.includes('easter') || id.includes('liturgy') || id.includes('sacrament') || id.includes('posture') || id.includes('calendar')) {
+  if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || id.includes('station') || id.includes('cross') || id.includes('triduum') || id.includes('easter') || id.includes('liturgy') || id.includes('sacrament') || id.includes('posture') || id.includes('calendar') || id.includes('rite') || id.includes('cst') || id.includes('virtue') || id.includes('latin') || id.includes('prayer') || id.includes('creed') || id.includes('commandment') || id.includes('mass') || id.includes('sacred') || id.includes('communion')) {
     return 'Catholic Life & Faith Formation';
   }
   if (id.includes('math') || id.includes('pythagoras') || id.includes('algebra') || id.includes('calculus') || id.includes('fractions') || id.includes('bodmas') || id.includes('times')) {
@@ -413,9 +421,13 @@ export function generateScenesManifest(options = {}) {
     for (const [id, item] of allCartridgeFiles.entries()) {
       const targetAst = path.join(targetDir, `${id}.ast`);
       const targetSvg = path.join(targetDir, `${id}.svg`);
-      fs.writeFileSync(targetAst, item.content, 'utf8');
+      if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
+        fs.writeFileSync(targetAst, item.content, 'utf8');
+      }
       if (fs.existsSync(item.svgPath) && item.svgPath !== targetSvg) {
-        fs.copyFileSync(item.svgPath, targetSvg);
+        if (!fs.existsSync(targetSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetSvg).size) {
+          fs.copyFileSync(item.svgPath, targetSvg);
+        }
       }
     }
   });

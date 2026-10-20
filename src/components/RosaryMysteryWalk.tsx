@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { speakInLanguage } from '../engine/translationService';
 import {
   playSuccessChime,
@@ -184,6 +186,7 @@ export default function RosaryMysteryWalk() {
   const [activeCycle, setActiveCycle] = useState<MysteryCycle>('Joyful');
   const [activeDecade, setActiveDecade] = useState<number>(0); // 0 to 4
   const [currentBead, setCurrentBead] = useState<number>(0); // 0 to 10 (0: Our Father, 1-10: Hail Marys)
+  const [playerExpanded, setPlayerExpanded] = useState<boolean>(true);
 
   const currentMystery = ROSARY_DATA[activeCycle].mysteries[activeDecade];
 
@@ -228,19 +231,137 @@ export default function RosaryMysteryWalk() {
 
   return (
     <div style={{ padding: '1.25rem', background: 'var(--stj-surface)', color: 'var(--stj-text)' }}>
-      {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
-            <span style={{ fontSize: '1.75rem' }}>📿</span>
-            <h2 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, color: 'var(--stj-primary)' }}>
-              Pillar 4: The Holy Rosary & Marian Mysteries
+      {/* Hero Banner with Embedded AST Vector Simulation */}
+      <div
+        style={{
+          background: 'linear-gradient(135deg, #1e1b4b 0%, #172554 60%, #0369a1 100%)',
+          borderRadius: '16px',
+          padding: '1.75rem',
+          color: '#ffffff',
+          marginBottom: '1.5rem',
+          border: '2px solid #38bdf8',
+          boxShadow: '0 8px 24px rgba(3, 105, 161, 0.25)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem',
+        }}
+      >
+        <div style={{ maxWidth: '680px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+            <span style={{ fontSize: '1.8rem' }}>📿</span>
+            <h2 style={{ fontSize: '1.35rem', fontWeight: 900, color: '#fef08a', margin: 0 }}>
+              The Holy Rosary &amp; Marian Mysteries
             </h2>
-            <span className="stj-badge stj-badge-primary">Contemplative Prayer</span>
+            <span
+              style={{
+                background: '#38bdf8',
+                color: '#082f49',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.72rem',
+                fontWeight: 800,
+              }}
+            >
+              MARIAN CONTEMPLATION
+            </span>
           </div>
-          <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--stj-text-muted)', maxWidth: '750px', lineHeight: 1.5 }}>
-            St John Paul II described the Rosary as &ldquo;contemplating the face of Christ with Mary.&rdquo; Walk through the 20 mysteries of salvation history and step through the beads interactively.
+          <p style={{ margin: 0, fontSize: '0.92rem', color: '#e0f2fe', lineHeight: 1.5 }}>
+            St John Paul II described the Holy Rosary as &ldquo;contemplating the face of Christ with Mary.&rdquo; Journey through the 20 sacred mysteries of salvation history—Joyful, Luminous, Sorrowful, and Glorious—with living vector beads and meditation checkpoints.
           </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setPlayerExpanded(!playerExpanded)}
+            style={{
+              background: playerExpanded ? '#facc15' : 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '8px',
+              color: playerExpanded ? '#1e1b4b' : '#ffffff',
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{playerExpanded ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=rosary-mysteries"
+            style={{
+              background: 'rgba(255, 255, 255, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.4)',
+              borderRadius: '8px',
+              color: '#ffffff',
+              padding: '8px 16px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* Embedded AST Vector Media Player */}
+      {playerExpanded && (
+        <div
+          style={{
+            borderRadius: '14px',
+            overflow: 'hidden',
+            border: '2px solid #0284c7',
+            background: '#090e1a',
+            marginBottom: '2rem',
+            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+          }}
+        >
+          <div
+            style={{
+              background: '#0c4a6e',
+              padding: '10px 16px',
+              borderBottom: '1px solid #0369a1',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: '0.8rem',
+            }}
+          >
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: The 20 Holy Rosary Mysteries</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#bae6fd', fontFamily: 'monospace' }}>
+              Cartridge: rosary-mysteries.ast
+            </span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="rosary-mysteries"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
+
+      {/* Header Controls */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--stj-primary)', textTransform: 'uppercase' }}>
+            Interactive Decades &amp; Scripture Meditations
+          </span>
         </div>
 
         <button

@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import { speakInLanguage } from '../engine/translationService';
 import {
   playSuccessChime,
@@ -184,6 +186,7 @@ const BEATITUDES: Beatitude[] = [
 ];
 
 export default function CommandmentsMoralGuide() {
+  const [showPlayer, setShowPlayer] = useState(false);
   const [selectedNum, setSelectedNum] = useState(1);
   const [activeSubTab, setActiveSubTab] = useState<'commandments' | 'beatitudes' | 'examination'>('commandments');
   const [examChecklist, setExamChecklist] = useState<Record<number, boolean>>({});
@@ -223,16 +226,78 @@ export default function CommandmentsMoralGuide() {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={() => handleListen(`Commandment ${activeCmd.number}: ${activeCmd.childTitle}. ${activeCmd.traditionalText}. ${activeCmd.howWeLiveIt}`)}
-          className="stj-btn stj-btn-secondary"
-          style={{ minHeight: '38px', padding: '4px 14px', fontSize: '0.82rem' }}
-        >
-          <span>🔊</span>
-          <span>Listen Commandment {activeCmd.number}</span>
-        </button>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <button
+            type="button"
+            onClick={() => handleListen(`Commandment ${activeCmd.number}: ${activeCmd.childTitle}. ${activeCmd.traditionalText}. ${activeCmd.howWeLiveIt}`)}
+            className="stj-btn stj-btn-secondary"
+            style={{ minHeight: '38px', padding: '4px 14px', fontSize: '0.82rem' }}
+          >
+            <span>🔊</span>
+            <span>Listen Commandment {activeCmd.number}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#facc15' : 'rgba(255, 255, 255, 0.15)',
+              border: '1.5px solid #ca8a04',
+              borderRadius: '8px',
+              color: showPlayer ? '#1e1b4b' : 'inherit',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 800,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=ten-commandments"
+            style={{
+              background: 'rgba(255, 255, 255, 0.1)',
+              border: '1px solid #cbd5e1',
+              borderRadius: '8px',
+              color: 'inherit',
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              textDecoration: 'none',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
+        </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Ten Commandments */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #ca8a04', background: '#090e1a', marginBottom: '1.5rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#1c1917', padding: '10px 16px', borderBottom: '1px solid #44403c', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: The Ten Commandments (The Two Tablets of Sinai)</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontFamily: 'monospace' }}>Cartridge: ten-commandments.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="ten-commandments"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+            bslEnabled={false}
+          />
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '1.5rem' }}>

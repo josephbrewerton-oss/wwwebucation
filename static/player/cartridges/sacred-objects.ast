@@ -1,0 +1,57 @@
+(:scene :id "sacred-objects" :type "Sim" :title "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "categoryFilter" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Category (1: Sacred Vessels, 2: Sacred Linens, 3: Sanctuary Appointments, 4: Vestments)")
+    (:var :name "zoomDetail" :val 1.0 :min 0.8 :max 1.6 :step 0.1 :label "Examination Zoom Level")
+    (:var :name "specularGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Gold & Silver Sacred Sheen Intensity")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#category-slider-knob" :axis "x" :min 160 :max 640
+      (:bind-var "categoryFilter" :map "linear" :from-min 160 :from-max 640 :to-min 1.0 :to-max 4.0)
+    )
+    (:draggable :target "#zoom-lens-control" :axis "y" :min 100 :max 260
+      (:bind-var "zoomDetail" :map "linear" :from-min 260 :from-max 100 :to-min 0.8 :to-max 1.6)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.5 :text "Every object in the Catholic sanctuary is set apart and consecrated for the worship of God, reflecting the splendour of Heaven.")
+    (:start 4.5 :end 9.5 :text "Sacred Vessels — Chalice, Paten, and Ciborium — are crafted from precious gold and silver to hold the living Body and Blood of Christ.")
+    (:start 9.5 :end 14.5 :text "Sacred Linens — Corporal, Purificator, and Pall — are woven of pure linen with reverent white embroidery to safeguard every consecrated particle.")
+    (:start 14.5 :end 19.5 :text "Sanctuary Appointments — Tabernacle, burning red Sanctuary Lamp, Altar Bells, and Cruets — sustain the Holy Sacrifice and silent adoration.")
+    (:start 19.5 :end 24.5 :text "Liturgical Vestments — Alb, Cincture, Stole, and Chasuble — conceal the priest's personality so Christ Himself presides at the altar.")
+    (:start 24.5 :end 28.0 :text "The Monstrance (Ostensorium) holds the consecrated Host high in its golden sunburst during Eucharistic Benediction and Adoration.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "Why are the Chalice and Paten made of precious metals like gold or silver?")
+      (:options
+        ("Out of supreme reverence and honour for the real Body and Blood of Jesus Christ" :correct true)
+        ("Because ordinary metals were banned by ancient kings" :correct false)
+        ("Purely for decoration with no spiritual meaning" :correct false)
+        ("Because gold keeps wine colder" :correct false)
+      )
+      (:explanation "The Catholic Church instructs that sacred vessels that touch the consecrated species must be crafted from precious metals (or lined with gold) as a direct act of adoration for Jesus truly present.")
+    )
+    (:checkpoint :at 0.72
+      (:prompt "What does the Priest's white Alb symbolize when he vests for Holy Mass?")
+      (:options
+        ("The baptismal innocence, purity of soul, and the white robes of the redeemed in Heaven" :correct true)
+        ("A doctor's medical lab coat" :correct false)
+        ("A Roman toga worn for warm weather" :correct false)
+        ("A symbol of the priest's personal wealth" :correct false)
+      )
+      (:explanation "The Alb (from the Latin 'albus' meaning white) recalls the white garment given at Baptism and the radiant white robes worn by the saints before the Throne of the Lamb in Revelation 7:14.")
+    )
+  ))
+
+  (:bindings (
+    (:target "#gold-specular-sheen" :attr "opacity" :expr "0.4 + 0.3 * sin(t * 3.0) * specularGlow")
+    (:target "#monstrance-sunburst" :attr "transform" :expr "'rotate(' + (t * 5.0) + ' 660 170)'")
+    (:target "#sanctuary-lamp-red-glow" :attr "opacity" :expr "0.5 + 0.35 * sin(t * 2.2)")
+    (:target "#active-category-display" :attr "opacity" :expr "1.0")
+  ))
+)
