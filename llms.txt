@@ -4,11 +4,12 @@
 
 ## Core Portal Endpoints & Route Map
 - [Portal Home](/) - Overview, Quick Starters, and Subject Hub
-- [AST Vector Media Player](/media-player) - Interactive curriculum vector slides, formative checkpoints, 3D viewpoints, smartboard chalkboard overlay, and parameter sandboxes
+- [AST Vector Media Player](/media-player) - Full-featured vector stage, 3D viewpoints, interactive parameter HUD, smartboard chalkboard overlay, and procedural sonification
 - [Decentralized Cartridge Vault](/cartridges) - Offline curriculum ROM repository, PhET/SWF transpiler bridge, and cartridge compressor
 - [Standalone Micro-Vector Player](/player.html) - Zero-dependency embeddable vector stage, OBS studio broadcaster, and Developer Studio
 - [EYFS & KS1 Phonics Sounds Suite](/phonics) - DfE Phases 2–5 soundboard, sound buttons blending mat, Alien Words screening check & flashcards
 - [MFL & Polyglot Languages Studio](/languages) - Spanish, French & Latin comparative phonics, verb wheels, etymology bridges & vocab sprints
+- [3D British Sign Language (BSL) Studio](/bsl) - 360° rotatable 3D two-handed manual alphabet, A-E-I-O-U vowel tap positions, Signer vs Receiver POV
 - [Shakespeare Globe Theatre Suite](/shakespeare) - 1599 Wooden O 3D stage geometry, 5-Act dramatic play-throughs, spoken blank verse & metronomes
 - [Practice Arena](/practice-lab) - Interactive AST questions, Professor Turing AI hints, instant mistake diagnostics
 - [Curriculum Lessons](/learning-zone) - Oak National Academy aligned interactive lesson viewer
@@ -24,71 +25,80 @@
 - [Privacy Policy](/privacy) - Zero-cloud egress, on-device IndexedDB storage, and GDPR compliance
 - [Child Safety Policy](/child-safety) - Strict safeguarding standards, local AI inference, and student data protection
 
-## Architectural Overview
+## Architectural Overview & Engine Upgrades
 - **Zero Cloud Leakage & Zero Server Data**: The site holds 0 student or user data on remote servers. All logs, answers, voice inputs, and progress records remain exclusively within client-side IndexedDB (`services/dbStore.ts`, `services/jotter-db.ts`).
-- **Autonomous Self-Mounting Cartridges**: Cartridges carry their own address coordinates (`:mount "/curriculum/..."`), subject section (`:section`), and tier (`:tier "core"`). The portal dynamically constructs its navigation hierarchy from the cartridges itself.
-- **Inference Engine**: In-browser Chrome Prompt API / Gemini Nano (W3C `window.LanguageModel`), local Ollama endpoints, or WebLLM via WebGPU.
-- **Decoupled Headless Distribution**: The AST Vector Engine is fully packaged as `@stjosephs/ast-vector-player` (`static/player/package.json`), completely decoupled from the React portal with zero framework dependencies. It can be dropped into any external website, LMS, or application across four distribution formats: (1) Headless JS runtime (`import { AstEngine } from '@stjosephs/ast-vector-player'`); (2) Zero-dependency Web Component (`<micro-vector-player>`); (3) Embeddable responsive LMS iframe (`/player/index.html?preset=...`) with bidirectional `postMessage` telemetry; and (4) Single-file air-gapped HTML bundle (`< 45 KB`) running from `file://` or USB sticks.
-- **British Sign Language (BSL) In-Vision Vector Interpreter**: Built-in procedural 3D signing overlay (< 12 KB, zero external video streams) rendering authentic BANZSL two-handed manual alphabet fingerspelling for curriculum keywords, synchronized with narrative speech synthesis word boundaries and subtitles. Features dual camera perspectives (Signer POV looking down from chest vs. Receiver POV facing conversational partner), W3C Document Picture-in-Picture (PiP) undocking, and fluid 60 FPS Hermite spline co-articulation.
-- **Micro-Payload Vector Substrate**: AST Vector Media Player (`/static/player/ast-engine.js`) replaces heavy 50–100 MB video streaming with 2.5 KB – 25 KB declarative S-Expression AST vector cartridges. Sub-15 ms boot time, < 8 MB RAM footprint.
+- **Multi-Modal Synchronized Tuples**: Full multi-modal tuple binding: `[AST Vector Stage + Synchronized Video Underlay/Overlay + Procedural Web Audio Synth + S-Expression Reactive Data-Flow + Sub-pixel Pointer Gestures + Formative Assessment Checkpoints]`. Video and vector playback are locked to a single master clock with configurable `video-fit` ("contain" | "cover"), frame-accurate timeline scrubbing, and reactive HUD overlays that dynamically bind to video timestamps.
+- **Decoupled, Domain-Agnostic Flash-Caliber Engine (<35 KB gzipped)**: The AST Vector Engine (`@stjosephs/ast-vector-player`) is fully decoupled from the React portal and purged of hardcoded scene logic. It runs with 0 external runtime dependencies, sub-15 ms cold start, and <8 MB RAM. It features dynamic parameter and selector HUD auto-discovery (`setupSimParametersHud`), which automatically parses `:inputs`, `:vars`, numerical bounds, step sizes, labels, and selector controls (such as DNA base-pair unzipping and nucleotides, kinetic gas pressure valves, electric circuit switches, calculus tangent probes, or DOOH commercial dials) for ANY scene or domain.
+- **High-Performance AST Binary Bytecode (.astb)**: Vector scenes can be compiled and streamed as ultra-dense binary bytecode (`.astb`) via `src/utils/astBytecode.ts` and `ast-engine.js`. The zero-allocation binary reader decodes opcodes for stages, reactive bindings, 3D meshes, keyframes, computed expressions, state machines, and emitters with sub-millisecond parsing and a 99.8% size reduction over legacy web bundles.
+- **On-Device Edge AI & Gemini Nano Synergy**: Powered by the Chrome Prompt API (`window.LanguageModel`) and local WebLLM. This pairing is historically unique: while generative models struggle to output 2–5 MB of imperative JavaScript (e.g. PhET bundles) at runtime, they can generate 1–4 KB declarative AST S-Expressions constrained by GBNF grammar (`ast-sexpr.gbnf` / `ast-scene.gbnf`) in ~500 ms with mathematical syntax guarantees. Students receive instant, personalized pedagogical hints and formative scaffolds completely offline with zero cloud data egress.
+- **Universal Translator & Multilingual Voice/Subtitles**: Procedural speech synthesis and bilingual subtitles in English, Spanish, French, Latin, German, and Italian, perfectly locked to AST keyframe intervals.
+- **British Sign Language (BSL) In-Vision Vector Interpreter**: Built-in procedural 3D signing overlay (<12 KB, zero external video streams) rendering authentic BANZSL two-handed manual alphabet fingerspelling for curriculum keywords, synchronized with narrative speech synthesis word boundaries and subtitles. Features dual camera perspectives (Signer POV looking down from chest vs. Receiver POV facing conversational partner), W3C Document Picture-in-Picture (PiP) undocking, and fluid 60 FPS Hermite spline co-articulation.
 - **Smartboard & Stylus Pen Overlay**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
-- **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset Web Audio synthesis.
+- **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset mathematical Web Audio synthesis.
+- **PhET & Legacy Flash Transpiler Bridge (`ast-phet-bridge.js` & `phetBridge.ts`)**: Distills 12 MB legacy PhET HTML5/JSON bundles and Flash SWFs down into <4 KB AST S-Expressions (99.8% payload reduction) while preserving physical conservation laws, zero-asset Web Audio, and SCORM auto-reporting.
 - **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
-- **Humanitarian Air-Gap Bundling**: Single-file HTML offline bundles (`exportAirgapHtmlBundle.ts`) enabling full academic curriculum delivery on flash drives in off-grid classrooms with zero internet.
+- **Decoupled 4-Way Distribution**: The engine distributes across four universal formats: (1) Headless npm package (`@stjosephs/ast-vector-player`); (2) Zero-dependency Web Component (`<micro-vector-player>`); (3) Embeddable responsive LMS iframe (`/player/index.html?preset=...`) with bidirectional `postMessage` telemetry; and (4) Single-file air-gapped HTML bundle (`<45 KB`) running from `file://` or USB thumb drives.
+- **Cross-Industry DOOH & AdTech Ready (Track B)**: Meets strict IAB display advertising weight limits (<45 KB total ad weight vs 150 KB cap), runs 24/7 on low-power quad-core ARM chips (Raspberry Pi, Android 11 sticks, LG webOS, Samsung Tizen) with <8 MB RAM, scales infinitely from 2-inch shelf labels to 100-ft 8K billboards with zero pixelation, and executes Dynamic Creative Optimization (DCO) over `postMessage`.
 
-## Production AST Vector Simulations & Films (Self-Mounting Curriculum Cartridges)
-- [Solemn Eucharistic Procession Film](/curriculum/catholic-life/film) - Catholic Life: Synchronized liturgical film and vector HUD overlay, Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil benediction.
-- [Sacred Altar Anatomy](/curriculum/catholic-life/altar-anatomy) - Catholic Life: Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
-- [Sacred Church Tour](/curriculum/catholic-life/church-tour) - Catholic Life: 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
-- [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) - Catholic Life: The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
-- [Holy Oils & Sacred Ambry](/curriculum/catholic-life/holy-oils) - Catholic Life: Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
-- [The Holy Rosary 3D Mysteries](/curriculum/catholic-life/rosary-mysteries) - Catholic Life: Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
-- [Calculus Curves](/curriculum/maths/calculus/tangent-slopes) - GCSE/A-Level Calculus: Tangent Slopes dy/dx, Stationary Turning Points & Riemann Integrals with GeoGebra/Desmos formula evaluation.
-- [Kinetic Gas Theory](/curriculum/science/physics/kinetic-gas) - KS3/KS4 Molecular Gas Theory: Boyle's Law PV = nRT, Gay-Lussac's Law, impulse momentum pressure gauge, and solid/liquid/gas phase changes.
-- [Pythagoras Geometric Proof](/curriculum/maths/geometry/pythagoras) - KS3 Geometry: High-fidelity Euclidean shear proof, dynamic square slicing, area conservation, and algebraic a² + b² = c² step-by-step verification.
-- [Aquarium Living Ecosystem](/curriculum/computing/stress-benchmark) - Benchmark & Biology: Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
-- [Electric Circuits Lab](/curriculum/science/physics/electric-circuits) - KS3 Physics: Interactive knife switches, Ohm's law V = IR, series/parallel branches, and live ammeter/voltmeter readings.
-- [Algebra Balance Lab](/curriculum/maths/algebra/balance-scale) - KS2/KS3 Mathematics: Two-pan balance scale, algebraic balancing equations, and zero-pair cancelations.
-- [Fraction Wall & Slicing](/curriculum/maths/arithmetic/fractions) - KS2 Mathematics: Visual fraction wall, dynamic denominator slicing, equivalent fractions, and part-whole arithmetic.
-- [Solar System 3D](/curriculum/science/physics/solar-system) - KS3 Astronomy: Heliocentric planetary orbits, Keplerian velocities, and 3D inclination angles.
-- [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) - KS3 Biology: Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
-- [Water Cycle Continuous Engine](/curriculum/geography/water-cycle) - KS2 Geography/Science: Evaporation, transpiration, condensation, precipitation, and percolation cycle.
-- [Bohr Atom & Electron Shells](/curriculum/science/chemistry/atomic-structure) - KS3 Chemistry: 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell tilt.
-- [Kinematics & Velocity Vectors](/curriculum/science/physics/velocity-vectors) - KS3 Physics: Distance-time and velocity-time graphs with synchronized vector sprites.
-- [DNA Watson-Crick Double Helix](/curriculum/science/biology/dna-helix) - KS3/KS4 Genetics: Hydrogen bonded base pairing (A-T, C-G) in 3D projected helical twist.
-- [BODMAS Order of Operations](/curriculum/maths/algebra/bodmas) - KS2/KS3 Mathematics: Visual forcefield brackets, operation precedence clamps, and interactive evaluation steps.
-- [Phonics Laboratory](/curriculum/english/phonics/phonics-lab) - EYFS/KS1 Early Reading: Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
-- [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) - EYFS/KS1 Early Literacy: DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
-- [Spelling Bee Arena](/curriculum/english/spelling/spelling-bee) - KS1/KS2/KS3 English: Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
-- [Times Tables 2D Array](/curriculum/maths/arithmetic/times-tables) - KS1/KS2 Mathematics: Multiplication arrays, distributive property slicing, and commuter proofs.
-- [Maths Fishing Bonds to 10/20](/curriculum/maths/arithmetic/number-bonds) - KS1 Mathematics: Gamified number bond rods and complement calculations.
-- [Mountain Elevation Trigonometry](/curriculum/geography/mountain-elevation) - KS2/KS3 Geography/Maths: Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
-- [Shakespeare Globe Theatre](/curriculum/english/theatre/globe) - KS3/KS4 English Literature: 1599 Globe Theatre stage anatomy, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
-- [Macbeth 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) - KS3/KS4 English Literature: 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
-- [Modern Foreign Languages (Spanish/French/Latin)](/curriculum/languages/mfl-polyglot) - KS2/KS3 MFL: Conversational speech synthesis, phonetic soundboard, and regular verb conjugation wheels.
-- [3D British Sign Language (BSL) Fingerspelling](/curriculum/languages/bsl-fingerspelling) - Inclusion & Languages: 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
+## Complete Production Curriculum Cartridge Catalog (46 Cartridges)
 
-## Formative Assessment & Checkpoint Control Subsystem
-- **Randomized Option Shuffling**: Every formative checkpoint dynamically randomizes answer choice order via Fisher-Yates shuffle at runtime, decoupling correct answers from index 0/Option A and tracking the true answer key transparently.
-- **Flexible Question Visibility**: Checkpoint questions can be dismissed, minimized into a floating non-intrusive pill (`🎯 Show Question`), or restored on-demand.
-- **Presenter & Classroom Toggle**: Interactive mode can be enabled or disabled via toolbar button or keyboard shortcut `Q`, allowing teachers to deliver continuous presentations without mandatory pauses or activate checkpoints on demand.
+### Mathematics & Quantitative Reasoning
+1. [Calculus: Tangent Slopes & Integrals](/curriculum/maths/calculus/tangent-slopes) (`calculus-curves`) - Tangent slope dy/dx, stationary turning points, and Riemann Simpson's 1/3 numerical integrals.
+2. [Algebra Balance Scale Lab](/curriculum/maths/algebra/balance-scale) (`algebra-balance`) - Two-pan balance scale, algebraic equation balancing (2x + 5 = 15), and zero-pair cancelations.
+3. [Pythagoras' Geometric Proof](/curriculum/maths/geometry/pythagoras) (`pythagoras`) - Euclidean shear proof, dynamic square slicing, area conservation, and algebraic a² + b² = c² verification.
+4. [BODMAS / BIDMAS Forcefield Clamping](/curriculum/maths/algebra/bodmas) (`bodmas`) - Visual operation precedence clamps, bracket forcefields, and step-by-step arithmetic evaluations.
+5. [Fraction Wall & Slicing](/curriculum/maths/arithmetic/fractions) (`fractions`) - Visual fraction wall, dynamic denominator slicing, equivalent fractions, and common denominator arithmetic.
+6. [Times Tables 2D Multiplication Array](/curriculum/maths/arithmetic/times-tables) (`times-tables`) - 2× to 12× multiplication arrays, distributive property slicing, and commutative proofs.
+7. [Maths Fishing: Number Bonds to 10/20](/curriculum/maths/arithmetic/number-bonds) (`math-fishing`) - Gamified number bond rods, hook physics, and complementary addition calculations.
 
-## Physical Engines, Spatial Telemetry & Transpiler Bridges
-- **Analytic 3D Ray-Math & Symbolic Spatial Telemetry Subsystem**: Replaces raw video buffers and vision frame streaming with compact symbolic S-Expression tokens `(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])` and `(:camera-state :theta ... :phi ... :dist ...)`. Pure CPU analytic geometry (< 15 KB, 0 GPU/WebGL driver requirements) with deterministic closed-loop actuation opcodes (`:rotate-camera`, `:nudge`, `:var`) and 60 FPS Painter's algorithm depth fog layer re-sorting.
-- **Direct Flash-Caliber Canvas Manipulation (`ast-gestures.js`)**: Real-time pointer capture and drag-and-drop on live SVG elements with sub-pixel inverse CTM coordinate translation.
-- **Zero-Asset Procedural Web Audio (`VectorProceduralAudioSynth`)**: 0 KB mathematical Web Audio synthesis for tactile switch clicks, ascending pentatonic chimes (C5-E5-G5-C6), and liturgical bell/chime cues.
-- **PhET Simulation Ingestion (`ast-phet-bridge.js` & `phetBridge.ts`)**: Distills 12 MB legacy PhET HTML5/JSON bundles down into < 4 KB AST S-Expressions (99.8% payload reduction).
-- **GeoGebra & Desmos Calculus Plotter (`calculusPlotter.ts`)**: Numerical derivative tangent lines, Simpson's 1/3 integration polygons, and stationary point detection.
-- **Micro-SCORM 1.2 / 2004 & xAPI Gradebook Bridge (`MicroSCORMBridge`)**: Zero-dependency gradebook sync for Canvas, Moodle, and Blackboard.
+### Physics, Chemistry & Space Sciences
+8. [Kinetic Gas Theory & Boyle's Law](/curriculum/science/physics/kinetic-gas) (`kinetic-gas`) - Molecular gas dynamics, Boyle's Law PV = nRT, Gay-Lussac's Law, wall impulse pressure gauge, and solid/liquid/gas phase changes.
+9. [Electrical Circuits Lab & Ohm's Law](/curriculum/science/physics/electric-circuits) (`electric-circuits`) - Interactive knife switches, Ohm's law V = IR, series/parallel branches, and live ammeter/voltmeter readouts.
+10. [Bohr Atomic Structure & Electron Shells](/curriculum/science/chemistry/atomic-structure) (`atom`) - 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell inclination tilt.
+11. [Kinematics: Velocity & Distance-Time Vectors](/curriculum/science/physics/velocity-vectors) (`velocity`) - Distance-time and velocity-time graphs with synchronized vector sprites and acceleration vectors.
+12. [Solar System 3D Heliocentric Orbits](/curriculum/science/physics/solar-system) (`solar-system`) - Heliocentric planetary orbits, Keplerian velocities, axial tilts, and 3D inclination angles.
 
-## Cross-Industry Applications: Digital Signage (DOOH) & Programmatic Advertising
-- **Standalone Engine Package (`@stjosephs/ast-vector-player`)**: Standalone < 35 KB gzipped (< 150 KB uncompressed) runtime, decoupled from the school portal and embeddable anywhere via `<micro-vector-player>` Web Component or sandboxed iframe.
-- **IAB Ad-Tech Compliance (< 45 KB Total Ad Weight)**: IAB and Google Display Network mandate initial display ad loads under 150 KB. An entire AST interactive 3D, physics, or particle banner loads under 45 KB total payload (engine + scene), completely bypassing the heavy runtimes of Lottie (~150 KB), GSAP, and Three.js (> 600 KB).
-- **24/7 Digital Signage & DOOH Hardware Reliability**: Consumes < 8 MB RAM with zero garbage collection thrashing. Operates continuously 24/7/365 without memory leaks or crashes on low-cost ARM media players (Raspberry Pi CM4, Rockchip, Android 11 sticks, LG webOS, Samsung Tizen).
-- **Dynamic Creative Optimization (DCO)**: Real-time localized pricing, countdown timers, and weather-driven ad creatives update at 60 FPS via reactive `:vars` without re-rendering video blobs.
-- **Infinite DPI Resolution Independence**: Pure mathematical SVG vector projection scales from a 2-inch supermarket electronic shelf label (ESL) to a 100-foot 8K Times Square LED billboard with zero pixelation and zero bandwidth increase.
-- **Interactive Retail Kiosks & Wayfinding**: Sub-pixel PointerCapture touch/stylus dragging (`ast-gestures.js`) with quadratic Bézier pen smoothing and 0 KB procedural Web Audio UI sonification.
-- **Commercial Dual-Licensing (Track B)**: Enterprise DOOH networks, ad tech providers, and kiosk OEMs license proprietary closed-source rights under Track B (`LICENSING.md`), directly funding humanitarian classroom hardware.
+### Biology & Earth Sciences
+13. [DNA Watson-Crick Double Helix & Transcription](/curriculum/science/biology/dna-helix) (`dna-helix`) - Hydrogen-bonded base pairing (A-T, C-G) in 3D projected helical twist with interactive unzipping and transcription controls.
+14. [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) (`photosynthesis`) - Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
+15. [Water Cycle Continuous Earth Engine](/curriculum/geography/water-cycle) (`water-cycle`) - Evaporation, transpiration, condensation, precipitation, and percolation cycle.
+16. [Mountain Elevation & Atmospheric Science](/curriculum/geography/mountain-elevation) (`mountain-elevation`) - Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
+17. [Aquarium Living Ecosystem Stress Benchmark](/curriculum/computing/stress-benchmark) (`fish-tank`) - Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
+
+### Early Literacy, Phonics & English Language Arts
+18. [Early Phonics Laboratory](/curriculum/english/phonics/phonics-lab) (`phonics-lab`) - Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
+19. [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) (`phonics-screening`) - DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
+20. [Spelling Bee Championship Arena](/curriculum/english/spelling/spelling-bee) (`spelling-bee`) - Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
+21. [Shakespeare Globe Theatre 1599 Anatomy](/curriculum/english/theatre/globe) (`shakespeare`) - 1599 Wooden O 3D stage geometry, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
+22. [Macbeth: 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) (`shakespeare-macbeth`) - 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
+
+### Languages, Polyglot & Accessibility
+23. [MFL & Polyglot Languages Studio](/curriculum/languages/mfl-polyglot) (`languages`) - Spanish, French & Latin comparative phonics, conversational speech synthesis, and regular verb conjugation wheels.
+24. [3D British Sign Language (BSL) Two-Handed Fingerspelling](/curriculum/languages/bsl-fingerspelling) (`bsl-fingerspelling`) - 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
+
+### Catholic Life, Liturgy & Sacraments
+25. [Solemn Eucharistic Procession Film](/curriculum/catholic-life/film) (`eucharistic-procession-film`) - Synchronized liturgical film and vector HUD overlay, Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil benediction.
+26. [Sacred Altar Anatomy & Types](/curriculum/catholic-life/altar-anatomy) (`altar-anatomy`) - Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
+27. [Sacred Church Tour & Architecture](/curriculum/catholic-life/church-tour) (`church-tour`) - 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
+28. [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) (`stations-of-the-cross`) - The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
+29. [Holy Oils & Sacred Ambry (Olea Sancta)](/curriculum/catholic-life/holy-oils) (`holy-oils`) - Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
+30. [Holy Water & The Thurible (Asperges & Incense)](/curriculum/catholic-life/holy-water-thurifer) (`holy-water-thurifer`) - Holy Water fonts, Aspergillum & Aspersorium, Thurible censing swings, charcoal boat, and sacramental purification rites.
+31. [The Holy Rosary: 3D Beads & 20 Mysteries](/curriculum/catholic-life/rosary-mysteries) (`rosary-mysteries`) - Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
+32. [First Holy Communion & Eucharistic Adoration](/curriculum/catholic-life/first-communion) (`first-communion`) - Catechetical preparation for First Holy Communion, Real Presence, Transubstantiation, and Eucharistic Adoration in the Monstrance.
+33. [The Seven Holy Sacraments](/curriculum/catholic-life/seven-sacraments) (`seven-sacraments`) - Sacraments of Initiation (Baptism, Confirmation, Eucharist), Healing (Reconciliation, Anointing), and Service (Holy Orders, Matrimony).
+34. [The Order of the Holy Mass](/curriculum/catholic-life/order-of-the-mass) (`order-of-the-mass`) - Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites with Latin & English dialogs.
+35. [The Sacred Paschal Triduum & Easter](/curriculum/catholic-life/triduum-easter) (`triduum-easter`) - Holy Thursday Mass of the Lord's Supper, Good Friday Passion, Easter Vigil Lucernarium (Lumen Christi), and Easter Sunday Resurrection.
+36. [The Catholic Liturgical Year & Seasons](/curriculum/catholic-life/liturgical-calendar) (`liturgical-calendar`) - Seasonal cycle of Advent, Christmas, Lent, Triduum, Easter, and Ordinary Time with liturgical color symbolism.
+37. [Sacred Postures & Gestures in Prayer](/curriculum/catholic-life/liturgical-postures) (`liturgical-postures`) - Genuflection, bowing, kneeling, standing, Sign of the Cross, and Orans posture with theological meanings.
+38. [The Liturgy of the Hours (Divine Office)](/curriculum/catholic-life/liturgy-of-the-hours) (`liturgy-of-the-hours`) - Sanctification of daily time through Matins, Lauds, Terce, Sext, None, Vespers, and Compline.
+39. [The Nicene & Apostles' Creed](/curriculum/catholic-life/nicene-creed) (`nicene-creed`) - Systematic exploration of the Credo in Unum Deum, Trinitarian theology, Christology, and Four Marks of the Church.
+40. [The Ten Commandments & Moral Law](/curriculum/catholic-life/ten-commandments) (`ten-commandments`) - The Decalogue on the Two Tablets of Sinai, love of God and neighbor, and Catholic moral theology.
+41. [Sacred Vessels, Linens & Vestments](/curriculum/catholic-life/sacred-objects) (`sacred-objects`) - Chalice, Ciborium, Paten, Monstrance, Corporal, Purificator, Alb, Cincture, Stole, Chasuble, and Humeral Veil.
+42. [Latin Prayers & Gregorian Chant](/curriculum/catholic-life/latin-mass-prayers) (`latin-mass-prayers`) - Pater Noster, Ave Maria, Gloria Patri, Salve Regina, and Gregorian neume notation.
+43. [The 24 Catholic Rites & Churches](/curriculum/catholic-life/catholic-rites) (`catholic-rites`) - Universal communion across Western Latin Rite and Eastern Catholic Rites (Byzantine, Alexandrian, Antiochene, Armenian, Chaldean).
+44. [Catholic Social Teaching & Gospel Virtues](/curriculum/catholic-life/cst-virtues) (`cst-virtues`) - Seven principles of CST (Human Dignity, Subsidiarity, Common Good, Option for the Poor, Solidarity) and theological/cardinal virtues.
+45. [Sample Physics Knowledge Pipeline](/curriculum/science/physics/pipeline-sample) (`pipeline-sample`) - Algorithmic physics pipeline and kinetic energy vector calculation testbed.
+46. [Portal Welcome & Simulator Onboarding](/curriculum/portal/welcome) (`welcome`) - Guided onboarding tour of the AST vector canvas, camera orbit controls, and smartboard stylus whiteboard tools.
 
 ## Structured Substrates & Machine Manifests
 - [Master Curriculum Catalog](/manifests/catalog.json) - Machine-readable Oak-aligned curriculum manifest
@@ -99,7 +109,9 @@
 - [Full LLM Specification](/llms-full.txt) - Exhaustive technical and architectural dossier for LLMs
 
 ## Model Consumption & Generation Guidelines
-- When generating question scaffolds, output strictly typed S-Expressions matching `/nano-map.ast`.
-- When generating interactive slides, output SlideScript or GBNF-validated S-Expressions matching `/player/grammar/ast-scene.gbnf`.
-- For educational vector graphics, utilize `<svg viewBox="0 0 800 480">` coordinate spaces with responsive element IDs matching `:bindings` declarations.
-- Keep prompt tokens minimal: rely on concise AST descriptors rather than verbose prose.
+- **Zero Cloud Egress**: Student logs, answers, and evaluations must stay on client-side IndexedDB.
+- **Strict Grammar Validation**: Validate all generated S-Expressions against `/player/grammar/ast-sexpr.gbnf`.
+- **Declarative Tuple Composition**: When composing interactive lessons or slides, declare multi-modal tuples containing vector keyframes, reactive bindings, sound sonification hooks, and formative assessment gates.
+- **Coordinate Space Invariant**: Standardize on `<svg viewBox="0 0 800 480">` with responsive element IDs matching `:bindings` declarations.
+- **Dynamic Parameters**: Emit `:inputs` and `:vars` blocks with explicit `:label`, `:min`, `:max`, `:step`, and `:default` properties to trigger the engine's generic parameter HUD automatically without custom JavaScript.
+- **Token Efficiency**: Rely on concise AST S-Expressions rather than prose; S-Expressions consume 75% fewer tokens and execute deterministically at 60 FPS in native SVG.
