@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-20T14:12:22.482Z",
-  "totalScenes": 45,
+  "generatedAt": "2026-10-21T07:52:14.147Z",
+  "totalScenes": 46,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -618,6 +618,20 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 30
+    },
+    {
+      "id": "welcome",
+      "type": "Sim",
+      "title": "Welcome to AST Vector Player & Educational Simulator",
+      "stage": "PORTAL APPARATUS & SIMULATOR",
+      "duration": 16,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "scenes/welcome.svg",
+      "astFile": "scenes/welcome.ast",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 8
     },
     {
       "id": "pipeline-sample",

@@ -335,8 +335,8 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 ### Available In-Browser WebMCP Tools:
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
 2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via React Router.
-3. `launch_simulation` (Consequential): Programmatically open and render any of the 29 interactive AST vector cartridges on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all 29 vector cartridges with learning invariants, subjects, and runtimes.
+3. `launch_simulation` (Consequential): Programmatically open and render any interactive AST vector cartridge or synchronized educational film on the stage with autoPlay.
+4. `list_ast_simulations` (Read-Only): Enumerate all vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
 
 ---
