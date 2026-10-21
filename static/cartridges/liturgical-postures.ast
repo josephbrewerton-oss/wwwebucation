@@ -1,4 +1,4 @@
-(:scene :id "liturgical-postures" :type "Sim" :title "Sacred Postures & Gestures: Praying with Mind, Heart & Body" :stage "CATHOLIC LIFE" :duration 24.0
+(:scene :id "liturgical-postures" :type "Sim" :oak-id "OAK-KS2-RE-010" :oak-unit "ks2-re-catholic-liturgical-postures-prayer" :title "Sacred Postures & Gestures: Praying with Mind, Heart & Body" :stage "CATHOLIC LIFE" :duration 24.0
   (:vars (
     (:var :name "postureStep" :val 0.0 :min 0.0 :max 4.0 :step 1.0 :label "Sacred Posture Selector")
     (:var :name "reverenceAngle" :val 0.0 :min 0.0 :max 90.0 :step 5.0 :label "Incline / Bow Angle")

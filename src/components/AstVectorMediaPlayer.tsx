@@ -1064,21 +1064,21 @@ const playerSrc = useMemo(() => {
 <optgroup label="🎮 Simulations (Sim)" style={{ background: '#0f172a', color: '#38bdf8' }}>
   {PRESET_OPTIONS.filter((o) => o.type === 'Sim').map((opt) => (
     <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-      {opt.label} ({opt.stage})
+      {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label} ({opt.stage})
     </option>
   ))}
 </optgroup>
 <optgroup label="📑 Interactive Slides (Slide)" style={{ background: '#0f172a', color: '#34d399' }}>
   {PRESET_OPTIONS.filter((o) => o.type === 'Slide').map((opt) => (
     <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-      {opt.label} ({opt.stage})
+      {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label} ({opt.stage})
     </option>
   ))}
 </optgroup>
 <optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
   {PRESET_OPTIONS.filter((o) => o.type === 'App').map((opt) => (
     <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-      {opt.label} ({opt.stage})
+      {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label} ({opt.stage})
     </option>
   ))}
 </optgroup>

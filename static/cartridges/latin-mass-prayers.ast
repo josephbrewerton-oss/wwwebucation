@@ -1,4 +1,4 @@
-(:scene :id "latin-mass-prayers" :type "Sim" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "latin-mass-prayers" :type "Sim" :oak-id "OAK-KS3-RE-013" :oak-unit "ks3-re-catholic-traditional-latin-prayers" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "selectedPrayer" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Selected Latin Prayer (1: Pater Noster, 2: Ave Maria, 3: Sanctus, 4: Agnus Dei)")
     (:var :name "candleFlicker" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Monastery Chapel Candle Illumination")

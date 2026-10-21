@@ -848,6 +848,9 @@ export function generateScenesManifest(options = {}) {
     type: m.type, // 'Sim' | 'Slide' | 'App'
     label: `${m.title}`,
     stage: m.stage,
+    oakId: m.oakId,
+    oakUnit: m.oakUnit,
+    subject: m.subject,
     isCore: m.isCore ?? true,
     tier: m.tier || 'core',
     mount: m.mount,
@@ -866,6 +869,9 @@ export interface ScenePresetOption {
   type: CartridgeType;
   label: string;
   stage: string;
+  oakId?: string;
+  oakUnit?: string;
+  subject?: string;
   isCore?: boolean;
   tier?: string;
   mount?: string;

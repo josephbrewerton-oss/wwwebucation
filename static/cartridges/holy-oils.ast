@@ -1,4 +1,4 @@
-(:scene :id "holy-oils" :type "Slide" :title "The Three Holy Oils & The Sacred Ambry (Olea Sancta)" :stage "CATHOLIC LIFE" :duration 18.0
+(:scene :id "holy-oils" :type "Slide" :oak-id "OAK-KS2-RE-003" :oak-unit "ks2-re-catholic-holy-oils-ambry" :title "The Three Holy Oils & The Sacred Ambry (Olea Sancta)" :stage "CATHOLIC LIFE" :duration 18.0
   (:vars (
     (:var :name "ambryLight" :val 1.0 :min 0.2 :max 1.5 :step 0.1 :label "Ambry Sanctuary Lamp")
     (:var :name "oilGlow" :val 1.0 :min 0.0 :max 1.0 :step 1.0 :label "Ampulla Halo")

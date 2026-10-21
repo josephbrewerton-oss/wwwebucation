@@ -1,4 +1,4 @@
-(:scene :id "order-of-the-mass" :type "Sim" :title "The Order of the Holy Mass: Source & Summit of Catholic Life" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "order-of-the-mass" :type "Sim" :oak-id "OAK-KS2-RE-016" :oak-unit "ks2-re-catholic-order-of-mass" :title "The Order of the Holy Mass: Source & Summit of Catholic Life" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "massPart" :val 3.0 :min 1.0 :max 4.0 :step 1.0 :label "Part of the Holy Mass (1: Introductory, 2: Word, 3: Eucharist, 4: Concluding)")
     (:var :name "elevationHeight" :val 1.0 :min 0.0 :max 1.5 :step 0.1 :label "Elevation of the Consecrated Host & Chalice")

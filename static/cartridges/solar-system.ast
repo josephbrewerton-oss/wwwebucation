@@ -1,4 +1,4 @@
-(:scene :id "solar-system" :type "Sim" :title "Solar System: Heliocentric Planetary Motion" :stage "KS3 SCIENCE" :duration 14.0
+(:scene :id "solar-system" :type "Sim" :oak-id "OAK-KS3-SCI-006" :oak-unit "ks3-physics-space-solar-system-gravity" :title "Solar System: Heliocentric Planetary Motion" :stage "KS3 SCIENCE" :duration 14.0
   (:camera :distance 580 :pitch 24 :yaw "((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 2.8) % 360" :fov 60)
   (:vars (
     (:var :name "warpSpeed" :val 1.0 :min 0.2 :max 10.0 :step 0.2 :label "Time Dilation Warp")

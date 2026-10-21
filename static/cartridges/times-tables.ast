@@ -1,4 +1,4 @@
-(:scene :id "times-tables" :type "Sim" :title "Times Tables: 2× to 12× Array & Distributive Splitter" :stage "KS1/KS2 MATHS" :duration 14.0
+(:scene :id "times-tables" :type "Sim" :oak-id "OAK-KS1-MAT-006" :oak-unit "ks1-maths-arithmetic-multiplication-arrays" :title "Times Tables: 2× to 12× Array & Distributive Splitter" :stage "KS1/KS2 MATHS" :duration 14.0
   (:vars (
     (:var :name "table" :val 7 :min 2 :max 12 :step 1 :label "Times Table (2 to 12)")
     (:var :name "multiplier" :val 8 :min 1 :max 12 :step 1 :label "Multiplier (1 to 12)")

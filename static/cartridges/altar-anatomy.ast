@@ -1,4 +1,4 @@
-(:scene :id "altar-anatomy" :type "Slide" :title "The Catholic Altar: Sacred Anatomy, Types & Appointments" :stage "CATHOLIC LIFE" :duration 18.0
+(:scene :id "altar-anatomy" :type "Slide" :oak-id "OAK-KS2-RE-002" :oak-unit "ks2-re-catholic-altar-mensa-relics" :title "The Catholic Altar: Sacred Anatomy, Types & Appointments" :stage "CATHOLIC LIFE" :duration 18.0
   (:vars (
     (:var :name "candleGlow" :val 1.0 :min 0.2 :max 1.5 :step 0.1 :label "Altar Candles Flame")
     (:var :name "xrayRelics" :val 0.0 :min 0.0 :max 1.0 :step 1.0 :label "Relic Stone X-Ray")

@@ -377,6 +377,23 @@ export default function MediaPlayerPage(): React.JSX.Element {
                 >
                   {currentPresetMeta.stage}
                 </span>
+                {currentPresetMeta.oakId && (
+                  <span
+                    style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      padding: '2px 7px',
+                      borderRadius: '4px',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      color: '#38bdf8',
+                      border: '1px solid rgba(56, 189, 248, 0.35)',
+                      letterSpacing: '0.04em',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    {currentPresetMeta.oakId}
+                  </span>
+                )}
                 <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>&bull; Lumina Motion Suite</span>
               </div>
               <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#f8fafc', margin: '2px 0 0' }}>
@@ -427,7 +444,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                     .filter((c) => (c.type || 'Sim') === 'Sim' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                        {c.icon} {c.title} ({c.stage})
+                        {c.icon} {c.oakId ? `[${c.oakId}] ` : ''}{c.title} ({c.stage})
                       </option>
                     ))}
                 </optgroup>
@@ -436,7 +453,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                     .filter((c) => c.type === 'Slide' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                        {c.icon} {c.title} ({c.stage})
+                        {c.icon} {c.oakId ? `[${c.oakId}] ` : ''}{c.title} ({c.stage})
                       </option>
                     ))}
                 </optgroup>
@@ -445,7 +462,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
                     .filter((c) => c.type === 'App' && c.source === 'builtin')
                     .map((c) => (
                       <option key={c.id} value={c.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
-                        {c.icon} {c.title} ({c.stage})
+                        {c.icon} {c.oakId ? `[${c.oakId}] ` : ''}{c.title} ({c.stage})
                       </option>
                     ))}
                 </optgroup>

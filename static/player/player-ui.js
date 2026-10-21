@@ -983,6 +983,11 @@
         return t === 'app' || t === 'application' || t === 'game' || t === 'tool';
       });
 
+      const filmItems = builtInItems.filter(item => {
+        const t = (item.type || '').toLowerCase();
+        return t === 'film' || t === 'video';
+      });
+
       const appendCategoryGroup = (label, color, items) => {
         if (!items || items.length === 0) return;
         const grp = document.createElement('optgroup');
@@ -992,7 +997,8 @@
         items.forEach(item => {
           const opt = document.createElement('option');
           opt.value = item.id;
-          opt.textContent = `${item.title} (${item.stage})`;
+          const oakPrefix = item.oakId ? `[${item.oakId}] ` : '';
+          opt.textContent = `${oakPrefix}${item.title} (${item.stage})`;
           opt.style.background = '#0f172a';
           opt.style.color = '#f8fafc';
           if (item.id === activeId) opt.selected = true;
@@ -1004,6 +1010,7 @@
       appendCategoryGroup('🎮 Simulations (Sim)', '#38bdf8', simItems);
       appendCategoryGroup('📑 Interactive Slides (Slide)', '#34d399', slideItems);
       appendCategoryGroup('💻 Vector Applications (App)', '#fbbf24', appItems);
+      appendCategoryGroup('🎬 Video / Film (Film)', '#f43f5e', filmItems);
 
       // Teacher Auto-Find Actions
       const actionGroup = document.createElement('optgroup');

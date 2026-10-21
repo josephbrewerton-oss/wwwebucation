@@ -32,11 +32,15 @@ import {
   decompressCartridgeBundle,
   type CompressedCartridgeMetadata,
 } from '../utils/cartridgeCompression';
+import { PRESET_OPTIONS, type ScenePresetOption } from '../data/player/generatedScenes';
 
 export interface CartridgeDefinition {
   id: string;
   title: string;
   stage: string;
+  oakId?: string;
+  oakUnit?: string;
+  subject?: string;
   category?: string;
   duration?: number;
   type?: 'Sim' | 'Slide' | 'App' | 'Film';
@@ -1182,7 +1186,18 @@ export function normalizeCartridgeId(id: string): string {
   const clean = id.toLowerCase().trim()
     .replace(/^(demo-|scene-|preset-)/, '')
     .replace(/\.(ast|svg|json|html|phet)$/, '');
-  return CARTRIDGE_ALIASES[clean] || clean;
+
+  if (CARTRIDGE_ALIASES[clean]) return CARTRIDGE_ALIASES[clean];
+
+  // Resolve by Oak National Curriculum numbers (:oak-id or :oak-unit)
+  const byOak = PRESET_OPTIONS.find(
+    (p) =>
+      (p.oakId && p.oakId.toLowerCase() === clean) ||
+      (p.oakUnit && p.oakUnit.toLowerCase() === clean)
+  );
+  if (byOak) return byOak.id;
+
+  return clean;
 }
 
 /**
@@ -1210,16 +1225,48 @@ export function getAllCartridges(): CartridgeDefinition[] {
     seen.add(c.id);
   });
 
+  const presetMap = new Map<string, ScenePresetOption>(PRESET_OPTIONS.map((p) => [p.id, p]));
+
   BUILTIN_CARTRIDGES.forEach((b) => {
     if (!seen.has(b.id)) {
+      const meta = presetMap.get(b.id);
       merged.push({
         ...b,
+        oakId: b.oakId || meta?.oakId,
+        oakUnit: b.oakUnit || meta?.oakUnit,
+        subject: b.subject || meta?.subject,
         isCore: true,
         tier: 'core',
-        mount: b.mount || getDefaultMountForCartridge(b.id),
-        section: b.section || getDefaultSectionForCartridge(b.id, b.category),
+        mount: b.mount || meta?.mount || getDefaultMountForCartridge(b.id),
+        section: b.section || meta?.section || getDefaultSectionForCartridge(b.id, b.category),
       });
       seen.add(b.id);
+    }
+  });
+
+  // Ensure all generated curriculum cartridges are present with full Oak metadata
+  PRESET_OPTIONS.forEach((opt) => {
+    if (!seen.has(opt.id)) {
+      merged.push({
+        id: opt.id,
+        title: opt.label,
+        stage: opt.stage,
+        oakId: opt.oakId,
+        oakUnit: opt.oakUnit,
+        subject: opt.subject,
+        type: opt.type,
+        category: opt.subject || 'General Curriculum',
+        desc: `Oak National Curriculum aligned cartridge: ${opt.oakId || opt.stage}.`,
+        icon: opt.type === 'Sim' ? '🎮' : opt.type === 'Slide' ? '📑' : '💻',
+        source: 'builtin',
+        svgFile: `scenes/${opt.id}.svg`,
+        astFile: `scenes/${opt.id}.ast`,
+        isCore: opt.isCore ?? true,
+        tier: (opt.tier as any) || 'core',
+        mount: opt.mount || getDefaultMountForCartridge(opt.id),
+        section: opt.section || getDefaultSectionForCartridge(opt.id),
+      });
+      seen.add(opt.id);
     }
   });
 
@@ -1336,7 +1383,13 @@ export function getCartridge(idOrAlias: string): CartridgeDefinition | null {
   if (!idOrAlias) return null;
   const canonicalId = normalizeCartridgeId(idOrAlias);
   const all = getAllCartridges();
-  const found = all.find((c) => c.id === canonicalId || c.id === idOrAlias);
+  const found = all.find(
+    (c) =>
+      c.id === canonicalId ||
+      c.id === idOrAlias ||
+      (c.oakId && c.oakId.toLowerCase() === idOrAlias.toLowerCase()) ||
+      (c.oakUnit && c.oakUnit.toLowerCase() === idOrAlias.toLowerCase())
+  );
   if (found) {
     if (!found.svgMarkup && EMBEDDED_CORE_CARTRIDGES[canonicalId]) {
       found.svgMarkup = EMBEDDED_CORE_CARTRIDGES[canonicalId].svg;
