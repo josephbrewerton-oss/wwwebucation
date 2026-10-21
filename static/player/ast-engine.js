@@ -2227,12 +2227,12 @@
      * Returns true if current active scene has 3D nodes/camera
      */
     has3D() {
-      if (this.scene && this.scene.has3D) return true;
-      if (this.activePresetId === 'church-tour' || this.activePresetId === 'solar-system' || this.activePresetId === 'atom') return true;
+      if (this.scene && (this.scene.has3D || this.scene.camera)) return true;
       if (this.active3DItems && this.active3DItems.length > 0) return true;
       if (this.active3DNodes && this.active3DNodes.length > 0) return true;
       if (this.active3DLines && this.active3DLines.length > 0) return true;
       if (this.active3DRings && this.active3DRings.length > 0) return true;
+      if (this.active3DPolygons && this.active3DPolygons.length > 0) return true;
       return false;
     }
 
@@ -3342,9 +3342,11 @@
       }
       this.updateActiveKeyframeAndSpeech(true);
       if (!this.vars) this.vars = {};
-      if (this.activePresetId === 'solar-system' || (this.scene && this.scene.id === 'solar-system')) {
-        this.vars._solarClock = this.progress * (this.durationSec || 14.0);
-      }
+      const currentSec = this.progress * (this.durationSec || 10.0);
+      this.vars.simClock = currentSec;
+      this.vars.clock = currentSec;
+      this.vars._simClock = currentSec;
+      this.vars._solarClock = currentSec; // Backwards compatibility for orbital/planetary expressions
       this.applyBindings(this.progress);
       this.emit('timeupdate', {
         progress: this.progress,
@@ -4090,9 +4092,31 @@
               val = view.getFloat32(offset, true);
               offset += 4;
             }
-            offset += 12; // skip min, max, step
-            offset += 2;  // skip label
-            scene.vars[getStr(nameIdx)] = val;
+            const minVal = view.getFloat32(offset, true); offset += 4;
+            const maxVal = view.getFloat32(offset, true); offset += 4;
+            const stepVal = view.getFloat32(offset, true); offset += 4;
+            const labelIdx = view.getUint16(offset, true); offset += 2;
+            const vName = getStr(nameIdx);
+            const vLabel = getStr(labelIdx);
+            scene.vars[vName] = val;
+            break;
+          }
+          case 0x70: { // OP_INPUT
+            const kindVal = bytes[offset++];
+            const varIdx = view.getUint16(offset, true); offset += 2;
+            const labelIdx = view.getUint16(offset, true); offset += 2;
+            const minVal = view.getFloat32(offset, true); offset += 4;
+            const maxVal = view.getFloat32(offset, true); offset += 4;
+            const stepVal = view.getFloat32(offset, true); offset += 4;
+            if (!scene.inputs) scene.inputs = [];
+            scene.inputs.push({
+              type: kindVal === 2 ? 'switch' : (kindVal === 3 ? 'button' : 'slider'),
+              var: getStr(varIdx),
+              label: getStr(labelIdx),
+              min: minVal,
+              max: maxVal,
+              step: stepVal,
+            });
             break;
           }
           default:
@@ -5004,8 +5028,8 @@
         console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
       }
     }
-    // Fall back to .ast text if bytecode was not found, failed to parse, or is missing 3D bindings
-    if (!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d')))) {
+    // Fall back to or supplement from .ast text if bytecode was not found, failed to parse, is missing 3D bindings, or lacks interactive inputs/selectors
+    if (!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d'))) || (!parsedAst.inputs || parsedAst.inputs.length === 0)) {
       const foundAst = await fetchAsset('ast');
       if (foundAst) astText = foundAst;
     }
@@ -5029,9 +5053,40 @@
           return this.loadScene('welcome', shouldPlay);
         }
 
-        if ((!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d')))) && astText) {
+        if (astText) {
           try {
-            parsedAst = this.parseAst(astText);
+            const textParsed = this.parseAst(astText);
+            if (textParsed) {
+              if (!parsedAst) {
+                parsedAst = textParsed;
+              } else {
+                // Seamlessly merge rich interactive elements that compact bytecode may lack
+                if ((!parsedAst.inputs || parsedAst.inputs.length === 0) && textParsed.inputs && textParsed.inputs.length > 0) {
+                  parsedAst.inputs = textParsed.inputs;
+                }
+                if (textParsed.vars && typeof textParsed.vars === 'object') {
+                  parsedAst.vars = Object.assign({}, textParsed.vars, parsedAst.vars || {});
+                }
+                if ((!parsedAst.computed || parsedAst.computed.length === 0) && textParsed.computed) {
+                  parsedAst.computed = textParsed.computed;
+                }
+                if ((!parsedAst.bindInputs || parsedAst.bindInputs.length === 0) && textParsed.bindInputs) {
+                  parsedAst.bindInputs = textParsed.bindInputs;
+                }
+                if ((!parsedAst.emitters || parsedAst.emitters.length === 0) && textParsed.emitters) {
+                  parsedAst.emitters = textParsed.emitters;
+                }
+                if ((!parsedAst.stateMachines || parsedAst.stateMachines.length === 0) && textParsed.stateMachines) {
+                  parsedAst.stateMachines = textParsed.stateMachines;
+                }
+                if ((!parsedAst.gestures || parsedAst.gestures.length === 0) && textParsed.gestures) {
+                  parsedAst.gestures = textParsed.gestures;
+                }
+                if ((!parsedAst.bindings || parsedAst.bindings.length === 0) && textParsed.bindings && textParsed.bindings.length > 0) {
+                  parsedAst.bindings = textParsed.bindings;
+                }
+              }
+            }
           } catch (err) {
             console.warn('[AST Engine] Error parsing AST for', presetId, err);
             this.emit('error', { type: 'AST_PARSE_ERROR', presetId, message: err.message });
@@ -6800,7 +6855,7 @@ if (item.type === '3d-node') {
         }
 
         // Dynamic continuous simulation check:
-        const isDynamicScene = this.isDynamicSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || this.scene.id === 'solar-system' || typeof this.scene.mount === 'function'));
+        const isDynamicScene = this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || typeof this.scene.mount === 'function'));
 
         if (this.isPlaying) {
           this.progress += (deltaSec / this.durationSec) * this.speed;
@@ -6818,10 +6873,14 @@ if (item.type === '3d-node') {
 
           this.updateActiveKeyframeAndSpeech(false);
 
-          // Advance continuous astronomical orbital clock for infinite, smooth orbital simulations
+          // Advance decoupled universal simulation clock for infinite, smooth orbital, mechanical, and signage simulations
           if (!this.vars) this.vars = {};
-          const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : 1.0;
-          this.vars._solarClock = (this.vars._solarClock || 0) + (deltaSec * Math.max(0.1, warp) * this.speed);
+          const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0);
+          const clockDelta = (deltaSec * Math.max(0.01, warp) * this.speed);
+          this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
+          this.vars.clock = this.vars.simClock;
+          this.vars._simClock = this.vars.simClock;
+          this.vars._solarClock = this.vars.simClock; // Backwards-compatible alias for existing astronomical scenes
 
           // Synchronize backdrop film video clock if running
           if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {

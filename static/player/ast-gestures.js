@@ -344,6 +344,81 @@
         }
       }
 
+      // 9e. DNA Interactive Control Ribbon (Helicase Unzip, Base Filters, Speed Chips)
+      const dnaRibbon = this.stageSvg.querySelector('#dna-control-ribbon');
+      if (dnaRibbon) {
+        const setUnzipUI = (val) => {
+          if (this.engine) this.engine.setVar('unzipProgress', val);
+          const b0 = dnaRibbon.querySelector('#btn-dna-unzip-0 rect');
+          const b50 = dnaRibbon.querySelector('#btn-dna-unzip-50 rect');
+          const b100 = dnaRibbon.querySelector('#btn-dna-unzip-100 rect');
+          if (b0) b0.setAttribute('fill', val === 0 ? '#0284c7' : '#1e293b');
+          if (b50) b50.setAttribute('fill', Math.abs(val - 0.5) < 0.1 ? '#0284c7' : '#1e293b');
+          if (b100) b100.setAttribute('fill', val === 1.0 ? '#0284c7' : '#1e293b');
+        };
+
+        const setSpeedUI = (spd) => {
+          if (this.engine) this.engine.setVar('rotSpeed', spd);
+          const s1 = dnaRibbon.querySelector('#btn-dna-speed-1 rect');
+          const s2 = dnaRibbon.querySelector('#btn-dna-speed-2 rect');
+          if (s1) s1.setAttribute('fill', spd <= 1.2 ? '#0284c7' : '#1e293b');
+          if (s2) s2.setAttribute('fill', spd > 1.2 ? '#0284c7' : '#1e293b');
+        };
+
+        const setFilterUI = (mode) => {
+          const fAll = dnaRibbon.querySelector('#btn-dna-filter-all rect');
+          const fAt = dnaRibbon.querySelector('#btn-dna-filter-at rect');
+          const fCg = dnaRibbon.querySelector('#btn-dna-filter-cg rect');
+          if (fAll) fAll.setAttribute('fill', mode === 'all' ? '#0284c7' : '#1e293b');
+          if (fAt) fAt.setAttribute('fill', mode === 'at' ? '#0284c7' : '#1e293b');
+          if (fCg) fCg.setAttribute('fill', mode === 'cg' ? '#0284c7' : '#1e293b');
+
+          for (let i = 0; i < 18; i++) {
+            const line = this.stageSvg.querySelector(`#dna-line-${i}`);
+            const ca = this.stageSvg.querySelector(`#dna-ca-${i}`);
+            const cb = this.stageSvg.querySelector(`#dna-cb-${i}`);
+            const isAT = (i % 2 === 0);
+            const visible = (mode === 'all') || (mode === 'at' && isAT) || (mode === 'cg' && !isAT);
+            const op = visible ? '1.0' : '0.12';
+            if (line) line.setAttribute('opacity', op);
+            if (ca) ca.setAttribute('opacity', op);
+            if (cb) cb.setAttribute('opacity', op);
+          }
+        };
+
+        dnaRibbon.querySelectorAll('[data-action]').forEach(btn => {
+          btn.addEventListener('pointerdown', (ev) => {
+            ev.stopPropagation();
+            const act = btn.getAttribute('data-action');
+            if (act === 'dna-unzip-0') {
+              setUnzipUI(0.0);
+              this.playAudioTone(440, 'sine', 0.1, 0.2);
+            } else if (act === 'dna-unzip-50') {
+              setUnzipUI(0.5);
+              this.playAudioTone(554.37, 'sine', 0.1, 0.2);
+            } else if (act === 'dna-unzip-100') {
+              setUnzipUI(1.0);
+              this.playAudioTone(659.25, 'triangle', 0.12, 0.25);
+            } else if (act === 'dna-speed-1') {
+              setSpeedUI(1.0);
+              this.playAudioTone(480, 'sine', 0.08, 0.15);
+            } else if (act === 'dna-speed-2') {
+              setSpeedUI(2.0);
+              this.playAudioTone(600, 'sine', 0.08, 0.15);
+            } else if (act === 'dna-filter-all') {
+              setFilterUI('all');
+              this.playAudioTone(523.25, 'triangle', 0.08, 0.18);
+            } else if (act === 'dna-filter-at') {
+              setFilterUI('at');
+              this.playAudioTone(659.25, 'triangle', 0.08, 0.18);
+            } else if (act === 'dna-filter-cg') {
+              setFilterUI('cg');
+              this.playAudioTone(783.99, 'triangle', 0.08, 0.18);
+            }
+          });
+        });
+      }
+
       // 10. Dynamic Declarative Scene Gestures
       const scene = this.engine && this.engine.scene;
       if (scene && scene.gestures && Array.isArray(scene.gestures)) {
@@ -524,7 +599,7 @@
           this.dragMode = 'generic';
           genTarget.style.cursor = 'grabbing';
           this._wasPlayingBeforeDrag = Boolean(this.engine && this.engine.isPlaying);
-          const isContinuousScene = this.engine && this.engine.scene && (this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas');
+          const isContinuousScene = this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim' || this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas')));
           if (this.engine && !isContinuousScene && genTarget.id !== 'sun-body') {
             this.engine.pause();
           }

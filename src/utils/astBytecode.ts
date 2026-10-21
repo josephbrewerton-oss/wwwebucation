@@ -230,20 +230,37 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       if (k.startsWith('_')) continue;
       appendU8(OP_VAR);
       appendU16(strTable.intern(k));
-      if (typeof v === 'boolean') {
+      const isObj = v && typeof v === 'object';
+      const actualVal = isObj ? v.val : v;
+      if (typeof actualVal === 'boolean') {
         appendU8(3);
-        appendF32(v ? 1 : 0);
-      } else if (typeof v === 'string') {
+        appendF32(actualVal ? 1 : 0);
+      } else if (typeof actualVal === 'string') {
         appendU8(2);
-        appendF32(strTable.intern(v));
+        appendF32(strTable.intern(actualVal));
       } else {
         appendU8(1);
-        appendF32(Number(v) || 0);
+        appendF32(Number(actualVal) || 0);
       }
-      appendF32(0); // min
-      appendF32(100); // max
-      appendF32(1); // step
-      appendU16(strTable.intern(k));
+      appendF32(isObj && typeof v.min === 'number' ? v.min : 0); // min
+      appendF32(isObj && typeof v.max === 'number' ? v.max : 100); // max
+      appendF32(isObj && typeof v.step === 'number' ? v.step : 1); // step
+      appendU16(strTable.intern((isObj && v.label) ? v.label : k));
+    }
+  }
+
+  // 3b. Interactive User Controls (:inputs)
+  if (Array.isArray(scene.inputs)) {
+    for (const inp of scene.inputs) {
+      if (!inp || !inp.var) continue;
+      appendU8(OP_INPUT);
+      const kindVal = inp.type === 'switch' || inp.type === 'toggle' ? 2 : (inp.type === 'button' ? 3 : 1);
+      appendU8(kindVal);
+      appendU16(strTable.intern(inp.var));
+      appendU16(strTable.intern(inp.label || inp.var));
+      appendF32(typeof inp.min === 'number' ? inp.min : 0);
+      appendF32(typeof inp.max === 'number' ? inp.max : 100);
+      appendF32(typeof inp.step === 'number' ? inp.step : 1);
     }
   }
 
@@ -618,9 +635,31 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           val = view.getFloat32(offset, true);
           offset += 4;
         }
-        offset += 12; // skip min, max, step
-        offset += 2; // skip label
-        scene.vars![strTable.get(nameIdx)] = val;
+        const minVal = view.getFloat32(offset, true); offset += 4;
+        const maxVal = view.getFloat32(offset, true); offset += 4;
+        const stepVal = view.getFloat32(offset, true); offset += 4;
+        const labelIdx = view.getUint16(offset, true); offset += 2;
+        const vName = strTable.get(nameIdx);
+        const vLabel = strTable.get(labelIdx);
+        scene.vars![vName] = val;
+        break;
+      }
+      case OP_INPUT: {
+        const kindVal = bytes[offset++];
+        const varIdx = view.getUint16(offset, true); offset += 2;
+        const labelIdx = view.getUint16(offset, true); offset += 2;
+        const minVal = view.getFloat32(offset, true); offset += 4;
+        const maxVal = view.getFloat32(offset, true); offset += 4;
+        const stepVal = view.getFloat32(offset, true); offset += 4;
+        if (!scene.inputs) scene.inputs = [];
+        scene.inputs.push({
+          type: kindVal === 2 ? 'switch' : (kindVal === 3 ? 'button' : 'slider'),
+          var: strTable.get(varIdx),
+          label: strTable.get(labelIdx),
+          min: minVal,
+          max: maxVal,
+          step: stepVal,
+        });
         break;
       }
       default:
@@ -888,17 +927,82 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     });
   }
 
-  // Variables
+  // Variables & Inputs
   const vars: Record<string, any> = {};
-  const varRegex = /\(:var\s+:name\s+"([^"]+)"\s+:val\s+([\d\.\-]+|"([^"]+)"|true|false)/gi;
-  let vm: RegExpExecArray | null;
-  while ((vm = varRegex.exec(astText)) !== null) {
-    const vName = vm[1];
-    const rawVal = vm[2];
-    if (rawVal === 'true') vars[vName] = true;
-    else if (rawVal === 'false') vars[vName] = false;
-    else if (rawVal.startsWith('"')) vars[vName] = vm[3];
-    else vars[vName] = parseFloat(rawVal);
+  const varBlocks = extractSexprBlocks(astText, ':var');
+  varBlocks.forEach(vb => {
+    const vName = extractSlot(vb, /:name\s+"([^"]+)"/i);
+    const rawValMatch = vb.match(/:val\s+([\d\.\-]+|"([^"]+)"|true|false)/i);
+    if (!vName || !rawValMatch) return;
+    const rawVal = rawValMatch[1];
+    let val: any = 0;
+    if (rawVal === 'true') val = true;
+    else if (rawVal === 'false') val = false;
+    else if (rawVal.startsWith('"')) val = rawValMatch[2] || '';
+    else val = parseFloat(rawVal);
+
+    const minStr = extractSlot(vb, /:min\s+([\d\.\-]+)/i);
+    const maxStr = extractSlot(vb, /:max\s+([\d\.\-]+)/i);
+    const stepStr = extractSlot(vb, /:step\s+([\d\.]+)/i);
+    const unitStr = extractSlot(vb, /:unit\s+"([^"]+)"/i);
+    const labelStr = extractSlot(vb, /:label\s+"([^"]+)"/i);
+
+    if (minStr !== null && maxStr !== null) {
+      vars[vName] = {
+        val,
+        min: parseFloat(minStr),
+        max: parseFloat(maxStr),
+        step: stepStr ? parseFloat(stepStr) : 1,
+        unit: unitStr || '',
+        label: labelStr || vName
+      };
+    } else {
+      vars[vName] = val;
+    }
+  });
+
+  // Flat var regex fallback
+  if (Object.keys(vars).length === 0) {
+    const varRegex = /\(:var\s+:name\s+"([^"]+)"\s+:val\s+([\d\.\-]+|"([^"]+)"|true|false)/gi;
+    let vm: RegExpExecArray | null;
+    while ((vm = varRegex.exec(astText)) !== null) {
+      const vName = vm[1];
+      const rawVal = vm[2];
+      if (rawVal === 'true') vars[vName] = true;
+      else if (rawVal === 'false') vars[vName] = false;
+      else if (rawVal.startsWith('"')) vars[vName] = vm[3];
+      else vars[vName] = parseFloat(rawVal);
+    }
+  }
+
+  // User Input Controls (:inputs)
+  const inputs: Array<any> = [];
+  const inBlocks = extractSexprBlocks(astText, ':inputs');
+  if (inBlocks.length > 0) {
+    const blockText = inBlocks[0];
+    const inEntries = extractSexprBlocks(blockText, ':slider')
+      .concat(extractSexprBlocks(blockText, ':toggle'))
+      .concat(extractSexprBlocks(blockText, ':switch'))
+      .concat(extractSexprBlocks(blockText, ':button'))
+      .concat(extractSexprBlocks(blockText, ':number'));
+    inEntries.forEach(inText => {
+      const typeMatch = inText.match(/^\(:(slider|toggle|switch|button|number)\b/i);
+      const vName = extractSlot(inText, /:var\s+"([^"]+)"/i);
+      const inLabel = extractSlot(inText, /:label\s+"([^"]+)"/i) || vName;
+      const min = parseFloat(extractSlot(inText, /:min\s+([\d\.\-]+)/i) || '0');
+      const max = parseFloat(extractSlot(inText, /:max\s+([\d\.\-]+)/i) || '100');
+      const step = parseFloat(extractSlot(inText, /:step\s+([\d\.]+)/i) || '1');
+      if (typeMatch && vName) {
+        inputs.push({
+          type: typeMatch[1],
+          var: vName,
+          label: inLabel,
+          min,
+          max,
+          step,
+        });
+      }
+    });
   }
 
   // Camera (Supports static and dynamic string expressions)
@@ -949,5 +1053,6 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     checkpoints,
     gestures,
     vars,
+    inputs,
   });
 }
