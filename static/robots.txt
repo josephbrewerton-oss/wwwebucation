@@ -1,7 +1,12 @@
 # St Joseph's Curriculum Portal & AST Vector Player Suite
 # Architecture: Dual-Market (Track A: Open Humanitarian Education, Track B: Enterprise Digital Signage, DOOH & AdTech)
-# Decoupled Engine: Headless, Zero-Bloat (<35 KB) AST Vector Player embeddable in ANY site via <micro-vector-player> Web Component, NPM @stjosephs/ast-vector-player, or LMS iframe.
-# Accessibility: Real-time 3D British Sign Language (BSL) In-Vision Vector Interpreter overlay with dual POV (Signer vs Receiver) and speech boundary sync.
+# Decoupled Engine: Headless, Domain-Agnostic, Zero-Bloat (<35 KB) AST Vector Media Engine
+# Multi-Modal Tuples: [AST Vector Stage + Synchronized Video Underlay/Overlay + Procedural Web Audio Synth + S-Expression Data-Flow + Pointer Gestures + Formative Checkpoints]
+# Dynamic Param HUD: Generic, domain-agnostic discovery of :inputs, :vars, bounds, step sizes, and interactive selectors (DNA, physics, DOOH)
+# Binary Bytecode: High-throughput zero-alloc streaming reader (.astb) with sub-15ms cold start and <8 MB RAM footprint
+# Edge AI: On-device Chrome Prompt API (Gemini Nano) & local WebLLM with 500ms GBNF-constrained simulation generation and zero cloud leakage
+# Universal Translator: Real-time multilingual voice synthesis & bilingual subtitles (EN, ES, FR, LA, DE, IT)
+# Inclusion: Procedural 3D British Sign Language (BSL) In-Vision Vector Interpreter with BANZSL fingerspelling, dual POV, and PiP
 # Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
 
 User-agent: *
@@ -10,7 +15,7 @@ Allow: /media-player
 Allow: /player
 Allow: /player.html
 Allow: /simulator
-Allow: /cartridges
+Allow: /cartridges/
 Allow: /curriculum/
 Allow: /c/
 Allow: /phonics
@@ -18,6 +23,7 @@ Allow: /early-phonics
 Allow: /languages
 Allow: /mfl
 Allow: /polyglot
+Allow: /bsl
 Allow: /shakespeare
 Allow: /theatre
 Allow: /globe
@@ -39,10 +45,12 @@ Allow: /llms-full.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
 Allow: /manifests/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
 Allow: /player/scenes.manifest.json
 Allow: /player/scenes-config.json
 Allow: /nano-map.ast
-Allow: /cartridges/
 Allow: /docs/
 
 # Disallow internal raw workers and test fixtures
@@ -55,94 +63,46 @@ Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /sitemap.ast
 Allow: /manifests/
+Allow: /cartridges/
 Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+Allow: /docs/
 
 User-agent: ChatGPT-User
 Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
 
 User-agent: ClaudeBot
 Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /sitemap.ast
 Allow: /manifests/
+Allow: /cartridges/
 Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+Allow: /docs/
 
 User-agent: Claude-Web
 Allow: /
 Allow: /llms.txt
 Allow: /llms-full.txt
-
-User-agent: PerplexityBot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
 Allow: /sitemap.xml
+Allow: /sitemap.ast
 Allow: /manifests/
+Allow: /cartridges/
 Allow: /player/
-
-User-agent: Google-Extended
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-Allow: /sitemap.xml
-Allow: /manifests/
-Allow: /player/
-
-User-agent: GoogleOther
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: Applebot-Extended
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: cohere-ai
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: Amazonbot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: Meta-ExternalAgent
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: CCBot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: OAI-SearchBot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-Allow: /player/
-
-User-agent: bingbot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-Allow: /player/
-
-User-agent: Bytespider
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
-
-User-agent: DuckDuckBot
-Allow: /
-Allow: /llms.txt
-Allow: /llms-full.txt
 
 User-agent: anthropic-ai
 Allow: /
@@ -150,6 +110,148 @@ Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+Allow: /docs/
+
+User-agent: Google-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+
+User-agent: GoogleOther
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: Applebot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: Applebot-Extended
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: cohere-ai
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: Amazonbot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: Meta-ExternalAgent
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: CCBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: OAI-SearchBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
+
+User-agent: bingbot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+
+User-agent: Bytespider
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+
+User-agent: DuckDuckBot
+Allow: /
+Allow: /llms.txt
+Allow: /llms-full.txt
+Allow: /sitemap.xml
+Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
 Allow: /player/
 
 User-agent: DeepSeekBot
@@ -158,6 +260,11 @@ Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
 
 User-agent: MistralAI
 Allow: /
@@ -165,9 +272,12 @@ Allow: /llms.txt
 Allow: /llms-full.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
+Allow: /manifests/
+Allow: /cartridges/
+Allow: /player/
+Allow: /player/bytecode/
+Allow: /player/scenes/
 
 # Sitemap & Machine Briefings
 Sitemap: /sitemap.xml
 Sitemap: /sitemap.ast
-
-
