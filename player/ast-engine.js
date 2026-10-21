@@ -4762,11 +4762,11 @@
         const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
         let svgText = registryScene.svgMarkup || registryScene.svgText || '';
         let astText = registryScene.astSource || registryScene.astText || '';
+        let parsedAst = null;
 
         // If not already in registry/decentralized store, fetch dynamically
         if ((!svgText || !astText) && typeof fetch !== 'undefined') {
-          try {
-            const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
+          const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
               ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
               : './';
             const base = (this.options.basePath || currentDir || './').replace(/\/?$/, '/');
@@ -4904,7 +4904,7 @@
     return null;
   };
 
-  let parsedAst = null;
+  parsedAst = null;
   try {
     const [foundBytecode, foundSvg] = await Promise.all([
       fetchAsset('astb'),

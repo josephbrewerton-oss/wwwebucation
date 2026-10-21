@@ -502,7 +502,18 @@
         'spelling-bee': 'spelling-bee',
         'bee': 'spelling-bee'
       };
-      return aliases[clean] || clean;
+      if (aliases[clean]) return aliases[clean];
+
+      // Resolve by Oak Curriculum ID or Unit name (e.g. OAK-KS4-MAT-002 -> calculus-curves)
+      for (const k in scenes) {
+        const sc = scenes[k];
+        if (sc) {
+          if (sc.oakId && sc.oakId.toLowerCase() === clean) return sc.id;
+          if (sc.oakUnit && sc.oakUnit.toLowerCase() === clean) return sc.id;
+        }
+      }
+
+      return clean;
     },
 
     parseAstMetadata(content, id) {
