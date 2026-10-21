@@ -1,0 +1,204 @@
+<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Scriptorium & Sanctuary Ambience Gradient -->
+    <radialGradient id="sacred-objects-ambience" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#1e1b4b" />
+      <stop offset="50%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Divine Golden Sheen -->
+    <linearGradient id="sacred-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a" />
+      <stop offset="35%" stop-color="#eab308" />
+      <stop offset="70%" stop-color="#ca8a04" />
+      <stop offset="100%" stop-color="#854d0e" />
+    </linearGradient>
+
+    <!-- Silver Metal Sheen -->
+    <linearGradient id="sacred-silver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="45%" stop-color="#cbd5e1" />
+      <stop offset="100%" stop-color="#64748b" />
+    </linearGradient>
+
+    <!-- Sanctuary Lamp Red Glow -->
+    <radialGradient id="sanctuary-lamp-glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(239, 68, 68, 0.95)" />
+      <stop offset="40%" stop-color="rgba(220, 38, 38, 0.6)" />
+      <stop offset="100%" stop-color="rgba(153, 27, 27, 0)" />
+    </radialGradient>
+
+    <!-- Monstrance Radiant Halo -->
+    <radialGradient id="monstrance-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="rgba(254, 240, 138, 0.9)" />
+      <stop offset="45%" stop-color="rgba(234, 179, 8, 0.4)" />
+      <stop offset="100%" stop-color="rgba(161, 98, 7, 0)" />
+    </radialGradient>
+
+    <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="480" fill="url(#sacred-objects-ambience)" />
+
+  <!-- Architectural Background Arches -->
+  <g opacity="0.25">
+    <path d="M 50,420 L 50,160 Q 200,60 350,160 L 350,420 Z" fill="none" stroke="#6366f1" stroke-width="2" />
+    <path d="M 450,420 L 450,160 Q 600,60 750,160 L 750,420 Z" fill="none" stroke="#6366f1" stroke-width="2" />
+  </g>
+
+  <!-- Credence & Vestment Table Structure -->
+  <rect x="40" y="310" width="720" height="110" rx="6" fill="#1e293b" stroke="#334155" stroke-width="2" />
+  <!-- White Table Linen with Gold Border -->
+  <rect x="30" y="305" width="740" height="18" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" />
+  <line x1="30" y1="320" x2="770" y2="320" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6,4" />
+
+  <!-- SECTION 1: SACRED VESSELS (Left: Chalice, Paten with Host, Ciborium) -->
+  <g id="sacred-vessels-group">
+    <!-- Golden Chalice -->
+    <g transform="translate(110, 200)">
+      <!-- Base & Stem -->
+      <path d="M 15,105 L 65,105 L 55,95 L 43,95 L 43,55 Q 48,50 48,45 L 32,45 Q 32,50 37,55 L 37,95 L 25,95 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Nodule (Grip) -->
+      <circle cx="40" cy="50" r="8" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Cup Bowl -->
+      <path d="M 12,20 Q 12,50 40,50 Q 68,50 68,20 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Chalice Rim Inner Shadow -->
+      <ellipse cx="40" cy="20" rx="28" ry="6" fill="#713f12" stroke="#ca8a04" stroke-width="1.5" />
+      <ellipse cx="40" cy="20" rx="24" ry="4" fill="#854d0e" />
+      <!-- Cross engraving on base -->
+      <line x1="40" y1="98" x2="40" y2="103" stroke="#fef08a" stroke-width="1.5" />
+      <line x1="38" y1="100" x2="42" y2="100" stroke="#fef08a" stroke-width="1.5" />
+    </g>
+
+    <!-- Golden Paten & Sacred Host -->
+    <g transform="translate(195, 255)">
+      <!-- Shallow Paten Plate -->
+      <ellipse cx="35" cy="50" rx="36" ry="9" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Large Consecrated Host -->
+      <circle cx="35" cy="35" r="22" fill="#fffbeb" stroke="#fef08a" stroke-width="2" filter="url(#soft-glow)" />
+      <!-- IHS Engraving on Host -->
+      <text x="35" y="40" text-anchor="middle" font-family="serif" font-weight="900" font-size="12" fill="#ca8a04">IHS</text>
+      <!-- Small Cross above H -->
+      <line x1="35" y1="26" x2="35" y2="30" stroke="#ca8a04" stroke-width="1" />
+      <line x1="33" y1="28" x2="37" y2="28" stroke="#ca8a04" stroke-width="1" />
+    </g>
+
+    <!-- Ciborium with Golden Lid & Cross -->
+    <g transform="translate(265, 200)">
+      <!-- Base & Stem -->
+      <path d="M 15,105 L 65,105 L 55,95 L 43,95 L 43,58 L 37,58 L 37,95 L 25,95 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Deep Bowl -->
+      <path d="M 12,25 Q 12,60 40,60 Q 68,60 68,25 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Fitted Dome Lid -->
+      <path d="M 10,25 Q 40,0 70,25 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <!-- Cross Finial on Lid -->
+      <line x1="40" y1="2" x2="40" y2="12" stroke="#fef08a" stroke-width="2" />
+      <line x1="36" y1="6" x2="44" y2="6" stroke="#fef08a" stroke-width="2" />
+    </g>
+  </g>
+
+  <!-- SECTION 2: SACRED LINENS (Center Left: Corporal, Purificator, Pall) -->
+  <g id="sacred-linens-group" transform="translate(355, 260)">
+    <!-- Square Corporal Folded/Unfolded on Linen -->
+    <rect x="0" y="20" width="60" height="25" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
+    <line x1="30" y1="27" x2="30" y2="37" stroke="#dc2626" stroke-width="1.5" />
+    <line x1="25" y1="31" x2="35" y2="31" stroke="#dc2626" stroke-width="1.5" />
+    <!-- Pall (Stiff Card Covered in White Linen with Cross) -->
+    <rect x="70" y="10" width="38" height="36" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#soft-glow)" />
+    <path d="M 89,18 L 89,38 M 79,26 L 99,26" stroke="#ca8a04" stroke-width="2.5" />
+  </g>
+
+  <!-- SECTION 3: SANCTUARY APPOINTMENTS (Center Right: Red Lamp & Altar Bells & Cruets) -->
+  <g id="sanctuary-appointments-group">
+    <!-- Hanging Red Sanctuary Lamp -->
+    <g transform="translate(490, 160)">
+      <!-- Suspension Chain -->
+      <line x1="20" y1="-40" x2="20" y2="40" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="4,2" />
+      <!-- Red Glass Vessel -->
+      <ellipse cx="20" cy="50" rx="14" ry="18" fill="#dc2626" stroke="#991b1b" stroke-width="1.5" />
+      <!-- Real Presence Radiant Glow -->
+      <circle id="sanctuary-lamp-red-glow" cx="20" cy="50" r="32" fill="url(#sanctuary-lamp-glow)" />
+      <!-- Candle Flame -->
+      <path d="M 20,40 Q 23,47 20,53 Q 17,47 20,40 Z" fill="#fef08a" />
+    </g>
+
+    <!-- Altar Bells (Carillon / 4 Bells) -->
+    <g transform="translate(535, 275)">
+      <path d="M 12,30 Q 12,18 22,18 L 22,10 L 26,10 L 26,18 Q 36,18 36,30 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+      <line x1="24" y1="6" x2="24" y2="12" stroke="#ca8a04" stroke-width="2" />
+      <!-- Clapper -->
+      <circle cx="24" cy="32" r="3" fill="#ca8a04" />
+    </g>
+
+    <!-- Glass Cruets (Water & Wine) -->
+    <g transform="translate(575, 265)">
+      <!-- Wine Cruet (Red Wine liquid) -->
+      <path d="M 10,40 L 10,25 Q 15,15 15,12 L 20,12 Q 20,15 25,25 L 25,40 Z" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+      <path d="M 11,40 L 11,28 Q 17,28 24,28 L 24,40 Z" fill="#881337" opacity="0.8" />
+      <!-- Water Cruet (Clear liquid) -->
+      <path d="M 32,40 L 32,25 Q 37,15 37,12 L 42,12 Q 42,15 47,25 L 47,40 Z" fill="none" stroke="#94a3b8" stroke-width="1.5" />
+      <path d="M 33,40 L 33,30 Q 39,30 46,30 L 46,40 Z" fill="#38bdf8" opacity="0.6" />
+    </g>
+  </g>
+
+  <!-- SECTION 4: THE MONSTRANCE (Right: Radiant Golden Sunburst Ostensorium) -->
+  <g id="monstrance-group" transform="translate(660, 170)">
+    <!-- Sunburst Radiance Glow -->
+    <circle cx="0" cy="0" r="75" fill="url(#monstrance-halo)" />
+    
+    <!-- Rotating Sunburst Rays -->
+    <g id="monstrance-sunburst">
+      <line x1="0" y1="-65" x2="0" y2="65" stroke="#fde047" stroke-width="2.5" />
+      <line x1="-65" y1="0" x2="65" y2="0" stroke="#fde047" stroke-width="2.5" />
+      <line x1="-46" y1="-46" x2="46" y2="46" stroke="#fde047" stroke-width="2" />
+      <line x1="46" y1="-46" x2="-46" y2="46" stroke="#fde047" stroke-width="2" />
+      <!-- Intermediate Flame Rays -->
+      <line x1="0" y1="-52" x2="0" y2="52" stroke="#eab308" stroke-width="1.5" transform="rotate(22.5)" />
+      <line x1="0" y1="-52" x2="0" y2="52" stroke="#eab308" stroke-width="1.5" transform="rotate(67.5)" />
+      <line x1="0" y1="-52" x2="0" y2="52" stroke="#eab308" stroke-width="1.5" transform="rotate(112.5)" />
+      <line x1="0" y1="-52" x2="0" y2="52" stroke="#eab308" stroke-width="1.5" transform="rotate(157.5)" />
+    </g>
+
+    <!-- Outer Golden Ring -->
+    <circle cx="0" cy="0" r="38" fill="none" stroke="url(#sacred-gold)" stroke-width="5" />
+    <!-- Glass Luna Enclosure -->
+    <circle cx="0" cy="0" r="30" fill="rgba(255, 255, 255, 0.25)" stroke="#fef08a" stroke-width="1.5" />
+    
+    <!-- Consecrated Host in the Luna -->
+    <circle cx="0" cy="0" r="22" fill="#fffbeb" stroke="#facc15" stroke-width="1.5" filter="url(#soft-glow)" />
+    <text x="0" y="5" text-anchor="middle" font-family="serif" font-weight="900" font-size="11" fill="#a16207">IHS</text>
+
+    <!-- Base & Ornate Stand -->
+    <path d="M -8,38 L 8,38 L 5,120 L -5,120 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+    <path d="M -26,135 L 26,135 L 18,120 L -18,120 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
+    <!-- Top Cross -->
+    <line x1="0" y1="-38" x2="0" y2="-52" stroke="#fde047" stroke-width="3" />
+    <line x1="-7" y1="-46" x2="7" y2="-46" stroke="#fde047" stroke-width="3" />
+  </g>
+
+  <!-- Pulsating Gold Specular Sheen Effect -->
+  <circle id="gold-specular-sheen" cx="150" cy="225" r="8" fill="#ffffff" filter="url(#soft-glow)" opacity="0.6" />
+
+  <!-- Interactive Category Bar / Visual Legend at Bottom -->
+  <g transform="translate(60, 430)">
+    <!-- Rail -->
+    <rect x="0" y="6" width="680" height="10" rx="5" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
+    <!-- Labels -->
+    <g font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" text-anchor="middle">
+      <text x="100" y="-4" fill="#facc15">🏆 Sacred Vessels</text>
+      <text x="270" y="-4" fill="#e2e8f0">🕊️ Sacred Linens</text>
+      <text x="440" y="-4" fill="#f87171">🕯️ Sanctuary Appointments</text>
+      <text x="610" y="-4" fill="#a855f7">👑 Liturgical Vestments</text>
+    </g>
+    <!-- Draggable Knob -->
+    <g id="category-slider-knob" transform="translate(100, 11)" cursor="ew-resize">
+      <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="3" filter="url(#soft-glow)" />
+      <polygon points="-4,-4 4,0 -4,4" fill="#1e1b4b" transform="translate(-1, 0) scale(0.8)" />
+    </g>
+  </g>
+</svg>

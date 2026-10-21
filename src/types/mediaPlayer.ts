@@ -53,6 +53,8 @@ export interface ASTSceneDefinition {
   stage: string;
   /** Lesson title */
   title: string;
+  /** Scene duration in seconds */
+  duration?: number;
   /** Cartridge archetype: Sim, Slide, App, or Film */
   type?: 'Sim' | 'Slide' | 'App' | 'Film';
   /** Optional video or film backdrop path (e.g. /media/archive.mp4) */

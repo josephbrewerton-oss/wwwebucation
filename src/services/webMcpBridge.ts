@@ -15,6 +15,7 @@
 
 import { openPlayerModal, VectorPresetId } from './playerLauncher';
 import { getLearnerProfile } from './studentProfileStore';
+import { getAllCartridges } from './cartridgeStore';
 import {
   SACRED_OBJECTS,
   ALTAR_APPOINTMENTS,
@@ -380,36 +381,39 @@ export async function registerWebMcpTools(navigator?: NavigateFunction): Promise
         },
       },
       execute: async ({ subjectFilter }: { subjectFilter?: string }) => {
-        const cartridges = [
-          { id: 'church-tour', title: 'St. Joseph Church Sanctuary Tour & Liturgical Mystery', subject: 'Religious Education', invariants: ['Sub-pixel zoom', 'Altar reverence', 'Holy Water stoup', 'Thurifer processional'] },
-          { id: 'kinetic-gas', title: 'Kinetic Gas Theory & Maxwell-Boltzmann Distributions', subject: 'Science', invariants: ['Conservation of momentum', 'Brownian motion', 'Elastic collisions'] },
-          { id: 'calculus-curves', title: 'Interactive Differential Tangent & Slope Explorer', subject: 'Mathematics', invariants: ['Continuous derivatives', 'Secant-to-tangent limits', 'Newtonian fluxions'] },
-          { id: 'electric-circuits', title: "Ohm's Law & Kirchhoff Mesh Current Simulator", subject: 'Science', invariants: ['Charge conservation', 'Voltage drops', 'Live switch toggling'] },
-          { id: 'fractions', title: 'Fractions Vector Mastery & Equivalence Strips', subject: 'Mathematics', invariants: ['Visual unit partition', 'Improper-to-mixed conversion'] },
-          { id: 'solar-system', title: 'Keplerian Orbital Vector Dynamics', subject: 'Science', invariants: ['Inverse square gravitation', 'Orbital eccentricity'] },
-          { id: 'photosynthesis', title: 'Light Reactions, Chloroplast Photolysis & Calvin Cycle', subject: 'Science', invariants: ['ATP/NADPH yield', 'Electron transport chain'] },
-          { id: 'pythagoras', title: 'Geometric Proof & Dissection Vectors', subject: 'Mathematics', invariants: ['Area preservation', 'Euclidean transformation'] },
-          { id: 'atom', title: 'Bohr-Rutherford Atomic Shell & Electron Orbital Quantisation', subject: 'Science', invariants: ['Discrete energy levels', 'Photon emission spectra'] },
-          { id: 'velocity', title: 'Kinematics Vector Decomposition & Acceleration', subject: 'Science', invariants: ['Uniform acceleration', 'SUVAT calculus'] },
-          { id: 'dna-helix', title: 'Double Helix Nitrogenous Base-Pairing Transcriber', subject: 'Science', invariants: ['Watson-Crick antiparallel base pairing'] },
-          { id: 'bodmas', title: 'Order of Operations Algebraic Hierarchy Matrix', subject: 'Mathematics', invariants: ['Operator precedence tree evaluation'] },
-          { id: 'phonics-lab', title: 'Synthetic Phonics Articulatory Acoustics & Grapheme Lab', subject: 'English', invariants: ['Pure phoneme sonification'] },
-          { id: 'times-tables', title: 'Multiplication Grid & Distributive Law Matrices', subject: 'Mathematics', invariants: ['Commutative property visualization'] },
-          { id: 'mountain-elevation', title: 'Contour Elevation & Topological Projection Vectors', subject: 'Geography', invariants: ['Isometric contour interpolation'] },
-          { id: 'math-fishing', title: 'Mental Arithmetic Velocity & Reflex Retrieval', subject: 'Mathematics', invariants: ['Rapid fluency feedback'] },
-        ];
+        const allCartridges = getAllCartridges();
+        const cartridges = allCartridges.map((c) => ({
+          id: c.id,
+          title: c.title,
+          type: c.type || 'Sim',
+          stage: c.stage,
+          subject: c.category || 'General',
+          invariants: c.invariants || [],
+          video: c.video || null,
+          videoFit: c.videoFit || 'contain',
+          source: c.source || 'builtin',
+        }));
 
         let filtered = cartridges;
         if (subjectFilter) {
           const sf = subjectFilter.toLowerCase();
-          filtered = cartridges.filter((c) => c.subject.toLowerCase().includes(sf));
+          filtered = cartridges.filter(
+            (c) =>
+              c.subject.toLowerCase().includes(sf) ||
+              c.stage.toLowerCase().includes(sf) ||
+              (c.type && c.type.toLowerCase() === sf)
+          );
         }
 
-        return JSON.stringify({
-          count: filtered.length,
-          total: cartridges.length,
-          cartridges: filtered,
-        }, null, 2);
+        return JSON.stringify(
+          {
+            count: filtered.length,
+            total: cartridges.length,
+            cartridges: filtered,
+          },
+          null,
+          2
+        );
       },
     },
 

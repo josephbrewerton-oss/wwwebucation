@@ -37,6 +37,8 @@ export interface CartridgeDefinition {
   id: string;
   title: string;
   stage: string;
+  category?: string;
+  duration?: number;
   type?: 'Sim' | 'Slide' | 'App' | 'Film';
   video?: string;
   videoFit?: 'contain' | 'cover' | 'fill';
@@ -188,10 +190,29 @@ export const CARTRIDGE_ALIASES: Record<string, string> = {
   'procession-film': 'eucharistic-procession-film',
   'liturgical-film': 'eucharistic-procession-film',
   'procession': 'eucharistic-procession-film',
+  'welcome': 'welcome',
+  'intro': 'welcome',
+  'start': 'welcome',
+  'onboarding': 'welcome',
+  'showcase': 'welcome',
 };
 
 // Built-in Core Curriculum Cartridge Catalog
 export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
+  {
+    id: 'welcome',
+    type: 'Sim',
+    title: 'Welcome to AST Vector Player & Educational Simulator',
+    stage: 'PORTAL APPARATUS & SIMULATOR',
+    category: 'Portal Showcase',
+    desc: 'Interactive demonstration of the AST Vector Engine: 60 FPS sub-pixel kinematics, harmonic oscillations, smartboard stylus ink, and zero-cloud Gemini Nano tutoring.',
+    icon: '✨',
+    source: 'builtin',
+    svgFile: 'scenes/welcome.svg',
+    astFile: 'scenes/welcome.ast',
+    version: '2.6.0',
+    invariants: ['Zero Bloat Runtime', 'Harmonic Resonance', 'Sub-15ms Cold Start', 'Direct Pointer Capture'],
+  },
   {
     id: 'pythagoras',
     type: 'Sim',

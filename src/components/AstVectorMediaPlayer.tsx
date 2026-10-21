@@ -206,7 +206,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   onBslToggle,
 }, ref) => {
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const normalizedInitialPreset = normalizeCartridgeId(preset) || 'kinetic-gas';
+  const normalizedInitialPreset = normalizeCartridgeId(preset) || 'welcome';
   const initialPlayerPresetRef = useRef(normalizedInitialPreset);
   const [selectedPreset, setSelectedPreset] = useState<VectorPresetType>(normalizedInitialPreset);
   const selectedPresetRef = useRef(normalizedInitialPreset);

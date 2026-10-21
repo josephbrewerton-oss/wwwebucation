@@ -958,6 +958,21 @@
         return t === 'sim' || t === 'simulation';
       });
 
+      // Ensure welcome cartridge is placed at the top of simulations
+      const welcomeIdx = simItems.findIndex(i => i.id === 'welcome');
+      if (welcomeIdx > 0) {
+        const [w] = simItems.splice(welcomeIdx, 1);
+        simItems.unshift(w);
+      } else if (welcomeIdx === -1) {
+        simItems.unshift({
+          id: 'welcome',
+          title: 'Welcome to AST Vector Player & Educational Simulator',
+          stage: 'PORTAL SHOWCASE',
+          type: 'Sim',
+          _source: 'builtin'
+        });
+      }
+
       const slideItems = builtInItems.filter(item => {
         const t = (item.type || '').toLowerCase();
         return t === 'slide' || t === 'slides' || t === 'presentation';
