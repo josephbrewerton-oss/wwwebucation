@@ -561,12 +561,12 @@
           target.style.cursor = 'grabbing';
           if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
           this.playAudioTone(440, 'triangle', 0.08);
-        } else if (target.id === 'pyth-handle-a' || target.getAttribute('data-draggable') === 'pyth-handle-a') {
+        } else if (target.id === 'pyth-handle-a' || target.getAttribute('data-draggable') === 'pyth-handle-a' || target.closest('#pyth-handle-a') || target.closest('[data-draggable="pyth-handle-a"]')) {
           this.dragMode = 'pyth-handle-a';
           target.style.cursor = 'ns-resize';
           if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
           this.playAudioTone(440, 'triangle', 0.08);
-        } else if (target.id === 'pyth-handle-b' || target.getAttribute('data-draggable') === 'pyth-handle-b') {
+        } else if (target.id === 'pyth-handle-b' || target.getAttribute('data-draggable') === 'pyth-handle-b' || target.closest('#pyth-handle-b') || target.closest('[data-draggable="pyth-handle-b"]')) {
           this.dragMode = 'pyth-handle-b';
           target.style.cursor = 'ew-resize';
           if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
@@ -1057,29 +1057,29 @@
     // Direct Manipulation Action 4: Pythagoras Theorem PhET Geometry & Controls
     // =========================================================================
     handlePythagorasDragA(svgY) {
-      const originY = 280;
-      const s = 28;
+      const originY = this._pythOriginY !== undefined ? this._pythOriginY : 280;
+      const s = this._pythScale || 28;
       const rawA = (originY - svgY) / s;
-      const clampedA = Math.max(1, Math.min(10, Math.round(rawA)));
+      const clampedA = Math.max(1, Math.min(15, Math.round(rawA)));
       const curB = (this._pythState && this._pythState.b) || (this.engine && this.engine.vars && this.engine.vars.sideB) || 4;
       this.renderPythagorasGeometry(clampedA, curB);
       if (this.engine && typeof this.engine.setVar === 'function') {
         this.engine.setVar('sideA', clampedA);
       }
-      this.playAudioTone(300 + clampedA * 45, 'triangle', 0.05, 0.12);
+      this.playAudioTone(300 + clampedA * 30, 'triangle', 0.05, 0.12);
     }
 
     handlePythagorasDragB(svgX) {
-      const originX = 360;
-      const s = 28;
+      const originX = this._pythOriginX !== undefined ? this._pythOriginX : 360;
+      const s = this._pythScale || 28;
       const rawB = (svgX - originX) / s;
-      const clampedB = Math.max(1, Math.min(10, Math.round(rawB)));
+      const clampedB = Math.max(1, Math.min(15, Math.round(rawB)));
       const curA = (this._pythState && this._pythState.a) || (this.engine && this.engine.vars && this.engine.vars.sideA) || 3;
       this.renderPythagorasGeometry(curA, clampedB);
       if (this.engine && typeof this.engine.setVar === 'function') {
         this.engine.setVar('sideB', clampedB);
       }
-      this.playAudioTone(320 + clampedB * 40, 'triangle', 0.05, 0.12);
+      this.playAudioTone(320 + clampedB * 25, 'triangle', 0.05, 0.12);
     }
 
     /**
@@ -1842,7 +1842,7 @@
           this.playAudioTone(380, 'sine', 0.06);
           return;
         } else if (action === 'pyth-inc-a') {
-          const newA = Math.min(10, curA + 1);
+          const newA = Math.min(15, curA + 1);
           renderPyth(newA, curB);
           if (this.engine && this.engine.setVar) this.engine.setVar('sideA', newA);
           this.playAudioTone(460, 'sine', 0.06);
@@ -1854,7 +1854,7 @@
           this.playAudioTone(420, 'sine', 0.06);
           return;
         } else if (action === 'pyth-inc-b') {
-          const newB = Math.min(10, curB + 1);
+          const newB = Math.min(15, curB + 1);
           renderPyth(curA, newB);
           if (this.engine && this.engine.setVar) this.engine.setVar('sideB', newB);
           this.playAudioTone(520, 'sine', 0.06);
@@ -2674,13 +2674,45 @@ ${strokeLines.join('\n')}
       this._isRenderingPyth = true;
 
       try {
-        const clampedA = Math.max(1, Math.min(10, Math.round(a || 3)));
-        const clampedB = Math.max(1, Math.min(10, Math.round(b || 4)));
+        const clampedA = Math.max(1, Math.min(20, Math.round(a || 3)));
+        const clampedB = Math.max(1, Math.min(20, Math.round(b || 4)));
         this._pythState = { a: clampedA, b: clampedB };
 
-        const originX = 360;
-        const originY = 280;
-        const s = 28; // scale px per unit
+        // Calculate exact algebraic quantities
+        const areaA = clampedA * clampedA;
+        const areaB = clampedB * clampedB;
+        const areaC = areaA + areaB; // Always exact integer: a² + b²
+        const c = Math.sqrt(areaC);
+        const isIntC = Math.abs(c - Math.round(c)) < 1e-5;
+        const cInt = Math.round(c);
+
+        // Adaptive scaling & centering to guarantee full viewport fit
+        // Geometry bounding box: Width = (2a + b)*s, Height = (a + 2b)*s
+        const maxAvailW = 560;
+        const maxAvailH = 340;
+        let s = 28;
+        if (clampedA === 3 && clampedB === 4) {
+          s = 28;
+        } else {
+          const reqW = 2 * clampedA + clampedB;
+          const reqH = clampedA + 2 * clampedB;
+          s = Math.min(28, maxAvailW / reqW, maxAvailH / reqH);
+        }
+
+        let originX = 360;
+        let originY = 280;
+        if (clampedA === 3 && clampedB === 4) {
+          originX = 360;
+          originY = 280;
+        } else {
+          // Center the bounding box around stage center (400, 260)
+          originX = Math.round(400 - (clampedB / 2) * s);
+          originY = Math.round(260 + (clampedA / 2) * s);
+        }
+
+        this._pythScale = s;
+        this._pythOriginX = originX;
+        this._pythOriginY = originY;
 
         const vertAx = originX;
         const vertAy = originY - clampedA * s;
@@ -2693,6 +2725,21 @@ ${strokeLines.join('\n')}
           tri.setAttribute('points', `${originX},${originY} ${vertBx},${vertBy} ${vertAx},${vertAy}`);
         }
 
+        // Right-angle symbol alignment
+        const rightAngle = this.stageSvg.querySelector('#pyth-right-angle');
+        if (rightAngle) {
+          const raSize = Math.max(10, Math.min(18, Math.round(s * 0.6)));
+          rightAngle.setAttribute('x', String(originX));
+          rightAngle.setAttribute('y', String(originY - raSize));
+          rightAngle.setAttribute('width', String(raSize));
+          rightAngle.setAttribute('height', String(raSize));
+          const dot = rightAngle.nextElementSibling;
+          if (dot && dot.tagName.toLowerCase() === 'circle') {
+            dot.setAttribute('cx', String(originX + raSize / 2));
+            dot.setAttribute('cy', String(originY - raSize / 2));
+          }
+        }
+
         // Remove any group-level rasterizing filters that blur SVG vector text and children
         const groupA = this.stageSvg.querySelector('#pyth-group-a');
         if (groupA) groupA.removeAttribute('filter');
@@ -2701,84 +2748,91 @@ ${strokeLines.join('\n')}
         const bannerGroup = this.stageSvg.querySelector('#pyth-hud-banner');
         if (bannerGroup) bannerGroup.removeAttribute('filter');
 
-        // 2. Square A (extends left from vertical leg)
+        // 2. Square A (extends left from vertical leg a: area = a²)
         const rectA = this.stageSvg.querySelector('#pyth-rect-a');
         const txtA = this.stageSvg.querySelector('#pyth-txt-a');
         const gridA = this.stageSvg.querySelector('#pyth-grid-a');
         const badgeA = this.stageSvg.querySelector('#pyth-badge-a');
+        const sideALen = clampedA * s;
+
         if (rectA) {
-          rectA.setAttribute('x', String(originX - clampedA * s));
+          rectA.setAttribute('x', String(originX - sideALen));
           rectA.setAttribute('y', String(vertAy));
-          rectA.setAttribute('width', String(clampedA * s));
-          rectA.setAttribute('height', String(clampedA * s));
+          rectA.setAttribute('width', String(sideALen));
+          rectA.setAttribute('height', String(sideALen));
           rectA.setAttribute('opacity', '1');
           if (!rectA.getAttribute('filter')) rectA.setAttribute('filter', 'url(#pyth-shadow)');
         }
         if (txtA) {
-          txtA.setAttribute('x', String(originX - (clampedA * s) / 2));
-          txtA.setAttribute('y', String(originY - (clampedA * s) / 2 + 5));
-          txtA.textContent = `a² = ${clampedA * clampedA}`;
+          txtA.setAttribute('x', String(originX - sideALen / 2));
+          txtA.setAttribute('y', String(originY - sideALen / 2 + 5));
+          txtA.textContent = `a² = ${areaA}`;
           txtA.setAttribute('opacity', '1');
           txtA.removeAttribute('filter');
           txtA.setAttribute('text-rendering', 'geometricPrecision');
         }
         if (badgeA) {
-          const badgeW = clampedA * clampedA >= 100 ? 76 : 64;
+          const badgeW = areaA >= 100 ? 76 : 64;
           badgeA.setAttribute('width', String(badgeW));
-          badgeA.setAttribute('x', String(originX - (clampedA * s) / 2 - badgeW / 2));
-          badgeA.setAttribute('y', String(originY - (clampedA * s) / 2 - 13));
+          badgeA.setAttribute('x', String(originX - sideALen / 2 - badgeW / 2));
+          badgeA.setAttribute('y', String(originY - sideALen / 2 - 13));
         }
         if (gridA) {
           let linesA = '';
-          for (let i = 1; i < clampedA; i++) {
-            const lx = originX - clampedA * s + i * s;
-            const ly = vertAy + i * s;
-            linesA += `<line x1="${lx}" y1="${vertAy}" x2="${lx}" y2="${originY}" />`;
-            linesA += `<line x1="${originX - clampedA * s}" y1="${ly}" x2="${originX}" y2="${ly}" />`;
+          if (clampedA <= 15) {
+            for (let i = 1; i < clampedA; i++) {
+              const lx = originX - sideALen + i * s;
+              const ly = vertAy + i * s;
+              linesA += `<line x1="${lx.toFixed(1)}" y1="${vertAy.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${originY.toFixed(1)}" />`;
+              linesA += `<line x1="${(originX - sideALen).toFixed(1)}" y1="${ly.toFixed(1)}" x2="${originX.toFixed(1)}" y2="${ly.toFixed(1)}" />`;
+            }
           }
           gridA.innerHTML = linesA;
         }
 
-        // 3. Square B (extends down from horizontal leg)
+        // 3. Square B (extends down from horizontal leg b: area = b²)
         const rectB = this.stageSvg.querySelector('#pyth-rect-b');
         const txtB = this.stageSvg.querySelector('#pyth-txt-b');
         const gridB = this.stageSvg.querySelector('#pyth-grid-b');
         const badgeB = this.stageSvg.querySelector('#pyth-badge-b');
+        const sideBLen = clampedB * s;
+
         if (rectB) {
           rectB.setAttribute('x', String(originX));
           rectB.setAttribute('y', String(originY));
-          rectB.setAttribute('width', String(clampedB * s));
-          rectB.setAttribute('height', String(clampedB * s));
+          rectB.setAttribute('width', String(sideBLen));
+          rectB.setAttribute('height', String(sideBLen));
           rectB.setAttribute('opacity', '1');
           if (!rectB.getAttribute('filter')) rectB.setAttribute('filter', 'url(#pyth-shadow)');
         }
         if (txtB) {
-          txtB.setAttribute('x', String(originX + (clampedB * s) / 2));
-          txtB.setAttribute('y', String(originY + (clampedB * s) / 2 + 5));
-          txtB.textContent = `b² = ${clampedB * clampedB}`;
+          txtB.setAttribute('x', String(originX + sideBLen / 2));
+          txtB.setAttribute('y', String(originY + sideBLen / 2 + 5));
+          txtB.textContent = `b² = ${areaB}`;
           txtB.setAttribute('opacity', '1');
           txtB.removeAttribute('filter');
           txtB.setAttribute('text-rendering', 'geometricPrecision');
         }
         if (badgeB) {
-          const badgeW = clampedB * clampedB >= 100 ? 76 : 68;
+          const badgeW = areaB >= 100 ? 76 : 68;
           badgeB.setAttribute('width', String(badgeW));
-          badgeB.setAttribute('x', String(originX + (clampedB * s) / 2 - badgeW / 2));
-          badgeB.setAttribute('y', String(originY + (clampedB * s) / 2 - 13));
+          badgeB.setAttribute('x', String(originX + sideBLen / 2 - badgeW / 2));
+          badgeB.setAttribute('y', String(originY + sideBLen / 2 - 13));
         }
         if (gridB) {
           let linesB = '';
-          for (let i = 1; i < clampedB; i++) {
-            const lx = originX + i * s;
-            const ly = originY + i * s;
-            linesB += `<line x1="${lx}" y1="${originY}" x2="${lx}" y2="${originY + clampedB * s}" />`;
-            linesB += `<line x1="${originX}" y1="${ly}" x2="${originX + clampedB * s}" y2="${ly}" />`;
+          if (clampedB <= 15) {
+            for (let i = 1; i < clampedB; i++) {
+              const lx = originX + i * s;
+              const ly = originY + i * s;
+              linesB += `<line x1="${lx.toFixed(1)}" y1="${originY.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(originY + sideBLen).toFixed(1)}" />`;
+              linesB += `<line x1="${originX.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${(originX + sideBLen).toFixed(1)}" y2="${ly.toFixed(1)}" />`;
+            }
           }
           gridB.innerHTML = linesB;
         }
 
-        // 4. Square C on hypotenuse (Positive rotation angle in SVG Y-down coords: dy=+A, dx=+B)
-        const c = Math.sqrt(clampedA * clampedA + clampedB * clampedB);
+        // 4. Square C on hypotenuse (Exact area = a² + b² = c²)
         const angleRad = Math.atan2(clampedA, clampedB);
         const angleDeg = (angleRad * 180) / Math.PI;
         const groupC = this.stageSvg.querySelector('#pyth-group-c');
@@ -2795,88 +2849,106 @@ ${strokeLines.join('\n')}
         }
         if (groupC) {
           groupC.removeAttribute('filter');
-          groupC.setAttribute('transform', `translate(${vertAx}, ${vertAy}) rotate(${angleDeg.toFixed(2)})`);
+          groupC.setAttribute('transform', `translate(${vertAx.toFixed(1)}, ${vertAy.toFixed(1)}) rotate(${angleDeg.toFixed(2)})`);
         }
         if (rectC) {
           rectC.setAttribute('x', '0');
-          rectC.setAttribute('y', String(-cPx));
-          rectC.setAttribute('width', String(cPx));
-          rectC.setAttribute('height', String(cPx));
+          rectC.setAttribute('y', String((-cPx).toFixed(1)));
+          rectC.setAttribute('width', String(cPx.toFixed(1)));
+          rectC.setAttribute('height', String(cPx.toFixed(1)));
           rectC.setAttribute('opacity', '1');
           if (!rectC.getAttribute('filter')) rectC.setAttribute('filter', 'url(#pyth-shadow)');
         }
         if (txtC) {
-          txtC.setAttribute('x', String(cPx / 2));
-          txtC.setAttribute('y', String(-cPx / 2 + 5));
-          const cText = Math.abs(c - Math.round(c)) < 0.001 ? String(Math.round(c)) : c.toFixed(2);
-          txtC.textContent = `c² = ${Math.round(c * c)} (c = ${cText})`;
+          txtC.setAttribute('x', String((cPx / 2).toFixed(1)));
+          txtC.setAttribute('y', String((-cPx / 2 + 5).toFixed(1)));
+          txtC.textContent = isIntC
+            ? `c² = ${areaC} (c = ${cInt})`
+            : `c² = ${areaC} (c = √${areaC} ≈ ${c.toFixed(2)})`;
           txtC.setAttribute('opacity', '1');
           txtC.removeAttribute('filter');
           txtC.setAttribute('text-rendering', 'geometricPrecision');
         }
         if (badgeC) {
-          const badgeW = 124;
+          const badgeW = isIntC ? 120 : 156;
           badgeC.setAttribute('width', String(badgeW));
-          badgeC.setAttribute('x', String(cPx / 2 - badgeW / 2));
-          badgeC.setAttribute('y', String(-cPx / 2 - 14));
+          badgeC.setAttribute('x', String((cPx / 2 - badgeW / 2).toFixed(1)));
+          badgeC.setAttribute('y', String((-cPx / 2 - 14).toFixed(1)));
         }
         if (gridC) {
           let linesC = '';
-          const cSteps = Math.min(10, Math.max(1, Math.round(c)));
-          const stepSize = cPx / cSteps;
-          for (let i = 1; i < cSteps; i++) {
-            const pos = i * stepSize;
-            linesC += `<line x1="${pos.toFixed(1)}" y1="${(-cPx).toFixed(1)}" x2="${pos.toFixed(1)}" y2="0" />`;
-            linesC += `<line x1="0" y1="${(-cPx + pos).toFixed(1)}" x2="${cPx.toFixed(1)}" y2="${(-cPx + pos).toFixed(1)}" />`;
+          // Only render discrete unit tiles when c is an integer triple (e.g. 5, 10, 13, 15, 17)
+          // To avoid confusing students with rounded tiles on irrational lengths (e.g. √18)
+          if (isIntC && cInt <= 17) {
+            const stepSize = s; // Exact same unit scale s as legs a & b!
+            for (let i = 1; i < cInt; i++) {
+              const pos = i * stepSize;
+              linesC += `<line x1="${pos.toFixed(1)}" y1="${(-cPx).toFixed(1)}" x2="${pos.toFixed(1)}" y2="0" />`;
+              linesC += `<line x1="0" y1="${(-cPx + pos).toFixed(1)}" x2="${cPx.toFixed(1)}" y2="${(-cPx + pos).toFixed(1)}" />`;
+            }
           }
           gridC.innerHTML = linesC;
         }
 
-        // 5. Handles
+        // 5. Manipulator Handles A & B
         const handleA = this.stageSvg.querySelector('#pyth-handle-a');
         const handleB = this.stageSvg.querySelector('#pyth-handle-b');
         if (handleA) {
-          handleA.setAttribute('transform', `translate(${vertAx}, ${vertAy})`);
+          handleA.setAttribute('transform', `translate(${vertAx.toFixed(1)}, ${vertAy.toFixed(1)})`);
         }
         if (handleB) {
-          handleB.setAttribute('transform', `translate(${vertBx}, ${vertBy})`);
+          handleB.setAttribute('transform', `translate(${vertBx.toFixed(1)}, ${vertBy.toFixed(1)})`);
         }
 
         // 6. Side labels and dimension badge callouts
         const lblA = this.stageSvg.querySelector('#pyth-label-a');
         const lblB = this.stageSvg.querySelector('#pyth-label-b');
         const lblC = this.stageSvg.querySelector('#pyth-label-c');
-        const midAy = originY - (clampedA * s) / 2;
-        const midBx = originX + (clampedB * s) / 2;
-        const midCx = (vertAx + vertBx) / 2 + 20;
-        const midCy = (vertAy + vertBy) / 2;
+        const midAy = originY - sideALen / 2;
+        const midBx = originX + sideBLen / 2;
+
+        // Hypotenuse midpoint placed neatly inside the right triangle so it never overlaps square C
+        const midHypX = (vertAx + vertBx) / 2;
+        const midHypY = (vertAy + vertBy) / 2;
+        const midCx = midHypX + 0.22 * (originX - midHypX);
+        const midCy = midHypY + 0.22 * (originY - midHypY);
 
         if (lblA) {
           lblA.textContent = `a = ${clampedA}`;
+          lblA.setAttribute('x', String(originX + 16));
           lblA.setAttribute('y', String(midAy + 5));
           lblA.removeAttribute('filter');
           lblA.setAttribute('text-rendering', 'geometricPrecision');
           const rectBgA = lblA.previousElementSibling;
-          if (rectBgA && rectBgA.tagName.toLowerCase() === 'rect') rectBgA.setAttribute('y', String(midAy - 11));
+          if (rectBgA && rectBgA.tagName.toLowerCase() === 'rect') {
+            rectBgA.setAttribute('x', String(originX + 4));
+            rectBgA.setAttribute('y', String(midAy - 11));
+          }
         }
         if (lblB) {
           lblB.textContent = `b = ${clampedB}`;
           lblB.setAttribute('x', String(midBx));
+          lblB.setAttribute('y', String(originY - 12));
           lblB.removeAttribute('filter');
           lblB.setAttribute('text-rendering', 'geometricPrecision');
           const rectBgB = lblB.previousElementSibling;
-          if (rectBgB && rectBgB.tagName.toLowerCase() === 'rect') rectBgB.setAttribute('x', String(midBx - 23));
+          if (rectBgB && rectBgB.tagName.toLowerCase() === 'rect') {
+            rectBgB.setAttribute('x', String(midBx - 23));
+            rectBgB.setAttribute('y', String(originY - 26));
+          }
         }
         if (lblC) {
-          lblC.textContent = `c = ${c.toFixed(2)}`;
-          lblC.setAttribute('x', String(midCx));
-          lblC.setAttribute('y', String(midCy + 5));
+          lblC.textContent = isIntC ? `c = ${cInt}` : `c = √${areaC} ≈ ${c.toFixed(2)}`;
+          lblC.setAttribute('x', String(midCx.toFixed(1)));
+          lblC.setAttribute('y', String((midCy + 5).toFixed(1)));
           lblC.removeAttribute('filter');
           lblC.setAttribute('text-rendering', 'geometricPrecision');
           const rectBgC = lblC.previousElementSibling;
           if (rectBgC && rectBgC.tagName.toLowerCase() === 'rect') {
-            rectBgC.setAttribute('x', String(midCx - 28));
-            rectBgC.setAttribute('y', String(midCy - 11));
+            const badgeW = isIntC ? 56 : 94;
+            rectBgC.setAttribute('width', String(badgeW));
+            rectBgC.setAttribute('x', String((midCx - badgeW / 2).toFixed(1)));
+            rectBgC.setAttribute('y', String((midCy - 11).toFixed(1)));
           }
         }
 
@@ -2892,17 +2964,20 @@ ${strokeLines.join('\n')}
             tNode.textContent = `b = ${clampedB}`;
             tNode.setAttribute('x', String(midBx));
           } else if (text.startsWith('c =') && tNode.id !== 'pyth-label-c') {
-            tNode.textContent = `c = ${c.toFixed(2)}`;
-            tNode.setAttribute('x', String(midCx));
-            tNode.setAttribute('y', String(midCy + 5));
+            tNode.textContent = isIntC ? `c = ${cInt}` : `c = √${areaC} ≈ ${c.toFixed(2)}`;
+            tNode.setAttribute('x', String(midCx.toFixed(1)));
+            tNode.setAttribute('y', String((midCy + 5).toFixed(1)));
           }
         });
 
-        // 7. Banner formula text
+        // 7. Banner formula text with exact algebraic consistency
         const banner = this.stageSvg.querySelector('tspan');
         if (banner && banner.parentNode) {
-          const cStr = Math.abs(c - Math.round(c)) < 0.001 ? String(Math.round(c)) : c.toFixed(2);
-          banner.parentNode.innerHTML = `<tspan fill="#34d399">a² (${clampedA * clampedA})</tspan> + <tspan fill="#60a5fa">b² (${clampedB * clampedB})</tspan> = <tspan fill="#fbbf24">c² (${Math.round(c * c)})</tspan> ➔ ${clampedA}² + ${clampedB}² = ${cStr}²`;
+          if (isIntC) {
+            banner.parentNode.innerHTML = `<tspan fill="#34d399">a² (${areaA})</tspan> + <tspan fill="#60a5fa">b² (${areaB})</tspan> = <tspan fill="#fbbf24">c² (${areaC})</tspan> ➔ ${clampedA}² + ${clampedB}² = ${cInt}² (c = ${cInt})`;
+          } else {
+            banner.parentNode.innerHTML = `<tspan fill="#34d399">a² (${areaA})</tspan> + <tspan fill="#60a5fa">b² (${areaB})</tspan> = <tspan fill="#fbbf24">c² (${areaC})</tspan> ➔ ${clampedA}² + ${clampedB}² = (√${areaC})² ➔ c = √${areaC} ≈ ${c.toFixed(2)}`;
+          }
         }
 
         // 8. Sync state & engine variables without re-triggering recursive render loops
@@ -2910,6 +2985,10 @@ ${strokeLines.join('\n')}
           if (!this.engine.vars) this.engine.vars = {};
           this.engine.vars.sideA = clampedA;
           this.engine.vars.sideB = clampedB;
+          this.engine.vars.hypotenuse = isIntC ? cInt : Number(c.toFixed(2));
+          this.engine.vars.areaA = areaA;
+          this.engine.vars.areaB = areaB;
+          this.engine.vars.areaC = areaC;
         }
 
         // 9. Two-way sync to parameters HUD inputs
@@ -3678,16 +3757,16 @@ ${strokeLines.join('\n')}
         html += `
           <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-              <span style="font-size:10px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.5px;">📐 Integer Triples</span>
+              <span style="font-size:10px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.5px;">📐 Pythagorean Triples</span>
               <span style="font-size:9px; color:#94a3b8;">a² + b² = c²</span>
             </div>
             <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
-              <button type="button" class="pyth-triple-chip" data-a="3" data-b="4" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">3 - 4 - 5</button>
-              <button type="button" class="pyth-triple-chip" data-a="5" data-b="12" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">5 - 12 - 13</button>
-              <button type="button" class="pyth-triple-chip" data-a="6" data-b="8" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">6 - 8 - 10</button>
-              <button type="button" class="pyth-triple-chip" data-a="8" data-b="15" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">8 - 15 - 17</button>
-              <button type="button" class="pyth-triple-chip" data-a="1" data-b="1" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">1 - 1 - √2</button>
-              <button type="button" class="pyth-triple-chip" data-a="7" data-b="24" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;">7 - 24 - 25</button>
+              <button type="button" class="pyth-triple-chip" data-a="3" data-b="4" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="3² + 4² = 5²">3 - 4 - 5</button>
+              <button type="button" class="pyth-triple-chip" data-a="6" data-b="8" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="6² + 8² = 10²">6 - 8 - 10</button>
+              <button type="button" class="pyth-triple-chip" data-a="5" data-b="12" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="5² + 12² = 13²">5 - 12 - 13</button>
+              <button type="button" class="pyth-triple-chip" data-a="8" data-b="15" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="8² + 15² = 17²">8 - 15 - 17</button>
+              <button type="button" class="pyth-triple-chip" data-a="9" data-b="12" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="9² + 12² = 15²">9 - 12 - 15</button>
+              <button type="button" class="pyth-triple-chip" data-a="1" data-b="1" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="Isosceles: 1² + 1² = (√2)²">1 - 1 - √2</button>
             </div>
           </div>
         `;
