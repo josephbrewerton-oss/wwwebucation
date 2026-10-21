@@ -63,10 +63,10 @@ export interface BytecodeCompiledScene {
   videoFit?: 'contain' | 'cover' | 'fill';
   has3D?: boolean;
   hasVideo?: boolean;
-  camera?: { distance: number; pitch: number; yaw: number | string; fov: number } | null;
+  camera?: { distance: number; pitch: number | string; yaw: number | string; fov: number } | null;
   keyframes: Array<{ t: number; title: string; rule: string }>;
   subtitles: Array<{ start: number; end: number; en: string; es?: string; la?: string; [k: string]: any }>;
-  bindings: Array<{ target: string; attr: string; expr: string }>;
+  bindings: Array<any>;
   checkpoints: Array<{ t: number; prompt: string; options: string[]; answer: number; explanation: string }>;
   gestures?: Array<{ target: string; axis: string; min: number; max: number }>;
   vars?: Record<string, any>;
@@ -207,9 +207,21 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   if (scene.camera) {
     appendU8(OP_CAMERA);
     appendF32(scene.camera.distance || 500);
-    appendF32(scene.camera.pitch || 20);
+    appendF32(typeof scene.camera.pitch === 'number' ? scene.camera.pitch : 20);
     appendF32(typeof scene.camera.yaw === 'number' ? scene.camera.yaw : 0);
     appendF32(scene.camera.fov || 60);
+
+    if (typeof scene.camera.yaw === 'string' || typeof scene.camera.pitch === 'string') {
+      appendU8(OP_BINDING);
+      appendU16(strTable.intern(':camera'));
+      appendU16(strTable.intern('camera'));
+      appendU16(strTable.intern(JSON.stringify({
+        yaw: scene.camera.yaw,
+        pitch: scene.camera.pitch,
+        distance: scene.camera.distance,
+        fov: scene.camera.fov,
+      })));
+    }
   }
 
   // 3. Variables & Inputs
@@ -278,8 +290,22 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     for (const b of scene.bindings) {
       appendU8(OP_BINDING);
       appendU16(strTable.intern(b.target));
-      appendU16(strTable.intern(b.attr));
-      appendU16(strTable.intern(b.expr));
+      if (b.type === '3d-node') {
+        appendU16(strTable.intern(':3d-node'));
+        appendU16(strTable.intern(`${b.x}|${b.y}|${b.z}|${b.baseR || 8}|${b.label || ''}|${b.depthFog !== false ? 1 : 0}`));
+      } else if (b.type === '3d-ring') {
+        appendU16(strTable.intern(':3d-ring'));
+        appendU16(strTable.intern(`${b.r}|${b.cx || 0}|${b.cy || 0}|${b.cz || 0}|${b.tiltX || 0}|${b.tiltY || 0}|${b.tiltZ || 0}|${b.segments || 24}|${b.depthFog !== false ? 1 : 0}`));
+      } else if (b.type === '3d-line') {
+        appendU16(strTable.intern(':3d-line'));
+        appendU16(strTable.intern(`${b.x1}|${b.y1}|${b.z1}|${b.x2}|${b.y2}|${b.z2}|${b.cap1 || ''}|${b.cap2 || ''}|${b.baseR || 8}`));
+      } else if (b.type === '3d-polygon') {
+        appendU16(strTable.intern(':3d-polygon'));
+        appendU16(strTable.intern(`${b.depthFog !== false ? 1 : 0}|${b.cullBackface ? 1 : 0}|${b.pointsExpr}`));
+      } else {
+        appendU16(strTable.intern(b.attr || 'attr'));
+        appendU16(strTable.intern(b.expr || ''));
+      }
     }
   }
 
@@ -455,11 +481,93 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         const targetIdx = view.getUint16(offset, true); offset += 2;
         const attrIdx = view.getUint16(offset, true); offset += 2;
         const exprIdx = view.getUint16(offset, true); offset += 2;
-        scene.bindings.push({
-          target: strTable.get(targetIdx),
-          attr: strTable.get(attrIdx),
-          expr: strTable.get(exprIdx),
-        });
+        const target = strTable.get(targetIdx);
+        const attr = strTable.get(attrIdx);
+        const expr = strTable.get(exprIdx);
+
+        if (target === ':camera' && attr === 'camera') {
+          try {
+            const camData = expr.startsWith('{') ? JSON.parse(expr) : null;
+            if (camData) {
+              scene.camera = { ...(scene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }), ...camData };
+            }
+            scene.has3D = true;
+          } catch {}
+        } else if (attr === ':3d-node' || attr === '3d-node') {
+          if (expr.startsWith('{')) {
+            try { scene.bindings.push({ type: '3d-node', target, ...JSON.parse(expr) }); } catch {}
+          } else {
+            const p = expr.split('|');
+            scene.bindings.push({
+              type: '3d-node',
+              target,
+              x: p[0],
+              y: p[1],
+              z: p[2],
+              baseR: parseFloat(p[3]) || 8,
+              label: p[4] || null,
+              depthFog: p[5] !== '0',
+            });
+          }
+        } else if (attr === ':3d-ring' || attr === '3d-ring') {
+          if (expr.startsWith('{')) {
+            try { scene.bindings.push({ type: '3d-ring', target, ...JSON.parse(expr) }); } catch {}
+          } else {
+            const p = expr.split('|');
+            scene.bindings.push({
+              type: '3d-ring',
+              target,
+              r: p[0],
+              cx: p[1],
+              cy: p[2],
+              cz: p[3],
+              tiltX: p[4],
+              tiltY: p[5],
+              tiltZ: p[6],
+              segments: parseInt(p[7], 10) || 24,
+              depthFog: p[8] !== '0',
+            });
+          }
+        } else if (attr === ':3d-line' || attr === '3d-line') {
+          if (expr.startsWith('{')) {
+            try { scene.bindings.push({ type: '3d-line', target, ...JSON.parse(expr) }); } catch {}
+          } else {
+            const p = expr.split('|');
+            scene.bindings.push({
+              type: '3d-line',
+              target,
+              x1: p[0],
+              y1: p[1],
+              z1: p[2],
+              x2: p[3],
+              y2: p[4],
+              z2: p[5],
+              cap1: p[6] || null,
+              cap2: p[7] || null,
+              baseR: parseFloat(p[8]) || 8,
+            });
+          }
+        } else if (attr === ':3d-polygon' || attr === '3d-polygon') {
+          if (expr.startsWith('{')) {
+            try { scene.bindings.push({ type: '3d-polygon', target, ...JSON.parse(expr) }); } catch {}
+          } else {
+            const p = expr.split('|');
+            scene.bindings.push({
+              type: '3d-polygon',
+              target,
+              depthFog: p[0] !== '0',
+              cullBackface: p[1] === '1',
+              pointsExpr: p.slice(2).join('|'),
+            });
+          }
+        } else {
+          scene.bindings.push({
+            type: '2d-attr',
+            target,
+            attr,
+            expr,
+          });
+        }
         break;
       }
       case OP_CHECKPOINT: {
@@ -522,6 +630,38 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
   }
 
   return scene;
+}
+
+function extractSexprBlocks(text: string, tag: string): string[] {
+  const blocks: string[] = [];
+  const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const startRegex = new RegExp('\\(' + safeTag + '[\\s)]', 'gi');
+  let m: RegExpExecArray | null;
+  while ((m = startRegex.exec(text)) !== null) {
+    const startIdx = m.index;
+    let depth = 0;
+    let inString = false;
+    let endIdx = -1;
+    for (let i = startIdx; i < text.length; i++) {
+      const char = text[i];
+      if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
+        inString = !inString;
+      } else if (!inString) {
+        if (char === '(') depth++;
+        else if (char === ')') {
+          depth--;
+          if (depth === 0) {
+            endIdx = i + 1;
+            break;
+          }
+        }
+      }
+    }
+    if (endIdx !== -1) {
+      blocks.push(text.slice(startIdx, endIdx));
+    }
+  }
+  return blocks;
 }
 
 /**
@@ -590,16 +730,128 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     });
   }
 
-  // Bindings
-  const bindings: Array<{ target: string; attr: string; expr: string }> = [];
-  const bindRegex = /\(:target\s+"([^"]+)"\s+:attr\s+"([^"]+)"\s+:expr\s+"([^"]+)"\)/gi;
-  let bm: RegExpExecArray | null;
-  while ((bm = bindRegex.exec(astText)) !== null) {
-    bindings.push({
-      target: bm[1],
-      attr: bm[2],
-      expr: bm[3],
-    });
+  // Helper extraction routines
+  const extractSlot = (text: string, reg: RegExp): string | null => {
+    if (!text || typeof text !== 'string') return null;
+    const match = text.match(reg);
+    return match ? match[1].trim().replace(/^"|"$/g, '') : null;
+  };
+
+  const extractQuoted = (text: string, key: string): string | null => {
+    if (!text || typeof text !== 'string') return null;
+    const reg = new RegExp(`:${key}\\s+"((?:[^"\\\\]|\\\\.)*)"`, 'i');
+    const m = text.match(reg);
+    if (m) return m[1].replace(/\\"/g, '"');
+    const fallbackReg = new RegExp(`:${key}\\s+([^\\s\\)]+)`, 'i');
+    const fb = text.match(fallbackReg);
+    return fb ? fb[1].replace(/^"|"$/g, '') : null;
+  };
+
+  // Bindings (Supports 2D and 3D nodes, rings, lines, and polygons)
+  const bindings: Array<any> = [];
+  const bindBlocks = extractSexprBlocks(astText, ':target');
+  bindBlocks.forEach((block) => {
+    const target = extractQuoted(block, 'target') || extractSlot(block, /:target\s+"([^"]+)"/i);
+    const nodeType = extractSlot(block, /:type\s+"([^"]+)"/i);
+    const attr = extractQuoted(block, 'attr') || extractSlot(block, /:attr\s+"([^"]+)"/i);
+    const expr = extractQuoted(block, 'expr') || extractSlot(block, /:expr\s+"([^"]+)"/i);
+
+    if (nodeType === '3d-node') {
+      const x = extractSlot(block, /:x\s+"([^"]+)"/i) || '0';
+      const y = extractSlot(block, /:y\s+"([^"]+)"/i) || '0';
+      const z = extractSlot(block, /:z\s+"([^"]+)"/i) || '0';
+      const baseRStr = extractSlot(block, /:base-r\s+([\d\.]+)/i);
+      const baseR = baseRStr ? parseFloat(baseRStr) : 8;
+      const label = extractSlot(block, /:label\s+"([^"]+)"/i);
+      const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
+      const depthFog = depthFogStr !== 'false';
+
+      bindings.push({
+        type: '3d-node',
+        target,
+        x,
+        y,
+        z,
+        baseR,
+        label,
+        depthFog,
+      });
+    } else if (nodeType === '3d-line') {
+      bindings.push({
+        type: '3d-line',
+        target,
+        x1: extractSlot(block, /:x1\s+"([^"]+)"/i) || '0',
+        y1: extractSlot(block, /:y1\s+"([^"]+)"/i) || '0',
+        z1: extractSlot(block, /:z1\s+"([^"]+)"/i) || '0',
+        x2: extractSlot(block, /:x2\s+"([^"]+)"/i) || '0',
+        y2: extractSlot(block, /:y2\s+"([^"]+)"/i) || '0',
+        z2: extractSlot(block, /:z2\s+"([^"]+)"/i) || '0',
+        cap1: extractSlot(block, /:cap1\s+"([^"]+)"/i),
+        cap2: extractSlot(block, /:cap2\s+"([^"]+)"/i),
+        baseR: parseFloat(extractSlot(block, /:base-r\s+([\d\.]+)/i) || '8'),
+      });
+    } else if (nodeType === '3d-ring') {
+      const rStr = extractSlot(block, /:r\s+("[^"]+"|[\\d\\.]+)/i) || '100';
+      const cx = extractSlot(block, /:cx\s+"([^"]+)"/i) || '0';
+      const cy = extractSlot(block, /:cy\s+"([^"]+)"/i) || '0';
+      const cz = extractSlot(block, /:cz\s+"([^"]+)"/i) || '0';
+      const tiltX = extractSlot(block, /:tilt-x\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
+      const tiltY = extractSlot(block, /:tilt-y\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
+      const tiltZ = extractSlot(block, /:tilt-z\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
+      const segsStr = extractSlot(block, /:segments\s+([\d]+)/i);
+      const segments = segsStr ? parseInt(segsStr, 10) : 24;
+      const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
+      const depthFog = depthFogStr !== 'false';
+
+      bindings.push({
+        type: '3d-ring',
+        target,
+        r: rStr,
+        cx,
+        cy,
+        cz,
+        tiltX,
+        tiltY,
+        tiltZ,
+        segments,
+        depthFog,
+      });
+    } else if (nodeType === '3d-polygon') {
+      const ptsStr = extractSlot(block, /:points\s+"([^"]+)"/i) || extractSlot(block, /:pts\s+"([^"]+)"/i);
+      const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
+      const depthFog = depthFogStr !== 'false';
+      const cullBackfaceStr = extractSlot(block, /:cull-backface\s+([^\s\)]+)/i);
+      const cullBackface = cullBackfaceStr === 'true';
+
+      bindings.push({
+        type: '3d-polygon',
+        target,
+        pointsExpr: ptsStr,
+        depthFog,
+        cullBackface,
+      });
+    } else if (target && attr && expr) {
+      bindings.push({
+        type: '2d-attr',
+        target,
+        attr,
+        expr,
+      });
+    }
+  });
+
+  // Fallback for flat 2D bindings
+  if (bindings.length === 0) {
+    const bindRegex = /\(:target\s+"([^"]+)"\s+:attr\s+"([^"]+)"\s+:expr\s+"([^"]+)"\)/gi;
+    let bm: RegExpExecArray | null;
+    while ((bm = bindRegex.exec(astText)) !== null) {
+      bindings.push({
+        type: '2d-attr',
+        target: bm[1],
+        attr: bm[2],
+        expr: bm[3],
+      });
+    }
   }
 
   // Checkpoints
@@ -649,16 +901,35 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     else vars[vName] = parseFloat(rawVal);
   }
 
-  // Camera
-  let camera: { distance: number; pitch: number; yaw: number; fov: number } | null = null;
-  const camMatch = astText.match(/\(:camera\s+:distance\s+([\d\.]+)\s+:pitch\s+([\d\.\-]+)\s+:yaw\s+([\d\.\-]+)\s+:fov\s+([\d\.]+)\)/i);
-  if (camMatch) {
-    camera = {
-      distance: parseFloat(camMatch[1]),
-      pitch: parseFloat(camMatch[2]),
-      yaw: parseFloat(camMatch[3]),
-      fov: parseFloat(camMatch[4]),
+  // Camera (Supports static and dynamic string expressions)
+  let camera: { distance: number; pitch: number | string; yaw: number | string; fov: number } | null = null;
+  const camBlocks = extractSexprBlocks(astText, ':camera');
+  if (camBlocks.length > 0) {
+    const cBody = camBlocks[0];
+    const getCamVal = (key: string) => {
+      const m = cBody.match(new RegExp(`:${key}\\s+("([^"]+)"|([\\d\\.-]+))`, 'i'));
+      return m ? (m[2] !== undefined ? m[2] : m[3]) : null;
     };
+    const distStr = getCamVal('distance');
+    const pitchStr = getCamVal('pitch');
+    const yawStr = getCamVal('yaw');
+    const fovStr = getCamVal('fov');
+    camera = {
+      distance: distStr ? parseFloat(distStr) : 500,
+      pitch: pitchStr ? (isNaN(Number(pitchStr)) ? pitchStr : parseFloat(pitchStr)) : 20,
+      yaw: yawStr ? (isNaN(Number(yawStr)) ? yawStr : parseFloat(yawStr)) : 0,
+      fov: fovStr ? parseFloat(fovStr) : 60,
+    };
+  } else {
+    const camMatch = astText.match(/\(:camera\s+:distance\s+([\d\.]+)\s+:pitch\s+([\d\.\-]+)\s+:yaw\s+([\d\.\-]+)\s+:fov\s+([\d\.]+)\)/i);
+    if (camMatch) {
+      camera = {
+        distance: parseFloat(camMatch[1]),
+        pitch: parseFloat(camMatch[2]),
+        yaw: parseFloat(camMatch[3]),
+        fov: parseFloat(camMatch[4]),
+      };
+    }
   }
 
   return compileSceneToBytecode({

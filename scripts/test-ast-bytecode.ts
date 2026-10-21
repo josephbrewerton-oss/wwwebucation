@@ -128,6 +128,7 @@ function runTests() {
 
   const t0 = performance.now();
   let totalBytecodeSize = 0;
+  let totalDecompTime = 0;
 
   for (const f of files) {
     const raw = fs.readFileSync(path.join(CARTRIDGES_DIR, f), 'utf8');
@@ -137,14 +138,15 @@ function runTests() {
     const tDecompStart = performance.now();
     const sc = decompileBytecodeToScene(bin);
     const tDecomp = performance.now() - tDecompStart;
+    totalDecompTime += tDecomp;
 
     assert(Boolean(sc.id && sc.title), `Cartridge '${f}' successfully compiled & decompiled`);
     assert(tDecomp < 3.0, `Cartridge '${f}' decompiled in ${tDecomp.toFixed(3)} ms (< 3.0 ms threshold)`);
   }
 
   const totalTime = performance.now() - t0;
-  const avgTime = totalTime / files.length;
-  console.log(`\n  ⚡ Decompiled all ${files.length} cartridges in ${totalTime.toFixed(2)} ms (average ${avgTime.toFixed(3)} ms/cartridge)`);
+  const avgTime = totalDecompTime / files.length;
+  console.log(`\n  ⚡ Decompiled all ${files.length} cartridges in ${totalDecompTime.toFixed(2)} ms (average ${avgTime.toFixed(3)} ms/cartridge)`);
   assert(avgTime < 1.0, `Average decompilation time (${avgTime.toFixed(3)} ms) is strictly < 1.0 ms`);
   assert(totalTime < 100, 'Total compilation + decompilation suite runtime is strictly < 100 ms');
 
