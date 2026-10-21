@@ -3341,6 +3341,10 @@
         }
       }
       this.updateActiveKeyframeAndSpeech(true);
+      if (!this.vars) this.vars = {};
+      if (this.activePresetId === 'solar-system' || (this.scene && this.scene.id === 'solar-system')) {
+        this.vars._solarClock = this.progress * (this.durationSec || 14.0);
+      }
       this.applyBindings(this.progress);
       this.emit('timeupdate', {
         progress: this.progress,
@@ -3949,11 +3953,93 @@
             const targetIdx = view.getUint16(offset, true); offset += 2;
             const attrIdx = view.getUint16(offset, true); offset += 2;
             const exprIdx = view.getUint16(offset, true); offset += 2;
-            scene.bindings.push({
-              target: getStr(targetIdx),
-              attr: getStr(attrIdx),
-              expr: getStr(exprIdx)
-            });
+            const target = getStr(targetIdx);
+            const attr = getStr(attrIdx);
+            const expr = getStr(exprIdx);
+
+            if (target === ':camera' && attr === 'camera') {
+              try {
+                const camData = expr.startsWith('{') ? JSON.parse(expr) : null;
+                if (camData) {
+                  scene.camera = Object.assign(scene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }, camData);
+                }
+                scene.has3D = true;
+              } catch {}
+            } else if (attr === ':3d-node' || attr === '3d-node') {
+              if (expr.startsWith('{')) {
+                try { scene.bindings.push({ type: '3d-node', target, ...JSON.parse(expr) }); } catch {}
+              } else {
+                const p = expr.split('|');
+                scene.bindings.push({
+                  type: '3d-node',
+                  target,
+                  x: p[0],
+                  y: p[1],
+                  z: p[2],
+                  baseR: parseFloat(p[3]) || 8,
+                  label: p[4] || null,
+                  depthFog: p[5] !== '0',
+                });
+              }
+            } else if (attr === ':3d-ring' || attr === '3d-ring') {
+              if (expr.startsWith('{')) {
+                try { scene.bindings.push({ type: '3d-ring', target, ...JSON.parse(expr) }); } catch {}
+              } else {
+                const p = expr.split('|');
+                scene.bindings.push({
+                  type: '3d-ring',
+                  target,
+                  r: p[0],
+                  cx: p[1],
+                  cy: p[2],
+                  cz: p[3],
+                  tiltX: p[4],
+                  tiltY: p[5],
+                  tiltZ: p[6],
+                  segments: parseInt(p[7], 10) || 24,
+                  depthFog: p[8] !== '0',
+                });
+              }
+            } else if (attr === ':3d-line' || attr === '3d-line') {
+              if (expr.startsWith('{')) {
+                try { scene.bindings.push({ type: '3d-line', target, ...JSON.parse(expr) }); } catch {}
+              } else {
+                const p = expr.split('|');
+                scene.bindings.push({
+                  type: '3d-line',
+                  target,
+                  x1: p[0],
+                  y1: p[1],
+                  z1: p[2],
+                  x2: p[3],
+                  y2: p[4],
+                  z2: p[5],
+                  cap1: p[6] || null,
+                  cap2: p[7] || null,
+                  baseR: parseFloat(p[8]) || 8,
+                });
+              }
+            } else if (attr === ':3d-polygon' || attr === '3d-polygon') {
+              if (expr.startsWith('{')) {
+                try { scene.bindings.push({ type: '3d-polygon', target, ...JSON.parse(expr) }); } catch {}
+              } else {
+                const p = expr.split('|');
+                scene.bindings.push({
+                  type: '3d-polygon',
+                  target,
+                  depthFog: p[0] !== '0',
+                  cullBackface: p[1] === '1',
+                  pointsExpr: p.slice(2).join('|'),
+                });
+              }
+            } else {
+              scene.bindings.push({
+                type: '2d-attr',
+                target,
+                attr,
+                expr
+              });
+            }
             break;
           }
           case 0x40: { // OP_CHECKPOINT
@@ -4918,8 +5004,8 @@
         console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
       }
     }
-    // Fall back to .ast text if bytecode was not found or failed to parse
-    if (!parsedAst) {
+    // Fall back to .ast text if bytecode was not found, failed to parse, or is missing 3D bindings
+    if (!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d')))) {
       const foundAst = await fetchAsset('ast');
       if (foundAst) astText = foundAst;
     }
@@ -4943,7 +5029,7 @@
           return this.loadScene('welcome', shouldPlay);
         }
 
-        if (!parsedAst && astText) {
+        if ((!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d')))) && astText) {
           try {
             parsedAst = this.parseAst(astText);
           } catch (err) {
