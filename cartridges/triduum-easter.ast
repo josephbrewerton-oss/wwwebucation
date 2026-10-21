@@ -1,4 +1,4 @@
-(:scene :id "triduum-easter" :type "Sim" :title "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi" :stage "CATHOLIC LIFE" :duration 30.0
+(:scene :id "triduum-easter" :type "Sim" :oak-id "OAK-KS2-RE-006" :oak-unit "ks2-re-catholic-paschal-triduum" :title "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi" :stage "CATHOLIC LIFE" :duration 30.0
   (:vars (
     (:var :name "candleGlow" :val 1.0 :min 0.1 :max 2.0 :step 0.1 :label "Paschal Candle Radiance")
     (:var :name "elevationStep" :val 3.0 :min 1.0 :max 3.0 :step 1.0 :label "Lumen Christi Elevation")

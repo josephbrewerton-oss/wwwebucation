@@ -1,4 +1,4 @@
-(:scene :id "nicene-creed" :type "Sim" :title "The Nicene & Apostles' Creed: Credo in Unum Deum" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "nicene-creed" :type "Sim" :oak-id "OAK-KS3-RE-014" :oak-unit "ks3-re-catholic-creed-profession-faith" :title "The Nicene & Apostles' Creed: Credo in Unum Deum" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "trinityPillar" :val 1.0 :min 1.0 :max 3.0 :step 1.0 :label "Trinitarian Pillar (1: Father & Creation, 2: Son & Redemption, 3: Holy Spirit & Church)")
     (:var :name "creedGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Divine Light of Faith Intensity")

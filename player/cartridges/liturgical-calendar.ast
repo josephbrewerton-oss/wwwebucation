@@ -1,4 +1,4 @@
-(:scene :id "liturgical-calendar" :type "Sim" :title "The Catholic Liturgical Year: Sacred Seasons & Colors" :stage "CATHOLIC LIFE" :duration 26.0
+(:scene :id "liturgical-calendar" :type "Sim" :oak-id "OAK-KS2-RE-009" :oak-unit "ks2-re-catholic-liturgical-seasons" :title "The Catholic Liturgical Year: Sacred Seasons & Colors" :stage "CATHOLIC LIFE" :duration 26.0
   (:vars (
     (:var :name "seasonAngle" :val 0.0 :min 0.0 :max 360.0 :step 15.0 :label "Liturgical Year Wheel Dial")
     (:var :name "vestmentGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Liturgical Color Intensity")

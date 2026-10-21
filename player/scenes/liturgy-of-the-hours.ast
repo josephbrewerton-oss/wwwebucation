@@ -1,4 +1,4 @@
-(:scene :id "liturgy-of-the-hours" :type "Sim" :title "The Liturgy of the Hours: Sanctifying Time Through the Divine Office" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "liturgy-of-the-hours" :type "Sim" :oak-id "OAK-KS3-RE-007" :oak-unit "ks3-re-catholic-divine-office-psalms" :title "The Liturgy of the Hours: Sanctifying Time Through the Divine Office" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "canonicalHourIdx" :val 2.0 :min 0.0 :max 6.0 :step 1.0 :label "Canonical Hour")
     (:var :name "sunElevation" :val 45.0 :min 0.0 :max 360.0 :step 15.0 :label "Celestial Sun/Moon Angle")

@@ -1,4 +1,4 @@
-(:scene :id "phonics-screening" :type "Sim" :title "Year 1 Phonics Screening Check & Alien Words" :stage "EARLY YEARS & KS1 PHONICS" :duration 18.0
+(:scene :id "phonics-screening" :type "Sim" :oak-id "OAK-KS1-ENG-002" :oak-unit "ks1-english-reading-phonics-alien-words" :title "Year 1 Phonics Screening Check & Alien Words" :stage "EARLY YEARS & KS1 PHONICS" :duration 18.0
   (:camera :distance 400 :pitch 0 :yaw 0 :fov 60)
   (:vars (
     (:var :name "wordIdx" :val 0 :min 0 :max 39 :step 1 :label "Word Number (1–40)")

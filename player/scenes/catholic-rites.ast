@@ -1,4 +1,4 @@
-(:scene :id "catholic-rites" :type "Sim" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "catholic-rites" :type "Sim" :oak-id "OAK-KS3-RE-011" :oak-unit "ks3-re-catholic-sacramental-rites" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "selectedRite" :val 1.0 :min 1.0 :max 6.0 :step 1.0 :label "Selected Liturgical Rite (1: Roman, 2: Byzantine, 3: Alexandrian, 4: Antiochene, 5: Chaldean, 6: Armenian)")
     (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with the Holy See Beacon Intensity")

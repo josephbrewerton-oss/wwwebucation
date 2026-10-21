@@ -1,4 +1,4 @@
-(:scene :id "seven-sacraments" :type "Sim" :title "The Seven Holy Sacraments: Visible Signs of Invisible Grace" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "seven-sacraments" :type "Sim" :oak-id "OAK-KS2-RE-008" :oak-unit "ks2-re-catholic-seven-sacraments" :title "The Seven Holy Sacraments: Visible Signs of Invisible Grace" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "sacramentIndex" :val 0.0 :min 0.0 :max 6.0 :step 1.0 :label "Sacrament Selector")
     (:var :name "graceGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Sacramental Grace Radiance")

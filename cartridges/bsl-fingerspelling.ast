@@ -1,4 +1,4 @@
-(:scene :id "bsl-fingerspelling" :type "Sim" :title "BSL: 3D British Sign Language Two-Handed Fingerspelling" :stage "ACCESSIBILITY & LANGUAGES" :duration 16.0
+(:scene :id "bsl-fingerspelling" :type "Sim" :oak-id "OAK-KS2-INC-001" :title "BSL: 3D British Sign Language Two-Handed Fingerspelling" :stage "ACCESSIBILITY & LANGUAGES" :duration 16.0
   (:camera :distance 420 :pitch 18 :yaw "cameraYaw" :fov 60)
   (:vars (
     (:var :name "cameraYaw" :val 0 :min -180 :max 180 :step 5 :label "360° Hand Orbit (°)")

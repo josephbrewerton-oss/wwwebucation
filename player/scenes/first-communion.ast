@@ -1,4 +1,4 @@
-(:scene :id "first-communion" :type "Sim" :title "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "first-communion" :type "Sim" :oak-id "OAK-KS2-RE-005" :oak-unit "ks2-re-catholic-first-holy-communion" :title "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "communionStep" :val 1.0 :min 1.0 :max 5.0 :step 1.0 :label "Steps of First Holy Communion (1: Clean Heart, 2: Fasting, 3: Reverence, 4: Reception, 5: Thanksgiving)")
     (:var :name "adorationRadiance" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Eucharistic Adoration Divine Radiance")

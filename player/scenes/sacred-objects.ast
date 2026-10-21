@@ -1,4 +1,4 @@
-(:scene :id "sacred-objects" :type "Sim" :title "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "sacred-objects" :type "Sim" :oak-id "OAK-KS2-RE-017" :oak-unit "ks2-re-catholic-sacred-vessels-vestments" :title "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "categoryFilter" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Category (1: Sacred Vessels, 2: Sacred Linens, 3: Sanctuary Appointments, 4: Vestments)")
     (:var :name "zoomDetail" :val 1.0 :min 0.8 :max 1.6 :step 0.1 :label "Examination Zoom Level")
