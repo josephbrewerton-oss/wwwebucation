@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-21T11:39:31.463Z",
+  "generatedAt": "2026-10-21T11:57:51.210Z",
   "totalScenes": 45,
   "inputDirs": [
     "static/player/scenes",
@@ -711,7 +711,7 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3,
+      "bindingsCount": 6,
       "hasCheckpoints": false,
       "checkpointCount": 0
     },
