@@ -54,11 +54,58 @@
   </g>
 
   <!-- Interactive 3D Rotation Prompt -->
-  <g transform="translate(30, 425)">
-    <rect width="210" height="30" rx="6" fill="#0f172a" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
-    <text x="105" y="20" fill="#94a3b8" font-size="12" font-weight="700" text-anchor="middle" font-family="sans-serif">
+  <g transform="translate(18, 68)">
+    <rect width="180" height="26" rx="6" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
+    <text x="90" y="17" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle" font-family="sans-serif">
       🖱️ Drag Stage to Orbit in 3D
     </text>
+  </g>
+
+  <!-- Bottom Interactive DNA Control & Selector Ribbon -->
+  <g id="dna-control-ribbon" transform="translate(40, 424)">
+    <!-- Backdrop Pill -->
+    <rect width="720" height="44" rx="10" fill="#0f172a" fill-opacity="0.94" stroke="#334155" stroke-width="1.2" />
+
+    <!-- Group 1: Helicase Unzip Controls -->
+    <text x="14" y="27" fill="#38bdf8" font-size="10" font-weight="800" font-family="sans-serif">TRANSCRIPTION:</text>
+    <g transform="translate(112, 9)" style="cursor: pointer;" data-action="dna-unzip-0" id="btn-dna-unzip-0">
+      <rect width="72" height="26" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+      <text x="36" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">🔒 Intact (0%)</text>
+    </g>
+    <g transform="translate(190, 9)" style="cursor: pointer;" data-action="dna-unzip-50" id="btn-dna-unzip-50">
+      <rect width="76" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="38" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">✂️ Fork (50%)</text>
+    </g>
+    <g transform="translate(272, 9)" style="cursor: pointer;" data-action="dna-unzip-100" id="btn-dna-unzip-100">
+      <rect width="76" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="38" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">⚡ Split (100%)</text>
+    </g>
+
+    <!-- Group 2: Base Filter Selectors -->
+    <text x="364" y="27" fill="#f472b6" font-size="10" font-weight="800" font-family="sans-serif">BASES:</text>
+    <g transform="translate(412, 9)" style="cursor: pointer;" data-action="dna-filter-all" id="btn-dna-filter-all">
+      <rect width="52" height="26" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+      <text x="26" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">All (18)</text>
+    </g>
+    <g transform="translate(470, 9)" style="cursor: pointer;" data-action="dna-filter-at" id="btn-dna-filter-at">
+      <rect width="60" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="30" y="17" fill="#f87171" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">A = T (2H)</text>
+    </g>
+    <g transform="translate(536, 9)" style="cursor: pointer;" data-action="dna-filter-cg" id="btn-dna-filter-cg">
+      <rect width="60" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="30" y="17" fill="#60a5fa" font-size="10" font-weight="800" text-anchor="middle" font-family="sans-serif">C ≡ G (3H)</text>
+    </g>
+
+    <!-- Group 3: Speed Chips -->
+    <text x="608" y="27" fill="#e2e8f0" font-size="10" font-weight="800" font-family="sans-serif">SPEED:</text>
+    <g transform="translate(650, 9)" style="cursor: pointer;" data-action="dna-speed-1" id="btn-dna-speed-1">
+      <rect width="28" height="26" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+      <text x="14" y="17" fill="#ffffff" font-size="10" font-weight="900" text-anchor="middle" font-family="sans-serif">1×</text>
+    </g>
+    <g transform="translate(684, 9)" style="cursor: pointer;" data-action="dna-speed-2" id="btn-dna-speed-2">
+      <rect width="28" height="26" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="14" y="17" fill="#94a3b8" font-size="10" font-weight="900" text-anchor="middle" font-family="sans-serif">2×</text>
+    </g>
   </g>
 
   <!-- DNA Base Rungs (0-17) with 3D Depth Fog -->

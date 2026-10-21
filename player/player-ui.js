@@ -571,7 +571,7 @@
         this.elements.checkpointMinimizedPill.classList.add('hidden');
         this.elements.checkpointMinimizedPill.style.display = 'none';
       }
-      const isContinuousSim = this.engine && (this.engine.activePresetId === 'solar-system' || this.engine.activePresetId === 'kinetic-gas');
+      const isContinuousSim = this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim' || this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas')));
       if (!isContinuousSim) {
         this.engine.pause();
       }
