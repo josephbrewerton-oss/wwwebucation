@@ -73,6 +73,41 @@ export const DevStudioDrawer: React.FC<DevStudioDrawerProps> = ({
         fontSize: '0.82rem',
       }}
     >
+      {/* Studio Mission Banner */}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          marginBottom: '10px',
+          paddingBottom: '8px',
+          borderBottom: '1px solid var(--stj-border)',
+          flexWrap: 'wrap',
+          gap: '8px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '1.2rem' }}>💻</span>
+          <div>
+            <strong style={{ fontSize: '0.86rem', color: 'var(--stj-text)' }}>
+              AST Vector Studio
+            </strong>
+            <span style={{ fontSize: '0.74rem', color: 'var(--stj-text-muted)', marginLeft: '8px' }}>
+              Inspect stage nodes, live-edit SVG markup, and test continuous AST mathematics with zero cloud lag.
+            </span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="stj-btn stj-btn-ghost stj-btn-sm"
+          style={{ fontSize: '0.74rem', padding: '3px 8px' }}
+          title="Close Studio Drawer"
+        >
+          ✕ Close Studio
+        </button>
+      </div>
+
       {/* Studio Header & Tab Bar */}
       <div
         style={{
@@ -85,14 +120,6 @@ export const DevStudioDrawer: React.FC<DevStudioDrawerProps> = ({
         }}
       >
         <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-          <button
-            type="button"
-            onClick={() => setStudioTab('inspector')}
-            className={`stj-btn ${studioTab === 'inspector' ? 'stj-btn-primary' : 'stj-btn-ghost'} stj-btn-sm`}
-            style={{ fontSize: '0.76rem' }}
-          >
-            🎯 Live Inspector
-          </button>
           <button
             type="button"
             onClick={() => setStudioTab('svg')}
@@ -108,6 +135,14 @@ export const DevStudioDrawer: React.FC<DevStudioDrawerProps> = ({
             style={{ fontSize: '0.76rem' }}
           >
             ⚡ AST Expressions
+          </button>
+          <button
+            type="button"
+            onClick={() => setStudioTab('inspector')}
+            className={`stj-btn ${studioTab === 'inspector' ? 'stj-btn-primary' : 'stj-btn-ghost'} stj-btn-sm`}
+            style={{ fontSize: '0.76rem' }}
+          >
+            🎯 Live Inspector
           </button>
           <button
             type="button"

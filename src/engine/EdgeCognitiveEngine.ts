@@ -467,7 +467,9 @@ export class EdgeCognitiveEngine {
         const lm = win.LanguageModel || (typeof self !== 'undefined' ? (self as any).LanguageModel : null);
         if (lm) {
           const session = await lm.create({
-            systemPrompt: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.',
+            initialPrompts: [
+              { role: 'system', content: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.' }
+            ],
             outputLanguage: 'en',
           });
           const result = await session.prompt(prompt);
@@ -534,7 +536,9 @@ export class EdgeCognitiveEngine {
         const lm = win.LanguageModel || (typeof self !== 'undefined' ? (self as any).LanguageModel : null);
         if (lm) {
           const session = await lm.create({
-            systemPrompt: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.',
+            initialPrompts: [
+              { role: 'system', content: systemPrompt || 'You are an elite Socratic school tutor. Guide the student concisely.' }
+            ],
             outputLanguage: 'en',
           });
 

@@ -39,11 +39,11 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span className="stj-badge stj-badge-primary">&lt;{inspectedElement.tag}&gt;</span>
-              <code style={{ color: 'var(--stj-primary)', fontWeight: 700 }}>{inspectedElement.selector}</code>
+              <span className="stj-badge stj-badge-primary">&lt;{inspectedElement.tag || 'element'}&gt;</span>
+              <code style={{ color: 'var(--stj-primary)', fontWeight: 700 }}>{inspectedElement.selector || '#element'}</code>
             </div>
             <span style={{ fontSize: '0.72rem', color: 'var(--stj-text-muted)' }}>
-              Bounds: {Math.round(inspectedElement.bbox.width)}×{Math.round(inspectedElement.bbox.height)} px
+              Bounds: {Math.round(inspectedElement.bbox?.width || 0)}×{Math.round(inspectedElement.bbox?.height || 0)} px
             </span>
           </div>
 
@@ -61,12 +61,12 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
               </label>
               <input
                 type="text"
-                value={inspectedElement.attributes.fill || ''}
+                value={inspectedElement.attributes?.fill || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInspectedElement({
                     ...inspectedElement,
-                    attributes: { ...inspectedElement.attributes, fill: val }
+                    attributes: { ...(inspectedElement.attributes || {}), fill: val }
                   });
                   postToPlayer({ type: 'UPDATE_ELEMENT_ATTR', selector: inspectedElement.selector, attr: 'fill', value: val });
                 }}
@@ -81,12 +81,12 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
               </label>
               <input
                 type="text"
-                value={inspectedElement.attributes.stroke || ''}
+                value={inspectedElement.attributes?.stroke || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInspectedElement({
                     ...inspectedElement,
-                    attributes: { ...inspectedElement.attributes, stroke: val }
+                    attributes: { ...(inspectedElement.attributes || {}), stroke: val }
                   });
                   postToPlayer({ type: 'UPDATE_ELEMENT_ATTR', selector: inspectedElement.selector, attr: 'stroke', value: val });
                 }}
@@ -102,12 +102,12 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
               <input
                 type="number"
                 step="0.5"
-                value={inspectedElement.attributes.strokeWidth || '1'}
+                value={inspectedElement.attributes?.strokeWidth || '1'}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInspectedElement({
                     ...inspectedElement,
-                    attributes: { ...inspectedElement.attributes, strokeWidth: val }
+                    attributes: { ...(inspectedElement.attributes || {}), strokeWidth: val }
                   });
                   postToPlayer({ type: 'UPDATE_ELEMENT_ATTR', selector: inspectedElement.selector, attr: 'stroke-width', value: val });
                 }}
@@ -122,12 +122,12 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
               </label>
               <input
                 type="text"
-                value={inspectedElement.attributes.transform || ''}
+                value={inspectedElement.attributes?.transform || ''}
                 onChange={(e) => {
                   const val = e.target.value;
                   setInspectedElement({
                     ...inspectedElement,
-                    attributes: { ...inspectedElement.attributes, transform: val }
+                    attributes: { ...(inspectedElement.attributes || {}), transform: val }
                   });
                   postToPlayer({ type: 'UPDATE_ELEMENT_ATTR', selector: inspectedElement.selector, attr: 'transform', value: val });
                 }}
@@ -142,7 +142,9 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
             <button
               type="button"
               onClick={() => {
-                navigator.clipboard.writeText(inspectedElement.selector);
+                if (inspectedElement.selector) {
+                  navigator.clipboard.writeText(inspectedElement.selector);
+                }
               }}
               className="stj-btn stj-btn-secondary stj-btn-sm"
               style={{ fontSize: '0.74rem' }}
@@ -152,7 +154,7 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
             <button
               type="button"
               onClick={() => {
-                const rule = `(:target "${inspectedElement.selector}" :attr "transform" :expr "'rotate(' + (t * 360) + ')'")`;
+                const rule = `(:target "${inspectedElement.selector || '#element'}" :attr "transform" :expr "'rotate(' + (t * 360) + ')'")`;
                 navigator.clipboard.writeText(rule);
               }}
               className="stj-btn stj-btn-primary stj-btn-sm"
@@ -165,10 +167,18 @@ export const SvgInspectorDrawer: React.FC<SvgInspectorDrawerProps> = ({
       ) : (
         <div style={{ textAlign: 'center', padding: '16px', color: 'var(--stj-text-muted)' }}>
           <div style={{ fontSize: '1.4rem', marginBottom: '6px' }}>🎯</div>
-          <strong>No Element Selected</strong>
-          <p style={{ margin: '4px 0 0', fontSize: '0.78rem' }}>
-            Turn on <strong>🛠️ Inspect</strong> above and click any element on the vector stage to inspect its selector, bounding box, and live styling!
+          <strong style={{ color: 'var(--stj-text)' }}>No Stage Element Selected Yet</strong>
+          <p style={{ margin: '4px 0 10px', fontSize: '0.78rem' }}>
+            Click any element on the vector stage to inspect its selector, bounding box, and live styling in real time.
           </p>
+          <button
+            type="button"
+            onClick={() => postToPlayer({ type: 'SET_DEV_MODE', enabled: true })}
+            className="stj-btn stj-btn-primary stj-btn-sm"
+            style={{ fontSize: '0.76rem', fontWeight: 700 }}
+          >
+            🛠️ Activate Element Selector
+          </button>
         </div>
       )}
     </div>

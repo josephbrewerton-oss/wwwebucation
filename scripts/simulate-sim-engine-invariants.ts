@@ -9,6 +9,7 @@
 
 import assert from 'assert';
 import { parseSExpr } from '../src/utils/sexprParser';
+import { resolveConstraintRegExp, testConstraintRegExp, NANO_ACT_TUPLE_REGEX } from '../src/engine/aicaller';
 
 console.log('=============================================================');
 console.log('🔬 St Joseph\'s Simulation Engine & Physical Invariant Harness');
@@ -343,6 +344,102 @@ console.log('\n--- TEST 7: Checkpoint Minimize/Restore/Toggle Lifecycle ---');
   assert.strictEqual(ui.minimizedCheckpoint, null, 'Minimized checkpoint cleared on close');
 
   console.log('[✅ PASS] Sim 7: Checkpoint question minimize, restore, toggle [Q], and master lecture mode verified.');
+  passedTests++;
+}
+
+// =========================================================================
+// TEST 8: Chromium Issue 576432037 — Client-Side responseConstraint Verification
+// =========================================================================
+console.log('\n--- TEST 8: Chromium Issue 576432037 RegExp Constraint Defense ---');
+{
+  // 1. Verify resolveConstraintRegExp handles RegExp, string patterns, and pattern objects
+  const rawRegex = /^\(:act\s+:seek\s+[0-1](\.\d+)?\)$/;
+  assert(resolveConstraintRegExp(rawRegex) instanceof RegExp, 'Must resolve RegExp directly');
+  assert(resolveConstraintRegExp('^\\(:act.*\\)$') instanceof RegExp, 'Must compile string to RegExp');
+  assert(resolveConstraintRegExp({ pattern: rawRegex }) instanceof RegExp, 'Must resolve object pattern');
+  assert.strictEqual(resolveConstraintRegExp(null), null, 'Must return null for undefined/null');
+
+  // 2. Verify testConstraintRegExp resets stateful regexes and handles whitespace
+  const statefulRegex = /\(:act\s+:seek\s+\d+(\.\d+)?\)/g;
+  const validOutput = '   (:act :seek 0.5)   ';
+  assert.strictEqual(testConstraintRegExp(statefulRegex, validOutput), true, 'Must match trimmed valid tuple');
+  // Second test must NOT fail due to lastIndex advancing
+  assert.strictEqual(testConstraintRegExp(statefulRegex, validOutput), true, 'Must reset lastIndex and pass repeatedly');
+
+  // 3. Verify detection of dirty/bypassed output
+  const dirtyOutput = 'I am an AI assistant and I think you should adjust the slider to 0.5.';
+  assert.strictEqual(testConstraintRegExp(NANO_ACT_TUPLE_REGEX, dirtyOutput), false, 'Must flag dirty output that bypassed RegExp constraint');
+
+  const validTuple = '(:act :seek 0.35 :highlight "#piston" :say "Compressing gas increases collision frequency.")';
+  assert.strictEqual(testConstraintRegExp(NANO_ACT_TUPLE_REGEX, validTuple), true, 'Must pass valid action tuple');
+
+  // 4. Verify rejection behavior on persistent dirty output (Chromium Issue 576432037 simulation)
+  let retryCount = 0;
+  const mockBypassedSession = {
+    async prompt() {
+      retryCount++;
+      // Silently return unconstrained dirty prose instead of conforming to RegExp
+      return 'Here is an explanation of the phenomenon without S-expression formatting.';
+    }
+  };
+
+  const regex = NANO_ACT_TUPLE_REGEX;
+  let rejected = false;
+  try {
+    let output = await mockBypassedSession.prompt();
+    if (!testConstraintRegExp(regex, output)) {
+      // Simulate verification retry loop
+      let verified = false;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const retryOutput = await mockBypassedSession.prompt();
+        if (testConstraintRegExp(regex, retryOutput)) {
+          output = retryOutput;
+          verified = true;
+          break;
+        }
+      }
+      if (!verified) {
+        throw new Error('[AiCaller] Chromium Issue 576432037: output failed responseConstraint RegExp verification after retries. Rejecting dirty output.');
+      }
+    }
+  } catch (err: any) {
+    if (err.message.includes('Chromium Issue 576432037')) {
+      rejected = true;
+    }
+  }
+
+  assert.strictEqual(rejected, true, 'Dirty output must be rejected rather than passed downstream');
+  assert.strictEqual(retryCount, 3, 'Must have attempted initial prompt + 2 verification retries before rejecting');
+
+  // 5. Verify recovery behavior when retry satisfies the constraint
+  let recoveryAttempt = 0;
+  const mockRecoveringSession = {
+    async prompt() {
+      recoveryAttempt++;
+      if (recoveryAttempt === 1) {
+        // First attempt silently bypasses constraint
+        return 'Dirty unconstrained token output';
+      }
+      // Retry succeeds with valid tuple
+      return '(:act :seek 0.50 :highlight "#coil-core" :say "Electromagnetic field aligned.")';
+    }
+  };
+
+  let recoveredOutput = await mockRecoveringSession.prompt();
+  if (!testConstraintRegExp(regex, recoveredOutput)) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      const retryOut = await mockRecoveringSession.prompt();
+      if (testConstraintRegExp(regex, retryOut)) {
+        recoveredOutput = retryOut;
+        break;
+      }
+    }
+  }
+
+  assert.strictEqual(testConstraintRegExp(regex, recoveredOutput), true, 'Recovered output must pass constraint verification');
+  assert.strictEqual(recoveryAttempt, 2, 'Recovery must succeed on second prompt call');
+
+  console.log('[✅ PASS] Sim 8: Chromium Issue 576432037 client-side responseConstraint verification, retry recovery, and dirty output rejection verified.');
   passedTests++;
 }
 

@@ -9,7 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
 
 import { SANCTUARY_QUESTS, StationQuest } from "../data/catholic";
 
@@ -17,6 +17,7 @@ export { SANCTUARY_QUESTS };
 export type { StationQuest };
 
 export const SanctuaryPilgrimQuest: React.FC = () => {
+  const playerRef = useRef<AstVectorMediaPlayerHandle>(null);
   // Game Mode: 'tour' (narrated exploration) or 'quest' (scavenger hunt mode)
   const [gameMode, setGameMode] = useState<'tour' | 'quest'>('quest');
   const [activeStationIndex, setActiveStationIndex] = useState<number>(0);
@@ -100,12 +101,13 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
 
   // Navigate 3D player to specific station targetT
   const navigatePlayerToStation = useCallback((targetT: number) => {
-    if (typeof window === 'undefined') return;
-    window.postMessage({
-      source: 'sanctuary-quest-parent',
-      type: 'SEEK',
-      progress: targetT
-    }, '*');
+    if (playerRef.current) {
+      playerRef.current.seek(targetT);
+      playerRef.current.postToPlayer({
+        type: 'SEEK',
+        progress: targetT,
+      });
+    }
     playChime('click');
   }, [playChime]);
 
@@ -397,9 +399,10 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
       <div style={{ position: 'relative', borderRadius: '0 0 12px 12px', overflow: 'hidden', border: '1px solid #334155' }}>
         <div style={{ pointerEvents: 'auto' }}>
           <AstVectorMediaPlayer
+            ref={playerRef}
             preset="church-tour"
-            autoPlay={gameMode === 'tour'}
-            height="clamp(210px, 46vw + 40px, 440px)"
+            autoPlay={true}
+            height="clamp(260px, 48vw + 40px, 460px)"
             allowPresetSwitch={false}
             embedded={true}
           />

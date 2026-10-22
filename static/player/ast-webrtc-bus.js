@@ -483,9 +483,14 @@
             if (avail === 'no') return false;
           }
           this.aiSession = await LM.create({
-            systemPrompt: "You are an on-device AI physics & mathematics tutor. " +
-              "When asked to demonstrate a phenomenon, respond with concise explanations (under 2 sentences) " +
-              "and you may suggest AST variable settings such as (:var :name \"temperature\" :val 400)."
+            initialPrompts: [
+              {
+                role: 'system',
+                content: "You are an on-device AI physics & mathematics tutor. " +
+                  "When asked to demonstrate a phenomenon, respond with concise explanations (under 2 sentences) " +
+                  "and you may suggest AST variable settings such as (:var :name \"temperature\" :val 400)."
+              }
+            ]
           });
           return true;
         } catch (e) {

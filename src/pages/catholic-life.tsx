@@ -92,7 +92,7 @@ export default function CatholicLifePage(): React.JSX.Element {
 
   const [selectedCst, setSelectedCst] = useState<CSTPrinciple>(CST_PRINCIPLES[0]);
   const [selectedVirtue, setSelectedVirtue] = useState<SchoolVirtue>(SCHOOL_VIRTUES[0]);
-  const [overviewPlayerExpanded, setOverviewPlayerExpanded] = useState<boolean>(false);
+  const [overviewPlayerExpanded, setOverviewPlayerExpanded] = useState<boolean>(true);
   const [overviewTouchLock, setOverviewTouchLock] = useState<boolean>(true);
   const [cstPlayerExpanded, setCstPlayerExpanded] = useState<boolean>(false);
   const [massPlayerExpanded, setMassPlayerExpanded] = useState<boolean>(false);
@@ -766,87 +766,8 @@ export default function CatholicLifePage(): React.JSX.Element {
                 </div>
               </div>
 
-              {/* Mobile Compact Hero Preview when collapsed */}
-              <div className={`md:hidden ${overviewPlayerExpanded ? 'hidden' : 'block'}`}>
-                <div
-                  style={{
-                    background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)',
-                    borderRadius: '12px',
-                    padding: '1rem',
-                    border: '1px solid #334155',
-                    marginBottom: '0.5rem',
-                  }}
-                >
-                  <p style={{ margin: '0 0 10px 0', fontSize: '0.82rem', color: '#cbd5e1', lineHeight: 1.45 }}>
-                    📱 <strong>Mobile Viewport Notice:</strong> To ensure fast page scrolling across all 16 Catholic modules, the heavy 3D canvas is docked in the dedicated <strong>Church Tour</strong> tab.
-                  </p>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '12px' }}>
-                    {[
-                      '1. 💧 Holy Water Font',
-                      '2. ⛪ Nave & Pew Pliant',
-                      '3. 📖 Pulpit / Ambo',
-                      '4. ✝️ High Altar of Sacrifice',
-                      '5. ✨ Tabernacle & Red Lamp',
-                      '6. 🕊️ Lady Chapel',
-                    ].map((st) => (
-                      <span
-                        key={st}
-                        style={{
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          color: '#f8fafc',
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          padding: '3px 8px',
-                          borderRadius: '6px',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                        }}
-                      >
-                        {st}
-                      </span>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => handleTabChange('church-tour')}
-                      style={{
-                        background: '#facc15',
-                        color: '#0f172a',
-                        fontWeight: 800,
-                        fontSize: '0.8rem',
-                        padding: '8px 14px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      ⛪ Open Full Interactive Tour &rarr;
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setOverviewPlayerExpanded(true)}
-                      style={{
-                        background: 'transparent',
-                        color: '#38bdf8',
-                        fontWeight: 700,
-                        fontSize: '0.8rem',
-                        padding: '8px 12px',
-                        borderRadius: '8px',
-                        border: '1px solid #0284c7',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      ▶️ Expand 3D Player Here
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Live Vector Player (Always visible on desktop md+, toggleable on mobile) */}
-              <div className={`relative ${overviewPlayerExpanded ? 'block' : 'hidden md:block'}`}>
+              {/* Live Vector Player (Always visible on all viewports) */}
+              <div className="relative block">
                 {/* Touch Safeguard Bar for Mobile */}
                 <div
                   className="md:hidden"

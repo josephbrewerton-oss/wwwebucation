@@ -280,7 +280,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   // Developer Mode & Code Studio State
   const [isDevMode, setIsDevMode] = useState(false);
   const [showDevStudio, setShowDevStudio] = useState(false);
-  const [studioTab, setStudioTab] = useState<StudioTabType>('inspector');
+  const [studioTab, setStudioTab] = useState<StudioTabType>('svg');
   const [swfResult, setSwfResult] = useState<SwfTranspileResult | null>(null);
   const [isParsingSwf, setIsParsingSwf] = useState(false);
   const [swfError, setSwfError] = useState<string | null>(null);
@@ -1645,6 +1645,13 @@ const playerSrc = useMemo(() => {
                   const next = !showDevStudio;
                   setShowDevStudio(next);
                   if (next) {
+                    const cart = getCartridge(selectedPreset);
+                    if (cart?.svgMarkup && !customSvgCode) {
+                      setCustomSvgCode(cart.svgMarkup);
+                    }
+                    if (cart?.astSource && !customAstCode) {
+                      setCustomAstCode(cart.astSource);
+                    }
                     postToPlayer({ type: 'GET_STAGE_SVG' });
                   }
                 }}

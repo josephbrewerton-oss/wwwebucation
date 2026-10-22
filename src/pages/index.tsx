@@ -1,13 +1,15 @@
 if (typeof window !== 'undefined' && !(window as any).process) {
   (window as any).process = { env: { NODE_ENV: 'development' } };
 }
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import ExpressLessonLaunchpad from '../components/ExpressLessonLaunchpad';
 import HomeLearnerGuidedCard from '../components/HomeLearnerGuidedCard';
+import AstVectorMediaPlayer from '../components/AstVectorMediaPlayer';
 
 export default function Home() {
+  const [landingSimPreset, setLandingSimPreset] = useState<string>('kinetic-gas');
   return (
     <PageMeta
       title="Home"
@@ -50,13 +52,13 @@ export default function Home() {
 
           {/* Focused Action Pair */}
           <div className="stj-hero-actions">
-            <Link
-              to="/simulator"
+            <a
+              href="#featured-simulations"
               className="stj-btn-hero-primary"
             >
               <span>Launch Interactive Simulators</span>
-              <span aria-hidden="true">→</span>
-            </Link>
+              <span aria-hidden="true">↓</span>
+            </a>
 
             <a
               href="#express-lesson-launchpad"
@@ -184,6 +186,164 @@ export default function Home() {
             <div style={{ background: 'var(--stj-canvas)', padding: '1.25rem', borderRadius: 'var(--stj-radius-lg)', border: '1px solid var(--stj-border)' }}>
               <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--stj-text)', marginBottom: '0.35rem' }}>OBS Studio Sync</div>
               <div style={{ fontSize: '0.84rem', color: 'var(--stj-text-muted)', lineHeight: 1.5 }}>Stream lessons with lower-third overlays and real-time chapter syncing for remote learners.</div>
+            </div>
+          </div>
+
+          {/* Featured Interactive Simulation Suite with Drop-Down Holder */}
+          <div
+            id="featured-simulations"
+            style={{
+              background: '#090d16',
+              borderRadius: '16px',
+              border: '1px solid #1e293b',
+              padding: '1.25rem',
+              marginBottom: '1.75rem',
+              boxShadow: '0 8px 30px rgba(0, 0, 0, 0.45)',
+            }}
+          >
+            {/* Dropdown Holder Bar */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '12px',
+                marginBottom: '12px',
+                paddingBottom: '12px',
+                borderBottom: '1px solid #1e293b',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '1.4rem' }}>🎮</span>
+                <div>
+                  <label
+                    htmlFor="landing-sim-dropdown-holder"
+                    style={{
+                      display: 'block',
+                      fontSize: '0.74rem',
+                      fontWeight: 800,
+                      color: '#38bdf8',
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.05em',
+                    }}
+                  >
+                    Curriculum Simulation Selector
+                  </label>
+                  <strong style={{ fontSize: '0.98rem', color: '#f8fafc' }}>
+                    Choose a Simulation to Run Live on Stage:
+                  </strong>
+                </div>
+              </div>
+
+              {/* The Dropdown Holder */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <select
+                  id="landing-sim-dropdown-holder"
+                  value={landingSimPreset}
+                  onChange={(e) => setLandingSimPreset(e.target.value)}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: '8px',
+                    background: '#1e293b',
+                    color: '#ffffff',
+                    border: '1.5px solid #0284c7',
+                    fontWeight: 700,
+                    fontSize: '0.86rem',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    minWidth: '260px',
+                    maxWidth: '100%',
+                    boxShadow: '0 0 12px rgba(2, 132, 199, 0.25)',
+                  }}
+                  title="Select curriculum simulation from dropdown holder"
+                >
+                  <optgroup label="🔬 Science & Physics" style={{ background: '#0f172a', color: '#38bdf8' }}>
+                    <option value="kinetic-gas" style={{ background: '#0f172a', color: '#f8fafc' }}>💨 Kinetic Gas &amp; Boyle's Law</option>
+                    <option value="electric-circuits" style={{ background: '#0f172a', color: '#f8fafc' }}>💡 Electrical Circuits &amp; Ohm's Law</option>
+                    <option value="atom" style={{ background: '#0f172a', color: '#f8fafc' }}>⚛️ Bohr Atomic Electron Shells</option>
+                    <option value="solar-system" style={{ background: '#0f172a', color: '#f8fafc' }}>🪐 Solar System Heliocentric Motion</option>
+                    <option value="photosynthesis" style={{ background: '#0f172a', color: '#f8fafc' }}>🌱 Photosynthesis Solar Engine</option>
+                    <option value="dna-helix" style={{ background: '#0f172a', color: '#f8fafc' }}>🧬 DNA Helix Base Pairing</option>
+                    <option value="velocity" style={{ background: '#0f172a', color: '#f8fafc' }}>🏎️ Velocity Vectors &amp; Acceleration</option>
+                    <option value="water-cycle" style={{ background: '#0f172a', color: '#f8fafc' }}>💧 Water Cycle Earth Engine</option>
+                  </optgroup>
+                  <optgroup label="📐 Mathematics & Geometry" style={{ background: '#0f172a', color: '#34d399' }}>
+                    <option value="pythagoras" style={{ background: '#0f172a', color: '#f8fafc' }}>📐 Pythagoras' Theorem (a² + b² = c²)</option>
+                    <option value="fractions" style={{ background: '#0f172a', color: '#f8fafc' }}>🍰 Fractions: Common Denominators</option>
+                    <option value="algebra-balance" style={{ background: '#0f172a', color: '#f8fafc' }}>⚖️ Algebraic Balance Scale</option>
+                    <option value="times-tables" style={{ background: '#0f172a', color: '#f8fafc' }}>🔢 Times Tables 2D Grid Splitter</option>
+                    <option value="calculus-curves" style={{ background: '#0f172a', color: '#f8fafc' }}>📈 Calculus: Tangent Slopes &amp; Derivatives</option>
+                    <option value="bodmas" style={{ background: '#0f172a', color: '#f8fafc' }}>⚡ BODMAS / BIDMAS Forcefield</option>
+                    <option value="math-fishing" style={{ background: '#0f172a', color: '#f8fafc' }}>🎣 Math Pond: Number Bonds to 20</option>
+                  </optgroup>
+                  <optgroup label="⛪ Catholic Faith & Life" style={{ background: '#0f172a', color: '#facc15' }}>
+                    <option value="church-tour" style={{ background: '#0f172a', color: '#f8fafc' }}>⛪ Catholic Church Sanctuary Tour (3D)</option>
+                    <option value="stations-of-the-cross" style={{ background: '#0f172a', color: '#f8fafc' }}>✝️ Stations of the Cross (Via Crucis)</option>
+                  </optgroup>
+                  <optgroup label="🔤 English & Languages" style={{ background: '#0f172a', color: '#fbbf24' }}>
+                    <option value="phonics-lab" style={{ background: '#0f172a', color: '#f8fafc' }}>🔤 Early Phonics Sound Buttons</option>
+                    <option value="spelling-bee" style={{ background: '#0f172a', color: '#f8fafc' }}>🐝 Spelling Bee Championship</option>
+                    <option value="shakespeare" style={{ background: '#0f172a', color: '#f8fafc' }}>🎭 Globe Theatre Shakespeare</option>
+                    <option value="languages" style={{ background: '#0f172a', color: '#f8fafc' }}>🌍 Modern Foreign Languages Studio</option>
+                  </optgroup>
+                </select>
+
+                <Link
+                  to={`/media-player?preset=${landingSimPreset}`}
+                  className="stj-btn stj-btn-secondary stj-btn-sm"
+                  style={{ fontSize: '0.78rem', padding: '7px 12px', whiteSpace: 'nowrap' }}
+                  title="Open this simulation in full-featured studio"
+                >
+                  <span>↗ Fullscreen Studio</span>
+                </Link>
+              </div>
+            </div>
+
+            {/* Quick Category Filter Pills */}
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '12px' }}>
+              {[
+                { label: '💨 Kinetic Gas', id: 'kinetic-gas' },
+                { label: '📐 Pythagoras', id: 'pythagoras' },
+                { label: '⛪ Church Tour', id: 'church-tour' },
+                { label: '🍰 Fractions', id: 'fractions' },
+                { label: '💡 Circuits', id: 'electric-circuits' },
+                { label: '🪐 Solar System', id: 'solar-system' },
+                { label: '⚖️ Algebra Balance', id: 'algebra-balance' },
+                { label: '🔤 Phonics Lab', id: 'phonics-lab' },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  type="button"
+                  onClick={() => setLandingSimPreset(pill.id)}
+                  style={{
+                    background: landingSimPreset === pill.id ? '#0284c7' : '#1e293b',
+                    color: landingSimPreset === pill.id ? '#ffffff' : '#94a3b8',
+                    border: `1px solid ${landingSimPreset === pill.id ? '#38bdf8' : '#334155'}`,
+                    borderRadius: '9999px',
+                    padding: '3px 10px',
+                    fontSize: '0.74rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Live Media Player Stage */}
+            <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
+              <AstVectorMediaPlayer
+                key={`landing-sim-${landingSimPreset}`}
+                preset={landingSimPreset}
+                autoPlay={true}
+                height="460px"
+                allowPresetSwitch={true}
+                onPresetChange={(p) => setLandingSimPreset(p)}
+                embedded={true}
+              />
             </div>
           </div>
 

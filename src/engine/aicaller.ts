@@ -46,6 +46,44 @@ export function setUserAiConsent(granted: boolean): void {
   window.dispatchEvent(new CustomEvent('ai_consent_changed', { detail: granted }));
 }
 
+/**
+ * Helper to extract or compile a RegExp from a responseConstraint parameter.
+ */
+export function resolveConstraintRegExp(constraint: any): RegExp | null {
+  if (!constraint) return null;
+  if (constraint instanceof RegExp) return constraint;
+  if (typeof constraint === 'string') {
+    try {
+      return new RegExp(constraint);
+    } catch {
+      return null;
+    }
+  }
+  if (typeof constraint === 'object') {
+    const pattern = constraint.pattern || constraint.regex || constraint.source;
+    if (pattern instanceof RegExp) return pattern;
+    if (typeof pattern === 'string') {
+      try {
+        return new RegExp(pattern);
+      } catch {
+        return null;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Validates text against a constraint RegExp, handling leading/trailing whitespace and regex state resets.
+ */
+export function testConstraintRegExp(regex: RegExp, text: string): boolean {
+  if (typeof text !== 'string') return false;
+  regex.lastIndex = 0;
+  if (regex.test(text)) return true;
+  regex.lastIndex = 0;
+  return regex.test(text.trim());
+}
+
 class AiRuntimeCaller {
   private chatSession: any = null;
   private activeSystemPrompt: string = '';
@@ -216,7 +254,9 @@ class AiRuntimeCaller {
 
     // Fully-specified W3C Prompt API configuration
     const createOptions: any = {
-      systemPrompt,
+      initialPrompts: [
+        { role: 'system', content: systemPrompt }
+      ],
       // Modern W3C spec: replaces numeric temperature/topK
       samplingMode: 'most-predictable',
       expectedInputs: [{ type: 'text', languages: ['en'] }],
@@ -241,7 +281,9 @@ class AiRuntimeCaller {
         // 2. Fall back to numeric temperature/topK for older Chromium revisions
         try {
           return await lm.create({
-            systemPrompt,
+            initialPrompts: [
+              { role: 'system', content: systemPrompt }
+            ],
             temperature: 0.1,
             topK: 1,
             outputLanguage: 'en',
@@ -251,7 +293,9 @@ class AiRuntimeCaller {
         } catch {
           // 3. Minimal fallback
           return await lm.create({
-            systemPrompt,
+            initialPrompts: [
+              { role: 'system', content: systemPrompt }
+            ],
             expectedInputLanguages: ['en'],
             expectedOutputLanguages: ['en'],
           });
@@ -328,15 +372,57 @@ const executeCall = async (s: any) => {
 
   const attemptPrompt = async (targetSession: any, useConstraint: boolean) => {
     const args = buildArgs(useConstraint);
-    try {
-      return await targetSession.prompt(opts.prompt, args);
-    } catch (err: any) {
-      // Fallback for older Chromium builds that reject options objects entirely
-      if (err?.name === 'TypeError' || String(err?.message || '').includes('parameter')) {
-        return await targetSession.prompt(opts.prompt);
+    const constraintRegex = useConstraint ? resolveConstraintRegExp(opts.responseConstraint) : null;
+
+    const callPromptOnce = async (): Promise<string> => {
+      try {
+        return await targetSession.prompt(opts.prompt, args);
+      } catch (err: any) {
+        // Fallback for older Chromium builds that reject options objects entirely
+        if (err?.name === 'TypeError' || String(err?.message || '').includes('parameter')) {
+          return await targetSession.prompt(opts.prompt);
+        }
+        throw err;
       }
-      throw err;
+    };
+
+    let output = await callPromptOnce();
+
+    // Client-side verification check directly after session.prompt()
+    // Chromium Issue 576432037: responseConstraint RegExp bindings can be silently
+    // bypassed by the engine without throwing an error. Test output string directly against
+    // RegExp before downstream passing; retry or reject rather than letting dirty output through.
+    if (constraintRegex) {
+      if (!testConstraintRegExp(constraintRegex, output)) {
+        console.warn(
+          '[AiCaller] Chromium Issue 576432037: responseConstraint RegExp silently bypassed by engine. Output failed verification. Retrying prompt...',
+          { preview: (output || '').slice(0, 80) }
+        );
+
+        let verified = false;
+        const MAX_VERIFICATION_RETRIES = 2;
+        for (let attempt = 1; attempt <= MAX_VERIFICATION_RETRIES; attempt++) {
+          try {
+            const retryOutput = await callPromptOnce();
+            if (testConstraintRegExp(constraintRegex, retryOutput)) {
+              output = retryOutput;
+              verified = true;
+              break;
+            }
+          } catch (retryErr) {
+            console.warn(`[AiCaller] Constraint verification retry attempt ${attempt} failed:`, retryErr);
+          }
+        }
+
+        if (!verified) {
+          throw new Error(
+            `[AiCaller] Chromium Issue 576432037: output failed responseConstraint RegExp verification after retries. Rejecting dirty output: "${(output || '').slice(0, 100)}..."`
+          );
+        }
+      }
     }
+
+    return output;
   };
 
   try {
@@ -360,19 +446,27 @@ const executeCall = async (s: any) => {
       try {
         return await attemptPrompt(activeSession, true);
       } catch (retryErr: any) {
-        // If it failed again specifically on constraints, drop down to unconstrained
-        if (opts.responseConstraint) {
-          console.warn('[AiCaller] Reinitialized session failed on constraint; falling back unconstrained:', retryErr);
-          return await attemptPrompt(activeSession, false);
-        }
         throw retryErr;
       }
     }
 
-    // Case 2: Constraint unsupported by runtime -> Retry unconstrained on same session
+    // Case 2: Verification failure for Chromium Issue 576432037 -> Reject immediately, never pass dirty output downstream
+    const isVerificationFailure = String(err?.message || '').includes('Chromium Issue 576432037');
+    if (isVerificationFailure) {
+      throw err;
+    }
+
+    // Case 3: Constraint parameter unsupported by runtime -> Attempt unconstrained with strict client-side verification
     if (opts.responseConstraint) {
-      console.warn('[AiCaller] Prompt with responseConstraint failed, retrying unconstrained:', err);
-      return await attemptPrompt(activeSession, false);
+      console.warn('[AiCaller] Prompt options with responseConstraint failed at runtime, attempting unconstrained with strict verification:', err);
+      const unconstrainedOutput = await attemptPrompt(activeSession, false);
+      const fallbackRegex = resolveConstraintRegExp(opts.responseConstraint);
+      if (fallbackRegex && !testConstraintRegExp(fallbackRegex, unconstrainedOutput)) {
+        throw new Error(
+          `[AiCaller] Chromium Issue 576432037: Unconstrained fallback failed responseConstraint RegExp verification. Rejecting dirty output.`
+        );
+      }
+      return unconstrainedOutput;
     }
 
     throw err;
@@ -444,6 +538,10 @@ const executeCall = async (s: any) => {
             text = await session.prompt(opts.prompt, { outputLanguage: 'en' });
           } catch {
             text = await session.prompt(opts.prompt);
+          }
+          const constraintRegex = resolveConstraintRegExp(opts.responseConstraint);
+          if (constraintRegex && !testConstraintRegExp(constraintRegex, text)) {
+            throw new Error('[AiCaller] Chromium Issue 576432037: Stream fallback output failed responseConstraint RegExp verification.');
           }
           yield text;
           return;
