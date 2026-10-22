@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-21T08:38:25.456Z",
+  "generatedAt": "2026-10-22T08:22:00.750Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -435,7 +435,7 @@
       "astFile": "scenes/pythagoras.ast",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3
+      "bindingsCount": 6
     },
     {
       "id": "rosary-mysteries",

@@ -1,4 +1,4 @@
-(:scene :id "dna-helix" :type "Sim" :title "Genetics: DNA Base Pairing & Transcription" :stage "KS3 GENETICS" :duration 12.0
+(:scene :id "dna-helix" :type "Sim" :oak-id "OAK-KS3-SCI-005" :oak-unit "ks3-biology-genetics-dna-transcription" :title "Genetics: DNA Base Pairing & Transcription" :stage "KS3 GENETICS" :duration 12.0
   (:camera :distance 440 :pitch 18 :yaw "((vars.rotSpeed != null ? vars.rotSpeed : 1.0) * (clock != null ? clock : (t * 12.0)) * 25.0)" :fov 60)
   (:vars (
     (:var :name "rotSpeed" :val 1.0 :min 0.2 :max 3.0 :step 0.2 :label "Helix Spin Rate")

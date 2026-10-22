@@ -6711,8 +6711,8 @@ if (item.type === '3d-node') {
             // Orbital guide rings belong in the background layer so dashed lines never cut through solid planet spheres or labels
             const isOrbitA = a.type === '3d-ring' && a.target && a.target.includes('orbit');
             const isOrbitB = b.type === '3d-ring' && b.target && b.target.includes('orbit');
-            if (isOrbitA && !isOrbitB) return 1; // Orbit guide rings sort first (rendered into background)
-            if (!isOrbitA && isOrbitB) return -1;
+            if (isOrbitA && !isOrbitB) return -1; // Orbit guide rings sort first (rendered into background)
+            if (!isOrbitA && isOrbitB) return 1;
 
             // Stabilize Saturn ring relative to Saturn body so the ring smoothly surrounds the globe without flickering
             if (a.target === '#saturn-ring' && b.target === '#planet-saturn') return 1;
@@ -6720,21 +6720,39 @@ if (item.type === '3d-node') {
 
             return b.meanZ - a.meanZ;
           });
-          sorted.forEach(item => {
-            const cont = this._container;
-            if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
-              item.domNode.parentNode.appendChild(item.domNode);
+
+          // Mobile GPU anti-flicker: Only mutate the SVG DOM when the 3D depth sort order has actually changed.
+          // Unconditional appendChild at 60 FPS invalidates mobile compositor tile caches and causes flashing.
+          let orderChanged = false;
+          if (!this._last3DSortKeys || this._last3DSortKeys.length !== sorted.length) {
+            orderChanged = true;
+          } else {
+            for (let k = 0; k < sorted.length; k++) {
+              if (this._last3DSortKeys[k] !== sorted[k].target) {
+                orderChanged = true;
+                break;
+              }
             }
-            if (item.cap1 && item.cap1.parentNode && cont && cont.contains(item.cap1)) {
-              item.cap1.parentNode.appendChild(item.cap1);
-            }
-            if (item.cap2 && item.cap2.parentNode && cont && cont.contains(item.cap2)) {
-              item.cap2.parentNode.appendChild(item.cap2);
-            }
-            if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
-              item.labelNode.parentNode.appendChild(item.labelNode);
-            }
-});
+          }
+
+          if (orderChanged) {
+            this._last3DSortKeys = sorted.map(it => it.target);
+            sorted.forEach(item => {
+              const cont = this._container;
+              if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
+                item.domNode.parentNode.appendChild(item.domNode);
+              }
+              if (item.cap1 && item.cap1.parentNode && cont && cont.contains(item.cap1)) {
+                item.cap1.parentNode.appendChild(item.cap1);
+              }
+              if (item.cap2 && item.cap2.parentNode && cont && cont.contains(item.cap2)) {
+                item.cap2.parentNode.appendChild(item.cap2);
+              }
+              if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
+                item.labelNode.parentNode.appendChild(item.labelNode);
+              }
+            });
+          }
         }
       }
 

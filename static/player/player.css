@@ -151,15 +151,19 @@ main {
   max-height: 100%;
   display: block;
   object-fit: contain;
-  perspective: 900px;
   background: transparent;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 
 #scene-root {
   transform-origin: 400px 240px;
   transform-box: view-box;
-  transform-style: preserve-3d;
-  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  contain: layout style;
 }
 
 /* Subtitles Banner Overlay */

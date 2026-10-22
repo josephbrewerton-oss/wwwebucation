@@ -1,4 +1,4 @@
-(:scene :id "rosary-mysteries" :type "Sim" :title "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries" :stage "CATHOLIC LIFE & RE" :duration 20.0
+(:scene :id "rosary-mysteries" :type "Sim" :oak-id "OAK-KS2-RE-019" :oak-unit "ks2-re-catholic-rosary-twenty-mysteries" :title "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries" :stage "CATHOLIC LIFE & RE" :duration 20.0
   (:camera :distance 460 :pitch 22 :yaw "t * 36" :fov 60)
   (:vars (
     (:var :name "decade" :val 1 :min 1 :max 5 :step 1 :label "Decade (1 to 5)")

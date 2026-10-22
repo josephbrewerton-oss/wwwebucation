@@ -1,4 +1,4 @@
-(:scene :id "eucharistic-procession-film" :type "Film" :video "/media/eucharistic-procession.mp4" :video-fit "contain" :title "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors" :stage "CATHOLIC LIFE" :duration 26.0
+(:scene :id "eucharistic-procession-film" :type "Film" :oak-id "OAK-KS2-RE-018" :oak-unit "ks2-re-catholic-eucharistic-procession" :video "/media/eucharistic-procession.mp4" :video-fit "contain" :title "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors" :stage "CATHOLIC LIFE" :duration 26.0
   (:vars (
     (:var :name "incenseSwirl" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Censer Smoke Diffusion")
     (:var :name "monstranceGlow" :val 0.85 :min 0.2 :max 1.5 :step 0.1 :label "Eucharistic Halo Radiance")

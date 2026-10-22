@@ -1,4 +1,4 @@
-(:scene :id "stations-of-the-cross" :type "Slide" :title "The Stations of the Cross: Via Crucis & Sacred Passion" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "stations-of-the-cross" :type "Slide" :oak-id "OAK-KS2-RE-020" :oak-unit "ks2-re-catholic-via-crucis-stations" :title "The Stations of the Cross: Via Crucis & Sacred Passion" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
     (:var :name "candleGlow" :val 1.0 :min 0.2 :max 1.5 :step 0.1 :label "Vigil Candle Flame")
     (:var :name "pilgrimPace" :val 1.0 :min 0.5 :max 2.0 :step 0.25 :label "Pilgrim Walk Pace")

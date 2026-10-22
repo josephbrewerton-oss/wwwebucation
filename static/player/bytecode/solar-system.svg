@@ -24,13 +24,11 @@
       <stop offset="100%" stop-color="#000000" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Solar Flare Filter -->
-    <filter id="solar-flare" x="-80%" y="-80%" width="260%" height="260%">
-      <feGaussianBlur stdDeviation="7" result="heavyBlur" />
-      <feGaussianBlur stdDeviation="3" result="tightBlur" />
+    <!-- Solar Flare Filter: Mobile GPU zero-flicker optimized glow -->
+    <filter id="solar-flare" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="3.5" result="coronaGlow" />
       <feMerge>
-        <feMergeNode in="heavyBlur" />
-        <feMergeNode in="tightBlur" />
+        <feMergeNode in="coronaGlow" />
         <feMergeNode in="SourceGraphic" />
       </feMerge>
     </filter>

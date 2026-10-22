@@ -1,4 +1,4 @@
-(:scene :id "pythagoras" :type "Sim" :title "Pythagoras' Theorem (a² + b² = c²)" :stage "KS3 GEOMETRY" :duration 11.0
+(:scene :id "pythagoras" :type "Sim" :oak-id "OAK-KS3-MAT-001" :title "Pythagoras' Theorem (a² + b² = c²)" :stage "KS3 GEOMETRY" :duration 11.0
   (:vars (
     (:var :name "sideA" :val 3 :min 1 :max 15 :step 1 :unit "units" :label "Leg a")
     (:var :name "sideB" :val 4 :min 1 :max 15 :step 1 :unit "units" :label "Leg b")
@@ -24,35 +24,20 @@
     (:start 0.35 :end 0.70 :en "Observe area conservation: square a² (emerald) plus square b² (sapphire) always equals square c² (amber)." :es "Observa la conservación de área: el cuadrado a² más el cuadrado b² siempre es igual a c².")
     (:start 0.70 :end 1.00 :en "a² + b² = c². The total number of unit square tiles is strictly conserved for all right triangles." :es "a² + b² = c². El número total de baldosas unitarias se conserva estrictamente.")
   ))
-(:keyframes (
-    (:t 0.00 
-      (:seek :phase_setup)
-      (:highlight "#pyth-triangle")
-      (:var "sideA" 3)
-      (:say "Drag the handles or enter custom figures for leg a and leg b."))
-      
-    (:t 0.35 
-      (:seek :phase_area_ab)
-      (:highlight "#pyth-sq-a")
-      (:var "sideB" 4)
-      (:say "Square a squared emerald plus square b squared sapphire equals square c squared amber."))
-      
-    (:t 0.70 
-      (:seek :phase_hypotenuse)
-      (:highlight "#pyth-sq-c")
-      (:var "active_layer" 2)
-      (:say "a squared plus b squared equals c squared. Total tiles strictly conserved."))
-  ))  (:interactive false)
+  (:keyframes (
+    (:t 0.00 :title "Interactive Manipulative" :rule "Drag handles or enter custom figures to test Pythagorean triples")
+    (:t 0.35 :title "Area Conservation" :rule "Square of side a has area a²; square of side b has area b²")
+    (:t 0.70 :title "Vector Area Sum" :rule "Total square units: a² + b² = c²")
+    (:t 1.00 :title "Hypotenuse Square c²" :rule "c = √(a² + b²) preserved across continuous geometry")
+  ))
+  (:interactive false)
   (:questions false)
-(:bindings (
-    ;; Geometry updates for squares and handles
-    (:target "#pyth-sq-a" :attr "width"  :expr "vars.sideA * 30")
-    (:target "#pyth-sq-a" :attr "height" :expr "vars.sideA * 30")
-    (:target "#pyth-sq-b" :attr "width"  :expr "vars.sideB * 30")
-    (:target "#pyth-sq-b" :attr "height" :expr "vars.sideB * 30")
-    ;; Text overlays layered above tiles
-    (:target "#pyth-txt-a" :attr "textContent" :expr "`a² = ${computed.areaA}`")
-    (:target "#pyth-txt-b" :attr "textContent" :expr "`b² = ${computed.areaB}`")
-    (:target "#pyth-txt-c" :attr "textContent" :expr "`c² = ${computed.areaC} (c = ${computed.hypotenuse})`")
+  (:bindings (
+    (:target "#pyth-txt-a" :attr "text" :expr "'a² = ' + (vars.sideA * vars.sideA)")
+    (:target "#pyth-txt-b" :attr "text" :expr "'b² = ' + (vars.sideB * vars.sideB)")
+    (:target "#pyth-txt-c" :attr "text" :expr "'c² = ' + (vars.sideA * vars.sideA + vars.sideB * vars.sideB)")
+    (:target "#pyth-label-a" :attr "text" :expr "'a = ' + vars.sideA")
+    (:target "#pyth-label-b" :attr "text" :expr "'b = ' + vars.sideB")
+    (:target "#pyth-label-c" :attr "text" :expr "'c = ' + Math.sqrt(vars.sideA * vars.sideA + vars.sideB * vars.sideB).toFixed(2)")
   ))
 )

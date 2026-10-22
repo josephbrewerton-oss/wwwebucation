@@ -3,7 +3,7 @@
 ;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)
 ;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories
 ;; =============================================================================
-(bsl-lexicon :version "2.0.0-PHASE2" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 42
+(bsl-lexicon :version "2.0.0-PHASE2" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 68
   (sign :id "jesus" :word "JESUS" :cat "faith" :gloss "JESUS"
     :label "Jesus Christ"
     :desc "Index touches center of non-dominant palm, then dominant palm (the crucifixion nails in the hands)." :aliases ("CHRIST" "LORD" "SAVIOUR" "SAVIOR")
@@ -302,5 +302,187 @@
     :desc "Both flat open palms face forward at shoulder height and push outward with muscular effort." :aliases ("PUSH" "PRESSURE")
     (kf :idx 1 :label "Poised at Chest" :rule "Both flat hands held vertical in front of shoulders" :tip [0 -10 20] :knuckle [30 15 10] :wrist [75 55 0] :shape :flat :base-shift [-30 0 0] :nmf (nmf :mouth "force" :brows "furrowed"))
     (kf :idx 2 :label "Muscular Push Out" :rule "Both palms thrust forward driving against resistance" :tip [0 -5 65] :knuckle [25 20 50] :wrist [70 60 25] :shape :flat :base-shift [-30 0 0] :nmf (nmf :mouth "force" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "what" :word "WHAT" :cat "conversation" :gloss "WHAT"
+    :label "What / Query"
+    :desc "Both open hands held forward palms up, swinging gently side to side with inquisitive furrowed brows." :aliases ("WHATS" "QUERY")
+    (kf :idx 1 :label "Palms Up Chest Level" :rule "Both open flat hands held forward palms up at chest" :tip [15 10 30] :knuckle [45 30 20] :wrist [80 65 5] :shape :flat :base-mode :mirror :nmf (nmf :mouth "what" :brows "furrowed"))
+    (kf :idx 2 :label "Inquisitive Side Swing" :rule "Both open palms swing outward slightly in inquiry" :tip [45 15 35] :knuckle [75 35 25] :wrist [110 70 10] :shape :flat :base-mode :mirror :nmf (nmf :mouth "what" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "where" :word "WHERE" :cat "conversation" :gloss "WHERE"
+    :label "Where / Location"
+    :desc "Both flat palms facing upward held at chest level move in small horizontal circles with furrowed brows." :aliases ("WHERES")
+    (kf :idx 1 :label "Palms Up Center" :rule "Open palms face upward held at mid chest" :tip [20 15 25] :knuckle [50 35 15] :wrist [85 70 0] :shape :flat :base-mode :mirror :nmf (nmf :mouth "where" :brows "furrowed"))
+    (kf :idx 2 :label "Horizontal Search Circles" :rule "Hands circle slightly outward searching for location" :tip [40 15 35] :knuckle [70 35 25] :wrist [105 70 10] :shape :flat :base-mode :mirror :nmf (nmf :mouth "where" :brows "furrowed" :tilt "tilt-left"))
+  )
+
+  (sign :id "who" :word "WHO" :cat "conversation" :gloss "WHO"
+    :label "Who / Person"
+    :desc "Dominant index finger circles in small clockwise circles beside chin with furrowed inquisitive brows." :aliases ("WHOM" "WHOSE")
+    (kf :idx 1 :label "Index Near Chin" :rule "Dominant index points upward beside right side of chin" :tip [30 -45 24] :knuckle [55 -15 14] :wrist [90 25 0] :shape :point :nmf (nmf :mouth "who" :brows "furrowed"))
+    (kf :idx 2 :label "Inquisitive Circle" :rule "Dominant index circles gently beside mouth" :tip [25 -40 26] :knuckle [50 -10 16] :wrist [85 30 0] :shape :point :nmf (nmf :mouth "who" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "why" :word "WHY" :cat "conversation" :gloss "WHY"
+    :label "Why / Reason"
+    :desc "Dominant index finger points and touches non-dominant chest/shoulder with furrowed inquiring brows." :aliases ("REASON")
+    (kf :idx 1 :label "Touch Chest" :rule "Dominant index finger taps left upper chest" :tip [-20 -10 20] :knuckle [15 15 12] :wrist [65 55 0] :shape :point :nmf (nmf :mouth "why" :brows "furrowed"))
+    (kf :idx 2 :label "Inquiring Rebound" :rule "Dominant index rebounds slightly outward with quizzical expression" :tip [-5 -20 35] :knuckle [30 5 25] :wrist [80 45 10] :shape :point :nmf (nmf :mouth "why" :brows "furrowed" :tilt "tilt-right"))
+  )
+
+  (sign :id "when" :word "WHEN" :cat "conversation" :gloss "WHEN"
+    :label "When / Time Point"
+    :desc "Dominant fingers flutter lightly forward across cheek from right to left like passing time." :aliases ("WHENEVER")
+    (kf :idx 1 :label "Cheek Flutter Start" :rule "Fingertips poised near right cheekbone" :tip [45 -50 25] :knuckle [70 -20 15] :wrist [100 20 0] :shape :spread :nmf (nmf :mouth "when" :brows "furrowed"))
+    (kf :idx 2 :label "Temporal Flutter Forward" :rule "Fingers flutter forward with furrowed questioning brows" :tip [55 -35 45] :knuckle [80 -5 30] :wrist [110 35 15] :shape :spread :nmf (nmf :mouth "when" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "how" :word "HOW" :cat "conversation" :gloss "HOW"
+    :label "How / Manner"
+    :desc "Both curved hands with knuckles touching twist inward and outward from wrists, questioning brows." :aliases ("MANNER")
+    (kf :idx 1 :label "Knuckles Touching" :rule "Both curved hands held knuckles together at chest" :tip [-10 10 25] :knuckle [25 30 15] :wrist [70 65 0] :shape :claw :base-mode :mirror :nmf (nmf :mouth "how" :brows "furrowed"))
+    (kf :idx 2 :label "Twist Outward" :rule "Wrists rotate turning palms upward in inquiry" :tip [25 20 35] :knuckle [55 40 25] :wrist [95 75 10] :shape :flat :base-mode :mirror :nmf (nmf :mouth "how" :brows "furrowed" :tilt "tilt-left"))
+  )
+
+  (sign :id "goodbye" :word "GOODBYE" :cat "conversation" :gloss "GOODBYE"
+    :label "Goodbye / Farewell"
+    :desc "Dominant open flat hand waves warmly side-to-side at shoulder height." :aliases ("BYE" "FAREWELL" "SEE-YOU")
+    (kf :idx 1 :label "Wave Left" :rule "Open flat hand tilts toward left at upper shoulder level" :tip [45 -50 30] :knuckle [70 -20 20] :wrist [100 20 5] :shape :flat :nmf (nmf :mouth "bye" :brows "raised"))
+    (kf :idx 2 :label "Wave Right" :rule "Open flat hand tilts smoothly toward right with warm farewell smile" :tip [75 -45 35] :knuckle [95 -15 25] :wrist [120 25 10] :shape :flat :nmf (nmf :mouth "goodbye" :brows "raised" :tilt "tilt-right"))
+  )
+
+  (sign :id "name" :word "NAME" :cat "conversation" :gloss "NAME"
+    :label "Name / Called"
+    :desc "Dominant index and middle finger (H/V shape) brush across the forehead from left to right." :aliases ("NAMES" "CALLED" "NAMED")
+    (kf :idx 1 :label "Forehead Left" :rule "Two fingers touch left side of forehead" :tip [-15 -65 25] :knuckle [20 -35 15] :wrist [65 5 0] :shape :v :nmf (nmf :mouth "name" :brows "neutral"))
+    (kf :idx 2 :label "Forehead Sweep Across" :rule "Two fingers sweep across to right side of forehead" :tip [45 -65 25] :knuckle [70 -35 15] :wrist [100 5 0] :shape :v :nmf (nmf :mouth "name" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "sorry" :word "SORRY" :cat "conversation" :gloss "SORRY"
+    :label "Sorry / Apology"
+    :desc "Dominant closed fist makes gentle circular rubbing motion over heart with apologetic expression." :aliases ("APOLOGY" "APOLOGISE" "APOLOGIZE" "FORGIVE")
+    (kf :idx 1 :label "Fist at Heart" :rule "Closed fist placed against left chest over heart" :tip [-15 0 20] :knuckle [15 25 10] :wrist [60 60 0] :shape :fist :nmf (nmf :mouth "sorry" :brows "furrowed"))
+    (kf :idx 2 :label "Circular Rub Over Heart" :rule "Fist rubs circularly over heart with sincere head bow" :tip [-20 10 22] :knuckle [10 35 12] :wrist [55 70 0] :shape :fist :nmf (nmf :mouth "sorry" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "welcome" :word "WELCOME" :cat "conversation" :gloss "WELCOME"
+    :label "Welcome / Receive"
+    :desc "Both open hands with palms facing inward sweep from outside inward toward heart in a welcoming embrace." :aliases ("HOSPITALITY" "WELCOME-ALL")
+    (kf :idx 1 :label "Open Arms Wide" :rule "Both open hands spread outward welcoming visitor" :tip [65 0 30] :knuckle [90 25 20] :wrist [120 60 5] :shape :flat :base-mode :mirror :nmf (nmf :mouth "welcome" :brows "raised"))
+    (kf :idx 2 :label "Gather to Heart" :rule "Hands sweep inward toward chest warmly receiving guest" :tip [15 5 25] :knuckle [45 30 15] :wrist [80 65 0] :shape :flat :base-mode :mirror :nmf (nmf :mouth "welcome" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "start" :word "START" :cat "school" :gloss "START"
+    :label "Start / Begin"
+    :desc "Dominant index finger twists clockwise between non-dominant index and middle fingers like turning a key." :aliases ("BEGIN" "COMMENCE" "STARTS")
+    (kf :idx 1 :label "Key in Ignition" :rule "Dominant index inserted between non-dominant index and middle" :tip [-45 15 16] :knuckle [5 25 8] :wrist [60 65 -10] :shape :point :nmf (nmf :mouth "start" :brows "raised"))
+    (kf :idx 2 :label "Twist Ignition Key" :rule "Dominant wrist rotates sharply turning key forward to initiate" :tip [-35 10 25] :knuckle [15 20 15] :wrist [70 55 0] :shape :point :nmf (nmf :mouth "begin" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "stop" :word "STOP" :cat "school" :gloss "STOP"
+    :label "Stop / Halt"
+    :desc "Dominant flat open hand chops down vertically onto flat horizontal palm of non-dominant hand." :aliases ("HALT" "CEASE" "STOPS" "FREEZE")
+    (kf :idx 1 :label "Raise Chopping Hand" :rule "Dominant flat hand poised vertically above horizontal base palm" :tip [-40 -10 25] :knuckle [0 10 15] :wrist [55 50 0] :shape :flat :nmf (nmf :mouth "stop" :brows "furrowed"))
+    (kf :idx 2 :label "Decisive Palm Chop" :rule "Dominant hand chops firmly down striking base palm into complete halt" :tip [-45 25 12] :knuckle [5 35 5] :wrist [65 70 -10] :shape :flat :nmf (nmf :mouth "stop" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "sit" :word "SIT" :cat "school" :gloss "SIT"
+    :label "Sit / Be Seated"
+    :desc "Dominant hooked two fingers press downward onto non-dominant horizontal fingers like legs sitting down." :aliases ("SIT-DOWN" "SEAT" "SEATED")
+    (kf :idx 1 :label "Legs Poised Above Seat" :rule "Hooked two fingers hover above base fingers" :tip [-45 0 22] :knuckle [0 15 12] :wrist [55 55 0] :shape :claw :nmf (nmf :mouth "sit" :brows "neutral"))
+    (kf :idx 2 :label "Press Down to Sit" :rule "Fingers press firmly down onto base denoting sitting down" :tip [-45 25 14] :knuckle [5 35 5] :wrist [65 70 -10] :shape :claw :nmf (nmf :mouth "sit" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "stand" :word "STAND" :cat "school" :gloss "STAND"
+    :label "Stand / Stand Up"
+    :desc "Dominant inverted V-fingers stand upright on non-dominant flat palm, then elevate upward." :aliases ("STAND-UP" "UPRIGHT")
+    (kf :idx 1 :label "Standing on Palm" :rule "Inverted V-fingers stand upright on non-dominant palm" :tip [-45 20 14] :knuckle [0 0 20] :wrist [55 -20 25] :shape :v :nmf (nmf :mouth "stand" :brows "raised"))
+    (kf :idx 2 :label "Rise Tall" :rule "Hand lifts upward asserting tall upright posture" :tip [-35 -25 30] :knuckle [10 -45 35] :wrist [65 -65 40] :shape :v :nmf (nmf :mouth "up" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "wait" :word "WAIT" :cat "school" :gloss "WAIT"
+    :label "Wait / Hold On"
+    :desc "Dominant flat open hand held out palm forward at mid-chest with reassuring calm oscillation." :aliases ("HOLD-ON" "PAUSE" "PATIENCE")
+    (kf :idx 1 :label "Palm Forward Halt" :rule "Flat hand pushed forward facing listener at mid-chest" :tip [25 -10 45] :knuckle [55 15 30] :wrist [90 55 10] :shape :flat :nmf (nmf :mouth "wait" :brows "neutral"))
+    (kf :idx 2 :label "Calm Reassurance" :rule "Hand pulses gently forward reminding student to hold on" :tip [25 -5 55] :knuckle [55 20 40] :wrist [90 60 20] :shape :flat :nmf (nmf :mouth "wait" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "finish" :word "FINISH" :cat "school" :gloss "FINISH"
+    :label "Finish / Completed"
+    :desc "Both flat open hands held out in front flick outward from wrists decisively confirming completion." :aliases ("DONE" "COMPLETED" "FINISHED" "END")
+    (kf :idx 1 :label "Hands Poised Inward" :rule "Both open flat hands held facing inward at chest level" :tip [-10 5 25] :knuckle [25 25 15] :wrist [70 60 0] :shape :flat :base-mode :mirror :nmf (nmf :mouth "finish" :brows "raised"))
+    (kf :idx 2 :label "Flick Outward Done" :rule "Both hands flick outward shaking off tasks in finality" :tip [45 20 35] :knuckle [75 40 25] :wrist [110 75 10] :shape :spread :base-mode :mirror :nmf (nmf :mouth "done" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "correct" :word "CORRECT" :cat "school" :gloss "CORRECT"
+    :label "Correct / Right"
+    :desc "Dominant extended index finger taps firmly onto non-dominant index finger twice in clear affirmation." :aliases ("RIGHT" "ACCURATE" "EXACT")
+    (kf :idx 1 :label "Align Index Fingers" :rule "Dominant index taps down onto non-dominant index" :tip [-45 15 18] :knuckle [5 25 8] :wrist [65 60 -10] :shape :point :nmf (nmf :mouth "correct" :brows "raised"))
+    (kf :idx 2 :label "Affirmative Second Tap" :rule "Rebounds and strikes index firmly confirming correct answer" :tip [-45 15 18] :knuckle [5 25 8] :wrist [65 60 -10] :shape :point :nmf (nmf :mouth "right" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "wrong" :word "WRONG" :cat "school" :gloss "WRONG"
+    :label "Wrong / Incorrect"
+    :desc "Dominant crooked finger taps against chin/cheek, shaking head with furrowed brows." :aliases ("INCORRECT" "MISTAKE" "ERROR" "FALSE")
+    (kf :idx 1 :label "Tap Chin" :rule "Dominant hooked index finger touches side of chin" :tip [25 -45 24] :knuckle [55 -15 14] :wrist [90 25 0] :shape :claw :nmf (nmf :mouth "wrong" :brows "furrowed" :tilt "tilt-left"))
+    (kf :idx 2 :label "Correction Tap" :rule "Hooked finger taps second time with head shake" :tip [25 -45 24] :knuckle [55 -15 14] :wrist [90 25 0] :shape :claw :nmf (nmf :mouth "no" :brows "furrowed" :tilt "tilt-right"))
+  )
+
+  (sign :id "happy" :word "HAPPY" :cat "conversation" :gloss "HAPPY"
+    :label "Happy / Joyful"
+    :desc "Dominant flat open hand brushes upward twice across the chest in cheerful light strokes with broad smile." :aliases ("GLAD" "JOY" "JOYFUL" "DELIGHT")
+    (kf :idx 1 :label "Brush Up Chest 1" :rule "Flat open hand brushes up across chest" :tip [-10 10 20] :knuckle [25 35 10] :wrist [70 70 0] :shape :flat :nmf (nmf :mouth "happy" :brows "raised"))
+    (kf :idx 2 :label "Brush Up Chest 2" :rule "Second light buoyant upward stroke beaming with joyful enthusiasm" :tip [10 -25 30] :knuckle [45 0 18] :wrist [85 40 5] :shape :flat :nmf (nmf :mouth "happy" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "sad" :word "SAD" :cat "conversation" :gloss "SAD"
+    :label "Sad / Unhappy"
+    :desc "Dominant open hand fingertips stroke slowly downward past cheek and chest with downcast expression." :aliases ("UNHAPPY" "SORROW" "GLUM" "DOWN")
+    (kf :idx 1 :label "Touch High Cheek" :rule "Fingertips gently touch upper cheek near eye" :tip [40 -50 25] :knuckle [65 -20 15] :wrist [95 20 0] :shape :flat :nmf (nmf :mouth "sad" :brows "furrowed"))
+    (kf :idx 2 :label "Slow Downward Draw" :rule "Hand draws slowly down toward lower chest reflecting downcast emotion" :tip [20 25 20] :knuckle [45 50 10] :wrist [80 85 0] :shape :flat :nmf (nmf :mouth "sad" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "more" :word "MORE" :cat "conversation" :gloss "MORE"
+    :label "More / Additional"
+    :desc "Dominant flat hand rests on non-dominant flat hand then scoops forward adding more." :aliases ("ADDITIONAL" "EXTRA" "PLUS")
+    (kf :idx 1 :label "Rest on Base Hand" :rule "Dominant flat hand rests on horizontal base palm" :tip [-45 20 14] :knuckle [5 35 5] :wrist [65 70 -10] :shape :flat :nmf (nmf :mouth "more" :brows "raised"))
+    (kf :idx 2 :label "Scoop Forward Adding More" :rule "Hand sweeps forward and upward gathering additional quantity" :tip [-20 0 45] :knuckle [15 15 35] :wrist [75 50 15] :shape :flat :nmf (nmf :mouth "more" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "again" :word "AGAIN" :cat "conversation" :gloss "AGAIN"
+    :label "Again / Repeat"
+    :desc "Dominant two fingers (V-shape) arc over and tap non-dominant palm in repetition." :aliases ("REPEAT" "ONCE-MORE" "ENCORE")
+    (kf :idx 1 :label "Arc Above Palm" :rule "Two fingers arc above non-dominant open palm" :tip [-45 -10 25] :knuckle [0 10 15] :wrist [55 50 0] :shape :v :nmf (nmf :mouth "again" :brows "raised"))
+    (kf :idx 2 :label "Tap Palm Again" :rule "Two fingers tap down decisively onto base palm confirming repetition" :tip [-45 25 14] :knuckle [5 35 5] :wrist [65 70 -10] :shape :v :nmf (nmf :mouth "again" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "slow" :word "SLOW" :cat "stem" :gloss "SLOW"
+    :label "Slow / Deliberate"
+    :desc "Dominant flat hand glides slowly and smoothly up the back of non-dominant forearm." :aliases ("SLOWLY" "DELAY" "GENTLE")
+    (kf :idx 1 :label "Glide Start at Wrist" :rule "Dominant fingertips touch back of non-dominant wrist" :tip [-65 35 10] :knuckle [-20 40 5] :wrist [35 70 -10] :shape :flat :nmf (nmf :mouth "slow" :brows "neutral"))
+    (kf :idx 2 :label "Smooth Upward Stroke" :rule "Hand glides slowly up forearm toward elbow" :tip [-30 15 16] :knuckle [15 25 8] :wrist [70 55 0] :shape :flat :nmf (nmf :mouth "slow" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "big" :word "BIG" :cat "stem" :gloss "BIG"
+    :label "Big / Large"
+    :desc "Both curved claw hands start together in center and spread widely apart indicating vast scale." :aliases ("LARGE" "HUGE" "GREAT" "GIANT")
+    (kf :idx 1 :label "Center Bounds" :rule "Curved hands held together framing moderate boundary" :tip [-10 0 25] :knuckle [20 20 15] :wrist [65 55 0] :shape :claw :base-mode :mirror :nmf (nmf :mouth "big" :brows "raised"))
+    (kf :idx 2 :label "Expand Wide Apart" :rule "Hands push widely outward with puffed cheeks indicating immense size" :tip [75 -15 40] :knuckle [105 10 28] :wrist [140 45 12] :shape :claw :base-mode :mirror :nmf (nmf :mouth "huge" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "small" :word "SMALL" :cat "stem" :gloss "SMALL"
+    :label "Small / Little"
+    :desc "Dominant thumb and index finger pinch close together showing a tiny gap with squinted eyes." :aliases ("LITTLE" "TINY" "MINIATURE")
+    (kf :idx 1 :label "Measure Tiny Gap" :rule "Thumb and index pinched closely apart in front of eye" :tip [35 -35 30] :knuckle [60 -10 18] :wrist [95 35 0] :shape :claw :nmf (nmf :mouth "small" :brows "furrowed"))
+    (kf :idx 2 :label "Pinch Narrower" :rule "Fingers narrow gap closer showing minuscule dimension" :tip [30 -30 35] :knuckle [55 -5 22] :wrist [90 40 5] :shape :claw :nmf (nmf :mouth "tiny" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "all" :word "ALL" :cat "conversation" :gloss "ALL"
+    :label "All / Everyone"
+    :desc "Both open hands sweep from outward inward in a broad inclusive embrace gathering everything." :aliases ("EVERYONE" "EVERYBODY" "WHOLE")
+    (kf :idx 1 :label "Broad Perimeter" :rule "Both open hands reach out wide encompassing entire perimeter" :tip [60 -10 30] :knuckle [85 15 20] :wrist [115 50 5] :shape :flat :base-mode :mirror :nmf (nmf :mouth "all" :brows "raised"))
+    (kf :idx 2 :label "Inclusive Circle Inward" :rule "Hands sweep inward completing circle to join at center" :tip [-10 10 25] :knuckle [25 30 15] :wrist [70 65 0] :shape :flat :base-mode :mirror :nmf (nmf :mouth "all" :brows "raised" :tilt "nod"))
   )
 )

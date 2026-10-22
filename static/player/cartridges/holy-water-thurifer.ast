@@ -1,4 +1,4 @@
-(:scene :id "holy-water-thurifer" :type "Sim" :title "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification" :stage "CATHOLIC LIFE" :duration 24.0
+(:scene :id "holy-water-thurifer" :type "Sim" :oak-id "OAK-KS2-RE-004" :oak-unit "ks2-re-catholic-asperges-incensations" :title "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification" :stage "CATHOLIC LIFE" :duration 24.0
   (:vars (
     (:var :name "swingArc" :val 25.0 :min 5.0 :max 50.0 :step 5.0 :label "Thurible Chain Swing Arc")
     (:var :name "smokeDensity" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Incense Smoke Density")

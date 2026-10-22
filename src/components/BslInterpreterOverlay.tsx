@@ -85,6 +85,18 @@ const QUICK_SIGNS = [
   { label: '💨 Fast', word: 'FAST' },
   { label: '⏱️ Time', word: 'TIME' },
   { label: '💥 Force', word: 'FORCE' },
+  { label: '👋 Bye', word: 'GOODBYE' },
+  { label: '❓ What', word: 'WHAT' },
+  { label: '📍 Where', word: 'WHERE' },
+  { label: '🛑 Stop', word: 'STOP' },
+  { label: '▶️ Start', word: 'START' },
+  { label: '🏁 Finish', word: 'FINISH' },
+  { label: '😊 Happy', word: 'HAPPY' },
+  { label: '😢 Sad', word: 'SAD' },
+  { label: '🙏 Sorry', word: 'SORRY' },
+  { label: '➕ More', word: 'MORE' },
+  { label: '🔁 Again', word: 'AGAIN' },
+  { label: '✅ Correct', word: 'CORRECT' },
 ];
 
 export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
@@ -95,7 +107,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   className = '',
 }) => {
   const [viewAngle, setViewAngle] = useState<'signer' | 'receiver'>('receiver');
-  const [cameraMode, setCameraMode] = useState<'body' | 'face'>('body');
+  const [cameraMode, setCameraMode] = useState<'split' | 'body' | 'face'>('split');
   const [windowOpacity, setWindowOpacity] = useState<number>(1.0);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
@@ -380,7 +392,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }));
   };
 
-  // Camera angles with interactive orbit offset and Face Focus mode
+  // Camera angles with interactive orbit offset, Split Dual View, and Face Focus mode
   const cameraConfig = useMemo(() => {
     let baseYaw = viewAngle === 'signer' ? 0 : 180;
     let basePitch = viewAngle === 'signer' ? 24 : -6;
@@ -389,6 +401,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     if (cameraMode === 'face') {
       basePitch = 0;
       baseDistance = 210; // Zoomed in for crystal-clear focus on face, eyebrows, eyes, and mouth
+    } else if (cameraMode === 'split') {
+      basePitch = viewAngle === 'signer' ? 18 : -4;
+      baseDistance = 330; // Ergonomically framed dual-zone perspective
     }
 
     return {
@@ -520,25 +535,61 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     return { x: dx, y: dy, z: dz };
   }, [headTilt, transitionProgress]);
 
-  // When in Face Focus mode, shift 3D frame to center on the head and face
-  const projPoint = useCallback(
+  // Perspective projection for Upper Torso & Head / Face (anchored on LHS in split mode)
+  const projPointBody = useCallback(
     (pt: Point3D) => {
-      const yShift = cameraMode === 'face' ? headCenter3D.y : 0;
-      const zShift = cameraMode === 'face' ? headCenter3D.z : 0;
-      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, originX, originY);
+      let ox = 120 + orbitOffset.panX;
+      let oy = (cameraMode === 'face' ? 88 : 106) + orbitOffset.panY;
+      let yShift = cameraMode === 'face' ? headCenter3D.y : 0;
+      let zShift = cameraMode === 'face' ? headCenter3D.z : 0;
+
+      if (cameraMode === 'split') {
+        ox = 66 + orbitOffset.panX;
+        oy = 96 + orbitOffset.panY;
+        yShift = 0;
+        zShift = 0;
+      }
+      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, ox, oy);
     },
-    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, originX, originY]
+    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, orbitOffset.panX, orbitOffset.panY]
   );
 
-  // Upper Torso & Head Reference Frame (Anatomical Loci for BSL Signs)
-  const torsoHead = useMemo(() => projPoint(headCenter3D), [projPoint, headCenter3D]);
-  const torsoChin = useMemo(
-    () => projPoint({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }),
-    [projPoint, headCenter3D]
+  // Perspective projection for Signing Hands Space (anchored on RHS in split mode)
+  const projPointHands = useCallback(
+    (pt: Point3D) => {
+      let ox = 120 + orbitOffset.panX;
+      let oy = (cameraMode === 'face' ? 88 : 106) + orbitOffset.panY;
+      let yShift = cameraMode === 'face' ? headCenter3D.y : 0;
+      let zShift = cameraMode === 'face' ? headCenter3D.z : 0;
+
+      if (cameraMode === 'split') {
+        ox = 175 + orbitOffset.panX;
+        oy = 104 + orbitOffset.panY;
+        yShift = 0;
+        zShift = 0;
+      }
+      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, ox, oy);
+    },
+    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, orbitOffset.panX, orbitOffset.panY]
   );
-  const torsoChest = useMemo(() => projPoint({ x: 0, y: 15, z: -15 }), [projPoint]);
-  const torsoLeftShoulder = useMemo(() => projPoint({ x: -95, y: 15, z: -25 }), [projPoint]);
-  const torsoRightShoulder = useMemo(() => projPoint({ x: 95, y: 15, z: -25 }), [projPoint]);
+
+  const projPoint = projPointHands;
+
+  // Upper Torso & Head Reference Frame (Anatomical Loci for BSL Signs)
+  const torsoHead = useMemo(() => projPointBody(headCenter3D), [projPointBody, headCenter3D]);
+  const torsoChin = useMemo(
+    () => projPointBody({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }),
+    [projPointBody, headCenter3D]
+  );
+  const torsoChest = useMemo(() => projPointBody({ x: 0, y: 15, z: -15 }), [projPointBody]);
+  const torsoLeftShoulder = useMemo(
+    () => projPointBody({ x: cameraMode === 'split' ? -68 : -95, y: 15, z: -25 }),
+    [projPointBody, cameraMode]
+  );
+  const torsoRightShoulder = useMemo(
+    () => projPointBody({ x: cameraMode === 'split' ? 68 : 95, y: 15, z: -25 }),
+    [projPointBody, cameraMode]
+  );
 
   // 3D Projected Facial Feature Landmarks (Eyes, Eyebrows, Nose, Mouth)
   const facialLandmarks = useMemo(() => {
@@ -552,7 +603,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       browOuterDy = -1;
     }
 
-    let mouthW = cameraMode === 'face' ? 8 : 6;
+    let mouthW = cameraMode === 'face' ? 8 : (cameraMode === 'split' ? 5.5 : 6);
     let mouthH = cameraMode === 'face' ? 3 : 2;
     let mouthCurvature = 0;
     const lowerMouth = mouthPattern.toLowerCase();
@@ -567,11 +618,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       lowerMouth.includes('friend') ||
       lowerMouth.includes('thank')
     ) {
-      mouthW = cameraMode === 'face' ? 9.5 : 7.5;
+      mouthW = cameraMode === 'face' ? 9.5 : (cameraMode === 'split' ? 7 : 7.5);
       mouthH = cameraMode === 'face' ? 3.5 : 2.5;
       mouthCurvature = cameraMode === 'face' ? 4 : 3;
     } else if (lowerMouth.includes('no') || lowerMouth.includes('question')) {
-      mouthW = cameraMode === 'face' ? 8 : 6;
+      mouthW = cameraMode === 'face' ? 8 : (cameraMode === 'split' ? 5.5 : 6);
       mouthH = cameraMode === 'face' ? 5 : 3.5;
       mouthCurvature = -2;
     }
@@ -579,20 +630,20 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     const zFace = headCenter3D.z + 14;
     const zNose = headCenter3D.z + 18;
 
-    const leftBrowOut = projPoint({ x: headCenter3D.x - 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
-    const leftBrowIn = projPoint({ x: headCenter3D.x - 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
-    const rightBrowIn = projPoint({ x: headCenter3D.x + 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
-    const rightBrowOut = projPoint({ x: headCenter3D.x + 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
+    const leftBrowOut = projPointBody({ x: headCenter3D.x - 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
+    const leftBrowIn = projPointBody({ x: headCenter3D.x - 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
+    const rightBrowIn = projPointBody({ x: headCenter3D.x + 3, y: headCenter3D.y - 11 + browInnerDy, z: zFace + 1 });
+    const rightBrowOut = projPointBody({ x: headCenter3D.x + 11, y: headCenter3D.y - 10 + browOuterDy, z: zFace });
 
-    const leftEye = projPoint({ x: headCenter3D.x - 7, y: headCenter3D.y - 5, z: zFace });
-    const rightEye = projPoint({ x: headCenter3D.x + 7, y: headCenter3D.y - 5, z: zFace });
+    const leftEye = projPointBody({ x: headCenter3D.x - 7, y: headCenter3D.y - 5, z: zFace });
+    const rightEye = projPointBody({ x: headCenter3D.x + 7, y: headCenter3D.y - 5, z: zFace });
 
-    const noseBridge = projPoint({ x: headCenter3D.x, y: headCenter3D.y - 3, z: zNose - 2 });
-    const noseTip = projPoint({ x: headCenter3D.x, y: headCenter3D.y + 4, z: zNose });
+    const noseBridge = projPointBody({ x: headCenter3D.x, y: headCenter3D.y - 3, z: zNose - 2 });
+    const noseTip = projPointBody({ x: headCenter3D.x, y: headCenter3D.y + 4, z: zNose });
 
-    const mouthLeft = projPoint({ x: headCenter3D.x - mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
-    const mouthCenter = projPoint({ x: headCenter3D.x, y: headCenter3D.y + 14, z: zFace + 2 });
-    const mouthRight = projPoint({ x: headCenter3D.x + mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
+    const mouthLeft = projPointBody({ x: headCenter3D.x - mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
+    const mouthCenter = projPointBody({ x: headCenter3D.x, y: headCenter3D.y + 14, z: zFace + 2 });
+    const mouthRight = projPointBody({ x: headCenter3D.x + mouthW, y: headCenter3D.y + 13 - mouthCurvature, z: zFace });
 
     return {
       leftBrowOut,
@@ -612,7 +663,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       mouthPattern,
       headTilt,
     };
-  }, [headCenter3D, projPoint, eyebrowState, mouthPattern, headTilt, cameraMode]);
+  }, [headCenter3D, projPointBody, eyebrowState, mouthPattern, headTilt, cameraMode]);
 
   // Project dominant hand (The Pen) complete anatomical landmarks with dynamic shape solving
   const domHand3D = useMemo(() => {
@@ -870,21 +921,21 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip, currentPose.shape]);
 
-  // Project all dominant hand landmarks to 2D SVG stage
-  const domWrist = projPoint(domHand3D.wrist);
-  const domKnuckle = projPoint(domHand3D.knuckleIndex);
-  const domTip = projPoint(domHand3D.tipIndex);
-  const domPalm = projPoint(domHand3D.palm);
-  const domKMid = projPoint(domHand3D.kMid);
-  const domKRing = projPoint(domHand3D.kRing);
-  const domKPinky = projPoint(domHand3D.kPinky);
-  const domTipMid = projPoint(domHand3D.tipMid);
-  const domTipRing = projPoint(domHand3D.tipRing);
-  const domTipPinky = projPoint(domHand3D.tipPinky);
-  const domThumbBase = projPoint(domHand3D.thumbBase);
-  const domThumbKnuckle = projPoint(domHand3D.thumbKnuckle);
-  const domThumbTip = projPoint(domHand3D.thumbTip);
-  const domForearm = projPoint(domHand3D.forearm);
+  // Project all dominant hand landmarks to 2D SVG stage (anchored on RHS in dual split mode)
+  const domWrist = projPointHands(domHand3D.wrist);
+  const domKnuckle = projPointHands(domHand3D.knuckleIndex);
+  const domTip = projPointHands(domHand3D.tipIndex);
+  const domPalm = projPointHands(domHand3D.palm);
+  const domKMid = projPointHands(domHand3D.kMid);
+  const domKRing = projPointHands(domHand3D.kRing);
+  const domKPinky = projPointHands(domHand3D.kPinky);
+  const domTipMid = projPointHands(domHand3D.tipMid);
+  const domTipRing = projPointHands(domHand3D.tipRing);
+  const domTipPinky = projPointHands(domHand3D.tipPinky);
+  const domThumbBase = projPointHands(domHand3D.thumbBase);
+  const domThumbKnuckle = projPointHands(domHand3D.thumbKnuckle);
+  const domThumbTip = projPointHands(domHand3D.thumbTip);
+  const domForearm = projPointHands(domHand3D.forearm);
 
   // Project non-dominant hand (The Base / Left Hand) dynamically adapting to BSL linguistic mode
   const baseHand3D = useMemo(() => {
@@ -967,21 +1018,21 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [currentPose.baseHandMode, currentPose.baseHandOverride, currentPose.isWholeWordSign, domHand3D]);
 
-  // Project all non-dominant base hand landmarks to 2D SVG stage
-  const baseWrist = projPoint(baseHand3D.wrist);
-  const baseKnuckle = projPoint(baseHand3D.knuckleIndex);
-  const baseTip = projPoint(baseHand3D.tipIndex);
-  const basePalm = projPoint(baseHand3D.palm);
-  const baseKMid = projPoint(baseHand3D.kMid);
-  const baseKRing = projPoint(baseHand3D.kRing);
-  const baseKPinky = projPoint(baseHand3D.kPinky);
-  const baseTipMid = projPoint(baseHand3D.tipMid);
-  const baseTipRing = projPoint(baseHand3D.tipRing);
-  const baseTipPinky = projPoint(baseHand3D.tipPinky);
-  const baseThumbBase = projPoint(baseHand3D.thumbBase);
-  const baseThumbKnuckle = projPoint(baseHand3D.thumbKnuckle);
-  const baseThumbTip = projPoint(baseHand3D.thumbTip);
-  const baseForearm = projPoint(baseHand3D.forearm);
+  // Project all non-dominant base hand landmarks to 2D SVG stage (anchored on RHS in dual split mode)
+  const baseWrist = projPointHands(baseHand3D.wrist);
+  const baseKnuckle = projPointHands(baseHand3D.knuckleIndex);
+  const baseTip = projPointHands(baseHand3D.tipIndex);
+  const basePalm = projPointHands(baseHand3D.palm);
+  const baseKMid = projPointHands(baseHand3D.kMid);
+  const baseKRing = projPointHands(baseHand3D.kRing);
+  const baseKPinky = projPointHands(baseHand3D.kPinky);
+  const baseTipMid = projPointHands(baseHand3D.tipMid);
+  const baseTipRing = projPointHands(baseHand3D.tipRing);
+  const baseTipPinky = projPointHands(baseHand3D.tipPinky);
+  const baseThumbBase = projPointHands(baseHand3D.thumbBase);
+  const baseThumbKnuckle = projPointHands(baseHand3D.thumbKnuckle);
+  const baseThumbTip = projPointHands(baseHand3D.thumbTip);
+  const baseForearm = projPointHands(baseHand3D.forearm);
 
   const baseFingertips = useMemo(() => {
     return [
@@ -1565,8 +1616,78 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             </radialGradient>
           </defs>
 
-          {/* Stage Status Indicator: Shows Concept Sign or Fingerspelling mode */}
-          {cameraMode !== 'face' && (
+          {/* DUAL-ZONE SPLIT (LHS Face & Upper Body + RHS Signing Hands) & MAPPED TUPLES */}
+          {cameraMode === 'split' && (
+            <g id="bsl-dual-zone-framing">
+              {/* Subtle central neon dashed demarcation line */}
+              <line x1="118" y1="18" x2="118" y2="162" stroke="#334155" strokeWidth="0.8" strokeDasharray="3 3" opacity="0.5" />
+              <circle cx="118" cy="90" r="2.2" fill="#1e293b" stroke="#38bdf8" strokeWidth="0.8" opacity="0.75" />
+
+              {/* Corner framing brackets for LHS Face Zone */}
+              <path d="M 12 20 L 8 20 L 8 28" fill="none" stroke="#38bdf8" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 104 20 L 110 20 L 110 28" fill="none" stroke="#38bdf8" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 8 154 L 8 162 L 16 162" fill="none" stroke="#38bdf8" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 102 162 L 110 162 L 110 154" fill="none" stroke="#38bdf8" strokeWidth="0.8" opacity="0.45" />
+
+              {/* Corner framing brackets for RHS Hand Signing Zone */}
+              <path d="M 126 20 L 132 20 L 132 28" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 226 20 L 232 20 L 232 28" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 126 162 L 132 162 L 132 154" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
+              <path d="M 224 162 L 232 162 L 232 154" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
+
+              {/* Top Mapped Action Tuples */}
+              <text
+                x="66"
+                y="12"
+                fill="#38bdf8"
+                fontSize="5.2"
+                fontFamily="ui-monospace, monospace"
+                fontWeight="800"
+                textAnchor="middle"
+                letterSpacing="0.2"
+              >
+                {`(:nmf :brow :${eyebrowState} :mouth "${mouthPattern || 'neutral'}")`}
+              </text>
+              <text
+                x="175"
+                y="12"
+                fill="#f59e0b"
+                fontSize="5.2"
+                fontFamily="ui-monospace, monospace"
+                fontWeight="800"
+                textAnchor="middle"
+                letterSpacing="0.2"
+              >
+                {`(:act :sign "${currentPose.letter || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`}
+              </text>
+
+              {/* Bottom Mapped Coordinate & Loci Tuples */}
+              <text
+                x="66"
+                y="173"
+                fill="#64748b"
+                fontSize="4.8"
+                fontFamily="ui-monospace, monospace"
+                fontWeight="700"
+                textAnchor="middle"
+              >
+                {`(:loci :chin [${torsoChin.x.toFixed(0)}, ${torsoChin.y.toFixed(0)}] :tilt :${headTilt})`}
+              </text>
+              <text
+                x="175"
+                y="173"
+                fill="#64748b"
+                fontSize="4.8"
+                fontFamily="ui-monospace, monospace"
+                fontWeight="700"
+                textAnchor="middle"
+              >
+                {`(:xyz [${Math.round(interpolatedTip.x)}, ${Math.round(interpolatedTip.y)}, ${Math.round(interpolatedTip.z)}] :base :${baseHand3D.mode})`}
+              </text>
+            </g>
+          )}
+
+          {cameraMode !== 'split' && cameraMode !== 'face' && (
             <text
               x="120"
               y="13"
@@ -1600,15 +1721,15 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             <ellipse
               cx={torsoHead.x}
               cy={torsoHead.y}
-              rx={(cameraMode === 'face' ? 24 : 19) * torsoHead.scale}
-              ry={(cameraMode === 'face' ? 32 : 25) * torsoHead.scale}
+              rx={(cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+              ry={(cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * torsoHead.scale}
               fill="rgba(15, 23, 42, 0.7)"
               stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#64748b')}
               strokeWidth={eyebrowState !== 'neutral' ? '2' : '1.3'}
             />
 
             {/* Chin Locus Indicator */}
-            <circle cx={torsoChin.x} cy={torsoChin.y} r={(cameraMode === 'face' ? 3.5 : 2.5) * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
+            <circle cx={torsoChin.x} cy={torsoChin.y} r={(cameraMode === 'face' ? 3.5 : cameraMode === 'split' ? 2.2 : 2.5) * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
 
             {/* BSL NON-MANUAL FEATURES (NMF) 3D FACIAL RIG */}
             {showFacialFeatures && (
@@ -1858,6 +1979,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 opacity="0.85"
               />
             )}
+            {/* Dynamic S-Expression Reticle mapping tuple directly to signing locus */}
+            {cameraMode === 'split' && (
+              <g opacity={0.85}>
+                <line x1={domTip.x - 5} y1={domTip.y} x2={domTip.x + 5} y2={domTip.y} stroke="#f59e0b" strokeWidth="0.7" opacity="0.6" />
+                <line x1={domTip.x} y1={domTip.y - 5} x2={domTip.x} y2={domTip.y + 5} stroke="#f59e0b" strokeWidth="0.7" opacity="0.6" />
+                <text x={domTip.x + 6} y={domTip.y - 3} fill="#f59e0b" fontSize="4.4" fontFamily="ui-monospace, monospace" fontWeight="700" opacity="0.75">
+                  {`[${Math.round(interpolatedTip.x)}, ${Math.round(interpolatedTip.y)}]`}
+                </text>
+              </g>
+            )}
           </g>
         </svg>
 
@@ -1874,16 +2005,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
           <button
             type="button"
-            onClick={() => setCameraMode((prev) => (prev === 'body' ? 'face' : 'body'))}
+            onClick={() =>
+              setCameraMode((prev) =>
+                prev === 'split' ? 'body' : prev === 'body' ? 'face' : 'split'
+              )
+            }
             style={{
               ...stageBtnStyle,
-              background: cameraMode === 'face' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(15, 23, 42, 0.85)',
-              borderColor: cameraMode === 'face' ? '#38bdf8' : 'rgba(56, 189, 248, 0.3)',
-              color: cameraMode === 'face' ? '#38bdf8' : '#e2e8f0',
+              background: cameraMode === 'split' ? 'rgba(56, 189, 248, 0.28)' : cameraMode === 'face' ? 'rgba(245, 158, 11, 0.28)' : 'rgba(15, 23, 42, 0.85)',
+              borderColor: cameraMode === 'split' ? '#38bdf8' : cameraMode === 'face' ? '#f59e0b' : 'rgba(56, 189, 248, 0.3)',
+              color: cameraMode === 'split' ? '#38bdf8' : cameraMode === 'face' ? '#f59e0b' : '#e2e8f0',
             }}
-            title="Toggle between full upper body and zoomed-in Face Focus to clearly see eyebrows, eyes, and mouth shapes"
+            title="Cycle views: Dual Split (Face LHS + Hands RHS with Mapped Tuples), Center Unified Body, or Face Focus"
           >
-            <span>{cameraMode === 'face' ? '🔍 Face Focus' : '👤 Body View'}</span>
+            <span>
+              {cameraMode === 'split'
+                ? '⚖️ Dual: Face+Hands'
+                : cameraMode === 'face'
+                ? '🔍 Face Focus'
+                : '👤 Center Body'}
+            </span>
           </button>
 
           <button
