@@ -19,6 +19,7 @@ export interface PlayerDisplayConfig {
   showDevInspect: boolean;           // 🛠️ Inspect button (SVG Element Inspector)
   showDevStudio: boolean;            // 💻 Studio button (Live SVG/AST editor)
   showExportSpa: boolean;            // 🚀 Standalone SPA export button
+  showExportZip?: boolean;           // 📦 Offline Simulator Suite ZIP Bundle
   showStandaloneLink: boolean;       // ↗ Standalone window button
   showObsLink: boolean;              // 📡 OBS WebSocket Link button
   showLmsEmbed: boolean;             // 🔗 Embed in LMS button
@@ -98,6 +99,7 @@ export const SUITE_PRESET: PlayerDisplayConfig = {
   showDevInspect: false,
   showDevStudio: false,
   showExportSpa: false,
+  showExportZip: true,
   showStandaloneLink: true,
   showObsLink: false,
   showLmsEmbed: false,
@@ -127,6 +129,7 @@ export const CLASSROOM_PRESET: PlayerDisplayConfig = {
   showDevInspect: false,
   showDevStudio: false,
   showExportSpa: false,
+  showExportZip: true,
   showStandaloneLink: true,
   showObsLink: false,
   showLmsEmbed: false,
@@ -156,6 +159,7 @@ export const STUDENT_PRESET: PlayerDisplayConfig = {
   showDevInspect: false,
   showDevStudio: false,
   showExportSpa: false,
+  showExportZip: false,
   showStandaloneLink: false,
   showObsLink: false,
   showLmsEmbed: false,
@@ -185,6 +189,7 @@ export const BROADCAST_PRESET: PlayerDisplayConfig = {
   showDevInspect: false,
   showDevStudio: false,
   showExportSpa: false,
+  showExportZip: false,
   showStandaloneLink: true,
   showObsLink: true,
   showLmsEmbed: false,
@@ -214,6 +219,7 @@ export const DEVELOPER_PRESET: PlayerDisplayConfig = {
   showDevInspect: true,
   showDevStudio: true,
   showExportSpa: true,
+  showExportZip: true,
   showStandaloneLink: true,
   showObsLink: true,
   showLmsEmbed: true,
@@ -243,6 +249,7 @@ export const EMBEDDED_PRESET: PlayerDisplayConfig = {
   showDevInspect: false,
   showDevStudio: false,
   showExportSpa: false,
+  showExportZip: false,
   showStandaloneLink: false,
   showObsLink: false,
   showLmsEmbed: false,

@@ -178,6 +178,7 @@ export interface AstVectorMediaPlayerHandle {
   rotateCameraOrbit: (theta: number, phi: number, relative?: boolean) => void;
   nudgeNode: (target: string, dxyz: [number, number, number]) => void;
   setQuestions: (enabled: boolean) => void;
+  downloadZipSuite: () => void;
 }
 
 export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVectorMediaPlayerProps>(({
@@ -205,6 +206,8 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   bslEnabled: bslEnabledProp,
   onBslToggle,
 }, ref) => {
+  const rawBase = import.meta.env.BASE_URL || '/';
+  const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const normalizedInitialPreset = normalizeCartridgeId(preset) || 'welcome';
   const initialPlayerPresetRef = useRef(normalizedInitialPreset);
@@ -503,6 +506,48 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     setPipType('docked');
   }, [selectedPreset, isPipActive, pipType]);
 
+  const handleDownloadZipSuite = useCallback(async () => {
+    postToPlayer({ type: 'DOWNLOAD_OFFLINE_ZIP' });
+    const candidateUrls = [
+      `${cleanBase}lumina-vector-player.zip`,
+      `${cleanBase}player/lumina-vector-player.zip`,
+      '/lumina-vector-player.zip',
+    ];
+
+    for (const url of candidateUrls) {
+      try {
+        const resp = await fetch(url, { cache: 'no-cache' });
+        if (resp.ok) {
+          const blob = await resp.blob();
+          if (blob && blob.size > 0) {
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = 'lumina-vector-player.zip';
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+              URL.revokeObjectURL(blobUrl);
+              a.remove();
+            }, 2000);
+            setExportSuccessNotice(true);
+            setTimeout(() => setExportSuccessNotice(false), 3500);
+            return;
+          }
+        }
+      } catch (_) {}
+    }
+
+    const a = document.createElement('a');
+    a.href = `${cleanBase}lumina-vector-player.zip`;
+    a.download = 'lumina-vector-player.zip';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setExportSuccessNotice(true);
+    setTimeout(() => setExportSuccessNotice(false), 3500);
+  }, [cleanBase, postToPlayer]);
+
   // Expose imperative handle to parent components
   useImperativeHandle(ref, () => ({
     postToPlayer,
@@ -550,6 +595,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     castCameraRay: () => postToPlayer({ type: 'CAST_CAMERA_RAY' }),
     rotateCameraOrbit: (theta: number, phi: number, relative = false) => postToPlayer({ type: 'ROTATE_CAMERA_ORBIT', theta, phi, relative }),
     nudgeNode: (target: string, dxyz: [number, number, number]) => postToPlayer({ type: 'NUDGE_NODE', target, dxyz }),
+    downloadZipSuite: () => handleDownloadZipSuite(),
     injectCheckpoint: (checkpoint: {
       prompt: string;
       options: string[];
@@ -558,7 +604,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       title?: string;
       t?: number;
     }) => postToPlayer({ type: 'INJECT_CHECKPOINT', checkpoint }),
-  }), [postToPlayer, togglePictureInPicture]);
+  }), [postToPlayer, togglePictureInPicture, handleToggleBsl, bslEnabledProp, handleDownloadZipSuite]);
 
   // Automatically inject checkpoint into player stage when provided
   useEffect(() => {
@@ -788,6 +834,50 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
             setTimeout(() => setExportSuccessNotice(false), 3500);
           }
           break;
+        case 'DOWNLOAD_ZIP': {
+          const candidateUrls: string[] = Array.isArray(data.candidateUrls) ? data.candidateUrls : [];
+          const primaryUrl = data.url || `${cleanBase}lumina-vector-player.zip`;
+          if (!candidateUrls.includes(primaryUrl)) candidateUrls.unshift(primaryUrl);
+          if (!candidateUrls.includes(`${cleanBase}lumina-vector-player.zip`)) candidateUrls.push(`${cleanBase}lumina-vector-player.zip`);
+          if (!candidateUrls.includes(`${cleanBase}player/lumina-vector-player.zip`)) candidateUrls.push(`${cleanBase}player/lumina-vector-player.zip`);
+          if (!candidateUrls.includes('/lumina-vector-player.zip')) candidateUrls.push('/lumina-vector-player.zip');
+
+          (async () => {
+            for (const url of candidateUrls) {
+              try {
+                const resp = await fetch(url, { cache: 'no-cache' });
+                if (resp.ok) {
+                  const blob = await resp.blob();
+                  if (blob && blob.size > 0) {
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = blobUrl;
+                    a.download = data.filename || 'lumina-vector-player.zip';
+                    document.body.appendChild(a);
+                    a.click();
+                    setTimeout(() => {
+                      URL.revokeObjectURL(blobUrl);
+                      a.remove();
+                    }, 2000);
+                    setExportSuccessNotice(true);
+                    setTimeout(() => setExportSuccessNotice(false), 3500);
+                    return;
+                  }
+                }
+              } catch (_) {}
+            }
+
+            const a = document.createElement('a');
+            a.href = primaryUrl;
+            a.download = data.filename || 'lumina-vector-player.zip';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setExportSuccessNotice(true);
+            setTimeout(() => setExportSuccessNotice(false), 3500);
+          })();
+          break;
+        }
         case 'DISPLAY_CONFIG_CHANGED':
           if (data.config && typeof data.config === 'object') {
             setDisplayConfig((prev) => ({ ...prev, ...data.config }));
@@ -889,8 +979,6 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     if (onConfigChange) onConfigChange(displayConfig);
   }, [displayConfig, postToPlayer, onConfigChange]);
 
-const rawBase = import.meta.env.BASE_URL || '/';
-const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
 const effectiveMode = embedded ? 'embedded' : displayConfig.mode;
 const disableInitialQuestions = isCartridgeWithoutQuestions(initialPlayerPresetRef.current);
 const effectiveQuestions = disableInitialQuestions ? '0' : (showQuestions ? '1' : '0');
@@ -1686,6 +1774,25 @@ const playerSrc = useMemo(() => {
                 title="Export as an Autonomous, Offline-Executable Single Page Application in a single .svg file"
               >
                 <span>{exportSuccessNotice ? '✔ Exported SPA!' : '🚀 Standalone SPA'}</span>
+              </button>
+            )}
+
+            {displayConfig.showExportZip !== false && (
+              <button
+                type="button"
+                onClick={handleDownloadZipSuite}
+                className="stj-btn stj-btn-secondary stj-btn-sm player-toolbar-desktop-only"
+                style={{
+                  padding: '4px 10px',
+                  minHeight: '32px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  color: '#4ade80',
+                  borderColor: 'rgba(34, 197, 94, 0.4)',
+                }}
+                title="Download Complete Offline Simulator Suite (Zero-Dependency ZIP Bundle)"
+              >
+                <span>📦 ZIP Suite</span>
               </button>
             )}
 

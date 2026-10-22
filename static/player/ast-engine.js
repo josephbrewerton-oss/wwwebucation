@@ -8180,6 +8180,20 @@ if (item.type === '3d-node') {
           }
           break;
         }
+        case 'EXPORT_OFFLINE_ZIP':
+        case 'DOWNLOAD_OFFLINE_ZIP':
+        case 'DOWNLOAD_ZIP': {
+          if (uiController && typeof uiController.downloadOfflineSuiteZip === 'function') {
+            uiController.downloadOfflineSuiteZip();
+          } else {
+            engine.notifyParent({
+              type: 'DOWNLOAD_ZIP',
+              filename: 'lumina-vector-player.zip',
+              url: '/lumina-vector-player.zip'
+            });
+          }
+          break;
+        }
         case 'AI_VISUAL_COMMAND':
           if (data.packet || data.actions) {
             const packet = data.packet || {

@@ -166,6 +166,7 @@ export const PlayerSettingsModal: React.FC<PlayerSettingsModalProps> = ({
                   { key: 'showDevInspect', label: '🛠️ SVG Element Inspector' },
                   { key: 'showDevStudio', label: '💻 Live Code Studio' },
                   { key: 'showExportSpa', label: '🚀 Standalone SVG SPA Export' },
+                  { key: 'showExportZip', label: '📦 Offline Simulator Suite ZIP Bundle' },
                   { key: 'showStandaloneLink', label: '↗ Standalone Window Button' },
                   { key: 'showPipButton', label: '📺 Document Picture-in-Picture & Floating Player' },
                   { key: 'showObsLink', label: '📡 OBS Broadcast WebSocket Link' },

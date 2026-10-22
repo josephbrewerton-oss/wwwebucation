@@ -51,6 +51,7 @@
         voiceCmdText: document.getElementById('voice-cmd-text'),
         btnTheme: document.getElementById('btn-theme'),
         btnSuiteMode: document.getElementById('btn-suite-mode'),
+        btnDownloadZip: document.getElementById('btn-download-zip'),
         playerFooter: document.querySelector('footer'),
         btnPip: document.getElementById('btn-pip'),
         btnFullscreen: document.getElementById('btn-fullscreen'),
@@ -2292,6 +2293,13 @@ window.addEventListener('message', (e) => {
         });
       }
 
+      if (el.btnDownloadZip) {
+        el.btnDownloadZip.addEventListener('click', (e) => {
+          e.preventDefault();
+          this.downloadOfflineSuiteZip();
+        });
+      }
+
       // WebRTC P2P Mesh & AI Link Controls
       if (el.btnWebRtcLink) {
         el.btnWebRtcLink.addEventListener('click', () => {
@@ -2748,6 +2756,7 @@ window.addEventListener('message', (e) => {
         showDevInspect: false,
         showDevStudio: false,
         showExportSpa: false,
+        showExportZip: true,
         showStandaloneLink: true,
         showObsLink: false,
         showLmsEmbed: false,
@@ -2867,6 +2876,7 @@ window.addEventListener('message', (e) => {
       if (el.btnDevMode) el.btnDevMode.style.display = c.showDevInspect ? '' : 'none';
       if (el.btnDevStudio) el.btnDevStudio.style.display = c.showDevStudio ? '' : 'none';
       if (el.btnHeaderExportSpa) el.btnHeaderExportSpa.style.display = c.showExportSpa ? '' : 'none';
+      if (el.btnDownloadZip) el.btnDownloadZip.style.display = c.showExportZip !== false ? '' : 'none';
       if (el.btnObsLink) el.btnObsLink.style.display = c.showObsLink ? '' : 'none';
       if (el.btnPrint) el.btnPrint.style.display = c.showPrintWorksheet !== false ? '' : 'none';
       if (el.btnCopySvg) el.btnCopySvg.style.display = c.showCopySvg ? '' : 'none';
@@ -3793,6 +3803,98 @@ window.addEventListener('message', (e) => {
       } catch (err) {
         console.error('Failed to export standalone SVG applet:', err);
         this.showToast('⚠️ Export failed');
+      }
+    }
+
+    async downloadOfflineSuiteZip() {
+      try {
+        if (typeof this.showToast === 'function') {
+          this.showToast('📦 Preparing Offline Simulator Suite...');
+        }
+
+        // Candidate URLs for reliable resolution across root, /player/ subdirectory, and subpaths
+        const candidateUrls = [];
+        try {
+          candidateUrls.push(new URL('lumina-vector-player.zip', window.location.href).href);
+          candidateUrls.push(new URL('../lumina-vector-player.zip', window.location.href).href);
+        } catch (_) {}
+
+        const basePath = (this.engine && this.engine.options && this.engine.options.basePath) ||
+          (typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('base') : null) || '/';
+        const cleanBase = basePath.endsWith('/') ? basePath : (basePath + '/');
+        const baseZipUrl = `${cleanBase}lumina-vector-player.zip`;
+        const basePlayerZipUrl = `${cleanBase}player/lumina-vector-player.zip`;
+
+        if (!candidateUrls.includes(baseZipUrl)) candidateUrls.push(baseZipUrl);
+        if (!candidateUrls.includes(basePlayerZipUrl)) candidateUrls.push(basePlayerZipUrl);
+        if (!candidateUrls.includes('/lumina-vector-player.zip')) candidateUrls.push('/lumina-vector-player.zip');
+
+        const primaryUrl = candidateUrls[0] || '/lumina-vector-player.zip';
+
+        // 1. Notify host / parent application so top-level window can trigger browser download
+        if (this.engine && typeof this.engine.notifyParent === 'function') {
+          this.engine.notifyParent({
+            type: 'DOWNLOAD_ZIP',
+            filename: 'lumina-vector-player.zip',
+            url: primaryUrl,
+            candidateUrls: candidateUrls,
+          });
+        } else if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage({
+              source: 'ast-vector-player',
+              type: 'DOWNLOAD_ZIP',
+              filename: 'lumina-vector-player.zip',
+              url: primaryUrl,
+              candidateUrls: candidateUrls,
+            }, '*');
+          } catch (_) {}
+        }
+
+        // 2. Also execute local Blob download in current frame (unrestricted in standalone windows & modern tabs)
+        let downloadedLocally = false;
+        for (const candidate of candidateUrls) {
+          try {
+            const resp = await fetch(candidate, { cache: 'no-cache' });
+            if (resp.ok) {
+              const blob = await resp.blob();
+              if (blob && blob.size > 0) {
+                const blobUrl = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = 'lumina-vector-player.zip';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(() => {
+                  URL.revokeObjectURL(blobUrl);
+                  a.remove();
+                }, 2000);
+                downloadedLocally = true;
+                if (typeof this.playChime === 'function') this.playChime(659, 'triangle');
+                if (typeof this.showToast === 'function') this.showToast('📦 Offline Simulator Suite Downloaded!');
+                break;
+              }
+            }
+          } catch (_) {
+            // Proceed to next candidate URL
+          }
+        }
+
+        // 3. Fallback direct anchor navigation if fetch failed and not embedded
+        if (!downloadedLocally && (!window.parent || window.parent === window)) {
+          const fallbackLink = document.createElement('a');
+          fallbackLink.href = primaryUrl;
+          fallbackLink.setAttribute('download', 'lumina-vector-player.zip');
+          fallbackLink.target = '_blank';
+          document.body.appendChild(fallbackLink);
+          fallbackLink.click();
+          fallbackLink.remove();
+        }
+      } catch (err) {
+        console.error('Failed to download offline zip bundle:', err);
+        if (typeof this.showToast === 'function') {
+          this.showToast('⚠️ Could not download ZIP bundle');
+        }
       }
     }
 

@@ -8,8 +8,10 @@
  */
 
 import assert from 'assert';
+import fs from 'fs';
 import { parseSExpr } from '../src/utils/sexprParser';
 import { resolveConstraintRegExp, testConstraintRegExp, NANO_ACT_TUPLE_REGEX } from '../src/engine/aicaller';
+import { SUITE_PRESET, CLASSROOM_PRESET } from '../src/types/playerConfig';
 
 console.log('=============================================================');
 console.log('🔬 St Joseph\'s Simulation Engine & Physical Invariant Harness');
@@ -440,6 +442,46 @@ console.log('\n--- TEST 8: Chromium Issue 576432037 RegExp Constraint Defense --
   assert.strictEqual(recoveryAttempt, 2, 'Recovery must succeed on second prompt call');
 
   console.log('[✅ PASS] Sim 8: Chromium Issue 576432037 client-side responseConstraint verification, retry recovery, and dirty output rejection verified.');
+  passedTests++;
+}
+
+// =========================================================================
+// TEST 9: Offline Simulator Suite ZIP Export & Protocol Invariants
+// =========================================================================
+console.log('\n--- TEST 9: Offline Simulator Suite ZIP Export & Embed Protocol ---');
+{
+  const staticZipPath = 'static/lumina-vector-player.zip';
+  const playerZipPath = 'static/player/lumina-vector-player.zip';
+
+  assert(fs.existsSync(staticZipPath), `Primary distribution zip '${staticZipPath}' must exist on disk`);
+  assert(fs.existsSync(playerZipPath), `Subdirectory relative zip '${playerZipPath}' must exist on disk`);
+
+  const staticZipSize = fs.statSync(staticZipPath).size;
+  const playerZipSize = fs.statSync(playerZipPath).size;
+
+  assert(staticZipSize > 500000, `ZIP file size (${staticZipSize} bytes) must be comprehensive (> 500 KB)`);
+  assert.strictEqual(staticZipSize, playerZipSize, 'Static root and player folder zip files must be identical in size');
+
+  // Verify display configuration defaults include showExportZip: true in suite and classroom profiles
+  assert.strictEqual(SUITE_PRESET.showExportZip, true, 'SUITE_PRESET must have showExportZip enabled');
+  assert.strictEqual(CLASSROOM_PRESET.showExportZip, true, 'CLASSROOM_PRESET must have showExportZip enabled');
+
+  // Verify static/player/index.html includes accessible button with ID #btn-download-zip
+  const indexHtml = fs.readFileSync('static/player/index.html', 'utf-8');
+  assert(indexHtml.includes('id="btn-download-zip"'), 'index.html must include #btn-download-zip element');
+  assert(indexHtml.includes('class="zip-download-btn"'), 'index.html must style button with zip-download-btn class');
+
+  // Verify player-ui.js contains downloadOfflineSuiteZip handler and parent notification
+  const playerUi = fs.readFileSync('static/player/player-ui.js', 'utf-8');
+  assert(playerUi.includes('downloadOfflineSuiteZip()'), 'player-ui.js must define downloadOfflineSuiteZip()');
+  assert(playerUi.includes('btnDownloadZip: document.getElementById(\'btn-download-zip\')'), 'player-ui.js must bind btnDownloadZip element');
+  assert(playerUi.includes('type: \'DOWNLOAD_ZIP\''), 'player-ui.js must post DOWNLOAD_ZIP notification to parent');
+
+  // Verify ast-engine.js dispatches DOWNLOAD_OFFLINE_ZIP
+  const astEngine = fs.readFileSync('static/player/ast-engine.js', 'utf-8');
+  assert(astEngine.includes('DOWNLOAD_OFFLINE_ZIP'), 'ast-engine.js must listen for DOWNLOAD_OFFLINE_ZIP');
+
+  console.log(`[✅ PASS] Sim 9: Offline Simulator Suite ZIP Bundle (${(staticZipSize / 1024).toFixed(1)} KB), postMessage protocol, and UI binding verified.`);
   passedTests++;
 }
 
