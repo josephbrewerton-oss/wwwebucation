@@ -184,6 +184,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 0, y: -60, z: 25 },
         targetKnuckle: { x: 25, y: -25, z: 15 },
         targetWrist: { x: 65, y: 25, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'cross' },
       },
       {
@@ -192,6 +194,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 0, y: 35, z: 25 },
         targetKnuckle: { x: 25, y: 65, z: 15 },
         targetWrist: { x: 65, y: 95, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'cross' },
       },
       {
@@ -200,6 +204,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: -45, y: -15, z: 22 },
         targetKnuckle: { x: -10, y: 15, z: 12 },
         targetWrist: { x: 40, y: 55, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'cross' },
       },
       {
@@ -208,6 +214,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 45, y: -15, z: 22 },
         targetKnuckle: { x: 75, y: 15, z: 12 },
         targetWrist: { x: 110, y: 55, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'cross' },
       },
     ],
@@ -381,6 +389,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 50, y: -65, z: 28 },
         targetKnuckle: { x: 70, y: -35, z: 15 },
         targetWrist: { x: 95, y: 10, z: 0 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
         nmf: { eyebrows: 'neutral', mouth: 'teach' },
       },
       {
@@ -389,6 +399,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 30, y: -20, z: 65 },
         targetKnuckle: { x: 55, y: 10, z: 45 },
         targetWrist: { x: 85, y: 50, z: 20 },
+        shape: 'spread',
+        baseHandMode: 'mirror',
         nmf: { eyebrows: 'neutral', mouth: 'teacher' },
       },
     ],
@@ -1663,6 +1675,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 25, z: 8 },
         targetWrist: { x: 60, y: 65, z: -10 },
         shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'start' },
       },
       {
@@ -1672,6 +1685,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 15, y: 20, z: 15 },
         targetWrist: { x: 70, y: 55, z: 0 },
         shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'begin', headTilt: 'nod' },
       },
     ],
@@ -1693,6 +1707,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 0, y: 10, z: 15 },
         targetWrist: { x: 55, y: 50, z: 0 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'furrowed', mouth: 'stop' },
       },
       {
@@ -1702,6 +1717,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 35, z: 5 },
         targetWrist: { x: 65, y: 70, z: -10 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'furrowed', mouth: 'stop', headTilt: 'nod' },
       },
     ],
@@ -1723,6 +1739,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 0, y: 15, z: 12 },
         targetWrist: { x: 55, y: 55, z: 0 },
         shape: 'claw',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'sit' },
       },
       {
@@ -1732,6 +1749,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 35, z: 5 },
         targetWrist: { x: 65, y: 70, z: -10 },
         shape: 'claw',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'sit', headTilt: 'nod' },
       },
     ],
@@ -1753,6 +1771,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 0, y: 0, z: 20 },
         targetWrist: { x: 55, y: -20, z: 25 },
         shape: 'v',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'stand' },
       },
       {
@@ -1762,6 +1781,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 10, y: -45, z: 35 },
         targetWrist: { x: 65, y: -65, z: 40 },
         shape: 'v',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'up', headTilt: 'nod' },
       },
     ],
@@ -1773,25 +1793,27 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
     category: 'school',
     englishLabel: 'Wait / Hold On',
     gloss: 'WAIT',
-    description: 'Dominant flat open hand held out palm forward at mid-chest with reassuring calm oscillation.',
+    description: 'Both flat open hands held out palm forward at mid-chest in reassuring calm posture.',
     aliases: ['HOLD-ON', 'PAUSE', 'PATIENCE'],
     keyframes: [
       {
         label: 'Palm Forward Halt',
-        rule: 'Flat hand pushed forward facing listener at mid-chest',
+        rule: 'Both flat hands pushed forward facing listener at mid-chest',
         targetTip: { x: 25, y: -10, z: 45 },
         targetKnuckle: { x: 55, y: 15, z: 30 },
         targetWrist: { x: 90, y: 55, z: 10 },
         shape: 'flat',
+        baseHandMode: 'mirror',
         nmf: { eyebrows: 'neutral', mouth: 'wait' },
       },
       {
         label: 'Calm Reassurance',
-        rule: 'Hand pulses gently forward reminding student to hold on',
+        rule: 'Hands pulse gently forward reminding student to hold on',
         targetTip: { x: 25, y: -5, z: 55 },
         targetKnuckle: { x: 55, y: 20, z: 40 },
         targetWrist: { x: 90, y: 60, z: 20 },
         shape: 'flat',
+        baseHandMode: 'mirror',
         nmf: { eyebrows: 'neutral', mouth: 'wait', headTilt: 'nod' },
       },
     ],
@@ -1845,6 +1867,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 25, z: 8 },
         targetWrist: { x: 65, y: 60, z: -10 },
         shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'correct' },
       },
       {
@@ -1854,6 +1877,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 25, z: 8 },
         targetWrist: { x: 65, y: 60, z: -10 },
         shape: 'point',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'right', headTilt: 'nod' },
       },
     ],
@@ -1905,6 +1929,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 25, y: 35, z: 10 },
         targetWrist: { x: 70, y: 70, z: 0 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'happy' },
       },
       {
@@ -1914,6 +1939,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 45, y: 0, z: 18 },
         targetWrist: { x: 85, y: 40, z: 5 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'happy', headTilt: 'nod' },
       },
     ],
@@ -1965,6 +1991,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 35, z: 5 },
         targetWrist: { x: 65, y: 70, z: -10 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'more' },
       },
       {
@@ -1974,6 +2001,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 15, y: 15, z: 35 },
         targetWrist: { x: 75, y: 50, z: 15 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'more', headTilt: 'nod' },
       },
     ],
@@ -1995,6 +2023,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 0, y: 10, z: 15 },
         targetWrist: { x: 55, y: 50, z: 0 },
         shape: 'v',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'again' },
       },
       {
@@ -2004,6 +2033,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 5, y: 35, z: 5 },
         targetWrist: { x: 65, y: 70, z: -10 },
         shape: 'v',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'raised', mouth: 'again', headTilt: 'nod' },
       },
     ],
@@ -2025,6 +2055,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: -20, y: 40, z: 5 },
         targetWrist: { x: 35, y: 70, z: -10 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'slow' },
       },
       {
@@ -2034,6 +2065,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetKnuckle: { x: 15, y: 25, z: 8 },
         targetWrist: { x: 70, y: 55, z: 0 },
         shape: 'flat',
+        baseHandMode: 'vowel-board',
         nmf: { eyebrows: 'neutral', mouth: 'slow', headTilt: 'nod' },
       },
     ],
@@ -2223,12 +2255,18 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
   if (!kf.baseHandMode) {
     if (kf.baseHandOverride) {
       baseHandMode = 'override';
-    } else if (['PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST'].includes(sign.word)) {
+    } else if ([
+      'PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST',
+      'WHAT', 'WHERE', 'HOW', 'WELCOME', 'WAIT', 'FINISH', 'BIG', 'ALL', 'HOLY', 'TEACHER'
+    ].includes(sign.word)) {
       baseHandMode = 'mirror';
-    } else if (['SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS'].includes(sign.word)) {
+    } else if ([
+      'SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS',
+      'CROSS', 'START', 'STOP', 'SIT', 'STAND', 'CORRECT', 'HAPPY', 'MORE', 'AGAIN', 'SLOW'
+    ].includes(sign.word)) {
       baseHandMode = 'vowel-board';
     } else {
-      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY)
+      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL)
     }
   }
 
