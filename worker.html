@@ -325,7 +325,9 @@
       // 1. Primary config: Standard Chrome Prompt API with explicit outputLanguage
       try {
         cachedSession = await target.create({
-          systemPrompt: systemInstruction,
+          initialPrompts: [
+            { role: 'system', content: systemInstruction }
+          ],
           outputLanguage: 'en',
           expectedOutputLanguages: ['en'],
           expectedInputLanguages: ['en'],
@@ -338,7 +340,9 @@
         try {
           // 2. Minimal config with outputLanguage
           cachedSession = await target.create({
-            systemPrompt: systemInstruction,
+            initialPrompts: [
+              { role: 'system', content: systemInstruction }
+            ],
             outputLanguage: 'en',
             expectedOutputLanguages: ['en'],
             expectedInputLanguages: ['en'],
@@ -349,7 +353,9 @@
           try {
             // 3. Fallback without extra parameters
             cachedSession = await target.create({
-              systemPrompt: systemInstruction,
+              initialPrompts: [
+                { role: 'system', content: systemInstruction }
+              ],
             });
             currentSystemInstruction = systemInstruction;
             return cachedSession;

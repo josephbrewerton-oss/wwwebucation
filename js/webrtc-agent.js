@@ -271,7 +271,9 @@
         }
         if (isAvailable) {
           const session = await LM.create({
-            systemPrompt: PEDAGOGICAL_SYSTEM_PROMPT,
+            initialPrompts: [
+              { role: 'system', content: PEDAGOGICAL_SYSTEM_PROMPT }
+            ],
             outputLanguage: 'en',
             expectedOutputLanguages: ['en'],
             expectedInputLanguages: ['en'],

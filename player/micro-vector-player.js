@@ -289,7 +289,7 @@
         const hotspot = e.target.closest('[data-target-t]');
         if (hotspot) {
           const targetT = parseFloat(hotspot.getAttribute('data-target-t'));
-          const label = hotspot.getAttribute('data-label') || 'Sacred Space';
+          const label = hotspot.getAttribute('data-label') || 'Station';
           if (!isNaN(targetT)) {
             this.seek(targetT);
             this.dispatchEvent(new CustomEvent('hotspot', { detail: { targetT, label } }));
@@ -408,27 +408,27 @@
           ],
           render: (t) => {
             let camX = 400, camY = 430;
-            let sacredSpaceTitle = "1. NARTHEX & HOLY WATER STOUP";
+            let stationTitle = "1. NARTHEX & HOLY WATER STOUP";
             if (t >= 0.20 && t < 0.40) {
               const f = (t - 0.20) / 0.20;
               camX = 400; camY = 430 - f * 150;
-              sacredSpaceTitle = "2. THE NAVE & PEWS";
+              stationTitle = "2. THE NAVE & PEWS";
             } else if (t >= 0.40 && t < 0.60) {
               const f = (t - 0.40) / 0.20;
               camX = 400 - f * 59; camY = 280 - f * 140;
-              sacredSpaceTitle = "3. THE AMBO (LECTERN)";
+              stationTitle = "3. THE AMBO (LECTERN)";
             } else if (t >= 0.60 && t < 0.80) {
               const f = (t - 0.60) / 0.20;
               camX = 341 + f * 59; camY = 140 - f * 12;
-              sacredSpaceTitle = "4. THE ALTAR OF SACRIFICE";
+              stationTitle = "4. THE ALTAR OF SACRIFICE";
             } else if (t >= 0.80 && t < 0.92) {
               const f = (t - 0.80) / 0.12;
               camX = 400; camY = 128 - f * 56;
-              sacredSpaceTitle = "5. THE TABERNACLE & SANCTUARY LAMP";
+              stationTitle = "5. THE TABERNACLE & SANCTUARY LAMP";
             } else if (t >= 0.92) {
               const f = (t - 0.92) / 0.08;
               camX = 400 - Math.cos(f * Math.PI) * 180; camY = 190;
-              sacredSpaceTitle = "6. LADY CHAPEL & BAPTISMAL FONT";
+              stationTitle = "6. LADY CHAPEL & BAPTISMAL FONT";
             }
 
             return `
@@ -443,7 +443,7 @@
               <circle cx="${camX.toFixed(1)}" cy="${camY.toFixed(1)}" r="38" fill="rgba(56, 189, 248, 0.15)" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" filter="url(#mvp-glow)" />
               <circle cx="${camX.toFixed(1)}" cy="${camY.toFixed(1)}" r="7" fill="#38bdf8" />
               <rect x="160" y="18" width="480" height="36" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
-              <text x="175" y="41" fill="#38bdf8" font-size="12" font-weight="800">⛪ ${sacredSpaceTitle}</text>
+              <text x="175" y="41" fill="#38bdf8" font-size="12" font-weight="800">⛪ ${stationTitle}</text>
             `;
           }
         });
