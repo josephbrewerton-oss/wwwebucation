@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-23T09:43:31.394Z",
+  "generatedAt": "2026-10-23T10:14:23.725Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -89,16 +89,16 @@
     },
     {
       "id": "catholic-rites",
-      "type": "Sim",
+      "type": "Slide",
       "title": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "scenes/catholic-rites.svg",
       "astFile": "scenes/catholic-rites.ast",
-      "keyframeCount": 0,
-      "subtitleCount": 6,
+      "keyframeCount": 5,
+      "subtitleCount": 5,
       "bindingsCount": 4
     },
     {
@@ -271,17 +271,17 @@
     },
     {
       "id": "latin-mass-prayers",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "scenes/latin-mass-prayers.svg",
       "astFile": "scenes/latin-mass-prayers.ast",
-      "keyframeCount": 0,
-      "subtitleCount": 6,
-      "bindingsCount": 4
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 2
     },
     {
       "id": "liturgical-calendar",
@@ -355,17 +355,17 @@
     },
     {
       "id": "nicene-creed",
-      "type": "Sim",
+      "type": "Slide",
       "title": "The Nicene & Apostles' Creed: Credo in Unum Deum",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "scenes/nicene-creed.svg",
       "astFile": "scenes/nicene-creed.ast",
-      "keyframeCount": 0,
-      "subtitleCount": 6,
-      "bindingsCount": 4
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 2
     },
     {
       "id": "order-of-the-mass",
@@ -453,17 +453,17 @@
     },
     {
       "id": "sacred-objects",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "scenes/sacred-objects.svg",
       "astFile": "scenes/sacred-objects.ast",
-      "keyframeCount": 0,
-      "subtitleCount": 6,
-      "bindingsCount": 4
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 10
     },
     {
       "id": "seven-sacraments",
@@ -551,17 +551,17 @@
     },
     {
       "id": "ten-commandments",
-      "type": "Sim",
+      "type": "Slide",
       "title": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "scenes/ten-commandments.svg",
       "astFile": "scenes/ten-commandments.ast",
-      "keyframeCount": 0,
-      "subtitleCount": 6,
-      "bindingsCount": 5
+      "keyframeCount": 5,
+      "subtitleCount": 5,
+      "bindingsCount": 3
     },
     {
       "id": "times-tables",

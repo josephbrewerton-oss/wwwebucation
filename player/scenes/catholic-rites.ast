@@ -1,57 +1,51 @@
-(:scene :id "catholic-rites" :type "Sim" :oak-id "OAK-KS3-RE-011" :oak-unit "ks3-re-catholic-sacramental-rites" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "catholic-rites" :type "Slide" :oak-id "OAK-KS3-RE-011" :oak-unit "ks3-re-catholic-sacramental-rites" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
-    (:var :name "selectedRite" :val 1.0 :min 1.0 :max 6.0 :step 1.0 :label "Selected Liturgical Rite (1: Roman, 2: Byzantine, 3: Alexandrian, 4: Antiochene, 5: Chaldean, 6: Armenian)")
-    (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with the Holy See Beacon Intensity")
+    (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with Holy See Beacon")
     (:var :name "iconShimmer" :val 0.8 :min 0.0 :max 1.5 :step 0.1 :label "Iconostasis & Mosaic Shimmer")
   ))
 
-  (:camera :mode "2d" :viewBox "0 0 800 480")
+  (:inputs (
+    (:slider :var "communionGlow" :label "Peter's Beacon" :min 0.2 :max 2.0 :step 0.1)
+    (:slider :var "iconShimmer" :label "Icon Shimmer" :min 0.0 :max 1.5 :step 0.1)
+  ))
 
   (:gestures (
-    (:draggable :target "#rite-selector-knob" :axis "x" :min 120 :max 680
-      (:bind-var "selectedRite" :map "linear" :from-min 120 :from-max 680 :to-min 1.0 :to-max 6.0)
-    )
-    (:draggable :target "#communion-beacon-core" :axis "y" :min 80 :max 220
-      (:bind-var "communionGlow" :map "linear" :from-min 220 :from-max 80 :to-min 0.2 :to-max 2.0)
-    )
+    (:draggable :target "#rite-selector-knob" :axis "x" :min 120 :max 680)
   ))
 
   (:subtitles (
-    (:start 0.0 :end 4.5 :text "The Catholic Church is a global communion of 24 autonomous (sui iuris) Churches united under the Bishop of Rome.")
-    (:start 4.5 :end 9.0 :text "The Latin (Western) Church shares full communion with 23 ancient Eastern Catholic Churches spanning 6 Liturgical Traditions.")
-    (:start 9.0 :end 14.0 :text "From the Byzantine Divine Liturgy with icons, to the Alexandrian Ge'ez chant, Christ's Church breathes with two lungs: East and West.")
-    (:start 14.0 :end 19.5 :text "Ancient Eastern traditions use leavened prosphora bread symbolizing the Resurrection, alongside holy icons and incense.")
-    (:start 19.5 :end 24.5 :text "Churches like the Maronites of Lebanon have maintained unbroken communion with the Holy See across two millennia.")
-    (:start 24.5 :end 28.0 :text "In all 24 Churches, the same true Sacraments, apostolic faith, and communion with the Successor of Peter are fully preserved.")
+    (:start 0.00 :end 0.20 :en "The Catholic Church is a global communion of 24 autonomous (sui iuris) Churches united under the Bishop of Rome." :es "La Iglesia Católica es una comunión global de 24 Iglesias autónomas (sui iuris) unidas bajo el Obispo de Roma." :la "Ecclesia Catholica est communio viginti quattuor Ecclesiarum sui iuris sub Romano Pontifice.")
+    (:start 0.20 :end 0.45 :en "The Latin (Western) Church shares full communion with 23 ancient Eastern Catholic Churches spanning 6 Liturgical Traditions." :es "La Iglesia Latina comparte plena comunión con 23 Iglesias Católicas Orientales a través de 6 Tradiciones Litúrgicas." :la "Una Ecclesia Occidentalis et viginti tres Ecclesiae Orientales sex traditiones liturgicas participant.")
+    (:start 0.45 :end 0.70 :en "From the Byzantine Divine Liturgy with sacred icons to Alexandrian Ge'ez chant, Christ's Church breathes with two lungs: East and West." :es "Desde la Divina Liturgia bizantina con iconos hasta el canto ge'ez alejandrino, la Iglesia respira con dos pulmones." :la "Ecclesia duobus pulmonibus respirat: Oriente et Occidente in sacra liturgia et iconibus concordibus.")
+    (:start 0.70 :end 0.88 :en "Ancient Eastern traditions use leavened prosphora bread symbolizing the Resurrection, alongside holy icons and fragrant incense." :es "Las tradiciones orientales usan pan leudado prosfora simbolizando la Resurrección, con iconos e incienso." :la "Panis fermentatus prosphora Resurrectionem Christi significat una cum thure et sanctis iconibus.")
+    (:start 0.88 :end 1.00 :en "In all 24 Churches, the same true Sacraments, apostolic faith, and communion with the Successor of Peter are fully preserved." :es "En las 24 Iglesias se preservan los mismos verdaderos Sacramentos, la fe apostólica y la comunión con Pedro." :la "In omnibus viginti quattuor Ecclesiis eadem sacramenta et communio cum Successore Petri servantur.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. The Universal Catholic Communion (24 Churches)" :rule "Una Ecclesia: 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic) in one faith.")
+    (:t 0.20 :title "2. The Six Liturgical Families" :rule "Traditiones: Latin, Byzantine, Alexandrian, Antiochene, Chaldean, and Armenian rites.")
+    (:t 0.45 :title "3. Breathing with Two Lungs (East & West)" :rule "Duo Pulmones: Saint John Paul II taught the Church breathes with both East and West.")
+    (:t 0.70 :title "4. Prosphora, Icons & Eastern Sacramental Rites" :rule "Mysterium: Leavened Eucharistic Prosphora and sacred Iconostasis reflecting heavenly liturgy.")
+    (:t 0.88 :title "5. Unbroken Apostolic Unity with Peter" :rule "Cathedra Petri: Plenary communion with the Holy See preserving Catholic diversity in unity.")
   ))
 
   (:interactive (
-    (:checkpoint :at 0.35
-      (:prompt "How many autonomous (sui iuris) Churches make up the one Universal Catholic Church in full communion with the Pope?")
-      (:options
-        ("Only 1 (The Roman Church)" :correct false)
-        ("6 regional dioceses" :correct false)
-        ("24 autonomous Churches across 6 Liturgical Traditions" :correct true)
-        ("Over 500 divided denominations" :correct false)
-      )
-      (:explanation "The Catholic Church is a communion of 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic Churches) all united in one faith under the Pope.")
-    )
-    (:checkpoint :at 0.75
-      (:prompt "Why do Byzantine and Eastern Catholic Churches use leavened bread (Prosphora) for the Holy Eucharist?")
-      (:options
-        ("Because yeast represents the Risen Life of Christ and the breath of the Holy Spirit" :correct true)
-        ("Because unleavened bread is forbidden in the East" :correct false)
-        ("Because flat wafers were invented only recently" :correct false)
-        ("Only to make the bread softer for the priest" :correct false)
-      )
-      (:explanation "Leaven symbolizes Christ rising from the dead and the Holy Spirit breathing life into the bread! Both leavened and unleavened traditions are holy, ancient, and fully valid.")
-    )
+    (:checkpoint :t 0.35
+      :prompt "How many autonomous (sui iuris) Churches make up the one Universal Catholic Church in full communion with the Pope?"
+      :options ("24 autonomous Churches across 6 Liturgical Traditions" "Only 1 (The Roman Church alone)" "6 regional dioceses" "Over 500 divided denominations")
+      :answer 0
+      :explanation "The Catholic Church is a magnificent communion of 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic Churches) all united in one faith under the Pope.")
+    (:checkpoint :t 0.75
+      :prompt "Why do Byzantine and Eastern Catholic Churches use leavened bread (Prosphora) for the Holy Eucharist?"
+      :options ("Because yeast represents the Risen Life of Christ and the Holy Spirit breathing life into creation" "Because unleavened bread was forbidden in ancient times" "Because flat wafers were invented only recently" "Only to make the bread softer for the priest")
+      :answer 0
+      :explanation "Leaven symbolizes Christ rising from the dead and the Holy Spirit breathing life into the bread! Both leavened and unleavened traditions are holy, ancient, and fully valid.")
   ))
 
   (:bindings (
-    (:target "#beacon-pulse" :attr "opacity" :expr "0.3 + 0.4 * communionGlow")
-    (:target "#beacon-halo" :attr "r" :expr "30 + 20 * communionGlow")
-    (:target "#icon-gold-glow" :attr "opacity" :expr "0.4 + 0.5 * iconShimmer")
-    (:target "#dome-cross" :attr "transform" :expr "'rotate(' + (sin(t * 1.5) * 2) + ', 400, 110)'")
+    (:target "#beacon-pulse" :attr "opacity" :expr "0.3 + 0.4 * (vars.communionGlow || 1.0)")
+    (:target "#beacon-halo" :attr "r" :expr "30 + 20 * (vars.communionGlow || 1.0)")
+    (:target "#icon-gold-glow" :attr "opacity" :expr "0.4 + 0.5 * (vars.iconShimmer || 0.8)")
+    (:target "#dome-cross" :attr "transform" :expr "'rotate(' + (Math.sin(t * 1.5) * 2) + ', 400, 110)'")
   ))
 )

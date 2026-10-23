@@ -1,58 +1,49 @@
-(:scene :id "ten-commandments" :type "Sim" :oak-id "OAK-KS2-RE-015" :oak-unit "ks2-re-catholic-decalogue-moral-law" :title "The Ten Commandments & Moral Law: The Two Tablets of Sinai" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "ten-commandments" :type "Slide" :oak-id "OAK-KS2-RE-015" :oak-unit "ks2-re-catholic-decalogue-moral-law" :title "The Ten Commandments & Moral Law: The Two Tablets of Sinai" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
-    (:var :name "selectedTablet" :val 1.0 :min 1.0 :max 2.0 :step 1.0 :label "Selected Tablet (1: Love of God 1-3, 2: Love of Neighbour 4-10)")
-    (:var :name "sinaiGlory" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Mount Sinai Cloud of Glory Fire & Light")
-    (:var :name "commandmentHighlight" :val 1.0 :min 1.0 :max 10.0 :step 1.0 :label "Active Commandment Roman Numeral (I-X)")
+    (:var :name "sinaiGlory" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Mount Sinai Cloud of Glory")
+    (:var :name "selectedTablet" :val 1.0 :min 1.0 :max 2.0 :step 1.0 :label "Selected Tablet")
   ))
 
-  (:camera :mode "2d" :viewBox "0 0 800 480")
+  (:inputs (
+    (:slider :var "sinaiGlory" :label "Sinai Glory Cloud" :min 0.2 :max 2.0 :step 0.1)
+  ))
 
   (:gestures (
-    (:draggable :target "#tablet-toggle-knob" :axis "x" :min 260 :max 540
-      (:bind-var "selectedTablet" :map "linear" :from-min 260 :from-max 540 :to-min 1.0 :to-max 2.0)
-    )
-    (:draggable :target "#sinai-glory-node" :axis "y" :min 60 :max 180
-      (:bind-var "sinaiGlory" :map "linear" :from-min 180 :from-max 60 :to-min 0.2 :to-max 2.0)
-    )
+    (:draggable :target "#tablet-toggle-knob" :axis "x" :min 260 :max 540)
   ))
 
   (:subtitles (
-    (:start 0.0 :end 4.5 :text "God gave Moses the Ten Commandments (the Decalogue) on Mount Sinai as a loving covenant of life and freedom.")
-    (:start 4.5 :end 9.0 :text "The First Tablet contains Commandments I to III: Teaching us how to love, worship, and put God first in our lives.")
-    (:start 9.0 :end 14.0 :text "We honor God's holy Name, keep Sunday holy at Mass, and never allow idols or toys to take God's place.")
-    (:start 14.0 :end 19.5 :text "The Second Tablet contains Commandments IV to X: Guiding our love for our family, friends, classmates, and neighbours.")
-    (:start 19.5 :end 24.5 :text "We honor parents, protect human life, speak truth with kindness, and live with pure, peaceful, and generous hearts.")
-    (:start 24.5 :end 28.0 :text "Jesus summarized the Ten Commandments in the Two Great Commandments of Love: Love God, and love your neighbour as yourself.")
+    (:start 0.00 :end 0.20 :en "God gave Moses the Ten Commandments (the Decalogue) on Mount Sinai as a loving covenant of life and freedom." :es "Dios dio a Moisés los Diez Mandamientos en el Monte Sinaí como alianza de amor, vida y libertad." :la "Decalogus a Deo Moysi in Monte Sinai datus est ut foedus dilectionis et libertatis sempiternum.")
+    (:start 0.20 :end 0.45 :en "The First Tablet contains Commandments I to III: Teaching us how to love, worship, and put God first in our lives." :es "La Primera Tabla contiene los Mandamientos I a III: amar, adorar y poner a Dios en primer lugar." :la "Prima Tabula: Mandata I usque ad III nos docent Deum super omnia diligere et sanctificare.")
+    (:start 0.45 :end 0.70 :en "We honor God's holy Name, keep Sunday holy at Mass, and never allow idols or toys to take God's place." :es "Honramos el santo Nombre de Dios, santificamos el domingo en Misa y no adoramos ídolos." :la "Nomen Domini sanctificamus, diem dominicam celebramus et nulla idola cordis colimus.")
+    (:start 0.70 :end 0.88 :en "The Second Tablet contains Commandments IV to X: Guiding our love for family, friends, classmates, and neighbours." :es "La Segunda Tabla contiene los Mandamientos IV a X: amor filial, respeto a la vida y caridad fraterna." :la "Secunda Tabula: Mandata IV usque ad X amorem erga parentes, vitam et proximum gubernant.")
+    (:start 0.88 :end 1.00 :en "Jesus summarized all Ten Commandments in the Two Great Commandments: Love God, and love your neighbour as yourself." :es "Jesús resumió los Diez Mandamientos en los Dos Grandes Mandamientos: Amar a Dios y al prójimo." :la "Christus Decalogum in Duo Mandata Dilectionis complevit: Diliges Dominum Deum et proximum tuum.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. The Decalogue on Mount Sinai" :rule "Lex Domini: The loving moral law carved by the finger of God on stone tablets.")
+    (:t 0.20 :title "2. First Tablet: Love of God (I - III)" :rule "Dilectio Dei: One God alone, holy reverence for His Name, and keeping the Lord's Day holy.")
+    (:t 0.45 :title "3. Living Faith: Worship & The Lord's Day" :rule "Sanctificatio: Sunday Mass, prayer, and fidelity to God above all earthly treasures.")
+    (:t 0.70 :title "4. Second Tablet: Love of Neighbour (IV - X)" :rule "Dilectio Proximi: Honor father and mother, protect life, speak truth, and cherish purity.")
+    (:t 0.88 :title "5. The Law of Love Fulfilled in Christ" :rule "Novum Mandatum: Love one another as I have loved you (John 13:34).")
   ))
 
   (:interactive (
-    (:checkpoint :at 0.35
-      (:prompt "How did Jesus summarize all Ten Commandments into the Two Great Commandments of Love?")
-      (:options
-        ("Love the Lord your God with all your heart, and love your neighbour as yourself" :correct true)
-        ("Only follow rules when an adult is watching" :correct false)
-        ("Collect as many possessions as possible" :correct false)
-        ("Ignore others as long as you do your own work" :correct false)
-      )
-      (:explanation "In Matthew 22:37-40, Jesus reveals that all the Law and the Prophets depend on loving God wholeheartedly and loving our neighbour.")
-    )
-    (:checkpoint :at 0.72
-      (:prompt "Which Commandments belong to the First Tablet regarding our love and worship of God?")
-      (:options
-        ("Commandments 1, 2, and 3" :correct true)
-        ("Commandments 4, 5, and 6" :correct false)
-        ("Only Commandment 10" :correct false)
-        ("All 10 belong on the first tablet" :correct false)
-      )
-      (:explanation "St. Augustine taught that the Ten Commandments are divided into two tablets: the first 3 direct our love toward God, and the remaining 7 toward our neighbour.")
-    )
+    (:checkpoint :t 0.35
+      :prompt "How did Jesus summarize all Ten Commandments into the Two Great Commandments of Love?"
+      :options ("Love God with all your heart, and love your neighbour as yourself" "Follow only the laws that are convenient" "Replace all rules with modern customs" "Memorize the text without putting it into practice")
+      :answer 0
+      :explanation "In Matthew 22:37-40, Jesus reveals that upon these two commandments — Love of God and Love of Neighbour — depend all the Law and the Prophets.")
+    (:checkpoint :t 0.75
+      :prompt "What do the first three commandments on Tablet I specifically protect?"
+      :options ("Our supreme love, reverent honor, and worship owed to God" "Commercial business trade regulations" "Military battle tactics" "Ancient dietary rules")
+      :answer 0
+      :explanation "Commandments I to III focus directly on our covenantal relationship with God: worshiping Him alone, honoring His holy Name, and sanctifying the Lord's Day at Holy Mass.")
   ))
 
   (:bindings (
-    (:target "#sinai-cloud-glow" :attr "opacity" :expr "0.35 + 0.4 * sinaiGlory")
-    (:target "#sinai-cloud-glow" :attr "r" :expr "50 + 25 * sinaiGlory")
-    (:target "#sinai-lightning" :attr "opacity" :expr "0.2 + 0.6 * abs(sin(t * 3.5))")
-    (:target "#tablet-one-glow" :attr "stroke-width" :expr "selectedTablet < 1.5 ? 3 : 1")
-    (:target "#tablet-two-glow" :attr "stroke-width" :expr "selectedTablet >= 1.5 ? 3 : 1")
+    (:target "#sinai-glory" :attr "opacity" :expr "0.4 + 0.4 * (vars.sinaiGlory || 1.0)")
+    (:target "#tablet-left" :attr "opacity" :expr "t < 0.60 ? 1.0 : 0.6")
+    (:target "#tablet-right" :attr "opacity" :expr "t >= 0.60 ? 1.0 : 0.6")
   ))
 )
