@@ -6005,6 +6005,13 @@ ${strokeLines.join('\n')}
       const ratio = (clampedX - minX) / (maxX - minX);
       const stepped = Math.max(1, Math.min(6, Math.round(1 + ratio * 5)));
 
+      // Continuous 60 FPS real-time panoramic scroll along the 6 pavilions
+      const continuousOffset = -ratio * 5 * 800;
+      const strip = this.stageSvg.querySelector('#panoramic-rites-strip');
+      if (strip) {
+        strip.setAttribute('transform', `translate(${continuousOffset.toFixed(1)}, 0)`);
+      }
+
       if (this.engine && typeof this.engine.setVar === 'function') {
         const curRite = this.engine.vars?.selectedRite;
         if (curRite !== stepped) {
@@ -6032,6 +6039,12 @@ ${strokeLines.join('\n')}
         knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 18)`);
       }
 
+      const targetOffset = -((stepped - 1) * 800);
+      const strip = this.stageSvg.querySelector('#panoramic-rites-strip');
+      if (strip) {
+        strip.setAttribute('transform', `translate(${targetOffset.toFixed(1)}, 0)`);
+      }
+
       if (this.engine && typeof this.engine.setVar === 'function') {
         this.engine.setVar('selectedRite', stepped);
       }
@@ -6055,6 +6068,11 @@ ${strokeLines.join('\n')}
       const knob = this.stageSvg.querySelector('#rite-selector-knob');
       if (knob) {
         knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 18)`);
+      }
+      const targetOffset = -((curRite - 1) * 800);
+      const strip = this.stageSvg.querySelector('#panoramic-rites-strip');
+      if (strip) {
+        strip.setAttribute('transform', `translate(${targetOffset.toFixed(1)}, 0)`);
       }
       const riteTimes = [0.00, 0.20, 0.38, 0.56, 0.74, 0.90];
       const targetT = riteTimes[curRite - 1] || 0.00;
