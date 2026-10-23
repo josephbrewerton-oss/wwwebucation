@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-23T10:44:08.538Z",
+  "generatedAt": "2026-10-23T10:51:18.086Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -365,7 +365,7 @@
       "astFile": "scenes/nicene-creed.ast",
       "keyframeCount": 5,
       "subtitleCount": 5,
-      "bindingsCount": 2
+      "bindingsCount": 5
     },
     {
       "id": "order-of-the-mass",
@@ -561,7 +561,7 @@
       "astFile": "scenes/ten-commandments.ast",
       "keyframeCount": 5,
       "subtitleCount": 5,
-      "bindingsCount": 3
+      "bindingsCount": 8
     },
     {
       "id": "times-tables",

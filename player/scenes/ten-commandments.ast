@@ -6,10 +6,11 @@
 
   (:inputs (
     (:slider :var "sinaiGlory" :label "Sinai Glory Cloud" :min 0.2 :max 2.0 :step 0.1)
+    (:slider :var "selectedTablet" :label "Decalogue Tablet (1: God, 2: Neighbour)" :min 1.0 :max 2.0 :step 1.0)
   ))
 
   (:gestures (
-    (:draggable :target "#tablet-toggle-knob" :axis "x" :min 260 :max 540)
+    (:draggable :target "#tablet-toggle-knob" :axis "x" :min 260 :max 530 :var "selectedTablet")
   ))
 
   (:subtitles (
@@ -42,8 +43,13 @@
   ))
 
   (:bindings (
-    (:target "#sinai-glory" :attr "opacity" :expr "0.4 + 0.4 * (vars.sinaiGlory || 1.0)")
-    (:target "#tablet-left" :attr "opacity" :expr "t < 0.60 ? 1.0 : 0.6")
-    (:target "#tablet-right" :attr "opacity" :expr "t >= 0.60 ? 1.0 : 0.6")
+    (:target "#sinai-cloud-glow" :attr "opacity" :expr "0.4 + 0.4 * (vars.sinaiGlory || 1.0)")
+    (:target "#tablet-toggle-knob" :attr "transform" :expr "'translate(' + (vars.selectedTablet === 2 || (!vars.selectedTablet && t >= 0.60) ? 530 : 260) + ', 17)'")
+    (:target "#tablet-one-group" :attr "opacity" :expr "(vars.selectedTablet === 1 || (!vars.selectedTablet && t < 0.60)) ? 1.0 : 0.45")
+    (:target "#tablet-two-group" :attr "opacity" :expr "(vars.selectedTablet === 2 || (!vars.selectedTablet && t >= 0.60)) ? 1.0 : 0.45")
+    (:target "#tablet-one-glow" :attr "stroke-width" :expr "(vars.selectedTablet === 1 || (!vars.selectedTablet && t < 0.60)) ? 3.5 : 1.0")
+    (:target "#tablet-two-glow" :attr "stroke-width" :expr "(vars.selectedTablet === 2 || (!vars.selectedTablet && t >= 0.60)) ? 3.5 : 1.0")
+    (:target "#tablet-one-glow" :attr "stroke" :expr "(vars.selectedTablet === 1 || (!vars.selectedTablet && t < 0.60)) ? '#facc15' : '#475569'")
+    (:target "#tablet-two-glow" :attr "stroke" :expr "(vars.selectedTablet === 2 || (!vars.selectedTablet && t >= 0.60)) ? '#facc15' : '#475569'")
   ))
 )
