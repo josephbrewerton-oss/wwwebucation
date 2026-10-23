@@ -1,53 +1,5 @@
 [
   {
-    "slug": "church-tour",
-    "stream": "faith",
-    "title": "Sacred Architecture: 3D Catholic Church Tour",
-    "keyStage": "KS2",
-    "keyStageTitle": "Primary Preparation (KS2)",
-    "subjectTitle": "Religious Formation",
-    "unitTitle": "Sacred Architecture & Liturgy",
-    "lessonCode": "CHURCH-TOUR",
-    "questions": [
-      {
-        "questionText": "What is the primary architectural focal point of a Catholic church where the Holy Sacrifice of the Mass is offered?",
-        "correctAnswer": [
-          "the altar",
-          "altar",
-          "the high altar"
-        ],
-        "hint": "It represents both the sacrificial table of the Last Supper and Christ Himself.",
-        "explanation": "The altar is the center of thanksgiving that is accomplished through the Eucharist and the focal point of the liturgical assembly (CCC 1182).",
-        "distractors": [
-          {
-            "answerText": "the baptismal font",
-            "feedback": "The font is located near the entrance to signify entry into the Church, while the altar is the Eucharistic center."
-          },
-          {
-            "answerText": "the choir loft",
-            "feedback": "The choir loft supports the sacred music, but the altar is the central place of sacrifice."
-          }
-        ]
-      },
-      {
-        "questionText": "What does a lit Sanctuary Lamp (red candle) near the Tabernacle indicate?",
-        "correctAnswer": [
-          "the real presence of jesus christ in the reserved blessed sacrament",
-          "real presence of christ",
-          "christ is present in the tabernacle"
-        ],
-        "hint": "It signals that the consecrated Eucharistic host is physically present inside.",
-        "explanation": "A special lamp burns perpetually near the tabernacle to honor and indicate the Real Presence of Christ in the reserved Blessed Sacrament (CCC 1379; Canon 940).",
-        "distractors": [
-          {
-            "answerText": "that the church building is locked for the night",
-            "feedback": "The lamp burns day and night to attest to Christ's sacramental presence, not building security."
-          }
-        ]
-      }
-    ]
-  },
-  {
     "slug": "first-reconciliation",
     "stream": "faith",
     "title": "The Sacrament of Reconciliation (First Confession)",

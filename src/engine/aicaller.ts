@@ -10,7 +10,7 @@ export interface AiInferenceOptions {
   /** Set to true to reuse the multi-turn session (e.g. for conversational chat). Default: false (stateless). */
   preserveContext?: boolean;
   onDownloadProgress?: (loaded: number, total: number) => void;
-  /** Maximum inference timeout in milliseconds. Defaults to 25000ms. */
+  /** Maximum inference timeout in milliseconds. Defaults to 12000ms. */
   timeoutMs?: number;
   /**
    * W3C Prompt API constrained sampling:
@@ -22,7 +22,6 @@ export interface AiInferenceOptions {
    */
   omitResponseConstraintInput?: boolean;
 }
-
 export interface ModelAvailability {
   status: 'readily' | 'after-download' | 'no';
   maxTokens?: number;
@@ -65,7 +64,7 @@ export function resolveConstraintRegExp(constraint: any): RegExp | null {
     if (pattern instanceof RegExp) return pattern;
     if (typeof pattern === 'string') {
       try {
-        return new RegExp(pattern, constraint.flags || undefined);
+        return new RegExp(pattern);
       } catch {
         return null;
       }
@@ -109,6 +108,7 @@ class AiRuntimeCaller {
 
   /**
    * Synchronous check for native Prompt API presence (LanguageModel).
+   * 0ms, zero overhead, safe for low-spec Chromebooks.
    */
   public hasNativePromptApi(): boolean {
     return this.getAiRoot() !== null;
@@ -131,7 +131,7 @@ class AiRuntimeCaller {
   }
 
   /**
-   * Synchronous check whether on-device AI is supported and consented to.
+   * Synchronous check whether on-device AI (Native Prompt API or WebLLM fallback) is supported and consented to.
    */
   public isPromptApiAvailableSync(): boolean {
     if (!hasUserGrantedAiConsent()) return false;
@@ -139,6 +139,7 @@ class AiRuntimeCaller {
       if (this.cachedAvailability && this.cachedAvailability.status === 'no') return false;
       return true;
     }
+    // Safari / Firefox / non-Chromium WebLLM / WebGPU fallback path:
     if (edgeCognitiveEngine.isSupported()) return true;
     return false;
   }
@@ -157,6 +158,7 @@ class AiRuntimeCaller {
 
     const lm = this.getAiRoot();
     if (!lm) {
+      // Check WebLLM / WebGPU fallback for Safari / Firefox / non-Chromium
       if (edgeCognitiveEngine.isSupported()) {
         this.cachedAvailability = {
           status: 'readily',
@@ -175,6 +177,7 @@ class AiRuntimeCaller {
         if (typeof lm.availability === 'function') {
           let status: any = 'no';
           try {
+            // Modern W3C availability check
             status = await lm.availability({
               expectedInputs: [{ type: 'text', languages: ['en'] }],
               expectedOutputs: [{ type: 'text', languages: ['en'] }],
@@ -237,6 +240,8 @@ class AiRuntimeCaller {
    * Creates a configured session instance respecting user consent
    */
   private async createSessionInstance(opts?: Partial<AiInferenceOptions>): Promise<any> {
+    // UK GDPR & Children's Code Consent Gate:
+    // If the user hasn't explicitly granted permission, do NOT spin up or download local neural weights
     if (!hasUserGrantedAiConsent()) {
       throw new Error('User has not consented to in-browser AI model execution/download.');
     }
@@ -247,15 +252,19 @@ class AiRuntimeCaller {
 
     const systemPrompt = opts?.systemPrompt || 'You are an elite UK Curriculum Socratic educator.';
 
+    // Fully-specified W3C Prompt API configuration
     const createOptions: any = {
-      initialPrompts: [{ role: 'system', content: systemPrompt }],
-      temperature: opts?.temperature ?? 0.1,
-      topK: opts?.topK ?? 1,
+      initialPrompts: [
+        { role: 'system', content: systemPrompt }
+      ],
+      // Modern W3C spec: replaces numeric temperature/topK
+      samplingMode: 'most-predictable',
+      expectedInputs: [{ type: 'text', languages: ['en'] }],
+      expectedOutputs: [{ type: 'text', languages: ['en'] }],
       outputLanguage: 'en',
       expectedInputLanguages: ['en'],
       expectedOutputLanguages: ['en'],
     };
-
     if (opts?.onDownloadProgress) {
       createOptions.monitor = (m: any) => {
         m.addEventListener('downloadprogress', (e: any) => {
@@ -265,23 +274,36 @@ class AiRuntimeCaller {
     }
 
     const createPromise = (async () => {
+      // 1. Try modern W3C Prompt API with samplingMode
       try {
         return await lm.create(createOptions);
       } catch {
+        // 2. Fall back to numeric temperature/topK for older Chromium revisions
         try {
           return await lm.create({
-            initialPrompts: [{ role: 'system', content: systemPrompt }],
+            initialPrompts: [
+              { role: 'system', content: systemPrompt }
+            ],
             temperature: 0.1,
             topK: 1,
+            outputLanguage: 'en',
+            expectedInputLanguages: ['en'],
+            expectedOutputLanguages: ['en'],
           });
         } catch {
+          // 3. Minimal fallback
           return await lm.create({
-            initialPrompts: [{ role: 'system', content: systemPrompt }],
+            initialPrompts: [
+              { role: 'system', content: systemPrompt }
+            ],
+            expectedInputLanguages: ['en'],
+            expectedOutputLanguages: ['en'],
           });
         }
       }
     })();
 
+    // Model weight downloading might take longer, allow 45s if monitoring progress, otherwise 25s
     const creationTimeoutMs = opts?.onDownloadProgress ? 45000 : 25000;
     const timeoutPromise = new Promise<never>((_, reject) =>
       setTimeout(() => reject(new Error(`[AiCaller] Session initialization timed out after ${creationTimeoutMs}ms`)), creationTimeoutMs)
@@ -320,6 +342,7 @@ class AiRuntimeCaller {
       throw new Error('User has not consented to in-browser AI model execution.');
     }
 
+    // Child safety check on input before calling any model
     const safetyCheck = validateStudentInput(opts.prompt);
     if (!safetyCheck.isSafe) {
       return safetyCheck.safeReplacementText || 'Let us keep our learning safe and focused on your school lessons.';
@@ -333,114 +356,122 @@ class AiRuntimeCaller {
       let session = await this.getSession(opts);
       const timeoutMs = opts.timeoutMs ?? 25000;
 
-      const executeCall = async (s: any) => {
-        let activeSession = s;
+const executeCall = async (s: any) => {
+  let activeSession = s;
 
-        const buildArgs = (includeConstraint: boolean) => {
-          const args: any = { outputLanguage: 'en' };
-          if (includeConstraint && opts.responseConstraint) {
-            args.responseConstraint = opts.responseConstraint;
-            if (opts.omitResponseConstraintInput !== undefined) {
-              args.omitResponseConstraintInput = opts.omitResponseConstraintInput;
-            }
-          }
-          return args;
-        };
+  const buildArgs = (includeConstraint: boolean) => {
+    const args: any = { outputLanguage: 'en' };
+    if (includeConstraint && opts.responseConstraint) {
+      args.responseConstraint = opts.responseConstraint;
+      if (opts.omitResponseConstraintInput !== undefined) {
+        args.omitResponseConstraintInput = opts.omitResponseConstraintInput;
+      }
+    }
+    return args;
+  };
 
-        const attemptPrompt = async (targetSession: any, useConstraint: boolean) => {
-          const args = buildArgs(useConstraint);
-          const constraintRegex = useConstraint ? resolveConstraintRegExp(opts.responseConstraint) : null;
+  const attemptPrompt = async (targetSession: any, useConstraint: boolean) => {
+    const args = buildArgs(useConstraint);
+    const constraintRegex = useConstraint ? resolveConstraintRegExp(opts.responseConstraint) : null;
 
-          const callPromptOnce = async (): Promise<string> => {
-            try {
-              return await targetSession.prompt(opts.prompt, args);
-            } catch (err: any) {
-              if (err?.name === 'TypeError' || String(err?.message || '').includes('parameter')) {
-                return await targetSession.prompt(opts.prompt);
-              }
-              throw err;
-            }
-          };
-
-          let output = await callPromptOnce();
-
-          // Client-side verification check for Chromium Issue 576432037
-          if (constraintRegex) {
-            if (!testConstraintRegExp(constraintRegex, output)) {
-              console.warn(
-                '[AiCaller] Chromium Issue 576432037: responseConstraint RegExp silently bypassed by engine. Output failed verification. Retrying prompt...',
-                { preview: (output || '').slice(0, 80) }
-              );
-
-              let verified = false;
-              const MAX_VERIFICATION_RETRIES = 2;
-              for (let attempt = 1; attempt <= MAX_VERIFICATION_RETRIES; attempt++) {
-                try {
-                  const retryOutput = await callPromptOnce();
-                  if (testConstraintRegExp(constraintRegex, retryOutput)) {
-                    output = retryOutput;
-                    verified = true;
-                    break;
-                  }
-                } catch (retryErr) {
-                  console.warn(`[AiCaller] Constraint verification retry attempt ${attempt} failed:`, retryErr);
-                }
-              }
-
-              if (!verified) {
-                throw new Error(
-                  `[AiCaller] Chromium Issue 576432037: output failed responseConstraint RegExp verification after retries. Rejecting dirty output: "${(output || '').slice(0, 100)}..."`
-                );
-              }
-            }
-          }
-
-          return output;
-        };
-
-        try {
-          return await attemptPrompt(activeSession, true);
-        } catch (err: any) {
-          const isDestroyed =
-            err?.name === 'InvalidStateError' ||
-            String(err?.message || '').toLowerCase().includes('destroyed');
-
-          // Case 1: Session died / invalidated -> Reinitialize and retry
-          if (isDestroyed) {
-            if (isEphemeral) {
-              try { activeSession?.destroy?.(); } catch {}
-            } else {
-              this.destroy();
-            }
-
-            activeSession = await this.createSessionInstance(opts);
-            session = activeSession;
-            return await attemptPrompt(activeSession, true);
-          }
-
-          // Case 2: Verification failure for Chromium Issue 576432037 -> Reject immediately
-          const isVerificationFailure = String(err?.message || '').includes('Chromium Issue 576432037');
-          if (isVerificationFailure) {
-            throw err;
-          }
-
-          // Case 3: Constraint parameter unsupported by runtime -> Attempt unconstrained
-          if (opts.responseConstraint) {
-            console.warn('[AiCaller] Prompt options with responseConstraint failed at runtime, attempting unconstrained with strict verification:', err);
-            const unconstrainedOutput = await attemptPrompt(activeSession, false);
-            const fallbackRegex = resolveConstraintRegExp(opts.responseConstraint);
-            if (fallbackRegex && !testConstraintRegExp(fallbackRegex, unconstrainedOutput)) {
-              throw new Error(
-                `[AiCaller] Chromium Issue 576432037: Unconstrained fallback failed responseConstraint RegExp verification. Rejecting dirty output.`
-              );
-            }
-            return unconstrainedOutput;
-          }
-
-          throw err;
+    const callPromptOnce = async (): Promise<string> => {
+      try {
+        return await targetSession.prompt(opts.prompt, args);
+      } catch (err: any) {
+        // Fallback for older Chromium builds that reject options objects entirely
+        if (err?.name === 'TypeError' || String(err?.message || '').includes('parameter')) {
+          return await targetSession.prompt(opts.prompt);
         }
-      };
+        throw err;
+      }
+    };
 
+    let output = await callPromptOnce();
+
+    // Client-side verification check directly after session.prompt()
+    // Chromium Issue 576432037: responseConstraint RegExp bindings can be silently
+    // bypassed by the engine without throwing an error. Test output string directly against
+    // RegExp before downstream passing; retry or reject rather than letting dirty output through.
+    if (constraintRegex) {
+      if (!testConstraintRegExp(constraintRegex, output)) {
+        console.warn(
+          '[AiCaller] Chromium Issue 576432037: responseConstraint RegExp silently bypassed by engine. Output failed verification. Retrying prompt...',
+          { preview: (output || '').slice(0, 80) }
+        );
+
+        let verified = false;
+        const MAX_VERIFICATION_RETRIES = 2;
+        for (let attempt = 1; attempt <= MAX_VERIFICATION_RETRIES; attempt++) {
+          try {
+            const retryOutput = await callPromptOnce();
+            if (testConstraintRegExp(constraintRegex, retryOutput)) {
+              output = retryOutput;
+              verified = true;
+              break;
+            }
+          } catch (retryErr) {
+            console.warn(`[AiCaller] Constraint verification retry attempt ${attempt} failed:`, retryErr);
+          }
+        }
+
+        if (!verified) {
+          throw new Error(
+            `[AiCaller] Chromium Issue 576432037: output failed responseConstraint RegExp verification after retries. Rejecting dirty output: "${(output || '').slice(0, 100)}..."`
+          );
+        }
+      }
+    }
+
+    return output;
+  };
+
+  try {
+    return await attemptPrompt(activeSession, true);
+  } catch (err: any) {
+    const isDestroyed =
+      err?.name === 'InvalidStateError' ||
+      String(err?.message || '').toLowerCase().includes('destroyed');
+
+    // Case 1: Session died / invalidated -> Reinitialize and retry
+    if (isDestroyed) {
+      if (isEphemeral) {
+        try { activeSession?.destroy?.(); } catch {}
+      } else {
+        this.destroy();
+      }
+
+      activeSession = await this.getSession(opts);
+      session = activeSession; // keep outer reference in sync for final cleanup
+
+      try {
+        return await attemptPrompt(activeSession, true);
+      } catch (retryErr: any) {
+        throw retryErr;
+      }
+    }
+
+    // Case 2: Verification failure for Chromium Issue 576432037 -> Reject immediately, never pass dirty output downstream
+    const isVerificationFailure = String(err?.message || '').includes('Chromium Issue 576432037');
+    if (isVerificationFailure) {
+      throw err;
+    }
+
+    // Case 3: Constraint parameter unsupported by runtime -> Attempt unconstrained with strict client-side verification
+    if (opts.responseConstraint) {
+      console.warn('[AiCaller] Prompt options with responseConstraint failed at runtime, attempting unconstrained with strict verification:', err);
+      const unconstrainedOutput = await attemptPrompt(activeSession, false);
+      const fallbackRegex = resolveConstraintRegExp(opts.responseConstraint);
+      if (fallbackRegex && !testConstraintRegExp(fallbackRegex, unconstrainedOutput)) {
+        throw new Error(
+          `[AiCaller] Chromium Issue 576432037: Unconstrained fallback failed responseConstraint RegExp verification. Rejecting dirty output.`
+        );
+      }
+      return unconstrainedOutput;
+    }
+
+    throw err;
+  }
+};
       const inferencePromise = executeCall(session);
       const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`[AiCaller] Inference prompt timed out after ${timeoutMs}ms`)), timeoutMs)
@@ -451,6 +482,7 @@ class AiRuntimeCaller {
       } catch (err) {
         if (!isEphemeral) this.destroy();
         console.warn('[AiCaller] Chrome AI prompt failed, invoking WebLLM fallback:', err);
+        // Fall through to Tier 2
       } finally {
         if (isEphemeral && session?.destroy) {
           try { session.destroy(); } catch {}
@@ -468,6 +500,7 @@ class AiRuntimeCaller {
       throw new Error('No on-device AI inference engine is available in this browser environment.');
     }
 
+    // Sanitize output for child safety before returning
     return sanitizeAiOutput(rawOutput);
   }
 
@@ -479,12 +512,14 @@ class AiRuntimeCaller {
       throw new Error('User has not consented to in-browser AI model execution.');
     }
 
+    // Child safety check on streaming input
     const safetyCheck = validateStudentInput(opts.prompt);
     if (!safetyCheck.isSafe) {
       yield safetyCheck.safeReplacementText || 'Let us keep our learning safe and focused on your school lessons.';
       return;
     }
 
+    // Tier 1: Chrome Native Prompt API Streaming
     if (this.hasNativePromptApi()) {
       const isEphemeral = !opts.preserveContext;
       let session = await this.getSession(opts);
@@ -522,32 +557,24 @@ class AiRuntimeCaller {
         } else if (typeof stream.getReader === 'function') {
           const reader = stream.getReader();
           let previous = '';
-          let streamDone = false;
           try {
             while (true) {
               const { done, value } = await reader.read();
-              if (done) {
-                streamDone = true;
-                break;
-              }
+              if (done) break;
               const chunk = typeof value === 'string' ? value : new TextDecoder().decode(value);
               const delta = chunk.startsWith(previous) ? chunk.slice(previous.length) : chunk;
               previous = chunk;
               yield delta;
             }
           } finally {
-            try {
-              if (!streamDone) await reader.cancel();
-            } catch {}
-            try {
-              reader.releaseLock();
-            } catch {}
+            reader.releaseLock();
           }
         }
         return;
       } catch (err) {
         if (!isEphemeral) this.destroy();
         console.warn('[AiCaller] Native stream failed, trying WebLLM streaming:', err);
+        // Fall through to Tier 2
       } finally {
         if (isEphemeral && session?.destroy) {
           try { session.destroy(); } catch {}
@@ -555,6 +582,7 @@ class AiRuntimeCaller {
       }
     }
 
+    // Tier 2: WebLLM / WebGPU real-time token stream
     if (edgeCognitiveEngine.isSupported()) {
       for await (const token of edgeCognitiveEngine.inferStream(opts.prompt, opts.systemPrompt)) {
         yield token;
@@ -565,11 +593,17 @@ class AiRuntimeCaller {
     throw new Error('No on-device AI inference engine is available in this browser environment.');
   }
 
+  /**
+   * Token budget inspection
+   */
   async getRemainingTokens(): Promise<number | null> {
     if (!this.chatSession?.tokensLeft) return null;
     return this.chatSession.tokensLeft;
   }
 
+  /**
+   * Explicit lifecycle cleanup
+   */
   destroy() {
     if (this.chatSession) {
       try {
@@ -640,18 +674,28 @@ export interface AiVisualCommandPacket {
   sayText?: string;
 }
 
+/**
+ * Sanitizes an SVG CSS selector to guarantee zero script injection
+ */
 function sanitizeSvgSelector(rawSelector: string): string | null {
   if (!rawSelector || typeof rawSelector !== 'string') return null;
   const clean = rawSelector.trim().replace(/^['"]|['"]$/g, '');
+  // Disallow javascript protocol, script tags, or dangerous syntax
   if (/[<>'"`;(){}]/.test(clean) || clean.toLowerCase().includes('script')) {
     return null;
   }
+  // Must look like an ID (#...), class (....), or attribute ([...])
   if (/^[#\.]?[a-zA-Z0-9_\-\:]+$/.test(clean) || /^\[[a-zA-Z0-9_\-]+(=['"]?[a-zA-Z0-9_\-]+['"]?)?\]$/.test(clean)) {
     return clean.startsWith('#') || clean.startsWith('.') || clean.startsWith('[') ? clean : `#${clean}`;
   }
   return null;
 }
 
+/**
+ * Parses Gemini Nano's concise Lisp-style S-Expression grammar:
+ * (:act :seek <0.0-1.0> [:highlight "<svg-id>"] [:var "<name>" <val>] [:say "<text>"] [:zoom "<svg-id>"]
+ *       [:orbit :theta <f> :phi <f>] [:nudge :target "<id>" :dxyz [<dx> <dy> <dz>]])
+ */
 export function parseAiActionTuples(nanoOutput: string): {
   actions: AiVisualAction[];
   sayText: string;
@@ -661,6 +705,7 @@ export function parseAiActionTuples(nanoOutput: string): {
   let sayText = '';
   const sExprList: string[] = [];
 
+  // 1. Match all (:act ...) blocks
   const actRegex = /\(:act\s+([^)]+)\)/gi;
   let match: RegExpExecArray | null;
 
@@ -669,6 +714,7 @@ export function parseAiActionTuples(nanoOutput: string): {
     const body = match[1];
     sExprList.push(rawTuple);
 
+    // Parse :seek <float>
     const seekMatch = body.match(/:seek\s+([0-9.]+)/i);
     if (seekMatch) {
       const p = Math.max(0.0, Math.min(1.0, parseFloat(seekMatch[1])));
@@ -677,6 +723,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :highlight / :spotlight "<selector>"
     const highlightMatch = body.match(/:(highlight|spotlight)\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))/i);
     if (highlightMatch) {
       const rawSel = highlightMatch[3] || highlightMatch[4] || highlightMatch[5];
@@ -686,6 +733,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :zoom "<selector>"
     const zoomMatch = body.match(/:zoom\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))/i);
     if (zoomMatch) {
       const rawSel = zoomMatch[2] || zoomMatch[3] || zoomMatch[4];
@@ -695,6 +743,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :orbit / :rotate-camera :theta <val> :phi <val>
     const orbitMatch = body.match(/:(?:orbit|rotate-camera|camera)\s+:theta\s+([0-9.-]+)\s+:phi\s+([0-9.-]+)/i);
     if (orbitMatch) {
       const theta = parseFloat(orbitMatch[1]);
@@ -704,6 +753,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :nudge :target "<selector>" :dxyz [<dx> <dy> <dz>]
     const nudgeMatch = body.match(/:nudge\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:dxyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
     if (nudgeMatch) {
       const rawSel = nudgeMatch[2] || nudgeMatch[3] || nudgeMatch[4];
@@ -716,6 +766,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :probe-move :target "<selector>" :xyz [<x> <y> <z>]
     const probeMatch = body.match(/:probe-move\s+:target\s+("([^"]+)"|'([^']+)'|([#a-zA-Z0-9_\-:]+))\s+:xyz\s+\[([0-9.-]+)\s+([0-9.-]+)\s+([0-9.-]+)\]/i);
     if (probeMatch) {
       const rawSel = probeMatch[2] || probeMatch[3] || probeMatch[4];
@@ -728,6 +779,7 @@ export function parseAiActionTuples(nanoOutput: string): {
       }
     }
 
+    // Parse :var "<name>" <val>
     const varMatch = body.match(/:var\s+("?([a-zA-Z0-9_]+)"?)\s+([0-9.-]+|"[^"]+"|'[^']+')/i);
     if (varMatch) {
       const varName = varMatch[2];
@@ -737,15 +789,18 @@ export function parseAiActionTuples(nanoOutput: string): {
       actions.push({ type: 'SET_VARIABLE', variable: varName, value: finalVal });
     }
 
+    // Parse :step <int>
     const stepMatch = body.match(/:step\s+([0-9]+)/i);
     if (stepMatch) {
       actions.push({ type: 'STEP', stepIndex: parseInt(stepMatch[1], 10) });
     }
 
+    // Parse :reset
     if (/:reset/i.test(body)) {
       actions.push({ type: 'RESET_VIEW' });
     }
 
+    // Parse :say / :narrate "<text>"
     const sayMatch = body.match(/:(say|narrate)\s+("([^"]*)"|'([^']*)')/i);
     if (sayMatch) {
       const text = (sayMatch[3] !== undefined ? sayMatch[3] : sayMatch[4] || '').trim();
@@ -756,6 +811,7 @@ export function parseAiActionTuples(nanoOutput: string): {
     }
   }
 
+  // 2. Parse standalone spatial action opcodes if not enclosed in (:act ...)
   const standaloneOrbit = nanoOutput.match(/\(:(?:rotate-camera|orbit|camera)\s+:theta\s+([0-9.-]+)\s+:phi\s+([0-9.-]+)\)/i);
   if (standaloneOrbit) {
     const theta = parseFloat(standaloneOrbit[1]);
@@ -779,6 +835,7 @@ export function parseAiActionTuples(nanoOutput: string): {
     }
   }
 
+  // 3. If no :say was found inside (:act ...), extract spoken explanation from text outside the S-Expr
   if (!sayText) {
     const textWithoutSExpr = nanoOutput.replace(/\(:[a-z\-]+\s+[^)]+\)/gi, '').replace(/```[a-z]*|```/gi, '').trim();
     sayText = textWithoutSExpr || 'Let us observe the visual demonstration on the simulation stage.';
@@ -787,6 +844,7 @@ export function parseAiActionTuples(nanoOutput: string): {
     }
   }
 
+  // 4. Fallback: If no action was emitted at all, generate an informative seek or orbit
   if (actions.length === 0) {
     const lower = nanoOutput.toLowerCase();
     if (lower.includes('orbit') || lower.includes('camera') || lower.includes('angle') || lower.includes('rotate')) {
@@ -812,8 +870,16 @@ export function parseAiActionTuples(nanoOutput: string): {
   };
 }
 
+/**
+ * Prompts Gemini Nano on-device to generate visual demonstration action tuples (:act)
+ * conforming to the Co-Pilot specification in betaplans.md, with Proprioceptive Spatial Awareness.
+ */
+/**
+ * Canonical regular expression constraining Gemini Nano's sampling logits directly
+ * to single-level (:act ...) S-expression action tuples (Kenji / W3C Prompt API test case).
+ */
 export const NANO_ACT_TUPLE_REGEX =
-  /^\s*\(:act(\s+:(seek\s+(0|1|0?\.\d+)|highlight\s+["'][#a-zA-Z0-9_\-:]+["']|zoom\s+["'][#a-zA-Z0-9_\-:]+["']|orbit\s+:theta\s+-?\d+(\.\d+)?\s+:phi\s+-?\d+(\.\d+)?|nudge\s+:target\s+["'][#a-zA-Z0-9_\-:]+["']\s+:dxyz\s+\[\s*-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*\]|probe-move\s+:target\s+["'][#a-zA-Z0-9_\-:]+["']\s+:xyz\s+\[\s*-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s*\]|var\s+["']?[a-zA-Z0-9_]+["']?\s+(-?\d+(\.\d+)?|["'][^"']*["'])|step\s+\d+|reset|say\s+["'][^"']*["']))+\s*\)\s*$/;
+  /^\s*\(:act(\s+:(seek\s+[0-1](\.\d+)?|highlight\s+"#[a-zA-Z0-9_\-:]+"|zoom\s+"#[a-zA-Z0-9_\-:]+"|orbit\s+:theta\s+-?\d+(\.\d+)?\s+:phi\s+-?\d+(\.\d+)?|nudge\s+:target\s+"#[a-zA-Z0-9_\-:]+"\s+:dxyz\s+\[-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\]|probe-move\s+:target\s+"#[a-zA-Z0-9_\-:]+"\s+:xyz\s+\[-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\s+-?\d+(\.\d+)?\]|var\s+"[a-zA-Z0-9_]+"\s+(-?\d+(\.\d+)?|"[^"]*")|step\s+\d+|reset|say\s+"[^"]*"))+\)\s*$/;
 
 export async function promptAiCoPilotDemonstration(
   telemetry: Partial<PlayerTelemetryEvent>,
@@ -826,12 +892,14 @@ export async function promptAiCoPilotDemonstration(
   const varsStr = JSON.stringify(varsObj);
   const keyframeIdx = telemetry?.activeKeyframe ?? 0;
 
+  // Spatial Telemetry Emission: exact ray hit and camera state S-Expression tokens
   const spatialTelemetryToken =
     telemetry?.spatialTelemetry?.sExpr ||
     telemetry?.spatialTelemetry?.rayHitSExpr ||
     '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])';
   const hitTarget = telemetry?.spatialTelemetry?.hit?.target || '#coil-core';
 
+  // Compact, high-instruction-density system prompt constrained by betaplans.md grammar and Proprioceptive Awareness
   const systemPrompt = `You are Gemini Nano, an on-device AI Co-Pilot embedded in the St Joseph's Vector Classroom Whiteboard.
 CURRENT SCENE: "${sceneId}" | PROGRESS: ${progressPercent}% (Step #${keyframeIdx}) | VARIABLES: ${varsStr}.
 
@@ -862,6 +930,8 @@ RULES:
 
   const userPrompt = `Pupil asks: "${pupilQuestion.trim()}". Spatial token: ${spatialTelemetryToken}. Show and actuate on the simulation stage.`;
 
+  // Execute on-device inference (Chrome Prompt API with WebLLM fallback)
+// Execute on-device inference with RegExp sampling constraint
   const rawOutput = await aiCaller.promptText({
     prompt: userPrompt,
     systemPrompt,
