@@ -2035,7 +2035,7 @@ const playerSrc = useMemo(() => {
           ) : (
             <div style={{ position: 'relative', width: '100%', height: '100%' }}>
               <iframe
-                key={`vector-player-viewport-${currentLang}`}
+                key={`vector-player-viewport-${selectedPreset}-${currentLang}`}
                 ref={iframeRef}
                 src={playerSrc}
                 title="Lumina Vector Player"
