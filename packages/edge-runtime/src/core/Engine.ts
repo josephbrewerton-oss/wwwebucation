@@ -21,7 +21,9 @@ export class EdgeCognitiveEngine {
             if (avail === "no") throw new Error("LanguageModel unavailable");
           }
           const session = await LM.create({
-            systemPrompt: systemPrompt || "You are an educational AST generator."
+            initialPrompts: [
+            { role: 'system', content: systemPrompt || "You are an educational AST generator." }
+          ]
           });
           const result = await session.prompt(prompt);
           if (session.destroy) session.destroy();
