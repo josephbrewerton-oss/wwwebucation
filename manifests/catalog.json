@@ -1,6 +1,6 @@
 {
   "version": "1.2.0-compact",
-  "generatedAt": 1792761880798,
+  "generatedAt": 1792762890433,
   "streams": [
     {
       "id": "academic",
@@ -22,6 +22,16 @@
     }
   ],
   "items": [
+    {
+      "id": "church-tour",
+      "stream": "faith",
+      "keyStage": "KS2",
+      "subject": "Religious Formation",
+      "unit": "Sacred Architecture & Liturgy",
+      "title": "Sacred Architecture: 3D Catholic Church Tour",
+      "badgeIcon": "⛪",
+      "manifestPath": "manifests/lessons/church-tour.json"
+    },
     {
       "id": "first-reconciliation",
       "stream": "faith",
