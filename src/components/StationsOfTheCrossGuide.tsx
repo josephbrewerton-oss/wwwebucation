@@ -3,23 +3,53 @@
 // Complete Catechetical & Liturgical Guide: The Stations of the Cross (Via Crucis)
 // Elevated Sacred Typographic Lectern & Contemplative Chapel Presentation
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import {
   STATIONS_OF_THE_CROSS,
   OPENING_DEVOTIONAL_VERSICLE,
   STATIONS_HISTORY_AND_THEOLOGY,
   StationOfTheCross,
 } from '../data/catholic/stationsOfTheCrossData';
-import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
 
 type TextScale = 'standard' | 'comfortable' | 'presentation';
 type LanguageMode = 'english' | 'bilingual' | 'spanish';
 
+// 15 canonical keyframe progress points matching static/player/scenes/stations-of-the-cross.ast
+const STATION_TIMELINE_TARGETS: number[] = [
+  0.00, // Station I: Condemned to Death
+  0.07, // Station II: Embracing the Cross
+  0.14, // Station III: First Fall
+  0.21, // Station IV: Meeting His Sorrowful Mother
+  0.28, // Station V: Simon of Cyrene
+  0.35, // Station VI: Veronica's Holy Veil
+  0.42, // Station VII: Second Fall
+  0.49, // Station VIII: Consoling the Women of Jerusalem
+  0.56, // Station IX: Third Fall
+  0.63, // Station X: Stripped of Garments
+  0.70, // Station XI: Nailed to the Cross
+  0.77, // Station XII: Dies on the Cross
+  0.84, // Station XIII: The Pietà
+  0.91, // Station XIV: Laid in the Sepulchre Tomb
+  0.96, // Station XV: Paschal Resurrection of Christ
+];
+
+const PLAY_SPEED_PRESETS = [
+  { value: 0.5, label: '0.5×', desc: 'Contemplative Devotion (Slow, reverent prayer)' },
+  { value: 0.75, label: '0.75×', desc: 'Sacred Meditation' },
+  { value: 1.0, label: '1.0×', desc: 'Standard Pilgrim Pace' },
+  { value: 1.5, label: '1.5×', desc: 'Classroom Quick Review' },
+];
+
 export default function StationsOfTheCrossGuide(): React.JSX.Element {
+  const playerRef = useRef<AstVectorMediaPlayerHandle>(null);
   const [selectedStationIndex, setSelectedStationIndex] = useState<number>(0);
   const [showPlayer, setShowPlayer] = useState<boolean>(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [textScale, setTextScale] = useState<TextScale>('comfortable');
   const [languageMode, setLanguageMode] = useState<LanguageMode>('bilingual');
   const [focusMode, setFocusMode] = useState<boolean>(false);
@@ -42,19 +72,83 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
     };
   }, []);
 
+  const seekPlayerToStation = useCallback((index: number) => {
+    const targetT = STATION_TIMELINE_TARGETS[index] ?? 0;
+    playerRef.current?.seek(targetT);
+    playerRef.current?.postToPlayer({ type: 'SEEK', progress: targetT });
+  }, []);
+
+  const handleSelectStation = useCallback((index: number) => {
+    setSelectedStationIndex(index);
+    seekPlayerToStation(index);
+  }, [seekPlayerToStation]);
+
+  const handleSpeedChange = (speed: number) => {
+    setPlaybackSpeed(speed);
+    playerRef.current?.setSpeed(speed);
+  };
+
+  const handleTogglePlay = () => {
+    if (isPlaying) {
+      playerRef.current?.pause();
+      setIsPlaying(false);
+    } else {
+      playerRef.current?.play();
+      setIsPlaying(true);
+    }
+  };
+
   // Keyboard navigation for Stations (ArrowLeft / ArrowRight)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
       if (e.key === 'ArrowRight' && selectedStationIndex < STATIONS_OF_THE_CROSS.length - 1) {
-        setSelectedStationIndex((i) => i + 1);
+        handleSelectStation(selectedStationIndex + 1);
       } else if (e.key === 'ArrowLeft' && selectedStationIndex > 0) {
-        setSelectedStationIndex((i) => i - 1);
+        handleSelectStation(selectedStationIndex - 1);
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedStationIndex]);
+  }, [selectedStationIndex, handleSelectStation]);
+
+  // Synchronize keyframe updates from AST player
+  const handleKeyframeReached = useCallback((keyframe: { title: string; rule: string; progress: number }) => {
+    let closestIdx = 0;
+    let minDiff = 999;
+    STATION_TIMELINE_TARGETS.forEach((targetT, idx) => {
+      const diff = Math.abs(keyframe.progress - targetT);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closestIdx = idx;
+      }
+    });
+    if (minDiff < 0.045) {
+      setSelectedStationIndex((prev) => (prev !== closestIdx ? closestIdx : prev));
+    }
+  }, []);
+
+  // Listen for HOTSPOT_SELECTED postMessages from the SVG stage
+  useEffect(() => {
+    const handleMessage = (e: MessageEvent) => {
+      const data = e.data;
+      if (!data) return;
+      if (data.type === 'HOTSPOT_SELECTED' && typeof data.targetT === 'number') {
+        let closestIdx = 0;
+        let minDiff = 999;
+        STATION_TIMELINE_TARGETS.forEach((targetT, idx) => {
+          const diff = Math.abs(data.targetT - targetT);
+          if (diff < minDiff) {
+            minDiff = diff;
+            closestIdx = idx;
+          }
+        });
+        setSelectedStationIndex(closestIdx);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
 
   const toggleStationCompleted = (num: number) => {
     setCompletedStations((prev) => {
@@ -283,21 +377,74 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
             <div className="flex items-center gap-2 text-slate-300 font-medium">
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
               <span className="font-serif">AST Interactive Simulation: stations-of-the-cross</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <span className="text-amber-400 font-semibold text-xs flex items-center gap-1.5">
-                <span>✝️ 14 Sacred Stations</span>
-                <span className="text-slate-500 hidden sm:inline">&bull;</span>
-                <span className="text-slate-300 hidden sm:inline">Interactive Checkpoints &amp; Drag</span>
+              <span className="text-amber-400 font-mono text-[11px] px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/30">
+                {station.romanNumeral}. {station.title}
               </span>
             </div>
+
+            {/* Play Speed Tuple Controls & Media Player Deep Links */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Play/Pause Button */}
+              <button
+                type="button"
+                onClick={handleTogglePlay}
+                className="px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors"
+                title={isPlaying ? 'Pause simulation motion' : 'Resume simulation motion'}
+              >
+                {isPlaying ? '⏸ Pause' : '▶ Play'}
+              </button>
+
+              {/* Reset to Station I */}
+              <button
+                type="button"
+                onClick={() => handleSelectStation(0)}
+                className="px-2 py-1 rounded-lg text-xs font-medium bg-slate-800 text-slate-300 border border-white/10 hover:bg-slate-700 transition-colors"
+                title="Rewind pilgrimage to Station I"
+              >
+                ↺ Station I
+              </button>
+
+              {/* Play Speed Tuple Preset Bar */}
+              <div className="flex items-center rounded-lg bg-slate-950/90 p-0.5 border border-white/10 text-[11px]">
+                <span className="px-1.5 text-slate-400 text-[10px] font-semibold hidden sm:inline">Pace:</span>
+                {PLAY_SPEED_PRESETS.map((preset) => (
+                  <button
+                    key={preset.value}
+                    type="button"
+                    onClick={() => handleSpeedChange(preset.value)}
+                    className={`px-1.5 py-0.5 rounded transition-colors font-medium ${
+                      playbackSpeed === preset.value
+                        ? 'bg-amber-500 text-slate-950 font-bold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                    title={preset.desc}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Deep links to Full Player / Simulator */}
+              <Link
+                to="/media-player?preset=stations-of-the-cross"
+                className="px-2 py-1 rounded-lg text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 hover:bg-indigo-500/30 transition-colors inline-flex items-center gap-1"
+                title="Launch full-screen Media Player with on-device TTS narration and display modes"
+              >
+                <span>📺 Full Player ↗</span>
+              </Link>
+            </div>
           </div>
+
           <div style={{ position: 'relative', width: '100%', pointerEvents: 'auto' }}>
             <AstVectorMediaPlayer
+              ref={playerRef}
               preset="stations-of-the-cross"
+              speed={playbackSpeed}
+              autoPlay={isPlaying}
               height="clamp(220px, 45vw + 40px, 390px)"
               allowPresetSwitch={false}
               embedded={true}
+              onKeyframeReached={handleKeyframeReached}
             />
           </div>
         </div>
@@ -335,7 +482,7 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
                 <button
                   key={st.number}
                   type="button"
-                  onClick={() => setSelectedStationIndex(idx)}
+                  onClick={() => handleSelectStation(idx)}
                   className={`group relative flex flex-col items-center justify-center py-2 px-2.5 rounded-xl transition-all ${
                     active
                       ? 'bg-gradient-to-b from-amber-400 to-amber-500 text-slate-950 font-bold shadow-lg ring-2 ring-amber-300/80 scale-[1.03] z-10'

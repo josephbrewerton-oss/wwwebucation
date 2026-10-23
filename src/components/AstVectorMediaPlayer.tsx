@@ -114,6 +114,7 @@ export interface AstVectorMediaPlayerProps {
   preset?: VectorPresetType;
   embedded?: boolean;
   lang?: string;
+  speed?: number;
   autoPlay?: boolean;
   theme?: 'dark' | 'light';
   height?: string | number;
@@ -149,6 +150,7 @@ export interface AstVectorMediaPlayerHandle {
   pause: () => void;
   play: () => void;
   togglePlay: () => void;
+  setSpeed: (speed: number) => void;
   toggleVoiceCommands: () => void;
   startVoiceCommands: () => void;
   stopVoiceCommands: () => void;
@@ -185,6 +187,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   preset = 'kinetic-gas',
   embedded = true,
   lang,
+  speed = 1.0,
   autoPlay = true,
   theme,
   height = '520px',
@@ -564,6 +567,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       postToPlayer({ type: 'TOGGLE_PLAY' });
       setIsPlaying((prev) => !prev);
     },
+    setSpeed: (s: number) => postToPlayer({ type: 'SET_SPEED', speed: s }),
     toggleVoiceCommands: () => postToPlayer({ type: 'TOGGLE_VOICE_COMMANDS' }),
     startVoiceCommands: () => postToPlayer({ type: 'START_VOICE_COMMANDS' }),
     stopVoiceCommands: () => postToPlayer({ type: 'STOP_VOICE_COMMANDS' }),
@@ -980,12 +984,17 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     if (onConfigChange) onConfigChange(displayConfig);
   }, [displayConfig, postToPlayer, onConfigChange]);
 
+  // Sync playback speed changes to player iframe
+  useEffect(() => {
+    postToPlayer({ type: 'SET_SPEED', speed: speed ?? 1.0 });
+  }, [speed, postToPlayer]);
+
 const effectiveMode = embedded ? 'embedded' : displayConfig.mode;
 const disableInitialQuestions = isCartridgeWithoutQuestions(initialPlayerPresetRef.current);
 const effectiveQuestions = disableInitialQuestions ? '0' : (showQuestions ? '1' : '0');
 const playerSrc = useMemo(() => {
-  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&autoplay=${autoPlay ? '1' : '0'}&questions=${effectiveQuestions}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
-}, [cleanBase, currentLang, autoPlay, effectiveQuestions, activeTheme, effectiveMode, embedded]);
+  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&speed=${encodeURIComponent(speed ?? 1.0)}&autoplay=${autoPlay ? '1' : '0'}&questions=${effectiveQuestions}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
+}, [cleanBase, currentLang, speed, autoPlay, effectiveQuestions, activeTheme, effectiveMode, embedded]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const embedCode = `<iframe src="${origin}${cleanBase}player/index.html?preset=${encodeURIComponent(selectedPreset)}&lang=${encodeURIComponent(currentLang)}&mode=${encodeURIComponent(embedTargetMode)}" width="100%" height="480" frameborder="0" allow="fullscreen" loading="lazy" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:1px solid #1e293b;"></iframe>`;
