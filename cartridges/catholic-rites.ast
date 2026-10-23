@@ -1,16 +1,18 @@
 (:scene :id "catholic-rites" :type "Slide" :oak-id "OAK-KS3-RE-011" :oak-unit "ks3-re-catholic-sacramental-rites" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
+    (:var :name "selectedRite" :val 1.0 :min 1.0 :max 6.0 :step 1.0 :label "Selected Liturgical Rite")
     (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with Holy See Beacon")
     (:var :name "iconShimmer" :val 0.8 :min 0.0 :max 1.5 :step 0.1 :label "Iconostasis & Mosaic Shimmer")
   ))
 
   (:inputs (
+    (:slider :var "selectedRite" :label "Liturgical Tradition" :min 1.0 :max 6.0 :step 1.0)
     (:slider :var "communionGlow" :label "Peter's Beacon" :min 0.2 :max 2.0 :step 0.1)
     (:slider :var "iconShimmer" :label "Icon Shimmer" :min 0.0 :max 1.5 :step 0.1)
   ))
 
   (:gestures (
-    (:draggable :target "#rite-selector-knob" :axis "x" :min 120 :max 680)
+    (:draggable :target "#rite-selector-knob" :axis "x" :min 140 :max 660 :var "selectedRite")
   ))
 
   (:subtitles (
@@ -46,6 +48,27 @@
     (:target "#beacon-pulse" :attr "opacity" :expr "0.3 + 0.4 * (vars.communionGlow || 1.0)")
     (:target "#beacon-halo" :attr "r" :expr "30 + 20 * (vars.communionGlow || 1.0)")
     (:target "#icon-gold-glow" :attr "opacity" :expr "0.4 + 0.5 * (vars.iconShimmer || 0.8)")
-    (:target "#dome-cross" :attr "transform" :expr "'rotate(' + (Math.sin(t * 1.5) * 2) + ', 400, 110)'")
+    (:target "#rite-selector-knob" :attr "transform" :expr "'translate(' + (vars.selectedRite ? (140 + (vars.selectedRite - 1) * 104) : (140 + Math.min(1.0, t / 0.90) * 520)) + ', 18)'")
+    (:target "#active-rite-title" :attr "textContent" :expr "['1. Western Latin Rite (Roman, Ambrosian, Mozarabic)', '2. Byzantine Tradition (Constantinopolitan)', '3. Alexandrian Tradition (Coptic & Ge\\'ez)', '4. Antiochian Tradition (West Syriac & Maronite)', '5. Chaldean Tradition (East Syriac & St. Thomas)', '6. Armenian Tradition (Holy See of Cilicia)'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || '1. Western Latin Rite'")
+    (:target "#active-rite-desc" :attr "textContent" :expr "['1 Western Church (>1.3B) • Unleavened Host (Hostia Pura) • Statues & Gregorian Chant', '14 Eastern Catholic Churches • Sacred Icons • Leavened Prosphora • Divine Liturgy', '3 Eastern Churches: Coptic (Egypt), Ethiopian & Eritrean • Ancient Liturgy of St. Mark', '3 Eastern Churches: Maronite (Lebanon), Syriac, Syro-Malankara • West Syriac Aramaic', '2 Eastern Churches: Chaldean (Iraq) & Syro-Malabar (India, AD 52) • Addai & Mari', '1 Eastern Church: Armenian Catholic Church (Cilicia) • First Christian Nation (AD 301)'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || ''")
+    (:target "#western-latin-shrine" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.20) ? 1.0 : 0.45")
+    (:target "#eastern-byzantine-shrine" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite > 1 : t >= 0.20) ? 1.0 : 0.45")
+    (:target "#eastern-tradition-title" :attr "textContent" :expr "['23 Eastern Catholic Churches', '23 Eastern Catholic Churches', 'Alexandrian Rite (Coptic & Ge\\'ez)', 'Antiochene Rite (West Syriac)', 'Chaldean Rite (East Syriac)', 'Armenian Catholic Rite'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || '23 Eastern Catholic Churches'")
+    (:target "#eastern-tradition-sub" :attr "textContent" :expr "['Byzantine • Antiochian • Alexandrian', 'Byzantine (14 Churches in Communion)', 'Coptic (Egypt) • Ethiopian • Eritrean', 'Maronite (Lebanon) • Syriac • Malankara', 'Chaldean (Iraq) • Syro-Malabar (India)', 'Armenian Catholic Church (Cilicia)'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || ''")
+    (:target "#eastern-tradition-features" :attr "textContent" :expr "['Prosphora (Leaven) • Holy Icons • Liturgical Spoon', 'Holy Icons • Prosphora Bread • St. John Chrysostom', 'Sahidic Coptic & Ge\\'ez Chant • Liturgy of St. Mark', 'Aramaic of Christ • Liturgy of St. James', 'Addai & Mari • St. Thomas Nasranis (AD 52)', 'Unmixed Wine • Ancient Khachkar Cross • AD 301'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || ''")
+    (:target "#tick-1-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.18) ? 0.9 : 0.0")
+    (:target "#tick-2-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 2 : (t >= 0.18 && t < 0.36)) ? 0.9 : 0.0")
+    (:target "#tick-3-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 3 : (t >= 0.36 && t < 0.54)) ? 0.9 : 0.0")
+    (:target "#tick-4-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 4 : (t >= 0.54 && t < 0.72)) ? 0.9 : 0.0")
+    (:target "#tick-5-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 5 : (t >= 0.72 && t < 0.88)) ? 0.9 : 0.0")
+    (:target "#tick-6-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 6 : t >= 0.88) ? 0.9 : 0.0")
+    (:target "#tick-1-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.18) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-2-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 2 : (t >= 0.18 && t < 0.36)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-3-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 3 : (t >= 0.36 && t < 0.54)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-4-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 4 : (t >= 0.54 && t < 0.72)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-5-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 5 : (t >= 0.72 && t < 0.88)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-6-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 6 : t >= 0.88) ? '#fef08a' : '#94a3b8'")
+    (:target "#beacon-ray-left" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.20) ? 0.85 : 0.2")
+    (:target "#beacon-ray-right" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite > 1 : t >= 0.20) ? 0.85 : 0.2")
   ))
 )

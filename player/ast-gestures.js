@@ -304,6 +304,11 @@
         this.setupPhonicsLabInteractivity();
       }
 
+      // 9bg. Catholic Rites & 24 Churches Interactive Slider Subsystem
+      if (this.stageSvg.querySelector('#rite-selector-knob') || this.stageSvg.querySelector('#rite-selector-container') || (this.engine.scene && this.engine.scene.id === 'catholic-rites')) {
+        this.setupCatholicRitesInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -500,6 +505,20 @@
           this.dragTarget = this.stageSvg.querySelector('#tt-laser-splitter') || target;
           this.dragMode = 'tt-splitter';
           this.playAudioTone(480, 'sine', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        // Direct Catholic Rites Slider Knob Drag Mode
+        if (target.id === 'rite-selector-knob' || target.closest('#rite-selector-knob') || target.getAttribute('data-draggable') === 'rite-selector') {
+          e.preventDefault();
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          this.isDragging = true;
+          this.dragTarget = this.stageSvg.querySelector('#rite-selector-knob') || target;
+          this.dragMode = 'rite-selector';
+          this.dragTarget.style.cursor = 'grabbing';
+          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
+          this.playAudioTone(523.25, 'triangle', 0.08);
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
@@ -721,6 +740,8 @@
           this.handleFishingHookDrag(svgPt);
         } else if (this.dragMode === 'tt-splitter') {
           this.handleTimesTablesSplitterDrag(svgPt.x);
+        } else if (this.dragMode === 'rite-selector') {
+          this.handleRiteSelectorDrag(svgPt.x);
         } else if (this.dragMode === 'generic') {
           this.handleGenericDrag(this.dragTarget, svgPt);
         }
@@ -775,6 +796,9 @@
         } else if (this.dragMode === 'fishing-hook') {
           if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
           this.finishFishingHookDrag();
+        } else if (this.dragMode === 'rite-selector') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'ew-resize';
+          this.finishRiteSelectorDrag();
         } else if (this.dragMode === 'generic') {
           const axis = this.dragTarget.getAttribute('data-gesture-axis') || 'xy';
           this.dragTarget.style.cursor = axis === 'y' ? 'ns-resize' : (axis === 'x' ? 'ew-resize' : 'grab');
@@ -825,7 +849,7 @@
 
       if (axis === 'x' || axis === 'xy') {
         if (!isNaN(minX) && !isNaN(maxX) && maxX > minX) {
-          if (minX <= 0 && maxX <= 100) {
+          if (this.targetInitial.initTx !== 0 || targetTx >= minX - 20) {
             targetTx = Math.max(minX, Math.min(maxX, targetTx));
           } else {
             const absX = (this.targetInitial.x || 0) + (targetTx - (this.targetInitial.initTx || 0));
@@ -836,7 +860,7 @@
       }
       if (axis === 'y' || axis === 'xy') {
         if (!isNaN(minY) && !isNaN(maxY) && maxY > minY) {
-          if (minY <= 0 && maxY <= 100) {
+          if (this.targetInitial.initTy !== 0 || targetTy >= minY - 20) {
             targetTy = Math.max(minY, Math.min(maxY, targetTy));
           } else {
             const absY = (this.targetInitial.y || 0) + (targetTy - (this.targetInitial.initTy || 0));
@@ -850,15 +874,44 @@
 
       if (varName && this.engine && typeof this.engine.setVar === 'function') {
         const ratio = axis === 'y'
-          ? Math.max(0, Math.min(1, (svgPt.y - minY) / (maxY - minY || 1)))
-          : Math.max(0, Math.min(1, (svgPt.x - minX) / (maxX - minX || 1)));
-        const vConfig = this.engine.scene && this.engine.scene.vars && this.engine.scene.vars[varName];
-        if (vConfig && typeof vConfig.min === 'number' && typeof vConfig.max === 'number') {
-          const mapped = vConfig.min + ratio * (vConfig.max - vConfig.min);
-          const stepVal = vConfig.step || 1;
-          const stepped = Math.round(mapped / stepVal) * stepVal;
-          this.engine.setVar(varName, stepped);
+          ? Math.max(0, Math.min(1, (targetTy - minY) / (maxY - minY || 1)))
+          : Math.max(0, Math.min(1, (targetTx - minX) / (maxX - minX || 1)));
+
+        let vMin = 0;
+        let vMax = 100;
+        let stepVal = 1;
+        let foundConfig = false;
+
+        const sceneInputs = this.engine.scene && this.engine.scene.inputs;
+        if (Array.isArray(sceneInputs)) {
+          const inp = sceneInputs.find(i => i && i.var === varName);
+          if (inp) {
+            if (typeof inp.min === 'number') vMin = inp.min;
+            if (typeof inp.max === 'number') vMax = inp.max;
+            if (typeof inp.step === 'number') stepVal = inp.step;
+            foundConfig = true;
+          }
         }
+
+        if (!foundConfig && this.engine.scene && this.engine.scene.vars) {
+          const rawVar = this.engine.scene.vars[varName];
+          if (rawVar && typeof rawVar === 'object') {
+            if (typeof rawVar.min === 'number') vMin = rawVar.min;
+            if (typeof rawVar.max === 'number') vMax = rawVar.max;
+            if (typeof rawVar.step === 'number') stepVal = rawVar.step;
+            foundConfig = true;
+          }
+        }
+
+        if (!foundConfig && varName === 'selectedRite') {
+          vMin = 1.0;
+          vMax = 6.0;
+          stepVal = 1.0;
+        }
+
+        const mapped = vMin + ratio * (vMax - vMin);
+        const stepped = Math.round(mapped / stepVal) * stepVal;
+        this.engine.setVar(varName, stepped);
       }
 
       if (this.engine) {
@@ -5820,6 +5873,121 @@ ${strokeLines.join('\n')}
           speakPhoneme('Pure sounds: Never add uh at the end. Say crisp k instead of kuh, and sharp t instead of tuh!');
           setBanner("Pure Sounds Invariant: Eliminate schwa (/uh/) to enable seamless synthetic blending!", '#22d3ee');
         });
+      }
+    }
+
+    // =========================================================================
+    // Catholic Rites & 24 Churches (Omnes Gentes) Interactive Liturgical Dial
+    // =========================================================================
+    setupCatholicRitesInteractivity() {
+      if (!this.stageSvg) return;
+      const knob = this.stageSvg.querySelector('#rite-selector-knob');
+      const container = this.stageSvg.querySelector('#rite-selector-container');
+
+      if (knob) {
+        knob.style.cursor = 'ew-resize';
+        knob.setAttribute('data-draggable', 'rite-selector');
+        knob.setAttribute('data-pedagogical', 'rite-dial');
+      }
+
+      if (container && !container._hasRiteClicks) {
+        container._hasRiteClicks = true;
+        container.style.cursor = 'pointer';
+
+        // Direct click on track or rite station ticks (1..6)
+        container.addEventListener('pointerdown', (ev) => {
+          if (ev.target.closest('#rite-selector-knob')) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          const svgPt = this.screenToSvg(ev.clientX, ev.clientY);
+          this.handleRiteSelectorClick(svgPt.x);
+        });
+      }
+
+      // Add individual click handlers for stations 1..6 if present
+      for (let i = 1; i <= 6; i++) {
+        const btn = this.stageSvg.querySelector(`#station-${i}-btn`) || this.stageSvg.querySelector(`#tick-${i}-pill`);
+        if (btn && !btn._hasStationClick) {
+          btn._hasStationClick = true;
+          btn.style.cursor = 'pointer';
+          btn.addEventListener('pointerdown', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            const targetX = 140 + (i - 1) * ((660 - 140) / 5);
+            this.handleRiteSelectorClick(targetX);
+          });
+        }
+      }
+    }
+
+    handleRiteSelectorDrag(svgX) {
+      const minX = 140;
+      const maxX = 660;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const knob = this.stageSvg.querySelector('#rite-selector-knob');
+      if (knob) {
+        knob.setAttribute('transform', `translate(${clampedX.toFixed(1)}, 18)`);
+      }
+
+      // Map clampedX (140..660) to stepped rite 1..6
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const stepped = Math.max(1, Math.min(6, Math.round(1 + ratio * 5)));
+
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        const curRite = this.engine.vars?.selectedRite;
+        if (curRite !== stepped) {
+          this.engine.setVar('selectedRite', stepped);
+          const riteChimes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+          this.playAudioTone(riteChimes[stepped - 1] || 523.25, 'sine', 0.07, 0.16);
+        }
+      }
+
+      if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+    }
+
+    handleRiteSelectorClick(svgX) {
+      const minX = 140;
+      const maxX = 660;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const stepped = Math.max(1, Math.min(6, Math.round(1 + ratio * 5)));
+      const targetX = 140 + (stepped - 1) * ((660 - 140) / 5);
+
+      const knob = this.stageSvg.querySelector('#rite-selector-knob');
+      if (knob) {
+        knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 18)`);
+      }
+
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        this.engine.setVar('selectedRite', stepped);
+      }
+
+      const riteTimes = [0.00, 0.20, 0.38, 0.56, 0.74, 0.90];
+      const targetT = riteTimes[stepped - 1] || 0.00;
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(targetT);
+      } else if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+
+      const riteChimes = [523.25, 587.33, 659.25, 783.99, 880.00, 1046.50];
+      this.playAudioTone(riteChimes[stepped - 1] || 523.25, 'sine', 0.12, 0.22);
+      this.createTouchRipple(targetX, 433);
+    }
+
+    finishRiteSelectorDrag() {
+      const curRite = (this.engine && this.engine.vars && this.engine.vars.selectedRite) || 1;
+      const targetX = 140 + (curRite - 1) * ((660 - 140) / 5);
+      const knob = this.stageSvg.querySelector('#rite-selector-knob');
+      if (knob) {
+        knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 18)`);
+      }
+      const riteTimes = [0.00, 0.20, 0.38, 0.56, 0.74, 0.90];
+      const targetT = riteTimes[curRite - 1] || 0.00;
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(targetT);
       }
     }
   }

@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-23T10:14:23.725Z",
+  "generatedAt": "2026-10-23T10:44:08.538Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -99,7 +99,7 @@
       "astFile": "scenes/catholic-rites.ast",
       "keyframeCount": 5,
       "subtitleCount": 5,
-      "bindingsCount": 4
+      "bindingsCount": 25
     },
     {
       "id": "church-tour",
