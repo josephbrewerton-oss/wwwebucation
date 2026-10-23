@@ -6,8 +6,9 @@
 # Binary Bytecode: High-throughput zero-alloc streaming reader (.astb) with sub-15ms cold start and <8 MB RAM footprint
 # Edge AI: On-device Chrome Prompt API (Gemini Nano) & local WebLLM with 500ms GBNF-constrained simulation generation and zero cloud leakage
 # Universal Translator: Real-time multilingual voice synthesis & bilingual subtitles (EN, ES, FR, LA, DE, IT)
-# Inclusion: Procedural 3D British Sign Language (BSL) In-Vision Vector Interpreter with BANZSL fingerspelling, dual POV, and PiP
-# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
+# Inclusion: Procedural 3D British Sign Language (BSL) In-Vision Vector Interpreter (68-Sign Primary Corpus, 11.3 KB Gzipped, Dual-Hand :mirror/:vowel-board/:base-shift Kinematics, Grammatical NMF Facial Rig, 360° Drag-to-Orbit, Shift+B Global Hotkey)
+# Oak National Academy Alignment: Synchronous Oak RE ID mappings (OAK-KS2-RE-001 through 020) across all 19 Catholic Life vector cartridges
+# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /lexicons/bsl-signs.ast, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
 
 User-agent: *
 Allow: /
@@ -45,6 +46,8 @@ Allow: /llms-full.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
 Allow: /manifests/
+Allow: /lexicons/
+Allow: /lexicons/bsl-signs.ast
 Allow: /player/
 Allow: /player/bytecode/
 Allow: /player/scenes/

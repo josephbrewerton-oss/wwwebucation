@@ -740,6 +740,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
         case 'TOGGLE_BSL': {
           const next = Boolean(data.enabled);
           setLocalBslEnabled(next);
+          setGlobalBslEnabled(next);
           if (typeof window !== 'undefined') {
             localStorage.setItem('stj_bsl_enabled', next ? 'true' : 'false');
           }

@@ -1055,7 +1055,6 @@ export default function CatholicLifePage(): React.JSX.Element {
                   height="clamp(240px, 45vw + 40px, 420px)"
                   allowPresetSwitch={false}
                   embedded={true}
-                  bslEnabled={false}
                 />
               </div>
             )}
@@ -1589,7 +1588,6 @@ export default function CatholicLifePage(): React.JSX.Element {
                       height="clamp(240px, 45vw + 40px, 420px)"
                       allowPresetSwitch={false}
                       embedded={true}
-                      bslEnabled={false}
                     />
                   </div>
                 )}
@@ -1689,18 +1687,17 @@ export default function CatholicLifePage(): React.JSX.Element {
                       height="clamp(240px, 45vw + 40px, 420px)"
                       allowPresetSwitch={false}
                       embedded={true}
-                      bslEnabled={false}
                     />
                   </div>
                 )}
                 
-                <FirstCommunionMasteryLab />
+                <FirstCommunionMasteryLab initialTab="mass-walk" hideSubNav={true} />
               </div>
             )}
 
             {activeTab === 'journal' && (
               <div style={{ marginBottom: '2rem' }}>
-                <FirstCommunionMasteryLab />
+                <FirstCommunionMasteryLab initialTab="journal" hideSubNav={true} />
               </div>
             )}
           </div>

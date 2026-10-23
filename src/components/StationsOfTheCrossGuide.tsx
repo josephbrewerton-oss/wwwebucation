@@ -298,7 +298,6 @@ export default function StationsOfTheCrossGuide(): React.JSX.Element {
               height="clamp(220px, 45vw + 40px, 390px)"
               allowPresetSwitch={false}
               embedded={true}
-              bslEnabled={false}
             />
           </div>
         </div>

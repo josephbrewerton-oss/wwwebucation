@@ -211,7 +211,6 @@ export default function CatholicRitesExplorer({
             height="clamp(240px, 45vw + 40px, 420px)"
             allowPresetSwitch={false}
             embedded={true}
-            bslEnabled={false}
           />
         </div>
       )}

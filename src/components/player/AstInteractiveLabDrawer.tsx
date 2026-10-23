@@ -1129,20 +1129,67 @@ export default function AstInteractiveLabDrawer({
               </div>
             </div>
 
-            <div style={{ marginBottom: '12px' }}>
+            <div style={{ marginBottom: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
-                <span>Rows:</span>
-                <span style={{ color: '#38bdf8' }}>{rows}</span>
+                <span>Times Table (Rows):</span>
+                <span style={{ color: '#38bdf8' }}>{rows}&times;</span>
               </div>
-              <input type="range" min="1" max="12" value={rows} onChange={(e) => setRows(Number(e.target.value))} style={{ width: '100%', accentColor: '#38bdf8' }} />
+              <input
+                type="range"
+                min="2"
+                max="12"
+                value={rows}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setRows(val);
+                  postVarToPlayer('table', val);
+                }}
+                style={{ width: '100%', accentColor: '#38bdf8' }}
+              />
+              {/* Quick Table Selection Chips 2x through 12x */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      setRows(num);
+                      postVarToPlayer('table', num);
+                    }}
+                    style={{
+                      padding: '3px 7px',
+                      borderRadius: '5px',
+                      fontSize: '0.72rem',
+                      fontWeight: 800,
+                      border: rows === num ? '1px solid #10b981' : '1px solid #334155',
+                      background: rows === num ? '#059669' : '#1e293b',
+                      color: rows === num ? '#ffffff' : '#cbd5e1',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {num}&times;
+                  </button>
+                ))}
+              </div>
             </div>
 
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
-                <span>Columns:</span>
-                <span style={{ color: '#4ade80' }}>{cols}</span>
+                <span>Multiplier (Columns):</span>
+                <span style={{ color: '#4ade80' }}>&times;{cols}</span>
               </div>
-              <input type="range" min="1" max="12" value={cols} onChange={(e) => setCols(Number(e.target.value))} style={{ width: '100%', accentColor: '#4ade80' }} />
+              <input
+                type="range"
+                min="1"
+                max="12"
+                value={cols}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setCols(val);
+                  postVarToPlayer('multiplier', val);
+                }}
+                style={{ width: '100%', accentColor: '#4ade80' }}
+              />
             </div>
 
             {(() => {

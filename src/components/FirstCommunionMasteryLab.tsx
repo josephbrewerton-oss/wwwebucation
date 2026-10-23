@@ -28,7 +28,26 @@ import {
 export { LITURGY_STEPS, SACRED_OBJECTS, CATHOLIC_PRAYERS };
 export type { LiturgyStep, SacredObject, CatholicPrayer };
 
-export default function FirstCommunionMasteryLab() {
+export interface FirstCommunionMasteryLabProps {
+  initialTab?:
+    | 'mass-walk'
+    | 'seven-sacraments'
+    | 'creed'
+    | 'commandments'
+    | 'rosary'
+    | 'liturgical-seasons'
+    | 'sacred-objects'
+    | 'prayers'
+    | 'latin-prayers'
+    | 'postures'
+    | 'journal';
+  hideSubNav?: boolean;
+}
+
+export default function FirstCommunionMasteryLab({
+  initialTab = 'mass-walk',
+  hideSubNav = false,
+}: FirstCommunionMasteryLabProps = {}) {
   const [activeTab, setActiveTab] = useState<
     | 'mass-walk'
     | 'seven-sacraments'
@@ -41,7 +60,11 @@ export default function FirstCommunionMasteryLab() {
     | 'latin-prayers'
     | 'postures'
     | 'journal'
-  >('mass-walk');
+  >(initialTab);
+
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
 
   // Liturgy ordering game state
   const [sequenceSelection, setSequenceSelection] = useState<string[]>([]);
@@ -227,6 +250,7 @@ export default function FirstCommunionMasteryLab() {
       </header>
 
       {/* Navigation Sub-Tabs */}
+      {!hideSubNav && (
       <nav
         aria-label="First Communion Sections"
         style={{
@@ -493,6 +517,7 @@ export default function FirstCommunionMasteryLab() {
           <span>Family Mass Journal</span>
         </button>
       </nav>
+      )}
 
       {/* TAB 1: WALK THROUGH THE HOLY MASS */}
       {activeTab === 'mass-walk' && (

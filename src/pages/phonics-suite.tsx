@@ -6,6 +6,7 @@ import {
   DECODABLE_WORDS,
   OFFICIAL_SCREENING_POOL,
   TRICKY_WORDS,
+  getPhonemeSpokenText,
   type PhonicGrapheme,
   type DecodableWord,
   type ScreeningWord,
@@ -48,12 +49,14 @@ export default function PhonicsSuitePage() {
   // Tricky Words Filter
   const [trickyPhase, setTrickyPhase] = useState<number | 'all'>('all');
 
-  // Procedural Web Speech + Web Audio Synthesis
+  // Procedural Web Speech + Pure Synthetic Phoneme Resolver
   const playSound = useCallback((text: string, rate: number = 0.88, pitch: number = 1.05) => {
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
+        // Resolve pure synthetic phonemes to eliminate intrusive letter-name spelling (e.g. "tee", "pee", "kay")
+        const resolvedText = getPhonemeSpokenText(text);
+        const utter = new SpeechSynthesisUtterance(resolvedText);
         utter.rate = rate;
         utter.pitch = pitch;
         const voices = window.speechSynthesis.getVoices();

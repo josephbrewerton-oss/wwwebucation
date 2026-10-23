@@ -35,7 +35,8 @@
   (:player
     (:engine :path "/player/ast-engine.js" :runtime "vanilla-js" :budget "<35KB")
     (:shell  :path "/player/index.html"    :css "/player/player.css")
-    (:manifest :path "/scenes.manifest.json"))
+    (:manifest :path "/scenes.manifest.json")
+    (:lexicon :id "bsl-signs" :path "/lexicons/bsl-signs.ast" :signs 68 :budget "<12KB"))
 
   (:cartridges :directory "/cartridges/"
     ;; Catholic Life

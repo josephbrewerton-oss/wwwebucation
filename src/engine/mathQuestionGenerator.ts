@@ -241,8 +241,8 @@ export class MathQuestionGenerator {
    * KS2: Multiplication / Times Tables with additive and factor confusion
    */
   private static generateTimesTableQuestion(rng: PRNG, seedToken: string): GeneratedMathQuestion {
-    const table = rng.nextInt(3, 10);
-    const factor = rng.nextInt(3, 10);
+    const table = rng.nextInt(2, 12);
+    const factor = rng.nextInt(1, 12);
     const correct = table * factor;
 
     const trapAdd = table + factor;

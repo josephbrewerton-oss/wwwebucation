@@ -880,41 +880,7 @@ export default function LearningZonePage() {
                 }
               >
                 <AstVectorMediaPlayer
-                  preset={(() => {
-                    const s = selectedSubject.toLowerCase();
-                    const u = selectedUnit.toLowerCase();
-                    if (u.includes('station') || u.includes('cross') || u.includes('passion') || u.includes('calvary') || u.includes('easter')) {
-                      return 'stations-of-the-cross';
-                    }
-                    if (s.includes('relig') || s.includes('catholic') || u.includes('church') || u.includes('sanctuary')) {
-                      return 'church-tour';
-                    }
-                    if (u.includes('mountain') || u.includes('altitude') || u.includes('climb') || u.includes('elevation') || u.includes('hill') || u.includes('geography')) {
-                      return 'mountain-elevation';
-                    }
-                    if (u.includes('photo') || u.includes('plant') || u.includes('leaf') || u.includes('botan')) {
-                      return 'photosynthesis';
-                    }
-                    if (u.includes('pythag') || u.includes('triangle') || u.includes('geometry') || u.includes('theorem')) {
-                      return 'pythagoras';
-                    }
-                    if (u.includes('atom') || u.includes('bohr') || u.includes('electron') || u.includes('chem')) {
-                      return 'atom';
-                    }
-                    if (u.includes('mitosis') || u.includes('cell') || u.includes('division')) {
-                      return 'cell-mitosis';
-                    }
-                    if (u.includes('velocity') || u.includes('speed') || u.includes('vector') || u.includes('physic')) {
-                      return 'velocity';
-                    }
-                    if (u.includes('dna') || u.includes('helix') || u.includes('genet')) {
-                      return 'dna-helix';
-                    }
-                    if (s.includes('science') || u.includes('space') || u.includes('solar') || u.includes('planet')) {
-                      return 'solar-system';
-                    }
-                    return 'fractions';
-                  })()}
+                  preset={resolvePresetForTopic(selectedSubject, selectedUnit, activeTopic)}
                   allowPresetSwitch={true}
                   autoPlay={true}
                   height="540px"
@@ -929,13 +895,7 @@ export default function LearningZonePage() {
                 }
               >
                 <ZeroBloatVectorStudio
-                  initialPreset={
-                    selectedSubject.toLowerCase().includes('math')
-                      ? 'fractions'
-                      : selectedSubject.toLowerCase().includes('science') || selectedUnit.toLowerCase().includes('space')
-                      ? 'solar-system'
-                      : 'fractions'
-                  }
+                  initialPreset={resolvePresetForTopic(selectedSubject, selectedUnit, activeTopic)}
                 />
               </React.Suspense>
             )}

@@ -13,6 +13,8 @@
  */
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import {
   HOLY_OILS,
   HOLY_AMBRY_INFO,
@@ -22,6 +24,7 @@ import {
 
 export const HolyOilsExplorer: React.FC = () => {
   const [selectedOilId, setSelectedOilId] = useState<'SC' | 'OC' | 'OI'>('SC');
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'ambry' | 'sacraments' | 'stocks' | 'chrismMass' | 'quiz'>('ambry');
   const [quizAnswers, setQuizAnswers] = useState<Record<number, number>>({});
   const [showExplanations, setShowExplanations] = useState<Record<number, boolean>>({});
@@ -66,18 +69,59 @@ export const HolyOilsExplorer: React.FC = () => {
       {/* Header Banner */}
       <div className="rounded-2xl p-6 sm:p-8 bg-gradient-to-r from-amber-950/80 via-slate-900 to-emerald-950/80 border border-amber-500/30 text-white shadow-xl relative overflow-hidden">
         <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-        <div className="relative z-10 max-w-3xl">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3 border border-amber-500/30">
-            <span>🏺</span> Olea Sancta • Liturgical Sacred Treasures
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 relative z-10">
+          <div className="max-w-3xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3 border border-amber-500/30">
+              <span>🏺</span> Olea Sancta • Liturgical Sacred Treasures
+            </div>
+            <h2 className="text-3xl sm:text-4xl font-serif font-bold text-amber-100 tracking-wide">
+              The Three Holy Oils & The Sacred Ambry
+            </h2>
+            <p className="mt-2 text-slate-300 text-sm sm:text-base leading-relaxed">
+              From the fragrant balsamic seal of <span className="text-amber-300 font-semibold">Sacred Chrism</span> to the comforting balm of the <span className="text-sky-300 font-semibold">Oil of the Sick</span> and the spiritual armor of the <span className="text-emerald-300 font-semibold">Oil of Catechumens</span>, discover how the Catholic Church consecrates every milestone of human life through holy anointing.
+            </p>
           </div>
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-amber-100 tracking-wide">
-            The Three Holy Oils & The Sacred Ambry
-          </h2>
-          <p className="mt-2 text-slate-300 text-sm sm:text-base leading-relaxed">
-            From the fragrant balsamic seal of <span className="text-amber-300 font-semibold">Sacred Chrism</span> to the comforting balm of the <span className="text-sky-300 font-semibold">Oil of the Sick</span> and the spiritual armor of the <span className="text-emerald-300 font-semibold">Oil of Catechumens</span>, discover how the Catholic Church consecrates every milestone of human life through holy anointing.
-          </p>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowPlayer(!showPlayer)}
+              className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 border transition-all ${
+                showPlayer
+                  ? 'bg-amber-400 text-slate-950 border-amber-300 shadow-lg shadow-amber-400/20'
+                  : 'bg-amber-500/20 text-amber-300 border-amber-500/40 hover:bg-amber-500/30'
+              }`}
+            >
+              <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+            </button>
+            <Link
+              to="/media-player?preset=holy-oils"
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-bold flex items-center gap-2 bg-slate-800/80 hover:bg-slate-700 text-white border border-slate-600 transition-all text-decoration-none"
+            >
+              <span>📺 Full Player</span>
+            </Link>
+          </div>
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Holy Oils */}
+      {showPlayer && (
+        <div className="rounded-2xl overflow-hidden border-2 border-amber-500/50 bg-slate-950 shadow-2xl">
+          <div className="bg-amber-950/70 px-4 py-2.5 border-b border-amber-600/40 flex items-center justify-between text-xs sm:text-sm">
+            <span className="flex items-center gap-2 font-bold text-amber-300">
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: The Three Holy Oils &amp; Sacred Ambry</span>
+            </span>
+            <span className="text-amber-200/70 font-mono text-xs">Cartridge: holy-oils.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="holy-oils"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+          />
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div className="flex flex-wrap gap-2 border-b border-slate-700/60 pb-3">

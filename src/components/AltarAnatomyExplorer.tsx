@@ -8,6 +8,8 @@
  */
 
 import React, { useState, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
+import AstVectorMediaPlayer from './AstVectorMediaPlayer';
 import {
   ALTAR_TYPES,
   ALTAR_APPOINTMENTS,
@@ -29,6 +31,7 @@ export type CandleMode = 'daily' | 'sunday' | 'bishop';
 
 export const AltarAnatomyExplorer: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AltarTabMode>('anatomy');
+  const [showPlayer, setShowPlayer] = useState<boolean>(false);
   const [selectedSeason, setSelectedSeason] = useState<string>('green');
   const [selectedAppointmentId, setSelectedAppointmentId] = useState<string>('mensa');
   const [selectedAltarTypeId, setSelectedAltarTypeId] = useState<string>('freestanding');
@@ -275,8 +278,66 @@ export const AltarAnatomyExplorer: React.FC = () => {
           >
             {soundEnabled ? '🔔 Sound On' : '🔕 Muted'}
           </button>
+
+          <button
+            type="button"
+            onClick={() => setShowPlayer(!showPlayer)}
+            style={{
+              background: showPlayer ? '#facc15' : 'rgba(250, 204, 21, 0.2)',
+              border: '1px solid #facc15',
+              color: showPlayer ? '#1e1b4b' : '#fef08a',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              cursor: 'pointer',
+              fontWeight: 800,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>{showPlayer ? '▲ Hide Vector Sim' : '🎮 Vector Simulation'}</span>
+          </button>
+
+          <Link
+            to="/media-player?preset=altar-anatomy"
+            style={{
+              background: 'rgba(255, 255, 255, 0.15)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              color: '#ffffff',
+              borderRadius: '8px',
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              textDecoration: 'none',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
+            <span>📺 Full Player</span>
+          </Link>
         </div>
       </div>
+
+      {/* Embedded AST Vector Media Player for Altar Anatomy */}
+      {showPlayer && (
+        <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #ca8a04', background: '#090e1a', margin: '0 1rem 1.5rem 1rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
+          <div style={{ background: '#311042', padding: '10px 16px', borderBottom: '1px solid #581c87', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+              <span>✨</span>
+              <span>AST Vector Interactive Engine: Sacred Anatomy of the Catholic Altar</span>
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: altar-anatomy.ast</span>
+          </div>
+          <AstVectorMediaPlayer
+            preset="altar-anatomy"
+            height="clamp(240px, 45vw + 40px, 420px)"
+            allowPresetSwitch={false}
+            embedded={true}
+          />
+        </div>
+      )}
 
       {/* Navigation Sub-Tabs */}
       <div
