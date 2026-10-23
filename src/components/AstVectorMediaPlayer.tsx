@@ -1,6 +1,6 @@
 // src/components/AstVectorMediaPlayer.tsx
 /**
- * AST-Guided Vector Media Player (Decoupled iFrame Architecture)
+ * AST-Guided Vector Media Player (Decoupled<i iFrame Architecture)
  * 
  * Runs procedural SVG motion, continuous keyframe interpolation, and on-device Web Speech
  * inside an isolated browsing context.
@@ -1935,9 +1935,9 @@ const playerSrc = useMemo(() => {
                   Primary: {selectedPreset}
                 </div>
                 <iframe
-                  key={`primary-player-viewport-${currentLang}`}
-                  ref={iframeRef}
-                  src={playerSrc}
+                key={`vector-player-viewport-${selectedPreset}-${currentLang}`}
+                ref={iframeRef}
+                src={playerSrc}
                   title="Primary Concept Viewport"
                   style={{
                     width: '100%',
