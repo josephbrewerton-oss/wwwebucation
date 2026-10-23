@@ -993,8 +993,9 @@ const effectiveMode = embedded ? 'embedded' : displayConfig.mode;
 const disableInitialQuestions = isCartridgeWithoutQuestions(initialPlayerPresetRef.current);
 const effectiveQuestions = disableInitialQuestions ? '0' : (showQuestions ? '1' : '0');
 const playerSrc = useMemo(() => {
-  return `${cleanBase}player/index.html?preset=${encodeURIComponent(initialPlayerPresetRef.current)}&lang=${encodeURIComponent(currentLang)}&speed=${encodeURIComponent(speed ?? 1.0)}&autoplay=${autoPlay ? '1' : '0'}&questions=${effectiveQuestions}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
-}, [cleanBase, currentLang, speed, autoPlay, effectiveQuestions, activeTheme, effectiveMode, embedded]);
+  const targetPreset = selectedPreset || preset || 'church-tour';
+  return `${cleanBase}player/index.html?preset=${encodeURIComponent(targetPreset)}&lang=${encodeURIComponent(currentLang)}&speed=${encodeURIComponent(speed ?? 1.0)}&autoplay=${autoPlay ? '1' : '0'}&questions=${effectiveQuestions}&theme=${encodeURIComponent(activeTheme)}&mode=${encodeURIComponent(effectiveMode)}&embed=${embedded ? '1' : '0'}&base=${encodeURIComponent(cleanBase)}&v=2.6.0`;
+}, [cleanBase, selectedPreset, preset, currentLang, speed, autoPlay, effectiveQuestions, activeTheme, effectiveMode, embedded]);
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
   const embedCode = `<iframe src="${origin}${cleanBase}player/index.html?preset=${encodeURIComponent(selectedPreset)}&lang=${encodeURIComponent(currentLang)}&mode=${encodeURIComponent(embedTargetMode)}" width="100%" height="480" frameborder="0" allow="fullscreen" loading="lazy" style="border-radius:12px;box-shadow:0 4px 12px rgba(0,0,0,0.15);border:1px solid #1e293b;"></iframe>`;
