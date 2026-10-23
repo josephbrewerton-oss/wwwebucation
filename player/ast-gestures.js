@@ -5564,9 +5564,9 @@ ${strokeLines.join('\n')}
           word: 'cat',
           emoji: '🐱',
           tokens: [
-            { g: 'c', p: '/k/', speech: 'k', soundName: 'k', tone: 520, isDigraph: false },
+            { g: 'c', p: '/k/', speech: 'kuh', soundName: 'k', tone: 520, isDigraph: false },
             { g: 'a', p: '/æ/', speech: 'ah', soundName: 'short a', tone: 440, isDigraph: false },
-            { g: 't', p: '/t/', speech: 't', soundName: 't', tone: 580, isDigraph: false }
+            { g: 't', p: '/t/', speech: 'tuh', soundName: 't', tone: 580, isDigraph: false }
           ],
           explanation: 'Short vowel /a/ with crisp unvoiced stops /k/ and /t/.'
         },
@@ -5574,9 +5574,9 @@ ${strokeLines.join('\n')}
           word: 'dog',
           emoji: '🐶',
           tokens: [
-            { g: 'd', p: '/d/', speech: 'd', soundName: 'd', tone: 480, isDigraph: false },
-            { g: 'o', p: '/ɒ/', speech: 'o', soundName: 'short o', tone: 420, isDigraph: false },
-            { g: 'g', p: '/g/', speech: 'g', soundName: 'g', tone: 460, isDigraph: false }
+            { g: 'd', p: '/d/', speech: 'duh', soundName: 'd', tone: 480, isDigraph: false },
+            { g: 'o', p: '/ɒ/', speech: 'off', soundName: 'short o', tone: 420, isDigraph: false },
+            { g: 'g', p: '/g/', speech: 'guh', soundName: 'g', tone: 460, isDigraph: false }
           ],
           explanation: 'Voiced stop /d/, open short /o/, and voiced velar /g/.'
         },
@@ -5584,9 +5584,9 @@ ${strokeLines.join('\n')}
           word: 'sun',
           emoji: '☀️',
           tokens: [
-            { g: 's', p: '/s/', speech: 's', soundName: 's', tone: 620, isDigraph: false },
+            { g: 's', p: '/s/', speech: 'ssss', soundName: 's', tone: 620, isDigraph: false },
             { g: 'u', p: '/ʌ/', speech: 'uh', soundName: 'short u', tone: 440, isDigraph: false },
-            { g: 'n', p: '/n/', speech: 'n', soundName: 'n', tone: 500, isDigraph: false }
+            { g: 'n', p: '/n/', speech: 'nnn', soundName: 'n', tone: 500, isDigraph: false }
           ],
           explanation: 'Continuous fricative /s/, short /u/, and nasal /n/.'
         },
@@ -5594,9 +5594,9 @@ ${strokeLines.join('\n')}
           word: 'ship',
           emoji: '🚢',
           tokens: [
-            { g: 'sh', p: '/ʃ/', speech: 'sh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true },
-            { g: 'i', p: '/ɪ/', speech: 'i', soundName: 'short i', tone: 460, isDigraph: false },
-            { g: 'p', p: '/p/', speech: 'p', soundName: 'p', tone: 540, isDigraph: false }
+            { g: 'sh', p: '/ʃ/', speech: 'shhh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true },
+            { g: 'i', p: '/ɪ/', speech: 'ih', soundName: 'short i', tone: 460, isDigraph: false },
+            { g: 'p', p: '/p/', speech: 'puh', soundName: 'p', tone: 540, isDigraph: false }
           ],
           explanation: 'Consonant digraph "sh" (two letters, one sound — digraph dash!) with short /i/ and /p/.'
         },
@@ -5604,9 +5604,9 @@ ${strokeLines.join('\n')}
           word: 'rain',
           emoji: '🌧️',
           tokens: [
-            { g: 'r', p: '/r/', speech: 'r', soundName: 'r', tone: 490, isDigraph: false },
+            { g: 'r', p: '/r/', speech: 'rrr', soundName: 'r', tone: 490, isDigraph: false },
             { g: 'ai', p: '/eɪ/', speech: 'ay', soundName: 'vowel digraph ai', tone: 580, isDigraph: true },
-            { g: 'n', p: '/n/', speech: 'n', soundName: 'n', tone: 500, isDigraph: false }
+            { g: 'n', p: '/n/', speech: 'nnn', soundName: 'n', tone: 500, isDigraph: false }
           ],
           explanation: 'Vowel digraph "ai" makes the long /ay/ sound — represented with a sound dash.'
         },
@@ -5614,9 +5614,9 @@ ${strokeLines.join('\n')}
           word: 'fish',
           emoji: '🐟',
           tokens: [
-            { g: 'f', p: '/f/', speech: 'f', soundName: 'f', tone: 600, isDigraph: false },
-            { g: 'i', p: '/ɪ/', speech: 'i', soundName: 'short i', tone: 460, isDigraph: false },
-            { g: 'sh', p: '/ʃ/', speech: 'sh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true }
+            { g: 'f', p: '/f/', speech: 'fff', soundName: 'f', tone: 600, isDigraph: false },
+            { g: 'i', p: '/ɪ/', speech: 'ih', soundName: 'short i', tone: 460, isDigraph: false },
+            { g: 'sh', p: '/ʃ/', speech: 'shhh', soundName: 'consonant digraph sh', tone: 650, isDigraph: true }
           ],
           explanation: 'Continuous /f/, short /i/, and consonant digraph "sh" at the end of the word.'
         }
@@ -5625,11 +5625,20 @@ ${strokeLines.join('\n')}
       this._phWords = WORDS;
       this._phWordIdx = 0;
 
+      const PHONETIC_LOOKUP = {
+        s: 'ssss', t: 'tuh', p: 'puh', d: 'duh', g: 'guh', c: 'kuh', k: 'kuh', ck: 'kuh',
+        b: 'buh', h: 'huh', j: 'juh', w: 'wuh', y: 'yuh', ch: 'tch', sh: 'shhh', th: 'thuh',
+        ng: 'ing', qu: 'kwuh', ph: 'fff', wh: 'wuh', m: 'mmm', n: 'nnn', r: 'rrr', l: 'lll',
+        f: 'fff', v: 'vvv', z: 'zzz', o: 'off'
+      };
+
       const speakPhoneme = (text, rate = 0.9) => {
         if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
           try {
             window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
+            const clean = (text || '').trim().toLowerCase();
+            const resolved = PHONETIC_LOOKUP[clean] || text;
+            const u = new SpeechSynthesisUtterance(resolved);
             u.rate = rate;
             u.pitch = 1.05;
             const voices = window.speechSynthesis.getVoices();

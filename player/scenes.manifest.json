@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-22T17:45:44.075Z",
+  "generatedAt": "2026-10-23T08:04:52.548Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -99,7 +99,7 @@
       "astFile": "scenes/catholic-rites.ast",
       "keyframeCount": 0,
       "subtitleCount": 6,
-      "bindingsCount": 5
+      "bindingsCount": 4
     },
     {
       "id": "church-tour",
@@ -113,7 +113,7 @@
       "astFile": "scenes/church-tour.ast",
       "keyframeCount": 6,
       "subtitleCount": 6,
-      "bindingsCount": 4
+      "bindingsCount": 9
     },
     {
       "id": "cst-virtues",
