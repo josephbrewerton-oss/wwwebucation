@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-23T17:10:29.933Z",
+  "generatedAt": "2026-10-23T17:28:55.845Z",
   "totalScenes": 46,
   "scenes": [
     {
@@ -103,7 +103,7 @@
     },
     {
       "id": "church-tour",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
       "stage": "CATHOLIC LIFE",
       "duration": 16,
