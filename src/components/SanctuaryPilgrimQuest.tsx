@@ -9,6 +9,7 @@
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
 
 import { SANCTUARY_QUESTS, StationQuest } from "../data/catholic";
@@ -99,7 +100,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
     }
   }, [audioMuted]);
 
-  // Navigate 3D player to specific station targetT
+  // Navigate 3D player to specific station targetT and pause at station in quest mode
   const navigatePlayerToStation = useCallback((targetT: number) => {
     if (playerRef.current) {
       playerRef.current.seek(targetT);
@@ -107,9 +108,31 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
         type: 'SEEK',
         progress: targetT,
       });
+      // In quest mode, hold station position so student can inspect the sacred space
+      if (gameMode === 'quest') {
+        playerRef.current.pause();
+        playerRef.current.postToPlayer({
+          type: 'PAUSE',
+        });
+      }
     }
     playChime('click');
-  }, [playChime]);
+  }, [playChime, gameMode]);
+
+  // Switch between continuous Guided Tour and station-based Pilgrim Quest
+  const handleSwitchGameMode = (mode: 'tour' | 'quest') => {
+    setGameMode(mode);
+    if (mode === 'tour') {
+      playerRef.current?.play();
+      playerRef.current?.postToPlayer({ type: 'PLAY' });
+    } else {
+      const targetT = SANCTUARY_QUESTS[activeStationIndex].targetT;
+      playerRef.current?.seek(targetT);
+      playerRef.current?.pause();
+      playerRef.current?.postToPlayer({ type: 'SEEK', progress: targetT });
+      playerRef.current?.postToPlayer({ type: 'PAUSE' });
+    }
+  };
 
   // Select station from quest list
   const handleSelectStation = (index: number) => {
@@ -215,8 +238,29 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
             </p>
           </div>
 
-          {/* Mode Switcher & Audio Controls */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Mode Switcher, Simulator Link & Audio Controls */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <Link
+              to="/simulator?preset=church-tour"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: 'rgba(99, 102, 241, 0.2)',
+                border: '1px solid rgba(99, 102, 241, 0.45)',
+                borderRadius: '8px',
+                color: '#c7d2fe',
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+                transition: 'all 0.15s ease',
+              }}
+              title="Open full interactive cartridge in AST Vector Simulator"
+            >
+              <span>🎮 Open in Simulator ↗</span>
+            </Link>
+
             <div
               style={{
                 display: 'inline-flex',
@@ -228,7 +272,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
             >
               <button
                 type="button"
-                onClick={() => setGameMode('tour')}
+                onClick={() => handleSwitchGameMode('tour')}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -245,7 +289,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => setGameMode('quest')}
+                onClick={() => handleSwitchGameMode('quest')}
                 style={{
                   padding: '6px 12px',
                   borderRadius: '6px',
@@ -371,7 +415,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
           <span>⛪</span>
           <span style={{ fontWeight: 700, color: '#f8fafc' }}>Church Sanctuary Tour</span>
           <span style={{ color: '#64748b' }}>&bull;</span>
-          <span style={{ color: '#38bdf8' }}>3D Vector Stage</span>
+          <span style={{ color: '#38bdf8' }}>Interactive Vector Stage</span>
         </div>
         <button
           type="button"
@@ -389,19 +433,19 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
             alignItems: 'center',
             gap: '4px',
           }}
-          title="Toggle between smooth page scrolling and interactive 3D rotation"
+          title="Toggle between smooth page scrolling and interactive map exploration"
         >
-          <span>{touchScrollLocked ? '👆 3D Orbit Active' : '🔒 Page Scroll Safe'}</span>
+          <span>{touchScrollLocked ? '👆 Map Interactive' : '🔒 Page Scroll Safe'}</span>
         </button>
       </div>
 
-      {/* Main 3D Vector Stage Window (Responsive Height) */}
+      {/* Main Vector Stage Window (Responsive Height) */}
       <div style={{ position: 'relative', borderRadius: '0 0 12px 12px', overflow: 'hidden', border: '1px solid #334155' }}>
         <div style={{ pointerEvents: 'auto' }}>
           <AstVectorMediaPlayer
             ref={playerRef}
             preset="church-tour"
-            autoPlay={true}
+            autoPlay={gameMode === 'tour'}
             height="clamp(260px, 48vw + 40px, 460px)"
             allowPresetSwitch={false}
             embedded={true}
@@ -430,7 +474,7 @@ export const SanctuaryPilgrimQuest: React.FC = () => {
               boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
             }}
           >
-            <span>👆 Tap to Enable 3D Orbit / Pan</span>
+            <span>👆 Tap to Interact with Sacred Map</span>
           </div>
         )}
       </div>

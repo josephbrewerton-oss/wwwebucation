@@ -880,7 +880,7 @@ export default function LearningZonePage() {
                 }
               >
                 <AstVectorMediaPlayer
-                  preset={resolvePresetForTopic(selectedSubject, selectedUnit, activeTopic)}
+                  preset={resolvePresetForTopic(selectedSubject, selectedUnit, lessonData?.title)}
                   allowPresetSwitch={true}
                   autoPlay={true}
                   height="540px"
@@ -895,7 +895,7 @@ export default function LearningZonePage() {
                 }
               >
                 <ZeroBloatVectorStudio
-                  initialPreset={resolvePresetForTopic(selectedSubject, selectedUnit, activeTopic)}
+                  initialPreset={resolvePresetForTopic(selectedSubject, selectedUnit, lessonData?.title) as any}
                 />
               </React.Suspense>
             )}

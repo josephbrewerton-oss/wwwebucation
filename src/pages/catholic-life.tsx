@@ -741,8 +741,30 @@ export default function CatholicLifePage(): React.JSX.Element {
                       gap: '4px',
                     }}
                   >
-                    <span>{overviewPlayerExpanded ? '⏹️ Hide 3D Stage' : '▶️ Preview 3D Stage'}</span>
+                    <span>{overviewPlayerExpanded ? '⏹️ Hide Stage' : '▶️ Preview Stage'}</span>
                   </button>
+
+                  {/* Simulator Deep Link */}
+                  <Link
+                    to="/simulator?preset=church-tour"
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '8px',
+                      background: 'rgba(99, 102, 241, 0.18)',
+                      color: '#a5b4fc',
+                      border: '1px solid rgba(99, 102, 241, 0.4)',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      textDecoration: 'none',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      transition: 'all 0.15s ease',
+                    }}
+                    title="Open full interactive cartridge in AST Vector Simulator"
+                  >
+                    <span>🎮 Open in Simulator ↗</span>
+                  </Link>
 
                   <button
                     type="button"
@@ -766,8 +788,8 @@ export default function CatholicLifePage(): React.JSX.Element {
                 </div>
               </div>
 
-              {/* Live Vector Player (Always visible on all viewports) */}
-              <div className="relative block">
+              {/* Live Vector Player (Responsive to mobile toggle) */}
+              <div className={overviewPlayerExpanded ? 'relative block' : 'relative hidden md:block'}>
                 {/* Touch Safeguard Bar for Mobile */}
                 <div
                   className="md:hidden"
@@ -798,7 +820,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                       cursor: 'pointer',
                     }}
                   >
-                    {overviewTouchLock ? '🔒 Page Scroll Safe' : '👆 3D Interactive'}
+                    {overviewTouchLock ? '🔒 Page Scroll Safe' : '👆 Map Interactive'}
                   </button>
                 </div>
 
@@ -833,11 +855,79 @@ export default function CatholicLifePage(): React.JSX.Element {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                         pointerEvents: 'auto',
                       }}
-                      title="Tap to enable 3D Orbit touch interactions"
+                      title="Tap to enable interactive touch controls on the sanctuary floor plan"
                     >
-                      <span>👆 Tap to Enable 3D Orbit</span>
+                      <span>👆 Tap to Interact with Sacred Map</span>
                     </div>
                   )}
+                </div>
+
+                {/* Sacred Spaces Quick Select Chips */}
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    padding: '8px 10px',
+                    background: '#0b1120',
+                    border: '1px solid #1e293b',
+                    borderTop: 'none',
+                    borderRadius: '0 0 10px 10px',
+                    overflowX: 'auto',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, paddingRight: '4px' }}>
+                    Quick Stations:
+                  </span>
+                  {[
+                    { name: 'Narthex', icon: '🚪' },
+                    { name: 'Nave', icon: '⛪' },
+                    { name: 'Ambo', icon: '📖' },
+                    { name: 'Altar', icon: '✝️' },
+                    { name: 'Tabernacle', icon: '🕯️' },
+                    { name: 'Lady Chapel', icon: '🌹' },
+                  ].map((station) => (
+                    <button
+                      key={station.name}
+                      type="button"
+                      onClick={() => handleTabChange('church-tour')}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: '#1e293b',
+                        border: '1px solid #334155',
+                        color: '#cbd5e1',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title={`Jump to ${station.name} in Sanctuary Pilgrim Quest`}
+                    >
+                      <span>{station.icon}</span>
+                      <span>{station.name}</span>
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    onClick={() => handleTabChange('church-tour')}
+                    style={{
+                      marginLeft: 'auto',
+                      padding: '3px 8px',
+                      borderRadius: '6px',
+                      background: 'rgba(56, 189, 248, 0.15)',
+                      border: '1px solid rgba(56, 189, 248, 0.4)',
+                      color: '#38bdf8',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Start Pilgrim Quest &rarr;
+                  </button>
                 </div>
               </div>
             </div>
@@ -1043,12 +1133,33 @@ export default function CatholicLifePage(): React.JSX.Element {
             {/* Embedded AST Vector Media Player for CST & Virtues */}
             {cstPlayerExpanded && (
               <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #15803d', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-                <div style={{ background: '#064e3b', padding: '10px 16px', borderBottom: '1px solid #047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                <div style={{ background: '#064e3b', padding: '10px 16px', borderBottom: '1px solid #047857', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', flexWrap: 'wrap', gap: '8px' }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
                     <span>✨</span>
                     <span>AST Vector Interactive Engine: Catholic Social Teaching &amp; Virtues</span>
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: '#a7f3d0', fontFamily: 'monospace' }}>Cartridge: cst-virtues.ast</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#a7f3d0', fontFamily: 'monospace' }}>Cartridge: cst-virtues.ast</span>
+                    <Link
+                      to="/simulator?preset=cst-virtues"
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: 'rgba(255, 255, 255, 0.15)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        color: '#ffffff',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                      }}
+                      title="Open in Simulator"
+                    >
+                      <span>🎮 Simulator ↗</span>
+                    </Link>
+                  </div>
                 </div>
                 <AstVectorMediaPlayer
                   preset="cst-virtues"
@@ -1576,12 +1687,33 @@ export default function CatholicLifePage(): React.JSX.Element {
                 {/* Embedded AST Vector Media Player for First Communion */}
                 {firstCommunionPlayerExpanded && (
                   <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #ca8a04', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-                    <div style={{ background: '#431407', padding: '10px 16px', borderBottom: '1px solid #78350f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                    <div style={{ background: '#431407', padding: '10px 16px', borderBottom: '1px solid #78350f', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', flexWrap: 'wrap', gap: '8px' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
                         <span>✨</span>
                         <span>AST Vector Interactive Engine: First Holy Communion &amp; Eucharistic Adoration</span>
                       </span>
-                      <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: first-communion.ast</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>Cartridge: first-communion.ast</span>
+                        <Link
+                          to="/simulator?preset=first-communion"
+                          style={{
+                            padding: '3px 8px',
+                            borderRadius: '6px',
+                            background: 'rgba(255, 255, 255, 0.15)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            color: '#ffffff',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                          title="Open in Simulator"
+                        >
+                          <span>🎮 Simulator ↗</span>
+                        </Link>
+                      </div>
                     </div>
                     <AstVectorMediaPlayer
                       preset="first-communion"

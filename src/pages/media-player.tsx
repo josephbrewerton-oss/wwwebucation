@@ -963,7 +963,56 @@ export default function MediaPlayerPage(): React.JSX.Element {
           </button>
         </div>
 
-        {/* Full Sheet Curriculum Suite Callout Banner for Phonics and Languages */}
+        {/* Full Sheet Curriculum Suite Callout Banner for Catholic Life, Phonics and Languages */}
+        {(activePreset === 'church-tour' || activePreset === 'first-communion' || activePreset === 'cst-virtues' || activePreset === 'order-of-the-mass') && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderRadius: '12px',
+              background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.22) 0%, rgba(30, 58, 138, 0.35) 100%)',
+              border: '2px solid #6366f1',
+              marginBottom: '1.25rem',
+              flexWrap: 'wrap',
+              gap: '10px',
+              boxShadow: '0 4px 16px rgba(99, 102, 241, 0.25)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.6rem' }}>⛪</span>
+              <div>
+                <div style={{ fontWeight: 900, color: '#a5b4fc', fontSize: '0.92rem' }}>
+                  Linked to Catholic Life: {activePreset === 'church-tour' ? 'Sanctuary Pilgrim Quest' : activePreset === 'first-communion' ? 'First Holy Communion Lab' : activePreset === 'cst-virtues' ? 'Catholic Social Teaching & Virtues' : 'Order of the Mass Guide'}
+                </div>
+                <div style={{ color: '#cbd5e1', fontSize: '0.8rem', marginTop: '2px' }}>
+                  Explore interactive theological checkpoints, liturgical artifacts, Latin prayer guides, and earn your official Sanctuary Pilgrim Certificate.
+                </div>
+              </div>
+            </div>
+            <Link
+              to={`/catholic-life?tab=${activePreset === 'church-tour' ? 'church-tour' : activePreset === 'first-communion' ? 'first-communion' : activePreset === 'cst-virtues' ? 'cst-virtues' : 'mass'}`}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                background: '#4f46e5',
+                color: '#ffffff',
+                fontWeight: 900,
+                fontSize: '0.84rem',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(99, 102, 241, 0.4)',
+              }}
+            >
+              <span>🏛️ Return to Catholic Sanctuary</span>
+              <span>➔</span>
+            </Link>
+          </div>
+        )}
+
         {activePreset === 'phonics-lab' && (
           <div
             style={{
