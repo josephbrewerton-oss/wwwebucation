@@ -309,6 +309,21 @@
         this.setupCatholicRitesInteractivity();
       }
 
+      // 9bh. Nicene Creed Trinitarian Dial Subsystem
+      if (this.stageSvg.querySelector('#creed-trinity-slider') || this.stageSvg.querySelector('#creed-dial-container') || (this.engine.scene && this.engine.scene.id === 'nicene-creed')) {
+        this.setupNiceneCreedInteractivity();
+      }
+
+      // 9bi. Ten Commandments Decalogue Two-Tablet Slider Subsystem
+      if (this.stageSvg.querySelector('#tablet-toggle-knob') || this.stageSvg.querySelector('#tablet-selector-container') || (this.engine.scene && this.engine.scene.id === 'ten-commandments')) {
+        this.setupTenCommandmentsInteractivity();
+      }
+
+      // 9bj. Sacred Objects Category Slider Subsystem
+      if (this.stageSvg.querySelector('#category-slider-knob') || this.stageSvg.querySelector('#sacred-category-track') || (this.engine.scene && this.engine.scene.id === 'sacred-objects')) {
+        this.setupSacredObjectsInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -519,6 +534,48 @@
           this.dragTarget.style.cursor = 'grabbing';
           if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
           this.playAudioTone(523.25, 'triangle', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        // Direct Nicene Creed Slider Knob Drag Mode
+        if (target.id === 'creed-trinity-slider' || target.closest('#creed-trinity-slider')) {
+          e.preventDefault();
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          this.isDragging = true;
+          this.dragTarget = this.stageSvg.querySelector('#creed-trinity-slider') || target;
+          this.dragMode = 'creed-slider';
+          this.dragTarget.style.cursor = 'grabbing';
+          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
+          this.playAudioTone(523.25, 'triangle', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        // Direct Ten Commandments Tablet Toggle Knob Drag Mode
+        if (target.id === 'tablet-toggle-knob' || target.closest('#tablet-toggle-knob')) {
+          e.preventDefault();
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          this.isDragging = true;
+          this.dragTarget = this.stageSvg.querySelector('#tablet-toggle-knob') || target;
+          this.dragMode = 'tablet-knob';
+          this.dragTarget.style.cursor = 'grabbing';
+          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
+          this.playAudioTone(440, 'triangle', 0.08);
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        // Direct Sacred Objects Category Slider Knob Drag Mode
+        if (target.id === 'category-slider-knob' || target.closest('#category-slider-knob')) {
+          e.preventDefault();
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          this.isDragging = true;
+          this.dragTarget = this.stageSvg.querySelector('#category-slider-knob') || target;
+          this.dragMode = 'category-knob';
+          this.dragTarget.style.cursor = 'grabbing';
+          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
+          this.playAudioTone(493.88, 'triangle', 0.08);
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
@@ -742,6 +799,12 @@
           this.handleTimesTablesSplitterDrag(svgPt.x);
         } else if (this.dragMode === 'rite-selector') {
           this.handleRiteSelectorDrag(svgPt.x);
+        } else if (this.dragMode === 'creed-slider') {
+          this.handleCreedSliderDrag(svgPt.x);
+        } else if (this.dragMode === 'tablet-knob') {
+          this.handleTabletKnobDrag(svgPt.x);
+        } else if (this.dragMode === 'category-knob') {
+          this.handleCategoryKnobDrag(svgPt.x);
         } else if (this.dragMode === 'generic') {
           this.handleGenericDrag(this.dragTarget, svgPt);
         }
@@ -799,6 +862,15 @@
         } else if (this.dragMode === 'rite-selector') {
           if (this.dragTarget) this.dragTarget.style.cursor = 'ew-resize';
           this.finishRiteSelectorDrag();
+        } else if (this.dragMode === 'creed-slider') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'ew-resize';
+          this.finishCreedSliderDrag();
+        } else if (this.dragMode === 'tablet-knob') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'ew-resize';
+          this.finishTabletKnobDrag();
+        } else if (this.dragMode === 'category-knob') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'ew-resize';
+          this.finishCategoryKnobDrag();
         } else if (this.dragMode === 'generic') {
           const axis = this.dragTarget.getAttribute('data-gesture-axis') || 'xy';
           this.dragTarget.style.cursor = axis === 'y' ? 'ns-resize' : (axis === 'x' ? 'ew-resize' : 'grab');
@@ -5989,6 +6061,228 @@ ${strokeLines.join('\n')}
       if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
         this.engine.seek(targetT);
       }
+    }
+
+    // =========================================================================
+    // Nicene Creed Trinitarian Articles Dial Subsystem
+    // =========================================================================
+    setupNiceneCreedInteractivity() {
+      if (!this.stageSvg) return;
+      const slider = this.stageSvg.querySelector('#creed-trinity-slider');
+      const track = this.stageSvg.querySelector('#creed-dial-container');
+      if (slider) {
+        slider.style.cursor = 'ew-resize';
+        slider.setAttribute('data-draggable', 'creed-slider');
+      }
+      if (track && !track._hasCreedClicks) {
+        track._hasCreedClicks = true;
+        track.style.cursor = 'pointer';
+        track.addEventListener('pointerdown', (ev) => {
+          if (ev.target.closest('#creed-trinity-slider')) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          const svgPt = this.screenToSvg(ev.clientX, ev.clientY);
+          this.handleCreedSliderClick(svgPt.x);
+        });
+      }
+    }
+
+    handleCreedSliderDrag(svgX) {
+      const minX = 175;
+      const maxX = 585;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const slider = this.stageSvg.querySelector('#creed-trinity-slider');
+      if (slider) slider.setAttribute('transform', `translate(${clampedX.toFixed(1)}, 17)`);
+
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const article = Math.max(1, Math.min(3, Math.round(1 + ratio * 2)));
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        if (this.engine.vars?.creedArticle !== article) {
+          this.engine.setVar('creedArticle', article);
+          const chimes = [523.25, 659.25, 783.99];
+          this.playAudioTone(chimes[article - 1] || 523.25, 'sine', 0.08, 0.18);
+        }
+      }
+      if (this.engine) this.engine.applyBindings(this.engine.progress);
+    }
+
+    handleCreedSliderClick(svgX) {
+      const minX = 175;
+      const maxX = 585;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const article = Math.max(1, Math.min(3, Math.round(1 + ratio * 2)));
+      const targetX = 175 + (article - 1) * 205;
+
+      const slider = this.stageSvg.querySelector('#creed-trinity-slider');
+      if (slider) slider.setAttribute('transform', `translate(${targetX.toFixed(1)}, 17)`);
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        this.engine.setVar('creedArticle', article);
+      }
+      const times = [0.00, 0.45, 0.88];
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(times[article - 1] || 0.00);
+      } else if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+      const chimes = [523.25, 659.25, 783.99];
+      this.playAudioTone(chimes[article - 1] || 523.25, 'sine', 0.12, 0.22);
+      this.createTouchRipple(targetX, 437);
+    }
+
+    finishCreedSliderDrag() {
+      const curArt = (this.engine && this.engine.vars && this.engine.vars.creedArticle) || 1;
+      const targetX = 175 + (curArt - 1) * 205;
+      const slider = this.stageSvg.querySelector('#creed-trinity-slider');
+      if (slider) slider.setAttribute('transform', `translate(${targetX.toFixed(1)}, 17)`);
+      const times = [0.00, 0.45, 0.88];
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(times[curArt - 1] || 0.00);
+      }
+    }
+
+    // =========================================================================
+    // Ten Commandments Decalogue Two-Tablet Slider Subsystem
+    // =========================================================================
+    setupTenCommandmentsInteractivity() {
+      if (!this.stageSvg) return;
+      const knob = this.stageSvg.querySelector('#tablet-toggle-knob');
+      const track = this.stageSvg.querySelector('#tablet-selector-container');
+      if (knob) {
+        knob.style.cursor = 'ew-resize';
+        knob.setAttribute('data-draggable', 'tablet-knob');
+      }
+      if (track && !track._hasTabletClicks) {
+        track._hasTabletClicks = true;
+        track.style.cursor = 'pointer';
+        track.addEventListener('pointerdown', (ev) => {
+          if (ev.target.closest('#tablet-toggle-knob')) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          const svgPt = this.screenToSvg(ev.clientX, ev.clientY);
+          this.handleTabletKnobClick(svgPt.x);
+        });
+      }
+    }
+
+    handleTabletKnobDrag(svgX) {
+      const minX = 260;
+      const maxX = 530;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const knob = this.stageSvg.querySelector('#tablet-toggle-knob');
+      if (knob) knob.setAttribute('transform', `translate(${clampedX.toFixed(1)}, 17)`);
+
+      const tablet = clampedX < 395 ? 1 : 2;
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        if (this.engine.vars?.selectedTablet !== tablet) {
+          this.engine.setVar('selectedTablet', tablet);
+          this.playAudioTone(tablet === 1 ? 440 : 554.37, 'sine', 0.08, 0.18);
+        }
+      }
+      if (this.engine) this.engine.applyBindings(this.engine.progress);
+    }
+
+    handleTabletKnobClick(svgX) {
+      const tablet = svgX < 395 ? 1 : 2;
+      const targetX = tablet === 1 ? 260 : 530;
+      const knob = this.stageSvg.querySelector('#tablet-toggle-knob');
+      if (knob) knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 17)`);
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        this.engine.setVar('selectedTablet', tablet);
+      }
+      const times = [0.20, 0.70];
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(times[tablet - 1] || 0.20);
+      } else if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+      this.playAudioTone(tablet === 1 ? 440 : 554.37, 'sine', 0.12, 0.22);
+      this.createTouchRipple(targetX, 437);
+    }
+
+    finishTabletKnobDrag() {
+      const curTab = (this.engine && this.engine.vars && this.engine.vars.selectedTablet) || 1;
+      const targetX = curTab === 1 ? 260 : 530;
+      const knob = this.stageSvg.querySelector('#tablet-toggle-knob');
+      if (knob) knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 17)`);
+      const times = [0.20, 0.70];
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(times[curTab - 1] || 0.20);
+      }
+    }
+
+    // =========================================================================
+    // Sacred Objects Category Slider Subsystem
+    // =========================================================================
+    setupSacredObjectsInteractivity() {
+      if (!this.stageSvg) return;
+      const knob = this.stageSvg.querySelector('#category-slider-knob');
+      const track = this.stageSvg.querySelector('#sacred-category-track') || (knob && knob.parentNode);
+      if (knob) {
+        knob.style.cursor = 'ew-resize';
+        knob.setAttribute('data-draggable', 'category-knob');
+      }
+      if (track && !track._hasSacredClicks) {
+        track._hasSacredClicks = true;
+        track.style.cursor = 'pointer';
+        track.addEventListener('pointerdown', (ev) => {
+          if (ev.target.closest('#category-slider-knob')) return;
+          ev.preventDefault();
+          ev.stopPropagation();
+          const svgPt = this.screenToSvg(ev.clientX, ev.clientY);
+          this.handleCategoryKnobClick(svgPt.x);
+        });
+      }
+    }
+
+    handleCategoryKnobDrag(svgX) {
+      const minX = 80;
+      const maxX = 640;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const knob = this.stageSvg.querySelector('#category-slider-knob');
+      if (knob) knob.setAttribute('transform', `translate(${clampedX.toFixed(1)}, 11)`);
+
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const catIdx = Math.max(0, Math.min(4, Math.round(ratio * 4)));
+      const milestones = [0.00, 0.20, 0.44, 0.68, 0.88];
+      if (this.engine && typeof this.engine.seek === 'function' && !this.engine.isPlaying) {
+        this.engine.seek(milestones[catIdx]);
+      } else if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+    }
+
+    handleCategoryKnobClick(svgX) {
+      const minX = 80;
+      const maxX = 640;
+      const clampedX = Math.max(minX, Math.min(maxX, svgX));
+      const ratio = (clampedX - minX) / (maxX - minX);
+      const catIdx = Math.max(0, Math.min(4, Math.round(ratio * 4)));
+      const targetX = 80 + catIdx * ((640 - 80) / 4);
+
+      const knob = this.stageSvg.querySelector('#category-slider-knob');
+      if (knob) knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 11)`);
+
+      const milestones = [0.00, 0.20, 0.44, 0.68, 0.88];
+      if (this.engine && typeof this.engine.seek === 'function') {
+        this.engine.seek(milestones[catIdx]);
+      }
+      this.playAudioTone(440 + catIdx * 65, 'sine', 0.1, 0.2);
+      this.createTouchRipple(targetX, 451);
+    }
+
+    finishCategoryKnobDrag() {
+      const t = (this.engine && this.engine.progress) || 0;
+      const milestones = [0.00, 0.20, 0.44, 0.68, 0.88];
+      let closestIdx = 0;
+      let minDiff = 999;
+      milestones.forEach((m, idx) => {
+        const diff = Math.abs(t - m);
+        if (diff < minDiff) { minDiff = diff; closestIdx = idx; }
+      });
+      const targetX = 80 + closestIdx * ((640 - 80) / 4);
+      const knob = this.stageSvg.querySelector('#category-slider-knob');
+      if (knob) knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 11)`);
     }
   }
 

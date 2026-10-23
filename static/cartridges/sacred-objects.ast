@@ -10,7 +10,7 @@
   ))
 
   (:gestures (
-    (:draggable :target "#category-slider-knob" :axis "x" :min 80 :max 680)
+    (:draggable :target "#category-slider-knob" :axis "x" :min 80 :max 640)
   ))
 
   (:subtitles (
