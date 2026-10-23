@@ -172,7 +172,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "ten-commandments",
-    "type": "Sim",
+    "type": "Slide",
     "label": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS2-RE-015",
@@ -202,7 +202,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "sacred-objects",
-    "type": "Sim",
+    "type": "Slide",
     "label": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS2-RE-017",
@@ -277,7 +277,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "catholic-rites",
-    "type": "Sim",
+    "type": "Slide",
     "label": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS3-RE-011",
@@ -307,7 +307,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "latin-mass-prayers",
-    "type": "Sim",
+    "type": "Slide",
     "label": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS3-RE-013",
@@ -322,7 +322,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "nicene-creed",
-    "type": "Sim",
+    "type": "Slide",
     "label": "The Nicene & Apostles' Creed: Credo in Unum Deum",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS3-RE-014",

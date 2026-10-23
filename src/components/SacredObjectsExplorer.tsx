@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
 import { SACRED_OBJECTS, SacredObject } from '../data/catholic';
 import { speakInLanguage } from '../engine/translationService';
 import {
@@ -38,10 +38,44 @@ const LATIN_NAMES: Record<string, string> = {
   aspergillum: 'Aspergillum et Aspersorium',
 };
 
+const OBJECT_KEYFRAME_MAP: Record<string, number> = {
+  chalice: 0.00,
+  paten: 0.00,
+  ciborium: 0.00,
+  corporal: 0.20,
+  purificator: 0.20,
+  pall: 0.20,
+  'sanctuary-lamp': 0.44,
+  tabernacle: 0.44,
+  'altar-bells': 0.44,
+  cruets: 0.44,
+  mensa: 0.44,
+  'altar-stone': 0.44,
+  'thurible-boat': 0.44,
+  aspergillum: 0.44,
+  alb: 0.68,
+  cincture: 0.68,
+  stole: 0.68,
+  chasuble: 0.68,
+  'humeral-veil': 0.68,
+  monstrance: 0.88,
+};
+
+const MILESTONES = [
+  { t: 0.00, title: 'Sacred Vessels', icon: '🏆', desc: 'Chalice, Paten, Ciborium' },
+  { t: 0.20, title: 'Sacred Linens', icon: '🕊️', desc: 'Corporal, Purificator, Pall' },
+  { t: 0.44, title: 'Appointments', icon: '🕯️', desc: 'Sanctuary Lamp, Bells, Cruets' },
+  { t: 0.68, title: 'Vestments', icon: '👑', desc: 'Alb, Stole, Chasuble' },
+  { t: 0.88, title: 'The Monstrance', icon: '✨', desc: 'Ostensorium & Adoration' },
+];
+
 export default function SacredObjectsExplorer() {
   const [activeCategory, setActiveCategory] = useState<'All' | 'Vessel' | 'Linen' | 'Sanctuary' | 'Vestment'>('All');
   const [selectedObjectId, setSelectedObjectId] = useState<string>('chalice');
   const [playerExpanded, setPlayerExpanded] = useState<boolean>(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+  const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const playerRef = useRef<AstVectorMediaPlayerHandle>(null);
   
   // Interactive Quiz State
   const [quizIndex, setQuizIndex] = useState<number>(0);
@@ -59,6 +93,41 @@ export default function SacredObjectsExplorer() {
     playClickTone();
     triggerHapticClick();
     setSelectedObjectId(id);
+    const targetT = OBJECT_KEYFRAME_MAP[id] ?? 0.00;
+    if (playerRef.current) {
+      playerRef.current.seek(targetT);
+    }
+  };
+
+  const handleSelectMilestone = (t: number) => {
+    playClickTone();
+    triggerHapticClick();
+    if (playerRef.current) {
+      playerRef.current.seek(t);
+    }
+  };
+
+  const handleTogglePlay = () => {
+    playClickTone();
+    triggerHapticClick();
+    if (playerRef.current) {
+      if (isPlaying) {
+        playerRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        playerRef.current.play();
+        setIsPlaying(true);
+      }
+    }
+  };
+
+  const handleSetSpeed = (speed: number) => {
+    playClickTone();
+    triggerHapticClick();
+    setPlaybackSpeed(speed);
+    if (playerRef.current && typeof playerRef.current.setSpeed === 'function') {
+      playerRef.current.setSpeed(speed);
+    }
   };
 
   const handleSpeak = (text: string, lang = 'en') => {
@@ -188,7 +257,7 @@ export default function SacredObjectsExplorer() {
       </div>
 
       {/* Embedded AST Vector Media Player */}
-      {playerExpanded && (
+      {playerExpanded ? (
         <div
           style={{
             borderRadius: '14px',
@@ -199,6 +268,7 @@ export default function SacredObjectsExplorer() {
             boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
           }}
         >
+          {/* Header Bar: Status & Direct Controls */}
           <div
             style={{
               background: '#1e1b4b',
@@ -207,23 +277,179 @@ export default function SacredObjectsExplorer() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '8px',
               fontSize: '0.8rem',
             }}
           >
-            <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
               <span>✨</span>
               <span>AST Vector Interactive Engine: Sacred Sanctuary Objects &amp; Vestments</span>
-            </span>
-            <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>
-              Cartridge: sacred-objects.ast
-            </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '0.75rem', color: '#fde68a', fontFamily: 'monospace' }}>
+                OAK-KS2-RE-017
+              </span>
+              <button
+                type="button"
+                onClick={handleTogglePlay}
+                style={{
+                  background: isPlaying ? '#eab308' : 'rgba(255, 255, 255, 0.15)',
+                  color: isPlaying ? '#0f172a' : '#ffffff',
+                  border: '1px solid rgba(255, 255, 255, 0.25)',
+                  borderRadius: '6px',
+                  padding: '3px 8px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                {isPlaying ? '⏸ Pause' : '▶ Play'}
+              </button>
+            </div>
           </div>
-          <AstVectorMediaPlayer
-            preset="sacred-objects"
-            height="clamp(240px, 45vw + 40px, 420px)"
-            allowPresetSwitch={false}
-            embedded={true}
-          />
+
+          {/* Keyframe Milestones Toolbar */}
+          <div
+            style={{
+              background: '#0f172a',
+              padding: '8px 12px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', overflowX: 'auto', paddingBottom: '2px' }}>
+              <span style={{ fontSize: '0.72rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', marginRight: '4px' }}>
+                Seek:
+              </span>
+              {MILESTONES.map((m) => (
+                <button
+                  key={m.t}
+                  type="button"
+                  onClick={() => handleSelectMilestone(m.t)}
+                  style={{
+                    background: 'rgba(30, 41, 59, 0.8)',
+                    color: '#e2e8f0',
+                    border: '1px solid rgba(255, 255, 255, 0.12)',
+                    borderRadius: '6px',
+                    padding: '3px 8px',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={m.desc}
+                >
+                  <span>{m.icon}</span>
+                  <span>{m.title}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Playback Speed Tuple */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94a3b8', fontWeight: 700 }}>Speed:</span>
+              {[0.5, 0.75, 1.0, 1.5].map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => handleSetSpeed(s)}
+                  style={{
+                    background: playbackSpeed === s ? '#facc15' : 'rgba(30, 41, 59, 0.6)',
+                    color: playbackSpeed === s ? '#0f172a' : '#cbd5e1',
+                    border: '1px solid ' + (playbackSpeed === s ? '#facc15' : 'rgba(255, 255, 255, 0.1)'),
+                    borderRadius: '4px',
+                    padding: '2px 6px',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                  }}
+                >
+                  {s}×
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div style={{ position: 'relative', width: '100%', pointerEvents: 'auto' }}>
+            <AstVectorMediaPlayer
+              ref={playerRef}
+              preset="sacred-objects"
+              speed={playbackSpeed}
+              autoPlay={isPlaying}
+              height="clamp(240px, 45vw + 40px, 420px)"
+              allowPresetSwitch={false}
+              embedded={true}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Graceful Collapsed State (No Blank Rectangle) */
+        <div
+          style={{
+            background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.4) 0%, rgba(15, 23, 42, 0.6) 100%)',
+            border: '1px dashed #ca8a04',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '1.4rem' }}>🏺</span>
+            <div>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#fef08a' }}>
+                AST Vector Apparatus Collapsed
+              </div>
+              <div style={{ fontSize: '0.76rem', color: '#94a3b8' }}>
+                5 keyframe milestones ready (Vessels, Linens, Appointments, Vestments, Monstrance)
+              </div>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button
+              type="button"
+              onClick={() => setPlayerExpanded(true)}
+              style={{
+                background: '#ca8a04',
+                color: '#1e1b4b',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+              }}
+            >
+              ▶ Open Interactive Simulation
+            </button>
+            <Link
+              to="/media-player?preset=sacred-objects"
+              style={{
+                background: 'rgba(255, 255, 255, 0.12)',
+                color: '#ffffff',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                borderRadius: '6px',
+                padding: '6px 12px',
+                fontSize: '0.78rem',
+                fontWeight: 700,
+                textDecoration: 'none',
+              }}
+            >
+              📺 Full Player ↗
+            </Link>
+          </div>
         </div>
       )}
 

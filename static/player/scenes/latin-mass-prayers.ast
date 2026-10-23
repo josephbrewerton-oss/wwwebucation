@@ -1,57 +1,47 @@
-(:scene :id "latin-mass-prayers" :type "Sim" :oak-id "OAK-KS3-RE-013" :oak-unit "ks3-re-catholic-traditional-latin-prayers" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "latin-mass-prayers" :type "Slide" :oak-id "OAK-KS3-RE-013" :oak-unit "ks3-re-catholic-traditional-latin-prayers" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
-    (:var :name "selectedPrayer" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Selected Latin Prayer (1: Pater Noster, 2: Ave Maria, 3: Sanctus, 4: Agnus Dei)")
-    (:var :name "candleFlicker" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Monastery Chapel Candle Illumination")
-    (:var :name "neumePosition" :val 0.0 :min 0.0 :max 100.0 :step 1.0 :label "Gregorian Neume Scan Position")
+    (:var :name "candleFlicker" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Chapel Candle Glow")
   ))
 
-  (:camera :mode "2d" :viewBox "0 0 800 480")
+  (:inputs (
+    (:slider :var "candleFlicker" :label "Candle Light" :min 0.2 :max 2.0 :step 0.1)
+  ))
 
   (:gestures (
-    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 660
-      (:bind-var "selectedPrayer" :map "linear" :from-min 140 :from-max 660 :to-min 1.0 :to-max 4.0)
-    )
-    (:draggable :target "#cantor-quill-node" :axis "x" :min 200 :max 600
-      (:bind-var "neumePosition" :map "linear" :from-min 200 :from-max 600 :to-min 0.0 :to-max 100.0)
-    )
+    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 660)
   ))
 
   (:subtitles (
-    (:start 0.0 :end 4.5 :text "Latin has been the universal mother tongue of the Roman Catholic Church for nearly two thousand years.")
-    (:start 4.5 :end 9.0 :text "Praying in Latin unites Catholics across every country, culture, and continent in one voice of prayer.")
-    (:start 9.0 :end 14.0 :text "Gregorian Chant, written on a 4-line musical staff with square neumes, is the Church's native sacred music.")
-    (:start 14.0 :end 19.5 :text "From the 'Pater Noster' taught by Christ to the 'Agnus Dei' chanted before Holy Communion, each prayer is steeped in Scripture.")
-    (:start 19.5 :end 24.5 :text "Illuminated manuscripts crafted by medieval monks preserved the Word of God with gold leaf, lapis lazuli, and sacred chant.")
-    (:start 24.5 :end 28.0 :text "By learning these foundational prayers, we step into the living river of Catholic sacred tradition.")
+    (:start 0.00 :end 0.20 :en "Latin has been the universal mother tongue of the Roman Catholic Church for nearly two thousand years." :es "El latín ha sido la lengua materna universal de la Iglesia Católica Romana durante casi dos mil años." :la "Lingua Latina est lingua materna universalis Ecclesiae Catholicae per saecula fideliter custodita.")
+    (:start 0.20 :end 0.45 :en "Praying in Latin unites Catholics across every country, culture, and continent in one shared voice of prayer." :es "Orar en latín une a los católicos de cada país, cultura y continente en una sola voz sagrada." :la "Oratio Latina catholicos omnium gentium et linguarum in unam vocem orantem coniungit.")
+    (:start 0.45 :end 0.70 :en "Gregorian Chant, written on a 4-line musical staff with square neumes, is the Church's native sacred music." :es "El canto gregoriano, escrito en tetragrama con neumas cuadrados, es la música sagrada propia de la Iglesia." :la "Cantus Gregorianus notis quadratis exaratus propria musica sacra Ecclesiae Romanae est.")
+    (:start 0.70 :end 0.88 :en "From the 'Pater Noster' taught by Christ to the 'Agnus Dei' chanted before Holy Communion, each prayer is steeped in Scripture." :es "Desde el 'Pater Noster' hasta el 'Agnus Dei' antes de la Comunión, cada oración brota de la Escritura." :la "A Pater Noster usque ad Agnus Dei ante sacram communionem omnis oratio sacris Scripturis abundat.")
+    (:start 0.88 :end 1.00 :en "By learning these foundational prayers, we step into the living river of Catholic sacred tradition." :es "Al aprender estas oraciones fundamentales, entramos en el río vivo de la tradición católica." :la "His orationibus ediscendis in vivum flumen sacrae traditionis catholicae ingredimur.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. The Universal Sacred Tongue (Lingua Latina)" :rule "Lingua Latina: The timeless sacred language uniting Catholic worship across the earth.")
+    (:t 0.20 :title "2. Pater Noster (The Lord's Prayer)" :rule "Oratio Dominica: The prayer taught by Our Lord Jesus Christ Himself (Matthew 6:9-13).")
+    (:t 0.45 :title "3. Ave Maria (The Angelic Salutation)" :rule "Salutatio Angelica: Fulfilling Luke 1:28, 42 in filial love for the Mother of God.")
+    (:t 0.70 :title "4. Sanctus & Agnus Dei (Liturgical Chant)" :rule "Musica Sacra: Chanted by angels in Isaiah 6:3 and John the Baptist in John 1:29.")
+    (:t 0.88 :title "5. Gregorian Chant & Sacred Neumes" :rule "Cantus Gregorianus: Prayer sung with reverence, beauty, and solemn theological depth.")
   ))
 
   (:interactive (
-    (:checkpoint :at 0.35
-      (:prompt "What does the Latin phrase 'Pater Noster, qui es in caelis' translate to in English?")
-      (:options
-        ("Our Father, who art in heaven" :correct true)
-        ("Hail Mary, full of grace" :correct false)
-        ("Glory be to the Father" :correct false)
-        ("Lamb of God, who takest away the sins of the world" :correct false)
-      )
-      (:explanation "'Pater Noster' is the Latin title and opening of the Lord's Prayer given by Jesus Christ in the Gospel of Matthew.")
-    )
-    (:checkpoint :at 0.72
-      (:prompt "How many lines are traditionally used in a medieval Gregorian Chant musical staff?")
-      (:options
-        ("4 lines (with square neume notation)" :correct true)
-        ("5 lines (modern musical staff)" :correct false)
-        ("12 lines" :correct false)
-        ("Chant had no written notes at all" :correct false)
-      )
-      (:explanation "Gregorian chant is historically written on a 4-line staff with Do or Fa clefs and square notes called neumes (developed by Guido d'Arezzo).")
-    )
+    (:checkpoint :t 0.35
+      :prompt "What does the Latin phrase 'Pater Noster, qui es in caelis' translate to in English?"
+      :options ("Our Father, who art in heaven" "Hail Mary, full of grace" "Glory be to the Father" "Lamb of God, who takest away the sins of the world")
+      :answer 0
+      :explanation "'Pater Noster, qui es in caelis' is the opening phrase of the Lord's Prayer in Latin, taught by Jesus Christ in Matthew 6:9.")
+    (:checkpoint :t 0.75
+      :prompt "Why does the Catholic Church hold Gregorian Chant in highest esteem for sacred liturgy (Sacrosanctum Concilium 116)?"
+      :options ("Because it is specially suited to the Roman liturgy and directs the soul to God without distraction" "Because other instruments were invented only recently" "Because modern melodies are forbidden entirely" "Purely as an archaeological museum artifact")
+      :answer 0
+      :explanation "Vatican II (Sacrosanctum Concilium §116) affirms Gregorian chant as 'specially suited to the Roman liturgy' and therefore gives it 'pride of place in liturgical services'.")
   ))
 
   (:bindings (
-    (:target "#candle-halo" :attr "opacity" :expr "0.4 + 0.35 * candleFlicker")
-    (:target "#candle-halo" :attr "r" :expr "35 + 15 * candleFlicker")
-    (:target "#chant-tracker" :attr "transform" :expr "'translate(' + (neumePosition * 3.5) + ', 0)'")
-    (:target "#quill-glow" :attr "opacity" :expr "0.5 + 0.4 * sin(t * 3.0)")
+    (:target "#manuscript-glow" :attr "opacity" :expr "0.4 + 0.35 * (vars.candleFlicker || 1.0)")
+    (:target "#neume-staff" :attr "opacity" :expr "t >= 0.40 ? 1.0 : 0.7")
   ))
 )
