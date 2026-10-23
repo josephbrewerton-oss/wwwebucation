@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import AstVectorMediaPlayer, { AstVectorMediaPlayerHandle } from './AstVectorMediaPlayer';
 import LiturgicalMisconceptionsExplorer from './LiturgicalMisconceptionsExplorer';
 import {
   LITURGICAL_RITE_FAMILIES,
@@ -11,7 +11,25 @@ import {
   SuiIurisChurch,
 } from '../data/catholic/catholicRitesData';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
-import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
+import { playSuccessChime, triggerHapticSuccess, playClickTone, triggerHapticClick } from '../services/soundHaptics';
+
+export const RITE_MILESTONES = [
+  { riteNum: 1, t: 0.00, id: 'latin', name: '1. Roman (Latin)', tag: 'Western (>1.3B)', icon: '🏛️', color: '#2563eb' },
+  { riteNum: 2, t: 0.20, id: 'byzantine', name: '2. Byzantine', tag: '14 Churches', icon: '✨', color: '#d97706' },
+  { riteNum: 3, t: 0.38, id: 'alexandrian', name: '3. Alexandrian', tag: 'Coptic & Ge’ez', icon: '🇪🇬', color: '#059669' },
+  { riteNum: 4, t: 0.56, id: 'antiochene', name: '4. Antiochian', tag: 'Maronite & Syriac', icon: '🇱🇧', color: '#dc2626' },
+  { riteNum: 5, t: 0.74, id: 'chaldean', name: '5. Chaldean', tag: 'Mesopotamia & India', icon: '🇮🇳', color: '#7c3aed' },
+  { riteNum: 6, t: 0.90, id: 'armenian', name: '6. Armenian', tag: 'Cilicia (AD 301)', icon: '🇦🇲', color: '#ea580c' },
+];
+
+export const RITE_ID_MAP: Record<string, typeof RITE_MILESTONES[0]> = {
+  latin: RITE_MILESTONES[0],
+  byzantine: RITE_MILESTONES[1],
+  alexandrian: RITE_MILESTONES[2],
+  antiochene: RITE_MILESTONES[3],
+  chaldean: RITE_MILESTONES[4],
+  armenian: RITE_MILESTONES[5],
+};
 
 interface CatholicRitesExplorerProps {
   theme?: 'dark' | 'light';
@@ -20,7 +38,12 @@ interface CatholicRitesExplorerProps {
 export default function CatholicRitesExplorer({
   theme = 'light',
 }: CatholicRitesExplorerProps): React.JSX.Element {
-  const [showPlayer, setShowPlayer] = useState<boolean>(false);
+  const [showPlayer, setShowPlayer] = useState<boolean>(true);
+  const [activeRiteMilestone, setActiveRiteMilestone] = useState<number>(1);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1.0);
+  const [isPlayerPlaying, setIsPlayerPlaying] = useState<boolean>(false);
+  const playerRef = useRef<AstVectorMediaPlayerHandle>(null);
+
   const [selectedRiteId, setSelectedRiteId] = useState<string>('all');
   const [selectedRegion, setSelectedRegion] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -91,6 +114,31 @@ export default function CatholicRitesExplorer({
   const handleStopVoice = () => {
     cancelSpeech();
     setSpeakingIndex(null);
+  };
+
+  const handleSeekRite = (riteNum: number, targetT: number, riteId?: string) => {
+    setActiveRiteMilestone(riteNum);
+    if (riteId) setSelectedRiteId(riteId);
+    if (playerRef.current) {
+      playerRef.current.seek(targetT);
+      playerRef.current.postToPlayer({ type: 'SET_VAR', name: 'selectedRite', val: riteNum });
+    }
+    playSuccessChime();
+    triggerHapticSuccess();
+  };
+
+  const handleTogglePlay = () => {
+    if (playerRef.current) {
+      playerRef.current.togglePlay();
+      setIsPlayerPlaying((prev) => !prev);
+    }
+  };
+
+  const handleSetSpeed = (spd: number) => {
+    setPlaybackSpeed(spd);
+    if (playerRef.current) {
+      playerRef.current.setSpeed(spd);
+    }
   };
 
   const selectedComparison = LITURGICAL_COMPARISONS.find((c) => c.id === selectedComparisonId) || LITURGICAL_COMPARISONS[0];
@@ -199,14 +247,101 @@ export default function CatholicRitesExplorer({
       {/* Embedded AST Vector Media Player for Catholic Rites */}
       {showPlayer && (
         <div style={{ borderRadius: '14px', overflow: 'hidden', border: '2px solid #2563eb', background: '#090e1a', marginBottom: '2rem', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)' }}>
-          <div style={{ background: '#1e1b4b', padding: '10px 16px', borderBottom: '1px solid #312e81', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+          {/* Header Bar */}
+          <div style={{ background: '#1e1b4b', padding: '10px 16px', borderBottom: '1px solid #312e81', display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.8rem', flexWrap: 'wrap', gap: '8px' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 700, color: '#facc15' }}>
               <span>✨</span>
               <span>AST Vector Interactive Engine: The 24 Catholic Rites &amp; Churches (Omnes Gentes)</span>
             </span>
-            <span style={{ fontSize: '0.75rem', color: '#cbd5e1', fontFamily: 'monospace' }}>Cartridge: catholic-rites.ast</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              {/* Play / Pause Toggle */}
+              <button
+                type="button"
+                onClick={handleTogglePlay}
+                style={{
+                  background: isPlayerPlaying ? '#dc2626' : '#16a34a',
+                  border: 'none',
+                  borderRadius: '6px',
+                  color: '#ffffff',
+                  padding: '4px 10px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                }}
+              >
+                <span>{isPlayerPlaying ? '⏸ Pause' : '▶ Play'}</span>
+              </button>
+              {/* Speed Controls */}
+              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.1)', borderRadius: '6px', overflow: 'hidden' }}>
+                {[0.75, 1.0, 1.5].map((spd) => (
+                  <button
+                    key={spd}
+                    type="button"
+                    onClick={() => handleSetSpeed(spd)}
+                    style={{
+                      background: playbackSpeed === spd ? '#2563eb' : 'transparent',
+                      color: playbackSpeed === spd ? '#ffffff' : '#94a3b8',
+                      border: 'none',
+                      padding: '3px 8px',
+                      fontSize: '0.72rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {spd}x
+                  </button>
+                ))}
+              </div>
+              <span style={{ fontSize: '0.72rem', color: '#cbd5e1', fontFamily: 'monospace' }}>catholic-rites.ast</span>
+            </div>
           </div>
+
+          {/* Interactive Liturgical Family Milestone Quick-Seek Ribbon */}
+          <div style={{ background: 'rgba(15, 23, 42, 0.95)', padding: '10px 14px', borderBottom: '1px solid #1e293b', display: 'flex', alignItems: 'center', gap: '8px', overflowX: 'auto' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.05em', whiteSpace: 'nowrap' }}>
+              Seek Tradition:
+            </span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
+              {RITE_MILESTONES.map((m) => {
+                const isActive = activeRiteMilestone === m.riteNum;
+                return (
+                  <button
+                    key={m.riteNum}
+                    type="button"
+                    onClick={() => handleSeekRite(m.riteNum, m.t, m.id)}
+                    style={{
+                      padding: '5px 11px',
+                      borderRadius: '8px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      border: isActive ? `2px solid ${m.color}` : '1px solid rgba(255,255,255,0.15)',
+                      background: isActive ? `${m.color}33` : 'rgba(255,255,255,0.06)',
+                      color: isActive ? '#fef08a' : '#cbd5e1',
+                      boxShadow: isActive ? `0 0 12px ${m.color}55` : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{m.icon}</span>
+                    <span>{m.name}</span>
+                    <span style={{ fontSize: '0.68rem', color: isActive ? '#fde047' : '#64748b', fontWeight: 500 }}>
+                      ({m.tag})
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <AstVectorMediaPlayer
+            ref={playerRef}
             preset="catholic-rites"
             height="clamp(240px, 45vw + 40px, 420px)"
             allowPresetSwitch={false}
@@ -343,25 +478,31 @@ export default function CatholicRitesExplorer({
               >
                 All 6 Rites (24 Churches)
               </button>
-              {LITURGICAL_RITE_FAMILIES.map((rf) => (
-                <button
-                  key={rf.id}
-                  type="button"
-                  onClick={() => setSelectedRiteId(rf.id)}
-                  style={{
-                    padding: '6px 12px',
-                    borderRadius: '20px',
-                    fontSize: '0.82rem',
-                    fontWeight: 700,
-                    border: selectedRiteId === rf.id ? `2px solid ${rf.colorScheme.border}` : '1px solid #cbd5e1',
-                    background: selectedRiteId === rf.id ? rf.colorScheme.border : '#ffffff',
-                    color: selectedRiteId === rf.id ? '#ffffff' : rf.colorScheme.text,
-                    cursor: 'pointer',
-                  }}
-                >
-                  {rf.name} ({rf.churchesCount})
-                </button>
-              ))}
+              {LITURGICAL_RITE_FAMILIES.map((rf) => {
+                const m = RITE_ID_MAP[rf.id];
+                return (
+                  <button
+                    key={rf.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedRiteId(rf.id);
+                      if (m) handleSeekRite(m.riteNum, m.t);
+                    }}
+                    style={{
+                      padding: '6px 12px',
+                      borderRadius: '20px',
+                      fontSize: '0.82rem',
+                      fontWeight: 700,
+                      border: selectedRiteId === rf.id ? `2px solid ${rf.colorScheme.border}` : '1px solid #cbd5e1',
+                      background: selectedRiteId === rf.id ? rf.colorScheme.border : '#ffffff',
+                      color: selectedRiteId === rf.id ? '#ffffff' : rf.colorScheme.text,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {rf.name} ({rf.churchesCount})
+                  </button>
+                );
+              })}
             </div>
           </div>
 
