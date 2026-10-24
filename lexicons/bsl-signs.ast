@@ -165,10 +165,9 @@
   (sign :id "equal" :word "EQUAL" :cat "stem" :gloss "EQUAL"
     :label "Equals / Same"
     :desc "Both index fingers held parallel horizontally like an equals sign (=)." :aliases ("EQUALS" "SAME" "EQUIVALENT")
-    (kf :idx 1 :label "Parallel Index Bars" :rule "Dominant index placed parallel just above non-dominant index" :tip [-35 0 20] :knuckle [15 10 10] :wrist [75 45 0] :nmf (nmf :mouth "equal" :brows "neutral"))
-    (kf :idx 2 :label "Press Equality" :rule "Both horizontal fingers tap together confirming equality" :tip [-35 15 20] :knuckle [15 25 10] :wrist [75 55 0] :nmf (nmf :mouth "equal" :brows "neutral"))
+    (kf :idx 1 :label "Parallel Index Bars" :rule "Dominant index placed parallel just above non-dominant index" :tip [-35 0 20] :knuckle [15 10 10] :wrist [75 45 0] :shape :point :base-mode :vowel-board :base-shift [0 15 0] :nmf (nmf :mouth "equal" :brows "neutral"))
+    (kf :idx 2 :label "Press Equality":rule "Both horizontal fingers tap together confirming equality":tip [-35 15 20] :knuckle [15 25 10] :wrist [75 55 0] :shape :point :base-mode :vowel-board :base-shift [0 15 0] :nmf (nmf :mouth "equal" :brows "neutral"))
   )
-
   (sign :id "water" :word "WATER" :cat "stem" :gloss "WATER"
     :label "Water / Liquid"
     :desc "Index finger taps side of chin twice (BSL water sign)." :aliases ("LIQUID" "DRINK")
