@@ -210,12 +210,13 @@ const roundTripAst = serializeLexiconToAst(parsedFromDisk);
 const reParsed = parseAstToLexicon(roundTripAst);
 assert(Object.keys(reParsed).length === diskCount, '100% round-trip AST serialization and deserialization fidelity confirmed');
 
-// Storage footprint verification (< 15 KB gzipped for full 68-sign corpus, < 200 bytes/sign invariant)
+// Storage footprint verification (< 24 KB gzipped for full 100-sign corpus, < 200 bytes/sign invariant)
 const gzipped = zlib.gzipSync(astContent);
 const gzippedKb = (gzipped.length / 1024).toFixed(2);
 const bytesPerSign = (gzipped.length / diskCount).toFixed(1);
 console.log(`  📦 Storage footprint: ${gzipped.length} bytes gzipped (${gzippedKb} KB, ${bytesPerSign} bytes/sign)`);
-assert(gzipped.length < 15360, `AST gzipped payload (${gzippedKb} KB) is strictly < 15 KB for 68 signs (99.99% video reduction)`);
+assert(gzipped.length < 24576, `AST gzipped payload (${gzippedKb} KB) is strictly < 24 KB for ${diskCount} signs (99.99% video reduction)`);
+assert(Number(bytesPerSign) < 200, `Storage efficiency (${bytesPerSign} bytes/sign) maintains the < 200 bytes/sign invariant`);
 
 // Deserialization benchmark
 const tAstStart = performance.now();
@@ -256,6 +257,52 @@ assert(serializedTest.includes(':shape :spread'), "Serialized :shape :spread cor
 assert(serializedTest.includes(':shape :v'), "Serialized :shape :v correctly");
 assert(serializedTest.includes(':shape :point'), "Serialized :shape :point correctly");
 
+// ---------------------------------------------------------
+// Test 9: Signature BSL Level 2 / Level 3 Grammar Engine & Spatial Invariants
+// ---------------------------------------------------------
+console.log('\n9. Testing Signature BSL Level 2 / Level 3 Grammar & Spatial Invariants:');
+const { analyzeAndTransformBslGrammar, modulateDirectionalKeyframes, DEFAULT_BSL_LOCI } = await import('../src/utils/bslGrammarEngine');
+
+// 9.1: Timeline Rule - Time indicators fronted
+const timeAnalysis = analyzeAndTransformBslGrammar('The pupil read the book yesterday');
+assert(timeAnalysis.tokens[0].cleanWord === 'YESTERDAY', "Timeline Rule: 'YESTERDAY' fronted to index 0");
+assert(timeAnalysis.tokens[0].role === 'time', "Constituent tagged with role 'time'");
+
+// 9.2: WH-Question Post-Positioning & Furrowed Eyebrow NMF
+const whAnalysis = analyzeAndTransformBslGrammar('What is your name?');
+assert(whAnalysis.sentenceType === 'wh-question', "Sentence categorized as 'wh-question'");
+const lastToken = whAnalysis.tokens[whAnalysis.tokens.length - 1];
+assert(lastToken.cleanWord === 'WHAT', "WH-Question word 'WHAT' placed at end of sentence");
+assert(lastToken.nmf?.eyebrows === 'furrowed', "WH-Question receives furrowed eyebrows NMF");
+
+// 9.3: Negation Post-Predicate Placement & Head Shake NMF
+const negAnalysis = analyzeAndTransformBslGrammar('I do not understand');
+assert(negAnalysis.sentenceType === 'negation', "Sentence categorized as 'negation'");
+const negToken = negAnalysis.tokens.find(t => t.role === 'negation');
+assert(Boolean(negToken), "Negation constituent identified");
+assert(negToken?.nmf?.headTilt === 'shake', "Negation receives synchronized 'shake' headTilt NMF");
+
+// 9.4: Polar (Yes/No) Question Raised Eyebrow NMF
+const polarAnalysis = analyzeAndTransformBslGrammar('Do you understand?');
+assert(polarAnalysis.sentenceType === 'polar-question', "Sentence categorized as 'polar-question'");
+const finalPolarToken = polarAnalysis.tokens[polarAnalysis.tokens.length - 1];
+assert(finalPolarToken.nmf?.eyebrows === 'raised', "Polar question final token receives raised eyebrows NMF");
+
+// 9.5: Directional Verb Spatial Modulation
+const dirAnalysis = analyzeAndTransformBslGrammar('Teacher give pupil book');
+const dirVerbToken = dirAnalysis.tokens.find(t => t.role === 'directional-verb');
+assert(Boolean(dirVerbToken), "Identified directional agreement verb 'GIVE'");
+assert(dirVerbToken?.directionalFrom === 'LOCUS_A' && dirVerbToken?.directionalTo === 'LOCUS_B',
+  "Directional verb trajectory mapped from LOCUS_A (Subject) to LOCUS_B (Recipient)");
+
+// Verify 3D trajectory modulation coordinates
+const giveSign = parsedFromDisk['GIVE'];
+assert(Boolean(giveSign && giveSign.isDirectional), "Sign 'GIVE' has :directional true metadata");
+const modulatedKfs = modulateDirectionalKeyframes(giveSign, DEFAULT_BSL_LOCI.LOCUS_A.coords, DEFAULT_BSL_LOCI.LOCUS_B.coords);
+assert(modulatedKfs.length === giveSign.keyframes.length, "Modulated directional keyframes match sign keyframe count");
+assert(modulatedKfs[0].targetTip.x < 0, "Origin keyframe centers on LOCUS_A (left space, x < 0)");
+assert(modulatedKfs[modulatedKfs.length - 1].targetTip.x > 0, "Destination keyframe terminates on LOCUS_B (right space, x > 0)");
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);
@@ -263,7 +310,7 @@ console.log(`==================================================\n`);
 if (failedTests > 0) {
   process.exit(1);
 } else {
-  console.log('🎉 All BSL In-Vision Interpreter Invariants & Phase 1 Signs Verified!');
+  console.log('🎉 All BSL In-Vision Interpreter Invariants & Level 2/3 Signs Verified!');
   process.exit(0);
 }
 

@@ -19,10 +19,25 @@ import {
   enableUniversalObserver,
   speakCurrentPage,
 } from '../engine/universalDomTranslator';
-import { getBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
+import {
+  getBslEnabled,
+  toggleBsl,
+  subscribeBsl,
+  getSignLanguage,
+  setSignLanguage,
+  getLanguageTuple,
+  setLanguageTuple,
+  subscribeLanguageTuple,
+  openBslSignStudio,
+  SUPPORTED_SIGN_LANGUAGES,
+  SignLanguageCode,
+  LanguageTuple,
+} from '../services/bslGlobalStore';
 
 export default function UniversalTranslatorBar() {
   const [currentLang, setCurrentLang] = useState<string>('en');
+  const [signLang, setSignLang] = useState<SignLanguageCode>(() => getSignLanguage());
+  const [languageTuple, setLanguageTupleState] = useState<LanguageTuple>(() => getLanguageTuple());
   const [bslEnabled, setBslEnabled] = useState<boolean>(() => getBslEnabled());
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isTranslated, setIsTranslated] = useState<boolean>(false);
@@ -34,12 +49,14 @@ export default function UniversalTranslatorBar() {
   // Ensure CSS variable --universal-bar-height is set once or on actual height changes without triggering forced synchronous reflow
   const lastHeightRef = useRef<number>(-1);
 
-  // Synchronize global British Sign Language (BSL) state
+  // Synchronize global British Sign Language (BSL) & Language Tuple state
   useEffect(() => {
-    const unsubscribe = subscribeBsl((enabled) => {
-      setBslEnabled(enabled);
+    const unsubscribeTuple = subscribeLanguageTuple((tuple) => {
+      setLanguageTupleState(tuple);
+      setSignLang(tuple[1]);
+      setBslEnabled(tuple[1] !== 'OFF');
     });
-    return unsubscribe;
+    return unsubscribeTuple;
   }, []);
 
   useEffect(() => {
@@ -212,6 +229,7 @@ export default function UniversalTranslatorBar() {
   const handleLanguageSelect = async (langCode: string) => {
     setCurrentLang(langCode);
     setSavedLanguage(langCode);
+    setLanguageTuple([langCode, signLang]);
 
     if (langCode === 'en') {
       setIsTranslated(false);
@@ -230,6 +248,11 @@ export default function UniversalTranslatorBar() {
     } finally {
       setIsTranslating(false);
     }
+  };
+
+  const handleSignLanguageChange = (newSign: SignLanguageCode) => {
+    setSignLang(newSign);
+    setLanguageTuple([currentLang, newSign]);
   };
 
   const handleToggleOriginal = () => {
@@ -499,32 +522,56 @@ export default function UniversalTranslatorBar() {
               <span className="hidden sm:inline">Listen</span>
             </button>
 
-            {/* British Sign Language (BSL) In-Vision Interpreter Accessible Button */}
-            <button
-              type="button"
-              id="universal-bsl-toggle-btn"
-              onClick={() => toggleBsl()}
-              style={{
-                background: bslEnabled ? 'rgba(56, 189, 248, 0.22)' : 'rgba(30, 41, 59, 0.8)',
-                color: bslEnabled ? '#38bdf8' : '#cbd5e1',
-                border: `1.5px solid ${bslEnabled ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)'}`,
-                borderRadius: '6px',
-                padding: '0.22rem 0.6rem',
-                fontSize: '0.76rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-                transition: 'all 0.15s ease',
-                boxShadow: bslEnabled ? '0 0 10px rgba(56, 189, 248, 0.35)' : undefined,
-                whiteSpace: 'nowrap',
-              }}
-              title="Toggle British Sign Language (BSL) In-Vision Vector Interpreter (Shortcut: Shift + B)"
+            {/* Sign Language / Language Tuple Control Group */}
+            <div
+              className="inline-flex items-center gap-1.5 bg-slate-900/90 border border-slate-700/80 rounded-md px-1.5 py-0.5"
+              title={`Language Tuple: [Spoken: ${currentLang.toUpperCase()} / Sign: ${signLang}]`}
             >
-              <span>🖐️</span>
-              <span>BSL: {bslEnabled ? 'ON' : 'OFF'}</span>
-            </button>
+              <label htmlFor="universal-sign-select" className="text-xs text-slate-400 font-semibold flex items-center gap-1 cursor-pointer">
+                <span>🖐️</span>
+                <span className="hidden lg:inline text-[11px] font-mono text-sky-400">[{currentLang.toUpperCase()}/{signLang}]</span>
+              </label>
+
+              <select
+                id="universal-sign-select"
+                value={signLang}
+                onChange={(e) => handleSignLanguageChange(e.target.value as SignLanguageCode)}
+                className="bg-transparent text-xs font-bold text-sky-300 focus:outline-none cursor-pointer py-0.5"
+                title="Select Sign Language Interpreter system (Language Tuple [spoken, sign])"
+              >
+                <option value="BSL" className="bg-slate-900 text-white">🇬🇧 BSL (Level 2/3 Natural)</option>
+                <option value="ASL" className="bg-slate-900 text-white">🇺🇸 ASL (American)</option>
+                <option value="LSE" className="bg-slate-900 text-white">🇪🇸 LSE (Spanish)</option>
+                <option value="ISL" className="bg-slate-900 text-white">🇮🇪 ISL (Irish)</option>
+                <option value="OFF" className="bg-slate-900 text-slate-400">🚫 Sign: Off</option>
+              </select>
+
+              {/* BSL Sign Studio Launcher Button */}
+              <button
+                type="button"
+                id="universal-open-studio-btn"
+                onClick={() => openBslSignStudio()}
+                style={{
+                  background: 'rgba(16, 185, 129, 0.25)',
+                  border: '1px solid #10b981',
+                  color: '#6ee7b7',
+                  borderRadius: '4px',
+                  padding: '0.12rem 0.45rem',
+                  fontSize: '0.72rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '3px',
+                  transition: 'all 0.15s ease',
+                  whiteSpace: 'nowrap',
+                }}
+                title="Open BSL Sign Studio — Author and pose custom curriculum signs"
+              >
+                <span>✍️</span>
+                <span className="hidden sm:inline">Studio</span>
+              </button>
+            </div>
 
             {/* Permanent hidden container for automated Google Web Translation Engine */}
             <div

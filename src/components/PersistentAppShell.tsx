@@ -12,17 +12,23 @@ import { hypervisor } from '../engine/hypervisor';
 import { playSuccessChime, playIncorrectTone, triggerHapticSuccess, triggerHapticError } from '../services/soundHaptics';
 import { triggerMasteryConfetti } from '../utils/confetti';
 import { initWebMcpBridge } from '../services/webMcpBridge';
-import { getBslEnabled, setBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
+import { getBslEnabled, setBslEnabled, toggleBsl, subscribeBsl, subscribeBslSignStudio } from '../services/bslGlobalStore';
+import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 
 const GlobalPlayerModal = React.lazy(() => import('./GlobalPlayerModal'));
 const GlobalChallengeModal = React.lazy(() => import('./GlobalChallengeModal'));
 const BslInterpreterOverlay = React.lazy(() => import('./BslInterpreterOverlay'));
+const BslSignStudioModal = React.lazy(() =>
+  import('./BslSignStudioModal').then((m) => ({ default: m.BslSignStudioModal }))
+);
 
 export default function PersistentAppShell(): React.JSX.Element {
   const location = useLocation();
   const navigate = useNavigate();
   const [incomingBroadcast, setIncomingBroadcast] = useState<TeacherBroadcastCommand | null>(null);
   const [bslActive, setBslActive] = useState<boolean>(() => getBslEnabled());
+  const [studioOpen, setStudioOpen] = useState<boolean>(false);
+  const [studioWord, setStudioWord] = useState<string | undefined>(undefined);
 
   // Scroll restoration on route transition (batched via requestAnimationFrame to prevent forced synchronous reflow)
   useEffect(() => {
@@ -56,12 +62,20 @@ export default function PersistentAppShell(): React.JSX.Element {
     document.documentElement.setAttribute('data-high-contrast', storedContrast ? 'true' : 'false');
   }, []);
 
-  // Synchronize global British Sign Language (BSL) overlay state
+  // Synchronize global British Sign Language (BSL) overlay state & Custom Lexicon
   useEffect(() => {
-    const unsubscribe = subscribeBsl((enabled) => {
+    initCustomSignsIntoLexicon();
+    const unsubscribeBsl = subscribeBsl((enabled) => {
       setBslActive(enabled);
     });
-    return unsubscribe;
+    const unsubscribeStudio = subscribeBslSignStudio((payload) => {
+      setStudioOpen(payload.open);
+      setStudioWord(payload.word);
+    });
+    return () => {
+      unsubscribeBsl();
+      unsubscribeStudio();
+    };
   }, []);
 
   // Global accessibility shortcut: Shift + B toggles BSL In-Vision Interpreter anywhere
@@ -255,6 +269,16 @@ export default function PersistentAppShell(): React.JSX.Element {
       {bslActive && (
         <Suspense fallback={null}>
           <BslInterpreterOverlay onClose={() => setBslEnabled(false)} />
+        </Suspense>
+      )}
+
+      {/* BSL Sign Studio & Keyframe Poser (Zero-Video Lexicon Authoring) */}
+      {studioOpen && (
+        <Suspense fallback={null}>
+          <BslSignStudioModal
+            initialWord={studioWord}
+            onClose={() => setStudioOpen(false)}
+          />
         </Suspense>
       )}
 

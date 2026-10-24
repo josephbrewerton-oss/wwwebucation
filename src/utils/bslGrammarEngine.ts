@@ -1,0 +1,735 @@
+/**
+ * src/utils/bslGrammarEngine.ts
+ *
+ * St Joseph's Educational Media Suite - British Sign Language (BSL) Level 2/3 Natural Grammar Engine
+ * Copyright (c) 2026 Joseph Brewerton.
+ * SPDX-License-Identifier: AGPL-3.0-or-later OR Commercial-License
+ *
+ * Implements Signature BSL Level 2 / Level 3 Linguistic Standards:
+ * 1. Timeline & Chronological Primacy: Time markers anchor the timeline at the front of the utterance.
+ * 2. Topic-Comment & OSV (Object-Subject-Verb) Structural Reordering over English SVO.
+ * 3. Spatial Referencing & 3D Spatial Loci: Assigns 3D coordinates for 1st person, 2nd person, and 3rd person entities (Loci A & B).
+ * 4. Directional / Agreement Verbs: Modulates 3D vector trajectories dynamically between sender and recipient loci (GIVE, ASK, TELL, SHOW, HELP, LOOK).
+ * 5. Non-Manual Features (NMF) Syntactic Binding:
+ *    - WH-Questions: Post-positioned with furrowed eyebrows and forward chin angle.
+ *    - Polar (Yes/No) Questions: Raised eyebrows and forward head tilt.
+ *    - Negations: Post-verbal placement with synchronized head shake.
+ *    - Affirmations: Assertive head nod.
+ * 6. Particle & Copula Suppression: Strips English articles ('the', 'a') and copulas ('is', 'are', 'was') that do not exist in natural BSL.
+ */
+
+import { Point3D, BslHandPose, BslNmf, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import { BslSign, BslSignKeyframe, lookupBslSign, signKeyframeToHandPose } from './bslLexicon';
+
+export type BslGrammarMode = 'bsl-natural' | 'sse' | 'fingerspell';
+
+export type BslLocusId = 'ME' | 'YOU' | 'LOCUS_A' | 'LOCUS_B';
+
+export interface BslLocus {
+  id: BslLocusId;
+  label: string;
+  coords: Point3D;
+  assignedEntity?: string;
+}
+
+export const DEFAULT_BSL_LOCI: Record<BslLocusId, BslLocus> = {
+  ME: {
+    id: 'ME',
+    label: '1st Person (Signer)',
+    coords: { x: 20, y: 30, z: 15 },
+  },
+  YOU: {
+    id: 'YOU',
+    label: '2nd Person (Addressee)',
+    coords: { x: 0, y: -20, z: 65 },
+  },
+  LOCUS_A: {
+    id: 'LOCUS_A',
+    label: '3rd Person (Locus A - Left)',
+    coords: { x: -55, y: -10, z: 35 },
+  },
+  LOCUS_B: {
+    id: 'LOCUS_B',
+    label: '3rd Person (Locus B - Right)',
+    coords: { x: 55, y: -10, z: 35 },
+  },
+};
+
+export type BslGrammarRole =
+  | 'time'
+  | 'topic'
+  | 'subject'
+  | 'object'
+  | 'verb'
+  | 'directional-verb'
+  | 'question'
+  | 'negation'
+  | 'modifier'
+  | 'particle'
+  | 'fingerspell';
+
+export interface BslGrammarToken {
+  originalWord: string;
+  cleanWord: string;
+  gloss: string;
+  role: BslGrammarRole;
+  locus?: BslLocusId;
+  directionalFrom?: BslLocusId;
+  directionalTo?: BslLocusId;
+  nmf?: BslNmf;
+  sign?: BslSign;
+  isFingerspelled?: boolean;
+}
+
+export interface BslGrammarAnalysis {
+  originalText: string;
+  mode: BslGrammarMode;
+  sentenceType: 'statement' | 'wh-question' | 'polar-question' | 'negation' | 'conditional';
+  tokens: BslGrammarToken[];
+  glossSequence: string;
+  activeLoci: Record<BslLocusId, BslLocus>;
+  nmfSummary: {
+    eyebrows: 'neutral' | 'raised' | 'furrowed';
+    headTilt: 'neutral' | 'nod' | 'shake' | 'tilt-left' | 'tilt-right';
+    mouthCue: string;
+  };
+  stream: BslHandPose[];
+}
+
+// BSL Time Markers (must be placed at the very start of natural BSL sentences)
+const TIME_WORDS = new Set([
+  'YESTERDAY', 'TODAY', 'TOMORROW', 'NOW', 'MORNING', 'AFTERNOON', 'NIGHT',
+  'PAST', 'FUTURE', 'BEFORE', 'AFTER', 'ALWAYS', 'NEVER', 'LAST-WEEK', 'NEXT-WEEK',
+  'SOON', 'LATER', 'DAILY', 'EARLY'
+]);
+
+// BSL WH-Question words (placed at the very end of natural BSL questions with furrowed eyebrows)
+const WH_QUESTION_WORDS = new Set([
+  'WHAT', 'WHERE', 'WHO', 'WHY', 'WHEN', 'HOW', 'WHICH'
+]);
+
+// English aux verbs that signal a polar (Yes/No) question when leading
+const POLAR_QUESTION_LEADERS = new Set([
+  'DO', 'DOES', 'DID', 'ARE', 'IS', 'AM', 'CAN', 'COULD', 'WILL', 'WOULD',
+  'HAVE', 'HAS', 'HAD', 'SHOULD', 'MAY', 'MIGHT'
+]);
+
+// Negation markers (placed after verb or at clause end with synchronized head shake)
+const NEGATION_WORDS = new Set([
+  'NOT', 'NO', "DON'T", "DOESN'T", "DIDN'T", 'NEVER', 'CANNOT', "CAN'T",
+  "WON'T", 'NONE', 'NOTHING', 'NOWHERE', "ISN'T", "AREN'T", "WASN'T", "WEREN'T"
+]);
+
+// Directional agreement verbs that take 3D spatial loci trajectories
+const DIRECTIONAL_VERB_WORDS = new Set([
+  'GIVE', 'GIVES', 'GIVING', 'GAVE',
+  'ASK', 'ASKS', 'ASKING', 'ASKED',
+  'TELL', 'TELLS', 'TELLING', 'TOLD',
+  'SHOW', 'SHOWS', 'SHOWING', 'SHOWED',
+  'HELP', 'HELPS', 'HELPING', 'HELPED',
+  'EXPLAIN', 'EXPLAINS', 'EXPLAINING', 'EXPLAINED',
+  'LOOK', 'LOOKS', 'LOOKING', 'LOOKED',
+  'SEND', 'SENDS', 'SENDING', 'SENT',
+  'PAY', 'PAYS', 'PAYING', 'PAID',
+  'INVITE', 'INVITES', 'INVITING', 'INVITED'
+]);
+
+// English copulas and function words dropped in BSL Level 2/3
+const BSL_OMITTED_PARTICLES = new Set([
+  'THE', 'A', 'AN', 'IS', 'ARE', 'AM', 'WAS', 'WERE', 'BE', 'BEEN', 'BEING',
+  'OF', 'TO', 'IN', 'ON', 'AT', 'IT', 'ITS', 'THAT', 'THIS', 'THESE', 'THOSE',
+  'WITH', 'AS', 'FOR', 'BY', 'FROM', 'AND', 'BUT', 'OR', 'NOR', 'SO', 'YET',
+  'DO', 'DOES', 'DID', 'WILL', 'WOULD', 'SHALL', 'SHOULD', 'HAVE', 'HAS', 'HAD'
+]);
+
+// Pronoun mappings
+const PRONOUN_1P = new Set(['I', 'ME', 'MY', 'MINE', 'MYSELF']);
+const PRONOUN_2P = new Set(['YOU', 'YOUR', 'YOURS', 'YOURSELF']);
+const PRONOUN_3P = new Set(['HE', 'HIM', 'HIS', 'SHE', 'HER', 'HERS', 'THEY', 'THEM', 'THEIR']);
+
+/**
+ * Modulates directional verb keyframes based on dynamic 3D spatial loci.
+ * If giving from ME to YOU: trajectory starts near chest and pushes forward into 2P space.
+ * If from Locus A to Locus B: trajectory starts on the left and sweeps across to the right.
+ */
+export function modulateDirectionalKeyframes(
+  sign: BslSign,
+  fromLocus: Point3D,
+  toLocus: Point3D
+): BslSignKeyframe[] {
+  const kfs = sign.keyframes;
+  if (!kfs || kfs.length === 0) return [];
+
+  const dx = toLocus.x - fromLocus.x;
+  const dy = toLocus.y - fromLocus.y;
+  const dz = toLocus.z - fromLocus.z;
+
+  return kfs.map((kf, idx) => {
+    const fraction = idx / Math.max(1, kfs.length - 1);
+    const targetCenter = {
+      x: fromLocus.x + dx * fraction,
+      y: fromLocus.y + dy * fraction,
+      z: fromLocus.z + dz * fraction,
+    };
+
+    // Calculate anatomical offsets relative to keyframe's original targetTip
+    const origTip = kf.targetTip;
+    const origKnuckle = kf.targetKnuckle;
+    const origWrist = kf.targetWrist;
+
+    const knuckleOffset = {
+      x: origKnuckle.x - origTip.x,
+      y: origKnuckle.y - origTip.y,
+      z: origKnuckle.z - origTip.z,
+    };
+
+    const wristOffset = {
+      x: origWrist.x - origTip.x,
+      y: origWrist.y - origTip.y,
+      z: origWrist.z - origTip.z,
+    };
+
+    return {
+      ...kf,
+      targetTip: {
+        x: targetCenter.x,
+        y: targetCenter.y,
+        z: targetCenter.z,
+      },
+      targetKnuckle: {
+        x: targetCenter.x + knuckleOffset.x,
+        y: targetCenter.y + knuckleOffset.y,
+        z: targetCenter.z + knuckleOffset.z,
+      },
+      targetWrist: {
+        x: targetCenter.x + wristOffset.x,
+        y: targetCenter.y + wristOffset.y,
+        z: targetCenter.z + wristOffset.z,
+      },
+    };
+  });
+}
+
+/**
+ * Normalizes an English word to its root lemma for BSL sign lookup
+ */
+function normalizeToBslLemma(cleanWord: string): string {
+  if (['PRAYING', 'PRAYS', 'PRAYED'].includes(cleanWord)) return 'PRAY';
+  if (['CHURCHES', 'CHAPEL', 'SANCTUARY'].includes(cleanWord)) return 'CHURCH';
+  if (['STUDENTS', 'PUPILS', 'CHILDREN'].includes(cleanWord)) return 'PUPIL';
+  if (['TEACHERS', 'TEACHING'].includes(cleanWord)) return 'TEACHER';
+  if (['BOOKS', 'READING', 'READS'].includes(cleanWord)) return 'BOOK';
+  if (['GIVING', 'GIVES', 'GAVE'].includes(cleanWord)) return 'GIVE';
+  if (['HELPING', 'HELPS', 'HELPED'].includes(cleanWord)) return 'HELP';
+  if (['SHOWING', 'SHOWS', 'SHOWED'].includes(cleanWord)) return 'SHOW';
+  if (['TELLING', 'TELLS', 'TOLD'].includes(cleanWord)) return 'TELL';
+  if (['ASKING', 'ASKS', 'ASKED'].includes(cleanWord)) return 'ASK';
+  if (['EXPLAINING', 'EXPLAINS', 'EXPLAINED'].includes(cleanWord)) return 'EXPLAIN';
+  if (['LOOKING', 'LOOKS', 'LOOKED'].includes(cleanWord)) return 'LOOK';
+  if (['UNDERSTANDING', 'UNDERSTOOD'].includes(cleanWord)) return 'UNDERSTAND';
+  if (['LOVES', 'LOVING', 'LOVED'].includes(cleanWord)) return 'LOVE';
+  if (['STARTING', 'STARTS', 'STARTED'].includes(cleanWord)) return 'START';
+  if (['STOPPING', 'STOPS', 'STOPPED'].includes(cleanWord)) return 'STOP';
+  if (['FINISHING', 'FINISHES', 'FINISHED'].includes(cleanWord)) return 'FINISH';
+  if (['QUESTIONS'].includes(cleanWord)) return 'WHAT';
+  return cleanWord;
+}
+
+/**
+ * Core Linguistic Pipeline: Transforms English Text into BSL Level 2/3 Natural Syntax
+ */
+export function analyzeAndTransformBslGrammar(
+  text: string,
+  options?: { mode?: BslGrammarMode }
+): BslGrammarAnalysis {
+  const mode = options?.mode || 'bsl-natural';
+  const cleanInput = (text || '').trim();
+
+  const loci: Record<BslLocusId, BslLocus> = {
+    ME: { ...DEFAULT_BSL_LOCI.ME },
+    YOU: { ...DEFAULT_BSL_LOCI.YOU },
+    LOCUS_A: { ...DEFAULT_BSL_LOCI.LOCUS_A },
+    LOCUS_B: { ...DEFAULT_BSL_LOCI.LOCUS_B },
+  };
+
+  if (!cleanInput) {
+    return {
+      originalText: '',
+      mode,
+      sentenceType: 'statement',
+      tokens: [],
+      glossSequence: '',
+      activeLoci: loci,
+      nmfSummary: { eyebrows: 'neutral', headTilt: 'neutral', mouthCue: '' },
+      stream: [],
+    };
+  }
+
+  const rawWords = cleanInput.split(/\s+/).filter(Boolean);
+  const isQuestionMark = cleanInput.endsWith('?');
+
+  // Detect sentence types
+  const upperWords = rawWords.map((w) => w.toUpperCase().replace(/[^A-Z-]/g, ''));
+  const hasWhQuestion = upperWords.some((w) => WH_QUESTION_WORDS.has(w));
+  const hasPolarLeader = upperWords.length > 0 && POLAR_QUESTION_LEADERS.has(upperWords[0]);
+  const hasNegation = upperWords.some((w) => NEGATION_WORDS.has(w));
+
+  let sentenceType: BslGrammarAnalysis['sentenceType'] = 'statement';
+  if (hasWhQuestion) {
+    sentenceType = 'wh-question';
+  } else if (isQuestionMark || hasPolarLeader) {
+    sentenceType = 'polar-question';
+  } else if (hasNegation) {
+    sentenceType = 'negation';
+  }
+
+  // 1. If explicit Fingerspell mode
+  if (mode === 'fingerspell') {
+    const tokens: BslGrammarToken[] = [];
+    const stream: BslHandPose[] = [];
+
+    rawWords.forEach((raw, wIdx) => {
+      const clean = raw.toUpperCase().replace(/[^A-Z-]/g, '');
+      if (!clean) return;
+      tokens.push({
+        originalWord: raw,
+        cleanWord: clean,
+        gloss: clean.split('').join('-'),
+        role: 'fingerspell',
+        isFingerspelled: true,
+      });
+
+      for (const char of clean) {
+        if (BSL_ALPHABET_POSES[char]) {
+          stream.push(BSL_ALPHABET_POSES[char]);
+        }
+      }
+      if (wIdx < rawWords.length - 1) {
+        stream.push({
+          letter: ' ',
+          label: 'Word Boundary',
+          rule: 'Neutral transition between words',
+          isVowel: false,
+          targetTip: DOMINANT_REST_POSE,
+          targetKnuckle: DOMINANT_REST_KNUCKLE,
+          targetWrist: DOMINANT_REST_WRIST,
+        });
+      }
+    });
+
+    return {
+      originalText: cleanInput,
+      mode,
+      sentenceType,
+      tokens,
+      glossSequence: tokens.map((t) => t.gloss).join(' '),
+      activeLoci: loci,
+      nmfSummary: { eyebrows: 'neutral', headTilt: 'neutral', mouthCue: '' },
+      stream,
+    };
+  }
+
+  // 2. If Sign Supported English (SSE / Level 1)
+  if (mode === 'sse') {
+    const tokens: BslGrammarToken[] = [];
+    const stream: BslHandPose[] = [];
+
+    for (let wIdx = 0; wIdx < rawWords.length; wIdx++) {
+      const raw = rawWords[wIdx];
+      const clean = raw.toUpperCase().replace(/[^A-Z-]/g, '');
+      if (!clean) continue;
+
+      if (BSL_OMITTED_PARTICLES.has(clean)) {
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: `(${clean})`,
+          role: 'particle',
+        });
+        continue;
+      }
+
+      const lemma = normalizeToBslLemma(clean);
+      const sign = lookupBslSign(lemma) || lookupBslSign(clean);
+
+      if (sign) {
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: sign.gloss || sign.word,
+          role: 'verb',
+          sign,
+        });
+        const total = sign.keyframes.length;
+        sign.keyframes.forEach((kf, idx) => {
+          stream.push(signKeyframeToHandPose(sign, kf, idx, total));
+        });
+      } else {
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: clean.split('').join('-'),
+          role: 'fingerspell',
+          isFingerspelled: true,
+        });
+        for (const char of clean) {
+          if (BSL_ALPHABET_POSES[char]) {
+            stream.push(BSL_ALPHABET_POSES[char]);
+          }
+        }
+      }
+
+      if (wIdx < rawWords.length - 1 && stream.length > 0) {
+        stream.push({
+          letter: ' ',
+          label: 'Word Boundary',
+          rule: 'Neutral transition',
+          isVowel: false,
+          targetTip: DOMINANT_REST_POSE,
+          targetKnuckle: DOMINANT_REST_KNUCKLE,
+          targetWrist: DOMINANT_REST_WRIST,
+        });
+      }
+    }
+
+    return {
+      originalText: cleanInput,
+      mode,
+      sentenceType,
+      tokens,
+      glossSequence: tokens.map((t) => t.gloss).join(' '),
+      activeLoci: loci,
+      nmfSummary: {
+        eyebrows: sentenceType === 'wh-question' ? 'furrowed' : sentenceType === 'polar-question' ? 'raised' : 'neutral',
+        headTilt: sentenceType === 'negation' ? 'shake' : 'neutral',
+        mouthCue: '',
+      },
+      stream,
+    };
+  }
+
+  // 3. Natural BSL Level 2 / Level 3 Syntactic Transformation
+  // Parse semantic constituents:
+  const timeTokens: BslGrammarToken[] = [];
+  const whQuestionTokens: BslGrammarToken[] = [];
+  const negationTokens: BslGrammarToken[] = [];
+  const coreTokens: {
+    raw: string;
+    clean: string;
+    lemma: string;
+    sign?: BslSign;
+    role: BslGrammarRole;
+    isPronoun1P?: boolean;
+    isPronoun2P?: boolean;
+    isPronoun3P?: boolean;
+  }[] = [];
+
+  for (let i = 0; i < rawWords.length; i++) {
+    const raw = rawWords[i];
+    const clean = raw.toUpperCase().replace(/[^A-Z-]/g, '');
+    if (!clean) continue;
+
+    // Check 2-word phrase lookup first (e.g. "THANK YOU", "SOLAR SYSTEM", "HOLY BOOK")
+    if (i < rawWords.length - 1) {
+      const nextClean = rawWords[i + 1].toUpperCase().replace(/[^A-Z-]/g, '');
+      const twoWord = `${clean} ${nextClean}`;
+      const phraseSign = lookupBslSign(twoWord);
+      if (phraseSign) {
+        coreTokens.push({
+          raw: `${raw} ${rawWords[i + 1]}`,
+          clean: twoWord,
+          lemma: twoWord,
+          sign: phraseSign,
+          role: 'topic',
+        });
+        i++;
+        continue;
+      }
+    }
+
+    // Temporal markers -> extracted for timeline fronting
+    if (TIME_WORDS.has(clean)) {
+      const timeSign = lookupBslSign(clean) || lookupBslSign(normalizeToBslLemma(clean));
+      timeTokens.push({
+        originalWord: raw,
+        cleanWord: clean,
+        gloss: timeSign?.gloss || clean,
+        role: 'time',
+        sign: timeSign,
+        nmf: { eyebrows: 'neutral', mouth: clean.toLowerCase() },
+      });
+      continue;
+    }
+
+    // WH-Questions -> extracted for sentence-final positioning with furrowed eyebrows
+    if (WH_QUESTION_WORDS.has(clean)) {
+      const whSign = lookupBslSign(clean);
+      whQuestionTokens.push({
+        originalWord: raw,
+        cleanWord: clean,
+        gloss: whSign?.gloss || clean,
+        role: 'question',
+        sign: whSign,
+        nmf: { eyebrows: 'furrowed', mouth: clean.toLowerCase(), headTilt: 'neutral' },
+      });
+      continue;
+    }
+
+    // Negations -> extracted for post-predicate placement with head shake
+    if (NEGATION_WORDS.has(clean)) {
+      const negSign = lookupBslSign('NO') || lookupBslSign('NOT');
+      negationTokens.push({
+        originalWord: raw,
+        cleanWord: clean,
+        gloss: 'NOT',
+        role: 'negation',
+        sign: negSign,
+        nmf: { eyebrows: 'neutral', mouth: 'no', headTilt: 'shake' },
+      });
+      continue;
+    }
+
+    // Drop English auxiliary particles & copulas
+    if (BSL_OMITTED_PARTICLES.has(clean)) {
+      continue;
+    }
+
+    const lemma = normalizeToBslLemma(clean);
+    const sign = lookupBslSign(lemma) || lookupBslSign(clean);
+
+    let role: BslGrammarRole = 'topic';
+    const isPronoun1 = PRONOUN_1P.has(clean);
+    const isPronoun2 = PRONOUN_2P.has(clean);
+    const isPronoun3 = PRONOUN_3P.has(clean);
+
+    if (DIRECTIONAL_VERB_WORDS.has(clean) || DIRECTIONAL_VERB_WORDS.has(lemma)) {
+      role = 'directional-verb';
+    } else if (isPronoun1 || isPronoun2 || isPronoun3) {
+      role = 'subject';
+    } else if (sign?.category === 'faith' || sign?.category === 'stem' || sign?.category === 'school') {
+      role = 'topic';
+    }
+
+    coreTokens.push({
+      raw,
+      clean,
+      lemma,
+      sign,
+      role,
+      isPronoun1P: isPronoun1,
+      isPronoun2P: isPronoun2,
+      isPronoun3P: isPronoun3,
+    });
+  }
+
+  // Assign Spatial Loci to entities and actors
+  let subjectEntity: typeof coreTokens[0] | undefined;
+  let objectEntity: typeof coreTokens[0] | undefined;
+  let directionalVerb: typeof coreTokens[0] | undefined;
+
+  for (const token of coreTokens) {
+    if (token.role === 'directional-verb') {
+      directionalVerb = token;
+    } else if (!subjectEntity) {
+      subjectEntity = token;
+    } else if (!objectEntity) {
+      objectEntity = token;
+    }
+  }
+
+  // Allocate spatial loci
+  let fromLocus: BslLocusId = 'ME';
+  let toLocus: BslLocusId = 'YOU';
+
+  if (subjectEntity) {
+    if (subjectEntity.isPronoun1P) {
+      fromLocus = 'ME';
+    } else if (subjectEntity.isPronoun2P) {
+      fromLocus = 'YOU';
+    } else {
+      fromLocus = 'LOCUS_A';
+      loci.LOCUS_A.assignedEntity = subjectEntity.clean;
+    }
+  }
+
+  if (objectEntity) {
+    if (objectEntity.isPronoun1P) {
+      toLocus = 'ME';
+    } else if (objectEntity.isPronoun2P) {
+      toLocus = 'YOU';
+    } else {
+      toLocus = fromLocus === 'LOCUS_A' ? 'LOCUS_B' : 'LOCUS_A';
+      loci[toLocus].assignedEntity = objectEntity.clean;
+    }
+  }
+
+  // Build the reordered Natural BSL Token Sequence:
+  // Order: [TIME] -> [TOPIC / OBJECT] -> [SUBJECT (Locus)] -> [DIRECTIONAL VERB] -> [NEGATION] -> [WH-QUESTION]
+  const reorderedTokens: BslGrammarToken[] = [];
+
+  // 1. TIME FIRST
+  timeTokens.forEach((t) => {
+    reorderedTokens.push(t);
+  });
+
+  // 2. TOPIC / OBJECT FIRST (Topic-Comment architecture)
+  if (objectEntity) {
+    reorderedTokens.push({
+      originalWord: objectEntity.raw,
+      cleanWord: objectEntity.clean,
+      gloss: objectEntity.sign?.gloss || objectEntity.clean,
+      role: 'topic',
+      locus: toLocus,
+      sign: objectEntity.sign,
+      nmf: { eyebrows: 'neutral', mouth: objectEntity.clean.toLowerCase() },
+    });
+  }
+
+  // 3. SUBJECT (with Spatial Locus binding)
+  if (subjectEntity) {
+    reorderedTokens.push({
+      originalWord: subjectEntity.raw,
+      cleanWord: subjectEntity.clean,
+      gloss: subjectEntity.sign?.gloss || subjectEntity.clean,
+      role: 'subject',
+      locus: fromLocus,
+      sign: subjectEntity.sign,
+      nmf: { eyebrows: 'neutral', mouth: subjectEntity.clean.toLowerCase() },
+    });
+  }
+
+  // 4. OTHER CORE TOKENS (excluding already placed subject/object/directional)
+  coreTokens.forEach((token) => {
+    if (token === subjectEntity || token === objectEntity || token === directionalVerb) return;
+    reorderedTokens.push({
+      originalWord: token.raw,
+      cleanWord: token.clean,
+      gloss: token.sign?.gloss || token.clean,
+      role: token.role,
+      sign: token.sign,
+      nmf: { eyebrows: 'neutral', mouth: token.clean.toLowerCase() },
+    });
+  });
+
+  // 5. DIRECTIONAL VERB / MAIN VERB
+  if (directionalVerb) {
+    reorderedTokens.push({
+      originalWord: directionalVerb.raw,
+      cleanWord: directionalVerb.clean,
+      gloss: `${directionalVerb.sign?.gloss || directionalVerb.clean}[${fromLocus}→${toLocus}]`,
+      role: 'directional-verb',
+      directionalFrom: fromLocus,
+      directionalTo: toLocus,
+      sign: directionalVerb.sign,
+      nmf: {
+        eyebrows: sentenceType === 'wh-question' ? 'furrowed' : 'neutral',
+        mouth: directionalVerb.clean.toLowerCase(),
+      },
+    });
+  }
+
+  // 6. NEGATION AT THE END (with headshake)
+  negationTokens.forEach((t) => {
+    reorderedTokens.push(t);
+  });
+
+  // 7. WH-QUESTION AT THE END (with furrowed eyebrows)
+  whQuestionTokens.forEach((t) => {
+    reorderedTokens.push(t);
+  });
+
+  // If sentence was a polar question (Yes/No) and no WH word, mark final token with raised eyebrows
+  if (sentenceType === 'polar-question' && reorderedTokens.length > 0) {
+    const lastTok = reorderedTokens[reorderedTokens.length - 1];
+    lastTok.nmf = {
+      ...lastTok.nmf,
+      eyebrows: 'raised',
+      headTilt: 'nod',
+    };
+  }
+
+  // Synthesize procedural 3D stream with modulated directional vectors
+  const stream: BslHandPose[] = [];
+
+  for (let tIdx = 0; tIdx < reorderedTokens.length; tIdx++) {
+    const tok = reorderedTokens[tIdx];
+
+    if (tok.role === 'directional-verb' && tok.sign && tok.directionalFrom && tok.directionalTo) {
+      // Modulate 3D trajectory between the two loci
+      const fromPt = loci[tok.directionalFrom].coords;
+      const toPt = loci[tok.directionalTo].coords;
+      const modulatedKfs = modulateDirectionalKeyframes(tok.sign, fromPt, toPt);
+      const totalKf = modulatedKfs.length;
+
+      modulatedKfs.forEach((kf, kfIdx) => {
+        const pose = signKeyframeToHandPose(tok.sign!, kf, kfIdx, totalKf);
+        if (tok.nmf) {
+          pose.nmf = { ...pose.nmf, ...tok.nmf };
+        }
+        stream.push(pose);
+      });
+    } else if (tok.sign) {
+      // Whole-Word sign
+      const totalKf = tok.sign.keyframes.length;
+      tok.sign.keyframes.forEach((kf, kfIdx) => {
+        const pose = signKeyframeToHandPose(tok.sign!, kf, kfIdx, totalKf);
+        if (tok.nmf) {
+          pose.nmf = { ...pose.nmf, ...tok.nmf };
+        }
+        stream.push(pose);
+      });
+    } else {
+      // Un-lexiconed word: fallback to BANZSL manual fingerspelling
+      tok.isFingerspelled = true;
+      for (const char of tok.cleanWord) {
+        if (BSL_ALPHABET_POSES[char]) {
+          const pose = { ...BSL_ALPHABET_POSES[char] };
+          if (tok.nmf) pose.nmf = tok.nmf;
+          stream.push(pose);
+        }
+      }
+    }
+
+    // Add neutral transition boundary between words
+    if (tIdx < reorderedTokens.length - 1 && stream.length > 0) {
+      stream.push({
+        letter: ' ',
+        label: 'Boundary',
+        rule: 'Neutral transition between signs',
+        isVowel: false,
+        targetTip: DOMINANT_REST_POSE,
+        targetKnuckle: DOMINANT_REST_KNUCKLE,
+        targetWrist: DOMINANT_REST_WRIST,
+      });
+    }
+  }
+
+  // Compose human-readable BSL gloss sequence
+  const glossSequence = reorderedTokens
+    .map((t) => {
+      let badge = `[${t.role.toUpperCase()}]`;
+      if (t.role === 'time') badge = '[TIME]';
+      if (t.role === 'topic') badge = `[TOPIC]`;
+      if (t.role === 'subject') badge = `[SUBJ(${t.locus || ''})]`;
+      if (t.role === 'directional-verb') badge = `[DIR-VERB(${t.directionalFrom}→${t.directionalTo})]`;
+      if (t.role === 'question') badge = '[WH-?]';
+      if (t.role === 'negation') badge = '[NEG]';
+      return `${badge} ${t.gloss}`;
+    })
+    .join('  ➔  ');
+
+  return {
+    originalText: cleanInput,
+    mode,
+    sentenceType,
+    tokens: reorderedTokens,
+    glossSequence,
+    activeLoci: loci,
+    nmfSummary: {
+      eyebrows: sentenceType === 'wh-question' ? 'furrowed' : sentenceType === 'polar-question' ? 'raised' : 'neutral',
+      headTilt: sentenceType === 'negation' ? 'shake' : sentenceType === 'polar-question' ? 'nod' : 'neutral',
+      mouthCue: cleanInput.slice(0, 15),
+    },
+    stream,
+  };
+}

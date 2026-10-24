@@ -63,7 +63,9 @@ export function serializeSignToAst(sign: BslSign): string {
 
   lines.push(`  (sign :id "${escapeAstString(sign.id)}" :word "${escapeAstString(sign.word)}" :cat "${escapeAstString(sign.category)}" :gloss "${escapeAstString(sign.gloss)}"`);
   lines.push(`    :label "${escapeAstString(sign.englishLabel)}"`);
-  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}`);
+  const directionalStr = sign.isDirectional ? ' :directional true' : '';
+  const lociStr = sign.defaultLoci ? ` :default-loci (:from "${escapeAstString(sign.defaultLoci.from)}" :to "${escapeAstString(sign.defaultLoci.to)}")` : '';
+  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}${directionalStr}${lociStr}`);
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
@@ -194,6 +196,18 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     aliases = props.aliases.map((a: any) => String(a).toUpperCase());
   }
 
+  const isDirectional = Boolean(props.directional || props[':directional']);
+  let defaultLoci: { from: string; to: string } | undefined = undefined;
+  if (props['default-loci']) {
+    const dl = typeof props['default-loci'] === 'object' && props['default-loci'].props ? props['default-loci'].props : props['default-loci'];
+    if (dl && (dl.from || dl[':from'])) {
+      defaultLoci = {
+        from: String(dl.from || dl[':from']),
+        to: String(dl.to || dl[':to']),
+      };
+    }
+  }
+
   return {
     id: props.id || word.toLowerCase(),
     word: word.toUpperCase(),
@@ -203,6 +217,8 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     description: props.desc || '',
     keyframes,
     aliases,
+    isDirectional: isDirectional || undefined,
+    defaultLoci,
   };
 }
 

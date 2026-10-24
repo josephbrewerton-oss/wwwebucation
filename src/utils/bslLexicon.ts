@@ -15,7 +15,7 @@
 import { Point3D, BslHandPose, BslNmf, BslHandShape, BslBaseHandMode, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
 
 export type { BslNmf, BslHandShape, BslBaseHandMode };
-export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation';
+export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation' | 'grammar' | 'temporal';
 
 export interface BslSignKeyframe {
   label: string;
@@ -46,6 +46,9 @@ export interface BslSign {
   description: string;
   keyframes: BslSignKeyframe[];
   aliases?: string[];
+  isDirectional?: boolean;
+  directionalType?: 'subject-to-object' | 'object-to-subject';
+  defaultLoci?: { from: string; to: string };
 }
 
 /**
@@ -586,11 +589,14 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
   'LOOK': {
     id: 'look',
     word: 'LOOK',
-    category: 'school',
+    category: 'grammar',
     englishLabel: 'Look / See / Watch',
     gloss: 'LOOK',
-    description: 'Two fingers (V-shape) point outward from eyes toward the subject.',
-    aliases: ['SEE', 'WATCH', 'VIEW', 'OBSERVE'],
+    description: 'Two fingers (V-shape) point outward from eyes toward the target locus.',
+    aliases: ['SEE', 'WATCH', 'VIEW', 'OBSERVE', 'LOOKS', 'LOOKED', 'LOOKING'],
+    isDirectional: true,
+    directionalType: 'subject-to-object',
+    defaultLoci: { from: 'ME', to: 'YOU' },
     keyframes: [
       {
         label: 'From Eyes',
@@ -598,14 +604,16 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: 35, y: -45, z: 25 },
         targetKnuckle: { x: 60, y: -15, z: 15 },
         targetWrist: { x: 90, y: 25, z: 0 },
+        shape: 'v',
         nmf: { eyebrows: 'raised', mouth: 'look' },
       },
       {
         label: 'Direct Outward',
-        rule: 'V-fingers thrust forward directing gaze',
+        rule: 'V-fingers thrust forward directing gaze to target locus',
         targetTip: { x: 25, y: -25, z: 65 },
         targetKnuckle: { x: 50, y: 5, z: 45 },
         targetWrist: { x: 80, y: 45, z: 20 },
+        shape: 'v',
         nmf: { eyebrows: 'raised', mouth: 'look' },
       },
     ],
@@ -2164,6 +2172,1019 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
       },
     ],
   },
+
+  // =========================================================================
+  // LEVEL 2/3 DIRECTIONAL & AGREEMENT VERBS (SPATIAL LOCI MODULATED)
+  // =========================================================================
+  'GIVE': {
+    id: 'give',
+    word: 'GIVE',
+    category: 'grammar',
+    englishLabel: 'Give / Provide',
+    gloss: 'GIVE',
+    description: 'Flat cupped hand sweeps forward from sender locus to recipient locus with slight wrist flick.',
+    aliases: ['PROVIDE', 'GIVES', 'GAVE', 'GIVING'],
+    isDirectional: true,
+    directionalType: 'subject-to-object',
+    defaultLoci: { from: 'ME', to: 'YOU' },
+    keyframes: [
+      {
+        label: 'Source Origin',
+        rule: 'Hand holds open palm up near body at origin locus',
+        targetTip: { x: 20, y: 25, z: 20 },
+        targetKnuckle: { x: 45, y: 45, z: 12 },
+        targetWrist: { x: 80, y: 75, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'neutral', mouth: 'give' },
+      },
+      {
+        label: 'Deliver to Destination',
+        rule: 'Hand sweeps outward and presents palm to destination locus',
+        targetTip: { x: 10, y: -15, z: 60 },
+        targetKnuckle: { x: 35, y: 10, z: 45 },
+        targetWrist: { x: 75, y: 45, z: 30 },
+        shape: 'flat',
+        nmf: { eyebrows: 'neutral', mouth: 'give', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'TELL': {
+    id: 'tell',
+    word: 'TELL',
+    category: 'grammar',
+    englishLabel: 'Tell / Inform',
+    gloss: 'TELL',
+    description: 'Dominant index fingertip touches side of chin/lips and projects forward towards recipient.',
+    aliases: ['INFORM', 'TELLS', 'TOLD', 'TELLING'],
+    isDirectional: true,
+    directionalType: 'subject-to-object',
+    defaultLoci: { from: 'ME', to: 'YOU' },
+    keyframes: [
+      {
+        label: 'Touch Lips',
+        rule: 'Index finger touches side of chin below bottom lip',
+        targetTip: { x: 12, y: -52, z: 24 },
+        targetKnuckle: { x: 38, y: -25, z: 15 },
+        targetWrist: { x: 75, y: 25, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'tell' },
+      },
+      {
+        label: 'Project Forward to Addressee',
+        rule: 'Index finger flicks forward from lips straight toward recipient locus',
+        targetTip: { x: 8, y: -25, z: 58 },
+        targetKnuckle: { x: 32, y: 0, z: 40 },
+        targetWrist: { x: 70, y: 35, z: 25 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'tell' },
+      },
+    ],
+  },
+
+  'ASK': {
+    id: 'ask',
+    word: 'ASK',
+    category: 'grammar',
+    englishLabel: 'Ask / Inquire',
+    gloss: 'ASK',
+    description: 'Hooked index finger points towards recipient locus with inquisitive slight forward head tilt.',
+    aliases: ['INQUIRE', 'QUESTION', 'ASKS', 'ASKED', 'ASKING'],
+    isDirectional: true,
+    directionalType: 'subject-to-object',
+    defaultLoci: { from: 'ME', to: 'YOU' },
+    keyframes: [
+      {
+        label: 'Inquisitive Origin',
+        rule: 'Hooked index points forward from chest',
+        targetTip: { x: 15, y: 10, z: 30 },
+        targetKnuckle: { x: 42, y: 32, z: 20 },
+        targetWrist: { x: 80, y: 65, z: 5 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'ask' },
+      },
+      {
+        label: 'Direct Query to Locus',
+        rule: 'Index extends forward reaching toward destination locus',
+        targetTip: { x: 5, y: -15, z: 62 },
+        targetKnuckle: { x: 30, y: 8, z: 45 },
+        targetWrist: { x: 72, y: 40, z: 28 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'ask', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'SHOW': {
+    id: 'show',
+    word: 'SHOW',
+    category: 'grammar',
+    englishLabel: 'Show / Demonstrate',
+    gloss: 'SHOW',
+    description: 'Non-dominant flat palm faces forward, dominant index presses palm pushing forward towards recipient.',
+    aliases: ['DEMONSTRATE', 'DISPLAY', 'SHOWS', 'SHOWED', 'SHOWING'],
+    isDirectional: true,
+    directionalType: 'subject-to-object',
+    defaultLoci: { from: 'ME', to: 'YOU' },
+    keyframes: [
+      {
+        label: 'Index to Base Palm',
+        rule: 'Dominant index presses into center of open non-dominant palm facing target',
+        targetTip: { x: -35, y: 5, z: 25 },
+        targetKnuckle: { x: 5, y: 20, z: 15 },
+        targetWrist: { x: 55, y: 60, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'show' },
+      },
+      {
+        label: 'Push Outward Together',
+        rule: 'Both hands push forward in unison presenting the evidence to destination locus',
+        targetTip: { x: -20, y: -20, z: 55 },
+        targetKnuckle: { x: 15, y: -2, z: 42 },
+        targetWrist: { x: 60, y: 30, z: 25 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
+        baseHandOverride: { shiftX: 15, shiftY: -20, shiftZ: 30 },
+        nmf: { eyebrows: 'raised', mouth: 'show', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'EXPLAIN': {
+    id: 'explain',
+    word: 'EXPLAIN',
+    category: 'grammar',
+    englishLabel: 'Explain / Clarify',
+    gloss: 'EXPLAIN',
+    description: 'Both hands open and close alternating fingers pushing forward towards recipient.',
+    aliases: ['CLARIFY', 'DESCRIBE', 'EXPLAINS', 'EXPLAINED', 'EXPLAINING'],
+    isDirectional: true,
+    keyframes: [
+      {
+        label: 'Alternating Right Forward',
+        rule: 'Right hand pushes forward with fingers fluttering open',
+        targetTip: { x: 25, y: -10, z: 45 },
+        targetKnuckle: { x: 50, y: 15, z: 30 },
+        targetWrist: { x: 85, y: 50, z: 15 },
+        shape: 'spread',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'explain' },
+      },
+      {
+        label: 'Alternating Left Forward',
+        rule: 'Left hand pushes forward while right recedes',
+        targetTip: { x: 10, y: 5, z: 30 },
+        targetKnuckle: { x: 40, y: 25, z: 20 },
+        targetWrist: { x: 75, y: 60, z: 5 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
+        baseHandOverride: { shiftX: 25, shiftY: -15, shiftZ: 20 },
+        nmf: { eyebrows: 'neutral', mouth: 'explain' },
+      },
+    ],
+  },
+
+
+  // =========================================================================
+  // LEVEL 2/3 TEMPORAL & TIMELINE SIGNS (CHRONOLOGICAL PRIMACY)
+  // =========================================================================
+  'YESTERDAY': {
+    id: 'yesterday',
+    word: 'YESTERDAY',
+    category: 'temporal',
+    englishLabel: 'Yesterday / Past Day',
+    gloss: 'YESTERDAY',
+    description: 'Thumb of dominant fist points backwards over shoulder into the past timeline.',
+    aliases: ['PAST-DAY'],
+    keyframes: [
+      {
+        label: 'Thumb at Cheek',
+        rule: 'Fist with extended thumb begins beside cheek',
+        targetTip: { x: 45, y: -45, z: 22 },
+        targetKnuckle: { x: 65, y: -20, z: 12 },
+        targetWrist: { x: 95, y: 20, z: -5 },
+        shape: 'fist',
+        nmf: { eyebrows: 'neutral', mouth: 'yesterday' },
+      },
+      {
+        label: 'Thumb Points Over Shoulder',
+        rule: 'Thumb flicks backward past shoulder into past timeline',
+        targetTip: { x: 60, y: -60, z: -10 },
+        targetKnuckle: { x: 80, y: -30, z: -15 },
+        targetWrist: { x: 105, y: 10, z: -25 },
+        shape: 'fist',
+        nmf: { eyebrows: 'neutral', mouth: 'yesterday', headTilt: 'tilt-right' },
+      },
+    ],
+  },
+
+  'TODAY': {
+    id: 'today',
+    word: 'TODAY',
+    category: 'temporal',
+    englishLabel: 'Today / Present Day',
+    gloss: 'TODAY',
+    description: 'Both open hands palm up drop firmly twice in front of waist indicating this day.',
+    aliases: ['THIS-DAY', 'CURRENT-DAY'],
+    keyframes: [
+      {
+        label: 'Hands Raised',
+        rule: 'Both open flat hands palm up held at waist level',
+        targetTip: { x: 35, y: 15, z: 25 },
+        targetKnuckle: { x: 60, y: 35, z: 15 },
+        targetWrist: { x: 95, y: 65, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'today' },
+      },
+      {
+        label: 'Firm Downward Pulse',
+        rule: 'Both hands drop firmly downward asserting the present moment',
+        targetTip: { x: 35, y: 40, z: 25 },
+        targetKnuckle: { x: 60, y: 55, z: 15 },
+        targetWrist: { x: 95, y: 85, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'today', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'TOMORROW': {
+    id: 'tomorrow',
+    word: 'TOMORROW',
+    category: 'temporal',
+    englishLabel: 'Tomorrow / Next Day',
+    gloss: 'TOMORROW',
+    description: 'Thumb of dominant fist flicks forward from cheek into the future timeline.',
+    aliases: ['NEXT-DAY'],
+    keyframes: [
+      {
+        label: 'Thumb at Jawline',
+        rule: 'Thumb tip touches side of jaw near ear',
+        targetTip: { x: 42, y: -40, z: 18 },
+        targetKnuckle: { x: 65, y: -18, z: 10 },
+        targetWrist: { x: 95, y: 25, z: -5 },
+        shape: 'fist',
+        nmf: { eyebrows: 'neutral', mouth: 'tomorrow' },
+      },
+      {
+        label: 'Forward Arc into Future',
+        rule: 'Thumb arches forward away from jawline into upcoming future space',
+        targetTip: { x: 30, y: -30, z: 52 },
+        targetKnuckle: { x: 55, y: -5, z: 35 },
+        targetWrist: { x: 90, y: 30, z: 18 },
+        shape: 'fist',
+        nmf: { eyebrows: 'neutral', mouth: 'tomorrow' },
+      },
+    ],
+  },
+
+  'NOW': {
+    id: 'now',
+    word: 'NOW',
+    category: 'temporal',
+    englishLabel: 'Now / Immediately',
+    gloss: 'NOW',
+    description: 'Both hands bend downward firmly in front of body at present waist level.',
+    aliases: ['CURRENTLY', 'PRESENT', 'IMMEDIATELY'],
+    keyframes: [
+      {
+        label: 'Wrists Poised',
+        rule: 'Both flat hands point slightly upward at lower chest',
+        targetTip: { x: 30, y: 10, z: 25 },
+        targetKnuckle: { x: 55, y: 30, z: 15 },
+        targetWrist: { x: 90, y: 60, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'now' },
+      },
+      {
+        label: 'Crisp Downward Drop',
+        rule: 'Both hands drop crisply downward snapping into present plane',
+        targetTip: { x: 30, y: 35, z: 25 },
+        targetKnuckle: { x: 55, y: 50, z: 15 },
+        targetWrist: { x: 90, y: 80, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'now', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'FUTURE': {
+    id: 'future',
+    word: 'FUTURE',
+    category: 'temporal',
+    englishLabel: 'Future / Ahead',
+    gloss: 'FUTURE',
+    description: 'Flat open hand sweeps forward from side of temple into distant space.',
+    aliases: ['AHEAD', 'LATER', 'UPCOMING', 'SOON'],
+    keyframes: [
+      {
+        label: 'Temple Origin',
+        rule: 'Flat open hand held vertical beside eye/temple',
+        targetTip: { x: 35, y: -55, z: 22 },
+        targetKnuckle: { x: 58, y: -25, z: 12 },
+        targetWrist: { x: 90, y: 15, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'raised', mouth: 'future' },
+      },
+      {
+        label: 'Long Forward Sweep',
+        rule: 'Flat hand sweeps far forward slicing through upcoming future timeline',
+        targetTip: { x: 20, y: -35, z: 70 },
+        targetKnuckle: { x: 45, y: -5, z: 50 },
+        targetWrist: { x: 80, y: 25, z: 30 },
+        shape: 'flat',
+        nmf: { eyebrows: 'raised', mouth: 'future' },
+      },
+    ],
+  },
+
+  'PAST': {
+    id: 'past',
+    word: 'PAST',
+    category: 'temporal',
+    englishLabel: 'Past / Ago',
+    gloss: 'PAST',
+    description: 'Flat hand waves backward over dominant shoulder into history.',
+    aliases: ['AGO', 'BEFORE', 'PREVIOUSLY', 'HISTORY'],
+    keyframes: [
+      {
+        label: 'At Shoulder',
+        rule: 'Flat hand vertical in front of dominant shoulder',
+        targetTip: { x: 40, y: -30, z: 20 },
+        targetKnuckle: { x: 62, y: -5, z: 10 },
+        targetWrist: { x: 90, y: 35, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'neutral', mouth: 'past' },
+      },
+      {
+        label: 'Wave Backward Over Shoulder',
+        rule: 'Hand sweeps backward past shoulder into past timeline',
+        targetTip: { x: 55, y: -50, z: -15 },
+        targetKnuckle: { x: 75, y: -20, z: -20 },
+        targetWrist: { x: 100, y: 15, z: -30 },
+        shape: 'flat',
+        nmf: { eyebrows: 'neutral', mouth: 'past', headTilt: 'tilt-right' },
+      },
+    ],
+  },
+
+  'MORNING': {
+    id: 'morning',
+    word: 'MORNING',
+    category: 'temporal',
+    englishLabel: 'Morning / Dawn',
+    gloss: 'MORNING',
+    description: 'Dominant hand rises like the dawn sun rising above horizontal non-dominant arm.',
+    aliases: ['DAWN', 'AM'],
+    keyframes: [
+      {
+        label: 'Below Horizon',
+        rule: 'Cupped hand rests beneath non-dominant forearm',
+        targetTip: { x: -10, y: 35, z: 20 },
+        targetKnuckle: { x: 20, y: 55, z: 12 },
+        targetWrist: { x: 60, y: 85, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'morning' },
+      },
+      {
+        label: 'Sun Rises Above Horizon',
+        rule: 'Hand rises upward above forearm spreading light',
+        targetTip: { x: 0, y: -20, z: 32 },
+        targetKnuckle: { x: 25, y: 10, z: 20 },
+        targetWrist: { x: 65, y: 50, z: 5 },
+        shape: 'spread',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'raised', mouth: 'morning', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'AFTERNOON': {
+    id: 'afternoon',
+    word: 'AFTERNOON',
+    category: 'temporal',
+    englishLabel: 'Afternoon / PM',
+    gloss: 'AFTERNOON',
+    description: 'Dominant flat hand rests on non-dominant arm and tilts gently downward.',
+    aliases: ['PM', 'MIDDAY'],
+    keyframes: [
+      {
+        label: 'Arm Rest High',
+        rule: 'Dominant elbow rests on non-dominant fingertips pointing slightly up',
+        targetTip: { x: 15, y: -30, z: 30 },
+        targetKnuckle: { x: 40, y: 0, z: 20 },
+        targetWrist: { x: 75, y: 40, z: 5 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'afternoon' },
+      },
+      {
+        label: 'Tilt Downward',
+        rule: 'Hand tilts gently downward as afternoon progresses',
+        targetTip: { x: 25, y: 5, z: 30 },
+        targetKnuckle: { x: 45, y: 25, z: 18 },
+        targetWrist: { x: 75, y: 55, z: 5 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'afternoon' },
+      },
+    ],
+  },
+
+  // =========================================================================
+  // LEVEL 2/3 COGNITION, REASONING & DISCOURSE SIGNS
+  // =========================================================================
+  'UNDERSTAND': {
+    id: 'understand',
+    word: 'UNDERSTAND',
+    category: 'grammar',
+    englishLabel: 'Understand / Comprehend',
+    gloss: 'UNDERSTAND',
+    description: 'Index finger flicks upward next to temple like an enlightened spark of comprehension.',
+    aliases: ['COMPREHEND', 'GET-IT', 'UNDERSTOOD'],
+    keyframes: [
+      {
+        label: 'Fist at Temple',
+        rule: 'Fist held beside temple with index curled',
+        targetTip: { x: 32, y: -48, z: 18 },
+        targetKnuckle: { x: 55, y: -25, z: 10 },
+        targetWrist: { x: 85, y: 18, z: 0 },
+        shape: 'fist',
+        nmf: { eyebrows: 'raised', mouth: 'understand' },
+      },
+      {
+        label: 'Index Sparks Upward',
+        rule: 'Index finger springs upright in comprehension',
+        targetTip: { x: 32, y: -72, z: 25 },
+        targetKnuckle: { x: 55, y: -40, z: 15 },
+        targetWrist: { x: 85, y: 5, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'understand', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'AGREE': {
+    id: 'agree',
+    word: 'AGREE',
+    category: 'grammar',
+    englishLabel: 'Agree / Concur',
+    gloss: 'AGREE',
+    description: 'Index points to head, then dominant flat hand drops firmly onto non-dominant palm.',
+    aliases: ['CONCUR', 'CONSENT', 'AGREES', 'AGREED'],
+    keyframes: [
+      {
+        label: 'Point to Head',
+        rule: 'Dominant index touches temple (same thought)',
+        targetTip: { x: 30, y: -52, z: 20 },
+        targetKnuckle: { x: 55, y: -25, z: 10 },
+        targetWrist: { x: 85, y: 18, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'agree' },
+      },
+      {
+        label: 'Hands Unite in Agreement',
+        rule: 'Dominant flat hand drops firmly into non-dominant open palm',
+        targetTip: { x: -30, y: 15, z: 22 },
+        targetKnuckle: { x: 5, y: 32, z: 12 },
+        targetWrist: { x: 55, y: 68, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'raised', mouth: 'agree', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'DISAGREE': {
+    id: 'disagree',
+    word: 'DISAGREE',
+    category: 'grammar',
+    englishLabel: 'Disagree / Differ',
+    gloss: 'DISAGREE',
+    description: 'Index points to head then index fingers cross with a firm head shake.',
+    aliases: ['DIFFER', 'DISAGREES', 'DISAGREED'],
+    keyframes: [
+      {
+        label: 'Point to Head',
+        rule: 'Index points to temple',
+        targetTip: { x: 30, y: -52, z: 20 },
+        targetKnuckle: { x: 55, y: -25, z: 10 },
+        targetWrist: { x: 85, y: 18, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'differ' },
+      },
+      {
+        label: 'Cross Fingers No',
+        rule: 'Both index fingers cross in negation with head shake',
+        targetTip: { x: 0, y: 5, z: 28 },
+        targetKnuckle: { x: 30, y: 25, z: 18 },
+        targetWrist: { x: 70, y: 60, z: 5 },
+        shape: 'point',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'furrowed', mouth: 'no', headTilt: 'shake' },
+      },
+    ],
+  },
+
+  'REMEMBER': {
+    id: 'remember',
+    word: 'REMEMBER',
+    category: 'grammar',
+    englishLabel: 'Remember / Recall',
+    gloss: 'REMEMBER',
+    description: 'Dominant thumb touches forehead then drops to join non-dominant thumb in memory locked.',
+    aliases: ['RECALL', 'MEMORIZE', 'REMEMBERS'],
+    keyframes: [
+      {
+        label: 'Touch Forehead',
+        rule: 'Thumb of dominant fist touches side of forehead',
+        targetTip: { x: 25, y: -55, z: 22 },
+        targetKnuckle: { x: 50, y: -28, z: 12 },
+        targetWrist: { x: 80, y: 15, z: 0 },
+        shape: 'fist',
+        nmf: { eyebrows: 'raised', mouth: 'remember' },
+      },
+      {
+        label: 'Lock Thumbs Together',
+        rule: 'Dominant thumb drops and locks onto non-dominant thumb',
+        targetTip: { x: -15, y: 10, z: 25 },
+        targetKnuckle: { x: 15, y: 30, z: 15 },
+        targetWrist: { x: 60, y: 65, z: 0 },
+        shape: 'fist',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'remember', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'FORGET': {
+    id: 'forget',
+    word: 'FORGET',
+    category: 'grammar',
+    englishLabel: 'Forget / Blank',
+    gloss: 'FORGET',
+    description: 'Flat open hand wipes across forehead as if clearing thoughts from mind.',
+    aliases: ['FORGOT', 'FORGOTTEN'],
+    keyframes: [
+      {
+        label: 'Hand at Temple',
+        rule: 'Open flat hand rests across temple and forehead',
+        targetTip: { x: 0, y: -60, z: 25 },
+        targetKnuckle: { x: 35, y: -35, z: 15 },
+        targetWrist: { x: 75, y: 5, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'furrowed', mouth: 'forget' },
+      },
+      {
+        label: 'Wipe Across',
+        rule: 'Hand sweeps laterally across forehead into space',
+        targetTip: { x: 45, y: -60, z: 25 },
+        targetKnuckle: { x: 75, y: -35, z: 15 },
+        targetWrist: { x: 105, y: 5, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'furrowed', mouth: 'blank', headTilt: 'shake' },
+      },
+    ],
+  },
+
+  'THINK': {
+    id: 'think',
+    word: 'THINK',
+    category: 'grammar',
+    englishLabel: 'Think / Ponder',
+    gloss: 'THINK',
+    description: 'Dominant index finger taps or gently circles temple in reflection.',
+    aliases: ['PONDER', 'CONSIDER', 'THINKS', 'THOUGHT'],
+    keyframes: [
+      {
+        label: 'Index at Temple',
+        rule: 'Index finger touches side of temple',
+        targetTip: { x: 28, y: -52, z: 22 },
+        targetKnuckle: { x: 55, y: -25, z: 12 },
+        targetWrist: { x: 85, y: 18, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'think' },
+      },
+      {
+        label: 'Reflective Tap',
+        rule: 'Index finger taps temple in contemplation',
+        targetTip: { x: 28, y: -50, z: 20 },
+        targetKnuckle: { x: 55, y: -23, z: 10 },
+        targetWrist: { x: 85, y: 20, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'think' },
+      },
+    ],
+  },
+
+  'KNOW': {
+    id: 'know',
+    word: 'KNOW',
+    category: 'grammar',
+    englishLabel: 'Know / Aware',
+    gloss: 'KNOW',
+    description: 'Fingertips of dominant flat hand touch side of forehead twice.',
+    aliases: ['AWARE', 'KNOWS', 'KNEW', 'KNOWN'],
+    keyframes: [
+      {
+        label: 'Touch Forehead',
+        rule: 'Fingertips of bent flat hand tap side of forehead',
+        targetTip: { x: 25, y: -55, z: 22 },
+        targetKnuckle: { x: 52, y: -30, z: 12 },
+        targetWrist: { x: 82, y: 15, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'raised', mouth: 'know' },
+      },
+      {
+        label: 'Second Tap',
+        rule: 'Fingertips confirm contact on forehead with head nod',
+        targetTip: { x: 25, y: -53, z: 20 },
+        targetKnuckle: { x: 52, y: -28, z: 10 },
+        targetWrist: { x: 82, y: 17, z: 0 },
+        shape: 'flat',
+        nmf: { eyebrows: 'raised', mouth: 'know', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'WANT': {
+    id: 'want',
+    word: 'WANT',
+    category: 'grammar',
+    englishLabel: 'Want / Desire',
+    gloss: 'WANT',
+    description: 'Both clawed hands palm up pull smoothly inwards toward the chest.',
+    aliases: ['DESIRE', 'WANTS', 'WANTED'],
+    keyframes: [
+      {
+        label: 'Reach Outward',
+        rule: 'Both hands open clawed palms up reaching forward',
+        targetTip: { x: 25, y: 0, z: 45 },
+        targetKnuckle: { x: 50, y: 25, z: 30 },
+        targetWrist: { x: 85, y: 60, z: 15 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'want' },
+      },
+      {
+        label: 'Pull Inward',
+        rule: 'Both clawed hands pull inward towards body',
+        targetTip: { x: 20, y: 20, z: 25 },
+        targetKnuckle: { x: 45, y: 40, z: 15 },
+        targetWrist: { x: 80, y: 70, z: 0 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'want', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'NEED': {
+    id: 'need',
+    word: 'NEED',
+    category: 'grammar',
+    englishLabel: 'Need / Require',
+    gloss: 'NEED',
+    description: 'Bent index finger nods firmly downward in front of body in requirement.',
+    aliases: ['REQUIRE', 'MUST-HAVE', 'NEEDS', 'NEEDED'],
+    keyframes: [
+      {
+        label: 'Hook Up',
+        rule: 'Bent hooked index finger held at mid chest',
+        targetTip: { x: 20, y: 5, z: 30 },
+        targetKnuckle: { x: 45, y: 25, z: 20 },
+        targetWrist: { x: 80, y: 60, z: 5 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'need' },
+      },
+      {
+        label: 'Firm Downward Bend',
+        rule: 'Hooked index nods firmly downward expressing imperative necessity',
+        targetTip: { x: 20, y: 28, z: 30 },
+        targetKnuckle: { x: 45, y: 45, z: 20 },
+        targetWrist: { x: 80, y: 75, z: 5 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'need', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'CAN': {
+    id: 'can',
+    word: 'CAN',
+    category: 'grammar',
+    englishLabel: 'Can / Able',
+    gloss: 'CAN',
+    description: 'Both fists nod downward firmly in affirmative capability.',
+    aliases: ['ABLE', 'COULD', 'POSSIBLE'],
+    keyframes: [
+      {
+        label: 'Fists Poised',
+        rule: 'Both fists held in front of body at waist level',
+        targetTip: { x: 25, y: 15, z: 25 },
+        targetKnuckle: { x: 50, y: 35, z: 15 },
+        targetWrist: { x: 85, y: 65, z: 0 },
+        shape: 'fist',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'can' },
+      },
+      {
+        label: 'Affirmative Nod Down',
+        rule: 'Both fists drop firmly downward confirming ability',
+        targetTip: { x: 25, y: 38, z: 25 },
+        targetKnuckle: { x: 50, y: 55, z: 15 },
+        targetWrist: { x: 85, y: 85, z: 0 },
+        shape: 'fist',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'can', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'CANNOT': {
+    id: 'cannot',
+    word: 'CANNOT',
+    category: 'grammar',
+    englishLabel: 'Cannot / Unable',
+    gloss: 'CANNOT',
+    description: 'Dominant index crosses and strikes down off non-dominant index with head shake.',
+    aliases: ["CAN'T", 'UNABLE', 'IMPOSSIBLE'],
+    keyframes: [
+      {
+        label: 'Index Raised Above Non-Dominant',
+        rule: 'Dominant index raised above non-dominant extended index finger',
+        targetTip: { x: -25, y: -5, z: 25 },
+        targetKnuckle: { x: 5, y: 15, z: 15 },
+        targetWrist: { x: 50, y: 55, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'furrowed', mouth: 'cant' },
+      },
+      {
+        label: 'Strike Down and Past',
+        rule: 'Dominant index strikes past non-dominant index with emphatic head shake',
+        targetTip: { x: -25, y: 30, z: 25 },
+        targetKnuckle: { x: 5, y: 45, z: 15 },
+        targetWrist: { x: 50, y: 80, z: 0 },
+        shape: 'point',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'furrowed', mouth: 'no', headTilt: 'shake' },
+      },
+    ],
+  },
+
+  'MUST': {
+    id: 'must',
+    word: 'MUST',
+    category: 'grammar',
+    englishLabel: 'Must / Obligation',
+    gloss: 'MUST',
+    description: 'Index finger points down firmly with strong downward thrust.',
+    aliases: ['HAVE-TO', 'OBLIGATED'],
+    keyframes: [
+      {
+        label: 'Point Raised',
+        rule: 'Index finger points forward at chest level',
+        targetTip: { x: 20, y: -10, z: 30 },
+        targetKnuckle: { x: 45, y: 15, z: 20 },
+        targetWrist: { x: 80, y: 55, z: 5 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'must' },
+      },
+      {
+        label: 'Forceful Downward Thrust',
+        rule: 'Index thrusts firmly downward in absolute mandate',
+        targetTip: { x: 20, y: 35, z: 30 },
+        targetKnuckle: { x: 45, y: 55, z: 20 },
+        targetWrist: { x: 80, y: 85, z: 5 },
+        shape: 'point',
+        nmf: { eyebrows: 'furrowed', mouth: 'must', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'BECAUSE': {
+    id: 'because',
+    word: 'BECAUSE',
+    category: 'grammar',
+    englishLabel: 'Because / Reason',
+    gloss: 'BECAUSE',
+    description: 'Index finger taps side of forehead then drops into open flat hand.',
+    aliases: ['REASON', 'WHY-BECAUSE'],
+    keyframes: [
+      {
+        label: 'Tap Forehead',
+        rule: 'Dominant index taps side of forehead',
+        targetTip: { x: 28, y: -52, z: 22 },
+        targetKnuckle: { x: 55, y: -25, z: 12 },
+        targetWrist: { x: 85, y: 18, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'because' },
+      },
+      {
+        label: 'Present Reason',
+        rule: 'Hand opens into flat palm up explaining the cause',
+        targetTip: { x: 25, y: 10, z: 35 },
+        targetKnuckle: { x: 50, y: 35, z: 25 },
+        targetWrist: { x: 85, y: 65, z: 10 },
+        shape: 'flat',
+        nmf: { eyebrows: 'neutral', mouth: 'reason' },
+      },
+    ],
+  },
+
+  'IF': {
+    id: 'if',
+    word: 'IF',
+    category: 'grammar',
+    englishLabel: 'If / Conditional',
+    gloss: 'IF',
+    description: 'Dominant little finger taps cheek twice in classical BSL conditional marker.',
+    aliases: ['SUPPOSE', 'WHETHER'],
+    keyframes: [
+      {
+        label: 'Pinky at Cheek',
+        rule: 'Pinky finger touches upper cheekbone',
+        targetTip: { x: 30, y: -45, z: 20 },
+        targetKnuckle: { x: 55, y: -20, z: 10 },
+        targetWrist: { x: 85, y: 22, z: -5 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'if' },
+      },
+      {
+        label: 'Pinky Tap',
+        rule: 'Pinky taps cheek twice with raised eyebrows indicating conditional clause',
+        targetTip: { x: 30, y: -43, z: 18 },
+        targetKnuckle: { x: 55, y: -18, z: 8 },
+        targetWrist: { x: 85, y: 24, z: -5 },
+        shape: 'point',
+        nmf: { eyebrows: 'raised', mouth: 'if' },
+      },
+    ],
+  },
+
+  // =========================================================================
+  // LEVEL 2/3 PRONOUNS & ENTITY REFERENCES
+  // =========================================================================
+  'ME': {
+    id: 'me',
+    word: 'ME',
+    category: 'grammar',
+    englishLabel: 'Me / I',
+    gloss: 'ME',
+    description: 'Dominant index points directly to the center of own chest.',
+    aliases: ['I', 'MYSELF'],
+    keyframes: [
+      {
+        label: 'Approach Chest',
+        rule: 'Dominant index points towards heart',
+        targetTip: { x: 10, y: 0, z: 15 },
+        targetKnuckle: { x: 40, y: 20, z: 10 },
+        targetWrist: { x: 75, y: 55, z: 0 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'me' },
+      },
+      {
+        label: 'Touch Center Chest',
+        rule: 'Index touches center of own chest establishing 1st person locus',
+        targetTip: { x: 0, y: 10, z: 8 },
+        targetKnuckle: { x: 30, y: 25, z: 5 },
+        targetWrist: { x: 70, y: 60, z: -5 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'me' },
+      },
+    ],
+  },
+
+  'YOU': {
+    id: 'you',
+    word: 'YOU',
+    category: 'grammar',
+    englishLabel: 'You / Addressee',
+    gloss: 'YOU',
+    description: 'Dominant index points directly forward to the addressee (2nd person locus).',
+    aliases: ['YOURSELF'],
+    keyframes: [
+      {
+        label: 'Raise Point',
+        rule: 'Dominant index points forward at upper chest level',
+        targetTip: { x: 10, y: -10, z: 35 },
+        targetKnuckle: { x: 35, y: 15, z: 25 },
+        targetWrist: { x: 75, y: 50, z: 10 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'you' },
+      },
+      {
+        label: 'Direct Point to Addressee',
+        rule: 'Index finger extends forward directly toward 2nd person locus',
+        targetTip: { x: 0, y: -20, z: 65 },
+        targetKnuckle: { x: 25, y: 0, z: 45 },
+        targetWrist: { x: 65, y: 35, z: 25 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'you' },
+      },
+    ],
+  },
+
+  'THEY': {
+    id: 'they',
+    word: 'THEY',
+    category: 'grammar',
+    englishLabel: 'They / Them',
+    gloss: 'THEY',
+    description: 'Dominant index sweeps horizontally across 3rd person space.',
+    aliases: ['THEM', 'THOSE-PEOPLE'],
+    keyframes: [
+      {
+        label: 'Start Sweep Left',
+        rule: 'Index points towards Locus A on left',
+        targetTip: { x: -45, y: -5, z: 35 },
+        targetKnuckle: { x: -15, y: 15, z: 25 },
+        targetWrist: { x: 35, y: 55, z: 10 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'they' },
+      },
+      {
+        label: 'Sweep to Locus B Right',
+        rule: 'Index sweeps across to Locus B on right encompassing the group',
+        targetTip: { x: 45, y: -5, z: 35 },
+        targetKnuckle: { x: 70, y: 15, z: 25 },
+        targetWrist: { x: 105, y: 55, z: 10 },
+        shape: 'point',
+        nmf: { eyebrows: 'neutral', mouth: 'they' },
+      },
+    ],
+  },
+
+  'PUPIL': {
+    id: 'pupil',
+    word: 'PUPIL',
+    category: 'school',
+    englishLabel: 'Pupil / Student',
+    gloss: 'PUPIL',
+    description: 'Sign for LEARN (taps forehead from palm) followed by person drop.',
+    aliases: ['STUDENT', 'LEARNER', 'SCHOLAR'],
+    keyframes: [
+      {
+        label: 'Gather from Palm',
+        rule: 'Dominant fingertips touch non-dominant open palm (gathering knowledge)',
+        targetTip: { x: -40, y: 20, z: 15 },
+        targetKnuckle: { x: 0, y: 35, z: 10 },
+        targetWrist: { x: 50, y: 70, z: 0 },
+        shape: 'claw',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'student' },
+      },
+      {
+        label: 'Knowledge to Forehead',
+        rule: 'Hand rises and touches forehead (internalizing learning)',
+        targetTip: { x: 22, y: -52, z: 22 },
+        targetKnuckle: { x: 48, y: -25, z: 12 },
+        targetWrist: { x: 80, y: 18, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'raised', mouth: 'pupil', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'FAMILY': {
+    id: 'family',
+    word: 'FAMILY',
+    category: 'conversation',
+    englishLabel: 'Family / Relatives',
+    gloss: 'FAMILY',
+    description: 'Both curved hands draw an inclusive horizontal circle and join pinkies together.',
+    aliases: ['HOUSEHOLD', 'RELATIVES'],
+    keyframes: [
+      {
+        label: 'Hands Apart',
+        rule: 'Both curved hands in front of chest facing each other',
+        targetTip: { x: 30, y: 5, z: 30 },
+        targetKnuckle: { x: 55, y: 25, z: 20 },
+        targetWrist: { x: 90, y: 60, z: 5 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'family' },
+      },
+      {
+        label: 'Circle Together',
+        rule: 'Both hands sweep in a circle and unite together in loving unity',
+        targetTip: { x: 0, y: 15, z: 25 },
+        targetKnuckle: { x: 30, y: 35, z: 15 },
+        targetWrist: { x: 70, y: 70, z: 0 },
+        shape: 'claw',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'family', headTilt: 'nod' },
+      },
+    ],
+  },
 };
 
 /**
@@ -2257,16 +3278,18 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
       baseHandMode = 'override';
     } else if ([
       'PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST',
-      'WHAT', 'WHERE', 'HOW', 'WELCOME', 'WAIT', 'FINISH', 'BIG', 'ALL', 'HOLY', 'TEACHER'
+      'WHAT', 'WHERE', 'HOW', 'WELCOME', 'WAIT', 'FINISH', 'BIG', 'ALL', 'HOLY', 'TEACHER',
+      'GIVE', 'EXPLAIN', 'TODAY', 'NOW', 'DISAGREE', 'WANT', 'CAN', 'FAMILY'
     ].includes(sign.word)) {
       baseHandMode = 'mirror';
     } else if ([
       'SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS',
-      'CROSS', 'START', 'STOP', 'SIT', 'STAND', 'CORRECT', 'HAPPY', 'MORE', 'AGAIN', 'SLOW'
+      'CROSS', 'START', 'STOP', 'SIT', 'STAND', 'CORRECT', 'HAPPY', 'MORE', 'AGAIN', 'SLOW',
+      'SHOW', 'MORNING', 'AFTERNOON', 'AGREE', 'REMEMBER', 'CANNOT', 'PUPIL'
     ].includes(sign.word)) {
       baseHandMode = 'vowel-board';
     } else {
-      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL)
+      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL, TELL, ASK, LOOK, YESTERDAY, TOMORROW, FUTURE, PAST, UNDERSTAND, FORGET, THINK, KNOW, NEED, MUST, BECAUSE, IF, ME, YOU, THEY)
     }
   }
 

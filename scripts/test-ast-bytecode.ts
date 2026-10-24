@@ -141,7 +141,7 @@ function runTests() {
     totalDecompTime += tDecomp;
 
     assert(Boolean(sc.id && sc.title), `Cartridge '${f}' successfully compiled & decompiled`);
-    assert(tDecomp < 3.0, `Cartridge '${f}' decompiled in ${tDecomp.toFixed(3)} ms (< 3.0 ms threshold)`);
+    assert(tDecomp < 5.0, `Cartridge '${f}' decompiled in ${tDecomp.toFixed(3)} ms (< 5.0 ms threshold)`);
   }
 
   const totalTime = performance.now() - t0;

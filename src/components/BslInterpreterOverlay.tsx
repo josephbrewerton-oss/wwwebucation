@@ -38,8 +38,14 @@ import {
   registerBslSigns,
 } from '../utils/bslLexicon';
 import { parseAstToLexicon } from '../utils/bslAstCodec';
+import {
+  analyzeAndTransformBslGrammar,
+  BslGrammarMode,
+  BslGrammarAnalysis,
+} from '../utils/bslGrammarEngine';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
-import { subscribeBslSpeech } from '../services/bslGlobalStore';
+import { subscribeBslSpeech, openBslSignStudio } from '../services/bslGlobalStore';
+import { subscribeCustomSigns, initCustomSignsIntoLexicon } from '../services/customSignStore';
 
 export interface BslInterpreterOverlayProps {
   activeWord?: string;
@@ -111,7 +117,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [windowOpacity, setWindowOpacity] = useState<number>(1.0);
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
-  const [signMode, setSignMode] = useState<'concept' | 'fingerspell'>('concept');
+  const [grammarMode, setGrammarMode] = useState<BslGrammarMode>('bsl-natural');
+  const [showGrammarInspector, setShowGrammarInspector] = useState<boolean>(false);
+  const [grammarAnalysis, setGrammarAnalysis] = useState<BslGrammarAnalysis | null>(null);
   const [customInput, setCustomInput] = useState<string>('');
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
   const [showPanControls, setShowPanControls] = useState<boolean>(false);
@@ -124,6 +132,21 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
       word: s.word,
     }));
   });
+
+  // Synchronize available signs with custom signs from IndexedDB
+  useEffect(() => {
+    const refreshSigns = () => {
+      setAvailableSigns(
+        Object.values(BSL_CURRICULUM_LEXICON).map((s) => ({
+          label: s.englishLabel || s.word,
+          word: s.word,
+        }))
+      );
+    };
+    initCustomSignsIntoLexicon().then(refreshSigns);
+    const unsub = subscribeCustomSigns(refreshSigns);
+    return unsub;
+  }, []);
 
   // Active signing state
   const [currentLetter, setCurrentLetter] = useState<string>('');
@@ -415,18 +438,19 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   }, [viewAngle, orbitOffset, cameraMode]);
 
   // Enqueue new word or phrase for conceptual BSL signing or fingerspelling
-  const enqueueText = useCallback((text: string, overrideMode?: 'concept' | 'fingerspell') => {
+  const enqueueText = useCallback((text: string, overrideMode?: BslGrammarMode) => {
     if (!text || typeof text !== 'string') return;
     const clean = text.trim();
     if (!clean) return;
 
     setActiveWordDisplay(clean.toUpperCase());
-    const effectiveMode = overrideMode || signMode;
-    const poses = decomposeTextToBslStreamWithLexicon(clean, { mode: effectiveMode });
-    if (poses.length > 0) {
-      queueRef.current = [...poses, REST_POSE];
+    const effectiveMode = overrideMode || grammarMode;
+    const analysis = analyzeAndTransformBslGrammar(clean, { mode: effectiveMode });
+    setGrammarAnalysis(analysis);
+    if (analysis.stream.length > 0) {
+      queueRef.current = [...analysis.stream, REST_POSE];
     }
-  }, [signMode]);
+  }, [grammarMode]);
 
   const enqueueWord = useCallback((word: string) => {
     enqueueText(word);
@@ -525,6 +549,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     if (headTilt === 'nod') {
       dy += 4 * Math.sin(transitionProgress * Math.PI); // subtle rhythmic nod
       dz += 2;
+    } else if (headTilt === 'shake') {
+      dx += 6 * Math.sin(transitionProgress * Math.PI * 2); // authentic BSL negation head shake
     } else if (headTilt === 'tilt-right') {
       dx += 4;
       dy -= 2;
@@ -1356,6 +1382,52 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             🌐
           </button>
 
+          {/* Sign Studio & Keyframe Poser Launcher */}
+          <button
+            type="button"
+            onClick={() => openBslSignStudio(activeWordDisplay || undefined)}
+            style={{
+              background: 'rgba(16, 185, 129, 0.2)',
+              border: '1px solid #10b981',
+              color: '#6ee7b7',
+              cursor: 'pointer',
+              padding: '2px 5px',
+              borderRadius: '4px',
+              fontSize: '0.66rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+            }}
+            title="Open BSL Sign Studio to create or edit signs"
+          >
+            <span>✍️</span>
+            <span>Studio</span>
+          </button>
+
+          {/* Level 2/3 Syntax & Spatial Loci Inspector */}
+          <button
+            type="button"
+            onClick={() => setShowGrammarInspector((p) => !p)}
+            style={{
+              background: showGrammarInspector ? '#0284c7' : 'rgba(56, 189, 248, 0.15)',
+              border: `1px solid ${showGrammarInspector ? '#38bdf8' : 'rgba(56, 189, 248, 0.3)'}`,
+              color: showGrammarInspector ? '#ffffff' : '#38bdf8',
+              cursor: 'pointer',
+              padding: '2px 5px',
+              borderRadius: '4px',
+              fontSize: '0.66rem',
+              fontWeight: 700,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '2px',
+            }}
+            title="Toggle BSL Level 2/3 Syntax & Spatial Loci Inspector"
+          >
+            <span>⚖️</span>
+            <span>Syntax</span>
+          </button>
+
           {/* Reset Position Button */}
           {windowPos && (
             <button
@@ -1568,7 +1640,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   fontWeight: 700,
                 }}
               >
-                {activeNmf.headTilt === 'nod' ? '✓ Nod' : 'Tilt'}
+                {activeNmf.headTilt === 'nod' ? '✓ Nod' : activeNmf.headTilt === 'shake' ? '✗ Shake' : 'Tilt'}
               </span>
             )}
             {(!activeNmf || (!activeNmf.eyebrows && !activeNmf.mouth && !activeNmf.headTilt)) && (
@@ -1579,6 +1651,96 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <span style={{ color: '#64748b', fontSize: '0.6rem' }}>Face Off</span>
         )}
       </div>
+
+      {/* BSL Level 2/3 Syntax & Spatial Loci Inspector Drawer */}
+      {showGrammarInspector && (
+        <div
+          style={{
+            padding: '6px 10px',
+            background: 'rgba(10, 15, 30, 0.98)',
+            borderBottom: '1px solid rgba(56, 189, 248, 0.3)',
+            fontSize: '0.65rem',
+            color: '#e2e8f0',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+            <span style={{ fontWeight: 800, color: '#38bdf8', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <span>⚖️ Level 2/3 Natural BSL</span>
+              <span
+                style={{
+                  fontSize: '0.55rem',
+                  fontWeight: 800,
+                  padding: '1px 5px',
+                  borderRadius: '3px',
+                  background: grammarAnalysis?.sentenceType === 'wh-question'
+                    ? 'rgba(239, 68, 68, 0.2)'
+                    : grammarAnalysis?.sentenceType === 'polar-question'
+                    ? 'rgba(56, 189, 248, 0.2)'
+                    : grammarAnalysis?.sentenceType === 'negation'
+                    ? 'rgba(245, 158, 11, 0.2)'
+                    : 'rgba(34, 197, 94, 0.2)',
+                  color: grammarAnalysis?.sentenceType === 'wh-question'
+                    ? '#f87171'
+                    : grammarAnalysis?.sentenceType === 'polar-question'
+                    ? '#38bdf8'
+                    : grammarAnalysis?.sentenceType === 'negation'
+                    ? '#fbbf24'
+                    : '#4ade80',
+                  border: '1px solid currentColor',
+                }}
+              >
+                {grammarAnalysis?.sentenceType?.toUpperCase() || 'TOPIC-COMMENT'}
+              </span>
+            </span>
+            <span style={{ fontSize: '0.58rem', color: '#94a3b8' }}>
+              NMF: {facialLandmarks.eyebrowState === 'furrowed' ? 'Furrowed 😠' : facialLandmarks.eyebrowState === 'raised' ? 'Raised 🤨' : 'Neutral 🙂'}
+              {facialLandmarks.headTilt === 'shake' ? ' • Shake ↔️' : facialLandmarks.headTilt === 'nod' ? ' • Nod ↕️' : ''}
+            </span>
+          </div>
+
+          {/* Gloss Sequence */}
+          <div
+            style={{
+              padding: '3px 6px',
+              background: 'rgba(15, 23, 42, 0.8)',
+              borderRadius: '4px',
+              fontFamily: 'monospace',
+              fontSize: '0.62rem',
+              color: '#fbbf24',
+              marginBottom: '5px',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              overflowX: 'auto',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            {grammarAnalysis?.glossSequence || activeWordDisplay || 'Awaiting utterance...'}
+          </div>
+
+          {/* Spatial Loci Compass */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px', fontSize: '0.58rem' }}>
+            <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '2px 4px', borderRadius: '3px', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontWeight: 700 }}>1P (Self)</span>
+              <span style={{ color: '#38bdf8', fontWeight: 600 }}>Me / Signer</span>
+            </div>
+            <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '2px 4px', borderRadius: '3px', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontWeight: 700 }}>2P (Front)</span>
+              <span style={{ color: '#38bdf8', fontWeight: 600 }}>You / Addressee</span>
+            </div>
+            <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '2px 4px', borderRadius: '3px', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontWeight: 700 }}>Locus A (Left)</span>
+              <span style={{ color: grammarAnalysis?.activeLoci?.LOCUS_A?.assignedEntity ? '#a78bfa' : '#64748b', fontWeight: 600 }}>
+                {grammarAnalysis?.activeLoci?.LOCUS_A?.assignedEntity || '3rd Entity'}
+              </span>
+            </div>
+            <div style={{ background: 'rgba(30, 41, 59, 0.6)', padding: '2px 4px', borderRadius: '3px', border: '1px solid rgba(56, 189, 248, 0.15)' }}>
+              <span style={{ color: '#94a3b8', display: 'block', fontWeight: 700 }}>Locus B (Right)</span>
+              <span style={{ color: grammarAnalysis?.activeLoci?.LOCUS_B?.assignedEntity ? '#f472b6' : '#64748b', fontWeight: 600 }}>
+                {grammarAnalysis?.activeLoci?.LOCUS_B?.assignedEntity || '3rd Entity'}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3D Skeletal Vector Stage with Pointer Drag Orbit */}
       <div
@@ -2238,20 +2400,35 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
           <button
             type="button"
-            onClick={() => setSignMode((m) => (m === 'concept' ? 'fingerspell' : 'concept'))}
+            onClick={() => {
+              setGrammarMode((m) => {
+                const next = m === 'bsl-natural' ? 'sse' : m === 'sse' ? 'fingerspell' : 'bsl-natural';
+                if (activeWordDisplay) {
+                  enqueueText(activeWordDisplay, next);
+                }
+                return next;
+              });
+            }}
             style={{
-              background: signMode === 'concept' ? 'rgba(245, 158, 11, 0.22)' : 'rgba(56, 189, 248, 0.22)',
-              border: `1px solid ${signMode === 'concept' ? '#f59e0b' : '#38bdf8'}`,
+              background:
+                grammarMode === 'bsl-natural'
+                  ? 'rgba(16, 185, 129, 0.22)'
+                  : grammarMode === 'sse'
+                  ? 'rgba(245, 158, 11, 0.22)'
+                  : 'rgba(56, 189, 248, 0.22)',
+              border: `1px solid ${
+                grammarMode === 'bsl-natural' ? '#10b981' : grammarMode === 'sse' ? '#f59e0b' : '#38bdf8'
+              }`,
               borderRadius: '4px',
-              color: signMode === 'concept' ? '#fbbf24' : '#38bdf8',
+              color: grammarMode === 'bsl-natural' ? '#6ee7b7' : grammarMode === 'sse' ? '#fbbf24' : '#38bdf8',
               padding: '1px 6px',
               fontSize: '0.62rem',
               fontWeight: 800,
               cursor: 'pointer',
             }}
-            title={signMode === 'concept' ? 'Active: BSL Concept Signs (uses whole-word signs). Click to switch to manual alphabet.' : 'Active: BANZSL Fingerspelling (spells letter-by-letter). Click to switch to concept signs.'}
+            title="Cycle Syntax: Natural BSL (Level 2/3 Topic-Comment & Directional) -> SSE (Sign Supported English) -> BANZSL Fingerspelling"
           >
-            {signMode === 'concept' ? '🤟 Concept Signs' : '🔤 Fingerspelling'}
+            {grammarMode === 'bsl-natural' ? '🤟 Level 2/3 BSL' : grammarMode === 'sse' ? '📝 SSE L1' : '🔤 Fingerspell'}
           </button>
 
           <span style={{ color: '#94a3b8', fontSize: '0.62rem', marginLeft: '2px' }}>Speed:</span>

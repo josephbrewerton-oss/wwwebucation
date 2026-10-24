@@ -17,7 +17,7 @@ export interface Point3D {
 export interface BslNmf {
   eyebrows?: 'neutral' | 'raised' | 'furrowed';
   mouth?: string;
-  headTilt?: 'neutral' | 'nod' | 'tilt-left' | 'tilt-right';
+  headTilt?: 'neutral' | 'nod' | 'shake' | 'tilt-left' | 'tilt-right';
 }
 
 export type BslHandShape = 'point' | 'flat' | 'fist' | 'claw' | 'spread' | 'v';
