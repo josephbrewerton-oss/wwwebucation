@@ -11,7 +11,7 @@ import * as path from 'path';
 import { compileAstTextToBytecode, decompileBytecodeToScene, isAstBytecode } from '../src/utils/astBytecode';
 
 const ROOT_DIR = process.cwd();
-const SOURCE_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
+const SOURCE_DIR = path.join(ROOT_DIR, 'static', 'player', 'cartridges');
 const TARGET_DIR = path.join(ROOT_DIR, 'static', 'player', 'bytecode');
 const SCENES_DIR = path.join(ROOT_DIR, 'static', 'player', 'scenes');
 
