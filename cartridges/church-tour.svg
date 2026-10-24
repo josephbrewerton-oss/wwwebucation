@@ -22,43 +22,43 @@
   </defs>
 
   <!-- Deep Sacred Interior Atmosphere Backdrop -->
-  <rect x="0" y="0" width="800" height="480" fill="#090d16" />
-  <circle cx="400" cy="220" r="320" fill="url(#sanctuary-glow)" />
+  <rect x="0" y="0" width="800" height="480" fill="#0a0f1d" />
+  <circle cx="400" cy="200" r="340" fill="url(#sanctuary-glow)" />
 
-  <!-- 1. Deep Sacred Basilica Floor Architecture -->
-  <path d="M 310 440 L 310 240 L 160 240 L 160 160 L 310 160 L 310 50 Q 400 30, 490 50 L 490 160 L 640 160 L 640 240 L 490 240 L 490 440 Z" fill="#0b1120" stroke="#334155" stroke-width="3" />
-  <path d="M 310 390 L 490 390 M 310 340 L 490 340 M 310 290 L 490 290 M 310 240 L 490 240" stroke="#1e293b" stroke-width="1.5" stroke-dasharray="2 4" />
+  <!-- 1. Deep Sacred Basilica Floor Architecture (Luminous Limestone Stone & Blue Drafting Contour) -->
+  <path d="M 310 440 L 310 240 L 160 240 L 160 160 L 310 160 L 310 50 Q 400 30, 490 50 L 490 160 L 640 160 L 640 240 L 490 240 L 490 440 Z" fill="#111827" stroke="#38bdf8" stroke-width="3" filter="url(#glow)" />
+  <path d="M 310 390 L 490 390 M 310 340 L 490 340 M 310 290 L 490 290 M 310 240 L 490 240" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 4" />
 
-  <!-- 2. Nave Central Royal Carpet &amp; Pews -->
+  <!-- 2. Nave Central Royal Carpet & Pews (Vibrant Crimson with Gold Boundary Ribbons) -->
   <g class="ast-hotspot" data-target-t="0.20" data-label="2. The Nave &amp; Central Aisle" data-pedagogical="church-nave" style="cursor: pointer;">
-    <rect x="375" y="180" width="50" height="260" fill="#7f1d1d" opacity="0.85" rx="2" />
-    <line x1="375" y1="180" x2="375" y2="440" stroke="#dc2626" stroke-width="1.5" />
-    <line x1="425" y1="180" x2="425" y2="440" stroke="#dc2626" stroke-width="1.5" />
-    <!-- 10 Detailed Wooden Pews -->
-    <rect x="320" y="250" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="324" y1="254" x2="362" y2="254" stroke="#92400e" stroke-width="1" />
-    <rect x="434" y="250" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="438" y1="254" x2="476" y2="254" stroke="#92400e" stroke-width="1" />
+    <rect x="375" y="180" width="50" height="260" fill="#991b1b" stroke="#f59e0b" stroke-width="1.5" rx="3" />
+    <line x1="375" y1="180" x2="375" y2="440" stroke="#fbbf24" stroke-width="2" />
+    <line x1="425" y1="180" x2="425" y2="440" stroke="#fbbf24" stroke-width="2" />
+    <!-- 10 Detailed Wooden Pews with Warm Timber Grain -->
+    <rect x="320" y="250" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="324" y1="254" x2="362" y2="254" stroke="#fde68a" stroke-width="1" />
+    <rect x="434" y="250" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="438" y1="254" x2="476" y2="254" stroke="#fde68a" stroke-width="1" />
 
-    <rect x="320" y="286" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="324" y1="290" x2="362" y2="290" stroke="#92400e" stroke-width="1" />
-    <rect x="434" y="286" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="438" y1="290" x2="476" y2="290" stroke="#92400e" stroke-width="1" />
+    <rect x="320" y="286" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="324" y1="290" x2="362" y2="290" stroke="#fde68a" stroke-width="1" />
+    <rect x="434" y="286" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="438" y1="290" x2="476" y2="290" stroke="#fde68a" stroke-width="1" />
 
-    <rect x="320" y="322" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="324" y1="326" x2="362" y2="326" stroke="#92400e" stroke-width="1" />
-    <rect x="434" y="322" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="438" y1="326" x2="476" y2="326" stroke="#92400e" stroke-width="1" />
+    <rect x="320" y="322" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="324" y1="326" x2="362" y2="326" stroke="#fde68a" stroke-width="1" />
+    <rect x="434" y="322" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="438" y1="326" x2="476" y2="326" stroke="#fde68a" stroke-width="1" />
 
-    <rect x="320" y="358" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="324" y1="362" x2="362" y2="362" stroke="#92400e" stroke-width="1" />
-    <rect x="434" y="358" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="438" y1="362" x2="476" y2="362" stroke="#92400e" stroke-width="1" />
+    <rect x="320" y="358" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="324" y1="362" x2="362" y2="362" stroke="#fde68a" stroke-width="1" />
+    <rect x="434" y="358" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="438" y1="362" x2="476" y2="362" stroke="#fde68a" stroke-width="1" />
 
-    <rect x="320" y="394" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="324" y1="398" x2="362" y2="398" stroke="#92400e" stroke-width="1" />
-    <rect x="434" y="394" width="46" height="18" rx="3" fill="#451a03" stroke="#78350f" stroke-width="1" />
-    <line x1="438" y1="398" x2="476" y2="398" stroke="#92400e" stroke-width="1" />
+    <rect x="320" y="394" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="324" y1="398" x2="362" y2="398" stroke="#fde68a" stroke-width="1" />
+    <rect x="434" y="394" width="46" height="18" rx="3" fill="#78350f" stroke="#b45309" stroke-width="1.5" />
+    <line x1="438" y1="398" x2="476" y2="398" stroke="#fde68a" stroke-width="1" />
   </g>
 
   <!-- 3. Elevated Sanctuary Platform &amp; Altar of Sacrifice -->
