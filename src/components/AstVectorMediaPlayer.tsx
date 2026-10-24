@@ -39,6 +39,7 @@ import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { exportSubjectCartridge, AVAILABLE_CARTRIDGES } from '../utils/exportSubjectCartridge';
 import { getRelatedConcepts } from '../data/player/astConceptGraph';
 import { getCartridge, normalizeCartridgeId, saveCustomCartridge } from '../services/cartridgeStore';
+import { getVaultCartridge } from '../services/dbStore';
 import { classroomBeacon } from '../services/classroomBeacon';
 import {
   getBslEnabled,
@@ -323,6 +324,51 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [isAiDemonstrating, setIsAiDemonstrating] = useState(false);
   const [inkNotice, setInkNotice] = useState<string | null>(null);
 
+  // Helper to load cartridge from in-memory cache or IndexedDB vault directly into player
+  const dispatchCartridgeToPlayer = useCallback((cartId: string) => {
+    const canonical = normalizeCartridgeId(cartId);
+    if (!canonical) return;
+
+    // 1. Check in-memory store
+    const cart = getCartridge(canonical);
+    if (cart && typeof cart.svgMarkup === 'string' && cart.svgMarkup.includes('<svg') && cart.astSource) {
+      postToPlayer({
+        type: 'LOAD_CARTRIDGE',
+        cartridge: {
+          id: cart.id,
+          title: cart.title,
+          stage: cart.stage,
+          svg: cart.svgMarkup,
+          ast: cart.astSource,
+        },
+      });
+      return;
+    }
+
+    // 2. Check IndexedDB cartridge vault
+    getVaultCartridge(canonical)
+      .then((vaultItem) => {
+        if (
+          vaultItem &&
+          typeof vaultItem.svgMarkup === 'string' &&
+          vaultItem.svgMarkup.includes('<svg') &&
+          vaultItem.astSource
+        ) {
+          postToPlayer({
+            type: 'LOAD_CARTRIDGE',
+            cartridge: {
+              id: vaultItem.id,
+              title: vaultItem.title,
+              stage: vaultItem.stage,
+              svg: vaultItem.svgMarkup,
+              ast: vaultItem.astSource,
+            },
+          });
+        }
+      })
+      .catch(() => {});
+  }, [postToPlayer]);
+
   // Sync internal selected preset if external preset prop changes
   useEffect(() => {
     const canonical = normalizeCartridgeId(preset);
@@ -333,22 +379,9 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       const disableQ = isCartridgeWithoutQuestions(canonical);
       postToPlayer({ type: 'SET_PRESET', preset: canonical, play: autoPlayRef.current });
       postToPlayer({ type: 'SET_QUESTIONS', enabled: disableQ ? false : (showQuestions ?? true) });
-
-      const cart = getCartridge(canonical);
-      if (cart && typeof cart.svgMarkup === 'string' && cart.svgMarkup.includes('<svg') && cart.astSource) {
-        postToPlayer({
-          type: 'LOAD_CARTRIDGE',
-          cartridge: {
-            id: cart.id,
-            title: cart.title,
-            stage: cart.stage,
-            svg: cart.svgMarkup,
-            ast: cart.astSource,
-          },
-        });
-      }
+      dispatchCartridgeToPlayer(canonical);
     }
-  }, [preset, postToPlayer, showQuestions]);
+  }, [preset, postToPlayer, showQuestions, dispatchCartridgeToPlayer]);
 
   useEffect(() => {
     autoPlayRef.current = autoPlay;
@@ -396,23 +429,11 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     onPresetChange?.(canonical);
   }, [onPresetChange, showQuestions]);
 
-  // Sync decentralized custom/PhET cartridge on initial ready
+  // Sync cartridge definition from memory or IndexedDB on initial ready
   useEffect(() => {
     if (!isPlayerReady) return;
-    const cart = getCartridge(selectedPreset);
-    if (cart && (cart.source === 'phet' || cart.source === 'user' || cart.source === 'imported') && cart.svgMarkup && cart.astSource) {
-      postToPlayer({
-        type: 'LOAD_CARTRIDGE',
-        cartridge: {
-          id: cart.id,
-          title: cart.title,
-          stage: cart.stage,
-          svg: cart.svgMarkup,
-          ast: cart.astSource,
-        },
-      });
-    }
-  }, [selectedPreset, isPlayerReady, postToPlayer]);
+    dispatchCartridgeToPlayer(selectedPreset);
+  }, [selectedPreset, isPlayerReady, dispatchCartridgeToPlayer]);
 
   const togglePictureInPicture = useCallback(async () => {
     if (pipWindowRef.current) {
@@ -708,22 +729,13 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
           // If parent preset differs from initial preset booted in the iframe URL, smoothly sync it
           if (selectedPresetRef.current && selectedPresetRef.current !== initialPlayerPresetRef.current) {
             postToPlayer({ type: 'SET_PRESET', preset: selectedPresetRef.current, play: autoPlayRef.current });
-            const cart = getCartridge(selectedPresetRef.current);
-            if (cart && typeof cart.svgMarkup === 'string' && cart.svgMarkup.includes('<svg') && cart.astSource) {
-              postToPlayer({
-                type: 'LOAD_CARTRIDGE',
-                cartridge: {
-                  id: cart.id,
-                  title: cart.title,
-                  stage: cart.stage,
-                  svg: cart.svgMarkup,
-                  ast: cart.astSource,
-                },
-              });
-            }
           } else if (data.preset && data.preset !== selectedPresetRef.current) {
             setSelectedPreset(data.preset);
             selectedPresetRef.current = data.preset;
+          }
+          // Always dispatch active cartridge definition (from RAM or IndexedDB) to player iframe
+          if (selectedPresetRef.current) {
+            dispatchCartridgeToPlayer(selectedPresetRef.current);
           }
           break;
         case 'PRESETCHANGE':

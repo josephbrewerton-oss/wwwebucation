@@ -21,6 +21,7 @@ import LiturgyOfTheHoursGuide from '../components/LiturgyOfTheHoursGuide';
 import SacredObjectsExplorer from '../components/SacredObjectsExplorer';
 import { speakInLanguage, cancelSpeech } from '../engine/translationService';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
+import { initCartridgeVault } from '../services/cartridgeStore';
 
 export type CatholicLifeTab =
   | 'overview'
@@ -94,9 +95,15 @@ export default function CatholicLifePage(): React.JSX.Element {
   const [selectedVirtue, setSelectedVirtue] = useState<SchoolVirtue>(SCHOOL_VIRTUES[0]);
   const [overviewPlayerExpanded, setOverviewPlayerExpanded] = useState<boolean>(true);
   const [overviewTouchLock, setOverviewTouchLock] = useState<boolean>(true);
+  const [overviewPreset, setOverviewPreset] = useState<'church-tour' | 'catholic-rites'>('church-tour');
   const [cstPlayerExpanded, setCstPlayerExpanded] = useState<boolean>(false);
   const [massPlayerExpanded, setMassPlayerExpanded] = useState<boolean>(false);
   const [firstCommunionPlayerExpanded, setFirstCommunionPlayerExpanded] = useState<boolean>(false);
+
+  // Initialize IndexedDB cartridge vault on component mount
+  useEffect(() => {
+    initCartridgeVault().catch(() => {});
+  }, []);
 
   // Keep state synced with URL search params
   useEffect(() => {
@@ -710,18 +717,62 @@ export default function CatholicLifePage(): React.JSX.Element {
             >
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <span style={{ fontSize: '1.3rem' }}>⛪</span>
+                  <span style={{ fontSize: '1.3rem' }}>{overviewPreset === 'church-tour' ? '⛪' : '🌍'}</span>
                   <div>
                     <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800, color: '#f8fafc' }}>
-                      Featured: Interactive Tour of a Catholic Church
+                      {overviewPreset === 'church-tour'
+                        ? 'Featured: Interactive Tour of a Catholic Church'
+                        : 'Featured: The 6 Rites & 24 Churches of Catholic Communion'}
                     </h3>
                     <p style={{ margin: 0, fontSize: '0.8rem', color: '#94a3b8' }}>
-                      Narthex, Nave, Ambo, Altar, Tabernacle &amp; Lady Chapel &bull; 6 Sacred Spaces
+                      {overviewPreset === 'church-tour'
+                        ? 'Narthex, Nave, Ambo, Altar, Tabernacle & Lady Chapel • 6 Sacred Spaces'
+                        : 'Latin, Byzantine, Alexandrian, Antiochian, Chaldean & Armenian • Universal Catholic Communion'}
                     </p>
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  {/* Cartridge Segmented Switcher */}
+                  <div style={{ display: 'inline-flex', background: 'rgba(15, 23, 42, 0.85)', padding: '3px', borderRadius: '10px', border: '1px solid rgba(255, 255, 255, 0.15)', gap: '3px' }}>
+                    <button
+                      type="button"
+                      onClick={() => setOverviewPreset('church-tour')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '7px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: overviewPreset === 'church-tour' ? '#0284c7' : 'transparent',
+                        color: overviewPreset === 'church-tour' ? '#ffffff' : '#94a3b8',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Load Church Tour simulation"
+                    >
+                      ⛪ Church Tour
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOverviewPreset('catholic-rites')}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '7px',
+                        fontSize: '0.76rem',
+                        fontWeight: 700,
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: overviewPreset === 'catholic-rites' ? '#2563eb' : 'transparent',
+                        color: overviewPreset === 'catholic-rites' ? '#ffffff' : '#94a3b8',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title="Load 6 Liturgical Rites & 24 Churches simulation"
+                    >
+                      🌍 24 Churches
+                    </button>
+                  </div>
+
                   {/* Mobile Preview Toggle Button */}
                   <button
                     type="button"
@@ -746,7 +797,7 @@ export default function CatholicLifePage(): React.JSX.Element {
 
                   {/* Simulator Deep Link */}
                   <Link
-                    to="/simulator?preset=church-tour"
+                    to={`/simulator?preset=${overviewPreset}`}
                     style={{
                       padding: '6px 14px',
                       borderRadius: '8px',
@@ -763,16 +814,16 @@ export default function CatholicLifePage(): React.JSX.Element {
                     }}
                     title="Open full interactive cartridge in AST Vector Simulator"
                   >
-                    <span>🎮 Open in Simulator ↗</span>
+                    <span>🎮 Simulator ↗</span>
                   </Link>
 
                   <button
                     type="button"
-                    onClick={() => handleTabChange('church-tour')}
+                    onClick={() => handleTabChange(overviewPreset === 'church-tour' ? 'church-tour' : 'rites')}
                     style={{
                       padding: '6px 14px',
                       borderRadius: '8px',
-                      background: '#0284c7',
+                      background: overviewPreset === 'church-tour' ? '#0284c7' : '#2563eb',
                       color: '#ffffff',
                       border: 'none',
                       fontWeight: 700,
@@ -783,7 +834,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                       gap: '4px',
                     }}
                   >
-                    Full Tour &amp; Sacred Spaces &rarr;
+                    {overviewPreset === 'church-tour' ? 'Full Tour & Spaces →' : 'Explore 24 Churches →'}
                   </button>
                 </div>
               </div>
@@ -826,9 +877,10 @@ export default function CatholicLifePage(): React.JSX.Element {
 
                 <div style={{ pointerEvents: 'auto', position: 'relative', width: '100%', maxWidth: '100%', overflow: 'hidden' }}>
                   <AstVectorMediaPlayer
-                    preset="church-tour"
+                    key={`overview-player-${overviewPreset}`}
+                    preset={overviewPreset}
                     autoPlay={true}
-                    height="clamp(210px, 45vw + 40px, 380px)"
+                    height="clamp(280px, 50vw + 40px, 440px)"
                     allowPresetSwitch={false}
                     embedded={true}
                   />
@@ -855,14 +907,14 @@ export default function CatholicLifePage(): React.JSX.Element {
                         boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
                         pointerEvents: 'auto',
                       }}
-                      title="Tap to enable interactive touch controls on the sanctuary floor plan"
+                      title="Tap to enable interactive touch controls on the vector simulation stage"
                     >
-                      <span>👆 Tap to Interact with Sacred Map</span>
+                      <span>👆 Tap to Interact with Vector Stage</span>
                     </div>
                   )}
                 </div>
 
-                {/* Sacred Spaces Quick Select Chips */}
+                {/* Quick Select Exploration Chips */}
                 <div
                   style={{
                     display: 'flex',
@@ -878,42 +930,76 @@ export default function CatholicLifePage(): React.JSX.Element {
                   }}
                 >
                   <span style={{ fontSize: '0.74rem', color: '#64748b', fontWeight: 700, paddingRight: '4px' }}>
-                    Quick Stations:
+                    {overviewPreset === 'church-tour' ? 'Quick Stations:' : 'Traditions:'}
                   </span>
-                  {[
-                    { name: 'Narthex', icon: '🚪' },
-                    { name: 'Nave', icon: '⛪' },
-                    { name: 'Ambo', icon: '📖' },
-                    { name: 'Altar', icon: '✝️' },
-                    { name: 'Tabernacle', icon: '🕯️' },
-                    { name: 'Lady Chapel', icon: '🌹' },
-                  ].map((station) => (
-                    <button
-                      key={station.name}
-                      type="button"
-                      onClick={() => handleTabChange('church-tour')}
-                      style={{
-                        padding: '3px 8px',
-                        borderRadius: '6px',
-                        background: '#1e293b',
-                        border: '1px solid #334155',
-                        color: '#cbd5e1',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '4px',
-                      }}
-                      title={`Jump to ${station.name} in Sanctuary Pilgrim Quest`}
-                    >
-                      <span>{station.icon}</span>
-                      <span>{station.name}</span>
-                    </button>
-                  ))}
+                  {overviewPreset === 'church-tour' ? (
+                    [
+                      { name: 'Narthex', icon: '🚪' },
+                      { name: 'Nave', icon: '⛪' },
+                      { name: 'Ambo', icon: '📖' },
+                      { name: 'Altar', icon: '✝️' },
+                      { name: 'Tabernacle', icon: '🕯️' },
+                      { name: 'Lady Chapel', icon: '🌹' },
+                    ].map((station) => (
+                      <button
+                        key={station.name}
+                        type="button"
+                        onClick={() => handleTabChange('church-tour')}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          color: '#cbd5e1',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                        title={`Jump to ${station.name} in Sanctuary Pilgrim Quest`}
+                      >
+                        <span>{station.icon}</span>
+                        <span>{station.name}</span>
+                      </button>
+                    ))
+                  ) : (
+                    [
+                      { name: 'Latin (Western)', icon: '🏛️' },
+                      { name: 'Byzantine', icon: '✨' },
+                      { name: 'Alexandrian (Coptic)', icon: '🇪🇬' },
+                      { name: 'Antiochian (Maronite)', icon: '🇱🇧' },
+                      { name: 'Chaldean & Malabar', icon: '🇮🇳' },
+                      { name: 'Armenian', icon: '🇦🇲' },
+                    ].map((trad) => (
+                      <button
+                        key={trad.name}
+                        type="button"
+                        onClick={() => handleTabChange('rites')}
+                        style={{
+                          padding: '3px 8px',
+                          borderRadius: '6px',
+                          background: '#1e293b',
+                          border: '1px solid #334155',
+                          color: '#cbd5e1',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                        }}
+                        title={`Explore ${trad.name} in Catholic Rites Explorer`}
+                      >
+                        <span>{trad.icon}</span>
+                        <span>{trad.name}</span>
+                      </button>
+                    ))
+                  )}
                   <button
                     type="button"
-                    onClick={() => handleTabChange('church-tour')}
+                    onClick={() => handleTabChange(overviewPreset === 'church-tour' ? 'church-tour' : 'rites')}
                     style={{
                       marginLeft: 'auto',
                       padding: '3px 8px',
@@ -926,7 +1012,7 @@ export default function CatholicLifePage(): React.JSX.Element {
                       cursor: 'pointer',
                     }}
                   >
-                    Start Pilgrim Quest &rarr;
+                    {overviewPreset === 'church-tour' ? 'Start Pilgrim Quest →' : 'View Full Guide →'}
                   </button>
                 </div>
               </div>

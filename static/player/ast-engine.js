@@ -2181,12 +2181,13 @@
       }
       if (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.get === 'function') {
         const found = global.ASTSceneRegistry.get(presetId);
-        if (found) return found;
+        if (found && (found.svgText || found.svgMarkup || found.mount || found.render || (found.keyframes && found.keyframes.length))) return found;
       }
       if (global.ASTScenes && global.ASTScenes[presetId]) {
-        return global.ASTScenes[presetId];
+        const found = global.ASTScenes[presetId];
+        if (found && (found.svgText || found.svgMarkup || found.mount || found.render || (found.keyframes && found.keyframes.length))) return found;
       }
-      return this.getBuiltinWelcomeScene();
+      return null;
     }
 
     on(event, callback) {
@@ -4785,7 +4786,8 @@
       presetId = normalizedId;
 
       // Deduplication Guard: If this exact preset is already mounted and ready, avoid re-fetching or wiping container
-      if (this.activePresetId === presetId && this._mountedSceneId === presetId && this.scene) {
+      const hasRenderableContent = this.scene && (this.scene.svgText || this.scene.render || this.scene.mount || (this.scene.keyframes && this.scene.keyframes.length));
+      if (this.activePresetId === presetId && this._mountedSceneId === presetId && hasRenderableContent) {
         if (shouldPlay && !this.isPlaying) {
           this.play();
         } else if (shouldPlay === false && this.isPlaying) {
@@ -4939,14 +4941,15 @@
                 : './';
 
               const candidateUrls = Array.from(new Set([
+                ...(customBase ? [
+                  `${customBase.replace(/\/$/, '')}/bytecode/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/player/cartridges/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/scenes/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/player/scenes/${sceneId}.${ext}`,
+                ] : []),
                 ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                `/player/bytecode/${sceneId}.${ext}`,
-                `/bytecode/${sceneId}.${ext}`,
-                `/cartridges/${sceneId}.${ext}`,
-                `/player/cartridges/${sceneId}.${ext}`,
-                `/player/scenes/${sceneId}.${ext}`,
-                `/scenes/${sceneId}.${ext}`,
                 `${currentDir}bytecode/${sceneId}.${ext}`,
                 `${currentDir}cartridges/${sceneId}.${ext}`,
                 `${currentDir}scenes/${sceneId}.${ext}`,
@@ -4963,13 +4966,12 @@
                 `../player/scenes/${sceneId}.${ext}`,
                 `../scenes/${sceneId}.${ext}`,
                 ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                ...(customBase ? [
-                  `${customBase.replace(/\/$/, '')}/bytecode/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/player/cartridges/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/scenes/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/player/scenes/${sceneId}.${ext}`,
-                ] : [])
+                `/player/bytecode/${sceneId}.${ext}`,
+                `/bytecode/${sceneId}.${ext}`,
+                `/cartridges/${sceneId}.${ext}`,
+                `/player/cartridges/${sceneId}.${ext}`,
+                `/player/scenes/${sceneId}.${ext}`,
+                `/scenes/${sceneId}.${ext}`
               ])).filter(Boolean);
 
     const isBinary = ext === 'astb';
@@ -5039,9 +5041,9 @@
 }
 
         // Secondary fallback for core cartridges if network fetch failed on GitHub Pages
-        if (!svgText && (presetId === 'pythagoras' || presetId === 'pythagorus') && global.ASTSceneRegistry) {
-          const fb = global.ASTSceneRegistry.get('pythagoras');
-          if (fb) {
+        if (!svgText && global.ASTSceneRegistry) {
+          const fb = global.ASTSceneRegistry.get(presetId);
+          if (fb && (fb.svgMarkup || fb.svgText)) {
             svgText = fb.svgMarkup || fb.svgText || '';
             astText = fb.astSource || fb.astText || '';
           }
