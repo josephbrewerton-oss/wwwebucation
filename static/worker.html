@@ -711,9 +711,12 @@ Format as:
 
       if (data.type === 'peer_ready' || data.type === 'reconnect_rtc') {
         // If the channel is already open or in the middle of connecting, ignore peer_ready
-        if (activeChannel && activeChannel.readyState === 'open') return;
+        if (data.type === 'peer_ready' || data.type === 'reconnect_rtc') {
+        // 1. If channel is already open or currently connecting, ignore peer_ready completely
+        if (activeChannel && (activeChannel.readyState === 'open' || activeChannel.readyState === 'connecting')) return;
         if (isConnecting && !data.force) return;
 
+        // 2. If force is requested, tear down cleanly before re-negotiating
         if (data.force) {
           if (activeChannel) {
             try { activeChannel.close(); } catch {}
@@ -725,7 +728,11 @@ Format as:
           }
           isConnecting = false;
         }
-        initAndOffer();
+
+        // 3. Only negotiate if we don't already have an active PeerConnection
+        if (!pc || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
+          initAndOffer();
+        }
       }
       } else if (data.type === 'answer' && pc) {
         if (pc.signalingState === 'have-local-offer') {
