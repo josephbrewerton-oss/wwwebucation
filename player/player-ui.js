@@ -1079,7 +1079,48 @@
       oldMarkers.forEach(m => m.remove());
 
       const scene = this.engine.scene;
-      if (!scene || !scene.keyframes) return;
+      if (!scene) return;
+
+      const isContinuousSim = Boolean(
+        this.engine.isContinuousSim ||
+        scene.type === 'Sim' ||
+        scene.cartridgeType === 'Sim' ||
+        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+      );
+
+      if (isContinuousSim) {
+        if (this.elements.slideDeckBar) {
+          this.elements.slideDeckBar.style.display = 'none';
+        }
+        if (this.elements.btnStepMode) {
+          this.elements.btnStepMode.style.display = 'none';
+          this.stepMode = false;
+        }
+        if (this.elements.btnPrev) {
+          this.elements.btnPrev.style.display = 'none';
+        }
+        if (this.elements.btnNext) {
+          this.elements.btnNext.style.display = 'none';
+        }
+        return;
+      } else {
+        if (this.elements.slideDeckBar) {
+          this.elements.slideDeckBar.style.display = '';
+        }
+        if (this.elements.btnStepMode) {
+          this.elements.btnStepMode.style.display = '';
+        }
+        if (this.elements.btnPrev) {
+          this.elements.btnPrev.style.display = '';
+        }
+        if (this.elements.btnNext) {
+          this.elements.btnNext.style.display = '';
+        }
+      }
+
+      if (!scene.keyframes) return;
 
       scene.keyframes.forEach(kf => {
         const marker = document.createElement('div');
@@ -1210,18 +1251,30 @@
         this.elements.timelineThumb.style.left = `${pct}%`;
       }
       if (this.elements.timeReadout) {
-        const kfs = (scene && scene.keyframes) || [];
-        if (kfs.length > 0) {
-          const curT = this.engine.progress;
-          let activeIdx = 0;
-          kfs.forEach((kf, idx) => {
-            if (kf.t <= curT + 0.02) activeIdx = idx;
-          });
-          const curKf = kfs[activeIdx];
-          const cleanTitle = (curKf && curKf.title) ? curKf.title.replace(/^\d+[\.\s]*/, '') : 'Interactive Slide';
-          this.elements.timeReadout.textContent = `Slide ${activeIdx + 1} of ${kfs.length}: ${cleanTitle}`;
+        const isContinuousSim = Boolean(
+          this.engine.isContinuousSim ||
+          scene.type === 'Sim' ||
+          scene.cartridgeType === 'Sim' ||
+          (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+          (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+          (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+        );
+        if (isContinuousSim) {
+          this.elements.timeReadout.textContent = '⚡ 60 FPS Continuous Simulation';
         } else {
-          this.elements.timeReadout.textContent = `Interactive Slide • 60 FPS`;
+          const kfs = (scene && scene.keyframes) || [];
+          if (kfs.length > 0) {
+            const curT = this.engine.progress;
+            let activeIdx = 0;
+            kfs.forEach((kf, idx) => {
+              if (kf.t <= curT + 0.02) activeIdx = idx;
+            });
+            const curKf = kfs[activeIdx];
+            const cleanTitle = (curKf && curKf.title) ? curKf.title.replace(/^\d+[\.\s]*/, '') : 'Interactive Slide';
+            this.elements.timeReadout.textContent = `Slide ${activeIdx + 1} of ${kfs.length}: ${cleanTitle}`;
+          } else {
+            this.elements.timeReadout.textContent = `Interactive Slide • 60 FPS`;
+          }
         }
       }
     }
