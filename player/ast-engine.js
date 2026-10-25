@@ -3282,7 +3282,7 @@
       if (!this.animationFrameId) {
         this.lastTimestamp = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         if (typeof requestAnimationFrame !== 'undefined') {
-          this.animationFrameId = requestAnimationFrame(this.tick);
+          this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
         }
       }
       if (this.isPlaying) {
@@ -3304,7 +3304,7 @@
       }
     }
 
-    play() {
+   play() {
       if (!this.isPlaying) {
         this.isPlaying = true;
         this.lastTimestamp = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -3313,21 +3313,28 @@
         }
         this.emit('statechange', { isPlaying: true, speed: this.speed });
       }
-      if (!this.animationFrameId) {
-        this.start();
+
+      if (this.animationFrameId) {
+        cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
       }
+      this.start();
     }
 
-    pause() {
+   pause() {
       if (this.isPlaying) {
         this.isPlaying = false;
-        if (this.backdropVideo) {
+        if (this.backdropVideo && !this.backdropVideo.paused) {
           this.backdropVideo.pause();
         }
         this.emit('statechange', { isPlaying: false, speed: this.speed });
       }
+      if (this.animationFrameId) {
+        cancelAnimationFrame(this.animationFrameId);
+        this.animationFrameId = null;
+      }
+      this.lastTimestamp = null;
     }
-
     togglePlay() {
       if (this.isPlaying) {
         this.pause();
@@ -6955,7 +6962,7 @@ if (item.type === '3d-node') {
     /**
      * Main Animation Tick Loop with Delta-Time Clamping
      */
-    tick(currentTimestamp) {
+tick(currentTimestamp) {
       if (!currentTimestamp && typeof performance !== 'undefined' && typeof performance.now === 'function') {
         currentTimestamp = performance.now();
       }
@@ -6998,7 +7005,7 @@ if (item.type === '3d-node') {
 
           this.updateActiveKeyframeAndSpeech(false);
 
-          // Advance decoupled universal simulation clock for infinite, smooth orbital, mechanical, and signage simulations
+          // Advance decoupled universal simulation clock ONLY while playing
           if (!this.vars) this.vars = {};
           const speedParam = typeof this.vars.speedMultiplier === 'number'
             ? this.vars.speedMultiplier
@@ -7008,11 +7015,11 @@ if (item.type === '3d-node') {
                     ? this.vars.warpSpeed
                     : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0)));
 
-          const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.isPlaying ? (this.speed || 1.0) : 1.0);
+          const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.speed || 1.0);
           this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
           this.vars.clock = this.vars.simClock;
           this.vars._simClock = this.vars.simClock;
-          this.vars._solarClock = this.vars.simClock; // Backwards-compatible alias for existing astronomical scenes
+          this.vars._solarClock = this.vars.simClock;
 
           // Synchronize backdrop film video clock if running
           if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {
@@ -7021,20 +7028,17 @@ if (item.type === '3d-node') {
               this.backdropVideo.currentTime = expectedSec;
             }
           }
-        }
 
-        // Continuous 60 FPS Render Loop:
-        // applyBindings uses effectiveT (which evaluates vars.simClock), keeping 3D projections live
-        this.applyBindings(this.progress, deltaSec);
-
-        if (this.isPlaying) {
           this.emit('timeupdate', {
             progress: this.progress,
             currentTime: this.progress * (this.durationSec || 10.0),
             duration: this.durationSec
           });
-        }
-      }
+        } // Closes if (this.isPlaying)
+
+        // Continuous 60 FPS Render Loop: keeping 3D camera interactive even while paused
+        this.applyBindings(this.progress, deltaSec);
+      } // Closes if (this.lastTimestamp !== null)
 
       this.lastTimestamp = currentTimestamp;
       if (typeof requestAnimationFrame !== 'undefined') {
