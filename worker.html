@@ -14,6 +14,7 @@
     let pc = null;
     let activeChannel = null;
     let isConnecting = false;
+    let lastOfferTimestamp = 0;
     let isBusy = false;
 
     // Warm Session Cache for low-latency inference (< 250ms per token vs 800ms+ cold start)
@@ -201,19 +202,25 @@
 
     // WebRTC PeerConnection initialization
     async function initAndOffer() {
-      // Guard 1: Do not start a new connection if one is already open or negotiating
-      if (activeChannel && (activeChannel.readyState === 'open' || activeChannel.readyState === 'connecting')) return;
-      if (isConnecting) return;
-      if (pc && pc.signalingState !== 'closed' && (pc.connectionState === 'connecting' || pc.iceConnectionState === 'checking')) return;
+  const now = Date.now();
+  // 1. Throttle: Never negotiate more frequently than once every 4 seconds
+  if (now - lastOfferTimestamp < 4000) return;
 
-      isConnecting = true;
-      if (pc) {
-        try { pc.close(); } catch {}
-      }
+  // 2. Guard: Do not negotiate if already open or connecting
+  if (activeChannel && (activeChannel.readyState === 'open' || activeChannel.readyState === 'connecting')) return;
+  if (isConnecting) return;
+  if (pc && (pc.connectionState === 'connecting' || pc.iceConnectionState === 'checking')) return;
 
-      console.log('[Guest VM Daemon] Initializing PeerConnection & DataChannel...');
-      pc = new RTCPeerConnection({ iceServers: [] });
+  lastOfferTimestamp = now;
+  isConnecting = true;
 
+  if (pc) {
+    try { pc.close(); } catch {}
+    pc = null;
+  }
+
+  console.log('[Guest VM Daemon] Initializing PeerConnection & DataChannel...');
+  pc = new RTCPeerConnection({ iceServers: [] });
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
           isConnecting = false;
