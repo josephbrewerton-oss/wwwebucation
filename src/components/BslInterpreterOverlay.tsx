@@ -30,6 +30,8 @@ import {
   decomposeTextToBslStream,
   project3DToSvg,
   interpolatePoint3D,
+  solveHandKinematics,
+  evaluateBslEase,
 } from '../utils/bslAlphabet';
 import {
   decomposeTextToBslStreamWithLexicon,
@@ -478,15 +480,23 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     return unsubscribe;
   }, [enqueueText]);
 
-  // Kinematic render loop (60 FPS Hermite interpolation)
+  // Kinematic render loop (60 FPS Hermite interpolation with hold dwell & ease curves)
   useEffect(() => {
     let t = 1;
     let fromPose = REST_POSE;
     let toPose = REST_POSE;
+    let holdRemainingSec = 0;
 
     const frameStep = (now: number) => {
       const dt = (now - lastTimeRef.current) / 1000;
       lastTimeRef.current = now;
+
+      // Stationary dwell time at keyframe before interpolating (:hold <ms>)
+      if (holdRemainingSec > 0) {
+        holdRemainingSec -= dt;
+        animFrameRef.current = requestAnimationFrame(frameStep);
+        return;
+      }
 
       const duration = 0.36 / speedMultiplier;
       t += dt / duration;
@@ -498,6 +508,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           fromPose = toPose;
           toPose = next;
           t = 0;
+          if (toPose.hold && toPose.hold > 0) {
+            holdRemainingSec = (toPose.hold / 1000) / speedMultiplier;
+          }
           setPrevPose(fromPose);
           setCurrentPose(toPose);
           setCurrentLetter(toPose.letter.trim());
@@ -518,18 +531,23 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [speedMultiplier]);
 
+  // Easing profile evaluation (:snap, :ease-out, :linear, :bounce)
+  const easedProgress = useMemo(() => {
+    return evaluateBslEase(currentPose.ease, transitionProgress);
+  }, [currentPose.ease, transitionProgress]);
+
   // Current interpolated dominant pointer points
   const interpolatedTip: Point3D = useMemo(() => {
-    return interpolatePoint3D(prevPose.targetTip, currentPose.targetTip, transitionProgress);
-  }, [prevPose.targetTip, currentPose.targetTip, transitionProgress]);
+    return interpolatePoint3D(prevPose.targetTip, currentPose.targetTip, easedProgress);
+  }, [prevPose.targetTip, currentPose.targetTip, easedProgress]);
 
   const interpolatedKnuckle: Point3D = useMemo(() => {
-    return interpolatePoint3D(prevPose.targetKnuckle, currentPose.targetKnuckle, transitionProgress);
-  }, [prevPose.targetKnuckle, currentPose.targetKnuckle, transitionProgress]);
+    return interpolatePoint3D(prevPose.targetKnuckle, currentPose.targetKnuckle, easedProgress);
+  }, [prevPose.targetKnuckle, currentPose.targetKnuckle, easedProgress]);
 
   const interpolatedWrist: Point3D = useMemo(() => {
-    return interpolatePoint3D(prevPose.targetWrist, currentPose.targetWrist, transitionProgress);
-  }, [prevPose.targetWrist, currentPose.targetWrist, transitionProgress]);
+    return interpolatePoint3D(prevPose.targetWrist, currentPose.targetWrist, easedProgress);
+  }, [prevPose.targetWrist, currentPose.targetWrist, easedProgress]);
 
   // Canvas dimension: 240 x 180 (comfortably framing both left and right hands in 3D perspective with generous headroom)
   const originX = 120 + orbitOffset.panX;
@@ -691,261 +709,16 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     };
   }, [headCenter3D, projPointBody, eyebrowState, mouthPattern, headTilt, cameraMode]);
 
-  // Project dominant hand (The Pen) complete anatomical landmarks with dynamic shape solving
+  // Project dominant hand (The Pen) complete anatomical landmarks with dynamic shape solving & palm axial roll
   const domHand3D = useMemo(() => {
     const w = interpolatedWrist;
     const k = interpolatedKnuckle;
     const t = interpolatedTip;
-    const shape = currentPose.shape || 'point';
+    const shape = currentPose.shape || prevPose.shape || 'flat-closed';
+    const palm = currentPose.palm || prevPose.palm || 'in';
 
-    // Direction along index pointing axis
-    const fx = k.x - w.x;
-    const fy = k.y - w.y;
-    const fz = k.z - w.z;
-    const fLen = Math.hypot(fx, fy, fz) || 1;
-    const ufx = fx / fLen;
-    const ufy = fy / fLen;
-    const ufz = fz / fLen;
-
-    // Lateral vector across palm toward pinky (perpendicular to finger and vertical)
-    const latX = -ufy * 0.9;
-    const latY = ufx * 0.9;
-    const latZ = 0.4;
-    const latLen = Math.hypot(latX, latY, latZ) || 1;
-    const ulx = latX / latLen;
-    const uly = latY / latLen;
-    const ulz = latZ / latLen;
-
-    // Palmar / dorsal normal vector (uf x ul)
-    const unx = ufy * ulz - ufz * uly;
-    const uny = ufz * ulx - ufx * ulz;
-    const unz = ufx * uly - ufy * ulx;
-    const unLen = Math.hypot(unx, uny, unz) || 1;
-    const unormX = unx / unLen;
-    const unormY = uny / unLen;
-    const unormZ = unz / unLen;
-
-    // Palm center of dominant hand
-    const palm: Point3D = {
-      x: w.x * 0.5 + k.x * 0.5 + ulx * 12,
-      y: w.y * 0.5 + k.y * 0.5 + uly * 12,
-      z: w.z * 0.5 + k.z * 0.5 + ulz * 12,
-    };
-
-    // Knuckles for middle, ring, pinky
-    const kMid: Point3D = {
-      x: k.x + ulx * 14 - ufx * 3,
-      y: k.y + uly * 14 - ufy * 3,
-      z: k.z + ulz * 14 - ufz * 3,
-    };
-    const kRing: Point3D = {
-      x: k.x + ulx * 25 - ufx * 7,
-      y: k.y + uly * 25 - ufy * 7,
-      z: k.z + ulz * 25 - ufz * 7,
-    };
-    const kPinky: Point3D = {
-      x: k.x + ulx * 35 - ufx * 12,
-      y: k.y + uly * 35 - ufy * 12,
-      z: k.z + ulz * 35 - ufz * 12,
-    };
-
-    // Passive curled fingertips tucked into the palm (pointing hand posture)
-    const tipMidCurled: Point3D = {
-      x: palm.x + ulx * 6 - ufx * 4,
-      y: palm.y + uly * 6 - ufy * 4,
-      z: palm.z + 8,
-    };
-    const tipRingCurled: Point3D = {
-      x: palm.x + ulx * 16 - ufx * 6,
-      y: palm.y + uly * 16 - ufy * 6,
-      z: palm.z + 6,
-    };
-    const tipPinkyCurled: Point3D = {
-      x: palm.x + ulx * 24 - ufx * 8,
-      y: palm.y + uly * 24 - ufy * 8,
-      z: palm.z + 4,
-    };
-
-    // Thumb base & knuckle
-    const thumbBase: Point3D = {
-      x: w.x * 0.65 + k.x * 0.35 - ulx * 10,
-      y: w.y * 0.65 + k.y * 0.35 - uly * 10,
-      z: w.z * 0.65 + k.z * 0.35 + 4,
-    };
-    const thumbKnuckle: Point3D = {
-      x: thumbBase.x + ufx * 12 - ulx * 5,
-      y: thumbBase.y + ufy * 12 - uly * 5,
-      z: thumbBase.z + 6,
-    };
-
-    // Forearm entry point
-    const forearm: Point3D = {
-      x: w.x - ufx * 36 + ulx * 6,
-      y: w.y - ufy * 36 + uly * 6 + 28,
-      z: w.z - 20,
-    };
-
-    // Dynamic handshape digit solver (:point | :flat | :fist | :claw | :spread | :v)
-    let tipIndex: Point3D = t;
-    let tipMid: Point3D = tipMidCurled;
-    let tipRing: Point3D = tipRingCurled;
-    let tipPinky: Point3D = tipPinkyCurled;
-    let thumbTip: Point3D = {
-      x: k.x * 0.6 + kMid.x * 0.4 - ufx * 4,
-      y: k.y * 0.6 + kMid.y * 0.4 - ufy * 4,
-      z: k.z + 8,
-    };
-
-    switch (shape) {
-      case 'flat':
-        // All fingers extended, closed together (B-hand)
-        tipIndex = t;
-        tipMid = {
-          x: kMid.x + ufx * 27,
-          y: kMid.y + ufy * 27,
-          z: kMid.z + ufz * 27,
-        };
-        tipRing = {
-          x: kRing.x + ufx * 24,
-          y: kRing.y + ufy * 24,
-          z: kRing.z + ufz * 24,
-        };
-        tipPinky = {
-          x: kPinky.x + ufx * 19,
-          y: kPinky.y + ufy * 19,
-          z: kPinky.z + ufz * 19,
-        };
-        thumbTip = {
-          x: k.x - ulx * 7 - ufx * 2,
-          y: k.y - uly * 7 - ufy * 2,
-          z: k.z + 4,
-        };
-        break;
-
-      case 'fist':
-        // S-hand / A-hand: all fingers tightly curled including index
-        tipIndex = {
-          x: palm.x - ulx * 3 - ufx * 4,
-          y: palm.y - uly * 3 - ufy * 4,
-          z: palm.z + 8,
-        };
-        tipMid = tipMidCurled;
-        tipRing = tipRingCurled;
-        tipPinky = tipPinkyCurled;
-        thumbTip = {
-          x: k.x + ulx * 6 + ufx * 2,
-          y: k.y + uly * 6 + ufy * 2,
-          z: k.z + 10,
-        };
-        break;
-
-      case 'claw':
-        // Curved 5-hand: all fingers bent into curved hooks
-        tipIndex = {
-          x: k.x + ufx * 14 - unormX * 12,
-          y: k.y + ufy * 14 - unormY * 12,
-          z: k.z + ufz * 14 - unormZ * 12,
-        };
-        tipMid = {
-          x: kMid.x + ufx * 15 - unormX * 12,
-          y: kMid.y + ufy * 15 - unormY * 12,
-          z: kMid.z + ufz * 15 - unormZ * 12,
-        };
-        tipRing = {
-          x: kRing.x + ufx * 14 - unormX * 12,
-          y: kRing.y + ufy * 14 - unormY * 12,
-          z: kRing.z + ufz * 14 - unormZ * 12,
-        };
-        tipPinky = {
-          x: kPinky.x + ufx * 11 - unormX * 12,
-          y: kPinky.y + ufy * 11 - unormY * 12,
-          z: kPinky.z + ufz * 11 - unormZ * 12,
-        };
-        thumbTip = {
-          x: thumbKnuckle.x + ufx * 10 - unormX * 10,
-          y: thumbKnuckle.y + ufy * 10 - unormY * 10,
-          z: thumbKnuckle.z + ufz * 10 - unormZ * 10,
-        };
-        break;
-
-      case 'spread':
-        // Open 5-hand: all fingers extended and splayed laterally
-        tipIndex = {
-          x: k.x + ufx * 25 - ulx * 8,
-          y: k.y + ufy * 25 - uly * 8,
-          z: k.z + ufz * 25,
-        };
-        tipMid = {
-          x: kMid.x + ufx * 28,
-          y: kMid.y + ufy * 28,
-          z: kMid.z + ufz * 28,
-        };
-        tipRing = {
-          x: kRing.x + ufx * 25 + ulx * 8,
-          y: kRing.y + ufy * 25 + uly * 8,
-          z: kRing.z + ufz * 25,
-        };
-        tipPinky = {
-          x: kPinky.x + ufx * 21 + ulx * 16,
-          y: kPinky.y + ufy * 21 + uly * 16,
-          z: kPinky.z + ufz * 21,
-        };
-        thumbTip = {
-          x: thumbKnuckle.x + ufx * 12 - ulx * 14,
-          y: thumbKnuckle.y + ufy * 12 - uly * 14,
-          z: thumbKnuckle.z + 8,
-        };
-        break;
-
-      case 'v':
-        // V-hand: Index + Middle extended with spread, ring and pinky curled
-        tipIndex = {
-          x: k.x + ufx * 25 - ulx * 6,
-          y: k.y + ufy * 25 - uly * 6,
-          z: k.z + ufz * 25,
-        };
-        tipMid = {
-          x: kMid.x + ufx * 26 + ulx * 6,
-          y: kMid.y + ufy * 26 + uly * 6,
-          z: kMid.z + ufz * 26,
-        };
-        tipRing = tipRingCurled;
-        tipPinky = tipPinkyCurled;
-        thumbTip = {
-          x: kRing.x - ufx * 2,
-          y: kRing.y - ufy * 2,
-          z: kRing.z + 8,
-        };
-        break;
-
-      case 'point':
-      default:
-        // Only index extended (1-hand / G-hand)
-        tipIndex = t;
-        tipMid = tipMidCurled;
-        tipRing = tipRingCurled;
-        tipPinky = tipPinkyCurled;
-        break;
-    }
-
-    return {
-      wrist: w,
-      knuckleIndex: k,
-      tipIndex,
-      palm,
-      kMid,
-      kRing,
-      kPinky,
-      tipMid,
-      tipRing,
-      tipPinky,
-      thumbBase,
-      thumbKnuckle,
-      thumbTip,
-      forearm,
-      shape,
-    };
-  }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip, currentPose.shape]);
+    return solveHandKinematics(w, k, t, shape, palm);
+  }, [interpolatedWrist, interpolatedKnuckle, interpolatedTip, currentPose.shape, prevPose.shape, currentPose.palm, prevPose.palm]);
 
   // Project all dominant hand landmarks to 2D SVG stage (anchored on RHS in dual split mode)
   const domWrist = projPointHands(domHand3D.wrist);

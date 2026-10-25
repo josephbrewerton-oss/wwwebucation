@@ -20,7 +20,21 @@ export interface BslNmf {
   headTilt?: 'neutral' | 'nod' | 'shake' | 'tilt-left' | 'tilt-right';
 }
 
-export type BslHandShape = 'point' | 'flat' | 'fist' | 'claw' | 'spread' | 'v';
+export type BslHandShape =
+  | 'point'
+  | 'point-l'
+  | 'flat'
+  | 'flat-closed'
+  | 'spread'
+  | 'flat-spread'
+  | 'claw'
+  | 'fist'
+  | 'v'
+  | 'c-shape';
+
+export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | Point3D | [number, number, number];
+
+export type BslEaseCurve = 'snap' | 'ease-out' | 'linear' | 'bounce' | string;
 
 export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override';
 
@@ -35,6 +49,9 @@ export interface BslHandPose {
   activeVowelIndex?: number; // 0=A (Thumb), 1=E (Index), 2=I (Middle), 3=O (Ring), 4=U (Pinky)
   nmf?: BslNmf;
   shape?: BslHandShape;
+  palm?: BslPalmOrientation;
+  hold?: number;
+  ease?: BslEaseCurve;
   isWholeWordSign?: boolean;
   baseHandMode?: BslBaseHandMode;
   baseHandOverride?: {
@@ -416,3 +433,414 @@ export function project3DToSvg(
     depth: z2,
   };
 }
+
+/**
+ * Easing profile evaluator for BSL keyframes
+ */
+export function evaluateBslEase(ease: BslEaseCurve | undefined, t: number): number {
+  const clamped = Math.max(0, Math.min(1, t));
+  const curve = (ease || 'ease-out').toLowerCase().replace(/^:/, '');
+  switch (curve) {
+    case 'linear':
+      return clamped;
+    case 'snap':
+      return clamped < 0.2 ? 0 : 1;
+    case 'bounce': {
+      const n1 = 7.5625;
+      const d1 = 2.75;
+      let x = clamped;
+      if (x < 1 / d1) {
+        return n1 * x * x;
+      } else if (x < 2 / d1) {
+        x -= 1.5 / d1;
+        return n1 * x * x + 0.75;
+      } else if (x < 2.5 / d1) {
+        x -= 2.25 / d1;
+        return n1 * x * x + 0.9375;
+      } else {
+        x -= 2.625 / d1;
+        return n1 * x * x + 0.984375;
+      }
+    }
+    case 'ease-out':
+    default:
+      // Smooth Hermite cubic ease out
+      return clamped * clamped * (3 - 2 * clamped);
+  }
+}
+
+export interface BslSolvedDominantHand {
+  wrist: Point3D;
+  knuckleIndex: Point3D;
+  tipIndex: Point3D;
+  palm: Point3D;
+  kMid: Point3D;
+  kRing: Point3D;
+  kPinky: Point3D;
+  tipMid: Point3D;
+  tipRing: Point3D;
+  tipPinky: Point3D;
+  thumbBase: Point3D;
+  thumbKnuckle: Point3D;
+  thumbTip: Point3D;
+  forearm: Point3D;
+  shape: BslHandShape;
+  palmNormal: Point3D;
+}
+
+/**
+ * Procedural BSL Hand Posture Matrix & Kinematic Bone Solver
+ * Computes complete 3D skeletal landmark positions for dominant signing hand,
+ * taking into account handshape archetype and wrist axial roll (pronation/supination).
+ */
+export function solveHandKinematics(
+  wrist: Point3D,
+  knuckle: Point3D,
+  tip: Point3D,
+  shapeInput?: BslHandShape,
+  palmInput?: BslPalmOrientation
+): BslSolvedDominantHand {
+  const w = wrist;
+  const k = knuckle;
+  const t = tip;
+  const shape: BslHandShape = shapeInput || 'flat-closed';
+
+  // 1. Arm vector along index pointing axis
+  const fx = k.x - w.x;
+  const fy = k.y - w.y;
+  const fz = k.z - w.z;
+  const fLen = Math.hypot(fx, fy, fz) || 1;
+  const ufx = fx / fLen;
+  const ufy = fy / fLen;
+  const ufz = fz / fLen;
+
+  // 2. Default reference lateral vector (perpendicular to arm and vertical)
+  const defaultLatX = -ufy * 0.9;
+  const defaultLatY = ufx * 0.9;
+  const defaultLatZ = 0.4;
+  const defaultLatLen = Math.hypot(defaultLatX, defaultLatY, defaultLatZ) || 1;
+  let ulx = defaultLatX / defaultLatLen;
+  let uly = defaultLatY / defaultLatLen;
+  let ulz = defaultLatZ / defaultLatLen;
+
+  // 3. Compute palm normal orientation from :palm attribute (wrist axial roll)
+  let targetNormal: Point3D | null = null;
+  if (palmInput) {
+    if (typeof palmInput === 'string') {
+      const p = palmInput.toLowerCase().replace(/^:/, '');
+      if (p === 'in') targetNormal = { x: 0, y: 0, z: -1 }; // towards chest
+      else if (p === 'out') targetNormal = { x: 0, y: 0, z: 1 }; // towards receiver
+      else if (p === 'down') targetNormal = { x: 0, y: 1, z: 0 }; // prone (downwards)
+      else if (p === 'up') targetNormal = { x: 0, y: -1, z: 0 }; // supine (upwards)
+      else if (p === 'side') targetNormal = { x: -1, y: 0, z: 0 }; // vertical edge
+    } else if (Array.isArray(palmInput) && palmInput.length >= 3) {
+      targetNormal = { x: Number(palmInput[0]) || 0, y: Number(palmInput[1]) || 0, z: Number(palmInput[2]) || 0 };
+    } else if (typeof palmInput === 'object' && 'x' in palmInput) {
+      targetNormal = palmInput;
+    }
+  }
+
+  let unormX = 0;
+  let unormY = 0;
+  let unormZ = 1;
+
+  if (targetNormal) {
+    // Project target normal onto the plane orthogonal to arm vector (uf)
+    const dot = targetNormal.x * ufx + targetNormal.y * ufy + targetNormal.z * ufz;
+    const projX = targetNormal.x - dot * ufx;
+    const projY = targetNormal.y - dot * ufy;
+    const projZ = targetNormal.z - dot * ufz;
+    const projLen = Math.hypot(projX, projY, projZ);
+
+    if (projLen > 0.001) {
+      unormX = projX / projLen;
+      unormY = projY / projLen;
+      unormZ = projZ / projLen;
+
+      // Recompute lateral vector as cross product: uLateral = uArm x uNormal
+      const crossX = ufy * unormZ - ufz * unormY;
+      const crossY = ufz * unormX - ufx * unormZ;
+      const crossZ = ufx * unormY - ufy * unormX;
+      const crossLen = Math.hypot(crossX, crossY, crossZ) || 1;
+      ulx = crossX / crossLen;
+      uly = crossY / crossLen;
+      ulz = crossZ / crossLen;
+    }
+  } else {
+    // Reference normal = uf x ul
+    const unx = ufy * ulz - ufz * uly;
+    const uny = ufz * ulx - ufx * ulz;
+    const unz = ufx * uly - ufy * ulx;
+    const unLen = Math.hypot(unx, uny, unz) || 1;
+    unormX = unx / unLen;
+    unormY = uny / unLen;
+    unormZ = unz / unLen;
+  }
+
+  // 4. Palm center of dominant hand
+  const palm: Point3D = {
+    x: w.x * 0.5 + k.x * 0.5 + ulx * 12,
+    y: w.y * 0.5 + k.y * 0.5 + uly * 12,
+    z: w.z * 0.5 + k.z * 0.5 + ulz * 12,
+  };
+
+  // Knuckles for middle, ring, pinky
+  const kMid: Point3D = {
+    x: k.x + ulx * 14 - ufx * 3,
+    y: k.y + uly * 14 - ufy * 3,
+    z: k.z + ulz * 14 - ufz * 3,
+  };
+  const kRing: Point3D = {
+    x: k.x + ulx * 25 - ufx * 7,
+    y: k.y + uly * 25 - ufy * 7,
+    z: k.z + ulz * 25 - ufz * 7,
+  };
+  const kPinky: Point3D = {
+    x: k.x + ulx * 35 - ufx * 12,
+    y: k.y + uly * 35 - ufy * 12,
+    z: k.z + ulz * 35 - ufz * 12,
+  };
+
+  // Passive curled fingertips tucked into palm
+  const tipMidCurled: Point3D = {
+    x: palm.x + ulx * 6 - ufx * 4,
+    y: palm.y + uly * 6 - ufy * 4,
+    z: palm.z + 8,
+  };
+  const tipRingCurled: Point3D = {
+    x: palm.x + ulx * 16 - ufx * 6,
+    y: palm.y + uly * 16 - ufy * 6,
+    z: palm.z + 6,
+  };
+  const tipPinkyCurled: Point3D = {
+    x: palm.x + ulx * 24 - ufx * 8,
+    y: palm.y + uly * 24 - ufy * 8,
+    z: palm.z + 4,
+  };
+
+  // Thumb base & knuckle
+  const thumbBase: Point3D = {
+    x: w.x * 0.65 + k.x * 0.35 - ulx * 10,
+    y: w.y * 0.65 + k.y * 0.35 - uly * 10,
+    z: w.z * 0.65 + k.z * 0.35 + 4,
+  };
+  const thumbKnuckle: Point3D = {
+    x: thumbBase.x + ufx * 12 - ulx * 5,
+    y: thumbBase.y + ufy * 12 - uly * 5,
+    z: thumbBase.z + 6,
+  };
+
+  // Forearm entry point
+  const forearm: Point3D = {
+    x: w.x - ufx * 36 + ulx * 6,
+    y: w.y - ufy * 36 + uly * 6 + 28,
+    z: w.z - 20,
+  };
+
+  // 5. Posture Matrix & Digit Solver for Shape Archetype
+  let tipIndex: Point3D = t;
+  let tipMid: Point3D = tipMidCurled;
+  let tipRing: Point3D = tipRingCurled;
+  let tipPinky: Point3D = tipPinkyCurled;
+  let thumbTip: Point3D = {
+    x: k.x * 0.6 + kMid.x * 0.4 - ufx * 4,
+    y: k.y * 0.6 + kMid.y * 0.4 - ufy * 4,
+    z: k.z + 8,
+  };
+
+  switch (shape) {
+    case 'point-l':
+      // Index extended + Thumb extended at 90° angle
+      tipIndex = t;
+      tipMid = tipMidCurled;
+      tipRing = tipRingCurled;
+      tipPinky = tipPinkyCurled;
+      thumbTip = {
+        x: thumbKnuckle.x + ufx * 8 - ulx * 20,
+        y: thumbKnuckle.y + ufy * 8 - uly * 20,
+        z: thumbKnuckle.z + 8,
+      };
+      break;
+
+    case 'flat':
+    case 'flat-closed':
+      // All 4 fingers extended closed together (B-hand)
+      tipIndex = t;
+      tipMid = {
+        x: kMid.x + ufx * 27,
+        y: kMid.y + ufy * 27,
+        z: kMid.z + ufz * 27,
+      };
+      tipRing = {
+        x: kRing.x + ufx * 24,
+        y: kRing.y + ufy * 24,
+        z: kRing.z + ufz * 24,
+      };
+      tipPinky = {
+        x: kPinky.x + ufx * 19,
+        y: kPinky.y + ufy * 19,
+        z: kPinky.z + ufz * 19,
+      };
+      thumbTip = {
+        x: k.x - ulx * 7 - ufx * 2,
+        y: k.y - uly * 7 - ufy * 2,
+        z: k.z + 4,
+      };
+      break;
+
+    case 'spread':
+    case 'flat-spread':
+      // All 5 digits fully extended and splayed laterally (5-hand)
+      tipIndex = {
+        x: k.x + ufx * 25 - ulx * 8,
+        y: k.y + ufy * 25 - uly * 8,
+        z: k.z + ufz * 25,
+      };
+      tipMid = {
+        x: kMid.x + ufx * 28,
+        y: kMid.y + ufy * 28,
+        z: kMid.z + ufz * 28,
+      };
+      tipRing = {
+        x: kRing.x + ufx * 25 + ulx * 8,
+        y: kRing.y + ufy * 25 + uly * 8,
+        z: kRing.z + ufz * 25,
+      };
+      tipPinky = {
+        x: kPinky.x + ufx * 21 + ulx * 16,
+        y: kPinky.y + ufy * 21 + uly * 16,
+        z: kPinky.z + ufz * 21,
+      };
+      thumbTip = {
+        x: thumbKnuckle.x + ufx * 12 - ulx * 14,
+        y: thumbKnuckle.y + ufy * 12 - uly * 14,
+        z: thumbKnuckle.z + 8,
+      };
+      break;
+
+    case 'claw':
+      // Curved 5-hand: all fingers bent into curved hooks
+      tipIndex = {
+        x: k.x + ufx * 14 - unormX * 12,
+        y: k.y + ufy * 14 - unormY * 12,
+        z: k.z + ufz * 14 - unormZ * 12,
+      };
+      tipMid = {
+        x: kMid.x + ufx * 15 - unormX * 12,
+        y: kMid.y + ufy * 15 - unormY * 12,
+        z: kMid.z + ufz * 15 - unormZ * 12,
+      };
+      tipRing = {
+        x: kRing.x + ufx * 14 - unormX * 12,
+        y: kRing.y + ufy * 14 - unormY * 12,
+        z: kRing.z + ufz * 14 - unormZ * 12,
+      };
+      tipPinky = {
+        x: kPinky.x + ufx * 11 - unormX * 12,
+        y: kPinky.y + ufy * 11 - unormY * 12,
+        z: kPinky.z + ufz * 11 - unormZ * 12,
+      };
+      thumbTip = {
+        x: thumbKnuckle.x + ufx * 10 - unormX * 10,
+        y: thumbKnuckle.y + ufy * 10 - unormY * 10,
+        z: thumbKnuckle.z + ufz * 10 - unormZ * 10,
+      };
+      break;
+
+    case 'c-shape':
+      // Curved arc on all fingers forming a C-shape
+      tipIndex = {
+        x: k.x + ufx * 18 - unormX * 16,
+        y: k.y + ufy * 18 - unormY * 16,
+        z: k.z + ufz * 18 - unormZ * 16,
+      };
+      tipMid = {
+        x: kMid.x + ufx * 19 - unormX * 16,
+        y: kMid.y + ufy * 19 - unormY * 16,
+        z: kMid.z + ufz * 19 - unormZ * 16,
+      };
+      tipRing = {
+        x: kRing.x + ufx * 17 - unormX * 16,
+        y: kRing.y + ufy * 17 - unormY * 16,
+        z: kRing.z + ufz * 17 - unormZ * 16,
+      };
+      tipPinky = {
+        x: kPinky.x + ufx * 14 - unormX * 16,
+        y: kPinky.y + ufy * 14 - unormY * 16,
+        z: kPinky.z + ufz * 14 - unormZ * 16,
+      };
+      thumbTip = {
+        x: thumbKnuckle.x + ufx * 6 + unormX * 14,
+        y: thumbKnuckle.y + ufy * 6 + unormY * 14,
+        z: thumbKnuckle.z + 8,
+      };
+      break;
+
+    case 'fist':
+      // S-hand / A-hand: all fingers tightly curled
+      tipIndex = {
+        x: palm.x - ulx * 3 - ufx * 4,
+        y: palm.y - uly * 3 - ufy * 4,
+        z: palm.z + 8,
+      };
+      tipMid = tipMidCurled;
+      tipRing = tipRingCurled;
+      tipPinky = tipPinkyCurled;
+      thumbTip = {
+        x: k.x + ulx * 6 + ufx * 2,
+        y: k.y + uly * 6 + ufy * 2,
+        z: k.z + 10,
+      };
+      break;
+
+    case 'v':
+      // V-hand: Index + Middle extended with spread, ring and pinky curled
+      tipIndex = {
+        x: k.x + ufx * 25 - ulx * 6,
+        y: k.y + ufy * 25 - uly * 6,
+        z: k.z + ufz * 25,
+      };
+      tipMid = {
+        x: kMid.x + ufx * 26 + ulx * 6,
+        y: kMid.y + ufy * 26 + uly * 6,
+        z: kMid.z + ufz * 26,
+      };
+      tipRing = tipRingCurled;
+      tipPinky = tipPinkyCurled;
+      thumbTip = {
+        x: kRing.x - ufx * 2,
+        y: kRing.y - ufy * 2,
+        z: kRing.z + 8,
+      };
+      break;
+
+    case 'point':
+    default:
+      // Only index extended (1-hand / G-hand)
+      tipIndex = t;
+      tipMid = tipMidCurled;
+      tipRing = tipRingCurled;
+      tipPinky = tipPinkyCurled;
+      break;
+  }
+
+  return {
+    wrist: w,
+    knuckleIndex: k,
+    tipIndex,
+    palm,
+    kMid,
+    kRing,
+    kPinky,
+    tipMid,
+    tipRing,
+    tipPinky,
+    thumbBase,
+    thumbKnuckle,
+    thumbTip,
+    forearm,
+    shape,
+    palmNormal: { x: unormX, y: unormY, z: unormZ },
+  };
+}
+

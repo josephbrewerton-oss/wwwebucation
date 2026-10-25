@@ -12,9 +12,9 @@
  * - Seamless hybrid fallback to BANZSL 2-handed manual alphabet fingerspelling
  */
 
-import { Point3D, BslHandPose, BslNmf, BslHandShape, BslBaseHandMode, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import { Point3D, BslHandPose, BslNmf, BslHandShape, BslPalmOrientation, BslEaseCurve, BslBaseHandMode, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
 
-export type { BslNmf, BslHandShape, BslBaseHandMode };
+export type { BslNmf, BslHandShape, BslPalmOrientation, BslEaseCurve, BslBaseHandMode };
 export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation' | 'grammar' | 'temporal';
 
 export interface BslSignKeyframe {
@@ -25,6 +25,9 @@ export interface BslSignKeyframe {
   targetKnuckle: Point3D;
   targetWrist: Point3D;
   shape?: BslHandShape;
+  palm?: BslPalmOrientation;
+  hold?: number;
+  ease?: BslEaseCurve;
   baseHandMode?: BslBaseHandMode;
   activeVowelIndex?: number;
   baseHandOverride?: {
@@ -751,6 +754,12 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: -35, y: 0, z: 20 },
         targetKnuckle: { x: 15, y: 10, z: 10 },
         targetWrist: { x: 75, y: 45, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        hold: 150,
+        ease: 'ease-out',
+        baseHandMode: 'vowel-board',
+        baseHandOverride: { shiftX: 0, shiftY: 15, shiftZ: 0 },
         nmf: { eyebrows: 'neutral', mouth: 'equal' },
       },
       {
@@ -759,6 +768,12 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         targetTip: { x: -35, y: 15, z: 20 },
         targetKnuckle: { x: 15, y: 25, z: 10 },
         targetWrist: { x: 75, y: 55, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        hold: 100,
+        ease: 'snap',
+        baseHandMode: 'vowel-board',
+        baseHandOverride: { shiftX: 0, shiftY: 15, shiftZ: 0 },
         nmf: { eyebrows: 'neutral', mouth: 'equal' },
       },
     ],
