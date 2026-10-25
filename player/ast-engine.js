@@ -2128,7 +2128,10 @@
 
       // Eagerly ingest initial scene assets if in browser
       if (typeof window !== 'undefined') {
+        window.astEngine = this;
+        window.engine = this;
         this.loadScene(this.activePresetId, this.isPlaying);
+        this.start();
       }
     }
 
@@ -3309,6 +3312,9 @@
           this.backdropVideo.play().catch(() => {});
         }
         this.emit('statechange', { isPlaying: true, speed: this.speed });
+      }
+      if (!this.animationFrameId) {
+        this.start();
       }
     }
 
@@ -6471,6 +6477,8 @@
      * Includes 3D perspective projection, 3D rings, 3D polygons, and Painter's Algorithm Z-Sorting
      */
     applyBindings(t, dt = 0.016) {
+      const isSim = Boolean(this.isContinuousSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim')));
+      const effectiveT = (isSim && this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : t;
       // Eagerly evaluate reactive computed graph every frame
       this.updateComputedVars();
 
@@ -6860,7 +6868,7 @@ if (item.type === '3d-node') {
           if (b.node) {
             try {
               const val = b.evalFn(
-                t, v, Math, v,
+                effectiveT, v, Math, v,
                 astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
                 AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
                 AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
@@ -6878,7 +6886,6 @@ if (item.type === '3d-node') {
           }
         }
       }
-
       // 3. Thermodynamic Gas Emitter Synchronization across timeline & state transitions
       if (this.activePresetId === 'kinetic-gas' && this.emitters && (this.emitters.has('gas-molecules') || this.emitters.size > 0)) {
         const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
