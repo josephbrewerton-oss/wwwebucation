@@ -88,7 +88,7 @@ function createChemistryBundle(): string {
 // Benchmark Runner
 async function runImportSimulation() {
   console.log('='.repeat(78));
-  console.log('🚀 ST JOSEPH’S AST VECTOR ENGINE — PHET IMPORT SIMULATION & BENCHMARK');
+  console.log('🚀 OPEN SIMULATION (PHET-COMPATIBLE FORMAT) INGESTION BENCHMARK');
   console.log('='.repeat(78));
 
   const testCases = [
