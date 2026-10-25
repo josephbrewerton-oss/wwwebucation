@@ -6984,7 +6984,7 @@ if (item.type === '3d-node') {
 
         if (this.isPlaying || isDynamicScene) {
           if (this.isPlaying) {
-            this.progress += (deltaSec / this.durationSec) * this.speed;
+            this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
 
             if (this.progress >= 1.0) {
               if (this.loop || isDynamicScene) {
@@ -7002,8 +7002,15 @@ if (item.type === '3d-node') {
 
           // Advance decoupled universal simulation clock for infinite, smooth orbital, mechanical, and signage simulations
           if (!this.vars) this.vars = {};
-          const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0);
-          const clockDelta = (deltaSec * Math.max(0.01, warp) * (this.isPlaying ? this.speed : 1.0));
+          const speedParam = typeof this.vars.speedMultiplier === 'number'
+            ? this.vars.speedMultiplier
+            : (typeof this.vars.speed === 'number'
+                ? this.vars.speed
+                : (typeof this.vars.warpSpeed === 'number'
+                    ? this.vars.warpSpeed
+                    : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0)));
+
+          const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.isPlaying ? (this.speed || 1.0) : 1.0);
           this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
           this.vars.clock = this.vars.simClock;
           this.vars._simClock = this.vars.simClock;
@@ -7011,22 +7018,21 @@ if (item.type === '3d-node') {
 
           // Synchronize backdrop film video clock if running
           if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {
-            const expectedSec = this.progress * this.durationSec;
+            const expectedSec = this.progress * (this.durationSec || 10.0);
             if (Math.abs(this.backdropVideo.currentTime - expectedSec) > 0.35) {
               this.backdropVideo.currentTime = expectedSec;
             }
           }
         }
 
-        // PhET-Grade Continuous 60 FPS Render Loop:
-        // Always execute applyBindings every frame so direct manipulation, live physics,
-        // particle collisions, and 60 FPS rendering execute continuously even if clock is paused!
+        // Continuous 60 FPS Render Loop:
+        // applyBindings uses effectiveT (which evaluates vars.simClock), keeping 3D projections live
         this.applyBindings(this.progress, deltaSec);
 
         if (this.isPlaying) {
           this.emit('timeupdate', {
             progress: this.progress,
-            currentTime: this.progress * this.durationSec,
+            currentTime: this.progress * (this.durationSec || 10.0),
             duration: this.durationSec
           });
         }
@@ -7034,10 +7040,9 @@ if (item.type === '3d-node') {
 
       this.lastTimestamp = currentTimestamp;
       if (typeof requestAnimationFrame !== 'undefined') {
-        this.animationFrameId = requestAnimationFrame(this.tick);
+        this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
       }
     }
-
     /**
      * Hot-reloads raw SVG markup directly onto the stage container
      * Rebinds active AST expressions without losing clock state or timeline position
