@@ -233,21 +233,31 @@ assert(astElapsedMs < 25.0, `AST S-Expression deserialization time (${astElapsed
 console.log('\n8. Testing Handshape Opcode Invariants (:shape opcode):');
 const { serializeSignToAst } = await import('../src/utils/bslAstCodec');
 const sampleAstShape = `(sign :id "test-shape" :word "TEST" :cat "stem" :gloss "TEST" :label "Test Shape" :desc "Testing opcode"
-  (kf :idx 1 :label "Flat Hand" :rule "Flat handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :flat)
-  (kf :idx 2 :label "Fist Hand" :rule "Fist handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :fist)
-  (kf :idx 3 :label "Claw Hand" :rule "Claw handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :claw)
-  (kf :idx 4 :label "Spread Hand" :rule "Spread handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :spread)
-  (kf :idx 5 :label "V Hand" :rule "V handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :v)
-  (kf :idx 6 :label "Point Hand" :rule "Point handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :point)
+  (kf :idx 1 :label "Flat Hand" :rule "Flat handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :flat :palm :in :hold 150 :ease :ease-out)
+  (kf :idx 2 :label "Fist Hand" :rule "Fist handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :fist :palm :out :hold 100 :ease :snap)
+  (kf :idx 3 :label "Claw Hand" :rule "Claw handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :claw :palm :down :hold 50 :ease :linear)
+  (kf :idx 4 :label "Spread Hand" :rule "Spread handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :spread :palm :up :hold 200 :ease :bounce)
+  (kf :idx 5 :label "V Hand" :rule "V handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :v :palm :side)
+  (kf :idx 6 :label "Point Hand" :rule "Point handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :point :palm :in)
+  (kf :idx 7 :label "Point-L Hand" :rule "Point-L handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :point-l :palm :out)
+  (kf :idx 8 :label "C-Shape Hand" :rule "C-shape handshape" :tip [0 0 0] :knuckle [10 10 10] :wrist [20 20 20] :shape :c-shape :palm :in)
 )`;
 const parsedTest = parseAstToLexicon(sampleAstShape);
 assert(Boolean(parsedTest['TEST']), "Parsed AST sign with :shape opcodes");
 assert(parsedTest['TEST'].keyframes[0].shape === 'flat', "Parsed :shape :flat");
+assert(parsedTest['TEST'].keyframes[0].palm === 'in', "Parsed :palm :in");
+assert(parsedTest['TEST'].keyframes[0].hold === 150, "Parsed :hold 150");
+assert(parsedTest['TEST'].keyframes[0].ease === 'ease-out', "Parsed :ease :ease-out");
 assert(parsedTest['TEST'].keyframes[1].shape === 'fist', "Parsed :shape :fist");
+assert(parsedTest['TEST'].keyframes[1].palm === 'out', "Parsed :palm :out");
+assert(parsedTest['TEST'].keyframes[1].hold === 100, "Parsed :hold 100");
+assert(parsedTest['TEST'].keyframes[1].ease === 'snap', "Parsed :ease :snap");
 assert(parsedTest['TEST'].keyframes[2].shape === 'claw', "Parsed :shape :claw");
 assert(parsedTest['TEST'].keyframes[3].shape === 'spread', "Parsed :shape :spread");
 assert(parsedTest['TEST'].keyframes[4].shape === 'v', "Parsed :shape :v");
 assert(parsedTest['TEST'].keyframes[5].shape === 'point', "Parsed :shape :point");
+assert(parsedTest['TEST'].keyframes[6].shape === 'point-l', "Parsed :shape :point-l");
+assert(parsedTest['TEST'].keyframes[7].shape === 'c-shape', "Parsed :shape :c-shape");
 
 const serializedTest = serializeSignToAst(parsedTest['TEST']);
 assert(serializedTest.includes(':shape :flat'), "Serialized :shape :flat correctly");
@@ -256,6 +266,32 @@ assert(serializedTest.includes(':shape :claw'), "Serialized :shape :claw correct
 assert(serializedTest.includes(':shape :spread'), "Serialized :shape :spread correctly");
 assert(serializedTest.includes(':shape :v'), "Serialized :shape :v correctly");
 assert(serializedTest.includes(':shape :point'), "Serialized :shape :point correctly");
+assert(serializedTest.includes(':shape :point-l'), "Serialized :shape :point-l correctly");
+assert(serializedTest.includes(':shape :c-shape'), "Serialized :shape :c-shape correctly");
+assert(serializedTest.includes(':palm :in'), "Serialized :palm :in correctly");
+assert(serializedTest.includes(':hold 150'), "Serialized :hold 150 correctly");
+assert(serializedTest.includes(':ease :ease-out'), "Serialized :ease :ease-out correctly");
+
+// Verify EQUAL sign from disk has extended kinematic attributes
+const equalSign = parsedFromDisk['EQUAL'];
+assert(Boolean(equalSign), "Sign 'EQUAL' loaded from canonical disk AST");
+assert(equalSign.keyframes[0].shape === 'point', "Sign 'EQUAL' kf 1 has :shape :point");
+assert(equalSign.keyframes[0].palm === 'in', "Sign 'EQUAL' kf 1 has :palm :in");
+assert(equalSign.keyframes[0].hold === 150, "Sign 'EQUAL' kf 1 has :hold 150");
+assert(equalSign.keyframes[0].ease === 'ease-out', "Sign 'EQUAL' kf 1 has :ease :ease-out");
+assert(equalSign.keyframes[1].shape === 'point', "Sign 'EQUAL' kf 2 has :shape :point");
+assert(equalSign.keyframes[1].palm === 'in', "Sign 'EQUAL' kf 2 has :palm :in");
+assert(equalSign.keyframes[1].hold === 100, "Sign 'EQUAL' kf 2 has :hold 100");
+assert(equalSign.keyframes[1].ease === 'snap', "Sign 'EQUAL' kf 2 has :ease :snap");
+
+// Verify kinematic solver implementation
+const { solveHandKinematics, evaluateBslEase } = await import('../src/utils/bslAlphabet');
+const solved = solveHandKinematics({ x: 75, y: 45, z: 0 }, { x: 15, y: 10, z: 10 }, { x: -35, y: 0, z: 20 }, 'point', 'in');
+assert(Boolean(solved && solved.tipIndex && solved.palm), "Kinematic bone solver generates valid hand rig");
+assert(Number.isFinite(solved.palmNormal.z), "Kinematic bone solver computes palm normal vector");
+assert(evaluateBslEase('snap', 0.1) === 0, "evaluateBslEase handles :snap");
+assert(evaluateBslEase('snap', 0.9) === 1, "evaluateBslEase handles :snap");
+
 
 // ---------------------------------------------------------
 // Test 9: Signature BSL Level 2 / Level 3 Grammar Engine & Spatial Invariants

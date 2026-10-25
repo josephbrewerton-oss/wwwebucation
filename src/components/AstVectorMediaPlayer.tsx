@@ -111,6 +111,44 @@ export const isCartridgeWithoutQuestions = (presetId: string): boolean => {
   return false;
 };
 
+/**
+ * Distinguishes Continuous Simulation archetypes (Sim) from Discrete Narrative Slides (Slide).
+ * Continuous simulations run an uninhibited 60 FPS animation loop with performance.now() delta-time,
+ * evaluate the reactive computed graph every frame, bypass the slide transport, and let sliders act as live variables.
+ */
+export const isContinuousCartridge = (presetId: string): boolean => {
+  const canonical = normalizeCartridgeId(presetId) || presetId;
+  const cart = getCartridge(canonical) as any;
+  if (cart) {
+    if (cart.type === 'Sim' || cart.cartridgeType === 'Sim' || (cart.vars && (Array.isArray(cart.vars) ? cart.vars.length > 0 : Object.keys(cart.vars).length > 0))) return true;
+    if (cart.astSource) {
+      if (
+        /:type\s+"Sim"/i.test(cart.astSource) ||
+        /:continuous\s+true\b/i.test(cart.astSource) ||
+        /\(:3d-node\s+/i.test(cart.astSource) ||
+        /\(:vars\s+/i.test(cart.astSource)
+      ) {
+        return true;
+      }
+    }
+  }
+  const scene = PRESET_OPTIONS.find((opt) => opt.id === canonical || opt.id === presetId);
+  if (scene) {
+    if (scene.type === 'Sim' || (scene as any).isContinuousSim) return true;
+  }
+  // Known continuous simulation archetypes:
+  const simCartridges = new Set([
+    'atom',
+    'kinetic-gas',
+    'solar-system',
+    'calculus-curves',
+    'electric-circuits',
+    'dna-helix',
+    'water-cycle'
+  ]);
+  return simCartridges.has(canonical);
+};
+
 export interface AstVectorMediaPlayerProps {
   preset?: VectorPresetType;
   embedded?: boolean;
@@ -609,9 +647,21 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     sendAiVisualCommand: (packet: AiVisualCommandPacket) => postToPlayer({ type: 'AI_VISUAL_COMMAND', packet }),
     preemptAiDemo: () => postToPlayer({ type: 'PUPIL_INTERRUPT' }),
     getTelemetrySnapshot: () => latestTelemetryRef.current,
-    nextSlide: () => postToPlayer({ type: 'STEP_NEXT_KEYFRAME' }),
-    prevSlide: () => postToPlayer({ type: 'STEP_PREV_KEYFRAME' }),
-    goToSlide: (progress: number) => postToPlayer({ type: 'STEP_TO_KEYFRAME', progress }),
+    nextSlide: () => {
+      if (!isContinuousCartridge(selectedPreset)) {
+        postToPlayer({ type: 'STEP_NEXT_KEYFRAME' });
+      }
+    },
+    prevSlide: () => {
+      if (!isContinuousCartridge(selectedPreset)) {
+        postToPlayer({ type: 'STEP_PREV_KEYFRAME' });
+      }
+    },
+    goToSlide: (progress: number) => {
+      if (!isContinuousCartridge(selectedPreset)) {
+        postToPlayer({ type: 'STEP_TO_KEYFRAME', progress });
+      }
+    },
     takeQuiz: () => postToPlayer({ type: 'TRIGGER_CHECKPOINT' }),
     toggleCheckpoint: () => postToPlayer({ type: 'TOGGLE_CHECKPOINT' }),
     toggleInteractiveMode: () => postToPlayer({ type: 'TOGGLE_INTERACTIVE_MODE' }),

@@ -1,6 +1,10 @@
 {
   "version": "2.6.0",
+<<<<<<< HEAD
   "generatedAt": "2026-10-25T09:53:45.866Z",
+=======
+  "generatedAt": "2026-10-25T08:20:25.063Z",
+>>>>>>> 8710bd548b508a68db0848de5950f3740d052550
   "totalScenes": 45,
   "inputDirs": [
     "static/player/scenes",

@@ -4776,6 +4776,48 @@
     }
 
     /**
+     * Mounts a pre-parsed or runtime-constructed cartridge with eager pre-paint computed evaluation
+     */
+    initScene(scene) {
+      if (!scene) return;
+      this.scene = scene;
+      this.activePresetId = scene.id || this.activePresetId;
+      this.durationSec = scene.duration || 10.0;
+      const isContinuousSim = Boolean(
+        scene.type === 'Sim' ||
+        scene.cartridgeType === 'Sim' ||
+        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node')) ||
+        scene.continuous ||
+        scene.isContinuous ||
+        typeof scene.mount === 'function'
+      );
+      this.isContinuousSim = isContinuousSim;
+      if (this.container) {
+        this.container.innerHTML = '';
+        this.mountSceneAsset(scene, this.container);
+      }
+      this.resetVars();
+      this.updateComputedVars(); // Pre-paint computed state evaluation before initial frame pass
+      try {
+        if (typeof this.applyBindings === 'function') {
+          this.applyBindings(0);
+        }
+        if (typeof this.render === 'function') {
+          this.render(0);
+        }
+      } catch (bindErr) {
+        console.warn('[AST Engine] Initial frame bind notice:', bindErr);
+      }
+      return this.scene;
+    }
+
+    mountCartridge(cartridge) {
+      return this.initScene(cartridge);
+    }
+
+    /**
      * Dynamically ingests [id].svg and [id].ast assets on selection
      */
     async loadScene(presetId, shouldPlay = false) {
@@ -5165,6 +5207,17 @@
 
       this.scene = scene;
       this.durationSec = this.scene.duration || 10.0;
+      const isContinuousSim = Boolean(
+        scene.type === 'Sim' ||
+        scene.cartridgeType === 'Sim' ||
+        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node')) ||
+        scene.continuous ||
+        scene.isContinuous ||
+        typeof scene.mount === 'function'
+      );
+      this.isContinuousSim = isContinuousSim;
 
       // Mount into container
       if (this.container) {
@@ -5172,8 +5225,9 @@
         this.mountSceneAsset(scene, this.container);
       }
       this.resetVars();
+      this.updateComputedVars(); // Pre-paint computed state evaluation before initial frame
 
-// 1. Hide the "Loading AST Vector Scene..." overlay immediately
+      // 1. Hide the "Loading AST Vector Scene..." overlay immediately
       const loaderEl = document.getElementById('loading-indicator') || 
                        document.getElementById('loading') ||
                        document.querySelector('.loading-badge') ||
@@ -5220,7 +5274,7 @@
       });
 
       this.seek(0);
-      if (shouldPlay) {
+      if (shouldPlay || isContinuousSim) {
         this.play();
       }
       this._mountedSceneId = presetId;
@@ -5278,6 +5332,42 @@
         render: sceneData.render
       };
       return this.loadScene(id, shouldPlay);
+    }
+
+    /**
+     * Initializes a scene with pre-paint computed evaluation and continuous sim archetype detection
+     */
+    initScene(scene) {
+      if (!scene) return null;
+      this.scene = scene;
+      this.durationSec = scene.duration || 10.0;
+      this.isContinuousSim = Boolean(
+        scene.type === 'Sim' ||
+        scene.cartridgeType === 'Sim' ||
+        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node')) ||
+        scene.continuous ||
+        scene.isContinuous ||
+        typeof scene.mount === 'function'
+      );
+      this.resetVars();
+      this.updateComputedVars();
+      if (this.container) {
+        this.mountSceneAsset(scene, this.container);
+      }
+      this.applyBindings(0);
+      if (this.isContinuousSim) {
+        this.play();
+      }
+      return this.scene;
+    }
+
+    /**
+     * Mounts a cartridge with pre-paint computed evaluation
+     */
+    mountCartridge(cartridge) {
+      return this.initScene(cartridge);
     }
 
     /**
@@ -6251,8 +6341,9 @@
         }
       }
 
-      // 2. Initialize reactive variables for the loaded scene
+      // 2. Initialize reactive variables for the loaded scene & evaluate pre-paint computed graph
       this.resetVars();
+      this.updateComputedVars();
 
       // 3. Optimized DOM Partitioning & Hardware Promotion (Static vs Kinematic Actors)
       try {
@@ -6380,6 +6471,9 @@
      * Includes 3D perspective projection, 3D rings, 3D polygons, and Painter's Algorithm Z-Sorting
      */
     applyBindings(t, dt = 0.016) {
+      // Eagerly evaluate reactive computed graph every frame
+      this.updateComputedVars();
+
       // Safety check: ensure container has scene elements mounted
       if (!this._isMounting && this._container && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== this._container)) {
         if (this.scene) {
@@ -6854,7 +6948,11 @@ if (item.type === '3d-node') {
     /**
      * Main Animation Tick Loop with Delta-Time Clamping
      */
-    tick(currentTimestamp) {      if (this.lastTimestamp !== null) {
+    tick(currentTimestamp) {
+      if (!currentTimestamp && typeof performance !== 'undefined' && typeof performance.now === 'function') {
+        currentTimestamp = performance.now();
+      }
+      if (this.lastTimestamp !== null) {
         const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
         const deltaSec = Math.min(rawDeltaSec, 0.1);
         this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
@@ -6875,28 +6973,30 @@ if (item.type === '3d-node') {
         }
 
         // Dynamic continuous simulation check:
-        const isDynamicScene = this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || typeof this.scene.mount === 'function'));
+        const isDynamicScene = Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
 
-        if (this.isPlaying) {
-          this.progress += (deltaSec / this.durationSec) * this.speed;
+        if (this.isPlaying || isDynamicScene) {
+          if (this.isPlaying) {
+            this.progress += (deltaSec / this.durationSec) * this.speed;
 
-          if (this.progress >= 1.0) {
-            if (this.loop || isDynamicScene) {
-              this.progress = this.progress % 1.0;
-              this.lastSpokenIndex = -1;
-            } else {
-              this.progress = 1.0;
-              this.pause();
-              this.emit('ended', { duration: this.durationSec });
+            if (this.progress >= 1.0) {
+              if (this.loop || isDynamicScene) {
+                this.progress = this.progress % 1.0;
+                this.lastSpokenIndex = -1;
+              } else {
+                this.progress = 1.0;
+                this.pause();
+                this.emit('ended', { duration: this.durationSec });
+              }
             }
-          }
 
-          this.updateActiveKeyframeAndSpeech(false);
+            this.updateActiveKeyframeAndSpeech(false);
+          }
 
           // Advance decoupled universal simulation clock for infinite, smooth orbital, mechanical, and signage simulations
           if (!this.vars) this.vars = {};
           const warp = typeof this.vars.warpSpeed === 'number' ? this.vars.warpSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0);
-          const clockDelta = (deltaSec * Math.max(0.01, warp) * this.speed);
+          const clockDelta = (deltaSec * Math.max(0.01, warp) * (this.isPlaying ? this.speed : 1.0));
           this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
           this.vars.clock = this.vars.simClock;
           this.vars._simClock = this.vars.simClock;
@@ -7800,6 +7900,7 @@ if (item.type === '3d-node') {
           break;
         case 'STEP_NEXT_KEYFRAME':
         case 'NEXT_SLIDE':
+          if (engine.isContinuousSim) break;
           if (uiController && typeof uiController.stepToNextKeyframe === 'function') {
             uiController.stepToNextKeyframe();
           } else {
@@ -7808,6 +7909,7 @@ if (item.type === '3d-node') {
           break;
         case 'STEP_PREV_KEYFRAME':
         case 'PREV_SLIDE':
+          if (engine.isContinuousSim) break;
           if (uiController && typeof uiController.stepToPrevKeyframe === 'function') {
             uiController.stepToPrevKeyframe();
           } else {
@@ -7816,6 +7918,7 @@ if (item.type === '3d-node') {
           break;
         case 'STEP_TO_KEYFRAME':
         case 'GOTO_SLIDE':
+          if (engine.isContinuousSim) break;
           if (typeof data.progress === 'number') {
             engine.seek(data.progress);
             if (uiController && typeof uiController.onStopReached === 'function') {

@@ -12,7 +12,7 @@
  * - Zero external dependencies, pure O(n) streaming parsing and serialization.
  */
 
-import { Point3D, BslHandShape, BslBaseHandMode } from './bslAlphabet';
+import { Point3D, BslHandShape, BslBaseHandMode, BslPalmOrientation, BslEaseCurve } from './bslAlphabet';
 import { BslSign, BslSignKeyframe, BslCategory, BslNmf } from './bslLexicon';
 import { parseSExpr } from './sexprParser';
 import { SExprNode } from '../types/sexpr';
@@ -69,7 +69,16 @@ export function serializeSignToAst(sign: BslSign): string {
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
-    const shapeStr = kf.shape ? ` :shape :${kf.shape}` : '';
+    const shapeStr = kf.shape ? ` :shape :${String(kf.shape).replace(/^:/, '')}` : '';
+    const palmStr = kf.palm
+      ? (typeof kf.palm === 'string'
+          ? ` :palm :${String(kf.palm).replace(/^:/, '')}`
+          : Array.isArray(kf.palm)
+            ? ` :palm [${kf.palm.join(' ')}]`
+            : ` :palm [${(kf.palm as any).x} ${(kf.palm as any).y} ${(kf.palm as any).z}]`)
+      : '';
+    const holdStr = kf.hold !== undefined ? ` :hold ${kf.hold}` : '';
+    const easeStr = kf.ease ? ` :ease :${String(kf.ease).replace(/^:/, '')}` : '';
     const baseModeStr = kf.baseHandMode ? ` :base-mode :${kf.baseHandMode}` : '';
     const nmfStr = kf.nmf
       ? ` :nmf (nmf :mouth "${escapeAstString(kf.nmf.mouth || '')}" :brows "${escapeAstString(kf.nmf.eyebrows || 'neutral')}"${kf.nmf.headTilt ? ` :tilt "${escapeAstString(kf.nmf.headTilt)}"` : ''})`
@@ -82,7 +91,7 @@ export function serializeSignToAst(sign: BslSign): string {
     lines.push(
       `    (kf :idx ${i + 1} :label "${escapeAstString(kf.label)}" :rule "${escapeAstString(kf.rule)}"` +
       ` :tip ${point3DToAstVector(kf.targetTip)} :knuckle ${point3DToAstVector(kf.targetKnuckle)} :wrist ${point3DToAstVector(kf.targetWrist)}` +
-      `${shapeStr}${baseModeStr}${vowelStr}${shiftStr}${nmfStr})`
+      `${shapeStr}${palmStr}${holdStr}${easeStr}${baseModeStr}${vowelStr}${shiftStr}${nmfStr})`
     );
   }
 
@@ -144,10 +153,25 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     let shape: BslHandShape | undefined = undefined;
     if (kfProps.shape) {
       const rawShape = String(kfProps.shape).replace(/^:/, '').toLowerCase();
-      if (['point', 'flat', 'fist', 'claw', 'spread', 'v'].includes(rawShape)) {
+      if (['point', 'point-l', 'flat', 'flat-closed', 'spread', 'flat-spread', 'claw', 'fist', 'v', 'c-shape'].includes(rawShape)) {
         shape = rawShape as BslHandShape;
       }
     }
+
+    let palm: BslPalmOrientation | undefined = undefined;
+    if (kfProps.palm !== undefined) {
+      if (typeof kfProps.palm === 'string') {
+        const rawPalm = String(kfProps.palm).replace(/^:/, '').toLowerCase();
+        if (['in', 'out', 'down', 'up', 'side'].includes(rawPalm)) {
+          palm = rawPalm as any;
+        }
+      } else if (Array.isArray(kfProps.palm) && kfProps.palm.length >= 3) {
+        palm = [Number(kfProps.palm[0]) || 0, Number(kfProps.palm[1]) || 0, Number(kfProps.palm[2]) || 0];
+      }
+    }
+
+    const hold = kfProps.hold !== undefined ? Number(kfProps.hold) : undefined;
+    const ease = kfProps.ease ? String(kfProps.ease).replace(/^:/, '').toLowerCase() : undefined;
 
     let nmf: BslNmf | undefined = undefined;
     if (kfProps.nmf) {
@@ -183,6 +207,9 @@ export function parseAstNodeToSign(node: any): BslSign | null {
       targetKnuckle: knuckle,
       targetWrist: wrist,
       shape,
+      palm,
+      hold,
+      ease,
       baseHandMode,
       activeVowelIndex: kfProps.vowel !== undefined ? Number(kfProps.vowel) : undefined,
       baseHandOverride,

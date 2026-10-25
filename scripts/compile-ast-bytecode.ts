@@ -11,9 +11,15 @@ import * as path from 'path';
 import { compileAstTextToBytecode, decompileBytecodeToScene, isAstBytecode } from '../src/utils/astBytecode';
 
 const ROOT_DIR = process.cwd();
-const SOURCE_DIR = path.join(ROOT_DIR, 'static', 'player', 'cartridges');
+
+// Prefer top-level static/cartridges if it contains .ast files, otherwise fallback to static/player/cartridges
+const SOURCE_DIR = fs.existsSync(path.join(ROOT_DIR, 'static', 'cartridges'))
+  ? path.join(ROOT_DIR, 'static', 'cartridges')
+  : path.join(ROOT_DIR, 'static', 'player', 'cartridges');
+
 const TARGET_DIR = path.join(ROOT_DIR, 'static', 'player', 'bytecode');
 const SCENES_DIR = path.join(ROOT_DIR, 'static', 'player', 'scenes');
+const PUBLIC_TARGET_DIR = path.join(ROOT_DIR, 'public', 'player', 'bytecode');
 
 function run() {
   console.log('[AST Bytecode Compiler] Compiling canonical cartridges to binary .astb payloads...');
@@ -59,17 +65,28 @@ function run() {
         throw new Error(`Decompilation sanity check failed for ${id}`);
       }
 
-      // Write compiled bytecode to both static/player/bytecode/ and static/player/scenes/
+      // 1. Write compiled bytecode to static destinations
       fs.writeFileSync(targetAstbPath, binBuffer);
       if (fs.existsSync(SCENES_DIR)) {
         fs.writeFileSync(scenesAstbPath, binBuffer);
       }
 
-      // Copy matching SVG to bytecode folder if present
+      // 2. Ensure compiled bytecode reaches Vite's public asset root
+      if (fs.existsSync(path.join(ROOT_DIR, 'public'))) {
+        if (!fs.existsSync(PUBLIC_TARGET_DIR)) {
+          fs.mkdirSync(PUBLIC_TARGET_DIR, { recursive: true });
+        }
+        fs.writeFileSync(path.join(PUBLIC_TARGET_DIR, `${id}.astb`), binBuffer);
+      }
+
+      // 3. Copy matching SVG to bytecode folders if present
       const svgSrcPath = path.join(SOURCE_DIR, `${id}.svg`);
       const targetSvgPath = path.join(TARGET_DIR, `${id}.svg`);
       if (fs.existsSync(svgSrcPath)) {
         fs.copyFileSync(svgSrcPath, targetSvgPath);
+        if (fs.existsSync(PUBLIC_TARGET_DIR)) {
+          fs.copyFileSync(svgSrcPath, path.join(PUBLIC_TARGET_DIR, `${id}.svg`));
+        }
       }
 
       const binSize = binBuffer.byteLength;
@@ -83,7 +100,10 @@ function run() {
     }
   }
 
-  const overallReduction = ((1 - totalBytecodeBytes / totalSrcBytes) * 100).toFixed(1);
+  const overallReduction = totalSrcBytes > 0 
+    ? ((1 - totalBytecodeBytes / totalSrcBytes) * 100).toFixed(1) 
+    : '0';
+
   console.log(`\n======================================================`);
   console.log(`[AST Bytecode Compiler] Successfully compiled ${count} cartridges!`);
   console.log(`  Original AST Text:  ${(totalSrcBytes / 1024).toFixed(2)} KB`);
