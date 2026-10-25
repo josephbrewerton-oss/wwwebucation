@@ -106,15 +106,13 @@ This beta build introduces the **world's first procedural, real-time BSL "In-Vis
 
 ---
 
-## 5. Phase 1 AST Calculations & Storage Verification Report
+## 6. Culturally-Aligned Stylized Human Avatar Skin Mode & Deaf Community Standards
 
-* **Storage Compression**: 
-  - Standard video equivalent: ~320 MB (32 signs × 10 MB video clips).
-  - AST S-Expression file (`bsl-signs.ast`): **20.1 KB raw / 5.58 KB gzipped** (178 bytes per sign).
-  - **Storage Reduction: 99.9982% (55,787× smaller)**.
-* **Kinematic Computation Benchmark**:
-  - Hermite interpolation: **0.43 µs / op** (< 50 µs invariant).
-  - Full AST S-Expression parser: **2.4 ms** for entire 32-sign curriculum dictionary.
-  - Runtime Memory Footprint: < 1.5 MB RAM.
-* **Test Suite**: 7 test suites, 153/153 tests passing cleanly.
+Following direct consultations and principles of Deaf Cultural Linguistics (ASLI, NRCPD, and WFD signing ergonomics):
+* **Avoidance of Uncanny Valley CGI**: Rather than introducing heavy pseudo-photorealistic 3D CGI meshes (which fail to capture natural facial micro-movements and induce ocular fatigue), the interpreter utilizes an internationally acclaimed, dignified **stylized human vector silhouette**.
+* **Contrasting Interpreter Top**: Renders a matte dark charcoal/navy shirt (`#0f172a` - `#1e293b`) conforming to professional BSL interpreter dress standards, creating the vital visual high-contrast "signing box" against which hands and finger positions are immediately legible.
+* **Volumetric Anatomical Hand Capsules**: Hands and fingers are projected with rounded volumetric muscular pads (warm skin gradient `url(#bslHumanSkin)` and softer palm gradient `url(#bslHumanSkinPalm)`), fleshy thenar cushions, and rounded fingertip pads rather than bare wireframe lines.
+* **Non-Manual Features (NMF)**: Full grammatical eyebrow articulation (furrowed for WH-questions, raised for polar questions), expressive almond eyes with catchlights, soft nose contours, and dynamic lip mouthing aperture.
+* **Instant Dual-Mode Toggle**: The control bar provides a persistent `🧑 Human` ↔ `🦴 Skeleton` toggle, allowing users to switch between the dignified Human Avatar and the mathematical Kinematic X-Ray with zero performance loss.
+
 

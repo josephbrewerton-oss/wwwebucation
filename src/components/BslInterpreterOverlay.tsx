@@ -126,6 +126,14 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [isPipActive, setIsPipActive] = useState<boolean>(false);
   const [showPanControls, setShowPanControls] = useState<boolean>(false);
   const [showFacialFeatures, setShowFacialFeatures] = useState<boolean>(true);
+  const [avatarSkinMode, setAvatarSkinMode] = useState<'human' | 'skeleton'>(() => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        return (localStorage.getItem('stj_bsl_skin_mode') as 'human' | 'skeleton') || 'human';
+      }
+    } catch (_) {}
+    return 'human';
+  });
   const [importNotice, setImportNotice] = useState<string>('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [availableSigns, setAvailableSigns] = useState<{ label: string; word: string }[]>(() => {
@@ -1549,6 +1557,42 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               <stop offset="60%" stopColor="#0284c7" stopOpacity="0.5" />
               <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
             </radialGradient>
+
+            {/* Respectful Stylized Human Skin Gradients (Warm Natural Tone) */}
+            <linearGradient id="bslHumanSkin" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#fbe8db" />
+              <stop offset="60%" stopColor="#f5d0b5" />
+              <stop offset="100%" stopColor="#e5baa0" />
+            </linearGradient>
+
+            <linearGradient id="bslHumanSkinPalm" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#fff4ec" />
+              <stop offset="60%" stopColor="#f9dfcd" />
+              <stop offset="100%" stopColor="#edc8b0" />
+            </linearGradient>
+
+            <linearGradient id="bslHumanSkinBack" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#f5d0b5" />
+              <stop offset="100%" stopColor="#d9a889" />
+            </linearGradient>
+
+            {/* Standard BSL Professional Attire (Contrasting Matte Dark Navy/Charcoal Top) */}
+            <linearGradient id="bslInterpreterTop" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#1e293b" />
+              <stop offset="50%" stopColor="#0f172a" />
+              <stop offset="100%" stopColor="#070d18" />
+            </linearGradient>
+
+            {/* Dignified Hair Silhouette Gradient */}
+            <linearGradient id="bslHairGradient" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#334155" />
+              <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+
+            {/* Soft Ambient Depth Filter */}
+            <filter id="bslSoftGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.3" />
+            </filter>
           </defs>
 
           {/* DUAL-ZONE SPLIT (LHS Face & Upper Body + RHS Signing Hands) & MAPPED TUPLES */}
@@ -1640,118 +1684,318 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
           {/* UPPER TORSO & ANATOMICAL LOCI */}
           <g id="bsl-upper-torso">
-            {/* Shoulders & Collar line */}
-            <path
-              d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y} Q ${torsoChest.x} ${torsoChest.y} ${torsoRightShoulder.x} ${torsoRightShoulder.y}`}
-              fill="none"
-              stroke="#475569"
-              strokeWidth="2"
-              strokeDasharray="3 3"
-              opacity="0.35"
-            />
-            {/* Chest Center Cross/Anchor */}
-            <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.35" />
-            
-            {/* Head Silhouette Base with generous headroom */}
-            <ellipse
-              cx={torsoHead.x}
-              cy={torsoHead.y}
-              rx={(cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
-              ry={(cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * torsoHead.scale}
-              fill="rgba(15, 23, 42, 0.7)"
-              stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#64748b')}
-              strokeWidth={eyebrowState !== 'neutral' ? '2' : '1.3'}
-            />
-
-            {/* Chin Locus Indicator */}
-            <circle cx={torsoChin.x} cy={torsoChin.y} r={(cameraMode === 'face' ? 3.5 : cameraMode === 'split' ? 2.2 : 2.5) * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
-
-            {/* BSL NON-MANUAL FEATURES (NMF) 3D FACIAL RIG */}
-            {showFacialFeatures && (
-              <g id="bsl-face-nmf" opacity={0.95}>
-                {/* Eyebrows: Dynamic Grammatical NMF (Raised = Yes/No question, Furrowed = Wh-question) */}
-                <line
-                  x1={facialLandmarks.leftBrowOut.x}
-                  y1={facialLandmarks.leftBrowOut.y}
-                  x2={facialLandmarks.leftBrowIn.x}
-                  y2={facialLandmarks.leftBrowIn.y}
-                  stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
-                  strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
-                  strokeLinecap="round"
+            {avatarSkinMode === 'human' ? (
+              <g id="bsl-human-torso-head">
+                {/* 1. Neck Column */}
+                <path
+                  d={`M ${torsoHead.x - 7 * torsoHead.scale} ${torsoHead.y + 16 * torsoHead.scale}
+                      L ${torsoHead.x - 9 * torsoHead.scale} ${torsoChest.y + 6}
+                      L ${torsoHead.x + 9 * torsoHead.scale} ${torsoChest.y + 6}
+                      L ${torsoHead.x + 7 * torsoHead.scale} ${torsoHead.y + 16 * torsoHead.scale} Z`}
+                  fill="url(#bslHumanSkin)"
+                  stroke="#d4a385"
+                  strokeWidth="0.8"
                 />
-                <line
-                  x1={facialLandmarks.rightBrowIn.x}
-                  y1={facialLandmarks.rightBrowIn.y}
-                  x2={facialLandmarks.rightBrowOut.x}
-                  y2={facialLandmarks.rightBrowOut.y}
-                  stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
-                  strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
+
+                {/* 2. Professional Interpreter Dark Top (Signing Box Contrast Canvas) */}
+                <path
+                  d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y}
+                      Q ${torsoHead.x} ${torsoChest.y + 2} ${torsoRightShoulder.x} ${torsoRightShoulder.y}
+                      L ${torsoRightShoulder.x + (cameraMode === 'split' ? 12 : 18)} 180
+                      L ${torsoLeftShoulder.x - (cameraMode === 'split' ? 12 : 18)} 180 Z`}
+                  fill="url(#bslInterpreterTop)"
+                  stroke="#334155"
+                  strokeWidth="1.2"
+                />
+
+                {/* Collar seam */}
+                <path
+                  d={`M ${torsoLeftShoulder.x + 18} ${torsoLeftShoulder.y + 2}
+                      Q ${torsoHead.x} ${torsoChest.y + 9} ${torsoRightShoulder.x - 18} ${torsoRightShoulder.y + 2}`}
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="1.2"
                   strokeLinecap="round"
                 />
 
-                {/* Left Eye */}
+                {/* Left & Right Fabric Sleeves extending down to mid-forearm */}
+                <line
+                  x1={torsoLeftShoulder.x}
+                  y1={torsoLeftShoulder.y}
+                  x2={torsoLeftShoulder.x * 0.45 + baseForearm.x * 0.55}
+                  y2={torsoLeftShoulder.y * 0.45 + baseForearm.y * 0.55}
+                  stroke="#1e293b"
+                  strokeWidth={13 * torsoHead.scale}
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={torsoRightShoulder.x}
+                  y1={torsoRightShoulder.y}
+                  x2={torsoRightShoulder.x * 0.45 + domForearm.x * 0.55}
+                  y2={torsoRightShoulder.y * 0.45 + domForearm.y * 0.55}
+                  stroke="#1e293b"
+                  strokeWidth={13 * torsoHead.scale}
+                  strokeLinecap="round"
+                />
+
+                {/* 3. Left & Right Ear Lobes */}
                 <ellipse
-                  cx={facialLandmarks.leftEye.x}
-                  cy={facialLandmarks.leftEye.y}
-                  rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
-                  ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
-                  fill="#0f172a"
-                  stroke="#38bdf8"
-                  strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
+                  cx={torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                  cy={torsoHead.y}
+                  rx={3.5 * torsoHead.scale}
+                  ry={5.5 * torsoHead.scale}
+                  fill="url(#bslHumanSkin)"
+                  stroke="#d4a385"
+                  strokeWidth="0.8"
                 />
-                <circle
-                  cx={facialLandmarks.leftEye.x}
-                  cy={facialLandmarks.leftEye.y}
-                  r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
-                  fill="#38bdf8"
-                />
-
-                {/* Right Eye */}
                 <ellipse
-                  cx={facialLandmarks.rightEye.x}
-                  cy={facialLandmarks.rightEye.y}
-                  rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
-                  ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
-                  fill="#0f172a"
-                  stroke="#38bdf8"
-                  strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
-                />
-                <circle
-                  cx={facialLandmarks.rightEye.x}
-                  cy={facialLandmarks.rightEye.y}
-                  r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
-                  fill="#38bdf8"
+                  cx={torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                  cy={torsoHead.y}
+                  rx={3.5 * torsoHead.scale}
+                  ry={5.5 * torsoHead.scale}
+                  fill="url(#bslHumanSkin)"
+                  stroke="#d4a385"
+                  strokeWidth="0.8"
                 />
 
-                {/* Nose Bridge */}
-                <line
-                  x1={facialLandmarks.noseBridge.x}
-                  y1={facialLandmarks.noseBridge.y}
-                  x2={facialLandmarks.noseTip.x}
-                  y2={facialLandmarks.noseTip.y}
-                  stroke="#64748b"
-                  strokeWidth={cameraMode === 'face' ? '1.6' : '1.2'}
-                  strokeLinecap="round"
-                  opacity="0.8"
+                {/* 4. Head Silhouette Base with gentle natural warmth */}
+                <ellipse
+                  cx={torsoHead.x}
+                  cy={torsoHead.y}
+                  rx={(cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                  ry={(cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * torsoHead.scale}
+                  fill="url(#bslHumanSkin)"
+                  stroke="#d4a385"
+                  strokeWidth="1.2"
+                  filter="url(#bslSoftGlow)"
                 />
 
-                {/* Mouth & Lips (Dynamic Mouthing Aperture & Lip Pattern) */}
-                {mouthPattern ? (
-                  <path
-                    d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
-                    fill="rgba(56, 189, 248, 0.28)"
-                    stroke="#38bdf8"
-                    strokeWidth={cameraMode === 'face' ? '2.4' : '1.8'}
-                    strokeLinecap="round"
-                  />
-                ) : (
-                  <path
-                    d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
-                    fill="none"
-                    stroke="#94a3b8"
-                    strokeWidth={cameraMode === 'face' ? '1.8' : '1.3'}
-                    strokeLinecap="round"
-                  />
+                {/* 5. Natural Hair Silhouette */}
+                <path
+                  d={`M ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale}
+                      Q ${torsoHead.x} ${torsoHead.y - (cameraMode === 'face' ? 38 : cameraMode === 'split' ? 26 : 30) * torsoHead.scale} ${torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale}
+                      Q ${torsoHead.x} ${torsoHead.y - (cameraMode === 'face' ? 20 : cameraMode === 'split' ? 13 : 15) * torsoHead.scale} ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale} Z`}
+                  fill="url(#bslHairGradient)"
+                />
+
+                {/* 6. Human Facial Features (NMF Rig) */}
+                {showFacialFeatures && (
+                  <g id="bsl-face-nmf" opacity={0.98}>
+                    {/* Natural Arched Eyebrows (Grammatical NMF) */}
+                    <line
+                      x1={facialLandmarks.leftBrowOut.x}
+                      y1={facialLandmarks.leftBrowOut.y}
+                      x2={facialLandmarks.leftBrowIn.x}
+                      y2={facialLandmarks.leftBrowIn.y}
+                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#1e293b')}
+                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.4) * torsoHead.scale}
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1={facialLandmarks.rightBrowIn.x}
+                      y1={facialLandmarks.rightBrowIn.y}
+                      x2={facialLandmarks.rightBrowOut.x}
+                      y2={facialLandmarks.rightBrowOut.y}
+                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#1e293b')}
+                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.4) * torsoHead.scale}
+                      strokeLinecap="round"
+                    />
+
+                    {/* Left Eye (Gentle almond sclera + dark pupil + catchlight) */}
+                    <ellipse
+                      cx={facialLandmarks.leftEye.x}
+                      cy={facialLandmarks.leftEye.y}
+                      rx={(cameraMode === 'face' ? 4.2 : 3.0) * torsoHead.scale}
+                      ry={(cameraMode === 'face' ? 2.8 : 2.0) * torsoHead.scale}
+                      fill="#ffffff"
+                      stroke="#cbd5e1"
+                      strokeWidth="0.7"
+                    />
+                    <circle
+                      cx={facialLandmarks.leftEye.x}
+                      cy={facialLandmarks.leftEye.y}
+                      r={(cameraMode === 'face' ? 2.0 : 1.4) * torsoHead.scale}
+                      fill="#1e293b"
+                    />
+                    <circle
+                      cx={facialLandmarks.leftEye.x - 0.7 * torsoHead.scale}
+                      cy={facialLandmarks.leftEye.y - 0.7 * torsoHead.scale}
+                      r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
+                      fill="#ffffff"
+                    />
+
+                    {/* Right Eye */}
+                    <ellipse
+                      cx={facialLandmarks.rightEye.x}
+                      cy={facialLandmarks.rightEye.y}
+                      rx={(cameraMode === 'face' ? 4.2 : 3.0) * torsoHead.scale}
+                      ry={(cameraMode === 'face' ? 2.8 : 2.0) * torsoHead.scale}
+                      fill="#ffffff"
+                      stroke="#cbd5e1"
+                      strokeWidth="0.7"
+                    />
+                    <circle
+                      cx={facialLandmarks.rightEye.x}
+                      cy={facialLandmarks.rightEye.y}
+                      r={(cameraMode === 'face' ? 2.0 : 1.4) * torsoHead.scale}
+                      fill="#1e293b"
+                    />
+                    <circle
+                      cx={facialLandmarks.rightEye.x - 0.7 * torsoHead.scale}
+                      cy={facialLandmarks.rightEye.y - 0.7 * torsoHead.scale}
+                      r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
+                      fill="#ffffff"
+                    />
+
+                    {/* Soft Nose Bridge & Contour */}
+                    <path
+                      d={`M ${facialLandmarks.noseBridge.x} ${facialLandmarks.noseBridge.y} L ${facialLandmarks.noseTip.x - 1} ${facialLandmarks.noseTip.y} Q ${facialLandmarks.noseTip.x} ${facialLandmarks.noseTip.y + 1.6} ${facialLandmarks.noseTip.x + 2} ${facialLandmarks.noseTip.y}`}
+                      fill="none"
+                      stroke="#c48e6c"
+                      strokeWidth={cameraMode === 'face' ? '1.5' : '1.1'}
+                      strokeLinecap="round"
+                    />
+
+                    {/* Natural Mouth & Lips (Dynamic Mouthing Aperture & Lip Pattern) */}
+                    {mouthPattern ? (
+                      <path
+                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
+                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y - (facialLandmarks.mouthH * 0.4 * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}
+                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Z`}
+                        fill="#7f1d1d"
+                        stroke="#cf7a84"
+                        strokeWidth={cameraMode === 'face' ? '2.0' : '1.5'}
+                        strokeLinejoin="round"
+                      />
+                    ) : (
+                      <path
+                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
+                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 1} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                        fill="none"
+                        stroke="#c26e79"
+                        strokeWidth={cameraMode === 'face' ? '2.2' : '1.6'}
+                        strokeLinecap="round"
+                      />
+                    )}
+                  </g>
+                )}
+              </g>
+            ) : (
+              <g id="bsl-skeleton-torso-head">
+                {/* Shoulders & Collar line */}
+                <path
+                  d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y} Q ${torsoChest.x} ${torsoChest.y} ${torsoRightShoulder.x} ${torsoRightShoulder.y}`}
+                  fill="none"
+                  stroke="#475569"
+                  strokeWidth="2"
+                  strokeDasharray="3 3"
+                  opacity="0.35"
+                />
+                {/* Chest Center Cross/Anchor */}
+                <circle cx={torsoChest.x} cy={torsoChest.y} r={3 * torsoChest.scale} fill="#38bdf8" opacity="0.35" />
+                
+                {/* Head Silhouette Base with generous headroom */}
+                <ellipse
+                  cx={torsoHead.x}
+                  cy={torsoHead.y}
+                  rx={(cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                  ry={(cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * torsoHead.scale}
+                  fill="rgba(15, 23, 42, 0.7)"
+                  stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#64748b')}
+                  strokeWidth={eyebrowState !== 'neutral' ? '2' : '1.3'}
+                />
+
+                {/* Chin Locus Indicator */}
+                <circle cx={torsoChin.x} cy={torsoChin.y} r={(cameraMode === 'face' ? 3.5 : cameraMode === 'split' ? 2.2 : 2.5) * torsoChin.scale} fill="#94a3b8" opacity="0.6" />
+
+                {/* BSL NON-MANUAL FEATURES (NMF) 3D FACIAL RIG */}
+                {showFacialFeatures && (
+                  <g id="bsl-face-nmf" opacity={0.95}>
+                    {/* Eyebrows: Dynamic Grammatical NMF */}
+                    <line
+                      x1={facialLandmarks.leftBrowOut.x}
+                      y1={facialLandmarks.leftBrowOut.y}
+                      x2={facialLandmarks.leftBrowIn.x}
+                      y2={facialLandmarks.leftBrowIn.y}
+                      stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
+                      strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
+                      strokeLinecap="round"
+                    />
+                    <line
+                      x1={facialLandmarks.rightBrowIn.x}
+                      y1={facialLandmarks.rightBrowIn.y}
+                      x2={facialLandmarks.rightBrowOut.x}
+                      y2={facialLandmarks.rightBrowOut.y}
+                      stroke={eyebrowState === 'raised' ? '#38bdf8' : (eyebrowState === 'furrowed' ? '#f59e0b' : '#cbd5e1')}
+                      strokeWidth={(cameraMode === 'face' ? 3.2 : 2.4) * torsoHead.scale}
+                      strokeLinecap="round"
+                    />
+
+                    {/* Left Eye */}
+                    <ellipse
+                      cx={facialLandmarks.leftEye.x}
+                      cy={facialLandmarks.leftEye.y}
+                      rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
+                      ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
+                      fill="#0f172a"
+                      stroke="#38bdf8"
+                      strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
+                    />
+                    <circle
+                      cx={facialLandmarks.leftEye.x}
+                      cy={facialLandmarks.leftEye.y}
+                      r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
+                      fill="#38bdf8"
+                    />
+
+                    {/* Right Eye */}
+                    <ellipse
+                      cx={facialLandmarks.rightEye.x}
+                      cy={facialLandmarks.rightEye.y}
+                      rx={(cameraMode === 'face' ? 3.8 : 2.8) * torsoHead.scale}
+                      ry={(cameraMode === 'face' ? 2.4 : 1.8) * torsoHead.scale}
+                      fill="#0f172a"
+                      stroke="#38bdf8"
+                      strokeWidth={cameraMode === 'face' ? '1.2' : '0.8'}
+                    />
+                    <circle
+                      cx={facialLandmarks.rightEye.x}
+                      cy={facialLandmarks.rightEye.y}
+                      r={(cameraMode === 'face' ? 1.6 : 1.2) * torsoHead.scale}
+                      fill="#38bdf8"
+                    />
+
+                    {/* Nose Bridge */}
+                    <line
+                      x1={facialLandmarks.noseBridge.x}
+                      y1={facialLandmarks.noseBridge.y}
+                      x2={facialLandmarks.noseTip.x}
+                      y2={facialLandmarks.noseTip.y}
+                      stroke="#64748b"
+                      strokeWidth={cameraMode === 'face' ? '1.6' : '1.2'}
+                      strokeLinecap="round"
+                      opacity="0.8"
+                    />
+
+                    {/* Mouth & Lips */}
+                    {mouthPattern ? (
+                      <path
+                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                        fill="rgba(56, 189, 248, 0.28)"
+                        stroke="#38bdf8"
+                        strokeWidth={cameraMode === 'face' ? '2.4' : '1.8'}
+                        strokeLinecap="round"
+                      />
+                    ) : (
+                      <path
+                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                        fill="none"
+                        stroke="#94a3b8"
+                        strokeWidth={cameraMode === 'face' ? '1.8' : '1.3'}
+                        strokeLinecap="round"
+                      />
+                    )}
+                  </g>
                 )}
               </g>
             )}
@@ -1763,60 +2007,130 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
           {/* NON-DOMINANT HAND (The Base / Left Hand) */}
           <g id="bsl-base-hand" opacity={0.95}>
-            {/* 1. Forearm connecting to wrist */}
-            <line
-              x1={baseForearm.x}
-              y1={baseForearm.y}
-              x2={baseWrist.x}
-              y2={baseWrist.y}
-              stroke="#475569"
-              strokeWidth="4"
-              strokeLinecap="round"
-              opacity={baseHand3D.mode === 'rest' ? 0.35 : 0.55}
-            />
+            {avatarSkinMode === 'human' ? (
+              <g id="bsl-base-hand-human" opacity={baseHand3D.mode === 'rest' ? 0.65 : 0.98} filter="url(#bslSoftGlow)">
+                {/* 1. Forearm (Contrasting sleeve cuff to warm skin wrist) */}
+                <line
+                  x1={baseForearm.x}
+                  y1={baseForearm.y}
+                  x2={baseWrist.x}
+                  y2={baseWrist.y}
+                  stroke="url(#bslHumanSkin)"
+                  strokeWidth={6.5 * baseWrist.scale}
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={baseForearm.x - 3}
+                  y1={baseForearm.y - 1}
+                  x2={baseForearm.x + 3}
+                  y2={baseForearm.y + 1}
+                  stroke="#1e293b"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                />
 
-            {/* 2. Palm body polygon */}
-            <polygon
-              points={`${baseWrist.x},${baseWrist.y} ${baseThumbBase.x},${baseThumbBase.y} ${baseKnuckle.x},${baseKnuckle.y} ${baseKMid.x},${baseKMid.y} ${baseKRing.x},${baseKRing.y} ${baseKPinky.x},${baseKPinky.y}`}
-              fill={baseHand3D.mode === 'rest' ? 'rgba(71, 85, 105, 0.12)' : 'rgba(56, 189, 248, 0.12)'}
-              stroke={baseHand3D.mode === 'rest' ? 'rgba(100, 116, 139, 0.3)' : 'rgba(56, 189, 248, 0.45)'}
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
+                {/* 2. Palm body polygon - Warm contoured fleshy palm */}
+                <polygon
+                  points={`${baseWrist.x},${baseWrist.y} ${baseThumbBase.x},${baseThumbBase.y} ${baseKnuckle.x},${baseKnuckle.y} ${baseKMid.x},${baseKMid.y} ${baseKRing.x},${baseKRing.y} ${baseKPinky.x},${baseKPinky.y}`}
+                  fill="url(#bslHumanSkinPalm)"
+                  stroke="#c48e6c"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
 
-            {/* 3. Wrist and Palm center */}
-            <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
-            <circle cx={basePalm.x} cy={basePalm.y} r={4 * basePalm.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} opacity={0.5} />
+                {/* Thenar eminence cushion (base of thumb pad) */}
+                <ellipse
+                  cx={(baseWrist.x + baseThumbBase.x * 2) / 3}
+                  cy={(baseWrist.y + baseThumbBase.y * 2) / 3}
+                  rx={4.2 * baseWrist.scale}
+                  ry={3.2 * baseWrist.scale}
+                  fill="#fbe8db"
+                  opacity="0.75"
+                />
 
-            {/* 4. Middle Finger */}
-            <line x1={basePalm.x} y1={basePalm.y} x2={baseKMid.x} y2={baseKMid.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.5} strokeLinecap="round" />
-            <line x1={baseKMid.x} y1={baseKMid.y} x2={baseTipMid.x} y2={baseTipMid.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.85} />
-            <circle cx={baseKMid.x} cy={baseKMid.y} r={3.5 * baseKMid.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 4.8 : 3) * baseTipMid.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+                {/* 3. Volumetric Middle Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKMid.x} y2={baseKMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 5.2 : 4.4) * baseKMid.scale} strokeLinecap="round" />
+                <line x1={baseKMid.x} y1={baseKMid.y} x2={baseTipMid.x} y2={baseTipMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.8 : 4.0) * baseTipMid.scale} strokeLinecap="round" />
+                <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 3.4 : 2.5) * baseTipMid.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 5. Ring Finger */}
-            <line x1={basePalm.x} y1={basePalm.y} x2={baseKRing.x} y2={baseKRing.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" />
-            <line x1={baseKRing.x} y1={baseKRing.y} x2={baseTipRing.x} y2={baseTipRing.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.8} />
-            <circle cx={baseKRing.x} cy={baseKRing.y} r={3.2 * baseKRing.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 4.5 : 2.8) * baseTipRing.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+                {/* 4. Volumetric Ring Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKRing.x} y2={baseKRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 5.0 : 4.2) * baseKRing.scale} strokeLinecap="round" />
+                <line x1={baseKRing.x} y1={baseKRing.y} x2={baseTipRing.x} y2={baseTipRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.6 : 3.8) * baseTipRing.scale} strokeLinecap="round" />
+                <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 3.2 : 2.4) * baseTipRing.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 6. Pinky Finger */}
-            <line x1={basePalm.x} y1={basePalm.y} x2={baseKPinky.x} y2={baseKPinky.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 2.8 : 2} strokeLinecap="round" />
-            <line x1={baseKPinky.x} y1={baseKPinky.y} x2={baseTipPinky.x} y2={baseTipPinky.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.75} />
-            <circle cx={baseKPinky.x} cy={baseKPinky.y} r={3 * baseKPinky.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 4 : 2.5) * baseTipPinky.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+                {/* 5. Volumetric Pinky Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKPinky.x} y2={baseKPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.6 : 3.8) * baseKPinky.scale} strokeLinecap="round" />
+                <line x1={baseKPinky.x} y1={baseKPinky.y} x2={baseTipPinky.x} y2={baseTipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.2 : 3.4) * baseTipPinky.scale} strokeLinecap="round" />
+                <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 3.0 : 2.2) * baseTipPinky.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 7. Thumb */}
-            <line x1={baseThumbBase.x} y1={baseThumbBase.y} x2={baseThumbKnuckle.x} y2={baseThumbKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="2.8" strokeLinecap="round" />
-            <line x1={baseThumbKnuckle.x} y1={baseThumbKnuckle.y} x2={baseThumbTip.x} y2={baseThumbTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#0ea5e9'} strokeWidth="2.5" strokeLinecap="round" />
-            <circle cx={baseThumbKnuckle.x} cy={baseThumbKnuckle.y} r={3.8 * baseThumbKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.5 * baseThumbTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="0.8" />
+                {/* 6. Volumetric Thumb */}
+                <line x1={baseThumbBase.x} y1={baseThumbBase.y} x2={baseThumbKnuckle.x} y2={baseThumbKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.4 * baseThumbKnuckle.scale} strokeLinecap="round" />
+                <line x1={baseThumbKnuckle.x} y1={baseThumbKnuckle.y} x2={baseThumbTip.x} y2={baseThumbTip.y} stroke="url(#bslHumanSkin)" strokeWidth={4.8 * baseThumbTip.scale} strokeLinecap="round" />
+                <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.4 * baseThumbTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 8. Index Finger */}
-            <line x1={basePalm.x} y1={basePalm.y} x2={baseKnuckle.x} y2={baseKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="3.2" strokeLinecap="round" />
-            <line x1={baseKnuckle.x} y1={baseKnuckle.y} x2={baseTip.x} y2={baseTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#38bdf8'} strokeWidth="3" strokeLinecap="round" />
-            <circle cx={baseKnuckle.x} cy={baseKnuckle.y} r={4.5 * baseKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
-            <circle cx={baseTip.x} cy={baseTip.y} r={5.2 * baseTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="1.5" />
+                {/* 7. Volumetric Index Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKnuckle.x} y2={baseKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.4 * baseKnuckle.scale} strokeLinecap="round" />
+                <line x1={baseKnuckle.x} y1={baseKnuckle.y} x2={baseTip.x} y2={baseTip.y} stroke="url(#bslHumanSkin)" strokeWidth={4.8 * baseTip.scale} strokeLinecap="round" />
+                <circle cx={baseTip.x} cy={baseTip.y} r={3.6 * baseTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+              </g>
+            ) : (
+              <g id="bsl-base-hand-skeleton">
+                {/* 1. Forearm connecting to wrist */}
+                <line
+                  x1={baseForearm.x}
+                  y1={baseForearm.y}
+                  x2={baseWrist.x}
+                  y2={baseWrist.y}
+                  stroke="#475569"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  opacity={baseHand3D.mode === 'rest' ? 0.35 : 0.55}
+                />
+
+                {/* 2. Palm body polygon */}
+                <polygon
+                  points={`${baseWrist.x},${baseWrist.y} ${baseThumbBase.x},${baseThumbBase.y} ${baseKnuckle.x},${baseKnuckle.y} ${baseKMid.x},${baseKMid.y} ${baseKRing.x},${baseKRing.y} ${baseKPinky.x},${baseKPinky.y}`}
+                  fill={baseHand3D.mode === 'rest' ? 'rgba(71, 85, 105, 0.12)' : 'rgba(56, 189, 248, 0.12)'}
+                  stroke={baseHand3D.mode === 'rest' ? 'rgba(100, 116, 139, 0.3)' : 'rgba(56, 189, 248, 0.45)'}
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+
+                {/* 3. Wrist and Palm center */}
+                <circle cx={baseWrist.x} cy={baseWrist.y} r={5 * baseWrist.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
+                <circle cx={basePalm.x} cy={basePalm.y} r={4 * basePalm.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} opacity={0.5} />
+
+                {/* 4. Middle Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKMid.x} y2={baseKMid.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.5} strokeLinecap="round" />
+                <line x1={baseKMid.x} y1={baseKMid.y} x2={baseTipMid.x} y2={baseTipMid.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.85} />
+                <circle cx={baseKMid.x} cy={baseKMid.y} r={3.5 * baseKMid.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 4.8 : 3) * baseTipMid.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+                {/* 5. Ring Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKRing.x} y2={baseKRing.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 3 : 2.2} strokeLinecap="round" />
+                <line x1={baseKRing.x} y1={baseKRing.y} x2={baseTipRing.x} y2={baseTipRing.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 3 : 2} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.8} />
+                <circle cx={baseKRing.x} cy={baseKRing.y} r={3.2 * baseKRing.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 4.5 : 2.8) * baseTipRing.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+                {/* 6. Pinky Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKPinky.x} y2={baseKPinky.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth={isLeftExtended ? 2.8 : 2} strokeLinecap="round" />
+                <line x1={baseKPinky.x} y1={baseKPinky.y} x2={baseTipPinky.x} y2={baseTipPinky.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : isLeftExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isLeftExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isLeftExtended ? 1 : 0.75} />
+                <circle cx={baseKPinky.x} cy={baseKPinky.y} r={3 * baseKPinky.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 4 : 2.5) * baseTipPinky.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth={isLeftExtended ? 1 : 0} />
+
+                {/* 7. Thumb */}
+                <line x1={baseThumbBase.x} y1={baseThumbBase.y} x2={baseThumbKnuckle.x} y2={baseThumbKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="2.8" strokeLinecap="round" />
+                <line x1={baseThumbKnuckle.x} y1={baseThumbKnuckle.y} x2={baseThumbTip.x} y2={baseThumbTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#0ea5e9'} strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx={baseThumbKnuckle.x} cy={baseThumbKnuckle.y} r={3.8 * baseThumbKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.5 * baseThumbTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="0.8" />
+
+                {/* 8. Index Finger */}
+                <line x1={basePalm.x} y1={basePalm.y} x2={baseKnuckle.x} y2={baseKnuckle.y} stroke={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} strokeWidth="3.2" strokeLinecap="round" />
+                <line x1={baseKnuckle.x} y1={baseKnuckle.y} x2={baseTip.x} y2={baseTip.y} stroke={baseHand3D.mode === 'rest' ? '#475569' : '#38bdf8'} strokeWidth="3" strokeLinecap="round" />
+                <circle cx={baseKnuckle.x} cy={baseKnuckle.y} r={4.5 * baseKnuckle.scale} fill={baseHand3D.mode === 'rest' ? '#475569' : '#0284c7'} stroke="#ffffff" strokeWidth="1" />
+                <circle cx={baseTip.x} cy={baseTip.y} r={5.2 * baseTip.scale} fill={baseHand3D.mode === 'rest' ? '#64748b' : '#38bdf8'} stroke="#ffffff" strokeWidth="1.5" />
+              </g>
+            )}
 
             {/* Vowel Labels: ONLY rendered during BANZSL fingerspelling, NEVER during whole-word signs! */}
             {!currentPose.isWholeWordSign && (
@@ -1851,60 +2165,130 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
           {/* DOMINANT HAND (The Pen - Full Anatomical Right Hand) */}
           <g id="bsl-dominant-hand">
-            {/* 1. Forearm connecting to wrist */}
-            <line
-              x1={domForearm.x}
-              y1={domForearm.y}
-              x2={domWrist.x}
-              y2={domWrist.y}
-              stroke="#475569"
-              strokeWidth="4"
-              strokeLinecap="round"
-              opacity="0.55"
-            />
+            {avatarSkinMode === 'human' ? (
+              <g id="bsl-dominant-hand-human" filter="url(#bslSoftGlow)">
+                {/* 1. Forearm (Contrasting sleeve cuff to warm skin wrist) */}
+                <line
+                  x1={domForearm.x}
+                  y1={domForearm.y}
+                  x2={domWrist.x}
+                  y2={domWrist.y}
+                  stroke="url(#bslHumanSkin)"
+                  strokeWidth={6.8 * domWrist.scale}
+                  strokeLinecap="round"
+                />
+                <line
+                  x1={domForearm.x - 3}
+                  y1={domForearm.y - 1}
+                  x2={domForearm.x + 3}
+                  y2={domForearm.y + 1}
+                  stroke="#1e293b"
+                  strokeWidth="3.2"
+                  strokeLinecap="round"
+                />
 
-            {/* 2. Palm body polygon */}
-            <polygon
-              points={`${domWrist.x},${domWrist.y} ${domThumbBase.x},${domThumbBase.y} ${domKnuckle.x},${domKnuckle.y} ${domKMid.x},${domKMid.y} ${domKRing.x},${domKRing.y} ${domKPinky.x},${domKPinky.y}`}
-              fill="rgba(56, 189, 248, 0.12)"
-              stroke="rgba(56, 189, 248, 0.45)"
-              strokeWidth="1.2"
-              strokeLinejoin="round"
-            />
+                {/* 2. Palm body polygon - Warm contoured fleshy palm */}
+                <polygon
+                  points={`${domWrist.x},${domWrist.y} ${domThumbBase.x},${domThumbBase.y} ${domKnuckle.x},${domKnuckle.y} ${domKMid.x},${domKMid.y} ${domKRing.x},${domKRing.y} ${domKPinky.x},${domKPinky.y}`}
+                  fill="url(#bslHumanSkinPalm)"
+                  stroke="#c48e6c"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
 
-            {/* 3. Wrist and Palm center */}
-            <circle cx={domWrist.x} cy={domWrist.y} r={5 * domWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
-            <circle cx={domPalm.x} cy={domPalm.y} r={4 * domPalm.scale} fill="#38bdf8" opacity="0.5" />
+                {/* Thenar eminence cushion (base of thumb pad) */}
+                <ellipse
+                  cx={(domWrist.x + domThumbBase.x * 2) / 3}
+                  cy={(domWrist.y + domThumbBase.y * 2) / 3}
+                  rx={4.4 * domWrist.scale}
+                  ry={3.4 * domWrist.scale}
+                  fill="#fbe8db"
+                  opacity="0.75"
+                />
 
-            {/* 4. Middle Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.5} strokeLinecap="round" />
-            <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.85} />
-            <circle cx={domKMid.x} cy={domKMid.y} r={3.5 * domKMid.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 4.8 : 3) * domTipMid.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+                {/* 3. Volumetric Middle Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.4 : 4.6) * domKMid.scale} strokeLinecap="round" />
+                <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.0 : 4.2) * domTipMid.scale} strokeLinecap="round" />
+                <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 3.6 : 2.6) * domTipMid.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 5. Ring Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" />
-            <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.8} />
-            <circle cx={domKRing.x} cy={domKRing.y} r={3.2 * domKRing.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 4.5 : 2.8) * domTipRing.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+                {/* 4. Volumetric Ring Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.2 : 4.4) * domKRing.scale} strokeLinecap="round" />
+                <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.8 : 4.0) * domTipRing.scale} strokeLinecap="round" />
+                <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 3.4 : 2.5) * domTipRing.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 6. Pinky Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 2.8 : 2} strokeLinecap="round" />
-            <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.75} />
-            <circle cx={domKPinky.x} cy={domKPinky.y} r={3 * domKPinky.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 4 : 2.5) * domTipPinky.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+                {/* 5. Volumetric Pinky Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.8 : 4.0) * domKPinky.scale} strokeLinecap="round" />
+                <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.4 : 3.6) * domTipPinky.scale} strokeLinecap="round" />
+                <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 3.2 : 2.3) * domTipPinky.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 7. Thumb */}
-            <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
-            <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
-            <circle cx={domThumbKnuckle.x} cy={domThumbKnuckle.y} r={3.8 * domThumbKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
-            <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
+                {/* 6. Volumetric Thumb */}
+                <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.6 * domThumbKnuckle.scale} strokeLinecap="round" />
+                <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="url(#bslHumanSkin)" strokeWidth={5.0 * domThumbTip.scale} strokeLinecap="round" />
+                <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
 
-            {/* 8. Active Pointer / Index Finger */}
-            <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="#38bdf8" strokeWidth="3.2" strokeLinecap="round" />
-            <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
-            <circle cx={domKnuckle.x} cy={domKnuckle.y} r={4.5 * domKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
-            <circle cx={domTip.x} cy={domTip.y} r={5.2 * domTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+                {/* 7. Volumetric Active Pointer / Index Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.6 * domKnuckle.scale} strokeLinecap="round" />
+                <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="url(#bslHumanSkin)" strokeWidth={5.0 * domTip.scale} strokeLinecap="round" />
+                <circle cx={domTip.x} cy={domTip.y} r={3.8 * domTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+              </g>
+            ) : (
+              <g id="bsl-dominant-hand-skeleton">
+                {/* 1. Forearm connecting to wrist */}
+                <line
+                  x1={domForearm.x}
+                  y1={domForearm.y}
+                  x2={domWrist.x}
+                  y2={domWrist.y}
+                  stroke="#475569"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+
+                {/* 2. Palm body polygon */}
+                <polygon
+                  points={`${domWrist.x},${domWrist.y} ${domThumbBase.x},${domThumbBase.y} ${domKnuckle.x},${domKnuckle.y} ${domKMid.x},${domKMid.y} ${domKRing.x},${domKRing.y} ${domKPinky.x},${domKPinky.y}`}
+                  fill="rgba(56, 189, 248, 0.12)"
+                  stroke="rgba(56, 189, 248, 0.45)"
+                  strokeWidth="1.2"
+                  strokeLinejoin="round"
+                />
+
+                {/* 3. Wrist and Palm center */}
+                <circle cx={domWrist.x} cy={domWrist.y} r={5 * domWrist.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+                <circle cx={domPalm.x} cy={domPalm.y} r={4 * domPalm.scale} fill="#38bdf8" opacity="0.5" />
+
+                {/* 4. Middle Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.5} strokeLinecap="round" />
+                <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.85} />
+                <circle cx={domKMid.x} cy={domKMid.y} r={3.5 * domKMid.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 4.8 : 3) * domTipMid.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+
+                {/* 5. Ring Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 3 : 2.2} strokeLinecap="round" />
+                <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 3 : 2} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.8} />
+                <circle cx={domKRing.x} cy={domKRing.y} r={3.2 * domKRing.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 4.5 : 2.8) * domTipRing.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+
+                {/* 6. Pinky Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="#38bdf8" strokeWidth={isDomExtended ? 2.8 : 2} strokeLinecap="round" />
+                <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke={isDomExtended ? '#38bdf8' : '#0ea5e9'} strokeWidth={isDomExtended ? 2.8 : 1.8} strokeLinecap="round" opacity={isDomExtended ? 1 : 0.75} />
+                <circle cx={domKPinky.x} cy={domKPinky.y} r={3 * domKPinky.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 4 : 2.5) * domTipPinky.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth={isDomExtended ? 1 : 0} />
+
+                {/* 7. Thumb */}
+                <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="#38bdf8" strokeWidth="2.8" strokeLinecap="round" />
+                <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="#0ea5e9" strokeWidth="2.5" strokeLinecap="round" />
+                <circle cx={domThumbKnuckle.x} cy={domThumbKnuckle.y} r={3.8 * domThumbKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="0.8" />
+                <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="0.8" />
+
+                {/* 8. Active Pointer / Index Finger */}
+                <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="#38bdf8" strokeWidth="3.2" strokeLinecap="round" />
+                <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="#38bdf8" strokeWidth="3" strokeLinecap="round" />
+                <circle cx={domKnuckle.x} cy={domKnuckle.y} r={4.5 * domKnuckle.scale} fill="#0284c7" stroke="#ffffff" strokeWidth="1" />
+                <circle cx={domTip.x} cy={domTip.y} r={5.2 * domTip.scale} fill="#38bdf8" stroke="#ffffff" strokeWidth="1.5" />
+              </g>
+            )}
             {(!currentPose.isWholeWordSign || domHand3D.shape === 'point') && (
               <circle
                 cx={domTip.x}
@@ -1929,6 +2313,34 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
 
         {/* Camera Angle & Face Focus Control Bar - Positioned at bottom floor so stage and face are 100% unobstructed */}
         <div style={{ position: 'absolute', bottom: '6px', left: '8px', display: 'flex', gap: '4px' }}>
+          <button
+            type="button"
+            onClick={() =>
+              setAvatarSkinMode((prev) => {
+                const next = prev === 'human' ? 'skeleton' : 'human';
+                try {
+                  localStorage.setItem('stj_bsl_skin_mode', next);
+                } catch (_) {}
+                return next;
+              })
+            }
+            style={{
+              ...stageBtnStyle,
+              background:
+                avatarSkinMode === 'human'
+                  ? 'rgba(245, 158, 11, 0.22)'
+                  : 'rgba(56, 189, 248, 0.18)',
+              borderColor:
+                avatarSkinMode === 'human'
+                  ? '#f59e0b'
+                  : 'rgba(56, 189, 248, 0.4)',
+              color: avatarSkinMode === 'human' ? '#fcd34d' : '#38bdf8',
+            }}
+            title="Toggle between Culturally-Aligned Stylized Human Avatar and Kinematic Coordinate Skeleton"
+          >
+            <span>{avatarSkinMode === 'human' ? '🧑 Human' : '🦴 Skeleton'}</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setViewAngle((prev) => (prev === 'signer' ? 'receiver' : 'signer'))}
