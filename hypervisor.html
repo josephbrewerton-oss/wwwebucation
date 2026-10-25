@@ -148,13 +148,14 @@
     // 2. Handle Signaling Messages
     bus.onmessage = async (e) => {
       if (e.data.type === 'offer') {
+        // Halt polling immediately once the peer starts offering
+        clearInterval(connectInterval);
+
         // Clean up previous peer connection if one exists
         if (pc) {
           pc.close();
         }
-
         pc = new RTCPeerConnection();
-
         pc.ondatachannel = (ev) => {
           channel = ev.channel;
           channel.onopen = () => {
