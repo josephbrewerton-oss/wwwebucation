@@ -6492,21 +6492,21 @@
       const camera = Object.assign({ distance: 500, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
 
       // Dynamic camera yaw if expression
+      // Dynamic camera yaw if expression
       if (typeof camera.yaw === 'string') {
         try {
-          const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
+          const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
           const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.yaw});`);
-          camera.yaw = yawFn(t, Math, this.vars || {}, clock);
+          camera.yaw = yawFn(effectiveT, Math, this.vars || {}, clock);
         } catch {}
       }
       if (typeof camera.pitch === 'string') {
         try {
-          const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
+          const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
           const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.pitch});`);
-          camera.pitch = pitchFn(t, Math, this.vars || {}, clock);
+          camera.pitch = pitchFn(effectiveT, Math, this.vars || {}, clock);
         } catch {}
       }
-
       // Calculate combined camera orientation and distance scaling
       const yawBase = typeof camera.yaw === 'number' ? camera.yaw : 0;
       const pitchBase = typeof camera.pitch === 'number' ? camera.pitch : 0;
@@ -6552,9 +6552,9 @@
           }
 
 if (item.type === '3d-node') {
-            let wx = Number(item.evalX(t, v, Math, comp)) || 0;
-            let wy = Number(item.evalY(t, v, Math, comp)) || 0;
-            let wz = Number(item.evalZ(t, v, Math, comp)) || 0;
+            let wx = Number(item.evalX(effectiveT, v, Math, comp)) || 0;
+            let wy = Number(item.evalY(effectiveT, v, Math, comp)) || 0;
+            let wz = Number(item.evalZ(effectiveT, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
               wx += (off[0] || 0); wy += (off[1] || 0); wz += (off[2] || 0);
@@ -6595,12 +6595,12 @@ if (item.type === '3d-node') {
               }
             }
           } else if (item.type === '3d-line') {
-            let x1 = Number(item.evalX1(t, v, Math, comp)) || 0;
-            let y1 = Number(item.evalY1(t, v, Math, comp)) || 0;
-            let z1 = Number(item.evalZ1(t, v, Math, comp)) || 0;
-            let x2 = Number(item.evalX2(t, v, Math, comp)) || 0;
-            let y2 = Number(item.evalY2(t, v, Math, comp)) || 0;
-            let z2 = Number(item.evalZ2(t, v, Math, comp)) || 0;
+            let x1 = Number(item.evalX1(effectiveT, v, Math, comp)) || 0;
+            let y1 = Number(item.evalY1(effectiveT, v, Math, comp)) || 0;
+            let z1 = Number(item.evalZ1(effectiveT, v, Math, comp)) || 0;
+            let x2 = Number(item.evalX2(effectiveT, v, Math, comp)) || 0;
+            let y2 = Number(item.evalY2(effectiveT, v, Math, comp)) || 0;
+            let z2 = Number(item.evalZ2(effectiveT, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
               x1 += (off[0] || 0); y1 += (off[1] || 0); z1 += (off[2] || 0);
@@ -6684,19 +6684,19 @@ if (item.type === '3d-node') {
               item.cap2.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
             }
           } else if (item.type === '3d-ring') {
-            let r = Number(item.evalR(t, v, Math, comp)) || 100;
-            let cx = Number(item.evalCX(t, v, Math, comp)) || 0;
-            let cy = Number(item.evalCY(t, v, Math, comp)) || 0;
-            let cz = Number(item.evalCZ(t, v, Math, comp)) || 0;
+            let r = Number(item.evalR(effectiveT, v, Math, comp)) || 100;
+            let cx = Number(item.evalCX(effectiveT, v, Math, comp)) || 0;
+            let cy = Number(item.evalCY(effectiveT, v, Math, comp)) || 0;
+            let cz = Number(item.evalCZ(effectiveT, v, Math, comp)) || 0;
             if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
               const off = this.nodeOffsets.get(item.target);
               cx += (off[0] || 0); cy += (off[1] || 0); cz += (off[2] || 0);
             }
             item.worldCenter = [cx, cy, cz];
             item.worldRadius = r;
-            const tiltXDeg = Number(item.evalTiltX(t, v, Math, comp)) || 0;
-            const tiltYDeg = Number(item.evalTiltY(t, v, Math, comp)) || 0;
-            const tiltZDeg = Number(item.evalTiltZ(t, v, Math, comp)) || 0;
+            const tiltXDeg = Number(item.evalTiltX(effectiveT, v, Math, comp)) || 0;
+            const tiltYDeg = Number(item.evalTiltY(effectiveT, v, Math, comp)) || 0;
+            const tiltZDeg = Number(item.evalTiltZ(effectiveT, v, Math, comp)) || 0;
 
             const rxRad = tiltXDeg * (Math.PI / 180);
             const ryRad = tiltYDeg * (Math.PI / 180);
@@ -6755,7 +6755,7 @@ if (item.type === '3d-node') {
               }
             }
           } else if (item.type === '3d-polygon') {
-            let rawPts = item.evalPts(t, v, Math, comp);
+            let rawPts = item.evalPts(effectiveT, v, Math, comp);
             if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
               const off = this.nodeOffsets.get(item.target);
               rawPts = rawPts.map(pt => [(pt[0] || 0) + (off[0] || 0), (pt[1] || 0) + (off[1] || 0), (pt[2] || 0) + (off[2] || 0)]);
