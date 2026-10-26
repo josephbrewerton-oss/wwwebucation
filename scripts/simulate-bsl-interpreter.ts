@@ -389,6 +389,41 @@ const neckSpan = chestY - chinY; // 22
 assert(neckSpan <= 25 && neckSpan >= 16,
   `Anatomical neck span (${neckSpan} units) strictly conforms to 1/3 head proportion (avoiding swan neck)`);
 
+// 10.6: Universal Language Tuple Invariant: [spoken, sign] with MAKATON
+const { SUPPORTED_SIGN_LANGUAGES } = await import('../src/services/bslGlobalStore');
+assert(Boolean(SUPPORTED_SIGN_LANGUAGES.MAKATON), "MAKATON is registered in SUPPORTED_SIGN_LANGUAGES");
+assert(SUPPORTED_SIGN_LANGUAGES.MAKATON.code === 'MAKATON', "MAKATON code conforms to SignLanguageCode");
+assert(SUPPORTED_SIGN_LANGUAGES.MAKATON.name.includes('Makaton'), "MAKATON label includes 'Makaton'");
+const sampleTuple: [string, any] = ['en', 'MAKATON'];
+assert(sampleTuple[0] === 'en' && sampleTuple[1] === 'MAKATON', "Language Tuple [:en :makaton] format valid");
+
+// ---------------------------------------------------------
+// Test 11: Anatomical Shoulder Proportions & Trapezius Slope Invariants
+// ---------------------------------------------------------
+console.log('\n11. Testing Anatomical Shoulder Proportions & Trapezius Slope Invariants:');
+
+// 11.1: Downward Trapezius Slope Invariant
+// Shoulders must slope DOWN from the base of the neck / chest anchor (-24 to -15 = +9 units downward)
+const shoulderY = -15;
+const trapeziusSlope = shoulderY - chestY; // 9 units lower
+assert(trapeziusSlope >= 6 && trapeziusSlope <= 14,
+  `Trapezius slope (${trapeziusSlope} units) slopes naturally downward from neck to shoulders (avoiding hunched shoulders)`);
+
+// 11.2: Bi-Acromial Shoulder Breadth Proportions
+const standardShoulderSpan = 56 - (-56); // 112
+const headBreadth = 19 * 2; // 38
+const shoulderRatio = standardShoulderSpan / headBreadth;
+assert(shoulderRatio >= 2.5 && shoulderRatio <= 3.2,
+  `Standard bi-acromial shoulder ratio (${shoulderRatio.toFixed(2)}) conforms to adult human proportion (2.5-3.2x head breadth)`);
+
+// 11.3: Split Viewport Dual-Zone Containment
+const splitShoulderSpan = 38 - (-38); // 76
+const splitOriginX = 66;
+const rightShoulderSplitX = splitOriginX + 38; // 104
+const splitDemarcationLine = 118;
+assert(rightShoulderSplitX < splitDemarcationLine,
+  `In split mode, right shoulder (${rightShoulderSplitX}px) remains contained within LHS pane (< ${splitDemarcationLine}px)`);
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

@@ -48,8 +48,14 @@ import {
   BslGrammarMode,
   BslGrammarAnalysis,
 } from '../utils/bslGrammarEngine';
+import {
+  subscribeBslSpeech,
+  openBslSignStudio,
+  subscribeLanguageTuple,
+  setSignLanguage,
+  getLanguageTuple,
+} from '../services/bslGlobalStore';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
-import { subscribeBslSpeech, openBslSignStudio } from '../services/bslGlobalStore';
 import { subscribeCustomSigns, initCustomSignsIntoLexicon } from '../services/customSignStore';
 
 export interface BslInterpreterOverlayProps {
@@ -180,6 +186,22 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     initCustomSignsIntoLexicon().then(refreshSigns);
     const unsub = subscribeCustomSigns(refreshSigns);
     return unsub;
+  }, []);
+
+  // Synchronize with Global Language Tuple from UniversalTranslatorBar (e.g. ['en', 'MAKATON'] vs ['en', 'BSL'])
+  useEffect(() => {
+    const [, currentSign] = getLanguageTuple();
+    if (currentSign === 'MAKATON') {
+      setGrammarMode('makaton');
+    }
+    const unsubscribeTuple = subscribeLanguageTuple(([, sgn]) => {
+      if (sgn === 'MAKATON') {
+        setGrammarMode('makaton');
+      } else if (sgn === 'BSL') {
+        setGrammarMode('bsl-natural');
+      }
+    });
+    return unsubscribeTuple;
   }, []);
 
   // Active signing state
@@ -679,16 +701,25 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     () => projPointBody({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }),
     [projPointBody, headCenter3D]
   );
-  // Anatomically proportioned upper torso & shoulders (neck length ~ 1/3 head height, strictly avoiding elongated swan neck)
+  // Anatomically proportioned upper torso & shoulders (neck length ~ 1/3 head height, natural downward trapezius slope)
   const torsoChest = useMemo(() => projPointBody({ x: 0, y: -24, z: -15 }), [projPointBody]);
   const torsoLeftShoulder = useMemo(
-    () => projPointBody({ x: cameraMode === 'split' ? -68 : -95, y: -24, z: -25 }),
+    () => projPointBody({ x: cameraMode === 'split' ? -38 : -56, y: -15, z: -20 }),
     [projPointBody, cameraMode]
   );
   const torsoRightShoulder = useMemo(
-    () => projPointBody({ x: cameraMode === 'split' ? 68 : 95, y: -24, z: -25 }),
+    () => projPointBody({ x: cameraMode === 'split' ? 38 : 56, y: -15, z: -20 }),
     [projPointBody, cameraMode]
   );
+
+  // Screen-space shoulder anchors (ensures stable viewer-left and viewer-right orientation across all orbit yaw angles)
+  const shoulderViewerLeft = useMemo(() => {
+    return torsoLeftShoulder.x <= torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
+  }, [torsoLeftShoulder, torsoRightShoulder]);
+
+  const shoulderViewerRight = useMemo(() => {
+    return torsoLeftShoulder.x > torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
+  }, [torsoLeftShoulder, torsoRightShoulder]);
 
   // 3D Projected Facial Feature Landmarks (Eyes, Eyebrows, Nose, Mouth)
   const facialLandmarks = useMemo(() => {
@@ -1707,18 +1738,20 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               <path d="M 126 162 L 132 162 L 132 154" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
               <path d="M 224 162 L 232 162 L 232 154" fill="none" stroke="#f59e0b" strokeWidth="0.8" opacity="0.45" />
 
-              {/* Top Mapped Action Tuples */}
+              {/* Top Mapped Action Tuples with Explicit Language Tuples */}
               <text
                 x="66"
                 y="12"
-                fill="#38bdf8"
+                fill={grammarMode === 'makaton' ? '#c084fc' : '#38bdf8'}
                 fontSize="5.2"
                 fontFamily="ui-monospace, monospace"
                 fontWeight="800"
                 textAnchor="middle"
                 letterSpacing="0.2"
               >
-                {`(:nmf :brow :${eyebrowState} :mouth "${mouthPattern || 'neutral'}")`}
+                {grammarMode === 'makaton'
+                  ? `(:tuple [:en :makaton] :brow :${eyebrowState} :mouth "${mouthPattern || 'neutral'}")`
+                  : `(:tuple [:en :bsl] :brow :${eyebrowState} :mouth "${mouthPattern || 'neutral'}")`}
               </text>
               <text
                 x="175"
@@ -1730,7 +1763,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 textAnchor="middle"
                 letterSpacing="0.2"
               >
-                {`(:act :sign "${currentPose.letter || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`}
+                {grammarMode === 'makaton'
+                  ? `(:act :keyword "${currentPose.letter?.split(' ')[0] || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`
+                  : `(:act :sign "${currentPose.letter || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`}
               </text>
 
               {/* Bottom Mapped Coordinate & Loci Tuples */}
@@ -1782,85 +1817,135 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             {avatarSkinMode === 'human' ? (
               <g id="bsl-human-torso-head">
                 {/* 1. Realistic Compact Anatomical Neck Column with Sternocleidomastoid Contours */}
-                <path
-                  d={`M ${torsoHead.x - 7.5 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
-                      L ${torsoHead.x - 9.5 * torsoHead.scale} ${torsoChest.y + 4 * torsoHead.scale}
-                      L ${torsoHead.x + 9.5 * torsoHead.scale} ${torsoChest.y + 4 * torsoHead.scale}
-                      L ${torsoHead.x + 7.5 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale} Z`}
-                  fill="url(#bslHumanSkin)"
-                  stroke="#d59a7c"
-                  strokeWidth="0.8"
-                />
-                {/* Sub-mandibular ambient neck shadow right under jawline */}
-                <path
-                  d={`M ${torsoHead.x - 7.2 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
-                      Q ${torsoChin.x} ${torsoChin.y + 3.5 * torsoHead.scale} ${torsoHead.x + 7.2 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
-                      L ${torsoHead.x + 7.6 * torsoHead.scale} ${torsoChin.y + 3.0 * torsoHead.scale}
-                      Q ${torsoChin.x} ${torsoChin.y + 6.0 * torsoHead.scale} ${torsoHead.x - 7.6 * torsoHead.scale} ${torsoChin.y + 3.0 * torsoHead.scale} Z`}
-                  fill="url(#bslJawShadow)"
-                />
+                {(() => {
+                  const s = torsoHead.scale;
+                  const neckHalfW = 8.8 * s;
+                  const neckLeftX = torsoHead.x - neckHalfW;
+                  const neckRightX = torsoHead.x + neckHalfW;
+                  const neckBaseY = torsoChest.y + 1.5 * s;
+                  const neckTopY = torsoChin.y - 1.5 * s;
 
-                {/* 2. Professional Interpreter Dark Top & Anatomical Clavicles */}
-                <path
-                  d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y}
-                      Q ${torsoHead.x} ${torsoChest.y + 2} ${torsoRightShoulder.x} ${torsoRightShoulder.y}
-                      L ${torsoRightShoulder.x + (cameraMode === 'split' ? 12 : 18)} 180
-                      L ${torsoLeftShoulder.x - (cameraMode === 'split' ? 12 : 18)} 180 Z`}
-                  fill="url(#bslInterpreterTop)"
-                  stroke="#334155"
-                  strokeWidth="1.2"
-                />
+                  return (
+                    <>
+                      <path
+                        d={`M ${neckLeftX} ${neckTopY}
+                            L ${neckLeftX - 1.2 * s} ${neckBaseY}
+                            L ${neckRightX + 1.2 * s} ${neckBaseY}
+                            L ${neckRightX} ${neckTopY} Z`}
+                        fill="url(#bslHumanSkin)"
+                        stroke="#d59a7c"
+                        strokeWidth="0.8"
+                      />
+                      {/* Sub-mandibular ambient neck shadow right under jawline */}
+                      <path
+                        d={`M ${neckLeftX} ${neckTopY}
+                            Q ${torsoChin.x} ${torsoChin.y + 3.2 * s} ${neckRightX} ${neckTopY}
+                            L ${neckRightX + 0.6 * s} ${torsoChin.y + 4.5 * s}
+                            Q ${torsoChin.x} ${torsoChin.y + 7.5 * s} ${neckLeftX - 0.6 * s} ${torsoChin.y + 4.5 * s} Z`}
+                        fill="url(#bslJawShadow)"
+                      />
 
-                {/* Clavicle / Collarbone Accents */}
-                <path
-                  d={`M ${torsoLeftShoulder.x + 18 * torsoHead.scale} ${torsoChest.y + 3}
-                      Q ${torsoHead.x - 4 * torsoHead.scale} ${torsoChest.y + 5.5} ${torsoHead.x} ${torsoChest.y + 6}
-                      Q ${torsoHead.x + 4 * torsoHead.scale} ${torsoChest.y + 5.5} ${torsoRightShoulder.x - 18 * torsoHead.scale} ${torsoChest.y + 3}`}
-                  fill="none"
-                  stroke="#d59a7c"
-                  strokeWidth={1.1 * torsoHead.scale}
-                  strokeLinecap="round"
-                  opacity={0.65}
-                />
+                      {/* 2. Professional Interpreter Top with sculpted trapezius slope and rounded shoulder caps */}
+                      <path
+                        d={`M ${shoulderViewerLeft.x - 4 * s} 180
+                            L ${shoulderViewerLeft.x - 3 * s} ${shoulderViewerLeft.y + 12 * s}
+                            Q ${shoulderViewerLeft.x - 2 * s} ${shoulderViewerLeft.y} ${shoulderViewerLeft.x + 4 * s} ${shoulderViewerLeft.y}
+                            Q ${neckLeftX - 4 * s} ${neckBaseY + 1 * s} ${neckLeftX} ${neckBaseY}
+                            Q ${torsoHead.x} ${neckBaseY + 6.5 * s} ${neckRightX} ${neckBaseY}
+                            Q ${neckRightX + 4 * s} ${neckBaseY + 1 * s} ${shoulderViewerRight.x - 4 * s} ${shoulderViewerRight.y}
+                            Q ${shoulderViewerRight.x + 2 * s} ${shoulderViewerRight.y} ${shoulderViewerRight.x + 3 * s} ${shoulderViewerRight.y + 12 * s}
+                            L ${shoulderViewerRight.x + 4 * s} 180 Z`}
+                        fill="url(#bslInterpreterTop)"
+                        stroke="#334155"
+                        strokeWidth="1.2"
+                      />
 
-                {/* Professional Crew Collar with layered neckband ribbing */}
-                <path
-                  d={`M ${torsoLeftShoulder.x + 18} ${torsoLeftShoulder.y + 2}
-                      Q ${torsoHead.x} ${torsoChest.y + 6} ${torsoRightShoulder.x - 18} ${torsoRightShoulder.y + 2}`}
-                  fill="none"
-                  stroke="#475569"
-                  strokeWidth="1.4"
-                  strokeLinecap="round"
-                />
-                <path
-                  d={`M ${torsoLeftShoulder.x + 20} ${torsoLeftShoulder.y + 4}
-                      Q ${torsoHead.x} ${torsoChest.y + 8} ${torsoRightShoulder.x - 20} ${torsoRightShoulder.y + 4}`}
-                  fill="none"
-                  stroke="#1e293b"
-                  strokeWidth="1.0"
-                  strokeLinecap="round"
-                  opacity={0.7}
-                />
+                      {/* Anatomical Clavicle / Collarbone Accents branching to each shoulder */}
+                      <path
+                        d={`M ${torsoHead.x - 2.5 * s} ${neckBaseY + 7 * s}
+                            Q ${torsoHead.x - 14 * s} ${neckBaseY + 5.5 * s} ${shoulderViewerLeft.x + 10 * s} ${shoulderViewerLeft.y + 3 * s}`}
+                        fill="none"
+                        stroke="#d59a7c"
+                        strokeWidth={1.0 * s}
+                        strokeLinecap="round"
+                        opacity={0.6}
+                      />
+                      <path
+                        d={`M ${torsoHead.x + 2.5 * s} ${neckBaseY + 7 * s}
+                            Q ${torsoHead.x + 14 * s} ${neckBaseY + 5.5 * s} ${shoulderViewerRight.x - 10 * s} ${shoulderViewerRight.y + 3 * s}`}
+                        fill="none"
+                        stroke="#d59a7c"
+                        strokeWidth={1.0 * s}
+                        strokeLinecap="round"
+                        opacity={0.6}
+                      />
 
-                {/* Left & Right Fabric Sleeves extending down to mid-forearm */}
-                <line
-                  x1={torsoLeftShoulder.x}
-                  y1={torsoLeftShoulder.y}
-                  x2={torsoLeftShoulder.x * 0.45 + baseForearm.x * 0.55}
-                  y2={torsoLeftShoulder.y * 0.45 + baseForearm.y * 0.55}
-                  stroke="#1e293b"
-                  strokeWidth={13 * torsoHead.scale}
-                  strokeLinecap="round"
-                />
-                <line
-                  x1={torsoRightShoulder.x}
-                  y1={torsoRightShoulder.y}
-                  x2={torsoRightShoulder.x * 0.45 + domForearm.x * 0.55}
-                  y2={torsoRightShoulder.y * 0.45 + domForearm.y * 0.55}
-                  stroke="#1e293b"
-                  strokeWidth={13 * torsoHead.scale}
-                  strokeLinecap="round"
-                />
+                      {/* Professional Crew Collar with layered neckband ribbing */}
+                      <path
+                        d={`M ${neckLeftX - 1 * s} ${neckBaseY - 1 * s}
+                            Q ${torsoHead.x} ${neckBaseY + 6.5 * s} ${neckRightX + 1 * s} ${neckBaseY - 1 * s}`}
+                        fill="none"
+                        stroke="#475569"
+                        strokeWidth={1.6 * s}
+                        strokeLinecap="round"
+                      />
+                      <path
+                        d={`M ${neckLeftX} ${neckBaseY + 1 * s}
+                            Q ${torsoHead.x} ${neckBaseY + 8.5 * s} ${neckRightX} ${neckBaseY + 1 * s}`}
+                        fill="none"
+                        stroke="#1e293b"
+                        strokeWidth={1.1 * s}
+                        strokeLinecap="round"
+                        opacity={0.8}
+                      />
+
+                      {/* Fabric Sleeves connecting seamlessly to forearm limbs */}
+                      {cameraMode === 'split' ? (
+                        <>
+                          <line
+                            x1={shoulderViewerLeft.x}
+                            y1={shoulderViewerLeft.y + 4 * s}
+                            x2={shoulderViewerLeft.x - 4 * s}
+                            y2={180}
+                            stroke="#1e293b"
+                            strokeWidth={11 * s}
+                            strokeLinecap="round"
+                          />
+                          <line
+                            x1={shoulderViewerRight.x}
+                            y1={shoulderViewerRight.y + 4 * s}
+                            x2={shoulderViewerRight.x + 4 * s}
+                            y2={180}
+                            stroke="#1e293b"
+                            strokeWidth={11 * s}
+                            strokeLinecap="round"
+                          />
+                        </>
+                      ) : (
+                        <>
+                          {/* Dominant Upper Arm Sleeve (Right Shoulder to Dominant Forearm) */}
+                          <path
+                            d={`M ${torsoRightShoulder.x} ${torsoRightShoulder.y + 3 * s}
+                                Q ${torsoRightShoulder.x * 0.7 + domForearm.x * 0.3 - 6 * s} ${Math.max(torsoRightShoulder.y + 16 * s, (torsoRightShoulder.y + domForearm.y) * 0.5 + 12 * s)} ${domForearm.x} ${domForearm.y}`}
+                            fill="none"
+                            stroke="#1e293b"
+                            strokeWidth={11 * s}
+                            strokeLinecap="round"
+                          />
+                          {/* Base Upper Arm Sleeve (Left Shoulder to Base Forearm) */}
+                          <path
+                            d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y + 3 * s}
+                                Q ${torsoLeftShoulder.x * 0.7 + baseForearm.x * 0.3 + 6 * s} ${Math.max(torsoLeftShoulder.y + 16 * s, (torsoLeftShoulder.y + baseForearm.y) * 0.5 + 12 * s)} ${baseForearm.x} ${baseForearm.y}`}
+                            fill="none"
+                            stroke="#1e293b"
+                            strokeWidth={11 * s}
+                            strokeLinecap="round"
+                          />
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
 
                 {/* 3. Left & Right Ears with Anatomical Concha Folds */}
                 <g id="bsl-ears">
@@ -2261,9 +2346,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               </g>
             ) : (
               <g id="bsl-skeleton-torso-head">
-                {/* Shoulders & Collar line */}
+                {/* Shoulders & Trapezius line */}
                 <path
-                  d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y} Q ${torsoChest.x} ${torsoChest.y} ${torsoRightShoulder.x} ${torsoRightShoulder.y}`}
+                  d={`M ${shoulderViewerLeft.x} ${shoulderViewerLeft.y} Q ${torsoChest.x} ${torsoChest.y} ${shoulderViewerRight.x} ${shoulderViewerRight.y}`}
                   fill="none"
                   stroke="#475569"
                   strokeWidth="2"
@@ -3073,6 +3158,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             onClick={() => {
               setGrammarMode((m) => {
                 const next = m === 'bsl-natural' ? 'makaton' : m === 'makaton' ? 'sse' : m === 'sse' ? 'fingerspell' : 'bsl-natural';
+                if (next === 'makaton') {
+                  setSignLanguage('MAKATON');
+                } else if (next === 'bsl-natural') {
+                  setSignLanguage('BSL');
+                }
                 if (activeWordDisplay) {
                   enqueueText(activeWordDisplay, next);
                 }

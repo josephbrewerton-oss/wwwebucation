@@ -540,6 +540,7 @@ export default function UniversalTranslatorBar() {
                 title="Select Sign Language Interpreter system (Language Tuple [spoken, sign])"
               >
                 <option value="BSL" className="bg-slate-900 text-white">🇬🇧 BSL (Level 2/3 Natural)</option>
+                <option value="MAKATON" className="bg-slate-900 text-purple-300">🤝 Makaton (Key Word Signing)</option>
                 <option value="ASL" className="bg-slate-900 text-white">🇺🇸 ASL (American)</option>
                 <option value="LSE" className="bg-slate-900 text-white">🇪🇸 LSE (Spanish)</option>
                 <option value="ISL" className="bg-slate-900 text-white">🇮🇪 ISL (Irish)</option>

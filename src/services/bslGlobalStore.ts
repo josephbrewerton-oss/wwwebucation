@@ -6,7 +6,7 @@
  * BSL Sign Studio authoring modal, and speech boundaries across the entire app.
  */
 
-export type SignLanguageCode = 'BSL' | 'ASL' | 'LSE' | 'ISL' | 'OFF';
+export type SignLanguageCode = 'BSL' | 'MAKATON' | 'ASL' | 'LSE' | 'ISL' | 'OFF';
 export type SpokenLanguageCode = string; // e.g., 'en', 'es', 'la', 'fr', etc.
 
 export type LanguageTuple = [spoken: SpokenLanguageCode, sign: SignLanguageCode];
@@ -30,6 +30,15 @@ export const SUPPORTED_SIGN_LANGUAGES: Record<SignLanguageCode, SignLanguageInfo
     alphabetType: 'two-handed',
     family: 'BANZSL',
     description: 'Authentic 2-handed manual alphabet and UK regional signing lexicon',
+  },
+  MAKATON: {
+    code: 'MAKATON',
+    name: 'Makaton (Key Word Signing)',
+    nativeLabel: 'Makaton',
+    flag: '🤝',
+    alphabetType: 'hybrid',
+    family: 'BANZSL',
+    description: 'UK SEN language programme using keyword signing in spoken English order',
   },
   ASL: {
     code: 'ASL',
