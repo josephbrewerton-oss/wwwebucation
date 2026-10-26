@@ -14,7 +14,6 @@
     let pc = null;
     let activeChannel = null;
     let isConnecting = false;
-    let lastOfferTimestamp = 0;
     let isBusy = false;
 
     // Warm Session Cache for low-latency inference (< 250ms per token vs 800ms+ cold start)
@@ -202,25 +201,17 @@
 
     // WebRTC PeerConnection initialization
     async function initAndOffer() {
-  const now = Date.now();
-  // 1. Throttle: Never negotiate more frequently than once every 4 seconds
-  if (now - lastOfferTimestamp < 4000) return;
+      if (activeChannel && activeChannel.readyState === 'open') return;
+      if (isConnecting) return;
 
-  // 2. Guard: Do not negotiate if already open or connecting
-  if (activeChannel && (activeChannel.readyState === 'open' || activeChannel.readyState === 'connecting')) return;
-  if (isConnecting) return;
-  if (pc && (pc.connectionState === 'connecting' || pc.iceConnectionState === 'checking')) return;
+      isConnecting = true;
+      if (pc) {
+        try { pc.close(); } catch {}
+      }
 
-  lastOfferTimestamp = now;
-  isConnecting = true;
+      console.log('[Guest VM Daemon] Initializing PeerConnection & DataChannel...');
+      pc = new RTCPeerConnection({ iceServers: [] });
 
-  if (pc) {
-    try { pc.close(); } catch {}
-    pc = null;
-  }
-
-  console.log('[Guest VM Daemon] Initializing PeerConnection & DataChannel...');
-  pc = new RTCPeerConnection({ iceServers: [] });
       pc.oniceconnectionstatechange = () => {
         if (pc.iceConnectionState === 'disconnected' || pc.iceConnectionState === 'failed') {
           isConnecting = false;
@@ -717,14 +708,7 @@ Format as:
       }
 
       if (data.type === 'peer_ready' || data.type === 'reconnect_rtc') {
-        // If the channel is already open or in the middle of connecting, ignore peer_ready
-        if (data.type === 'peer_ready' || data.type === 'reconnect_rtc') {
-        // 1. If channel is already open or currently connecting, ignore peer_ready completely
-        if (activeChannel && (activeChannel.readyState === 'open' || activeChannel.readyState === 'connecting')) return;
-        if (isConnecting && !data.force) return;
-
-        // 2. If force is requested, tear down cleanly before re-negotiating
-        if (data.force) {
+        if (data.force || !activeChannel || activeChannel.readyState !== 'open') {
           if (activeChannel) {
             try { activeChannel.close(); } catch {}
             activeChannel = null;
@@ -735,12 +719,7 @@ Format as:
           }
           isConnecting = false;
         }
-
-        // 3. Only negotiate if we don't already have an active PeerConnection
-        if (!pc || pc.connectionState === 'failed' || pc.connectionState === 'closed') {
-          initAndOffer();
-        }
-      }
+        initAndOffer();
       } else if (data.type === 'answer' && pc) {
         if (pc.signalingState === 'have-local-offer') {
           try {

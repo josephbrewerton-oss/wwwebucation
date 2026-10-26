@@ -19,9 +19,9 @@
  */
 
 import { Point3D, BslHandPose, BslNmf, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
-import { BslSign, BslSignKeyframe, lookupBslSign, signKeyframeToHandPose } from './bslLexicon';
+import { BslSign, BslSignKeyframe, lookupBslSign, signKeyframeToHandPose, lookupMakatonSign } from './bslLexicon';
 
-export type BslGrammarMode = 'bsl-natural' | 'sse' | 'fingerspell';
+export type BslGrammarMode = 'bsl-natural' | 'sse' | 'makaton' | 'fingerspell';
 
 export type BslLocusId = 'ME' | 'YOU' | 'LOCUS_A' | 'LOCUS_B';
 
@@ -79,6 +79,7 @@ export interface BslGrammarToken {
   nmf?: BslNmf;
   sign?: BslSign;
   isFingerspelled?: boolean;
+  makatonStage?: number;
 }
 
 export interface BslGrammarAnalysis {
@@ -240,9 +241,9 @@ function normalizeToBslLemma(cleanWord: string): string {
  */
 export function analyzeAndTransformBslGrammar(
   text: string,
-  options?: { mode?: BslGrammarMode }
+  options?: BslGrammarMode | { mode?: BslGrammarMode }
 ): BslGrammarAnalysis {
-  const mode = options?.mode || 'bsl-natural';
+  const mode = typeof options === 'string' ? options : options?.mode || 'bsl-natural';
   const cleanInput = (text || '').trim();
 
   const loci: Record<BslLocusId, BslLocus> = {
@@ -408,7 +409,142 @@ export function analyzeAndTransformBslGrammar(
     };
   }
 
-  // 3. Natural BSL Level 2 / Level 3 Syntactic Transformation
+  // 3. If Makaton (Keyword Signing / SEN Communication Programme)
+  // Essential Key Word Signing in English word order without fingerspelling cognitive clutter
+  if (mode === 'makaton') {
+    const tokens: BslGrammarToken[] = [];
+    const stream: BslHandPose[] = [];
+
+    for (let wIdx = 0; wIdx < rawWords.length; wIdx++) {
+      const raw = rawWords[wIdx];
+      const clean = raw.toUpperCase().replace(/[^A-Z-]/g, '');
+      if (!clean) continue;
+
+      // In Makaton, function words/articles are voiced in spoken speech but omitted from hand signing
+      if (BSL_OMITTED_PARTICLES.has(clean)) {
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: `(${clean.toLowerCase()})`,
+          role: 'particle',
+        });
+        continue;
+      }
+
+      // 1. Try 2-word phrase lookup in Makaton (e.g. "THANK YOU", "SOLAR SYSTEM", "HOLY BOOK")
+      if (wIdx < rawWords.length - 1) {
+        const nextClean = rawWords[wIdx + 1].toUpperCase().replace(/[^A-Z-]/g, '');
+        const phrase = `${clean} ${nextClean}`;
+        const makatonMatch = lookupMakatonSign(phrase);
+        if (makatonMatch && makatonMatch.sign.keyframes.length > 0) {
+          const { sign, stage } = makatonMatch;
+          tokens.push({
+            originalWord: `${raw} ${rawWords[wIdx + 1]}`,
+            cleanWord: phrase,
+            gloss: `[S${stage}] ${sign.gloss || sign.word}`,
+            role: 'topic',
+            sign,
+            makatonStage: stage,
+          });
+          const total = sign.keyframes.length;
+          sign.keyframes.forEach((kf, idx) => {
+            const pose = signKeyframeToHandPose(sign, kf, idx, total);
+            stream.push({
+              ...pose,
+              label: `Makaton Stage ${stage} • ${sign.englishLabel}`,
+              nmf: {
+                eyebrows: 'raised',
+                mouth: raw,
+                headTilt: 'nod',
+              },
+            });
+          });
+          wIdx++;
+          if (wIdx < rawWords.length - 1 && stream.length > 0) {
+            stream.push({
+              letter: ' ',
+              label: 'Makaton Keyword Pause',
+              rule: 'Gentle pause between core concepts',
+              isVowel: false,
+              targetTip: DOMINANT_REST_POSE,
+              targetKnuckle: DOMINANT_REST_KNUCKLE,
+              targetWrist: DOMINANT_REST_WRIST,
+            });
+          }
+          continue;
+        }
+      }
+
+      // 2. Single keyword lookup in Makaton & BSL Core Lexicon
+      const lemma = normalizeToBslLemma(clean);
+      const makatonMatch = lookupMakatonSign(lemma) || lookupMakatonSign(clean);
+
+      if (makatonMatch && makatonMatch.sign.keyframes.length > 0) {
+        const { sign, stage } = makatonMatch;
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: `[S${stage}] ${sign.gloss || sign.word}`,
+          role: 'topic',
+          sign,
+          makatonStage: stage,
+        });
+        const total = sign.keyframes.length;
+        sign.keyframes.forEach((kf, idx) => {
+          const pose = signKeyframeToHandPose(sign, kf, idx, total);
+          stream.push({
+            ...pose,
+            label: `Makaton Stage ${stage} • ${sign.englishLabel}`,
+            nmf: {
+              eyebrows: 'raised',
+              mouth: raw,
+              headTilt: 'nod',
+            },
+          });
+        });
+      } else {
+        // In Makaton, untranslated words are spoken naturally without fingerspelling overload
+        tokens.push({
+          originalWord: raw,
+          cleanWord: clean,
+          gloss: `~${clean.toLowerCase()}~`,
+          role: 'particle',
+        });
+      }
+
+      if (wIdx < rawWords.length - 1 && stream.length > 0) {
+        const lastPose = stream[stream.length - 1];
+        if (lastPose && lastPose.letter !== ' ') {
+          stream.push({
+            letter: ' ',
+            label: 'Makaton Keyword Pause',
+            rule: 'Gentle pause between core concepts',
+            isVowel: false,
+            targetTip: DOMINANT_REST_POSE,
+            targetKnuckle: DOMINANT_REST_KNUCKLE,
+            targetWrist: DOMINANT_REST_WRIST,
+          });
+        }
+      }
+    }
+
+    return {
+      originalText: cleanInput,
+      mode,
+      sentenceType,
+      tokens,
+      glossSequence: tokens.map((t) => t.gloss).join(' '),
+      activeLoci: loci,
+      nmfSummary: {
+        eyebrows: 'raised',
+        headTilt: 'nod',
+        mouthCue: cleanInput,
+      },
+      stream,
+    };
+  }
+
+  // 4. Natural BSL Level 2 / Level 3 Syntactic Transformation
   // Parse semantic constituents:
   const timeTokens: BslGrammarToken[] = [];
   const whQuestionTokens: BslGrammarToken[] = [];

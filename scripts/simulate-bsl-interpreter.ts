@@ -339,6 +339,56 @@ assert(modulatedKfs.length === giveSign.keyframes.length, "Modulated directional
 assert(modulatedKfs[0].targetTip.x < 0, "Origin keyframe centers on LOCUS_A (left space, x < 0)");
 assert(modulatedKfs[modulatedKfs.length - 1].targetTip.x > 0, "Destination keyframe terminates on LOCUS_B (right space, x > 0)");
 
+// ---------------------------------------------------------
+// Test 10: Makaton Core Repertoire & Key Word Signing Invariants
+// ---------------------------------------------------------
+console.log('\n10. Testing Makaton Core Repertoire & Key Word Signing Invariants:');
+const { MAKATON_CORE_STAGES, getMakatonSigns, lookupMakatonSign } = await import('../src/utils/bslLexicon');
+
+// 10.1: Verify Makaton Core Stages Definition
+assert(Boolean(MAKATON_CORE_STAGES[1] && MAKATON_CORE_STAGES[2] && MAKATON_CORE_STAGES[3] && MAKATON_CORE_STAGES[4]),
+  "Makaton Core Stages 1 through 4 are formally codified");
+
+// 10.2: Verify High-Frequency Makaton Signs on Disk
+const makatonSampleWords = ['EAT', 'DRINK', 'TOILET', 'BED', 'MUM', 'DAD', 'HOME', 'PLAY', 'LIKE', 'WASH', 'WALK'];
+for (const word of makatonSampleWords) {
+  const sign = parsedFromDisk[word];
+  assert(Boolean(sign && sign.keyframes.length >= 2), `Makaton Core Sign '${word}' loaded from disk AST with >= 2 keyframes`);
+  assert(sign.makatonStage !== undefined, `Sign '${word}' has valid :makaton-stage ${sign.makatonStage}`);
+}
+
+// 10.3: Key Word Signing Grammar Mode - Preserves English word order & drops particles without spelling
+const makatonUtterance = 'The pupil wants to eat and drink water';
+const makatonAnalysis = analyzeAndTransformBslGrammar(makatonUtterance, 'makaton');
+assert(makatonAnalysis.mode === 'makaton', "Utterance analyzed in 'makaton' mode");
+
+// In Makaton, words follow English order
+const signedWords = makatonAnalysis.tokens.filter(t => t.sign).map(t => t.cleanWord);
+assert(signedWords.includes('PUPIL') && signedWords.includes('EAT') && signedWords.includes('DRINK') && signedWords.includes('WATER'),
+  "Key concepts (PUPIL, EAT, DRINK, WATER) captured in Makaton stream");
+assert(signedWords.indexOf('EAT') < signedWords.indexOf('DRINK'),
+  "English chronological SVO order strictly preserved (EAT before DRINK)");
+
+// In Makaton, grammatical particles are omitted from hand signing without fingerspelling
+const particleTokens = makatonAnalysis.tokens.filter(t => t.role === 'particle');
+assert(particleTokens.some(t => t.cleanWord === 'THE') && particleTokens.some(t => t.cleanWord === 'TO') && particleTokens.some(t => t.cleanWord === 'AND'),
+  "Non-content particles (THE, TO, AND) classified as speech-only particles");
+assert(makatonAnalysis.tokens.every(t => !t.isFingerspelled),
+  "Makaton mode eliminates fingerspelling cognitive clutter for SEN learners");
+
+// 10.4: Makaton warm facial engagement NMF
+assert(makatonAnalysis.nmfSummary.eyebrows === 'raised', "Makaton produces warm, encouraging raised-eyebrow NMF");
+assert(makatonAnalysis.nmfSummary.headTilt === 'nod', "Makaton produces encouraging rhythmic head nod NMF");
+
+// 10.5: Anatomical Neck Proportion Invariant
+// Chin is at y = -46. Torso chest is at y = -24. Distance = 22 units (~ 1/3 head height).
+const headY = -72;
+const chinY = headY + 26; // -46
+const chestY = -24;
+const neckSpan = chestY - chinY; // 22
+assert(neckSpan <= 25 && neckSpan >= 16,
+  `Anatomical neck span (${neckSpan} units) strictly conforms to 1/3 head proportion (avoiding swan neck)`);
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

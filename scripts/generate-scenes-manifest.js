@@ -96,10 +96,8 @@ export function getControlledInputDirs(options = {}) {
       .map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
   }
 
-  // 4. Default controlled search paths
+  // 4. Default controlled search paths (Single canonical source of truth)
   const defaultCandidates = [
-    path.join(rootDir, 'static', 'player', 'scenes'),
-    path.join(rootDir, 'static', 'player', 'cartridges'),
     path.join(rootDir, 'static', 'cartridges')
   ];
 
@@ -720,8 +718,8 @@ export function generateScenesManifest(options = {}) {
         subject: meta.subject,
         has3D: meta.has3D,
         nodes3DCount: meta.nodes3DCount,
-        svgFile: `scenes/${svgFile}`,
-        astFile: `scenes/${astFile}`,
+        svgFile: `cartridges/${svgFile}`,
+        astFile: `cartridges/${astFile}`,
         astbFile: `bytecode/${meta.id}.astb`,
         video: meta.video || null,
         videoFit: meta.videoFit || 'contain',
@@ -814,28 +812,21 @@ export function generateScenesManifest(options = {}) {
   const rootLegacyConfigPath = path.join(rootDir, 'static', 'scenes-config.json');
   fs.writeFileSync(rootLegacyConfigPath, jsonStr, 'utf8');
 
-  // Synchronize controlled cartridge folders so they all have the updated :type files
-  const syncDirs = [
-    path.join(rootDir, 'static', 'cartridges'),
-    path.join(rootDir, 'static', 'player', 'cartridges'),
-    path.join(rootDir, 'static', 'player', 'scenes')
-  ];
-
-  syncDirs.forEach((targetDir) => {
-    if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-    for (const [id, item] of allCartridgeFiles.entries()) {
-      const targetAst = path.join(targetDir, `${id}.ast`);
-      const targetSvg = path.join(targetDir, `${id}.svg`);
-      if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
-        fs.writeFileSync(targetAst, item.content, 'utf8');
-      }
-      if (fs.existsSync(item.svgPath) && item.svgPath !== targetSvg) {
-        if (!fs.existsSync(targetSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetSvg).size) {
-          fs.copyFileSync(item.svgPath, targetSvg);
-        }
+  // Synchronize canonical cartridge folder if content was enriched with :type or :oak-id
+  const targetDir = path.join(rootDir, 'static', 'cartridges');
+  if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+  for (const [id, item] of allCartridgeFiles.entries()) {
+    const targetAst = path.join(targetDir, `${id}.ast`);
+    const targetSvg = path.join(targetDir, `${id}.svg`);
+    if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
+      fs.writeFileSync(targetAst, item.content, 'utf8');
+    }
+    if (fs.existsSync(item.svgPath) && item.svgPath !== targetSvg) {
+      if (!fs.existsSync(targetSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetSvg).size) {
+        fs.copyFileSync(item.svgPath, targetSvg);
       }
     }
-  });
+  }
 
   // 2. Output strongly typed presets for React UI
   const tsDataDir = path.dirname(tsExportPath);

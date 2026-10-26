@@ -52,6 +52,7 @@ export interface BslSign {
   isDirectional?: boolean;
   directionalType?: 'subject-to-object' | 'object-to-subject';
   defaultLoci?: { from: string; to: string };
+  makatonStage?: number; // Makaton Core Vocabulary Stages 1-8 (UK SEN / Early Communication Standard)
 }
 
 /**
@@ -3200,6 +3201,405 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
       },
     ],
   },
+
+  // =========================================================================
+  // MAKATON CORE VOCABULARY (STAGES 1-4 ESSENTIALS)
+  // Key word signing repertoire for Special Educational Needs (SEN) and early language
+  // =========================================================================
+  'EAT': {
+    id: 'eat',
+    word: 'EAT',
+    category: 'conversation',
+    englishLabel: 'Eat / Food',
+    gloss: 'EAT',
+    makatonStage: 1,
+    description: 'Dominant hand brings pinched fingertips to mouth twice in authentic UK Makaton eating gesture.',
+    aliases: ['FOOD', 'EATING', 'EATS', 'MEAL', 'DINNER', 'LUNCH', 'BREAKFAST'],
+    keyframes: [
+      {
+        label: 'Hand to Mouth',
+        rule: 'Fingertips brought close to lips',
+        targetTip: { x: 5, y: -45, z: 22 },
+        targetKnuckle: { x: 25, y: -20, z: 12 },
+        targetWrist: { x: 60, y: 15, z: 0 },
+        shape: 'fist',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'eat' },
+        hold: 120,
+      },
+      {
+        label: 'Double Tap Food',
+        rule: 'Second tap at lips confirming nourishment request',
+        targetTip: { x: 0, y: -46, z: 24 },
+        targetKnuckle: { x: 20, y: -22, z: 14 },
+        targetWrist: { x: 55, y: 10, z: 0 },
+        shape: 'fist',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'eat', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'DRINK': {
+    id: 'drink',
+    word: 'DRINK',
+    category: 'conversation',
+    englishLabel: 'Drink / Cup',
+    gloss: 'DRINK',
+    makatonStage: 1,
+    description: 'Dominant C-shape hand tilts upward towards mouth as if holding and sipping from a cup.',
+    aliases: ['DRINKING', 'DRINKS', 'BEVERAGE', 'CUP', 'THIRSTY'],
+    keyframes: [
+      {
+        label: 'Hold Cup',
+        rule: 'C-handshape holding cup at chin level',
+        targetTip: { x: 10, y: -38, z: 20 },
+        targetKnuckle: { x: 30, y: -15, z: 12 },
+        targetWrist: { x: 65, y: 20, z: 0 },
+        shape: 'c-shape',
+        palm: 'side',
+        nmf: { eyebrows: 'neutral', mouth: 'drink' },
+        hold: 100,
+      },
+      {
+        label: 'Tilt and Sip',
+        rule: 'Tilt hand towards lips as drinking',
+        targetTip: { x: 5, y: -44, z: 24 },
+        targetKnuckle: { x: 22, y: -22, z: 16 },
+        targetWrist: { x: 50, y: 10, z: 2 },
+        shape: 'c-shape',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'drink', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'TOILET': {
+    id: 'toilet',
+    word: 'TOILET',
+    category: 'school',
+    englishLabel: 'Toilet / Bathroom',
+    gloss: 'TOILET',
+    makatonStage: 1,
+    description: 'Dominant middle finger taps the opposite shoulder twice in standard UK Makaton/BSL.',
+    aliases: ['BATHROOM', 'RESTROOM', 'WASHROOM', 'LOO'],
+    keyframes: [
+      {
+        label: 'Touch Shoulder',
+        rule: 'Middle finger reaches across chest to touch opposite shoulder',
+        targetTip: { x: -35, y: -18, z: 15 },
+        targetKnuckle: { x: -5, y: 5, z: 10 },
+        targetWrist: { x: 35, y: 45, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'toilet' },
+        hold: 120,
+      },
+      {
+        label: 'Double Tap Shoulder',
+        rule: 'Tap shoulder second time clearly',
+        targetTip: { x: -38, y: -18, z: 12 },
+        targetKnuckle: { x: -8, y: 5, z: 8 },
+        targetWrist: { x: 32, y: 45, z: -2 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'toilet' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'BED': {
+    id: 'bed',
+    word: 'BED',
+    category: 'conversation',
+    englishLabel: 'Bed / Sleep',
+    gloss: 'BED',
+    makatonStage: 1,
+    description: 'Both flat palms together placed against the side of the tilted face/cheek like a resting pillow.',
+    aliases: ['SLEEP', 'SLEEPING', 'BEDTIME', 'REST', 'ASLEEP'],
+    keyframes: [
+      {
+        label: 'Hands to Cheek',
+        rule: 'Flat hands together brought up to cheek',
+        targetTip: { x: 35, y: -45, z: 20 },
+        targetKnuckle: { x: 55, y: -20, z: 12 },
+        targetWrist: { x: 80, y: 15, z: 0 },
+        shape: 'flat',
+        palm: 'side',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'bed', headTilt: 'tilt-right' },
+        hold: 150,
+      },
+      {
+        label: 'Pillow Rest',
+        rule: 'Head tilts gently resting on hands',
+        targetTip: { x: 38, y: -42, z: 22 },
+        targetKnuckle: { x: 58, y: -18, z: 14 },
+        targetWrist: { x: 82, y: 18, z: 2 },
+        shape: 'flat',
+        palm: 'side',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'sleep', headTilt: 'tilt-right' },
+        hold: 200,
+      },
+    ],
+  },
+
+  'MUM': {
+    id: 'mum',
+    word: 'MUM',
+    category: 'conversation',
+    englishLabel: 'Mum / Mother',
+    gloss: 'MUM',
+    makatonStage: 2,
+    description: 'Dominant index finger taps the right corner of the mouth/chin twice rhythmically.',
+    aliases: ['MOTHER', 'MOM', 'MAMMY', 'MUMMY'],
+    keyframes: [
+      {
+        label: 'Tap Corner of Mouth',
+        rule: 'Index finger touches corner of mouth',
+        targetTip: { x: 18, y: -42, z: 22 },
+        targetKnuckle: { x: 38, y: -18, z: 12 },
+        targetWrist: { x: 70, y: 20, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'Mum' },
+        hold: 120,
+      },
+      {
+        label: 'Second M Tap',
+        rule: 'Repeat tap for the double M syllable',
+        targetTip: { x: 20, y: -40, z: 22 },
+        targetKnuckle: { x: 40, y: -16, z: 12 },
+        targetWrist: { x: 72, y: 22, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'Mother', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'DAD': {
+    id: 'dad',
+    word: 'DAD',
+    category: 'conversation',
+    englishLabel: 'Dad / Father',
+    gloss: 'DAD',
+    makatonStage: 2,
+    description: 'Dominant index and middle fingers tap the non-dominant index and middle fingers twice.',
+    aliases: ['FATHER', 'DADDY', 'PAPA'],
+    keyframes: [
+      {
+        label: 'Two-Finger Tap',
+        rule: 'Dominant index and middle tap non-dominant two fingers',
+        targetTip: { x: -5, y: 10, z: 25 },
+        targetKnuckle: { x: 25, y: 30, z: 15 },
+        targetWrist: { x: 65, y: 65, z: 0 },
+        shape: 'point',
+        palm: 'down',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'Dad' },
+        hold: 120,
+      },
+      {
+        label: 'Second Tap',
+        rule: 'Second rhythmic tap for double D syllable',
+        targetTip: { x: -5, y: 8, z: 26 },
+        targetKnuckle: { x: 25, y: 28, z: 16 },
+        targetWrist: { x: 65, y: 62, z: 2 },
+        shape: 'point',
+        palm: 'down',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'Father', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'HOME': {
+    id: 'home',
+    word: 'HOME',
+    category: 'conversation',
+    englishLabel: 'Home / House',
+    gloss: 'HOME',
+    makatonStage: 2,
+    description: 'Both flat hands touch at fingertips forming an apex triangular roof over the chest.',
+    aliases: ['HOUSE', 'HOMES'],
+    keyframes: [
+      {
+        label: 'Form Roof Apex',
+        rule: 'Both flat hands touch fingertips forming pitched roof',
+        targetTip: { x: 0, y: -15, z: 28 },
+        targetKnuckle: { x: 30, y: 10, z: 18 },
+        targetWrist: { x: 70, y: 50, z: 5 },
+        shape: 'flat',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'home' },
+        hold: 150,
+      },
+      {
+        label: 'Shelter Hold',
+        rule: 'Firm hold establishing warmth and security',
+        targetTip: { x: 0, y: -12, z: 28 },
+        targetKnuckle: { x: 30, y: 12, z: 18 },
+        targetWrist: { x: 70, y: 52, z: 5 },
+        shape: 'flat',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'home', headTilt: 'nod' },
+        hold: 180,
+      },
+    ],
+  },
+
+  'PLAY': {
+    id: 'play',
+    word: 'PLAY',
+    category: 'school',
+    englishLabel: 'Play / Game',
+    gloss: 'PLAY',
+    makatonStage: 3,
+    description: 'Both open flat hands with palms facing upward rotate forward in alternating joyful cycles.',
+    aliases: ['PLAYING', 'GAME', 'GAMES', 'PLAYED'],
+    keyframes: [
+      {
+        label: 'Open Palms Up',
+        rule: 'Both hands open palms upward at waist level',
+        targetTip: { x: 25, y: 20, z: 25 },
+        targetKnuckle: { x: 50, y: 40, z: 15 },
+        targetWrist: { x: 80, y: 70, z: 0 },
+        shape: 'flat',
+        palm: 'up',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'play' },
+        hold: 120,
+      },
+      {
+        label: 'Playful Rotation',
+        rule: 'Hands cycle forward in alternating play motion',
+        targetTip: { x: 35, y: 15, z: 30 },
+        targetKnuckle: { x: 60, y: 35, z: 20 },
+        targetWrist: { x: 85, y: 65, z: 5 },
+        shape: 'flat',
+        palm: 'up',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'game', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'LIKE': {
+    id: 'like',
+    word: 'LIKE',
+    category: 'conversation',
+    englishLabel: 'Like / Enjoy',
+    gloss: 'LIKE',
+    makatonStage: 4,
+    description: 'Dominant flat hand rests over chest and moves forward with appreciation.',
+    aliases: ['LIKING', 'LIKES', 'ENJOY', 'PREFER'],
+    keyframes: [
+      {
+        label: 'Hand on Chest',
+        rule: 'Flat hand rests over heart locus',
+        targetTip: { x: -10, y: -5, z: 20 },
+        targetKnuckle: { x: 15, y: 15, z: 12 },
+        targetWrist: { x: 50, y: 50, z: 0 },
+        shape: 'flat',
+        palm: 'in',
+        nmf: { eyebrows: 'raised', mouth: 'like' },
+        hold: 120,
+      },
+      {
+        label: 'Move Forward Warmly',
+        rule: 'Hand pushes forward with appreciative nod',
+        targetTip: { x: 5, y: -5, z: 35 },
+        targetKnuckle: { x: 25, y: 15, z: 22 },
+        targetWrist: { x: 60, y: 45, z: 8 },
+        shape: 'flat',
+        palm: 'in',
+        nmf: { eyebrows: 'raised', mouth: 'like', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'WASH': {
+    id: 'wash',
+    word: 'WASH',
+    category: 'school',
+    englishLabel: 'Wash / Clean',
+    gloss: 'WASH',
+    makatonStage: 4,
+    description: 'Dominant fist rubs over the back of the non-dominant hand in a circular hand-washing motion.',
+    aliases: ['WASHING', 'WASHED', 'CLEAN', 'SOAP'],
+    keyframes: [
+      {
+        label: 'Fist on Hand Back',
+        rule: 'Dominant fist touches back of non-dominant hand',
+        targetTip: { x: -5, y: 15, z: 20 },
+        targetKnuckle: { x: 20, y: 35, z: 12 },
+        targetWrist: { x: 55, y: 70, z: 0 },
+        shape: 'fist',
+        palm: 'down',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'wash' },
+        hold: 130,
+      },
+      {
+        label: 'Circular Scrub',
+        rule: 'Fist circular scrub cleaning hands',
+        targetTip: { x: 5, y: 12, z: 22 },
+        targetKnuckle: { x: 30, y: 32, z: 14 },
+        targetWrist: { x: 65, y: 68, z: 2 },
+        shape: 'fist',
+        palm: 'down',
+        baseHandMode: 'vowel-board',
+        nmf: { eyebrows: 'neutral', mouth: 'wash' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'WALK': {
+    id: 'walk',
+    word: 'WALK',
+    category: 'conversation',
+    englishLabel: 'Walk / Step',
+    gloss: 'WALK',
+    makatonStage: 4,
+    description: 'Dominant inverted V-handshape moves downward and forward like legs stepping along a path.',
+    aliases: ['WALKING', 'WALKED', 'STEP', 'GO-OUT'],
+    keyframes: [
+      {
+        label: 'First Leg Forward',
+        rule: 'Inverted V fingers pointing down stepping forward',
+        targetTip: { x: 10, y: 25, z: 25 },
+        targetKnuckle: { x: 25, y: 0, z: 18 },
+        targetWrist: { x: 55, y: -20, z: 5 },
+        shape: 'v',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'walk' },
+        hold: 120,
+      },
+      {
+        label: 'Second Leg Step',
+        rule: 'Second finger steps forward completing walking motion',
+        targetTip: { x: 20, y: 28, z: 32 },
+        targetKnuckle: { x: 35, y: 2, z: 22 },
+        targetWrist: { x: 65, y: -18, z: 8 },
+        shape: 'v',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'walk', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
 };
 
 /**
@@ -3294,17 +3694,17 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     } else if ([
       'PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST',
       'WHAT', 'WHERE', 'HOW', 'WELCOME', 'WAIT', 'FINISH', 'BIG', 'ALL', 'HOLY', 'TEACHER',
-      'GIVE', 'EXPLAIN', 'TODAY', 'NOW', 'DISAGREE', 'WANT', 'CAN', 'FAMILY'
+      'GIVE', 'EXPLAIN', 'TODAY', 'NOW', 'DISAGREE', 'WANT', 'CAN', 'FAMILY', 'HOME', 'PLAY', 'BED'
     ].includes(sign.word)) {
       baseHandMode = 'mirror';
     } else if ([
       'SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS',
       'CROSS', 'START', 'STOP', 'SIT', 'STAND', 'CORRECT', 'HAPPY', 'MORE', 'AGAIN', 'SLOW',
-      'SHOW', 'MORNING', 'AFTERNOON', 'AGREE', 'REMEMBER', 'CANNOT', 'PUPIL'
+      'SHOW', 'MORNING', 'AFTERNOON', 'AGREE', 'REMEMBER', 'CANNOT', 'PUPIL', 'DAD', 'WASH'
     ].includes(sign.word)) {
       baseHandMode = 'vowel-board';
     } else {
-      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL, TELL, ASK, LOOK, YESTERDAY, TOMORROW, FUTURE, PAST, UNDERSTAND, FORGET, THINK, KNOW, NEED, MUST, BECAUSE, IF, ME, YOU, THEY)
+      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL, TELL, ASK, LOOK, YESTERDAY, TOMORROW, FUTURE, PAST, UNDERSTAND, FORGET, THINK, KNOW, NEED, MUST, BECAUSE, IF, ME, YOU, THEY, EAT, DRINK, TOILET, MUM, LIKE, WALK)
     }
   }
 
@@ -3439,3 +3839,117 @@ export function decomposeTextToBslStreamWithLexicon(
 
   return stream;
 }
+
+// =============================================================================
+// MAKATON CORE VOCABULARY STAGES & SEN PEDAGOGY
+// Makaton Language Programme: Keyword signing alongside speech in English word order
+// =============================================================================
+
+export interface MakatonStageInfo {
+  stage: number;
+  name: string;
+  category: string;
+  description: string;
+  coreWords: string[];
+}
+
+export const MAKATON_CORE_STAGES: Record<number, MakatonStageInfo> = {
+  1: {
+    stage: 1,
+    name: 'Immediate Needs & Greetings',
+    category: 'Essential Communication',
+    description: 'Basic daily survival, greetings, requests, and self-advocacy.',
+    coreWords: ['HELLO', 'GOODBYE', 'PLEASE', 'THANK YOU', 'YES', 'NO', 'EAT', 'DRINK', 'MORE', 'AGAIN', 'BED', 'TOILET', 'HELP', 'SORRY'],
+  },
+  2: {
+    stage: 2,
+    name: 'People & Home',
+    category: 'Family & Identity',
+    description: 'Key family members, home environment, and personal identity.',
+    coreWords: ['MUM', 'DAD', 'FAMILY', 'HOME', 'HOUSE', 'BABY', 'BOY', 'GIRL'],
+  },
+  3: {
+    stage: 3,
+    name: 'Food & Activities',
+    category: 'Daily Living',
+    description: 'Everyday nourishment, play, and engaging leisure activities.',
+    coreWords: ['BOOK', 'PLAY', 'WATER', 'FOOD', 'MUSIC', 'BALL'],
+  },
+  4: {
+    stage: 4,
+    name: 'Actions & Daily Routines',
+    category: 'Core Verbs & Directives',
+    description: 'Classroom instructions, movement, hygiene, and guidance.',
+    coreWords: ['LOOK', 'LISTEN', 'WAIT', 'STOP', 'START', 'GO', 'WASH', 'WALK', 'LIKE', 'STAND', 'SIT'],
+  },
+  5: {
+    stage: 5,
+    name: 'School, Feelings & Community',
+    category: 'Education & Social-Emotional',
+    description: 'School learning, educators, peers, and emotional states.',
+    coreWords: ['SCHOOL', 'TEACHER', 'PUPIL', 'FRIEND', 'HAPPY', 'SAD', 'GOOD', 'WRITE', 'READ', 'LEARN'],
+  },
+  6: {
+    stage: 6,
+    name: 'Time & Natural World',
+    category: 'Environment',
+    description: 'Daily rhythms, weather, and the physical cosmos.',
+    coreWords: ['SUN', 'MOON', 'EARTH', 'DAY', 'NIGHT', 'RAIN', 'STAR', 'TIME'],
+  },
+  7: {
+    stage: 7,
+    name: 'Faith, Prayer & Community Life',
+    category: 'Spiritual & Catholic Life',
+    description: 'Sacred life, worship, and reverence in Catholic education.',
+    coreWords: ['JESUS', 'GOD', 'PRAY', 'CHURCH', 'BIBLE', 'CROSS', 'LOVE', 'PEACE'],
+  },
+  8: {
+    stage: 8,
+    name: 'Expanding Concepts & STEM',
+    category: 'STEM & Reasoning',
+    description: 'Higher curriculum concepts, quantification, and spatial logic.',
+    coreWords: ['MATHS', 'NUMBER', 'EQUAL', 'SCIENCE', 'ENERGY', 'FORCE', 'GRAVITY', 'PLANET', 'ORBIT'],
+  },
+};
+
+/**
+ * Returns all signs in the curriculum lexicon belonging to a specific Makaton stage
+ */
+export function getMakatonSigns(stage?: number): BslSign[] {
+  const allSigns = Object.values(BSL_CURRICULUM_LEXICON);
+  if (stage === undefined) {
+    return allSigns.filter(s => s.makatonStage !== undefined || Object.values(MAKATON_CORE_STAGES).some(stg => stg.coreWords.includes(s.word)));
+  }
+  const stageInfo = MAKATON_CORE_STAGES[stage];
+  const targetWords = stageInfo ? new Set(stageInfo.coreWords) : new Set<string>();
+  return allSigns.filter(s => s.makatonStage === stage || targetWords.has(s.word));
+}
+
+/**
+ * Checks if a word is part of the Makaton core vocabulary
+ */
+export function isMakatonWord(word: string): boolean {
+  if (!word) return false;
+  const clean = word.trim().toUpperCase().replace(/[^A-Z-]/g, '');
+  const sign = lookupBslSign(clean);
+  if (sign && sign.makatonStage !== undefined) return true;
+  return Object.values(MAKATON_CORE_STAGES).some(stg => stg.coreWords.includes(clean));
+}
+
+/**
+ * Looks up a Makaton sign with stage metadata attached
+ */
+export function lookupMakatonSign(word: string): { sign: BslSign; stage: number } | null {
+  const sign = lookupBslSign(word);
+  if (!sign) return null;
+  if (sign.makatonStage !== undefined) {
+    return { sign, stage: sign.makatonStage };
+  }
+  for (const [stgNum, stgInfo] of Object.entries(MAKATON_CORE_STAGES)) {
+    if (stgInfo.coreWords.includes(sign.word)) {
+      return { sign, stage: Number(stgNum) };
+    }
+  }
+  return { sign, stage: 1 };
+}
+

@@ -63,9 +63,10 @@ export function serializeSignToAst(sign: BslSign): string {
 
   lines.push(`  (sign :id "${escapeAstString(sign.id)}" :word "${escapeAstString(sign.word)}" :cat "${escapeAstString(sign.category)}" :gloss "${escapeAstString(sign.gloss)}"`);
   lines.push(`    :label "${escapeAstString(sign.englishLabel)}"`);
+  const makatonStr = sign.makatonStage !== undefined ? ` :makaton-stage ${sign.makatonStage}` : '';
   const directionalStr = sign.isDirectional ? ' :directional true' : '';
   const lociStr = sign.defaultLoci ? ` :default-loci (:from "${escapeAstString(sign.defaultLoci.from)}" :to "${escapeAstString(sign.defaultLoci.to)}")` : '';
-  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}${directionalStr}${lociStr}`);
+  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}${makatonStr}${directionalStr}${lociStr}`);
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
@@ -235,6 +236,9 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     }
   }
 
+  const rawMakatonStage = props['makaton-stage'] !== undefined ? props['makaton-stage'] : props.makatonStage;
+  const makatonStage = rawMakatonStage !== undefined ? Number(rawMakatonStage) : undefined;
+
   return {
     id: props.id || word.toLowerCase(),
     word: word.toUpperCase(),
@@ -246,6 +250,7 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     aliases,
     isDirectional: isDirectional || undefined,
     defaultLoci,
+    makatonStage: Number.isFinite(makatonStage) ? makatonStage : undefined,
   };
 }
 

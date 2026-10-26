@@ -694,5 +694,20 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Computing & Technology",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "pipeline-sample",
+    "type": "App",
+    "label": "Sample Physics Knowledge Nodes",
+    "stage": "KS3",
+    "oakId": "OAK-DEV-001",
+    "oakUnit": "dev-apparatus-pipeline-sample",
+    "subject": "Educational Technology",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/dev/pipeline-sample",
+    "section": "Development & Test Apparatus",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   }
 ];

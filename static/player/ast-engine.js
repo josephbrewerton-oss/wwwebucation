@@ -4948,31 +4948,26 @@
               : '';
 
             const candidateBases = [
-              './scenes/',
+              './bytecode/',
               './cartridges/',
-              'scenes/',
+              'bytecode/',
               'cartridges/',
               './',
               base,
               currentDir,
-              `${currentDir}scenes/`,
+              `${currentDir}bytecode/`,
               `${currentDir}cartridges/`,
-              '/player/scenes/',
-              '/player/cartridges/',
+              '/player/bytecode/',
               '/cartridges/',
+              `${base}bytecode/`,
               `${base}cartridges/`,
-              `${base}scenes/`,
-              `${base}player/`,
-              `${base}player/cartridges/`,
-              `${base}player/scenes/`,
-              ghRepoPrefix ? `${ghRepoPrefix}/player/scenes/` : '',
+              `${base}player/bytecode/`,
+              ghRepoPrefix ? `${ghRepoPrefix}/player/bytecode/` : '',
               ghRepoPrefix ? `${ghRepoPrefix}/cartridges/` : '',
-              ghRepoPrefix ? `${ghRepoPrefix}/player/cartridges/` : '',
               ghRepoPrefix ? `${ghRepoPrefix}/player/` : '',
-              '../scenes/',
+              '../bytecode/',
+              '../player/bytecode/',
               '../cartridges/',
-              '../player/scenes/',
-              '../player/cartridges/',
               '/'
             ].filter(Boolean);
 
@@ -4999,34 +4994,23 @@
                 ...(customBase ? [
                   `${customBase.replace(/\/$/, '')}/bytecode/${sceneId}.${ext}`,
                   `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/player/cartridges/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/scenes/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/player/scenes/${sceneId}.${ext}`,
                 ] : []),
                 ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                `${currentDir}bytecode/${sceneId}.${ext}`,
-                `${currentDir}cartridges/${sceneId}.${ext}`,
-                `${currentDir}scenes/${sceneId}.${ext}`,
+                // 1. Direct bytecode directory (fast relative lookup from player iframe)
                 `bytecode/${sceneId}.${ext}`,
-                `cartridges/${sceneId}.${ext}`,
-                `scenes/${sceneId}.${ext}`,
+                `${currentDir}bytecode/${sceneId}.${ext}`,
                 `./bytecode/${sceneId}.${ext}`,
-                `./cartridges/${sceneId}.${ext}`,
-                `./scenes/${sceneId}.${ext}`,
-                `../bytecode/${sceneId}.${ext}`,
-                `../player/bytecode/${sceneId}.${ext}`,
-                `../cartridges/${sceneId}.${ext}`,
-                `../player/cartridges/${sceneId}.${ext}`,
-                `../player/scenes/${sceneId}.${ext}`,
-                `../scenes/${sceneId}.${ext}`,
-                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 `/player/bytecode/${sceneId}.${ext}`,
-                `/bytecode/${sceneId}.${ext}`,
+                `../player/bytecode/${sceneId}.${ext}`,
+                `../bytecode/${sceneId}.${ext}`,
+                // 2. Canonical cartridges directory (source SVG & AST)
+                `cartridges/${sceneId}.${ext}`,
+                `${currentDir}cartridges/${sceneId}.${ext}`,
+                `./cartridges/${sceneId}.${ext}`,
                 `/cartridges/${sceneId}.${ext}`,
-                `/player/cartridges/${sceneId}.${ext}`,
-                `/player/scenes/${sceneId}.${ext}`,
-                `/scenes/${sceneId}.${ext}`
+                `../cartridges/${sceneId}.${ext}`,
+                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`)
               ])).filter(Boolean);
 
     const isBinary = ext === 'astb';
@@ -5073,6 +5057,7 @@
 
   parsedAst = null;
   try {
+    // Prefer token-efficient binary .astb bytecode first alongside companion vector SVG
     const [foundBytecode, foundSvg] = await Promise.all([
       fetchAsset('astb'),
       fetchAsset('svg')
@@ -5085,8 +5070,8 @@
         console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
       }
     }
-    // Fall back to or supplement from .ast text if bytecode was not found, failed to parse, is missing 3D bindings, or lacks interactive inputs/selectors
-    if (!parsedAst || (!parsedAst.bindings || parsedAst.bindings.length === 0) || (parsedAst.has3D && !parsedAst.bindings.some(b => b.type && b.type.startsWith('3d'))) || (!parsedAst.inputs || parsedAst.inputs.length === 0)) {
+    // Fall back to .ast S-Expression text ONLY if bytecode was not available or decompilation failed
+    if (!parsedAst) {
       const foundAst = await fetchAsset('ast');
       if (foundAst) astText = foundAst;
     }

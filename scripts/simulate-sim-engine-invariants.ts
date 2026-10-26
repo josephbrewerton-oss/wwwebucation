@@ -170,7 +170,7 @@ console.log('\n--- TEST 5: S-Expression Grammar Verification of kinetic-gas.ast 
 {
   const fs = await import('fs');
   const path = await import('path');
-  const astContent = fs.readFileSync(path.resolve('static/player/scenes/kinetic-gas.ast'), 'utf8');
+  const astContent = fs.readFileSync(path.resolve('static/cartridges/kinetic-gas.ast'), 'utf8');
 
   assert(astContent.includes(':name "particleCount"'), 'kinetic-gas.ast must define particleCount var');
   assert(astContent.includes(':slider :var "particleCount"'), 'kinetic-gas.ast must provide particleCount slider');

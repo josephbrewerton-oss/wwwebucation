@@ -38,6 +38,9 @@ import {
   lookupBslSign,
   BSL_CURRICULUM_LEXICON,
   registerBslSigns,
+  MAKATON_CORE_STAGES,
+  getMakatonSigns,
+  lookupMakatonSign,
 } from '../utils/bslLexicon';
 import { parseAstToLexicon } from '../utils/bslAstCodec';
 import {
@@ -105,6 +108,20 @@ const QUICK_SIGNS = [
   { label: '➕ More', word: 'MORE' },
   { label: '🔁 Again', word: 'AGAIN' },
   { label: '✅ Correct', word: 'CORRECT' },
+  { label: '🍽️ Eat', word: 'EAT' },
+  { label: '🥤 Drink', word: 'DRINK' },
+  { label: '🚻 Toilet', word: 'TOILET' },
+  { label: '🛏️ Bed', word: 'BED' },
+  { label: '👩 Mum', word: 'MUM' },
+  { label: '👨 Dad', word: 'DAD' },
+  { label: '🏠 Home', word: 'HOME' },
+  { label: '🎮 Play', word: 'PLAY' },
+  { label: '👀 Look', word: 'LOOK' },
+  { label: '👂 Listen', word: 'LISTEN' },
+  { label: '⏳ Wait', word: 'WAIT' },
+  { label: '❤️ Like', word: 'LIKE' },
+  { label: '🧼 Wash', word: 'WASH' },
+  { label: '🚶 Walk', word: 'WALK' },
 ];
 
 export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
@@ -120,6 +137,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [isMinimized, setIsMinimized] = useState<boolean>(false);
   const [speedMultiplier, setSpeedMultiplier] = useState<number>(1.2);
   const [grammarMode, setGrammarMode] = useState<BslGrammarMode>('bsl-natural');
+  const [selectedMakatonStage, setSelectedMakatonStage] = useState<'all' | number>('all');
   const [showGrammarInspector, setShowGrammarInspector] = useState<boolean>(false);
   const [grammarAnalysis, setGrammarAnalysis] = useState<BslGrammarAnalysis | null>(null);
   const [customInput, setCustomInput] = useState<string>('');
@@ -143,6 +161,12 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     }));
   });
 
+  const displaySigns = useMemo(() => {
+    if (selectedMakatonStage === 'all') return availableSigns;
+    const stageSigns = new Set(getMakatonSigns(selectedMakatonStage).map((s) => s.word));
+    return availableSigns.filter((s) => stageSigns.has(s.word));
+  }, [availableSigns, selectedMakatonStage]);
+
   // Synchronize available signs with custom signs from IndexedDB
   useEffect(() => {
     const refreshSigns = () => {
@@ -164,6 +188,28 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   const [prevPose, setPrevPose] = useState<BslHandPose>(REST_POSE);
   const [transitionProgress, setTransitionProgress] = useState<number>(1);
   const [activeWordDisplay, setActiveWordDisplay] = useState<string>('');
+
+  // Zero-bloat procedural blink timer (closes eyelids for ~130ms every 3.5-5.5s)
+  const [isBlinking, setIsBlinking] = useState<boolean>(false);
+  useEffect(() => {
+    let timeoutId: any;
+    let blinkTimeoutId: any;
+    const scheduleNextBlink = () => {
+      const nextDelay = 3400 + Math.random() * 2200;
+      timeoutId = setTimeout(() => {
+        setIsBlinking(true);
+        blinkTimeoutId = setTimeout(() => {
+          setIsBlinking(false);
+          scheduleNextBlink();
+        }, 130);
+      }, nextDelay);
+    };
+    scheduleNextBlink();
+    return () => {
+      clearTimeout(timeoutId);
+      clearTimeout(blinkTimeoutId);
+    };
+  }, []);
 
   // Queue of poses to play
   const queueRef = useRef<BslHandPose[]>([]);
@@ -633,13 +679,14 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     () => projPointBody({ x: headCenter3D.x, y: headCenter3D.y + 26, z: headCenter3D.z + 5 }),
     [projPointBody, headCenter3D]
   );
-  const torsoChest = useMemo(() => projPointBody({ x: 0, y: 15, z: -15 }), [projPointBody]);
+  // Anatomically proportioned upper torso & shoulders (neck length ~ 1/3 head height, strictly avoiding elongated swan neck)
+  const torsoChest = useMemo(() => projPointBody({ x: 0, y: -24, z: -15 }), [projPointBody]);
   const torsoLeftShoulder = useMemo(
-    () => projPointBody({ x: cameraMode === 'split' ? -68 : -95, y: 15, z: -25 }),
+    () => projPointBody({ x: cameraMode === 'split' ? -68 : -95, y: -24, z: -25 }),
     [projPointBody, cameraMode]
   );
   const torsoRightShoulder = useMemo(
-    () => projPointBody({ x: cameraMode === 'split' ? 68 : 95, y: 15, z: -25 }),
+    () => projPointBody({ x: cameraMode === 'split' ? 68 : 95, y: -24, z: -25 }),
     [projPointBody, cameraMode]
   );
 
@@ -1336,7 +1383,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   fontWeight: 700,
                 }}
               >
-                {currentPose.isWholeWordSign ? 'BSL Concept Sign' : 'BANZSL Fingerspelling'}
+                {currentPose.isWholeWordSign ? (grammarMode === 'makaton' ? 'Makaton Keyword Sign' : 'BSL Concept Sign') : 'BANZSL Fingerspelling'}
               </span>
               {currentPose.shape && (
                 <span
@@ -1558,35 +1605,81 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               <stop offset="100%" stopColor="#0284c7" stopOpacity="0" />
             </radialGradient>
 
-            {/* Respectful Stylized Human Skin Gradients (Warm Natural Tone) */}
+            {/* Respectful Stylized Human Skin Gradients (Warm Natural Tone with Ambient Lighting) */}
             <linearGradient id="bslHumanSkin" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#fbe8db" />
-              <stop offset="60%" stopColor="#f5d0b5" />
-              <stop offset="100%" stopColor="#e5baa0" />
+              <stop offset="0%" stopColor="#fef0e6" />
+              <stop offset="35%" stopColor="#f8d7c2" />
+              <stop offset="75%" stopColor="#ebbda1" />
+              <stop offset="100%" stopColor="#d5997a" />
             </linearGradient>
 
             <linearGradient id="bslHumanSkinPalm" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#fff4ec" />
-              <stop offset="60%" stopColor="#f9dfcd" />
-              <stop offset="100%" stopColor="#edc8b0" />
+              <stop offset="0%" stopColor="#fff6ef" />
+              <stop offset="50%" stopColor="#fae1d1" />
+              <stop offset="100%" stopColor="#ecc4aa" />
             </linearGradient>
 
             <linearGradient id="bslHumanSkinBack" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0%" stopColor="#f5d0b5" />
-              <stop offset="100%" stopColor="#d9a889" />
+              <stop offset="0%" stopColor="#f8d7c2" />
+              <stop offset="100%" stopColor="#d59a7c" />
             </linearGradient>
 
-            {/* Standard BSL Professional Attire (Contrasting Matte Dark Navy/Charcoal Top) */}
-            <linearGradient id="bslInterpreterTop" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#1e293b" />
-              <stop offset="50%" stopColor="#0f172a" />
-              <stop offset="100%" stopColor="#070d18" />
+            {/* Sub-mandibular ambient neck shadow */}
+            <linearGradient id="bslJawShadow" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#b46e50" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#b46e50" stopOpacity="0" />
             </linearGradient>
 
-            {/* Dignified Hair Silhouette Gradient */}
-            <linearGradient id="bslHairGradient" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#334155" />
+            {/* Fleshy Thenar & Hypothenar Palm Eminence Cushion */}
+            <radialGradient id="bslPalmEminence" cx="40%" cy="40%" r="60%">
+              <stop offset="0%" stopColor="#fff8f4" stopOpacity="0.9" />
+              <stop offset="65%" stopColor="#fde4d4" stopOpacity="0.6" />
+              <stop offset="100%" stopColor="#f8d7c2" stopOpacity="0" />
+            </radialGradient>
+
+            {/* Realistic Hazel/Slate Iris with Deep Limbal Ring */}
+            <radialGradient id="bslIrisGradient" cx="35%" cy="35%" r="60%">
+              <stop offset="0%" stopColor="#64748b" />
+              <stop offset="45%" stopColor="#334155" />
+              <stop offset="85%" stopColor="#1e293b" />
+              <stop offset="100%" stopColor="#090d16" />
+            </radialGradient>
+
+            {/* Natural Lip Contours & Vermilion Border */}
+            <linearGradient id="bslLipUpper" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#be5d69" />
+              <stop offset="100%" stopColor="#993844" />
+            </linearGradient>
+            <linearGradient id="bslLipLower" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#e8929c" />
+              <stop offset="45%" stopColor="#df7a86" />
+              <stop offset="100%" stopColor="#b34956" />
+            </linearGradient>
+
+            {/* Layered Hair Volume Gradients */}
+            <linearGradient id="bslHairVolume" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#475569" />
+              <stop offset="35%" stopColor="#293548" />
               <stop offset="100%" stopColor="#0f172a" />
+            </linearGradient>
+            <linearGradient id="bslHairFront" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#55657e" />
+              <stop offset="50%" stopColor="#334155" />
+              <stop offset="100%" stopColor="#1e293b" />
+            </linearGradient>
+
+            {/* Standard BSL Professional Attire (Contrasting Matte Dark Navy Top) */}
+            <linearGradient id="bslInterpreterTop" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#243044" />
+              <stop offset="40%" stopColor="#151e2e" />
+              <stop offset="100%" stopColor="#0b111c" />
+            </linearGradient>
+
+            {/* Faint Dorsal Fingernail Translucency */}
+            <linearGradient id="bslNailGradient" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor="#ffffff" stopOpacity="0.75" />
+              <stop offset="60%" stopColor="#faeae2" stopOpacity="0.45" />
+              <stop offset="100%" stopColor="#eec8b5" stopOpacity="0.7" />
             </linearGradient>
 
             {/* Soft Ambient Depth Filter */}
@@ -1677,7 +1770,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               letterSpacing="0.4"
             >
               {currentPose.isWholeWordSign
-                ? `✨ BSL SIGN • ${baseHand3D.mode === 'mirror' ? '2-HANDED MIRROR' : baseHand3D.mode === 'rest' ? '1-HANDED GESTURE' : 'CONTACT BASE'}`
+                ? grammarMode === 'makaton'
+                  ? `🤝 MAKATON • ${currentPose.label.includes('Stage') ? currentPose.label.split('•')[0].trim().toUpperCase() : 'CORE STAGE 1-4'} KEYWORD`
+                  : `✨ BSL SIGN • ${baseHand3D.mode === 'mirror' ? '2-HANDED MIRROR' : baseHand3D.mode === 'rest' ? '1-HANDED GESTURE' : 'CONTACT BASE'}`
                 : '🔤 BANZSL MANUAL ALPHABET FINGERSPELLING'}
             </text>
           )}
@@ -1686,18 +1781,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           <g id="bsl-upper-torso">
             {avatarSkinMode === 'human' ? (
               <g id="bsl-human-torso-head">
-                {/* 1. Neck Column */}
+                {/* 1. Realistic Compact Anatomical Neck Column with Sternocleidomastoid Contours */}
                 <path
-                  d={`M ${torsoHead.x - 7 * torsoHead.scale} ${torsoHead.y + 16 * torsoHead.scale}
-                      L ${torsoHead.x - 9 * torsoHead.scale} ${torsoChest.y + 6}
-                      L ${torsoHead.x + 9 * torsoHead.scale} ${torsoChest.y + 6}
-                      L ${torsoHead.x + 7 * torsoHead.scale} ${torsoHead.y + 16 * torsoHead.scale} Z`}
+                  d={`M ${torsoHead.x - 7.5 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
+                      L ${torsoHead.x - 9.5 * torsoHead.scale} ${torsoChest.y + 4 * torsoHead.scale}
+                      L ${torsoHead.x + 9.5 * torsoHead.scale} ${torsoChest.y + 4 * torsoHead.scale}
+                      L ${torsoHead.x + 7.5 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale} Z`}
                   fill="url(#bslHumanSkin)"
-                  stroke="#d4a385"
+                  stroke="#d59a7c"
                   strokeWidth="0.8"
                 />
+                {/* Sub-mandibular ambient neck shadow right under jawline */}
+                <path
+                  d={`M ${torsoHead.x - 7.2 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
+                      Q ${torsoChin.x} ${torsoChin.y + 3.5 * torsoHead.scale} ${torsoHead.x + 7.2 * torsoHead.scale} ${torsoChin.y - 2 * torsoHead.scale}
+                      L ${torsoHead.x + 7.6 * torsoHead.scale} ${torsoChin.y + 3.0 * torsoHead.scale}
+                      Q ${torsoChin.x} ${torsoChin.y + 6.0 * torsoHead.scale} ${torsoHead.x - 7.6 * torsoHead.scale} ${torsoChin.y + 3.0 * torsoHead.scale} Z`}
+                  fill="url(#bslJawShadow)"
+                />
 
-                {/* 2. Professional Interpreter Dark Top (Signing Box Contrast Canvas) */}
+                {/* 2. Professional Interpreter Dark Top & Anatomical Clavicles */}
                 <path
                   d={`M ${torsoLeftShoulder.x} ${torsoLeftShoulder.y}
                       Q ${torsoHead.x} ${torsoChest.y + 2} ${torsoRightShoulder.x} ${torsoRightShoulder.y}
@@ -1708,14 +1811,35 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   strokeWidth="1.2"
                 />
 
-                {/* Collar seam */}
+                {/* Clavicle / Collarbone Accents */}
+                <path
+                  d={`M ${torsoLeftShoulder.x + 18 * torsoHead.scale} ${torsoChest.y + 3}
+                      Q ${torsoHead.x - 4 * torsoHead.scale} ${torsoChest.y + 5.5} ${torsoHead.x} ${torsoChest.y + 6}
+                      Q ${torsoHead.x + 4 * torsoHead.scale} ${torsoChest.y + 5.5} ${torsoRightShoulder.x - 18 * torsoHead.scale} ${torsoChest.y + 3}`}
+                  fill="none"
+                  stroke="#d59a7c"
+                  strokeWidth={1.1 * torsoHead.scale}
+                  strokeLinecap="round"
+                  opacity={0.65}
+                />
+
+                {/* Professional Crew Collar with layered neckband ribbing */}
                 <path
                   d={`M ${torsoLeftShoulder.x + 18} ${torsoLeftShoulder.y + 2}
-                      Q ${torsoHead.x} ${torsoChest.y + 9} ${torsoRightShoulder.x - 18} ${torsoRightShoulder.y + 2}`}
+                      Q ${torsoHead.x} ${torsoChest.y + 6} ${torsoRightShoulder.x - 18} ${torsoRightShoulder.y + 2}`}
                   fill="none"
                   stroke="#475569"
-                  strokeWidth="1.2"
+                  strokeWidth="1.4"
                   strokeLinecap="round"
+                />
+                <path
+                  d={`M ${torsoLeftShoulder.x + 20} ${torsoLeftShoulder.y + 4}
+                      Q ${torsoHead.x} ${torsoChest.y + 8} ${torsoRightShoulder.x - 20} ${torsoRightShoulder.y + 4}`}
+                  fill="none"
+                  stroke="#1e293b"
+                  strokeWidth="1.0"
+                  strokeLinecap="round"
+                  opacity={0.7}
                 />
 
                 {/* Left & Right Fabric Sleeves extending down to mid-forearm */}
@@ -1738,47 +1862,101 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   strokeLinecap="round"
                 />
 
-                {/* 3. Left & Right Ear Lobes */}
-                <ellipse
-                  cx={torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
-                  cy={torsoHead.y}
-                  rx={3.5 * torsoHead.scale}
-                  ry={5.5 * torsoHead.scale}
-                  fill="url(#bslHumanSkin)"
-                  stroke="#d4a385"
-                  strokeWidth="0.8"
-                />
-                <ellipse
-                  cx={torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
-                  cy={torsoHead.y}
-                  rx={3.5 * torsoHead.scale}
-                  ry={5.5 * torsoHead.scale}
-                  fill="url(#bslHumanSkin)"
-                  stroke="#d4a385"
-                  strokeWidth="0.8"
-                />
+                {/* 3. Left & Right Ears with Anatomical Concha Folds */}
+                <g id="bsl-ears">
+                  {/* Left Ear */}
+                  <ellipse
+                    cx={torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                    cy={torsoHead.y}
+                    rx={3.6 * torsoHead.scale}
+                    ry={5.8 * torsoHead.scale}
+                    fill="url(#bslHumanSkin)"
+                    stroke="#cf9c80"
+                    strokeWidth="0.8"
+                  />
+                  <path
+                    d={`M ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 2.5 * torsoHead.scale}
+                        Q ${torsoHead.x - (cameraMode === 'face' ? 25.5 : cameraMode === 'split' ? 17.5 : 20.5) * torsoHead.scale} ${torsoHead.y} ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y + 2.5 * torsoHead.scale}`}
+                    fill="none"
+                    stroke="#b46e50"
+                    strokeWidth={0.8 * torsoHead.scale}
+                    strokeLinecap="round"
+                    opacity={0.65}
+                  />
 
-                {/* 4. Head Silhouette Base with gentle natural warmth */}
-                <ellipse
-                  cx={torsoHead.x}
-                  cy={torsoHead.y}
-                  rx={(cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
-                  ry={(cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * torsoHead.scale}
-                  fill="url(#bslHumanSkin)"
-                  stroke="#d4a385"
-                  strokeWidth="1.2"
-                  filter="url(#bslSoftGlow)"
-                />
+                  {/* Right Ear */}
+                  <ellipse
+                    cx={torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale}
+                    cy={torsoHead.y}
+                    rx={3.6 * torsoHead.scale}
+                    ry={5.8 * torsoHead.scale}
+                    fill="url(#bslHumanSkin)"
+                    stroke="#cf9c80"
+                    strokeWidth="0.8"
+                  />
+                  <path
+                    d={`M ${torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 2.5 * torsoHead.scale}
+                        Q ${torsoHead.x + (cameraMode === 'face' ? 25.5 : cameraMode === 'split' ? 17.5 : 20.5) * torsoHead.scale} ${torsoHead.y} ${torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y + 2.5 * torsoHead.scale}`}
+                    fill="none"
+                    stroke="#b46e50"
+                    strokeWidth={0.8 * torsoHead.scale}
+                    strokeLinecap="round"
+                    opacity={0.65}
+                  />
+                </g>
 
-                {/* 5. Natural Hair Silhouette */}
-                <path
-                  d={`M ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale}
-                      Q ${torsoHead.x} ${torsoHead.y - (cameraMode === 'face' ? 38 : cameraMode === 'split' ? 26 : 30) * torsoHead.scale} ${torsoHead.x + (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale}
-                      Q ${torsoHead.x} ${torsoHead.y - (cameraMode === 'face' ? 20 : cameraMode === 'split' ? 13 : 15) * torsoHead.scale} ${torsoHead.x - (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * torsoHead.scale} ${torsoHead.y - 4 * torsoHead.scale} Z`}
-                  fill="url(#bslHairGradient)"
-                />
+                {/* 4. Cranial Dome & Contoured Mandible Jawline */}
+                {(() => {
+                  const s = torsoHead.scale;
+                  const headRx = (cameraMode === 'face' ? 24 : cameraMode === 'split' ? 16 : 19) * s;
+                  const headRy = (cameraMode === 'face' ? 32 : cameraMode === 'split' ? 22 : 25) * s;
+                  return (
+                    <g id="bsl-head-contour">
+                      {/* Contoured Cranium & Jaw Tapering to Chin */}
+                      <path
+                        d={`M ${torsoHead.x - headRx} ${torsoHead.y - headRy * 0.1}
+                            C ${torsoHead.x - headRx} ${torsoHead.y - headRy * 1.08} ${torsoHead.x + headRx} ${torsoHead.y - headRy * 1.08} ${torsoHead.x + headRx} ${torsoHead.y - headRy * 0.1}
+                            C ${torsoHead.x + headRx * 0.98} ${torsoHead.y + headRy * 0.45} ${torsoHead.x + headRx * 0.55} ${torsoChin.y} ${torsoChin.x} ${torsoChin.y + 0.5}
+                            C ${torsoHead.x - headRx * 0.55} ${torsoChin.y} ${torsoHead.x - headRx * 0.98} ${torsoHead.y + headRy * 0.45} ${torsoHead.x - headRx} ${torsoHead.y - headRy * 0.1} Z`}
+                        fill="url(#bslHumanSkin)"
+                        stroke="#d49f82"
+                        strokeWidth="1.2"
+                        filter="url(#bslSoftGlow)"
+                      />
 
-                {/* 6. Human Facial Features (NMF Rig) */}
+                      {/* Gentle Cheek Warmth & Malar Volume */}
+                      <ellipse cx={torsoHead.x - headRx * 0.52} cy={torsoHead.y + headRy * 0.12} rx={5 * s} ry={3.5 * s} fill="#f43f5e" opacity="0.08" />
+                      <ellipse cx={torsoHead.x + headRx * 0.52} cy={torsoHead.y + headRy * 0.12} rx={5 * s} ry={3.5 * s} fill="#f43f5e" opacity="0.08" />
+
+                      {/* 5. Layered Volumetric Hair Architecture */}
+                      {/* Back Volume Base */}
+                      <path
+                        d={`M ${torsoHead.x - headRx * 1.05} ${torsoHead.y - headRy * 0.05}
+                            C ${torsoHead.x - headRx * 1.08} ${torsoHead.y - headRy * 1.18} ${torsoHead.x + headRx * 1.08} ${torsoHead.y - headRy * 1.18} ${torsoHead.x + headRx * 1.05} ${torsoHead.y - headRy * 0.05}
+                            Q ${torsoHead.x} ${torsoHead.y - headRy * 0.35} ${torsoHead.x - headRx * 1.05} ${torsoHead.y - headRy * 0.05} Z`}
+                        fill="url(#bslHairVolume)"
+                      />
+                      {/* Forehead Ambient Occlusion Shadow below Hairline */}
+                      <path
+                        d={`M ${torsoHead.x - headRx * 0.9} ${torsoHead.y - headRy * 0.25}
+                            Q ${torsoHead.x} ${torsoHead.y - headRy * 0.45} ${torsoHead.x + headRx * 0.9} ${torsoHead.y - headRy * 0.25}
+                            Q ${torsoHead.x} ${torsoHead.y - headRy * 0.35} ${torsoHead.x - headRx * 0.9} ${torsoHead.y - headRy * 0.25} Z`}
+                        fill="rgba(15, 23, 42, 0.18)"
+                      />
+                      {/* Sculpted Front Hairline with Natural Side-Part */}
+                      <path
+                        d={`M ${torsoHead.x - headRx * 1.02} ${torsoHead.y - headRy * 0.1}
+                            Q ${torsoHead.x - headRx * 0.3} ${torsoHead.y - headRy * 0.8} ${torsoHead.x - headRx * 0.1} ${torsoHead.y - headRy * 0.55}
+                            Q ${torsoHead.x + headRx * 0.5} ${torsoHead.y - headRy * 0.75} ${torsoHead.x + headRx * 1.02} ${torsoHead.y - headRy * 0.1}
+                            Q ${torsoHead.x + headRx * 0.7} ${torsoHead.y - headRy * 0.4} ${torsoHead.x + headRx * 0.35} ${torsoHead.y - headRy * 0.5}
+                            Q ${torsoHead.x - headRx * 0.4} ${torsoHead.y - headRy * 0.4} ${torsoHead.x - headRx * 1.02} ${torsoHead.y - headRy * 0.1} Z`}
+                        fill="url(#bslHairFront)"
+                      />
+                    </g>
+                  );
+                })()}
+
+                {/* 6. Human Facial Features (Living NMF Rig) */}
                 {showFacialFeatures && (
                   <g id="bsl-face-nmf" opacity={0.98}>
                     {/* Natural Arched Eyebrows (Grammatical NMF) */}
@@ -1787,8 +1965,8 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                       y1={facialLandmarks.leftBrowOut.y}
                       x2={facialLandmarks.leftBrowIn.x}
                       y2={facialLandmarks.leftBrowIn.y}
-                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#1e293b')}
-                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.4) * torsoHead.scale}
+                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#273449')}
+                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.5) * torsoHead.scale}
                       strokeLinecap="round"
                     />
                     <line
@@ -1796,86 +1974,287 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                       y1={facialLandmarks.rightBrowIn.y}
                       x2={facialLandmarks.rightBrowOut.x}
                       y2={facialLandmarks.rightBrowOut.y}
-                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#1e293b')}
-                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.4) * torsoHead.scale}
+                      stroke={eyebrowState === 'raised' ? '#f59e0b' : (eyebrowState === 'furrowed' ? '#ea580c' : '#273449')}
+                      strokeWidth={(cameraMode === 'face' ? 3.4 : 2.5) * torsoHead.scale}
                       strokeLinecap="round"
                     />
 
-                    {/* Left Eye (Gentle almond sclera + dark pupil + catchlight) */}
-                    <ellipse
-                      cx={facialLandmarks.leftEye.x}
-                      cy={facialLandmarks.leftEye.y}
-                      rx={(cameraMode === 'face' ? 4.2 : 3.0) * torsoHead.scale}
-                      ry={(cameraMode === 'face' ? 2.8 : 2.0) * torsoHead.scale}
-                      fill="#ffffff"
-                      stroke="#cbd5e1"
-                      strokeWidth="0.7"
-                    />
-                    <circle
-                      cx={facialLandmarks.leftEye.x}
-                      cy={facialLandmarks.leftEye.y}
-                      r={(cameraMode === 'face' ? 2.0 : 1.4) * torsoHead.scale}
-                      fill="#1e293b"
-                    />
-                    <circle
-                      cx={facialLandmarks.leftEye.x - 0.7 * torsoHead.scale}
-                      cy={facialLandmarks.leftEye.y - 0.7 * torsoHead.scale}
-                      r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
-                      fill="#ffffff"
-                    />
-
-                    {/* Right Eye */}
-                    <ellipse
-                      cx={facialLandmarks.rightEye.x}
-                      cy={facialLandmarks.rightEye.y}
-                      rx={(cameraMode === 'face' ? 4.2 : 3.0) * torsoHead.scale}
-                      ry={(cameraMode === 'face' ? 2.8 : 2.0) * torsoHead.scale}
-                      fill="#ffffff"
-                      stroke="#cbd5e1"
-                      strokeWidth="0.7"
-                    />
-                    <circle
-                      cx={facialLandmarks.rightEye.x}
-                      cy={facialLandmarks.rightEye.y}
-                      r={(cameraMode === 'face' ? 2.0 : 1.4) * torsoHead.scale}
-                      fill="#1e293b"
-                    />
-                    <circle
-                      cx={facialLandmarks.rightEye.x - 0.7 * torsoHead.scale}
-                      cy={facialLandmarks.rightEye.y - 0.7 * torsoHead.scale}
-                      r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
-                      fill="#ffffff"
-                    />
-
-                    {/* Soft Nose Bridge & Contour */}
+                    {/* Supratarsal Eyelid Creases (Folds above each eye) */}
                     <path
-                      d={`M ${facialLandmarks.noseBridge.x} ${facialLandmarks.noseBridge.y} L ${facialLandmarks.noseTip.x - 1} ${facialLandmarks.noseTip.y} Q ${facialLandmarks.noseTip.x} ${facialLandmarks.noseTip.y + 1.6} ${facialLandmarks.noseTip.x + 2} ${facialLandmarks.noseTip.y}`}
+                      d={`M ${facialLandmarks.leftEye.x - 3.8 * torsoHead.scale} ${facialLandmarks.leftEye.y - 3.2 * torsoHead.scale}
+                          Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y - (eyebrowState === 'raised' ? 4.8 : 3.8) * torsoHead.scale} ${facialLandmarks.leftEye.x + 3.8 * torsoHead.scale} ${facialLandmarks.leftEye.y - 2.8 * torsoHead.scale}`}
+                      fill="none"
+                      stroke="#d49f82"
+                      strokeWidth={0.8 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.65}
+                    />
+                    <path
+                      d={`M ${facialLandmarks.rightEye.x - 3.8 * torsoHead.scale} ${facialLandmarks.rightEye.y - 2.8 * torsoHead.scale}
+                          Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y - (eyebrowState === 'raised' ? 4.8 : 3.8) * torsoHead.scale} ${facialLandmarks.rightEye.x + 3.8 * torsoHead.scale} ${facialLandmarks.rightEye.y - 3.2 * torsoHead.scale}`}
+                      fill="none"
+                      stroke="#d49f82"
+                      strokeWidth={0.8 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.65}
+                    />
+
+                    {/* Left Eye (Living Almond Sclera + Hazel Iris + Specular Catchlight + Procedural Blink) */}
+                    {isBlinking ? (
+                      /* Natural closed eyelid arc during 120ms procedural micro-blink */
+                      <path
+                        d={`M ${facialLandmarks.leftEye.x - 4.2 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                            Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y + 1.8 * torsoHead.scale} ${facialLandmarks.leftEye.x + 4.2 * torsoHead.scale} ${facialLandmarks.leftEye.y}`}
+                        fill="none"
+                        stroke="#334155"
+                        strokeWidth={1.8 * torsoHead.scale}
+                        strokeLinecap="round"
+                      />
+                    ) : (
+                      <g id="bsl-left-eye-open">
+                        {/* Almond Sclera with soft ambient shadow */}
+                        <path
+                          d={`M ${facialLandmarks.leftEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                              Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y - 3.0 * torsoHead.scale} ${facialLandmarks.leftEye.x + 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                              Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y + 2.5 * torsoHead.scale} ${facialLandmarks.leftEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y} Z`}
+                          fill="#fefefe"
+                          stroke="#cbd5e1"
+                          strokeWidth="0.7"
+                        />
+                        {/* Upper eyelid ambient shadow */}
+                        <path
+                          d={`M ${facialLandmarks.leftEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                              Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y - 3.0 * torsoHead.scale} ${facialLandmarks.leftEye.x + 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                              Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y - 1.0 * torsoHead.scale} ${facialLandmarks.leftEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.leftEye.y} Z`}
+                          fill="rgba(15, 23, 42, 0.14)"
+                        />
+                        {/* Hazel/Slate Iris with Limbal Ring */}
+                        <circle
+                          cx={facialLandmarks.leftEye.x}
+                          cy={facialLandmarks.leftEye.y}
+                          r={(cameraMode === 'face' ? 2.3 : 1.7) * torsoHead.scale}
+                          fill="url(#bslIrisGradient)"
+                          stroke="#090d16"
+                          strokeWidth="0.4"
+                        />
+                        {/* Dark Pupil */}
+                        <circle
+                          cx={facialLandmarks.leftEye.x}
+                          cy={facialLandmarks.leftEye.y}
+                          r={(cameraMode === 'face' ? 1.2 : 0.9) * torsoHead.scale}
+                          fill="#09090b"
+                        />
+                        {/* 10 O'Clock Primary Specular Catchlight Dot */}
+                        <circle
+                          cx={facialLandmarks.leftEye.x - 0.7 * torsoHead.scale}
+                          cy={facialLandmarks.leftEye.y - 0.7 * torsoHead.scale}
+                          r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
+                          fill="#ffffff"
+                        />
+                        {/* Secondary micro bounce catchlight */}
+                        <circle
+                          cx={facialLandmarks.leftEye.x + 0.5 * torsoHead.scale}
+                          cy={facialLandmarks.leftEye.y + 0.5 * torsoHead.scale}
+                          r={(cameraMode === 'face' ? 0.35 : 0.25) * torsoHead.scale}
+                          fill="#ffffff"
+                          opacity={0.65}
+                        />
+                        {/* Upper Eyelash Line */}
+                        <path
+                          d={`M ${facialLandmarks.leftEye.x - 4.5 * torsoHead.scale} ${facialLandmarks.leftEye.y}
+                              Q ${facialLandmarks.leftEye.x} ${facialLandmarks.leftEye.y - 3.2 * torsoHead.scale} ${facialLandmarks.leftEye.x + 4.5 * torsoHead.scale} ${facialLandmarks.leftEye.y}`}
+                          fill="none"
+                          stroke="#1e293b"
+                          strokeWidth={1.3 * torsoHead.scale}
+                          strokeLinecap="round"
+                        />
+                      </g>
+                    )}
+
+                    {/* Right Eye (Living Almond Sclera + Hazel Iris + Specular Catchlight + Procedural Blink) */}
+                    {isBlinking ? (
+                      /* Natural closed eyelid arc during 120ms procedural micro-blink */
+                      <path
+                        d={`M ${facialLandmarks.rightEye.x - 4.2 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                            Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y + 1.8 * torsoHead.scale} ${facialLandmarks.rightEye.x + 4.2 * torsoHead.scale} ${facialLandmarks.rightEye.y}`}
+                        fill="none"
+                        stroke="#334155"
+                        strokeWidth={1.8 * torsoHead.scale}
+                        strokeLinecap="round"
+                      />
+                    ) : (
+                      <g id="bsl-right-eye-open">
+                        {/* Almond Sclera with soft ambient shadow */}
+                        <path
+                          d={`M ${facialLandmarks.rightEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                              Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y - 3.0 * torsoHead.scale} ${facialLandmarks.rightEye.x + 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                              Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y + 2.5 * torsoHead.scale} ${facialLandmarks.rightEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y} Z`}
+                          fill="#fefefe"
+                          stroke="#cbd5e1"
+                          strokeWidth="0.7"
+                        />
+                        {/* Upper eyelid ambient shadow */}
+                        <path
+                          d={`M ${facialLandmarks.rightEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                              Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y - 3.0 * torsoHead.scale} ${facialLandmarks.rightEye.x + 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                              Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y - 1.0 * torsoHead.scale} ${facialLandmarks.rightEye.x - 4.4 * torsoHead.scale} ${facialLandmarks.rightEye.y} Z`}
+                          fill="rgba(15, 23, 42, 0.14)"
+                        />
+                        {/* Hazel/Slate Iris with Limbal Ring */}
+                        <circle
+                          cx={facialLandmarks.rightEye.x}
+                          cy={facialLandmarks.rightEye.y}
+                          r={(cameraMode === 'face' ? 2.3 : 1.7) * torsoHead.scale}
+                          fill="url(#bslIrisGradient)"
+                          stroke="#090d16"
+                          strokeWidth="0.4"
+                        />
+                        {/* Dark Pupil */}
+                        <circle
+                          cx={facialLandmarks.rightEye.x}
+                          cy={facialLandmarks.rightEye.y}
+                          r={(cameraMode === 'face' ? 1.2 : 0.9) * torsoHead.scale}
+                          fill="#09090b"
+                        />
+                        {/* 10 O'Clock Primary Specular Catchlight Dot */}
+                        <circle
+                          cx={facialLandmarks.rightEye.x - 0.7 * torsoHead.scale}
+                          cy={facialLandmarks.rightEye.y - 0.7 * torsoHead.scale}
+                          r={(cameraMode === 'face' ? 0.7 : 0.5) * torsoHead.scale}
+                          fill="#ffffff"
+                        />
+                        {/* Secondary micro bounce catchlight */}
+                        <circle
+                          cx={facialLandmarks.rightEye.x + 0.5 * torsoHead.scale}
+                          cy={facialLandmarks.rightEye.y + 0.5 * torsoHead.scale}
+                          r={(cameraMode === 'face' ? 0.35 : 0.25) * torsoHead.scale}
+                          fill="#ffffff"
+                          opacity={0.65}
+                        />
+                        {/* Upper Eyelash Line */}
+                        <path
+                          d={`M ${facialLandmarks.rightEye.x - 4.5 * torsoHead.scale} ${facialLandmarks.rightEye.y}
+                              Q ${facialLandmarks.rightEye.x} ${facialLandmarks.rightEye.y - 3.2 * torsoHead.scale} ${facialLandmarks.rightEye.x + 4.5 * torsoHead.scale} ${facialLandmarks.rightEye.y}`}
+                          fill="none"
+                          stroke="#1e293b"
+                          strokeWidth={1.3 * torsoHead.scale}
+                          strokeLinecap="round"
+                        />
+                      </g>
+                    )}
+
+                    {/* Sculpted Nose Bridge & Nostril Wings */}
+                    <path
+                      d={`M ${facialLandmarks.noseBridge.x} ${facialLandmarks.noseBridge.y}
+                          L ${facialLandmarks.noseTip.x - 1.2 * torsoHead.scale} ${facialLandmarks.noseTip.y}
+                          Q ${facialLandmarks.noseTip.x} ${facialLandmarks.noseTip.y + 1.8 * torsoHead.scale} ${facialLandmarks.noseTip.x + 1.6 * torsoHead.scale} ${facialLandmarks.noseTip.y}`}
                       fill="none"
                       stroke="#c48e6c"
                       strokeWidth={cameraMode === 'face' ? '1.5' : '1.1'}
                       strokeLinecap="round"
                     />
+                    {/* Faint Nostril Wing Creases */}
+                    <path
+                      d={`M ${facialLandmarks.noseTip.x - 2.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 0.6 * torsoHead.scale}
+                          Q ${facialLandmarks.noseTip.x - 1.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 1.8 * torsoHead.scale} ${facialLandmarks.noseTip.x - 0.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 1.6 * torsoHead.scale}`}
+                      fill="none"
+                      stroke="#caa084"
+                      strokeWidth={0.7 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.6}
+                    />
+                    <path
+                      d={`M ${facialLandmarks.noseTip.x + 2.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 0.6 * torsoHead.scale}
+                          Q ${facialLandmarks.noseTip.x + 1.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 1.8 * torsoHead.scale} ${facialLandmarks.noseTip.x + 0.8 * torsoHead.scale} ${facialLandmarks.noseTip.y + 1.6 * torsoHead.scale}`}
+                      fill="none"
+                      stroke="#caa084"
+                      strokeWidth={0.7 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.6}
+                    />
 
-                    {/* Natural Mouth & Lips (Dynamic Mouthing Aperture & Lip Pattern) */}
+                    {/* Philtrum Columns (Under-nose indentation to Cupid's bow) */}
+                    <line
+                      x1={facialLandmarks.noseTip.x - 0.7 * torsoHead.scale}
+                      y1={facialLandmarks.noseTip.y + 2.2 * torsoHead.scale}
+                      x2={facialLandmarks.mouthCenter.x - 0.7 * torsoHead.scale}
+                      y2={facialLandmarks.mouthCenter.y - 2.6 * torsoHead.scale}
+                      stroke="#d59a7c"
+                      strokeWidth={0.5 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.45}
+                    />
+                    <line
+                      x1={facialLandmarks.noseTip.x + 0.7 * torsoHead.scale}
+                      y1={facialLandmarks.noseTip.y + 2.2 * torsoHead.scale}
+                      x2={facialLandmarks.mouthCenter.x + 0.7 * torsoHead.scale}
+                      y2={facialLandmarks.mouthCenter.y - 2.6 * torsoHead.scale}
+                      stroke="#d59a7c"
+                      strokeWidth={0.5 * torsoHead.scale}
+                      strokeLinecap="round"
+                      opacity={0.45}
+                    />
+
+                    {/* Natural Mouth & Lips with Cupid's Bow and Oral Cavity Depth */}
                     {mouthPattern ? (
-                      <path
-                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
-                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y - (facialLandmarks.mouthH * 0.4 * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}
-                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * torsoHead.scale)} ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Z`}
-                        fill="#7f1d1d"
-                        stroke="#cf7a84"
-                        strokeWidth={cameraMode === 'face' ? '2.0' : '1.5'}
-                        strokeLinejoin="round"
-                      />
+                      <g id="bsl-mouth-articulating">
+                        {/* Oral Cavity Aperture */}
+                        <path
+                          d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y - (facialLandmarks.mouthH * 0.45 * torsoHead.scale)} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * 1.1 * torsoHead.scale)} ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Z`}
+                          fill="#3d0a12"
+                          stroke="url(#bslLipUpper)"
+                          strokeWidth={cameraMode === 'face' ? '1.8' : '1.3'}
+                          strokeLinejoin="round"
+                        />
+                        {/* Subtle Upper Incisor Tooth-Line Accent */}
+                        <rect
+                          x={facialLandmarks.mouthCenter.x - 2.8 * torsoHead.scale}
+                          y={facialLandmarks.mouthCenter.y - (facialLandmarks.mouthH * 0.2 * torsoHead.scale)}
+                          width={5.6 * torsoHead.scale}
+                          height={1.3 * torsoHead.scale}
+                          rx={0.6 * torsoHead.scale}
+                          fill="#fefcf8"
+                          opacity={0.88}
+                        />
+                        {/* Lower Vermilion Lip Highlight */}
+                        <path
+                          d={`M ${facialLandmarks.mouthLeft.x + 1.5 * torsoHead.scale} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * 0.7 * torsoHead.scale)}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * 1.25 * torsoHead.scale)} ${facialLandmarks.mouthRight.x - 1.5 * torsoHead.scale} ${facialLandmarks.mouthCenter.y + (facialLandmarks.mouthH * 0.7 * torsoHead.scale)}`}
+                          fill="none"
+                          stroke="url(#bslLipLower)"
+                          strokeWidth={1.5 * torsoHead.scale}
+                          strokeLinecap="round"
+                        />
+                      </g>
                     ) : (
-                      <path
-                        d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
-                            Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 1} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
-                        fill="none"
-                        stroke="#c26e79"
-                        strokeWidth={cameraMode === 'face' ? '2.2' : '1.6'}
-                        strokeLinecap="round"
-                      />
+                      <g id="bsl-mouth-neutral">
+                        {/* Upper Lip with Cupid's Bow Dip */}
+                        <path
+                          d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
+                              Q ${facialLandmarks.mouthLeft.x * 0.5 + facialLandmarks.mouthCenter.x * 0.5} ${facialLandmarks.mouthCenter.y - 1.2 * torsoHead.scale} ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y - 0.4 * torsoHead.scale}
+                              Q ${facialLandmarks.mouthRight.x * 0.5 + facialLandmarks.mouthCenter.x * 0.5} ${facialLandmarks.mouthCenter.y - 1.2 * torsoHead.scale} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 0.3 * torsoHead.scale} ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y} Z`}
+                          fill="url(#bslLipUpper)"
+                        />
+                        {/* Fuller Lower Lip with Vermilion Ambient Highlight */}
+                        <path
+                          d={`M ${facialLandmarks.mouthLeft.x + 0.8 * torsoHead.scale} ${facialLandmarks.mouthLeft.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 2.2 * torsoHead.scale} ${facialLandmarks.mouthRight.x - 0.8 * torsoHead.scale} ${facialLandmarks.mouthRight.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 0.4 * torsoHead.scale} ${facialLandmarks.mouthLeft.x + 0.8 * torsoHead.scale} ${facialLandmarks.mouthLeft.y} Z`}
+                          fill="url(#bslLipLower)"
+                        />
+                        {/* Oral commissure line (mouth slit) */}
+                        <path
+                          d={`M ${facialLandmarks.mouthLeft.x} ${facialLandmarks.mouthLeft.y}
+                              Q ${facialLandmarks.mouthCenter.x} ${facialLandmarks.mouthCenter.y + 0.2 * torsoHead.scale} ${facialLandmarks.mouthRight.x} ${facialLandmarks.mouthRight.y}`}
+                          fill="none"
+                          stroke="#7e2231"
+                          strokeWidth={cameraMode === 'face' ? '1.0' : '0.7'}
+                          strokeLinecap="round"
+                        />
+                      </g>
                     )}
                   </g>
                 )}
@@ -2016,7 +2395,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={baseWrist.x}
                   y2={baseWrist.y}
                   stroke="url(#bslHumanSkin)"
-                  strokeWidth={6.5 * baseWrist.scale}
+                  strokeWidth={6.8 * baseWrist.scale}
                   strokeLinecap="round"
                 />
                 <line
@@ -2025,8 +2404,18 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={baseForearm.x + 3}
                   y2={baseForearm.y + 1}
                   stroke="#1e293b"
-                  strokeWidth="3.2"
+                  strokeWidth="3.4"
                   strokeLinecap="round"
+                />
+                {/* Wrist Carpal Crease */}
+                <path
+                  d={`M ${baseWrist.x - 3.5 * baseWrist.scale} ${baseWrist.y}
+                      Q ${baseWrist.x} ${baseWrist.y + 1.2 * baseWrist.scale} ${baseWrist.x + 3.5 * baseWrist.scale} ${baseWrist.y}`}
+                  fill="none"
+                  stroke="#d59a7c"
+                  strokeWidth={0.8 * baseWrist.scale}
+                  strokeLinecap="round"
+                  opacity={0.65}
                 />
 
                 {/* 2. Palm body polygon - Warm contoured fleshy palm */}
@@ -2042,36 +2431,54 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 <ellipse
                   cx={(baseWrist.x + baseThumbBase.x * 2) / 3}
                   cy={(baseWrist.y + baseThumbBase.y * 2) / 3}
-                  rx={4.2 * baseWrist.scale}
-                  ry={3.2 * baseWrist.scale}
-                  fill="#fbe8db"
+                  rx={4.8 * baseWrist.scale}
+                  ry={3.6 * baseWrist.scale}
+                  fill="url(#bslPalmEminence)"
+                  opacity="0.9"
+                />
+                {/* Hypothenar eminence (outer ulnar palm mound) */}
+                <ellipse
+                  cx={(baseWrist.x * 1.8 + baseKPinky.x * 1.2) / 3}
+                  cy={(baseWrist.y * 1.8 + baseKPinky.y * 1.2) / 3}
+                  rx={3.8 * baseWrist.scale}
+                  ry={2.8 * baseWrist.scale}
+                  fill="url(#bslPalmEminence)"
                   opacity="0.75"
                 />
 
-                {/* 3. Volumetric Middle Finger */}
+                {/* 3. Volumetric Middle Finger with Joint Crease & Nail Bed */}
                 <line x1={basePalm.x} y1={basePalm.y} x2={baseKMid.x} y2={baseKMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 5.2 : 4.4) * baseKMid.scale} strokeLinecap="round" />
                 <line x1={baseKMid.x} y1={baseKMid.y} x2={baseTipMid.x} y2={baseTipMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.8 : 4.0) * baseTipMid.scale} strokeLinecap="round" />
-                <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 3.4 : 2.5) * baseTipMid.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(baseKMid.x + baseTipMid.x) / 2 - 1.4} y1={(baseKMid.y + baseTipMid.y) / 2} x2={(baseKMid.x + baseTipMid.x) / 2 + 1.4} y2={(baseKMid.y + baseTipMid.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={baseTipMid.x} cy={baseTipMid.y} r={(isLeftExtended ? 3.4 : 2.5) * baseTipMid.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${baseTipMid.x - 1.2} ${baseTipMid.y - 0.2} Q ${baseTipMid.x} ${baseTipMid.y - 1.1} ${baseTipMid.x + 1.2} ${baseTipMid.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 4. Volumetric Ring Finger */}
+                {/* 4. Volumetric Ring Finger with Joint Crease & Nail Bed */}
                 <line x1={basePalm.x} y1={basePalm.y} x2={baseKRing.x} y2={baseKRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 5.0 : 4.2) * baseKRing.scale} strokeLinecap="round" />
                 <line x1={baseKRing.x} y1={baseKRing.y} x2={baseTipRing.x} y2={baseTipRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.6 : 3.8) * baseTipRing.scale} strokeLinecap="round" />
-                <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 3.2 : 2.4) * baseTipRing.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(baseKRing.x + baseTipRing.x) / 2 - 1.3} y1={(baseKRing.y + baseTipRing.y) / 2} x2={(baseKRing.x + baseTipRing.x) / 2 + 1.3} y2={(baseKRing.y + baseTipRing.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={baseTipRing.x} cy={baseTipRing.y} r={(isLeftExtended ? 3.2 : 2.4) * baseTipRing.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${baseTipRing.x - 1.1} ${baseTipRing.y - 0.2} Q ${baseTipRing.x} ${baseTipRing.y - 1.0} ${baseTipRing.x + 1.1} ${baseTipRing.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 5. Volumetric Pinky Finger */}
+                {/* 5. Volumetric Pinky Finger with Joint Crease & Nail Bed */}
                 <line x1={basePalm.x} y1={basePalm.y} x2={baseKPinky.x} y2={baseKPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.6 : 3.8) * baseKPinky.scale} strokeLinecap="round" />
                 <line x1={baseKPinky.x} y1={baseKPinky.y} x2={baseTipPinky.x} y2={baseTipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isLeftExtended ? 4.2 : 3.4) * baseTipPinky.scale} strokeLinecap="round" />
-                <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 3.0 : 2.2) * baseTipPinky.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(baseKPinky.x + baseTipPinky.x) / 2 - 1.1} y1={(baseKPinky.y + baseTipPinky.y) / 2} x2={(baseKPinky.x + baseTipPinky.x) / 2 + 1.1} y2={(baseKPinky.y + baseTipPinky.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={baseTipPinky.x} cy={baseTipPinky.y} r={(isLeftExtended ? 3.0 : 2.2) * baseTipPinky.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${baseTipPinky.x - 1.0} ${baseTipPinky.y - 0.2} Q ${baseTipPinky.x} ${baseTipPinky.y - 0.9} ${baseTipPinky.x + 1.0} ${baseTipPinky.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 6. Volumetric Thumb */}
+                {/* 6. Volumetric Thumb with Joint Crease & Nail Bed */}
                 <line x1={baseThumbBase.x} y1={baseThumbBase.y} x2={baseThumbKnuckle.x} y2={baseThumbKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.4 * baseThumbKnuckle.scale} strokeLinecap="round" />
                 <line x1={baseThumbKnuckle.x} y1={baseThumbKnuckle.y} x2={baseThumbTip.x} y2={baseThumbTip.y} stroke="url(#bslHumanSkin)" strokeWidth={4.8 * baseThumbTip.scale} strokeLinecap="round" />
-                <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.4 * baseThumbTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <circle cx={baseThumbTip.x} cy={baseThumbTip.y} r={3.4 * baseThumbTip.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${baseThumbTip.x - 1.3} ${baseThumbTip.y - 0.2} Q ${baseThumbTip.x} ${baseThumbTip.y - 1.1} ${baseThumbTip.x + 1.3} ${baseThumbTip.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 7. Volumetric Index Finger */}
+                {/* 7. Volumetric Index Finger with Joint Crease & Nail Bed */}
                 <line x1={basePalm.x} y1={basePalm.y} x2={baseKnuckle.x} y2={baseKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.4 * baseKnuckle.scale} strokeLinecap="round" />
                 <line x1={baseKnuckle.x} y1={baseKnuckle.y} x2={baseTip.x} y2={baseTip.y} stroke="url(#bslHumanSkin)" strokeWidth={4.8 * baseTip.scale} strokeLinecap="round" />
-                <circle cx={baseTip.x} cy={baseTip.y} r={3.6 * baseTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(baseKnuckle.x + baseTip.x) / 2 - 1.4} y1={(baseKnuckle.y + baseTip.y) / 2} x2={(baseKnuckle.x + baseTip.x) / 2 + 1.4} y2={(baseKnuckle.y + baseTip.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={baseTip.x} cy={baseTip.y} r={3.6 * baseTip.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${baseTip.x - 1.3} ${baseTip.y - 0.2} Q ${baseTip.x} ${baseTip.y - 1.1} ${baseTip.x + 1.3} ${baseTip.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
               </g>
             ) : (
               <g id="bsl-base-hand-skeleton">
@@ -2174,7 +2581,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={domWrist.x}
                   y2={domWrist.y}
                   stroke="url(#bslHumanSkin)"
-                  strokeWidth={6.8 * domWrist.scale}
+                  strokeWidth={7.0 * domWrist.scale}
                   strokeLinecap="round"
                 />
                 <line
@@ -2183,8 +2590,18 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                   x2={domForearm.x + 3}
                   y2={domForearm.y + 1}
                   stroke="#1e293b"
-                  strokeWidth="3.2"
+                  strokeWidth="3.4"
                   strokeLinecap="round"
+                />
+                {/* Wrist Carpal Crease */}
+                <path
+                  d={`M ${domWrist.x - 3.5 * domWrist.scale} ${domWrist.y}
+                      Q ${domWrist.x} ${domWrist.y + 1.2 * domWrist.scale} ${domWrist.x + 3.5 * domWrist.scale} ${domWrist.y}`}
+                  fill="none"
+                  stroke="#d59a7c"
+                  strokeWidth={0.8 * domWrist.scale}
+                  strokeLinecap="round"
+                  opacity={0.65}
                 />
 
                 {/* 2. Palm body polygon - Warm contoured fleshy palm */}
@@ -2200,36 +2617,54 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 <ellipse
                   cx={(domWrist.x + domThumbBase.x * 2) / 3}
                   cy={(domWrist.y + domThumbBase.y * 2) / 3}
-                  rx={4.4 * domWrist.scale}
-                  ry={3.4 * domWrist.scale}
-                  fill="#fbe8db"
+                  rx={5.0 * domWrist.scale}
+                  ry={3.8 * domWrist.scale}
+                  fill="url(#bslPalmEminence)"
+                  opacity="0.9"
+                />
+                {/* Hypothenar eminence (outer ulnar palm mound) */}
+                <ellipse
+                  cx={(domWrist.x * 1.8 + domKPinky.x * 1.2) / 3}
+                  cy={(domWrist.y * 1.8 + domKPinky.y * 1.2) / 3}
+                  rx={4.0 * domWrist.scale}
+                  ry={3.0 * domWrist.scale}
+                  fill="url(#bslPalmEminence)"
                   opacity="0.75"
                 />
 
-                {/* 3. Volumetric Middle Finger */}
+                {/* 3. Volumetric Middle Finger with Joint Crease & Nail Bed */}
                 <line x1={domPalm.x} y1={domPalm.y} x2={domKMid.x} y2={domKMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.4 : 4.6) * domKMid.scale} strokeLinecap="round" />
                 <line x1={domKMid.x} y1={domKMid.y} x2={domTipMid.x} y2={domTipMid.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.0 : 4.2) * domTipMid.scale} strokeLinecap="round" />
-                <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 3.6 : 2.6) * domTipMid.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(domKMid.x + domTipMid.x) / 2 - 1.4} y1={(domKMid.y + domTipMid.y) / 2} x2={(domKMid.x + domTipMid.x) / 2 + 1.4} y2={(domKMid.y + domTipMid.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={domTipMid.x} cy={domTipMid.y} r={(isDomExtended ? 3.6 : 2.6) * domTipMid.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${domTipMid.x - 1.2} ${domTipMid.y - 0.2} Q ${domTipMid.x} ${domTipMid.y - 1.1} ${domTipMid.x + 1.2} ${domTipMid.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 4. Volumetric Ring Finger */}
+                {/* 4. Volumetric Ring Finger with Joint Crease & Nail Bed */}
                 <line x1={domPalm.x} y1={domPalm.y} x2={domKRing.x} y2={domKRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 5.2 : 4.4) * domKRing.scale} strokeLinecap="round" />
                 <line x1={domKRing.x} y1={domKRing.y} x2={domTipRing.x} y2={domTipRing.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.8 : 4.0) * domTipRing.scale} strokeLinecap="round" />
-                <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 3.4 : 2.5) * domTipRing.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(domKRing.x + domTipRing.x) / 2 - 1.3} y1={(domKRing.y + domTipRing.y) / 2} x2={(domKRing.x + domTipRing.x) / 2 + 1.3} y2={(domKRing.y + domTipRing.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={domTipRing.x} cy={domTipRing.y} r={(isDomExtended ? 3.4 : 2.5) * domTipRing.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${domTipRing.x - 1.1} ${domTipRing.y - 0.2} Q ${domTipRing.x} ${domTipRing.y - 1.0} ${domTipRing.x + 1.1} ${domTipRing.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 5. Volumetric Pinky Finger */}
+                {/* 5. Volumetric Pinky Finger with Joint Crease & Nail Bed */}
                 <line x1={domPalm.x} y1={domPalm.y} x2={domKPinky.x} y2={domKPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.8 : 4.0) * domKPinky.scale} strokeLinecap="round" />
                 <line x1={domKPinky.x} y1={domKPinky.y} x2={domTipPinky.x} y2={domTipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth={(isDomExtended ? 4.4 : 3.6) * domTipPinky.scale} strokeLinecap="round" />
-                <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 3.2 : 2.3) * domTipPinky.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(domKPinky.x + domTipPinky.x) / 2 - 1.1} y1={(domKPinky.y + domTipPinky.y) / 2} x2={(domKPinky.x + domTipPinky.x) / 2 + 1.1} y2={(domKPinky.y + domTipPinky.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={domTipPinky.x} cy={domTipPinky.y} r={(isDomExtended ? 3.2 : 2.3) * domTipPinky.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${domTipPinky.x - 1.0} ${domTipPinky.y - 0.2} Q ${domTipPinky.x} ${domTipPinky.y - 0.9} ${domTipPinky.x + 1.0} ${domTipPinky.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 6. Volumetric Thumb */}
+                {/* 6. Volumetric Thumb with Joint Crease & Nail Bed */}
                 <line x1={domThumbBase.x} y1={domThumbBase.y} x2={domThumbKnuckle.x} y2={domThumbKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.6 * domThumbKnuckle.scale} strokeLinecap="round" />
                 <line x1={domThumbKnuckle.x} y1={domThumbKnuckle.y} x2={domThumbTip.x} y2={domThumbTip.y} stroke="url(#bslHumanSkin)" strokeWidth={5.0 * domThumbTip.scale} strokeLinecap="round" />
-                <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <circle cx={domThumbTip.x} cy={domThumbTip.y} r={3.5 * domThumbTip.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${domThumbTip.x - 1.3} ${domThumbTip.y - 0.2} Q ${domThumbTip.x} ${domThumbTip.y - 1.1} ${domThumbTip.x + 1.3} ${domThumbTip.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
 
-                {/* 7. Volumetric Active Pointer / Index Finger */}
+                {/* 7. Volumetric Active Pointer / Index Finger with Joint Crease & Nail Bed */}
                 <line x1={domPalm.x} y1={domPalm.y} x2={domKnuckle.x} y2={domKnuckle.y} stroke="url(#bslHumanSkin)" strokeWidth={5.6 * domKnuckle.scale} strokeLinecap="round" />
                 <line x1={domKnuckle.x} y1={domKnuckle.y} x2={domTip.x} y2={domTip.y} stroke="url(#bslHumanSkin)" strokeWidth={5.0 * domTip.scale} strokeLinecap="round" />
-                <circle cx={domTip.x} cy={domTip.y} r={3.8 * domTip.scale} fill="#fbe8db" stroke="#caa084" strokeWidth="0.8" />
+                <line x1={(domKnuckle.x + domTip.x) / 2 - 1.4} y1={(domKnuckle.y + domTip.y) / 2} x2={(domKnuckle.x + domTip.x) / 2 + 1.4} y2={(domKnuckle.y + domTip.y) / 2} stroke="#b88365" strokeWidth="0.8" strokeLinecap="round" opacity={0.6} />
+                <circle cx={domTip.x} cy={domTip.y} r={3.8 * domTip.scale} fill="#fef0e6" stroke="#caa084" strokeWidth="0.8" />
+                <path d={`M ${domTip.x - 1.3} ${domTip.y - 0.2} Q ${domTip.x} ${domTip.y - 1.1} ${domTip.x + 1.3} ${domTip.y - 0.2}`} fill="url(#bslNailGradient)" stroke="#ebd5cb" strokeWidth="0.4" opacity={0.7} />
               </g>
             ) : (
               <g id="bsl-dominant-hand-skeleton">
@@ -2502,7 +2937,57 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         {currentPose.rule || 'Hands in neutral rest position ready for narration stream.'}
       </div>
 
-      {/* Quick BSL Curriculum Signs Strip */}
+      {/* Makaton Stages & Repertoire Filter Bar */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '3px',
+          padding: '3px 8px',
+          background: 'rgba(10, 16, 30, 0.98)',
+          borderTop: '1px solid rgba(56, 189, 248, 0.15)',
+          overflowX: 'auto',
+          scrollbarWidth: 'none',
+        }}
+      >
+        <span style={{ fontSize: '0.58rem', fontWeight: 800, color: '#a855f7', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '3px' }}>
+          <span>🤝 Makaton:</span>
+        </span>
+        {[
+          { id: 'all', label: 'All Signs' },
+          { id: 1, label: 'S1 Needs' },
+          { id: 2, label: 'S2 People' },
+          { id: 3, label: 'S3 Food/Play' },
+          { id: 4, label: 'S4 Actions' },
+          { id: 5, label: 'S5 School' },
+          { id: 7, label: 'S7 Faith' },
+        ].map((tab) => {
+          const isSelected = selectedMakatonStage === tab.id;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setSelectedMakatonStage(tab.id as any)}
+              style={{
+                background: isSelected ? 'rgba(168, 85, 247, 0.28)' : 'rgba(30, 41, 59, 0.6)',
+                border: `1px solid ${isSelected ? '#a855f7' : 'rgba(148, 163, 184, 0.2)'}`,
+                borderRadius: '3px',
+                color: isSelected ? '#e9d5ff' : '#94a3b8',
+                padding: '1px 5px',
+                fontSize: '0.56rem',
+                fontWeight: isSelected ? 800 : 600,
+                whiteSpace: 'nowrap',
+                cursor: 'pointer',
+              }}
+              title={`Filter repertoire by Makaton stage: ${tab.label}`}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Quick BSL / Makaton Curriculum Signs Strip */}
       <div
         style={{
           display: 'flex',
@@ -2518,7 +3003,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#38bdf8', whiteSpace: 'nowrap', paddingRight: '2px' }}>
           Signs:
         </span>
-        {availableSigns.map((s) => (
+        {displaySigns.map((s) => (
           <button
             key={s.word}
             type="button"
@@ -2534,7 +3019,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               whiteSpace: 'nowrap',
               cursor: 'pointer',
             }}
-            title={`Play BSL whole-word sign: ${s.word}`}
+            title={`Play whole-word sign: ${s.word}`}
           >
             {s.label}
           </button>
@@ -2587,7 +3072,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             type="button"
             onClick={() => {
               setGrammarMode((m) => {
-                const next = m === 'bsl-natural' ? 'sse' : m === 'sse' ? 'fingerspell' : 'bsl-natural';
+                const next = m === 'bsl-natural' ? 'makaton' : m === 'makaton' ? 'sse' : m === 'sse' ? 'fingerspell' : 'bsl-natural';
                 if (activeWordDisplay) {
                   enqueueText(activeWordDisplay, next);
                 }
@@ -2598,22 +3083,43 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               background:
                 grammarMode === 'bsl-natural'
                   ? 'rgba(16, 185, 129, 0.22)'
+                  : grammarMode === 'makaton'
+                  ? 'rgba(168, 85, 247, 0.25)'
                   : grammarMode === 'sse'
                   ? 'rgba(245, 158, 11, 0.22)'
                   : 'rgba(56, 189, 248, 0.22)',
               border: `1px solid ${
-                grammarMode === 'bsl-natural' ? '#10b981' : grammarMode === 'sse' ? '#f59e0b' : '#38bdf8'
+                grammarMode === 'bsl-natural'
+                  ? '#10b981'
+                  : grammarMode === 'makaton'
+                  ? '#a855f7'
+                  : grammarMode === 'sse'
+                  ? '#f59e0b'
+                  : '#38bdf8'
               }`,
               borderRadius: '4px',
-              color: grammarMode === 'bsl-natural' ? '#6ee7b7' : grammarMode === 'sse' ? '#fbbf24' : '#38bdf8',
+              color:
+                grammarMode === 'bsl-natural'
+                  ? '#6ee7b7'
+                  : grammarMode === 'makaton'
+                  ? '#e9d5ff'
+                  : grammarMode === 'sse'
+                  ? '#fbbf24'
+                  : '#38bdf8',
               padding: '1px 6px',
               fontSize: '0.62rem',
               fontWeight: 800,
               cursor: 'pointer',
             }}
-            title="Cycle Syntax: Natural BSL (Level 2/3 Topic-Comment & Directional) -> SSE (Sign Supported English) -> BANZSL Fingerspelling"
+            title="Cycle Syntax: Natural BSL (Level 2/3 Topic-Comment) -> Makaton (SEN Keyword Signing) -> SSE (Sign Supported English) -> Fingerspelling"
           >
-            {grammarMode === 'bsl-natural' ? '🤟 Level 2/3 BSL' : grammarMode === 'sse' ? '📝 SSE L1' : '🔤 Fingerspell'}
+            {grammarMode === 'bsl-natural'
+              ? '🤟 Natural BSL'
+              : grammarMode === 'makaton'
+              ? '🤝 Makaton'
+              : grammarMode === 'sse'
+              ? '📝 SSE L1'
+              : '🔤 Fingerspell'}
           </button>
 
           <span style={{ color: '#94a3b8', fontSize: '0.62rem', marginLeft: '2px' }}>Speed:</span>

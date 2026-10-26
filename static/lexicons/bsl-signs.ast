@@ -3,7 +3,7 @@
 ;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)
 ;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories
 ;; =============================================================================
-(bsl-lexicon :version "2.0.0-LEVEL2-3" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon (Level 2/3 Upgraded)" :signs-count 100
+(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 111
   (sign :id "jesus" :word "JESUS" :cat "faith" :gloss "JESUS"
     :label "Jesus Christ"
     :desc "Index touches center of non-dominant palm, then dominant palm (the crucifixion nails in the hands)." :aliases ("CHRIST" "LORD" "SAVIOUR" "SAVIOR")
@@ -164,10 +164,11 @@
 
   (sign :id "equal" :word "EQUAL" :cat "stem" :gloss "EQUAL"
     :label "Equals / Same"
-    :desc "Both index fingers parallel horizontally like an equals sign (=)." :aliases ("EQUALS" "SAME" "EQUIVALENT")
+    :desc "Both index fingers held parallel horizontally like an equals sign (=)." :aliases ("EQUALS" "SAME" "EQUIVALENT")
     (kf :idx 1 :label "Parallel Index Bars" :rule "Dominant index placed parallel just above non-dominant index" :tip [-35 0 20] :knuckle [15 10 10] :wrist [75 45 0] :shape :point :palm :in :hold 150 :ease :ease-out :base-mode :vowel-board :base-shift [0 15 0] :nmf (nmf :mouth "equal" :brows "neutral"))
     (kf :idx 2 :label "Press Equality" :rule "Both horizontal fingers tap together confirming equality" :tip [-35 15 20] :knuckle [15 25 10] :wrist [75 55 0] :shape :point :palm :in :hold 100 :ease :snap :base-mode :vowel-board :base-shift [0 15 0] :nmf (nmf :mouth "equal" :brows "neutral"))
   )
+
   (sign :id "water" :word "WATER" :cat "stem" :gloss "WATER"
     :label "Water / Liquid"
     :desc "Index finger taps side of chin twice (BSL water sign)." :aliases ("LIQUID" "DRINK")
@@ -707,5 +708,82 @@
     :desc "Both curved hands draw an inclusive horizontal circle and join pinkies together." :aliases ("HOUSEHOLD" "RELATIVES")
     (kf :idx 1 :label "Hands Apart" :rule "Both curved hands in front of chest facing each other" :tip [30 5 30] :knuckle [55 25 20] :wrist [90 60 5] :shape :claw :base-mode :mirror :nmf (nmf :mouth "family" :brows "raised"))
     (kf :idx 2 :label "Circle Together" :rule "Both hands sweep in a circle and unite together in loving unity" :tip [0 15 25] :knuckle [30 35 15] :wrist [70 70 0] :shape :claw :base-mode :mirror :nmf (nmf :mouth "family" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "eat" :word "EAT" :cat "conversation" :gloss "EAT"
+    :label "Eat / Food"
+    :desc "Dominant hand brings pinched fingertips to mouth twice in authentic UK Makaton eating gesture." :aliases ("FOOD" "EATING" "EATS" "MEAL" "DINNER" "LUNCH" "BREAKFAST") :makaton-stage 1
+    (kf :idx 1 :label "Hand to Mouth" :rule "Fingertips brought close to lips" :tip [5 -45 22] :knuckle [25 -20 12] :wrist [60 15 0] :shape :fist :palm :in :hold 120 :nmf (nmf :mouth "eat" :brows "neutral"))
+    (kf :idx 2 :label "Double Tap Food" :rule "Second tap at lips confirming nourishment request" :tip [0 -46 24] :knuckle [20 -22 14] :wrist [55 10 0] :shape :fist :palm :in :hold 150 :nmf (nmf :mouth "eat" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "drink" :word "DRINK" :cat "conversation" :gloss "DRINK"
+    :label "Drink / Cup"
+    :desc "Dominant C-shape hand tilts upward towards mouth as if holding and sipping from a cup." :aliases ("DRINKING" "DRINKS" "BEVERAGE" "CUP" "THIRSTY") :makaton-stage 1
+    (kf :idx 1 :label "Hold Cup" :rule "C-handshape holding cup at chin level" :tip [10 -38 20] :knuckle [30 -15 12] :wrist [65 20 0] :shape :c-shape :palm :side :hold 100 :nmf (nmf :mouth "drink" :brows "neutral"))
+    (kf :idx 2 :label "Tilt and Sip" :rule "Tilt hand towards lips as drinking" :tip [5 -44 24] :knuckle [22 -22 16] :wrist [50 10 2] :shape :c-shape :palm :in :hold 150 :nmf (nmf :mouth "drink" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "toilet" :word "TOILET" :cat "school" :gloss "TOILET"
+    :label "Toilet / Bathroom"
+    :desc "Dominant middle finger taps the opposite shoulder twice in standard UK Makaton/BSL." :aliases ("BATHROOM" "RESTROOM" "WASHROOM" "LOO") :makaton-stage 1
+    (kf :idx 1 :label "Touch Shoulder" :rule "Middle finger reaches across chest to touch opposite shoulder" :tip [-35 -18 15] :knuckle [-5 5 10] :wrist [35 45 0] :shape :point :palm :in :hold 120 :nmf (nmf :mouth "toilet" :brows "neutral"))
+    (kf :idx 2 :label "Double Tap Shoulder" :rule "Tap shoulder second time clearly" :tip [-38 -18 12] :knuckle [-8 5 8] :wrist [32 45 -2] :shape :point :palm :in :hold 150 :nmf (nmf :mouth "toilet" :brows "neutral"))
+  )
+
+  (sign :id "bed" :word "BED" :cat "conversation" :gloss "BED"
+    :label "Bed / Sleep"
+    :desc "Both flat palms together placed against the side of the tilted face/cheek like a resting pillow." :aliases ("SLEEP" "SLEEPING" "BEDTIME" "REST" "ASLEEP") :makaton-stage 1
+    (kf :idx 1 :label "Hands to Cheek" :rule "Flat hands together brought up to cheek" :tip [35 -45 20] :knuckle [55 -20 12] :wrist [80 15 0] :shape :flat :palm :side :hold 150 :base-mode :mirror :nmf (nmf :mouth "bed" :brows "neutral" :tilt "tilt-right"))
+    (kf :idx 2 :label "Pillow Rest" :rule "Head tilts gently resting on hands" :tip [38 -42 22] :knuckle [58 -18 14] :wrist [82 18 2] :shape :flat :palm :side :hold 200 :base-mode :mirror :nmf (nmf :mouth "sleep" :brows "neutral" :tilt "tilt-right"))
+  )
+
+  (sign :id "mum" :word "MUM" :cat "conversation" :gloss "MUM"
+    :label "Mum / Mother"
+    :desc "Dominant index finger taps the right corner of the mouth/chin twice rhythmically." :aliases ("MOTHER" "MOM" "MAMMY" "MUMMY") :makaton-stage 2
+    (kf :idx 1 :label "Tap Corner of Mouth" :rule "Index finger touches corner of mouth" :tip [18 -42 22] :knuckle [38 -18 12] :wrist [70 20 0] :shape :point :palm :in :hold 120 :nmf (nmf :mouth "Mum" :brows "neutral"))
+    (kf :idx 2 :label "Second M Tap" :rule "Repeat tap for the double M syllable" :tip [20 -40 22] :knuckle [40 -16 12] :wrist [72 22 0] :shape :point :palm :in :hold 150 :nmf (nmf :mouth "Mother" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "dad" :word "DAD" :cat "conversation" :gloss "DAD"
+    :label "Dad / Father"
+    :desc "Dominant index and middle fingers tap the non-dominant index and middle fingers twice." :aliases ("FATHER" "DADDY" "PAPA") :makaton-stage 2
+    (kf :idx 1 :label "Two-Finger Tap" :rule "Dominant index and middle tap non-dominant two fingers" :tip [-5 10 25] :knuckle [25 30 15] :wrist [65 65 0] :shape :point :palm :down :hold 120 :base-mode :vowel-board :nmf (nmf :mouth "Dad" :brows "neutral"))
+    (kf :idx 2 :label "Second Tap" :rule "Second rhythmic tap for double D syllable" :tip [-5 8 26] :knuckle [25 28 16] :wrist [65 62 2] :shape :point :palm :down :hold 150 :base-mode :vowel-board :nmf (nmf :mouth "Father" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "home" :word "HOME" :cat "conversation" :gloss "HOME"
+    :label "Home / House"
+    :desc "Both flat hands touch at fingertips forming an apex triangular roof over the chest." :aliases ("HOUSE" "HOMES") :makaton-stage 2
+    (kf :idx 1 :label "Form Roof Apex" :rule "Both flat hands touch fingertips forming pitched roof" :tip [0 -15 28] :knuckle [30 10 18] :wrist [70 50 5] :shape :flat :palm :in :hold 150 :base-mode :mirror :nmf (nmf :mouth "home" :brows "raised"))
+    (kf :idx 2 :label "Shelter Hold" :rule "Firm hold establishing warmth and security" :tip [0 -12 28] :knuckle [30 12 18] :wrist [70 52 5] :shape :flat :palm :in :hold 180 :base-mode :mirror :nmf (nmf :mouth "home" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "play" :word "PLAY" :cat "school" :gloss "PLAY"
+    :label "Play / Game"
+    :desc "Both open flat hands with palms facing upward rotate forward in alternating joyful cycles." :aliases ("PLAYING" "GAME" "GAMES" "PLAYED") :makaton-stage 3
+    (kf :idx 1 :label "Open Palms Up" :rule "Both hands open palms upward at waist level" :tip [25 20 25] :knuckle [50 40 15] :wrist [80 70 0] :shape :flat :palm :up :hold 120 :base-mode :mirror :nmf (nmf :mouth "play" :brows "raised"))
+    (kf :idx 2 :label "Playful Rotation" :rule "Hands cycle forward in alternating play motion" :tip [35 15 30] :knuckle [60 35 20] :wrist [85 65 5] :shape :flat :palm :up :hold 150 :base-mode :mirror :nmf (nmf :mouth "game" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "like" :word "LIKE" :cat "conversation" :gloss "LIKE"
+    :label "Like / Enjoy"
+    :desc "Dominant flat hand rests over chest and moves forward with appreciation." :aliases ("LIKING" "LIKES" "ENJOY" "PREFER") :makaton-stage 4
+    (kf :idx 1 :label "Hand on Chest" :rule "Flat hand rests over heart locus" :tip [-10 -5 20] :knuckle [15 15 12] :wrist [50 50 0] :shape :flat :palm :in :hold 120 :nmf (nmf :mouth "like" :brows "raised"))
+    (kf :idx 2 :label "Move Forward Warmly" :rule "Hand pushes forward with appreciative nod" :tip [5 -5 35] :knuckle [25 15 22] :wrist [60 45 8] :shape :flat :palm :in :hold 150 :nmf (nmf :mouth "like" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "wash" :word "WASH" :cat "school" :gloss "WASH"
+    :label "Wash / Clean"
+    :desc "Dominant fist rubs over the back of the non-dominant hand in a circular hand-washing motion." :aliases ("WASHING" "WASHED" "CLEAN" "SOAP") :makaton-stage 4
+    (kf :idx 1 :label "Fist on Hand Back" :rule "Dominant fist touches back of non-dominant hand" :tip [-5 15 20] :knuckle [20 35 12] :wrist [55 70 0] :shape :fist :palm :down :hold 130 :base-mode :vowel-board :nmf (nmf :mouth "wash" :brows "neutral"))
+    (kf :idx 2 :label "Circular Scrub" :rule "Fist circular scrub cleaning hands" :tip [5 12 22] :knuckle [30 32 14] :wrist [65 68 2] :shape :fist :palm :down :hold 150 :base-mode :vowel-board :nmf (nmf :mouth "wash" :brows "neutral"))
+  )
+
+  (sign :id "walk" :word "WALK" :cat "conversation" :gloss "WALK"
+    :label "Walk / Step"
+    :desc "Dominant inverted V-handshape moves downward and forward like legs stepping along a path." :aliases ("WALKING" "WALKED" "STEP" "GO-OUT") :makaton-stage 4
+    (kf :idx 1 :label "First Leg Forward" :rule "Inverted V fingers pointing down stepping forward" :tip [10 25 25] :knuckle [25 0 18] :wrist [55 -20 5] :shape :v :palm :in :hold 120 :nmf (nmf :mouth "walk" :brows "neutral"))
+    (kf :idx 2 :label "Second Leg Step" :rule "Second finger steps forward completing walking motion" :tip [20 28 32] :knuckle [35 2 22] :wrist [65 -18 8] :shape :v :palm :in :hold 150 :nmf (nmf :mouth "walk" :brows "neutral" :tilt "nod"))
   )
 )

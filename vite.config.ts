@@ -14,8 +14,6 @@ function astSceneAutoFinder(): import('vite').Plugin {
         .map((d) => (path.isAbsolute(d) ? d : path.resolve(import.meta.dirname, d)));
     }
     return [
-      path.resolve(import.meta.dirname, 'static/player/scenes'),
-      path.resolve(import.meta.dirname, 'static/player/cartridges'),
       path.resolve(import.meta.dirname, 'static/cartridges')
     ].filter((d) => fs.existsSync(d));
   };
@@ -45,6 +43,8 @@ function astSceneAutoFinder(): import('vite').Plugin {
       for (const file of astFiles) {
         const id = file.replace('.ast', '');
         if (seen.has(id)) continue;
+        const svgPath = path.join(dir, `${id}.svg`);
+        if (!fs.existsSync(svgPath)) continue;
         seen.add(id);
 
         const fullPath = path.join(dir, file);
@@ -68,8 +68,9 @@ function astSceneAutoFinder(): import('vite').Plugin {
           duration: durationMatch ? parseFloat(durationMatch[1]) : 14.0,
           has3D,
           nodes3DCount: has3D ? 1 : 0,
-          svgFile: `scenes/${id}.svg`,
-          astFile: `scenes/${id}.ast`,
+          svgFile: `cartridges/${id}.svg`,
+          astFile: `cartridges/${id}.ast`,
+          astbFile: `bytecode/${id}.astb`,
           keyframeCount,
           subtitleCount,
           bindingsCount
