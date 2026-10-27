@@ -1,32 +1,25 @@
-(:scene :id "times-tables" :type "Sim" :oak-id "OAK-KS1-MAT-006" :oak-unit "ks1-maths-arithmetic-multiplication-arrays" :title "Times Tables: 2× to 12× Array & Distributive Splitter" :stage "KS1/KS2 MATHS" :duration 14.0
+(:scene :id "times-tables" :type "Sim" :oak-id "OAK-KS1-MAT-006" :oak-unit "ks1-maths-arithmetic-multiplication-arrays" :title "Times Tables: 1× to 12× Standard School Multiplication Chart & Grid" :stage "KS1/KS2 MATHS" :duration 14.0
   (:vars (
-    (:var :name "table" :val 7 :min 2 :max 12 :step 1 :label "Times Table (2 to 12)")
+    (:var :name "table" :val 7 :min 1 :max 12 :step 1 :label "Times Table (1 to 12)")
     (:var :name "multiplier" :val 8 :min 1 :max 12 :step 1 :label "Multiplier (1 to 12)")
-    (:var :name "splitCol" :val 5 :min 1 :max 11 :step 1 :label "Distributive Split Column")
   ))
   (:inputs (
-    (:slider :var "table" :label "Times Table" :min 2 :max 12 :step 1)
+    (:slider :var "table" :label "Times Table" :min 1 :max 12 :step 1)
     (:slider :var "multiplier" :label "Multiplier" :min 1 :max 12 :step 1)
-    (:slider :var "splitCol" :label "Split At Column" :min 1 :max 11 :step 1)
   ))
   (:computed (
     (:name "totalProduct" :expr "vars.table * vars.multiplier")
-    (:name "part1" :expr "vars.table * Math.min(vars.multiplier, vars.splitCol || 5)")
-    (:name "part2" :expr "vars.table * Math.max(0, vars.multiplier - (vars.splitCol || 5))")
-  ))
-  (:gestures (
-    (:draggable :target "#tt-laser-splitter" :axis "x" :min 80 :max 420)
   ))
   (:subtitles (
-    (:start 0.00 :end 0.35 :en "Master all times tables from 2× to 12×! Select any table above or tap the 2D array." :es "¡Domina todas las tablas de multiplicar del 2× al 12×! Selecciona cualquier tabla arriba o toca la cuadrícula.")
-    (:start 0.35 :end 0.70 :en "The Distributive Property: Split intimidating numbers into friendly chunks like 5s and 2s." :es "La propiedad distributiva: Divide números difíciles en partes fáciles de 5 y 2.")
-    (:start 0.70 :end 1.00 :en "Geometric Area Proof: Combine the emerald and amber blocks to solve any multiplication fact instantly!" :es "Demostración geométrica: ¡Combina los bloques esmeralda y ámbar para resolver cualquier multiplicación!")
+    (:start 0.00 :end 0.35 :en "Master the 1 to 12 times tables in standard UK school format! Select any times table from 1× to 12×." :es "¡Domina las tablas de multiplicar del 1 al 12 en el formato escolar estándar!")
+    (:start 0.35 :end 0.70 :en "Each table shows all 12 multiplication facts, repeated addition, and inverse division facts." :es "Cada tabla muestra las 12 multiplicaciones, suma repetida y divisiones inversas.")
+    (:start 0.70 :end 1.00 :en "Explore the 12×12 Multiplication Grid or test your fluency with the MTC challenge quiz!" :es "¡Explora la cuadrícula de 12×12 o pon a prueba tu cálculo mental con el reto MTC!")
   ))
   (:keyframes (
-    (:t 0.00 :title "Step 1: The 2D Array" :rule "A 2D matrix of Rows × Columns represents multiplication as geometric area.")
-    (:t 0.35 :title "Step 2: The Distributive Cut" :rule "Decompose difficult multiplicands into friendly chunks (e.g. 8 = 5 + 3).")
-    (:t 0.70 :title "Step 3: Partial Products" :rule "Evaluate friendly partial blocks with ease.")
-    (:t 1.00 :title "Step 4: Recombination" :rule "Combine partial products for instant arithmetic mastery.")
+    (:t 0.00 :title "Step 1: Choose Table" :rule "Select any table from 1× to 12× to view the complete school multiplication chart.")
+    (:t 0.35 :title "Step 2: 1 to 12 Equations" :rule "Read and recite the 12 multiplication facts from 1×N through 12×N.")
+    (:t 0.70 :title "Step 3: Inverses & Commutativity" :rule "Understand fact families: a × b = c implies b × a = c and c ÷ a = b.")
+    (:t 1.00 :title "Step 4: 12×12 Grid Mastery" :rule "Explore the 12×12 matrix to discover number patterns and square numbers.")
   ))
   (:interactive false)
   (:questions false)

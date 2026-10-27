@@ -1,0 +1,33 @@
+(:cartridge :type :data :id "oak-data-spanish-foundations" :title "Spanish Greetings & Verbs" :stage "Key Stage 2" :subject "Spanish" :unit "Spanish Greetings & Introductions"
+  (:axiom "In Spanish, noun gender (masculine/feminine) dictates article and adjective agreement, while verb inflection encodes subject person without requiring explicit pronouns.")
+  (:trap "Assuming Spanish word order mirrors English literally, or forgetting agreement with feminine nouns ending in \"-a\".")
+  (:socratic-pivot "Why can you say \"Tengo diez años\" without using the word \"yo\" (I)?")
+  (:hook "Greeting a pen-pal in Madrid with natural native fluency and correct formal/informal courtesy.")
+  (:guided-step "Select greetings based on time of day (días, tardes, noches), ask names with \"¿Cómo te llamas?\", and apply gendered adjectives.")
+  (:questions (
+    (:q :id "es-1" :prompt "How do you say \"Good afternoon\" or \"Good evening\" (before dark) in Spanish?"
+        :options ("Buenas tardes" "Buenos días" "Buenas noches" "Hola amigo")
+        :answer 0
+        :tier "recall"
+        :hint "\"Días\" is masculine plural used in the morning, while \"tardes\" is feminine plural used in the afternoon."
+        :explanation "\"Buenas tardes\" is used from midday until nightfall. \"Buenos días\" is used in the morning, and \"Buenas noches\" is used at night."
+        :misconceptions ("Correct! \"Buenas tardes\" means Good afternoon / early evening." "Misconception: \"Buenos días\" means Good morning." "Misconception: \"Buenas noches\" means Good night / late evening." "Misconception: \"Hola amigo\" means Hello friend.")
+    )
+    (:q :id "es-2" :prompt "When someone asks you \"¿Cómo te llamas?\" in Spanish, how do you correctly answer \"My name is Carlos\"?"
+        :options ("Me llamo Carlos" "Tengo Carlos" "Soy llamo Carlos" "Mi Carlos es")
+        :answer 0
+        :tier "application"
+        :hint "\"Me llamo\" literally translates to \"I call myself\"."
+        :explanation "In Spanish, the reflexive verb phrase \"Me llamo...\" (literally \"I call myself...\") is the standard natural way to state your name."
+        :misconceptions ("Correct! \"Me llamo Carlos\" is the natural Spanish idiom." "Misconception: \"Tengo\" means \"I have\", used for age (e.g. Tengo 10 años)." "Misconception: \"Soy llamo\" incorrectly combines two verbs (I am I call)." "Misconception: \"Mi Carlos es\" is an incorrect literal English word-for-word word order.")
+    )
+    (:q :id "es-3" :prompt "In Spanish, why does the sentence \"Vivo en Londres\" NOT require the pronoun \"Yo\" (I) at the front?"
+        :options ("The verb ending \"-o\" already indicates that the subject is first person singular (\"I\")" "Pronouns are forbidden by the Spanish Royal Academy" "Spanish only allows questions to have subject pronouns" "\"Vivo\" is an adjective that describes London")
+        :answer 0
+        :tier "analysis"
+        :hint "Spanish is a \"pro-drop\" (null-subject) language where conjugated verb endings reveal who is performing the action."
+        :explanation "Spanish is a pro-drop language: verb conjugation endings (such as \"-o\" in \"vivo\") clearly signal the subject (\"I\"), so subject pronouns like \"yo\" are omitted unless used for emphasis."
+        :misconceptions ("Correct! The conjugated verb ending \"-o\" specifies the first-person subject." "Misconception: Pronouns are permitted for emphasis or contrast, never forbidden." "Misconception: Pronoun rules apply equally across statements and questions." "Misconception: \"Vivo\" is a conjugated verb (from vivir, to live), not an adjective.")
+    )
+  ))
+)
