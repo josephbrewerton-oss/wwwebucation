@@ -57,9 +57,11 @@ import {
 } from '../services/bslGlobalStore';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
 import { subscribeCustomSigns, initCustomSignsIntoLexicon } from '../services/customSignStore';
-import { 
-  initCodebookIntoLexicon, 
-  type CodebookSign 
+import {
+  initCodebookIntoLexicon,
+  type CodebookSign
+} from '../services/bslGlobalStore';
+
 export interface BslInterpreterOverlayProps {
   activeWord?: string;
   activeSubtitle?: string;
