@@ -1,0 +1,49 @@
+(:cartridge :type :data :id "oak-data-seasonal-changes" :title "Seasonal Changes & Earth Cycles" :stage "Key Stage 1" :subject "Science" :unit "Seasonal Changes"
+  (:axiom "Earth experiences four continuous seasons (Spring, Summer, Autumn, Winter) caused by its tilted orbit around the Sun, altering daylight hours and weather.")
+  (:trap "Thinking summer is warmer because Earth is physically closer to the Sun, or that trees die in winter rather than entering dormancy.")
+  (:socratic-pivot "Why do we wear warm woollen coats and see the sun set earlier in winter than in summer?")
+  (:hook "Noticing shadows growing long and leaves turning crimson gold in Autumn.")
+  (:guided-step "Observe changes in daylight duration, temperature, and tree foliage across the yearly cycle.")
+  (:questions (
+    (:q :id "sc-1" :prompt "Which season has the longest daylight hours and the warmest average weather in the United Kingdom?"
+        :options ("Summer" "Winter" "Spring" "Autumn")
+        :answer 0
+        :tier "recall"
+        :hint "Think about the season when schools have the long holiday and bedtime is still light outside."
+        :explanation "In Summer, the UK is tilted towards the Sun, giving us long daylight hours and more direct sunlight, making it the warmest season."
+        :misconceptions ("Correct! Summer brings the longest days and highest temperatures." "Misconception: Winter has the shortest daylight hours and coldest temperatures." "Misconception: Spring is warming up, but daylight is still shorter than Summer." "Misconception: Autumn daylight hours are decreasing.")
+    )
+    (:q :id "sc-2" :prompt "What happens to deciduous trees during Autumn in the UK?"
+        :options ("Their leaves change colour to red, orange, and brown before falling off" "They grow bright new green leaves and colourful flower blossoms" "They produce juicy ripe strawberries on their branches" "Their tree trunks shrink into the ground until springtime")
+        :answer 0
+        :tier "recall"
+        :hint "Think about kicking piles of crunchy leaves in the park in October."
+        :explanation "Deciduous trees lose their leaves in Autumn to conserve water and protect themselves against cold winter frost and storms."
+        :misconceptions ("Correct! Deciduous leaves change colour and fall in Autumn." "Misconception: Growing new leaves and blossoms happens in Spring." "Misconception: Strawberries are summer fruit that grow on small ground plants." "Misconception: Tree trunks remain standing tall throughout the year.")
+    )
+    (:q :id "sc-3" :prompt "How do daylight hours change as we move from Autumn into Winter?"
+        :options ("Daylight hours become shorter, so it gets dark earlier in the afternoon" "Daylight hours stay exactly 12 hours long every single day" "Daylight hours get longer, with bright sun shining until 9 o’clock at night" "The Sun stops rising completely for three whole months in England")
+        :answer 0
+        :tier "application"
+        :hint "Think about when streetlights turn on when walking home from school in December."
+        :explanation "As Winter approaches, the Northern Hemisphere tilts away from the Sun, making daylight hours steadily shorter and nights longer."
+        :misconceptions ("Correct! Days get shorter and nights get longer in Winter." "Misconception: Day length only balances at 12 hours during the Equinoxes in Spring and Autumn." "Misconception: Long evenings until 9pm happen in mid-Summer (around the Summer Solstice)." "Misconception: The Sun still rises every day in the UK in winter, although day length is short.")
+    )
+    (:q :id "sc-4" :prompt "What type of tree keeps its green needles all through the cold winter months?"
+        :options ("Evergreen tree" "Deciduous tree" "Dead tree" "Desert palm tree")
+        :answer 0
+        :tier "recall"
+        :hint "Think of a Christmas pine tree that stays green all year round."
+        :explanation "Evergreen trees (like pines and firs) have tough, waxy needles that survive freezing weather and stay green all year round."
+        :misconceptions ("Correct! Evergreen trees stay green through all four seasons." "Misconception: Deciduous trees shed their leaves completely in Autumn." "Misconception: Dormant winter trees are alive, not dead." "Misconception: Palm trees thrive in warm tropical climates.")
+    )
+    (:q :id "sc-5" :prompt "Which weather pattern is most typical of a British Winter?"
+        :options ("Cold temperatures, frost, snow, and icy morning puddles" "Hot sunny heatwaves with beach weather every day" "Warm gentle breezes with cherry blossom petals falling" "Tropical monsoon thunderstorms with humid 35°C heat")
+        :answer 0
+        :tier "recall"
+        :hint "Think of scraping frost off car windscreens and wearing gloves."
+        :explanation "Winter in the UK brings cold temperatures, freezing frost on grass, icy roads, and occasional snowfall due to low solar heating."
+        :misconceptions ("Correct! Cold temperatures, frost, and ice characterise British winter." "Misconception: Heatwaves occur during Summer." "Misconception: Cherry blossoms bloom in early Spring." "Misconception: Tropical monsoons happen in equatorial climates.")
+    )
+  ))
+)

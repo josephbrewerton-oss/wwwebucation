@@ -33,6 +33,15 @@ import {
   type CompressedCartridgeMetadata,
 } from '../utils/cartridgeCompression';
 import { PRESET_OPTIONS, type ScenePresetOption } from '../data/player/generatedScenes';
+import { BUILTIN_DATA_CARTRIDGES } from '../data/player/dataCartridges';
+import {
+  type DataCartridgeQuestion,
+  type DataCartridgePayload,
+  extractDataPayloadFromAst,
+  serializeDataCartridgeToAst,
+} from '../utils/astQuestionExtractor';
+
+export type { DataCartridgeQuestion, DataCartridgePayload };
 
 export interface CartridgeDefinition {
   id: string;
@@ -43,7 +52,7 @@ export interface CartridgeDefinition {
   subject?: string;
   category?: string;
   duration?: number;
-  type?: 'Sim' | 'Slide' | 'App' | 'Film';
+  type?: 'Sim' | 'Slide' | 'App' | 'Film' | 'Data';
   video?: string;
   videoFit?: 'contain' | 'cover' | 'fill';
   desc: string;
@@ -58,6 +67,7 @@ export interface CartridgeDefinition {
   astSource?: string;
   svgFile?: string;
   astFile?: string;
+  dataPayload?: DataCartridgePayload;
   author?: string;
   version?: string;
   invariants?: string[];
@@ -199,6 +209,29 @@ export const CARTRIDGE_ALIASES: Record<string, string> = {
   'start': 'welcome',
   'onboarding': 'welcome',
   'showcase': 'welcome',
+  'data-states': 'oak-data-states-of-matter',
+  'oak-data-states-of-matter': 'oak-data-states-of-matter',
+  'states-of-matter-data': 'oak-data-states-of-matter',
+  'data-fractions': 'oak-data-fractions-decimals',
+  'oak-data-fractions-decimals': 'oak-data-fractions-decimals',
+  'data-seasonal': 'oak-data-seasonal-changes',
+  'oak-data-seasonal-changes': 'oak-data-seasonal-changes',
+  'data-sacraments': 'oak-data-re-sacraments',
+  'oak-data-re-sacraments': 'oak-data-re-sacraments',
+  'data-algorithms': 'oak-data-algorithms-sequencing',
+  'oak-data-algorithms-sequencing': 'oak-data-algorithms-sequencing',
+  'data-phonics': 'oak-data-phonics-screening',
+  'oak-data-phonics-screening': 'oak-data-phonics-screening',
+  'data-circuits': 'oak-data-electric-circuits',
+  'oak-data-electric-circuits': 'oak-data-electric-circuits',
+  'data-angles': 'oak-data-angles-triangles',
+  'oak-data-angles-triangles': 'oak-data-angles-triangles',
+  'data-cells': 'oak-data-cell-biology',
+  'oak-data-cell-biology': 'oak-data-cell-biology',
+  'data-creed': 'oak-data-re-nicene-creed',
+  'oak-data-re-nicene-creed': 'oak-data-re-nicene-creed',
+  'data-spanish': 'oak-data-spanish-foundations',
+  'oak-data-spanish-foundations': 'oak-data-spanish-foundations',
 };
 
 // Built-in Core Curriculum Cartridge Catalog
@@ -304,10 +337,10 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
   {
     id: 'times-tables',
     type: 'Sim',
-    title: 'Times Tables Arrays & Distributive Splitter (12×12)',
+    title: 'Times Tables (1× to 12× Standard School Chart & Grid)',
     stage: 'KS1/KS2 MATHS',
     category: 'Mathematics',
-    desc: 'Visual 2D arrays, 90° commutative rotation, and mental arithmetic decomposition: 7 × 8 = (7 × 5) + (7 × 3) = 56.',
+    desc: 'Standard school 1 to 12 multiplication facts, 12×12 multiplication square, fact families, and commutative proofs.',
     icon: '📐',
     source: 'builtin',
     svgFile: 'cartridges/times-tables.svg',
@@ -840,6 +873,27 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     version: '2.6.0',
     invariants: ['Scriptural Contemplation', 'Marian Devotion', 'Ecclesiastical Latin Prayers'],
   },
+  // Modular Oak Curriculum Question Banks & Data Cartridges
+  ...BUILTIN_DATA_CARTRIDGES.map((d): CartridgeDefinition => ({
+    id: d.id,
+    type: 'Data',
+    title: d.title,
+    stage: d.stage,
+    subject: d.subject,
+    oakId: d.oakId,
+    oakUnit: d.oakUnit,
+    category: d.category,
+    desc: d.desc,
+    icon: d.icon,
+    source: 'builtin',
+    svgMarkup: d.svgMarkup,
+    astSource: d.astSource,
+    dataPayload: d.dataPayload,
+    isCore: true,
+    tier: 'core',
+    version: '2.6.0',
+    invariants: ['Modular Decentralized Data Cartridge', 'Zero LLM Heap Overhead', 'Sub-1ms Retrieval'],
+  })),
 ];
 
 // Fallback embedded SVG & AST for core cartridges when running completely air-gapped
@@ -1235,6 +1289,96 @@ export function getCartridge(idOrAlias: string): CartridgeDefinition | null {
 }
 
 /**
+ * Retrieves all registered Data Cartridges (Question Banks & Diagnostic Decks)
+ */
+export function getDataCartridges(): CartridgeDefinition[] {
+  return getAllCartridges().filter((c) => c.type === 'Data');
+}
+
+/**
+ * Finds a Data Cartridge by ID, alias, or matching stage/subject/unit coordinates
+ */
+export function getDataCartridge(idOrAlias: string): CartridgeDefinition | undefined {
+  if (!idOrAlias) return undefined;
+  const cart = getCartridge(idOrAlias);
+  if (cart && cart.type === 'Data') return cart;
+
+  // Fallback: match by unit or title
+  const clean = idOrAlias.toLowerCase().trim();
+  const allData = getDataCartridges();
+  return allData.find(
+    (c) =>
+      c.id.toLowerCase() === clean ||
+      (c.oakUnit && c.oakUnit.toLowerCase() === clean) ||
+      (c.dataPayload?.unit && c.dataPayload.unit.toLowerCase() === clean) ||
+      c.title.toLowerCase().includes(clean)
+  );
+}
+
+/**
+ * Resolves a Data Cartridge for given curriculum coordinates (stage, subject, unit)
+ */
+export function findDataCartridgeForTopic(stage?: string, subject?: string, unit?: string): CartridgeDefinition | undefined {
+  if (!unit && !subject) return undefined;
+  const cleanUnit = (unit || '').toLowerCase().trim();
+  const cleanSub = (subject || '').toLowerCase().trim();
+  const allData = getDataCartridges();
+
+  // 1. Direct unit or title match
+  const directMatch = allData.find((c) => {
+    const payloadUnit = (c.dataPayload?.unit || c.oakUnit || '').toLowerCase();
+    const title = c.title.toLowerCase();
+    const unitMatches = payloadUnit === cleanUnit || payloadUnit.includes(cleanUnit) || cleanUnit.includes(payloadUnit) || title.includes(cleanUnit);
+    if (!unitMatches) return false;
+    if (stage && c.stage && c.stage.toLowerCase() !== stage.toLowerCase()) {
+      const ksMatch = c.stage.match(/ks\s*([1-4])/i);
+      const targetKsMatch = stage.match(/ks\s*([1-4])/i);
+      if (ksMatch && targetKsMatch && ksMatch[1] !== targetKsMatch[1]) {
+        return false;
+      }
+    }
+    return true;
+  });
+  if (directMatch) return directMatch;
+
+  // 2. Significant keyword tokens match (e.g. "matter", "fractions", "circuits", "angles", "sacraments", "creed", "phonics", "spanish")
+  const stopWords = new Set(['and', '&', 'the', 'of', 'in', 'for', 'with', 'a', 'an']);
+  const unitTokens = cleanUnit.split(/[^a-z0-9]+/).filter((t) => t.length >= 3 && !stopWords.has(t));
+
+  if (unitTokens.length > 0) {
+    const tokenMatch = allData.find((c) => {
+      const corpus = `${c.title} ${c.oakUnit || ''} ${c.dataPayload?.unit || ''} ${c.id}`.toLowerCase();
+      const matchCount = unitTokens.filter((tok) => corpus.includes(tok)).length;
+      return matchCount >= Math.min(1, unitTokens.length);
+    });
+    if (tokenMatch) return tokenMatch;
+  }
+
+  // 3. Fallback: subject match if unit was ambiguous or general
+  if (cleanSub) {
+    return allData.find((c) => {
+      const cSub = (c.subject || c.dataPayload?.subject || '').toLowerCase();
+      return cSub === cleanSub || cSub.includes(cleanSub) || cleanSub.includes(cSub);
+    });
+  }
+
+  return undefined;
+}
+
+/**
+ * Exports a Data Cartridge's canonical AST S-Expression string
+ */
+export function exportDataCartridgeAsAst(cartridgeId: string): string | null {
+  const cart = getDataCartridge(cartridgeId);
+  if (!cart) return null;
+  if (cart.astSource) return cart.astSource;
+  if (cart.dataPayload) {
+    return serializeDataCartridgeToAst(cart.dataPayload, cart.id, cart.title);
+  }
+  return null;
+}
+
+/**
  * Saves or updates a cartridge to decentralized storage (IndexedDB Vault + RAM)
  */
 export function saveCustomCartridge(cartridge: CartridgeDefinition): void {
@@ -1433,20 +1577,31 @@ export async function importCartridgeFile(file: File): Promise<CartridgeDefiniti
   if (fileName.endsWith('.json')) {
     try {
       const data = JSON.parse(text);
-      if (data && data.id && (data.svgMarkup || data.astSource)) {
+      if (data && data.id && (data.svgMarkup || data.astSource || data.dataPayload || Array.isArray(data.questions))) {
+        const isData = data.type === 'Data' || Boolean(data.dataPayload) || Array.isArray(data.questions);
+        const dataPayload = data.dataPayload || (Array.isArray(data.questions) ? extractDataPayloadFromAst(text) : undefined);
+        const resolvedType: 'Sim' | 'Slide' | 'App' | 'Film' | 'Data' = isData ? 'Data' : (data.type || 'Sim');
+        const count = dataPayload?.questions?.length || 0;
+        const defaultSvg = isData
+          ? `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="data-imported-json" cx="50%" cy="40%" r="65%"><stop offset="0%" stop-color="#1e293b"/><stop offset="100%" stop-color="#090d16"/></radialGradient></defs><rect width="800" height="480" fill="url(#data-imported-json)" rx="16"/><rect x="40" y="40" width="720" height="400" rx="12" fill="#0f172a" fill-opacity="0.85" stroke="#0284c7" stroke-width="2" stroke-dasharray="6,4"/><circle cx="400" cy="140" r="50" fill="#0284c7" fill-opacity="0.2" stroke="#38bdf8" stroke-width="3"/><text x="400" y="156" font-size="42" text-anchor="middle">📊</text><text x="400" y="235" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle">${data.title || data.id}</text><text x="400" y="270" fill="#38bdf8" font-size="13" font-weight="800" text-anchor="middle" letter-spacing="2">${(data.stage || 'CURRICULUM').toUpperCase()} • ${(data.subject || 'DATA DECK').toUpperCase()}</text><rect x="260" y="300" width="280" height="38" rx="19" fill="#0284c7"/><text x="400" y="324" fill="#ffffff" font-size="13" font-weight="900" text-anchor="middle" letter-spacing="1">📊 ${count} DIAGNOSTIC QUESTIONS</text><text x="400" y="375" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">⚡ Zero-Latency Modular Data Deck • Mounts Instantly in Practice Lab</text></svg>`
+          : '';
+
         const cart: CartridgeDefinition = {
           id: data.id,
           title: data.title || data.id,
-          stage: data.stage || 'CUSTOM CARTRIDGE',
-          category: data.category || 'General',
-          desc: data.desc || 'Imported decentralized cartridge package.',
-          icon: data.icon || '📦',
+          stage: data.stage || (isData ? 'CURRICULUM DECK' : 'CUSTOM CARTRIDGE'),
+          subject: data.subject || dataPayload?.subject,
+          category: data.category || (isData ? (dataPayload?.subject || 'Curriculum Data') : 'General'),
+          type: resolvedType,
+          dataPayload: dataPayload || undefined,
+          desc: data.desc || (isData ? `Decentralized question bank with ${count} questions.` : 'Imported decentralized cartridge package.'),
+          icon: data.icon || (isData ? '📊' : '📦'),
           source: data.source || 'user',
-          svgMarkup: data.svgMarkup || '',
-          astSource: data.astSource || '',
+          svgMarkup: data.svgMarkup || defaultSvg,
+          astSource: data.astSource || (isData && dataPayload ? serializeDataCartridgeToAst(dataPayload, data.id, data.title || data.id) : ''),
           author: data.author || 'Educator',
           version: data.version || '1.0.0',
-          invariants: data.invariants || [],
+          invariants: data.invariants || (isData ? ['Modular Decentralized Data Cartridge', 'Zero LLM Heap Overhead'] : []),
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -1459,19 +1614,25 @@ export async function importCartridgeFile(file: File): Promise<CartridgeDefiniti
   // 4. Living AST.SVG Capsule or SVG file
   if (fileName.endsWith('.svg') || fileName.endsWith('.ast.svg')) {
     const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const astMatch = text.match(/<metadata[^>]*data-ast=["']([\s\S]*?)["']/i) || text.match(/\(:scene[\s\S]*?\)/);
+    const astMatch = text.match(/<metadata[^>]*data-ast=["']([\s\S]*?)["']/i) || text.match(/\(:scene[\s\S]*?\)/) || text.match(/\(:cartridge[\s\S]*?\)/);
     const cleanId = file.name.replace(/\.(ast\.)?svg$/i, '').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
+
+    const decodedAst = astMatch ? (astMatch[1] ? decodeURIComponent(astMatch[1]) : astMatch[0]) : '';
+    const isData = decodedAst.includes(':type :data') || decodedAst.includes(':type "Data"') || decodedAst.includes(':questions');
+    const dataPayload = isData ? extractDataPayloadFromAst(decodedAst) : undefined;
 
     const cart: CartridgeDefinition = {
       id: cleanId,
       title: titleMatch ? titleMatch[1] : cleanId,
       stage: 'VECTOR CAPSULE',
-      category: 'Mathematics',
-      desc: 'Imported living vector cartridge capsule.',
-      icon: '🎨',
+      type: isData ? 'Data' : 'Sim',
+      dataPayload: dataPayload || undefined,
+      category: isData ? (dataPayload?.subject || 'Curriculum Data') : 'Mathematics',
+      desc: isData ? `Imported living data capsule (${dataPayload?.questions.length || 0} questions).` : 'Imported living vector cartridge capsule.',
+      icon: isData ? '📊' : '🎨',
       source: 'imported',
       svgMarkup: text,
-      astSource: astMatch ? (astMatch[1] ? decodeURIComponent(astMatch[1]) : astMatch[0]) : `(:scene :id "${cleanId}" :title "${cleanId}")`,
+      astSource: decodedAst || `(:scene :id "${cleanId}" :title "${cleanId}")`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -1480,27 +1641,43 @@ export async function importCartridgeFile(file: File): Promise<CartridgeDefiniti
   }
 
   // 5. Raw AST S-Expression file (.ast)
-  if (fileName.endsWith('.ast') || text.trim().startsWith('(:scene') || text.trim().startsWith('(')) {
+  if (fileName.endsWith('.ast') || text.trim().startsWith('(:scene') || text.trim().startsWith('(:cartridge') || text.trim().startsWith('(')) {
     const cleanId = file.name.replace(/\.ast$/i, '').replace(/[^a-z0-9_-]/gi, '-').toLowerCase();
     const titleMatch = text.match(/:title\s+"([^"]+)"/i);
     const stageMatch = text.match(/:stage\s+"([^"]+)"/i);
-    const typeMatch = text.match(/:type\s+"(Sim|Slide|App|Film)"/i);
+    const subjectMatch = text.match(/:subject\s+"([^"]+)"/i);
+    const typeMatch = text.match(/:type\s+("Sim"|"Slide"|"App"|"Film"|"Data"|:data|:sim|:slide|:app|:film)/i);
     const videoMatch = text.match(/:video\s+"([^"]+)"/i) || text.match(/:film\s+"([^"]+)"/i);
     const videoFitMatch = text.match(/:video-?fit\s+"([^"]+)"/i);
-    const resolvedType: 'Sim' | 'Slide' | 'App' | 'Film' = (typeMatch?.[1] as any) || (videoMatch ? 'Film' : 'Sim');
+    
+    const isData = (typeMatch && /data/i.test(typeMatch[1])) || text.includes(':questions') || text.includes(':type :data');
+    const resolvedType: 'Sim' | 'Slide' | 'App' | 'Film' | 'Data' = isData
+      ? 'Data'
+      : (typeMatch?.[1] as any) || (videoMatch ? 'Film' : 'Sim');
+
+    const dataPayload = isData ? extractDataPayloadFromAst(text) : undefined;
+    const qCount = dataPayload?.questions?.length || 0;
 
     const cart: CartridgeDefinition = {
       id: cleanId,
       title: titleMatch ? titleMatch[1] : cleanId,
-      stage: stageMatch ? stageMatch[1] : 'CURRICULUM',
+      stage: stageMatch ? stageMatch[1] : (dataPayload?.stage || 'CURRICULUM'),
+      subject: subjectMatch ? subjectMatch[1] : dataPayload?.subject,
       type: resolvedType,
+      dataPayload: dataPayload || undefined,
       video: videoMatch ? videoMatch[1] : undefined,
       videoFit: (videoFitMatch ? videoFitMatch[1] : 'contain') as any,
-      category: resolvedType === 'Film' ? 'Educational Film' : 'Mathematics',
-      desc: resolvedType === 'Film' ? 'Synchronized educational film with interactive vector stage overlays.' : 'Imported declarative AST vector logic cartridge.',
-      icon: resolvedType === 'Film' ? '🎬' : '📜',
+      category: resolvedType === 'Film' ? 'Educational Film' : isData ? (dataPayload?.subject || 'Curriculum Data') : 'Mathematics',
+      desc: resolvedType === 'Film'
+        ? 'Synchronized educational film with interactive vector stage overlays.'
+        : isData
+        ? `Decentralized question bank cartridge with ${qCount} curriculum questions.`
+        : 'Imported declarative AST vector logic cartridge.',
+      icon: resolvedType === 'Film' ? '🎬' : isData ? '📊' : '📜',
       source: 'imported',
-      svgMarkup: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16" fill-opacity="${resolvedType === 'Film' ? '0' : '1'}"/><text x="400" y="240" fill="#38bdf8" font-size="20" font-weight="800" text-anchor="middle">${cleanId}</text></svg>`,
+      svgMarkup: isData
+        ? `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="data-imported-ast" cx="50%" cy="40%" r="65%"><stop offset="0%" stop-color="#1e293b"/><stop offset="100%" stop-color="#090d16"/></radialGradient></defs><rect width="800" height="480" fill="url(#data-imported-ast)" rx="16"/><rect x="40" y="40" width="720" height="400" rx="12" fill="#0f172a" fill-opacity="0.85" stroke="#0284c7" stroke-width="2" stroke-dasharray="6,4"/><circle cx="400" cy="140" r="50" fill="#0284c7" fill-opacity="0.2" stroke="#38bdf8" stroke-width="3"/><text x="400" y="156" font-size="42" text-anchor="middle">📊</text><text x="400" y="235" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle">${titleMatch ? titleMatch[1] : cleanId}</text><text x="400" y="270" fill="#38bdf8" font-size="13" font-weight="800" text-anchor="middle" letter-spacing="2">${(stageMatch ? stageMatch[1] : (dataPayload?.stage || 'CURRICULUM')).toUpperCase()} • ${(subjectMatch ? subjectMatch[1] : (dataPayload?.subject || 'DATA DECK')).toUpperCase()}</text><rect x="260" y="300" width="280" height="38" rx="19" fill="#0284c7"/><text x="400" y="324" fill="#ffffff" font-size="13" font-weight="900" text-anchor="middle" letter-spacing="1">📊 ${qCount} DIAGNOSTIC QUESTIONS</text><text x="400" y="375" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="middle">⚡ Zero-Latency Modular Data Deck • Mounts Instantly in Practice Lab</text></svg>`
+        : `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16" fill-opacity="${resolvedType === 'Film' ? '0' : '1'}"/><text x="400" y="240" fill="#38bdf8" font-size="20" font-weight="800" text-anchor="middle">${cleanId}</text></svg>`,
       astSource: text,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -1521,6 +1698,8 @@ export function createCustomCartridge(input: {
   stage: string;
   desc?: string;
   icon?: string;
+  type?: 'Sim' | 'Slide' | 'App' | 'Film' | 'Data';
+  dataPayload?: DataCartridgePayload;
   svgMarkup?: string;
   astSource?: string;
 }): CartridgeDefinition {
@@ -1529,7 +1708,12 @@ export function createCustomCartridge(input: {
     .replace(/[^a-z0-9_-]+/g, '-')
     .replace(/^-|-$/g, '') || `cartridge-${Date.now().toString(36)}`;
 
-  const defaultSvg = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+  const isData = input.type === 'Data' || Boolean(input.dataPayload);
+  const resolvedType = isData ? 'Data' : (input.type || 'Sim');
+
+  const defaultSvg = isData
+    ? `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><defs><radialGradient id="data-custom" cx="50%" cy="40%" r="65%"><stop offset="0%" stop-color="#1e293b"/><stop offset="100%" stop-color="#090d16"/></radialGradient></defs><rect width="800" height="480" fill="url(#data-custom)" rx="16"/><text x="400" y="220" fill="#38bdf8" font-size="24" font-weight="900" text-anchor="middle">${input.title}</text><text x="400" y="260" fill="#f8fafc" font-size="14" font-weight="700" text-anchor="middle">📊 ${input.dataPayload?.questions.length || 0} QUESTIONS</text></svg>`
+    : `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <radialGradient id="custom-glow" cx="50%" cy="50%" r="60%">
       <stop offset="0%" stop-color="#1e293b" />
@@ -1544,7 +1728,9 @@ export function createCustomCartridge(input: {
   </g>
 </svg>`;
 
-  const defaultAst = `(:scene :id "${cleanId}" :title "${input.title}" :stage "${input.stage}" :duration 12.0
+  const defaultAst = isData && input.dataPayload
+    ? serializeDataCartridgeToAst(input.dataPayload, cleanId, input.title)
+    : `(:scene :id "${cleanId}" :title "${input.title}" :stage "${input.stage}" :duration 12.0
   (:vars (
     (:var :name "magnitude" :val 5 :min 1 :max 10 :step 1 :label "Magnitude")
   ))
@@ -1568,9 +1754,11 @@ export function createCustomCartridge(input: {
     id: cleanId,
     title: input.title,
     stage: input.stage || 'CUSTOM APPARATUS',
-    category: input.category || 'General',
-    desc: input.desc || 'Custom authored decentralized vector cartridge.',
-    icon: input.icon || '📐',
+    category: input.category || (isData ? 'Curriculum Data' : 'General'),
+    type: resolvedType,
+    dataPayload: input.dataPayload,
+    desc: input.desc || (isData ? 'Custom authored decentralized question bank cartridge.' : 'Custom authored decentralized vector cartridge.'),
+    icon: input.icon || (isData ? '📊' : '📐'),
     source: 'user',
     svgMarkup: input.svgMarkup || defaultSvg,
     astSource: input.astSource || defaultAst,

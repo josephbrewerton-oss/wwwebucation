@@ -16,11 +16,24 @@ import {
   serializeDatasetToCartridge,
   parseCartridgeToDataset,
 } from '../src/utils/astCartridgeSerializer';
+import { BUILTIN_DATA_CARTRIDGES } from '../src/data/player/dataCartridges';
 
 const CARTRIDGES_DIR = path.resolve(process.cwd(), 'static/cartridges');
 
 if (!fs.existsSync(CARTRIDGES_DIR)) {
   fs.mkdirSync(CARTRIDGES_DIR, { recursive: true });
+}
+
+// 0. Materialize built-in Oak Data Cartridges into static/cartridges
+for (const cart of BUILTIN_DATA_CARTRIDGES) {
+  const astPath = path.join(CARTRIDGES_DIR, `${cart.id}.ast`);
+  const svgPath = path.join(CARTRIDGES_DIR, `${cart.id}.svg`);
+  if (!fs.existsSync(astPath) && cart.astSource) {
+    fs.writeFileSync(astPath, cart.astSource, 'utf-8');
+  }
+  if (!fs.existsSync(svgPath) && cart.svgMarkup) {
+    fs.writeFileSync(svgPath, cart.svgMarkup, 'utf-8');
+  }
 }
 
 console.log('⚡ =========================================================================');

@@ -24,7 +24,9 @@ function astSceneAutoFinder(): import('vite').Plugin {
       if (clean === 'sim' || clean === 'simulation' || clean === 'interactive') return 'Sim';
       if (clean === 'slide' || clean === 'slides' || clean === 'presentation') return 'Slide';
       if (clean === 'app' || clean === 'application' || clean === 'tool' || clean === 'lab') return 'App';
+      if (clean === 'data' || clean === 'question' || clean === 'deck' || clean === 'quiz' || clean === 'dataset') return 'Data';
     }
+    if (id.startsWith('oak-data-') || id.includes('-data-')) return 'Data';
     if (['phonics-lab', 'languages', 'fish-tank'].includes(id)) return 'App';
     if (['church-tour', 'photosynthesis', 'water-cycle', 'dna-helix', 'shakespeare', 'fractions', 'times-tables', 'bodmas'].includes(id)) return 'Slide';
     return 'Sim';

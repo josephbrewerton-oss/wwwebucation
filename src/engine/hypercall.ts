@@ -17,6 +17,7 @@ import { extractQuestionFromAst, stripPromptDecorators } from '../utils/astQuest
 import { PRNG } from './prng';
 import { MindSpaceEngine } from './mindSpaceEngine';
 import { LessonSequencer, PedagogicalStage } from './lessonSequencer';
+import { findDataCartridgeForTopic, getDataCartridge, type CartridgeDefinition } from '../services/cartridgeStore';
 
 export interface HyperMessage<T = any> {
   intent: string;
@@ -397,6 +398,100 @@ const AST_NODE_MAP = new Map<string, { execute: (intent: string, payload: any) =
               } catch {}
             }
             return mathCandidate;
+          }
+
+          // 1b. Fast-Path for Modular AST Data Cartridges (< 1ms, zero-cloud, 100% curriculum verified)
+          const requestedCartId = payload?.cartridgeId || payload?.deckId;
+          const dataCart: CartridgeDefinition | undefined = requestedCartId
+            ? (getDataCartridge(requestedCartId) || findDataCartridgeForTopic(stage, subject, topic))
+            : findDataCartridgeForTopic(stage, subject, topic);
+
+          if (dataCart && dataCart.dataPayload && dataCart.dataPayload.questions?.length > 0) {
+            const dp = dataCart.dataPayload;
+            const qList = dp.questions;
+            let chosenQIndex = 0;
+            if (typeof payload?.deckQuestionIndex === 'number' && payload.deckQuestionIndex >= 0 && payload.deckQuestionIndex < qList.length) {
+              chosenQIndex = payload.deckQuestionIndex;
+            } else if (payload?.forceVariation && excludePrompt) {
+              const cleanExclude = stripPromptDecorators(excludePrompt).toLowerCase();
+              const eligible = qList
+                .map((q, idx) => ({ q, idx }))
+                .filter((item) => stripPromptDecorators(item.q.prompt).toLowerCase() !== cleanExclude);
+              if (eligible.length > 0) {
+                const pick = prng.nextInt(0, eligible.length - 1);
+                chosenQIndex = eligible[pick].idx;
+              } else {
+                chosenQIndex = prng.nextInt(0, qList.length - 1);
+              }
+            } else {
+              chosenQIndex = prng.nextInt(0, qList.length - 1);
+            }
+
+            const chosenQ = qList[chosenQIndex] || qList[0];
+            const rawKey = typeof chosenQ.answer === 'number' ? chosenQ.answer : 0;
+            const rawMiscs =
+              chosenQ.misconceptions && chosenQ.misconceptions.length === chosenQ.options.length
+                ? chosenQ.misconceptions
+                : chosenQ.options.map((_, idx) =>
+                    idx === rawKey
+                      ? 'Correct! Accurately applies foundational curriculum rules.'
+                      : `Common trap: ${dp.trap || 'Confuses foundational properties.'}`
+                  );
+
+            let cartCandidate = {
+              id: chosenQ.id || `${dataCart.id}_${chosenQIndex + 1}`,
+              seedToken: activeSeedToken,
+              urn: `urn:cartridge:${dataCart.id}:${chosenQ.id || chosenQIndex + 1}`,
+              csn: dataCart.oakId || `CSN-${(stage || 'KS').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3)}-CART`,
+              routeEngine: 'data_cartridge',
+              cartridgeId: dataCart.id,
+              cartridgeTitle: dataCart.title,
+              deckQuestionIndex: chosenQIndex,
+              totalDeckQuestions: qList.length,
+              tier: chosenQ.tier || 'application',
+              pedagogicalStage: 'PRACTICE' as PedagogicalStage,
+              stageBadge: `📦 ${dataCart.stage || stage} • ${dataCart.subject || subject}`,
+              stepLabel: dataCart.title,
+              pedagogicalIntent: `Modular AST Data Cartridge: ${dataCart.title} (Question ${chosenQIndex + 1} of ${qList.length})`,
+              axiom: dp.axiom || `Core curriculum rule established in ${dataCart.title}.`,
+              trap: dp.trap || `Common misconception regarding ${dp.unit}.`,
+              hook: dp.hook || `Real-world inquiry into ${dp.unit}.`,
+              guidedStep: dp.guidedStep || `Examine the core components of ${dp.unit}.`,
+              prompt: chosenQ.prompt,
+              options: [...chosenQ.options],
+              answerKey: rawKey,
+              hint: chosenQ.hint || 'Focus on foundational concepts.',
+              explanation: chosenQ.explanation || dp.axiom || 'Review the core definition.',
+              misconceptions: rawMiscs,
+              socraticFollowUp: dp.socraticPivot || `Can you identify the defining feature of ${dp.unit}?`,
+              difficulty,
+              scratchpad: '',
+            };
+
+            if (lang && lang !== 'en') {
+              try {
+                const translated = await translateQuestionData(
+                  {
+                    prompt: cartCandidate.prompt,
+                    displayOptions: cartCandidate.options,
+                    hint: cartCandidate.hint,
+                    explanation: cartCandidate.explanation,
+                    misconceptions: cartCandidate.misconceptions,
+                  },
+                  lang
+                );
+                cartCandidate = {
+                  ...cartCandidate,
+                  prompt: translated.prompt,
+                  options: translated.displayOptions,
+                  hint: translated.hint,
+                  explanation: translated.explanation,
+                  misconceptions: translated.misconceptions || cartCandidate.misconceptions,
+                };
+              } catch {}
+            }
+
+            return cartCandidate;
           }
 
           // 2. Query deterministic Curriculum Route Mesh for Verified Questions & Invariants

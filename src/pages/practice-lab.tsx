@@ -13,6 +13,7 @@ import { dispatch } from '../engine/hypercall';
 import { hypervisor } from '../engine/hypervisor';
 
 import { ALL_CURRICULUM_ROUTES } from '../curriculum/curriculumMesh';
+import { getDataCartridge, getCartridge } from '../services/cartridgeStore';
 
 // Known AST and topic shortcode mappings to curriculum coordinates
 const TOPIC_ALIAS_MAP: Record<string, { stage: string; subject: string; unit: string }> = {
@@ -62,6 +63,19 @@ function getInitialPracticeSelection(): { stage: string; subject: string; unit: 
   const urlSub = searchParams.get('sub');
   const urlUnit = searchParams.get('unit');
   const urlTopic = searchParams.get('topic');
+  const urlDeck = searchParams.get('deck') || searchParams.get('cartridge');
+
+  // 0. Explicit Data Cartridge or Question Deck (?deck=... or ?cartridge=...)
+  if (urlDeck) {
+    const dataCart = getDataCartridge(urlDeck) || getCartridge(urlDeck);
+    if (dataCart && dataCart.dataPayload) {
+      return {
+        stage: dataCart.dataPayload.stage || dataCart.stage,
+        subject: dataCart.dataPayload.subject || dataCart.subject || 'Science',
+        unit: dataCart.dataPayload.unit || dataCart.oakUnit || dataCart.title,
+      };
+    }
+  }
 
   // 1. Explicit query parameters (e.g. ?ks=...&sub=...&unit=...)
   if (urlKs || urlSub || urlUnit) {
@@ -165,6 +179,17 @@ export default function PracticeLabPage() {
       const urlSub = searchParams.get('sub');
       const urlUnit = searchParams.get('unit');
       const urlTopic = searchParams.get('topic');
+      const urlDeck = searchParams.get('deck') || searchParams.get('cartridge');
+
+      if (urlDeck) {
+        const dataCart = getDataCartridge(urlDeck) || getCartridge(urlDeck);
+        if (dataCart && dataCart.dataPayload) {
+          setActiveStage(dataCart.dataPayload.stage || dataCart.stage);
+          setActiveSubject(dataCart.dataPayload.subject || dataCart.subject || 'Science');
+          setActiveUnit(dataCart.dataPayload.unit || dataCart.oakUnit || dataCart.title);
+          return;
+        }
+      }
 
       if (urlKs || urlSub || urlUnit) {
         if (urlKs && urlKs !== activeStage) setActiveStage(urlKs);
@@ -497,6 +522,7 @@ export default function PracticeLabPage() {
                 initialKeyStage={activeStage}
                 initialSubject={activeSubject}
                 initialUnit={activeUnit}
+                initialCartridgeId={typeof window !== 'undefined' ? (new URLSearchParams(location?.search || window.location.search).get('deck') || new URLSearchParams(location?.search || window.location.search).get('cartridge') || undefined) : undefined}
                 onTopicChange={(stage, sub, unit) => {
                   if (stage) setActiveStage(stage);
                   if (sub) setActiveSubject(sub);

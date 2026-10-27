@@ -272,7 +272,7 @@ export default function Home() {
                     <option value="pythagoras" style={{ background: '#0f172a', color: '#f8fafc' }}>📐 Pythagoras' Theorem (a² + b² = c²)</option>
                     <option value="fractions" style={{ background: '#0f172a', color: '#f8fafc' }}>🍰 Fractions: Common Denominators</option>
                     <option value="algebra-balance" style={{ background: '#0f172a', color: '#f8fafc' }}>⚖️ Algebraic Balance Scale</option>
-                    <option value="times-tables" style={{ background: '#0f172a', color: '#f8fafc' }}>🔢 Times Tables 2D Grid Splitter</option>
+                    <option value="times-tables" style={{ background: '#0f172a', color: '#f8fafc' }}>🔢 Times Tables (1 to 12× School Chart &amp; Grid)</option>
                     <option value="calculus-curves" style={{ background: '#0f172a', color: '#f8fafc' }}>📈 Calculus: Tangent Slopes &amp; Derivatives</option>
                     <option value="bodmas" style={{ background: '#0f172a', color: '#f8fafc' }}>⚡ BODMAS / BIDMAS Forcefield</option>
                     <option value="math-fishing" style={{ background: '#0f172a', color: '#f8fafc' }}>🎣 Math Pond: Number Bonds to 20</option>

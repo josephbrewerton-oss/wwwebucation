@@ -25,7 +25,15 @@ import {
   triggerMasteryConfetti,
 } from '../utils/confetti';
 import { openPlayerModal, resolvePresetForTopic } from '../services/playerLauncher';
-import { stripPromptDecorators } from '../utils/astQuestionExtractor';
+import { stripPromptDecorators, extractDataPayloadFromAst } from '../utils/astQuestionExtractor';
+import {
+  getDataCartridges,
+  getDataCartridge,
+  findDataCartridgeForTopic,
+  exportDataCartridgeAsAst,
+  saveCustomCartridge,
+  type CartridgeDefinition,
+} from '../services/cartridgeStore';
 
 const AstVectorMediaPlayer = React.lazy(() => import('./AstVectorMediaPlayer'));
 
@@ -33,6 +41,7 @@ interface NeuralLabCanvasProps {
   initialKeyStage?: string;
   initialSubject?: string;
   initialUnit?: string;
+  initialCartridgeId?: string;
   onTopicChange?: (keyStage: string, subject: string, unit: string) => void;
 }
 
@@ -40,6 +49,7 @@ export default function NeuralLabCanvas({
   initialKeyStage,
   initialSubject,
   initialUnit,
+  initialCartridgeId,
   onTopicChange,
 }: NeuralLabCanvasProps) {
   const [curriculumSetting, setCurriculumSetting] = useState<string>(() => {
@@ -51,7 +61,13 @@ export default function NeuralLabCanvas({
   const [selectedUnit, setSelectedUnit] = useState(() => initialUnit || (typeof window !== 'undefined' ? localStorage.getItem('stj_active_unit') : null) || 'Seasonal Changes');
   const [selectedLesson, setSelectedLesson] = useState('');
   const [sessionId, setSessionId] = useState('Lesson 1');
-  const [questionMode, setQuestionMode] = useState<'stage' | 'card'>('stage');
+  const [questionMode, setQuestionMode] = useState<'card' | 'stage'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('practice_question_mode');
+      if (saved === 'card' || saved === 'stage') return saved;
+    }
+    return 'card';
+  });
 
   const [activeLang, setActiveLang] = useState<string>(() => {
     return typeof window !== 'undefined' ? getSavedLanguage() : 'en';
@@ -73,7 +89,71 @@ export default function NeuralLabCanvas({
     return 'challenger';
   });
   const [hasConsent, setHasConsent] = useState(false);
-  const [showCanvasTopology, setShowCanvasTopology] = useState(true);
+  const [showCanvasTopology, setShowCanvasTopology] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('practice_show_topology') === 'true';
+    }
+    return false;
+  });
+
+  const handleSetQuestionMode = (mode: 'card' | 'stage') => {
+    setQuestionMode(mode);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('practice_question_mode', mode);
+    }
+  };
+
+  const handleToggleCanvasTopology = () => {
+    setShowCanvasTopology((prev) => {
+      const next = !prev;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('practice_show_topology', String(next));
+      }
+      return next;
+    });
+  };
+
+  // Modular Data Cartridges State (Question Banks & Diagnostic Decks)
+  const [dataCartridgesList, setDataCartridgesList] = useState<CartridgeDefinition[]>(() => getDataCartridges());
+  const [mountedDataCartridge, setMountedDataCartridge] = useState<CartridgeDefinition | null>(() => {
+    if (initialCartridgeId) {
+      const direct = getDataCartridge(initialCartridgeId);
+      if (direct && direct.dataPayload) return direct;
+    }
+    if (initialUnit) {
+      const match = findDataCartridgeForTopic(initialKeyStage, initialSubject, initialUnit);
+      if (match && match.dataPayload) return match;
+    }
+    return null;
+  });
+  const [activeDeckQuestionIndex, setActiveDeckQuestionIndex] = useState(0);
+  const [isCartridgeModalOpen, setIsCartridgeModalOpen] = useState(false);
+  const [cartridgeFilterSubject, setCartridgeFilterSubject] = useState('All');
+  const [cartridgeToast, setCartridgeToast] = useState<string | null>(null);
+
+  // Synchronize mountedDataCartridge whenever selection coordinates change
+  useEffect(() => {
+    const matched = findDataCartridgeForTopic(selectedKeyStage, selectedSubject, selectedUnit);
+    if (matched && matched.dataPayload) {
+      setMountedDataCartridge(matched);
+      setActiveDeckQuestionIndex(0);
+    } else {
+      setMountedDataCartridge(null);
+      setActiveDeckQuestionIndex(0);
+    }
+  }, [selectedKeyStage, selectedSubject, selectedUnit]);
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setDataCartridgesList(getDataCartridges());
+    };
+    window.addEventListener('cartridges_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('cartridges_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, []);
 
   // Hypervisor Host Supervisor State & Metrics
   const [vmState, setVmState] = useState<GuestVMState>(() => hypervisor.getState());
@@ -123,6 +203,11 @@ export default function NeuralLabCanvas({
     urn?: string;
     csn?: string;
     routeEngine?: string;
+    cartridgeId?: string;
+    cartridgeTitle?: string;
+    deckQuestionIndex?: number;
+    totalDeckQuestions?: number;
+    tier?: string;
     axiom?: string;
     trap?: string;
   } | null>(null);
@@ -220,11 +305,20 @@ export default function NeuralLabCanvas({
       recentPromptsRef.current = [pTrimmed, ...recentPromptsRef.current.filter((p) => p !== pTrimmed)].slice(0, 15);
     }
 
+    if (typeof question.deckQuestionIndex === 'number') {
+      setActiveDeckQuestionIndex(question.deckQuestionIndex);
+    }
+
     setActiveQuestion({
       id: question.id || `q_${Date.now()}`,
       urn: question.urn,
       csn: question.csn,
       routeEngine: question.routeEngine,
+      cartridgeId: question.cartridgeId,
+      cartridgeTitle: question.cartridgeTitle,
+      deckQuestionIndex: question.deckQuestionIndex,
+      totalDeckQuestions: question.totalDeckQuestions,
+      tier: question.tier,
       axiom: question.axiom,
       trap: question.trap,
       seedToken: question.seedToken || payload.seedToken || '',
@@ -255,7 +349,9 @@ export default function NeuralLabCanvas({
     targetLang = activeLang,
     forceVariation = false,
     customSeed?: string,
-    lessonTitle = activeSelectionRef.current.lesson
+    lessonTitle = activeSelectionRef.current.lesson,
+    targetDeckIndex?: number,
+    targetCartridgeId?: string
   ) => {
     const requestId = ++activeRequestIdRef.current;
     setIsGenerating(true);
@@ -288,6 +384,8 @@ export default function NeuralLabCanvas({
           excludePrompt: currentPrompt,
           seed: seedToUse,
           nonce: Math.floor(Math.random() * 1000000),
+          cartridgeId: targetCartridgeId || mountedDataCartridge?.id,
+          deckQuestionIndex: targetDeckIndex,
         },
       });
 
@@ -454,6 +552,122 @@ export default function NeuralLabCanvas({
       localStorage.setItem('preferred_difficulty', newDiff);
     }
     requestQuestion(selectedKeyStage, selectedSubject, selectedUnit, newDiff, activeLang, false, undefined, selectedLesson);
+  };
+
+  const handleJumpToDeckQuestion = (idx: number) => {
+    if (!mountedDataCartridge) return;
+    setActiveDeckQuestionIndex(idx);
+    requestQuestion(
+      selectedKeyStage,
+      selectedSubject,
+      selectedUnit,
+      difficulty,
+      activeLang,
+      false,
+      undefined,
+      selectedLesson,
+      idx,
+      mountedDataCartridge.id
+    );
+  };
+
+  const handleNextDeckQuestion = () => {
+    if (!mountedDataCartridge || !mountedDataCartridge.dataPayload) {
+      requestQuestion(selectedKeyStage, selectedSubject, selectedUnit, difficulty, activeLang, true);
+      return;
+    }
+    const total = mountedDataCartridge.dataPayload.questions.length;
+    const nextIdx = (activeDeckQuestionIndex + 1) % total;
+    handleJumpToDeckQuestion(nextIdx);
+  };
+
+  const handlePrevDeckQuestion = () => {
+    if (!mountedDataCartridge || !mountedDataCartridge.dataPayload) return;
+    const total = mountedDataCartridge.dataPayload.questions.length;
+    const prevIdx = (activeDeckQuestionIndex - 1 + total) % total;
+    handleJumpToDeckQuestion(prevIdx);
+  };
+
+  const handleMountCartridge = (cart: CartridgeDefinition) => {
+    setMountedDataCartridge(cart);
+    setActiveDeckQuestionIndex(0);
+    const stage = cart.dataPayload?.stage || cart.stage || selectedKeyStage;
+    const sub = cart.dataPayload?.subject || cart.subject || selectedSubject;
+    const unit = cart.dataPayload?.unit || cart.oakUnit || cart.title;
+
+    setSelectedKeyStage(stage);
+    setSelectedSubject(sub);
+    setSelectedUnit(unit);
+    setSelectedLesson('');
+    onTopicChange?.(stage, sub, unit);
+    setIsCartridgeModalOpen(false);
+
+    requestQuestion(
+      stage,
+      sub,
+      unit,
+      difficulty,
+      activeLang,
+      false,
+      undefined,
+      '',
+      0,
+      cart.id
+    );
+    setCartridgeToast(`Mounted ${cart.title}!`);
+    setTimeout(() => setCartridgeToast(null), 3000);
+  };
+
+  const handleExportCartridge = (cartId?: string) => {
+    const id = cartId || mountedDataCartridge?.id;
+    if (!id) return;
+    const ast = exportDataCartridgeAsAst(id);
+    if (!ast) return;
+    const blob = new Blob([ast], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${id}.ast`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setCartridgeToast(`Exported ${id}.ast`);
+    setTimeout(() => setCartridgeToast(null), 3000);
+  };
+
+  const handleImportCustomCartridge = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (!text) return;
+      const payload = extractDataPayloadFromAst(text);
+      if (payload && payload.questions.length > 0) {
+        const customId = `user-cart-${Date.now()}`;
+        const newCart: CartridgeDefinition = {
+          id: customId,
+          title: `${payload.unit} (Custom Deck)`,
+          stage: payload.stage,
+          subject: payload.subject,
+          oakUnit: payload.unit,
+          category: payload.subject || 'Custom',
+          type: 'Data',
+          icon: '📦',
+          desc: `Custom AST Data Cartridge (${payload.questions.length} questions).`,
+          source: 'user',
+          dataPayload: payload,
+          astSource: text,
+        };
+        saveCustomCartridge(newCart);
+        setDataCartridgesList(getDataCartridges());
+        handleMountCartridge(newCart);
+      } else {
+        alert('Could not parse valid AST Data Cartridge. Please check format.');
+      }
+    };
+    reader.readAsText(file);
   };
 
   const hasMountedRef = useRef(false);
@@ -680,6 +894,247 @@ export default function NeuralLabCanvas({
           </div>
         )}
 
+        {/* Cartridge Toast Notification */}
+        {cartridgeToast && (
+          <div
+            style={{
+              marginBottom: '1rem',
+              padding: '0.65rem 1rem',
+              background: '#064e3b',
+              border: '1px solid #10b981',
+              borderRadius: '8px',
+              color: '#a7f3d0',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+            }}
+          >
+            <span>⚡</span>
+            <span>{cartridgeToast}</span>
+          </div>
+        )}
+
+        {/* Modular Oak Curriculum Cartridge Deck Dock */}
+        <div
+          style={{
+            marginBottom: '1.25rem',
+            background: mountedDataCartridge
+              ? 'linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.98) 100%)'
+              : 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
+            border: mountedDataCartridge ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            color: mountedDataCartridge ? '#f8fafc' : '#334155',
+            boxShadow: mountedDataCartridge ? '0 4px 14px rgba(59, 130, 246, 0.15)' : 'none',
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: '10px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <span style={{ fontSize: '1.5rem' }}>
+                {mountedDataCartridge?.icon || '📦'}
+              </span>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span
+                    style={{
+                      fontSize: '0.9rem',
+                      fontWeight: 800,
+                      color: mountedDataCartridge ? '#60a5fa' : '#0f172a',
+                    }}
+                  >
+                    {mountedDataCartridge ? `AST Cartridge Deck: ${mountedDataCartridge.title}` : 'Oak Curriculum Cartridge Library'}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
+                      background: mountedDataCartridge ? '#1e3a8a' : '#e2e8f0',
+                      color: mountedDataCartridge ? '#93c5fd' : '#475569',
+                      border: mountedDataCartridge ? '1px solid #3b82f6' : '1px solid #cbd5e1',
+                    }}
+                  >
+                    {mountedDataCartridge ? '📦 MODULAR DECK' : '⚡ 11+ OAK CARTRIDGES'}
+                  </span>
+                  {activeQuestion?.tier && (
+                    <span
+                      style={{
+                        fontSize: '0.7rem',
+                        fontWeight: 800,
+                        padding: '2px 8px',
+                        borderRadius: '9999px',
+                        background: '#064e3b',
+                        color: '#6ee7b7',
+                        border: '1px solid #059669',
+                        textTransform: 'uppercase',
+                      }}
+                    >
+                      Tier: {activeQuestion.tier}
+                    </span>
+                  )}
+                </div>
+                <div style={{ fontSize: '0.76rem', color: mountedDataCartridge ? '#94a3b8' : '#64748b', marginTop: '2px' }}>
+                  {mountedDataCartridge
+                    ? `${mountedDataCartridge.stage} • ${mountedDataCartridge.subject} • 100% Offline AST • Zero Cloud LLM Latency`
+                    : 'Practice with verified, zero-cloud Oak National Curriculum cartridges across KS1–KS3.'}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {mountedDataCartridge && (
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePrevDeckQuestion}
+                    title="Previous question in cartridge deck"
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      background: '#1e293b',
+                      color: '#cbd5e1',
+                      border: '1px solid #475569',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    ◀ Prev
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextDeckQuestion}
+                    title="Next question in cartridge deck"
+                    style={{
+                      padding: '5px 12px',
+                      borderRadius: '6px',
+                      background: '#2563eb',
+                      color: '#ffffff',
+                      border: 'none',
+                      fontSize: '0.78rem',
+                      fontWeight: 800,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    Next ▶
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleExportCartridge()}
+                    title="Download this cartridge as an offline .ast file"
+                    style={{
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      color: '#e2e8f0',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    💾 Export .ast
+                  </button>
+                </>
+              )}
+
+              <button
+                type="button"
+                onClick={() => setIsCartridgeModalOpen(true)}
+                style={{
+                  padding: '5px 12px',
+                  borderRadius: '6px',
+                  background: mountedDataCartridge ? 'linear-gradient(135deg, #4f46e5 0%, #3730a3 100%)' : '#4338ca',
+                  color: '#ffffff',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '5px',
+                  boxShadow: '0 2px 6px rgba(79, 70, 229, 0.3)',
+                }}
+              >
+                <span>📚</span>
+                <span>{mountedDataCartridge ? 'Switch Deck' : 'Browse Cartridges'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Stepper Pills for Mounted Cartridge */}
+          {mountedDataCartridge && mountedDataCartridge.dataPayload && (
+            <div
+              style={{
+                marginTop: '10px',
+                paddingTop: '8px',
+                borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '8px',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94a3b8' }}>
+                  Deck Questions:
+                </span>
+                {mountedDataCartridge.dataPayload.questions.map((q, idx) => {
+                  const isActive = idx === activeDeckQuestionIndex;
+                  return (
+                    <button
+                      key={q.id || idx}
+                      type="button"
+                      onClick={() => handleJumpToDeckQuestion(idx)}
+                      style={{
+                        padding: '3px 8px',
+                        borderRadius: '6px',
+                        background: isActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)',
+                        color: isActive ? '#090d16' : '#cbd5e1',
+                        border: isActive ? '1px solid #7dd3fc' : '1px solid rgba(255, 255, 255, 0.15)',
+                        fontSize: '0.72rem',
+                        fontWeight: isActive ? 900 : 600,
+                        cursor: 'pointer',
+                        transition: 'all 0.15s ease',
+                      }}
+                      title={`Jump to Q${idx + 1}: ${q.prompt.slice(0, 40)}...`}
+                    >
+                      {idx + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div style={{ fontSize: '0.75rem', color: '#94a3b8', fontStyle: 'italic' }}>
+                Question {activeDeckQuestionIndex + 1} of {mountedDataCartridge.dataPayload.questions.length}
+              </div>
+            </div>
+          )}
+        </div>
+
         {/* Child-Friendly Difficulty / Challenge Level Selector */}
         <div
           style={{
@@ -852,7 +1307,7 @@ export default function NeuralLabCanvas({
             {/* 2D Canvas AST Topology Toggle */}
             <button
               type="button"
-              onClick={() => setShowCanvasTopology(!showCanvasTopology)}
+              onClick={handleToggleCanvasTopology}
               style={{
                 fontSize: '0.75rem',
                 fontWeight: 700,
@@ -926,19 +1381,41 @@ export default function NeuralLabCanvas({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.1rem' }}>🎮</span>
+                <span style={{ fontSize: '1.1rem' }}>📝</span>
                 <span style={{ fontSize: '0.84rem', fontWeight: 800, color: '#334155' }}>
-                  Question Presentation:
+                  Practice Presentation:
                 </span>
                 <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                  {questionMode === 'stage' ? 'Served directly inside live 60 FPS vector player' : 'Step-by-step accessible text cards'}
+                  {questionMode === 'card' ? 'Multi-Choice Oak Curriculum Questions with Socratic Diagnostics' : 'Served directly inside live 60 FPS vector simulation player'}
                 </span>
               </div>
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <button
                   type="button"
-                  onClick={() => setQuestionMode('stage')}
+                  onClick={() => handleSetQuestionMode('card')}
+                  style={{
+                    padding: '6px 14px',
+                    borderRadius: '8px',
+                    border: 'none',
+                    background: questionMode === 'card' ? '#0f172a' : 'transparent',
+                    color: questionMode === 'card' ? '#ffffff' : '#64748b',
+                    fontWeight: questionMode === 'card' ? 800 : 600,
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '6px',
+                    boxShadow: questionMode === 'card' ? '0 2px 8px rgba(15, 23, 42, 0.3)' : 'none',
+                    transition: 'all 0.15s ease',
+                  }}
+                  aria-pressed={questionMode === 'card'}
+                >
+                  <span>📝 Multi-Choice Questions</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetQuestionMode('stage')}
                   style={{
                     padding: '6px 14px',
                     borderRadius: '8px',
@@ -957,28 +1434,6 @@ export default function NeuralLabCanvas({
                   aria-pressed={questionMode === 'stage'}
                 >
                   <span>🎬 In-Stage Vector Player</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setQuestionMode('card')}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    border: 'none',
-                    background: questionMode === 'card' ? '#0f172a' : 'transparent',
-                    color: questionMode === 'card' ? '#ffffff' : '#64748b',
-                    fontWeight: questionMode === 'card' ? 800 : 600,
-                    fontSize: '0.8rem',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: questionMode === 'card' ? '0 2px 8px rgba(15, 23, 42, 0.3)' : 'none',
-                    transition: 'all 0.15s ease',
-                  }}
-                  aria-pressed={questionMode === 'card'}
-                >
-                  <span>📝 Accessible Text Card</span>
                 </button>
               </div>
             </div>
@@ -1148,6 +1603,7 @@ export default function NeuralLabCanvas({
                 displayOptions={activeQuestion.displayOptions}
                 selectedAnswer={selectedAnswer}
                 correctIndex={correctIndex}
+                onSelectOption={handleSelectOption}
                 score={score}
                 streak={streak}
                 seedToken={activeQuestion.seedToken}
@@ -1180,18 +1636,21 @@ export default function NeuralLabCanvas({
                   setActiveLang(newLang);
                   requestQuestion(selectedKeyStage, selectedSubject, selectedUnit, difficulty, newLang);
                 }}
-                onSelectOption={handleSelectOption}
                 onNextQuestion={() => {
-                  const targetSeed = streamTransition?.nextSeedToken;
-                  requestQuestion(
-                    selectedKeyStage,
-                    selectedSubject,
-                    selectedUnit,
-                    difficulty,
-                    activeLang,
-                    true,
-                    targetSeed
-                  );
+                  if (mountedDataCartridge && mountedDataCartridge.dataPayload) {
+                    handleNextDeckQuestion();
+                  } else {
+                    const targetSeed = streamTransition?.nextSeedToken;
+                    requestQuestion(
+                      selectedKeyStage,
+                      selectedSubject,
+                      selectedUnit,
+                      difficulty,
+                      activeLang,
+                      true,
+                      targetSeed
+                    );
+                  }
                 }}
                 onParallelVariation={() => requestQuestion(selectedKeyStage, selectedSubject, selectedUnit, difficulty, activeLang, true)}
               />
@@ -1211,11 +1670,300 @@ export default function NeuralLabCanvas({
           >
             <div style={{ fontSize: '1.25rem', fontWeight: 600 }}>Ready to Practice</div>
             <div style={{ fontSize: '0.95rem' }}>
-              Select your Stage, Subject, and Unit above, then click <strong>New Question</strong> to begin.
+              Select your Stage, Subject, and Unit above, or mount a cartridge from the <strong>Cartridge Library</strong> to begin.
             </div>
+            <button
+              type="button"
+              onClick={() => setIsCartridgeModalOpen(true)}
+              style={{
+                marginTop: '8px',
+                padding: '8px 18px',
+                borderRadius: '8px',
+                background: '#4338ca',
+                color: '#ffffff',
+                border: 'none',
+                fontWeight: 800,
+                fontSize: '0.86rem',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                boxShadow: '0 2px 8px rgba(67, 56, 202, 0.3)',
+              }}
+            >
+              <span>📦</span>
+              <span>Open Oak Cartridge Library</span>
+            </button>
           </div>
         )}
       </div>
+
+      {/* Cartridge Library & Importer Modal */}
+      {isCartridgeModalOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(6px)',
+            zIndex: 9999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '1rem',
+          }}
+          onClick={() => setIsCartridgeModalOpen(false)}
+        >
+          <div
+            style={{
+              background: '#0f172a',
+              border: '1px solid #334155',
+              borderRadius: '16px',
+              maxWidth: '850px',
+              width: '100%',
+              maxHeight: '90vh',
+              overflowY: 'auto',
+              padding: '1.5rem',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.7)',
+              color: '#f8fafc',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                paddingBottom: '1rem',
+                borderBottom: '1px solid #1e293b',
+                marginBottom: '1.25rem',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.75rem' }}>📦</span>
+                <div>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0, color: '#f8fafc' }}>
+                    Oak Curriculum Data Cartridges
+                  </h2>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#94a3b8' }}>
+                    Decentralized, zero-cloud question banks running off pure AST S-Expressions.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCartridgeModalOpen(false)}
+                style={{
+                  background: '#1e293b',
+                  border: '1px solid #334155',
+                  color: '#94a3b8',
+                  borderRadius: '8px',
+                  width: '32px',
+                  height: '32px',
+                  fontSize: '1rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Subject Filters */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                flexWrap: 'wrap',
+                marginBottom: '1.25rem',
+              }}
+            >
+              {['All', 'Science', 'Mathematics', 'Catholic Faith', 'Computing', 'English Literature & Phonics', 'Modern & Classical Languages'].map((cat) => {
+                const isActive = cartridgeFilterSubject === cat;
+                return (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => setCartridgeFilterSubject(cat)}
+                    style={{
+                      padding: '4px 12px',
+                      borderRadius: '9999px',
+                      border: isActive ? '1px solid #38bdf8' : '1px solid #334155',
+                      background: isActive ? '#0369a1' : '#1e293b',
+                      color: isActive ? '#ffffff' : '#94a3b8',
+                      fontSize: '0.75rem',
+                      fontWeight: isActive ? 800 : 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Cartridge Grid */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))',
+                gap: '12px',
+                marginBottom: '1.5rem',
+              }}
+            >
+              {dataCartridgesList
+                .filter((c) => {
+                  if (cartridgeFilterSubject === 'All') return true;
+                  return (c.category || c.subject) === cartridgeFilterSubject;
+                })
+                .map((cart) => {
+                  const qCount = cart.dataPayload?.questions?.length || 0;
+                  const isCurrent = mountedDataCartridge?.id === cart.id;
+
+                  return (
+                    <div
+                      key={cart.id}
+                      style={{
+                        background: isCurrent ? 'rgba(59, 130, 246, 0.12)' : '#1e293b',
+                        border: isCurrent ? '1.5px solid #3b82f6' : '1px solid #334155',
+                        borderRadius: '12px',
+                        padding: '12px 14px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        gap: '10px',
+                        transition: 'all 0.15s ease',
+                      }}
+                    >
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ fontSize: '1.4rem' }}>{cart.icon || '📦'}</span>
+                            <span style={{ fontSize: '0.88rem', fontWeight: 800, color: '#f8fafc' }}>
+                              {cart.title}
+                            </span>
+                          </div>
+                          <span
+                            style={{
+                              fontSize: '0.68rem',
+                              fontWeight: 800,
+                              padding: '2px 8px',
+                              borderRadius: '9999px',
+                              background: '#047857',
+                              color: '#a7f3d0',
+                              border: '1px solid #059669',
+                            }}
+                          >
+                            {qCount} Questions
+                          </span>
+                        </div>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.4 }}>
+                          {cart.desc}
+                        </p>
+                        <div style={{ marginTop: '8px', fontSize: '0.68rem', color: '#38bdf8', fontWeight: 700 }}>
+                          {cart.stage} • {cart.subject || cart.category}
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.08)' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleExportCartridge(cart.id)}
+                          style={{
+                            background: 'transparent',
+                            color: '#94a3b8',
+                            border: '1px solid #475569',
+                            borderRadius: '6px',
+                            padding: '4px 8px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                          }}
+                          title="Download canonical AST S-Expression file"
+                        >
+                          💾 .ast
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleMountCartridge(cart)}
+                          style={{
+                            background: isCurrent ? '#059669' : '#2563eb',
+                            color: '#ffffff',
+                            border: 'none',
+                            borderRadius: '6px',
+                            padding: '5px 14px',
+                            fontSize: '0.76rem',
+                            fontWeight: 800,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                          }}
+                        >
+                          <span>{isCurrent ? '✓ Active Deck' : '▶ Mount to Lab'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+
+            {/* Custom Cartridge File Ingestion Dropzone */}
+            <div
+              style={{
+                padding: '12px 16px',
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px dashed #475569',
+                borderRadius: '10px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                flexWrap: 'wrap',
+                gap: '10px',
+              }}
+            >
+              <div>
+                <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#e2e8f0' }}>
+                  📥 Import Custom Cartridge (.ast or .json)
+                </span>
+                <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>
+                  Load teacher-authored question banks or offline air-gapped curriculum cartridges.
+                </div>
+              </div>
+
+              <label
+                style={{
+                  background: '#334155',
+                  color: '#f8fafc',
+                  padding: '5px 14px',
+                  borderRadius: '6px',
+                  fontSize: '0.76rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                }}
+              >
+                <span>Browse File</span>
+                <input
+                  type="file"
+                  accept=".ast,.json,.svg"
+                  onChange={handleImportCustomCartridge}
+                  style={{ display: 'none' }}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

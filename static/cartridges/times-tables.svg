@@ -1,38 +1,36 @@
 <svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Background Gradient -->
-    <radialGradient id="tt-bg-glow" cx="45%" cy="35%" r="70%">
-      <stop offset="0%" stop-color="#064e3b" stop-opacity="0.35" />
-      <stop offset="45%" stop-color="#0f172a" stop-opacity="0.95" />
+    <!-- Background Radial Gradient -->
+    <radialGradient id="tt-bg-glow" cx="50%" cy="30%" r="75%">
+      <stop offset="0%" stop-color="#064e3b" stop-opacity="0.25" />
+      <stop offset="45%" stop-color="#0b1329" stop-opacity="0.96" />
       <stop offset="100%" stop-color="#020617" stop-opacity="1" />
     </radialGradient>
 
-    <!-- Emerald Tile Gradient (Left Distributive Block) -->
-    <linearGradient id="tt-tile-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#34d399" />
-      <stop offset="100%" stop-color="#059669" />
+    <!-- Emerald Highlight Gradient -->
+    <linearGradient id="tt-grad-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#047857" />
     </linearGradient>
 
-    <!-- Amber Tile Gradient (Right Distributive Block) -->
-    <linearGradient id="tt-tile-amber" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#fbbf24" />
-      <stop offset="100%" stop-color="#d97706" />
-    </linearGradient>
-
-    <!-- Unified Cyan Tile Gradient -->
-    <linearGradient id="tt-tile-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Cyan Highlight Gradient -->
+    <linearGradient id="tt-grad-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#38bdf8" />
       <stop offset="100%" stop-color="#0284c7" />
     </linearGradient>
 
-    <!-- Neon Splitter Laser Filter -->
-    <filter id="tt-laser-glow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feMerge>
-        <feMergeNode in="blur" />
-        <feMergeNode in="SourceGraphic" />
-      </feMerge>
-    </filter>
+    <!-- Amber Highlight Gradient -->
+    <linearGradient id="tt-grad-amber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f59e0b" />
+      <stop offset="100%" stop-color="#b45309" />
+    </linearGradient>
+
+    <!-- Active Row Highlight Gradient -->
+    <linearGradient id="tt-grad-row-active" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#0284c7" stop-opacity="0.35" />
+      <stop offset="50%" stop-color="#0369a1" stop-opacity="0.20" />
+      <stop offset="100%" stop-color="#0c4a6e" stop-opacity="0.05" />
+    </linearGradient>
 
     <!-- Drop Shadow Filter -->
     <filter id="tt-card-shadow" x="-10%" y="-10%" width="120%" height="120%">
@@ -44,106 +42,118 @@
   <rect width="800" height="480" fill="url(#tt-bg-glow)" />
 
   <!-- Subtle Mathematical Coordinate Grid -->
-  <g opacity="0.05" stroke="#ffffff" stroke-width="1">
-    <line x1="0" y1="50" x2="800" y2="50" />
-    <line x1="0" y1="90" x2="800" y2="90" />
-    <line x1="0" y1="130" x2="800" y2="130" />
-    <line x1="0" y1="230" x2="800" y2="230" />
-    <line x1="0" y1="330" x2="800" y2="330" />
-    <line x1="0" y1="430" x2="800" y2="430" />
+  <g opacity="0.04" stroke="#ffffff" stroke-width="1">
+    <line x1="0" y1="46" x2="800" y2="46" />
+    <line x1="0" y1="86" x2="800" y2="86" />
+    <line x1="0" y1="120" x2="800" y2="120" />
+    <line x1="0" y1="432" x2="800" y2="432" />
   </g>
 
-  <!-- TOP HEADER & TITLE (Y: 10 - 45) -->
-  <g transform="translate(18, 14)">
+  <!-- ========================================================================= -->
+  <!-- TOP HEADER (Y: 10 - 44) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(18, 12)">
     <text x="0" y="16" font-family="system-ui, sans-serif" font-size="16" font-weight="900" fill="#f8fafc" letter-spacing="0.5">
-      TIMES TABLES MASTER (2× TO 12×)
+      STANDARD SCHOOL TIMES TABLES (1× TO 12×)
     </text>
     <text x="0" y="30" font-family="system-ui, sans-serif" font-size="10.5" font-weight="600" fill="#94a3b8">
-      Visual 2D Array • Distributive Property Slicer • Commutative Law Proof
+      UK National Curriculum &amp; MTC Standard • 1 to 12 Multiplication Format &amp; 12×12 Grid
     </text>
 
-    <!-- Right Mode Switcher Tabs -->
-    <g transform="translate(480, 2)">
-      <g id="tab-mode-array" style="cursor: pointer;" data-action="tt-mode-array">
-        <rect width="82" height="26" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
-        <text x="41" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">📐 2D Array</text>
+    <!-- Mode Switcher Tabs -->
+    <g transform="translate(470, 2)">
+      <!-- Tab 1: 1-12 Table List (Default active) -->
+      <g id="tab-mode-list" style="cursor: pointer;" data-action="tt-mode-list">
+        <rect width="90" height="26" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+        <text x="45" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">📋 1–12 Table</text>
       </g>
-      <g id="tab-mode-skip" transform="translate(88, 0)" style="cursor: pointer;" data-action="tt-mode-skip">
-        <rect width="94" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-        <text x="47" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">📏 Skip Count</text>
+      <!-- Tab 2: 12x12 Grid -->
+      <g id="tab-mode-grid" transform="translate(96, 0)" style="cursor: pointer;" data-action="tt-mode-grid">
+        <rect width="90" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="45" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">🔲 12×12 Grid</text>
       </g>
-      <g id="tab-mode-quiz" transform="translate(188, 0)" style="cursor: pointer;" data-action="tt-mode-quiz">
-        <rect width="94" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-        <text x="47" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">⚡ Challenge</text>
+      <!-- Tab 3: MTC Speed Quiz -->
+      <g id="tab-mode-quiz" transform="translate(192, 0)" style="cursor: pointer;" data-action="tt-mode-quiz">
+        <rect width="102" height="26" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="51" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">⚡ MTC Speed Test</text>
       </g>
     </g>
   </g>
 
-  <!-- TIMES TABLES SELECTOR STRIP: 2× TO 12× (Y: 50 - 82) -->
-  <g id="tt-table-strip" transform="translate(18, 52)">
+  <!-- ========================================================================= -->
+  <!-- TABLE SELECTOR RIBBON: 1× TO 12× (Y: 48 - 82) -->
+  <!-- ========================================================================= -->
+  <g id="tt-table-strip" transform="translate(18, 48)">
     <rect width="764" height="34" rx="8" fill="#0b1120" fill-opacity="0.9" stroke="#1e293b" stroke-width="1" />
     <text x="10" y="21" fill="#38bdf8" font-size="10" font-weight="900" letter-spacing="0.5">TABLE:</text>
 
-    <!-- 11 Table Buttons from 2x to 12x -->
+    <!-- 12 Table Chips: 1x to 12x -->
+    <!-- 1x -->
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="1" transform="translate(56, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">1×</text>
+    </g>
     <!-- 2x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="2" transform="translate(60, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">2×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="2" transform="translate(115, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">2×</text>
     </g>
     <!-- 3x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="3" transform="translate(122, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">3×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="3" transform="translate(174, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">3×</text>
     </g>
     <!-- 4x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="4" transform="translate(184, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">4×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="4" transform="translate(233, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">4×</text>
     </g>
     <!-- 5x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="5" transform="translate(246, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">5×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="5" transform="translate(292, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">5×</text>
     </g>
     <!-- 6x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="6" transform="translate(308, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">6×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="6" transform="translate(351, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">6×</text>
     </g>
     <!-- 7x (Default active) -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="7" transform="translate(370, 4)">
-      <rect width="56" height="26" rx="5" fill="#059669" stroke="#10b981" stroke-width="1.5" />
-      <text x="28" y="17" fill="#ffffff" font-size="10.5" font-weight="900" text-anchor="middle">7×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="7" transform="translate(410, 4)">
+      <rect width="54" height="26" rx="5" fill="#059669" stroke="#10b981" stroke-width="1.5" />
+      <text x="27" y="17" fill="#ffffff" font-size="10.5" font-weight="900" text-anchor="middle">7×</text>
     </g>
     <!-- 8x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="8" transform="translate(432, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">8×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="8" transform="translate(469, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">8×</text>
     </g>
     <!-- 9x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="9" transform="translate(494, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">9×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="9" transform="translate(528, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">9×</text>
     </g>
     <!-- 10x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="10" transform="translate(556, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">10×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="10" transform="translate(587, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">10×</text>
     </g>
     <!-- 11x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="11" transform="translate(618, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">11×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="11" transform="translate(646, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">11×</text>
     </g>
     <!-- 12x -->
-    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="12" transform="translate(680, 4)">
-      <rect width="56" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="28" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">12×</text>
+    <g class="table-chip" style="cursor: pointer;" data-action="tt-set-table" data-table="12" transform="translate(705, 4)">
+      <rect width="54" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="27" y="17" fill="#cbd5e1" font-size="10.5" font-weight="800" text-anchor="middle">12×</text>
     </g>
   </g>
 
-  <!-- MULTIPLIER STEPPER & QUICK ACTION TOOLBAR (Y: 90 - 122) -->
-  <g transform="translate(18, 92)">
+  <!-- ========================================================================= -->
+  <!-- SUB-BAR: MULTIPLIER STEPPER & QUICK ACTION TOOLBAR (Y: 88 - 116) -->
+  <!-- ========================================================================= -->
+  <g transform="translate(18, 88)">
     <!-- Multiplier Stepper -->
     <g>
       <!-- Decrement Button -->
@@ -154,243 +164,268 @@
 
       <!-- Multiplier Label Box -->
       <g transform="translate(32, 0)">
-        <rect width="90" height="26" rx="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
-        <text id="tt-multiplier-display" x="45" y="17" fill="#38bdf8" font-size="11" font-weight="800" text-anchor="middle">
+        <rect width="94" height="26" rx="5" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
+        <text id="tt-multiplier-display" x="47" y="17" fill="#38bdf8" font-size="11" font-weight="800" text-anchor="middle">
           × 8 Multiplier
         </text>
       </g>
 
       <!-- Increment Button -->
-      <g transform="translate(126, 0)" style="cursor: pointer;" data-action="tt-inc-mult">
+      <g transform="translate(130, 0)" style="cursor: pointer;" data-action="tt-inc-mult">
         <rect width="28" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
         <text x="14" y="17" fill="#ffffff" font-size="13" font-weight="900" text-anchor="middle">+</text>
       </g>
     </g>
 
     <!-- Commutative Flip Button -->
-    <g transform="translate(162, 0)" style="cursor: pointer;" data-action="tt-flip">
-      <rect width="134" height="26" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1" />
-      <text id="tt-flip-label" x="67" y="17" fill="#facc15" font-size="10" font-weight="800" text-anchor="middle">
+    <g transform="translate(166, 0)" style="cursor: pointer;" data-action="tt-flip">
+      <rect width="138" height="26" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text id="tt-flip-label" x="69" y="17" fill="#facc15" font-size="10" font-weight="800" text-anchor="middle">
         🔄 Flip: 7×8 ⇄ 8×7
       </text>
     </g>
 
-    <!-- Distributive Split Presets -->
-    <g transform="translate(304, 0)">
-      <g style="cursor: pointer;" data-action="tt-split-5">
-        <rect width="78" height="26" rx="5" fill="#065f46" stroke="#10b981" stroke-width="1" />
-        <text x="39" y="17" fill="#34d399" font-size="9.5" font-weight="800" text-anchor="middle">Cut at 5</text>
-      </g>
-      <g transform="translate(84, 0)" style="cursor: pointer;" data-action="tt-split-half">
-        <rect width="78" height="26" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1" />
-        <text x="39" y="17" fill="#cbd5e1" font-size="9.5" font-weight="800" text-anchor="middle">Cut in Half</text>
-      </g>
-      <g transform="translate(168, 0)" style="cursor: pointer;" data-action="tt-split-none">
-        <rect width="78" height="26" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1" />
-        <text x="39" y="17" fill="#cbd5e1" font-size="9.5" font-weight="800" text-anchor="middle">Whole Array</text>
-      </g>
-    </g>
-
-    <!-- Sound / Sonification Multiplier Playback -->
-    <g transform="translate(558, 0)" style="cursor: pointer;" data-action="tt-play-scale">
-      <rect width="116" height="26" rx="5" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
-      <text x="58" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">🎵 Listen to Multiple</text>
-    </g>
-  </g>
-
-  <!-- ========================================================================= -->
-  <!-- MAIN STAGE LEFT: 2D ARRAY & DISTRIBUTIVE SPLITTER (X: 18, Y: 126, 470x302) -->
-  <!-- ========================================================================= -->
-  <g id="tt-stage-array" transform="translate(18, 126)">
-    <!-- Stage Box -->
-    <rect width="474" height="298" rx="12" fill="#0f172a" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
-
-    <!-- Array Dimensions Banner -->
-    <g transform="translate(14, 12)">
-      <rect width="446" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text id="tt-array-banner" x="223" y="18" fill="#38bdf8" font-size="11.5" font-weight="900" text-anchor="middle">
-        7 Rows × 8 Columns = 56 Total Area Units
+    <!-- Hide / Reveal Answers (Test Yourself) Toggle -->
+    <g transform="translate(312, 0)" style="cursor: pointer;" data-action="tt-toggle-hide">
+      <rect width="146" height="26" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="tt-hide-toggle-text" x="73" y="17" fill="#cbd5e1" font-size="10" font-weight="800" text-anchor="middle">
+        👁️ Hide Answers (Test)
       </text>
     </g>
 
-    <!-- Column Bracket Indicators -->
-    <g transform="translate(26, 46)">
-      <!-- Left Split Chunk Label -->
-      <g id="tt-col-left-pill">
-        <rect id="tt-col-left-rect" x="0" y="0" width="220" height="18" rx="4" fill="rgba(16, 185, 129, 0.2)" stroke="#10b981" />
-        <text id="tt-col-left-text" x="110" y="13" font-size="10" font-weight="800" fill="#34d399" text-anchor="middle">
-          5 COLUMNS (7 × 5 = 35)
+    <!-- Procedural Recite 1-12 Audio Button -->
+    <g transform="translate(466, 0)" style="cursor: pointer;" data-action="tt-recite">
+      <rect width="144" height="26" rx="5" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+      <text x="72" y="17" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">
+        🔊 Recite Table (1 to 12)
+      </text>
+    </g>
+
+    <!-- Reset to 1x Button -->
+    <g transform="translate(618, 0)" style="cursor: pointer;" data-action="tt-set-mult" data-mult="1">
+      <rect width="146" height="26" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1" />
+      <text x="73" y="17" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">
+        ⏮️ Start at 1 × Table
+      </text>
+    </g>
+  </g>
+
+  <!-- ========================================================================= -->
+  <!-- STAGE 1: STANDARD SCHOOL 1 TO 12 TIMES TABLE & MASTERY CARD (DEFAULT)     -->
+  <!-- ========================================================================= -->
+  <g id="tt-stage-list" transform="translate(18, 122)">
+    <!-- LEFT PANEL: 1 TO 12 SCHOOL VERTICAL MULTIPLICATION CHART (Width: 376, Height: 306) -->
+    <g>
+      <rect width="376" height="306" rx="10" fill="#0b1120" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
+
+      <!-- Left Header Plaque -->
+      <g transform="translate(12, 10)">
+        <rect width="352" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text id="tt-list-header" x="176" y="16" fill="#38bdf8" font-size="11" font-weight="900" text-anchor="middle">
+          7 TIMES TABLE (1× TO 12×)
         </text>
       </g>
 
-      <!-- Right Split Chunk Label -->
-      <g id="tt-col-right-pill">
-        <rect id="tt-col-right-rect" x="230" y="0" width="135" height="18" rx="4" fill="rgba(245, 158, 11, 0.2)" stroke="#f59e0b" />
-        <text id="tt-col-right-text" x="297" y="13" font-size="10" font-weight="800" fill="#fbbf24" text-anchor="middle">
-          3 COLS (7 × 3 = 21)
+      <!-- 12 Standard Vertical Equations (Managed procedurally in ast-gestures.js) -->
+      <g id="tt-list-rows" transform="translate(12, 38)">
+        <!-- 12 rows are rendered dynamically here -->
+      </g>
+    </g>
+
+    <!-- RIGHT PANEL: MULTIPLICATION FACT & MASTERY CARD (Width: 376, Height: 306) -->
+    <g transform="translate(388, 0)">
+      <rect width="376" height="306" rx="10" fill="#0b1120" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
+
+      <!-- Right Header Plaque -->
+      <g transform="translate(12, 10)">
+        <rect width="352" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="176" y="16" fill="#38bdf8" font-size="11" font-weight="900" text-anchor="middle">
+          🧠 MULTIPLICATION FACT MASTER
         </text>
       </g>
-    </g>
 
-    <!-- Dynamic 2D Array Tiles Container -->
-    <!-- Managed procedurally by ASTDirectGestureSubsystem to render any RxC from 2x1 to 12x12 -->
-    <g id="tt-array-grid" transform="translate(26, 72)">
-      <!-- Tiles are injected and dynamically rendered here -->
-    </g>
-
-    <!-- Draggable / Clickable Distributive Laser Splitter Bar -->
-    <g id="tt-laser-splitter" style="cursor: ew-resize;" data-draggable="splitter" transform="translate(250, 68)">
-      <line x1="0" y1="0" x2="0" y2="218" stroke="#f43f5e" stroke-width="3" stroke-dasharray="6 3" filter="url(#tt-laser-glow)" />
-      <!-- Top Grip Handle -->
-      <g transform="translate(0, -6)">
-        <circle cx="0" cy="0" r="10" fill="#dc2626" stroke="#fecdd3" stroke-width="1.5" />
-        <text x="0" y="4" fill="#ffffff" font-size="9" font-weight="900" text-anchor="middle">✂️</text>
+      <!-- Target Equation Box -->
+      <g transform="translate(14, 38)">
+        <rect width="348" height="46" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+        <text id="tt-card-target-eq" x="174" y="27" fill="#ffffff" font-size="20" font-weight="900" text-anchor="middle">
+          7 × 8 = 56
+        </text>
+        <text id="tt-card-word-form" x="174" y="40" fill="#94a3b8" font-size="9.5" font-weight="700" text-anchor="middle">
+          Seven multiplied by eight equals fifty-six
+        </text>
       </g>
-      <!-- Bottom Grip Handle -->
-      <g transform="translate(0, 222)">
-        <circle cx="0" cy="0" r="9" fill="#dc2626" stroke="#fecdd3" stroke-width="1.5" />
-        <text x="0" y="3" fill="#ffffff" font-size="8" font-weight="900" text-anchor="middle">↔</text>
+
+      <!-- Visual Grouping Representation (8 groups of 7) -->
+      <g transform="translate(14, 88)">
+        <rect width="348" height="52" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="12" y="15" fill="#38bdf8" font-size="9" font-weight="900">📦 VISUAL EQUAL GROUPS:</text>
+        <text id="tt-visual-groups-sub" x="336" y="15" fill="#94a3b8" font-size="8.5" font-weight="700" text-anchor="end">8 groups of 7</text>
+        <!-- Dynamic visual tokens container -->
+        <g id="tt-visual-groups-container" transform="translate(12, 22)">
+          <!-- Procedurally populated tokens -->
+        </g>
+      </g>
+
+      <!-- Fact Family & Inverse Division -->
+      <g transform="translate(14, 144)">
+        <rect width="348" height="48" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="12" y="15" fill="#facc15" font-size="9" font-weight="900">🔗 FACT FAMILY &amp; INVERSES:</text>
+        <text id="tt-card-family-comm" x="12" y="29" fill="#e2e8f0" font-size="9" font-weight="700">8 × 7 = 56 (Commutative Property)</text>
+        <text id="tt-card-family-div" x="12" y="42" fill="#cbd5e1" font-size="8.5" font-weight="600">56 ÷ 7 = 8 • 56 ÷ 8 = 7 (Division Inverses)</text>
+      </g>
+
+      <!-- Repeated Addition Line -->
+      <g transform="translate(14, 196)">
+        <rect width="348" height="44" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="12" y="15" fill="#34d399" font-size="9" font-weight="900">➕ REPEATED ADDITION:</text>
+        <text id="tt-card-repeated-add" x="12" y="32" fill="#4ade80" font-size="9.5" font-weight="800">
+          7 + 7 + 7 + 7 + 7 + 7 + 7 + 7 = 56
+        </text>
+      </g>
+
+      <!-- Distributive Mental Strategy Breakdown -->
+      <g transform="translate(14, 244)">
+        <rect width="348" height="52" rx="8" fill="#0f172a" stroke="#10b981" stroke-width="1" />
+        <text x="12" y="15" fill="#38bdf8" font-size="9" font-weight="900">✂️ MENTAL PARTITION STRATEGY:</text>
+        <text id="tt-card-strategy" x="12" y="31" fill="#38bdf8" font-size="10" font-weight="800">
+          7 × 8 = (7 × 5) + (7 × 3) = 35 + 21 = 56
+        </text>
+        <text x="12" y="44" fill="#94a3b8" font-size="8.5" font-weight="600">
+          Decompose difficult multipliers into friendly 5s and 2s!
+        </text>
       </g>
     </g>
   </g>
 
   <!-- ========================================================================= -->
-  <!-- MAIN STAGE LEFT ALTERNATE: SKIP COUNTING NUMBER LINE (X: 18, Y: 126, 470x302) -->
+  <!-- STAGE 2: 12×12 MULTIPLICATION SQUARE / GRID VIEW (DISPLAY="NONE")          -->
   <!-- ========================================================================= -->
-  <g id="tt-stage-skip" transform="translate(18, 126)" display="none">
-    <rect width="474" height="298" rx="12" fill="#0f172a" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
+  <g id="tt-stage-grid" transform="translate(18, 122)" display="none">
+    <!-- Grid Canvas Box -->
+    <g>
+      <rect width="490" height="306" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
 
-    <text x="237" y="30" fill="#38bdf8" font-size="13" font-weight="900" text-anchor="middle">
-      📏 RHYTHMIC SKIP COUNTING &amp; MULTIPLE JUMPS
-    </text>
-    <text id="tt-skip-subtitle" x="237" y="48" fill="#94a3b8" font-size="10.5" font-weight="600" text-anchor="middle">
-      Count in groups of 7: 7, 14, 21, 28, 35, 42, 49, 56...
-    </text>
+      <!-- Grid Title -->
+      <g transform="translate(12, 10)">
+        <rect width="466" height="22" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="233" y="15" fill="#38bdf8" font-size="10" font-weight="900" text-anchor="middle">
+          🔲 12×12 MULTIPLICATION SQUARE (TAP ANY CELL)
+        </text>
+      </g>
 
-    <!-- Number Line Dynamic Canvas -->
-    <g id="tt-numberline-canvas" transform="translate(24, 70)">
-      <!-- Animated Arches & Multiples will be rendered here -->
+      <!-- 13x13 Dynamic Matrix (Rendered procedurally in ast-gestures.js) -->
+      <g id="tt-12x12-matrix" transform="translate(14, 38)">
+        <!-- Procedurally rendered 13x13 cells -->
+      </g>
+    </g>
+
+    <!-- Right Side Grid Inspector (Width: 262, Height: 306) -->
+    <g transform="translate(502, 0)">
+      <rect width="262" height="306" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
+
+      <g transform="translate(12, 10)">
+        <rect width="238" height="22" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="119" y="15" fill="#38bdf8" font-size="10" font-weight="900" text-anchor="middle">
+          CELL INSPECTOR
+        </text>
+      </g>
+
+      <!-- Big Intersection Eq -->
+      <g transform="translate(14, 38)">
+        <rect width="234" height="52" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="1.5" />
+        <text id="tt-grid-cell-eq" x="117" y="32" fill="#ffffff" font-size="18" font-weight="900" text-anchor="middle">
+          7 × 8 = 56
+        </text>
+        <text id="tt-grid-square-badge" x="117" y="46" fill="#facc15" font-size="8.5" font-weight="800" text-anchor="middle">
+          Row 7 × Col 8
+        </text>
+      </g>
+
+      <!-- Factors & Properties -->
+      <g transform="translate(14, 96)">
+        <rect width="234" height="60" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+        <text x="12" y="16" fill="#facc15" font-size="9" font-weight="900">📐 FACTORS &amp; PROPERTIES:</text>
+        <text id="tt-grid-factors" x="12" y="32" fill="#cbd5e1" font-size="8.5" font-weight="700">Factors: 1, 2, 4, 7, 8, 14, 28, 56</text>
+        <text id="tt-grid-even" x="12" y="48" fill="#94a3b8" font-size="8.5" font-weight="600">Even Number • Multiple of 7 and 8</text>
+      </g>
+
+      <!-- Square Numbers Note -->
+      <g transform="translate(14, 162)">
+        <rect width="234" height="68" rx="8" fill="#0f172a" stroke="#334155" stroke-width="1" />
+        <text x="12" y="16" fill="#38bdf8" font-size="9" font-weight="900">⭐ SQUARE NUMBERS DIAGONAL:</text>
+        <text x="12" y="30" fill="#94a3b8" font-size="8" font-weight="600">1, 4, 9, 16, 25, 36, 49, 64, 81, 100, 121, 144</text>
+        <text x="12" y="44" fill="#cbd5e1" font-size="8" font-weight="600">Formed when a number is multiplied by itself</text>
+        <text x="12" y="58" fill="#facc15" font-size="8.5" font-weight="800">(n × n = n² along the main diagonal).</text>
+      </g>
+
+      <!-- Audio Button -->
+      <g transform="translate(14, 238)" style="cursor: pointer;" data-action="tt-recite">
+        <rect width="234" height="32" rx="6" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
+        <text x="117" y="20" fill="#ffffff" font-size="10" font-weight="800" text-anchor="middle">
+          🎵 Play Multiple Tone
+        </text>
+      </g>
     </g>
   </g>
 
   <!-- ========================================================================= -->
-  <!-- MAIN STAGE LEFT ALTERNATE: CHALLENGE QUIZ MODE (X: 18, Y: 126, 470x302)   -->
+  <!-- STAGE 3: MTC MULTIPLICATION FLUENCY CHALLENGE QUIZ (DISPLAY="NONE")       -->
   <!-- ========================================================================= -->
-  <g id="tt-stage-quiz" transform="translate(18, 126)" display="none">
-    <rect width="474" height="298" rx="12" fill="#0f172a" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
+  <g id="tt-stage-quiz" transform="translate(18, 122)" display="none">
+    <rect width="764" height="306" rx="10" fill="#0b1120" fill-opacity="0.95" stroke="#1e293b" stroke-width="1.5" filter="url(#tt-card-shadow)" />
 
     <!-- Quiz Header Plaque -->
-    <g transform="translate(24, 20)">
-      <rect width="426" height="34" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text x="14" y="22" fill="#facc15" font-size="11" font-weight="900">⚡ MULTIPLICATION FLUENCY CHALLENGE</text>
-      <text id="tt-quiz-streak" x="412" y="22" fill="#34d399" font-size="11" font-weight="900" text-anchor="end">🔥 Streak: 0</text>
+    <g transform="translate(24, 18)">
+      <rect width="716" height="34" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="16" y="22" fill="#facc15" font-size="11" font-weight="900">⚡ MULTIPLICATION TABLES CHECK (MTC) FLUENCY PRACTICE</text>
+      <text id="tt-quiz-streak" x="700" y="22" fill="#34d399" font-size="11" font-weight="900" text-anchor="end">🔥 Streak: 0</text>
     </g>
 
     <!-- Large Flashcard Question -->
-    <g transform="translate(87, 72)">
+    <g transform="translate(232, 68)">
       <rect width="300" height="74" rx="12" fill="#090d16" stroke="#38bdf8" stroke-width="2" />
-      <text id="tt-quiz-prompt" x="150" y="48" fill="#f8fafc" font-size="32" font-weight="900" text-anchor="middle">
+      <text id="tt-quiz-prompt" x="150" y="48" fill="#f8fafc" font-size="34" font-weight="900" text-anchor="middle">
         7 × 8 = ?
       </text>
     </g>
 
     <!-- 4 Multiple Choice Options -->
-    <g id="tt-quiz-options" transform="translate(57, 166)">
+    <g id="tt-quiz-options" transform="translate(152, 160)">
       <!-- Opt 0 -->
       <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="0">
-        <rect width="170" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
-        <text id="tt-quiz-val-0" x="85" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">56</text>
+        <rect width="216" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+        <text id="tt-quiz-val-0" x="108" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">56</text>
       </g>
       <!-- Opt 1 -->
-      <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="1" transform="translate(190, 0)">
-        <rect width="170" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
-        <text id="tt-quiz-val-1" x="85" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">54</text>
+      <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="1" transform="translate(244, 0)">
+        <rect width="216" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+        <text id="tt-quiz-val-1" x="108" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">54</text>
       </g>
       <!-- Opt 2 -->
       <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="2" transform="translate(0, 52)">
-        <rect width="170" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
-        <text id="tt-quiz-val-2" x="85" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">48</text>
+        <rect width="216" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+        <text id="tt-quiz-val-2" x="108" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">48</text>
       </g>
       <!-- Opt 3 -->
-      <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="3" transform="translate(190, 52)">
-        <rect width="170" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
-        <text id="tt-quiz-val-3" x="85" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">63</text>
+      <g class="quiz-opt-btn" style="cursor: pointer;" data-action="tt-quiz-answer" data-idx="3" transform="translate(244, 52)">
+        <rect width="216" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+        <text id="tt-quiz-val-3" x="108" y="26" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle">63</text>
       </g>
     </g>
 
     <!-- Quiz Feedback Message -->
-    <text id="tt-quiz-msg" x="237" y="280" fill="#38bdf8" font-size="12" font-weight="800" text-anchor="middle">
+    <text id="tt-quiz-msg" x="382" y="280" fill="#38bdf8" font-size="12" font-weight="800" text-anchor="middle">
       Select the correct product to score!
     </text>
   </g>
 
   <!-- ========================================================================= -->
-  <!-- RIGHT STAGE: MENTAL ARITHMETIC ARCHITECTURE CARD (X: 504, Y: 126, 278x298)-->
+  <!-- BOTTOM EXPLANATORY BANNER (Y: 436 - 470) -->
   <!-- ========================================================================= -->
-  <g id="tt-card-dock" transform="translate(504, 126)">
-    <rect width="278" height="298" rx="12" fill="#0f172a" fill-opacity="0.95" stroke="#334155" stroke-width="1.5" filter="url(#tt-card-shadow)" />
-
-    <!-- Card Top Header -->
-    <text x="139" y="24" fill="#38bdf8" font-size="12" font-weight="900" text-anchor="middle" letter-spacing="0.5">
-      🧠 DISTRIBUTIVE ARCHITECTURE
-    </text>
-
-    <!-- Target Equation Box -->
-    <g transform="translate(16, 34)">
-      <rect width="246" height="42" rx="8" fill="#1e293b" stroke="#475569" stroke-width="1" />
-      <text x="123" y="16" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">TARGET PRODUCT</text>
-      <text id="tt-card-target-eq" x="123" y="34" fill="#ffffff" font-size="15" font-weight="900" text-anchor="middle">
-        7 × 8 = 56
-      </text>
-    </g>
-
-    <!-- Step 1: Friendly Cut 1 (Emerald) -->
-    <g transform="translate(16, 84)">
-      <rect width="246" height="42" rx="8" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1" />
-      <text id="tt-card-step1-title" x="123" y="16" fill="#34d399" font-size="9" font-weight="700" text-anchor="middle">
-        FRIENDLY CHUNK 1 (5s)
-      </text>
-      <text id="tt-card-step1-eq" x="123" y="34" fill="#4ade80" font-size="14" font-weight="900" text-anchor="middle">
-        7 × 5 = 35
-      </text>
-    </g>
-
-    <!-- Step 2: Remaining Cut 2 (Amber) -->
-    <g transform="translate(16, 134)">
-      <rect width="246" height="42" rx="8" fill="rgba(245, 158, 11, 0.15)" stroke="#f59e0b" stroke-width="1" />
-      <text id="tt-card-step2-title" x="123" y="16" fill="#fbbf24" font-size="9" font-weight="700" text-anchor="middle">
-        REMAINING CHUNK 2 (3s)
-      </text>
-      <text id="tt-card-step2-eq" x="123" y="34" fill="#fcd34d" font-size="14" font-weight="900" text-anchor="middle">
-        7 × 3 = 21
-      </text>
-    </g>
-
-    <!-- Step 3: Recombination & Sum (Cyan) -->
-    <g transform="translate(16, 184)">
-      <rect width="246" height="46" rx="8" fill="rgba(6, 182, 212, 0.18)" stroke="#06b6d4" stroke-width="1.5" />
-      <text x="123" y="16" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">
-        MENTAL RE-COMBINATION
-      </text>
-      <text id="tt-card-step3-eq" x="123" y="36" fill="#38bdf8" font-size="16" font-weight="900" text-anchor="middle">
-        35 + 21 = 56
-      </text>
-    </g>
-
-    <!-- Fact Family & Inverse Division -->
-    <g transform="translate(16, 238)">
-      <rect width="246" height="48" rx="8" fill="#1e293b" fill-opacity="0.8" stroke="#334155" stroke-width="1" />
-      <text x="12" y="16" fill="#facc15" font-size="9" font-weight="900">🔗 FACT FAMILY &amp; INVERSES:</text>
-      <text id="tt-card-family-1" x="12" y="30" fill="#cbd5e1" font-size="8.5" font-weight="600">8 × 7 = 56 • Commutative Law</text>
-      <text id="tt-card-family-2" x="12" y="42" fill="#cbd5e1" font-size="8.5" font-weight="600">56 ÷ 7 = 8 • 56 ÷ 8 = 7 (Division Inverse)</text>
-    </g>
-  </g>
-
-  <!-- BOTTOM EXPLANATORY BANNER (Y: 434 - 470) -->
-  <g transform="translate(18, 434)">
-    <rect width="764" height="36" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1.2" />
-    <text id="tt-banner-txt" x="382" y="22" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#34d399" text-anchor="middle">
-      The Distributive Property: 7 × 8 = 7 × (5 + 3) = 35 + 21 = 56.
+  <g transform="translate(18, 436)">
+    <rect width="764" height="34" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.2" />
+    <text id="tt-banner-txt" x="382" y="22" font-family="system-ui, sans-serif" font-size="11.5" font-weight="700" fill="#34d399" text-anchor="middle">
+      Standard School Times Table: 7 × 8 = 56 • 8 groups of 7 • Inverse: 56 ÷ 7 = 8.
     </text>
   </g>
 </svg>

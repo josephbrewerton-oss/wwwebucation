@@ -1119,24 +1119,24 @@ export default function AstInteractiveLabDrawer({
           <div>
             <div style={{ background: 'rgba(234, 179, 8, 0.15)', padding: '10px', borderRadius: '8px', marginBottom: '14px', border: '1px solid rgba(234, 179, 8, 0.3)' }}>
               <div style={{ fontSize: '0.76rem', color: '#fde047', fontWeight: 700, textTransform: 'uppercase' }}>
-                Multiplication Array Invariant:
+                Standard School Times Table (1× to 12×):
               </div>
               <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#facc15', margin: '2px 0' }}>
-                Rows &times; Columns = Total Tiles
+                {rows} &times; {cols} = {rows * cols}
               </div>
               <div style={{ fontSize: '0.72rem', color: '#cbd5e1' }}>
-                Geometric 2D area representation proves commutative and distributive properties.
+                Standard UK curriculum 1 to 12 multiplication facts, commutative laws, and 12&times;12 grid.
               </div>
             </div>
 
             <div style={{ marginBottom: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
-                <span>Times Table (Rows):</span>
+                <span>Times Table:</span>
                 <span style={{ color: '#38bdf8' }}>{rows}&times;</span>
               </div>
               <input
                 type="range"
-                min="2"
+                min="1"
                 max="12"
                 value={rows}
                 onChange={(e) => {
@@ -1146,9 +1146,9 @@ export default function AstInteractiveLabDrawer({
                 }}
                 style={{ width: '100%', accentColor: '#38bdf8' }}
               />
-              {/* Quick Table Selection Chips 2x through 12x */}
+              {/* Quick Table Selection Chips 1x through 12x */}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                {[2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
                   <button
                     key={num}
                     type="button"
@@ -1175,7 +1175,7 @@ export default function AstInteractiveLabDrawer({
 
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
-                <span>Multiplier (Columns):</span>
+                <span>Multiplier (1 to 12):</span>
                 <span style={{ color: '#4ade80' }}>&times;{cols}</span>
               </div>
               <input
@@ -1190,29 +1190,51 @@ export default function AstInteractiveLabDrawer({
                 }}
                 style={{ width: '100%', accentColor: '#4ade80' }}
               />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => {
+                      setCols(num);
+                      postVarToPlayer('multiplier', num);
+                    }}
+                    style={{
+                      padding: '2px 6px',
+                      borderRadius: '4px',
+                      fontSize: '0.70rem',
+                      fontWeight: 700,
+                      border: cols === num ? '1px solid #38bdf8' : '1px solid #334155',
+                      background: cols === num ? '#0284c7' : '#1e293b',
+                      color: cols === num ? '#ffffff' : '#94a3b8',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    &times;{num}
+                  </button>
+                ))}
+              </div>
             </div>
 
             {(() => {
               const total = rows * cols;
-              const splitCol = Math.floor(cols / 2);
-              const remCol = cols - splitCol;
 
               return (
                 <div style={{ background: '#090d16', border: '1px solid #1e293b', borderRadius: '10px', padding: '12px' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94a3b8', marginBottom: '6px' }}>
-                    ARRAY PROPERTIES:
+                    MULTIPLICATION PROPERTIES:
                   </div>
 
                   <div style={{ fontSize: '0.95rem', fontWeight: 900, color: '#f8fafc', marginBottom: '6px' }}>
-                    {rows} &times; {cols} = <span style={{ color: '#facc15' }}>{total} tiles</span>
+                    {rows} &times; {cols} = <span style={{ color: '#facc15' }}>{total}</span>
                   </div>
 
                   <div style={{ fontSize: '0.76rem', color: '#94a3b8', marginBottom: '6px' }}>
-                    Commutative Proof: {rows} &times; {cols} &equiv; {cols} &times; {rows} = {total}
+                    Commutative Law: {rows} &times; {cols} = {cols} &times; {rows} = {total}
                   </div>
 
                   <div style={{ fontSize: '0.76rem', color: '#cbd5e1', background: 'rgba(255,255,255,0.06)', padding: '6px 8px', borderRadius: '6px' }}>
-                    Distributive Split: {rows} &times; ({splitCol} + {remCol}) = ({rows} &times; {splitCol}) + ({rows} &times; {remCol}) = {rows * splitCol} + {rows * remCol} = {total}
+                    Inverse Division: {total} &divide; {rows} = {cols} &bull; {total} &divide; {cols} = {rows}
                   </div>
                 </div>
               );

@@ -1831,9 +1831,9 @@
       }
 
       // -----------------------------------------------------------------------
-      // Times Tables Master (2x to 12x) Actions
+      // Times Tables Master (1x to 12x) Actions
       // -----------------------------------------------------------------------
-      if (action && (action.startsWith('tt-set-') || action.startsWith('tt-inc-') || action.startsWith('tt-dec-') || action === 'tt-flip' || action.startsWith('tt-split-') || action.startsWith('tt-mode-') || action === 'tt-play-scale' || action === 'tt-quiz-answer')) {
+      if (action && action.startsWith('tt-')) {
         this.handleTimesTablesAction(action, targetNode);
         return;
       }
@@ -4547,36 +4547,45 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // Times Tables: 2x to 12x Dynamic 2D Array & Distributive Splitter Subsystem
+    // =========================================================================
+    // Standard School Times Tables: 1x to 12x Multiplication & 12x12 Grid
     // =========================================================================
     setupTimesTablesInteractivity() {
       if (!this.stageSvg) return;
       this._ttTable = (this.engine && this.engine.vars && Number(this.engine.vars.table)) || 7;
       this._ttMultiplier = (this.engine && this.engine.vars && Number(this.engine.vars.multiplier)) || 8;
-      this._ttSplitCol = (this.engine && this.engine.vars && Number(this.engine.vars.splitCol)) || 5;
-      this._ttMode = 'array';
+      this._ttMode = 'list';
+      this._ttHideAnswers = false;
+      this._ttRevealedRows = new Set();
       this._ttQuizStreak = 0;
+      this._ttIsReciting = false;
 
       this.renderTimesTablesGrid();
     }
 
     renderTimesTablesGrid() {
       if (!this.stageSvg) return;
-      const table = Math.max(2, Math.min(12, this._ttTable || 7));
+      const table = Math.max(1, Math.min(12, this._ttTable || 7));
       const mult = Math.max(1, Math.min(12, this._ttMultiplier || 8));
-      const splitCol = Math.max(1, Math.min(mult, this._ttSplitCol || 5));
       this._ttTable = table;
       this._ttMultiplier = mult;
-      this._ttSplitCol = splitCol;
 
-      // Update Header & Multiplier display
+      // 1. Update Header & Sub-bar displays
+      const listHeader = this.stageSvg.querySelector('#tt-list-header');
+      if (listHeader) listHeader.textContent = `${table} TIMES TABLE (1× TO 12×)`;
+
       const multDisplay = this.stageSvg.querySelector('#tt-multiplier-display');
       if (multDisplay) multDisplay.textContent = `× ${mult} Multiplier`;
 
       const flipLabel = this.stageSvg.querySelector('#tt-flip-label');
       if (flipLabel) flipLabel.textContent = `🔄 Flip: ${table}×${mult} ⇄ ${mult}×${table}`;
 
-      // Highlight Table chips (2x to 12x)
+      const hideToggleText = this.stageSvg.querySelector('#tt-hide-toggle-text');
+      if (hideToggleText) {
+        hideToggleText.textContent = this._ttHideAnswers ? '👁️ Show All Answers' : '👁️ Hide Answers (Test)';
+      }
+
+      // 2. Highlight Table Chips (1x to 12x)
       const chips = this.stageSvg.querySelectorAll('.table-chip');
       chips.forEach(chip => {
         const tVal = Number(chip.getAttribute('data-table'));
@@ -4594,160 +4603,320 @@ ${strokeLines.join('\n')}
         }
       });
 
-      // Update Array Dimensions Banner
-      const banner = this.stageSvg.querySelector('#tt-array-banner');
-      if (banner) {
-        banner.textContent = `${table} Rows × ${mult} Columns = ${table * mult} Total Area Units`;
+      // 3. Render the 12 Standard School Rows (1 x Table to 12 x Table)
+      const rowsContainer = this.stageSvg.querySelector('#tt-list-rows');
+      if (rowsContainer) {
+        rowsContainer.innerHTML = '';
+        const rowH = 20;
+        const rowGap = 2;
+        const width = 352;
+
+        for (let i = 1; i <= 12; i++) {
+          const y = (i - 1) * (rowH + rowGap);
+          const isActive = (i === mult);
+          const isHidden = this._ttHideAnswers && !this._ttRevealedRows.has(i);
+          const product = i * table;
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(0, ${y})`);
+          g.setAttribute('data-action', 'tt-set-mult');
+          g.setAttribute('data-mult', String(i));
+          g.style.cursor = 'pointer';
+
+          // Background Row Rect
+          const rowRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rowRect.setAttribute('width', String(width));
+          rowRect.setAttribute('height', String(rowH));
+          rowRect.setAttribute('rx', '4');
+          rowRect.setAttribute('fill', isActive ? 'url(#tt-grad-row-active)' : '#0f172a');
+          rowRect.setAttribute('stroke', isActive ? '#38bdf8' : '#1e293b');
+          rowRect.setAttribute('stroke-width', isActive ? '1.5' : '1');
+          g.appendChild(rowRect);
+
+          // Active Arrow Indicator
+          if (isActive) {
+            const arrow = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            arrow.setAttribute('x', '10');
+            arrow.setAttribute('y', '14.5');
+            arrow.setAttribute('fill', '#38bdf8');
+            arrow.setAttribute('font-size', '10');
+            arrow.setAttribute('font-weight', '900');
+            arrow.textContent = '▶';
+            g.appendChild(arrow);
+          }
+
+          // Equation text: e.g. " 1 × 7 ="
+          const eqText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          eqText.setAttribute('x', isActive ? '24' : '14');
+          eqText.setAttribute('y', '14.5');
+          eqText.setAttribute('fill', isActive ? '#f8fafc' : '#cbd5e1');
+          eqText.setAttribute('font-size', '11');
+          eqText.setAttribute('font-family', 'ui-monospace, SFMono-Regular, Menlo, monospace');
+          eqText.setAttribute('font-weight', isActive ? '900' : '700');
+          const padI = i < 10 ? ` ${i}` : `${i}`;
+          eqText.textContent = `${padI} × ${table} =`;
+          g.appendChild(eqText);
+
+          // Answer Pill Box
+          const ansBoxW = 54;
+          const ansBoxH = 16;
+          const ansBoxX = width - ansBoxW - 8;
+          const ansBoxY = 2;
+
+          const ansRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          ansRect.setAttribute('x', String(ansBoxX));
+          ansRect.setAttribute('y', String(ansBoxY));
+          ansRect.setAttribute('width', String(ansBoxW));
+          ansRect.setAttribute('height', String(ansBoxH));
+          ansRect.setAttribute('rx', '3.5');
+          ansRect.setAttribute('fill', isHidden ? '#1e293b' : (isActive ? '#0284c7' : '#1e293b'));
+          ansRect.setAttribute('stroke', isHidden ? '#f59e0b' : (isActive ? '#38bdf8' : '#334155'));
+          ansRect.setAttribute('stroke-width', '1');
+          g.appendChild(ansRect);
+
+          const ansText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          ansText.setAttribute('x', String(ansBoxX + ansBoxW / 2));
+          ansText.setAttribute('y', String(ansBoxY + 11.5));
+          ansText.setAttribute('fill', isHidden ? '#facc15' : (isActive ? '#ffffff' : '#34d399'));
+          ansText.setAttribute('font-size', '11');
+          ansText.setAttribute('font-family', 'ui-monospace, SFMono-Regular, Menlo, monospace');
+          ansText.setAttribute('font-weight', '900');
+          ansText.setAttribute('text-anchor', 'middle');
+          ansText.textContent = isHidden ? '?' : String(product);
+          g.appendChild(ansText);
+
+          if (isHidden) {
+            ansRect.setAttribute('data-action', 'tt-reveal-row');
+            ansRect.setAttribute('data-row', String(i));
+          }
+
+          rowsContainer.appendChild(g);
+        }
       }
 
-      // Compute Tile Layout
-      const availW = 422;
-      const availH = 210;
-      const gapX = Math.max(2, Math.min(5, Math.floor(40 / mult)));
-      const gapY = Math.max(2, Math.min(4, Math.floor(30 / table)));
-      const tileW = Math.max(18, Math.min(38, Math.floor((availW - (mult - 1) * gapX) / mult)));
-      const tileH = Math.max(12, Math.min(26, Math.floor((availH - (table - 1) * gapY) / table)));
+      // 4. Update Right Side Multiplication Fact & Mastery Card
+      const total = table * mult;
+      const setTxt = (id, str) => { const el = this.stageSvg.querySelector(id); if (el) el.textContent = str; };
 
-      const totalGridW = mult * tileW + (mult - 1) * gapX;
-      const startX = Math.max(0, Math.floor((availW - totalGridW) / 2));
-      this._ttGridStartX = startX;
-      this._ttTileW = tileW;
-      this._ttGapX = gapX;
+      setTxt('#tt-card-target-eq', `${table} × ${mult} = ${total}`);
 
-      // Build Dynamic Grid SVG
-      const gridContainer = this.stageSvg.querySelector('#tt-array-grid');
-      if (gridContainer) {
-        gridContainer.innerHTML = '';
-        let tileNum = 1;
+      const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
+      const tWord = words[table] || String(table);
+      const mWord = words[mult] || String(mult);
+      const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+      setTxt('#tt-card-word-form', `${cap(tWord)} multiplied by ${mWord} is ${total}`);
 
-        for (let r = 0; r < table; r++) {
-          for (let c = 0; c < mult; c++) {
-            const x = startX + c * (tileW + gapX);
-            const y = r * (tileH + gapY);
-            const isLeft = (c < splitCol);
+      setTxt('#tt-card-family-comm', `${mult} × ${table} = ${total} (Commutative Property)`);
+      setTxt('#tt-card-family-div', `${total} ÷ ${table} = ${mult} • ${total} ÷ ${mult} = ${table} (Division Inverses)`);
 
-            const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-            g.setAttribute('transform', `translate(${x}, ${y})`);
-            g.style.cursor = 'pointer';
+      // Repeated Addition string
+      if (mult <= 10) {
+        setTxt('#tt-card-repeated-add', `${Array(mult).fill(table).join(' + ')} = ${total}`);
+      } else {
+        setTxt('#tt-card-repeated-add', `${Array(4).fill(table).join(' + ')} ... (${mult} times) = ${total}`);
+      }
 
-            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-            rect.setAttribute('width', String(tileW));
-            rect.setAttribute('height', String(tileH));
-            rect.setAttribute('rx', '4');
-            rect.setAttribute('fill', isLeft ? 'url(#tt-tile-emerald)' : 'url(#tt-tile-amber)');
-            rect.setAttribute('stroke', isLeft ? '#10b981' : '#f59e0b');
-            rect.setAttribute('stroke-width', '0.8');
+      // Visual Grouping Representation
+      const visSub = this.stageSvg.querySelector('#tt-visual-groups-sub');
+      if (visSub) visSub.textContent = `${mult} groups of ${table}`;
 
-            g.appendChild(rect);
+      const visContainer = this.stageSvg.querySelector('#tt-visual-groups-container');
+      if (visContainer) {
+        visContainer.innerHTML = '';
+        const maxGroups = mult;
+        const barW = Math.max(16, Math.min(26, Math.floor(320 / maxGroups) - 3));
+        const barH = 20;
 
-            // Tile Number / Multiple Text
-            if (tileW >= 22 && tileH >= 16) {
-              const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-              txt.setAttribute('x', String(tileW / 2));
-              txt.setAttribute('y', String(tileH / 2 + 3.5));
+        for (let gIdx = 0; gIdx < maxGroups; gIdx++) {
+          const gx = gIdx * (barW + 3);
+          const groupG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          groupG.setAttribute('transform', `translate(${gx}, 0)`);
+
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('width', String(barW));
+          rect.setAttribute('height', String(barH));
+          rect.setAttribute('rx', '3');
+          rect.setAttribute('fill', '#0284c7');
+          rect.setAttribute('stroke', '#38bdf8');
+          rect.setAttribute('stroke-width', '1');
+          groupG.appendChild(rect);
+
+          const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          txt.setAttribute('x', String(barW / 2));
+          txt.setAttribute('y', '14');
+          txt.setAttribute('fill', '#ffffff');
+          txt.setAttribute('font-size', '9');
+          txt.setAttribute('font-weight', '900');
+          txt.setAttribute('text-anchor', 'middle');
+          txt.textContent = String(table);
+          groupG.appendChild(txt);
+
+          visContainer.appendChild(groupG);
+        }
+      }
+
+      // Mental Partition Strategy
+      if (mult > 5) {
+        const p1 = 5;
+        const p2 = mult - 5;
+        setTxt('#tt-card-strategy', `${table} × ${mult} = (${table} × ${p1}) + (${table} × ${p2}) = ${table * p1} + ${table * p2} = ${total}`);
+      } else if (mult > 1) {
+        const p1 = Math.floor(mult / 2);
+        const p2 = mult - p1;
+        setTxt('#tt-card-strategy', `${table} × ${mult} = (${table} × ${p1}) + (${table} × ${p2}) = ${table * p1} + ${table * p2} = ${total}`);
+      } else {
+        setTxt('#tt-card-strategy', `Identity Property: Any number multiplied by 1 is itself (${table} × 1 = ${table}).`);
+      }
+
+      // 5. Update Bottom Banner
+      setTxt('#tt-banner-txt', `Standard School Times Table: ${table} × ${mult} = ${total} • ${mult} groups of ${table} • Inverses: ${total} ÷ ${table} = ${mult}, ${total} ÷ ${mult} = ${table}`);
+
+      // 6. If in Grid view, render the 12x12 matrix
+      if (this._ttMode === 'grid') {
+        this.renderTimesTablesMatrix12x12();
+      }
+    }
+
+    renderTimesTablesMatrix12x12() {
+      if (!this.stageSvg) return;
+      const matrixContainer = this.stageSvg.querySelector('#tt-12x12-matrix');
+      if (!matrixContainer) return;
+      matrixContainer.innerHTML = '';
+
+      const table = this._ttTable || 7;
+      const mult = this._ttMultiplier || 8;
+
+      const cols = 13;
+      const rows = 13;
+      const cellW = 34;
+      const cellH = 19;
+      const gap = 1.5;
+
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const x = c * (cellW + gap);
+          const y = r * (cellH + gap);
+
+          const isTopHeader = (r === 0);
+          const isLeftHeader = (c === 0);
+          const isCorner = (r === 0 && c === 0);
+
+          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          g.setAttribute('transform', `translate(${x}, ${y})`);
+
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('width', String(cellW));
+          rect.setAttribute('height', String(cellH));
+          rect.setAttribute('rx', '2.5');
+
+          const txt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          txt.setAttribute('x', String(cellW / 2));
+          txt.setAttribute('y', String(cellH / 2 + 3.5));
+          txt.setAttribute('text-anchor', 'middle');
+          txt.setAttribute('font-family', 'ui-monospace, SFMono-Regular, Menlo, monospace');
+
+          if (isCorner) {
+            rect.setAttribute('fill', '#0284c7');
+            rect.setAttribute('stroke', '#38bdf8');
+            rect.setAttribute('stroke-width', '1');
+            txt.setAttribute('fill', '#ffffff');
+            txt.setAttribute('font-size', '10');
+            txt.setAttribute('font-weight', '900');
+            txt.textContent = '×';
+          } else if (isTopHeader) {
+            const colVal = c;
+            const isColActive = (colVal === mult);
+            rect.setAttribute('fill', isColActive ? '#d97706' : '#1e293b');
+            rect.setAttribute('stroke', isColActive ? '#f59e0b' : '#334155');
+            rect.setAttribute('stroke-width', isColActive ? '1.5' : '0.8');
+            txt.setAttribute('fill', isColActive ? '#ffffff' : '#facc15');
+            txt.setAttribute('font-size', '8.5');
+            txt.setAttribute('font-weight', '900');
+            txt.textContent = String(colVal);
+          } else if (isLeftHeader) {
+            const rowVal = r;
+            const isRowActive = (rowVal === table);
+            rect.setAttribute('fill', isRowActive ? '#059669' : '#1e293b');
+            rect.setAttribute('stroke', isRowActive ? '#10b981' : '#334155');
+            rect.setAttribute('stroke-width', isRowActive ? '1.5' : '0.8');
+            txt.setAttribute('fill', isRowActive ? '#ffffff' : '#34d399');
+            txt.setAttribute('font-size', '8.5');
+            txt.setAttribute('font-weight', '900');
+            txt.textContent = String(rowVal);
+          } else {
+            const prod = r * c;
+            const isIntersection = (r === table && c === mult);
+            const isRowCross = (r === table);
+            const isColCross = (c === mult);
+            const isSquare = (r === c);
+
+            if (isIntersection) {
+              rect.setAttribute('fill', '#0284c7');
+              rect.setAttribute('stroke', '#38bdf8');
+              rect.setAttribute('stroke-width', '1.5');
               txt.setAttribute('fill', '#ffffff');
-              txt.setAttribute('font-size', tileW > 28 ? '9' : '7.5');
+              txt.setAttribute('font-weight', '900');
+              txt.setAttribute('font-size', '9');
+            } else if (isRowCross) {
+              rect.setAttribute('fill', '#064e3b');
+              rect.setAttribute('stroke', '#059669');
+              rect.setAttribute('stroke-width', '0.6');
+              txt.setAttribute('fill', '#6ee7b7');
+              txt.setAttribute('font-weight', '700');
+              txt.setAttribute('font-size', '8');
+            } else if (isColCross) {
+              rect.setAttribute('fill', '#451a03');
+              rect.setAttribute('stroke', '#d97706');
+              rect.setAttribute('stroke-width', '0.6');
+              txt.setAttribute('fill', '#fde68a');
+              txt.setAttribute('font-weight', '700');
+              txt.setAttribute('font-size', '8');
+            } else if (isSquare) {
+              rect.setAttribute('fill', '#172554');
+              rect.setAttribute('stroke', '#3b82f6');
+              rect.setAttribute('stroke-width', '0.8');
+              txt.setAttribute('fill', '#93c5fd');
               txt.setAttribute('font-weight', '800');
-              txt.setAttribute('text-anchor', 'middle');
-              txt.setAttribute('pointer-events', 'none');
-              txt.textContent = String(tileNum);
-              g.appendChild(txt);
+              txt.setAttribute('font-size', '8');
+            } else {
+              rect.setAttribute('fill', '#0f172a');
+              rect.setAttribute('stroke', '#1e293b');
+              rect.setAttribute('stroke-width', '0.5');
+              txt.setAttribute('fill', '#94a3b8');
+              txt.setAttribute('font-weight', '600');
+              txt.setAttribute('font-size', '8');
             }
 
-            // Click listener for procedural musical note!
-            const thisNum = tileNum;
-            g.addEventListener('pointerdown', (ev) => {
-              ev.stopPropagation();
-              const pentatonicFreqs = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
-              const noteFreq = pentatonicFreqs[(thisNum - 1) % pentatonicFreqs.length];
-              this.playAudioTone(noteFreq, 'sine', 0.1, 0.2);
-              this.createTouchRipple(ev.clientX, ev.clientY);
+            txt.textContent = String(prod);
 
-              // Flash tile
-              rect.setAttribute('fill', '#38bdf8');
-              setTimeout(() => {
-                rect.setAttribute('fill', isLeft ? 'url(#tt-tile-emerald)' : 'url(#tt-tile-amber)');
-              }, 180);
-            });
-
-            gridContainer.appendChild(g);
-            tileNum++;
+            g.style.cursor = 'pointer';
+            g.setAttribute('data-action', 'tt-grid-cell');
+            g.setAttribute('data-r', String(r));
+            g.setAttribute('data-c', String(c));
           }
+
+          g.appendChild(rect);
+          g.appendChild(txt);
+          matrixContainer.appendChild(g);
         }
       }
 
-      // Position Laser Splitter
-      const splitter = this.stageSvg.querySelector('#tt-laser-splitter');
-      if (splitter) {
-        if (splitCol >= mult) {
-          splitter.setAttribute('display', 'none');
-        } else {
-          splitter.setAttribute('display', 'block');
-          const splitX = 26 + startX + splitCol * (tileW + gapX) - (gapX / 2);
-          splitter.setAttribute('transform', `translate(${splitX}, 68)`);
-          const line = splitter.querySelector('line');
-          if (line) line.setAttribute('y2', String(table * (tileH + gapY) + 10));
-          const botGrip = splitter.querySelectorAll('g')[1];
-          if (botGrip) botGrip.setAttribute('transform', `translate(0, ${table * (tileH + gapY) + 14})`);
-        }
-      }
-
-      // Update Column Bracket Pills
-      const leftW = splitCol * (tileW + gapX) - gapX;
-      const rightW = (mult - splitCol) * (tileW + gapX) - gapX;
-
-      const leftRect = this.stageSvg.querySelector('#tt-col-left-rect');
-      const leftText = this.stageSvg.querySelector('#tt-col-left-text');
-      if (leftRect) {
-        leftRect.setAttribute('x', String(startX));
-        leftRect.setAttribute('width', String(Math.max(40, leftW)));
-      }
-      if (leftText) {
-        leftText.setAttribute('x', String(startX + Math.max(40, leftW) / 2));
-        leftText.textContent = `${splitCol} COLS (${table} × ${splitCol} = ${table * splitCol})`;
-      }
-
-      const rightPill = this.stageSvg.querySelector('#tt-col-right-pill');
-      const rightRect = this.stageSvg.querySelector('#tt-col-right-rect');
-      const rightText = this.stageSvg.querySelector('#tt-col-right-text');
-      if (splitCol >= mult) {
-        if (rightPill) rightPill.setAttribute('display', 'none');
-      } else {
-        if (rightPill) rightPill.setAttribute('display', 'block');
-        const rX = startX + splitCol * (tileW + gapX);
-        if (rightRect) {
-          rightRect.setAttribute('x', String(rX));
-          rightRect.setAttribute('width', String(Math.max(40, rightW)));
-        }
-        if (rightText) {
-          rightText.setAttribute('x', String(rX + Math.max(40, rightW) / 2));
-          rightText.textContent = `${mult - splitCol} COLS (${table} × ${mult - splitCol} = ${table * (mult - splitCol)})`;
-        }
-      }
-
-      // Update Right Stage Cards
+      // Update Grid Inspector Plaque
+      const total = table * mult;
       const setTxt = (id, str) => { const el = this.stageSvg.querySelector(id); if (el) el.textContent = str; };
-      setTxt('#tt-card-target-eq', `${table} × ${mult} = ${table * mult}`);
-      setTxt('#tt-card-step1-title', `FRIENDLY CHUNK 1 (${splitCol}s)`);
-      setTxt('#tt-card-step1-eq', `${table} × ${splitCol} = ${table * splitCol}`);
-      setTxt('#tt-card-step2-title', `REMAINING CHUNK 2 (${mult - splitCol}s)`);
-      setTxt('#tt-card-step2-eq', `${table} × ${mult - splitCol} = ${table * (mult - splitCol)}`);
-      setTxt('#tt-card-step3-eq', `${table * splitCol} + ${table * (mult - splitCol)} = ${table * mult}`);
-      setTxt('#tt-card-family-1', `${mult} × ${table} = ${table * mult} • Commutative Law`);
-      setTxt('#tt-card-family-2', `${table * mult} ÷ ${table} = ${mult} • ${table * mult} ÷ ${mult} = ${table} (Inverse)`);
-
-      // Update Bottom Banner
-      const bannerTxt = this.stageSvg.querySelector('#tt-banner-txt');
-      if (bannerTxt) {
-        if (splitCol === mult) {
-          bannerTxt.textContent = `Complete Array: ${table} rows × ${mult} columns = ${table * mult} total area units.`;
-        } else {
-          bannerTxt.textContent = `The Distributive Property: ${table} × ${mult} = ${table} × (${splitCol} + ${mult - splitCol}) = ${table * splitCol} + ${table * (mult - splitCol)} = ${table * mult}.`;
-        }
+      setTxt('#tt-grid-cell-eq', `${table} × ${mult} = ${total}`);
+      if (table === mult) {
+        setTxt('#tt-grid-square-badge', `⭐ SQUARE NUMBER: ${table}² = ${total}`);
+      } else {
+        setTxt('#tt-grid-square-badge', `Row ${table} × Column ${mult}`);
       }
 
-      // If in skip-counting or quiz mode, update those views too
-      if (this._ttMode === 'skip') this.renderTimesTablesSkipCounting();
+      const factors = [];
+      for (let f = 1; f <= total; f++) {
+        if (total % f === 0) factors.push(f);
+      }
+      setTxt('#tt-grid-factors', `Factors: ${factors.join(', ')}`);
+      setTxt('#tt-grid-even', total % 2 === 0 ? `Even Number • Multiple of ${table} and ${mult}` : `Odd Number • Multiple of ${table} and ${mult}`);
     }
 
     handleTimesTablesAction(action, targetNode) {
@@ -4758,18 +4927,39 @@ ${strokeLines.join('\n')}
         if (tableVal) {
           this._ttTable = tableVal;
           if (this.engine) this.engine.setVar('table', tableVal);
-          this.playAudioTone(330 + tableVal * 30, 'triangle', 0.12, 0.2);
+          this.playAudioTone(260 + tableVal * 30, 'triangle', 0.12, 0.2);
+          this.renderTimesTablesGrid();
+        }
+      } else if (action === 'tt-set-mult') {
+        const multVal = targetNode ? Number(targetNode.getAttribute('data-mult') || targetNode.closest('[data-mult]')?.getAttribute('data-mult')) : 1;
+        if (multVal) {
+          this._ttMultiplier = multVal;
+          if (this.engine) this.engine.setVar('multiplier', multVal);
+          this.playAudioTone(300 + multVal * 30, 'sine', 0.1, 0.18);
+          this.renderTimesTablesGrid();
+        }
+      } else if (action === 'tt-grid-cell') {
+        const rVal = targetNode ? Number(targetNode.getAttribute('data-r') || targetNode.closest('[data-r]')?.getAttribute('data-r')) : 7;
+        const cVal = targetNode ? Number(targetNode.getAttribute('data-c') || targetNode.closest('[data-c]')?.getAttribute('data-c')) : 8;
+        if (rVal && cVal) {
+          this._ttTable = rVal;
+          this._ttMultiplier = cVal;
+          if (this.engine) {
+            this.engine.setVar('table', rVal);
+            this.engine.setVar('multiplier', cVal);
+          }
+          this.playAudioTone(220 + (rVal + cVal) * 20, 'sine', 0.1, 0.2);
           this.renderTimesTablesGrid();
         }
       } else if (action === 'tt-inc-mult') {
         this._ttMultiplier = Math.min(12, (this._ttMultiplier || 8) + 1);
         if (this.engine) this.engine.setVar('multiplier', this._ttMultiplier);
-        this.playAudioTone(400 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
+        this.playAudioTone(320 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
         this.renderTimesTablesGrid();
       } else if (action === 'tt-dec-mult') {
         this._ttMultiplier = Math.max(1, (this._ttMultiplier || 8) - 1);
         if (this.engine) this.engine.setVar('multiplier', this._ttMultiplier);
-        this.playAudioTone(400 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
+        this.playAudioTone(320 + this._ttMultiplier * 25, 'sine', 0.08, 0.18);
         this.renderTimesTablesGrid();
       } else if (action === 'tt-flip') {
         const tmp = this._ttTable;
@@ -4781,30 +4971,27 @@ ${strokeLines.join('\n')}
         }
         this.playAudioTone(523.25, 'triangle', 0.14, 0.22);
         this.renderTimesTablesGrid();
-      } else if (action === 'tt-split-5') {
-        this._ttSplitCol = Math.min(5, this._ttMultiplier);
-        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
-        this.playAudioTone(587.33, 'triangle', 0.1, 0.2);
-        this.renderTimesTablesGrid();
-      } else if (action === 'tt-split-half') {
-        this._ttSplitCol = Math.max(1, Math.floor(this._ttMultiplier / 2));
-        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
-        this.playAudioTone(520, 'triangle', 0.1, 0.2);
-        this.renderTimesTablesGrid();
-      } else if (action === 'tt-split-none') {
-        this._ttSplitCol = this._ttMultiplier;
-        if (this.engine) this.engine.setVar('splitCol', this._ttSplitCol);
+      } else if (action === 'tt-toggle-hide') {
+        this._ttHideAnswers = !this._ttHideAnswers;
+        if (!this._ttHideAnswers) this._ttRevealedRows.clear();
         this.playAudioTone(440, 'triangle', 0.1, 0.2);
         this.renderTimesTablesGrid();
-      } else if (action === 'tt-play-scale') {
-        this.playMultiplesScale();
-      } else if (action === 'tt-mode-array') {
-        this._ttMode = 'array';
-        this.updateTimesTablesModeView('array');
-      } else if (action === 'tt-mode-skip') {
-        this._ttMode = 'skip';
-        this.updateTimesTablesModeView('skip');
-        this.renderTimesTablesSkipCounting();
+      } else if (action === 'tt-reveal-row') {
+        const rowVal = targetNode ? Number(targetNode.getAttribute('data-row') || targetNode.closest('[data-row]')?.getAttribute('data-row')) : 1;
+        if (rowVal) {
+          this._ttRevealedRows.add(rowVal);
+          this.playAudioTone(659.25, 'sine', 0.1, 0.2);
+          this.renderTimesTablesGrid();
+        }
+      } else if (action === 'tt-recite') {
+        this.reciteTimesTable();
+      } else if (action === 'tt-mode-list') {
+        this._ttMode = 'list';
+        this.updateTimesTablesModeView('list');
+      } else if (action === 'tt-mode-grid') {
+        this._ttMode = 'grid';
+        this.updateTimesTablesModeView('grid');
+        this.renderTimesTablesMatrix12x12();
       } else if (action === 'tt-mode-quiz') {
         this._ttMode = 'quiz';
         this.updateTimesTablesModeView('quiz');
@@ -4817,17 +5004,17 @@ ${strokeLines.join('\n')}
 
     updateTimesTablesModeView(mode) {
       if (!this.stageSvg) return;
-      const stageArray = this.stageSvg.querySelector('#tt-stage-array');
-      const stageSkip = this.stageSvg.querySelector('#tt-stage-skip');
+      const stageList = this.stageSvg.querySelector('#tt-stage-list');
+      const stageGrid = this.stageSvg.querySelector('#tt-stage-grid');
       const stageQuiz = this.stageSvg.querySelector('#tt-stage-quiz');
 
-      if (stageArray) stageArray.setAttribute('display', mode === 'array' ? 'block' : 'none');
-      if (stageSkip) stageSkip.setAttribute('display', mode === 'skip' ? 'block' : 'none');
+      if (stageList) stageList.setAttribute('display', mode === 'list' ? 'block' : 'none');
+      if (stageGrid) stageGrid.setAttribute('display', mode === 'grid' ? 'block' : 'none');
       if (stageQuiz) stageQuiz.setAttribute('display', mode === 'quiz' ? 'block' : 'none');
 
       const tabs = [
-        { id: '#tab-mode-array', mode: 'array' },
-        { id: '#tab-mode-skip', mode: 'skip' },
+        { id: '#tab-mode-list', mode: 'list' },
+        { id: '#tab-mode-grid', mode: 'grid' },
         { id: '#tab-mode-quiz', mode: 'quiz' }
       ];
       tabs.forEach(t => {
@@ -4848,123 +5035,33 @@ ${strokeLines.join('\n')}
       this.playAudioTone(440, 'sine', 0.08);
     }
 
-    handleTimesTablesSplitterDrag(svgX) {
-      if (!this.stageSvg) return;
-      const mult = this._ttMultiplier || 8;
-      const startX = this._ttGridStartX || 0;
-      const tileW = this._ttTileW || 38;
-      const gapX = this._ttGapX || 4;
-
-      const relX = svgX - 26 - startX;
-      const colStep = tileW + gapX;
-      let newSplit = Math.round(relX / colStep);
-      newSplit = Math.max(1, Math.min(mult, newSplit));
-
-      if (newSplit !== this._ttSplitCol) {
-        this._ttSplitCol = newSplit;
-        if (this.engine) this.engine.setVar('splitCol', newSplit);
-        this.renderTimesTablesGrid();
-        this.playAudioTone(320 + newSplit * 40, 'triangle', 0.05, 0.15);
-      }
-    }
-
-    renderTimesTablesSkipCounting() {
-      if (!this.stageSvg) return;
-      const canvas = this.stageSvg.querySelector('#tt-numberline-canvas');
-      if (!canvas) return;
-      canvas.innerHTML = '';
-
+    reciteTimesTable() {
+      if (!this.stageSvg || this._ttIsReciting) return;
+      this._ttIsReciting = true;
       const table = this._ttTable || 7;
-      const mult = this._ttMultiplier || 8;
+      const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 987.77, 1046.50];
 
-      const sub = this.stageSvg.querySelector('#tt-skip-subtitle');
-      if (sub) {
-        const seq = [];
-        for (let i = 1; i <= mult; i++) seq.push(i * table);
-        sub.textContent = `Skip counting by ${table}s: ${seq.join(', ')}`;
-      }
+      for (let i = 1; i <= 12; i++) {
+        setTimeout(() => {
+          this._ttMultiplier = i;
+          if (this.engine) this.engine.setVar('multiplier', i);
+          const freq = pentatonic[(i - 1) % pentatonic.length];
+          this.playAudioTone(freq, 'sine', 0.12, 0.22);
+          this.renderTimesTablesGrid();
 
-      const lineW = 426;
-      const lineY = 160;
-      const stepW = lineW / mult;
-
-      // Draw baseline
-      const baseLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      baseLine.setAttribute('x1', '0');
-      baseLine.setAttribute('y1', String(lineY));
-      baseLine.setAttribute('x2', String(lineW));
-      baseLine.setAttribute('y2', String(lineY));
-      baseLine.setAttribute('stroke', '#334155');
-      baseLine.setAttribute('stroke-width', '2');
-      canvas.appendChild(baseLine);
-
-      // Draw jumping arches
-      for (let i = 0; i < mult; i++) {
-        const x1 = i * stepW;
-        const x2 = (i + 1) * stepW;
-        const midX = (x1 + x2) / 2;
-        const archH = Math.min(84, 26 + stepW * 0.7);
-        const topY = lineY - archH;
-
-        // Quadratic bezier arc
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('d', `M ${x1} ${lineY} Q ${midX} ${topY} ${x2} ${lineY}`);
-        path.setAttribute('fill', 'none');
-        path.setAttribute('stroke', '#10b981');
-        path.setAttribute('stroke-width', '2');
-        path.setAttribute('stroke-dasharray', '4 2');
-        canvas.appendChild(path);
-
-        // Jump label +Table
-        const jumpTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        jumpTxt.setAttribute('x', String(midX));
-        jumpTxt.setAttribute('y', String(topY - 4));
-        jumpTxt.setAttribute('fill', '#34d399');
-        jumpTxt.setAttribute('font-size', '9');
-        jumpTxt.setAttribute('font-weight', '800');
-        jumpTxt.setAttribute('text-anchor', 'middle');
-        jumpTxt.textContent = `+${table}`;
-        canvas.appendChild(jumpTxt);
-
-        // Multiple peg
-        const peg = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-        peg.setAttribute('transform', `translate(${x2}, ${lineY})`);
-        peg.style.cursor = 'pointer';
-
-        const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-        dot.setAttribute('cx', '0');
-        dot.setAttribute('cy', '0');
-        dot.setAttribute('r', '8');
-        dot.setAttribute('fill', '#0284c7');
-        dot.setAttribute('stroke', '#38bdf8');
-        dot.setAttribute('stroke-width', '1.5');
-        peg.appendChild(dot);
-
-        const valTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        valTxt.setAttribute('x', '0');
-        valTxt.setAttribute('y', '20');
-        valTxt.setAttribute('fill', '#f8fafc');
-        valTxt.setAttribute('font-size', '10');
-        valTxt.setAttribute('font-weight', '900');
-        valTxt.setAttribute('text-anchor', 'middle');
-        valTxt.textContent = String((i + 1) * table);
-        peg.appendChild(valTxt);
-
-        const curStep = i + 1;
-        peg.addEventListener('pointerdown', (ev) => {
-          ev.stopPropagation();
-          this.playAudioTone(260 + curStep * 40, 'triangle', 0.15, 0.22);
-          this.createTouchRipple(ev.clientX, ev.clientY);
-        });
-
-        canvas.appendChild(peg);
+          if (i === 12) {
+            setTimeout(() => {
+              this._ttIsReciting = false;
+            }, 300);
+          }
+        }, (i - 1) * 280);
       }
     }
 
     setupTimesTablesQuiz() {
       if (!this.stageSvg) return;
       const table = this._ttTable || 7;
-      const mult = Math.floor(Math.random() * 11) + 2; // 2 to 12
+      const mult = Math.floor(Math.random() * 12) + 1; // 1 to 12
       const correctAns = table * mult;
 
       this._ttQuizQuestion = { table, mult, correctAns };
@@ -4975,11 +5072,10 @@ ${strokeLines.join('\n')}
       const streakEl = this.stageSvg.querySelector('#tt-quiz-streak');
       if (streakEl) streakEl.textContent = `🔥 Streak: ${this._ttQuizStreak || 0}`;
 
-      // Distractors
       const set = new Set([correctAns]);
       while (set.size < 4) {
         const offset = (Math.random() > 0.5 ? 1 : -1) * (Math.random() > 0.5 ? table : (Math.random() > 0.5 ? 2 : 10));
-        const val = Math.max(2, correctAns + offset);
+        const val = Math.max(1, correctAns + offset);
         set.add(val);
       }
       const options = Array.from(set).sort(() => Math.random() - 0.5);
@@ -5029,7 +5125,7 @@ ${strokeLines.join('\n')}
 
         setTimeout(() => {
           this.setupTimesTablesQuiz();
-        }, 900);
+        }, 850);
       } else {
         this._ttQuizStreak = 0;
         if (rect) {
@@ -5048,17 +5144,11 @@ ${strokeLines.join('\n')}
     }
 
     playMultiplesScale() {
-      if (!this.stageSvg) return;
-      const table = this._ttTable || 7;
-      const mult = this._ttMultiplier || 8;
-      const pentatonic = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33, 659.25, 783.99, 880.00, 1046.50, 1174.66];
+      this.reciteTimesTable();
+    }
 
-      for (let i = 0; i < mult; i++) {
-        setTimeout(() => {
-          const freq = pentatonic[i % pentatonic.length];
-          this.playAudioTone(freq, 'sine', 0.12, 0.2);
-        }, i * 140);
-      }
+    handleTimesTablesSplitterDrag(svgX) {
+      // Legacy compatibility stub
     }
 
     // =========================================================================
