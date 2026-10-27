@@ -12,10 +12,34 @@
  * - Seamless hybrid fallback to BANZSL 2-handed manual alphabet fingerspelling
  */
 
-import { Point3D, BslHandPose, BslNmf, BslHandShape, BslPalmOrientation, BslEaseCurve, BslBaseHandMode, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
+import {
+  Point3D,
+  BslHandPose,
+  BslNmf,
+  BslHandShape,
+  BslPalmOrientation,
+  BslEaseCurve,
+  BslBaseHandMode,
+  BslClassifierType,
+  BslAspect,
+  BslClassifierPredicate,
+  DOMINANT_REST_POSE,
+  DOMINANT_REST_KNUCKLE,
+  DOMINANT_REST_WRIST,
+  BSL_ALPHABET_POSES,
+} from './bslAlphabet';
 
-export type { BslNmf, BslHandShape, BslPalmOrientation, BslEaseCurve, BslBaseHandMode };
-export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation' | 'grammar' | 'temporal';
+export type {
+  BslNmf,
+  BslHandShape,
+  BslPalmOrientation,
+  BslEaseCurve,
+  BslBaseHandMode,
+  BslClassifierType,
+  BslAspect,
+  BslClassifierPredicate,
+};
+export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation' | 'grammar' | 'temporal' | 'classifier';
 
 export interface BslSignKeyframe {
   label: string;
@@ -38,6 +62,8 @@ export interface BslSignKeyframe {
     shiftZ?: number;
   };
   nmf?: BslNmf;
+  classifier?: BslClassifierPredicate;
+  aspect?: BslAspect;
 }
 
 export interface BslSign {
@@ -53,6 +79,8 @@ export interface BslSign {
   directionalType?: 'subject-to-object' | 'object-to-subject';
   defaultLoci?: { from: string; to: string };
   makatonStage?: number; // Makaton Core Vocabulary Stages 1-8 (UK SEN / Early Communication Standard)
+  classifier?: BslClassifierPredicate;
+  aspect?: BslAspect;
 }
 
 /**

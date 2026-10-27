@@ -424,6 +424,147 @@ const splitDemarcationLine = 118;
 assert(rightShoulderSplitX < splitDemarcationLine,
   `In split mode, right shoulder (${rightShoulderSplitX}px) remains contained within LHS pane (< ${splitDemarcationLine}px)`);
 
+// ---------------------------------------------------------
+// Test 12: BSL Level 6 Linguistic Engine Invariants (Turn 1)
+// ---------------------------------------------------------
+console.log('\n12. Testing BSL Level 6 Linguistic Engine & Grammar Invariants:');
+
+// 12.1: Multi-Loci 3D Registers Completeness
+const { ADVERB_MOUTH_MAP } = await import('../src/utils/bslGrammarEngine');
+const expectedLociKeys = ['ME', 'YOU', 'LOCUS_A', 'LOCUS_B', 'LOCUS_C', 'LOCUS_D', 'LOCUS_E', 'LOCUS_F', 'LOCUS_HIGH', 'LOCUS_LOW'];
+expectedLociKeys.forEach((key) => {
+  assert(Boolean(DEFAULT_BSL_LOCI[key as any]), `Locus register '${key}' is codified in DEFAULT_BSL_LOCI`);
+  assert(typeof DEFAULT_BSL_LOCI[key as any].coords.x === 'number', `Locus '${key}' has valid 3D X coordinate`);
+});
+
+// 12.2: Vertical Elevation Planes (High vs Low)
+assert(DEFAULT_BSL_LOCI.LOCUS_HIGH.coords.y < DEFAULT_BSL_LOCI.ME.coords.y,
+  `LOCUS_HIGH (${DEFAULT_BSL_LOCI.LOCUS_HIGH.coords.y}) is elevated above 1P plane (${DEFAULT_BSL_LOCI.ME.coords.y})`);
+assert(DEFAULT_BSL_LOCI.LOCUS_LOW.coords.y > DEFAULT_BSL_LOCI.ME.coords.y,
+  `LOCUS_LOW (${DEFAULT_BSL_LOCI.LOCUS_LOW.coords.y}) is positioned below 1P plane (${DEFAULT_BSL_LOCI.ME.coords.y})`);
+
+// 12.3: Hierarchical Divine / Authority Allocation
+const divineAnalysis = analyzeAndTransformBslGrammar('GOD BLESS EARTH', 'bsl-natural');
+const godToken = divineAnalysis.tokens.find((t) => t.cleanWord === 'GOD');
+assert(godToken?.locus === 'LOCUS_HIGH', `Entity 'GOD' automatically assigned to LOCUS_HIGH elevation register`);
+const earthToken = divineAnalysis.tokens.find((t) => t.cleanWord === 'EARTH');
+assert(earthToken?.locus === 'LOCUS_LOW', `Entity 'EARTH' automatically assigned to LOCUS_LOW register`);
+
+// 12.4: Constructed Action & Role Shift Detection
+const dialogueAnalysis = analyzeAndTransformBslGrammar('JESUS SAID PRAY', 'bsl-natural');
+const jesusToken = dialogueAnalysis.tokens.find((t) => t.cleanWord === 'JESUS');
+assert(Boolean(jesusToken?.nmf?.roleShift), `Dialogue cue 'SAID' activates Level 6 Constructed Action (:role-shift)`);
+assert(jesusToken?.nmf?.roleShift?.agent === 'JESUS', `Role shift agent correctly identified as 'JESUS'`);
+assert(typeof jesusToken?.nmf?.roleShift?.yaw === 'number' && jesusToken?.nmf?.roleShift?.yaw !== 0,
+  `Role shift produces non-zero torso yaw (${jesusToken?.nmf?.roleShift?.yaw}°) for 3D body rotation`);
+
+// 12.5: Adverbial Non-Manual Mouth Morphemes
+assert(ADVERB_MOUTH_MAP.EASILY === 'mm', `Adverb 'EASILY' maps to BSL aspectual mouth morpheme 'mm'`);
+assert(ADVERB_MOUTH_MAP.CARELESSLY === 'th', `Adverb 'CARELESSLY' maps to BSL mouth morpheme 'th'`);
+assert(ADVERB_MOUTH_MAP.CAREFULLY === 'pursed', `Adverb 'CAREFULLY' maps to BSL mouth morpheme 'pursed'`);
+assert(ADVERB_MOUTH_MAP.MASSIVELY === 'puffed-cheeks', `Adverb 'MASSIVELY' maps to BSL mouth morpheme 'puffed-cheeks'`);
+assert(ADVERB_MOUTH_MAP.STRONG === 'tight-lips', `Adverb 'STRONG' maps to BSL mouth morpheme 'tight-lips'`);
+
+const adverbAnalysis = analyzeAndTransformBslGrammar('THEY PRAY CAREFULLY', 'bsl-natural');
+const prayToken = adverbAnalysis.tokens.find((t) => t.cleanWord === 'PRAY');
+assert(prayToken?.nmf?.mouth === 'pursed', `Adverb 'CAREFULLY' binds 'pursed' mouth morpheme to predicate`);
+
+// ---------------------------------------------------------
+// Test 13: BSL Level 6 Classifier Predicates & Aspectual Modulators (Turn 2)
+// ---------------------------------------------------------
+console.log('\n13. Testing BSL Level 6 Classifier Predicates & Aspectual Modulators:');
+const {
+  CLASSIFIER_VERB_MAP,
+  ASPECT_MARKER_MAP,
+  generateClassifierPredicate,
+} = await import('../src/utils/bslGrammarEngine');
+
+// 13.1: Classifier Types Codification
+assert(CLASSIFIER_VERB_MAP.WALK === 'proform-v', "Verb 'WALK' maps to bipedal classifier 'proform-v'");
+assert(CLASSIFIER_VERB_MAP.WALKED === 'proform-v', "Verb 'WALKED' maps to bipedal classifier 'proform-v'");
+assert(CLASSIFIER_VERB_MAP.DRIVE === 'proform-b', "Verb 'DRIVE' maps to flat vehicle classifier 'proform-b'");
+assert(CLASSIFIER_VERB_MAP.ACCELERATED === 'proform-b', "Verb 'ACCELERATED' maps to flat vehicle classifier 'proform-b'");
+assert(CLASSIFIER_VERB_MAP.VESSEL === 'proform-c', "Noun 'VESSEL' maps to cylindrical classifier 'proform-c'");
+assert(CLASSIFIER_VERB_MAP.CHALICE === 'handling-cup', "Liturgical 'CHALICE' maps to reverent 'handling-cup' classifier");
+assert(CLASSIFIER_VERB_MAP.READ === 'handling-book', "Verb 'READ' maps to open scripture 'handling-book' classifier");
+assert(CLASSIFIER_VERB_MAP.APPROACH === 'proform-1', "Verb 'APPROACH' maps to upright person trajectory 'proform-1'");
+
+// 13.2: Aspectual Marker Mappings
+assert(ASPECT_MARKER_MAP.STEADILY === 'durative', "Marker 'STEADILY' maps to 'durative' aspect");
+assert(ASPECT_MARKER_MAP.CONTINUOUSLY === 'durative', "Marker 'CONTINUOUSLY' maps to 'durative' aspect");
+assert(ASPECT_MARKER_MAP.SUDDENLY === 'intensive', "Marker 'SUDDENLY' maps to 'intensive' aspect");
+assert(ASPECT_MARKER_MAP.FORCEFULLY === 'intensive', "Marker 'FORCEFULLY' maps to 'intensive' aspect");
+assert(ASPECT_MARKER_MAP.OFTEN === 'habitual', "Marker 'OFTEN' maps to 'habitual' aspect");
+assert(ASPECT_MARKER_MAP.DAILY === 'habitual', "Marker 'DAILY' maps to 'habitual' aspect");
+assert(ASPECT_MARKER_MAP.STARTING === 'inceptive', "Marker 'STARTING' maps to 'inceptive' aspect");
+
+// 13.3: Procedural Bipedal Classifier CL:V Generation with Durative Aspect
+const durativeWalk = generateClassifierPredicate('proform-v', {
+  fromLocus: 'LOCUS_A',
+  toLocus: 'LOCUS_B',
+  aspect: 'durative',
+});
+assert(durativeWalk.classifier?.type === 'proform-v', "Generated sign has classifier type 'proform-v'");
+assert(durativeWalk.aspect === 'durative', "Generated sign has aspect 'durative'");
+assert(durativeWalk.keyframes.length === 4, "Durative aspect generates 4-stage continuous stepping cadence");
+assert(durativeWalk.keyframes[0].shape === 'v', "Keyframe 1 uses inverted V shape (:shape :v)");
+assert(durativeWalk.keyframes[0].palm === 'down', "Keyframe 1 points downward (:palm :down for legs)");
+assert(durativeWalk.keyframes[0].nmf?.mouth === 'mm', "Durative pacing generates 'mm' mouth morpheme");
+assert(durativeWalk.keyframes[3].ease === 'snap', "Terminal keyframe settles with 'snap' ease");
+
+// 13.4: Procedural Flat Vehicle Classifier CL:B Generation with Intensive Aspect
+const intensiveCar = generateClassifierPredicate('proform-b', {
+  fromLocus: 'LOCUS_A',
+  toLocus: 'LOCUS_B',
+  aspect: 'intensive',
+});
+assert(intensiveCar.classifier?.type === 'proform-b', "Generated vehicle sign has classifier type 'proform-b'");
+assert(intensiveCar.aspect === 'intensive', "Generated vehicle sign has aspect 'intensive'");
+assert(intensiveCar.keyframes[0].hold === 200, "Intensive aspect primes motion with prolonged tension hold (200ms)");
+assert(intensiveCar.keyframes[1].ease === 'snap', "Intensive acceleration halts with rigid snap deceleration");
+assert(intensiveCar.keyframes[1].nmf?.mouth === 'puffed-cheeks', "Intensive vehicle zoom produces 'puffed-cheeks' NMF");
+
+// 13.5: Procedural Liturgical Handling Classifier (Sacred Chalice)
+const chaliceSign = generateClassifierPredicate('handling-cup', {
+  fromLocus: 'LOCUS_LOW',
+  toLocus: 'LOCUS_HIGH',
+});
+assert(chaliceSign.classifier?.type === 'handling-cup', "Liturgical chalice sign has 'handling-cup' type");
+assert(chaliceSign.keyframes[0].baseHandMode === 'override', "Chalice handling coordinates both hands (:base-mode :override)");
+assert(chaliceSign.keyframes[1].targetTip.y < 0, "Chalice is elevated to divine high plane (y < 0)");
+assert(chaliceSign.keyframes[1].nmf?.eyebrows === 'raised', "Reverent elevation features raised liturgical eyebrows");
+
+// 13.6: Natural Sentence Transformation with Bipedal Classifier & Durative Aspect
+const walkSentence = analyzeAndTransformBslGrammar('The pupil walked steadily from left to right', 'bsl-natural');
+const walkClToken = walkSentence.tokens.find((t) => t.role === 'classifier-predicate');
+assert(Boolean(walkClToken), "Natural grammar transforms 'walked' into Level 6 classifier-predicate");
+assert(walkClToken?.classifier?.type === 'proform-v', "Classified as 'proform-v' bipedal locomotion");
+assert(walkClToken?.aspect === 'durative', "Temporal aspect inflected with 'durative' cadence");
+assert(walkClToken?.gloss.includes('CL:V'), "Gloss sequence incorporates standard Level 6 'CL:V' notation");
+assert(walkSentence.stream.some((p) => p.classifier?.type === 'proform-v'), "3D output stream contains proform-v classifier poses");
+
+// 13.7: Natural Sentence Transformation with Vehicle Classifier & Intensive Aspect
+const carSentence = analyzeAndTransformBslGrammar('The car accelerated suddenly', 'bsl-natural');
+const carClToken = carSentence.tokens.find((t) => t.role === 'classifier-predicate');
+assert(Boolean(carClToken), "Natural grammar transforms 'accelerated' into Level 6 vehicle classifier");
+assert(carClToken?.classifier?.type === 'proform-b', "Classified as 'proform-b' flat vehicle");
+assert(carClToken?.aspect === 'intensive', "Temporal aspect inflected with 'intensive' acceleration");
+assert(carClToken?.gloss.includes('CL:B'), "Gloss sequence incorporates standard Level 6 'CL:B' notation");
+
+// 13.8: S-Expression AST Serialization & Deserialization of Classifiers
+const { parseAstNodeToSign } = await import('../src/utils/bslAstCodec');
+const serializedCl = serializeSignToAst(durativeWalk);
+assert(serializedCl.includes(':classifier'), "AST S-Expression serializes :classifier opcode");
+assert(serializedCl.includes(':type "proform-v"'), "AST S-Expression preserves classifier :type 'proform-v'");
+assert(serializedCl.includes(':aspect :durative'), "AST S-Expression preserves :aspect :durative");
+
+const { parseSExpr } = await import('../src/utils/sexprParser');
+const parsedNode = parseSExpr(serializedCl.trim());
+const deserializedCl = parseAstNodeToSign(parsedNode);
+assert(Boolean(deserializedCl), "Deserialized AST node into BslSign");
+assert(deserializedCl?.classifier?.type === 'proform-v', "Deserialized classifier type 'proform-v' matches with 100% fidelity");
+assert(deserializedCl?.aspect === 'durative', "Deserialized aspect 'durative' matches with 100% fidelity");
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);
@@ -431,7 +572,8 @@ console.log(`==================================================\n`);
 if (failedTests > 0) {
   process.exit(1);
 } else {
-  console.log('🎉 All BSL In-Vision Interpreter Invariants & Level 2/3 Signs Verified!');
+  console.log('🎉 All BSL In-Vision Interpreter Invariants & Level 6 Turn 2 Verified!');
   process.exit(0);
 }
+
 

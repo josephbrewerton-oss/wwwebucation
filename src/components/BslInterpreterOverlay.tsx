@@ -669,9 +669,26 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         yShift = 0;
         zShift = 0;
       }
-      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, ox, oy);
+
+      let px = pt.x;
+      let py = pt.y;
+      let pz = pt.z;
+
+      // Level 6 Constructed Action / Role Shift Torso Yaw Rotation
+      const roleYaw = currentPose?.nmf?.roleShift?.yaw;
+      if (roleYaw) {
+        const rad = (roleYaw * Math.PI) / 180;
+        const cosY = Math.cos(rad);
+        const sinY = Math.sin(rad);
+        const rx = px * cosY + pz * sinY;
+        const rz = -px * sinY + pz * cosY;
+        px = rx;
+        pz = rz;
+      }
+
+      return project3DToSvg({ x: px, y: py - yShift, z: pz - zShift }, cameraConfig, ox, oy);
     },
-    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, orbitOffset.panX, orbitOffset.panY]
+    [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, orbitOffset.panX, orbitOffset.panY, currentPose?.nmf?.roleShift?.yaw]
   );
 
   // Perspective projection for Signing Hands Space (anchored on RHS in split mode)
@@ -737,7 +754,37 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
     let mouthH = cameraMode === 'face' ? 3 : 2;
     let mouthCurvature = 0;
     const lowerMouth = mouthPattern.toLowerCase();
-    if (lowerMouth.includes('o') || lowerMouth.includes('u')) {
+    if (lowerMouth === 'mm') {
+      // Adverbial: ordinary, steady, effortless
+      mouthW = cameraMode === 'face' ? 7.2 : 5.4;
+      mouthH = 0.8;
+      mouthCurvature = 0.3;
+    } else if (lowerMouth === 'th') {
+      // Adverbial: careless, accidental, relaxed
+      mouthW = cameraMode === 'face' ? 6.5 : 4.8;
+      mouthH = 3.2;
+      mouthCurvature = -0.4;
+    } else if (lowerMouth === 'pursed') {
+      // Adverbial: exact, precise, deliberate
+      mouthW = cameraMode === 'face' ? 3.4 : 2.6;
+      mouthH = 3.4;
+      mouthCurvature = 0;
+    } else if (lowerMouth === 'puffed-cheeks') {
+      // Adverbial: vast, massive, strenuous
+      mouthW = cameraMode === 'face' ? 4.8 : 3.6;
+      mouthH = 4.2;
+      mouthCurvature = 0;
+    } else if (lowerMouth === 'tight-lips') {
+      // Adverbial: determined, restricted
+      mouthW = cameraMode === 'face' ? 8.8 : 6.8;
+      mouthH = 0.5;
+      mouthCurvature = -0.3;
+    } else if (lowerMouth === 'f-mouth') {
+      // Adverbial: focused, intense
+      mouthW = cameraMode === 'face' ? 6.0 : 4.5;
+      mouthH = 2.0;
+      mouthCurvature = 0.8;
+    } else if (lowerMouth.includes('o') || lowerMouth.includes('u')) {
       mouthW = cameraMode === 'face' ? 5.5 : 4;
       mouthH = cameraMode === 'face' ? 7 : 5;
     } else if (
@@ -1763,7 +1810,9 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
                 textAnchor="middle"
                 letterSpacing="0.2"
               >
-                {grammarMode === 'makaton'
+                {currentPose.classifier
+                  ? `(:cl :type "${currentPose.classifier.type}" :aspect :${currentPose.aspect || currentPose.classifier.aspect || 'neutral'} :shape :${domHand3D.shape || 'flat'})`
+                  : grammarMode === 'makaton'
                   ? `(:act :keyword "${currentPose.letter?.split(' ')[0] || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`
                   : `(:act :sign "${currentPose.letter || currentPose.label}" :shape :${domHand3D.shape || 'flat'})`}
               </text>
@@ -1772,13 +1821,15 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
               <text
                 x="66"
                 y="173"
-                fill="#64748b"
+                fill={currentPose.nmf?.roleShift ? '#f43f5e' : '#64748b'}
                 fontSize="4.8"
                 fontFamily="ui-monospace, monospace"
                 fontWeight="700"
                 textAnchor="middle"
               >
-                {`(:loci :chin [${torsoChin.x.toFixed(0)}, ${torsoChin.y.toFixed(0)}] :tilt :${headTilt})`}
+                {currentPose.nmf?.roleShift
+                  ? `(:shift :agent "${currentPose.nmf.roleShift.agent}" :yaw ${currentPose.nmf.roleShift.yaw > 0 ? '+' : ''}${currentPose.nmf.roleShift.yaw}°)`
+                  : `(:loci :chin [${torsoChin.x.toFixed(0)}, ${torsoChin.y.toFixed(0)}] :tilt :${headTilt})`}
               </text>
               <text
                 x="175"
@@ -1798,13 +1849,15 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             <text
               x="120"
               y="13"
-              fill={currentPose.isWholeWordSign ? '#f59e0b' : '#38bdf8'}
+              fill={currentPose.classifier ? '#10b981' : currentPose.isWholeWordSign ? '#f59e0b' : '#38bdf8'}
               fontSize="6"
               fontWeight="800"
               textAnchor="middle"
               letterSpacing="0.4"
             >
-              {currentPose.isWholeWordSign
+              {currentPose.classifier
+                ? `🌐 BSL CLASSIFIER • ${currentPose.classifier.type.toUpperCase()}${currentPose.aspect ? ` [${currentPose.aspect.toUpperCase()}]` : ''}`
+                : currentPose.isWholeWordSign
                 ? grammarMode === 'makaton'
                   ? `🤝 MAKATON • ${currentPose.label.includes('Stage') ? currentPose.label.split('•')[0].trim().toUpperCase() : 'CORE STAGE 1-4'} KEYWORD`
                   : `✨ BSL SIGN • ${baseHand3D.mode === 'mirror' ? '2-HANDED MIRROR' : baseHand3D.mode === 'rest' ? '1-HANDED GESTURE' : 'CONTACT BASE'}`

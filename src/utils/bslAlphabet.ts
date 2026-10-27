@@ -14,10 +14,32 @@ export interface Point3D {
   z: number;
 }
 
+export type BslMouthMorpheme =
+  | 'open'
+  | 'closed'
+  | 'smile'
+  | 'round'
+  | 'f-mouth'
+  | 'mm'            // Adverbial: ordinary / effortless / steady
+  | 'th'            // Adverbial: careless / accidental / relaxed
+  | 'pursed'        // Adverbial: exact / precise / deliberate
+  | 'puffed-cheeks' // Adverbial: vast / massive / strenuous
+  | 'tight-lips'    // Adverbial: determined / restricted
+  | string;
+
+export interface BslRoleShift {
+  agent: string;
+  yaw: number;             // Torso rotation in degrees (-25 to +25)
+  gaze?: Point3D | string; // Gaze orientation target
+  elevation?: 'high' | 'mid' | 'low';
+}
+
 export interface BslNmf {
   eyebrows?: 'neutral' | 'raised' | 'furrowed';
-  mouth?: string;
+  mouth?: BslMouthMorpheme;
   headTilt?: 'neutral' | 'nod' | 'shake' | 'tilt-left' | 'tilt-right';
+  gaze?: Point3D | string;
+  roleShift?: BslRoleShift;
 }
 
 export type BslHandShape =
@@ -37,6 +59,35 @@ export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | Point3D
 export type BslEaseCurve = 'snap' | 'ease-out' | 'linear' | 'bounce' | string;
 
 export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override';
+
+// BSL Level 6 Classifier Types (Polycomponential Predicates)
+export type BslClassifierType =
+  | 'proform-v'        // CL:V bipedal legs walking/jumping/standing
+  | 'proform-1'        // CL:1 upright person/thin long object/trajectory
+  | 'proform-b'        // CL:B flat entity (vehicle/boat/plane/surface)
+  | 'proform-c'        // CL:C cylindrical entity (chalice/cup/column/trunk)
+  | 'proform-claw'     // CL:claw spherical or chunky object
+  | 'handling-cup'     // CL:handling reverent two-handed chalice manipulation
+  | 'handling-book'    // CL:handling open sacred book / text
+  | 'handling-pen'     // CL:handling precision writing / tracing
+  | 'trace-line';      // CL:SASS tracing line / contour
+
+// BSL Level 6 Temporal Aspect Modulations
+export type BslAspect =
+  | 'neutral'          // Standard single execution
+  | 'durative'         // Continuous, slow elliptical repetition (studying, pacing)
+  | 'habitual'         // Rhythmic frequent iterative pulses (daily prayer, regular duty)
+  | 'intensive'        // Sharp hesitation followed by explosive acceleration & rigid snap stop
+  | 'inceptive';       // Distinct initial hesitation before clean departure
+
+export interface BslClassifierPredicate {
+  type: BslClassifierType;
+  aspect?: BslAspect;
+  fromLocus?: string;
+  toLocus?: string;
+  manner?: 'slow' | 'fast' | 'stumble' | 'steady' | 'zig-zag';
+  entityLabel?: string;
+}
 
 export interface BslHandPose {
   letter: string;
@@ -61,6 +112,8 @@ export interface BslHandPose {
     shiftY?: number;
     shiftZ?: number;
   };
+  classifier?: BslClassifierPredicate;
+  aspect?: BslAspect;
 }
 
 // Fixed anatomical non-dominant base hand coordinates (The "Paper" for BANZSL fingerspelling)

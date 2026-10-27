@@ -18,17 +18,52 @@
  * 6. Particle & Copula Suppression: Strips English articles ('the', 'a') and copulas ('is', 'are', 'was') that do not exist in natural BSL.
  */
 
-import { Point3D, BslHandPose, BslNmf, DOMINANT_REST_POSE, DOMINANT_REST_KNUCKLE, DOMINANT_REST_WRIST, BSL_ALPHABET_POSES } from './bslAlphabet';
-import { BslSign, BslSignKeyframe, lookupBslSign, signKeyframeToHandPose, lookupMakatonSign } from './bslLexicon';
+import {
+  Point3D,
+  BslHandPose,
+  BslNmf,
+  BslHandShape,
+  BslPalmOrientation,
+  BslEaseCurve,
+  BslBaseHandMode,
+  BslMouthMorpheme,
+  BslClassifierType,
+  BslAspect,
+  BslClassifierPredicate,
+  DOMINANT_REST_POSE,
+  DOMINANT_REST_KNUCKLE,
+  DOMINANT_REST_WRIST,
+  BSL_ALPHABET_POSES,
+} from './bslAlphabet';
+import { BslSign, BslSignKeyframe, BslCategory, lookupBslSign, signKeyframeToHandPose, lookupMakatonSign } from './bslLexicon';
+
+export type {
+  BslClassifierType,
+  BslAspect,
+  BslClassifierPredicate,
+};
 
 export type BslGrammarMode = 'bsl-natural' | 'sse' | 'makaton' | 'fingerspell';
 
-export type BslLocusId = 'ME' | 'YOU' | 'LOCUS_A' | 'LOCUS_B';
+export type BslLocusId =
+  | 'ME'
+  | 'YOU'
+  | 'LOCUS_A'
+  | 'LOCUS_B'
+  | 'LOCUS_C'
+  | 'LOCUS_D'
+  | 'LOCUS_E'
+  | 'LOCUS_F'
+  | 'LOCUS_HIGH'
+  | 'LOCUS_LOW';
+
+export type BslElevation = 'high' | 'mid' | 'low';
 
 export interface BslLocus {
   id: BslLocusId;
   label: string;
   coords: Point3D;
+  elevation?: BslElevation;
   assignedEntity?: string;
 }
 
@@ -37,21 +72,61 @@ export const DEFAULT_BSL_LOCI: Record<BslLocusId, BslLocus> = {
     id: 'ME',
     label: '1st Person (Signer)',
     coords: { x: 20, y: 30, z: 15 },
+    elevation: 'mid',
   },
   YOU: {
     id: 'YOU',
     label: '2nd Person (Addressee)',
     coords: { x: 0, y: -20, z: 65 },
+    elevation: 'mid',
   },
   LOCUS_A: {
     id: 'LOCUS_A',
-    label: '3rd Person (Locus A - Left)',
-    coords: { x: -55, y: -10, z: 35 },
+    label: '3rd Person (Locus A - Far Left)',
+    coords: { x: -60, y: -10, z: 35 },
+    elevation: 'mid',
   },
   LOCUS_B: {
     id: 'LOCUS_B',
-    label: '3rd Person (Locus B - Right)',
-    coords: { x: 55, y: -10, z: 35 },
+    label: '3rd Person (Locus B - Far Right)',
+    coords: { x: 60, y: -10, z: 35 },
+    elevation: 'mid',
+  },
+  LOCUS_C: {
+    id: 'LOCUS_C',
+    label: '3rd Person (Locus C - Mid Left)',
+    coords: { x: -35, y: -15, z: 45 },
+    elevation: 'mid',
+  },
+  LOCUS_D: {
+    id: 'LOCUS_D',
+    label: '3rd Person (Locus D - Mid Right)',
+    coords: { x: 35, y: -15, z: 45 },
+    elevation: 'mid',
+  },
+  LOCUS_E: {
+    id: 'LOCUS_E',
+    label: '3rd Person (Locus E - Near Left)',
+    coords: { x: -50, y: 15, z: 25 },
+    elevation: 'low',
+  },
+  LOCUS_F: {
+    id: 'LOCUS_F',
+    label: '3rd Person (Locus F - Near Right)',
+    coords: { x: 50, y: 15, z: 25 },
+    elevation: 'low',
+  },
+  LOCUS_HIGH: {
+    id: 'LOCUS_HIGH',
+    label: 'Hierarchical Superior (Divine / Authority / High)',
+    coords: { x: 0, y: -45, z: 50 },
+    elevation: 'high',
+  },
+  LOCUS_LOW: {
+    id: 'LOCUS_LOW',
+    label: 'Hierarchical Subordinate (Earthly / Low)',
+    coords: { x: 0, y: 35, z: 20 },
+    elevation: 'low',
   },
 };
 
@@ -62,6 +137,7 @@ export type BslGrammarRole =
   | 'object'
   | 'verb'
   | 'directional-verb'
+  | 'classifier-predicate'
   | 'question'
   | 'negation'
   | 'modifier'
@@ -76,6 +152,8 @@ export interface BslGrammarToken {
   locus?: BslLocusId;
   directionalFrom?: BslLocusId;
   directionalTo?: BslLocusId;
+  classifier?: BslClassifierPredicate;
+  aspect?: BslAspect;
   nmf?: BslNmf;
   sign?: BslSign;
   isFingerspelled?: boolean;
@@ -147,6 +225,423 @@ const BSL_OMITTED_PARTICLES = new Set([
 const PRONOUN_1P = new Set(['I', 'ME', 'MY', 'MINE', 'MYSELF']);
 const PRONOUN_2P = new Set(['YOU', 'YOUR', 'YOURS', 'YOURSELF']);
 const PRONOUN_3P = new Set(['HE', 'HIM', 'HIS', 'SHE', 'HER', 'HERS', 'THEY', 'THEM', 'THEIR']);
+
+// BSL Level 6 Hierarchical Vertical Spatial Registers
+export const HIERARCHICAL_HIGH_ENTITIES = new Set([
+  'GOD', 'JESUS', 'CHRIST', 'LORD', 'HEAVEN', 'SPIRIT', 'CREATOR', 'ALMIGHTY'
+]);
+
+export const HIERARCHICAL_LOW_ENTITIES = new Set([
+  'EARTH', 'GROUND', 'HELL'
+]);
+
+// BSL Level 6 Adverbial Non-Manual Mouth Morphemes
+export const ADVERB_MOUTH_MAP: Record<string, string> = {
+  EASILY: 'mm',
+  SMOOTHLY: 'mm',
+  NORMALLY: 'mm',
+  CALMLY: 'mm',
+  STEADILY: 'mm',
+  CONTINUOUSLY: 'mm',
+  CARELESSLY: 'th',
+  CLUMSILY: 'th',
+  ACCIDENTALLY: 'th',
+  RANDOMLY: 'th',
+  CAREFULLY: 'pursed',
+  PRECISELY: 'pursed',
+  EXACTLY: 'pursed',
+  STRICTLY: 'pursed',
+  DELIBERATELY: 'pursed',
+  MASSIVELY: 'puffed-cheeks',
+  ENORMOUSLY: 'puffed-cheeks',
+  HEAVILY: 'puffed-cheeks',
+  VASTLY: 'puffed-cheeks',
+  STRONG: 'tight-lips',
+  DETERMINED: 'tight-lips',
+  FOCUSED: 'f-mouth',
+  INTENSE: 'f-mouth',
+};
+
+// BSL Level 6 Classifier Verb Mappings (Translates motion & handling verbs into Polycomponential Predicates)
+export const CLASSIFIER_VERB_MAP: Record<string, BslClassifierType> = {
+  WALK: 'proform-v',
+  WALKS: 'proform-v',
+  WALKING: 'proform-v',
+  WALKED: 'proform-v',
+  STRIDE: 'proform-v',
+  STRIDING: 'proform-v',
+  STRIDED: 'proform-v',
+  JUMP: 'proform-v',
+  JUMPING: 'proform-v',
+  JUMPED: 'proform-v',
+  LIMP: 'proform-v',
+  LIMPING: 'proform-v',
+  APPROACH: 'proform-1',
+  APPROACHING: 'proform-1',
+  APPROACHED: 'proform-1',
+  DRIVE: 'proform-b',
+  DRIVING: 'proform-b',
+  DROVE: 'proform-b',
+  FLY: 'proform-b',
+  FLYING: 'proform-b',
+  FLEW: 'proform-b',
+  SAIL: 'proform-b',
+  SAILING: 'proform-b',
+  SAILED: 'proform-b',
+  ACCELERATE: 'proform-b',
+  ACCELERATES: 'proform-b',
+  ACCELERATED: 'proform-b',
+  ACCELERATING: 'proform-b',
+  CHALICE: 'handling-cup',
+  VESSEL: 'proform-c',
+  CUP: 'proform-c',
+  ELEVATE: 'proform-c',
+  ELEVATING: 'proform-c',
+  ELEVATED: 'proform-c',
+  READ: 'handling-book',
+  READING: 'handling-book',
+  WRITE: 'handling-pen',
+  WRITING: 'handling-pen',
+};
+
+// BSL Level 6 Temporal Aspect Markers (Modulates repetitive cadence & tension)
+export const ASPECT_MARKER_MAP: Record<string, BslAspect> = {
+  STEADILY: 'durative',
+  CONTINUOUSLY: 'durative',
+  SLOWLY: 'durative',
+  HOURS: 'durative',
+  ENDLESSLY: 'durative',
+  OFTEN: 'habitual',
+  REGULARLY: 'habitual',
+  DAILY: 'habitual',
+  REPEATEDLY: 'habitual',
+  SUDDENLY: 'intensive',
+  SHARPLY: 'intensive',
+  FAST: 'intensive',
+  QUICKLY: 'intensive',
+  INTENSELY: 'intensive',
+  FORCEFULLY: 'intensive',
+  STARTING: 'inceptive',
+  BEGINNING: 'inceptive',
+};
+
+/**
+ * Procedurally generates a BSL Level 6 Classifier Predicate sign with 3D trajectories
+ * and aspectual kinematic inflections (durative circular waves, intensive snap holds, etc.).
+ */
+export function generateClassifierPredicate(
+  type: BslClassifierType,
+  options: {
+    fromLocus?: BslLocusId;
+    toLocus?: BslLocusId;
+    aspect?: BslAspect;
+    manner?: 'slow' | 'fast' | 'stumble' | 'steady' | 'zig-zag';
+    entityLabel?: string;
+  } = {}
+): BslSign {
+  const fromLocus = options.fromLocus || 'LOCUS_A';
+  const toLocus = options.toLocus || 'LOCUS_B';
+  const aspect = options.aspect || 'neutral';
+  const p0 = DEFAULT_BSL_LOCI[fromLocus]?.coords || { x: -45, y: 15, z: 25 };
+  const p1 = DEFAULT_BSL_LOCI[toLocus]?.coords || { x: 45, y: 15, z: 25 };
+
+  let glossLabel = `CL:${type.toUpperCase()}[${fromLocus}→${toLocus}${aspect !== 'neutral' ? `:${aspect.toUpperCase()}` : ''}]`;
+  const kfs: BslSignKeyframe[] = [];
+
+  switch (type) {
+    case 'proform-v': {
+      glossLabel = `CL:V[${fromLocus}→${toLocus}${aspect !== 'neutral' ? `:${aspect.toUpperCase()}` : ''}]`;
+      if (aspect === 'durative') {
+        kfs.push({
+          label: 'CL:V • Prep & Initial Step',
+          rule: 'Inverted V hand lifts at origin locus',
+          targetTip: { x: p0.x, y: p0.y - 10, z: p0.z },
+          targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+          targetWrist: { x: p0.x + 50, y: p0.y + 50, z: p0.z - 25 },
+          shape: 'v',
+          palm: 'down',
+          hold: 80,
+          ease: 'ease-out',
+          nmf: { eyebrows: 'neutral', mouth: 'mm' },
+        });
+        const midX1 = p0.x + (p1.x - p0.x) * 0.33;
+        const midX2 = p0.x + (p1.x - p0.x) * 0.66;
+        kfs.push({
+          label: 'CL:V • Mid Stride Step 1',
+          rule: 'First leg extends forward along trajectory',
+          targetTip: { x: midX1, y: p0.y + 5, z: p0.z + 5 },
+          targetKnuckle: { x: midX1 + 20, y: p0.y + 30, z: p0.z - 5 },
+          targetWrist: { x: midX1 + 50, y: p0.y + 65, z: p0.z - 20 },
+          shape: 'v',
+          palm: 'down',
+          ease: 'linear',
+          nmf: { eyebrows: 'neutral', mouth: 'mm' },
+        });
+        kfs.push({
+          label: 'CL:V • Mid Stride Step 2',
+          rule: 'Second leg follows through with steady cadence',
+          targetTip: { x: midX2, y: p0.y - 5, z: p0.z + 8 },
+          targetKnuckle: { x: midX2 + 20, y: p0.y + 20, z: p0.z - 2 },
+          targetWrist: { x: midX2 + 50, y: p0.y + 55, z: p0.z - 18 },
+          shape: 'v',
+          palm: 'down',
+          ease: 'linear',
+          nmf: { eyebrows: 'neutral', mouth: 'mm' },
+        });
+        kfs.push({
+          label: 'CL:V • Settle at Destination',
+          rule: 'Both legs plant at target destination locus',
+          targetTip: { x: p1.x, y: p1.y, z: p1.z },
+          targetKnuckle: { x: p1.x + 20, y: p1.y + 25, z: p1.z - 10 },
+          targetWrist: { x: p1.x + 50, y: p1.y + 60, z: p1.z - 25 },
+          shape: 'v',
+          palm: 'down',
+          hold: 150,
+          ease: 'snap',
+          nmf: { eyebrows: 'neutral', mouth: 'mm' },
+        });
+      } else if (aspect === 'intensive') {
+        kfs.push({
+          label: 'CL:V • Tense Gather at Origin',
+          rule: 'Legs coiled at origin locus with tension',
+          targetTip: { x: p0.x, y: p0.y - 15, z: p0.z - 5 },
+          targetKnuckle: { x: p0.x + 20, y: p0.y + 10, z: p0.z - 15 },
+          targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 30 },
+          shape: 'v',
+          palm: 'down',
+          hold: 250,
+          ease: 'ease-out',
+          nmf: { eyebrows: 'furrowed', mouth: 'tight-lips' },
+        });
+        kfs.push({
+          label: 'CL:V • Explosive Leap / Sprint',
+          rule: 'Sudden burst across spatial plane',
+          targetTip: { x: p0.x + (p1.x - p0.x) * 0.7, y: p0.y - 25, z: p0.z + 15 },
+          targetKnuckle: { x: p0.x + (p1.x - p0.x) * 0.7 + 20, y: p0.y, z: p0.z + 5 },
+          targetWrist: { x: p0.x + (p1.x - p0.x) * 0.7 + 50, y: p0.y + 35, z: p0.z - 10 },
+          shape: 'v',
+          palm: 'down',
+          ease: 'snap',
+          nmf: { eyebrows: 'furrowed', mouth: 'tight-lips' },
+        });
+        kfs.push({
+          label: 'CL:V • Rigid Sudden Stop',
+          rule: 'Instant snap halt at destination',
+          targetTip: { x: p1.x, y: p1.y, z: p1.z },
+          targetKnuckle: { x: p1.x + 20, y: p1.y + 25, z: p1.z - 10 },
+          targetWrist: { x: p1.x + 50, y: p1.y + 60, z: p1.z - 25 },
+          shape: 'v',
+          palm: 'down',
+          hold: 200,
+          ease: 'snap',
+          nmf: { eyebrows: 'neutral', mouth: 'tight-lips', headTilt: 'nod' },
+        });
+      } else {
+        kfs.push({
+          label: 'CL:V • Depart Locus',
+          rule: 'Inverted V departs origin locus',
+          targetTip: { x: p0.x, y: p0.y, z: p0.z },
+          targetKnuckle: { x: p0.x + 20, y: p0.y + 25, z: p0.z - 10 },
+          targetWrist: { x: p0.x + 50, y: p0.y + 60, z: p0.z - 25 },
+          shape: 'v',
+          palm: 'down',
+          ease: 'ease-out',
+        });
+        kfs.push({
+          label: 'CL:V • Arrive Locus',
+          rule: 'Inverted V lands at destination locus',
+          targetTip: { x: p1.x, y: p1.y, z: p1.z },
+          targetKnuckle: { x: p1.x + 20, y: p1.y + 25, z: p1.z - 10 },
+          targetWrist: { x: p1.x + 50, y: p1.y + 60, z: p1.z - 25 },
+          shape: 'v',
+          palm: 'down',
+          hold: 120,
+          ease: 'snap',
+        });
+      }
+      break;
+    }
+
+    case 'proform-b': {
+      glossLabel = `CL:B[${fromLocus}→${toLocus}${aspect !== 'neutral' ? `:${aspect.toUpperCase()}` : ''}]`;
+      if (aspect === 'intensive') {
+        kfs.push({
+          label: 'CL:B • Vehicle Static Hold',
+          rule: 'Flat hand held primed at start locus',
+          targetTip: { x: p0.x, y: p0.y, z: p0.z },
+          targetKnuckle: { x: p0.x + 25, y: p0.y + 15, z: p0.z - 5 },
+          targetWrist: { x: p0.x + 65, y: p0.y + 40, z: p0.z - 15 },
+          shape: 'flat',
+          palm: 'down',
+          hold: 200,
+          ease: 'ease-out',
+          nmf: { eyebrows: 'furrowed', mouth: 'tight-lips' },
+        });
+        kfs.push({
+          label: 'CL:B • Sudden Acceleration & Halt',
+          rule: 'Rapid forward zoom terminating with sharp stop',
+          targetTip: { x: p1.x, y: p1.y, z: p1.z },
+          targetKnuckle: { x: p1.x + 25, y: p1.y + 15, z: p1.z - 5 },
+          targetWrist: { x: p1.x + 65, y: p1.y + 40, z: p1.z - 15 },
+          shape: 'flat',
+          palm: 'down',
+          hold: 250,
+          ease: 'snap',
+          nmf: { eyebrows: 'neutral', mouth: 'puffed-cheeks', headTilt: 'nod' },
+        });
+      } else {
+        kfs.push({
+          label: 'CL:B • Depart Origin',
+          rule: 'Flat hand glides forward representing vehicle motion',
+          targetTip: { x: p0.x, y: p0.y, z: p0.z },
+          targetKnuckle: { x: p0.x + 25, y: p0.y + 15, z: p0.z - 5 },
+          targetWrist: { x: p0.x + 65, y: p0.y + 40, z: p0.z - 15 },
+          shape: 'flat',
+          palm: 'down',
+          ease: 'linear',
+          nmf: { mouth: aspect === 'durative' ? 'mm' : 'neutral' },
+        });
+        kfs.push({
+          label: 'CL:B • Arrive Destination',
+          rule: 'Vehicle comes to rest at target locus',
+          targetTip: { x: p1.x, y: p1.y, z: p1.z },
+          targetKnuckle: { x: p1.x + 25, y: p1.y + 15, z: p1.z - 5 },
+          targetWrist: { x: p1.x + 65, y: p1.y + 40, z: p1.z - 15 },
+          shape: 'flat',
+          palm: 'down',
+          hold: 120,
+          ease: 'snap',
+          nmf: { mouth: aspect === 'durative' ? 'mm' : 'neutral' },
+        });
+      }
+      break;
+    }
+
+    case 'proform-c': {
+      glossLabel = `CL:C[${fromLocus || 'LOCUS_HIGH'}]`;
+      const highY = DEFAULT_BSL_LOCI.LOCUS_HIGH.coords.y; // -45
+      kfs.push({
+        label: 'CL:C • Frame Cylindrical Vessel',
+        rule: 'C-handshape grasps perimeter of vessel at chest height',
+        targetTip: { x: 0, y: -10, z: 35 },
+        targetKnuckle: { x: 25, y: 15, z: 25 },
+        targetWrist: { x: 60, y: 55, z: 10 },
+        shape: 'c-shape',
+        palm: 'side',
+        ease: 'ease-out',
+        nmf: { mouth: 'pursed' },
+      });
+      kfs.push({
+        label: 'CL:C • Elevate to High Register',
+        rule: 'Vessel is elevated upward to divine plane',
+        targetTip: { x: 0, y: highY, z: 45 },
+        targetKnuckle: { x: 25, y: highY + 25, z: 35 },
+        targetWrist: { x: 60, y: highY + 65, z: 20 },
+        shape: 'c-shape',
+        palm: 'side',
+        hold: 250,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'pursed' },
+      });
+      break;
+    }
+
+    case 'handling-cup': {
+      glossLabel = `CL:HANDLING[CHALICE]`;
+      const highY = DEFAULT_BSL_LOCI.LOCUS_HIGH.coords.y; // -45
+      kfs.push({
+        label: 'Handling Chalice • Two-Handed Grip at Altar',
+        rule: 'Both hands clasp chalice stem and base reverently',
+        targetTip: { x: 0, y: 10, z: 35 },
+        targetKnuckle: { x: 25, y: 35, z: 25 },
+        targetWrist: { x: 55, y: 70, z: 10 },
+        shape: 'c-shape',
+        baseHandMode: 'override',
+        baseHandOverride: { shiftX: -30, shiftY: 0, shiftZ: 0 },
+        ease: 'ease-out',
+        nmf: { mouth: 'pursed' },
+      });
+      kfs.push({
+        label: 'Handling Chalice • Reverent Elevation',
+        rule: 'Both hands elevate the sacred chalice toward heaven',
+        targetTip: { x: 0, y: highY, z: 45 },
+        targetKnuckle: { x: 25, y: highY + 25, z: 35 },
+        targetWrist: { x: 55, y: highY + 60, z: 20 },
+        shape: 'c-shape',
+        baseHandMode: 'override',
+        baseHandOverride: { shiftX: -30, shiftY: 0, shiftZ: 0 },
+        hold: 300,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'pursed' },
+      });
+      break;
+    }
+
+    case 'handling-book': {
+      glossLabel = `CL:HANDLING[BOOK]`;
+      kfs.push({
+        label: 'Handling Book • Open Scripture',
+        rule: 'Both open flat hands side-by-side simulate open book pages',
+        targetTip: { x: 15, y: 0, z: 30 },
+        targetKnuckle: { x: 45, y: 20, z: 20 },
+        targetWrist: { x: 80, y: 55, z: 5 },
+        shape: 'flat',
+        palm: 'up',
+        baseHandMode: 'mirror',
+        hold: 200,
+        ease: 'ease-out',
+        nmf: { mouth: 'book' },
+      });
+      break;
+    }
+
+    case 'proform-1':
+    default: {
+      glossLabel = `CL:1[${fromLocus}→${toLocus}]`;
+      kfs.push({
+        label: 'CL:1 • Upright Person Path Departure',
+        rule: 'Single index finger represents person standing/departing',
+        targetTip: { x: p0.x, y: p0.y - 20, z: p0.z },
+        targetKnuckle: { x: p0.x + 15, y: p0.y + 10, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 45, y: p0.y + 45, z: p0.z - 20 },
+        shape: 'point',
+        palm: 'in',
+        ease: 'ease-out',
+      });
+      kfs.push({
+        label: 'CL:1 • Upright Person Path Arrival',
+        rule: 'Person path arrives at target locus',
+        targetTip: { x: p1.x, y: p1.y - 20, z: p1.z },
+        targetKnuckle: { x: p1.x + 15, y: p1.y + 10, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 45, y: p1.y + 45, z: p1.z - 20 },
+        shape: 'point',
+        palm: 'in',
+        hold: 120,
+        ease: 'snap',
+      });
+      break;
+    }
+  }
+
+  return {
+    id: `cl-${type}-${aspect}`,
+    word: `CL:${type.toUpperCase()}`,
+    category: 'classifier',
+    englishLabel: `Classifier Predicate (${type})`,
+    gloss: glossLabel,
+    description: `Level 6 Classifier Predicate with ${aspect} temporal aspect modulation`,
+    keyframes: kfs,
+    classifier: {
+      type,
+      aspect,
+      fromLocus,
+      toLocus,
+      manner: options.manner,
+      entityLabel: options.entityLabel,
+    },
+    aspect,
+  };
+}
 
 /**
  * Modulates directional verb keyframes based on dynamic 3D spatial loci.
@@ -251,6 +746,12 @@ export function analyzeAndTransformBslGrammar(
     YOU: { ...DEFAULT_BSL_LOCI.YOU },
     LOCUS_A: { ...DEFAULT_BSL_LOCI.LOCUS_A },
     LOCUS_B: { ...DEFAULT_BSL_LOCI.LOCUS_B },
+    LOCUS_C: { ...DEFAULT_BSL_LOCI.LOCUS_C },
+    LOCUS_D: { ...DEFAULT_BSL_LOCI.LOCUS_D },
+    LOCUS_E: { ...DEFAULT_BSL_LOCI.LOCUS_E },
+    LOCUS_F: { ...DEFAULT_BSL_LOCI.LOCUS_F },
+    LOCUS_HIGH: { ...DEFAULT_BSL_LOCI.LOCUS_HIGH },
+    LOCUS_LOW: { ...DEFAULT_BSL_LOCI.LOCUS_LOW },
   };
 
   if (!cleanInput) {
@@ -558,6 +1059,9 @@ export function analyzeAndTransformBslGrammar(
     isPronoun1P?: boolean;
     isPronoun2P?: boolean;
     isPronoun3P?: boolean;
+    gloss?: string;
+    classifier?: BslClassifierPredicate;
+    aspect?: BslAspect;
   }[] = [];
 
   for (let i = 0; i < rawWords.length; i++) {
@@ -630,6 +1134,16 @@ export function analyzeAndTransformBslGrammar(
       continue;
     }
 
+    // Adverbial Non-Manual Markers -> captured as facial mouth morphemes modifying the predicate, not manual signs
+    if (ADVERB_MOUTH_MAP[clean]) {
+      continue;
+    }
+
+    // Temporal Aspect Markers -> modulate predicate trajectory cadence rather than separate manual signs
+    if (ASPECT_MARKER_MAP[clean]) {
+      continue;
+    }
+
     const lemma = normalizeToBslLemma(clean);
     const sign = lookupBslSign(lemma) || lookupBslSign(clean);
 
@@ -638,7 +1152,11 @@ export function analyzeAndTransformBslGrammar(
     const isPronoun2 = PRONOUN_2P.has(clean);
     const isPronoun3 = PRONOUN_3P.has(clean);
 
-    if (DIRECTIONAL_VERB_WORDS.has(clean) || DIRECTIONAL_VERB_WORDS.has(lemma)) {
+    const classifierType = CLASSIFIER_VERB_MAP[clean] || CLASSIFIER_VERB_MAP[lemma];
+
+    if (classifierType) {
+      role = 'classifier-predicate';
+    } else if (DIRECTIONAL_VERB_WORDS.has(clean) || DIRECTIONAL_VERB_WORDS.has(lemma)) {
       role = 'directional-verb';
     } else if (isPronoun1 || isPronoun2 || isPronoun3) {
       role = 'subject';
@@ -658,22 +1176,71 @@ export function analyzeAndTransformBslGrammar(
     });
   }
 
+  // Level 6 Temporal Aspect Markers
+  let detectedAspect: BslAspect | undefined = undefined;
+  for (const w of upperWords) {
+    if (ASPECT_MARKER_MAP[w]) {
+      detectedAspect = ASPECT_MARKER_MAP[w];
+      break;
+    }
+  }
+
+  // Level 6 Adverbial Non-Manual Mouth Morphemes
+  let detectedAdverbMouth: string | undefined = undefined;
+  for (const w of upperWords) {
+    if (ADVERB_MOUTH_MAP[w]) {
+      detectedAdverbMouth = ADVERB_MOUTH_MAP[w];
+      break;
+    }
+  }
+
   // Assign Spatial Loci to entities and actors
   let subjectEntity: typeof coreTokens[0] | undefined;
   let objectEntity: typeof coreTokens[0] | undefined;
   let directionalVerb: typeof coreTokens[0] | undefined;
+  let classifierPredicateToken: typeof coreTokens[0] | undefined;
 
   for (const token of coreTokens) {
-    if (token.role === 'directional-verb') {
+    if (token.role === 'classifier-predicate') {
+      classifierPredicateToken = token;
+    } else if (token.role === 'directional-verb') {
       directionalVerb = token;
-    } else if (!subjectEntity) {
-      subjectEntity = token;
-    } else if (!objectEntity) {
-      objectEntity = token;
     }
   }
 
-  // Allocate spatial loci
+  if (directionalVerb || classifierPredicateToken) {
+    for (const token of coreTokens) {
+      if (token === directionalVerb || token === classifierPredicateToken) continue;
+      if (!subjectEntity) {
+        subjectEntity = token;
+      } else if (!objectEntity) {
+        objectEntity = token;
+      }
+    }
+  } else {
+    // Non-directional sentence
+    if (coreTokens.length === 1) {
+      subjectEntity = coreTokens[0];
+    } else if (coreTokens.length === 2) {
+      subjectEntity = coreTokens[0];
+      objectEntity = coreTokens[1];
+    } else if (coreTokens.length >= 3) {
+      // In English S-V-O sentences like "GOD BLESS EARTH" or "PUPIL READ BOOK",
+      // the middle constituent is the predicate verb and the last constituent is the object entity.
+      const lastToken = coreTokens[coreTokens.length - 1];
+      const middleToken = coreTokens[1];
+      if (HIERARCHICAL_LOW_ENTITIES.has(lastToken.clean) || HIERARCHICAL_HIGH_ENTITIES.has(lastToken.clean) || !middleToken.sign) {
+        subjectEntity = coreTokens[0];
+        middleToken.role = 'verb';
+        objectEntity = lastToken;
+      } else {
+        subjectEntity = coreTokens[0];
+        objectEntity = coreTokens[1];
+      }
+    }
+  }
+
+  // Allocate spatial loci (Level 6 Multi-Loci & Vertical Elevation Registers)
   let fromLocus: BslLocusId = 'ME';
   let toLocus: BslLocusId = 'YOU';
 
@@ -682,6 +1249,12 @@ export function analyzeAndTransformBslGrammar(
       fromLocus = 'ME';
     } else if (subjectEntity.isPronoun2P) {
       fromLocus = 'YOU';
+    } else if (HIERARCHICAL_HIGH_ENTITIES.has(subjectEntity.clean)) {
+      fromLocus = 'LOCUS_HIGH';
+      loci.LOCUS_HIGH.assignedEntity = subjectEntity.clean;
+    } else if (HIERARCHICAL_LOW_ENTITIES.has(subjectEntity.clean)) {
+      fromLocus = 'LOCUS_LOW';
+      loci.LOCUS_LOW.assignedEntity = subjectEntity.clean;
     } else {
       fromLocus = 'LOCUS_A';
       loci.LOCUS_A.assignedEntity = subjectEntity.clean;
@@ -693,14 +1266,56 @@ export function analyzeAndTransformBslGrammar(
       toLocus = 'ME';
     } else if (objectEntity.isPronoun2P) {
       toLocus = 'YOU';
+    } else if (HIERARCHICAL_HIGH_ENTITIES.has(objectEntity.clean)) {
+      toLocus = 'LOCUS_HIGH';
+      loci.LOCUS_HIGH.assignedEntity = objectEntity.clean;
+    } else if (HIERARCHICAL_LOW_ENTITIES.has(objectEntity.clean)) {
+      toLocus = 'LOCUS_LOW';
+      loci.LOCUS_LOW.assignedEntity = objectEntity.clean;
     } else {
-      toLocus = fromLocus === 'LOCUS_A' ? 'LOCUS_B' : 'LOCUS_A';
+      const fl = fromLocus as string;
+      toLocus = fl === 'LOCUS_A' ? 'LOCUS_B' : (fl === 'LOCUS_B' ? 'LOCUS_C' : 'LOCUS_A');
       loci[toLocus].assignedEntity = objectEntity.clean;
     }
   }
 
+  // If classifier predicate is active, synthesize its 3D procedural keyframes
+  if (classifierPredicateToken) {
+    const clType =
+      CLASSIFIER_VERB_MAP[classifierPredicateToken.clean] ||
+      CLASSIFIER_VERB_MAP[classifierPredicateToken.lemma] ||
+      'proform-v';
+    const classifierSign = generateClassifierPredicate(clType, {
+      fromLocus,
+      toLocus,
+      aspect: detectedAspect || 'neutral',
+      entityLabel: subjectEntity?.clean,
+    });
+    classifierPredicateToken.sign = classifierSign;
+    classifierPredicateToken.classifier = classifierSign.classifier;
+    classifierPredicateToken.aspect = detectedAspect || 'neutral';
+    classifierPredicateToken.gloss = classifierSign.gloss;
+  }
+
+  // Level 6 Constructed Action / Role Shift Detection
+  const hasDialogueCue = ['SAID', 'ASKED', 'TOLD', 'EXPLAINED', 'REPLIED', 'SPOKE', 'COMMANDED', 'PRAYED'].some((w) =>
+    upperWords.includes(w)
+  );
+  let activeRoleShift: { agent: string; yaw: number; elevation?: BslElevation } | undefined = undefined;
+  if (hasDialogueCue && subjectEntity) {
+    const fl = fromLocus as string;
+    const isLeftLocus = fl === 'LOCUS_A' || fl === 'LOCUS_C' || fl === 'LOCUS_E';
+    const isRightLocus = fl === 'LOCUS_B' || fl === 'LOCUS_D' || fl === 'LOCUS_F';
+    const yaw = isLeftLocus ? -20 : isRightLocus ? 20 : -15;
+    activeRoleShift = {
+      agent: subjectEntity.clean,
+      yaw,
+      elevation: loci[fromLocus]?.elevation || 'mid',
+    };
+  }
+
   // Build the reordered Natural BSL Token Sequence:
-  // Order: [TIME] -> [TOPIC / OBJECT] -> [SUBJECT (Locus)] -> [DIRECTIONAL VERB] -> [NEGATION] -> [WH-QUESTION]
+  // Order: [TIME] -> [TOPIC / OBJECT] -> [SUBJECT (Locus)] -> [DIRECTIONAL VERB / CLASSIFIER] -> [NEGATION] -> [WH-QUESTION]
   const reorderedTokens: BslGrammarToken[] = [];
 
   // 1. TIME FIRST
@@ -717,11 +1332,14 @@ export function analyzeAndTransformBslGrammar(
       role: 'topic',
       locus: toLocus,
       sign: objectEntity.sign,
-      nmf: { eyebrows: 'neutral', mouth: objectEntity.clean.toLowerCase() },
+      nmf: {
+        eyebrows: 'neutral',
+        mouth: (detectedAdverbMouth as any) || objectEntity.clean.toLowerCase(),
+      },
     });
   }
 
-  // 3. SUBJECT (with Spatial Locus binding)
+  // 3. SUBJECT (with Spatial Locus binding and Role-Shift if dialogue)
   if (subjectEntity) {
     reorderedTokens.push({
       originalWord: subjectEntity.raw,
@@ -730,25 +1348,59 @@ export function analyzeAndTransformBslGrammar(
       role: 'subject',
       locus: fromLocus,
       sign: subjectEntity.sign,
-      nmf: { eyebrows: 'neutral', mouth: subjectEntity.clean.toLowerCase() },
+      nmf: {
+        eyebrows: 'neutral',
+        mouth: objectEntity ? subjectEntity.clean.toLowerCase() : (detectedAdverbMouth as any) || subjectEntity.clean.toLowerCase(),
+        roleShift: activeRoleShift,
+      },
     });
   }
 
-  // 4. OTHER CORE TOKENS (excluding already placed subject/object/directional)
+  // 4. OTHER CORE TOKENS (excluding already placed subject/object/directional/classifier)
   coreTokens.forEach((token) => {
-    if (token === subjectEntity || token === objectEntity || token === directionalVerb) return;
+    if (token === subjectEntity || token === objectEntity || token === directionalVerb || token === classifierPredicateToken) return;
+    const tokenLocus = HIERARCHICAL_HIGH_ENTITIES.has(token.clean)
+      ? 'LOCUS_HIGH'
+      : HIERARCHICAL_LOW_ENTITIES.has(token.clean)
+      ? 'LOCUS_LOW'
+      : undefined;
+    if (tokenLocus) {
+      loci[tokenLocus].assignedEntity = token.clean;
+    }
     reorderedTokens.push({
       originalWord: token.raw,
       cleanWord: token.clean,
       gloss: token.sign?.gloss || token.clean,
       role: token.role,
+      locus: tokenLocus,
       sign: token.sign,
-      nmf: { eyebrows: 'neutral', mouth: token.clean.toLowerCase() },
+      nmf: {
+        eyebrows: 'neutral',
+        mouth: (detectedAdverbMouth as any) || token.clean.toLowerCase(),
+        roleShift: activeRoleShift,
+      },
     });
   });
 
-  // 5. DIRECTIONAL VERB / MAIN VERB
-  if (directionalVerb) {
+  // 5. CLASSIFIER PREDICATE OR DIRECTIONAL VERB / MAIN VERB
+  if (classifierPredicateToken) {
+    reorderedTokens.push({
+      originalWord: classifierPredicateToken.raw,
+      cleanWord: classifierPredicateToken.clean,
+      gloss: classifierPredicateToken.gloss,
+      role: 'classifier-predicate',
+      directionalFrom: fromLocus,
+      directionalTo: toLocus,
+      classifier: classifierPredicateToken.classifier,
+      aspect: classifierPredicateToken.aspect,
+      sign: classifierPredicateToken.sign,
+      nmf: {
+        eyebrows: 'neutral',
+        mouth: (detectedAdverbMouth as any) || classifierPredicateToken.sign?.keyframes[0]?.nmf?.mouth || classifierPredicateToken.clean.toLowerCase(),
+        roleShift: activeRoleShift,
+      },
+    });
+  } else if (directionalVerb) {
     reorderedTokens.push({
       originalWord: directionalVerb.raw,
       cleanWord: directionalVerb.clean,
@@ -759,7 +1411,8 @@ export function analyzeAndTransformBslGrammar(
       sign: directionalVerb.sign,
       nmf: {
         eyebrows: sentenceType === 'wh-question' ? 'furrowed' : 'neutral',
-        mouth: directionalVerb.clean.toLowerCase(),
+        mouth: detectedAdverbMouth || directionalVerb.clean.toLowerCase(),
+        roleShift: activeRoleShift,
       },
     });
   }
@@ -805,10 +1458,12 @@ export function analyzeAndTransformBslGrammar(
         stream.push(pose);
       });
     } else if (tok.sign) {
-      // Whole-Word sign
+      // Whole-Word sign or Classifier Predicate
       const totalKf = tok.sign.keyframes.length;
       tok.sign.keyframes.forEach((kf, kfIdx) => {
         const pose = signKeyframeToHandPose(tok.sign!, kf, kfIdx, totalKf);
+        if (tok.classifier) pose.classifier = tok.classifier;
+        if (tok.aspect) pose.aspect = tok.aspect;
         if (tok.nmf) {
           pose.nmf = { ...pose.nmf, ...tok.nmf };
         }

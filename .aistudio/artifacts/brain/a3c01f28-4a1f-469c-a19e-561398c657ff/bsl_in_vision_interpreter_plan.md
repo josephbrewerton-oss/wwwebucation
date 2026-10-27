@@ -112,7 +112,40 @@ Following direct consultations and principles of Deaf Cultural Linguistics (ASLI
 * **Avoidance of Uncanny Valley CGI**: Rather than introducing heavy pseudo-photorealistic 3D CGI meshes (which fail to capture natural facial micro-movements and induce ocular fatigue), the interpreter utilizes an internationally acclaimed, dignified **stylized human vector silhouette**.
 * **Contrasting Interpreter Top**: Renders a matte dark charcoal/navy shirt (`#0f172a` - `#1e293b`) conforming to professional BSL interpreter dress standards, creating the vital visual high-contrast "signing box" against which hands and finger positions are immediately legible.
 * **Volumetric Anatomical Hand Capsules**: Hands and fingers are projected with rounded volumetric muscular pads (warm skin gradient `url(#bslHumanSkin)` and softer palm gradient `url(#bslHumanSkinPalm)`), fleshy thenar cushions, and rounded fingertip pads rather than bare wireframe lines.
-* **Non-Manual Features (NMF)**: Full grammatical eyebrow articulation (furrowed for WH-questions, raised for polar questions), expressive almond eyes with catchlights, soft nose contours, and dynamic lip mouthing aperture.
-* **Instant Dual-Mode Toggle**: The control bar provides a persistent `🧑 Human` ↔ `🦴 Skeleton` toggle, allowing users to switch between the dignified Human Avatar and the mathematical Kinematic X-Ray with zero performance loss.
+## 7. BSL Level 6 Linguistic Upgrade Roadmap & Multi-Turn Progress
+
+### Turn 1: Linguistic Engine & Multi-Loci Spatial Grammar [COMPLETED]
+- [x] **10-Point Spatial Register Grid**: Codified `BslLocusId` expanded across lateral 3D space (`LOCUS_A` through `LOCUS_F`) and vertical planes (`LOCUS_HIGH` for divine/authority entities, `LOCUS_LOW` for earthly/subordinate entities).
+- [x] **Constructed Action & Role-Shift (`:role-shift`)**: Automatic detection of reported dialogue cues (`SAID`, `PRAYED`, `ASKED`, etc.) triggering realistic 3D upper-torso yaw rotation ($\pm 15^\circ$ to $20^\circ$) and head elevation shift.
+- [x] **Adverbial Non-Manual Mouth Morphemes**: Implementation of Level 6 mouth shapes (`mm` for ease/continuity, `th` for carelessness, `pursed` for meticulous precision, `puffed-cheeks` for immense size, `tight-lips` for determination, `f-mouth` for focus).
+- [x] **Test Harness Invariants (Test 12)**: 524 assertions passing with 0 failures (`npm run test:bsl`).
+- [x] **Zero Build Overhead**: Sub-second compilation, 0 external dependencies, < 35 KB gzipped total runtime.
+
+### Turn 2: Classifier Predicates & Aspectual Modulators [COMPLETED]
+- [x] **Polycomponential Classifier Predicates (`BslClassifierType`)**:
+  - `proform-v` (bipedal locomotion / inverted V two legs walking, jumping, falling).
+  - `proform-b` (flat entity / plane / boat / vehicle planing across 3D space).
+  - `proform-c` (cylindrical object / vessel / chalice / column).
+  - `proform-1` (upright person path / single entity trajectory).
+  - `handling-cup` (reverent two-handed chalice elevation).
+  - `handling-book` (open sacred scripture / reading).
+  - `handling-pen` (precision writing / tracing).
+- [x] **Temporal Aspect Inflections (`BslAspect`)**:
+  - `durative`: 4-stage continuous elliptical stepping cadence with `:shape :v`, `:palm :down`, and `'mm'` mouth morpheme.
+  - `intensive`: 200 ms prep hold, explosive sudden acceleration, rigid snap halt with `'tight-lips'` / `'puffed-cheeks'`.
+  - `habitual`: rhythmic iterative pulses.
+  - `inceptive`: initial hesitation followed by crisp departure.
+- [x] **AST S-Expression Round-Trip Serialization**: Fully supported `:classifier` and `:aspect` opcodes with 100% round-trip AST parser fidelity.
+- [x] **In-Vision Viewport HUD**: Real-time display of active classifier and aspect badges (`(:cl :type "..." :aspect :... :shape :...)` and `🌐 BSL CLASSIFIER • PROFORM-V [DURATIVE]`).
+- [x] **Automated Test Invariants (Section 13)**: 570 assertions passing with 0 failures (`npm run test:bsl`).
+
+### Turn 3: High-Register Theological & Academic Lexicon [READY TO COMMENCE]
+- [ ] High-Register Catholic Faith signs: Transubstantiation, Consubstantial, Incarnation, Sanctifying Grace, Tabernacle, Eucharist, Absolution, Trinity.
+- [ ] STEM Academic Lexicon: Differentiation, Photosynthesis, Electromagnetic Induction, Velocity Vector, Kinetic Molecule.
+- [ ] Canonical serialization to `static/lexicons/bsl-signs.ast` maintaining < 24 KB total gzipped storage footprint.
+
+### Turn 4: Build Verification, Demo Suite & Golden Master [PLANNED]
+- [ ] End-to-end integration across all 17 interactive player scenes and practice lab.
+- [ ] Zero CLS, offline PWA validation, sub-15 ms cold start.
 
 

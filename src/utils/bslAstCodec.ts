@@ -66,7 +66,11 @@ export function serializeSignToAst(sign: BslSign): string {
   const makatonStr = sign.makatonStage !== undefined ? ` :makaton-stage ${sign.makatonStage}` : '';
   const directionalStr = sign.isDirectional ? ' :directional true' : '';
   const lociStr = sign.defaultLoci ? ` :default-loci (:from "${escapeAstString(sign.defaultLoci.from)}" :to "${escapeAstString(sign.defaultLoci.to)}")` : '';
-  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}${makatonStr}${directionalStr}${lociStr}`);
+  const classifierStr = sign.classifier
+    ? ` :classifier (:type "${escapeAstString(sign.classifier.type)}"${sign.classifier.aspect ? ` :aspect "${escapeAstString(sign.classifier.aspect)}"` : ''}${sign.classifier.fromLocus ? ` :from "${escapeAstString(sign.classifier.fromLocus)}"` : ''}${sign.classifier.toLocus ? ` :to "${escapeAstString(sign.classifier.toLocus)}"` : ''})`
+    : '';
+  const aspectStr = sign.aspect ? ` :aspect :${sign.aspect}` : '';
+  lines.push(`    :desc "${escapeAstString(sign.description)}"${aliasesStr}${makatonStr}${directionalStr}${lociStr}${classifierStr}${aspectStr}`);
 
   for (let i = 0; i < sign.keyframes.length; i++) {
     const kf = sign.keyframes[i];
@@ -236,6 +240,39 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     }
   }
 
+  let classifier: any = undefined;
+  if (props.classifier || props[':classifier']) {
+    const rawCl = props.classifier || props[':classifier'];
+    if (Array.isArray(rawCl)) {
+      classifier = {};
+      for (let i = 0; i < rawCl.length; i += 2) {
+        const k = String(rawCl[i]).replace(/^:/, '');
+        const v = rawCl[i + 1];
+        if (v !== undefined) {
+          classifier[k] = typeof v === 'string' ? v.replace(/^:/, '') : v;
+        }
+      }
+    } else {
+      const cl = typeof rawCl === 'object' && rawCl.props ? rawCl.props : rawCl;
+      if (cl && (cl.type || cl[':type'])) {
+        classifier = {
+          type: String(cl.type || cl[':type']).replace(/^:/, ''),
+          aspect: cl.aspect || cl[':aspect'] ? String(cl.aspect || cl[':aspect']).replace(/^:/, '') : undefined,
+          fromLocus: cl.from || cl[':from'] ? String(cl.from || cl[':from']) : undefined,
+          toLocus: cl.to || cl[':to'] ? String(cl.to || cl[':to']) : undefined,
+        };
+      }
+    }
+  }
+
+  let aspect: any = undefined;
+  if (props.aspect || props[':aspect']) {
+    const rawAspect = String(props.aspect || props[':aspect']).replace(/^:/, '').toLowerCase();
+    if (['neutral', 'durative', 'habitual', 'intensive', 'inceptive'].includes(rawAspect)) {
+      aspect = rawAspect;
+    }
+  }
+
   const rawMakatonStage = props['makaton-stage'] !== undefined ? props['makaton-stage'] : props.makatonStage;
   const makatonStage = rawMakatonStage !== undefined ? Number(rawMakatonStage) : undefined;
 
@@ -251,6 +288,8 @@ export function parseAstNodeToSign(node: any): BslSign | null {
     isDirectional: isDirectional || undefined,
     defaultLoci,
     makatonStage: Number.isFinite(makatonStage) ? makatonStage : undefined,
+    classifier,
+    aspect,
   };
 }
 
