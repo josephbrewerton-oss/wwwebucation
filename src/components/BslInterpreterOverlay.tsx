@@ -57,7 +57,9 @@ import {
 } from '../services/bslGlobalStore';
 import '../utils/ast3dWasmBridge'; // Auto-boots WebAssembly 3D Kernel
 import { subscribeCustomSigns, initCustomSignsIntoLexicon } from '../services/customSignStore';
-
+import { 
+  initCodebookIntoLexicon, 
+  type CodebookSign 
 export interface BslInterpreterOverlayProps {
   activeWord?: string;
   activeSubtitle?: string;
@@ -75,6 +77,61 @@ const REST_POSE: BslHandPose = {
   targetKnuckle: DOMINANT_REST_KNUCKLE,
   targetWrist: DOMINANT_REST_WRIST,
 };
+export const signMatrix: any[][] = Array.from({ length: 64 }, () => Array(32).fill(null));
+export const signById = new Map<string, any>();
+export async function loadBSLCodebook(url = '/static/lexicons/bsl-codebook.lisp'): Promise<void> {
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`Failed to load BSL codebook: ${response.statusText}`);
+  }
+
+  const rawLisp = await response.text();
+
+  // Regex to extract each (sign :g <int> :w <int> :id "<id>" :hex #x<hex> :viseme "<viseme>" ...)
+  const signRegex = /\(sign\s+:g\s+(\d+)\s+:w\s+(\d+)\s+:id\s+"([^"]+)"\s+:hex\s+#x([0-9a-fA-F]+)\s+:viseme\s+"([^"]*)"([\s\S]*?)\n\s*\)/g;
+  let match: RegExpExecArray | null;
+
+  while ((match = signRegex.exec(rawLisp)) !== null) {
+    const g = parseInt(match[1], 10);
+    const w = parseInt(match[2], 10);
+    const id = match[3];
+    const hex = parseInt(match[4], 16);
+    const viseme = match[5];
+    const kfBlock = match[6];
+
+    // Extract keyframes inside the sign
+    const keyframes: CodebookSign['keyframes'] = [];
+    const kfRegex = /\(kf\s+:idx\s+(\d+)\s+:shape\s+:([\w-]+)\s+:pos\s+\[([-\d\s]+)\]\s+:ori\s+:([\w-]+)(?:[\s\S]*?:aspect\s+:([\w-]+))?(?:[\s\S]*?:hold\s+(\d+))?/g;
+    let kfMatch: RegExpExecArray | null;
+
+    while ((kfMatch = kfRegex.exec(kfBlock)) !== null) {
+      const coords = kfMatch[3].trim().split(/\s+/).map(Number) as [number, number, number];
+      keyframes.push({
+        idx: parseInt(kfMatch[1], 10),
+        shape: kfMatch[2],
+        pos: coords,
+        ori: kfMatch[4],
+        aspect: kfMatch[5],
+        hold: kfMatch[6] ? parseInt(kfMatch[6], 10) : undefined
+      });
+    }
+
+    const entry: CodebookSign = { id, g, w, hex, viseme, keyframes };
+
+    // Register in fast O(1) table
+    signMatrix[g][w] = entry;
+    signById.set(id, entry);
+  }
+
+  console.log(`[BSL Engine] Codebook loaded: ${signById.size} canonical signs ready.`);
+}
+
+/**
+ * Called by Gemini Nano emission parser: (:act :g 4 :w 0)
+ */
+export function getSignByOpcode(g: number, w: number): CodebookSign | null {
+  return signMatrix[g]?.[w] ?? null;
+}
 
 const QUICK_SIGNS = [
   { label: '✝️ Jesus', word: 'JESUS' },
@@ -183,6 +240,7 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         }))
       );
     };
+    loadBSLCodebook();
     initCustomSignsIntoLexicon().then(refreshSigns);
     const unsub = subscribeCustomSigns(refreshSigns);
     return unsub;
