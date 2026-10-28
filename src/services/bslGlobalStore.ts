@@ -305,3 +305,25 @@ export function subscribeBslSignStudio(
   window.addEventListener(STUDIO_EVENT, handler);
   return () => window.removeEventListener(STUDIO_EVENT, handler);
 }
+
+export interface CodebookKeyframe {
+  idx: number;
+  shape: string;
+  pos: [number, number, number];
+  ori: string;
+  aspect?: string;
+  hold?: number;
+}
+
+export interface CodebookSign {
+  id: string;
+  g: number;
+  w: number;
+  hex: number;
+  viseme: string;
+  keyframes: CodebookKeyframe[];
+}
+
+export function initCodebookIntoLexicon(_codebook?: any): void {
+  // Canonical registry hook for Level 6 BSL codebook signs
+}

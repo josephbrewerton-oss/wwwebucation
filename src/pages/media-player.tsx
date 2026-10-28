@@ -99,6 +99,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
   const [filterCategory, setFilterCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [isSimStopped, setIsSimStopped] = useState(false);
+  const [simSpeed, setSimSpeed] = useState<number>(1.0);
   const [showQuestions, setShowQuestions] = useState(true);
   const [bslEnabled, setBslEnabled] = useState<boolean>(() => getBslEnabled());
 
@@ -529,6 +530,49 @@ export default function MediaPlayerPage(): React.JSX.Element {
               <span>{isSimStopped ? '▶' : '⏹'}</span> {isSimStopped ? 'Resume Sim' : 'Stop Sim'}
             </button>
 
+            {/* Simulation Playback Speed Multiplier */}
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                background: '#1e293b',
+                padding: '4px 10px',
+                borderRadius: '8px',
+                border: '1px solid #475569',
+              }}
+              title="Adjust simulation playback and physics execution rate"
+            >
+              <span style={{ fontSize: '0.78rem', color: '#94a3b8', fontWeight: 600 }}>Speed:</span>
+              <select
+                value={simSpeed}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setSimSpeed(val);
+                  playerRef.current?.setSpeed(val);
+                }}
+                style={{
+                  background: 'transparent',
+                  color: '#38bdf8',
+                  border: 'none',
+                  fontSize: '0.78rem',
+                  fontWeight: 800,
+                  cursor: 'pointer',
+                  outline: 'none',
+                  padding: '2px 4px',
+                }}
+                aria-label="Simulation Playback Speed"
+              >
+                <option value={0.25} style={{ background: '#0f172a', color: '#f8fafc' }}>0.25×</option>
+                <option value={0.5} style={{ background: '#0f172a', color: '#f8fafc' }}>0.5×</option>
+                <option value={0.75} style={{ background: '#0f172a', color: '#f8fafc' }}>0.75×</option>
+                <option value={1.0} style={{ background: '#0f172a', color: '#f8fafc' }}>1.0×</option>
+                <option value={1.25} style={{ background: '#0f172a', color: '#f8fafc' }}>1.25×</option>
+                <option value={1.5} style={{ background: '#0f172a', color: '#f8fafc' }}>1.5×</option>
+                <option value={2.0} style={{ background: '#0f172a', color: '#f8fafc' }}>2.0×</option>
+              </select>
+            </div>
+
             {isCartridgeWithoutQuestions(activePreset) ? (
               <span
                 style={{
@@ -675,6 +719,7 @@ export default function MediaPlayerPage(): React.JSX.Element {
           ref={playerRef}
           preset={activePreset}
           autoPlay={true}
+          speed={simSpeed}
           showQuestions={showQuestions}
           bslEnabled={bslEnabled}
           onBslToggle={(val) => setBslEnabled(val)}

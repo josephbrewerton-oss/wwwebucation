@@ -81,13 +81,18 @@ const REST_POSE: BslHandPose = {
 };
 export const signMatrix: any[][] = Array.from({ length: 64 }, () => Array(32).fill(null));
 export const signById = new Map<string, any>();
-export async function loadBSLCodebook(url = '/static/lexicons/bsl-codebook.lisp'): Promise<void> {
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`Failed to load BSL codebook: ${response.statusText}`);
-  }
+export async function loadBSLCodebook(url = '/lexicons/bsl-codebook.lisp'): Promise<void> {
+  try {
+    let response = await fetch(url);
+    if (!response.ok && url !== '/static/lexicons/bsl-codebook.lisp') {
+      response = await fetch('/static/lexicons/bsl-codebook.lisp');
+    }
+    if (!response.ok) {
+      console.warn(`[BSL Engine] Could not load BSL codebook (${response.status})`);
+      return;
+    }
 
-  const rawLisp = await response.text();
+    const rawLisp = await response.text();
 
   // Regex to extract each (sign :g <int> :w <int> :id "<id>" :hex #x<hex> :viseme "<viseme>" ...)
   const signRegex = /\(sign\s+:g\s+(\d+)\s+:w\s+(\d+)\s+:id\s+"([^"]+)"\s+:hex\s+#x([0-9a-fA-F]+)\s+:viseme\s+"([^"]*)"([\s\S]*?)\n\s*\)/g;
@@ -125,7 +130,10 @@ export async function loadBSLCodebook(url = '/static/lexicons/bsl-codebook.lisp'
     signById.set(id, entry);
   }
 
-  console.log(`[BSL Engine] Codebook loaded: ${signById.size} canonical signs ready.`);
+    console.log(`[BSL Engine] Codebook loaded: ${signById.size} canonical signs ready.`);
+  } catch (err) {
+    console.warn('[BSL Engine] Codebook loading error:', err);
+  }
 }
 
 /**
