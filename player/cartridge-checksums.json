@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-28T20:11:07.208Z",
+  "generatedAt": "2026-10-28T20:14:54.009Z",
   "totalCartridges": 58,
-  "masterChecksum": "c20aa0aa1cd72a5552b20ca9d931c21ef6706ab8e3ff2539f25ae6ecaa827812",
+  "masterChecksum": "419e77d64e06aa454776e7b96eb6cf92b79ecda4a5903508ffab23b8a575af54",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -282,15 +282,15 @@
       "title": "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "05cf6088dbdabd38ce201227a64c4ec921a5d56432e9c34a50346446ee8eaca5",
+      "astSha256": "dea410ef5ce554da216fe60942f2cc795ae6ca6936457d6d40177b5c827acb42",
       "svgSha256": "020ab784761874413c838d4efd54349b34c6a7f87a0b9709323930c18204a640",
-      "astbSha256": "0e71ef47f67e166811ad5e8cd4af3c61d48b59d41331e637ec234f7e1e078022",
-      "astbBytes": 4132,
-      "astBytes": 6292,
+      "astbSha256": "43dc1760a9296151d2eb3c46803755f6a7c5c91466fe4237b14e406c7395d609",
+      "astbBytes": 4546,
+      "astBytes": 7211,
       "svgBytes": 9167,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "5634d1be6d1e103479a76eb0de90903eb7ba02c2e49c4c922699c0c3f46c3443",
+      "seal": "beb0d9715c418e6bed3d3c9105b2abb87ff1a16d7f3713bf30f4195acf3180f4",
       "certified": true
     },
     "kinetic-gas": {

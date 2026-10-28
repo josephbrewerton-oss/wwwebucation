@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-28T20:11:11.136Z",
+  "generatedAt": "2026-10-28T20:14:56.332Z",
   "totalScenes": 58,
   "scenes": [
     {
@@ -271,7 +271,7 @@
       "astbFile": "bytecode/holy-water-thurifer.astb",
       "keyframeCount": 4,
       "subtitleCount": 4,
-      "bindingsCount": 3
+      "bindingsCount": 5
     },
     {
       "id": "kinetic-gas",
