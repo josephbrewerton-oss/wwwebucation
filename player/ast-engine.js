@@ -5009,6 +5009,7 @@
 
             const sceneId = presetId;
             const fetchAsset = async (ext) => {
+              const isBinary = ext === 'astb';
               // 1. Determine current directory of player/index.html
               const baseHref = (typeof document !== 'undefined' && document.baseURI) 
                 ? document.baseURI 
@@ -5026,6 +5027,7 @@
                 ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
                 : './';
 
+              const candidateUrls = Array.from(new Set([
                 // 1. Direct canonical paths (resolves immediately with zero 404 probes)
                 isBinary ? `/player/bytecode/${sceneId}.${ext}` : `/cartridges/${sceneId}.${ext}`,
                 isBinary ? `bytecode/${sceneId}.${ext}` : `../cartridges/${sceneId}.${ext}`,
@@ -5046,8 +5048,7 @@
                 ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`)
               ])).filter(Boolean);
 
-    const isBinary = ext === 'astb';
-    for (const url of candidateUrls) {
+              for (const url of candidateUrls) {
       try {
         const res = await fetch(url);
         if (!res.ok) continue;
