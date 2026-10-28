@@ -44,15 +44,8 @@ export async function syncCurriculumIndex(db: IDBDatabase): Promise<void> {
   if (count > 0) return;
 
   try {
-    const res = await fetch('/schoolsample/manifests/rag-index.json');
-    if (!res.ok) {
-      // Fallback for root path if base url differs
-      const fallbackRes = await fetch('/manifests/rag-index.json');
-      if (!fallbackRes.ok) return;
-      const indexData = await fallbackRes.json();
-      populateStore(db, indexData);
-      return;
-    }
+    const res = await fetch('/manifests/rag-index.json');
+    if (!res.ok) return;
     const indexData = await res.json();
     populateStore(db, indexData);
   } catch (err) {

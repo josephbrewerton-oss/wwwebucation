@@ -660,8 +660,23 @@
         : './';
       const base = (basePath || currentDir || './').replace(/\/?$/, '/');
 
-      // 1. Try Live Dynamic Discovery Endpoints (Vite / Dev / API Server)
-      const dynamicUrls = ['/api/scenes', '/player/api/scenes', `${base}api/scenes`];
+      // 1. Direct Static Configuration Manifest (authoritative and instantaneous)
+      const candidateUrls = [
+        './scenes.manifest.json',
+        '/player/scenes.manifest.json',
+        `${currentDir}scenes.manifest.json`,
+        './scenes-config.json',
+        '/scenes.manifest.json',
+        '/player/scenes-config.json'
+      ];
+
+      for (const url of candidateUrls) {
+        const manifestRes = await this.loadConfig(url);
+        if (manifestRes) return manifestRes;
+      }
+
+      // 2. Fallback: Optional dynamic discovery endpoints if running on custom server
+      const dynamicUrls = ['/api/scenes', '/player/api/scenes'];
       for (const endpoint of dynamicUrls) {
         try {
           const res = await fetch(endpoint).catch(() => null);
@@ -675,56 +690,6 @@
             }
           }
         } catch (_) {}
-      }
-
-      // 2. Try HTML directory index probe on scenes/ (Nginx autoindex, Python http.server, Apache)
-      try {
-        const scenesIndexRes = await fetch(`${base}scenes/`).catch(() => null);
-        if (scenesIndexRes && scenesIndexRes.ok) {
-          const html = await scenesIndexRes.text();
-          const hrefRegex = /href=["']([^"']+\.ast)["']/gi;
-          let match;
-          let discovered = 0;
-          while ((match = hrefRegex.exec(html)) !== null) {
-            const rawFile = match[1].split('/').pop();
-            const id = rawFile.replace('.ast', '');
-            if (id && !SceneRegistry.has(id)) {
-              SceneRegistry.register(id, {
-                id,
-                title: id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-                stage: 'CURRICULUM',
-                duration: 14.0,
-                svgFile: `scenes/${id}.svg`,
-                astFile: `scenes/${id}.ast`
-              });
-              discovered++;
-            }
-          }
-          if (discovered > 0) {
-            return { totalScenes: Object.keys(scenes).length, scenes: SceneRegistry.list() };
-          }
-        }
-      } catch (_) {}
-
-      // 3. Fallback: Load static configuration manifest with resilient fallback cascade
-      const candidateUrls = [
-        './scenes.manifest.json',
-        './scenes-config.json',
-        `${currentDir}scenes.manifest.json`,
-        `${currentDir}scenes-config.json`,
-        `${base}player/scenes.manifest.json`,
-        `${base}player/scenes-config.json`,
-        `${base}scenes.manifest.json`,
-        `${base}scenes-config.json`,
-        '/player/scenes.manifest.json',
-        '/player/scenes-config.json',
-        '/scenes.manifest.json',
-        '/scenes-config.json'
-      ];
-
-      for (const url of candidateUrls) {
-        const manifestRes = await this.loadConfig(url);
-        if (manifestRes) return manifestRes;
       }
 
       return { totalScenes: Object.keys(scenes).length, scenes: SceneRegistry.list() };

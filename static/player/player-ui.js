@@ -71,6 +71,7 @@
         speedSelector: document.getElementById('speed-selector'),
         langSelector: document.getElementById('lang-selector'),
         badgeStage: document.getElementById('badge-stage'),
+        badgeNativeSeal: document.getElementById('badge-native-seal'),
         btn3DOrbit: document.getElementById('btn-3d-orbit'),
         orbitHint: document.getElementById('orbit-hint'),
         playerStage: document.getElementById('player-stage'),
@@ -1731,6 +1732,13 @@
             el.btnCopySvg.textContent = '✓ Copied!';
             setTimeout(() => { el.btnCopySvg.textContent = orig; }, 2000);
           }).catch(() => {});
+        });
+      }
+
+      if (el.badgeNativeSeal) {
+        el.badgeNativeSeal.addEventListener('click', () => {
+          const currentPreset = this.engine && (this.engine.activePresetId || this.engine.preset);
+          this.showToast(`🛡️ Verified: Native to St Joseph's Curriculum Authority [${currentPreset || 'Simulation'}]`, 4000);
         });
       }
 

@@ -143,7 +143,8 @@ export default function DynamicLessonViewer({
   useEffect(() => {
     async function initCatalog() {
       try {
-        const catRes = await fetch(`${normalizedBase}/manifests/catalog.json`);
+        const catalogUrl = normalizedBase ? `${normalizedBase}/manifests/catalog.json` : '/manifests/catalog.json';
+        const catRes = await fetch(catalogUrl);
         if (catRes.ok) {
           const catData: MasterCatalog = await catRes.json();
           setCatalog(catData);

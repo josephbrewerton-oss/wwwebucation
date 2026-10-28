@@ -20,6 +20,7 @@ import {
 import { type CompressedCartridgeMetadata } from '../utils/cartridgeCompression';
 import { getBslEnabled, toggleBsl, subscribeBsl } from '../services/bslGlobalStore';
 import { exportSubjectCartridge, exportCustomCartridgeBundle } from '../utils/exportSubjectCartridge';
+import NativeCurriculumBadge from '../components/NativeCurriculumBadge';
 
 const ShakespearePlayExplorer = React.lazy(() => import('../components/ShakespearePlayExplorer'));
 
@@ -1301,9 +1302,12 @@ export default function MediaPlayerPage(): React.JSX.Element {
                   <h4 style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0f172a', margin: '0 0 4px' }}>
                     {p.title}
                   </h4>
-                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: 0, lineHeight: 1.4 }}>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 8px', lineHeight: 1.4 }}>
                     {p.desc}
                   </p>
+                  <div>
+                    <NativeCurriculumBadge cartridgeId={p.id} size="sm" />
+                  </div>
                 </div>
 
                 <div style={{ marginTop: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', borderTop: '1px solid #f1f5f9', paddingTop: '10px' }}>

@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AstVectorMediaPlayer from './AstVectorMediaPlayer';
+import NativeCurriculumBadge from './NativeCurriculumBadge';
 import {
   subscribeToPlayerCalls,
   closePlayerModal,
@@ -87,11 +88,12 @@ export default function GlobalPlayerModal(): React.JSX.Element | null {
             alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
             <span style={{ fontSize: '1.2rem' }}>🎬</span>
             <span style={{ color: '#f8fafc', fontWeight: 800, fontSize: '0.95rem' }}>
               {callOptions.title || 'Interactive Visual Lab'}
             </span>
+            <NativeCurriculumBadge cartridgeId={callOptions.preset || 'fractions'} size="sm" />
           </div>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

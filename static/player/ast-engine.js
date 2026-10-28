@@ -4990,26 +4990,23 @@
                 ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
                 : './';
 
-              const candidateUrls = Array.from(new Set([
+                // 1. Direct canonical paths (resolves immediately with zero 404 probes)
+                isBinary ? `/player/bytecode/${sceneId}.${ext}` : `/cartridges/${sceneId}.${ext}`,
+                isBinary ? `bytecode/${sceneId}.${ext}` : `../cartridges/${sceneId}.${ext}`,
+                `/player/bytecode/${sceneId}.${ext}`,
+                `/cartridges/${sceneId}.${ext}`,
+                `bytecode/${sceneId}.${ext}`,
+                `../cartridges/${sceneId}.${ext}`,
                 ...(customBase ? [
                   `${customBase.replace(/\/$/, '')}/bytecode/${sceneId}.${ext}`,
                   `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
                 ] : []),
                 ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                // 1. Direct bytecode directory (fast relative lookup from player iframe)
-                `bytecode/${sceneId}.${ext}`,
                 `${currentDir}bytecode/${sceneId}.${ext}`,
                 `./bytecode/${sceneId}.${ext}`,
-                `/player/bytecode/${sceneId}.${ext}`,
                 `../player/bytecode/${sceneId}.${ext}`,
                 `../bytecode/${sceneId}.${ext}`,
-                // 2. Canonical cartridges directory (source SVG & AST)
-                `cartridges/${sceneId}.${ext}`,
-                `${currentDir}cartridges/${sceneId}.${ext}`,
-                `./cartridges/${sceneId}.${ext}`,
-                `/cartridges/${sceneId}.${ext}`,
-                `../cartridges/${sceneId}.${ext}`,
                 ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`)
               ])).filter(Boolean);
 

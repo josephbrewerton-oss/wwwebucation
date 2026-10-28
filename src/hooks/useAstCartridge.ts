@@ -126,8 +126,7 @@ export function useAstCartridge<T = SExprAST>(
       if (!astText) {
         const basePath = options.basePath || '/cartridges/';
         const candidateUrls = [
-          `${basePath}${normalizedId}.ast`,
-          `/static/cartridges/${normalizedId}.ast`,
+          `${basePath.replace(/\/+$/, '')}/${normalizedId}.ast`,
         ];
 
         let fetchedResponse: Response | null = null;

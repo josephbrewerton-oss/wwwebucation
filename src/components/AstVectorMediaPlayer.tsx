@@ -47,6 +47,7 @@ import {
   subscribeBsl,
   broadcastBslSpeech,
 } from '../services/bslGlobalStore';
+import NativeCurriculumBadge from './NativeCurriculumBadge';
 
 // 1. Single Source of Truth: Import presets compiled from static/player/scenes/
 import { PRESET_OPTIONS, type ScenePresetOption } from '../data/player/generatedScenes';
@@ -1244,6 +1245,8 @@ const playerSrc = useMemo(() => {
 </optgroup>
               </select>
             )}
+
+            <NativeCurriculumBadge cartridgeId={selectedPreset} size="sm" />
 
             {relatedConcepts.length > 0 && (
               <button
