@@ -1,16 +1,23 @@
 (:scene :id "liturgical-calendar" :type "Sim" :oak-id "OAK-KS2-RE-009" :oak-unit "ks2-re-catholic-liturgical-seasons" :title "The Catholic Liturgical Year: Sacred Seasons & Colors" :stage "CATHOLIC LIFE" :duration 26.0
   (:vars (
-    (:var :name "seasonAngle" :val 0.0 :min 0.0 :max 360.0 :step 15.0 :label "Liturgical Year Wheel Dial")
-    (:var :name "vestmentGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Liturgical Color Intensity")
-    (:var :name "sundayCycle" :val 2.0 :min 0.0 :max 2.0 :step 1.0 :label "Lectionary Cycle (Year A, B, C)")
+    (:var :name "seasonAngle" :val 0.0 :min 0.0 :max 360.0 :step 1.0 :label "Liturgical Year Wheel Dial")
+    (:var :name "vestmentGlow" :val 1.0 :min 0.4 :max 2.0 :step 0.1 :label "Liturgical Color Intensity")
+    (:var :name "sundayCycle" :val 0.0 :min 0.0 :max 2.0 :step 1.0 :label "Lectionary Cycle (Year A, B, C)")
   ))
   (:inputs (
-    (:slider :var "seasonAngle" :label "Year Wheel Angle (Advent to Ordinary Time)" :min 0.0 :max 360.0 :step 15.0)
-    (:slider :var "vestmentGlow" :label "Liturgical Color Intensity" :min 0.2 :max 2.0 :step 0.2)
-    (:slider :var "sundayCycle" :label "Lectionary Cycle (A=Matthew, B=Mark, C=Luke)" :min 0.0 :max 2.0 :step 1.0)
+    ;; Step size 1.0 for a smooth manual sweep across the 360-degree circle
+    (:slider :var "seasonAngle" :label "Year Wheel Angle (0° Advent -> 360° Christ the King)" :min 0.0 :max 360.0 :step 1.0)
+    (:slider :var "vestmentGlow" :label "Liturgical Color Intensity" :min 0.4 :max 2.0 :step 0.1)
+    (:slider :var "sundayCycle" :label "Lectionary Cycle (0: Year A, 1: Year B, 2: Year C)" :min 0.0 :max 2.0 :step 1.0)
   ))
-  (:gestures (
-    (:draggable :target "#liturgical-dial-needle" :axis "xy" :min 100 :max 700)
+
+  (:computed (
+    ;; If the user touches the slider (> 0), honor their manual position.
+    ;; Otherwise, sweep cleanly from 0 to 360 degrees across the 26-second timeline duration.
+    (:name "activeAngle" :expr "(vars.seasonAngle > 0 ? vars.seasonAngle : (Math.min(1.0, t) * 360)) % 360")
+    
+    ;; Normalized fraction of the year (0.0 to 1.0) used for all color, text, and halo switches:
+    (:name "yearNorm" :expr "activeAngle / 360")
   ))
   (:subtitles (
     (:start 0.00 :end 0.16 :en "Advent (Violet / Purple): Four weeks of joyful expectation, preparation, and penance awaiting the twofold coming of Christ: His birth in Bethlehem and His return in glory. Third Sunday: Rose (Gaudete)." :es "Adviento (Morado): Cuatro semanas de preparación alegre y penitencia esperando la venida de Cristo. Tercer domingo: Rosa (Gaudete)." :la "Tempus Adventus: Veni, veni Emmanuel, captivum solve Israel. Gaudete in Domino semper: iterum dico, gaudete.")
@@ -46,8 +53,24 @@
       :explanation "Easter is celebrated for 50 uninterrupted days ('as one feast day, indeed as one great Sunday', General Norms for the Liturgical Year §22), culminating in the descent of the Holy Spirit on Pentecost.")
   ))
   (:bindings (
-    (:target "#liturgical-dial-needle" :attr "transform" :expr "'rotate(' + ((t * 360) + (vars.seasonAngle || 0)) + ' 400 220)'")
-    (:target "#season-glow-halo" :attr "stroke" :expr "t < 0.16 ? '#a855f7' : (t < 0.32 ? '#facc15' : (t < 0.48 ? '#22c55e' : (t < 0.65 ? '#9333ea' : (t < 0.82 ? '#f59e0b' : '#22c55e'))))")
-    (:target "#season-center-badge" :attr "fill" :expr "t < 0.16 ? '#581c87' : (t < 0.32 ? '#854d0e' : (t < 0.48 ? '#14532d' : (t < 0.65 ? '#581c87' : (t < 0.82 ? '#7f1d1d' : '#14532d'))))")
+    ;; Dial rotation: locked strictly to the 400 220 center hub
+    (:target "#liturgical-dial-needle" :attr "transform" 
+      :expr "'rotate(' + activeAngle.toFixed(1) + ' 400 220)'")
+
+    ;; Outer Halo: changes color dynamically based on where the needle points
+    (:target "#season-glow-halo" :attr "stroke" 
+      :expr "yearNorm < 0.16 ? '#a855f7' : (yearNorm < 0.32 ? '#facc15' : (yearNorm < 0.48 ? '#22c55e' : (yearNorm < 0.65 ? '#9333ea' : (yearNorm < 0.82 ? '#f59e0b' : '#22c55e'))))")
+
+    ;; Center Badge Fill: matching vestment palette
+    (:target "#season-center-badge" :attr "fill" 
+      :expr "yearNorm < 0.16 ? '#581c87' : (yearNorm < 0.32 ? '#854d0e' : (yearNorm < 0.48 ? '#14532d' : (yearNorm < 0.65 ? '#581c87' : (yearNorm < 0.82 ? '#7f1d1d' : '#14532d'))))")
+
+    ;; Vestment glow intensity
+    (:target "#season-glow-halo" :attr "stroke-width" 
+      :expr "(4 * (vars.vestmentGlow || 1.0)) + 'px'")
+
+    ;; Active Season Text readout
+    (:target "#season-name-display" :attr "textContent" 
+      :expr "yearNorm < 0.16 ? 'ADVENT (VIOLET)' : (yearNorm < 0.32 ? 'CHRISTMASTIDE (WHITE/GOLD)' : (yearNorm < 0.48 ? 'ORDINARY TIME I (GREEN)' : (yearNorm < 0.65 ? 'LENT & PASSIONTIDE (VIOLET)' : (yearNorm < 0.82 ? 'EASTER & PENTECOST (GOLD/RED)' : 'ORDINARY TIME II / CHRIST THE KING (GREEN)'))))")
   ))
 )

@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-28T20:24:34.556Z",
+  "generatedAt": "2026-10-28T20:30:37.240Z",
   "totalCartridges": 58,
-  "masterChecksum": "c20a66c721fc4773e7353b6b9024a2f197f1d9a6000ab80dd92c2419f3e1007b",
+  "masterChecksum": "2570b66d9eefcb206386ef19c557cfa9401c82e98b96197de5f29ebaa6bc9fd7",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -346,15 +346,15 @@
       "title": "The Catholic Liturgical Year: Sacred Seasons & Colors",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "5dc8c741de8515c09c48bf3ab2bba84ded948a2ed16c7d553ef88d07bb51e0ef",
+      "astSha256": "88ef7c8e58cad997c4ad9c4e5dc3125be0a613a6901907e6b3c1b2afb5b864ac",
       "svgSha256": "ec9c2c0e23145505dde3189ad8544137211b41b1ab46f6a887dc5b002f26b3f3",
-      "astbSha256": "fd2e51df091001d2a441c107fd479fee098bbe4a014980eccde1d8a03999d8e6",
-      "astbBytes": 4302,
-      "astBytes": 6884,
+      "astbSha256": "187d4b96ce30db74074e3c7481f5d3384befa692547f230cb4e63674d59db513",
+      "astbBytes": 4756,
+      "astBytes": 8134,
       "svgBytes": 5782,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "71e0c68f47551d64696e829106df2b1f77886a09c025961159aebcba35cc3128",
+      "seal": "4588f2b907dfeb512dd8ce0bc5ee620dafb08649525655a0ae22f936f6dc10ef",
       "certified": true
     },
     "liturgical-postures": {

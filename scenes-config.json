@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-28T20:24:33.699Z",
+  "generatedAt": "2026-10-28T20:30:36.582Z",
   "totalScenes": 58,
   "inputDirs": [
     "static/cartridges"
@@ -250,7 +250,7 @@
       "section": "Catholic Life & Faith Formation",
       "keyframeCount": 6,
       "subtitleCount": 6,
-      "bindingsCount": 3,
+      "bindingsCount": 5,
       "hasCheckpoints": true,
       "checkpointCount": 3
     },
