@@ -10,6 +10,8 @@
   (:computed (
     (:name "summitTemp" :expr "(vars.seaLevelTemp - (vars.peakHeight / 1000) * 6.5).toFixed(1)")
     (:name "summitPressureKpa" :expr "(101.3 * Math.exp(-vars.peakHeight / 7400)).toFixed(1)")
+    ;; Hard ceiling clamp for normalized progress:
+    (:name "clampedT" :expr "Math.min(1.0, Math.max(0.0, t))")
   ))
   (:gestures (
     (:draggable :target "#climber-marker" :axis "xy" :min 180 :max 400)
