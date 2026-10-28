@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-28T09:42:42.543Z",
-  "totalScenes": 57,
+  "generatedAt": "2026-10-28T10:07:32.535Z",
+  "totalScenes": 58,
   "inputDirs": [
     "static/cartridges"
   ],
@@ -1198,6 +1198,33 @@
       "bindingsCount": 20,
       "hasCheckpoints": false,
       "checkpointCount": 0
+    },
+    {
+      "id": "bbc-model-b",
+      "type": "Sim",
+      "title": "BBC Micro Model B: 6502 Computing & BBC BASIC",
+      "stage": "KS2 & KS3 COMPUTING",
+      "duration": 16,
+      "oakId": "OAK-KS2-COM-012",
+      "oakUnit": "ks2-computing-history-algorithms-bbc-micro",
+      "subject": "Computing",
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/bbc-model-b.svg",
+      "astFile": "cartridges/bbc-model-b.ast",
+      "astbFile": "bytecode/bbc-model-b.astb",
+      "video": null,
+      "videoFit": "contain",
+      "hasVideo": false,
+      "isCore": true,
+      "tier": "core",
+      "mount": "/curriculum/computing/bbc-model-b",
+      "section": "Computing & Technology",
+      "keyframeCount": 5,
+      "subtitleCount": 4,
+      "bindingsCount": 9,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "fish-tank",

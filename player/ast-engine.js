@@ -1683,6 +1683,37 @@
         noise.stop(now + 0.25);
       } catch (e) {}
     }
+
+    playBbcBeep() {
+      if (this.muted || !this.ensureContext()) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc1 = this.ctx.createOscillator();
+        const gain1 = this.ctx.createGain();
+        osc1.type = 'square';
+        osc1.frequency.setValueAtTime(1200, now);
+        gain1.gain.setValueAtTime(0.08, now);
+        gain1.gain.setValueAtTime(0.08, now + 0.08);
+        gain1.gain.linearRampToValueAtTime(0.0001, now + 0.09);
+        osc1.connect(gain1);
+        gain1.connect(this.ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.095);
+
+        const osc2 = this.ctx.createOscillator();
+        const gain2 = this.ctx.createGain();
+        const t2 = now + 0.095;
+        osc2.type = 'square';
+        osc2.frequency.setValueAtTime(800, t2);
+        gain2.gain.setValueAtTime(0.08, t2);
+        gain2.gain.setValueAtTime(0.08, t2 + 0.12);
+        gain2.gain.linearRampToValueAtTime(0.0001, t2 + 0.135);
+        osc2.connect(gain2);
+        gain2.connect(this.ctx.destination);
+        osc2.start(t2);
+        osc2.stop(t2 + 0.14);
+      } catch (e) {}
+    }
   }
 
   /**
@@ -4822,6 +4853,11 @@
         }
       } catch (bindErr) {
         console.warn('[AST Engine] Initial frame bind notice:', bindErr);
+      }
+      if ((scene.id === 'bbc-model-b' || scene.id === 'bbc-micro') && this.synth) {
+        try {
+          this.synth.playBbcBeep();
+        } catch (_) {}
       }
       return this.scene;
     }

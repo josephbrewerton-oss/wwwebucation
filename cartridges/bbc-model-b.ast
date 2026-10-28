@@ -1,0 +1,68 @@
+(:scene :id "bbc-model-b" :type "Sim" :oak-id "OAK-KS2-COM-012" :oak-unit "ks2-computing-history-algorithms-bbc-micro" :title "BBC Micro Model B: 6502 Computing & BBC BASIC" :stage "KS2 & KS3 COMPUTING" :duration 16.0
+  (:vars (
+    (:var :name "clockMhz" :val 2.0 :min 0.5 :max 8.0 :step 0.5 :label "6502 Clock Frequency (MHz)")
+    (:var :name "progMode" :val 1 :min 1 :max 4 :step 1 :label "BBC BASIC Demo Routine")
+    (:var :name "cycles" :val 100 :min 0 :max 1000 :step 10 :label "Instruction Cycles")
+  ))
+  (:inputs (
+    (:slider :var "clockMhz" :label "6502 Clock Speed (MHz)" :min 0.5 :max 8.0 :step 0.5)
+    (:slider :var "progMode" :label "Program Routine (1:Hello 2:Loops 3:Teletext 4:Fibonacci)" :min 1 :max 4 :step 1)
+  ))
+  (:computed (
+    (:name "cycleCount" :expr "Math.round(vars.clockMhz * 1000000 * t)")
+    (:name "accValue" :expr "Math.round(40 + 20 * Math.sin(t * Math.PI * 4))")
+  ))
+  (:subtitles (
+    (:start 0.00 :end 4.00 :en "Welcome to the 1981 Acorn BBC Microcomputer Model B, powered by the 2 MHz MOS 6502 CPU and 32KB of RAM." :es "Bienvenidos al microordenador Acorn BBC Modelo B de 1981, con CPU MOS 6502 a 2 MHz y 32KB de RAM.")
+    (:start 4.00 :end 8.50 :en "Authored by Sophie Wilson, BBC BASIC introduced structured line numbers, modular procedures, and instant inline 6502 assembly." :es "Creado por Sophie Wilson, BBC BASIC introdujo números de línea estructurados, procedimientos y ensamblador 6502 integrado.")
+    (:start 8.50 :end 12.50 :en "The SAA5050 video processor generates 40x25 Teletext characters (MODE 7) using only 1KB of screen memory, saving valuable user RAM." :es "El procesador SAA5050 genera 40x25 caracteres de teletexto (MODO 7) usando solo 1KB de memoria, ahorrando RAM para el usuario.")
+    (:start 12.50 :end 16.00 :en "Acorn's work on the BBC Micro directly inspired the design of the ARM chip, which now powers billions of mobile devices worldwide." :es "El trabajo de Acorn en el BBC Micro inspiró directamente el procesador ARM, que hoy impulsa miles de millones de dispositivos móviles.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "System Boot" :rule "MOS operating system initializes 32KB user memory and sound generator.")
+    (:t 0.25 :title "BASIC Interpreter" :rule "BBC BASIC prompt is ready for procedural execution and mathematical evaluation.")
+    (:t 0.50 :title "6502 Execution" :rule "Accumulator, X, Y registers and Program Counter step through opcode cycles.")
+    (:t 0.75 :title "Teletext MODE 7" :rule "Contiguous mosaic graphics and 7 primary colors render via SAA5050 character ROM.")
+    (:t 1.00 :title "ARM Heritage" :rule "Acorn RISC Machine architecture succeeds the 6502 microcomputer legacy.")
+  ))
+  (:gestures (
+    (:draggable :target "#key-spacebar" :axis "x" :min 115 :max 125)
+  ))
+  (:bindings (
+    (:target "#clock-freq-val" :attr "textContent" :expr "vars.clockMhz.toFixed(2) + ' MHz'")
+    (:target "#reg-a-val" :attr "textContent" :expr "'&' + Math.round(40 + 20 * Math.sin(t * Math.PI * 4)).toString(16).toUpperCase() + ' (' + Math.round(40 + 20 * Math.sin(t * Math.PI * 4)) + ')'")
+    (:target "#reg-x-val" :attr "textContent" :expr "'&' + Math.round(1 + ((t * 20) % 15)).toString(16).toUpperCase().padStart(2, '0') + ' (' + Math.round(1 + ((t * 20) % 15)) + ')'")
+    (:target "#reg-pc-val" :attr "textContent" :expr "'&E0' + Math.round(40 + (t * 60)).toString(16).toUpperCase()")
+    (:target "#screen-cursor" :attr "opacity" :expr "Math.sin(t * Math.PI * 8) > 0 ? 0.95 : 0.05")
+    (:target "#turtle-tracer" :attr "transform" :expr "'rotate(' + (t * 360 * vars.clockMhz * 0.5) + ' 80 122)'")
+    (:target "#teletext-art-layer" :attr "opacity" :expr "vars.progMode === 3 ? 1.0 : (t > 0.65 ? 0.95 : 0.4)")
+    (:target "#basic-line-3" :attr "textContent" :expr "vars.progMode === 1 ? '>30 PRINT \"HELLO WORLD FROM BBC BASIC!\"' : (vars.progMode === 2 ? '>30 FOR I=1 TO 10 : PRINT I*I : NEXT' : (vars.progMode === 3 ? '>30 MODE 7 : COLOUR 129 : REM CEEFAX' : '>30 F1=1 : F2=1 : REPEAT : PRINT F1'))")
+    (:target "#out-line-1" :attr "textContent" :expr "vars.progMode === 1 ? 'HELLO WORLD FROM BBC BASIC!' : (vars.progMode === 2 ? '1  4  9  16  25  36  49  64  81  100' : (vars.progMode === 3 ? 'BBC CEEFAX 100  CEEFAX 100  28 OCT' : 'FIBONACCI: 1, 1, 2, 3, 5, 8, 13, 21, 34, 55'))")
+  ))
+  (:interactive (
+    (:checkpoint
+      :t 0.35
+      :prompt "Why did BBC BASIC use explicit line numbers (10, 20, 30...) for program statements?"
+      :options (
+        "To allow easy insertion of new instructions between existing lines without renumbering"
+        "Because the 6502 CPU cannot execute code without line numbers"
+        "To reserve memory addresses on floppy disk storage"
+        "To set the clock frequency of the processor"
+      )
+      :answer 0
+      :explanation "Line numbers incremented by 10 (10, 20, 30...) allowed programmers to easily insert new lines (e.g. line 15 or 25) between existing instructions without having to rewrite or renumber their entire program."
+    )
+    (:checkpoint
+      :t 0.75
+      :prompt "What is the primary role of the 6502 CPU's Accumulator (A) register?"
+      :options (
+        "To store the results of arithmetic calculations and logical operations"
+        "To hold the physical monitor refresh rate"
+        "To store the Teletext font characters"
+        "To provide backup battery power to user memory"
+      )
+      :answer 0
+      :explanation "The Accumulator (A) is the primary internal register where the 6502 processor performs all its mathematical additions, subtractions, and bitwise logical operations (AND, OR, EOR)."
+    )
+  ))
+)
