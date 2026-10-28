@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-27T21:41:18.343Z",
+  "generatedAt": "2026-10-28T08:38:13.136Z",
   "totalScenes": 57,
   "inputDirs": [
     "static/cartridges"
@@ -43,7 +43,7 @@
       "type": "Slide",
       "title": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
       "stage": "CATHOLIC LIFE",
-      "duration": 16,
+      "duration": 42,
       "oakId": "OAK-KS2-RE-001",
       "oakUnit": "ks2-re-catholic-sacred-architecture",
       "subject": "Religious Education",

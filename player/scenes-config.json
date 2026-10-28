@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-27T21:41:21.244Z",
+  "generatedAt": "2026-10-28T08:38:15.490Z",
   "totalScenes": 57,
   "scenes": [
     {
@@ -113,7 +113,7 @@
       "type": "Slide",
       "title": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
       "stage": "CATHOLIC LIFE",
-      "duration": 16,
+      "duration": 42,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/church-tour.svg",

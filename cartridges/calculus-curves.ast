@@ -6,8 +6,8 @@
     (:slider :var "probeX" :label "Probe Position (x)" :min -1.5 :max 3.5 :step 0.05)
   ))
   (:computed (
-    (:name "slope" :expr "(2 * vars.probeX - 2).toFixed(2)")
-    (:name "curveY" :expr "(vars.probeX * vars.probeX - 2 * vars.probeX).toFixed(2)")
+    (:name "slope" :expr (:format-num (- (* 2 vars.probeX) 2) :decimals 2 :signed false))
+    (:name "curveY" :expr (:format-num (- (:pow vars.probeX 2) (* 2 vars.probeX)) :decimals 2 :signed false))
   ))
   (:gestures (
     (:draggable :target "#tangent-assembly" :axis "curve" :min 175 :max 425)
@@ -32,10 +32,18 @@
       :explanation "The derivative is f'(x) = 2x - 2. Substituting x = 1 gives 2(1) - 2 = 0. A gradient of 0 defines a stationary turning point.")
   ))
   (:bindings (
-    (:target "#tangent-assembly" :attr "transform" :expr "'translate(' + Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) + ', ' + Math.max(50, Math.min(320, (210 - (Math.pow((Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) - 250) / 50, 2) - 2 * ((Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) - 250) / 50)) * 25))) + ')'")
-    (:target "#tangent-line" :attr "transform" :expr "'rotate(' + (-Math.atan((2 * ((Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) - 250) / 50) - 2)) * 180 / Math.PI) + ')'")
-    (:target "#card-slope-val" :attr "textContent" :expr "'m = ' + (2 * ((Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) - 250) / 50) - 2 >= 0 ? '+' : '') + (2 * ((Math.max(175, Math.min(425, (150 + 200 * Math.min(1, t / 0.85)))) - 250) / 50) - 2).toFixed(2)")
-    (:target "#integral-shaded-area" :attr "opacity" :expr "t > 0.65 ? Math.min(1, (t - 0.65) / 0.25) : 0.2")
-    (:target "#calc-theorem-note" :attr "textContent" :expr "t < 0.65 ? 'Differentiation: Tangent slope dy/dx = lim(Δy/Δx) evaluates instantaneous rate of change.' : 'Fundamental Theorem: ∫[a,b] f(x)dx = F(b) - F(a) calculates exact geometric area.'")
+    (:target "#tangent-assembly" :attr "transform" :expr
+      (:translate
+        (:clamp 175 425 (+ 150 (* 200 (:min 1.0 (/ t 0.85)))))
+        (:clamp 50 320 (- 210 (* (- (:pow (/ (- (:clamp 175 425 (+ 150 (* 200 (:min 1.0 (/ t 0.85))))) 250) 50) 2) (* 2 (/ (- (:clamp 175 425 (+ 150 (* 200 (:min 1.0 (/ t 0.85))))) 250) 50))) 25)))))
+    (:target "#tangent-line" :attr "transform" :expr
+      (:rotate
+        (- (:rad-to-deg (:atan (- (* 2 (/ (- (:clamp 175 425 (+ 150 (* 200 (:min 1.0 (/ t 0.85))))) 250) 50)) 2))))))
+    (:target "#card-slope-val" :attr "textContent" :expr
+      (+ "m = " (:format-num (- (* 2 (/ (- (:clamp 175 425 (+ 150 (* 200 (:min 1.0 (/ t 0.85))))) 250) 50)) 2) :decimals 2 :signed true)))
+    (:target "#integral-shaded-area" :attr "opacity" :expr
+      (:if (> t 0.65) (:min 1.0 (/ (- t 0.65) 0.25)) 0.2))
+    (:target "#calc-theorem-note" :attr "textContent" :expr
+      (:if (< t 0.65) "Differentiation: Tangent slope dy/dx = lim(Δy/Δx) evaluates instantaneous rate of change." "Fundamental Theorem: ∫[a,b] f(x)dx = F(b) - F(a) calculates exact geometric area."))
   ))
 )
