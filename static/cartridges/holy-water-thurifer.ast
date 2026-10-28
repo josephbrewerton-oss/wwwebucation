@@ -42,8 +42,22 @@
       :explanation "Psalm 141:2 proclaims: 'Let my prayer rise before you like incense, the lifting up of my hands like an evening sacrifice.' In Revelation 8:3-4, the angel offers the incense with the prayers of all God's people on the golden altar before the throne.")
   ))
   (:bindings (
-    (:target "#thurible-swing-group" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 8) * (vars.swingArc || 25)) + ' 400 60)'")
-    (:target "#incense-smoke-cloud" :attr "opacity" :expr "(0.35 + Math.sin(t * 12) * 0.15) * (vars.smokeDensity || 1.0)")
-    (:target "#water-droplet-burst" :attr "opacity" :expr "t >= 0.28 && t < 0.55 ? (0.85 + Math.sin(t * 30) * 0.15) : 0.05")
+    ;; 1. Solemn, stately thurible swing (clamped and phased)
+    (:target "#thurible-swing-group" :attr "transform" 
+      :expr "'rotate(' + (t >= 0.55 ? Math.sin((t - 0.55) * Math.PI * 14) * (vars.swingArc || 25) : 0) + ' 400 60)'")
+
+    ;; 2. Smoke Vertical Rise & Drift: Rises up the stage (-Y) and billows slightly side-to-side (+/- X)
+    (:target "#incense-smoke-cloud" :attr "transform" 
+      :expr "t >= 0.55 ? 'translate(' + (Math.sin((t - 0.55) * Math.PI * 6) * 18) + ',' + (-((t - 0.55) * 260) % 180) + ') scale(' + (1.0 + (((t - 0.55) * 1.8) % 1.2)) + ')' : 'translate(0,0) scale(0)'")
+
+    ;; 3. Smoke Opacity: Fades in at the thurible, remains dense, fades toward the top of its ascent
+    (:target "#incense-smoke-cloud" :attr "opacity" 
+      :expr "t >= 0.55 ? Math.max(0, (0.75 - (((t - 0.55) * 1.5) % 0.8)) * (vars.smokeDensity || 1.0)) : 0.0")
+
+    ;; 4. Asperges Droplets: Active only during Step 2 (0.28 to 0.55), pulsating outward
+    (:target "#water-droplet-burst" :attr "opacity" 
+      :expr "t >= 0.28 && t < 0.55 && (vars.holyWaterSprinkled !== 0) ? (0.85 + Math.sin(t * 18) * 0.15) : 0.0")
+    (:target "#water-droplet-burst" :attr "transform" 
+      :expr "t >= 0.28 && t < 0.55 ? 'translate(0,' + ((t * 80) % 25) + ') scale(' + (1.0 + ((t * 3) % 0.4)) + ')' : 'scale(1)'")
   ))
 )
