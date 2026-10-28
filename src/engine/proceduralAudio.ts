@@ -162,3 +162,44 @@ export function playProofResolvedChord(volume: number = 0.12): void {
     console.debug('[Procedural Audio]:', err);
   }
 }
+
+/**
+ * Play authentic BBC Micro Model B two-tone boot chime (1200Hz followed by 800Hz square waves)
+ */
+export function playBbcMicroBeep(volume: number = 0.08): void {
+  try {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+    const now = ctx.currentTime;
+
+    // Tone 1: 1200 Hz for 80ms
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'square';
+    osc1.frequency.setValueAtTime(1200, now);
+    gain1.gain.setValueAtTime(volume, now);
+    gain1.gain.setValueAtTime(volume, now + 0.08);
+    gain1.gain.linearRampToValueAtTime(0.0001, now + 0.09);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.095);
+
+    // Tone 2: 800 Hz for 120ms
+    const t2 = now + 0.095;
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'square';
+    osc2.frequency.setValueAtTime(800, t2);
+    gain2.gain.setValueAtTime(volume, t2);
+    gain2.gain.setValueAtTime(volume, t2 + 0.12);
+    gain2.gain.linearRampToValueAtTime(0.0001, t2 + 0.135);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(t2);
+    osc2.stop(t2 + 0.14);
+  } catch (err) {
+    console.debug('[Procedural Audio]:', err);
+  }
+}
+

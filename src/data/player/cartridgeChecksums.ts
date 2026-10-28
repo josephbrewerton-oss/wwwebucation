@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-28T08:42:30.616Z",
-  "totalCartridges": 57,
-  "masterChecksum": "f5efd28dc8133f864e7627964fdf98cf9b5912226a4f313fa567006961e2d2b7",
+  "generatedAt": "2026-10-28T09:57:19.978Z",
+  "totalCartridges": 58,
+  "masterChecksum": "6f7e86477a213ba94c89e1f127cdd81b04e4da0339be41a8719b3d6790430e66",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -80,6 +80,22 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
       "seal": "58d963854cad2c42ee2e89b0418d098aa93c16d9f4432e2a454097736a710661",
+      "certified": true
+    },
+    "bbc-model-b": {
+      "id": "bbc-model-b",
+      "title": "BBC Micro Model B: 6502 Computing & BBC BASIC",
+      "stage": "KS2 & KS3 COMPUTING",
+      "type": "Sim",
+      "astSha256": "a61c28fa30f9b5a655944f084e1a7cff5954ba0af7fc8f9f017c7f9ad68b13dd",
+      "svgSha256": "7343f8ca7b1662811e1c3c48ff0ecf143bfe306fad0b02dbaf5af9897248d2dc",
+      "astbSha256": "efbdf9a3adbda52b7dd16eca6077fff7621d8d47ac079ae2d5a3b1d4ca6f5a28",
+      "astbBytes": 3197,
+      "astBytes": 5628,
+      "svgBytes": 28869,
+      "tier": "native",
+      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
+      "seal": "16d9acd88c48d13b6468adc5fbb0f50a1c356cabf05c5ff9f8a53487c323af13",
       "certified": true
     },
     "bodmas": {

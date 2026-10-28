@@ -88,6 +88,12 @@ const STORAGE_KEY_CUSTOM_BUNDLES = 'stj_custom_bundles_v1';
 
 // Canonical Alias Map for fault-tolerant decentralized matching (e.g. spelling variants)
 export const CARTRIDGE_ALIASES: Record<string, string> = {
+  'bbc-micro': 'bbc-model-b',
+  'bbc-model-b': 'bbc-model-b',
+  'bbc': 'bbc-model-b',
+  'bbc-basic': 'bbc-model-b',
+  'acorn': 'bbc-model-b',
+  '6502': 'bbc-model-b',
   'pythagorus': 'pythagoras',
   'pythagoras': 'pythagoras',
   'pythagoras-theorem': 'pythagoras',
@@ -873,6 +879,25 @@ export const BUILTIN_CARTRIDGES: CartridgeDefinition[] = [
     version: '2.6.0',
     invariants: ['Scriptural Contemplation', 'Marian Devotion', 'Ecclesiastical Latin Prayers'],
   },
+  {
+    id: 'bbc-model-b',
+    type: 'Sim',
+    title: 'BBC Micro Model B: 6502 Computing & BBC BASIC',
+    stage: 'KS2 & KS3 COMPUTING',
+    category: 'Computing',
+    desc: 'The iconic 1981 Acorn BBC Microcomputer Model B with 2 MHz MOS 6502 CPU, 32KB RAM, Teletext SAA5050 MODE 7 graphics, and BBC BASIC.',
+    icon: '💻',
+    source: 'builtin',
+    duration: 16.0,
+    oakId: 'OAK-KS2-COM-012',
+    oakUnit: 'ks2-computing-history-algorithms-bbc-micro',
+    mount: '/curriculum/computing/history/bbc-model-b',
+    section: 'Computing & Algorithmic Thinking',
+    svgFile: 'cartridges/bbc-model-b.svg',
+    astFile: 'cartridges/bbc-model-b.ast',
+    version: '2.6.0',
+    invariants: ['MOS 6502 Instruction Timing', 'BBC BASIC Line Number Ordering', 'Teletext SAA5050 40x25 Character Grid'],
+  },
   // Modular Oak Curriculum Question Banks & Data Cartridges
   ...BUILTIN_DATA_CARTRIDGES.map((d): CartridgeDefinition => ({
     id: d.id,
@@ -1159,11 +1184,15 @@ export function getDefaultMountForCartridge(id: string): string {
     'water-cycle': '/curriculum/geography/water-cycle',
     'mountain-elevation': '/curriculum/geography/mountain-elevation',
     'fish-tank': '/curriculum/computing/stress-benchmark',
+    'bbc-model-b': '/curriculum/computing/history/bbc-model-b',
   };
   return map[id] || `/curriculum/${id}`;
 }
 
 export function getDefaultSectionForCartridge(id: string, category?: string): string {
+  if (id.includes('bbc') || id.includes('fish-tank') || category === 'Computing') {
+    return 'Computing & Algorithmic Thinking';
+  }
   if (id.includes('church') || id.includes('altar') || id.includes('holy') || id.includes('rosary') || category === 'Catholic Faith') {
     return 'Catholic Life & Faith Formation';
   }

@@ -1,0 +1,439 @@
+<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- CRT Monitor Gradients & Phosphor Glow -->
+    <radialGradient id="crt-tube-grad" cx="50%" cy="45%" r="65%">
+      <stop offset="0%" stop-color="#0a150a"/>
+      <stop offset="70%" stop-color="#040b04"/>
+      <stop offset="100%" stop-color="#010401"/>
+    </radialGradient>
+    <radialGradient id="crt-glass-glare" cx="30%" cy="20%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.08"/>
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.02"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="bezel-metallic" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#334155"/>
+      <stop offset="25%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <!-- BBC Model B Casing Gradients -->
+    <linearGradient id="bbc-casing-cream" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#d8cfbc"/>
+      <stop offset="40%" stop-color="#cec3ad"/>
+      <stop offset="100%" stop-color="#b6aa92"/>
+    </linearGradient>
+    <linearGradient id="bbc-keyboard-well" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#2a221b"/>
+      <stop offset="100%" stop-color="#191410"/>
+    </linearGradient>
+    <linearGradient id="red-key-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#dc2626"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+    <linearGradient id="char-key-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3b3128"/>
+      <stop offset="100%" stop-color="#231b14"/>
+    </linearGradient>
+    <linearGradient id="space-key-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#352b22"/>
+      <stop offset="100%" stop-color="#1c1611"/>
+    </linearGradient>
+    <linearGradient id="badge-red" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#b91c1c"/>
+      <stop offset="100%" stop-color="#991b1b"/>
+    </linearGradient>
+    <filter id="phosphor-glow" x="-10%" y="-10%" width="120%" height="120%">
+      <feGaussianBlur stdDeviation="1.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <pattern id="scanlines" width="100" height="4" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="100" y2="0" stroke="#000000" stroke-opacity="0.25" stroke-width="1.2"/>
+    </pattern>
+  </defs>
+
+  <!-- Background Lab Desktop -->
+  <rect width="800" height="480" fill="#090d16"/>
+  <rect x="0" y="440" width="800" height="40" fill="#04070e" stroke="#1e293b" stroke-width="1"/>
+
+  <!-- ========================================== -->
+  <!-- 1. MICROVITE CUB CRT COLOR MONITOR (TOP)   -->
+  <!-- ========================================== -->
+  <g id="crt-monitor" transform="translate(140, 16)">
+    <!-- Monitor Outer Chasis -->
+    <rect x="0" y="0" width="520" height="248" rx="14" fill="url(#bezel-metallic)" stroke="#475569" stroke-width="2"/>
+    <rect x="6" y="6" width="508" height="236" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+    
+    <!-- Microvite CUB Branding Badge -->
+    <rect x="22" y="222" width="76" height="12" rx="2" fill="#0284c7" fill-opacity="0.3" stroke="#0284c7" stroke-width="0.8"/>
+    <text x="60" y="231" fill="#38bdf8" font-size="7.5" font-family="'Courier New', monospace" font-weight="900" text-anchor="middle" letter-spacing="1">MICROVITE 1431</text>
+    
+    <!-- Monitor Power LED (Green) -->
+    <circle cx="490" cy="228" r="3.5" fill="#22c55e" filter="url(#phosphor-glow)"/>
+    <circle cx="490" cy="228" r="1.5" fill="#ffffff"/>
+
+    <!-- CRT Inner Bezel Curved Screen Frame -->
+    <rect x="22" y="14" width="476" height="198" rx="18" fill="#020408" stroke="#334155" stroke-width="3"/>
+
+    <!-- CRT Phosphor Screen Surface -->
+    <rect id="crt-screen" x="26" y="18" width="468" height="190" rx="14" fill="url(#crt-tube-grad)"/>
+
+    <!-- CRT Scanlines Overlay -->
+    <rect x="26" y="18" width="468" height="190" rx="14" fill="url(#scanlines)" pointer-events="none"/>
+
+    <!-- CRT Glass Glare Arc -->
+    <ellipse cx="140" cy="50" rx="100" ry="25" fill="url(#crt-glass-glare)" pointer-events="none"/>
+
+    <!-- ======================================== -->
+    <!-- 2. CRT SCREEN CONTENT (BBC BASIC / SAA5050) -->
+    <!-- ======================================== -->
+    <g id="screen-content" transform="translate(42, 36)" filter="url(#phosphor-glow)">
+      <!-- System Header -->
+      <text x="0" y="14" fill="#4ade80" font-size="11" font-family="'Courier New', monospace" font-weight="700" letter-spacing="0.5">BBC Computer 32K</text>
+      <text x="0" y="28" fill="#4ade80" font-size="11" font-family="'Courier New', monospace" font-weight="700" letter-spacing="0.5">Acorn 1770 DFS</text>
+      <text x="0" y="42" fill="#4ade80" font-size="11" font-family="'Courier New', monospace" font-weight="700" letter-spacing="0.5">BASIC</text>
+      
+      <!-- Interactive Terminal Program Listing Lines -->
+      <text id="basic-line-1" x="0" y="62" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">>10 REM *** ST JOSEPH'S COMPUTING LAB ***</text>
+      <text id="basic-line-2" x="0" y="76" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">>20 MODE 7 : COLOUR 130 : CLS</text>
+      <text id="basic-line-3" x="0" y="90" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">>30 PRINT "HELLO WORLD FROM BBC BASIC!"</text>
+      <text id="basic-line-4" x="0" y="104" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">>40 FOR N=1 TO 5 : PRINT "STEP "; N : NEXT</text>
+      <text id="basic-line-5" x="0" y="118" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">>RUN</text>
+
+      <!-- Program Execution Output / Graphics Canvas -->
+      <g id="program-output" transform="translate(0, 126)">
+        <text id="out-line-1" x="0" y="10" fill="#facc15" font-size="10" font-family="'Courier New', monospace" font-weight="700">HELLO WORLD FROM BBC BASIC!</text>
+        <text id="out-line-2" x="0" y="22" fill="#38bdf8" font-size="10" font-family="'Courier New', monospace" font-weight="700">STEP 1  STEP 2  STEP 3  STEP 4  STEP 5</text>
+        <text id="out-prompt" x="0" y="36" fill="#4ade80" font-size="10.5" font-family="'Courier New', monospace" font-weight="700">></text>
+        <!-- Flashing Cursor -->
+        <rect id="screen-cursor" x="10" y="27" width="7" height="10" fill="#4ade80" opacity="0.9"/>
+      </g>
+
+      <!-- Mini Teletext Ceefax Art Layer (Optional MODE 7 Overlay) -->
+      <g id="teletext-art-layer" transform="translate(260, 4)" opacity="0.92">
+        <rect width="160" height="150" fill="#040b04" stroke="#16a34a" stroke-width="1" rx="4"/>
+        <rect x="4" y="4" width="152" height="18" fill="#b91c1c"/>
+        <text x="80" y="16" fill="#ffffff" font-size="9" font-family="'Courier New', monospace" font-weight="900" text-anchor="middle" letter-spacing="1">CEEFAX P100</text>
+        <!-- Teletext Blocks -->
+        <rect x="10" y="28" width="40" height="14" fill="#3b82f6"/>
+        <rect x="54" y="28" width="40" height="14" fill="#facc15"/>
+        <rect x="98" y="28" width="52" height="14" fill="#22c55e"/>
+        <text x="10" y="55" fill="#f8fafc" font-size="8" font-family="'Courier New', monospace" font-weight="700">MOS 6502 @ 2 MHz</text>
+        <text x="10" y="68" fill="#f8fafc" font-size="8" font-family="'Courier New', monospace" font-weight="700">32KB USER RAM</text>
+        <text x="10" y="81" fill="#f8fafc" font-size="8" font-family="'Courier New', monospace" font-weight="700">TELETEXT SAA5050</text>
+        <text x="10" y="94" fill="#38bdf8" font-size="8" font-family="'Courier New', monospace" font-weight="700">SOPHIE WILSON 1981</text>
+        <!-- Geometric Turtle Graphics Preview -->
+        <circle id="turtle-tracer" cx="80" cy="122" r="16" fill="none" stroke="#e11d48" stroke-width="2" stroke-dasharray="3,3"/>
+        <polygon points="80,110 85,124 75,124" fill="#22c55e"/>
+      </g>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- 3. BBC MODEL B COMPUTER CHASSIS (LOWER)    -->
+  <!-- ========================================== -->
+  <g id="bbc-chassis" transform="translate(100, 268)">
+    <!-- Main Angled Wedge Casing (Cream / Beige) -->
+    <polygon points="0,30 20,0 580,0 600,30 600,165 0,165" fill="url(#bbc-casing-cream)" stroke="#8d816c" stroke-width="1.5"/>
+
+    <!-- Sloped Keyboard Surround (Dark Chocolate Brown) -->
+    <polygon points="35,28 45,10 555,10 565,28 565,155 35,155" fill="url(#bbc-keyboard-well)" stroke="#191410" stroke-width="1.5"/>
+
+    <!-- Official BBC Micro Red Branding Badge -->
+    <g id="bbc-badge" transform="translate(48, 14)">
+      <rect width="180" height="18" rx="2" fill="url(#badge-red)" stroke="#7f1d1d" stroke-width="0.8"/>
+      <text x="6" y="12" fill="#ffffff" font-size="8.5" font-family="'Arial Black', sans-serif" font-weight="900" letter-spacing="0.5">British Broadcasting Corporation</text>
+      <text x="175" y="12" fill="#fef08a" font-size="8" font-family="monospace" font-weight="900" text-anchor="end">32K</text>
+    </g>
+
+    <!-- Model B Identification Label -->
+    <text x="495" y="26" fill="#64748b" font-size="9" font-family="sans-serif" font-weight="800" letter-spacing="1">COMPUTER SYSTEM</text>
+
+    <!-- Cassette Motor & Power LEDs -->
+    <g id="bbc-leds" transform="translate(520, 138)">
+      <circle cx="0" cy="0" r="3" fill="#ef4444" filter="url(#phosphor-glow)"/>
+      <text x="8" y="2" fill="#cbd5e1" font-size="6.5" font-family="sans-serif" font-weight="700">MOTOR</text>
+      <circle cx="45" cy="0" r="3" fill="#ef4444" filter="url(#phosphor-glow)"/>
+      <text x="53" y="2" fill="#cbd5e1" font-size="6.5" font-family="sans-serif" font-weight="700">POWER</text>
+    </g>
+
+    <!-- ======================================== -->
+    <!-- 4. PHYSICAL KEYBOARD & RED FUNCTION KEYS  -->
+    <!-- ======================================== -->
+    <!-- Row 0: Red Function Keys (f0 - f9) -->
+    <g id="row-fn-keys" transform="translate(52, 34)">
+      <!-- f0 to f9 keys -->
+      <rect id="key-f0" x="0" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="19" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f0</text>
+
+      <rect id="key-f1" x="42" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="61" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f1</text>
+
+      <rect id="key-f2" x="84" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="103" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f2</text>
+
+      <rect id="key-f3" x="126" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="145" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f3</text>
+
+      <rect id="key-f4" x="168" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="187" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f4</text>
+
+      <rect id="key-f5" x="210" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="229" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f5</text>
+
+      <rect id="key-f6" x="252" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="271" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f6</text>
+
+      <rect id="key-f7" x="294" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="313" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f7</text>
+
+      <rect id="key-f8" x="336" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="355" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f8</text>
+
+      <rect id="key-f9" x="378" width="38" height="12" rx="2" fill="url(#red-key-grad)" stroke="#7f1d1d" stroke-width="0.8" cursor="pointer"/>
+      <text x="397" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">f9</text>
+
+      <rect id="key-break" x="430" width="46" height="12" rx="2" fill="#b91c1c" stroke="#450a0a" stroke-width="1" cursor="pointer"/>
+      <text x="453" y="9" fill="#ffffff" font-size="7" font-weight="900" font-family="monospace" text-anchor="middle">BREAK</text>
+    </g>
+
+    <!-- Main Keyboard Key Matrix (Simulated Rows) -->
+    <g id="keyboard-keys" transform="translate(52, 50)">
+      <!-- Number Row (1-0, -, ^) -->
+      <g id="row-numbers">
+        <rect x="0" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="14" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">ESC</text>
+
+        <rect x="31" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="45" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">1 !</text>
+
+        <rect x="62" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="76" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">2 "</text>
+
+        <rect x="93" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="107" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">3 £</text>
+
+        <rect x="124" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="138" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">4 $</text>
+
+        <rect x="155" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="169" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">5 %</text>
+
+        <rect x="186" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="200" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">6 &amp;</text>
+
+        <rect x="217" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="231" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">7 '</text>
+
+        <rect x="248" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="262" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">8 (</text>
+
+        <rect x="279" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="293" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">9 )</text>
+
+        <rect x="310" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="324" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">0</text>
+
+        <rect x="341" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="355" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">- =</text>
+
+        <rect x="372" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="386" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">^ ~</text>
+
+        <rect x="403" y="0" width="42" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="424" y="12" fill="#ffffff" font-size="7.5" font-family="monospace" text-anchor="middle">DELETE</text>
+
+        <!-- Arrow Keys Pad -->
+        <rect x="450" y="0" width="24" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="462" y="12" fill="#ffffff" font-size="9" font-family="monospace" text-anchor="middle">▲</text>
+      </g>
+
+      <!-- QWERTY Row -->
+      <g id="row-qwerty" transform="translate(0, 20)">
+        <rect x="0" y="0" width="38" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="19" y="12" fill="#ffffff" font-size="7.5" font-family="monospace" text-anchor="middle">TAB</text>
+
+        <rect x="41" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="55" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">Q</text>
+
+        <rect x="72" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="86" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">W</text>
+
+        <rect x="103" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="117" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">E</text>
+
+        <rect x="134" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="148" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">R</text>
+
+        <rect x="165" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="179" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">T</text>
+
+        <rect x="196" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="210" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">Y</text>
+
+        <rect x="227" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="241" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">U</text>
+
+        <rect x="258" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="272" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">I</text>
+
+        <rect x="289" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="303" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">O</text>
+
+        <rect x="320" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="334" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">P</text>
+
+        <rect x="351" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="365" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">@</text>
+
+        <rect x="382" y="0" width="28" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="396" y="12" fill="#ffffff" font-size="8" font-family="monospace" text-anchor="middle">[</text>
+
+        <rect x="413" y="0" width="35" height="38" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="430" y="24" fill="#ffffff" font-size="8.5" font-family="monospace" font-weight="900" text-anchor="middle">RETURN</text>
+
+        <rect x="450" y="0" width="24" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="462" y="12" fill="#ffffff" font-size="9" font-family="monospace" text-anchor="middle">▼</text>
+      </g>
+
+      <!-- Spacebar Row (Bottom) -->
+      <g id="row-space" transform="translate(0, 60)">
+        <rect x="0" y="0" width="56" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="28" y="12" fill="#ffffff" font-size="7.5" font-family="monospace" text-anchor="middle">CTRL</text>
+
+        <rect x="60" y="0" width="50" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="85" y="12" fill="#ffffff" font-size="7.5" font-family="monospace" text-anchor="middle">CAPS</text>
+
+        <!-- Giant Space Bar -->
+        <rect id="key-spacebar" x="115" y="0" width="230" height="18" rx="2" fill="url(#space-key-grad)" stroke="#191410" cursor="pointer"/>
+
+        <rect x="350" y="0" width="45" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="372" y="12" fill="#ffffff" font-size="7.5" font-family="monospace" text-anchor="middle">SHIFT</text>
+
+        <rect x="400" y="0" width="24" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="412" y="12" fill="#ffffff" font-size="9" font-family="monospace" text-anchor="middle">◀</text>
+
+        <rect x="428" y="0" width="24" height="18" rx="2" fill="url(#char-key-grad)" stroke="#191410"/>
+        <text x="440" y="12" fill="#ffffff" font-size="9" font-family="monospace" text-anchor="middle">▶</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- 5. 6502 CPU ARCHITECTURE & HUD INSPECTOR   -->
+  <!-- ========================================== -->
+  <!-- Left Side: MOS 6502 Register Deck -->
+  <g id="cpu-hud" transform="translate(16, 26)">
+    <rect width="112" height="236" rx="8" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1.5"/>
+    <rect x="4" y="4" width="104" height="20" rx="4" fill="#1e293b"/>
+    <text x="56" y="18" fill="#38bdf8" font-size="9" font-family="'Courier New', monospace" font-weight="900" text-anchor="middle">MOS 6502 CPU</text>
+
+    <!-- Accumulator A -->
+    <g transform="translate(8, 34)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8" font-family="monospace">A (Acc):</text>
+      <rect x="45" y="0" width="50" height="14" rx="2" fill="#020617" stroke="#0284c7" stroke-width="1"/>
+      <text id="reg-a-val" x="70" y="10" fill="#38bdf8" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">&amp;42 (66)</text>
+    </g>
+
+    <!-- Index Register X -->
+    <g transform="translate(8, 52)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8" font-family="monospace">X Index:</text>
+      <rect x="45" y="0" width="50" height="14" rx="2" fill="#020617" stroke="#0284c7" stroke-width="1"/>
+      <text id="reg-x-val" x="70" y="10" fill="#38bdf8" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">&amp;05 (05)</text>
+    </g>
+
+    <!-- Index Register Y -->
+    <g transform="translate(8, 70)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8" font-family="monospace">Y Index:</text>
+      <rect x="45" y="0" width="50" height="14" rx="2" fill="#020617" stroke="#0284c7" stroke-width="1"/>
+      <text id="reg-y-val" x="70" y="10" fill="#38bdf8" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">&amp;00 (00)</text>
+    </g>
+
+    <!-- Program Counter PC -->
+    <g transform="translate(8, 88)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8" font-family="monospace">PC Addr:</text>
+      <rect x="45" y="0" width="50" height="14" rx="2" fill="#020617" stroke="#059669" stroke-width="1"/>
+      <text id="reg-pc-val" x="70" y="10" fill="#34d399" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">&amp;E040</text>
+    </g>
+
+    <!-- Stack Pointer SP -->
+    <g transform="translate(8, 106)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8" font-family="monospace">Stack SP:</text>
+      <rect x="45" y="0" width="50" height="14" rx="2" fill="#020617" stroke="#d97706" stroke-width="1"/>
+      <text id="reg-sp-val" x="70" y="10" fill="#fbbf24" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">&amp;01FF</text>
+    </g>
+
+    <!-- Processor Status Flags (NV-BDIZC) -->
+    <g transform="translate(8, 126)">
+      <text x="0" y="10" fill="#94a3b8" font-size="7.5" font-family="monospace">Flags NV-BDIZC:</text>
+      <rect x="0" y="14" width="96" height="16" rx="2" fill="#020617" stroke="#475569" stroke-width="1"/>
+      <text id="cpu-flags-val" x="48" y="25" fill="#f43f5e" font-size="8" font-family="monospace" font-weight="900" text-anchor="middle">0 0 1 0 0 1 0 0</text>
+    </g>
+
+    <!-- Clock Frequency Readout -->
+    <g transform="translate(8, 164)">
+      <text x="0" y="10" fill="#94a3b8" font-size="7.5" font-family="monospace">Clock Speed:</text>
+      <rect x="0" y="14" width="96" height="18" rx="3" fill="#020617" stroke="#10b981" stroke-width="1"/>
+      <text id="clock-freq-val" x="48" y="27" fill="#10b981" font-size="10" font-family="monospace" font-weight="900" text-anchor="middle">2.00 MHz</text>
+    </g>
+
+    <!-- Sophie Wilson Credit -->
+    <text x="56" y="222" fill="#64748b" font-size="6.5" font-family="sans-serif" text-anchor="middle">Sophie Wilson (1981)</text>
+  </g>
+
+  <!-- Right Side: 32K Memory Map Visualizer -->
+  <g id="memory-map" transform="translate(672, 26)">
+    <rect width="112" height="236" rx="8" fill="#0f172a" fill-opacity="0.9" stroke="#334155" stroke-width="1.5"/>
+    <rect x="4" y="4" width="104" height="20" rx="4" fill="#1e293b"/>
+    <text x="56" y="18" fill="#f59e0b" font-size="8.5" font-family="'Courier New', monospace" font-weight="900" text-anchor="middle">32K MEMORY MAP</text>
+
+    <!-- OS ROM Block (&C000-&FFFF 16K) -->
+    <g transform="translate(8, 30)">
+      <rect width="96" height="34" rx="3" fill="#1e1b4b" stroke="#6366f1" stroke-width="1"/>
+      <text x="48" y="14" fill="#a5b4fc" font-size="7.5" font-family="monospace" font-weight="700" text-anchor="middle">&amp;C000 - &amp;FFFF</text>
+      <text x="48" y="26" fill="#818cf8" font-size="7" font-family="sans-serif" text-anchor="middle">16KB OS / MOS ROM</text>
+    </g>
+
+    <!-- Sideways BASIC ROM (&8000-&BFFF 16K) -->
+    <g transform="translate(8, 70)">
+      <rect width="96" height="34" rx="3" fill="#064e3b" stroke="#10b981" stroke-width="1"/>
+      <text x="48" y="14" fill="#6ee7b7" font-size="7.5" font-family="monospace" font-weight="700" text-anchor="middle">&amp;8000 - &amp;BFFF</text>
+      <text x="48" y="26" fill="#34d399" font-size="7" font-family="sans-serif" text-anchor="middle">16KB BBC BASIC II</text>
+    </g>
+
+    <!-- Display / Screen RAM (HIMEM) -->
+    <g transform="translate(8, 110)">
+      <rect id="screen-ram-block" width="96" height="34" rx="3" fill="#451a03" stroke="#f59e0b" stroke-width="1"/>
+      <text x="48" y="14" fill="#fde68a" font-size="7.5" font-family="monospace" font-weight="700" text-anchor="middle">MODE 7: 1KB RAM</text>
+      <text x="48" y="26" fill="#f59e0b" font-size="7" font-family="sans-serif" text-anchor="middle">HIMEM: &amp;7C00</text>
+    </g>
+
+    <!-- User Program RAM (PAGE) -->
+    <g transform="translate(8, 150)">
+      <rect width="96" height="34" rx="3" fill="#022c22" stroke="#14b8a6" stroke-width="1"/>
+      <text x="48" y="14" fill="#5eead4" font-size="7.5" font-family="monospace" font-weight="700" text-anchor="middle">PAGE: &amp;0E00</text>
+      <text x="48" y="26" fill="#2dd4bf" font-size="7" font-family="sans-serif" text-anchor="middle">User BASIC Code</text>
+    </g>
+
+    <!-- Zero Page & Stack (&0000-&01FF) -->
+    <g transform="translate(8, 190)">
+      <rect width="96" height="34" rx="3" fill="#311042" stroke="#d946ef" stroke-width="1"/>
+      <text x="48" y="14" fill="#f0abfc" font-size="7.5" font-family="monospace" font-weight="700" text-anchor="middle">&amp;0000 - &amp;01FF</text>
+      <text x="48" y="26" fill="#e879f9" font-size="7" font-family="sans-serif" text-anchor="middle">Zero Page &amp; Stack</text>
+    </g>
+  </g>
+
+  <!-- ========================================== -->
+  <!-- 6. BOTTOM PEDAGOGICAL BANNER & HOTSPOTS   -->
+  <!-- ========================================== -->
+  <g id="bottom-status-bar" transform="translate(24, 452)">
+    <text x="0" y="12" fill="#94a3b8" font-size="10" font-family="sans-serif" font-weight="700">
+      🎓 St Joseph's Computing Laboratory: <tspan fill="#38bdf8">1981 Acorn BBC Microcomputer Model B</tspan> &bull; Father of the ARM Architecture
+    </text>
+    <text x="750" y="12" fill="#22c55e" font-size="9.5" font-family="monospace" font-weight="800" text-anchor="end">
+      ● 6502 SYSTEM READY
+    </text>
+  </g>
+</svg>

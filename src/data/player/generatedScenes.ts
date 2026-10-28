@@ -681,6 +681,21 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "bbc-model-b",
+    "type": "Sim",
+    "label": "BBC Micro Model B: 6502 Computing & BBC BASIC",
+    "stage": "KS2 & KS3 COMPUTING",
+    "oakId": "OAK-KS2-COM-012",
+    "oakUnit": "ks2-computing-history-algorithms-bbc-micro",
+    "subject": "Computing",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/computing/bbc-model-b",
+    "section": "Computing & Technology",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "fish-tank",
     "type": "App",
     "label": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",

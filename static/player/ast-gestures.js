@@ -324,6 +324,11 @@
         this.setupSacredObjectsInteractivity();
       }
 
+      // 9bk. BBC Micro Model B Keyboard & 6502 Subsystem
+      if (this.stageSvg.querySelector('#row-fn-keys') || this.stageSvg.querySelector('#key-break') || (this.engine.scene && this.engine.scene.id === 'bbc-model-b')) {
+        this.setupBbcMicroInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -6391,6 +6396,71 @@ ${strokeLines.join('\n')}
       const targetX = 80 + closestIdx * ((640 - 80) / 4);
       const knob = this.stageSvg.querySelector('#category-slider-knob');
       if (knob) knob.setAttribute('transform', `translate(${targetX.toFixed(1)}, 11)`);
+    }
+
+    setupBbcMicroInteractivity() {
+      // 1. Break Key - Reboots system, flashes cursor/CRT, plays dual-tone beep
+      const breakKey = this.stageSvg.querySelector('#key-break');
+      if (breakKey) {
+        const onBreak = (e) => {
+          if (e) e.stopPropagation();
+          if (this.engine && this.engine.synth && typeof this.engine.synth.playBbcBeep === 'function') {
+            this.engine.synth.playBbcBeep();
+          } else {
+            this.playAudioTone(1200, 'square', 0.08, 0.1);
+            setTimeout(() => this.playAudioTone(800, 'square', 0.12, 0.1), 95);
+          }
+          // Flash CRT tube surface
+          const screen = this.stageSvg.querySelector('#crt-screen');
+          if (screen) {
+            screen.setAttribute('fill', '#15803d');
+            setTimeout(() => screen.setAttribute('fill', 'url(#crt-tube-grad)'), 80);
+          }
+          if (this.engine) {
+            this.engine.seek(0);
+            if (this.engine.vars) {
+              this.engine.vars.progMode = 1;
+            }
+            this.engine.applyBindings(0);
+          }
+        };
+        breakKey.addEventListener('pointerdown', onBreak);
+        breakKey.addEventListener('click', onBreak);
+      }
+
+      // 2. Red Function Keys f0-f9
+      for (let i = 0; i <= 9; i++) {
+        const fnKey = this.stageSvg.querySelector(`#key-f${i}`);
+        if (fnKey) {
+          const onFnClick = (e) => {
+            if (e) e.stopPropagation();
+            this.playAudioTone(1400 + i * 80, 'square', 0.04, 0.1);
+            if (this.engine && this.engine.vars) {
+              if (i >= 1 && i <= 4) {
+                this.engine.vars.progMode = i;
+                this.engine.applyBindings(this.engine.progress || 0);
+              }
+            }
+          };
+          fnKey.addEventListener('pointerdown', onFnClick);
+          fnKey.addEventListener('click', onFnClick);
+        }
+      }
+
+      // 3. Spacebar mechanical thud & program step toggle
+      const spacebar = this.stageSvg.querySelector('#key-spacebar');
+      if (spacebar) {
+        const onSpace = (e) => {
+          if (e) e.stopPropagation();
+          this.playAudioTone(180, 'triangle', 0.05, 0.15);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.progMode = (this.engine.vars.progMode % 4) + 1;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        spacebar.addEventListener('pointerdown', onSpace);
+        spacebar.addEventListener('click', onSpace);
+      }
     }
   }
 
