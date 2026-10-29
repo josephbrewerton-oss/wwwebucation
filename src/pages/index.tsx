@@ -7,6 +7,7 @@ import PageMeta from '../components/PageMeta';
 import ExpressLessonLaunchpad from '../components/ExpressLessonLaunchpad';
 import HomeLearnerGuidedCard from '../components/HomeLearnerGuidedCard';
 import AstVectorMediaPlayer from '../components/AstVectorMediaPlayer';
+import { PRESET_OPTIONS } from '../data/player/generatedScenes';
 
 export default function Home() {
   const [landingSimPreset, setLandingSimPreset] = useState<string>('kinetic-gas');
@@ -258,35 +259,45 @@ export default function Home() {
                   }}
                   title="Select curriculum simulation from dropdown holder"
                 >
-                  <optgroup label="🔬 Science & Physics" style={{ background: '#0f172a', color: '#38bdf8' }}>
-                    <option value="kinetic-gas" style={{ background: '#0f172a', color: '#f8fafc' }}>💨 Kinetic Gas &amp; Boyle's Law</option>
-                    <option value="electric-circuits" style={{ background: '#0f172a', color: '#f8fafc' }}>💡 Electrical Circuits &amp; Ohm's Law</option>
-                    <option value="atom" style={{ background: '#0f172a', color: '#f8fafc' }}>⚛️ Bohr Atomic Electron Shells</option>
-                    <option value="solar-system" style={{ background: '#0f172a', color: '#f8fafc' }}>🪐 Solar System Heliocentric Motion</option>
-                    <option value="photosynthesis" style={{ background: '#0f172a', color: '#f8fafc' }}>🌱 Photosynthesis Solar Engine</option>
-                    <option value="dna-helix" style={{ background: '#0f172a', color: '#f8fafc' }}>🧬 DNA Helix Base Pairing</option>
-                    <option value="velocity" style={{ background: '#0f172a', color: '#f8fafc' }}>🏎️ Velocity Vectors &amp; Acceleration</option>
-                    <option value="water-cycle" style={{ background: '#0f172a', color: '#f8fafc' }}>💧 Water Cycle Earth Engine</option>
+                  <optgroup label="🎮 Simulations (Sim)" style={{ background: '#0f172a', color: '#38bdf8' }}>
+                    {PRESET_OPTIONS.filter((o) => o.type === 'Sim').map((opt) => (
+                      <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+                        {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label}
+                      </option>
+                    ))}
                   </optgroup>
-                  <optgroup label="📐 Mathematics & Geometry" style={{ background: '#0f172a', color: '#34d399' }}>
-                    <option value="pythagoras" style={{ background: '#0f172a', color: '#f8fafc' }}>📐 Pythagoras' Theorem (a² + b² = c²)</option>
-                    <option value="fractions" style={{ background: '#0f172a', color: '#f8fafc' }}>🍰 Fractions: Common Denominators</option>
-                    <option value="algebra-balance" style={{ background: '#0f172a', color: '#f8fafc' }}>⚖️ Algebraic Balance Scale</option>
-                    <option value="times-tables" style={{ background: '#0f172a', color: '#f8fafc' }}>🔢 Times Tables (1 to 12× School Chart &amp; Grid)</option>
-                    <option value="calculus-curves" style={{ background: '#0f172a', color: '#f8fafc' }}>📈 Calculus: Tangent Slopes &amp; Derivatives</option>
-                    <option value="bodmas" style={{ background: '#0f172a', color: '#f8fafc' }}>⚡ BODMAS / BIDMAS Forcefield</option>
-                    <option value="math-fishing" style={{ background: '#0f172a', color: '#f8fafc' }}>🎣 Math Pond: Number Bonds to 20</option>
+                  <optgroup label="📑 Interactive Slides (Slide)" style={{ background: '#0f172a', color: '#34d399' }}>
+                    {PRESET_OPTIONS.filter((o) => o.type === 'Slide').map((opt) => (
+                      <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+                        {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label}
+                      </option>
+                    ))}
                   </optgroup>
-                  <optgroup label="⛪ Catholic Faith & Life" style={{ background: '#0f172a', color: '#facc15' }}>
-                    <option value="church-tour" style={{ background: '#0f172a', color: '#f8fafc' }}>⛪ Catholic Church Sanctuary Tour (3D)</option>
-                    <option value="stations-of-the-cross" style={{ background: '#0f172a', color: '#f8fafc' }}>✝️ Stations of the Cross (Via Crucis)</option>
+                  <optgroup label="💻 Vector Applications (App)" style={{ background: '#0f172a', color: '#fbbf24' }}>
+                    {PRESET_OPTIONS.filter((o) => o.type === 'App').map((opt) => (
+                      <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+                        {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label}
+                      </option>
+                    ))}
                   </optgroup>
-                  <optgroup label="🔤 English & Languages" style={{ background: '#0f172a', color: '#fbbf24' }}>
-                    <option value="phonics-lab" style={{ background: '#0f172a', color: '#f8fafc' }}>🔤 Early Phonics Sound Buttons</option>
-                    <option value="spelling-bee" style={{ background: '#0f172a', color: '#f8fafc' }}>🐝 Spelling Bee Championship</option>
-                    <option value="shakespeare" style={{ background: '#0f172a', color: '#f8fafc' }}>🎭 Globe Theatre Shakespeare</option>
-                    <option value="languages" style={{ background: '#0f172a', color: '#f8fafc' }}>🌍 Modern Foreign Languages Studio</option>
-                  </optgroup>
+                  {PRESET_OPTIONS.some((o) => o.type === 'Film') && (
+                    <optgroup label="🎬 Video / Film (Film)" style={{ background: '#0f172a', color: '#f43f5e' }}>
+                      {PRESET_OPTIONS.filter((o) => o.type === 'Film').map((opt) => (
+                        <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+                          {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
+                  {PRESET_OPTIONS.some((o) => !['Sim', 'Slide', 'App', 'Film'].includes(o.type)) && (
+                    <optgroup label="🔬 Curriculum Cartridges" style={{ background: '#0f172a', color: '#a78bfa' }}>
+                      {PRESET_OPTIONS.filter((o) => !['Sim', 'Slide', 'App', 'Film'].includes(o.type)).map((opt) => (
+                        <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+                          {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label}
+                        </option>
+                      ))}
+                    </optgroup>
+                  )}
                 </select>
 
                 <Link

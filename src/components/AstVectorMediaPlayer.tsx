@@ -121,13 +121,13 @@ export const isContinuousCartridge = (presetId: string): boolean => {
   const canonical = normalizeCartridgeId(presetId) || presetId;
   const cart = getCartridge(canonical) as any;
   if (cart) {
-    if (cart.type === 'Sim' || cart.cartridgeType === 'Sim' || (cart.vars && (Array.isArray(cart.vars) ? cart.vars.length > 0 : Object.keys(cart.vars).length > 0))) return true;
+    if (cart.type === 'Slide' || cart.cartridgeType === 'Slide' || /:type\s+"Slide"/i.test(cart.astSource || '')) return false;
+    if (cart.type === 'Sim' || cart.cartridgeType === 'Sim') return true;
     if (cart.astSource) {
       if (
         /:type\s+"Sim"/i.test(cart.astSource) ||
         /:continuous\s+true\b/i.test(cart.astSource) ||
-        /\(:3d-node\s+/i.test(cart.astSource) ||
-        /\(:vars\s+/i.test(cart.astSource)
+        /\(:3d-node\s+/i.test(cart.astSource)
       ) {
         return true;
       }
@@ -135,6 +135,7 @@ export const isContinuousCartridge = (presetId: string): boolean => {
   }
   const scene = PRESET_OPTIONS.find((opt) => opt.id === canonical || opt.id === presetId);
   if (scene) {
+    if (scene.type === 'Slide') return false;
     if (scene.type === 'Sim' || (scene as any).isContinuousSim) return true;
   }
   // Known continuous simulation archetypes:
@@ -144,8 +145,7 @@ export const isContinuousCartridge = (presetId: string): boolean => {
     'solar-system',
     'calculus-curves',
     'electric-circuits',
-    'dna-helix',
-    'water-cycle'
+    'dna-helix'
   ]);
   return simCartridges.has(canonical);
 };
@@ -1243,6 +1243,24 @@ const playerSrc = useMemo(() => {
     </option>
   ))}
 </optgroup>
+{PRESET_OPTIONS.some((o) => o.type === 'Film') && (
+  <optgroup label="🎬 Video / Film (Film)" style={{ background: '#0f172a', color: '#f43f5e' }}>
+    {PRESET_OPTIONS.filter((o) => o.type === 'Film').map((opt) => (
+      <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+        {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label} ({opt.stage})
+      </option>
+    ))}
+  </optgroup>
+)}
+{PRESET_OPTIONS.some((o) => !['Sim', 'Slide', 'App', 'Film'].includes(o.type)) && (
+  <optgroup label="🔬 Curriculum Cartridges" style={{ background: '#0f172a', color: '#a78bfa' }}>
+    {PRESET_OPTIONS.filter((o) => !['Sim', 'Slide', 'App', 'Film'].includes(o.type)).map((opt) => (
+      <option key={opt.id} value={opt.id} style={{ background: '#0f172a', color: '#f8fafc' }}>
+        {opt.oakId ? `[${opt.oakId}] ` : ''}{opt.label} ({opt.stage})
+      </option>
+    ))}
+  </optgroup>
+)}
               </select>
             )}
 

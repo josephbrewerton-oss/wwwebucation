@@ -15,29 +15,29 @@
   const BUILTIN_CATALOG = [
     { id: "welcome", type: "Sim", title: "Welcome to AST Vector Player & Educational Simulator", stage: "PORTAL SHOWCASE", duration: 16, svgFile: "scenes/welcome.svg", astFile: "scenes/welcome.ast" },
     { id: "algebra-balance", type: "Sim", title: "⚖️ Algebraic Balance Scale (2x + 5 = 15)", stage: "KS2/KS3 MATHS", duration: 14, svgFile: "scenes/algebra-balance.svg", astFile: "scenes/algebra-balance.ast" },
-    { id: "altar-anatomy", type: "Slide", title: "The Catholic Altar: Sacred Anatomy, Types & Appointments", stage: "CATHOLIC LIFE", duration: 18, svgFile: "scenes/altar-anatomy.svg", astFile: "scenes/altar-anatomy.ast" },
-    { id: "atom", type: "Sim", title: "Atomic Structure: Bohr Electron Shells", stage: "KS3 CHEMISTRY", duration: 12, has3D: true, svgFile: "scenes/atom.svg", astFile: "scenes/atom.ast" },
-    { id: "bodmas", type: "Slide", title: "BODMAS / BIDMAS: Forcefield Clamping & Area Physics", stage: "KS2/KS3 MATHS", duration: 14, svgFile: "scenes/bodmas.svg", astFile: "scenes/bodmas.ast" },
+    { id: "altar-anatomy", type: "Slide", title: "The Catholic Altar: Sacred Anatomy, Types & Appointments", stage: "CATHOLIC LIFE", duration: 35, svgFile: "scenes/altar-anatomy.svg", astFile: "scenes/altar-anatomy.ast" },
+    { id: "atom", type: "Sim", title: "Atomic Structure: Bohr Electron Shells", stage: "KS3 CHEMISTRY", duration: 20, has3D: true, svgFile: "scenes/atom.svg", astFile: "scenes/atom.ast" },
+    { id: "bodmas", type: "Slide", title: "BODMAS / BIDMAS: Forcefield Clamping & Area Physics", stage: "KS2/KS3 MATHS", duration: 25, svgFile: "scenes/bodmas.svg", astFile: "scenes/bodmas.ast" },
     { id: "calculus-curves", type: "Sim", title: "Calculus: Tangent Slopes & Definite Integrals", stage: "GCSE & A-LEVEL MATHS", duration: 14, svgFile: "scenes/calculus-curves.svg", astFile: "scenes/calculus-curves.ast" },
-    { id: "church-tour", type: "Slide", title: "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces", stage: "CATHOLIC LIFE", duration: 16, svgFile: "scenes/church-tour.svg", astFile: "scenes/church-tour.ast" },
-    { id: "holy-oils", type: "Slide", title: "The Three Holy Oils & The Sacred Ambry (Olea Sancta)", stage: "CATHOLIC LIFE", duration: 18, svgFile: "scenes/holy-oils.svg", astFile: "scenes/holy-oils.ast" },
-    { id: "dna-helix", type: "Sim", title: "Genetics: DNA Base Pairing & Transcription", stage: "KS3 GENETICS", duration: 12, has3D: true, svgFile: "scenes/dna-helix.svg", astFile: "scenes/dna-helix.ast" },
-    { id: "electric-circuits", type: "Sim", title: "💡 Electrical Circuits & Ohm's Law (V = I × R)", stage: "KS2/KS3 PHYSICS", duration: 12, svgFile: "scenes/electric-circuits.svg", astFile: "scenes/electric-circuits.ast" },
+    { id: "church-tour", type: "Slide", title: "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces", stage: "CATHOLIC LIFE", duration: 60, svgFile: "scenes/church-tour.svg", astFile: "scenes/church-tour.ast" },
+    { id: "holy-oils", type: "Slide", title: "The Three Holy Oils & The Sacred Ambry (Olea Sancta)", stage: "CATHOLIC LIFE", duration: 30, svgFile: "scenes/holy-oils.svg", astFile: "scenes/holy-oils.ast" },
+    { id: "dna-helix", type: "Sim", title: "Genetics: DNA Base Pairing & Transcription", stage: "KS3 GENETICS", duration: 20, has3D: true, svgFile: "scenes/dna-helix.svg", astFile: "scenes/dna-helix.ast" },
+    { id: "electric-circuits", type: "Sim", title: "💡 Electrical Circuits & Ohm's Law (V = I × R)", stage: "KS2/KS3 PHYSICS", duration: 20, svgFile: "scenes/electric-circuits.svg", astFile: "scenes/electric-circuits.ast" },
     { id: "fish-tank", type: "App", title: "Aquarium Stress Benchmark: Vector Point & FPS Limiter", stage: "BENCHMARK & STRESS LAB", duration: 12, svgFile: "scenes/fish-tank.svg", astFile: "scenes/fish-tank.ast" },
-    { id: "fractions", type: "Slide", title: "Fractions: Why Common Denominators Rule", stage: "KS2 MATHS", duration: 12, svgFile: "scenes/fractions.svg", astFile: "scenes/fractions.ast" },
+    { id: "fractions", type: "Slide", title: "Fractions: Why Common Denominators Rule", stage: "KS2 MATHS", duration: 24, svgFile: "scenes/fractions.svg", astFile: "scenes/fractions.ast" },
     { id: "kinetic-gas", type: "Sim", title: "Kinetic Gas Theory & Boyle's Law", stage: "KS3/KS4 PHYSICS & CHEMISTRY", duration: 14, svgFile: "scenes/kinetic-gas.svg", astFile: "scenes/kinetic-gas.ast" },
     { id: "languages", type: "App", title: "MFL & Polyglot Studio: Spanish, French & Latin", stage: "KS2/KS3 MFL", duration: 15, svgFile: "scenes/languages.svg", astFile: "scenes/languages.ast" },
     { id: "math-fishing", type: "App", title: "Math Pond: Number Bonds Fishing Game", stage: "KS1/KS2 MATHS", duration: 14, svgFile: "scenes/math-fishing.svg", astFile: "scenes/math-fishing.ast" },
     { id: "mountain-elevation", type: "Sim", title: "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science", stage: "KS2/KS3 MATHS & GEOGRAPHY", duration: 16, svgFile: "scenes/mountain-elevation.svg", astFile: "scenes/mountain-elevation.ast" },
     { id: "phonics-lab", type: "App", title: "Early Phonics: Sound Buttons & Blending Mat", stage: "EYFS/KS1 ENGLISH", duration: 12, svgFile: "scenes/phonics-lab.svg", astFile: "scenes/phonics-lab.ast" },
-    { id: "photosynthesis", type: "Slide", title: "Photosynthesis: The Green Solar Engine", stage: "KS3 BIOLOGY", duration: 10, svgFile: "scenes/photosynthesis.svg", astFile: "scenes/photosynthesis.ast" },
-    { id: "pythagoras", type: "Sim", title: "Pythagoras' Theorem (a² + b² = c²)", stage: "KS3 GEOMETRY", duration: 11, svgFile: "scenes/pythagoras.svg", astFile: "scenes/pythagoras.ast" },
+    { id: "photosynthesis", type: "Slide", title: "Photosynthesis: The Green Solar Engine", stage: "KS3 BIOLOGY", duration: 24, svgFile: "scenes/photosynthesis.svg", astFile: "scenes/photosynthesis.ast" },
+    { id: "pythagoras", type: "Sim", title: "Pythagoras' Theorem (a² + b² = c²)", stage: "KS3 GEOMETRY", duration: 22, svgFile: "scenes/pythagoras.svg", astFile: "scenes/pythagoras.ast" },
     { id: "shakespeare", type: "Slide", title: "The Globe Theatre: Shakespeare & Iambic Pentameter", stage: "KS3/KS4 ENGLISH LITERATURE", duration: 15, svgFile: "scenes/shakespeare.svg", astFile: "scenes/shakespeare.ast" },
     { id: "solar-system", type: "Sim", title: "Solar System: Heliocentric Planetary Motion", stage: "KS3 SCIENCE", duration: 14, has3D: true, svgFile: "scenes/solar-system.svg", astFile: "scenes/solar-system.ast" },
     { id: "spelling-bee", type: "App", title: "Spelling Bee Championship: KS1 to KS3 Orthography", stage: "KS1/KS2/KS3 ENGLISH", duration: 14, svgFile: "scenes/spelling-bee.svg", astFile: "scenes/spelling-bee.ast" },
     { id: "times-tables", type: "Sim", title: "Times Tables: 1× to 12× Standard School Multiplication Chart & Grid", stage: "KS1/KS2 MATHS", duration: 14, svgFile: "scenes/times-tables.svg", astFile: "scenes/times-tables.ast" },
-    { id: "velocity", type: "Sim", title: "Kinematics: Velocity & Distance-Time Vectors", stage: "KS3 PHYSICS", duration: 10, svgFile: "scenes/velocity.svg", astFile: "scenes/velocity.ast" },
-    { id: "water-cycle", type: "Slide", title: "Water Cycle: Continuous Earth Cycle", stage: "KS2 GEOGRAPHY", duration: 10, svgFile: "scenes/water-cycle.svg", astFile: "scenes/water-cycle.ast" },
+    { id: "velocity", type: "Sim", title: "Kinematics: Velocity & Distance-Time Vectors", stage: "KS3 PHYSICS", duration: 20, svgFile: "scenes/velocity.svg", astFile: "scenes/velocity.ast" },
+    { id: "water-cycle", type: "Slide", title: "Water Cycle: Continuous Earth Cycle", stage: "KS2 GEOGRAPHY", duration: 24, svgFile: "scenes/water-cycle.svg", astFile: "scenes/water-cycle.ast" },
     { id: "bsl-fingerspelling", type: "Sim", title: "BSL: 3D British Sign Language Two-Handed Fingerspelling", stage: "ACCESSIBILITY & LANGUAGES", duration: 14, has3D: true, svgFile: "scenes/bsl-fingerspelling.svg", astFile: "scenes/bsl-fingerspelling.ast" },
     { id: "phonics-screening", type: "Sim", title: "Year 1 Phonics Screening Check & Alien Words", stage: "EYFS/KS1 PHONICS", duration: 12, svgFile: "scenes/phonics-screening.svg", astFile: "scenes/phonics-screening.ast" },
     { id: "shakespeare-macbeth", type: "Slide", title: "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall", stage: "KS3/KS4 ENGLISH LITERATURE", duration: 16, svgFile: "scenes/shakespeare-macbeth.svg", astFile: "scenes/shakespeare-macbeth.ast" },
@@ -54,7 +54,7 @@
     { id: "sacred-objects", type: "Sim", title: "Sacred Vessels, Linens & Vestments of the Catholic Church", stage: "CATHOLIC LIFE", duration: 16, oakId: "OAK-KS2-RE-017", oakUnit: "ks2-re-catholic-sacred-vessels-vestments", svgFile: "scenes/sacred-objects.svg", astFile: "scenes/sacred-objects.ast" },
     { id: "stations-of-the-cross", type: "Slide", title: "The Stations of the Cross: Via Crucis & Sacred Passion", stage: "CATHOLIC LIFE", duration: 28, oakId: "OAK-KS2-RE-020", oakUnit: "ks2-re-catholic-via-crucis-stations", svgFile: "scenes/stations-of-the-cross.svg", astFile: "scenes/stations-of-the-cross.ast" },
     { id: "liturgy-of-the-hours", type: "Sim", title: "The Liturgy of the Hours: Divine Office & Daily Sanctification", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-007", oakUnit: "ks3-re-catholic-divine-office-psalms", svgFile: "scenes/liturgy-of-the-hours.svg", astFile: "scenes/liturgy-of-the-hours.ast" },
-    { id: "catholic-rites", type: "Sim", title: "The 24 Catholic Rites & Churches: Universal Communion across East & West", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-011", oakUnit: "ks3-re-catholic-sacramental-rites", svgFile: "scenes/catholic-rites.svg", astFile: "scenes/catholic-rites.ast" },
+    { id: "catholic-rites", type: "Slide", title: "The 24 Catholic Rites & Churches: Universal Communion across East & West", stage: "CATHOLIC LIFE", duration: 54, oakId: "OAK-KS3-RE-011", oakUnit: "ks3-re-catholic-sacramental-rites", svgFile: "scenes/catholic-rites.svg", astFile: "scenes/catholic-rites.ast" },
     { id: "cst-virtues", type: "Sim", title: "Catholic Social Teaching & Virtues: Gospel Love in Daily Action", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-012", oakUnit: "ks3-re-catholic-social-teaching-virtues", svgFile: "scenes/cst-virtues.svg", astFile: "scenes/cst-virtues.ast" },
     { id: "latin-mass-prayers", type: "Sim", title: "Latin Prayers & Gregorian Chant: The Universal Voice of the Church", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-013", oakUnit: "ks3-re-catholic-traditional-latin-prayers", svgFile: "scenes/latin-mass-prayers.svg", astFile: "scenes/latin-mass-prayers.ast" },
     { id: "nicene-creed", type: "Sim", title: "The Nicene & Apostles' Creed: The Profession of Faith", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-014", oakUnit: "ks3-re-catholic-creed-profession-faith", svgFile: "scenes/nicene-creed.svg", astFile: "scenes/nicene-creed.ast" }
@@ -422,6 +422,9 @@
       if (!norm || this.isUnsafeKey(norm) || this.isUnsafeKey(id)) return null;
       scenes[norm] = Object.assign({ id: norm }, scene);
       if (norm !== id) scenes[id] = scenes[norm];
+      if (scene && scene.base && scene.base !== norm && !this.isUnsafeKey(scene.base)) {
+        scenes[scene.base] = scenes[norm];
+      }
       return scenes[norm];
     },
 

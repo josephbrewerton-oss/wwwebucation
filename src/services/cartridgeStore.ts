@@ -968,7 +968,7 @@ export async function initCartridgeVault(): Promise<void> {
       // 4. Pre-expand embedded core simulations (e.g. Pythagoras, Church Tour, Catholic Rites) into vault
       for (const [id, core] of Object.entries(EMBEDDED_CORE_CARTRIDGES)) {
         const existing = mergedMap.get(id);
-        if (!existing || !existing.svgMarkup || !existing.astSource) {
+        if (!existing || !existing.svgMarkup || !existing.astSource || (existing.source === 'builtin' && existing.astSource !== core.ast)) {
           const isCatholic = id.includes('church') || id.includes('rites');
           const title = id === 'church-tour'
             ? 'Tour of a Catholic Church: Sacred Architecture & Sacred Spaces'

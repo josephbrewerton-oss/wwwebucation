@@ -22,7 +22,12 @@ const tsExportPath = path.join(rootDir, 'src', 'data', 'player', 'generatedScene
 function extractSlot(content, regex) {
   const match = content.match(regex);
   if (!match) return null;
-  return match[1].trim().replace(/^"|"$/g, '');
+  for (let i = match.length - 1; i >= 1; i--) {
+    if (match[i] !== undefined && match[i] !== '') {
+      return match[i].trim().replace(/^"|"$/g, '');
+    }
+  }
+  return match[0].trim().replace(/^"|"$/g, '');
 }
 
 /**
@@ -502,18 +507,45 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
   return { oakId, oakUnit, subject, section, mount };
 }
 
-function parseAstHeader(astContent, filename) {
-  const id = extractSlot(astContent, /:id\s+("[^"]+"|[^\s\)]+)/i);
-  const rawType = extractSlot(astContent, /:type\s+("Sim"|"Slide"|"App"|"[^"]+"|[^\s\)]+)/i);
-  const title = extractSlot(astContent, /:title\s+"([^"]+)"/i);
-  const stage = extractSlot(astContent, /:stage\s+"([^"]+)"/i) || 'CURRICULUM';
-  const durationStr = extractSlot(astContent, /:duration\s+([\d\.]+)/i);
-  const duration = durationStr ? parseFloat(durationStr) : 10.0;
+function parseAstHeader(astContent, filename, base) {
+  const fallbackBase = base || (filename ? filename.replace(/\.ast$/, '') : 'unnamed');
 
-  if (!id) {
-    console.warn(`[Manifest Generator] Warning: Could not find :id in ${filename}`);
-    return null;
+  // Parse (:id ...), :id ..., (id ...), or meta (id ...)
+  const parsedId = extractSlot(astContent, /\(:id\s+("([^"]+)"|([^\s\)]+))\)/i)
+    || extractSlot(astContent, /:id\s+("([^"]+)"|([^\s\)]+))/i)
+    || extractSlot(astContent, /\(id\s+("([^"]+)"|([^\s\)]+))\)/i)
+    || extractSlot(astContent, /meta[\s\S]*?\(id\s+("([^"]+)"|([^\s\)]+))\)/i);
+  
+  const id = parsedId || fallbackBase;
+
+  // Parse (:type ...), :type ..., (type ...)
+  const rawType = extractSlot(astContent, /\(:type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)\)/i)
+    || extractSlot(astContent, /:type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)/i)
+    || extractSlot(astContent, /\(type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)\)/i);
+
+  // Parse (:title ...), :title ..., (title ...)
+  let title = extractSlot(astContent, /\(:title\s+"([^"]+)"\)/i)
+    || extractSlot(astContent, /:title\s+"([^"]+)"/i)
+    || extractSlot(astContent, /\(title\s+"([^"]+)"\)/i);
+  if (!title) {
+    title = (id || fallbackBase)
+      .replace(/[-_]/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
+
+  // Parse (:stage ...), :stage ..., (stage ...)
+  let stage = extractSlot(astContent, /\(:stage\s+"([^"]+)"\)/i)
+    || extractSlot(astContent, /:stage\s+"([^"]+)"/i)
+    || extractSlot(astContent, /\(stage\s+"([^"]+)"\)/i);
+  if (!stage) {
+    stage = 'CURRICULUM';
+  }
+
+  // Parse (:duration ...), :duration ..., (duration ...)
+  const durationStr = extractSlot(astContent, /\(:duration\s+([\d\.]+)\)/i)
+    || extractSlot(astContent, /:duration\s+([\d\.]+)/i)
+    || extractSlot(astContent, /\(duration\s+([\d\.]+)\)/i);
+  const duration = durationStr ? parseFloat(durationStr) : 14.0;
 
   const type = inferCartridgeType(rawType, astContent);
 
@@ -554,6 +586,7 @@ function parseAstHeader(astContent, filename) {
 
   return {
     id,
+    base: fallbackBase,
     type,
     rawType,
     title: title || id,
@@ -655,44 +688,33 @@ export function generateScenesManifest(options = {}) {
 
   const manifest = [];
   const processedIds = new Set();
-  const allCartridgeFiles = new Map(); // id -> { astPath, svgPath, meta, content }
+  const allCartridgeFiles = new Map(); // id -> { astPath, svgPath, meta, content, base }
 
   for (const dir of inputDirs) {
     if (!fs.existsSync(dir)) continue;
     const files = fs.readdirSync(dir);
-    const astFiles = files.filter((f) => f.endsWith('.ast'));
 
-    for (const astFile of astFiles) {
+    // Scan directory for all matching .ast and .svg file pairs by basename
+    const astBasenames = new Set(files.filter((f) => f.endsWith('.ast')).map((f) => f.slice(0, -4)));
+    const svgBasenames = new Set(files.filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)));
+
+    // Find all matching pairs
+    const matchingBases = Array.from(astBasenames).filter((base) => svgBasenames.has(base));
+
+    for (const base of matchingBases) {
+      const astFile = `${base}.ast`;
+      const svgFile = `${base}.svg`;
       const fullAstPath = path.join(dir, astFile);
+      const fullSvgPath = path.join(dir, svgFile);
+
       let content = fs.readFileSync(fullAstPath, 'utf8');
-      const meta = parseAstHeader(content, astFile);
+      const meta = parseAstHeader(content, astFile, base);
 
       if (!meta || processedIds.has(meta.id)) continue;
 
-      const svgFile = `${meta.id}.svg`;
-      const fullSvgPath = path.join(dir, svgFile);
-
-      // Verify matching SVG
-      let svgExists = fs.existsSync(fullSvgPath);
-      if (!svgExists) {
-        // Check other input directories for SVG
-        for (const otherDir of inputDirs) {
-          const altSvg = path.join(otherDir, svgFile);
-          if (fs.existsSync(altSvg)) {
-            svgExists = true;
-            break;
-          }
-        }
-      }
-
-      if (!svgExists) {
-        console.warn(`[Manifest Generator] Warning: Matching SVG file missing for ${astFile}:${svgFile}`);
-        continue;
-      }
-
-      // Ensure :type is called directly in the .ast file
+      // Ensure :type is called directly in the .ast file if in scene form
       let updatedContent = ensureTypeCalledInAst(content, meta.type);
-      // Ensure Oak Curriculum numbers (:oak-id and :oak-unit) are directly assigned in the .ast file
+      // Ensure Oak Curriculum numbers (:oak-id and :oak-unit) are directly assigned in the .ast file if in scene form
       updatedContent = ensureOakCalledInAst(updatedContent, meta.oakId, meta.oakUnit);
       if (updatedContent !== content) {
         fs.writeFileSync(fullAstPath, updatedContent, 'utf8');
@@ -704,12 +726,14 @@ export function generateScenesManifest(options = {}) {
         astPath: fullAstPath,
         svgPath: fullSvgPath,
         meta,
-        content
+        content,
+        base
       });
 
       manifest.push({
         id: meta.id,
-        type: meta.type, // "Sim" | "Slide" | "App"
+        base: base,
+        type: meta.type, // "Sim" | "Slide" | "App" | "Film"
         title: meta.title,
         stage: meta.stage,
         duration: meta.duration,
@@ -718,9 +742,9 @@ export function generateScenesManifest(options = {}) {
         subject: meta.subject,
         has3D: meta.has3D,
         nodes3DCount: meta.nodes3DCount,
-        svgFile: `cartridges/${svgFile}`,
-        astFile: `cartridges/${astFile}`,
-        astbFile: `bytecode/${meta.id}.astb`,
+        svgFile: `cartridges/${base}.svg`,
+        astFile: `cartridges/${base}.ast`,
+        astbFile: `bytecode/${base}.astb`,
         video: meta.video || null,
         videoFit: meta.videoFit || 'contain',
         hasVideo: Boolean(meta.video),
@@ -794,7 +818,7 @@ export function generateScenesManifest(options = {}) {
     generatedAt: new Date().toISOString(),
     totalScenes: manifest.length,
     inputDirs: inputDirs.map((d) => path.relative(rootDir, d) || '.'),
-    types: ['Sim', 'Slide', 'App'],
+    types: ['Sim', 'Slide', 'App', 'Film'],
     scenes: manifest
   };
 
@@ -812,12 +836,65 @@ export function generateScenesManifest(options = {}) {
   const rootLegacyConfigPath = path.join(rootDir, 'static', 'scenes-config.json');
   fs.writeFileSync(rootLegacyConfigPath, jsonStr, 'utf8');
 
+  // 2. Output manifest.oak.json (authoritative Oak Curriculum Registry)
+  const oakUnits = [];
+  const seenUnits = new Set();
+  manifest.forEach((m) => {
+    if (m.oakUnit && !seenUnits.has(m.oakUnit)) {
+      seenUnits.add(m.oakUnit);
+      oakUnits.push({
+        unit: m.oakUnit,
+        oakId: m.oakId,
+        subject: m.subject,
+        section: m.section,
+        stage: m.stage,
+        title: m.title,
+        cartridgeId: m.id
+      });
+    }
+  });
+
+  const oakManifest = {
+    version: '2.6.0',
+    authority: "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
+    generatedAt: new Date().toISOString(),
+    totalCartridges: manifest.length,
+    units: oakUnits,
+    cartridges: manifest.map((m) => ({
+      id: m.id,
+      base: m.base,
+      type: m.type,
+      title: m.title,
+      stage: m.stage,
+      oakId: m.oakId,
+      oakUnit: m.oakUnit,
+      subject: m.subject,
+      section: m.section,
+      mount: m.mount,
+      duration: m.duration,
+      svgFile: m.svgFile,
+      astFile: m.astFile,
+      astbFile: m.astbFile,
+      isCore: m.isCore,
+      tier: m.tier,
+      hasCheckpoints: m.hasCheckpoints,
+      checkpointCount: m.checkpointCount
+    }))
+  };
+
+  const oakJsonStr = JSON.stringify(oakManifest, null, 2) + '\n';
+  const playerOakManifestPath = path.join(rootDir, 'static', 'player', 'manifest.oak.json');
+  const rootOakManifestPath = path.join(rootDir, 'static', 'manifest.oak.json');
+  fs.writeFileSync(playerOakManifestPath, oakJsonStr, 'utf8');
+  fs.writeFileSync(rootOakManifestPath, oakJsonStr, 'utf8');
+  console.log(`[Manifest Generator] Successfully wrote Oak manifest to ${playerOakManifestPath} and ${rootOakManifestPath}`);
+
   // Synchronize canonical cartridge folder if content was enriched with :type or :oak-id
   const targetDir = path.join(rootDir, 'static', 'cartridges');
   if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
   for (const [id, item] of allCartridgeFiles.entries()) {
-    const targetAst = path.join(targetDir, `${id}.ast`);
-    const targetSvg = path.join(targetDir, `${id}.svg`);
+    const targetAst = path.join(targetDir, `${item.base}.ast`);
+    const targetSvg = path.join(targetDir, `${item.base}.svg`);
     if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
       fs.writeFileSync(targetAst, item.content, 'utf8');
     }
@@ -828,7 +905,7 @@ export function generateScenesManifest(options = {}) {
     }
   }
 
-  // 2. Output strongly typed presets for React UI
+  // 3. Output strongly typed presets for React UI
   const tsDataDir = path.dirname(tsExportPath);
   if (!fs.existsSync(tsDataDir)) {
     fs.mkdirSync(tsDataDir, { recursive: true });
@@ -836,7 +913,8 @@ export function generateScenesManifest(options = {}) {
 
   const presetEntries = manifest.map((m) => ({
     id: m.id,
-    type: m.type, // 'Sim' | 'Slide' | 'App'
+    base: m.base,
+    type: m.type, // 'Sim' | 'Slide' | 'App' | 'Film'
     label: `${m.title}`,
     stage: m.stage,
     oakId: m.oakId,
@@ -857,6 +935,7 @@ export type CartridgeType = 'Sim' | 'Slide' | 'App' | 'Film';
 
 export interface ScenePresetOption {
   id: string;
+  base?: string;
   type: CartridgeType;
   label: string;
   stage: string;

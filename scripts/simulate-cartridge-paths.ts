@@ -66,16 +66,18 @@ async function runSimulation() {
   for (const scene of scenes) {
     const id = scene.id;
 
+    const fileBase = scene.base || id;
+
     // 1. Check Canonical Authoring Files (static/cartridges/)
-    const authoringAst = path.join(ROOT_DIR, 'static', 'cartridges', `${id}.ast`);
-    const authoringSvg = path.join(ROOT_DIR, 'static', 'cartridges', `${id}.svg`);
+    const authoringAst = path.join(ROOT_DIR, 'static', scene.astFile || `cartridges/${fileBase}.ast`);
+    const authoringSvg = path.join(ROOT_DIR, 'static', scene.svgFile || `cartridges/${fileBase}.svg`);
     assert(fs.existsSync(authoringAst), `Missing authoring AST for ${id}: ${authoringAst}`);
     assert(fs.existsSync(authoringSvg), `Missing authoring SVG for ${id}: ${authoringSvg}`);
     stats.diskAstVerified++;
 
     // 2. Check Runtime Bytecode Files (static/player/bytecode/)
-    const runtimeAstb = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${id}.astb`);
-    const runtimeSvg = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${id}.svg`);
+    const runtimeAstb = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${fileBase}.astb`);
+    const runtimeSvg = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${fileBase}.svg`);
     assert(fs.existsSync(runtimeAstb), `Missing runtime ASTB for ${id}: ${runtimeAstb}`);
     assert(fs.existsSync(runtimeSvg), `Missing runtime SVG for ${id}: ${runtimeSvg}`);
 
@@ -106,11 +108,12 @@ async function runSimulation() {
   // Emulate player iframe running at /player/index.html
   for (const scene of scenes) {
     const id = scene.id;
+    const fileBase = scene.base || id;
 
     // Emulate candidate URLs prioritized by ast-engine.js
-    const playerRelativeAstbUrl = `${DEV_SERVER_BASE}/player/bytecode/${id}.astb`;
-    const playerRelativeSvgUrl = `${DEV_SERVER_BASE}/player/bytecode/${id}.svg`;
-    const portalCartridgeSvgUrl = `${DEV_SERVER_BASE}/cartridges/${id}.svg`;
+    const playerRelativeAstbUrl = `${DEV_SERVER_BASE}/player/bytecode/${fileBase}.astb`;
+    const playerRelativeSvgUrl = `${DEV_SERVER_BASE}/player/bytecode/${fileBase}.svg`;
+    const portalCartridgeSvgUrl = `${DEV_SERVER_BASE}/cartridges/${fileBase}.svg`;
 
     // 1. Fetch .astb bytecode
     const t0 = performance.now();
@@ -126,7 +129,7 @@ async function runSimulation() {
     const decElapsed = performance.now() - decStart;
     totalDecompileTimeMs += decElapsed;
 
-    assert(decompiled.id === id, `Decompiled ID mismatch: expected ${id}, got ${decompiled.id}`);
+    assert(decompiled.id === id || decompiled.id === fileBase, `Decompiled ID mismatch: expected ${id}, got ${decompiled.id}`);
     assert(decompiled.title.length > 0, `Decompiled title is empty for ${id}`);
     assert(decompiled.duration > 0, `Decompiled duration <= 0 for ${id}`);
     stats.decompilationsPassed++;

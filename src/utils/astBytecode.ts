@@ -711,11 +711,16 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     throw new Error('Empty or invalid AST content for bytecode compilation');
   }
 
-  const idMatch = astText.match(/:id\s+("([^"]+)"|([^\s\)]+))/i);
-  const id = idMatch ? (idMatch[2] || idMatch[3]) : 'unnamed';
+  const idMatch = astText.match(/\(:id\s+("([^"]+)"|([^\s\)]+))\)/i)
+    || astText.match(/:id\s+("([^"]+)"|([^\s\)]+))/i)
+    || astText.match(/\(id\s+("([^"]+)"|([^\s\)]+))\)/i)
+    || astText.match(/meta[\s\S]*?\(id\s+("([^"]+)"|([^\s\)]+))\)/i);
+  const id = idMatch ? (idMatch[2] || idMatch[3] || idMatch[1] || '').replace(/^"|"$/g, '').trim() : 'unnamed';
 
-  const typeMatch = astText.match(/:type\s+("([^"]+)"|([^\s\)]+))/i);
-  const rawType = typeMatch ? (typeMatch[2] || typeMatch[3]) : null;
+  const typeMatch = astText.match(/\(:type\s+("([^"]+)"|([^\s\)]+))\)/i)
+    || astText.match(/:type\s+("([^"]+)"|([^\s\)]+))/i)
+    || astText.match(/\(type\s+("([^"]+)"|([^\s\)]+))\)/i);
+  const rawType = typeMatch ? (typeMatch[2] || typeMatch[3] || typeMatch[1] || '').replace(/^"|"$/g, '').trim() : null;
 
   const videoMatch = astText.match(/:video\s+("([^"]+)"|([^\s\)]+))/i) || astText.match(/:film\s+("([^"]+)"|([^\s\)]+))/i);
   const video = videoMatch ? (videoMatch[2] || videoMatch[3]) : null;
@@ -734,14 +739,20 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     type = 'Film';
   }
 
-  const titleMatch = astText.match(/:title\s+"([^"]+)"/i);
-  const title = titleMatch ? titleMatch[1] : id;
+  const titleMatch = astText.match(/\(:title\s+"([^"]+)"\)/i)
+    || astText.match(/:title\s+"([^"]+)"/i)
+    || astText.match(/\(title\s+"([^"]+)"\)/i);
+  const title = titleMatch ? titleMatch[1] : (id !== 'unnamed' ? id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'AST Scene');
 
-  const stageMatch = astText.match(/:stage\s+"([^"]+)"/i);
+  const stageMatch = astText.match(/\(:stage\s+"([^"]+)"\)/i)
+    || astText.match(/:stage\s+"([^"]+)"/i)
+    || astText.match(/\(stage\s+"([^"]+)"\)/i);
   const stage = stageMatch ? stageMatch[1] : 'CURRICULUM';
 
-  const durationMatch = astText.match(/:duration\s+([\d\.]+)/i);
-  const duration = durationMatch ? parseFloat(durationMatch[1]) : 10.0;
+  const durationMatch = astText.match(/\(:duration\s+([\d\.]+)\)/i)
+    || astText.match(/:duration\s+([\d\.]+)/i)
+    || astText.match(/\(duration\s+([\d\.]+)\)/i);
+  const duration = durationMatch ? parseFloat(durationMatch[1]) : 14.0;
 
   // Keyframes
   const keyframes: Array<{ t: number; title: string; rule: string }> = [];

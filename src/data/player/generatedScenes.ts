@@ -5,6 +5,7 @@ export type CartridgeType = 'Sim' | 'Slide' | 'App' | 'Film';
 
 export interface ScenePresetOption {
   id: string;
+  base?: string;
   type: CartridgeType;
   label: string;
   stage: string;
@@ -22,6 +23,7 @@ export interface ScenePresetOption {
 export const PRESET_OPTIONS: ScenePresetOption[] = [
   {
     "id": "welcome",
+    "base": "welcome",
     "type": "Sim",
     "label": "Welcome to AST Vector Player & Educational Simulator",
     "stage": "PORTAL APPARATUS & SIMULATOR",
@@ -37,6 +39,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "church-tour",
+    "base": "church-tour",
     "type": "Slide",
     "label": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
     "stage": "CATHOLIC LIFE",
@@ -52,6 +55,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "altar-anatomy",
+    "base": "altar-anatomy",
     "type": "Slide",
     "label": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
     "stage": "CATHOLIC LIFE",
@@ -67,6 +71,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "holy-oils",
+    "base": "holy-oils",
     "type": "Slide",
     "label": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
     "stage": "CATHOLIC LIFE",
@@ -82,6 +87,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "holy-water-thurifer",
+    "base": "holy-water-thurifer",
     "type": "Sim",
     "label": "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification",
     "stage": "CATHOLIC LIFE",
@@ -97,6 +103,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "first-communion",
+    "base": "first-communion",
     "type": "Sim",
     "label": "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love",
     "stage": "CATHOLIC LIFE",
@@ -112,6 +119,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "triduum-easter",
+    "base": "triduum-easter",
     "type": "Sim",
     "label": "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi",
     "stage": "CATHOLIC LIFE",
@@ -127,6 +135,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "seven-sacraments",
+    "base": "seven-sacraments",
     "type": "Sim",
     "label": "The Seven Holy Sacraments: Visible Signs of Invisible Grace",
     "stage": "CATHOLIC LIFE",
@@ -142,6 +151,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "liturgical-calendar",
+    "base": "liturgical-calendar",
     "type": "Sim",
     "label": "The Catholic Liturgical Year: Sacred Seasons & Colors",
     "stage": "CATHOLIC LIFE",
@@ -157,6 +167,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "liturgical-postures",
+    "base": "liturgical-postures",
     "type": "Sim",
     "label": "Sacred Postures & Gestures: Praying with Mind, Heart & Body",
     "stage": "CATHOLIC LIFE",
@@ -172,6 +183,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "ten-commandments",
+    "base": "ten-commandments",
     "type": "Slide",
     "label": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
     "stage": "CATHOLIC LIFE",
@@ -187,6 +199,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "order-of-the-mass",
+    "base": "order-of-the-mass",
     "type": "Sim",
     "label": "The Order of the Holy Mass: Source & Summit of Catholic Life",
     "stage": "CATHOLIC LIFE",
@@ -202,6 +215,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "sacred-objects",
+    "base": "sacred-objects",
     "type": "Slide",
     "label": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
     "stage": "CATHOLIC LIFE",
@@ -217,6 +231,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "eucharistic-procession-film",
+    "base": "eucharistic-procession-film",
     "type": "Film",
     "label": "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors",
     "stage": "CATHOLIC LIFE",
@@ -232,6 +247,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "rosary-mysteries",
+    "base": "rosary-mysteries",
     "type": "Sim",
     "label": "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries",
     "stage": "CATHOLIC LIFE & RE",
@@ -247,6 +263,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "stations-of-the-cross",
+    "base": "stations-of-the-cross",
     "type": "Slide",
     "label": "The Stations of the Cross: Via Crucis & Sacred Passion",
     "stage": "CATHOLIC LIFE",
@@ -262,6 +279,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "liturgy-of-the-hours",
+    "base": "liturgy-of-the-hours",
     "type": "Sim",
     "label": "The Liturgy of the Hours: Sanctifying Time Through the Divine Office",
     "stage": "CATHOLIC LIFE",
@@ -277,6 +295,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "catholic-rites",
+    "base": "catholic-rites",
     "type": "Slide",
     "label": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
     "stage": "CATHOLIC LIFE",
@@ -292,6 +311,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "cst-virtues",
+    "base": "cst-virtues",
     "type": "Sim",
     "label": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
     "stage": "CATHOLIC LIFE",
@@ -307,6 +327,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "latin-mass-prayers",
+    "base": "latin-mass-prayers",
     "type": "Slide",
     "label": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
     "stage": "CATHOLIC LIFE",
@@ -322,6 +343,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "nicene-creed",
+    "base": "nicene-creed",
     "type": "Slide",
     "label": "The Nicene & Apostles' Creed: Credo in Unum Deum",
     "stage": "CATHOLIC LIFE",
@@ -337,6 +359,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "times-tables",
+    "base": "times-tables",
     "type": "Sim",
     "label": "Times Tables: 1× to 12× Standard School Multiplication Chart & Grid",
     "stage": "KS1/KS2 MATHS",
@@ -352,6 +375,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "math-fishing",
+    "base": "math-fishing",
     "type": "App",
     "label": "Math Pond: Number Bonds Fishing Game",
     "stage": "KS1/KS2 MATHS",
@@ -367,6 +391,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "bodmas",
+    "base": "bodmas",
     "type": "Slide",
     "label": "BODMAS / BIDMAS: Forcefield Clamping & Area Physics",
     "stage": "KS2/KS3 MATHS",
@@ -382,6 +407,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "fractions",
+    "base": "fractions",
     "type": "Slide",
     "label": "Fractions: Why Common Denominators Rule",
     "stage": "KS2 MATHS",
@@ -397,6 +423,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "pythagoras",
+    "base": "pythagoras",
     "type": "Sim",
     "label": "Pythagoras' Theorem (a² + b² = c²)",
     "stage": "KS3 GEOMETRY",
@@ -412,6 +439,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "algebra-balance",
+    "base": "algebra-balance",
     "type": "Sim",
     "label": "⚖️ Algebraic Balance Scale: Preserving Equality (2x + 5 = 15)",
     "stage": "KS2/KS3 MATHS",
@@ -427,6 +455,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "calculus-curves",
+    "base": "calculus-curves",
     "type": "Sim",
     "label": "Calculus: Tangent Slopes & Definite Integrals",
     "stage": "GCSE & A-LEVEL MATHS",
@@ -442,6 +471,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "kinetic-gas",
+    "base": "kinetic-gas",
     "type": "Sim",
     "label": "Kinetic Gas Theory & Boyle's Law",
     "stage": "KS3/KS4 PHYSICS & CHEMISTRY",
@@ -457,6 +487,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "electric-circuits",
+    "base": "electric-circuits",
     "type": "Sim",
     "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
     "stage": "KS2/KS3 PHYSICS",
@@ -472,6 +503,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "atom",
+    "base": "atom",
     "type": "Sim",
     "label": "Atomic Structure: Bohr Electron Shells",
     "stage": "KS3 CHEMISTRY",
@@ -487,6 +519,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "photosynthesis",
+    "base": "photosynthesis",
     "type": "Slide",
     "label": "Photosynthesis: The Green Solar Engine",
     "stage": "KS3 BIOLOGY",
@@ -502,6 +535,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "dna-helix",
+    "base": "dna-helix",
     "type": "Sim",
     "label": "Genetics: DNA Base Pairing & Transcription",
     "stage": "KS3 GENETICS",
@@ -517,6 +551,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "solar-system",
+    "base": "solar-system",
     "type": "Sim",
     "label": "Solar System: Heliocentric Planetary Motion",
     "stage": "KS3 SCIENCE",
@@ -532,6 +567,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "velocity",
+    "base": "velocity",
     "type": "Sim",
     "label": "Kinematics: Velocity & Distance-Time Vectors",
     "stage": "KS3 PHYSICS",
@@ -547,6 +583,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "phonics-lab",
+    "base": "phonics-lab",
     "type": "App",
     "label": "Early Phonics: Sound Buttons & Blending Mat",
     "stage": "EYFS/KS1 ENGLISH",
@@ -562,6 +599,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "phonics-screening",
+    "base": "phonics-screening",
     "type": "Sim",
     "label": "Year 1 Phonics Screening Check & Alien Words",
     "stage": "EARLY YEARS & KS1 PHONICS",
@@ -577,6 +615,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "spelling-bee",
+    "base": "spelling-bee",
     "type": "App",
     "label": "Spelling Bee Championship: KS1 to KS3 Orthography",
     "stage": "KS1/KS2/KS3 ENGLISH",
@@ -592,6 +631,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "shakespeare",
+    "base": "shakespeare",
     "type": "Slide",
     "label": "The Globe Theatre: Shakespeare & Iambic Pentameter",
     "stage": "KS3/KS4 ENGLISH LITERATURE",
@@ -607,6 +647,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "shakespeare-macbeth",
+    "base": "shakespeare-macbeth",
     "type": "Slide",
     "label": "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall",
     "stage": "KS3/KS4 ENGLISH LITERATURE",
@@ -622,6 +663,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "water-cycle",
+    "base": "water-cycle",
     "type": "Slide",
     "label": "Water Cycle: Continuous Earth Cycle",
     "stage": "KS2 GEOGRAPHY",
@@ -637,6 +679,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "mountain-elevation",
+    "base": "mountain-elevation",
     "type": "Sim",
     "label": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
     "stage": "KS2/KS3 MATHS & GEOGRAPHY",
@@ -652,6 +695,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "languages",
+    "base": "languages",
     "type": "App",
     "label": "MFL & Polyglot Studio: Spanish, French & Latin",
     "stage": "KS2/KS3 MFL",
@@ -667,6 +711,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "bsl-fingerspelling",
+    "base": "bsl-fingerspelling",
     "type": "Sim",
     "label": "BSL: 3D British Sign Language Two-Handed Fingerspelling",
     "stage": "ACCESSIBILITY & LANGUAGES",
@@ -682,6 +727,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "bbc-model-b",
+    "base": "bbc-model-b",
     "type": "Sim",
     "label": "BBC Micro Model B: 6502 Computing & BBC BASIC",
     "stage": "KS2 & KS3 COMPUTING",
@@ -697,6 +743,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "fish-tank",
+    "base": "fish-tank",
     "type": "App",
     "label": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
     "stage": "BENCHMARK & STRESS LAB",
@@ -711,7 +758,24 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "inverted-pendulum-dyno",
+    "base": "pendulum_dyno",
+    "type": "App",
+    "label": "Inverted Pendulum Dyno",
+    "stage": "CURRICULUM",
+    "oakId": "OAK-KS3-GEN-INVERTEDP",
+    "oakUnit": "ks3-generalcurriculum-inverted-pendulum-dyno",
+    "subject": "General Curriculum",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/general/inverted-pendulum-dyno",
+    "section": "Curriculum Cartridges",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
+  },
+  {
     "id": "oak-data-algorithms-sequencing",
+    "base": "oak-data-algorithms-sequencing",
     "type": "App",
     "label": "Algorithms, Sequencing & Logic",
     "stage": "Key Stage 2",
@@ -727,6 +791,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-angles-triangles",
+    "base": "oak-data-angles-triangles",
     "type": "App",
     "label": "Angles, Triangles & Geometry",
     "stage": "Key Stage 2",
@@ -742,6 +807,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-cell-biology",
+    "base": "oak-data-cell-biology",
     "type": "App",
     "label": "Cell Biology & Organelles",
     "stage": "Key Stage 3",
@@ -757,6 +823,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-electric-circuits",
+    "base": "oak-data-electric-circuits",
     "type": "App",
     "label": "Electric Circuits & Conductors",
     "stage": "Key Stage 2",
@@ -772,6 +839,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-fractions-decimals",
+    "base": "oak-data-fractions-decimals",
     "type": "App",
     "label": "Fractions, Decimals & Percentages",
     "stage": "Key Stage 2",
@@ -787,6 +855,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-phonics-screening",
+    "base": "oak-data-phonics-screening",
     "type": "App",
     "label": "Phonics, Digraphs & Alien Words",
     "stage": "Key Stage 1",
@@ -802,6 +871,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-re-nicene-creed",
+    "base": "oak-data-re-nicene-creed",
     "type": "App",
     "label": "The Nicene Creed & Trinity",
     "stage": "Key Stage 2",
@@ -817,6 +887,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-re-sacraments",
+    "base": "oak-data-re-sacraments",
     "type": "App",
     "label": "The Seven Sacraments & Holy Eucharist",
     "stage": "Key Stage 2",
@@ -832,6 +903,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-seasonal-changes",
+    "base": "oak-data-seasonal-changes",
     "type": "App",
     "label": "Seasonal Changes & Earth Cycles",
     "stage": "Key Stage 1",
@@ -847,6 +919,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-spanish-foundations",
+    "base": "oak-data-spanish-foundations",
     "type": "App",
     "label": "Spanish Greetings & Verbs",
     "stage": "Key Stage 2",
@@ -862,6 +935,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "oak-data-states-of-matter",
+    "base": "oak-data-states-of-matter",
     "type": "App",
     "label": "States of Matter & Particle Theory",
     "stage": "Key Stage 2",
@@ -877,6 +951,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "pipeline-sample",
+    "base": "pipeline-sample",
     "type": "App",
     "label": "Sample Physics Knowledge Nodes",
     "stage": "KS3",
