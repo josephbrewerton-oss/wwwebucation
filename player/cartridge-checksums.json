@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T12:23:05.743Z",
+  "generatedAt": "2026-10-29T14:36:34.604Z",
   "totalCartridges": 60,
-  "masterChecksum": "40bc357e7ce13f4ef87fec4b9d4d960f6934f00d5f61896cd9e13062e004409a",
+  "masterChecksum": "d910b96c7991432c6076a22d1b57d2bf497d23ab16ce5dcaf05b0401f86992fb",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -650,15 +650,15 @@
       "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
       "stage": "KS3 PHYSICS",
       "type": "Sim",
-      "astSha256": "0336fb71c855b32db24125c8cb60fbd7f74d03e1da64ece000c71bacc5289403",
+      "astSha256": "cabf1a2a52d8ef2702f808a973d18729f8c2bad85ca83c809c665e0cbd1c05f0",
       "svgSha256": "cc1cf199c38e9d999ce814b9d12160c6f7671c95882db79ad39b82d060f86fbc",
-      "astbSha256": "f265ff178d326456a6d7f33fb1eee1d32bb63adf3d69cd49772b82ce6c69036a",
-      "astbBytes": 3142,
-      "astBytes": 5360,
+      "astbSha256": "028cbdb1035d7bf1e294e9e86823bf55c1c3c83b3c21684fcd38cf1d753f6833",
+      "astbBytes": 3449,
+      "astBytes": 6083,
       "svgBytes": 2161,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "1087ddcc19842d017eabc56a54d90fd5a438c0bb47c58e974b46d3af274503c3",
+      "seal": "58ae0e7185155a256af3539a7579cc05b702efe780f4fc4bff18e94c5e50b269",
       "certified": true
     },
     "phonics-lab": {

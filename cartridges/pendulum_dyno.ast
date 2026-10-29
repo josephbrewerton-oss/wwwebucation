@@ -46,11 +46,27 @@
       :explanation "The dynamic state of the cart-pole system is completely specified by 4 state variables: cart position and velocity (x, dx/dt) plus pole angle and angular velocity (θ, dθ/dt).")
   ))
   (:bindings (
+    ;; Kinematic transforms
     (:target "#cart" :attr "transform" :expr "'translate(' + (400 + (vars.cartX || 0) + Math.sin(t * Math.PI * 4) * (60 / (vars.kp || 1.8))) + ', 250)'")
     (:target "#pole" :attr "transform" :expr "'rotate(' + ((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4) * Math.exp(-t * 0.8 * (vars.kd || 0.6))) + ', 0, 0)'")
+
+    ;; High-contrast stage elements
+    (:target "#cart" :attr "stroke" :expr "'#38bdf8'")
+    (:target "#cart" :attr "stroke-width" :expr "'2'")
+    (:target "#pole" :attr "stroke" :expr "Math.abs((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4)) < 15 ? '#38bdf8' : '#f43f5e'")
+    (:target "#pole" :attr "stroke-width" :expr "'4'")
+
+    ;; HUD Telemetry values & color attributes
     (:target "#hud-mode" :attr "textContent" :expr "t < 0.5 ? 'TUPLE (x,v,θ,ω)' : 'LQR-BALANCE'")
+    (:target "#hud-mode" :attr "fill" :expr "'#38bdf8'")
+
     (:target "#hud-bytes" :attr "textContent" :expr "t < 0.5 ? '16 B' : '32 B'")
+    (:target "#hud-bytes" :attr "fill" :expr "'#a5f3fc'")
+
     (:target "#hud-ms" :attr "textContent" :expr "(10.2 + Math.sin(t * Math.PI * 8) * 1.6).toFixed(1) + ' ms'")
+    (:target "#hud-ms" :attr "fill" :expr "'#34d399'")
+
     (:target "#hud-status" :attr "textContent" :expr "Math.abs((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4)) < 15 ? 'BALANCED (60 FPS)' : 'RECOVERY MANEUVER'")
+    (:target "#hud-status" :attr "fill" :expr "Math.abs((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4)) < 15 ? '#22c55e' : '#f43f5e'")
   ))
 )
