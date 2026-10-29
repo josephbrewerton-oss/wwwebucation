@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T20:28:34.587Z",
+  "generatedAt": "2026-10-29T20:29:17.853Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -594,14 +594,14 @@
       "title": "The Order of the Holy Mass: Source & Summit of Catholic Life",
       "stage": "CATHOLIC LIFE",
       "duration": 28,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "cartridges/order-of-the-mass.svg",
       "astFile": "cartridges/order-of-the-mass.ast",
       "astbFile": "bytecode/order-of-the-mass.astb",
       "keyframeCount": 0,
       "subtitleCount": 6,
-      "bindingsCount": 4
+      "bindingsCount": 14
     },
     {
       "id": "pendulum_dyno",

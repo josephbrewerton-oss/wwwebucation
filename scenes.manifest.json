@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T20:28:31.789Z",
+  "generatedAt": "2026-10-29T20:29:15.171Z",
   "totalScenes": 59,
   "inputDirs": [
     "static/cartridges",
@@ -331,7 +331,7 @@
       "oakId": "OAK-KS2-RE-016",
       "oakUnit": "ks2-re-catholic-order-of-mass",
       "subject": "Religious Education",
-      "has3D": true,
+      "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/order-of-the-mass.svg",
       "astFile": "cartridges/order-of-the-mass.ast",
@@ -345,7 +345,7 @@
       "section": "Catholic Life & Faith Formation",
       "keyframeCount": 0,
       "subtitleCount": 6,
-      "bindingsCount": 4,
+      "bindingsCount": 14,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },

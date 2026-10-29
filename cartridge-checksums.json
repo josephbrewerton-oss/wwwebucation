@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T20:28:32.480Z",
+  "generatedAt": "2026-10-29T20:29:15.860Z",
   "totalCartridges": 60,
-  "masterChecksum": "660553640b6edcf335b084c3bc173952c6da182c26b9a8f34954dc776b043036",
+  "masterChecksum": "6458d0c8bf3472a991e6b6f454ffe5f450d90ddbfe8424a807d12fd1cb635c30",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -634,15 +634,15 @@
       "title": "The Order of the Holy Mass: Source & Summit of Catholic Life",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "0398df817efac2642d53297209974e0db77759fb7296caa1ed7004d6de85e22a",
+      "astSha256": "eb944efa627655f768f4744a0170f1ef684fd52842b01c7464651c07ba808ec0",
       "svgSha256": "af628f8077395c3a1e5eff028cd9ee3af24e07c1f53fc2b678093358431f57ae",
-      "astbSha256": "dd0918fed784684740a60a716a272630b8b8f0a0ef305605ccf71917712c45bd",
-      "astbBytes": 680,
-      "astBytes": 3844,
+      "astbSha256": "855562dbd6b5d7744ef436f195558ceb0953974e5787cd9ea73855942d78eb51",
+      "astbBytes": 1789,
+      "astBytes": 5858,
       "svgBytes": 10587,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "f60bd6c88baf672f750fe86edb804e7b0ec7c92fc8e6295b639e4af8e51ae2de",
+      "seal": "0ccfa2c9190d429fa81fffa6a64ced7af8fb96e0aeacacd489c90e3eff04340c",
       "certified": true
     },
     "pendulum_dyno": {
