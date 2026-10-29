@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T19:36:08.662Z",
+  "generatedAt": "2026-10-29T19:37:15.352Z",
   "totalCartridges": 60,
-  "masterChecksum": "5ff9b534a1a7ae642a9516b6fe9be4d0307d894d2b6da62da02e7b6df3cc3d1f",
+  "masterChecksum": "3d80cb74268ac35da2b52e2d3425bb15ca678e375047157294b171caee5f6024",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -347,14 +347,14 @@
       "stage": "CATHOLIC LIFE",
       "type": "Slide",
       "astSha256": "97feb2dc1bf8237f7144f26ecc5e3f2133a8cb5f267a64d71cb0005276915552",
-      "svgSha256": "29852b345a2172f6359ee53f236ff3a7e8028bc71a53422e83b3cf5663d6a7d5",
+      "svgSha256": "56767312ef8cd7e304a5acf8e917659fbb6b58ac90fafe21a18d56cadc230f7c",
       "astbSha256": "8f8069c06cb68f937f239da7bbdbb9158fd64e5f69304718951c2a74419f572b",
       "astbBytes": 3678,
       "astBytes": 5625,
-      "svgBytes": 13059,
+      "svgBytes": 13044,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "1d3891dcfb84c6fa6143d76bcfd12530bdabe95d69093a1cc21cc94a9508a1d2",
+      "seal": "925018f970fead0b1e141ab6b1a777b7bab0884b20cdb08161ec13ceb249254e",
       "certified": true
     },
     "liturgical-calendar": {
