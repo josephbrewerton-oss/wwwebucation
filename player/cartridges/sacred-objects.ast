@@ -1,0 +1,57 @@
+(:scene :id "sacred-objects" :type "Slide" :oak-id "OAK-KS2-RE-017" :oak-unit "ks2-re-catholic-sacred-vessels-vestments" :title "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "candleGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Sanctuary Lamp Flame Glow")
+    (:var :name "specularGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Gold & Silver Sacred Sheen")
+  ))
+
+  (:inputs (
+    (:slider :var "candleGlow" :label "Sanctuary Lamp Flame" :min 0.2 :max 2.0 :step 0.1)
+    (:slider :var "specularGlow" :label "Sacred Metal Sheen" :min 0.2 :max 2.0 :step 0.1)
+  ))
+
+  (:gestures (
+    (:draggable :target "#category-slider-knob" :axis "x" :min 80 :max 640)
+  ))
+
+  (:subtitles (
+    (:start 0.00 :end 0.20 :en "Sacred Vessels — Golden Chalice, Paten, and Ciborium — are consecrated to hold the real Body and Blood of Jesus Christ." :es "Los Vasos Sagrados — Cáliz, Patena y Copón — están consagrados para contener el verdadero Cuerpo y Sangre de Cristo." :la "Vasa Sacra: Calix aureus, Patina et Ciborium pretioso auro efficta ad Corpus et Sanguinem Christi custodiendum.")
+    (:start 0.20 :end 0.44 :en "Sacred Linens — Corporal, Purificator, and stiff linen Pall — are woven of pure linen to protect every consecrated particle." :es "Los Lienzos Sagrados — Corporal, Purificador y Pala — son de puro lino para custodiar cada partícula consagrada." :la "Lintea Sacra: Corporale, Purificatorium et Palla lintea particulas sanctissimas eucharisticas custodiunt.")
+    (:start 0.44 :end 0.68 :en "Sanctuary Appointments — the burning red Sanctuary Lamp, Altar Bells, and Cruets — proclaim Christ's Real Presence." :es "Los Objetos del Santuario — la Lámpara roja del Sagrario, Campanillas y Vinajeras — proclaman la Presencia Real." :la "Lumen Sanctuarii rubrum, campanellae et ampullae Christum vere praesentem in Tabernaculo nuntiant.")
+    (:start 0.68 :end 0.88 :en "Liturgical Vestments — Alb, Cincture, Stole, and Chasuble — conceal the priest so Christ Himself presides at the altar." :es "Las Vestiduras Litúrgicas — Alba, Cíngulo, Estola y Casulla — ocultan al sacerdote para que Cristo presida en persona Christi." :la "Vestimenta Liturgica: Alba, Cingulum, Stola et Casula sacerdotem vestiunt ut Christus ipse praesit.")
+    (:start 0.88 :end 1.00 :en "The Monstrance holds the consecrated Host in its radiant golden sunburst during Solemn Benediction and Eucharistic Adoration." :es "La Custodia expone la Hostia consagrada en su resplandor dorado durante la Bendición y Adoración Eucarística." :la "Ostensorium radiante auro sanctissimam Hostiam in adoratione eucharistica conspiciendam exhibet.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. Sacred Vessels (Chalice, Paten, Ciborium)" :rule "Vasa Sacra: Precious gold and silver consecrated vessels touching the Body and Blood of Christ.")
+    (:t 0.20 :title "2. Sacred Linens (Corporal, Purificator, Pall)" :rule "Lintea Sacra: Pure white linen safeguarding every particle of the Blessed Sacrament.")
+    (:t 0.44 :title "3. Sanctuary Appointments (Red Lamp, Bells, Cruets)" :rule "Sanctuarium: Sanctuary lamp of the Real Presence, Sanctus bells, and wine and water cruets.")
+    (:t 0.68 :title "4. Liturgical Vestments (Alb, Stole, Chasuble)" :rule "Vestimenta: Sacred robes concealing the priest so Christ Himself presides in persona Christi.")
+    (:t 0.88 :title "5. The Monstrance (Ostensorium) & Adoration" :rule "Ostensorium: The golden radiant sunburst elevating Jesus during Eucharistic Benediction.")
+  ))
+
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "Why must the Chalice, Paten, and Ciborium be crafted of precious metals like gold or silver?"
+      :options ("Supreme reverence and honor for the real Body and Blood of Jesus Christ" "Because ordinary metals were forbidden by Roman civil law" "Purely decorative aesthetic with no spiritual meaning" "Because gold makes liturgical wine taste sweeter")
+      :answer 0
+      :explanation "The Catholic Church instructs (GIRM 327-328) that vessels holding the consecrated species must be crafted from precious metals out of supreme reverence for Christ truly present.")
+    (:checkpoint :t 0.75
+      :prompt "What does the Priest's white Alb symbolize when he vests for Holy Mass?"
+      :options ("Baptismal innocence, purity of heart, and the white robes of the redeemed in Heaven" "A traditional medical smock worn during plagues" "A Roman senator's toga for formal oratory" "A symbol of the personal authority and worldly rank of the priest")
+      :answer 0
+      :explanation "The Alb (from Latin 'albus' meaning white) symbolizes the baptismal purity of soul and the radiant white robes worn by the saints before the Throne of the Lamb (Revelation 7:14).")
+  ))
+
+  (:bindings (
+    (:target "#gold-specular-sheen" :attr "opacity" :expr "(0.35 + 0.35 * Math.sin(t * Math.PI * 6.0)) * (vars.specularGlow || 1.0)")
+    (:target "#monstrance-sunburst" :attr "transform" :expr "'rotate(' + (t * 360.0) + ' 0 0)'")
+    (:target "#sanctuary-lamp-red-glow" :attr "opacity" :expr "(0.55 + 0.35 * Math.sin(t * Math.PI * 4.0)) * (vars.candleGlow || 1.0)")
+    (:target "#active-category-display" :attr "textContent" :expr "t < 0.20 ? '1. SACRED VESSELS • CHALICE, PATEN & CIBORIUM' : (t < 0.44 ? '2. SACRED LINENS • CORPORAL, PURIFICATOR & PALL' : (t < 0.68 ? '3. SANCTUARY APPOINTMENTS • RED LAMP, BELLS & CRUETS' : (t < 0.88 ? '4. LITURGICAL VESTMENTS • ALB, STOLE & CHASUBLE' : '5. THE MONSTRANCE • EUCHARISTIC BENEDICTION & ADORATION')))")
+    (:target "#category-slider-knob" :attr "transform" :expr "'translate(' + (80 + t * 560) + ', 11)'")
+    (:target "#sacred-vessels-group" :attr "opacity" :expr "t < 0.24 ? 1.0 : 0.55")
+    (:target "#sacred-linens-group" :attr "opacity" :expr "t >= 0.18 && t < 0.48 ? 1.0 : 0.55")
+    (:target "#sanctuary-appointments-group" :attr "opacity" :expr "t >= 0.42 && t < 0.72 ? 1.0 : 0.55")
+    (:target "#vestments-group" :attr "opacity" :expr "t >= 0.66 && t < 0.90 ? 1.0 : 0.55")
+    (:target "#monstrance-group" :attr "opacity" :expr "t >= 0.84 ? 1.0 : 0.65")
+  ))
+)

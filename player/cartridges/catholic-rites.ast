@@ -1,0 +1,68 @@
+(:scene :id "catholic-rites" :type "Slide" :oak-id "OAK-KS3-RE-011" :oak-unit "ks3-re-catholic-sacramental-rites" :title "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "selectedRite" :val 1.0 :min 1.0 :max 6.0 :step 1.0 :label "Selected Liturgical Rite")
+    (:var :name "communionGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Communion with Holy See Beacon")
+    (:var :name "iconShimmer" :val 0.8 :min 0.0 :max 1.5 :step 0.1 :label "Iconostasis & Mosaic Shimmer")
+  ))
+
+  (:inputs (
+    (:slider :var "selectedRite" :label "Liturgical Tradition" :min 1.0 :max 6.0 :step 1.0)
+    (:slider :var "communionGlow" :label "Peter's Beacon" :min 0.2 :max 2.0 :step 0.1)
+    (:slider :var "iconShimmer" :label "Icon Shimmer" :min 0.0 :max 1.5 :step 0.1)
+  ))
+
+  (:gestures (
+    (:draggable :target "#rite-selector-knob" :axis "x" :min 140 :max 660 :var "selectedRite")
+  ))
+
+  (:subtitles (
+    (:start 0.00 :end 0.20 :en "The Catholic Church is a global communion of 24 autonomous (sui iuris) Churches united under the Bishop of Rome." :es "La Iglesia Católica es una comunión global de 24 Iglesias autónomas (sui iuris) unidas bajo el Obispo de Roma." :la "Ecclesia Catholica est communio viginti quattuor Ecclesiarum sui iuris sub Romano Pontifice.")
+    (:start 0.20 :end 0.45 :en "The Latin (Western) Church shares full communion with 23 ancient Eastern Catholic Churches spanning 6 Liturgical Traditions." :es "La Iglesia Latina comparte plena comunión con 23 Iglesias Católicas Orientales a través de 6 Tradiciones Litúrgicas." :la "Una Ecclesia Occidentalis et viginti tres Ecclesiae Orientales sex traditiones liturgicas participant.")
+    (:start 0.45 :end 0.70 :en "From the Byzantine Divine Liturgy with sacred icons to Alexandrian Ge'ez chant, Christ's Church breathes with two lungs: East and West." :es "Desde la Divina Liturgia bizantina con iconos hasta el canto ge'ez alejandrino, la Iglesia respira con dos pulmones." :la "Ecclesia duobus pulmonibus respirat: Oriente et Occidente in sacra liturgia et iconibus concordibus.")
+    (:start 0.70 :end 0.88 :en "Ancient Eastern traditions use leavened prosphora bread symbolizing the Resurrection, alongside holy icons and fragrant incense." :es "Las tradiciones orientales usan pan leudado prosfora simbolizando la Resurrección, con iconos e incienso." :la "Panis fermentatus prosphora Resurrectionem Christi significat una cum thure et sanctis iconibus.")
+    (:start 0.88 :end 1.00 :en "In all 24 Churches, the same true Sacraments, apostolic faith, and communion with the Successor of Peter are fully preserved." :es "En las 24 Iglesias se preservan los mismos verdaderos Sacramentos, la fe apostólica y la comunión con Pedro." :la "In omnibus viginti quattuor Ecclesiis eadem sacramenta et communio cum Successore Petri servantur.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. The Universal Catholic Communion (24 Churches)" :rule "Una Ecclesia: 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic) in one faith.")
+    (:t 0.20 :title "2. The Six Liturgical Families" :rule "Traditiones: Latin, Byzantine, Alexandrian, Antiochene, Chaldean, and Armenian rites.")
+    (:t 0.45 :title "3. Breathing with Two Lungs (East & West)" :rule "Duo Pulmones: Saint John Paul II taught the Church breathes with both East and West.")
+    (:t 0.70 :title "4. Prosphora, Icons & Eastern Sacramental Rites" :rule "Mysterium: Leavened Eucharistic Prosphora and sacred Iconostasis reflecting heavenly liturgy.")
+    (:t 0.88 :title "5. Unbroken Apostolic Unity with Peter" :rule "Cathedra Petri: Plenary communion with the Holy See preserving Catholic diversity in unity.")
+  ))
+
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "How many autonomous (sui iuris) Churches make up the one Universal Catholic Church in full communion with the Pope?"
+      :options ("24 autonomous Churches across 6 Liturgical Traditions" "Only 1 (The Roman Church alone)" "6 regional dioceses" "Over 500 divided denominations")
+      :answer 0
+      :explanation "The Catholic Church is a magnificent communion of 24 autonomous Churches (1 Western Latin + 23 Eastern Catholic Churches) all united in one faith under the Pope.")
+    (:checkpoint :t 0.75
+      :prompt "Why do Byzantine and Eastern Catholic Churches use leavened bread (Prosphora) for the Holy Eucharist?"
+      :options ("Because yeast represents the Risen Life of Christ and the Holy Spirit breathing life into creation" "Because unleavened bread was forbidden in ancient times" "Because flat wafers were invented only recently" "Only to make the bread softer for the priest")
+      :answer 0
+      :explanation "Leaven symbolizes Christ rising from the dead and the Holy Spirit breathing life into the bread! Both leavened and unleavened traditions are holy, ancient, and fully valid.")
+  ))
+
+  (:bindings (
+    (:target "#beacon-pulse" :attr "opacity" :expr "0.3 + 0.4 * (vars.communionGlow || 1.0)")
+    (:target "#beacon-halo" :attr "r" :expr "26 + 18 * (vars.communionGlow || 1.0)")
+    (:target "#icon-gold-glow" :attr "opacity" :expr "0.4 + 0.5 * (vars.iconShimmer || 0.8)")
+    (:target "#panoramic-rites-strip" :attr "transform" :expr "'translate(' + (-((vars.selectedRite ? (vars.selectedRite - 1) : Math.min(5, t / 0.18)) * 800)) + ', 0)'")
+    (:target "#rite-selector-knob" :attr "transform" :expr "'translate(' + (vars.selectedRite ? (140 + (vars.selectedRite - 1) * 104) : (140 + Math.min(1.0, t / 0.90) * 520)) + ', 18)'")
+    (:target "#active-rite-title" :attr "textContent" :expr "['1. Western Latin Rite (Roman, Ambrosian, Mozarabic)', '2. Byzantine Tradition (Constantinopolitan)', '3. Alexandrian Tradition (Coptic & Ge\\'ez)', '4. Antiochian Tradition (West Syriac & Maronite)', '5. Chaldean Tradition (East Syriac & St. Thomas)', '6. Armenian Tradition (Holy See of Cilicia)'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || '1. Western Latin Rite'")
+    (:target "#active-rite-desc" :attr "textContent" :expr "['1 Western Church (>1.3B) • Unleavened Host (Hostia Pura) • Statues & Gregorian Chant', '14 Eastern Catholic Churches • Sacred Icons • Leavened Prosphora • Divine Liturgy', '3 Eastern Churches: Coptic (Egypt), Ethiopian & Eritrean • Ancient Liturgy of St. Mark', '3 Eastern Churches: Maronite (Lebanon), Syriac, Syro-Malankara • West Syriac Aramaic', '2 Eastern Churches: Chaldean (Iraq) & Syro-Malabar (India, AD 52) • Addai & Mari', '1 Eastern Church: Armenian Catholic Church (Cilicia) • First Christian Nation (AD 301)'][(vars.selectedRite ? Math.round(vars.selectedRite) : Math.min(6, 1 + Math.floor(t / 0.16))) - 1] || ''")
+    (:target "#tick-1-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.18) ? 0.9 : 0.0")
+    (:target "#tick-2-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 2 : (t >= 0.18 && t < 0.36)) ? 0.9 : 0.0")
+    (:target "#tick-3-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 3 : (t >= 0.36 && t < 0.54)) ? 0.9 : 0.0")
+    (:target "#tick-4-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 4 : (t >= 0.54 && t < 0.72)) ? 0.9 : 0.0")
+    (:target "#tick-5-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 5 : (t >= 0.72 && t < 0.88)) ? 0.9 : 0.0")
+    (:target "#tick-6-pill" :attr "opacity" :expr "(vars.selectedRite ? vars.selectedRite === 6 : t >= 0.88) ? 0.9 : 0.0")
+    (:target "#tick-1-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 1 : t < 0.18) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-2-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 2 : (t >= 0.18 && t < 0.36)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-3-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 3 : (t >= 0.36 && t < 0.54)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-4-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 4 : (t >= 0.54 && t < 0.72)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-5-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 5 : (t >= 0.72 && t < 0.88)) ? '#fef08a' : '#94a3b8'")
+    (:target "#tick-6-text" :attr "fill" :expr "(vars.selectedRite ? vars.selectedRite === 6 : t >= 0.88) ? '#fef08a' : '#94a3b8'")
+  ))
+)

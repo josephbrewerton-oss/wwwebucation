@@ -1,0 +1,49 @@
+(:cartridge :type :data :id "oak-data-angles-triangles" :title "Angles, Triangles & Geometry" :stage "Key Stage 2" :subject "Mathematics" :unit "Angles and Triangles"
+  (:axiom "The interior angles of any planar triangle always sum to exactly 180 degrees (a straight line angle).")
+  (:trap "Confusing obtuse angles (> 90°) with reflex angles (> 180°), or assuming longer triangle sides must contain larger total interior angles.")
+  (:socratic-pivot "If you tear the three corners off any paper triangle and line them up side-by-side, why do they always form a perfectly straight line?")
+  (:hook "Roof truss carpenters and navigation compass bearings rely on fixed angle sums.")
+  (:guided-step "Identify right angles (90°), acute angles (< 90°), and obtuse angles (90°–180°), and subtract known angles from 180° to find missing angles.")
+  (:questions (
+    (:q :id "ang-1" :prompt "What is the sum of the three interior angles inside ANY triangle on a flat plane?"
+        :options ("Exactly 180°" "Exactly 360°" "Exactly 90°" "It depends on whether the triangle is big or small")
+        :answer 0
+        :tier "recall"
+        :hint "Tearing the three vertices of any triangle and putting them together creates a straight line."
+        :explanation "In Euclidean geometry, the interior angles of every triangle always add up to exactly 180°, regardless of the size or shape of the triangle."
+        :misconceptions ("Correct! The interior angles of all planar triangles sum to 180°." "Misconception: 360° is the angle sum of a four-sided quadrilateral (or a full turn)." "Misconception: 90° is a single right angle." "Misconception: Angle sum is an invariant property of Euclidean triangles, independent of physical scale.")
+    )
+    (:q :id "ang-2" :prompt "A right-angled triangle has one angle measuring 90° and another measuring 35°. What is the measure of the third angle?"
+        :options ("55°" "45°" "65°" "90°")
+        :answer 0
+        :tier "application"
+        :hint "Subtract the two known angles (90° and 35°) from the total triangle angle sum of 180°."
+        :explanation "180° - 90° - 35° = 55°. In any right triangle, the two non-right angles are complementary and always add to 90° (90° - 35° = 55°)."
+        :misconceptions ("Correct! 180° - (90° + 35°) = 55°." "Misconception: 90° - 45° = 45° assumes both acute angles are equal (an isosceles right triangle)." "Misconception: Calculation error adding 10° too much." "Misconception: A triangle cannot have two 90° interior angles on a flat plane (that would already total 180°).")
+    )
+    (:q :id "ang-3" :prompt "What classification is given to an angle that measures 135°?"
+        :options ("An obtuse angle (between 90° and 180°)" "An acute angle (less than 90°)" "A right angle (exactly 90°)" "A reflex angle (greater than 180°)")
+        :answer 0
+        :tier "recall"
+        :hint "It is wider than an \"L\" shaped corner (90°) but smaller than a straight line (180°)."
+        :explanation "An obtuse angle is strictly greater than 90° and less than 180°. 135° falls squarely into this range."
+        :misconceptions ("Correct! 135° is between 90° and 180°, making it obtuse." "Misconception: Acute angles are strictly less than 90°." "Misconception: Right angles measure exactly 90°." "Misconception: Reflex angles are strictly greater than 180° and less than 360°.")
+    )
+    (:q :id "ang-4" :prompt "An equilateral triangle has three sides of equal length. What is the size of each of its three interior angles?"
+        :options ("60° each" "90° each" "45° each" "120° each")
+        :answer 0
+        :tier "application"
+        :hint "Because all three sides are equal, all three angles must be equal: divide 180° by 3."
+        :explanation "An equilateral triangle has three congruent angles. Dividing 180° equally among the 3 angles gives 180° ÷ 3 = 60° for each angle."
+        :misconceptions ("Correct! 180° ÷ 3 = 60° per angle." "Misconception: 90° × 3 = 270°, which is impossible in a triangle." "Misconception: 45° × 3 = 135°, which does not equal 180°." "Misconception: 120° is the exterior angle of an equilateral triangle, not the interior angle.")
+    )
+    (:q :id "ang-5" :prompt "How many degrees are in a complete full turn (rotation)?"
+        :options ("360°" "180°" "270°" "100°")
+        :answer 0
+        :tier "recall"
+        :hint "A straight line is a half-turn (180°). Double that for a full turn."
+        :explanation "A full circle rotation consists of 4 right angles or 2 straight lines, totalling exactly 360°."
+        :misconceptions ("Correct! A full circular turn measures 360°." "Misconception: 180° is a half-turn (straight line)." "Misconception: 270° is a three-quarter turn." "Misconception: Metric 100 is not used for angular degrees in standard geometry.")
+    )
+  ))
+)

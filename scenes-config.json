@@ -1,9 +1,10 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T09:38:50.849Z",
+  "generatedAt": "2026-10-29T09:45:42.219Z",
   "totalScenes": 59,
   "inputDirs": [
-    "static/cartridges"
+    "static/cartridges",
+    "static/player/cartridges"
   ],
   "types": [
     "Sim",
@@ -1001,7 +1002,7 @@
       "duration": 16,
       "oakId": "OAK-KS3-SCI-010",
       "oakUnit": "ks3-physics-inverted-pendulum-dyno",
-      "subject": "Science",
+      "subject": "Mathematics",
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/inverted-pendulum-dyno.svg",
@@ -1012,8 +1013,8 @@
       "hasVideo": false,
       "isCore": true,
       "tier": "core",
-      "mount": "/curriculum/science/inverted-pendulum-dyno",
-      "section": "Natural Sciences & Physics",
+      "mount": "/curriculum/mathematics/inverted-pendulum-dyno",
+      "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 6,

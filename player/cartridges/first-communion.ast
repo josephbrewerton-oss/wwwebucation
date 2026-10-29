@@ -1,0 +1,57 @@
+(:scene :id "first-communion" :type "Sim" :oak-id "OAK-KS2-RE-005" :oak-unit "ks2-re-catholic-first-holy-communion" :title "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "communionStep" :val 1.0 :min 1.0 :max 5.0 :step 1.0 :label "Steps of First Holy Communion (1: Clean Heart, 2: Fasting, 3: Reverence, 4: Reception, 5: Thanksgiving)")
+    (:var :name "adorationRadiance" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Eucharistic Adoration Divine Radiance")
+    (:var :name "reverentBow" :val 1.0 :min 0.0 :max 1.0 :step 0.1 :label "Communicant Reverent Bow Angle")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#communion-steps-slider" :axis "x" :min 120 :max 680
+      (:bind-var "communionStep" :map "linear" :from-min 120 :from-max 680 :to-min 1.0 :to-max 5.0)
+    )
+    (:draggable :target "#adoration-radiance-dial" :axis "y" :min 90 :max 250
+      (:bind-var "adorationRadiance" :map "linear" :from-min 250 :from-max 90 :to-min 0.2 :to-max 2.0)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 5.0 :text "Preparing for First Holy Communion is a sacred milestone: receiving the living Lord Jesus Christ into our heart and soul.")
+    (:start 5.0 :end 10.0 :text "Step 1: First Confession (Reconciliation) washes our soul clean so Jesus finds a bright, peaceful temple within us.")
+    (:start 10.0 :end 15.0 :text "Step 2: The Eucharistic Fast of 1 hour from food and drink awakens holy hunger for the True Bread of Life.")
+    (:start 15.0 :end 20.0 :text "Step 3: Approaching the Sanctuary, hands folded in prayer, we make a profound bow of reverence before the Blessed Sacrament.")
+    (:start 20.0 :end 24.5 :text "Step 4: The Priest proclaims 'The Body of Christ', and we proclaim our living faith with a clear, joyful 'Amen!'")
+    (:start 24.5 :end 28.0 :text "Step 5: In silent Thanksgiving and Eucharistic Adoration, we speak intimately with Jesus who now dwells within our heart.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.42
+      (:prompt "When the priest elevates the Sacred Host and proclaims 'The Body of Christ', what does our response 'Amen' mean?")
+      (:options
+        ("'I believe with all my heart that this is truly Jesus Christ, my Lord and God'" :correct true)
+        ("'Thank you for the snack'" :correct false)
+        ("'The ceremony is now finished'" :correct false)
+        ("'I hope everyone is watching me'" :correct false)
+      )
+      (:explanation "St Augustine explained: 'You hear the words The Body of Christ, and you answer Amen. Be then a member of Christ's Body, so that your Amen may be true!' Saying Amen is our solemn oath of faith in the Real Presence.")
+    )
+    (:checkpoint :at 0.76
+      (:prompt "What is the Catholic rule for the Eucharistic Fast before receiving Holy Communion?")
+      (:options
+        ("Fast from all food and drink (except water and medicine) for at least 1 full hour before receiving Holy Communion" :correct true)
+        ("Fast for 3 full days without water" :correct false)
+        ("Eating chewing gum and sweets during Holy Mass is encouraged" :correct false)
+        ("No fasting is ever observed" :correct false)
+      )
+      (:explanation "Canon Law (Can. 919) prescribes fasting from food and drink for at least one hour before Holy Communion. This ancient discipline teaches reverence, self-control, and spiritual preparation for the Lord's banquet.")
+    )
+  ))
+
+  (:bindings (
+    (:target "#eucharistic-monstrance-rays" :attr "transform" :expr "'rotate(' + (t * 6.0) + ' 400 170)'")
+    (:target "#host-living-glow" :attr "opacity" :expr "0.6 + 0.35 * sin(t * 3.0) * adorationRadiance")
+    (:target "#communicant-bow" :attr "transform" :expr "'rotate(' + (12 * reverentBow) + ' 280 340)'")
+    (:target "#adoration-light-cone" :attr "opacity" :expr "0.25 + 0.25 * adorationRadiance")
+  ))
+)

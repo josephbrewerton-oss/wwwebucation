@@ -1,0 +1,36 @@
+(:scene :id "phonics-screening" :type "Sim" :oak-id "OAK-KS1-ENG-002" :oak-unit "ks1-english-reading-phonics-alien-words" :title "Year 1 Phonics Screening Check & Alien Words" :stage "EARLY YEARS & KS1 PHONICS" :duration 18.0
+  (:camera :distance 400 :pitch 0 :yaw 0 :fov 60)
+  (:vars (
+    (:var :name "wordIdx" :val 0 :min 0 :max 39 :step 1 :label "Word Number (1–40)")
+    (:var :name "sweepProgress" :val 0.0 :min 0.0 :max 1.0 :step 0.05 :label "Sound Sweep")
+  ))
+  (:inputs (
+    (:slider :var "wordIdx" :label "Screening Pool Word (1 to 40)" :min 0 :max 39 :step 1)
+  ))
+  (:gestures (
+    (:draggable :target "#blend-sweep-pointer" :axis "x" :min -165 :max 165 :var "sweepProgress")
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.25 :en "The official Year 1 Phonics Screening Check assesses whether pupils have learned phonic decoding to an age-appropriate standard (32/40 threshold)." :es "La prueba oficial de fonética de Year 1 evalúa si los alumnos dominan la decodificación fonética (umbral de 32/40).")
+    (:start 0.25 :end 0.50 :en "Pseudo-words ('alien words') are marked with friendly monster pictures. They test pure decoding without relying on sight memory." :es "Las pseudopalabras ('palabras alienígenas') llevan dibujos de monstruos. Evalúan la decodificación pura sin memorización visual.")
+    (:start 0.50 :end 0.75 :en "Press the sound buttons underneath each grapheme: dots for single letters, dashes for consonant digraphs, and arches for split digraphs." :es "Presione los botones de sonido: puntos para letras simples, guiones para dígrafos y arcos para dígrafos divididos.")
+    (:start 0.75 :end 1.00 :en "Drag the green blending arrow from left to right to sweep across the phonemes and blend the pure sounds into the complete word." :es "Arrastre la flecha verde de izquierda a derecha para unir los fonemas en la palabra completa.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Section 1: Simple CVC & Short Vowels" :rule "Words like 'cat', 'ship', and pseudo-words like 'vap' and 'fop'.")
+    (:t 0.25 :title "2. Alien Words & Monster Badges" :rule "Monster picture signifies an alien word that must be decoded purely by sound.")
+    (:t 0.50 :title "3. Section 2: Phase 5 Alternative Graphemes" :rule "Split digraphs (a-e, i-e) and vowel digraphs (ea, oi, igh, oy).")
+    (:t 0.75 :title "4. The 32/40 Mastery Threshold" :rule "Achieving 32 or more out of 40 confirms secure phonetic decoding skills.")
+  ))
+  (:interactive false)
+  (:questions false)
+  (:bindings (
+    (:target "#alien-monster-badge" :attr "opacity" :expr "t < 0.5 ? '1' : '0.15'")
+    (:target "#blend-sweep-pointer" :attr "cx" :expr "String(-165 + ((t * 4) % 1) * 330)")
+    (:target "#sound-dot-1" :attr "fill" :expr "((t * 4) % 1) < 0.33 ? '#10b981' : '#38bdf8'")
+    (:target "#sound-dot-2" :attr "fill" :expr "((t * 4) % 1) >= 0.33 && ((t * 4) % 1) < 0.66 ? '#10b981' : '#38bdf8'")
+    (:target "#sound-dot-3" :attr "fill" :expr "((t * 4) % 1) >= 0.66 ? '#10b981' : '#38bdf8'")
+    (:target "#current-word-display" :attr "textContent" :expr "t < 0.25 ? 'v  a  p' : (t < 0.5 ? 's  h  i  p' : (t < 0.75 ? 'b  l  o  s  t' : 's  t  r  i  k  e'))")
+    (:target "#word-type-tag" :attr "textContent" :expr "t < 0.25 ? '👾 PSEUDO / ALIEN WORD' : (t < 0.5 ? '📖 REAL ENGLISH WORD' : (t < 0.75 ? '👾 PSEUDO / ALIEN WORD' : '📖 REAL ENGLISH WORD'))")
+  ))
+)
