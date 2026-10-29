@@ -5027,7 +5027,18 @@
                 ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
                 : './';
 
+              const directFile = isBinary ? (registryScene.astbFile || (registryScene.base ? `bytecode/${registryScene.base}.astb` : ''))
+                : ext === 'svg' ? (registryScene.svgFile || (registryScene.base ? `cartridges/${registryScene.base}.svg` : ''))
+                : (registryScene.astFile || (registryScene.base ? `cartridges/${registryScene.base}.ast` : ''));
+              const directUrls = directFile ? [
+                directFile.startsWith('/') ? directFile : `/${directFile}`,
+                directFile,
+                `../${directFile}`,
+                `${currentDir}${directFile}`
+              ] : [];
+
               const candidateUrls = Array.from(new Set([
+                ...directUrls,
                 // 1. Direct canonical paths (resolves immediately with zero 404 probes)
                 isBinary ? `/player/bytecode/${sceneId}.${ext}` : `/cartridges/${sceneId}.${ext}`,
                 isBinary ? `bytecode/${sceneId}.${ext}` : `../cartridges/${sceneId}.${ext}`,
@@ -5239,7 +5250,8 @@
 
       this.scene = scene;
       this.durationSec = this.scene.duration || 10.0;
-      const isContinuousSim = Boolean(
+      const isSlide = scene.type === 'Slide' || scene.cartridgeType === 'Slide';
+      const isContinuousSim = !isSlide && Boolean(
         scene.type === 'Sim' ||
         scene.cartridgeType === 'Sim' ||
         (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
@@ -7006,7 +7018,8 @@ tick(currentTimestamp) {
         }
 
         // Dynamic continuous simulation check:
-        const isDynamicScene = Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
+        const isSlide = Boolean(this.scene && (this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide'));
+        const isDynamicScene = !isSlide && Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
 
         if (this.isPlaying) {
           this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
@@ -7032,7 +7045,7 @@ tick(currentTimestamp) {
                 ? this.vars.speed
                 : (typeof this.vars.warpSpeed === 'number'
                     ? this.vars.warpSpeed
-                    : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0)));
+                    : (typeof this.vars.pilgrimSpeed === 'number' ? this.vars.pilgrimSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0))));
 
           const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.speed || 1.0);
           this.vars.simClock = (this.vars.simClock || 0) + clockDelta;

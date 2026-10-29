@@ -573,7 +573,8 @@
         this.elements.checkpointMinimizedPill.classList.add('hidden');
         this.elements.checkpointMinimizedPill.style.display = 'none';
       }
-      const isContinuousSim = this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim' || this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas')));
+      const isSlide = scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide');
+      const isContinuousSim = !isSlide && this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim' || this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas')));
       if (!isContinuousSim) {
         this.engine.pause();
       }
@@ -990,6 +991,13 @@
         return t === 'film' || t === 'video';
       });
 
+      const otherItems = builtInItems.filter(item =>
+        !simItems.includes(item) &&
+        !slideItems.includes(item) &&
+        !appItems.includes(item) &&
+        !filmItems.includes(item)
+      );
+
       const appendCategoryGroup = (label, color, items) => {
         if (!items || items.length === 0) return;
         const grp = document.createElement('optgroup');
@@ -1013,6 +1021,7 @@
       appendCategoryGroup('📑 Interactive Slides (Slide)', '#34d399', slideItems);
       appendCategoryGroup('💻 Vector Applications (App)', '#fbbf24', appItems);
       appendCategoryGroup('🎬 Video / Film (Film)', '#f43f5e', filmItems);
+      appendCategoryGroup('🔬 Curriculum Cartridges', '#a78bfa', otherItems);
 
       // Teacher Auto-Find Actions
       const actionGroup = document.createElement('optgroup');

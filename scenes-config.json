@@ -1,18 +1,20 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T06:25:42.728Z",
-  "totalScenes": 58,
+  "generatedAt": "2026-10-29T08:39:34.072Z",
+  "totalScenes": 59,
   "inputDirs": [
     "static/cartridges"
   ],
   "types": [
     "Sim",
     "Slide",
-    "App"
+    "App",
+    "Film"
   ],
   "scenes": [
     {
       "id": "welcome",
+      "base": "welcome",
       "type": "Sim",
       "title": "Welcome to AST Vector Player & Educational Simulator",
       "stage": "PORTAL APPARATUS & SIMULATOR",
@@ -40,10 +42,11 @@
     },
     {
       "id": "church-tour",
+      "base": "church-tour",
       "type": "Slide",
       "title": "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces",
       "stage": "CATHOLIC LIFE",
-      "duration": 42,
+      "duration": 60,
       "oakId": "OAK-KS2-RE-001",
       "oakUnit": "ks2-re-catholic-sacred-architecture",
       "subject": "Religious Education",
@@ -67,6 +70,7 @@
     },
     {
       "id": "altar-anatomy",
+      "base": "altar-anatomy",
       "type": "Slide",
       "title": "The Catholic Altar: Sacred Anatomy, Types & Appointments",
       "stage": "CATHOLIC LIFE",
@@ -94,6 +98,7 @@
     },
     {
       "id": "holy-oils",
+      "base": "holy-oils",
       "type": "Slide",
       "title": "The Three Holy Oils & The Sacred Ambry (Olea Sancta)",
       "stage": "CATHOLIC LIFE",
@@ -121,6 +126,7 @@
     },
     {
       "id": "holy-water-thurifer",
+      "base": "holy-water-thurifer",
       "type": "Sim",
       "title": "Holy Water & The Thurible: Asperges, Incense & Sacramental Purification",
       "stage": "CATHOLIC LIFE",
@@ -148,6 +154,7 @@
     },
     {
       "id": "first-communion",
+      "base": "first-communion",
       "type": "Sim",
       "title": "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love",
       "stage": "CATHOLIC LIFE",
@@ -175,6 +182,7 @@
     },
     {
       "id": "triduum-easter",
+      "base": "triduum-easter",
       "type": "Sim",
       "title": "The Sacred Paschal Triduum & Easter: Upper Room, Cross & Lumen Christi",
       "stage": "CATHOLIC LIFE",
@@ -202,6 +210,7 @@
     },
     {
       "id": "seven-sacraments",
+      "base": "seven-sacraments",
       "type": "Sim",
       "title": "The Seven Holy Sacraments: Visible Signs of Invisible Grace",
       "stage": "CATHOLIC LIFE",
@@ -229,6 +238,7 @@
     },
     {
       "id": "liturgical-calendar",
+      "base": "liturgical-calendar",
       "type": "Sim",
       "title": "The Catholic Liturgical Year: Sacred Seasons & Colors",
       "stage": "CATHOLIC LIFE",
@@ -256,6 +266,7 @@
     },
     {
       "id": "liturgical-postures",
+      "base": "liturgical-postures",
       "type": "Sim",
       "title": "Sacred Postures & Gestures: Praying with Mind, Heart & Body",
       "stage": "CATHOLIC LIFE",
@@ -283,6 +294,7 @@
     },
     {
       "id": "ten-commandments",
+      "base": "ten-commandments",
       "type": "Slide",
       "title": "The Ten Commandments & Moral Law: The Two Tablets of Sinai",
       "stage": "CATHOLIC LIFE",
@@ -310,6 +322,7 @@
     },
     {
       "id": "order-of-the-mass",
+      "base": "order-of-the-mass",
       "type": "Sim",
       "title": "The Order of the Holy Mass: Source & Summit of Catholic Life",
       "stage": "CATHOLIC LIFE",
@@ -337,6 +350,7 @@
     },
     {
       "id": "sacred-objects",
+      "base": "sacred-objects",
       "type": "Slide",
       "title": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
       "stage": "CATHOLIC LIFE",
@@ -364,6 +378,7 @@
     },
     {
       "id": "eucharistic-procession-film",
+      "base": "eucharistic-procession-film",
       "type": "Film",
       "title": "Solemn Eucharistic Procession: Liturgical Film & Sacred Vectors",
       "stage": "CATHOLIC LIFE",
@@ -391,6 +406,7 @@
     },
     {
       "id": "rosary-mysteries",
+      "base": "rosary-mysteries",
       "type": "Sim",
       "title": "The Holy Rosary: 3D Beads & 20 Scriptural Mysteries",
       "stage": "CATHOLIC LIFE & RE",
@@ -418,6 +434,7 @@
     },
     {
       "id": "stations-of-the-cross",
+      "base": "stations-of-the-cross",
       "type": "Slide",
       "title": "The Stations of the Cross: Via Crucis & Sacred Passion",
       "stage": "CATHOLIC LIFE",
@@ -445,6 +462,7 @@
     },
     {
       "id": "liturgy-of-the-hours",
+      "base": "liturgy-of-the-hours",
       "type": "Sim",
       "title": "The Liturgy of the Hours: Sanctifying Time Through the Divine Office",
       "stage": "CATHOLIC LIFE",
@@ -472,6 +490,7 @@
     },
     {
       "id": "catholic-rites",
+      "base": "catholic-rites",
       "type": "Slide",
       "title": "The 24 Catholic Rites & Churches: Unity in Diversity Across East & West",
       "stage": "CATHOLIC LIFE",
@@ -499,6 +518,7 @@
     },
     {
       "id": "cst-virtues",
+      "base": "cst-virtues",
       "type": "Sim",
       "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
       "stage": "CATHOLIC LIFE",
@@ -526,6 +546,7 @@
     },
     {
       "id": "latin-mass-prayers",
+      "base": "latin-mass-prayers",
       "type": "Slide",
       "title": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
       "stage": "CATHOLIC LIFE",
@@ -553,6 +574,7 @@
     },
     {
       "id": "nicene-creed",
+      "base": "nicene-creed",
       "type": "Slide",
       "title": "The Nicene & Apostles' Creed: Credo in Unum Deum",
       "stage": "CATHOLIC LIFE",
@@ -580,6 +602,7 @@
     },
     {
       "id": "times-tables",
+      "base": "times-tables",
       "type": "Sim",
       "title": "Times Tables: 1× to 12× Standard School Multiplication Chart & Grid",
       "stage": "KS1/KS2 MATHS",
@@ -607,6 +630,7 @@
     },
     {
       "id": "math-fishing",
+      "base": "math-fishing",
       "type": "App",
       "title": "Math Pond: Number Bonds Fishing Game",
       "stage": "KS1/KS2 MATHS",
@@ -634,6 +658,7 @@
     },
     {
       "id": "bodmas",
+      "base": "bodmas",
       "type": "Slide",
       "title": "BODMAS / BIDMAS: Forcefield Clamping & Area Physics",
       "stage": "KS2/KS3 MATHS",
@@ -661,6 +686,7 @@
     },
     {
       "id": "fractions",
+      "base": "fractions",
       "type": "Slide",
       "title": "Fractions: Why Common Denominators Rule",
       "stage": "KS2 MATHS",
@@ -688,6 +714,7 @@
     },
     {
       "id": "pythagoras",
+      "base": "pythagoras",
       "type": "Sim",
       "title": "Pythagoras' Theorem (a² + b² = c²)",
       "stage": "KS3 GEOMETRY",
@@ -715,6 +742,7 @@
     },
     {
       "id": "algebra-balance",
+      "base": "algebra-balance",
       "type": "Sim",
       "title": "⚖️ Algebraic Balance Scale: Preserving Equality (2x + 5 = 15)",
       "stage": "KS2/KS3 MATHS",
@@ -742,6 +770,7 @@
     },
     {
       "id": "calculus-curves",
+      "base": "calculus-curves",
       "type": "Sim",
       "title": "Calculus: Tangent Slopes & Definite Integrals",
       "stage": "GCSE & A-LEVEL MATHS",
@@ -769,6 +798,7 @@
     },
     {
       "id": "kinetic-gas",
+      "base": "kinetic-gas",
       "type": "Sim",
       "title": "Kinetic Gas Theory & Boyle's Law",
       "stage": "KS3/KS4 PHYSICS & CHEMISTRY",
@@ -796,6 +826,7 @@
     },
     {
       "id": "electric-circuits",
+      "base": "electric-circuits",
       "type": "Sim",
       "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
       "stage": "KS2/KS3 PHYSICS",
@@ -823,6 +854,7 @@
     },
     {
       "id": "atom",
+      "base": "atom",
       "type": "Sim",
       "title": "Atomic Structure: Bohr Electron Shells",
       "stage": "KS3 CHEMISTRY",
@@ -850,6 +882,7 @@
     },
     {
       "id": "photosynthesis",
+      "base": "photosynthesis",
       "type": "Slide",
       "title": "Photosynthesis: The Green Solar Engine",
       "stage": "KS3 BIOLOGY",
@@ -877,6 +910,7 @@
     },
     {
       "id": "dna-helix",
+      "base": "dna-helix",
       "type": "Sim",
       "title": "Genetics: DNA Base Pairing & Transcription",
       "stage": "KS3 GENETICS",
@@ -904,6 +938,7 @@
     },
     {
       "id": "solar-system",
+      "base": "solar-system",
       "type": "Sim",
       "title": "Solar System: Heliocentric Planetary Motion",
       "stage": "KS3 SCIENCE",
@@ -931,6 +966,7 @@
     },
     {
       "id": "velocity",
+      "base": "velocity",
       "type": "Sim",
       "title": "Kinematics: Velocity & Distance-Time Vectors",
       "stage": "KS3 PHYSICS",
@@ -958,6 +994,7 @@
     },
     {
       "id": "phonics-lab",
+      "base": "phonics-lab",
       "type": "App",
       "title": "Early Phonics: Sound Buttons & Blending Mat",
       "stage": "EYFS/KS1 ENGLISH",
@@ -985,6 +1022,7 @@
     },
     {
       "id": "phonics-screening",
+      "base": "phonics-screening",
       "type": "Sim",
       "title": "Year 1 Phonics Screening Check & Alien Words",
       "stage": "EARLY YEARS & KS1 PHONICS",
@@ -1012,6 +1050,7 @@
     },
     {
       "id": "spelling-bee",
+      "base": "spelling-bee",
       "type": "App",
       "title": "Spelling Bee Championship: KS1 to KS3 Orthography",
       "stage": "KS1/KS2/KS3 ENGLISH",
@@ -1039,6 +1078,7 @@
     },
     {
       "id": "shakespeare",
+      "base": "shakespeare",
       "type": "Slide",
       "title": "The Globe Theatre: Shakespeare & Iambic Pentameter",
       "stage": "KS3/KS4 ENGLISH LITERATURE",
@@ -1066,6 +1106,7 @@
     },
     {
       "id": "shakespeare-macbeth",
+      "base": "shakespeare-macbeth",
       "type": "Slide",
       "title": "Macbeth: 5-Act Dramatic Soliloquy & Moral Fall",
       "stage": "KS3/KS4 ENGLISH LITERATURE",
@@ -1093,6 +1134,7 @@
     },
     {
       "id": "water-cycle",
+      "base": "water-cycle",
       "type": "Slide",
       "title": "Water Cycle: Continuous Earth Cycle",
       "stage": "KS2 GEOGRAPHY",
@@ -1120,6 +1162,7 @@
     },
     {
       "id": "mountain-elevation",
+      "base": "mountain-elevation",
       "type": "Sim",
       "title": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
       "stage": "KS2/KS3 MATHS & GEOGRAPHY",
@@ -1147,6 +1190,7 @@
     },
     {
       "id": "languages",
+      "base": "languages",
       "type": "App",
       "title": "MFL & Polyglot Studio: Spanish, French & Latin",
       "stage": "KS2/KS3 MFL",
@@ -1174,6 +1218,7 @@
     },
     {
       "id": "bsl-fingerspelling",
+      "base": "bsl-fingerspelling",
       "type": "Sim",
       "title": "BSL: 3D British Sign Language Two-Handed Fingerspelling",
       "stage": "ACCESSIBILITY & LANGUAGES",
@@ -1201,6 +1246,7 @@
     },
     {
       "id": "bbc-model-b",
+      "base": "bbc-model-b",
       "type": "Sim",
       "title": "BBC Micro Model B: 6502 Computing & BBC BASIC",
       "stage": "KS2 & KS3 COMPUTING",
@@ -1228,6 +1274,7 @@
     },
     {
       "id": "fish-tank",
+      "base": "fish-tank",
       "type": "App",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "stage": "BENCHMARK & STRESS LAB",
@@ -1254,11 +1301,40 @@
       "checkpointCount": 0
     },
     {
+      "id": "inverted-pendulum-dyno",
+      "base": "pendulum_dyno",
+      "type": "App",
+      "title": "Inverted Pendulum Dyno",
+      "stage": "CURRICULUM",
+      "duration": 14,
+      "oakId": "OAK-KS3-GEN-INVERTEDP",
+      "oakUnit": "ks3-generalcurriculum-inverted-pendulum-dyno",
+      "subject": "General Curriculum",
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/pendulum_dyno.svg",
+      "astFile": "cartridges/pendulum_dyno.ast",
+      "astbFile": "bytecode/pendulum_dyno.astb",
+      "video": null,
+      "videoFit": "contain",
+      "hasVideo": false,
+      "isCore": true,
+      "tier": "core",
+      "mount": "/curriculum/general/inverted-pendulum-dyno",
+      "section": "Curriculum Cartridges",
+      "keyframeCount": 0,
+      "subtitleCount": 0,
+      "bindingsCount": 0,
+      "hasCheckpoints": false,
+      "checkpointCount": 0
+    },
+    {
       "id": "oak-data-algorithms-sequencing",
+      "base": "oak-data-algorithms-sequencing",
       "type": "App",
       "title": "Algorithms, Sequencing & Logic",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAA",
       "oakUnit": "Algorithms and Sequencing",
       "subject": "Computing",
@@ -1282,10 +1358,11 @@
     },
     {
       "id": "oak-data-angles-triangles",
+      "base": "oak-data-angles-triangles",
       "type": "App",
       "title": "Angles, Triangles & Geometry",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAA",
       "oakUnit": "Angles and Triangles",
       "subject": "Mathematics",
@@ -1309,10 +1386,11 @@
     },
     {
       "id": "oak-data-cell-biology",
+      "base": "oak-data-cell-biology",
       "type": "App",
       "title": "Cell Biology & Organelles",
       "stage": "Key Stage 3",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAC",
       "oakUnit": "Cell Biology",
       "subject": "Science",
@@ -1336,10 +1414,11 @@
     },
     {
       "id": "oak-data-electric-circuits",
+      "base": "oak-data-electric-circuits",
       "type": "App",
       "title": "Electric Circuits & Conductors",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-SCI-OAKDATAE",
       "oakUnit": "Circuits and Conductors",
       "subject": "Science",
@@ -1363,10 +1442,11 @@
     },
     {
       "id": "oak-data-fractions-decimals",
+      "base": "oak-data-fractions-decimals",
       "type": "App",
       "title": "Fractions, Decimals & Percentages",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-MAT-OAKDATAF",
       "oakUnit": "Fractions and Decimals",
       "subject": "Mathematics",
@@ -1390,10 +1470,11 @@
     },
     {
       "id": "oak-data-phonics-screening",
+      "base": "oak-data-phonics-screening",
       "type": "App",
       "title": "Phonics, Digraphs & Alien Words",
       "stage": "Key Stage 1",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-ENG-OAKDATAP",
       "oakUnit": "Phonics & Simple Sentences",
       "subject": "English",
@@ -1417,10 +1498,11 @@
     },
     {
       "id": "oak-data-re-nicene-creed",
+      "base": "oak-data-re-nicene-creed",
       "type": "App",
       "title": "The Nicene Creed & Trinity",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-RE-OAKDATAR",
       "oakUnit": "The Nicene Creed & Trinity",
       "subject": "Religious Education (Catholic)",
@@ -1444,10 +1526,11 @@
     },
     {
       "id": "oak-data-re-sacraments",
+      "base": "oak-data-re-sacraments",
       "type": "App",
       "title": "The Seven Sacraments & Holy Eucharist",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-RE-OAKDATAR",
       "oakUnit": "The Holy Eucharist & Sacraments",
       "subject": "Religious Education (Catholic)",
@@ -1471,10 +1554,11 @@
     },
     {
       "id": "oak-data-seasonal-changes",
+      "base": "oak-data-seasonal-changes",
       "type": "App",
       "title": "Seasonal Changes & Earth Cycles",
       "stage": "Key Stage 1",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAS",
       "oakUnit": "Seasonal Changes",
       "subject": "Science",
@@ -1498,10 +1582,11 @@
     },
     {
       "id": "oak-data-spanish-foundations",
+      "base": "oak-data-spanish-foundations",
       "type": "App",
       "title": "Spanish Greetings & Verbs",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAS",
       "oakUnit": "Spanish Greetings & Introductions",
       "subject": "Spanish",
@@ -1525,10 +1610,11 @@
     },
     {
       "id": "oak-data-states-of-matter",
+      "base": "oak-data-states-of-matter",
       "type": "App",
       "title": "States of Matter & Particle Theory",
       "stage": "Key Stage 2",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-KS3-GEN-OAKDATAS",
       "oakUnit": "States of Matter",
       "subject": "Science",
@@ -1552,10 +1638,11 @@
     },
     {
       "id": "pipeline-sample",
+      "base": "pipeline-sample",
       "type": "App",
       "title": "Sample Physics Knowledge Nodes",
       "stage": "KS3",
-      "duration": 10,
+      "duration": 14,
       "oakId": "OAK-DEV-001",
       "oakUnit": "dev-apparatus-pipeline-sample",
       "subject": "Educational Technology",
