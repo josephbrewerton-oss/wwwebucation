@@ -24,16 +24,16 @@
 
     <!-- Sanctuary Lamp Red Glow -->
     <radialGradient id="sanctuary-lamp-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(239, 68, 68, 0.95)" />
-      <stop offset="40%" stop-color="rgba(220, 38, 38, 0.6)" />
-      <stop offset="100%" stop-color="rgba(153, 27, 27, 0)" />
+      <stop offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
+      <stop offset="40%" stop-color="#dc2626" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#991b1b" stop-opacity="0" />
     </radialGradient>
 
     <!-- Monstrance Radiant Halo -->
     <radialGradient id="monstrance-halo" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="rgba(254, 240, 138, 0.9)" />
-      <stop offset="45%" stop-color="rgba(234, 179, 8, 0.4)" />
-      <stop offset="100%" stop-color="rgba(161, 98, 7, 0)" />
+      <stop offset="0%" stop-color="#fef08a" stop-opacity="0.9" />
+      <stop offset="45%" stop-color="#eab308" stop-opacity="0.4" />
+      <stop offset="100%" stop-color="#a16207" stop-opacity="0" />
     </radialGradient>
 
     <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -54,14 +54,14 @@
 
   <!-- Active Milestone Header Indicator -->
   <g transform="translate(400, 36)" text-anchor="middle">
-    <rect x="-280" y="-18" width="560" height="32" rx="16" fill="rgba(15, 23, 42, 0.9)" stroke="#ca8a04" stroke-width="1.5" />
-    <text id="active-category-display" x="0" y="4" font-family="system-ui, -apple-system, sans-serif" font-size="12" font-weight="800" fill="#fef08a" letter-spacing="0.5">1. SACRED VESSELS • CHALICE, PATEN & CIBORIUM</text>
+    <rect x="-280" y="-18" width="560" height="32" rx="16" fill="#0f172a" stroke="#ca8a04" stroke-width="1.5" />
+    <text id="active-category-display" x="0" y="4" font-family="sans-serif" font-size="12" font-weight="800" fill="#fef08a" letter-spacing="0.5">1. SACRED VESSELS • CHALICE, PATEN & CIBORIUM</text>
   </g>
 
-  <!-- Credence & Vestment Altar Table Structure -->
+  <!-- Credence &amp; Vestment Altar Table Structure -->
   <rect x="30" y="300" width="740" height="118" rx="6" fill="#1e293b" stroke="#334155" stroke-width="2" />
   <rect x="20" y="295" width="760" height="18" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" />
-  <line x1="20" y1="310" x2="780" y2="310" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6,4" />
+  <line x1="20" y1="310" x2="780" y2="310" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6 4" />
 
   <!-- SECTION 1: SACRED VESSELS -->
   <g id="sacred-vessels-group" opacity="1.0">
@@ -73,14 +73,14 @@
       <ellipse cx="40" cy="20" rx="24" ry="4" fill="#854d0e" />
       <line x1="40" y1="98" x2="40" y2="103" stroke="#fef08a" stroke-width="1.5" />
       <line x1="38" y1="100" x2="42" y2="100" stroke="#fef08a" stroke-width="1.5" />
-      <text x="40" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#facc15">Chalice</text>
+      <text x="40" y="118" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#facc15">Chalice</text>
     </g>
 
     <g transform="translate(165, 245)">
       <ellipse cx="35" cy="50" rx="36" ry="9" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
       <circle cx="35" cy="35" r="20" fill="#fffbeb" stroke="#fef08a" stroke-width="2" filter="url(#soft-glow)" />
       <text x="35" y="40" text-anchor="middle" font-family="serif" font-weight="900" font-size="11" fill="#ca8a04">IHS</text>
-      <text x="35" y="66" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#facc15">Paten</text>
+      <text x="35" y="66" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#facc15">Paten</text>
     </g>
 
     <g transform="translate(235, 190)">
@@ -89,7 +89,7 @@
       <path d="M 10,25 Q 40,0 70,25 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
       <line x1="40" y1="2" x2="40" y2="12" stroke="#fef08a" stroke-width="2" />
       <line x1="36" y1="6" x2="44" y2="6" stroke="#fef08a" stroke-width="2" />
-      <text x="40" y="118" text-anchor="middle" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#facc15">Ciborium</text>
+      <text x="40" y="118" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#facc15">Ciborium</text>
     </g>
   </g>
 
@@ -98,28 +98,28 @@
     <rect x="0" y="24" width="56" height="24" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5" />
     <line x1="28" y1="30" x2="28" y2="40" stroke="#dc2626" stroke-width="1.5" />
     <line x1="23" y1="34" x2="33" y2="34" stroke="#dc2626" stroke-width="1.5" />
-    <text x="28" y="60" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Corporal</text>
+    <text x="28" y="60" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Corporal</text>
 
     <rect x="68" y="12" width="36" height="36" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#soft-glow)" />
     <path d="M 86,20 L 86,40 M 76,28 L 96,28" stroke="#ca8a04" stroke-width="2.5" />
-    <text x="86" y="60" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Pall</text>
+    <text x="86" y="60" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Pall</text>
   </g>
 
   <!-- SECTION 3: SANCTUARY APPOINTMENTS -->
   <g id="sanctuary-appointments-group" opacity="0.2">
     <g transform="translate(445, 150)">
-      <line x1="20" y1="-30" x2="20" y2="40" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="4,2" />
+      <line x1="20" y1="-30" x2="20" y2="40" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="4 2" />
       <ellipse cx="20" cy="50" rx="14" ry="18" fill="#dc2626" stroke="#991b1b" stroke-width="1.5" />
       <circle id="sanctuary-lamp-red-glow" cx="20" cy="50" r="30" fill="url(#sanctuary-lamp-glow)" />
       <path d="M 20,40 Q 23,47 20,53 Q 17,47 20,40 Z" fill="#fef08a" />
-      <text x="20" y="80" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#f87171">Sanctuary Lamp</text>
+      <text x="20" y="80" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#f87171">Sanctuary Lamp</text>
     </g>
 
     <g transform="translate(490, 260)">
       <path d="M 10,26 Q 10,14 20,14 L 20,8 L 24,8 L 24,14 Q 34,14 34,26 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
       <line x1="22" y1="4" x2="22" y2="10" stroke="#ca8a04" stroke-width="2" />
       <circle cx="22" cy="28" r="3" fill="#ca8a04" />
-      <text x="22" y="44" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#facc15">Bells</text>
+      <text x="22" y="44" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#facc15">Bells</text>
     </g>
 
     <g transform="translate(530, 252)">
@@ -127,7 +127,7 @@
       <path d="M 9,36 L 9,25 Q 14,25 20,25 L 20,36 Z" fill="#881337" opacity="0.85" />
       <path d="M 26,36 L 26,22 Q 31,12 31,10 L 35,10 Q 35,12 39,22 L 39,36 Z" fill="none" stroke="#94a3b8" stroke-width="1.5" />
       <path d="M 27,36 L 27,27 Q 33,27 38,27 L 38,36 Z" fill="#38bdf8" opacity="0.65" />
-      <text x="24" y="52" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#94a3b8">Cruets</text>
+      <text x="24" y="52" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#94a3b8">Cruets</text>
     </g>
   </g>
 
@@ -139,7 +139,7 @@
     <path d="M 16,110 L 16,122 L 44,122 L 44,110 Z" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
     <rect x="26" y="36" width="8" height="74" fill="#fef08a" stroke="#ca8a04" stroke-width="1" />
     <rect x="15" y="55" width="30" height="8" fill="#fef08a" stroke="#ca8a04" stroke-width="1" />
-    <text x="30" y="136" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#facc15">Chasuble</text>
+    <text x="30" y="136" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#facc15">Chasuble</text>
   </g>
 
   <!-- SECTION 5: THE MONSTRANCE -->
@@ -156,14 +156,14 @@
       <line x1="0" y1="-48" x2="0" y2="48" stroke="#eab308" stroke-width="1.5" transform="rotate(157.5)" />
     </g>
     <circle cx="0" cy="0" r="35" fill="none" stroke="url(#sacred-gold)" stroke-width="4.5" />
-    <circle cx="0" cy="0" r="28" fill="rgba(255, 255, 255, 0.25)" stroke="#fef08a" stroke-width="1.5" />
+    <circle cx="0" cy="0" r="28" fill="#ffffff" fill-opacity="0.25" stroke="#fef08a" stroke-width="1.5" />
     <circle cx="0" cy="0" r="20" fill="#fffbeb" stroke="#facc15" stroke-width="1.5" filter="url(#soft-glow)" />
     <text x="0" y="5" text-anchor="middle" font-family="serif" font-weight="900" font-size="11" fill="#a16207">IHS</text>
     <path d="M -7,35 L 7,35 L 5,105 L -5,105 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
     <path d="M -24,120 L 24,120 L 16,105 L -16,105 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
     <line x1="0" y1="-35" x2="0" y2="-48" stroke="#fde047" stroke-width="2.5" />
     <line x1="-6" y1="-42" x2="6" y2="-42" stroke="#fde047" stroke-width="2.5" />
-    <text x="0" y="136" text-anchor="middle" font-family="system-ui, sans-serif" font-size="9" font-weight="700" fill="#facc15">Monstrance</text>
+    <text x="0" y="136" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#facc15">Monstrance</text>
   </g>
 
   <!-- Pulsating Gold Sheen Sparkle -->
@@ -176,30 +176,30 @@
     <!-- Touch/Click Targets -->
     <g id="tab-vessels">
       <rect x="10" y="4" width="125" height="26" fill="transparent" />
-      <text id="lbl-vessels" x="72" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#facc15">🏆 Vessels</text>
+      <text id="lbl-vessels" x="72" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#facc15">1. Vessels</text>
     </g>
 
     <g id="tab-linens">
       <rect x="145" y="4" width="125" height="26" fill="transparent" />
-      <text id="lbl-linens" x="207" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">🕊️ Linens</text>
+      <text id="lbl-linens" x="207" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">2. Linens</text>
     </g>
 
     <g id="tab-appointments">
       <rect x="280" y="4" width="140" height="26" fill="transparent" />
-      <text id="lbl-appointments" x="350" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">🕯️ Appointments</text>
+      <text id="lbl-appointments" x="350" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">3. Sanctuary</text>
     </g>
 
     <g id="tab-vestments">
       <rect x="430" y="4" width="125" height="26" fill="transparent" />
-      <text id="lbl-vestments" x="492" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">👑 Vestments</text>
+      <text id="lbl-vestments" x="492" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">4. Vestments</text>
     </g>
 
     <g id="tab-monstrance">
       <rect x="565" y="4" width="105" height="26" fill="transparent" />
-      <text id="lbl-monstrance" x="617" y="21" font-family="system-ui, -apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">✨ Monstrance</text>
+      <text id="lbl-monstrance" x="617" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#94a3b8">5. Monstrance</text>
     </g>
 
-    <!-- Indicator Knob: Translates horizontally without Y-offset -->
+    <!-- Indicator Knob -->
     <g id="category-slider-knob" pointer-events="none" transform="translate(72, 17)">
       <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="2" filter="url(#soft-glow)" />
       <polygon points="-3,-4 4,0 -3,4" fill="#1e1b4b" />
