@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T16:05:26.499Z",
+  "generatedAt": "2026-10-29T16:11:34.964Z",
   "totalCartridges": 60,
-  "masterChecksum": "09ac8122531ecdfb515585f264dbcf9bfb7ec5302e3f533a04fdaba5f9960f35",
+  "masterChecksum": "9efd6273526a1c6ba31aca95d6c967963926a2d1f692c253b964c69cf9c7d4b6",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -153,16 +153,16 @@
       "id": "cst-virtues",
       "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
       "stage": "CATHOLIC LIFE",
-      "type": "Sim",
-      "astSha256": "5d8adc69f49679e55dbb60bda74220bc374cc308640b6e08289a022c246926e8",
+      "type": "Slide",
+      "astSha256": "5a0ab01dcf129d86d529886cfad42995d885112682535293c587e0ef474e4731",
       "svgSha256": "bad8a077b47abe7450084c4dcf5d270712d77ee5d7bd702831ceaf19856b46f8",
-      "astbSha256": "50d12b6d5b03beb2da30585b74ea4898204ad21edbe1a3a3da76574fbd4fa0c5",
+      "astbSha256": "339b142056731ab8afd92027b3ed393f5ddacfdf3f0ffa6d3ffd4f1909e1aea8",
       "astbBytes": 2430,
-      "astBytes": 3835,
+      "astBytes": 3837,
       "svgBytes": 8123,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "a5035ba29415cb0ab11c4e5e75d03d067cec300428df7489680fd20c4958dfff",
+      "seal": "5669e50a8db3e1a6904bf9b19caf3887d42c14c7943898abe46ea47f548bb13a",
       "certified": true
     },
     "dna-helix": {

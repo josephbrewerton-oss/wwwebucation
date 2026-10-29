@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T16:05:29.644Z",
+  "generatedAt": "2026-10-29T16:11:37.477Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -140,7 +140,7 @@
     },
     {
       "id": "cst-virtues",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
       "stage": "CATHOLIC LIFE",
       "duration": 28,

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-10-29T16:05:25.636Z",
+  "generatedAt": "2026-10-29T16:11:34.064Z",
   "totalCartridges": 59,
   "units": [
     {
@@ -882,7 +882,7 @@
     {
       "id": "cst-virtues",
       "base": "cst-virtues",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
       "stage": "CATHOLIC LIFE",
       "oakId": "OAK-KS3-RE-012",
