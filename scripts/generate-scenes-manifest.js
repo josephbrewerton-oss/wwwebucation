@@ -2,10 +2,11 @@
  * scripts/generate-scenes-manifest.js
  * 
  * Scans controlled input directories for *.ast cartridges, verifies matching [id].svg,
- * parses/ensures root slots (:id, :type ["Sim"|"Slide"|"App"], :title, :stage, :duration), and emits:
- * 1. static/player/scenes.manifest.json (Runtime payload for the iframe player)
- * 2. src/data/player/generatedScenes.ts (Single source of truth for React UI)
- * 3. Keeps controlled input directories (scenes, cartridges) synchronized
+ * parses root slots (:id, :type ["Sim"|"Slide"|"App"|"Film"], :title, :stage, :duration), and emits:
+ * 1. static/player/scenes.manifest.json & static/scenes.manifest.json
+ * 2. static/player/manifest.oak.json & static/manifest.oak.json
+ * 3. src/data/player/generatedScenes.ts (Single source of truth for React UI)
+ * 4. Synchronizes assets into static/player/cartridges/ for zero-404 iframe execution
  */
 
 import fs from 'node:fs';
@@ -35,7 +36,6 @@ function extractSlot(content, regex) {
  * Zero hard-coded lists of IDs.
  */
 export function inferCartridgeType(rawType, astContent) {
-  // 1. Explicit declaration takes absolute priority
   if (rawType) {
     const clean = rawType.replace(/^"|"$/g, '').trim().toLowerCase();
     if (clean === 'sim' || clean === 'simulation' || clean === 'interactive') return 'Sim';
@@ -44,28 +44,23 @@ export function inferCartridgeType(rawType, astContent) {
     if (clean === 'film' || clean === 'video' || clean === 'movie') return 'Film';
   }
 
-  // 1b. Explicit video or film slot declaration
   if (/:video\s+|:film\s+/i.test(astContent)) {
     return 'Film';
   }
 
-  // 2. Structural Inference (Pure AST inspection, NO ID checking)
   const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
   const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
   const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
   const hasPhysics = /:physics\s*\(/i.test(astContent) || /:emitter\s+/i.test(astContent);
 
-  // If it's a narrated presentation with no direct pointer grabbing:
   if (hasSubtitles && !hasGestures && !hasPhysics) {
     return 'Slide';
   }
 
-  // If it has direct physical manipulation, emitters, or formative checkpoints:
   if (hasGestures || hasPhysics || hasCheckpoints) {
     return 'Sim';
   }
 
-  // Standalone game/utility/unclassified tool:
   return 'App';
 }
 
@@ -73,12 +68,10 @@ export function inferCartridgeType(rawType, astContent) {
  * Resolves controlled input directories from options, CLI flags, env vars, or defaults.
  */
 export function getControlledInputDirs(options = {}) {
-  // 1. Explicit options
   if (options.inputDirs && Array.isArray(options.inputDirs) && options.inputDirs.length > 0) {
     return options.inputDirs.map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
   }
 
-  // 2. Command-line args --input-dirs=dir1,dir2 or --dirs=dir1,dir2
   const cliDirsArg = process.argv.find(
     (arg) => arg.startsWith('--input-dirs=') || arg.startsWith('--dirs=') || arg.startsWith('--input-dir=')
   );
@@ -91,7 +84,6 @@ export function getControlledInputDirs(options = {}) {
       .map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
   }
 
-  // 3. Environment variables CARTRIDGE_DIRS or INPUT_DIRS
   const envDirs = process.env.CARTRIDGE_DIRS || process.env.INPUT_DIRS;
   if (envDirs) {
     return envDirs
@@ -101,9 +93,9 @@ export function getControlledInputDirs(options = {}) {
       .map((d) => (path.isAbsolute(d) ? d : path.join(rootDir, d)));
   }
 
-  // 4. Default controlled search paths (Single canonical source of truth)
   const defaultCandidates = [
-    path.join(rootDir, 'static', 'cartridges')
+    path.join(rootDir, 'static', 'cartridges'),
+    path.join(rootDir, 'static', 'player', 'cartridges')
   ];
 
   return defaultCandidates.filter((d) => fs.existsSync(d));
@@ -111,34 +103,24 @@ export function getControlledInputDirs(options = {}) {
 
 export const normalizeCartridgeType = inferCartridgeType;
 
-/**
- * Canonical Oak National Curriculum Standards & Reference Registry
- * Maps core curriculum apparatus to official Oak National Academy numbers,
- * key stages, subject departments, and verified lesson coordinates.
- */
 export const OAK_CURRICULUM_REGISTRY = {};
 
 /**
  * Dynamically resolves Oak Curriculum Number, Unit, Subject, Section and Mount.
- * Prioritizes explicit AST declaration, then canonical registry, then algorithmic inference.
- * Zero hardcoding failure.
  */
 export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
-  // 1. Explicit AST declaration takes top priority
   const declaredOakId = extractSlot(astContent, /:oak-?id\s+"([^"]+)"/i) || extractSlot(astContent, /:oak\s+"([^"]+)"/i);
   const declaredOakUnit = extractSlot(astContent, /:oak-?unit\s+"([^"]+)"/i) || extractSlot(astContent, /:unit\s+"([^"]+)"/i);
   const declaredSubject = extractSlot(astContent, /:subject\s+"([^"]+)"/i);
   const declaredMount = extractSlot(astContent, /:mount\s+"([^"]+)"/i);
   const declaredSection = extractSlot(astContent, /:section\s+"([^"]+)"/i);
 
-
-  // 3. Algorithmic inference from Stage & ID keywords
   const normStage = (stage || '').toUpperCase();
   let inferSubject = 'General Curriculum';
   let inferSection = 'Curriculum Cartridges';
   let inferPrefix = 'GEN';
 
-  if (/MATH|GEOMETRY|ALGEBRA|CALCULUS|ARITHMETIC/.test(normStage) || /math|pythagoras|algebra|calculus|fractions|bodmas|times/.test(id)) {
+  if (/MATH|GEOMETRY|ALGEBRA|CALCULUS|ARITHMETIC/.test(normStage) || /math|pythagoras|algebra|calculus|fractions|bodmas|times|pendulum/.test(id)) {
     inferSubject = 'Mathematics';
     inferSection = 'Mathematics & Geometry';
     inferPrefix = 'MAT';
@@ -185,7 +167,6 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
 function parseAstHeader(astContent, filename, base) {
   const fallbackBase = base || (filename ? filename.replace(/\.ast$/, '') : 'unnamed');
 
-  // Parse (:id ...), :id ..., (id ...), or meta (id ...)
   const parsedId = extractSlot(astContent, /\(:id\s+("([^"]+)"|([^\s\)]+))\)/i)
     || extractSlot(astContent, /:id\s+("([^"]+)"|([^\s\)]+))/i)
     || extractSlot(astContent, /\(id\s+("([^"]+)"|([^\s\)]+))\)/i)
@@ -193,12 +174,10 @@ function parseAstHeader(astContent, filename, base) {
   
   const id = parsedId || fallbackBase;
 
-  // Parse (:type ...), :type ..., (type ...)
   const rawType = extractSlot(astContent, /\(:type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)\)/i)
     || extractSlot(astContent, /:type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)/i)
     || extractSlot(astContent, /\(type\s+("Sim"|"Slide"|"App"|"Film"|"[^"]+"|[^\s\)]+)\)/i);
 
-  // Parse (:title ...), :title ..., (title ...)
   let title = extractSlot(astContent, /\(:title\s+"([^"]+)"\)/i)
     || extractSlot(astContent, /:title\s+"([^"]+)"/i)
     || extractSlot(astContent, /\(title\s+"([^"]+)"\)/i);
@@ -208,7 +187,6 @@ function parseAstHeader(astContent, filename, base) {
       .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
-  // Parse (:stage ...), :stage ..., (stage ...)
   let stage = extractSlot(astContent, /\(:stage\s+"([^"]+)"\)/i)
     || extractSlot(astContent, /:stage\s+"([^"]+)"/i)
     || extractSlot(astContent, /\(stage\s+"([^"]+)"\)/i);
@@ -216,7 +194,6 @@ function parseAstHeader(astContent, filename, base) {
     stage = 'CURRICULUM';
   }
 
-  // Parse (:duration ...), :duration ..., (duration ...)
   const durationStr = extractSlot(astContent, /\(:duration\s+([\d\.]+)\)/i)
     || extractSlot(astContent, /:duration\s+([\d\.]+)/i)
     || extractSlot(astContent, /\(duration\s+([\d\.]+)\)/i);
@@ -224,38 +201,30 @@ function parseAstHeader(astContent, filename, base) {
 
   const type = inferCartridgeType(rawType, astContent);
 
-  // Count keyframes
   const keyframesMatch = astContent.match(/\(:keyframes\s*\(([\s\S]*?)\)\s*\)/i);
   const keyframeCount = keyframesMatch ? (keyframesMatch[1].match(/\(:t\s+/g) || []).length : 0;
 
-  // Count subtitles
   const subtitlesMatch = astContent.match(/\(:subtitles\s*\(([\s\S]*?)\)\s*\)/i);
   const subtitleCount = subtitlesMatch ? (subtitlesMatch[1].match(/\(:start\s+/g) || []).length : 0;
 
-  // Count bindings
   const bindingsCount = (astContent.match(/\(:target\s+/g) || []).length;
 
-  // Checkpoints count & capability
   const checkpointBlocks = (astContent.match(/\(:checkpoint\s+/gi) || []).length;
   const isInteractiveDisabled = /:interactive\s+(false|nil|none)\b/i.test(astContent) ||
     /:questions\s+(false|nil|none)\b/i.test(astContent) ||
     type === 'App';
   const hasCheckpoints = !isInteractiveDisabled && checkpointBlocks > 0;
 
-  // 3D capabilities
   const has3D = /:camera\s+|:type\s+"3d-/i.test(astContent);
   const nodes3DCount = (astContent.match(/:type\s+"3d-/gi) || []).length;
 
-  // Core Cartridge Tier (:core true or :tier "core")
   const tierMatch = extractSlot(astContent, /:tier\s+("Core"|"core"|"phet"|"user"|"[^"]+"|[^\s\)]+)/i);
   const coreExplicit = /:core\s+(true|t)\b/i.test(astContent);
   const tier = tierMatch ? tierMatch.toLowerCase() : 'core';
   const isCore = coreExplicit || tier === 'core';
 
-  // Dynamic Oak Curriculum & Navigation Resolver (Zero Hardcoded Fragility)
   const curriculumMeta = resolveCartridgeCurriculumMetadata(id, astContent, stage);
 
-  // Video/Film backdrop capabilities
   const video = extractSlot(astContent, /:video\s+"([^"]+)"/i) || extractSlot(astContent, /:film\s+"([^"]+)"/i);
   const videoFit = extractSlot(astContent, /:video-?fit\s+"([^"]+)"/i) || extractSlot(astContent, /:videoFit\s+"([^"]+)"/i) || 'contain';
 
@@ -287,16 +256,11 @@ function parseAstHeader(astContent, filename, base) {
   };
 }
 
-/**
- * Ensures the .ast content explicitly declares :type ("Sim", "Slide", "App", "Film")
- */
 function ensureTypeCalledInAst(astContent, type) {
-  // If already calls :type "Sim"|"Slide"|"App"|"Film", preserve
   if (/:type\s+"(Sim|Slide|App|Film)"/i.test(astContent)) {
     return astContent;
   }
 
-  // If has other :type "3d-...", check if root header has :type
   const headerMatch = astContent.match(/^\s*\(:scene\s+:id\s+("[^"]+"|[^\s\)]+)/i);
   if (headerMatch) {
     return astContent.replace(
@@ -305,7 +269,6 @@ function ensureTypeCalledInAst(astContent, type) {
     );
   }
 
-  // Pattern (scene :id "..." ...)
   const altHeaderMatch = astContent.match(/^\s*\(scene\s+:id\s+("[^"]+"|[^\s\)]+)/i);
   if (altHeaderMatch) {
     return astContent.replace(
@@ -317,9 +280,6 @@ function ensureTypeCalledInAst(astContent, type) {
   return astContent;
 }
 
-/**
- * Ensures the .ast content explicitly declares :oak-id and :oak-unit
- */
 export function ensureOakCalledInAst(astContent, oakId, oakUnit) {
   if (!oakId) return astContent;
   let updated = astContent;
@@ -329,7 +289,6 @@ export function ensureOakCalledInAst(astContent, oakId, oakUnit) {
 
   if (hasOakId && hasOakUnit) return updated;
 
-  // Pattern (:scene :id "..." ...)
   const headerRegex = /^(\s*\(:scene\s+:id\s+(?:"[^"]+"|[^\s\)]+)(?:\s+:type\s+"[^"]+")?)/i;
   const match = updated.match(headerRegex);
   if (match) {
@@ -339,7 +298,6 @@ export function ensureOakCalledInAst(astContent, oakId, oakUnit) {
     return updated.replace(headerRegex, `$1${additions}`);
   }
 
-  // Pattern (scene :id "..." ...)
   const altHeaderRegex = /^(\s*\(scene\s+:id\s+(?:"[^"]+"|[^\s\)]+)(?:\s+:type\s+"[^"]+")?)/i;
   const altMatch = updated.match(altHeaderRegex);
   if (altMatch) {
@@ -363,17 +321,15 @@ export function generateScenesManifest(options = {}) {
 
   const manifest = [];
   const processedIds = new Set();
-  const allCartridgeFiles = new Map(); // id -> { astPath, svgPath, meta, content, base }
+  const allCartridgeFiles = new Map();
 
   for (const dir of inputDirs) {
     if (!fs.existsSync(dir)) continue;
     const files = fs.readdirSync(dir);
 
-    // Scan directory for all matching .ast and .svg file pairs by basename
     const astBasenames = new Set(files.filter((f) => f.endsWith('.ast')).map((f) => f.slice(0, -4)));
     const svgBasenames = new Set(files.filter((f) => f.endsWith('.svg')).map((f) => f.slice(0, -4)));
 
-    // Find all matching pairs
     const matchingBases = Array.from(astBasenames).filter((base) => svgBasenames.has(base));
 
     for (const base of matchingBases) {
@@ -387,9 +343,7 @@ export function generateScenesManifest(options = {}) {
 
       if (!meta || processedIds.has(meta.id)) continue;
 
-      // Ensure :type is called directly in the .ast file if in scene form
       let updatedContent = ensureTypeCalledInAst(content, meta.type);
-      // Ensure Oak Curriculum numbers (:oak-id and :oak-unit) are directly assigned in the .ast file if in scene form
       updatedContent = ensureOakCalledInAst(updatedContent, meta.oakId, meta.oakUnit);
       if (updatedContent !== content) {
         fs.writeFileSync(fullAstPath, updatedContent, 'utf8');
@@ -408,7 +362,7 @@ export function generateScenesManifest(options = {}) {
       manifest.push({
         id: meta.id,
         base: base,
-        type: meta.type, // "Sim" | "Slide" | "App" | "Film"
+        type: meta.type,
         title: meta.title,
         stage: meta.stage,
         duration: meta.duration,
@@ -436,7 +390,6 @@ export function generateScenesManifest(options = {}) {
     }
   }
 
-  // Systematic Oak National Curriculum progression ordering (Zero hardcoded scene names)
   function getOakSortKey(scene) {
     if (scene.id === 'welcome' || (scene.oakId && scene.oakId.includes('PORTAL'))) {
       return '0-0-000';
@@ -446,26 +399,14 @@ export function generateScenesManifest(options = {}) {
     const match = oakId.match(/OAK-(KS\d|EYFS|DEV|PORTAL)-([A-Z]+)-(\d+)/i);
 
     const subjectWeights = {
-      'RE': 1,
-      'MAT': 2,
-      'SCI': 3,
-      'ENG': 4,
-      'GEO': 5,
-      'MFL': 6,
-      'LAN': 6,
-      'INC': 7,
-      'COM': 8,
-      'DEV': 9
+      'RE': 1, 'MAT': 2, 'SCI': 3, 'ENG': 4,
+      'GEO': 5, 'MFL': 6, 'LAN': 6, 'INC': 7,
+      'COM': 8, 'DEV': 9
     };
 
     const stageWeights = {
-      'EYFS': 1,
-      'KS1': 2,
-      'KS2': 3,
-      'KS3': 4,
-      'KS4': 5,
-      'GCSE': 5,
-      'A-LEVEL': 6
+      'EYFS': 1, 'KS1': 2, 'KS2': 3,
+      'KS3': 4, 'KS4': 5, 'GCSE': 5, 'A-LEVEL': 6
     };
 
     if (match) {
@@ -487,7 +428,7 @@ export function generateScenesManifest(options = {}) {
     return a.title.localeCompare(b.title);
   });
 
-  // 1. Output runtime JSON manifest
+  // 1. Output runtime JSON manifests
   const output = {
     version: '2.6.0',
     generatedAt: new Date().toISOString(),
@@ -501,17 +442,15 @@ export function generateScenesManifest(options = {}) {
   fs.writeFileSync(manifestPath, jsonStr, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote ${manifest.length} scenes to ${manifestPath}`);
 
-  // Emit to root static/ directory for root-level fetches
   const rootManifestPath = path.join(rootDir, 'static', 'scenes.manifest.json');
   fs.writeFileSync(rootManifestPath, jsonStr, 'utf8');
 
-  // Emit scenes-config.json for backward compatibility in both locations
   const legacyConfigPath = path.join(rootDir, 'static', 'player', 'scenes-config.json');
   fs.writeFileSync(legacyConfigPath, jsonStr, 'utf8');
   const rootLegacyConfigPath = path.join(rootDir, 'static', 'scenes-config.json');
   fs.writeFileSync(rootLegacyConfigPath, jsonStr, 'utf8');
 
-  // 2. Output manifest.oak.json (authoritative Oak Curriculum Registry)
+  // 2. Output manifest.oak.json
   const oakUnits = [];
   const seenUnits = new Set();
   manifest.forEach((m) => {
@@ -564,17 +503,21 @@ export function generateScenesManifest(options = {}) {
   fs.writeFileSync(rootOakManifestPath, oakJsonStr, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote Oak manifest to ${playerOakManifestPath} and ${rootOakManifestPath}`);
 
-  // 1. Synchronize assets into static/player/scenes/ (authoritative single source of truth for player)
+  // 3. Synchronize assets into static/player/cartridges/ (matches manifest svgFile/astFile paths)
+  const playerCartridgesDir = path.join(rootDir, 'static', 'player', 'cartridges');
+  if (!fs.existsSync(playerCartridgesDir)) fs.mkdirSync(playerCartridgesDir, { recursive: true });
+
+  const rootCartridgesDir = path.join(rootDir, 'static', 'cartridges');
+  if (!fs.existsSync(rootCartridgesDir)) fs.mkdirSync(rootCartridgesDir, { recursive: true });
+
+  // Fallback scenes directory for backward compatibility
   const playerScenesDir = path.join(rootDir, 'static', 'player', 'scenes');
   if (!fs.existsSync(playerScenesDir)) fs.mkdirSync(playerScenesDir, { recursive: true });
 
-  const targetDir = path.join(rootDir, 'static', 'cartridges');
-  if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
-
   for (const [id, item] of allCartridgeFiles.entries()) {
-    // Copy into static/player/scenes/
-    const targetPlayerAst = path.join(playerScenesDir, `${item.base}.ast`);
-    const targetPlayerSvg = path.join(playerScenesDir, `${item.base}.svg`);
+    // A. Sync to static/player/cartridges/
+    const targetPlayerAst = path.join(playerCartridgesDir, `${item.base}.ast`);
+    const targetPlayerSvg = path.join(playerCartridgesDir, `${item.base}.svg`);
     if (!fs.existsSync(targetPlayerAst) || fs.readFileSync(targetPlayerAst, 'utf8') !== item.content) {
       fs.writeFileSync(targetPlayerAst, item.content, 'utf8');
     }
@@ -584,35 +527,33 @@ export function generateScenesManifest(options = {}) {
       }
     }
 
-    // Mirror with logical ID if different from disk base
-    if (item.meta.id && item.meta.id !== item.base) {
-      const targetPlayerAstId = path.join(playerScenesDir, `${item.meta.id}.ast`);
-      const targetPlayerSvgId = path.join(playerScenesDir, `${item.meta.id}.svg`);
-      if (!fs.existsSync(targetPlayerAstId) || fs.readFileSync(targetPlayerAstId, 'utf8') !== item.content) {
-        fs.writeFileSync(targetPlayerAstId, item.content, 'utf8');
-      }
-      if (fs.existsSync(item.svgPath)) {
-        if (!fs.existsSync(targetPlayerSvgId) || fs.statSync(item.svgPath).size !== fs.statSync(targetPlayerSvgId).size) {
-          fs.copyFileSync(item.svgPath, targetPlayerSvgId);
-        }
+    // B. Sync to static/cartridges/ (if discovered from player/cartridges)
+    const targetRootAst = path.join(rootCartridgesDir, `${item.base}.ast`);
+    const targetRootSvg = path.join(rootCartridgesDir, `${item.base}.svg`);
+    if (!fs.existsSync(targetRootAst) || fs.readFileSync(targetRootAst, 'utf8') !== item.content) {
+      fs.writeFileSync(targetRootAst, item.content, 'utf8');
+    }
+    if (fs.existsSync(item.svgPath) && item.svgPath !== targetRootSvg) {
+      if (!fs.existsSync(targetRootSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetRootSvg).size) {
+        fs.copyFileSync(item.svgPath, targetRootSvg);
       }
     }
 
-    // Sync into static/cartridges/
-    const targetAst = path.join(targetDir, `${item.base}.ast`);
-    const targetSvg = path.join(targetDir, `${item.base}.svg`);
-    if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
-      fs.writeFileSync(targetAst, item.content, 'utf8');
+    // C. Backward-compatibility mirror in static/player/scenes/
+    const legacySceneAst = path.join(playerScenesDir, `${item.base}.ast`);
+    const legacySceneSvg = path.join(playerScenesDir, `${item.base}.svg`);
+    if (!fs.existsSync(legacySceneAst) || fs.readFileSync(legacySceneAst, 'utf8') !== item.content) {
+      fs.writeFileSync(legacySceneAst, item.content, 'utf8');
     }
-    if (fs.existsSync(item.svgPath) && item.svgPath !== targetSvg) {
-      if (!fs.existsSync(targetSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetSvg).size) {
-        fs.copyFileSync(item.svgPath, targetSvg);
+    if (fs.existsSync(item.svgPath)) {
+      if (!fs.existsSync(legacySceneSvg) || fs.statSync(item.svgPath).size !== fs.statSync(legacySceneSvg).size) {
+        fs.copyFileSync(item.svgPath, legacySceneSvg);
       }
     }
   }
-  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/scenes/`);
+  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/cartridges/`);
 
-  // 3. Output strongly typed presets for React UI
+  // 4. Output strongly typed presets for React UI
   const tsDataDir = path.dirname(tsExportPath);
   if (!fs.existsSync(tsDataDir)) {
     fs.mkdirSync(tsDataDir, { recursive: true });
@@ -621,7 +562,7 @@ export function generateScenesManifest(options = {}) {
   const presetEntries = manifest.map((m) => ({
     id: m.id,
     base: m.base,
-    type: m.type, // 'Sim' | 'Slide' | 'App' | 'Film'
+    type: m.type,
     label: `${m.title}`,
     stage: m.stage,
     oakId: m.oakId,
@@ -666,7 +607,6 @@ export const PRESET_OPTIONS: ScenePresetOption[] = ${JSON.stringify(presetEntrie
   return output;
 }
 
-// Run when executed directly
 if (process.argv[1] && process.argv[1].endsWith('generate-scenes-manifest.js')) {
   generateScenesManifest();
   process.exit(0);
