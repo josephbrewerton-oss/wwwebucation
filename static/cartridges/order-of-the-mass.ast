@@ -1,16 +1,21 @@
 (:scene :id "order-of-the-mass" :type "Sim" :oak-id "OAK-KS2-RE-016" :oak-unit "ks2-re-catholic-order-of-mass" :title "The Order of the Holy Mass: Source & Summit of Catholic Life" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
-    (:var :name "massPart" :val 3.0 :min 1.0 :max 4.0 :step 1.0 :label "Part of the Holy Mass (1: Introductory, 2: Word, 3: Eucharist, 4: Concluding)")
-    (:var :name "elevationHeight" :val 1.0 :min 0.0 :max 1.5 :step 0.1 :label "Elevation of the Consecrated Host & Chalice")
-    (:var :name "sanctuaryLampGlow" :val 1.0 :min 0.3 :max 2.0 :step 0.1 :label "Sanctuary Red Lamp Real Presence Intensity")
+    (:var :name "massPart" :val 3.0 :min 1.0 :max 4.0 :step 1.0 :label "Part of Holy Mass (1: Introductory, 2: Word, 3: Eucharist, 4: Concluding)")
+    (:var :name "elevationHeight" :val 1.0 :min 0.0 :max 1.5 :step 0.1 :label "Elevation Height of Host & Chalice")
+    (:var :name "sanctuaryLampGlow" :val 1.0 :min 0.3 :max 2.0 :step 0.1 :label "Sanctuary Red Lamp Flame Glow")
   ))
 
-  (:camera :mode "2d" :viewBox "0 0 800 480")
+  (:inputs (
+    (:slider :var "massPart" :label "Mass Part (1–4)" :min 1.0 :max 4.0 :step 1.0)
+    (:slider :var "elevationHeight" :label "Elevation Height" :min 0.0 :max 1.5 :step 0.1)
+    (:slider :var "sanctuaryLampGlow" :label "Sanctuary Lamp Glow" :min 0.3 :max 2.0 :step 0.1)
+  ))
 
   (:gestures (
-    (:draggable :target "#mass-parts-knob" :axis "x" :min 140 :max 660
-      (:bind-var "massPart" :map "linear" :from-min 140 :from-max 660 :to-min 1.0 :to-max 4.0)
-    )
+    (:interactive :target "#btn-mass-1" :action "set-var" :var "massPart" :val 1.0)
+    (:interactive :target "#btn-mass-2" :action "set-var" :var "massPart" :val 2.0)
+    (:interactive :target "#btn-mass-3" :action "set-var" :var "massPart" :val 3.0)
+    (:interactive :target "#btn-mass-4" :action "set-var" :var "massPart" :val 4.0)
     (:draggable :target "#elevation-host-chalice" :axis "y" :min 90 :max 240
       (:bind-var "elevationHeight" :map "linear" :from-min 240 :from-max 90 :to-min 0.0 :to-max 1.5)
     )
@@ -49,9 +54,30 @@
   ))
 
   (:bindings (
-    (:target "#sanctuary-flame-halo" :attr "opacity" :expr "0.4 + 0.35 * sanctuaryLampGlow")
-    (:target "#sanctuary-flame-halo" :attr "r" :expr "20 + 12 * sanctuaryLampGlow")
-    (:target "#elevation-host-chalice" :attr "transform" :expr "'translate(0, ' + (-45 * elevationHeight) + ')'")
-    (:target "#host-divine-radiance" :attr "opacity" :expr "0.5 + 0.4 * sin(t * 2.5)")
+    ;; Sanctuary Lamp flame flicker
+    (:target "#sanctuary-flame-halo" :attr "opacity" :expr "0.4 + 0.35 * (vars.sanctuaryLampGlow || 1.0)")
+    (:target "#sanctuary-flame-halo" :attr "r" :expr "20 + 8 * (vars.sanctuaryLampGlow || 1.0)")
+
+    ;; Preserves x=400 center coordinate, lifts Chalice & Host upwards
+    (:target "#elevation-host-chalice" :attr "transform" :expr "'translate(400, ' + (160 - 50 * (vars.elevationHeight || 1.0)) + ')'")
+    (:target "#host-divine-radiance" :attr "opacity" :expr "0.45 + 0.35 * Math.sin(t * 3.0)")
+
+    ;; Bottom Slider Knob track translation (180px, 328px, 477px, 625px)
+    (:target "#mass-parts-knob" :attr "transform" :expr "'translate(' + (180 + ((vars.massPart || 3.0) - 1.0) * 148.33) + ', 0)'")
+
+    ;; HUD Badge Title
+    (:target "#mass-part-heading" :attr "textContent" :expr "Math.round(vars.massPart || 3) === 1 ? '1. INTRODUCTORY RITES' : Math.round(vars.massPart || 3) === 2 ? '2. LITURGY OF THE WORD' : Math.round(vars.massPart || 3) === 3 ? '3. LITURGY OF THE EUCHARIST' : '4. CONCLUDING RITES'")
+
+    ;; Part Layer Opacities
+    (:target "#layer-part-1" :attr "opacity" :expr "Math.round(vars.massPart || 3) === 1 ? 1.0 : 0.0")
+    (:target "#layer-part-2" :attr "opacity" :expr "Math.round(vars.massPart || 3) === 2 ? 1.0 : 0.0")
+    (:target "#layer-part-3" :attr "opacity" :expr "Math.round(vars.massPart || 3) === 3 ? 1.0 : 0.0")
+    (:target "#layer-part-4" :attr "opacity" :expr "Math.round(vars.massPart || 3) === 4 ? 1.0 : 0.0")
+
+    ;; Bottom Label Highlights (gold when active, slate when inactive)
+    (:target "#lbl-mass-1" :attr "fill" :expr "Math.round(vars.massPart || 3) === 1 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-mass-2" :attr "fill" :expr "Math.round(vars.massPart || 3) === 2 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-mass-3" :attr "fill" :expr "Math.round(vars.massPart || 3) === 3 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-mass-4" :attr "fill" :expr "Math.round(vars.massPart || 3) === 4 ? '#fef08a' : '#cbd5e1'")
   ))
 )
