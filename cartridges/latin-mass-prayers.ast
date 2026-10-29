@@ -10,44 +10,66 @@
   ))
 
   (:gestures (
-    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 615
-      (:bind-var "prayerIndex" :map "linear" :from-min 140 :from-max 615 :to-min 1.0 :to-max 4.0)
+    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 160 :max 585
+      (:bind-var "prayerIndex" :map "linear" :from-min 160 :from-max 585 :to-min 1.0 :to-max 4.0)
     )
   ))
 
   (:subtitles (
-    (:start 0.00 :end 0.20 :en "Latin has been the universal mother tongue of the Roman Catholic Church for nearly two thousand years." :es "El latín ha sido la lengua materna universal de la Iglesia Católica Romana durante casi dos mil años." :la "Lingua Latina est lingua materna universalis Ecclesiae Catholicae per saecula fideliter custodita.")
-    (:start 0.20 :end 0.45 :en "Praying in Latin unites Catholics across every country, culture, and continent in one shared voice of prayer." :es "Orar en latín une a los católicos de cada país, cultura y continente en una sola voz sagrada." :la "Oratio Latina catholicos omnium gentium et linguarum in unam vocem orantem coniungit.")
-    (:start 0.45 :end 0.70 :en "Gregorian Chant, written on a 4-line musical staff with square neumes, is the Church's native sacred music." :es "El canto gregoriano, escrito en tetragrama con neumas cuadrados, es la música sagrada propia de la Iglesia." :la "Cantus Gregorianus notis quadratis exaratus propria musica sacra Ecclesiae Romanae est.")
-    (:start 0.70 :end 0.88 :en "From the 'Pater Noster' taught by Christ to the 'Agnus Dei' chanted before Holy Communion, each prayer is steeped in Scripture." :es "Desde el 'Pater Noster' hasta el 'Agnus Dei' antes de la Comunión, cada oración brota de la Escritura." :la "A Pater Noster usque ad Agnus Dei ante sacram communionem omnis oratio sacris Scripturis abundat.")
-    (:start 0.88 :end 1.00 :en "By learning these foundational prayers, we step into the living river of Catholic sacred tradition." :es "Al aprender estas oraciones fundamentales, entramos en el río vivo de la tradición católica." :la "His orationibus ediscendis in vivum flumen sacrae traditionis catholicae ingredimur.")
+    (:start 0.00 :end 0.25 :en "Latin is the universal mother tongue of the Catholic Church. Slide 1: The Pater Noster (Our Father)." :es "El latín es la lengua materna de la Iglesia. Diapositiva 1: El Pater Noster.")
+    (:start 0.25 :end 0.50 :en "Slide 2: The Ave Maria (Hail Mary), echoing the words of Archangel Gabriel and Saint Elizabeth." :es "Diapositiva 2: El Ave María, según las palabras del Arcángel San Gabriel.")
+    (:start 0.50 :end 0.75 :en "Slide 3: The Sanctus (Holy, Holy, Holy), chanted with the heavenly choirs of angels." :es "Diapositiva 3: El Sanctus, cantado junto a los coros celestiales.")
+    (:start 0.75 :end 1.00 :en "Slide 4: The Agnus Dei (Lamb of God), invoking Christ before receiving Holy Communion." :es "Diapositiva 4: El Agnus Dei, invocando a Cristo antes de la Comunión.")
   ))
 
   (:keyframes (
-    (:t 0.00 :title "1. The Universal Sacred Tongue (Lingua Latina)" :rule "Lingua Latina: The timeless sacred language uniting Catholic worship across the earth.")
-    (:t 0.20 :title "2. Pater Noster (The Lord's Prayer)" :rule "Oratio Dominica: The prayer taught by Our Lord Jesus Christ Himself (Matthew 6:9-13).")
-    (:t 0.45 :title "3. Ave Maria (The Angelic Salutation)" :rule "Salutatio Angelica: Fulfilling Luke 1:28, 42 in filial love for the Mother of God.")
-    (:t 0.70 :title "4. Sanctus & Agnus Dei (Liturgical Chant)" :rule "Musica Sacra: Chanted by angels in Isaiah 6:3 and John the Baptist in John 1:29.")
-    (:t 0.88 :title "5. Gregorian Chant & Sacred Neumes" :rule "Cantus Gregorianus: Prayer sung with reverence, beauty, and solemn theological depth.")
+    (:t 0.00 :title "1. Pater Noster" :rule "Oratio Dominica: The Lord's Prayer taught by Christ.")
+    (:t 0.25 :title "2. Ave Maria" :rule "Salutatio Angelica: The Angelic Salutation.")
+    (:t 0.50 :title "3. Sanctus" :rule "Trisagion: The celestial hymn of Isaiah 6:3.")
+    (:t 0.75 :title "4. Agnus Dei" :rule "Fractio Panis: Lamb of God chanted at the Eucharistic fraction.")
   ))
 
   (:interactive (
     (:checkpoint :t 0.35
       :prompt "What does the Latin phrase 'Pater Noster, qui es in caelis' translate to in English?"
-      :options ("Our Father, who art in heaven" "Hail Mary, full of grace" "Glory be to the Father" "Lamb of God, who takest away the sins of the world")
+      :options ("Our Father, who art in heaven" "Hail Mary, full of grace" "Glory be to the Father" "Lamb of God")
       :answer 0
-      :explanation "'Pater Noster, qui es in caelis' is the opening phrase of the Lord's Prayer in Latin, taught by Jesus Christ in Matthew 6:9.")
+      :explanation "'Pater Noster, qui es in caelis' is the opening phrase of the Lord's Prayer in Latin.")
     (:checkpoint :t 0.75
       :prompt "Why does the Catholic Church hold Gregorian Chant in highest esteem for sacred liturgy (Sacrosanctum Concilium 116)?"
-      :options ("Because it is specially suited to the Roman liturgy and directs the soul to God without distraction" "Because other instruments were invented only recently" "Because modern melodies are forbidden entirely" "Purely as an archaeological museum artifact")
+      :options ("Because it is specially suited to the Roman liturgy and directs the soul to God without distraction" "Because other instruments were invented only recently" "Because modern melodies are forbidden entirely" "Purely as a museum artifact")
       :answer 0
-      :explanation "Vatican II (Sacrosanctum Concilium §116) affirms Gregorian chant as 'specially suited to the Roman liturgy' and therefore gives it 'pride of place in liturgical services'.")
+      :explanation "Vatican II (Sacrosanctum Concilium §116) gives Gregorian chant pride of place in liturgical services.")
   ))
 
   (:bindings (
+    ;; Candle light controls
     (:target "#manuscript-glow" :attr "opacity" :expr "0.4 + 0.35 * (vars.candleFlicker || 1.0)")
-    (:target "#neume-staff" :attr "opacity" :expr "t >= 0.40 ? 1.0 : 0.7")
-    ;; This physically moves the bottom knob along the track between 140px and 615px
-    (:target "#prayer-scroll-slider" :attr "transform" :expr "'translate(' + (140 + ((vars.prayerIndex || 1.0) - 1.0) * 158.3) + ', 17)'")
+    (:target "#candle-halo-left" :attr "r" :expr "30 + 10 * (vars.candleFlicker || 1.0)")
+    (:target "#candle-halo-right" :attr "r" :expr "30 + 10 * (vars.candleFlicker || 1.0)")
+
+    ;; Slider knob physical translation across the track (160 to 585)
+    (:target "#prayer-scroll-slider" :attr "transform" :expr "'translate(' + (160 + ((vars.prayerIndex || 1.0) - 1.0) * 141.67) + ', 0)'")
+
+    ;; Illuminated initial letter (P, A, S, A)
+    (:target "#chant-initial" :attr "textContent" :expr "Math.round(vars.prayerIndex || 1) === 1 ? 'P' : Math.round(vars.prayerIndex || 1) === 2 ? 'A' : Math.round(vars.prayerIndex || 1) === 3 ? 'S' : 'A'")
+
+    ;; Gregorian chant staff line 1
+    (:target "#chant-staff-line1" :attr "textContent" :expr "Math.round(vars.prayerIndex || 1) === 1 ? 'Pa - ter   nos - ter,   qui   es   in' : Math.round(vars.prayerIndex || 1) === 2 ? 'A - ve   Ma - rí - a,   grá - ti - a' : Math.round(vars.prayerIndex || 1) === 3 ? 'Sanc - tus,   Sanc - tus,   Sanc - tus' : 'Ag - nus   De - i,   qui   tol - lis'")
+
+    ;; Gregorian chant staff line 2
+    (:target "#chant-staff-line2" :attr "textContent" :expr "Math.round(vars.prayerIndex || 1) === 1 ? 'cae - lis:   sanc - ti - fi - cé - tur' : Math.round(vars.prayerIndex || 1) === 2 ? 'ple - na:   Dó - mi - nus   te - cum:' : Math.round(vars.prayerIndex || 1) === 3 ? 'Dó - mi - nus   De - us   Sá - ba - oth:' : 'pec - cá - ta   mun - di:'")
+
+    ;; Left folio Latin body layers
+    (:target "#latin-body-1" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 1 ? 1.0 : 0.0")
+    (:target "#latin-body-2" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 2 ? 1.0 : 0.0")
+    (:target "#latin-body-3" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 3 ? 1.0 : 0.0")
+    (:target "#latin-body-4" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 4 ? 1.0 : 0.0")
+
+    ;; Right folio English translation slides
+    (:target "#slide-prayer-1" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 1 ? 1.0 : 0.0")
+    (:target "#slide-prayer-2" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 2 ? 1.0 : 0.0")
+    (:target "#slide-prayer-3" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 3 ? 1.0 : 0.0")
+    (:target "#slide-prayer-4" :attr "opacity" :expr "Math.round(vars.prayerIndex || 1) === 4 ? 1.0 : 0.0")
   ))
 )

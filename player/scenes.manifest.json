@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T19:27:23.345Z",
+  "generatedAt": "2026-10-29T19:36:11.617Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -329,9 +329,9 @@
       "svgFile": "cartridges/latin-mass-prayers.svg",
       "astFile": "cartridges/latin-mass-prayers.ast",
       "astbFile": "bytecode/latin-mass-prayers.astb",
-      "keyframeCount": 5,
-      "subtitleCount": 5,
-      "bindingsCount": 3
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 15
     },
     {
       "id": "liturgical-calendar",
