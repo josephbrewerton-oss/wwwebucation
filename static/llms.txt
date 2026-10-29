@@ -37,11 +37,14 @@
 - **Smartboard & Stylus Pen Overlay**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
 - **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset mathematical Web Audio synthesis.
 - **PhET & Legacy Flash Transpiler Bridge (`ast-phet-bridge.js` & `phetBridge.ts`)**: Distills 12 MB legacy PhET HTML5/JSON bundles and Flash SWFs down into <4 KB AST S-Expressions (99.8% payload reduction) while preserving physical conservation laws, zero-asset Web Audio, and SCORM auto-reporting.
+> Deterministic, privacy-first, on-device AI educational portal running via in-browser WebRTC loopback channels, Chrome Prompt API (Gemini Nano), WebLLM, and the autonomous <35 KB AST Vector Media Engine. 
+
+The AST player serves a dual-market architecture: perpetually free for state schools and the humanitarian commons (Track A), and commercially licensed for enterprise LMS, digital signage, and high-performance embedded systems (Track B).
 - **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
 - **Decoupled 4-Way Distribution**: The engine distributes across four universal formats: (1) Headless npm package (`@stjosephs/ast-vector-player`); (2) Zero-dependency Web Component (`<micro-vector-player>`); (3) Embeddable responsive LMS iframe (`/player/index.html?preset=...`) with bidirectional `postMessage` telemetry; and (4) Single-file air-gapped HTML bundle (`<45 KB`) running from `file://` or USB thumb drives.
 - **Cross-Industry DOOH & AdTech Ready (Track B)**: Meets strict IAB display advertising weight limits (<45 KB total ad weight vs 150 KB cap), runs 24/7 on low-power quad-core ARM chips (Raspberry Pi, Android 11 sticks, LG webOS, Samsung Tizen) with <8 MB RAM, scales infinitely from 2-inch shelf labels to 100-ft 8K billboards with zero pixelation, and executes Dynamic Creative Optimization (DCO) over `postMessage`.
 
-## Complete Production Curriculum Cartridge Catalog (46 Cartridges)
+## Complete Production Curriculum Cartridge Catalog (48 Cartridges)
 
 ### Mathematics & Quantitative Reasoning
 1. [Calculus: Tangent Slopes & Integrals](/curriculum/maths/calculus/tangent-slopes) (`calculus-curves`) - Tangent slope dy/dx, stationary turning points, and Riemann Simpson's 1/3 numerical integrals.
@@ -58,48 +61,50 @@
 10. [Bohr Atomic Structure & Electron Shells](/curriculum/science/chemistry/atomic-structure) (`atom`) - 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell inclination tilt.
 11. [Kinematics: Velocity & Distance-Time Vectors](/curriculum/science/physics/velocity-vectors) (`velocity`) - Distance-time and velocity-time graphs with synchronized vector sprites and acceleration vectors.
 12. [Solar System 3D Heliocentric Orbits](/curriculum/science/physics/solar-system) (`solar-system`) - Heliocentric planetary orbits, Keplerian velocities, axial tilts, and 3D inclination angles.
+13. [BBC Micro Model B & MOS 6502 Architecture](/curriculum/computing/bbc-micro) (`bbc-micro`) - Sophie Wilson 1981 Acorn MOS 6502 system, 54-key matrix, SAA5050 Ceefax teletext Mode 7 overlay, and native CRT phosphor scanline optics.
+14. [Inverted Pendulum & Cart-Pole LQR Balance](/curriculum/computing/cart-pole) (`cart-pole`) - Deterministic continuous 60 FPS state-space feedback control, real-time telemetry HUD, and kinematic disturbance injection.
 
 ### Biology & Earth Sciences
-13. [DNA Watson-Crick Double Helix & Transcription](/curriculum/science/biology/dna-helix) (`dna-helix`) - Hydrogen-bonded base pairing (A-T, C-G) in 3D projected helical twist with interactive unzipping and transcription controls.
-14. [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) (`photosynthesis`) - Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
-15. [Water Cycle Continuous Earth Engine](/curriculum/geography/water-cycle) (`water-cycle`) - Evaporation, transpiration, condensation, precipitation, and percolation cycle.
-16. [Mountain Elevation & Atmospheric Science](/curriculum/geography/mountain-elevation) (`mountain-elevation`) - Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
-17. [Aquarium Living Ecosystem Stress Benchmark](/curriculum/computing/stress-benchmark) (`fish-tank`) - Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
+15. [DNA Watson-Crick Double Helix & Transcription](/curriculum/science/biology/dna-helix) (`dna-helix`) - Hydrogen-bonded base pairing (A-T, C-G) in 3D projected helical twist with interactive unzipping and transcription controls.
+16. [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) (`photosynthesis`) - Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
+17. [Water Cycle Continuous Earth Engine](/curriculum/geography/water-cycle) (`water-cycle`) - Evaporation, transpiration, condensation, precipitation, and percolation cycle.
+18. [Mountain Elevation & Atmospheric Science](/curriculum/geography/mountain-elevation) (`mountain-elevation`) - Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
+19. [Aquarium Living Ecosystem Stress Benchmark](/curriculum/computing/stress-benchmark) (`fish-tank`) - Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
 
 ### Early Literacy, Phonics & English Language Arts
-18. [Early Phonics Laboratory](/curriculum/english/phonics/phonics-lab) (`phonics-lab`) - Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
-19. [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) (`phonics-screening`) - DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
-20. [Spelling Bee Championship Arena](/curriculum/english/spelling/spelling-bee) (`spelling-bee`) - Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
-21. [Shakespeare Globe Theatre 1599 Anatomy](/curriculum/english/theatre/globe) (`shakespeare`) - 1599 Wooden O 3D stage geometry, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
-22. [Macbeth: 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) (`shakespeare-macbeth`) - 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
+20. [Early Phonics Laboratory](/curriculum/english/phonics/phonics-lab) (`phonics-lab`) - Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
+21. [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) (`phonics-screening`) - DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
+22. [Spelling Bee Championship Arena](/curriculum/english/spelling/spelling-bee) (`spelling-bee`) - Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
+23. [Shakespeare Globe Theatre 1599 Anatomy](/curriculum/english/theatre/globe) (`shakespeare`) - 1599 Wooden O 3D stage geometry, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
+24. [Macbeth: 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) (`shakespeare-macbeth`) - 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
 
 ### Languages, Polyglot & Accessibility
-23. [MFL & Polyglot Languages Studio](/curriculum/languages/mfl-polyglot) (`languages`) - Spanish, French & Latin comparative phonics, conversational speech synthesis, and regular verb conjugation wheels.
-24. [3D British Sign Language (BSL) Two-Handed Fingerspelling](/curriculum/languages/bsl-fingerspelling) (`bsl-fingerspelling`) - 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
+25. [MFL & Polyglot Languages Studio](/curriculum/languages/mfl-polyglot) (`languages`) - Spanish, French & Latin comparative phonics, conversational speech synthesis, and regular verb conjugation wheels.
+26. [3D British Sign Language (BSL) Two-Handed Fingerspelling](/curriculum/languages/bsl-fingerspelling) (`bsl-fingerspelling`) - 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
 
 ### Catholic Life, Liturgy & Sacraments
-25. [Solemn Eucharistic Procession Film](/curriculum/catholic-life/film) (`eucharistic-procession-film`) - Synchronized liturgical film and vector HUD overlay, Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil benediction.
-26. [Sacred Altar Anatomy & Types](/curriculum/catholic-life/altar-anatomy) (`altar-anatomy`) - Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
-27. [Sacred Church Tour & Architecture](/curriculum/catholic-life/church-tour) (`church-tour`) - 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
-28. [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) (`stations-of-the-cross`) - The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
-29. [Holy Oils & Sacred Ambry (Olea Sancta)](/curriculum/catholic-life/holy-oils) (`holy-oils`) - Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
-30. [Holy Water & The Thurible (Asperges & Incense)](/curriculum/catholic-life/holy-water-thurifer) (`holy-water-thurifer`) - Holy Water fonts, Aspergillum & Aspersorium, Thurible censing swings, charcoal boat, and sacramental purification rites.
-31. [The Holy Rosary: 3D Beads & 20 Mysteries](/curriculum/catholic-life/rosary-mysteries) (`rosary-mysteries`) - Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
-32. [First Holy Communion & Eucharistic Adoration](/curriculum/catholic-life/first-communion) (`first-communion`) - Catechetical preparation for First Holy Communion, Real Presence, Transubstantiation, and Eucharistic Adoration in the Monstrance.
-33. [The Seven Holy Sacraments](/curriculum/catholic-life/seven-sacraments) (`seven-sacraments`) - Sacraments of Initiation (Baptism, Confirmation, Eucharist), Healing (Reconciliation, Anointing), and Service (Holy Orders, Matrimony).
-34. [The Order of the Holy Mass](/curriculum/catholic-life/order-of-the-mass) (`order-of-the-mass`) - Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites with Latin & English dialogs.
-35. [The Sacred Paschal Triduum & Easter](/curriculum/catholic-life/triduum-easter) (`triduum-easter`) - Holy Thursday Mass of the Lord's Supper, Good Friday Passion, Easter Vigil Lucernarium (Lumen Christi), and Easter Sunday Resurrection.
-36. [The Catholic Liturgical Year & Seasons](/curriculum/catholic-life/liturgical-calendar) (`liturgical-calendar`) - Seasonal cycle of Advent, Christmas, Lent, Triduum, Easter, and Ordinary Time with liturgical color symbolism.
-37. [Sacred Postures & Gestures in Prayer](/curriculum/catholic-life/liturgical-postures) (`liturgical-postures`) - Genuflection, bowing, kneeling, standing, Sign of the Cross, and Orans posture with theological meanings.
+27. [Solemn Eucharistic Procession Film](/curriculum/catholic-life/film) (`eucharistic-procession-film`) - Synchronized liturgical film and vector HUD overlay, Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil benediction.
+28. [Sacred Altar Anatomy & Types](/curriculum/catholic-life/altar-anatomy) (`altar-anatomy`) - Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
+29. [Sacred Church Tour & Architecture](/curriculum/catholic-life/church-tour) (`church-tour`) - 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
+30. [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) (`stations-of-the-cross`) - The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
+31. [Holy Oils & Sacred Ambry (Olea Sancta)](/curriculum/catholic-life/holy-oils) (`holy-oils`) - Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
+32. [Holy Water & The Thurible (Asperges & Incense)](/curriculum/catholic-life/holy-water-thurifer) (`holy-water-thurifer`) - Holy Water fonts, Aspergillum & Aspersorium, Thurible censing swings, charcoal boat, and sacramental purification rites.
+33. [The Holy Rosary: 3D Beads & 20 Mysteries](/curriculum/catholic-life/rosary-mysteries) (`rosary-mysteries`) - Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
+34. [First Holy Communion & Eucharistic Adoration](/curriculum/catholic-life/first-communion) (`first-communion`) - Catechetical preparation for First Holy Communion, Real Presence, Transubstantiation, and Eucharistic Adoration in the Monstrance.
+35. [The Seven Holy Sacraments](/curriculum/catholic-life/seven-sacraments) (`seven-sacraments`) - Sacraments of Initiation (Baptism, Confirmation, Eucharist), Healing (Reconciliation, Anointing), and Service (Holy Orders, Matrimony).
+36. [The Order of the Holy Mass](/curriculum/catholic-life/order-of-the-mass) (`order-of-the-mass`) - Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites with Latin & English dialogs.
+37. [The Sacred Paschal Triduum & Easter](/curriculum/catholic-life/triduum-easter) (`triduum-easter`) - Holy Thursday Mass of the Lord's Supper, Good Friday Passion, Easter Vigil Lucernarium (Lumen Christi), and Easter Sunday Resurrection.
+38. [The Catholic Liturgical Year & Seasons](/curriculum/catholic-life/liturgical-calendar) (`liturgical-calendar`) - Seasonal cycle of Advent, Christmas, Lent, Triduum, Easter, and Ordinary Time with liturgical color symbolism.
+39. [Sacred Postures & Gestures in Prayer](/curriculum/catholic-life/liturgical-postures) (`liturgical-postures`) - Genuflection, bowing, kneeling, standing, Sign of the Cross, and Orans posture with theological meanings.
 38. [The Liturgy of the Hours (Divine Office)](/curriculum/catholic-life/liturgy-of-the-hours) (`liturgy-of-the-hours`) - Sanctification of daily time through Matins, Lauds, Terce, Sext, None, Vespers, and Compline.
-39. [The Nicene & Apostles' Creed](/curriculum/catholic-life/nicene-creed) (`nicene-creed`) - Systematic exploration of the Credo in Unum Deum, Trinitarian theology, Christology, and Four Marks of the Church.
-40. [The Ten Commandments & Moral Law](/curriculum/catholic-life/ten-commandments) (`ten-commandments`) - The Decalogue on the Two Tablets of Sinai, love of God and neighbor, and Catholic moral theology.
-41. [Sacred Vessels, Linens & Vestments](/curriculum/catholic-life/sacred-objects) (`sacred-objects`) - Chalice, Ciborium, Paten, Monstrance, Corporal, Purificator, Alb, Cincture, Stole, Chasuble, and Humeral Veil.
-42. [Latin Prayers & Gregorian Chant](/curriculum/catholic-life/latin-mass-prayers) (`latin-mass-prayers`) - Pater Noster, Ave Maria, Gloria Patri, Salve Regina, and Gregorian neume notation.
-43. [The 24 Catholic Rites & Churches](/curriculum/catholic-life/catholic-rites) (`catholic-rites`) - Universal communion across Western Latin Rite and Eastern Catholic Rites (Byzantine, Alexandrian, Antiochene, Armenian, Chaldean).
-44. [Catholic Social Teaching & Gospel Virtues](/curriculum/catholic-life/cst-virtues) (`cst-virtues`) - Seven principles of CST (Human Dignity, Subsidiarity, Common Good, Option for the Poor, Solidarity) and theological/cardinal virtues.
-45. [Sample Physics Knowledge Pipeline](/curriculum/science/physics/pipeline-sample) (`pipeline-sample`) - Algorithmic physics pipeline and kinetic energy vector calculation testbed.
-46. [Portal Welcome & Simulator Onboarding](/curriculum/portal/welcome) (`welcome`) - Guided onboarding tour of the AST vector canvas, camera orbit controls, and smartboard stylus whiteboard tools.
+40. [The Nicene & Apostles' Creed](/curriculum/catholic-life/nicene-creed) (`nicene-creed`) - Systematic exploration of the Credo in Unum Deum, Trinitarian theology, Christology, and Four Marks of the Church.
+41. [The Ten Commandments & Moral Law](/curriculum/catholic-life/ten-commandments) (`ten-commandments`) - The Decalogue on the Two Tablets of Sinai, love of God and neighbor, and Catholic moral theology.
+43. [Sacred Vessels, Linens & Vestments](/curriculum/catholic-life/sacred-objects) (`sacred-objects`) - Chalice, Ciborium, Paten, Monstrance, Corporal, Purificator, Alb, Cincture, Stole, Chasuble, and Humeral Veil.
+44. [Latin Prayers & Gregorian Chant](/curriculum/catholic-life/latin-mass-prayers) (`latin-mass-prayers`) - Pater Noster, Ave Maria, Gloria Patri, Salve Regina, and Gregorian neume notation.
+45. [The 24 Catholic Rites & Churches](/curriculum/catholic-life/catholic-rites) (`catholic-rites`) - Universal communion across Western Latin Rite and Eastern Catholic Rites (Byzantine, Alexandrian, Antiochene, Armenian, Chaldean).
+46. [Catholic Social Teaching & Gospel Virtues](/curriculum/catholic-life/cst-virtues) (`cst-virtues`) - Seven principles of CST (Human Dignity, Subsidiarity, Common Good, Option for the Poor, Solidarity) and theological/cardinal virtues.
+47. [Sample Physics Knowledge Pipeline](/curriculum/science/physics/pipeline-sample) (`pipeline-sample`) - Algorithmic physics pipeline and kinetic energy vector calculation testbed.
+48. [Portal Welcome & Simulator Onboarding](/curriculum/portal/welcome) (`welcome`) - Guided onboarding tour of the AST vector canvas, camera orbit controls, and smartboard stylus whiteboard tools.
 
 ## Structured Substrates & Machine Manifests
 - [Master Curriculum Catalog](/manifests/catalog.json) - Machine-readable Oak-aligned curriculum manifest
@@ -116,4 +121,8 @@
 - **Declarative Tuple Composition**: When composing interactive lessons or slides, declare multi-modal tuples containing vector keyframes, reactive bindings, sound sonification hooks, and formative assessment gates.
 - **Coordinate Space Invariant**: Standardize on `<svg viewBox="0 0 800 480">` with responsive element IDs matching `:bindings` declarations.
 - **Dynamic Parameters**: Emit `:inputs` and `:vars` blocks with explicit `:label`, `:min`, `:max`, `:step`, and `:default` properties to trigger the engine's generic parameter HUD automatically without custom JavaScript.
+- **Scene Execution Typology**: Always declare the correct `:type` in the root `(:scene ...)` tag:
+  - `:type "Sim"` for continuous $\Delta t$ dynamic integration (kinematics, pendulums, orbits, gas laws).
+  - `:type "Slide"` for discrete conceptual inspection decks (CST virtues, liturgical postures, grammar rubrics) without a runaway clock.
+  - `:type "Film"` for strictly monotonic timeline choreography ($t \in [0.0, 1.0]$) bound to audio or video duration.
 - **Token Efficiency**: Rely on concise AST S-Expressions rather than prose; S-Expressions consume 75% fewer tokens and execute deterministically at 60 FPS in native SVG.
