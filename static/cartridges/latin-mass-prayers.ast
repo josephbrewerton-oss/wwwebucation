@@ -10,10 +10,11 @@
   ))
 
   (:gestures (
-    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 160 :max 585
-      (:bind-var "prayerIndex" :map "linear" :from-min 160 :from-max 585 :to-min 1.0 :to-max 4.0)
-    )
-  ))
+  (:click :target "#btn-pater" :action "set-var" :var "prayerIndex" :val 1.0)
+  (:click :target "#btn-ave" :action "set-var" :var "prayerIndex" :val 2.0)
+  (:click :target "#btn-sanctus" :action "set-var" :var "prayerIndex" :val 3.0)
+  (:click :target "#btn-agnus" :action "set-var" :var "prayerIndex" :val 4.0)
+))
 
   (:subtitles (
     (:start 0.00 :end 0.25 :en "Latin is the universal mother tongue of the Catholic Church. Slide 1: The Pater Noster (Our Father)." :es "El latín es la lengua materna de la Iglesia. Diapositiva 1: El Pater Noster.")
