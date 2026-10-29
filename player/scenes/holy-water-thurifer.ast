@@ -44,11 +44,11 @@
  (:bindings (
     ;; 1. Solemn, stately thurible swing (clamped and phased)
     (:target "#thurible-swing-group" :attr "transform" 
-      :expr "'rotate(' + (t >= 0.55 ? Math.sin((t - 0.55) * Math.PI * 8) * (vars.swingArc || 25) : 0) + ' 400 60)'")
+      :expr "'rotate(' + (t >= 0.55 ? Math.sin((t - 0.55) * Math.PI * 3) * (vars.swingArc || 25) : 0) + ' 400 60)'")
 
     ;; 2. Smoke Vertical Rise & Drift: Sways in harmonic cadence with the thurible (PI * 8)
     (:target "#incense-smoke-cloud" :attr "transform" 
-      :expr "t >= 0.55 ? 'translate(' + (Math.sin((t - 0.55) * Math.PI * 8) * 16) + ',' + (-((t - 0.55) * 200) % 180) + ') scale(' + (1.0 + (((t - 0.55) * 1.5) % 1.1)) + ')' : 'translate(0,0) scale(0)'")
+      :expr "t >= 0.55 ? 'translate(' + (Math.sin((t - 0.55) * Math.PI * 3) * 16) + ',' + (-((t - 0.55) * 200) % 180) + ') scale(' + (1.0 + (((t - 0.55) * 1.5) % 1.1)) + ')' : 'translate(0,0) scale(0)'")
 
     ;; 3. Smoke Opacity: Fades in at the thurible, remains dense, fades toward top
     (:target "#incense-smoke-cloud" :attr "opacity" 
