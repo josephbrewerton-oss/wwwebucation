@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="100%" height="100%">
+  <defs>
+    <style>
+      .track { stroke: #2a2d34; stroke-width: 4; stroke-linecap: round; }
+      .cart-body { fill: #1f2430; stroke: #707a8c; stroke-width: 2; rx: 4; }
+      .wheel { fill: #0f111a; stroke: #4c566a; stroke-width: 2; }
+      .pole-stem { stroke: #ff3366; stroke-width: 4; stroke-linecap: round; }
+      .pivot { fill: #ffd866; stroke: #1f2430; stroke-width: 2; }
+      .hud-text { font-family: monospace; font-size: 11px; fill: #a6accd; }
+      .hud-val  { font-family: monospace; font-size: 14px; font-weight: bold; }
+    </style>
+  </defs>
+
+  <!-- Track & Baseline -->
+  <line x1="50" y1="280" x2="750" y2="280" class="track" />
+
+  <!-- The Cart Assembly (Transformed via Cartesian X) -->
+  <g id="cart" transform="translate(400, 250)">
+    <!-- Wheels -->
+    <circle cx="-30" cy="25" r="8" class="wheel" />
+    <circle cx="30" cy="25" r="8" class="wheel" />
+    <!-- Chassis -->
+    <rect x="-45" y="0" width="90" height="24" class="cart-body" />
+    
+    <!-- The Inverted Pole (Rotated around the pivot at 0, 0) -->
+    <!-- The Needle Law: Pure polar rotation, 0 degrees is straight UP -->
+    <g id="pole" transform="rotate(0, 0, 0)">
+      <line x1="0" y1="0" x2="0" y2="-120" class="pole-stem" />
+      <circle cx="0" cy="-120" r="7" fill="#ff3366" />
+    </g>
+    <!-- Pivot Pin -->
+    <circle cx="0" cy="0" r="4" class="pivot" />
+  </g>
+
+  <!-- Arcade Telemetry HUD -->
+  <g id="hud" transform="translate(50, 40)">
+    <text x="0" y="0" class="hud-text">MODE: <tspan id="hud-mode" class="hud-val" fill="#a6e22e">TUPLE</tspan></text>
+    <text x="0" y="22" class="hud-text">PAYLOAD: <tspan id="hud-bytes" class="hud-val" fill="#f8f8f2">14 B</tspan></text>
+    <text x="0" y="44" class="hud-text">LOOP LATENCY: <tspan id="hud-ms" class="hud-val" fill="#a6e22e">11.2 ms</tspan></text>
+    <text x="0" y="66" class="hud-text">STATE: <tspan id="hud-status" class="hud-val" fill="#a6e22e">LOCKED (60 FPS)</tspan></text>
+  </g>
+</svg>
