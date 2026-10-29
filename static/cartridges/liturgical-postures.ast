@@ -44,8 +44,37 @@
       :explanation "At the announcement of the Gospel, priest and people trace the Sign of the Cross with the thumb on the forehead, lips, and chest, praying silently: 'May the Word of the Lord be on my mind, on my lips, and in my heart.'")
   ))
   (:bindings (
-    (:target "#pilgrim-figure-torso" :attr "transform" :expr "t >= 0.65 && t < 0.82 ? 'rotate(' + (35 + (vars.reverenceAngle || 0) * 0.4) + ' 400 240)' : (t >= 0.22 && t < 0.65 ? 'translate(0, 30)' : 'none')")
-    (:target "#pilgrim-knees-group" :attr "transform" :expr "t >= 0.22 && t < 0.65 ? 'scale(1, 0.75) translate(0, 45)' : 'none'")
-    (:target "#cross-trace-stroke" :attr "opacity" :expr "t >= 0.82 ? (0.85 + Math.sin(t * 20) * 0.15) : 0.05")
+    ;; Determine effective posture state from either manual slider or timeline t
+    ;; 0: Stand, 1: Kneel, 2: Genuflect, 3: Bow, 4: Sign of Cross
+    (:target "#pilgrim-figure-torso" :attr "transform" :expr "
+      var p = (vars.postureStep !== undefined && vars.postureStep > 0) ? vars.postureStep : (t < 0.22 ? 0 : (t < 0.44 ? 1 : (t < 0.65 ? 2 : (t < 0.82 ? 3 : 4))));
+      var angle = parseFloat(vars.reverenceAngle || 0);
+      if (p === 3) {
+        'rotate(' + (25 + angle * 0.5) + ' 400 240)';
+      } else if (p === 1 || p === 2) {
+        'translate(0, 36)';
+      } else {
+        'none';
+      }
+    ")
+    (:target "#pilgrim-knees-group" :attr "transform" :expr "
+      var p = (vars.postureStep !== undefined && vars.postureStep > 0) ? vars.postureStep : (t < 0.22 ? 0 : (t < 0.44 ? 1 : (t < 0.65 ? 2 : (t < 0.82 ? 3 : 4))));
+      if (p === 1) {
+        'translate(0, 24) scale(1, 0.70)';
+      } else if (p === 2) {
+        'translate(0, 18) scale(1, 0.82)';
+      } else {
+        'none';
+      }
+    ")
+    (:target "#cross-trace-stroke" :attr "opacity" :expr "
+      var p = (vars.postureStep !== undefined && vars.postureStep > 0) ? vars.postureStep : (t < 0.22 ? 0 : (t < 0.44 ? 1 : (t < 0.65 ? 2 : (t < 0.82 ? 3 : 4))));
+      var prog = parseFloat(vars.crossSignProgress !== undefined ? vars.crossSignProgress : 1.0);
+      if (p === 4) {
+        (0.75 + Math.sin(t * 12) * 0.25) * prog;
+      } else {
+        0.05;
+      }
+    ")
   ))
 )
