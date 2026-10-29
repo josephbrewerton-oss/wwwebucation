@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-10-29T08:36:09.986Z",
+  "generatedAt": "2026-10-29T08:51:56.998Z",
   "totalCartridges": 59,
   "units": [
     {
@@ -320,6 +320,15 @@
       "cartridgeId": "velocity"
     },
     {
+      "unit": "ks3-physics-inverted-pendulum-dyno",
+      "oakId": "OAK-KS3-SCI-010",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "stage": "KS3 PHYSICS",
+      "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
+      "cartridgeId": "inverted-pendulum-dyno"
+    },
+    {
       "unit": "ks1-english-reading-phonics-sound-buttons",
       "oakId": "OAK-KS1-ENG-001",
       "subject": "English",
@@ -399,15 +408,6 @@
       "stage": "BENCHMARK & STRESS LAB",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "cartridgeId": "fish-tank"
-    },
-    {
-      "unit": "ks3-generalcurriculum-inverted-pendulum-dyno",
-      "oakId": "OAK-KS3-GEN-INVERTEDP",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "stage": "CURRICULUM",
-      "title": "Inverted Pendulum Dyno",
-      "cartridgeId": "inverted-pendulum-dyno"
     },
     {
       "unit": "Algorithms and Sequencing",
@@ -1220,6 +1220,26 @@
       "checkpointCount": 1
     },
     {
+      "id": "inverted-pendulum-dyno",
+      "base": "inverted-pendulum-dyno",
+      "type": "Sim",
+      "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
+      "stage": "KS3 PHYSICS",
+      "oakId": "OAK-KS3-SCI-010",
+      "oakUnit": "ks3-physics-inverted-pendulum-dyno",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "mount": "/curriculum/science/inverted-pendulum-dyno",
+      "duration": 16,
+      "svgFile": "cartridges/inverted-pendulum-dyno.svg",
+      "astFile": "cartridges/inverted-pendulum-dyno.ast",
+      "astbFile": "bytecode/inverted-pendulum-dyno.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 2
+    },
+    {
       "id": "phonics-lab",
       "base": "phonics-lab",
       "type": "App",
@@ -1434,26 +1454,6 @@
       "svgFile": "cartridges/fish-tank.svg",
       "astFile": "cartridges/fish-tank.ast",
       "astbFile": "bytecode/fish-tank.astb",
-      "isCore": true,
-      "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
-    },
-    {
-      "id": "inverted-pendulum-dyno",
-      "base": "pendulum_dyno",
-      "type": "App",
-      "title": "Inverted Pendulum Dyno",
-      "stage": "CURRICULUM",
-      "oakId": "OAK-KS3-GEN-INVERTEDP",
-      "oakUnit": "ks3-generalcurriculum-inverted-pendulum-dyno",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "mount": "/curriculum/general/inverted-pendulum-dyno",
-      "duration": 14,
-      "svgFile": "cartridges/pendulum_dyno.svg",
-      "astFile": "cartridges/pendulum_dyno.ast",
-      "astbFile": "bytecode/pendulum_dyno.astb",
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": false,

@@ -116,330 +116,7 @@ export const normalizeCartridgeType = inferCartridgeType;
  * Maps core curriculum apparatus to official Oak National Academy numbers,
  * key stages, subject departments, and verified lesson coordinates.
  */
-export const OAK_CURRICULUM_REGISTRY = {
-  'pythagoras': {
-    oakId: 'OAK-KS3-MAT-001',
-    oakUnit: 'ks3-maths-geometry-pythagoras',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/geometry/pythagoras',
-    section: 'Mathematics & Geometry'
-  },
-  'calculus-curves': {
-    oakId: 'OAK-KS4-MAT-002',
-    oakUnit: 'ks4-maths-calculus-tangents',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/calculus/tangent-slopes',
-    section: 'Mathematics & Geometry'
-  },
-  'algebra-balance': {
-    oakId: 'OAK-KS3-MAT-003',
-    oakUnit: 'ks3-maths-algebra-linear-equations',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/algebra/balance-scale',
-    section: 'Mathematics & Geometry'
-  },
-  'bodmas': {
-    oakId: 'OAK-KS2-MAT-004',
-    oakUnit: 'ks2-maths-arithmetic-order-operations',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/algebra/bodmas',
-    section: 'Mathematics & Geometry'
-  },
-  'fractions': {
-    oakId: 'OAK-KS2-MAT-005',
-    oakUnit: 'ks2-maths-arithmetic-common-denominators',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/arithmetic/fractions',
-    section: 'Mathematics & Geometry'
-  },
-  'times-tables': {
-    oakId: 'OAK-KS1-MAT-006',
-    oakUnit: 'ks1-maths-arithmetic-multiplication-arrays',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/arithmetic/times-tables',
-    section: 'Mathematics & Geometry'
-  },
-  'math-fishing': {
-    oakId: 'OAK-KS1-MAT-007',
-    oakUnit: 'ks1-maths-arithmetic-number-bonds',
-    subject: 'Mathematics',
-    mount: '/curriculum/maths/arithmetic/number-bonds',
-    section: 'Mathematics & Geometry'
-  },
-  'kinetic-gas': {
-    oakId: 'OAK-KS3-SCI-001',
-    oakUnit: 'ks3-physics-particles-gas-pressure',
-    subject: 'Science',
-    mount: '/curriculum/science/physics/kinetic-gas',
-    section: 'Natural Sciences & Physics'
-  },
-  'electric-circuits': {
-    oakId: 'OAK-KS3-SCI-002',
-    oakUnit: 'ks3-physics-electricity-circuits-ohms-law',
-    subject: 'Science',
-    mount: '/curriculum/science/physics/electric-circuits',
-    section: 'Natural Sciences & Physics'
-  },
-  'atom': {
-    oakId: 'OAK-KS3-SCI-003',
-    oakUnit: 'ks3-chemistry-atomic-structure-periodic-table',
-    subject: 'Science',
-    mount: '/curriculum/science/chemistry/atomic-structure',
-    section: 'Natural Sciences & Physics'
-  },
-  'photosynthesis': {
-    oakId: 'OAK-KS3-SCI-004',
-    oakUnit: 'ks3-biology-plants-photosynthesis-solar',
-    subject: 'Science',
-    mount: '/curriculum/science/biology/photosynthesis',
-    section: 'Natural Sciences & Physics'
-  },
-  'dna-helix': {
-    oakId: 'OAK-KS3-SCI-005',
-    oakUnit: 'ks3-biology-genetics-dna-transcription',
-    subject: 'Science',
-    mount: '/curriculum/science/biology/dna-helix',
-    section: 'Natural Sciences & Physics'
-  },
-  'solar-system': {
-    oakId: 'OAK-KS3-SCI-006',
-    oakUnit: 'ks3-physics-space-solar-system-gravity',
-    subject: 'Science',
-    mount: '/curriculum/science/physics/solar-system',
-    section: 'Natural Sciences & Physics'
-  },
-  'velocity': {
-    oakId: 'OAK-KS3-SCI-007',
-    oakUnit: 'ks3-physics-motion-velocity-vectors',
-    subject: 'Science',
-    mount: '/curriculum/science/physics/velocity-vectors',
-    section: 'Natural Sciences & Physics'
-  },
-  'water-cycle': {
-    oakId: 'OAK-KS2-GEO-001',
-    oakUnit: 'ks2-geography-physical-water-cycle',
-    subject: 'Geography',
-    mount: '/curriculum/geography/water-cycle',
-    section: 'Geography & Earth Sciences'
-  },
-  'mountain-elevation': {
-    oakId: 'OAK-KS2-GEO-002',
-    oakUnit: 'ks2-geography-topography-mountain-elevation',
-    subject: 'Geography',
-    mount: '/curriculum/geography/mountain-elevation',
-    section: 'Geography & Earth Sciences'
-  },
-  'phonics-lab': {
-    oakId: 'OAK-KS1-ENG-001',
-    oakUnit: 'ks1-english-reading-phonics-sound-buttons',
-    subject: 'English',
-    mount: '/curriculum/english/phonics/phonics-lab',
-    section: 'English Literature & Phonics'
-  },
-  'phonics-screening': {
-    oakId: 'OAK-KS1-ENG-002',
-    oakUnit: 'ks1-english-reading-phonics-alien-words',
-    subject: 'English',
-    mount: '/curriculum/english/phonics/screening-check',
-    section: 'English Literature & Phonics'
-  },
-  'spelling-bee': {
-    oakId: 'OAK-KS2-ENG-003',
-    oakUnit: 'ks2-english-writing-orthography-spelling',
-    subject: 'English',
-    mount: '/curriculum/english/spelling/spelling-bee',
-    section: 'English Literature & Phonics'
-  },
-  'shakespeare': {
-    oakId: 'OAK-KS3-ENG-004',
-    oakUnit: 'ks3-english-literature-globe-theatre',
-    subject: 'English',
-    mount: '/curriculum/english/theatre/globe',
-    section: 'English Literature & Phonics'
-  },
-  'shakespeare-macbeth': {
-    oakId: 'OAK-KS4-ENG-005',
-    oakUnit: 'ks4-english-literature-macbeth-drama',
-    subject: 'English',
-    mount: '/curriculum/english/theatre/macbeth',
-    section: 'English Literature & Phonics'
-  },
-  'languages': {
-    oakId: 'OAK-KS2-MFL-001',
-    oakUnit: 'ks2-languages-mfl-polyglot-studio',
-    subject: 'Languages',
-    mount: '/curriculum/languages/mfl-polyglot',
-    section: 'Languages & Inclusion'
-  },
-  'bsl-fingerspelling': {
-    oakId: 'OAK-KS2-INC-001',
-    oakUnit: 'ks2-inclusion-bsl-3d-fingerspelling',
-    subject: 'Inclusion & Languages',
-    mount: '/curriculum/languages/bsl-fingerspelling',
-    section: 'Languages & Inclusion'
-  },
-  'fish-tank': {
-    oakId: 'OAK-KS3-COM-001',
-    oakUnit: 'ks3-computing-systems-stress-benchmarks',
-    subject: 'Computing',
-    mount: '/curriculum/computing/stress-benchmark',
-    section: 'Computing & Technology'
-  },
-  'church-tour': {
-    oakId: 'OAK-KS2-RE-001',
-    oakUnit: 'ks2-re-catholic-sacred-architecture',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/church-tour',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'altar-anatomy': {
-    oakId: 'OAK-KS2-RE-002',
-    oakUnit: 'ks2-re-catholic-altar-mensa-relics',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/altar-anatomy',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'holy-oils': {
-    oakId: 'OAK-KS2-RE-003',
-    oakUnit: 'ks2-re-catholic-holy-oils-ambry',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/holy-oils',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'holy-water-thurifer': {
-    oakId: 'OAK-KS2-RE-004',
-    oakUnit: 'ks2-re-catholic-asperges-incensations',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/holy-water-thurifer',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'first-communion': {
-    oakId: 'OAK-KS2-RE-005',
-    oakUnit: 'ks2-re-catholic-first-holy-communion',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/first-communion',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'triduum-easter': {
-    oakId: 'OAK-KS2-RE-006',
-    oakUnit: 'ks2-re-catholic-paschal-triduum',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/triduum-easter',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'liturgy-of-the-hours': {
-    oakId: 'OAK-KS3-RE-007',
-    oakUnit: 'ks3-re-catholic-divine-office-psalms',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/liturgy-of-the-hours',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'seven-sacraments': {
-    oakId: 'OAK-KS2-RE-008',
-    oakUnit: 'ks2-re-catholic-seven-sacraments',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/seven-sacraments',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'liturgical-calendar': {
-    oakId: 'OAK-KS2-RE-009',
-    oakUnit: 'ks2-re-catholic-liturgical-seasons',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/liturgical-calendar',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'liturgical-postures': {
-    oakId: 'OAK-KS2-RE-010',
-    oakUnit: 'ks2-re-catholic-liturgical-postures-prayer',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/liturgical-postures',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'catholic-rites': {
-    oakId: 'OAK-KS3-RE-011',
-    oakUnit: 'ks3-re-catholic-sacramental-rites',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/rites',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'cst-virtues': {
-    oakId: 'OAK-KS3-RE-012',
-    oakUnit: 'ks3-re-catholic-social-teaching-virtues',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/cst-virtues',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'latin-mass-prayers': {
-    oakId: 'OAK-KS3-RE-013',
-    oakUnit: 'ks3-re-catholic-traditional-latin-prayers',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/prayers-latin',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'nicene-creed': {
-    oakId: 'OAK-KS3-RE-014',
-    oakUnit: 'ks3-re-catholic-creed-profession-faith',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/creed',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'ten-commandments': {
-    oakId: 'OAK-KS2-RE-015',
-    oakUnit: 'ks2-re-catholic-decalogue-moral-law',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/commandments',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'order-of-the-mass': {
-    oakId: 'OAK-KS2-RE-016',
-    oakUnit: 'ks2-re-catholic-order-of-mass',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/mass',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'sacred-objects': {
-    oakId: 'OAK-KS2-RE-017',
-    oakUnit: 'ks2-re-catholic-sacred-vessels-vestments',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/sacred-objects',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'eucharistic-procession-film': {
-    oakId: 'OAK-KS2-RE-018',
-    oakUnit: 'ks2-re-catholic-eucharistic-procession',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/film',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'rosary-mysteries': {
-    oakId: 'OAK-KS2-RE-019',
-    oakUnit: 'ks2-re-catholic-rosary-twenty-mysteries',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/rosary-mysteries',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'stations-of-the-cross': {
-    oakId: 'OAK-KS2-RE-020',
-    oakUnit: 'ks2-re-catholic-via-crucis-stations',
-    subject: 'Religious Education',
-    mount: '/curriculum/catholic-life/stations-of-the-cross',
-    section: 'Catholic Life & Faith Formation'
-  },
-  'welcome': {
-    oakId: 'OAK-PORTAL-000',
-    oakUnit: 'portal-apparatus-showcase',
-    subject: 'Educational Technology',
-    mount: '/player',
-    section: 'Portal Showcase & Apparatus'
-  },
-  'pipeline-sample': {
-    oakId: 'OAK-DEV-001',
-    oakUnit: 'dev-apparatus-pipeline-sample',
-    subject: 'Educational Technology',
-    mount: '/curriculum/dev/pipeline-sample',
-    section: 'Development & Test Apparatus'
-  }
-};
+export const OAK_CURRICULUM_REGISTRY = {};
 
 /**
  * Dynamically resolves Oak Curriculum Number, Unit, Subject, Section and Mount.
@@ -454,8 +131,6 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
   const declaredMount = extractSlot(astContent, /:mount\s+"([^"]+)"/i);
   const declaredSection = extractSlot(astContent, /:section\s+"([^"]+)"/i);
 
-  // 2. Canonical Registry Lookup
-  const known = OAK_CURRICULUM_REGISTRY[id];
 
   // 3. Algorithmic inference from Stage & ID keywords
   const normStage = (stage || '').toUpperCase();
@@ -498,11 +173,11 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
     : normStage.includes('KS4') || normStage.includes('GCSE') || normStage.includes('A-LEVEL') ? 'KS4'
     : 'KS3';
 
-  const oakId = declaredOakId || (known && known.oakId) || `OAK-${stageCode}-${inferPrefix}-${id.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, '')}`;
-  const oakUnit = declaredOakUnit || (known && known.oakUnit) || `${stageCode.toLowerCase()}-${inferSubject.toLowerCase().replace(/[^a-z]/g, '')}-${id}`;
-  const subject = declaredSubject || (known && known.subject) || inferSubject;
-  const section = declaredSection || (known && known.section) || inferSection;
-  const mount = declaredMount || (known && known.mount) || `/curriculum/${inferSubject.toLowerCase().split(' ')[0]}/${id}`;
+  const oakId = declaredOakId || `OAK-${stageCode}-${inferPrefix}-${id.slice(0, 10).toUpperCase().replace(/[^A-Z0-9]/g, '')}`;
+  const oakUnit = declaredOakUnit || `${stageCode.toLowerCase()}-${inferSubject.toLowerCase().replace(/[^a-z]/g, '')}-${id}`;
+  const subject = declaredSubject || inferSubject;
+  const section = declaredSection || inferSection;
+  const mount = declaredMount || `/curriculum/${inferSubject.toLowerCase().split(' ')[0]}/${id}`;
 
   return { oakId, oakUnit, subject, section, mount };
 }
@@ -889,10 +564,41 @@ export function generateScenesManifest(options = {}) {
   fs.writeFileSync(rootOakManifestPath, oakJsonStr, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote Oak manifest to ${playerOakManifestPath} and ${rootOakManifestPath}`);
 
-  // Synchronize canonical cartridge folder if content was enriched with :type or :oak-id
+  // 1. Synchronize assets into static/player/scenes/ (authoritative single source of truth for player)
+  const playerScenesDir = path.join(rootDir, 'static', 'player', 'scenes');
+  if (!fs.existsSync(playerScenesDir)) fs.mkdirSync(playerScenesDir, { recursive: true });
+
   const targetDir = path.join(rootDir, 'static', 'cartridges');
   if (!fs.existsSync(targetDir)) fs.mkdirSync(targetDir, { recursive: true });
+
   for (const [id, item] of allCartridgeFiles.entries()) {
+    // Copy into static/player/scenes/
+    const targetPlayerAst = path.join(playerScenesDir, `${item.base}.ast`);
+    const targetPlayerSvg = path.join(playerScenesDir, `${item.base}.svg`);
+    if (!fs.existsSync(targetPlayerAst) || fs.readFileSync(targetPlayerAst, 'utf8') !== item.content) {
+      fs.writeFileSync(targetPlayerAst, item.content, 'utf8');
+    }
+    if (fs.existsSync(item.svgPath)) {
+      if (!fs.existsSync(targetPlayerSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetPlayerSvg).size) {
+        fs.copyFileSync(item.svgPath, targetPlayerSvg);
+      }
+    }
+
+    // Mirror with logical ID if different from disk base
+    if (item.meta.id && item.meta.id !== item.base) {
+      const targetPlayerAstId = path.join(playerScenesDir, `${item.meta.id}.ast`);
+      const targetPlayerSvgId = path.join(playerScenesDir, `${item.meta.id}.svg`);
+      if (!fs.existsSync(targetPlayerAstId) || fs.readFileSync(targetPlayerAstId, 'utf8') !== item.content) {
+        fs.writeFileSync(targetPlayerAstId, item.content, 'utf8');
+      }
+      if (fs.existsSync(item.svgPath)) {
+        if (!fs.existsSync(targetPlayerSvgId) || fs.statSync(item.svgPath).size !== fs.statSync(targetPlayerSvgId).size) {
+          fs.copyFileSync(item.svgPath, targetPlayerSvgId);
+        }
+      }
+    }
+
+    // Sync into static/cartridges/
     const targetAst = path.join(targetDir, `${item.base}.ast`);
     const targetSvg = path.join(targetDir, `${item.base}.svg`);
     if (!fs.existsSync(targetAst) || fs.readFileSync(targetAst, 'utf8') !== item.content) {
@@ -904,6 +610,7 @@ export function generateScenesManifest(options = {}) {
       }
     }
   }
+  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/scenes/`);
 
   // 3. Output strongly typed presets for React UI
   const tsDataDir = path.dirname(tsExportPath);
