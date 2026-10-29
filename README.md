@@ -1,16 +1,16 @@
-Markdown<!--
+<!--
 Copyright (c) 2026 Joseph Brewerton
 Licensed under GNU AGPLv3 / Commercial Dual-License.
 -->
 
-wwwebucation
+# wwwebucation
 
 Dedicated to St Joseph, and created in the spirit of the Catholic Church’s preferential option for the poor—providing equitable access to learning for all.
 
 # ⚡ St Joseph's Edge Learning Engine & AST Vector Suite
 
-> **Zero-Marginal-Cost, Privacy-Preserving On-Device AI Tutoring & Vector Media Platform**  
-> Powered by the UK National Curriculum (Oak National Academy), Chromium Prompt API (Gemini Nano), and Deterministic S-Expression AST Runtimes.
+> **Zero-Marginal-Cost, Sovereign On-Device AI Tutoring & Deterministic Vector Media Platform**  
+> Powered by the UK National Curriculum (Oak National Academy), Chromium Prompt API (Gemini Nano), bespoke `.astb` Bytecode Compilers, and Native SVG Vector Primitives.
 
 [![Lighthouse Desktop](https://img.shields.io/badge/Lighthouse_Desktop-99%2F100-brightgreen)](https://pagespeed.web.dev/)
 [![Lighthouse Accessibility](https://img.shields.io/badge/Accessibility-96%2F100-brightgreen)](https://pagespeed.web.dev/)
@@ -26,7 +26,7 @@ Dedicated to St Joseph, and created in the spirit of the Catholic Church’s pre
 
 Traditional EdTech and AI tutoring platforms rely on centralized cloud infrastructure, charging £5–£20 per student/month to offset API compute bills. This creates deep digital divides in bandwidth-constrained, emerging, and underfunded educational environments.
 
-The **St Joseph's Engine** flips this paradigm. By running quantized neural inference client-side via **Chromium Built-in AI (Gemini Nano)** paired with a deterministic, substrate-based S-expression AST compiler, it delivers infinite, curriculum-aligned practice drills, Socratic tutoring, and procedural vector animations at **£0.00 marginal compute cost**—with zero network egress, complete offline capability, and a verified 99/100 Lighthouse performance rating on static hosting.
+The **St Joseph's Engine** rejects modern web bloat and cloud dependency. By pairing quantized local neural inference via **Chromium Built-in AI (Gemini Nano)** with a deterministic, compiled binary bytecode VM (`.astb`) driving native SVG primitives, it delivers infinite, curriculum-aligned practice drills, Socratic tutoring, and 60 FPS interactive cartridges at **£0.00 marginal compute cost**—with zero network egress, complete offline capability, and a verified 99/100 Lighthouse performance rating on static hosting.
 
 ---
 
@@ -34,128 +34,145 @@ The **St Joseph's Engine** flips this paradigm. By running quantized neural infe
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                              BROWSER TAB                                │
+│                             BROWSER RUNTIME                             │
 │                                                                         │
-│   ┌────────────────────────┐              ┌──────────────────────────┐  │
-│   │   React 19 / Vite 8    │ ◄──────────► │    IndexedDB Storage     │  │
-│   │ (App Shell / Viewport) │              │ (Curriculum Cache & VFS) │  │
-│   └───────────┬────────────┘              └──────────────────────────┘  │
-│               │                                                         │
-│               │ Substrate Message Dispatch (Hypercall)                  │
-│               ▼                                                         │
+│   ┌────────────────────────────────┐    ┌───────────────────────────┐   │
+│   │   Stateless Shell / Host       │◄──►│    IndexedDB Storage      │   │
+│   │ (Zero-Dep Harness / Web Comp)  │    │ (Curriculum VFS & Cache)  │   │
+│   └───────────────┬────────────────┘    └───────────────────────────┘   │
+│                   │                                                     │
+│                   │ Hypercall Event Bus & Cartridge Loader              │
+│                   ▼                                                     │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                     Hypercall Substrate Bus                     │   │
-│   │  - QuestionEngine Node (Stage-Calibrated AST Logic)             │   │
-│   │  - LessonSynthesizer Node (IndexedDB Cache + Baseline Influx)   │   │
-│   │  - AST Vector Media Hypervisor (60 FPS Sandboxed iFrame)        │   │
-│   └───────────────────────────┬─────────────────────────────────────┘   │
-│                               │                                         │
-│               ┌───────────────┴───────────────┐                         │
-│               ▼                               ▼                         │
-│   ┌──────────────────────┐        ┌─────────────────────────────────┐   │
-│   │  3-Tier Inference    │        │    AST Vector Media Suite       │   │
-│   │  • Tier 1: Nano      │        │  • Declarative SVG Bindings     │   │
-│   │  • Tier 2: WebLLM    │        │  • Legacy SWF/Flash Importer    │   │
-│   │  • Tier 3: AST Rules │        │  • Document Picture-in-Picture  │   │
-│   └──────────────────────┘        └─────────────────────────────────┘   │
-│                               │                                         │
-│                               ▼                                         │
+│   │                      S-Expression Compiler                      │   │
+│   │   Declarative AST  ──►  Bespoke Binary Bytecode (.astb)         │   │
+│   └───────────────────────────────┬─────────────────────────────────┘   │
+│                                   │                                     │
+│                   ┌───────────────┴───────────────┐                     │
+│                   ▼                               ▼                     │
+│   ┌──────────────────────────────┐ ┌────────────────────────────────┐   │
+│   │      On-Device Inference     │ │     WASM Substrate VM Core     │   │
+│   │  • Tier 1: Gemini Nano API   │ │  • Linear Memory Evaluator     │   │
+│   │  • Tier 2: WebLLM Fallback   │ │  • Deterministic 60 FPS Clock  │   │
+│   │  • Tier 3: AST Logic Rules   │ │  • Zero-Heap Direct Mutation   │   │
+│   └───────────────┬──────────────┘ └────────────────┬───────────────┘   │
+│                   │                                 │                   │
+│                   └────────────────┬────────────────┘                   │
+│                                    │                                    │
+│                                    ▼                                    │
 │   ┌─────────────────────────────────────────────────────────────────┐   │
-│   │                  Pedagogical Governance Layer                   │   │
-│   │  - Multi-Tier Calibration (KS1 sensory → KS4 GCSE quantitative) │   │
-│   │  - Cognitive Trap & Misconception Extraction Engine             │   │
-│   │  - Super Teacher Nano Socratic Voice & Text Engine              │   │
+│   │                Native SVG Vector Display Target                 │   │
+│   │  • :Sim   - Continuous kinematics, LQR balance & ray telemetry  │   │
+│   │  • :Slide - Discrete pedagogical decks, CST virtues, rubrics   │   │
+│   │  • :Film  - Deterministic time curves & multilingual subtitles │   │
+│   │  • Optical filters, scanlines, and phosphor tube geometries     │   │
 │   └─────────────────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────────────────┘
-### Key Architectural Pillars
+Key Architectural Pillars
+Compiled Binary Bytecode (.astb) & WASM VM:
 
-- **3-Tier On-Device Inference Hierarchy**:
-  - **Tier 1 (Chromium Prompt API)**: Native, zero-heap Gemini Nano neural inference.
-  - **Tier 2 (WebLLM via WebGPU)**: Local shader inference (`SmolLM2-360M-Instruct-q4f16_1-MLC`) with automatic memory probing to prevent tab crashes on low-RAM devices.
-  - **Tier 3 (Deterministic S-Expression Synthesizer)**: Sub-5ms instantaneous procedural rule engine that runs completely offline with zero GPU overhead.
-- **Decentralized Virtual Console & Self-Mounting Cartridge Architecture**:
-  - **Zero Server Data**: The site holds 0 user or student data on remote servers. It functions as an air-gapped, stateless execution console.
-  - **28 Production Vector Cartridges**: Modular curriculum ROMs (2.5 KB to 25 KB) covering Mathematics, Physics, Chemistry, Biology, Phonics, MFL, 3D BSL Fingerspelling, Shakespeare, and Catholic Life.
-  - **Autonomous Self-Mounting**: Cartridges declare their own address coordinates (`:mount "/curriculum/..."`), subject section (`:section`), and protection tier (`:tier "core"`). The portal dynamically constructs its navigation tree from the cartridges themselves.
-  - **70× Lighter Footprint than PhET**: Sub-15 ms cold start, < 8 MB RAM ceiling, and 0 KB audio downloads (all sounds procedurally synthesized via Web Audio API nodes).
-- **Analytic 3D Ray-Math & Symbolic Spatial Telemetry Subsystem**:
-  - Replaces multi-megabyte vision frames and video streaming with compact S-expression tokens (`(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])`).
-  - Driver-independent CPU analytic geometry (< 15 KB JS, 0 WebGL dependencies) feeding mathematically exact spatial hits directly into Gemini Nano.
-  - Closed-loop deterministic actuation opcodes (`:rotate-camera`, `:nudge`, `:var`) re-sorting vector layers via Painter's algorithm with depth fog in 60 FPS real-time.
-- **Decoupled, Headless AST Vector Player (< 35 KB)**:
-  - **Zero Framework Coupling**: The vector player engine is fully autonomous from the React web portal, located in `static/player/` with its own `package.json` (`@stjosephs/ast-vector-player`).
-  - **4 Universal Distribution Formats**:
-    1. **Headless Engine**: `import { AstEngine } from '@stjosephs/ast-vector-player'` for custom UIs and node runtimes.
-    2. **Drop-in Web Component**: `<script src="micro-vector-player.js"></script><micro-vector-player preset="kinetic-gas" autoplay></micro-vector-player>` for WordPress, Webflow, Shopify, or plain HTML.
-    3. **LMS Iframe**: Embeddable responsive iframe for Canvas, Moodle, Blackboard, and Google Classroom with bidirectional `postMessage` telemetry.
-    4. **Air-Gap Single-File HTML**: Self-contained `.html` bundles (< 45 KB) running offline via `file://` or USB drives with zero internet.
-- **Real-Time British Sign Language (BSL) "In-Vision" Vector Interpreter**:
-  - **In-Stage Overlay**: Procedural, zero-video 3D signing overlay rendering on top of the vector stage, synchronized with narrative speech synthesis word boundaries and subtitles.
-  - **Authentic BANZSL 2-Handed Alphabet**: Anatomically accurate non-dominant "Paper" base hand with A-E-I-O-U fingertip vowel markers and dominant "Pen" pointer hand with 60 FPS Hermite spline co-articulation.
-  - **Dual Perspective & PiP**: Instant toggle between Signer POV (first-person looking down from chest) and Receiver POV (facing conversational partner), with W3C Document Picture-in-Picture undocking.
-- **3D British Sign Language (BSL) Fingerspelling Studio**: Dedicated interactive curriculum cartridge (`/curriculum/languages/bsl-fingerspelling`) for learning the manual alphabet, vowel rules, and interactive typing drills in under 6 KB.
-- **5-Act Shakespeare Globe Theatre Suite**: 1599 Bankside Globe Theatre 3D stage geometry (Heavens canopy, Hell trapdoor, thrust stage) with spoken blank verse soliloquies, iambic pentameter metronomes, and canon vs what-if branches.
-- **Smartboard & Stylus Whiteboard Layer**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
-- **Legacy SWF / Flash Transcompiler**: Built-in client-side decompiler that takes legacy Flash binaries (FWS/CWS), parses twips geometry, and emits clean SVG paths and parametric S-expressions.
-- **Document Picture-in-Picture (PiP)**: Runs interactive vector labs, 3D scenes, and Socratic quizzes in an always-on-top desktop window without blocking portal navigation.
-- **Stage-Calibrated Governance**: Constrains models across UK developmental stages—enforcing sensory, tangible vocabulary for Key Stage 1 and formal quantitative syllabus standards ($F=ma$, vectors, momentum) for Key Stage 4.
-- **Zero-Egress IndexedDB Persistence**: Caches curriculum trees, lesson records, and diagnostic progress locally (`EdgeLearningEngineDB`), fulfilling a 0 bps post-install network SLA.
+Declarative Lisp-style S-expressions compile directly down to a packed binary bytecode format (.astb).
 
-### 🤖 Machine Dossiers & Agentic Discovery Endpoints
-- **[`/llms.txt`](/static/llms.txt)**: Concise machine context following the `/llms.txt` standard for fast agent retrieval.
-- **[`/llms-full.txt`](/static/llms-full.txt)**: Exhaustive technical dossier detailing the full 28-cartridge catalog, AST grammar, and dual-track architecture.
-- **[`/robots.txt`](/static/robots.txt)**: Explicit permissions for search crawlers and AI agents (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.).
-- **[`/sitemap.xml`](/static/sitemap.xml)**: Standard XML sitemap indexing all public routes and curriculum cartridges.
-- **[`/sitemap.ast`](/static/sitemap.ast)**: Deterministic Lisp S-Expression sitemap and cartridge URI registry.
-- **[`/player/scenes.manifest.json`](/static/player/scenes.manifest.json)**: Machine-readable index of all 28 production cartridges.
+Evaluated inside a compact, zero-dependency WASM virtual machine that bypasses dynamic AST traversal, GC pressure, and framework reconciliation cycles during 60 FPS animation loops.
 
----
+Multi-Modal Scene Execution Engine:
 
-## 📊 Performance & Benchmarks
+:Sim (Continuous Dynamic State): Real-time physical kinematics (e.g. Inverted Pendulum LQR balance, CRT beam physics) locked to a continuous 60 FPS 
+Δt ticker.
 
+:Slide (Discrete Exploratory Decks): Event-driven pedagogical units (e.g. Catholic Social Teaching, Liturgical Postures) that decouple user reflection from continuous clock drift.
+
+:Film (Linear Narrative Choreography): Monotonically locked timelines (
+t∈[0.0,1.0]) synchronized with speech synthesis and multilingual subtitle tracks.
+
+Pure Vector Hardware & CRT Emulation:
+
+Full hardware vector simulation (such as the MOS 6502 BBC Micro Model B) rendered purely via native SVG primitives, Bézier curves, radial gradients, and phosphor-glow filters.
+
+Zero heavy Canvas/WebGL runtime allocations; deterministic visual hydration and instant hot-patching of visual assets directly in the DOM.
+
+3-Tier On-Device Inference Hierarchy:
+
+Tier 1 (Chromium Prompt API): Native, zero-heap Gemini Nano neural inference acting as a real-time state synthesizer and Socratic dialogue tutor.
+
+Tier 2 (WebLLM via WebGPU): Local shader inference (SmolLM2-360M-Instruct-q4f16_1-MLC) with automatic memory probing for unsupported browsers.
+
+Tier 3 (Deterministic S-Expression Synthesizer): Sub-5ms procedural rule engine executing offline without GPU or neural dependencies.
+
+Decentralized Virtual Console & Self-Mounting Cartridges:
+
+Zero Server Data: Operates as a completely air-gapped, stateless execution console with 0 bytes transmitted to remote servers.
+
+28 Production Vector Cartridges: Compact curriculum ROMs (2.5 KB to 25 KB) self-declaring coordinates (:mount "/curriculum/..."), subject tags (:section), and access levels (:tier).
+
+Sub-15ms Cold Starts: Consumes < 8 MB RAM with zero audio downloads (all sounds procedurally synthesized via native Web Audio API oscillators).
+
+Analytic 3D Ray-Math & Symbolic Spatial Telemetry (Zero-GPU):
+
+Replaces heavy vision frames and video streams with compact S-expression tokens ((:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0])).
+
+CPU-bound analytic geometry (< 15 KB JS) providing exact spatial hit-testing for real-time robotic and scientific kinematics.
+
+Decoupled, Headless AST Vector Player (< 35 KB):
+
+Completely framework-agnostic runtime (@stjosephs/ast-vector-player).
+
+Distributable as a headless engine, drop-in Web Component, LMS iframe (Canvas/Moodle/Google Classroom), or a single self-contained air-gapped .html bundle (< 45 KB) executable from a USB drive.
+
+Real-Time British Sign Language (BSL) & Shakespeare Globe Suites:
+
+Procedural, vector-driven BANZSL 2-handed signing overlays with 60 FPS Hermite spline co-articulation and Document PiP support.
+
+Mathematically accurate 1599 Bankside Globe Theatre 3D stage geometry with spoken iambic pentameter metronomes and multi-branch dramaturgy.
+
+🤖 Machine Dossiers & Agentic Discovery Endpoints
+/llms.txt: Concise machine context following the /llms.txt standard for fast agent retrieval.
+
+/llms-full.txt: Exhaustive technical dossier detailing the full 28-cartridge catalog, AST grammar, and dual-track architecture.
+
+/robots.txt: Explicit permissions for search crawlers and AI agents (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.).
+
+/sitemap.xml: Standard XML sitemap indexing all public routes and curriculum cartridges.
+
+/sitemap.ast: Deterministic Lisp S-Expression sitemap and cartridge URI registry.
+
+/player/scenes.manifest.json: Machine-readable index of all 28 production cartridges.
+
+📊 Performance & Benchmarks
 Audited on production builds via Google PageSpeed Insights:
 
-| Metric | Desktop Production Audit | Legacy Cloud EdTech Baseline |
-| :--- | :--- | :--- |
-| **Performance** | **99 / 100** | ~44 / 100 |
-| **Accessibility** | **96 / 100** | ~100 / 100 |
-| **Best Practices** | **100 / 100** | ~100 / 100 |
-| **SEO** | **100 / 100** | ~85 / 100 |
-| **Agentic Browsing** | **2 / 2 (Pass)** | 0 / 2 |
-| **Marginal Compute Cost** | **£0.00** | £5–£20 / student / mo |
-| **Data Egress** | **0 Bytes** | Continuous API Streaming |
+Metric	St Joseph's Engine Audit	Legacy Cloud EdTech Baseline
+Performance	99 / 100	~44 / 100
+Accessibility	96 / 100	~100 / 100
+Best Practices	100 / 100	~100 / 100
+SEO	100 / 100	~85 / 100
+Agentic Browsing	2 / 2 (Pass)	0 / 2
+Marginal Compute Cost	£0.00	£5–£20 / student / mo
+Data Egress	0 Bytes	Continuous API Streaming
+🔒 Privacy & Statutory Safeguarding
+Zero Telemetry: No pupil profiles, student queries, voice recordings, or behavioral telemetry leave the client browser.
 
----
+Local Sandboxed Processing: Socratic dialogues, dynamic grading, and physics mutations stay strictly within browser memory and local IndexedDB tables (EdgeLearningEngineDB).
 
-## 🔒 Privacy & Statutory Safeguarding
+Statutory Compliance: Inherently compliant with UK GDPR (Article 25 Data Protection by Design & Default), the Data Protection Act 2018, the ICO Children's Code, and KCSIE guidelines. Multi-Academy Trusts can deploy immediately with zero DPO procurement overhead.
 
-- **Zero Telemetry**: No pupil profiles, student queries, voice recordings, or behavioral data are transmitted to cloud AI providers.
-- **Local Processing**: Pedagogical evaluations, Socratic reasoning, and telemetry remain inside the client's browser sandbox and local IndexedDB tables.
-- **Safeguarding & Compliance**: Fulfills UK GDPR (Article 25 Data Protection by Design & Default), the Data Protection Act 2018, the ICO Children's Code, and KCSIE guidelines. Multi-Academy Trusts can deploy without Data Protection Officer (DPO) procurement friction.
+🚀 Getting Started
+Prerequisites
+Node.js: v20.0.0 or higher
 
----
+Chromium-based browser: Built-in AI flags enabled (chrome://flags/#optimization-guide-on-device-model set to Enabled BypassPerfRequirement and chrome://flags/#prompt-api-for-gemini-nano set to Enabled).
 
-## 🚀 Getting Started
-
-### Prerequisites
-- **Node.js**: v20.0.0 or higher
-- **Chromium-based browser**: Built-in AI flags enabled (`chrome://flags/#optimization-guide-on-device-model` set to *Enabled BypassPerfRequirement* and `chrome://flags/#prompt-api-for-gemini-nano` set to *Enabled*).
-
-### Installation
-```bash
-git clone https://github.com/josephbrewerton-oss/schoolsample.git
+Installation
+Bash
+git clone [https://github.com/josephbrewerton-oss/schoolsample.git](https://github.com/josephbrewerton-oss/schoolsample.git)
 cd schoolsample
 npm install
-```
-
-### Local Development
-```bash
-# Start Vite development server (port 3000)
+Local Development
+Bash
+# Start local development server (port 3000)
 npm run dev
-```
-
-### Verification & Test Suites
-```bash
+Verification & Test Suites
+Bash
 # Run End-to-End AST & Manifest Determinism Test Suite
 npm run test:ast
 
@@ -170,48 +187,55 @@ npm run test:ink
 
 # Run Legacy SWF Transcompiler Test Harness
 npm run test:swf
-```
-
-### Production Build & Clean Distribution
-```bash
+Production Build & Clean Distribution
+Bash
 # Build optimized static production bundle
 npm run build
 
 # Export clean-room, zero-source public release (/dist-public-release)
 npm run export:dist
-```
+🗺️ Roadmap & Field Testing
+[x] On-device Prompt API integration & Hypercall dispatch engine
 
----
+[x] Developmental prompt calibration across UK Key Stages (KS1–KS4)
 
-## 🗺️ Roadmap & Field Testing
+[x] Super Teacher Nano on-device Socratic tutor with Web Speech API
 
-- [x] On-device Prompt API integration & Hypercall dispatch engine
-- [x] Developmental prompt calibration across UK Key Stages (KS1–KS4)
-- [x] Super Teacher Nano on-device Socratic tutor with Web Speech API
-- [x] Complete Oak National Academy curriculum mapping (402 lesson units)
-- [x] Offline IndexedDB caching and fallback synthesis
-- [x] AST Vector Media Player with W3C Document PiP and 3D spatial engine
-- [x] Analytic 3D Ray-Math & Symbolic Spatial Telemetry Subsystem (Zero-GPU)
-- [x] Native Smartboard Stylus Pen Layer with quadratic Bézier smoothing
-- [x] Legacy Adobe Flash (.swf) binary transcompiler to SVG + AST
-- [x] Peer-to-peer WebRTC classroom sync (TeacherBeaconPage)
-- [ ] Field trial deployment across low-connectivity test environments (Nigeria Pilot)
-- [ ] Dynamic WASSCE / JAMB curriculum mapping layer
+[x] Complete Oak National Academy curriculum mapping (402 lesson units)
 
----
+[x] Offline IndexedDB caching and fallback synthesis
 
-## ⚖️ Licensing & Terms
+[x] AST Vector Media Player with W3C Document PiP and 3D spatial engine
 
-**Contact**: `joseph.brewerton@gmail.com`
+[x] Analytic 3D Ray-Math & Symbolic Spatial Telemetry Subsystem (Zero-GPU)
 
-### 1. Platform & Engine Source Code (Dual Licensing)
+[x] Native Smartboard Stylus Pen Layer with quadratic Bézier smoothing
+
+[x] Legacy Adobe Flash (.swf) binary transcompiler to SVG + AST
+
+[x] Peer-to-peer WebRTC classroom sync (TeacherBeaconPage)
+
+[x] Discrete execution runtime modes (:Sim, :Slide, :Film)
+
+[ ] Field trial deployment across low-connectivity test environments (Nigeria Pilot)
+
+[ ] Dynamic WASSCE / JAMB curriculum mapping layer
+
+⚖️ Licensing & Terms
+Contact: joseph.brewerton@gmail.com
+
+1. Platform & Engine Source Code (Dual Licensing)
 The software engine, AST compilers, vector player, and hypercall dispatch system are available under a dual-licensing charter:
-- **Track A: The Humanitarian Commons (GNU AGPLv3)**: Free in perpetuity for state schools, Catholic dioceses, parishes, educational charities, and emerging economies. Includes a strict copyleft reciprocity clause prohibiting proprietary commercial entities from enclosing the code behind paywalls.
-- **Track B: Enterprise Commercial License**: For commercial LMS vendors, proprietary EdTech providers, or multi-academy trusts requiring closed-source redistribution, private hosting, and custom SLAs. 100% of Track B revenues fund refurbished Chromebooks and offline solar education kits for disadvantaged learners.
 
-### 2. Upstream Educational Content (OGL v3.0)
+Track A: The Humanitarian Commons (GNU AGPLv3): Free in perpetuity for state schools, Catholic dioceses, parishes, educational charities, and emerging economies. Includes a strict copyleft reciprocity clause prohibiting proprietary commercial entities from enclosing the code behind paywalls.
+
+Track B: Enterprise Commercial License: For commercial LMS vendors, proprietary EdTech providers, or multi-academy trusts requiring closed-source redistribution, private hosting, and custom SLAs. 100% of Track B revenues fund refurbished Chromebooks and offline solar education kits for disadvantaged learners.
+
+2. Upstream Educational Content (OGL v3.0)
 Curriculum frameworks, question structures, misconception taxonomies, and lesson sequences incorporate public educational datasets provided by Oak National Academy, used under the Open Government Licence v3.0:
-- **Attribution**: Contains public sector information licensed under the Open Government Licence v3.0. Sourced from Oak National Academy.
-- **Licence Reference**: Open Government Licence v3.0
-- **Non-Endorsement**: This software is an independent platform and is not endorsed, sponsored, or certified by Oak National Academy or the UK Department for Education.
 
+Attribution: Contains public sector information licensed under the Open Government Licence v3.0. Sourced from Oak National Academy.
+
+Licence Reference: Open Government Licence v3.0
+
+Non-Endorsement: This software is an independent platform and is not endorsed, sponsored, or certified by Oak National Academy or the UK Department for Education.
