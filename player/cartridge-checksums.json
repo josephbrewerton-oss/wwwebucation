@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T19:48:47.727Z",
+  "generatedAt": "2026-10-29T20:26:50.498Z",
   "totalCartridges": 60,
-  "masterChecksum": "94eede2c99bb36f871b58324ea775f23dfd619082a313b85c355ad1cc61bae9b",
+  "masterChecksum": "5acb8bae0c193f9544ef806d5114340bb2a97623c6aceae12f3a088c459a5cdc",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -635,14 +635,14 @@
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
       "astSha256": "0398df817efac2642d53297209974e0db77759fb7296caa1ed7004d6de85e22a",
-      "svgSha256": "3112db7d7dbf00a2abfada2490c8d502b2ddb56bfb69631f274a3b150e233838",
+      "svgSha256": "c90d03aef51cff09296cee254c1e1736c1f0c637c012d8808dc9b70347711f9f",
       "astbSha256": "dd0918fed784684740a60a716a272630b8b8f0a0ef305605ccf71917712c45bd",
       "astbBytes": 680,
       "astBytes": 3844,
-      "svgBytes": 7945,
+      "svgBytes": 7209,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "b0fc2d925bb7e4127e0483c065c41737c01f3b299134c23f615f0b7d215778d5",
+      "seal": "3d7aee5f373f2afe7d99f82f68b3c841f30f84eb52176b6594ba0fdf953d41d4",
       "certified": true
     },
     "pendulum_dyno": {
