@@ -1,6 +1,8 @@
 (:scene :id "latin-mass-prayers" :type "Slide" :oak-id "OAK-KS3-RE-013" :oak-unit "ks3-re-catholic-traditional-latin-prayers" :title "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
+    (:var :name "prayerIndex" :val 1.0 :min 1.0 :max 4.0 :step 1.0 :label "Selected Prayer")
     (:var :name "candleFlicker" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Chapel Candle Glow")
+    
   ))
 
   (:inputs (
@@ -8,9 +10,10 @@
   ))
 
   (:gestures (
-    (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 660)
-  ))
-
+  (:draggable :target "#prayer-scroll-slider" :axis "x" :min 140 :max 660
+    (:bind-var "prayerIndex" :map "linear" :from-min 140 :from-max 660 :to-min 1.0 :to-max 4.0)
+  )
+))
   (:subtitles (
     (:start 0.00 :end 0.20 :en "Latin has been the universal mother tongue of the Roman Catholic Church for nearly two thousand years." :es "El latín ha sido la lengua materna universal de la Iglesia Católica Romana durante casi dos mil años." :la "Lingua Latina est lingua materna universalis Ecclesiae Catholicae per saecula fideliter custodita.")
     (:start 0.20 :end 0.45 :en "Praying in Latin unites Catholics across every country, culture, and continent in one shared voice of prayer." :es "Orar en latín une a los católicos de cada país, cultura y continente en una sola voz sagrada." :la "Oratio Latina catholicos omnium gentium et linguarum in unam vocem orantem coniungit.")
