@@ -1,6 +1,6 @@
 <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Scriptorium & Sanctuary Ambience Gradient -->
+    <!-- Scriptorium and Sanctuary Ambience Gradient -->
     <radialGradient id="sacred-objects-ambience" cx="50%" cy="30%" r="75%">
       <stop offset="0%" stop-color="#1e1b4b" />
       <stop offset="50%" stop-color="#0f172a" />
@@ -35,11 +35,6 @@
       <stop offset="45%" stop-color="#eab308" stop-opacity="0.4" />
       <stop offset="100%" stop-color="#a16207" stop-opacity="0" />
     </radialGradient>
-
-    <filter id="soft-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="3" result="blur" />
-      <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
   </defs>
 
   <!-- Background Sanctuary Ambience -->
@@ -55,10 +50,10 @@
   <!-- Active Milestone Header Indicator -->
   <g transform="translate(400, 36)" text-anchor="middle">
     <rect x="-280" y="-18" width="560" height="32" rx="16" fill="#0f172a" stroke="#ca8a04" stroke-width="1.5" />
-    <text id="active-category-display" x="0" y="4" font-family="sans-serif" font-size="12" font-weight="800" fill="#fef08a" letter-spacing="0.5">1. SACRED VESSELS • CHALICE, PATEN & CIBORIUM</text>
+    <text id="active-category-display" x="0" y="4" font-family="sans-serif" font-size="12" font-weight="800" fill="#fef08a" letter-spacing="0.5">1. SACRED VESSELS: CHALICE, PATEN AND CIBORIUM</text>
   </g>
 
-  <!-- Credence &amp; Vestment Altar Table Structure -->
+  <!-- Credence and Vestment Altar Table Structure -->
   <rect x="30" y="300" width="740" height="118" rx="6" fill="#1e293b" stroke="#334155" stroke-width="2" />
   <rect x="20" y="295" width="760" height="18" rx="3" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5" />
   <line x1="20" y1="310" x2="780" y2="310" stroke="#ca8a04" stroke-width="1.5" stroke-dasharray="6 4" />
@@ -78,7 +73,7 @@
 
     <g transform="translate(165, 245)">
       <ellipse cx="35" cy="50" rx="36" ry="9" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
-      <circle cx="35" cy="35" r="20" fill="#fffbeb" stroke="#fef08a" stroke-width="2" filter="url(#soft-glow)" />
+      <circle cx="35" cy="35" r="20" fill="#fffbeb" stroke="#fef08a" stroke-width="2" />
       <text x="35" y="40" text-anchor="middle" font-family="serif" font-weight="900" font-size="11" fill="#ca8a04">IHS</text>
       <text x="35" y="66" text-anchor="middle" font-family="sans-serif" font-size="10" font-weight="700" fill="#facc15">Paten</text>
     </g>
@@ -100,7 +95,7 @@
     <line x1="23" y1="34" x2="33" y2="34" stroke="#dc2626" stroke-width="1.5" />
     <text x="28" y="60" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Corporal</text>
 
-    <rect x="68" y="12" width="36" height="36" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" filter="url(#soft-glow)" />
+    <rect x="68" y="12" width="36" height="36" rx="2" fill="#ffffff" stroke="#e2e8f0" stroke-width="2" />
     <path d="M 86,20 L 86,40 M 76,28 L 96,28" stroke="#ca8a04" stroke-width="2.5" />
     <text x="86" y="60" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#e2e8f0">Pall</text>
   </g>
@@ -157,7 +152,7 @@
     </g>
     <circle cx="0" cy="0" r="35" fill="none" stroke="url(#sacred-gold)" stroke-width="4.5" />
     <circle cx="0" cy="0" r="28" fill="#ffffff" fill-opacity="0.25" stroke="#fef08a" stroke-width="1.5" />
-    <circle cx="0" cy="0" r="20" fill="#fffbeb" stroke="#facc15" stroke-width="1.5" filter="url(#soft-glow)" />
+    <circle cx="0" cy="0" r="20" fill="#fffbeb" stroke="#facc15" stroke-width="1.5" />
     <text x="0" y="5" text-anchor="middle" font-family="serif" font-weight="900" font-size="11" fill="#a16207">IHS</text>
     <path d="M -7,35 L 7,35 L 5,105 L -5,105 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
     <path d="M -24,120 L 24,120 L 16,105 L -16,105 Z" fill="url(#sacred-gold)" stroke="#854d0e" stroke-width="1.5" />
@@ -166,14 +161,13 @@
     <text x="0" y="136" text-anchor="middle" font-family="sans-serif" font-size="9" font-weight="700" fill="#facc15">Monstrance</text>
   </g>
 
-  <!-- Pulsating Gold Sheen Sparkle -->
-  <circle id="gold-specular-sheen" cx="130" cy="215" r="7" fill="#ffffff" filter="url(#soft-glow)" opacity="0.6" />
+  <!-- Specular Sheen Sparkle -->
+  <circle id="gold-specular-sheen" cx="130" cy="215" r="7" fill="#ffffff" opacity="0.6" />
 
-  <!-- Interactive Category Bar / Visual Legend at Bottom -->
+  <!-- Interactive Category Bar at Bottom -->
   <g transform="translate(60, 424)">
     <rect x="0" y="0" width="680" height="34" rx="17" fill="#0f172a" stroke="#334155" stroke-width="1.5" />
     
-    <!-- Touch/Click Targets -->
     <g id="tab-vessels">
       <rect x="10" y="4" width="125" height="26" fill="transparent" />
       <text id="lbl-vessels" x="72" y="21" font-family="sans-serif" font-size="11" font-weight="800" text-anchor="middle" fill="#facc15">1. Vessels</text>
@@ -201,7 +195,7 @@
 
     <!-- Indicator Knob -->
     <g id="category-slider-knob" pointer-events="none" transform="translate(72, 17)">
-      <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="2" filter="url(#soft-glow)" />
+      <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="2" />
       <polygon points="-3,-4 4,0 -3,4" fill="#1e1b4b" />
     </g>
   </g>
