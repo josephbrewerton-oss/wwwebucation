@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T20:35:54.464Z",
+  "generatedAt": "2026-10-29T20:37:28.040Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -721,7 +721,7 @@
       "astbFile": "bytecode/sacred-objects.astb",
       "keyframeCount": 5,
       "subtitleCount": 5,
-      "bindingsCount": 10
+      "bindingsCount": 15
     },
     {
       "id": "seven-sacraments",

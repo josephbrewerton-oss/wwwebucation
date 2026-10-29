@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T20:35:52.759Z",
+  "generatedAt": "2026-10-29T20:37:26.449Z",
   "totalCartridges": 60,
-  "masterChecksum": "46afd072deb1cd61af1d820476c2f679948befc59e56ad56f603f250e78605b8",
+  "masterChecksum": "83d1973c754d5d832e0babdf2b5c78f34b072ef011bbd44197db2082ffae7f9b",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -762,15 +762,15 @@
       "title": "Sacred Vessels, Linens, Sanctuary Appointments & Vestments of the Catholic Church",
       "stage": "CATHOLIC LIFE",
       "type": "Slide",
-      "astSha256": "b0e4ffb078dfff7b4026823d6a4b834e584f9fe7a1ee04cd296ca692a2d40150",
+      "astSha256": "27c5fdf41dbf20cc505fc0b83dea11b1d86f9b8c56a6ab048136eca5087b39af",
       "svgSha256": "5ff1daa713788ced74d2555818268099178e270b0604e65c724a3ea9214a329d",
-      "astbSha256": "470251c40ef9ba8e01df685772b099bef2f7a3ebb39e7454560c47f7668cf1e7",
-      "astbBytes": 5037,
-      "astBytes": 6209,
+      "astbSha256": "89ffd71fe9d15a10b2f2a1e19ad8a9e40e999c8a6fa5bd2f8879c82e165f88ea",
+      "astbBytes": 6081,
+      "astBytes": 8200,
       "svgBytes": 13197,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "34fe166621e67df144e909b68dcbd4f2264cabc19e1dffe22f2d0e89aff26863",
+      "seal": "d3b62f6f5c033445babe7763a9db261ab8ac9b610ad413c15f860dc4c444a9bb",
       "certified": true
     },
     "seven-sacraments": {
