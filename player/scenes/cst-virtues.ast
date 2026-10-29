@@ -1,0 +1,57 @@
+(:scene :id "cst-virtues" :type "Sim" :oak-id "OAK-KS3-RE-012" :oak-unit "ks3-re-catholic-social-teaching-virtues" :title "Catholic Social Teaching & Virtues: Gospel Love in Daily Action" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "activePillar" :val 1.0 :min 1.0 :max 7.0 :step 1.0 :label "Selected CST Pillar (1: Dignity, 2: Common Good, 3: Solidarity, 4: Subsidiarity, 5: Option for Poor, 6: Work, 7: Creation)")
+    (:var :name "solidarityGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Global Neighbour Solidarity Ray Intensity")
+    (:var :name "creationGrowth" :val 1.0 :min 0.5 :max 1.8 :step 0.1 :label "Laudato Si' Care for Creation Seedling Scale")
+  ))
+
+  (:camera :mode "2d" :viewBox "0 0 800 480")
+
+  (:gestures (
+    (:draggable :target "#cst-compass-dial" :axis "x" :min 120 :max 680
+      (:bind-var "activePillar" :map "linear" :from-min 120 :from-max 680 :to-min 1.0 :to-max 7.0)
+    )
+    (:draggable :target "#creation-seedling-node" :axis "y" :min 140 :max 280
+      (:bind-var "creationGrowth" :map "linear" :from-min 280 :from-max 140 :to-min 0.5 :to-max 1.8)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.5 :text "Catholic Social Teaching (CST) shows how Christ's Gospel is put into real daily action in our classrooms, towns, and global community.")
+    (:start 4.5 :end 9.0 :text "The bedrock principle is the Dignity of the Human Person: every human is made in God's image and has infinite sacred worth.")
+    (:start 9.0 :end 14.0 :text "The Common Good reminds us that true flourishing happens when we ensure everyone has what they need to thrive—not just a lucky few.")
+    (:start 14.0 :end 19.5 :text "In Solidarity and Preferential Option for the Poor, we stand with the vulnerable, seeing Jesus in the hungry, refugee, and lonely.")
+    (:start 19.5 :end 24.5 :text "Through Care for Creation (Laudato Si'), we protect God's planetary garden for generations to come.")
+    (:start 24.5 :end 28.0 :text "Guided by the Theological Virtues (Faith, Hope, Love) and Cardinal Virtues, our school community brings Christ's light to all.")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "What is the foundational first principle of Catholic Social Teaching from which all human rights flow?")
+      (:options
+        ("The Dignity of the Human Person made in the Image and Likeness of God" :correct true)
+        ("Having the highest gross domestic product" :correct false)
+        ("Winning school competitions" :correct false)
+        ("Following the opinions of social media" :correct false)
+      )
+      (:explanation "Genesis 1:27 teaches that every single person is formed in the image of God (Imago Dei) with inviolable worth and dignity.")
+    )
+    (:checkpoint :at 0.72
+      (:prompt "What does Pope Francis call the Earth in his encyclical Laudato Si' on Care for Creation?")
+      (:options
+        ("Our Common Home, a sister with whom we share our life" :correct true)
+        ("An endless warehouse of resources to consume" :correct false)
+        ("A problem only for scientists to solve" :correct false)
+        ("Something that does not relate to Christian faith" :correct false)
+      )
+      (:explanation "Pope Francis reminds us in Laudato Si' that our planet is our Common Home, entrusted to us by God as loving stewards.")
+    )
+  ))
+
+  (:bindings (
+    (:target "#solidarity-halo" :attr "opacity" :expr "0.3 + 0.35 * solidarityGlow")
+    (:target "#solidarity-halo" :attr "r" :expr "45 + 15 * solidarityGlow")
+    (:target "#seedling-stem" :attr "transform" :expr "'scale(' + creationGrowth + ')'")
+    (:target "#justice-scales" :attr "transform" :expr "'rotate(' + (sin(t * 1.2) * 5) + ', 220, 240)'")
+  ))
+)

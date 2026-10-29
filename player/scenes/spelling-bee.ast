@@ -1,0 +1,32 @@
+(:scene :id "spelling-bee" :type "App" :oak-id "OAK-KS2-ENG-003" :oak-unit "ks2-english-writing-orthography-spelling" :title "Spelling Bee Championship: KS1 to KS3 Orthography" :stage "KS1/KS2/KS3 ENGLISH" :duration 14.0
+  (:vars (
+    (:var :name "keyStage" :val "KS2U" :label "Key Stage (KS1, KS2L, KS2U, KS3)")
+    (:var :name "score" :val 0 :min 0 :max 1000 :step 10 :label "Championship Score")
+    (:var :name "streak" :val 0 :min 0 :max 50 :step 1 :label "Honey Streak")
+    (:var :name "speechRate" :val 0.9 :min 0.5 :max 1.5 :step 0.1 :label "Speech Speed")
+  ))
+  (:inputs (
+    (:slider :var "speechRate" :label "Pronunciation Speed" :min 0.5 :max 1.5 :step 0.1)
+  ))
+  (:computed (
+    (:name "scoreDisplay" :expr "'Score: ' + (vars.score || 0)")
+    (:name "streakDisplay" :expr "'🍯 Streak: ' + (vars.streak || 0)")
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.33 :en "Welcome to the Spelling Bee! Listen closely to the spoken word and National Curriculum definition." :es "¡Bienvenido al concurso de ortografía! Escucha la palabra y su definición.")
+    (:start 0.33 :end 0.66 :en "Type letters using your keyboard or click the interactive letter tiles to construct the spelling." :es "Escribe letras con tu teclado o pulsa las fichas de letras para deletrear la palabra.")
+    (:start 0.66 :end 1.00 :en "Collect golden honey drops by maintaining a winning streak across Key Stages 1, 2, and 3!" :es "¡Acumula gotas de miel dorada manteniendo una racha en las diferentes etapas!")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Key Stage Selection" :rule "Select KS1 (Phonics), KS2 Lower (Y3/4), KS2 Upper (Y5/6), or KS3 (Academic).")
+    (:t 0.33 :title "Auditory Memory" :rule "Listen to word pronunciation, in-context usage, and phonetic etymology breakdown.")
+    (:t 0.66 :title "Orthographic Recall" :rule "Construct the target word using on-screen letter tiles or physical keyboard entry.")
+    (:t 1.00 :title "Mastery Validation" :rule "Submit spelling to earn honey drops, streak multipliers, and instant formative feedback.")
+  ))
+  (:interactive false)
+  (:questions false)
+  (:bindings (
+    (:target "#bee-score-txt" :attr "textContent" :expr "computed.scoreDisplay")
+    (:target "#bee-streak-txt" :attr "textContent" :expr "computed.streakDisplay")
+  ))
+)

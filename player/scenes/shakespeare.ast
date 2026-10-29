@@ -1,0 +1,66 @@
+(:scene :id "shakespeare" :type "Slide" :oak-id "OAK-KS3-ENG-004" :title "The Globe Theatre: Shakespeare & Iambic Pentameter" :stage "KS3/KS4 ENGLISH LITERATURE" :duration 16.0
+  (:camera :distance 520 :pitch 24 :yaw "t * 40" :fov 60)
+  (:vars (
+    (:var :name "tempo" :val 72 :min 40 :max 140 :step 2 :unit "BPM" :label "Heartbeat Metronome Tempo")
+    (:var :name "cameraYaw" :val 0 :min -180 :max 180 :step 5 :label "Amphitheatre Perspective")
+  ))
+  (:inputs (
+    (:slider :var "tempo" :label "Iambic Pulse Tempo (BPM)" :min 40 :max 140 :step 2)
+    (:slider :var "cameraYaw" :label "3D Orbit Rotation (°)" :min -180 :max 180 :step 5)
+  ))
+  (:gestures (
+    (:draggable :target "#iambic-dot" :axis "x" :min 20 :max 580 :var "tempo")
+    (:draggable :target "#globe-actor-soliloquy" :axis "xy" :min -50 :max 50)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.25 :en "Welcome to the 1599 Globe Theatre on London's Bankside: a three-tiered wooden amphitheatre holding 3,000 spectators." :es "Bienvenidos al Globe Theatre de 1599: un anfiteatro de tres niveles para 3.000 espectadores.")
+    (:start 0.25 :end 0.50 :en "Actors advance onto a raised thrust stage, surrounded on three sides by groundlings paying one penny in the standing yard." :es "Los actores avanzan en un escenario rodeado en tres lados por plebeyos en el patio.")
+    (:start 0.50 :end 0.75 :en "Shakespeare writes in Iambic Pentameter: five pairs of unstressed and stressed beats mirroring the human heartbeat." :es "Shakespeare escribe en pentámetro yámbico: cinco pares de sílabas que siguen el latido del corazón.")
+    (:start 0.75 :end 1.00 :en "When Macbeth wavers—'Is this a dagger which I see before me'—Shakespeare adds an 11th beat: the meter fractures as his moral mind collapses." :es "Cuando Macbeth duda, Shakespeare añade un 11° tiempo: el metro se quiebra cuando su mente moral colapsa.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. The 'Wooden O' & 360° Amphitheatre" :rule "Built 1599 from timbers of The Theatre. 3 tiers of covered galleries with central open sky.")
+    (:t 0.25 :title "2. The Thrust Stage & Cosmological Levels" :rule "Cosmic vertical axis: Trapdoor (Hell below), Platform (Earth), Balcony (Juliet's window), Heavens (God above).")
+    (:t 0.50 :title "3. The Iambic Pentameter Heartbeat" :rule "Blank verse rhythm: da-DUM da-DUM da-DUM da-DUM da-DUM (5 iambic feet = 10 syllables).")
+    (:t 0.75 :title "4. The Broken Meter: Macbeth's Moral Fractures" :rule "Feminine endings (11th unstressed beat) and caesura pauses externalize psychological conflict.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "What cosmological symbol did the Globe's physical structure represent, from stage trapdoor up to the canopy roof?"
+      :options ("Hell below (trapdoor), Earth in the middle (thrust stage), and Heaven above (canopy roof)" "The four cardinal points of London" "The hierarchy of English Parliament" "The four humours of Elizabethan medicine")
+      :answer 0
+      :explanation "Elizabethan theatre architecture mirrored the Elizabethan Great Chain of Being: the trapdoor represented Hell and ghosts, the stage was Earth, and the canopy ceiling painted with zodiac stars was called The Heavens.")
+    (:checkpoint :t 0.65
+      :prompt "How many metrical feet (iambs) are found in a standard line of Shakespearean iambic pentameter?"
+      :options ("5 feet (10 syllables total: ∪ / ∪ / ∪ / ∪ / ∪ /)" "4 feet (8 syllables)" "6 feet (alexandrine)" "3 feet (trimeter)")
+      :answer 0
+      :explanation "Penta means five: five iambs (unstressed + stressed pairs) produce 10 syllables per regular blank verse line.")
+  ))
+  (:bindings (
+    <!-- 3D Amphitheatre Gallery Tiers -->
+    (:target "#globe-gallery-ring-1" :type "3d-ring" :r "210" :tilt-x "22" :depth-fog true)
+    (:target "#globe-gallery-ring-2" :type "3d-ring" :r "235" :tilt-x "22" :depth-fog true)
+    (:target "#globe-gallery-ring-3" :type "3d-ring" :r "260" :tilt-x "22" :depth-fog true)
+    (:target "#globe-yard-ring" :type "3d-ring" :r "165" :tilt-x "22" :depth-fog true)
+
+    <!-- 3D Cosmological Stage Entities -->
+    (:target "#globe-frons-scenae" :type "3d-polygon" :pts "[[-110, -110, -40], [110, -110, -40], [110, 30, -40], [-110, 30, -40]]" :depth-fog true)
+    (:target "#globe-heavens-roof" :type "3d-polygon" :pts "[[-130, -120, -40], [130, -120, -40], [110, -120, 60], [-110, -120, 60]]" :depth-fog true)
+    (:target "#globe-stage-platform" :type "3d-polygon" :pts "[[-110, 30, -40], [110, 30, -40], [125, 30, 95], [-125, 30, 95]]" :depth-fog true)
+
+    <!-- 3D Pillars of Hercules Supporting Heavens -->
+    (:target "#globe-pillar-left" :type "3d-line" :x1 "-85" :y1 "-120" :z1 "55" :x2 "-85" :y2 "30" :z2 "55" :depth-fog true)
+    (:target "#globe-pillar-right" :type "3d-line" :x1 "85" :y1 "-120" :z1 "55" :x2 "85" :y2 "30" :z2 "55" :depth-fog true)
+
+    <!-- 3D Nodes: Hell Trapdoor, Balcony & Actor Macbeth -->
+    (:target "#globe-trapdoor-hell" :type "3d-node" :x "0" :y "28" :z "40" :base-r 18 :depth-fog true)
+    (:target "#globe-balcony-tarras" :type "3d-node" :x "0" :y "-65" :z "-38" :base-r 24 :depth-fog true)
+    (:target "#globe-discovery-space" :type "3d-node" :x "0" :y "-15" :z "-39" :base-r 20 :depth-fog true)
+    (:target "#globe-actor-soliloquy" :type "3d-node" :x "0" :y "18" :z "72" :base-r 14 :depth-fog true)
+
+    <!-- Dynamic Pulse & Meter Animations -->
+    (:target "#iambic-dot" :attr "cx" :expr "String(20 + ((t * 4) % 1) * 560)")
+    (:target "#iambic-status-text" :attr "textContent" :expr "t < 0.25 ? 'THE 1599 GLOBE: 360° Amphitheatre & Cosmological Tiers' : (t < 0.50 ? 'THRUST STAGE: Hell (Trapdoor) ➔ Earth (Stage) ➔ Heavens (Roof)' : (t < 0.75 ? 'IAMBIC PENTAMETER (10 beats): da-DUM da-DUM da-DUM da-DUM da-DUM' : 'METER BREAK: Feminine Ending (11th beat waver in Macbeth)'))")
+    (:target "#globe-trapdoor-glow" :attr "opacity" :expr "0.4 + Math.sin(t * Math.PI * 6) * 0.35")
+  ))
+)

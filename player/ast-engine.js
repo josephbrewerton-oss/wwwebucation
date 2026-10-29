@@ -5037,8 +5037,18 @@
                 `${currentDir}${directFile}`
               ] : [];
 
+              const altId = registryScene.base || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
+              const altUrls = altId ? [
+                isBinary ? `/player/bytecode/${altId}.${ext}` : `/cartridges/${altId}.${ext}`,
+                isBinary ? `bytecode/${altId}.${ext}` : `../cartridges/${altId}.${ext}`,
+                `/cartridges/${altId}.${ext}`,
+                `../cartridges/${altId}.${ext}`,
+                `cartridges/${altId}.${ext}`
+              ] : [];
+
               const candidateUrls = Array.from(new Set([
                 ...directUrls,
+                ...altUrls,
                 // 1. Direct canonical paths (resolves immediately with zero 404 probes)
                 isBinary ? `/player/bytecode/${sceneId}.${ext}` : `/cartridges/${sceneId}.${ext}`,
                 isBinary ? `bytecode/${sceneId}.${ext}` : `../cartridges/${sceneId}.${ext}`,

@@ -15,7 +15,7 @@
   <line x1="50" y1="280" x2="750" y2="280" class="track" />
 
   <!-- The Cart Assembly (Transformed via Cartesian X) -->
-  <g id="cart" transform="translate(400, 250)">
+  <g id="cart" transform="translate(400, 250)" style="cursor: grab;" data-pedagogical="cart-chassis">
     <!-- Wheels -->
     <circle cx="-30" cy="25" r="8" class="wheel" />
     <circle cx="30" cy="25" r="8" class="wheel" />
@@ -24,7 +24,7 @@
     
     <!-- The Inverted Pole (Rotated around the pivot at 0, 0) -->
     <!-- The Needle Law: Pure polar rotation, 0 degrees is straight UP -->
-    <g id="pole" transform="rotate(0, 0, 0)">
+    <g id="pole" transform="rotate(0, 0, 0)" style="cursor: grab;" data-pedagogical="inverted-pole">
       <line x1="0" y1="0" x2="0" y2="-120" class="pole-stem" />
       <circle cx="0" cy="-120" r="7" fill="#ff3366" />
     </g>
@@ -35,8 +35,8 @@
   <!-- Arcade Telemetry HUD -->
   <g id="hud" transform="translate(50, 40)">
     <text x="0" y="0" class="hud-text">MODE: <tspan id="hud-mode" class="hud-val" fill="#a6e22e">TUPLE</tspan></text>
-    <text x="0" y="22" class="hud-text">PAYLOAD: <tspan id="hud-bytes" class="hud-val" fill="#f8f8f2">14 B</tspan></text>
-    <text x="0" y="44" class="hud-text">LOOP LATENCY: <tspan id="hud-ms" class="hud-val" fill="#a6e22e">11.2 ms</tspan></text>
-    <text x="0" y="66" class="hud-text">STATE: <tspan id="hud-status" class="hud-val" fill="#a6e22e">LOCKED (60 FPS)</tspan></text>
+    <text x="0" y="22" class="hud-text">PAYLOAD: <tspan id="hud-bytes" class="hud-val" fill="#f8f8f2">16 B</tspan></text>
+    <text x="0" y="44" class="hud-text">LOOP LATENCY: <tspan id="hud-ms" class="hud-val" fill="#a6e22e">10.2 ms</tspan></text>
+    <text x="0" y="66" class="hud-text">STATE: <tspan id="hud-status" class="hud-val" fill="#a6e22e">BALANCED (60 FPS)</tspan></text>
   </g>
 </svg>

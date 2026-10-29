@@ -1,0 +1,49 @@
+(:cartridge :type :data :id "oak-data-algorithms-sequencing" :title "Algorithms, Sequencing & Logic" :stage "Key Stage 2" :subject "Computing" :unit "Algorithms and Sequencing"
+  (:axiom "An algorithm is an unambiguous, finite sequence of precise instructions designed to solve a problem or accomplish a specific task.")
+  (:trap "Assuming a computer knows what you mean without explicit instructions, or thinking bugs are hardware defects rather than logic errors.")
+  (:socratic-pivot "If you tell a robot \"make a jam sandwich\", why will it fail unless you specify \"pick up the knife with your right hand\"?")
+  (:hook "Programming a rover robot to navigate a volcanic obstacle course on Mars.")
+  (:guided-step "Decompose complex tasks into linear steps, condition checks (selection), and loops (iteration).")
+  (:questions (
+    (:q :id "comp-1" :prompt "What is the computer science definition of an algorithm?"
+        :options ("A precise, step-by-step set of instructions to solve a problem or complete a task" "The physical glass screen of a tablet computer" "A computer virus that steals passwords from websites" "A keyboard shortcut used to delete a whole paragraph")
+        :answer 0
+        :tier "recall"
+        :hint "Think of a recipe in cooking or a Lego construction manual."
+        :explanation "An algorithm is an ordered, unambiguous set of rules or steps that takes an input and reliably produces the desired output."
+        :misconceptions ("Correct! An algorithm is a precise, ordered sequence of instructions." "Misconception: A tablet screen is physical display hardware." "Misconception: A virus is malicious software, not the definition of an algorithm." "Misconception: A keyboard shortcut is an input event, not an algorithm.")
+    )
+    (:q :id "comp-2" :prompt "In computer programming, what does the process of \"debugging\" mean?"
+        :options ("Finding and fixing errors or logical mistakes in program code" "Cleaning dust and crumbs out of a computer keyboard" "Downloading free games from an internet browser" "Unplugging the power cable while the computer is saving a file")
+        :answer 0
+        :tier "recall"
+        :hint "When a code script doesn’t behave as expected, programmers trace the error step-by-step."
+        :explanation "Debugging is the systematic process of finding, tracing, and resolving bugs (errors or unintended behaviors) in computer software code."
+        :misconceptions ("Correct! Debugging is finding and resolving software code defects." "Misconception: Physical cleaning is hardware maintenance, not code debugging." "Misconception: Downloading software is file transfer." "Misconception: Abruptly unplugging power can corrupt data files.")
+    )
+    (:q :id "comp-3" :prompt "Which programming construct allows a set of instructions to be repeated multiple times without writing them out again?"
+        :options ("A loop (iteration)" "An IF statement (selection)" "A variable assignment" "A print statement")
+        :answer 0
+        :tier "application"
+        :hint "Think of \"repeat 4 times [move forward 10 steps, turn right 90 degrees]\" to draw a square."
+        :explanation "Iteration (loops, such as \"repeat 10 times\" or \"while condition is true\") executes a block of code repeatedly, keeping algorithms efficient and concise."
+        :misconceptions ("Correct! Loops and iteration handle repeated code execution." "Misconception: Selection (IF-THEN-ELSE) branches execution based on a condition rather than repeating." "Misconception: Variables store values in memory." "Misconception: Print statements output text to the screen.")
+    )
+    (:q :id "comp-4" :prompt "Why is the exact sequence (order) of commands critical in an algorithm?"
+        :options ("Executing commands in the wrong order produces incorrect results or complete failure" "Computers shuffle commands randomly to make execution faster" "Order only matters in human languages, not in binary code" "Commands always execute from bottom to top automatically")
+        :answer 0
+        :tier "analysis"
+        :hint "What happens if you put your shoes on before your socks?"
+        :explanation "Computers execute instructions sequentially. Changing the order (e.g. putting shoes on before socks, or moving forward before checking for a wall) breaks the logic."
+        :misconceptions ("Correct! Sequential order is fundamental to deterministic algorithm execution." "Misconception: Computers execute code strictly in program counter sequence, never randomly." "Misconception: Order is even more rigorous in code than natural languages." "Misconception: Standard code executes sequentially from top to bottom.")
+    )
+    (:q :id "comp-5" :prompt "A smart thermostat has the rule: \"IF room temperature < 18°C, THEN turn heating ON; ELSE turn heating OFF.\" What computational concept is this?"
+        :options ("Selection (conditional branching based on a test condition)" "An infinite loop" "A hardware memory crash" "Data encryption")
+        :answer 0
+        :tier "application"
+        :hint "The program decides which path to follow depending on whether the temperature is below 18°C."
+        :explanation "Selection allows a computer program to make decisions and execute different paths based on whether a condition evaluates to TRUE or FALSE."
+        :misconceptions ("Correct! Selection uses IF/ELSE conditional logic to branch behavior." "Misconception: An infinite loop repeats endlessly without a termination condition." "Misconception: A memory crash occurs when resources are exhausted." "Misconception: Encryption scrambles data for cybersecurity.")
+    )
+  ))
+)

@@ -1,0 +1,51 @@
+(:scene :id "liturgy-of-the-hours" :type "Sim" :oak-id "OAK-KS3-RE-007" :oak-unit "ks3-re-catholic-divine-office-psalms" :title "The Liturgy of the Hours: Sanctifying Time Through the Divine Office" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "canonicalHourIdx" :val 2.0 :min 0.0 :max 6.0 :step 1.0 :label "Canonical Hour")
+    (:var :name "sunElevation" :val 45.0 :min 0.0 :max 360.0 :step 15.0 :label "Celestial Sun/Moon Angle")
+    (:var :name "breviaryOpen" :val 1.0 :min 0.0 :max 1.0 :step 1.0 :label "Breviary Display")
+  ))
+  (:inputs (
+    (:slider :var "canonicalHourIdx" :label "Hour (Matins, Lauds, Terce, Sext, None, Vespers, Compline)" :min 0.0 :max 6.0 :step 1.0)
+    (:slider :var "sunElevation" :label "Celestial Sphere Dial" :min 0.0 :max 360.0 :step 15.0)
+    (:slider :var "breviaryOpen" :label "Breviary Ribbons" :min 0.0 :max 1.0 :step 1.0)
+  ))
+  (:gestures (
+    (:draggable :target "#celestial-dial-knob" :axis "xy" :min 100 :max 700)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.16 :en "Office of Readings / Matins (Vigiliae): Chanted during the quiet night or predawn hours. Extended meditation on the Sacred Scriptures and writings of the Church Fathers (Patristic corpus)." :es "Oficio de Lecturas / Maitines: Rezado durante la noche o antes del amanecer. Meditación profunda en la Escritura y los Santos Padres." :la "Officium Lectionis (Matutinum): Domine, labia mea aperies: Et os meum annuntiabit laudem tuam. Deus in adiutorium meum intende: Domine ad adiuvandum me festina.")
+    (:start 0.16 :end 0.34 :en "Lauds (Morning Prayer): One of the two principal hinge hours. Consecrates the dawn and the day's first thoughts to the Risen Christ, culminating in the Canticle of Zechariah (Benedictus, Luke 1:68-79)." :es "Laudes (Oración de la Mañana): Hora quicio principal. Consagra el amanecer al Cristo Resucitado con el Cántico de Zacarías (Benedictus)." :la "Laudes Matutinae: Benedictus Dominus Deus Israel, quia visitavit et fecit redemptionem plebis suae: Illuminare his qui in tenebris et in umbra mortis sedent.")
+    (:start 0.34 :end 0.52 :en "Daytime Hours (Terce at 9 AM, Sext at 12 noon, None at 3 PM): Pauses throughout daily labor recalling the Holy Spirit descending at Pentecost, Christ nailed to the Cross, and His sacred death on Calvary." :es "Horas Menores (Tercia 9h, Sexta 12h, Nona 15h): Pausas en el trabajo recordando Pentecostés, a Cristo clavado en la Cruz y su muerte redentora." :la "Horae Diurnae: Tertia (Spiritus Sanctus), Sexta (Crucifixio Christi), Nona (Mors Domini in Calvario). Incline cor meum in testimonia tua.")
+    (:start 0.52 :end 0.74 :en "Vespers (Evening Prayer): The second great hinge hour celebrated at sunset. Offering the evening sacrifice of thanksgiving as candles are lit, crowned by the Blessed Virgin Mary's Canticle (Magnificat, Luke 1:46-55)." :es "Vísperas (Oración de la Tarde): La segunda gran hora quicio al caer el sol. Sacrificio vespertino de alabanza coronado por el Magníficat de María." :la "Vesperae: Magnificat anima mea Dominum, et exsultavit spiritus meus in Deo salvatore meo: Quia respexit humilitatem ancillae suae.")
+    (:start 0.74 :end 1.00 :en "Compline (Night Prayer): Prayed in peaceful darkness before sleep. Examination of conscience, the Canticle of Simeon (Nunc Dimittis, Luke 2:29-32), and the night's final Marian Antiphon (Salve Regina)." :es "Completas (Oración de la Noche): Rezado en paz antes de dormir. Examen de conciencia, el Cántico de Simeón (Nunc Dimittis) y la Salve Regina final." :la "Completorium: Nunc dimittis servum tuum, Domine, secundum verbum tuum in pace: Quia viderunt oculi mei salutare tuum. Salve, Regina, Mater misericordiae!")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "I. Office of Readings / Matins" :rule "Vigiliae • 2:00 AM - 5:00 AM; night silence; Patristic readings; Te Deum.")
+    (:t 0.16 :title "II. Lauds (Morning Prayer - Hinge Hour)" :rule "Laudes • 6:00 AM; daybreak sun; praise of creation; Canticle of Zechariah (Benedictus).")
+    (:t 0.34 :title "III. Daytime Hours (Terce, Sext, None)" :rule "Hora Media • 9:00 AM, 12:00 PM, 3:00 PM; sanctifying daily labor; Passion memory.")
+    (:t 0.52 :title "IV. Vespers (Evening Prayer - Hinge Hour)" :rule "Vesperae • 6:00 PM; evening sacrifice; lighting the lucerna; Magnificat of Mary.")
+    (:t 0.74 :title "V. Compline (Night Prayer & Salve Regina)" :rule "Completorium • 9:00 PM; quiet peace; Nunc Dimittis; Salve Regina Marian antiphon.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.30
+      :prompt "Which Gospel canticle is chanted by the universal Church every single morning during Morning Prayer (Lauds)?"
+      :options ("The Canticle of Zechariah (Benedictus Dominus Deus Israel, Luke 1:68-79)" "The Magnificat" "The Nunc Dimittis" "The Gloria in Excelsis Deo")
+      :answer 0
+      :explanation "Under the General Instruction of the Liturgy of the Hours §50, the Canticle of Zechariah (Benedictus) is chanted every morning at Lauds, celebrating Christ as the Dawn from on high breaking upon those who dwell in darkness.")
+    (:checkpoint :t 0.68
+      :prompt "What is the great Gospel canticle sung at Vespers (Evening Prayer) every evening?"
+      :options ("The Magnificat — Mary's hymn of praise and joy (Luke 1:46-55)" "The Beatitudes" "The Benedictus" "The Song of Moses")
+      :answer 0
+      :explanation "Every evening at Vespers, the Church joins the Mother of God in chanting the Magnificat ('My soul proclaims the greatness of the Lord'), thanking God for the day's salvation history.")
+    (:checkpoint :t 0.92
+      :prompt "What biblical canticle from the Presentation in the Temple is prayed at Compline (Night Prayer) before resting?"
+      :options ("The Canticle of Simeon (Nunc Dimittis: 'Now, Lord, let your servant go in peace')" "Psalm 23" "The Song of the Three Holy Children" "The Canticle of Anna")
+      :answer 0
+      :explanation "At Compline, the Church places the prayer of aged Simeon (Luke 2:29-32) on our lips as we commit our souls into God's hands before sleep, ready to wake either to earthly dawn or the eternal resurrection.")
+  ))
+  (:bindings (
+    (:target "#celestial-sun-moon" :attr "transform" :expr "'rotate(' + ((t * 360) + (vars.sunElevation || 0)) + ' 400 240)'")
+    (:target "#celestial-sky-fill" :attr "fill" :expr "t >= 0.16 && t < 0.60 ? '#1e3a8a' : (t >= 0.60 && t < 0.74 ? '#7c2d12' : '#030712')")
+    (:target "#breviary-ribbon-red" :attr "transform" :expr "'rotate(' + (Math.sin(t * 10) * 8) + ' 400 320)'")
+  ))
+)

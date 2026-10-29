@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T08:39:36.657Z",
-  "totalScenes": 59,
+  "generatedAt": "2026-10-29T09:05:38.972Z",
+  "totalScenes": 60,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -272,6 +272,21 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 5
+    },
+    {
+      "id": "inverted-pendulum-dyno",
+      "type": "Sim",
+      "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
+      "stage": "KS3 PHYSICS",
+      "duration": 16,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/inverted-pendulum-dyno.svg",
+      "astFile": "cartridges/inverted-pendulum-dyno.ast",
+      "astbFile": "bytecode/inverted-pendulum-dyno.astb",
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 6
     },
     {
       "id": "kinetic-gas",
@@ -591,17 +606,17 @@
     {
       "id": "pendulum_dyno",
       "type": "Sim",
-      "title": "pendulum_dyno",
-      "stage": "CURRICULUM",
-      "duration": 14,
+      "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
+      "stage": "KS3 PHYSICS",
+      "duration": 16,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/pendulum_dyno.svg",
       "astFile": "cartridges/pendulum_dyno.ast",
       "astbFile": "bytecode/pendulum_dyno.astb",
-      "keyframeCount": 0,
-      "subtitleCount": 0,
-      "bindingsCount": 0
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 6
     },
     {
       "id": "phonics-lab",

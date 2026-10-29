@@ -57,7 +57,8 @@
     { id: "catholic-rites", type: "Slide", title: "The 24 Catholic Rites & Churches: Universal Communion across East & West", stage: "CATHOLIC LIFE", duration: 54, oakId: "OAK-KS3-RE-011", oakUnit: "ks3-re-catholic-sacramental-rites", svgFile: "scenes/catholic-rites.svg", astFile: "scenes/catholic-rites.ast" },
     { id: "cst-virtues", type: "Sim", title: "Catholic Social Teaching & Virtues: Gospel Love in Daily Action", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-012", oakUnit: "ks3-re-catholic-social-teaching-virtues", svgFile: "scenes/cst-virtues.svg", astFile: "scenes/cst-virtues.ast" },
     { id: "latin-mass-prayers", type: "Sim", title: "Latin Prayers & Gregorian Chant: The Universal Voice of the Church", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-013", oakUnit: "ks3-re-catholic-traditional-latin-prayers", svgFile: "scenes/latin-mass-prayers.svg", astFile: "scenes/latin-mass-prayers.ast" },
-    { id: "nicene-creed", type: "Sim", title: "The Nicene & Apostles' Creed: The Profession of Faith", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-014", oakUnit: "ks3-re-catholic-creed-profession-faith", svgFile: "scenes/nicene-creed.svg", astFile: "scenes/nicene-creed.ast" }
+    { id: "nicene-creed", type: "Sim", title: "The Nicene & Apostles' Creed: The Profession of Faith", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-014", oakUnit: "ks3-re-catholic-creed-profession-faith", svgFile: "scenes/nicene-creed.svg", astFile: "scenes/nicene-creed.ast" },
+    { id: "inverted-pendulum-dyno", base: "pendulum_dyno", type: "Sim", title: "Inverted Pendulum Dynamical System: Cart-Pole State Control", stage: "KS3 PHYSICS", duration: 16, oakId: "OAK-KS3-SCI-010", oakUnit: "ks3-physics-inverted-pendulum-dyno", svgFile: "cartridges/pendulum_dyno.svg", astFile: "cartridges/pendulum_dyno.ast" }
   ];
 
   const scenes = Object.create(null);
@@ -437,8 +438,8 @@
       if (scenes[norm] && !scenes[norm].svgMarkup && !scenes[norm].svgText && EMBEDDED_FALLBACKS[norm]) {
         Object.assign(scenes[norm], EMBEDDED_FALLBACKS[norm]);
       }
-      if (scenes[norm] && (scenes[norm].svgMarkup || scenes[norm].svgText)) return scenes[norm];
-      if (!this.isUnsafeKey(id) && scenes[id] && (scenes[id].svgMarkup || scenes[id].svgText)) return scenes[id];
+      if (scenes[norm]) return scenes[norm];
+      if (!this.isUnsafeKey(id) && scenes[id]) return scenes[id];
 
       // Check decentralized localStorage for custom or imported PhET cartridges
       if (typeof localStorage !== 'undefined') {
@@ -514,6 +515,11 @@
         .replace(/\.(ast|svg|json)$/, '');
       if (this.isUnsafeKey(clean)) return '';
       const aliases = {
+        'pendulum': 'inverted-pendulum-dyno',
+        'inverted-pendulum': 'inverted-pendulum-dyno',
+        'inverted-pendulum-dyno': 'inverted-pendulum-dyno',
+        'pendulum-dyno': 'inverted-pendulum-dyno',
+        'pendulum_dyno': 'inverted-pendulum-dyno',
         'pythagorus': 'pythagoras',
         'pythagoras-theorem': 'pythagoras',
         'pythagoras-proof': 'pythagoras',

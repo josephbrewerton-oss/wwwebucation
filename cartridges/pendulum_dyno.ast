@@ -1,40 +1,56 @@
-(cartridge
-  (meta
-    (id "inverted-pendulum-dyno")
-    (version "1.0.0")
-    (fps 60)
-    (budget-kb 32))
-
-  ;; State Vector Definition: (x, v_x, theta, omega, t)
-  ;; x: [-300.0 .. 300.0] track offset from centre (px)
-  ;; v_x: cart velocity
-  ;; theta: [-3.1415 .. 3.1415] angle from upright vertical (rad)
-  ;; omega: angular velocity
-  ;; t: normalized cycle time [0.0 .. 1.0]
-  (state
-    (cart-x 0.0)
-    (cart-vx 0.0)
-    (pole-rad 0.05)
-    (pole-omega 0.0)
-    (mode :tuple))
-
-  ;; Hardware Binding: Directly drives the SVG nodes without DOM diffing
-  (bind
-    (target "#cart"
-      (attr "transform" (format "translate({0}, 250)" (+ 400 (get state cart-x)))))
-    
-    ;; Polar Needle Law: rotation strictly around the pivot (0, 0)
-    (target "#pole"
-      (attr "transform" (format "rotate({0}, 0, 0)" (rad->deg (get state pole-rad))))))
-
-  ;; Inference Interface: Defines how state feeds into Nano
-  (inference-profile
-    (:tuple
-      (format "({0},{1},{2},{3})")
-      (parse :flat-numeric-array)
-      (expected-bytes 16))
-    
-    (:json
-      (format "{\"cart\":{\"x\":{0},\"vx\":{1}},\"pole\":{\"theta\":{2},\"omega\":{3}}}")
-      (parse :json-object)
-      (expected-bytes 148))))
+(:scene :id "inverted-pendulum-dyno" :type "Sim" :oak-id "OAK-KS3-SCI-010" :oak-unit "ks3-physics-inverted-pendulum-dyno" :title "Inverted Pendulum Dynamical System: Cart-Pole State Control" :stage "KS3 PHYSICS" :duration 16.0
+  (:vars (
+    (:var :name "cartX" :val 0 :min -250 :max 250 :step 1 :unit "px" :label "Cart Position (x)")
+    (:var :name "poleAngle" :val 6 :min -45 :max 45 :step 0.5 :unit "°" :label "Pole Angle (θ)")
+    (:var :name "kp" :val 1.8 :min 0.2 :max 4.0 :step 0.1 :label "Proportional Gain (Kp)")
+    (:var :name "kd" :val 0.6 :min 0.1 :max 2.0 :step 0.05 :label "Derivative Gain (Kd)")
+  ))
+  (:inputs (
+    (:slider :var "cartX" :label "Cart Track Offset (px)" :min -250 :max 250 :step 1)
+    (:slider :var "poleAngle" :label "Inverted Pole Perturbation (°)" :min -45 :max 45 :step 0.5)
+    (:slider :var "kp" :label "Control Feedback Gain (Kp)" :min 0.2 :max 4.0 :step 0.1)
+    (:slider :var "kd" :label "Damping Derivative Gain (Kd)" :min 0.1 :max 2.0 :step 0.05)
+  ))
+  (:computed (
+    (:name "cartOffset" :expr "400 + (vars.cartX || 0) + Math.sin(t * Math.PI * 4) * (60 / (vars.kp || 1.8))")
+    (:name "poleDeg" :expr "(vars.poleAngle || 0) * Math.cos(t * Math.PI * 4) * Math.exp(-t * 0.8 * (vars.kd || 0.6))")
+    (:name "cycleLatency" :expr "(10.2 + Math.sin(t * Math.PI * 8) * 1.6).toFixed(1)")
+    (:name "systemStatus" :expr "Math.abs(computed.poleDeg || 0) < 15 ? 'BALANCED (60 FPS)' : 'RECOVERY MANEUVER'")
+  ))
+  (:gestures (
+    (:draggable :target "#cart" :axis "x" :min 100 :max 700)
+    (:draggable :target "#pole" :axis "xy" :min -45 :max 45)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.25 :en "An inverted pendulum is naturally open-loop unstable due to gravity." :es "Un péndulo invertido es intrínsecamente inestable en lazo abierto debido a la gravedad." :la "Pendulum inversum ob gravitatem natura sua instabile est.")
+    (:start 0.25 :end 0.50 :en "To balance the vertical pole, the cart must accelerate underneath in the direction of the fall." :es "Para equilibrar el poste vertical, el carro debe acelerar por debajo en la dirección de la caída." :la "Currus sub virga in casus directionem accelerare debet ut aequilibrium servet.")
+    (:start 0.50 :end 0.75 :en "Active state-feedback control (LQR/PID) computes the corrective horizontal force at 60 FPS." :es "El control por realimentación de estado (LQR/PID) calcula la fuerza correctora horizontal a 60 FPS." :la "Reversio status vectoris vim correctivam sexagies in secundo computat.")
+    (:start 0.75 :end 1.00 :en "By dynamically adjusting cart displacement, the pole angle converges stably toward vertical." :es "Ajustando dinámicamente el desplazamiento del carro, el ángulo del poste converge establemente hacia la vertical." :la "Virga ad statum directum stabiliter convergit.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Unstable Inverted Equilibrium" :rule "Vertical center of mass produces diverging gravitational torque (τ = m·g·L·sin θ).")
+    (:t 0.25 :title "2. Directional Perturbation" :rule "Angular displacement triggers immediate counter-acceleration of the cart chassis.")
+    (:t 0.50 :title "3. Active State Space Feedback" :rule "State vector (x, v, θ, ω) determines restoring force: F = -Kx.")
+    (:t 0.75 :title "4. Convergent Limit Cycle" :rule "Damping absorbs energy; pole angle settles within narrow vertical tolerance.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "When an inverted pendulum tilts to the right, which way must the cart move to restore balance?"
+      :options ("Accelerate rightward directly under the pole's falling center of mass" "Accelerate leftward away from the pole" "Remain completely stationary" "Lift upward into the air")
+      :answer 0
+      :explanation "Just like balancing a broomstick on your palm, the base must quickly accelerate in the direction of the fall to bring the center of mass back above the pivot.")
+    (:checkpoint :t 0.80
+      :prompt "In state-space control of the cart-pole system, which parameters compose the 4-dimensional state vector?"
+      :options ("Cart position (x), cart velocity (v), pole angle (θ), and pole angular velocity (ω)" "Cart color, ambient temperature, track length, and friction" "Only the weight of the cart and the height of the room" "Only the battery voltage and time of day")
+      :answer 0
+      :explanation "The dynamic state of the cart-pole system is completely specified by 4 state variables: cart position and velocity (x, dx/dt) plus pole angle and angular velocity (θ, dθ/dt).")
+  ))
+  (:bindings (
+    (:target "#cart" :attr "transform" :expr "'translate(' + (400 + (vars.cartX || 0) + Math.sin(t * Math.PI * 4) * (60 / (vars.kp || 1.8))) + ', 250)'")
+    (:target "#pole" :attr "transform" :expr "'rotate(' + ((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4) * Math.exp(-t * 0.8 * (vars.kd || 0.6))) + ', 0, 0)'")
+    (:target "#hud-mode" :attr "textContent" :expr "t < 0.5 ? 'TUPLE (x,v,θ,ω)' : 'LQR-BALANCE'")
+    (:target "#hud-bytes" :attr "textContent" :expr "t < 0.5 ? '16 B' : '32 B'")
+    (:target "#hud-ms" :attr "textContent" :expr "(10.2 + Math.sin(t * Math.PI * 8) * 1.6).toFixed(1) + ' ms'")
+    (:target "#hud-status" :attr "textContent" :expr "Math.abs((vars.poleAngle || 0) * Math.cos(t * Math.PI * 4)) < 15 ? 'BALANCED (60 FPS)' : 'RECOVERY MANEUVER'")
+  ))
+)
