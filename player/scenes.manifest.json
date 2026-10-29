@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-29T06:24:34.878Z",
-  "totalScenes": 58,
+  "generatedAt": "2026-10-29T06:25:46.038Z",
+  "totalScenes": 59,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -587,6 +587,21 @@
       "keyframeCount": 0,
       "subtitleCount": 6,
       "bindingsCount": 4
+    },
+    {
+      "id": "pendulum_dyno",
+      "type": "Sim",
+      "title": "pendulum_dyno",
+      "stage": "CURRICULUM",
+      "duration": 14,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/pendulum_dyno.svg",
+      "astFile": "cartridges/pendulum_dyno.ast",
+      "astbFile": "bytecode/pendulum_dyno.astb",
+      "keyframeCount": 0,
+      "subtitleCount": 0,
+      "bindingsCount": 0
     },
     {
       "id": "phonics-lab",
