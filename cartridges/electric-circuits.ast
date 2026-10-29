@@ -9,8 +9,8 @@
     (:slider :var "resistance" :label "Resistance (Ω)" :min 1.0 :max 12.0 :step 0.5)
   ))
   (:computed (
-    (:name "current" :expr "(vars.switchClosed ? vars.voltage / vars.resistance : 0).toFixed(2)")
-    (:name "power" :expr "(vars.switchClosed ? (vars.voltage * vars.voltage) / vars.resistance : 0).toFixed(1)")
+    (:name "current" :expr "vars.switchClosed ? (vars.voltage / vars.resistance) : 0")
+    (:name "power" :expr "vars.switchClosed ? ((vars.voltage * vars.voltage) / vars.resistance) : 0")
   ))
   (:gestures (
     (:interactive :target "#circuit-switch" :action "toggle-switch")
@@ -39,8 +39,11 @@
       :explanation "High resistance in the filament causes electrons to collide with tungsten ions, releasing intense thermal heat and visible light photons.")
   ))
   (:bindings (
-    (:target "#telemetry-display" :attr "textContent" :expr "'Voltage: ' + vars.voltage + 'V | Resistance: ' + vars.resistance + 'Ω | Current: ' + computed.current + 'A | Power: ' + computed.power + 'W'")
-    (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed !== false ? Math.min(1.0, 0.4 + (computed.power / 60)) : 0.05")
-    (:target "#bulb-halo" :attr "r" :expr "vars.switchClosed !== false ? String(40 + Math.min(40, computed.power * 0.8)) : '20'")
+    (:target "#telemetry-display" :attr "textContent" :expr "'Voltage: ' + (vars.voltage || 0) + 'V | Resistance: ' + (vars.resistance || 1) + 'Ω | Current: ' + Number(computed.current || 0).toFixed(2) + 'A | Power: ' + Number(computed.power || 0).toFixed(1) + 'W'")
+    ;; Start glow at 0.15 so turning dials actually ramps from dim to radiant
+    (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed ? Math.min(1.0, 0.15 + (Number(computed.power || 0) / 120)) : 0.05")
+    (:target "#bulb-halo" :attr "r" :expr "vars.switchClosed ? (25 + Math.min(65, Number(computed.power || 0) * 0.5)) : 15")
+    ;; Optional: modulate the bulb filament core stroke-width/color for extra visual punch
+    (:target "#bulb-filament" :attr "stroke" :expr "vars.switchClosed && Number(computed.power || 0) > 2 ? '#fff5a0' : '#444'")
   ))
 )
