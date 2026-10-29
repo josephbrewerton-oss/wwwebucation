@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-29T19:48:05.133Z",
+  "generatedAt": "2026-10-29T19:48:47.727Z",
   "totalCartridges": 60,
-  "masterChecksum": "eb0199b9fb4525579499e1b474c277cfcf64ba8b55a1edac7a2a1e631e9776a5",
+  "masterChecksum": "94eede2c99bb36f871b58324ea775f23dfd619082a313b85c355ad1cc61bae9b",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -346,15 +346,15 @@
       "title": "Latin Prayers & Gregorian Chant: The Universal Voice of the Catholic Church",
       "stage": "CATHOLIC LIFE",
       "type": "Slide",
-      "astSha256": "97feb2dc1bf8237f7144f26ecc5e3f2133a8cb5f267a64d71cb0005276915552",
+      "astSha256": "506d1e6bc90d0fb9bc6442377628d9450ac5bf98225a4e100d37fca84147d375",
       "svgSha256": "7c30f4a6394c77da41e776d098e7dfddd43ecad8b062d185f1fe1b370622930d",
       "astbSha256": "8f8069c06cb68f937f239da7bbdbb9158fd64e5f69304718951c2a74419f572b",
       "astbBytes": 3678,
-      "astBytes": 5625,
+      "astBytes": 5755,
       "svgBytes": 13677,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "bc4758cbd0f2e54d2b5d5bce0709eeb027ab8f4930f5e19e9b56c2645a6b7720",
+      "seal": "2e580817c7a1a1d638e021a68f655c2f00d870964c056f6db373c4fc48d261fa",
       "certified": true
     },
     "liturgical-calendar": {
