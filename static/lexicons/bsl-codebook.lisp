@@ -7,7 +7,7 @@
 ;; Addressing: (:g Group_0..63 :w Word_0..31)
 ;; =============================================================================
 
-(bsl-codebook :version "2.0.0-PHASE2" :standard "BANZSL" :grid "64x32" :signs-count 60
+(bsl-codebook :version "2.0.0-PHASE2" :standard "BANZSL" :grid "64x32" :signs-count 84
 
   ;; ===========================================================================
   ;; GROUP 00: SOCIAL DISCOURSE, POLITE GREETINGS & EXCHANGES
@@ -400,6 +400,47 @@
     (sign :g 4 :w 17 :id "slow" :hex #x010402011 :viseme "slow"
       (kf :idx 1 :shape :flat :pos [-65 35 10] :ori :prone :base-mode :vowel-board :nmf (nmf :brows "neutral"))
       (kf :idx 2 :shape :flat :pos [-30 15 16] :ori :prone :aspect :durative :base-mode :vowel-board :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 4 :w 18 :id "pressure" :hex #x010003012 :viseme "pressure"
+      (kf :idx 1 :shape :flat :pos [0 -5 22]  :ori :prone :base-mode :mirror :nmf (nmf :brows "furrowed"))
+      (kf :idx 2 :shape :flat :pos [0 15 22]  :ori :prone :aspect :intensive :hold 200 :base-mode :mirror :nmf (nmf :brows "furrowed" :tilt "nod")))
+
+    (sign :g 4 :w 19 :id "current" :hex #x030401051 :viseme "current"
+      (kf :idx 1 :shape :point :pos [-45 15 20] :ori :lateral :base-mode :base-hold :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :point :pos [35 10 25]  :ori :lateral :aspect :durative :hold 160 :base-mode :base-hold :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 4 :w 20 :id "voltage" :hex #x050003052 :viseme "voltage"
+      (kf :idx 1 :shape :v :pos [-15 0 25] :ori :lateral :base-mode :mirror :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :v :pos [30 -5 35] :ori :outward :aspect :intensive :hold 180 :base-mode :mirror :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 4 :w 21 :id "resistance" :hex #x020403032 :viseme "resistance"
+      (kf :idx 1 :shape :fist :pos [-10 10 20] :ori :inward :base-mode :base-hold :nmf (nmf :brows "furrowed"))
+      (kf :idx 2 :shape :fist :pos [-5 12 22]  :ori :inward :aspect :intensive :hold 220 :base-mode :base-hold :nmf (nmf :brows "furrowed" :tilt "nod")))
+
+    (sign :g 4 :w 22 :id "atom" :hex #x070008011 :viseme "atom"
+      (kf :idx 1 :shape :pinch :pos [0 -25 25]  :ori :prone :base-mode :base-hold :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :pinch :pos [30 25 35]  :ori :outward :aspect :durative :hold 180 :base-mode :base-hold :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 4 :w 23 :id "velocity" :hex #x030001051 :viseme "velocity"
+      (kf :idx 1 :shape :point :pos [-25 5 20]  :ori :lateral :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :point :pos [45 -15 55] :ori :lateral :aspect :durative :hold 170 :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 4 :w 24 :id "acceleration" :hex #x010001052 :viseme "fast"
+      (kf :idx 1 :shape :flat :pos [-30 10 18] :ori :lateral :hold 140 :nmf (nmf :brows "furrowed"))
+      (kf :idx 2 :shape :flat :pos [55 -20 70] :ori :lateral :aspect :intensive :hold 200 :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 4 :w 25 :id "fraction" :hex #x030007012 :viseme "fraction"
+      (kf :idx 1 :shape :point :pos [15 -30 25] :ori :prone :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :flat  :pos [0 5 25]    :ori :prone :hold 120 :nmf (nmf :brows "neutral"))
+      (kf :idx 3 :shape :point :pos [15 35 22]  :ori :prone :aspect :intensive :hold 160 :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 4 :w 26 :id "slope" :hex #x010403052 :viseme "slope"
+      (kf :idx 1 :shape :flat :pos [-20 20 20] :ori :prone :base-mode :base-hold :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :flat :pos [25 -25 40] :ori :lateral :aspect :intensive :hold 200 :base-mode :base-hold :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 4 :w 27 :id "pendulum" :hex #x030408011 :viseme "pendulum"
+      (kf :idx 1 :shape :point :pos [-35 20 25] :ori :prone :base-mode :base-hold :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :point :pos [35 20 25]  :ori :prone :aspect :durative :hold 180 :base-mode :base-hold :nmf (nmf :brows "neutral" :tilt "nod")))
   )
 
   ;; ===========================================================================
@@ -443,6 +484,30 @@
     (sign :g 5 :w 8 :id "peace" :hex #x010001011 :viseme "peace"
       (kf :idx 1 :shape :flat :pos [-10 5 20]  :ori :prone :nmf (nmf :brows "neutral"))
       (kf :idx 2 :shape :flat :pos [55 30 20]  :ori :prone :aspect :durative :base-shift [-40 20 0] :nmf (nmf :brows "neutral")))
+
+    (sign :g 5 :w 9 :id "chalice" :hex #x060002031 :viseme "chalice"
+      (kf :idx 1 :shape :claw :pos [0 15 25]   :ori :inward :base-mode :base-hold :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :claw :pos [0 -45 45]  :ori :inward :aspect :durative :hold 250 :base-mode :base-hold :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 5 :w 10 :id "tabernacle" :hex #x010009051 :viseme "tabernacle"
+      (kf :idx 1 :shape :flat :pos [25 -10 30] :ori :lateral :base-mode :mirror :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :flat :pos [0 10 28]   :ori :inward :aspect :durative :hold 220 :base-mode :mirror :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 5 :w 11 :id "eucharist" :hex #x070502031 :viseme "eucharist"
+      (kf :idx 1 :shape :pinch :pos [10 -40 35] :ori :inward :base-mode :vowel-board :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :pinch :pos [-10 5 22]  :ori :inward :aspect :durative :hold 240 :base-mode :vowel-board :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 5 :w 12 :id "consecrate" :hex #x010003011 :viseme "consecrate"
+      (kf :idx 1 :shape :flat :pos [0 5 35]  :ori :prone :base-mode :mirror :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :flat :pos [0 20 35] :ori :prone :aspect :durative :hold 240 :base-mode :mirror :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 5 :w 13 :id "incense" :hex #x020008031 :viseme "incense"
+      (kf :idx 1 :shape :fist :pos [20 -10 45] :ori :inward :hold 140 :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :fist :pos [10 15 25]  :ori :inward :aspect :durative :hold 180 :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 5 :w 14 :id "genuflect" :hex #x050402011 :viseme "genuflect"
+      (kf :idx 1 :shape :v :pos [0 -10 25] :ori :prone :base-mode :vowel-board :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :v :pos [0 35 25]  :ori :prone :aspect :durative :hold 240 :base-mode :vowel-board :nmf (nmf :brows "neutral" :tilt "nod")))
   )
 
   ;; ===========================================================================
@@ -484,5 +549,18 @@
     (sign :g 6 :w 8 :id "not-like" :hex #x010301012 :viseme "not"
       (kf :idx 1 :shape :flat :pos [-10 -5 20] :ori :inward :hold 100 :nmf (nmf :mouth "like" :brows "furrowed"))
       (kf :idx 2 :shape :flat :pos [35 15 35]  :ori :prone  :aspect :intensive :hold 180 :nmf (nmf :brows "furrowed" :tilt "shake")))
+
+    (sign :g 6 :w 9 :id "dir-give" :hex #x010103021 :viseme "give"
+      (kf :idx 1 :shape :flat :pos [20 30 15]  :ori :supine :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :flat :pos [0 -20 65]  :ori :supine :aspect :durative :hold 160 :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 6 :w 10 :id "dir-bless" :hex #x010502011 :viseme "bless"
+      (kf :idx 1 :shape :flat   :pos [0 -45 50] :ori :prone :base-mode :base-hold :nmf (nmf :brows "raised"))
+      (kf :idx 2 :shape :spread :pos [10 -20 40] :ori :prone :base-mode :base-hold :nmf (nmf :brows "raised"))
+      (kf :idx 3 :shape :flat   :pos [20 30 15] :ori :prone :aspect :durative :hold 240 :base-mode :base-hold :nmf (nmf :brows "raised" :tilt "nod")))
+
+    (sign :g 6 :w 11 :id "cl-base-hold" :hex #x010600051 :viseme ""
+      (kf :idx 1 :shape :flat :pos [-35 15 20] :ori :lateral :hold 300 :base-mode :base-hold :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :flat :pos [-35 15 20] :ori :lateral :aspect :durative :hold 300 :base-mode :base-hold :nmf (nmf :brows "neutral")))
   )
 )

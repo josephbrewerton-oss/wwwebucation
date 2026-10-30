@@ -3,7 +3,7 @@
 ;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)
 ;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories
 ;; =============================================================================
-(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 120
+(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 136
   (sign :id "jesus" :word "JESUS" :cat "faith" :gloss "JESUS"
     :label "Jesus Christ"
     :desc "Index touches center of non-dominant palm, then dominant palm (the crucifixion nails in the hands)." :aliases ("CHRIST" "LORD" "SAVIOUR" "SAVIOR")
@@ -299,7 +299,7 @@
 
   (sign :id "force" :word "FORCE" :cat "stem" :gloss "FORCE"
     :label "Force / Push"
-    :desc "Both flat open palms face forward at shoulder height and push outward with muscular effort." :aliases ("PUSH" "PRESSURE")
+    :desc "Both flat open palms face forward at shoulder height and push outward with muscular effort." :aliases ("PUSH" "THRUST")
     (kf :idx 1 :label "Poised at Chest" :rule "Both flat hands held vertical in front of shoulders" :tip [0 -10 20] :knuckle [30 15 10] :wrist [75 55 0] :shape :flat :base-shift [-30 0 0] :nmf (nmf :mouth "force" :brows "furrowed"))
     (kf :idx 2 :label "Muscular Push Out" :rule "Both palms thrust forward driving against resistance" :tip [0 -5 65] :knuckle [25 20 50] :wrist [70 60 25] :shape :flat :base-shift [-30 0 0] :nmf (nmf :mouth "force" :brows "furrowed" :tilt "nod"))
   )
@@ -865,5 +865,121 @@
     :desc "Flat hand sweeps off chest and twists outward with a sharp negative headshake." :aliases ("DISLIKE" "HATE")
     (kf :idx 1 :label "Contact Heart" :rule "Flat hand touches heart" :tip [-10 -5 20] :knuckle [15 15 12] :wrist [50 50 0] :shape :flat :palm :in :hold 100 :nmf (nmf :mouth "like" :brows "furrowed"))
     (kf :idx 2 :label "Repulsive Flick Away" :rule "Hand flicks outward and turns palm down with firm head shake" :tip [35 15 35] :knuckle [65 35 25] :wrist [95 70 10] :shape :flat :palm :down :hold 180 :nmf (nmf :mouth "not" :brows "furrowed" :tilt "shake"))
+  )
+
+  ;; --- 10. Advanced Curriculum STEM Signs ---
+  (sign :id "pressure" :word "PRESSURE" :cat "stem" :gloss "PRESSURE"
+    :label "Pressure / Compressive Stress"
+    :desc "Both flat palms press firmly against each other downward, showing compressive stress and force over surface area." :aliases ("COMPRESSION" "STRESS")
+    (kf :idx 1 :label "Align Opposing Palms" :rule "Both flat hands hover opposed at mid chest" :tip [0 -5 22] :knuckle [25 15 12] :wrist [65 55 0] :shape :flat :palm :down :base-mode :mirror :nmf (nmf :mouth "pressure" :brows "furrowed"))
+    (kf :idx 2 :label "Compress Surface" :rule "Palms compress together firmly with sustained tension" :tip [0 20 22] :knuckle [25 38 12] :wrist [65 72 0] :shape :flat :palm :down :hold 200 :ease :snap :base-mode :mirror :nmf (nmf :mouth "pressure" :brows "furrowed" :tilt "nod"))
+  )
+
+  (sign :id "current" :word "CURRENT" :cat "stem" :gloss "CURRENT"
+    :label "Electric Current / Flow of Charge"
+    :desc "Dominant index weaves steadily forward through non-dominant ring or over base hand showing electron stream." :aliases ("AMPS" "AMPERE" "CHARGE-FLOW")
+    (kf :idx 1 :label "Thread at Origin" :rule "Dominant index threads at wrist of base hand" :tip [-35 15 20] :knuckle [-5 25 10] :wrist [35 55 0] :shape :point :palm :out :base-mode :vowel-board :nmf (nmf :mouth "current" :brows "neutral"))
+    (kf :idx 2 :label "Flow Down Conductor" :rule "Index shoots forward linearly like continuous charge flow" :tip [25 10 50] :knuckle [50 20 35] :wrist [85 45 15] :shape :point :palm :out :hold 150 :ease :ease-out :base-mode :vowel-board :nmf (nmf :mouth "current" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "voltage" :word "VOLTAGE" :cat "stem" :gloss "VOLTAGE"
+    :label "Voltage / Potential Difference"
+    :desc "Both V-handshapes separate vertically and surge forward showing electrical potential difference." :aliases ("VOLTS" "POTENTIAL")
+    (kf :idx 1 :label "V-Handshapes Poised" :rule "Both V-handshapes held opposed across vertical gap" :tip [0 -15 25] :knuckle [25 10 15] :wrist [65 50 0] :shape :v :palm :in :base-mode :mirror :nmf (nmf :mouth "voltage" :brows "furrowed"))
+    (kf :idx 2 :label "Potential Surge" :rule "V-hands snap outward with electric potential impulse" :tip [30 -10 40] :knuckle [55 15 28] :wrist [90 52 10] :shape :v :palm :in :hold 180 :ease :snap :base-mode :mirror :nmf (nmf :mouth "voltage" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "resistance" :word "RESISTANCE" :cat "stem" :gloss "RESISTANCE"
+    :label "Electrical Resistance / Resistor"
+    :desc "Dominant R/hooked index vibrates or zig-zags across non-dominant forearm showing impedance to current." :aliases ("OHMS" "IMPEDANCE")
+    (kf :idx 1 :label "Impedance Rest" :rule "Hooked index touches non-dominant wrist" :tip [-40 20 18] :knuckle [-10 30 10] :wrist [35 60 0] :shape :claw :palm :down :base-mode :vowel-board :nmf (nmf :mouth "ohms" :brows "furrowed"))
+    (kf :idx 2 :label "Zig-zag Obstruction" :rule "Hand zig-zags haltingly along forearm showing resistance" :tip [-15 15 22] :knuckle [15 25 12] :wrist [55 55 2] :shape :claw :palm :down :hold 160 :ease :snap :base-mode :vowel-board :nmf (nmf :mouth "resistance" :brows "furrowed" :tilt "shake"))
+  )
+
+  (sign :id "atom" :word "ATOM" :cat "stem" :gloss "ATOM"
+    :label "Atom / Atomic Nucleus & Orbitals"
+    :desc "Dominant pinch handshape circles non-dominant fist or core showing orbiting electrons and atomic structure." :aliases ("ATOMIC" "NUCLEUS" "MOLECULE")
+    (kf :idx 1 :label "Core Nucleus" :rule "Dominant pinched fingers hover directly over stationary base fist" :tip [-10 0 25] :knuckle [15 20 15] :wrist [55 55 0] :shape :pinch :palm :in :base-mode :vowel-board :nmf (nmf :mouth "atom" :brows "raised"))
+    (kf :idx 2 :label "Orbital Shell Loop" :rule "Pinched hand sweeps an orbital ellipse around nucleus" :tip [25 -10 35] :knuckle [50 10 22] :wrist [85 45 5] :shape :pinch :palm :in :hold 180 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "atom" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "velocity" :word "VELOCITY" :cat "stem" :gloss "VELOCITY"
+    :label "Velocity / Directed Speed"
+    :desc "Dominant V-hand slices decisively forward along vector angle indicating speed with defined direction." :aliases ("VECTOR-SPEED" "DISPLACEMENT-RATE")
+    (kf :idx 1 :label "Poised on Trajectory" :rule "V-hand held close to ribs pointing along vector axis" :tip [10 15 20] :knuckle [35 30 12] :wrist [70 60 0] :shape :v :palm :side :nmf (nmf :mouth "velocity" :brows "neutral"))
+    (kf :idx 2 :label "Vector Slice" :rule "V-hand darts swiftly along angled trajectory path" :tip [40 -15 60] :knuckle [65 5 45] :wrist [95 35 25] :shape :v :palm :side :hold 180 :ease :ease-out :nmf (nmf :mouth "velocity" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "acceleration" :word "ACCELERATION" :cat "stem" :gloss "ACCELERATION"
+    :label "Acceleration / Rate of Velocity Change"
+    :desc "Dominant flat hand accelerates progressively forward, gathering exponential speed from slow to swift." :aliases ("ACCELERATE" "SPEEDING-UP")
+    (kf :idx 1 :label "Low Velocity Start" :rule "Flat hand poised steady at mid body" :tip [0 20 20] :knuckle [25 35 10] :wrist [65 65 0] :shape :flat :palm :side :hold 120 :nmf (nmf :mouth "accel" :brows "neutral"))
+    (kf :idx 2 :label "Surge to Peak" :rule "Hand bursts forward into rapid acceleration vector" :tip [35 -20 65] :knuckle [60 -5 50] :wrist [95 25 30] :shape :flat :palm :side :hold 160 :ease :snap :nmf (nmf :mouth "fast" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "fraction" :word "FRACTION" :cat "stem" :gloss "FRACTION"
+    :label "Fraction / Numerator over Denominator"
+    :desc "Dominant index draws horizontal division bar between upper numerator locus and lower denominator locus." :aliases ("NUMERATOR" "DENOMINATOR" "DIVIDE")
+    (kf :idx 1 :label "Numerator Locus" :rule "Dominant index points at upper numerator level" :tip [-15 -25 25] :knuckle [15 -5 15] :wrist [55 35 0] :shape :point :palm :down :base-mode :vowel-board :nmf (nmf :mouth "numerator" :brows "raised"))
+    (kf :idx 2 :label "Division Bar Line" :rule "Hand slices horizontal line dividing top from bottom" :tip [15 0 25] :knuckle [40 15 15] :wrist [75 48 0] :shape :flat :palm :down :hold 120 :base-mode :vowel-board :nmf (nmf :mouth "over" :brows "neutral"))
+    (kf :idx 3 :label "Denominator Locus" :rule "Index points down settling on denominator level" :tip [-15 25 25] :knuckle [15 40 15] :wrist [55 68 0] :shape :point :palm :down :hold 150 :ease :snap :base-mode :vowel-board :nmf (nmf :mouth "fraction" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "slope" :word "SLOPE" :cat "stem" :gloss "SLOPE"
+    :label "Slope / Gradient / Pitch"
+    :desc "Dominant flat hand tilts along gradient line showing rise over run incline." :aliases ("GRADIENT" "INCLINE" "PITCH")
+    (kf :idx 1 :label "Horizontal Base" :rule "Flat hand rests on base horizontal plane" :tip [-20 20 20] :knuckle [10 32 10] :wrist [55 60 0] :shape :flat :palm :down :base-mode :vowel-board :nmf (nmf :mouth "run" :brows "neutral"))
+    (kf :idx 2 :label "Incline Gradient" :rule "Hand rotates upward along angular gradient slope" :tip [25 -15 35] :knuckle [45 5 22] :wrist [80 40 5] :shape :flat :palm :down :hold 180 :ease :ease-out :base-mode :vowel-board :nmf (nmf :mouth "slope" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "pendulum" :word "PENDULUM" :cat "stem" :gloss "PENDULUM"
+    :label "Pendulum / Harmonic Oscillation"
+    :desc "Dominant index hangs suspended and oscillates smoothly left and right in simple harmonic motion." :aliases ("OSCILLATION" "SWING")
+    (kf :idx 1 :label "Left Apex" :rule "Index suspends at left oscillation amplitude" :tip [-40 15 25] :knuckle [-10 25 15] :wrist [35 55 0] :shape :point :palm :down :base-mode :vowel-board :nmf (nmf :mouth "swing" :brows "raised"))
+    (kf :idx 2 :label "Equilibrium Through" :rule "Finger sweeps smoothly through bottom nadir" :tip [0 35 25] :knuckle [25 45 15] :wrist [65 72 0] :shape :point :palm :down :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "mm" :brows "neutral"))
+    (kf :idx 3 :label "Right Apex" :rule "Finger rises and arrests at right oscillation amplitude" :tip [40 15 25] :knuckle [65 25 15] :wrist [95 55 0] :shape :point :palm :down :hold 180 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "pendulum" :brows "raised" :tilt "nod"))
+  )
+
+  ;; --- 11. Liturgical & Catholic Life Signs ---
+  (sign :id "chalice" :word "CHALICE" :cat "faith" :gloss "CHALICE"
+    :label "Sacred Chalice / Eucharistic Cup"
+    :desc "Both hands cup the sacred vessel, elevating it with deep reverence toward God." :aliases ("CUP" "VESSEL" "GRAIL")
+    (kf :idx 1 :label "Grasp Sacred Stem" :rule "Curved C-hand cupping base of sacred chalice" :tip [-15 15 25] :knuckle [15 30 15] :wrist [55 60 0] :shape :c-shape :palm :in :base-mode :vowel-board :nmf (nmf :mouth "chalice" :brows "raised"))
+    (kf :idx 2 :label "Reverent Elevation" :rule "Chalice elevated aloft before the altar toward heaven" :tip [0 -40 45] :knuckle [25 -20 30] :wrist [65 15 10] :shape :c-shape :palm :in :hold 240 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "reverence" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "tabernacle" :word "TABERNACLE" :cat "faith" :gloss "TABERNACLE"
+    :label "Tabernacle / Sacred Sanctuary"
+    :desc "Both hands outline the sacred dwelling shrine, opening doors with holy reverence." :aliases ("SANCTUARY" "SHRINE" "ARK")
+    (kf :idx 1 :label "Outline Sanctuary Dome" :rule "Both curved hands frame the sacred enclosure" :tip [0 -20 30] :knuckle [30 0 18] :wrist [75 40 5] :shape :c-shape :palm :in :base-mode :mirror :nmf (nmf :mouth "tabernacle" :brows "raised"))
+    (kf :idx 2 :label "Open Sacred Doors" :rule "Hands part outward reverently revealing the presence" :tip [35 -10 35] :knuckle [65 10 22] :wrist [105 45 8] :shape :flat :palm :out :hold 220 :ease :ease-out :base-mode :mirror :nmf (nmf :mouth "holy" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "eucharist" :word "EUCHARIST" :cat "faith" :gloss "EUCHARIST"
+    :label "Holy Eucharist / Blessed Sacrament"
+    :desc "Pinch handshape holds the sacred host aloft, elevating the Body of Christ." :aliases ("HOST" "SACRAMENT" "COMMUNION")
+    (kf :idx 1 :label "Hold Sacred Host" :rule "Pinch fingers hold delicate circular host at chest" :tip [-10 -10 25] :knuckle [15 10 15] :wrist [55 45 0] :shape :pinch :palm :in :base-mode :vowel-board :nmf (nmf :mouth "Eucharist" :brows "raised"))
+    (kf :idx 2 :label "Divine Elevation" :rule "Pinch hand elevates host to heavenly high locus" :tip [0 -50 40] :knuckle [25 -30 25] :wrist [65 5 10] :shape :pinch :palm :in :hold 260 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "holy" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "consecrate" :word "CONSECRATE" :cat "faith" :gloss "CONSECRATE"
+    :label "Consecrate / Eucharistic Prayer"
+    :desc "Both flat hands extend palms down over the gifts in solemn epiclesis blessing." :aliases ("EPICLESIS" "SANCTIFY")
+    (kf :idx 1 :label "Epiclesis Extension" :rule "Both flat hands extend forward over altar gifts" :tip [0 -5 35] :knuckle [25 15 22] :wrist [65 50 5] :shape :flat :palm :down :base-mode :mirror :nmf (nmf :mouth "consecrate" :brows "raised"))
+    (kf :idx 2 :label "Descending Sanctification" :rule "Hands dip in solemn sacramental blessing invocation" :tip [0 15 35] :knuckle [25 32 22] :wrist [65 65 5] :shape :flat :palm :down :hold 240 :ease :smooth :base-mode :mirror :nmf (nmf :mouth "bless" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "incense" :word "INCENSE" :cat "faith" :gloss "INCENSE"
+    :label "Incense / Sacred Thurible"
+    :desc "Dominant hand holds chain and swings thurible forward and backward rising in fragrant prayer." :aliases ("THURIBLE" "CENSER" "SMOKE")
+    (kf :idx 1 :label "Backswing" :rule "Hand draws thurible chain backward" :tip [15 10 15] :knuckle [40 25 8] :wrist [75 55 -5] :shape :fist :palm :in :nmf (nmf :mouth "incense" :brows "neutral"))
+    (kf :idx 2 :label "Forward Sacred Swing" :rule "Thurible swings forward ascending with sweet smoke" :tip [25 -20 50] :knuckle [50 -5 35] :wrist [85 30 15] :shape :fist :palm :in :hold 200 :ease :smooth :nmf (nmf :mouth "incense" :brows "raised" :tilt "nod"))
+  )
+
+  (sign :id "genuflect" :word "GENUFLECT" :cat "faith" :gloss "GENUFLECT"
+    :label "Genuflect / Knee to Ground"
+    :desc "Dominant inverted V-fingers bend right knee gracefully touching the sacred ground before the altar." :aliases ("KNEEL" "BOW-KNEE" "ADORATION")
+    (kf :idx 1 :label "Standing Reverence" :rule "Inverted V legs standing upright before tabernacle" :tip [10 -15 25] :knuckle [25 5 18] :wrist [55 35 5] :shape :v :palm :down :base-mode :vowel-board :nmf (nmf :mouth "adore" :brows "raised"))
+    (kf :idx 2 :label "Right Knee to Ground" :rule "Right leg flexes deeply touching ground in profound adoration" :tip [10 35 25] :knuckle [25 45 18] :wrist [55 70 5] :shape :v :palm :down :hold 250 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "reverence" :brows "raised" :tilt "nod"))
   )
 )

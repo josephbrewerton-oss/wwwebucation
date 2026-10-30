@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-10-29T08:59:40.089Z",
+  "generatedAt": "2026-10-30T09:30:09.979Z",
   "totalCartridges": 59,
   "units": [
     {
@@ -322,8 +322,8 @@
     {
       "unit": "ks3-physics-inverted-pendulum-dyno",
       "oakId": "OAK-KS3-SCI-010",
-      "subject": "Science",
-      "section": "Natural Sciences & Physics",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
       "stage": "KS3 PHYSICS",
       "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
       "cartridgeId": "inverted-pendulum-dyno"
@@ -882,7 +882,7 @@
     {
       "id": "cst-virtues",
       "base": "cst-virtues",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
       "stage": "CATHOLIC LIFE",
       "oakId": "OAK-KS3-RE-012",
@@ -1227,9 +1227,9 @@
       "stage": "KS3 PHYSICS",
       "oakId": "OAK-KS3-SCI-010",
       "oakUnit": "ks3-physics-inverted-pendulum-dyno",
-      "subject": "Science",
-      "section": "Natural Sciences & Physics",
-      "mount": "/curriculum/science/inverted-pendulum-dyno",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "mount": "/curriculum/mathematics/inverted-pendulum-dyno",
       "duration": 16,
       "svgFile": "cartridges/inverted-pendulum-dyno.svg",
       "astFile": "cartridges/inverted-pendulum-dyno.ast",

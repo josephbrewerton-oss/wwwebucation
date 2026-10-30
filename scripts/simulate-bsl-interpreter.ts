@@ -176,15 +176,15 @@ assert(lookupBslSign('GOODBYE')?.id === 'goodbye', "Sign 'GOODBYE' resolves corr
 assert(lookupBslSign('SORRY')?.id === 'sorry', "Sign 'SORRY' resolves correctly");
 
 // Test hybrid streaming: Whole Sign vs Fingerspelling
-const testPhrase = 'JESUS ATOM PRAY';
+const testPhrase = 'JESUS QUARK PRAY';
 const hybridStream = decomposeTextToBslStreamWithLexicon(testPhrase);
 const hasJesusSign = hybridStream.some(p => p.letter.includes('JESUS'));
 const hasPraySign = hybridStream.some(p => p.letter.includes('PRAY'));
-const hasAtomSpelling = hybridStream.some(p => p.letter === 'A' || p.letter === 'T' || p.letter === 'O' || p.letter === 'M');
+const hasQuarkSpelling = hybridStream.some(p => p.letter === 'Q' || p.letter === 'U' || p.letter === 'A' || p.letter === 'R' || p.letter === 'K');
 
 assert(hasJesusSign, "Hybrid stream uses whole-word sign for 'JESUS'");
 assert(hasPraySign, "Hybrid stream uses whole-word sign for 'PRAY'");
-assert(hasAtomSpelling, "Hybrid stream falls back to fingerspelling for un-lexiconed word 'ATOM'");
+assert(hasQuarkSpelling, "Hybrid stream falls back to fingerspelling for un-lexiconed word 'QUARK'");
 
 // ---------------------------------------------------------
 // Test 7: AST S-Expression Serialization & Storage Invariants

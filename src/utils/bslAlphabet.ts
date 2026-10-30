@@ -52,13 +52,42 @@ export type BslHandShape =
   | 'claw'
   | 'fist'
   | 'v'
-  | 'c-shape';
+  | 'c-shape'
+  | 'pinch';
 
-export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | Point3D | [number, number, number];
+export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | 'lateral' | Point3D | [number, number, number];
 
-export type BslEaseCurve = 'snap' | 'ease-out' | 'linear' | 'bounce' | string;
+export type BslEaseCurve = 'snap' | 'ease-out' | 'ease-in' | 'smooth' | 'linear' | 'bounce' | string;
 
-export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override';
+export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override' | 'base-hold';
+
+// BSL Level 6 Directional Agreement Verbs
+export type BslDirectionalVerbType =
+  | 'give'
+  | 'teach'
+  | 'bless'
+  | 'show'
+  | 'help'
+  | 'send'
+  | 'invite';
+
+export interface BslDirectionalAgreement {
+  verb: BslDirectionalVerbType;
+  fromLocus: string;
+  toLocus: string;
+  aspect?: BslAspect;
+  manner?: string;
+}
+
+// BSL Level 6 Instruction Tuple interface for declarative scene choreography
+export interface BslLevel6InstructionTuple {
+  topic?: string;
+  rhQuestion?: string;
+  directionalVerb?: BslDirectionalAgreement;
+  classifier?: BslClassifierPredicate;
+  nmfMouth?: string;
+  aspect?: BslAspect;
+}
 
 // BSL Level 6 Classifier Types (Polycomponential Predicates)
 export type BslClassifierType =
@@ -87,6 +116,10 @@ export interface BslClassifierPredicate {
   toLocus?: string;
   manner?: 'slow' | 'fast' | 'stumble' | 'steady' | 'zig-zag';
   entityLabel?: string;
+  baseHold?: {
+    shape: BslHandShape;
+    locus?: string;
+  };
 }
 
 export interface BslHandPose {

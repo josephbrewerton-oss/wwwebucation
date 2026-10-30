@@ -312,7 +312,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   {
     "id": "cst-virtues",
     "base": "cst-virtues",
-    "type": "Sim",
+    "type": "Slide",
     "label": "Catholic Social Teaching & Virtues: Gospel Love in Daily Action",
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS3-RE-012",
@@ -589,11 +589,11 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "stage": "KS3 PHYSICS",
     "oakId": "OAK-KS3-SCI-010",
     "oakUnit": "ks3-physics-inverted-pendulum-dyno",
-    "subject": "Science",
+    "subject": "Mathematics",
     "isCore": true,
     "tier": "core",
-    "mount": "/curriculum/science/inverted-pendulum-dyno",
-    "section": "Natural Sciences & Physics",
+    "mount": "/curriculum/mathematics/inverted-pendulum-dyno",
+    "section": "Mathematics & Geometry",
     "hasCheckpoints": true,
     "checkpointCount": 2
   },

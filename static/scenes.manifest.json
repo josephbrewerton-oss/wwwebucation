@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-30T08:06:28.778Z",
+  "generatedAt": "2026-10-30T09:30:09.975Z",
   "totalScenes": 59,
   "inputDirs": [
     "static/cartridges",
@@ -331,7 +331,7 @@
       "oakId": "OAK-KS2-RE-016",
       "oakUnit": "ks2-re-catholic-order-of-mass",
       "subject": "Religious Education",
-      "has3D": true,
+      "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/order-of-the-mass.svg",
       "astFile": "cartridges/order-of-the-mass.ast",
@@ -345,7 +345,7 @@
       "section": "Catholic Life & Faith Formation",
       "keyframeCount": 0,
       "subtitleCount": 6,
-      "bindingsCount": 4,
+      "bindingsCount": 14,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -373,7 +373,7 @@
       "section": "Catholic Life & Faith Formation",
       "keyframeCount": 5,
       "subtitleCount": 5,
-      "bindingsCount": 10,
+      "bindingsCount": 15,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -567,9 +567,9 @@
       "tier": "core",
       "mount": "/curriculum/religious/latin-mass-prayers",
       "section": "Catholic Life & Faith Formation",
-      "keyframeCount": 5,
-      "subtitleCount": 5,
-      "bindingsCount": 2,
+      "keyframeCount": 4,
+      "subtitleCount": 4,
+      "bindingsCount": 15,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -849,7 +849,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3,
+      "bindingsCount": 4,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },

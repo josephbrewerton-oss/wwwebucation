@@ -30,6 +30,9 @@ import {
   BslClassifierType,
   BslAspect,
   BslClassifierPredicate,
+  BslDirectionalVerbType,
+  BslDirectionalAgreement,
+  BslLevel6InstructionTuple,
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
   DOMINANT_REST_WRIST,
@@ -41,6 +44,9 @@ export type {
   BslClassifierType,
   BslAspect,
   BslClassifierPredicate,
+  BslDirectionalVerbType,
+  BslDirectionalAgreement,
+  BslLevel6InstructionTuple,
 };
 
 export type BslGrammarMode = 'bsl-natural' | 'sse' | 'makaton' | 'fingerspell';
@@ -199,9 +205,43 @@ const NEGATION_WORDS = new Set([
   "WON'T", 'NONE', 'NOTHING', 'NOWHERE', "ISN'T", "AREN'T", "WASN'T", "WEREN'T"
 ]);
 
+// BSL Level 6 Directional Agreement Verb Mappings
+export const DIRECTIONAL_VERB_MAP: Record<string, BslDirectionalVerbType> = {
+  GIVE: 'give',
+  GIVES: 'give',
+  GIVING: 'give',
+  GAVE: 'give',
+  TEACH: 'teach',
+  TEACHES: 'teach',
+  TEACHING: 'teach',
+  TAUGHT: 'teach',
+  BLESS: 'bless',
+  BLESSES: 'bless',
+  BLESSING: 'bless',
+  BLESSED: 'bless',
+  SHOW: 'show',
+  SHOWS: 'show',
+  SHOWING: 'show',
+  SHOWED: 'show',
+  HELP: 'help',
+  HELPS: 'help',
+  HELPING: 'help',
+  HELPED: 'help',
+  SEND: 'send',
+  SENDS: 'send',
+  SENDING: 'send',
+  SENT: 'send',
+  INVITE: 'invite',
+  INVITES: 'invite',
+  INVITING: 'invite',
+  INVITED: 'invite',
+};
+
 // Directional agreement verbs that take 3D spatial loci trajectories
 const DIRECTIONAL_VERB_WORDS = new Set([
   'GIVE', 'GIVES', 'GIVING', 'GAVE',
+  'TEACH', 'TEACHES', 'TEACHING', 'TAUGHT',
+  'BLESS', 'BLESSES', 'BLESSING', 'BLESSED',
   'ASK', 'ASKS', 'ASKING', 'ASKED',
   'TELL', 'TELLS', 'TELLING', 'TOLD',
   'SHOW', 'SHOWS', 'SHOWING', 'SHOWED',
@@ -704,6 +744,355 @@ export function modulateDirectionalKeyframes(
       },
     };
   });
+}
+
+/**
+ * Procedurally synthesizes a BSL Level 6 Directional Agreement Verb with 3D trajectories
+ * computed dynamically between source and destination spatial loci.
+ */
+export function generateDirectionalAgreementSign(
+  verb: BslDirectionalVerbType,
+  options: {
+    fromLocus?: BslLocusId;
+    toLocus?: BslLocusId;
+    aspect?: BslAspect;
+    manner?: 'slow' | 'fast' | 'reverent' | 'continuous' | 'steady';
+  } = {}
+): BslSign {
+  const fromLocus: BslLocusId = options.fromLocus || (verb === 'bless' ? 'LOCUS_HIGH' : 'ME');
+  const toLocus: BslLocusId = options.toLocus || (verb === 'invite' ? 'ME' : 'YOU');
+  const aspect: BslAspect = options.aspect || 'neutral';
+
+  const p0 = DEFAULT_BSL_LOCI[fromLocus]?.coords || { x: 20, y: 30, z: 15 };
+  const p1 = DEFAULT_BSL_LOCI[toLocus]?.coords || { x: 0, y: -20, z: 65 };
+  const dx = p1.x - p0.x;
+  const dy = p1.y - p0.y;
+  const dz = p1.z - p0.z;
+  const pMid: Point3D = {
+    x: p0.x + dx * 0.5,
+    y: p0.y + dy * 0.5 - 10,
+    z: p0.z + dz * 0.5,
+  };
+
+  const glossLabel = `${verb.toUpperCase()}[${fromLocus}→${toLocus}${aspect !== 'neutral' ? `:${aspect.toUpperCase()}` : ''}]`;
+  const kfs: BslSignKeyframe[] = [];
+
+  switch (verb) {
+    case 'give': {
+      kfs.push({
+        label: `GIVE • Origin [${fromLocus}]`,
+        rule: `Open cupped/flat hand gathers at origin locus`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 25 },
+        shape: 'flat',
+        palm: 'up',
+        hold: aspect === 'intensive' ? 200 : 100,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'neutral', mouth: 'give' },
+      });
+      if (aspect === 'durative') {
+        kfs.push({
+          label: `GIVE • Mid Extension`,
+          rule: `Continuous smooth glide across discourse space`,
+          targetTip: { x: pMid.x, y: pMid.y, z: pMid.z },
+          targetKnuckle: { x: pMid.x + 20, y: pMid.y + 15, z: pMid.z - 10 },
+          targetWrist: { x: pMid.x + 50, y: pMid.y + 45, z: pMid.z - 25 },
+          shape: 'flat',
+          palm: 'up',
+          hold: 80,
+          ease: 'smooth',
+          nmf: { eyebrows: 'neutral', mouth: 'mm' },
+        });
+      }
+      kfs.push({
+        label: `GIVE • Deliver to [${toLocus}]`,
+        rule: `Hand extends forward offering to destination locus`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 15, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'flat',
+        palm: 'up',
+        hold: 160,
+        ease: aspect === 'intensive' ? 'snap' : 'ease-out',
+        nmf: { eyebrows: 'neutral', mouth: 'give', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'teach': {
+      kfs.push({
+        label: `TEACH • Gather Wisdom at [${fromLocus}]`,
+        rule: `Clawed / pinched hand gathers wisdom from mind or origin locus`,
+        targetTip: { x: p0.x, y: p0.y - 25, z: p0.z },
+        targetKnuckle: { x: p0.x + 25, y: p0.y - 5, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 55, y: p0.y + 25, z: p0.z - 20 },
+        shape: 'claw',
+        palm: 'out',
+        hold: 120,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'raised', mouth: 'teach' },
+      });
+      kfs.push({
+        label: `TEACH • Impart Wisdom to [${toLocus}]`,
+        rule: `Hand opens and projects knowledge outward toward learner locus`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 25, y: p1.y + 20, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 55, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'spread',
+        palm: 'out',
+        hold: 180,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'teach', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'bless': {
+      kfs.push({
+        label: `BLESS • Divine Origin [${fromLocus}]`,
+        rule: `Open hand hovers at hierarchical high locus in sacred poise`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 20, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 45, y: p0.y + 50, z: p0.z - 25 },
+        shape: 'flat',
+        palm: 'down',
+        hold: 180,
+        ease: 'ease-out',
+        baseHandMode: 'base-hold',
+        baseHandOverride: { palm: { x: -20, y: 10, z: 20 } },
+        nmf: { eyebrows: 'raised', mouth: 'bless' },
+      });
+      kfs.push({
+        label: `BLESS • Sanctifying Arc`,
+        rule: `Hand descends gracefully in sacred arc spreading divine blessing`,
+        targetTip: { x: pMid.x, y: pMid.y + 5, z: pMid.z },
+        targetKnuckle: { x: pMid.x + 20, y: pMid.y + 25, z: pMid.z - 10 },
+        targetWrist: { x: pMid.x + 45, y: pMid.y + 55, z: pMid.z - 25 },
+        shape: 'spread',
+        palm: 'down',
+        hold: 100,
+        ease: 'smooth',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'raised', mouth: 'bless' },
+      });
+      kfs.push({
+        label: `BLESS • Bestow Grace on [${toLocus}]`,
+        rule: `Hand settles over recipient locus with profound peace and reverent nod`,
+        targetTip: { x: p1.x, y: p1.y + 10, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 30, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 60, z: p1.z - 25 },
+        shape: 'flat',
+        palm: 'down',
+        hold: 240,
+        ease: 'smooth',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'raised', mouth: 'bless', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'show': {
+      kfs.push({
+        label: `SHOW • Present onto Palette [${fromLocus}]`,
+        rule: `Dominant index indicates onto non-dominant base-hold palette`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 25 },
+        shape: 'point',
+        palm: 'out',
+        baseHandMode: 'base-hold',
+        baseHandOverride: { palm: { x: p0.x - 15, y: p0.y + 10, z: p0.z } },
+        hold: 120,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'raised', mouth: 'show' },
+      });
+      kfs.push({
+        label: `SHOW • Display Forward to [${toLocus}]`,
+        rule: `Both hands present display object forward to destination locus`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 15, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'point',
+        palm: 'out',
+        hold: 160,
+        ease: 'snap',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'raised', mouth: 'show', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'help': {
+      kfs.push({
+        label: `HELP • Support at Origin [${fromLocus}]`,
+        rule: `Non-dominant flat hand supports dominant fist under base`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 25 },
+        shape: 'fist',
+        palm: 'in',
+        baseHandMode: 'base-hold',
+        baseHandOverride: { palm: { x: p0.x, y: p0.y + 15, z: p0.z } },
+        hold: 130,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'neutral', mouth: 'help' },
+      });
+      kfs.push({
+        label: `HELP • Uplift Forward to [${toLocus}]`,
+        rule: `Hands lift together pushing assistance towards recipient locus`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 15, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'fist',
+        palm: 'in',
+        hold: 180,
+        ease: 'ease-out',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'neutral', mouth: 'help', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'send': {
+      kfs.push({
+        label: `SEND • Prepared at [${fromLocus}]`,
+        rule: `Flat hand held palm inward close to origin locus`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 25 },
+        shape: 'flat',
+        palm: 'in',
+        hold: 110,
+        ease: 'ease-in',
+        nmf: { eyebrows: 'neutral', mouth: 'send' },
+      });
+      kfs.push({
+        label: `SEND • Dispatch to [${toLocus}]`,
+        rule: `Hand thrusts decisively toward target locus releasing transmission`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 15, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'flat',
+        palm: 'out',
+        hold: 170,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'send', headTilt: 'nod' },
+      });
+      break;
+    }
+    case 'invite': {
+      kfs.push({
+        label: `INVITE • Extended to [${fromLocus}]`,
+        rule: `Open hand extends invitingly toward foreign locus`,
+        targetTip: { x: p0.x, y: p0.y, z: p0.z },
+        targetKnuckle: { x: p0.x + 20, y: p0.y + 15, z: p0.z - 10 },
+        targetWrist: { x: p0.x + 50, y: p0.y + 45, z: p0.z - 25 },
+        shape: 'flat',
+        palm: 'up',
+        hold: 130,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'raised', mouth: 'invite' },
+      });
+      kfs.push({
+        label: `INVITE • Welcome Inward to [${toLocus}]`,
+        rule: `Hand draws inward in warm inviting curve toward self/host`,
+        targetTip: { x: p1.x, y: p1.y, z: p1.z },
+        targetKnuckle: { x: p1.x + 20, y: p1.y + 15, z: p1.z - 10 },
+        targetWrist: { x: p1.x + 50, y: p1.y + 45, z: p1.z - 25 },
+        shape: 'flat',
+        palm: 'up',
+        hold: 200,
+        ease: 'smooth',
+        nmf: { eyebrows: 'raised', mouth: 'invite', headTilt: 'nod' },
+      });
+      break;
+    }
+  }
+
+  return {
+    id: `dir-${verb}-${fromLocus.toLowerCase()}-${toLocus.toLowerCase()}`,
+    word: verb.toUpperCase(),
+    category: verb === 'bless' ? 'faith' : 'grammar',
+    englishLabel: `${verb.toUpperCase()} (${fromLocus} → ${toLocus})`,
+    gloss: glossLabel,
+    description: `Level 6 Directional Agreement Verb ${verb.toUpperCase()} computed from ${fromLocus} to ${toLocus}`,
+    keyframes: kfs,
+    isDirectional: true,
+    defaultLoci: { from: fromLocus, to: toLocus },
+    aspect,
+  };
+}
+
+/**
+ * Parses a BSL Level 6 Instruction Tuple into a sequence of authentic BslSign objects
+ */
+export function parseBslInstructionTuple(tuple: BslLevel6InstructionTuple): BslSign[] {
+  const result: BslSign[] = [];
+
+  // 1. Topic (Eyebrows Raised)
+  if (tuple.topic) {
+    const raw = tuple.topic.trim().toUpperCase();
+    const sign = lookupBslSign(raw);
+    if (sign) {
+      result.push({
+        ...sign,
+        keyframes: sign.keyframes.map((kf) => ({
+          ...kf,
+          nmf: {
+            ...kf.nmf,
+            eyebrows: 'raised',
+            mouth: tuple.nmfMouth || kf.nmf?.mouth || raw.toLowerCase(),
+          },
+        })),
+      });
+    }
+  }
+
+  // 2. Rhetorical Question (Eyebrows Furrowed / Raised)
+  if (tuple.rhQuestion) {
+    const raw = tuple.rhQuestion.trim().toUpperCase();
+    const sign = lookupBslSign(raw);
+    if (sign) {
+      result.push({
+        ...sign,
+        keyframes: sign.keyframes.map((kf) => ({
+          ...kf,
+          nmf: {
+            ...kf.nmf,
+            eyebrows: 'furrowed',
+            mouth: raw.toLowerCase(),
+          },
+        })),
+      });
+    }
+  }
+
+  // 3. Directional Agreement Verb
+  if (tuple.directionalVerb) {
+    const dirSign = generateDirectionalAgreementSign(tuple.directionalVerb.verb, {
+      fromLocus: tuple.directionalVerb.fromLocus as BslLocusId,
+      toLocus: tuple.directionalVerb.toLocus as BslLocusId,
+      aspect: tuple.directionalVerb.aspect || tuple.aspect,
+      manner: tuple.directionalVerb.manner as any,
+    });
+    result.push(dirSign);
+  }
+
+  // 4. Classifier Predicate (with optional baseHold anchor)
+  if (tuple.classifier) {
+    const clSign = generateClassifierPredicate(tuple.classifier.type, {
+      fromLocus: tuple.classifier.fromLocus as BslLocusId,
+      toLocus: tuple.classifier.toLocus as BslLocusId,
+      aspect: tuple.classifier.aspect || tuple.aspect,
+      manner: tuple.classifier.manner,
+      entityLabel: tuple.classifier.entityLabel,
+    });
+    if (tuple.classifier.baseHold) {
+      clSign.keyframes = clSign.keyframes.map((kf) => ({
+        ...kf,
+        baseHandMode: 'base-hold',
+      }));
+    }
+    result.push(clSign);
+  }
+
+  return result;
 }
 
 /**
@@ -1297,6 +1686,22 @@ export function analyzeAndTransformBslGrammar(
     classifierPredicateToken.gloss = classifierSign.gloss;
   }
 
+  // If directional agreement verb is active, synthesize its 3D procedural agreement sign
+  if (directionalVerb) {
+    const dirType =
+      DIRECTIONAL_VERB_MAP[directionalVerb.clean] ||
+      DIRECTIONAL_VERB_MAP[directionalVerb.lemma];
+    if (dirType) {
+      const dirSign = generateDirectionalAgreementSign(dirType, {
+        fromLocus,
+        toLocus,
+        aspect: detectedAspect || 'neutral',
+      });
+      directionalVerb.sign = dirSign;
+      directionalVerb.gloss = dirSign.gloss;
+    }
+  }
+
   // Level 6 Constructed Action / Role Shift Detection
   const hasDialogueCue = ['SAID', 'ASKED', 'TOLD', 'EXPLAINED', 'REPLIED', 'SPOKE', 'COMMANDED', 'PRAYED'].some((w) =>
     upperWords.includes(w)
@@ -1404,7 +1809,7 @@ export function analyzeAndTransformBslGrammar(
     reorderedTokens.push({
       originalWord: directionalVerb.raw,
       cleanWord: directionalVerb.clean,
-      gloss: `${directionalVerb.sign?.gloss || directionalVerb.clean}[${fromLocus}→${toLocus}]`,
+      gloss: directionalVerb.gloss || `${directionalVerb.sign?.gloss || directionalVerb.clean}[${fromLocus}→${toLocus}]`,
       role: 'directional-verb',
       directionalFrom: fromLocus,
       directionalTo: toLocus,
@@ -1444,10 +1849,13 @@ export function analyzeAndTransformBslGrammar(
     const tok = reorderedTokens[tIdx];
 
     if (tok.role === 'directional-verb' && tok.sign && tok.directionalFrom && tok.directionalTo) {
-      // Modulate 3D trajectory between the two loci
+      // If directional sign is procedurally synthesized with baked loci/curves, use them directly;
+      // otherwise modulate keyframes across loci vectors.
       const fromPt = loci[tok.directionalFrom].coords;
       const toPt = loci[tok.directionalTo].coords;
-      const modulatedKfs = modulateDirectionalKeyframes(tok.sign, fromPt, toPt);
+      const modulatedKfs = tok.sign.id.startsWith('dir-')
+        ? tok.sign.keyframes
+        : modulateDirectionalKeyframes(tok.sign, fromPt, toPt);
       const totalKf = modulatedKfs.length;
 
       modulatedKfs.forEach((kf, kfIdx) => {
