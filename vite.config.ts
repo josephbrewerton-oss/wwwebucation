@@ -125,7 +125,7 @@ function astSceneAutoFinder(): import('vite').Plugin {
 }
 
 export default defineConfig({
-  base: process.env.BASE_URL || '/',
+  base: process.env.BASE_URL || '/wwwebucation/',
   plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
@@ -161,6 +161,9 @@ export default defineConfig({
           }
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'vendor-react';
+          }
+          if (id.includes('src/components/BslInterpreterOverlay') || id.includes('src/utils/bsl')) {
+            return 'bsl-engine';
           }
         },
       },
