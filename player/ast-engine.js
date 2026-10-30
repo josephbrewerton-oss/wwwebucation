@@ -2293,13 +2293,28 @@
     /**
      * Reset camera to default scene orientation
      */
+   
     resetCamera() {
+    if (!this.cameraOrbit) {
+      this.cameraOrbit = {
+        yawOffset: 0,
+        pitchOffset: 0,
+        distanceScale: 1.0
+      };
+    } else {
       this.cameraOrbit.yawOffset = 0;
       this.cameraOrbit.pitchOffset = 0;
       this.cameraOrbit.distanceScale = 1.0;
-      this.applyBindings(this.progress);
+    }
+
+    if (typeof this.applyBindings === 'function') {
+      this.applyBindings(this.progress || 0);
+    }
+    
+    if (typeof this.emit === 'function') {
       this.emit('camerachange', { ...this.cameraOrbit });
     }
+  }
 
     /**
      * Pre-registers canonical spatial targets for electromagnetic physics, atomic cores, and probes
