@@ -33,6 +33,8 @@ import {
   BslDirectionalVerbType,
   BslDirectionalAgreement,
   BslLevel6InstructionTuple,
+  BslBuoyType,
+  BslBuoy,
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
   DOMINANT_REST_WRIST,
@@ -47,6 +49,8 @@ export type {
   BslDirectionalVerbType,
   BslDirectionalAgreement,
   BslLevel6InstructionTuple,
+  BslBuoyType,
+  BslBuoy,
 };
 
 export type BslGrammarMode = 'bsl-natural' | 'sse' | 'makaton' | 'fingerspell';
@@ -148,7 +152,11 @@ export type BslGrammarRole =
   | 'negation'
   | 'modifier'
   | 'particle'
-  | 'fingerspell';
+  | 'fingerspell'
+  | 'rhq'
+  | 'cause'
+  | 'conditional'
+  | 'buoy';
 
 export interface BslGrammarToken {
   originalWord: string;
@@ -164,6 +172,8 @@ export interface BslGrammarToken {
   sign?: BslSign;
   isFingerspelled?: boolean;
   makatonStage?: number;
+  buoy?: BslBuoy;
+  clauseRole?: 'rhq-question' | 'rhq-answer' | 'conditional-if' | 'conditional-then';
 }
 
 export interface BslGrammarAnalysis {
@@ -1044,10 +1054,10 @@ export function parseBslInstructionTuple(tuple: BslLevel6InstructionTuple): BslS
     }
   }
 
-  // 2. Rhetorical Question (Eyebrows Furrowed / Raised)
+  // 2. Rhetorical Question (Level 6 RHQ: Eyebrows Raised with Tilt)
   if (tuple.rhQuestion) {
     const raw = tuple.rhQuestion.trim().toUpperCase();
-    const sign = lookupBslSign(raw);
+    const sign = lookupBslSign(raw) || lookupBslSign('WHY-RHQ');
     if (sign) {
       result.push({
         ...sign,
@@ -1055,7 +1065,8 @@ export function parseBslInstructionTuple(tuple: BslLevel6InstructionTuple): BslS
           ...kf,
           nmf: {
             ...kf.nmf,
-            eyebrows: 'furrowed',
+            eyebrows: 'raised',
+            headTilt: 'tilt-right',
             mouth: raw.toLowerCase(),
           },
         })),
@@ -1090,6 +1101,17 @@ export function parseBslInstructionTuple(tuple: BslLevel6InstructionTuple): BslS
       }));
     }
     result.push(clSign);
+  }
+
+  // 5. If Discourse Buoy is defined, anchor the non-dominant base hand across all signs
+  if (tuple.buoy) {
+    result.forEach((sign) => {
+      sign.buoy = tuple.buoy;
+      sign.keyframes.forEach((kf) => {
+        kf.buoy = tuple.buoy;
+        kf.baseHandMode = 'base-hold';
+      });
+    });
   }
 
   return result;
@@ -1161,12 +1183,15 @@ export function analyzeAndTransformBslGrammar(
 
   // Detect sentence types
   const upperWords = rawWords.map((w) => w.toUpperCase().replace(/[^A-Z-]/g, ''));
+  const hasConditionalLeader = upperWords.length > 0 && (upperWords[0] === 'IF' || upperWords[0] === 'SUPPOSE');
   const hasWhQuestion = upperWords.some((w) => WH_QUESTION_WORDS.has(w));
   const hasPolarLeader = upperWords.length > 0 && POLAR_QUESTION_LEADERS.has(upperWords[0]);
   const hasNegation = upperWords.some((w) => NEGATION_WORDS.has(w));
 
   let sentenceType: BslGrammarAnalysis['sentenceType'] = 'statement';
-  if (hasWhQuestion) {
+  if (hasConditionalLeader) {
+    sentenceType = 'conditional';
+  } else if (hasWhQuestion) {
     sentenceType = 'wh-question';
   } else if (isQuestionMark || hasPolarLeader) {
     sentenceType = 'polar-question';
@@ -1518,6 +1543,48 @@ export function analyzeAndTransformBslGrammar(
       continue;
     }
 
+    // Level 6 Causal Conjunctions (BECAUSE, SINCE) -> Transpile into Rhetorical Question WHY[RHQ]
+    if (clean === 'BECAUSE' || clean === 'SINCE') {
+      const whyRhqSign = lookupBslSign('WHY-RHQ');
+      coreTokens.push({
+        raw,
+        clean: 'WHY-RHQ',
+        lemma: 'WHY-RHQ',
+        sign: whyRhqSign || undefined,
+        role: 'rhq',
+        gloss: 'WHY[RHQ]',
+      });
+      continue;
+    }
+
+    // Level 6 Conditional Markers (IF, SUPPOSE) -> Transpile into SUPPOSE with raised brows
+    if (clean === 'IF' || clean === 'SUPPOSE') {
+      const supposeSign = lookupBslSign('SUPPOSE');
+      coreTokens.push({
+        raw,
+        clean: 'SUPPOSE',
+        lemma: 'SUPPOSE',
+        sign: supposeSign || undefined,
+        role: 'conditional',
+        gloss: 'SUPPOSE',
+      });
+      continue;
+    }
+
+    // Level 6 Consequential Markers (THEREFORE, THUS) -> Transpile into RESULT
+    if (clean === 'THEREFORE' || clean === 'THUS') {
+      const resultSign = lookupBslSign('RESULT');
+      coreTokens.push({
+        raw,
+        clean: 'RESULT',
+        lemma: 'RESULT',
+        sign: resultSign || undefined,
+        role: 'topic',
+        gloss: 'RESULT',
+      });
+      continue;
+    }
+
     // Drop English auxiliary particles & copulas
     if (BSL_OMITTED_PARTICLES.has(clean)) {
       continue;
@@ -1720,112 +1787,221 @@ export function analyzeAndTransformBslGrammar(
   }
 
   // Build the reordered Natural BSL Token Sequence:
-  // Order: [TIME] -> [TOPIC / OBJECT] -> [SUBJECT (Locus)] -> [DIRECTIONAL VERB / CLASSIFIER] -> [NEGATION] -> [WH-QUESTION]
   const reorderedTokens: BslGrammarToken[] = [];
+  const rhqIndex = coreTokens.findIndex((t) => t.role === 'rhq');
 
-  // 1. TIME FIRST
-  timeTokens.forEach((t) => {
-    reorderedTokens.push(t);
-  });
+  if (rhqIndex !== -1) {
+    // -------------------------------------------------------------------------
+    // Level 6 Rhetorical Questioning Architecture:
+    // [EFFECT TOPIC/PREDICATE] -> [RHQ: WHY? (brows up, tilt right)] -> [CAUSE (nod)]
+    // -------------------------------------------------------------------------
+    timeTokens.forEach((t) => reorderedTokens.push(t));
 
-  // 2. TOPIC / OBJECT FIRST (Topic-Comment architecture)
-  if (objectEntity) {
+    const effectTokens = coreTokens.slice(0, rhqIndex);
+    effectTokens.forEach((t) => {
+      reorderedTokens.push({
+        originalWord: t.raw,
+        cleanWord: t.clean,
+        gloss: t.gloss || t.sign?.gloss || t.clean,
+        role: 'topic',
+        sign: t.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          mouth: t.clean.toLowerCase(),
+        },
+      });
+    });
+
+    const rhqTok = coreTokens[rhqIndex];
     reorderedTokens.push({
-      originalWord: objectEntity.raw,
-      cleanWord: objectEntity.clean,
-      gloss: objectEntity.sign?.gloss || objectEntity.clean,
-      role: 'topic',
-      locus: toLocus,
-      sign: objectEntity.sign,
+      originalWord: rhqTok.raw,
+      cleanWord: 'WHY-RHQ',
+      gloss: 'WHY[RHQ]',
+      role: 'rhq',
+      sign: rhqTok.sign || lookupBslSign('WHY-RHQ') || undefined,
       nmf: {
-        eyebrows: 'neutral',
-        mouth: (detectedAdverbMouth as any) || objectEntity.clean.toLowerCase(),
+        eyebrows: 'raised',
+        headTilt: 'tilt-right',
+        mouth: 'why',
       },
     });
-  }
 
-  // 3. SUBJECT (with Spatial Locus binding and Role-Shift if dialogue)
-  if (subjectEntity) {
+    const causeTokens = coreTokens.slice(rhqIndex + 1);
+    causeTokens.forEach((t) => {
+      reorderedTokens.push({
+        originalWord: t.raw,
+        cleanWord: t.clean,
+        gloss: t.gloss || t.sign?.gloss || t.clean,
+        role: 'cause',
+        sign: t.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          headTilt: 'nod',
+          mouth: t.clean.toLowerCase(),
+        },
+      });
+    });
+
+    negationTokens.forEach((t) => reorderedTokens.push(t));
+    whQuestionTokens.forEach((t) => reorderedTokens.push(t));
+  } else if (sentenceType === 'conditional') {
+    // -------------------------------------------------------------------------
+    // Level 6 Conditional Architecture:
+    // [COND] SUPPOSE (brows up) -> Condition Clause (brows up) -> Consequence (nod)
+    // -------------------------------------------------------------------------
+    timeTokens.forEach((t) => reorderedTokens.push(t));
+
+    const condTok = coreTokens.find((t) => t.role === 'conditional');
     reorderedTokens.push({
-      originalWord: subjectEntity.raw,
-      cleanWord: subjectEntity.clean,
-      gloss: subjectEntity.sign?.gloss || subjectEntity.clean,
-      role: 'subject',
-      locus: fromLocus,
-      sign: subjectEntity.sign,
+      originalWord: condTok?.raw || 'if',
+      cleanWord: 'SUPPOSE',
+      gloss: 'SUPPOSE',
+      role: 'conditional',
+      sign: condTok?.sign || lookupBslSign('SUPPOSE') || undefined,
       nmf: {
-        eyebrows: 'neutral',
-        mouth: objectEntity ? subjectEntity.clean.toLowerCase() : (detectedAdverbMouth as any) || subjectEntity.clean.toLowerCase(),
-        roleShift: activeRoleShift,
+        eyebrows: 'raised',
+        headTilt: 'tilt-left',
+        mouth: 'suppose',
       },
     });
-  }
 
-  // 4. OTHER CORE TOKENS (excluding already placed subject/object/directional/classifier)
-  coreTokens.forEach((token) => {
-    if (token === subjectEntity || token === objectEntity || token === directionalVerb || token === classifierPredicateToken) return;
-    const tokenLocus = HIERARCHICAL_HIGH_ENTITIES.has(token.clean)
-      ? 'LOCUS_HIGH'
-      : HIERARCHICAL_LOW_ENTITIES.has(token.clean)
-      ? 'LOCUS_LOW'
-      : undefined;
-    if (tokenLocus) {
-      loci[tokenLocus].assignedEntity = token.clean;
+    const contentTokens = coreTokens.filter((t) => t.role !== 'conditional');
+    const midPoint = Math.max(1, Math.floor(contentTokens.length / 2));
+    const ifTokens = contentTokens.slice(0, midPoint);
+    const thenTokens = contentTokens.slice(midPoint);
+
+    ifTokens.forEach((t) => {
+      reorderedTokens.push({
+        originalWord: t.raw,
+        cleanWord: t.clean,
+        gloss: t.gloss || t.sign?.gloss || t.clean,
+        role: 'topic',
+        sign: t.sign,
+        nmf: {
+          eyebrows: 'raised',
+          headTilt: 'tilt-left',
+          mouth: t.clean.toLowerCase(),
+        },
+      });
+    });
+
+    thenTokens.forEach((t) => {
+      reorderedTokens.push({
+        originalWord: t.raw,
+        cleanWord: t.clean,
+        gloss: t.gloss || t.sign?.gloss || t.clean,
+        role: 'topic',
+        sign: t.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          headTilt: 'nod',
+          mouth: t.clean.toLowerCase(),
+        },
+      });
+    });
+
+    negationTokens.forEach((t) => reorderedTokens.push(t));
+  } else {
+    // Standard Topic-Comment Architecture:
+    // Order: [TIME] -> [TOPIC / OBJECT] -> [SUBJECT (Locus)] -> [DIRECTIONAL VERB / CLASSIFIER] -> [NEGATION] -> [WH-QUESTION]
+    timeTokens.forEach((t) => {
+      reorderedTokens.push(t);
+    });
+
+    if (objectEntity) {
+      reorderedTokens.push({
+        originalWord: objectEntity.raw,
+        cleanWord: objectEntity.clean,
+        gloss: objectEntity.sign?.gloss || objectEntity.clean,
+        role: 'topic',
+        locus: toLocus,
+        sign: objectEntity.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          mouth: (detectedAdverbMouth as any) || objectEntity.clean.toLowerCase(),
+        },
+      });
     }
-    reorderedTokens.push({
-      originalWord: token.raw,
-      cleanWord: token.clean,
-      gloss: token.sign?.gloss || token.clean,
-      role: token.role,
-      locus: tokenLocus,
-      sign: token.sign,
-      nmf: {
-        eyebrows: 'neutral',
-        mouth: (detectedAdverbMouth as any) || token.clean.toLowerCase(),
-        roleShift: activeRoleShift,
-      },
-    });
-  });
 
-  // 5. CLASSIFIER PREDICATE OR DIRECTIONAL VERB / MAIN VERB
-  if (classifierPredicateToken) {
-    reorderedTokens.push({
-      originalWord: classifierPredicateToken.raw,
-      cleanWord: classifierPredicateToken.clean,
-      gloss: classifierPredicateToken.gloss,
-      role: 'classifier-predicate',
-      directionalFrom: fromLocus,
-      directionalTo: toLocus,
-      classifier: classifierPredicateToken.classifier,
-      aspect: classifierPredicateToken.aspect,
-      sign: classifierPredicateToken.sign,
-      nmf: {
-        eyebrows: 'neutral',
-        mouth: (detectedAdverbMouth as any) || classifierPredicateToken.sign?.keyframes[0]?.nmf?.mouth || classifierPredicateToken.clean.toLowerCase(),
-        roleShift: activeRoleShift,
-      },
+    if (subjectEntity) {
+      reorderedTokens.push({
+        originalWord: subjectEntity.raw,
+        cleanWord: subjectEntity.clean,
+        gloss: subjectEntity.sign?.gloss || subjectEntity.clean,
+        role: 'subject',
+        locus: fromLocus,
+        sign: subjectEntity.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          mouth: objectEntity ? subjectEntity.clean.toLowerCase() : (detectedAdverbMouth as any) || subjectEntity.clean.toLowerCase(),
+          roleShift: activeRoleShift,
+        },
+      });
+    }
+
+    coreTokens.forEach((token) => {
+      if (token === subjectEntity || token === objectEntity || token === directionalVerb || token === classifierPredicateToken) return;
+      const tokenLocus = HIERARCHICAL_HIGH_ENTITIES.has(token.clean)
+        ? 'LOCUS_HIGH'
+        : HIERARCHICAL_LOW_ENTITIES.has(token.clean)
+        ? 'LOCUS_LOW'
+        : undefined;
+      if (tokenLocus) {
+        loci[tokenLocus].assignedEntity = token.clean;
+      }
+      reorderedTokens.push({
+        originalWord: token.raw,
+        cleanWord: token.clean,
+        gloss: token.sign?.gloss || token.clean,
+        role: token.role,
+        locus: tokenLocus,
+        sign: token.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          mouth: (detectedAdverbMouth as any) || token.clean.toLowerCase(),
+          roleShift: activeRoleShift,
+        },
+      });
     });
-  } else if (directionalVerb) {
-    reorderedTokens.push({
-      originalWord: directionalVerb.raw,
-      cleanWord: directionalVerb.clean,
-      gloss: directionalVerb.gloss || `${directionalVerb.sign?.gloss || directionalVerb.clean}[${fromLocus}→${toLocus}]`,
-      role: 'directional-verb',
-      directionalFrom: fromLocus,
-      directionalTo: toLocus,
-      sign: directionalVerb.sign,
-      nmf: {
-        eyebrows: sentenceType === 'wh-question' ? 'furrowed' : 'neutral',
-        mouth: detectedAdverbMouth || directionalVerb.clean.toLowerCase(),
-        roleShift: activeRoleShift,
-      },
+
+    if (classifierPredicateToken) {
+      reorderedTokens.push({
+        originalWord: classifierPredicateToken.raw,
+        cleanWord: classifierPredicateToken.clean,
+        gloss: classifierPredicateToken.gloss,
+        role: 'classifier-predicate',
+        directionalFrom: fromLocus,
+        directionalTo: toLocus,
+        classifier: classifierPredicateToken.classifier,
+        aspect: classifierPredicateToken.aspect,
+        sign: classifierPredicateToken.sign,
+        nmf: {
+          eyebrows: 'neutral',
+          mouth: (detectedAdverbMouth as any) || classifierPredicateToken.sign?.keyframes[0]?.nmf?.mouth || classifierPredicateToken.clean.toLowerCase(),
+          roleShift: activeRoleShift,
+        },
+      });
+    } else if (directionalVerb) {
+      reorderedTokens.push({
+        originalWord: directionalVerb.raw,
+        cleanWord: directionalVerb.clean,
+        gloss: directionalVerb.gloss || `${directionalVerb.sign?.gloss || directionalVerb.clean}[${fromLocus}→${toLocus}]`,
+        role: 'directional-verb',
+        directionalFrom: fromLocus,
+        directionalTo: toLocus,
+        sign: directionalVerb.sign,
+        nmf: {
+          eyebrows: sentenceType === 'wh-question' ? 'furrowed' : 'neutral',
+          mouth: detectedAdverbMouth || directionalVerb.clean.toLowerCase(),
+          roleShift: activeRoleShift,
+        },
+      });
+    }
+
+    negationTokens.forEach((t) => {
+      reorderedTokens.push(t);
     });
   }
-
-  // 6. NEGATION AT THE END (with headshake)
-  negationTokens.forEach((t) => {
-    reorderedTokens.push(t);
-  });
 
   // 7. WH-QUESTION AT THE END (with furrowed eyebrows)
   whQuestionTokens.forEach((t) => {
@@ -1872,6 +2048,7 @@ export function analyzeAndTransformBslGrammar(
         const pose = signKeyframeToHandPose(tok.sign!, kf, kfIdx, totalKf);
         if (tok.classifier) pose.classifier = tok.classifier;
         if (tok.aspect) pose.aspect = tok.aspect;
+        if (tok.buoy) pose.buoy = tok.buoy;
         if (tok.nmf) {
           pose.nmf = { ...pose.nmf, ...tok.nmf };
         }
@@ -1884,6 +2061,7 @@ export function analyzeAndTransformBslGrammar(
         if (BSL_ALPHABET_POSES[char]) {
           const pose = { ...BSL_ALPHABET_POSES[char] };
           if (tok.nmf) pose.nmf = tok.nmf;
+          if (tok.buoy) pose.buoy = tok.buoy;
           stream.push(pose);
         }
       }
@@ -1913,6 +2091,10 @@ export function analyzeAndTransformBslGrammar(
       if (t.role === 'directional-verb') badge = `[DIR-VERB(${t.directionalFrom}→${t.directionalTo})]`;
       if (t.role === 'question') badge = '[WH-?]';
       if (t.role === 'negation') badge = '[NEG]';
+      if (t.role === 'rhq') badge = '[RHQ]';
+      if (t.role === 'cause') badge = '[CAUSE]';
+      if (t.role === 'conditional') badge = '[COND]';
+      if (t.role === 'buoy') badge = '[BUOY]';
       return `${badge} ${t.gloss}`;
     })
     .join('  ➔  ');
@@ -1925,8 +2107,8 @@ export function analyzeAndTransformBslGrammar(
     glossSequence,
     activeLoci: loci,
     nmfSummary: {
-      eyebrows: sentenceType === 'wh-question' ? 'furrowed' : sentenceType === 'polar-question' ? 'raised' : 'neutral',
-      headTilt: sentenceType === 'negation' ? 'shake' : sentenceType === 'polar-question' ? 'nod' : 'neutral',
+      eyebrows: sentenceType === 'wh-question' ? 'furrowed' : (sentenceType === 'polar-question' || sentenceType === 'conditional') ? 'raised' : 'neutral',
+      headTilt: sentenceType === 'negation' ? 'shake' : (sentenceType === 'polar-question' || sentenceType === 'conditional') ? 'nod' : 'neutral',
       mouthCue: cleanInput.slice(0, 15),
     },
     stream,

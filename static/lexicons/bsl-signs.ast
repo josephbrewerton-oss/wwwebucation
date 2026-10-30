@@ -3,7 +3,7 @@
 ;; Canonical Procedural 3D Kinematic S-Expression Corpus (Phase 1)
 ;; Zero-Video Invariant: Ultra-compact mathematical representations of sign trajectories
 ;; =============================================================================
-(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 136
+(bsl-lexicon :version "1.0.0-PHASE1" :standard "BANZSL" :title "St Joseph's BSL Curriculum Lexicon" :signs-count 142
   (sign :id "jesus" :word "JESUS" :cat "faith" :gloss "JESUS"
     :label "Jesus Christ"
     :desc "Index touches center of non-dominant palm, then dominant palm (the crucifixion nails in the hands)." :aliases ("CHRIST" "LORD" "SAVIOUR" "SAVIOR")
@@ -982,4 +982,47 @@
     (kf :idx 1 :label "Standing Reverence" :rule "Inverted V legs standing upright before tabernacle" :tip [10 -15 25] :knuckle [25 5 18] :wrist [55 35 5] :shape :v :palm :down :base-mode :vowel-board :nmf (nmf :mouth "adore" :brows "raised"))
     (kf :idx 2 :label "Right Knee to Ground" :rule "Right leg flexes deeply touching ground in profound adoration" :tip [10 35 25] :knuckle [25 45 18] :wrist [55 70 5] :shape :v :palm :down :hold 250 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "reverence" :brows "raised" :tilt "nod"))
   )
+
+  (sign :id "why-rhq" :word "WHY-RHQ" :cat "grammar" :gloss "WHY[RHQ]"
+    :label "Why? (Rhetorical Question Marker)"
+    :desc "Dominant index taps chest with eyebrows raised and head tilted right, posing the rhetorical clausal question." :aliases ("WHY-RH" "RHQ-WHY" "WHY-CLAUSETIE")
+    (kf :idx 1 :label "Touch Chest Brow Raised" :rule "Dominant index taps upper chest with eyebrows raised in rhetorical anticipation" :tip [-20 -10 20] :knuckle [15 15 12] :wrist [65 55 0] :shape :point :hold 140 :ease :snap :nmf (nmf :mouth "why" :brows "raised" :tilt "tilt-right"))
+    (kf :idx 2 :label "Rebound & Hold Pause" :rule "Dominant index rebounds slightly holding rhetorical suspense before cause clause" :tip [-5 -20 35] :knuckle [30 5 25] :wrist [80 45 10] :shape :point :hold 220 :ease :ease-out :nmf (nmf :mouth "why" :brows "raised" :tilt "tilt-right"))
+  )
+
+  (sign :id "reason" :word "REASON" :cat "grammar" :gloss "REASON"
+    :label "Reason / Because / Cause"
+    :desc "Dominant index taps temple/forehead then extends forward with affirmative head nod." :aliases ("BECAUSE" "CAUSE" "EXPLANATION")
+    (kf :idx 1 :label "Index at Temple" :rule "Dominant index tip contacts right side of forehead/temple" :tip [45 -65 25] :knuckle [70 -35 15] :wrist [100 5 0] :shape :point :hold 120 :ease :snap :nmf (nmf :mouth "reason" :brows "neutral"))
+    (kf :idx 2 :label "Extend Forward Asserting Cause" :rule "Index moves forward and slightly down with firm affirmative nod" :tip [25 -20 50] :knuckle [50 5 35] :wrist [85 40 15] :shape :point :hold 180 :ease :smooth :nmf (nmf :mouth "because" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "suppose" :word "SUPPOSE" :cat "grammar" :gloss "SUPPOSE"
+    :label "Suppose / If / Hypothesis"
+    :desc "Dominant pinky finger touches high cheekbone near eye twice with raised eyebrows, signaling condition." :aliases ("IF" "HYPOTHESIS" "ASSUME" "CONDITION")
+    (kf :idx 1 :label "Pinky to Cheekbone" :rule "Dominant little finger tip touches high cheekbone near outer eye" :tip [42 -60 24] :knuckle [68 -30 14] :wrist [98 15 0] :shape :point :hold 140 :ease :snap :nmf (nmf :mouth "if" :brows "raised" :tilt "tilt-left"))
+    (kf :idx 2 :label "Cheek Tap Rebound" :rule "Little finger rebounds slightly and taps again while maintaining condition brow raise" :tip [40 -55 28] :knuckle [65 -25 18] :wrist [95 20 5] :shape :point :hold 200 :ease :ease-out :nmf (nmf :mouth "suppose" :brows "raised" :tilt "tilt-left"))
+  )
+
+  (sign :id "result" :word "RESULT" :cat "grammar" :gloss "RESULT"
+    :label "Result / Therefore / Consequence"
+    :desc "Both flat hands drop forward and outward from chest with decisive affirmative nod." :aliases ("THEREFORE" "CONSEQUENCE" "SO-RESULT" "THUS")
+    (kf :idx 1 :label "Hands Poised at Chest" :rule "Both flat open hands held parallel at upper chest palms inward" :tip [0 -15 25] :knuckle [30 10 15] :wrist [70 45 0] :shape :flat :base-mode :mirror :hold 100 :ease :snap :nmf (nmf :mouth "result" :brows "neutral"))
+    (kf :idx 2 :label "Drop Forward Decisive" :rule "Both hands sweep forward and turn palms up in decisive conclusion" :tip [20 10 55] :knuckle [50 30 40] :wrist [90 65 20] :shape :flat :base-mode :mirror :hold 220 :ease :ease-out :nmf (nmf :mouth "therefore" :brows "neutral" :tilt "nod"))
+  )
+
+  (sign :id "compare" :word "COMPARE" :cat "grammar" :gloss "COMPARE"
+    :label "Compare / Contrast / Difference"
+    :desc "Alternating flat hands dip between Locus A (left) and Locus B (right) establishing spatial contrast." :aliases ("CONTRAST" "DIFFERENCE" "VERSUS" "WHILE")
+    (kf :idx 1 :label "Dip Left Locus A" :rule "Non-dominant left hand dips down at Locus A while right hand rises" :tip [-35 -10 35] :knuckle [-5 15 25] :wrist [45 50 10] :shape :flat :base-mode :mirror :hold 150 :ease :smooth :nmf (nmf :mouth "compare" :brows "raised" :tilt "tilt-left"))
+    (kf :idx 2 :label "Dip Right Locus B" :rule "Dominant right hand dips down at Locus B while left hand rises in contrast" :tip [45 10 35] :knuckle [75 30 25] :wrist [110 65 10] :shape :flat :base-mode :mirror :hold 180 :ease :smooth :nmf (nmf :mouth "contrast" :brows "raised" :tilt "tilt-right"))
+  )
+
+  (sign :id "prove" :word "PROVE" :cat "stem" :gloss "PROVE"
+    :label "Prove / Confirm / Verify"
+    :desc "Dominant flat open hand strikes firmly down onto horizontal non-dominant palm, confirming empirical truth." :aliases ("CONFIRM" "VERIFY" "PROOF" "EVIDENCE" "EVIDENT")
+    (kf :idx 1 :label "Raise Above Palm" :rule "Dominant flat hand poised vertically above flat horizontal base palm" :tip [-40 -15 28] :knuckle [0 5 18] :wrist [55 45 5] :shape :flat :base-mode :vowel-board :hold 110 :ease :snap :nmf (nmf :mouth "prove" :brows "neutral"))
+    (kf :idx 2 :label "Firm Downward Strike" :rule "Dominant flat hand strikes down firmly onto base palm in authoritative confirmation" :tip [-45 22 14] :knuckle [5 38 5] :wrist [65 72 -8] :shape :flat :base-mode :vowel-board :hold 240 :ease :snap :nmf (nmf :mouth "prove" :brows "neutral" :tilt "nod"))
+  )
 )
+

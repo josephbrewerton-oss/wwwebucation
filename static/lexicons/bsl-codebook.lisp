@@ -7,7 +7,7 @@
 ;; Addressing: (:g Group_0..63 :w Word_0..31)
 ;; =============================================================================
 
-(bsl-codebook :version "2.0.0-PHASE2" :standard "BANZSL" :grid "64x32" :signs-count 84
+(bsl-codebook :version "2.0.0-PHASE2" :standard "BANZSL" :grid "64x32" :signs-count 90
 
   ;; ===========================================================================
   ;; GROUP 00: SOCIAL DISCOURSE, POLITE GREETINGS & EXCHANGES
@@ -562,5 +562,29 @@
     (sign :g 6 :w 11 :id "cl-base-hold" :hex #x010600051 :viseme ""
       (kf :idx 1 :shape :flat :pos [-35 15 20] :ori :lateral :hold 300 :base-mode :base-hold :nmf (nmf :brows "neutral"))
       (kf :idx 2 :shape :flat :pos [-35 15 20] :ori :lateral :aspect :durative :hold 300 :base-mode :base-hold :nmf (nmf :brows "neutral")))
+
+    (sign :g 6 :w 12 :id "why-rhq" :hex #x030301041 :viseme "why"
+      (kf :idx 1 :shape :point :pos [-20 -10 20] :ori :inward :hold 140 :nmf (nmf :brows "raised" :tilt "tilt-right"))
+      (kf :idx 2 :shape :point :pos [-5 -20 35]  :ori :inward :aspect :durative :hold 220 :nmf (nmf :brows "raised" :tilt "tilt-right")))
+
+    (sign :g 6 :w 13 :id "reason" :hex #x030203040 :viseme "reason"
+      (kf :idx 1 :shape :point :pos [45 -65 25] :ori :inward :hold 120 :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :point :pos [25 -20 50] :ori :inward :aspect :standard :hold 180 :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 6 :w 14 :id "suppose" :hex #x030207031 :viseme "suppose"
+      (kf :idx 1 :shape :point :pos [42 -60 24] :ori :inward :hold 140 :nmf (nmf :brows "raised" :tilt "tilt-left"))
+      (kf :idx 2 :shape :point :pos [40 -55 28] :ori :inward :aspect :durative :hold 200 :nmf (nmf :brows "raised" :tilt "tilt-left")))
+
+    (sign :g 6 :w 15 :id "result" :hex #x010003010 :viseme "result"
+      (kf :idx 1 :shape :flat :pos [0 -15 25]  :ori :inward  :base-mode :mirror :hold 100 :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :flat :pos [20 10 55]  :ori :supine  :aspect :standard  :base-mode :mirror :hold 220 :nmf (nmf :brows "neutral" :tilt "nod")))
+
+    (sign :g 6 :w 16 :id "compare" :hex #x010609021 :viseme "compare"
+      (kf :idx 1 :shape :flat :pos [-35 -10 35] :ori :prone :base-mode :mirror :hold 150 :nmf (nmf :brows "raised" :tilt "tilt-left"))
+      (kf :idx 2 :shape :flat :pos [45 10 35]   :ori :prone :aspect :durative  :base-mode :mirror :hold 180 :nmf (nmf :brows "raised" :tilt "tilt-right")))
+
+    (sign :g 6 :w 17 :id "prove" :hex #x010405012 :viseme "prove"
+      (kf :idx 1 :shape :flat :pos [-40 -15 28] :ori :prone :base-mode :vowel-board :hold 110 :nmf (nmf :brows "neutral"))
+      (kf :idx 2 :shape :flat :pos [-45 22 14]  :ori :prone :aspect :intensive    :base-mode :vowel-board :hold 240 :nmf (nmf :brows "neutral" :tilt "nod")))
   )
 )

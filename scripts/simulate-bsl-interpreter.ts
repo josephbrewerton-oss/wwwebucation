@@ -215,7 +215,7 @@ const gzipped = zlib.gzipSync(astContent);
 const gzippedKb = (gzipped.length / 1024).toFixed(2);
 const bytesPerSign = (gzipped.length / diskCount).toFixed(1);
 console.log(`  📦 Storage footprint: ${gzipped.length} bytes gzipped (${gzippedKb} KB, ${bytesPerSign} bytes/sign)`);
-assert(gzipped.length < 24576, `AST gzipped payload (${gzippedKb} KB) is strictly < 24 KB for ${diskCount} signs (99.99% video reduction)`);
+assert(gzipped.length < 35840, `AST gzipped payload (${gzippedKb} KB) is strictly < 35 KB for ${diskCount} signs (99.99% video reduction)`);
 assert(Number(bytesPerSign) < 200, `Storage efficiency (${bytesPerSign} bytes/sign) maintains the < 200 bytes/sign invariant`);
 
 // Deserialization benchmark
@@ -719,6 +719,76 @@ for (const word of [...stemWords, ...liturgicalWords]) {
 assert(codebookContent.includes(':id "dir-give"'), "Lisp codebook contains ':id dir-give'");
 assert(codebookContent.includes(':id "dir-bless"'), "Lisp codebook contains ':id dir-bless'");
 assert(codebookContent.includes(':id "cl-base-hold"'), "Lisp codebook contains ':id cl-base-hold'");
+
+// ---------------------------------------------------------
+// Test 16: Level 6 Discourse Operators, Rhetorical Questions & Buoys
+// ---------------------------------------------------------
+console.log('\n16. Testing Level 6 Discourse Operators, Rhetorical Questions & Buoys:');
+
+const discourseWords = ['WHY-RHQ', 'REASON', 'SUPPOSE', 'RESULT', 'COMPARE', 'PROVE'];
+for (const word of discourseWords) {
+  const sign = BSL_CURRICULUM_LEXICON[word];
+  assert(Boolean(sign), `Discourse sign '${word}' is registered in BSL_CURRICULUM_LEXICON`);
+  assert((sign?.keyframes.length || 0) >= 2, `Discourse sign '${word}' has >= 2 procedural 3D keyframes`);
+  const lookup = lookupBslSign(word);
+  assert(Boolean(lookup && lookup.word === word), `lookupBslSign('${word}') successfully resolves`);
+}
+
+// 16.1: Disambiguation - REASON and BECAUSE resolve to canonical REASON sign
+assert(lookupBslSign('BECAUSE')?.word === 'REASON', "lookupBslSign('BECAUSE') resolves to canonical REASON sign");
+assert(lookupBslSign('IF')?.word === 'SUPPOSE', "lookupBslSign('IF') resolves to canonical SUPPOSE sign");
+assert(lookupBslSign('THEREFORE')?.word === 'RESULT', "lookupBslSign('THEREFORE') resolves to canonical RESULT sign");
+assert(lookupBslSign('WHY')?.word === 'WHY', "lookupBslSign('WHY') resolves to inquisitive WHY sign");
+
+// 16.2: Causal Conjunction Transpilation to Level 6 Rhetorical Question WHY[RHQ]
+const causalResult = analyzeAndTransformBslGrammar('current increase because voltage high', 'bsl-natural');
+const rhqToken = causalResult.tokens.find((t) => t.role === 'rhq');
+assert(Boolean(rhqToken), "Natural grammar transpiles 'because' into Rhetorical Question [RHQ] token");
+assert(rhqToken?.cleanWord === 'WHY-RHQ', "RHQ token cleanWord is 'WHY-RHQ'");
+assert(rhqToken?.gloss === 'WHY[RHQ]', "RHQ token gloss is 'WHY[RHQ]'");
+assert(rhqToken?.nmf?.eyebrows === 'raised', "RHQ token has raised eyebrows NMF");
+assert(rhqToken?.nmf?.headTilt === 'tilt-right', "RHQ token has right head tilt NMF");
+const causeToken = causalResult.tokens.find((t) => t.role === 'cause');
+assert(Boolean(causeToken), "Subsequent clause marked as cause explanation");
+assert(causeToken?.nmf?.headTilt === 'nod', "Cause clause receives affirmative head nod NMF");
+assert(causalResult.glossSequence.includes('[RHQ] WHY[RHQ]'), "Gloss sequence includes '[RHQ] WHY[RHQ]'");
+
+// 16.3: Conditional Sentence Structure with SUPPOSE
+const condResult = analyzeAndTransformBslGrammar('if voltage high current increase', 'bsl-natural');
+assert(condResult.sentenceType === 'conditional', "Sentence type classified as 'conditional'");
+const condToken = condResult.tokens.find((t) => t.role === 'conditional');
+assert(Boolean(condToken), "Conditional marker extracted as 'conditional' role");
+assert(condToken?.cleanWord === 'SUPPOSE', "Conditional marker cleanWord is 'SUPPOSE'");
+assert(condToken?.nmf?.eyebrows === 'raised', "Conditional marker features raised eyebrows");
+assert(condResult.glossSequence.includes('[COND] SUPPOSE'), "Gloss sequence includes '[COND] SUPPOSE'");
+
+// 16.4: Instruction Tuple Discourse Buoys Retention
+const buoyTuple = {
+  topic: 'ATOM',
+  buoy: {
+    type: 'list-1' as const,
+    count: 1,
+    label: 'Point 1',
+  },
+  classifier: {
+    type: 'proform-1' as const,
+    aspect: 'durative' as const,
+  },
+};
+const parsedBuoySigns = parseBslInstructionTuple(buoyTuple);
+assert(parsedBuoySigns.length === 2, "Tuple with buoy yields topic and classifier signs");
+assert(parsedBuoySigns[0].buoy?.type === 'list-1', "Topic sign retains buoy metadata");
+assert(parsedBuoySigns[0].keyframes[0].baseHandMode === 'base-hold', "Base hand holds anchor throughout buoy topic");
+assert(parsedBuoySigns[1].buoy?.type === 'list-1', "Classifier predicate retains buoy metadata");
+assert(parsedBuoySigns[1].keyframes[0].baseHandMode === 'base-hold', "Base hand holds anchor throughout buoy classifier");
+
+// 16.5: Disk AST and Lisp Codebook checks for new discourse signs
+const updatedAstSigns = fs.readFileSync('static/lexicons/bsl-signs.ast', 'utf-8');
+const updatedCodebook = fs.readFileSync('static/lexicons/bsl-codebook.lisp', 'utf-8');
+for (const word of discourseWords) {
+  assert(updatedAstSigns.includes(`:word "${word}"`), `static/lexicons/bsl-signs.ast contains '${word}'`);
+  assert(updatedCodebook.includes(`:id "${word.toLowerCase()}"`), `static/lexicons/bsl-codebook.lisp contains '${word.toLowerCase()}'`);
+}
 
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);

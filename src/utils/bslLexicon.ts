@@ -23,6 +23,8 @@ import {
   BslClassifierType,
   BslAspect,
   BslClassifierPredicate,
+  BslBuoyType,
+  BslBuoy,
   DOMINANT_REST_POSE,
   DOMINANT_REST_KNUCKLE,
   DOMINANT_REST_WRIST,
@@ -38,6 +40,8 @@ export type {
   BslClassifierType,
   BslAspect,
   BslClassifierPredicate,
+  BslBuoyType,
+  BslBuoy,
 };
 export type BslCategory = 'faith' | 'school' | 'stem' | 'conversation' | 'grammar' | 'temporal' | 'classifier';
 
@@ -64,6 +68,7 @@ export interface BslSignKeyframe {
   nmf?: BslNmf;
   classifier?: BslClassifierPredicate;
   aspect?: BslAspect;
+  buoy?: BslBuoy;
 }
 
 export interface BslSign {
@@ -81,6 +86,7 @@ export interface BslSign {
   makatonStage?: number; // Makaton Core Vocabulary Stages 1-8 (UK SEN / Early Communication Standard)
   classifier?: BslClassifierPredicate;
   aspect?: BslAspect;
+  buoy?: BslBuoy;
 }
 
 /**
@@ -1991,6 +1997,220 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
   },
 
   // =========================================================================
+  // LEVEL 6 DISCOURSE OPERATORS, RHETORICAL CLAUSES & DISCOURSE BUOYS
+  // Signature BSL Level 6 NVQ Advanced Linguistic Discourse Mechanics
+  // =========================================================================
+  'WHY-RHQ': {
+    id: 'why-rhq',
+    word: 'WHY-RHQ',
+    category: 'grammar',
+    englishLabel: 'Why? (Rhetorical Question Marker)',
+    gloss: 'WHY[RHQ]',
+    description: 'Dominant index taps chest with eyebrows raised and head tilted right, posing the rhetorical clausal question.',
+    aliases: ['WHY-RH', 'RHQ-WHY', 'WHY-CLAUSETIE'],
+    keyframes: [
+      {
+        label: 'Touch Chest Brow Raised',
+        rule: 'Dominant index taps upper chest with eyebrows raised in rhetorical anticipation',
+        targetTip: { x: -20, y: -10, z: 20 },
+        targetKnuckle: { x: 15, y: 15, z: 12 },
+        targetWrist: { x: 65, y: 55, z: 0 },
+        shape: 'point',
+        hold: 140,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'why', headTilt: 'tilt-right' },
+      },
+      {
+        label: 'Rebound & Hold Pause',
+        rule: 'Dominant index rebounds slightly holding rhetorical suspense before cause clause',
+        targetTip: { x: -5, y: -20, z: 35 },
+        targetKnuckle: { x: 30, y: 5, z: 25 },
+        targetWrist: { x: 80, y: 45, z: 10 },
+        shape: 'point',
+        hold: 220,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'raised', mouth: 'why', headTilt: 'tilt-right' },
+      },
+    ],
+  },
+
+  'REASON': {
+    id: 'reason',
+    word: 'REASON',
+    category: 'grammar',
+    englishLabel: 'Reason / Because / Cause',
+    gloss: 'REASON',
+    description: 'Dominant index taps temple/forehead then extends forward with affirmative head nod.',
+    aliases: ['BECAUSE', 'CAUSE', 'EXPLANATION'],
+    keyframes: [
+      {
+        label: 'Index at Temple',
+        rule: 'Dominant index tip contacts right side of forehead/temple',
+        targetTip: { x: 45, y: -65, z: 25 },
+        targetKnuckle: { x: 70, y: -35, z: 15 },
+        targetWrist: { x: 100, y: 5, z: 0 },
+        shape: 'point',
+        hold: 120,
+        ease: 'snap',
+        nmf: { eyebrows: 'neutral', mouth: 'reason' },
+      },
+      {
+        label: 'Extend Forward Asserting Cause',
+        rule: 'Index moves forward and slightly down with firm affirmative nod',
+        targetTip: { x: 25, y: -20, z: 50 },
+        targetKnuckle: { x: 50, y: 5, z: 35 },
+        targetWrist: { x: 85, y: 40, z: 15 },
+        shape: 'point',
+        hold: 180,
+        ease: 'smooth',
+        nmf: { eyebrows: 'neutral', mouth: 'because', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'SUPPOSE': {
+    id: 'suppose',
+    word: 'SUPPOSE',
+    category: 'grammar',
+    englishLabel: 'Suppose / If / Hypothesis',
+    gloss: 'SUPPOSE',
+    description: 'Dominant pinky finger touches high cheekbone near eye twice with raised eyebrows, signaling condition.',
+    aliases: ['IF', 'HYPOTHESIS', 'ASSUME', 'CONDITION'],
+    keyframes: [
+      {
+        label: 'Pinky to Cheekbone',
+        rule: 'Dominant little finger tip touches high cheekbone near outer eye',
+        targetTip: { x: 42, y: -60, z: 24 },
+        targetKnuckle: { x: 68, y: -30, z: 14 },
+        targetWrist: { x: 98, y: 15, z: 0 },
+        shape: 'point',
+        hold: 140,
+        ease: 'snap',
+        nmf: { eyebrows: 'raised', mouth: 'if', headTilt: 'tilt-left' },
+      },
+      {
+        label: 'Cheek Tap Rebound',
+        rule: 'Little finger rebounds slightly and taps again while maintaining condition brow raise',
+        targetTip: { x: 40, y: -55, z: 28 },
+        targetKnuckle: { x: 65, y: -25, z: 18 },
+        targetWrist: { x: 95, y: 20, z: 5 },
+        shape: 'point',
+        hold: 200,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'raised', mouth: 'suppose', headTilt: 'tilt-left' },
+      },
+    ],
+  },
+
+  'RESULT': {
+    id: 'result',
+    word: 'RESULT',
+    category: 'grammar',
+    englishLabel: 'Result / Therefore / Consequence',
+    gloss: 'RESULT',
+    description: 'Both flat hands drop forward and outward from chest with decisive affirmative nod.',
+    aliases: ['THEREFORE', 'CONSEQUENCE', 'SO-RESULT', 'THUS'],
+    keyframes: [
+      {
+        label: 'Hands Poised at Chest',
+        rule: 'Both flat open hands held parallel at upper chest palms inward',
+        targetTip: { x: 0, y: -15, z: 25 },
+        targetKnuckle: { x: 30, y: 10, z: 15 },
+        targetWrist: { x: 70, y: 45, z: 0 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        hold: 100,
+        ease: 'snap',
+        nmf: { eyebrows: 'neutral', mouth: 'result' },
+      },
+      {
+        label: 'Drop Forward Decisive',
+        rule: 'Both hands sweep forward and turn palms up in decisive conclusion',
+        targetTip: { x: 20, y: 10, z: 55 },
+        targetKnuckle: { x: 50, y: 30, z: 40 },
+        targetWrist: { x: 90, y: 65, z: 20 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        hold: 220,
+        ease: 'ease-out',
+        nmf: { eyebrows: 'neutral', mouth: 'therefore', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  'COMPARE': {
+    id: 'compare',
+    word: 'COMPARE',
+    category: 'grammar',
+    englishLabel: 'Compare / Contrast / Difference',
+    gloss: 'COMPARE',
+    description: 'Alternating flat hands dip between Locus A (left) and Locus B (right) establishing spatial contrast.',
+    aliases: ['CONTRAST', 'DIFFERENCE', 'VERSUS', 'WHILE'],
+    keyframes: [
+      {
+        label: 'Dip Left Locus A',
+        rule: 'Non-dominant left hand dips down at Locus A while right hand rises',
+        targetTip: { x: -35, y: -10, z: 35 },
+        targetKnuckle: { x: -5, y: 15, z: 25 },
+        targetWrist: { x: 45, y: 50, z: 10 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        hold: 150,
+        ease: 'smooth',
+        nmf: { eyebrows: 'raised', mouth: 'compare', headTilt: 'tilt-left' },
+      },
+      {
+        label: 'Dip Right Locus B',
+        rule: 'Dominant right hand dips down at Locus B while left hand rises in contrast',
+        targetTip: { x: 45, y: 10, z: 35 },
+        targetKnuckle: { x: 75, y: 30, z: 25 },
+        targetWrist: { x: 110, y: 65, z: 10 },
+        shape: 'flat',
+        baseHandMode: 'mirror',
+        hold: 180,
+        ease: 'smooth',
+        nmf: { eyebrows: 'raised', mouth: 'contrast', headTilt: 'tilt-right' },
+      },
+    ],
+  },
+
+  'PROVE': {
+    id: 'prove',
+    word: 'PROVE',
+    category: 'stem',
+    englishLabel: 'Prove / Confirm / Verify',
+    gloss: 'PROVE',
+    description: 'Dominant flat open hand strikes firmly down onto horizontal non-dominant palm, confirming empirical truth.',
+    aliases: ['CONFIRM', 'VERIFY', 'PROOF', 'EVIDENCE', 'EVIDENT'],
+    keyframes: [
+      {
+        label: 'Raise Above Palm',
+        rule: 'Dominant flat hand poised vertically above flat horizontal base palm',
+        targetTip: { x: -40, y: -15, z: 28 },
+        targetKnuckle: { x: 0, y: 5, z: 18 },
+        targetWrist: { x: 55, y: 45, z: 5 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        hold: 110,
+        ease: 'snap',
+        nmf: { eyebrows: 'neutral', mouth: 'prove' },
+      },
+      {
+        label: 'Firm Downward Strike',
+        rule: 'Dominant flat hand strikes down firmly onto base palm in authoritative confirmation',
+        targetTip: { x: -45, y: 22, z: 14 },
+        targetKnuckle: { x: 5, y: 38, z: 5 },
+        targetWrist: { x: 65, y: 72, z: -8 },
+        shape: 'flat',
+        baseHandMode: 'vowel-board',
+        hold: 240,
+        ease: 'snap',
+        nmf: { eyebrows: 'neutral', mouth: 'prove', headTilt: 'nod' },
+      },
+    ],
+  },
+
+  // =========================================================================
   // PHASE 2 FOUNDATIONAL CONVERSATIONAL & CLASSROOM BASIC SIGNS
   // =========================================================================
   'WHAT': {
@@ -2091,10 +2311,10 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
     id: 'why',
     word: 'WHY',
     category: 'conversation',
-    englishLabel: 'Why / Reason',
+    englishLabel: 'Why / Inquisitive',
     gloss: 'WHY',
     description: 'Dominant index finger points and touches non-dominant chest/shoulder with furrowed inquiring brows.',
-    aliases: ['REASON'],
+    aliases: ['QUERY-WHY', 'WHEREFORE'],
     keyframes: [
       {
         label: 'Touch Chest',
@@ -4307,24 +4527,26 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
   // Determine anatomical role of the non-dominant hand in natural BSL
   let baseHandMode: BslBaseHandMode = kf.baseHandMode || 'rest';
   if (!kf.baseHandMode) {
-    if (kf.baseHandOverride) {
+    if (kf.buoy || sign.buoy) {
+      baseHandMode = 'base-hold';
+    } else if (kf.baseHandOverride) {
       baseHandMode = 'override';
     } else if ([
       'PRAY', 'CHURCH', 'FORCE', 'LOVE', 'PEACE', 'BIBLE', 'BOOK', 'EARTH', 'SCIENCE', 'EQUAL', 'HEAT', 'FAST',
       'WHAT', 'WHERE', 'HOW', 'WELCOME', 'WAIT', 'FINISH', 'BIG', 'ALL', 'HOLY', 'TEACHER',
       'GIVE', 'EXPLAIN', 'TODAY', 'NOW', 'DISAGREE', 'WANT', 'CAN', 'FAMILY', 'HOME', 'PLAY', 'BED',
-      'PRESSURE', 'VOLTAGE', 'TABERNACLE', 'CONSECRATE'
+      'PRESSURE', 'VOLTAGE', 'TABERNACLE', 'CONSECRATE', 'RESULT', 'COMPARE'
     ].includes(sign.word)) {
       baseHandMode = 'mirror';
     } else if ([
       'SCHOOL', 'HELP', 'LEARN', 'READ', 'WRITE', 'MATHS', 'NUMBER', 'GOOD', 'FRIEND', 'PLANET', 'ORBIT', 'GRAVITY', 'TIME', 'JESUS',
       'CROSS', 'START', 'STOP', 'SIT', 'STAND', 'CORRECT', 'HAPPY', 'MORE', 'AGAIN', 'SLOW',
       'SHOW', 'MORNING', 'AFTERNOON', 'AGREE', 'REMEMBER', 'CANNOT', 'PUPIL', 'DAD', 'WASH',
-      'CURRENT', 'RESISTANCE', 'ATOM', 'FRACTION', 'SLOPE', 'PENDULUM', 'CHALICE', 'EUCHARIST', 'GENUFLECT'
+      'CURRENT', 'RESISTANCE', 'ATOM', 'FRACTION', 'SLOPE', 'PENDULUM', 'CHALICE', 'EUCHARIST', 'GENUFLECT', 'PROVE'
     ].includes(sign.word)) {
       baseHandMode = 'vowel-board';
     } else {
-      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL, TELL, ASK, LOOK, YESTERDAY, TOMORROW, FUTURE, PAST, UNDERSTAND, FORGET, THINK, KNOW, NEED, MUST, BECAUSE, IF, ME, YOU, THEY, EAT, DRINK, TOILET, MUM, LIKE, WALK)
+      baseHandMode = 'rest'; // One-handed signs (GOD, SUN, MOON, HELLO, THANK YOU, PLEASE, YES, NO, LIGHT, WATER, ENERGY, WHO, WHY, WHEN, GOODBYE, NAME, SORRY, WRONG, SAD, SMALL, TELL, ASK, LOOK, YESTERDAY, TOMORROW, FUTURE, PAST, UNDERSTAND, FORGET, THINK, KNOW, NEED, MUST, BECAUSE, IF, ME, YOU, THEY, EAT, DRINK, TOILET, MUM, LIKE, WALK, WHY-RHQ, REASON, SUPPOSE)
     }
   }
 
@@ -4344,6 +4566,7 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     baseHandOverride: kf.baseHandOverride,
     classifier: kf.classifier || sign.classifier,
     aspect: kf.aspect || sign.aspect,
+    buoy: kf.buoy || sign.buoy,
   };
 }
 

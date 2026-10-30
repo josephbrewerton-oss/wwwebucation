@@ -59,7 +59,23 @@ export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | 'latera
 
 export type BslEaseCurve = 'snap' | 'ease-out' | 'ease-in' | 'smooth' | 'linear' | 'bounce' | string;
 
-export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override' | 'base-hold';
+export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override' | 'base-hold' | 'buoy-list' | 'buoy-pointer';
+
+// BSL Level 6 Discourse Buoys (Non-dominant hand sustained spatial anchors)
+export type BslBuoyType =
+  | 'list-1'     // Index finger extended (item 1)
+  | 'list-2'     // Index and middle extended (item 2)
+  | 'list-3'     // Thumb, index, middle extended (item 3)
+  | 'list-4'     // 4 fingers extended (item 4)
+  | 'pointer'    // Index points steadily at locus
+  | 'theme';     // Base hand holds topic proform
+
+export interface BslBuoy {
+  type: BslBuoyType;
+  locus?: string;
+  count?: number;
+  label?: string;
+}
 
 // BSL Level 6 Directional Agreement Verbs
 export type BslDirectionalVerbType =
@@ -87,6 +103,8 @@ export interface BslLevel6InstructionTuple {
   classifier?: BslClassifierPredicate;
   nmfMouth?: string;
   aspect?: BslAspect;
+  buoy?: BslBuoy;
+  clauseType?: 'topic' | 'rhq' | 'cause' | 'conditional' | 'consequent';
 }
 
 // BSL Level 6 Classifier Types (Polycomponential Predicates)
@@ -147,6 +165,7 @@ export interface BslHandPose {
   };
   classifier?: BslClassifierPredicate;
   aspect?: BslAspect;
+  buoy?: BslBuoy;
 }
 
 // Fixed anatomical non-dominant base hand coordinates (The "Paper" for BANZSL fingerspelling)
