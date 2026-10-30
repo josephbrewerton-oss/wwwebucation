@@ -164,8 +164,8 @@ Chromium-based browser: Built-in AI flags enabled (chrome://flags/#optimization-
 
 Installation
 Bash
-git clone [https://github.com/josephbrewerton-oss/schoolsample.git](https://github.com/josephbrewerton-oss/schoolsample.git)
-cd schoolsample
+git clone [https://github.com/josephbrewerton-oss/wwwebucation.git](https://github.com/josephbrewerton-oss/webucation.git)
+cd wwwebucation
 npm install
 Local Development
 Bash

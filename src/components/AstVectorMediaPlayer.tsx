@@ -278,7 +278,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
 
   const postToPlayer = useCallback((payload: Record<string, any>) => {
     if (iframeRef.current && iframeRef.current.contentWindow) {
-      // Use '*' so GitHub Pages subpaths (/schoolsample/) never drop postMessage packets
+      // Use '*' so GitHub Pages subpaths (/wwwebucation/) never drop postMessage packets
       iframeRef.current.contentWindow.postMessage(payload, '*');
     }
   }, []);

@@ -74,7 +74,7 @@ export default function DualLicenseSection(): React.JSX.Element {
     const legalText = `St Joseph's Curriculum Portal — Dual-Licensing Summary
 Track A (Humanitarian Commons): GNU AGPLv3 (Software) & OGL v3.0 (Curriculum). 100% Free in perpetuity for all state schools, Catholic organisations, charities, and emerging nations.
 Track B (Commercial Enterprise): Available for proprietary closed-source redistribution.
-Full text: https://github.com/josephbrewerton-oss/schoolsample/blob/main/LICENSE.md`;
+Full text: https://github.com/josephbrewerton-oss/wwwebucation/blob/main/LICENSE.md`;
     navigator.clipboard.writeText(legalText);
     setCopiedLicense(true);
     setTimeout(() => setCopiedLicense(false), 3000);
@@ -382,7 +382,7 @@ Full text: https://github.com/josephbrewerton-oss/schoolsample/blob/main/LICENSE
             <span>{copiedLicense ? 'Copied Summary!' : 'Copy Summary'}</span>
           </button>
           <a
-            href="https://github.com/josephbrewerton-oss/schoolsample/blob/main/LICENSE.md"
+            href="https://github.com/josephbrewerton-oss/wwwebucation/blob/main/LICENSE.md"
             target="_blank"
             rel="noreferrer"
             style={{

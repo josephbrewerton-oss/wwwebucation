@@ -111,8 +111,8 @@ Audited on production builds via Google PageSpeed Insights:
 ### Installation
 
 ```bash
-git clone [https://github.com/josephbrewerton-oss/schoolsample.git](https://github.com/josephbrewerton-oss/schoolsample.git)
-cd schoolsample
+git clone [https://github.com/josephbrewerton-oss/wwwebucation.git](https://github.com/josephbrewerton-oss/wwwebucation.git)
+cd wwwebucation
 npm install
 
 ```
@@ -124,7 +124,7 @@ npm run start
 
 ```
 
-Runs the local development instance at `http://localhost:3000/schoolsample/learning-zone`.
+Runs the local development instance at `http://localhost:3000/wwwebucation/learning-zone`.
 
 ### Production Build & Deployment
 

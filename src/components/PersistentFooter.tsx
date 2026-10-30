@@ -108,7 +108,7 @@ export default function PersistentFooter(): React.JSX.Element {
             </li>
             <li>
               <a
-                href="https://github.com/josephbrewerton-oss/schoolsample"
+                href="https://github.com/josephbrewerton-oss/wwwebucation"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{ color: '#cbd5e1', textDecoration: 'none' }}

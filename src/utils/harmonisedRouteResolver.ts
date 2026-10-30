@@ -17,11 +17,17 @@ export interface RouteResolution {
 
 export function resolveHarmonisedRoute(rawPath: string, search: string = ''): RouteResolution {
   let clean = (rawPath || '/').toLowerCase();
-  if (clean.startsWith('/schoolsample')) {
-    clean = clean.replace('/schoolsample', '');
-  }
-  clean = clean.replace(/\/+$/, '') || '/';
 
+  // Strip known GitHub Pages subpath prefixes
+  const repoPrefixes = ['/wwweducation', '/wwwebucation', '/schoolsample'];
+  for (const prefix of repoPrefixes) {
+    if (clean.startsWith(prefix)) {
+      clean = clean.slice(prefix.length);
+      break;
+    }
+  }
+
+  clean = clean.replace(/\/+$/, '') || '/';
   const fullQuery = (clean + ' ' + (search || '')).toLowerCase();
 
   // 1. Primary Curriculum Aliases
