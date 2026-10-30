@@ -565,6 +565,161 @@ assert(Boolean(deserializedCl), "Deserialized AST node into BslSign");
 assert(deserializedCl?.classifier?.type === 'proform-v', "Deserialized classifier type 'proform-v' matches with 100% fidelity");
 assert(deserializedCl?.aspect === 'durative', "Deserialized aspect 'durative' matches with 100% fidelity");
 
+// ---------------------------------------------------------
+// Test 14: Level 6 Directional Agreement Verbs & Base-Hold Anchors
+// ---------------------------------------------------------
+console.log('\n14. Testing Level 6 Directional Agreement Verbs & Base-Hold Anchors:');
+const {
+  DIRECTIONAL_VERB_MAP,
+  generateDirectionalAgreementSign,
+  parseBslInstructionTuple,
+} = await import('../src/utils/bslGrammarEngine');
+
+// 14.1: Canonical directional verb mappings
+const expectedVerbs = ['GIVE', 'TEACH', 'BLESS', 'SHOW', 'HELP', 'SEND', 'INVITE'];
+for (const v of expectedVerbs) {
+  assert(
+    Boolean(DIRECTIONAL_VERB_MAP[v]),
+    `Directional verb '${v}' is mapped in DIRECTIONAL_VERB_MAP`
+  );
+}
+
+// 14.2: GIVE from ME (1P) to YOU (2P)
+const giveMeToYou = generateDirectionalAgreementSign('give', { fromLocus: 'ME', toLocus: 'YOU' });
+assert(giveMeToYou.isDirectional === true, "GIVE is flagged as directional sign");
+assert(giveMeToYou.gloss === 'GIVE[ME→YOU]', "Gloss correctly formats 'GIVE[ME→YOU]'");
+assert(giveMeToYou.keyframes.length >= 2, "GIVE has >= 2 keyframes");
+assert(giveMeToYou.keyframes[0].targetTip.x === 20 && giveMeToYou.keyframes[0].targetTip.y === 30, "GIVE origin begins at ME locus coordinates");
+assert(giveMeToYou.keyframes[giveMeToYou.keyframes.length - 1].targetTip.z === 65, "GIVE terminates forward at YOU locus (z=65)");
+
+// 14.3: BLESS from LOCUS_HIGH to ME
+const blessHighToMe = generateDirectionalAgreementSign('bless', { fromLocus: 'LOCUS_HIGH', toLocus: 'ME' });
+assert(blessHighToMe.gloss === 'BLESS[LOCUS_HIGH→ME]', "Gloss correctly formats 'BLESS[LOCUS_HIGH→ME]'");
+assert(blessHighToMe.keyframes[0].targetTip.y === -45, "BLESS origin starts at LOCUS_HIGH elevation (y=-45)");
+assert(blessHighToMe.keyframes[0].baseHandMode === 'base-hold', "BLESS utilizes base-hold anchor mode");
+assert(blessHighToMe.keyframes[blessHighToMe.keyframes.length - 1].nmf?.eyebrows === 'raised', "BLESS features raised reverent eyebrows NMF");
+assert(blessHighToMe.keyframes[blessHighToMe.keyframes.length - 1].nmf?.mouth === 'bless', "BLESS features 'bless' mouth morpheme");
+
+// 14.4: SHOW from LOCUS_A to LOCUS_B with Base-Hold
+const showSign = generateDirectionalAgreementSign('show', { fromLocus: 'LOCUS_A', toLocus: 'LOCUS_B' });
+assert(showSign.keyframes[0].baseHandMode === 'base-hold', "SHOW utilizes base-hold non-dominant display palette");
+assert(showSign.keyframes[0].targetTip.x === -60, "SHOW starts on left at LOCUS_A (x=-60)");
+assert(showSign.keyframes[1].targetTip.x === 60, "SHOW sweeps across to LOCUS_B (x=60)");
+
+// 14.5: HELP from ME to LOCUS_C
+const helpSign = generateDirectionalAgreementSign('help', { fromLocus: 'ME', toLocus: 'LOCUS_C' });
+assert(helpSign.keyframes[0].baseHandMode === 'base-hold', "HELP supports fist on base-hold palm");
+assert(helpSign.keyframes[1].targetTip.x === -35, "HELP pushes forward to LOCUS_C (x=-35)");
+
+// 14.6: SEND and INVITE reciprocity
+const sendSign = generateDirectionalAgreementSign('send', { fromLocus: 'LOCUS_A', toLocus: 'YOU' });
+assert(sendSign.keyframes[1].ease === 'snap', "SEND terminates with swift snap transmission");
+const inviteSign = generateDirectionalAgreementSign('invite', { fromLocus: 'YOU', toLocus: 'ME' });
+assert(inviteSign.keyframes[1].ease === 'smooth', "INVITE draws inward with smooth welcoming trajectory");
+
+// 14.7: TEACH from LOCUS_HIGH to LOCUS_D
+const teachSign = generateDirectionalAgreementSign('teach', { fromLocus: 'LOCUS_HIGH', toLocus: 'LOCUS_D' });
+assert(teachSign.keyframes[0].shape === 'claw', "TEACH begins with clawed wisdom-gathering handshape");
+assert(teachSign.keyframes[1].shape === 'spread', "TEACH expands with open spread imparting handshape");
+
+// 14.8: Level 6 Instruction Tuple Parser
+const instructionTuple = {
+  topic: 'CHALICE',
+  rhQuestion: 'WHY',
+  directionalVerb: {
+    verb: 'bless' as const,
+    fromLocus: 'LOCUS_HIGH',
+    toLocus: 'ME',
+  },
+  classifier: {
+    type: 'proform-v' as const,
+    aspect: 'durative' as const,
+    baseHold: {
+      shape: 'flat' as const,
+      locus: 'LOCUS_A',
+    },
+  },
+  nmfMouth: 'reverence',
+};
+const parsedTupleSigns = parseBslInstructionTuple(instructionTuple);
+assert(parsedTupleSigns.length === 4, "parseBslInstructionTuple yields 4 distinct semantic signs");
+assert(parsedTupleSigns[0].keyframes[0].nmf?.eyebrows === 'raised', "Tuple topic sign inflects with raised eyebrows");
+assert(parsedTupleSigns[2].isDirectional === true, "Tuple yields valid directional agreement verb");
+assert(parsedTupleSigns[3].keyframes[0].baseHandMode === 'base-hold', "Tuple classifier preserves base-hold anchor mode");
+
+// 14.9: Natural Grammar Sentence Integration for Directional Verbs
+const godBlessSentence = analyzeAndTransformBslGrammar('God bless me', 'bsl-natural');
+const blessToken = godBlessSentence.tokens.find((t) => t.role === 'directional-verb');
+assert(Boolean(blessToken), "Natural grammar detects 'bless' as directional agreement verb");
+assert(blessToken?.directionalFrom === 'LOCUS_HIGH', "'God' binds directional verb origin to LOCUS_HIGH");
+assert(blessToken?.directionalTo === 'ME', "'Me' binds directional verb destination to ME");
+assert(godBlessSentence.stream.length > 0, "Procedural 3D stream generated with modulated directional vectors");
+
+// ---------------------------------------------------------
+// Test 15: Curriculum STEM & Liturgical Lexicon Coverage
+// ---------------------------------------------------------
+console.log('\n15. Testing Advanced STEM & Liturgical Vocabulary Invariants:');
+
+const stemWords = [
+  'PRESSURE', 'CURRENT', 'VOLTAGE', 'RESISTANCE', 'ATOM',
+  'VELOCITY', 'ACCELERATION', 'FRACTION', 'SLOPE', 'PENDULUM'
+];
+for (const word of stemWords) {
+  const sign = BSL_CURRICULUM_LEXICON[word];
+  assert(Boolean(sign), `STEM sign '${word}' is registered in BSL_CURRICULUM_LEXICON`);
+  assert(sign?.category === 'stem', `STEM sign '${word}' has category 'stem'`);
+  assert((sign?.keyframes.length || 0) >= 2, `STEM sign '${word}' has >= 2 procedural 3D keyframes`);
+  const lookup = lookupBslSign(word);
+  assert(Boolean(lookup && lookup.word === word), `lookupBslSign('${word}') successfully resolves`);
+}
+
+const liturgicalWords = [
+  'CHALICE', 'TABERNACLE', 'EUCHARIST', 'CONSECRATE', 'INCENSE', 'GENUFLECT'
+];
+for (const word of liturgicalWords) {
+  const sign = BSL_CURRICULUM_LEXICON[word];
+  assert(Boolean(sign), `Liturgical sign '${word}' is registered in BSL_CURRICULUM_LEXICON`);
+  assert(sign?.category === 'faith', `Liturgical sign '${word}' has category 'faith'`);
+  assert((sign?.keyframes.length || 0) >= 2, `Liturgical sign '${word}' has >= 2 procedural 3D keyframes`);
+  const lookup = lookupBslSign(word);
+  assert(Boolean(lookup && lookup.word === word), `lookupBslSign('${word}') successfully resolves`);
+}
+
+// 15.3: Makaton Stages 7 & 8 Extension
+const stage7 = MAKATON_CORE_STAGES[7];
+assert(Boolean(stage7), "Makaton Stage 7 (Faith & Liturgical Life) is defined");
+for (const word of liturgicalWords) {
+  assert(stage7.coreWords.includes(word), `Makaton Stage 7 coreWords includes '${word}'`);
+}
+
+const stage8 = MAKATON_CORE_STAGES[8];
+assert(Boolean(stage8), "Makaton Stage 8 (Advanced STEM) is defined");
+for (const word of stemWords) {
+  assert(stage8.coreWords.includes(word), `Makaton Stage 8 coreWords includes '${word}'`);
+}
+
+// 15.4: S-Expression Lexicon on disk contains all new signs
+const astSignsContent = fs.readFileSync('static/lexicons/bsl-signs.ast', 'utf-8');
+for (const word of [...stemWords, ...liturgicalWords]) {
+  assert(
+    astSignsContent.includes(`:word "${word}"`),
+    `static/lexicons/bsl-signs.ast contains S-Expression for '${word}'`
+  );
+}
+
+// 15.5: Lisp 32-Bit Codebook on disk contains all new signs
+const codebookContent = fs.readFileSync('static/lexicons/bsl-codebook.lisp', 'utf-8');
+for (const word of [...stemWords, ...liturgicalWords]) {
+  const id = word.toLowerCase();
+  assert(
+    codebookContent.includes(`:id "${id}"`),
+    `static/lexicons/bsl-codebook.lisp contains codebook entry for '${id}'`
+  );
+}
+assert(codebookContent.includes(':id "dir-give"'), "Lisp codebook contains ':id dir-give'");
+assert(codebookContent.includes(':id "dir-bless"'), "Lisp codebook contains ':id dir-bless'");
+assert(codebookContent.includes(':id "cl-base-hold"'), "Lisp codebook contains ':id cl-base-hold'");
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);
