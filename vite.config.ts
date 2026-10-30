@@ -116,12 +116,10 @@ function astSceneAutoFinder(): import('vite').Plugin {
         totalScenes: scenes.length,
         scenes
       };
-      const playerDir = path.resolve(import.meta.dirname, 'static/player');
-      if (!fs.existsSync(playerDir)) {
-        fs.mkdirSync(playerDir, { recursive: true });
-      }
-      fs.writeFileSync(path.join(playerDir, 'scenes.manifest.json'), JSON.stringify(payload, null, 2));
-      fs.writeFileSync(path.join(playerDir, 'scenes-config.json'), JSON.stringify(payload, null, 2));
+      const manifestPath = path.resolve(import.meta.dirname, 'static/player/scenes.manifest.json');
+      const configPath = path.resolve(import.meta.dirname, 'static/player/scenes-config.json');
+      fs.writeFileSync(manifestPath, JSON.stringify(payload, null, 2));
+      fs.writeFileSync(configPath, JSON.stringify(payload, null, 2));
     }
   };
 }
@@ -131,12 +129,13 @@ export default defineConfig({
   plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
-    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
+    'process.env': {},
     'process.browser': true,
   },
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      'react-router-dom': path.resolve(import.meta.dirname, 'src/router/index.tsx'),
     },
   },
   server: {
