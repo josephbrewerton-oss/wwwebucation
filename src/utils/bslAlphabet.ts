@@ -607,7 +607,20 @@ export function solveHandKinematics(
 ): BslSolvedDominantHand {
   const w = wrist;
   const k = knuckle;
-  const t = tip;
+  
+  // Guard against coordinate space explosion by clamping tip reach from knuckle
+  const MAX_REACH = 45;
+  const rawDx = tip.x - k.x;
+  const rawDy = tip.y - k.y;
+  const rawDz = tip.z - k.z;
+  const rawDist = Math.hypot(rawDx, rawDy, rawDz) || 1;
+  const clampedDist = Math.min(MAX_REACH, rawDist);
+  const t: Point3D = {
+    x: k.x + (rawDx / rawDist) * clampedDist,
+    y: k.y + (rawDy / rawDist) * clampedDist,
+    z: k.z + (rawDz / rawDist) * clampedDist,
+  };
+
   const shape: BslHandShape = shapeInput || 'flat-closed';
 
   // 1. Arm vector along index pointing axis
@@ -754,6 +767,26 @@ export function solveHandKinematics(
   };
 
   switch (shape) {
+    case 'pinch': {
+      // Index and thumb meet together at a localized forward pinch point
+      const pinchPoint: Point3D = {
+        x: k.x + ufx * 18 - unormX * 8,
+        y: k.y + ufy * 18 - unormY * 8,
+        z: k.z + ufz * 18 - unormZ * 8,
+      };
+      tipIndex = pinchPoint;
+      thumbTip = {
+        x: pinchPoint.x - ulx * 2,
+        y: pinchPoint.y - uly * 2,
+        z: pinchPoint.z + 2,
+      };
+      // Middle, ring, and pinky relax curled into palm
+      tipMid = tipMidCurled;
+      tipRing = tipRingCurled;
+      tipPinky = tipPinkyCurled;
+      break;
+    }
+
     case 'point-l':
       // Index extended + Thumb extended at 90° angle
       tipIndex = t;
@@ -948,4 +981,3 @@ export function solveHandKinematics(
     palmNormal: { x: unormX, y: unormY, z: unormZ },
   };
 }
-
