@@ -874,7 +874,21 @@
     (kf :idx 1 :label "Align Opposing Palms" :rule "Both flat hands hover opposed at mid chest" :tip [0 -5 22] :knuckle [25 15 12] :wrist [65 55 0] :shape :flat :palm :down :base-mode :mirror :nmf (nmf :mouth "pressure" :brows "furrowed"))
     (kf :idx 2 :label "Compress Surface" :rule "Palms compress together firmly with sustained tension" :tip [0 20 22] :knuckle [25 38 12] :wrist [65 72 0] :shape :flat :palm :down :hold 200 :ease :snap :base-mode :mirror :nmf (nmf :mouth "pressure" :brows "furrowed" :tilt "nod"))
   )
+  ;; --- Planetary & Atomic Orbital Dynamics ---
+  (sign :id "kepler-law" :word "KEPLER LAW" :cat "stem" :gloss "KEPLER-HARMONIC-LAW"
+    :label "Kepler's Third (Harmonic) Law"
+    :desc "Non-dominant fist anchors the Sun focus while dominant index traces variable-speed elliptical orbits." :aliases ("KEPLER" "HARMONIC-LAW" "PLANETARY-ORBITS")
+    (kf :idx 1 :label "Solar Center Anchor" :rule "Non-dominant fist anchors the Sun locus; dominant index begins outer ellipse" :tip [-20 0 25] :knuckle [10 20 15] :wrist [55 60 0] :shape :point :base-mode :vowel-board :nmf (nmf :mouth "Kepler" :brows "raised"))
+    (kf :idx 2 :label "Elliptic Sweep Fast-Slow" :rule "Dominant index accelerates through perihelion sweep" :tip [30 15 45] :knuckle [55 35 30] :wrist [90 70 15] :shape :point :hold 180 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "orbit" :brows "neutral" :tilt "nod"))
+  )
 
+  (sign :id "bohr-model" :word "BOHR MODEL" :cat "stem" :gloss "BOHR-MODEL"
+    :label "Bohr Model / Quantized Energy Levels"
+    :desc "Non-dominant fist anchors atomic nucleus while dominant index steps between discrete circular orbital shells." :aliases ("BOHR" "BOHR-LAW" "QUANTIZED-ORBITS")
+    (kf :idx 1 :label "Nucleus Locus" :rule "Non-dominant fist holds stationary nucleus anchor at center" :tip [-15 5 22] :knuckle [15 25 12] :wrist [55 60 0] :shape :fist :base-mode :vowel-board :nmf (nmf :mouth "Bohr" :brows "raised"))
+    (kf :idx 2 :label "Inner Shell n=1" :rule "Dominant index traces tight inner ground-state orbit" :tip [5 -5 30] :knuckle [30 15 20] :wrist [70 50 5] :shape :point :hold 140 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "atom" :brows "neutral"))
+    (kf :idx 3 :label "Outer Shell n=2" :rule "Dominant index expands out to step into discrete higher energy shell" :tip [35 -15 40] :knuckle [60 10 25] :wrist [95 45 10] :shape :point :hold 180 :ease :smooth :base-mode :vowel-board :nmf (nmf :mouth "level" :brows "raised" :tilt "nod"))
+  )
   (sign :id "current" :word "CURRENT" :cat "stem" :gloss "CURRENT"
     :label "Electric Current / Flow of Charge"
     :desc "Dominant index weaves steadily forward through non-dominant ring or over base hand showing electron stream." :aliases ("AMPS" "AMPERE" "CHARGE-FLOW")
