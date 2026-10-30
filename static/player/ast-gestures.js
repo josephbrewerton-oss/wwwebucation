@@ -5951,48 +5951,67 @@ ${strokeLines.join('\n')}
         }
       });
 
-      // Blending Arrow & Finger Cursor click handler
-      const finger = this.stageSvg.querySelector('#ph-finger-cursor');
-      const arrowLine = finger && finger.parentNode;
-      if (arrowLine) {
-        arrowLine.style.cursor = 'pointer';
-        arrowLine.addEventListener('pointerdown', (e) => {
-          e.stopPropagation();
-          const cur = WORDS[this._phWordIdx] || WORDS[0];
+     // Blending Arrow & Finger Cursor click handler
+const finger = this.stageSvg.querySelector('#ph-finger-cursor');
+const arrowLine = finger && finger.parentNode;
 
-          let step = 0;
-          const sweepInterval = setInterval(() => {
-            if (step < cur.tokens.length) {
-              const tok = cur.tokens[step];
-              const letterId = ids[step];
-              const btn = this.stageSvg.querySelector(`#ph-btn-${letterId}`);
-              if (btn) {
-                btn.setAttribute('fill', '#38bdf8');
-                setTimeout(() => {
-                  btn.setAttribute('fill', tok.isDigraph ? '#6b21a8' : '#0284c7');
-                }, 220);
-              }
-              if (finger) {
-                finger.setAttribute('cx', String(45 + step * 115));
-              }
-              this.playAudioTone(tok.tone, 'sine', 0.06, 0.12);
-              step++;
-            } else {
-              clearInterval(sweepInterval);
-              if (finger) finger.setAttribute('cx', '300');
-              const res = this.stageSvg.querySelector('#ph-blended-result');
-              if (res) res.setAttribute('opacity', '1');
+if (arrowLine) {
+  arrowLine.style.cursor = 'pointer';
+  arrowLine.addEventListener('pointerdown', (e) => {
+    e.stopPropagation();
 
-              speakPhoneme(`${cur.word}! ${cur.word}!`, 0.95);
-              setBanner(`🎉 Blended! /${cur.tokens.map(t => t.g).join('/ - /')}/ = "${cur.word}" ${cur.emoji}!`, '#4ade80');
+    // Prevent re-trigger while currently sweeping
+    if (this._isBlending) return;
+    this._isBlending = true;
 
-              this.playAudioTone(523.25, 'sine', 0.1, 0.2);
-              setTimeout(() => this.playAudioTone(659.25, 'sine', 0.12, 0.2), 70);
-              setTimeout(() => this.playAudioTone(783.99, 'sine', 0.16, 0.28), 140);
-            }
-          }, 280);
-        });
+    if (this._sweepInterval) clearInterval(this._sweepInterval);
+
+    const cur = WORDS[this._phWordIdx] || WORDS[0];
+    let step = 0;
+
+    this._sweepInterval = setInterval(() => {
+      if (step < cur.tokens.length) {
+        const tok = cur.tokens[step];
+        const letterId = ids[step];
+        const btn = this.stageSvg.querySelector(`#ph-btn-${letterId}`);
+
+        if (btn) {
+          btn.setAttribute('fill', '#38bdf8');
+          setTimeout(() => {
+            btn.setAttribute('fill', tok.isDigraph ? '#6b21a8' : '#0284c7');
+          }, 220);
+        }
+
+        if (finger) {
+          finger.setAttribute('cx', String(45 + step * 115));
+        }
+
+        this.playAudioTone(tok.tone, 'sine', 0.06, 0.12);
+        step++;
+      } else {
+        clearInterval(this._sweepInterval);
+        this._sweepInterval = null;
+        this._isBlending = false;
+
+        // Park finger neatly at the end of the word line
+        if (finger) {
+          finger.setAttribute('cx', String(45 + (cur.tokens.length - 1) * 115 + 40));
+        }
+
+        const res = this.stageSvg.querySelector('#ph-blended-result');
+        if (res) res.setAttribute('opacity', '1');
+
+        speakPhoneme(`${cur.word}! ${cur.word}!`, 0.95);
+        setBanner(`🎉 Blended! /${cur.tokens.map(t => t.g).join('/ - /')}/ = "${cur.word}" ${cur.emoji}!`, '#4ade80');
+
+        // Arpeggio chime (C5 - E5 - G5)
+        this.playAudioTone(523.25, 'sine', 0.1, 0.2);
+        setTimeout(() => this.playAudioTone(659.25, 'sine', 0.12, 0.2), 70);
+        setTimeout(() => this.playAudioTone(783.99, 'sine', 0.16, 0.28), 140);
       }
+    }, 280);
+  });
+}      }
 
       // Blended Result click -> cycles to next decodable word!
       const blendedRes = this.stageSvg.querySelector('#ph-blended-result');
