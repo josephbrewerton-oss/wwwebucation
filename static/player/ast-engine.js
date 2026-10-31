@@ -4999,28 +4999,25 @@
               : '';
 
             const candidateBases = [
+              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/cartridges/`,
+              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/bytecode/`,
+              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/player/bytecode/`,
+              './static/cartridges/',
+              './static/bytecode/',
               './bytecode/',
               './cartridges/',
-              'bytecode/',
-              'cartridges/',
               './',
               base,
-              currentDir,
-              `${currentDir}bytecode/`,
-              `${currentDir}cartridges/`,
-              '/player/bytecode/',
-              '/cartridges/',
-              `${base}bytecode/`,
-              `${base}cartridges/`,
-              `${base}player/bytecode/`,
-              ghRepoPrefix ? `${ghRepoPrefix}/player/bytecode/` : '',
-              ghRepoPrefix ? `${ghRepoPrefix}/cartridges/` : '',
-              ghRepoPrefix ? `${ghRepoPrefix}/player/` : '',
-              '../bytecode/',
-              '../player/bytecode/',
-              '../cartridges/',
-              '/'
-            ].filter(Boolean);
+            currentDir,
+              `${currentDir}static/bytecode/`,
+              `${currentDir}static/cartridges/`,
+              `${base}static/bytecode/`,
+              `${base}static/cartridges/`,
+              `${base}static/player/bytecode/`,
+              ghRepoPrefix ? `${ghRepoPrefix}/static/player/bytecode/` : '',
+              ghRepoPrefix ? `${ghRepoPrefix}/static/cartridges/` : '',
+              ghRepoPrefix ? `${ghRepoPrefix}/static/bytecode/` : ''
+              ].filter(Boolean);
 
             const sceneId = presetId;
             const fetchAsset = async (ext) => {
