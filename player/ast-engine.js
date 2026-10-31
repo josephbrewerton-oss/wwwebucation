@@ -5083,25 +5083,21 @@ inputs.forEach(inp => {
 
         let scene = this.sceneCache[presetId];
 
-if (!scene) {
-        const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
-        let svgText = registryScene.svgMarkup || registryScene.svgText || '';
-        let astText = registryScene.astSource || registryScene.astText || '';
-        let parsedAst = null;
+let scene = this.sceneCache[presetId];
 
         if (!scene) {
-        const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
-        let svgText = registryScene.svgMarkup || registryScene.svgText || '';
-        let astText = registryScene.astSource || registryScene.astText || '';
-        let parsedAst = null;
+          const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
+          let svgText = registryScene.svgMarkup || registryScene.svgText || '';
+          let astText = registryScene.astSource || registryScene.astText || '';
+          let parsedAst = null;
 
-        // If not already in registry/decentralized store, fetch dynamically
-        if ((!svgText || !astText) && typeof fetch !== 'undefined') {
-          const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
-            ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
-            : './';
-          const base = (this.options?.basePath || currentDir || './').replace(/\/?$/, '/');
-          const cacheBust = '?v=2.6.0';
+          // If not already in registry/decentralized store, fetch dynamically
+          if ((!svgText || !astText) && typeof fetch !== 'undefined') {
+            const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
+              ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
+              : './';
+            const base = (this.options?.basePath || currentDir || './').replace(/\/?$/, '/');
+            const cacheBust = '?v=2.6.0';
 
           // Automatic GitHub Pages repository prefix detection (e.g. /my-repo/player/)
           const ghRepoMatch = (typeof window !== 'undefined' && window.location && window.location.pathname)
