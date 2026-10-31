@@ -5058,27 +5058,30 @@
                 `cartridges/${altId}.${ext}`
               ] : [];
 
+             const repoBase = (typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/';
+
               const candidateUrls = Array.from(new Set([
+                // 1. Fully-qualified base paths from candidateBases first (immediate 200 hits)
+                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`),
+
+                // 2. Direct canonical fallbacks with repo base
+                `${repoBase}static/cartridges/${sceneId}.${ext}`,
+                `${repoBase}static/bytecode/${sceneId}.${ext}`,
+                `${repoBase}static/player/bytecode/${sceneId}.${ext}`,
+
+                // 3. Registry scene specific paths
                 ...directUrls,
                 ...altUrls,
-                // 1. Direct canonical paths (resolves immediately with zero 404 probes)
-                isBinary ? `/player/bytecode/${sceneId}.${ext}` : `/cartridges/${sceneId}.${ext}`,
-                isBinary ? `bytecode/${sceneId}.${ext}` : `../cartridges/${sceneId}.${ext}`,
-                `/player/bytecode/${sceneId}.${ext}`,
-                `/cartridges/${sceneId}.${ext}`,
-                `bytecode/${sceneId}.${ext}`,
-                `../cartridges/${sceneId}.${ext}`,
+
+                // 4. Custom user overrides
                 ...(customBase ? [
-                  `${customBase.replace(/\/$/, '')}/bytecode/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/cartridges/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/static/bytecode/${sceneId}.${ext}`,
+                  `${customBase.replace(/\/$/, '')}/static/cartridges/${sceneId}.${ext}`,
                 ] : []),
                 ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
                 ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                `${currentDir}bytecode/${sceneId}.${ext}`,
-                `./bytecode/${sceneId}.${ext}`,
-                `../player/bytecode/${sceneId}.${ext}`,
-                `../bytecode/${sceneId}.${ext}`,
-                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`)
+                `./static/bytecode/${sceneId}.${ext}`,
+                `./static/cartridges/${sceneId}.${ext}`
               ])).filter(Boolean);
 
               for (const url of candidateUrls) {
