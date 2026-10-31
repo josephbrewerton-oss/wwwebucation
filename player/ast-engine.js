@@ -5082,7 +5082,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         let scene = this.sceneCache[presetId];
 
-      if (!scene) {
+if (!scene) {
         const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
         let svgText = registryScene.svgMarkup || registryScene.svgText || '';
         let astText = registryScene.astSource || registryScene.astText || '';
@@ -5132,21 +5132,23 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 ? (registryScene?.svgFile || (regBase ? `cartridges/${regBase}.svg` : ''))
                 : (registryScene?.astFile || (regBase ? `cartridges/${regBase}.ast` : ''));
 
-            const primaryDir = isBinary ? 'static/bytecode' : 'static/cartridges';
-            const secondaryDir = isBinary ? 'static/player/bytecode' : 'static/cartridges';
+            // Both .astb and .svg are hosted under static/player/bytecode/
+            const primaryDir = 'static/player/bytecode';
+            const secondaryDir = isBinary ? 'static/bytecode' : 'static/cartridges';
 
             // Build candidate URLs prioritized from most specific to general fallbacks
             const candidateUrls = Array.from(new Set([
-              // 1. Direct registry target
+              // 1. Direct registry target (if explicit path declared)
               directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
               directFile ? `${repoBase}${directFile.replace(/^\/+/, '')}` : '',
 
-              // 2. Canonical repo paths (bytecode first for astb, cartridges for svg/ast)
+              // 2. Exact repo location where both .astb and companion .svg live
               `${repoBase}${primaryDir}/${sceneId}.${ext}`,
-              `${repoBase}${secondaryDir}/${sceneId}.${ext}`,
 
-              // 3. Alternate ID aliasing
+              // 3. Fallbacks for alternate folders
+              `${repoBase}${secondaryDir}/${sceneId}.${ext}`,
               altId ? `${repoBase}${primaryDir}/${altId}.${ext}` : '',
+              altId ? `${repoBase}${secondaryDir}/${altId}.${ext}` : '',
 
               // 4. Custom parameter directories
               ...customDirs.map(d => `${d}/${sceneId}.${ext}`),
@@ -5198,6 +5200,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
             return null;
           };
+
+          parsedAst = null;
+          try {
+            const [foundBytecode, foundSvg] = await Promise.all([
+              fetchAsset('astb'),
+              fetchAsset('svg')
+            ]);
+            if (foundSvg) svgText = foundSvg;
+            if (foundBytecode) {
+              try {
+                parsedAst = this.decompileBytecode(foundBytecode);
+              } catch (err) {
+                console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
+              }
+            }
+            if (!parsedAst) {
+              const foundAst = await fetchAsset('ast');
+              if (foundAst) astText = foundAst;
+            }
+          } catch (e) {
+            console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
+          }
+        }
 
           parsedAst = null;
           try {
