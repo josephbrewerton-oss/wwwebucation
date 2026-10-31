@@ -5405,45 +5405,24 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
 
     /**
-     * Initializes a scene with pre-paint computed evaluation and continuous sim archetype detection
-     */
-    initScene(scene) {
-      if (!scene) return null;
-      this.scene = scene;
-      this.durationSec = scene.duration || 10.0;
-      this.isContinuousSim = Boolean(
-        scene.type === 'Sim' ||
-        scene.cartridgeType === 'Sim' ||
-        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
-        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
-        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node')) ||
-        scene.continuous ||
-        scene.isContinuous ||
-        typeof scene.mount === 'function'
-      );
-      this.resetVars();
-      this.updateComputedVars();
-      if (this.container) {
-        this.mountSceneAsset(scene, this.container);
-      }
-    this.mountDeclarativeHud(scene);
-      this.applyBindings(0);
-      if (this.isContinuousSim) {
-        this.play();
-      }
-      return this.scene;
-    }
-    mountDeclarativeHud(scene) {
+     mountDeclarativeHud(scene) {
     if (!this.container) return;
 
-    const existingHud = this.container.querySelector('#ast-declarative-hud') || 
-                        this.container.parentElement?.querySelector('#ast-declarative-hud');
+    // Clear any previous HUD instances
+    const existingHud = document.querySelector('#ast-declarative-hud');
     if (existingHud) existingHud.remove();
 
     const inputs = scene?.inputs;
     if (!Array.isArray(inputs) || inputs.length === 0) return;
 
-    const hostEl = this.container.parentElement || this.container;
+    // Ensure hostEl is an HTML element, never an <svg> root or SVG sub-element
+    let hostEl = this.container;
+    if (hostEl instanceof SVGElement || hostEl.tagName?.toLowerCase() === 'svg') {
+      hostEl = hostEl.closest('div') || hostEl.parentElement || document.body;
+    } else if (hostEl.parentElement && hostEl.parentElement.tagName?.toLowerCase() === 'svg') {
+      hostEl = hostEl.parentElement.closest('div') || hostEl.parentElement.parentElement || document.body;
+    }
+
     if (getComputedStyle(hostEl).position === 'static') {
       hostEl.style.position = 'relative';
     }
@@ -5464,7 +5443,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       display: flex;
       flex-direction: column;
       gap: 8px;
-      z-index: 50;
+      z-index: 9999;
       backdrop-filter: blur(8px);
       box-shadow: 0 4px 12px rgba(0,0,0,0.4);
       user-select: none;
@@ -5499,6 +5478,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     hostEl.appendChild(hud);
 
+    // Attach event listeners for sliders and toggles
     inputs.forEach(inp => {
       const vName = inp.var || inp.id;
       const slider = hud.querySelector(`#hud-inp-${vName}`);
@@ -5516,6 +5496,26 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
         });
       }
+
+      if (btn) {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const currentVal = Boolean(this.scene?.vars?.[vName]);
+          const nextVal = !currentVal;
+
+          if (this.scene && this.scene.vars) {
+            this.scene.vars[vName] = nextVal;
+          }
+
+          btn.style.background = nextVal ? '#0284c7' : '#475569';
+          btn.textContent = nextVal ? 'CLOSED' : 'OPEN';
+
+          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
+          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+        });
+      }
+    });
+  }
 
       if (btn) {
         btn.addEventListener('click', () => {
