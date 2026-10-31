@@ -3757,16 +3757,15 @@
       return localized;
     }
 
-    updateActiveKeyframeAndSpeech(userSeeking = false) {
-      if (!this.scene.keyframes || !this.scene.keyframes.length) return;
+updateActiveKeyframeAndSpeech(userSeeking = false) {
+  if (!this.scene?.keyframes?.length) return;
 
-      let activeIndex = 0;
-      for (let i = 0; i < this.scene.keyframes.length; i++) {
-        if (this.progress >= this.scene.keyframes[i].t) {
-          activeIndex = i;
-        }
-      }
-
+  let activeIndex = 0;
+  for (let i = 0; i < this.scene.keyframes.length; i++) {
+    if (this.progress >= this.scene.keyframes[i].t) {
+      activeIndex = i;
+    }
+  }
       if (activeIndex !== this.lastSpokenIndex) {
         const kf = this.scene.keyframes[activeIndex];
         this.emit('keyframe', {
@@ -5288,13 +5287,16 @@
       );
       this.isContinuousSim = isContinuousSim;
 
-      // Mount into container
+// Mount into container
       if (this.container) {
         this.container.innerHTML = '';
         this.mountSceneAsset(scene, this.container);
       }
       this.resetVars();
       this.updateComputedVars(); // Pre-paint computed state evaluation before initial frame
+
+      // ---> MISSING LINK INSERTED HERE <---
+      this.mountDeclarativeHud(scene);
 
       // 1. Hide the "Loading AST Vector Scene..." overlay immediately
       const loaderEl = document.getElementById('loading-indicator') || 
@@ -5316,7 +5318,7 @@
       } catch (bindErr) {
         console.warn('[AST Engine] Initial frame bind notice:', bindErr);
       }
-
+        
       this.emit('presetchange', {
         preset: this.activePresetId,
         title: this.scene.title,
@@ -5425,13 +5427,111 @@
       if (this.container) {
         this.mountSceneAsset(scene, this.container);
       }
+    this.mountDeclarativeHud(scene);
       this.applyBindings(0);
       if (this.isContinuousSim) {
         this.play();
       }
       return this.scene;
     }
+    mountDeclarativeHud(scene) {
+    if (!this.container) return;
 
+    const existingHud = this.container.querySelector('#ast-declarative-hud') || 
+                        this.container.parentElement?.querySelector('#ast-declarative-hud');
+    if (existingHud) existingHud.remove();
+
+    const inputs = scene?.inputs;
+    if (!Array.isArray(inputs) || inputs.length === 0) return;
+
+    const hostEl = this.container.parentElement || this.container;
+    if (getComputedStyle(hostEl).position === 'static') {
+      hostEl.style.position = 'relative';
+    }
+
+    const hud = document.createElement('div');
+    hud.id = 'ast-declarative-hud';
+    hud.style.cssText = `
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(15, 23, 42, 0.90);
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #f8fafc;
+      font-family: system-ui, sans-serif;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 50;
+      backdrop-filter: blur(8px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+      user-select: none;
+    `;
+
+    hud.innerHTML = `
+      <div style="font-weight: 700; color: #38bdf8; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">
+        <span>⚡ Parameters</span>
+        <span style="font-size: 9px; color: #94a3b8; font-family: monospace;">AST AUTO</span>
+      </div>
+      ${inputs.map(inp => {
+        const vName = inp.var || inp.id;
+        const curVal = this.scene?.vars?.[vName] !== undefined ? this.scene.vars[vName] : (inp.val ?? inp.default ?? 0);
+        if (inp.type === 'switch' || typeof curVal === 'boolean') {
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+              <span>${inp.label || vName}:</span>
+              <button id="hud-btn-${vName}" type="button" style="cursor:pointer; background:${curVal ? '#0284c7' : '#475569'}; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-weight:600; font-size:11px;">
+                ${curVal ? 'CLOSED' : 'OPEN'}
+              </button>
+            </div>
+          `;
+        }
+        return `
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <span>${inp.label || vName}: <b id="hud-val-${vName}" style="color:#fde047;">${curVal}</b></span>
+            <input type="range" id="hud-inp-${vName}" min="${inp.min}" max="${inp.max}" step="${inp.step || 1}" value="${curVal}" style="cursor:pointer; width:90px;">
+          </div>
+        `;
+      }).join('')}
+    `;
+
+    hostEl.appendChild(hud);
+
+    inputs.forEach(inp => {
+      const vName = inp.var || inp.id;
+      const slider = hud.querySelector(`#hud-inp-${vName}`);
+      const btn = hud.querySelector(`#hud-btn-${vName}`);
+      const display = hud.querySelector(`#hud-val-${vName}`);
+
+      if (slider) {
+        slider.addEventListener('input', (e) => {
+          const val = parseFloat(e.target.value);
+          if (display) display.textContent = val;
+          if (this.scene && this.scene.vars) {
+            this.scene.vars[vName] = val;
+          }
+          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
+          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+        });
+      }
+
+      if (btn) {
+        btn.addEventListener('click', () => {
+          if (this.scene && this.scene.vars) {
+            this.scene.vars[vName] = !this.scene.vars[vName];
+            const isClosed = this.scene.vars[vName];
+            btn.textContent = isClosed ? 'CLOSED' : 'OPEN';
+            btn.style.background = isClosed ? '#0284c7' : '#475569';
+          }
+          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
+          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+        });
+      }
+    });
+  }
     /**
      * Mounts a cartridge with pre-paint computed evaluation
      */
