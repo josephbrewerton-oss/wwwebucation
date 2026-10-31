@@ -3199,8 +3199,8 @@ window.addEventListener('message', (e) => {
           this.onStopReached(reached);
         }
 
-        // If looped back to start, allow checkpoints to be answered again
-        if (this.engine.progress < 0.05 && this.completedCheckpoints.size > 0) {
+        // If looped back to start, allow checkpoints to be answered again (only for narrative slides, not continuous simulation loops)
+        if (!this.engine.isContinuousSim && this.engine.scene?.type !== 'Sim' && this.engine.progress < 0.05 && this.completedCheckpoints.size > 0) {
           this.completedCheckpoints.clear();
         }
       });

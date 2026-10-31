@@ -40,6 +40,9 @@
   ))
   (:bindings (
     (:target "#telemetry-display" :attr "textContent" :expr "'Voltage: ' + (vars.voltage || 0) + 'V | Resistance: ' + (vars.resistance || 1) + 'Ω | Current: ' + Number(computed.current || 0).toFixed(2) + 'A | Power: ' + Number(computed.power || 0).toFixed(1) + 'W'")
+    (:target "#battery-voltage-text" :attr "textContent" :expr "(vars.voltage || 12) + 'V'")
+    (:target "#resistor-ohms-text" :attr "textContent" :expr "(vars.resistance || 4) + ' Ω'")
+    (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.current || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
     ;; Start glow at 0.15 so turning dials actually ramps from dim to radiant
     (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed ? Math.min(1.0, 0.15 + (Number(computed.power || 0) / 120)) : 0.05")
     (:target "#bulb-halo" :attr "r" :expr "vars.switchClosed ? (25 + Math.min(65, Number(computed.power || 0) * 0.5)) : 15")
