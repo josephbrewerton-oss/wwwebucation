@@ -5088,6 +5088,12 @@ if (!scene) {
         let astText = registryScene.astSource || registryScene.astText || '';
         let parsedAst = null;
 
+        if (!scene) {
+        const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
+        let svgText = registryScene.svgMarkup || registryScene.svgText || '';
+        let astText = registryScene.astSource || registryScene.astText || '';
+        let parsedAst = null;
+
         // If not already in registry/decentralized store, fetch dynamically
         if ((!svgText || !astText) && typeof fetch !== 'undefined') {
           const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
@@ -5200,29 +5206,6 @@ if (!scene) {
 
             return null;
           };
-          parsedAst = null;
-          try {
-            const [foundBytecode, foundSvg] = await Promise.all([
-              fetchAsset('astb'),
-              fetchAsset('svg')
-            ]);
-            if (foundSvg) svgText = foundSvg;
-            if (foundBytecode) {
-              try {
-                parsedAst = this.decompileBytecode(foundBytecode);
-              } catch (err) {
-                console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
-              }
-            }
-            if (!parsedAst) {
-              const foundAst = await fetchAsset('ast');
-              if (foundAst) astText = foundAst;
-            }
-          } catch (e) {
-            console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
-          }
-        } // <--- Closes: if ((!svgText || !astText) && typeof fetch !== 'undefined')
-      }   // <--- Closes: if (!scene)
 
           parsedAst = null;
           try {
@@ -5247,28 +5230,6 @@ if (!scene) {
           }
         }
 
-          parsedAst = null;
-          try {
-            const [foundBytecode, foundSvg] = await Promise.all([
-              fetchAsset('astb'),
-              fetchAsset('svg')
-            ]);
-            if (foundSvg) svgText = foundSvg;
-            if (foundBytecode) {
-              try {
-                parsedAst = this.decompileBytecode(foundBytecode);
-              } catch (err) {
-                console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
-              }
-            }
-            if (!parsedAst) {
-              const foundAst = await fetchAsset('ast');
-              if (foundAst) astText = foundAst;
-            }
-          } catch (e) {
-            console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
-          }
-        }
         // Secondary fallback for core cartridges if network fetch failed on GitHub Pages
         if (!svgText && global.ASTSceneRegistry) {
           const fb = global.ASTSceneRegistry.get(presetId);
@@ -5328,7 +5289,6 @@ if (!scene) {
           (parsedAst && parsedAst.camera) ||
           (registryScene && registryScene.has3D)
         );
-
         const isInteractiveExplicitlyDisabled = astText ? (
           /:interactive\s+(false|nil|none)\b/i.test(astText) ||
           /:questions\s+(false|nil|none)\b/i.test(astText) ||
