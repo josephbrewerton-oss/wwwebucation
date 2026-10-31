@@ -5220,7 +5220,6 @@ if (!scene) {
               } catch (err) {
                 console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
               }
-            }
             if (!parsedAst) {
               const foundAst = await fetchAsset('ast');
               if (foundAst) astText = foundAst;
