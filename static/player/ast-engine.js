@@ -5422,7 +5422,7 @@ inputs.forEach(inp => {
       }
       this._mountedSceneId = presetId;
       return this.scene;
-    }); // <--- ADD THE MISSING ')' TO MATCH (async () => {
+    }; // <--- ADD THE MISSING ')' TO MATCH (async () => {
 
     const loadPromiseExecution = loadPromise();
     this._inFlightLoadPromise = loadPromiseExecution;
