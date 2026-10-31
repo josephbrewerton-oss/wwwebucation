@@ -5141,8 +5141,7 @@ if (!scene) {
             // Both .astb and .svg are hosted under static/player/bytecode/
             const primaryDir = 'static/player/bytecode';
             const secondaryDir = isBinary ? 'static/bytecode' : 'static/cartridges';
-
-            // Build candidate URLs prioritized from most specific to general fallbacks
+// Build candidate URLs prioritized from most specific to general fallbacks
             const candidateUrls = Array.from(new Set([
               // 1. Direct registry target (if explicit path declared)
               directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
@@ -5220,6 +5219,7 @@ if (!scene) {
               } catch (err) {
                 console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
               }
+            }
             if (!parsedAst) {
               const foundAst = await fetchAsset('ast');
               if (foundAst) astText = foundAst;
@@ -5227,7 +5227,6 @@ if (!scene) {
           } catch (e) {
             console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
           }
-        }
 
         // Secondary fallback for core cartridges if network fetch failed on GitHub Pages
         if (!svgText && global.ASTSceneRegistry) {
@@ -5574,26 +5573,6 @@ if (!scene) {
           if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
         });
       }
-
-      if (btn) {
-        btn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const currentVal = Boolean(this.scene?.vars?.[vName]);
-          const nextVal = !currentVal;
-
-          if (this.scene && this.scene.vars) {
-            this.scene.vars[vName] = nextVal;
-          }
-
-          btn.style.background = nextVal ? '#0284c7' : '#475569';
-          btn.textContent = nextVal ? 'CLOSED' : 'OPEN';
-
-          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
-          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
-        });
-      }
-    });
-  }
 
       if (btn) {
         btn.addEventListener('click', () => {
