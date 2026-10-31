@@ -5200,6 +5200,29 @@ if (!scene) {
 
             return null;
           };
+          parsedAst = null;
+          try {
+            const [foundBytecode, foundSvg] = await Promise.all([
+              fetchAsset('astb'),
+              fetchAsset('svg')
+            ]);
+            if (foundSvg) svgText = foundSvg;
+            if (foundBytecode) {
+              try {
+                parsedAst = this.decompileBytecode(foundBytecode);
+              } catch (err) {
+                console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
+              }
+            }
+            if (!parsedAst) {
+              const foundAst = await fetchAsset('ast');
+              if (foundAst) astText = foundAst;
+            }
+          } catch (e) {
+            console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
+          }
+        } // <--- Closes: if ((!svgText || !astText) && typeof fetch !== 'undefined')
+      }   // <--- Closes: if (!scene)
 
           parsedAst = null;
           try {
