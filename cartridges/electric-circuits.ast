@@ -1,31 +1,36 @@
-(:scene :id "electric-circuits" :type "Sim" :oak-id "OAK-KS3-SCI-002" :oak-unit "ks3-physics-electricity-circuits-ohms-law" :title "💡 Electrical Circuits & Ohm's Law (V = I × R)" :stage "KS2/KS3 PHYSICS" :duration 12.0
+(scene :id "electric-circuits" :type "Sim" :oak-id "OAK-KS2-SCI-ELECTRICC" :stage "KS2/KS3 PHYSICS" :duration 12.0
+  (:title "💡 Electrical Circuits & Ohm's Law (V = I × R)")
+
   (:vars (
-    (:var :name "voltage" :val 12.0 :min 1.5 :max 24.0 :step 0.5 :label "Battery Voltage (V)")
-    (:var :name "resistance" :val 4.0 :min 1.0 :max 12.0 :step 0.5 :label "Circuit Resistance (Ω)")
+    (:var :name "voltage" :val 12.0 :min 1.5 :max 24.0 :step 0.5 :unit "V" :label "Battery Voltage (V)")
+    (:var :name "resistance" :val 4.0 :min 1.0 :max 12.0 :step 0.5 :unit "Ω" :label "Circuit Resistance (Ω)")
     (:var :name "switchClosed" :val true :label "Knife Switch Position")
   ))
+
   (:inputs (
     (:slider :var "voltage" :label "Voltage (V)" :min 1.5 :max 24.0 :step 0.5)
     (:slider :var "resistance" :label "Resistance (Ω)" :min 1.0 :max 12.0 :step 0.5)
+    (:switch :var "switchClosed" :label "Knife Switch")
   ))
+
   (:computed (
     (:name "current" :expr "vars.switchClosed ? (vars.voltage / vars.resistance) : 0")
     (:name "power" :expr "vars.switchClosed ? ((vars.voltage * vars.voltage) / vars.resistance) : 0")
   ))
-  (:gestures (
-    (:interactive :target "#circuit-switch" :action "toggle-switch")
-  ))
-  (:subtitles (
-    (:start 0.00 :end 3.50 :en "An electrical circuit is a closed loop! The battery voltage pushes electrons through the copper wires." :es "¡Un circuito eléctrico es un lazo cerrado! El voltaje de la batería empuja electrones por los cables.")
-    (:start 3.50 :end 7.50 :en "Watch the yellow electrons move! Current is the rate of charge flow: I = Voltage divided by Resistance." :es "¡Mira cómo se mueven los electrones! La corriente es la tasa de flujo: I = Voltaje dividido entre Resistencia.")
-    (:start 7.50 :end 12.00 :en "Inside the lightbulb, resistance forces electrons to collide, heating the filament into brilliant glowing light!" :es "Dentro de la bombilla, la resistencia hace chocar los electrones, ¡calentando el filamento y emitiendo luz!")
-  ))
+
   (:keyframes (
     (:t 0.00 :title "1. Closed Loop Circuit" :rule "Current (I) only flows through an unbroken conductive loop from positive to negative terminal")
     (:t 0.35 :title "2. Voltage Drives Potential" :rule "Voltage (V) is electrical pressure. Higher voltage pushes more coulombs per second")
     (:t 0.70 :title "3. Resistance Opposes Flow" :rule "Resistance (R) in ohms restricts electron velocity: Ohm's Law I = V / R")
     (:t 1.00 :title "4. Energy Dissipation" :rule "Electrons collide with tungsten atoms, converting electrical energy into radiant photon light (P = I²R)")
   ))
+
+  (:subtitles (
+    (:start 0.00 :end 3.50 :en "An electrical circuit is a closed loop! The battery voltage pushes electrons through the copper wires." :es "¡Un circuito eléctrico es un lazo cerrado! El voltaje de la batería empuja electrones por los cables.")
+    (:start 3.50 :end 7.50 :en "Watch the yellow electrons move! Current is the rate of charge flow: I = Voltage divided by Resistance." :es "¡Mira cómo se mueven los electrones! La corriente es la tasa de flujo: I = Voltaje dividido entre Resistencia.")
+    (:start 7.50 :end 12.00 :en "Inside the lightbulb, resistance forces electrons to collide, heating the filament into brilliant glowing light!" :es "Dentro de la bombilla, la resistencia hace chocar los electrones, ¡calentando el filamento y emitiendo luz!")
+  ))
+
   (:interactive (
     (:checkpoint :t 0.34
       :prompt "According to Ohm's Law (I = V / R), what happens if we double the battery voltage while keeping resistance the same?"
@@ -38,15 +43,22 @@
       :answer 0
       :explanation "High resistance in the filament causes electrons to collide with tungsten ions, releasing intense thermal heat and visible light photons.")
   ))
+
   (:bindings (
+    ;; Telemetry & Formula Overlays
     (:target "#telemetry-display" :attr "textContent" :expr "'Voltage: ' + (vars.voltage || 0) + 'V | Resistance: ' + (vars.resistance || 1) + 'Ω | Current: ' + Number(computed.current || 0).toFixed(2) + 'A | Power: ' + Number(computed.power || 0).toFixed(1) + 'W'")
     (:target "#battery-voltage-text" :attr "textContent" :expr "(vars.voltage || 12) + 'V'")
     (:target "#resistor-ohms-text" :attr "textContent" :expr "(vars.resistance || 4) + ' Ω'")
-    (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.current || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
-    ;; Start glow at 0.15 so turning dials actually ramps from dim to radiant
+    (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.power || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
+
+    ;; Physical Knife Switch Arm & Label Visuals
+    (:target "#circuit-switch" :attr "data-state" :expr "vars.switchClosed ? 'closed' : 'open'")
+    (:target "#switch-blade" :attr "transform" :expr "vars.switchClosed ? 'rotate(0)' : 'rotate(-35)'")
+    (:target "#switch-text" :attr "textContent" :expr "vars.switchClosed ? 'SWITCH: CLOSED (Click to toggle)' : 'SWITCH: OPEN (Click to toggle)'")
+
+    ;; Bulb Glow & Filament
     (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed ? Math.min(1.0, 0.15 + (Number(computed.power || 0) / 120)) : 0.05")
     (:target "#bulb-halo" :attr "r" :expr "vars.switchClosed ? (25 + Math.min(65, Number(computed.power || 0) * 0.5)) : 15")
-    ;; Optional: modulate the bulb filament core stroke-width/color for extra visual punch
     (:target "#bulb-filament" :attr "stroke" :expr "vars.switchClosed && Number(computed.power || 0) > 2 ? '#fff5a0' : '#444'")
   ))
 )

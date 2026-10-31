@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-10-31T11:56:43.194Z",
+  "generatedAt": "2026-10-31T12:11:58.739Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -181,7 +181,7 @@
       "astbFile": "bytecode/electric-circuits.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 7
+      "bindingsCount": 10
     },
     {
       "id": "eucharistic-procession-film",

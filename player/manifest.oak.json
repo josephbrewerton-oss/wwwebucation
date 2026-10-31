@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-10-31T11:56:39.924Z",
+  "generatedAt": "2026-10-31T12:11:56.793Z",
   "totalCartridges": 59,
   "units": [
     {
@@ -266,15 +266,6 @@
       "cartridgeId": "kinetic-gas"
     },
     {
-      "unit": "ks3-physics-electricity-circuits-ohms-law",
-      "oakId": "OAK-KS3-SCI-002",
-      "subject": "Science",
-      "section": "Natural Sciences & Physics",
-      "stage": "KS2/KS3 PHYSICS",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
-      "cartridgeId": "electric-circuits"
-    },
-    {
       "unit": "protons",
       "oakId": "OAK-KS3-SCI-003",
       "subject": "Science",
@@ -408,6 +399,15 @@
       "stage": "BENCHMARK & STRESS LAB",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "cartridgeId": "fish-tank"
+    },
+    {
+      "unit": "V",
+      "oakId": "OAK-KS2-SCI-ELECTRICC",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "stage": "KS2/KS3 PHYSICS",
+      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "cartridgeId": "electric-circuits"
     },
     {
       "unit": "Algorithms and Sequencing",
@@ -1100,26 +1100,6 @@
       "checkpointCount": 1
     },
     {
-      "id": "electric-circuits",
-      "base": "electric-circuits",
-      "type": "Sim",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
-      "stage": "KS2/KS3 PHYSICS",
-      "oakId": "OAK-KS3-SCI-002",
-      "oakUnit": "ks3-physics-electricity-circuits-ohms-law",
-      "subject": "Science",
-      "section": "Natural Sciences & Physics",
-      "mount": "/curriculum/science/electric-circuits",
-      "duration": 12,
-      "svgFile": "cartridges/electric-circuits.svg",
-      "astFile": "cartridges/electric-circuits.ast",
-      "astbFile": "bytecode/electric-circuits.astb",
-      "isCore": true,
-      "tier": "core",
-      "hasCheckpoints": true,
-      "checkpointCount": 2
-    },
-    {
       "id": "atom",
       "base": "atom",
       "type": "Sim",
@@ -1458,6 +1438,26 @@
       "tier": "core",
       "hasCheckpoints": false,
       "checkpointCount": 0
+    },
+    {
+      "id": "electric-circuits",
+      "base": "electric-circuits",
+      "type": "Sim",
+      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "stage": "KS2/KS3 PHYSICS",
+      "oakId": "OAK-KS2-SCI-ELECTRICC",
+      "oakUnit": "V",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "mount": "/curriculum/science/electric-circuits",
+      "duration": 12,
+      "svgFile": "cartridges/electric-circuits.svg",
+      "astFile": "cartridges/electric-circuits.ast",
+      "astbFile": "bytecode/electric-circuits.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "oak-data-algorithms-sequencing",
