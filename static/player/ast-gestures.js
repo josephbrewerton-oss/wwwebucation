@@ -5445,6 +5445,7 @@ ${strokeLines.join('\n')}
         try { window.focus(); } catch {}
       });
     }
+    }
     attachSpellingBeeDirectListeners() {
       if (!this.stageSvg) return;
       const beeActions = this.stageSvg.querySelectorAll('[data-action^="bee-"]');
