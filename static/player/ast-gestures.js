@@ -6056,7 +6056,7 @@ if (arrowLine) {
       }
     }, 280);
   });
-}      }
+} 
 
       // Blended Result click -> cycles to next decodable word!
       const blendedRes = this.stageSvg.querySelector('#ph-blended-result');
