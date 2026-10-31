@@ -5422,7 +5422,7 @@ inputs.forEach(inp => {
       }
       this._mountedSceneId = presetId;
       return this.scene;
-    }; // <--- ADD THE MISSING ')' TO MATCH (async () => {
+    })();
 
     const loadPromiseExecution = loadPromise();
     this._inFlightLoadPromise = loadPromiseExecution;
@@ -5440,7 +5440,6 @@ inputs.forEach(inp => {
   setPreset(presetId, shouldPlay = false) {
     return this.loadScene(presetId, shouldPlay);
   }
-
   /**
    * Ingests and mounts an in-memory scene object directly without requiring filesystem fetch.
    * Ideal for standalone npm packages and programmatic scene generation.
