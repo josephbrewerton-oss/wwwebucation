@@ -125,7 +125,7 @@ function astSceneAutoFinder(): import('vite').Plugin {
 }
 
 export default defineConfig({
-  base: process.env.BASE_URL || '/wwwebucation/',
+  base: '/wwwebucation/', // Hardcoded repository base path to prevent root domain 404s
   plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
