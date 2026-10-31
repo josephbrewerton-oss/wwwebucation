@@ -6379,21 +6379,54 @@
             const node = container.querySelector(b.target);
             if (node) {
               let evalFn = () => 0;
+              let rawExpr = String(b.expr || '0').trim();
+
+              // 1. Transform Lisp-style (:if cond then else) into JS ternary: ((cond) ? (then) : (else))
+              rawExpr = rawExpr.replace(
+                /\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g,
+                '($1 ? $2 : $3)'
+              );
+
+              // 2. Strip Lisp variable colon prefixes (e.g., :t -> t, :vars -> vars)
+              rawExpr = rawExpr.replace(/:([a-zA-Z_]\w*)/g, '$1');
+
               try {
-                evalFn = new Function('t', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor', 'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${b.expr});`);
+                evalFn = new Function(
+                  't', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor',
+                  'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch',
+                  'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate',
+                  'scale', 'sineWave', 'smoothstep',
+                  `"use strict"; return (${rawExpr});`
+                );
               } catch (e) {
                 console.warn('[AST Engine] Failed compiling expr:', b.expr, e);
+                // Safe default value fallback depending on target attribute
+                evalFn = b.attr === 'transform' ? () => '' : () => 0;
               }
+
               this.activeBindings.push({
                 target: b.target,
                 attr: b.attr,
                 node,
-                evalFn
+                evalFn: (t, vars, Math, comp, ...helpers) => {
+                  let val;
+                  try {
+                    val = evalFn(t, vars, Math, comp, ...helpers);
+                  } catch {
+                    val = b.attr === 'transform' ? '' : 0;
+                  }
+
+                  // 3. Format bare numbers into valid SVG transform strings
+                  if (b.attr === 'transform') {
+                    if (val === 0 || val === '0' || !val) return '';
+                    if (typeof val === 'number') return `translate(${val}, 0)`;
+                    if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
+                  }
+                  return val;
+                }
               });
             }
           }
-        });
-      }
 
 // 1. Initialize zero-bloat micro-physics if defined on the scene
       if (this.physics && scene.physics) {
