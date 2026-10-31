@@ -4954,14 +4954,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       hostEl.appendChild(hud);
 
-      inputs.forEach(inp => {
+inputs.forEach(inp => {
         const vName = inp.var || inp.id;
         const slider = hud.querySelector(`#hud-inp-${vName}`);
         const btn = hud.querySelector(`#hud-btn-${vName}`);
         const display = hud.querySelector(`#hud-val-${vName}`);
 
         if (slider) {
-          slider.Listener('input', (e) => {
+          slider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
             if (display) display.textContent = val;
             if (this.scene && this.scene.vars) {
@@ -4972,7 +4972,27 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           });
         }
 
-   async loadScene(presetId, shouldPlay = false) {
+        if (btn) {
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentVal = Boolean(this.scene?.vars?.[vName]);
+            const nextVal = !currentVal;
+
+            if (this.scene && this.scene.vars) {
+              this.scene.vars[vName] = nextVal;
+            }
+
+            btn.style.background = nextVal ? '#0284c7' : '#475569';
+            btn.textContent = nextVal ? 'CLOSED' : 'OPEN';
+
+            if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
+            if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+          });
+        }
+      });
+    }
+
+    async loadScene(presetId, shouldPlay = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
         ? global.ASTSceneRegistry.normalizeId(presetId)
