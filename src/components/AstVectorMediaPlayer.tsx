@@ -364,9 +364,15 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   const [inkNotice, setInkNotice] = useState<string | null>(null);
 
   // Helper to load cartridge from in-memory cache or IndexedDB vault directly into player
-  const dispatchCartridgeToPlayer = useCallback((cartId: string) => {
+  const dispatchedPresetRef = useRef<string | null>(null);
+  const dispatchCartridgeToPlayer = useCallback((cartId: string, force = false) => {
     const canonical = normalizeCartridgeId(cartId);
     if (!canonical) return;
+
+    if (!force && dispatchedPresetRef.current === canonical) {
+      return; // Already dispatched this cartridge definition to player
+    }
+    dispatchedPresetRef.current = canonical;
 
     // 1. Check in-memory store
     const cart = getCartridge(canonical);
@@ -451,6 +457,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
     const canonical = normalizeCartridgeId(nextPreset);
     setSelectedPreset(canonical);
     selectedPresetRef.current = canonical;
+    dispatchedPresetRef.current = canonical;
 
     const disableQ = isCartridgeWithoutQuestions(canonical);
     if (iframeRef.current && iframeRef.current.contentWindow) {
@@ -784,8 +791,8 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
             setSelectedPreset(data.preset);
             selectedPresetRef.current = data.preset;
           }
-          // Always dispatch active cartridge definition (from RAM or IndexedDB) to player iframe
-          if (selectedPresetRef.current) {
+          // Dispatch active cartridge definition to player iframe if not yet dispatched
+          if (selectedPresetRef.current && dispatchedPresetRef.current !== selectedPresetRef.current) {
             dispatchCartridgeToPlayer(selectedPresetRef.current);
           }
           break;

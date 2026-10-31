@@ -35,7 +35,7 @@
   <g transform="translate(110, 195)" data-pedagogical="ec-battery">
     <rect x="0" y="0" width="80" height="70" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
     <text x="40" y="28" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">BATTERY</text>
-    <text x="40" y="52" fill="#60a5fa" font-size="16" font-weight="900" text-anchor="middle">12V</text>
+    <text id="battery-voltage-text" x="40" y="52" fill="#60a5fa" font-size="16" font-weight="900" text-anchor="middle">12V</text>
     <line x1="40" y1="-10" x2="40" y2="0" stroke="#ef4444" stroke-width="4"/>
     <text x="55" y="-2" fill="#ef4444" font-size="14" font-weight="900">+</text>
     <line x1="40" y1="70" x2="40" y2="80" stroke="#38bdf8" stroke-width="4"/>
@@ -46,7 +46,7 @@
   <g transform="translate(360, 75)" data-pedagogical="ec-resistor">
     <rect x="0" y="10" width="80" height="40" rx="6" fill="#334155" stroke="#f59e0b" stroke-width="2"/>
     <text x="40" y="28" fill="#f8fafc" font-size="11" font-weight="800" text-anchor="middle">RESISTOR</text>
-    <text x="40" y="44" fill="#fde047" font-size="13" font-weight="900" text-anchor="middle">4 Ω</text>
+    <text id="resistor-ohms-text" x="40" y="44" fill="#fde047" font-size="13" font-weight="900" text-anchor="middle">4 Ω</text>
   </g>
   
   <!-- Component 3: Lightbulb (Right side) -->
@@ -56,7 +56,7 @@
     <!-- Glass Dome -->
     <circle cx="0" cy="0" r="26" fill="rgba(255, 255, 255, 0.2)" stroke="#facc15" stroke-width="2"/>
     <!-- Filament -->
-    <path d="M -8 10 L -4 -6 L 0 6 L 4 -6 L 8 10" fill="none" stroke="#fef08a" stroke-width="2"/>
+    <path id="bulb-filament" d="M -8 10 L -4 -6 L 0 6 L 4 -6 L 8 10" fill="none" stroke="#fef08a" stroke-width="2"/>
     <text x="0" y="45" fill="#facc15" font-size="12" font-weight="800" text-anchor="middle">LIGHTBULB</text>
   </g>
   
@@ -71,7 +71,7 @@
   
   <!-- Legend Card -->
   <rect x="180" y="420" width="440" height="40" rx="8" fill="rgba(15, 23, 42, 0.85)" stroke="#1e293b" stroke-width="1"/>
-  <text x="400" y="445" fill="#cbd5e1" font-size="12" font-weight="700" text-anchor="middle">
+  <text id="formula-legend-text" x="400" y="445" fill="#cbd5e1" font-size="12" font-weight="700" text-anchor="middle">
     Formula: Current I = 12V ÷ 4Ω = 3.0 Amperes • Power P = 12V × 3.0A = 36 Watts
   </text>
 </svg>

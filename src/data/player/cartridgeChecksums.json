@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-10-31T08:39:04.435Z",
+  "generatedAt": "2026-10-31T09:15:53.699Z",
   "totalCartridges": 60,
-  "masterChecksum": "12e075886e658bbc3ce64ecdf6ca4bb220a2624b227d6ac544d1e55c8bb39fd7",
+  "masterChecksum": "f90daa426c3d54dd6d992289b415e7cefac4b9641015c56b49da41eb9dccb870",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -186,15 +186,15 @@
       "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
       "stage": "KS2/KS3 PHYSICS",
       "type": "Sim",
-      "astSha256": "5d249328c0f2a059c53a738406808c7f1ade4f31559cb8c94e39bdcbaefcd108",
-      "svgSha256": "9c1bb38cba9ac7c763bdacc954c59269fc81c7e7fbaa9554ae1e1d3a9ea9cae7",
-      "astbSha256": "760568354558a5b8f1c56204cb194816279a922a3ec001dfdd93a950c5b91f4b",
-      "astbBytes": 2079,
-      "astBytes": 4147,
-      "svgBytes": 4884,
+      "astSha256": "de0dced2d6a4f240872a6fb1e54b8b5f80f24d432dba3b760eed5d27f4c7e777",
+      "svgSha256": "804e83b2cfe7d3bcbb7d6cdb0c76da32fa422c6fe9ad0084acc161b54787bc67",
+      "astbSha256": "214cb25a1fd4f5447ada986a55d4414e51fca690c090b794cab0d55c398f34c4",
+      "astbBytes": 2527,
+      "astBytes": 4700,
+      "svgBytes": 4978,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "59f3959c7cf8dc82d0a71789874af11a744ae6e0faa8dbc8a92bd5e402b48895",
+      "seal": "fe79e1f5768a4ab711550b256b59eda98f3aa46e4e6ecb45c94f7c2730e29c95",
       "certified": true
     },
     "eucharistic-procession-film": {

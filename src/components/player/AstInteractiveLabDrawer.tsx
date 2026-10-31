@@ -1345,15 +1345,81 @@ export default function AstInteractiveLabDrawer({
                 <span>Battery Voltage (V):</span>
                 <span style={{ color: '#38bdf8' }}>{voltage} Volts</span>
               </div>
-              <input type="range" min="1.5" max="24" step="0.5" value={voltage} onChange={(e) => setVoltage(Number(e.target.value))} style={{ width: '100%', accentColor: '#38bdf8' }} />
+              <input
+                type="range"
+                min="1.5"
+                max="24"
+                step="0.5"
+                value={voltage}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setVoltage(val);
+                  postVarToPlayer('voltage', val);
+                }}
+                style={{ width: '100%', accentColor: '#38bdf8' }}
+              />
             </div>
 
-            <div style={{ marginBottom: '16px' }}>
+            <div style={{ marginBottom: '14px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', fontWeight: 700, marginBottom: '4px' }}>
                 <span>Resistor (R):</span>
                 <span style={{ color: '#f59e0b' }}>{resistance} &Omega;</span>
               </div>
-              <input type="range" min="1" max="20" value={resistance} onChange={(e) => setResistance(Number(e.target.value))} style={{ width: '100%', accentColor: '#f59e0b' }} />
+              <input
+                type="range"
+                min="1"
+                max="20"
+                step="0.5"
+                value={resistance}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setResistance(val);
+                  postVarToPlayer('resistance', val);
+                }}
+                style={{ width: '100%', accentColor: '#f59e0b' }}
+              />
+            </div>
+
+            {/* Knife Switch Quick Control */}
+            <div style={{ marginBottom: '14px', display: 'flex', gap: '8px' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  postVarToPlayer('switchClosed', true);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '5px 8px',
+                  background: 'rgba(34, 197, 94, 0.2)',
+                  border: '1px solid #22c55e',
+                  borderRadius: '6px',
+                  color: '#4ade80',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                ⚡ Close Switch
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  postVarToPlayer('switchClosed', false);
+                }}
+                style={{
+                  flex: 1,
+                  padding: '5px 8px',
+                  background: 'rgba(239, 68, 68, 0.2)',
+                  border: '1px solid #ef4444',
+                  borderRadius: '6px',
+                  color: '#f87171',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                }}
+              >
+                ⏹ Open Switch
+              </button>
             </div>
 
             {(() => {

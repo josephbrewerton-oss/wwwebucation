@@ -3730,9 +3730,11 @@ ${strokeLines.join('\n')}
     // Continuous Electron Flow Drift for Electrical Circuits
     // =========================================================================
     startCircuitElectronsLoop() {
-      if (this._circuitAnimId) cancelAnimationFrame(this._circuitAnimId);
-      const dots = this.stageSvg && this.stageSvg.querySelectorAll('.e-dot');
-      if (!dots || !dots.length) return;
+      if (this._circuitAnimId) {
+        cancelAnimationFrame(this._circuitAnimId);
+        this._circuitAnimId = null;
+      }
+      let dots = this.stageSvg ? this.stageSvg.querySelectorAll('.e-dot') : null;
 
       const L1 = 500;
       const L2 = 260;
@@ -3752,25 +3754,51 @@ ${strokeLines.join('\n')}
       };
 
       let driftOffset = 0;
-      const tick = () => {
-        if (!this.stageSvg || !this.stageSvg.querySelector('#circuit-switch')) return;
-        const v = (this.engine && this.engine.vars) || {};
-        const isClosed = v.switchClosed !== false;
-        const voltage = v.voltage !== undefined ? v.voltage : 12;
-        const resistance = v.resistance !== undefined ? v.resistance : 4;
-        const current = isClosed ? voltage / Math.max(0.5, resistance) : 0;
+      let lastTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+      const tick = (now) => {
+        const timestamp = now || (typeof performance !== 'undefined' ? performance.now() : Date.now());
+        const dt = Math.max(0.001, Math.min(0.1, (timestamp - lastTime) / 1000));
+        lastTime = timestamp;
 
-        if (isClosed && current > 0) {
-          driftOffset = (driftOffset + current * 0.7) % perimeter;
+        // Verify that electric-circuits stage is still active
+        const isCircuitScene = Boolean(
+          this.stageSvg && (
+            this.stageSvg.querySelector('#circuit-switch') ||
+            this.stageSvg.querySelector('.e-dot') ||
+            (this.engine && this.engine.scene && (this.engine.scene.id === 'electric-circuits' || this.engine.scene.id === 'phet-ohms-law'))
+          )
+        );
+
+        if (!isCircuitScene) {
+          this._circuitAnimId = null;
+          return;
         }
 
-        const count = dots.length;
-        dots.forEach((dot, idx) => {
-          const pt = getPointOnPerimeter(driftOffset + (idx * perimeter) / count);
-          dot.setAttribute('cx', pt.x.toFixed(1));
-          dot.setAttribute('cy', pt.y.toFixed(1));
-          dot.setAttribute('opacity', isClosed ? '0.95' : '0.15');
-        });
+        // Re-acquire dots if unmounted or detached from DOM
+        if (!dots || !dots.length || !dots[0].isConnected) {
+          dots = this.stageSvg ? this.stageSvg.querySelectorAll('.e-dot') : null;
+        }
+
+        const v = (this.engine && this.engine.vars) || {};
+        const isClosed = v.switchClosed !== false;
+        const voltage = Number(v.voltage !== undefined ? v.voltage : 12) || 12;
+        const resistance = Number(v.resistance !== undefined ? v.resistance : 4) || 4;
+        const current = isClosed ? (voltage / Math.max(0.2, resistance)) : 0;
+
+        if (isClosed && current > 0 && isFinite(current)) {
+          driftOffset = (driftOffset + current * 42.0 * dt) % perimeter;
+          if (isNaN(driftOffset)) driftOffset = 0;
+        }
+
+        if (dots && dots.length) {
+          const count = dots.length;
+          dots.forEach((dot, idx) => {
+            const pt = getPointOnPerimeter(driftOffset + (idx * perimeter) / count);
+            dot.setAttribute('cx', pt.x.toFixed(1));
+            dot.setAttribute('cy', pt.y.toFixed(1));
+            dot.setAttribute('opacity', isClosed ? '0.95' : '0.15');
+          });
+        }
 
         this._circuitAnimId = requestAnimationFrame(tick);
       };
@@ -3809,6 +3837,14 @@ ${strokeLines.join('\n')}
         });
       }
 
+      // Fallback inputs for core STEM simulations if inputs missing from parsed scene
+      if (inputs.length === 0 && (scene.id === 'electric-circuits' || scene.id === 'phet-ohms-law')) {
+        inputs = [
+          { type: 'slider', var: 'voltage', label: 'Battery Voltage (V)', min: 1.5, max: 24.0, step: 0.5, unit: 'V' },
+          { type: 'slider', var: 'resistance', label: 'Circuit Resistance (Ω)', min: 1.0, max: 12.0, step: 0.5, unit: 'Ω' }
+        ];
+      }
+
       if (inputs.length === 0) {
         if (hud) hud.style.display = 'none';
         return;
@@ -3830,7 +3866,7 @@ ${strokeLines.join('\n')}
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
           padding: 10px 14px;
           color: #f8fafc;
-          z-index: 28;
+          z-index: 35;
           user-select: none;
           font-family: ui-sans-serif, system-ui, sans-serif;
           font-size: 12px;
@@ -3986,7 +4022,7 @@ ${strokeLines.join('\n')}
       if (!this._varChangeBound && this.engine && typeof this.engine.on === 'function') {
         this._varChangeBound = true;
         this.engine.on('varchange', (data) => {
-          const curHud = container.querySelector('#stage-sim-parameters');
+          const curHud = document.getElementById('stage-sim-parameters') || (container && container.querySelector('#stage-sim-parameters'));
           if (curHud && curHud.style.display !== 'none') {
             const sList = curHud.querySelectorAll('.sim-param-slider');
             sList.forEach(s => {
