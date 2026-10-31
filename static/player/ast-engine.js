@@ -5440,994 +5440,824 @@ inputs.forEach(inp => {
   setPreset(presetId, shouldPlay = false) {
     return this.loadScene(presetId, shouldPlay);
   }
-    /**
-     * Ingests and mounts an in-memory scene object directly without requiring filesystem fetch.
-     * Ideal for standalone npm packages and programmatic scene generation.
-     * @param {Object} sceneData
-     * @param {boolean} shouldPlay
-     */
-    loadSceneData(sceneData, shouldPlay = false) {
-      if (!sceneData || typeof sceneData !== 'object') {
-        const err = new Error('[AST Engine] loadSceneData requires a valid scene object');
-        this.emit('error', { type: 'INVALID_SCENE_DATA', message: err.message });
-        throw err;
-      }
-      const id = sceneData.id || `custom-${Date.now()}`;
-      this.sceneCache[id] = {
-        id,
-        title: sceneData.title || id,
-        stage: sceneData.stage || 'CUSTOM',
-        duration: parseFloat(sceneData.duration) || 10.0,
-        camera: sceneData.camera || null,
-        has3D: Boolean(sceneData.has3D || sceneData.camera),
-        interactive: sceneData.interactive || null,
-        keyframes: sceneData.keyframes || [],
-        subtitles: sceneData.subtitles || [],
-        rawBindings: sceneData.bindings || sceneData.rawBindings || [],
-        stateMachines: sceneData.stateMachines || null,
-        emitters: sceneData.emitters || null,
-        bindInputs: sceneData.bindInputs || null,
-        vars: sceneData.vars || null,
-        gestures: sceneData.gestures || null,
-        svgText: sceneData.svgText || '',
-        mount: sceneData.mount,
-        update: sceneData.update,
-        render: sceneData.render
-      };
-      return this.loadScene(id, shouldPlay);
+
+  /**
+   * Ingests and mounts an in-memory scene object directly without requiring filesystem fetch.
+   * Ideal for standalone npm packages and programmatic scene generation.
+   * @param {Object} sceneData
+   * @param {boolean} shouldPlay
+   */
+  loadSceneData(sceneData, shouldPlay = false) {
+    if (!sceneData || typeof sceneData !== 'object') {
+      const err = new Error('[AST Engine] loadSceneData requires a valid scene object');
+      this.emit('error', { type: 'INVALID_SCENE_DATA', message: err.message });
+      throw err;
     }
+    const id = sceneData.id || `custom-${Date.now()}`;
+    this.sceneCache[id] = {
+      id,
+      title: sceneData.title || id,
+      stage: sceneData.stage || 'CUSTOM',
+      duration: parseFloat(sceneData.duration) || 10.0,
+      camera: sceneData.camera || null,
+      has3D: Boolean(sceneData.has3D || sceneData.camera),
+      interactive: sceneData.interactive || null,
+      keyframes: sceneData.keyframes || [],
+      subtitles: sceneData.subtitles || [],
+      rawBindings: sceneData.bindings || sceneData.rawBindings || [],
+      stateMachines: sceneData.stateMachines || null,
+      emitters: sceneData.emitters || null,
+      bindInputs: sceneData.bindInputs || null,
+      vars: sceneData.vars || null,
+      gestures: sceneData.gestures || null,
+      svgText: sceneData.svgText || '',
+      mount: sceneData.mount,
+      update: sceneData.update,
+      render: sceneData.render
+    };
+    return this.loadScene(id, shouldPlay);
+  }
 
-     mountDeclarativeHud(scene) {
-    if (!this.container) return;
+  /**
+   * Mounts a cartridge with pre-paint computed evaluation
+   */
+  mountCartridge(cartridge) {
+    return this.initScene(cartridge);
+  }
 
-    // Clear any previous HUD instances
-    const existingHud = document.querySelector('#ast-declarative-hud');
-    if (existingHud) existingHud.remove();
-
-    const inputs = scene?.inputs;
-    if (!Array.isArray(inputs) || inputs.length === 0) return;
-
-    // Ensure hostEl is an HTML element, never an <svg> root or SVG sub-element
-    let hostEl = this.container;
-    if (hostEl instanceof SVGElement || hostEl.tagName?.toLowerCase() === 'svg') {
-      hostEl = hostEl.closest('div') || hostEl.parentElement || document.body;
-    } else if (hostEl.parentElement && hostEl.parentElement.tagName?.toLowerCase() === 'svg') {
-      hostEl = hostEl.parentElement.closest('div') || hostEl.parentElement.parentElement || document.body;
+  /**
+   * Ingests local files (.json, .ast, .svg) via File/Blob APIs (e.g. file picker or drag-and-drop).
+   * @param {File|Blob} file
+   * @param {boolean} shouldPlay
+   * @returns {Promise<Object>} Loaded scene
+   */
+  async loadFromFile(file, shouldPlay = false) {
+    if (!file) {
+      const err = new Error('[AST Engine] loadFromFile requires a valid File or Blob');
+      this.emit('error', { type: 'FILE_LOAD_ERROR', message: err.message });
+      throw err;
     }
+    const filename = file.name || 'custom-asset';
+    const ext = filename.split('.').pop().toLowerCase();
 
-    if (getComputedStyle(hostEl).position === 'static') {
-      hostEl.style.position = 'relative';
-    }
-
-    const hud = document.createElement('div');
-    hud.id = 'ast-declarative-hud';
-    hud.style.cssText = `
-      position: absolute;
-      top: 14px;
-      right: 14px;
-      background: rgba(15, 23, 42, 0.90);
-      border: 1px solid rgba(56, 189, 248, 0.35);
-      border-radius: 8px;
-      padding: 10px 14px;
-      color: #f8fafc;
-      font-family: system-ui, sans-serif;
-      font-size: 12px;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-      z-index: 9999;
-      backdrop-filter: blur(8px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.4);
-      user-select: none;
-    `;
-
-    hud.innerHTML = `
-      <div style="font-weight: 700; color: #38bdf8; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">
-        <span>⚡ Parameters</span>
-        <span style="font-size: 9px; color: #94a3b8; font-family: monospace;">AST AUTO</span>
-      </div>
-      ${inputs.map(inp => {
-        const vName = inp.var || inp.id;
-        const curVal = this.scene?.vars?.[vName] !== undefined ? this.scene.vars[vName] : (inp.val ?? inp.default ?? 0);
-        if (inp.type === 'switch' || typeof curVal === 'boolean') {
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <span>${inp.label || vName}:</span>
-              <button id="hud-btn-${vName}" type="button" style="cursor:pointer; background:${curVal ? '#0284c7' : '#475569'}; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-weight:600; font-size:11px;">
-                ${curVal ? 'CLOSED' : 'OPEN'}
-              </button>
-            </div>
-          `;
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => {
+        const err = new Error(`Failed to read file "${filename}": ${reader.error?.message}`);
+        this.emit('error', { type: 'FILE_READ_ERROR', filename, message: err.message });
+        if (this.container) {
+          this.renderErrorPlaceholder(filename, err.message);
         }
-        return `
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-            <span>${inp.label || vName}: <b id="hud-val-${vName}" style="color:#fde047;">${curVal}</b></span>
-            <input type="range" id="hud-inp-${vName}" min="${inp.min}" max="${inp.max}" step="${inp.step || 1}" value="${curVal}" style="cursor:pointer; width:90px;">
-          </div>
-        `;
-      }).join('')}
-    `;
+        reject(err);
+      };
+      reader.onload = () => {
+        try {
+          const content = String(reader.result || '').trim();
+          const id = filename.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
-    hostEl.appendChild(hud);
+          if (ext === 'json') {
+            const json = JSON.parse(content);
+            json.id = json.id || id;
+            const loaded = this.loadSceneData(json, shouldPlay);
+            this.emit('fileloaded', { filename, type: 'json', id: json.id });
+            resolve(loaded);
+          } else if (ext === 'svg' || (ext !== 'ast' && content.includes('<svg'))) {
+            let embeddedAst = '';
+            const metaMatch = content.match(/<metadata[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/metadata>/i)
+              || content.match(/<script[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/script>/i)
+              || content.match(/<ast-scene[^>]*>([\s\S]*?)<\/ast-scene>/i);
 
-    // Attach event listeners for sliders and toggles
-    inputs.forEach(inp => {
-      const vName = inp.var || inp.id;
-      const slider = hud.querySelector(`#hud-inp-${vName}`);
-      const btn = hud.querySelector(`#hud-btn-${vName}`);
-      const display = hud.querySelector(`#hud-val-${vName}`);
+            if (metaMatch && metaMatch[1]) {
+              embeddedAst = metaMatch[1].trim();
+            }
 
-      if (slider) {
-        slider.addEventListener('input', (e) => {
-          const val = parseFloat(e.target.value);
-          if (display) display.textContent = val;
-          if (this.scene && this.scene.vars) {
-            this.scene.vars[vName] = val;
+            let parsed = null;
+            if (embeddedAst) {
+              try {
+                parsed = this.parseAst(embeddedAst);
+              } catch (e) {
+                console.warn('[AST Engine] Notice: Could not parse embedded AST inside SVG:', e);
+              }
+            }
+
+            const scene = {
+              id: (parsed && parsed.id) || id,
+              title: (parsed && parsed.title) || filename,
+              stage: (parsed && parsed.stage) || (embeddedAst ? 'HYBRID AST.SVG CAPSULE' : 'CUSTOM SVG'),
+              duration: (parsed && parsed.duration) || 10.0,
+              camera: (parsed && parsed.camera) || null,
+              has3D: Boolean(parsed && parsed.has3D),
+              keyframes: (parsed && parsed.keyframes) || [],
+              subtitles: (parsed && parsed.subtitles) || [],
+              rawBindings: (parsed && parsed.bindings) || [],
+              interactive: (parsed && parsed.interactive) || null,
+              gestures: (parsed && parsed.gestures) || null,
+              stateMachines: (parsed && parsed.stateMachines) || null,
+              emitters: (parsed && parsed.emitters) || null,
+              bindInputs: (parsed && parsed.bindInputs) || null,
+              svgText: content
+            };
+
+            const loaded = this.loadSceneData(scene, shouldPlay);
+            this.emit('fileloaded', { filename, type: embeddedAst ? 'ast.svg' : 'svg', id: scene.id });
+            resolve(loaded);
+          } else if (ext === 'ast') {
+            const parsed = this.parseAst(content);
+            const scene = {
+              id: (parsed && parsed.id) || id,
+              title: (parsed && parsed.title) || filename,
+              stage: (parsed && parsed.stage) || 'CUSTOM AST',
+              duration: (parsed && parsed.duration) || 10.0,
+              camera: (parsed && parsed.camera) || null,
+              has3D: Boolean(parsed && parsed.has3D),
+              keyframes: (parsed && parsed.keyframes) || [],
+              subtitles: (parsed && parsed.subtitles) || [],
+              rawBindings: (parsed && parsed.bindings) || [],
+              interactive: (parsed && parsed.interactive) || null,
+              gestures: (parsed && parsed.gestures) || null,
+              stateMachines: (parsed && parsed.stateMachines) || null,
+              emitters: (parsed && parsed.emitters) || null,
+              bindInputs: (parsed && parsed.bindInputs) || null,
+              svgText: ''
+            };
+            const loaded = this.loadSceneData(scene, shouldPlay);
+            this.emit('fileloaded', { filename, type: 'ast', id: scene.id });
+            resolve(loaded);
+          } else {
+            if (content.startsWith('{')) {
+              const json = JSON.parse(content);
+              resolve(this.loadSceneData(json, shouldPlay));
+            } else if (content.startsWith('(')) {
+              const parsed = this.parseAst(content);
+              resolve(this.loadSceneData({ id, ...parsed }, shouldPlay));
+            } else if (content.includes('<svg')) {
+              resolve(this.loadSceneData({ id, title: filename, svgText: content }, shouldPlay));
+            } else if (content.startsWith('#') || content.includes('Stage:') || content.includes('Shape:')) {
+              if (global.ASTSlideScriptCompiler) {
+                const compiled = global.ASTSlideScriptCompiler.compile(content);
+                resolve(this.loadSceneData(compiled.scene, shouldPlay));
+              } else {
+                throw new Error(`SlideScript detected but compiler is not loaded.`);
+              }
+            } else if (ext === 'html' || ext === 'htm' || ext === 'phet' || (global.ASTPhetBridge && global.ASTPhetBridge.isPhetBundle(content))) {
+              if (global.ASTPhetBridge) {
+                const result = global.ASTPhetBridge.transpilePhet(content, filename);
+                const parsed = this.parseAst(result.astSource);
+                const scene = {
+                  id: result.id || id,
+                  title: result.title || filename,
+                  stage: result.stage || 'PhET TRANSLATED',
+                  duration: result.duration || 12.0,
+                  svgText: result.svgText,
+                  keyframes: (parsed && parsed.keyframes) || [],
+                  subtitles: (parsed && parsed.subtitles) || [],
+                  rawBindings: (parsed && parsed.bindings) || []
+                };
+                const loaded = this.loadSceneData(scene, shouldPlay);
+                this.emit('fileloaded', {
+                  filename,
+                  type: 'phet-transpiled',
+                  id: scene.id,
+                  title: scene.title,
+                  stage: scene.stage,
+                  metadata: result.metadata,
+                  svgMarkup: result.svgText,
+                  astSource: result.astSource
+                });
+                resolve(loaded);
+              } else {
+                throw new Error(`PhET bundle detected but ASTPhetBridge is not loaded.`);
+              }
+            } else {
+              throw new Error(`Unsupported file extension: .${ext}. Expected .json, .ast, .svg, .html (PhET), or SlideScript.`);
+            }
           }
-          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
-          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
-        });
-      }
-
-      if (btn) {
-        btn.addEventListener('click', () => {
-          if (this.scene && this.scene.vars) {
-            this.scene.vars[vName] = !this.scene.vars[vName];
-            const isClosed = this.scene.vars[vName];
-            btn.textContent = isClosed ? 'CLOSED' : 'OPEN';
-            btn.style.background = isClosed ? '#0284c7' : '#475569';
+        } catch (parseErr) {
+          console.error('[AST Engine] Error parsing file:', filename, parseErr);
+          this.emit('error', { type: 'FILE_PARSE_ERROR', filename, message: parseErr.message });
+          if (this.container) {
+            this.renderErrorPlaceholder(filename, `File parse failed: ${parseErr.message}`);
           }
-          if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
-          if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
-        });
-      }
+          reject(parseErr);
+        }
+      };
+      reader.readAsText(file);
     });
   }
-    /**
-     * Mounts a cartridge with pre-paint computed evaluation
-     */
-    mountCartridge(cartridge) {
-      return this.initScene(cartridge);
+
+  /**
+   * Reads a File or Blob as UTF-8 text using a Promise.
+   * @param {File|Blob} file
+   * @returns {Promise<string>}
+   */
+  readFileAsText(file) {
+    if (!file) return Promise.resolve('');
+    if (typeof file.text === 'function') {
+      return file.text();
+    }
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || '').trim());
+      reader.onerror = () => reject(new Error(`Failed to read file "${file.name}": ${reader.error?.message}`));
+      reader.readAsText(file);
+    });
+  }
+
+  /**
+   * Loads one or multiple simulation files.
+   * @param {FileList|File[]} fileList
+   * @param {boolean} shouldPlay
+   */
+  async loadFiles(fileList, shouldPlay = false) {
+    if (!fileList) {
+      throw new Error('[AST Engine] loadFiles requires a valid file list');
+    }
+    const files = Array.from(fileList);
+    if (files.length === 0) return null;
+    if (files.length === 1) {
+      return this.loadFromFile(files[0], shouldPlay);
     }
 
-    /**
-     * Ingests local files (.json, .ast, .svg) via File/Blob APIs (e.g. file picker or drag-and-drop).
-     * @param {File|Blob} file
-     * @param {boolean} shouldPlay
-     * @returns {Promise<Object>} Loaded scene
-     */
-    async loadFromFile(file, shouldPlay = false) {
-      if (!file) {
-        const err = new Error('[AST Engine] loadFromFile requires a valid File or Blob');
-        this.emit('error', { type: 'FILE_LOAD_ERROR', message: err.message });
-        throw err;
-      }
-      const filename = file.name || 'custom-asset';
-      const ext = filename.split('.').pop().toLowerCase();
+    const svgFile = files.find(f => {
+      const name = (f.name || '').toLowerCase();
+      return name.endsWith('.svg') && !name.endsWith('.ast.svg');
+    }) || files.find(f => (f.name || '').toLowerCase().endsWith('.svg'));
 
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onerror = () => {
-          const err = new Error(`Failed to read file "${filename}": ${reader.error?.message}`);
-          this.emit('error', { type: 'FILE_READ_ERROR', filename, message: err.message });
-          if (this.container) {
-            this.renderErrorPlaceholder(filename, err.message);
-          }
-          reject(err);
-        };
-        reader.onload = () => {
-          try {
-            const content = String(reader.result || '').trim();
-            const id = filename.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+    const astFile = files.find(f => {
+      const name = (f.name || '').toLowerCase();
+      return name.endsWith('.ast') || name.endsWith('.json') || name.endsWith('.slidescript');
+    });
 
-            if (ext === 'json') {
-              const json = JSON.parse(content);
-              json.id = json.id || id;
-              const loaded = this.loadSceneData(json, shouldPlay);
-              this.emit('fileloaded', { filename, type: 'json', id: json.id });
-              resolve(loaded);
-            } else if (ext === 'svg' || (ext !== 'ast' && content.includes('<svg'))) {
-              // -------------------------------------------------------------
-              // Single-File Hybrid Simulation Capsule (.ast.svg)
-              // Inspect SVG for embedded AST S-expressions:
-              // <metadata type="application/ast-sexpr">(:scene ...)</metadata>
-              // or <script type="application/ast-sexpr">(:scene ...)</script>
-              // or <ast-scene>(:scene ...)</ast-scene>
-              // -------------------------------------------------------------
-              let embeddedAst = '';
-              const metaMatch = content.match(/<metadata[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/metadata>/i)
-                || content.match(/<script[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/script>/i)
-                || content.match(/<ast-scene[^>]*>([\s\S]*?)<\/ast-scene>/i);
+    if (svgFile && astFile) {
+      const [svgContent, astContent] = await Promise.all([
+        this.readFileAsText(svgFile),
+        this.readFileAsText(astFile)
+      ]);
 
-              if (metaMatch && metaMatch[1]) {
-                embeddedAst = metaMatch[1].trim();
-              }
+      const astExt = (astFile.name || '').split('.').pop().toLowerCase();
+      let parsed = null;
+      let interactive = null;
+      let gestures = null;
+      let stateMachines = null;
+      let emitters = null;
+      let bindInputs = null;
+      let keyframes = [];
+      let subtitles = [];
+      let rawBindings = [];
+      let duration = 10.0;
+      let title = astFile.name.replace(/\.[^/.]+$/, '');
+      let id = title.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
-              let parsed = null;
-              if (embeddedAst) {
-                try {
-                  parsed = this.parseAst(embeddedAst);
-                } catch (e) {
-                  console.warn('[AST Engine] Notice: Could not parse embedded AST inside SVG:', e);
-                }
-              }
-
-              const scene = {
-                id: (parsed && parsed.id) || id,
-                title: (parsed && parsed.title) || filename,
-                stage: (parsed && parsed.stage) || (embeddedAst ? 'HYBRID AST.SVG CAPSULE' : 'CUSTOM SVG'),
-                duration: (parsed && parsed.duration) || 10.0,
-                camera: (parsed && parsed.camera) || null,
-                has3D: Boolean(parsed && parsed.has3D),
-                keyframes: (parsed && parsed.keyframes) || [],
-                subtitles: (parsed && parsed.subtitles) || [],
-                rawBindings: (parsed && parsed.bindings) || [],
-                interactive: (parsed && parsed.interactive) || null,
-                gestures: (parsed && parsed.gestures) || null,
-                stateMachines: (parsed && parsed.stateMachines) || null,
-                emitters: (parsed && parsed.emitters) || null,
-                bindInputs: (parsed && parsed.bindInputs) || null,
-                svgText: content
-              };
-
-              const loaded = this.loadSceneData(scene, shouldPlay);
-              this.emit('fileloaded', { filename, type: embeddedAst ? 'ast.svg' : 'svg', id: scene.id });
-              resolve(loaded);
-            } else if (ext === 'ast') {
-              const parsed = this.parseAst(content);
-              const scene = {
-                id: (parsed && parsed.id) || id,
-                title: (parsed && parsed.title) || filename,
-                stage: (parsed && parsed.stage) || 'CUSTOM AST',
-                duration: (parsed && parsed.duration) || 10.0,
-                camera: (parsed && parsed.camera) || null,
-                has3D: Boolean(parsed && parsed.has3D),
-                keyframes: (parsed && parsed.keyframes) || [],
-                subtitles: (parsed && parsed.subtitles) || [],
-                rawBindings: (parsed && parsed.bindings) || [],
-                interactive: (parsed && parsed.interactive) || null,
-                gestures: (parsed && parsed.gestures) || null,
-                stateMachines: (parsed && parsed.stateMachines) || null,
-                emitters: (parsed && parsed.emitters) || null,
-                bindInputs: (parsed && parsed.bindInputs) || null,
-                svgText: ''
-              };
-              const loaded = this.loadSceneData(scene, shouldPlay);
-              this.emit('fileloaded', { filename, type: 'ast', id: scene.id });
-              resolve(loaded);
-            } else {
-              // Heuristic content-based detection
-              if (content.startsWith('{')) {
-                const json = JSON.parse(content);
-                resolve(this.loadSceneData(json, shouldPlay));
-              } else if (content.startsWith('(')) {
-                const parsed = this.parseAst(content);
-                resolve(this.loadSceneData({ id, ...parsed }, shouldPlay));
-              } else if (content.includes('<svg')) {
-                resolve(this.loadSceneData({ id, title: filename, svgText: content }, shouldPlay));
-              } else if (content.startsWith('#') || content.includes('Stage:') || content.includes('Shape:')) {
-                if (global.ASTSlideScriptCompiler) {
-                  const compiled = global.ASTSlideScriptCompiler.compile(content);
-                  resolve(this.loadSceneData(compiled.scene, shouldPlay));
-                } else {
-                  throw new Error(`SlideScript detected but compiler is not loaded.`);
-                }
-              } else if (ext === 'html' || ext === 'htm' || ext === 'phet' || (global.ASTPhetBridge && global.ASTPhetBridge.isPhetBundle(content))) {
-                if (global.ASTPhetBridge) {
-                  const result = global.ASTPhetBridge.transpilePhet(content, filename);
-                  const parsed = this.parseAst(result.astSource);
-                  const scene = {
-                    id: result.id || id,
-                    title: result.title || filename,
-                    stage: result.stage || 'PhET TRANSLATED',
-                    duration: result.duration || 12.0,
-                    svgText: result.svgText,
-                    keyframes: (parsed && parsed.keyframes) || [],
-                    subtitles: (parsed && parsed.subtitles) || [],
-                    rawBindings: (parsed && parsed.bindings) || []
-                  };
-                  const loaded = this.loadSceneData(scene, shouldPlay);
-                  this.emit('fileloaded', {
-                    filename,
-                    type: 'phet-transpiled',
-                    id: scene.id,
-                    title: scene.title,
-                    stage: scene.stage,
-                    metadata: result.metadata,
-                    svgMarkup: result.svgText,
-                    astSource: result.astSource
-                  });
-                  resolve(loaded);
-                } else {
-                  throw new Error(`PhET bundle detected but ASTPhetBridge is not loaded.`);
-                }
-              } else {
-                throw new Error(`Unsupported file extension: .${ext}. Expected .json, .ast, .svg, .html (PhET), or SlideScript.`);
-              }
-            }
-          } catch (parseErr) {
-            console.error('[AST Engine] Error parsing file:', filename, parseErr);
-            this.emit('error', { type: 'FILE_PARSE_ERROR', filename, message: parseErr.message });
-            if (this.container) {
-              this.renderErrorPlaceholder(filename, `File parse failed: ${parseErr.message}`);
-            }
-            reject(parseErr);
-          }
-        };
-        reader.readAsText(file);
-      });
-    }
-
-    /**
-     * Reads a File or Blob as UTF-8 text using a Promise.
-     * @param {File|Blob} file
-     * @returns {Promise<string>}
-     */
-    readFileAsText(file) {
-      if (!file) return Promise.resolve('');
-      if (typeof file.text === 'function') {
-        return file.text();
-      }
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(String(reader.result || '').trim());
-        reader.onerror = () => reject(new Error(`Failed to read file "${file.name}": ${reader.error?.message}`));
-        reader.readAsText(file);
-      });
-    }
-
-    /**
-     * Loads one or multiple simulation files.
-     * Intelligently accepts and merges the dual nature of cartridges:
-     * 1. Companion Dual-Nature Pairs: Drops of both `.svg` vector artwork + `.ast` logic script simultaneously.
-     * 2. Single-File Hybrid Capsules (`.ast.svg`): Vector SVG with embedded executable AST metadata.
-     * 3. Single AST, JSON, SlideScript, or translated PhET bundles.
-     * @param {FileList|File[]} fileList
-     * @param {boolean} shouldPlay
-     */
-    async loadFiles(fileList, shouldPlay = false) {
-      if (!fileList) {
-        throw new Error('[AST Engine] loadFiles requires a valid file list');
-      }
-      const files = Array.from(fileList);
-      if (files.length === 0) return null;
-      if (files.length === 1) {
-        return this.loadFromFile(files[0], shouldPlay);
-      }
-
-      // Dual-nature companion pair detection: one .svg and one .ast (or .json / .slidescript)
-      const svgFile = files.find(f => {
-        const name = (f.name || '').toLowerCase();
-        return name.endsWith('.svg') && !name.endsWith('.ast.svg');
-      }) || files.find(f => (f.name || '').toLowerCase().endsWith('.svg'));
-
-      const astFile = files.find(f => {
-        const name = (f.name || '').toLowerCase();
-        return name.endsWith('.ast') || name.endsWith('.json') || name.endsWith('.slidescript');
-      });
-
-      if (svgFile && astFile) {
-        const [svgContent, astContent] = await Promise.all([
-          this.readFileAsText(svgFile),
-          this.readFileAsText(astFile)
-        ]);
-
-        const astExt = (astFile.name || '').split('.').pop().toLowerCase();
-        let parsed = null;
-        let interactive = null;
-        let gestures = null;
-        let stateMachines = null;
-        let emitters = null;
-        let bindInputs = null;
-        let keyframes = [];
-        let subtitles = [];
-        let rawBindings = [];
-        let duration = 10.0;
-        let title = astFile.name.replace(/\.[^/.]+$/, '');
-        let id = title.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-
-        if (astExt === 'json') {
-          const json = JSON.parse(astContent);
-          id = json.id || id;
-          title = json.title || title;
-          duration = json.duration || duration;
-          keyframes = json.keyframes || [];
-          subtitles = json.subtitles || [];
-          rawBindings = json.bindings || json.rawBindings || [];
-          interactive = json.interactive || null;
-          gestures = json.gestures || null;
-          stateMachines = json.stateMachines || null;
-          emitters = json.emitters || null;
-          bindInputs = json.bindInputs || null;
-        } else if (astExt === 'slidescript') {
-          if (global.ASTSlideScriptCompiler) {
-            const compiled = global.ASTSlideScriptCompiler.compile(astContent);
-            parsed = compiled.scene;
-            id = parsed.id || id;
-            title = parsed.title || title;
-            duration = parsed.duration || duration;
-            keyframes = parsed.keyframes || [];
-            subtitles = parsed.subtitles || [];
-            rawBindings = parsed.rawBindings || [];
-          }
-        } else {
-          // Standard AST S-Expression file
-          parsed = this.parseAst(astContent);
-          if (parsed) {
-            id = parsed.id || id;
-            title = parsed.title || title;
-            duration = parsed.duration || duration;
-            keyframes = parsed.keyframes || [];
-            subtitles = parsed.subtitles || [];
-            rawBindings = parsed.bindings || [];
-            interactive = parsed.interactive || null;
-            gestures = parsed.gestures || null;
-            stateMachines = parsed.stateMachines || null;
-            emitters = parsed.emitters || null;
-            bindInputs = parsed.bindInputs || null;
-          }
-        }
-
-        const scene = {
-          id,
-          title,
-          stage: `DUAL PAIR (${astFile.name} + ${svgFile.name})`,
-          duration,
-          camera: (parsed && parsed.camera) || null,
-          has3D: Boolean(parsed && parsed.has3D),
-          keyframes,
-          subtitles,
-          rawBindings,
-          interactive,
-          gestures,
-          stateMachines,
-          emitters,
-          bindInputs,
-          svgText: svgContent
-        };
-
-        const loaded = this.loadSceneData(scene, shouldPlay);
-        this.emit('fileloaded', {
-          filename: `${astFile.name} + ${svgFile.name}`,
-          type: 'companion-pair',
-          id: scene.id,
-          dualNature: true
-        });
-        return loaded;
-      }
-
-      // If multiple files dropped without an explicit svg+ast pair, load the primary simulation file
-      const primaryFile = files.find(f => /\.(ast|svg|json|html|slidescript)$/i.test(f.name)) || files[0];
-      return this.loadFromFile(primaryFile, shouldPlay);
-    }
-
-    /**
-     * Loads a simulation directly from a zero-server URL payload string or base64 payload.
-     * Supports S-expressions (#ast=...), SlideScript markdown (#script=...), or JSON (#data=...).
-     * @param {string} payload
-     * @param {boolean} shouldPlay
-     */
-    loadFromPayload(payload, shouldPlay = false) {
-      if (!payload || typeof payload !== 'string') {
-        const err = new Error('[AST Engine] loadFromPayload requires a valid string');
-        this.emit('error', { type: 'INVALID_PAYLOAD', message: err.message });
-        throw err;
-      }
-
-      let content = payload.trim();
-      // Decode Base64 if flagged or clean base64 string
-      if (content.startsWith('base64:')) {
-        try {
-          content = decodeURIComponent(escape(atob(content.slice(7))));
-        } catch (e) {
-          try { content = atob(content.slice(7)); } catch {}
-        }
-      } else if (!content.startsWith('(') && !content.startsWith('{') && !content.startsWith('<') && !content.startsWith('#') && /^[A-Za-z0-9+/=_-]+$/.test(content)) {
-        try {
-          const rawB64 = content.replace(/-/g, '+').replace(/_/g, '/');
-          const decoded = decodeURIComponent(escape(atob(rawB64)));
-          if (decoded.startsWith('(') || decoded.startsWith('{') || decoded.startsWith('<') || decoded.startsWith('#')) {
-            content = decoded;
-          }
-        } catch {}
-      }
-
-      const id = `payload-${Date.now()}`;
-
-      // 1. AST S-Expression
-      if (content.startsWith('(')) {
-        const parsed = this.parseAst(content);
-        const scene = {
-          id: (parsed && parsed.id) || id,
-          title: (parsed && parsed.title) || 'Decentralized Vector Simulation',
-          stage: (parsed && parsed.stage) || 'DECENTRALIZED WEB',
-          duration: (parsed && parsed.duration) || 10.0,
-          camera: (parsed && parsed.camera) || null,
-          has3D: Boolean(parsed && parsed.has3D),
-          keyframes: (parsed && parsed.keyframes) || [],
-          subtitles: (parsed && parsed.subtitles) || [],
-          rawBindings: (parsed && parsed.bindings) || [],
-          interactive: (parsed && parsed.interactive) || null,
-          gestures: (parsed && parsed.gestures) || null,
-          stateMachines: (parsed && parsed.stateMachines) || null,
-          emitters: (parsed && parsed.emitters) || null,
-          bindInputs: (parsed && parsed.bindInputs) || null,
-          svgText: ''
-        };
-        const loaded = this.loadSceneData(scene, shouldPlay);
-        this.emit('fileloaded', { filename: `${scene.id}.ast`, type: 'ast-payload', id: scene.id });
-        return loaded;
-      }
-
-      // 2. SlideScript Markdown
-      if (content.startsWith('#') || content.includes('Stage:') || content.includes('Shape:')) {
+      if (astExt === 'json') {
+        const json = JSON.parse(astContent);
+        id = json.id || id;
+        title = json.title || title;
+        duration = json.duration || duration;
+        keyframes = json.keyframes || [];
+        subtitles = json.subtitles || [];
+        rawBindings = json.bindings || json.rawBindings || [];
+        interactive = json.interactive || null;
+        gestures = json.gestures || null;
+        stateMachines = json.stateMachines || null;
+        emitters = json.emitters || null;
+        bindInputs = json.bindInputs || null;
+      } else if (astExt === 'slidescript') {
         if (global.ASTSlideScriptCompiler) {
-          const compiled = global.ASTSlideScriptCompiler.compile(content);
-          const loaded = this.loadSceneData(compiled.scene, shouldPlay);
-          this.emit('fileloaded', { filename: `${compiled.scene.id || id}.slidescript`, type: 'slidescript-payload', id: compiled.scene.id || id });
-          return loaded;
+          const compiled = global.ASTSlideScriptCompiler.compile(astContent);
+          parsed = compiled.scene;
+          id = parsed.id || id;
+          title = parsed.title || title;
+          duration = parsed.duration || duration;
+          keyframes = parsed.keyframes || [];
+          subtitles = parsed.subtitles || [];
+          rawBindings = parsed.rawBindings || [];
+        }
+      } else {
+        parsed = this.parseAst(astContent);
+        if (parsed) {
+          id = parsed.id || id;
+          title = parsed.title || title;
+          duration = parsed.duration || duration;
+          keyframes = parsed.keyframes || [];
+          subtitles = parsed.subtitles || [];
+          rawBindings = parsed.bindings || [];
+          interactive = parsed.interactive || null;
+          gestures = parsed.gestures || null;
+          stateMachines = parsed.stateMachines || null;
+          emitters = parsed.emitters || null;
+          bindInputs = parsed.bindInputs || null;
         }
       }
 
-      // 3. JSON Scene
-      if (content.startsWith('{')) {
-        const json = JSON.parse(content);
-        const loaded = this.loadSceneData(json, shouldPlay);
-        this.emit('fileloaded', { filename: `${json.id || id}.json`, type: 'json-payload', id: json.id || id });
+      const scene = {
+        id,
+        title,
+        stage: `DUAL PAIR (${astFile.name} + ${svgFile.name})`,
+        duration,
+        camera: (parsed && parsed.camera) || null,
+        has3D: Boolean(parsed && parsed.has3D),
+        keyframes,
+        subtitles,
+        rawBindings,
+        interactive,
+        gestures,
+        stateMachines,
+        emitters,
+        bindInputs,
+        svgText: svgContent
+      };
+
+      const loaded = this.loadSceneData(scene, shouldPlay);
+      this.emit('fileloaded', {
+        filename: `${astFile.name} + ${svgFile.name}`,
+        type: 'companion-pair',
+        id: scene.id,
+        dualNature: true
+      });
+      return loaded;
+    }
+
+    const primaryFile = files.find(f => /\.(ast|svg|json|html|slidescript)$/i.test(f.name)) || files[0];
+    return this.loadFromFile(primaryFile, shouldPlay);
+  }
+
+  /**
+   * Loads a simulation directly from a zero-server URL payload string or base64 payload.
+   */
+  loadFromPayload(payload, shouldPlay = false) {
+    if (!payload || typeof payload !== 'string') {
+      const err = new Error('[AST Engine] loadFromPayload requires a valid string');
+      this.emit('error', { type: 'INVALID_PAYLOAD', message: err.message });
+      throw err;
+    }
+
+    let content = payload.trim();
+    if (content.startsWith('base64:')) {
+      try {
+        content = decodeURIComponent(escape(atob(content.slice(7))));
+      } catch (e) {
+        try { content = atob(content.slice(7)); } catch {}
+      }
+    } else if (!content.startsWith('(') && !content.startsWith('{') && !content.startsWith('<') && !content.startsWith('#') && /^[A-Za-z0-9+/=_-]+$/.test(content)) {
+      try {
+        const rawB64 = content.replace(/-/g, '+').replace(/_/g, '/');
+        const decoded = decodeURIComponent(escape(atob(rawB64)));
+        if (decoded.startsWith('(') || decoded.startsWith('{') || decoded.startsWith('<') || decoded.startsWith('#')) {
+          content = decoded;
+        }
+      } catch {}
+    }
+
+    const id = `payload-${Date.now()}`;
+
+    if (content.startsWith('(')) {
+      const parsed = this.parseAst(content);
+      const scene = {
+        id: (parsed && parsed.id) || id,
+        title: (parsed && parsed.title) || 'Decentralized Vector Simulation',
+        stage: (parsed && parsed.stage) || 'DECENTRALIZED WEB',
+        duration: (parsed && parsed.duration) || 10.0,
+        camera: (parsed && parsed.camera) || null,
+        has3D: Boolean(parsed && parsed.has3D),
+        keyframes: (parsed && parsed.keyframes) || [],
+        subtitles: (parsed && parsed.subtitles) || [],
+        rawBindings: (parsed && parsed.bindings) || [],
+        interactive: (parsed && parsed.interactive) || null,
+        gestures: (parsed && parsed.gestures) || null,
+        stateMachines: (parsed && parsed.stateMachines) || null,
+        emitters: (parsed && parsed.emitters) || null,
+        bindInputs: (parsed && parsed.bindInputs) || null,
+        svgText: ''
+      };
+      const loaded = this.loadSceneData(scene, shouldPlay);
+      this.emit('fileloaded', { filename: `${scene.id}.ast`, type: 'ast-payload', id: scene.id });
+      return loaded;
+    }
+
+    if (content.startsWith('#') || content.includes('Stage:') || content.includes('Shape:')) {
+      if (global.ASTSlideScriptCompiler) {
+        const compiled = global.ASTSlideScriptCompiler.compile(content);
+        const loaded = this.loadSceneData(compiled.scene, shouldPlay);
+        this.emit('fileloaded', { filename: `${compiled.scene.id || id}.slidescript`, type: 'slidescript-payload', id: compiled.scene.id || id });
         return loaded;
       }
-
-      // 4. Standalone SVG
-      if (content.includes('<svg')) {
-        return this.loadFromFile(new Blob([content], { type: 'image/svg+xml' }), shouldPlay);
-      }
-
-      throw new Error('[AST Engine] Unrecognized payload format: expected AST S-expression, SlideScript, or JSON');
     }
 
-    /**
-     * Loads an external standalone scene manifest (.json), AST file (.ast), or SVG (.svg) from a remote URL.
-     * @param {string} url
-     * @param {boolean} shouldPlay
-     */
-    async loadFromUrl(url, shouldPlay = false) {
-      if (!url || typeof url !== 'string') {
-        const err = new Error('[AST Engine] loadFromUrl requires a valid URL');
-        this.emit('error', { type: 'INVALID_URL', message: err.message });
-        throw err;
+    if (content.startsWith('{')) {
+      const json = JSON.parse(content);
+      const loaded = this.loadSceneData(json, shouldPlay);
+      this.emit('fileloaded', { filename: `${json.id || id}.json`, type: 'json-payload', id: json.id || id });
+      return loaded;
+    }
+
+    if (content.includes('<svg')) {
+      return this.loadFromFile(new Blob([content], { type: 'image/svg+xml' }), shouldPlay);
+    }
+
+    throw new Error('[AST Engine] Unrecognized payload format: expected AST S-expression, SlideScript, or JSON');
+  }
+
+  /**
+   * Loads an external standalone scene manifest (.json), AST file (.ast), or SVG (.svg) from a remote URL.
+   */
+  async loadFromUrl(url, shouldPlay = false) {
+    if (!url || typeof url !== 'string') {
+      const err = new Error('[AST Engine] loadFromUrl requires a valid URL');
+      this.emit('error', { type: 'INVALID_URL', message: err.message });
+      throw err;
+    }
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }
+      const text = await res.text();
+      const cleanUrl = url.split('?')[0];
+      const filename = cleanUrl.split('/').pop() || 'remote-asset';
+      const blob = new Blob([text], { type: res.headers.get('content-type') || 'text/plain' });
       try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        Object.defineProperty(blob, 'name', { value: filename, writable: false });
+      } catch {}
+      return await this.loadFromFile(blob, shouldPlay);
+    } catch (err) {
+      console.error('[AST Engine] Failed to load from URL:', url, err);
+      this.emit('error', { type: 'URL_LOAD_ERROR', url, message: err.message });
+      if (this.container) {
+        this.renderErrorPlaceholder(url, `Network error: ${err.message}`);
+      }
+      throw err;
+    }
+  }
+
+  renderErrorPlaceholder(identifier, message) {
+    if (!this.container) return;
+    const escapeXmlText = (str) => String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const safeId = escapeXmlText(identifier || 'Unknown');
+    const safeMsg = escapeXmlText(message || 'Failed to load vector asset');
+    this.container.innerHTML = `
+      <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16; border-radius:12px;">
+        <rect x="20" y="20" width="760" height="440" rx="16" fill="#0f172a" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 6"/>
+        <circle cx="400" cy="180" r="42" fill="#ef4444" fill-opacity="0.12" stroke="#ef4444" stroke-width="2.5"/>
+        <text x="400" y="192" fill="#ef4444" font-size="34" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">⚠️</text>
+        <text x="400" y="260" fill="#f8fafc" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui, sans-serif">Scene Load Error</text>
+        <text x="400" y="295" fill="#94a3b8" font-size="14" text-anchor="middle" font-family="system-ui, sans-serif">${safeMsg}</text>
+        <text x="400" y="325" fill="#64748b" font-size="12" text-anchor="middle" font-family="monospace">Target: ${safeId}</text>
+        <g cursor="pointer" id="error-fallback-action" transform="translate(325, 360)">
+          <rect width="150" height="38" rx="19" fill="#2563eb"/>
+          <text x="75" y="24" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">Load Default Scene</text>
+        </g>
+      </svg>
+    `;
+    const btn = this.container.querySelector('#error-fallback-action');
+    if (btn) {
+      btn.onclick = () => {
+        this.loadScene('fractions', true);
+      };
+    }
+  }
+
+  sanitizeSvg(rawSvg) {
+    if (!rawSvg || typeof rawSvg !== 'string') return '';
+    let clean = rawSvg.trim();
+    if (/<!DOCTYPE|<!ENTITY/i.test(clean)) {
+      clean = clean
+        .replace(/<!DOCTYPE(?:\s+[^[>]*(?:\[[\s\S]*?\])?\s*)?>/gi, '<!-- DOCTYPE disabled -->')
+        .replace(/<!ENTITY[\s\S]*?>/gi, '<!-- ENTITY disabled -->');
+    }
+    return clean;
+  }
+
+  sanitizeSvgElement(rootSvg) {
+    if (!rootSvg) return null;
+    const dangerousTags = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
+    if (rootSvg.tagName && dangerousTags.includes(rootSvg.tagName.toLowerCase())) return null;
+
+    for (const tag of dangerousTags) {
+      rootSvg.querySelectorAll(tag).forEach(el => el.remove());
+    }
+
+    const allElements = [rootSvg, ...rootSvg.querySelectorAll('*')];
+    for (const el of allElements) {
+      if (!el.attributes) continue;
+      const toRemove = [];
+      for (let i = 0; i < el.attributes.length; i++) {
+        const attr = el.attributes[i];
+        const name = attr.name.toLowerCase();
+        const val = (attr.value || '').trim().toLowerCase();
+
+        if (name.startsWith('on')) {
+          toRemove.push(attr.name);
+        } else if (
+          (name === 'href' || name.endsWith(':href') || name === 'src') &&
+          /^(javascript:|vbscript:|data:(?!image\/(png|jpe?g|gif|webp|svg\+xml)))/i.test(val)
+        ) {
+          toRemove.push(attr.name);
         }
-        const text = await res.text();
-        const cleanUrl = url.split('?')[0];
-        const filename = cleanUrl.split('/').pop() || 'remote-asset';
-        const blob = new Blob([text], { type: res.headers.get('content-type') || 'text/plain' });
-        try {
-          Object.defineProperty(blob, 'name', { value: filename, writable: false });
-        } catch {}
-        return await this.loadFromFile(blob, shouldPlay);
-      } catch (err) {
-        console.error('[AST Engine] Failed to load from URL:', url, err);
-        this.emit('error', { type: 'URL_LOAD_ERROR', url, message: err.message });
-        if (this.container) {
-          this.renderErrorPlaceholder(url, `Network error: ${err.message}`);
-        }
-        throw err;
+      }
+      for (const attrName of toRemove) {
+        el.removeAttribute(attrName);
       }
     }
 
-    /**
-     * Renders a resilient, accessible vector fallback card inside the container when a scene fails to load.
-     * Prevents empty/black screen states in standalone embeds.
-     */
-    renderErrorPlaceholder(identifier, message) {
-      if (!this.container) return;
-      const escapeXmlText = (str) => String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-      const safeId = escapeXmlText(identifier || 'Unknown');
-      const safeMsg = escapeXmlText(message || 'Failed to load vector asset');
-      this.container.innerHTML = `
-        <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16; border-radius:12px;">
-          <rect x="20" y="20" width="760" height="440" rx="16" fill="#0f172a" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 6"/>
-          <circle cx="400" cy="180" r="42" fill="#ef4444" fill-opacity="0.12" stroke="#ef4444" stroke-width="2.5"/>
-          <text x="400" y="192" fill="#ef4444" font-size="34" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">⚠️</text>
-          <text x="400" y="260" fill="#f8fafc" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui, sans-serif">Scene Load Error</text>
-          <text x="400" y="295" fill="#94a3b8" font-size="14" text-anchor="middle" font-family="system-ui, sans-serif">${safeMsg}</text>
-          <text x="400" y="325" fill="#64748b" font-size="12" text-anchor="middle" font-family="monospace">Target: ${safeId}</text>
-          <g cursor="pointer" id="error-fallback-action" transform="translate(325, 360)">
-            <rect width="150" height="38" rx="19" fill="#2563eb"/>
-            <text x="75" y="24" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">Load Default Scene</text>
-          </g>
-        </svg>
-      `;
-      const btn = this.container.querySelector('#error-fallback-action');
-      if (btn) {
-        btn.onclick = () => {
-          this.loadScene('fractions', true);
+    return rootSvg;
+  }
+
+  ensureMasterDefs(container) {
+    if (typeof document === 'undefined') return;
+    const target = container || this._container || this.container;
+    if (!target) return;
+    const rootSvg = (target.tagName && target.tagName.toLowerCase() === 'svg')
+      ? target
+      : (target.ownerSVGElement || (typeof target.closest === 'function' ? target.closest('svg') : null) || document.getElementById('stage-svg') || (typeof target.querySelector === 'function' ? target.querySelector('svg') : null));
+    if (!rootSvg) return;
+
+    if (rootSvg.querySelector('#ast-master-defs') || document.getElementById('ast-master-defs')) return;
+
+    const defsEl = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+    defsEl.setAttribute('id', 'ast-master-defs');
+    defsEl.innerHTML = `
+      <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
+      </filter>
+      <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feComponentTransfer in="blur" result="cb">
+          <feFuncR type="linear" slope="1.2" />
+          <feFuncG type="linear" slope="0.9" />
+          <feFuncB type="linear" slope="0.2" />
+        </feComponentTransfer>
+        <feMerge><feMergeNode in="cb" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-glow-red" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-glow-purple" x="-30%" y="-30%" width="160%" height="160%">
+        <feGaussianBlur stdDeviation="3.5" result="blur" />
+        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
+      </filter>
+      <filter id="ast-drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55" />
+      </filter>
+      <filter id="ast-blur-soft" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="5" />
+      </filter>
+      <marker id="ast-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+      </marker>
+      <marker id="ast-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
+        <polygon points="8 0, 0 3, 8 6" fill="#38bdf8" />
+      </marker>
+      <marker id="ast-arrow-cyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
+      </marker>
+      <marker id="ast-arrow-gold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" />
+      </marker>
+      <marker id="ast-arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
+      </marker>
+      <marker id="ast-arrow-emerald" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
+        <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
+      </marker>
+      <marker id="ast-vector-dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
+        <circle cx="3" cy="3" r="2.5" fill="#38bdf8" />
+      </marker>
+      <pattern id="ast-grid-fine" width="20" height="20" patternUnits="userSpaceOnUse">
+        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5" />
+      </pattern>
+      <pattern id="ast-grid-dense" width="40" height="40" patternUnits="userSpaceOnUse">
+        <rect width="40" height="40" fill="none" />
+        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" stroke-width="1.2" stroke-opacity="0.6" />
+        <path d="M 20 0 L 20 40 M 0 20 L 40 20" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4" />
+      </pattern>
+      <pattern id="ast-grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
+        <circle cx="2" cy="2" r="1" fill="#475569" fill-opacity="0.6" />
+      </pattern>
+      <linearGradient id="ast-grad-cyan" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#38bdf8" />
+        <stop offset="100%" stop-color="#0284c7" />
+      </linearGradient>
+      <linearGradient id="ast-grad-gold" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#fef08a" />
+        <stop offset="100%" stop-color="#f59e0b" />
+      </linearGradient>
+      <linearGradient id="ast-grad-emerald" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#34d399" />
+        <stop offset="100%" stop-color="#059669" />
+      </linearGradient>
+      <linearGradient id="ast-grad-purple" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#c084fc" />
+        <stop offset="100%" stop-color="#7c3aed" />
+      </linearGradient>
+      <linearGradient id="ast-grad-crimson" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0%" stop-color="#f87171" />
+        <stop offset="100%" stop-color="#dc2626" />
+      </linearGradient>
+      <linearGradient id="ast-blueprint-backdrop" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#070e1b" />
+        <stop offset="100%" stop-color="#020617" />
+      </linearGradient>
+    `;
+    rootSvg.insertBefore(defsEl, rootSvg.firstChild);
+  }
+
+  setupBackdropVideo(scene) {
+    if (typeof document === 'undefined') return;
+
+    const stageSvg = this.getStageSvg();
+    const parentContainer = (stageSvg && stageSvg.parentElement) || this.container || document.getElementById('player-stage');
+
+    let videoEl = document.getElementById('ast-backdrop-video');
+    if (!videoEl && parentContainer) {
+      videoEl = document.createElement('video');
+      videoEl.id = 'ast-backdrop-video';
+      videoEl.setAttribute('playsinline', '');
+      videoEl.setAttribute('webkit-playsinline', '');
+      videoEl.setAttribute('preload', 'auto');
+      videoEl.controls = false;
+      videoEl.muted = false;
+      videoEl.style.position = 'absolute';
+      videoEl.style.top = '0';
+      videoEl.style.left = '0';
+      videoEl.style.width = '100%';
+      videoEl.style.height = '100%';
+      videoEl.style.zIndex = '1';
+      videoEl.style.pointerEvents = 'none';
+      videoEl.style.background = '#000000';
+      videoEl.style.display = 'none';
+
+      if (stageSvg && stageSvg.parentNode === parentContainer) {
+        parentContainer.insertBefore(videoEl, stageSvg);
+      } else {
+        parentContainer.appendChild(videoEl);
+      }
+    }
+
+    this.backdropVideo = videoEl;
+
+    if (stageSvg) {
+      stageSvg.style.position = 'relative';
+      stageSvg.style.zIndex = '2';
+      stageSvg.style.background = 'transparent';
+    }
+
+    if (scene && (scene.video || scene.hasVideo)) {
+      const videoSrc = scene.video;
+      if (videoEl && videoSrc) {
+        const currentSrc = videoEl.getAttribute('src');
+        if (currentSrc !== videoSrc) {
+          videoEl.src = videoSrc;
+          videoEl.load();
+        }
+        videoEl.style.objectFit = scene.videoFit || 'contain';
+        videoEl.style.display = 'block';
+
+        const onLoadedMeta = () => {
+          if (videoEl.duration && Number.isFinite(videoEl.duration) && (!scene.duration || scene.duration === 10.0)) {
+            scene.duration = videoEl.duration;
+            this.durationSec = videoEl.duration;
+          }
+          if (this.isPlaying) {
+            videoEl.play().catch(() => {});
+          }
+        };
+        videoEl.onloadedmetadata = onLoadedMeta;
+        videoEl.onerror = (e) => {
+          console.warn('[AST Engine] Backdrop video source unavailable or failed to load:', videoSrc, e);
+          videoEl.style.display = 'none';
+        };
+
+        if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
+          videoEl.currentTime = this.progress * videoEl.duration;
+        }
+
+        videoEl.onended = () => {
+          if (this.loop) {
+            videoEl.currentTime = 0;
+            videoEl.play().catch(() => {});
+          } else {
+            this.pause();
+          }
         };
       }
+    } else if (videoEl) {
+      videoEl.pause();
+      videoEl.removeAttribute('src');
+      videoEl.style.display = 'none';
+      videoEl.onloadedmetadata = null;
+      videoEl.onended = null;
     }
+  }
 
-    /**
-     * Sanitizes raw SVG text against XML bombs (CWE-776) and DOM-based XSS (CWE-79 / js/xss-through-dom).
-     * Strips DOCTYPE, ENTITY declarations, script/foreignObject/iframe tags, inline on* handlers, and javascript: protocols.
-     * @param {string} rawSvg
-     * @returns {string} Clean SVG markup
-     */
-    sanitizeSvg(rawSvg) {
-      if (!rawSvg || typeof rawSvg !== 'string') return '';
-      let clean = rawSvg.trim();
-
-      // 1. Mitigate XML Entity Expansion / XML Bomb (CWE-776)
-      // Neutralizes DOCTYPE and ENTITY declarations safely without multi-character string stripping
-      if (/<!DOCTYPE|<!ENTITY/i.test(clean)) {
-        clean = clean
-          .replace(/<!DOCTYPE(?:\s+[^[>]*(?:\[[\s\S]*?\])?\s*)?>/gi, '<!-- DOCTYPE disabled -->')
-          .replace(/<!ENTITY[\s\S]*?>/gi, '<!-- ENTITY disabled -->');
+  mountSceneAsset(scene, container) {
+    if (!container || !scene || this._isMounting) return;
+    this._isMounting = true;
+    try {
+      this._mountedContainer = container;
+      this._mountedSceneId = scene.id;
+      this.setupBackdropVideo(scene);
+      const stage = this.getStageSvg();
+      if (stage) {
+        stage.setAttribute('viewBox', '0 0 800 480');
+        this._defaultViewBox = '0 0 800 480';
       }
+      this.ensureMasterDefs(container);
+      this.activeBindings = [];
+      this.active3DNodes = [];
+      this.active3DLines = [];
+      this.active3DRings = [];
+      this.active3DPolygons = [];
+      this.active3DItems = [];
+      this._cachedElements = null;
 
-      return clean;
-    }
+      if (scene.svgText) {
+        try {
+          let safeSvg = this.sanitizeSvg(scene.svgText);
+          safeSvg = safeSvg
+            .replace(/&times;/g, '×')
+            .replace(/&bull;/g, '•')
+            .replace(/&Omega;/g, 'Ω')
+            .replace(/&nbsp;/g, '&#160;')
+            .replace(/&divide;/g, '÷')
+            .replace(/&diams;/g, '♦')
+            .replace(/&mdash;/g, '—')
+            .replace(/&ne;/g, '≠')
+            .replace(/&deg;/g, '°');
 
-    /**
-     * Deep-sanitizes parsed SVG DOM element tree before mounting into live container.
-     * Recursively scrubs any nested executable elements or script attributes.
-     * @param {Element} rootSvg
-     * @returns {Element|null} Sanitized root SVG node
-     */
-    sanitizeSvgElement(rootSvg) {
-      if (!rootSvg) return null;
-      const dangerousTags = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
-      if (rootSvg.tagName && dangerousTags.includes(rootSvg.tagName.toLowerCase())) return null;
+          let mounted = false;
+          if (safeSvg && typeof DOMParser !== 'undefined') {
+            const parser = new DOMParser();
+            let doc = parser.parseFromString(safeSvg, 'image/svg+xml');
 
-      // 1. Remove dangerous elements via structural DOM queries
-      for (const tag of dangerousTags) {
-        rootSvg.querySelectorAll(tag).forEach(el => el.remove());
-      }
-
-      // 2. Deep-clean attributes across all descendants
-      const allElements = [rootSvg, ...rootSvg.querySelectorAll('*')];
-      for (const el of allElements) {
-        if (!el.attributes) continue;
-        const toRemove = [];
-        for (let i = 0; i < el.attributes.length; i++) {
-          const attr = el.attributes[i];
-          const name = attr.name.toLowerCase();
-          const val = (attr.value || '').trim().toLowerCase();
-
-          if (name.startsWith('on')) {
-            toRemove.push(attr.name);
-          } else if (
-            (name === 'href' || name.endsWith(':href') || name === 'src') &&
-            /^(javascript:|vbscript:|data:(?!image\/(png|jpe?g|gif|webp|svg\+xml)))/i.test(val)
-          ) {
-            toRemove.push(attr.name);
-          }
-        }
-        for (const attrName of toRemove) {
-          el.removeAttribute(attrName);
-        }
-      }
-
-      return rootSvg;
-    }
-
-    /**
-     * Master SVG Asset Catalog Injection (< 1.2 KB)
-     * Automatically provisions universal filter glows, directional markers,
-     * coordinate grids, and backdrop gradients so cartridges and generative
-     * Gemini Nano simulations do not need to duplicate 40-50 lines of boilerplate SVG <defs>.
-     */
-    ensureMasterDefs(container) {
-      if (typeof document === 'undefined') return;
-      const target = container || this._container || this.container;
-      if (!target) return;
-      const rootSvg = (target.tagName && target.tagName.toLowerCase() === 'svg')
-        ? target
-        : (target.ownerSVGElement || (typeof target.closest === 'function' ? target.closest('svg') : null) || document.getElementById('stage-svg') || (typeof target.querySelector === 'function' ? target.querySelector('svg') : null));
-      if (!rootSvg) return;
-
-      if (rootSvg.querySelector('#ast-master-defs') || document.getElementById('ast-master-defs')) return;
-
-      const defsEl = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-      defsEl.setAttribute('id', 'ast-master-defs');
-      defsEl.innerHTML = `
-        <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
-        </filter>
-        <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feComponentTransfer in="blur" result="cb">
-            <feFuncR type="linear" slope="1.2" />
-            <feFuncG type="linear" slope="0.9" />
-            <feFuncB type="linear" slope="0.2" />
-          </feComponentTransfer>
-          <feMerge><feMergeNode in="cb" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-glow-red" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-glow-purple" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="3.5" result="blur" />
-          <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
-        <filter id="ast-drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
-          <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55" />
-        </filter>
-        <filter id="ast-blur-soft" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="5" />
-        </filter>
-        <marker id="ast-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
-        </marker>
-        <marker id="ast-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
-          <polygon points="8 0, 0 3, 8 6" fill="#38bdf8" />
-        </marker>
-        <marker id="ast-arrow-cyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
-        </marker>
-        <marker id="ast-arrow-gold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" />
-        </marker>
-        <marker id="ast-arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
-        </marker>
-        <marker id="ast-arrow-emerald" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
-        </marker>
-        <marker id="ast-vector-dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
-          <circle cx="3" cy="3" r="2.5" fill="#38bdf8" />
-        </marker>
-        <pattern id="ast-grid-fine" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5" />
-        </pattern>
-        <pattern id="ast-grid-dense" width="40" height="40" patternUnits="userSpaceOnUse">
-          <rect width="40" height="40" fill="none" />
-          <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" stroke-width="1.2" stroke-opacity="0.6" />
-          <path d="M 20 0 L 20 40 M 0 20 L 40 20" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4" />
-        </pattern>
-        <pattern id="ast-grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
-          <circle cx="2" cy="2" r="1" fill="#475569" fill-opacity="0.6" />
-        </pattern>
-        <linearGradient id="ast-grad-cyan" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#38bdf8" />
-          <stop offset="100%" stop-color="#0284c7" />
-        </linearGradient>
-        <linearGradient id="ast-grad-gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#fef08a" />
-          <stop offset="100%" stop-color="#f59e0b" />
-        </linearGradient>
-        <linearGradient id="ast-grad-emerald" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#34d399" />
-          <stop offset="100%" stop-color="#059669" />
-        </linearGradient>
-        <linearGradient id="ast-grad-purple" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#c084fc" />
-          <stop offset="100%" stop-color="#7c3aed" />
-        </linearGradient>
-        <linearGradient id="ast-grad-crimson" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stop-color="#f87171" />
-          <stop offset="100%" stop-color="#dc2626" />
-        </linearGradient>
-        <linearGradient id="ast-blueprint-backdrop" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#070e1b" />
-          <stop offset="100%" stop-color="#020617" />
-        </linearGradient>
-      `;
-      rootSvg.insertBefore(defsEl, rootSvg.firstChild);
-    }
-
-    /**
-     * Synchronized Film & Video Backdrop Subsystem
-     * Mounts, configures, and synchronizes real HTML5 video elements behind vector stages.
-     */
-    setupBackdropVideo(scene) {
-      if (typeof document === 'undefined') return;
-
-      const stageSvg = this.getStageSvg();
-      const parentContainer = (stageSvg && stageSvg.parentElement) || this.container || document.getElementById('player-stage');
-
-      let videoEl = document.getElementById('ast-backdrop-video');
-      if (!videoEl && parentContainer) {
-        videoEl = document.createElement('video');
-        videoEl.id = 'ast-backdrop-video';
-        videoEl.setAttribute('playsinline', '');
-        videoEl.setAttribute('webkit-playsinline', '');
-        videoEl.setAttribute('preload', 'auto');
-        videoEl.controls = false;
-        videoEl.muted = false;
-        videoEl.style.position = 'absolute';
-        videoEl.style.top = '0';
-        videoEl.style.left = '0';
-        videoEl.style.width = '100%';
-        videoEl.style.height = '100%';
-        videoEl.style.zIndex = '1';
-        videoEl.style.pointerEvents = 'none';
-        videoEl.style.background = '#000000';
-        videoEl.style.display = 'none';
-
-        if (stageSvg && stageSvg.parentNode === parentContainer) {
-          parentContainer.insertBefore(videoEl, stageSvg);
-        } else {
-          parentContainer.appendChild(videoEl);
-        }
-      }
-
-      this.backdropVideo = videoEl;
-
-      if (stageSvg) {
-        stageSvg.style.position = 'relative';
-        stageSvg.style.zIndex = '2';
-        stageSvg.style.background = 'transparent';
-      }
-
-      if (scene && (scene.video || scene.hasVideo)) {
-        const videoSrc = scene.video;
-        if (videoEl && videoSrc) {
-          const currentSrc = videoEl.getAttribute('src');
-          if (currentSrc !== videoSrc) {
-            videoEl.src = videoSrc;
-            videoEl.load();
-          }
-          videoEl.style.objectFit = scene.videoFit || 'contain';
-          videoEl.style.display = 'block';
-
-          const onLoadedMeta = () => {
-            if (videoEl.duration && Number.isFinite(videoEl.duration) && (!scene.duration || scene.duration === 10.0)) {
-              scene.duration = videoEl.duration;
-              this.durationSec = videoEl.duration;
+            if (!doc.querySelector('parsererror')) {
+              const rootSvg = doc.querySelector('svg');
+              if (rootSvg) {
+                this.sanitizeSvgElement(rootSvg);
+                if (typeof container.replaceChildren === 'function') {
+                  container.replaceChildren(...rootSvg.childNodes);
+                } else {
+                  container.innerHTML = rootSvg.innerHTML;
+                }
+                mounted = true;
+              }
             }
-            if (this.isPlaying) {
-              videoEl.play().catch(() => {});
-            }
-          };
-          videoEl.onloadedmetadata = onLoadedMeta;
-          videoEl.onerror = (e) => {
-            console.warn('[AST Engine] Backdrop video source unavailable or failed to load:', videoSrc, e);
-            videoEl.style.display = 'none';
-          };
 
-          if (Number.isFinite(videoEl.duration) && videoEl.duration > 0) {
-            videoEl.currentTime = this.progress * videoEl.duration;
+            if (!mounted) {
+              const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
+              const rootSvg = htmlDoc.querySelector('svg');
+              if (rootSvg) {
+                this.sanitizeSvgElement(rootSvg);
+                if (typeof container.replaceChildren === 'function') {
+                  container.replaceChildren(...rootSvg.childNodes);
+                } else {
+                  container.innerHTML = rootSvg.innerHTML;
+                }
+                mounted = true;
+              }
+            }
           }
 
-          videoEl.onended = () => {
-            if (this.loop) {
-              videoEl.currentTime = 0;
-              videoEl.play().catch(() => {});
-            } else {
-              this.pause();
-            }
-          };
+          if (!mounted && container) {
+            console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
+          }
+        } catch (err) {
+          console.warn('SVG mount bypassed due to parse failure:', err);
         }
-      } else if (videoEl) {
-        videoEl.pause();
-        videoEl.removeAttribute('src');
-        videoEl.style.display = 'none';
-        videoEl.onloadedmetadata = null;
-        videoEl.onended = null;
-      }
-    }
-
-    /**
-     * Mounts SVG template and compiles AST bindings to DOM nodes
-     */
-    mountSceneAsset(scene, container) {
-      if (!container || !scene || this._isMounting) return;
-      this._isMounting = true;
-      try {
-        this._mountedContainer = container;
-        this._mountedSceneId = scene.id;
-        this.setupBackdropVideo(scene);
-        const stage = this.getStageSvg();
-        if (stage) {
-          stage.setAttribute('viewBox', '0 0 800 480');
-          this._defaultViewBox = '0 0 800 480';
-        }
-        this.ensureMasterDefs(container);
-        this.activeBindings = [];
-        this.active3DNodes = [];
-        this.active3DLines = [];
-        this.active3DRings = [];
-        this.active3DPolygons = [];
-        this.active3DItems = [];
-        this._cachedElements = null;
-
-        // 1. Mount SVG template if available
-        if (scene.svgText) {
+      } else if (typeof scene.render === 'function' && typeof scene.mount !== 'function') {
+        const rendered = scene.render(this.progress);
+        if (typeof Node !== 'undefined' && rendered instanceof Node) {
+          container.replaceChildren(rendered);
+        } else if (typeof rendered === 'string') {
           try {
-            let safeSvg = this.sanitizeSvg(scene.svgText);
-            // Replace legacy HTML entities if present to guarantee clean XML parsing
-            safeSvg = safeSvg
-              .replace(/&times;/g, '×')
-              .replace(/&bull;/g, '•')
-              .replace(/&Omega;/g, 'Ω')
-              .replace(/&nbsp;/g, '&#160;')
-              .replace(/&divide;/g, '÷')
-              .replace(/&diams;/g, '♦')
-              .replace(/&mdash;/g, '—')
-              .replace(/&ne;/g, '≠')
-              .replace(/&deg;/g, '°');
-
-            let mounted = false;
-            if (safeSvg && typeof DOMParser !== 'undefined') {
-              const parser = new DOMParser();
-              let doc = parser.parseFromString(safeSvg, 'image/svg+xml');
-
-              if (!doc.querySelector('parsererror')) {
-                const rootSvg = doc.querySelector('svg');
-                if (rootSvg) {
-                  this.sanitizeSvgElement(rootSvg);
-                  if (typeof container.replaceChildren === 'function') {
-                    container.replaceChildren(...rootSvg.childNodes);
-                  } else {
-                    container.innerHTML = rootSvg.innerHTML;
-                  }
-                  mounted = true;
-                }
-              }
-
-              // Fallback to HTML parser if XML parser had an entity or parse warning
-              if (!mounted) {
-                const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-                const rootSvg = htmlDoc.querySelector('svg');
-                if (rootSvg) {
-                  this.sanitizeSvgElement(rootSvg);
-                  if (typeof container.replaceChildren === 'function') {
-                    container.replaceChildren(...rootSvg.childNodes);
-                  } else {
-                    container.innerHTML = rootSvg.innerHTML;
-                  }
-                  mounted = true;
-                }
-              }
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${rendered}</svg>`, 'image/svg+xml');
+            const svgEl = doc.querySelector('svg');
+            if (svgEl && !doc.querySelector('parsererror')) {
+              container.replaceChildren(...svgEl.childNodes);
             }
-
-            if (!mounted && container) {
-              console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
-            }
-          } catch (err) {
-            console.warn('SVG mount bypassed due to parse failure:', err);
-          }
-        } else if (typeof scene.render === 'function' && typeof scene.mount !== 'function') {
-          const rendered = scene.render(this.progress);
-          if (typeof Node !== 'undefined' && rendered instanceof Node) {
-            container.replaceChildren(rendered);
-          } else if (typeof rendered === 'string') {
-            try {
-              const parser = new DOMParser();
-              const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${rendered}</svg>`, 'image/svg+xml');
-              const svgEl = doc.querySelector('svg');
-              if (svgEl && !doc.querySelector('parsererror')) {
-                container.replaceChildren(...svgEl.childNodes);
-              }
-            } catch (e) {
-              console.warn('[AST Engine] Rendered SVG string failed to parse safely:', e);
-            }
+          } catch (e) {
+            console.warn('[AST Engine] Rendered SVG string failed to parse safely:', e);
           }
         }
+      }
 
-        // 2. Run procedural mount hook (can populate existing SVG nodes or build its own)
-        if (typeof scene.mount === 'function') {
-          this._cachedElements = scene.mount(container);
-        }
+      if (typeof scene.mount === 'function') {
+        this._cachedElements = scene.mount(container);
+      }
 
-      // Compile AST mathematical evaluation bindings
       if (scene.rawBindings && scene.rawBindings.length) {
         scene.rawBindings.forEach(b => {
           if (b.type === '3d-node') {
@@ -6526,19 +6356,15 @@ inputs.forEach(inp => {
               this.active3DItems.push(item);
             }
           } else {
-            // Standard 2D attribute binding
             const node = container.querySelector(b.target);
             if (node) {
               let evalFn = () => 0;
               let rawExpr = String(b.expr || '0').trim();
 
-              // 1. Transform Lisp-style (:if cond then else) into JS ternary: ((cond) ? (then) : (else))
               rawExpr = rawExpr.replace(
                 /\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g,
                 '($1 ? $2 : $3)'
               );
-
-              // 2. Strip Lisp variable colon prefixes (e.g., :t -> t, :vars -> vars)
               rawExpr = rawExpr.replace(/:([a-zA-Z_]\w*)/g, '$1');
 
               try {
@@ -6551,36 +6377,34 @@ inputs.forEach(inp => {
                 );
               } catch (e) {
                 console.warn('[AST Engine] Failed compiling expr:', b.expr, e);
-                // Safe default value fallback depending on target attribute
                 evalFn = b.attr === 'transform' ? () => '' : () => 0;
               }
 
               this.activeBindings.push({
-              target: b.target,
-              attr: b.attr,
-              node,
-              evalFn: (t, vars, Math, comp, ...helpers) => {
-                let val;
-                try {
-                  val = evalFn(t, vars, Math, comp, ...helpers);
-                } catch {
-                  val = b.attr === 'transform' ? '' : 0;
-                }
+                target: b.target,
+                attr: b.attr,
+                node,
+                evalFn: (t, vars, Math, comp, ...helpers) => {
+                  let val;
+                  try {
+                    val = evalFn(t, vars, Math, comp, ...helpers);
+                  } catch {
+                    val = b.attr === 'transform' ? '' : 0;
+                  }
 
-                // 3. Format bare numbers into valid SVG transform strings
-                if (b.attr === 'transform') {
-                  if (val === 0 || val === '0' || !val) return '';
-                  if (typeof val === 'number') return `translate(${val}, 0)`;
-                  if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
+                  if (b.attr === 'transform') {
+                    if (val === 0 || val === '0' || !val) return '';
+                    if (typeof val === 'number') return `translate(${val}, 0)`;
+                    if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
+                  }
+                  return val;
                 }
-                return val;
-              }
-            });
+              });
+            }
           }
-        }
-      });
-    }
-// 1. Initialize zero-bloat micro-physics if defined on the scene
+        });
+      }
+
       if (this.physics && scene.physics) {
         this.physics.clear();
         if (scene.physics.gravity !== undefined) this.physics.setGravity(scene.physics.gravity);
@@ -6595,11 +6419,9 @@ inputs.forEach(inp => {
         }
       }
 
-      // 2. Initialize reactive variables for the loaded scene & evaluate pre-paint computed graph
       this.resetVars();
       this.updateComputedVars();
 
-      // 3. Optimized DOM Partitioning & Hardware Promotion (Static vs Kinematic Actors)
       try {
         if (!container) return;
         const dynamicTargets = new Set();
@@ -6611,7 +6433,7 @@ inputs.forEach(inp => {
             } else if (b && b.target) {
               const freshEl = container.querySelector(b.target);
               if (freshEl) {
-                b.node = freshEl; // Re-bind to fresh live DOM node
+                b.node = freshEl;
                 dynamicTargets.add(freshEl);
               }
             }
@@ -6635,7 +6457,6 @@ inputs.forEach(inp => {
           });
         }
 
-        // Apply hardware promotion safely
         dynamicTargets.forEach(el => {
           if (el && el.style && typeof el.style.setProperty === 'function') {
             el.style.setProperty('will-change', 'transform, opacity');
@@ -6649,7 +6470,6 @@ inputs.forEach(inp => {
           });
         }
 
-        // Apply hardware compositor promotion to all dynamic elements
         dynamicTargets.forEach(node => {
           if (node && node.style) {
             node.style.willChange = 'transform';
@@ -6658,7 +6478,6 @@ inputs.forEach(inp => {
           }
         });
 
-        // Apply static containment to explicit static elements or background layers
         if (scene.staticElements && Array.isArray(scene.staticElements)) {
           scene.staticElements.forEach(s => {
             const el = container.querySelector(s.target);
@@ -6669,7 +6488,6 @@ inputs.forEach(inp => {
             }
           });
         } else {
-          // Automatic inference: top-level groups get layout containment without blocking user pointer events
           const directChildren = Array.from(container.children || []);
           directChildren.forEach(child => {
             if (child.id === 'annotation-ink-root' || child.id === 'dev-overlay-root') return;
@@ -6684,7 +6502,6 @@ inputs.forEach(inp => {
         console.warn('[AST Engine] DOM optimization notice:', domOptErr);
       }
 
-      // Mount any registered Multi-Entity Vector Emitters with obstacle collision pipelines
       this.emitters.clear();
       if (scene.emitters && Array.isArray(scene.emitters)) {
         scene.emitters.forEach(emConfig => {
@@ -6697,12 +6514,10 @@ inputs.forEach(inp => {
         }
       }
 
-      // Mount any declarative :bind-input items
       if (scene.bindInputs && Array.isArray(scene.bindInputs)) {
         scene.bindInputs.forEach(bi => this.registerBindInput(bi));
       }
 
-      // Mount declarative state transition machines
       this.stateMachines.clear();
       if (scene.stateMachines && Array.isArray(scene.stateMachines)) {
         scene.stateMachines.forEach(smConfig => {
@@ -6715,269 +6530,289 @@ inputs.forEach(inp => {
       if (typeof window !== 'undefined' && window.__astGestures && typeof window.__astGestures.enhanceSceneInteractivity === 'function') {
         window.__astGestures.enhanceSceneInteractivity();
       }
-      } finally {
-        this._isMounting = false;
+    } finally {
+      this._isMounting = false;
+    }
+  }
+
+  applyBindings(t, dt = 0.016) {
+    const isSim = Boolean(this.isContinuousSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim')));
+    const effectiveT = (isSim && this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : t;
+    this.updateComputedVars();
+
+    if (!this._isMounting && this._container && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== this._container)) {
+      if (this.scene) {
+        this.mountSceneAsset(this.scene, this._container);
       }
     }
 
-    /**
-     * Evaluates AST mathematical bindings directly on the DOM at 60 FPS
-     * Includes 3D perspective projection, 3D rings, 3D polygons, and Painter's Algorithm Z-Sorting
-     */
-    applyBindings(t, dt = 0.016) {
-      const isSim = Boolean(this.isContinuousSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim')));
-      const effectiveT = (isSim && this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : t;
-      // Eagerly evaluate reactive computed graph every frame
-      this.updateComputedVars();
+    const camera = Object.assign({ distance: 500, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
 
-      // Safety check: ensure container has scene elements mounted
-      if (!this._isMounting && this._container && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== this._container)) {
-        if (this.scene) {
-          this.mountSceneAsset(this.scene, this._container);
+    if (typeof camera.yaw === 'string') {
+      try {
+        const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
+        const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.yaw});`);
+        camera.yaw = yawFn(effectiveT, Math, this.vars || {}, clock);
+      } catch {}
+    }
+    if (typeof camera.pitch === 'string') {
+      try {
+        const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
+        const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.pitch});`);
+        camera.pitch = pitchFn(effectiveT, Math, this.vars || {}, clock);
+      } catch {}
+    }
+    const yawBase = typeof camera.yaw === 'number' ? camera.yaw : 0;
+    const pitchBase = typeof camera.pitch === 'number' ? camera.pitch : 0;
+    const totalScale = Math.max(0.2, Math.min(4.0, (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0)));
+
+    const hasSoftware3D = Boolean(this.active3DItems && this.active3DItems.length > 0);
+    if (this._container && this._container.style) {
+      if (!hasSoftware3D && (this.cameraOrbit && (this.cameraOrbit.yawOffset !== 0 || this.cameraOrbit.pitchOffset !== 0 || this.cameraOrbit.distanceScale !== 1.0))) {
+        const orbitYaw = Math.max(-45, Math.min(45, this.cameraOrbit.yawOffset));
+        const orbitPitch = Math.max(-45, Math.min(45, this.cameraOrbit.pitchOffset));
+        this._container.style.transformOrigin = '400px 240px';
+        this._container.style.transformBox = 'view-box';
+        this._container.style.transform = `perspective(800px) rotateX(${orbitPitch.toFixed(1)}deg) rotateY(${orbitYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
+        this._container.style.transition = this.isOrbitDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+      } else {
+        this._container.style.transform = '';
+        this._container.style.transition = '';
+      }
+    }
+
+    if (this.active3DItems && this.active3DItems.length) {
+      let dnaStrandA = null;
+      let dnaStrandB = null;
+      const v = this.vars || {};
+      const comp = v;
+      for (let i = 0; i < this.active3DItems.length; i++) {
+        const item = this.active3DItems[i];
+
+        if (item.domNode && (item.domNode.getAttribute('display') === 'none' || item.domNode.style.display === 'none')) {
+          if (item.labelNode) item.labelNode.setAttribute('opacity', '0');
+          if (item.cap1) item.cap1.setAttribute('opacity', '0');
+          if (item.cap2) item.cap2.setAttribute('opacity', '0');
+          continue;
         }
-      }
 
-      const camera = Object.assign({ distance: 500, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
+        if (item.type === '3d-node') {
+          let wx = Number(item.evalX(effectiveT, v, Math, comp)) || 0;
+          let wy = Number(item.evalY(effectiveT, v, Math, comp)) || 0;
+          let wz = Number(item.evalZ(effectiveT, v, Math, comp)) || 0;
+          if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+            const off = this.nodeOffsets.get(item.target);
+            wx += (off[0] || 0); wy += (off[1] || 0); wz += (off[2] || 0);
+          }
+          item.worldX = wx;
+          item.worldY = wy;
+          item.worldZ = wz;
+          const proj = this.project3D(wx, wy, wz, camera, 400, 240);
+          item.meanZ = Number.isFinite(proj.z) ? proj.z : 0;
 
-      // Dynamic camera yaw if expression
-      // Dynamic camera yaw if expression
-      if (typeof camera.yaw === 'string') {
-        try {
-          const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
-          const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.yaw});`);
-          camera.yaw = yawFn(effectiveT, Math, this.vars || {}, clock);
-        } catch {}
-      }
-      if (typeof camera.pitch === 'string') {
-        try {
-          const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
-          const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.pitch});`);
-          camera.pitch = pitchFn(effectiveT, Math, this.vars || {}, clock);
-        } catch {}
-      }
-      // Calculate combined camera orientation and distance scaling
-      const yawBase = typeof camera.yaw === 'number' ? camera.yaw : 0;
-      const pitchBase = typeof camera.pitch === 'number' ? camera.pitch : 0;
-      const totalYaw = yawBase + (this.cameraOrbit ? this.cameraOrbit.yawOffset : 0);
-      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (this.cameraOrbit ? this.cameraOrbit.pitchOffset : 0)));
-      const totalScale = Math.max(0.2, Math.min(4.0, (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0)));
+          if (item.domNode) {
+            const cx = Number.isFinite(proj.x) ? proj.x : 400;
+            const cy = Number.isFinite(proj.y) ? proj.y : 240;
+            const baseR = Number(item.baseR) || 8;
+            const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
+            const r = Math.max(1, baseR * scale);
 
-      // Apply hardware-accelerated 3D spatial transformation to the scene stage container
-      // NOTE: Scenes with active software 3D items (3d-node, 3d-line, 3d-ring, 3d-polygon)
-      // are ALREADY projected in true 3D perspective by project3D at 60 FPS.
-      // Applying CSS rotateY to the container itself causes double-rotation and catastrophic
-      // flattening at 90 degrees edge-on! Container transform is ONLY for flat 2D scenes with subtle orbit dragging.
-      const hasSoftware3D = Boolean(this.active3DItems && this.active3DItems.length > 0);
-      if (this._container && this._container.style) {
-        if (!hasSoftware3D && (this.cameraOrbit && (this.cameraOrbit.yawOffset !== 0 || this.cameraOrbit.pitchOffset !== 0 || this.cameraOrbit.distanceScale !== 1.0))) {
-          const orbitYaw = Math.max(-45, Math.min(45, this.cameraOrbit.yawOffset));
-          const orbitPitch = Math.max(-45, Math.min(45, this.cameraOrbit.pitchOffset));
-          this._container.style.transformOrigin = '400px 240px';
-          this._container.style.transformBox = 'view-box';
-          this._container.style.transform = `perspective(800px) rotateX(${orbitPitch.toFixed(1)}deg) rotateY(${orbitYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
-          this._container.style.transition = this.isOrbitDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
-        } else {
-          this._container.style.transform = '';
-          this._container.style.transition = '';
-        }
-      }
-
-      // 1. Process 3D Items (Nodes, Lines, Rings, Polygons)
-      if (this.active3DItems && this.active3DItems.length) {
-        let dnaStrandA = null;
-        let dnaStrandB = null;
-        const v = this.vars || {};
-        const comp = v;
-        for (let i = 0; i < this.active3DItems.length; i++) {
-          const item = this.active3DItems[i];
-
-          // Check if element is hidden by reactive binding
-          if (item.domNode && (item.domNode.getAttribute('display') === 'none' || item.domNode.style.display === 'none')) {
-            if (item.labelNode) item.labelNode.setAttribute('opacity', '0');
-            if (item.cap1) item.cap1.setAttribute('opacity', '0');
-            if (item.cap2) item.cap2.setAttribute('opacity', '0');
-            continue;
+            item.domNode.setAttribute('cx', cx.toFixed(1));
+            item.domNode.setAttribute('cy', cy.toFixed(1));
+            item.domNode.setAttribute('r', r.toFixed(1));
+            if (item.depthFog) {
+              const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+              item.domNode.setAttribute('opacity', op.toFixed(2));
+            }
           }
 
-if (item.type === '3d-node') {
-            let wx = Number(item.evalX(effectiveT, v, Math, comp)) || 0;
-            let wy = Number(item.evalY(effectiveT, v, Math, comp)) || 0;
-            let wz = Number(item.evalZ(effectiveT, v, Math, comp)) || 0;
-            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
-              const off = this.nodeOffsets.get(item.target);
-              wx += (off[0] || 0); wy += (off[1] || 0); wz += (off[2] || 0);
+          if (item.labelNode) {
+            const lx = Number.isFinite(proj.x) ? proj.x : 400;
+            const ly = Number.isFinite(proj.y) ? proj.y : 240;
+            const baseR = Number(item.baseR) || 8;
+            const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
+            const r = baseR * scale;
+            item.labelNode.setAttribute('x', lx.toFixed(1));
+            item.labelNode.setAttribute('y', (ly + r + 14).toFixed(1));
+            if (item.depthFog) {
+              const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+              item.labelNode.setAttribute('opacity', op.toFixed(2));
             }
-            item.worldX = wx;
-            item.worldY = wy;
-            item.worldZ = wz;
-            const proj = this.project3D(wx, wy, wz, camera, 400, 240);
-            item.meanZ = Number.isFinite(proj.z) ? proj.z : 0;
+          }
+        } else if (item.type === '3d-line') {
+          let x1 = Number(item.evalX1(effectiveT, v, Math, comp)) || 0;
+          let y1 = Number(item.evalY1(effectiveT, v, Math, comp)) || 0;
+          let z1 = Number(item.evalZ1(effectiveT, v, Math, comp)) || 0;
+          let x2 = Number(item.evalX2(effectiveT, v, Math, comp)) || 0;
+          let y2 = Number(item.evalY2(effectiveT, v, Math, comp)) || 0;
+          let z2 = Number(item.evalZ2(effectiveT, v, Math, comp)) || 0;
+          if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+            const off = this.nodeOffsets.get(item.target);
+            x1 += (off[0] || 0); y1 += (off[1] || 0); z1 += (off[2] || 0);
+            x2 += (off[0] || 0); y2 += (off[1] || 0); z2 += (off[2] || 0);
+          }
+          item.worldP1 = [x1, y1, z1];
+          item.worldP2 = [x2, y2, z2];
 
-            if (item.domNode) {
-              const cx = Number.isFinite(proj.x) ? proj.x : 400;
-              const cy = Number.isFinite(proj.y) ? proj.y : 240;
-              const baseR = Number(item.baseR) || 8;
-              const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
-              const r = Math.max(1, baseR * scale);
-
-              item.domNode.setAttribute('cx', cx.toFixed(1));
-              item.domNode.setAttribute('cy', cy.toFixed(1));
-              item.domNode.setAttribute('r', r.toFixed(1));
-              if (item.depthFog) {
-                const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-                item.domNode.setAttribute('opacity', op.toFixed(2));
+          const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
+          let unzipOffset = 0;
+          let isUnzipped = false;
+          if (item.target && item.target.startsWith('#dna-line-')) {
+            const idxMatch = item.target.match(/\d+/);
+            if (idxMatch) {
+              const idx = parseInt(idxMatch[0], 10);
+              if (unzip > 0 && (idx / 18) <= unzip) {
+                isUnzipped = true;
+                unzipOffset = (unzip - (idx / 18) + 0.1) * 35;
               }
+              if (!dnaStrandA) dnaStrandA = [];
+              if (!dnaStrandB) dnaStrandB = [];
+            }
+          }
+
+          const p1 = this.project3D(x1 - unzipOffset, y1, z1, camera, 400, 240);
+          const p2 = this.project3D(x2 + unzipOffset, y2, z2, camera, 400, 240);
+          const z1Val = Number.isFinite(p1.z) ? p1.z : 0;
+          const z2Val = Number.isFinite(p2.z) ? p2.z : 0;
+          item.meanZ = (z1Val + z2Val) / 2;
+
+          if (item.target && item.target.startsWith('#dna-line-')) {
+            const idxMatch = item.target.match(/\d+/);
+            if (idxMatch) {
+              const idx = parseInt(idxMatch[0], 10);
+              dnaStrandA[idx] = p1;
+              dnaStrandB[idx] = p2;
+            }
+          }
+
+          if (item.domNode) {
+            const px1 = Number.isFinite(p1.x) ? p1.x : 0;
+            const py1 = Number.isFinite(p1.y) ? p1.y : 0;
+            const px2 = Number.isFinite(p2.x) ? p2.x : 0;
+            const py2 = Number.isFinite(p2.y) ? p2.y : 0;
+            const op1 = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
+            const op2 = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
+
+            item.domNode.setAttribute('x1', px1.toFixed(1));
+            item.domNode.setAttribute('y1', py1.toFixed(1));
+            item.domNode.setAttribute('x2', px2.toFixed(1));
+            item.domNode.setAttribute('y2', py2.toFixed(1));
+            if (isUnzipped) {
+              item.domNode.setAttribute('opacity', '0.15');
+              item.domNode.setAttribute('stroke-dasharray', '3,4');
+            } else {
+              item.domNode.setAttribute('opacity', ((op1 + op2) / 2).toFixed(2));
+              item.domNode.removeAttribute('stroke-dasharray');
+            }
+          }
+          if (item.cap1) {
+            const c1x = Number.isFinite(p1.x) ? p1.x : 0;
+            const c1y = Number.isFinite(p1.y) ? p1.y : 0;
+            const c1op = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
+            const baseR = Number(item.baseR) || 8;
+            const scale = Number.isFinite(p1.scale) ? p1.scale : 1.0;
+            item.cap1.setAttribute('cx', c1x.toFixed(1));
+            item.cap1.setAttribute('cy', c1y.toFixed(1));
+            item.cap1.setAttribute('opacity', c1op.toFixed(2));
+            item.cap1.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
+          }
+          if (item.cap2) {
+            const c2x = Number.isFinite(p2.x) ? p2.x : 0;
+            const c2y = Number.isFinite(p2.y) ? p2.y : 0;
+            const c2op = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
+            const baseR = Number(item.baseR) || 8;
+            const scale = Number.isFinite(p2.scale) ? p2.scale : 1.0;
+            item.cap2.setAttribute('cx', c2x.toFixed(1));
+            item.cap2.setAttribute('cy', c2y.toFixed(1));
+            item.cap2.setAttribute('opacity', c2op.toFixed(2));
+            item.cap2.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
+          }
+        } else if (item.type === '3d-ring') {
+          let r = Number(item.evalR(effectiveT, v, Math, comp)) || 100;
+          let cx = Number(item.evalCX(effectiveT, v, Math, comp)) || 0;
+          let cy = Number(item.evalCY(effectiveT, v, Math, comp)) || 0;
+          let cz = Number(item.evalCZ(effectiveT, v, Math, comp)) || 0;
+          if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
+            const off = this.nodeOffsets.get(item.target);
+            cx += (off[0] || 0); cy += (off[1] || 0); cz += (off[2] || 0);
+          }
+          item.worldCenter = [cx, cy, cz];
+          item.worldRadius = r;
+          const tiltXDeg = Number(item.evalTiltX(effectiveT, v, Math, comp)) || 0;
+          const tiltYDeg = Number(item.evalTiltY(effectiveT, v, Math, comp)) || 0;
+          const tiltZDeg = Number(item.evalTiltZ(effectiveT, v, Math, comp)) || 0;
+
+          const rxRad = tiltXDeg * (Math.PI / 180);
+          const ryRad = tiltYDeg * (Math.PI / 180);
+          const rzRad = tiltZDeg * (Math.PI / 180);
+
+          const n = Math.max(3, item.segments || 24);
+          let pathD = '';
+          let totalZ = 0;
+          let totalOpacity = 0;
+
+          for (let k = 0; k < n; k++) {
+            const theta = (k / n) * Math.PI * 2;
+            let px = r * Math.cos(theta);
+            let py = 0;
+            let pz = r * Math.sin(theta);
+
+            if (tiltXDeg !== 0) {
+              const py1 = py * Math.cos(rxRad) - pz * Math.sin(rxRad);
+              const pz1 = py * Math.sin(rxRad) + pz * Math.cos(rxRad);
+              py = py1; pz = pz1;
+            }
+            if (tiltYDeg !== 0) {
+              const px1 = px * Math.cos(ryRad) + pz * Math.sin(ryRad);
+              const pz1 = -px * Math.sin(ryRad) + pz * Math.cos(ryRad);
+              px = px1; pz = pz1;
+            }
+            if (tiltZDeg !== 0) {
+              const px1 = px * Math.cos(rzRad) - py * Math.sin(rzRad);
+              const py1 = px * Math.sin(rzRad) + py * Math.cos(rzRad);
+              px = px1; py = py1;
             }
 
-            if (item.labelNode) {
-              const lx = Number.isFinite(proj.x) ? proj.x : 400;
-              const ly = Number.isFinite(proj.y) ? proj.y : 240;
-              const baseR = Number(item.baseR) || 8;
-              const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
-              const r = baseR * scale;
-              item.labelNode.setAttribute('x', lx.toFixed(1));
-              item.labelNode.setAttribute('y', (ly + r + 14).toFixed(1));
-              if (item.depthFog) {
-                const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-                item.labelNode.setAttribute('opacity', op.toFixed(2));
-              }
-            }
-          } else if (item.type === '3d-line') {
-            let x1 = Number(item.evalX1(effectiveT, v, Math, comp)) || 0;
-            let y1 = Number(item.evalY1(effectiveT, v, Math, comp)) || 0;
-            let z1 = Number(item.evalZ1(effectiveT, v, Math, comp)) || 0;
-            let x2 = Number(item.evalX2(effectiveT, v, Math, comp)) || 0;
-            let y2 = Number(item.evalY2(effectiveT, v, Math, comp)) || 0;
-            let z2 = Number(item.evalZ2(effectiveT, v, Math, comp)) || 0;
-            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
-              const off = this.nodeOffsets.get(item.target);
-              x1 += (off[0] || 0); y1 += (off[1] || 0); z1 += (off[2] || 0);
-              x2 += (off[0] || 0); y2 += (off[1] || 0); z2 += (off[2] || 0);
-            }
-            item.worldP1 = [x1, y1, z1];
-            item.worldP2 = [x2, y2, z2];
+            const proj = this.project3D(cx + px, cy + py, cz + pz, camera, 400, 240);
+            const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
+            const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
+            totalZ += pzVal;
+            totalOpacity += popVal;
 
-            // Support Helicase unzipping interaction for DNA strands
-            const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
-            let unzipOffset = 0;
-            let isUnzipped = false;
-            if (item.target && item.target.startsWith('#dna-line-')) {
-              const idxMatch = item.target.match(/\d+/);
-              if (idxMatch) {
-                const idx = parseInt(idxMatch[0], 10);
-                if (unzip > 0 && (idx / 18) <= unzip) {
-                  isUnzipped = true;
-                  unzipOffset = (unzip - (idx / 18) + 0.1) * 35;
-                }
-                if (!dnaStrandA) dnaStrandA = [];
-                if (!dnaStrandB) dnaStrandB = [];
-              }
-            }
+            const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
+            const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
 
-            const p1 = this.project3D(x1 - unzipOffset, y1, z1, camera, 400, 240);
-            const p2 = this.project3D(x2 + unzipOffset, y2, z2, camera, 400, 240);
-            const z1Val = Number.isFinite(p1.z) ? p1.z : 0;
-            const z2Val = Number.isFinite(p2.z) ? p2.z : 0;
-            item.meanZ = (z1Val + z2Val) / 2;
-
-            if (item.target && item.target.startsWith('#dna-line-')) {
-              const idxMatch = item.target.match(/\d+/);
-              if (idxMatch) {
-                const idx = parseInt(idxMatch[0], 10);
-                dnaStrandA[idx] = p1;
-                dnaStrandB[idx] = p2;
-              }
+            if (k === 0) {
+              pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
+            } else {
+              pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
             }
+          }
+          pathD += ' Z';
+          item.meanZ = totalZ / n;
+          const avgOpacity = totalOpacity / n;
 
-            if (item.domNode) {
-              const px1 = Number.isFinite(p1.x) ? p1.x : 0;
-              const py1 = Number.isFinite(p1.y) ? p1.y : 0;
-              const px2 = Number.isFinite(p2.x) ? p2.x : 0;
-              const py2 = Number.isFinite(p2.y) ? p2.y : 0;
-              const op1 = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
-              const op2 = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
-
-              item.domNode.setAttribute('x1', px1.toFixed(1));
-              item.domNode.setAttribute('y1', py1.toFixed(1));
-              item.domNode.setAttribute('x2', px2.toFixed(1));
-              item.domNode.setAttribute('y2', py2.toFixed(1));
-              if (isUnzipped) {
-                item.domNode.setAttribute('opacity', '0.15');
-                item.domNode.setAttribute('stroke-dasharray', '3,4');
-              } else {
-                item.domNode.setAttribute('opacity', ((op1 + op2) / 2).toFixed(2));
-                item.domNode.removeAttribute('stroke-dasharray');
-              }
+          if (item.domNode) {
+            item.domNode.setAttribute('d', pathD);
+            if (item.depthFog) {
+              item.domNode.setAttribute('opacity', avgOpacity.toFixed(2));
             }
-            if (item.cap1) {
-              const c1x = Number.isFinite(p1.x) ? p1.x : 0;
-              const c1y = Number.isFinite(p1.y) ? p1.y : 0;
-              const c1op = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
-              const baseR = Number(item.baseR) || 8;
-              const scale = Number.isFinite(p1.scale) ? p1.scale : 1.0;
-              item.cap1.setAttribute('cx', c1x.toFixed(1));
-              item.cap1.setAttribute('cy', c1y.toFixed(1));
-              item.cap1.setAttribute('opacity', c1op.toFixed(2));
-              item.cap1.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
-            }
-            if (item.cap2) {
-              const c2x = Number.isFinite(p2.x) ? p2.x : 0;
-              const c2y = Number.isFinite(p2.y) ? p2.y : 0;
-              const c2op = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
-              const baseR = Number(item.baseR) || 8;
-              const scale = Number.isFinite(p2.scale) ? p2.scale : 1.0;
-              item.cap2.setAttribute('cx', c2x.toFixed(1));
-              item.cap2.setAttribute('cy', c2y.toFixed(1));
-              item.cap2.setAttribute('opacity', c2op.toFixed(2));
-              item.cap2.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
-            }
-          } else if (item.type === '3d-ring') {
-            let r = Number(item.evalR(effectiveT, v, Math, comp)) || 100;
-            let cx = Number(item.evalCX(effectiveT, v, Math, comp)) || 0;
-            let cy = Number(item.evalCY(effectiveT, v, Math, comp)) || 0;
-            let cz = Number(item.evalCZ(effectiveT, v, Math, comp)) || 0;
-            if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
-              const off = this.nodeOffsets.get(item.target);
-              cx += (off[0] || 0); cy += (off[1] || 0); cz += (off[2] || 0);
-            }
-            item.worldCenter = [cx, cy, cz];
-            item.worldRadius = r;
-            const tiltXDeg = Number(item.evalTiltX(effectiveT, v, Math, comp)) || 0;
-            const tiltYDeg = Number(item.evalTiltY(effectiveT, v, Math, comp)) || 0;
-            const tiltZDeg = Number(item.evalTiltZ(effectiveT, v, Math, comp)) || 0;
-
-            const rxRad = tiltXDeg * (Math.PI / 180);
-            const ryRad = tiltYDeg * (Math.PI / 180);
-            const rzRad = tiltZDeg * (Math.PI / 180);
-
-            const n = Math.max(3, item.segments || 24);
+          }
+        } else if (item.type === '3d-polygon') {
+          let rawPts = item.evalPts(effectiveT, v, Math, comp);
+          if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
+            const off = this.nodeOffsets.get(item.target);
+            rawPts = rawPts.map(pt => [(pt[0] || 0) + (off[0] || 0), (pt[1] || 0) + (off[1] || 0), (pt[2] || 0) + (off[2] || 0)]);
+          }
+          item.worldPts = rawPts;
+          if (Array.isArray(rawPts) && rawPts.length >= 3) {
             let pathD = '';
             let totalZ = 0;
             let totalOpacity = 0;
 
-            for (let k = 0; k < n; k++) {
-              const theta = (k / n) * Math.PI * 2;
-              let px = r * Math.cos(theta);
-              let py = 0;
-              let pz = r * Math.sin(theta);
-
-              if (tiltXDeg !== 0) {
-                const py1 = py * Math.cos(rxRad) - pz * Math.sin(rxRad);
-                const pz1 = py * Math.sin(rxRad) + pz * Math.cos(rxRad);
-                py = py1; pz = pz1;
-              }
-              if (tiltYDeg !== 0) {
-                const px1 = px * Math.cos(ryRad) + pz * Math.sin(ryRad);
-                const pz1 = -px * Math.sin(ryRad) + pz * Math.cos(ryRad);
-                px = px1; pz = pz1;
-              }
-              if (tiltZDeg !== 0) {
-                const px1 = px * Math.cos(rzRad) - py * Math.sin(rzRad);
-                const py1 = px * Math.sin(rzRad) + py * Math.cos(rzRad);
-                px = px1; py = py1;
-              }
-
-              const proj = this.project3D(cx + px, cy + py, cz + pz, camera, 400, 240);
+            for (let k = 0; k < rawPts.length; k++) {
+              const pt = rawPts[k];
+              const proj = this.project3D(pt[0] || 0, pt[1] || 0, pt[2] || 0, camera, 400, 240);
               const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
               const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
               totalZ += pzVal;
@@ -6993,56 +6828,17 @@ if (item.type === '3d-node') {
               }
             }
             pathD += ' Z';
-            item.meanZ = totalZ / n;
-            const avgOpacity = totalOpacity / n;
+            item.meanZ = totalZ / rawPts.length;
 
             if (item.domNode) {
               item.domNode.setAttribute('d', pathD);
               if (item.depthFog) {
-                item.domNode.setAttribute('opacity', avgOpacity.toFixed(2));
-              }
-            }
-          } else if (item.type === '3d-polygon') {
-            let rawPts = item.evalPts(effectiveT, v, Math, comp);
-            if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
-              const off = this.nodeOffsets.get(item.target);
-              rawPts = rawPts.map(pt => [(pt[0] || 0) + (off[0] || 0), (pt[1] || 0) + (off[1] || 0), (pt[2] || 0) + (off[2] || 0)]);
-            }
-            item.worldPts = rawPts;
-            if (Array.isArray(rawPts) && rawPts.length >= 3) {
-              let pathD = '';
-              let totalZ = 0;
-              let totalOpacity = 0;
-
-              for (let k = 0; k < rawPts.length; k++) {
-                const pt = rawPts[k];
-                const proj = this.project3D(pt[0] || 0, pt[1] || 0, pt[2] || 0, camera, 400, 240);
-                const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
-                const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-                totalZ += pzVal;
-                totalOpacity += popVal;
-
-                const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
-                const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
-
-                if (k === 0) {
-                  pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
-                } else {
-                  pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
-                }
-              }
-              pathD += ' Z';
-              item.meanZ = totalZ / rawPts.length;
-
-              if (item.domNode) {
-                item.domNode.setAttribute('d', pathD);
-                if (item.depthFog) {
-                  item.domNode.setAttribute('opacity', (totalOpacity / rawPts.length).toFixed(2));
-                }
+                item.domNode.setAttribute('opacity', (totalOpacity / rawPts.length).toFixed(2));
               }
             }
           }
-        // Update continuous DNA sugar-phosphate backbones if present
+        }
+
         if (dnaStrandA && dnaStrandA.length > 1) {
           const bbA = this._container && this._container.querySelector('#dna-backbone-a');
           if (bbA) {
@@ -7055,455 +6851,404 @@ if (item.type === '3d-node') {
             bbB.setAttribute('d', this._pointsToSpline(dnaStrandB));
           }
         }
-        }
+      }
 
-        // Unified Painter's Algorithm: Sort furthest to closest in SVG DOM
-        if (this.active3DItems.length > 1) {
-          const sorted = [...this.active3DItems].sort((a, b) => {
-            // Orbital guide rings belong in the background layer so dashed lines never cut through solid planet spheres or labels
-            const isOrbitA = a.type === '3d-ring' && a.target && a.target.includes('orbit');
-            const isOrbitB = b.type === '3d-ring' && b.target && b.target.includes('orbit');
-            if (isOrbitA && !isOrbitB) return -1; // Orbit guide rings sort first (rendered into background)
-            if (!isOrbitA && isOrbitB) return 1;
+      if (this.active3DItems.length > 1) {
+        const sorted = [...this.active3DItems].sort((a, b) => {
+          const isOrbitA = a.type === '3d-ring' && a.target && a.target.includes('orbit');
+          const isOrbitB = b.type === '3d-ring' && b.target && b.target.includes('orbit');
+          if (isOrbitA && !isOrbitB) return -1;
+          if (!isOrbitA && isOrbitB) return 1;
 
-            // Stabilize Saturn ring relative to Saturn body so the ring smoothly surrounds the globe without flickering
-            if (a.target === '#saturn-ring' && b.target === '#planet-saturn') return 1;
-            if (a.target === '#planet-saturn' && b.target === '#saturn-ring') return -1;
+          if (a.target === '#saturn-ring' && b.target === '#planet-saturn') return 1;
+          if (a.target === '#planet-saturn' && b.target === '#saturn-ring') return -1;
 
-            return b.meanZ - a.meanZ;
-          });
+          return b.meanZ - a.meanZ;
+        });
 
-          // Mobile GPU anti-flicker: Only mutate the SVG DOM when the 3D depth sort order has actually changed.
-          // Unconditional appendChild at 60 FPS invalidates mobile compositor tile caches and causes flashing.
-          let orderChanged = false;
-          if (!this._last3DSortKeys || this._last3DSortKeys.length !== sorted.length) {
-            orderChanged = true;
-          } else {
-            for (let k = 0; k < sorted.length; k++) {
-              if (this._last3DSortKeys[k] !== sorted[k].target) {
-                orderChanged = true;
-                break;
-              }
+        let orderChanged = false;
+        if (!this._last3DSortKeys || this._last3DSortKeys.length !== sorted.length) {
+          orderChanged = true;
+        } else {
+          for (let k = 0; k < sorted.length; k++) {
+            if (this._last3DSortKeys[k] !== sorted[k].target) {
+              orderChanged = true;
+              break;
             }
           }
-
-          if (orderChanged) {
-            this._last3DSortKeys = sorted.map(it => it.target);
-            sorted.forEach(item => {
-              const cont = this._container;
-              if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
-                item.domNode.parentNode.appendChild(item.domNode);
-              }
-              if (item.cap1 && item.cap1.parentNode && cont && cont.contains(item.cap1)) {
-                item.cap1.parentNode.appendChild(item.cap1);
-              }
-              if (item.cap2 && item.cap2.parentNode && cont && cont.contains(item.cap2)) {
-                item.cap2.parentNode.appendChild(item.cap2);
-              }
-              if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
-                item.labelNode.parentNode.appendChild(item.labelNode);
-              }
-            });
-          }
         }
-      }
 
-// 2. Direct 2D AST Math & User Interaction Variable Bindings
-      if (this.activeBindings && this.activeBindings.length) {
-        const v = this.vars || {};
-        for (let i = 0; i < this.activeBindings.length; i++) {
-          const b = this.activeBindings[i];
-          if (b.node) {
-            try {
-              const val = b.evalFn(
-                effectiveT, v, Math, v,
-                astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
-                AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
-                AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
-              );
-              if (b.lastVal !== val) {
-                b.lastVal = val;
-                if (b.attr === 'textContent') {
-                  b.node.textContent = String(val);
-                } else {
-                  const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
-                  b.node.setAttribute(b.attr, String(safeVal));
-                }
-              }
-            } catch (err) {}
-          }
+        if (orderChanged) {
+          this._last3DSortKeys = sorted.map(it => it.target);
+          sorted.forEach(item => {
+            const cont = this._container;
+            if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
+              item.domNode.parentNode.appendChild(item.domNode);
+            }
+            if (item.cap1 && item.cap1.parentNode && cont && cont.contains(item.cap1)) {
+              item.cap1.parentNode.appendChild(item.cap1);
+            }
+            if (item.cap2 && item.cap2.parentNode && cont && cont.contains(item.cap2)) {
+              item.cap2.parentNode.appendChild(item.cap2);
+            }
+            if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
+              item.labelNode.parentNode.appendChild(item.labelNode);
+            }
+          });
         }
-      }
-      // 3. Thermodynamic Gas Emitter Synchronization across timeline & state transitions
-      if (this.activePresetId === 'kinetic-gas' && this.emitters && (this.emitters.has('gas-molecules') || this.emitters.size > 0)) {
-        const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
-        if (gasEm) {
-          const manualState = this.vars && this.vars.state;
-          const manualTemp = this.vars && this.vars.temp;
-          let currentPhase = 'gas';
-          if (manualState) {
-            currentPhase = String(manualState).toLowerCase();
-          } else if (manualTemp !== undefined) {
-            if (manualTemp <= 140) currentPhase = 'solid';
-            else if (manualTemp <= 273) currentPhase = 'liquid';
-            else currentPhase = 'gas';
-          } else {
-            if (t >= 0.87) currentPhase = 'solid';
-            else if (t >= 0.74) currentPhase = 'liquid';
-            else currentPhase = 'gas';
-          }
-
-          gasEm.setPhaseState(currentPhase);
-
-          let pX = 430;
-          if (this.vars && this.vars.volume !== undefined && this.vars.volume !== null) {
-            pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, this.vars.volume)) - 0.35) / 0.65;
-          } else {
-            pX = t < 0.25 ? 430 : (t < 0.51 ? (430 - 180 * Math.min(1, (t - 0.25) / 0.26)) : (t < 0.74 ? 250 : (250 + 180 * Math.min(1, (t - 0.74) / 0.13))));
-          }
-          gasEm.clampToPistonX(pX);
-
-          if (currentPhase === 'gas') {
-            const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
-            gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
-          }
-        }
-      }
-
-      // 4. Procedural update hook if present
-      if (this.scene && typeof this.scene.update === 'function' && this._cachedElements) {
-        this.scene.update(t, this._cachedElements, this, dt);
       }
     }
 
-    /**
-     * Direct Element Attribute Patching (Decoupled render)
-     */
-/**
-     * Direct Element Attribute Patching (Decoupled render)
-     */
-    renderCurrentVector(container) {
-      const target = container || this.container;
-      if (target) {
-        if (!this._isMounting && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== target)) {
-          if (this.scene) {
-            this.mountSceneAsset(this.scene, target);
-          }
+    if (this.activeBindings && this.activeBindings.length) {
+      const v = this.vars || {};
+      for (let i = 0; i < this.activeBindings.length; i++) {
+        const b = this.activeBindings[i];
+        if (b.node) {
+          try {
+            const val = b.evalFn(
+              effectiveT, v, Math, v,
+              astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
+              AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
+              AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
+            );
+            if (b.lastVal !== val) {
+              b.lastVal = val;
+              if (b.attr === 'textContent') {
+                b.node.textContent = String(val);
+              } else {
+                const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
+                b.node.setAttribute(b.attr, String(safeVal));
+              }
+            }
+          } catch (err) {}
         }
-        this.applyBindings(this.progress);
-        return '';
       }
+    }
 
-      if (this.scene && typeof this.scene.render === 'function') {
-        return this.scene.render(this.progress);
+    if (this.activePresetId === 'kinetic-gas' && this.emitters && (this.emitters.has('gas-molecules') || this.emitters.size > 0)) {
+      const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
+      if (gasEm) {
+        const manualState = this.vars && this.vars.state;
+        const manualTemp = this.vars && this.vars.temp;
+        let currentPhase = 'gas';
+        if (manualState) {
+          currentPhase = String(manualState).toLowerCase();
+        } else if (manualTemp !== undefined) {
+          if (manualTemp <= 140) currentPhase = 'solid';
+          else if (manualTemp <= 273) currentPhase = 'liquid';
+          else currentPhase = 'gas';
+        } else {
+          if (t >= 0.87) currentPhase = 'solid';
+          else if (t >= 0.74) currentPhase = 'liquid';
+          else currentPhase = 'gas';
+        }
+
+        gasEm.setPhaseState(currentPhase);
+
+        let pX = 430;
+        if (this.vars && this.vars.volume !== undefined && this.vars.volume !== null) {
+          pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, this.vars.volume)) - 0.35) / 0.65;
+        } else {
+          pX = t < 0.25 ? 430 : (t < 0.51 ? (430 - 180 * Math.min(1, (t - 0.25) / 0.26)) : (t < 0.74 ? 250 : (250 + 180 * Math.min(1, (t - 0.74) / 0.13))));
+        }
+        gasEm.clampToPistonX(pX);
+
+        if (currentPhase === 'gas') {
+          const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
+          gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
+        }
       }
+    }
+
+    if (this.scene && typeof this.scene.update === 'function' && this._cachedElements) {
+      this.scene.update(t, this._cachedElements, this, dt);
+    }
+  }
+
+  renderCurrentVector(container) {
+    const target = container || this.container;
+    if (target) {
+      if (!this._isMounting && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== target)) {
+        if (this.scene) {
+          this.mountSceneAsset(this.scene, target);
+        }
+      }
+      this.applyBindings(this.progress);
       return '';
     }
 
-    /**
-     * Main Animation Tick Loop with Delta-Time Clamping
-     */
-tick(currentTimestamp) {
-      if (!currentTimestamp && typeof performance !== 'undefined' && typeof performance.now === 'function') {
-        currentTimestamp = performance.now();
-      }
-      if (this.lastTimestamp !== null) {
-        const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
-        const deltaSec = Math.min(rawDeltaSec, 0.1);
-        this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
-
-        // Micro-Physics Subsystem Tick (< 1.5 KB zero-bloat)
-        if (this.physics && this.physics.enabled && this.physics.bodies.length > 0) {
-          this.physics.update(deltaSec);
-        }
-
-        // Declarative State Transition Machines Tick
-        for (const sm of this.stateMachines.values()) {
-          sm.update(deltaSec, this.reactiveVars || {});
-        }
-
-        // Multi-Entity Particle Emitter Collections Tick
-        for (const em of this.emitters.values()) {
-          em.update(deltaSec);
-        }
-
-        // Dynamic continuous simulation check:
-        const isSlide = Boolean(this.scene && (this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide'));
-        const isDynamicScene = !isSlide && Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
-
-        if (this.isPlaying) {
-          this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
-
-          if (this.progress >= 1.0) {
-            if (this.loop || isDynamicScene) {
-              this.progress = this.progress % 1.0;
-              this.lastSpokenIndex = -1;
-            } else {
-              this.progress = 1.0;
-              this.pause();
-              this.emit('ended', { duration: this.durationSec });
-            }
-          }
-
-          this.updateActiveKeyframeAndSpeech(false);
-
-          // Advance decoupled universal simulation clock ONLY while playing
-          if (!this.vars) this.vars = {};
-          const speedParam = typeof this.vars.speedMultiplier === 'number'
-            ? this.vars.speedMultiplier
-            : (typeof this.vars.speed === 'number'
-                ? this.vars.speed
-                : (typeof this.vars.warpSpeed === 'number'
-                    ? this.vars.warpSpeed
-                    : (typeof this.vars.pilgrimSpeed === 'number' ? this.vars.pilgrimSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0))));
-
-          const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.speed || 1.0);
-          this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
-          this.vars.clock = this.vars.simClock;
-          this.vars._simClock = this.vars.simClock;
-          this.vars._solarClock = this.vars.simClock;
-
-          // Synchronize backdrop film video clock if running
-          if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {
-            const expectedSec = this.progress * (this.durationSec || 10.0);
-            if (Math.abs(this.backdropVideo.currentTime - expectedSec) > 0.35) {
-              this.backdropVideo.currentTime = expectedSec;
-            }
-          }
-
-          if (this.scene) {
-            this.emit('timeupdate', {
-              progress: this.progress,
-              currentTime: this.progress * (this.durationSec || 10.0),
-              duration: this.durationSec
-            });
-          }
-        } // Closes if (this.isPlaying)
-
-        // Continuous 60 FPS Render Loop: keeping 3D camera interactive even while paused
-        this.applyBindings(this.progress, deltaSec);
-      } // Closes if (this.lastTimestamp !== null)
-
-      this.lastTimestamp = currentTimestamp;
-      if (typeof requestAnimationFrame !== 'undefined') {
-        this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
-      }
+    if (this.scene && typeof this.scene.render === 'function') {
+      return this.scene.render(this.progress);
     }
-    /**
-     * Hot-reloads raw SVG markup directly onto the stage container
-     * Rebinds active AST expressions without losing clock state or timeline position
-     */
-    hotReloadSvg(svgMarkup) {
-      if (!svgMarkup || typeof svgMarkup !== 'string') return false;
-      try {
-        if (!this.scene) {
-          this.scene = { id: 'custom-scene', title: 'Custom SVG Scene', stage: 'DEVELOPER', duration: 10.0 };
-        }
-        this.scene.svgText = this.sanitizeSvg(svgMarkup);
+    return '';
+  }
 
-        if (this._container) {
-          // Mount sanitized scene asset and recompile AST bindings
-          this.mountSceneAsset(this.scene, this._container);
-          this.applyBindings(this.progress);
-        }
-
-        this.emit('svghotreloaded', { svg: this.scene.svgText, progress: this.progress });
-        this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'svg' });
-        return true;
-      } catch (err) {
-        console.error('[AST Engine] Failed to hot-reload SVG:', err);
-        return false;
-      }
+  tick(currentTimestamp) {
+    if (!currentTimestamp && typeof performance !== 'undefined' && typeof performance.now === 'function') {
+      currentTimestamp = performance.now();
     }
+    if (this.lastTimestamp !== null) {
+      const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
+      const deltaSec = Math.min(rawDeltaSec, 0.1);
+      this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
 
-    /**
-     * Hot-reloads AST S-Expressions / keyframes / bindings in real-time
-     * Recompiles mathematical expressions and applies them immediately
-     */
-    hotReloadAst(astInput) {
-      if (!astInput) return false;
-      try {
-        let parsed = typeof astInput === 'string' ? this.parseAst(astInput) : astInput;
-        if (!parsed) return false;
-
-        if (!this.scene) this.scene = {};
-        this.scene.id = parsed.id || this.scene.id || 'custom-ast';
-        this.scene.title = parsed.title || this.scene.title || 'Custom AST Scene';
-        this.scene.stage = parsed.stage || this.scene.stage || 'DEVELOPER';
-        this.scene.duration = parsed.duration || this.scene.duration || 10.0;
-        this.scene.keyframes = parsed.keyframes || [];
-        this.scene.subtitles = parsed.subtitles || [];
-        this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];
-        if (parsed.interactive) {
-          this.scene.interactive = parsed.interactive;
-        } else if (parsed.checkpoints && parsed.checkpoints.length > 0) {
-          this.scene.interactive = { checkpoints: parsed.checkpoints, hotspots: [] };
-        } else {
-          this.scene.interactive = null;
-        }
-        if (parsed.camera) this.scene.camera = parsed.camera;
-        if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
-        this.scene.astSource = typeof astInput === 'string' ? astInput : null;
-
-        this.durationSec = this.scene.duration;
-
-        if (this._container) {
-          this.mountSceneAsset(this.scene, this._container);
-          this.applyBindings(this.progress);
-        }
-
-        this.emit('asthotreloaded', { ast: parsed, progress: this.progress });
-        this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'ast' });
-        return true;
-      } catch (err) {
-        console.error('[AST Engine] Failed to hot-reload AST:', err);
-        return false;
-      }
-    }
-
-    /**
-     * Serializes clean SVG stage XML without transient developer overlay elements
-     */
-    getStageSvgSnapshot() {
-      if (typeof document === 'undefined') return '';
-      const svg = document.getElementById('stage-svg');
-      if (!svg) return '';
-      const clone = svg.cloneNode(true);
-      const devOverlay = clone.querySelector('#dev-overlay-root');
-      if (devOverlay) devOverlay.remove();
-      return clone.outerHTML;
-    }
-
-    /**
-     * Retrieves current AST source or formats current scene configuration
-     */
-    getCurrentAstSource() {
-      if (this.scene && this.scene.astSource) return this.scene.astSource;
-      if (!this.scene) return '';
-
-      const s = this.scene;
-      let ast = `(:scene :id "${s.id || 'custom'}" :title "${s.title || 'Parametric Scene'}" :stage "${s.stage || 'CURRICULUM'}" :duration ${(s.duration || 10.0).toFixed(1)}\n`;
-
-      if (s.subtitles && s.subtitles.length) {
-        ast += `  (:subtitles (\n`;
-        s.subtitles.forEach(sub => {
-          ast += `    (:start ${sub.start.toFixed(2)} :end ${sub.end.toFixed(2)} :en "${sub.en || ''}"${sub.es ? ` :es "${sub.es}"` : ''})\n`;
-        });
-        ast += `  ))\n`;
+      if (this.physics && this.physics.enabled && this.physics.bodies.length > 0) {
+        this.physics.update(deltaSec);
       }
 
-      if (s.keyframes && s.keyframes.length) {
-        ast += `  (:keyframes (\n`;
-        s.keyframes.forEach(kf => {
-          ast += `    (:t ${kf.t.toFixed(2)} :title "${kf.title}" :rule "${kf.rule}")\n`;
-        });
-        ast += `  ))\n`;
+      for (const sm of this.stateMachines.values()) {
+        sm.update(deltaSec, this.reactiveVars || {});
       }
 
-      if (s.rawBindings && s.rawBindings.length) {
-        ast += `  (:bindings (\n`;
-        s.rawBindings.forEach(b => {
-          if (b.type === '3d-node') {
-            ast += `    (:3d-node :target "${b.target}" :x "${b.x}" :y "${b.y}" :z "${b.z}" :baseR ${b.baseR || 6})\n`;
+      for (const em of this.emitters.values()) {
+        em.update(deltaSec);
+      }
+
+      const isSlide = Boolean(this.scene && (this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide'));
+      const isDynamicScene = !isSlide && Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
+
+      if (this.isPlaying) {
+        this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
+
+        if (this.progress >= 1.0) {
+          if (this.loop || isDynamicScene) {
+            this.progress = this.progress % 1.0;
+            this.lastSpokenIndex = -1;
           } else {
-            ast += `    (:target "${b.target}" :attr "${b.attr}" :expr "${b.expr}")\n`;
+            this.progress = 1.0;
+            this.pause();
+            this.emit('ended', { duration: this.durationSec });
           }
-        });
-        ast += `  ))\n`;
+        }
+
+        this.updateActiveKeyframeAndSpeech(false);
+
+        if (!this.vars) this.vars = {};
+        const speedParam = typeof this.vars.speedMultiplier === 'number'
+          ? this.vars.speedMultiplier
+          : (typeof this.vars.speed === 'number'
+              ? this.vars.speed
+              : (typeof this.vars.warpSpeed === 'number'
+                  ? this.vars.warpSpeed
+                  : (typeof this.vars.pilgrimSpeed === 'number' ? this.vars.pilgrimSpeed : (typeof this.vars.timeWarp === 'number' ? this.vars.timeWarp : 1.0))));
+
+        const clockDelta = deltaSec * Math.max(0.01, speedParam) * (this.speed || 1.0);
+        this.vars.simClock = (this.vars.simClock || 0) + clockDelta;
+        this.vars.clock = this.vars.simClock;
+        this.vars._simClock = this.vars.simClock;
+        this.vars._solarClock = this.vars.simClock;
+
+        if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo) && !this.backdropVideo.paused && this.backdropVideo.duration > 0) {
+          const expectedSec = this.progress * (this.durationSec || 10.0);
+          if (Math.abs(this.backdropVideo.currentTime - expectedSec) > 0.35) {
+            this.backdropVideo.currentTime = expectedSec;
+          }
+        }
+
+        if (this.scene) {
+          this.emit('timeupdate', {
+            progress: this.progress,
+            currentTime: this.progress * (this.durationSec || 10.0),
+            duration: this.durationSec
+          });
+        }
       }
 
-      ast += `)\n`;
-      return ast;
+      this.applyBindings(this.progress, deltaSec);
     }
 
-    /**
-     * Curriculum-aligned Socratic Checkpoints for interactive active recall.
-     * Purely declarative: extracts checkpoints from the active scene's AST definition.
-     * Never injects hard-coded or generic fallback questions into cartridges that do not have them.
-     */
-    getDefaultCheckpoints(presetId) {
-      if (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints)) {
-        return this.scene.interactive.checkpoints;
-      }
-      return [];
+    this.lastTimestamp = currentTimestamp;
+    if (typeof requestAnimationFrame !== 'undefined') {
+      this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
     }
+  }
 
-    /**
-     * Non-Linear Branching Decision Tree Handler
-     */
-    selectBranch(branchIndex) {
-      const cp = this.activeCheckpoint || (this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints[0]) || null;
-      if (!cp) return;
-      const branches = cp.branches || [];
-      const branch = branches[branchIndex];
-      if (!branch) return;
+  hotReloadSvg(svgMarkup) {
+    if (!svgMarkup || typeof svgMarkup !== 'string') return false;
+    try {
+      if (!this.scene) {
+        this.scene = { id: 'custom-scene', title: 'Custom SVG Scene', stage: 'DEVELOPER', duration: 10.0 };
+      }
+      this.scene.svgText = this.sanitizeSvg(svgMarkup);
 
-      if (this.audioSynth) this.audioSynth.playSuccessChime();
-      if (this.scormBridge) {
-        this.scormBridge.setScore(100);
-        this.scormBridge.setStatus('passed');
+      if (this._container) {
+        this.mountSceneAsset(this.scene, this._container);
+        this.applyBindings(this.progress);
       }
 
-      this.notifyParent({
-        type: 'BRANCH_SELECTED',
-        branchIndex,
-        label: branch.label,
-        targetTime: branch.targetTime,
-        explanation: branch.explanation
+      this.emit('svghotreloaded', { svg: this.scene.svgText, progress: this.progress });
+      this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'svg' });
+      return true;
+    } catch (err) {
+      console.error('[AST Engine] Failed to hot-reload SVG:', err);
+      return false;
+    }
+  }
+
+  hotReloadAst(astInput) {
+    if (!astInput) return false;
+    try {
+      let parsed = typeof astInput === 'string' ? this.parseAst(astInput) : astInput;
+      if (!parsed) return false;
+
+      if (!this.scene) this.scene = {};
+      this.scene.id = parsed.id || this.scene.id || 'custom-ast';
+      this.scene.title = parsed.title || this.scene.title || 'Custom AST Scene';
+      this.scene.stage = parsed.stage || this.scene.stage || 'DEVELOPER';
+      this.scene.duration = parsed.duration || this.scene.duration || 10.0;
+      this.scene.keyframes = parsed.keyframes || [];
+      this.scene.subtitles = parsed.subtitles || [];
+      this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];
+      if (parsed.interactive) {
+        this.scene.interactive = parsed.interactive;
+      } else if (parsed.checkpoints && parsed.checkpoints.length > 0) {
+        this.scene.interactive = { checkpoints: parsed.checkpoints, hotspots: [] };
+      } else {
+        this.scene.interactive = null;
+      }
+      if (parsed.camera) this.scene.camera = parsed.camera;
+      if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
+      this.scene.astSource = typeof astInput === 'string' ? astInput : null;
+
+      this.durationSec = this.scene.duration;
+
+      if (this._container) {
+        this.mountSceneAsset(this.scene, this._container);
+        this.applyBindings(this.progress);
+      }
+
+      this.emit('asthotreloaded', { ast: parsed, progress: this.progress });
+      this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'ast' });
+      return true;
+    } catch (err) {
+      console.error('[AST Engine] Failed to hot-reload AST:', err);
+      return false;
+    }
+  }
+
+  getStageSvgSnapshot() {
+    if (typeof document === 'undefined') return '';
+    const svg = document.getElementById('stage-svg');
+    if (!svg) return '';
+    const clone = svg.cloneNode(true);
+    const devOverlay = clone.querySelector('#dev-overlay-root');
+    if (devOverlay) devOverlay.remove();
+    return clone.outerHTML;
+  }
+
+  getCurrentAstSource() {
+    if (this.scene && this.scene.astSource) return this.scene.astSource;
+    if (!this.scene) return '';
+
+    const s = this.scene;
+    let ast = `(:scene :id "${s.id || 'custom'}" :title "${s.title || 'Parametric Scene'}" :stage "${s.stage || 'CURRICULUM'}" :duration ${(s.duration || 10.0).toFixed(1)}\n`;
+
+    if (s.subtitles && s.subtitles.length) {
+      ast += `  (:subtitles (\n`;
+      s.subtitles.forEach(sub => {
+        ast += `    (:start ${sub.start.toFixed(2)} :end ${sub.end.toFixed(2)} :en "${sub.en || ''}"${sub.es ? ` :es "${sub.es}"` : ''})\n`;
       });
-
-      if (typeof branch.targetTime === 'number') {
-        this.seek(branch.targetTime);
-      }
-      this.isBranching = false;
-      this.play();
+      ast += `  ))\n`;
     }
 
-    /**
-     * Compiles an Autonomous, Self-Contained Single Page Application (SPA) in a single .svg file
-     * Contains vector visuals, embedded HUD controls, audio speech synthesis, and Socratic checkpoint quizzes.
-     * Can be opened directly in any browser (file:///... or downloaded) with zero dependencies.
-     */
-    compileAutonomousSvgApplet() {
-      if (typeof document === 'undefined') return '';
-      const stage = document.getElementById('stage-svg');
-      if (!stage) return '';
+    if (s.keyframes && s.keyframes.length) {
+      ast += `  (:keyframes (\n`;
+      s.keyframes.forEach(kf => {
+        ast += `    (:t ${kf.t.toFixed(2)} :title "${kf.title}" :rule "${kf.rule}")\n`;
+      });
+      ast += `  ))\n`;
+    }
 
-      const clone = stage.cloneNode(true);
-      const devOverlay = clone.querySelector('#dev-overlay-root');
-      if (devOverlay) devOverlay.remove();
+    if (s.rawBindings && s.rawBindings.length) {
+      ast += `  (:bindings (\n`;
+      s.rawBindings.forEach(b => {
+        if (b.type === '3d-node') {
+          ast += `    (:3d-node :target "${b.target}" :x "${b.x}" :y "${b.y}" :z "${b.z}" :baseR ${b.baseR || 6})\n`;
+        } else {
+          ast += `    (:target "${b.target}" :attr "${b.attr}" :expr "${b.expr}")\n`;
+        }
+      });
+      ast += `  ))\n`;
+    }
 
-      // Extract inner visual SVG elements
-      const innerSvg = clone.innerHTML;
-      const sceneId = this.scene?.id || this.activePresetId || 'scene';
-      const sceneTitle = this.scene?.title || 'Interactive Vector Lesson';
-      const sceneStage = this.scene?.stage || 'UK CURRICULUM';
-      const duration = this.durationSec || 10.0;
-      const subtitles = this.scene?.subtitles || [];
-      const keyframes = this.scene?.keyframes || [];
-      const rawBindings = this.scene?.rawBindings || [];
-      const has3D = this.has3D();
-      const camera = this.scene?.camera || { yaw: 0, pitch: 0, distance: 1.0 };
-      const checkpoints = (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints))
-        ? this.scene.interactive.checkpoints
-        : ((this.scene && Array.isArray(this.scene.checkpoints)) ? this.scene.checkpoints : []);
+    ast += `)\n`;
+    return ast;
+  }
 
-      const manifestData = {
-        id: sceneId,
-        title: sceneTitle,
-        stage: sceneStage,
-        duration: duration,
-        subtitles: subtitles,
-        keyframes: keyframes,
-        bindings: rawBindings,
-        has3D: has3D,
-        camera: camera,
-        checkpoints: checkpoints
-      };
+  getDefaultCheckpoints(presetId) {
+    if (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints)) {
+      return this.scene.interactive.checkpoints;
+    }
+    return [];
+  }
 
-      const manifestJson = JSON.stringify(manifestData).replace(/<\/script>/gi, '<\\/script>');
+  selectBranch(branchIndex) {
+    const cp = this.activeCheckpoint || (this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints[0]) || null;
+    if (!cp) return;
+    const branches = cp.branches || [];
+    const branch = branches[branchIndex];
+    if (!branch) return;
 
-      return `<?xml version="1.0" encoding="UTF-8"?>
+    if (this.audioSynth) this.audioSynth.playSuccessChime();
+    if (this.scormBridge) {
+      this.scormBridge.setScore(100);
+      this.scormBridge.setStatus('passed');
+    }
+
+    this.notifyParent({
+      type: 'BRANCH_SELECTED',
+      branchIndex,
+      label: branch.label,
+      targetTime: branch.targetTime,
+      explanation: branch.explanation
+    });
+
+    if (typeof branch.targetTime === 'number') {
+      this.seek(branch.targetTime);
+    }
+    this.isBranching = false;
+    this.play();
+  }
+
+  compileAutonomousSvgApplet() {
+    if (typeof document === 'undefined') return '';
+    const stage = document.getElementById('stage-svg');
+    if (!stage) return '';
+
+    const clone = stage.cloneNode(true);
+    const devOverlay = clone.querySelector('#dev-overlay-root');
+    if (devOverlay) devOverlay.remove();
+
+    const innerSvg = clone.innerHTML;
+    const sceneId = this.scene?.id || this.activePresetId || 'scene';
+    const sceneTitle = this.scene?.title || 'Interactive Vector Lesson';
+    const sceneStage = this.scene?.stage || 'UK CURRICULUM';
+    const duration = this.durationSec || 10.0;
+    const subtitles = this.scene?.subtitles || [];
+    const keyframes = this.scene?.keyframes || [];
+    const rawBindings = this.scene?.rawBindings || [];
+    const has3D = this.has3D();
+    const camera = this.scene?.camera || { yaw: 0, pitch: 0, distance: 1.0 };
+    const checkpoints = (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints))
+      ? this.scene.interactive.checkpoints
+      : ((this.scene && Array.isArray(this.scene.checkpoints)) ? this.scene.checkpoints : []);
+
+    const manifestData = {
+      id: sceneId,
+      title: sceneTitle,
+      stage: sceneStage,
+      duration: duration,
+      subtitles: subtitles,
+      keyframes: keyframes,
+      bindings: rawBindings,
+      has3D: has3D,
+      camera: camera,
+      checkpoints: checkpoints
+    };
+
+    const manifestJson = JSON.stringify(manifestData).replace(/<\/script>/gi, '<\\/script>');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
 <svg viewBox="0 0 800 560" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
   <defs id="ast-master-defs">
     <filter id="hud-glow" x="-20%" y="-20%" width="140%" height="140%">
@@ -7525,7 +7270,6 @@ tick(currentTimestamp) {
       <stop offset="100%" stop-color="#020617" />
     </linearGradient>
 
-    <!-- Master Visual Filter Glows -->
     <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
       <feGaussianBlur stdDeviation="3.5" result="blur" />
       <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
@@ -7558,7 +7302,6 @@ tick(currentTimestamp) {
       <feGaussianBlur stdDeviation="5" />
     </filter>
 
-    <!-- Master Directional & Vector Markers -->
     <marker id="ast-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
       <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
     </marker>
@@ -7581,7 +7324,6 @@ tick(currentTimestamp) {
       <circle cx="3" cy="3" r="2.5" fill="#38bdf8" />
     </marker>
 
-    <!-- Master Grids & Patterns -->
     <pattern id="ast-grid-fine" width="20" height="20" patternUnits="userSpaceOnUse">
       <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5" />
     </pattern>
@@ -7594,7 +7336,6 @@ tick(currentTimestamp) {
       <circle cx="2" cy="2" r="1" fill="#475569" fill-opacity="0.6" />
     </pattern>
 
-    <!-- Master Gradients -->
     <linearGradient id="ast-grad-cyan" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#38bdf8" />
       <stop offset="100%" stop-color="#0284c7" />
@@ -7633,49 +7374,40 @@ tick(currentTimestamp) {
     ]]>
   </style>
 
-  <!-- Canvas Background -->
   <rect width="800" height="560" fill="url(#hud-bg-grad)" />
 
-  <!-- Top Title Bar -->
   <g id="hud-top-bar">
     <rect x="0" y="0" width="800" height="34" fill="#0b1120e6" stroke="#1e293b" stroke-width="1" />
     <text x="18" y="22" fill="#38bdf8" font-size="12" font-weight="800" font-family="system-ui, -apple-system, sans-serif">${sceneStage} • ${sceneTitle}</text>
     <text x="782" y="22" fill="#64748b" font-size="10" font-weight="700" text-anchor="end" font-family="system-ui, -apple-system, sans-serif">⚡ AUTONOMOUS SVG SPA • ST JOSEPH'S</text>
   </g>
 
-  <!-- Vector Scene Stage Viewport (480px height) -->
   <g id="scene-stage" transform="translate(0, 30)">
     ${innerSvg}
   </g>
 
-  <!-- Synchronized Subtitle Overlay -->
   <g id="hud-subtitle-group" transform="translate(400, 470)">
     <rect id="sub-bg" x="-360" y="-18" width="720" height="36" rx="8" fill="#0f172af0" stroke="#38bdf850" stroke-width="1" />
     <text id="sub-text" x="0" y="5" fill="#f8fafc" font-size="13" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">Loading lesson...</text>
   </g>
 
-  <!-- Integrated Bottom HUD Control Bar -->
   <g id="hud-control-bar">
     <rect x="0" y="490" width="800" height="70" fill="url(#hud-bar-grad)" stroke="#1e293b" stroke-width="1.5" />
     
-    <!-- Scrubber Progress Track -->
     <rect id="track-bg" x="20" y="500" width="760" height="6" rx="3" fill="#334155" cursor="pointer" />
     <rect id="track-fill" x="20" y="500" width="0" height="6" rx="3" fill="#38bdf8" pointer-events="none" />
     <circle id="track-thumb" cx="20" cy="503" r="6" fill="#ffffff" stroke="#0284c7" stroke-width="2" cursor="pointer" />
 
-    <!-- Play/Pause Button -->
     <g id="btn-play" class="hud-btn" transform="translate(20, 516)">
       <rect width="76" height="30" rx="6" fill="#2563eb" />
       <text id="txt-play" x="38" y="20" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">▶ Play</text>
     </g>
 
-    <!-- Reset Button -->
     <g id="btn-reset" class="hud-btn" transform="translate(104, 516)">
       <rect width="64" height="30" rx="6" fill="#334155" />
       <text x="32" y="20" fill="#e2e8f0" font-size="12" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">↺ Reset</text>
     </g>
 
-    <!-- Step Back & Forward -->
     <g id="btn-prev" class="hud-btn" transform="translate(176, 516)">
       <rect width="32" height="30" rx="6" fill="#1e293b" stroke="#475569" />
       <text x="16" y="20" fill="#cbd5e1" font-size="12" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">◀</text>
@@ -7685,45 +7417,36 @@ tick(currentTimestamp) {
       <text x="16" y="20" fill="#cbd5e1" font-size="12" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">▶</text>
     </g>
 
-    <!-- Time Readout -->
     <text id="txt-time" x="260" y="536" fill="#94a3b8" font-size="12" font-family="ui-monospace, monospace" font-weight="600">00:00 / 00:10</text>
 
-    <!-- Speed Cycle Button -->
     <g id="btn-speed" class="hud-btn" transform="translate(370, 516)">
       <rect width="48" height="30" rx="6" fill="#1e293b" stroke="#475569" />
       <text id="txt-speed" x="24" y="20" fill="#38bdf8" font-size="11" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">1.0x</text>
     </g>
 
-    <!-- Voice Narration Button (Web Speech) -->
     <g id="btn-voice" class="hud-btn" transform="translate(426, 516)">
       <rect id="bg-voice" width="86" height="30" rx="6" fill="#1e293b" stroke="#475569" />
       <text id="txt-voice" x="43" y="20" fill="#cbd5e1" font-size="11" font-weight="600" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">🎙️ Voice</text>
     </g>
 
-    <!-- Socratic Quiz Trigger Button -->
     <g id="btn-quiz" class="hud-btn" transform="translate(520, 516)">
       <rect width="78" height="30" rx="6" fill="#047857" />
       <text x="39" y="20" fill="#ecfdf5" font-size="11" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">🎯 Quiz</text>
     </g>
 
-    <!-- Autonomous Status Indicator -->
     <circle cx="700" cy="531" r="4" fill="#22c55e" />
     <text x="710" y="535" fill="#22c55e" font-size="10" font-weight="700" font-family="system-ui, -apple-system, sans-serif">OFFLINE SPA</text>
   </g>
 
-  <!-- Interactive Socratic Checkpoint Modal Card -->
   <g id="quiz-modal" style="display:none;" transform="translate(100, 70)">
     <rect width="600" height="360" rx="16" fill="#0f172af5" stroke="#38bdf8" stroke-width="2" filter="url(#hud-card-shadow)" />
     
-    <!-- Modal Header -->
     <rect x="0" y="0" width="600" height="50" rx="16" fill="#1e293b" />
     <text x="24" y="32" fill="#38bdf8" font-size="16" font-weight="800" font-family="system-ui, -apple-system, sans-serif">🎯 Socratic Checkpoint</text>
     <text x="576" y="32" fill="#94a3b8" font-size="12" font-weight="600" text-anchor="end" font-family="system-ui, -apple-system, sans-serif">Formative Check</text>
 
-    <!-- Question Prompt -->
     <text id="quiz-question-txt" x="24" y="85" fill="#f8fafc" font-size="13" font-weight="700" font-family="system-ui, -apple-system, sans-serif">Loading challenge...</text>
 
-    <!-- Options A, B, C -->
     <g id="quiz-opt-0" class="quiz-btn" transform="translate(24, 110)">
       <rect width="552" height="42" rx="8" fill="#1e293b" stroke="#334155" stroke-width="1.5" />
       <text id="quiz-opt-txt-0" x="16" y="26" fill="#e2e8f0" font-size="12" font-family="system-ui, -apple-system, sans-serif">Option A</text>
@@ -7737,10 +7460,8 @@ tick(currentTimestamp) {
       <text id="quiz-opt-txt-2" x="16" y="26" fill="#e2e8f0" font-size="12" font-family="system-ui, -apple-system, sans-serif">Option C</text>
     </g>
 
-    <!-- Diagnostic Feedback Message -->
     <text id="quiz-feedback-txt" x="24" y="282" fill="#94a3b8" font-size="12" font-weight="600" font-family="system-ui, -apple-system, sans-serif">Select an option to evaluate your understanding.</text>
 
-    <!-- Bottom Action Controls -->
     <g id="btn-quiz-resume" class="quiz-btn" style="display:none;" transform="translate(456, 305)">
       <rect width="120" height="34" rx="6" fill="#2563eb" />
       <text x="60" y="22" fill="#ffffff" font-size="12" font-weight="700" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">Resume ▶</text>
@@ -7751,7 +7472,6 @@ tick(currentTimestamp) {
     </g>
   </g>
 
-  <!-- Autonomous Micro-Player Execution Engine -->
   <script type="text/javascript">
     <![CDATA[
     (function () {
@@ -7766,7 +7486,6 @@ tick(currentTimestamp) {
       let lastSpokenIndex = -1;
       const duration = data.duration || 10.0;
 
-      // DOM references
       const elTrackBg = document.getElementById('track-bg');
       const elTrackFill = document.getElementById('track-fill');
       const elTrackThumb = document.getElementById('track-thumb');
@@ -7792,7 +7511,6 @@ tick(currentTimestamp) {
       let activeCheckpoint = null;
       const triggeredCheckpoints = {};
 
-      // AstMath Master Math & Transform Extension for autonomous SVG
       const AstMath = {
         clamp: (v, min = 0, max = 1) => Math.max(min, Math.min(max, Number(v) || 0)),
         lerp: (a, b, t) => (Number(a) || 0) + ((Number(b) || 0) - (Number(a) || 0)) * (Number(t) || 0),
@@ -7823,7 +7541,6 @@ tick(currentTimestamp) {
       };
       Object.assign(Math, AstMath);
 
-      // Compile continuous mathematical AST expressions
       const compiledBindings = (data.bindings || []).map(b => {
         if (!b.expr) return null;
         try {
@@ -7849,7 +7566,7 @@ tick(currentTimestamp) {
               if (b.attr === 'textContent') {
                 n.textContent = String(val);
               } else if (b.attr === 'style' || b.attr.startsWith('style.')) {
-                const prop = b.attr.replace(/^style\\./, '');
+                const prop = b.attr.replace(/^style\./, '');
                 n.style[prop] = val;
               } else {
                 n.setAttribute(b.attr, String(val));
@@ -7858,7 +7575,6 @@ tick(currentTimestamp) {
           } catch (err) {}
         }
 
-        // Subtitles
         const curSec = t * duration;
         let foundSub = null;
         let subIdx = -1;
@@ -7874,7 +7590,6 @@ tick(currentTimestamp) {
         }
         if (elSubText) elSubText.textContent = foundSub || (data.title + ' • Step ' + Math.ceil(t * 4));
 
-        // On-Device Web Speech Synthesis
         if (voiceEnabled && 'speechSynthesis' in window && subIdx >= 0 && subIdx !== lastSpokenIndex && foundSub) {
           lastSpokenIndex = subIdx;
           try {
@@ -7885,7 +7600,6 @@ tick(currentTimestamp) {
           } catch (e) {}
         }
 
-        // Formative Socratic Checkpoint Trigger
         if (isPlaying && data.checkpoints && data.checkpoints.length) {
           for (let c = 0; c < data.checkpoints.length; c++) {
             const cp = data.checkpoints[c];
@@ -7898,7 +7612,6 @@ tick(currentTimestamp) {
           }
         }
 
-        // Scrubber HUD updates
         const trackWidth = 760;
         const fillW = Math.max(0, Math.min(trackWidth, t * trackWidth));
         if (elTrackFill) elTrackFill.setAttribute('width', fillW);
@@ -7998,7 +7711,6 @@ tick(currentTimestamp) {
         });
       }
 
-      // Event Listeners
       if (elBtnPlay) elBtnPlay.onclick = function () { isPlaying ? pause() : play(); };
       if (elBtnReset) elBtnReset.onclick = function () {
         pause();
@@ -8020,9 +7732,7 @@ tick(currentTimestamp) {
         if (elTxtVoice) elTxtVoice.textContent = voiceEnabled ? '🔊 Voice ON' : '🎙️ Voice';
       };
       if (elBtnQuiz) elBtnQuiz.onclick = function () {
-        if (!data.checkpoints || !data.checkpoints.length) {
-          return;
-        }
+        if (!data.checkpoints || !data.checkpoints.length) return;
         if (elQuizModal && elQuizModal.style.display === 'block') {
           elQuizModal.style.display = 'none';
           return;
@@ -8047,638 +7757,238 @@ tick(currentTimestamp) {
         };
       }
 
-      // Keyboard Controls
       window.addEventListener('keydown', function (e) {
         if (e.code === 'Space') { e.preventDefault(); isPlaying ? pause() : play(); }
         else if (e.code === 'ArrowLeft') { e.preventDefault(); seek(progress - 0.05); }
         else if (e.code === 'ArrowRight') { e.preventDefault(); seek(progress + 0.05); }
       });
 
-      // Initial Frame
       applyBindings(0.0);
     })();
     ]]>
   </script>
 </svg>`;
+  }
+}
+
+// Setup postMessage Gateway with Origin Validation
+function setupPostMessageBridge(engine, uiController) {
+  if (typeof window === 'undefined') return;
+
+  window.addEventListener('message', (event) => {
+    const expectedOrigin = engine.targetOrigin;
+    if (expectedOrigin && expectedOrigin !== '*' && event.origin !== expectedOrigin) {
+      if (window.location.origin && window.location.origin !== 'null' && event.origin !== window.location.origin) {
+        console.warn('[AST-Player] Rejected unauthorized cross-origin message from:', event.origin);
+        return;
+      }
     }
-  }
 
-  // Setup postMessage Gateway with Origin Validation
-  function setupPostMessageBridge(engine, uiController) {
-    if (typeof window === 'undefined') return;
+    const data = event.data;
+    if (!data || typeof data !== 'object') return;
 
-    window.addEventListener('message', (event) => {
-      const expectedOrigin = engine.targetOrigin;
-      if (expectedOrigin && expectedOrigin !== '*' && event.origin !== expectedOrigin) {
-        if (window.location.origin && window.location.origin !== 'null' && event.origin !== window.location.origin) {
-          console.warn('[AST-Player] Rejected unauthorized cross-origin message from:', event.origin);
-          return;
-        }
-      }
-
-      const data = event.data;
-      if (!data || typeof data !== 'object') return;
-
-      switch (data.type) {
-        case 'SEEK':
-          if (typeof data.progress === 'number') engine.seek(data.progress);
-          break;
-        case 'PLAY':
-          engine.play();
-          break;
-        case 'PAUSE':
-          engine.pause();
-          break;
-        case 'TOGGLE_PLAY':
-          engine.togglePlay();
-          break;
-        case 'SET_LOOP':
-          if (typeof data.loop === 'boolean') engine.setLoop(data.loop);
-          break;
-        case 'TOGGLE_LOOP':
-          engine.toggleLoop();
-          break;
-        case 'SET_VOLUME':
-          if (typeof data.volume === 'number') engine.setVolume(data.volume);
-          break;
-        case 'SET_MUTED':
-          if (typeof data.muted === 'boolean') engine.setMuted(data.muted);
-          break;
-        case 'TOGGLE_MUTE':
-          engine.toggleMute();
-          break;
-        case 'SET_GRAVITY':
-          if (typeof data.gravity === 'number' && engine.physics) engine.physics.setGravity(data.gravity);
-          break;
-        case 'SET_RESTITUTION':
-          if (typeof data.bounce === 'number' && engine.physics) engine.physics.setRestitution(data.bounce);
-          break;
-        case 'SET_FRICTION':
-          if (typeof data.friction === 'number' && engine.physics) engine.physics.setFriction(data.friction);
-          break;
-        case 'RESET_PHYSICS':
-          if (engine.physics) engine.physics.reset();
-          break;
-        case 'PHYSICS_IMPULSE':
-          if (engine.physics) engine.physics.applyImpulse(data.target || data.id, data.fx || 0, data.fy || -400);
-          break;
-        case 'PHYSICS_JUMP':
-          if (engine.physics) engine.physics.jump(data.target || data.id, data.jumpVelocity || -480);
-          break;
-        case 'SET_SPEED':
-          if (data.speed) engine.setSpeed(data.speed);
-          break;
-        case 'SET_LANGUAGE':
-        case 'SET_LANG':
-          if (data.lang) engine.setLanguage(data.lang);
-          if (uiController && uiController.updateView) uiController.updateView();
-          break;
-        case 'SET_BILINGUAL_SUBTITLES':
-          engine.setBilingualSubtitles(data.enabled);
-          if (uiController && uiController.updateView) uiController.updateView();
-          break;
-        case 'SET_SPEECH_RATE':
-          if (data.rate) engine.setSpeechRate(data.rate);
-          break;
-        case 'SET_PRESET':
-          if (data.preset) {
-            const canonicalPreset = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
-              ? global.ASTSceneRegistry.normalizeId(data.preset)
-              : data.preset;
-            if (engine.activePresetId === canonicalPreset && engine._mountedSceneId === canonicalPreset && engine.scene) {
-              if (data.play === true && !engine.isPlaying) {
-                engine.play();
-              } else if (data.play === false && engine.isPlaying) {
-                engine.pause();
-              }
-            } else {
-              engine.loadScene(canonicalPreset, data.play !== false);
+    switch (data.type) {
+      case 'SEEK':
+        if (typeof data.progress === 'number') engine.seek(data.progress);
+        break;
+      case 'PLAY':
+        engine.play();
+        break;
+      case 'PAUSE':
+        engine.pause();
+        break;
+      case 'TOGGLE_PLAY':
+        engine.togglePlay();
+        break;
+      case 'SET_LOOP':
+        if (typeof data.loop === 'boolean') engine.setLoop(data.loop);
+        break;
+      case 'TOGGLE_LOOP':
+        engine.toggleLoop();
+        break;
+      case 'SET_VOLUME':
+        if (typeof data.volume === 'number') engine.setVolume(data.volume);
+        break;
+      case 'SET_MUTED':
+        if (typeof data.muted === 'boolean') engine.setMuted(data.muted);
+        break;
+      case 'TOGGLE_MUTE':
+        engine.toggleMute();
+        break;
+      case 'SET_GRAVITY':
+        if (typeof data.gravity === 'number' && engine.physics) engine.physics.setGravity(data.gravity);
+        break;
+      case 'SET_RESTITUTION':
+        if (typeof data.bounce === 'number' && engine.physics) engine.physics.setRestitution(data.bounce);
+        break;
+      case 'SET_FRICTION':
+        if (typeof data.friction === 'number' && engine.physics) engine.physics.setFriction(data.friction);
+        break;
+      case 'RESET_PHYSICS':
+        if (engine.physics) engine.physics.reset();
+        break;
+      case 'PHYSICS_IMPULSE':
+        if (engine.physics) engine.physics.applyImpulse(data.target || data.id, data.fx || 0, data.fy || -400);
+        break;
+      case 'PHYSICS_JUMP':
+        if (engine.physics) engine.physics.jump(data.target || data.id, data.jumpVelocity || -480);
+        break;
+      case 'SET_SPEED':
+        if (data.speed) engine.setSpeed(data.speed);
+        break;
+      case 'SET_LANGUAGE':
+      case 'SET_LANG':
+        if (data.lang) engine.setLanguage(data.lang);
+        if (uiController && uiController.updateView) uiController.updateView();
+        break;
+      case 'SET_BILINGUAL_SUBTITLES':
+        engine.setBilingualSubtitles(data.enabled);
+        if (uiController && uiController.updateView) uiController.updateView();
+        break;
+      case 'SET_SPEECH_RATE':
+        if (data.rate) engine.setSpeechRate(data.rate);
+        break;
+      case 'SET_PRESET':
+        if (data.preset) {
+          const canonicalPreset = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
+            ? global.ASTSceneRegistry.normalizeId(data.preset)
+            : data.preset;
+          if (engine.activePresetId === canonicalPreset && engine._mountedSceneId === canonicalPreset && engine.scene) {
+            if (data.play === true && !engine.isPlaying) {
+              engine.play();
+            } else if (data.play === false && engine.isPlaying) {
+              engine.pause();
             }
-          }
-          break;
-        case 'STEP_NEXT_KEYFRAME':
-        case 'NEXT_SLIDE':
-          if (engine.isContinuousSim) break;
-          if (uiController && typeof uiController.stepToNextKeyframe === 'function') {
-            uiController.stepToNextKeyframe();
           } else {
-            engine.step(0.05);
+            engine.loadScene(canonicalPreset, data.play !== false);
           }
-          break;
-        case 'STEP_PREV_KEYFRAME':
-        case 'PREV_SLIDE':
-          if (engine.isContinuousSim) break;
-          if (uiController && typeof uiController.stepToPrevKeyframe === 'function') {
-            uiController.stepToPrevKeyframe();
-          } else {
-            engine.step(-0.05);
-          }
-          break;
-        case 'STEP_TO_KEYFRAME':
-        case 'GOTO_SLIDE':
-          if (engine.isContinuousSim) break;
-          if (typeof data.progress === 'number') {
-            engine.seek(data.progress);
-            if (uiController && typeof uiController.onStopReached === 'function') {
-              uiController.onStopReached(data.progress);
-            }
-          }
-          break;
-        case 'TOGGLE_BSL':
-          if (uiController && typeof uiController.toggleBsl === 'function') {
-            uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
-          }
-          break;
-        case 'SET_BSL':
-          if (uiController && typeof uiController.toggleBsl === 'function') {
-            uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
-          }
-          break;
-        case 'TRIGGER_CHECKPOINT':
-        case 'TAKE_QUIZ':
-          if (uiController && typeof uiController.toggleCheckpointView === 'function') {
-            uiController.toggleCheckpointView();
-          } else if (uiController && typeof uiController.triggerFirstCheckpoint === 'function') {
-            uiController.triggerFirstCheckpoint();
-          }
-          break;
-        case 'TOGGLE_CHECKPOINT':
-          if (uiController && typeof uiController.toggleCheckpointView === 'function') {
-            uiController.toggleCheckpointView();
-          }
-          break;
-        case 'TOGGLE_INTERACTIVE_MODE':
-          if (uiController && typeof uiController.toggleInteractiveMode === 'function') {
-            uiController.toggleInteractiveMode();
-          }
-          break;
-        case 'SET_QUESTIONS':
-        case 'SET_INTERACTIVE_MODE':
-          if (uiController && typeof uiController.setInteractiveMode === 'function') {
-            const isEnabled = typeof data.enabled === 'boolean' ? data.enabled : (typeof data.value === 'boolean' ? data.value : true);
-            uiController.setInteractiveMode(isEnabled);
-          }
-          break;
-        case 'CLOSE_CHECKPOINT':
-          if (uiController && typeof uiController.closeInteractiveCard === 'function') {
-            uiController.closeInteractiveCard(false);
-          }
-          break;
-        case 'SET_THEME':
-          if (data.theme && uiController && uiController.setTheme) {
-            uiController.setTheme(data.theme);
-          }
-          break;
-        case 'ROTATE_3D':
-          if (typeof data.deltaYaw === 'number' || typeof data.deltaPitch === 'number') {
-            engine.rotateCamera(data.deltaYaw || 0, data.deltaPitch || 0);
-          }
-          break;
-        case 'ZOOM_3D':
-          if (typeof data.deltaZoom === 'number') {
-            engine.zoomCamera(data.deltaZoom);
-          }
-          break;
-        case 'SET_CAMERA':
-          if (typeof data.yaw === 'number') engine.cameraOrbit.yawOffset = data.yaw;
-          if (typeof data.pitch === 'number') engine.cameraOrbit.pitchOffset = data.pitch;
-          if (typeof data.distanceScale === 'number') engine.cameraOrbit.distanceScale = data.distanceScale;
-          engine.applyBindings(engine.progress);
-          engine.emit('camerachange', { ...engine.cameraOrbit });
-          break;
-        case 'AUDIO_PLAY_CLICK':
-          if (engine.audioSynth) engine.audioSynth.playClick(data.freq || 900);
-          break;
-        case 'AUDIO_PLAY_SUCCESS':
-          if (engine.audioSynth) engine.audioSynth.playSuccessChime();
-          break;
-        case 'AUDIO_PLAY_FAIL':
-          if (engine.audioSynth) engine.audioSynth.playFailBuzz();
-          break;
-        case 'AUDIO_PLAY_SPRING':
-          if (engine.audioSynth) engine.audioSynth.playSpring(data.freq || 440);
-          break;
-        case 'AUDIO_PLAY_BOING':
-          if (engine.audioSynth) engine.audioSynth.playBoing(data.freq || 220);
-          break;
-        case 'AUDIO_PLAY_WHISTLE':
-          if (engine.audioSynth) engine.audioSynth.playSlideWhistle(data.startFreq || 280, data.endFreq || 840, data.duration || 0.35);
-          break;
-        case 'AUDIO_PLAY_POP':
-          if (engine.audioSynth) engine.audioSynth.playPop(data.freq || 620);
-          break;
-        case 'AUDIO_PLAY_WHOOSH':
-          if (engine.audioSynth) engine.audioSynth.playWhoosh();
-          break;
-        case 'AUDIO_SET_HUM':
-          if (engine.audioSynth) engine.audioSynth.setHum(data.freq || 60, data.volume || 0.05);
-          break;
-        case 'AUDIO_STOP_HUM':
-          if (engine.audioSynth) engine.audioSynth.stopHum();
-          break;
-        case 'SIM_ACTION':
-          if (data.action === 'FEED_FISH' && global.__astGestures && global.__astGestures.stageSvg) {
-            const evt = new CustomEvent('feed_fish', { detail: { x: 300 + Math.random() * 200, y: 100 + Math.random() * 80 } });
-            global.__astGestures.stageSvg.dispatchEvent(evt);
-          } else if (data.action === 'TAP_GLASS' && global.__astGestures && global.__astGestures.stageSvg) {
-            const evt = new CustomEvent('tap_glass', { detail: { x: 400, y: 240 } });
-            global.__astGestures.stageSvg.dispatchEvent(evt);
-          }
-          break;
-        case 'TOGGLE_PEN':
-          if (global.__astGestures) {
-            global.__astGestures.isPenActive = data.enabled !== undefined ? Boolean(data.enabled) : !global.__astGestures.isPenActive;
-            if (global.__astGestures.stageSvg) {
-              global.__astGestures.stageSvg.style.cursor = global.__astGestures.isPenActive ? 'crosshair' : 'default';
-            }
-          }
-          break;
-        case 'CLEAR_INK':
-        case 'CLEAR_WHITEBOARD_INK':
-          if (global.__astGestures) {
-            global.__astGestures.clearWhiteboardInk();
-          }
-          break;
-        case 'UNDO_WHITEBOARD_INK':
-          if (global.__astGestures) {
-            global.__astGestures.undoLastStroke();
-          }
-          break;
-        case 'IMPORT_WHITEBOARD_INK':
-        case 'LOAD_WHITEBOARD_INK':
-          if (global.__astGestures) {
-            const raw = data.data || data.ast || data.json;
-            if (typeof raw === 'string') {
-              if (raw.trim().startsWith('(')) {
-                global.__astGestures.importInkFromAST(raw);
-              } else {
-                try {
-                  global.__astGestures.importInkFromJSON(JSON.parse(raw));
-                } catch {
-                  global.__astGestures.importInkFromAST(raw);
-                }
-              }
-            } else if (typeof raw === 'object') {
-              global.__astGestures.importInkFromJSON(raw);
-            }
-          }
-          break;
-        case 'EXPORT_WHITEBOARD_INK':
-          if (global.__astGestures) {
-            global.__astGestures.broadcastInkSession();
-          }
-          break;
-        case 'TOGGLE_XRAY':
-          if (global.__astGestures) {
-            global.__astGestures.isXRayActive = data.enabled !== undefined ? Boolean(data.enabled) : !global.__astGestures.isXRayActive;
-          }
-          break;
-        case 'SET_VAR':
-          if (data.name !== undefined && data.value !== undefined) {
-            engine.setVar(data.name, data.value);
-          }
-          break;
-        case 'RESET_VARS':
-          engine.resetVars();
-          break;
-        case 'GET_VARS':
-          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-            window.parent.postMessage({ type: 'VARS_STATE', vars: { ...(engine.vars || {}) } }, '*');
-          }
-          break;
-        case 'GET_CONTEXT_SNAPSHOT':
-          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-            window.parent.postMessage({
-              type: 'CONTEXT_SNAPSHOT',
-              sceneId: engine.activePresetId,
-              title: engine.currentScene ? engine.currentScene.title : engine.activePresetId,
-              stage: engine.currentScene ? engine.currentScene.stage : 'CURRICULUM',
-              progress: engine.progress,
-              currentTime: engine.currentTime,
-              duration: engine.duration,
-              vars: { ...(engine.vars || {}) },
-              computed: { ...(engine.computedValues || {}) },
-            }, '*');
-          }
-          break;
-        case 'SCORM_SET_SCORE':
-          if (engine.scormBridge) engine.scormBridge.setScore(data.score, data.min || 0, data.max || 100);
-          break;
-        case 'SCORM_SET_STATUS':
-          if (engine.scormBridge) engine.scormBridge.setStatus(data.status);
-          break;
-        case 'SELECT_BRANCH':
-          if (typeof engine.selectBranch === 'function') engine.selectBranch(data.branchIndex);
-          break;
-        case 'RESET_3D':
-          engine.resetCamera();
-          break;
-        case 'ACTUATE_OPCODE':
-          if (data.opcode) {
-            engine.actuateOpcode(data.opcode);
-          }
-          break;
-        case 'CAST_CAMERA_RAY':
-          engine.emitSpatialTelemetry('QUERY', data.screenX, data.screenY);
-          break;
-        case 'GET_SPATIAL_TELEMETRY':
-          engine.emitSpatialTelemetry('REQUEST');
-          break;
-        case 'NUDGE_NODE':
-          if (data.target && Array.isArray(data.dxyz)) {
-            engine.actuateNode(data.target, data.dxyz[0], data.dxyz[1], data.dxyz[2], true);
-          }
-          break;
-        case 'ROTATE_CAMERA_ORBIT':
-          if (typeof data.theta === 'number' || typeof data.phi === 'number') {
-            engine.actuateCamera(data.theta || 0, data.phi || 0, Boolean(data.relative));
-          }
-          break;
-        case 'VOICE_COMMAND':
-        case 'EXECUTE_VOICE_COMMAND':
-          if (uiController && typeof uiController.handleVoiceCommand === 'function') {
-            uiController.handleVoiceCommand(data.command || data.transcript);
-          }
-          break;
-        case 'TOGGLE_VOICE_COMMANDS':
-          if (uiController && typeof uiController.toggleVoiceCommands === 'function') {
-            uiController.toggleVoiceCommands();
-          }
-          break;
-        case 'START_VOICE_COMMANDS':
-          if (uiController && typeof uiController.startVoiceCommands === 'function') {
-            uiController.startVoiceCommands();
-          }
-          break;
-        case 'STOP_VOICE_COMMANDS':
-          if (uiController && typeof uiController.stopVoiceCommands === 'function') {
-            uiController.stopVoiceCommands();
-          }
-          break;
-        case 'REQUEST_PRINT':
-          window.print();
-          break;
-        case 'INJECT_CHECKPOINT':
-          if (data.checkpoint && engine.scene) {
-            if (!engine.scene.interactive) engine.scene.interactive = { checkpoints: [], hotspots: [] };
-            if (!Array.isArray(engine.scene.interactive.checkpoints)) engine.scene.interactive.checkpoints = [];
-            const cp = {
-              t: data.checkpoint.t !== undefined ? data.checkpoint.t : engine.progress,
-              title: data.checkpoint.title || 'PRACTICE QUESTION',
-              prompt: data.checkpoint.prompt || data.checkpoint.question,
-              options: data.checkpoint.options || [],
-              answer: data.checkpoint.answer !== undefined ? data.checkpoint.answer : 0,
-              explanation: data.checkpoint.explanation || ''
-            };
-            engine.scene.interactive.checkpoints.push(cp);
-            engine.pause();
-            if (uiController && typeof uiController.triggerCheckpoint === 'function') {
-              uiController.triggerCheckpoint(cp, engine.scene.interactive.checkpoints.length - 1);
-            }
-          }
-          break;
-        case 'LOAD_CARTRIDGE':
-          if (data.cartridge) {
-            const cart = data.cartridge;
-            const cid = cart.id || 'custom-cartridge';
-            const parsed = cart.ast ? engine.parseAst(cart.ast) : null;
-            const sceneMeta = {
-              id: cid,
-              title: cart.title || (parsed && parsed.title) || cid,
-              stage: cart.stage || (parsed && parsed.stage) || 'CUSTOM CARTRIDGE',
-              duration: cart.duration || (parsed && parsed.duration) || 12.0,
-              svgMarkup: cart.svg || cart.svgMarkup || '',
-              svgText: cart.svg || cart.svgMarkup || '',
-              astSource: cart.ast || cart.astSource || '',
-              astText: cart.ast || cart.astSource || '',
-              ...parsed
-            };
-            if (global.ASTSceneRegistry) {
-              global.ASTSceneRegistry.register(cid, sceneMeta);
-            }
-            engine.sceneCache[cid] = null; // force fresh reload
-            engine.loadScene(cid, true);
-            if (uiController && uiController.showToast) {
-              uiController.showToast(`⚡ Loaded Cartridge: ${sceneMeta.title}`);
-            }
-          }
-          break;
-        case 'LOAD_AST':
-          if (data.ast) {
-            const parsed = engine.parseAst(data.ast);
-            if (parsed && parsed.id) {
-              if (global.ASTSceneRegistry) global.ASTSceneRegistry.register(parsed.id, parsed);
-              engine.loadScene(parsed.id);
-            }
-          }
-          break;
-        case 'HOT_RELOAD_SVG':
-          if (data.svg) {
-            engine.hotReloadSvg(data.svg);
-            if (uiController && uiController.showToast) {
-              uiController.showToast('⚡ SVG Stage Hot-Reloaded');
-            }
-          }
-          break;
-        case 'HOT_RELOAD_AST':
-          if (data.ast) {
-            engine.hotReloadAst(data.ast);
-            if (uiController && uiController.showToast) {
-              uiController.showToast('⚡ AST Expressions Hot-Reloaded');
-            }
-          }
-          break;
-        case 'SET_DEV_MODE':
-          if (uiController && typeof uiController.setDevMode === 'function') {
-            uiController.setDevMode(Boolean(data.enabled));
-          }
-          break;
-        case 'OPEN_DEV_STUDIO':
-          if (uiController && typeof uiController.openDevStudio === 'function') {
-            uiController.openDevStudio(data.tab || 'svg');
-          }
-          break;
-        case 'UPDATE_ELEMENT_ATTR':
-          if (data.selector && data.attr && engine.container) {
-            const node = engine.container.querySelector(data.selector);
-            if (node) {
-              if (data.attr === 'style' || data.attr.startsWith('style.')) {
-                const prop = data.attr.replace(/^style\./, '');
-                node.style[prop] = data.value;
-              } else if (data.attr === 'textContent') {
-                node.textContent = data.value;
-              } else {
-                node.setAttribute(data.attr, data.value);
-              }
-            }
-          }
-          break;
-        case 'GET_STAGE_SVG':
-          engine.notifyParent({
-            type: 'STAGE_SVG_SNAPSHOT',
-            svg: engine.getStageSvgSnapshot(),
-            ast: engine.getCurrentAstSource(),
-            preset: engine.activePresetId
-          });
-          break;
-        case 'GET_AST_SOURCE':
-          engine.notifyParent({
-            type: 'AST_SOURCE_SNAPSHOT',
-            ast: engine.getCurrentAstSource(),
-            preset: engine.activePresetId
-          });
-          break;
-        case 'EXPORT_STANDALONE_APPLET':
-        case 'GET_STANDALONE_SVG': {
-          const appletSvg = engine.compileAutonomousSvgApplet();
-          const filename = `${engine.activePresetId || 'scene'}-standalone-applet.svg`;
-          engine.notifyParent({
-            type: 'STANDALONE_APPLET_COMPILED',
-            svg: appletSvg,
-            filename: filename,
-            preset: engine.activePresetId
-          });
-          if (uiController && typeof uiController.showToast === 'function') {
-            uiController.showToast('🚀 Standalone SVG SPA Compiled');
-          }
-          break;
         }
-        case 'EXPORT_OFFLINE_ZIP':
-        case 'DOWNLOAD_OFFLINE_ZIP':
-        case 'DOWNLOAD_ZIP': {
-          if (uiController && typeof uiController.downloadOfflineSuiteZip === 'function') {
-            uiController.downloadOfflineSuiteZip();
-          } else {
-            engine.notifyParent({
-              type: 'DOWNLOAD_ZIP',
-              filename: 'lumina-vector-player.zip',
-              url: '/lumina-vector-player.zip'
-            });
-          }
-          break;
+        break;
+      case 'STEP_NEXT_KEYFRAME':
+      case 'NEXT_SLIDE':
+        if (engine.isContinuousSim) break;
+        if (uiController && typeof uiController.stepToNextKeyframe === 'function') {
+          uiController.stepToNextKeyframe();
+        } else {
+          engine.step(0.05);
         }
-        case 'AI_VISUAL_COMMAND':
-          if (data.packet || data.actions) {
-            const packet = data.packet || {
-              transactionId: data.transactionId || `nano_${Date.now()}`,
-              actions: data.actions || [],
-              pedagogicalIntent: data.pedagogicalIntent || 'STEP_BY_STEP_DEMO',
-              rawSExpr: data.rawSExpr,
-              sayText: data.sayText
-            };
-            engine.executeAiVisualCommand(packet);
+        break;
+      case 'STEP_PREV_KEYFRAME':
+      case 'PREV_SLIDE':
+        if (engine.isContinuousSim) break;
+        if (uiController && typeof uiController.stepToPrevKeyframe === 'function') {
+          uiController.stepToPrevKeyframe();
+        } else {
+          engine.step(-0.05);
+        }
+        break;
+      case 'STEP_TO_KEYFRAME':
+      case 'GOTO_SLIDE':
+        if (engine.isContinuousSim) break;
+        if (typeof data.progress === 'number') {
+          engine.seek(data.progress);
+          if (uiController && typeof uiController.onStopReached === 'function') {
+            uiController.onStopReached(data.progress);
           }
-          break;
-        case 'PUPIL_INTERRUPT':
-        case 'CANCEL_AI_DEMO':
-          engine.preemptAiDemonstration('PARENT_REQUEST');
-          break;
-        case 'GET_TELEMETRY':
-          engine.emitTelemetrySnapshot('REQUESTED');
-          break;
-        case 'PING':
-          engine.notifyParent({
-            type: 'PONG',
-            ready: true,
-            version: ASTVectorPlayerEngine.VERSION,
-            license: ASTVectorPlayerEngine.LICENSE,
-            has3D: engine.has3D()
-          });
-          break;
-        case 'TOGGLE_OBS_DRAWER':
-          if (uiController && typeof uiController.toggleObsDrawer === 'function') {
-            uiController.toggleObsDrawer();
+        }
+        break;
+      case 'TOGGLE_BSL':
+      case 'SET_BSL':
+        if (uiController && typeof uiController.toggleBsl === 'function') {
+          uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
+        }
+        break;
+      case 'TRIGGER_CHECKPOINT':
+      case 'TAKE_QUIZ':
+      case 'TOGGLE_CHECKPOINT':
+        if (uiController && typeof uiController.toggleCheckpointView === 'function') {
+          uiController.toggleCheckpointView();
+        } else if (uiController && typeof uiController.triggerFirstCheckpoint === 'function') {
+          uiController.triggerFirstCheckpoint();
+        }
+        break;
+      case 'TOGGLE_INTERACTIVE_MODE':
+        if (uiController && typeof uiController.toggleInteractiveMode === 'function') {
+          uiController.toggleInteractiveMode();
+        }
+        break;
+      case 'SET_QUESTIONS':
+      case 'SET_INTERACTIVE_MODE':
+        if (uiController && typeof uiController.setInteractiveMode === 'function') {
+          const isEnabled = typeof data.enabled === 'boolean' ? data.enabled : (typeof data.value === 'boolean' ? data.value : true);
+          uiController.setInteractiveMode(isEnabled);
+        }
+        break;
+      case 'CLOSE_CHECKPOINT':
+        if (uiController && typeof uiController.closeInteractiveCard === 'function') {
+          uiController.closeInteractiveCard(false);
+        }
+        break;
+      case 'SET_THEME':
+        if (data.theme && uiController && uiController.setTheme) {
+          uiController.setTheme(data.theme);
+        }
+        break;
+      case 'ROTATE_3D':
+        if (typeof data.deltaYaw === 'number' || typeof data.deltaPitch === 'number') {
+          engine.rotateCamera(data.deltaYaw || 0, data.deltaPitch || 0);
+        }
+        break;
+      case 'ZOOM_3D':
+        if (typeof data.deltaZoom === 'number') {
+          engine.zoomCamera(data.deltaZoom);
+        }
+        break;
+      case 'SET_CAMERA':
+        if (typeof data.yaw === 'number') engine.cameraOrbit.yawOffset = data.yaw;
+        if (typeof data.pitch === 'number') engine.cameraOrbit.pitchOffset = data.pitch;
+        if (typeof data.distanceScale === 'number') engine.cameraOrbit.distanceScale = data.distanceScale;
+        engine.applyBindings(engine.progress);
+        engine.emit('camerachange', { ...engine.cameraOrbit });
+        break;
+      case 'AUDIO_PLAY_CLICK':
+        if (engine.audioSynth) engine.audioSynth.playClick(data.freq || 900);
+        break;
+      case 'AUDIO_PLAY_SUCCESS':
+        if (engine.audioSynth) engine.audioSynth.playSuccessChime();
+        break;
+      case 'AUDIO_PLAY_FAIL':
+        if (engine.audioSynth) engine.audioSynth.playFailBuzz();
+        break;
+      case 'AUDIO_PLAY_SPRING':
+        if (engine.audioSynth) engine.audioSynth.playSpring(data.freq || 440);
+        break;
+      case 'AUDIO_PLAY_BOING':
+        if (engine.audioSynth) engine.audioSynth.playBoing(data.freq || 220);
+        break;
+      case 'AUDIO_PLAY_WHISTLE':
+        if (engine.audioSynth) engine.audioSynth.playSlideWhistle(data.startFreq || 280, data.endFreq || 840, data.duration || 0.35);
+        break;
+      case 'AUDIO_PLAY_POP':
+        if (engine.audioSynth) engine.audioSynth.playPop(data.freq || 620);
+        break;
+      case 'AUDIO_PLAY_WHOOSH':
+        if (engine.audioSynth) engine.audioSynth.playWhoosh();
+        break;
+      case 'AUDIO_SET_HUM':
+        if (engine.audioSynth) engine.audioSynth.setHum(data.freq || 60, data.volume || 0.05);
+        break;
+      case 'AUDIO_STOP_HUM':
+        if (engine.audioSynth) engine.audioSynth.stopHum();
+        break;
+      case 'SIM_ACTION':
+        if (data.action === 'FEED_FISH' && global.__astGestures && global.__astGestures.stageSvg) {
+          const evt = new CustomEvent('feed_fish', { detail: { x: 300 + Math.random() * 200, y: 100 + Math.random() * 80 } });
+          global.__astGestures.stageSvg.dispatchEvent(evt);
+        } else if (data.action === 'TAP_GLASS' && global.__astGestures && global.__astGestures.stageSvg) {
+          const evt = new CustomEvent('tap_glass', { detail: { x: 400, y: 240 } });
+          global.__astGestures.stageSvg.dispatchEvent(evt);
+        }
+        break;
+      case 'TOGGLE_PEN':
+        if (global.__astGestures) {
+          global.__astGestures.isPenActive = data.enabled !== undefined ? Boolean(data.enabled) : !global.__astGestures.isPenActive;
+          if (global.__astGestures.stageSvg) {
+            global.__astGestures.stageSvg.style.cursor = global.__astGestures.isPenActive ? 'crosshair' : 'default';
           }
-          break;
-        case 'CONNECT_OBS':
-          if (uiController && uiController.obs) {
-            uiController.obs.connect(data.url, data.password);
-          }
-          break;
-        case 'DISCONNECT_OBS':
-          if (uiController && uiController.obs) {
-            uiController.obs.disconnect();
-          }
-          break;
-        case 'SET_OBS_RECORDING':
-          if (uiController && uiController.obs) {
-            data.record ? uiController.obs.startRecord() : uiController.obs.stopRecord();
-          }
-          break;
-        case 'SET_DISPLAY_CONFIG':
-          if (data.config && uiController && typeof uiController.applyDisplayConfig === 'function') {
-            uiController.applyDisplayConfig(data.config);
-          }
-          break;
-        case 'TOGGLE_SETTINGS_DRAWER':
-          if (uiController && typeof uiController.toggleSettingsDrawer === 'function') {
-            uiController.toggleSettingsDrawer();
-          }
-          break;
-        case 'TOGGLE_PIP':
-          if (uiController && typeof uiController.togglePictureInPicture === 'function') {
-            uiController.togglePictureInPicture();
-          }
-          break;
-        case 'PHYSICS_INIT':
-          if (engine.physics && data.config) {
-            engine.physics.clear();
-            if (data.config.gravity !== undefined) engine.physics.setGravity(data.config.gravity);
-            if (data.config.groundY !== undefined) engine.physics.groundY = data.config.groundY;
-            if (data.config.friction !== undefined) engine.physics.friction = data.config.friction;
-            if (Array.isArray(data.config.bodies)) {
-              data.config.bodies.forEach(b => engine.physics.addBody(b));
-            }
-          }
-          break;
-        case 'PHYSICS_IMPULSE':
-          if (engine.physics) {
-            engine.physics.applyImpulse(data.target || data.id, data.fx, data.fy);
-          }
-          break;
-        case 'PHYSICS_JUMP':
-          if (engine.physics) {
-            engine.physics.jump(data.target || data.id, data.vy || -480);
-          }
-          break;
-        case 'SET_GRAVITY':
-          if (engine.physics) {
-            engine.physics.setGravity(data.gravity);
-          }
-          break;
-        case 'PHYSICS_RESET':
-          if (engine.physics) {
-            engine.physics.reset();
-          }
-          break;
-        case 'PHYSICS_CLEAR':
-          if (engine.physics) {
-            engine.physics.clear();
-          }
-          break;
-      }
-    });
-
-    // Notify ready
-    engine.notifyParent({
-      type: 'PLAYER_READY',
-      version: ASTVectorPlayerEngine.VERSION,
-      license: ASTVectorPlayerEngine.LICENSE,
-      has3D: engine.has3D(),
-      hasInteractive: Boolean(engine.scene && engine.scene.interactive && engine.scene.interactive.checkpoints && engine.scene.interactive.checkpoints.length),
-      keyframes: (engine.scene && engine.scene.keyframes) || [],
-      interactive: (engine.scene && engine.scene.interactive) || null,
-      preset: engine.activePresetId,
-      isPlaying: engine.isPlaying,
-      presets: global.ASTSceneRegistry ? global.ASTSceneRegistry.list() : []
-    });
-  }
-
-  global.VectorMicroPhysics = VectorMicroPhysics;
-  global.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
-  global.setupPostMessageBridge = setupPostMessageBridge;
-
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { VectorMicroPhysics, ASTVectorPlayerEngine, setupPostMessageBridge };
-  }
-})(typeof window !== 'undefined' ? window : globalThis);
+        }
