@@ -7219,11 +7219,13 @@ tick(currentTimestamp) {
             }
           }
 
-          this.emit('timeupdate', {
-            progress: this.progress,
-            currentTime: this.progress * (this.durationSec || 10.0),
-            duration: this.durationSec
-          });
+          if (this.scene) {
+            this.emit('timeupdate', {
+              progress: this.progress,
+              currentTime: this.progress * (this.durationSec || 10.0),
+              duration: this.durationSec
+            });
+          }
         } // Closes if (this.isPlaying)
 
         // Continuous 60 FPS Render Loop: keeping 3D camera interactive even while paused
