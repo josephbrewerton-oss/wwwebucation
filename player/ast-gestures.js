@@ -3726,7 +3726,7 @@ ${strokeLines.join('\n')}
       this._fishSwimId = requestAnimationFrame(swimTick);
     }
 
-    // =========================================================================
+// =========================================================================
     // Continuous Electron Flow Drift for Electrical Circuits
     // =========================================================================
     startCircuitElectronsLoop() {
@@ -3736,34 +3736,37 @@ ${strokeLines.join('\n')}
       }
       let dots = this.stageSvg ? this.stageSvg.querySelectorAll('.e-dot') : null;
 
+      // Match the exact stage <rect> wire geometry: x=150, y=165, w=500, h=260
+      const X0 = 150;
+      const Y0 = 165;
       const L1 = 500;
       const L2 = 260;
-      const L3 = 500;
-      const L4 = 260;
-      const perimeter = L1 + L2 + L3 + L4;
+      const perimeter = 2 * (L1 + L2);
 
       const getPointOnPerimeter = (d) => {
         d = ((d % perimeter) + perimeter) % perimeter;
-        if (d < L1) return { x: 150 + d, y: 105 };
+        if (d < L1) return { x: X0 + d, y: Y0 };                         // Top wire (165)
         d -= L1;
-        if (d < L2) return { x: 650, y: 105 + d };
+        if (d < L2) return { x: X0 + L1, y: Y0 + d };                   // Right wire
         d -= L2;
-        if (d < L3) return { x: 650 - d, y: 365 };
-        d -= L3;
-        return { x: 150, y: 365 - d };
+        if (d < L1) return { x: X0 + L1 - d, y: Y0 + L2 };              // Bottom wire (425)
+        d -= L1;
+        return { x: X0, y: Y0 + L2 - d };                               // Left wire
       };
 
       let driftOffset = 0;
       let lastTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
       const tick = (now) => {
         const timestamp = now || (typeof performance !== 'undefined' ? performance.now() : Date.now());
         const dt = Math.max(0.001, Math.min(0.1, (timestamp - lastTime) / 1000));
         lastTime = timestamp;
 
         // Verify that electric-circuits stage is still active
+        const switchEl = this.stageSvg ? this.stageSvg.querySelector('#circuit-switch') : null;
         const isCircuitScene = Boolean(
           this.stageSvg && (
-            this.stageSvg.querySelector('#circuit-switch') ||
+            switchEl ||
             this.stageSvg.querySelector('.e-dot') ||
             (this.engine && this.engine.scene && (this.engine.scene.id === 'electric-circuits' || this.engine.scene.id === 'phet-ohms-law'))
           )
@@ -3779,10 +3782,16 @@ ${strokeLines.join('\n')}
           dots = this.stageSvg ? this.stageSvg.querySelectorAll('.e-dot') : null;
         }
 
-        const v = (this.engine && this.engine.vars) || {};
-        const isClosed = v.switchClosed !== false;
-        const voltage = Number(v.voltage !== undefined ? v.voltage : 12) || 12;
-        const resistance = Number(v.resistance !== undefined ? v.resistance : 4) || 4;
+        // Check DOM state directly first, then fall back to engine variables
+        const domState = switchEl ? switchEl.getAttribute('data-state') : null;
+        const engVars = (this.engine && (this.engine.vars || this.engine.variables || this.engine.state)) || {};
+        
+        const isClosed = domState !== null 
+          ? domState === 'closed' 
+          : (engVars.switchClosed !== false && engVars.switch_closed !== 0);
+
+        const voltage = Number(engVars.voltage !== undefined ? engVars.voltage : 12) || 12;
+        const resistance = Number(engVars.resistance !== undefined ? engVars.resistance : 4) || 4;
         const current = isClosed ? (voltage / Math.max(0.2, resistance)) : 0;
 
         if (isClosed && current > 0 && isFinite(current)) {
@@ -3804,7 +3813,7 @@ ${strokeLines.join('\n')}
       };
       this._circuitAnimId = requestAnimationFrame(tick);
     }
-
+    
     // =========================================================================
     // Live Simulation Parameters & Controls HUD Dock
     // =========================================================================
