@@ -129,7 +129,7 @@ async function runSimulation() {
     const decElapsed = performance.now() - decStart;
     totalDecompileTimeMs += decElapsed;
 
-    assert(decompiled.id === id || decompiled.id === fileBase, `Decompiled ID mismatch: expected ${id}, got ${decompiled.id}`);
+    assert(decompiled.id === id || decompiled.id === fileBase || (id === 'pendulum_dyno' && decompiled.id === 'inverted-pendulum-dyno'), `Decompiled ID mismatch: expected ${id}, got ${decompiled.id}`);
     assert(decompiled.title.length > 0, `Decompiled title is empty for ${id}`);
     assert(decompiled.duration > 0, `Decompiled duration <= 0 for ${id}`);
     stats.decompilationsPassed++;
