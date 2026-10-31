@@ -5484,7 +5484,6 @@ if (!scene) {
       return this.loadScene(id, shouldPlay);
     }
 
-    /**
      mountDeclarativeHud(scene) {
     if (!this.container) return;
 
