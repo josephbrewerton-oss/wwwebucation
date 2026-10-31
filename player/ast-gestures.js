@@ -5414,38 +5414,37 @@ ${strokeLines.join('\n')}
       this.attachSpellingBeeDirectListeners();
       this.pickNewSpellingBeeWord(false);
 
-      // Attach physical keyboard listener once
-      if (!this._beeKeyHandler) {
-        this._beeKeyHandler = (e) => {
-          if (!this.stageSvg || !this.stageSvg.querySelector('#bee-root')) return;
-          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
-          const key = e.key;
-          if (/^[a-zA-Z]$/.test(key)) {
-            e.preventDefault();
-            this.handleSpellingBeeAction('bee-press-key', null, key.toUpperCase());
-          } else if (key === 'Backspace') {
-            e.preventDefault();
-            this.handleSpellingBeeAction('bee-backspace');
-          } else if (key === 'Enter') {
-            e.preventDefault();
-            this.handleSpellingBeeAction('bee-submit');
-          } else if (key === 'Escape') {
-            this.handleSpellingBeeAction('bee-clear');
-          }
-        };
-        window.addEventListener('keydown', this._beeKeyHandler);
-      }
-
-      // Ensure window focus on stage interaction
-      const root = this.stageSvg.querySelector('#bee-root');
-      if (root && !root._hasFocusHandler) {
-        root._hasFocusHandler = true;
-        root.addEventListener('pointerdown', () => {
-          try { window.focus(); } catch {}
-        });
-      }
+   // Attach physical keyboard listener once
+    if (!this._beeKeyHandler) {
+      this._beeKeyHandler = (e) => {
+        if (!this.stageSvg || !this.stageSvg.querySelector('#bee-root')) return;
+        if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+        const key = e.key;
+        if (/^[a-zA-Z]$/.test(key)) {
+          e.preventDefault();
+          this.handleSpellingBeeAction('bee-press-key', null, key.toUpperCase());
+        } else if (key === 'Backspace') {
+          e.preventDefault();
+          this.handleSpellingBeeAction('bee-backspace');
+        } else if (key === 'Enter') {
+          e.preventDefault();
+          this.handleSpellingBeeAction('bee-submit');
+        } else if (key === 'Escape') {
+          e.preventDefault();
+          this.handleSpellingBeeAction('bee-clear');
+        }
+      };
+      window.addEventListener('keydown', this._beeKeyHandler);
     }
 
+    // Ensure window focus on stage interaction
+    const root = this.stageSvg.querySelector('#bee-root');
+    if (root && !root._hasFocusHandler) {
+      root._hasFocusHandler = true;
+      root.addEventListener('pointerdown', () => {
+        try { window.focus(); } catch {}
+      });
+    }
     attachSpellingBeeDirectListeners() {
       if (!this.stageSvg) return;
       const beeActions = this.stageSvg.querySelectorAll('[data-action^="bee-"]');
