@@ -4991,6 +4991,7 @@ inputs.forEach(inp => {
         }
       });
     }
+  }
 
     async loadScene(presetId, shouldPlay = false) {
       this.cancelSpeech();
