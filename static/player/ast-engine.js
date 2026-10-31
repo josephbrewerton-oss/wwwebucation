@@ -4991,8 +4991,6 @@ inputs.forEach(inp => {
         }
       });
     }
-  }
-
     async loadScene(presetId, shouldPlay = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
