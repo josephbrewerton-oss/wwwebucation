@@ -42,11 +42,15 @@
 
           // 1. Try browser fetch for standalone .wasm binary
           if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
+            const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/wwwebucation/';
+            const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
             const candidates = [
+              `${cleanBase}static/player/wasm/ast-transpiler-engine.wasm`,
+              `${cleanBase}player/wasm/ast-transpiler-engine.wasm`,
               './wasm/ast-transpiler-engine.wasm',
-              '/player/wasm/ast-transpiler-engine.wasm',
-              'player/wasm/ast-transpiler-engine.wasm',
+              './ast-transpiler-engine.wasm',
               'wasm/ast-transpiler-engine.wasm',
+              '/player/wasm/ast-transpiler-engine.wasm',
             ];
             for (const url of candidates) {
               try {

@@ -248,7 +248,9 @@ export class HypervisorHost {
     if (!el) {
       el = document.createElement('iframe');
       el.id = 'neural-worker-guest-vm';
-      el.src = `${(import.meta as any).env?.BASE_URL || '/'}worker.html?v=1.3.0`;
+      const basePath = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (import.meta as any).env?.BASE_URL || '/';
+      const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
+      el.src = `${cleanBase}worker.html?v=1.3.0`;
       el.style.display = 'none';
       el.style.width = '0px';
       el.style.height = '0px';
@@ -272,7 +274,9 @@ export class HypervisorHost {
       const parent = existing.parentNode;
       const newIframe = document.createElement('iframe');
       newIframe.id = 'neural-worker-guest-vm';
-      newIframe.src = `${(import.meta as any).env?.BASE_URL || '/'}worker.html?v=${Date.now()}`;
+      const basePath = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (import.meta as any).env?.BASE_URL || '/';
+      const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
+      newIframe.src = `${cleanBase}worker.html?v=${Date.now()}`;
       newIframe.style.display = 'none';
       newIframe.style.width = '0px';
       newIframe.style.height = '0px';

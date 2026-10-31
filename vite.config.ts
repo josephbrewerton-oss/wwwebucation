@@ -125,7 +125,7 @@ function astSceneAutoFinder(): import('vite').Plugin {
 }
 
 export default defineConfig({
-  base: '/wwwebucation/', // Hardcoded repository base path to prevent root domain 404s
+  base: process.env.BASE_URL || '/',
   plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
@@ -161,9 +161,6 @@ export default defineConfig({
           }
           if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
             return 'vendor-react';
-          }
-          if (id.includes('src/components/BslInterpreterOverlay') || id.includes('src/utils/bsl')) {
-            return 'bsl-engine';
           }
         },
       },

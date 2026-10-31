@@ -605,28 +605,59 @@ export function solveHandKinematics(
   shapeInput?: BslHandShape,
   palmInput?: BslPalmOrientation
 ): BslSolvedDominantHand {
-  const w = wrist;
-  const k = knuckle;
-  
-  // Guard against coordinate space explosion by clamping tip reach from knuckle
+  const w: Point3D = {
+    x: Number.isFinite(wrist?.x) ? wrist.x : DOMINANT_REST_WRIST.x,
+    y: Number.isFinite(wrist?.y) ? wrist.y : DOMINANT_REST_WRIST.y,
+    z: Number.isFinite(wrist?.z) ? wrist.z : DOMINANT_REST_WRIST.z,
+  };
+  const k: Point3D = {
+    x: Number.isFinite(knuckle?.x) ? knuckle.x : DOMINANT_REST_KNUCKLE.x,
+    y: Number.isFinite(knuckle?.y) ? knuckle.y : DOMINANT_REST_KNUCKLE.y,
+    z: Number.isFinite(knuckle?.z) ? knuckle.z : DOMINANT_REST_KNUCKLE.z,
+  };
+  const tipPt: Point3D = {
+    x: Number.isFinite(tip?.x) ? tip.x : DOMINANT_REST_POSE.x,
+    y: Number.isFinite(tip?.y) ? tip.y : DOMINANT_REST_POSE.y,
+    z: Number.isFinite(tip?.z) ? tip.z : DOMINANT_REST_POSE.z,
+  };
+
+  // Clamp procedural vector offsets to valid signing box bounds
   const MAX_REACH = 45;
-  const rawDx = tip.x - k.x;
-  const rawDy = tip.y - k.y;
-  const rawDz = tip.z - k.z;
-  const rawDist = Math.hypot(rawDx, rawDy, rawDz) || 1;
+  let dx = tipPt.x - k.x;
+  let dy = tipPt.y - k.y;
+  let dz = tipPt.z - k.z;
+  if (isNaN(dx) || isNaN(dy) || isNaN(dz) || !isFinite(dx) || !isFinite(dy) || !isFinite(dz)) {
+    // Graceful fallback to rest position
+    dx = DOMINANT_REST_POSE.x - DOMINANT_REST_KNUCKLE.x;
+    dy = DOMINANT_REST_POSE.y - DOMINANT_REST_KNUCKLE.y;
+    dz = DOMINANT_REST_POSE.z - DOMINANT_REST_KNUCKLE.z;
+  }
+  dx = Math.max(-MAX_REACH, Math.min(MAX_REACH, dx));
+  dy = Math.max(-MAX_REACH, Math.min(MAX_REACH, dy));
+  dz = Math.max(-MAX_REACH, Math.min(MAX_REACH, dz));
+  const rawDist = Math.hypot(dx, dy, dz) || 1;
   const clampedDist = Math.min(MAX_REACH, rawDist);
   const t: Point3D = {
-    x: k.x + (rawDx / rawDist) * clampedDist,
-    y: k.y + (rawDy / rawDist) * clampedDist,
-    z: k.z + (rawDz / rawDist) * clampedDist,
+    x: k.x + (dx / rawDist) * clampedDist,
+    y: k.y + (dy / rawDist) * clampedDist,
+    z: k.z + (dz / rawDist) * clampedDist,
   };
 
   const shape: BslHandShape = shapeInput || 'flat-closed';
 
-  // 1. Arm vector along index pointing axis
-  const fx = k.x - w.x;
-  const fy = k.y - w.y;
-  const fz = k.z - w.z;
+  // 1. Arm vector along index pointing axis with defensive bounds
+  let fx = k.x - w.x;
+  let fy = k.y - w.y;
+  let fz = k.z - w.z;
+  if (isNaN(fx) || isNaN(fy) || isNaN(fz) || !isFinite(fx) || !isFinite(fy) || !isFinite(fz)) {
+    fx = DOMINANT_REST_KNUCKLE.x - DOMINANT_REST_WRIST.x;
+    fy = DOMINANT_REST_KNUCKLE.y - DOMINANT_REST_WRIST.y;
+    fz = DOMINANT_REST_KNUCKLE.z - DOMINANT_REST_WRIST.z;
+  }
+  const MAX_ARM_REACH = 55;
+  fx = Math.max(-MAX_ARM_REACH, Math.min(MAX_ARM_REACH, fx));
+  fy = Math.max(-MAX_ARM_REACH, Math.min(MAX_ARM_REACH, fy));
+  fz = Math.max(-MAX_ARM_REACH, Math.min(MAX_ARM_REACH, fz));
   const fLen = Math.hypot(fx, fy, fz) || 1;
   const ufx = fx / fLen;
   const ufy = fy / fLen;
@@ -962,22 +993,32 @@ export function solveHandKinematics(
       break;
   }
 
+  const sanitize = (pt: Point3D, fb: Point3D): Point3D => ({
+    x: Number.isFinite(pt.x) ? pt.x : fb.x,
+    y: Number.isFinite(pt.y) ? pt.y : fb.y,
+    z: Number.isFinite(pt.z) ? pt.z : fb.z,
+  });
+
   return {
-    wrist: w,
-    knuckleIndex: k,
-    tipIndex,
-    palm,
-    kMid,
-    kRing,
-    kPinky,
-    tipMid,
-    tipRing,
-    tipPinky,
-    thumbBase,
-    thumbKnuckle,
-    thumbTip,
-    forearm,
+    wrist: sanitize(w, DOMINANT_REST_WRIST),
+    knuckleIndex: sanitize(k, DOMINANT_REST_KNUCKLE),
+    tipIndex: sanitize(tipIndex, t),
+    palm: sanitize(palm, k),
+    kMid: sanitize(kMid, k),
+    kRing: sanitize(kRing, k),
+    kPinky: sanitize(kPinky, k),
+    tipMid: sanitize(tipMid, tipMidCurled),
+    tipRing: sanitize(tipRing, tipRingCurled),
+    tipPinky: sanitize(tipPinky, tipPinkyCurled),
+    thumbBase: sanitize(thumbBase, w),
+    thumbKnuckle: sanitize(thumbKnuckle, thumbBase),
+    thumbTip: sanitize(thumbTip, thumbKnuckle),
+    forearm: sanitize(forearm, w),
     shape,
-    palmNormal: { x: unormX, y: unormY, z: unormZ },
+    palmNormal: {
+      x: Number.isFinite(unormX) ? unormX : 0,
+      y: Number.isFinite(unormY) ? unormY : 0,
+      z: Number.isFinite(unormZ) ? unormZ : 1,
+    },
   };
 }

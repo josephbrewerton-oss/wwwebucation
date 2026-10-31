@@ -290,7 +290,7 @@ export default function PersistentAppShell(): React.JSX.Element {
             hypervisor.registerWorkerIframe(el);
           }
         }}
-        src={`${import.meta.env.BASE_URL}worker.html?v=1.3.0`}
+        src={`${((typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}worker.html?v=1.3.0`}
         style={{ display: 'none', width: 0, height: 0, border: 'none' }}
         title="neural-worker-guest-vm"
       />

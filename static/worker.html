@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>St Joseph's Neural Guest VM Worker</title>
+  <style>
+    body { margin: 0; padding: 0; background: transparent; overflow: hidden; }
+  </style>
+</head>
+<body>
+<script>
+/**
+ * St Joseph's Educational Media Suite - Neural Guest VM Daemon
+ * Off-main-thread WebRTC RTCDataChannel Loopback & Supervised Execution Worker
+ */
+(function() {
+  'use strict';
+
+  var PROTOCOL_MAGIC_0 = 0x53; // 'S'
+  var PROTOCOL_MAGIC_1 = 0x4a; // 'J'
+  var PROTOCOL_VERSION = 0x02;
+  var OP_HEARTBEAT_PING = 0x04;
+  var OP_HEARTBEAT_PONG = 0x05;
+
+  var pc = null;
+  var dataChannel = null;
+  var signalingBus = null;
+  var isInitiating = false;
+
+  try {
+    signalingBus = new BroadcastChannel('webrtc-neural-signaling');
+    signalingBus.onmessage = function(ev) {
+      handleSignaling(ev.data);
+    };
+  } catch (e) {
+    // BroadcastChannel unsupported or blocked
+  }
+
+  function sendSignaling(msg) {
+    if (signalingBus) {
+      try { signalingBus.postMessage(msg); } catch (_) {}
+    }
+    if (window.parent && window.parent !== window) {
+      try { window.parent.postMessage(msg, '*'); } catch (_) {}
+    }
+  }
+
+  function createPongFrame() {
+    var buf = new ArrayBuffer(16);
+    var view = new DataView(buf);
+    view.setUint8(0, PROTOCOL_MAGIC_0);
+    view.setUint8(1, PROTOCOL_MAGIC_1);
+    view.setUint8(2, PROTOCOL_VERSION);
+    view.setUint8(3, OP_HEARTBEAT_PONG);
+    view.setUint16(4, 0, false);
+    view.setUint32(6, 0, false);
+    view.setUint16(10, 0, false);
+    view.setUint32(12, 0, false);
+    return buf;
+  }
+
+  function initWebRTC(reason) {
+    if (isInitiating) return;
+    isInitiating = true;
+
+    try {
+      if (dataChannel) {
+        try { dataChannel.close(); } catch (_) {}
+        dataChannel = null;
+      }
+      if (pc) {
+        try { pc.close(); } catch (_) {}
+        pc = null;
+      }
+
+      var RTCPeer = window.RTCPeerConnection || window.webkitRTCPeerConnection;
+      if (!RTCPeer) {
+        isInitiating = false;
+        return;
+      }
+
+      pc = new RTCPeer({ iceServers: [] });
+
+      pc.onicecandidate = function(event) {
+        if (event.candidate) {
+          sendSignaling({
+            type: 'candidate',
+            candidate: event.candidate.toJSON ? event.candidate.toJSON() : event.candidate
+          });
+        }
+      };
+
+      dataChannel = pc.createDataChannel('neural_bus', { ordered: true });
+      dataChannel.binaryType = 'arraybuffer';
+
+      dataChannel.onopen = function() {
+        isInitiating = false;
+        notifyGuestReady();
+        try {
+          dataChannel.send(createPongFrame());
+        } catch (_) {}
+      };
+
+      dataChannel.onmessage = function(event) {
+        var data = event.data;
+        if (data instanceof ArrayBuffer && data.byteLength >= 16) {
+          var view = new DataView(data);
+          if (view.getUint8(0) === PROTOCOL_MAGIC_0 && view.getUint8(1) === PROTOCOL_MAGIC_1) {
+            var opcode = view.getUint8(3);
+            if (opcode === OP_HEARTBEAT_PING) {
+              try {
+                dataChannel.send(createPongFrame());
+              } catch (_) {}
+            }
+          }
+        }
+      };
+
+      pc.createOffer().then(function(offer) {
+        return pc.setLocalDescription(offer).then(function() {
+          sendSignaling({
+            type: 'offer',
+            sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription
+          });
+          isInitiating = false;
+        });
+      }).catch(function() {
+        isInitiating = false;
+      });
+
+    } catch (err) {
+      isInitiating = false;
+    }
+  }
+
+  function handleSignaling(data) {
+    if (!data || typeof data !== 'object') return;
+
+    if (data.type === 'peer_ready') {
+      initWebRTC('peer_ready');
+    } else if (data.type === 'answer' && data.sdp && pc) {
+      try {
+        var RTCSession = window.RTCSessionDescription;
+        pc.setRemoteDescription(new RTCSession(data.sdp)).catch(function() {});
+      } catch (_) {}
+    } else if (data.type === 'candidate' && data.candidate && pc) {
+      try {
+        var RTCIce = window.RTCIceCandidate;
+        pc.addIceCandidate(new RTCIce(data.candidate)).catch(function() {});
+      } catch (_) {}
+    }
+  }
+
+  function notifyGuestReady() {
+    if (window.parent && window.parent !== window) {
+      try {
+        window.parent.postMessage({
+          type: 'GUEST_READY',
+          __neural_guest__: true,
+          sessionWarm: true,
+          capabilities: ['socratic', 'ast', 'math', 'rules']
+        }, '*');
+      } catch (_) {}
+    }
+  }
+
+  window.addEventListener('message', function(ev) {
+    var data = ev.data;
+    if (!data || typeof data !== 'object') return;
+
+    if (data.__neural_hypervisor__) {
+      if (data.type === 'SUPERVISOR_PING') {
+        if (window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage({
+              type: 'SUPERVISOR_PONG',
+              __neural_guest__: true,
+              pingTimestamp: data.timestamp || Date.now(),
+              sessionWarm: true
+            }, '*');
+          } catch (_) {}
+        }
+      } else if (data.type === 'RECONNECT_RTC') {
+        initWebRTC(data.reason || 'reconnect_requested');
+      }
+    } else if (data.type === 'peer_ready' || data.type === 'answer' || data.type === 'candidate') {
+      handleSignaling(data);
+    }
+  });
+
+  // Announce guest readiness immediately on DOM load
+  notifyGuestReady();
+  sendSignaling({ type: 'daemon_ready', timestamp: Date.now() });
+
+  // Initiate WebRTC loopback offer handshake
+  setTimeout(function() {
+    initWebRTC('boot');
+  }, 50);
+
+})();
+</script>
+</body>
+</html>

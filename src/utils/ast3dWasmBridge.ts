@@ -58,15 +58,28 @@ export class AST3DWasmBridgeReact {
     try {
       let binaryBytes: Uint8Array | null = null;
 
-      // 1. Try fetching standalone .wasm binary
+      // 1. Try fetching standalone .wasm binary with base-aware paths
       if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
-        try {
-          const resp = await fetch('/player/wasm/ast-3d-engine.wasm');
-          if (resp.ok) {
-            const ab = await resp.arrayBuffer();
-            binaryBytes = new Uint8Array(ab);
-          }
-        } catch (_) {}
+        const basePath = (window as any).__AST_BASE_URL__ || (window as any).__AST_ASSET_BASE__ || (import.meta.env?.BASE_URL || '/').replace(/\/?$/, '/');
+        const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
+        const candidates = [
+          `${cleanBase}static/player/wasm/ast-3d-engine.wasm`,
+          `${cleanBase}player/wasm/ast-3d-engine.wasm`,
+          './static/player/wasm/ast-3d-engine.wasm',
+          './player/wasm/ast-3d-engine.wasm',
+          './wasm/ast-3d-engine.wasm',
+          '/player/wasm/ast-3d-engine.wasm',
+        ];
+        for (const url of candidates) {
+          try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+              const ab = await resp.arrayBuffer();
+              binaryBytes = new Uint8Array(ab);
+              break;
+            }
+          } catch (_) {}
+        }
       }
 
       // 2. Fallback to inlined base64 binary

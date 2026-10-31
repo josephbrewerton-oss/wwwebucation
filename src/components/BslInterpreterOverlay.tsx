@@ -762,6 +762,11 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
   // Perspective projection for Signing Hands Space (anchored on RHS in split mode)
   const projPointHands = useCallback(
     (pt: Point3D) => {
+      const safePt: Point3D = {
+        x: Number.isFinite(pt?.x) ? Math.max(-150, Math.min(150, pt.x)) : 0,
+        y: Number.isFinite(pt?.y) ? Math.max(-150, Math.min(150, pt.y)) : 0,
+        z: Number.isFinite(pt?.z) ? Math.max(-100, Math.min(100, pt.z)) : 0,
+      };
       let ox = 120 + orbitOffset.panX;
       let oy = (cameraMode === 'face' ? 88 : 106) + orbitOffset.panY;
       let yShift = cameraMode === 'face' ? headCenter3D.y : 0;
@@ -773,7 +778,13 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
         yShift = 0;
         zShift = 0;
       }
-      return project3DToSvg({ x: pt.x, y: pt.y - yShift, z: pt.z - zShift }, cameraConfig, ox, oy);
+      const res = project3DToSvg({ x: safePt.x, y: safePt.y - yShift, z: safePt.z - zShift }, cameraConfig, ox, oy);
+      return {
+        x: Number.isFinite(res.x) ? res.x : ox,
+        y: Number.isFinite(res.y) ? res.y : oy,
+        scale: Number.isFinite(res.scale) ? Math.max(0.1, Math.min(3.5, res.scale)) : 1.0,
+        depth: Number.isFinite(res.depth) ? res.depth : 0,
+      };
     },
     [cameraMode, headCenter3D.y, headCenter3D.z, cameraConfig, orbitOffset.panX, orbitOffset.panY]
   );
