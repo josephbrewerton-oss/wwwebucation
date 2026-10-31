@@ -5081,7 +5081,7 @@ inputs.forEach(inp => {
 
         // Note: Do not clear container.innerHTML here; preserve current apparatus until new scene is ready
 
-let scene = this.sceneCache[presetId];
+        scene = this.sceneCache[presetId];
 
         if (!scene) {
           const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
