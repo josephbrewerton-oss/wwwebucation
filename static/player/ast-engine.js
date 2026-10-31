@@ -5216,7 +5216,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           (/:enabled\s+(false|nil)\b/i.test(astText) && /:interactive/i.test(astText))
         ) : false;
 
-        const resolvedType = (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim';
+       const resolvedType = (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim';
         const hasAstCheckpoints = Boolean(
           (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length > 0) ||
           (parsedAst && parsedAst.interactive && parsedAst.interactive.checkpoints && parsedAst.interactive.checkpoints.length > 0)
@@ -5270,7 +5270,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           });
         }
         this.emit('scene_registered', { id: presetId, scene });
-      }
+      } // Closes outer cache-miss fetch block
 
       this.scene = scene;
       this.durationSec = this.scene.duration || 10.0;
@@ -5287,7 +5287,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       );
       this.isContinuousSim = isContinuousSim;
 
-// Mount into container
+      // Mount into container
       if (this.container) {
         this.container.innerHTML = '';
         this.mountSceneAsset(scene, this.container);
@@ -5295,7 +5295,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.resetVars();
       this.updateComputedVars(); // Pre-paint computed state evaluation before initial frame
 
-      // ---> MISSING LINK INSERTED HERE <---
+      // Mount the declarative parameter dock directly inside the stage
       this.mountDeclarativeHud(scene);
 
       // 1. Hide the "Loading AST Vector Scene..." overlay immediately
@@ -5306,7 +5306,6 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (loaderEl && loaderEl.style) {
         loaderEl.style.display = 'none';
       }
-
       // 2. Pulse Frame 0 so vector attributes, coordinates, and physics bind immediately
       try {
         if (typeof this.applyBindings === 'function') {
