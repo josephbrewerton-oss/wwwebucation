@@ -5104,108 +5104,65 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               ? ghRepoMatch[1]
               : '';
 
-            const candidateBases = [
-              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/cartridges/`,
-              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/bytecode/`,
-              `${(typeof window !== "undefined" && window.__AST_BASE_URL__) || '/wwwebucation/'}static/player/bytecode/`,
-              './static/cartridges/',
-              './static/bytecode/',
-              './bytecode/',
-              './cartridges/',
-              './',
-              base,
-            currentDir,
-              `${currentDir}static/bytecode/`,
-              `${currentDir}static/cartridges/`,
-              `${base}static/bytecode/`,
-              `${base}static/cartridges/`,
-              `${base}static/player/bytecode/`,
-              ghRepoPrefix ? `${ghRepoPrefix}/static/player/bytecode/` : '',
-              ghRepoPrefix ? `${ghRepoPrefix}/static/cartridges/` : '',
-              ghRepoPrefix ? `${ghRepoPrefix}/static/bytecode/` : ''
-              ].filter(Boolean);
-
             const sceneId = presetId;
             const fetchAsset = async (ext) => {
               const isBinary = ext === 'astb';
-              // 1. Determine current directory of player/index.html
-              const baseHref = (typeof document !== 'undefined' && document.baseURI) 
-                ? document.baseURI 
-                : (typeof window !== 'undefined' ? window.location.href : '');
-              const urlParams = (typeof window !== 'undefined' && window.location) ? new URLSearchParams(window.location.search) : new URLSearchParams();
-              const customBase = urlParams.get('base') || this.options.basePath || '';
+
+              const repoBase = ((typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/')
+                .replace(/\/+$/, '') + '/';
+
+              const urlParams = (typeof window !== 'undefined' && window.location) 
+                ? new URLSearchParams(window.location.search) 
+                : new URLSearchParams();
+              const customBase = urlParams.get('base') || this.options?.basePath || '';
               const customDirsParam = urlParams.get('dirs') || urlParams.get('inputDirs') || urlParams.get('dir') || '';
-              const customDirs = customDirsParam ? customDirsParam.split(',').map(d => d.trim()).filter(Boolean) : [];
+              const customDirs = customDirsParam 
+                ? customDirsParam.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean) 
+                : [];
+              const optDirs = Array.isArray(this.options?.inputDirs) 
+                ? this.options.inputDirs 
+                : (this.options?.cartridgeDir ? [this.options.cartridgeDir] : []);
 
-              // Explicit options passed programmatically to ASTVectorPlayerEngine
-              const optDirs = Array.isArray(this.options.inputDirs) ? this.options.inputDirs : (this.options.cartridgeDir ? [this.options.cartridgeDir] : []);
-
-              // Calculate current script directory: .../player/
-              const currentDir = (typeof window !== 'undefined' && window.location)
+              const currentDir = (typeof window !== 'undefined' && window.location?.pathname)
                 ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
                 : './';
 
-              const directFile = isBinary ? (registryScene.astbFile || (registryScene.base ? `bytecode/${registryScene.base}.astb` : ''))
-                : ext === 'svg' ? (registryScene.svgFile || (registryScene.base ? `cartridges/${registryScene.base}.svg` : ''))
-                : (registryScene.astFile || (registryScene.base ? `cartridges/${registryScene.base}.ast` : ''));
-              const directUrls = directFile ? [
-                directFile.startsWith('/') ? directFile : `/${directFile}`,
-                directFile,
-                `../${directFile}`,
-                `${currentDir}${directFile}`
-              ] : [];
+              const regBase = registryScene?.base || '';
+              const altId = regBase || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
 
-              const altId = registryScene.base || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
-              const altUrls = altId ? [
-                isBinary ? `/player/bytecode/${altId}.${ext}` : `/cartridges/${altId}.${ext}`,
-                isBinary ? `bytecode/${altId}.${ext}` : `../cartridges/${altId}.${ext}`,
-                `/cartridges/${altId}.${ext}`,
-                `../cartridges/${altId}.${ext}`,
-                `cartridges/${altId}.${ext}`
-              ] : [];
+              const directFile = isBinary 
+                ? (registryScene?.astbFile || (regBase ? `bytecode/${regBase}.astb` : ''))
+                : ext === 'svg' 
+                  ? (registryScene?.svgFile || (regBase ? `cartridges/${regBase}.svg` : ''))
+                  : (registryScene?.astFile || (regBase ? `cartridges/${regBase}.ast` : ''));
 
-             const repoBase = (typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/';
-
+              // Build candidate URLs prioritized from most specific to general fallbacks
               const candidateUrls = Array.from(new Set([
-                // 1. Fully-qualified base paths from candidateBases first (immediate 200 hits)
-                ...candidateBases.map(b => `${b.replace(/\/$/, '')}/${sceneId}.${ext}`),
+                // 1. Direct registry file targets under repoBase
+                directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
+                directFile ? `${repoBase}${directFile.replace(/^\/+/, '')}` : '',
 
-                // 2. Direct canonical fallbacks with repo base
+                // 2. Canonical static repo paths
                 `${repoBase}static/cartridges/${sceneId}.${ext}`,
                 `${repoBase}static/bytecode/${sceneId}.${ext}`,
                 `${repoBase}static/player/bytecode/${sceneId}.${ext}`,
 
-                // 3. Registry scene specific paths
-                ...directUrls,
-                ...altUrls,
+                // 3. Alternate alias paths (if registered)
+                altId ? `${repoBase}static/cartridges/${altId}.${ext}` : '',
+                altId ? `${repoBase}static/bytecode/${altId}.${ext}` : '',
 
-                // 4. Custom user overrides
-                ...(customBase ? [
-                  `${customBase.replace(/\/$/, '')}/static/bytecode/${sceneId}.${ext}`,
-                  `${customBase.replace(/\/$/, '')}/static/cartridges/${sceneId}.${ext}`,
-                ] : []),
-                ...optDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
-                ...customDirs.map(d => `${d.replace(/\/$/, '')}/${sceneId}.${ext}`),
+                // 4. Custom query/option directories
+                ...customDirs.map(d => `${d}/${sceneId}.${ext}`),
+                ...optDirs.map(d => `${d.replace(/\/+$/, '')}/${sceneId}.${ext}`),
+                customBase ? `${customBase.replace(/\/+$/, '')}/static/cartridges/${sceneId}.${ext}` : '',
+
+                // 5. Local relative fallbacks
+                `./static/cartridges/${sceneId}.${ext}`,
                 `./static/bytecode/${sceneId}.${ext}`,
-                `./static/cartridges/${sceneId}.${ext}`
+                `${currentDir}static/cartridges/${sceneId}.${ext}`
               ])).filter(Boolean);
 
               for (const url of candidateUrls) {
-      try {
-        const res = await fetch(url);
-        if (!res.ok) continue;
-
-        if (isBinary) {
-          const buf = await res.arrayBuffer();
-          if (buf && buf.byteLength >= 16) {
-            const u8 = new Uint8Array(buf, 0, 4);
-            if (u8[0] === 0x41 && u8[1] === 0x53 && u8[2] === 0x54 && u8[3] === 0x42) {
-              return buf;
-            }
-          }
-          continue;
-        }
-
         const text = await res.text();
         const trimmed = text.trim();
 
