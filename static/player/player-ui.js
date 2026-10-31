@@ -1186,13 +1186,21 @@
     }
 
         updateView() {
-          const scene = this.engine && this.engine.scene;
-        if (!scene) return;
+    const scene = this.engine && this.engine.scene;
+    if (!scene) return;
 
-        if (this.elements.badgeStage) {
-          this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
-        }
-    this.updateSubtitles();
+    if (this.elements.badgeStage) {
+      this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
+    }
+
+    if (typeof this.updateSubtitles === 'function') {
+      this.updateSubtitles();
+    } else if (this.engine && typeof this.engine.updateSubtitles === 'function') {
+      this.engine.updateSubtitles();
+    }
+
+
+          
       // Highlight active slide pill
       if (this.elements.slideDeckPills && scene && Array.isArray(scene.keyframes)) {
         const curT = this.engine.progress;
