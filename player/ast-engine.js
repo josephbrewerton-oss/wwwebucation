@@ -5429,24 +5429,24 @@ if (!scene) {
       }
       this._mountedSceneId = presetId;
       return this.scene;
-      })();
+    };
 
-      this._inFlightLoadPromise = loadPromise;
-      try {
-        const res = await loadPromise;
-        return res;
-      } finally {
-        if (this._inFlightLoadPresetId === presetId) {
-          this._inFlightLoadPromise = null;
-          this._inFlightLoadPresetId = null;
-        }
+    const loadPromiseExecution = loadPromise();
+    this._inFlightLoadPromise = loadPromiseExecution;
+    try {
+      const res = await loadPromiseExecution;
+      return res;
+    } finally {
+      if (this._inFlightLoadPresetId === presetId) {
+        this._inFlightLoadPromise = null;
+        this._inFlightLoadPresetId = null;
       }
     }
+  }
 
-    setPreset(presetId, shouldPlay = false) {
-      return this.loadScene(presetId, shouldPlay);
-    }
-
+  setPreset(presetId, shouldPlay = false) {
+    return this.loadScene(presetId, shouldPlay);
+  }
     /**
      * Ingests and mounts an in-memory scene object directly without requiring filesystem fetch.
      * Ideal for standalone npm packages and programmatic scene generation.
