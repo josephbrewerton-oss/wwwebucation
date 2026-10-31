@@ -6405,29 +6405,30 @@
               }
 
               this.activeBindings.push({
-                target: b.target,
-                attr: b.attr,
-                node,
-                evalFn: (t, vars, Math, comp, ...helpers) => {
-                  let val;
-                  try {
-                    val = evalFn(t, vars, Math, comp, ...helpers);
-                  } catch {
-                    val = b.attr === 'transform' ? '' : 0;
-                  }
-
-                  // 3. Format bare numbers into valid SVG transform strings
-                  if (b.attr === 'transform') {
-                    if (val === 0 || val === '0' || !val) return '';
-                    if (typeof val === 'number') return `translate(${val}, 0)`;
-                    if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
-                  }
-                  return val;
+              target: b.target,
+              attr: b.attr,
+              node,
+              evalFn: (t, vars, Math, comp, ...helpers) => {
+                let val;
+                try {
+                  val = evalFn(t, vars, Math, comp, ...helpers);
+                } catch {
+                  val = b.attr === 'transform' ? '' : 0;
                 }
-              });
-            }
-          }
 
+                // 3. Format bare numbers into valid SVG transform strings
+                if (b.attr === 'transform') {
+                  if (val === 0 || val === '0' || !val) return '';
+                  if (typeof val === 'number') return `translate(${val}, 0)`;
+                  if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
+                }
+                return val;
+              }
+            });
+          }
+        }
+      });
+    }
 // 1. Initialize zero-bloat micro-physics if defined on the scene
       if (this.physics && scene.physics) {
         this.physics.clear();
