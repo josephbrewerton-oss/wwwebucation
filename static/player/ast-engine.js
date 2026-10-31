@@ -5081,8 +5081,6 @@ inputs.forEach(inp => {
 
         // Note: Do not clear container.innerHTML here; preserve current apparatus until new scene is ready
 
-        let scene = this.sceneCache[presetId];
-
 let scene = this.sceneCache[presetId];
 
         if (!scene) {
