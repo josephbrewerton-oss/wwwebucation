@@ -5091,128 +5091,136 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         // If not already in registry/decentralized store, fetch dynamically
         if ((!svgText || !astText) && typeof fetch !== 'undefined') {
           const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
-              ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
-              : './';
-            const base = (this.options.basePath || currentDir || './').replace(/\/?$/, '/');
-            const cacheBust = '?v=2.6.0';
+            ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
+            : './';
+          const base = (this.options?.basePath || currentDir || './').replace(/\/?$/, '/');
+          const cacheBust = '?v=2.6.0';
 
-            // Automatic GitHub Pages repository prefix detection (e.g. /my-repo/player/)
-            const ghRepoMatch = (typeof window !== 'undefined' && window.location && window.location.pathname)
-              ? window.location.pathname.match(/^(\/[^\/]+)\//)
-              : null;
-            const ghRepoPrefix = (ghRepoMatch && ghRepoMatch[1] && !ghRepoMatch[1].startsWith('/player') && !ghRepoMatch[1].startsWith('/api'))
-              ? ghRepoMatch[1]
-              : '';
+          // Automatic GitHub Pages repository prefix detection (e.g. /my-repo/player/)
+          const ghRepoMatch = (typeof window !== 'undefined' && window.location && window.location.pathname)
+            ? window.location.pathname.match(/^(\/[^\/]+)\//)
+            : null;
+          const ghRepoPrefix = (ghRepoMatch && ghRepoMatch[1] && !ghRepoMatch[1].startsWith('/player') && !ghRepoMatch[1].startsWith('/api'))
+            ? ghRepoMatch[1]
+            : '';
 
-            const sceneId = presetId;
-            const fetchAsset = async (ext) => {
-              const isBinary = ext === 'astb';
+          const sceneId = presetId;
+          const fetchAsset = async (ext) => {
+            const isBinary = ext === 'astb';
 
-              const repoBase = ((typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/')
-                .replace(/\/+$/, '') + '/';
+            const repoBase = ((typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/')
+              .replace(/\/+$/, '') + '/';
 
-              const urlParams = (typeof window !== 'undefined' && window.location) 
-                ? new URLSearchParams(window.location.search) 
-                : new URLSearchParams();
-              const customBase = urlParams.get('base') || this.options?.basePath || '';
-              const customDirsParam = urlParams.get('dirs') || urlParams.get('inputDirs') || urlParams.get('dir') || '';
-              const customDirs = customDirsParam 
-                ? customDirsParam.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean) 
-                : [];
-              const optDirs = Array.isArray(this.options?.inputDirs) 
-                ? this.options.inputDirs 
-                : (this.options?.cartridgeDir ? [this.options.cartridgeDir] : []);
+            const urlParams = (typeof window !== 'undefined' && window.location) 
+              ? new URLSearchParams(window.location.search) 
+              : new URLSearchParams();
+            const customBase = urlParams.get('base') || this.options?.basePath || '';
+            const customDirsParam = urlParams.get('dirs') || urlParams.get('inputDirs') || urlParams.get('dir') || '';
+            const customDirs = customDirsParam 
+              ? customDirsParam.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean) 
+              : [];
+            const optDirs = Array.isArray(this.options?.inputDirs) 
+              ? this.options.inputDirs 
+              : (this.options?.cartridgeDir ? [this.options.cartridgeDir] : []);
 
-              const currentDir = (typeof window !== 'undefined' && window.location?.pathname)
-                ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
-                : './';
+            const regBase = registryScene?.base || '';
+            const altId = regBase || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
 
-              const regBase = registryScene?.base || '';
-              const altId = regBase || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
+            const directFile = isBinary 
+              ? (registryScene?.astbFile || (regBase ? `bytecode/${regBase}.astb` : ''))
+              : ext === 'svg' 
+                ? (registryScene?.svgFile || (regBase ? `cartridges/${regBase}.svg` : ''))
+                : (registryScene?.astFile || (regBase ? `cartridges/${regBase}.ast` : ''));
 
-              const directFile = isBinary 
-                ? (registryScene?.astbFile || (regBase ? `bytecode/${regBase}.astb` : ''))
-                : ext === 'svg' 
-                  ? (registryScene?.svgFile || (regBase ? `cartridges/${regBase}.svg` : ''))
-                  : (registryScene?.astFile || (regBase ? `cartridges/${regBase}.ast` : ''));
+            const primaryDir = isBinary ? 'static/bytecode' : 'static/cartridges';
+            const secondaryDir = isBinary ? 'static/player/bytecode' : 'static/cartridges';
 
-              // Build candidate URLs prioritized from most specific to general fallbacks
-              const candidateUrls = Array.from(new Set([
-                // 1. Direct registry file targets under repoBase
-                directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
-                directFile ? `${repoBase}${directFile.replace(/^\/+/, '')}` : '',
+            // Build candidate URLs prioritized from most specific to general fallbacks
+            const candidateUrls = Array.from(new Set([
+              // 1. Direct registry target
+              directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
+              directFile ? `${repoBase}${directFile.replace(/^\/+/, '')}` : '',
 
-                // 2. Canonical static repo paths
-                `${repoBase}static/cartridges/${sceneId}.${ext}`,
-                `${repoBase}static/bytecode/${sceneId}.${ext}`,
-                `${repoBase}static/player/bytecode/${sceneId}.${ext}`,
+              // 2. Canonical repo paths (bytecode first for astb, cartridges for svg/ast)
+              `${repoBase}${primaryDir}/${sceneId}.${ext}`,
+              `${repoBase}${secondaryDir}/${sceneId}.${ext}`,
 
-                // 3. Alternate alias paths (if registered)
-                altId ? `${repoBase}static/cartridges/${altId}.${ext}` : '',
-                altId ? `${repoBase}static/bytecode/${altId}.${ext}` : '',
+              // 3. Alternate ID aliasing
+              altId ? `${repoBase}${primaryDir}/${altId}.${ext}` : '',
 
-                // 4. Custom query/option directories
-                ...customDirs.map(d => `${d}/${sceneId}.${ext}`),
-                ...optDirs.map(d => `${d.replace(/\/+$/, '')}/${sceneId}.${ext}`),
-                customBase ? `${customBase.replace(/\/+$/, '')}/static/cartridges/${sceneId}.${ext}` : '',
+              // 4. Custom parameter directories
+              ...customDirs.map(d => `${d}/${sceneId}.${ext}`),
+              ...optDirs.map(d => `${d.replace(/\/+$/, '')}/${sceneId}.${ext}`),
+              customBase ? `${customBase.replace(/\/+$/, '')}/${primaryDir}/${sceneId}.${ext}` : '',
 
-                // 5. Local relative fallbacks
-                `./static/cartridges/${sceneId}.${ext}`,
-                `./static/bytecode/${sceneId}.${ext}`,
-                `${currentDir}static/cartridges/${sceneId}.${ext}`
-              ])).filter(Boolean);
+              // 5. Local relative fallbacks
+              `./${primaryDir}/${sceneId}.${ext}`,
+              `${currentDir}${primaryDir}/${sceneId}.${ext}`
+            ])).filter(Boolean);
 
-              for (const url of candidateUrls) {
-        const text = await res.text();
-        const trimmed = text.trim();
+            for (const url of candidateUrls) {
+              try {
+                const res = await fetch(url);
+                if (!res.ok) continue;
 
-        // 🛡️ Guard against AI Studio / proxy serving HTML 200 fallbacks instead of actual raw assets
-        if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
-          continue;
+                if (isBinary) {
+                  const buf = await res.arrayBuffer();
+                  if (buf && buf.byteLength >= 16) {
+                    const u8 = new Uint8Array(buf, 0, 4);
+                    if (u8[0] === 0x41 && u8[1] === 0x53 && u8[2] === 0x54 && u8[3] === 0x42) {
+                      return buf;
+                    }
+                  }
+                  continue;
+                }
+
+                const text = await res.text();
+                const trimmed = text.trim();
+
+                // Guard against fallback HTML 200 responses
+                if (trimmed.startsWith('<!DOCTYPE') || trimmed.startsWith('<html')) {
+                  continue;
+                }
+
+                // Validate payload matches requested file extension
+                if (ext === 'svg' && !trimmed.includes('<svg')) {
+                  continue;
+                }
+                if (ext === 'ast' && !trimmed.startsWith('(') && !trimmed.startsWith(';')) {
+                  continue;
+                }
+
+                return trimmed;
+              } catch (_) {
+                // Fall through to next candidate URL
+              }
+            }
+
+            return null;
+          };
+
+          parsedAst = null;
+          try {
+            const [foundBytecode, foundSvg] = await Promise.all([
+              fetchAsset('astb'),
+              fetchAsset('svg')
+            ]);
+            if (foundSvg) svgText = foundSvg;
+            if (foundBytecode) {
+              try {
+                parsedAst = this.decompileBytecode(foundBytecode);
+              } catch (err) {
+                console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
+              }
+            }
+            if (!parsedAst) {
+              const foundAst = await fetchAsset('ast');
+              if (foundAst) astText = foundAst;
+            }
+          } catch (e) {
+            console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
+          }
         }
-
-        // Validate payload matches requested file extension
-        if (ext === 'svg' && !trimmed.includes('<svg')) {
-          continue;
-        }
-        if (ext === 'ast' && !trimmed.startsWith('(') && !trimmed.startsWith(';')) {
-          continue;
-        }
-
-        return trimmed;
-      } catch (_) {
-        // Fall through to next candidate URL
-      }
-    }
-
-    return null;
-  };
-
-  parsedAst = null;
-  try {
-    // Prefer token-efficient binary .astb bytecode first alongside companion vector SVG
-    const [foundBytecode, foundSvg] = await Promise.all([
-      fetchAsset('astb'),
-      fetchAsset('svg')
-    ]);
-    if (foundSvg) svgText = foundSvg;
-    if (foundBytecode) {
-      try {
-        parsedAst = this.decompileBytecode(foundBytecode);
-      } catch (err) {
-        console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
-      }
-    }
-    // Fall back to .ast S-Expression text ONLY if bytecode was not available or decompilation failed
-    if (!parsedAst) {
-      const foundAst = await fetchAsset('ast');
-      if (foundAst) astText = foundAst;
-    }
-  } catch (e) {
-    console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
-  }
-}
-
         // Secondary fallback for core cartridges if network fetch failed on GitHub Pages
         if (!svgText && global.ASTSceneRegistry) {
           const fb = global.ASTSceneRegistry.get(presetId);
