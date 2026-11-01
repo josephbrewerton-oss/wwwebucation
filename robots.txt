@@ -8,7 +8,7 @@
 # Universal Translator: Real-time multilingual voice synthesis & bilingual subtitles (EN, ES, FR, LA, DE, IT)
 # Inclusion: Procedural 3D British Sign Language (BSL) In-Vision Vector Interpreter (68-Sign Primary Corpus, 11.3 KB Gzipped, Dual-Hand :mirror/:vowel-board/:base-shift Kinematics, Grammatical NMF Facial Rig, 360° Drag-to-Orbit, Shift+B Global Hotkey)
 # Oak National Academy Alignment: Synchronous Oak RE ID mappings (OAK-KS2-RE-001 through 020) across all 19 Catholic Life vector cartridges
-# Machine Dossiers: /llms.txt, /llms-full.txt, /player/scenes.manifest.json, /lexicons/bsl-signs.ast, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
+# Machine Dossiers: /llms.txt, /llms-full.txt, /agents.txt, /player/scenes.manifest.json, /lexicons/bsl-signs.ast, /player/README.md, /docs/AST_PLAYER_SPECIFICATION.md
 
 User-agent: *
 Allow: /
@@ -43,6 +43,7 @@ Allow: /profile
 Allow: /settings
 Allow: /llms.txt
 Allow: /llms-full.txt
+Allow: /agents.txt
 Allow: /sitemap.xml
 Allow: /sitemap.ast
 Allow: /manifests/
