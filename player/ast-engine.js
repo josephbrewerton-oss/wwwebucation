@@ -5084,7 +5084,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         // Note: Do not clear container.innerHTML here; preserve current apparatus until new scene is ready
 
-        scene = this.sceneCache[presetId];
+        let scene = this.sceneCache[presetId];
 
         if (!scene) {
           const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
