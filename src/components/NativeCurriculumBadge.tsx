@@ -2,10 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   verifyCartridgeIntegrity,
-  formatShortHash,
-  getRegisteredRecord,
   type CartridgeIntegrityResult,
-  CURRICULUM_AUTHORITY_NAME,
 } from '../utils/cartridgeIntegrity';
 
 export interface NativeCurriculumBadgeProps {
@@ -22,7 +19,7 @@ export default function NativeCurriculumBadge({
   size = 'sm',
   showDetailsModal = true,
   className = '',
-}: NativeCurriculumBadgeProps): React.JSX.Element {
+}: NativeCurriculumBadgeProps): React.ReactElement {
   const [result, setResult] = useState<CartridgeIntegrityResult | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 

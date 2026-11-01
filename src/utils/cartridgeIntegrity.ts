@@ -55,20 +55,26 @@ export async function computeSha256(data: string | ArrayBuffer | Uint8Array): Pr
     uint8 = new Uint8Array(data);
   }
 
-  // Check for Web Crypto API
-  if (typeof crypto !== 'undefined' && crypto.subtle && typeof crypto.subtle.digest === 'function') {
-    const hashBuffer = await crypto.subtle.digest('SHA-256', uint8 as unknown as BufferSource);
+  // Check for Web Crypto API (standard in modern browsers and Node 18+)
+  const subtleCrypto = (typeof globalThis !== 'undefined' && globalThis.crypto?.subtle)
+    || (typeof window !== 'undefined' && window.crypto?.subtle);
+
+  if (subtleCrypto && typeof subtleCrypto.digest === 'function') {
+    const hashBuffer = await subtleCrypto.digest('SHA-256', uint8 as unknown as BufferSource);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // Node.js runtime fallback (for test scripts)
-  try {
-    const nodeCrypto = await import('crypto');
-    return nodeCrypto.createHash('sha256').update(uint8).digest('hex');
-  } catch {
-    throw new Error('No cryptographic SHA-256 implementation available in runtime environment.');
+  // Node.js runtime fallback (for CLI test scripts) with @vite-ignore to prevent browser bundle errors
+  if (typeof globalThis !== 'undefined' && (globalThis as any).process?.versions?.node) {
+    try {
+      const moduleName = 'crypto';
+      const nodeCrypto = await import(/* @vite-ignore */ moduleName);
+      return nodeCrypto.createHash('sha256').update(uint8).digest('hex');
+    } catch {}
   }
+
+  throw new Error('No cryptographic SHA-256 implementation available in runtime environment.');
 }
 
 /**
