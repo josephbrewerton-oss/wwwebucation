@@ -6362,6 +6362,25 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (node) {
               let evalFn = () => 0;
               let rawExpr = String(b.expr || '0').trim();
+              let affine = b.affine || null;
+
+              if (!affine && rawExpr) {
+                const transX = rawExpr.match(/^translate\(\s*([^,]+?)\s*(?:,\s*0\s*)?\)$/);
+                const rot = rawExpr.match(/^rotate\(\s*([^,)]+?)(?:\s*,\s*([0-9.-]+)\s*,\s*([0-9.-]+)\s*)?\)$/);
+                const coreMath = transX ? transX[1].trim() : (rot ? rot[1].trim() : rawExpr);
+
+                const lin1 = coreMath.match(/^([0-9.-]+)\s*([+-])\s*([0-9.-]+)\s*\*\s*t$/);
+                const lin2 = coreMath.match(/^([0-9.-]+)\s*\*\s*t\s*([+-])\s*([0-9.-]+)$/);
+                if (lin1) {
+                  const c = parseFloat(lin1[1]);
+                  const m = (lin1[2] === '-' ? -1 : 1) * parseFloat(lin1[3]);
+                  affine = { m, c, transform: transX ? 'translateX' : (rot ? 'rotate' : 'none'), originX: rot && rot[2] ? parseFloat(rot[2]) : null, originY: rot && rot[3] ? parseFloat(rot[3]) : null };
+                } else if (lin2) {
+                  const m = parseFloat(lin2[1]);
+                  const c = (lin2[2] === '-' ? -1 : 1) * parseFloat(lin2[3]);
+                  affine = { m, c, transform: transX ? 'translateX' : (rot ? 'rotate' : 'none'), originX: rot && rot[2] ? parseFloat(rot[2]) : null, originY: rot && rot[3] ? parseFloat(rot[3]) : null };
+                }
+              }
 
               rawExpr = rawExpr.replace(
                 /\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g,
@@ -6386,6 +6405,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 target: b.target,
                 attr: b.attr,
                 node,
+                affine,
+                matrixBuf: affine && (affine.transform === 'translateX' || affine.transform === 'translateY' || affine.transform === 'rotate') ? new Float32Array(6) : null,
                 evalFn: (t, vars, Math, comp, ...helpers) => {
                   let val;
                   try {
@@ -6907,12 +6928,41 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const b = this.activeBindings[i];
         if (b.node) {
           try {
-            const val = b.evalFn(
-              effectiveT, v, Math, v,
-              astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
-              AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
-              AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
-            );
+            let val;
+            if (b.affine) {
+              const num = b.affine.m * effectiveT + b.affine.c;
+              if (b.matrixBuf) {
+                const mb = b.matrixBuf;
+                if (b.affine.transform === 'translateX') {
+                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = num; mb[5] = 0;
+                } else if (b.affine.transform === 'translateY') {
+                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = 0; mb[5] = num;
+                } else if (b.affine.transform === 'rotate') {
+                  const rad = num * (Math.PI / 180);
+                  const cos = Math.cos(rad);
+                  const sin = Math.sin(rad);
+                  mb[0] = cos; mb[1] = sin; mb[2] = -sin; mb[3] = cos;
+                  if (b.affine.originX != null && b.affine.originY != null) {
+                    const cx = b.affine.originX;
+                    const cy = b.affine.originY;
+                    mb[4] = cx - cx * cos + cy * sin;
+                    mb[5] = cy - cx * sin - cy * cos;
+                  } else {
+                    mb[4] = 0; mb[5] = 0;
+                  }
+                }
+                val = `matrix(${mb[0]},${mb[1]},${mb[2]},${mb[3]},${mb[4]},${mb[5]})`;
+              } else {
+                val = num;
+              }
+            } else {
+              val = b.evalFn(
+                effectiveT, v, Math, v,
+                astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
+                AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
+                AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
+              );
+            }
             if (b.lastVal !== val) {
               b.lastVal = val;
               if (b.attr === 'textContent') {
