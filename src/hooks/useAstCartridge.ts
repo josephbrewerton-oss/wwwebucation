@@ -16,7 +16,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { parseSExpr } from '../utils/sexprParser';
 import { SExprAST } from '../types/sexpr';
 import { getCartridge, normalizeCartridgeId, CartridgeDefinition } from '../services/cartridgeStore';
-import { getVaultCartridge } from '../services/dbStore';
+import { getVaultCartridge, putVaultCartridge } from '../services/dbStore';
 
 interface CacheEntry<T> {
   raw: string;
@@ -123,25 +123,30 @@ export function useAstCartridge<T = SExprAST>(
       }
 
       // 4. Fetch from static cartridges asset folder
+      // 4. Fetch from static cartridges asset folder with base-aware resolution
       if (!astText) {
-        const basePath = options.basePath || '/cartridges/';
-        const candidateUrls = [
-          `${basePath.replace(/\/+$/, '')}/${normalizedId}.ast`,
-        ];
+        const appBase = ((typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+        const defaultBase = options.basePath ? options.basePath.replace(/\/+$/, '') + '/' : `${appBase}cartridges/`;
+        const candidateUrls = Array.from(new Set([
+          `${defaultBase}${normalizedId}.ast`,
+          `${appBase}cartridges/${normalizedId}.ast`,
+          `${appBase}player/cartridges/${normalizedId}.ast`,
+          `./cartridges/${normalizedId}.ast`,
+          `/cartridges/${normalizedId}.ast`,
+        ])).filter(Boolean);
 
-        let fetchedResponse: Response | null = null;
         for (const url of candidateUrls) {
           try {
             const res = await fetch(url);
             if (res.ok) {
-              fetchedResponse = res;
-              break;
+              const text = await res.text();
+              const trimmed = text.trim();
+              if (!trimmed.startsWith('<!DOCTYPE') && !trimmed.startsWith('<html')) {
+                astText = text;
+                break;
+              }
             }
           } catch {}
-        }
-
-        if (fetchedResponse) {
-          astText = await fetchedResponse.text();
         }
       }
 
@@ -155,13 +160,25 @@ export function useAstCartridge<T = SExprAST>(
         ? options.transform(parsedAst, astText)
         : (parsedAst as unknown as T);
 
-      // 6. Populate cache
+      // 6. Populate in-memory cache and IndexedDB vault
       if (!options.noCache) {
         IN_MEMORY_CARTRIDGE_CACHE.set(normalizedId, {
           raw: astText,
           parsed: transformedData,
           timestamp: Date.now(),
         });
+        putVaultCartridge({
+          id: normalizedId,
+          title: def?.title || normalizedId,
+          desc: def?.desc || def?.title || normalizedId,
+          icon: def?.icon || '⚡',
+          astSource: astText,
+          svgMarkup: def?.svgMarkup || '',
+          category: def?.category || 'General',
+          stage: def?.stage || 'CURRICULUM',
+          source: 'builtin',
+          updatedAt: Date.now(),
+        }).catch(() => {});
       }
 
       if (isMountedRef.current) {

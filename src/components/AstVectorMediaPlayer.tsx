@@ -249,7 +249,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
   bslEnabled: bslEnabledProp,
   onBslToggle,
 }, ref) => {
-  const rawBase = import.meta.env.BASE_URL || '/';
+  const rawBase = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || import.meta.env.BASE_URL || '/';
   const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const normalizedInitialPreset = normalizeCartridgeId(preset) || 'welcome';
