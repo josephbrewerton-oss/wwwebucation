@@ -10,6 +10,7 @@
     (:slider :var "breviaryOpen" :label "Breviary Ribbons" :min 0.0 :max 1.0 :step 1.0)
   ))
   (:gestures (
+    (:rotate :target "#celestial-dial-knob" :cx 400 :cy 240 :var "sunElevation")
     (:draggable :target "#celestial-dial-knob" :axis "xy" :min 100 :max 700)
   ))
   (:subtitles (
