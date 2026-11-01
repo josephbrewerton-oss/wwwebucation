@@ -71,7 +71,7 @@ export default function AstInteractiveLabDrawer({
     preset === 'calculus-curves' ? 'calculus' : preset === 'kinetic-gas' ? 'kinetic-gas' : 'preset'
   );
 
-  const postVarToPlayer = (name: string, val: string | number) => {
+  const postVarToPlayer = (name: string, val: string | number | boolean) => {
     if (typeof window !== 'undefined') {
       const iframes = document.querySelectorAll('iframe');
       iframes.forEach((f) => {

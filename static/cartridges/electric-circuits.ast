@@ -1,4 +1,4 @@
-(scene :id "electric-circuits" :type "Sim" :stage "KS2/KS3 PHYSICS" :duration 12.0
+(scene :id "electric-circuits" :type "Sim" :oak-id "OAK-KS2-SCI-ELECTRICC" :stage "KS2/KS3 PHYSICS" :duration 12.0
   (:title "💡 Electrical Circuits & Ohm's Law (V = I × R)")
 
   (:vars (
@@ -60,5 +60,10 @@
     (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed ? Math.min(1.0, 0.15 + (Number(computed.power || 0) / 120)) : 0.05")
     (:target "#bulb-halo" :attr "r" :expr "vars.switchClosed ? (25 + Math.min(65, Number(computed.power || 0) * 0.5)) : 15")
     (:target "#bulb-filament" :attr "stroke" :expr "vars.switchClosed && Number(computed.power || 0) > 2 ? '#fff5a0' : '#444'")
+
+    ;; Dynamic Current Flow & Electron Drift
+    (:target "#wire-flow" :attr "stroke-dashoffset" :expr "vars.switchClosed ? -(t * 60 * Number(computed.current || 1)) : 0")
+    (:target "#wire-flow" :attr "stroke" :expr "vars.switchClosed ? '#facc15' : '#475569'")
+    (:target "#electron-charges" :attr "opacity" :expr "vars.switchClosed ? 1.0 : 0.2")
   ))
 )

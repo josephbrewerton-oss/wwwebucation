@@ -486,22 +486,6 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 1
   },
   {
-    "id": "electric-circuits",
-    "base": "electric-circuits",
-    "type": "Sim",
-    "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
-    "stage": "KS2/KS3 PHYSICS",
-    "oakId": "OAK-KS3-SCI-002",
-    "oakUnit": "ks3-physics-electricity-circuits-ohms-law",
-    "subject": "Science",
-    "isCore": true,
-    "tier": "core",
-    "mount": "/curriculum/science/electric-circuits",
-    "section": "Natural Sciences & Physics",
-    "hasCheckpoints": true,
-    "checkpointCount": 2
-  },
-  {
     "id": "atom",
     "base": "atom",
     "type": "Sim",
@@ -772,6 +756,22 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Catholic Life & Faith Formation",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "electric-circuits",
+    "base": "electric-circuits",
+    "type": "Sim",
+    "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+    "stage": "KS2/KS3 PHYSICS",
+    "oakId": "OAK-KS2-SCI-ELECTRICC",
+    "oakUnit": "V",
+    "subject": "Science",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/science/electric-circuits",
+    "section": "Natural Sciences & Physics",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "oak-data-algorithms-sequencing",
