@@ -40,7 +40,7 @@
         try {
           let binaryBytes = null;
 
-// 1. Try browser fetch for standalone .wasm binary
+          // 1. Try browser fetch for standalone .wasm binary
           if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
             const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/wwwebucation/';
             const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
@@ -55,19 +55,10 @@
             for (const url of candidates) {
               try {
                 const resp = await fetch(url);
-                const cType = resp.headers.get('content-type') || '';
-                
-                // Reject if server routed to 404.html
-                if (!resp.ok || cType.includes('text/html')) continue;
-
-                const ab = await resp.arrayBuffer();
-                if (ab && ab.byteLength >= 4) {
-                  const magic = new Uint8Array(ab, 0, 4);
-                  // Check for WASM magic header: \0asm (0x00, 0x61, 0x73, 0x6D)
-                  if (magic[0] === 0x00 && magic[1] === 0x61 && magic[2] === 0x73 && magic[3] === 0x6D) {
-                    binaryBytes = new Uint8Array(ab);
-                    break;
-                  }
+                if (resp.ok) {
+                  const ab = await resp.arrayBuffer();
+                  binaryBytes = new Uint8Array(ab);
+                  break;
                 }
               } catch (_) {}
             }
@@ -75,17 +66,18 @@
 
           // 2. Fallback to inlined zero-latency base64
           if (!binaryBytes || binaryBytes.length === 0) {
-            if (typeof atob === 'function' && typeof FALLBACK_TRANSPILER_WASM_BASE64 === 'string' && FALLBACK_TRANSPILER_WASM_BASE64.length > 0) {
+            if (typeof atob === 'function') {
               const binStr = atob(FALLBACK_TRANSPILER_WASM_BASE64);
               const len = binStr.length;
               binaryBytes = new Uint8Array(len);
               for (let i = 0; i < len; i++) {
                 binaryBytes[i] = binStr.charCodeAt(i);
               }
-            } else if (typeof Buffer !== 'undefined' && typeof FALLBACK_TRANSPILER_WASM_BASE64 === 'string' && FALLBACK_TRANSPILER_WASM_BASE64.length > 0) {
+            } else if (typeof Buffer !== 'undefined') {
               binaryBytes = Buffer.from(FALLBACK_TRANSPILER_WASM_BASE64, 'base64');
             }
           }
+
           const wasmRes = await WebAssembly.instantiate(binaryBytes);
           this.instance = wasmRes.instance || wasmRes;
           this.exports = this.instance.exports;

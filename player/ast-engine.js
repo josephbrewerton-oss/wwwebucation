@@ -4554,6 +4554,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (inBlocks.length > 0) {
         const blockText = inBlocks[0];
         const inEntries = extractSexprBlocks(blockText, ':slider')
+          .concat(extractSexprBlocks(blockText, ':switch'))
           .concat(extractSexprBlocks(blockText, ':toggle'))
           .concat(extractSexprBlocks(blockText, ':stepper'))
           .concat(extractSexprBlocks(blockText, ':select'))
@@ -4879,14 +4880,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       return this.scene;
     }
 
-    mountCartridge(cartridge) {
-      return this.initScene(cartridge);
-    }
-
     mountDeclarativeHud(scene) {
       if (!this.container) return;
 
-      const existingHud = document.querySelector('#ast-declarative-hud');
+      const doc = this.container.ownerDocument || (typeof document !== 'undefined' ? document : null);
+      if (!doc) return;
+
+      const existingHud = doc.querySelector('#ast-declarative-hud');
       if (existingHud) existingHud.remove();
 
       const inputs = scene?.inputs;
@@ -4894,16 +4894,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       let hostEl = this.container;
       if (hostEl instanceof SVGElement || hostEl.tagName?.toLowerCase() === 'svg') {
-        hostEl = hostEl.closest('div') || hostEl.parentElement || document.body;
+        hostEl = hostEl.closest('div') || hostEl.parentElement || doc.body;
       } else if (hostEl.parentElement && hostEl.parentElement.tagName?.toLowerCase() === 'svg') {
-        hostEl = hostEl.parentElement.closest('div') || hostEl.parentElement.parentElement || document.body;
+        hostEl = hostEl.parentElement.closest('div') || hostEl.parentElement.parentElement || doc.body;
       }
 
       if (getComputedStyle(hostEl).position === 'static') {
         hostEl.style.position = 'relative';
       }
 
-      const hud = document.createElement('div');
+      const hud = doc.createElement('div');
       hud.id = 'ast-declarative-hud';
       hud.style.cssText = `
         position: absolute;
@@ -4954,7 +4954,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       hostEl.appendChild(hud);
 
-inputs.forEach(inp => {
+      inputs.forEach(inp => {
         const vName = inp.var || inp.id;
         const slider = hud.querySelector(`#hud-inp-${vName}`);
         const btn = hud.querySelector(`#hud-btn-${vName}`);
@@ -4969,6 +4969,7 @@ inputs.forEach(inp => {
             }
             if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
             if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+            if (typeof this.render === 'function') this.render(this.progress || 0);
           });
         }
 
@@ -4987,10 +4988,12 @@ inputs.forEach(inp => {
 
             if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
             if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+            if (typeof this.render === 'function') this.render(this.progress || 0);
           });
         }
       });
     }
+
     async loadScene(presetId, shouldPlay = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
@@ -5222,6 +5225,7 @@ inputs.forEach(inp => {
           } catch (e) {
             console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
           }
+        }
 
         // Secondary fallback for core cartridges if network fetch failed on GitHub Pages
         if (!svgText && global.ASTSceneRegistry) {
@@ -5424,10 +5428,9 @@ inputs.forEach(inp => {
       return this.scene;
     })();
 
-    const loadPromiseExecution = loadPromise();
-    this._inFlightLoadPromise = loadPromiseExecution;
+    this._inFlightLoadPromise = loadPromise;
     try {
-      const res = await loadPromiseExecution;
+      const res = await loadPromise;
       return res;
     } finally {
       if (this._inFlightLoadPresetId === presetId) {
@@ -7991,3 +7994,128 @@ function setupPostMessageBridge(engine, uiController) {
             global.__astGestures.stageSvg.style.cursor = global.__astGestures.isPenActive ? 'crosshair' : 'default';
           }
         }
+        break;
+      case 'CLEAR_WHITEBOARD_INK':
+        if (global.__astGestures && typeof global.__astGestures.clearWhiteboardInk === 'function') {
+          global.__astGestures.clearWhiteboardInk();
+        }
+        break;
+      case 'UNDO_WHITEBOARD_INK':
+        if (global.__astGestures && typeof global.__astGestures.undoLastStroke === 'function') {
+          global.__astGestures.undoLastStroke();
+        }
+        break;
+      case 'EXPORT_WHITEBOARD_INK':
+        if (global.__astGestures && typeof global.__astGestures.broadcastInkSession === 'function') {
+          global.__astGestures.broadcastInkSession();
+        }
+        break;
+      case 'TOGGLE_XRAY':
+        if (typeof engine.togglePedagogicalXRay === 'function') {
+          engine.togglePedagogicalXRay(typeof data.enabled === 'boolean' ? data.enabled : undefined);
+        }
+        break;
+      case 'SET_VAR':
+        if (data.name && data.value !== undefined) {
+          if (typeof engine.setVar === 'function') {
+            engine.setVar(data.name, data.value);
+          } else if (engine.scene && engine.scene.vars) {
+            engine.scene.vars[data.name] = data.value;
+            if (typeof engine.updateComputedVars === 'function') engine.updateComputedVars();
+            if (typeof engine.applyBindings === 'function') engine.applyBindings(engine.progress || 0);
+            if (typeof engine.render === 'function') engine.render(engine.progress || 0);
+          }
+        }
+        break;
+      case 'RESET_3D':
+        if (typeof engine.resetCamera === 'function') {
+          engine.resetCamera();
+        }
+        break;
+      case 'ROTATE_CAMERA_ORBIT':
+        if (typeof engine.rotateCamera === 'function') {
+          engine.rotateCamera(data.theta || 0, data.phi || 0, data.relative);
+        }
+        break;
+      case 'DOWNLOAD_OFFLINE_ZIP':
+        if (typeof engine.downloadOfflineZipSuite === 'function') {
+          engine.downloadOfflineZipSuite();
+        }
+        break;
+      case 'INJECT_CHECKPOINT':
+        if (data.checkpoint && engine.scene) {
+          if (!engine.scene.interactive) engine.scene.interactive = { checkpoints: [] };
+          if (!Array.isArray(engine.scene.interactive.checkpoints)) engine.scene.interactive.checkpoints = [];
+          engine.scene.interactive.checkpoints.push(data.checkpoint);
+          if (uiController && typeof uiController.updateView === 'function') uiController.updateView();
+        }
+        break;
+      case 'LOAD_CARTRIDGE':
+        if (data.cartridge) {
+          engine.loadSceneData(data.cartridge, data.play !== false);
+        }
+        break;
+      case 'SET_DEV_MODE':
+        if (typeof engine.setDevMode === 'function') {
+          engine.setDevMode(Boolean(data.enabled));
+        }
+        break;
+      case 'GET_STAGE_SVG':
+        if (typeof engine.getStageSvg === 'function') {
+          const svgMarkup = engine.getStageSvg();
+          engine.notifyParent({ type: 'STAGE_SVG_RESPONSE', svg: svgMarkup });
+        }
+        break;
+      case 'EXPORT_STANDALONE_APPLET':
+        if (typeof engine.exportStandaloneApplet === 'function') {
+          engine.exportStandaloneApplet();
+        }
+        break;
+      case 'ACTUATE_OPCODE':
+        if (typeof engine.actuateOpcode === 'function') {
+          engine.actuateOpcode(data.opcode);
+        }
+        break;
+      case 'CAST_CAMERA_RAY':
+        if (typeof engine.castCameraRay === 'function') {
+          engine.castCameraRay();
+        }
+        break;
+      case 'NUDGE_NODE':
+        if (typeof engine.actuateNode === 'function') {
+          const dxyz = Array.isArray(data.dxyz) ? data.dxyz : [0, 0, 0];
+          engine.actuateNode(data.target, dxyz[0] || 0, dxyz[1] || 0, dxyz[2] || 0, true);
+        }
+        break;
+      case 'VOICE_COMMAND':
+        if (typeof engine.handleVoiceCommand === 'function') {
+          engine.handleVoiceCommand(data.command);
+        }
+        break;
+      case 'TOGGLE_VOICE_COMMANDS':
+      case 'START_VOICE_COMMANDS':
+      case 'STOP_VOICE_COMMANDS':
+        if (typeof engine.toggleVoiceRecognition === 'function') {
+          engine.toggleVoiceRecognition();
+        }
+        break;
+      case 'PUPIL_INTERRUPT':
+        if (typeof engine.cancelSpeech === 'function') {
+          engine.cancelSpeech();
+        }
+        break;
+      default:
+        break;
+    }
+  });
+}
+
+  // Expose to global/window environment
+  global.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
+  global.setupPostMessageBridge = setupPostMessageBridge;
+  if (typeof window !== 'undefined') {
+    window.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
+    window.setupPostMessageBridge = setupPostMessageBridge;
+  }
+})(typeof window !== 'undefined' ? window : globalThis);
+
