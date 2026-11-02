@@ -1021,4 +1021,46 @@ export function renderHomePage(): HTMLElement {
       </p>
       <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
         <a href="${base}licensing" style="padding: 0.75rem 1.75rem; border-radius: 8px; background: #15803d; color: #ffffff; font-weight: 700; text-decoration: none;">🕊️ Read Our School Mission</a>
-        <a href="${base}privacy" style="padding: 0.75rem 1.75rem; border-radius: 8px; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; font-weight: 60
+        <a href="${base}privacy" style="padding: 0.75rem 1.75rem; border-radius: 8px; background: #ffffff; border: 1px solid #cbd5e1; color: #334155; font-weight: 600; text-decoration: none;">🛡️ Safe, Private &amp; On Your Device</a>
+      </div>
+    </section>
+
+    <!-- Licensing Footer -->
+    <div style="padding-top: 2rem; border-top: 1px solid #e2e8f0; text-align: center; font-size: 0.875rem; color: #64748b; line-height: 1.6;">
+      St Joseph's Learning Portal &bull; Open-source, privacy-first educational technology.
+      Curriculum materials licensed under <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 600;">OGL v3.0 (Oak National Academy)</a>.
+    </div>
+  `;
+
+  // Attach interactive preset switcher to dropdown & pills without React
+  const iframe = container.querySelector<HTMLIFrameElement>('#landing-stage-viewport');
+  const select = container.querySelector<HTMLSelectElement>('#landing-sim-selector');
+  const pills = container.querySelectorAll<HTMLButtonElement>('.sim-pill-btn');
+
+  function updatePreset(presetId: string) {
+    if (iframe) {
+      iframe.src = `${base}player.html?preset=${presetId}`;
+    }
+    if (select) {
+      select.value = presetId;
+    }
+    pills.forEach((p) => {
+      const active = p.dataset.preset === presetId;
+      p.style.background = active ? '#0284c7' : '#1e293b';
+      p.style.color = active ? '#ffffff' : '#94a3b8';
+      p.style.borderColor = active ? '#38bdf8' : '#334155';
+    });
+  }
+
+  select?.addEventListener('change', (e) => {
+    updatePreset((e.target as HTMLSelectElement).value);
+  });
+
+  pills.forEach((p) => {
+    p.addEventListener('click', () => {
+      if (p.dataset.preset) updatePreset(p.dataset.preset);
+    });
+  });
+
+  return container;
+}
