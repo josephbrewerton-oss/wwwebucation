@@ -10,6 +10,7 @@ import { PRESET_OPTIONS } from '../data/player/generatedScenes';
 
 const AstVectorMediaPlayer = lazy(() => import('../components/AstVectorMediaPlayer'));
 
+
 export default function Home() {
   const [landingSimPreset, setLandingSimPreset] = useState<string>('kinetic-gas');
   return (
@@ -711,6 +712,8 @@ export default function Home() {
   );
 }
 export function renderHomePage(): HTMLElement {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+
   const container = document.createElement('div');
   container.className = 'home-landing-stage';
   container.style.cssText = 'padding: 3rem 1.5rem; max-width: 1140px; margin: 0 auto;';
@@ -733,20 +736,19 @@ export function renderHomePage(): HTMLElement {
       </p>
 
       <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <a href="/player" class="stj-btn" style="padding: 10px 22px; background: #0284c7; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+        <a href="${base}player" class="stj-btn" style="padding: 10px 22px; background: #0284c7; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
           Launch Interactive Simulators ↓
         </a>
-        <a href="/practice-lab" class="stj-btn" style="padding: 10px 22px; background: #0f172a; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+        <a href="${base}practice-lab" class="stj-btn" style="padding: 10px 22px; background: #0f172a; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
           Practice Question Bank ↓
         </a>
       </div>
     </section>
 
-    <!-- Embedded Stage Viewport -->
     <div style="background: #090d16; border-radius: 16px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.45); margin-bottom: 2.5rem;">
       <iframe 
         id="landing-stage-viewport"
-        src="/player/index.html?preset=kinetic-gas" 
+        src="${base}player.html?preset=kinetic-gas" 
         style="width: 100%; height: 480px; border: none; display: block;" 
         title="Featured Interactive Simulation">
       </iframe>
