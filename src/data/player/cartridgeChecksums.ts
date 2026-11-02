@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-01T08:21:22.134Z",
+  "generatedAt": "2026-11-02T08:42:47.399Z",
   "totalCartridges": 60,
-  "masterChecksum": "c45b2e718532d6f684c59ccc463b3d01a2993b81f52f0e0402e93154d417651e",
+  "masterChecksum": "209a73aa9fffa8390e44c631ebc741ff9490cb8af51df480d6a374adf4a746b5",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -423,15 +423,15 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "title": "The Liturgy of the Hours: Sanctifying Time Through the Divine Office",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "84be615c6176f5bd90b387a406fbe7cc720245ff4b119b9084ba119b66cf5d14",
+      "astSha256": "51e8439d720acccc4cccc06b31aadc391e36499d15ee2a65dd4a2b4e08889a0f",
       "svgSha256": "4c45fd038713d8290ae2d2c6b8c0881f0c65a56db71fab4271515f0058a536a4",
-      "astbSha256": "b6ec0a9f2cd7ad9dda865a2f2f2a526287b515443d234ee325fe7907df5051e2",
-      "astbBytes": 4052,
-      "astBytes": 6547,
+      "astbSha256": "d24c50817c7b7521f6e26ee4302e5046d5315d1b2d28d5d4275c8a3b7cf702ad",
+      "astbBytes": 4018,
+      "astBytes": 6551,
       "svgBytes": 8990,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "3392e18a57a3a054bdbc3c8716b79537680397633ead6c966f6483bec584c46b",
+      "seal": "c9a1696fa6474497d8811b9e5a7bb98b979299f1bdaf443011e5cb97da236a8e",
       "certified": true
     },
     "math-fishing": {
