@@ -125,7 +125,7 @@ function astSceneAutoFinder(): import('vite').Plugin {
 }
 
 export default defineConfig({
-  base: process.env.BASE_URL || '/',
+  base: process.env.BASE_URL || '/wwwebucation/',
   plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
