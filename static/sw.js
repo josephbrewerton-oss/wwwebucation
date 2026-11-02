@@ -47,15 +47,22 @@ self.addEventListener('install', (event) => {
 
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
+    (async () => {
+      if ('navigationPreload' in self.registration) {
+        try {
+          await self.registration.navigationPreload.enable();
+        } catch {}
+      }
+      const keys = await caches.keys();
+      await Promise.all(
         keys.map((key) => {
           if (key !== CACHE_NAME) {
             return caches.delete(key);
           }
         })
       );
-    }).then(() => self.clients.claim())
+      await self.clients.claim();
+    })()
   );
 });
 
@@ -97,22 +104,34 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Navigation requests (HTML pages): Network-first to always serve the latest app version and chunk manifests
+  // Navigation requests (HTML pages): Network-first with Navigation Preload for sub-100ms mobile FCP
   if (request.mode === 'navigate') {
     event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
+      (async () => {
+        try {
+          // 1. Check if browser parallel preloaded the network response
+          const preload = await event.preloadResponse;
+          if (preload && preload.ok) {
+            const clone = preload.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put('./index.html', clone.clone());
+              cache.put(request, clone);
+            }).catch(() => {});
+            return preload;
+          }
+
+          // 2. Direct network fetch
+          const networkResponse = await fetch(request);
           if (networkResponse && networkResponse.ok) {
             const clone = networkResponse.clone();
             caches.open(CACHE_NAME).then((cache) => {
               cache.put('./index.html', clone.clone());
               cache.put(request, clone);
-            });
+            }).catch(() => {});
           }
           return networkResponse;
-        })
-        .catch(async () => {
-          // Offline fallback when no network is available
+        } catch {
+          // 3. Instant offline fallback
           const cachedShell =
             (await caches.match('./index.html')) ||
             (await caches.match(request)) ||
@@ -122,7 +141,8 @@ self.addEventListener('fetch', (event) => {
             status: 200,
             headers: { 'Content-Type': 'text/html' },
           });
-        })
+        }
+      })()
     );
     return;
   }
