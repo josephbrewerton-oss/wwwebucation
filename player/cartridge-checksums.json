@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-02T08:33:02.821Z",
+  "generatedAt": "2026-11-02T08:46:58.988Z",
   "totalCartridges": 60,
-  "masterChecksum": "4f094ad68ad24250256cd911198f913477a780b7379218aed881d0336af62a42",
+  "masterChecksum": "209a73aa9fffa8390e44c631ebc741ff9490cb8af51df480d6a374adf4a746b5",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -394,15 +394,15 @@
       "title": "The Liturgy of the Hours: Sanctifying Time Through the Divine Office",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "a2bcc9fb81336399d0101a9cd440d0c72eea1f724487db618f47b1f16ff96b83",
+      "astSha256": "51e8439d720acccc4cccc06b31aadc391e36499d15ee2a65dd4a2b4e08889a0f",
       "svgSha256": "4c45fd038713d8290ae2d2c6b8c0881f0c65a56db71fab4271515f0058a536a4",
-      "astbSha256": "b6ec0a9f2cd7ad9dda865a2f2f2a526287b515443d234ee325fe7907df5051e2",
-      "astbBytes": 4052,
-      "astBytes": 6628,
+      "astbSha256": "d24c50817c7b7521f6e26ee4302e5046d5315d1b2d28d5d4275c8a3b7cf702ad",
+      "astbBytes": 4018,
+      "astBytes": 6551,
       "svgBytes": 8990,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "4341e67b1e13e33044a54aa3cfeb3aa7a2a8ef6168bece4c1f52084bf474a415",
+      "seal": "c9a1696fa6474497d8811b9e5a7bb98b979299f1bdaf443011e5cb97da236a8e",
       "certified": true
     },
     "math-fishing": {

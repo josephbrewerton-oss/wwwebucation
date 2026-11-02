@@ -11,7 +11,6 @@
   ))
   (:gestures (
     (:rotate :target "#celestial-dial-knob" :cx 400 :cy 240 :var "sunElevation")
-    (:draggable :target "#celestial-dial-knob" :axis "xy" :min 100 :max 700)
   ))
   (:subtitles (
     (:start 0.00 :end 0.16 :en "Office of Readings / Matins (Vigiliae): Chanted during the quiet night or predawn hours. Extended meditation on the Sacred Scriptures and writings of the Church Fathers (Patristic corpus)." :es "Oficio de Lecturas / Maitines: Rezado durante la noche o antes del amanecer. Meditación profunda en la Escritura y los Santos Padres." :la "Officium Lectionis (Matutinum): Domine, labia mea aperies: Et os meum annuntiabit laudem tuam. Deus in adiutorium meum intende: Domine ad adiuvandum me festina.")

@@ -460,6 +460,12 @@
               el.style.cursor = 'pointer';
               el.setAttribute('data-interactive', g.action || 'toggle');
               if (g.action) el.setAttribute('data-action', g.action);
+            } else if (g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
+              el.style.cursor = 'grab';
+              el.setAttribute('data-draggable', 'rotate');
+              el.setAttribute('data-gesture-cx', String(g.cx !== undefined ? g.cx : 400));
+              el.setAttribute('data-gesture-cy', String(g.cy !== undefined ? g.cy : 240));
+              if (g.var) el.setAttribute('data-gesture-var', g.var);
             } else {
               el.style.cursor = g.axis === 'y' ? 'ns-resize' : (g.axis === 'x' ? 'ew-resize' : 'grab');
               el.setAttribute('data-draggable', 'generic');
@@ -705,6 +711,12 @@
             y: initY
           };
           this.playAudioTone(380, 'triangle', 0.06);
+        } else if (target.getAttribute('data-draggable') === 'rotate' || target.closest('[data-draggable="rotate"]')) {
+          const rotTarget = target.getAttribute('data-draggable') === 'rotate' ? target : target.closest('[data-draggable="rotate"]');
+          this.dragTarget = rotTarget;
+          this.dragMode = 'rotate';
+          rotTarget.style.cursor = 'grabbing';
+          this.playAudioTone(380, 'triangle', 0.06);
         } else if (target.getAttribute('data-interactive') === 'switch' || target.getAttribute('data-interactive') === 'toggle-switch' || target.getAttribute('data-action') === 'toggle-switch') {
           this.toggleSwitch(target);
           return;
@@ -811,6 +823,8 @@
           this.handleCategoryKnobDrag(svgPt.x);
         } else if (this.dragMode === 'generic') {
           this.handleGenericDrag(this.dragTarget, svgPt);
+        } else if (this.dragMode === 'rotate') {
+          this.handleRotateDrag(this.dragTarget, svgPt);
         }
       } else if (this.isXRayActive) {
         const pedNode = e.target.closest('[data-pedagogical]');
@@ -882,6 +896,9 @@
           if (this.engine && !this.engine.isPlaying && this._wasPlayingBeforeDrag) {
             this.engine.play();
           }
+        } else if (this.dragMode === 'rotate') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
+          this.playAudioTone(440, 'sine', 0.05);
         }
 
         this.isDragging = false;
@@ -991,6 +1008,23 @@
       }
 
       if (this.engine) {
+        this.engine.applyBindings(this.engine.progress);
+      }
+    }
+
+    handleRotateDrag(target, svgPt) {
+      if (!target) return;
+      const cx = parseFloat(target.getAttribute('data-gesture-cx') || '400');
+      const cy = parseFloat(target.getAttribute('data-gesture-cy') || '240');
+      const varName = target.getAttribute('data-gesture-var');
+      const angleRad = Math.atan2(svgPt.y - cy, svgPt.x - cx);
+      let angleDeg = angleRad * (180 / Math.PI);
+      if (angleDeg < 0) angleDeg += 360;
+      target.setAttribute('transform', `rotate(${angleDeg.toFixed(1)} ${cx} ${cy})`);
+      if (varName && this.engine && typeof this.engine.setVar === 'function') {
+        this.engine.setVar(varName, parseFloat(angleDeg.toFixed(1)));
+      }
+      if (this.engine && typeof this.engine.applyBindings === 'function') {
         this.engine.applyBindings(this.engine.progress);
       }
     }
