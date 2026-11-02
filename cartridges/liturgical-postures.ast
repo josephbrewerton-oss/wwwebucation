@@ -20,10 +20,10 @@
   ))
 
   (:computed (
-    ;; Resolves posture safely: explicit slider takes precedence; falls back to timeline t
-    (:name "p" :expr "(vars.postureStep !== undefined && vars.postureStep !== null) ? Math.round(Number(vars.postureStep)) : (t < 0.22 ? 0 : (t < 0.44 ? 1 : (t < 0.65 ? 2 : (t < 0.82 ? 3 : 4))))")
-    (:name "bowDeg" :expr "20 + (Number(vars.reverenceAngle || 0) * 0.6)")
-  ))
+  ;; If dragged near Tabernacle -> Genuflect (2); near Altar -> Bow (3); center -> Stand (0) or Kneel (1)
+  (:name "dragX" :expr "Number(vars['posture-figure-beacon_x'] || 496)")
+  (:name "p" :expr "vars.postureStep > 0 ? Math.round(Number(vars.postureStep)) : (computed.dragX > 600 ? 2 : (computed.dragX < 350 ? 3 : 0))")
+))
 
   (:gestures (
     (:draggable :target "#posture-figure-beacon" :axis "xy" :min 100 :max 700)
