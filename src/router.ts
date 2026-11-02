@@ -1,8 +1,6 @@
 // src/router.ts - Native Micro-Router (30 lines, zero dependencies)
 type RouteHandler = () => Promise<HTMLElement | string>;
 
-// src/router.ts - Flexible Native Micro-Router
-type RouteHandler = () => Promise<HTMLElement | string>;
 
 const routes: Record<string, RouteHandler> = {
   '/': () => import('./pages/index').then(m => m.renderHomePage ? m.renderHomePage() : (m.default ? String(m.default) : '')),
