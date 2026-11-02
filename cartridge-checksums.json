@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-02T10:57:43.286Z",
+  "generatedAt": "2026-11-02T11:06:21.712Z",
   "totalCartridges": 60,
-  "masterChecksum": "dd1f2d9a14332c7fe0c42f4ccf6b23573554d15187305210f5d13da25d07109a",
+  "masterChecksum": "73b3cd8aba96d0d3e5482b8bb3e8cc6961780c364e119ce9757516d35e5b53d8",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -378,15 +378,15 @@
       "title": "Sacred Postures & Gestures: Praying with Mind, Heart & Body",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "3488299abefc38277b645b94ffacde0050491b8b124b4b1ffb2ad28398657f47",
+      "astSha256": "9c5694f4f7f23133d22f01c9bf60b089e8e17a1d93ad6b76d8dd116d22068bae",
       "svgSha256": "5f0149ee5d801aff963992218e83bfe3d6ef287739382d26de462bf3973eac4f",
-      "astbSha256": "b6dd3fa47fd736a11b060a43b8594eb6242dd9ff334d308ee285ced0a181ba7f",
-      "astbBytes": 5194,
-      "astBytes": 7532,
+      "astbSha256": "4607dba8818a64999b711aacee5e84545c2fe3d74747441903822cb667e9f9f5",
+      "astbBytes": 3706,
+      "astBytes": 6426,
       "svgBytes": 5608,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "658b9d2ee0e1e3dda8acbce0ea1bab389ac74db7d82764e35996de24b2e5f5ab",
+      "seal": "60f7ee708d284d7a6bfe7eb8ae96d9e6e0f9f67ce7ed4041e6f01c3fea1b8359",
       "certified": true
     },
     "liturgy-of-the-hours": {
