@@ -44,12 +44,14 @@
 ### Machine-Readable Endpoints & Manifests
 - `/llms.txt` : Concise machine-readable context file following the llms.txt standard.
 - `/llms-full.txt` : Comprehensive full-system briefing file for large-context models.
+- `/agents.txt` : Directory of autonomous web agent capabilities, tools, and W3C WebMCP definitions.
 - `/robots.txt` : Web robot and AI bot discovery policy.
+- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 60 cartridges.
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/sitemap.ast` : S-Expression sitemap indexing self-mounting cartridges.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 46 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of all 60 production vector simulation cartridges.
 - `/player/scenes-config.json` : Timeline keyframes, multilingual subtitles (EN/ES/FR/LA/DE/IT), and pause checkpoints.
 - `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
 - `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
@@ -200,7 +202,7 @@ The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/
 
 ---
 
-## 10. Complete Production Curriculum Cartridge Catalog (46 Cartridges)
+## 10. Complete Production Curriculum Cartridge Catalog (60 Cartridges)
 
 ### 10.1. Mathematics & Quantitative Reasoning
 1. **Calculus: Tangent Slopes & Integrals (`calculus-curves`)**: GCSE/A-Level. Tangent slope $dy/dx$, stationary turning points, and Simpson's 1/3 numerical integrals with interactive curve selection.

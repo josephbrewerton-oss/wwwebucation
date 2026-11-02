@@ -582,7 +582,7 @@
       const params = new URLSearchParams(window.location.search);
       const src = params.get('src') || params.get('file');
       const basePath = params.get('basePath') || params.get('base');
-      const preset = params.get('preset') || params.get('cartridge') || (src ? null : 'fractions');
+      const preset = params.get('preset') || params.get('cartridge') || (src ? null : 'welcome');
       const lang = params.get('lang') || 'en';
       const speed = parseFloat(params.get('speed') || '1.0');
       const autoplay = params.get('autoplay') !== '0' && params.get('play') !== '0';

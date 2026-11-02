@@ -4994,6 +4994,79 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       });
     }
 
+    getFromVaultIndexedDb(presetId) {
+      if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open('EdgeLearningEngineDB', 5);
+          req.onerror = () => resolve(null);
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('cartridges_vault')) {
+              db.createObjectStore('cartridges_vault', { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('cartridges_vault')) {
+              db.close();
+              return resolve(null);
+            }
+            const tx = db.transaction('cartridges_vault', 'readonly');
+            const store = tx.objectStore('cartridges_vault');
+            const getReq = store.get(presetId);
+            getReq.onsuccess = () => {
+              const res = getReq.result;
+              db.close();
+              resolve(res || null);
+            };
+            getReq.onerror = () => {
+              db.close();
+              resolve(null);
+            };
+          };
+        } catch {
+          resolve(null);
+        }
+      });
+    }
+
+    putIntoVaultIndexedDb(record) {
+      if (typeof indexedDB === 'undefined' || !record || !record.id) return Promise.resolve();
+      return new Promise((resolve) => {
+        try {
+          const req = indexedDB.open('EdgeLearningEngineDB', 5);
+          req.onerror = () => resolve();
+          req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains('cartridges_vault')) {
+              db.createObjectStore('cartridges_vault', { keyPath: 'id' });
+            }
+          };
+          req.onsuccess = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('cartridges_vault')) {
+              db.close();
+              return resolve();
+            }
+            const tx = db.transaction('cartridges_vault', 'readwrite');
+            const store = tx.objectStore('cartridges_vault');
+            store.put({ ...record, updatedAt: Date.now() });
+            tx.oncomplete = () => {
+              db.close();
+              resolve();
+            };
+            tx.onerror = () => {
+              db.close();
+              resolve();
+            };
+          };
+        } catch {
+          resolve();
+        }
+      });
+    }
+
     async loadScene(presetId, shouldPlay = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
@@ -5087,86 +5160,82 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         let scene = this.sceneCache[presetId];
 
         if (!scene) {
-          const registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
+          let registryScene = (global.ASTSceneRegistry && global.ASTSceneRegistry.get(presetId)) || (global.ASTScenes && global.ASTScenes[presetId]) || {};
           let svgText = registryScene.svgMarkup || registryScene.svgText || '';
           let astText = registryScene.astSource || registryScene.astText || '';
           let parsedAst = null;
 
-          // If not already in registry/decentralized store, fetch dynamically
+          // 1. Check decentralized IndexedDB Cartridge Vault first (Zero Network Overhead & Zero 404s)
+          if (!svgText || !astText) {
+            try {
+              const vaultItem = await this.getFromVaultIndexedDb(presetId);
+              if (vaultItem && (vaultItem.svgMarkup || vaultItem.svgText)) {
+                svgText = vaultItem.svgMarkup || vaultItem.svgText;
+                astText = vaultItem.astSource || vaultItem.astText || '';
+                if (!registryScene.title && vaultItem.title) {
+                  registryScene = { ...registryScene, ...vaultItem };
+                }
+              }
+            } catch (_) {}
+          }
+
+          // 2. If not already in registry or vault, fetch dynamically
           if ((!svgText || !astText) && typeof fetch !== 'undefined') {
             const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
               ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
               : './';
-            const base = (this.options?.basePath || currentDir || './').replace(/\/?$/, '/');
-            const cacheBust = '?v=2.6.0';
 
-          // Automatic GitHub Pages repository prefix detection (e.g. /my-repo/player/)
-          const ghRepoMatch = (typeof window !== 'undefined' && window.location && window.location.pathname)
-            ? window.location.pathname.match(/^(\/[^\/]+)\//)
-            : null;
-          const ghRepoPrefix = (ghRepoMatch && ghRepoMatch[1] && !ghRepoMatch[1].startsWith('/player') && !ghRepoMatch[1].startsWith('/api'))
-            ? ghRepoMatch[1]
-            : '';
+            // Resolve base repository prefix dynamically
+            let repoBase = '/';
+            if (typeof window !== 'undefined') {
+              if (window.__AST_BASE_URL__) {
+                repoBase = window.__AST_BASE_URL__.replace(/\/+$/, '') + '/';
+              } else if (window.location && window.location.pathname) {
+                const path = window.location.pathname;
+                const ghMatch = path.match(/^(\/[^\/]+)\//);
+                if (ghMatch && ghMatch[1] && !ghMatch[1].startsWith('/player') && !ghMatch[1].startsWith('/api') && !ghMatch[1].startsWith('/simulator') && !ghMatch[1].startsWith('/curriculum')) {
+                  repoBase = ghMatch[1] + '/';
+                }
+              }
+            }
 
-          const sceneId = presetId;
-          const fetchAsset = async (ext) => {
-            const isBinary = ext === 'astb';
+            const sceneId = presetId;
+            const fetchAsset = async (ext) => {
+              const isBinary = ext === 'astb';
+              const candidateUrls = [];
 
-            const repoBase = ((typeof window !== 'undefined' && window.__AST_BASE_URL__) || '/wwwebucation/')
-              .replace(/\/+$/, '') + '/';
+              if (isBinary) {
+                candidateUrls.push(
+                  `${repoBase}player/bytecode/${sceneId}.astb`,
+                  `./bytecode/${sceneId}.astb`,
+                  `${repoBase}bytecode/${sceneId}.astb`
+                );
+              } else if (ext === 'svg') {
+                if (registryScene?.svgFile) {
+                  candidateUrls.push(`${repoBase}${registryScene.svgFile.replace(/^(?:static\/|player\/)?/, '')}`);
+                }
+                candidateUrls.push(
+                  `${repoBase}cartridges/${sceneId}.svg`,
+                  `${repoBase}player/bytecode/${sceneId}.svg`,
+                  `./scenes/${sceneId}.svg`,
+                  `../cartridges/${sceneId}.svg`
+                );
+              } else if (ext === 'ast') {
+                if (registryScene?.astFile) {
+                  candidateUrls.push(`${repoBase}${registryScene.astFile.replace(/^(?:static\/|player\/)?/, '')}`);
+                }
+                candidateUrls.push(
+                  `${repoBase}cartridges/${sceneId}.ast`,
+                  `${repoBase}player/scenes/${sceneId}.ast`,
+                  `../cartridges/${sceneId}.ast`,
+                  `./scenes/${sceneId}.ast`
+                );
+              }
 
-            const urlParams = (typeof window !== 'undefined' && window.location) 
-              ? new URLSearchParams(window.location.search) 
-              : new URLSearchParams();
-            const customBase = urlParams.get('base') || this.options?.basePath || '';
-            const customDirsParam = urlParams.get('dirs') || urlParams.get('inputDirs') || urlParams.get('dir') || '';
-            const customDirs = customDirsParam 
-              ? customDirsParam.split(',').map(d => d.trim().replace(/\/+$/, '')).filter(Boolean) 
-              : [];
-            const optDirs = Array.isArray(this.options?.inputDirs) 
-              ? this.options.inputDirs 
-              : (this.options?.cartridgeDir ? [this.options.cartridgeDir] : []);
-
-            const regBase = registryScene?.base || '';
-            const altId = regBase || (sceneId === 'inverted-pendulum-dyno' ? 'pendulum_dyno' : (sceneId === 'pendulum_dyno' ? 'inverted-pendulum-dyno' : ''));
-
-            const directFile = isBinary 
-              ? (registryScene?.astbFile || (regBase ? `bytecode/${regBase}.astb` : ''))
-              : ext === 'svg' 
-                ? (registryScene?.svgFile || (regBase ? `cartridges/${regBase}.svg` : ''))
-                : (registryScene?.astFile || (regBase ? `cartridges/${regBase}.ast` : ''));
-
-            // Both .astb and .svg are hosted under static/player/bytecode/
-            const primaryDir = 'static/player/bytecode';
-            const secondaryDir = isBinary ? 'static/bytecode' : 'static/cartridges';
-// Build candidate URLs prioritized from most specific to general fallbacks
-            const candidateUrls = Array.from(new Set([
-              // 1. Direct registry target (if explicit path declared)
-              directFile ? `${repoBase}static/${directFile.replace(/^\/+/, '')}` : '',
-              directFile ? `${repoBase}${directFile.replace(/^\/+/, '')}` : '',
-
-              // 2. Exact repo location where both .astb and companion .svg live
-              `${repoBase}${primaryDir}/${sceneId}.${ext}`,
-
-              // 3. Fallbacks for alternate folders
-              `${repoBase}${secondaryDir}/${sceneId}.${ext}`,
-              altId ? `${repoBase}${primaryDir}/${altId}.${ext}` : '',
-              altId ? `${repoBase}${secondaryDir}/${altId}.${ext}` : '',
-
-              // 4. Custom parameter directories
-              ...customDirs.map(d => `${d}/${sceneId}.${ext}`),
-              ...optDirs.map(d => `${d.replace(/\/+$/, '')}/${sceneId}.${ext}`),
-              customBase ? `${customBase.replace(/\/+$/, '')}/${primaryDir}/${sceneId}.${ext}` : '',
-
-              // 5. Local relative fallbacks
-              `./${primaryDir}/${sceneId}.${ext}`,
-              `${currentDir}${primaryDir}/${sceneId}.${ext}`
-            ])).filter(Boolean);
-
-            for (const url of candidateUrls) {
-              try {
-                const res = await fetch(url);
-                if (!res.ok) continue;
+              for (const url of Array.from(new Set(candidateUrls.filter(Boolean)))) {
+                try {
+                  const res = await fetch(url);
+                  if (!res.ok) continue;
 
                 if (isBinary) {
                   const buf = await res.arrayBuffer();
@@ -5334,6 +5403,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         this.sceneCache[presetId] = scene;
 
+        // Auto-inflate scene into IndexedDB Cartridge Vault so subsequent loads require 0 network
+        this.putIntoVaultIndexedDb({
+          id: presetId,
+          title: scene.title,
+          stage: scene.stage,
+          type: scene.type || 'Sim',
+          svgMarkup: svgText,
+          astSource: astText || '',
+          source: 'builtin',
+          updatedAt: Date.now()
+        });
+
         // Auto-register dynamically found scene so teacher does not have to reprocess index
         if (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.register === 'function') {
           global.ASTSceneRegistry.register(presetId, {
@@ -5456,27 +5537,58 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       throw err;
     }
     const id = sceneData.id || `custom-${Date.now()}`;
+    const svgText = sceneData.svgText || sceneData.svgMarkup || sceneData.svg || '';
+    const astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
+
+    // If raw AST text is provided, parse it to extract rich interactive properties
+    let parsedAst = null;
+    if (astText && typeof astText === 'string' && (astText.trim().startsWith('(') || astText.includes('(:scene') || astText.includes('(:cartridge'))) {
+      try {
+        parsedAst = this.parseAst(astText);
+      } catch (_) {}
+    }
+
+    const resolvedTitle = sceneData.title || (parsedAst && parsedAst.title) || id;
+    const resolvedStage = sceneData.stage || (parsedAst && parsedAst.stage) || 'CUSTOM';
+    const resolvedType = sceneData.type || (parsedAst && parsedAst.type) || 'Sim';
+
     this.sceneCache[id] = {
       id,
-      title: sceneData.title || id,
-      stage: sceneData.stage || 'CUSTOM',
-      duration: parseFloat(sceneData.duration) || 10.0,
-      camera: sceneData.camera || null,
-      has3D: Boolean(sceneData.has3D || sceneData.camera),
-      interactive: sceneData.interactive || null,
-      keyframes: sceneData.keyframes || [],
-      subtitles: sceneData.subtitles || [],
-      rawBindings: sceneData.bindings || sceneData.rawBindings || [],
-      stateMachines: sceneData.stateMachines || null,
-      emitters: sceneData.emitters || null,
-      bindInputs: sceneData.bindInputs || null,
-      vars: sceneData.vars || null,
-      gestures: sceneData.gestures || null,
-      svgText: sceneData.svgText || '',
+      title: resolvedTitle,
+      stage: resolvedStage,
+      type: resolvedType,
+      duration: parseFloat(sceneData.duration || (parsedAst && parsedAst.duration)) || 10.0,
+      camera: sceneData.camera || (parsedAst && parsedAst.camera) || null,
+      has3D: Boolean(sceneData.has3D || sceneData.camera || (parsedAst && parsedAst.has3D)),
+      interactive: sceneData.interactive || (parsedAst && parsedAst.interactive) || null,
+      keyframes: (sceneData.keyframes && sceneData.keyframes.length) ? sceneData.keyframes : ((parsedAst && parsedAst.keyframes) || []),
+      subtitles: (sceneData.subtitles && sceneData.subtitles.length) ? sceneData.subtitles : ((parsedAst && parsedAst.subtitles) || []),
+      rawBindings: sceneData.bindings || sceneData.rawBindings || (parsedAst && (parsedAst.rawBindings || parsedAst.bindings)) || [],
+      stateMachines: sceneData.stateMachines || (parsedAst && parsedAst.stateMachines) || null,
+      emitters: sceneData.emitters || (parsedAst && parsedAst.emitters) || null,
+      bindInputs: sceneData.bindInputs || (parsedAst && parsedAst.bindInputs) || null,
+      vars: sceneData.vars || (parsedAst && parsedAst.vars) || null,
+      inputs: sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
+      computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
+      gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
+      svgText: svgText,
       mount: sceneData.mount,
       update: sceneData.update,
       render: sceneData.render
     };
+
+    // Auto-inflate directly into user's IndexedDB vault
+    this.putIntoVaultIndexedDb({
+      id,
+      title: resolvedTitle,
+      stage: resolvedStage,
+      type: resolvedType,
+      svgMarkup: svgText,
+      astSource: astText,
+      source: sceneData.source || 'custom',
+      updatedAt: Date.now()
+    });
+
     return this.loadScene(id, shouldPlay);
   }
 
@@ -5913,7 +6025,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     const btn = this.container.querySelector('#error-fallback-action');
     if (btn) {
       btn.onclick = () => {
-        this.loadScene('fractions', true);
+        this.loadScene('welcome', true);
       };
     }
   }
@@ -6977,8 +7089,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    if (this.activePresetId === 'kinetic-gas' && this.emitters && (this.emitters.has('gas-molecules') || this.emitters.size > 0)) {
-      const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
+    const phaseEmitter = this.emitters && (this.emitters.get('gas-molecules') || Array.from(this.emitters.values()).find(e => typeof e.setPhaseState === 'function'));
+    if (phaseEmitter) {
+      const gasEm = phaseEmitter;
       if (gasEm) {
         const manualState = this.vars && this.vars.state;
         const manualTemp = this.vars && this.vars.temp;
