@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-02T10:28:03.209Z",
+  "generatedAt": "2026-11-02T10:57:45.769Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -171,7 +171,7 @@
     {
       "id": "electric-circuits",
       "type": "Sim",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "title": "Electrical Circuits & Ohm's Law (V = I × R)",
       "stage": "KS2/KS3 PHYSICS",
       "duration": 12,
       "has3D": false,

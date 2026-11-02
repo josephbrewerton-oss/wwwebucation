@@ -1,5 +1,10 @@
-(scene :id "electric-circuits" :type "Sim" :oak-id "OAK-KS2-SCI-ELECTRICC" :stage "KS2/KS3 PHYSICS" :duration 12.0
-  (:title "💡 Electrical Circuits & Ohm's Law (V = I × R)")
+(:scene 
+  :id "electric-circuits" 
+  :type "Sim" 
+  :oak-id "OAK-KS2-SCI-ELECTRICC" 
+  :title "Electrical Circuits & Ohm's Law (V = I × R)" 
+  :stage "KS2/KS3 PHYSICS" 
+  :duration 12.0
 
   (:vars (
     (:var :name "voltage" :val 12.0 :min 1.5 :max 24.0 :step 0.5 :unit "V" :label "Battery Voltage (V)")
@@ -14,8 +19,8 @@
   ))
 
   (:computed (
-    (:name "current" :expr "vars.switchClosed ? (vars.voltage / vars.resistance) : 0")
-    (:name "power" :expr "vars.switchClosed ? ((vars.voltage * vars.voltage) / vars.resistance) : 0")
+    (:name "current" :expr "vars.switchClosed ? (vars.voltage / (vars.resistance || 1.0)) : 0")
+    (:name "power" :expr "vars.switchClosed ? ((vars.voltage * vars.voltage) / (vars.resistance || 1.0)) : 0")
   ))
 
   (:keyframes (
@@ -26,9 +31,9 @@
   ))
 
   (:subtitles (
-    (:start 0.00 :end 3.50 :en "An electrical circuit is a closed loop! The battery voltage pushes electrons through the copper wires." :es "¡Un circuito eléctrico es un lazo cerrado! El voltaje de la batería empuja electrones por los cables.")
-    (:start 3.50 :end 7.50 :en "Watch the yellow electrons move! Current is the rate of charge flow: I = Voltage divided by Resistance." :es "¡Mira cómo se mueven los electrones! La corriente es la tasa de flujo: I = Voltaje dividido entre Resistencia.")
-    (:start 7.50 :end 12.00 :en "Inside the lightbulb, resistance forces electrons to collide, heating the filament into brilliant glowing light!" :es "Dentro de la bombilla, la resistencia hace chocar los electrones, ¡calentando el filamento y emitiendo luz!")
+    (:start 0.00 :end 0.29 :en "An electrical circuit is a closed loop! The battery voltage pushes electrons through the copper wires." :es "¡Un circuito eléctrico es un lazo cerrado! El voltaje de la batería empuja electrones por los cables.")
+    (:start 0.29 :end 0.63 :en "Watch the yellow electrons move! Current is the rate of charge flow: I = Voltage divided by Resistance." :es "¡Mira cómo se mueven los electrones! La corriente es la tasa de flujo: I = Voltaje dividido entre Resistencia.")
+    (:start 0.63 :end 1.00 :en "Inside the lightbulb, resistance forces electrons to collide, heating the filament into brilliant glowing light!" :es "Dentro de la bombilla, la resistencia hace chocar los electrones, ¡calentando el filamento y emitiendo luz!")
   ))
 
   (:interactive (
@@ -49,11 +54,11 @@
     (:target "#telemetry-display" :attr "textContent" :expr "'Voltage: ' + (vars.voltage || 0) + 'V | Resistance: ' + (vars.resistance || 1) + 'Ω | Current: ' + Number(computed.current || 0).toFixed(2) + 'A | Power: ' + Number(computed.power || 0).toFixed(1) + 'W'")
     (:target "#battery-voltage-text" :attr "textContent" :expr "(vars.voltage || 12) + 'V'")
     (:target "#resistor-ohms-text" :attr "textContent" :expr "(vars.resistance || 4) + ' Ω'")
-    (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.power || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
+    (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.current || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
 
-    ;; Physical Knife Switch Arm & Label Visuals
+    ;; Physical Knife Switch Arm & Label Visuals (Adjust 450 180 to match your SVG hinge)
     (:target "#circuit-switch" :attr "data-state" :expr "vars.switchClosed ? 'closed' : 'open'")
-    (:target "#switch-blade" :attr "transform" :expr "vars.switchClosed ? 'rotate(0)' : 'rotate(-35)'")
+    (:target "#switch-blade" :attr "transform" :expr "vars.switchClosed ? 'rotate(0 450 180)' : 'rotate(-35 450 180)'")
     (:target "#switch-text" :attr "textContent" :expr "vars.switchClosed ? 'SWITCH: CLOSED (Click to toggle)' : 'SWITCH: OPEN (Click to toggle)'")
 
     ;; Bulb Glow & Filament
