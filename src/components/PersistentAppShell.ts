@@ -95,3 +95,4 @@ export class PersistentAppShellElement extends HTMLElement {
 }
 
 customElements.define('app-shell', PersistentAppShellElement);
+export default PersistentAppShellElement;
