@@ -369,3 +369,4 @@ export function renderHomePage(): HTMLElement {
 
   return container;
 }
+export default renderHomePage;
