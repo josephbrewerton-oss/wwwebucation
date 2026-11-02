@@ -1,12 +1,15 @@
 // src/router.ts - Native Micro-Router (30 lines, zero dependencies)
 type RouteHandler = () => Promise<HTMLElement | string>;
 
+// src/router.ts - Flexible Native Micro-Router
+type RouteHandler = () => Promise<HTMLElement | string>;
+
 const routes: Record<string, RouteHandler> = {
-  '/': () => import('./pages/index').then(m => m.renderHomePage()),
-  '/player': () => import('./pages/media-player').then(m => m.renderPlayerPage()),
-  '/practice-lab': () => import('./pages/practice-lab').then(m => m.renderPracticePage()),
-  '/learning-zone': () => import('./pages/learning-zone').then(m => m.renderLearningZonePage()),
-  '/settings': () => import('./pages/settings').then(m => m.renderSettingsPage()),
+  '/': () => import('./pages/index').then(m => m.renderHomePage ? m.renderHomePage() : (m.default ? String(m.default) : '')),
+  '/player': () => import('./pages/media-player').then(m => m.renderPlayerPage ? m.renderPlayerPage() : (m.default ? String(m.default) : '')),
+  '/practice-lab': () => import('./pages/practice-lab').then(m => m.renderPracticePage ? m.renderPracticePage() : (m.default ? String(m.default) : '')),
+  '/learning-zone': () => import('./pages/learning-zone').then(m => m.renderLearningZonePage ? m.renderLearningZonePage() : (m.default ? String(m.default) : '')),
+  '/settings': () => import('./pages/settings').then(m => m.renderSettingsPage ? m.renderSettingsPage() : (m.default ? String(m.default) : '')),
 };
 
 export async function navigate(path: string) {

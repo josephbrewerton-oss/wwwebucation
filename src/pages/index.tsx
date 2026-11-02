@@ -710,3 +710,48 @@ export default function Home() {
     </PageMeta>
   );
 }
+export function renderHomePage(): HTMLElement {
+  const container = document.createElement('div');
+  container.className = 'home-landing-stage';
+  container.style.cssText = 'padding: 3rem 1.5rem; max-width: 1140px; margin: 0 auto;';
+
+  container.innerHTML = `
+    <section style="text-align: center; margin-bottom: 3.5rem;">
+      <div style="display: flex; gap: 8px; justify-content: center; align-items: center; margin-bottom: 1.25rem; font-size: 0.85rem;">
+        <span style="color: #16a34a; font-weight: 700;">Education should be free</span>
+        <span style="color: #cbd5e1;">·</span>
+        <span style="color: #64748b;">UK National Curriculum</span>
+        <span style="color: #cbd5e1;">·</span>
+        <span style="color: #64748b;">Works Offline</span>
+      </div>
+
+      <h1 style="font-size: 2.75rem; font-weight: 800; color: #0f172a; margin: 0 0 1rem; letter-spacing: -0.025em;">
+        Learn with Confidence at St Joseph's
+      </h1>
+      <p style="font-size: 1.15rem; color: #475569; max-width: 720px; margin: 0 auto 2.25rem; line-height: 1.6;">
+        Interactive practice with instant feedback, step-by-step clues, and zero-bloat vector simulations.
+      </p>
+
+      <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+        <a href="/player" class="stj-btn" style="padding: 10px 22px; background: #0284c7; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+          Launch Interactive Simulators ↓
+        </a>
+        <a href="/practice-lab" class="stj-btn" style="padding: 10px 22px; background: #0f172a; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+          Practice Question Bank ↓
+        </a>
+      </div>
+    </section>
+
+    <!-- Embedded Stage Viewport -->
+    <div style="background: #090d16; border-radius: 16px; border: 1px solid #1e293b; overflow: hidden; box-shadow: 0 8px 30px rgba(0,0,0,0.45); margin-bottom: 2.5rem;">
+      <iframe 
+        id="landing-stage-viewport"
+        src="/player/index.html?preset=kinetic-gas" 
+        style="width: 100%; height: 480px; border: none; display: block;" 
+        title="Featured Interactive Simulation">
+      </iframe>
+    </div>
+  `;
+
+  return container;
+}

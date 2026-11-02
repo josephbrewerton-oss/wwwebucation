@@ -2286,3 +2286,24 @@ export default function MediaPlayerPage(): React.JSX.Element {
     </div>
   );
 }
+export function renderPlayerPage(): HTMLElement {
+  const container = document.createElement('div');
+  container.className = 'ast-player-container';
+  container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;';
+
+  const params = new URLSearchParams(window.location.search);
+  const preset = params.get('preset') || 'kinetic-gas';
+
+  container.innerHTML = `
+    <div style="background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden;">
+      <iframe 
+        id="stage-viewport" 
+        src="/player/index.html?preset=${encodeURIComponent(preset)}" 
+        style="width:100%; height:min(540px, 60vh); border:none;" 
+        title="AST Player">
+      </iframe>
+    </div>
+  `;
+
+  return container;
+}
