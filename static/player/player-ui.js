@@ -574,7 +574,7 @@
         this.elements.checkpointMinimizedPill.style.display = 'none';
       }
       const isSlide = scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide');
-      const isContinuousSim = !isSlide && this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim' || this.engine.scene.id === 'solar-system' || this.engine.scene.id === 'kinetic-gas')));
+      const isContinuousSim = !isSlide && Boolean(this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim'))));
       if (!isContinuousSim) {
         this.engine.pause();
       }
@@ -2797,8 +2797,7 @@ window.addEventListener('message', (e) => {
       }
 
       // Check if current active scene is an interactive simulation apparatus
-      const activePreset = this.engine && (this.engine.activePresetId || this.engine.preset);
-      const isInteractiveSimulation = ['solar-system', 'water-cycle', 'kinetic-gas', 'calculus-curves', 'electric-circuits', 'math-fishing'].includes(activePreset);
+      const isInteractiveSimulation = Boolean(this.engine?.isContinuousSim || this.engine?.scene?.type === 'Sim' || (this.engine?.scene?.vars && Object.keys(this.engine.scene.vars).length > 0));
 
       try {
         const raw = localStorage.getItem('stj_player_display_config');
@@ -4403,8 +4402,8 @@ window.addEventListener('message', (e) => {
         executedAction = 'LOAD_SCENE_math-fishing';
         actionLabel = '🎣 Loaded Math Fishing Scene';
       } else if (text.includes('atomic') || text.includes('atom') || text.includes('bohr')) {
-        this.engine.loadScene('atomic-structure', true);
-        executedAction = 'LOAD_SCENE_atomic-structure';
+        this.engine.loadScene('atom', true);
+        executedAction = 'LOAD_SCENE_atom';
         actionLabel = '⚛️ Loaded Atomic Structure Scene';
       } else if (text.includes('church') || text.includes('cathedral') || text.includes('chapel')) {
         this.engine.loadScene('church-tour', true);

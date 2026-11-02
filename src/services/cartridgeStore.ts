@@ -1014,12 +1014,136 @@ export async function initCartridgeVault(): Promise<void> {
       }
 
       isVaultInitialized = true;
+
+      // 6. Autonomous background idle vault inflation:
+      // Gradually inflate registered curriculum cartridges into IndexedDB so student device never encounters 404s
+      if (typeof window !== 'undefined') {
+        const runBackgroundInflation = () => {
+          const uninflated = PRESET_OPTIONS.filter((opt) => !mergedMap.has(opt.id) || !mergedMap.get(opt.id)?.svgMarkup);
+          let i = 0;
+          const inflateNext = () => {
+            if (i >= uninflated.length) return;
+            const target = uninflated[i++];
+            inflateCartridgeToVault(target.id).finally(() => {
+              if (i < uninflated.length) {
+                if (typeof (window as any).requestIdleCallback === 'function') {
+                  (window as any).requestIdleCallback(inflateNext, { timeout: 1000 });
+                } else {
+                  setTimeout(inflateNext, 250);
+                }
+              }
+            });
+          };
+          if (typeof (window as any).requestIdleCallback === 'function') {
+            (window as any).requestIdleCallback(inflateNext, { timeout: 2000 });
+          } else {
+            setTimeout(inflateNext, 500);
+          }
+        };
+        runBackgroundInflation();
+      }
     } catch (err) {
       console.warn('[cartridgeStore] Failed to initialize cartridge vault:', err);
     }
   })();
 
   return vaultInitPromise;
+}
+
+/**
+ * Inflates a specific cartridge into the user's IndexedDB Cartridge Vault.
+ * Guarantees zero-network retrieval on subsequent loads and air-gapped readiness.
+ */
+export async function inflateCartridgeToVault(cartridgeId: string): Promise<CartridgeDefinition | null> {
+  const canonical = normalizeCartridgeId(cartridgeId);
+  if (!canonical) return null;
+
+  // 1. Check in-memory cache
+  const inMem = inMemoryCartridgesCache?.find((c) => c.id === canonical);
+  if (inMem && inMem.svgMarkup && inMem.astSource) {
+    return inMem;
+  }
+
+  // 2. Check IndexedDB cartridge vault
+  try {
+    const vaultItem = await getVaultCartridge(canonical);
+    if (vaultItem && vaultItem.svgMarkup && vaultItem.astSource) {
+      if (inMemoryCartridgesCache && !inMemoryCartridgesCache.some((c) => c.id === canonical)) {
+        inMemoryCartridgesCache.push(vaultItem as CartridgeDefinition);
+      }
+      return vaultItem as CartridgeDefinition;
+    }
+  } catch (_) {}
+
+  // 3. Check embedded core simulations (0ms air-gapped)
+  if (EMBEDDED_CORE_CARTRIDGES[canonical]) {
+    const core = EMBEDDED_CORE_CARTRIDGES[canonical];
+    const def: CartridgeDefinition = {
+      id: canonical,
+      title: canonical.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      stage: 'CURRICULUM',
+      category: 'STEM',
+      desc: 'Pre-expanded offline core vector simulation.',
+      icon: '📐',
+      source: 'builtin',
+      svgMarkup: core.svg,
+      astSource: core.ast,
+      updatedAt: Date.now(),
+    };
+    await putVaultCartridge(def as VaultCartridgeRecord);
+    if (inMemoryCartridgesCache) {
+      const idx = inMemoryCartridgesCache.findIndex((c) => c.id === canonical);
+      if (idx >= 0) inMemoryCartridgesCache[idx] = def;
+      else inMemoryCartridgesCache.push(def);
+    }
+    return def;
+  }
+
+  // 4. Fetch companion .svg and .ast to inflate into IndexedDB vault
+  if (typeof fetch !== 'undefined') {
+    try {
+      const rawBase = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
+      const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
+
+      const [svgRes, astRes] = await Promise.all([
+        fetch(`${cleanBase}cartridges/${canonical}.svg`).catch(() => null),
+        fetch(`${cleanBase}cartridges/${canonical}.ast`).catch(() => null),
+      ]);
+
+      let svgText = (svgRes && svgRes.ok) ? await svgRes.text() : '';
+      let astText = (astRes && astRes.ok) ? await astRes.text() : '';
+
+      if (svgText.trim().startsWith('<!DOCTYPE') || svgText.trim().startsWith('<html')) svgText = '';
+      if (astText.trim().startsWith('<!DOCTYPE') || astText.trim().startsWith('<html')) astText = '';
+
+      if (svgText && astText) {
+        const meta = PRESET_OPTIONS.find((p) => p.id === canonical);
+        const def: CartridgeDefinition = {
+          id: canonical,
+          title: meta?.label || canonical.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+          stage: meta?.stage || 'CURRICULUM',
+          subject: meta?.subject,
+          type: meta?.type || 'Sim',
+          category: meta?.subject || 'Curriculum',
+          desc: `Oak National Curriculum aligned cartridge: ${canonical}.`,
+          icon: meta?.type === 'Sim' ? '🎮' : meta?.type === 'Slide' ? '📑' : '💻',
+          source: 'builtin',
+          svgMarkup: svgText,
+          astSource: astText,
+          updatedAt: Date.now(),
+        };
+        await putVaultCartridge(def as VaultCartridgeRecord);
+        if (inMemoryCartridgesCache) {
+          const idx = inMemoryCartridgesCache.findIndex((c) => c.id === canonical);
+          if (idx >= 0) inMemoryCartridgesCache[idx] = def;
+          else inMemoryCartridgesCache.push(def);
+        }
+        return def;
+      }
+    } catch (_) {}
+  }
+
+  return null;
 }
 
 // Auto-bootstrap vault in browser environments

@@ -1,0 +1,97 @@
+# agents.txt — Autonomous Web Agent & AI System Directory
+# St Joseph's Curriculum Portal & AST Vector Media Platform
+# Conforms to emerging Agent protocol specifications & W3C WebMCP
+# Canonical URL: /agents.txt
+
+Agent-Version: 1.0.0
+Organization: St Joseph's Catholic Primary School & Educational Commons
+Licensing: Dual-Market (Track A: Open Humanitarian AGPLv3/OGLv3; Track B: Enterprise Commercial)
+Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Local Edge Persistence)
+
+# -----------------------------------------------------------------------------
+# 1. Machine-Readable Knowledge & Schema Dossiers
+# -----------------------------------------------------------------------------
+LLMS-Index: /llms.txt
+LLMS-Full: /llms-full.txt
+Curriculum-Manifest: /player/scenes.manifest.json
+Cartridge-Checksums: /cartridge-checksums.json
+Cartridge-Directory: /cartridges/
+Bytecode-Directory: /player/bytecode/
+S-Expression-Grammar: /player/grammar/ast-sexpr.gbnf
+BSL-Lexicon: /lexicons/bsl-signs.ast
+Sitemap-XML: /sitemap.xml
+Sitemap-AST: /sitemap.ast
+
+# -----------------------------------------------------------------------------
+# 2. On-Device Agent Capabilities & In-Browser Tools (W3C WebMCP)
+# -----------------------------------------------------------------------------
+# Agents operating inside the client browser may invoke registered tools via:
+# window.modelContext.executeTool(toolName, args)
+
+Tool: launch_simulation
+Description: Boots an AST Vector Simulation cartridge into the interactive apparatus.
+Parameters:
+  - preset (string, required): Canonical cartridge ID (e.g., 'velocity', 'electric-circuits', 'kinetic-gas', 'pythagoras')
+  - speed (number, optional): Playback speed multiplier (default: 1.0)
+  - autoPlay (boolean, optional): Begin immediate timeline playback (default: true)
+
+Tool: list_ast_simulations
+Description: Retrieves the catalog of all 60 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
+Parameters: none
+
+Tool: evaluate_math_kernel
+Description: Submits a continuous mathematical formula to the AST Math Compiler for affine single-cycle FMA decomposition and 6-float matrix compilation.
+Parameters:
+  - expr (string, required): Mathematical formula or transform string (e.g. 'translate(430 - 180 * t, 0)')
+  - attr (string, optional): Target SVG attribute (e.g. 'transform', 'width', 'opacity')
+
+Tool: translate_text
+Description: Invokes the Universal Translator for real-time multilingual translation and speech boundary synchronization.
+Parameters:
+  - text (string, required): Source text to translate
+  - targetLanguage (string, required): Target language code ('en', 'es', 'fr', 'la', 'de', 'it')
+
+Tool: request_bsl_signing
+Description: Broadcasts English text to the procedural 3D vector British Sign Language / Makaton interpreter avatar.
+Parameters:
+  - text (string, required): English text string to transpile into Level 6 BSL grammar
+  - signLanguage (string, optional): 'BSL' | 'MAKATON' (default: 'BSL')
+
+Tool: catholic_catechism_search
+Description: Queries the offline catechetical, liturgical, and scripture database for primary and secondary RE instruction.
+Parameters:
+  - query (string, required): Topic, sacrament, or liturgical calendar query
+
+# -----------------------------------------------------------------------------
+# 3. Agent Permissions & Access Policy
+# -----------------------------------------------------------------------------
+User-agent: *
+Allow-Agent: true
+Allow-Read: /
+Allow-Read: /media-player
+Allow-Read: /cartridges/
+Allow-Read: /player/
+Allow-Read: /player/bytecode/
+Allow-Read: /learning-zone
+Allow-Read: /practice-lab
+Allow-Read: /phonics
+Allow-Read: /languages
+Allow-Read: /bsl
+Allow-Read: /shakespeare
+Allow-Read: /catholic-life
+Allow-Read: /licensing
+Allow-Read: /docs/
+
+# Strict Boundaries:
+Disallow-Write: /
+Disallow-Scrape: /profile
+Disallow-Scrape: /settings
+Disallow-Cloud-Egress: true
+
+# -----------------------------------------------------------------------------
+# 4. Infrastructure & Caching Directives
+# -----------------------------------------------------------------------------
+Cache-TTL-Cartridges: 2592000 # 30 days (content-addressable immutable hashes)
+Cache-TTL-Manifests: 86400    # 24 hours
+Compression: Bytecode .astb format preferred over raw .ast text (-46.6% payload)
+Execution-Target: Client-side WebAssembly (7-page linear memory) & JavaScript SPA

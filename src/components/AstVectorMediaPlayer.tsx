@@ -38,7 +38,7 @@ import AstInteractiveLabDrawer from './player/AstInteractiveLabDrawer';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { exportSubjectCartridge, AVAILABLE_CARTRIDGES } from '../utils/exportSubjectCartridge';
 import { getRelatedConcepts } from '../data/player/astConceptGraph';
-import { getCartridge, normalizeCartridgeId, saveCustomCartridge } from '../services/cartridgeStore';
+import { getCartridge, normalizeCartridgeId, saveCustomCartridge, inflateCartridgeToVault } from '../services/cartridgeStore';
 import { getVaultCartridge } from '../services/dbStore';
 import { classroomBeacon } from '../services/classroomBeacon';
 import {
@@ -390,7 +390,7 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
       return;
     }
 
-    // 2. Check IndexedDB cartridge vault
+    // 2. Check IndexedDB cartridge vault or inflate on-demand
     getVaultCartridge(canonical)
       .then((vaultItem) => {
         if (
@@ -409,7 +409,26 @@ export const AstVectorMediaPlayer = forwardRef<AstVectorMediaPlayerHandle, AstVe
               ast: vaultItem.astSource,
             },
           });
+          return;
         }
+
+        // 3. Inflate directly into IndexedDB vault on demand (zero 404s, offline ready)
+        inflateCartridgeToVault(canonical)
+          .then((inflated) => {
+            if (inflated && inflated.svgMarkup && inflated.astSource) {
+              postToPlayer({
+                type: 'LOAD_CARTRIDGE',
+                cartridge: {
+                  id: inflated.id,
+                  title: inflated.title,
+                  stage: inflated.stage,
+                  svg: inflated.svgMarkup,
+                  ast: inflated.astSource,
+                },
+              });
+            }
+          })
+          .catch(() => {});
       })
       .catch(() => {});
   }, [postToPlayer]);

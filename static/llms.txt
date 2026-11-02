@@ -24,9 +24,11 @@
 - [Dual-Licensing Charter & Covenant](/licensing) - Track A Humanitarian Commons GNU AGPLv3/OGLv3 vs Track B Enterprise Commercial License
 - [Privacy Policy](/privacy) - Zero-cloud egress, on-device IndexedDB storage, and GDPR compliance
 - [Child Safety Policy](/child-safety) - Strict safeguarding standards, local AI inference, and student data protection
+- [Autonomous Agent Directory](/agents.txt) - Machine-readable tools, permissions, and W3C WebMCP discovery
 
 ## Architectural Overview & Engine Upgrades
 - **Zero Cloud Leakage & Zero Server Data**: The site holds 0 student or user data on remote servers. All logs, answers, voice inputs, and progress records remain exclusively within client-side IndexedDB (`services/dbStore.ts`, `services/jotter-db.ts`).
+- **Single-Cycle FMA Math Compiler & 6-Float Matrix Vectorization**: Built-in AST Math Compiler (`astMathCompiler.ts`) automatically extracts linear affine relationships (m*t + c) and compiles transforms to direct 6-element homogeneous affine matrices (`matrix(a, b, c, d, e, f)`). Pre-allocated flat buffers evaluate in single-cycle FMA math with zero dynamic heap allocations, 1.7× faster 60 FPS frame loops, and zero JIT micro-compiles on scene mount.
 - **Multi-Modal Synchronized Tuples**: Full multi-modal tuple binding: `[AST Vector Stage + Synchronized Video Underlay/Overlay + Procedural Web Audio Synth + S-Expression Reactive Data-Flow + Sub-pixel Pointer Gestures + Formative Assessment Checkpoints]`. Video and vector playback are locked to a single master clock with configurable `video-fit` ("contain" | "cover"), frame-accurate timeline scrubbing, and reactive HUD overlays that dynamically bind to video timestamps.
 - **Decoupled, Domain-Agnostic Flash-Caliber Engine (<35 KB gzipped)**: The AST Vector Engine (`@stjosephs/ast-vector-player`) is fully decoupled from the React portal and purged of hardcoded scene logic. It runs with 0 external runtime dependencies, sub-15 ms cold start, and <8 MB RAM. It features dynamic parameter and selector HUD auto-discovery (`setupSimParametersHud`), which automatically parses `:inputs`, `:vars`, numerical bounds, step sizes, labels, and selector controls (such as DNA base-pair unzipping and nucleotides, kinetic gas pressure valves, electric circuit switches, calculus tangent probes, or DOOH commercial dials) for ANY scene or domain.
 - **High-Performance AST Binary Bytecode (.astb)**: Vector scenes can be compiled and streamed as ultra-dense binary bytecode (`.astb`) via `src/utils/astBytecode.ts` and `ast-engine.js`. The zero-allocation binary reader decodes opcodes for stages, reactive bindings, 3D meshes, keyframes, computed expressions, state machines, and emitters with sub-millisecond parsing and a 99.8% size reduction over legacy web bundles.
@@ -44,7 +46,7 @@ The AST player serves a dual-market architecture: perpetually free for state sch
 - **Decoupled 4-Way Distribution**: The engine distributes across four universal formats: (1) Headless npm package (`@stjosephs/ast-vector-player`); (2) Zero-dependency Web Component (`<micro-vector-player>`); (3) Embeddable responsive LMS iframe (`/player/index.html?preset=...`) with bidirectional `postMessage` telemetry; and (4) Single-file air-gapped HTML bundle (`<45 KB`) running from `file://` or USB thumb drives.
 - **Cross-Industry DOOH & AdTech Ready (Track B)**: Meets strict IAB display advertising weight limits (<45 KB total ad weight vs 150 KB cap), runs 24/7 on low-power quad-core ARM chips (Raspberry Pi, Android 11 sticks, LG webOS, Samsung Tizen) with <8 MB RAM, scales infinitely from 2-inch shelf labels to 100-ft 8K billboards with zero pixelation, and executes Dynamic Creative Optimization (DCO) over `postMessage`.
 
-## Complete Production Curriculum Cartridge Catalog (48 Cartridges)
+## Complete Production Curriculum Cartridge Catalog (60 Cartridges)
 
 ### Mathematics & Quantitative Reasoning
 1. [Calculus: Tangent Slopes & Integrals](/curriculum/maths/calculus/tangent-slopes) (`calculus-curves`) - Tangent slope dy/dx, stationary turning points, and Riemann Simpson's 1/3 numerical integrals.
