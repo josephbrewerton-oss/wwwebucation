@@ -1,7 +1,6 @@
 import React, { lazy } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import PersistentAppShell from './components/PersistentAppShell';
-import HomePage from './pages/index';
 import ErrorBoundary from './components/ErrorBoundary';
 
 // Helper: If a deployed chunk 404s after a new build, reload the window once to fetch the new manifest
@@ -36,6 +35,7 @@ function lazyRetry<T extends React.ComponentType<any>>(
   });
 }
 
+const HomePage = lazyRetry(() => import('./pages/index'));
 const PracticeLabPage = lazyRetry(() => import('./pages/practice-lab'));
 const CatholicLifePage = lazyRetry(() => import('./pages/catholic-life'));
 const LearningZonePage = lazyRetry(() => import('./pages/learning-zone'));

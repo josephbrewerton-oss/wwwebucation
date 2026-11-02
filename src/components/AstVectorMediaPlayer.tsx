@@ -2047,6 +2047,7 @@ const playerSrc = useMemo(() => {
                   ref={iframeRef}
                   src={playerSrc}
                   title="Primary Concept Viewport"
+                  loading="lazy"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -2130,6 +2131,7 @@ const playerSrc = useMemo(() => {
                   key={`compare-${comparisonPreset}-${currentLang}`}
                   src={`${cleanBase}player/index.html?preset=${encodeURIComponent(comparisonPreset)}&lang=${encodeURIComponent(currentLang)}&autoplay=1&theme=${encodeURIComponent(activeTheme)}&mode=minimal&v=2.5.0`}
                   title="Comparative Concept Viewport"
+                  loading="lazy"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -2147,6 +2149,7 @@ const playerSrc = useMemo(() => {
                 ref={iframeRef}
                 src={playerSrc}
                 title="Lumina Vector Player"
+                loading="lazy"
                 style={{
                   width: '100%',
                   height: '100%',

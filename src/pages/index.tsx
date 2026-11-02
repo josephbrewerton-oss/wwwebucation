@@ -1,20 +1,21 @@
 if (typeof window !== 'undefined' && !(window as any).process) {
   (window as any).process = { env: { NODE_ENV: 'development' } };
 }
-import React, { useState } from 'react';
+import React, { useState, Suspense, lazy } from 'react';
 import { Link } from 'react-router-dom';
 import PageMeta from '../components/PageMeta';
 import ExpressLessonLaunchpad from '../components/ExpressLessonLaunchpad';
 import HomeLearnerGuidedCard from '../components/HomeLearnerGuidedCard';
-import AstVectorMediaPlayer from '../components/AstVectorMediaPlayer';
 import { PRESET_OPTIONS } from '../data/player/generatedScenes';
+
+const AstVectorMediaPlayer = lazy(() => import('../components/AstVectorMediaPlayer'));
 
 export default function Home() {
   const [landingSimPreset, setLandingSimPreset] = useState<string>('kinetic-gas');
   return (
     <PageMeta
-      title="Home"
-      description="St Joseph's Primary & Secondary Interactive Learning Portal"
+      title="St Joseph's Curriculum Portal — Education Should Be Free"
+      description="Interactive UK National Curriculum portal, zero-bloat AST vector science simulations, BSL in-vision sign interpretation, and on-device offline learning."
     >
       <div style={{ padding: '3rem 1.5rem', maxWidth: '1140px', margin: '0 auto' }}>
         
@@ -345,16 +346,37 @@ export default function Home() {
             </div>
 
             {/* Live Media Player Stage */}
-            <div style={{ borderRadius: '12px', overflow: 'hidden' }}>
-              <AstVectorMediaPlayer
-                key={`landing-sim-${landingSimPreset}`}
-                preset={landingSimPreset}
-                autoPlay={true}
-                height="460px"
-                allowPresetSwitch={true}
-                onPresetChange={(p) => setLandingSimPreset(p)}
-                embedded={true}
-              />
+            <div style={{ borderRadius: '12px', overflow: 'hidden', minHeight: '460px', background: '#090d16' }}>
+              <Suspense
+                fallback={
+                  <div
+                    style={{
+                      height: '460px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#090d16',
+                      color: '#94a3b8',
+                      gap: '12px',
+                    }}
+                  >
+                    <div style={{ fontSize: '2.4rem' }}>⚡</div>
+                    <strong style={{ color: '#f8fafc', fontSize: '1.05rem' }}>AST Vector Engine Ready</strong>
+                    <span style={{ fontSize: '0.85rem' }}>Loading zero-bloat simulation stage...</span>
+                  </div>
+                }
+              >
+                <AstVectorMediaPlayer
+                  key={`landing-sim-${landingSimPreset}`}
+                  preset={landingSimPreset}
+                  autoPlay={false}
+                  height="460px"
+                  allowPresetSwitch={true}
+                  onPresetChange={(p) => setLandingSimPreset(p)}
+                  embedded={true}
+                />
+              </Suspense>
             </div>
           </div>
 

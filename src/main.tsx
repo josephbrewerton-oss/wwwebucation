@@ -2,7 +2,6 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './css/custom.css';
-import 'katex/dist/katex.min.css';
 import { registerServiceWorker } from './registerServiceWorker';
 import { isDataSaverActive, applyDataSaverToDOM } from './services/dataSaverStore';
 

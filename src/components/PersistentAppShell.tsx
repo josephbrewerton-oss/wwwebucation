@@ -8,7 +8,6 @@ import ViewportSkeleton from './ViewportSkeleton';
 import { OfflineIndicator } from './OfflineIndicator';
 import { classroomBeacon, TeacherBroadcastCommand } from '../services/classroomBeacon';
 import { getLearnerProfile } from '../services/studentProfileStore';
-import { hypervisor } from '../engine/hypervisor';
 import { playSuccessChime, playIncorrectTone, triggerHapticSuccess, triggerHapticError } from '../services/soundHaptics';
 import { triggerMasteryConfetti } from '../utils/confetti';
 import { initWebMcpBridge } from '../services/webMcpBridge';
@@ -286,8 +285,12 @@ export default function PersistentAppShell(): React.JSX.Element {
       <iframe
         id="neural-worker-guest-vm"
         ref={(el) => {
-          if (el && hypervisor?.registerWorkerIframe) {
-            hypervisor.registerWorkerIframe(el);
+          if (el) {
+            import('../engine/hypervisor').then(({ hypervisor }) => {
+              if (hypervisor?.registerWorkerIframe) {
+                hypervisor.registerWorkerIframe(el);
+              }
+            }).catch(() => {});
           }
         }}
         src={`${((typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || import.meta.env.BASE_URL || '/').replace(/\/?$/, '/')}worker.html?v=1.3.0`}
