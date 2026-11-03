@@ -1188,7 +1188,7 @@
     updateView() {
       const scene = this.engine.scene;
       if (this.elements.badgeStage) {
-        this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
+        this.elements.badgeStage.textContent = (scene && scene.stage) || 'CURRICULUM';
       }
       this.updateBslButton();
 
