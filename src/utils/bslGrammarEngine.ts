@@ -2089,14 +2089,40 @@ export function analyzeAndTransformBslGrammar(
         stream.push(pose);
       });
     } else {
-      // Un-lexiconed word: fallback to BANZSL manual fingerspelling
-      tok.isFingerspelled = true;
-      for (const char of tok.cleanWord) {
-        if (BSL_ALPHABET_POSES[char]) {
-          const pose = { ...BSL_ALPHABET_POSES[char] };
-          if (tok.nmf) pose.nmf = tok.nmf;
+      // 1. Attempt BSL Level 6 Semantic Classifier Predicate synthesis
+      const classifierMatch = mapWordToClassifier(tok.cleanWord);
+
+      if (classifierMatch) {
+        const clSign = generateClassifierPredicate(classifierMatch.type, {
+          entityLabel: tok.cleanWord,
+          ...classifierMatch.options,
+        });
+
+        tok.classifier = { type: classifierMatch.type, form: clSign.word };
+        tok.sign = clSign;
+        tok.isFingerspelled = false;
+
+        const totalKf = clSign.keyframes.length;
+        clSign.keyframes.forEach((kf, kfIdx) => {
+          const pose = signKeyframeToHandPose(clSign, kf, kfIdx, totalKf);
+          if (tok.classifier) pose.classifier = tok.classifier;
+          if (tok.aspect) pose.aspect = tok.aspect;
           if (tok.buoy) pose.buoy = tok.buoy;
+          if (tok.nmf) {
+            pose.nmf = { ...pose.nmf, ...tok.nmf };
+          }
           stream.push(pose);
+        });
+      } else {
+        // 2. Un-lexiconed word without spatial proform: fallback to BANZSL manual fingerspelling
+        tok.isFingerspelled = true;
+        for (const char of tok.cleanWord) {
+          if (BSL_ALPHABET_POSES[char]) {
+            const pose = { ...BSL_ALPHABET_POSES[char] };
+            if (tok.nmf) pose.nmf = tok.nmf;
+            if (tok.buoy) pose.buoy = tok.buoy;
+            stream.push(pose);
+          }
         }
       }
     }
