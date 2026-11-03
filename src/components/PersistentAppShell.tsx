@@ -3,6 +3,7 @@ import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics
 import { toggleBsl, subscribeBsl, getBslEnabled } from '../services/bslGlobalStore';
 import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
+import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
 import { navigate } from '../router';
 
@@ -12,6 +13,7 @@ export class PersistentAppShellElement extends HTMLElement {
   private colorMode: 'light' | 'dark' = 'light';
   private dataSaver = false;
   private bsl = false;
+  private isOfflineSynced = false;
   private unsubscribeBsl?: () => void;
   private unsubscribeDataSaver?: () => void;
   private unsubscribeLang?: () => void;
@@ -20,6 +22,7 @@ export class PersistentAppShellElement extends HTMLElement {
     this.colorMode = (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
     this.dataSaver = isDataSaverActive();
     this.bsl = getBslEnabled();
+    this.isOfflineSynced = isOfflineSyncComplete();
     document.documentElement.setAttribute('data-theme', this.colorMode);
 
     this.render();
@@ -172,6 +175,11 @@ export class PersistentAppShellElement extends HTMLElement {
 
               <!-- Right Actions (Data Saver, Settings, Theme, Mobile toggle) -->
               <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+                <!-- Save Offline (0 Data) Button -->
+                <button type="button" id="nav-btn-offline-sync" class="hidden sm:inline-flex" style="background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Sync Curriculum for 100% Zero-Data Offline Operation">
+                  ${this.isOfflineSynced ? '💾 Saved (0 Data)' : '💾 Save Offline'}
+                </button>
+
                 <!-- Data Saver Toggle -->
                 <button type="button" id="nav-btn-data-saver" class="hidden sm:inline-flex" style="background:${this.dataSaver ? '#ecfdf5' : 'transparent'}; color:${this.dataSaver ? '#065f46' : '#64748b'}; border:1px solid ${this.dataSaver ? '#10b981' : '#cbd5e1'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Low Bandwidth Data Saver">
                   📶 ${this.dataSaver ? 'Data Saver: ON' : 'Data Saver'}
@@ -197,6 +205,9 @@ export class PersistentAppShellElement extends HTMLElement {
             <!-- Mobile Drawer -->
             <div id="nav-mobile-drawer" style="display:none; padding:1rem; border-top:1px solid #e2e8f0; background:var(--stj-canvas, #ffffff); flex-direction:column; gap:0.75rem;">
               <div style="font-weight:700; font-size:0.8rem; color:#64748b; text-transform:uppercase;">Navigation Menu</div>
+              <button type="button" id="mobile-btn-offline-sync" style="padding:10px; border-radius:6px; background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; font-weight:700; font-size:0.85rem; cursor:pointer; text-align:left;">
+                ${this.isOfflineSynced ? '💾 Saved to Device (0 Data)' : '💾 Save to Device (0 Data Offline)'}
+              </button>
               <a href="${base}" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🏠 Home</a>
               <a href="${base}catholic-life" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:700;">✝️ Catholic Life &amp; Faith</a>
               <a href="${base}player" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🎮 Interactive Simulators</a>
@@ -375,6 +386,50 @@ export class PersistentAppShellElement extends HTMLElement {
       localStorage.setItem('theme', this.colorMode);
       if (btnTheme) btnTheme.textContent = this.colorMode === 'dark' ? '☀️' : '🌙';
     });
+
+    // Offline Sync (Zero Data)
+    const btnOfflineSync = this.querySelector<HTMLButtonElement>('#nav-btn-offline-sync');
+    const btnMobileOfflineSync = this.querySelector<HTMLButtonElement>('#mobile-btn-offline-sync');
+    const handleSync = async () => {
+      const updateSyncBtns = (text: string, isDone = false) => {
+        if (btnOfflineSync) {
+          btnOfflineSync.textContent = text;
+          if (isDone) {
+            btnOfflineSync.style.background = '#ecfdf5';
+            btnOfflineSync.style.color = '#065f46';
+            btnOfflineSync.style.borderColor = '#10b981';
+          }
+        }
+        if (btnMobileOfflineSync) {
+          btnMobileOfflineSync.textContent = text;
+          if (isDone) {
+            btnMobileOfflineSync.style.background = '#ecfdf5';
+            btnMobileOfflineSync.style.color = '#065f46';
+            btnMobileOfflineSync.style.borderColor = '#10b981';
+          }
+        }
+      };
+
+      updateSyncBtns('⏳ Syncing...');
+      try {
+        const ok = await syncEntireCurriculumOffline((progress) => {
+          updateSyncBtns(`⏳ ${progress.percentage}%`);
+        });
+        if (ok) {
+          this.isOfflineSynced = true;
+          updateSyncBtns('💾 Saved (0 Data)', true);
+          playSuccessChime();
+          triggerHapticSuccess();
+        } else {
+          updateSyncBtns('💾 Save Offline');
+        }
+      } catch (err) {
+        console.warn('Offline sync failed', err);
+        updateSyncBtns('💾 Save Offline');
+      }
+    };
+    btnOfflineSync?.addEventListener('click', handleSync);
+    btnMobileOfflineSync?.addEventListener('click', handleSync);
 
     // Mobile menu toggle
     const btnMobile = this.querySelector<HTMLButtonElement>('#nav-btn-mobile');
