@@ -1690,10 +1690,18 @@
       }
 
       if (el.btnNarrate) {
+        const isVoiceOn = Boolean(this.engine.voiceEnabled);
+        el.btnNarrate.classList.toggle('active', isVoiceOn);
+        el.btnNarrate.textContent = isVoiceOn ? '🔊 Voice: ON' : '🔊 Voice';
+
         el.btnNarrate.addEventListener('click', () => {
           const enabled = this.engine.toggleVoice();
           el.btnNarrate.classList.toggle('active', enabled);
           el.btnNarrate.textContent = enabled ? '🔊 Voice: ON' : '🔊 Voice';
+          if (enabled) {
+            const currentSub = this.engine.getCurrentSubtitle() || (this.engine.scene && this.engine.scene.title) || '';
+            if (currentSub) this.engine.speakText(currentSub);
+          }
         });
       }
 

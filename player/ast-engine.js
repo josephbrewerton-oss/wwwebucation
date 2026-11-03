@@ -2019,7 +2019,7 @@
         speed: 1.0,
         autoplay: true,
         theme: 'dark',
-        voiceEnabled: false,
+        voiceEnabled: true,
         container: null,
         basePath: './',
       }, options);
@@ -3775,8 +3775,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           progress: this.progress
         });
 
+        const subText = this.getCurrentSubtitle() || `${kf.title}. ${kf.rule}`;
+        this.notifyParent({ type: 'SUBTITLE_UPDATE', text: subText });
+
         if (this.voiceEnabled && (this.isPlaying || userSeeking)) {
-          const subText = this.getCurrentSubtitle() || `${kf.title}. ${kf.rule}`;
           this.speakText(subText);
         }
 
@@ -5506,6 +5508,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.play();
       }
       this._mountedSceneId = presetId;
+
+      // Broadcast initial scene subtitle & narration to parent and BSL engine
+      const initialSub = this.getCurrentSubtitle() || (this.scene && (this.scene.title + (this.scene.stage ? ` - ${this.scene.stage}` : ''))) || '';
+      if (initialSub) {
+        this.notifyParent({ type: 'SUBTITLE_UPDATE', text: initialSub });
+        if (this.voiceEnabled) {
+          this.speakText(initialSub);
+        }
+      }
+
       return this.scene;
     })();
 
