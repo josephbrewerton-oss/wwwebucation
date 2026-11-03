@@ -692,7 +692,41 @@ export function generateClassifierPredicate(
     aspect,
   };
 }
+export function mapWordToClassifier(word: string): { type: BslClassifierType; options?: any } | null {
+  const clean = word.toLowerCase().trim();
 
+  // 1. Flat surfaces, sheets, layers, membranes, boundaries, walls, vehicles
+  if (/(layer|membrane|wall|surface|barrier|plate|stratum|boundary|sheet|horizon|car|vehicle|glide|flow)/i.test(clean)) {
+    return { type: 'proform-b' as BslClassifierType, options: { aspect: 'durative' } };
+  }
+
+  // 2. Tubes, beakers, vessels, pistons, cylinders, chambers, conduits
+  if (/(cylinder|tube|vessel|beaker|pipe|chamber|piston|conduit|column|container)/i.test(clean)) {
+    return { type: 'proform-c' as BslClassifierType };
+  }
+
+  // 3. Sacred items, chalice, host, altar vessels
+  if (/(chalice|cup|goblet|ciborium|paten)/i.test(clean)) {
+    return { type: 'handling-cup' as BslClassifierType };
+  }
+
+  // 4. Texts, gospel, scripture, reading, papers
+  if (/(book|bible|gospel|scripture|text|scroll|pages)/i.test(clean)) {
+    return { type: 'handling-book' as BslClassifierType };
+  }
+
+  // 5. People, walking, moving agents, running, stepping
+  if (/(walk|step|stride|run|person|child|disciple|travel|approach|depart)/i.test(clean)) {
+    return { type: 'proform-v' as BslClassifierType, options: { aspect: 'durative' } };
+  }
+
+  // 6. Rays, beams, straight trajectories, vectors, force lines
+  if (/(ray|beam|trajectory|vector|line|axis|pointer|path)/i.test(clean)) {
+    return { type: 'proform-1' as BslClassifierType };
+  }
+
+  return null;
+}
 /**
  * Modulates directional verb keyframes based on dynamic 3D spatial loci.
  * If giving from ME to YOU: trajectory starts near chest and pushes forward into 2P space.
@@ -2066,7 +2100,6 @@ export function analyzeAndTransformBslGrammar(
         }
       }
     }
-
     // Add neutral transition boundary between words
     if (tIdx < reorderedTokens.length - 1 && stream.length > 0) {
       stream.push({
@@ -2114,3 +2147,47 @@ export function analyzeAndTransformBslGrammar(
     stream,
   };
 }
+export type BslClassifierType = 'CL:FLAT' | 'CL:CYLINDER' | 'CL:TRACE' | 'CL:SPHERE';
+
+interface ClassifierRule {
+  type: BslClassifierType;
+  match: RegExp;
+  handshape: string;
+  mouthMorpheme: string;
+  movementVector: { x: number; y: number; z: number };
+}
+
+const CLASSIFIER_RULES: ClassifierRule[] = [
+  {
+    // Flat surfaces, boundaries, barriers, partitions
+    type: 'CL:FLAT',
+    match: /(layer|membrane|wall|surface|barrier|plate|stratum|boundary|sheet|horizon)/i,
+    handshape: 'flat-open',
+    mouthMorpheme: 'th',
+    movementVector: { x: 30, y: 0, z: 5 },
+  },
+  {
+    // Containers, tubes, vessels, cylinders, conduits
+    type: 'CL:CYLINDER',
+    match: /(cylinder|tube|vessel|beaker|pipe|chamber|piston|conduit|column)/i,
+    handshape: 'c-hand',
+    mouthMorpheme: 'puffed-cheeks',
+    movementVector: { x: 0, y: -25, z: 0 },
+  },
+  {
+    // Directional pathways, beams, rays, force lines, trajectories
+    type: 'CL:TRACE',
+    match: /(ray|beam|flow|vector|trajectory|current|line|force|axis|frequency)/i,
+    handshape: 'pointer',
+    mouthMorpheme: 'cs',
+    movementVector: { x: 35, y: -20, z: 20 },
+  },
+  {
+    // Particles, bodies, spheres, cells, molecules, planets
+    type: 'CL:SPHERE',
+    match: /(particle|molecule|atom|cell|nucleus|sphere|globule|vesicle|core|body)/i,
+    handshape: 'claw',
+    mouthMorpheme: 'mm',
+    movementVector: { x: 10, y: 10, z: 10 },
+  },
+];
