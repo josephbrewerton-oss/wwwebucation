@@ -319,7 +319,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
               </g>
             </g>
 
-            <!-- ============================================================== -->
+     <!-- ============================================================== -->
             <!-- 3D NON-DOMINANT BASE HAND (Left Hand) - Authentic 2-Handed BSL -->
             <!-- ============================================================== -->
             <g id="bsl-base-hand-group">
@@ -327,8 +327,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
               <line id="bsl-base-arm" x1="95" y1="150" x2="115" y2="135" stroke="#c2410c" stroke-width="10" stroke-linecap="round" opacity="0.95" />
               <!-- Left Wrist Joint -->
               <circle id="bsl-base-wrist" cx="115" cy="135" r="8" fill="#ea580c" stroke="#fed7aa" stroke-width="1.2" />
-              <!-- Left Palm Cushion Polygon -->
-              <polygon id="bsl-base-palm-poly" points="115,135 125,115 145,120 135,140" fill="url(#bslHumanSkinPalm)" stroke="#ea580c" stroke-width="1.8" stroke-linejoin="round" />
+              <!-- Left Palm Cushion Ellipse -->
+              <ellipse id="bsl-base-palm-poly" cx="125" cy="125" rx="12" ry="14" fill="url(#bslHumanSkinPalm)" stroke="#ea580c" stroke-width="1.8" />
               <!-- Left Eminence Mound (Thumb base) -->
               <circle id="bsl-base-eminence" cx="120" cy="128" r="6.5" fill="#f97316" opacity="0.5" />
               <!-- 5 Left Articulated Finger Bones with Joint Thickness -->
@@ -351,8 +351,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
               <line id="bsl-dom-forearm" x1="225" y1="150" x2="195" y2="135" stroke="#ea580c" stroke-width="10" stroke-linecap="round" opacity="0.95" />
               <!-- Right Wrist Joint -->
               <circle id="bsl-dom-wrist" cx="195" cy="135" r="8.5" fill="#ea580c" stroke="#fed7aa" stroke-width="1.2" />
-              <!-- Right Palm Cushion Polygon -->
-              <polygon id="bsl-dom-palm-poly" points="195,135 185,115 165,120 175,140" fill="url(#bslHumanSkinPalm)" stroke="#ea580c" stroke-width="1.8" stroke-linejoin="round" />
+              <!-- Right Palm Cushion Ellipse -->
+              <ellipse id="bsl-dom-palm-poly" cx="180" cy="125" rx="12" ry="14" fill="url(#bslHumanSkinPalm)" stroke="#ea580c" stroke-width="1.8" />
               <!-- Right Eminence Mound -->
               <circle id="bsl-dom-eminence" cx="188" cy="128" r="7" fill="#f97316" opacity="0.5" />
               <!-- Main Pointer Finger Bone (Index) -->
@@ -363,7 +363,6 @@ export class NativeBslInterpreterElement extends HTMLElement {
               <!-- Active Fingertip Point with Glowing Touch Marker -->
               <circle id="bsl-dom-tip" cx="145" cy="105" r="6.5" fill="#facc15" stroke="#ca8a04" stroke-width="1.5" />
             </g>
-
             <!-- Active Sign Keyframe Aura Indicator -->
             <circle id="bsl-action-aura" cx="160" cy="120" r="22" fill="none" stroke="#38bdf8" stroke-width="2" opacity="0" stroke-dasharray="4,4" />
           </svg>
@@ -706,10 +705,20 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // -------------------------------------------------------------
     // 3. EXPRESSIVE FACIAL RIG (Eyebrows, Eyes, Mouth Morphemes, Tilt)
     // -------------------------------------------------------------
-    const nmf = this.currentPose.nmf;
-    const headTilt = nmf?.headTilt || 'neutral';
-    const mouth = (nmf?.mouth || '').toLowerCase();
-    const eyebrows = nmf?.eyebrows || 'neutral';
+    const nmf = this.currentPose.nmf as any;
+const headTilt = nmf?.headTilt || nmf?.tilt || 'neutral';
+const mouth = (nmf?.mouth || (this.currentPose as any)?.viseme || this.currentPose.label || '').toLowerCase();
+let eyebrows = nmf?.eyebrows || nmf?.brows || 'neutral';
+
+if (eyebrows === 'neutral') {
+  const lbl = (this.currentPose.label || '').toLowerCase();
+  const rule = (this.currentPose.rule || '').toLowerCase();
+  if (lbl.includes('topic') || rule.includes('topic') || mouth.includes('theory') || this.currentPose.isWholeWordSign) {
+    eyebrows = 'raised';
+  } else if (lbl.includes('what') || lbl.includes('why') || lbl.includes('how') || this.currentPose.letter === '?') {
+    eyebrows = 'furrowed';
+  }
+}
 
     let headDx = 0;
     let headDy = 0;
@@ -807,13 +816,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
       domWrist.setAttribute('cy', String(projDomWrist.y));
     }
 
-    const domPalmPoly = this.querySelector<SVGEllipseElement>('#bsl-dom-palm-poly');
-    if (domPalmPoly) {
-      domPalmPoly.setAttribute('cx', String(projDomPalm.x));
-      domPalmPoly.setAttribute('cy', String(projDomPalm.y));
-      domPalmPoly.setAttribute('rx', '12');
-      domPalmPoly.setAttribute('ry', '14');
-    }
+    const basePalmPoly = this.querySelector<SVGEllipseElement>('#bsl-base-palm-poly');
+if (basePalmPoly) {
+  basePalmPoly.setAttribute('cx', String(projBasePalm.x));
+  basePalmPoly.setAttribute('cy', String(projBasePalm.y));
+  basePalmPoly.setAttribute('rx', '12');
+  basePalmPoly.setAttribute('ry', '14');
+  basePalmPoly.setAttribute('opacity', baseMode === 'rest' ? '0.35' : '1');
+}
 
     const domEminence = this.querySelector<SVGCircleElement>('#bsl-dom-eminence');
     if (domEminence) {
