@@ -1,11 +1,13 @@
 import { classroomBeacon } from '../services/classroomBeacon';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
-import { toggleBsl, subscribeBsl, getBslEnabled } from '../services/bslGlobalStore';
+import { toggleBsl, subscribeBsl, getBslEnabled, broadcastBslSpeech } from '../services/bslGlobalStore';
 import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
 import { navigate } from '../router';
+import './NativeBslInterpreter';
+import type { NativeBslInterpreterElement } from './NativeBslInterpreter';
 
 export class PersistentAppShellElement extends HTMLElement {
   private mobileMenuOpen = false;
@@ -473,22 +475,20 @@ export class PersistentAppShellElement extends HTMLElement {
         btnBsl.style.background = enabled ? '#0284c7' : '#1e293b';
         btnBsl.style.borderColor = enabled ? '#38bdf8' : '#334155';
       }
-      bslSlot.innerHTML = enabled ? `
-        <div id="bsl-floating-overlay" style="position:fixed; bottom:20px; right:20px; z-index:9999; background:#090d16; border:2px solid #0284c7; border-radius:12px; box-shadow:0 12px 36px rgba(0,0,0,0.5); overflow:hidden; width:280px;">
-          <div style="background:#0f172a; padding:6px 10px; display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #1e293b;">
-            <span style="font-size:0.76rem; font-weight:800; color:#38bdf8; display:flex; align-items:center; gap:5px;">
-              <span>🖐️</span> BSL Vector Interpreter
-            </span>
-            <button type="button" id="close-bsl-btn" style="background:transparent; border:none; color:#94a3b8; font-size:0.8rem; cursor:pointer;" title="Close BSL Overlay">✕</button>
-          </div>
-          <iframe src="${base}player.html?preset=bsl-fingerspelling&bsl=1" style="width:100%; height:200px; border:none; display:block;" title="BSL Interpreter"></iframe>
-        </div>
-      ` : '';
+      bslSlot.innerHTML = enabled ? `<native-bsl-interpreter></native-bsl-interpreter>` : '';
+    });
 
-      const closeBslBtn = bslSlot.querySelector('#close-bsl-btn');
-      closeBslBtn?.addEventListener('click', () => {
-        toggleBsl();
-      });
+    // Listen to lesson narration & subtitle broadcasts from player iframe
+    window.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'SUBTITLE_UPDATE' && e.data.text) {
+        broadcastBslSpeech({ subtitle: e.data.text, isSpeaking: true });
+        const interpreter = this.querySelector<NativeBslInterpreterElement>('native-bsl-interpreter');
+        if (interpreter) {
+          interpreter.processUtterance(e.data.text);
+        }
+      } else if (e.data && (e.data.type === 'SPEECH_END' || e.data.type === 'SUBTITLE_CLEAR')) {
+        broadcastBslSpeech({ isSpeaking: false });
+      }
     });
   }
 

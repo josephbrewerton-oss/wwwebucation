@@ -1,5 +1,5 @@
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
-import { toggleBsl, getBslEnabled, subscribeBsl } from '../services/bslGlobalStore';
+import { toggleBsl, getBslEnabled, subscribeBsl, broadcastBslSpeech } from '../services/bslGlobalStore';
 
 export function renderPlayerPage(): HTMLElement {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
@@ -203,6 +203,9 @@ export function renderPlayerPage(): HTMLElement {
     if (iframe) {
       iframe.src = `${base}player.html?preset=${presetId}&bsl=${bslActive ? '1' : '0'}`;
     }
+
+    // Broadcast lesson change to BSL interpreter
+    broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
 
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('preset', presetId);
