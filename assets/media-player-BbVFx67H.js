@@ -1,19 +1,19 @@
-import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./generatedScenes-YJ8cIO2Y.js";function i(){let i=`/wwwebucation/`.replace(/\/?$/,`/`),a=document.createElement(`div`);a.className=`ast-media-player-container`,a.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;`;let o=new URLSearchParams(window.location.search),s=o.get(`preset`)||`kinetic-gas`,c=`All`,l=``,u=n()||o.get(`bsl`)===`1`,d=Array.isArray(r)&&r.length>0?r:[{id:`kinetic-gas`,label:`Kinetic Gas Theory & Thermodynamics`,type:`Sim`,stage:`KS3/KS4 PHYSICS`},{id:`pythagoras`,label:`Pythagoras' Theorem (a² + b² = c²)`,type:`Sim`,stage:`KS3/KS4 MATHEMATICS`},{id:`fractions`,label:`Fractions: Why Common Denominators Rule`,type:`Slide`,stage:`KEY STAGE 2`},{id:`electric-circuits`,label:`Electrical Circuits & Ohm’s Law`,type:`Sim`,stage:`KEY STAGE 3`},{id:`solar-system`,label:`Solar System: Heliocentric Planetary Motion`,type:`Sim`,stage:`KEY STAGE 2/3`},{id:`algebra-balance`,label:`Algebraic Balance Scale`,type:`Sim`,stage:`KEY STAGE 3`},{id:`church-tour`,label:`The Catholic Church Sanctuary & Altar`,type:`Slide`,stage:`WHOLE SCHOOL RE`},{id:`phonics-lab`,label:`EYFS Phonics Sound Mat & Digraphs`,type:`App`,stage:`EYFS / KS1`}];function f(e){return d.find(t=>t.id===e)||d[0]}let p=d.filter(e=>(e.type||`Sim`)===`Sim`),m=d.filter(e=>e.type===`Slide`),h=d.filter(e=>e.type===`App`),g=d.filter(e=>e.type===`Data`),_=`
+import{d as e,l as t,u as n}from"./index--2lsGKnF.js";import{t as r}from"./generatedScenes-YJ8cIO2Y.js";var i=`kinetic-gas`,a=new Set(r.map(e=>e.id));function o(e){return e&&a.has(e)?e:i}function s(e,t,n){return`${e}player.html?${new URLSearchParams({preset:t,bsl:n?`1`:`0`}).toString()}`}function c(){let i=`/wwwebucation/`.replace(/\/?$/,`/`),a=document.createElement(`div`);a.className=`ast-media-player-container`,a.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;`;let c=new URLSearchParams(window.location.search),l=o(c.get(`preset`)),u=`All`,d=``,f=n()||c.get(`bsl`)===`1`,p=Array.isArray(r)&&r.length>0?r:[{id:`kinetic-gas`,label:`Kinetic Gas Theory & Thermodynamics`,type:`Sim`,stage:`KS3/KS4 PHYSICS`},{id:`pythagoras`,label:`Pythagoras' Theorem (a² + b² = c²)`,type:`Sim`,stage:`KS3/KS4 MATHEMATICS`},{id:`fractions`,label:`Fractions: Why Common Denominators Rule`,type:`Slide`,stage:`KEY STAGE 2`},{id:`electric-circuits`,label:`Electrical Circuits & Ohm’s Law`,type:`Sim`,stage:`KEY STAGE 3`},{id:`solar-system`,label:`Solar System: Heliocentric Planetary Motion`,type:`Sim`,stage:`KEY STAGE 2/3`},{id:`algebra-balance`,label:`Algebraic Balance Scale`,type:`Sim`,stage:`KEY STAGE 3`},{id:`church-tour`,label:`The Catholic Church Sanctuary & Altar`,type:`Slide`,stage:`WHOLE SCHOOL RE`},{id:`phonics-lab`,label:`EYFS Phonics Sound Mat & Digraphs`,type:`App`,stage:`EYFS / KS1`}];function m(e){return p.find(t=>t.id===e)||p[0]}let h=p.filter(e=>(e.type||`Sim`)===`Sim`),g=p.filter(e=>e.type===`Slide`),_=p.filter(e=>e.type===`App`),v=p.filter(e=>e.type===`Data`),y=`
     <optgroup label="🎮 Simulations (Sim)" style="background:#0f172a; color:#38bdf8;">
-      ${p.map(e=>`<option value="${e.id}" ${e.id===s?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
+      ${h.map(e=>`<option value="${e.id}" ${e.id===l?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
     </optgroup>
     <optgroup label="📑 Interactive Slides (Slide)" style="background:#0f172a; color:#34d399;">
-      ${m.map(e=>`<option value="${e.id}" ${e.id===s?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
+      ${g.map(e=>`<option value="${e.id}" ${e.id===l?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
     </optgroup>
     <optgroup label="💻 Vector Applications (App)" style="background:#0f172a; color:#fbbf24;">
-      ${h.map(e=>`<option value="${e.id}" ${e.id===s?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
+      ${_.map(e=>`<option value="${e.id}" ${e.id===l?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
     </optgroup>
-    ${g.length>0?`
+    ${v.length>0?`
     <optgroup label="📊 Datasets & Checkpoints (Data)" style="background:#0f172a; color:#a78bfa;">
-      ${g.map(e=>`<option value="${e.id}" ${e.id===s?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
+      ${v.map(e=>`<option value="${e.id}" ${e.id===l?`selected`:``}>${e.label} (${e.stage})</option>`).join(``)}
     </optgroup>
     `:``}
-  `,v=f(s);a.innerHTML=`
+  `,b=m(l);a.innerHTML=`
     <!-- Top Breadcrumbs -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
       <div style="display:flex; align-items:center; gap:8px;">
@@ -41,15 +41,15 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
           <div>
             <div style="display:flex; align-items:center; gap:6px;">
               <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em;">
-                ${v.stage}
+                ${b.stage}
               </span>
               <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace;">
-                ${v.type||`Sim`}
+                ${b.type||`Sim`}
               </span>
               <span style="color:#94a3b8; font-size:0.75rem;">&bull; Lumina AST Vector Engine</span>
             </div>
             <h2 id="player-active-title" style="font-size:1.15rem; font-weight:800; color:#f8fafc; margin:2px 0 0;">
-              ${v.label}
+              ${b.label}
             </h2>
           </div>
         </div>
@@ -61,7 +61,7 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
               🎮 Cartridge:
             </label>
             <select id="player-sim-selector" style="padding:6px 12px; border-radius:8px; background:#0f172a; color:#ffffff; border:1.5px solid #0284c7; font-size:0.82rem; font-weight:700; cursor:pointer; outline:none; max-width:280px;">
-              ${_}
+              ${y}
             </select>
           </div>
 
@@ -71,8 +71,8 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
           </button>
 
           <!-- BSL Signing Toggle Button -->
-          <button type="button" id="player-btn-bsl" style="padding:6px 14px; border-radius:8px; background:${u?`rgba(56, 189, 248, 0.16)`:`#1e293b`}; color:${u?`#38bdf8`:`#94a3b8`}; border:${u?`1.5px solid #38bdf8`:`1px solid #475569`}; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="British Sign Language (BSL) In-Vision Interpreter (Shift + B)">
-            <span>🖐️</span> BSL Signing: ${u?`ON`:`OFF`}
+          <button type="button" id="player-btn-bsl" style="padding:6px 14px; border-radius:8px; background:${f?`rgba(56, 189, 248, 0.16)`:`#1e293b`}; color:${f?`#38bdf8`:`#94a3b8`}; border:${f?`1.5px solid #38bdf8`:`1px solid #475569`}; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="British Sign Language (BSL) In-Vision Interpreter (Shift + B)">
+            <span>🖐️</span> BSL Signing: ${f?`ON`:`OFF`}
           </button>
 
           <!-- Fullscreen Button -->
@@ -86,7 +86,7 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
       <div id="player-iframe-wrapper" style="position:relative; width:100%; height:540px; background:#000000;">
         <iframe
           id="ast-player-iframe"
-          src="${i}player.html?preset=${s}&bsl=${u?`1`:`0`}"
+          src="${i}player.html?preset=${l}&bsl=${f?`1`:`0`}"
           style="width:100%; height:100%; border:none; display:block;"
           allow="autoplay; fullscreen"
           title="AST Interactive Vector Stage">
@@ -99,8 +99,8 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
         <div style="display:flex; gap:6px; flex-wrap:wrap;" id="category-filter-buttons">
           ${[`All`,`Sim`,`Slide`,`App`,`Data`].map(e=>`
-            <button type="button" class="cat-pill-btn" data-cat="${e}" style="padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${e===c?`#0284c7`:`#cbd5e1`}; background:${e===c?`#0284c7`:`#f8fafc`}; color:${e===c?`#ffffff`:`#475569`};">
-              ${e===`All`?`🌟 All (`+d.length+`)`:e===`Sim`?`🎮 Sims`:e===`Slide`?`📑 Slides`:e===`App`?`💻 Apps`:`📊 Datasets`}
+            <button type="button" class="cat-pill-btn" data-cat="${e}" style="padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${e===u?`#0284c7`:`#cbd5e1`}; background:${e===u?`#0284c7`:`#f8fafc`}; color:${e===u?`#ffffff`:`#475569`};">
+              ${e===`All`?`🌟 All (`+p.length+`)`:e===`Sim`?`🎮 Sims`:e===`Slide`?`📑 Slides`:e===`App`?`💻 Apps`:`📊 Datasets`}
             </button>
           `).join(``)}
         </div>
@@ -133,7 +133,7 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
         <a href="${i}news" style="padding:6px 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.78rem; font-weight:700; text-decoration:none;">Architecture Notes &rarr;</a>
       </div>
     </div>
-  `;let y=a.querySelector(`#ast-player-iframe`),b=a.querySelector(`#player-sim-selector`),x=a.querySelector(`#player-active-title`),S=a.querySelector(`#player-active-stage-badge`),C=a.querySelector(`#player-active-type-badge`),w=a.querySelector(`#player-btn-bsl`),T=a.querySelector(`#player-btn-reset`),E=a.querySelector(`#player-btn-fullscreen`),D=a.querySelector(`#cartridge-search-input`),O=a.querySelector(`#cartridges-grid`),k=a.querySelectorAll(`.cat-pill-btn`);function A(e){s=e;let n=f(e);x&&(x.textContent=n.label),S&&(S.textContent=n.stage),C&&(C.textContent=n.type||`Sim`),b&&(b.value=e),y&&(y.src=`${i}player.html?preset=${e}&bsl=${u?`1`:`0`}`),t({subtitle:`${n.label}. ${n.stage}`,isSpeaking:!0});let r=new URL(window.location.href);r.searchParams.set(`preset`,e),window.history.replaceState({},``,r.toString()),j()}function j(){if(!O)return;let e=l.toLowerCase().trim(),t=d.filter(t=>{let n=c===`All`||(t.type||`Sim`)===c,r=!e||t.label.toLowerCase().includes(e)||t.stage.toLowerCase().includes(e)||t.id.toLowerCase().includes(e);return n&&r});t.length===0?O.innerHTML=`<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#94a3b8;">No matching cartridges found.</div>`:(O.innerHTML=t.map(e=>{let t=e.id===s;return`
+  `;let x=a.querySelector(`#ast-player-iframe`),S=a.querySelector(`#player-sim-selector`),C=a.querySelector(`#player-active-title`),w=a.querySelector(`#player-active-stage-badge`),T=a.querySelector(`#player-active-type-badge`),E=a.querySelector(`#player-btn-bsl`),D=a.querySelector(`#player-btn-reset`),O=a.querySelector(`#player-btn-fullscreen`),k=a.querySelector(`#cartridge-search-input`),A=a.querySelector(`#cartridges-grid`),j=a.querySelectorAll(`.cat-pill-btn`);function M(e){let n=o(e);l=n;let r=m(n);C&&(C.textContent=r.label),w&&(w.textContent=r.stage),T&&(T.textContent=r.type||`Sim`),S&&(S.value=n),x&&(x.src=s(i,n,f)),t({subtitle:`${r.label}. ${r.stage}`,isSpeaking:!0});let a=new URL(window.location.href);a.searchParams.set(`preset`,n),window.history.replaceState({},``,a.toString()),N()}function N(){if(!A)return;let e=d.toLowerCase().trim(),t=p.filter(t=>{let n=u===`All`||(t.type||`Sim`)===u,r=!e||t.label.toLowerCase().includes(e)||t.stage.toLowerCase().includes(e)||t.id.toLowerCase().includes(e);return n&&r});t.length===0?A.innerHTML=`<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#94a3b8;">No matching cartridges found.</div>`:(A.innerHTML=t.map(e=>{let t=e.id===l;return`
         <div 
           class="cartridge-card" 
           data-id="${e.id}"
@@ -147,4 +147,4 @@ import{d as e,l as t,u as n}from"./index-Cb3zc21W.js";import{t as r}from"./gener
           <strong style="display:block; font-size:0.86rem; color:#0f172a; margin-bottom:6px; line-height:1.3;">${e.label}</strong>
           <span style="font-size:0.75rem; color:#0284c7; font-weight:700;">${t?`▶ Currently Playing`:`Launch &rarr;`}</span>
         </div>
-      `}).join(``),O.querySelectorAll(`.cartridge-card`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.getAttribute(`data-id`);t&&(A(t),y?.scrollIntoView({behavior:`smooth`,block:`center`}))})}))}return b?.addEventListener(`change`,e=>{A(e.target.value)}),T?.addEventListener(`click`,()=>{y&&(y.src=`${i}player.html?preset=${s}&bsl=${u?`1`:`0`}`)}),w?.addEventListener(`click`,()=>{u=!u,e(),w.textContent=`🖐️ BSL Signing: ${u?`ON`:`OFF`}`,w.style.background=u?`rgba(56, 189, 248, 0.16)`:`#1e293b`,w.style.borderColor=u?`#38bdf8`:`#475569`,w.style.color=u?`#38bdf8`:`#94a3b8`,y&&(y.src=`${i}player.html?preset=${s}&bsl=${u?`1`:`0`}`)}),E?.addEventListener(`click`,()=>{let e=a.querySelector(`#player-iframe-wrapper`);document.fullscreenElement?document.exitFullscreen?.():e?.requestFullscreen?.()}),k.forEach(e=>{e.addEventListener(`click`,()=>{c=e.getAttribute(`data-cat`)||`All`,k.forEach(e=>{let t=e.getAttribute(`data-cat`)===c;e.style.background=t?`#0284c7`:`#f8fafc`,e.style.color=t?`#ffffff`:`#475569`,e.style.borderColor=t?`#0284c7`:`#cbd5e1`}),j()})}),D?.addEventListener(`input`,e=>{l=e.target.value,j()}),j(),a}export{i as default,i as renderPlayerPage};
+      `}).join(``),A.querySelectorAll(`.cartridge-card`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.getAttribute(`data-id`);t&&(M(t),x?.scrollIntoView({behavior:`smooth`,block:`center`}))})}))}return S?.addEventListener(`change`,e=>{M(e.target.value)}),D?.addEventListener(`click`,()=>{x&&(x.src=s(i,l,f))}),E?.addEventListener(`click`,()=>{f=!f,e(),E.textContent=`🖐️ BSL Signing: ${f?`ON`:`OFF`}`,E.style.background=f?`rgba(56, 189, 248, 0.16)`:`#1e293b`,E.style.borderColor=f?`#38bdf8`:`#475569`,E.style.color=f?`#38bdf8`:`#94a3b8`,x&&(x.src=s(i,l,f))}),O?.addEventListener(`click`,()=>{let e=a.querySelector(`#player-iframe-wrapper`);document.fullscreenElement?document.exitFullscreen?.():e?.requestFullscreen?.()}),j.forEach(e=>{e.addEventListener(`click`,()=>{u=e.getAttribute(`data-cat`)||`All`,j.forEach(e=>{let t=e.getAttribute(`data-cat`)===u;e.style.background=t?`#0284c7`:`#f8fafc`,e.style.color=t?`#ffffff`:`#475569`,e.style.borderColor=t?`#0284c7`:`#cbd5e1`}),N()})}),k?.addEventListener(`input`,e=>{d=e.target.value,N()}),N(),a}export{c as default,c as renderPlayerPage};
