@@ -5,8 +5,9 @@
  * Copyright (c) 2026 Joseph Brewerton.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Commercial-License
  *
- * AST Calculation & Storage Architecture for BSL (Phase 1):
+ * AST Calculation & Storage Architecture for BSL (Phase 1 & Phase 2 Universal):
  * - Serializes multi-keyframe 3D human signing trajectories into declarative S-Expressions.
+ * - Parses both Phase 1 (bsl-lexicon) and Phase 2 (bsl-codebook with quantized groups).
  * - Achieves 99.998% compression over video: a full sign is ~150 bytes (vs 10+ MB video).
  * - Enables real-time procedural forward kinematics, 3D perspective projection, and Hermite interpolation.
  * - Zero external dependencies, pure O(n) streaming parsing and serialization.
@@ -129,85 +130,112 @@ export function serializeLexiconToAst(
   return `${header.join('\n')}\n${signEntries.join('\n\n')}\n)\n`;
 }
 
+/**
+ * Traverses S-expression tree nodes recursively to collect all sign declarations,
+ * whether they sit under a flat root or are nested inside (group ...) blocks.
+ */
+function extractSignNodes(node: any): any[] {
+  if (!node || typeof node !== 'object') return [];
+  const tag = node.tag || node[':tag'];
+  if (tag === 'sign' || tag === ':sign') {
+    return [node];
+  }
+  const children = Array.isArray(node) ? node : (node.children || []);
+  return children.flatMap(extractSignNodes);
+}
 
 /**
  * Parses an AST S-Expression node representing a BSL sign into a structured BslSign.
+ * Supports Phase 1 (:tip, :knuckle, :wrist) and Phase 2 (:pos, :ori, :hex bitfields).
  */
 export function parseAstNodeToSign(node: any): BslSign | null {
   if (!node) return null;
 
-  // Handle SExprNode format from sexprParser: { tag: 'sign', props: {...}, children: [...] }
   const isSExprNode = typeof node === 'object' && (node.tag === 'sign' || node.tag === ':sign');
   const props = isSExprNode ? node.props : (node[':props'] || node);
   const children = isSExprNode ? node.children : [];
 
-  const word = props.word || props.id?.toUpperCase();
-  if (!word) return null;
+  const rawId = props.id || props[':id'];
+  const rawWord = props.word || props[':word'] || (rawId ? String(rawId).toUpperCase() : null);
+  if (!rawWord) return null;
 
   const keyframes: BslSignKeyframe[] = [];
 
   // Parse keyframe children
-  const kfNodes = children.filter((c: any) => c && (c.tag === 'kf' || c.tag === ':kf' || c[':tag'] === 'kf'));
+  const kfNodes = children.filter((c: any) => {
+    const tag = c && (c.tag || c[':tag']);
+    return tag === 'kf' || tag === ':kf';
+  });
 
   for (const kfNode of kfNodes) {
     const kfProps = kfNode.props || {};
-    const tip = astVectorToPoint3D(kfProps.tip);
-    const knuckle = astVectorToPoint3D(kfProps.knuckle);
-    const wrist = astVectorToPoint3D(kfProps.wrist);
+
+    // Support Phase 2 :pos vector tuple as fallback/primary
+    const pos = astVectorToPoint3D(kfProps.pos || kfProps[':pos']);
+    const tip = (kfProps.tip || kfProps[':tip']) ? astVectorToPoint3D(kfProps.tip || kfProps[':tip']) : pos;
+    const knuckle = (kfProps.knuckle || kfProps[':knuckle'])
+      ? astVectorToPoint3D(kfProps.knuckle || kfProps[':knuckle'])
+      : { x: pos.x, y: pos.y + 10, z: pos.z };
+    const wrist = (kfProps.wrist || kfProps[':wrist'])
+      ? astVectorToPoint3D(kfProps.wrist || kfProps[':wrist'])
+      : { x: pos.x, y: pos.y + 25, z: pos.z - 5 };
 
     let shape: BslHandShape | undefined = undefined;
-    if (kfProps.shape) {
-      const rawShape = String(kfProps.shape).replace(/^:/, '').toLowerCase();
-      if (['point', 'point-l', 'flat', 'flat-closed', 'spread', 'flat-spread', 'claw', 'fist', 'v', 'c-shape'].includes(rawShape)) {
-        shape = rawShape as BslHandShape;
-      }
+    const shapeProp = kfProps.shape || kfProps[':shape'];
+    if (shapeProp) {
+      const rawShape = String(shapeProp).replace(/^:/, '').toLowerCase();
+      shape = rawShape as BslHandShape;
     }
 
     let palm: BslPalmOrientation | undefined = undefined;
-    if (kfProps.palm !== undefined) {
-      if (typeof kfProps.palm === 'string') {
-        const rawPalm = String(kfProps.palm).replace(/^:/, '').toLowerCase();
-        if (['in', 'out', 'down', 'up', 'side'].includes(rawPalm)) {
-          palm = rawPalm as any;
-        }
-      } else if (Array.isArray(kfProps.palm) && kfProps.palm.length >= 3) {
-        palm = [Number(kfProps.palm[0]) || 0, Number(kfProps.palm[1]) || 0, Number(kfProps.palm[2]) || 0];
+    const rawPalm = kfProps.palm || kfProps[':palm'] || kfProps.ori || kfProps[':ori'];
+    if (rawPalm !== undefined) {
+      if (typeof rawPalm === 'string') {
+        const cleaned = String(rawPalm).replace(/^:/, '').toLowerCase();
+        palm = cleaned as any;
+      } else if (Array.isArray(rawPalm) && rawPalm.length >= 3) {
+        palm = [Number(rawPalm[0]) || 0, Number(rawPalm[1]) || 0, Number(rawPalm[2]) || 0];
       }
     }
 
-    const hold = kfProps.hold !== undefined ? Number(kfProps.hold) : undefined;
-    const ease = kfProps.ease ? String(kfProps.ease).replace(/^:/, '').toLowerCase() : undefined;
+    const rawHold = kfProps.hold !== undefined ? kfProps.hold : kfProps[':hold'];
+    const hold = rawHold !== undefined ? Number(rawHold) : undefined;
+    const rawEase = kfProps.ease || kfProps[':ease'];
+    const ease = rawEase ? String(rawEase).replace(/^:/, '').toLowerCase() : undefined;
 
     let nmf: BslNmf | undefined = undefined;
-    if (kfProps.nmf) {
-      const nmfProps = typeof kfProps.nmf === 'object' && kfProps.nmf.props ? kfProps.nmf.props : kfProps.nmf;
+    const nmfProp = kfProps.nmf || kfProps[':nmf'];
+    if (nmfProp) {
+      const nmfProps = typeof nmfProp === 'object' && nmfProp.props ? nmfProp.props : nmfProp;
       nmf = {
-        mouth: nmfProps.mouth,
-        eyebrows: nmfProps.brows || nmfProps.eyebrows || 'neutral',
-        headTilt: nmfProps.tilt || nmfProps.headTilt || 'neutral',
+        mouth: nmfProps.mouth || nmfProps[':mouth'],
+        eyebrows: nmfProps.brows || nmfProps[':brows'] || nmfProps.eyebrows || 'neutral',
+        headTilt: nmfProps.tilt || nmfProps[':tilt'] || nmfProps.headTilt || 'neutral',
       };
     }
 
     let baseHandOverride: BslSignKeyframe['baseHandOverride'] = undefined;
-    if (kfProps['base-shift'] && Array.isArray(kfProps['base-shift'])) {
+    const baseShift = kfProps['base-shift'] || kfProps[':base-shift'];
+    if (baseShift && Array.isArray(baseShift)) {
       baseHandOverride = {
-        shiftX: Number(kfProps['base-shift'][0]) || 0,
-        shiftY: Number(kfProps['base-shift'][1]) || 0,
-        shiftZ: Number(kfProps['base-shift'][2]) || 0,
+        shiftX: Number(baseShift[0]) || 0,
+        shiftY: Number(baseShift[1]) || 0,
+        shiftZ: Number(baseShift[2]) || 0,
       };
     }
 
     let baseHandMode: BslBaseHandMode | undefined = undefined;
-    if (kfProps['base-mode']) {
-      const rawMode = String(kfProps['base-mode']).replace(/^:/, '').toLowerCase();
-      if (['rest', 'vowel-board', 'mirror', 'override'].includes(rawMode)) {
-        baseHandMode = rawMode as BslBaseHandMode;
-      }
+    const baseMode = kfProps['base-mode'] || kfProps[':base-mode'];
+    if (baseMode) {
+      const rawMode = String(baseMode).replace(/^:/, '').toLowerCase();
+      baseHandMode = rawMode as BslBaseHandMode;
     }
 
+    const vowelVal = kfProps.vowel !== undefined ? kfProps.vowel : kfProps[':vowel'];
+
     keyframes.push({
-      label: kfProps.label || 'Pose',
-      rule: kfProps.rule || '',
+      label: kfProps.label || kfProps[':label'] || (rawId ? String(rawId) : 'Pose'),
+      rule: kfProps.rule || kfProps[':rule'] || '',
       targetTip: tip,
       targetKnuckle: knuckle,
       targetWrist: wrist,
@@ -216,7 +244,7 @@ export function parseAstNodeToSign(node: any): BslSign | null {
       hold,
       ease,
       baseHandMode,
-      activeVowelIndex: kfProps.vowel !== undefined ? Number(kfProps.vowel) : undefined,
+      activeVowelIndex: vowelVal !== undefined ? Number(vowelVal) : undefined,
       baseHandOverride,
       nmf,
     });
@@ -224,14 +252,16 @@ export function parseAstNodeToSign(node: any): BslSign | null {
 
   // Parse aliases
   let aliases: string[] | undefined = undefined;
-  if (Array.isArray(props.aliases)) {
-    aliases = props.aliases.map((a: any) => String(a).toUpperCase());
+  const rawAliases = props.aliases || props[':aliases'];
+  if (Array.isArray(rawAliases)) {
+    aliases = rawAliases.map((a: any) => String(a).toUpperCase());
   }
 
   const isDirectional = Boolean(props.directional || props[':directional']);
   let defaultLoci: { from: string; to: string } | undefined = undefined;
-  if (props['default-loci']) {
-    const dl = typeof props['default-loci'] === 'object' && props['default-loci'].props ? props['default-loci'].props : props['default-loci'];
+  const dlProp = props['default-loci'] || props[':default-loci'];
+  if (dlProp) {
+    const dl = typeof dlProp === 'object' && dlProp.props ? dlProp.props : dlProp;
     if (dl && (dl.from || dl[':from'])) {
       defaultLoci = {
         from: String(dl.from || dl[':from']),
@@ -241,8 +271,8 @@ export function parseAstNodeToSign(node: any): BslSign | null {
   }
 
   let classifier: any = undefined;
-  if (props.classifier || props[':classifier']) {
-    const rawCl = props.classifier || props[':classifier'];
+  const rawCl = props.classifier || props[':classifier'];
+  if (rawCl) {
     if (Array.isArray(rawCl)) {
       classifier = {};
       for (let i = 0; i < rawCl.length; i += 2) {
@@ -266,23 +296,25 @@ export function parseAstNodeToSign(node: any): BslSign | null {
   }
 
   let aspect: any = undefined;
-  if (props.aspect || props[':aspect']) {
-    const rawAspect = String(props.aspect || props[':aspect']).replace(/^:/, '').toLowerCase();
-    if (['neutral', 'durative', 'habitual', 'intensive', 'inceptive'].includes(rawAspect)) {
-      aspect = rawAspect;
-    }
+  const aspectProp = props.aspect || props[':aspect'];
+  if (aspectProp) {
+    const rawAspect = String(aspectProp).replace(/^:/, '').toLowerCase();
+    aspect = rawAspect;
   }
 
-  const rawMakatonStage = props['makaton-stage'] !== undefined ? props['makaton-stage'] : props.makatonStage;
-  const makatonStage = rawMakatonStage !== undefined ? Number(rawMakatonStage) : undefined;
+  const rawMakaton = props['makaton-stage'] !== undefined ? props['makaton-stage'] : (props.makatonStage || props[':makaton-stage']);
+  const makatonStage = rawMakaton !== undefined ? Number(rawMakaton) : undefined;
+
+  const id = rawId ? String(rawId) : rawWord.toLowerCase();
+  const word = String(rawWord).toUpperCase();
 
   return {
-    id: props.id || word.toLowerCase(),
-    word: word.toUpperCase(),
-    category: (props.cat as BslCategory) || 'conversation',
-    englishLabel: props.label || word,
-    gloss: props.gloss || word,
-    description: props.desc || '',
+    id,
+    word,
+    category: ((props.cat || props[':cat']) as BslCategory) || 'conversation',
+    englishLabel: props.label || props[':label'] || props.viseme || props[':viseme'] || word,
+    gloss: props.gloss || props[':gloss'] || word,
+    description: props.desc || props[':desc'] || '',
     keyframes,
     aliases,
     isDirectional: isDirectional || undefined,
@@ -294,33 +326,31 @@ export function parseAstNodeToSign(node: any): BslSign | null {
 }
 
 /**
- * Parses a full .ast file content into a dictionary of BslSign objects.
+ * Parses full .ast or .lisp codebook content into an accessible dictionary of BslSign objects.
  */
 export function parseAstToLexicon(astContent: string): Record<string, BslSign> {
   const astRoot = parseSExpr(astContent);
   const result: Record<string, BslSign> = {};
 
-  if (!astRoot || typeof astRoot !== 'object') return result;
+  if (!astRoot) return result;
 
-  // Handle single (sign ...) root node as well as (bsl-lexicon ...) collection
-  if (!Array.isArray(astRoot) && ((astRoot as SExprNode).tag === 'sign' || (astRoot as SExprNode).tag === ':sign')) {
-    const singleSign = parseAstNodeToSign(astRoot);
-    if (singleSign) {
-      result[singleSign.word] = singleSign;
-      return result;
-    }
-  }
+  // Collect all sign nodes regardless of whether they are flat or wrapped in groups
+  const signNodes = extractSignNodes(astRoot);
 
-  // Root node can be (bsl-lexicon ...) or array of signs
-  const children = Array.isArray(astRoot)
-    ? astRoot
-    : ((astRoot as SExprNode).children || []);
+  for (const node of signNodes) {
+    const sign = parseAstNodeToSign(node);
+    if (sign) {
+      // Register by all common query variations for O(1) matching
+      result[sign.word] = sign;
+      result[sign.id.toLowerCase()] = sign;
+      result[sign.id] = sign;
 
-  for (const child of children) {
-    if (child && typeof child === 'object') {
-      const sign = parseAstNodeToSign(child);
-      if (sign) {
-        result[sign.word] = sign;
+      // Register explicit aliases declared on the sign
+      if (sign.aliases) {
+        for (const alias of sign.aliases) {
+          result[alias.toUpperCase()] = sign;
+          result[alias.toLowerCase()] = sign;
+        }
       }
     }
   }
