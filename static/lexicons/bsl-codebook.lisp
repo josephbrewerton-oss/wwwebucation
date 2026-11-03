@@ -737,3 +737,5 @@
 (sign :g 8 :w 15 :id "explore" :hex #x050203041 :viseme "search"
   (kf :idx 1 :shape :v     :pos [25 -45 25]  :ori :outward :nmf (nmf :brows "raised"))
   (kf :idx 2 :shape :v     :pos [35 -20 65]  :ori :outward :aspect :durative :hold 200 :nmf (nmf :brows "raised" :tilt "nod")))
+)
+)
