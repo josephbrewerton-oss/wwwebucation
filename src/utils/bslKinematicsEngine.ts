@@ -70,6 +70,8 @@ export interface BslSolvedFrame {
   baseFingertips: Array<{ id: string; name: string; x: number; y: number; scale: number; idx: number }>;
 }
 
+
+
 export function computeHeadCenter(headTilt: string, progress: number): Point3D {
   let dx = 0;
   let dy = -72;
@@ -240,6 +242,8 @@ export function solveBaseHandKinematics(
   };
 }
 
+
+
 export function computeBslFrame(
   currentPose: BslHandPose,
   prevPose: BslHandPose,
@@ -252,41 +256,35 @@ export function computeBslFrame(
   panY: number,
   cameraMode: 'split' | 'body' | 'face'
 ): BslSolvedFrame {
-  const activeNmf = currentPose.nmf;
-  const eyebrowState = activeNmf?.eyebrows || 'neutral';
-  const mouthPattern = (activeNmf?.mouth || '').toLowerCase();
-  const headTilt = activeNmf?.headTilt || 'neutral';
-  const roleYaw = activeNmf?.roleShift?.yaw;
+const activeNmf = currentPose.nmf as any;
 
-  const head3D = computeHeadCenter(headTilt, progress);
-  const pBody = (pt: Point3D) => projectPoint(pt, camera, panX, panY, cameraMode, 'body', head3D.y, head3D.z, roleYaw);
+  // 1. Support both TypeScript 'eyebrows' and Lisp codebook ':brows'
+  let rawEyebrowState = activeNmf?.eyebrows || activeNmf?.brows || 'neutral';
 
-  const torsoHead = pBody(head3D);
-  const torsoChin = pBody({ x: head3D.x, y: head3D.y + 26, z: head3D.z + 5 });
-  const torsoChest = pBody({ x: 0, y: -24, z: -15 });
-  const torsoLeftShoulder = pBody({ x: cameraMode === 'split' ? -38 : -56, y: -15, z: -20 });
-  const torsoRightShoulder = pBody({ x: cameraMode === 'split' ? 38 : 56, y: -15, z: -20 });
+  // 2. Extract mouth pattern from nmf.mouth, top-level viseme, or pose label
+  const mouthPattern = (
+    activeNmf?.mouth ||
+    (currentPose as any)?.viseme ||
+    currentPose.label ||
+    ''
+  ).toLowerCase();
 
-  const shoulderViewerLeft = torsoLeftShoulder.x <= torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
-  const shoulderViewerRight = torsoLeftShoulder.x > torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
-
-  // --- NMF Fallback & Semantic Inference ---
-  let effectiveEyebrows = eyebrowState;
+  // 3. Fallback inference if eyebrow state is still 'neutral'
+  let effectiveEyebrows = rawEyebrowState;
   if (effectiveEyebrows === 'neutral') {
     const label = (currentPose.label || '').toLowerCase();
     const rule = (currentPose.rule || '').toLowerCase();
-    const mouth = mouthPattern;
 
     // Raise eyebrows for topics, concepts, conditional questions, or theory
     if (
       label.includes('topic') ||
       rule.includes('topic') ||
-      mouth.includes('theory') ||
+      mouthPattern.includes('theory') ||
       currentPose.isWholeWordSign
     ) {
       effectiveEyebrows = 'raised';
-    } 
-    // Furrow eyebrows for questions / inquiry
+    }
+    // Furrow eyebrows for questions / interrogatives
     else if (
       label.includes('what') ||
       label.includes('why') ||
@@ -297,15 +295,33 @@ export function computeBslFrame(
     }
   }
 
-  // Facial geometry
-  let browInnerDy = effectiveEyebrows === 'raised' ? -5 : effectiveEyebrows === 'furrowed' ? 3 : 0;
-  let browOuterDy = effectiveEyebrows === 'raised' ? -4 : effectiveEyebrows === 'furrowed' ? -1 : 0;
-  
-  // Facial geometry
-  let browInnerDy = eyebrowState === 'raised' ? -5 : eyebrowState === 'furrowed' ? 3 : 0;
-  let browOuterDy = eyebrowState === 'raised' ? -4 : eyebrowState === 'furrowed' ? -1 : 0;
-  // --- BSL Mouth Morphemes & Mouthing ---
-  let mouthW = cameraMode === 'face' ? 6.5 : 5.0;
+  // 4. Head tilt & role shift
+  const headTilt = activeNmf?.headTilt || activeNmf?.tilt || 'neutral';
+  const roleYaw = activeNmf?.roleShift?.yaw;
+
+  const head3D = computeHeadCenter(headTilt, progress);
+  const pBody = (pt: Point3D) =>
+    projectPoint(pt, camera, panX, panY, cameraMode, 'body', head3D.y, head3D.z, roleYaw);
+
+  const torsoHead = pBody(head3D);
+  const torsoChin = pBody({ x: head3D.x, y: head3D.y + 26, z: head3D.z + 5 });
+  const torsoChest = pBody({ x: 0, y: -24, z: -15 });
+  const torsoLeftShoulder = pBody({ x: cameraMode === 'split' ? -38 : -56, y: -15, z: -20 });
+  const torsoRightShoulder = pBody({ x: cameraMode === 'split' ? 38 : 56, y: -15, z: -20 });
+
+  const shoulderViewerLeft =
+    torsoLeftShoulder.x <= torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
+  const shoulderViewerRight =
+    torsoLeftShoulder.x > torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
+
+  // 5. Eyebrow geometry (single declaration using inferred effectiveEyebrows)
+  let browInnerDy =
+    effectiveEyebrows === 'raised' ? -5 : effectiveEyebrows === 'furrowed' ? 3 : 0;
+  let browOuterDy =
+    effectiveEyebrows === 'raised' ? -4 : effectiveEyebrows === 'furrowed' ? -1 : 0;
+
+  // 6. BSL Mouth Morphemes & Mouthing
+  let mouthW = cameraMode === 'face' ? 6.5 : cameraMode === 'split' ? 5.0 : 5.5;
   let mouthH = cameraMode === 'face' ? 1.8 : 1.4;
   let mouthCurvature = 0.5; // subtle resting curve
 
@@ -319,12 +335,22 @@ export function computeBslFrame(
     mouthW = cameraMode === 'face' ? 6.2 : 4.8;
     mouthH = 2.8;
     mouthCurvature = -0.3;
-  } else if (mouthPattern === 'pursed' || mouthPattern === 'tight' || mouthPattern.includes('compress')) {
+  } else if (
+    mouthPattern === 'pursed' ||
+    mouthPattern === 'tight' ||
+    mouthPattern.includes('compress')
+  ) {
     // Concentration, precision, pressure, strict bounds
     mouthW = cameraMode === 'face' ? 3.6 : 2.6;
     mouthH = 2.0;
     mouthCurvature = -0.8;
-  } else if (mouthPattern === 'puffed-cheeks' || mouthPattern === 'poo' || mouthPattern.includes('gas') || mouthPattern.includes('expand')) {
+  } else if (
+    mouthPattern === 'puffed-cheeks' ||
+    mouthPattern === 'poo' ||
+    mouthPattern === 'puff' ||
+    mouthPattern.includes('gas') ||
+    mouthPattern.includes('expand')
+  ) {
     // Explosion, sudden expansion, high pressure volume
     mouthW = cameraMode === 'face' ? 5.2 : 4.0;
     mouthH = cameraMode === 'face' ? 5.5 : 4.2;
@@ -334,19 +360,29 @@ export function computeBslFrame(
     mouthW = cameraMode === 'face' ? 8.5 : 6.8;
     mouthH = 1.4;
     mouthCurvature = 1.0;
-  } else if (mouthPattern === 'cha' || mouthPattern.includes('billions') || mouthPattern.includes('large')) {
+  } else if (
+    mouthPattern === 'cha' ||
+    mouthPattern.includes('billions') ||
+    mouthPattern.includes('large') ||
+    mouthPattern.includes('huge')
+  ) {
     // Enormous size, large quantity, massive scale
     mouthW = cameraMode === 'face' ? 8.0 : 6.2;
     mouthH = cameraMode === 'face' ? 6.0 : 4.6;
     mouthCurvature = 0;
+  } else if (mouthPattern === 'good' || mouthPattern === 'thank') {
+    mouthW = cameraMode === 'face' ? 9.0 : 7.0;
+    mouthH = cameraMode === 'face' ? 3.2 : 2.2;
+    mouthCurvature = cameraMode === 'face' ? 3.5 : 2.5;
   } else if (mouthPattern.length > 0) {
     // Lexical mouthing (English word articulation)
     const hasOpenVowel = /[ou]/i.test(mouthPattern);
     mouthW = cameraMode === 'face' ? 7.0 : 5.4;
-    mouthH = hasOpenVowel ? (cameraMode === 'face' ? 4.2 : 3.2) : (cameraMode === 'face' ? 2.4 : 1.8);
+    mouthH = hasOpenVowel
+      ? (cameraMode === 'face' ? 4.2 : 3.2)
+      : (cameraMode === 'face' ? 2.4 : 1.8);
     mouthCurvature = 1.0;
-  }
-  const zFace = head3D.z + 14;
+  }  const zFace = head3D.z + 14;
   const zNose = head3D.z + 18;
 
   const face: SolvedFacialLandmarks2D = {
