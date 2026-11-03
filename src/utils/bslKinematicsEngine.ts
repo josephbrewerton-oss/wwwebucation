@@ -304,33 +304,48 @@ export function computeBslFrame(
   // Facial geometry
   let browInnerDy = eyebrowState === 'raised' ? -5 : eyebrowState === 'furrowed' ? 3 : 0;
   let browOuterDy = eyebrowState === 'raised' ? -4 : eyebrowState === 'furrowed' ? -1 : 0;
-  let mouthW = cameraMode === 'face' ? 8 : cameraMode === 'split' ? 5.5 : 6;
-  let mouthH = cameraMode === 'face' ? 3 : 2;
-  let mouthCurvature = 0;
+  // --- BSL Mouth Morphemes & Mouthing ---
+  let mouthW = cameraMode === 'face' ? 6.5 : 5.0;
+  let mouthH = cameraMode === 'face' ? 1.8 : 1.4;
+  let mouthCurvature = 0.5; // subtle resting curve
 
   if (mouthPattern === 'mm') {
-    mouthW = cameraMode === 'face' ? 7.2 : 5.4;
-    mouthH = 0.8;
-    mouthCurvature = 0.3;
-  } else if (mouthPattern === 'th') {
-    mouthW = cameraMode === 'face' ? 6.5 : 4.8;
-    mouthH = 3.2;
-    mouthCurvature = -0.4;
-  } else if (mouthPattern === 'pursed') {
-    mouthW = cameraMode === 'face' ? 3.4 : 2.6;
-    mouthH = 3.4;
-  } else if (mouthPattern === 'puffed-cheeks') {
-    mouthW = cameraMode === 'face' ? 4.8 : 3.6;
-    mouthH = 4.2;
-  } else if (mouthPattern.includes('o') || mouthPattern.includes('u')) {
-    mouthW = cameraMode === 'face' ? 5.5 : 4;
-    mouthH = cameraMode === 'face' ? 7 : 5;
-  } else if (mouthPattern.includes('a') || mouthPattern.includes('e') || mouthPattern.includes('good') || mouthPattern.includes('thank')) {
-    mouthW = cameraMode === 'face' ? 9.5 : cameraMode === 'split' ? 7 : 7.5;
-    mouthH = cameraMode === 'face' ? 3.5 : 2.5;
-    mouthCurvature = cameraMode === 'face' ? 4 : 3;
+    // Ordinary, effortless, steady state (pressed horizontal lips)
+    mouthW = cameraMode === 'face' ? 7.0 : 5.2;
+    mouthH = 0.6;
+    mouthCurvature = 0;
+  } else if (mouthPattern === 'th' || mouthPattern === 'tongue') {
+    // Careless, accidental, lucky (tongue between teeth)
+    mouthW = cameraMode === 'face' ? 6.2 : 4.8;
+    mouthH = 2.8;
+    mouthCurvature = -0.3;
+  } else if (mouthPattern === 'pursed' || mouthPattern === 'tight' || mouthPattern.includes('compress')) {
+    // Concentration, precision, pressure, strict bounds
+    mouthW = cameraMode === 'face' ? 3.6 : 2.6;
+    mouthH = 2.0;
+    mouthCurvature = -0.8;
+  } else if (mouthPattern === 'puffed-cheeks' || mouthPattern === 'poo' || mouthPattern.includes('gas') || mouthPattern.includes('expand')) {
+    // Explosion, sudden expansion, high pressure volume
+    mouthW = cameraMode === 'face' ? 5.2 : 4.0;
+    mouthH = cameraMode === 'face' ? 5.5 : 4.2;
+    mouthCurvature = 0;
+  } else if (mouthPattern === 'ee' || mouthPattern === 'cs') {
+    // Extreme proximity, grit, effort, intensity
+    mouthW = cameraMode === 'face' ? 8.5 : 6.8;
+    mouthH = 1.4;
+    mouthCurvature = 1.0;
+  } else if (mouthPattern === 'cha' || mouthPattern.includes('billions') || mouthPattern.includes('large')) {
+    // Enormous size, large quantity, massive scale
+    mouthW = cameraMode === 'face' ? 8.0 : 6.2;
+    mouthH = cameraMode === 'face' ? 6.0 : 4.6;
+    mouthCurvature = 0;
+  } else if (mouthPattern.length > 0) {
+    // Lexical mouthing (English word articulation)
+    const hasOpenVowel = /[ou]/i.test(mouthPattern);
+    mouthW = cameraMode === 'face' ? 7.0 : 5.4;
+    mouthH = hasOpenVowel ? (cameraMode === 'face' ? 4.2 : 3.2) : (cameraMode === 'face' ? 2.4 : 1.8);
+    mouthCurvature = 1.0;
   }
-
   const zFace = head3D.z + 14;
   const zNose = head3D.z + 18;
 
