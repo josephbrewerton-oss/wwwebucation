@@ -270,6 +270,37 @@ export function computeBslFrame(
   const shoulderViewerLeft = torsoLeftShoulder.x <= torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
   const shoulderViewerRight = torsoLeftShoulder.x > torsoRightShoulder.x ? torsoLeftShoulder : torsoRightShoulder;
 
+  // --- NMF Fallback & Semantic Inference ---
+  let effectiveEyebrows = eyebrowState;
+  if (effectiveEyebrows === 'neutral') {
+    const label = (currentPose.label || '').toLowerCase();
+    const rule = (currentPose.rule || '').toLowerCase();
+    const mouth = mouthPattern;
+
+    // Raise eyebrows for topics, concepts, conditional questions, or theory
+    if (
+      label.includes('topic') ||
+      rule.includes('topic') ||
+      mouth.includes('theory') ||
+      currentPose.isWholeWordSign
+    ) {
+      effectiveEyebrows = 'raised';
+    } 
+    // Furrow eyebrows for questions / inquiry
+    else if (
+      label.includes('what') ||
+      label.includes('why') ||
+      label.includes('how') ||
+      currentPose.letter === '?'
+    ) {
+      effectiveEyebrows = 'furrowed';
+    }
+  }
+
+  // Facial geometry
+  let browInnerDy = effectiveEyebrows === 'raised' ? -5 : effectiveEyebrows === 'furrowed' ? 3 : 0;
+  let browOuterDy = effectiveEyebrows === 'raised' ? -4 : effectiveEyebrows === 'furrowed' ? -1 : 0;
+  
   // Facial geometry
   let browInnerDy = eyebrowState === 'raised' ? -5 : eyebrowState === 'furrowed' ? 3 : 0;
   let browOuterDy = eyebrowState === 'raised' ? -4 : eyebrowState === 'furrowed' ? -1 : 0;
