@@ -106,10 +106,6 @@ export async function loadBSLCodebook(url = '/lexicons/bsl-codebook.lisp'): Prom
     const viseme = match[5];
     const kfBlock = match[6];
 
-    // Extract keyframes inside the sign
-    const keyframes: CodebookSign['keyframes'] = [];
-    const kfRegex = /\(kf\s+:idx\s+(\d+)\s+:shape\s+:([\w-]+)\s+:pos\s+\[([-\d\s]+)\]\s+:ori\s+:([\w-]+)(?:[\s\S]*?:aspect\s+:([\w-]+))?(?:[\s\S]*?:hold\s+(\d+))?/g;
-    let kfMatch: RegExpExecArray | null;
 
     while ((kfMatch = kfRegex.exec(kfBlock)) !== null) {
       const coords = kfMatch[3].trim().split(/\s+/).map(Number) as [number, number, number];
