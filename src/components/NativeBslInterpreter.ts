@@ -816,14 +816,13 @@ if (eyebrows === 'neutral') {
       domWrist.setAttribute('cy', String(projDomWrist.y));
     }
 
-    const basePalmPoly = this.querySelector<SVGEllipseElement>('#bsl-base-palm-poly');
-if (basePalmPoly) {
-  basePalmPoly.setAttribute('cx', String(projBasePalm.x));
-  basePalmPoly.setAttribute('cy', String(projBasePalm.y));
-  basePalmPoly.setAttribute('rx', '12');
-  basePalmPoly.setAttribute('ry', '14');
-  basePalmPoly.setAttribute('opacity', baseMode === 'rest' ? '0.35' : '1');
-}
+    const domPalmPoly = this.querySelector<SVGEllipseElement>('#bsl-dom-palm-poly');
+    if (domPalmPoly) {
+      domPalmPoly.setAttribute('cx', String(projDomPalm.x));
+      domPalmPoly.setAttribute('cy', String(projDomPalm.y));
+      domPalmPoly.setAttribute('rx', '12');
+      domPalmPoly.setAttribute('ry', '14');
+    }
 
     const domEminence = this.querySelector<SVGCircleElement>('#bsl-dom-eminence');
     if (domEminence) {
