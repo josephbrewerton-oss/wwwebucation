@@ -1,1706 +1,234 @@
-// src/pages/learning-zone.tsx
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import PageMeta from '../components/PageMeta';
-import { getAssetUrl } from '../utils/url';
-import { CurriculumSelector } from '../components/CurriculumSelector';
-import TuringTutor from '../components/NanoAssistantPanel';
-import SeedInflationStudio from '../components/SeedInflationStudio';
-import LocalKeyGuard from '../components/LocalKeyGuard';
-import { dispatch } from '../engine/hypercall';
+import { ALL_CURRICULUM_ROUTES } from '../curriculum/curriculumMesh';
 
-const FirstCommunionMasteryLab = React.lazy(() => import('../components/FirstCommunionMasteryLab'));
-const ConceptConstellation = React.lazy(() => import('../components/ConceptConstellation'));
-const ZeroBloatVectorStudio = React.lazy(() => import('../components/ZeroBloatVectorStudio'));
-const AstVectorMediaPlayer = React.lazy(() => import('../components/AstVectorMediaPlayer'));
-import { openPlayerModal, resolvePresetForTopic } from '../services/playerLauncher';
-import { openChallengeModal, resolveChallengeForTopic } from '../services/challengeLauncher';
-import { hypervisor } from '../engine/hypervisor';
-import {
-  SUPPORTED_LANGUAGES,
-  getSavedLanguage,
-  listenToLanguageChange,
-  setSavedLanguage,
-  getLanguagePracticeMode,
-  listenToLanguagePracticeMode,
-  getSpeechSpeed,
-  listenToSpeechSpeed,
-} from '../engine/operational-language';
-import {
-  translateLessonData,
-  speakInLanguage,
-  speakBilingual,
-  cancelSpeech,
-} from '../engine/translationService';
-
-export interface LessonViewContent {
-  title: string;
+export interface LessonUnit {
+  id: string;
+  stage: string;
+  subject: string;
+  unit: string;
   axiom: string;
   trap: string;
-  hook: string;
-  guidedStep: string;
-  socraticCheck: string;
+  step: string;
+  preset?: string;
 }
 
-const buildDefaultNarrative = (topic: string, data: Partial<LessonViewContent>): string => {
-  return `### ${topic}\n\n**1. Let's Learn! (The Big Idea):**\n${data.axiom || `Let's explore what makes ${topic} so interesting and how it works.`}\n\n**2. Step-by-Step Example:**\n${data.guidedStep || `Follow along step-by-step to see how to solve questions about ${topic}.`}\n\n**3. Watch Out for This Common Mistake!:**\nDon't get tricked: "${data.trap || `It's easy to make a quick slip here with ${topic}`}". Remember to double-check your steps!\n\n**4. Quick Check — Can You Answer This?:**\n${data.socraticCheck || `Can you explain the main idea of ${topic} in your own words?`}`;
-};
+const SAMPLE_UNITS: LessonUnit[] = [
+  {
+    id: 'unit-mat-fractions',
+    stage: 'Key Stage 2',
+    subject: 'Mathematics',
+    unit: 'Unit Fractions & Parts of a Whole',
+    axiom: 'A fraction represents equal parts of a whole object or quantity. The denominator tells us the total equal slices, and the numerator tells us how many slices we have.',
+    trap: 'Never add the denominators together! 1/4 + 2/4 is NOT 3/8. Denominators stay the same when adding like fractions.',
+    step: '1. Check the denominators match. 2. Add the numerators (1 + 2 = 3). 3. Keep the denominator: 3/4. 4. Simplify if possible.',
+    preset: 'fractions'
+  },
+  {
+    id: 'unit-sci-gas',
+    stage: 'Key Stage 3',
+    subject: 'Science',
+    unit: 'States of Matter & Kinetic Gas Theory',
+    axiom: 'Gas pressure is caused by gas particles colliding with the walls of their container. Heating particles increases their speed and collision frequency.',
+    trap: 'Remember that gas particles themselves do not expand when heated — rather, they move faster and push further apart.',
+    step: '1. Heat adds kinetic energy. 2. Faster particles hit the container walls harder and more frequently. 3. Pressure rises proportionally.',
+    preset: 'kinetic-gas'
+  },
+  {
+    id: 'unit-mat-pyth',
+    stage: 'Key Stage 3',
+    subject: 'Mathematics',
+    unit: "Pythagoras' Theorem (a² + b² = c²)",
+    axiom: 'In any right-angled triangle, the area of the square on the hypotenuse (longest side) is equal to the sum of the areas of the squares on the other two sides.',
+    trap: 'Do not forget the square root at the end! a² + b² gives c², so you must take the square root to find length c.',
+    step: '1. Square side a (e.g. 3² = 9). 2. Square side b (4² = 16). 3. Add them together (9 + 16 = 25). 4. Take the square root: √25 = 5.',
+    preset: 'pythagoras'
+  },
+  {
+    id: 'unit-sci-circuits',
+    stage: 'Key Stage 3',
+    subject: 'Science',
+    unit: "Electric Circuits & Ohm's Law (V = I × R)",
+    axiom: 'Electric current is the flow of electric charge. Voltage is the electrical push, and resistance is the opposition to current flow.',
+    trap: 'Do not connect an ammeter in parallel; ammeters must be in series! Voltmeters must be connected in parallel.',
+    step: "1. Identify known quantities (e.g. V = 12V, R = 4Ω). 2. Rearrange Ohm's formula: I = V / R. 3. Calculate current: 12 / 4 = 3 Amperes.",
+    preset: 'electric-circuits'
+  },
+  {
+    id: 'unit-re-mass',
+    stage: 'Key Stage 2',
+    subject: 'Catholic RE',
+    unit: 'The Order of the Mass & The Eucharist',
+    axiom: 'The Holy Mass is the memorial sacrifice of Christ. We gather to listen to God’s Word (Table of the Word) and receive Christ in the Blessed Sacrament (Table of the Eucharist).',
+    trap: 'The Eucharist is not merely a symbol; through transubstantiation, the bread and wine truly become the Body and Blood of Christ.',
+    step: '1. Introductory Rites (gathering & penitence). 2. Liturgy of the Word (Readings & Gospel). 3. Liturgy of the Eucharist (Offertory, Consecration, Communion). 4. Concluding Rites (blessing & mission).',
+    preset: 'church-tour'
+  }
+];
 
-export default function LearningZonePage() {
-  const [curriculumSetting, setCurriculumSetting] = useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('curriculum_standard') || 'uk_oak';
-    }
-    return 'uk_oak';
-  });
+export function renderLearningZonePage(): HTMLElement {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const container = document.createElement('div');
+  container.className = 'learning-zone-stage';
+  container.style.cssText = 'max-width: 1140px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [userRole, setUserRole] = useState<'pupil' | 'teacher'>(() => {
-    if (typeof window !== 'undefined') {
-      return (localStorage.getItem('learning_zone_role') as 'pupil' | 'teacher') || 'pupil';
-    }
-    return 'pupil';
-  });
-  const [pupilTab, setPupilTab] = useState<'learn' | 'tutor' | 'full'>('learn');
+  let selectedStage = 'All';
+  let activeTab: 'curriculum' | 'constellation' = 'curriculum';
 
-  const handleRoleChange = (role: 'pupil' | 'teacher') => {
-    setUserRole(role);
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('learning_zone_role', role);
-    }
-  };
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('tab') === 'constellation') {
+    activeTab = 'constellation';
+  }
 
-  const [activeViewMode, setActiveViewMode] = useState<'lesson' | 'inflation' | 'first-communion' | 'constellation' | 'vector-motion'>(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'inflation') return 'inflation';
-    if (tab === 'first-communion') return 'first-communion';
-    if (tab === 'constellation' || tab === 'graph') return 'constellation';
-    if (tab === 'vector-motion' || tab === 'vectors') return 'vector-motion';
-    return 'lesson';
-  });
-
-  const [motionPlayerMode, setMotionPlayerMode] = useState<'iframe' | 'studio'>('iframe');
-
-  const normalizeKeyStageParam = (raw: string | null): string => {
-    if (!raw) return 'ks1';
-    const l = raw.toLowerCase();
-    if (l.includes('1')) return 'ks1';
-    if (l.includes('2')) return 'ks2';
-    if (l.includes('3')) return 'ks3';
-    if (l.includes('4') || l.includes('gcse')) return 'ks4';
-    return raw;
-  };
-
-  useEffect(() => {
-    const tab = searchParams.get('tab');
-    if (tab === 'inflation' && activeViewMode !== 'inflation') {
-      setActiveViewMode('inflation');
-    } else if (tab === 'first-communion' && activeViewMode !== 'first-communion') {
-      setActiveViewMode('first-communion');
-    } else if ((tab === 'constellation' || tab === 'graph') && activeViewMode !== 'constellation') {
-      setActiveViewMode('constellation');
-    } else if ((tab === 'vector-motion' || tab === 'vectors') && activeViewMode !== 'vector-motion') {
-      setActiveViewMode('vector-motion');
-    } else if (!tab && activeViewMode !== 'lesson') {
-      setActiveViewMode('lesson');
-    }
-
-    const urlKs = searchParams.get('ks');
-    const urlSub = searchParams.get('sub');
-    const urlUnit = searchParams.get('unit');
-
-    if (urlKs) {
-      const normKs = normalizeKeyStageParam(urlKs);
-      if (normKs !== selectedKeyStage) {
-        setSelectedKeyStage(normKs);
-      }
-    }
-    if (urlSub && urlSub !== selectedSubject) {
-      setSelectedSubject(urlSub);
-    }
-    if (urlUnit && urlUnit !== selectedUnit) {
-      setSelectedUnit(urlUnit);
-    }
-  }, [searchParams]);
-
-  const [currentLang, setCurrentLang] = useState<string>(() => {
-    return typeof window !== 'undefined' ? getSavedLanguage() : 'en';
-  });
-  const [showOriginal, setShowOriginal] = useState<boolean>(false);
-  const [isTranslatingLesson, setIsTranslatingLesson] = useState<boolean>(false);
-  const [translatedLessonData, setTranslatedLessonData] = useState<LessonViewContent | null>(null);
-  const [translatedFullText, setTranslatedFullText] = useState<string | null>(null);
-
-  const [practiceMode, setPracticeMode] = useState<boolean>(() => getLanguagePracticeMode());
-  const [speechSpeed, setLocalSpeechSpeed] = useState<number>(() => getSpeechSpeed());
-  const [audioSpeaking, setAudioSpeaking] = useState<boolean>(false);
-  const cancelAudioRef = useRef<(() => void) | null>(null);
-
-  useEffect(() => {
-    const unsubLang = listenToLanguageChange((newLang) => {
-      setCurrentLang(newLang);
+  function getFilteredUnits(): LessonUnit[] {
+    return SAMPLE_UNITS.filter(u => {
+      return selectedStage === 'All' || u.stage === selectedStage;
     });
-    const unsubPractice = listenToLanguagePracticeMode((enabled) => {
-      setPracticeMode(enabled);
-    });
-    const unsubSpeed = listenToSpeechSpeed((speed) => {
-      setLocalSpeechSpeed(speed);
-    });
-    return () => {
-      unsubLang();
-      unsubPractice();
-      unsubSpeed();
-      if (cancelAudioRef.current) {
-        cancelAudioRef.current();
-        cancelAudioRef.current = null;
-      }
-      cancelSpeech();
-    };
-  }, []);
+  }
 
-  const activeRequestIdRef = useRef(0);
-  const [isCompiling, setIsCompiling] = useState(false);
-  const [isSynthesizingFull, setIsSynthesizingFull] = useState(false);
+  function render() {
+    const units = getFilteredUnits();
 
-  const [selectedKeyStage, setSelectedKeyStage] = useState(() => {
-    const initialKs = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('ks') : null;
-    return normalizeKeyStageParam(initialKs);
-  });
-  const [selectedSubject, setSelectedSubject] = useState(() => {
-    return (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('sub') : null) || 'Science';
-  });
-  const [selectedUnit, setSelectedUnit] = useState(() => {
-    return (typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('unit') : null) || 'Animals and Humans';
-  });
-  const [sessionId, setSessionId] = useState('Lesson 1');
-
-  // 1. Resolve Curriculum Catalogue Tree via Substrate Dispatch
-  const [curriculumTree, setCurriculumTree] = useState<any>(null);
-  useEffect(() => {
-    dispatch('CurriculumNode', {
-      intent: 'resolve:tree',
-      payload: { stage: selectedKeyStage, curriculum: curriculumSetting },
-    }).then((res) => {
-      if (res.ok) setCurriculumTree(res.data);
-    });
-  }, [selectedKeyStage, curriculumSetting]);
-
-  const [lessonData, setLessonData] = useState<LessonViewContent>({
-    title: 'Animals and Humans',
-    axiom: 'Animals, including humans, have basic needs for survival and distinct body structures.',
-    trap: 'Believing that humans are not animals or that all animals have the same dietary needs.',
-    hook: 'How do different animals survive in varying environments compared to humans?',
-    guidedStep: 'Identify, compare, and classify common animals by their physical structures and diets.',
-    socraticCheck: 'What essential things do all animals need to stay alive?',
-  });
-
-  const [fullLessonText, setFullLessonText] = useState<string>(() =>
-    buildDefaultNarrative('Animals and Humans', {
-      axiom: 'Animals, including humans, have basic needs for survival and distinct body structures.',
-      guidedStep: 'Identify, compare, and classify common animals by their physical structures and diets.',
-      trap: 'Believing that humans are not animals or that all animals have the same dietary needs.',
-      socraticCheck: 'What essential things do all animals need to stay alive?',
-    })
-  );
-
-  // Dynamic lesson re-translation when currentLang or lessonData changes
-  useEffect(() => {
-    let cancelled = false;
-
-    if (!currentLang || currentLang === 'en') {
-      setTranslatedLessonData(null);
-      setTranslatedFullText(null);
-      setIsTranslatingLesson(false);
-      return;
-    }
-
-    setIsTranslatingLesson(true);
-    translateLessonData(
-      {
-        title: lessonData.title,
-        axiom: lessonData.axiom,
-        trap: lessonData.trap,
-        hook: lessonData.hook,
-        guidedStep: lessonData.guidedStep,
-        socraticCheck: lessonData.socraticCheck,
-        fullText: fullLessonText,
-      },
-      currentLang
-    )
-      .then((res) => {
-        if (!cancelled) {
-          setTranslatedLessonData({
-            title: res.title,
-            axiom: res.axiom,
-            trap: res.trap,
-            hook: res.hook,
-            guidedStep: res.guidedStep,
-            socraticCheck: res.socraticCheck,
-          });
-          if (res.fullText) {
-            setTranslatedFullText(res.fullText);
-          }
-          setIsTranslatingLesson(false);
-        }
-      })
-      .catch((err) => {
-        console.warn('[Lesson Translation Error]:', err);
-        if (!cancelled) setIsTranslatingLesson(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [lessonData, fullLessonText, currentLang]);
-
-  // 2. Governed Compilation with Atomic Target Parameters
-  const compileLessonForTopic = useCallback(
-    async (targetStage: string, targetSubject: string, targetTopic: string) => {
-      if (!targetTopic) return;
-
-      const requestId = ++activeRequestIdRef.current;
-      setIsCompiling(true);
-
-      // Child-friendly optimistic placeholder update so the UI reacts immediately
-      setLessonData((prev) => ({
-        ...prev,
-        title: targetTopic,
-        axiom: `Getting ready to explore ${targetTopic}! Loading key facts...`,
-        trap: `Finding helpful tips so you don't get tricked...`,
-        hook: `Have you ever wondered how ${targetTopic} works in the real world?`,
-        guidedStep: `Preparing fun examples and steps to try together...`,
-        socraticCheck: `What is the most interesting thing you know about ${targetTopic}?`,
-      }));
-
-      const timeoutTimer = setTimeout(() => {
-        if (requestId === activeRequestIdRef.current) {
-          setIsCompiling(false);
-        }
-      }, 4500);
-
-      try {
-        // Step A: Fast IndexedDB Cache Lookup
-        const cacheRes = await dispatch('LessonSynthesizer', {
-          intent: 'inflate:baseline',
-          payload: {
-            stage: targetStage,
-            subject: targetSubject,
-            topic: targetTopic,
-            lang: currentLang,
-          },
-        });
-
-        if (requestId !== activeRequestIdRef.current) {
-          clearTimeout(timeoutTimer);
-          return;
-        }
-
-        const isRealData =
-          cacheRes?.ok &&
-          cacheRes.data &&
-          cacheRes.data.axiom &&
-          !cacheRes.data.axiom.startsWith('Synthesizing') &&
-          !cacheRes.data.axiom.startsWith('Getting ready') &&
-          !cacheRes.data.axiom.startsWith('Core curriculum rule established');
-
-        if (isRealData) {
-          const loadedLesson: LessonViewContent = {
-            title: cacheRes.data.title || targetTopic,
-            axiom: cacheRes.data.axiom,
-            trap: cacheRes.data.trap || '',
-            hook: cacheRes.data.hook || '',
-            guidedStep: cacheRes.data.guidedStep || '',
-            socraticCheck: cacheRes.data.socraticCheck || '',
-          };
-
-          setLessonData(loadedLesson);
-          if (cacheRes.data.fullText && cacheRes.data.fullText.trim().length > 20) {
-            setFullLessonText(cacheRes.data.fullText);
-          } else {
-            setFullLessonText(buildDefaultNarrative(loadedLesson.title, loadedLesson));
-          }
-
-          setIsCompiling(false);
-          clearTimeout(timeoutTimer);
-          return;
-        }
-
-        // Step B: Governed AI Question Engine Synthesis
-        const res = await dispatch('QuestionEngine', {
-          intent: 'synthesize:governed',
-          payload: {
-            keyStage: targetStage,
-            subject: targetSubject,
-            topic: targetTopic,
-            curriculum: curriculumSetting,
-            lang: currentLang,
-          },
-        });
-
-        if (requestId !== activeRequestIdRef.current) {
-          clearTimeout(timeoutTimer);
-          return;
-        }
-
-        if (res?.ok && res.data) {
-          const freshLesson: LessonViewContent = {
-            title: targetTopic,
-            axiom: res.data.axiom || `The big idea behind ${targetTopic} and why it matters.`,
-            trap: res.data.trap || `A friendly tip so you don't get tricked on ${targetTopic}.`,
-            hook: res.data.hook || `How does ${targetTopic} connect to our daily world?`,
-            guidedStep: res.data.guidedStep || `Follow the step-by-step guide to explore and solve ${targetTopic}.`,
-            socraticCheck: res.data.prompt || `Can you share what you've learned about ${targetTopic}?`,
-          };
-
-          // Update active view state with real synthesized data
-          setLessonData(freshLesson);
-
-          const defaultNarrative = buildDefaultNarrative(targetTopic, freshLesson);
-          setFullLessonText(defaultNarrative);
-
-          // Buffer back to IndexedDB with real content
-          dispatch('LessonSynthesizer', {
-            intent: 'inflate:baseline',
-            payload: {
-              stage: targetStage,
-              subject: targetSubject,
-              topic: targetTopic,
-              fullText: defaultNarrative,
-              lang: currentLang,
-              ...freshLesson,
-            },
-          });
-        }
-      } catch {
-        // Fallback gracefully without console error
-      } finally {
-        if (requestId === activeRequestIdRef.current) {
-          setIsCompiling(false);
-          clearTimeout(timeoutTimer);
-        }
-      }
-    },
-    [curriculumSetting, currentLang]
-  );
-
-  // 3. Keep Active Lesson Synced when Unit selection changes
-  useEffect(() => {
-    compileLessonForTopic(selectedKeyStage, selectedSubject, selectedUnit);
-  }, [selectedKeyStage, selectedSubject, selectedUnit, curriculumSetting, compileLessonForTopic]);
-
-  // 4. Synthesize Full Dynamic Lesson (Axiom Expansion)
-  const handleSynthesizeFullLesson = async () => {
-    setIsSynthesizingFull(true);
-    try {
-      const res = await dispatch('LessonSynthesizer', {
-        intent: 'synthesize:full-lesson',
-        payload: {
-          stage: selectedKeyStage,
-          subject: selectedSubject,
-          topic: selectedUnit,
-          axiom: lessonData.axiom,
-          trap: lessonData.trap,
-          steps: [lessonData.hook, lessonData.guidedStep, lessonData.socraticCheck],
-          lang: currentLang,
-        },
-      });
-
-      const output = res?.data?.content || res?.data?.fullText;
-      if (res?.ok && output && output.trim().length > 10) {
-        setFullLessonText(output);
-      } else {
-        setFullLessonText(buildDefaultNarrative(selectedUnit, lessonData));
-      }
-    } catch {
-      setFullLessonText(buildDefaultNarrative(selectedUnit, lessonData));
-    } finally {
-      setIsSynthesizingFull(false);
-    }
-  };
-
-  const handleLanguageChange = (newLang: string) => {
-    setCurrentLang(newLang);
-    setSavedLanguage(newLang);
-    setShowOriginal(false);
-  };
-
-  const isNonEnglish = currentLang && currentLang !== 'en';
-  const effectiveLesson = isNonEnglish && !showOriginal && translatedLessonData ? translatedLessonData : lessonData;
-  const effectiveFullText = isNonEnglish && !showOriginal && translatedFullText ? translatedFullText : fullLessonText;
-  const currentLangMeta = SUPPORTED_LANGUAGES[currentLang] || SUPPORTED_LANGUAGES.en;
-
-  const handleSpeakLesson = (slow?: boolean) => {
-    cancelSpeech();
-    if (cancelAudioRef.current) {
-      cancelAudioRef.current();
-      cancelAudioRef.current = null;
-    }
-    const textToSpeak = `${effectiveLesson.title}. Today's big idea: ${effectiveLesson.axiom}. Something to think about: ${effectiveLesson.hook}. How it works: ${effectiveLesson.guidedStep}. Watch out so you don't get tricked: ${effectiveLesson.trap}. Quick question for you: ${effectiveLesson.socraticCheck}`;
-    const langToSpeak = isNonEnglish && !showOriginal ? currentLang : 'en';
-    setAudioSpeaking(true);
-    speakInLanguage(textToSpeak, langToSpeak, {
-      rate: slow ? 0.7 : speechSpeed,
-      onEnd: () => setAudioSpeaking(false),
-      onError: () => setAudioSpeaking(false),
-    });
-  };
-
-  const handleSpeakEchoLesson = () => {
-    cancelSpeech();
-    if (cancelAudioRef.current) {
-      cancelAudioRef.current();
-      cancelAudioRef.current = null;
-      setAudioSpeaking(false);
-      return;
-    }
-
-    if (!isNonEnglish) {
-      handleSpeakLesson();
-      return;
-    }
-
-    const enText = `${lessonData.title}. The big idea: ${lessonData.axiom}. Think about this: ${lessonData.hook}.`;
-    const targetText = translatedLessonData
-      ? `${translatedLessonData.title}. ${translatedLessonData.axiom}. ${translatedLessonData.hook}.`
-      : enText;
-
-    setAudioSpeaking(true);
-    cancelAudioRef.current = speakBilingual(
-      enText,
-      'en',
-      targetText,
-      currentLang,
-      {
-        rate: speechSpeed,
-        onEnd: () => {
-          setAudioSpeaking(false);
-          cancelAudioRef.current = null;
-        },
-      }
-    );
-  };
-
-  const handleStopAudio = () => {
-    cancelSpeech();
-    if (cancelAudioRef.current) {
-      cancelAudioRef.current();
-      cancelAudioRef.current = null;
-    }
-    setAudioSpeaking(false);
-  };
-
-  const practiceLabUrl = `/practice-lab?ks=${encodeURIComponent(selectedKeyStage)}&sub=${encodeURIComponent(selectedSubject)}&unit=${encodeURIComponent(selectedUnit)}`;
-
-  return (
-    <PageMeta
-      title="Pupil Learning Zone | St Joseph's Curriculum"
-      description="Fun, step-by-step lessons, helpful hints, and practice quizzes for children at St Joseph's."
-    >
-      <div style={{ maxWidth: '1100px', margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui, sans-serif' }}>
-        {/* Header Bar: Pupil View vs. Teacher / Master View */}
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '1.25rem',
-            flexWrap: 'wrap',
-            gap: '0.75rem',
-            background: '#ffffff',
-            padding: '0.75rem 1.25rem',
-            borderRadius: '14px',
-            border: '1px solid #e2e8f0',
-            boxShadow: '0 1px 3px rgba(0,0,0,0.03)',
-          }}
-        >
-          {/* Primary Role Switch: Pupil vs Teacher */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Mode:
-            </span>
-            <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '10px', gap: '3px' }}>
-              <button
-                type="button"
-                id="learning-role-pupil"
-                onClick={() => handleRoleChange('pupil')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '7px',
-                  border: 'none',
-                  background: userRole === 'pupil' ? '#2563eb' : 'transparent',
-                  color: userRole === 'pupil' ? '#ffffff' : '#475569',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxShadow: userRole === 'pupil' ? '0 2px 4px rgba(37,99,235,0.2)' : 'none',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>🎒 Pupil View</span>
-                <span className="hidden sm:inline" style={{ fontSize: '0.7rem', opacity: userRole === 'pupil' ? 0.9 : 0.6 }}>(Fun &amp; Clear)</span>
-              </button>
-
-              <button
-                type="button"
-                id="learning-role-teacher"
-                onClick={() => handleRoleChange('teacher')}
-                style={{
-                  padding: '6px 12px',
-                  borderRadius: '7px',
-                  border: 'none',
-                  background: userRole === 'teacher' ? '#0f172a' : 'transparent',
-                  color: userRole === 'teacher' ? '#ffffff' : '#475569',
-                  fontWeight: 700,
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px',
-                  boxShadow: userRole === 'teacher' ? '0 2px 4px rgba(15,23,42,0.2)' : 'none',
-                  transition: 'all 0.15s ease',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                <span>👩‍🏫 Teacher View</span>
-                <span className="hidden sm:inline" style={{ fontSize: '0.7rem', opacity: userRole === 'teacher' ? 0.9 : 0.6 }}>(Lesson Plan)</span>
-              </button>
-            </div>
+    container.innerHTML = `
+      <!-- Header -->
+      <div style="margin-bottom: 2rem;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+          <span style="color:#cbd5e1;">/</span>
+          <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">📖 Learning Zone</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div>
+            <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">National Curriculum Learning Zone</h1>
+            <p style="font-size:0.95rem; color:#64748b; margin:0;">
+              Structured unit trajectories, clear explanations, common misconception guards, and interactive simulations.
+            </p>
           </div>
-
-          {/* Mode Switchers: Lesson Plan vs Star Map vs Visual Studio */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', background: '#f8fafc', padding: '3px', borderRadius: '8px', border: '1px solid #e2e8f0', gap: '3px' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveViewMode('lesson');
-                  setSearchParams({});
-                }}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: activeViewMode === 'lesson' ? '#ffffff' : 'transparent',
-                  color: activeViewMode === 'lesson' ? '#0f172a' : '#64748b',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: activeViewMode === 'lesson' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
-                }}
-              >
-                📖 Today&apos;s Lesson
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveViewMode('constellation');
-                  setSearchParams({ tab: 'constellation' });
-                }}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: activeViewMode === 'constellation' ? '#6366f1' : 'transparent',
-                  color: activeViewMode === 'constellation' ? '#ffffff' : '#64748b',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: activeViewMode === 'constellation' ? '0 1px 2px rgba(99,102,241,0.2)' : 'none',
-                }}
-              >
-                🌟 Learning Star Map
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveViewMode('vector-motion');
-                  setSearchParams({ tab: 'vector-motion' });
-                }}
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  border: 'none',
-                  background: activeViewMode === 'vector-motion' ? '#0284c7' : 'transparent',
-                  color: activeViewMode === 'vector-motion' ? '#ffffff' : '#64748b',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  boxShadow: activeViewMode === 'vector-motion' ? '0 1px 2px rgba(2,132,199,0.2)' : 'none',
-                }}
-              >
-                🎨 Visual Animations &amp; Worksheets
-              </button>
-              {userRole === 'teacher' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveViewMode('inflation');
-                    setSearchParams({ tab: 'inflation' });
-                  }}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: 'none',
-                    background: activeViewMode === 'inflation' ? '#2563eb' : 'transparent',
-                    color: activeViewMode === 'inflation' ? '#ffffff' : '#64748b',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    boxShadow: activeViewMode === 'inflation' ? '0 1px 2px rgba(37,99,235,0.2)' : 'none',
-                  }}
-                >
-                  🌱 Seed Engine
-                </button>
-              )}
-              <Link
-                to="/catholic-life"
-                title="Whole-School Catholic Faith Sanctuary (Not Key Staged)"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  background: '#eef2ff',
-                  color: '#3730a3',
-                  border: '1px solid #c7d2fe',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>✝️</span> Catholic Sanctuary
-              </Link>
-              <Link
-                to="/phonics"
-                title="Early Years & KS1 Systematic Synthetic Phonics Teaching Suite"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  background: '#f0fdf4',
-                  color: '#065f46',
-                  border: '1px solid #a7f3d0',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>🔤</span> Phonics Suite
-              </Link>
-              <Link
-                to="/languages"
-                title="MFL & Polyglot Language Teaching Suite (Spanish, French, Latin)"
-                style={{
-                  padding: '4px 10px',
-                  borderRadius: '6px',
-                  textDecoration: 'none',
-                  background: '#fffbeb',
-                  color: '#92400e',
-                  border: '1px solid #fde68a',
-                  fontSize: '0.78rem',
-                  fontWeight: 700,
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <span>🌍</span> Languages Suite
-              </Link>
-            </div>
-
-            {/* Quick Practice shortcut button */}
-            <Link
-              to={practiceLabUrl}
-              aria-label={`Practice Quiz for ${selectedUnit}`}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '8px',
-                background: '#eff6ff',
-                color: '#1d4ed8',
-                border: '1px solid #bfdbfe',
-                fontSize: '0.85rem',
-                fontWeight: 700,
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-              }}
-            >
-              <span>⭐ Practice Quiz</span>
-              <span>➔</span>
-            </Link>
+          <div style="display:flex; gap:8px;">
+            <button type="button" id="tab-btn-curriculum" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.84rem; cursor:pointer; border:1px solid ${activeTab === 'curriculum' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'curriculum' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'curriculum' ? '#ffffff' : '#475569'};">
+              📖 Units &amp; Lessons
+            </button>
+            <button type="button" id="tab-btn-constellation" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.84rem; cursor:pointer; border:1px solid ${activeTab === 'constellation' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'constellation' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'constellation' ? '#ffffff' : '#475569'};">
+              ✨ Concept Constellation
+            </button>
           </div>
         </div>
-
-        {activeViewMode === 'inflation' && userRole === 'teacher' ? (
-          <LocalKeyGuard
-            featureTitle="Internal Seed Inflation &amp; AST Engine"
-            featureDescription="This module contains proprietary procedural curriculum generators, misconception graphs, and AST seeds. An authorized local cryptographic key is required to activate it on this device."
-          >
-            <SeedInflationStudio />
-          </LocalKeyGuard>
-        ) : activeViewMode === 'constellation' ? (
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Curriculum Learning Constellation
-                </h2>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Interactive star-map of your learning! Click any topic bubble to see how it connects and jump straight to that lesson.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveViewMode('lesson');
-                  setSearchParams({});
-                }}
-                style={{
-                  padding: '6px 14px',
-                  borderRadius: '8px',
-                  background: '#f1f5f9',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                }}
-              >
-                &larr; Back to Lesson View
-              </button>
-            </div>
-            <React.Suspense
-              fallback={
-                <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', background: '#0a0e17', borderRadius: '16px' }}>
-                  <span>Loading in-memory Concept Constellation graph...</span>
-                </div>
-              }
-            >
-              <ConceptConstellation
-                filterStage={selectedKeyStage}
-                filterSubject={selectedSubject}
-                onSelectConcept={(concept) => {
-                  if (concept.path) {
-                    const parts = concept.path.split('/');
-                    if (parts.length >= 3) {
-                      setSelectedKeyStage(parts[0]);
-                      setSelectedSubject(parts[1]);
-                      setSelectedUnit(parts[2]);
-                    }
-                  }
-                }}
-              />
-            </React.Suspense>
-          </div>
-        ) : activeViewMode === 'vector-motion' ? (
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{ marginBottom: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                  Interactive Visual Lessons &amp; Vector Motion Suite
-                </h2>
-                <p style={{ fontSize: '0.82rem', color: '#64748b', margin: '2px 0 0 0' }}>
-                  Interactive 60 FPS visual simulations, mathematical proofs, solar system orbits, and printable worksheets.
-                </p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <div style={{ display: 'flex', background: '#f1f5f9', padding: '3px', borderRadius: '8px', border: '1px solid #cbd5e1', gap: '3px' }}>
-                  <button
-                    type="button"
-                    onClick={() => setMotionPlayerMode('iframe')}
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: motionPlayerMode === 'iframe' ? '#0284c7' : 'transparent',
-                      color: motionPlayerMode === 'iframe' ? '#ffffff' : '#475569',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    🎬 Interactive Lesson Player
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setMotionPlayerMode('studio')}
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      border: 'none',
-                      background: motionPlayerMode === 'studio' ? '#0f172a' : 'transparent',
-                      color: motionPlayerMode === 'studio' ? '#ffffff' : '#475569',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      transition: 'all 0.15s ease',
-                    }}
-                  >
-                    🎨 Full Studio &amp; Worksheets
-                  </button>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveViewMode('lesson');
-                    setSearchParams({});
-                  }}
-                  style={{
-                    padding: '6px 14px',
-                    borderRadius: '8px',
-                    background: '#ffffff',
-                    border: '1px solid #cbd5e1',
-                    color: '#334155',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  &larr; Back to Lesson View
-                </button>
-              </div>
-            </div>
-
-            {motionPlayerMode === 'iframe' ? (
-              <React.Suspense
-                fallback={
-                  <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', background: '#090d16', borderRadius: '14px', border: '1px solid #1e293b' }}>
-                    <span>Initializing Interactive Lesson Player...</span>
-                  </div>
-                }
-              >
-                <AstVectorMediaPlayer
-                  preset={resolvePresetForTopic(selectedSubject, selectedUnit, lessonData?.title)}
-                  allowPresetSwitch={true}
-                  autoPlay={true}
-                  height="540px"
-                />
-              </React.Suspense>
-            ) : (
-              <React.Suspense
-                fallback={
-                  <div style={{ padding: '3rem', textAlign: 'center', color: '#64748b', background: '#f8fafc', borderRadius: '16px' }}>
-                    <span>Loading Zero-Bloat Parametric Vector Studio...</span>
-                  </div>
-                }
-              >
-                <ZeroBloatVectorStudio
-                  initialPreset={resolvePresetForTopic(selectedSubject, selectedUnit, lessonData?.title) as any}
-                />
-              </React.Suspense>
-            )}
-          </div>
-        ) : activeViewMode === 'first-communion' ? (
-          <>
-            <div style={{ marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveViewMode('lesson');
-                  setSearchParams({});
-                }}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '8px',
-                  background: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                }}
-              >
-                <span>&larr;</span>
-                <span>Back to Standard Lessons</span>
-              </button>
-              <Link
-                to={practiceLabUrl}
-                aria-label={`Practice Lab Quiz for ${selectedUnit}`}
-                style={{
-                  padding: '7px 16px',
-                  borderRadius: '8px',
-                  background: '#eff6ff',
-                  color: '#1d4ed8',
-                  border: '1px solid #bfdbfe',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  textDecoration: 'none',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                }}
-              >
-                <span>⭐ Practice Lab Quiz</span>
-                <span>➔</span>
-              </Link>
-            </div>
-            <React.Suspense
-              fallback={
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>
-                  <span>Loading Catholic First Holy Communion Masterclass...</span>
-                </div>
-              }
-            >
-              <FirstCommunionMasteryLab />
-            </React.Suspense>
-          </>
-        ) : (
-          <>
-            {/* Top Selector Control Bar */}
-            <div style={{ marginBottom: '1.5rem' }}>
-              <CurriculumSelector
-                keyStage={selectedKeyStage}
-                subject={selectedSubject}
-                unit={selectedUnit}
-                status="online"
-                isReady={!isCompiling}
-                sessionId={sessionId}
-                curriculumTree={curriculumTree}
-                buttonLabel={isCompiling ? '⚡ Loading...' : '📖 Change Topic'}
-                onKeyStageChange={(newKs, firstSub, firstUnit) => {
-                  setSelectedKeyStage(newKs);
-                  if (firstSub) setSelectedSubject(firstSub);
-                  if (firstUnit) setSelectedUnit(firstUnit);
-                }}
-                onSubjectChange={(newSub, firstUnit) => {
-                  setSelectedSubject(newSub);
-                  if (firstUnit) setSelectedUnit(firstUnit);
-                }}
-                onUnitChange={(newUnit) => setSelectedUnit(newUnit)}
-                onSessionIdChange={setSessionId}
-                onNewQuestion={() => compileLessonForTopic(selectedKeyStage, selectedSubject, selectedUnit)}
-                onDownloadReport={() => {}}
-              />
-            </div>
-
-            {/* Catholic First Communion Banner if studying Catholic RE */}
-            {(selectedSubject.toLowerCase().includes('catholic') ||
-              selectedSubject.toLowerCase().includes('religious education') ||
-              selectedUnit.toLowerCase().includes('communion') ||
-              selectedUnit.toLowerCase().includes('eucharist') ||
-              selectedUnit.toLowerCase().includes('baptism') ||
-              selectedUnit.toLowerCase().includes('reconciliation') ||
-              selectedUnit.toLowerCase().includes('mass')) && (
-              <div
-                style={{
-                  marginBottom: '1.25rem',
-                  background: 'linear-gradient(135deg, #fefce8 0%, #fef08a 100%)',
-                  border: '2px solid #facc15',
-                  borderRadius: '12px',
-                  padding: '0.85rem 1.25rem',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  flexWrap: 'wrap',
-                  gap: '0.75rem',
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <span style={{ fontSize: '1.6rem' }}>✝️</span>
-                  <div>
-                    <strong style={{ color: '#854d0e', fontSize: '0.95rem' }}>
-                      Whole-School Catholic Life &amp; Faith Sanctuary Available
-                    </strong>
-                    <span style={{ display: 'block', fontSize: '0.8rem', color: '#713f12' }}>
-                      All Catholic content is now unified in one dedicated place for all ages: Holy Mass, Seven Sacraments, Rosary, Latin Prayers, and CST.
-                    </span>
-                  </div>
-                </div>
-                <Link
-                  to="/catholic-life"
-                  id="open-communion-masterclass-btn"
-                  style={{
-                    padding: '7px 16px',
-                    borderRadius: '8px',
-                    background: '#4338ca',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.84rem',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    boxShadow: '0 2px 4px rgba(67, 56, 202, 0.25)',
-                  }}
-                >
-                  <span>✝️ Open Catholic Sanctuary</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            )}
-
-            {/* Main Lesson Sheet */}
-            <div
-              style={{
-                background: '#ffffff',
-                border: '1px solid #e2e8f0',
-                borderRadius: '16px',
-                padding: userRole === 'pupil' ? '1.75rem 2rem' : '2.25rem',
-                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.04)',
-                minHeight: '440px',
-                opacity: isCompiling ? 0.7 : 1,
-                transition: 'opacity 0.2s ease',
-              }}
-            >
-              {/* Lesson Header */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                    <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                      {selectedKeyStage.toUpperCase()} &bull; {selectedSubject.toUpperCase()}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: '0.72rem',
-                        fontWeight: 700,
-                        padding: '1px 7px',
-                        borderRadius: '9999px',
-                        background: userRole === 'pupil' ? '#eff6ff' : '#f8fafc',
-                        color: userRole === 'pupil' ? '#1d4ed8' : '#475569',
-                        border: '1px solid #cbd5e1',
-                      }}
-                    >
-                      {userRole === 'pupil' ? '🎒 Pupil View' : '👩‍🏫 Teacher Lesson Plan'}
-                    </span>
-                  </div>
-                  <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#0f172a', margin: 0, letterSpacing: '-0.02em' }}>
-                    {effectiveLesson.title || selectedUnit}
-                  </h1>
-                </div>
-
-                {/* Compact Control Cluster */}
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-                  {isNonEnglish && (
-                    <button
-                      type="button"
-                      onClick={() => setShowOriginal(!showOriginal)}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: showOriginal ? '#fef3c7' : '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        color: showOriginal ? '#92400e' : '#334155',
-                        fontSize: '0.82rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                      }}
-                    >
-                      {showOriginal ? `🌐 ${currentLangMeta.label}` : '🇬🇧 Original'}
-                    </button>
-                  )}
-
-                  {/* Audio Controls */}
-                  {isNonEnglish && (
-                    <button
-                      type="button"
-                      onClick={handleSpeakEchoLesson}
-                      style={{
-                        padding: '6px 12px',
-                        borderRadius: '8px',
-                        background: audioSpeaking ? '#047857' : '#ecfdf5',
-                        border: '1px solid #a7f3d0',
-                        color: audioSpeaking ? '#ffffff' : '#065f46',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: '5px',
-                        boxShadow: audioSpeaking ? '0 0 8px rgba(16, 185, 129, 0.4)' : 'none',
-                      }}
-                      title="Sequential bilingual echo: Listen in English first, then in target language"
-                    >
-                      <span>🎧</span>
-                      <span>{audioSpeaking ? 'Playing Echo...' : `Echo (EN ➔ ${currentLangMeta.code.toUpperCase()})`}</span>
-                    </button>
-                  )}
-
-                  {/* Launch Interactive Motion Player for Current Lesson */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const resolvedPreset = resolvePresetForTopic(selectedSubject, selectedUnit, effectiveLesson.title);
-                      openPlayerModal({
-                        preset: resolvedPreset,
-                        title: `${effectiveLesson.title || selectedUnit} — Visual Motion Model`,
-                        lang: currentLang,
-                        autoPlay: true,
-                      });
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
-                      border: '1px solid #0284c7',
-                      color: '#ffffff',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 6px rgba(2, 132, 199, 0.25)',
-                    }}
-                    title="Launch interactive visual animation player for this lesson"
-                  >
-                    <span>🎬</span>
-                    <span>Visual Lab</span>
-                  </button>
-
-                  {/* Launch Matched Challenge Game for Current Lesson */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const challenge = resolveChallengeForTopic(selectedSubject, selectedUnit, effectiveLesson.title, selectedKeyStage);
-                      openChallengeModal({
-                        challenge,
-                        autoStart: true,
-                      });
-                    }}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                      border: '1px solid #7c3aed',
-                      color: '#ffffff',
-                      fontSize: '0.82rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                      boxShadow: '0 2px 6px rgba(124, 58, 237, 0.25)',
-                    }}
-                    title="Launch hands-on unit challenge game for this lesson"
-                  >
-                    <span>🎮</span>
-                    <span>Play Challenge</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSpeakLesson()}
-                    style={{
-                      padding: '6px 12px',
-                      borderRadius: '8px',
-                      background: '#ffffff',
-                      border: '1px solid #cbd5e1',
-                      color: '#1e293b',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '5px',
-                    }}
-                    title="Listen to lesson overview in active language"
-                  >
-                    <span>🔊</span>
-                    <span>Read Aloud</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleSpeakLesson(true)}
-                    style={{
-                      padding: '6px 10px',
-                      borderRadius: '8px',
-                      background: '#f8fafc',
-                      border: '1px solid #cbd5e1',
-                      color: '#475569',
-                      fontSize: '0.82rem',
-                      fontWeight: 600,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                    }}
-                    title="Listen at slower speed (0.7x) for phonetic clarity"
-                  >
-                    <span>🐢</span>
-                    <span>Slow</span>
-                  </button>
-
-                  {audioSpeaking && (
-                    <button
-                      type="button"
-                      onClick={handleStopAudio}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: '8px',
-                        background: '#fee2e2',
-                        border: '1px solid #fca5a5',
-                        color: '#b91c1c',
-                        fontSize: '0.82rem',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                      }}
-                      title="Stop audio playback"
-                    >
-                      ⏹ Stop
-                    </button>
-                  )}
-
-                  <Link
-                    to={practiceLabUrl}
-                    aria-label={`Practice questions now for ${selectedUnit}`}
-                    style={{
-                      padding: '7px 16px',
-                      borderRadius: '8px',
-                      background: '#2563eb',
-                      color: '#ffffff',
-                      fontSize: '0.85rem',
-                      fontWeight: 700,
-                      textDecoration: 'none',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                      boxShadow: '0 2px 6px rgba(37,99,235,0.25)',
-                    }}
-                  >
-                    <span>⚡ Practice Now</span>
-                  </Link>
-                </div>
-              </div>
-
-              {/* Translation Alert (if non-English) */}
-              {isNonEnglish && (
-                <div
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                    marginBottom: '1rem',
-                    padding: '3px 10px',
-                    borderRadius: '9999px',
-                    fontSize: '0.78rem',
-                    fontWeight: 600,
-                    background: showOriginal ? '#fffbeb' : '#eff6ff',
-                    color: showOriginal ? '#b45309' : '#1e40af',
-                    border: `1px solid ${showOriginal ? '#fef3c7' : '#bfdbfe'}`,
-                  }}
-                >
-                  {isTranslatingLesson ? (
-                    <span>⚡ Translating into {currentLangMeta.label}...</span>
-                  ) : showOriginal ? (
-                    <span>🇬🇧 Viewing English Original</span>
-                  ) : (
-                    <span>🌐 Translated into {currentLangMeta.label} ({currentLangMeta.nativeLabel})</span>
-                  )}
-                </div>
-              )}
-
-              {/* ========================================================================= */}
-              {/* PUPIL VIEW: Uncluttered, Calm 3-Step Journey with Socratic Tutor on Demand */}
-              {/* ========================================================================= */}
-              {userRole === 'pupil' ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                  {/* Clean Pupil Sub-Tabs to prevent vertical scrolling fatigue */}
-                  <div style={{ display: 'flex', gap: '8px', borderBottom: '1px solid #e2e8f0', paddingBottom: '0.5rem', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={() => setPupilTab('learn')}
-                      style={{
-                        padding: '7px 16px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: pupilTab === 'learn' ? '#eff6ff' : 'transparent',
-                        color: pupilTab === 'learn' ? '#1d4ed8' : '#64748b',
-                        fontWeight: pupilTab === 'learn' ? 700 : 600,
-                        fontSize: '0.92rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <span>📖</span>
-                      <span>1. Step-by-Step Lesson</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPupilTab('tutor')}
-                      style={{
-                        padding: '7px 16px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: pupilTab === 'tutor' ? '#eff6ff' : 'transparent',
-                        color: pupilTab === 'tutor' ? '#1d4ed8' : '#64748b',
-                        fontWeight: pupilTab === 'tutor' ? 700 : 600,
-                        fontSize: '0.92rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <span>💬</span>
-                      <span>2. Ask Professor Turing</span>
-                      <span style={{ fontSize: '0.7rem', background: '#dbeafe', color: '#1e40af', padding: '1px 6px', borderRadius: '6px', fontWeight: 700 }}>Friendly AI Buddy</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setPupilTab('full')}
-                      style={{
-                        padding: '7px 16px',
-                        borderRadius: '8px',
-                        border: 'none',
-                        background: pupilTab === 'full' ? '#eff6ff' : 'transparent',
-                        color: pupilTab === 'full' ? '#1d4ed8' : '#64748b',
-                        fontWeight: pupilTab === 'full' ? 700 : 600,
-                        fontSize: '0.92rem',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '6px',
-                      }}
-                    >
-                      <span>📚</span>
-                      <span>3. Story &amp; Full Reading</span>
-                    </button>
-                  </div>
-
-                  {/* Pupil Tab 1: 3-Step Clean Lesson Card */}
-                  {pupilTab === 'learn' && (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                      {/* Step 1: Core Fact Banner */}
-                      <div style={{ background: 'linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%)', border: '1.5px solid #bae6fd', borderRadius: '14px', padding: '1.25rem 1.5rem', boxShadow: '0 2px 4px rgba(2, 132, 199, 0.05)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                          <span>🌟</span> The Big Idea to Remember:
-                        </div>
-                        <p style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0, lineHeight: 1.5 }}>
-                          {effectiveLesson.axiom}
-                        </p>
-                      </div>
-
-                      {/* Step 2: What are we investigating? */}
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                          <span>🤔</span> 1. Think About This:
-                        </div>
-                        <p style={{ fontSize: '1.05rem', color: '#1e293b', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
-                          {effectiveLesson.hook}
-                        </p>
-                      </div>
-
-                      {/* Step 3: Practice Activity */}
-                      <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.25rem 1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                          <span>🚀</span> 2. How It Works (Step-by-Step):
-                        </div>
-                        <p style={{ fontSize: '1.05rem', color: '#1e293b', margin: 0, lineHeight: 1.6, fontWeight: 500 }}>
-                          {effectiveLesson.guidedStep}
-                        </p>
-                      </div>
-
-                      {/* Step 4: Watch Out Trap */}
-                      <div style={{ background: '#fffbeb', border: '1.5px solid #fde68a', borderRadius: '14px', padding: '1.25rem 1.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.82rem', fontWeight: 800, color: '#b45309', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '6px' }}>
-                          <span>🕵️</span> 3. Watch Out! Don&apos;t Get Tricked:
-                        </div>
-                        <p style={{ fontSize: '1rem', color: '#92400e', margin: 0, lineHeight: 1.5, fontWeight: 500 }}>
-                          {effectiveLesson.trap}
-                        </p>
-                      </div>
-
-                      {/* Dual Mastery Arena: Diagnostic Quiz + Hands-On Unit Challenge Game */}
-                      {(() => {
-                        const currentChallenge = resolveChallengeForTopic(selectedSubject, selectedUnit, effectiveLesson.title, selectedKeyStage);
-                        return (
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: '12px',
-                              background: 'linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%)',
-                              border: '1.5px solid #cbd5e1',
-                              borderRadius: '16px',
-                              padding: '1.25rem 1.5rem',
-                              marginTop: '0.75rem',
-                              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.03)',
-                            }}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                              <div>
-                                <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                  <span>🏆</span>
-                                  <span>Put Your Superpower to the Test!</span>
-                                </div>
-                                <div style={{ fontSize: '0.88rem', color: '#475569', marginTop: '2px' }}>
-                                  Choose how you want to prove mastery of <strong>{effectiveLesson.title || selectedUnit}</strong>:
-                                </div>
-                              </div>
-                            </div>
-
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '12px', marginTop: '4px' }}>
-                              {/* Option 1: Hands-On Challenge Game */}
-                              <div
-                                style={{
-                                  background: '#ffffff',
-                                  border: '1.5px solid #e2e8f0',
-                                  borderRadius: '12px',
-                                  padding: '1rem',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'space-between',
-                                  gap: '12px',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                }}
-                              >
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '1.25rem' }}>{currentChallenge.icon}</span>
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', background: currentChallenge.badgeColor, color: '#ffffff', textTransform: 'uppercase' }}>
-                                      {currentChallenge.badge}
-                                    </span>
-                                  </div>
-                                  <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>
-                                    {currentChallenge.title}
-                                  </div>
-                                  <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0', lineHeight: 1.45 }}>
-                                    {currentChallenge.description}
-                                  </p>
-                                </div>
-
-                                <button
-                                  type="button"
-                                  onClick={() => openChallengeModal({ challenge: currentChallenge, autoStart: true })}
-                                  style={{
-                                    padding: '9px 16px',
-                                    borderRadius: '8px',
-                                    background: 'linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%)',
-                                    color: '#ffffff',
-                                    fontWeight: 700,
-                                    fontSize: '0.88rem',
-                                    border: 'none',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px',
-                                    boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)',
-                                    transition: 'all 0.15s ease',
-                                  }}
-                                  aria-label={`Launch ${currentChallenge.title}`}
-                                >
-                                  <span>🎮 Play Hands-On Challenge</span>
-                                  <span>➔</span>
-                                </button>
-                              </div>
-
-                              {/* Option 2: 3-Question Practice Quiz */}
-                              <div
-                                style={{
-                                  background: '#ffffff',
-                                  border: '1.5px solid #e2e8f0',
-                                  borderRadius: '12px',
-                                  padding: '1rem',
-                                  display: 'flex',
-                                  flexDirection: 'column',
-                                  justifyContent: 'space-between',
-                                  gap: '12px',
-                                  boxShadow: '0 2px 4px rgba(0,0,0,0.02)',
-                                }}
-                              >
-                                <div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
-                                    <span style={{ fontSize: '1.25rem' }}>⭐</span>
-                                    <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '2px 8px', borderRadius: '9999px', background: '#2563eb', color: '#ffffff', textTransform: 'uppercase' }}>
-                                      Diagnostic Recall
-                                    </span>
-                                  </div>
-                                  <div style={{ fontWeight: 800, fontSize: '0.98rem', color: '#0f172a' }}>
-                                    3-Question Quick Quiz
-                                  </div>
-                                  <p style={{ fontSize: '0.84rem', color: '#64748b', margin: '4px 0 0', lineHeight: 1.45 }}>
-                                    Answer 3 quick multi-choice questions with instant explanations and earn mastery stars.
-                                  </p>
-                                </div>
-
-                                <Link
-                                  to={practiceLabUrl}
-                                  aria-label={`Start Practice Quiz for ${selectedUnit}`}
-                                  style={{
-                                    padding: '9px 16px',
-                                    borderRadius: '8px',
-                                    background: '#2563eb',
-                                    color: '#ffffff',
-                                    fontWeight: 700,
-                                    textDecoration: 'none',
-                                    fontSize: '0.88rem',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: '6px',
-                                    boxShadow: '0 2px 8px rgba(37,99,235,0.25)',
-                                  }}
-                                >
-                                  <span>📝 Start Quick Quiz</span>
-                                  <span>➔</span>
-                                </Link>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })()}
-                    </div>
-                  )}
-
-                  {/* Pupil Tab 2: Socratic AI Tutor */}
-                  {pupilTab === 'tutor' && (
-                    <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '1rem', border: '1px solid #e2e8f0' }}>
-                      <div style={{ marginBottom: '1rem', fontSize: '0.92rem', color: '#475569', lineHeight: 1.5 }}>
-                        Stuck or curious about <strong>{effectiveLesson.title}</strong>? Professor Turing is right here with gentle hints and fun clues — no grades, just friendly help!
-                      </div>
-                      <TuringTutor
-                        key={`${selectedKeyStage}-${selectedSubject}-${selectedUnit}-${currentLang}`}
-                        seedKey={`${selectedKeyStage}:${selectedSubject}:${selectedUnit}:${currentLang}`}
-                        keyStage={selectedKeyStage}
-                        subject={selectedSubject}
-                        unit={selectedUnit}
-                        contextTopic={selectedUnit}
-                        activePrompt={effectiveLesson.socraticCheck}
-                      />
-                    </div>
-                  )}
-
-                  {/* Pupil Tab 3: Full Reading Narrative */}
-                  {pupilTab === 'full' && (
-                    <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '1.5rem', lineHeight: 1.7, color: '#334155', whiteSpace: 'pre-wrap' }}>
-                      {effectiveFullText}
-                    </div>
-                  )}
-                </div>
-              ) : (
-                /* ========================================================================= */
-                /* TEACHER VIEW: Full Pedagogical Architecture, Diagnostic Pillars, & AI Expand */
-                /* ========================================================================= */
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                  {/* Teacher Action Toolbar */}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.75rem 1rem', borderRadius: '10px', border: '1px solid #e2e8f0', flexWrap: 'wrap', gap: '8px' }}>
-                    <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#334155' }}>
-                      Pedagogical Blueprint &bull; Diagnostic Architecture
-                    </span>
-                    <button
-                      type="button"
-                      onClick={handleSynthesizeFullLesson}
-                      disabled={isSynthesizingFull || isCompiling}
-                      style={{
-                        padding: '6px 14px',
-                        borderRadius: '6px',
-                        background: '#ffffff',
-                        border: '1px solid #cbd5e1',
-                        color: '#0f172a',
-                        fontWeight: 600,
-                        fontSize: '0.82rem',
-                        cursor: isSynthesizingFull ? 'wait' : 'pointer',
-                      }}
-                    >
-                      {isSynthesizingFull ? '✨ Synthesizing Lesson...' : '✨ Expand Detailed Lesson Plan (AI)'}
-                    </button>
-                  </div>
-
-                  {/* Diagnostic Pillars */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 280px), 1fr))', gap: '1.25rem' }}>
-                    <div style={{ padding: '1.25rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>📐</span> Pedagogical Axiom (Standard)
-                      </div>
-                      <p style={{ color: '#334155', fontSize: '0.95rem', lineHeight: 1.6, fontWeight: 500, margin: 0 }}>
-                        {effectiveLesson.axiom}
-                      </p>
-                    </div>
-
-                    <div style={{ padding: '1.25rem', borderRadius: '12px', background: '#fffbeb', border: '1px solid #fef3c7' }}>
-                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#b45309', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>⚠️</span> Cognitive Trap (Student Misconception)
-                      </div>
-                      <p style={{ color: '#92400e', fontSize: '0.95rem', lineHeight: 1.6, fontWeight: 500, margin: 0 }}>
-                        {effectiveLesson.trap}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Structured Lesson Delivery Flow */}
-                  <div style={{ padding: '1.25rem', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #dcfce7' }}>
-                    <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#166534', margin: '0 0 0.85rem 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span>📋</span> 3-Part Lesson Delivery Flow
-                    </h2>
-                    
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                      <div style={{ padding: '0.85rem 1rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <strong style={{ color: '#15803d', fontSize: '0.85rem' }}>Phase 1: Inquiry Hook</strong>
-                        <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b', fontSize: '0.92rem' }}>{effectiveLesson.hook}</p>
-                      </div>
-
-                      <div style={{ padding: '0.85rem 1rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <strong style={{ color: '#15803d', fontSize: '0.85rem' }}>Phase 2: Guided Practice &amp; Activity</strong>
-                        <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b', fontSize: '0.92rem' }}>{effectiveLesson.guidedStep}</p>
-                      </div>
-
-                      <div style={{ padding: '0.85rem 1rem', background: '#ffffff', borderRadius: '8px', border: '1px solid #bbf7d0' }}>
-                        <strong style={{ color: '#15803d', fontSize: '0.85rem' }}>Phase 3: Socratic Check for Understanding</strong>
-                        <p style={{ margin: '0.25rem 0 0 0', color: '#1e293b', fontSize: '0.92rem' }}><em>"{effectiveLesson.socraticCheck}"</em></p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Expanded AI Lesson Narrative Block */}
-                  {effectiveFullText && (
-                    <div
-                      style={{
-                        padding: '1.5rem',
-                        borderRadius: '12px',
-                        background: '#f8fafc',
-                        border: '1px solid #cbd5e1',
-                        boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.04)',
-                      }}
-                    >
-                      <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span>✨</span> Teacher Lesson Outline &amp; Narrative
-                      </h2>
-                      <div style={{ color: '#334155', fontSize: '0.95rem', lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
-                        {effectiveFullText}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Socratic Assistant Panel */}
-                  <div style={{ borderTop: '1px solid #f1f5f9', paddingTop: '1.25rem' }}>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#334155', marginBottom: '0.75rem' }}>
-                      🎓 AI Socratic Tutor Simulation:
-                    </div>
-                    <TuringTutor
-                      key={`${selectedKeyStage}-${selectedSubject}-${selectedUnit}-${currentLang}`}
-                      seedKey={`${selectedKeyStage}:${selectedSubject}:${selectedUnit}:${currentLang}`}
-                      keyStage={selectedKeyStage}
-                      subject={selectedSubject}
-                      unit={selectedUnit}
-                      contextTopic={selectedUnit}
-                      activePrompt={effectiveLesson.socraticCheck}
-                    />
-                  </div>
-                </div>
-              )}
-
-            </div>
-          </>
-        )}
       </div>
-    </PageMeta>
-  );
+
+      ${activeTab === 'constellation' ? `
+        <!-- Concept Constellation Graph View -->
+        <div style="background:#090d16; border:1px solid #1e293b; border-radius:16px; padding:2rem; color:#ffffff; margin-bottom:2rem; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:8px;">
+            <div>
+              <span style="font-size:0.75rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">Logseq-Style Prerequisite Graph</span>
+              <h2 style="font-size:1.4rem; font-weight:800; margin:2px 0 0;">Curriculum Concept Constellation</h2>
+            </div>
+            <span style="font-size:0.75rem; background:#1e293b; color:#34d399; padding:4px 10px; border-radius:999px; font-weight:700;">
+              0 bps Local Execution
+            </span>
+          </div>
+          <p style="font-size:0.88rem; color:#94a3b8; line-height:1.5; margin:0 0 1.5rem 0;">
+            Every lesson connects to earlier foundations. Explore prerequisite paths and see how primary mathematics flows directly into secondary physics and computing.
+          </p>
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1rem;">
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:1.25rem;">
+              <span style="font-size:0.72rem; color:#38bdf8; font-weight:800;">ROOT FOUNDATION</span>
+              <h3 style="font-size:1rem; color:#f8fafc; margin:4px 0 8px;">Fractions &amp; Proportions</h3>
+              <p style="font-size:0.8rem; color:#94a3b8; margin:0 0 10px;">Leads to: Decimals, Percentages, Ratios, Probability, and Algebraic Equations.</p>
+              <a href="${base}player?preset=fractions" style="font-size:0.78rem; color:#38bdf8; font-weight:700; text-decoration:none;">Open Fraction Sim &rarr;</a>
+            </div>
+
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:1.25rem;">
+              <span style="font-size:0.72rem; color:#34d399; font-weight:800;">PHYSICAL SCIENCES</span>
+              <h3 style="font-size:1rem; color:#f8fafc; margin:4px 0 8px;">Kinetic Gas &amp; Thermodynamics</h3>
+              <p style="font-size:0.8rem; color:#94a3b8; margin:0 0 10px;">Leads to: Particle Theory, Pressure Laws, Heat Capacity, and Chemical Equilibrium.</p>
+              <a href="${base}player?preset=kinetic-gas" style="font-size:0.78rem; color:#34d399; font-weight:700; text-decoration:none;">Open Gas Sim &rarr;</a>
+            </div>
+
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:10px; padding:1.25rem;">
+              <span style="font-size:0.72rem; color:#fbbf24; font-weight:800;">GEOMETRIC REASONING</span>
+              <h3 style="font-size:1rem; color:#f8fafc; margin:4px 0 8px;">Pythagoras' Theorem</h3>
+              <p style="font-size:0.8rem; color:#94a3b8; margin:0 0 10px;">Leads to: Trigonometry, Coordinate Geometry, 3D Vectors, and Physics Mechanics.</p>
+              <a href="${base}player?preset=pythagoras" style="font-size:0.78rem; color:#fbbf24; font-weight:700; text-decoration:none;">Open Pythagoras Sim &rarr;</a>
+            </div>
+          </div>
+        </div>
+      ` : `
+        <!-- Stage Filters -->
+        <div style="display:flex; gap:8px; margin-bottom:1.5rem; flex-wrap:wrap; align-items:center;">
+          <span style="font-size:0.84rem; font-weight:700; color:#64748b; margin-right:4px;">Filter by Stage:</span>
+          ${['All', 'Key Stage 2', 'Key Stage 3'].map(st => `
+            <button type="button" class="stage-pill-btn" data-stage="${st}" style="padding:6px 14px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${st === selectedStage ? '#0284c7' : '#cbd5e1'}; background:${st === selectedStage ? '#0284c7' : '#ffffff'}; color:${st === selectedStage ? '#ffffff' : '#475569'};">
+              ${st}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Units Walkthrough List -->
+        <div style="display:flex; flex-direction:column; gap:1.5rem;">
+          ${units.map(unit => `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.75rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span style="font-size:0.74rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:999px;">
+                    ${unit.stage}
+                  </span>
+                  <span style="font-size:0.78rem; font-weight:700; color:#64748b;">
+                    ${unit.subject}
+                  </span>
+                </div>
+                ${unit.preset ? `
+                  <a href="${base}player?preset=${unit.preset}" style="padding:5px 12px; background:#0284c7; color:#fff; border-radius:6px; font-size:0.78rem; font-weight:700; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                    <span>🎮 Launch Simulator</span> &rarr;
+                  </a>
+                ` : ''}
+              </div>
+
+              <h2 style="font-size:1.35rem; font-weight:800; color:#0f172a; margin:0 0 12px 0;">${unit.unit}</h2>
+
+              <!-- The Big Idea -->
+              <div style="margin-bottom:12px;">
+                <strong style="color:#0369a1; font-size:0.88rem; display:block; margin-bottom:3px;">💡 1. The Core Big Idea:</strong>
+                <p style="font-size:0.9rem; color:#334155; line-height:1.5; margin:0;">${unit.axiom}</p>
+              </div>
+
+              <!-- Step by Step -->
+              <div style="margin-bottom:12px; background:#f8fafc; border-left:3px solid #0284c7; padding:10px 14px; border-radius:0 8px 8px 0;">
+                <strong style="color:#0f172a; font-size:0.85rem; display:block; margin-bottom:3px;">📋 2. Step-by-Step Method:</strong>
+                <p style="font-size:0.86rem; color:#475569; line-height:1.5; margin:0;">${unit.step}</p>
+              </div>
+
+              <!-- Tricky Pitfall to Avoid -->
+              <div style="background:#fffbeb; border-left:3px solid #f59e0b; padding:10px 14px; border-radius:0 8px 8px 0;">
+                <strong style="color:#92400e; font-size:0.85rem; display:block; margin-bottom:3px;">⚠️ 3. Watch Out For This Common Mistake:</strong>
+                <p style="font-size:0.86rem; color:#78350f; line-height:1.5; margin:0;">${unit.trap}</p>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `}
+    `;
+
+    // Tab buttons
+    container.querySelector('#tab-btn-curriculum')?.addEventListener('click', () => {
+      activeTab = 'curriculum';
+      render();
+    });
+    container.querySelector('#tab-btn-constellation')?.addEventListener('click', () => {
+      activeTab = 'constellation';
+      render();
+    });
+
+    // Stage filters
+    container.querySelectorAll('.stage-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedStage = btn.getAttribute('data-stage') || 'All';
+        render();
+      });
+    });
+  }
+
+  render();
+  return container;
 }
+
+export default renderLearningZonePage;

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-02T09:37:06.139Z",
+  "generatedAt": "2026-11-03T08:20:27.528Z",
   "totalCartridges": 59,
   "units": [
     {
@@ -406,7 +406,7 @@
       "subject": "Science",
       "section": "Natural Sciences & Physics",
       "stage": "KS2/KS3 PHYSICS",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "title": "Electrical Circuits & Ohm's Law (V = I × R)",
       "cartridgeId": "electric-circuits"
     },
     {
@@ -1443,7 +1443,7 @@
       "id": "electric-circuits",
       "base": "electric-circuits",
       "type": "Sim",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "title": "Electrical Circuits & Ohm's Law (V = I × R)",
       "stage": "KS2/KS3 PHYSICS",
       "oakId": "OAK-KS2-SCI-ELECTRICC",
       "oakUnit": "V",

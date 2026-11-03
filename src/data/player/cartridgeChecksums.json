@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-02T09:37:07.548Z",
+  "generatedAt": "2026-11-03T08:19:32.410Z",
   "totalCartridges": 60,
-  "masterChecksum": "209a73aa9fffa8390e44c631ebc741ff9490cb8af51df480d6a374adf4a746b5",
+  "masterChecksum": "ae83373663fdaf917283216c25d403268fd3e270b4e74bc05a90954aa96c3766",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -183,18 +183,18 @@
     },
     "electric-circuits": {
       "id": "electric-circuits",
-      "title": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+      "title": "Electrical Circuits & Ohm's Law (V = I × R)",
       "stage": "KS2/KS3 PHYSICS",
       "type": "Sim",
-      "astSha256": "4bac0de06a136d71563c98fcbb630d656027f6dec14db6f05268396c43547376",
+      "astSha256": "aae7a9dc797fe74988cf0fbf3cc50f8d8992dfcfd9f37c8fdf4ba5ebda20d1b3",
       "svgSha256": "6b835c1df41c034112e35b3c43136503baf56dce5f30005def5766aec3fa81b1",
-      "astbSha256": "88bf4d6cccaba51c4583bcc6f49dc3c47aa6e595c74211f750f8d236aa0c6c30",
-      "astbBytes": 3038,
-      "astBytes": 5295,
+      "astbSha256": "429f3ac763aaed8d9e95c0a1e496f4a848bb21d4431befd7b6a257f306c80854",
+      "astbBytes": 3051,
+      "astBytes": 5381,
       "svgBytes": 4993,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "1c5958fe7eb60b07e2710510e67e4ded943bd6c7773fb2b8dfd1664b6f17b340",
+      "seal": "64bdc9c65812c0ccdf811385bf29a48c92f86e43f29110bf1f6fd2b9833cf75e",
       "certified": true
     },
     "eucharistic-procession-film": {
@@ -378,15 +378,15 @@
       "title": "Sacred Postures & Gestures: Praying with Mind, Heart & Body",
       "stage": "CATHOLIC LIFE",
       "type": "Sim",
-      "astSha256": "3488299abefc38277b645b94ffacde0050491b8b124b4b1ffb2ad28398657f47",
+      "astSha256": "6efa477501631e43e979fe2bd16fdb763716f7195784dbf28914b10b1bfa0f61",
       "svgSha256": "5f0149ee5d801aff963992218e83bfe3d6ef287739382d26de462bf3973eac4f",
-      "astbSha256": "b6dd3fa47fd736a11b060a43b8594eb6242dd9ff334d308ee285ced0a181ba7f",
-      "astbBytes": 5194,
-      "astBytes": 7532,
+      "astbSha256": "4607dba8818a64999b711aacee5e84545c2fe3d74747441903822cb667e9f9f5",
+      "astbBytes": 3706,
+      "astBytes": 6384,
       "svgBytes": 5608,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "658b9d2ee0e1e3dda8acbce0ea1bab389ac74db7d82764e35996de24b2e5f5ab",
+      "seal": "28862be57080b6d11fe07c6606762d9f153b0a892683eb9e2581041a01bae37a",
       "certified": true
     },
     "liturgy-of-the-hours": {

@@ -1,907 +1,176 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import PageMeta from '../components/PageMeta';
-import { CurriculumProviderKey } from '../data/curriculumRegistry';
-import { getInstalledCurriculumPacks, CustomCurriculumPack } from '../services/curriculumPackStore';
-import { aiCaller, hasUserGrantedAiConsent, setUserAiConsent } from '../engine/aicaller';
-import { edgeCognitiveEngine } from '../engine/EdgeCognitiveEngine';
-import {
-  SUPPORTED_LANGUAGES,
-  getSavedLanguage,
-  setSavedLanguage,
-} from '../engine/operational-language';
-import { translatePageDOM, restorePageDOM } from '../engine/universalDomTranslator';
-import { getComplianceCaveat } from '../data/complianceCaveats';
-import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
-import { downloadCurriculumForOffline, getOfflineStatus, SyncProgress, OfflineStatus } from '../services/offlineSyncService';
-import {
-  isSoundEnabled,
-  setSoundEnabled,
-  isHapticsEnabled,
-  setHapticsEnabled,
-  playSuccessChime,
-  triggerHapticSuccess,
-} from '../services/soundHaptics';
-import {
-  isStrictAirGapMode,
-  setStrictAirGapMode,
-  listenToAirGapChanges,
-} from '../services/privacyGuard';
-import {
-  getEnergyAuditReport,
-  measureLiveEnergyFootprint,
-  type EnergyAuditReport,
-} from '../engine/energyMatrix';
+import { getSavedLanguage, setSavedLanguage } from '../engine/operational-language';
+import { isDataSaverActive, setDataSaverMode } from '../services/dataSaverStore';
+import { getBslEnabled, toggleBsl } from '../services/bslGlobalStore';
 
-export default function SettingsPage() {
-  // 1. Synchronous lazy initializers (eliminates frame-0 flash)
-  const [curriculumStandard, setCurriculumStandard] = useState<CurriculumProviderKey>(() => {
-    return (typeof window !== 'undefined' && (localStorage.getItem('curriculum_standard') as CurriculumProviderKey)) || 'uk_oak';
-  });
-  const [preferredDifficulty, setPreferredDifficulty] = useState<'warmup' | 'challenger' | 'brainbuster'>(() => {
-    return (typeof window !== 'undefined' && (localStorage.getItem('preferred_difficulty') as any)) || 'challenger';
-  });
-  const [hasAiConsent, setHasAiConsent] = useState<boolean>(() => {
-    return typeof window !== 'undefined' ? hasUserGrantedAiConsent() : false;
-  });
-  const [portalLanguage, setPortalLanguage] = useState<string>(() => {
-    return typeof window !== 'undefined' ? getSavedLanguage() : 'en';
-  });
-  const [dataSaver, setDataSaver] = useState<boolean>(() => isDataSaverActive());
-  const [customPacks, setCustomPacks] = useState<CustomCurriculumPack[]>(() => {
-    return typeof window !== 'undefined' ? getInstalledCurriculumPacks() : [];
-  });
+export function renderSettingsPage(): HTMLElement {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const container = document.createElement('div');
+  container.className = 'settings-page-stage';
+  container.style.cssText = 'max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  const [nanoStatus, setNanoStatus] = useState<'checking' | 'ready' | 'after-download' | 'unavailable'>(() => {
-    if (typeof window !== 'undefined' && aiCaller.isPromptApiAvailableSync?.()) {
-      return 'ready';
-    }
-    return 'checking';
-  });
+  let currentLang = getSavedLanguage();
+  let theme = localStorage.getItem('theme') || 'light';
+  let fontSize = localStorage.getItem('app_font_size') || 'normal';
+  let highContrast = localStorage.getItem('app_high_contrast') === 'true';
+  let dataSaver = isDataSaverActive();
+  let bslActive = getBslEnabled();
 
-  const [saveMessage, setSaveMessage] = useState('');
-  const [testResult, setTestResult] = useState('');
-  const [cacheClearNotice, setCacheClearNotice] = useState('');
-  const [offlineStatus, setOfflineStatus] = useState<OfflineStatus>({ isCached: false, cachedCount: 0 });
-  const [syncProgress, setSyncProgress] = useState<SyncProgress | null>(null);
-  const [isSyncing, setIsSyncing] = useState<boolean>(false);
+  function render() {
+    container.innerHTML = `
+      <!-- Header -->
+      <div style="margin-bottom: 2rem;">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+          <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+          <span style="color:#cbd5e1;">/</span>
+          <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">⚙️ System Settings</span>
+        </div>
+        <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">System, Accessibility &amp; Offline Preferences</h1>
+        <p style="font-size:0.95rem; color:#64748b; margin:0;">
+          All settings are stored directly on your device. We do not use tracking cookies or cloud profiling.
+        </p>
+      </div>
 
-  const [soundEnabled, setSoundEnabledState] = useState<boolean>(() => isSoundEnabled());
-  const [hapticsEnabled, setHapticsEnabledState] = useState<boolean>(() => isHapticsEnabled());
-  const [strictAirGap, setStrictAirGapState] = useState<boolean>(() => isStrictAirGapMode());
-  const [energyReport, setEnergyReport] = useState<EnergyAuditReport>(() => getEnergyAuditReport());
+      <div style="display:flex; flex-direction:column; gap:1.5rem;">
+        <!-- 1. Accessibility & Visual Sensory -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <h2 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; display:flex; align-items:center; gap:8px;">
+            <span>👁️</span> Visual &amp; Sensory Access
+          </h2>
 
-  useEffect(() => {
-    getOfflineStatus().then(setOfflineStatus);
-
-    const unsubDataSaver = listenToDataSaverChanges((enabled) => {
-      setDataSaver(enabled);
-    });
-
-    const unsubAirGap = listenToAirGapChanges((enabled) => {
-      setStrictAirGapState(enabled);
-    });
-
-    const handleSoundHapticsUpdate = () => {
-      setSoundEnabledState(isSoundEnabled());
-      setHapticsEnabledState(isHapticsEnabled());
-    };
-    window.addEventListener('stj_sound_haptics_updated', handleSoundHapticsUpdate);
-
-    // Check local Gemini Nano availability asynchronously without blocking frame 0
-    let isMounted = true;
-    aiCaller.checkAvailability()
-      .then((availability) => {
-        if (!isMounted) return;
-        if (availability.status === 'readily') {
-          setNanoStatus('ready');
-        } else if (availability.status === 'after-download') {
-          setNanoStatus('after-download');
-        } else {
-          setNanoStatus('unavailable');
-        }
-      })
-      .catch(() => {
-        if (isMounted) setNanoStatus('unavailable');
-      });
-
-    return () => {
-      isMounted = false;
-      unsubDataSaver();
-      unsubAirGap();
-      window.removeEventListener('stj_sound_haptics_updated', handleSoundHapticsUpdate);
-    };
-  }, []);
-
-  const handleStartOfflineSync = async () => {
-    setIsSyncing(true);
-    setSyncProgress({
-      total: 0,
-      completed: 0,
-      percent: 0,
-      currentFile: 'Preparing offline pre-cache...',
-      status: 'syncing',
-    });
-
-    const res = await downloadCurriculumForOffline((prog) => {
-      setSyncProgress(prog);
-    });
-
-    setIsSyncing(false);
-    if (res.success) {
-      getOfflineStatus().then(setOfflineStatus);
-    }
-  };
-
-  const handleToggleConsent = (granted: boolean) => {
-    setUserAiConsent(granted);
-    setHasAiConsent(granted);
-    if (!granted) {
-      aiCaller.destroy();
-      setTestResult('🌱 Eco Mode Active: Neural downloads disabled. Relying 100% on zero-data offline curriculum rules.');
-    } else {
-      setTestResult('🚀 In-Browser Brainpower Enabled: Permitted to use on-device Gemini Nano when present.');
-    }
-  };
-
-  const handleTestBrainpower = async () => {
-    setTestResult('Analyzing device hardware and memory profile...');
-    try {
-      const avail = await aiCaller.checkAvailability();
-      const memGuard = edgeCognitiveEngine.getMemoryGuardStatus();
-
-      if (!hasAiConsent) {
-        setTestResult('🌱 Eco Mode Active: On-device neural downloads disabled until consent is granted below. Operating in Tier 3 (Verified Offline Curriculum Rules).');
-      } else if (avail.status === 'readily') {
-        setTestResult('🎉 Tier 1 Active (Chrome Gemini Nano): Hardware-accelerated on-device neural runtime verified & ready for instant zero-cloud Socratic dialogues!');
-      } else if (avail.status === 'after-download') {
-        setTestResult('📥 Tier 1 Available: Managed Chrome can download on-device Gemini Nano for offline neural inference.');
-      } else if (edgeCognitiveEngine.isSupported() && !memGuard.tripped) {
-        const budget = edgeCognitiveEngine.getMemoryBudgetReport();
-        setTestResult(`⚡ Tier 2 Active (WebLLM WebGPU Neural Engine): On-device neural shader pipeline supported with budgeted KV cache (~${budget.totalEstimatedFootprintMb} MB combined, saving ${budget.budgetSavedMb} MB vs unconstrained ${budget.unbudgetedBaselineFootprintMb} MB baseline). Auto-unload timer set to ${budget.idleTimeoutSeconds}s.`);
-      } else if (memGuard.tripped) {
-        setTestResult(`🛡️ Tier 3 Active (Local Socratic Rule Synthesizer): ${memGuard.reason} Memory guard successfully engaged to prevent browser tab termination.`);
-      } else {
-        setTestResult('⚡ Tier 3 Active (Local Socratic Rule Synthesizer): Running instant, battery-safe verified curriculum rules directly from your device.');
-      }
-    } catch {
-      setTestResult('⚡ Tier 3 Active: Verified offline curriculum questions ready.');
-    }
-  };
-
-  const handleSave = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('curriculum_standard', curriculumStandard);
-    localStorage.setItem('preferred_difficulty', preferredDifficulty);
-    setUserAiConsent(hasAiConsent);
-    setSavedLanguage(portalLanguage);
-
-    if (portalLanguage && portalLanguage !== 'en') {
-      translatePageDOM(portalLanguage);
-    } else {
-      restorePageDOM();
-    }
-
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('curriculum_standard_changed', { detail: curriculumStandard }));
-
-    setSaveMessage('✅ Settings saved successfully!');
-    setTimeout(() => setSaveMessage(''), 3000);
-  };
-
-  const handleClearTranslationCache = () => {
-    try {
-      const keysToRemove: string[] = [];
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && (key.startsWith('cache_trans_') || key.startsWith('trans_'))) {
-          keysToRemove.push(key);
-        }
-      }
-      keysToRemove.forEach((k) => localStorage.removeItem(k));
-      setCacheClearNotice(`Cleared ${keysToRemove.length} cached translations.`);
-      setTimeout(() => setCacheClearNotice(''), 3000);
-    } catch {}
-  };
-
-  return (
-    <PageMeta title="Settings" description="Manage local neural engine and curriculum preferences.">
-      <div style={{ maxWidth: '800px', margin: '2rem auto', padding: '0 1rem', fontFamily: 'system-ui, sans-serif' }}>
-        <div
-          style={{
-            background: '#ffffff',
-            border: '1px solid #e2e8f0',
-            borderRadius: '16px',
-            padding: '2rem',
-            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.5rem' }}>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:1.25rem;">
+            <!-- Theme Toggle -->
             <div>
-              <h1 style={{ fontSize: '1.75rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
-                ⚙️ System, Sensory &amp; Curriculum Settings
-              </h1>
-              <p style={{ fontSize: '0.88rem', color: '#64748b', margin: 0 }}>
-                Configure your device preferences, audio chimes, offline storage, AI consent, and language.
-              </p>
-            </div>
-            <Link
-              to="/catholic-life"
-              style={{
-                fontSize: '0.82rem',
-                fontWeight: 700,
-                color: '#4338ca',
-                background: '#eef2ff',
-                border: '1px solid #c7d2fe',
-                padding: '6px 12px',
-                borderRadius: '8px',
-                textDecoration: 'none',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '5px',
-              }}
-            >
-              <span>✝️</span> Catholic Sanctuary &rarr;
-            </Link>
-          </div>
-
-          {/* Quick Section Anchor Jump Bar */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '6px',
-              overflowX: 'auto',
-              paddingBottom: '12px',
-              marginBottom: '1.5rem',
-              borderBottom: '1px solid #e2e8f0',
-            }}
-          >
-            {[
-              { id: 'settings-brainpower', label: '🧠 AI & Runtime' },
-              { id: 'settings-audio', label: '🔊 Sound & Haptics' },
-              { id: 'settings-language', label: '🌐 Language' },
-              { id: 'settings-difficulty', label: '🎯 Challenge Level' },
-              { id: 'settings-datasaver', label: '📶 Data Saver' },
-              { id: 'settings-offline', label: '💾 Offline Storage' },
-              { id: 'settings-airgap', label: '🛡️ Air-Gap Privacy' },
-            ].map((btn) => (
-              <a
-                key={btn.id}
-                href={`#${btn.id}`}
-                style={{
-                  padding: '5px 12px',
-                  borderRadius: '6px',
-                  background: '#f8fafc',
-                  border: '1px solid #cbd5e1',
-                  color: '#334155',
-                  fontSize: '0.8rem',
-                  fontWeight: 600,
-                  textDecoration: 'none',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                {btn.label}
-              </a>
-            ))}
-          </div>
-
-          <form onSubmit={handleSave}>
-            {/* Device Brainpower & In-Browser Download */}
-            <div id="settings-brainpower" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                <h2 style={{ fontSize: '1.15rem', fontWeight: 700, color: '#0f172a', margin: 0 }}>
-                  🧠 Device Brainpower & In-Browser AI
-                </h2>
-                <button
-                  type="button"
-                  onClick={handleTestBrainpower}
-                  style={{
-                    padding: '4px 12px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#1e40af',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                >
-                  🔍 Test Device Brainpower
-                </button>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '0.75rem' }}>
-                <span style={{ fontWeight: 600, color: '#334155' }}>Chrome Gemini Nano Status:</span>
-                {nanoStatus === 'checking' && <span style={{ color: '#64748b' }}>Checking runtime...</span>}
-                {nanoStatus === 'ready' && (
-                  <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.85rem' }}>
-                    Active (Hardware Accelerated)
-                  </span>
-                )}
-                {nanoStatus === 'after-download' && (
-                  <span style={{ background: '#fef3c7', color: '#b45309', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.85rem' }}>
-                    Download Available (Chrome fetches model on first run)
-                  </span>
-                )}
-                {nanoStatus === 'unavailable' && (
-                  <span style={{ background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: '6px', fontWeight: 700, fontSize: '0.85rem' }}>
-                    Offline Mode (Verified Pre-Compiled Curriculum)
-                  </span>
-                )}
-              </div>
-
-              {testResult && (
-                <div style={{ marginTop: '0.75rem', padding: '8px 12px', background: '#ffffff', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', color: '#1e293b' }}>
-                  {testResult}
-                </div>
-              )}
-
-              <div style={{ marginTop: '0.85rem', padding: '0.75rem', background: '#eff6ff', borderRadius: '8px', border: '1px solid #dbeafe', fontSize: '0.85rem', color: '#1e40af', lineHeight: 1.5 }}>
-                <strong>💻 How does it work on Chromebooks?</strong>
-                <br />
-                School Chromebooks and modern PCs can run AI models right inside Chrome! When supported, Chrome downloads the model once to the device cache. After that, it generates customized practice questions and Socratic hints <strong>completely offline</strong> without needing school Wi-Fi or sending data to the cloud.
-              </div>
-
-              {/* Energy Matrix & 0 bps SLA Self-Auditing Telemetry Tray */}
-              <div
-                style={{
-                  marginTop: '1rem',
-                  padding: '1rem 1.25rem',
-                  background: '#f0f9ff',
-                  border: '1px solid #bae6fd',
-                  borderRadius: '10px',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.2rem' }}>⚡</span>
-                    <div>
-                      <strong style={{ color: '#0369a1', fontSize: '0.96rem' }}>
-                        Energy Matrix &amp; 0 bps Network SLA Audit
-                      </strong>
-                      <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
-                        Continuous self-auditing proof on the metal (Local AST vs. Cloud Server Farm)
-                      </div>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const updated = measureLiveEnergyFootprint();
-                      setEnergyReport(updated);
-                      playSuccessChime();
-                      triggerHapticSuccess();
-                    }}
-                    style={{
-                      padding: '4px 10px',
-                      borderRadius: '6px',
-                      background: '#0284c7',
-                      color: '#ffffff',
-                      border: 'none',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    🔄 Re-Benchmark Metal
-                  </button>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '8px', marginTop: '10px' }}>
-                  <div style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>NETWORK EGRESS SLA</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#10b981' }}>{energyReport.networkSlaBps} bps</div>
-                    <div style={{ fontSize: '0.66rem', color: '#059669' }}>0 tokens leaked to cloud</div>
-                  </div>
-
-                  <div style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>ENERGY FOOTPRINT</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#0284c7' }}>~{energyReport.joulesPerLessonObjective} J</div>
-                    <div style={{ fontSize: '0.66rem', color: '#0369a1' }}>per lesson objective</div>
-                  </div>
-
-                  <div style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>CLOUD REDUCTION</div>
-                    <div style={{ fontSize: '1.1rem', fontWeight: 900, color: '#16a34a' }}>{energyReport.energyReductionPercent}%</div>
-                    <div style={{ fontSize: '0.66rem', color: '#15803d' }}>vs 10,800 J cloud APIs</div>
-                  </div>
-
-                  <div style={{ background: '#ffffff', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e0f2fe' }}>
-                    <div style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 600 }}>EXECUTION TIER</div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0f172a' }}>{energyReport.latencyMs} ms</div>
-                    <div style={{ fontSize: '0.66rem', color: '#64748b' }}>{energyReport.executionTier}</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Explicit UK GDPR / Resource Consent Card */}
-              {(() => {
-                const caveat = getComplianceCaveat(portalLanguage);
-                return (
-                  <div
-                    style={{
-                      marginTop: '1rem',
-                      padding: '1rem 1.25rem',
-                      background: hasAiConsent ? '#f0fdf4' : '#fffbeb',
-                      border: `2px solid ${hasAiConsent ? '#86efac' : '#fcd34d'}`,
-                      borderRadius: '10px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                      <div style={{ flex: 1, minWidth: '260px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <span style={{ fontSize: '1.1rem' }}>{hasAiConsent ? '🛡️' : '🔒'}</span>
-                          <strong style={{ color: hasAiConsent ? '#166534' : '#92400e', fontSize: '0.95rem' }}>
-                            {caveat.badgeTitle} &bull; UK GDPR &amp; CAADCA &amp; India DPDP
-                          </strong>
-                        </div>
-                        <p style={{ fontSize: '0.85rem', color: hasAiConsent ? '#14532d' : '#78350f', margin: '0.35rem 0 0.5rem 0', lineHeight: 1.45 }}>
-                          {hasAiConsent ? caveat.activeSummary : caveat.ecoSummary}
-                        </p>
-                        <div style={{ fontSize: '0.78rem', color: '#78350f', background: '#fff7ed', padding: '6px 10px', borderRadius: '6px', border: '1px solid #ffedd5', marginBottom: '8px', lineHeight: 1.4 }}>
-                          <div><strong>California (AB 2273 CAADCA &amp; SOPIPA):</strong> {caveat.californiaNotice}</div>
-                          <div style={{ marginTop: '3px' }}><strong>India (DPDP Act Sec 5(3)):</strong> {caveat.indiaNotice}</div>
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
-                          📦 Runtime: {aiCaller.hasNativePromptApi() ? 'Gemini Nano (Chrome Built-in)' : 'WebLLM / WebGPU Neural Pipeline (Safari/Firefox supported)'} &nbsp;|&nbsp; 📶 Offline-cached &nbsp;|&nbsp; 🔒 100% On-device
-                        </div>
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.78rem' }}>
-                          <Link to="/privacy" style={{ color: '#0284c7', textDecoration: 'none', fontWeight: 600 }}>
-                            Read full UK GDPR, Children's Code &amp; California/India Disclaimers &rarr;
-                          </Link>
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        {hasAiConsent ? (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleConsent(false)}
-                            style={{
-                              padding: '8px 14px',
-                              borderRadius: '8px',
-                              border: '1px solid #ef4444',
-                              background: '#ffffff',
-                              color: '#dc2626',
-                              fontWeight: 700,
-                              fontSize: '0.85rem',
-                              cursor: 'pointer',
-                            }}
-                          >
-                            🛑 {caveat.ecoBtn}
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleToggleConsent(true)}
-                            style={{
-                              padding: '8px 14px',
-                              borderRadius: '8px',
-                              border: 'none',
-                              background: '#16a34a',
-                              color: '#ffffff',
-                              fontWeight: 700,
-                              fontSize: '0.85rem',
-                              cursor: 'pointer',
-                              boxShadow: '0 2px 4px rgba(22, 163, 74, 0.2)',
-                            }}
-                          >
-                            {caveat.activateBtn}
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Default Challenge Level */}
-            <div id="settings-difficulty" style={{ marginBottom: '2rem' }}>
-              <label htmlFor="difficulty-select" style={{ display: 'block', fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
-                🎯 Default Challenge Level
-              </label>
-              <select
-                id="difficulty-select"
-                value={preferredDifficulty}
-                onChange={(e) => setPreferredDifficulty(e.target.value as any)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontSize: '0.95rem',
-                  color: '#0f172a',
-                }}
-              >
-                <option value="warmup">🌱 Warm-Up (Level 1) — Simple words, friendly confidence builder</option>
-                <option value="challenger">⚡ Challenger (Level 2) — Everyday scenarios and clever distractors</option>
-                <option value="brainbuster">🏆 Brain Buster (Level 3) — Deep thinking, multi-step problem solving</option>
-              </select>
-            </div>
-
-            {/* Universal Language & Translation Settings */}
-            <div id="settings-language" style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '0.75rem' }}>
-                <label htmlFor="portal-language-select" style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <span>🌐</span> Universal Portal Language & Translation
-                </label>
-                <button
-                  type="button"
-                  onClick={handleClearTranslationCache}
-                  style={{
-                    padding: '4px 10px',
-                    borderRadius: '6px',
-                    border: '1px solid #cbd5e1',
-                    background: '#ffffff',
-                    color: '#64748b',
-                    fontSize: '0.8rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                  }}
-                  title="Clear locally stored translations"
-                >
-                  🧹 Clear Translation Cache
-                </button>
-              </div>
-
-              <select
-                id="portal-language-select"
-                value={portalLanguage}
-                onChange={(e) => setPortalLanguage(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontSize: '0.95rem',
-                  color: '#0f172a',
-                  fontWeight: 600,
-                }}
-              >
-                {Object.values(SUPPORTED_LANGUAGES).map((lang) => (
-                  <option key={lang.code} value={lang.code}>
-                    {lang.label} ({lang.nativeLabel}) — {lang.code.toUpperCase()}
-                  </option>
-                ))}
-              </select>
-
-              {cacheClearNotice && (
-                <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#16a34a', fontWeight: 600 }}>
-                  {cacheClearNotice}
-                </div>
-              )}
-            </div>
-
-            {/* Curriculum Standard Selection */}
-            <div style={{ marginBottom: '2rem' }}>
-              <label htmlFor="curriculum-standard-select" style={{ display: 'block', fontSize: '1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.5rem' }}>
-                Curriculum Framework
-              </label>
-              <select
-                id="curriculum-standard-select"
-                value={curriculumStandard}
-                onChange={(e) => setCurriculumStandard(e.target.value as CurriculumProviderKey)}
-                style={{
-                  width: '100%',
-                  padding: '10px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #cbd5e1',
-                  background: '#ffffff',
-                  fontSize: '0.95rem',
-                  color: '#0f172a',
-                }}
-              >
-                <option value="uk_oak">UK National Curriculum (Oak National Academy)</option>
-                <option value="international">International / Cambridge Standard (Universal Scope)</option>
-                <option value="custom_imported">Custom / Overseas Imported Syllabi Only</option>
-              </select>
-            </div>
-
-            {/* Developing Nations & Low-Bandwidth Optimization Card */}
-            <div
-              id="settings-datasaver"
-              style={{
-                marginBottom: '2rem',
-                padding: '1.5rem',
-                borderRadius: '12px',
-                background: dataSaver ? '#ecfdf5' : '#f8fafc',
-                border: `1px solid ${dataSaver ? '#6ee7b7' : '#cbd5e1'}`,
-                transition: 'all 0.2s ease',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px', marginBottom: '1rem' }}>
-                <div style={{ maxWidth: '640px' }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: dataSaver ? '#065f46' : '#0f172a', margin: '0 0 4px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span>🌱</span> Developing Nations & Metered Data Optimization
-                  </h3>
-                  <p style={{ fontSize: '0.88rem', color: dataSaver ? '#047857' : '#475569', margin: 0, lineHeight: 1.5 }}>
-                    Designed for rural schools, refugee learning centers, and students on metered mobile data.
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  id="settings-data-saver-toggle"
-                  onClick={() => setDataSaverMode(!dataSaver)}
-                  style={{
-                    padding: '8px 16px',
-                    borderRadius: '8px',
-                    background: dataSaver ? '#059669' : '#2563eb',
-                    color: '#ffffff',
-                    border: 'none',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
-                >
-                  <span>📶</span> {dataSaver ? 'Data Saver: ACTIVE' : 'Enable Data Saver Mode'}
-                </button>
-              </div>
-
-              {/* Offline Pre-cache Trigger */}
-              <div
-                id="settings-offline"
-                style={{
-                  marginTop: '1.25rem',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  background: '#ffffff',
-                  border: '1px solid #e2e8f0',
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                  <div>
-                    <strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'block', marginBottom: '3px' }}>
-                      📥 One-Click Offline Curriculum Preloader
-                    </strong>
-                    <div style={{ marginTop: '4px', fontSize: '0.78rem', color: offlineStatus.isCached ? '#15803d' : '#b45309', fontWeight: 600 }}>
-                      {offlineStatus.isCached
-                        ? `✓ Offline Ready: ${offlineStatus.cachedCount} assets cached locally in browser`
-                        : `Offline cache partial (${offlineStatus.cachedCount} items stored)`}
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    id="settings-offline-sync-btn"
-                    onClick={handleStartOfflineSync}
-                    disabled={isSyncing}
-                    style={{
-                      padding: '8px 14px',
-                      borderRadius: '6px',
-                      background: isSyncing ? '#94a3b8' : '#0f172a',
-                      color: '#ffffff',
-                      border: 'none',
-                      fontWeight: 600,
-                      fontSize: '0.82rem',
-                      cursor: isSyncing ? 'not-allowed' : 'pointer',
-                    }}
-                  >
-                    <span>{isSyncing ? 'Saving Offline...' : 'Save Entire Portal Offline'}</span>
-                  </button>
-                </div>
-
-                {syncProgress && (
-                  <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#475569', marginBottom: '4px' }}>
-                      <span>{syncProgress.currentFile}</span>
-                      <strong>{syncProgress.percent}%</strong>
-                    </div>
-                    <div style={{ width: '100%', height: '6px', background: '#e2e8f0', borderRadius: '3px', overflow: 'hidden' }}>
-                      <div
-                        style={{
-                          width: `${syncProgress.percent}%`,
-                          height: '100%',
-                          background: syncProgress.status === 'completed' ? '#16a34a' : '#2563eb',
-                          transition: 'width 0.2s ease',
-                        }}
-                      />
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* PWA Offline App */}
-            <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f8fafc', border: '1px solid #cbd5e1' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0' }}>
-                📲 Progressive Web App (PWA) Offline Engine
-              </h3>
-              <div style={{ fontSize: '0.82rem', color: '#16a34a', fontWeight: 700, marginTop: '8px' }}>
-                🟢 Service Worker Registered &bull; Cache Status: Active
-              </div>
-            </div>
-
-            {/* Overseas & Custom Curriculum */}
-            <div style={{ marginBottom: '2rem', padding: '1.5rem', borderRadius: '12px', background: '#f0fdf4', border: '1px solid #86efac' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#166534', margin: '0 0 4px 0' }}>
-                    🌍 Overseas & Custom Curriculum Importer
-                  </h3>
-                  <div style={{ fontSize: '0.82rem', color: '#15803d', fontWeight: 700, marginTop: '8px' }}>
-                    Active custom packs: <strong>{customPacks.length}</strong>
-                  </div>
-                </div>
-                <Link
-                  to="/curriculum-studio"
-                  style={{
-                    padding: '9px 16px',
-                    borderRadius: '8px',
-                    background: '#16a34a',
-                    color: '#ffffff',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Open Studio &rarr;
-                </Link>
-              </div>
-            </div>
-
-            {/* 🔊 Auditory & Tactile Sensory Feedback (Zero-Data Native Synthesizer) */}
-            <div id="settings-audio" className="stj-card" style={{ marginBottom: '2rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 4px 0' }}>
-                    🔊 Auditory & Tactile Sensory Feedback
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--stj-text-muted)' }}>
-                    Native Web Audio sine-wave harmonic synthesis and physical haptic impulses. 100% offline with zero network data.
-                  </p>
-                </div>
-                <span className="stj-badge stj-badge-primary">Native Web Audio</span>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', padding: '0.75rem', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-md)' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Audio Harmonic Chimes</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--stj-text-muted)' }}>
-                      Uplifting major chord for correct deductions; warm, gentle tone for formative guidance.
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => playSuccessChime()}
-                      className="stj-btn stj-btn-secondary"
-                      style={{ minHeight: '36px', padding: '4px 12px', fontSize: '0.8rem' }}
-                    >
-                      ▶ Test Chime
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = !soundEnabled;
-                        setSoundEnabled(next);
-                        setSoundEnabledState(next);
-                      }}
-                      className={`stj-btn ${soundEnabled ? 'stj-btn-success' : 'stj-btn-secondary'}`}
-                      style={{ minHeight: '36px', padding: '4px 14px', fontSize: '0.82rem' }}
-                    >
-                      {soundEnabled ? '🔊 Sound Enabled' : '🔇 Muted'}
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', padding: '0.75rem', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-md)' }}>
-                  <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Tactile Haptic Impulses</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--stj-text-muted)' }}>
-                      Light vibration tap on touch-enabled phones and school tablets.
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <button
-                      type="button"
-                      onClick={() => triggerHapticSuccess()}
-                      className="stj-btn stj-btn-secondary"
-                      style={{ minHeight: '36px', padding: '4px 12px', fontSize: '0.8rem' }}
-                    >
-                      ⚡ Test Haptic
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = !hapticsEnabled;
-                        setHapticsEnabled(next);
-                        setHapticsEnabledState(next);
-                      }}
-                      className={`stj-btn ${hapticsEnabled ? 'stj-btn-success' : 'stj-btn-secondary'}`}
-                      style={{ minHeight: '36px', padding: '4px 14px', fontSize: '0.82rem' }}
-                    >
-                      {hapticsEnabled ? '📳 Haptics On' : '📴 Haptics Off'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* 🛡️ WebRTC Architecture & Strict Air-Gap Privacy Guard */}
-            <div id="settings-airgap" className="stj-card" style={{ marginBottom: '2rem', border: strictAirGap ? '2px solid var(--stj-warning)' : '1px solid var(--stj-border)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: 800, margin: '0 0 4px 0' }}>
-                    🛡️ WebRTC & Air-Gap Privacy Verification
-                  </h3>
-                  <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--stj-text-muted)' }}>
-                    Enterprise architectural transparency on peer connection handling and data egress guarantees.
-                  </p>
-                </div>
-                <span className={`stj-badge ${strictAirGap ? 'stj-badge-primary' : 'stj-badge-success'}`}>
-                  {strictAirGap ? 'Strict Air-Gap Active' : 'Loopback Only (iceServers: [])'}
-                </span>
-              </div>
-
-              <div style={{ fontSize: '0.85rem', lineHeight: 1.6, color: 'var(--stj-text)', marginBottom: '1rem' }}>
-                <p style={{ margin: '0 0 0.5rem 0' }}>
-                  <strong>How WebRTC operates in St Joseph&apos;s:</strong> The neural hypervisor initiates an RTCPeerConnection strictly configured with <code>iceServers: []</code>. This creates a zero-copy fast-path <em>within your browser process</em> between the main viewport and the isolated <code>worker.html</code> iframe on this single device.
-                </p>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', margin: '0.75rem 0' }}>
-                  <div style={{ padding: '6px 12px', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-sm)', fontSize: '0.8rem', fontWeight: 700 }}>
-                    🔒 STUN/TURN Servers: 0 (Disabled)
-                  </div>
-                  <div style={{ padding: '6px 12px', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-sm)', fontSize: '0.8rem', fontWeight: 700 }}>
-                    🔒 Cloud Data Egress: 0 KB (Zero-Leakage)
-                  </div>
-                  <div style={{ padding: '6px 12px', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-sm)', fontSize: '0.8rem', fontWeight: 700 }}>
-                    🔒 External IPs Queried: None
-                  </div>
-                </div>
-              </div>
-
-              <div style={{ padding: '0.85rem', background: 'var(--stj-canvas)', borderRadius: 'var(--stj-radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>Strict Air-Gap Mode</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--stj-text-muted)' }}>
-                    Completely disables RTCPeerConnection initialization. All neural communication uses standard browser <code>postMessage</code>.
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = !strictAirGap;
-                    setStrictAirGapMode(next);
-                    setStrictAirGapState(next);
-                  }}
-                  className={`stj-btn ${strictAirGap ? 'stj-btn-primary' : 'stj-btn-secondary'}`}
-                  style={{ minHeight: '38px', padding: '4px 16px', fontSize: '0.84rem' }}
-                >
-                  {strictAirGap ? '🛡️ Strict Air-Gap Engaged' : '⚡ Engage Air-Gap Mode'}
-                </button>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <button
-                type="submit"
-                style={{
-                  background: '#2563eb',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '10px 20px',
-                  fontWeight: 600,
-                  fontSize: '0.95rem',
-                  cursor: 'pointer',
-                }}
-              >
-                Save Preferences
+              <label style="display:block; font-size:0.85rem; font-weight:700; color:#475569; margin-bottom:6px;">Display Theme:</label>
+              <button type="button" id="settings-theme-toggle" style="padding:8px 16px; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; font-weight:700; font-size:0.88rem; cursor:pointer;">
+                ${theme === 'dark' ? '🌙 Dark Mode (Active)' : '☀️ Light Mode (Active)'}
               </button>
-              {saveMessage && <span style={{ color: '#16a34a', fontWeight: 600, fontSize: '0.9rem' }}>{saveMessage}</span>}
             </div>
-          </form>
+
+            <!-- Font Size -->
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:700; color:#475569; margin-bottom:6px;">Font Size:</label>
+              <div style="display:flex; gap:6px;">
+                <button type="button" class="settings-font-btn" data-size="normal" style="padding:6px 14px; border-radius:6px; border:1px solid ${fontSize === 'normal' ? '#0284c7' : '#cbd5e1'}; background:${fontSize === 'normal' ? '#0284c7' : '#f8fafc'}; color:${fontSize === 'normal' ? '#fff' : '#334155'}; font-weight:700; cursor:pointer;">
+                  Standard (A)
+                </button>
+                <button type="button" class="settings-font-btn" data-size="large" style="padding:6px 14px; border-radius:6px; border:1px solid ${fontSize === 'large' ? '#0284c7' : '#cbd5e1'}; background:${fontSize === 'large' ? '#0284c7' : '#f8fafc'}; color:${fontSize === 'large' ? '#fff' : '#334155'}; font-weight:700; cursor:pointer;">
+                  Large (A+)
+                </button>
+              </div>
+            </div>
+
+            <!-- Contrast -->
+            <div>
+              <label style="display:block; font-size:0.85rem; font-weight:700; color:#475569; margin-bottom:6px;">High Contrast Mode:</label>
+              <button type="button" id="settings-contrast-toggle" style="padding:8px 16px; border-radius:8px; border:1px solid ${highContrast ? '#0284c7' : '#cbd5e1'}; background:${highContrast ? '#eff6ff' : '#f8fafc'}; color:${highContrast ? '#0284c7' : '#334155'}; font-weight:700; font-size:0.88rem; cursor:pointer;">
+                ${highContrast ? '🌓 High Contrast: ON' : '🌓 High Contrast: OFF'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. Language & Polyglot Settings -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <h2 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; display:flex; align-items:center; gap:8px;">
+            <span>🌐</span> Language &amp; Translation
+          </h2>
+
+          <div style="display:flex; flex-direction:column; gap:10px; max-width:400px;">
+            <label for="settings-lang-select" style="font-size:0.85rem; font-weight:700; color:#475569;">Default Portal Language:</label>
+            <select id="settings-lang-select" style="padding:8px 12px; border-radius:8px; border:1.5px solid #0284c7; background:#ffffff; font-size:0.9rem; font-weight:700; cursor:pointer;">
+              <option value="en" ${currentLang === 'en' ? 'selected' : ''}>🇬🇧 English</option>
+              <option value="es" ${currentLang === 'es' ? 'selected' : ''}>🇪🇸 Español (Spanish)</option>
+              <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>🇫🇷 Français (French)</option>
+              <option value="la" ${currentLang === 'la' ? 'selected' : ''}>🇻🇦 Latina (Ecclesiastical Latin)</option>
+              <option value="de" ${currentLang === 'de' ? 'selected' : ''}>🇩🇪 Deutsch (German)</option>
+              <option value="pl" ${currentLang === 'pl' ? 'selected' : ''}>🇵🇱 Polski (Polish)</option>
+              <option value="uk" ${currentLang === 'uk' ? 'selected' : ''}>🇺🇦 Українська (Ukrainian)</option>
+              <option value="pt" ${currentLang === 'pt' ? 'selected' : ''}>🇵🇹 Português (Portuguese)</option>
+              <option value="ar" ${currentLang === 'ar' ? 'selected' : ''}>🇸🇦 العربية (Arabic)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 3. British Sign Language (BSL) -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <h2 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 0.5rem 0; display:flex; align-items:center; gap:8px;">
+            <span>🖐️</span> British Sign Language (BSL) In-Vision Interpreter
+          </h2>
+          <p style="font-size:0.85rem; color:#64748b; margin:0 0 1rem 0; line-height:1.5;">
+            Our in-vision procedural vector interpreter signs synchronously with speech without loading heavy video streams. Keyboard shortcut: <kbd style="background:#f1f5f9; border:1px solid #cbd5e1; padding:1px 5px; border-radius:4px;">Shift + B</kbd>.
+          </p>
+
+          <button type="button" id="settings-bsl-toggle" style="padding:8px 16px; border-radius:8px; border:1.5px solid ${bslActive ? '#0284c7' : '#cbd5e1'}; background:${bslActive ? '#0284c7' : '#f8fafc'}; color:${bslActive ? '#ffffff' : '#334155'}; font-weight:700; font-size:0.88rem; cursor:pointer;">
+            ${bslActive ? '🖐️ BSL Signing: ON (Active)' : '🖐️ BSL Signing: OFF'}
+          </button>
+        </div>
+
+        <!-- 4. Low-Bandwidth Data Saver Mode -->
+        <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <h2 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 0.5rem 0; display:flex; align-items:center; gap:8px;">
+            <span>📶</span> Data Saver Mode (Zero Data / Developing Nations)
+          </h2>
+          <p style="font-size:0.85rem; color:#64748b; margin:0 0 1rem 0; line-height:1.5;">
+            Suppresses external font requests, disables background prefetching, and runs exclusively on local vector assets to conserve expensive mobile data.
+          </p>
+
+          <button type="button" id="settings-data-saver-toggle" style="padding:8px 16px; border-radius:8px; border:1.5px solid ${dataSaver ? '#10b981' : '#cbd5e1'}; background:${dataSaver ? '#ecfdf5' : '#f8fafc'}; color:${dataSaver ? '#065f46' : '#334155'}; font-weight:700; font-size:0.88rem; cursor:pointer;">
+            ${dataSaver ? '📶 Data Saver: ON (Low Bandwidth)' : '📶 Data Saver: OFF'}
+          </button>
         </div>
       </div>
-    </PageMeta>
-  );
+    `;
+
+    // Bind Theme Toggle
+    container.querySelector('#settings-theme-toggle')?.addEventListener('click', () => {
+      theme = theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', theme);
+      document.documentElement.setAttribute('data-theme', theme);
+      render();
+    });
+
+    // Bind Font Size
+    container.querySelectorAll('.settings-font-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        fontSize = btn.getAttribute('data-size') || 'normal';
+        localStorage.setItem('app_font_size', fontSize);
+        document.documentElement.setAttribute('data-font-size', fontSize);
+        render();
+      });
+    });
+
+    // Bind Contrast
+    container.querySelector('#settings-contrast-toggle')?.addEventListener('click', () => {
+      highContrast = !highContrast;
+      localStorage.setItem('app_high_contrast', String(highContrast));
+      document.documentElement.setAttribute('data-high-contrast', String(highContrast));
+      render();
+    });
+
+    // Bind Language
+    container.querySelector('#settings-lang-select')?.addEventListener('change', (e) => {
+      const newLang = (e.target as HTMLSelectElement).value;
+      currentLang = newLang;
+      setSavedLanguage(newLang);
+    });
+
+    // Bind BSL
+    container.querySelector('#settings-bsl-toggle')?.addEventListener('click', () => {
+      bslActive = !bslActive;
+      toggleBsl();
+      render();
+    });
+
+    // Bind Data Saver
+    container.querySelector('#settings-data-saver-toggle')?.addEventListener('click', () => {
+      dataSaver = !dataSaver;
+      setDataSaverMode(dataSaver);
+      render();
+    });
+  }
+
+  render();
+  return container;
 }
+
+export default renderSettingsPage;

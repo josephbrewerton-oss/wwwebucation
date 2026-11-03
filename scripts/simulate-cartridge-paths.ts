@@ -20,7 +20,8 @@ import { parseSExpr } from '../src/utils/sexprParser';
 
 const ROOT_DIR = process.cwd();
 const MANIFEST_PATH = path.join(ROOT_DIR, 'static', 'player', 'scenes.manifest.json');
-const DEV_SERVER_BASE = 'http://localhost:3000';
+const BASE_SUBPATH = (process.env.BASE_URL || '/wwwebucation/').replace(/\/+$/, '');
+const DEV_SERVER_BASE = `http://localhost:3000${BASE_SUBPATH}`;
 
 interface SimStats {
   totalCartridges: number;

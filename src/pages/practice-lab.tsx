@@ -1,553 +1,304 @@
-// src/pages/practice-lab.tsx
-import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
-import { useLocation, Link } from 'react-router-dom';
-import NeuralLabCanvas from '../components/NeuralLabCanvas';
-import NanoAssistantPanel from '../components/NanoAssistantPanel';
-import PageMeta from '../components/PageMeta';
-import { getAssetUrl } from '../utils/url';
-import {
-  getSavedLanguage,
-  listenToLanguageChange,
-} from '../engine/operational-language';
-import { dispatch } from '../engine/hypercall';
-import { hypervisor } from '../engine/hypervisor';
-
 import { ALL_CURRICULUM_ROUTES } from '../curriculum/curriculumMesh';
-import { getDataCartridge, getCartridge } from '../services/cartridgeStore';
 
-// Known AST and topic shortcode mappings to curriculum coordinates
-const TOPIC_ALIAS_MAP: Record<string, { stage: string; subject: string; unit: string }> = {
-  'sci-states': { stage: 'Key Stage 2', subject: 'Science', unit: 'States of Matter' },
-  'sci-ecosystems': { stage: 'Key Stage 2', subject: 'Science', unit: 'Ecosystems & Energy' },
-  'sci-plants': { stage: 'Key Stage 2', subject: 'Science', unit: 'Plant Nutrition' },
-  'mat-fractions': { stage: 'Key Stage 2', subject: 'Mathematics', unit: 'Fractions and Decimals' },
-  'mat-angles': { stage: 'Key Stage 2', subject: 'Mathematics', unit: 'Angles and Triangles' },
-  'comp-algorithms': { stage: 'Key Stage 2', subject: 'Computing', unit: 'Algorithms and Sequencing' },
-  're-eucharist': { stage: 'Key Stage 2', subject: 'Religious Education (Catholic)', unit: 'The Holy Eucharist & Sacraments' },
-  'seasonal-changes': { stage: 'Key Stage 1', subject: 'Science', unit: 'Seasonal Changes' },
-  'animals-humans': { stage: 'Key Stage 1', subject: 'Science', unit: 'Animals and Humans' },
-  'materials-properties': { stage: 'Key Stage 1', subject: 'Science', unit: 'Materials and Properties' },
-  'phonics-simple-sentences': { stage: 'Key Stage 1', subject: 'English', unit: 'Phonics & Simple Sentences' },
-  'living-memory': { stage: 'Key Stage 1', subject: 'History', unit: 'Changes Within Living Memory' },
-};
-
-function resolveTopicParam(topicParam: string): { stage: string; subject: string; unit: string } | null {
-  if (!topicParam) return null;
-  const clean = topicParam.trim().toLowerCase();
-  if (TOPIC_ALIAS_MAP[clean]) return TOPIC_ALIAS_MAP[clean];
-
-  // Try matching against ALL_CURRICULUM_ROUTES
-  const found = ALL_CURRICULUM_ROUTES.find(
-    (r) =>
-      r.topicId.toLowerCase() === clean ||
-      r.topicTitle.toLowerCase() === clean ||
-      r.urn.toLowerCase().includes(clean)
-  );
-  if (found) {
-    return {
-      stage: found.stageTitle,
-      subject: found.subjectTitle,
-      unit: found.topicTitle,
-    };
-  }
-  return null;
+interface PracticeQuestion {
+  id: string;
+  stage: string;
+  subject: string;
+  unit: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  hint: string;
+  explanation: string;
+  simPreset?: string;
 }
 
-function getInitialPracticeSelection(): { stage: string; subject: string; unit: string } {
-  if (typeof window === 'undefined') {
-    return { stage: 'Key Stage 1', subject: 'Science', unit: 'Seasonal Changes' };
-  }
-
-  const searchParams = new URLSearchParams(window.location.search);
-  const urlKs = searchParams.get('ks');
-  const urlSub = searchParams.get('sub');
-  const urlUnit = searchParams.get('unit');
-  const urlTopic = searchParams.get('topic');
-  const urlDeck = searchParams.get('deck') || searchParams.get('cartridge');
-
-  // 0. Explicit Data Cartridge or Question Deck (?deck=... or ?cartridge=...)
-  if (urlDeck) {
-    const dataCart = getDataCartridge(urlDeck) || getCartridge(urlDeck);
-    if (dataCart && dataCart.dataPayload) {
-      return {
-        stage: dataCart.dataPayload.stage || dataCart.stage,
-        subject: dataCart.dataPayload.subject || dataCart.subject || 'Science',
-        unit: dataCart.dataPayload.unit || dataCart.oakUnit || dataCart.title,
-      };
-    }
-  }
-
-  // 1. Explicit query parameters (e.g. ?ks=...&sub=...&unit=...)
-  if (urlKs || urlSub || urlUnit) {
-    const stage = urlKs || localStorage.getItem('stj_active_stage') || 'Key Stage 1';
-    const subject = urlSub || localStorage.getItem('stj_active_subject') || 'Science';
-    const unit = urlUnit || localStorage.getItem('stj_active_unit') || 'Seasonal Changes';
-    return { stage, subject, unit };
-  }
-
-  // 2. Topic shortcode or URN (?topic=sci-states, etc.)
-  if (urlTopic) {
-    const resolved = resolveTopicParam(urlTopic);
-    if (resolved) return resolved;
-  }
-
-  // 3. User's previously chosen / remembered subject & unit from localStorage
-  const savedSub = localStorage.getItem('stj_active_subject');
-  const savedStage = localStorage.getItem('stj_active_stage');
-  const savedUnit = localStorage.getItem('stj_active_unit');
-
-  if (savedSub) {
-    return {
-      stage: savedStage || 'Key Stage 1',
-      subject: savedSub,
-      unit: savedUnit || 'Seasonal Changes',
-    };
-  }
-
-  // 4. Default: Key Stage 1 Science (Seasonal Changes) — no hardcoded Mathematics
-  return {
-    stage: 'Key Stage 1',
+const SAMPLE_DRILLS: PracticeQuestion[] = [
+  {
+    id: 'mat-frac-1',
+    stage: 'Key Stage 2',
+    subject: 'Mathematics',
+    unit: 'Fractions and Decimals',
+    question: 'What is 1/4 + 2/4 in simplest form?',
+    options: ['3/8', '3/4', '2/8', '1/2'],
+    correctIndex: 1,
+    hint: 'When fractions share the same denominator (bottom number), simply add the numerators (top numbers)!',
+    explanation: 'Correct! 1/4 + 2/4 = (1 + 2)/4 = 3/4. Denominators stay the same.',
+    simPreset: 'fractions'
+  },
+  {
+    id: 'sci-gas-1',
+    stage: 'Key Stage 3',
     subject: 'Science',
-    unit: 'Seasonal Changes',
-  };
-}
+    unit: 'States of Matter & Gas Laws',
+    question: 'If the volume of a sealed gas container is halved at constant temperature, what happens to the gas pressure?',
+    options: ['Halved', 'Remains identical', 'Doubled', 'Quadrupled'],
+    correctIndex: 2,
+    hint: "Recall Boyle's Law: P × V = constant. Fewer spaces mean particles collide with walls twice as often.",
+    explanation: "Correct! By Boyle's Law, pressure is inversely proportional to volume. Halving the volume doubles the pressure.",
+    simPreset: 'kinetic-gas'
+  },
+  {
+    id: 'mat-pyth-1',
+    stage: 'Key Stage 3',
+    subject: 'Mathematics',
+    unit: 'Pythagoras Theorem',
+    question: 'In a right-angled triangle with legs a = 3 and b = 4, what is the length of hypotenuse c?',
+    options: ['5', '7', '12', '25'],
+    correctIndex: 0,
+    hint: "Use Pythagoras' formula: a² + b² = c². 3² + 4² = 9 + 16 = 25.",
+    explanation: 'Correct! √25 = 5. A classic 3-4-5 Pythagorean triple.',
+    simPreset: 'pythagoras'
+  },
+  {
+    id: 'sci-circ-1',
+    stage: 'Key Stage 3',
+    subject: 'Science',
+    unit: 'Electrical Circuits & Ohm’s Law',
+    question: 'If voltage across a resistor is 12V and current is 3A, what is its electrical resistance?',
+    options: ['36 Ω', '4 Ω', '9 Ω', '0.25 Ω'],
+    correctIndex: 1,
+    hint: "Use Ohm's Law: V = I × R, which rearranges to R = V / I.",
+    explanation: 'Correct! R = 12V / 3A = 4 Ω.',
+    simPreset: 'electric-circuits'
+  },
+  {
+    id: 're-mass-1',
+    stage: 'Key Stage 2',
+    subject: 'Religious Education (Catholic)',
+    unit: 'The Holy Eucharist & Sacraments',
+    question: 'Which part of the Mass follows the Liturgy of the Word?',
+    options: ['Introductory Rites', 'Liturgy of the Eucharist', 'Concluding Rites', 'Penitential Act'],
+    correctIndex: 1,
+    hint: 'After listening to God’s Word in Scripture, we approach the Altar for the sacrifice and Thanksgiving.',
+    explanation: 'Correct! The two main tables of the Mass are the Table of the Word followed by the Table of the Eucharist.',
+    simPreset: 'church-tour'
+  },
+  {
+    id: 'lang-es-1',
+    stage: 'Key Stage 2',
+    subject: 'Spanish',
+    unit: 'Greetings and Introductions',
+    question: 'How do you say "Good morning" in Spanish?',
+    options: ['Buenas noches', 'Buenos días', 'Hasta luego', 'Por favor'],
+    correctIndex: 1,
+    hint: '"Día" means day. "Buenos días" literally means good days!',
+    explanation: 'Correct! "Buenos días" is used in the morning until lunchtime.',
+    simPreset: 'languages'
+  }
+];
 
-// In-line error boundary to capture child crashes without wiping the page
-class ComponentGuard extends Component<
-  { label: string; children: ReactNode },
-  { error: Error | null }
-> {
-  state = { error: null };
+export function renderPracticePage(): HTMLElement {
+  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const container = document.createElement('div');
+  container.className = 'practice-arena-stage';
+  container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  static getDerivedStateFromError(error: Error) {
-    return { error };
+  let selectedStage = 'All';
+  let selectedSubject = 'All';
+  let score = 0;
+  let streak = 0;
+  const answeredQuestions = new Set<string>();
+
+  function getFilteredDrills(): PracticeQuestion[] {
+    return SAMPLE_DRILLS.filter(d => {
+      const matchStage = selectedStage === 'All' || d.stage === selectedStage;
+      const matchSubject = selectedSubject === 'All' || d.subject === selectedSubject;
+      return matchStage && matchSubject;
+    });
   }
 
-  componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error(`[Guard] Crash inside ${this.props.label}:`, error, info);
-  }
+  function render() {
+    const drills = getFilteredDrills();
 
-  render() {
-    if (this.state.error) {
-      return (
-        <div
-          style={{
-            margin: '1rem 0',
-            padding: '1.25rem',
-            background: '#450a0a',
-            border: '1px solid #dc2626',
-            borderRadius: '8px',
-            color: '#fecaca',
-            fontFamily: 'monospace',
-          }}
-        >
-          <strong style={{ display: 'block', marginBottom: '0.5rem', color: '#f87171' }}>
-            Error rendering {this.props.label}:
-          </strong>
-          <code>{(this.state.error as Error).message}</code>
+    container.innerHTML = `
+      <!-- Header -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1.5rem;">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+            <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+            <span style="color:#cbd5e1;">/</span>
+            <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">⚡ Practice Lab Question Bank</span>
+          </div>
+          <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 4px 0;">Interactive Practice Arena</h1>
+          <p style="font-size:0.95rem; color:#64748b; margin:0;">
+            Immediate diagnostic feedback, step-by-step hints, and linked AST vector simulations.
+          </p>
         </div>
-      );
-    }
-    return this.props.children;
-  }
-}
 
-export default function PracticeLabPage() {
-  const [mounted, setMounted] = useState(false);
-  const [currentLang, setCurrentLang] = useState(() => {
-    return typeof window !== 'undefined' ? getSavedLanguage() : 'en';
-  });
-
-  const location = useLocation();
-
-  const [initialCoordinates] = useState(getInitialPracticeSelection);
-  const [activeStage, setActiveStage] = useState(initialCoordinates.stage);
-  const [activeSubject, setActiveSubject] = useState(initialCoordinates.subject);
-  const [activeUnit, setActiveUnit] = useState(initialCoordinates.unit);
-  const [activeAxiomCheck, setActiveAxiomCheck] = useState<string | undefined>(undefined);
-
-  // 2. Mount status
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // 3. Query Param Ingestion
-  useEffect(() => {
-    if (typeof window !== 'undefined' && location?.search) {
-      const searchParams = new URLSearchParams(location.search);
-      const urlKs = searchParams.get('ks');
-      const urlSub = searchParams.get('sub');
-      const urlUnit = searchParams.get('unit');
-      const urlTopic = searchParams.get('topic');
-      const urlDeck = searchParams.get('deck') || searchParams.get('cartridge');
-
-      if (urlDeck) {
-        const dataCart = getDataCartridge(urlDeck) || getCartridge(urlDeck);
-        if (dataCart && dataCart.dataPayload) {
-          setActiveStage(dataCart.dataPayload.stage || dataCart.stage);
-          setActiveSubject(dataCart.dataPayload.subject || dataCart.subject || 'Science');
-          setActiveUnit(dataCart.dataPayload.unit || dataCart.oakUnit || dataCart.title);
-          return;
-        }
-      }
-
-      if (urlKs || urlSub || urlUnit) {
-        if (urlKs && urlKs !== activeStage) setActiveStage(urlKs);
-        if (urlSub && urlSub !== activeSubject) setActiveSubject(urlSub);
-        if (urlUnit && urlUnit !== activeUnit) setActiveUnit(urlUnit);
-      } else if (urlTopic) {
-        const resolved = resolveTopicParam(urlTopic);
-        if (resolved) {
-          setActiveStage(resolved.stage);
-          setActiveSubject(resolved.subject);
-          setActiveUnit(resolved.unit);
-        }
-      }
-    }
-  }, [location.search]);
-
-  // Persist subject selection so it is remembered across all sessions and page refreshes
-  useEffect(() => {
-    if (typeof window !== 'undefined' && activeSubject) {
-      localStorage.setItem('stj_active_stage', activeStage);
-      localStorage.setItem('stj_active_subject', activeSubject);
-      localStorage.setItem('stj_active_unit', activeUnit);
-    }
-  }, [activeStage, activeSubject, activeUnit]);
-
-  // 4. Baseline Dispatch with Safe Promise Guard
-  useEffect(() => {
-    let isCancelled = false;
-
-    try {
-      const call = dispatch('LessonSynthesizer', {
-        intent: 'inflate:baseline',
-        payload: {
-          stage: activeStage,
-          subject: activeSubject,
-          topic: activeUnit,
-        },
-      });
-
-      if (call && typeof call.then === 'function') {
-        call
-          .then((res) => {
-            if (!isCancelled && res?.ok && res?.data?.socraticCheck) {
-              setActiveAxiomCheck(res.data.socraticCheck);
-            }
-          })
-          .catch(() => {});
-      }
-    } catch {
-      // Graceful fallback
-    }
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [activeStage, activeSubject, activeUnit]);
-
-  return (
-    <PageMeta title="Practice Arena" description="St Joseph's Interactive Curriculum Practice Arena">
-      {/* Explicit dark container so content never blends with a white layout */}
-      <div
-        style={{
-          minHeight: 'calc(100vh - 60px)',
-          backgroundColor: '#0f172a',
-          color: '#f8fafc',
-          padding: '1.5rem 1rem 3rem 1rem',
-        }}
-      >
-        {mounted ? (
-          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h1 style={{ fontSize: '1.85rem', fontWeight: 800, color: '#f8fafc', margin: '0 0 0.35rem 0', letterSpacing: '-0.02em' }}>
-                Practice Arena &amp; Neural Lab
-              </h1>
-              <p style={{ color: '#94a3b8', fontSize: '0.92rem', margin: 0 }}>
-                Interactive curriculum drills, adaptive question mastery, and in-stage vector simulations.
-              </p>
-            </div>
-
-            {/* Quick Switcher for Languages & MFL Lab */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '10px',
-                background: 'linear-gradient(135deg, rgba(30, 27, 75, 0.6) 0%, rgba(15, 23, 42, 0.8) 100%)',
-                border: '1px solid #4338ca',
-                borderRadius: '12px',
-                padding: '10px 14px',
-                marginBottom: '1.25rem',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🌍</span>
-                <div>
-                  <span style={{ fontSize: '0.86rem', color: '#fef3c7', fontWeight: 700 }}>
-                    Modern Foreign Languages &amp; EAL Booster:
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
-                    Phonics soundboards, verb conjugation wheels &amp; rapid vocab sprints with native audio.
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveStage('Key Stage 2');
-                    setActiveSubject('Spanish');
-                    setActiveUnit('Spanish Greetings & Introductions');
-                  }}
-                  style={{
-                    background: '#312e81',
-                    color: '#c7d2fe',
-                    border: '1px solid #6366f1',
-                    borderRadius: '8px',
-                    padding: '5px 12px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <span>🇪🇸 KS2 Spanish Drill</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveStage('Key Stage 3');
-                    setActiveSubject('Spanish');
-                    setActiveUnit('Spanish Present Tense: Regular Verbs (-ar, -er, -ir)');
-                  }}
-                  style={{
-                    background: '#312e81',
-                    color: '#c7d2fe',
-                    border: '1px solid #6366f1',
-                    borderRadius: '8px',
-                    padding: '5px 12px',
-                    fontSize: '0.78rem',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                  }}
-                >
-                  <span>🇪🇸 KS3 Verbs Drill</span>
-                </button>
-
-                <Link
-                  to="/languages"
-                  style={{
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    borderRadius: '8px',
-                    padding: '5px 14px',
-                    fontSize: '0.78rem',
-                    fontWeight: 800,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)',
-                  }}
-                >
-                  <span>🚀 Open Polyglot Studio</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Early Phonics Lab Booster Card */}
-            <div
-              style={{
-                marginTop: '12px',
-                background: 'linear-gradient(135deg, rgba(5, 150, 105, 0.15) 0%, rgba(6, 78, 59, 0.25) 100%)',
-                border: '1px solid rgba(16, 185, 129, 0.4)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🔤</span>
-                <div>
-                  <span style={{ fontSize: '0.86rem', color: '#a7f3d0', fontWeight: 700 }}>
-                    Early Years &amp; KS1 Systematic Synthetic Phonics (SSP):
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
-                    DfE Phases 2–5 pure sounds, sound buttons blending mat &amp; Year 1 Alien Words Screening Check.
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Link
-                  to="/phonics"
-                  style={{
-                    background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(5, 150, 105, 0.3)',
-                  }}
-                >
-                  <span>🚀 Open Phonics Suite</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* MFL & Polyglot Languages Booster Card */}
-            <div
-              style={{
-                marginTop: '12px',
-                background: 'linear-gradient(135deg, rgba(217, 119, 6, 0.15) 0%, rgba(180, 83, 9, 0.22) 100%)',
-                border: '1px solid rgba(245, 158, 11, 0.4)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🌍</span>
-                <div>
-                  <span style={{ fontSize: '0.86rem', color: '#fde68a', fontWeight: 700 }}>
-                    MFL &amp; Polyglot Studio (Spanish, French &amp; Latin):
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
-                    Comparative phonology, verb conjugation paradigms, pro-drop syntax &amp; English etymology cognate trees.
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Link
-                  to="/languages"
-                  style={{
-                    background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
-                    color: '#ffffff',
-                    textDecoration: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 800,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(217, 119, 6, 0.3)',
-                  }}
-                >
-                  <span>🚀 Open Languages Suite</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Spelling Bee Championship Booster Card */}
-            <div
-              style={{
-                marginTop: '12px',
-                background: 'linear-gradient(135deg, rgba(234, 179, 8, 0.15) 0%, rgba(161, 98, 7, 0.22) 100%)',
-                border: '1px solid rgba(250, 204, 21, 0.4)',
-                borderRadius: '12px',
-                padding: '12px 16px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                flexWrap: 'wrap',
-                gap: '12px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <span style={{ fontSize: '1.25rem' }}>🐝</span>
-                <div>
-                  <span style={{ fontSize: '0.86rem', color: '#fef08a', fontWeight: 700 }}>
-                    Spelling Bee Championship (KS1–KS3):
-                  </span>
-                  <span style={{ fontSize: '0.78rem', color: '#cbd5e1', marginLeft: '6px' }}>
-                    UK National Curriculum statutory spelling lists, speech synthesis pronunciation, touch letter tiles &amp; honey streaks.
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Link
-                  to="/player?preset=spelling-bee&mode=game"
-                  style={{
-                    background: 'linear-gradient(135deg, #eab308 0%, #ca8a04 100%)',
-                    color: '#0f172a',
-                    textDecoration: 'none',
-                    borderRadius: '8px',
-                    padding: '6px 14px',
-                    fontSize: '0.8rem',
-                    fontWeight: 900,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '4px',
-                    boxShadow: '0 2px 8px rgba(234, 179, 8, 0.3)',
-                  }}
-                >
-                  <span>🚀 Launch Spelling Bee</span>
-                  <span>➔</span>
-                </Link>
-              </div>
-            </div>
-
-            <ComponentGuard label="NeuralLabCanvas">
-              <NeuralLabCanvas
-                initialKeyStage={activeStage}
-                initialSubject={activeSubject}
-                initialUnit={activeUnit}
-                initialCartridgeId={typeof window !== 'undefined' ? (new URLSearchParams(location?.search || window.location.search).get('deck') || new URLSearchParams(location?.search || window.location.search).get('cartridge') || undefined) : undefined}
-                onTopicChange={(stage, sub, unit) => {
-                  if (stage) setActiveStage(stage);
-                  if (sub) setActiveSubject(sub);
-                  if (unit) setActiveUnit(unit);
-                }}
-              />
-            </ComponentGuard>
-
-            <ComponentGuard label="NanoAssistantPanel">
-              <NanoAssistantPanel
-                seedKey={`${activeStage}:${activeSubject}:${activeUnit}`}
-                keyStage={activeStage}
-                subject={activeSubject}
-                unit={activeUnit}
-                contextTopic={`${activeStage} • ${activeSubject}: ${activeUnit}`}
-                activePrompt={activeAxiomCheck}
-              />
-            </ComponentGuard>
+        <!-- Score & Streak Pills -->
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 14px; border-radius:999px; font-size:0.85rem; font-weight:700; color:#166534; display:flex; align-items:center; gap:6px;">
+            <span>⭐</span> Score: <span id="score-val">${score}</span>
           </div>
-        ) : (
-          <div style={{ maxWidth: '1100px', margin: '3rem auto', textAlign: 'center', color: '#94a3b8' }}>
-            <p style={{ fontSize: '1.1rem', fontWeight: 600 }}>Loading St Joseph&apos;s Practice Arena...</p>
+          <div style="background:#fffbeb; border:1px solid #fde68a; padding:6px 14px; border-radius:999px; font-size:0.85rem; font-weight:700; color:#92400e; display:flex; align-items:center; gap:6px;">
+            <span>🔥</span> Streak: <span id="streak-val">${streak}</span>
           </div>
-        )}
+        </div>
       </div>
-    </PageMeta>
-  );
+
+      <!-- Filters Toolbar -->
+      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:2rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:0.8rem; font-weight:700; color:#475569;">Key Stage:</label>
+            ${['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3'].map(st => `
+              <button type="button" class="stage-filter-btn" data-stage="${st}" style="padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1px solid ${st === selectedStage ? '#0284c7' : '#cbd5e1'}; background:${st === selectedStage ? '#0284c7' : '#f8fafc'}; color:${st === selectedStage ? '#fff' : '#475569'};">
+                ${st}
+              </button>
+            `).join('')}
+          </div>
+
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+            <label style="font-size:0.8rem; font-weight:700; color:#475569;">Subject:</label>
+            ${['All', 'Mathematics', 'Science', 'Spanish', 'Religious Education (Catholic)'].map(sub => `
+              <button type="button" class="subject-filter-btn" data-subject="${sub}" style="padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1px solid ${sub === selectedSubject ? '#0284c7' : '#cbd5e1'}; background:${sub === selectedSubject ? '#0284c7' : '#f8fafc'}; color:${sub === selectedSubject ? '#fff' : '#475569'};">
+                ${sub === 'Religious Education (Catholic)' ? '✝️ Catholic RE' : sub}
+              </button>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+
+      <!-- Drills List -->
+      <div id="drills-container" style="display:flex; flex-direction:column; gap:1.25rem;">
+        ${drills.length === 0 ? `
+          <div style="text-align:center; padding:3rem; color:#64748b; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
+            No questions found for the selected filters.
+          </div>
+        ` : drills.map((drill, qIdx) => `
+          <div class="drill-card" id="drill-${drill.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <span style="font-size:0.75rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:999px;">
+                  ${drill.stage}
+                </span>
+                <span style="font-size:0.75rem; font-weight:700; color:#ca8a04;">
+                  ${drill.subject} &bull; ${drill.unit}
+                </span>
+              </div>
+              ${drill.simPreset ? `
+                <a href="${base}player?preset=${drill.simPreset}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                  <span>🎮 Open Simulator</span> &rarr;
+                </a>
+              ` : ''}
+            </div>
+
+            <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; line-height:1.4;">
+              ${qIdx + 1}. ${drill.question}
+            </h3>
+
+            <!-- Options Grid -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:1rem;">
+              ${drill.options.map((opt, optIdx) => `
+                <button
+                  type="button"
+                  class="option-btn"
+                  data-drill-id="${drill.id}"
+                  data-opt-idx="${optIdx}"
+                  style="text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc; color:#0f172a; font-weight:600; font-size:0.9rem; cursor:pointer; transition:all 0.15s ease;">
+                  <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:22px; font-size:0.78rem; margin-right:8px; font-weight:800;">
+                    ${String.fromCharCode(65 + optIdx)}
+                  </span>
+                  ${opt}
+                </button>
+              `).join('')}
+            </div>
+
+            <!-- Feedback & Hint Box -->
+            <div class="feedback-box" id="feedback-${drill.id}" style="display:none; padding:10px 14px; border-radius:8px; font-size:0.86rem; margin-top:8px;"></div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
+              <button type="button" class="hint-toggle-btn" data-drill-id="${drill.id}" style="background:transparent; border:none; color:#0284c7; font-size:0.8rem; font-weight:700; cursor:pointer;">
+                💡 Need a clue?
+              </button>
+              <div class="hint-text" id="hint-${drill.id}" style="display:none; font-size:0.82rem; color:#64748b; font-style:italic;">
+                ${drill.hint}
+              </div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+
+    // Bind Filter Listeners
+    container.querySelectorAll('.stage-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedStage = btn.getAttribute('data-stage') || 'All';
+        render();
+      });
+    });
+
+    container.querySelectorAll('.subject-filter-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedSubject = btn.getAttribute('data-subject') || 'All';
+        render();
+      });
+    });
+
+    // Bind Option Clicks
+    container.querySelectorAll('.option-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const drillId = btn.getAttribute('data-drill-id');
+        const optIdx = parseInt(btn.getAttribute('data-opt-idx') || '0', 10);
+        const drill = SAMPLE_DRILLS.find(d => d.id === drillId);
+        if (!drill) return;
+
+        const card = container.querySelector(`#drill-${drillId}`);
+        const feedback = container.querySelector(`#feedback-${drillId}`) as HTMLElement;
+        if (!card || !feedback) return;
+
+        // Prevent repeated scoring on same question
+        const isFirstAnswer = !answeredQuestions.has(drill.id);
+        answeredQuestions.add(drill.id);
+
+        if (optIdx === drill.correctIndex) {
+          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #16a34a; background:#dcfce7; color:#166534; font-weight:700; font-size:0.9rem;');
+          feedback.style.display = 'block';
+          feedback.style.background = '#dcfce7';
+          feedback.style.color = '#166534';
+          feedback.style.border = '1px solid #86efac';
+          feedback.innerHTML = `<strong>🎉 Brilliant!</strong> ${drill.explanation}`;
+
+          if (isFirstAnswer) {
+            score += 10;
+            streak += 1;
+            const scoreVal = container.querySelector('#score-val');
+            const streakVal = container.querySelector('#streak-val');
+            if (scoreVal) scoreVal.textContent = String(score);
+            if (streakVal) streakVal.textContent = String(streak);
+          }
+        } else {
+          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #dc2626; background:#fee2e2; color:#991b1b; font-weight:700; font-size:0.9rem;');
+          feedback.style.display = 'block';
+          feedback.style.background = '#fee2e2';
+          feedback.style.color = '#991b1b';
+          feedback.style.border = '1px solid #fca5a5';
+          feedback.innerHTML = `<strong>Not quite:</strong> Try reviewing the clue below.`;
+
+          if (isFirstAnswer) {
+            streak = 0;
+            const streakVal = container.querySelector('#streak-val');
+            if (streakVal) streakVal.textContent = '0';
+          }
+        }
+      });
+    });
+
+    // Bind Hint Toggles
+    container.querySelectorAll('.hint-toggle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const drillId = btn.getAttribute('data-drill-id');
+        const hintEl = container.querySelector(`#hint-${drillId}`) as HTMLElement;
+        if (hintEl) {
+          hintEl.style.display = hintEl.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+    });
+  }
+
+  render();
+  return container;
 }
+
+export default renderPracticePage;

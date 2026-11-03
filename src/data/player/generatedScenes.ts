@@ -761,7 +761,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "id": "electric-circuits",
     "base": "electric-circuits",
     "type": "Sim",
-    "label": "💡 Electrical Circuits & Ohm's Law (V = I × R)",
+    "label": "Electrical Circuits & Ohm's Law (V = I × R)",
     "stage": "KS2/KS3 PHYSICS",
     "oakId": "OAK-KS2-SCI-ELECTRICC",
     "oakUnit": "V",

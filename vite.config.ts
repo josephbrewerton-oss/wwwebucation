@@ -1,4 +1,5 @@
 import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
 import path from 'path';
 import fs from 'fs';
 
@@ -125,7 +126,7 @@ function astSceneAutoFinder(): import('vite').Plugin {
 
 export default defineConfig({
   base: process.env.BASE_URL || '/wwwebucation/',
-  plugins: [astSceneAutoFinder()],
+  plugins: [react(), astSceneAutoFinder()],
   publicDir: 'static',
   define: {
     'process.env': {},
@@ -134,6 +135,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, 'src'),
+      'react-router-dom': path.resolve(import.meta.dirname, 'src/router/index.tsx'),
     },
   },
   server: {
@@ -156,6 +158,9 @@ export default defineConfig({
           }
           if (id.includes('node_modules/katex/')) {
             return 'vendor-katex';
+          }
+          if (id.includes('node_modules/react/') || id.includes('node_modules/react-dom/')) {
+            return 'vendor-react';
           }
         },
       },
