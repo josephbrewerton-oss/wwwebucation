@@ -427,10 +427,18 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
             )}
           </g>
 
-          {/* Base Hand (Left) */}
+{/* Base Hand (Left) */}
           <g id="avatar-base-hand" opacity={frame.baseHandMode === 'rest' ? 0.65 : 0.98}>
             <line x1={frame.baseHand.forearm.x} y1={frame.baseHand.forearm.y} x2={frame.baseHand.wrist.x} y2={frame.baseHand.wrist.y} stroke="url(#bslHumanSkin)" strokeWidth="6.5" strokeLinecap="round" />
-            <polygon points={`${frame.baseHand.wrist.x},${frame.baseHand.wrist.y} ${frame.baseHand.thumbBase.x},${frame.baseHand.thumbBase.y} ${frame.baseHand.knuckleIndex.x},${frame.baseHand.knuckleIndex.y} ${frame.baseHand.kMid.x},${frame.baseHand.kMid.y} ${frame.baseHand.kPinky.x},${frame.baseHand.kPinky.y}`} fill="url(#bslHumanSkin)" stroke="#c48e6c" />
+            <ellipse
+              cx={frame.baseHand.palm.x}
+              cy={frame.baseHand.palm.y}
+              rx={6.5 * frame.baseHand.palm.scale}
+              ry={7.5 * frame.baseHand.palm.scale}
+              fill="url(#bslHumanSkin)"
+              stroke="#c48e6c"
+              strokeWidth="1.2"
+            />
             <line x1={frame.baseHand.knuckleIndex.x} y1={frame.baseHand.knuckleIndex.y} x2={frame.baseHand.tipIndex.x} y2={frame.baseHand.tipIndex.y} stroke="url(#bslHumanSkin)" strokeWidth="4.8" strokeLinecap="round" />
             <line x1={frame.baseHand.kMid.x} y1={frame.baseHand.kMid.y} x2={frame.baseHand.tipMid.x} y2={frame.baseHand.tipMid.y} stroke="url(#bslHumanSkin)" strokeWidth="4.8" strokeLinecap="round" />
             <line x1={frame.baseHand.kPinky.x} y1={frame.baseHand.kPinky.y} x2={frame.baseHand.tipPinky.x} y2={frame.baseHand.tipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth="4.4" strokeLinecap="round" />
@@ -440,7 +448,15 @@ export const BslInterpreterOverlay: React.FC<BslInterpreterOverlayProps> = ({
           {/* Dominant Hand (Right) */}
           <g id="avatar-dom-hand">
             <line x1={frame.domHand.forearm.x} y1={frame.domHand.forearm.y} x2={frame.domHand.wrist.x} y2={frame.domHand.wrist.y} stroke="url(#bslHumanSkin)" strokeWidth="6.8" strokeLinecap="round" />
-            <polygon points={`${frame.domHand.wrist.x},${frame.domHand.wrist.y} ${frame.domHand.thumbBase.x},${frame.domHand.thumbBase.y} ${frame.domHand.knuckleIndex.x},${frame.domHand.knuckleIndex.y} ${frame.domHand.kMid.x},${frame.domHand.kMid.y} ${frame.domHand.kPinky.x},${frame.domHand.kPinky.y}`} fill="url(#bslHumanSkin)" stroke="#c48e6c" />
+            <ellipse
+              cx={frame.domHand.palm.x}
+              cy={frame.domHand.palm.y}
+              rx={6.8 * frame.domHand.palm.scale}
+              ry={8.0 * frame.domHand.palm.scale}
+              fill="url(#bslHumanSkin)"
+              stroke="#c48e6c"
+              strokeWidth="1.2"
+            />
             <line x1={frame.domHand.knuckleIndex.x} y1={frame.domHand.knuckleIndex.y} x2={frame.domHand.tipIndex.x} y2={frame.domHand.tipIndex.y} stroke="url(#bslHumanSkin)" strokeWidth="5" strokeLinecap="round" />
             <line x1={frame.domHand.kMid.x} y1={frame.domHand.kMid.y} x2={frame.domHand.tipMid.x} y2={frame.domHand.tipMid.y} stroke="url(#bslHumanSkin)" strokeWidth="5" strokeLinecap="round" />
             <line x1={frame.domHand.kPinky.x} y1={frame.domHand.kPinky.y} x2={frame.domHand.tipPinky.x} y2={frame.domHand.tipPinky.y} stroke="url(#bslHumanSkin)" strokeWidth="4.6" strokeLinecap="round" />
