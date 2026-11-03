@@ -128,6 +128,9 @@ export class PersistentAppShellElement extends HTMLElement {
                     <a href="${base}player" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>🎬</span> <strong>Interactive Visual Lab</strong>
                     </a>
+                    <a href="${base}catholic-life?tab=church-tour" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🏛️</span> <strong>Church Tour &amp; Altar Sim</strong>
+                    </a>
                     <a href="${base}languages" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>🌍</span> <strong>MFL &amp; Polyglot Studio</strong>
                     </a>
@@ -210,6 +213,7 @@ export class PersistentAppShellElement extends HTMLElement {
               </button>
               <a href="${base}" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🏠 Home</a>
               <a href="${base}catholic-life" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:700;">✝️ Catholic Life &amp; Faith</a>
+              <a href="${base}catholic-life?tab=church-tour" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🏛️ Church Tour &amp; Altar Sim</a>
               <a href="${base}player" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🎮 Interactive Simulators</a>
               <a href="${base}learning-zone" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">📖 Lessons &amp; Units</a>
               <a href="${base}practice-lab" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">⚡ Practice Lab Drills</a>

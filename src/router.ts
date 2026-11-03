@@ -23,6 +23,12 @@ const routes: Record<string, RouteHandler> = {
   '/player': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
   '/media-player': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
   '/simulator': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
+  '/simulations': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
+  '/simulators': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
+  '/simulation': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
+  '/church-tour': () => import('./pages/catholic-life').then(m => resolveView(m, 'renderCatholicLifePage')),
+  '/altar': () => import('./pages/catholic-life').then(m => resolveView(m, 'renderCatholicLifePage')),
+  '/altar-anatomy': () => import('./pages/catholic-life').then(m => resolveView(m, 'renderCatholicLifePage')),
   '/catholic-life': () => import('./pages/catholic-life').then(m => resolveView(m, 'renderCatholicLifePage')),
   '/first-communion': () => import('./pages/catholic-life').then(m => resolveView(m, 'renderCatholicLifePage')),
   '/practice-lab': () => import('./pages/practice-lab').then(m => resolveView(m, 'renderPracticePage')),
@@ -80,6 +86,14 @@ export async function handleRouteChange() {
       outlet.innerHTML = '';
       outlet.appendChild(view);
     }
+
+    if (window.location.hash) {
+      const hashEl = document.querySelector(window.location.hash);
+      if (hashEl) {
+        hashEl.scrollIntoView({ behavior: 'smooth' });
+        return;
+      }
+    }
     window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
   } catch (err) {
     console.error('Route navigation error:', err);
@@ -108,8 +122,22 @@ export function initRouter() {
       !target.hasAttribute('download') &&
       target.target !== '_blank'
     ) {
-      e.preventDefault();
+      const rawHref = target.getAttribute('href') || '';
       const url = new URL(target.href);
+
+      // Handle in-page fragment/hash navigation smoothly without full page reload
+      if (rawHref.startsWith('#') || (url.pathname === window.location.pathname && url.hash)) {
+        e.preventDefault();
+        const hash = url.hash || rawHref;
+        const targetEl = document.querySelector(hash);
+        if (targetEl) {
+          targetEl.scrollIntoView({ behavior: 'smooth' });
+          window.history.pushState(null, '', url.pathname + url.search + hash);
+        }
+        return;
+      }
+
+      e.preventDefault();
       navigate(url.pathname + url.search + url.hash);
     }
   });

@@ -24,6 +24,8 @@ export function renderHomePage(): HTMLElement {
 
   const featuredPills = [
     { label: '💨 Kinetic Gas', id: 'kinetic-gas' },
+    { label: '🏛️ Church Tour', id: 'church-tour' },
+    { label: '🕯️ High Altar', id: 'altar-anatomy' },
     { label: '📐 Pythagoras', id: 'pythagoras' },
     { label: '🍰 Fractions', id: 'fractions' },
     { label: '💡 Circuits', id: 'electric-circuits' },
@@ -67,13 +69,17 @@ export function renderHomePage(): HTMLElement {
         Tailored for Key Stages 1 to 4 in Mathematics, Science, English, Computing, and more.
       </p>
 
-      <div class="stj-hero-actions" style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
-        <a href="#featured-simulations" class="stj-btn-hero-primary" style="padding: 10px 22px; background: #0284c7; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
-          <span>Launch Interactive Simulators</span>
+      <div class="stj-hero-actions" style="display: flex; gap: 0.85rem; justify-content: center; flex-wrap: wrap;">
+        <a href="${base}player" class="stj-btn-hero-primary" style="padding: 10px 22px; background: #0284c7; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);">
+          <span>🎮 Launch Simulator Studio</span>
+          <span aria-hidden="true">→</span>
+        </a>
+        <a href="#featured-simulations" class="stj-btn-hero-secondary" style="padding: 10px 20px; background: #0f172a; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <span>Live Stage Demo</span>
           <span aria-hidden="true">↓</span>
         </a>
-        <a href="#express-lesson-launchpad" class="stj-btn-hero-secondary" style="padding: 10px 22px; background: #0f172a; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none;">
-          <span>Explore Curriculum Lessons</span>
+        <a href="#express-lesson-launchpad" class="stj-btn-hero-secondary" style="padding: 10px 20px; background: #334155; color: #ffffff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+          <span>Explore Lessons</span>
           <span aria-hidden="true">↓</span>
         </a>
       </div>

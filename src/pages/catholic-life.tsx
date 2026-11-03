@@ -56,8 +56,31 @@ export function renderCatholicLifePage(): HTMLElement {
   container.className = 'catholic-life-sanctuary-stage';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem;';
 
-  let currentTab: 'overview' | 'mass' | 'sacraments' | 'rosary' | 'cst' | 'tour' = 'overview';
+  const urlParams = new URLSearchParams(window.location.search);
+  const path = window.location.pathname;
+  let initialTab: 'overview' | 'church-tour' | 'altar-anatomy' | 'mass' | 'sacraments' | 'rosary' | 'cst' = 'overview';
+  
+  if (path.includes('altar')) {
+    initialTab = 'altar-anatomy';
+  } else if (path.includes('church-tour') || path.includes('tour')) {
+    initialTab = 'church-tour';
+  } else if (urlParams.get('tab') === 'church-tour' || urlParams.get('tab') === 'tour') {
+    initialTab = 'church-tour';
+  } else if (urlParams.get('tab') === 'altar' || urlParams.get('tab') === 'altar-anatomy') {
+    initialTab = 'altar-anatomy';
+  } else if (urlParams.get('tab') === 'mass') {
+    initialTab = 'mass';
+  } else if (urlParams.get('tab') === 'sacraments') {
+    initialTab = 'sacraments';
+  } else if (urlParams.get('tab') === 'rosary') {
+    initialTab = 'rosary';
+  } else if (urlParams.get('tab') === 'cst') {
+    initialTab = 'cst';
+  }
+
+  let currentTab: 'overview' | 'church-tour' | 'altar-anatomy' | 'mass' | 'sacraments' | 'rosary' | 'cst' = initialTab;
   let activeRosaryCycle: 'Joyful' | 'Luminous' | 'Sorrowful' | 'Glorious' = 'Joyful';
+  let activeCatholicSim: string = currentTab === 'altar-anatomy' ? 'altar-anatomy' : 'church-tour';
 
   function renderHeader(): string {
     return `
@@ -79,13 +102,19 @@ export function renderCatholicLifePage(): HTMLElement {
           Catholic Life, Liturgy &amp; Faith Sanctuary
         </h1>
         <p style="font-size:1.05rem; color:#cbd5e1; max-width:840px; margin:0 0 1.5rem 0; line-height:1.6;">
-          Explore the living heartbeat of our Catholic faith: the Holy Mass step-by-step, the Seven Sacraments, the Holy Rosary, and Catholic Social Teaching (CST) in accordance with the Curriculum Directory.
+          Explore the living heartbeat of our Catholic faith: the Holy Mass step-by-step, interactive Church and Altar simulations, the Seven Sacraments, the Holy Rosary, and Catholic Social Teaching (CST).
         </p>
 
         <!-- Navigation Tabs Bar -->
         <div style="display:flex; gap:8px; flex-wrap:wrap;" id="catholic-nav-tabs">
           <button type="button" class="sanctuary-tab-btn" data-tab="overview" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'overview' ? '#facc15' : '#334155'}; color:${currentTab === 'overview' ? '#0f172a' : '#ffffff'};">
             📖 Sanctuary Overview
+          </button>
+          <button type="button" class="sanctuary-tab-btn" data-tab="church-tour" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'church-tour' ? '#facc15' : '#334155'}; color:${currentTab === 'church-tour' ? '#0f172a' : '#ffffff'};">
+            🏛️ Church Tour Sim
+          </button>
+          <button type="button" class="sanctuary-tab-btn" data-tab="altar-anatomy" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'altar-anatomy' ? '#facc15' : '#334155'}; color:${currentTab === 'altar-anatomy' ? '#0f172a' : '#ffffff'};">
+            🕯️ High Altar Anatomy
           </button>
           <button type="button" class="sanctuary-tab-btn" data-tab="mass" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'mass' ? '#facc15' : '#334155'}; color:${currentTab === 'mass' ? '#0f172a' : '#ffffff'};">
             🍞 The Holy Mass
@@ -99,9 +128,6 @@ export function renderCatholicLifePage(): HTMLElement {
           <button type="button" class="sanctuary-tab-btn" data-tab="cst" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'cst' ? '#facc15' : '#334155'}; color:${currentTab === 'cst' ? '#0f172a' : '#ffffff'};">
             🌱 Catholic Social Teaching (CST)
           </button>
-          <button type="button" class="sanctuary-tab-btn" data-tab="tour" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'tour' ? '#facc15' : '#334155'}; color:${currentTab === 'tour' ? '#0f172a' : '#ffffff'};">
-            ⛪ Interactive Church Sim
-          </button>
         </div>
       </section>
     `;
@@ -109,6 +135,70 @@ export function renderCatholicLifePage(): HTMLElement {
 
   function renderOverview(): string {
     return `
+      <!-- Featured Interactive Church & Altar Simulators Banner -->
+      <section style="background: linear-gradient(135deg, #090d16 0%, #1e1b4b 100%); border: 1.5px solid #0284c7; border-radius: 16px; padding: 1.75rem 1.5rem; margin-bottom: 2.5rem; box-shadow: 0 4px 20px rgba(2, 132, 199, 0.15);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1.25rem;">
+          <div>
+            <div style="font-size:0.75rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:3px;">
+              🎮 Interactive Sacred Architecture &amp; Sanctuary Simulators
+            </div>
+            <h2 style="font-size:1.45rem; font-weight:800; color:#ffffff; margin:0;">
+              Live Interactive Walkthroughs: Church Sanctuary &amp; The High Altar
+            </h2>
+          </div>
+          <a href="${base}player" style="padding:6px 14px; font-size:0.8rem; background:#0284c7; color:#fff; border-radius:6px; text-decoration:none; font-weight:700;">
+            Launch Fullscreen Studio &rarr;
+          </a>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px, 1fr)); gap:1.25rem;">
+          <!-- Church Tour Featured Card -->
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:1.25rem; color:#f8fafc; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:1.4rem;">🏛️</span>
+                <span style="font-size:0.72rem; background:#1e293b; color:#38bdf8; padding:2px 8px; border-radius:999px; font-weight:700;">60 FPS Vector Tour</span>
+              </div>
+              <h3 style="font-size:1.15rem; font-weight:800; color:#ffffff; margin:0 0 6px 0;">Tour of a Catholic Church: Sacred Architecture</h3>
+              <p style="font-size:0.84rem; color:#94a3b8; line-height:1.5; margin:0 0 12px 0;">
+                Walk from the Narthex &amp; Holy Water stoup through the Nave, past the Ambo (Table of the Word), to the High Altar, Tabernacle &amp; red Sanctuary Lamp, Lady Chapel, and Baptismal Font. Features Latin, English &amp; Spanish audio subtitles with 3 formative checkpoints.
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="view-tab-direct" data-target="church-tour" style="flex:1; padding:8px 12px; border-radius:6px; background:#0284c7; color:#fff; border:none; font-weight:700; font-size:0.82rem; cursor:pointer;">
+                🏛️ Launch Church Tour Sim
+              </button>
+              <a href="${base}player?preset=church-tour" style="padding:8px 12px; border-radius:6px; background:#1e293b; color:#38bdf8; text-decoration:none; font-weight:700; font-size:0.82rem; border:1px solid #334155;">
+                ↗ Studio
+              </a>
+            </div>
+          </div>
+
+          <!-- Altar Anatomy Featured Card -->
+          <div style="background:#0f172a; border:1px solid #334155; border-radius:12px; padding:1.25rem; color:#f8fafc; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:1.4rem;">🕯️</span>
+                <span style="font-size:0.72rem; background:#1e293b; color:#fbbf24; padding:2px 8px; border-radius:999px; font-weight:700;">Altar Stone X-Ray</span>
+              </div>
+              <h3 style="font-size:1.15rem; font-weight:800; color:#ffffff; margin:0 0 6px 0;">The Catholic Altar: Sacred Anatomy &amp; Relics</h3>
+              <p style="font-size:0.84rem; color:#94a3b8; line-height:1.5; margin:0 0 12px 0;">
+                Examine the consecrated Mensa representing Christ the living Cornerstone, the Altar Stone with Five Sacred Wounds and sealed relics of holy martyrs, pure linen shroud, seasonal antependium, and the 2, 6, 7 beeswax candles rule under GIRM 117.
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="view-tab-direct" data-target="altar-anatomy" style="flex:1; padding:8px 12px; border-radius:6px; background:#ca8a04; color:#fff; border:none; font-weight:700; font-size:0.82rem; cursor:pointer;">
+                🕯️ Launch High Altar Sim
+              </button>
+              <a href="${base}player?preset=altar-anatomy" style="padding:8px 12px; border-radius:6px; background:#1e293b; color:#fbbf24; text-decoration:none; font-weight:700; font-size:0.82rem; border:1px solid #334155;">
+                ↗ Studio
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 Pillars Grid -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; margin-bottom:2.5rem;">
         <!-- Mass Card -->
         <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.04);">
@@ -172,6 +262,111 @@ export function renderCatholicLifePage(): HTMLElement {
               <p style="font-size:0.85rem; color:#334155; line-height:1.5; margin:0; font-style:italic;">"${p.text}"</p>
             </div>
           `).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderInteractiveSim(activeId: string): string {
+    const isAltar = activeId === 'altar-anatomy';
+    const isChurch = activeId === 'church-tour';
+
+    const simPills = [
+      { id: 'church-tour', label: '🏛️ Church Sanctuary Tour' },
+      { id: 'altar-anatomy', label: '🕯️ High Altar Anatomy' },
+      { id: 'sacred-objects', label: '🍷 Sacred Vessels & Vestments' },
+      { id: 'order-of-the-mass', label: '🍞 Order of the Mass' },
+      { id: 'stations-of-the-cross', label: '✝️ Stations of the Cross' },
+      { id: 'first-communion', label: '🕊️ First Holy Communion' },
+      { id: 'liturgical-calendar', label: '🌿 Liturgical Calendar' },
+      { id: 'liturgical-postures', label: '🛐 Liturgical Postures' },
+    ];
+
+    return `
+      <section style="margin-bottom:3rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
+          <div>
+            <h2 style="font-size:1.6rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">
+              ${isAltar ? 'The Catholic Altar: Sacred Anatomy &amp; Relics' : 
+                isChurch ? 'Tour of a Catholic Church: Sacred Architecture' : 
+                'Interactive Catholic Faith &amp; Liturgy Simulator'}
+            </h2>
+            <p style="font-size:0.95rem; color:#64748b; margin:0;">
+              ${isAltar ? 'Interactive exploration of the Mensa, Altar Stone with Five Sacred Wounds, Martyrs Relics, and 2, 6, 7 Beeswax Candles Rule.' :
+                isChurch ? 'Explore the sacred architecture from the Narthex &amp; Holy Water Stoup to the Nave, Ambo, Altar, Tabernacle &amp; Baptistery.' :
+                'Interactive 60 FPS vector simulation grounded in Catholic theology and GIRM.'}
+            </p>
+          </div>
+          <a href="${base}player?preset=${activeId}" style="padding:8px 16px; background:#0284c7; color:#fff; border-radius:8px; font-weight:700; text-decoration:none; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
+            <span>↗ Fullscreen Studio</span>
+          </a>
+        </div>
+
+        <!-- Quick Switcher Pills -->
+        <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem; padding:8px 12px; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px;">
+          <span style="font-size:0.75rem; font-weight:800; color:#64748b; align-self:center; margin-right:4px;">Switch Sim:</span>
+          ${simPills.map(p => `
+            <button 
+              type="button" 
+              class="catholic-sim-pill" 
+              data-preset="${p.id}" 
+              style="padding:5px 12px; border-radius:999px; font-weight:700; font-size:0.78rem; cursor:pointer; border:1px solid ${p.id === activeId ? '#0284c7' : '#cbd5e1'}; background:${p.id === activeId ? '#0284c7' : '#ffffff'}; color:${p.id === activeId ? '#ffffff' : '#334155'};">
+              ${p.label}
+            </button>
+          `).join('')}
+        </div>
+
+        <!-- Embedded Vector Simulator Viewport -->
+        <div style="background:#090d16; border-radius:16px; border:1.5px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:1.5rem;">
+          <iframe 
+            id="catholic-sim-iframe"
+            src="${base}player.html?preset=${activeId}" 
+            style="width:100%; height:540px; border:none; display:block;" 
+            title="Catholic Sanctuary Interactive Stage">
+          </iframe>
+        </div>
+
+        <!-- Pedagogical Notes & GIRM Specifications -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1rem;">
+          ${isAltar ? `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">1. The Mensa (Christ Cornerstone)</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                The consecrated stone table representing Jesus Christ Himself. Anointed with Sacred Chrism during dedication, it signifies Christ as the true living altar of sacrifice.
+              </p>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">2. Altar Stone &amp; Martyrs' Relics</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                Marked with five engraved crosses for the Five Wounds of Christ (hands, feet, side). Relics of holy martyrs are sealed inside (Rev 6:9), continuing the catacomb tradition.
+              </p>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">3. The 2, 6, 7 Candles Rule</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                Pure beeswax candles: 2 for weekday Mass, 6 for Sunday / feast days, and 7 whenever the Diocesan Bishop celebrates Mass (GIRM 117 / Ceremonial of Bishops §125).
+              </p>
+            </div>
+          ` : `
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">1. Narthex &amp; Holy Water Stoup</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                We bless ourselves with Holy Water upon entering in the Name of the Father, Son, and Holy Spirit to recall our baptismal vows and cleanse our hearts for worship.
+              </p>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">2. Nave &amp; Genuflection to Tabernacle</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                Before entering our pew, we genuflect on the right knee toward the Tabernacle to adore Jesus Christ physically and divinely present in the Blessed Sacrament.
+              </p>
+            </div>
+            <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem;">
+              <strong style="color:#0f172a; font-size:0.95rem; display:block; margin-bottom:4px;">3. Ambo (Table of the Word) &amp; Altar</strong>
+              <p style="font-size:0.84rem; color:#475569; line-height:1.5; margin:0;">
+                The Ambo is where Sacred Scripture and the Holy Gospel are proclaimed. The High Altar is the sacred center where the Holy Sacrifice of the Mass is offered.
+              </p>
+            </div>
+          `}
         </div>
       </section>
     `;
@@ -374,44 +569,27 @@ export function renderCatholicLifePage(): HTMLElement {
     `;
   }
 
-  function renderTour(): string {
-    return `
-      <section style="margin-bottom:3rem;">
-        <div style="margin-bottom:1.5rem;">
-          <h2 style="font-size:1.6rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">Interactive Catholic Church Sanctuary Simulator</h2>
-          <p style="font-size:0.95rem; color:#64748b; margin:0 0 1rem 0;">
-            Explore the sacred anatomy of the altar, tabernacle, sanctuary lamp, ambo, and baptistery in real-time vector graphics.
-          </p>
-        </div>
-
-        <div style="background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35);">
-          <iframe 
-            src="${base}player.html?preset=church-tour" 
-            style="width:100%; height:540px; border:none; display:block;" 
-            title="Catholic Church Sanctuary Interactive Tour">
-          </iframe>
-        </div>
-      </section>
-    `;
-  }
-
   function updateView() {
     container.innerHTML = `
       ${renderHeader()}
       <div id="sanctuary-content-body">
         ${currentTab === 'overview' ? renderOverview() :
+          currentTab === 'church-tour' ? renderInteractiveSim(activeCatholicSim) :
+          currentTab === 'altar-anatomy' ? renderInteractiveSim('altar-anatomy') :
           currentTab === 'mass' ? renderMass() :
           currentTab === 'sacraments' ? renderSacraments() :
           currentTab === 'rosary' ? renderRosary() :
-          currentTab === 'cst' ? renderCST() :
-          renderTour()}
+          renderCST()}
       </div>
     `;
 
     // Bind tab button listeners
     container.querySelectorAll('.sanctuary-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        currentTab = (btn.getAttribute('data-tab') as any) || 'overview';
+        const targetTab = btn.getAttribute('data-tab') as any;
+        currentTab = targetTab || 'overview';
+        if (targetTab === 'church-tour') activeCatholicSim = 'church-tour';
+        if (targetTab === 'altar-anatomy') activeCatholicSim = 'altar-anatomy';
         updateView();
       });
     });
@@ -419,7 +597,24 @@ export function renderCatholicLifePage(): HTMLElement {
     // Direct overview card links
     container.querySelectorAll('.view-tab-direct').forEach((btn) => {
       btn.addEventListener('click', () => {
-        currentTab = (btn.getAttribute('data-target') as any) || 'overview';
+        const target = btn.getAttribute('data-target') as any;
+        currentTab = target || 'overview';
+        if (target === 'church-tour') activeCatholicSim = 'church-tour';
+        if (target === 'altar-anatomy') activeCatholicSim = 'altar-anatomy';
+        updateView();
+      });
+    });
+
+    // Catholic sim pill switchers
+    container.querySelectorAll('.catholic-sim-pill').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.getAttribute('data-preset') || 'church-tour';
+        activeCatholicSim = preset;
+        if (preset === 'altar-anatomy') {
+          currentTab = 'altar-anatomy';
+        } else {
+          currentTab = 'church-tour';
+        }
         updateView();
       });
     });
