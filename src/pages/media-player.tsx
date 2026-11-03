@@ -1,6 +1,22 @@
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
 import { toggleBsl, getBslEnabled, subscribeBsl, broadcastBslSpeech } from '../services/bslGlobalStore';
 
+const DEFAULT_PRESET_ID = 'kinetic-gas';
+const VALID_PRESET_IDS = new Set(PRESET_OPTIONS.map((p) => p.id));
+
+function normalizePresetId(raw: string | null | undefined): string {
+  if (!raw) return DEFAULT_PRESET_ID;
+  return VALID_PRESET_IDS.has(raw) ? raw : DEFAULT_PRESET_ID;
+}
+
+function buildPlayerSrc(base: string, presetId: string, bslActive: boolean): string {
+  const params = new URLSearchParams({
+    preset: presetId,
+    bsl: bslActive ? '1' : '0',
+  });
+  return `${base}player.html?${params.toString()}`;
+}
+
 export function renderPlayerPage(): HTMLElement {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
   const container = document.createElement('div');
@@ -9,7 +25,7 @@ export function renderPlayerPage(): HTMLElement {
 
   // Read initial preset from URL
   const params = new URLSearchParams(window.location.search);
-  let activePreset = params.get('preset') || 'kinetic-gas';
+  let activePreset = normalizePresetId(params.get('preset'));
   let activeCategory = 'All';
   let searchQuery = '';
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
@@ -193,22 +209,23 @@ export function renderPlayerPage(): HTMLElement {
   const catButtons = container.querySelectorAll<HTMLButtonElement>('.cat-pill-btn');
 
   function updatePreset(presetId: string) {
-    activePreset = presetId;
-    const item = getPresetMeta(presetId);
+    const safePresetId = normalizePresetId(presetId);
+    activePreset = safePresetId;
+    const item = getPresetMeta(safePresetId);
     if (titleEl) titleEl.textContent = item.label;
     if (stageBadgeEl) stageBadgeEl.textContent = item.stage;
     if (typeBadgeEl) typeBadgeEl.textContent = item.type || 'Sim';
-    if (select) select.value = presetId;
+    if (select) select.value = safePresetId;
 
     if (iframe) {
-      iframe.src = `${base}player.html?preset=${presetId}&bsl=${bslActive ? '1' : '0'}`;
+      iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
     }
 
     // Broadcast lesson change to BSL interpreter
     broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
 
     const nextUrl = new URL(window.location.href);
-    nextUrl.searchParams.set('preset', presetId);
+    nextUrl.searchParams.set('preset', safePresetId);
     window.history.replaceState({}, '', nextUrl.toString());
 
     renderGrid();
@@ -266,7 +283,7 @@ export function renderPlayerPage(): HTMLElement {
   // Reset button
   resetBtn?.addEventListener('click', () => {
     if (iframe) {
-      iframe.src = `${base}player.html?preset=${activePreset}&bsl=${bslActive ? '1' : '0'}`;
+      iframe.src = buildPlayerSrc(base, activePreset, bslActive);
     }
   });
 
@@ -279,7 +296,7 @@ export function renderPlayerPage(): HTMLElement {
     bslBtn.style.borderColor = bslActive ? '#38bdf8' : '#475569';
     bslBtn.style.color = bslActive ? '#38bdf8' : '#94a3b8';
     if (iframe) {
-      iframe.src = `${base}player.html?preset=${activePreset}&bsl=${bslActive ? '1' : '0'}`;
+      iframe.src = buildPlayerSrc(base, activePreset, bslActive);
     }
   });
 
