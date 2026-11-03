@@ -807,12 +807,12 @@ export class NativeBslInterpreterElement extends HTMLElement {
       domWrist.setAttribute('cy', String(projDomWrist.y));
     }
 
-    const domPalmPoly = this.querySelector<SVGPolygonElement>('#bsl-dom-palm-poly');
+    const domPalmPoly = this.querySelector<SVGEllipseElement>('#bsl-dom-palm-poly');
     if (domPalmPoly) {
-      domPalmPoly.setAttribute(
-        'points',
-        `${projDomWrist.x},${projDomWrist.y} ${projDomThumbBase.x},${projDomThumbBase.y} ${projDomKnuckle.x},${projDomKnuckle.y} ${projDomMidK.x},${projDomMidK.y} ${projDomPalm.x},${projDomPalm.y}`
-      );
+      domPalmPoly.setAttribute('cx', String(projDomPalm.x));
+      domPalmPoly.setAttribute('cy', String(projDomPalm.y));
+      domPalmPoly.setAttribute('rx', '12');
+      domPalmPoly.setAttribute('ry', '14');
     }
 
     const domEminence = this.querySelector<SVGCircleElement>('#bsl-dom-eminence');
@@ -870,15 +870,12 @@ export class NativeBslInterpreterElement extends HTMLElement {
       baseWristEl.setAttribute('opacity', baseMode === 'rest' ? '0.35' : '1');
     }
 
-    const basePalmPoly = this.querySelector<SVGPolygonElement>('#bsl-base-palm-poly');
+    const basePalmPoly = this.querySelector<SVGEllipseElement>('#bsl-base-palm-poly');
     if (basePalmPoly) {
-      const tip0 = projBaseFingertips[0] || projBasePalm;
-      const tip1 = projBaseFingertips[1] || projBasePalm;
-      const tip4 = projBaseFingertips[4] || projBasePalm;
-      basePalmPoly.setAttribute(
-        'points',
-        `${projBaseWrist.x},${projBaseWrist.y} ${tip0.x},${tip0.y} ${tip1.x},${tip1.y} ${tip4.x},${tip4.y} ${projBasePalm.x},${projBasePalm.y}`
-      );
+      basePalmPoly.setAttribute('cx', String(projBasePalm.x));
+      basePalmPoly.setAttribute('cy', String(projBasePalm.y));
+      basePalmPoly.setAttribute('rx', '12');
+      basePalmPoly.setAttribute('ry', '14');
       basePalmPoly.setAttribute('opacity', baseMode === 'rest' ? '0.35' : '1');
     }
 
