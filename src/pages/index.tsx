@@ -344,25 +344,29 @@ export function renderHomePage(): HTMLElement {
   `;
 
   // Attach interactive preset switcher to dropdown & pills without React
-  const iframe = container.querySelector<HTMLIFrameElement>('#landing-stage-viewport');
-  const select = container.querySelector<HTMLSelectElement>('#landing-sim-selector');
-  const pills = container.querySelectorAll<HTMLButtonElement>('.sim-pill-btn');
+const iframe = container.querySelector<HTMLIFrameElement>('#landing-stage-viewport');
+const select = container.querySelector<HTMLSelectElement>('#landing-sim-selector');
+const pills = container.querySelectorAll<HTMLButtonElement>('.sim-pill-btn');
 
-  function updatePreset(presetId: string) {
-    if (iframe) {
-      iframe.src = `${base}player.html?preset=${presetId}`;
-    }
-    if (select) {
-      select.value = presetId;
-    }
-    pills.forEach((p) => {
-      const active = p.dataset.preset === presetId;
-      p.style.background = active ? '#0284c7' : '#1e293b';
-      p.style.color = active ? '#ffffff' : '#94a3b8';
-      p.style.borderColor = active ? '#38bdf8' : '#334155';
-    });
+// Guarantee accessible name for screen readers & AI agent accessibility tree
+if (select && !select.getAttribute('aria-label')) {
+  select.setAttribute('aria-label', 'Select Curriculum Simulation');
+}
+
+function updatePreset(presetId: string) {
+  if (iframe) {
+    iframe.src = `${base}player.html?preset=${presetId}`;
   }
-
+  if (select) {
+    select.value = presetId;
+  }
+  pills.forEach((p) => {
+    const active = p.dataset.preset === presetId;
+    p.style.background = active ? '#0284c7' : '#1e293b';
+    p.style.color = active ? '#ffffff' : '#94a3b8';
+    p.style.borderColor = active ? '#38bdf8' : '#334155';
+  });
+}
   select?.addEventListener('change', (e) => {
     updatePreset((e.target as HTMLSelectElement).value);
   });
