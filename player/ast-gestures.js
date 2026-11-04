@@ -35,11 +35,14 @@
 
       // Pen Annotation Whiteboard State
       this.isPenActive = false;
+      this.currentTool = 'pen'; // 'pen', 'marker', 'highlighter', 'eraser'
       this.currentInkColor = '#facc15'; // Neon Gold default
       this.currentInkWidth = 3.5;
       this.isDrawing = false;
       this.currentStroke = null;
       this.strokes = [];
+      this._undoStack = [];
+      this.stylusOnlyMode = false;
 
       // X-Ray Pedagogical Tooltip Mode
       this.isXRayActive = false;
@@ -139,11 +142,12 @@
           this.clearWhiteboardInk();
         } else if (ev.data.type === 'UNDO_WHITEBOARD_INK') {
           this.undoLastStroke();
+        } else if (ev.data.type === 'REDO_WHITEBOARD_INK') {
+          this.redoLastStroke();
         } else if (ev.data.type === 'EXPORT_WHITEBOARD_INK') {
           this.broadcastInkSession();
         } else if (ev.data.type === 'TOGGLE_PEN') {
-          this.isPenActive = Boolean(ev.data.enabled);
-          if (this.stageSvg) this.stageSvg.style.cursor = this.isPenActive ? 'crosshair' : 'default';
+          this.togglePen(typeof ev.data.enabled === 'boolean' ? ev.data.enabled : undefined);
         }
       });
     }
@@ -495,12 +499,21 @@
 
       const svgPt = this.screenToSvg(e.clientX, e.clientY);
 
-      // A. If Whiteboard Pen Mode is active, draw ink stroke
+      // A. If Whiteboard Pen Mode is active, draw ink stroke or erase
       if (this.isPenActive) {
-        e.preventDefault();
-        this.isDrawing = true;
-        this.startInkStroke(svgPt);
-        return;
+        if (this.currentTool === 'eraser') {
+          e.preventDefault();
+          this.eraseStrokeAt(svgPt);
+          return;
+        }
+        if (this.stylusOnlyMode && e.pointerType !== 'pen') {
+          // Touch in stylus-only mode falls through to direct apparatus drag
+        } else {
+          e.preventDefault();
+          this.isDrawing = true;
+          this.startInkStroke(svgPt);
+          return;
+        }
       }
 
       // B. Check for interactive direct-grab targets or action buttons
@@ -785,6 +798,17 @@
           const subEv = eventsToProcess[i];
           const svgPt = this.screenToSvg(subEv.clientX, subEv.clientY);
           this.continueInkStroke(svgPt);
+        }
+        return;
+      }
+
+      // Whiteboard Eraser continuous scrubbing while dragging
+      if (this.isPenActive && this.currentTool === 'eraser' && (e.buttons > 0 || (e.pressure && e.pressure > 0))) {
+        e.preventDefault();
+        for (let i = 0; i < eventsToProcess.length; i++) {
+          const subEv = eventsToProcess[i];
+          const svgPt = this.screenToSvg(subEv.clientX, subEv.clientY);
+          this.eraseStrokeAt(svgPt);
         }
         return;
       }
@@ -2071,14 +2095,29 @@
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', this.currentInkColor);
       path.setAttribute('stroke-width', this.currentInkWidth.toString());
-      path.setAttribute('stroke-linecap', 'round');
-      path.setAttribute('stroke-linejoin', 'round');
+
+      if (this.currentTool === 'highlighter') {
+        path.setAttribute('stroke-opacity', '0.45');
+        path.setAttribute('stroke-linecap', 'square');
+        path.setAttribute('stroke-linejoin', 'bevel');
+        path.style.mixBlendMode = 'multiply';
+      } else if (this.currentTool === 'marker') {
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-opacity', '0.92');
+      } else {
+        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linejoin', 'round');
+        path.setAttribute('stroke-opacity', '1.0');
+      }
+
       path.setAttribute('d', `M ${x} ${y} `);
 
       this.inkRoot.appendChild(path);
       const strokeObj = {
         id: `stroke_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
         element: path,
+        tool: this.currentTool || 'pen',
         color: this.currentInkColor,
         width: this.currentInkWidth,
         d: `M ${x} ${y} `,
@@ -2088,6 +2127,7 @@
       };
       this.currentStroke = strokeObj;
       this.strokes.push(strokeObj);
+      this._undoStack = []; // New stroke clears redo stack
     }
 
     continueInkStroke(pt) {
@@ -2110,6 +2150,44 @@
       this.persistInkToSession();
     }
 
+    eraseStrokeAt(pt) {
+      if (!this.inkRoot || this.strokes.length === 0) return;
+      const eraseRadius = Math.max(16, this.currentInkWidth * 2.5);
+      const eraseRadiusSq = eraseRadius * eraseRadius;
+
+      let erasedAny = false;
+      for (let i = this.strokes.length - 1; i >= 0; i--) {
+        const s = this.strokes[i];
+        if (!s || !s.points) continue;
+
+        let hit = false;
+        for (let j = 0; j < s.points.length; j++) {
+          const p = s.points[j];
+          const dx = p.x - pt.x;
+          const dy = p.y - pt.y;
+          if (dx * dx + dy * dy <= eraseRadiusSq) {
+            hit = true;
+            break;
+          }
+        }
+
+        if (hit) {
+          const removed = this.strokes.splice(i, 1)[0];
+          if (removed && removed.element && removed.element.parentNode) {
+            removed.element.parentNode.removeChild(removed.element);
+          }
+          if (!this._undoStack) this._undoStack = [];
+          this._undoStack.push(removed);
+          erasedAny = true;
+        }
+      }
+
+      if (erasedAny) {
+        this.persistInkToSession();
+        this.playAudioTone(220, 'sine', 0.04);
+      }
+    }
+
     undoLastStroke() {
       if (!this.inkRoot || this.strokes.length === 0) return;
       const last = this.strokes.pop();
@@ -2118,13 +2196,32 @@
         if (el && el.parentNode) {
           el.parentNode.removeChild(el);
         }
+        if (!this._undoStack) this._undoStack = [];
+        this._undoStack.push(last);
       }
       this.persistInkToSession();
       this.playAudioTone(330, 'sine', 0.05);
     }
 
+    redoLastStroke() {
+      if (!this.inkRoot || !this._undoStack || this._undoStack.length === 0) return;
+      const restored = this._undoStack.pop();
+      if (restored) {
+        if (restored.element) {
+          this.inkRoot.appendChild(restored.element);
+        }
+        this.strokes.push(restored);
+        this.persistInkToSession();
+        this.playAudioTone(523, 'sine', 0.05);
+      }
+    }
+
     clearWhiteboardInk() {
       if (!this.inkRoot) return;
+      if (this.strokes.length > 0) {
+        if (!this._undoStack) this._undoStack = [];
+        this._undoStack.push(...this.strokes);
+      }
       this.inkRoot.innerHTML = '';
       this.strokes = [];
       this.persistInkToSession();
@@ -2466,6 +2563,36 @@ ${strokeLines.join('\n')}
       }, 2500);
     }
 
+    togglePen(forceState) {
+      this.isPenActive = (forceState !== undefined) ? Boolean(forceState) : !this.isPenActive;
+      const penBtn = document.getElementById('stage-hud-pen-btn');
+      if (penBtn) {
+        penBtn.style.background = this.isPenActive ? '#eab308' : 'rgba(255, 255, 255, 0.08)';
+        penBtn.style.color = this.isPenActive ? '#090d16' : '#ffffff';
+      }
+      const headerPen = document.getElementById('btn-pen');
+      if (headerPen) {
+        headerPen.classList.toggle('active', this.isPenActive);
+      }
+      this.stageSvg.style.cursor = this.isPenActive ? (this.currentTool === 'eraser' ? 'cell' : 'crosshair') : 'default';
+
+      const penTools = document.getElementById('stage-hud-pen-tools');
+      const penPalette = document.getElementById('stage-hud-pen-palette');
+      const penWidths = document.getElementById('stage-hud-pen-widths');
+      const inkExtraActions = document.getElementById('stage-hud-ink-actions');
+      const clearBtn = document.getElementById('stage-hud-clear-btn');
+
+      const displayVal = this.isPenActive ? 'flex' : 'none';
+      if (penTools) penTools.style.display = displayVal;
+      if (penPalette) penPalette.style.display = displayVal;
+      if (penWidths) penWidths.style.display = displayVal;
+      if (inkExtraActions) inkExtraActions.style.display = displayVal;
+      if (clearBtn) clearBtn.style.display = displayVal;
+
+      this.playAudioTone(this.isPenActive ? 660 : 440, 'sine', 0.06);
+      this.showFloatingNotice(this.isPenActive ? '🖊️ Whiteboard Marker Active' : 'Whiteboard Inactive');
+    }
+
     // =========================================================================
     // Stage-Embedded Glass HUD Floating Bar
     // =========================================================================
@@ -2481,49 +2608,123 @@ ${strokeLines.join('\n')}
         right: 14px;
         display: flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(15, 23, 42, 0.88);
-        backdrop-filter: blur(10px);
+        gap: 5px;
+        background: rgba(15, 23, 42, 0.92);
+        backdrop-filter: blur(12px);
         padding: 5px 8px;
         border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
         z-index: 30;
         user-select: none;
       `;
 
-      // 1. Pen Tool Button
-      const penBtn = this.createHudButton('✏️', 'Smartboard Pen Mode (Draw & Annotate)', () => {
-        this.isPenActive = !this.isPenActive;
-        penBtn.style.background = this.isPenActive ? '#eab308' : 'rgba(255, 255, 255, 0.08)';
-        penBtn.style.color = this.isPenActive ? '#090d16' : '#ffffff';
-        this.stageSvg.style.cursor = this.isPenActive ? 'crosshair' : 'default';
-        penPalette.style.display = this.isPenActive ? 'flex' : 'none';
-        inkExtraActions.style.display = this.isPenActive ? 'flex' : 'none';
-        this.playAudioTone(this.isPenActive ? 660 : 440, 'sine', 0.06);
+      // 1. Tool Selection Pills (Pen, Marker, Highlighter, Eraser)
+      const penTools = document.createElement('div');
+      penTools.id = 'stage-hud-pen-tools';
+      penTools.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
+      const tools = [
+        { id: 'pen', icon: '✏️', title: 'Precision Pen (Smooth 2px-4px)', width: 3.5 },
+        { id: 'marker', icon: '🖍️', title: 'Whiteboard Marker (Rich 6px)', width: 6.0 },
+        { id: 'highlighter', icon: '✨', title: 'Pedagogical Highlighter (Soft Glow 12px)', width: 12.0 },
+        { id: 'eraser', icon: '🧽', title: 'Smart Stroke Eraser', width: 24.0 },
+      ];
+      const toolBtns = [];
+      tools.forEach(t => {
+        const btn = this.createHudButton(t.icon, t.title, () => {
+          this.currentTool = t.id;
+          this.currentInkWidth = t.width;
+          this.stageSvg.style.cursor = (t.id === 'eraser') ? 'cell' : 'crosshair';
+          toolBtns.forEach(b => {
+            b.el.style.background = (b.id === t.id) ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+            b.el.style.borderColor = (b.id === t.id) ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)';
+          });
+          this.playAudioTone(t.id === 'eraser' ? 330 : 600, 'sine', 0.04);
+        });
+        if (t.id === this.currentTool) {
+          btn.style.background = 'rgba(56, 189, 248, 0.3)';
+          btn.style.borderColor = '#38bdf8';
+        }
+        toolBtns.push({ id: t.id, el: btn });
+        penTools.appendChild(btn);
       });
 
-      // Pen Palette Mini Bar
+      // 2. Stroke Thickness Pills (Thin 2.5px, Medium 5.5px, Broad 11px)
+      const penWidths = document.createElement('div');
+      penWidths.id = 'stage-hud-pen-widths';
+      penWidths.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
+      const widths = [
+        { label: '•', width: 2.5, title: 'Fine Stroke' },
+        { label: '●', width: 5.5, title: 'Medium Stroke' },
+        { label: '■', width: 11.0, title: 'Broad Stroke' },
+      ];
+      const widthBtns = [];
+      widths.forEach(w => {
+        const btn = this.createHudButton(w.label, w.title, () => {
+          this.currentInkWidth = w.width;
+          widthBtns.forEach(wb => {
+            wb.el.style.borderColor = (wb.w === w.width) ? '#facc15' : 'rgba(255, 255, 255, 0.12)';
+            wb.el.style.color = (wb.w === w.width) ? '#facc15' : '#f8fafc';
+          });
+          this.playAudioTone(700, 'triangle', 0.03);
+        });
+        btn.style.fontSize = w.width > 8 ? '16px' : (w.width > 4 ? '13px' : '10px');
+        widthBtns.push({ w: w.width, el: btn });
+        penWidths.appendChild(btn);
+      });
+
+      // 3. Smartboard 7-Color Palette Pills (Gold, Cyan, Green, Red, Purple, White, Black)
       const penPalette = document.createElement('div');
+      penPalette.id = 'stage-hud-pen-palette';
       penPalette.style.cssText = 'display:none; align-items:center; gap:4px; margin-right:4px;';
-      const colors = ['#facc15', '#38bdf8', '#4ade80', '#f43f5e', '#ffffff'];
+      const colors = [
+        { hex: '#facc15', name: 'Gold' },
+        { hex: '#38bdf8', name: 'Cyan' },
+        { hex: '#4ade80', name: 'Green' },
+        { hex: '#f43f5e', name: 'Red' },
+        { hex: '#c084fc', name: 'Purple' },
+        { hex: '#ffffff', name: 'White' },
+        { hex: '#0f172a', name: 'Charcoal' }
+      ];
       colors.forEach(col => {
         const dot = document.createElement('button');
         dot.type = 'button';
-        dot.style.cssText = `width:18px; height:18px; border-radius:50%; background:${col}; border:1px solid rgba(255,255,255,0.4); cursor:pointer; padding:0;`;
+        dot.title = col.name;
+        dot.style.cssText = `width:18px; height:18px; border-radius:50%; background:${col.hex}; border:1.5px solid rgba(255,255,255,0.45); cursor:pointer; padding:0; transition: transform 0.12s ease;`;
+        dot.onmouseenter = () => dot.style.transform = 'scale(1.25)';
+        dot.onmouseleave = () => dot.style.transform = 'scale(1.0)';
         dot.onclick = () => {
-          this.currentInkColor = col;
+          this.currentInkColor = col.hex;
+          if (this.currentTool === 'eraser') {
+            this.currentTool = 'pen';
+            this.stageSvg.style.cursor = 'crosshair';
+            toolBtns.forEach(b => {
+              b.el.style.background = (b.id === 'pen') ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.08)';
+              b.el.style.borderColor = (b.id === 'pen') ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)';
+            });
+          }
           this.playAudioTone(587, 'sine', 0.03);
         };
         penPalette.appendChild(dot);
       });
 
-      // Extra Ink Actions (Undo, Export AST, Broadcast)
+      // 4. Whiteboard Utility Actions (Undo, Redo, Palm Rejection, Copy AST, Broadcast)
       const inkExtraActions = document.createElement('div');
-      inkExtraActions.style.cssText = 'display:none; align-items:center; gap:4px; margin-right:4px;';
+      inkExtraActions.id = 'stage-hud-ink-actions';
+      inkExtraActions.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:4px;';
 
-      const undoBtn = this.createHudButton('↩️', 'Undo Last Stroke', () => this.undoLastStroke());
-      const exportBtn = this.createHudButton('📋', 'Export Ink to AST (Copy S-Expression)', () => {
+      const undoBtn = this.createHudButton('↩️', 'Undo Last Stroke (Ctrl+Z)', () => this.undoLastStroke());
+      const redoBtn = this.createHudButton('↪️', 'Redo Stroke (Ctrl+Y)', () => this.redoLastStroke());
+
+      const palmBtn = this.createHudButton('🖐️', 'Stylus-Only Palm Rejection (Ignore Touch Gestures While Writing)', () => {
+        this.stylusOnlyMode = !this.stylusOnlyMode;
+        palmBtn.style.background = this.stylusOnlyMode ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
+        palmBtn.style.color = this.stylusOnlyMode ? '#090d16' : '#ffffff';
+        this.showFloatingNotice(this.stylusOnlyMode ? '🖐️ Stylus-Only Active (Finger Touch Ignored)' : '🖐️ Finger & Stylus Drawing Active');
+        this.playAudioTone(this.stylusOnlyMode ? 784 : 440, 'sine', 0.05);
+      });
+
+      const exportBtn = this.createHudButton('📋', 'Export Ink to AST S-Expression', () => {
         const ast = this.exportInkToAST();
         if (navigator.clipboard) {
           navigator.clipboard.writeText(ast);
@@ -2536,13 +2737,23 @@ ${strokeLines.join('\n')}
       });
 
       inkExtraActions.appendChild(undoBtn);
+      inkExtraActions.appendChild(redoBtn);
+      inkExtraActions.appendChild(palmBtn);
       inkExtraActions.appendChild(exportBtn);
       inkExtraActions.appendChild(broadcastBtn);
 
-      // Clear Ink Button
-      const clearBtn = this.createHudButton('🗑️', 'Clear Whiteboard Ink', () => this.clearWhiteboardInk());
+      // 5. Clear Ink Button
+      const clearBtn = this.createHudButton('🗑️', 'Clear All Whiteboard Ink', () => this.clearWhiteboardInk());
+      clearBtn.id = 'stage-hud-clear-btn';
+      clearBtn.style.display = 'none';
 
-      // 2. X-Ray Discovery Button
+      // 6. Pen Toggle Primary Pill
+      const penBtn = this.createHudButton('🖊️', 'Whiteboard Ink Mode (Draw, Annotate & Highlight) • [W]', () => {
+        this.togglePen();
+      });
+      penBtn.id = 'stage-hud-pen-btn';
+
+      // 7. X-Ray Discovery Button
       const xrayBtn = this.createHudButton('🔬', 'Pedagogical X-Ray Inspection', () => {
         this.isXRayActive = !this.isXRayActive;
         xrayBtn.style.background = this.isXRayActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
@@ -2550,7 +2761,7 @@ ${strokeLines.join('\n')}
         this.playAudioTone(this.isXRayActive ? 784 : 392, 'sine', 0.08);
       });
 
-      // 3. Audio Sonification Button
+      // 8. Audio Sonification Button
       const soundBtn = this.createHudButton('🔊', 'Multi-sensory Procedural Audio', () => {
         this.sonificationEnabled = !this.sonificationEnabled;
         soundBtn.textContent = this.sonificationEnabled ? '🔊' : '🔇';
@@ -2558,10 +2769,12 @@ ${strokeLines.join('\n')}
         if (this.sonificationEnabled) this.playAudioTone(523, 'sine', 0.05);
       });
 
+      hud.appendChild(penTools);
+      hud.appendChild(penWidths);
       hud.appendChild(penPalette);
       hud.appendChild(inkExtraActions);
-      hud.appendChild(penBtn);
       hud.appendChild(clearBtn);
+      hud.appendChild(penBtn);
       hud.appendChild(xrayBtn);
       hud.appendChild(soundBtn);
       container.appendChild(hud);
