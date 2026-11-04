@@ -1187,7 +1187,7 @@
     }
 
     updateView() {
-      const scene = this.engine.scene;
+      const scene = this.engine?.scene;
       if (this.elements.badgeStage) {
         this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
       }
