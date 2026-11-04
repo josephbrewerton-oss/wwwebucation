@@ -1,14 +1,14 @@
-import{t as e}from"./generatedScenes-YJ8cIO2Y.js";function t(){let t=`/wwwebucation/`.replace(/\/?$/,`/`),n=document.createElement(`div`);n.className=`home-landing-stage`,n.style.cssText=`padding: 3rem 1.5rem; max-width: 1140px; margin: 0 auto;`;let r=(Array.isArray(e)&&e.length>0?e:[{id:`kinetic-gas`,label:`Kinetic Gas Theory & Thermodynamics`},{id:`pythagoras`,label:`Pythagoras' Theorem (a² + b² = c²)`},{id:`fractions`,label:`Fractions: Why Common Denominators Rule`},{id:`electric-circuits`,label:`Electrical Circuits & Ohm’s Law`},{id:`solar-system`,label:`Solar System: Heliocentric Planetary Motion`},{id:`algebra-balance`,label:`Algebraic Balance Scale`}]).map(e=>`
-    <option value="${e.id}">${e.label}</option>
-  `).join(``),i=[{label:`💨 Kinetic Gas`,id:`kinetic-gas`},{label:`🏛️ Church Tour`,id:`church-tour`},{label:`🕯️ High Altar`,id:`altar-anatomy`},{label:`📐 Pythagoras`,id:`pythagoras`},{label:`🍰 Fractions`,id:`fractions`},{label:`💡 Circuits`,id:`electric-circuits`},{label:`🪐 Solar System`,id:`solar-system`},{label:`⚖️ Algebra Balance`,id:`algebra-balance`},{label:`💻 BBC Micro`,id:`bbc-model-b`},{label:`🤟 BSL Signs`,id:`bsl-fingerspelling`}].map((e,t)=>`
+import{t as e}from"./generatedScenes-YJ8cIO2Y.js";function t(){let t=`/wwwebucation/`.replace(/\/?$/,`/`),n=document.createElement(`div`);n.className=`home-landing-stage`,n.style.cssText=`padding: 3rem 1.5rem; max-width: 1140px; margin: 0 auto;`;let r=Array.isArray(e)&&e.length>0?e:[{id:`welcome`,label:`Welcome to AST Vector Player & Educational Simulator`},{id:`kinetic-gas`,label:`Kinetic Gas Theory & Thermodynamics`},{id:`pythagoras`,label:`Pythagoras' Theorem (a² + b² = c²)`},{id:`fractions`,label:`Fractions: Why Common Denominators Rule`},{id:`electric-circuits`,label:`Electrical Circuits & Ohm’s Law`},{id:`solar-system`,label:`Solar System: Heliocentric Planetary Motion`},{id:`algebra-balance`,label:`Algebraic Balance Scale`}],i=r[0]?.id||`welcome`,a=r.map(e=>`
+    <option value="${e.id}" ${e.id===i?`selected`:``}>${e.label}</option>
+  `).join(``),o=[{label:`👋 Introduction`,id:`welcome`},{label:`💨 Kinetic Gas`,id:`kinetic-gas`},{label:`🏛️ Church Tour`,id:`church-tour`},{label:`🕯️ High Altar`,id:`altar-anatomy`},{label:`📐 Pythagoras`,id:`pythagoras`},{label:`🍰 Fractions`,id:`fractions`},{label:`💡 Circuits`,id:`electric-circuits`},{label:`🪐 Solar System`,id:`solar-system`},{label:`⚖️ Algebra Balance`,id:`algebra-balance`},{label:`💻 BBC Micro`,id:`bbc-model-b`},{label:`🤟 BSL Signs`,id:`bsl-fingerspelling`}].map(e=>{let t=e.id===i;return`
     <button 
       type="button" 
       class="sim-pill-btn" 
       data-preset="${e.id}" 
-      style="background: ${t===0?`#0284c7`:`#1e293b`}; color: ${t===0?`#ffffff`:`#94a3b8`}; border: 1px solid ${t===0?`#38bdf8`:`#334155`}; border-radius: 9999px; padding: 3px 10px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
+      style="background: ${t?`#0284c7`:`#1e293b`}; color: ${t?`#ffffff`:`#94a3b8`}; border: 1px solid ${t?`#38bdf8`:`#334155`}; border-radius: 9999px; padding: 3px 10px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
       ${e.label}
     </button>
-  `).join(``);n.innerHTML=`
+  `}).join(``);n.innerHTML=`
     <!-- Welcome Hero -->
     <section style="text-align: center; margin-bottom: 3.5rem;">
       <div class="stj-meta-strip" style="margin-bottom: 1.25rem; justify-content: center; display: flex; gap: 8px; font-size: 0.85rem; align-items: center;">
@@ -191,20 +191,20 @@ import{t as e}from"./generatedScenes-YJ8cIO2Y.js";function t(){let t=`/wwwebucat
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <select id="landing-sim-selector" style="padding: 8px 14px; border-radius: 8px; background: #1e293b; color: #ffffff; border: 1.5px solid #0284c7; font-weight: 700; font-size: 0.86rem; cursor: pointer;">
               aria-label="Choose a Simulation to Run Live on Stage"
-              ${r}
+              ${a}
             </select>
             <a href="${t}media-player" style="padding: 7px 12px; font-size: 0.78rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Fullscreen Studio</a>
           </div>
         </div>
 
         <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
-          ${i}
+          ${o}
         </div>
 
         <div style="border-radius: 12px; overflow: hidden; min-height: 480px; background: #090d16;">
           <iframe 
             id="landing-stage-viewport"
-            src="${t}player.html?preset=kinetic-gas" 
+            src="${t}player.html?preset=${i}" 
             style="width: 100%; height: 480px; border: none; display: block;" 
             title="Featured Interactive Simulation">
           </iframe>
@@ -305,4 +305,4 @@ import{t as e}from"./generatedScenes-YJ8cIO2Y.js";function t(){let t=`/wwwebucat
       St Joseph's Learning Portal &bull; Open-source, privacy-first educational technology.
       Curriculum materials licensed under <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 600;">OGL v3.0 (Oak National Academy)</a>.
     </div>
-  `;let a=n.querySelector(`#landing-stage-viewport`),o=n.querySelector(`#landing-sim-selector`),s=n.querySelectorAll(`.sim-pill-btn`);o&&!o.getAttribute(`aria-label`)&&o.setAttribute(`aria-label`,`Select Curriculum Simulation`);function c(e){a&&(a.src=`${t}player.html?preset=${e}`),o&&(o.value=e),s.forEach(t=>{let n=t.dataset.preset===e;t.style.background=n?`#0284c7`:`#1e293b`,t.style.color=n?`#ffffff`:`#94a3b8`,t.style.borderColor=n?`#38bdf8`:`#334155`})}return o?.addEventListener(`change`,e=>{c(e.target.value)}),s.forEach(e=>{e.addEventListener(`click`,()=>{e.dataset.preset&&c(e.dataset.preset)})}),n}export{t as default,t as renderHomePage};
+  `;let s=n.querySelector(`#landing-stage-viewport`),c=n.querySelector(`#landing-sim-selector`),l=n.querySelectorAll(`.sim-pill-btn`);c&&!c.getAttribute(`aria-label`)&&c.setAttribute(`aria-label`,`Select Curriculum Simulation`);function u(e){s&&(s.src=`${t}player.html?preset=${e}`),c&&(c.value=e),l.forEach(t=>{let n=t.dataset.preset===e;t.style.background=n?`#0284c7`:`#1e293b`,t.style.color=n?`#ffffff`:`#94a3b8`,t.style.borderColor=n?`#38bdf8`:`#334155`})}return c?.addEventListener(`change`,e=>{u(e.target.value)}),l.forEach(e=>{e.addEventListener(`click`,()=>{e.dataset.preset&&u(e.dataset.preset)})}),n}export{t as default,t as renderHomePage};
