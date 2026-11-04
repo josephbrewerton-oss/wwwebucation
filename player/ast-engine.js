@@ -3633,6 +3633,7 @@
       if (!this.voiceEnabled) {
         this.cancelSpeech();
       }
+      this.notifyParent({ type: 'VOICE_TOGGLE', enabled: this.voiceEnabled });
       return this.voiceEnabled;
     }
 
@@ -8104,6 +8105,18 @@ function setupPostMessageBridge(engine, uiController) {
       case 'SET_THEME':
         if (data.theme && uiController && uiController.setTheme) {
           uiController.setTheme(data.theme);
+        }
+        break;
+      case 'SET_VOICE':
+        if (typeof data.enabled === 'boolean') {
+          engine.voiceEnabled = data.enabled;
+          if (!engine.voiceEnabled) {
+            engine.cancelSpeech();
+          }
+          if (uiController && uiController.elements && uiController.elements.btnNarrate) {
+            uiController.elements.btnNarrate.classList.toggle('active', engine.voiceEnabled);
+            uiController.elements.btnNarrate.textContent = engine.voiceEnabled ? '🔊 Voice: ON' : '🔊 Voice';
+          }
         }
         break;
       case 'ROTATE_3D':
