@@ -1,4 +1,4 @@
-import{a as e,d as t,h as n,i as r,n as i,r as a}from"./index-BMoEbClf.js";function o(){let o=`/wwwebucation/`.replace(/\/?$/,`/`),s=document.createElement(`div`);s.className=`settings-page-stage`,s.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let c=i(),l=localStorage.getItem(`theme`)||`light`,u=localStorage.getItem(`app_font_size`)||`normal`,d=localStorage.getItem(`app_high_contrast`)===`true`,f=r(),p=t();function m(){s.innerHTML=`
+import{a as e,d as t,h as n,i as r,n as i,r as a}from"./index-yLajHfBw.js";function o(){let o=`/wwwebucation/`.replace(/\/?$/,`/`),s=document.createElement(`div`);s.className=`settings-page-stage`,s.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let c=i(),l=localStorage.getItem(`theme`)||`light`,u=localStorage.getItem(`app_font_size`)||`normal`,d=localStorage.getItem(`app_high_contrast`)===`true`,f=r(),p=t();function m(){s.innerHTML=`
       <!-- Header -->
       <div style="margin-bottom: 2rem;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">

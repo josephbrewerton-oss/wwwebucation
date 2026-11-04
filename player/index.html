@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>St Joseph's AST Vector Media Player</title>
+  <link rel="stylesheet" href="./player.css">
+</head>
+<body data-theme="dark">
+
+  <!-- Top Header Bar -->
+  <header>
+    <div class="header-left">
+      <span class="badge" id="badge-stage">CURRICULUM</span>
+      <select id="preset-selector" title="Select Curriculum Vector Preset">
+        <!-- Injected dynamically from ASTSceneRegistry -->
+      </select>
+      <button type="button" id="btn-open-file" title="Open local simulation (.ast, .svg, .json) or dual pair">📂 <span class="btn-label">Open...</span></button>
+      <input type="file" id="file-input-hidden" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
+    </div>
+
+    <div class="header-actions">
+      <button type="button" id="btn-pen" title="Toggle Smartboard Whiteboard Pen & Marker (W)">🖊️ <span class="btn-label">Marker</span></button>
+      <button type="button" id="btn-step-mode" title="Toggle Clicker / Step-by-Step Lesson Mode (S / Clicker PageDown)">👣 <span class="btn-label">Step Mode</span></button>
+      <button type="button" id="btn-interactive" title="Toggle Interactive Questions & Hotspots">🎯 <span class="btn-label">Interactive</span></button>
+      <button type="button" id="btn-dev-mode" title="Toggle Point-and-Click SVG Element Inspector">🛠️ <span class="btn-label">Inspect</span></button>
+      <button type="button" id="btn-dev-studio" title="Open Live SVG & AST Code Studio">💻 <span class="btn-label">Studio</span></button>
+      <button type="button" id="btn-print" title="Generate A4 Classroom Worksheet">🖨️ <span class="btn-label">Print</span></button>
+      <button type="button" id="btn-copy-svg" title="Copy Raw Vector SVG to Clipboard">📋 <span class="btn-label">Copy SVG</span></button>
+      <button type="button" id="btn-theme" title="Toggle Dark/Light Mode">☀️</button>
+      <button type="button" id="btn-download-zip" class="zip-download-btn" title="Download Offline Simulator Suite ZIP">📦 ZIP</button>
+      <button type="button" id="btn-fullscreen" title="Toggle Fullscreen">⛶</button>
+    </div>
+  </header>
+
+  <!-- Main Vector Canvas Stage -->
+  <main id="player-stage">
+    <svg id="stage-svg" viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <!-- Gradients & Glow Filters -->
+        <linearGradient id="grad-sun" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="#fef08a" />
+          <stop offset="100%" stop-color="#f59e0b" />
+        </linearGradient>
+        <linearGradient id="grad-leaf" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="#15803d" />
+          <stop offset="100%" stop-color="#166534" />
+        </linearGradient>
+        <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+      </defs>
+      <!-- Dynamic Vector Layer is generated here -->
+      <g id="scene-root"></g>
+      <!-- Interactive SVG Developer Overlay Layer -->
+      <g id="dev-overlay-root">
+        <rect id="dev-hover-box" class="dev-overlay-box hover hidden" x="0" y="0" width="0" height="0" />
+        <rect id="dev-select-box" class="dev-overlay-box select hidden" x="0" y="0" width="0" height="0" />
+      </g>
+    </svg>
+
+    <!-- Floating Element Inspector Tooltip -->
+    <div id="dev-hover-tooltip" class="dev-hover-tooltip hidden"></div>
+
+    <!-- Interactive Element Inspector Drawer -->
+    <div id="dev-inspector-drawer" class="dev-inspector-drawer hidden">
+      <div class="dev-drawer-header">
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:14px;">🛠️</span>
+          <span id="dev-inspected-tag" class="dev-tag-badge">&lt;element&gt;</span>
+        </div>
+        <button type="button" id="dev-inspector-close" class="dev-drawer-close" title="Close Inspector">&times;</button>
+      </div>
+
+      <div style="font-size:11px; color:#94a3b8; display:flex; justify-content:space-between; align-items:center;">
+        <span>Selector:</span>
+        <code id="dev-inspected-sel" style="color:#38bdf8; font-weight:700; user-select:text;">#id</code>
+      </div>
+
+      <div class="dev-prop-grid">
+        <span class="dev-prop-label">BBox (X, Y)</span>
+        <input type="text" id="dev-prop-xy" class="dev-prop-input" readonly />
+
+        <span class="dev-prop-label">BBox (W, H)</span>
+        <input type="text" id="dev-prop-wh" class="dev-prop-input" readonly />
+
+        <span class="dev-prop-label">Fill</span>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="color" id="dev-color-fill" style="width:24px; height:24px; padding:0; border:none; border-radius:4px; cursor:pointer; background:none;" />
+          <input type="text" id="dev-prop-fill" class="dev-prop-input" />
+        </div>
+
+        <span class="dev-prop-label">Stroke</span>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="color" id="dev-color-stroke" style="width:24px; height:24px; padding:0; border:none; border-radius:4px; cursor:pointer; background:none;" />
+          <input type="text" id="dev-prop-stroke" class="dev-prop-input" />
+        </div>
+
+        <span class="dev-prop-label">Stroke W</span>
+        <input type="number" id="dev-prop-strokew" class="dev-prop-input" min="0" max="20" step="0.5" />
+
+        <span class="dev-prop-label">Opacity</span>
+        <input type="range" id="dev-prop-opacity" class="dev-prop-range" min="0" max="1" step="0.05" />
+
+        <span class="dev-prop-label">Transform</span>
+        <input type="text" id="dev-prop-transform" class="dev-prop-input" />
+      </div>
+
+      <div class="dev-drawer-actions">
+        <button type="button" id="dev-btn-export-ast" class="dev-btn">📋 Copy S-Expr</button>
+        <button type="button" id="dev-btn-delete" class="dev-btn danger">🗑️ Delete Node</button>
+      </div>
+    </div>
+
+    <!-- Live SVG / AST Developer Studio Panel -->
+    <div id="dev-studio-panel" class="dev-studio-panel hidden">
+      <div class="dev-studio-header">
+        <div class="dev-studio-tabs">
+          <button type="button" class="dev-studio-tab active" data-tab="slidescript">📝 SlideScript</button>
+          <button type="button" class="dev-studio-tab" data-tab="quizbuilder">🎯 Checkpoints</button>
+          <button type="button" class="dev-studio-tab" data-tab="svg">Interactive SVG</button>
+          <button type="button" class="dev-studio-tab" data-tab="ast">AST S-Expressions</button>
+          <button type="button" class="dev-studio-tab" data-tab="templates">Curriculum Templates</button>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" id="dev-btn-apply" class="dev-btn primary">⚡ Hot Reload</button>
+          <button type="button" id="dev-studio-close" class="dev-drawer-close">&times;</button>
+        </div>
+      </div>
+
+      <div class="dev-studio-body">
+        <!-- Natural Curriculum SlideScript Tab -->
+        <div id="dev-slidescript-tab" class="dev-tab-pane" style="display:flex; flex-direction:column; width:100%; height:100%; box-sizing:border-box;">
+          <div class="compiler-toolbar">
+            <span style="font-weight:700; font-size:12px; color:#38bdf8;">Natural Text Curriculum SlideScript:</span>
+            <button type="button" class="compiler-tpl-btn" data-tpl="photosynthesis">🌿 Photosynthesis</button>
+            <button type="button" class="compiler-tpl-btn" data-tpl="boyle-law">🔬 Boyle's Gas Law</button>
+            <button type="button" class="compiler-tpl-btn" data-tpl="force-vectors">🏎️ Force Vectors</button>
+            <button type="button" class="compiler-tpl-btn" data-tpl="osmosis">💧 Osmosis</button>
+            <span class="compiler-syntax-pill">Syntax: # Title | ## Step (time) | Rule: | Subtitles: | ## Checkpoint: | - Option [correct]</span>
+          </div>
+          <textarea id="dev-editor-slidescript" class="dev-editor-textarea" spellcheck="false" placeholder="# Title of your slide&#10;Stage: KS3 SCIENCE&#10;Duration: 10s&#10;&#10;## Step 1: Initial Principle (0s)&#10;Rule: High volume means lower collision frequency.&#10;Subtitles: Watch particles move within the open space.&#10;&#10;## Step 2: Mechanical Compression (4s)&#10;Rule: Halving the volume doubles the pressure!&#10;Subtitles: Notice the collision rate multiply.&#10;&#10;## Checkpoint: Conceptual Mastery (7s)&#10;Question: If container volume is reduced by half, what happens to pressure?&#10;- It halves&#10;- It doubles [correct]&#10;- It stays constant&#10;Explain: Boyle's Law states pressure is inversely proportional to volume."></textarea>
+        </div>
+
+        <!-- Visual Checkpoint Builder Tab -->
+        <div id="dev-quizbuilder-tab" class="dev-tab-pane" style="display:none; width:100%; height:100%; overflow-y:auto; padding:12px; box-sizing:border-box;">
+          <div class="quizbuilder-container">
+            <div class="quizbuilder-card">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <span style="font-weight:700; font-size:13px; color:#38bdf8;">🎯 Create Active Teaching Checkpoint Challenge</span>
+                <span style="font-size:11px; color:#94a3b8;">Pauses lesson and checks understanding</span>
+              </div>
+
+              <div class="quizbuilder-grid">
+                <div class="quizbuilder-row">
+                  <label class="quiz-label">Timestamp (t: 0.0 to 1.0):</label>
+                  <div style="display:flex; gap:6px; align-items:center;">
+                    <input type="number" id="qb-time" class="quiz-input" min="0" max="1" step="0.05" value="0.5" style="width:90px;" />
+                    <button type="button" id="qb-btn-capture-time" class="dev-btn" style="font-size:10px; padding:4px 8px;">📍 Capture Playhead</button>
+                    <span id="qb-time-seconds" style="font-size:11px; color:#94a3b8;">(= 5.0s)</span>
+                  </div>
+                </div>
+
+                <div class="quizbuilder-row">
+                  <label class="quiz-label">Station / Checkpoint Title:</label>
+                  <input type="text" id="qb-title" class="quiz-input" placeholder="e.g. Concept Mastery Check" value="Concept Mastery Check" />
+                </div>
+
+                <div class="quizbuilder-row">
+                  <label class="quiz-label">Question / Prompt:</label>
+                  <textarea id="qb-prompt" class="quiz-textarea" rows="2" placeholder="e.g. What happens to the vehicle velocity when forward thrust exceeds friction?"></textarea>
+                </div>
+
+                <div class="quizbuilder-row">
+                  <label class="quiz-label">Multiple-Choice Options (Select Radio for Correct):</label>
+                  <div class="quiz-options-list">
+                    <div class="quiz-opt-item">
+                      <input type="radio" name="qb-opt-correct" value="0" checked />
+                      <input type="text" id="qb-opt-0" class="quiz-input" placeholder="Option 1 (e.g. It accelerates forward)" />
+                    </div>
+                    <div class="quiz-opt-item">
+                      <input type="radio" name="qb-opt-correct" value="1" />
+                      <input type="text" id="qb-opt-1" class="quiz-input" placeholder="Option 2 (e.g. It decelerates and stops)" />
+                    </div>
+                    <div class="quiz-opt-item">
+                      <input type="radio" name="qb-opt-correct" value="2" />
+                      <input type="text" id="qb-opt-2" class="quiz-input" placeholder="Option 3 (e.g. It remains stationary)" />
+                    </div>
+                    <div class="quiz-opt-item">
+                      <input type="radio" name="qb-opt-correct" value="3" />
+                      <input type="text" id="qb-opt-3" class="quiz-input" placeholder="Option 4 (optional)" />
+                    </div>
+                  </div>
+                </div>
+
+                <div class="quizbuilder-row">
+                  <label class="quiz-label">Pedagogical Explanation / Feedback:</label>
+                  <textarea id="qb-explanation" class="quiz-textarea" rows="2" placeholder="e.g. Unbalanced forces create a net resultant force, producing acceleration according to Newton's Second Law (F = m · a)."></textarea>
+                </div>
+              </div>
+
+              <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" id="qb-btn-insert" class="dev-btn primary" style="padding:6px 16px;">➕ Inject Checkpoint into Active Slide</button>
+              </div>
+            </div>
+
+            <!-- Existing Checkpoints in Current Slide -->
+            <div class="quizbuilder-existing">
+              <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">Current Checkpoints in Active Slide</div>
+              <div id="qb-existing-list" style="display:flex; flex-direction:column; gap:6px;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SVG Code Tab -->
+        <textarea id="dev-editor-svg" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Paste or edit raw &lt;svg&gt; XML nodes here..."></textarea>
+
+        <!-- AST Code Tab -->
+        <textarea id="dev-editor-ast" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Write or edit AST S-Expressions here (:scene :id ... (:bindings ...))"></textarea>
+
+        <!-- Templates Tab -->
+        <div id="dev-template-tab" class="dev-template-list" style="display:none;"></div>
+      </div>
+    </div>
+
+    <!-- Synchronized Subtitle Overlay -->
+    <div id="subtitle-overlay">Loading AST Vector Scene...</div>
+
+    <!-- Interactive Checkpoint Question / Hotspot Drawer -->
+    <div id="interactive-card" class="interactive-card hidden">
+      <div class="interactive-header">
+        <span id="interactive-badge" class="interactive-badge">CHECKPOINT CHALLENGE</span>
+        <button type="button" id="interactive-close" class="interactive-close" title="Close Checkpoint">&times;</button>
+      </div>
+      <div id="interactive-body"></div>
+    </div>
+
+    <!-- Subtle Toast Notification -->
+    <div id="ast-toast" class="ast-toast">Station Selected</div>
+  </main>
+
+  <!-- Bottom Player Chrome -->
+  <footer>
+    <!-- Interactive Timeline Scrubber -->
+    <div class="scrubber-container" id="scrubber-box">
+      <div class="timeline-track" id="timeline-track">
+        <div class="timeline-fill" id="timeline-fill"></div>
+        <div class="timeline-thumb" id="timeline-thumb"></div>
+      </div>
+    </div>
+
+    <!-- Controls Row -->
+    <div class="controls-row">
+      <div class="controls-left">
+        <button type="button" id="btn-play" title="Play / Pause (Spacebar)">▶ Play</button>
+        <button type="button" id="btn-prev" title="Step Back 5% (Left Arrow)">⏮</button>
+        <button type="button" id="btn-next" title="Step Forward 5% (Right Arrow)">⏭</button>
+        <button type="button" id="btn-reset" title="Rewind to Beginning">↺</button>
+        <span class="time-readout" id="time-readout">⚡ 60 FPS Interactive Lab</span>
+      </div>
+
+      <div class="controls-right">
+        <!-- Speed Multipliers -->
+        <select id="speed-selector" title="Playback Speed">
+          <option value="0.25">0.25×</option>
+          <option value="0.5">0.5×</option>
+          <option value="0.75">0.75×</option>
+          <option value="1" selected>1.0×</option>
+          <option value="1.5">1.5×</option>
+          <option value="2">2.0×</option>
+        </select>
+
+        <!-- Narration Speech Toggle -->
+        <button type="button" id="btn-narrate" title="Toggle On-Device Voice Narration">🔊 Voice</button>
+
+        <!-- Language Selector -->
+        <select id="lang-selector" title="Subtitle and Narration Language">
+          <option value="en" selected>🇬🇧 EN</option>
+          <option value="es">🇪🇸 ES</option>
+          <option value="fr">🇫🇷 FR</option>
+          <option value="de">🇩🇪 DE</option>
+          <option value="it">🇮🇹 IT</option>
+          <option value="pl">🇵🇱 PL</option>
+          <option value="pt">🇵🇹 PT</option>
+          <option value="uk">🇺🇦 UK</option>
+          <option value="ar">🇸🇦 AR</option>
+          <option value="la">🇻🇦 LA</option>
+        </select>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modular Scripts -->
+  <script src="./ast-compiler.js"></script>
+  <script src="./ast-phet-bridge.js"></script>
+  <script src="./ast-registry.js"></script>
+  <script src="./ast-engine.js"></script>
+  <script src="./player-ui.js"></script>
+  <script src="./ast-gestures.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      const params = new URLSearchParams(window.location.search);
+      const src = params.get('src') || params.get('file');
+      const preset = params.get('preset') || (src ? null : 'fractions');
+      const lang = params.get('lang') || 'en';
+      const speed = parseFloat(params.get('speed') || '1.0');
+      const autoplay = params.get('autoplay') === '1' || params.get('play') === '1';
+      const theme = params.get('theme') || 'dark';
+
+      const stageSvg = document.getElementById('stage-svg');
+      const stageRoot = document.getElementById('scene-root');
+
+      // 1. Initialize Engine
+      const engine = new window.ASTVectorPlayerEngine({
+        preset: preset,
+        lang: lang,
+        speed: speed,
+        autoplay: autoplay,
+        container: stageRoot,
+        voiceEnabled: true,
+      });
+
+      // 2. Initialize Direct In-Stage Gesture & Manipulation Subsystem
+      let gestures = null;
+      if (window.ASTDirectGestureSubsystem) {
+        gestures = new window.ASTDirectGestureSubsystem(engine);
+        gestures.init(stageSvg, stageRoot);
+        window.__astGestures = gestures;
+      }
+
+      // 3. Initialize UI Controller
+      const ui = new window.ASTPlayerUI(engine);
+      ui.setTheme(theme);
+      window.AST_ENGINE = engine;
+    })();
+  </script>
+</body>
+</html>
