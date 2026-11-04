@@ -1,4 +1,4 @@
-function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement(`div`);return t.className=`child-safety-page-stage`,t.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; color: #1e293b;`,t.innerHTML=`
+import{n as e}from"./index-vWgKSsK7.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`child-safety-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; color: #1e293b;`,n.innerHTML=`
     <!-- Header Banner -->
     <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); border-radius: 18px; padding: 2.5rem 2rem; color: #ffffff; margin-bottom: 2.5rem; box-shadow: 0 10px 25px -5px rgba(4, 120, 87, 0.25);">
       <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.15); padding: 4px 12px; border-radius: 20px; fontSize: 0.85rem; font-weight: 700; margin-bottom: 1rem;">
@@ -33,6 +33,6 @@ function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement
 
     <!-- Back to Home -->
     <div style="text-align: center; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
-      <a href="${e}" style="color: #0284c7; font-weight: 700; text-decoration: none;">&larr; Back to St Joseph's Portal</a>
+      <a href="${t}" style="color: #0284c7; font-weight: 700; text-decoration: none;">&larr; Back to St Joseph's Portal</a>
     </div>
-  `,t}export{e as default,e as renderChildSafetyPage};
+  `,n}export{t as default,t as renderChildSafetyPage};

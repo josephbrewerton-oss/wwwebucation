@@ -1,8 +1,8 @@
-function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement(`div`);return t.className=`student-profile-stage`,t.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,t.innerHTML=`
+import{n as e}from"./index-vWgKSsK7.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`student-profile-stage`,n.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-        <a href="${e}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+        <a href="${t}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
         <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">⭐ Student Progress</span>
       </div>
@@ -58,4 +58,4 @@ function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement
         </div>
       </div>
     </div>
-  `,t}export{e as default,e as renderProfilePage};
+  `,n}export{t as default,t as renderProfilePage};

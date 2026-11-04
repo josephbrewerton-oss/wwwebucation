@@ -1,4 +1,4 @@
-function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement(`div`);return t.className=`news-blog-stage`,t.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,t.innerHTML=`
+import{n as e}from"./index-vWgKSsK7.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`news-blog-stage`,n.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Newsroom Header -->
     <div style="margin-bottom: 2.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #0284c7; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
@@ -47,13 +47,13 @@ function e(){let e=`/wwwebucation/`.replace(/\/?$/,`/`),t=document.createElement
         </div>
 
         <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-          <a href="${e}player" style="padding: 10px 20px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+          <a href="${t}player" style="padding: 10px 20px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
             Launch Interactive Player &rarr;
           </a>
-          <a href="${e}learning-zone" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+          <a href="${t}learning-zone" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
             Explore Lesson Trajectories &rarr;
           </a>
         </div>
       </div>
     </article>
-  `,t}export{e as default,e as renderBlogPage};
+  `,n}export{t as default,t as renderBlogPage};

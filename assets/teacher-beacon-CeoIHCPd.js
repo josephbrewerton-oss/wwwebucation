@@ -1,8 +1,8 @@
-import{g as e}from"./index-yLajHfBw.js";import{t}from"./generatedScenes-YJ8cIO2Y.js";function n(){let n=`/wwwebucation/`.replace(/\/?$/,`/`),r=document.createElement(`div`);r.className=`teacher-beacon-stage`,r.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,r.innerHTML=`
+import{_ as e,n as t}from"./index-vWgKSsK7.js";import{t as n}from"./generatedScenes-YJ8cIO2Y.js";function r(){let r=t(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-        <a href="${n}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+        <a href="${r}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
         <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">📡 Teacher Beacon Console</span>
       </div>
@@ -21,7 +21,7 @@ import{g as e}from"./index-yLajHfBw.js";import{t}from"./generatedScenes-YJ8cIO2Y
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
         <select id="beacon-cartridge-select" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0284c7; font-size:0.9rem; font-weight:700; flex:1; max-width:400px;">
-          ${t.map(e=>`
+          ${n.map(e=>`
             <option value="${e.id}">${e.label} (${e.stage})</option>
           `).join(``)}
         </select>
@@ -34,4 +34,4 @@ import{g as e}from"./index-yLajHfBw.js";import{t}from"./generatedScenes-YJ8cIO2Y
         Command broadcast sent successfully!
       </div>
     </div>
-  `;let i=r.querySelector(`#btn-broadcast-scene`),a=r.querySelector(`#beacon-cartridge-select`),o=r.querySelector(`#beacon-toast`);return i?.addEventListener(`click`,()=>{let t=a?.value;t&&(e.broadcastAstScene(t),o&&(o.style.display=`block`,o.textContent=`📢 Successfully broadcast scene [${t}] to the classroom!`,setTimeout(()=>{o.style.display=`none`},4e3)))}),r}export{n as default,n as renderTeacherBeaconPage};
+  `;let a=i.querySelector(`#btn-broadcast-scene`),o=i.querySelector(`#beacon-cartridge-select`),s=i.querySelector(`#beacon-toast`);return a?.addEventListener(`click`,()=>{let t=o?.value;t&&(e.broadcastAstScene(t),s&&(s.style.display=`block`,s.textContent=`📢 Successfully broadcast scene [${t}] to the classroom!`,setTimeout(()=>{s.style.display=`none`},4e3)))}),i}export{r as default,r as renderTeacherBeaconPage};
