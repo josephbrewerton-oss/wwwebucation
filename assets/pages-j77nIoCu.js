@@ -190,6 +190,7 @@ import{t as e}from"./generatedScenes-YJ8cIO2Y.js";function t(){let t=`/wwwebucat
 
           <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
             <select id="landing-sim-selector" style="padding: 8px 14px; border-radius: 8px; background: #1e293b; color: #ffffff; border: 1.5px solid #0284c7; font-weight: 700; font-size: 0.86rem; cursor: pointer;">
+              aria-label="Choose a Simulation to Run Live on Stage"
               ${r}
             </select>
             <a href="${t}media-player" style="padding: 7px 12px; font-size: 0.78rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Fullscreen Studio</a>
