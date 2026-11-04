@@ -1,7 +1,8 @@
+import { getBaseUrl } from '../utils/url';
 import { SHAKESPEARE_PLAY_STORIES } from '../data/shakespearePlays';
 
 export function renderShakespearePage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'shakespeare-theatre-stage';
   container.style.cssText = 'max-width: 1240px; margin: 0 auto; padding: 2rem 1.25rem 4rem; color: #0f172a;';

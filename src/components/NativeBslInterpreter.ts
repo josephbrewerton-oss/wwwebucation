@@ -15,6 +15,7 @@
  * - Live connection to all 60 curriculum simulator narration streams
  */
 
+import { getBaseUrl } from '../utils/url';
 import {
   Point3D,
   BslHandPose,
@@ -171,7 +172,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   private async loadLexicon() {
     try {
-      const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+      const base = getBaseUrl();
       const res = await fetch(`${base}lexicons/bsl-signs.ast`);
       if (res.ok) {
         const astContent = await res.text();

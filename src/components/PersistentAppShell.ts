@@ -6,6 +6,7 @@ import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '.
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
 import { navigate } from '../router';
+import { getBaseUrl } from '../utils/url';
 import './NativeBslInterpreter';
 import type { NativeBslInterpreterElement } from './NativeBslInterpreter';
 
@@ -33,7 +34,7 @@ export class PersistentAppShellElement extends HTMLElement {
   }
 
   private render() {
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+    const base = getBaseUrl();
     const currentLang = getSavedLanguage();
 
     this.innerHTML = `
@@ -333,7 +334,7 @@ export class PersistentAppShellElement extends HTMLElement {
   }
 
   private bindEvents() {
-    const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+    const base = getBaseUrl();
 
     // Language select
     const langSelect = this.querySelector<HTMLSelectElement>('#stj-lang-select');

@@ -1,7 +1,8 @@
+import { getBaseUrl } from '../utils/url';
 import { LANGUAGE_PHONEMES, VERB_CONJUGATIONS } from '../data/languagesCurriculumData';
 
 export function renderLanguagesPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'languages-suite-stage';
   container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';

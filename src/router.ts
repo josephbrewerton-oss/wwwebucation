@@ -50,9 +50,15 @@ const routes: Record<string, RouteHandler> = {
   '/profile': () => import('./pages/profile').then(m => resolveView(m, 'renderProfilePage')),
 };
 
+import { getBaseUrl } from './utils/url';
+
 export function normalizePath(rawPath: string): string {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
+  const baseNoSlash = base.replace(/\/+$/, '');
   let path = rawPath.split('?')[0].split('#')[0];
+  if (baseNoSlash && (path === baseNoSlash || path === baseNoSlash + '/')) {
+    return '/';
+  }
   if (base !== '/' && path.startsWith(base)) {
     path = '/' + path.slice(base.length);
   }
@@ -62,7 +68,7 @@ export function normalizePath(rawPath: string): string {
 }
 
 export async function navigate(path: string) {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   let targetUrl = path;
   if (!path.startsWith('http://') && !path.startsWith('https://')) {
     if (base !== '/' && !path.startsWith(base)) {
@@ -104,7 +110,7 @@ export async function handleRouteChange() {
       <div style="padding: 3rem 1.5rem; text-align: center; max-width: 600px; margin: 0 auto;">
         <h2 style="font-size: 1.5rem; color: #dc2626; font-weight: 800; margin-bottom: 0.5rem;">Navigation Notice</h2>
         <p style="color: #64748b; margin-bottom: 1.5rem;">An unexpected issue occurred while rendering this curriculum module.</p>
-        <button type="button" onclick="window.location.href='${import.meta.env.BASE_URL || '/'}'" style="padding: 8px 16px; background: #0284c7; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">
+        <button type="button" onclick="window.location.href='${getBaseUrl()}'" style="padding: 8px 16px; background: #0284c7; color: #fff; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">
           Return to Portal Home
         </button>
       </div>

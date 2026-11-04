@@ -1,5 +1,6 @@
+import { getBaseUrl } from '../utils/url';
 export function renderChildSafetyPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'child-safety-page-stage';
   container.style.cssText = 'max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; color: #1e293b;';

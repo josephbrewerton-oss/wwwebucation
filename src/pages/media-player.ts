@@ -1,3 +1,4 @@
+import { getBaseUrl } from '../utils/url';
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
 import {
   toggleBsl,
@@ -26,7 +27,7 @@ function buildPlayerSrc(base: string, presetId: string, bslActive: boolean): str
 }
 
 export function renderPlayerPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'ast-media-player-container';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;';

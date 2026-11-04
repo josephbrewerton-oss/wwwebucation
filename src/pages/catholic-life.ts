@@ -1,3 +1,4 @@
+import { getBaseUrl } from '../utils/url';
 // src/pages/catholic-life.tsx
 // St Joseph's Catholic Life & Faith Sanctuary
 // Pure Native TypeScript Single-Page View (Zero React)
@@ -58,7 +59,7 @@ const ROSARY_MYSTERIES = {
 export type CatholicTab = 'overview' | 'altar-anatomy' | 'church-tour' | 'latin-prayers' | 'mass' | 'sacraments' | 'rosary' | 'cst';
 
 export function renderCatholicLifePage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'catholic-life-sanctuary-stage';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem;';

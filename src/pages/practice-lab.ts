@@ -1,3 +1,4 @@
+import { getBaseUrl } from '../utils/url';
 // src/pages/practice-lab.tsx
 // St Joseph's Curriculum Portal - Interactive Practice Lab Arena
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
@@ -66,7 +67,7 @@ function assembleAllPracticeQuestions(): PracticeQuestion[] {
 }
 
 export function renderPracticePage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'practice-arena-stage';
   container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';

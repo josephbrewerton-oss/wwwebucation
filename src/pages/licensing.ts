@@ -1,5 +1,6 @@
+import { getBaseUrl } from '../utils/url';
 export function renderLicensingPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'licensing-page-stage';
   container.style.cssText = 'max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;';

@@ -123,8 +123,8 @@ function astSceneAutoFinder(): import('vite').Plugin {
   };
 }
 
-export default defineConfig({
-  base: process.env.BASE_URL || '/wwwebucation/',
+export default defineConfig(({ mode }) => ({
+  base: process.env.BASE_URL || (mode === 'production' ? './' : '/'),
   plugins: [astSceneAutoFinder()],
   publicDir: 'static',
   define: {
@@ -139,10 +139,14 @@ export default defineConfig({
   server: {
     host: '0.0.0.0',
     port: 3000,
+    allowedHosts: true,
+    hmr: process.env.DISABLE_HMR !== 'true',
+    watch: process.env.DISABLE_HMR === 'true' ? null : {},
   },
   preview: {
     host: '0.0.0.0',
     port: 3000,
+    allowedHosts: true,
   },
   build: {
     outDir: 'dist',
@@ -161,4 +165,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

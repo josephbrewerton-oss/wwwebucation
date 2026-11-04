@@ -1,5 +1,6 @@
+import { getBaseUrl } from '../utils/url';
 export function renderNotFoundPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'not-found-stage';
   container.style.cssText = 'max-width: 700px; margin: 4rem auto; padding: 2rem 1rem; text-align: center; color: #0f172a;';

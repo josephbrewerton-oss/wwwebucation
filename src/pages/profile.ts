@@ -1,5 +1,6 @@
+import { getBaseUrl } from '../utils/url';
 export function renderProfilePage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'student-profile-stage';
   container.style.cssText = 'max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';

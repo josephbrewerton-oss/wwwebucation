@@ -1,3 +1,4 @@
+import { getBaseUrl } from '../../utils/url';
 // src/pages/catholic/AltarExplorer.ts
 // St Joseph's Catholic Life & Faith Sanctuary
 // Interactive High Altar & Sanctuary Explorer (Zero React, Pure Native TypeScript)
@@ -13,7 +14,7 @@ import {
 } from '../../data/catholic';
 
 export function renderAltarExplorer(onLaunchStudio?: () => void): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'altar-sanctuary-explorer';
 

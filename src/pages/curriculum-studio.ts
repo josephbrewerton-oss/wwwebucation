@@ -1,7 +1,8 @@
+import { getBaseUrl } from '../utils/url';
 import { PRESET_OPTIONS } from '../data/player/generatedScenes';
 
 export function renderCurriculumStudioPage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'curriculum-studio-stage';
   container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';

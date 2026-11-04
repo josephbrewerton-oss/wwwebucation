@@ -1,3 +1,4 @@
+import { getBaseUrl } from '../utils/url';
 // src/pages/learning-zone.tsx
 // St Joseph's Curriculum Portal - National Curriculum Learning Zone
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
@@ -6,7 +7,7 @@ import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode } from '../curriculum/curric
 import { resolveTopicSimulator, SimPresetBadge } from '../curriculum/curriculumSimMapping';
 
 export function renderLearningZonePage(): HTMLElement {
-  const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
+  const base = getBaseUrl();
   const container = document.createElement('div');
   container.className = 'learning-zone-stage';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
