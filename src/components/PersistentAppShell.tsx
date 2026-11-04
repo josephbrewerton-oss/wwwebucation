@@ -106,18 +106,44 @@ export class PersistentAppShellElement extends HTMLElement {
                   Home
                 </a>
 
-                <a href="${base}catholic-life" class="nav-link" style="padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:700; text-decoration:none; color:var(--stj-text, #0f172a); border-radius:6px;" title="Whole-School Catholic Life, Mass, Sacraments & CST">
-                  ✝️ Catholic Life
-                </a>
+                <!-- Dedicated Catholic Sanctuary Dropdown -->
+                <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
+                  <button type="button" id="nav-dropdown-catholic-btn" style="background:rgba(202, 138, 4, 0.12); border:1px solid rgba(202, 138, 4, 0.4); padding:0.35rem 0.65rem; font-size:0.88rem; font-weight:700; color:#b45309; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;" title="Whole-School Catholic Life, Mass, Sacraments & CST">
+                    <span>✝️ Catholic Sanctuary</span>
+                    <span style="font-size:0.6rem; opacity:0.8;">▼</span>
+                  </button>
+                  <div id="nav-dropdown-catholic-menu" style="display:none; position:absolute; top:100%; left:0; width:310px; background:var(--stj-canvas, #ffffff); border:1.5px solid #ca8a04; border-radius:10px; box-shadow:0 12px 28px -4px rgba(202,138,4,0.25); padding:0.5rem; z-index:1000; flex-direction:column; gap:2px;">
+                    <a href="${base}catholic-life" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>📖</span> <strong>Sanctuary Overview &amp; AMDG</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=altar-anatomy" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🕯️</span> <strong>High Altar &amp; Sanctuary Explorer</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=church-tour" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🏛️</span> <strong>Church Architecture 3D Tour</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=latin-prayers" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🇻🇦</span> <strong>Latin Mass Prayers Chapel</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=mass" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🍞</span> <strong>The Holy Mass Step-by-Step</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=sacraments" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🕊️</span> <strong>The Seven Sacraments</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=rosary" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>📿</span> <strong>The Holy Rosary Walk</strong>
+                    </a>
+                    <a href="${base}catholic-life?tab=cst" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>🌱</span> <strong>Catholic Social Teaching (CST)</strong>
+                    </a>
+                  </div>
+                </div>
 
-                <a href="${base}player" class="nav-link" style="padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; text-decoration:none; color:var(--stj-text, #0f172a); border-radius:6px;" title="Interactive STEM & Visual Simulators">
-                  🎮 Simulators
-                </a>
-
-                <!-- Learning Dropdown -->
+                <!-- Academic Teaching & Curriculum Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
                   <button type="button" id="nav-dropdown-learning-btn" style="background:transparent; border:none; padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; color:var(--stj-text, #0f172a); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:4px;">
-                    <span>Learning</span>
+                    <span>Teaching &amp; Curriculum</span>
                     <span style="font-size:0.6rem; opacity:0.7;">▼</span>
                   </button>
                   <div id="nav-dropdown-learning-menu" style="display:none; position:absolute; top:100%; left:0; width:290px; background:var(--stj-canvas, #ffffff); border:1px solid var(--stj-border, #e2e8f0); border-radius:10px; box-shadow:0 12px 28px -4px rgba(0,0,0,0.18); padding:0.5rem; z-index:1000; flex-direction:column; gap:2px;">
@@ -127,11 +153,8 @@ export class PersistentAppShellElement extends HTMLElement {
                     <a href="${base}learning-zone?tab=constellation" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>✨</span> <strong>Concept Constellation</strong>
                     </a>
-                    <a href="${base}player" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🎬</span> <strong>Interactive Visual Lab</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=church-tour" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🏛️</span> <strong>Church Tour &amp; Altar Sim</strong>
+                    <a href="${base}practice-lab" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                      <span>⚡</span> <strong>Practice Lab Drills</strong>
                     </a>
                     <a href="${base}languages" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>🌍</span> <strong>MFL &amp; Polyglot Studio</strong>
@@ -142,14 +165,15 @@ export class PersistentAppShellElement extends HTMLElement {
                     <a href="${base}shakespeare" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>🎭</span> <strong>Shakespeare Globe Theatre</strong>
                     </a>
-                    <a href="${base}practice-lab" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>⚡</span> <strong>Practice Lab Drills</strong>
-                    </a>
                     <a href="${base}profile" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
                       <span>⭐</span> <strong>Student Progress &amp; Badges</strong>
                     </a>
                   </div>
                 </div>
+
+                <a href="${base}player" class="nav-link" style="padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; text-decoration:none; color:var(--stj-text, #0f172a); border-radius:6px;" title="Interactive STEM & Visual Simulators">
+                  🎮 Simulators
+                </a>
 
                 <!-- Educator & Admin Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
@@ -213,19 +237,29 @@ export class PersistentAppShellElement extends HTMLElement {
               <button type="button" id="mobile-btn-offline-sync" style="padding:10px; border-radius:6px; background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; font-weight:700; font-size:0.85rem; cursor:pointer; text-align:left;">
                 ${this.isOfflineSynced ? '💾 Saved to Device (0 Data)' : '💾 Save to Device (0 Data Offline)'}
               </button>
-              <a href="${base}" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🏠 Home</a>
-              <a href="${base}catholic-life" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:700;">✝️ Catholic Life &amp; Faith</a>
-              <a href="${base}catholic-life?tab=church-tour" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🏛️ Church Tour &amp; Altar Sim</a>
-              <a href="${base}player" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🎮 Interactive Simulators</a>
-              <a href="${base}learning-zone" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">📖 Lessons &amp; Units</a>
-              <a href="${base}practice-lab" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">⚡ Practice Lab Drills</a>
-              <a href="${base}languages" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🌍 Languages &amp; MFL</a>
-              <a href="${base}phonics" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🔤 EYFS / KS1 Phonics</a>
-              <a href="${base}shakespeare" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🎭 Shakespeare Theatre</a>
-              <a href="${base}teacher-beacon" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">📡 Teacher Beacon</a>
-              <a href="${base}curriculum-studio" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">🛠️ Curriculum Studio</a>
-              <a href="${base}settings" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">⚙️ Settings</a>
-              <a href="${base}news" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:600;">📰 News &amp; Updates</a>
+              <a href="${base}" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:700;">🏠 Home</a>
+              
+              <div style="font-size:0.72rem; font-weight:800; color:#ca8a04; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">✝️ Catholic Sanctuary</div>
+              <a href="${base}catholic-life" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📖 Sanctuary Overview</a>
+              <a href="${base}catholic-life?tab=altar-anatomy" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🕯️ High Altar Explorer</a>
+              <a href="${base}catholic-life?tab=church-tour" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🏛️ Church 3D Tour</a>
+              <a href="${base}catholic-life?tab=latin-prayers" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🇻🇦 Latin Mass Prayers</a>
+              <a href="${base}catholic-life?tab=mass" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🍞 The Holy Mass</a>
+
+              <div style="font-size:0.72rem; font-weight:800; color:#0284c7; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">📚 Teaching &amp; Curriculum</div>
+              <a href="${base}learning-zone" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📖 Lessons &amp; Units</a>
+              <a href="${base}learning-zone?tab=constellation" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">✨ Concept Constellation</a>
+              <a href="${base}practice-lab" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">⚡ Practice Lab Drills</a>
+              <a href="${base}languages" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🌍 Languages &amp; MFL</a>
+              <a href="${base}phonics" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🔤 EYFS / KS1 Phonics</a>
+              <a href="${base}shakespeare" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🎭 Shakespeare Theatre</a>
+
+              <div style="font-size:0.72rem; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">🎮 Simulators &amp; Studio</div>
+              <a href="${base}player" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🎮 AST Vector Simulators</a>
+              <a href="${base}teacher-beacon" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📡 Teacher Beacon</a>
+              <a href="${base}curriculum-studio" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🛠️ Curriculum Studio</a>
+              <a href="${base}settings" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">⚙️ Settings</a>
+              <a href="${base}news" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📰 News &amp; Updates</a>
             </div>
           </nav>
         </header>
@@ -341,6 +375,18 @@ export class PersistentAppShellElement extends HTMLElement {
       toggleBsl();
     });
 
+    // Catholic Dropdown toggle
+    const btnCatholic = this.querySelector<HTMLButtonElement>('#nav-dropdown-catholic-btn');
+    const menuCatholic = this.querySelector<HTMLDivElement>('#nav-dropdown-catholic-menu');
+    btnCatholic?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const isOpen = menuCatholic?.style.display === 'flex';
+      if (menuCatholic) menuCatholic.style.display = isOpen ? 'none' : 'flex';
+      if (menuLearning) menuLearning.style.display = 'none';
+      const menuAdmin = this.querySelector<HTMLDivElement>('#nav-dropdown-admin-menu');
+      if (menuAdmin) menuAdmin.style.display = 'none';
+    });
+
     // Learning Dropdown toggle
     const btnLearning = this.querySelector<HTMLButtonElement>('#nav-dropdown-learning-btn');
     const menuLearning = this.querySelector<HTMLDivElement>('#nav-dropdown-learning-menu');
@@ -348,6 +394,7 @@ export class PersistentAppShellElement extends HTMLElement {
       e.stopPropagation();
       const isOpen = menuLearning?.style.display === 'flex';
       if (menuLearning) menuLearning.style.display = isOpen ? 'none' : 'flex';
+      if (menuCatholic) menuCatholic.style.display = 'none';
       const menuAdmin = this.querySelector<HTMLDivElement>('#nav-dropdown-admin-menu');
       if (menuAdmin) menuAdmin.style.display = 'none';
     });
@@ -359,11 +406,13 @@ export class PersistentAppShellElement extends HTMLElement {
       e.stopPropagation();
       const isOpen = menuAdmin?.style.display === 'flex';
       if (menuAdmin) menuAdmin.style.display = isOpen ? 'none' : 'flex';
+      if (menuCatholic) menuCatholic.style.display = 'none';
       if (menuLearning) menuLearning.style.display = 'none';
     });
 
     // Close dropdowns on document click
     document.addEventListener('click', () => {
+      if (menuCatholic) menuCatholic.style.display = 'none';
       if (menuLearning) menuLearning.style.display = 'none';
       if (menuAdmin) menuAdmin.style.display = 'none';
     });

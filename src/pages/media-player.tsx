@@ -52,31 +52,50 @@ export function renderPlayerPage(): HTMLElement {
         { id: 'phonics-lab', label: 'EYFS Phonics Sound Mat & Digraphs', type: 'App', stage: 'EYFS / KS1' },
       ];
 
+  function isCatholicPreset(p: ScenePresetOption): boolean {
+    return (
+      p.stage === 'CATHOLIC LIFE' ||
+      p.subject === 'Religious Education' ||
+      (p.section && p.section.includes('Catholic')) ||
+      ['church-tour', 'altar-anatomy', 'holy-oils', 'holy-water-thurifer', 'latin-mass-prayers', 'catholic-rites', 'order-of-the-mass', 'stations-of-the-cross', 'first-communion', 'liturgical-calendar', 'liturgical-postures', 'liturgy-of-the-hours', 'triduum-easter'].includes(p.id)
+    );
+  }
+
+  function isStemPreset(p: ScenePresetOption): boolean {
+    return !isCatholicPreset(p) && (p.subject === 'Science' || (p.stage && p.stage.includes('PHYSICS')) || ['kinetic-gas', 'electric-circuits', 'solar-system', 'photosynthesis', 'atom', 'velocity', 'dna-helix'].includes(p.id));
+  }
+
+  function isMathPreset(p: ScenePresetOption): boolean {
+    return !isCatholicPreset(p) && (p.subject === 'Mathematics' || ['pythagoras', 'fractions', 'algebra-balance', 'calculus-curves', 'bodmas', 'times-tables'].includes(p.id));
+  }
+
+  function isOtherPreset(p: ScenePresetOption): boolean {
+    return !isCatholicPreset(p) && !isStemPreset(p) && !isMathPreset(p);
+  }
+
   function getPresetMeta(id: string): ScenePresetOption {
     return presets.find((p) => p.id === id) || presets[0];
   }
 
   // Build options for select dropdown
-  const simGroup = presets.filter(p => (p.type || 'Sim') === 'Sim');
-  const slideGroup = presets.filter(p => p.type === 'Slide');
-  const appGroup = presets.filter(p => p.type === 'App');
-  const dataGroup = presets.filter(p => (p.type as string) === 'Data');
+  const catholicGroup = presets.filter(isCatholicPreset);
+  const stemGroup = presets.filter(isStemPreset);
+  const mathGroup = presets.filter(isMathPreset);
+  const otherGroup = presets.filter(isOtherPreset);
 
   const optionsHtml = `
-    <optgroup label="🎮 Simulations (Sim)" style="background:#0f172a; color:#38bdf8;">
-      ${simGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
+    <optgroup label="✝️ Catholic Sanctuary &amp; Liturgy" style="background:#0f172a; color:#fde047;">
+      ${catholicGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
     </optgroup>
-    <optgroup label="📑 Interactive Slides (Slide)" style="background:#0f172a; color:#34d399;">
-      ${slideGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
+    <optgroup label="🔬 STEM &amp; Natural Sciences" style="background:#0f172a; color:#38bdf8;">
+      ${stemGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
     </optgroup>
-    <optgroup label="💻 Vector Applications (App)" style="background:#0f172a; color:#fbbf24;">
-      ${appGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
+    <optgroup label="📐 Mathematics &amp; Logic" style="background:#0f172a; color:#34d399;">
+      ${mathGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
     </optgroup>
-    ${dataGroup.length > 0 ? `
-    <optgroup label="📊 Datasets & Checkpoints (Data)" style="background:#0f172a; color:#a78bfa;">
-      ${dataGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
+    <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
+      ${otherGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
     </optgroup>
-    ` : ''}
   `;
 
   const meta = getPresetMeta(activePreset);
@@ -162,13 +181,33 @@ export function renderPlayerPage(): HTMLElement {
       </div>
     </div>
 
+    <!-- Catholic Sanctuary Linkage Banner -->
+    <div id="catholic-sanctuary-banner" style="display:${isCatholicPreset(meta) ? 'flex' : 'none'}; background:linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%); border:1.5px solid #ca8a04; border-radius:10px; padding:10px 16px; margin-bottom:1.5rem; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; color:#ffffff; box-shadow:0 4px 14px rgba(202,138,4,0.15);">
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span style="font-size:1.3rem;">✝️</span>
+        <div>
+          <span style="font-size:0.86rem; color:#fde047; font-weight:800;">St Joseph's Catholic Sanctuary:</span>
+          <span style="font-size:0.82rem; color:#cbd5e1; margin-left:4px;">This simulation is part of our Catholic faith formation and sacred liturgical curriculum.</span>
+        </div>
+      </div>
+      <a href="${base}catholic-life?tab=altar-anatomy" style="padding:5px 12px; border-radius:6px; background:#ca8a04; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem;">
+        Open High Altar &amp; Latin Chapel &rarr;
+      </a>
+    </div>
+
     <!-- Category Filter Tabs & Search -->
     <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:1.75rem;">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
         <div style="display:flex; gap:6px; flex-wrap:wrap;" id="category-filter-buttons">
-          ${['All', 'Sim', 'Slide', 'App', 'Data'].map(cat => `
-            <button type="button" class="cat-pill-btn" data-cat="${cat}" style="padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${cat === activeCategory ? '#0284c7' : '#cbd5e1'}; background:${cat === activeCategory ? '#0284c7' : '#f8fafc'}; color:${cat === activeCategory ? '#ffffff' : '#475569'};">
-              ${cat === 'All' ? '🌟 All (' + presets.length + ')' : cat === 'Sim' ? '🎮 Sims' : cat === 'Slide' ? '📑 Slides' : cat === 'App' ? '💻 Apps' : '📊 Datasets'}
+          ${[
+            { id: 'All', label: '🌟 All (' + presets.length + ')' },
+            { id: 'Catholic', label: '✝️ Catholic Faith (' + catholicGroup.length + ')' },
+            { id: 'STEM', label: '🔬 STEM Sciences (' + stemGroup.length + ')' },
+            { id: 'Maths', label: '📐 Mathematics (' + mathGroup.length + ')' },
+            { id: 'EYFS', label: '🔤 EYFS & Languages (' + otherGroup.length + ')' },
+          ].map(cat => `
+            <button type="button" class="cat-pill-btn" data-cat="${cat.id}" style="padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${cat.id === activeCategory ? '#0284c7' : '#cbd5e1'}; background:${cat.id === activeCategory ? '#0284c7' : '#f8fafc'}; color:${cat.id === activeCategory ? '#ffffff' : '#475569'};">
+              ${cat.label}
             </button>
           `).join('')}
         </div>
@@ -177,7 +216,7 @@ export function renderPlayerPage(): HTMLElement {
           <input
             type="search"
             id="cartridge-search-input"
-            placeholder="Search cartridges (e.g. Pythagoras, circuits)..."
+            placeholder="Search cartridges (e.g. Altar, Pythagoras, circuits)..."
             style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none;"
           />
         </div>
@@ -225,6 +264,11 @@ export function renderPlayerPage(): HTMLElement {
     if (typeBadgeEl) typeBadgeEl.textContent = item.type || 'Sim';
     if (select) select.value = safePresetId;
 
+    const catholicBanner = container.querySelector<HTMLElement>('#catholic-sanctuary-banner');
+    if (catholicBanner) {
+      catholicBanner.style.display = isCatholicPreset(item) ? 'flex' : 'none';
+    }
+
     if (iframe) {
       iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
     }
@@ -243,7 +287,13 @@ export function renderPlayerPage(): HTMLElement {
     if (!gridContainer) return;
     const q = searchQuery.toLowerCase().trim();
     const filtered = presets.filter((p) => {
-      const matchCat = activeCategory === 'All' || (p.type || 'Sim') === activeCategory;
+      let matchCat = true;
+      if (activeCategory === 'Catholic') matchCat = isCatholicPreset(p);
+      else if (activeCategory === 'STEM') matchCat = isStemPreset(p);
+      else if (activeCategory === 'Maths') matchCat = isMathPreset(p);
+      else if (activeCategory === 'EYFS') matchCat = isOtherPreset(p);
+      else if (activeCategory !== 'All') matchCat = (p.type || 'Sim') === activeCategory;
+
       const matchQ = !q || p.label.toLowerCase().includes(q) || p.stage.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
       return matchCat && matchQ;
     });
