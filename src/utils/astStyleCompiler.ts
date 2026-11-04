@@ -1,5 +1,5 @@
 // src/utils/astStyleCompiler.ts
-import type { CSSProperties } from 'react';
+export type CSSProperties = Record<string, string | number | undefined>;
 import type { SExprAST, SExprNode } from '../types/sexpr';
 
 /**

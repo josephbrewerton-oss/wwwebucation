@@ -39,9 +39,6 @@
     "@types/canvas-confetti": "^1.9.0",
     "@types/katex": "^0.16.8",
     "@types/node": "^26.5.1",
-    "@types/react": "^19.0.0",
-    "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^6.1.1",
     "typescript": "^5.6.3",
     "vite": "^8.3.5",
     "wabt": "^1.0.39",
@@ -65,9 +62,6 @@
   "dependencies": {
     "@mlc-ai/web-llm": "^0.2.85",
     "canvas-confetti": "^1.9.4",
-    "katex": "^0.18.7",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-router-dom": "^7.18.3"
+    "katex": "^0.18.7"
   }
 }

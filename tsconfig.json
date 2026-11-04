@@ -10,7 +10,6 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "noEmit": true,
-    "jsx": "react-jsx",
     "strict": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
@@ -18,8 +17,7 @@
     "types": ["vite/client", "node", "webmcp-types"],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "react-router-dom": ["src/router/index.tsx"]
+      "@/*": ["src/*"]
     }
   },
   "include": ["src", "vite.config.ts"]
