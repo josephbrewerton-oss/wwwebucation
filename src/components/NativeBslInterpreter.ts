@@ -47,6 +47,10 @@ import {
   subscribeBslSpeech,
   subscribeBsl,
   toggleBsl,
+  getVoiceEnabled,
+  setVoiceEnabled,
+  toggleVoice,
+  subscribeVoice,
   BslSpeechPayload,
 } from '../services/bslGlobalStore';
 
@@ -80,9 +84,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private activeGloss = 'WELCOME';
   private activeClassifier = '';
   private activeAspect = '';
-  private isVoiceOn = true;
+  private isVoiceOn = getVoiceEnabled();
   private unsubscribeSpeech?: () => void;
+  private unsubscribeVoice?: () => void;
   private messageListener?: (e: MessageEvent) => void;
+  private visibilityListener?: () => void;
 
   // Window dragging & orbiting
   private isDragging = false;
@@ -95,8 +101,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private orbitStartY = 0;
 
   connectedCallback() {
+    this.isVoiceOn = getVoiceEnabled();
     this.renderShell();
     this.bindEvents();
+    this.updateVoiceBtn();
     this.loadLexicon();
     this.startSigningLoop();
 
@@ -109,6 +117,17 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
     });
 
+    // Listen to unified voice changes across the app & iframe
+    this.unsubscribeVoice = subscribeVoice((enabled) => {
+      this.isVoiceOn = enabled;
+      this.updateVoiceBtn();
+      if (!enabled && typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        try {
+          window.speechSynthesis.cancel();
+        } catch (_) {}
+      }
+    });
+
     // Listen directly to postMessage events from any simulator iframe
     this.messageListener = (e: MessageEvent) => {
       if (!e.data || typeof e.data !== 'object') return;
@@ -118,9 +137,21 @@ export class NativeBslInterpreterElement extends HTMLElement {
         this.processUtterance(`${e.data.title}. ${e.data.rule || ''}`);
       } else if (e.data.type === 'PRESETCHANGE' && e.data.title) {
         this.processUtterance(`Lesson: ${e.data.title}`);
+      } else if ((e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') && typeof e.data.enabled === 'boolean') {
+        setVoiceEnabled(e.data.enabled);
       }
     };
     window.addEventListener('message', this.messageListener);
+
+    // Pause 60 FPS RAF loop when tab is hidden to save GPU/CPU cycles on Chromebooks
+    this.visibilityListener = () => {
+      if (document.hidden) {
+        this.pauseLoop();
+      } else {
+        this.resumeLoop();
+      }
+    };
+    document.addEventListener('visibilitychange', this.visibilityListener);
 
     // Initial welcoming introduction to demonstrate two-handed signing right away!
     setTimeout(() => {
@@ -131,9 +162,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this.animFrameId) cancelAnimationFrame(this.animFrameId);
+    this.pauseLoop();
     if (this.unsubscribeSpeech) this.unsubscribeSpeech();
+    if (this.unsubscribeVoice) this.unsubscribeVoice();
     if (this.messageListener) window.removeEventListener('message', this.messageListener);
+    if (this.visibilityListener) document.removeEventListener('visibilitychange', this.visibilityListener);
   }
 
   private async loadLexicon() {
@@ -434,11 +467,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // Voice button
     const btnVoice = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
     btnVoice?.addEventListener('click', () => {
-      this.isVoiceOn = !this.isVoiceOn;
-      if (btnVoice) {
-        btnVoice.textContent = this.isVoiceOn ? '🔊 Audio' : '🔇 Mute';
-        btnVoice.style.background = this.isVoiceOn ? '#0369a1' : '#1e293b';
-      }
+      toggleVoice();
     });
 
     // POV toggle
@@ -568,6 +597,29 @@ export class NativeBslInterpreterElement extends HTMLElement {
       if (this.currentPose.nmf.mouth) parts.push(`"${this.currentPose.nmf.mouth}"`);
       if (this.currentPose.nmf.headTilt && this.currentPose.nmf.headTilt !== 'neutral') parts.push(this.currentPose.nmf.headTilt);
       nmfTag.textContent = parts.length > 0 ? `NMF: ${parts.join(' ')}` : 'NMF: neutral';
+    }
+  }
+
+  public updateVoiceBtn() {
+    const btnVoice = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
+    if (btnVoice) {
+      btnVoice.textContent = this.isVoiceOn ? '🔊 Audio' : '🔇 Mute';
+      btnVoice.style.background = this.isVoiceOn ? '#0369a1' : '#1e293b';
+      btnVoice.title = this.isVoiceOn ? 'Speech Audio Narration is ON (Click to Mute)' : 'Speech Audio Narration is MUTED (Click to Enable)';
+    }
+  }
+
+  public pauseLoop() {
+    if (this.animFrameId) {
+      cancelAnimationFrame(this.animFrameId);
+      this.animFrameId = null;
+    }
+    this.isPlaying = false;
+  }
+
+  public resumeLoop() {
+    if (!this.animFrameId && this.isConnected) {
+      this.startSigningLoop();
     }
   }
 

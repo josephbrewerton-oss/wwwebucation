@@ -192,6 +192,11 @@ export function solveBaseHandKinematics(
       thumbTip: { x: -domHand3D.thumbTip.x, y: domHand3D.thumbTip.y, z: domHand3D.thumbTip.z },
       forearm: { x: -domHand3D.forearm.x, y: domHand3D.forearm.y, z: domHand3D.forearm.z },
       shape: domHand3D.shape,
+      palmNormal: {
+        x: -domHand3D.palmNormal.x,
+        y: domHand3D.palmNormal.y,
+        z: domHand3D.palmNormal.z,
+      },
     };
   }
 
@@ -214,6 +219,7 @@ export function solveBaseHandKinematics(
       thumbTip: BSL_BASE_REST_HAND.fingertips[0],
       forearm: { x: rw.x - 25, y: rw.y + 35, z: rw.z - 15 },
       shape: 'flat',
+      palmNormal: { x: 0, y: 1, z: 0 },
     };
   }
 
@@ -239,6 +245,7 @@ export function solveBaseHandKinematics(
     thumbTip: { x: BSL_BASE_HAND.fingertips[0].x + sx, y: BSL_BASE_HAND.fingertips[0].y + sy, z: BSL_BASE_HAND.fingertips[0].z + sz },
     forearm: { x: bw.x - 30, y: bw.y + 35, z: bw.z - 15 },
     shape: 'flat',
+    palmNormal: { x: 0, y: -1, z: 0 },
   };
 }
 

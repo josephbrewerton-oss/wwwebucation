@@ -593,6 +593,8 @@ export interface BslSolvedDominantHand {
   palmNormal: Point3D;
 }
 
+export type SolvedHand3D = BslSolvedDominantHand;
+
 /**
  * Procedural BSL Hand Posture Matrix & Kinematic Bone Solver
  * Computes complete 3D skeletal landmark positions for dominant signing hand,
@@ -1020,5 +1022,203 @@ export function solveHandKinematics(
       y: Number.isFinite(unormY) ? unormY : 0,
       z: Number.isFinite(unormZ) ? unormZ : 1,
     },
+  };
+}
+
+// ============================================================================
+// PROCEDURAL PHONEMIC VOCABULARY SYNTHESIS ("ELITE" 1984 ARCHITECTURE)
+// Eliminates bloated JSON keyframe dictionaries in favor of compact, composable
+// phonemic primitives (Stokoe notation / modern BSL phonology) with sub-8-byte
+// serialized footprints for Chromebook / low-spec hardware.
+// ============================================================================
+
+/** 1. Dez (Designator / Handshape SKU Register) */
+export const PHONEMIC_DEZ_REGISTERS: readonly BslHandShape[] = [
+  'point',        // 0: 1-hand / G-hand (Index pointer)
+  'flat',         // 1: B-hand / Open flat palm
+  'flat-closed',  // 2: Closed B-hand
+  'spread',       // 3: 5-hand / Splayed palm
+  'claw',         // 4: 5-claw / Spherical grasp
+  'fist',         // 5: S-hand / A-hand clenched
+  'v',            // 6: V-hand / Bipedal proform
+  'c-shape',      // 7: C-hand / Cylindrical grasp
+  'pinch',        // 8: F-hand / Precision pinch
+  'point-l',      // 9: L-hand (Index + Thumb)
+] as const;
+
+/** 2. Tab (Tabula / Spatial Body Location Anchors) */
+export const PHONEMIC_TAB_REGISTERS: readonly { name: string; pos: Point3D }[] = [
+  { name: 'CHEST',      pos: { x: 0,   y: 10,  z: 10 } }, // 0: Neutral signing box origin
+  { name: 'FACE',       pos: { x: 0,   y: -60, z: 25 } }, // 1: Mid-face / nose level
+  { name: 'CHIN',       pos: { x: 0,   y: -35, z: 20 } }, // 2: Lower facial / jaw anchor
+  { name: 'FOREHEAD',   pos: { x: 0,   y: -85, z: 25 } }, // 3: Upper facial / brow plane
+  { name: 'LOCUS_A',    pos: { x: -45, y: 10,  z: 15 } }, // 4: 3P Left spatial locus
+  { name: 'LOCUS_B',    pos: { x: 45,  y: 10,  z: 15 } }, // 5: 3P Right spatial locus
+  { name: 'LOCUS_C',    pos: { x: 0,   y: 15,  z: 25 } }, // 6: Center stage / sacred plane
+  { name: 'LOCUS_HIGH', pos: { x: 0,   y: -50, z: 40 } }, // 7: Elevated / divine plane
+  { name: 'LOCUS_LOW',  pos: { x: 0,   y: 60,  z: 10 } }, // 8: Subordinate / ground plane
+  { name: 'BASE_HAND',  pos: { x: -60, y: 30,  z: 10 } }, // 9: Non-dominant base anchor
+] as const;
+
+/** 3. Sig (Signation / Kinematic Trajectory Descriptors) */
+export const PHONEMIC_SIG_REGISTERS = [
+  'static-hold',   // 0: Fixed position with no translation
+  'linear-fwd',    // 1: Direct straight vector push forward
+  'linear-sweep',  // 2: Horizontal sweep left-to-right
+  'arc-up',        // 3: Parabolic upward ascent
+  'arc-down',      // 4: Parabolic downward descent
+  'cycle-ellipse', // 5: Continuous durative elliptical repetition
+  'snap-halt',     // 6: Rapid ballistic advance terminating with rigid stop
+  'recoil',        // 7: Quick rebound pulse
+] as const;
+
+/** 4. Ori (Orientation / Palm Axial Alignment) */
+export const PHONEMIC_ORI_REGISTERS: readonly BslPalmOrientation[] = [
+  'in',      // 0: Facing signer chest (z-)
+  'out',     // 1: Facing receiver (z+)
+  'down',    // 2: Prone / downwards (y+)
+  'up',      // 3: Supine / upwards (y-)
+  'side',    // 4: Vertical medial edge (x-)
+  'lateral', // 5: Lateral edge (x+)
+] as const;
+
+/** 5. NMF (Non-Manual Feature Register: Brows, Viseme Morpheme, Head Tilt) */
+export const PHONEMIC_NMF_REGISTERS: readonly BslNmf[] = [
+  { eyebrows: 'neutral', mouth: 'neutral', headTilt: 'neutral' },     // 0: Neutral
+  { eyebrows: 'raised', mouth: 'neutral', headTilt: 'nod' },         // 1: Topic / Polar Question
+  { eyebrows: 'furrowed', mouth: 'tight-lips', headTilt: 'neutral' }, // 2: WH-Question
+  { eyebrows: 'neutral', mouth: 'mm', headTilt: 'neutral' },          // 3: Regular / Durative Cadence
+  { eyebrows: 'neutral', mouth: 'th', headTilt: 'neutral' },          // 4: Careless / Effortless Glide
+  { eyebrows: 'furrowed', mouth: 'tight-lips', headTilt: 'nod' },     // 5: Intensive / Strenuous Action
+  { eyebrows: 'raised', mouth: 'puffed-cheeks', headTilt: 'neutral' },// 6: Massive / Voluminous Vessel
+  { eyebrows: 'neutral', mouth: 'neutral', headTilt: 'shake' },       // 7: Negation / Refusal
+] as const;
+
+export const PHONEMIC_ASPECT_REGISTERS: readonly BslAspect[] = [
+  'neutral',
+  'durative',
+  'habitual',
+  'intensive',
+  'inceptive',
+] as const;
+
+export const PHONEMIC_BASE_MODES: readonly BslBaseHandMode[] = [
+  'rest',
+  'vowel-board',
+  'mirror',
+  'override',
+  'base-hold',
+  'buoy-list',
+  'buoy-pointer',
+] as const;
+
+/**
+ * Dense 8-Byte Phonemic Parameter Tuple
+ * Packing structure:
+ *  [0] Dez index (0-9)
+ *  [1] Tab index (0-9)
+ *  [2] Sig index (0-7)
+ *  [3] Ori index (0-5)
+ *  [4] NMF index (0-7)
+ *  [5] Aspect index (0-4)
+ *  [6] BaseMode index (0-6)
+ *  [7] Hold duration in deciseconds (0-255 = 0-2550 ms)
+ */
+export function encodePhonemicTuple(params: {
+  dez?: BslHandShape;
+  tab?: number | string;
+  sig?: number | string;
+  ori?: BslPalmOrientation;
+  nmfIndex?: number;
+  aspect?: BslAspect;
+  baseMode?: BslBaseHandMode;
+  holdMs?: number;
+}): Uint8Array {
+  const buf = new Uint8Array(8);
+
+  // 0: Dez
+  const dezIdx = params.dez ? PHONEMIC_DEZ_REGISTERS.indexOf(params.dez) : 0;
+  buf[0] = dezIdx >= 0 ? dezIdx : 0;
+
+  // 1: Tab
+  if (typeof params.tab === 'number') {
+    buf[1] = Math.min(PHONEMIC_TAB_REGISTERS.length - 1, Math.max(0, params.tab));
+  } else if (typeof params.tab === 'string') {
+    const tIdx = PHONEMIC_TAB_REGISTERS.findIndex(r => r.name.toLowerCase() === (params.tab as string).toLowerCase());
+    buf[1] = tIdx >= 0 ? tIdx : 0;
+  } else {
+    buf[1] = 0;
+  }
+
+  // 2: Sig
+  if (typeof params.sig === 'number') {
+    buf[2] = Math.min(PHONEMIC_SIG_REGISTERS.length - 1, Math.max(0, params.sig));
+  } else if (typeof params.sig === 'string') {
+    const sIdx = PHONEMIC_SIG_REGISTERS.indexOf(params.sig as any);
+    buf[2] = sIdx >= 0 ? sIdx : 0;
+  } else {
+    buf[2] = 0;
+  }
+
+  // 3: Ori
+  const oriIdx = params.ori ? PHONEMIC_ORI_REGISTERS.indexOf(params.ori) : 0;
+  buf[3] = oriIdx >= 0 ? oriIdx : 0;
+
+  // 4: NMF
+  buf[4] = Math.min(PHONEMIC_NMF_REGISTERS.length - 1, Math.max(0, params.nmfIndex || 0));
+
+  // 5: Aspect
+  const aspIdx = params.aspect ? PHONEMIC_ASPECT_REGISTERS.indexOf(params.aspect) : 0;
+  buf[5] = aspIdx >= 0 ? aspIdx : 0;
+
+  // 6: BaseMode
+  const bmIdx = params.baseMode ? PHONEMIC_BASE_MODES.indexOf(params.baseMode) : 0;
+  buf[6] = bmIdx >= 0 ? bmIdx : 0;
+
+  // 7: Hold duration (deciseconds)
+  buf[7] = Math.min(255, Math.max(0, Math.round((params.holdMs || 80) / 10)));
+
+  return buf;
+}
+
+/**
+ * Decodes an 8-byte tuple directly into runtime BslHandPose coordinates and parameters
+ * with zero dynamic object/closure churn during hot simulation runs.
+ */
+export function decodePhonemicTuple(tuple: Uint8Array | number[]): BslHandPose {
+  const dezIdx = tuple[0] < PHONEMIC_DEZ_REGISTERS.length ? tuple[0] : 0;
+  const tabIdx = tuple[1] < PHONEMIC_TAB_REGISTERS.length ? tuple[1] : 0;
+  const oriIdx = tuple[3] < PHONEMIC_ORI_REGISTERS.length ? tuple[3] : 0;
+  const nmfIdx = tuple[4] < PHONEMIC_NMF_REGISTERS.length ? tuple[4] : 0;
+  const aspIdx = tuple[5] < PHONEMIC_ASPECT_REGISTERS.length ? tuple[5] : 0;
+  const bmIdx  = tuple[6] < PHONEMIC_BASE_MODES.length ? tuple[6] : 0;
+  const holdMs = (tuple[7] || 8) * 10;
+
+  const tab = PHONEMIC_TAB_REGISTERS[tabIdx];
+  const shape = PHONEMIC_DEZ_REGISTERS[dezIdx];
+  const palm = PHONEMIC_ORI_REGISTERS[oriIdx];
+  const nmf = PHONEMIC_NMF_REGISTERS[nmfIdx];
+  const aspect = PHONEMIC_ASPECT_REGISTERS[aspIdx];
+  const baseHandMode = PHONEMIC_BASE_MODES[bmIdx];
+
+  const targetTip: Point3D = { ...tab.pos };
+  const targetKnuckle: Point3D = { x: tab.pos.x + 20, y: tab.pos.y + 20, z: tab.pos.z - 10 };
+  const targetWrist: Point3D = { x: tab.pos.x + 55, y: tab.pos.y + 55, z: tab.pos.z - 25 };
+
+  return {
+    letter: '',
+    label: `Elite • ${tab.name} [${shape}]`,
+    rule: `Procedural phonemic synthesis: Dez=${shape}, Tab=${tab.name}, Ori=${palm}`,
+    isVowel: false,
+    targetTip,
+    targetKnuckle,
+    targetWrist,
+    shape,
+    palm,
+    nmf,
+    aspect,
+    baseHandMode,
+    hold: holdMs,
+    ease: 'ease-out',
   };
 }

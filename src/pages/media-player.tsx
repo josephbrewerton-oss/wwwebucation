@@ -1,5 +1,13 @@
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
-import { toggleBsl, getBslEnabled, subscribeBsl, broadcastBslSpeech } from '../services/bslGlobalStore';
+import {
+  toggleBsl,
+  getBslEnabled,
+  subscribeBsl,
+  broadcastBslSpeech,
+  subscribeVoice,
+  getVoiceEnabled,
+  setVoiceEnabled,
+} from '../services/bslGlobalStore';
 
 const DEFAULT_PRESET_ID = 'kinetic-gas';
 const VALID_PRESET_IDS = new Set(PRESET_OPTIONS.map((p) => p.id));
@@ -287,16 +295,43 @@ export function renderPlayerPage(): HTMLElement {
     }
   });
 
-  // BSL toggle
+  // Synchronize BSL button UI
+  function updateBslBtnUi(active: boolean) {
+    bslActive = active;
+    if (bslBtn) {
+      bslBtn.textContent = `🖐️ BSL Signing: ${active ? 'ON' : 'OFF'}`;
+      bslBtn.style.background = active ? 'rgba(56, 189, 248, 0.16)' : '#1e293b';
+      bslBtn.style.borderColor = active ? '#38bdf8' : '#475569';
+      bslBtn.style.color = active ? '#38bdf8' : '#94a3b8';
+    }
+  }
+
+  // Subscribe to universal BSL state across top nav, Shift+B shortcut, and floating close button
+  subscribeBsl((enabled) => {
+    if (bslActive !== enabled) {
+      updateBslBtnUi(enabled);
+      if (iframe) {
+        iframe.src = buildPlayerSrc(base, activePreset, enabled);
+      }
+    }
+  });
+
+  // BSL toggle button click
   bslBtn?.addEventListener('click', () => {
-    bslActive = !bslActive;
     toggleBsl();
-    bslBtn.textContent = `🖐️ BSL Signing: ${bslActive ? 'ON' : 'OFF'}`;
-    bslBtn.style.background = bslActive ? 'rgba(56, 189, 248, 0.16)' : '#1e293b';
-    bslBtn.style.borderColor = bslActive ? '#38bdf8' : '#475569';
-    bslBtn.style.color = bslActive ? '#38bdf8' : '#94a3b8';
-    if (iframe) {
-      iframe.src = buildPlayerSrc(base, activePreset, bslActive);
+  });
+
+  // Synchronize voice narration between host and simulator iframe
+  subscribeVoice((enabled) => {
+    try {
+      iframe?.contentWindow?.postMessage({ type: 'SET_VOICE', enabled }, '*');
+    } catch (_) {}
+  });
+
+  window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
+    if ((e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') && typeof e.data.enabled === 'boolean') {
+      setVoiceEnabled(e.data.enabled);
     }
   });
 

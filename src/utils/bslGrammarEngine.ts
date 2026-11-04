@@ -645,6 +645,23 @@ export function generateClassifierPredicate(
       break;
     }
 
+    case 'proform-claw': {
+      glossLabel = `CL:CLAW[${fromLocus || 'LOCUS_C'}]`;
+      kfs.push({
+        label: 'CL:Claw • Grasp Spherical Entity',
+        rule: 'Curved claw handshape encloses spherical particle/cell',
+        targetTip: { x: p0.x, y: p0.y, z: p0.z + 10 },
+        targetKnuckle: { x: p0.x + 25, y: p0.y + 20, z: p0.z },
+        targetWrist: { x: p0.x + 60, y: p0.y + 50, z: p0.z - 15 },
+        shape: 'claw',
+        palm: 'down',
+        hold: 160,
+        ease: 'ease-out',
+        nmf: { mouth: 'mm' },
+      });
+      break;
+    }
+
     case 'proform-1':
     default: {
       glossLabel = `CL:1[${fromLocus}→${toLocus}]`;
@@ -723,6 +740,11 @@ export function mapWordToClassifier(word: string): { type: BslClassifierType; op
   // 6. Rays, beams, straight trajectories, vectors, force lines
   if (/(ray|beam|trajectory|vector|line|axis|pointer|path)/i.test(clean)) {
     return { type: 'proform-1' as BslClassifierType };
+  }
+
+  // 7. Spherical particles, cells, atoms, molecules, globules, bodies
+  if (/(particle|molecule|atom|cell|nucleus|sphere|globule|vesicle|core|body|planet)/i.test(clean)) {
+    return { type: 'proform-claw' as BslClassifierType };
   }
 
   return null;
@@ -2098,7 +2120,10 @@ export function analyzeAndTransformBslGrammar(
           ...classifierMatch.options,
         });
 
-        tok.classifier = { type: classifierMatch.type, form: clSign.word };
+        tok.classifier = clSign.classifier || {
+          type: classifierMatch.type,
+          entityLabel: tok.cleanWord,
+        };
         tok.sign = clSign;
         tok.isFingerspelled = false;
 
@@ -2173,47 +2198,3 @@ export function analyzeAndTransformBslGrammar(
     stream,
   };
 }
-export type BslClassifierType = 'CL:FLAT' | 'CL:CYLINDER' | 'CL:TRACE' | 'CL:SPHERE';
-
-interface ClassifierRule {
-  type: BslClassifierType;
-  match: RegExp;
-  handshape: string;
-  mouthMorpheme: string;
-  movementVector: { x: number; y: number; z: number };
-}
-
-const CLASSIFIER_RULES: ClassifierRule[] = [
-  {
-    // Flat surfaces, boundaries, barriers, partitions
-    type: 'CL:FLAT',
-    match: /(layer|membrane|wall|surface|barrier|plate|stratum|boundary|sheet|horizon)/i,
-    handshape: 'flat-open',
-    mouthMorpheme: 'th',
-    movementVector: { x: 30, y: 0, z: 5 },
-  },
-  {
-    // Containers, tubes, vessels, cylinders, conduits
-    type: 'CL:CYLINDER',
-    match: /(cylinder|tube|vessel|beaker|pipe|chamber|piston|conduit|column)/i,
-    handshape: 'c-hand',
-    mouthMorpheme: 'puffed-cheeks',
-    movementVector: { x: 0, y: -25, z: 0 },
-  },
-  {
-    // Directional pathways, beams, rays, force lines, trajectories
-    type: 'CL:TRACE',
-    match: /(ray|beam|flow|vector|trajectory|current|line|force|axis|frequency)/i,
-    handshape: 'pointer',
-    mouthMorpheme: 'cs',
-    movementVector: { x: 35, y: -20, z: 20 },
-  },
-  {
-    // Particles, bodies, spheres, cells, molecules, planets
-    type: 'CL:SPHERE',
-    match: /(particle|molecule|atom|cell|nucleus|sphere|globule|vesicle|core|body)/i,
-    handshape: 'claw',
-    mouthMorpheme: 'mm',
-    movementVector: { x: 10, y: 10, z: 10 },
-  },
-];

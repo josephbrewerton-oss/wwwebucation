@@ -81,12 +81,14 @@ export const SUPPORTED_SIGN_LANGUAGES: Record<SignLanguageCode, SignLanguageInfo
 const STORAGE_KEY_BSL_ENABLED = 'stj_bsl_enabled';
 const STORAGE_KEY_SIGN_LANG = 'stj_sign_language';
 const STORAGE_KEY_LANGUAGE_TUPLE = 'stj_language_tuple';
+const STORAGE_KEY_VOICE_ENABLED = 'stj_voice_enabled';
 
 const CHANGE_EVENT = 'stj_bsl_change';
 const SIGN_LANG_EVENT = 'stj_sign_lang_change';
 const TUPLE_EVENT = 'stj_language_tuple_change';
 const SPEECH_EVENT = 'stj_bsl_speech';
 const STUDIO_EVENT = 'stj_bsl_studio_toggle';
+const VOICE_CHANGE_EVENT = 'stj_voice_change';
 
 export interface BslSpeechPayload {
   word?: string;
@@ -244,6 +246,71 @@ export function subscribeBsl(callback: (enabled: boolean) => void): () => void {
 
   return () => {
     window.removeEventListener(CHANGE_EVENT, handler);
+    window.removeEventListener('storage', handler);
+  };
+}
+
+/**
+ * Gets whether speech audio narration is globally enabled.
+ */
+export function getVoiceEnabled(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const val = localStorage.getItem(STORAGE_KEY_VOICE_ENABLED);
+    return val !== null ? val === 'true' : true;
+  } catch (_) {
+    return true;
+  }
+}
+
+/**
+ * Sets speech audio narration state globally, cancelling any pending speech buffers immediately when muted.
+ */
+export function setVoiceEnabled(enabled: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEY_VOICE_ENABLED, String(enabled));
+  } catch (_) {}
+
+  // Immediate kill of any background speech buffers when muted
+  if (!enabled && 'speechSynthesis' in window) {
+    try {
+      window.speechSynthesis.cancel();
+    } catch (_) {}
+  }
+
+  window.dispatchEvent(new CustomEvent(VOICE_CHANGE_EVENT, { detail: { enabled } }));
+}
+
+/**
+ * Toggles speech audio narration on/off.
+ */
+export function toggleVoice(): boolean {
+  const next = !getVoiceEnabled();
+  setVoiceEnabled(next);
+  return next;
+}
+
+/**
+ * Subscribes to global voice audio narration changes across all views.
+ */
+export function subscribeVoice(callback: (enabled: boolean) => void): () => void {
+  if (typeof window === 'undefined') return () => {};
+
+  const handler = (e: Event) => {
+    const custom = e as CustomEvent<{ enabled: boolean }>;
+    if (custom.detail && typeof custom.detail.enabled === 'boolean') {
+      callback(custom.detail.enabled);
+    } else {
+      callback(getVoiceEnabled());
+    }
+  };
+
+  window.addEventListener(VOICE_CHANGE_EVENT, handler);
+  window.addEventListener('storage', handler);
+
+  return () => {
+    window.removeEventListener(VOICE_CHANGE_EVENT, handler);
     window.removeEventListener('storage', handler);
   };
 }
