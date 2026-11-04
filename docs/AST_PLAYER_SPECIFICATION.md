@@ -165,6 +165,17 @@ Gesture          ::= "(:draggable" ws ":target" ws String ws
   - Interactive smartboard in-stage stylus ink (`#annotation-ink-root`) draws directly over live or paused video frames.
   - Synchronized multilingual subtitles, speech synthesis, and audio cues float seamlessly over the film layer.
 
+### 3.11. Key Mathematical Paradigm: Analytic Vector Ray Tracing (:ray-tracer / :optics)
+Contrary to the industry misconception that ray tracing requires raster framebuffers and stochastic pixel-sampling, this engine implements **Analytic 2D Ray Tracing**:
+* **Continuous Geometry Representation**: Obstacles, lenses, prisms, and mirrors are defined as continuous parametric segments, circular arcs, and Bézier curves in vector coordinate space.
+* **Closed-Form Linear Algebra & Snell's Law**:
+  - Rays $\vec{P}(t) = \vec{O} + t\vec{D}$ are tested against boundary segments via closed-form 2D linear algebra:
+    $$t = \frac{(\vec{A} - \vec{O}) \times \vec{S}}{\vec{D} \times \vec{S}}, \quad u = \frac{(\vec{A} - \vec{O}) \times \vec{D}}{\vec{D} \times \vec{S}}$$
+  - Refraction and Total Internal Reflection (TIR) are evaluated directly in WASM / typed linear memory via Snell's Law in vector form:
+    $$\vec{R} = \eta \vec{D} + \left(\eta (\vec{N} \cdot (-\vec{D})) - \sqrt{1 - \eta^2 (1 - (\vec{N} \cdot (-\vec{D}))^2)}\right) \vec{N}$$
+* **Ray Path as the Visual Primitive**: The ray path itself is the visual primitive. Ray hit sequences $[\vec{P}_0, \vec{P}_1, \dots, \vec{P}_k]$ are written directly to `<polyline points="...">` or `<line>` endpoints in a single atomic commit per frame.
+* **Sub-Millisecond Zero-Aliasing Execution**: Produces infinitely scalable, zero-aliasing optical paths across Smartboards, 8K displays, and mobile devices with sub-millisecond CPU overhead and zero pixelation.
+
 ---
 
 ## 4. Canonical Scene File Example
