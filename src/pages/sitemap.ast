@@ -1,0 +1,142 @@
+(:sitemap
+  :portal "St Joseph's Curriculum Portal"
+  :version "2.6.0"
+  :generated "2026-11-04"
+  :license "GNU-AGPLv3"[cite: 6]
+  :governance "Zero-Cloud Egress / Sovereign On-Device Execution"
+
+  ;; Core Application Routes
+  (:routes (
+    (:route :path "/"                  :view "home"            :title "Home Portal & Apparatus Stage")
+    (:route :path "/player"            :view "media-player"    :title "AST Vector Simulation Studio")
+    (:route :path "/learning-zone"     :view "learning-zone"   :title "Curriculum Units & Lessons")[cite: 4]
+    (:route :path "/practice-lab"      :view "practice-lab"    :title "Socratic Edge Practice Lab")[cite: 4]
+    (:route :path "/catholic-life"     :view "catholic-life"   :title "Catholic Sanctuary & Faith Formation")
+    (:route :path "/curriculum-studio" :view "studio"          :title "Overseas Importer & CSV Editor")[cite: 4]
+    (:route :path "/teacher-beacon"    :view "beacon"          :title "P2P WebRTC Classroom Mesh")[cite: 4]
+    (:route :path "/news"              :view "blog"            :title "Technical Architecture Dispatches")
+    (:route :path "/licensing"         :view "licensing"       :title "Dual-Licensing Charter & Covenant")[cite: 4, 6]
+    (:route :path "/privacy"           :view "privacy"         :title "Statutory Safeguarding & Privacy")[cite: 4]
+  ))
+
+  ;; Production Cartridge Registry (ROMs & Binary Bytecode)
+  (:cartridges (
+    (:cartridge
+      :id "welcome"
+      :type "Sim"
+      :title "Welcome to AST Vector Player & Educational Simulator"
+      :stage "PORTAL APPARATUS & SIMULATOR"
+      :tier "core"
+      :oak-id "OAK-PORTAL-000"
+      :mount "/curriculum/general/welcome"
+      :svg "cartridges/welcome.svg"
+      :ast "cartridges/welcome.ast"
+      :bytecode "bytecode/welcome.astb")
+
+    (:cartridge
+      :id "church-tour"
+      :type "Slide"
+      :title "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces"
+      :stage "CATHOLIC LIFE"
+      :tier "core"
+      :oak-id "OAK-KS2-RE-001"
+      :mount "/curriculum/religious/church-tour"
+      :svg "cartridges/church-tour.svg"
+      :ast "cartridges/church-tour.ast"
+      :bytecode "bytecode/church-tour.astb")
+
+    (:cartridge
+      :id "altar-anatomy"
+      :type "Slide"
+      :title "The Catholic Altar: Sacred Anatomy, Types & Appointments"
+      :stage "CATHOLIC LIFE"
+      :tier "core"
+      :oak-id "OAK-KS2-RE-002"
+      :mount "/curriculum/science/altar-anatomy"
+      :svg "cartridges/altar-anatomy.svg"
+      :ast "cartridges/altar-anatomy.ast"
+      :bytecode "bytecode/altar-anatomy.astb")
+
+    (:cartridge
+      :id "times-tables"
+      :type "Sim"
+      :title "Times Tables: 1× to 12× Standard School Multiplication Chart & Grid"
+      :stage "KS1/KS2 MATHS"
+      :tier "core"
+      :oak-id "OAK-KS1-MAT-006"
+      :mount "/curriculum/mathematics/times-tables"
+      :svg "cartridges/times-tables.svg"
+      :ast "cartridges/times-tables.ast"
+      :bytecode "bytecode/times-tables.astb")
+
+    (:cartridge
+      :id "fractions"
+      :type "Slide"
+      :title "Fractions: Why Common Denominators Rule"
+      :stage "KS2 MATHS"
+      :tier "core"
+      :oak-id "OAK-KS2-MAT-005"
+      :mount "/curriculum/mathematics/fractions"
+      :svg "cartridges/fractions.svg"
+      :ast "cartridges/fractions.ast"
+      :bytecode "bytecode/fractions.astb")
+
+    (:cartridge
+      :id "pythagoras"
+      :type "Sim"
+      :title "Pythagoras' Theorem (a² + b² = c²)"
+      :stage "KS3 GEOMETRY"
+      :tier "core"
+      :oak-id "OAK-KS3-MAT-001"
+      :mount "/curriculum/mathematics/pythagoras"
+      :svg "cartridges/pythagoras.svg"
+      :ast "cartridges/pythagoras.ast"
+      :bytecode "bytecode/pythagoras.astb")
+
+    (:cartridge
+      :id "kinetic-gas"
+      :type "Sim"
+      :title "Kinetic Gas Theory & Boyle's Law"
+      :stage "KS3/KS4 PHYSICS & CHEMISTRY"
+      :tier "core"
+      :oak-id "OAK-KS3-SCI-001"
+      :mount "/curriculum/science/kinetic-gas"
+      :svg "cartridges/kinetic-gas.svg"
+      :ast "cartridges/kinetic-gas.ast"
+      :bytecode "bytecode/kinetic-gas.astb")
+
+    (:cartridge
+      :id "bsl-fingerspelling"
+      :type "Sim"
+      :title "BSL: 3D British Sign Language Two-Handed Fingerspelling"
+      :stage "ACCESSIBILITY & LANGUAGES"
+      :tier "core"
+      :oak-id "OAK-KS2-INC-001"
+      :mount "/curriculum/english/bsl-fingerspelling"
+      :svg "cartridges/bsl-fingerspelling.svg"
+      :ast "cartridges/bsl-fingerspelling.ast"
+      :bytecode "bytecode/bsl-fingerspelling.astb")
+
+    (:cartridge
+      :id "bbc-model-b"
+      :type "Sim"
+      :title "BBC Micro Model B: 6502 Computing & BBC BASIC"
+      :stage "KS2 & KS3 COMPUTING"
+      :tier "core"
+      :oak-id "OAK-KS2-COM-012"
+      :mount "/curriculum/computing/bbc-model-b"
+      :svg "cartridges/bbc-model-b.svg"
+      :ast "cartridges/bbc-model-b.ast"
+      :bytecode "bytecode/bbc-model-b.astb")
+  ))
+
+  ;; Autonomous Edge Discovery Metadata
+  (:agent-discovery
+    (:llms-txt "%BASE_URL%llms.txt")
+    (:llms-full "%BASE_URL%llms-full.txt")
+    (:spec "%BASE_URL%docs/AST_PLAYER_SPECIFICATION.md")
+    (:invariants
+      (:memory-pool "448 KB Fixed Linear WASM (7 Pages)")
+      (:gc-pressure "0 bytes dynamic allocations during 60 FPS loop")
+      (:network-egress "0 bps client-to-cloud data leakage")))
+)
