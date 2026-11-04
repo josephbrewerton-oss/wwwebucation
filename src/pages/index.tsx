@@ -10,6 +10,7 @@ export function renderHomePage(): HTMLElement {
   const scenes = Array.isArray(PRESET_OPTIONS) && PRESET_OPTIONS.length > 0 
     ? PRESET_OPTIONS 
     : [
+        { id: 'welcome', label: 'Welcome to AST Vector Player & Educational Simulator' },
         { id: 'kinetic-gas', label: 'Kinetic Gas Theory & Thermodynamics' },
         { id: 'pythagoras', label: "Pythagoras' Theorem (a² + b² = c²)" },
         { id: 'fractions', label: 'Fractions: Why Common Denominators Rule' },
@@ -18,11 +19,14 @@ export function renderHomePage(): HTMLElement {
         { id: 'algebra-balance', label: 'Algebraic Balance Scale' },
       ];
 
+  const defaultSceneId = scenes[0]?.id || 'welcome';
+
   const optionsHtml = scenes.map(opt => `
-    <option value="${opt.id}">${opt.label}</option>
+    <option value="${opt.id}" ${opt.id === defaultSceneId ? 'selected' : ''}>${opt.label}</option>
   `).join('');
 
   const featuredPills = [
+    { label: '👋 Introduction', id: 'welcome' },
     { label: '💨 Kinetic Gas', id: 'kinetic-gas' },
     { label: '🏛️ Church Tour', id: 'church-tour' },
     { label: '🕯️ High Altar', id: 'altar-anatomy' },
@@ -35,15 +39,18 @@ export function renderHomePage(): HTMLElement {
     { label: '🤟 BSL Signs', id: 'bsl-fingerspelling' },
   ];
 
-  const pillsHtml = featuredPills.map((pill, i) => `
+  const pillsHtml = featuredPills.map((pill) => {
+    const isDefault = pill.id === defaultSceneId;
+    return `
     <button 
       type="button" 
       class="sim-pill-btn" 
       data-preset="${pill.id}" 
-      style="background: ${i === 0 ? '#0284c7' : '#1e293b'}; color: ${i === 0 ? '#ffffff' : '#94a3b8'}; border: 1px solid ${i === 0 ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 3px 10px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
+      style="background: ${isDefault ? '#0284c7' : '#1e293b'}; color: ${isDefault ? '#ffffff' : '#94a3b8'}; border: 1px solid ${isDefault ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 3px 10px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
       ${pill.label}
     </button>
-  `).join('');
+  `;
+  }).join('');
 
   container.innerHTML = `
     <!-- Welcome Hero -->
@@ -241,7 +248,7 @@ export function renderHomePage(): HTMLElement {
         <div style="border-radius: 12px; overflow: hidden; min-height: 480px; background: #090d16;">
           <iframe 
             id="landing-stage-viewport"
-            src="${base}player.html?preset=kinetic-gas" 
+            src="${base}player.html?preset=${defaultSceneId}" 
             style="width: 100%; height: 480px; border: none; display: block;" 
             title="Featured Interactive Simulation">
           </iframe>
@@ -345,29 +352,30 @@ export function renderHomePage(): HTMLElement {
   `;
 
   // Attach interactive preset switcher to dropdown & pills without React
-const iframe = container.querySelector<HTMLIFrameElement>('#landing-stage-viewport');
-const select = container.querySelector<HTMLSelectElement>('#landing-sim-selector');
-const pills = container.querySelectorAll<HTMLButtonElement>('.sim-pill-btn');
+  const iframe = container.querySelector<HTMLIFrameElement>('#landing-stage-viewport');
+  const select = container.querySelector<HTMLSelectElement>('#landing-sim-selector');
+  const pills = container.querySelectorAll<HTMLButtonElement>('.sim-pill-btn');
 
-// Guarantee accessible name for screen readers & AI agent accessibility tree
-if (select && !select.getAttribute('aria-label')) {
-  select.setAttribute('aria-label', 'Select Curriculum Simulation');
-}
+  // Guarantee accessible name for screen readers & AI agent accessibility tree
+  if (select && !select.getAttribute('aria-label')) {
+    select.setAttribute('aria-label', 'Select Curriculum Simulation');
+  }
 
-function updatePreset(presetId: string) {
-  if (iframe) {
-    iframe.src = `${base}player.html?preset=${presetId}`;
+  function updatePreset(presetId: string) {
+    if (iframe) {
+      iframe.src = `${base}player.html?preset=${presetId}`;
+    }
+    if (select) {
+      select.value = presetId;
+    }
+    pills.forEach((p) => {
+      const active = p.dataset.preset === presetId;
+      p.style.background = active ? '#0284c7' : '#1e293b';
+      p.style.color = active ? '#ffffff' : '#94a3b8';
+      p.style.borderColor = active ? '#38bdf8' : '#334155';
+    });
   }
-  if (select) {
-    select.value = presetId;
-  }
-  pills.forEach((p) => {
-    const active = p.dataset.preset === presetId;
-    p.style.background = active ? '#0284c7' : '#1e293b';
-    p.style.color = active ? '#ffffff' : '#94a3b8';
-    p.style.borderColor = active ? '#38bdf8' : '#334155';
-  });
-}
+
   select?.addEventListener('change', (e) => {
     updatePreset((e.target as HTMLSelectElement).value);
   });
@@ -380,4 +388,5 @@ function updatePreset(presetId: string) {
 
   return container;
 }
+
 export default renderHomePage;
