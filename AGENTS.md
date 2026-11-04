@@ -1,8 +1,8 @@
 # St Joseph's Curriculum Portal — AI Agent Context & Rules
 
 ## Project Architecture
-- **Framework**: High-performance client-side Single Page Application (SPA) powered by **Vite 8+** (Rolldown / esbuild), **React 19**, and **React Router 7**.
-- **Persistent App Shell**: The Universal Translator Bar, Persistent Navbar, and Footer are permanently mounted in `src/components/PersistentAppShell.tsx`. Route navigation occurs in-memory inside `#ast-persistent-viewport` via `<Outlet />`.
+- **Framework**: High-performance client-side Single Page Application (SPA) powered by **Vite 8+** (Rolldown / esbuild), **Native Web Standards / TypeScript (Zero React)**, and a lightweight native micro-router (`src/router.ts`).
+- **Persistent App Shell**: The Universal Translator Bar, Persistent Navbar, and Footer are permanently mounted in `src/components/PersistentAppShell.ts` as `<app-shell>`. Route navigation occurs in-memory inside `#ast-persistent-viewport` via `#page-outlet`.
 - **Styling**: Tailwind CSS & scoped CSS without heavy framework overrides. `html { scrollbar-gutter: stable; }` must be preserved to prevent Cumulative Layout Shift (CLS).
 - **Static Assets**: Located in `static/` (served at `/` via Vite's `publicDir: 'static'`).
 - **Build**: `npm run build` runs icon generation, Oak manifest compilation, AST bytecode generation, and `vite build` into `dist/`. Build time must remain sub-second (< 1s). Do NOT re-introduce Docusaurus or SSR build tools.

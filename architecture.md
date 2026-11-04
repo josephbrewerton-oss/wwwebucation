@@ -1,7 +1,7 @@
 # St Joseph's Curriculum Portal — System Architecture & Context
 
 ## 1. Project Overview & Commercial Thesis
-The St Joseph's Curriculum Portal is an enterprise-grade, edge-native learning platform and declarative vector animation runtime built on **Vite 8+ (Rolldown)**, **React 19**, and a **3-Tier client-side inference engine** with zero network egress.
+The St Joseph's Curriculum Portal is an enterprise-grade, edge-native learning platform and declarative vector animation runtime built on **Vite 8+ (Rolldown)**, **Native Web Components / TypeScript (Zero React)**, and a **3-Tier client-side inference engine** with zero network egress.
 
 * **Zero Marginal Compute Overhead:** Inference, procedural S-expression compilation, Socratic evaluation, and 60 FPS vector animation run 100% client-side in the browser.
 * **Statutory Safeguarding & Zero-Telemetry:** Pupil records, diagnostics, voice recordings, and assessment tokens are strictly isolated in local IndexedDB (`EdgeLearningEngineDB`), fulfilling UK GDPR (Art. 25) and KCSIE standards.
@@ -17,7 +17,7 @@ The St Joseph's Curriculum Portal is an enterprise-grade, edge-native learning p
 │                              BROWSER TAB                               │
 │                                                                        │
 │   ┌────────────────────────┐             ┌──────────────────────────┐  │
-│   │   React 19 / Vite 8    │ ◄─────────► │    IndexedDB Storage     │  │
+│   │ Vanilla TS & Vite 8    │ ◄─────────► │    IndexedDB Storage     │  │
 │   │ (App Shell / Viewport) │             │ (Curriculum Cache & VFS) │  │
 │   └───────────┬────────────┘             └──────────────────────────┘  │
 │               │                                                        │

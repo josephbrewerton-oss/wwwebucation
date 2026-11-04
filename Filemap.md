@@ -12,17 +12,15 @@ Current active repository structure (Vite 6+ SPA, Edge AI Engine, PWA):
 - `Filemap.md` — Active directory index
 
 ## Source Code (`src/`)
-- `src/main.tsx` — Root React 19 application bootstrapper, service worker registration
-- `src/App.tsx` — Router setup with React Router 7 and persistent layout routes
+- `src/main.ts` — Root vanilla application bootstrapper, service worker registration, and `<app-shell>` mount
+- `src/router.ts` — High-performance zero-dependency micro-router
 - `src/types.ts` — Shared TypeScript types
 - `src/registerServiceWorker.ts` — Offline PWA service worker lifecycle manager
 - `src/components/`
-  - `src/components/PersistentAppShell.tsx` — Universal Translator bar, Persistent Navbar, Footer, and sandboxed Worker guest VM
-  - `src/components/PersistentNavbar.tsx` — Responsive navigation, Gemini Nano indicator, Data Saver toggle, PWA install prompt
-  - `src/components/InteractiveEdgeSandbox.tsx` — In-browser local interactive practice sandbox
-  - `src/components/DynamicLessonViewer.tsx` — Lesson viewer for interactive curriculum units
-  - `src/components/UniversalTranslatorBar.tsx` — Multi-language switcher and live DOM translation controller
-  - `src/components/PageMeta.tsx` — Dynamic page title and meta description tag updater
+  - `src/components/PersistentAppShell.ts` — Native Custom Element `<app-shell>`: Universal Translator bar, Persistent Navbar, Footer, and sandboxed Worker guest VM
+  - `src/components/NativeBslInterpreter.ts` — Procedural 60 FPS BSL in-vision interpreter Custom Element
+  - `src/components/componentsFlow.ts` — Unified S-Expression & AST stream coordinator
+  - `src/components/player/` — Pure vanilla TypeScript player overlay and drawer modules
 - `src/css/`
   - `src/css/custom.css` — Global styling, high-contrast mode, zero-CLS rules, and low-bandwidth/Data-Saver hardware rules
 - `src/data/`
