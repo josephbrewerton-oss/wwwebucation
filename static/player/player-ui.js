@@ -58,6 +58,7 @@
         btnPrint: document.getElementById('btn-print'),
         btnCopySvg: document.getElementById('btn-copy-svg'),
         btnPlayMode: document.getElementById('btn-play-mode'),
+        btnPen: document.getElementById('btn-pen'),
         btnInteractive: document.getElementById('btn-interactive'),
         interactiveCard: document.getElementById('interactive-card'),
         interactiveBody: document.getElementById('interactive-body'),
@@ -1260,17 +1261,31 @@
       if (this.elements.timelineThumb) {
         this.elements.timelineThumb.style.left = `${pct}%`;
       }
+      const isContinuousSim = Boolean(
+        this.engine.isContinuousSim ||
+        scene.type === 'Sim' ||
+        scene.cartridgeType === 'Sim' ||
+        scene.type === 'App' ||
+        scene.cartridgeType === 'App' ||
+        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+      );
+
+      // On simulations, switch off the timeline scrubber and step buttons
+      if (this.elements.scrubberBox) {
+        this.elements.scrubberBox.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showTimelineScrubber !== false ? '' : 'none');
+      }
+      if (this.elements.btnPrev) {
+        this.elements.btnPrev.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
+      }
+      if (this.elements.btnNext) {
+        this.elements.btnNext.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
+      }
+
       if (this.elements.timeReadout) {
-        const isContinuousSim = Boolean(
-          this.engine.isContinuousSim ||
-          scene.type === 'Sim' ||
-          scene.cartridgeType === 'Sim' ||
-          (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
-          (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
-          (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
-        );
         if (isContinuousSim) {
-          this.elements.timeReadout.textContent = '⚡ 60 FPS Continuous Simulation';
+          this.elements.timeReadout.textContent = '⚡ 60 FPS Interactive Lab';
         } else {
           const kfs = (scene && scene.keyframes) || [];
           if (kfs.length > 0) {
@@ -1283,7 +1298,9 @@
             const cleanTitle = (curKf && curKf.title) ? curKf.title.replace(/^\d+[\.\s]*/, '') : 'Interactive Slide';
             this.elements.timeReadout.textContent = `Slide ${activeIdx + 1} of ${kfs.length}: ${cleanTitle}`;
           } else {
-            this.elements.timeReadout.textContent = `Interactive Slide • 60 FPS`;
+            const curSec = Math.floor(this.engine.progress * (this.engine.durationSec || 10));
+            const totalSec = Math.floor(this.engine.durationSec || 10);
+            this.elements.timeReadout.textContent = `${this.formatTime(curSec)} / ${this.formatTime(totalSec)} (${pct}%)`;
           }
         }
       }
@@ -1991,6 +2008,17 @@ window.addEventListener('message', (e) => {
           });
           if (this.engine.activePresetId === 'church-tour') {
             this.startQuestMode();
+          }
+        });
+      }
+
+      // Whiteboard Marker Pill Button
+      if (el.btnPen) {
+        el.btnPen.addEventListener('click', () => {
+          if (window.__astGestures && typeof window.__astGestures.togglePen === 'function') {
+            window.__astGestures.togglePen();
+          } else {
+            window.postMessage({ type: 'TOGGLE_PEN' }, '*');
           }
         });
       }
@@ -2719,6 +2747,13 @@ window.addEventListener('message', (e) => {
         } else if (e.code === 'KeyP' && !e.ctrlKey && !e.metaKey) {
           e.preventDefault();
           if (el.btnPlayMode) el.btnPlayMode.click();
+        } else if ((e.code === 'KeyW' || e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          e.preventDefault();
+          if (window.__astGestures && typeof window.__astGestures.togglePen === 'function') {
+            window.__astGestures.togglePen();
+          } else {
+            window.postMessage({ type: 'TOGGLE_PEN' }, '*');
+          }
         } else if (e.code === 'Home' || e.code === 'Digit0' || e.code === 'Numpad0') {
           e.preventDefault();
           if (el.btnReset) el.btnReset.click();

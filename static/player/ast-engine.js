@@ -7186,20 +7186,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const isDynamicScene = !isSlide && Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
 
       if (this.isPlaying) {
-        this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
+        if (!isDynamicScene) {
+          this.progress += (deltaSec / (this.durationSec || 10.0)) * (this.speed || 1.0);
 
-        if (this.progress >= 1.0) {
-          if (this.loop || isDynamicScene) {
-            this.progress = this.progress % 1.0;
-            this.lastSpokenIndex = -1;
-          } else {
-            this.progress = 1.0;
-            this.pause();
-            this.emit('ended', { duration: this.durationSec });
+          if (this.progress >= 1.0) {
+            if (this.loop) {
+              this.progress = this.progress % 1.0;
+              this.lastSpokenIndex = -1;
+            } else {
+              this.progress = 1.0;
+              this.pause();
+              this.emit('ended', { duration: this.durationSec });
+            }
           }
-        }
 
-        this.updateActiveKeyframeAndSpeech(false);
+          this.updateActiveKeyframeAndSpeech(false);
+        }
 
         if (!this.vars) this.vars = {};
         const speedParam = typeof this.vars.speedMultiplier === 'number'
@@ -7225,9 +7227,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         if (this.scene) {
           this.emit('timeupdate', {
-            progress: this.progress,
-            currentTime: this.progress * (this.durationSec || 10.0),
-            duration: this.durationSec
+            progress: isDynamicScene ? 0 : this.progress,
+            currentTime: isDynamicScene ? 0 : this.progress * (this.durationSec || 10.0),
+            duration: isDynamicScene ? 0 : this.durationSec
           });
         }
       }
