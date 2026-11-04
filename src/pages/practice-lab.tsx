@@ -1,6 +1,11 @@
-import { ALL_CURRICULUM_ROUTES } from '../curriculum/curriculumMesh';
+// src/pages/practice-lab.tsx
+// St Joseph's Curriculum Portal - Interactive Practice Lab Arena
+// Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 
-interface PracticeQuestion {
+import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, CurriculumQuestionItem } from '../curriculum/curriculumMesh';
+import { resolveTopicSimulator } from '../curriculum/curriculumSimMapping';
+
+export interface PracticeQuestion {
   id: string;
   stage: string;
   subject: string;
@@ -13,80 +18,52 @@ interface PracticeQuestion {
   simPreset?: string;
 }
 
-const SAMPLE_DRILLS: PracticeQuestion[] = [
-  {
-    id: 'mat-frac-1',
-    stage: 'Key Stage 2',
-    subject: 'Mathematics',
-    unit: 'Fractions and Decimals',
-    question: 'What is 1/4 + 2/4 in simplest form?',
-    options: ['3/8', '3/4', '2/8', '1/2'],
-    correctIndex: 1,
-    hint: 'When fractions share the same denominator (bottom number), simply add the numerators (top numbers)!',
-    explanation: 'Correct! 1/4 + 2/4 = (1 + 2)/4 = 3/4. Denominators stay the same.',
-    simPreset: 'fractions'
-  },
-  {
-    id: 'sci-gas-1',
-    stage: 'Key Stage 3',
-    subject: 'Science',
-    unit: 'States of Matter & Gas Laws',
-    question: 'If the volume of a sealed gas container is halved at constant temperature, what happens to the gas pressure?',
-    options: ['Halved', 'Remains identical', 'Doubled', 'Quadrupled'],
-    correctIndex: 2,
-    hint: "Recall Boyle's Law: P × V = constant. Fewer spaces mean particles collide with walls twice as often.",
-    explanation: "Correct! By Boyle's Law, pressure is inversely proportional to volume. Halving the volume doubles the pressure.",
-    simPreset: 'kinetic-gas'
-  },
-  {
-    id: 'mat-pyth-1',
-    stage: 'Key Stage 3',
-    subject: 'Mathematics',
-    unit: 'Pythagoras Theorem',
-    question: 'In a right-angled triangle with legs a = 3 and b = 4, what is the length of hypotenuse c?',
-    options: ['5', '7', '12', '25'],
-    correctIndex: 0,
-    hint: "Use Pythagoras' formula: a² + b² = c². 3² + 4² = 9 + 16 = 25.",
-    explanation: 'Correct! √25 = 5. A classic 3-4-5 Pythagorean triple.',
-    simPreset: 'pythagoras'
-  },
-  {
-    id: 'sci-circ-1',
-    stage: 'Key Stage 3',
-    subject: 'Science',
-    unit: 'Electrical Circuits & Ohm’s Law',
-    question: 'If voltage across a resistor is 12V and current is 3A, what is its electrical resistance?',
-    options: ['36 Ω', '4 Ω', '9 Ω', '0.25 Ω'],
-    correctIndex: 1,
-    hint: "Use Ohm's Law: V = I × R, which rearranges to R = V / I.",
-    explanation: 'Correct! R = 12V / 3A = 4 Ω.',
-    simPreset: 'electric-circuits'
-  },
-  {
-    id: 're-mass-1',
-    stage: 'Key Stage 2',
-    subject: 'Religious Education (Catholic)',
-    unit: 'The Holy Eucharist & Sacraments',
-    question: 'Which part of the Mass follows the Liturgy of the Word?',
-    options: ['Introductory Rites', 'Liturgy of the Eucharist', 'Concluding Rites', 'Penitential Act'],
-    correctIndex: 1,
-    hint: 'After listening to God’s Word in Scripture, we approach the Altar for the sacrifice and Thanksgiving.',
-    explanation: 'Correct! The two main tables of the Mass are the Table of the Word followed by the Table of the Eucharist.',
-    simPreset: 'church-tour'
-  },
-  {
-    id: 'lang-es-1',
-    stage: 'Key Stage 2',
-    subject: 'Spanish',
-    unit: 'Greetings and Introductions',
-    question: 'How do you say "Good morning" in Spanish?',
-    options: ['Buenas noches', 'Buenos días', 'Hasta luego', 'Por favor'],
-    correctIndex: 1,
-    hint: '"Día" means day. "Buenos días" literally means good days!',
-    explanation: 'Correct! "Buenos días" is used in the morning until lunchtime.',
-    simPreset: 'languages'
+function assembleAllPracticeQuestions(): PracticeQuestion[] {
+  const list: PracticeQuestion[] = [];
+
+  for (const route of ALL_CURRICULUM_ROUTES) {
+    const sim = resolveTopicSimulator(route.topicId, route.topicTitle, route.subjectTitle);
+    const simPreset = sim ? sim.presetId : undefined;
+
+    if (route.questions && route.questions.length > 0) {
+      for (const q of route.questions) {
+        list.push({
+          id: q.id,
+          stage: route.stageTitle,
+          subject: route.subjectTitle,
+          unit: route.topicTitle,
+          question: q.prompt,
+          options: q.options,
+          correctIndex: q.answerKey,
+          hint: q.hint,
+          explanation: q.explanation,
+          simPreset,
+        });
+      }
+    } else {
+      // Fallback: generate a core axiom check question
+      list.push({
+        id: `q_axiom_${route.stageId}_${route.topicId}`,
+        stage: route.stageTitle,
+        subject: route.subjectTitle,
+        unit: route.topicTitle,
+        question: `Which fundamental principle governs ${route.topicTitle}?`,
+        options: [
+          route.axiom,
+          `It operates in reverse without regard for foundational invariants.`,
+          `It only applies under hypothetical lab conditions with arbitrary constants.`,
+          `It contradicts the standard National Curriculum frameworks.`,
+        ],
+        correctIndex: 0,
+        hint: route.guidedStep || 'Focus on the defining conceptual axiom.',
+        explanation: `Correct! ${route.axiom}`,
+        simPreset,
+      });
+    }
   }
-];
+
+  return list;
+}
 
 export function renderPracticePage(): HTMLElement {
   const base = (import.meta.env.BASE_URL || '/').replace(/\/?$/, '/');
@@ -94,18 +71,70 @@ export function renderPracticePage(): HTMLElement {
   container.className = 'practice-arena-stage';
   container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  let selectedStage = 'All';
-  let selectedSubject = 'All';
+  const allQuestions = assembleAllPracticeQuestions();
+
+  // Read initial filter from URL params if linked from Learning Zone
+  const params = new URLSearchParams(window.location.search);
+  let selectedStage = params.get('stage') || 'All';
+  let selectedSubject = params.get('subject') || 'All';
+  let searchQuery = params.get('q') || '';
   let score = 0;
   let streak = 0;
   const answeredQuestions = new Set<string>();
 
+  // Extract distinct stages and subjects
+  const stages = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'];
+  const subjectsSet = new Set<string>();
+  allQuestions.forEach((q) => {
+    if (q.subject) subjectsSet.add(q.subject);
+  });
+  const subjects = ['All', ...Array.from(subjectsSet).sort()];
+
   function getFilteredDrills(): PracticeQuestion[] {
-    return SAMPLE_DRILLS.filter(d => {
+    const q = searchQuery.toLowerCase().trim();
+    return allQuestions.filter((d) => {
       const matchStage = selectedStage === 'All' || d.stage === selectedStage;
       const matchSubject = selectedSubject === 'All' || d.subject === selectedSubject;
-      return matchStage && matchSubject;
+      if (!matchStage || !matchSubject) return false;
+      if (q) {
+        const inQ = d.question.toLowerCase().includes(q);
+        const inUnit = d.unit.toLowerCase().includes(q);
+        const inExp = d.explanation.toLowerCase().includes(q);
+        if (!inQ && !inUnit && !inExp) return false;
+      }
+      return true;
     });
+  }
+
+  function playSound(type: 'success' | 'error') {
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      if (type === 'success') {
+        osc.frequency.setValueAtTime(523.25, ctx.currentTime); // C5
+        osc.frequency.exponentialRampToValueAtTime(659.25, ctx.currentTime + 0.1); // E5
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } else {
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, ctx.currentTime);
+        osc.frequency.linearRampToValueAtTime(120, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.12, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.2);
+      }
+    } catch {
+      // AudioContext unavailable
+    }
   }
 
   function render() {
@@ -113,67 +142,96 @@ export function renderPracticePage(): HTMLElement {
 
     container.innerHTML = `
       <!-- Header -->
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1.5rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:1.75rem;">
         <div>
           <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-            <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+            <a href="${base}" style="font-size:0.82rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
             <span style="color:#cbd5e1;">/</span>
-            <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">⚡ Practice Lab Question Bank</span>
+            <a href="${base}learning-zone" style="font-size:0.82rem; color:#64748b; text-decoration:none; font-weight:600;">Learning Zone</a>
+            <span style="color:#cbd5e1;">/</span>
+            <span style="font-size:0.82rem; color:#0284c7; font-weight:700;">⚡ Practice Lab Arena</span>
           </div>
-          <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 4px 0;">Interactive Practice Arena</h1>
-          <p style="font-size:0.95rem; color:#64748b; margin:0;">
-            Immediate diagnostic feedback, step-by-step hints, and linked AST vector simulations.
+          <h1 style="font-size:2.2rem; font-weight:800; color:#0f172a; margin:0 0 6px 0; letter-spacing:-0.02em;">
+            Interactive Practice Arena
+          </h1>
+          <p style="font-size:0.96rem; color:#475569; margin:0; line-height:1.5;">
+            Master National Curriculum topics with diagnostic checkpoints, immediate feedback, hints, and linked 60 FPS simulations.
           </p>
         </div>
 
-        <!-- Score & Streak Pills -->
-        <div style="display:flex; gap:10px; align-items:center;">
-          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:6px 14px; border-radius:999px; font-size:0.85rem; font-weight:700; color:#166534; display:flex; align-items:center; gap:6px;">
-            <span>⭐</span> Score: <span id="score-val">${score}</span>
+        <!-- Score & Streak Status -->
+        <div style="display:flex; gap:12px; align-items:center;">
+          <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
+            <span>⭐</span> Score: <span id="score-val" style="font-size:1.1rem; font-weight:800;">${score}</span>
           </div>
-          <div style="background:#fffbeb; border:1px solid #fde68a; padding:6px 14px; border-radius:999px; font-size:0.85rem; font-weight:700; color:#92400e; display:flex; align-items:center; gap:6px;">
-            <span>🔥</span> Streak: <span id="streak-val">${streak}</span>
+          <div style="background:#fffbeb; border:1px solid #fde68a; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#92400e; display:flex; align-items:center; gap:8px;">
+            <span>🔥</span> Streak: <span id="streak-val" style="font-size:1.1rem; font-weight:800;">${streak}</span>
           </div>
         </div>
       </div>
 
       <!-- Filters Toolbar -->
-      <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:2rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
-        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <label style="font-size:0.8rem; font-weight:700; color:#475569;">Key Stage:</label>
-            ${['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3'].map(st => `
-              <button type="button" class="stage-filter-btn" data-stage="${st}" style="padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1px solid ${st === selectedStage ? '#0284c7' : '#cbd5e1'}; background:${st === selectedStage ? '#0284c7' : '#f8fafc'}; color:${st === selectedStage ? '#fff' : '#475569'};">
-                ${st}
-              </button>
-            `).join('')}
+      <section style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:2rem; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
+        <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">
+          <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="practice-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Key Stage:</label>
+              <select id="practice-stage-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
+                ${stages.map(st => `<option value="${st}" ${st === selectedStage ? 'selected' : ''}>${st}</option>`).join('')}
+              </select>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:6px;">
+              <label for="practice-subject-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Subject:</label>
+              <select id="practice-subject-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
+                ${subjects.map(sub => `<option value="${sub}" ${sub === selectedSubject ? 'selected' : ''}>${sub}</option>`).join('')}
+              </select>
+            </div>
           </div>
 
-          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-            <label style="font-size:0.8rem; font-weight:700; color:#475569;">Subject:</label>
-            ${['All', 'Mathematics', 'Science', 'Spanish', 'Religious Education (Catholic)'].map(sub => `
-              <button type="button" class="subject-filter-btn" data-subject="${sub}" style="padding:4px 10px; border-radius:6px; font-size:0.78rem; font-weight:700; cursor:pointer; border:1px solid ${sub === selectedSubject ? '#0284c7' : '#cbd5e1'}; background:${sub === selectedSubject ? '#0284c7' : '#f8fafc'}; color:${sub === selectedSubject ? '#fff' : '#475569'};">
-                ${sub === 'Religious Education (Catholic)' ? '✝️ Catholic RE' : sub}
-              </button>
-            `).join('')}
+          <div style="flex:1; min-width:240px; max-width:360px; position:relative;">
+            <input 
+              type="text" 
+              id="practice-search-input" 
+              value="${searchQuery}" 
+              placeholder="Search question prompts or topics..." 
+              style="width:100%; box-sizing:border-box; padding:8px 36px 8px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a;"
+            />
+            ${searchQuery ? `
+              <button type="button" id="clear-practice-search-btn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; font-size:0.9rem; cursor:pointer;">✕</button>
+            ` : ''}
           </div>
         </div>
-      </div>
+
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:0.78rem; color:#64748b;">
+          <span>Showing <strong>${drills.length}</strong> active practice questions</span>
+          ${(selectedStage !== 'All' || selectedSubject !== 'All' || searchQuery) ? `
+            <button type="button" id="reset-practice-filters-btn" style="background:none; border:none; color:#0284c7; font-weight:700; cursor:pointer; text-decoration:underline;">
+              Reset filters
+            </button>
+          ` : ''}
+        </div>
+      </section>
 
       <!-- Drills List -->
       <div id="drills-container" style="display:flex; flex-direction:column; gap:1.25rem;">
         ${drills.length === 0 ? `
-          <div style="text-align:center; padding:3rem; color:#64748b; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;">
-            No questions found for the selected filters.
+          <div style="text-align:center; padding:3rem; color:#64748b; background:#ffffff; border-radius:14px; border:1px solid #e2e8f0;">
+            <div style="font-size:2rem; margin-bottom:0.5rem;">🔍</div>
+            <h3 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin:0 0 6px 0;">No questions match this selection</h3>
+            <p style="font-size:0.86rem; color:#64748b; margin:0 0 1rem 0;">
+              Try picking 'All' Key Stages or clearing the search query.
+            </p>
           </div>
         ` : drills.map((drill, qIdx) => `
-          <div class="drill-card" id="drill-${drill.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
-              <div style="display:flex; align-items:center; gap:8px;">
-                <span style="font-size:0.75rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:2px 8px; border-radius:999px;">
+          <article class="drill-card" id="drill-${drill.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
+              <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                <span style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">
                   ${drill.stage}
                 </span>
-                <span style="font-size:0.75rem; font-weight:700; color:#ca8a04;">
+                <span style="color:#cbd5e1;">&bull;</span>
+                <span style="font-size:0.74rem; font-weight:700; color:#475569;">
                   ${drill.subject} &bull; ${drill.unit}
                 </span>
               </div>
@@ -184,20 +242,20 @@ export function renderPracticePage(): HTMLElement {
               ` : ''}
             </div>
 
-            <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; line-height:1.4;">
+            <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; line-height:1.45;">
               ${qIdx + 1}. ${drill.question}
             </h3>
 
             <!-- Options Grid -->
-            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:10px; margin-bottom:1rem;">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:10px; margin-bottom:1rem;">
               ${drill.options.map((opt, optIdx) => `
                 <button
                   type="button"
                   class="option-btn"
                   data-drill-id="${drill.id}"
                   data-opt-idx="${optIdx}"
-                  style="text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc; color:#0f172a; font-weight:600; font-size:0.9rem; cursor:pointer; transition:all 0.15s ease;">
-                  <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:22px; font-size:0.78rem; margin-right:8px; font-weight:800;">
+                  style="text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc; color:#0f172a; font-weight:600; font-size:0.88rem; cursor:pointer; transition:all 0.15s ease; line-height:1.4;">
+                  <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:22px; font-size:0.76rem; margin-right:8px; font-weight:800;">
                     ${String.fromCharCode(65 + optIdx)}
                   </span>
                   ${opt}
@@ -206,7 +264,7 @@ export function renderPracticePage(): HTMLElement {
             </div>
 
             <!-- Feedback & Hint Box -->
-            <div class="feedback-box" id="feedback-${drill.id}" style="display:none; padding:10px 14px; border-radius:8px; font-size:0.86rem; margin-top:8px;"></div>
+            <div class="feedback-box" id="feedback-${drill.id}" style="display:none; padding:10px 14px; border-radius:8px; font-size:0.86rem; margin-top:8px; line-height:1.5;"></div>
             
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px;">
               <button type="button" class="hint-toggle-btn" data-drill-id="${drill.id}" style="background:transparent; border:none; color:#0284c7; font-size:0.8rem; font-weight:700; cursor:pointer;">
@@ -216,49 +274,70 @@ export function renderPracticePage(): HTMLElement {
                 ${drill.hint}
               </div>
             </div>
-          </div>
+          </article>
         `).join('')}
       </div>
     `;
 
-    // Bind Filter Listeners
-    container.querySelectorAll('.stage-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedStage = btn.getAttribute('data-stage') || 'All';
-        render();
-      });
+    // Bind Filter Selects
+    const stageSelect = container.querySelector('#practice-stage-select') as HTMLSelectElement | null;
+    stageSelect?.addEventListener('change', () => {
+      selectedStage = stageSelect.value;
+      render();
     });
 
-    container.querySelectorAll('.subject-filter-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        selectedSubject = btn.getAttribute('data-subject') || 'All';
-        render();
-      });
+    const subjectSelect = container.querySelector('#practice-subject-select') as HTMLSelectElement | null;
+    subjectSelect?.addEventListener('change', () => {
+      selectedSubject = subjectSelect.value;
+      render();
     });
+
+    const searchInput = container.querySelector('#practice-search-input') as HTMLInputElement | null;
+    searchInput?.addEventListener('input', () => {
+      searchQuery = searchInput.value;
+      render();
+      const newInput = container.querySelector('#practice-search-input') as HTMLInputElement | null;
+      if (newInput) {
+        newInput.focus();
+        newInput.setSelectionRange(searchQuery.length, searchQuery.length);
+      }
+    });
+
+    container.querySelector('#clear-practice-search-btn')?.addEventListener('click', () => {
+      searchQuery = '';
+      render();
+    });
+
+    const resetPracticeFilters = () => {
+      selectedStage = 'All';
+      selectedSubject = 'All';
+      searchQuery = '';
+      render();
+    };
+    container.querySelector('#reset-practice-filters-btn')?.addEventListener('click', resetPracticeFilters);
 
     // Bind Option Clicks
-    container.querySelectorAll('.option-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
+    container.querySelectorAll('.option-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
         const drillId = btn.getAttribute('data-drill-id');
         const optIdx = parseInt(btn.getAttribute('data-opt-idx') || '0', 10);
-        const drill = SAMPLE_DRILLS.find(d => d.id === drillId);
+        const drill = drills.find((d) => d.id === drillId);
         if (!drill) return;
 
-        const card = container.querySelector(`#drill-${drillId}`);
         const feedback = container.querySelector(`#feedback-${drillId}`) as HTMLElement;
-        if (!card || !feedback) return;
+        if (!feedback) return;
 
-        // Prevent repeated scoring on same question
         const isFirstAnswer = !answeredQuestions.has(drill.id);
         answeredQuestions.add(drill.id);
 
         if (optIdx === drill.correctIndex) {
-          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #16a34a; background:#dcfce7; color:#166534; font-weight:700; font-size:0.9rem;');
+          playSound('success');
+          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #16a34a; background:#dcfce7; color:#166534; font-weight:700; font-size:0.88rem; line-height:1.4;');
           feedback.style.display = 'block';
           feedback.style.background = '#dcfce7';
           feedback.style.color = '#166534';
           feedback.style.border = '1px solid #86efac';
-          feedback.innerHTML = `<strong>🎉 Brilliant!</strong> ${drill.explanation}`;
+          feedback.innerHTML = `<strong>🎉 Excellent!</strong> ${drill.explanation}`;
 
           if (isFirstAnswer) {
             score += 10;
@@ -269,7 +348,8 @@ export function renderPracticePage(): HTMLElement {
             if (streakVal) streakVal.textContent = String(streak);
           }
         } else {
-          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #dc2626; background:#fee2e2; color:#991b1b; font-weight:700; font-size:0.9rem;');
+          playSound('error');
+          btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #dc2626; background:#fee2e2; color:#991b1b; font-weight:700; font-size:0.88rem; line-height:1.4;');
           feedback.style.display = 'block';
           feedback.style.background = '#fee2e2';
           feedback.style.color = '#991b1b';
@@ -286,7 +366,7 @@ export function renderPracticePage(): HTMLElement {
     });
 
     // Bind Hint Toggles
-    container.querySelectorAll('.hint-toggle-btn').forEach(btn => {
+    container.querySelectorAll('.hint-toggle-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const drillId = btn.getAttribute('data-drill-id');
         const hintEl = container.querySelector(`#hint-${drillId}`) as HTMLElement;
