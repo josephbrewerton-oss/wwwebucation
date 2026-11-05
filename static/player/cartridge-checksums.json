@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-05T08:04:17.638Z",
+  "generatedAt": "2026-11-05T08:15:23.492Z",
   "totalCartridges": 60,
-  "masterChecksum": "ae83373663fdaf917283216c25d403268fd3e270b4e74bc05a90954aa96c3766",
+  "masterChecksum": "9b9aa31220d659ebb1b43c0997b4decf119315c335ea7bce7db02b44d5e8a256",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -698,15 +698,15 @@
       "title": "Photosynthesis: The Green Solar Engine",
       "stage": "KS3 BIOLOGY",
       "type": "Slide",
-      "astSha256": "87596d97eab1608dfcbf9ac811bd5fa53b53e4cc7dc896af31d6a2737533512f",
-      "svgSha256": "6241f4fe901c1010f85b855ebbc8513e33d6d8d4a98fbb461d161a328a17662f",
-      "astbSha256": "922e214a6c3842fc45a1c489674495f37ffde264e59c1940511af9c8ed32608c",
-      "astbBytes": 1599,
-      "astBytes": 2908,
-      "svgBytes": 5559,
+      "astSha256": "76a551b3d7b336d07c778df82acc49d4261323d10a19628dfd2f05fe5f461fa8",
+      "svgSha256": "c6b125d61adb77b8834d7959e935f0ec839aed802a9ffb3734dc0efbf49c6db1",
+      "astbSha256": "75ea03d19ef3170941be288ed36b0b4640d0d18247d219bc66f1452a2cff2220",
+      "astbBytes": 2022,
+      "astBytes": 3963,
+      "svgBytes": 6229,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "75963fb475534e19029a904189a79217d5fbf4fad3fa17b3cadcbc9814f9c419",
+      "seal": "9aa5074be948cc2801b2b19705636ba6dbc53be08f3d672ebc77c1bf194e83d0",
       "certified": true
     },
     "pipeline-sample": {

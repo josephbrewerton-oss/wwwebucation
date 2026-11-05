@@ -1,0 +1,125 @@
+<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <filter id="oil-glow-filter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4.5" result="blur" />
+      <feComposite in="SourceGraphic" in2="blur" operator="over" />
+    </filter>
+    <linearGradient id="wallBg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stopColor="#1e293b" />
+      <stop offset="100%" stopColor="#0f172a" />
+    </linearGradient>
+    <linearGradient id="goldArch" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#f59e0b" />
+      <stop offset="50%" stopColor="#fde047" />
+      <stop offset="100%" stopColor="#b45309" />
+    </linearGradient>
+    <radialGradient id="lampGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stopColor="#fbbf24" stopOpacity="0.8" />
+      <stop offset="40%" stopColor="#f59e0b" stopOpacity="0.3" />
+      <stop offset="100%" stopColor="#f59e0b" stopOpacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Church Sanctuary Wall Background -->
+  <rect x="0" y="0" width="800" height="480" fill="url(#wallBg)" />
+
+  <!-- Architectural Ambry Niche -->
+  <g id="ambry-structure" transform="translate(140, 25)">
+    <!-- Outer Marble Frame -->
+    <rect x="0" y="0" width="520" height="360" rx="14" fill="#334155" stroke="#64748b" strokeWidth="3" />
+    <!-- Arch Header -->
+    <path d="M 30 110 C 30 30, 490 30, 490 110 L 490 340 L 30 340 Z" fill="#0f172a" stroke="#d97706" strokeWidth="2.5" />
+    <!-- Golden Arch Beading -->
+    <path d="M 45 115 C 45 45, 475 45, 475 115" fill="none" stroke="url(#goldArch)" strokeWidth="4" />
+    
+    <!-- Title Inscription -->
+    <text x="260" y="70" fill="#fef08a" fontSize="20" fontFamily="serif" textAnchor="middle" fontWeight="bold" letterSpacing="4">
+      OLEA SANCTA
+    </text>
+    <text x="260" y="90" fill="#cbd5e1" fontSize="10" fontFamily="serif" textAnchor="middle" letterSpacing="2">
+      AMBRIARIUM SANCTUARII
+    </text>
+
+    <!-- Deep Red Velvet Backing -->
+    <rect x="50" y="105" width="420" height="215" rx="6" fill="#450a0a" stroke="#7f1d1d" strokeWidth="1" />
+
+    <!-- Marble Shelf -->
+    <rect x="35" y="300" width="450" height="18" rx="2" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
+    <rect x="30" y="318" width="460" height="8" fill="#64748b" opacity="0.6" />
+
+    <!-- Ambry Sanctuary Vigil Lamp -->
+    <g id="ambry-lamp" transform="translate(260, 115)">
+      <circle id="ambry-lamp-glow" cx="0" cy="0" r="28" fill="url(#lampGlow)" opacity="0.8" />
+      <polygon points="-8,-4 8,-4 5,8 -5,8" fill="#dc2626" stroke="#991b1b" strokeWidth="1" />
+      <circle cx="0" cy="-6" r="3" fill="#fde047" filter="url(#oil-glow-filter)" />
+    </g>
+
+    <!-- VESSEL 1: O.I. (Oleum Infirmorum) Left -->
+    <g id="vessel-oi" transform="translate(110, 150)">
+      <circle id="oi-vessel-glow" cx="25" cy="80" r="50" fill="#38bdf8" opacity="0.2" filter="url(#oil-glow-filter)" />
+      <!-- Crystal Ampulla -->
+      <ellipse cx="25" cy="95" rx="30" ry="38" fill="#0284c7" opacity="0.45" />
+      <ellipse cx="25" cy="95" rx="26" ry="34" fill="#38bdf8" opacity="0.65" />
+      <path d="M 6 85 C 6 55, 44 55, 44 85 C 44 125, 6 125, 6 85 Z" fill="none" stroke="#e0f2fe" strokeWidth="2" opacity="0.8" />
+      <!-- Neck & Silver Stopper -->
+      <rect x="18" y="45" width="14" height="22" rx="2" fill="#cbd5e1" stroke="#f8fafc" strokeWidth="1" />
+      <circle cx="25" cy="38" r="7" fill="#e2e8f0" stroke="#f8fafc" strokeWidth="1" />
+      <!-- Silver Plate -->
+      <rect x="7" y="84" width="36" height="22" rx="3" fill="#0f172a" stroke="#38bdf8" strokeWidth="1.5" />
+      <text x="25" y="100" fill="#38bdf8" fontSize="13" fontFamily="serif" textAnchor="middle" fontWeight="bold">O.I.</text>
+      <text x="25" y="142" fill="#7dd3fc" fontSize="11" fontFamily="serif" textAnchor="middle" fontWeight="bold">Oleum Infirmorum</text>
+      <text x="25" y="154" fill="#bae6fd" fontSize="8" textAnchor="middle">Oil of the Sick</text>
+    </g>
+
+    <!-- VESSEL 2: S.C. (Sanctum Chrisma) Center -->
+    <g id="vessel-sc" transform="translate(235, 135)">
+      <circle id="sc-vessel-glow" cx="25" cy="90" r="60" fill="#f59e0b" opacity="0.3" filter="url(#oil-glow-filter)" />
+      <!-- Amber Balsam Liquid -->
+      <ellipse cx="25" cy="110" rx="35" ry="44" fill="#b45309" opacity="0.5" />
+      <ellipse cx="25" cy="110" rx="31" ry="40" fill="#fbbf24" opacity="0.7" />
+      <path d="M 4 98 C 4 62, 46 62, 46 98 C 46 145, 4 145, 4 98 Z" fill="none" stroke="#fef3c7" strokeWidth="2.5" opacity="0.9" />
+      <!-- Gilded Neck & Cross Stopper -->
+      <rect x="17" y="50" width="16" height="26" rx="3" fill="#d97706" stroke="#fef08a" strokeWidth="1.5" />
+      <path d="M 25 24 L 25 50 M 18 32 L 32 32" stroke="#fde047" strokeWidth="3" strokeLinecap="round" />
+      <!-- Gold Plate -->
+      <rect x="5" y="98" width="40" height="24" rx="4" fill="#451a03" stroke="#f59e0b" strokeWidth="1.5" />
+      <text x="25" y="115" fill="#fef08a" fontSize="15" fontFamily="serif" textAnchor="middle" fontWeight="bold">S.C.</text>
+      <text x="25" y="162" fill="#fcd34d" fontSize="12" fontFamily="serif" textAnchor="middle" fontWeight="bold">Sanctum Chrisma</text>
+      <text x="25" y="174" fill="#fef08a" fontSize="8.5" textAnchor="middle">Sacred Chrism • Balsam</text>
+    </g>
+
+    <!-- VESSEL 3: O.C. (Oleum Catechumenorum) Right -->
+    <g id="vessel-oc" transform="translate(360, 150)">
+      <circle id="oc-vessel-glow" cx="25" cy="80" r="50" fill="#10b981" opacity="0.2" filter="url(#oil-glow-filter)" />
+      <!-- Olive Oil Emerald Tint -->
+      <ellipse cx="25" cy="95" rx="30" ry="38" fill="#047857" opacity="0.45" />
+      <ellipse cx="25" cy="95" rx="26" ry="34" fill="#34d399" opacity="0.65" />
+      <path d="M 6 85 C 6 55, 44 55, 44 85 C 44 125, 6 125, 6 85 Z" fill="none" stroke="#d1fae5" strokeWidth="2" opacity="0.8" />
+      <!-- Neck & Silver Stopper -->
+      <rect x="18" y="45" width="14" height="22" rx="2" fill="#cbd5e1" stroke="#f8fafc" strokeWidth="1" />
+      <circle cx="25" cy="38" r="7" fill="#e2e8f0" stroke="#f8fafc" strokeWidth="1" />
+      <!-- Silver Plate -->
+      <rect x="7" y="84" width="36" height="22" rx="3" fill="#064e3b" stroke="#34d399" strokeWidth="1.5" />
+      <text x="25" y="100" fill="#6ee7b7" fontSize="13" fontFamily="serif" textAnchor="middle" fontWeight="bold">O.C.</text>
+      <text x="25" y="142" fill="#6ee7b7" fontSize="11" fontFamily="serif" textAnchor="middle" fontWeight="bold">Catechumenorum</text>
+      <text x="25" y="154" fill="#a7f3d0" fontSize="8" textAnchor="middle">Oil of Catechumens</text>
+    </g>
+
+    <!-- Glass Pane Sheen -->
+    <rect x="25" y="25" width="470" height="315" rx="10" fill="white" opacity="0.04" pointerEvents="none" />
+  </g>
+
+  <!-- Interactive Target Probe Pointer -->
+  <circle id="oil-probe" cx="400" cy="80" r="14" fill="#f59e0b" fillOpacity="0.3" stroke="#fef08a" strokeWidth="2.5" filter="url(#oil-glow-filter)" />
+
+  <!-- Lower Banner Console -->
+  <rect x="30" y="405" width="740" height="65" rx="10" fill="#090d16" stroke="#334155" strokeWidth="1.5" />
+  <text id="oil-step-title" x="50" y="428" fill="#fbbf24" fontSize="13" fontFamily="serif" fontWeight="bold" letterSpacing="1.5">
+    1. AMBRIARIUM SACRUM (THE SACRED AMBRY)
+  </text>
+  <text id="oil-step-desc" x="50" y="452" fill="#cbd5e1" fontSize="11" fontFamily="sans-serif">
+    Inscribed with OLEA SANCTA &bull; Reverently housing the three sacramental oils...
+  </text>
+  <rect x="680" y="415" width="75" height="24" rx="4" fill="#1e293b" stroke="#475569" strokeWidth="1" />
+  <text x="717" y="431" fill="#94a3b8" fontSize="10" fontFamily="sans-serif" textAnchor="middle" fontWeight="bold">CCC 1241</text>
+</svg>
