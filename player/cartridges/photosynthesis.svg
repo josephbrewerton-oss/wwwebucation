@@ -55,9 +55,20 @@
   </g>
 
   <!-- Sun Solar Engine in Upper Sky -->
-  <g transform="translate(400, 15)">
-    <circle cx="0" cy="0" r="45" fill="url(#ps-sun-grad)" filter="url(#glow)" opacity="0.85" />
+  <g id="ps-sun-engine" transform="translate(400, 15)">
+    <circle id="ps-sun-glow" cx="0" cy="0" r="45" fill="url(#ps-sun-grad)" filter="url(#glow)" opacity="0.85" />
     <circle cx="0" cy="0" r="18" fill="#fef08a" filter="url(#glow)" />
+    <!-- Coronal Solar Flare Rays (Illustrator Trim & Pivot) -->
+    <g id="ps-sun-rays" stroke="#facc15" stroke-width="2" stroke-linecap="round" opacity="0.75">
+      <line x1="0" y1="-26" x2="0" y2="-42" />
+      <line x1="0" y1="26" x2="0" y2="42" />
+      <line x1="-26" y1="0" x2="-42" y2="0" />
+      <line x1="26" y1="0" x2="42" y2="0" />
+      <line x1="-19" y1="-19" x2="-31" y2="-31" />
+      <line x1="19" y1="19" x2="31" y2="31" />
+      <line x1="-19" y1="19" x2="-31" y2="31" />
+      <line x1="19" y1="-19" x2="31" y2="-31" />
+    </g>
   </g>
 
   <!-- Botanical Leaf Structure -->
@@ -66,7 +77,7 @@
     <path id="ps-leaf" d="M 120 240 C 200 80, 600 80, 680 240 C 600 400, 200 400, 120 240 Z" fill="url(#grad-leaf)" stroke="#4ade80" stroke-width="3" />
 
     <!-- Mesophyll Cellular Chloroplast Organelles inside Leaf -->
-    <g opacity="0.35">
+    <g id="ps-chloroplasts" opacity="0.35">
       <ellipse cx="260" cy="200" rx="18" ry="10" fill="url(#ps-chloroplast)" />
       <ellipse cx="340" cy="180" rx="20" ry="11" fill="url(#ps-chloroplast)" />
       <ellipse cx="440" cy="185" rx="22" ry="12" fill="url(#ps-chloroplast)" />
@@ -77,8 +88,8 @@
       <ellipse cx="540" cy="270" rx="18" ry="10" fill="url(#ps-chloroplast)" />
     </g>
 
-    <!-- Vascular Vein Network (Xylem &amp; Phloem) -->
-    <path id="ps-veins" d="M 120 240 L 680 240 M 260 240 L 340 160 M 380 240 L 460 160 M 500 240 L 570 175 M 260 240 L 340 320 M 380 240 L 460 320 M 500 240 L 570 305" stroke="#86efac" stroke-width="2.5" fill="none" opacity="0.75" stroke-linecap="round" />
+    <!-- Vascular Vein Network (Xylem &amp; Phloem) with Trim Paths -->
+    <path id="ps-veins" d="M 120 240 L 680 240 M 260 240 L 340 160 M 380 240 L 460 160 M 500 240 L 570 175 M 260 240 L 340 320 M 380 240 L 460 320 M 500 240 L 570 305" stroke="#86efac" stroke-width="2.5" fill="none" opacity="0.85" stroke-linecap="round" stroke-dasharray="1205" stroke-dashoffset="0" />
   </g>
 
   <!-- Cellular Anatomy Labels -->

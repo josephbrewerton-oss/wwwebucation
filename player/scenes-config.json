@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-05T08:11:06.339Z",
+  "generatedAt": "2026-11-05T08:39:06.295Z",
   "totalScenes": 60,
   "scenes": [
     {
@@ -661,7 +661,7 @@
       "astbFile": "bytecode/photosynthesis.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 6
+      "bindingsCount": 11
     },
     {
       "id": "pipeline-sample",
