@@ -58,7 +58,7 @@ export function getRegisteredWebMcpTools(): readonly string[] {
 }
 
 /**
- * Set or update the React Router navigate callback for in-app transitions
+ * Set or update the native router navigate callback for in-app transitions
  */
 export function setWebMcpNavigator(navigator: NavigateFunction | null): void {
   activeNavigator = navigator;

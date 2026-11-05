@@ -1,7 +1,7 @@
 /**
  * src/utils/ast3dWasmBridge.ts
  *
- * St Joseph's Educational Media Suite — WASM 3D Kernel Bridge for React/Browser
+ * St Joseph's Educational Media Suite — WASM 3D Kernel Bridge
  * Conforms to docs/WASM_ARCHITECTURE_CONTRACT.md (Page 4 Memory Layout: 0x040000)
  */
 
@@ -16,8 +16,8 @@ export interface Projected3DPoint {
   safeZ: number;
 }
 
-export class AST3DWasmBridgeReact {
-  private static instance: AST3DWasmBridgeReact | null = null;
+export class AST3DWasmBridge {
+  private static instance: AST3DWasmBridge | null = null;
   public isReady = false;
   private memory: WebAssembly.Memory | null = null;
   private exports: any = null;
@@ -39,17 +39,17 @@ export class AST3DWasmBridgeReact {
   };
 
   private constructor() {
-    this.init().catch((err) => console.warn('[WASM 3D React Bridge] Init warning:', err));
+    this.init().catch((err) => console.warn('[WASM 3D Bridge] Init warning:', err));
   }
 
-  public static getInstance(): AST3DWasmBridgeReact {
-    if (!AST3DWasmBridgeReact.instance) {
-      AST3DWasmBridgeReact.instance = new AST3DWasmBridgeReact();
+  public static getInstance(): AST3DWasmBridge {
+    if (!AST3DWasmBridge.instance) {
+      AST3DWasmBridge.instance = new AST3DWasmBridge();
       if (typeof window !== 'undefined') {
-        (window as any).AST3DWasmBridge = AST3DWasmBridgeReact.instance;
+        (window as any).AST3DWasmBridge = AST3DWasmBridge.instance;
       }
     }
-    return AST3DWasmBridgeReact.instance;
+    return AST3DWasmBridge.instance;
   }
 
   public async init(): Promise<boolean> {
@@ -106,7 +106,7 @@ export class AST3DWasmBridgeReact {
 
       return true;
     } catch (err) {
-      console.warn('WASM 3D React initialization failed, falling back to JS math:', err);
+      console.warn('WASM 3D initialization failed, falling back to JS math:', err);
       this.isReady = false;
       return false;
     }
@@ -199,5 +199,5 @@ export class AST3DWasmBridgeReact {
 
 // Auto-instantiate singleton
 if (typeof window !== 'undefined') {
-  AST3DWasmBridgeReact.getInstance();
+  AST3DWasmBridge.getInstance();
 }

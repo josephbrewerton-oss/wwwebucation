@@ -1,7 +1,7 @@
 /**
  * src/utils/astTranspilerWasmBridge.ts
  *
- * St Joseph's Educational Media Suite — Flash SWF & PhET Transpiler WASM Bridge for React/Vite
+ * St Joseph's Educational Media Suite — Flash SWF & PhET Transpiler WASM Bridge
  * Conforms to docs/WASM_ARCHITECTURE_CONTRACT.md & docs/AST_PLAYER_SPECIFICATION.md
  */
 
@@ -33,8 +33,8 @@ export interface PhetScanResult {
   propertyCount: number;
 }
 
-export class ASTTranspilerWasmBridgeReact {
-  private static instance: ASTTranspilerWasmBridgeReact | null = null;
+export class ASTTranspilerWasmBridge {
+  private static instance: ASTTranspilerWasmBridge | null = null;
   public isReady = false;
   private exports: any = null;
   private memory: WebAssembly.Memory | null = null;
@@ -45,17 +45,17 @@ export class ASTTranspilerWasmBridgeReact {
   private readonly STREAM_BUFFER_PTR = 0x010000;
 
   private constructor() {
-    this.init().catch((err) => console.warn('[Transpiler WASM React Bridge] Init notice:', err));
+    this.init().catch((err) => console.warn('[Transpiler WASM Bridge] Init notice:', err));
   }
 
-  public static getInstance(): ASTTranspilerWasmBridgeReact {
-    if (!ASTTranspilerWasmBridgeReact.instance) {
-      ASTTranspilerWasmBridgeReact.instance = new ASTTranspilerWasmBridgeReact();
+  public static getInstance(): ASTTranspilerWasmBridge {
+    if (!ASTTranspilerWasmBridge.instance) {
+      ASTTranspilerWasmBridge.instance = new ASTTranspilerWasmBridge();
       if (typeof window !== 'undefined') {
-        (window as any).ASTTranspilerWasmBridge = ASTTranspilerWasmBridgeReact.instance;
+        (window as any).ASTTranspilerWasmBridge = ASTTranspilerWasmBridge.instance;
       }
     }
-    return ASTTranspilerWasmBridgeReact.instance;
+    return ASTTranspilerWasmBridge.instance;
   }
 
   public async init(): Promise<boolean> {
@@ -117,7 +117,7 @@ export class ASTTranspilerWasmBridgeReact {
 
       return true;
     } catch (err) {
-      console.warn('WASM Transpiler React initialization notice, falling back to JS:', err);
+      console.warn('WASM Transpiler initialization notice, falling back to JS:', err);
       this.isReady = false;
       return false;
     }
@@ -226,4 +226,4 @@ export class ASTTranspilerWasmBridgeReact {
   }
 }
 
-export const transpilerWasm = ASTTranspilerWasmBridgeReact.getInstance();
+export const transpilerWasm = ASTTranspilerWasmBridge.getInstance();

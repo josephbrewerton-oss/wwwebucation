@@ -1,14 +1,6 @@
 // Auto-generated Domain Substrate: CORE
-export const CORE_AST_STRING = ";; Domain AST Manifest: core\n(:domain-substrate :core\n  (:symbol \"default\" :from \"App.tsx\" :kind :function :return \"React.JSX.Element\" :params ())\n  (:symbol \"ConceptGraphNode\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConceptGraphEdge\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DiagnosticRemediationRoute\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConceptGraphEngine\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"ConceptGraphEngineSingleton\" :params ())\n  (:symbol \"adaptOakStage\" :from \"curriculum/curriculumAdapter.ts\" :kind :function :return \"StandardStage\" :params ((:param \"stage\" :type \"any\")))\n  (:symbol \"StandardTopic\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardSubject\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardStage\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"generateCurriculumStockNumber\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"string\" :params ((:param \"stageId\" :type \"string\") (:param \"subjectId\" :type \"string\") (:param \"topicId\" :type \"string\")))\n  (:symbol \"registerRouteNode\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"void\" :params ((:param \"node\" :type \"CurriculumRouteNode\")))\n  (:symbol \"ingestCustomCurriculumPack\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"number\" :params ((:param \"pack\" :type \"any\")))\n  (:symbol \"syncMeshToIndexedDB\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"resolveCurriculumRoute\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"CurriculumRouteNode\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"lessonTitleOrId\" :type \"string\")))\n  (:symbol \"getQuestionForRoute\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"CurriculumQuestionItem\" :params ((:param \"route\" :type \"CurriculumRouteNode\") (:param \"lessonTitleOrId\" :type \"string\") (:param \"forceVariation\" :type \"boolean\") (:param \"seedToken\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"exportCurriculumMeshToSExpr\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"exportCurriculumMeshToJSON\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"object\" :params ())\n  (:symbol \"ExecutionEngineType\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumQuestionItem\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumLessonNode\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRouteNode\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ALL_CURRICULUM_ROUTES\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"CurriculumRouteNode[]\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"curriculum/engine.ts\" :kind :const :return \"{ readonly folder: \"src/curriculum\"; readonly timestamp: 1787937755228; readonly totalModules: 2; readonly exports: readonly [{ readonly name: \"StandardTopic\"; readonly isType: true; readonly sourceFile: \"curriculumAdapter\"; }, ... 8 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"adaptOakStage\" :from \"curriculum/engine.ts\" :kind :function :return \"StandardStage\" :params ((:param \"stage\" :type \"any\")))\n  (:symbol \"StandardTopic\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardSubject\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardStage\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"findTopicLessons\" :from \"curriculum/engine.ts\" :kind :function :return \"OakLesson[]\" :params ((:param \"stageKey\" :type \"string\") (:param \"subjectTitle\" :type \"string\") (:param \"topicTitle\" :type \"string\")))\n  (:symbol \"OakLesson\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakTopic\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakSubject\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakStage\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_CATALOGUE\" :from \"curriculum/engine.ts\" :kind :const :return \"Record<string, OakStage>\" :params ())\n  (:symbol \"OakCatalogue\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_OAK_CATALOGUE\" :from \"curriculum/engine.ts\" :kind :const :return \"OakCatalogue\" :params ())\n  (:symbol \"getActiveCurriculum\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumPackage\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"dispatchAstIntent\" :from \"curriculum/index.ts\" :kind :function :return \"T\" :params ((:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"CurriculumPackage\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRegistry\" :from \"curriculum/index.ts\" :kind :const :return \"Record<string, CurriculumPackage>\" :params ())\n  (:symbol \"generateCurriculumStockNumber\" :from \"curriculum/index.ts\" :kind :function :return \"string\" :params ((:param \"stageId\" :type \"string\") (:param \"subjectId\" :type \"string\") (:param \"topicId\" :type \"string\")))\n  (:symbol \"registerRouteNode\" :from \"curriculum/index.ts\" :kind :function :return \"void\" :params ((:param \"node\" :type \"CurriculumRouteNode\")))\n  (:symbol \"ingestCustomCurriculumPack\" :from \"curriculum/index.ts\" :kind :function :return \"number\" :params ((:param \"pack\" :type \"any\")))\n  (:symbol \"syncMeshToIndexedDB\" :from \"curriculum/index.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"resolveCurriculumRoute\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumRouteNode\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"lessonTitleOrId\" :type \"string\")))\n  (:symbol \"getQuestionForRoute\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumQuestionItem\" :params ((:param \"route\" :type \"CurriculumRouteNode\") (:param \"lessonTitleOrId\" :type \"string\") (:param \"forceVariation\" :type \"boolean\") (:param \"seedToken\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"exportCurriculumMeshToSExpr\" :from \"curriculum/index.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"exportCurriculumMeshToJSON\" :from \"curriculum/index.ts\" :kind :function :return \"object\" :params ())\n  (:symbol \"ExecutionEngineType\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumQuestionItem\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumLessonNode\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRouteNode\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ALL_CURRICULUM_ROUTES\" :from \"curriculum/index.ts\" :kind :const :return \"CurriculumRouteNode[]\" :params ())\n  (:symbol \"generateCurriculumAst\" :from \"curriculum/mineCurriculumAst.ts\" :kind :function :return \"void\" :params ((:param \"dirPath\" :type \"string\") (:param \"outputPath\" :type \"string\")))\n  (:symbol \"findTopicLessons\" :from \"curriculum/oakCatalogue.ts\" :kind :function :return \"OakLesson[]\" :params ((:param \"stageKey\" :type \"string\") (:param \"subjectTitle\" :type \"string\") (:param \"topicTitle\" :type \"string\")))\n  (:symbol \"OakLesson\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakTopic\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakSubject\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakStage\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_CATALOGUE\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"Record<string, OakStage>\" :params ())\n  (:symbol \"OakCatalogue\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_OAK_CATALOGUE\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"OakCatalogue\" :params ())\n  (:symbol \"AltarTypeInfo\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarCandleRule\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarAppointment\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarDressingStep\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalSeasonTheme\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASON_THEMES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"Record<string, LiturgicalSeasonTheme>\" :params ())\n  (:symbol \"ALTAR_CANDLE_RULES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"Record<\"daily\" | \"sunday\" | \"bishop\", AltarCandleRule>\" :params ())\n  (:symbol \"ALTAR_TYPES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarTypeInfo[]\" :params ())\n  (:symbol \"ALTAR_APPOINTMENTS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarAppointment[]\" :params ())\n  (:symbol \"ALTAR_DRESSING_STEPS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarDressingStep[]\" :params ())\n  (:symbol \"TabernacleCatechesis\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TABERNACLE_CATECHESIS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"TabernacleCatechesis\" :params ())\n  (:symbol \"RiteAltarTradition\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RITE_ALTAR_TRADITIONS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"RiteAltarTradition[]\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"data/catholic/catholicPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"data/catholic/catholicPrayers.ts\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"SuiIurisChurch\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalRiteFamily\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalComparisonTopic\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConsecrationVoiceSample\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_RITE_FAMILIES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"LiturgicalRiteFamily[]\" :params ())\n  (:symbol \"SUI_IURIS_CHURCHES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"SuiIurisChurch[]\" :params ())\n  (:symbol \"LITURGICAL_COMPARISONS\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"LiturgicalComparisonTopic[]\" :params ())\n  (:symbol \"CONSECRATION_VOICES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"ConsecrationVoiceSample[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"HolyOil\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyAmbryInfo\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"HolyOil[]\" :params ())\n  (:symbol \"HOLY_AMBRY_INFO\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"HolyAmbryInfo\" :params ())\n  (:symbol \"SacramentalOilQuizQuestion\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS_QUIZ\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"SacramentalOilQuizQuestion[]\" :params ())\n  (:symbol \"HolyWaterFact\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ThuriferRoleFact\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IncensationMoment\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyWaterThuriferQuiz\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_WATER_CATECHESIS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"HolyWaterFact[]\" :params ())\n  (:symbol \"THURIFER_AND_INCENSE_CATECHESIS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"ThuriferRoleFact[]\" :params ())\n  (:symbol \"INCENSATION_MOMENTS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"IncensationMoment[]\" :params ())\n  (:symbol \"HOLY_WATER_THURIFER_QUIZ\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"HolyWaterThuriferQuiz[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"data/catholic/index.ts\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"data/catholic/index.ts\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"CORRECT_LITURGY_SEQUENCE_IDS\" :from \"data/catholic/index.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"SacredObject\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"data/catholic/index.ts\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"data/catholic/index.ts\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"StationQuest\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SANCTUARY_QUESTS\" :from \"data/catholic/index.ts\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"SacramentData\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacramentQuizQuestion\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SACRAMENTS_QUIZ_QUESTIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentQuizQuestion[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"data/catholic/index.ts\" :kind :function :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalQuizItem\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"LITURGICAL_QUIZ_QUESTIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalQuizItem[]\" :params ())\n  (:symbol \"CATHOLIC_KS2_KNOWLEDGE\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"CATHOLIC_KS3_KNOWLEDGE\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"AltarTypeInfo\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarCandleRule\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarAppointment\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarDressingStep\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalSeasonTheme\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASON_THEMES\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, LiturgicalSeasonTheme>\" :params ())\n  (:symbol \"ALTAR_CANDLE_RULES\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<\"daily\" | \"sunday\" | \"bishop\", AltarCandleRule>\" :params ())\n  (:symbol \"ALTAR_TYPES\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarTypeInfo[]\" :params ())\n  (:symbol \"ALTAR_APPOINTMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarAppointment[]\" :params ())\n  (:symbol \"ALTAR_DRESSING_STEPS\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarDressingStep[]\" :params ())\n  (:symbol \"TabernacleCatechesis\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TABERNACLE_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"TabernacleCatechesis\" :params ())\n  (:symbol \"RiteAltarTradition\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RITE_ALTAR_TRADITIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"RiteAltarTradition[]\" :params ())\n  (:symbol \"HolyOil\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyAmbryInfo\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyOil[]\" :params ())\n  (:symbol \"HOLY_AMBRY_INFO\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyAmbryInfo\" :params ())\n  (:symbol \"SacramentalOilQuizQuestion\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS_QUIZ\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentalOilQuizQuestion[]\" :params ())\n  (:symbol \"ReceptionMethod\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OurFatherPosture\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalMyth\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EUCHARISTIC_RECEPTION_METHODS\" :from \"data/catholic/index.ts\" :kind :const :return \"ReceptionMethod[]\" :params ())\n  (:symbol \"OUR_FATHER_POSTURES\" :from \"data/catholic/index.ts\" :kind :const :return \"OurFatherPosture[]\" :params ())\n  (:symbol \"LITURGICAL_MYTHS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalMyth[]\" :params ())\n  (:symbol \"HolyWaterFact\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ThuriferRoleFact\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IncensationMoment\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyWaterThuriferQuiz\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_WATER_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyWaterFact[]\" :params ())\n  (:symbol \"THURIFER_AND_INCENSE_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"ThuriferRoleFact[]\" :params ())\n  (:symbol \"INCENSATION_MOMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"IncensationMoment[]\" :params ())\n  (:symbol \"HOLY_WATER_THURIFER_QUIZ\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyWaterThuriferQuiz[]\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :function :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalQuizItem\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"LITURGICAL_QUIZ_QUESTIONS\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"LiturgicalQuizItem[]\" :params ())\n  (:symbol \"ReceptionMethod\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OurFatherPosture\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalMyth\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EUCHARISTIC_RECEPTION_METHODS\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"ReceptionMethod[]\" :params ())\n  (:symbol \"OUR_FATHER_POSTURES\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"OurFatherPosture[]\" :params ())\n  (:symbol \"LITURGICAL_MYTHS\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"LiturgicalMyth[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"CORRECT_LITURGY_SEQUENCE_IDS\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"CATHOLIC_KS2_KNOWLEDGE\" :from \"data/catholic/reCurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"CATHOLIC_KS3_KNOWLEDGE\" :from \"data/catholic/reKs3CurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"SacredObject\" :from \"data/catholic/sacredObjects.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"data/catholic/sacredObjects.ts\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"StationQuest\" :from \"data/catholic/sanctuaryQuests.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SANCTUARY_QUESTS\" :from \"data/catholic/sanctuaryQuests.ts\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"SacramentData\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacramentQuizQuestion\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SACRAMENTS_QUIZ_QUESTIONS\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"SacramentQuizQuestion[]\" :params ())\n  (:symbol \"getComplianceCaveat\" :from \"data/complianceCaveats.ts\" :kind :function :return \"ComplianceCaveat\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"ComplianceCaveat\" :from \"data/complianceCaveats.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"COMPLIANCE_CAVEATS\" :from \"data/complianceCaveats.ts\" :kind :const :return \"Record<string, ComplianceCaveat>\" :params ())\n  (:symbol \"CURRICULUM_COMPLETE_BASE\" :from \"data/curriculumKnowledgeComplete.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"CurriculumTopicEntry\" :from \"data/curriculumKnowledgeExpansion.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_EXPANSION_BASE\" :from \"data/curriculumKnowledgeExpansion.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"getActiveCurriculumTree\" :from \"data/curriculumRegistry.ts\" :kind :function :return \"Record<string, StandardStage>\" :params ((:param \"providerKey\" :type \"CurriculumProviderKey\")))\n  (:symbol \"CurriculumProviderKey\" :from \"data/curriculumRegistry.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_PROVIDERS\" :from \"data/curriculumRegistry.ts\" :kind :const :return \"Record<CurriculumProviderKey, () => Record<string, StandardStage>>\" :params ())\n  (:symbol \"findCurriculumKnowledge\" :from \"data/oakCurriculumKnowledge.ts\" :kind :function :return \"CurriculumTopicKnowledge\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"CurriculumQuestion\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumTopicKnowledge\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_KNOWLEDGE_BASE\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"OakLessonSeed\" :from \"data/oakCurriculumSeeds.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_SEEDS\" :from \"data/oakCurriculumSeeds.ts\" :kind :const :return \"Record<string, OakLessonSeed>\" :params ())\n  (:symbol \"PhonicGrapheme\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SoundSegment\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DecodableWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ScreeningWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TrickyWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PHONICS_GRAPHEMES\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"PhonicGrapheme[]\" :params ())\n  (:symbol \"DECODABLE_WORDS\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"DecodableWord[]\" :params ())\n  (:symbol \"OFFICIAL_SCREENING_POOL\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"ScreeningWord[]\" :params ())\n  (:symbol \"TRICKY_WORDS\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"TrickyWord[]\" :params ())\n  (:symbol \"getRelatedConcepts\" :from \"data/player/astConceptGraph.ts\" :kind :function :return \"{ id: string; title: string; stage: string; icon: string; reason: string; relationshipType: string; invariantConcept: string; }[]\" :params ((:param \"presetId\" :type \"string\")))\n  (:symbol \"ConceptNode\" :from \"data/player/astConceptGraph.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AST_CONCEPT_GRAPH\" :from \"data/player/astConceptGraph.ts\" :kind :const :return \"Record<string, ConceptNode>\" :params ())\n  (:symbol \"CartridgeType\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ScenePresetOption\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OPTIONS\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"ScenePresetOption[]\" :params ())\n  (:symbol \"DramaticChoice\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayAct\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ShakespearePlayStory\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SHAKESPEARE_PLAY_STORIES\" :from \"data/shakespearePlays.ts\" :kind :const :return \"ShakespearePlayStory[]\" :params ())\n  (:symbol \"COMMUNION_MANIFEST\" :from \"manifests/communion.ts\" :kind :const :return \"DomainManifest\" :params ())\n  (:symbol \"SCHOOL_MANIFEST\" :from \"manifests/school.ts\" :kind :const :return \"DomainManifest\" :params ())\n  (:symbol \"VFS_CURRICULUM_SEEDS\" :from \"manifests/vfsSeedModules.ts\" :kind :const :return \"Record<string, string>\" :params ())\n  (:symbol \"registerServiceWorker\" :from \"registerServiceWorker.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"BrowserRouter\" :from \"router/index.tsx\" :kind :function :return \"React.JSX.Element\" :params ((:param \"__0\" :type \"BrowserRouterProps\")))\n  (:symbol \"useLocation\" :from \"router/index.tsx\" :kind :function :return \"LocationState\" :params ())\n  (:symbol \"useNavigate\" :from \"router/index.tsx\" :kind :function :return \"NavigateFunction\" :params ())\n  (:symbol \"useSearchParams\" :from \"router/index.tsx\" :kind :function :return \"[URLSearchParams, (newParams: Record<string, string> | URLSearchParams, options?: { replace?: boolean; }) => void]\" :params ())\n  (:symbol \"Route\" :from \"router/index.tsx\" :kind :function :return \"any\" :params ((:param \"_props\" :type \"RouteProps\")))\n  (:symbol \"Routes\" :from \"router/index.tsx\" :kind :function :return \"any\" :params ((:param \"__0\" :type \"RoutesProps\")))\n  (:symbol \"Outlet\" :from \"router/index.tsx\" :kind :function :return \"any\" :params ())\n  (:symbol \"LocationState\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NavigateFunction\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"BrowserRouterProps\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"RouteProps\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"RoutesProps\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"LinkProps\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"Link\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NavLinkProps\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"NavLink\" :from \"router/index.tsx\" :kind :const :return \"any\" :params ())\n  (:symbol \"getRuleSet\" :from \"rules/index.ts\" :kind :function :return \"RulePackage\" :params ((:param \"name\" :type \"string\")))\n  (:symbol \"RulePackage\" :from \"rules/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RulesRegistry\" :from \"rules/index.ts\" :kind :const :return \"Record<string, RulePackage>\" :params ())\n  (:symbol \"SemanticRule\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Challenge\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Cohort\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TutorPersona\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DomainManifest\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LearningStream\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CatalogItem\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StreamCategory\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MasterCatalog\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"defineASTScene\" :from \"types/mediaPlayer.ts\" :kind :function :return \"ASTSceneDefinition\" :params ((:param \"scene\" :type \"ASTSceneDefinition\")))\n  (:symbol \"ASTKeyframe\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTSubtitle\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTAudioCue\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTSceneDefinition\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTPlayerCommand\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTPlayerTelemetry\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getPresetConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"PlayerDisplayConfig\" :params ((:param \"mode\" :type \"PlayerDisplayMode\")))\n  (:symbol \"loadSavedPlayerConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"savePlayerConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"void\" :params ((:param \"config\" :type \"PlayerDisplayConfig\")))\n  (:symbol \"PlayerDisplayMode\" :from \"types/playerConfig.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerDisplayConfig\" :from \"types/playerConfig.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MODE_METADATA\" :from \"types/playerConfig.ts\" :kind :const :return \"Record<PlayerDisplayMode, { label: string; icon: string; tag: string; description: string; }>\" :params ())\n  (:symbol \"SUITE_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"CLASSROOM_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"STUDENT_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"BROADCAST_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"DEVELOPER_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"EMBEDDED_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"CONFIG_STORAGE_KEY\" :from \"types/playerConfig.ts\" :kind :const :return \"\"stj_player_display_config\"\" :params ())\n  (:symbol \"isAstQuestion\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"isAstScene\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"isAstLesson\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"SExprAtom\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SExprNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SExprAST\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstQuestionNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ParsedAstNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstCameraOrbit\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstKeyframeNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstBindingType\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstBindingNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstSubtitleNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstPhysicsBody\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstPhysicsConfig\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstSceneNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstLessonNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"UnifiedAstUnit\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BackendTier\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineOptions\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"healSExprString\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"string\" :params ((:param \"raw\" :type \"string\")))\n  (:symbol \"extractQuestionFromAst\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"ExtractedQuestion\" :params ((:param \"rawLisp\" :type \"string\")))\n  (:symbol \"stripPromptDecorators\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"string\" :params ((:param \"prompt\" :type \"string\")))\n  (:symbol \"ExtractedQuestion\" :from \"utils/astQuestionExtractor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"compileAstStyle\" :from \"utils/astStyleCompiler.ts\" :kind :function :return \"CSSProperties\" :params ((:param \"styleAst\" :type \"SExprAST | CSSProperties\") (:param \"nodeProps\" :type \"Record<string, any>\")))\n  (:symbol \"LITURGICAL_AST_PALETTE\" :from \"utils/astStyleCompiler.ts\" :kind :const :return \"Record<string, { bg: string; border: string; text: string; accent: string; }>\" :params ())\n  (:symbol \"isBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"boolean\" :params ((:param \"data\" :type \"unknown\")))\n  (:symbol \"encodeBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"opcode\" :type \"number\") (:param \"payload\" :type \"string | Uint8Array<ArrayBufferLike>\") (:param \"streamId\" :type \"number\") (:param \"flags\" :type \"number\")))\n  (:symbol \"decodeBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"DecodedBinaryFrame\" :params ((:param \"buffer\" :type \"ArrayBuffer\")))\n  (:symbol \"createTokenChunkFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"token\" :type \"string\") (:param \"streamId\" :type \"number\") (:param \"isFinal\" :type \"boolean\")))\n  (:symbol \"createAstNodeFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"rawAst\" :type \"string\") (:param \"streamId\" :type \"number\") (:param \"isGoverned\" :type \"boolean\") (:param \"metadata\" :type \"Record<string, any>\")))\n  (:symbol \"createEofFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"streamId\" :type \"number\")))\n  (:symbol \"PROTOCOL_MAGIC_0\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"83\" :params ())\n  (:symbol \"PROTOCOL_MAGIC_1\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"74\" :params ())\n  (:symbol \"PROTOCOL_VERSION\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"OP_TOKEN_CHUNK\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"OP_AST_NODE_CHUNK\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"OP_AST_NODE_COMPLETE\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"3\" :params ())\n  (:symbol \"OP_HEARTBEAT_PING\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"OP_HEARTBEAT_PONG\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"5\" :params ())\n  (:symbol \"OP_STATUS\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"6\" :params ())\n  (:symbol \"OP_ERROR\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"7\" :params ())\n  (:symbol \"OP_STREAM_EOF\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"15\" :params ())\n  (:symbol \"FLAG_IS_FINAL\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"FLAG_IS_GOVERNED\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"FLAG_IS_JSON\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"DecodedBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"parseMathExpression\" :from \"utils/calculusPlotter.ts\" :kind :function :return \"(x: number) => number\" :params ((:param \"expr\" :type \"string\")))\n  (:symbol \"PlotCoordinate\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TangentAnalysis\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IntegralAnalysis\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ViewportTransform\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CalculusPlotter\" :from \"utils/calculusPlotter.ts\" :kind :class :return \"typeof CalculusPlotter\" :params ())\n  (:symbol \"CALCULUS_PRESETS\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"{ id: string; name: string; category: string; latex: string; fn: (x: number) => number; derivativeStr: string; defaultX0: number; defaultA: number; defaultB: number; }[]\" :params ())\n  (:symbol \"compressStringToGzip\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<Uint8Array<ArrayBufferLike>>\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"decompressGzipToString\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"compressedBytes\" :type \"Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"uint8ArrayToBase64\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"string\" :params ((:param \"bytes\" :type \"Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"base64ToUint8Array\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Uint8Array<ArrayBufferLike>\" :params ((:param \"base64\" :type \"string\")))\n  (:symbol \"compressCartridge\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<{ compressedBytes: Uint8Array<ArrayBufferLike>; base64: string; metadata: CompressedCartridgeMetadata; }>\" :params ((:param \"cartridge\" :type \"CartridgeDefinition\")))\n  (:symbol \"decompressCartridge\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CartridgeDefinition>\" :params ((:param \"data\" :type \"string | ArrayBuffer | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"compressCartridgeBundle\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CompressedBundlePayload>\" :params ((:param \"bundleId\" :type \"string\") (:param \"title\" :type \"string\") (:param \"cartridges\" :type \"CartridgeDefinition[]\")))\n  (:symbol \"decompressCartridgeBundle\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CartridgeDefinition[]>\" :params ((:param \"payload\" :type \"string | Uint8Array<ArrayBufferLike> | CompressedBundlePayload\")))\n  (:symbol \"CompressedCartridgeMetadata\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CompressedCartridgePayload\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CompressedBundlePayload\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Channel\" :from \"utils/channelBus.ts\" :kind :class :return \"typeof Channel\" :params ())\n  (:symbol \"Channels\" :from \"utils/channelBus.ts\" :kind :const :return \"{ UI_ACTIONS: Channel<{ action: string; payload: any; }>; AI_DIAGNOSTICS: Channel<{ studentId: string; challengeId: string; answer: string; isCorrect: boolean; }>; PROGRESS_LOG: Channel<...>; }\" :params ())\n  (:symbol \"triggerCorrectConfetti\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerStreakCelebration\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ((:param \"streak\" :type \"number\")))\n  (:symbol \"triggerMasteryConfetti\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"encryptLocalData\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<EncryptedPayload>\" :params ((:param \"plainText\" :type \"string\") (:param \"passphrase\" :type \"string\")))\n  (:symbol \"decryptLocalData\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"payload\" :type \"EncryptedPayload\") (:param \"passphrase\" :type \"string\")))\n  (:symbol \"computeSha256\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"EncryptedPayload\" :from \"utils/cryptoVault.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"exportAirgapHtmlBundle\" :from \"utils/exportAirgapHtmlBundle.ts\" :kind :function :return \"void\" :params ((:param \"presetId\" :type \"string\") (:param \"presetTitle\" :type \"string\")))\n  (:symbol \"exportSubjectCartridge\" :from \"utils/exportSubjectCartridge.ts\" :kind :function :return \"void\" :params ((:param \"cartridgeIdOrPackageId\" :type \"string\")))\n  (:symbol \"exportCustomCartridgeBundle\" :from \"utils/exportSubjectCartridge.ts\" :kind :function :return \"void\" :params ((:param \"scenes\" :type \"{ id: string; title: string; category: string; svgMarkup?: string; astSource?: string; }[]\") (:param \"title\" :type \"string\") (:param \"description\" :type \"string\") (:param \"filename\" :type \"string\")))\n  (:symbol \"CartridgePackage\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_CARTRIDGE_PACKAGES\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"CartridgePackage[]\" :params ())\n  (:symbol \"AVAILABLE_CARTRIDGES\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"CartridgePackage[]\" :params ())\n  (:symbol \"resolveHarmonisedRoute\" :from \"utils/harmonisedRouteResolver.ts\" :kind :function :return \"RouteResolution\" :params ((:param \"rawPath\" :type \"string\") (:param \"search\" :type \"string\")))\n  (:symbol \"RouteResolution\" :from \"utils/harmonisedRouteResolver.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"isPhetBundle\" :from \"utils/phetBridge.ts\" :kind :function :return \"boolean\" :params ((:param \"content\" :type \"string\")))\n  (:symbol \"extractPhetMetadata\" :from \"utils/phetBridge.ts\" :kind :function :return \"{ title: string; simName: string; version: string; locales: string[]; }\" :params ((:param \"content\" :type \"string\") (:param \"fileName\" :type \"string\")))\n  (:symbol \"extractPhetProperties\" :from \"utils/phetBridge.ts\" :kind :function :return \"ExtractedPhetProperty[]\" :params ((:param \"content\" :type \"string\")))\n  (:symbol \"synthesizeUniversalPhetSim\" :from \"utils/phetBridge.ts\" :kind :function :return \"{ svgMarkup: string; astSource: string; invariants: string[]; }\" :params ((:param \"fileContent\" :type \"string\") (:param \"fileName\" :type \"string\") (:param \"meta\" :type \"{ title: string; simName: string; version: string; locales: string[]; }\")))\n  (:symbol \"transpilePhetFile\" :from \"utils/phetBridge.ts\" :kind :function :return \"Promise<PhetTranspileResult>\" :params ((:param \"fileContent\" :type \"string\") (:param \"fileName\" :type \"string\")))\n  (:symbol \"PhetMetadata\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PhetTranspileResult\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SupportedPhetPreset\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PHET_BUILTIN_MODELS\" :from \"utils/phetBridge.ts\" :kind :const :return \"Record<SupportedPhetPreset, { title: string; subject: string; stage: string; invariants: string[]; generateSvg: () => string; generateAst: () => string; }>\" :params ())\n  (:symbol \"ExtractedPhetProperty\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"generateSessionReport\" :from \"utils/sessionReporter.ts\" :kind :function :return \"Promise<SessionReportSummary>\" :params ((:param \"sessionId\" :type \"string\")))\n  (:symbol \"downloadReportAsHtml\" :from \"utils/sessionReporter.ts\" :kind :function :return \"void\" :params ((:param \"summary\" :type \"SessionReportSummary\")))\n  (:symbol \"SessionReportSummary\" :from \"utils/sessionReporter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"stripSExprComments\" :from \"utils/sexprParser.ts\" :kind :function :return \"string\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"parseSExpr\" :from \"utils/sexprParser.ts\" :kind :function :return \"SExprAST\" :params ((:param \"input\" :type \"string\")))\n  (:symbol \"tokenize\" :from \"utils/sexprParser.ts\" :kind :function :return \"string[]\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"parseAstNode\" :from \"utils/sexprParser.ts\" :kind :function :return \"ParsedAstNode\" :params ((:param \"input\" :type \"SExprAST\")))\n  (:symbol \"ParsedAstNode\" :from \"utils/sexprParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"utils/sexprParser.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"transpileSwfToAst\" :from \"utils/swfAstParser.ts\" :kind :function :return \"Promise<SwfTranspileResult>\" :params ((:param \"fileData\" :type \"ArrayBuffer | Uint8Array<ArrayBufferLike>\") (:param \"sceneId\" :type \"string\")))\n  (:symbol \"SwfMetadata\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspileResult\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfMorphShape\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfActionRecord\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getAssetUrl\" :from \"utils/url.ts\" :kind :function :return \"string\" :params ((:param \"path\" :type \"string\")))\n)\n";
+export const CORE_AST_STRING = ";; Domain AST Manifest: core\n(:domain-substrate :core\n  (:symbol \"ConceptGraphNode\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConceptGraphEdge\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DiagnosticRemediationRoute\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConceptGraphEngine\" :from \"curriculum/conceptGraphEngine.ts\" :kind :const :return \"ConceptGraphEngineSingleton\" :params ())\n  (:symbol \"adaptOakStage\" :from \"curriculum/curriculumAdapter.ts\" :kind :function :return \"StandardStage\" :params ((:param \"stage\" :type \"any\")))\n  (:symbol \"StandardTopic\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardSubject\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardStage\" :from \"curriculum/curriculumAdapter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"generateCurriculumStockNumber\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"string\" :params ((:param \"stageId\" :type \"string\") (:param \"subjectId\" :type \"string\") (:param \"topicId\" :type \"string\")))\n  (:symbol \"registerRouteNode\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"void\" :params ((:param \"node\" :type \"CurriculumRouteNode\")))\n  (:symbol \"ingestCustomCurriculumPack\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"number\" :params ((:param \"pack\" :type \"any\")))\n  (:symbol \"syncMeshToIndexedDB\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"resolveCurriculumRoute\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"CurriculumRouteNode\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"lessonTitleOrId\" :type \"string\")))\n  (:symbol \"getQuestionForRoute\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"CurriculumQuestionItem\" :params ((:param \"route\" :type \"CurriculumRouteNode\") (:param \"lessonTitleOrId\" :type \"string\") (:param \"forceVariation\" :type \"boolean\") (:param \"seedToken\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"exportCurriculumMeshToSExpr\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"exportCurriculumMeshToJSON\" :from \"curriculum/curriculumMesh.ts\" :kind :function :return \"object\" :params ())\n  (:symbol \"ExecutionEngineType\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumQuestionItem\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumLessonNode\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRouteNode\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ALL_CURRICULUM_ROUTES\" :from \"curriculum/curriculumMesh.ts\" :kind :const :return \"CurriculumRouteNode[]\" :params ())\n  (:symbol \"resolveTopicSimulator\" :from \"curriculum/curriculumSimMapping.ts\" :kind :function :return \"SimPresetBadge\" :params ((:param \"topicId\" :type \"string\") (:param \"topicTitle\" :type \"string\") (:param \"subjectTitle\" :type \"string\")))\n  (:symbol \"SimPresetBadge\" :from \"curriculum/curriculumSimMapping.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"curriculum/engine.ts\" :kind :const :return \"{ readonly folder: \"src/curriculum\"; readonly timestamp: 1787937755228; readonly totalModules: 2; readonly exports: readonly [{ readonly name: \"StandardTopic\"; readonly isType: true; readonly sourceFile: \"curriculumAdapter\"; }, ... 8 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"adaptOakStage\" :from \"curriculum/engine.ts\" :kind :function :return \"StandardStage\" :params ((:param \"stage\" :type \"any\")))\n  (:symbol \"StandardTopic\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardSubject\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StandardStage\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"findTopicLessons\" :from \"curriculum/engine.ts\" :kind :function :return \"OakLesson[]\" :params ((:param \"stageKey\" :type \"string\") (:param \"subjectTitle\" :type \"string\") (:param \"topicTitle\" :type \"string\")))\n  (:symbol \"OakLesson\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakTopic\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakSubject\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakStage\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_CATALOGUE\" :from \"curriculum/engine.ts\" :kind :const :return \"Record<string, OakStage>\" :params ())\n  (:symbol \"OakCatalogue\" :from \"curriculum/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_OAK_CATALOGUE\" :from \"curriculum/engine.ts\" :kind :const :return \"OakCatalogue\" :params ())\n  (:symbol \"getActiveCurriculum\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumPackage\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"dispatchAstIntent\" :from \"curriculum/index.ts\" :kind :function :return \"T\" :params ((:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"CurriculumPackage\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRegistry\" :from \"curriculum/index.ts\" :kind :const :return \"Record<string, CurriculumPackage>\" :params ())\n  (:symbol \"generateCurriculumStockNumber\" :from \"curriculum/index.ts\" :kind :function :return \"string\" :params ((:param \"stageId\" :type \"string\") (:param \"subjectId\" :type \"string\") (:param \"topicId\" :type \"string\")))\n  (:symbol \"registerRouteNode\" :from \"curriculum/index.ts\" :kind :function :return \"void\" :params ((:param \"node\" :type \"CurriculumRouteNode\")))\n  (:symbol \"ingestCustomCurriculumPack\" :from \"curriculum/index.ts\" :kind :function :return \"number\" :params ((:param \"pack\" :type \"any\")))\n  (:symbol \"syncMeshToIndexedDB\" :from \"curriculum/index.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"resolveCurriculumRoute\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumRouteNode\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"lessonTitleOrId\" :type \"string\")))\n  (:symbol \"getQuestionForRoute\" :from \"curriculum/index.ts\" :kind :function :return \"CurriculumQuestionItem\" :params ((:param \"route\" :type \"CurriculumRouteNode\") (:param \"lessonTitleOrId\" :type \"string\") (:param \"forceVariation\" :type \"boolean\") (:param \"seedToken\" :type \"string\") (:param \"excludePrompt\" :type \"string\")))\n  (:symbol \"exportCurriculumMeshToSExpr\" :from \"curriculum/index.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"exportCurriculumMeshToJSON\" :from \"curriculum/index.ts\" :kind :function :return \"object\" :params ())\n  (:symbol \"ExecutionEngineType\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumQuestionItem\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumLessonNode\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumRouteNode\" :from \"curriculum/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ALL_CURRICULUM_ROUTES\" :from \"curriculum/index.ts\" :kind :const :return \"CurriculumRouteNode[]\" :params ())\n  (:symbol \"generateCurriculumAst\" :from \"curriculum/mineCurriculumAst.ts\" :kind :function :return \"void\" :params ((:param \"dirPath\" :type \"string\") (:param \"outputPath\" :type \"string\")))\n  (:symbol \"findTopicLessons\" :from \"curriculum/oakCatalogue.ts\" :kind :function :return \"OakLesson[]\" :params ((:param \"stageKey\" :type \"string\") (:param \"subjectTitle\" :type \"string\") (:param \"topicTitle\" :type \"string\")))\n  (:symbol \"OakLesson\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakTopic\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakSubject\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OakStage\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_CATALOGUE\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"Record<string, OakStage>\" :params ())\n  (:symbol \"OakCatalogue\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_OAK_CATALOGUE\" :from \"curriculum/oakCatalogue.ts\" :kind :const :return \"OakCatalogue\" :params ())\n  (:symbol \"AltarTypeInfo\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarCandleRule\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarAppointment\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarDressingStep\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalSeasonTheme\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASON_THEMES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"Record<string, LiturgicalSeasonTheme>\" :params ())\n  (:symbol \"ALTAR_CANDLE_RULES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"Record<\"daily\" | \"sunday\" | \"bishop\", AltarCandleRule>\" :params ())\n  (:symbol \"ALTAR_TYPES\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarTypeInfo[]\" :params ())\n  (:symbol \"ALTAR_APPOINTMENTS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarAppointment[]\" :params ())\n  (:symbol \"ALTAR_DRESSING_STEPS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"AltarDressingStep[]\" :params ())\n  (:symbol \"TabernacleCatechesis\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TABERNACLE_CATECHESIS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"TabernacleCatechesis\" :params ())\n  (:symbol \"RiteAltarTradition\" :from \"data/catholic/altarData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RITE_ALTAR_TRADITIONS\" :from \"data/catholic/altarData.ts\" :kind :const :return \"RiteAltarTradition[]\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"data/catholic/catholicPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"data/catholic/catholicPrayers.ts\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"SuiIurisChurch\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalRiteFamily\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalComparisonTopic\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ConsecrationVoiceSample\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_RITE_FAMILIES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"LiturgicalRiteFamily[]\" :params ())\n  (:symbol \"SUI_IURIS_CHURCHES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"SuiIurisChurch[]\" :params ())\n  (:symbol \"LITURGICAL_COMPARISONS\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"LiturgicalComparisonTopic[]\" :params ())\n  (:symbol \"CONSECRATION_VOICES\" :from \"data/catholic/catholicRitesData.ts\" :kind :const :return \"ConsecrationVoiceSample[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"data/catholic/cstAndVirtues.ts\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"HolyOil\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyAmbryInfo\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"HolyOil[]\" :params ())\n  (:symbol \"HOLY_AMBRY_INFO\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"HolyAmbryInfo\" :params ())\n  (:symbol \"SacramentalOilQuizQuestion\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS_QUIZ\" :from \"data/catholic/holyOilsData.ts\" :kind :const :return \"SacramentalOilQuizQuestion[]\" :params ())\n  (:symbol \"HolyWaterFact\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ThuriferRoleFact\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IncensationMoment\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyWaterThuriferQuiz\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_WATER_CATECHESIS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"HolyWaterFact[]\" :params ())\n  (:symbol \"THURIFER_AND_INCENSE_CATECHESIS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"ThuriferRoleFact[]\" :params ())\n  (:symbol \"INCENSATION_MOMENTS\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"IncensationMoment[]\" :params ())\n  (:symbol \"HOLY_WATER_THURIFER_QUIZ\" :from \"data/catholic/holyWaterThuriferData.ts\" :kind :const :return \"HolyWaterThuriferQuiz[]\" :params ())\n  (:symbol \"CSTPrinciple\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CST_PRINCIPLES\" :from \"data/catholic/index.ts\" :kind :const :return \"CSTPrinciple[]\" :params ())\n  (:symbol \"SchoolVirtue\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SCHOOL_VIRTUES\" :from \"data/catholic/index.ts\" :kind :const :return \"SchoolVirtue[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"CORRECT_LITURGY_SEQUENCE_IDS\" :from \"data/catholic/index.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"SacredObject\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"CatholicPrayer\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CATHOLIC_PRAYERS\" :from \"data/catholic/index.ts\" :kind :const :return \"CatholicPrayer[]\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"data/catholic/index.ts\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"StationQuest\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SANCTUARY_QUESTS\" :from \"data/catholic/index.ts\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"SacramentData\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacramentQuizQuestion\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SACRAMENTS_QUIZ_QUESTIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentQuizQuestion[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"data/catholic/index.ts\" :kind :function :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalQuizItem\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"LITURGICAL_QUIZ_QUESTIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalQuizItem[]\" :params ())\n  (:symbol \"CATHOLIC_KS2_KNOWLEDGE\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"CATHOLIC_KS3_KNOWLEDGE\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"AltarTypeInfo\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarCandleRule\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarAppointment\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AltarDressingStep\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalSeasonTheme\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASON_THEMES\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<string, LiturgicalSeasonTheme>\" :params ())\n  (:symbol \"ALTAR_CANDLE_RULES\" :from \"data/catholic/index.ts\" :kind :const :return \"Record<\"daily\" | \"sunday\" | \"bishop\", AltarCandleRule>\" :params ())\n  (:symbol \"ALTAR_TYPES\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarTypeInfo[]\" :params ())\n  (:symbol \"ALTAR_APPOINTMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarAppointment[]\" :params ())\n  (:symbol \"ALTAR_DRESSING_STEPS\" :from \"data/catholic/index.ts\" :kind :const :return \"AltarDressingStep[]\" :params ())\n  (:symbol \"TabernacleCatechesis\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TABERNACLE_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"TabernacleCatechesis\" :params ())\n  (:symbol \"RiteAltarTradition\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RITE_ALTAR_TRADITIONS\" :from \"data/catholic/index.ts\" :kind :const :return \"RiteAltarTradition[]\" :params ())\n  (:symbol \"HolyOil\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyAmbryInfo\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyOil[]\" :params ())\n  (:symbol \"HOLY_AMBRY_INFO\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyAmbryInfo\" :params ())\n  (:symbol \"SacramentalOilQuizQuestion\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_OILS_QUIZ\" :from \"data/catholic/index.ts\" :kind :const :return \"SacramentalOilQuizQuestion[]\" :params ())\n  (:symbol \"ReceptionMethod\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OurFatherPosture\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalMyth\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EUCHARISTIC_RECEPTION_METHODS\" :from \"data/catholic/index.ts\" :kind :const :return \"ReceptionMethod[]\" :params ())\n  (:symbol \"OUR_FATHER_POSTURES\" :from \"data/catholic/index.ts\" :kind :const :return \"OurFatherPosture[]\" :params ())\n  (:symbol \"LITURGICAL_MYTHS\" :from \"data/catholic/index.ts\" :kind :const :return \"LiturgicalMyth[]\" :params ())\n  (:symbol \"HolyWaterFact\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ThuriferRoleFact\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IncensationMoment\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HolyWaterThuriferQuiz\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HOLY_WATER_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyWaterFact[]\" :params ())\n  (:symbol \"THURIFER_AND_INCENSE_CATECHESIS\" :from \"data/catholic/index.ts\" :kind :const :return \"ThuriferRoleFact[]\" :params ())\n  (:symbol \"INCENSATION_MOMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"IncensationMoment[]\" :params ())\n  (:symbol \"HOLY_WATER_THURIFER_QUIZ\" :from \"data/catholic/index.ts\" :kind :const :return \"HolyWaterThuriferQuiz[]\" :params ())\n  (:symbol \"StationOfTheCross\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OPENING_DEVOTIONAL_VERSICLE\" :from \"data/catholic/index.ts\" :kind :const :return \"{ leaderLatin: string; leaderEnglish: string; responseLatin: string; responseEnglish: string; }\" :params ())\n  (:symbol \"STATIONS_OF_THE_CROSS\" :from \"data/catholic/index.ts\" :kind :const :return \"StationOfTheCross[]\" :params ())\n  (:symbol \"STATIONS_HISTORY_AND_THEOLOGY\" :from \"data/catholic/index.ts\" :kind :const :return \"{ historicalOrigins: string; traditionalNumber: string; scripturalAndTraditionalStations: string; plenaryIndulgence: string; }\" :params ())\n  (:symbol \"getCurrentCanonicalHour\" :from \"data/catholic/index.ts\" :kind :function :return \"CanonicalHour\" :params ((:param \"date\" :type \"Date\")))\n  (:symbol \"CanonicalHour\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MarianAntiphon\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CANONICAL_HOURS\" :from \"data/catholic/index.ts\" :kind :const :return \"CanonicalHour[]\" :params ())\n  (:symbol \"MARIAN_ANTIPHONS\" :from \"data/catholic/index.ts\" :kind :const :return \"MarianAntiphon[]\" :params ())\n  (:symbol \"FOUR_WEEK_PSALTER_EXPLANATION\" :from \"data/catholic/index.ts\" :kind :const :return \"{ title: string; description: string; structureRules: string[]; }\" :params ())\n  (:symbol \"BREVIARY_FAQS\" :from \"data/catholic/index.ts\" :kind :const :return \"{ question: string; answer: string; }[]\" :params ())\n  (:symbol \"TriduumCeremony\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TriduumMovement\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LumenChristiStep\" :from \"data/catholic/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LUMEN_CHRISTI_CEREMONY_STEPS\" :from \"data/catholic/index.ts\" :kind :const :return \"LumenChristiStep[]\" :params ())\n  (:symbol \"TRIDUUM_MOVEMENTS\" :from \"data/catholic/index.ts\" :kind :const :return \"TriduumMovement[]\" :params ())\n  (:symbol \"EXSULTET_SACRED_TEXT\" :from \"data/catholic/index.ts\" :kind :const :return \"{ latinTitle: string; englishTitle: string; openingInvocation: { latin: string; english: string; spanish: string; }; felixCulpaStanza: { latin: string; english: string; spanish: string; }; pillarOfFireStanza: { ...; }; }\" :params ())\n  (:symbol \"VICTIMAE_PASCHALI_SEQUENCE\" :from \"data/catholic/index.ts\" :kind :const :return \"{ latinTitle: string; englishTitle: string; stanzas: { latin: string; english: string; spanish: string; }[]; }\" :params ())\n  (:symbol \"LatinPrayerVerse\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LatinPrayerItem\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LATIN_PRAYERS_DATA\" :from \"data/catholic/latinPrayers.ts\" :kind :const :return \"LatinPrayerItem[]\" :params ())\n  (:symbol \"getCurrentSeasonByDate\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :function :return \"LiturgicalSeason\" :params ())\n  (:symbol \"LiturgicalSeason\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalQuizItem\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_SEASONS\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"LiturgicalSeason[]\" :params ())\n  (:symbol \"LITURGICAL_QUIZ_QUESTIONS\" :from \"data/catholic/liturgicalCalendar.ts\" :kind :const :return \"LiturgicalQuizItem[]\" :params ())\n  (:symbol \"ReceptionMethod\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OurFatherPosture\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LiturgicalMyth\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EUCHARISTIC_RECEPTION_METHODS\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"ReceptionMethod[]\" :params ())\n  (:symbol \"OUR_FATHER_POSTURES\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"OurFatherPosture[]\" :params ())\n  (:symbol \"LITURGICAL_MYTHS\" :from \"data/catholic/liturgicalPosturesData.ts\" :kind :const :return \"LiturgicalMyth[]\" :params ())\n  (:symbol \"getCurrentCanonicalHour\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :function :return \"CanonicalHour\" :params ((:param \"date\" :type \"Date\")))\n  (:symbol \"CanonicalHour\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MarianAntiphon\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CANONICAL_HOURS\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"CanonicalHour[]\" :params ())\n  (:symbol \"MARIAN_ANTIPHONS\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"MarianAntiphon[]\" :params ())\n  (:symbol \"FOUR_WEEK_PSALTER_EXPLANATION\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"{ title: string; description: string; structureRules: string[]; }\" :params ())\n  (:symbol \"BREVIARY_FAQS\" :from \"data/catholic/liturgyOfTheHoursData.ts\" :kind :const :return \"{ question: string; answer: string; }[]\" :params ())\n  (:symbol \"LiturgyStep\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGY_STEPS\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"LiturgyStep[]\" :params ())\n  (:symbol \"CORRECT_LITURGY_SEQUENCE_IDS\" :from \"data/catholic/liturgySteps.ts\" :kind :const :return \"string[]\" :params ())\n  (:symbol \"CATHOLIC_KS2_KNOWLEDGE\" :from \"data/catholic/reCurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"CATHOLIC_KS3_KNOWLEDGE\" :from \"data/catholic/reKs3CurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"SacredObject\" :from \"data/catholic/sacredObjects.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SACRED_OBJECTS\" :from \"data/catholic/sacredObjects.ts\" :kind :const :return \"SacredObject[]\" :params ())\n  (:symbol \"StationQuest\" :from \"data/catholic/sanctuaryQuests.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SANCTUARY_QUESTS\" :from \"data/catholic/sanctuaryQuests.ts\" :kind :const :return \"StationQuest[]\" :params ())\n  (:symbol \"SacramentData\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SacramentQuizQuestion\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SEVEN_SACRAMENTS\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"SacramentData[]\" :params ())\n  (:symbol \"SACRAMENTS_QUIZ_QUESTIONS\" :from \"data/catholic/sevenSacraments.ts\" :kind :const :return \"SacramentQuizQuestion[]\" :params ())\n  (:symbol \"StationOfTheCross\" :from \"data/catholic/stationsOfTheCrossData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OPENING_DEVOTIONAL_VERSICLE\" :from \"data/catholic/stationsOfTheCrossData.ts\" :kind :const :return \"{ leaderLatin: string; leaderEnglish: string; responseLatin: string; responseEnglish: string; }\" :params ())\n  (:symbol \"STATIONS_OF_THE_CROSS\" :from \"data/catholic/stationsOfTheCrossData.ts\" :kind :const :return \"StationOfTheCross[]\" :params ())\n  (:symbol \"STATIONS_HISTORY_AND_THEOLOGY\" :from \"data/catholic/stationsOfTheCrossData.ts\" :kind :const :return \"{ historicalOrigins: string; traditionalNumber: string; scripturalAndTraditionalStations: string; plenaryIndulgence: string; }\" :params ())\n  (:symbol \"TriduumCeremony\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TriduumMovement\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LumenChristiStep\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LUMEN_CHRISTI_CEREMONY_STEPS\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"LumenChristiStep[]\" :params ())\n  (:symbol \"TRIDUUM_MOVEMENTS\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"TriduumMovement[]\" :params ())\n  (:symbol \"EXSULTET_SACRED_TEXT\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"{ latinTitle: string; englishTitle: string; openingInvocation: { latin: string; english: string; spanish: string; }; felixCulpaStanza: { latin: string; english: string; spanish: string; }; pillarOfFireStanza: { ...; }; }\" :params ())\n  (:symbol \"VICTIMAE_PASCHALI_SEQUENCE\" :from \"data/catholic/triduumEasterData.ts\" :kind :const :return \"{ latinTitle: string; englishTitle: string; stanzas: { latin: string; english: string; spanish: string; }[]; }\" :params ())\n  (:symbol \"getComplianceCaveat\" :from \"data/complianceCaveats.ts\" :kind :function :return \"ComplianceCaveat\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"ComplianceCaveat\" :from \"data/complianceCaveats.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"COMPLIANCE_CAVEATS\" :from \"data/complianceCaveats.ts\" :kind :const :return \"Record<string, ComplianceCaveat>\" :params ())\n  (:symbol \"CURRICULUM_COMPLETE_BASE\" :from \"data/curriculumKnowledgeComplete.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"CurriculumTopicEntry\" :from \"data/curriculumKnowledgeExpansion.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_EXPANSION_BASE\" :from \"data/curriculumKnowledgeExpansion.ts\" :kind :const :return \"Record<string, CurriculumTopicEntry>\" :params ())\n  (:symbol \"getActiveCurriculumTree\" :from \"data/curriculumRegistry.ts\" :kind :function :return \"Record<string, StandardStage>\" :params ((:param \"providerKey\" :type \"CurriculumProviderKey\")))\n  (:symbol \"CurriculumProviderKey\" :from \"data/curriculumRegistry.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_PROVIDERS\" :from \"data/curriculumRegistry.ts\" :kind :const :return \"Record<CurriculumProviderKey, () => Record<string, StandardStage>>\" :params ())\n  (:symbol \"LessonCard\" :from \"data/homeCurriculum.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FEATURED_LESSONS\" :from \"data/homeCurriculum.ts\" :kind :const :return \"LessonCard[]\" :params ())\n  (:symbol \"LanguagePhoneme\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"VerbConjugation\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EtymologyCognate\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LANGUAGE_PHONEMES\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"LanguagePhoneme[]\" :params ())\n  (:symbol \"VERB_CONJUGATIONS\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"VerbConjugation[]\" :params ())\n  (:symbol \"ETYMOLOGY_COGNATES\" :from \"data/languagesCurriculumData.ts\" :kind :const :return \"EtymologyCognate[]\" :params ())\n  (:symbol \"findCurriculumKnowledge\" :from \"data/oakCurriculumKnowledge.ts\" :kind :function :return \"CurriculumTopicKnowledge\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\")))\n  (:symbol \"CurriculumQuestion\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CurriculumTopicKnowledge\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CURRICULUM_KNOWLEDGE_BASE\" :from \"data/oakCurriculumKnowledge.ts\" :kind :const :return \"Record<string, CurriculumTopicKnowledge>\" :params ())\n  (:symbol \"OakLessonSeed\" :from \"data/oakCurriculumSeeds.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"OAK_CURRICULUM_SEEDS\" :from \"data/oakCurriculumSeeds.ts\" :kind :const :return \"Record<string, OakLessonSeed>\" :params ())\n  (:symbol \"getPhonemeSpokenText\" :from \"data/phonicsCurriculumData.ts\" :kind :function :return \"string\" :params ((:param \"grapheme\" :type \"string\") (:param \"fallbackHint\" :type \"string\")))\n  (:symbol \"PhonicGrapheme\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SoundSegment\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DecodableWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ScreeningWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TrickyWord\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PHONETIC_AUDIO_MAP\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"Record<string, string>\" :params ())\n  (:symbol \"PHONICS_GRAPHEMES\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"PhonicGrapheme[]\" :params ())\n  (:symbol \"DECODABLE_WORDS\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"DecodableWord[]\" :params ())\n  (:symbol \"OFFICIAL_SCREENING_POOL\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"ScreeningWord[]\" :params ())\n  (:symbol \"TRICKY_WORDS\" :from \"data/phonicsCurriculumData.ts\" :kind :const :return \"TrickyWord[]\" :params ())\n  (:symbol \"getRelatedConcepts\" :from \"data/player/astConceptGraph.ts\" :kind :function :return \"{ id: string; title: string; stage: string; icon: string; reason: string; relationshipType: string; invariantConcept: string; }[]\" :params ((:param \"presetId\" :type \"string\")))\n  (:symbol \"ConceptNode\" :from \"data/player/astConceptGraph.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AST_CONCEPT_GRAPH\" :from \"data/player/astConceptGraph.ts\" :kind :const :return \"Record<string, ConceptNode>\" :params ())\n  (:symbol \"getOfficialCartridgeRecord\" :from \"data/player/cartridgeChecksums.ts\" :kind :function :return \"CartridgeChecksumEntry\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"isOfficialNativeCartridge\" :from \"data/player/cartridgeChecksums.ts\" :kind :function :return \"boolean\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"CartridgeChecksumEntry\" :from \"data/player/cartridgeChecksums.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeRegistryManifest\" :from \"data/player/cartridgeChecksums.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CARTRIDGE_CHECKSUMS\" :from \"data/player/cartridgeChecksums.ts\" :kind :const :return \"CartridgeRegistryManifest\" :params ())\n  (:symbol \"OFFICIAL_AUTHORITY\" :from \"data/player/cartridgeChecksums.ts\" :kind :const :return \"\"St Joseph's Catholic Primary School Curriculum Authority\"\" :params ())\n  (:symbol \"BuiltinDataCartridgeDefinition\" :from \"data/player/dataCartridges.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BUILTIN_DATA_CARTRIDGES\" :from \"data/player/dataCartridges.ts\" :kind :const :return \"BuiltinDataCartridgeDefinition[]\" :params ())\n  (:symbol \"EmbeddedCartridgeData\" :from \"data/player/embeddedCoreCartridges.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EMBEDDED_CORE_CARTRIDGES\" :from \"data/player/embeddedCoreCartridges.ts\" :kind :const :return \"Record<string, EmbeddedCartridgeData>\" :params ())\n  (:symbol \"CartridgeType\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ScenePresetOption\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PRESET_OPTIONS\" :from \"data/player/generatedScenes.ts\" :kind :const :return \"ScenePresetOption[]\" :params ())\n  (:symbol \"DramaticChoice\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayAct\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ShakespearePlayStory\" :from \"data/shakespearePlays.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SHAKESPEARE_PLAY_STORIES\" :from \"data/shakespearePlays.ts\" :kind :const :return \"ShakespearePlayStory[]\" :params ())\n  (:symbol \"COMMUNION_MANIFEST\" :from \"manifests/communion.ts\" :kind :const :return \"DomainManifest\" :params ())\n  (:symbol \"SCHOOL_MANIFEST\" :from \"manifests/school.ts\" :kind :const :return \"DomainManifest\" :params ())\n  (:symbol \"VFS_CURRICULUM_SEEDS\" :from \"manifests/vfsSeedModules.ts\" :kind :const :return \"Record<string, string>\" :params ())\n  (:symbol \"registerServiceWorker\" :from \"registerServiceWorker.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"normalizePath\" :from \"router.ts\" :kind :function :return \"string\" :params ((:param \"rawPath\" :type \"string\")))\n  (:symbol \"navigate\" :from \"router.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"path\" :type \"string\")))\n  (:symbol \"handleRouteChange\" :from \"router.ts\" :kind :function :return \"Promise<void>\" :params ())\n  (:symbol \"initRouter\" :from \"router.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"RouteView\" :from \"router.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RouteHandler\" :from \"router.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"navigateTo\" :from \"router.ts\" :kind :const :return \"Promise<void>\" :params ((:param \"path\" :type \"string\")))\n  (:symbol \"getRuleSet\" :from \"rules/index.ts\" :kind :function :return \"RulePackage\" :params ((:param \"name\" :type \"string\")))\n  (:symbol \"RulePackage\" :from \"rules/index.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RulesRegistry\" :from \"rules/index.ts\" :kind :const :return \"Record<string, RulePackage>\" :params ())\n  (:symbol \"SemanticRule\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Challenge\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Cohort\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TutorPersona\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DomainManifest\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LearningStream\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CatalogItem\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"StreamCategory\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MasterCatalog\" :from \"types/learning-ast.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"defineASTScene\" :from \"types/mediaPlayer.ts\" :kind :function :return \"ASTSceneDefinition\" :params ((:param \"scene\" :type \"ASTSceneDefinition\")))\n  (:symbol \"ASTKeyframe\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTSubtitle\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTAudioCue\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTSceneDefinition\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTPlayerCommand\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTPlayerTelemetry\" :from \"types/mediaPlayer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getPresetConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"PlayerDisplayConfig\" :params ((:param \"mode\" :type \"PlayerDisplayMode\")))\n  (:symbol \"loadSavedPlayerConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"savePlayerConfig\" :from \"types/playerConfig.ts\" :kind :function :return \"void\" :params ((:param \"config\" :type \"PlayerDisplayConfig\")))\n  (:symbol \"PlayerDisplayMode\" :from \"types/playerConfig.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerDisplayConfig\" :from \"types/playerConfig.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MODE_METADATA\" :from \"types/playerConfig.ts\" :kind :const :return \"Record<PlayerDisplayMode, { label: string; icon: string; tag: string; description: string; }>\" :params ())\n  (:symbol \"SUITE_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"CLASSROOM_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"STUDENT_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"BROADCAST_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"DEVELOPER_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"EMBEDDED_PRESET\" :from \"types/playerConfig.ts\" :kind :const :return \"PlayerDisplayConfig\" :params ())\n  (:symbol \"CONFIG_STORAGE_KEY\" :from \"types/playerConfig.ts\" :kind :const :return \"\"stj_player_display_config\"\" :params ())\n  (:symbol \"isAstQuestion\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"isAstScene\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"isAstLesson\" :from \"types/sexpr.ts\" :kind :function :return \"boolean\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"SExprAtom\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SExprNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SExprAST\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstQuestionNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ParsedAstNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstCameraOrbit\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstKeyframeNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstBindingType\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstBindingNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstSubtitleNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstPhysicsBody\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstPhysicsConfig\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstSceneNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstLessonNode\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"UnifiedAstUnit\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BackendTier\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineOptions\" :from \"types/sexpr.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"Projected3DPoint\" :from \"utils/ast3dWasmBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AST3DWasmBridge\" :from \"utils/ast3dWasmBridge.ts\" :kind :class :return \"typeof AST3DWasmBridge\" :params ())\n  (:symbol \"isAstBytecode\" :from \"utils/astBytecode.ts\" :kind :function :return \"boolean\" :params ((:param \"buffer\" :type \"ArrayBuffer | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"compileSceneToBytecode\" :from \"utils/astBytecode.ts\" :kind :function :return \"Uint8Array<ArrayBufferLike>\" :params ((:param \"scene\" :type \"BytecodeCompiledScene\")))\n  (:symbol \"decompileBytecodeToScene\" :from \"utils/astBytecode.ts\" :kind :function :return \"BytecodeCompiledScene\" :params ((:param \"buffer\" :type \"ArrayBuffer | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"compileAstTextToBytecode\" :from \"utils/astBytecode.ts\" :kind :function :return \"Uint8Array<ArrayBufferLike>\" :params ((:param \"astText\" :type \"string\")))\n  (:symbol \"ASTB_MAGIC\" :from \"utils/astBytecode.ts\" :kind :const :return \"number[]\" :params ())\n  (:symbol \"ASTB_VERSION\" :from \"utils/astBytecode.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"ARCHETYPE_SIM\" :from \"utils/astBytecode.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"ARCHETYPE_SLIDE\" :from \"utils/astBytecode.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"ARCHETYPE_APP\" :from \"utils/astBytecode.ts\" :kind :const :return \"3\" :params ())\n  (:symbol \"ARCHETYPE_FILM\" :from \"utils/astBytecode.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"FLAG_HAS_3D\" :from \"utils/astBytecode.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"FLAG_HAS_VIDEO\" :from \"utils/astBytecode.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"FLAG_HAS_CHECKPOINTS\" :from \"utils/astBytecode.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"FLAG_HAS_SUBTITLES\" :from \"utils/astBytecode.ts\" :kind :const :return \"8\" :params ())\n  (:symbol \"OP_SCENE_META\" :from \"utils/astBytecode.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"OP_KEYFRAME\" :from \"utils/astBytecode.ts\" :kind :const :return \"16\" :params ())\n  (:symbol \"OP_SUBTITLE\" :from \"utils/astBytecode.ts\" :kind :const :return \"32\" :params ())\n  (:symbol \"OP_BINDING\" :from \"utils/astBytecode.ts\" :kind :const :return \"48\" :params ())\n  (:symbol \"OP_CHECKPOINT\" :from \"utils/astBytecode.ts\" :kind :const :return \"64\" :params ())\n  (:symbol \"OP_GESTURE\" :from \"utils/astBytecode.ts\" :kind :const :return \"80\" :params ())\n  (:symbol \"OP_VAR\" :from \"utils/astBytecode.ts\" :kind :const :return \"96\" :params ())\n  (:symbol \"OP_INPUT\" :from \"utils/astBytecode.ts\" :kind :const :return \"112\" :params ())\n  (:symbol \"OP_CAMERA\" :from \"utils/astBytecode.ts\" :kind :const :return \"128\" :params ())\n  (:symbol \"OP_EOF\" :from \"utils/astBytecode.ts\" :kind :const :return \"255\" :params ())\n  (:symbol \"BytecodeCompiledScene\" :from \"utils/astBytecode.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"escapeAstValue\" :from \"utils/astCartridgeSerializer.ts\" :kind :function :return \"string\" :params ((:param \"str\" :type \"unknown\")))\n  (:symbol \"valueToAst\" :from \"utils/astCartridgeSerializer.ts\" :kind :function :return \"string\" :params ((:param \"val\" :type \"any\") (:param \"indentLevel\" :type \"number\")))\n  (:symbol \"serializeEntityNode\" :from \"utils/astCartridgeSerializer.ts\" :kind :function :return \"string\" :params ((:param \"tag\" :type \"string\") (:param \"props\" :type \"Record<string, any>\") (:param \"children\" :type \"any[]\") (:param \"indentLevel\" :type \"number\")))\n  (:symbol \"serializeDatasetToCartridge\" :from \"utils/astCartridgeSerializer.ts\" :kind :function :return \"string\" :params ((:param \"metadata\" :type \"{ id: string; category: string; title: string; version?: string; itemTag?: string; items: Record<string, any>[]; }\")))\n  (:symbol \"parseCartridgeToDataset\" :from \"utils/astCartridgeSerializer.ts\" :kind :function :return \"{ id: string; category: string; title: string; version: string; count: number; items: T[]; }\" :params ((:param \"astContent\" :type \"string\")))\n  (:symbol \"compileExpressionToMathKernel\" :from \"utils/astMathCompiler.ts\" :kind :function :return \"MathDecomposition\" :params ((:param \"expr\" :type \"string\") (:param \"targetAttr\" :type \"string\")))\n  (:symbol \"evaluateAffine\" :from \"utils/astMathCompiler.ts\" :kind :function :return \"number\" :params ((:param \"m\" :type \"number\") (:param \"c\" :type \"number\") (:param \"t\" :type \"number\")))\n  (:symbol \"evaluateMap\" :from \"utils/astMathCompiler.ts\" :kind :function :return \"number\" :params ((:param \"val\" :type \"number\") (:param \"inMin\" :type \"number\") (:param \"inMax\" :type \"number\") (:param \"outMin\" :type \"number\") (:param \"outMax\" :type \"number\")))\n  (:symbol \"evaluateAffineMatrix6\" :from \"utils/astMathCompiler.ts\" :kind :function :return \"void\" :params ((:param \"affine\" :type \"AffineDecomposition\") (:param \"t\" :type \"number\") (:param \"outMatrix\" :type \"Float32Array<ArrayBufferLike>\")))\n  (:symbol \"formatSvgMatrix6\" :from \"utils/astMathCompiler.ts\" :kind :function :return \"string\" :params ((:param \"m\" :type \"Float32Array<ArrayBufferLike>\")))\n  (:symbol \"TransformKind\" :from \"utils/astMathCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AffineDecomposition\" :from \"utils/astMathCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MapDecomposition\" :from \"utils/astMathCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FallbackDecomposition\" :from \"utils/astMathCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathDecomposition\" :from \"utils/astMathCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"healSExprString\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"string\" :params ((:param \"raw\" :type \"string\")))\n  (:symbol \"extractQuestionFromAst\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"ExtractedQuestion\" :params ((:param \"rawLisp\" :type \"string\")))\n  (:symbol \"stripPromptDecorators\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"string\" :params ((:param \"prompt\" :type \"string\")))\n  (:symbol \"extractDataPayloadFromAst\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"DataCartridgePayload\" :params ((:param \"raw\" :type \"string\")))\n  (:symbol \"serializeDataCartridgeToAst\" :from \"utils/astQuestionExtractor.ts\" :kind :function :return \"string\" :params ((:param \"payload\" :type \"DataCartridgePayload\") (:param \"id\" :type \"string\") (:param \"title\" :type \"string\")))\n  (:symbol \"DataCartridgeQuestion\" :from \"utils/astQuestionExtractor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DataCartridgePayload\" :from \"utils/astQuestionExtractor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ExtractedQuestion\" :from \"utils/astQuestionExtractor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"compileAstStyle\" :from \"utils/astStyleCompiler.ts\" :kind :function :return \"CSSProperties\" :params ((:param \"styleAst\" :type \"SExprAST | CSSProperties\") (:param \"nodeProps\" :type \"Record<string, any>\")))\n  (:symbol \"CSSProperties\" :from \"utils/astStyleCompiler.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LITURGICAL_AST_PALETTE\" :from \"utils/astStyleCompiler.ts\" :kind :const :return \"Record<string, { bg: string; border: string; text: string; accent: string; }>\" :params ())\n  (:symbol \"DecodedSwfHeader\" :from \"utils/astTranspilerWasmBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTagScanResult\" :from \"utils/astTranspilerWasmBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PhetScanResult\" :from \"utils/astTranspilerWasmBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTTranspilerWasmBridge\" :from \"utils/astTranspilerWasmBridge.ts\" :kind :class :return \"typeof ASTTranspilerWasmBridge\" :params ())\n  (:symbol \"transpilerWasm\" :from \"utils/astTranspilerWasmBridge.ts\" :kind :const :return \"ASTTranspilerWasmBridge\" :params ())\n  (:symbol \"isBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"boolean\" :params ((:param \"data\" :type \"unknown\")))\n  (:symbol \"encodeBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"opcode\" :type \"number\") (:param \"payload\" :type \"string | Uint8Array<ArrayBufferLike>\") (:param \"streamId\" :type \"number\") (:param \"flags\" :type \"number\")))\n  (:symbol \"decodeBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"DecodedBinaryFrame\" :params ((:param \"buffer\" :type \"ArrayBuffer\")))\n  (:symbol \"createTokenChunkFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"token\" :type \"string\") (:param \"streamId\" :type \"number\") (:param \"isFinal\" :type \"boolean\")))\n  (:symbol \"createAstNodeFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"rawAst\" :type \"string\") (:param \"streamId\" :type \"number\") (:param \"isGoverned\" :type \"boolean\") (:param \"metadata\" :type \"Record<string, any>\")))\n  (:symbol \"createEofFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :function :return \"ArrayBuffer\" :params ((:param \"streamId\" :type \"number\")))\n  (:symbol \"PROTOCOL_MAGIC_0\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"83\" :params ())\n  (:symbol \"PROTOCOL_MAGIC_1\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"74\" :params ())\n  (:symbol \"PROTOCOL_VERSION\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"OP_TOKEN_CHUNK\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"OP_AST_NODE_CHUNK\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"OP_AST_NODE_COMPLETE\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"3\" :params ())\n  (:symbol \"OP_HEARTBEAT_PING\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"OP_HEARTBEAT_PONG\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"5\" :params ())\n  (:symbol \"OP_STATUS\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"6\" :params ())\n  (:symbol \"OP_ERROR\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"7\" :params ())\n  (:symbol \"OP_STREAM_EOF\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"15\" :params ())\n  (:symbol \"FLAG_IS_FINAL\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"1\" :params ())\n  (:symbol \"FLAG_IS_GOVERNED\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"2\" :params ())\n  (:symbol \"FLAG_IS_JSON\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"4\" :params ())\n  (:symbol \"DecodedBinaryFrame\" :from \"utils/binaryStreamProtocol.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"lerp3D\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"Point3D\" :params ((:param \"a\" :type \"Point3D\") (:param \"b\" :type \"Point3D\") (:param \"t\" :type \"number\")))\n  (:symbol \"decomposeTextToBslStream\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"BslHandPose[]\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"project3DToSvg\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"{ x: number; y: number; scale: number; depth: number; }\" :params ((:param \"point\" :type \"Point3D\") (:param \"camera\" :type \"{ yaw: number; pitch: number; distance: number; fov: number; }\") (:param \"originX\" :type \"number\") (:param \"originY\" :type \"number\")))\n  (:symbol \"evaluateBslEase\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"number\" :params ((:param \"ease\" :type \"string\") (:param \"t\" :type \"number\")))\n  (:symbol \"solveHandKinematics\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"BslSolvedDominantHand\" :params ((:param \"wrist\" :type \"Point3D\") (:param \"knuckle\" :type \"Point3D\") (:param \"tip\" :type \"Point3D\") (:param \"shapeInput\" :type \"BslHandShape\") (:param \"palmInput\" :type \"BslPalmOrientation\")))\n  (:symbol \"encodePhonemicTuple\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"Uint8Array<ArrayBufferLike>\" :params ((:param \"params\" :type \"{ dez?: BslHandShape; tab?: string | number; sig?: string | number; ori?: BslPalmOrientation; nmfIndex?: number; aspect?: BslAspect; baseMode?: BslBaseHandMode; holdMs?: number; }\")))\n  (:symbol \"decodePhonemicTuple\" :from \"utils/bslAlphabet.ts\" :kind :function :return \"BslHandPose\" :params ((:param \"tuple\" :type \"Uint8Array<ArrayBufferLike> | number[]\")))\n  (:symbol \"Point3D\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslMouthMorpheme\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslRoleShift\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslNmf\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslHandShape\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslPalmOrientation\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslEaseCurve\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBaseHandMode\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoyType\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoy\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslDirectionalVerbType\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslDirectionalAgreement\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslLevel6InstructionTuple\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslClassifierType\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslAspect\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslClassifierPredicate\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslHandPose\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BSL_BASE_HAND\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"{ wrist: { x: number; y: number; z: number; }; palm: { x: number; y: number; z: number; }; fingertips: { id: string; name: string; x: number; y: number; z: number; }[]; }\" :params ())\n  (:symbol \"BSL_BASE_REST_HAND\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"{ wrist: { x: number; y: number; z: number; }; palm: { x: number; y: number; z: number; }; fingertips: { id: string; name: string; x: number; y: number; z: number; }[]; }\" :params ())\n  (:symbol \"DOMINANT_REST_POSE\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"Point3D\" :params ())\n  (:symbol \"DOMINANT_REST_KNUCKLE\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"Point3D\" :params ())\n  (:symbol \"DOMINANT_REST_WRIST\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"Point3D\" :params ())\n  (:symbol \"BSL_ALPHABET_POSES\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"Record<string, BslHandPose>\" :params ())\n  (:symbol \"interpolatePoint3D\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"Point3D\" :params ((:param \"a\" :type \"Point3D\") (:param \"b\" :type \"Point3D\") (:param \"t\" :type \"number\")))\n  (:symbol \"BslSolvedDominantHand\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SolvedHand3D\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PHONEMIC_DEZ_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly BslHandShape[]\" :params ())\n  (:symbol \"PHONEMIC_TAB_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly { name: string; pos: Point3D; }[]\" :params ())\n  (:symbol \"PHONEMIC_SIG_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly [\"static-hold\", \"linear-fwd\", \"linear-sweep\", \"arc-up\", \"arc-down\", \"cycle-ellipse\", \"snap-halt\", \"recoil\"]\" :params ())\n  (:symbol \"PHONEMIC_ORI_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly BslPalmOrientation[]\" :params ())\n  (:symbol \"PHONEMIC_NMF_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly BslNmf[]\" :params ())\n  (:symbol \"PHONEMIC_ASPECT_REGISTERS\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly BslAspect[]\" :params ())\n  (:symbol \"PHONEMIC_BASE_MODES\" :from \"utils/bslAlphabet.ts\" :kind :const :return \"readonly BslBaseHandMode[]\" :params ())\n  (:symbol \"point3DToAstVector\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"string\" :params ((:param \"p\" :type \"Point3D\")))\n  (:symbol \"astVectorToPoint3D\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"Point3D\" :params ((:param \"vec\" :type \"any\")))\n  (:symbol \"escapeAstString\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"string\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"serializeSignToAst\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"string\" :params ((:param \"sign\" :type \"BslSign\")))\n  (:symbol \"serializeLexiconToAst\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"string\" :params ((:param \"lexicon\" :type \"Record<string, BslSign>\") (:param \"metadata\" :type \"{ version?: string; standard?: string; title?: string; }\")))\n  (:symbol \"parseAstNodeToSign\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"BslSign\" :params ((:param \"node\" :type \"any\")))\n  (:symbol \"parseAstToLexicon\" :from \"utils/bslAstCodec.ts\" :kind :function :return \"Record<string, BslSign>\" :params ((:param \"astContent\" :type \"string\")))\n  (:symbol \"generateClassifierPredicate\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"BslSign\" :params ((:param \"type\" :type \"BslClassifierType\") (:param \"options\" :type \"{ fromLocus?: BslLocusId; toLocus?: BslLocusId; aspect?: BslAspect; manner?: \"slow\" | \"fast\" | \"stumble\" | \"steady\" | \"zig-zag\"; entityLabel?: string; }\")))\n  (:symbol \"mapWordToClassifier\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"{ type: BslClassifierType; options?: any; }\" :params ((:param \"word\" :type \"string\")))\n  (:symbol \"modulateDirectionalKeyframes\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"BslSignKeyframe[]\" :params ((:param \"sign\" :type \"BslSign\") (:param \"fromLocus\" :type \"Point3D\") (:param \"toLocus\" :type \"Point3D\")))\n  (:symbol \"generateDirectionalAgreementSign\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"BslSign\" :params ((:param \"verb\" :type \"BslDirectionalVerbType\") (:param \"options\" :type \"{ fromLocus?: BslLocusId; toLocus?: BslLocusId; aspect?: BslAspect; manner?: \"slow\" | \"fast\" | \"steady\" | \"reverent\" | \"continuous\"; }\")))\n  (:symbol \"parseBslInstructionTuple\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"BslSign[]\" :params ((:param \"tuple\" :type \"BslLevel6InstructionTuple\")))\n  (:symbol \"analyzeAndTransformBslGrammar\" :from \"utils/bslGrammarEngine.ts\" :kind :function :return \"BslGrammarAnalysis\" :params ((:param \"text\" :type \"string\") (:param \"options\" :type \"BslGrammarMode | { mode?: BslGrammarMode; }\")))\n  (:symbol \"BslClassifierType\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslAspect\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslClassifierPredicate\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslDirectionalVerbType\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslDirectionalAgreement\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslLevel6InstructionTuple\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoyType\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoy\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslGrammarMode\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslLocusId\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslElevation\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslLocus\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_BSL_LOCI\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Record<BslLocusId, BslLocus>\" :params ())\n  (:symbol \"BslGrammarRole\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslGrammarToken\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslGrammarAnalysis\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DIRECTIONAL_VERB_MAP\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Record<string, BslDirectionalVerbType>\" :params ())\n  (:symbol \"HIERARCHICAL_HIGH_ENTITIES\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Set<string>\" :params ())\n  (:symbol \"HIERARCHICAL_LOW_ENTITIES\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Set<string>\" :params ())\n  (:symbol \"ADVERB_MOUTH_MAP\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Record<string, string>\" :params ())\n  (:symbol \"CLASSIFIER_VERB_MAP\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Record<string, BslClassifierType>\" :params ())\n  (:symbol \"ASPECT_MARKER_MAP\" :from \"utils/bslGrammarEngine.ts\" :kind :const :return \"Record<string, BslAspect>\" :params ())\n  (:symbol \"computeHeadCenter\" :from \"utils/bslKinematicsEngine.ts\" :kind :function :return \"Point3D\" :params ((:param \"headTilt\" :type \"string\") (:param \"progress\" :type \"number\")))\n  (:symbol \"projectPoint\" :from \"utils/bslKinematicsEngine.ts\" :kind :function :return \"{ x: number; y: number; scale: number; }\" :params ((:param \"pt\" :type \"Point3D\") (:param \"camera\" :type \"CameraConfig\") (:param \"panX\" :type \"number\") (:param \"panY\" :type \"number\") (:param \"cameraMode\" :type \"\"split\" | \"body\" | \"face\"\") (:param \"zone\" :type \"\"body\" | \"hands\"\") (:param \"headY\" :type \"number\") (:param \"headZ\" :type \"number\") (:param \"roleYaw\" :type \"number\")))\n  (:symbol \"projectSolvedHand\" :from \"utils/bslKinematicsEngine.ts\" :kind :function :return \"SolvedHand2D\" :params ((:param \"hand\" :type \"BslSolvedDominantHand\") (:param \"camera\" :type \"CameraConfig\") (:param \"panX\" :type \"number\") (:param \"panY\" :type \"number\") (:param \"cameraMode\" :type \"\"split\" | \"body\" | \"face\"\") (:param \"headY\" :type \"number\") (:param \"headZ\" :type \"number\")))\n  (:symbol \"solveBaseHandKinematics\" :from \"utils/bslKinematicsEngine.ts\" :kind :function :return \"BslSolvedDominantHand\" :params ((:param \"domHand3D\" :type \"BslSolvedDominantHand\") (:param \"currentPose\" :type \"BslHandPose\")))\n  (:symbol \"computeBslFrame\" :from \"utils/bslKinematicsEngine.ts\" :kind :function :return \"BslSolvedFrame\" :params ((:param \"currentPose\" :type \"BslHandPose\") (:param \"prevPose\" :type \"BslHandPose\") (:param \"interpolatedWrist\" :type \"Point3D\") (:param \"interpolatedKnuckle\" :type \"Point3D\") (:param \"interpolatedTip\" :type \"Point3D\") (:param \"progress\" :type \"number\") (:param \"camera\" :type \"CameraConfig\") (:param \"panX\" :type \"number\") (:param \"panY\" :type \"number\") (:param \"cameraMode\" :type \"\"split\" | \"body\" | \"face\"\")))\n  (:symbol \"CameraConfig\" :from \"utils/bslKinematicsEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SolvedHand2D\" :from \"utils/bslKinematicsEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SolvedFacialLandmarks2D\" :from \"utils/bslKinematicsEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslSolvedFrame\" :from \"utils/bslKinematicsEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"registerBslSigns\" :from \"utils/bslLexicon.ts\" :kind :function :return \"number\" :params ((:param \"signs\" :type \"Record<string, BslSign>\")))\n  (:symbol \"lookupBslSign\" :from \"utils/bslLexicon.ts\" :kind :function :return \"BslSign\" :params ((:param \"word\" :type \"string\")))\n  (:symbol \"signKeyframeToHandPose\" :from \"utils/bslLexicon.ts\" :kind :function :return \"BslHandPose\" :params ((:param \"sign\" :type \"BslSign\") (:param \"kf\" :type \"BslSignKeyframe\") (:param \"index\" :type \"number\") (:param \"total\" :type \"number\")))\n  (:symbol \"decomposeTextToBslStreamWithLexicon\" :from \"utils/bslLexicon.ts\" :kind :function :return \"BslHandPose[]\" :params ((:param \"text\" :type \"string\") (:param \"options\" :type \"{ mode?: \"fingerspell\" | \"concept\"; }\")))\n  (:symbol \"getMakatonSigns\" :from \"utils/bslLexicon.ts\" :kind :function :return \"BslSign[]\" :params ((:param \"stage\" :type \"number\")))\n  (:symbol \"isMakatonWord\" :from \"utils/bslLexicon.ts\" :kind :function :return \"boolean\" :params ((:param \"word\" :type \"string\")))\n  (:symbol \"lookupMakatonSign\" :from \"utils/bslLexicon.ts\" :kind :function :return \"{ sign: BslSign; stage: number; }\" :params ((:param \"word\" :type \"string\")))\n  (:symbol \"BslNmf\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslHandShape\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslPalmOrientation\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslEaseCurve\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBaseHandMode\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslClassifierType\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslAspect\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslClassifierPredicate\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoyType\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslBuoy\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslCategory\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslSignKeyframe\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BslSign\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"BSL_CURRICULUM_LEXICON\" :from \"utils/bslLexicon.ts\" :kind :const :return \"Record<string, BslSign>\" :params ())\n  (:symbol \"MakatonStageInfo\" :from \"utils/bslLexicon.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MAKATON_CORE_STAGES\" :from \"utils/bslLexicon.ts\" :kind :const :return \"Record<number, MakatonStageInfo>\" :params ())\n  (:symbol \"parseMathExpression\" :from \"utils/calculusPlotter.ts\" :kind :function :return \"(x: number) => number\" :params ((:param \"expr\" :type \"string\")))\n  (:symbol \"PlotCoordinate\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TangentAnalysis\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"IntegralAnalysis\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ViewportTransform\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CalculusPlotter\" :from \"utils/calculusPlotter.ts\" :kind :class :return \"typeof CalculusPlotter\" :params ())\n  (:symbol \"CALCULUS_PRESETS\" :from \"utils/calculusPlotter.ts\" :kind :const :return \"{ id: string; name: string; category: string; latex: string; fn: (x: number) => number; derivativeStr: string; defaultX0: number; defaultA: number; defaultB: number; }[]\" :params ())\n  (:symbol \"compressStringToGzip\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<Uint8Array<ArrayBufferLike>>\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"decompressGzipToString\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"compressedBytes\" :type \"Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"uint8ArrayToBase64\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"string\" :params ((:param \"bytes\" :type \"Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"base64ToUint8Array\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Uint8Array<ArrayBufferLike>\" :params ((:param \"base64\" :type \"string\")))\n  (:symbol \"compressCartridge\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<{ compressedBytes: Uint8Array<ArrayBufferLike>; base64: string; metadata: CompressedCartridgeMetadata; }>\" :params ((:param \"cartridge\" :type \"CartridgeDefinition\")))\n  (:symbol \"decompressCartridge\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CartridgeDefinition>\" :params ((:param \"data\" :type \"string | ArrayBuffer | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"compressCartridgeBundle\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CompressedBundlePayload>\" :params ((:param \"bundleId\" :type \"string\") (:param \"title\" :type \"string\") (:param \"cartridges\" :type \"CartridgeDefinition[]\")))\n  (:symbol \"decompressCartridgeBundle\" :from \"utils/cartridgeCompression.ts\" :kind :function :return \"Promise<CartridgeDefinition[]>\" :params ((:param \"payload\" :type \"string | Uint8Array<ArrayBufferLike> | CompressedBundlePayload\")))\n  (:symbol \"CompressedCartridgeMetadata\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CompressedCartridgePayload\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CompressedBundlePayload\" :from \"utils/cartridgeCompression.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"computeSha256\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"data\" :type \"string | ArrayBuffer | Uint8Array<ArrayBufferLike>\")))\n  (:symbol \"computeAuthoritySeal\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"id\" :type \"string\") (:param \"astHash\" :type \"string\") (:param \"svgHash\" :type \"string\")))\n  (:symbol \"formatShortHash\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"string\" :params ((:param \"hash\" :type \"string\") (:param \"length\" :type \"number\")))\n  (:symbol \"isNativeCartridge\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"boolean\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"getRegisteredRecord\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"CartridgeChecksumEntry\" :params ((:param \"id\" :type \"string\")))\n  (:symbol \"getMasterRegistryChecksum\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getTotalCertifiedCartridges\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"number\" :params ())\n  (:symbol \"verifyCartridgeIntegrity\" :from \"utils/cartridgeIntegrity.ts\" :kind :function :return \"Promise<CartridgeIntegrityResult>\" :params ((:param \"cartridgeId\" :type \"string\") (:param \"content\" :type \"string | { ast?: string | ArrayBuffer; svg?: string | ArrayBuffer; astb?: ArrayBuffer; }\")))\n  (:symbol \"CURRICULUM_AUTHORITY_NAME\" :from \"utils/cartridgeIntegrity.ts\" :kind :const :return \"\"St Joseph's Catholic Primary School Curriculum Authority\"\" :params ())\n  (:symbol \"AUTHORITY_SEAL_SALT\" :from \"utils/cartridgeIntegrity.ts\" :kind :const :return \"\"ST_JOSEPHS_CURRICULUM_SEAL_V1_2026_AGPL\"\" :params ())\n  (:symbol \"IntegrityStatus\" :from \"utils/cartridgeIntegrity.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeIntegrityResult\" :from \"utils/cartridgeIntegrity.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeStateVector\" :from \"utils/cartridgeStateHex.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeStateHex\" :from \"utils/cartridgeStateHex.ts\" :kind :const :return \"{ SCHEMA_VERSION: number; BUFFER_SIZE: number; pack(state?: CartridgeStateVector): string; unpack(hexStr: string): CartridgeStateVector; saveToHash(state: CartridgeStateVector): void; loadFromHash(): CartridgeStateVector; }\" :params ())\n  (:symbol \"Channel\" :from \"utils/channelBus.ts\" :kind :class :return \"typeof Channel\" :params ())\n  (:symbol \"Channels\" :from \"utils/channelBus.ts\" :kind :const :return \"{ UI_ACTIONS: Channel<{ action: string; payload: any; }>; AI_DIAGNOSTICS: Channel<{ studentId: string; challengeId: string; answer: string; isCorrect: boolean; }>; PROGRESS_LOG: Channel<...>; }\" :params ())\n  (:symbol \"triggerCorrectConfetti\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"triggerStreakCelebration\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ((:param \"streak\" :type \"number\")))\n  (:symbol \"triggerMasteryConfetti\" :from \"utils/confetti.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"encryptLocalData\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<EncryptedPayload>\" :params ((:param \"plainText\" :type \"string\") (:param \"passphrase\" :type \"string\")))\n  (:symbol \"decryptLocalData\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"payload\" :type \"EncryptedPayload\") (:param \"passphrase\" :type \"string\")))\n  (:symbol \"computeSha256\" :from \"utils/cryptoVault.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"EncryptedPayload\" :from \"utils/cryptoVault.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"exportAirgapHtmlBundle\" :from \"utils/exportAirgapHtmlBundle.ts\" :kind :function :return \"void\" :params ((:param \"presetId\" :type \"string\") (:param \"presetTitle\" :type \"string\")))\n  (:symbol \"exportSubjectCartridge\" :from \"utils/exportSubjectCartridge.ts\" :kind :function :return \"void\" :params ((:param \"cartridgeIdOrPackageId\" :type \"string\")))\n  (:symbol \"exportCustomCartridgeBundle\" :from \"utils/exportSubjectCartridge.ts\" :kind :function :return \"void\" :params ((:param \"scenes\" :type \"{ id: string; title: string; category: string; svgMarkup?: string; astSource?: string; }[]\") (:param \"title\" :type \"string\") (:param \"description\" :type \"string\") (:param \"filename\" :type \"string\")))\n  (:symbol \"CartridgePackage\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"DEFAULT_CARTRIDGE_PACKAGES\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"CartridgePackage[]\" :params ())\n  (:symbol \"AVAILABLE_CARTRIDGES\" :from \"utils/exportSubjectCartridge.ts\" :kind :const :return \"CartridgePackage[]\" :params ())\n  (:symbol \"resolveHarmonisedRoute\" :from \"utils/harmonisedRouteResolver.ts\" :kind :function :return \"RouteResolution\" :params ((:param \"rawPath\" :type \"string\") (:param \"search\" :type \"string\")))\n  (:symbol \"RouteResolution\" :from \"utils/harmonisedRouteResolver.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"isPhetBundle\" :from \"utils/phetBridge.ts\" :kind :function :return \"boolean\" :params ((:param \"content\" :type \"string\")))\n  (:symbol \"extractPhetMetadata\" :from \"utils/phetBridge.ts\" :kind :function :return \"{ title: string; simName: string; version: string; locales: string[]; }\" :params ((:param \"content\" :type \"string\") (:param \"fileName\" :type \"string\")))\n  (:symbol \"extractPhetProperties\" :from \"utils/phetBridge.ts\" :kind :function :return \"ExtractedPhetProperty[]\" :params ((:param \"content\" :type \"string\")))\n  (:symbol \"synthesizeUniversalPhetSim\" :from \"utils/phetBridge.ts\" :kind :function :return \"{ svgMarkup: string; astSource: string; invariants: string[]; }\" :params ((:param \"fileContent\" :type \"string\") (:param \"fileName\" :type \"string\") (:param \"meta\" :type \"{ title: string; simName: string; version: string; locales: string[]; }\")))\n  (:symbol \"transpilePhetFile\" :from \"utils/phetBridge.ts\" :kind :function :return \"Promise<PhetTranspileResult>\" :params ((:param \"fileContent\" :type \"string\") (:param \"fileName\" :type \"string\")))\n  (:symbol \"transpileSwfBinary\" :from \"utils/phetBridge.ts\" :kind :function :return \"Promise<PhetTranspileResult>\" :params ((:param \"buffer\" :type \"ArrayBuffer | Uint8Array<ArrayBufferLike>\") (:param \"fileName\" :type \"string\")))\n  (:symbol \"PhetMetadata\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PhetTranspileResult\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SupportedPhetPreset\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PHET_BUILTIN_MODELS\" :from \"utils/phetBridge.ts\" :kind :const :return \"Record<SupportedPhetPreset, { title: string; subject: string; stage: string; invariants: string[]; generateSvg: () => string; generateAst: () => string; }>\" :params ())\n  (:symbol \"ExtractedPhetProperty\" :from \"utils/phetBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"generateSessionReport\" :from \"utils/sessionReporter.ts\" :kind :function :return \"Promise<SessionReportSummary>\" :params ((:param \"sessionId\" :type \"string\")))\n  (:symbol \"downloadReportAsHtml\" :from \"utils/sessionReporter.ts\" :kind :function :return \"void\" :params ((:param \"summary\" :type \"SessionReportSummary\")))\n  (:symbol \"SessionReportSummary\" :from \"utils/sessionReporter.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"stripSExprComments\" :from \"utils/sexprParser.ts\" :kind :function :return \"string\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"parseSExpr\" :from \"utils/sexprParser.ts\" :kind :function :return \"SExprAST\" :params ((:param \"input\" :type \"string\")))\n  (:symbol \"tokenize\" :from \"utils/sexprParser.ts\" :kind :function :return \"string[]\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"parseAstNode\" :from \"utils/sexprParser.ts\" :kind :function :return \"ParsedAstNode\" :params ((:param \"input\" :type \"SExprAST\")))\n  (:symbol \"parseCartridgeHeader\" :from \"utils/sexprParser.ts\" :kind :function :return \"CartridgeHeaderMetadata\" :params ((:param \"astContent\" :type \"string\")))\n  (:symbol \"ParsedAstNode\" :from \"utils/sexprParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CartridgeHeaderMetadata\" :from \"utils/sexprParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"utils/sexprParser.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"transpileSwfToAst\" :from \"utils/swfAstParser.ts\" :kind :function :return \"Promise<SwfTranspileResult>\" :params ((:param \"fileData\" :type \"ArrayBuffer | Uint8Array<ArrayBufferLike>\") (:param \"sceneId\" :type \"string\")))\n  (:symbol \"SwfMetadata\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfTranspileResult\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfMorphShape\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SwfActionRecord\" :from \"utils/swfAstParser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"getBaseUrl\" :from \"utils/url.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getAssetUrl\" :from \"utils/url.ts\" :kind :function :return \"string\" :params ((:param \"path\" :type \"string\")))\n)\n";
 export const CORE_EXPORT_CATALOG = [
-  {
-    "name": "default",
-    "kind": "function",
-    "returnType": "React.JSX.Element",
-    "params": [],
-    "sourceFile": "App.tsx",
-    "relPath": "App.tsx"
-  },
   {
     "name": "ConceptGraphNode",
     "kind": "const",
@@ -242,6 +234,35 @@ export const CORE_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "curriculumMesh.ts",
     "relPath": "curriculum/curriculumMesh.ts"
+  },
+  {
+    "name": "resolveTopicSimulator",
+    "kind": "function",
+    "returnType": "SimPresetBadge",
+    "params": [
+      {
+        "name": "topicId",
+        "type": "string"
+      },
+      {
+        "name": "topicTitle",
+        "type": "string"
+      },
+      {
+        "name": "subjectTitle",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "curriculumSimMapping.ts",
+    "relPath": "curriculum/curriculumSimMapping.ts"
+  },
+  {
+    "name": "SimPresetBadge",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "curriculumSimMapping.ts",
+    "relPath": "curriculum/curriculumSimMapping.ts"
   },
   {
     "name": "FOLDER_MANIFEST",
@@ -1503,6 +1524,155 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "data/catholic/index.ts"
   },
   {
+    "name": "StationOfTheCross",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "OPENING_DEVOTIONAL_VERSICLE",
+    "kind": "const",
+    "returnType": "{ leaderLatin: string; leaderEnglish: string; responseLatin: string; responseEnglish: string; }",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "STATIONS_OF_THE_CROSS",
+    "kind": "const",
+    "returnType": "StationOfTheCross[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "STATIONS_HISTORY_AND_THEOLOGY",
+    "kind": "const",
+    "returnType": "{ historicalOrigins: string; traditionalNumber: string; scripturalAndTraditionalStations: string; plenaryIndulgence: string; }",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "getCurrentCanonicalHour",
+    "kind": "function",
+    "returnType": "CanonicalHour",
+    "params": [
+      {
+        "name": "date",
+        "type": "Date"
+      }
+    ],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "CanonicalHour",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "MarianAntiphon",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "CANONICAL_HOURS",
+    "kind": "const",
+    "returnType": "CanonicalHour[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "MARIAN_ANTIPHONS",
+    "kind": "const",
+    "returnType": "MarianAntiphon[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "FOUR_WEEK_PSALTER_EXPLANATION",
+    "kind": "const",
+    "returnType": "{ title: string; description: string; structureRules: string[]; }",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "BREVIARY_FAQS",
+    "kind": "const",
+    "returnType": "{ question: string; answer: string; }[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "TriduumCeremony",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "TriduumMovement",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "LumenChristiStep",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "LUMEN_CHRISTI_CEREMONY_STEPS",
+    "kind": "const",
+    "returnType": "LumenChristiStep[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "TRIDUUM_MOVEMENTS",
+    "kind": "const",
+    "returnType": "TriduumMovement[]",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "EXSULTET_SACRED_TEXT",
+    "kind": "const",
+    "returnType": "{ latinTitle: string; englishTitle: string; openingInvocation: { latin: string; english: string; spanish: string; }; felixCulpaStanza: { latin: string; english: string; spanish: string; }; pillarOfFireStanza: { ...; }; }",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
+    "name": "VICTIMAE_PASCHALI_SEQUENCE",
+    "kind": "const",
+    "returnType": "{ latinTitle: string; englishTitle: string; stanzas: { latin: string; english: string; spanish: string; }[]; }",
+    "params": [],
+    "sourceFile": "index.ts",
+    "relPath": "data/catholic/index.ts"
+  },
+  {
     "name": "LatinPrayerVerse",
     "kind": "const",
     "returnType": "any",
@@ -1615,6 +1785,67 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "data/catholic/liturgicalPosturesData.ts"
   },
   {
+    "name": "getCurrentCanonicalHour",
+    "kind": "function",
+    "returnType": "CanonicalHour",
+    "params": [
+      {
+        "name": "date",
+        "type": "Date"
+      }
+    ],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "CanonicalHour",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "MarianAntiphon",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "CANONICAL_HOURS",
+    "kind": "const",
+    "returnType": "CanonicalHour[]",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "MARIAN_ANTIPHONS",
+    "kind": "const",
+    "returnType": "MarianAntiphon[]",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "FOUR_WEEK_PSALTER_EXPLANATION",
+    "kind": "const",
+    "returnType": "{ title: string; description: string; structureRules: string[]; }",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
+    "name": "BREVIARY_FAQS",
+    "kind": "const",
+    "returnType": "{ question: string; answer: string; }[]",
+    "params": [],
+    "sourceFile": "liturgyOfTheHoursData.ts",
+    "relPath": "data/catholic/liturgyOfTheHoursData.ts"
+  },
+  {
     "name": "LiturgyStep",
     "kind": "const",
     "returnType": "any",
@@ -1719,6 +1950,94 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "data/catholic/sevenSacraments.ts"
   },
   {
+    "name": "StationOfTheCross",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "stationsOfTheCrossData.ts",
+    "relPath": "data/catholic/stationsOfTheCrossData.ts"
+  },
+  {
+    "name": "OPENING_DEVOTIONAL_VERSICLE",
+    "kind": "const",
+    "returnType": "{ leaderLatin: string; leaderEnglish: string; responseLatin: string; responseEnglish: string; }",
+    "params": [],
+    "sourceFile": "stationsOfTheCrossData.ts",
+    "relPath": "data/catholic/stationsOfTheCrossData.ts"
+  },
+  {
+    "name": "STATIONS_OF_THE_CROSS",
+    "kind": "const",
+    "returnType": "StationOfTheCross[]",
+    "params": [],
+    "sourceFile": "stationsOfTheCrossData.ts",
+    "relPath": "data/catholic/stationsOfTheCrossData.ts"
+  },
+  {
+    "name": "STATIONS_HISTORY_AND_THEOLOGY",
+    "kind": "const",
+    "returnType": "{ historicalOrigins: string; traditionalNumber: string; scripturalAndTraditionalStations: string; plenaryIndulgence: string; }",
+    "params": [],
+    "sourceFile": "stationsOfTheCrossData.ts",
+    "relPath": "data/catholic/stationsOfTheCrossData.ts"
+  },
+  {
+    "name": "TriduumCeremony",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "TriduumMovement",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "LumenChristiStep",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "LUMEN_CHRISTI_CEREMONY_STEPS",
+    "kind": "const",
+    "returnType": "LumenChristiStep[]",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "TRIDUUM_MOVEMENTS",
+    "kind": "const",
+    "returnType": "TriduumMovement[]",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "EXSULTET_SACRED_TEXT",
+    "kind": "const",
+    "returnType": "{ latinTitle: string; englishTitle: string; openingInvocation: { latin: string; english: string; spanish: string; }; felixCulpaStanza: { latin: string; english: string; spanish: string; }; pillarOfFireStanza: { ...; }; }",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
+    "name": "VICTIMAE_PASCHALI_SEQUENCE",
+    "kind": "const",
+    "returnType": "{ latinTitle: string; englishTitle: string; stanzas: { latin: string; english: string; spanish: string; }[]; }",
+    "params": [],
+    "sourceFile": "triduumEasterData.ts",
+    "relPath": "data/catholic/triduumEasterData.ts"
+  },
+  {
     "name": "getComplianceCaveat",
     "kind": "function",
     "returnType": "ComplianceCaveat",
@@ -1801,6 +2120,70 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "data/curriculumRegistry.ts"
   },
   {
+    "name": "LessonCard",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "homeCurriculum.ts",
+    "relPath": "data/homeCurriculum.ts"
+  },
+  {
+    "name": "FEATURED_LESSONS",
+    "kind": "const",
+    "returnType": "LessonCard[]",
+    "params": [],
+    "sourceFile": "homeCurriculum.ts",
+    "relPath": "data/homeCurriculum.ts"
+  },
+  {
+    "name": "LanguagePhoneme",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
+    "name": "VerbConjugation",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
+    "name": "EtymologyCognate",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
+    "name": "LANGUAGE_PHONEMES",
+    "kind": "const",
+    "returnType": "LanguagePhoneme[]",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
+    "name": "VERB_CONJUGATIONS",
+    "kind": "const",
+    "returnType": "VerbConjugation[]",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
+    "name": "ETYMOLOGY_COGNATES",
+    "kind": "const",
+    "returnType": "EtymologyCognate[]",
+    "params": [],
+    "sourceFile": "languagesCurriculumData.ts",
+    "relPath": "data/languagesCurriculumData.ts"
+  },
+  {
     "name": "findCurriculumKnowledge",
     "kind": "function",
     "returnType": "CurriculumTopicKnowledge",
@@ -1862,6 +2245,23 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "data/oakCurriculumSeeds.ts"
   },
   {
+    "name": "getPhonemeSpokenText",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "grapheme",
+        "type": "string"
+      },
+      {
+        "name": "fallbackHint",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "phonicsCurriculumData.ts",
+    "relPath": "data/phonicsCurriculumData.ts"
+  },
+  {
     "name": "PhonicGrapheme",
     "kind": "const",
     "returnType": "any",
@@ -1897,6 +2297,14 @@ export const CORE_EXPORT_CATALOG = [
     "name": "TrickyWord",
     "kind": "const",
     "returnType": "any",
+    "params": [],
+    "sourceFile": "phonicsCurriculumData.ts",
+    "relPath": "data/phonicsCurriculumData.ts"
+  },
+  {
+    "name": "PHONETIC_AUDIO_MAP",
+    "kind": "const",
+    "returnType": "Record<string, string>",
     "params": [],
     "sourceFile": "phonicsCurriculumData.ts",
     "relPath": "data/phonicsCurriculumData.ts"
@@ -1961,6 +2369,96 @@ export const CORE_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "astConceptGraph.ts",
     "relPath": "data/player/astConceptGraph.ts"
+  },
+  {
+    "name": "getOfficialCartridgeRecord",
+    "kind": "function",
+    "returnType": "CartridgeChecksumEntry",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "isOfficialNativeCartridge",
+    "kind": "function",
+    "returnType": "boolean",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "CartridgeChecksumEntry",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "CartridgeRegistryManifest",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "CARTRIDGE_CHECKSUMS",
+    "kind": "const",
+    "returnType": "CartridgeRegistryManifest",
+    "params": [],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "OFFICIAL_AUTHORITY",
+    "kind": "const",
+    "returnType": "\"St Joseph's Catholic Primary School Curriculum Authority\"",
+    "params": [],
+    "sourceFile": "cartridgeChecksums.ts",
+    "relPath": "data/player/cartridgeChecksums.ts"
+  },
+  {
+    "name": "BuiltinDataCartridgeDefinition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "dataCartridges.ts",
+    "relPath": "data/player/dataCartridges.ts"
+  },
+  {
+    "name": "BUILTIN_DATA_CARTRIDGES",
+    "kind": "const",
+    "returnType": "BuiltinDataCartridgeDefinition[]",
+    "params": [],
+    "sourceFile": "dataCartridges.ts",
+    "relPath": "data/player/dataCartridges.ts"
+  },
+  {
+    "name": "EmbeddedCartridgeData",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "embeddedCoreCartridges.ts",
+    "relPath": "data/player/embeddedCoreCartridges.ts"
+  },
+  {
+    "name": "EMBEDDED_CORE_CARTRIDGES",
+    "kind": "const",
+    "returnType": "Record<string, EmbeddedCartridgeData>",
+    "params": [],
+    "sourceFile": "embeddedCoreCartridges.ts",
+    "relPath": "data/player/embeddedCoreCartridges.ts"
   },
   {
     "name": "CartridgeType",
@@ -2051,147 +2549,75 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "registerServiceWorker.ts"
   },
   {
-    "name": "BrowserRouter",
+    "name": "normalizePath",
     "kind": "function",
-    "returnType": "React.JSX.Element",
+    "returnType": "string",
     "params": [
       {
-        "name": "__0",
-        "type": "BrowserRouterProps"
+        "name": "rawPath",
+        "type": "string"
       }
     ],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
   },
   {
-    "name": "useLocation",
+    "name": "navigate",
     "kind": "function",
-    "returnType": "LocationState",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "useNavigate",
-    "kind": "function",
-    "returnType": "NavigateFunction",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "useSearchParams",
-    "kind": "function",
-    "returnType": "[URLSearchParams, (newParams: Record<string, string> | URLSearchParams, options?: { replace?: boolean; }) => void]",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "Route",
-    "kind": "function",
-    "returnType": "any",
+    "returnType": "Promise<void>",
     "params": [
       {
-        "name": "_props",
-        "type": "RouteProps"
+        "name": "path",
+        "type": "string"
       }
     ],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
   },
   {
-    "name": "Routes",
+    "name": "handleRouteChange",
     "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [],
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
+  },
+  {
+    "name": "initRouter",
+    "kind": "function",
+    "returnType": "void",
+    "params": [],
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
+  },
+  {
+    "name": "RouteView",
+    "kind": "const",
     "returnType": "any",
+    "params": [],
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
+  },
+  {
+    "name": "RouteHandler",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
+  },
+  {
+    "name": "navigateTo",
+    "kind": "const",
+    "returnType": "Promise<void>",
     "params": [
       {
-        "name": "__0",
-        "type": "RoutesProps"
+        "name": "path",
+        "type": "string"
       }
     ],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "Outlet",
-    "kind": "function",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "LocationState",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "NavigateFunction",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "BrowserRouterProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "RouteProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "RoutesProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "LinkProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "Link",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "NavLinkProps",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
-  },
-  {
-    "name": "NavLink",
-    "kind": "const",
-    "returnType": "any",
-    "params": [],
-    "sourceFile": "index.tsx",
-    "relPath": "router/index.tsx"
+    "sourceFile": "router.ts",
+    "relPath": "router.ts"
   },
   {
     "name": "getRuleSet",
@@ -2653,6 +3079,464 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "types/sexpr.ts"
   },
   {
+    "name": "Projected3DPoint",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "ast3dWasmBridge.ts",
+    "relPath": "utils/ast3dWasmBridge.ts"
+  },
+  {
+    "name": "AST3DWasmBridge",
+    "kind": "class",
+    "returnType": "typeof AST3DWasmBridge",
+    "params": [],
+    "sourceFile": "ast3dWasmBridge.ts",
+    "relPath": "utils/ast3dWasmBridge.ts"
+  },
+  {
+    "name": "isAstBytecode",
+    "kind": "function",
+    "returnType": "boolean",
+    "params": [
+      {
+        "name": "buffer",
+        "type": "ArrayBuffer | Uint8Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "compileSceneToBytecode",
+    "kind": "function",
+    "returnType": "Uint8Array<ArrayBufferLike>",
+    "params": [
+      {
+        "name": "scene",
+        "type": "BytecodeCompiledScene"
+      }
+    ],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "decompileBytecodeToScene",
+    "kind": "function",
+    "returnType": "BytecodeCompiledScene",
+    "params": [
+      {
+        "name": "buffer",
+        "type": "ArrayBuffer | Uint8Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "compileAstTextToBytecode",
+    "kind": "function",
+    "returnType": "Uint8Array<ArrayBufferLike>",
+    "params": [
+      {
+        "name": "astText",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ASTB_MAGIC",
+    "kind": "const",
+    "returnType": "number[]",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ASTB_VERSION",
+    "kind": "const",
+    "returnType": "1",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ARCHETYPE_SIM",
+    "kind": "const",
+    "returnType": "1",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ARCHETYPE_SLIDE",
+    "kind": "const",
+    "returnType": "2",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ARCHETYPE_APP",
+    "kind": "const",
+    "returnType": "3",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "ARCHETYPE_FILM",
+    "kind": "const",
+    "returnType": "4",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "FLAG_HAS_3D",
+    "kind": "const",
+    "returnType": "1",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "FLAG_HAS_VIDEO",
+    "kind": "const",
+    "returnType": "2",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "FLAG_HAS_CHECKPOINTS",
+    "kind": "const",
+    "returnType": "4",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "FLAG_HAS_SUBTITLES",
+    "kind": "const",
+    "returnType": "8",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_SCENE_META",
+    "kind": "const",
+    "returnType": "1",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_KEYFRAME",
+    "kind": "const",
+    "returnType": "16",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_SUBTITLE",
+    "kind": "const",
+    "returnType": "32",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_BINDING",
+    "kind": "const",
+    "returnType": "48",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_CHECKPOINT",
+    "kind": "const",
+    "returnType": "64",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_GESTURE",
+    "kind": "const",
+    "returnType": "80",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_VAR",
+    "kind": "const",
+    "returnType": "96",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_INPUT",
+    "kind": "const",
+    "returnType": "112",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_CAMERA",
+    "kind": "const",
+    "returnType": "128",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "OP_EOF",
+    "kind": "const",
+    "returnType": "255",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "BytecodeCompiledScene",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astBytecode.ts",
+    "relPath": "utils/astBytecode.ts"
+  },
+  {
+    "name": "escapeAstValue",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "str",
+        "type": "unknown"
+      }
+    ],
+    "sourceFile": "astCartridgeSerializer.ts",
+    "relPath": "utils/astCartridgeSerializer.ts"
+  },
+  {
+    "name": "valueToAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "val",
+        "type": "any"
+      },
+      {
+        "name": "indentLevel",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "astCartridgeSerializer.ts",
+    "relPath": "utils/astCartridgeSerializer.ts"
+  },
+  {
+    "name": "serializeEntityNode",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "tag",
+        "type": "string"
+      },
+      {
+        "name": "props",
+        "type": "Record<string, any>"
+      },
+      {
+        "name": "children",
+        "type": "any[]"
+      },
+      {
+        "name": "indentLevel",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "astCartridgeSerializer.ts",
+    "relPath": "utils/astCartridgeSerializer.ts"
+  },
+  {
+    "name": "serializeDatasetToCartridge",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "metadata",
+        "type": "{ id: string; category: string; title: string; version?: string; itemTag?: string; items: Record<string, any>[]; }"
+      }
+    ],
+    "sourceFile": "astCartridgeSerializer.ts",
+    "relPath": "utils/astCartridgeSerializer.ts"
+  },
+  {
+    "name": "parseCartridgeToDataset",
+    "kind": "function",
+    "returnType": "{ id: string; category: string; title: string; version: string; count: number; items: T[]; }",
+    "params": [
+      {
+        "name": "astContent",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "astCartridgeSerializer.ts",
+    "relPath": "utils/astCartridgeSerializer.ts"
+  },
+  {
+    "name": "compileExpressionToMathKernel",
+    "kind": "function",
+    "returnType": "MathDecomposition",
+    "params": [
+      {
+        "name": "expr",
+        "type": "string"
+      },
+      {
+        "name": "targetAttr",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "evaluateAffine",
+    "kind": "function",
+    "returnType": "number",
+    "params": [
+      {
+        "name": "m",
+        "type": "number"
+      },
+      {
+        "name": "c",
+        "type": "number"
+      },
+      {
+        "name": "t",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "evaluateMap",
+    "kind": "function",
+    "returnType": "number",
+    "params": [
+      {
+        "name": "val",
+        "type": "number"
+      },
+      {
+        "name": "inMin",
+        "type": "number"
+      },
+      {
+        "name": "inMax",
+        "type": "number"
+      },
+      {
+        "name": "outMin",
+        "type": "number"
+      },
+      {
+        "name": "outMax",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "evaluateAffineMatrix6",
+    "kind": "function",
+    "returnType": "void",
+    "params": [
+      {
+        "name": "affine",
+        "type": "AffineDecomposition"
+      },
+      {
+        "name": "t",
+        "type": "number"
+      },
+      {
+        "name": "outMatrix",
+        "type": "Float32Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "formatSvgMatrix6",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "m",
+        "type": "Float32Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "TransformKind",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "AffineDecomposition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "MapDecomposition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "FallbackDecomposition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
+    "name": "MathDecomposition",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astMathCompiler.ts",
+    "relPath": "utils/astMathCompiler.ts"
+  },
+  {
     "name": "healSExprString",
     "kind": "function",
     "returnType": "string",
@@ -2692,6 +3576,56 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "utils/astQuestionExtractor.ts"
   },
   {
+    "name": "extractDataPayloadFromAst",
+    "kind": "function",
+    "returnType": "DataCartridgePayload",
+    "params": [
+      {
+        "name": "raw",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "astQuestionExtractor.ts",
+    "relPath": "utils/astQuestionExtractor.ts"
+  },
+  {
+    "name": "serializeDataCartridgeToAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "payload",
+        "type": "DataCartridgePayload"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "astQuestionExtractor.ts",
+    "relPath": "utils/astQuestionExtractor.ts"
+  },
+  {
+    "name": "DataCartridgeQuestion",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astQuestionExtractor.ts",
+    "relPath": "utils/astQuestionExtractor.ts"
+  },
+  {
+    "name": "DataCartridgePayload",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astQuestionExtractor.ts",
+    "relPath": "utils/astQuestionExtractor.ts"
+  },
+  {
     "name": "ExtractedQuestion",
     "kind": "const",
     "returnType": "any",
@@ -2717,12 +3651,60 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "utils/astStyleCompiler.ts"
   },
   {
+    "name": "CSSProperties",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astStyleCompiler.ts",
+    "relPath": "utils/astStyleCompiler.ts"
+  },
+  {
     "name": "LITURGICAL_AST_PALETTE",
     "kind": "const",
     "returnType": "Record<string, { bg: string; border: string; text: string; accent: string; }>",
     "params": [],
     "sourceFile": "astStyleCompiler.ts",
     "relPath": "utils/astStyleCompiler.ts"
+  },
+  {
+    "name": "DecodedSwfHeader",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astTranspilerWasmBridge.ts",
+    "relPath": "utils/astTranspilerWasmBridge.ts"
+  },
+  {
+    "name": "SwfTagScanResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astTranspilerWasmBridge.ts",
+    "relPath": "utils/astTranspilerWasmBridge.ts"
+  },
+  {
+    "name": "PhetScanResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "astTranspilerWasmBridge.ts",
+    "relPath": "utils/astTranspilerWasmBridge.ts"
+  },
+  {
+    "name": "ASTTranspilerWasmBridge",
+    "kind": "class",
+    "returnType": "typeof ASTTranspilerWasmBridge",
+    "params": [],
+    "sourceFile": "astTranspilerWasmBridge.ts",
+    "relPath": "utils/astTranspilerWasmBridge.ts"
+  },
+  {
+    "name": "transpilerWasm",
+    "kind": "const",
+    "returnType": "ASTTranspilerWasmBridge",
+    "params": [],
+    "sourceFile": "astTranspilerWasmBridge.ts",
+    "relPath": "utils/astTranspilerWasmBridge.ts"
   },
   {
     "name": "isBinaryFrame",
@@ -2955,6 +3937,1215 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "utils/binaryStreamProtocol.ts"
   },
   {
+    "name": "lerp3D",
+    "kind": "function",
+    "returnType": "Point3D",
+    "params": [
+      {
+        "name": "a",
+        "type": "Point3D"
+      },
+      {
+        "name": "b",
+        "type": "Point3D"
+      },
+      {
+        "name": "t",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "decomposeTextToBslStream",
+    "kind": "function",
+    "returnType": "BslHandPose[]",
+    "params": [
+      {
+        "name": "text",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "project3DToSvg",
+    "kind": "function",
+    "returnType": "{ x: number; y: number; scale: number; depth: number; }",
+    "params": [
+      {
+        "name": "point",
+        "type": "Point3D"
+      },
+      {
+        "name": "camera",
+        "type": "{ yaw: number; pitch: number; distance: number; fov: number; }"
+      },
+      {
+        "name": "originX",
+        "type": "number"
+      },
+      {
+        "name": "originY",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "evaluateBslEase",
+    "kind": "function",
+    "returnType": "number",
+    "params": [
+      {
+        "name": "ease",
+        "type": "string"
+      },
+      {
+        "name": "t",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "solveHandKinematics",
+    "kind": "function",
+    "returnType": "BslSolvedDominantHand",
+    "params": [
+      {
+        "name": "wrist",
+        "type": "Point3D"
+      },
+      {
+        "name": "knuckle",
+        "type": "Point3D"
+      },
+      {
+        "name": "tip",
+        "type": "Point3D"
+      },
+      {
+        "name": "shapeInput",
+        "type": "BslHandShape"
+      },
+      {
+        "name": "palmInput",
+        "type": "BslPalmOrientation"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "encodePhonemicTuple",
+    "kind": "function",
+    "returnType": "Uint8Array<ArrayBufferLike>",
+    "params": [
+      {
+        "name": "params",
+        "type": "{ dez?: BslHandShape; tab?: string | number; sig?: string | number; ori?: BslPalmOrientation; nmfIndex?: number; aspect?: BslAspect; baseMode?: BslBaseHandMode; holdMs?: number; }"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "decodePhonemicTuple",
+    "kind": "function",
+    "returnType": "BslHandPose",
+    "params": [
+      {
+        "name": "tuple",
+        "type": "Uint8Array<ArrayBufferLike> | number[]"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "Point3D",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslMouthMorpheme",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslRoleShift",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslNmf",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslHandShape",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslPalmOrientation",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslEaseCurve",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslBaseHandMode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslBuoyType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslBuoy",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslDirectionalVerbType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslDirectionalAgreement",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslLevel6InstructionTuple",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslClassifierType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslAspect",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslClassifierPredicate",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslHandPose",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BSL_BASE_HAND",
+    "kind": "const",
+    "returnType": "{ wrist: { x: number; y: number; z: number; }; palm: { x: number; y: number; z: number; }; fingertips: { id: string; name: string; x: number; y: number; z: number; }[]; }",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BSL_BASE_REST_HAND",
+    "kind": "const",
+    "returnType": "{ wrist: { x: number; y: number; z: number; }; palm: { x: number; y: number; z: number; }; fingertips: { id: string; name: string; x: number; y: number; z: number; }[]; }",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "DOMINANT_REST_POSE",
+    "kind": "const",
+    "returnType": "Point3D",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "DOMINANT_REST_KNUCKLE",
+    "kind": "const",
+    "returnType": "Point3D",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "DOMINANT_REST_WRIST",
+    "kind": "const",
+    "returnType": "Point3D",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BSL_ALPHABET_POSES",
+    "kind": "const",
+    "returnType": "Record<string, BslHandPose>",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "interpolatePoint3D",
+    "kind": "const",
+    "returnType": "Point3D",
+    "params": [
+      {
+        "name": "a",
+        "type": "Point3D"
+      },
+      {
+        "name": "b",
+        "type": "Point3D"
+      },
+      {
+        "name": "t",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "BslSolvedDominantHand",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "SolvedHand3D",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_DEZ_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly BslHandShape[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_TAB_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly { name: string; pos: Point3D; }[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_SIG_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly [\"static-hold\", \"linear-fwd\", \"linear-sweep\", \"arc-up\", \"arc-down\", \"cycle-ellipse\", \"snap-halt\", \"recoil\"]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_ORI_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly BslPalmOrientation[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_NMF_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly BslNmf[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_ASPECT_REGISTERS",
+    "kind": "const",
+    "returnType": "readonly BslAspect[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "PHONEMIC_BASE_MODES",
+    "kind": "const",
+    "returnType": "readonly BslBaseHandMode[]",
+    "params": [],
+    "sourceFile": "bslAlphabet.ts",
+    "relPath": "utils/bslAlphabet.ts"
+  },
+  {
+    "name": "point3DToAstVector",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "p",
+        "type": "Point3D"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "astVectorToPoint3D",
+    "kind": "function",
+    "returnType": "Point3D",
+    "params": [
+      {
+        "name": "vec",
+        "type": "any"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "escapeAstString",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "str",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "serializeSignToAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "sign",
+        "type": "BslSign"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "serializeLexiconToAst",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "lexicon",
+        "type": "Record<string, BslSign>"
+      },
+      {
+        "name": "metadata",
+        "type": "{ version?: string; standard?: string; title?: string; }"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "parseAstNodeToSign",
+    "kind": "function",
+    "returnType": "BslSign",
+    "params": [
+      {
+        "name": "node",
+        "type": "any"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "parseAstToLexicon",
+    "kind": "function",
+    "returnType": "Record<string, BslSign>",
+    "params": [
+      {
+        "name": "astContent",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslAstCodec.ts",
+    "relPath": "utils/bslAstCodec.ts"
+  },
+  {
+    "name": "generateClassifierPredicate",
+    "kind": "function",
+    "returnType": "BslSign",
+    "params": [
+      {
+        "name": "type",
+        "type": "BslClassifierType"
+      },
+      {
+        "name": "options",
+        "type": "{ fromLocus?: BslLocusId; toLocus?: BslLocusId; aspect?: BslAspect; manner?: \"slow\" | \"fast\" | \"stumble\" | \"steady\" | \"zig-zag\"; entityLabel?: string; }"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "mapWordToClassifier",
+    "kind": "function",
+    "returnType": "{ type: BslClassifierType; options?: any; }",
+    "params": [
+      {
+        "name": "word",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "modulateDirectionalKeyframes",
+    "kind": "function",
+    "returnType": "BslSignKeyframe[]",
+    "params": [
+      {
+        "name": "sign",
+        "type": "BslSign"
+      },
+      {
+        "name": "fromLocus",
+        "type": "Point3D"
+      },
+      {
+        "name": "toLocus",
+        "type": "Point3D"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "generateDirectionalAgreementSign",
+    "kind": "function",
+    "returnType": "BslSign",
+    "params": [
+      {
+        "name": "verb",
+        "type": "BslDirectionalVerbType"
+      },
+      {
+        "name": "options",
+        "type": "{ fromLocus?: BslLocusId; toLocus?: BslLocusId; aspect?: BslAspect; manner?: \"slow\" | \"fast\" | \"steady\" | \"reverent\" | \"continuous\"; }"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "parseBslInstructionTuple",
+    "kind": "function",
+    "returnType": "BslSign[]",
+    "params": [
+      {
+        "name": "tuple",
+        "type": "BslLevel6InstructionTuple"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "analyzeAndTransformBslGrammar",
+    "kind": "function",
+    "returnType": "BslGrammarAnalysis",
+    "params": [
+      {
+        "name": "text",
+        "type": "string"
+      },
+      {
+        "name": "options",
+        "type": "BslGrammarMode | { mode?: BslGrammarMode; }"
+      }
+    ],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslClassifierType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslAspect",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslClassifierPredicate",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslDirectionalVerbType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslDirectionalAgreement",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslLevel6InstructionTuple",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslBuoyType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslBuoy",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslGrammarMode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslLocusId",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslElevation",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslLocus",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "DEFAULT_BSL_LOCI",
+    "kind": "const",
+    "returnType": "Record<BslLocusId, BslLocus>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslGrammarRole",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslGrammarToken",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "BslGrammarAnalysis",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "DIRECTIONAL_VERB_MAP",
+    "kind": "const",
+    "returnType": "Record<string, BslDirectionalVerbType>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "HIERARCHICAL_HIGH_ENTITIES",
+    "kind": "const",
+    "returnType": "Set<string>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "HIERARCHICAL_LOW_ENTITIES",
+    "kind": "const",
+    "returnType": "Set<string>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "ADVERB_MOUTH_MAP",
+    "kind": "const",
+    "returnType": "Record<string, string>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "CLASSIFIER_VERB_MAP",
+    "kind": "const",
+    "returnType": "Record<string, BslClassifierType>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "ASPECT_MARKER_MAP",
+    "kind": "const",
+    "returnType": "Record<string, BslAspect>",
+    "params": [],
+    "sourceFile": "bslGrammarEngine.ts",
+    "relPath": "utils/bslGrammarEngine.ts"
+  },
+  {
+    "name": "computeHeadCenter",
+    "kind": "function",
+    "returnType": "Point3D",
+    "params": [
+      {
+        "name": "headTilt",
+        "type": "string"
+      },
+      {
+        "name": "progress",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "projectPoint",
+    "kind": "function",
+    "returnType": "{ x: number; y: number; scale: number; }",
+    "params": [
+      {
+        "name": "pt",
+        "type": "Point3D"
+      },
+      {
+        "name": "camera",
+        "type": "CameraConfig"
+      },
+      {
+        "name": "panX",
+        "type": "number"
+      },
+      {
+        "name": "panY",
+        "type": "number"
+      },
+      {
+        "name": "cameraMode",
+        "type": "\"split\" | \"body\" | \"face\""
+      },
+      {
+        "name": "zone",
+        "type": "\"body\" | \"hands\""
+      },
+      {
+        "name": "headY",
+        "type": "number"
+      },
+      {
+        "name": "headZ",
+        "type": "number"
+      },
+      {
+        "name": "roleYaw",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "projectSolvedHand",
+    "kind": "function",
+    "returnType": "SolvedHand2D",
+    "params": [
+      {
+        "name": "hand",
+        "type": "BslSolvedDominantHand"
+      },
+      {
+        "name": "camera",
+        "type": "CameraConfig"
+      },
+      {
+        "name": "panX",
+        "type": "number"
+      },
+      {
+        "name": "panY",
+        "type": "number"
+      },
+      {
+        "name": "cameraMode",
+        "type": "\"split\" | \"body\" | \"face\""
+      },
+      {
+        "name": "headY",
+        "type": "number"
+      },
+      {
+        "name": "headZ",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "solveBaseHandKinematics",
+    "kind": "function",
+    "returnType": "BslSolvedDominantHand",
+    "params": [
+      {
+        "name": "domHand3D",
+        "type": "BslSolvedDominantHand"
+      },
+      {
+        "name": "currentPose",
+        "type": "BslHandPose"
+      }
+    ],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "computeBslFrame",
+    "kind": "function",
+    "returnType": "BslSolvedFrame",
+    "params": [
+      {
+        "name": "currentPose",
+        "type": "BslHandPose"
+      },
+      {
+        "name": "prevPose",
+        "type": "BslHandPose"
+      },
+      {
+        "name": "interpolatedWrist",
+        "type": "Point3D"
+      },
+      {
+        "name": "interpolatedKnuckle",
+        "type": "Point3D"
+      },
+      {
+        "name": "interpolatedTip",
+        "type": "Point3D"
+      },
+      {
+        "name": "progress",
+        "type": "number"
+      },
+      {
+        "name": "camera",
+        "type": "CameraConfig"
+      },
+      {
+        "name": "panX",
+        "type": "number"
+      },
+      {
+        "name": "panY",
+        "type": "number"
+      },
+      {
+        "name": "cameraMode",
+        "type": "\"split\" | \"body\" | \"face\""
+      }
+    ],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "CameraConfig",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "SolvedHand2D",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "SolvedFacialLandmarks2D",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "BslSolvedFrame",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslKinematicsEngine.ts",
+    "relPath": "utils/bslKinematicsEngine.ts"
+  },
+  {
+    "name": "registerBslSigns",
+    "kind": "function",
+    "returnType": "number",
+    "params": [
+      {
+        "name": "signs",
+        "type": "Record<string, BslSign>"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "lookupBslSign",
+    "kind": "function",
+    "returnType": "BslSign",
+    "params": [
+      {
+        "name": "word",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "signKeyframeToHandPose",
+    "kind": "function",
+    "returnType": "BslHandPose",
+    "params": [
+      {
+        "name": "sign",
+        "type": "BslSign"
+      },
+      {
+        "name": "kf",
+        "type": "BslSignKeyframe"
+      },
+      {
+        "name": "index",
+        "type": "number"
+      },
+      {
+        "name": "total",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "decomposeTextToBslStreamWithLexicon",
+    "kind": "function",
+    "returnType": "BslHandPose[]",
+    "params": [
+      {
+        "name": "text",
+        "type": "string"
+      },
+      {
+        "name": "options",
+        "type": "{ mode?: \"fingerspell\" | \"concept\"; }"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "getMakatonSigns",
+    "kind": "function",
+    "returnType": "BslSign[]",
+    "params": [
+      {
+        "name": "stage",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "isMakatonWord",
+    "kind": "function",
+    "returnType": "boolean",
+    "params": [
+      {
+        "name": "word",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "lookupMakatonSign",
+    "kind": "function",
+    "returnType": "{ sign: BslSign; stage: number; }",
+    "params": [
+      {
+        "name": "word",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslNmf",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslHandShape",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslPalmOrientation",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslEaseCurve",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslBaseHandMode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslClassifierType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslAspect",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslClassifierPredicate",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslBuoyType",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslBuoy",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslCategory",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslSignKeyframe",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BslSign",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "BSL_CURRICULUM_LEXICON",
+    "kind": "const",
+    "returnType": "Record<string, BslSign>",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "MakatonStageInfo",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
+    "name": "MAKATON_CORE_STAGES",
+    "kind": "const",
+    "returnType": "Record<number, MakatonStageInfo>",
+    "params": [],
+    "sourceFile": "bslLexicon.ts",
+    "relPath": "utils/bslLexicon.ts"
+  },
+  {
     "name": "parseMathExpression",
     "kind": "function",
     "returnType": "(x: number) => number",
@@ -3150,6 +5341,164 @@ export const CORE_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "cartridgeCompression.ts",
     "relPath": "utils/cartridgeCompression.ts"
+  },
+  {
+    "name": "computeSha256",
+    "kind": "function",
+    "returnType": "Promise<string>",
+    "params": [
+      {
+        "name": "data",
+        "type": "string | ArrayBuffer | Uint8Array<ArrayBufferLike>"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "computeAuthoritySeal",
+    "kind": "function",
+    "returnType": "Promise<string>",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "astHash",
+        "type": "string"
+      },
+      {
+        "name": "svgHash",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "formatShortHash",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "hash",
+        "type": "string"
+      },
+      {
+        "name": "length",
+        "type": "number"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "isNativeCartridge",
+    "kind": "function",
+    "returnType": "boolean",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "getRegisteredRecord",
+    "kind": "function",
+    "returnType": "CartridgeChecksumEntry",
+    "params": [
+      {
+        "name": "id",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "getMasterRegistryChecksum",
+    "kind": "function",
+    "returnType": "string",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "getTotalCertifiedCartridges",
+    "kind": "function",
+    "returnType": "number",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "verifyCartridgeIntegrity",
+    "kind": "function",
+    "returnType": "Promise<CartridgeIntegrityResult>",
+    "params": [
+      {
+        "name": "cartridgeId",
+        "type": "string"
+      },
+      {
+        "name": "content",
+        "type": "string | { ast?: string | ArrayBuffer; svg?: string | ArrayBuffer; astb?: ArrayBuffer; }"
+      }
+    ],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "CURRICULUM_AUTHORITY_NAME",
+    "kind": "const",
+    "returnType": "\"St Joseph's Catholic Primary School Curriculum Authority\"",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "AUTHORITY_SEAL_SALT",
+    "kind": "const",
+    "returnType": "\"ST_JOSEPHS_CURRICULUM_SEAL_V1_2026_AGPL\"",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "IntegrityStatus",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "CartridgeIntegrityResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeIntegrity.ts",
+    "relPath": "utils/cartridgeIntegrity.ts"
+  },
+  {
+    "name": "CartridgeStateVector",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "cartridgeStateHex.ts",
+    "relPath": "utils/cartridgeStateHex.ts"
+  },
+  {
+    "name": "CartridgeStateHex",
+    "kind": "const",
+    "returnType": "{ SCHEMA_VERSION: number; BUFFER_SIZE: number; pack(state?: CartridgeStateVector): string; unpack(hexStr: string): CartridgeStateVector; saveToHash(state: CartridgeStateVector): void; loadFromHash(): CartridgeStateVector; }",
+    "params": [],
+    "sourceFile": "cartridgeStateHex.ts",
+    "relPath": "utils/cartridgeStateHex.ts"
   },
   {
     "name": "Channel",
@@ -3437,6 +5786,23 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "utils/phetBridge.ts"
   },
   {
+    "name": "transpileSwfBinary",
+    "kind": "function",
+    "returnType": "Promise<PhetTranspileResult>",
+    "params": [
+      {
+        "name": "buffer",
+        "type": "ArrayBuffer | Uint8Array<ArrayBufferLike>"
+      },
+      {
+        "name": "fileName",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "phetBridge.ts",
+    "relPath": "utils/phetBridge.ts"
+  },
+  {
     "name": "PhetMetadata",
     "kind": "const",
     "returnType": "any",
@@ -3563,7 +5929,28 @@ export const CORE_EXPORT_CATALOG = [
     "relPath": "utils/sexprParser.ts"
   },
   {
+    "name": "parseCartridgeHeader",
+    "kind": "function",
+    "returnType": "CartridgeHeaderMetadata",
+    "params": [
+      {
+        "name": "astContent",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "sexprParser.ts",
+    "relPath": "utils/sexprParser.ts"
+  },
+  {
     "name": "ParsedAstNode",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "sexprParser.ts",
+    "relPath": "utils/sexprParser.ts"
+  },
+  {
+    "name": "CartridgeHeaderMetadata",
     "kind": "const",
     "returnType": "any",
     "params": [],
@@ -3626,6 +6013,14 @@ export const CORE_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "swfAstParser.ts",
     "relPath": "utils/swfAstParser.ts"
+  },
+  {
+    "name": "getBaseUrl",
+    "kind": "function",
+    "returnType": "string",
+    "params": [],
+    "sourceFile": "url.ts",
+    "relPath": "utils/url.ts"
   },
   {
     "name": "getAssetUrl",

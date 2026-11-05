@@ -83,7 +83,7 @@ export const LITURGICAL_AST_PALETTE: Record<string, { bg: string; border: string
 
 /**
  * Normalizes CSS property keys from kebab-case or Lisp keywords (:min-height, :bg)
- * into standard React CSSProperties camelCase keys.
+ * into standard DOM CSSStyleDeclaration / CSSProperties camelCase keys.
  */
 const KEY_MAP: Record<string, keyof CSSProperties> = {
   bg: 'backgroundColor',
@@ -132,7 +132,7 @@ const KEY_MAP: Record<string, keyof CSSProperties> = {
 };
 
 /**
- * Compiles a CSS AST or props object into React.CSSProperties
+ * Compiles a CSS AST or props object into CSSProperties
  * 
  * Supports:
  * - AST SExprNode (e.g. { tag: 'rule', props: { bg: '#fff', radius: '8px' } })
@@ -290,7 +290,7 @@ function applyStyleKeyValue(target: CSSProperties, key: keyof CSSProperties, val
 }
 
 /**
- * Parses a standard CSS string into a typed React.CSSProperties object
+ * Parses a standard CSS string into a typed CSSProperties object
  */
 function parseCssString(css: string): CSSProperties {
   const result: Record<string, string> = {};
