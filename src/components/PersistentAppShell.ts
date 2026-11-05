@@ -68,17 +68,17 @@ export class PersistentAppShellElement extends HTMLElement {
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
               <!-- Font Size Controls -->
               <div style="display:inline-flex; align-items:center; gap:2px; background:#1e293b; border-radius:4px; padding:1px 4px; border:1px solid #334155;">
-                <button type="button" id="btn-font-normal" style="background:transparent; border:none; color:#f8fafc; font-size:0.7rem; cursor:pointer; padding:1px 4px;" title="Standard Font">A</button>
-                <button type="button" id="btn-font-large" style="background:transparent; border:none; color:#f8fafc; font-size:0.8rem; font-weight:700; cursor:pointer; padding:1px 4px;" title="Large Font">A+</button>
+                <button type="button" id="btn-font-normal" style="background:transparent; border:none; color:#f8fafc; font-size:0.7rem; cursor:pointer; padding:1px 4px;" title="Standard Font" aria-label="Standard Font Size">A</button>
+                <button type="button" id="btn-font-large" style="background:transparent; border:none; color:#f8fafc; font-size:0.8rem; font-weight:700; cursor:pointer; padding:1px 4px;" title="Large Font" aria-label="Large Font Size">A+</button>
               </div>
 
               <!-- High Contrast Toggle -->
-              <button type="button" id="btn-contrast-toggle" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 6px; cursor:pointer;" title="Toggle High Contrast">
+              <button type="button" id="btn-contrast-toggle" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 6px; cursor:pointer;" title="Toggle High Contrast" aria-label="Toggle High Contrast Mode">
                 🌓 Contrast
               </button>
 
               <!-- BSL Quick Toggle -->
-              <button type="button" id="top-bar-bsl-btn" style="background:${this.bsl ? '#0284c7' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 8px; font-weight:700; cursor:pointer;" title="British Sign Language (Shift+B)">
+              <button type="button" id="top-bar-bsl-btn" style="background:${this.bsl ? '#0284c7' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 8px; font-weight:700; cursor:pointer;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
                 🖐️ BSL: ${this.bsl ? 'ON' : 'OFF'}
               </button>
             </div>
@@ -90,7 +90,7 @@ export class PersistentAppShellElement extends HTMLElement {
               
               <!-- Brand -->
               <div style="display:flex; align-items:center; gap:0.75rem; flex-shrink:0;">
-                <a href="${base}" style="display:flex; align-items:center; gap:0.6rem; text-decoration:none; color:inherit;">
+                <a href="${base}" aria-label="St Joseph's Curriculum Portal Homepage" style="display:flex; align-items:center; gap:0.6rem; text-decoration:none; color:inherit;">
                   <img src="${base}img/logo.svg" alt="St Joseph's Logo" style="width:28px; height:28px; display:block;" onerror="this.src='${base}img/favicon-32x32.png'" />
                   <span style="font-weight:800; font-size:1.05rem; letter-spacing:-0.01em; color:var(--stj-text, #0f172a);">
                     St Joseph's Portal
@@ -109,7 +109,7 @@ export class PersistentAppShellElement extends HTMLElement {
 
                 <!-- Dedicated Catholic Sanctuary Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
-                  <button type="button" id="nav-dropdown-catholic-btn" style="background:rgba(202, 138, 4, 0.12); border:1px solid rgba(202, 138, 4, 0.4); padding:0.35rem 0.65rem; font-size:0.88rem; font-weight:700; color:#b45309; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;" title="Whole-School Catholic Life, Mass, Sacraments & CST">
+                  <button type="button" id="nav-dropdown-catholic-btn" aria-haspopup="true" aria-expanded="false" aria-label="Catholic Sanctuary Menu" style="background:rgba(202, 138, 4, 0.12); border:1px solid rgba(202, 138, 4, 0.4); padding:0.35rem 0.65rem; font-size:0.88rem; font-weight:700; color:#b45309; border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:5px;" title="Whole-School Catholic Life, Mass, Sacraments & CST">
                     <span>✝️ Catholic Sanctuary</span>
                     <span style="font-size:0.6rem; opacity:0.8;">▼</span>
                   </button>
@@ -143,7 +143,7 @@ export class PersistentAppShellElement extends HTMLElement {
 
                 <!-- Academic Teaching & Curriculum Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
-                  <button type="button" id="nav-dropdown-learning-btn" style="background:transparent; border:none; padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; color:var(--stj-text, #0f172a); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                  <button type="button" id="nav-dropdown-learning-btn" aria-haspopup="true" aria-expanded="false" aria-label="Teaching and Curriculum Menu" style="background:transparent; border:none; padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; color:var(--stj-text, #0f172a); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:4px;">
                     <span>Teaching &amp; Curriculum</span>
                     <span style="font-size:0.6rem; opacity:0.7;">▼</span>
                   </button>
@@ -206,22 +206,22 @@ export class PersistentAppShellElement extends HTMLElement {
               <!-- Right Actions (Data Saver, Settings, Theme, Mobile toggle) -->
               <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
                 <!-- Save Offline (0 Data) Button -->
-                <button type="button" id="nav-btn-offline-sync" class="hidden sm:inline-flex" style="background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Sync Curriculum for 100% Zero-Data Offline Operation">
+                <button type="button" id="nav-btn-offline-sync" class="hidden sm:inline-flex" style="background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Sync Curriculum for 100% Zero-Data Offline Operation" aria-label="Sync Curriculum for Zero Data Offline Operation">
                   ${this.isOfflineSynced ? '💾 Saved (0 Data)' : '💾 Save Offline'}
                 </button>
 
                 <!-- Data Saver Toggle -->
-                <button type="button" id="nav-btn-data-saver" class="hidden sm:inline-flex" style="background:${this.dataSaver ? '#ecfdf5' : 'transparent'}; color:${this.dataSaver ? '#065f46' : '#64748b'}; border:1px solid ${this.dataSaver ? '#10b981' : '#cbd5e1'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Low Bandwidth Data Saver">
+                <button type="button" id="nav-btn-data-saver" class="hidden sm:inline-flex" style="background:${this.dataSaver ? '#ecfdf5' : 'transparent'}; color:${this.dataSaver ? '#065f46' : '#64748b'}; border:1px solid ${this.dataSaver ? '#10b981' : '#cbd5e1'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Low Bandwidth Data Saver" aria-label="Toggle Low Bandwidth Data Saver Mode">
                   📶 ${this.dataSaver ? 'Data Saver: ON' : 'Data Saver'}
                 </button>
 
                 <!-- Settings Link -->
-                <a href="${base}settings" id="nav-btn-settings" class="hidden sm:inline-flex" style="padding:0.35rem 0.6rem; font-size:0.8rem; font-weight:700; color:#475569; border:1px solid #cbd5e1; border-radius:6px; text-decoration:none; align-items:center; gap:4px;" title="System Settings">
+                <a href="${base}settings" id="nav-btn-settings" class="hidden sm:inline-flex" style="padding:0.35rem 0.6rem; font-size:0.8rem; font-weight:700; color:#475569; border:1px solid #cbd5e1; border-radius:6px; text-decoration:none; align-items:center; gap:4px;" title="System Settings" aria-label="System Settings">
                   <span>⚙️</span> <span>Settings</span>
                 </a>
 
                 <!-- Theme Toggle -->
-                <button type="button" id="nav-btn-theme" style="background:transparent; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; padding:0.35rem 0.55rem; font-size:0.9rem;" title="Toggle Dark/Light Mode">
+                <button type="button" id="nav-btn-theme" style="background:transparent; border:1px solid #cbd5e1; border-radius:6px; cursor:pointer; padding:0.35rem 0.55rem; font-size:0.9rem;" title="Toggle Dark/Light Mode" aria-label="Toggle Dark or Light Mode">
                   ${this.colorMode === 'dark' ? '☀️' : '🌙'}
                 </button>
 
