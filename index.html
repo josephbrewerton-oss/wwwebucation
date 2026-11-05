@@ -85,7 +85,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="St Joseph's" />
 
-    <!-- Critical CSS for Instant 20ms First Paint (0 KB Web Font Downloads / 100% Offline) -->
+    <!-- Critical CSS for Instant Paint & Zero CLS -->
     <style>
       html {
         scrollbar-gutter: stable;
@@ -99,6 +99,12 @@
         color: #1e293b;
         -webkit-font-smoothing: antialiased;
       }
+      /* Fix 1: Geometry lock on #root to prevent hydration collapses */
+      #root {
+        min-height: 100vh;
+        width: 100%;
+        contain: layout style;
+      }
       #root-critical-shell {
         display: flex;
         flex-direction: column;
@@ -109,9 +115,11 @@
         background: #0f172a;
         color: #f8fafc;
         height: 41px;
+        min-height: 41px;
         display: flex;
         align-items: center;
         padding: 0 1rem;
+        box-sizing: border-box;
         border-bottom: 1px solid #1e293b;
       }
       .critical-bar-inner {
@@ -127,9 +135,11 @@
         background: #ffffff;
         border-bottom: 1px solid #e2e8f0;
         height: 54px;
+        min-height: 54px;
         display: flex;
         align-items: center;
         padding: 0 1rem;
+        box-sizing: border-box;
       }
       .critical-nav-inner {
         max-width: 1360px;
@@ -147,11 +157,20 @@
         font-size: 1.05rem;
         color: #0f172a;
       }
+      /* Fix 2: Explicit dimensions and aspect-ratio on SVG logo */
+      .critical-brand img {
+        width: 28px;
+        height: 28px;
+        aspect-ratio: 1 / 1;
+        flex-shrink: 0;
+        display: block;
+      }
       .critical-hero {
         max-width: 1100px;
         margin: 0 auto;
         padding: 3.5rem 1.5rem;
         text-align: center;
+        box-sizing: border-box;
       }
       .critical-pill {
         display: inline-flex;
@@ -166,12 +185,15 @@
         font-weight: 700;
         margin-bottom: 1.25rem;
       }
+      /* Fix 3: Strict line-height and text-wrap balance for stable LCP text */
       .critical-title {
         font-size: 2.85rem;
+        line-height: 1.15;
         font-weight: 800;
         color: #0f172a;
         margin: 0 0 1rem 0;
         letter-spacing: -0.025em;
+        text-wrap: balance;
       }
       .critical-sub {
         font-size: 1.2rem;
@@ -202,7 +224,7 @@
         <div class="critical-nav">
           <div class="critical-nav-inner">
             <div class="critical-brand">
-              <img src="%BASE_URL%img/logo.svg" alt="Logo" width="28" height="28" style="display: block;" />
+              <img src="%BASE_URL%img/logo.svg" alt="Logo" width="28" height="28" fetchpriority="high" />
               <span>St Joseph's Portal</span>
             </div>
             <div style="display: flex; gap: 1rem; color: #334155; font-size: 0.88rem; font-weight: 600;">
