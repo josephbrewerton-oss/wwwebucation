@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-06T19:34:23.751Z",
+  "generatedAt": "2026-11-06T19:35:10.678Z",
   "totalCartridges": 60,
   "units": [
     {
@@ -401,12 +401,12 @@
       "cartridgeId": "fish-tank"
     },
     {
-      "unit": "ks3-generalcurriculum-domino-multiplication",
-      "oakId": "OAK-KS3-GEN-DOMINOMUL",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "stage": "domino-multiplication.svg",
-      "title": "Multiplication Kinematics: Domino Cascade",
+      "unit": "ks2-multiplication-arrays",
+      "oakId": "OAK-KS2-MAT-DOM",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "stage": "KS2 MATHS",
+      "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
       "cartridgeId": "domino-multiplication"
     },
     {
@@ -1452,21 +1452,21 @@
       "id": "domino-multiplication",
       "base": "domino-multiplication",
       "type": "Sim",
-      "title": "Multiplication Kinematics: Domino Cascade",
-      "stage": "domino-multiplication.svg",
-      "oakId": "OAK-KS3-GEN-DOMINOMUL",
-      "oakUnit": "ks3-generalcurriculum-domino-multiplication",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "mount": "/curriculum/general/domino-multiplication",
-      "duration": 8,
+      "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
+      "stage": "KS2 MATHS",
+      "oakId": "OAK-KS2-MAT-DOM",
+      "oakUnit": "ks2-multiplication-arrays",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "mount": "/curriculum/mathematics/domino-multiplication",
+      "duration": 10,
       "svgFile": "cartridges/domino-multiplication.svg",
       "astFile": "cartridges/domino-multiplication.ast",
       "astbFile": "bytecode/domino-multiplication.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 1
     },
     {
       "id": "electric-circuits",

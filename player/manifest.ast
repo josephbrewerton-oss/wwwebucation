@@ -96,9 +96,9 @@
     (:cartridge
       :id "domino-multiplication"
       :type "Sim"
-      :title "Multiplication Kinematics: Domino Cascade"
-      :stage "domino-multiplication.svg"
-      :oak-id "OAK-KS3-GEN-DOMINOMUL"
+      :title "🁊 Kinematic Domino Multiplication: Group Arrays"
+      :stage "KS2 MATHS"
+      :oak-id "OAK-KS2-MAT-DOM"
       :bytecode "bytecode/domino-multiplication.astb")
 
     (:cartridge

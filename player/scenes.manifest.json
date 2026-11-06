@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-06T19:34:24.387Z",
+  "generatedAt": "2026-11-06T19:35:11.640Z",
   "totalScenes": 61,
   "scenes": [
     {
@@ -171,17 +171,17 @@
     {
       "id": "domino-multiplication",
       "type": "Sim",
-      "title": "Multiplication Kinematics: Domino Cascade",
-      "stage": "domino-multiplication.svg",
-      "duration": 8,
-      "has3D": true,
-      "nodes3DCount": 1,
+      "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
+      "stage": "KS2 MATHS",
+      "duration": 10,
+      "has3D": false,
+      "nodes3DCount": 0,
       "svgFile": "cartridges/domino-multiplication.svg",
       "astFile": "cartridges/domino-multiplication.ast",
       "astbFile": "bytecode/domino-multiplication.astb",
-      "keyframeCount": 3,
-      "subtitleCount": 2,
-      "bindingsCount": 0
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 11
     },
     {
       "id": "electric-circuits",
