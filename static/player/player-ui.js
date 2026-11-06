@@ -2514,29 +2514,42 @@ window.addEventListener('message', (e) => {
 
       // Edge AI Query input
       if (el.btnWebRtcAiAsk && el.webrtcAiInput) {
-        const askAiFn = () => {
-          const query = el.webrtcAiInput.value.trim();
-          if (!query) return;
-          if (!window.AST_WEBRTC) {
-            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
-          }
+        if (!window.AST_WEBRTC) {
+          window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
           const bus = window.AST_WEBRTC;
-          if (el.webrtcAiOutput) {
-            el.webrtcAiOutput.innerHTML = '<span class="ai-dot-pulse"></span> <em>Gemini Nano is evaluating...</em>';
-          }
+          
+          // Register listeners once on the bus lifecycle
           bus.on('aiToken', ({ token }) => {
             if (el.webrtcAiOutput) el.webrtcAiOutput.innerText += token;
           });
           bus.on('aiComplete', ({ fullText }) => {
             if (el.webrtcAiOutput) el.webrtcAiOutput.innerHTML = `🤖 <strong>Tutor:</strong> ${fullText}`;
           });
-          bus.processAiPrompt(query);
+        }
+
+        const askAiFn = (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          const query = el.webrtcAiInput.value.trim();
+          if (!query) return;
+
+          if (el.webrtcAiOutput) {
+            el.webrtcAiOutput.innerHTML = '<span class="ai-dot-pulse"></span> <em>Gemini Nano is evaluating...</em>';
+          }
+          
+          window.AST_WEBRTC.processAiPrompt(query);
           el.webrtcAiInput.value = '';
         };
 
         el.btnWebRtcAiAsk.addEventListener('click', askAiFn);
         el.webrtcAiInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') askAiFn();
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            askAiFn(e);
+          }
         });
       }
 
