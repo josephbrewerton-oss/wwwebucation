@@ -3511,6 +3511,7 @@
      * Sets a reactive state variable and recalculates derived outputs at 60 FPS
      */
     setVar(name, val, isAi = false) {
+      if (!name || name === '__proto__' || name === 'constructor' || name === 'prototype') return;
       if (!this.vars) this.vars = {};
       this.vars[name] = val;
       this.updateComputedVars();
@@ -4239,13 +4240,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (norm === 'film' || norm === 'video' || norm === 'movie') type = 'Film';
         else if (norm === 'slide') type = 'Slide';
         else if (norm === 'app') type = 'App';
+        else if (norm === 'data') type = 'Data';
         else type = 'Sim';
       } else if (video) {
         type = 'Film';
       } else {
         const hasSubtitles = /:subtitles\s*\(/i.test(astContent);
         const hasGestures = /:gestures\s*\(/i.test(astContent) || /:draggable\s+/i.test(astContent);
-        const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent);
+        const hasCheckpoints = /:interactive\s*\(/i.test(astContent) || /:checkpoint\s+/i.test(astContent) || /:questions\s*\(/i.test(astContent);
         const hasPhysics = /:physics\s*\(/i.test(astContent) || /:emitter\s+/i.test(astContent);
         if (hasSubtitles && !hasGestures && !hasPhysics) {
           type = 'Slide';
@@ -4483,8 +4485,65 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             answer: ansMatch ? parseInt(ansMatch[1], 10) : 0,
             explanation: explanation
           });
+        });
+
+        // Also extract questions from (:questions ((:q ...))) if no explicit :checkpoint entries were defined
+        if (checkpoints.length === 0) {
+          const qEntryBlocks = extractSexprBlocks(astContent, ':q').concat(extractSexprBlocks(astContent, ':question'));
+          if (qEntryBlocks.length > 0) {
+            const count = qEntryBlocks.length;
+            const dur = Math.max(12.0, count * 3.0);
+            qEntryBlocks.forEach((qText, qIdx) => {
+              const prompt = extractSlot.call(null, qText, /:prompt\s+"([^"]+)"/i) || extractSlot.call(null, qText, /:q\s+"([^"]+)"/i) || '';
+              const ansMatch = qText.match(/:answer\s+(\d+)/i) || qText.match(/:ans\s+(\d+)/i);
+              const explanation = extractSlot.call(null, qText, /:explanation\s+"([^"]+)"/i) || '';
+              const hint = extractSlot.call(null, qText, /:hint\s+"([^"]+)"/i) || '';
+              const optTagIdx = qText.indexOf(':options');
+              const options = [];
+              if (optTagIdx !== -1) {
+                const startParen = qText.indexOf('(', optTagIdx);
+                if (startParen !== -1) {
+                  let depth = 0;
+                  let inString = false;
+                  let endParen = -1;
+                  for (let i = startParen; i < qText.length; i++) {
+                    const ch = qText[i];
+                    if (ch === '"' && (i === 0 || qText[i - 1] !== '\\')) {
+                      inString = !inString;
+                    } else if (!inString) {
+                      if (ch === '(') depth++;
+                      else if (ch === ')') {
+                        depth--;
+                        if (depth === 0) {
+                          endParen = i;
+                          break;
+                        }
+                      }
+                    }
+                  }
+                  if (endParen !== -1) {
+                    const inside = qText.slice(startParen + 1, endParen);
+                    const optRegex = /"((?:[^"\\]|\\.)*)"/g;
+                    let om;
+                    while ((om = optRegex.exec(inside)) !== null) {
+                      options.push(om[1]);
+                    }
+                  }
+                }
+              }
+              if (prompt) {
+                checkpoints.push({
+                  t: parseFloat(((qIdx + 1) / (count + 1) * dur).toFixed(2)),
+                  title: `Question ${qIdx + 1} of ${count}`,
+                  prompt: prompt,
+                  options: options.length > 0 ? options : ['Correct', 'Incorrect'],
+                  answer: ansMatch ? parseInt(ansMatch[1], 10) : 0,
+                  explanation: explanation || hint || ''
+                });
+              }
+            });
+          }
         }
-      });
       }
 
       // Micro-physics block parsing (:physics (:gravity 980 ...) (:body ...))
@@ -5549,7 +5608,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.emit('error', { type: 'INVALID_SCENE_DATA', message: err.message });
       throw err;
     }
-    const id = sceneData.id || `custom-${Date.now()}`;
+    let id = String(sceneData.id || `custom-${Date.now()}`);
+    if (id === '__proto__' || id === 'constructor' || id === 'prototype') {
+      id = `custom-${Date.now()}`;
+    }
     const svgText = sceneData.svgText || sceneData.svgMarkup || sceneData.svg || '';
     const astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
 
@@ -6254,7 +6316,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         const onLoadedMeta = () => {
           if (videoEl.duration && Number.isFinite(videoEl.duration) && (!scene.duration || scene.duration === 10.0)) {
-            scene.duration = videoEl.duration;
+            if (scene && typeof scene === 'object' && scene !== Object.prototype && scene !== Function.prototype) {
+              Object.defineProperty(scene, 'duration', {
+                value: videoEl.duration,
+                writable: true,
+                configurable: true,
+                enumerable: true
+              });
+            }
             this.durationSec = videoEl.duration;
           }
           if (this.isPlaying) {

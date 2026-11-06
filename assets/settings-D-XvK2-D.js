@@ -1,4 +1,4 @@
-import{a as e,f as t,g as n,i as r,n as i,o as a,r as o}from"./index-C94_p4Ay.js";function s(){let s=i(),c=document.createElement(`div`);c.className=`settings-page-stage`,c.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let l=o(),u=localStorage.getItem(`theme`)||`light`,d=localStorage.getItem(`app_font_size`)||`normal`,f=localStorage.getItem(`app_high_contrast`)===`true`,p=e(),m=t();function h(){c.innerHTML=`
+import{a as e,f as t,g as n,i as r,n as i,o as a,r as o}from"./index-sOLI3i7b.js";function s(){let s=i(),c=document.createElement(`div`);c.className=`settings-page-stage`,c.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let l=o(),u=localStorage.getItem(`theme`)||`light`,d=localStorage.getItem(`app_font_size`)||`normal`,f=localStorage.getItem(`app_high_contrast`)===`true`,p=e(),m=t();function h(){c.innerHTML=`
       <!-- Header -->
       <div style="margin-bottom: 2rem;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">

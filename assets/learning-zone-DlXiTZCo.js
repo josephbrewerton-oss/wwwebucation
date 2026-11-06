@@ -1,7 +1,7 @@
-import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSimMapping-BweknIjT.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`learning-zone-stage`,i.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let a=new URLSearchParams(window.location.search),o=a.get(`stage`)||`All`,s=a.get(`subject`)||`All`,c=a.get(`q`)||``,l=a.get(`simOnly`)===`1`,u=a.get(`tab`)===`constellation`?`constellation`:a.get(`tab`)===`simulators`?`simulators`:`curriculum`,d=new Set,f=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],p=new Set;t.forEach(e=>{e.subjectTitle&&p.add(e.subjectTitle)});let m=[`All`,...Array.from(p).sort()];function h(){let e=c.toLowerCase().trim();return t.filter(t=>{if(o!==`All`&&t.stageTitle!==o||s!==`All`&&t.subjectTitle!==s||l&&!n(t.topicId,t.topicTitle,t.subjectTitle))return!1;if(e){let n=t.topicTitle.toLowerCase().includes(e),r=t.subjectTitle.toLowerCase().includes(e),i=t.axiom.toLowerCase().includes(e),a=t.cognitiveTrap.toLowerCase().includes(e),o=t.csn.toLowerCase().includes(e),s=t.lessons.some(t=>t.title.toLowerCase().includes(e));if(!n&&!r&&!i&&!a&&!o&&!s)return!1}return!0})}function g(){return t.filter(e=>n(e.topicId,e.topicTitle,e.subjectTitle)!==null).length}function _(){return t.reduce((e,t)=>e+(t.lessons?.length||0),0)}function v(e){if(!(`speechSynthesis`in window))return;window.speechSynthesis.cancel();let t=new SpeechSynthesisUtterance(e);t.rate=.9,t.pitch=1,t.lang=`en-GB`,window.speechSynthesis.speak(t)}function y(){let e=t.length,n=g(),i=_();return`
+import{n as e}from"./index-sOLI3i7b.js";import{n as t,r as n,t as r}from"./curriculumSimMapping-BrVqin_c.js";function i(e){return e?e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`):``}function a(){let a=e(),o=document.createElement(`div`);o.className=`learning-zone-stage`,o.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let s=new URLSearchParams(window.location.search),c=s.get(`stage`)||`All`,l=s.get(`subject`)||`All`,u=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`].includes(c)?c:`All`,d=l.replace(/[<>"'&]/g,``),f=(s.get(`q`)||``).slice(0,100),p=s.get(`simOnly`)===`1`,m=s.get(`tab`)===`constellation`?`constellation`:s.get(`tab`)===`simulators`?`simulators`:`curriculum`,h=new Set,g=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],_=new Set;n.forEach(e=>{e.subjectTitle&&_.add(e.subjectTitle)});let v=[`All`,...Array.from(_).sort()];function y(){let e=f.toLowerCase().trim();return n.filter(n=>{if(u!==`All`&&n.stageTitle!==u||d!==`All`&&n.subjectTitle!==d||p&&!t(n.topicId,n.topicTitle,n.subjectTitle))return!1;if(e){let t=n.topicTitle.toLowerCase().includes(e),r=n.subjectTitle.toLowerCase().includes(e),i=n.axiom.toLowerCase().includes(e),a=n.cognitiveTrap.toLowerCase().includes(e),o=n.csn.toLowerCase().includes(e),s=n.lessons.some(t=>t.title.toLowerCase().includes(e));if(!t&&!r&&!i&&!a&&!o&&!s)return!1}return!0})}function b(){return n.filter(e=>t(e.topicId,e.topicTitle,e.subjectTitle)!==null).length}function x(){return n.reduce((e,t)=>e+(t.lessons?.length||0),0)}function S(e){if(!(`speechSynthesis`in window))return;window.speechSynthesis.cancel();let t=new SpeechSynthesisUtterance(e);t.rate=.9,t.pitch=1,t.lang=`en-GB`,window.speechSynthesis.speak(t)}function C(){let e=n.length,t=b(),r=x();return`
       <section style="margin-bottom: 2rem;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.75rem;">
-          <a href="${r}" style="font-size:0.82rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+          <a href="${a}" style="font-size:0.82rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
           <span style="color:#cbd5e1;">/</span>
           <span style="font-size:0.82rem; color:#0284c7; font-weight:700;">📖 Learning Zone</span>
         </div>
@@ -30,12 +30,12 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             </div>
             <div style="width:1px; height:28px; background:#e2e8f0;"></div>
             <div>
-              <div style="font-size:1.35rem; font-weight:800; color:#10b981; line-height:1;">${i}</div>
+              <div style="font-size:1.35rem; font-weight:800; color:#10b981; line-height:1;">${r}</div>
               <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Oak Lessons</div>
             </div>
             <div style="width:1px; height:28px; background:#e2e8f0;"></div>
             <div>
-              <div style="font-size:1.35rem; font-weight:800; color:#f59e0b; line-height:1;">${n}</div>
+              <div style="font-size:1.35rem; font-weight:800; color:#f59e0b; line-height:1;">${t}</div>
               <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Vector Simulators</div>
             </div>
           </div>
@@ -43,18 +43,18 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
 
         <!-- Navigation Tabs Bar -->
         <div style="display:flex; gap:8px; margin-top:1.5rem; border-bottom:1px solid #e2e8f0; padding-bottom:12px; flex-wrap:wrap;">
-          <button type="button" id="tab-btn-curriculum" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${u===`curriculum`?`#0284c7`:`#cbd5e1`}; background:${u===`curriculum`?`#0284c7`:`#ffffff`}; color:${u===`curriculum`?`#ffffff`:`#334155`};">
+          <button type="button" id="tab-btn-curriculum" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${m===`curriculum`?`#0284c7`:`#cbd5e1`}; background:${m===`curriculum`?`#0284c7`:`#ffffff`}; color:${m===`curriculum`?`#ffffff`:`#334155`};">
             📖 Units &amp; Lessons (${e})
           </button>
-          <button type="button" id="tab-btn-simulators" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${u===`simulators`?`#0284c7`:`#cbd5e1`}; background:${u===`simulators`?`#0284c7`:`#ffffff`}; color:${u===`simulators`?`#ffffff`:`#334155`};">
-            🎮 Vector Simulators (${n})
+          <button type="button" id="tab-btn-simulators" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${m===`simulators`?`#0284c7`:`#cbd5e1`}; background:${m===`simulators`?`#0284c7`:`#ffffff`}; color:${m===`simulators`?`#ffffff`:`#334155`};">
+            🎮 Vector Simulators (${t})
           </button>
-          <button type="button" id="tab-btn-constellation" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${u===`constellation`?`#0284c7`:`#cbd5e1`}; background:${u===`constellation`?`#0284c7`:`#ffffff`}; color:${u===`constellation`?`#ffffff`:`#334155`};">
+          <button type="button" id="tab-btn-constellation" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${m===`constellation`?`#0284c7`:`#cbd5e1`}; background:${m===`constellation`?`#0284c7`:`#ffffff`}; color:${m===`constellation`?`#ffffff`:`#334155`};">
             ✨ Concept Constellation
           </button>
         </div>
       </section>
-    `}function b(e){return`
+    `}function w(e){return`
       <!-- Filters and Search Toolbar -->
       <section style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:1.75rem; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
         <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">
@@ -63,20 +63,20 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <div style="display:flex; align-items:center; gap:6px;">
               <label for="filter-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Key Stage:</label>
               <select id="filter-stage-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${f.map(e=>`<option value="${e}" ${e===o?`selected`:``}>${e}</option>`).join(``)}
+                ${g.map(e=>`<option value="${e}" ${e===u?`selected`:``}>${e}</option>`).join(``)}
               </select>
             </div>
 
             <div style="display:flex; align-items:center; gap:6px;">
               <label for="filter-subject-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Subject:</label>
               <select id="filter-subject-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${m.map(e=>`<option value="${e}" ${e===s?`selected`:``}>${e}</option>`).join(``)}
+                ${v.map(e=>`<option value="${e}" ${e===d?`selected`:``}>${e}</option>`).join(``)}
               </select>
             </div>
 
             <!-- Sim only checkbox -->
             <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; color:#0369a1; cursor:pointer; margin-left:6px;">
-              <input type="checkbox" id="filter-sim-only" ${l?`checked`:``} style="cursor:pointer;" />
+              <input type="checkbox" id="filter-sim-only" ${p?`checked`:``} style="cursor:pointer;" />
               <span>🎮 Has 60 FPS Sim</span>
             </label>
           </div>
@@ -86,11 +86,11 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <input 
               type="text" 
               id="filter-search-input" 
-              value="${c}" 
+              value="${i(f)}" 
               placeholder="Search topics, axioms, misconceptions..." 
               style="width:100%; box-sizing:border-box; padding:8px 36px 8px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a;"
             />
-            ${c?`
+            ${f?`
               <button type="button" id="clear-search-btn" style="position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:#94a3b8; font-size:0.9rem; cursor:pointer;">✕</button>
             `:``}
           </div>
@@ -98,14 +98,14 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
 
         <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; font-size:0.78rem; color:#64748b;">
           <span>Showing <strong>${e}</strong> curriculum units matching current filter</span>
-          ${o!==`All`||s!==`All`||c||l?`
+          ${u!==`All`||d!==`All`||f||p?`
             <button type="button" id="reset-filters-btn" style="background:none; border:none; color:#0284c7; font-weight:700; cursor:pointer; text-decoration:underline;">
               Reset all filters
             </button>
           `:``}
         </div>
       </section>
-    `}function x(e){let t=n(e.topicId,e.topicTitle,e.subjectTitle),i=d.has(e.urn),a=e.lessons&&e.lessons.length>0;return e.questions&&e.questions.length,`
+    `}function T(e){let n=t(e.topicId,e.topicTitle,e.subjectTitle),o=r(e.topicId),s=h.has(e.urn),c=e.lessons&&e.lessons.length>0;return e.questions&&e.questions.length,`
       <article class="curriculum-unit-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03); margin-bottom:1.25rem;">
         <!-- Header row -->
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:0.75rem;">
@@ -133,12 +133,12 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(e.axiom)}" title="Read axiom aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
               🔊 Listen
             </button>
-            <a href="${r}practice-lab?stage=${encodeURIComponent(e.stageTitle)}&subject=${encodeURIComponent(e.subjectTitle)}" style="padding:6px 12px; border-radius:6px; background:#f8fafc; border:1px solid #cbd5e1; color:#0f172a; text-decoration:none; font-weight:700; font-size:0.78rem;">
-              🎯 Practice Lab
+            <a href="${a}practice-lab?stage=${encodeURIComponent(e.stageTitle)}&subject=${encodeURIComponent(e.subjectTitle)}&q=${encodeURIComponent(e.topicTitle)}" title="${o?`Open Interactive Data Cartridge`:`Open Practice Lab`}" style="padding:6px 12px; border-radius:6px; background:${o?`#f0fdf4`:`#f8fafc`}; border:1px solid ${o?`#bbf7d0`:`#cbd5e1`}; color:${o?`#166534`:`#0f172a`}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+              <span>${o?`📊 Data Cartridge`:`🎯 Practice Lab`}</span>
             </a>
-            ${t?`
-              <a href="${r}player?preset=${t.presetId}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
-                <span>${t.icon} Launch Sim</span> &rarr;
+            ${n?`
+              <a href="${a}player?preset=${n.presetId}" title="${i(n.label)}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
+                <span>${n.icon} ${i(n.label)}</span> &rarr;
               </a>
             `:``}
           </div>
@@ -183,13 +183,13 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
         `:``}
 
         <!-- Lessons Accordion -->
-        ${a?`
+        ${c?`
           <div style="border-top:1px solid #f1f5f9; padding-top:10px; margin-top:8px;">
             <button type="button" class="toggle-lessons-btn" data-urn="${e.urn}" style="background:none; border:none; font-size:0.8rem; font-weight:700; color:#0284c7; cursor:pointer; padding:0; display:inline-flex; align-items:center; gap:4px;">
-              <span>${i?`▼`:`▶`} View ${e.lessons.length} Constituent Oak Lessons</span>
+              <span>${s?`▼`:`▶`} View ${e.lessons.length} Constituent Oak Lessons</span>
             </button>
 
-            ${i?`
+            ${s?`
               <div style="margin-top:10px; padding:10px 14px; background:#f8fafc; border-radius:8px; border:1px solid #e2e8f0;">
                 <div style="font-size:0.74rem; font-weight:800; color:#64748b; text-transform:uppercase; margin-bottom:8px;">
                   Oak National Curriculum Lesson Sequence:
@@ -207,7 +207,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
           </div>
         `:``}
       </article>
-    `}function S(){let e=t.map(e=>({route:e,sim:n(e.topicId,e.topicTitle,e.subjectTitle)})).filter(e=>e.sim!==null),i=new Set;return`
+    `}function E(){let e=n.map(e=>({route:e,sim:t(e.topicId,e.topicTitle,e.subjectTitle)})).filter(e=>e.sim!==null),r=new Set;return`
       <section style="margin-bottom:3rem;">
         <div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius:16px; padding:2rem; color:#ffffff; margin-bottom:2rem; border:1px solid #334155;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
@@ -224,7 +224,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
           </p>
 
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
-            ${e.filter(e=>!i.has(e.sim.presetId)&&(i.add(e.sim.presetId),!0)).map(({route:e,sim:t})=>`
+            ${e.filter(e=>!r.has(e.sim.presetId)&&(r.add(e.sim.presetId),!0)).map(({route:e,sim:t})=>`
               <div style="background:#090d16; border:1px solid #1e293b; border-radius:12px; padding:1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
@@ -243,7 +243,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
                     ${e.axiom.slice(0,110)}...
                   </p>
                 </div>
-                <a href="${r}player?preset=${t.presetId}" style="display:block; text-align:center; padding:8px 12px; border-radius:6px; background:#0284c7; color:#ffffff; font-weight:700; font-size:0.82rem; text-decoration:none;">
+                <a href="${a}player?preset=${t.presetId}" style="display:block; text-align:center; padding:8px 12px; border-radius:6px; background:#0284c7; color:#ffffff; font-weight:700; font-size:0.82rem; text-decoration:none;">
                   Launch Vector Sim &rarr;
                 </a>
               </div>
@@ -251,7 +251,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
           </div>
         </div>
       </section>
-    `}function C(){return`
+    `}function D(){return`
       <!-- Concept Constellation Graph View -->
       <section style="background:#090d16; border:1px solid #1e293b; border-radius:16px; padding:2rem; color:#ffffff; margin-bottom:2rem; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:8px;">
@@ -274,7 +274,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 12px 0; line-height:1.4;">
               Primary unit fractions $\rightarrow$ Decimal equivalents $\rightarrow$ Ratios &amp; Rates $\rightarrow$ Linear equations &amp; Probability.
             </p>
-            <a href="${r}player?preset=fractions" style="font-size:0.8rem; color:#38bdf8; font-weight:700; text-decoration:none;">
+            <a href="${a}player?preset=fractions" style="font-size:0.8rem; color:#38bdf8; font-weight:700; text-decoration:none;">
               Open Fraction Sim &rarr;
             </a>
           </div>
@@ -285,7 +285,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 12px 0; line-height:1.4;">
               States of matter (solid/liquid/gas) $\rightarrow$ Particle collision pressure $\rightarrow$ Boyle's &amp; Charles' Laws $\rightarrow$ Thermal equilibrium.
             </p>
-            <a href="${r}player?preset=kinetic-gas" style="font-size:0.8rem; color:#34d399; font-weight:700; text-decoration:none;">
+            <a href="${a}player?preset=kinetic-gas" style="font-size:0.8rem; color:#34d399; font-weight:700; text-decoration:none;">
               Open Gas Sim &rarr;
             </a>
           </div>
@@ -296,7 +296,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 12px 0; line-height:1.4;">
               Right-angle triangles $\rightarrow$ Square area equivalence ($a^2+b^2=c^2$) $\rightarrow$ Trigonometry $\rightarrow$ 3D Vector displacement.
             </p>
-            <a href="${r}player?preset=pythagoras" style="font-size:0.8rem; color:#fbbf24; font-weight:700; text-decoration:none;">
+            <a href="${a}player?preset=pythagoras" style="font-size:0.8rem; color:#fbbf24; font-weight:700; text-decoration:none;">
               Open Pythagoras Sim &rarr;
             </a>
           </div>
@@ -307,7 +307,7 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 12px 0; line-height:1.4;">
               Electron drift charge $\rightarrow$ Series/Parallel current $\rightarrow$ Voltage potential $\rightarrow$ Ohm's resistance ($V = I \times R$).
             </p>
-            <a href="${r}player?preset=electric-circuits" style="font-size:0.8rem; color:#f472b6; font-weight:700; text-decoration:none;">
+            <a href="${a}player?preset=electric-circuits" style="font-size:0.8rem; color:#f472b6; font-weight:700; text-decoration:none;">
               Open Circuit Sim &rarr;
             </a>
           </div>
@@ -318,18 +318,18 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             <p style="font-size:0.82rem; color:#94a3b8; margin:0 0 12px 0; line-height:1.4;">
               Sacred Architecture $\rightarrow$ Table of the Word &amp; Table of Eucharist $\rightarrow$ 7 Sacraments $\rightarrow$ Catholic Social Teaching.
             </p>
-            <a href="${r}player?preset=church-tour" style="font-size:0.8rem; color:#a78bfa; font-weight:700; text-decoration:none;">
+            <a href="${a}player?preset=church-tour" style="font-size:0.8rem; color:#a78bfa; font-weight:700; text-decoration:none;">
               Open Church Tour &rarr;
             </a>
           </div>
         </div>
       </section>
-    `}function w(){let e=h();i.innerHTML=`
-      ${y()}
-      ${u===`constellation`?C():u===`simulators`?S():`
-          ${b(e.length)}
+    `}function O(){let e=y();o.innerHTML=`
+      ${C()}
+      ${m===`constellation`?D():m===`simulators`?E():`
+          ${w(e.length)}
           <div id="learning-zone-units-list">
-            ${e.length>0?e.map(x).join(``):`
+            ${e.length>0?e.map(T).join(``):`
               <div style="text-align:center; padding:3rem 1rem; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px;">
                 <div style="font-size:2rem; margin-bottom:0.5rem;">🔍</div>
                 <h3 style="font-size:1.1rem; font-weight:700; color:#0f172a; margin:0 0 6px 0;">No curriculum units found</h3>
@@ -343,4 +343,4 @@ import{n as e}from"./index-C94_p4Ay.js";import{n as t,t as n}from"./curriculumSi
             `}
           </div>
         `}
-    `,i.querySelector(`#tab-btn-curriculum`)?.addEventListener(`click`,()=>{u=`curriculum`,w()}),i.querySelector(`#tab-btn-simulators`)?.addEventListener(`click`,()=>{u=`simulators`,w()}),i.querySelector(`#tab-btn-constellation`)?.addEventListener(`click`,()=>{u=`constellation`,w()});let t=i.querySelector(`#filter-stage-select`);t?.addEventListener(`change`,()=>{o=t.value,w()});let n=i.querySelector(`#filter-subject-select`);n?.addEventListener(`change`,()=>{s=n.value,w()});let r=i.querySelector(`#filter-sim-only`);r?.addEventListener(`change`,()=>{l=r.checked,w()});let a=i.querySelector(`#filter-search-input`);a?.addEventListener(`input`,()=>{c=a.value,w();let e=i.querySelector(`#filter-search-input`);e&&(e.focus(),e.setSelectionRange(c.length,c.length))}),i.querySelector(`#clear-search-btn`)?.addEventListener(`click`,()=>{c=``,w()});let f=()=>{o=`All`,s=`All`,c=``,l=!1,w()};i.querySelector(`#reset-filters-btn`)?.addEventListener(`click`,f),i.querySelector(`#empty-reset-btn`)?.addEventListener(`click`,f),i.querySelectorAll(`.speak-axiom-btn`).forEach(e=>{e.addEventListener(`click`,()=>{v(decodeURIComponent(e.getAttribute(`data-axiom`)||``))})}),i.querySelectorAll(`.toggle-lessons-btn`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.getAttribute(`data-urn`);t&&(d.has(t)?d.delete(t):d.add(t),w())})})}return w(),i}export{r as default,r as renderLearningZonePage};
+    `,o.querySelector(`#tab-btn-curriculum`)?.addEventListener(`click`,()=>{m=`curriculum`,O()}),o.querySelector(`#tab-btn-simulators`)?.addEventListener(`click`,()=>{m=`simulators`,O()}),o.querySelector(`#tab-btn-constellation`)?.addEventListener(`click`,()=>{m=`constellation`,O()});let t=o.querySelector(`#filter-stage-select`);t?.addEventListener(`change`,()=>{u=t.value,O()});let n=o.querySelector(`#filter-subject-select`);n?.addEventListener(`change`,()=>{d=n.value,O()});let r=o.querySelector(`#filter-sim-only`);r?.addEventListener(`change`,()=>{p=r.checked,O()});let i=o.querySelector(`#filter-search-input`);i?.addEventListener(`input`,()=>{f=i.value,O();let e=o.querySelector(`#filter-search-input`);e&&(e.focus(),e.setSelectionRange(f.length,f.length))}),o.querySelector(`#clear-search-btn`)?.addEventListener(`click`,()=>{f=``,O()});let a=()=>{u=`All`,d=`All`,f=``,p=!1,O()};o.querySelector(`#reset-filters-btn`)?.addEventListener(`click`,a),o.querySelector(`#empty-reset-btn`)?.addEventListener(`click`,a),o.querySelectorAll(`.speak-axiom-btn`).forEach(e=>{e.addEventListener(`click`,()=>{S(decodeURIComponent(e.getAttribute(`data-axiom`)||``))})}),o.querySelectorAll(`.toggle-lessons-btn`).forEach(e=>{e.addEventListener(`click`,()=>{let t=e.getAttribute(`data-urn`);t&&(h.has(t)?h.delete(t):h.add(t),O())})})}return O(),o}export{a as default,a as renderLearningZonePage};
