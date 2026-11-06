@@ -40,7 +40,7 @@
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",
     "@types/katex": "^0.16.8",
-    "@types/node": "^26.5.1",
+    "@types/node": "^26.6.6",
     "typescript": "^5.6.3",
     "vite": "^8.3.5",
     "wabt": "^1.0.39"
