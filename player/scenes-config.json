@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-06T19:31:04.734Z",
-  "totalScenes": 60,
+  "generatedAt": "2026-11-06T19:34:24.387Z",
+  "totalScenes": 61,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -167,6 +167,21 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 19
+    },
+    {
+      "id": "domino-multiplication",
+      "type": "Sim",
+      "title": "Multiplication Kinematics: Domino Cascade",
+      "stage": "domino-multiplication.svg",
+      "duration": 8,
+      "has3D": true,
+      "nodes3DCount": 1,
+      "svgFile": "cartridges/domino-multiplication.svg",
+      "astFile": "cartridges/domino-multiplication.ast",
+      "astbFile": "bytecode/domino-multiplication.astb",
+      "keyframeCount": 3,
+      "subtitleCount": 2,
+      "bindingsCount": 0
     },
     {
       "id": "electric-circuits",

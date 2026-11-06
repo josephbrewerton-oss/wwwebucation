@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-06T19:31:04.452Z",
+  "generatedAt": "2026-11-06T19:34:24.198Z",
   "totalCartridges": 61,
-  "masterChecksum": "d0579f85ee2f53bc536a9a22eba524aa87497f02c85cc75857c2fc645929b238",
+  "masterChecksum": "1b44cc9743ce0c3f80c3058f9b90b6d925a40768f4c9e749d3841d1bbe2c4027",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -186,15 +186,15 @@
       "title": "Multiplication Kinematics: Domino Cascade",
       "stage": "domino-multiplication.svg",
       "type": "Sim",
-      "astSha256": "91a422f168a7c5635cb3fba6a053265d07ab60929c511e94aaa8f85703ce568d",
-      "svgSha256": "",
+      "astSha256": "9e3cef28b5e77e240a1ce1450678ef6493f741913fe3eb2f32bcac10c588a314",
+      "svgSha256": "4f8bd2bd78009e29ad2da2074f51e99077022ec3b6e83be7dadad55a30000482",
       "astbSha256": "128e6d2a3403e33c314c4bc26c6e98aa63d5a89b41475bc3667e4efd25794f1f",
       "astbBytes": 746,
-      "astBytes": 1015,
-      "svgBytes": 0,
+      "astBytes": 1103,
+      "svgBytes": 6639,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "eda18055740c8b210981326a11644a872e70885bd9a112415bfba9add08d4bcd",
+      "seal": "b18a0853135ac6e2f1ee1c73e797a73009591e405b7be7516d3fc1c563e597c0",
       "certified": true
     },
     "electric-circuits": {

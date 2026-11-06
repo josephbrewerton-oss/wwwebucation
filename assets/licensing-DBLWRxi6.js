@@ -1,4 +1,4 @@
-import{n as e}from"./index-CS6YQR6X.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`licensing-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{n as e}from"./index-BNquBxi1.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`licensing-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 9999px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.75rem;">

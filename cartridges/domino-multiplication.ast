@@ -1,5 +1,5 @@
 (:scene
-  :id "domino-multiplication"
+  :id "domino-multiplication" :oak-id "OAK-KS3-GEN-DOMINOMUL" :oak-unit "ks3-generalcurriculum-domino-multiplication"
   :title "Multiplication Kinematics: Domino Cascade"
   :stage "domino-multiplication.svg"
   :type "Sim"

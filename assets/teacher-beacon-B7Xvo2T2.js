@@ -1,4 +1,4 @@
-import{n as e,p as t}from"./index-CS6YQR6X.js";import{t as n}from"./generatedScenes-YJ8cIO2Y.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
+import{n as e,p as t}from"./index-BNquBxi1.js";import{t as n}from"./generatedScenes-DgrtUFJH.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">

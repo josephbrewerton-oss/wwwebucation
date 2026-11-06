@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-06T19:31:03.788Z",
-  "totalCartridges": 59,
+  "generatedAt": "2026-11-06T19:34:23.751Z",
+  "totalCartridges": 60,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -399,6 +399,15 @@
       "stage": "BENCHMARK & STRESS LAB",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "cartridgeId": "fish-tank"
+    },
+    {
+      "unit": "ks3-generalcurriculum-domino-multiplication",
+      "oakId": "OAK-KS3-GEN-DOMINOMUL",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "stage": "domino-multiplication.svg",
+      "title": "Multiplication Kinematics: Domino Cascade",
+      "cartridgeId": "domino-multiplication"
     },
     {
       "unit": "V",
@@ -1434,6 +1443,26 @@
       "svgFile": "cartridges/fish-tank.svg",
       "astFile": "cartridges/fish-tank.ast",
       "astbFile": "bytecode/fish-tank.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": false,
+      "checkpointCount": 0
+    },
+    {
+      "id": "domino-multiplication",
+      "base": "domino-multiplication",
+      "type": "Sim",
+      "title": "Multiplication Kinematics: Domino Cascade",
+      "stage": "domino-multiplication.svg",
+      "oakId": "OAK-KS3-GEN-DOMINOMUL",
+      "oakUnit": "ks3-generalcurriculum-domino-multiplication",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "mount": "/curriculum/general/domino-multiplication",
+      "duration": 8,
+      "svgFile": "cartridges/domino-multiplication.svg",
+      "astFile": "cartridges/domino-multiplication.ast",
+      "astbFile": "bytecode/domino-multiplication.astb",
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": false,

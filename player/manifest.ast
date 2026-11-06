@@ -98,6 +98,7 @@
       :type "Sim"
       :title "Multiplication Kinematics: Domino Cascade"
       :stage "domino-multiplication.svg"
+      :oak-id "OAK-KS3-GEN-DOMINOMUL"
       :bytecode "bytecode/domino-multiplication.astb")
 
     (:cartridge
