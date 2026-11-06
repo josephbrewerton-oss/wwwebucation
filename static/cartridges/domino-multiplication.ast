@@ -1,22 +1,46 @@
-(:scene
-  :id "domino-multiplication"
-  :title "Multiplication Kinematics: Domino Cascade"
-  :stage "domino-multiplication.svg"
-  :type "Sim"
-  :duration 8.0
+(:scene :id "domino-multiplication" :type "Sim" :oak-id "OAK-KS2-MAT-DOM" :oak-unit "ks2-multiplication-arrays" :title "🁊 Kinematic Domino Multiplication: Group Arrays" :stage "KS2 MATHS" :duration 10.0
   (:vars (
-    (:var :name "groupSize" :val 6 :min 1 :max 12 :step 1 :label "Group Size (Multiplicand)")
-    (:var :name "groupCount" :val 7 :min 1 :max 12 :step 1 :label "Number of Groups (Multiplier)")
-    (:var :name "triggerRelease" :val 0 :min 0 :max 1 :step 1 :label "Release Trigger")
+    (:var :name "groups" :val 4.0 :min 1.0 :max 4.0 :step 1.0 :label "Number of Groups")
+    (:var :name "perGroup" :val 6.0 :min 1.0 :max 6.0 :step 1.0 :label "Tiles per Group")
   ))
-  (:camera :distance 750 :pitch 30 :yaw "15 + t * 10" :fov 55)
-  (:keyframes (
-    (:t 0.00 :title "Arranged Groups" :rule "Factor A × Factor B defines spatial clusters")
-    (:t 0.50 :title "Kinematic Transfer" :rule "Momentum cascades through factor clusters")
-    (:t 1.00 :title "Total Product" :rule "Total fallen tiles = Product")
+  (:inputs (
+    (:slider :var "groups" :label "Number of Groups" :min 1.0 :max 4.0 :step 1.0)
+  ))
+  (:gestures (
+    (:draggable :target "#release-trigger-lever" :axis "y" :min 0 :max 30)
   ))
   (:subtitles (
-    (:start 0.00 :end 3.50 :en "Observe the factors grouped into distinct physical clusters.")
-    (:start 3.50 :end 8.00 :en "Releasing the lead domino transfers momentum through each group.")
+    (:start 0.00 :end 3.00 :en "Multiplication is equal groups! 4 clusters of 6 dominoes stand in sequence." :es "¡Multiplicar es agrupar en partes iguales! 4 grupos de 6 fichas.")
+    (:start 3.00 :end 6.50 :en "Release the lever: momentum cascades through each factor cluster rhythmically." :es "Suelta la palanca: el impulso cae rítmicamente por cada grupo de factores.")
+    (:start 6.50 :end 10.00 :en "The final tile strikes the bell. 4 groups of 6 equals exactly 24 units." :es "La última ficha golpea la campana. 4 grupos de 6 equivalen exactamente a 24.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Factor Grouping" :rule "4 groups × 6 tiles prepared on the track")
+    (:t 0.30 :title "2. First Wave" :rule "Group 1 fallen: 6 tiles")
+    (:t 0.55 :title "3. Mid-Cascade" :rule "Group 2 fallen: 12 tiles, Group 3: 18 tiles")
+    (:t 0.90 :title "4. Product Reached" :rule "Group 4 fallen: 24 total. Bell struck")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.28
+      :prompt "If we have 4 groups with 6 dominoes in each group, how many tiles fall in total?"
+      :options ("24 tiles (4 × 6)" "20 tiles (4 + 6 + 10)" "10 tiles (4 + 6)")
+      :answer 0
+      :explanation "Multiplication represents repeated addition: 6 + 6 + 6 + 6 = 24.")
+  ))
+  (:bindings (
+    ;; Rotate dominoes dynamically as timeline 't' sweeps past each cluster
+    (:target "#domino-1-1" :attr "transform" :expr "'rotate(' + (t > 0.05 ? Math.min(68, (t - 0.05) * 500) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-1-6" :attr "transform" :expr "'rotate(' + (t > 0.20 ? Math.min(68, (t - 0.20) * 500) : 0).toFixed(1) + ', 96, 70)'")
+    (:target "#domino-2-1" :attr "transform" :expr "'rotate(' + (t > 0.35 ? Math.min(68, (t - 0.35) * 500) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-2-6" :attr "transform" :expr "'rotate(' + (t > 0.50 ? Math.min(68, (t - 0.50) * 500) : 0).toFixed(1) + ', 86, 70)'")
+    (:target "#domino-3-1" :attr "transform" :expr "'rotate(' + (t > 0.60 ? Math.min(68, (t - 0.60) * 500) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-3-6" :attr "transform" :expr "'rotate(' + (t > 0.75 ? Math.min(68, (t - 0.75) * 500) : 0).toFixed(1) + ', 76, 70)'")
+    (:target "#domino-4-1" :attr "transform" :expr "'rotate(' + (t > 0.80 ? Math.min(68, (t - 0.80) * 500) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-4-6" :attr "transform" :expr "'rotate(' + (t > 0.92 ? Math.min(68, (t - 0.92) * 500) : 0).toFixed(1) + ', 66, 70)'")
+    ;; Bell vibration at impact
+    (:target "#finish-bell" :attr "transform" :expr "t > 0.95 ? 'translate(640, 160) rotate(' + (Math.sin(t * 80) * 8).toFixed(1) + ', 20, 10)' : 'translate(640, 160)'")
+    ;; HUD updates
+    (:target "#math-display" :attr "textContent" :expr "'6 × ' + (vars.groups || 4) + ' = ' + (6 * (vars.groups || 4))")
+    (:target "#cadence-status" :attr "textContent" :expr "t < 0.25 ? 'Cluster 1 Falling...' : (t < 0.55 ? 'Cluster 2 Falling (12)...' : (t < 0.85 ? 'Cluster 3 Falling (18)...' : 'Full Array Fallen: 24 Units!'))")
   ))
 )
