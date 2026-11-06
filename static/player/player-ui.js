@@ -2701,7 +2701,27 @@ window.addEventListener('message', (e) => {
 
       // Keyboard navigation
       window.addEventListener('keydown', (e) => {
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+        // 1. Let text inputs, selects, textareas, and editable fields handle their own keys
+        if (
+          e.target.tagName === 'INPUT' || 
+          e.target.tagName === 'SELECT' || 
+          e.target.tagName === 'TEXTAREA' ||
+          e.target.isContentEditable
+        ) {
+          return;
+        }
+
+        // 2. Trap rogue 'Enter' presses so they don't trigger focused buttons or blow out the layout
+        if (e.code === 'Enter' || e.key === 'Enter') {
+          if (e.target.tagName === 'BUTTON') {
+            return; // Allow a genuinely focused button to fire normally if explicitly clicked
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
+        // 3. Main player shortcuts
         if (e.code === 'Space') {
           e.preventDefault();
           if (this.stepMode) {
