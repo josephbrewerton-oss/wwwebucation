@@ -1,0 +1,126 @@
+{
+  "id": "system-settings-manifest",
+  "version": 1,
+  "sections": [
+    {
+      "id": "content-deck",
+      "icon": "🎯",
+      "title": "Content Sector & Cartridge Deck",
+      "description": "Configure which AST cartridges are mounted in the active workspace.",
+      "items": [
+        [
+          "select",
+          "setting-cohort",
+          "Target Cohort / Focus",
+          "app_sector_cohort",
+          "all",
+          [
+            ["all", "🌟 Comprehensive (All Sectors Visible)"],
+            ["k12_stem", "🎒 Primary & Secondary STEM (Under-18s)"],
+            ["vocational_foundation", "🛠️ Vocational & Youth (e.g. King's Trust)"],
+            ["adult_workplace", "💼 Adult Workplace & Interview Prep"]
+          ],
+          "Select the active curriculum or vocational stage."
+        ],
+        [
+          "toggle",
+          "setting-faith",
+          "Faith & Liturgical Formation",
+          "app_faith_modules",
+          false,
+          { "activeLabel": "✝️ Faith Deck: ACTIVE", "inactiveLabel": "✝️ Faith Deck: HIDDEN" },
+          "Includes Catholic liturgical apparatuses, Scripture studies, and virtue trackers."
+        ]
+      ]
+    },
+    {
+      "id": "visual-sensory",
+      "icon": "👁️",
+      "title": "Visual & Sensory Access",
+      "items": [
+        [
+          "toggle",
+          "setting-theme",
+          "Display Theme",
+          "theme",
+          "light",
+          { "activeVal": "dark", "inactiveVal": "light", "activeLabel": "🌙 Dark Mode", "inactiveLabel": "☀️ Light Mode", "attr": "data-theme" },
+          null
+        ],
+        [
+          "segmented",
+          "setting-font-size",
+          "Font Size",
+          "app_font_size",
+          "normal",
+          [
+            ["normal", "Standard (A)"],
+            ["large", "Large (A+)"]
+          ],
+          null
+        ],
+        [
+          "toggle",
+          "setting-contrast",
+          "High Contrast Mode",
+          "app_high_contrast",
+          false,
+          { "activeLabel": "🌓 High Contrast: ON", "inactiveLabel": "🌓 High Contrast: OFF", "attr": "data-high-contrast" },
+          null
+        ]
+      ]
+    },
+    {
+      "id": "language-access",
+      "icon": "🌐",
+      "title": "Language & Translation",
+      "items": [
+        [
+          "select",
+          "setting-lang",
+          "Default Portal Language",
+          "app_language",
+          "en",
+          [
+            ["en", "🇬🇧 English"],
+            ["es", "🇪🇸 Español"],
+            ["fr", "🇫🇷 Français"],
+            ["la", "🇻🇦 Latina"],
+            ["de", "🇩🇪 Deutsch"],
+            ["pl", "🇵🇱 Polski"],
+            ["uk", "🇺🇦 Українська"],
+            ["pt", "🇵🇹 Português"],
+            ["ar", "🇸🇦 العربية"]
+          ],
+          null
+        ],
+        [
+          "toggle",
+          "setting-bsl",
+          "BSL In-Vision Interpreter",
+          "app_bsl_enabled",
+          false,
+          { "activeLabel": "🖐️ BSL Signing: ON", "inactiveLabel": "🖐️ BSL Signing: OFF" },
+          "Our in-vision procedural vector interpreter signs synchronously with speech."
+        ]
+      ]
+    },
+    {
+      "id": "data-saver-section",
+      "icon": "📶",
+      "title": "Low-Bandwidth Data Saver Mode",
+      "description": "Suppresses external font requests and background downloads.",
+      "items": [
+        [
+          "toggle",
+          "setting-data-saver",
+          "Data Saver Mode",
+          "app_data_saver",
+          false,
+          { "activeLabel": "📶 Data Saver: ON", "inactiveLabel": "📶 Data Saver: OFF" },
+          "Runs exclusively on local vector assets to conserve mobile data."
+        ]
+      ]
+    }
+  ]
+}
