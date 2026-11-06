@@ -61,8 +61,8 @@
     "node": ">=20.0"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.85",
+    "@mlc-ai/web-llm": "^0.2.87",
     "canvas-confetti": "^1.9.4",
-    "katex": "^0.18.7"
+    "katex": "^0.19.1"
   }
 }
