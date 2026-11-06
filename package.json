@@ -30,7 +30,9 @@
     "export:dist": "npx tsx scripts/export-distribution.ts",
     "lint": "tsc --noEmit",
     "mine:watch": "npx tsx scripts/watchSubstrates.ts"
-  },  "overrides": {
+  },
+  "overrides": {
+    "typescript": "^5.6.3",
     "esbuild": "^0.28.1",
     "source-map-js": "^1.2.2",
     "launch-editor": "^2.14.2"
@@ -41,8 +43,7 @@
     "@types/node": "^26.5.1",
     "typescript": "^5.6.3",
     "vite": "^8.3.5",
-    "wabt": "^1.0.39",
-    "webmcp-types": "^0.1.10"
+    "wabt": "^1.0.39"
   },
   "browserslist": {
     "production": [

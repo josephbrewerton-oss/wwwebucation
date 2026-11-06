@@ -6,6 +6,16 @@ import { getBaseUrl } from '../utils/url';
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator, SimPresetBadge } from '../curriculum/curriculumSimMapping';
 
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function renderLearningZonePage(): HTMLElement {
   const base = getBaseUrl();
   const container = document.createElement('div');
@@ -14,9 +24,11 @@ export function renderLearningZonePage(): HTMLElement {
 
   // Read URL query params for initial filters
   const params = new URLSearchParams(window.location.search);
-  let selectedStage = params.get('stage') || 'All';
-  let selectedSubject = params.get('subject') || 'All';
-  let searchQuery = params.get('q') || '';
+  const rawStage = params.get('stage') || 'All';
+  const rawSubject = params.get('subject') || 'All';
+  let selectedStage = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'].includes(rawStage) ? rawStage : 'All';
+  let selectedSubject = rawSubject.replace(/[<>"'&]/g, '');
+  let searchQuery = (params.get('q') || '').slice(0, 100);
   let filterSimOnly = params.get('simOnly') === '1';
   let activeTab: 'curriculum' | 'constellation' | 'simulators' = 
     params.get('tab') === 'constellation' ? 'constellation' : 
@@ -178,7 +190,7 @@ export function renderLearningZonePage(): HTMLElement {
             <input 
               type="text" 
               id="filter-search-input" 
-              value="${searchQuery}" 
+              value="${escapeHtml(searchQuery)}" 
               placeholder="Search topics, axioms, misconceptions..." 
               style="width:100%; box-sizing:border-box; padding:8px 36px 8px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a;"
             />

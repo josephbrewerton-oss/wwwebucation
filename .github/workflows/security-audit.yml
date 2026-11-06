@@ -22,8 +22,3 @@ jobs:
 
       - name: Audit Dependencies
         run: npm audit --audit-level=high
-
-      - name: Verify Scoped Dependencies
-        run: |
-          # Ensure critical private or edge packages are resolved correctly
-          npm ls @school-ai/edge-runtime || true

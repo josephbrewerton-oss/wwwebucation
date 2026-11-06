@@ -330,13 +330,14 @@ export function renderHomePage(): HTMLElement {
   const pillNav = container.querySelector<HTMLElement>('#sim-pill-nav');
 
   function updateActivePreset(id: string) {
-    activePreset = id;
-    if (iframe) iframe.src = `${base}player.html?preset=${id}`;
-    if (select) select.value = id;
+    const cleanId = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+    activePreset = cleanId;
+    if (iframe) iframe.src = `${base}player.html?preset=${encodeURIComponent(cleanId)}`;
+    if (select) select.value = cleanId;
 
     // Update pill buttons visual state
     pillNav?.querySelectorAll<HTMLButtonElement>('.sim-pill').forEach((btn) => {
-      const isSelected = btn.dataset.id === id;
+      const isSelected = btn.dataset.id === cleanId;
       btn.style.background = isSelected ? '#0284c7' : '#1e293b';
       btn.style.color = isSelected ? '#ffffff' : '#94a3b8';
       btn.style.borderColor = isSelected ? '#38bdf8' : '#334155';
@@ -347,21 +348,28 @@ export function renderHomePage(): HTMLElement {
     if (!select || !pillNav) return;
 
     // Dropdown options
-    select.innerHTML = cartridges.map(c => `
-      <option value="${c.id}" ${c.id === activePreset ? 'selected' : ''}>${c.title} (${c.subject || 'STEM'})</option>
-    `).join('');
+    select.replaceChildren();
+    for (const c of cartridges) {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = `${c.title} (${c.subject || 'STEM'})`;
+      if (c.id === activePreset) opt.selected = true;
+      select.appendChild(opt);
+    }
 
     // Quick selection pills
-    pillNav.innerHTML = cartridges.slice(0, 12).map(c => `
-      <button type="button" class="sim-pill" data-id="${c.id}" style="background: ${c.id === activePreset ? '#0284c7' : '#1e293b'}; color: ${c.id === activePreset ? '#ffffff' : '#94a3b8'}; border: 1px solid ${c.id === activePreset ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;">
-        ${c.title.split(':')[0]}
-      </button>
-    `).join('');
-
-    // Re-attach listeners
-    pillNav.querySelectorAll<HTMLButtonElement>('.sim-pill').forEach(btn => {
-      btn.onclick = () => btn.dataset.id && updateActivePreset(btn.dataset.id);
-    });
+    pillNav.replaceChildren();
+    for (const c of cartridges.slice(0, 12)) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'sim-pill';
+      btn.dataset.id = c.id;
+      const isSelected = c.id === activePreset;
+      btn.style.cssText = `background: ${isSelected ? '#0284c7' : '#1e293b'}; color: ${isSelected ? '#ffffff' : '#94a3b8'}; border: 1px solid ${isSelected ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;`;
+      btn.textContent = c.title.split(':')[0];
+      btn.onclick = () => updateActivePreset(c.id);
+      pillNav.appendChild(btn);
+    }
   }
 
   select?.addEventListener('change', (e) => {

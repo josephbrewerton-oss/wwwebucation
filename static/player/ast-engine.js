@@ -3511,6 +3511,7 @@
      * Sets a reactive state variable and recalculates derived outputs at 60 FPS
      */
     setVar(name, val, isAi = false) {
+      if (!name || name === '__proto__' || name === 'constructor' || name === 'prototype') return;
       if (!this.vars) this.vars = {};
       this.vars[name] = val;
       this.updateComputedVars();
@@ -5549,7 +5550,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.emit('error', { type: 'INVALID_SCENE_DATA', message: err.message });
       throw err;
     }
-    const id = sceneData.id || `custom-${Date.now()}`;
+    let id = String(sceneData.id || `custom-${Date.now()}`);
+    if (id === '__proto__' || id === 'constructor' || id === 'prototype') {
+      id = `custom-${Date.now()}`;
+    }
     const svgText = sceneData.svgText || sceneData.svgMarkup || sceneData.svg || '';
     const astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
 
@@ -6254,7 +6258,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         const onLoadedMeta = () => {
           if (videoEl.duration && Number.isFinite(videoEl.duration) && (!scene.duration || scene.duration === 10.0)) {
-            scene.duration = videoEl.duration;
+            if (scene && typeof scene === 'object' && scene !== Object.prototype && scene !== Function.prototype) {
+              Object.defineProperty(scene, 'duration', {
+                value: videoEl.duration,
+                writable: true,
+                configurable: true,
+                enumerable: true
+              });
+            }
             this.durationSec = videoEl.duration;
           }
           if (this.isPlaying) {

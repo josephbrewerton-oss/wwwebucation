@@ -593,22 +593,27 @@ export function renderCatholicLifePage(): HTMLElement {
     const bodyEl = container.querySelector('#sanctuary-content-body');
     if (!bodyEl) return;
 
+    const setSafeHtml = (el: Element, htmlStr: string) => {
+      const parsed = new DOMParser().parseFromString(htmlStr, 'text/html');
+      el.replaceChildren(...parsed.body.childNodes);
+    };
+
     if (currentTab === 'altar-anatomy') {
       bodyEl.appendChild(renderAltarExplorer());
     } else if (currentTab === 'latin-prayers') {
       bodyEl.appendChild(renderLatinPrayersChapel());
     } else if (currentTab === 'church-tour') {
-      bodyEl.innerHTML = renderInteractiveSim('church-tour');
+      setSafeHtml(bodyEl, renderInteractiveSim('church-tour'));
     } else if (currentTab === 'mass') {
-      bodyEl.innerHTML = renderMass();
+      setSafeHtml(bodyEl, renderMass());
     } else if (currentTab === 'sacraments') {
-      bodyEl.innerHTML = renderSacraments();
+      setSafeHtml(bodyEl, renderSacraments());
     } else if (currentTab === 'rosary') {
-      bodyEl.innerHTML = renderRosary();
+      setSafeHtml(bodyEl, renderRosary());
     } else if (currentTab === 'cst') {
-      bodyEl.innerHTML = renderCST();
+      setSafeHtml(bodyEl, renderCST());
     } else {
-      bodyEl.innerHTML = renderOverview();
+      setSafeHtml(bodyEl, renderOverview());
     }
 
     // Bind tab button listeners

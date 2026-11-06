@@ -375,7 +375,14 @@ export function extractDataPayloadFromAst(raw: string): DataCartridgePayload | n
  * Serializes a Data Cartridge payload into canonical declarative AST S-Expressions.
  */
 export function serializeDataCartridgeToAst(payload: DataCartridgePayload, id: string, title: string): string {
-  const sanitize = (s?: string) => (s ? s.replace(/"/g, '\\"') : '');
+  const sanitize = (s?: string) => {
+    if (!s) return '';
+    return s
+      .replace(/\\/g, '\\\\')
+      .replace(/"/g, '\\"')
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n');
+  };
   let ast = `(:cartridge :type :data :id "${sanitize(id)}" :title "${sanitize(title)}" :stage "${sanitize(payload.stage)}" :subject "${sanitize(payload.subject)}" :unit "${sanitize(payload.unit)}"\n`;
   if (payload.axiom) ast += `  (:axiom "${sanitize(payload.axiom)}")\n`;
   if (payload.trap) ast += `  (:trap "${sanitize(payload.trap)}")\n`;

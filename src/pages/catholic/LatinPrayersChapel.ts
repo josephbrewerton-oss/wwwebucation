@@ -4,6 +4,16 @@
 
 import { LATIN_PRAYERS_DATA, LatinPrayerItem, LatinPrayerVerse } from '../../data/catholic';
 
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function renderLatinPrayersChapel(): HTMLElement {
   const container = document.createElement('div');
   container.className = 'latin-mass-prayers-chapel';
@@ -110,7 +120,7 @@ export function renderLatinPrayersChapel(): HTMLElement {
             type="text" 
             id="latin-search-input" 
             placeholder="Search Latin or English text..." 
-            value="${searchQuery}" 
+            value="${escapeHtml(searchQuery)}" 
             style="background:#1e293b; color:#ffffff; border:1px solid #334155; border-radius:6px; padding:6px 12px; font-size:0.82rem; width:220px; outline:none;" />
         </div>
       </div>

@@ -66,6 +66,16 @@ function assembleAllPracticeQuestions(): PracticeQuestion[] {
   return list;
 }
 
+function escapeHtml(str: string): string {
+  if (!str) return '';
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function renderPracticePage(): HTMLElement {
   const base = getBaseUrl();
   const container = document.createElement('div');
@@ -76,9 +86,11 @@ export function renderPracticePage(): HTMLElement {
 
   // Read initial filter from URL params if linked from Learning Zone
   const params = new URLSearchParams(window.location.search);
-  let selectedStage = params.get('stage') || 'All';
-  let selectedSubject = params.get('subject') || 'All';
-  let searchQuery = params.get('q') || '';
+  const rawStage = params.get('stage') || 'All';
+  const rawSubject = params.get('subject') || 'All';
+  let selectedStage = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'].includes(rawStage) ? rawStage : 'All';
+  let selectedSubject = rawSubject.replace(/[<>"'&]/g, '');
+  let searchQuery = (params.get('q') || '').slice(0, 100);
   let score = 0;
   let streak = 0;
   const answeredQuestions = new Set<string>();
@@ -194,7 +206,7 @@ export function renderPracticePage(): HTMLElement {
             <input 
               type="text" 
               id="practice-search-input" 
-              value="${searchQuery}" 
+              value="${escapeHtml(searchQuery)}" 
               placeholder="Search question prompts or topics..." 
               style="width:100%; box-sizing:border-box; padding:8px 36px 8px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a;"
             />

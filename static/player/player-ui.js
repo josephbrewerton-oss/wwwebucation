@@ -3931,8 +3931,11 @@ window.addEventListener('message', (e) => {
           candidateUrls.push(new URL('../lumina-vector-player.zip', window.location.href).href);
         } catch (_) {}
 
-        const basePath = (this.engine && this.engine.options && this.engine.options.basePath) ||
-          (typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('base') : null) || '/';
+        let basePath = (this.engine && this.engine.options && this.engine.options.basePath) || '/';
+        const urlParamBase = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('base') : null;
+        if (urlParamBase && /^(\/|\.\/)[a-zA-Z0-9_\-\/]*$/.test(urlParamBase)) {
+          basePath = urlParamBase;
+        }
         const cleanBase = basePath.endsWith('/') ? basePath : (basePath + '/');
         const baseZipUrl = `${cleanBase}lumina-vector-player.zip`;
         const basePlayerZipUrl = `${cleanBase}player/lumina-vector-player.zip`;
@@ -3995,9 +3998,16 @@ window.addEventListener('message', (e) => {
         // 3. Fallback direct anchor navigation if fetch failed and not embedded
         if (!downloadedLocally && (!window.parent || window.parent === window)) {
           const fallbackLink = document.createElement('a');
-          fallbackLink.href = primaryUrl;
+          let safeDownloadUrl = '/lumina-vector-player.zip';
+          try {
+            const parsed = new URL(primaryUrl, window.location.href);
+            if ((parsed.protocol === 'http:' || parsed.protocol === 'https:') && parsed.origin === window.location.origin) {
+              safeDownloadUrl = parsed.pathname;
+            }
+          } catch (_) {}
+          fallbackLink.href = safeDownloadUrl;
           fallbackLink.setAttribute('download', 'lumina-vector-player.zip');
-          fallbackLink.target = '_blank';
+          fallbackLink.rel = 'noopener noreferrer';
           document.body.appendChild(fallbackLink);
           fallbackLink.click();
           fallbackLink.remove();

@@ -18,7 +18,8 @@ export function getBaseUrl(): string {
   const currentPath = window.location.pathname;
 
   // 2. Auto-detect GitHub Pages repository name from pathname if hosted on github.io
-  if (window.location.hostname.endsWith('github.io')) {
+  const hostname = window.location.hostname;
+  if (hostname === 'github.io' || hostname.endsWith('.github.io')) {
     const parts = currentPath.split('/').filter(Boolean);
     if (parts.length > 0) {
       return `/${parts[0]}/`;
