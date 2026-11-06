@@ -5,6 +5,7 @@ import { getBaseUrl } from '../utils/url';
 
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, CurriculumQuestionItem } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator } from '../curriculum/curriculumSimMapping';
+import { BUILTIN_DATA_CARTRIDGES } from '../data/player/dataCartridges';
 
 export interface PracticeQuestion {
   id: string;
@@ -17,11 +18,49 @@ export interface PracticeQuestion {
   hint: string;
   explanation: string;
   simPreset?: string;
+  tier?: string;
+  sourceDeck?: string;
 }
 
 function assembleAllPracticeQuestions(): PracticeQuestion[] {
   const list: PracticeQuestion[] = [];
+  const seenIds = new Set<string>();
 
+  // 1. Handcrafted Oak Data Cartridges (Priority Diagnostic Decks)
+  for (const cart of BUILTIN_DATA_CARTRIDGES) {
+    let simPreset: string | undefined = undefined;
+    const sim = resolveTopicSimulator(cart.oakUnit, cart.title, cart.subject);
+    if (sim) {
+      simPreset = sim.presetId;
+    } else {
+      const fallbackId = cart.id.replace(/^oak-data-/, '');
+      simPreset = fallbackId;
+    }
+
+    if (cart.dataPayload && Array.isArray(cart.dataPayload.questions)) {
+      for (const q of cart.dataPayload.questions) {
+        if (!seenIds.has(q.id)) {
+          seenIds.add(q.id);
+          list.push({
+            id: q.id,
+            stage: cart.stage,
+            subject: cart.subject,
+            unit: cart.oakUnit || cart.dataPayload.unit || cart.title,
+            question: q.prompt,
+            options: q.options,
+            correctIndex: q.answer,
+            hint: q.hint || cart.dataPayload.guidedStep || 'Focus on the foundational invariant axiom.',
+            explanation: q.explanation || (q.misconceptions && q.misconceptions[0]) || 'Correct conceptual understanding.',
+            simPreset,
+            tier: q.tier || 'application',
+            sourceDeck: cart.title,
+          });
+        }
+      }
+    }
+  }
+
+  // 2. National Curriculum Route Nodes
   for (const route of ALL_CURRICULUM_ROUTES) {
     const sim = resolveTopicSimulator(route.topicId, route.topicTitle, route.subjectTitle);
     const simPreset = sim ? sim.presetId : undefined;
@@ -247,6 +286,11 @@ export function renderPracticePage(): HTMLElement {
                 <span style="font-size:0.74rem; font-weight:700; color:#475569;">
                   ${drill.subject} &bull; ${drill.unit}
                 </span>
+                ${drill.sourceDeck ? `
+                  <span style="font-size:0.7rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">
+                    📦 ${escapeHtml(drill.sourceDeck)}
+                  </span>
+                ` : ''}
               </div>
               ${drill.simPreset ? `
                 <a href="${base}player?preset=${drill.simPreset}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
