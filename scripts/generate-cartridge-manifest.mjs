@@ -3,6 +3,7 @@ import { resolve, extname, basename } from 'node:path';
 
 const BYTECODE_DIR = resolve('./static/player/bytecode');
 const CARTRIDGES_DIR = resolve('./static/player/cartridges');
+const ROOT_CARTRIDGES_DIR = resolve('./static/cartridges');
 const OUTPUT_FILE = resolve('./static/player/manifest.ast');
 
 // Fallback human-readable title generator from slug
@@ -15,9 +16,14 @@ function slugToTitle(slug) {
 
 // Scans an associated .ast source file for explicit metadata fields
 function extractAstMetadata(id) {
-  const astPath = resolve(CARTRIDGES_DIR, `${id}.ast`);
+  let astPath = resolve(CARTRIDGES_DIR, `${id}.ast`);
   if (!existsSync(astPath)) {
-    return { title: slugToTitle(id), type: "Sim", stage: "PORTAL APPARATUS" };
+    const rootPath = resolve(ROOT_CARTRIDGES_DIR, `${id}.ast`);
+    if (existsSync(rootPath)) {
+      astPath = rootPath;
+    } else {
+      return { title: slugToTitle(id), type: "Sim", stage: "PORTAL APPARATUS" };
+    }
   }
 
   const content = readFileSync(astPath, 'utf8');

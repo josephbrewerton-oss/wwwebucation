@@ -123,9 +123,24 @@ function astSceneAutoFinder(): import('vite').Plugin {
   };
 }
 
+function rawAstPlugin(): import('vite').Plugin {
+  return {
+    name: 'vite-raw-ast',
+    transform(code, id) {
+      const cleanId = id.split('?')[0];
+      if (cleanId.endsWith('.ast') || cleanId.endsWith('.lisp')) {
+        return {
+          code: `export default ${JSON.stringify(code)};`,
+          map: { mappings: '' }
+        };
+      }
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: process.env.BASE_URL || (mode === 'production' ? './' : '/'),
-  plugins: [astSceneAutoFinder()],
+  plugins: [astSceneAutoFinder(), rawAstPlugin()],
   publicDir: 'static',
   define: {
     'process.env': {},

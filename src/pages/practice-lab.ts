@@ -5,7 +5,6 @@ import { getBaseUrl } from '../utils/url';
 
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, CurriculumQuestionItem } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator } from '../curriculum/curriculumSimMapping';
-import { BUILTIN_DATA_CARTRIDGES } from '../data/player/dataCartridges';
 
 export interface PracticeQuestion {
   id: string;
@@ -26,41 +25,7 @@ function assembleAllPracticeQuestions(): PracticeQuestion[] {
   const list: PracticeQuestion[] = [];
   const seenIds = new Set<string>();
 
-  // 1. Handcrafted Oak Data Cartridges (Priority Diagnostic Decks)
-  for (const cart of BUILTIN_DATA_CARTRIDGES) {
-    let simPreset: string | undefined = undefined;
-    const sim = resolveTopicSimulator(cart.oakUnit, cart.title, cart.subject);
-    if (sim) {
-      simPreset = sim.presetId;
-    } else {
-      const fallbackId = cart.id.replace(/^oak-data-/, '');
-      simPreset = fallbackId;
-    }
-
-    if (cart.dataPayload && Array.isArray(cart.dataPayload.questions)) {
-      for (const q of cart.dataPayload.questions) {
-        if (!seenIds.has(q.id)) {
-          seenIds.add(q.id);
-          list.push({
-            id: q.id,
-            stage: cart.stage,
-            subject: cart.subject,
-            unit: cart.oakUnit || cart.dataPayload.unit || cart.title,
-            question: q.prompt,
-            options: q.options,
-            correctIndex: q.answer,
-            hint: q.hint || cart.dataPayload.guidedStep || 'Focus on the foundational invariant axiom.',
-            explanation: q.explanation || (q.misconceptions && q.misconceptions[0]) || 'Correct conceptual understanding.',
-            simPreset,
-            tier: q.tier || 'application',
-            sourceDeck: cart.title,
-          });
-        }
-      }
-    }
-  }
-
-  // 2. National Curriculum Route Nodes
+  // Assemble practice items from the national curriculum routes (zero hardcoded static data bloat)
   for (const route of ALL_CURRICULUM_ROUTES) {
     const sim = resolveTopicSimulator(route.topicId, route.topicTitle, route.subjectTitle);
     const simPreset = sim ? sim.presetId : undefined;

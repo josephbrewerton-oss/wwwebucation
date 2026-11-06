@@ -162,3 +162,24 @@ export function resolveTopicSimulator(topicId: string, topicTitle: string, subje
 
   return null;
 }
+
+const DATA_CARTRIDGE_TOPICS = new Set([
+  'states-of-matter',
+  'fractions-decimals',
+  'seasonal-changes',
+  'sacraments',
+  're-sacraments',
+  'algorithms-sequencing',
+  'angles-triangles',
+  'electric-circuits',
+  'phonics-screening',
+  'cell-biology',
+  'nicene-creed',
+  're-nicene-creed',
+  'spanish-foundations',
+]);
+
+export function hasDataCartridge(topicId: string): boolean {
+  if (!topicId) return false;
+  return DATA_CARTRIDGE_TOPICS.has(topicId.toLowerCase().trim());
+}

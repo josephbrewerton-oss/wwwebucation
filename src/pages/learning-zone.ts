@@ -4,7 +4,7 @@ import { getBaseUrl } from '../utils/url';
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode } from '../curriculum/curriculumMesh';
-import { resolveTopicSimulator, SimPresetBadge } from '../curriculum/curriculumSimMapping';
+import { resolveTopicSimulator, SimPresetBadge, hasDataCartridge } from '../curriculum/curriculumSimMapping';
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -214,6 +214,7 @@ export function renderLearningZonePage(): HTMLElement {
 
   function renderUnitCard(node: CurriculumRouteNode): string {
     const sim = resolveTopicSimulator(node.topicId, node.topicTitle, node.subjectTitle);
+    const hasCart = hasDataCartridge(node.topicId);
     const isExpanded = expandedLessonUrns.has(node.urn);
     const hasLessons = node.lessons && node.lessons.length > 0;
     const hasQuestions = node.questions && node.questions.length > 0;
@@ -246,12 +247,12 @@ export function renderLearningZonePage(): HTMLElement {
             <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(node.axiom)}" title="Read axiom aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
               🔊 Listen
             </button>
-            <a href="${base}practice-lab?stage=${encodeURIComponent(node.stageTitle)}&subject=${encodeURIComponent(node.subjectTitle)}" style="padding:6px 12px; border-radius:6px; background:#f8fafc; border:1px solid #cbd5e1; color:#0f172a; text-decoration:none; font-weight:700; font-size:0.78rem;">
-              🎯 Practice Lab
+            <a href="${base}practice-lab?stage=${encodeURIComponent(node.stageTitle)}&subject=${encodeURIComponent(node.subjectTitle)}&q=${encodeURIComponent(node.topicTitle)}" title="${hasCart ? 'Open Interactive Data Cartridge' : 'Open Practice Lab'}" style="padding:6px 12px; border-radius:6px; background:${hasCart ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${hasCart ? '#bbf7d0' : '#cbd5e1'}; color:${hasCart ? '#166534' : '#0f172a'}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+              <span>${hasCart ? '📊 Data Cartridge' : '🎯 Practice Lab'}</span>
             </a>
             ${sim ? `
-              <a href="${base}player?preset=${sim.presetId}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
-                <span>${sim.icon} Launch Sim</span> &rarr;
+              <a href="${base}player?preset=${sim.presetId}" title="${escapeHtml(sim.label)}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
+                <span>${sim.icon} ${escapeHtml(sim.label)}</span> &rarr;
               </a>
             ` : ''}
           </div>

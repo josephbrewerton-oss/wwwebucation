@@ -329,6 +329,8 @@ export class PersistentAppShellElement extends HTMLElement {
     if (vmFrame) {
       import('../engine/hypervisor').then(({ hypervisor }) => {
         hypervisor?.registerWorkerIframe?.(vmFrame);
+      }).catch((err) => {
+        console.warn('[PersistentAppShell] Could not initialize neural hypervisor:', err);
       });
     }
   }
