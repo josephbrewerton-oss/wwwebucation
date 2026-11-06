@@ -1,0 +1,22 @@
+(:scene
+  :id "domino-multiplication"
+  :title "Multiplication Kinematics: Domino Cascade"
+  :stage "domino-multiplication.svg"
+  :type "Sim"
+  :duration 8.0
+  (:vars (
+    (:var :name "groupSize" :val 6 :min 1 :max 12 :step 1 :label "Group Size (Multiplicand)")
+    (:var :name "groupCount" :val 7 :min 1 :max 12 :step 1 :label "Number of Groups (Multiplier)")
+    (:var :name "triggerRelease" :val 0 :min 0 :max 1 :step 1 :label "Release Trigger")
+  ))
+  (:camera :distance 750 :pitch 30 :yaw "15 + t * 10" :fov 55)
+  (:keyframes (
+    (:t 0.00 :title "Arranged Groups" :rule "Factor A × Factor B defines spatial clusters")
+    (:t 0.50 :title "Kinematic Transfer" :rule "Momentum cascades through factor clusters")
+    (:t 1.00 :title "Total Product" :rule "Total fallen tiles = Product")
+  ))
+  (:subtitles (
+    (:start 0.00 :end 3.50 :en "Observe the factors grouped into distinct physical clusters.")
+    (:start 3.50 :end 8.00 :en "Releasing the lead domino transfers momentum through each group.")
+  ))
+)
