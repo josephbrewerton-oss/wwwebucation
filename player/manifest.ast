@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 60
+  :count 61
   (:cartridges (
     (:cartridge
       :id "algebra-balance"
@@ -92,6 +92,13 @@
       :stage "KS3 GENETICS"
       :oak-id "OAK-KS3-SCI-005"
       :bytecode "bytecode/dna-helix.astb")
+
+    (:cartridge
+      :id "domino-multiplication"
+      :type "Sim"
+      :title "Multiplication Kinematics: Domino Cascade"
+      :stage "domino-multiplication.svg"
+      :bytecode "bytecode/domino-multiplication.astb")
 
     (:cartridge
       :id "electric-circuits"
