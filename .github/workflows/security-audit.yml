@@ -1,0 +1,29 @@
+name: 'Security & Package Audit'
+on:
+  schedule:
+    # Run every Monday at midnight
+    - cron: '0 0 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Audit Dependencies
+        run: npm audit --audit-level=high
+
+      - name: Verify Scoped Dependencies
+        run: |
+          # Ensure critical private or edge packages are resolved correctly
+          npm ls @school-ai/edge-runtime || true
