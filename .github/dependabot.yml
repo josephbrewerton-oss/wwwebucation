@@ -1,0 +1,59 @@
+version: 2
+updates:
+  # ---------------------------------------------------------
+  # NPM / Node.js Ecosystem
+  # ---------------------------------------------------------
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "04:00"
+      timezone: "Europe/London"
+
+    # Always update the exact pinned version in package.json
+    versioning-strategy: "increase"
+
+    # Commit convention formatting
+    commit-message:
+      prefix: "chore"
+      prefix-development: "chore(deps-dev)"
+      include: "scope"
+
+    # Limit concurrent PRs to keep your review queue manageable
+    open-pull-requests-limit: 10
+
+    # Separate devDependencies into a single grouped PR
+    groups:
+      dev-dependencies:
+        dependency-type: "development"
+        patterns:
+          - "*"
+        # Exclude critical compilers/frameworks from the bulk PR
+        # so they receive isolated CI checks and review
+        exclude-patterns:
+          - "typescript"
+          - "vite"
+
+      prod-dependencies:
+        dependency-type: "production"
+        update-types:
+          - "patch"
+          - "minor"
+
+    # Pin core tools to their current major release to avoid unexpected breakage
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "vite"
+        update-types: ["version-update:semver-major"]
+
+  # ---------------------------------------------------------
+  # GitHub Actions Workflows (Pins action SHA / releases)
+  # ---------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
