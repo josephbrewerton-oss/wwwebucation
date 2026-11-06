@@ -1,5 +1,5 @@
 import { getBaseUrl } from '../utils/url';
-import settingsAST from '../cartridges/settings.ast.json';
+import settingsAST from 'settings.ast';
 
 type TupleSetting = [
   type: 'select' | 'toggle' | 'segmented',
