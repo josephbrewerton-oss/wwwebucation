@@ -1923,15 +1923,20 @@
         });
 
 window.addEventListener('message', (e) => {
-  const data = e.data;
-  if (!data) return;
+  if (e.origin !== window.location.origin) return;
+  if (e.source !== window.parent && e.source !== window) return;
 
-  if (data.type === 'SET_PRESET' && data.preset) {
-    if (el.presetSelector && el.presetSelector.value !== data.preset) {
-      el.presetSelector.value = data.preset;
+  const data = e.data;
+  if (!data || typeof data !== 'object' || typeof data.type !== 'string') return;
+
+  if (data.type === 'SET_PRESET' && typeof data.preset === 'string') {
+    const safePreset = /^[a-z0-9][a-z0-9-_]{0,63}$/i.test(data.preset) ? data.preset : null;
+    if (!safePreset) return;
+    if (el.presetSelector && el.presetSelector.value !== safePreset) {
+      el.presetSelector.value = safePreset;
     }
     if (this.engine) {
-      this.engine.setPreset(data.preset, Boolean(data.play));
+      this.engine.setPreset(safePreset, Boolean(data.play));
     }
   } else if (data.type === 'TRIGGER_OPEN_LOCAL') {
     const fileInput = el.fileInputHidden || document.getElementById('file-input-hidden');

@@ -173,21 +173,26 @@ export function renderPlayerPage(): HTMLElement {
   const optionsHtml = buildOptionsHtml(activePreset);
 
   const meta = getPresetMeta(activePreset);
+  const safeBase = escapeHtml(base);
+  const safeStage = escapeHtml(meta.stage || '');
+  const safeType = escapeHtml(meta.type || 'Sim');
+  const safeLabel = escapeHtml(meta.label || '');
+  const safePlayerSrc = escapeHtml(buildPlayerSrc(base, activePreset, bslActive));
 
   container.innerHTML = `
     <!-- Top Breadcrumbs -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
       <div style="display:flex; align-items:center; gap:8px;">
-        <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
+        <a href="${safeBase}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
         <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🎬 AST Vector Player &amp; Simulator</span>
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
-        <a href="${base}catholic-life" style="padding:6px 12px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:0.8rem; font-weight:600; text-decoration:none;">
+        <a href="${safeBase}catholic-life" style="padding:6px 12px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:0.8rem; font-weight:600; text-decoration:none;">
           ⛪ Catholic Sanctuary
         </a>
-        <a href="${base}practice-lab" style="padding:6px 12px; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.8rem; font-weight:600; text-decoration:none;">
+        <a href="${safeBase}practice-lab" style="padding:6px 12px; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.8rem; font-weight:600; text-decoration:none;">
           ⚡ Practice Lab
         </a>
       </div>
@@ -202,15 +207,15 @@ export function renderPlayerPage(): HTMLElement {
           <div>
             <div style="display:flex; align-items:center; gap:6px;">
               <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em;">
-                ${meta.stage}
+                ${safeStage}
               </span>
               <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace;">
-                ${meta.type || 'Sim'}
+                ${safeType}
               </span>
               <span style="color:#94a3b8; font-size:0.75rem;">&bull; Lumina AST Vector Engine</span>
             </div>
             <h2 id="player-active-title" style="font-size:1.15rem; font-weight:800; color:#f8fafc; margin:2px 0 0;">
-              ${meta.label}
+              ${safeLabel}
             </h2>
           </div>
         </div>
@@ -296,7 +301,7 @@ export function renderPlayerPage(): HTMLElement {
       <div id="player-iframe-wrapper" style="position:relative; width:100%; height:540px; background:#000000;">
         <iframe
           id="ast-player-iframe"
-          src="${base}player.html?preset=${activePreset}&bsl=${bslActive ? '1' : '0'}"
+          src="${safePlayerSrc}"
           style="width:100%; height:100%; border:none; display:block;"
           allow="autoplay; fullscreen"
           title="AST Interactive Vector Stage">
