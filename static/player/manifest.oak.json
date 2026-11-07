@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-06T09:19:42.240Z",
-  "totalCartridges": 59,
+  "generatedAt": "2026-11-07T08:35:59.255Z",
+  "totalCartridges": 60,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -399,6 +399,15 @@
       "stage": "BENCHMARK & STRESS LAB",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "cartridgeId": "fish-tank"
+    },
+    {
+      "unit": "ks2-multiplication-arrays",
+      "oakId": "OAK-KS2-MAT-DOM",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "stage": "KS2 MATHS",
+      "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
+      "cartridgeId": "domino-multiplication"
     },
     {
       "unit": "V",
@@ -1438,6 +1447,26 @@
       "tier": "core",
       "hasCheckpoints": false,
       "checkpointCount": 0
+    },
+    {
+      "id": "domino-multiplication",
+      "base": "domino-multiplication",
+      "type": "Sim",
+      "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
+      "stage": "KS2 MATHS",
+      "oakId": "OAK-KS2-MAT-DOM",
+      "oakUnit": "ks2-multiplication-arrays",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "mount": "/curriculum/mathematics/domino-multiplication",
+      "duration": 10,
+      "svgFile": "cartridges/domino-multiplication.svg",
+      "astFile": "cartridges/domino-multiplication.ast",
+      "astbFile": "bytecode/domino-multiplication.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 1
     },
     {
       "id": "electric-circuits",

@@ -1,6 +1,12 @@
 import { getBaseUrl } from '../utils/url';
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
 import {
+  saveCustomCartridge,
+  getCustomCartridges,
+  type CartridgeDefinition,
+} from '../services/cartridgeStore';
+import { isPhetBundle, transpilePhetFile } from '../utils/phetBridge';
+import {
   toggleBsl,
   getBslEnabled,
   subscribeBsl,
@@ -9,13 +15,41 @@ import {
   getVoiceEnabled,
   setVoiceEnabled,
 } from '../services/bslGlobalStore';
+import {
+  renderAstInteractiveLabDrawer,
+  renderPlayerEmbedModal,
+  renderPlayerSettingsModal,
+  renderNanoAiTutorDrawer,
+  renderDevStudioDrawer,
+  type StudioTabType,
+  type InspectedElementData,
+  mountChalkboard,
+  type AstChalkboardInstance,
+} from '../components/player';
+import { type SwfTranspileResult } from '../utils/swfAstParser';
+import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
+import { getPresetConfig, type PlayerDisplayConfig, type PlayerDisplayMode } from '../types/playerConfig';
 
 const DEFAULT_PRESET_ID = 'kinetic-gas';
 const VALID_PRESET_IDS = new Set(PRESET_OPTIONS.map((p) => p.id));
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 function normalizePresetId(raw: string | null | undefined): string {
   if (!raw) return DEFAULT_PRESET_ID;
-  return VALID_PRESET_IDS.has(raw) ? raw : DEFAULT_PRESET_ID;
+  if (VALID_PRESET_IDS.has(raw)) return raw;
+  try {
+    const custom = getCustomCartridges();
+    if (custom.some((c) => c.id === raw)) return raw;
+  } catch (_) {}
+  return DEFAULT_PRESET_ID;
 }
 
 function buildPlayerSrc(base: string, presetId: string, bslActive: boolean): string {
@@ -74,8 +108,31 @@ export function renderPlayerPage(): HTMLElement {
     return !isCatholicPreset(p) && !isStemPreset(p) && !isMathPreset(p);
   }
 
+  function getCustomCartridgesList(): CartridgeDefinition[] {
+    try {
+      const custom = getCustomCartridges();
+      return custom.filter((c) => !VALID_PRESET_IDS.has(c.id));
+    } catch (_) {
+      return [];
+    }
+  }
+
   function getPresetMeta(id: string): ScenePresetOption {
-    return presets.find((p) => p.id === id) || presets[0];
+    const found = presets.find((p) => p.id === id);
+    if (found) return found;
+    try {
+      const custom = getCustomCartridges().find((c) => c.id === id);
+      if (custom) {
+        return {
+          id: custom.id,
+          label: custom.title,
+          stage: custom.stage || 'LOCAL VAULT',
+          type: (custom.type as any) || 'Sim',
+          subject: custom.subject || 'Custom Ingestion',
+        };
+      }
+    } catch (_) {}
+    return presets[0];
   }
 
   // Build options for select dropdown
@@ -84,20 +141,36 @@ export function renderPlayerPage(): HTMLElement {
   const mathGroup = presets.filter(isMathPreset);
   const otherGroup = presets.filter(isOtherPreset);
 
-  const optionsHtml = `
-    <optgroup label="✝️ Catholic Sanctuary &amp; Liturgy" style="background:#0f172a; color:#fde047;">
-      ${catholicGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
-    </optgroup>
-    <optgroup label="🔬 STEM &amp; Natural Sciences" style="background:#0f172a; color:#38bdf8;">
-      ${stemGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
-    </optgroup>
-    <optgroup label="📐 Mathematics &amp; Logic" style="background:#0f172a; color:#34d399;">
-      ${mathGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
-    </optgroup>
-    <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
-      ${otherGroup.map(p => `<option value="${p.id}" ${p.id === activePreset ? 'selected' : ''}>${p.label} (${p.stage})</option>`).join('')}
-    </optgroup>
-  `;
+  function buildOptionsHtml(selectedId: string): string {
+    const customList = getCustomCartridgesList();
+    const customGroupHtml = customList.length > 0 ? `
+      <optgroup label="💾 Local Ingested Cartridges" style="background:#0f172a; color:#a78bfa;">
+        ${customList.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.title)} (${escapeHtml(c.stage || 'LOCAL')})</option>`).join('')}
+      </optgroup>
+    ` : '';
+
+    return `
+      ${customGroupHtml}
+      <optgroup label="✝️ Catholic Sanctuary &amp; Liturgy" style="background:#0f172a; color:#fde047;">
+        ${catholicGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      </optgroup>
+      <optgroup label="🔬 STEM &amp; Natural Sciences" style="background:#0f172a; color:#38bdf8;">
+        ${stemGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      </optgroup>
+      <optgroup label="📐 Mathematics &amp; Logic" style="background:#0f172a; color:#34d399;">
+        ${mathGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      </optgroup>
+      <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
+        ${otherGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      </optgroup>
+      <optgroup label="⚡ Dynamic Auto-Finder" style="background:#0f172a; color:#38bdf8;">
+        <option value="__custom_find__">🔍 Open Any Scene by Name / ID...</option>
+        <option value="__open_local__">📂 Open Local .ast or .svg File...</option>
+      </optgroup>
+    `;
+  }
+
+  const optionsHtml = buildOptionsHtml(activePreset);
 
   const meta = getPresetMeta(activePreset);
 
@@ -153,9 +226,50 @@ export function renderPlayerPage(): HTMLElement {
             </select>
           </div>
 
+          <!-- Open Local Cartridge Button -->
+          <button type="button" id="player-btn-open" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
+            📂 Open...
+          </button>
+          <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
+
           <!-- Reset Button -->
           <button type="button" id="player-btn-reset" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#f8fafc; border:1px solid #475569; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation">
             ↺ Reset
+          </button>
+
+          <!-- Parameters Lab Drawer Button -->
+          <button type="button" id="player-btn-lab" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Interactive Parameter Sliders &amp; Physical Manipulatives">
+            🎛️ Parameters
+          </button>
+
+          <!-- On-Device Gemini Nano AI Tutor Button -->
+          <button type="button" id="player-btn-ai" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.78rem; font-weight:700; cursor:pointer;" title="On-Device Gemini Nano AI Socratic Co-Pilot">
+            🤖 AI Tutor
+          </button>
+
+          <!-- Curriculum Dev Studio & PhET Transpiler Drawer Button -->
+          <button type="button" id="player-btn-studio" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Curriculum Dev Studio, PhET Bridge, Flash Lathe &amp; S-Expression Editor">
+            💻 Studio
+          </button>
+
+          <!-- Smartboard Whiteboard Marker Toggle -->
+          <button type="button" id="player-btn-pen" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#f59e0b; border:1px solid #d97706; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Toggle Smartboard Whiteboard Pen &amp; Annotation Layer">
+            🖊️ Marker
+          </button>
+
+          <!-- LMS Embed Modal Button -->
+          <button type="button" id="player-btn-embed" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
+            🚀 Embed
+          </button>
+
+          <!-- Display Settings Modal Button -->
+          <button type="button" id="player-btn-settings" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#94a3b8; border:1px solid #475569; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Teaching Profiles &amp; Player Controls Settings">
+            ⚙️ Settings
+          </button>
+
+          <!-- Single-File Air-Gapped HTML Export Button -->
+          <button type="button" id="player-btn-export-airgap" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Export Standalone Single-File HTML Lesson Capsule (< 45 KB)">
+            📦 Airgap HTML
           </button>
 
           <!-- BSL Signing Toggle Button -->
@@ -169,6 +283,9 @@ export function renderPlayerPage(): HTMLElement {
           </button>
         </div>
       </div>
+
+      <!-- In-Page Drawer & Modal Mount Point -->
+      <div id="player-drawer-mount-point" style="display:none; background:#0f172a; border-bottom:1px solid #334155;"></div>
 
       <!-- Live Stage iFrame -->
       <div id="player-iframe-wrapper" style="position:relative; width:100%; height:540px; background:#000000;">
@@ -251,12 +368,189 @@ export function renderPlayerPage(): HTMLElement {
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
   const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl')!;
   const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset')!;
+  const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
+  const labBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab');
+  const aiBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai');
+  const studioBtn = container.querySelector<HTMLButtonElement>('#player-btn-studio');
+  const penBtn = container.querySelector<HTMLButtonElement>('#player-btn-pen');
+  const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
+  const settingsBtn = container.querySelector<HTMLButtonElement>('#player-btn-settings');
+  const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
+  const drawerMount = container.querySelector<HTMLDivElement>('#player-drawer-mount-point');
+  const fileInputHidden = container.querySelector<HTMLInputElement>('#media-player-file-input')!;
   const fullscreenBtn = container.querySelector<HTMLButtonElement>('#player-btn-fullscreen')!;
   const searchInput = container.querySelector<HTMLInputElement>('#cartridge-search-input')!;
   const gridContainer = container.querySelector<HTMLDivElement>('#cartridges-grid')!;
   const catButtons = container.querySelectorAll<HTMLButtonElement>('.cat-pill-btn');
+  const iframeWrapper = container.querySelector<HTMLDivElement>('#player-iframe-wrapper')!;
+
+  let activeDrawer: 'lab' | 'ai' | 'studio' | 'embed' | 'settings' | null = null;
+  let chalkboard: AstChalkboardInstance | null = null;
+  let embedTargetMode: PlayerDisplayMode = 'classroom';
+  let copiedEmbed = false;
+  let displayConfig: PlayerDisplayConfig = getPresetConfig('classroom');
+
+  // Dev Studio state (PhET, SWF, Inspector, SVG, AST)
+  let studioTab: StudioTabType = 'phet';
+  let inspectedElement: InspectedElementData | null = null;
+  let customSvgCode = '';
+  let customAstCode = '';
+  let hotReloadFlash = false;
+  let swfResult: SwfTranspileResult | null = null;
+  let isParsingSwf = false;
+  let swfError: string | null = null;
+  let swfDragActive = false;
+
+  function renderCurrentDrawer() {
+    if (!drawerMount) return;
+    if (!activeDrawer) {
+      drawerMount.style.display = 'none';
+      drawerMount.innerHTML = '';
+      [labBtn, aiBtn, studioBtn, embedBtn, settingsBtn].forEach((b) => b?.classList.remove('active'));
+      return;
+    }
+
+    drawerMount.style.display = 'block';
+    drawerMount.innerHTML = '';
+    [labBtn, aiBtn, studioBtn, embedBtn, settingsBtn].forEach((b) => b?.classList.remove('active'));
+
+    let drawerEl: HTMLElement | null = null;
+    if (activeDrawer === 'lab') {
+      labBtn?.classList.add('active');
+      drawerEl = renderAstInteractiveLabDrawer({
+        isOpen: true,
+        onClose: () => toggleDrawer('lab'),
+        preset: activePreset,
+      });
+    } else if (activeDrawer === 'ai') {
+      aiBtn?.classList.add('active');
+      drawerEl = renderNanoAiTutorDrawer({
+        isOpen: true,
+        onClose: () => toggleDrawer('ai'),
+        preset: activePreset,
+        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
+      });
+    } else if (activeDrawer === 'studio') {
+      studioBtn?.classList.add('active');
+      drawerEl = renderDevStudioDrawer({
+        isOpen: true,
+        onClose: () => toggleDrawer('studio'),
+        studioTab,
+        setStudioTab: (tab) => {
+          studioTab = tab;
+          renderCurrentDrawer();
+        },
+        inspectedElement,
+        setInspectedElement: (elem) => {
+          inspectedElement = typeof elem === 'function' ? elem(inspectedElement) : elem;
+          renderCurrentDrawer();
+        },
+        customSvgCode,
+        setCustomSvgCode: (code) => {
+          customSvgCode = code;
+        },
+        customAstCode,
+        setCustomAstCode: (code) => {
+          customAstCode = code;
+        },
+        hotReloadFlash,
+        setHotReloadFlash: (val) => {
+          hotReloadFlash = val;
+        },
+        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
+        swfResult,
+        setSwfResult: (res) => {
+          swfResult = res;
+          renderCurrentDrawer();
+        },
+        isParsingSwf,
+        setIsParsingSwf: (val) => {
+          isParsingSwf = val;
+          renderCurrentDrawer();
+        },
+        swfError,
+        setSwfError: (err) => {
+          swfError = err;
+          renderCurrentDrawer();
+        },
+        swfDragActive,
+        setSwfDragActive: (val) => {
+          swfDragActive = val;
+          renderCurrentDrawer();
+        },
+      });
+    } else if (activeDrawer === 'embed') {
+      embedBtn?.classList.add('active');
+      const getEmbedSnippet = (mode: PlayerDisplayMode) =>
+        `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
+      drawerEl = renderPlayerEmbedModal({
+        isOpen: true,
+        onClose: () => toggleDrawer('embed'),
+        embedTargetMode,
+        setEmbedTargetMode: (mode) => {
+          embedTargetMode = mode;
+          renderCurrentDrawer();
+        },
+        copiedEmbed,
+        onCopyEmbedCode: () => {
+          copiedEmbed = true;
+          navigator.clipboard?.writeText(getEmbedSnippet(embedTargetMode));
+          renderCurrentDrawer();
+          setTimeout(() => {
+            copiedEmbed = false;
+            if (activeDrawer === 'embed') renderCurrentDrawer();
+          }, 2000);
+        },
+        embedCode: getEmbedSnippet(embedTargetMode),
+      });
+    } else if (activeDrawer === 'settings') {
+      settingsBtn?.classList.add('active');
+      drawerEl = renderPlayerSettingsModal({
+        isOpen: true,
+        onClose: () => toggleDrawer('settings'),
+        displayConfig,
+        setDisplayConfig: (cfg) => {
+          displayConfig = typeof cfg === 'function' ? cfg(displayConfig) : cfg;
+          iframe?.contentWindow?.postMessage({ type: 'UPDATE_CONFIG', config: displayConfig }, '*');
+        },
+        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
+      });
+    }
+
+    if (drawerEl) {
+      drawerMount.appendChild(drawerEl);
+    }
+  }
+
+  function toggleDrawer(name: 'lab' | 'ai' | 'studio' | 'embed' | 'settings') {
+    if (activeDrawer === name) {
+      activeDrawer = null;
+    } else {
+      activeDrawer = name;
+    }
+    renderCurrentDrawer();
+  }
+
+  function refreshDropdown() {
+    if (select) {
+      select.innerHTML = buildOptionsHtml(activePreset);
+      select.value = activePreset;
+    }
+  }
+
+  function getAllAvailablePresets(): ScenePresetOption[] {
+    const customList = getCustomCartridgesList().map((c) => ({
+      id: c.id,
+      label: c.title,
+      stage: c.stage || 'LOCAL VAULT',
+      type: (c.type as any) || 'Sim',
+      subject: c.subject || 'Custom Ingested',
+    }));
+    return [...customList, ...presets];
+  }
 
   function updatePreset(presetId: string) {
+    if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
     activePreset = safePresetId;
     const item = getPresetMeta(safePresetId);
@@ -277,6 +571,19 @@ export function renderPlayerPage(): HTMLElement {
     // Broadcast lesson change to BSL interpreter
     broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
 
+    if (chalkboard) {
+      chalkboard.destroy();
+      chalkboard = null;
+      if (penBtn) {
+        penBtn.style.background = '#1e293b';
+        penBtn.style.borderColor = '#d97706';
+        penBtn.style.color = '#f59e0b';
+      }
+    }
+    if (activeDrawer === 'lab' || activeDrawer === 'ai') {
+      renderCurrentDrawer();
+    }
+
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.set('preset', safePresetId);
     window.history.replaceState({}, '', nextUrl.toString());
@@ -284,10 +591,165 @@ export function renderPlayerPage(): HTMLElement {
     renderGrid();
   }
 
+  async function handleUploadedFiles(files: File[]) {
+    if (!files || files.length === 0) return;
+
+    try {
+      // 1. Dual Companion Pair (.svg + .ast)
+      const svgFile = files.find((f) => f.name.endsWith('.svg'));
+      const astFile = files.find((f) => f.name.endsWith('.ast'));
+
+      if (svgFile && astFile) {
+        const svgText = await svgFile.text();
+        const astText = await astFile.text();
+        const baseName = svgFile.name.replace(/\.[^/.]+$/, '');
+        const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+        const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+        const cart: CartridgeDefinition = {
+          id: cleanId,
+          title: cleanTitle,
+          stage: 'LOCAL VAULT',
+          category: 'Custom Files',
+          desc: `Locally ingested companion pair: ${svgFile.name} + ${astFile.name}.`,
+          icon: '💾',
+          source: 'imported',
+          svgMarkup: svgText,
+          astSource: astText,
+          updatedAt: Date.now(),
+        };
+
+        saveCustomCartridge(cart);
+        refreshDropdown();
+        updatePreset(cleanId);
+
+        iframe?.contentWindow?.postMessage(
+          {
+            type: 'LOAD_CUSTOM_CARTRIDGE',
+            cartridge: cart,
+          },
+          '*'
+        );
+        return;
+      }
+
+      // 2. Single or individual files
+      for (const file of files) {
+        const content = await file.text();
+
+        // PhET bundle
+        if (file.name.endsWith('.phet') || isPhetBundle(content)) {
+          const result = await transpilePhetFile(content, file.name);
+          if (result.success && result.svgMarkup && result.astSource) {
+            const simId = result.metadata?.simName || `phet-${Date.now()}`;
+            const title = result.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+            const cart: CartridgeDefinition = {
+              id: simId,
+              title,
+              stage: 'PHET INTERACTIVE',
+              category: 'STEM',
+              desc: `PhET simulation transpiled to AST: ${result.metadata?.compressionRatio || 'distilled'}.`,
+              icon: '⚛️',
+              source: 'phet',
+              svgMarkup: result.svgMarkup,
+              astSource: result.astSource,
+              updatedAt: Date.now(),
+            };
+            saveCustomCartridge(cart);
+            refreshDropdown();
+            updatePreset(simId);
+            iframe?.contentWindow?.postMessage(
+              {
+                type: 'LOAD_CUSTOM_CARTRIDGE',
+                cartridge: cart,
+              },
+              '*'
+            );
+            return;
+          }
+        }
+
+        // Single .svg (with embedded <script type="text/ast">) or standard SVG
+        if (file.name.endsWith('.svg')) {
+          const baseName = file.name.replace(/\.[^/.]+$/, '');
+          const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+          const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+
+          let astSource = '';
+          const match = content.match(/<script\s+type=["']text\/ast["'][^>]*>([\s\S]*?)<\/script>/i);
+          if (match && match[1]) {
+            astSource = match[1].trim();
+          } else {
+            astSource = `(:scene :id "${cleanId}" :title "${cleanTitle}" :stage "CUSTOM" :duration 10.0 (:bindings ()))`;
+          }
+
+          const cart: CartridgeDefinition = {
+            id: cleanId,
+            title: cleanTitle,
+            stage: 'LOCAL VAULT',
+            category: 'Custom Files',
+            desc: `Locally ingested vector cartridge: ${file.name}.`,
+            icon: '🎨',
+            source: 'imported',
+            svgMarkup: content,
+            astSource,
+            updatedAt: Date.now(),
+          };
+          saveCustomCartridge(cart);
+          refreshDropdown();
+          updatePreset(cleanId);
+          iframe?.contentWindow?.postMessage(
+            {
+              type: 'LOAD_CUSTOM_CARTRIDGE',
+              cartridge: cart,
+            },
+            '*'
+          );
+          return;
+        }
+
+        // Single .ast file
+        if (file.name.endsWith('.ast')) {
+          const baseName = file.name.replace(/\.[^/.]+$/, '');
+          const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+          const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+          const svgMarkup = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16"/><g id="scene-root"></g></svg>`;
+
+          const cart: CartridgeDefinition = {
+            id: cleanId,
+            title: cleanTitle,
+            stage: 'LOCAL VAULT',
+            category: 'Custom Files',
+            desc: `Locally ingested AST logic: ${file.name}.`,
+            icon: '📜',
+            source: 'imported',
+            svgMarkup,
+            astSource: content,
+            updatedAt: Date.now(),
+          };
+          saveCustomCartridge(cart);
+          refreshDropdown();
+          updatePreset(cleanId);
+          iframe?.contentWindow?.postMessage(
+            {
+              type: 'LOAD_CUSTOM_CARTRIDGE',
+              cartridge: cart,
+            },
+            '*'
+          );
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('[media-player] Error ingesting uploaded files:', err);
+    }
+  }
+
   function renderGrid() {
     if (!gridContainer) return;
     const q = searchQuery.toLowerCase().trim();
-    const filtered = presets.filter((p) => {
+    const allAvailable = getAllAvailablePresets();
+    const filtered = allAvailable.filter((p) => {
       let matchCat = true;
       if (activeCategory === 'Catholic') matchCat = isCatholicPreset(p);
       else if (activeCategory === 'STEM') matchCat = isStemPreset(p);
@@ -309,15 +771,15 @@ export function renderPlayerPage(): HTMLElement {
       return `
         <div 
           class="cartridge-card" 
-          data-id="${p.id}"
+          data-id="${escapeHtml(p.id)}"
           style="padding:12px; border-radius:10px; border:1.5px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#f8fafc'}; cursor:pointer; transition:all 0.15s ease;">
           <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
             <span style="font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:4px; background:${p.type === 'Slide' ? '#dcfce7' : p.type === 'App' ? '#fef3c7' : '#e0f2fe'}; color:${p.type === 'Slide' ? '#166534' : p.type === 'App' ? '#92400e' : '#0369a1'};">
-              ${p.type || 'Sim'}
+              ${escapeHtml(p.type || 'Sim')}
             </span>
-            <span style="font-size:0.68rem; color:#64748b; font-weight:600;">${p.stage}</span>
+            <span style="font-size:0.68rem; color:#64748b; font-weight:600;">${escapeHtml(p.stage)}</span>
           </div>
-          <strong style="display:block; font-size:0.86rem; color:#0f172a; margin-bottom:6px; line-height:1.3;">${p.label}</strong>
+          <strong style="display:block; font-size:0.86rem; color:#0f172a; margin-bottom:6px; line-height:1.3;">${escapeHtml(p.label)}</strong>
           <span style="font-size:0.75rem; color:#0284c7; font-weight:700;">${isSelected ? '▶ Currently Playing' : 'Launch &rarr;'}</span>
         </div>
       `;
@@ -336,14 +798,54 @@ export function renderPlayerPage(): HTMLElement {
 
   // Preset selector change
   select?.addEventListener('change', (e) => {
-    updatePreset((e.target as HTMLSelectElement).value);
+    const val = (e.target as HTMLSelectElement).value;
+    if (val === '__open_local__') {
+      select.value = activePreset;
+      fileInputHidden?.click();
+    } else if (val === '__custom_find__') {
+      select.value = activePreset;
+      const targetId = window.prompt('Enter Cartridge or Scene ID (e.g. calculus-curves, bbc-model-b, stations-of-the-cross):');
+      if (targetId && targetId.trim()) {
+        updatePreset(targetId.trim());
+      }
+    } else {
+      updatePreset(val);
+    }
   });
+
+  // Open button wiring
+  openBtn?.addEventListener('click', () => {
+    fileInputHidden?.click();
+  });
+
+  fileInputHidden?.addEventListener('change', (e) => {
+    const target = e.target as HTMLInputElement;
+    if (target.files && target.files.length) {
+      handleUploadedFiles(Array.from(target.files));
+      target.value = '';
+    }
+  });
+
+  // Drag & drop file loading on stage wrapper
+  if (iframeWrapper) {
+    iframeWrapper.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    iframeWrapper.addEventListener('drop', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+        handleUploadedFiles(Array.from(e.dataTransfer.files));
+      }
+    });
+  }
 
   // Reset button
   resetBtn?.addEventListener('click', () => {
-    if (iframe) {
-      iframe.src = buildPlayerSrc(base, activePreset, bslActive);
-    }
+    try {
+      iframe?.contentWindow?.postMessage({ type: 'RESET_SIM' }, '*');
+    } catch (_) {}
   });
 
   // Synchronize BSL button UI
@@ -381,9 +883,52 @@ export function renderPlayerPage(): HTMLElement {
 
   window.addEventListener('message', (e) => {
     if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'CARTRIDGE_INGESTED') {
+      refreshDropdown();
+      renderGrid();
+    }
     if ((e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') && typeof e.data.enabled === 'boolean') {
       setVoiceEnabled(e.data.enabled);
     }
+  });
+
+  window.addEventListener('cartridges_updated', () => {
+    refreshDropdown();
+    renderGrid();
+  });
+
+  // Drawer & Tool Buttons Wiring
+  labBtn?.addEventListener('click', () => toggleDrawer('lab'));
+  aiBtn?.addEventListener('click', () => toggleDrawer('ai'));
+  studioBtn?.addEventListener('click', () => toggleDrawer('studio'));
+  embedBtn?.addEventListener('click', () => toggleDrawer('embed'));
+  settingsBtn?.addEventListener('click', () => toggleDrawer('settings'));
+
+  penBtn?.addEventListener('click', () => {
+    if (chalkboard) {
+      chalkboard.destroy();
+      chalkboard = null;
+      penBtn.style.background = '#1e293b';
+      penBtn.style.borderColor = '#d97706';
+      penBtn.style.color = '#f59e0b';
+    } else if (iframeWrapper) {
+      chalkboard = mountChalkboard(iframeWrapper, {
+        onClose: () => {
+          chalkboard = null;
+          penBtn.style.background = '#1e293b';
+          penBtn.style.borderColor = '#d97706';
+          penBtn.style.color = '#f59e0b';
+        },
+      });
+      penBtn.style.background = 'rgba(245, 158, 11, 0.2)';
+      penBtn.style.borderColor = '#f59e0b';
+      penBtn.style.color = '#fbbf24';
+    }
+  });
+
+  exportAirgapBtn?.addEventListener('click', () => {
+    const activeMeta = getPresetMeta(activePreset);
+    exportAirgapHtmlBundle(activePreset, activeMeta.label);
   });
 
   // Fullscreen

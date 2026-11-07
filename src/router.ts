@@ -48,9 +48,12 @@ const routes: Record<string, RouteHandler> = {
   '/privacy': () => import('./pages/privacy').then(m => resolveView(m, 'renderPrivacyPage')),
   '/child-safety': () => import('./pages/child-safety').then(m => resolveView(m, 'renderChildSafetyPage')),
   '/profile': () => import('./pages/profile').then(m => resolveView(m, 'renderProfilePage')),
+  '/404': () => import('./pages/not-found').then(m => resolveView(m, 'renderNotFoundPage')),
 };
 
 import { getBaseUrl } from './utils/url';
+import { resolveHarmonisedRoute } from './utils/harmonisedRouteResolver';
+import { getCartridgeByMount } from './services/cartridgeStore';
 
 export function normalizePath(rawPath: string): string {
   const base = getBaseUrl();
@@ -86,7 +89,27 @@ export async function handleRouteChange() {
   const outlet = document.getElementById('page-outlet');
   if (!outlet) return;
 
-  const handler = routes[normalized] || routes['/'];
+  let handler = routes[normalized];
+
+  if (!handler) {
+    // 1. Check if route matches a declared cartridge mount address (e.g. /curriculum/geometry/pythagoras)
+    const mountedCartridge = getCartridgeByMount(normalized);
+    if (mountedCartridge) {
+      window.history.replaceState({}, '', `${getBaseUrl()}player?preset=${mountedCartridge.id}`);
+      handler = routes['/player'];
+    } else {
+      // 2. Check harmonised curriculum route resolver for fuzzy and legacy aliases
+      const resolution = resolveHarmonisedRoute(normalized, window.location.search);
+      if (resolution && resolution.targetPath && resolution.targetPath !== normalized && resolution.targetPath !== '/') {
+        window.history.replaceState({}, '', `${getBaseUrl()}${resolution.targetPath.replace(/^\//, '')}`);
+        const resolvedPath = normalizePath(resolution.targetPath);
+        handler = routes[resolvedPath] || routes['/404'];
+      } else {
+        handler = routes['/404'];
+      }
+    }
+  }
+
   try {
     const view = await handler();
     if (typeof view === 'string') {

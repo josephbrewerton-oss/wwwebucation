@@ -7,6 +7,7 @@ import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
 import { navigate } from '../router';
 import { getBaseUrl } from '../utils/url';
+import { subscribeToPlayerCalls } from '../services/playerLauncher';
 import './NativeBslInterpreter';
 import type { NativeBslInterpreterElement } from './NativeBslInterpreter';
 
@@ -20,6 +21,7 @@ export class PersistentAppShellElement extends HTMLElement {
   private unsubscribeBsl?: () => void;
   private unsubscribeDataSaver?: () => void;
   private unsubscribeLang?: () => void;
+  private unsubscribePlayerCalls?: () => void;
 
   connectedCallback() {
     this.colorMode = (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
@@ -31,6 +33,12 @@ export class PersistentAppShellElement extends HTMLElement {
     this.render();
     this.bindEvents();
     this.bindBeacon();
+
+    this.unsubscribePlayerCalls = subscribeToPlayerCalls((options) => {
+      if (options && options.preset) {
+        navigate(`/player?preset=${encodeURIComponent(options.preset)}`);
+      }
+    });
   }
 
   private render() {
@@ -571,6 +579,7 @@ export class PersistentAppShellElement extends HTMLElement {
     this.unsubscribeBsl?.();
     this.unsubscribeDataSaver?.();
     this.unsubscribeLang?.();
+    this.unsubscribePlayerCalls?.();
     classroomBeacon.stopStudentBeacon();
   }
 }

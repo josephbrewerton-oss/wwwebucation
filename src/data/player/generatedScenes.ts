@@ -758,6 +758,22 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "domino-multiplication",
+    "base": "domino-multiplication",
+    "type": "Sim",
+    "label": "🁊 Kinematic Domino Multiplication: Group Arrays",
+    "stage": "KS2 MATHS",
+    "oakId": "OAK-KS2-MAT-DOM",
+    "oakUnit": "ks2-multiplication-arrays",
+    "subject": "Mathematics",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/mathematics/domino-multiplication",
+    "section": "Mathematics & Geometry",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
+  },
+  {
     "id": "electric-circuits",
     "base": "electric-circuits",
     "type": "Sim",
