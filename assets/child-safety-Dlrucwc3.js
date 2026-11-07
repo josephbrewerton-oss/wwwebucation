@@ -1,4 +1,4 @@
-import{m as e}from"./index-LXD8iZwO.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`child-safety-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; color: #1e293b;`,n.innerHTML=`
+import{m as e}from"./index-Cl4e2W7A.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`child-safety-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; color: #1e293b;`,n.innerHTML=`
     <!-- Header Banner -->
     <div style="background: linear-gradient(135deg, #065f46 0%, #047857 100%); border-radius: 18px; padding: 2.5rem 2rem; color: #ffffff; margin-bottom: 2.5rem; box-shadow: 0 10px 25px -5px rgba(4, 120, 87, 0.25);">
       <div style="display: inline-flex; align-items: center; gap: 8px; background: rgba(255, 255, 255, 0.15); padding: 4px 12px; border-radius: 20px; fontSize: 0.85rem; font-weight: 700; margin-bottom: 1rem;">
