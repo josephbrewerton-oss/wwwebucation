@@ -28,7 +28,9 @@
       <button type="button" id="btn-print" title="Generate A4 Classroom Worksheet">🖨️ <span class="btn-label">Print</span></button>
       <button type="button" id="btn-copy-svg" title="Copy Raw Vector SVG to Clipboard">📋 <span class="btn-label">Copy SVG</span></button>
       <button type="button" id="btn-theme" title="Toggle Dark/Light Mode">☀️</button>
+      <button type="button" id="btn-settings" title="Teaching Profiles &amp; Stage Display Settings">⚙️</button>
       <button type="button" id="btn-header-export-spa" title="Export Standalone Autonomous SVG Applet Capsule (Zero Install, Runs Offline)">🚀 <span class="btn-label">Export Applet</span></button>
+      <button type="button" id="btn-obs-link" title="Connect OBS Studio Broadcast WebSocket (v5)">🎥 <span class="btn-label">OBS Link</span></button>
       <button type="button" id="btn-webrtc-link" title="Open P2P Classroom Beacon &amp; WebRTC Mesh">📡 <span class="btn-label">P2P Mesh</span></button>
       <button type="button" id="btn-fullscreen" title="Toggle Fullscreen">⛶</button>
     </div>
@@ -255,6 +257,129 @@
     <!-- Subtle Toast Notification -->
     <div id="ast-toast" class="ast-toast">Station Selected</div>
 
+    <!-- Display & Controls Settings Drawer -->
+    <div id="settings-drawer" class="settings-drawer hidden">
+      <div class="settings-drawer-header">
+        <div class="settings-drawer-title">
+          <span>⚙️ Teaching Profile &amp; Stage Controls</span>
+          <span id="settings-badge" class="settings-mode-badge">CLASSROOM</span>
+        </div>
+        <button type="button" id="settings-drawer-close" class="obs-drawer-close" title="Close Settings">&times;</button>
+      </div>
+      <div class="settings-drawer-body">
+        <div class="config-section-title">Teaching Profiles:</div>
+        <div class="mode-grid">
+          <div id="mode-card-classroom" class="mode-card active">
+            <div class="mode-card-header"><span>🏫</span> Classroom</div>
+            <div class="mode-card-desc">Max stage space, clean whiteboard, minimal chrome for whole-class display.</div>
+          </div>
+          <div id="mode-card-student" class="mode-card">
+            <div class="mode-card-header"><span>🎒</span> Student Focus</div>
+            <div class="mode-card-desc">Guided checkpoints, simple scrubber, focused questions.</div>
+          </div>
+          <div id="mode-card-broadcast" class="mode-card">
+            <div class="mode-card-header"><span>📡</span> Broadcast</div>
+            <div class="mode-card-desc">OBS WebSocket link, transparent alpha mode, high-contrast subtitles.</div>
+          </div>
+          <div id="mode-card-developer" class="mode-card">
+            <div class="mode-card-header"><span>🛠️</span> Developer</div>
+            <div class="mode-card-desc">Full SVG/AST code lathe, element inspector, 3D orbits &amp; PhET transpiler.</div>
+          </div>
+        </div>
+
+        <div class="config-section-title">Granular Controls:</div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">🎯 Interactive Checkpoints &amp; Quizzes</span>
+          <input type="checkbox" id="cfg-checkpoints" class="config-toggle-input" checked />
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">🌐 3D Orbital Camera Controls</span>
+          <input type="checkbox" id="cfg-3d" class="config-toggle-input" checked />
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">🛠️ SVG Element Inspector</span>
+          <input type="checkbox" id="cfg-inspect" class="config-toggle-input" checked />
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">💻 Live SVG &amp; AST Code Studio</span>
+          <input type="checkbox" id="cfg-studio" class="config-toggle-input" checked />
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">🚀 Export Standalone Applet</span>
+          <input type="checkbox" id="cfg-export-spa" class="config-toggle-input" checked />
+        </div>
+        <div class="config-toggle-row">
+          <span class="config-toggle-label">📺 Picture-in-Picture Uncoupling</span>
+          <input type="checkbox" id="cfg-pip" class="config-toggle-input" checked />
+        </div>
+
+        <div class="settings-footer-actions">
+          <button type="button" id="btn-reset-config" class="dev-btn" style="padding:4px 10px; font-size:11px;">↺ Reset to Classroom</button>
+          <span id="settings-label" style="font-size:11px; color:#94a3b8;">Classroom Mode</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- OBS Broadcast Studio WebSocket Drawer -->
+    <div id="obs-drawer" class="obs-drawer hidden">
+      <div class="obs-drawer-header">
+        <div class="obs-drawer-title">
+          <span id="obs-status-dot" class="obs-status-dot disconnected" style="display:inline-block; width:8px; height:8px; border-radius:50%; background:#ef4444; margin-right:4px;"></span>
+          <span>🎥 OBS Broadcast Studio</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span id="obs-drawer-badge" class="obs-drawer-badge disconnected">DISCONNECTED</span>
+          <button type="button" id="obs-drawer-close" class="obs-drawer-close" title="Close Drawer">&times;</button>
+        </div>
+      </div>
+      <div class="obs-drawer-body">
+        <div style="font-size:11px; color:#94a3b8; line-height:1.4;">
+          Connect to OBS Studio via WebSocket v5 (RPC v1). Enables automated recording synchronization, transparent lower-third subtitles, and remote scene control.
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:10px; font-weight:700; color:#38bdf8;">Server URL:</label>
+          <input type="text" id="obs-input-url" value="ws://127.0.0.1:4455" style="width:100%; background:#0b1120; border:1px solid #334155; color:#f8fafc; font-family:monospace; font-size:11px; padding:6px; border-radius:6px;" />
+          
+          <label style="font-size:10px; font-weight:700; color:#38bdf8;">Password (if configured):</label>
+          <input type="password" id="obs-input-password" placeholder="Leave blank if no password" style="width:100%; background:#0b1120; border:1px solid #334155; color:#f8fafc; font-size:11px; padding:6px; border-radius:6px;" />
+
+          <div style="display:flex; gap:6px; margin-top:4px;">
+            <button type="button" id="btn-obs-connect" class="obs-btn primary" style="flex:1;">🔗 Connect</button>
+            <button type="button" id="btn-obs-disconnect" class="obs-btn" style="flex:1;">✕ Disconnect</button>
+          </div>
+        </div>
+
+        <div style="border-top:1px solid #1e293b; padding-top:8px; display:flex; flex-direction:column; gap:6px;">
+          <label style="font-size:11px; font-weight:700; color:#f8fafc; margin-bottom:2px;">Automation Settings:</label>
+          <label style="font-size:11px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="obs-toggle-record" checked />
+            <span>Sync Recording with Play/Pause</span>
+          </label>
+          <label style="font-size:11px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="obs-toggle-subtitles" checked />
+            <span>Push Live Subtitles to Text Source</span>
+          </label>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <label style="font-size:10px; color:#94a3b8; white-space:nowrap;">Subtitle Source:</label>
+            <input type="text" id="obs-input-source" value="LessonSubtitles" style="flex:1; background:#0b1120; border:1px solid #334155; color:#f8fafc; font-size:10px; padding:3px 6px; border-radius:4px;" />
+          </div>
+          <label style="font-size:11px; color:#cbd5e1; display:flex; align-items:center; gap:6px; cursor:pointer;">
+            <input type="checkbox" id="obs-toggle-transparent" />
+            <span>Transparent Stage (Alpha Overlay)</span>
+          </label>
+        </div>
+
+        <div id="obs-live-controls" style="display:none; border-top:1px solid #1e293b; padding-top:8px;">
+          <label style="font-size:11px; font-weight:700; color:#f8fafc; display:block; margin-bottom:4px;">Live Controls:</label>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <select id="obs-select-scene" style="flex:1; background:#0b1120; border:1px solid #334155; color:#f8fafc; font-size:11px; padding:5px; border-radius:6px;"></select>
+            <button type="button" id="btn-obs-record-toggle" class="obs-btn" style="padding:5px 10px; color:#ef4444; font-weight:700;">⏺ Record</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- WebRTC P2P Classroom Mesh & Local AI Loopback Drawer -->
     <div id="webrtc-drawer" class="obs-drawer hidden">
       <div class="obs-drawer-header">
@@ -358,9 +483,10 @@
   <script src="./player/ast-phet-bridge.js"></script>
   <script src="./player/ast-registry.js"></script>
   <script src="./player/ast-engine.js"></script>
+  <script src="./player/ast-webrtc-bus.js"></script>
+  <script src="./player/obs-controller.js"></script>
   <script src="./player/player-ui.js"></script>
   <script src="./player/ast-gestures.js"></script>
-  <script src="./player/ast-webrtc-bus.js"></script>
   <script>
     (function () {
       'use strict';

@@ -8363,6 +8363,21 @@ function setupPostMessageBridge(engine, uiController) {
           engine.cancelSpeech();
         }
         break;
+      case 'TOGGLE_OBS_DRAWER':
+        if (uiController && typeof uiController.toggleObsDrawer === 'function') {
+          uiController.toggleObsDrawer();
+        }
+        break;
+      case 'TOGGLE_WEBRTC_DRAWER':
+        if (uiController && typeof uiController.toggleWebRtcDrawer === 'function') {
+          uiController.toggleWebRtcDrawer();
+        }
+        break;
+      case 'TOGGLE_SETTINGS_DRAWER':
+        if (uiController && typeof uiController.toggleSettingsDrawer === 'function') {
+          uiController.toggleSettingsDrawer();
+        }
+        break;
       default:
         break;
     }

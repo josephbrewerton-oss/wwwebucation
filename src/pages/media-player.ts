@@ -243,8 +243,8 @@ export function renderPlayerPage(): HTMLElement {
           </button>
 
           <!-- On-Device Gemini Nano AI Tutor Button -->
-          <button type="button" id="player-btn-ai" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.78rem; font-weight:700; cursor:pointer;" title="On-Device Gemini Nano AI Socratic Co-Pilot">
-            🤖 AI Tutor
+          <button type="button" id="player-btn-ai" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Ask Nano: On-Device Gemini Nano Socratic Co-Pilot &amp; Autonomous Solver">
+            🤖 Ask Nano
           </button>
 
           <!-- Curriculum Dev Studio & PhET Transpiler Drawer Button -->
@@ -255,6 +255,11 @@ export function renderPlayerPage(): HTMLElement {
           <!-- Smartboard Whiteboard Marker Toggle -->
           <button type="button" id="player-btn-pen" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#f59e0b; border:1px solid #d97706; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Toggle Smartboard Whiteboard Pen &amp; Annotation Layer">
             🖊️ Marker
+          </button>
+
+          <!-- OBS Studio Broadcast WebSocket Drawer Button -->
+          <button type="button" id="player-btn-obs" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #8b5cf6; font-size:0.78rem; font-weight:700; cursor:pointer;" title="OBS Studio WebSocket Broadcast Controller &amp; Live Subtitles Push">
+            🎥 OBS Link
           </button>
 
           <!-- LMS Embed Modal Button -->
@@ -373,6 +378,7 @@ export function renderPlayerPage(): HTMLElement {
   const aiBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai');
   const studioBtn = container.querySelector<HTMLButtonElement>('#player-btn-studio');
   const penBtn = container.querySelector<HTMLButtonElement>('#player-btn-pen');
+  const obsBtn = container.querySelector<HTMLButtonElement>('#player-btn-obs');
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const settingsBtn = container.querySelector<HTMLButtonElement>('#player-btn-settings');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
@@ -903,6 +909,10 @@ export function renderPlayerPage(): HTMLElement {
   studioBtn?.addEventListener('click', () => toggleDrawer('studio'));
   embedBtn?.addEventListener('click', () => toggleDrawer('embed'));
   settingsBtn?.addEventListener('click', () => toggleDrawer('settings'));
+
+  obsBtn?.addEventListener('click', () => {
+    iframe?.contentWindow?.postMessage({ type: 'TOGGLE_OBS_DRAWER' }, '*');
+  });
 
   penBtn?.addEventListener('click', () => {
     if (chalkboard) {
