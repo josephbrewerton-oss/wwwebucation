@@ -115,8 +115,14 @@ function astSceneAutoFinder(): import('vite').Plugin {
         totalScenes: scenes.length,
         scenes
       };
-      const manifestPath = path.resolve(import.meta.dirname, 'static/player/scenes.manifest.json');
-      const configPath = path.resolve(import.meta.dirname, 'static/player/scenes-config.json');
+      
+      const playerDir = path.resolve(import.meta.dirname, 'static/player');
+      if (!fs.existsSync(playerDir)) {
+        fs.mkdirSync(playerDir, { recursive: true });
+      }
+
+      const manifestPath = path.join(playerDir, 'scenes.manifest.json');
+      const configPath = path.join(playerDir, 'scenes-config.json');
       fs.writeFileSync(manifestPath, JSON.stringify(payload, null, 2));
       fs.writeFileSync(configPath, JSON.stringify(payload, null, 2));
     }
