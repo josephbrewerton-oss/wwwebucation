@@ -5,6 +5,7 @@ import { getBaseUrl } from '../utils/url';
 
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator, SimPresetBadge, hasDataCartridge } from '../curriculum/curriculumSimMapping';
+import { broadcastBslSpeech } from '../services/bslGlobalStore';
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -86,10 +87,13 @@ export function renderLearningZonePage(): HTMLElement {
   function speakAxiom(text: string) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
+    broadcastBslSpeech({ subtitle: text, isSpeaking: true });
     const utter = new SpeechSynthesisUtterance(text);
     utter.rate = 0.9;
     utter.pitch = 1.0;
     utter.lang = 'en-GB';
+    utter.onend = () => broadcastBslSpeech({ isSpeaking: false });
+    utter.onerror = () => broadcastBslSpeech({ isSpeaking: false });
     window.speechSynthesis.speak(utter);
   }
 

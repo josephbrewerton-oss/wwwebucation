@@ -1,5 +1,6 @@
 import { getBaseUrl } from '../utils/url';
 import { LANGUAGE_PHONEMES, VERB_CONJUGATIONS } from '../data/languagesCurriculumData';
+import { broadcastBslSpeech } from '../services/bslGlobalStore';
 
 export function renderLanguagesPage(): HTMLElement {
   const base = getBaseUrl();
@@ -12,9 +13,12 @@ export function renderLanguagesPage(): HTMLElement {
   function speakForeignText(text: string, langCode: string) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      broadcastBslSpeech({ subtitle: text, isSpeaking: true });
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = langCode === 'es' ? 'es-ES' : langCode === 'fr' ? 'fr-FR' : 'it-IT';
       utterance.rate = 0.9;
+      utterance.onend = () => broadcastBslSpeech({ isSpeaking: false });
+      utterance.onerror = () => broadcastBslSpeech({ isSpeaking: false });
       window.speechSynthesis.speak(utterance);
     }
   }

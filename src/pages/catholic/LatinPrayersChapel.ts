@@ -3,6 +3,7 @@
 // Latin Mass Prayers Chapel (Zero React, Pure Native TypeScript)
 
 import { LATIN_PRAYERS_DATA, LatinPrayerItem, LatinPrayerVerse } from '../../data/catholic';
+import { broadcastBslSpeech } from '../../services/bslGlobalStore';
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -27,12 +28,16 @@ export function renderLatinPrayersChapel(): HTMLElement {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
     }
+    broadcastBslSpeech({ isSpeaking: false });
     activePlayingId = null;
   }
 
   function reciteLatinPrayer(prayer: LatinPrayerItem) {
     if (!('speechSynthesis' in window)) return;
     stopSpeech();
+
+    const englishText = prayer.verses.map(v => v.english).join(' ');
+    broadcastBslSpeech({ subtitle: `${prayer.titleEnglish}: ${englishText}`, isSpeaking: true });
 
     const fullLatinText = prayer.verses.map(v => v.latin).join(' ... ');
     const utter = new SpeechSynthesisUtterance(fullLatinText);
@@ -48,11 +53,13 @@ export function renderLatinPrayersChapel(): HTMLElement {
     updateView();
 
     utter.onend = () => {
+      broadcastBslSpeech({ isSpeaking: false });
       activePlayingId = null;
       updateView();
     };
 
     utter.onerror = () => {
+      broadcastBslSpeech({ isSpeaking: false });
       activePlayingId = null;
       updateView();
     };

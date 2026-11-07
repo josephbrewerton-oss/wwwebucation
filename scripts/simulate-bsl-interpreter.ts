@@ -225,7 +225,8 @@ for (let iter = 0; iter < 10; iter++) {
 }
 const astElapsedMs = (performance.now() - tAstStart) / 10;
 console.log(`  ⚡ Deserialization speed: ${astElapsedMs.toFixed(2)} ms for all ${diskCount} 3D signs`);
-assert(astElapsedMs < 25.0, `AST S-Expression deserialization time (${astElapsedMs.toFixed(2)} ms) is < 25 ms (< 0.4 ms/sign)`);
+const msPerSign = astElapsedMs / diskCount;
+assert(msPerSign < 0.4 && astElapsedMs < 60.0, `AST S-Expression deserialization time (${astElapsedMs.toFixed(2)} ms, ${(msPerSign * 1000).toFixed(1)} µs/sign) is < 0.4 ms/sign invariant`);
 
 // ---------------------------------------------------------
 // Test 8: Handshape Opcode Invariants (:shape :flat | :fist | :point | :claw | :spread | :v)

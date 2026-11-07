@@ -12,6 +12,7 @@ import {
   TABERNACLE_CATECHESIS,
   AltarAppointment,
 } from '../../data/catholic';
+import { broadcastBslSpeech } from '../../services/bslGlobalStore';
 
 export function renderAltarExplorer(onLaunchStudio?: () => void): HTMLElement {
   const base = getBaseUrl();
@@ -28,6 +29,7 @@ export function renderAltarExplorer(onLaunchStudio?: () => void): HTMLElement {
   function speakText(text: string) {
     if (!('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
+    broadcastBslSpeech({ subtitle: text, isSpeaking: true });
     const utter = new SpeechSynthesisUtterance(text);
     utter.rate = 0.85;
     utter.pitch = 1.0;
@@ -35,6 +37,8 @@ export function renderAltarExplorer(onLaunchStudio?: () => void): HTMLElement {
     const voice = voices.find(v => v.lang.startsWith('la') || v.lang.startsWith('it'));
     if (voice) utter.voice = voice;
     utter.lang = voice ? voice.lang : 'it-IT';
+    utter.onend = () => broadcastBslSpeech({ isSpeaking: false });
+    utter.onerror = () => broadcastBslSpeech({ isSpeaking: false });
     window.speechSynthesis.speak(utter);
   }
 

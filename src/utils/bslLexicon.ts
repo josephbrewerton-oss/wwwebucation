@@ -30,6 +30,7 @@ import {
   DOMINANT_REST_WRIST,
   BSL_ALPHABET_POSES,
 } from './bslAlphabet';
+import { BSL_LEXICON_ALIASES } from '../../static/lexicons/bslLexiconAliases';
 
 export type {
   BslNmf,
@@ -7632,6 +7633,9 @@ for (const [canonicalId, sign] of Object.entries(BSL_CURRICULUM_LEXICON)) {
       ALIAS_MAP[alias.toUpperCase()] = canonicalId;
     }
   }
+}
+for (const [rawWord, canonicalId] of Object.entries(BSL_LEXICON_ALIASES)) {
+  ALIAS_MAP[rawWord.toUpperCase()] = canonicalId.toUpperCase();
 }
 
 /**

@@ -1,6 +1,7 @@
 // src/engine/translationService.ts
 import { SUPPORTED_LANGUAGES, SupportedLanguage, getSavedLanguage } from './operational-language';
 import { aiCaller, hasUserGrantedAiConsent } from './aicaller';
+import { broadcastBslSpeech } from '../services/bslGlobalStore';
 
 // In-memory LRU-like cache
 const MEMORY_TRANSLATION_CACHE = new Map<string, string>();
@@ -700,11 +701,27 @@ export function speakInLanguage(
       utterance.voice = matchingVoice;
     }
     utterance.rate = options?.rate ?? 0.95;
+    broadcastBslSpeech({ subtitle: text, isSpeaking: true });
+
     if (options?.onEnd) {
-      utterance.onend = options.onEnd;
+      utterance.onend = () => {
+        broadcastBslSpeech({ isSpeaking: false });
+        options.onEnd?.();
+      };
+    } else {
+      utterance.onend = () => {
+        broadcastBslSpeech({ isSpeaking: false });
+      };
     }
     if (options?.onError) {
-      utterance.onerror = options.onError;
+      utterance.onerror = () => {
+        broadcastBslSpeech({ isSpeaking: false });
+        options.onError?.();
+      };
+    } else {
+      utterance.onerror = () => {
+        broadcastBslSpeech({ isSpeaking: false });
+      };
     }
     if (options?.onBoundary) {
       utterance.onboundary = (e: SpeechSynthesisEvent) => {
@@ -715,6 +732,7 @@ export function speakInLanguage(
     }
     window.speechSynthesis.speak(utterance);
   } catch (e) {
+    broadcastBslSpeech({ isSpeaking: false });
     console.warn('[Speech Synthesis Error]:', e);
   }
 }

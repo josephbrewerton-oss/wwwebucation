@@ -1,5 +1,6 @@
 import { getBaseUrl } from '../utils/url';
 import { PHONICS_GRAPHEMES, DECODABLE_WORDS } from '../data/phonicsCurriculumData';
+import { broadcastBslSpeech } from '../services/bslGlobalStore';
 
 export function renderPhonicsPage(): HTMLElement {
   const base = getBaseUrl();
@@ -12,9 +13,12 @@ export function renderPhonicsPage(): HTMLElement {
   function speakText(text: string) {
     if ('speechSynthesis' in window) {
       window.speechSynthesis.cancel();
+      broadcastBslSpeech({ subtitle: text, isSpeaking: true });
       const utterance = new SpeechSynthesisUtterance(text);
       utterance.lang = 'en-GB';
       utterance.rate = 0.85;
+      utterance.onend = () => broadcastBslSpeech({ isSpeaking: false });
+      utterance.onerror = () => broadcastBslSpeech({ isSpeaking: false });
       window.speechSynthesis.speak(utterance);
     }
   }

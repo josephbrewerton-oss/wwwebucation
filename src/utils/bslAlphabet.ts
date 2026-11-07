@@ -209,6 +209,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     rule: 'Dominant index touches non-dominant thumb tip',
     isVowel: true,
     activeVowelIndex: 0,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -95, y: 10, z: 16 },
     targetKnuckle: { x: -35, y: 25, z: 8 },
     targetWrist: { x: 30, y: 70, z: -10 }
@@ -218,6 +219,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant B (Two Circles)',
     rule: 'Both hands join index and thumb into joined double loops',
     isVowel: false,
+    baseHandMode: 'mirror',
     targetTip: { x: -45, y: -10, z: 15 },
     targetKnuckle: { x: 10, y: 15, z: 5 },
     targetWrist: { x: 75, y: 65, z: -10 }
@@ -227,6 +229,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant C (Curved Arc)',
     rule: 'Dominant hand curves into a C shape facing non-dominant thumb/index web',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -65, y: -12, z: 15 },
     targetKnuckle: { x: -10, y: 10, z: 8 },
     targetWrist: { x: 55, y: 65, z: -10 }
@@ -236,6 +239,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant D (Index Loop)',
     rule: 'Dominant index and thumb form a circle touching non-dominant index',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -75, y: -30, z: 18 },
     targetKnuckle: { x: -15, y: -5, z: 10 },
     targetWrist: { x: 50, y: 55, z: -10 }
@@ -246,6 +250,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     rule: 'Dominant index touches non-dominant index fingertip',
     isVowel: true,
     activeVowelIndex: 1,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -75, y: -40, z: 18 },
     targetKnuckle: { x: -15, y: -15, z: 10 },
     targetWrist: { x: 45, y: 45, z: -10 }
@@ -255,6 +260,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant F (Crossed Fingers)',
     rule: 'Dominant index and middle fingers cross over non-dominant index and middle',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -62, y: -45, z: 19 },
     targetKnuckle: { x: -5, y: -18, z: 10 },
     targetWrist: { x: 55, y: 45, z: -10 }
@@ -264,6 +270,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant G (Fist Stack)',
     rule: 'Dominant fist rests directly on top of non-dominant fist',
     isVowel: false,
+    baseHandMode: 'base-hold',
     targetTip: { x: -50, y: 15, z: 15 },
     targetKnuckle: { x: 0, y: 25, z: 10 },
     targetWrist: { x: 60, y: 70, z: -10 }
@@ -273,6 +280,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant H (Palm Sweep)',
     rule: 'Dominant open palm brushes along non-dominant palm toward fingertips',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 5, z: 14 },
     targetKnuckle: { x: 5, y: 20, z: 8 },
     targetWrist: { x: 65, y: 65, z: -10 }
@@ -283,6 +291,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     rule: 'Dominant index touches non-dominant middle fingertip',
     isVowel: true,
     activeVowelIndex: 2,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: -50, z: 20 },
     targetKnuckle: { x: 10, y: -20, z: 12 },
     targetWrist: { x: 65, y: 40, z: -10 }
@@ -292,6 +301,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant J (Swoop Stroke)',
     rule: 'Dominant index touches middle fingertip and swoops into center palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: -10, z: 15 },
     targetKnuckle: { x: 15, y: 15, z: 10 },
     targetWrist: { x: 75, y: 65, z: -10 }
@@ -301,6 +311,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant K (Hook Knuckle)',
     rule: 'Dominant index hooks against the side knuckle of non-dominant index',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -65, y: -18, z: 16 },
     targetKnuckle: { x: -8, y: 0, z: 10 },
     targetWrist: { x: 55, y: 55, z: -10 }
@@ -310,6 +321,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant L (Palm Rest)',
     rule: 'Dominant index rests flat across the non-dominant open palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 20, z: 13 },
     targetKnuckle: { x: 5, y: 25, z: 8 },
     targetWrist: { x: 65, y: 70, z: -10 }
@@ -319,6 +331,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant M (3-Finger Rest)',
     rule: 'Dominant index, middle, and ring fingers rest flat on non-dominant palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 22, z: 12 },
     targetKnuckle: { x: 10, y: 28, z: 8 },
     targetWrist: { x: 70, y: 72, z: -10 }
@@ -328,6 +341,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant N (2-Finger Rest)',
     rule: 'Dominant index and middle fingers rest flat on non-dominant palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 24, z: 12 },
     targetKnuckle: { x: 10, y: 30, z: 8 },
     targetWrist: { x: 70, y: 74, z: -10 }
@@ -338,6 +352,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     rule: 'Dominant index touches non-dominant ring fingertip',
     isVowel: true,
     activeVowelIndex: 3,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -28, y: -42, z: 16 },
     targetKnuckle: { x: 30, y: -15, z: 10 },
     targetWrist: { x: 85, y: 45, z: -10 }
@@ -347,6 +362,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant P (Circle Stem)',
     rule: 'Dominant index and thumb form a loop touching vertical non-dominant index',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -75, y: -22, z: 18 },
     targetKnuckle: { x: -18, y: 2, z: 10 },
     targetWrist: { x: 45, y: 60, z: -10 }
@@ -356,6 +372,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant Q (Thumb Ring)',
     rule: 'Dominant index and thumb form circle around the base of non-dominant thumb',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -80, y: 15, z: 15 },
     targetKnuckle: { x: -20, y: 28, z: 10 },
     targetWrist: { x: 40, y: 75, z: -10 }
@@ -365,6 +382,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant R (Hooked Palm)',
     rule: 'Dominant curved index finger rests curved in the center palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 20, z: 14 },
     targetKnuckle: { x: 8, y: 26, z: 9 },
     targetWrist: { x: 68, y: 70, z: -10 }
@@ -374,6 +392,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant S (Pinky Hook)',
     rule: 'Dominant curved pinky hooks around the non-dominant pinky',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -10, y: -15, z: 12 },
     targetKnuckle: { x: 45, y: 0, z: 8 },
     targetWrist: { x: 95, y: 55, z: -10 }
@@ -383,6 +402,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant T (Side Touch)',
     rule: 'Dominant index touches the lower outer side of non-dominant hand',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -20, y: 45, z: 10 },
     targetKnuckle: { x: 38, y: 48, z: 6 },
     targetWrist: { x: 92, y: 80, z: -10 }
@@ -393,6 +413,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     rule: 'Dominant index touches non-dominant pinky fingertip',
     isVowel: true,
     activeVowelIndex: 4,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -10, y: -25, z: 12 },
     targetKnuckle: { x: 45, y: -5, z: 8 },
     targetWrist: { x: 95, y: 50, z: -10 }
@@ -402,6 +423,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant V (Victory Rest)',
     rule: 'Dominant index and middle spread into a V shape resting on non-dominant palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -50, y: 15, z: 14 },
     targetKnuckle: { x: 10, y: 24, z: 8 },
     targetWrist: { x: 70, y: 68, z: -10 }
@@ -411,6 +433,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant W (Interlock)',
     rule: 'Dominant fingers interlock with non-dominant fingers',
     isVowel: false,
+    baseHandMode: 'mirror',
     targetTip: { x: -50, y: -15, z: 15 },
     targetKnuckle: { x: 8, y: 5, z: 10 },
     targetWrist: { x: 65, y: 55, z: -10 }
@@ -420,6 +443,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant X (Crossed Index)',
     rule: 'Dominant index crosses over non-dominant index forming an X',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -75, y: -25, z: 18 },
     targetKnuckle: { x: -15, y: -2, z: 10 },
     targetWrist: { x: 45, y: 55, z: -10 }
@@ -429,6 +453,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant Y (Thumb-Index Web)',
     rule: 'Dominant index rests in the V web between non-dominant thumb and index',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -80, y: -10, z: 16 },
     targetKnuckle: { x: -20, y: 8, z: 10 },
     targetWrist: { x: 40, y: 65, z: -10 }
@@ -438,6 +463,7 @@ export const BSL_ALPHABET_POSES: Record<string, BslHandPose> = {
     label: 'Consonant Z (Palm Heel)',
     rule: 'Dominant bent hand rests along the heel of non-dominant palm',
     isVowel: false,
+    baseHandMode: 'vowel-board',
     targetTip: { x: -45, y: 60, z: 10 },
     targetKnuckle: { x: 12, y: 58, z: 6 },
     targetWrist: { x: 72, y: 85, z: -10 }
