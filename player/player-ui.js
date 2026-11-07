@@ -904,7 +904,7 @@
         });
       }
 
-      // 4. Ingest In-Browser Local Vault (offline user simulations)
+      // 4. Ingest In-Browser Local Vault (offline user simulations & custom cartridges)
       let vaultList = [];
       try {
         const rawVault = localStorage.getItem('ast_local_vault');
@@ -912,6 +912,25 @@
           const parsed = JSON.parse(rawVault);
           if (Array.isArray(parsed)) {
             vaultList = parsed.map(item => ({ ...item, _source: 'vault' }));
+          }
+        }
+      } catch (e) {}
+
+      try {
+        const rawCustom = localStorage.getItem('stj_custom_cartridges_v1');
+        if (rawCustom) {
+          const parsed = JSON.parse(rawCustom);
+          if (Array.isArray(parsed)) {
+            parsed.forEach(c => {
+              if (c && c.id && !vaultList.some(v => v.id === c.id)) {
+                vaultList.push({
+                  id: c.id,
+                  title: c.title || c.id,
+                  stage: c.stage || 'LOCAL VAULT',
+                  _source: 'vault'
+                });
+              }
+            });
           }
         }
       } catch (e) {}
@@ -1054,30 +1073,93 @@
     }
 
     /**
-     * Saves a simulation to the user's permanent browser local vault
+     * Saves a simulation to the user's permanent browser local vault & IndexedDB
      */
     saveToLocalVault(sceneData) {
       if (!sceneData || !sceneData.id) return;
       try {
-        let vault = [];
-        const raw = localStorage.getItem('ast_local_vault');
-        if (raw) vault = JSON.parse(raw) || [];
-        // Replace existing or prepend
-        const existingIdx = vault.findIndex(v => v.id === sceneData.id);
+        const id = sceneData.id || `custom_${Date.now()}`;
+        const title = sceneData.title || sceneData.filename || id;
+        const stage = sceneData.stage || 'LOCAL VAULT';
+        const svgMarkup = sceneData.svgMarkup || sceneData.svgText || '';
+        const astSource = sceneData.astSource || sceneData.astText || '';
+
         const item = {
-          id: sceneData.id,
-          title: sceneData.title || sceneData.id,
-          stage: sceneData.stage || 'LOCAL VAULT',
+          id,
+          title,
+          stage,
+          category: sceneData.category || 'User Cartridges',
+          svgMarkup,
+          astSource,
+          source: 'imported',
+          tier: 'user',
+          updatedAt: Date.now(),
           savedAt: new Date().toISOString()
         };
-        if (existingIdx >= 0) {
-          vault[existingIdx] = item;
-        } else {
-          vault.unshift(item);
+
+        // 1. Commit full payload to IndexedDB 'cartridges_vault'
+        if (typeof indexedDB !== 'undefined') {
+          const openReq = indexedDB.open('EdgeLearningEngineDB', 5);
+          openReq.onupgradeneeded = () => {
+            const db = openReq.result;
+            if (!db.objectStoreNames.contains('cartridges_vault')) {
+              db.createObjectStore('cartridges_vault', { keyPath: 'id' });
+            }
+          };
+          openReq.onsuccess = () => {
+            try {
+              const db = openReq.result;
+              if (db.objectStoreNames.contains('cartridges_vault')) {
+                const tx = db.transaction('cartridges_vault', 'readwrite');
+                tx.objectStore('cartridges_vault').put(item);
+              }
+            } catch (idbErr) {
+              console.warn('[Player UI] IndexedDB write warning:', idbErr);
+            }
+          };
         }
-        localStorage.setItem('ast_local_vault', JSON.stringify(vault.slice(0, 30)));
-        this.showToast(`💾 Saved to Local Vault: ${item.title}`);
+
+        // 2. Synchronize to localStorage 'stj_custom_cartridges_v1' and 'ast_local_vault'
+        try {
+          let customList = [];
+          const rawCustom = localStorage.getItem('stj_custom_cartridges_v1');
+          if (rawCustom) customList = JSON.parse(rawCustom) || [];
+          const filteredCustom = customList.filter(c => c.id !== id);
+          filteredCustom.unshift(item);
+          localStorage.setItem('stj_custom_cartridges_v1', JSON.stringify(filteredCustom.slice(0, 50)));
+
+          let vaultStubs = [];
+          const rawVault = localStorage.getItem('ast_local_vault');
+          if (rawVault) vaultStubs = JSON.parse(rawVault) || [];
+          const filteredStubs = vaultStubs.filter(v => v.id !== id);
+          filteredStubs.unshift({ id, title, stage, savedAt: item.savedAt });
+          localStorage.setItem('ast_local_vault', JSON.stringify(filteredStubs.slice(0, 50)));
+        } catch (_) {}
+
+        // 3. Register in runtime ASTSceneRegistry if available
+        if (window.ASTSceneRegistry) {
+          window.ASTSceneRegistry.register(id, {
+            id,
+            title,
+            stage,
+            svgMarkup,
+            astSource,
+          });
+        }
+
+        this.showToast(`💾 Saved to Local Vault: ${title}`);
         this.populatePresets();
+
+        // 4. Notify parent window if running inside an iframe
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+          try {
+            window.parent.postMessage({
+              source: 'ast-vector-player',
+              type: 'CARTRIDGE_INGESTED',
+              cartridge: { id, title, stage, svgMarkup, astSource }
+            }, '*');
+          } catch (_) {}
+        }
       } catch (e) {
         console.warn('[Player UI] Could not save to local vault:', e);
       }
@@ -1314,6 +1396,20 @@
       }
     }
 
+    resetSimulation() {
+      this.targetStop = null;
+      this.engine.seek(0.0);
+      this.engine.resetVars();
+      if (this.engine.physics) this.engine.physics.reset();
+      this.engine.resetCamera();
+      if (typeof this.engine.evaluateBindings === 'function') {
+        this.engine.evaluateBindings(0.0);
+      } else if (typeof this.engine.applyBindings === 'function') {
+        this.engine.applyBindings(0.0);
+      }
+      this.showToast('↺ Simulation Reset to Initial State');
+    }
+
     toggleTheme() {
       this.setTheme(this.theme === 'dark' ? 'light' : 'dark');
     }
@@ -1465,7 +1561,7 @@
       }
 
       // Native Open File Picker for Touch Screens & Smartboards
-      const btnOpen = el.btnOpenFile || document.getElementById('btn-open-file');
+      const btnOpen = el.btnOpenFile || el.btnOpenCartridge || document.getElementById('btn-open-file') || document.getElementById('btn-open-cartridge');
       const fileInput = el.fileInputHidden || document.getElementById('file-input-hidden');
       if (btnOpen && fileInput) {
         btnOpen.addEventListener('click', () => {
@@ -1526,12 +1622,7 @@
 
       if (el.btnReset) {
         el.btnReset.addEventListener('click', () => {
-          this.targetStop = null;
-          this.engine.resetVars();
-          if (this.engine.physics) this.engine.physics.reset();
-          this.engine.resetCamera();
-          this.engine.seek(0);
-          this.showToast('↺ Simulation Reset to Initial State');
+          this.resetSimulation();
         });
       }
 
@@ -1841,6 +1932,29 @@ window.addEventListener('message', (e) => {
     }
     if (this.engine) {
       this.engine.setPreset(data.preset, Boolean(data.play));
+    }
+  } else if (data.type === 'TRIGGER_OPEN_LOCAL') {
+    const fileInput = el.fileInputHidden || document.getElementById('file-input-hidden');
+    if (fileInput) fileInput.click();
+  } else if (data.type === 'REFRESH_PRESETS') {
+    this.populatePresets();
+  } else if (data.type === 'RESET_SIM') {
+    this.resetSimulation();
+  } else if (data.type === 'LOAD_CUSTOM_CARTRIDGE' && data.cartridge) {
+    const c = data.cartridge;
+    if (window.ASTSceneRegistry && typeof window.ASTSceneRegistry.register === 'function') {
+      window.ASTSceneRegistry.register(c.id, {
+        id: c.id,
+        title: c.title,
+        stage: c.stage || 'CUSTOM',
+        svgMarkup: c.svgMarkup,
+        astSource: c.astSource,
+      });
+    }
+    this.saveToLocalVault(c);
+    this.populatePresets();
+    if (this.engine && c.svgMarkup && c.astSource) {
+      this.engine.loadScene(c.svgMarkup, c.astSource, c.id);
     }
   }
 });
@@ -3314,6 +3428,17 @@ window.addEventListener('message', (e) => {
 
       this.engine.on('fileloaded', (info) => {
         this.showToast(`📂 File Loaded: ${info.filename}`, 3000);
+        // Persist ingested scene to IndexedDB and Local Vault
+        try {
+          this.saveToLocalVault({
+            id: info.id,
+            title: info.title || info.filename,
+            stage: info.stage || 'LOCAL VAULT',
+            svgMarkup: info.svgMarkup || (this.engine.scene && this.engine.scene.svgText) || '',
+            astSource: info.astSource || (this.engine.scene && this.engine.scene.rawAst) || '',
+            filename: info.filename
+          });
+        } catch (_) {}
         if (this.elements.presetSelector) {
           let exists = false;
           for (let i = 0; i < this.elements.presetSelector.options.length; i++) {

@@ -1,4 +1,4 @@
-import{n as e,p as t}from"./index-D7O_Atud.js";import{t as n}from"./generatedScenes-BAIKsbPa.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
+import{T as e,i as t,m as n}from"./index-BYgedQln.js";function r(){let r=n(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
@@ -21,7 +21,7 @@ import{n as e,p as t}from"./index-D7O_Atud.js";import{t as n}from"./generatedSce
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
         <select id="beacon-cartridge-select" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0284c7; font-size:0.9rem; font-weight:700; flex:1; max-width:400px;">
-          ${n.map(e=>`
+          ${t.map(e=>`
             <option value="${e.id}">${e.label} (${e.stage})</option>
           `).join(``)}
         </select>
@@ -34,4 +34,4 @@ import{n as e,p as t}from"./index-D7O_Atud.js";import{t as n}from"./generatedSce
         Command broadcast sent successfully!
       </div>
     </div>
-  `;let a=i.querySelector(`#btn-broadcast-scene`),o=i.querySelector(`#beacon-cartridge-select`),s=i.querySelector(`#beacon-toast`);return a?.addEventListener(`click`,()=>{let e=o?.value;e&&(t.broadcastAstScene(e),s&&(s.style.display=`block`,s.textContent=`📢 Successfully broadcast scene [${e}] to the classroom!`,setTimeout(()=>{s.style.display=`none`},4e3)))}),i}export{r as default,r as renderTeacherBeaconPage};
+  `;let a=i.querySelector(`#btn-broadcast-scene`),o=i.querySelector(`#beacon-cartridge-select`),s=i.querySelector(`#beacon-toast`);return a?.addEventListener(`click`,()=>{let t=o?.value;t&&(e.broadcastAstScene(t),s&&(s.style.display=`block`,s.textContent=`📢 Successfully broadcast scene [${t}] to the classroom!`,setTimeout(()=>{s.style.display=`none`},4e3)))}),i}export{r as default,r as renderTeacherBeaconPage};

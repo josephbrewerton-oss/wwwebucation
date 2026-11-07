@@ -1,4 +1,4 @@
-import{n as e}from"./index-D7O_Atud.js";import{t}from"./generatedScenes-BAIKsbPa.js";function n(){let n=e(),r=document.createElement(`div`);return r.className=`curriculum-studio-stage`,r.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,r.innerHTML=`
+import{i as e,m as t}from"./index-BYgedQln.js";function n(){let n=t(),r=document.createElement(`div`);return r.className=`curriculum-studio-stage`,r.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,r.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
@@ -22,10 +22,10 @@ import{n as e}from"./index-D7O_Atud.js";import{t}from"./generatedScenes-BAIKsbPa
     <!-- Active Cartridges Inventory -->
     <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; margin-bottom:2rem; box-shadow:0 2px 8px rgba(0,0,0,0.03);">
       <h2 style="font-size:1.2rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0;">
-        Active Controlled Cartridges (${t.length} Registered)
+        Active Controlled Cartridges (${e.length} Registered)
       </h2>
       <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; max-height:400px; overflow-y:auto;">
-        ${t.map(e=>`
+        ${e.map(e=>`
           <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px;">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
               <span style="font-size:0.7rem; font-weight:800; background:#e0f2fe; color:#0369a1; padding:1px 6px; border-radius:4px;">${e.type||`Sim`}</span>
