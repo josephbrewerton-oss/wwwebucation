@@ -52,12 +52,18 @@ export function renderLicensingPage(): HTMLElement {
       <p style="font-size: 0.92rem; color: #334155; line-height: 1.6; margin: 0 0 1rem 0;">
         The client-side Single Page Application, AST Vector Player, and SlideScript engine are dual-licensed:
       </p>
-      <ul style="font-size: 0.88rem; color: #475569; line-height: 1.6; margin: 0; padding-left: 1.25rem;">
-        <li><strong>GNU Affero General Public License v3.0 (AGPLv3):</strong> 100% free for educational use, research, and non-profit deployments.</li>
-        <li><strong>Open Government Licence v3.0 (OGL v3):</strong> Oak National Academy curriculum unit trajectories and national curriculum knowledge mappings.</li>
+      <ul style="font-size: 0.88rem; color: #475569; line-height: 1.8; margin: 0; padding-left: 1.25rem;">
+        <li>
+          <strong>GNU Affero General Public License v3.0 (<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">AGPLv3</a>):</strong> 
+          100% free for educational use, research, and non-profit deployments. Inspect the complete source code on 
+          <a href="https://github.com/josephbrewerton-oss/schoolsample" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">GitHub (josephbrewerton-oss/schoolsample)</a>.
+        </li>
+        <li>
+          <strong>Open Government Licence v3.0 (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">OGL v3</a>):</strong> 
+          Oak National Academy curriculum unit trajectories and national curriculum knowledge mappings.
+        </li>
       </ul>
     </div>
-
     <!-- Back to Home -->
     <div style="text-align: center; padding-top: 1.5rem; border-top: 1px solid #e2e8f0;">
       <a href="${base}" style="color: #0284c7; font-weight: 700; text-decoration: none;">&larr; Back to St Joseph's Portal</a>
