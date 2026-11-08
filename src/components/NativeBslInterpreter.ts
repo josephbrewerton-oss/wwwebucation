@@ -143,7 +143,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   private render() {
     this.innerHTML = `
-      <div id="bsl-floating-card" class="bsl-interpreter-dock" style="position:fixed; bottom:20px; right:20px; width:340px; background:#020617; border:1.5px solid #1e293b; border-radius:12px; box-shadow:0 20px 40px -8px rgba(0,0,0,0.7); z-index:9995; overflow:hidden; font-family:system-ui, -apple-system, sans-serif; display:flex; flex-direction:column; user-select:none;">
+      <div id="bsl-floating-card" class="bsl-interpreter-dock" style="position:fixed; bottom:20px; right:20px; width:340px; background:#020617; border:1.5px solid #1e293b; border-radius:12px; box-shadow:0 20px 40px -8px rgba(0,0,0,0.7); z-index:9995; overflow:hidden; font-family:system-ui, -apple-system, sans-serif; display:flex; flex-direction:column; user-select:none; pointer-events:auto;">
         
         <!-- Header Bar / Drag Handle -->
         <div id="bsl-header-bar" style="background:#0f172a; padding:8px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; cursor:grab;">

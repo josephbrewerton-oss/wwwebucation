@@ -223,6 +223,16 @@ export function renderPlayerPage(): HTMLElement {
             </select>
           </div>
 
+          <!-- Reset Simulation Apparatus Button -->
+          <button type="button" id="player-btn-reset" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation apparatus to initial conditions">
+            ↺ Reset
+          </button>
+
+          <!-- BSL Signing Toggle Button (Fixed Width to prevent layout shift) -->
+          <button type="button" id="player-btn-bsl" style="padding:6px 12px; border-radius:8px; background:${bslActive ? '#0284c7' : '#1e293b'}; color:#ffffff; border:1px solid ${bslActive ? '#38bdf8' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; min-width:142px; text-align:center; flex-shrink:0;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
+            🖐️ BSL Signing: ${bslActive ? 'ON' : 'OFF'}
+          </button>
+
           <!-- Open Local Cartridge Button -->
           <button type="button" id="player-btn-open" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
             📂 Open...
@@ -328,6 +338,8 @@ export function renderPlayerPage(): HTMLElement {
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
   const stageBadgeEl = container.querySelector<HTMLElement>('#player-active-stage-badge')!;
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
+  const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset');
+  const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl');
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
@@ -711,10 +723,28 @@ export function renderPlayerPage(): HTMLElement {
     });
   }
 
+  // Wire Reset & BSL Toolbar buttons
+  resetBtn?.addEventListener('click', () => {
+    postToPlayer({ type: 'RESET_SIM' });
+  });
+
+  bslBtn?.addEventListener('click', () => {
+    toggleBsl();
+  });
+
+  function updateBslUi(enabled: boolean) {
+    if (bslBtn) {
+      bslBtn.textContent = `🖐️ BSL Signing: ${enabled ? 'ON' : 'OFF'}`;
+      bslBtn.style.background = enabled ? '#0284c7' : '#1e293b';
+      bslBtn.style.borderColor = enabled ? '#38bdf8' : '#334155';
+    }
+  }
+
   // Subscribe to universal BSL state across top nav or keyboard shortcuts
   subscribeBsl((enabled) => {
     if (bslActive !== enabled) {
       bslActive = enabled;
+      updateBslUi(enabled);
       postToPlayer({ type: 'SET_BSL', enabled });
     }
   });
@@ -749,10 +779,12 @@ export function renderPlayerPage(): HTMLElement {
     }
     if (e.data.type === 'BSL_STATE_CHANGED' && typeof e.data.active === 'boolean') {
       bslActive = e.data.active;
+      updateBslUi(e.data.active);
       setBslEnabled(e.data.active);
     }
     if (e.data.type === 'TOGGLE_BSL' && typeof e.data.enabled === 'boolean') {
       bslActive = e.data.enabled;
+      updateBslUi(e.data.enabled);
       setBslEnabled(e.data.enabled);
     }
   });

@@ -86,7 +86,7 @@ export class PersistentAppShellElement extends HTMLElement {
               </button>
 
               <!-- BSL Quick Toggle -->
-              <button type="button" id="top-bar-bsl-btn" style="background:${this.bsl ? '#0284c7' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 8px; font-weight:700; cursor:pointer;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
+              <button type="button" id="top-bar-bsl-btn" style="background:${this.bsl ? '#0284c7' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 8px; font-weight:700; cursor:pointer; min-width:86px; text-align:center; flex-shrink:0;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
                 🖐️ BSL: ${this.bsl ? 'ON' : 'OFF'}
               </button>
             </div>
@@ -329,7 +329,7 @@ export class PersistentAppShellElement extends HTMLElement {
           </div>
         </footer>
 
-        <div id="bsl-overlay-slot"></div>
+        <div id="bsl-overlay-slot" style="position:fixed; bottom:0; right:0; pointer-events:none; z-index:9995;"></div>
         <div id="modal-slot"></div>
         <iframe id="neural-worker-guest-vm" src="${base}worker.html?v=1.3.0" style="display:none;" title="neural-worker-guest-vm"></iframe>
       </div>
