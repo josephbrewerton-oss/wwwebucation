@@ -739,18 +739,8 @@ header,
     gap: 3px;
     flex-shrink: 0;
   }
-  /* Hide desktop/dev/broadcaster-only buttons on mobile screens to prevent multi-row header blowout */
-  #btn-suite-mode,
-  #btn-dev-mode,
-  #btn-dev-studio,
-  #btn-header-export-spa,
-  #btn-download-zip,
-  #btn-webrtc-link,
-  #btn-obs-link,
-  #btn-print,
-  #btn-copy-svg,
+  /* Keep action bar buttons accessible with horizontal scrolling */
   #btn-shortcuts,
-  #btn-open-file,
   #btn-pip {
     display: none !important;
   }
@@ -2266,9 +2256,7 @@ body.interactive-suite-mode #stage-svg {
 }
 
 /* First-Class Dedicated Embedded Mode */
-body.ast-embedded-mode #btn-open-file,
 body.ast-embedded-mode #badge-stage,
-body.embedded-mode #btn-open-file,
 body.embedded-mode #badge-stage {
   display: none !important;
 }

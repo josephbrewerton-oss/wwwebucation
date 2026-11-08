@@ -29,6 +29,7 @@
         timelineTrack: document.getElementById('timeline-track'),
         scrubberBox: document.getElementById('scrubber-box'),
         timeReadout: document.getElementById('time-readout'),
+        btnOpenFile: document.getElementById('btn-open-file'),
         btnPlay: document.getElementById('btn-play'),
         btnPrev: document.getElementById('btn-prev'),
         btnNext: document.getElementById('btn-next'),
@@ -1175,13 +1176,20 @@
       const scene = this.engine.scene;
       if (!scene) return;
 
-      const isContinuousSim = Boolean(
+      const isSlide = Boolean(
+        scene && (
+          scene.type === 'Slide' ||
+          scene.cartridgeType === 'Slide' ||
+          scene.type === 'Film' ||
+          scene.cartridgeType === 'Film' ||
+          (Array.isArray(scene.keyframes) && scene.keyframes.length > 0)
+        )
+      );
+
+      const isContinuousSim = !isSlide && Boolean(
         this.engine.isContinuousSim ||
         scene.type === 'Sim' ||
-        scene.cartridgeType === 'Sim' ||
-        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
-        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
-        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+        scene.cartridgeType === 'Sim'
       );
 
       if (isContinuousSim) {
@@ -1189,8 +1197,7 @@
           this.elements.slideDeckBar.style.display = 'none';
         }
         if (this.elements.btnStepMode) {
-          this.elements.btnStepMode.style.display = 'none';
-          this.stepMode = false;
+          this.elements.btnStepMode.style.display = '';
         }
         if (this.elements.btnPrev) {
           this.elements.btnPrev.style.display = 'none';
@@ -1344,16 +1351,23 @@
       if (this.elements.timelineThumb) {
         this.elements.timelineThumb.style.left = `${pct}%`;
       }
-      const isContinuousSim = Boolean(
+      const isSlide = Boolean(
+        scene && (
+          scene.type === 'Slide' ||
+          scene.cartridgeType === 'Slide' ||
+          scene.type === 'Film' ||
+          scene.cartridgeType === 'Film' ||
+          (Array.isArray(scene.keyframes) && scene.keyframes.length > 0)
+        )
+      );
+
+      const isContinuousSim = !isSlide && Boolean(
         this.engine.isContinuousSim ||
         (scene && (
           scene.type === 'Sim' ||
           scene.cartridgeType === 'Sim' ||
           scene.type === 'App' ||
-          scene.cartridgeType === 'App' ||
-          (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
-          (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
-          (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+          scene.cartridgeType === 'App'
         ))
       );
 
@@ -3138,34 +3152,6 @@ window.addEventListener('message', (e) => {
       const urlParams = new URLSearchParams(window.location.search);
       const urlMode = urlParams.get('mode');
 
-      // 1. Check for dedicated embed / iframe flags
-      const isEmbed = urlParams.get('embed') === '1' || urlParams.get('embed') === 'true' || urlParams.get('embedded') === '1' || urlParams.get('embedded') === 'true' || urlMode === 'embed' || urlMode === 'embedded' || urlMode === 'minimal' || (typeof window !== 'undefined' && window.self !== window.top && urlParams.get('standalone') !== '1');
-      if (isEmbed) {
-        if (typeof document !== 'undefined' && document.body) {
-          document.body.classList.add('ast-embedded-mode');
-        }
-        const profile = this.getPresetProfile('embedded');
-        if (urlParams.get('presetSelector') === '1') {
-          profile.showPresetSelector = true;
-        }
-        if (urlParams.get('controls') === '0') {
-          profile.showPlaybackControls = false;
-          profile.showTimelineScrubber = false;
-        }
-        if (urlParams.get('scrubber') === '0') profile.showTimelineScrubber = false;
-        if (urlParams.get('subtitles') === '0') profile.showSubtitles = false;
-        if (urlParams.get('questions') === '0' || urlParams.get('questions') === 'false' ||
-            urlParams.get('checkpoints') === '0' || urlParams.get('checkpoints') === 'false' ||
-            urlParams.get('interactive') === '0' || urlParams.get('interactive') === 'false') {
-          profile.showInteractiveCheckpoints = false;
-        } else if (urlParams.get('questions') === '1' || urlParams.get('questions') === 'true' ||
-                   urlParams.get('checkpoints') === '1' || urlParams.get('checkpoints') === 'true' ||
-                   urlParams.get('interactive') === '1' || urlParams.get('interactive') === 'true') {
-          profile.showInteractiveCheckpoints = true;
-        }
-        return profile;
-      }
-
       const applyUrlFlags = (prof) => {
         if (!prof) return prof;
         if (urlParams.get('questions') === '0' || urlParams.get('questions') === 'false' ||
@@ -3180,15 +3166,24 @@ window.addEventListener('message', (e) => {
         return prof;
       };
 
-      if (urlMode && ['suite', 'classroom', 'student', 'broadcast', 'developer', 'embed', 'embedded'].includes(urlMode)) {
+      // 1. Explicit minimal embed mode
+      if (urlMode === 'minimal' || urlParams.get('minimal') === '1') {
+        if (typeof document !== 'undefined' && document.body) {
+          document.body.classList.add('ast-embedded-mode');
+        }
+        return applyUrlFlags(this.getPresetProfile('minimal'));
+      }
+
+      // 2. Explicit or default full modes
+      if (urlMode && ['suite', 'classroom', 'student', 'broadcast', 'developer', 'embedded'].includes(urlMode)) {
         return applyUrlFlags(this.getPresetProfile(urlMode));
       }
-      if (urlParams.get('clean') === '1' || urlParams.get('suite') === '1') {
+      if (urlParams.get('clean') === '1' || urlParams.get('suite') === '1' || urlParams.get('tools') === '1' || urlParams.get('all') === '1') {
         return applyUrlFlags(this.getPresetProfile('suite'));
       }
 
       // Check if current active scene is an interactive simulation apparatus
-      const isInteractiveSimulation = Boolean(this.engine?.isContinuousSim || this.engine?.scene?.type === 'Sim' || (this.engine?.scene?.vars && Object.keys(this.engine.scene.vars).length > 0));
+      const isInteractiveSimulation = Boolean(this.engine?.isContinuousSim || this.engine?.scene?.type === 'Sim' || this.engine?.scene?.cartridgeType === 'Sim');
 
       try {
         const raw = localStorage.getItem('stj_player_display_config');
@@ -3213,15 +3208,19 @@ window.addEventListener('message', (e) => {
         showStageBadge: true,
         showInteractiveCheckpoints: true,
         show3DControls: true,
-        showDevInspect: false,
-        showDevStudio: false,
-        showExportSpa: false,
+        showOpenFile: true,
+        showMarker: true,
+        showStepMode: true,
+        showDevInspect: true,
+        showDevStudio: true,
+        showExportSpa: true,
         showExportZip: true,
         showStandaloneLink: true,
-        showObsLink: false,
-        showLmsEmbed: false,
+        showObsLink: true,
+        showWebRtcLink: true,
+        showLmsEmbed: true,
         showPrintWorksheet: true,
-        showCopySvg: false,
+        showCopySvg: true,
         showThemeToggle: true,
         showFullscreen: true,
         showTimelineScrubber: true,
@@ -3246,9 +3245,16 @@ window.addEventListener('message', (e) => {
         base.showVolumeControl = false;
         base.showVoiceCommands = false;
         base.showPhysicsControls = false;
-      } else if (mode === 'embed' || mode === 'embedded' || mode === 'minimal') {
-        base.mode = 'embedded';
-        base.showPresetSelector = false; // Hide inner preset selector in embedded mode to eliminate multiple menus
+        base.showDevInspect = true;
+        base.showDevStudio = true;
+        base.showExportSpa = true;
+        base.showObsLink = true;
+        base.showWebRtcLink = true;
+        base.showCopySvg = true;
+        base.showPrintWorksheet = true;
+      } else if (mode === 'minimal') {
+        base.mode = 'minimal';
+        base.showPresetSelector = false;
         base.showStageBadge = false;
         base.showPrintWorksheet = false;
         base.showStandaloneLink = false;
@@ -3256,11 +3262,23 @@ window.addEventListener('message', (e) => {
         base.showDevStudio = false;
         base.showExportSpa = false;
         base.showObsLink = false;
+        base.showWebRtcLink = false;
         base.showLmsEmbed = false;
         base.showCopySvg = false;
         base.showSpeedSelector = false;
         base.showVoiceCommands = false;
         base.showPhysicsControls = false;
+      } else if (mode === 'embedded') {
+        base.mode = 'embedded';
+        base.showPresetSelector = false;
+        base.showStageBadge = false;
+        base.showDevInspect = true;
+        base.showDevStudio = true;
+        base.showExportSpa = true;
+        base.showObsLink = true;
+        base.showWebRtcLink = true;
+        base.showCopySvg = true;
+        base.showPrintWorksheet = true;
       } else if (mode === 'student') {
         base.showPrintWorksheet = false;
         base.showStandaloneLink = false;
@@ -3272,6 +3290,7 @@ window.addEventListener('message', (e) => {
         base.showDevStudio = true;
         base.showExportSpa = true;
         base.showObsLink = true;
+        base.showWebRtcLink = true;
         base.showLmsEmbed = true;
         base.showCopySvg = true;
       }
@@ -3302,16 +3321,10 @@ window.addEventListener('message', (e) => {
       if (el.presetSelector) el.presetSelector.style.display = c.showPresetSelector !== false ? '' : 'none';
       if (el.badgeStage) el.badgeStage.style.display = c.showStageBadge !== false ? '' : 'none';
       if (el.btnInteractive) {
-        const scene = this.engine && this.engine.scene;
-        const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
-        if (!hasCheckpoints) {
-          el.btnInteractive.style.display = 'none';
-        } else {
-          el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
-          if (c.showInteractiveCheckpoints !== undefined) {
-            this.interactiveMode = Boolean(c.showInteractiveCheckpoints);
-            el.btnInteractive.classList.toggle('active', this.interactiveMode);
-          }
+        el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
+        if (c.showInteractiveCheckpoints !== undefined) {
+          this.interactiveMode = Boolean(c.showInteractiveCheckpoints);
+          el.btnInteractive.classList.toggle('active', this.interactiveMode);
         }
       }
       
@@ -3333,13 +3346,17 @@ window.addEventListener('message', (e) => {
         }
       }
 
-      if (el.btnDevMode) el.btnDevMode.style.display = c.showDevInspect ? '' : 'none';
-      if (el.btnDevStudio) el.btnDevStudio.style.display = c.showDevStudio ? '' : 'none';
-      if (el.btnHeaderExportSpa) el.btnHeaderExportSpa.style.display = c.showExportSpa ? '' : 'none';
+      if (el.btnOpenFile) el.btnOpenFile.style.display = c.showOpenFile !== false ? '' : 'none';
+      if (el.btnPen) el.btnPen.style.display = c.showMarker !== false ? '' : 'none';
+      if (el.btnStepMode) el.btnStepMode.style.display = c.showStepMode !== false ? '' : 'none';
+      if (el.btnDevMode) el.btnDevMode.style.display = c.showDevInspect !== false ? '' : 'none';
+      if (el.btnDevStudio) el.btnDevStudio.style.display = c.showDevStudio !== false ? '' : 'none';
+      if (el.btnHeaderExportSpa) el.btnHeaderExportSpa.style.display = c.showExportSpa !== false ? '' : 'none';
       if (el.btnDownloadZip) el.btnDownloadZip.style.display = c.showExportZip !== false ? '' : 'none';
-      if (el.btnObsLink) el.btnObsLink.style.display = c.showObsLink ? '' : 'none';
+      if (el.btnObsLink) el.btnObsLink.style.display = c.showObsLink !== false ? '' : 'none';
+      if (el.btnWebRtcLink) el.btnWebRtcLink.style.display = c.showWebRtcLink !== false ? '' : 'none';
       if (el.btnPrint) el.btnPrint.style.display = c.showPrintWorksheet !== false ? '' : 'none';
-      if (el.btnCopySvg) el.btnCopySvg.style.display = c.showCopySvg ? '' : 'none';
+      if (el.btnCopySvg) el.btnCopySvg.style.display = c.showCopySvg !== false ? '' : 'none';
       if (el.btnTheme) el.btnTheme.style.display = c.showThemeToggle !== false ? '' : 'none';
       if (el.btnPip) el.btnPip.style.display = c.showPipButton !== false ? '' : 'none';
       if (el.btnFullscreen) el.btnFullscreen.style.display = c.showFullscreen !== false ? '' : 'none';
