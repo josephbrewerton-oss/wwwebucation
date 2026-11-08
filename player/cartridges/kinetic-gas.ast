@@ -5,11 +5,13 @@
     (:var :name "particleCount" :val 75 :min 15 :max 150 :step 5 :label "Particle Count (N)")
     (:var :name "state" :val "gas" :label "Matter Phase State")
   ))
-  (:inputs (
-    (:slider :var "volume" :label "Cylinder Volume (V)" :min 0.35 :max 1.0 :step 0.01)
-    (:slider :var "temp" :label "Thermal Temperature (T)" :min 90 :max 600 :step 10)
-    (:slider :var "particleCount" :label "Molecules / Atoms (N)" :min 15 :max 150 :step 5)
-  ))
+  (ui:controls
+    (control:button :id "reset" :label "↺ Reset Chamber" :action (sim:reset))
+    (control:toggle :id "bsl" :label "🖐️ BSL Signing" :bind *bsl-active* :action (player:toggle-bsl))
+    (control:slider :id "volume" :label "Chamber Volume (V)" :min 0.35 :max 1.0 :default 1.0 :step 0.01 :bind *volume*)
+    (control:slider :id "temp" :label "Temperature (T)" :min 90 :max 600 :default 300 :step 10 :bind *temp*)
+    (control:slider :id "particleCount" :label "Molecules (N)" :min 15 :max 150 :default 75 :step 5 :bind *particleCount*)
+  )
   (:computed (
     (:name "pressure" :expr "(101.3 / (vars.volume || 1.0) * ((vars.temp || 300) / 300)).toFixed(1)")
   ))

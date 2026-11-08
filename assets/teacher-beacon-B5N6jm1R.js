@@ -1,4 +1,4 @@
-import{C as e,i as t,m as n}from"./index-BI4DY4Jb.js";function r(){let r=n(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
+import{f as e,i as t,x as n}from"./index-D5DmBx_4.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
@@ -34,4 +34,4 @@ import{C as e,i as t,m as n}from"./index-BI4DY4Jb.js";function r(){let r=n(),i=d
         Command broadcast sent successfully!
       </div>
     </div>
-  `;let a=i.querySelector(`#btn-broadcast-scene`),o=i.querySelector(`#beacon-cartridge-select`),s=i.querySelector(`#beacon-toast`);return a?.addEventListener(`click`,()=>{let t=o?.value;t&&(e.broadcastAstScene(t),s&&(s.style.display=`block`,s.textContent=`📢 Successfully broadcast scene [${t}] to the classroom!`,setTimeout(()=>{s.style.display=`none`},4e3)))}),i}export{r as default,r as renderTeacherBeaconPage};
+  `;let a=i.querySelector(`#btn-broadcast-scene`),o=i.querySelector(`#beacon-cartridge-select`),s=i.querySelector(`#beacon-toast`);return a?.addEventListener(`click`,()=>{let e=o?.value;e&&(n.broadcastAstScene(e),s&&(s.style.display=`block`,s.textContent=`📢 Successfully broadcast scene [${e}] to the classroom!`,setTimeout(()=>{s.style.display=`none`},4e3)))}),i}export{r as default,r as renderTeacherBeaconPage};

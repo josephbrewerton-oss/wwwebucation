@@ -2114,6 +2114,28 @@
       // Reactive State Variables & User Interaction
       this.vars = {};
 
+      // Fantasy Console / Lisp Machine Canonical Action Dispatch Table
+      this.actionDispatch = {
+        'sim:reset': () => this.reset(),
+        'sim:play': () => this.play(),
+        'sim:pause': () => this.pause(),
+        'sim:toggle-play': () => this.togglePlay(),
+        'sim:step': (args) => this.step(args && args[0] !== undefined ? Number(args[0]) : (1 / 60)),
+        'sim:seek': (args) => this.seek(Number(args?.[0] || 0)),
+        'player:toggle-bsl': (args) => this.toggleBsl(args?.[0]),
+        'player:toggle-voice': (args) => this.toggleVoice(args?.[0]),
+        'player:fullscreen': () => this.toggleFullscreen(),
+        'set-var': (args) => {
+          if (args && args.length >= 2) this.setMemoryVar(args[0], args[1]);
+        },
+        'toggle-var': (args) => {
+          if (args && args.length >= 1) {
+            const cur = Boolean(this.getMemoryVar(args[0]));
+            this.setMemoryVar(args[0], !cur);
+          }
+        }
+      };
+
       // Event listeners
       this.listeners = {
         timeupdate: [],
@@ -2122,7 +2144,10 @@
         presetchange: [],
         langchange: [],
         camerachange: [],
-        varchange: []
+        varchange: [],
+        simreset: [],
+        bsltoggle: [],
+        voicetoggle: []
       };
 
       // Zero-Bloat Micro-Physics Subsystem (< 1.5 KB)
@@ -3507,23 +3532,48 @@
       }
     }
 
+    normalizeVarName(name) {
+      if (!name || typeof name !== 'string') return '';
+      let clean = name.trim().replace(/^\*|\*$/g, '');
+      if (clean === 'bsl-active') return 'bslActive';
+      if (clean === 'switch-closed') return 'switchClosed';
+      if (clean === 'particle-count') return 'particleCount';
+      return clean;
+    }
+
     /**
-     * Sets a reactive state variable and recalculates derived outputs at 60 FPS
+     * Fantasy Console / Lisp Machine Kernel Memory Store
+     * Sets a reactive state variable in WASM/JS linear memory and recalculates derived outputs at 60 FPS
      */
-    setVar(name, val, isAi = false) {
+    setMemoryVar(name, val, isAi = false) {
       if (!name || name === '__proto__' || name === 'constructor' || name === 'prototype') return;
+      const cleanName = this.normalizeVarName(name);
       if (!this.vars) this.vars = {};
+
+      this.vars[cleanName] = val;
       this.vars[name] = val;
+      this.vars[`*${cleanName}*`] = val;
+
+      if (this.scene && this.scene.vars) {
+        if (this.scene.vars[cleanName] !== undefined) {
+          if (typeof this.scene.vars[cleanName] === 'object' && this.scene.vars[cleanName] !== null) {
+            this.scene.vars[cleanName].value = val;
+          } else {
+            this.scene.vars[cleanName] = val;
+          }
+        }
+      }
+
       this.updateComputedVars();
-      this.syncBindInputs(name, val);
+      this.syncBindInputs(cleanName, val);
 
       // Synchronize vector particle emitters with thermodynamic state variables
       if (this.emitters && this.emitters.size > 0) {
         const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
         if (gasEm) {
-          if (name === 'particleCount' || name === 'count' || name === 'atoms') {
+          if (cleanName === 'particleCount' || cleanName === 'count' || cleanName === 'atoms') {
             gasEm.setCount(val);
-          } else if (name === 'temp' || name === 'temperature') {
+          } else if (cleanName === 'temp' || cleanName === 'temperature') {
             const numT = Number(val);
             gasEm.setSpeed(160 * Math.sqrt(Math.max(50, numT) / 300));
             if (!this.vars.state) {
@@ -3531,9 +3581,9 @@
               else if (numT <= 273) gasEm.setPhaseState('liquid');
               else gasEm.setPhaseState('gas');
             }
-          } else if (name === 'state' || name === 'phase') {
+          } else if (cleanName === 'state' || cleanName === 'phase') {
             gasEm.setPhaseState(String(val).toLowerCase());
-          } else if (name === 'volume') {
+          } else if (cleanName === 'volume') {
             const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
             gasEm.clampToPistonX(pX);
           }
@@ -3541,14 +3591,128 @@
       }
 
       this.applyBindings(this.progress);
-      this.emit('varchange', { name, value: val, vars: { ...this.vars } });
+      this.emit('varchange', { name: cleanName, value: val, vars: { ...this.vars } });
       if (!isAi) {
         this.emitTelemetrySnapshot('VAR_CHANGE');
       }
     }
 
+    getMemoryVar(name) {
+      if (!name || !this.vars) return undefined;
+      const clean = this.normalizeVarName(name);
+      return this.vars[clean] !== undefined ? this.vars[clean] : this.vars[name];
+    }
+
+    setVar(name, val, isAi = false) {
+      return this.setMemoryVar(name, val, isAi);
+    }
+
     getVar(name) {
-      return this.vars ? this.vars[name] : undefined;
+      return this.getMemoryVar(name);
+    }
+
+    /**
+     * Canonical S-Expression Action Dispatcher
+     * Evaluates action forms like (sim:reset), (player:toggle-bsl), (set-var *gravity* 10), (toggle-var *switchClosed*)
+     */
+    dispatchAction(actionForm, fallbackArgs = []) {
+      if (!actionForm) return;
+      let formStr = '';
+      if (typeof actionForm === 'string') {
+        formStr = actionForm.trim();
+      } else if (Array.isArray(actionForm)) {
+        formStr = `(${actionForm.join(' ')})`;
+      } else {
+        return;
+      }
+
+      let inner = formStr.replace(/^\(|\)$/g, '').trim();
+      if (!inner) return;
+
+      const tokens = inner.match(/"([^"]+)"|([^\s"]+)/g) || [];
+      if (tokens.length === 0) return;
+
+      const op = tokens[0].replace(/^"|"$/g, '');
+      const args = tokens.slice(1).map(tok => {
+        let clean = tok.replace(/^"|"$/g, '');
+        if (!isNaN(Number(clean))) return Number(clean);
+        if (clean === 'true') return true;
+        if (clean === 'false') return false;
+        return clean;
+      });
+
+      if (fallbackArgs && fallbackArgs.length > 0 && args.length === 0) {
+        args.push(...fallbackArgs);
+      }
+
+      if (this.actionDispatch && typeof this.actionDispatch[op] === 'function') {
+        this.actionDispatch[op](args);
+      } else if (op.startsWith('sim:')) {
+        const sub = op.slice(4);
+        if (sub === 'reset') this.reset();
+        else if (sub === 'play') this.play();
+        else if (sub === 'pause') this.pause();
+        else if (sub === 'toggle-play') this.togglePlay();
+        else if (sub === 'step') this.step(args[0] || (1 / 60));
+        else if (sub === 'seek') this.seek(Number(args[0] || 0));
+      } else if (op.startsWith('player:')) {
+        const sub = op.slice(7);
+        if (sub === 'toggle-bsl' || sub === 'bsl') this.toggleBsl(args[0]);
+        else if (sub === 'toggle-voice' || sub === 'voice') this.toggleVoice(args[0]);
+        else if (sub === 'fullscreen') this.toggleFullscreen();
+      } else if (op === 'set-var') {
+        this.setMemoryVar(args[0], args[1]);
+      } else if (op === 'toggle-var') {
+        const cur = Boolean(this.getMemoryVar(args[0]));
+        this.setMemoryVar(args[0], !cur);
+      } else {
+        console.warn(`[AST Kernel] Unhandled action dispatch: ${op}`, args);
+      }
+    }
+
+    reset() {
+      this.seek(0.0);
+      this.resetVars();
+      this.updateComputedVars();
+      this.applyBindings(0.0);
+      if (this.physics && typeof this.physics.reset === 'function') {
+        this.physics.reset();
+      }
+      if (typeof this.render === 'function') {
+        this.render(0.0);
+      }
+      this.emit('simreset', { time: 0.0 });
+      this.notifyParent({ type: 'SIM_RESET', time: 0.0 });
+    }
+
+    toggleBsl(force) {
+      const next = force !== undefined ? Boolean(force) : !Boolean(this.vars?.bslActive || this.vars?.['*bsl-active*']);
+      this.setMemoryVar('bslActive', next);
+      this.setMemoryVar('*bsl-active*', next);
+      this.emit('bsltoggle', { active: next });
+      this.notifyParent({ type: 'BSL_STATE_CHANGED', active: next });
+      return next;
+    }
+
+    toggleVoice(force) {
+      const next = force !== undefined ? Boolean(force) : !this.voiceEnabled;
+      this.voiceEnabled = next;
+      if (!this.voiceEnabled) {
+        this.cancelSpeech();
+      }
+      this.notifyParent({ type: 'VOICE_TOGGLE', enabled: next });
+      this.emit('voicetoggle', { enabled: next });
+      return next;
+    }
+
+    toggleFullscreen() {
+      if (typeof document === 'undefined') return;
+      const root = this.container?.closest('body') || document.documentElement;
+      if (!document.fullscreenElement) {
+        root.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
     }
 
     resetVars() {
@@ -4610,37 +4774,104 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         });
       }
 
-      // User Input Controls (:inputs ((:slider :var "volume" :label "Volume") ...))
-      const inputs = [];
-      const inBlocks = extractSexprBlocks(astContent, ':inputs');
-      if (inBlocks.length > 0) {
-        const blockText = inBlocks[0];
-        const inEntries = extractSexprBlocks(blockText, ':slider')
-          .concat(extractSexprBlocks(blockText, ':switch'))
-          .concat(extractSexprBlocks(blockText, ':toggle'))
-          .concat(extractSexprBlocks(blockText, ':stepper'))
-          .concat(extractSexprBlocks(blockText, ':select'))
-          .concat(extractSexprBlocks(blockText, ':button'));
+      // UI Controls Projection Subsystem: Fantasy Console / Lisp Machine Architecture
+      // Canonical: (ui:controls (control:button ...) (control:toggle ...) (control:slider ...) (control:select ...))
+      // Keyword/Legacy: (:ui-controls (...)) or (:inputs (...))
+      const uiControls = [];
+      const uiBlocks = extractSexprBlocks(astContent, 'ui:controls')
+        .concat(extractSexprBlocks(astContent, ':ui-controls'))
+        .concat(extractSexprBlocks(astContent, ':inputs'));
 
-        inEntries.forEach(inText => {
-          const typeMatch = inText.match(/^\(:([a-z0-9\-]+)/i);
-          const vName = extractSlot.call(null, inText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, inText, /:var\s+([^\s\)]+)/i);
-          const inLabel = extractSlot.call(null, inText, /:label\s+"([^"]+)"/i) || vName;
-          const min = parseFloat(extractSlot.call(null, inText, /:min\s+([\d\.\-]+)/i) || '0');
-          const max = parseFloat(extractSlot.call(null, inText, /:max\s+([\d\.\-]+)/i) || '100');
-          const step = parseFloat(extractSlot.call(null, inText, /:step\s+([\d\.]+)/i) || '1');
-          if (typeMatch && vName) {
-            inputs.push({
-              type: typeMatch[1],
-              var: vName,
-              label: inLabel,
+      if (uiBlocks.length > 0) {
+        uiBlocks.forEach(blockText => {
+          const entries = extractSexprBlocks(blockText, 'control:button')
+            .concat(extractSexprBlocks(blockText, 'control:toggle'))
+            .concat(extractSexprBlocks(blockText, 'control:slider'))
+            .concat(extractSexprBlocks(blockText, 'control:select'))
+            .concat(extractSexprBlocks(blockText, ':button'))
+            .concat(extractSexprBlocks(blockText, ':toggle'))
+            .concat(extractSexprBlocks(blockText, ':switch'))
+            .concat(extractSexprBlocks(blockText, ':slider'))
+            .concat(extractSexprBlocks(blockText, ':number'))
+            .concat(extractSexprBlocks(blockText, ':stepper'))
+            .concat(extractSexprBlocks(blockText, ':select'));
+
+          entries.forEach(entryText => {
+            let ctrlType = 'button';
+            if (entryText.includes('control:toggle') || entryText.includes(':toggle') || entryText.includes(':switch')) {
+              ctrlType = 'toggle';
+            } else if (entryText.includes('control:slider') || entryText.includes(':slider') || entryText.includes(':number') || entryText.includes(':stepper')) {
+              ctrlType = 'slider';
+            } else if (entryText.includes('control:select') || entryText.includes(':select')) {
+              ctrlType = 'select';
+            } else if (entryText.includes('control:button') || entryText.includes(':button')) {
+              ctrlType = 'button';
+            }
+
+            const id = extractSlot.call(null, entryText, /:id\s+"([^"]+)"/i) 
+              || extractSlot.call(null, entryText, /:id\s+([^\s\)]+)/i)
+              || extractSlot.call(null, entryText, /:var\s+"([^"]+)"/i)
+              || extractSlot.call(null, entryText, /:var\s+([^\s\)]+)/i)
+              || `ctrl_${uiControls.length + 1}`;
+
+            const label = extractSlot.call(null, entryText, /:label\s+"([^"]+)"/i)
+              || extractSlot.call(null, entryText, /:label\s+([^\s\)]+)/i)
+              || id;
+
+            let bind = extractSlot.call(null, entryText, /:bind\s+"([^"]+)"/i)
+              || extractSlot.call(null, entryText, /:bind\s+([^\s\)]+)/i)
+              || extractSlot.call(null, entryText, /:var\s+"([^"]+)"/i)
+              || extractSlot.call(null, entryText, /:var\s+([^\s\)]+)/i)
+              || null;
+
+            let cleanBind = bind ? bind.replace(/^\*|\*$/g, '') : null;
+
+            let action = null;
+            const actionMatch = entryText.match(/:action\s+(\([^\)]+\)|"[^"]+"|([^\s\)]+))/i);
+            if (actionMatch) {
+              action = actionMatch[1].trim().replace(/^"|"$/g, '');
+            } else if (ctrlType === 'button' && (id === 'reset' || id === 'sim:reset')) {
+              action = '(sim:reset)';
+            } else if (ctrlType === 'toggle' && (cleanBind === 'bsl-active' || cleanBind === 'bslActive' || id === 'bsl')) {
+              action = '(player:toggle-bsl)';
+            }
+
+            const min = parseFloat(extractSlot.call(null, entryText, /:min\s+([\d\.\-]+)/i) || '0');
+            const max = parseFloat(extractSlot.call(null, entryText, /:max\s+([\d\.\-]+)/i) || '100');
+            const step = parseFloat(extractSlot.call(null, entryText, /:step\s+([\d\.]+)/i) || '1');
+            const defaultStr = extractSlot.call(null, entryText, /:default\s+"?([^"\s\)]+)"?/i)
+              || extractSlot.call(null, entryText, /:val\s+"?([^"\s\)]+)"?/i);
+            let defaultVal = defaultStr !== null ? (isNaN(Number(defaultStr)) ? defaultStr : parseFloat(defaultStr)) : undefined;
+
+            let options = [];
+            const optMatch = entryText.match(/:options\s*\(([^)]+)\)/i);
+            if (optMatch) {
+              const optStr = optMatch[1];
+              const matches = optStr.match(/"([^"]+)"|([^\s"]+)/g);
+              if (matches) {
+                options = matches.map(s => s.replace(/^"|"$/g, ''));
+              }
+            }
+
+            uiControls.push({
+              id,
+              type: ctrlType,
+              label,
+              bind: cleanBind,
+              rawBind: bind,
+              var: cleanBind,
+              action,
               min,
               max,
-              step
+              step,
+              default: defaultVal,
+              val: defaultVal,
+              options
             });
-          }
+          });
         });
       }
+      const inputs = uiControls;
 
       // Derived & Computed Output Variables (:computed ((:name "pressure" :expr "101.3 / vars.volume") ...))
       const computed = [];
@@ -4888,6 +5119,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         emitters: emitters.length > 0 ? emitters : null,
         vars,
         inputs,
+        uiControls,
         computed,
         staticElements,
         actors,
@@ -5643,7 +5875,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       emitters: sceneData.emitters || (parsedAst && parsedAst.emitters) || null,
       bindInputs: sceneData.bindInputs || (parsedAst && parsedAst.bindInputs) || null,
       vars: sceneData.vars || (parsedAst && parsedAst.vars) || null,
-      inputs: sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
+      inputs: sceneData.uiControls || sceneData.inputs || (parsedAst && (parsedAst.uiControls || parsedAst.inputs)) || null,
+      uiControls: sceneData.uiControls || (parsedAst && parsedAst.uiControls) || sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
       computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
       gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
       svgText: svgText,
@@ -8274,9 +8507,24 @@ function setupPostMessageBridge(engine, uiController) {
           engine.togglePedagogicalXRay(typeof data.enabled === 'boolean' ? data.enabled : undefined);
         }
         break;
+      case 'DISPATCH_ACTION':
+        if (data.action && typeof engine.dispatchAction === 'function') {
+          engine.dispatchAction(data.action, data.args);
+        }
+        break;
+      case 'RESET_SIM':
+      case 'SIM_RESET':
+        if (typeof engine.reset === 'function') {
+          engine.reset();
+        } else if (uiController && typeof uiController.resetSimulation === 'function') {
+          uiController.resetSimulation();
+        }
+        break;
       case 'SET_VAR':
         if (data.name && data.value !== undefined) {
-          if (typeof engine.setVar === 'function') {
+          if (typeof engine.setMemoryVar === 'function') {
+            engine.setMemoryVar(data.name, data.value);
+          } else if (typeof engine.setVar === 'function') {
             engine.setVar(data.name, data.value);
           } else if (engine.scene && engine.scene.vars) {
             engine.scene.vars[data.name] = data.value;
