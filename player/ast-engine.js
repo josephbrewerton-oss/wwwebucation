@@ -4649,7 +4649,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             answer: ansMatch ? parseInt(ansMatch[1], 10) : 0,
             explanation: explanation
           });
-        });
+        }
+      });
 
         // Also extract questions from (:questions ((:q ...))) if no explicit :checkpoint entries were defined
         if (checkpoints.length === 0) {
@@ -5581,7 +5582,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
               }
             }
-            if (!parsedAst) {
+            if (!parsedAst || (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0))) {
               const foundAst = await fetchAsset('ast');
               if (foundAst) astText = foundAst;
             }
@@ -5613,6 +5614,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 parsedAst = textParsed;
               } else {
                 // Seamlessly merge rich interactive elements that compact bytecode may lack
+                if ((!parsedAst.uiControls || parsedAst.uiControls.length === 0) && textParsed.uiControls) {
+                  parsedAst.uiControls = textParsed.uiControls;
+                }
                 if ((!parsedAst.inputs || parsedAst.inputs.length === 0) && textParsed.inputs && textParsed.inputs.length > 0) {
                   parsedAst.inputs = textParsed.inputs;
                 }

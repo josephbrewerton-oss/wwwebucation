@@ -1,4 +1,4 @@
-import{_ as e,b as t,d as n,f as r,g as i,h as a,i as o,n as s,t as c,u as l,v as u,y as d}from"./index-D5DmBx_4.js";import{t as f}from"./EdgeCognitiveEngine-m840LBl2.js";function p(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{_ as e,b as t,d as n,f as r,g as i,h as a,i as o,n as s,t as c,u as l,v as u,y as d}from"./index-CzpTwRB5.js";import{t as f}from"./EdgeCognitiveEngine-C6aMuzvP.js";function p(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;
