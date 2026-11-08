@@ -4335,14 +4335,31 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const minVal = view.getFloat32(offset, true); offset += 4;
             const maxVal = view.getFloat32(offset, true); offset += 4;
             const stepVal = view.getFloat32(offset, true); offset += 4;
+            const vVar = getStr(varIdx);
+            const vLabel = getStr(labelIdx);
+            const cType = kindVal === 2 ? 'toggle' : (kindVal === 3 ? 'button' : 'slider');
+
             if (!scene.inputs) scene.inputs = [];
             scene.inputs.push({
               type: kindVal === 2 ? 'switch' : (kindVal === 3 ? 'button' : 'slider'),
-              var: getStr(varIdx),
-              label: getStr(labelIdx),
+              var: vVar,
+              label: vLabel,
               min: minVal,
               max: maxVal,
               step: stepVal,
+            });
+
+            if (!scene.uiControls) scene.uiControls = [];
+            scene.uiControls.push({
+              id: vVar,
+              type: cType,
+              label: vLabel || vVar,
+              bind: vVar,
+              action: cType === 'button' ? (vVar === 'reset' ? '(sim:reset)' : null) : (cType === 'toggle' && (vVar === 'bsl' || vVar === 'bsl-active') ? '(player:toggle-bsl)' : null),
+              min: minVal,
+              max: maxVal,
+              step: stepVal,
+              default: minVal
             });
             break;
           }

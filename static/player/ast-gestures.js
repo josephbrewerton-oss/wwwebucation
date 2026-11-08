@@ -4069,7 +4069,7 @@ ${strokeLines.join('\n')}
 
       let hud = container.querySelector('#stage-sim-parameters');
       const scene = this.engine.scene;
-      if (!scene) {
+      if (!scene || (scene.uiControls && scene.uiControls.length > 0) || container.querySelector('#cartridge-controls-overlay')) {
         if (hud) hud.style.display = 'none';
         return;
       }

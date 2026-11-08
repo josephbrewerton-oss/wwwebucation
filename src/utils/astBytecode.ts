@@ -71,6 +71,7 @@ export interface BytecodeCompiledScene {
   gestures?: Array<{ target: string; axis: string; min: number; max: number }>;
   vars?: Record<string, any>;
   inputs?: Array<any>;
+  uiControls?: Array<any>;
 }
 
 /**
@@ -249,19 +250,28 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     }
   }
 
-  // 3b. Interactive User Controls (:inputs)
-  if (Array.isArray(scene.inputs)) {
-    for (const inp of scene.inputs) {
-      if (!inp || !inp.var) continue;
-      appendU8(OP_INPUT);
-      const kindVal = inp.type === 'switch' || inp.type === 'toggle' ? 2 : (inp.type === 'button' ? 3 : 1);
-      appendU8(kindVal);
-      appendU16(strTable.intern(inp.var));
-      appendU16(strTable.intern(inp.label || inp.var));
-      appendF32(typeof inp.min === 'number' ? inp.min : 0);
-      appendF32(typeof inp.max === 'number' ? inp.max : 100);
-      appendF32(typeof inp.step === 'number' ? inp.step : 1);
-    }
+  // 3b. Interactive User Controls (:inputs or ui:controls)
+  const controlsToSerialize = (Array.isArray(scene.uiControls) && scene.uiControls.length > 0)
+    ? scene.uiControls.map((c) => ({
+        type: c.type === 'toggle' || c.type === 'switch' ? 'switch' : (c.type === 'button' ? 'button' : 'slider'),
+        var: c.bind || c.id,
+        label: c.label || c.id,
+        min: typeof c.min === 'number' ? c.min : 0,
+        max: typeof c.max === 'number' ? c.max : 100,
+        step: typeof c.step === 'number' ? c.step : 1,
+      }))
+    : (Array.isArray(scene.inputs) ? scene.inputs : []);
+
+  for (const inp of controlsToSerialize) {
+    if (!inp || !inp.var) continue;
+    appendU8(OP_INPUT);
+    const kindVal = inp.type === 'switch' || inp.type === 'toggle' ? 2 : (inp.type === 'button' ? 3 : 1);
+    appendU8(kindVal);
+    appendU16(strTable.intern(inp.var));
+    appendU16(strTable.intern(inp.label || inp.var));
+    appendF32(typeof inp.min === 'number' ? inp.min : 0);
+    appendF32(typeof inp.max === 'number' ? inp.max : 100);
+    appendF32(typeof inp.step === 'number' ? inp.step : 1);
   }
 
   // 4. Keyframes
@@ -651,14 +661,31 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         const minVal = view.getFloat32(offset, true); offset += 4;
         const maxVal = view.getFloat32(offset, true); offset += 4;
         const stepVal = view.getFloat32(offset, true); offset += 4;
+        const vVar = strTable.get(varIdx);
+        const vLabel = strTable.get(labelIdx);
+        const ctrlType = kindVal === 2 ? 'toggle' : (kindVal === 3 ? 'button' : 'slider');
+
         if (!scene.inputs) scene.inputs = [];
         scene.inputs.push({
           type: kindVal === 2 ? 'switch' : (kindVal === 3 ? 'button' : 'slider'),
-          var: strTable.get(varIdx),
-          label: strTable.get(labelIdx),
+          var: vVar,
+          label: vLabel,
           min: minVal,
           max: maxVal,
           step: stepVal,
+        });
+
+        if (!scene.uiControls) scene.uiControls = [];
+        scene.uiControls.push({
+          id: vVar,
+          type: ctrlType,
+          label: vLabel || vVar,
+          bind: vVar,
+          action: ctrlType === 'button' ? (vVar === 'reset' ? '(sim:reset)' : null) : (ctrlType === 'toggle' && (vVar === 'bsl' || vVar === 'bsl-active') ? '(player:toggle-bsl)' : null),
+          min: minVal,
+          max: maxVal,
+          step: stepVal,
+          default: minVal,
         });
         break;
       }
@@ -986,33 +1013,80 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     }
   }
 
-  // User Input Controls (:inputs)
+  // User Input Controls (:inputs or ui:controls)
   const inputs: Array<any> = [];
-  const inBlocks = extractSexprBlocks(astText, ':inputs');
-  if (inBlocks.length > 0) {
-    const blockText = inBlocks[0];
-    const inEntries = extractSexprBlocks(blockText, ':slider')
-      .concat(extractSexprBlocks(blockText, ':toggle'))
-      .concat(extractSexprBlocks(blockText, ':switch'))
-      .concat(extractSexprBlocks(blockText, ':button'))
-      .concat(extractSexprBlocks(blockText, ':number'));
-    inEntries.forEach(inText => {
-      const typeMatch = inText.match(/^\(:(slider|toggle|switch|button|number)\b/i);
-      const vName = extractSlot(inText, /:var\s+"([^"]+)"/i);
-      const inLabel = extractSlot(inText, /:label\s+"([^"]+)"/i) || vName;
-      const min = parseFloat(extractSlot(inText, /:min\s+([\d\.\-]+)/i) || '0');
-      const max = parseFloat(extractSlot(inText, /:max\s+([\d\.\-]+)/i) || '100');
-      const step = parseFloat(extractSlot(inText, /:step\s+([\d\.]+)/i) || '1');
-      if (typeMatch && vName) {
+  const uiControls: Array<any> = [];
+  const uiBlocks = extractSexprBlocks(astText, 'ui:controls')
+    .concat(extractSexprBlocks(astText, ':ui-controls'))
+    .concat(extractSexprBlocks(astText, ':inputs'));
+
+  if (uiBlocks.length > 0) {
+    uiBlocks.forEach((blockText) => {
+      const inEntries = extractSexprBlocks(blockText, 'control:slider')
+        .concat(extractSexprBlocks(blockText, 'control:toggle'))
+        .concat(extractSexprBlocks(blockText, 'control:button'))
+        .concat(extractSexprBlocks(blockText, 'control:select'))
+        .concat(extractSexprBlocks(blockText, ':slider'))
+        .concat(extractSexprBlocks(blockText, ':toggle'))
+        .concat(extractSexprBlocks(blockText, ':switch'))
+        .concat(extractSexprBlocks(blockText, ':button'))
+        .concat(extractSexprBlocks(blockText, ':number'))
+        .concat(extractSexprBlocks(blockText, ':stepper'));
+
+      inEntries.forEach((inText) => {
+        let ctrlType = 'slider';
+        if (inText.includes('control:toggle') || inText.includes(':toggle') || inText.includes(':switch')) {
+          ctrlType = 'toggle';
+        } else if (inText.includes('control:button') || inText.includes(':button')) {
+          ctrlType = 'button';
+        } else if (inText.includes('control:select') || inText.includes(':select')) {
+          ctrlType = 'select';
+        }
+
+        const id = extractSlot(inText, /:id\s+"([^"]+)"/i)
+          || extractSlot(inText, /:id\s+([^\s\)]+)/i)
+          || extractSlot(inText, /:var\s+"([^"]+)"/i)
+          || extractSlot(inText, /:var\s+([^\s\)]+)/i)
+          || `ctrl_${uiControls.length + 1}`;
+
+        const inLabel = extractSlot(inText, /:label\s+"([^"]+)"/i)
+          || extractSlot(inText, /:label\s+([^\s\)]+)/i)
+          || id;
+
+        const rawBind = extractSlot(inText, /:bind\s+"([^"]+)"/i)
+          || extractSlot(inText, /:bind\s+([^\s\)]+)/i)
+          || extractSlot(inText, /:var\s+"([^"]+)"/i)
+          || extractSlot(inText, /:var\s+([^\s\)]+)/i)
+          || id;
+        const bind = rawBind.replace(/^\*|\*$/g, '');
+
+        const min = parseFloat(extractSlot(inText, /:min\s+([\d\.\-]+)/i) || '0');
+        const max = parseFloat(extractSlot(inText, /:max\s+([\d\.\-]+)/i) || '100');
+        const step = parseFloat(extractSlot(inText, /:step\s+([\d\.]+)/i) || '1');
+        const defaultStr = extractSlot(inText, /:default\s+"?([^"\s\)]+)"?/i)
+          || extractSlot(inText, /:val\s+"?([^"\s\)]+)"?/i);
+        const defaultVal = defaultStr !== null ? (isNaN(Number(defaultStr)) ? defaultStr : parseFloat(defaultStr)) : undefined;
+
         inputs.push({
-          type: typeMatch[1],
-          var: vName,
+          type: ctrlType === 'toggle' ? 'switch' : (ctrlType === 'button' ? 'button' : 'slider'),
+          var: bind,
           label: inLabel,
           min,
           max,
           step,
         });
-      }
+
+        uiControls.push({
+          id,
+          type: ctrlType,
+          label: inLabel,
+          bind,
+          min,
+          max,
+          step,
+          default: defaultVal,
+        });
+      });
     });
   }
 
@@ -1065,5 +1139,6 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     gestures,
     vars,
     inputs,
+    uiControls,
   });
 }
