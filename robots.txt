@@ -49,6 +49,9 @@ Allow: /sitemap.ast
 Allow: /manifests/
 Allow: /lexicons/
 Allow: /lexicons/bsl-signs.ast
+Allow: /lexicons/bsl-codebook.lisp
+Allow: /sys/
+Allow: /sys/views/
 Allow: /player/
 Allow: /player/bytecode/
 Allow: /player/scenes/

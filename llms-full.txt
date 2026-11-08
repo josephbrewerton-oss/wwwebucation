@@ -90,13 +90,28 @@ The AST Vector Engine (`static/player/ast-engine.js` and `@stjosephs/ast-vector-
 - **Generic Master Clock**: Simulations advance a universal time accumulator `vars._simClock` (with backwards compatibility for legacy `_solarClock`), enabling continuous or periodic animations across any subject without engine customization.
 - **Universal State Machines**: Declarative `:state-machine` nodes govern state transitions, particle emissions, and conditional triggers across scientific models, industrial machines, and interactive games identically.
 
-### 4.2. Dynamic Parameter & Selector HUD (`setupSimParametersHud`)
-- **Automatic Parameter Discovery**: The engine inspects `:inputs` and `:vars` arrays declared in any cartridge.
-- **Auto-Generated Controls**: Generates sliders, step buttons, toggle switches, and discrete selectors dynamically:
-  - If a variable has `:min`, `:max`, and `:step`, a range slider with real-time value readout is mounted.
-  - If a variable represents discrete states or enumerations, a segmented button selector is created.
-  - Interactive parts across complex slides (such as DNA base-pair unzipping and nucleotide inspection, kinetic gas piston valves, calculus derivative sliders, or electric circuit switches) are discovered and rendered automatically without writing custom component code.
-- **Bidirectional Variable Binding**: User adjustments in the parameter HUD update reactive `:vars` instantly, triggering 60 FPS DOM attribute re-projections and formula evaluations.
+### 4.2. Sovereign Lisp Machine & Fantasy Console UI Subsystem (`ui:controls` & `projectControls`)
+- **Lisp as the Sovereign Substrate ("The Oil of the Site")**: The player operates as a bare-metal kernel (WASM linear memory pool, high-precision 60 FPS clock, vector stage, event loop). All scene logic, variable bindings, physics emitters, and interactive UI controls are declared as pure Lisp S-expressions inside cartridges (`.ast` and `.astb`).
+- **Data-as-Code Control Declaration (`ui:controls`)**: TypeScript/JavaScript does not invent or hardcode scene buttons, sliders, or UI controls in outer templates. Controls are declared as native S-expression forms:
+  ```lisp
+  (ui:controls
+    (control:button :id "reset" :label "↺ Reset Chamber" :action (sim:reset))
+    (control:toggle :id "bsl" :label "🖐️ BSL Signing" :bind *bsl-active* :action (player:toggle-bsl))
+    (control:slider :id "volume" :label "Chamber Volume (V)" :min 0.35 :max 1.0 :default 1.0 :step 0.01 :bind *volume*)
+    (control:slider :id "temp" :label "Temperature (T)" :min 90 :max 600 :default 300 :step 10 :bind *temp*)
+  )
+  ```
+- **Dynamic AST Projection (`projectControls`)**: When a cartridge mounts, the player runtime's AST walker inspects `(ui:controls ...)` and projects controls into an in-stage glass overlay (`⚡ LISP UI`).
+- **Action Dispatch Table**: Maps declarative S-expression forms directly to native kernel operations:
+  ```typescript
+  const actionDispatch: Record<string, (args?: any[]) => void> = {
+    'sim:reset': () => engine.reset(),
+    'player:toggle-bsl': () => engine.toggleBsl(),
+    'set-var': (name, value) => engine.setMemoryVar(name, value),
+  };
+  ```
+- **Bidirectional Variable Binding**: User adjustments update bound variables (`*volume*`, `*temp*`) in linear memory at 60 FPS without DOM re-renders or GC pause.
+- **Legacy HUD Auto-Discovery (`setupSimParametersHud`)**: For historical or bare numerical cartridges without explicit `(ui:controls ...)`, the engine falls back to auto-discovering numeric `:vars` and mounting parameter sliders automatically.
 
 ### 4.3. Direct Canvas Manipulation (`ast-gestures.js`)
 - **Sub-Pixel Coordinate Translation**: Applies inverse Current Transformation Matrix ($\mathbf{CTM}^{-1}$) to convert pointer coordinates into exact SVG stage coordinates regardless of CSS scaling, letterboxing, or display DPI.
