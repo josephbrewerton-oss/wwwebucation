@@ -818,6 +818,7 @@
       this.bindDOMEvents();
       this.bindEngineEvents();
       this.setupKeyframeMarkers();
+      this.projectControls(this.engine.scene);
       this.update3DStatus();
       this.initObsBroadcast();
       this.applyDisplayConfig(this.displayConfig);
@@ -1396,16 +1397,210 @@
       }
     }
 
+    /**
+     * Fantasy Console / Lisp Machine AST Control Projection Subsystem
+     * Reads (ui:controls ...) declared in active cartridge and dynamically
+     * projects controls into in-stage glass overlay.
+     */
+    projectControls(scene) {
+      const stage = this.elements.playerStage || document.getElementById('player-stage') || document.body;
+      if (!stage) return;
+
+      let overlay = document.getElementById('cartridge-controls-overlay');
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'cartridge-controls-overlay';
+        overlay.className = 'cartridge-controls-overlay';
+        stage.appendChild(overlay);
+      }
+
+      // Read controls from scene.uiControls or scene.inputs (data-as-code)
+      const controls = (scene && (scene.uiControls || scene.inputs)) || [];
+
+      if (!controls || controls.length === 0) {
+        overlay.classList.add('hidden');
+        overlay.innerHTML = '';
+        return;
+      }
+
+      overlay.classList.remove('hidden');
+      const title = (scene && (scene.title || scene.id)) || 'Simulation Controls';
+      overlay.innerHTML = `
+        <div class="cartridge-controls-header">
+          <div class="cartridge-controls-title">
+            <span class="cartridge-controls-chip">⚡ LISP UI</span>
+            <span class="cartridge-controls-name">${title}</span>
+          </div>
+          <button type="button" class="cartridge-controls-min-btn" title="Toggle Controls Overlay">▾</button>
+        </div>
+        <div class="cartridge-controls-body"></div>
+      `;
+
+      const minBtn = overlay.querySelector('.cartridge-controls-min-btn');
+      const body = overlay.querySelector('.cartridge-controls-body');
+      if (minBtn && body) {
+        minBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          body.classList.toggle('collapsed');
+          minBtn.textContent = body.classList.contains('collapsed') ? '▸' : '▾';
+        });
+      }
+
+      controls.forEach(ctrl => {
+        const type = ctrl.type || 'slider';
+        const id = ctrl.id || ctrl.var;
+        const bindVar = ctrl.bind || ctrl.var;
+        const label = ctrl.label || id;
+        const action = ctrl.action;
+        const curVal = bindVar && this.engine.getMemoryVar ? this.engine.getMemoryVar(bindVar) : (ctrl.default !== undefined ? ctrl.default : (ctrl.val ?? 0));
+
+        const itemEl = document.createElement('div');
+        itemEl.className = `cartridge-ctrl-item cartridge-ctrl-${type}`;
+        itemEl.setAttribute('data-ctrl-id', id);
+
+        if (type === 'button') {
+          itemEl.innerHTML = `
+            <button type="button" class="cartridge-ui-btn" id="ctrl-btn-${id}">
+              ${label}
+            </button>
+          `;
+          const btn = itemEl.querySelector('button');
+          if (btn) {
+            btn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              if (action && typeof this.engine.dispatchAction === 'function') {
+                this.engine.dispatchAction(action);
+              } else if (id === 'reset') {
+                this.resetSimulation();
+              }
+            });
+          }
+        } else if (type === 'toggle') {
+          const isChecked = Boolean(curVal);
+          itemEl.innerHTML = `
+            <div class="cartridge-ui-toggle-row">
+              <span class="cartridge-ui-label">${label}</span>
+              <button type="button" class="cartridge-ui-toggle ${isChecked ? 'active' : ''}" role="switch" aria-checked="${isChecked}" id="ctrl-toggle-${id}">
+                <span class="cartridge-ui-toggle-thumb"></span>
+                <span class="cartridge-ui-toggle-text">${isChecked ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+          `;
+          const toggleBtn = itemEl.querySelector('button');
+          const toggleText = itemEl.querySelector('.cartridge-ui-toggle-text');
+          if (toggleBtn) {
+            toggleBtn.addEventListener('click', (e) => {
+              e.stopPropagation();
+              const nowChecked = toggleBtn.getAttribute('aria-checked') === 'true';
+              const nextChecked = !nowChecked;
+              toggleBtn.setAttribute('aria-checked', String(nextChecked));
+              toggleBtn.classList.toggle('active', nextChecked);
+              if (toggleText) toggleText.textContent = nextChecked ? 'ON' : 'OFF';
+
+              if (action && typeof this.engine.dispatchAction === 'function') {
+                this.engine.dispatchAction(action, [nextChecked]);
+              }
+              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+                this.engine.setMemoryVar(bindVar, nextChecked);
+              }
+            });
+          }
+        } else if (type === 'slider') {
+          const val = curVal !== undefined ? curVal : (ctrl.min || 0);
+          itemEl.innerHTML = `
+            <div class="cartridge-ui-slider-box">
+              <div class="cartridge-ui-slider-header">
+                <span class="cartridge-ui-label">${label}</span>
+                <span class="cartridge-ui-badge" id="ctrl-val-${id}">${val}</span>
+              </div>
+              <input type="range" class="cartridge-ui-slider" id="ctrl-slider-${id}"
+                min="${ctrl.min !== undefined ? ctrl.min : 0}"
+                max="${ctrl.max !== undefined ? ctrl.max : 100}"
+                step="${ctrl.step !== undefined ? ctrl.step : 1}"
+                value="${val}" />
+            </div>
+          `;
+          const slider = itemEl.querySelector('input');
+          const readout = itemEl.querySelector(`#ctrl-val-${id}`);
+          if (slider) {
+            slider.addEventListener('input', (e) => {
+              const nextVal = parseFloat(e.target.value);
+              if (readout) readout.textContent = nextVal;
+              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+                this.engine.setMemoryVar(bindVar, nextVal);
+              }
+              if (action && typeof this.engine.dispatchAction === 'function') {
+                this.engine.dispatchAction(action, [nextVal]);
+              }
+            });
+          }
+        } else if (type === 'select') {
+          const optionsList = Array.isArray(ctrl.options) ? ctrl.options : [];
+          itemEl.innerHTML = `
+            <div class="cartridge-ui-select-box">
+              <span class="cartridge-ui-label">${label}</span>
+              <select class="cartridge-ui-select" id="ctrl-select-${id}">
+                ${optionsList.map(opt => `<option value="${opt}" ${opt === curVal ? 'selected' : ''}>${opt}</option>`).join('')}
+              </select>
+            </div>
+          `;
+          const sel = itemEl.querySelector('select');
+          if (sel) {
+            sel.addEventListener('change', (e) => {
+              const nextVal = e.target.value;
+              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+                this.engine.setMemoryVar(bindVar, nextVal);
+              }
+              if (action && typeof this.engine.dispatchAction === 'function') {
+                this.engine.dispatchAction(action, [nextVal]);
+              }
+            });
+          }
+        }
+
+        if (body) body.appendChild(itemEl);
+      });
+    }
+
+    syncProjectedControls(varName, value) {
+      const overlay = document.getElementById('cartridge-controls-overlay');
+      if (!overlay) return;
+      const cleanVar = this.engine && typeof this.engine.normalizeVarName === 'function'
+        ? this.engine.normalizeVarName(varName)
+        : varName.replace(/^\*|\*$/g, '');
+
+      const items = overlay.querySelectorAll('.cartridge-ctrl-item');
+      items.forEach(item => {
+        const id = item.getAttribute('data-ctrl-id');
+        const slider = item.querySelector('.cartridge-ui-slider');
+        if (slider && (id === cleanVar || id === varName)) {
+          slider.value = value;
+          const badge = item.querySelector(`#ctrl-val-${id}`);
+          if (badge) badge.textContent = value;
+        }
+        const toggle = item.querySelector('.cartridge-ui-toggle');
+        if (toggle && (id === cleanVar || id === varName || (id === 'switch' && cleanVar === 'switchClosed') || (id === 'bsl' && cleanVar === 'bslActive'))) {
+          const boolVal = Boolean(value);
+          toggle.setAttribute('aria-checked', String(boolVal));
+          toggle.classList.toggle('active', boolVal);
+          const txt = item.querySelector('.cartridge-ui-toggle-text');
+          if (txt) txt.textContent = boolVal ? 'ON' : 'OFF';
+        }
+      });
+    }
+
     resetSimulation() {
       this.targetStop = null;
-      this.engine.seek(0.0);
-      this.engine.resetVars();
-      if (this.engine.physics) this.engine.physics.reset();
-      this.engine.resetCamera();
-      if (typeof this.engine.evaluateBindings === 'function') {
-        this.engine.evaluateBindings(0.0);
-      } else if (typeof this.engine.applyBindings === 'function') {
-        this.engine.applyBindings(0.0);
+      if (this.engine && typeof this.engine.dispatchAction === 'function') {
+        this.engine.dispatchAction('sim:reset');
+      } else {
+        this.engine.seek(0.0);
+        this.engine.resetVars();
+        if (this.engine.physics) this.engine.physics.reset();
+        this.engine.resetCamera();
+        if (typeof this.engine.applyBindings === 'function') {
+          this.engine.applyBindings(0.0);
+        }
       }
       this.showToast('↺ Simulation Reset to Initial State');
     }
@@ -3496,7 +3691,18 @@ window.addEventListener('message', (e) => {
           this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
         }
 
+        this.projectControls(scene);
         this.updateView();
+      });
+
+      this.engine.on('varchange', (data) => {
+        if (data && data.name) {
+          this.syncProjectedControls(data.name, data.value);
+        }
+      });
+
+      this.engine.on('simreset', () => {
+        this.projectControls(this.engine && this.engine.scene);
       });
 
       this.engine.on('langchange', (data) => {

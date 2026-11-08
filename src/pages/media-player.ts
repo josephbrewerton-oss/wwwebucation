@@ -8,27 +8,16 @@ import {
 import { isPhetBundle, transpilePhetFile } from '../utils/phetBridge';
 import {
   toggleBsl,
+  setBslEnabled,
   getBslEnabled,
   subscribeBsl,
   broadcastBslSpeech,
   subscribeVoice,
-  getVoiceEnabled,
   setVoiceEnabled,
 } from '../services/bslGlobalStore';
-import {
-  renderAstInteractiveLabDrawer,
-  renderPlayerEmbedModal,
-  renderPlayerSettingsModal,
-  renderNanoAiTutorDrawer,
-  renderDevStudioDrawer,
-  type StudioTabType,
-  type InspectedElementData,
-  mountChalkboard,
-  type AstChalkboardInstance,
-} from '../components/player';
-import { type SwfTranspileResult } from '../utils/swfAstParser';
+import { renderPlayerEmbedModal } from '../components/player';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
-import { getPresetConfig, type PlayerDisplayConfig, type PlayerDisplayMode } from '../types/playerConfig';
+import { type PlayerDisplayMode } from '../types/playerConfig';
 
 const DEFAULT_PRESET_ID = 'kinetic-gas';
 const VALID_PRESET_IDS = new Set(PRESET_OPTIONS.map((p) => p.id));
@@ -237,54 +226,14 @@ export function renderPlayerPage(): HTMLElement {
           </button>
           <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
 
-          <!-- Reset Button -->
-          <button type="button" id="player-btn-reset" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#f8fafc; border:1px solid #475569; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation">
-            ↺ Reset
-          </button>
-
-          <!-- Parameters Lab Drawer Button -->
-          <button type="button" id="player-btn-lab" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Interactive Parameter Sliders &amp; Physical Manipulatives">
-            🎛️ Parameters
-          </button>
-
-          <!-- On-Device Gemini Nano AI Tutor Button -->
-          <button type="button" id="player-btn-ai" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Ask Nano: On-Device Gemini Nano Socratic Co-Pilot &amp; Autonomous Solver">
-            🤖 Ask Nano
-          </button>
-
-          <!-- Curriculum Dev Studio & PhET Transpiler Drawer Button -->
-          <button type="button" id="player-btn-studio" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Curriculum Dev Studio, PhET Bridge, Flash Lathe &amp; S-Expression Editor">
-            💻 Studio
-          </button>
-
-          <!-- Smartboard Whiteboard Marker Toggle -->
-          <button type="button" id="player-btn-pen" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#f59e0b; border:1px solid #d97706; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Toggle Smartboard Whiteboard Pen &amp; Annotation Layer">
-            🖊️ Marker
-          </button>
-
-          <!-- OBS Studio Broadcast WebSocket Drawer Button -->
-          <button type="button" id="player-btn-obs" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#c084fc; border:1px solid #8b5cf6; font-size:0.78rem; font-weight:700; cursor:pointer;" title="OBS Studio WebSocket Broadcast Controller &amp; Live Subtitles Push">
-            🎥 OBS Link
-          </button>
-
           <!-- LMS Embed Modal Button -->
           <button type="button" id="player-btn-embed" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
             🚀 Embed
           </button>
 
-          <!-- Display Settings Modal Button -->
-          <button type="button" id="player-btn-settings" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#94a3b8; border:1px solid #475569; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Teaching Profiles &amp; Player Controls Settings">
-            ⚙️ Settings
-          </button>
-
           <!-- Single-File Air-Gapped HTML Export Button -->
           <button type="button" id="player-btn-export-airgap" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Export Standalone Single-File HTML Lesson Capsule (< 45 KB)">
             📦 Airgap HTML
-          </button>
-
-          <!-- BSL Signing Toggle Button -->
-          <button type="button" id="player-btn-bsl" style="padding:6px 14px; border-radius:8px; background:${bslActive ? 'rgba(56, 189, 248, 0.16)' : '#1e293b'}; color:${bslActive ? '#38bdf8' : '#94a3b8'}; border:${bslActive ? '1.5px solid #38bdf8' : '1px solid #475569'}; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:6px;" title="British Sign Language (BSL) In-Vision Interpreter (Shift + B)">
-            <span>🖐️</span> BSL Signing: ${bslActive ? 'ON' : 'OFF'}
           </button>
 
           <!-- Fullscreen Button -->
@@ -376,16 +325,8 @@ export function renderPlayerPage(): HTMLElement {
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
   const stageBadgeEl = container.querySelector<HTMLElement>('#player-active-stage-badge')!;
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
-  const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl')!;
-  const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset')!;
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
-  const labBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab');
-  const aiBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai');
-  const studioBtn = container.querySelector<HTMLButtonElement>('#player-btn-studio');
-  const penBtn = container.querySelector<HTMLButtonElement>('#player-btn-pen');
-  const obsBtn = container.querySelector<HTMLButtonElement>('#player-btn-obs');
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
-  const settingsBtn = container.querySelector<HTMLButtonElement>('#player-btn-settings');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
   const drawerMount = container.querySelector<HTMLDivElement>('#player-drawer-mount-point');
   const fileInputHidden = container.querySelector<HTMLInputElement>('#media-player-file-input')!;
@@ -395,151 +336,68 @@ export function renderPlayerPage(): HTMLElement {
   const catButtons = container.querySelectorAll<HTMLButtonElement>('.cat-pill-btn');
   const iframeWrapper = container.querySelector<HTMLDivElement>('#player-iframe-wrapper')!;
 
-  let activeDrawer: 'lab' | 'ai' | 'studio' | 'embed' | 'settings' | null = null;
-  let chalkboard: AstChalkboardInstance | null = null;
+  // Strict Typed postMessage Protocol between Host Chassis & Unified Cartridge Player Kernel
+  type HostToPlayerMessage =
+    | { type: 'SET_PRESET'; preset: string; play?: boolean }
+    | { type: 'LOAD_CUSTOM_CARTRIDGE'; cartridge: CartridgeDefinition }
+    | { type: 'DISPATCH_ACTION'; action: string; args?: any[] }
+    | { type: 'SET_VAR'; name: string; value: any }
+    | { type: 'SET_VOICE'; enabled: boolean }
+    | { type: 'SET_BSL'; enabled: boolean }
+    | { type: 'TOGGLE_BSL' }
+    | { type: 'RESET_SIM' };
+
+  function postToPlayer(msg: HostToPlayerMessage) {
+    iframe?.contentWindow?.postMessage(msg, '*');
+  }
+
+  let isEmbedOpen = false;
   let embedTargetMode: PlayerDisplayMode = 'classroom';
   let copiedEmbed = false;
-  let displayConfig: PlayerDisplayConfig = getPresetConfig('classroom');
 
-  // Dev Studio state (PhET, SWF, Inspector, SVG, AST)
-  let studioTab: StudioTabType = 'phet';
-  let inspectedElement: InspectedElementData | null = null;
-  let customSvgCode = '';
-  let customAstCode = '';
-  let hotReloadFlash = false;
-  let swfResult: SwfTranspileResult | null = null;
-  let isParsingSwf = false;
-  let swfError: string | null = null;
-  let swfDragActive = false;
-
-  function renderCurrentDrawer() {
+  function renderEmbedDrawer() {
     if (!drawerMount) return;
-    if (!activeDrawer) {
+    if (!isEmbedOpen) {
       drawerMount.style.display = 'none';
       drawerMount.innerHTML = '';
-      [labBtn, aiBtn, studioBtn, embedBtn, settingsBtn].forEach((b) => b?.classList.remove('active'));
+      embedBtn?.classList.remove('active');
       return;
     }
 
     drawerMount.style.display = 'block';
     drawerMount.innerHTML = '';
-    [labBtn, aiBtn, studioBtn, embedBtn, settingsBtn].forEach((b) => b?.classList.remove('active'));
+    embedBtn?.classList.add('active');
 
-    let drawerEl: HTMLElement | null = null;
-    if (activeDrawer === 'lab') {
-      labBtn?.classList.add('active');
-      drawerEl = renderAstInteractiveLabDrawer({
-        isOpen: true,
-        onClose: () => toggleDrawer('lab'),
-        preset: activePreset,
-      });
-    } else if (activeDrawer === 'ai') {
-      aiBtn?.classList.add('active');
-      drawerEl = renderNanoAiTutorDrawer({
-        isOpen: true,
-        onClose: () => toggleDrawer('ai'),
-        preset: activePreset,
-        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
-      });
-    } else if (activeDrawer === 'studio') {
-      studioBtn?.classList.add('active');
-      drawerEl = renderDevStudioDrawer({
-        isOpen: true,
-        onClose: () => toggleDrawer('studio'),
-        studioTab,
-        setStudioTab: (tab) => {
-          studioTab = tab;
-          renderCurrentDrawer();
-        },
-        inspectedElement,
-        setInspectedElement: (elem) => {
-          inspectedElement = typeof elem === 'function' ? elem(inspectedElement) : elem;
-          renderCurrentDrawer();
-        },
-        customSvgCode,
-        setCustomSvgCode: (code) => {
-          customSvgCode = code;
-        },
-        customAstCode,
-        setCustomAstCode: (code) => {
-          customAstCode = code;
-        },
-        hotReloadFlash,
-        setHotReloadFlash: (val) => {
-          hotReloadFlash = val;
-        },
-        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
-        swfResult,
-        setSwfResult: (res) => {
-          swfResult = res;
-          renderCurrentDrawer();
-        },
-        isParsingSwf,
-        setIsParsingSwf: (val) => {
-          isParsingSwf = val;
-          renderCurrentDrawer();
-        },
-        swfError,
-        setSwfError: (err) => {
-          swfError = err;
-          renderCurrentDrawer();
-        },
-        swfDragActive,
-        setSwfDragActive: (val) => {
-          swfDragActive = val;
-          renderCurrentDrawer();
-        },
-      });
-    } else if (activeDrawer === 'embed') {
-      embedBtn?.classList.add('active');
-      const getEmbedSnippet = (mode: PlayerDisplayMode) =>
-        `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
-      drawerEl = renderPlayerEmbedModal({
-        isOpen: true,
-        onClose: () => toggleDrawer('embed'),
-        embedTargetMode,
-        setEmbedTargetMode: (mode) => {
-          embedTargetMode = mode;
-          renderCurrentDrawer();
-        },
-        copiedEmbed,
-        onCopyEmbedCode: () => {
-          copiedEmbed = true;
-          navigator.clipboard?.writeText(getEmbedSnippet(embedTargetMode));
-          renderCurrentDrawer();
-          setTimeout(() => {
-            copiedEmbed = false;
-            if (activeDrawer === 'embed') renderCurrentDrawer();
-          }, 2000);
-        },
-        embedCode: getEmbedSnippet(embedTargetMode),
-      });
-    } else if (activeDrawer === 'settings') {
-      settingsBtn?.classList.add('active');
-      drawerEl = renderPlayerSettingsModal({
-        isOpen: true,
-        onClose: () => toggleDrawer('settings'),
-        displayConfig,
-        setDisplayConfig: (cfg) => {
-          displayConfig = typeof cfg === 'function' ? cfg(displayConfig) : cfg;
-          iframe?.contentWindow?.postMessage({ type: 'UPDATE_CONFIG', config: displayConfig }, '*');
-        },
-        postToPlayer: (payload) => iframe?.contentWindow?.postMessage(payload, '*'),
-      });
-    }
+    const getEmbedSnippet = (mode: PlayerDisplayMode) =>
+      `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
+
+    const drawerEl = renderPlayerEmbedModal({
+      isOpen: true,
+      onClose: () => {
+        isEmbedOpen = false;
+        renderEmbedDrawer();
+      },
+      embedTargetMode,
+      setEmbedTargetMode: (mode) => {
+        embedTargetMode = mode;
+        renderEmbedDrawer();
+      },
+      copiedEmbed,
+      onCopyEmbedCode: () => {
+        copiedEmbed = true;
+        navigator.clipboard?.writeText(getEmbedSnippet(embedTargetMode));
+        renderEmbedDrawer();
+        setTimeout(() => {
+          copiedEmbed = false;
+          if (isEmbedOpen) renderEmbedDrawer();
+        }, 2000);
+      },
+      embedCode: getEmbedSnippet(embedTargetMode),
+    });
 
     if (drawerEl) {
       drawerMount.appendChild(drawerEl);
     }
-  }
-
-  function toggleDrawer(name: 'lab' | 'ai' | 'studio' | 'embed' | 'settings') {
-    if (activeDrawer === name) {
-      activeDrawer = null;
-    } else {
-      activeDrawer = name;
-    }
-    renderCurrentDrawer();
   }
 
   function refreshDropdown() {
@@ -582,17 +440,8 @@ export function renderPlayerPage(): HTMLElement {
     // Broadcast lesson change to BSL interpreter
     broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
 
-    if (chalkboard) {
-      chalkboard.destroy();
-      chalkboard = null;
-      if (penBtn) {
-        penBtn.style.background = '#1e293b';
-        penBtn.style.borderColor = '#d97706';
-        penBtn.style.color = '#f59e0b';
-      }
-    }
-    if (activeDrawer === 'lab' || activeDrawer === 'ai') {
-      renderCurrentDrawer();
+    if (isEmbedOpen) {
+      renderEmbedDrawer();
     }
 
     const nextUrl = new URL(window.location.href);
@@ -852,43 +701,18 @@ export function renderPlayerPage(): HTMLElement {
     });
   }
 
-  // Reset button
-  resetBtn?.addEventListener('click', () => {
-    try {
-      iframe?.contentWindow?.postMessage({ type: 'RESET_SIM' }, '*');
-    } catch (_) {}
-  });
-
-  // Synchronize BSL button UI
-  function updateBslBtnUi(active: boolean) {
-    bslActive = active;
-    if (bslBtn) {
-      bslBtn.textContent = `🖐️ BSL Signing: ${active ? 'ON' : 'OFF'}`;
-      bslBtn.style.background = active ? 'rgba(56, 189, 248, 0.16)' : '#1e293b';
-      bslBtn.style.borderColor = active ? '#38bdf8' : '#475569';
-      bslBtn.style.color = active ? '#38bdf8' : '#94a3b8';
-    }
-  }
-
-  // Subscribe to universal BSL state across top nav, Shift+B shortcut, and floating close button
+  // Subscribe to universal BSL state across top nav or keyboard shortcuts
   subscribeBsl((enabled) => {
     if (bslActive !== enabled) {
-      updateBslBtnUi(enabled);
-      if (iframe) {
-        iframe.src = buildPlayerSrc(base, activePreset, enabled);
-      }
+      bslActive = enabled;
+      postToPlayer({ type: 'SET_BSL', enabled });
     }
-  });
-
-  // BSL toggle button click
-  bslBtn?.addEventListener('click', () => {
-    toggleBsl();
   });
 
   // Synchronize voice narration between host and simulator iframe
   subscribeVoice((enabled) => {
     try {
-      iframe?.contentWindow?.postMessage({ type: 'SET_VOICE', enabled }, '*');
+      postToPlayer({ type: 'SET_VOICE', enabled });
     } catch (_) {}
   });
 
@@ -901,6 +725,14 @@ export function renderPlayerPage(): HTMLElement {
     if ((e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') && typeof e.data.enabled === 'boolean') {
       setVoiceEnabled(e.data.enabled);
     }
+    if (e.data.type === 'BSL_STATE_CHANGED' && typeof e.data.active === 'boolean') {
+      bslActive = e.data.active;
+      setBslEnabled(e.data.active);
+    }
+    if (e.data.type === 'TOGGLE_BSL' && typeof e.data.enabled === 'boolean') {
+      bslActive = e.data.enabled;
+      setBslEnabled(e.data.enabled);
+    }
   });
 
   window.addEventListener('cartridges_updated', () => {
@@ -908,37 +740,10 @@ export function renderPlayerPage(): HTMLElement {
     renderGrid();
   });
 
-  // Drawer & Tool Buttons Wiring
-  labBtn?.addEventListener('click', () => toggleDrawer('lab'));
-  aiBtn?.addEventListener('click', () => toggleDrawer('ai'));
-  studioBtn?.addEventListener('click', () => toggleDrawer('studio'));
-  embedBtn?.addEventListener('click', () => toggleDrawer('embed'));
-  settingsBtn?.addEventListener('click', () => toggleDrawer('settings'));
-
-  obsBtn?.addEventListener('click', () => {
-    iframe?.contentWindow?.postMessage({ type: 'TOGGLE_OBS_DRAWER' }, '*');
-  });
-
-  penBtn?.addEventListener('click', () => {
-    if (chalkboard) {
-      chalkboard.destroy();
-      chalkboard = null;
-      penBtn.style.background = '#1e293b';
-      penBtn.style.borderColor = '#d97706';
-      penBtn.style.color = '#f59e0b';
-    } else if (iframeWrapper) {
-      chalkboard = mountChalkboard(iframeWrapper, {
-        onClose: () => {
-          chalkboard = null;
-          penBtn.style.background = '#1e293b';
-          penBtn.style.borderColor = '#d97706';
-          penBtn.style.color = '#f59e0b';
-        },
-      });
-      penBtn.style.background = 'rgba(245, 158, 11, 0.2)';
-      penBtn.style.borderColor = '#f59e0b';
-      penBtn.style.color = '#fbbf24';
-    }
+  // Host chassis embed modal wiring
+  embedBtn?.addEventListener('click', () => {
+    isEmbedOpen = !isEmbedOpen;
+    renderEmbedDrawer();
   });
 
   exportAirgapBtn?.addEventListener('click', () => {

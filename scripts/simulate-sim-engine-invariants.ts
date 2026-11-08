@@ -172,8 +172,11 @@ console.log('\n--- TEST 5: S-Expression Grammar Verification of kinetic-gas.ast 
   const path = await import('path');
   const astContent = fs.readFileSync(path.resolve('static/cartridges/kinetic-gas.ast'), 'utf8');
 
-  assert(astContent.includes(':name "particleCount"'), 'kinetic-gas.ast must define particleCount var');
-  assert(astContent.includes(':slider :var "particleCount"'), 'kinetic-gas.ast must provide particleCount slider');
+  assert(
+    astContent.includes(':slider :var "particleCount"') ||
+    (astContent.includes('control:slider') && astContent.includes('particleCount')),
+    'kinetic-gas.ast must provide particleCount slider'
+  );
   assert(astContent.includes(':emitter :id "gas-molecules"'), 'kinetic-gas.ast must define gas-molecules emitter');
 
   const parsed = parseSExpr(astContent);

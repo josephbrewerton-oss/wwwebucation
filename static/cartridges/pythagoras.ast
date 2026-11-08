@@ -3,10 +3,12 @@
     (:var :name "sideA" :val 3 :min 1 :max 15 :step 1 :unit "units" :label "Leg a")
     (:var :name "sideB" :val 4 :min 1 :max 15 :step 1 :unit "units" :label "Leg b")
   ))
-  (:inputs (
-    (:number :var "sideA" :label "Triangle Leg a" :min 1 :max 15 :step 1)
-    (:number :var "sideB" :label "Triangle Leg b" :min 1 :max 15 :step 1)
-  ))
+  (ui:controls
+    (control:button :id "reset" :label "↺ Reset Triangle" :action (sim:reset))
+    (control:toggle :id "bsl" :label "🖐️ BSL Signing" :bind *bsl-active* :action (player:toggle-bsl))
+    (control:slider :id "sideA" :label "Triangle Leg a" :min 1 :max 12 :default 3 :step 1 :bind *sideA*)
+    (control:slider :id "sideB" :label "Triangle Leg b" :min 1 :max 12 :default 4 :step 1 :bind *sideB*)
+  )
   (:computed (
     (:name "hypotenuse" :expr "Math.sqrt(vars.sideA * vars.sideA + vars.sideB * vars.sideB).toFixed(2)")
     (:name "areaA" :expr "vars.sideA * vars.sideA")

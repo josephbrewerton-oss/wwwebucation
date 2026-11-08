@@ -1,6 +1,6 @@
 import { classroomBeacon } from '../services/classroomBeacon';
 import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
-import { toggleBsl, subscribeBsl, getBslEnabled, broadcastBslSpeech } from '../services/bslGlobalStore';
+import { toggleBsl, setBslEnabled, subscribeBsl, getBslEnabled, broadcastBslSpeech } from '../services/bslGlobalStore';
 import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
@@ -542,7 +542,12 @@ export class PersistentAppShellElement extends HTMLElement {
 
     // Listen to lesson narration & subtitle broadcasts from player iframe
     window.addEventListener('message', (e) => {
-      if (e.data && e.data.type === 'SUBTITLE_UPDATE' && e.data.text) {
+      if (e.data && (e.data.type === 'TOGGLE_BSL' || e.data.type === 'BSL_STATE_CHANGED')) {
+        const enabled = typeof e.data.enabled === 'boolean' ? e.data.enabled : e.data.active;
+        if (typeof enabled === 'boolean' && enabled !== this.bsl) {
+          setBslEnabled(enabled);
+        }
+      } else if (e.data && e.data.type === 'SUBTITLE_UPDATE' && e.data.text) {
         broadcastBslSpeech({ subtitle: e.data.text, isSpeaking: true });
         const interpreter = this.querySelector<NativeBslInterpreterElement>('native-bsl-interpreter');
         if (interpreter) {

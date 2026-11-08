@@ -2402,3 +2402,244 @@ body.embedded-mode header {
   text-rendering: geometricPrecision;
   pointer-events: auto;
 }
+
+/* ==========================================================================
+   Fantasy Console / Lisp Machine AST Control Projection Overlay
+   ========================================================================== */
+.cartridge-controls-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  max-width: 270px;
+  width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 10px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  user-select: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.cartridge-controls-overlay.hidden {
+  display: none !important;
+}
+
+.cartridge-controls-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(30, 41, 59, 0.7);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+}
+
+.cartridge-controls-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+.cartridge-controls-chip {
+  font-size: 9px;
+  font-weight: 800;
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.2);
+  color: #38bdf8;
+  letter-spacing: 0.05em;
+  font-family: ui-monospace, monospace;
+  white-space: nowrap;
+}
+
+.cartridge-controls-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cartridge-controls-min-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.cartridge-controls-min-btn:hover {
+  color: #f8fafc;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cartridge-controls-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  max-height: 380px;
+}
+
+.cartridge-controls-body.collapsed {
+  display: none;
+}
+
+.cartridge-ctrl-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cartridge-ui-btn {
+  width: 100%;
+  padding: 6px 12px;
+  background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+  border: 1px solid #0284c7;
+  color: #38bdf8;
+  font-size: 11px;
+  font-weight: 700;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.cartridge-ui-btn:hover {
+  background: #0284c7;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
+.cartridge-ui-btn:active {
+  transform: translateY(1px);
+}
+
+.cartridge-ui-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cartridge-ui-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.cartridge-ui-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 58px;
+  height: 24px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 2px 6px;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.cartridge-ui-toggle.active {
+  background: #0284c7;
+  border-color: #38bdf8;
+}
+
+.cartridge-ui-toggle-thumb {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  background: #ffffff;
+  border-radius: 50%;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+.cartridge-ui-toggle.active .cartridge-ui-toggle-thumb {
+  transform: translateX(34px);
+}
+
+.cartridge-ui-toggle-text {
+  font-size: 9px;
+  font-weight: 800;
+  color: #ffffff;
+  margin-left: auto;
+  letter-spacing: 0.05em;
+}
+
+.cartridge-ui-toggle.active .cartridge-ui-toggle-text {
+  margin-left: 6px;
+  margin-right: auto;
+}
+
+.cartridge-ui-slider-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cartridge-ui-slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cartridge-ui-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #fde047;
+  background: rgba(254, 240, 138, 0.15);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+}
+
+.cartridge-ui-slider {
+  width: 100%;
+  height: 5px;
+  border-radius: 3px;
+  background: #334155;
+  outline: none;
+  cursor: pointer;
+  accent-color: #38bdf8;
+}
+
+.cartridge-ui-select-box {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.cartridge-ui-select {
+  background: #0b1120;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}
