@@ -5524,23 +5524,41 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 );
               } else if (ext === 'svg') {
                 if (registryScene?.svgFile) {
-                  candidateUrls.push(`${repoBase}${registryScene.svgFile.replace(/^(?:static\/|player\/)?/, '')}`);
+                  const cleanSvg = registryScene.svgFile.replace(/^(?:static\/|player\/)?/, '');
+                  candidateUrls.push(
+                    `${repoBase}player/${cleanSvg}`,
+                    `${repoBase}${cleanSvg}`,
+                    `./player/${cleanSvg}`,
+                    `./${cleanSvg}`
+                  );
                 }
                 candidateUrls.push(
-                  `${repoBase}cartridges/${sceneId}.svg`,
+                  `${repoBase}player/scenes/${sceneId}.svg`,
                   `${repoBase}player/bytecode/${sceneId}.svg`,
+                  `${repoBase}cartridges/${sceneId}.svg`,
+                  `${repoBase}scenes/${sceneId}.svg`,
+                  `./player/scenes/${sceneId}.svg`,
                   `./scenes/${sceneId}.svg`,
-                  `../cartridges/${sceneId}.svg`
+                  `./bytecode/${sceneId}.svg`,
+                  `./cartridges/${sceneId}.svg`
                 );
               } else if (ext === 'ast') {
                 if (registryScene?.astFile) {
-                  candidateUrls.push(`${repoBase}${registryScene.astFile.replace(/^(?:static\/|player\/)?/, '')}`);
+                  const cleanAst = registryScene.astFile.replace(/^(?:static\/|player\/)?/, '');
+                  candidateUrls.push(
+                    `${repoBase}player/${cleanAst}`,
+                    `${repoBase}${cleanAst}`,
+                    `./player/${cleanAst}`,
+                    `./${cleanAst}`
+                  );
                 }
                 candidateUrls.push(
-                  `${repoBase}cartridges/${sceneId}.ast`,
                   `${repoBase}player/scenes/${sceneId}.ast`,
-                  `../cartridges/${sceneId}.ast`,
-                  `./scenes/${sceneId}.ast`
+                  `${repoBase}cartridges/${sceneId}.ast`,
+                  `${repoBase}scenes/${sceneId}.ast`,
+                  `./player/scenes/${sceneId}.ast`,
+                  `./scenes/${sceneId}.ast`,
+                  `./cartridges/${sceneId}.ast`
                 );
               }
 

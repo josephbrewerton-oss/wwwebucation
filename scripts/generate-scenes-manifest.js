@@ -550,8 +550,22 @@ export function generateScenesManifest(options = {}) {
         fs.copyFileSync(item.svgPath, legacySceneSvg);
       }
     }
+
+    // D. Root static/scenes/ mirror for direct asset resolution
+    const rootScenesDir = path.join(rootDir, 'static', 'scenes');
+    if (!fs.existsSync(rootScenesDir)) fs.mkdirSync(rootScenesDir, { recursive: true });
+    const rootSceneAst = path.join(rootScenesDir, `${item.base}.ast`);
+    const rootSceneSvg = path.join(rootScenesDir, `${item.base}.svg`);
+    if (!fs.existsSync(rootSceneAst) || fs.readFileSync(rootSceneAst, 'utf8') !== item.content) {
+      fs.writeFileSync(rootSceneAst, item.content, 'utf8');
+    }
+    if (fs.existsSync(item.svgPath)) {
+      if (!fs.existsSync(rootSceneSvg) || fs.statSync(item.svgPath).size !== fs.statSync(rootSceneSvg).size) {
+        fs.copyFileSync(item.svgPath, rootSceneSvg);
+      }
+    }
   }
-  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/cartridges/`);
+  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/cartridges/ and static/scenes/`);
 
   // 4. Output strongly typed presets for React UI
   const tsDataDir = path.dirname(tsExportPath);
