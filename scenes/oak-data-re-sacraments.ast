@@ -1,0 +1,57 @@
+(:cartridge :type :data :id "oak-data-re-sacraments" :title "The Seven Sacraments & Holy Eucharist" :stage "Key Stage 2" :subject "Religious Education (Catholic)" :unit "The Holy Eucharist & Sacraments"
+  (:axiom "A Sacrament is an outward, visible sign of inward grace instituted by Christ to confer divine life upon the soul.")
+  (:trap "Confusing the Holy Eucharist with a mere symbolic cracker, or believing sacraments are only human rituals without divine efficacy.")
+  (:socratic-pivot "Why did Jesus say at the Last Supper \"This IS my Body\", and how does the priest act in persona Christi at Mass?")
+  (:hook "Stepping into church and seeing the red sanctuary lamp flickering beside the Tabernacle.")
+  (:guided-step "Identify the three categories of Sacraments: Christian Initiation, Healing, and Service of Communion.")
+  (:questions (
+    (:q :id "re-1" :prompt "What is the doctrinal Catholic definition of a Sacrament?"
+        :options ("An outward and visible sign of invisible divine grace instituted by Jesus Christ" "A human tradition invented by medieval monks for church recordkeeping" "A graduation certificate awarded to students who pass Sunday school exams" "A personal opinion about morality that changes from year to year")
+        :answer 0
+        :tier "recall"
+        :hint "Recall the classic Catechism definition: an outward sign instituted by Christ to give grace."
+        :explanation "The Catholic Church teaches that Sacraments are efficacious signs of grace, instituted by Christ and entrusted to the Church, by which divine life is dispensed to us (CCC 1131)."
+        :misconceptions ("Correct! A Sacrament is an outward sign of inward grace instituted by Christ." "Misconception: Sacraments were instituted by Jesus Christ Himself in the Gospels." "Misconception: Sacraments are encounters with God’s grace, not academic tests." "Misconception: Sacraments convey objective divine grace through the Holy Spirit.")
+    )
+    (:q :id "re-2" :prompt "Which three sacraments make up the Sacraments of Christian Initiation, laying the foundation of Christian life?"
+        :options ("Baptism, Confirmation, and the Holy Eucharist" "Reconciliation, Anointing of the Sick, and Holy Orders" "Matrimony, Holy Orders, and Confession" "Baptism, Funerals, and Sunday Collection")
+        :answer 0
+        :tier "recall"
+        :hint "Think of the three sacraments by which a believer is reborn, strengthened by the Holy Spirit, and nourished by Christ’s Body and Blood."
+        :explanation "The Sacraments of Christian Initiation are Baptism (new birth in Christ), Confirmation (strengthening with the Holy Spirit), and the Holy Eucharist (nourishment with the Bread of Life)."
+        :misconceptions ("Correct! Baptism, Confirmation, and Eucharist are the three Sacraments of Initiation." "Misconception: Reconciliation and Anointing are the two Sacraments of Healing." "Misconception: Holy Orders and Matrimony are the Sacraments at the Service of Communion." "Misconception: Funerals are liturgical rites, not one of the Seven Sacraments.")
+    )
+    (:q :id "re-3" :prompt "What does the Catholic Church teach occurs during the Eucharistic Consecration at Mass (Transubstantiation)?"
+        :options ("The substance of bread and wine becomes truly and substantially the Body, Blood, Soul, and Divinity of Jesus Christ" "The bread and wine remain ordinary food but serve as a mental reminder or metaphor" "The bread turns into breadcrumbs with holy water sprinkled over it" "The priest performs a magic trick where the host disappears into thin air")
+        :answer 0
+        :tier "analysis"
+        :hint "Consider the doctrine of Real Presence affirmed by the Council of Trent and the words of Christ."
+        :explanation "Catholic doctrine teaches the Real Presence through Transubstantiation: while the physical appearances (accidents) of bread and wine remain, their underlying substance becomes truly the Body and Blood of Christ."
+        :misconceptions ("Correct! Transubstantiation affirms the Real Presence of Christ in the Eucharist." "Misconception: Catholic doctrine explicitly rejects the view that the Eucharist is merely a symbol or metaphor." "Misconception: Holy water is a sacramental, not part of Eucharistic consecration." "Misconception: The Eucharist is a divine mystery of faith, not an optical illusion.")
+    )
+    (:q :id "re-4" :prompt "What essential physical matter and words (form) are required for a valid Christian Baptism?"
+        :options ("Pouring of water while saying \"I baptise you in the name of the Father, and of the Son, and of the Holy Spirit\"" "Sprinkling salt while reciting the Ten Commandments in English" "Lighting seven candles while waving incense three times" "Writing the baby’s name in the parish registry without any prayer")
+        :answer 0
+        :tier "application"
+        :hint "Jesus commanded in Matthew 28:19: \"Baptise them in the name of the Father, and of the Son, and of the Holy Spirit.\""
+        :explanation "The essential matter of Baptism is true water (by immersion or pouring), and the essential form is the Trinitarian formula commanded by Christ: \"I baptise you in the name of the Father, and of the Son, and of the Holy Spirit.\""
+        :misconceptions ("Correct! Water and the Trinitarian formula are strictly required for valid baptism." "Misconception: Salt was historically an optional baptismal rite, but never the essential sacramental matter." "Misconception: Candles and incense are liturgical symbols, not the essential matter of baptism." "Misconception: Civil or parish registration cannot substitute for sacramental washing with water.")
+    )
+    (:q :id "re-5" :prompt "Which sacrament gives spiritual healing, forgiveness of sins committed after baptism, and reconciliation with God and the Church?"
+        :options ("The Sacrament of Reconciliation (Penance / Confession)" "The Sacrament of Confirmation" "The Sacrament of Holy Orders" "The Sacrament of Matrimony")
+        :answer 0
+        :tier "recall"
+        :hint "Jesus breathed on the apostles and said: \"Receive the Holy Spirit; whose sins you forgive are forgiven them\" (John 20:23)."
+        :explanation "In the Sacrament of Reconciliation, Christ’s mercy is mediated through the priest, granting absolution for sins to those who are contrite and confess."
+        :misconceptions ("Correct! Reconciliation provides forgiveness, healing, and peace of conscience." "Misconception: Confirmation imparts the fullness of the Holy Spirit for Christian witness." "Misconception: Holy Orders ordains deacons, priests, and bishops to sacred ministry." "Misconception: Matrimony sanctifies the marital covenant between husband and wife.")
+    )
+    (:q :id "re-6" :prompt "What is the purpose of the one-hour Eucharistic fast before receiving Holy Communion at Mass?"
+        :options ("To prepare our minds, bodies, and hearts with reverence and spiritual hunger for the Blessed Sacrament" "To save food money for the parish heating fund" "Because eating food is sinful on Sundays" "To make sure people feel faint and tired during the homily")
+        :answer 0
+        :tier "analysis"
+        :hint "Think about spiritual reverence and bodily discipline when preparing to receive Christ."
+        :explanation "Canon law asks Catholics to abstain from food and drink (except water and medicine) for at least one hour before Communion as an act of bodily preparation and reverence for the Lord."
+        :misconceptions ("Correct! The Eucharistic fast fosters spiritual reverence and physical readiness." "Misconception: The fast is a spiritual discipline, not a financial measure." "Misconception: Food is a good gift from God; fasting is a temporary exercise in spiritual preparation." "Misconception: Fasting is intended to promote prayerful attentiveness, not fatigue.")
+    )
+  ))
+)

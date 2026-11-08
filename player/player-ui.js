@@ -1272,7 +1272,7 @@
     updateView() {
       const scene = this.engine?.scene;
       if (this.elements.badgeStage) {
-        this.elements.badgeStage.textContent = scene.stage || 'CURRICULUM';
+        this.elements.badgeStage.textContent = (scene && scene.stage) ? scene.stage : 'CURRICULUM';
       }
       this.updateBslButton();
 
@@ -1326,7 +1326,7 @@
           }
         } else {
           this.elements.subtitleOverlay.style.opacity = '0.7';
-          this.elements.subtitleOverlay.textContent = scene.title || 'AST Vector Media Player';
+          this.elements.subtitleOverlay.textContent = (scene && scene.title) ? scene.title : 'AST Vector Media Player';
         }
       }
 
@@ -1346,13 +1346,15 @@
       }
       const isContinuousSim = Boolean(
         this.engine.isContinuousSim ||
-        scene.type === 'Sim' ||
-        scene.cartridgeType === 'Sim' ||
-        scene.type === 'App' ||
-        scene.cartridgeType === 'App' ||
-        (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
-        (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
-        (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+        (scene && (
+          scene.type === 'Sim' ||
+          scene.cartridgeType === 'Sim' ||
+          scene.type === 'App' ||
+          scene.cartridgeType === 'App' ||
+          (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+          (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
+          (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node'))
+        ))
       );
 
       // On simulations, switch off the timeline scrubber and step buttons
