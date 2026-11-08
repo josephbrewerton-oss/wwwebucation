@@ -17,8 +17,17 @@ function scanAndDigest() {
   const fileDigests: Record<string, string> = {};
   const hashCollector = crypto.createHash('sha256');
 
-  // Root substrates
-  const rootSubstrates = ['nano-map.ast', 'manifest.json'];
+  // Root substrates & core player runtime
+  const rootSubstrates = [
+    'nano-map.ast',
+    'manifest.json',
+    'player.html',
+    'player/player-ui.js',
+    'player/ast-engine.js',
+    'player/ast-compiler.js',
+    'player/ast-gestures.js',
+    'player/player.css'
+  ];
   for (const f of rootSubstrates) {
     const fullPath = path.join(STATIC_DIR, f);
     if (fs.existsSync(fullPath)) {

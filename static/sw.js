@@ -2,7 +2,7 @@
 // Ultra-Low-Bandwidth Offline Engine & Service Worker for St Joseph's Learning Portal
 // Designed for developing nations, metered data plans, and air-gapped schools.
 // Cache key is bound directly to the curriculum composite digest for content-addressed immutability.
-const MANIFEST_HASH = '581da29d3880';
+const MANIFEST_HASH = 'f7f0d767fe89';
 const CACHE_NAME = `stj-manifest-v-${MANIFEST_HASH}`;
 
 // Critical core assets to pre-cache on install for instant offline boot
@@ -143,6 +143,23 @@ self.addEventListener('fetch', (event) => {
           });
         }
       })()
+    );
+    return;
+  }
+
+  // Network-First with cache fallback for core player engine & player.html to prevent stale iframe bugs on deploy
+  const isPlayerCore = url.pathname.includes('player.html') || url.pathname.includes('player-ui.js') || url.pathname.includes('ast-engine.js') || url.pathname.includes('ast-registry.js');
+  if (isPlayerCore) {
+    event.respondWith(
+      fetch(request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const clone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

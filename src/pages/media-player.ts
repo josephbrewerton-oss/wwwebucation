@@ -418,7 +418,12 @@ export function renderPlayerPage(): HTMLElement {
     return [...customList, ...presets];
   }
 
-  function updatePreset(presetId: string) {
+  let isIframeReady = false;
+  iframe?.addEventListener('load', () => {
+    isIframeReady = true;
+  });
+
+  function updatePreset(presetId: string, skipPostMessage = false) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
     activePreset = safePresetId;
@@ -433,7 +438,9 @@ export function renderPlayerPage(): HTMLElement {
       catholicBanner.style.display = isCatholicPreset(item) ? 'flex' : 'none';
     }
 
-    if (iframe) {
+    if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
+      postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
+    } else if (iframe && (!iframe.src || iframe.src === 'about:blank' || !isIframeReady)) {
       iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
     }
 
@@ -717,7 +724,18 @@ export function renderPlayerPage(): HTMLElement {
   });
 
   window.addEventListener('message', (e) => {
-    if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.type === 'PLAYER_READY') {
+      isIframeReady = true;
+      if (activePreset) {
+        postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
+      }
+    }
+    if ((e.data.type === 'PRESETCHANGE' || e.data.type === 'PLAYER_PRESET_CHANGED') && typeof e.data.preset === 'string') {
+      const incomingId = normalizePresetId(e.data.preset);
+      if (incomingId !== activePreset) {
+        updatePreset(incomingId, true);
+      }
+    }
     if (e.data.type === 'CARTRIDGE_INGESTED') {
       refreshDropdown();
       renderGrid();

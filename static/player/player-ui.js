@@ -2120,7 +2120,6 @@
         });
 
 window.addEventListener('message', (e) => {
-  if (e.origin !== window.location.origin) return;
   if (e.source !== window.parent && e.source !== window) return;
 
   const data = e.data;
