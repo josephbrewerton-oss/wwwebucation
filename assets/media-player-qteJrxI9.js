@@ -1,4 +1,4 @@
-import{_ as e,b as t,d as n,f as r,g as i,h as a,i as o,n as s,t as c,u as l,v as u,x as d,y as f}from"./index-BP-E0K2R.js";import{t as p}from"./EdgeCognitiveEngine-C4EDP8IX.js";function m(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{_ as e,b as t,d as n,f as r,g as i,h as a,i as o,n as s,t as c,u as l,v as u,x as d,y as f}from"./index-y6T5rJ8b.js";import{t as p}from"./EdgeCognitiveEngine-DE7P65m-.js";function m(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;
@@ -219,66 +219,63 @@ In other countries, please reach out to your local child helpline or a trusted f
 
     <!-- Main Interactive Stage Frame -->
     <div style="background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
-      <!-- Stage Toolbar -->
-      <div style="padding:12px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
-        <div style="display:flex; align-items:center; gap:10px;">
-          <span style="font-size:1.4rem;">🎮</span>
-          <div>
+      <!-- Stage Toolbar: Row 1 (Header & Primary Simulation Controls) -->
+      <div style="padding:10px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; min-height:48px; box-sizing:border-box;">
+        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+          <span style="font-size:1.3rem; flex-shrink:0;">🎮</span>
+          <div style="min-width:0;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em;">
+              <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em; white-space:nowrap;">
                 ${ae}
               </span>
-              <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace;">
+              <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace; white-space:nowrap;">
                 ${oe}
               </span>
-              <span style="color:#94a3b8; font-size:0.75rem;">&bull; Lumina AST Vector Engine</span>
+              <span style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;" class="hidden sm:inline">&bull; Lumina AST Vector Engine</span>
             </div>
-            <h2 id="player-active-title" style="font-size:1.15rem; font-weight:800; color:#f8fafc; margin:2px 0 0;">
+            <h2 id="player-active-title" style="font-size:1.1rem; font-weight:800; color:#f8fafc; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${se}
             </h2>
           </div>
         </div>
 
-        <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-          <!-- Dropdown Selector -->
-          <div style="display:inline-flex; align-items:center; gap:6px;">
-            <label for="player-sim-selector" style="font-size:0.76rem; font-weight:800; color:#94a3b8; white-space:nowrap;">
-              🎮 Cartridge:
-            </label>
-            <select id="player-sim-selector" style="padding:6px 12px; border-radius:8px; background:#0f172a; color:#ffffff; border:1.5px solid #0284c7; font-size:0.82rem; font-weight:700; cursor:pointer; outline:none; max-width:280px;">
-              ${ie}
-            </select>
-          </div>
-
-          <!-- Reset Simulation Apparatus Button -->
-          <button type="button" id="player-btn-reset" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation apparatus to initial conditions">
+        <!-- Primary Execution Actions (Locked Dimensions to Eliminate Any Layout Shift) -->
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation apparatus to initial conditions">
             ↺ Reset
           </button>
-
-          <!-- BSL Signing Toggle Button (Fixed Width to prevent layout shift) -->
-          <button type="button" id="player-btn-bsl" style="padding:6px 12px; border-radius:8px; background:${b?`#0284c7`:`#1e293b`}; color:#ffffff; border:1px solid ${b?`#38bdf8`:`#334155`}; font-size:0.78rem; font-weight:700; cursor:pointer; min-width:142px; text-align:center; flex-shrink:0;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
+          <button type="button" id="player-btn-bsl" style="padding:5px 12px; border-radius:6px; background:${b?`#0284c7`:`#1e293b`}; color:#ffffff; border:1px solid ${b?`#38bdf8`:`#334155`}; font-size:0.78rem; font-weight:700; cursor:pointer; width:142px; text-align:center; flex-shrink:0;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
             🖐️ BSL Signing: ${b?`ON`:`OFF`}
           </button>
+          <button type="button" id="player-btn-fullscreen" style="padding:5px 12px; border-radius:6px; background:#0284c7; color:#ffffff; border:none; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Toggle Fullscreen">
+            ⛶ Fullscreen
+          </button>
+        </div>
+      </div>
 
-          <!-- Open Local Cartridge Button -->
-          <button type="button" id="player-btn-open" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.78rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:5px;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
+      <!-- Stage Toolbar: Row 2 (Cartridge Selector & Authoring / LMS Tools) -->
+      <div style="padding:8px 18px; background:#0b1120; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:42px; box-sizing:border-box; overflow-x:auto; flex-wrap:nowrap;">
+        <div style="display:inline-flex; align-items:center; gap:6px; flex-shrink:0;">
+          <label for="player-sim-selector" style="font-size:0.76rem; font-weight:800; color:#94a3b8; white-space:nowrap;">
+            🎮 Cartridge:
+          </label>
+          <select id="player-sim-selector" style="padding:4px 10px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #0284c7; font-size:0.8rem; font-weight:700; cursor:pointer; outline:none; max-width:280px;">
+            ${ie}
+          </select>
+        </div>
+
+        <div style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
             📂 Open...
           </button>
           <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
 
-          <!-- LMS Embed Modal Button -->
-          <button type="button" id="player-btn-embed" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
+          <button type="button" id="player-btn-embed" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
             🚀 Embed
           </button>
 
-          <!-- Single-File Air-Gapped HTML Export Button -->
-          <button type="button" id="player-btn-export-airgap" style="padding:6px 12px; border-radius:8px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Export Standalone Single-File HTML Lesson Capsule (< 45 KB)">
+          <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Export Standalone Single-File HTML Lesson Capsule (< 45 KB)">
             📦 Airgap HTML
-          </button>
-
-          <!-- Fullscreen Button -->
-          <button type="button" id="player-btn-fullscreen" style="padding:6px 12px; border-radius:8px; background:#0284c7; color:#ffffff; border:none; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Toggle Fullscreen">
-            ⛶ Fullscreen
           </button>
         </div>
       </div>

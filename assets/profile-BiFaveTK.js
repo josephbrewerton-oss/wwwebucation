@@ -1,4 +1,4 @@
-import{f as e}from"./index-BP-E0K2R.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`student-profile-stage`,n.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{f as e}from"./index-y6T5rJ8b.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`student-profile-stage`,n.style.cssText=`max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
