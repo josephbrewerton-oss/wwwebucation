@@ -45,6 +45,9 @@ function buildPlayerSrc(base: string, presetId: string, bslActive: boolean): str
   const params = new URLSearchParams({
     preset: presetId,
     bsl: bslActive ? '1' : '0',
+    mode: 'suite',
+    tools: '1',
+    all: '1',
   });
   return `${base}player.html?${params.toString()}`;
 }
@@ -724,6 +727,7 @@ export function renderPlayerPage(): HTMLElement {
   });
 
   window.addEventListener('message', (e) => {
+    if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'PLAYER_READY') {
       isIframeReady = true;
       if (activePreset) {
