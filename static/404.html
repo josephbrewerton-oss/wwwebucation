@@ -135,7 +135,11 @@
       // Single Page Application redirect fallback for GitHub Pages
       (function() {
         var path = window.location.pathname;
-        var base = '/wwwebucation/';
+        var parts = path.split('/').filter(Boolean);
+        var isGh = window.location.hostname.indexOf('github.io') !== -1;
+        var base = (isGh && parts.length > 0) ? '/' + parts[0] + '/' : '/';
+        if (path.indexOf('/schoolsample/') === 0) base = '/schoolsample/';
+        if (path.indexOf('/wwwebucation/') === 0) base = '/wwwebucation/';
         if (path.indexOf(base) === 0 && path.length > base.length) {
           var segment = path.slice(base.length);
           // If not a static file with extension, redirect to base with hash

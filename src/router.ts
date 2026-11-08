@@ -85,7 +85,15 @@ export async function navigate(path: string) {
 export const navigateTo = navigate;
 
 export async function handleRouteChange() {
-  const normalized = normalizePath(window.location.pathname);
+  let rawCurrentPath = window.location.pathname;
+  if (window.location.hash && (normalizePath(rawCurrentPath) === '/' || !routes[normalizePath(rawCurrentPath)])) {
+    const rawHash = window.location.hash.split('?')[0].replace(/^#\/?/, '/');
+    const cleanHash = normalizePath(rawHash);
+    if (routes[cleanHash]) {
+      rawCurrentPath = cleanHash;
+    }
+  }
+  const normalized = normalizePath(rawCurrentPath);
   const outlet = document.getElementById('page-outlet');
   if (!outlet) return;
 
