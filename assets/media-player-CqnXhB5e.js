@@ -1,4 +1,4 @@
-import{S as e,_ as t,b as n,d as r,f as i,g as a,i as o,n as s,p as c,t as l,u,v as d,x as f,y as p}from"./index-BIEfxjVn.js";import{t as m}from"./EdgeCognitiveEngine-BQX8QEVI.js";function h(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{S as e,_ as t,b as n,d as r,f as i,g as a,i as o,n as s,p as c,t as l,u,v as d,x as f,y as p}from"./index-DoNVsxJb.js";import{t as m}from"./EdgeCognitiveEngine-dsr_yCyF.js";function h(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;
