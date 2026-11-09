@@ -330,20 +330,30 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
       const tokenBox = document.createElement('div');
       tokenBox.style.cssText = 'background: #090d16; padding: 6px 10px; border-radius: 6px; border: 1px solid #1e293b; font-family: monospace; font-size: 0.74rem; color: #4ade80; display: flex; flex-direction: column; gap: 4px; user-select: all;';
-      tokenBox.innerHTML = `
-        <div style="display: flex; justify-content: space-between; align-items: center;">
-          <span style="color: #94a3b8; font-size: 0.68rem;">RAY INTERSECTION TOKEN:</span>
-          <span style="color: #38bdf8; font-size: 0.68rem;">Analytic Ray-Math (Zero GPU Drivers)</span>
-        </div>
-        <div style="font-weight: 700; overflow-x: auto; white-space: nowrap;">
-          ${latestTelemetry?.spatialTelemetry?.rayHitSExpr || '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])'}
-        </div>
-        ${latestTelemetry?.spatialTelemetry?.cameraStateSExpr ? `
-          <div style="color: #38bdf8; font-size: 0.70rem; overflow-x: auto; white-space: nowrap;">
-            ${latestTelemetry.spatialTelemetry.cameraStateSExpr}
-          </div>
-        ` : ''}
-      `;
+
+      const tokenHeader = document.createElement('div');
+      tokenHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+      const tokenLabel = document.createElement('span');
+      tokenLabel.style.cssText = 'color: #94a3b8; font-size: 0.68rem;';
+      tokenLabel.textContent = 'RAY INTERSECTION TOKEN:';
+      const tokenSub = document.createElement('span');
+      tokenSub.style.cssText = 'color: #38bdf8; font-size: 0.68rem;';
+      tokenSub.textContent = 'Analytic Ray-Math (Zero GPU Drivers)';
+      tokenHeader.appendChild(tokenLabel);
+      tokenHeader.appendChild(tokenSub);
+      tokenBox.appendChild(tokenHeader);
+
+      const rayHitVal = document.createElement('div');
+      rayHitVal.style.cssText = 'font-weight: 700; overflow-x: auto; white-space: nowrap;';
+      rayHitVal.textContent = latestTelemetry?.spatialTelemetry?.rayHitSExpr || '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])';
+      tokenBox.appendChild(rayHitVal);
+
+      if (latestTelemetry?.spatialTelemetry?.cameraStateSExpr) {
+        const camStateVal = document.createElement('div');
+        camStateVal.style.cssText = 'color: #38bdf8; font-size: 0.70rem; overflow-x: auto; white-space: nowrap;';
+        camStateVal.textContent = latestTelemetry.spatialTelemetry.cameraStateSExpr;
+        tokenBox.appendChild(camStateVal);
+      }
       telemetryBox.appendChild(tokenBox);
       copilotContainer.appendChild(telemetryBox);
 
@@ -427,7 +437,7 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
           const actBtn = document.createElement('button');
           actBtn.type = 'button';
           actBtn.style.cssText = 'margin-top: 6px; padding: 4px 8px; border-radius: 6px; background: #10b981; color: #ffffff; border: none; font-weight: 800; font-size: 0.7rem; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;';
-          actBtn.innerHTML = `<span>⚡ Apply to Stage: ${msg.action.name} = ${msg.action.val}</span>`;
+          actBtn.textContent = `⚡ Apply to Stage: ${msg.action.name} = ${msg.action.val}`;
           actBtn.onclick = () => {
             postToPlayer({ type: 'SET_VAR', name: msg.action!.name, value: msg.action!.val });
             chatLog.push({ sender: 'nano', text: `Applied live parameter to stage: ${msg.action!.name} = ${msg.action!.val}` });
@@ -608,10 +618,18 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
       const contextPill = document.createElement('div');
       contextPill.style.cssText = 'background: #1e293b; padding: 10px 14px; border-radius: 8px; font-size: 0.8rem;';
-      contextPill.innerHTML = `
-        <span style="color: #38bdf8; font-weight: 800;">Active Checkpoint Context: </span>
-        <span>${activeKeyframe ? `"${activeKeyframe.title} — ${activeKeyframe.rule}"` : `Simulation progress: ${(currentProgress * 100).toFixed(0)}% in ${preset}`}</span>
-      `;
+
+      const contextPrefix = document.createElement('span');
+      contextPrefix.style.cssText = 'color: #38bdf8; font-weight: 800;';
+      contextPrefix.textContent = 'Active Checkpoint Context: ';
+
+      const contextValue = document.createElement('span');
+      contextValue.textContent = activeKeyframe
+        ? `"${activeKeyframe.title} — ${activeKeyframe.rule}"`
+        : `Simulation progress: ${(currentProgress * 100).toFixed(0)}% in ${preset}`;
+
+      contextPill.appendChild(contextPrefix);
+      contextPill.appendChild(contextValue);
       graderContainer.appendChild(contextPill);
 
       const answerRow = document.createElement('div');
@@ -649,14 +667,17 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
       if (gradingResult) {
         const gradeBox = document.createElement('div');
         gradeBox.style.cssText = 'background: #0f172a; border: 1px solid #22c55e; border-radius: 8px; padding: 12px; display: flex; align-items: flex-start; gap: 12px;';
-        gradeBox.innerHTML = `
-          <div style="background: #22c55e; color: #000000; font-weight: 900; font-size: 1.1rem; padding: 6px 10px; border-radius: 8px; white-space: nowrap;">
-            ⭐ ${gradingResult.score}/5
-          </div>
-          <div style="flex: 1; font-size: 0.8rem; color: #e2e8f0; white-space: pre-line;">
-            ${gradingResult.feedback}
-          </div>
-        `;
+
+        const scoreBadge = document.createElement('div');
+        scoreBadge.style.cssText = 'background: #22c55e; color: #000000; font-weight: 900; font-size: 1.1rem; padding: 6px 10px; border-radius: 8px; white-space: nowrap;';
+        scoreBadge.textContent = `⭐ ${gradingResult.score}/5`;
+
+        const feedbackText = document.createElement('div');
+        feedbackText.style.cssText = 'flex: 1; font-size: 0.8rem; color: #e2e8f0; white-space: pre-line;';
+        feedbackText.textContent = gradingResult.feedback;
+
+        gradeBox.appendChild(scoreBadge);
+        gradeBox.appendChild(feedbackText);
         graderContainer.appendChild(gradeBox);
       }
 

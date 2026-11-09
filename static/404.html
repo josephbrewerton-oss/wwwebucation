@@ -136,15 +136,17 @@
       (function() {
         var path = window.location.pathname;
         var parts = path.split('/').filter(Boolean);
-        var isGh = window.location.hostname.indexOf('github.io') !== -1;
-        var base = (isGh && parts.length > 0) ? '/' + parts[0] + '/' : '/';
+        var hostname = window.location.hostname;
+        var isGh = hostname === 'github.io' || hostname.endsWith('.github.io');
+        var base = (isGh && parts.length > 0) ? '/' + encodeURIComponent(parts[0]) + '/' : '/';
         if (path.indexOf('/schoolsample/') === 0) base = '/schoolsample/';
         if (path.indexOf('/wwwebucation/') === 0) base = '/wwwebucation/';
         if (path.indexOf(base) === 0 && path.length > base.length) {
           var segment = path.slice(base.length);
           // If not a static file with extension, redirect to base with hash
           if (segment.indexOf('.') === -1) {
-            window.location.replace(base + '#' + segment + window.location.search);
+            var safeSegment = encodeURI(decodeURI(segment));
+            window.location.replace(base + '#' + safeSegment + window.location.search);
           }
         }
       })();
