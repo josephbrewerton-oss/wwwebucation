@@ -447,6 +447,12 @@
           <option value="2">2.0×</option>
         </select>
 
+        <!-- Master Sound Volume & Mute Controls -->
+        <div id="volume-box" style="display:inline-flex; align-items:center; gap:4px; margin-right:4px;">
+          <button type="button" id="btn-volume-mute" title="Mute / Unmute Audio (M)" style="background:transparent; border:none; cursor:pointer; font-size:13px; padding:2px 4px; color:#f8fafc;">🔊</button>
+          <input type="range" id="volume-slider" min="0" max="1" step="0.05" value="1" title="Master Audio Volume" style="width:48px; height:5px; cursor:pointer; accent-color:#0284c7;" />
+        </div>
+
         <!-- Narration Speech Toggle -->
         <button type="button" id="btn-narrate" title="Toggle On-Device Voice Narration">🔊 Voice</button>
 
