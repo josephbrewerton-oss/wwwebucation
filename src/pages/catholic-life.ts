@@ -585,30 +585,35 @@ export function renderCatholicLifePage(): HTMLElement {
   }
 
   function updateView() {
-    container.innerHTML = `
-      ${renderHeader()}
-      <div id="sanctuary-content-body"></div>
-    `;
-
-    const bodyEl = container.querySelector('#sanctuary-content-body');
-    if (!bodyEl) return;
+    let contentHtml = '';
+    let customElement: HTMLElement | null = null;
 
     if (currentTab === 'altar-anatomy') {
-      bodyEl.appendChild(renderAltarExplorer());
+      customElement = renderAltarExplorer();
     } else if (currentTab === 'latin-prayers') {
-      bodyEl.appendChild(renderLatinPrayersChapel());
+      customElement = renderLatinPrayersChapel();
     } else if (currentTab === 'church-tour') {
-      bodyEl.innerHTML = renderInteractiveSim('church-tour');
+      contentHtml = renderInteractiveSim('church-tour');
     } else if (currentTab === 'mass') {
-      bodyEl.innerHTML = renderMass();
+      contentHtml = renderMass();
     } else if (currentTab === 'sacraments') {
-      bodyEl.innerHTML = renderSacraments();
+      contentHtml = renderSacraments();
     } else if (currentTab === 'rosary') {
-      bodyEl.innerHTML = renderRosary();
+      contentHtml = renderRosary();
     } else if (currentTab === 'cst') {
-      bodyEl.innerHTML = renderCST();
+      contentHtml = renderCST();
     } else {
-      bodyEl.innerHTML = renderOverview();
+      contentHtml = renderOverview();
+    }
+
+    container.innerHTML = `
+      ${renderHeader()}
+      <div id="sanctuary-content-body">${contentHtml}</div>
+    `;
+
+    if (customElement) {
+      const bodyEl = container.querySelector('#sanctuary-content-body');
+      bodyEl?.appendChild(customElement);
     }
 
     // Bind tab button listeners

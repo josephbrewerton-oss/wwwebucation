@@ -20,11 +20,91 @@ export function renderBlogPage(): HTMLElement {
       </p>
     </div>
 
-    <!-- Latest Dispatch: September 2026 -->
+    <!-- Dispatch 1: November 2026 (BSL In-Vision) -->
+    <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
+      <div style="margin-bottom: 1.25rem;">
+        <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #e0e7ff; color: #4338ca; margin-bottom: 0.75rem;">
+          ★ LATEST RELEASE &bull; NOVEMBER 2026
+        </span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
+          Sovereign In-Vision BSL &amp; Makaton: Pure Vector Real-Time Signing with Zero Video Bills
+        </h2>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
+          Published November 2026 &bull; By St Joseph's Accessibility &amp; Formation Engineering Team
+        </p>
+      </div>
+
+      <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
+        <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.5rem;">
+          Under the BSL Act 2022, providing high-quality British Sign Language across digital curricula has required 
+          costly, static MP4 video overlays that consume hundreds of megabytes. We have deployed the world's first 
+          <strong>pure procedural SVG skeletal vector avatar</strong> (&lt;15KB runtime), translating complex STEM and sacred liturgical 
+          formation in real time at 60 FPS.
+        </p>
+
+        <div style="background: #eef2ff; border-left: 4px solid #6366f1; padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #3730a3; margin: 0 0 0.5rem 0;">
+            BSL Level 6 Linguistic Capabilities
+          </h3>
+          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #4338ca; line-height: 1.6;">
+            <li><strong>10-Point 3D Spatial Register:</strong> Real directional agreement verbs dynamically orienting between loci in 3D signing space.</li>
+            <li><strong>Polycomponential Classifiers:</strong> Proform handshapes for bipedal motion, cylindrical vessels, and sacred handling predicates.</li>
+            <li><strong>Aspectual Inflection &amp; NMFs:</strong> Durative/intensive kinematic cadences and synchronized mouth morphemes (<code style="background:#e0e7ff; padding:1px 4px; border-radius:4px;">th</code>, <code style="background:#e0e7ff; padding:1px 4px; border-radius:4px;">mm</code>, <code style="background:#e0e7ff; padding:1px 4px; border-radius:4px;">puffed</code>).</li>
+            <li><strong>Deaf-Cultural Contrast Palette:</strong> High-contrast charcoal/navy silhouette optimized for smartboard clarity without uncanny-valley eye strain.</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="${base}bsl-interpreting" style="padding: 10px 20px; background: #4f46e5; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Explore BSL Translation Suite &rarr;
+          </a>
+          <a href="${base}player" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Test Avatar in Player &rarr;
+          </a>
+        </div>
+      </div>
+    </article>
+
+    <!-- Dispatch 2: November 2026 (Edge AI & KCSIE) -->
+    <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
+      <div style="margin-bottom: 1.25rem;">
+        <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #fef3c7; color: #92400e; margin-bottom: 0.75rem;">
+          ★ ARCHITECTURAL DISPATCH &bull; NOVEMBER 2026
+        </span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
+          Zero-Cloud Socratic Tutoring: Air-Gapped Gemini Nano &amp; Deterministic Hallucination Defenses
+        </h2>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
+          Published November 2026 &bull; By St Joseph's AI Architecture Lab
+        </p>
+      </div>
+
+      <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
+        <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.5rem;">
+          School Data Protection Officers face a legal bind: classroom AI promises personalized scaffolding, but cloud LLM 
+          egress violates UK GDPR Art. 25, COPPA, and DfE KCSIE safeguarding guidance. Our platform solves this with a 3-tier 
+          local-only inference hierarchy anchored strictly to verifiable S-Expression truth.
+        </p>
+
+        <div style="background: #fffbeb; border-left: 4px solid #d97706; padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #b45309; margin: 0 0 0.5rem 0;">
+            Zero-Cloud Safeguarding Guarantees
+          </h3>
+          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #92400e; line-height: 1.6;">
+            <li><strong>0 Bytes Cloud Egress:</strong> Student inquiries and voice inputs run directly on the local NPU/GPU via Chromium Prompt API and WebLLM.</li>
+            <li><strong>Hallucination Anchored:</strong> Feedback is constrained by signed cartridge keyframe rules—no confabulated answers.</li>
+            <li><strong>Zero Per-Token Bills:</strong> Multi-Academy Trusts pay zero recurring cloud API subscription fees.</li>
+            <li><strong>Deterministic Tier-3 Fallback:</strong> Operates at 0ms latency even when fully disconnected from the internet.</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- Dispatch 3: September 2026 (Original Engine Launch) -->
     <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
       <div style="margin-bottom: 1.25rem;">
         <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #dcfce7; color: #15803d; margin-bottom: 0.75rem;">
-          ★ LATEST RELEASE &bull; SEPTEMBER 2026
+          FOUNDATION RELEASE &bull; SEPTEMBER 2026
         </span>
         <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
           AST Vector Player &amp; SlideScript: Replacing Heavy Video with 15KB Interactive Simulations
@@ -37,7 +117,7 @@ export function renderBlogPage(): HTMLElement {
       <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
         <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.5rem;">
           Schools have long faced an uncomfortable compromise: passive, bandwidth-hungry video streams (50–100MB per lesson) 
-          or isolated, engineer-only simulation applets. Our latest release solves both by combining procedural vector graphics, 
+          or isolated, engineer-only simulation applets. Our foundation release combines procedural vector graphics, 
           plain-text authoring, and clicker-driven active pedagogy.
         </p>
 

@@ -5,7 +5,7 @@ import {
   getCustomCartridges,
   type CartridgeDefinition,
 } from '../services/cartridgeStore';
-import { isPhetBundle, transpilePhetFile } from '../utils/phetBridge';
+import { isPhetBundle, transpilePhetFile, PHET_BUILTIN_MODELS, type SupportedPhetPreset } from '../utils/phetBridge';
 import {
   toggleBsl,
   setBslEnabled,
@@ -160,9 +160,16 @@ export function renderPlayerPage(): HTMLElement {
       <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
         ${otherGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
       </optgroup>
-      <optgroup label="⚡ Dynamic Auto-Finder" style="background:#0f172a; color:#38bdf8;">
+      <optgroup label="⚛️ PhET Ingestion &amp; Distillations" style="background:#0f172a; color:#38bdf8;">
+        <option value="__phet_ohms_law__">⚛️ PhET: Ohm's Law (V = I × R)</option>
+        <option value="__phet_faraday__">⚛️ PhET: Faraday's Induction (EMF)</option>
+        <option value="__phet_pendulum__">⚛️ PhET: Pendulum Laboratory</option>
+        <option value="__phet_acid_base__">⚛️ PhET: Acid-Base pH Solutions</option>
+        <option value="__phet_balancing__">⚛️ PhET: Balancing Chemical Equations</option>
+        <option value="__open_local__">📥 Ingest Local PhET (.html / .phet) or SWF...</option>
+      </optgroup>
+      <optgroup label="⚡ Dynamic Auto-Finder" style="background:#0f172a; color:#94a3b8;">
         <option value="__custom_find__">🔍 Open Any Scene by Name / ID...</option>
-        <option value="__open_local__">📂 Open Local .ast or .svg File...</option>
       </optgroup>
     `;
   }
@@ -251,8 +258,8 @@ export function renderPlayerPage(): HTMLElement {
             🎛️ Lab Drawer
           </button>
 
-          <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
-            📂 Open...
+          <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Transpile &amp; Ingest PhET Simulation (*.html, *.phet), Flash SWF, or AST Cartridge">
+            ⚛️ PhET / Ingest
           </button>
           <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
 
@@ -728,12 +735,47 @@ export function renderPlayerPage(): HTMLElement {
     });
   }
 
+  function loadBuiltinPhetModel(key: SupportedPhetPreset) {
+    const model = PHET_BUILTIN_MODELS[key];
+    if (!model) return;
+    const simId = `phet-${key}`;
+    const cart: CartridgeDefinition = {
+      id: simId,
+      title: model.title,
+      stage: model.stage || 'PHET DISTILLED',
+      category: model.subject || 'Physics',
+      desc: `PhET simulation transpiled to AST & hardware-accelerated SVG (< 4 KB payload). Invariants: ${model.invariants.join(', ')}.`,
+      icon: '⚛️',
+      source: 'phet',
+      svgMarkup: model.generateSvg(),
+      astSource: model.generateAst(),
+      updatedAt: Date.now(),
+    };
+    saveCustomCartridge(cart);
+    refreshDropdown();
+    updatePreset(simId);
+    postToPlayer({
+      type: 'LOAD_CUSTOM_CARTRIDGE',
+      cartridge: cart,
+    });
+  }
+
   // Preset selector change
   select?.addEventListener('change', (e) => {
     const val = (e.target as HTMLSelectElement).value;
     if (val === '__open_local__') {
       select.value = activePreset;
       fileInputHidden?.click();
+    } else if (val === '__phet_ohms_law__') {
+      loadBuiltinPhetModel('ohms-law');
+    } else if (val === '__phet_faraday__') {
+      loadBuiltinPhetModel('faraday');
+    } else if (val === '__phet_pendulum__') {
+      loadBuiltinPhetModel('pendulum');
+    } else if (val === '__phet_acid_base__') {
+      loadBuiltinPhetModel('acid-base');
+    } else if (val === '__phet_balancing__') {
+      loadBuiltinPhetModel('balancing-chemical');
     } else if (val === '__custom_find__') {
       select.value = activePreset;
       const targetId = window.prompt('Enter Cartridge or Scene ID (e.g. calculus-curves, bbc-model-b, stations-of-the-cross):');
@@ -763,10 +805,18 @@ export function renderPlayerPage(): HTMLElement {
     iframeWrapper.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      iframeWrapper.style.outline = '3px dashed #38bdf8';
+      iframeWrapper.style.outlineOffset = '-4px';
+    });
+    iframeWrapper.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      iframeWrapper.style.outline = 'none';
     });
     iframeWrapper.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
+      iframeWrapper.style.outline = 'none';
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
         handleUploadedFiles(Array.from(e.dataTransfer.files));
       }
