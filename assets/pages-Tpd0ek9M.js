@@ -1,4 +1,4 @@
-import{n as e}from"./sexprParser-BvWIIVhh.js";import{i as t,p as n}from"./index-CidvUumE.js";function r(){let r=n(),i=document.createElement(`div`);i.className=`home-landing-stage`,i.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let a=`welcome`,o=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));i.innerHTML=`
+import{n as e}from"./sexprParser-xJHiZPOD.js";import{i as t,p as n}from"./index-BIEfxjVn.js";function r(){let r=n(),i=document.createElement(`div`);i.className=`home-landing-stage`,i.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let a=`welcome`,o=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));i.innerHTML=`
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
@@ -207,6 +207,20 @@ import{n as e}from"./sexprParser-BvWIIVhh.js";import{i as t,p as n}from"./index-
             </p>
           </div>
           <span style="font-size: 0.84rem; font-weight: 700; color: #e11d48;">Enter Globe Theatre →</span>
+        </a>
+
+        <!-- SlideScript Cartridge Studio Card -->
+        <a href="${r}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+          <div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+              ✏️
+            </div>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">SlideScript Cartridge Studio</strong>
+            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+              Children write plain-English markdown or prompt on-device Gemini Nano to create and remix 60 FPS science and math cartridges with zero code syntax barriers.
+            </p>
+          </div>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Create a Cartridge →</span>
         </a>
 
         <!-- Teacher Beacon Card -->

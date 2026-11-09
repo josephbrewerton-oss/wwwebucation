@@ -1,4 +1,4 @@
-import{p as e}from"./index-CidvUumE.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`news-blog-stage`,n.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{p as e}from"./index-BIEfxjVn.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`news-blog-stage`,n.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Newsroom Header -->
     <div style="margin-bottom: 2.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #0284c7; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">
@@ -12,6 +12,50 @@ import{p as e}from"./index-CidvUumE.js";function t(){let t=e(),n=document.create
         Official announcements, releases, and breakthroughs in sovereign on-device AI and interactive vector teaching.
       </p>
     </div>
+
+    <!-- Dispatch 0: November 2026 (SlideScript & Child Authoring) -->
+    <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
+      <div style="margin-bottom: 1.25rem;">
+        <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #ecfdf5; color: #047857; margin-bottom: 0.75rem;">
+          ★ PEDAGOGICAL BREAKTHROUGH &bull; NOVEMBER 2026
+        </span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
+          Logo for the 21st Century: How SlideScript Empowers Children to Author 60 FPS Cartridges
+        </h2>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
+          Published November 2026 &bull; By St Joseph's Curriculum Engineering &amp; Computing Lab
+        </p>
+      </div>
+
+      <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
+        <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.5rem;">
+          In traditional digital education, children are passive consumers of software written by adults. 
+          With our isomorphic <strong>SlideScript Compiler</strong>, primary and secondary pupils become cartridge creators—writing 
+          plain-English markdown to synthesize full 60 FPS kinetic simulations, physics state machines, and self-grading quizzes.
+        </p>
+
+        <div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #065f46; margin: 0 0 0.5rem 0;">
+            How Pupils Author Living Apparatuses
+          </h3>
+          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #047857; line-height: 1.6;">
+            <li><strong>Plain-English Markdown Syntax:</strong> Simple directives (<code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">Shape: circle</code>, <code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">## Step 1:</code>, <code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">Question:</code>) compile automatically into hardware-accelerated vector graphics and physical invariants.</li>
+            <li><strong>Remix Any Existing Cartridge:</strong> With one click, pupils can de-compile any of the 61 production cartridges (from Pythagoras to Kinetic Gas) back into human SlideScript, modify variables, and run their remixes instantly.</li>
+            <li><strong>Local AI Co-Authoring:</strong> Pupils can prompt local Gemini Nano (<code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">"Create a simulation of photosynthesis with moving sunlight"</code>), which synthesizes mathematically valid AST specifications in ~500 ms with zero cloud data egress.</li>
+            <li><strong>Zero Setup or Toolchains:</strong> Runs entirely client-side in the browser on standard school Chromebooks with zero build tools or dependencies.</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="${t}player" style="padding: 10px 20px; background: #059669; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Open Cartridge Lathe &amp; Editor &rarr;
+          </a>
+          <a href="${t}learning-zone" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Browse Pupil Cartridges &rarr;
+          </a>
+        </div>
+      </div>
+    </article>
 
     <!-- Dispatch 1: November 2026 (BSL In-Vision) -->
     <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
