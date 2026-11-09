@@ -1183,3 +1183,131 @@ body {
   text-rendering: geometricPrecision;
   pointer-events: auto;
 }
+
+/* 7. Persistent App Shell Semantic Component Classes */
+.shell-root {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+}
+
+.shell-translator-bar {
+  background: #0f172a;
+  color: #f8fafc;
+  font-size: 0.75rem;
+  padding: 4px 1rem;
+  border-bottom: 1px solid #1e293b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.shell-header-group {
+  position: sticky;
+  top: 0;
+  z-index: 990;
+  width: 100%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.shell-navbar {
+  background: var(--stj-canvas, #ffffff);
+  border-bottom: 1px solid var(--stj-border, #e2e8f0);
+  padding: 0.5rem 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.shell-nav-link {
+  padding: 0.4rem 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+  color: var(--stj-text, #0f172a);
+  border-radius: var(--stj-radius-sm, 6px);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.shell-nav-link:hover {
+  background: var(--stj-surface-raised, #f1f5f9);
+}
+
+.shell-dropdown-menu {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 290px;
+  background: var(--stj-canvas, #ffffff);
+  border: 1px solid var(--stj-border, #e2e8f0);
+  border-radius: var(--stj-radius-lg, 12px);
+  box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.16);
+  padding: 0.5rem;
+  z-index: 1000;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.shell-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-radius: var(--stj-radius-sm, 6px);
+  text-decoration: none;
+  color: inherit;
+  font-size: 0.84rem;
+  transition: background 0.15s ease;
+}
+
+.shell-dropdown-item:hover {
+  background: var(--stj-surface-raised, #f1f5f9);
+}
+
+.shell-mobile-drawer {
+  display: none;
+  padding: 1rem;
+  border-top: 1px solid var(--stj-border, #e2e8f0);
+  background: var(--stj-canvas, #ffffff);
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.shell-footer {
+  background: #0f172a;
+  color: #cbd5e1;
+  padding: 3rem 1.5rem 2rem;
+  border-top: 1px solid #1e293b;
+  font-size: 0.88rem;
+}
+
+.shell-footer-grid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 2.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.shell-footer-col a {
+  color: #94a3b8;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: color 0.15s ease;
+}
+
+.shell-footer-col a:hover {
+  color: #38bdf8;
+}
+

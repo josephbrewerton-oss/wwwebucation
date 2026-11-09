@@ -8,6 +8,12 @@ import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../e
 import { navigate } from '../router';
 import { getBaseUrl } from '../utils/url';
 import { subscribeToPlayerCalls } from '../services/playerLauncher';
+import {
+  NAV_GROUPS,
+  CATHOLIC_SANCTUARY_ITEMS,
+  CURRICULUM_LAB_ITEMS,
+  SCHOOL_GOVERNANCE_ITEMS,
+} from '../data/navigationManifest';
 import './NativeBslInterpreter';
 import type { NativeBslInterpreterElement } from './NativeBslInterpreter';
 
@@ -129,92 +135,50 @@ export class PersistentAppShellElement extends HTMLElement {
                     <span>✝️ Catholic Sanctuary</span>
                     <span style="font-size:0.6rem; opacity:0.8;">▼</span>
                   </button>
-                  <div id="nav-dropdown-catholic-menu" style="display:none; position:absolute; top:100%; left:0; width:310px; background:var(--stj-canvas, #ffffff); border:1.5px solid #ca8a04; border-radius:10px; box-shadow:0 12px 28px -4px rgba(202,138,4,0.25); padding:0.5rem; z-index:1000; flex-direction:column; gap:2px;">
-                    <a href="${base}catholic-life" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>📖</span> <strong>Sanctuary Overview &amp; AMDG</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=altar-anatomy" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🕯️</span> <strong>High Altar &amp; Sanctuary Explorer</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=church-tour" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🏛️</span> <strong>Church Architecture 3D Tour</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=latin-prayers" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🇻🇦</span> <strong>Latin Mass Prayers Chapel</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=mass" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🍞</span> <strong>The Holy Mass Step-by-Step</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=sacraments" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🕊️</span> <strong>The Seven Sacraments</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=rosary" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>📿</span> <strong>The Holy Rosary Walk</strong>
-                    </a>
-                    <a href="${base}catholic-life?tab=cst" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🌱</span> <strong>Catholic Social Teaching (CST)</strong>
-                    </a>
+                  <div id="nav-dropdown-catholic-menu" class="shell-dropdown-menu" style="border-color:#ca8a04;">
+                    ${CATHOLIC_SANCTUARY_ITEMS.map((item) => `
+                      <a href="${base}${item.path}" class="shell-dropdown-item">
+                        <span>${item.icon}</span> <strong>${item.label}</strong>
+                      </a>
+                    `).join('')}
                   </div>
                 </div>
 
                 <!-- Academic Teaching & Curriculum Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
-                  <button type="button" id="nav-dropdown-learning-btn" aria-haspopup="true" aria-expanded="false" aria-label="Teaching and Curriculum Menu" style="background:transparent; border:none; padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; color:var(--stj-text, #0f172a); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                  <button type="button" id="nav-dropdown-learning-btn" aria-haspopup="true" aria-expanded="false" aria-label="Teaching and Curriculum Menu" class="shell-nav-link" style="background:transparent; border:none; cursor:pointer;">
                     <span>Teaching &amp; Curriculum</span>
                     <span style="font-size:0.6rem; opacity:0.7;">▼</span>
                   </button>
-                  <div id="nav-dropdown-learning-menu" style="display:none; position:absolute; top:100%; left:0; width:290px; background:var(--stj-canvas, #ffffff); border:1px solid var(--stj-border, #e2e8f0); border-radius:10px; box-shadow:0 12px 28px -4px rgba(0,0,0,0.18); padding:0.5rem; z-index:1000; flex-direction:column; gap:2px;">
-                    <a href="${base}learning-zone" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>📖</span> <strong>Lessons &amp; Curriculum</strong>
-                    </a>
-                    <a href="${base}learning-zone?tab=constellation" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>✨</span> <strong>Concept Constellation</strong>
-                    </a>
-                    <a href="${base}practice-lab" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>⚡</span> <strong>Practice Lab Drills</strong>
-                    </a>
-                    <a href="${base}languages" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🌍</span> <strong>MFL &amp; Polyglot Studio</strong>
-                    </a>
-                    <a href="${base}phonics" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🔤</span> <strong>EYFS &amp; KS1 Phonics Lab</strong>
-                    </a>
-                    <a href="${base}shakespeare" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🎭</span> <strong>Shakespeare Globe Theatre</strong>
-                    </a>
-                    <a href="${base}profile" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>⭐</span> <strong>Student Progress &amp; Badges</strong>
-                    </a>
+                  <div id="nav-dropdown-learning-menu" class="shell-dropdown-menu">
+                    ${CURRICULUM_LAB_ITEMS.map((item) => `
+                      <a href="${base}${item.path}" class="shell-dropdown-item">
+                        <span>${item.icon}</span> <strong>${item.label}</strong>
+                      </a>
+                    `).join('')}
                   </div>
                 </div>
 
-                <a href="${base}player" class="nav-link" style="padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; text-decoration:none; color:var(--stj-text, #0f172a); border-radius:6px;" title="Interactive STEM & Visual Simulators">
+                <a href="${base}player" class="shell-nav-link" title="Interactive STEM & Visual Simulators">
                   🎮 Simulators
                 </a>
 
                 <!-- Educator & Admin Dropdown -->
                 <div class="nav-dropdown-wrapper" style="position:relative; display:inline-block;">
-                  <button type="button" id="nav-dropdown-admin-btn" style="background:transparent; border:none; padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; color:var(--stj-text, #0f172a); border-radius:6px; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                  <button type="button" id="nav-dropdown-admin-btn" class="shell-nav-link" style="background:transparent; border:none; cursor:pointer;">
                     <span>Educator</span>
                     <span style="font-size:0.6rem; opacity:0.7;">▼</span>
                   </button>
-                  <div id="nav-dropdown-admin-menu" style="display:none; position:absolute; top:100%; left:0; width:280px; background:var(--stj-canvas, #ffffff); border:1px solid var(--stj-border, #e2e8f0); border-radius:10px; box-shadow:0 12px 28px -4px rgba(0,0,0,0.18); padding:0.5rem; z-index:1000; flex-direction:column; gap:2px;">
-                    <a href="${base}teacher-beacon" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>📡</span> <strong>Teacher Beacon</strong>
-                    </a>
-                    <a href="${base}curriculum-studio" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🛠️</span> <strong>Curriculum Studio</strong>
-                    </a>
-                    <a href="${base}licensing" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>⚖️</span> <strong>MAT SLA &amp; Licensing</strong>
-                    </a>
-                    <a href="${base}privacy" class="dropdown-item" style="display:flex; align-items:center; gap:8px; padding:6px 10px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
-                      <span>🛡️</span> <strong>Edge Privacy Guard</strong>
-                    </a>
+                  <div id="nav-dropdown-admin-menu" class="shell-dropdown-menu" style="width:280px;">
+                    ${SCHOOL_GOVERNANCE_ITEMS.map((item) => `
+                      <a href="${base}${item.path}" class="shell-dropdown-item">
+                        <span>${item.icon}</span> <strong>${item.label}</strong>
+                      </a>
+                    `).join('')}
                   </div>
                 </div>
 
-                <a href="${base}news" class="nav-link" style="padding:0.4rem 0.65rem; font-size:0.88rem; font-weight:600; text-decoration:none; color:var(--stj-text, #0f172a); border-radius:6px;">
+                <a href="${base}news" class="shell-nav-link">
                   📰 News
                 </a>
               </div>
@@ -254,34 +218,23 @@ export class PersistentAppShellElement extends HTMLElement {
             </div>
 
             <!-- Mobile Drawer -->
-            <div id="nav-mobile-drawer" style="display:none; padding:1rem; border-top:1px solid #e2e8f0; background:var(--stj-canvas, #ffffff); flex-direction:column; gap:0.75rem;">
+            <div id="nav-mobile-drawer" class="shell-mobile-drawer">
               <div style="font-weight:700; font-size:0.8rem; color:#64748b; text-transform:uppercase;">Navigation Menu</div>
               <button type="button" id="mobile-btn-offline-sync" style="padding:10px; border-radius:6px; background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; font-weight:700; font-size:0.85rem; cursor:pointer; text-align:left;">
                 ${this.isOfflineSynced ? '💾 Saved to Device (0 Data)' : '💾 Save to Device (0 Data Offline)'}
               </button>
               <a href="${base}" class="mobile-nav-link" style="padding:8px; border-radius:6px; text-decoration:none; color:inherit; font-weight:700;">🏠 Home</a>
               
-              <div style="font-size:0.72rem; font-weight:800; color:#ca8a04; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">✝️ Catholic Sanctuary</div>
-              <a href="${base}catholic-life" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📖 Sanctuary Overview</a>
-              <a href="${base}catholic-life?tab=altar-anatomy" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🕯️ High Altar Explorer</a>
-              <a href="${base}catholic-life?tab=church-tour" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🏛️ Church 3D Tour</a>
-              <a href="${base}catholic-life?tab=latin-prayers" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🇻🇦 Latin Mass Prayers</a>
-              <a href="${base}catholic-life?tab=mass" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🍞 The Holy Mass</a>
-
-              <div style="font-size:0.72rem; font-weight:800; color:#0284c7; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">📚 Teaching &amp; Curriculum</div>
-              <a href="${base}learning-zone" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📖 Lessons &amp; Units</a>
-              <a href="${base}learning-zone?tab=constellation" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">✨ Concept Constellation</a>
-              <a href="${base}practice-lab" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">⚡ Practice Lab Drills</a>
-              <a href="${base}languages" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🌍 Languages &amp; MFL</a>
-              <a href="${base}phonics" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🔤 EYFS / KS1 Phonics</a>
-              <a href="${base}shakespeare" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🎭 Shakespeare Theatre</a>
-
-              <div style="font-size:0.72rem; font-weight:800; color:#10b981; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">🎮 Simulators &amp; Studio</div>
-              <a href="${base}player" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🎮 AST Vector Simulators</a>
-              <a href="${base}teacher-beacon" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📡 Teacher Beacon</a>
-              <a href="${base}curriculum-studio" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">🛠️ Curriculum Studio</a>
-              <a href="${base}settings" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">⚙️ Settings</a>
-              <a href="${base}news" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">📰 News &amp; Updates</a>
+              ${NAV_GROUPS.map((group) => `
+                <div style="font-size:0.72rem; font-weight:800; color:${group.color || '#ca8a04'}; text-transform:uppercase; letter-spacing:0.05em; padding:8px 8px 2px;">
+                  ${group.icon} ${group.label}
+                </div>
+                ${group.items.map((item) => `
+                  <a href="${base}${item.path}" class="mobile-nav-link" style="padding:6px 8px 6px 14px; border-radius:6px; text-decoration:none; color:inherit; font-size:0.84rem;">
+                    ${item.icon} ${item.label}
+                  </a>
+                `).join('')}
+              `).join('')}
             </div>
           </nav>
         </header>
@@ -292,8 +245,8 @@ export class PersistentAppShellElement extends HTMLElement {
         </main>
 
         <!-- Persistent Footer -->
-        <footer id="persistent-footer" style="background:#0f172a; color:#cbd5e1; padding:3rem 1.5rem 2rem; border-top:1px solid #1e293b; font-size:0.88rem;">
-          <div style="max-width:1200px; margin:0 auto; display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:2rem; margin-bottom:2.5rem;">
+        <footer id="persistent-footer" class="shell-footer">
+          <div class="shell-footer-grid">
             <div>
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
                 <img src="${base}img/logo.svg" alt="Logo" style="width:24px; height:24px;" onerror="this.src='${base}img/favicon-32x32.png'" />
@@ -307,30 +260,18 @@ export class PersistentAppShellElement extends HTMLElement {
               </div>
             </div>
 
-            <div>
-              <strong style="display:block; color:#f8fafc; margin-bottom:12px; font-size:0.92rem;">Curriculum &amp; Labs</strong>
-              <div style="display:flex; flex-direction:column; gap:8px; font-size:0.84rem;">
-                <a href="${base}player" style="color:#94a3b8; text-decoration:none;">🎮 AST Vector Simulators</a>
-                <a href="${base}catholic-life" style="color:#94a3b8; text-decoration:none;">⛪ Catholic Life &amp; Faith</a>
-                <a href="${base}practice-lab" style="color:#94a3b8; text-decoration:none;">⚡ Practice Lab Question Bank</a>
-                <a href="${base}learning-zone" style="color:#94a3b8; text-decoration:none;">📖 Curriculum Lessons</a>
-                <a href="${base}phonics" style="color:#94a3b8; text-decoration:none;">🔤 Phonics &amp; Sound Mat</a>
-                <a href="${base}languages" style="color:#94a3b8; text-decoration:none;">🌍 Languages &amp; Verb Wheels</a>
-                <a href="${base}shakespeare" style="color:#94a3b8; text-decoration:none;">🎭 Shakespeare Theatre</a>
+            ${NAV_GROUPS.map((group) => `
+              <div class="shell-footer-col">
+                <strong style="display:block; color:#f8fafc; margin-bottom:12px; font-size:0.92rem;">${group.icon} ${group.label}</strong>
+                <div style="display:flex; flex-direction:column; gap:8px; font-size:0.84rem;">
+                  ${group.items.map((item) => `
+                    <a href="${base}${item.path}">
+                      <span>${item.icon}</span> ${item.label}
+                    </a>
+                  `).join('')}
+                </div>
               </div>
-            </div>
-
-            <div>
-              <strong style="display:block; color:#f8fafc; margin-bottom:12px; font-size:0.92rem;">School &amp; Governance</strong>
-              <div style="display:flex; flex-direction:column; gap:8px; font-size:0.84rem;">
-                <a href="${base}licensing" style="color:#94a3b8; text-decoration:none;">⚖️ Licensing &amp; MAT SLA</a>
-                <a href="${base}privacy" style="color:#94a3b8; text-decoration:none;">🛡️ Privacy &amp; Children's Code</a>
-                <a href="${base}child-safety" style="color:#94a3b8; text-decoration:none;">🔒 Child Safety &amp; KCSIE</a>
-                <a href="${base}teacher-beacon" style="color:#94a3b8; text-decoration:none;">📡 Teacher Beacon Console</a>
-                <a href="${base}curriculum-studio" style="color:#94a3b8; text-decoration:none;">🛠️ Curriculum Node Studio</a>
-                <a href="${base}news" style="color:#94a3b8; text-decoration:none;">📰 Technical Release Notes</a>
-              </div>
-            </div>
+            `).join('')}
           </div>
 
           <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#64748b;">
