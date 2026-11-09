@@ -15,7 +15,12 @@ import {
   subscribeVoice,
   setVoiceEnabled,
 } from '../services/bslGlobalStore';
-import { renderPlayerEmbedModal } from '../components/player';
+import {
+  renderPlayerEmbedModal,
+  renderNanoAiTutorDrawer,
+  renderAstInteractiveLabDrawer,
+} from '../components/player';
+import type { PlayerTelemetryEvent } from '../engine/aicaller';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { type PlayerDisplayMode } from '../types/playerConfig';
 
@@ -238,6 +243,14 @@ export function renderPlayerPage(): HTMLElement {
         </div>
 
         <div style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
+          <button type="button" id="player-btn-ai-tutor" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Ask Gemini Nano / Socratic Co-Pilot about misconceptions and simulation physics">
+            🤖 Ask Nano
+          </button>
+
+          <button type="button" id="player-btn-lab-drawer" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Adjust simulation physical invariants and mathematical parameters">
+            🎛️ Lab Drawer
+          </button>
+
           <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local .ast, .svg, .ast.svg, or PhET bundle">
             📂 Open...
           </button>
@@ -337,6 +350,8 @@ export function renderPlayerPage(): HTMLElement {
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
   const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset');
   const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl');
+  const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
+  const labDrawerBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab-drawer');
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
@@ -358,58 +373,95 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'SET_MUTED'; muted: boolean }
     | { type: 'SET_BSL'; enabled: boolean }
     | { type: 'TOGGLE_BSL' }
-    | { type: 'RESET_SIM' };
+    | { type: 'RESET_SIM' }
+    | Record<string, any>;
 
   function postToPlayer(msg: HostToPlayerMessage) {
     iframe?.contentWindow?.postMessage(msg, '*');
   }
 
-  let isEmbedOpen = false;
+  let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | null = null;
+  let latestTelemetry: PlayerTelemetryEvent | null = null;
   let embedTargetMode: PlayerDisplayMode = 'classroom';
   let copiedEmbed = false;
 
-  function renderEmbedDrawer() {
+  function renderActiveDrawer() {
     if (!drawerMount) return;
-    if (!isEmbedOpen) {
+    drawerMount.innerHTML = '';
+
+    if (aiTutorBtn) {
+      aiTutorBtn.style.background = activeDrawer === 'ai-tutor' ? '#581c87' : '#1e293b';
+      aiTutorBtn.style.borderColor = activeDrawer === 'ai-tutor' ? '#c084fc' : '#9333ea';
+    }
+    if (labDrawerBtn) {
+      labDrawerBtn.style.background = activeDrawer === 'lab' ? '#0369a1' : '#1e293b';
+      labDrawerBtn.style.borderColor = activeDrawer === 'lab' ? '#38bdf8' : '#0284c7';
+    }
+    if (embedBtn) {
+      embedBtn.style.background = activeDrawer === 'embed' ? '#065f46' : '#1e293b';
+      embedBtn.style.borderColor = activeDrawer === 'embed' ? '#34d399' : '#059669';
+    }
+
+    if (!activeDrawer) {
       drawerMount.style.display = 'none';
-      drawerMount.innerHTML = '';
-      embedBtn?.classList.remove('active');
       return;
     }
 
     drawerMount.style.display = 'block';
-    drawerMount.innerHTML = '';
-    embedBtn?.classList.add('active');
 
-    const getEmbedSnippet = (mode: PlayerDisplayMode) =>
-      `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
+    if (activeDrawer === 'ai-tutor') {
+      const drawerEl = renderNanoAiTutorDrawer({
+        isOpen: true,
+        onClose: () => {
+          activeDrawer = null;
+          renderActiveDrawer();
+        },
+        preset: activePreset,
+        postToPlayer: (payload) => postToPlayer(payload),
+        latestTelemetry,
+      });
+      if (drawerEl) drawerMount.appendChild(drawerEl);
+    } else if (activeDrawer === 'lab') {
+      const drawerEl = renderAstInteractiveLabDrawer({
+        isOpen: true,
+        onClose: () => {
+          activeDrawer = null;
+          renderActiveDrawer();
+        },
+        preset: activePreset,
+      });
+      if (drawerEl) drawerMount.appendChild(drawerEl);
+    } else if (activeDrawer === 'embed') {
+      const getEmbedSnippet = (mode: PlayerDisplayMode) =>
+        `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
 
-    const drawerEl = renderPlayerEmbedModal({
-      isOpen: true,
-      onClose: () => {
-        isEmbedOpen = false;
-        renderEmbedDrawer();
-      },
-      embedTargetMode,
-      setEmbedTargetMode: (mode) => {
-        embedTargetMode = mode;
-        renderEmbedDrawer();
-      },
-      copiedEmbed,
-      onCopyEmbedCode: () => {
-        copiedEmbed = true;
-        navigator.clipboard?.writeText(getEmbedSnippet(embedTargetMode));
-        renderEmbedDrawer();
-        setTimeout(() => {
-          copiedEmbed = false;
-          if (isEmbedOpen) renderEmbedDrawer();
-        }, 2000);
-      },
-      embedCode: getEmbedSnippet(embedTargetMode),
-    });
+      const drawerEl = renderPlayerEmbedModal({
+        isOpen: true,
+        onClose: () => {
+          activeDrawer = null;
+          renderActiveDrawer();
+        },
+        embedTargetMode,
+        setEmbedTargetMode: (mode) => {
+          embedTargetMode = mode;
+          renderActiveDrawer();
+        },
+        copiedEmbed,
+        onCopyEmbedCode: () => {
+          copiedEmbed = true;
+          navigator.clipboard?.writeText(getEmbedSnippet(embedTargetMode));
+          renderActiveDrawer();
+          setTimeout(() => {
+            copiedEmbed = false;
+            if (activeDrawer === 'embed') renderActiveDrawer();
+          }, 2000);
+        },
+        embedCode: getEmbedSnippet(embedTargetMode),
+      });
 
-    if (drawerEl) {
-      drawerMount.appendChild(drawerEl);
+      if (drawerEl) {
+        drawerMount.appendChild(drawerEl);
+      }
     }
   }
 
@@ -460,8 +512,8 @@ export function renderPlayerPage(): HTMLElement {
     // Broadcast lesson change to BSL interpreter
     broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
 
-    if (isEmbedOpen) {
-      renderEmbedDrawer();
+    if (activeDrawer) {
+      renderActiveDrawer();
     }
 
     const nextUrl = new URL(window.location.href);
@@ -786,6 +838,12 @@ export function renderPlayerPage(): HTMLElement {
       updateBslUi(e.data.enabled);
       setBslEnabled(e.data.enabled);
     }
+    if (e.data.type === 'TELEMETRY' || e.data.type === 'AST_TELEMETRY' || e.data.type === 'PLAYER_TELEMETRY') {
+      latestTelemetry = e.data.telemetry || e.data.payload || e.data;
+      if (activeDrawer === 'ai-tutor') {
+        renderActiveDrawer();
+      }
+    }
   });
 
   window.addEventListener('cartridges_updated', () => {
@@ -793,10 +851,20 @@ export function renderPlayerPage(): HTMLElement {
     renderGrid();
   });
 
-  // Host chassis embed modal wiring
+  // Drawer toggles
+  aiTutorBtn?.addEventListener('click', () => {
+    activeDrawer = activeDrawer === 'ai-tutor' ? null : 'ai-tutor';
+    renderActiveDrawer();
+  });
+
+  labDrawerBtn?.addEventListener('click', () => {
+    activeDrawer = activeDrawer === 'lab' ? null : 'lab';
+    renderActiveDrawer();
+  });
+
   embedBtn?.addEventListener('click', () => {
-    isEmbedOpen = !isEmbedOpen;
-    renderEmbedDrawer();
+    activeDrawer = activeDrawer === 'embed' ? null : 'embed';
+    renderActiveDrawer();
   });
 
   exportAirgapBtn?.addEventListener('click', () => {
