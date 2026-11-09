@@ -239,6 +239,20 @@ export function renderHomePage(): HTMLElement {
           <span style="font-size: 0.84rem; font-weight: 700; color: #e11d48;">Enter Globe Theatre →</span>
         </a>
 
+        <!-- SlideScript Cartridge Studio Card -->
+        <a href="${base}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+          <div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+              ✏️
+            </div>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">SlideScript Cartridge Studio</strong>
+            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+              Children write plain-English markdown or prompt on-device Gemini Nano to create and remix 60 FPS science and math cartridges with zero code syntax barriers.
+            </p>
+          </div>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Create a Cartridge →</span>
+        </a>
+
         <!-- Teacher Beacon Card -->
         <a href="${base}teacher-beacon" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
