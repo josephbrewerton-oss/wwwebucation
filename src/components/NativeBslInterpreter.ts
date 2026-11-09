@@ -55,12 +55,16 @@ import {
   subscribeVoice,
   BslSpeechPayload,
 } from '../services/bslGlobalStore';
+import { isSoundEnabled } from '../services/soundHaptics';
 
 export class NativeBslInterpreterElement extends HTMLElement {
   // PiP and Window state
   private pipWindow: Window | null = null;
   private stageHostContainer: HTMLElement | null = null;
   private avatarWrapper: HTMLElement | null = null;
+
+  // Speech tracking to avoid restarting on word boundaries
+  private lastSpokenSubtitle = '';
 
   // Camera POV
   private cameraMode: 'receiver' | 'signer' = 'receiver';
@@ -157,6 +161,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
             </button>
             <button type="button" id="bsl-btn-voice" style="background:${this.voiceEnabled ? '#0284c7' : '#1e293b'}; border:1px solid ${this.voiceEnabled ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Speech Narration Audio Toggle">
               ${this.voiceEnabled ? '🔊 Audio' : '🔇 Mute'}
+            </button>
+            <button type="button" id="bsl-btn-redock" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Dock avatar back to bottom right corner">
+              ⚓ Dock
             </button>
             <button type="button" id="bsl-btn-pip" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; border-radius:4px; font-size:0.75rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Pop-out Window (Document Picture-in-Picture)">
               ⧉
@@ -335,27 +342,27 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
     });
 
-    // Quick Pill Buttons
+    // Quick Pill Buttons (manual user intent -> speaks audio if voice and sound enabled)
     this.querySelectorAll<HTMLButtonElement>('.bsl-pill-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const word = btn.getAttribute('data-word');
-        if (word) this.processUtterance(word);
+        if (word) this.processUtterance(word, true);
       });
     });
 
-    // Text Input Form
+    // Text Input Form (manual user intent -> speaks audio if voice and sound enabled)
     const textForm = this.querySelector<HTMLFormElement>('#bsl-text-form');
     const textInput = this.querySelector<HTMLInputElement>('#bsl-text-input');
     textForm?.addEventListener('submit', (e) => {
       e.preventDefault();
       const val = textInput?.value.trim();
       if (val) {
-        this.processUtterance(val);
+        this.processUtterance(val, true);
         if (textInput) textInput.value = '';
       }
     });
 
-    // Make floating card draggable
+    // Make floating card draggable with safe viewport boundary clamping
     const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const headerBar = this.querySelector<HTMLElement>('#bsl-header-bar');
     if (floatingCard && headerBar) {
@@ -380,12 +387,26 @@ export class NativeBslInterpreterElement extends HTMLElement {
         headerBar.style.cursor = 'grabbing';
       });
 
+      // Quick re-dock to bottom right corner
+      const btnRedock = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
+      btnRedock?.addEventListener('click', () => {
+        floatingCard.style.bottom = '20px';
+        floatingCard.style.right = '20px';
+        floatingCard.style.left = 'auto';
+        floatingCard.style.top = 'auto';
+      });
+
       window.addEventListener('mousemove', (e) => {
         if (!isDragging) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-        floatingCard.style.left = `${initialLeft + dx}px`;
-        floatingCard.style.top = `${initialTop + dy}px`;
+        const cardW = floatingCard.offsetWidth || 340;
+        const maxLeft = Math.max(10, window.innerWidth - cardW - 10);
+        const maxTop = Math.max(50, window.innerHeight - 100);
+        const clampedLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
+        const clampedTop = Math.max(50, Math.min(maxTop, initialTop + dy));
+        floatingCard.style.left = `${clampedLeft}px`;
+        floatingCard.style.top = `${clampedTop}px`;
       });
 
       window.addEventListener('mouseup', () => {
@@ -410,24 +431,55 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     this.unsubscribeSpeech = subscribeBslSpeech((payload: BslSpeechPayload) => {
       if (payload.subtitle) {
-        this.processUtterance(payload.subtitle);
+        if (payload.subtitle !== this.lastSpokenSubtitle) {
+          this.lastSpokenSubtitle = payload.subtitle;
+          this.processUtterance(payload.subtitle, false);
+        }
       } else if (payload.word) {
-        this.processUtterance(payload.word);
+        // Highlighting current spoken word boundary in HUD without resetting the sentence queue
+        const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
+        if (hudGloss) {
+          hudGloss.textContent = `WORD: ${payload.word.toUpperCase()}`;
+        }
+        if (!this.lastSpokenSubtitle && this.isIdle) {
+          this.processUtterance(payload.word, false);
+        }
+      }
+      if (payload.isSpeaking === false) {
+        this.lastSpokenSubtitle = '';
       }
     });
+  }
+
+  /**
+   * Safe element resolver that queries within both the local custom element
+   * and the detached Picture-in-Picture window so animations and HUD updates
+   * never fail or disconnect when undocked.
+   */
+  private queryAvatarElement<T extends Element = HTMLElement>(selector: string): T | null {
+    if (this.avatarWrapper) {
+      const el = this.avatarWrapper.querySelector<T>(selector);
+      if (el) return el;
+    }
+    if (this.pipWindow && this.pipWindow.document) {
+      const el = this.pipWindow.document.querySelector<T>(selector);
+      if (el) return el;
+    }
+    return this.querySelector<T>(selector);
   }
 
   /**
    * Parses natural text through the BSL Level 6 grammar engine / Makaton lexicon
    * and queues 3D skeletal keyframe trajectories.
    */
-  public processUtterance(text: string) {
+  public processUtterance(text: string, speakAudio: boolean = false) {
     if (!text || typeof text !== 'string') return;
     const cleanText = text.trim();
     if (!cleanText) return;
 
-    // Optional audio narration via Web Speech API
-    if (this.voiceEnabled && 'speechSynthesis' in window) {
+    // Optional audio narration via Web Speech API (only if explicitly requested by manual user action,
+    // and both voice narration and master sound are active)
+    if (speakAudio && this.voiceEnabled && isSoundEnabled() && 'speechSynthesis' in window) {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
@@ -447,10 +499,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.currentNmfText = `Eyebrows: ${analysis.nmfSummary.eyebrows} | Mouth: ${analysis.nmfSummary.mouthCue || 'natural'} | Head: ${analysis.nmfSummary.headTilt}`;
 
     // Update HUD
-    const hudGloss = this.querySelector('#bsl-hud-gloss');
+    const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
     if (hudGloss) hudGloss.textContent = `GLOSS: ${this.currentGloss.slice(0, 24)}`;
 
-    const hudNmf = this.querySelector('#bsl-hud-nmf');
+    const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
     if (hudNmf) hudNmf.textContent = this.currentNmfText;
 
     // Check if classifier is active
@@ -460,7 +512,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     } else {
       this.activeClassifierText = 'CL: NONE';
     }
-    const hudCl = this.querySelector('#bsl-hud-cl');
+    const hudCl = this.queryAvatarElement('#bsl-hud-cl');
     if (hudCl) hudCl.textContent = this.activeClassifierText;
 
     // Queue keyframe poses
@@ -489,25 +541,33 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.holdRemaining = this.targetPose.hold || 80;
     this.isIdle = false;
 
-    const hudGloss = this.querySelector('#bsl-hud-gloss');
+    const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
     if (hudGloss) {
       hudGloss.textContent = `SIGN: ${this.targetPose.label || this.targetPose.letter}`;
     }
   }
 
   /**
-   * Main 60 FPS Skeletal Kinematic Animation Loop
+   * Main 60 FPS Skeletal Kinematic Animation Loop.
+   * Dynamically tracks PiP window vs main window requestAnimationFrame.
    */
   private startAnimationLoop() {
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
     const loop = (now: number) => {
       this.updateAvatar(now);
-      this.animationFrameId = requestAnimationFrame(loop);
+      const raf = (this.pipWindow && typeof this.pipWindow.requestAnimationFrame === 'function')
+        ? this.pipWindow.requestAnimationFrame.bind(this.pipWindow)
+        : window.requestAnimationFrame.bind(window);
+      this.animationFrameId = raf(loop);
     };
     this.animationFrameId = requestAnimationFrame(loop);
   }
 
   private updateAvatar(now: number) {
-    const svg = this.querySelector<SVGSVGElement>('#bsl-avatar-svg');
+    const svg = this.queryAvatarElement<SVGSVGElement>('#bsl-avatar-svg');
     if (!svg) return;
 
     // Advance timeline interpolation
@@ -593,7 +653,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   private renderLociLayer(cam: any, ox: number, oy: number) {
-    const lociGroup = this.querySelector('#bsl-layer-loci');
+    const lociGroup = this.queryAvatarElement('#bsl-layer-loci');
     if (!lociGroup) return;
 
     // Draw subtle 3D spatial register coordinates
@@ -617,7 +677,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   private renderBodyLayer(cam: any, ox: number, oy: number) {
-    const bodyGroup = this.querySelector('#bsl-layer-body');
+    const bodyGroup = this.queryAvatarElement('#bsl-layer-body');
     if (!bodyGroup) return;
 
     // Anatomical Shoulder & Trapezius Slope Invariants:
@@ -681,7 +741,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   private renderHeadLayer(cam: any, ox: number, oy: number, nmf: BslNmf) {
-    const headGroup = this.querySelector('#bsl-layer-head');
+    const headGroup = this.queryAvatarElement('#bsl-layer-head');
     if (!headGroup) return;
 
     // Head center at y = -72, chin at y = -46, neck span = 22 units (~ 1/3 head proportion invariant)
@@ -886,7 +946,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     activeShape: any,
     activePalm: any
   ) {
-    const baseGroup = this.querySelector('#bsl-layer-base-hand');
+    const baseGroup = this.queryAvatarElement('#bsl-layer-base-hand');
     if (!baseGroup) return;
 
     // 1. Bilateral Symmetrical Kinematics (PRAY, CHURCH, EQUAL, WHAT, SCIENCE, BIBLE, etc.)
@@ -1028,7 +1088,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     shape: any,
     palm: any
   ) {
-    const domGroup = this.querySelector('#bsl-layer-dominant-hand');
+    const domGroup = this.queryAvatarElement('#bsl-layer-dominant-hand');
     if (!domGroup) return;
 
     // Kinematic Hand Solver
@@ -1130,8 +1190,28 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.pipWindow.document.body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
       this.pipWindow.document.body.style.overflow = 'hidden';
 
-      // 6. Transfer live avatar wrapper without stopping animation loop
+      // 5b. Header Bar for PiP window with prominent Dock button
+      const pipHeader = this.pipWindow.document.createElement('div');
+      pipHeader.style.cssText = 'background:#0f172a; padding:6px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; user-select:none;';
+      pipHeader.innerHTML = `
+        <div style="display:flex; align-items:center; gap:6px;">
+          <span style="font-size:0.9rem;">🧏</span>
+          <span style="font-size:0.72rem; font-weight:800; color:#38bdf8; letter-spacing:0.5px;">BSL IN-VISION (ALWAYS ON TOP)</span>
+        </div>
+        <button type="button" id="pip-btn-redock" style="background:#0284c7; border:none; color:#ffffff; border-radius:4px; font-size:0.7rem; font-weight:700; padding:2px 8px; cursor:pointer;" title="Dock back to webpage">
+          ⚓ Dock to Page
+        </button>
+      `;
+      this.pipWindow.document.body.appendChild(pipHeader);
+      pipHeader.querySelector('#pip-btn-redock')?.addEventListener('click', () => {
+        if (this.pipWindow) {
+          this.pipWindow.close();
+        }
+      });
+
+      // 6. Transfer live avatar wrapper and re-bind animation loop to PiP
       this.pipWindow.document.body.appendChild(this.avatarWrapper);
+      this.startAnimationLoop();
 
       const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
       if (pipBtn) {
@@ -1142,6 +1222,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
       // 7. Dock back home on PiP window close
       this.pipWindow.addEventListener('pagehide', () => {
+        if (this.animationFrameId) {
+          cancelAnimationFrame(this.animationFrameId);
+          this.animationFrameId = null;
+        }
         if (this.avatarWrapper && this.stageHostContainer) {
           this.stageHostContainer.appendChild(this.avatarWrapper);
         }
@@ -1151,6 +1235,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
           pipBtn.style.color = '#38bdf8';
           pipBtn.title = 'Pop-out Window (Document Picture-in-Picture)';
         }
+        this.startAnimationLoop();
       });
     } catch (err) {
       console.error('[BSL Interpreter] Failed to open Document PiP window:', err);

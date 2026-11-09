@@ -3242,7 +3242,7 @@ window.addEventListener('message', (e) => {
         base.showSpeedSelector = false;
         base.showSubtitles = false;
         base.showLoopToggle = false;
-        base.showVolumeControl = false;
+        base.showVolumeControl = true;
         base.showVoiceCommands = false;
         base.showPhysicsControls = false;
         base.showDevInspect = true;
@@ -3279,6 +3279,7 @@ window.addEventListener('message', (e) => {
         base.showWebRtcLink = true;
         base.showCopySvg = true;
         base.showPrintWorksheet = true;
+        base.showVolumeControl = true;
       } else if (mode === 'student') {
         base.showPrintWorksheet = false;
         base.showStandaloneLink = false;

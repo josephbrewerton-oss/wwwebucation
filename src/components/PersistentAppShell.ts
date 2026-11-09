@@ -1,6 +1,6 @@
 import { classroomBeacon } from '../services/classroomBeacon';
-import { playSuccessChime, triggerHapticSuccess } from '../services/soundHaptics';
-import { toggleBsl, setBslEnabled, subscribeBsl, getBslEnabled, broadcastBslSpeech } from '../services/bslGlobalStore';
+import { playSuccessChime, triggerHapticSuccess, isSoundEnabled, setSoundEnabled } from '../services/soundHaptics';
+import { toggleBsl, setBslEnabled, subscribeBsl, getBslEnabled, broadcastBslSpeech, setVoiceEnabled, subscribeVoice } from '../services/bslGlobalStore';
 import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
@@ -17,16 +17,19 @@ export class PersistentAppShellElement extends HTMLElement {
   private colorMode: 'light' | 'dark' = 'light';
   private dataSaver = false;
   private bsl = false;
+  private sound = true;
   private isOfflineSynced = false;
   private unsubscribeBsl?: () => void;
   private unsubscribeDataSaver?: () => void;
   private unsubscribeLang?: () => void;
   private unsubscribePlayerCalls?: () => void;
+  private unsubscribeVoice?: () => void;
 
   connectedCallback() {
     this.colorMode = (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
     this.dataSaver = isDataSaverActive();
     this.bsl = getBslEnabled();
+    this.sound = isSoundEnabled();
     this.isOfflineSynced = isOfflineSyncComplete();
     document.documentElement.setAttribute('data-theme', this.colorMode);
 
@@ -83,6 +86,11 @@ export class PersistentAppShellElement extends HTMLElement {
               <!-- High Contrast Toggle -->
               <button type="button" id="btn-contrast-toggle" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 6px; cursor:pointer;" title="Toggle High Contrast" aria-label="Toggle High Contrast Mode">
                 🌓 Contrast
+              </button>
+
+              <!-- Master Audio / Sound Mute Toggle -->
+              <button type="button" id="top-bar-sound-btn" style="background:${this.sound ? '#0284c7' : '#1e293b'}; border:1px solid ${this.sound ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.72rem; padding:2px 8px; font-weight:700; cursor:pointer; min-width:86px; text-align:center; flex-shrink:0;" title="Toggle Classroom Sound Effects and Narration (M)" aria-label="Toggle Sound Effects and Narration Audio">
+                ${this.sound ? '🔊 Sound: ON' : '🔇 Mute'}
               </button>
 
               <!-- BSL Quick Toggle -->
@@ -211,8 +219,13 @@ export class PersistentAppShellElement extends HTMLElement {
                 </a>
               </div>
 
-              <!-- Right Actions (Data Saver, Settings, Theme, Mobile toggle) -->
+              <!-- Right Actions (Data Saver, Sound Mute, Settings, Theme, Mobile toggle) -->
               <div style="display:flex; align-items:center; gap:0.5rem; flex-shrink:0;">
+                <!-- Master Sound Mute Button in Navbar -->
+                <button type="button" id="nav-btn-sound" class="hidden sm:inline-flex" style="background:${this.sound ? '#eff6ff' : '#fef2f2'}; color:${this.sound ? '#1d4ed8' : '#b91c1c'}; border:1px solid ${this.sound ? '#93c5fd' : '#fecaca'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Toggle Classroom Sound Effects and Narration (M)" aria-label="Toggle Sound Effects and Narration Audio">
+                  ${this.sound ? '🔊 Sound: ON' : '🔇 Mute'}
+                </button>
+
                 <!-- Save Offline (0 Data) Button -->
                 <button type="button" id="nav-btn-offline-sync" class="hidden sm:inline-flex" style="background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Sync Curriculum for 100% Zero-Data Offline Operation" aria-label="Sync Curriculum for Zero Data Offline Operation">
                   ${this.isOfflineSynced ? '💾 Saved (0 Data)' : '💾 Save Offline'}
@@ -517,6 +530,56 @@ export class PersistentAppShellElement extends HTMLElement {
       });
     });
 
+    // Master Sound Mute Toggle (Top Bar + Navbar)
+    const btnSound = this.querySelector<HTMLButtonElement>('#top-bar-sound-btn');
+    const btnNavSound = this.querySelector<HTMLButtonElement>('#nav-btn-sound');
+    const updateSoundUi = (enabled: boolean) => {
+      this.sound = enabled;
+      if (btnSound) {
+        btnSound.textContent = enabled ? '🔊 Sound: ON' : '🔇 Mute';
+        btnSound.style.background = enabled ? '#0284c7' : '#1e293b';
+        btnSound.style.borderColor = enabled ? '#38bdf8' : '#334155';
+      }
+      if (btnNavSound) {
+        btnNavSound.textContent = enabled ? '🔊 Sound: ON' : '🔇 Mute';
+        btnNavSound.style.background = enabled ? '#eff6ff' : '#fef2f2';
+        btnNavSound.style.color = enabled ? '#1d4ed8' : '#b91c1c';
+        btnNavSound.style.borderColor = enabled ? '#93c5fd' : '#fecaca';
+      }
+    };
+
+    const toggleMasterSound = () => {
+      const next = !isSoundEnabled();
+      setSoundEnabled(next);
+      setVoiceEnabled(next);
+      updateSoundUi(next);
+      if (next) {
+        playSuccessChime();
+      }
+    };
+
+    btnSound?.addEventListener('click', toggleMasterSound);
+    btnNavSound?.addEventListener('click', toggleMasterSound);
+
+    const handleSoundUpdated = () => {
+      updateSoundUi(isSoundEnabled());
+    };
+    window.addEventListener('stj_sound_haptics_updated', handleSoundUpdated);
+    this.unsubscribeVoice = subscribeVoice((enabled) => {
+      updateSoundUi(enabled && isSoundEnabled());
+    });
+
+    // Keyboard shortcut M for Master Sound Mute
+    window.addEventListener('keydown', (e) => {
+      if ((e.key === 'M' || e.key === 'm') && !e.shiftKey && !e.ctrlKey && !e.altKey && !e.metaKey) {
+        const active = document.activeElement?.tagName;
+        if (active !== 'INPUT' && active !== 'TEXTAREA' && active !== 'SELECT') {
+          e.preventDefault();
+          toggleMasterSound();
+        }
+      }
+    });
+
     // Keyboard shortcut Shift+B for BSL
     window.addEventListener('keydown', (e) => {
       if (e.shiftKey && (e.key === 'B' || e.key === 'b')) {
@@ -542,17 +605,24 @@ export class PersistentAppShellElement extends HTMLElement {
 
     // Listen to lesson narration & subtitle broadcasts from player iframe
     window.addEventListener('message', (e) => {
-      if (e.data && (e.data.type === 'TOGGLE_BSL' || e.data.type === 'BSL_STATE_CHANGED')) {
+      if (!e.data || typeof e.data !== 'object') return;
+
+      if (e.data.type === 'TOGGLE_BSL' || e.data.type === 'BSL_STATE_CHANGED') {
         const enabled = typeof e.data.enabled === 'boolean' ? e.data.enabled : e.data.active;
         if (typeof enabled === 'boolean' && enabled !== this.bsl) {
           setBslEnabled(enabled);
         }
-      } else if (e.data && e.data.type === 'SUBTITLE_UPDATE' && e.data.text) {
-        broadcastBslSpeech({ subtitle: e.data.text, isSpeaking: true });
-        const interpreter = this.querySelector<NativeBslInterpreterElement>('native-bsl-interpreter');
-        if (interpreter) {
-          interpreter.processUtterance(e.data.text);
+      } else if (e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') {
+        if (typeof e.data.enabled === 'boolean') {
+          updateSoundUi(e.data.enabled);
         }
+      } else if (e.data.type === 'SUBTITLE_UPDATE' || e.data.type === 'SPEECH_START') {
+        const text = e.data.text || e.data.subtitle;
+        if (text && typeof text === 'string') {
+          broadcastBslSpeech({ subtitle: text, isSpeaking: true });
+        }
+      } else if (e.data.type === 'SPEECH_BOUNDARY' && e.data.word) {
+        broadcastBslSpeech({ word: e.data.word, isSpeaking: true });
       } else if (e.data && (e.data.type === 'SPEECH_END' || e.data.type === 'SUBTITLE_CLEAR')) {
         broadcastBslSpeech({ isSpeaking: false });
       }
@@ -587,6 +657,7 @@ export class PersistentAppShellElement extends HTMLElement {
     this.unsubscribeDataSaver?.();
     this.unsubscribeLang?.();
     this.unsubscribePlayerCalls?.();
+    this.unsubscribeVoice?.();
     classroomBeacon.stopStudentBeacon();
   }
 }

@@ -355,6 +355,7 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'DISPATCH_ACTION'; action: string; args?: any[] }
     | { type: 'SET_VAR'; name: string; value: any }
     | { type: 'SET_VOICE'; enabled: boolean }
+    | { type: 'SET_MUTED'; muted: boolean }
     | { type: 'SET_BSL'; enabled: boolean }
     | { type: 'TOGGLE_BSL' }
     | { type: 'RESET_SIM' };
@@ -746,10 +747,11 @@ export function renderPlayerPage(): HTMLElement {
     }
   });
 
-  // Synchronize voice narration between host and simulator iframe
+  // Synchronize voice narration and master mute between host and simulator iframe
   subscribeVoice((enabled) => {
     try {
       postToPlayer({ type: 'SET_VOICE', enabled });
+      postToPlayer({ type: 'SET_MUTED', muted: !enabled });
     } catch (_) {}
   });
 

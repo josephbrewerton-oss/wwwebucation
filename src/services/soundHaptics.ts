@@ -39,6 +39,9 @@ export function isSoundEnabled(): boolean {
 export function setSoundEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SOUND_KEY, String(enabled));
+  if (!enabled && 'speechSynthesis' in window) {
+    try { window.speechSynthesis.cancel(); } catch (_) {}
+  }
   window.dispatchEvent(new CustomEvent('stj_sound_haptics_updated'));
 }
 

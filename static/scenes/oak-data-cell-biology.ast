@@ -1,0 +1,41 @@
+(:cartridge :type :data :id "oak-data-cell-biology" :title "Cell Biology & Organelles" :stage "Key Stage 3" :subject "Science" :unit "Cell Biology"
+  (:axiom "Cells are the fundamental structural and functional units of all living organisms; eukaryotic plant and animal cells share organelles but plant cells possess unique rigid walls, chloroplasts, and permanent vacuoles.")
+  (:trap "Confusing cell walls with cell membranes, or believing animal cells have chloroplasts.")
+  (:socratic-pivot "Why does a plant stem stand upright without a bony skeleton, whereas an animal cell will burst if placed in pure water?")
+  (:hook "Viewing cheek cells under 400x magnification reveals tiny nucleus command centres.")
+  (:guided-step "Compare organelle structures: nucleus (DNA), mitochondria (aerobic respiration), ribosomes (protein synthesis), and chloroplasts (photosynthesis).")
+  (:questions (
+    (:q :id "cell-1" :prompt "Which three structures are present in typical plant cells but absent in animal cells?"
+        :options ("Cellulose cell wall, permanent large vacuole, and chloroplasts" "Nucleus, cytoplasm, and cell membrane" "Mitochondria, ribosomes, and endoplasmic reticulum" "Red blood cells, white blood cells, and platelets")
+        :answer 0
+        :tier "recall"
+        :hint "Think about what gives plants their green colour, rigid upright posture, and cell turgor."
+        :explanation "Plant cells uniquely have a rigid cellulose cell wall for structural support, a large permanent sap vacuole for turgor, and chloroplasts containing chlorophyll for photosynthesis. Animal cells have none of these three."
+        :misconceptions ("Correct! Cell wall, chloroplasts, and permanent vacuole are unique to plant cells." "Misconception: Nucleus, cytoplasm, and cell membrane are present in both plant and animal cells." "Misconception: Mitochondria and ribosomes are universal eukaryotic organelles found in both." "Misconception: Blood cells are specialized animal tissue cells.")
+    )
+    (:q :id "cell-2" :prompt "What is the primary function of the cell membrane in both plant and animal cells?"
+        :options ("Controlling which substances enter and leave the cell (selective permeability)" "Storing the entire genetic code inside chromosomes" "Releasing energy through aerobic cellular respiration" "Producing glucose using light energy from the Sun")
+        :answer 0
+        :tier "recall"
+        :hint "The membrane acts like a security gate controlling traffic in and out of the cell."
+        :explanation "The cell membrane is a partially permeable lipid bilayer that regulates the transport of nutrients, water, ions, and waste products into and out of the cell."
+        :misconceptions ("Correct! The cell membrane controls selective substance movement." "Misconception: Storing genetic code is the function of the cell nucleus." "Misconception: Releasing energy via aerobic respiration is the function of mitochondria." "Misconception: Producing glucose via photosynthesis is the function of chloroplasts.")
+    )
+    (:q :id "cell-3" :prompt "Why are mitochondria often described as the \"powerhouses\" of eukaryotic cells?"
+        :options ("They carry out aerobic respiration, transferring chemical energy from glucose into ATP" "They generate high-voltage electrical sparks to jump-start the cell" "They absorb direct sunlight to pump water out of the cell" "They digest toxic waste like miniature garbage disposal units")
+        :answer 0
+        :tier "analysis"
+        :hint "Mitochondria combine glucose with oxygen to release usable chemical energy for cellular work."
+        :explanation "Mitochondria are the site of aerobic cellular respiration, where glucose is oxidised to transfer energy into adenosine triphosphate (ATP), powering cellular functions."
+        :misconceptions ("Correct! Mitochondria carry out aerobic respiration, supplying ATP energy." "Misconception: Cellular respiration is chemical metabolism, not high-voltage electricity." "Misconception: Sunlight absorption is performed by chloroplasts in plant cells." "Misconception: Lysosomes perform digestive waste degradation.")
+    )
+    (:q :id "cell-4" :prompt "If a light microscope has a 10× eyepiece lens and a 40× objective lens, what is the total magnification of the specimen?"
+        :options ("400×" "50×" "4×" "4,000×")
+        :answer 0
+        :tier "application"
+        :hint "Multiply the magnification of the eyepiece lens by the magnification of the objective lens."
+        :explanation "Total magnification = Eyepiece magnification × Objective magnification. 10 × 40 = 400× magnification."
+        :misconceptions ("Correct! 10 × 40 = 400× total magnification." "Misconception: Adding 10 + 40 = 50 is a common mistake; optical lenses multiply magnification." "Misconception: Dividing 40 ÷ 10 = 4 is incorrect." "Misconception: 4,000× is an accidental extra zero.")
+    )
+  ))
+)
