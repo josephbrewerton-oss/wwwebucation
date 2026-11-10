@@ -689,7 +689,11 @@ export function renderCatholicLifePage(): HTMLElement {
     // Rosary cycle toggle buttons
     container.querySelectorAll('.rosary-cycle-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        activeRosaryCycle = (btn.getAttribute('data-cycle') as any) || 'Joyful';
+        const cycle = btn.getAttribute('data-cycle');
+        activeRosaryCycle =
+          cycle === 'Joyful' || cycle === 'Luminous' || cycle === 'Sorrowful' || cycle === 'Glorious'
+            ? cycle
+            : 'Joyful';
         updateView();
       });
     });
