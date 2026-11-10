@@ -1,4 +1,3 @@
-import { parseSExpr } from '../utils/sexprParser';
 import { getBaseUrl } from '../utils/url';
 import { PRESET_OPTIONS } from '../data/player/generatedScenes';
 
@@ -381,7 +380,8 @@ export function renderHomePage(): HTMLElement {
   // 4. Async Ingestion from sitemap.ast (falls back instantly to local list if offline)
   fetch(`${base}sitemap.ast`)
     .then(r => r.ok ? r.text() : Promise.reject())
-    .then(raw => {
+    .then(async (raw) => {
+      const { parseSExpr } = await import('../utils/sexprParser');
       const ast = parseSExpr(raw);
       if (Array.isArray(ast)) {
         const cartridgeNode = (ast as any[]).find((node: any) => Array.isArray(node) && node[0] === ':sitemap')

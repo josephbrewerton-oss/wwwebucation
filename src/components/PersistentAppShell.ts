@@ -1,7 +1,6 @@
 import { classroomBeacon } from '../services/classroomBeacon';
 import { playSuccessChime, triggerHapticSuccess, isSoundEnabled, setSoundEnabled } from '../services/soundHaptics';
 import { toggleBsl, setBslEnabled, subscribeBsl, getBslEnabled, broadcastBslSpeech, setVoiceEnabled, subscribeVoice } from '../services/bslGlobalStore';
-import { initCustomSignsIntoLexicon } from '../services/customSignStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
@@ -14,8 +13,6 @@ import {
   CURRICULUM_LAB_ITEMS,
   SCHOOL_GOVERNANCE_ITEMS,
 } from '../data/navigationManifest';
-import './NativeBslInterpreter';
-import type { NativeBslInterpreterElement } from './NativeBslInterpreter';
 
 export class PersistentAppShellElement extends HTMLElement {
   private mobileMenuOpen = false;
@@ -575,10 +572,9 @@ export class PersistentAppShellElement extends HTMLElement {
     // Global Keyboard Shortcuts
     window.addEventListener('keydown', this.handleKeyDown);
 
-    // Lexicon and BSL subscriber
-    initCustomSignsIntoLexicon();
+    // BSL on-demand lazy subscriber
     const bslSlot = this.querySelector('#bsl-overlay-slot')!;
-    this.unsubscribeBsl = subscribeBsl((enabled) => {
+    this.unsubscribeBsl = subscribeBsl(async (enabled) => {
       this.bsl = enabled;
       if (btnBsl) {
         btnBsl.textContent = `🖐️ BSL: ${enabled ? 'ON' : 'OFF'}`;
@@ -586,7 +582,14 @@ export class PersistentAppShellElement extends HTMLElement {
         btnBsl.style.borderColor = enabled ? '#38bdf8' : '#334155';
         btnBsl.setAttribute('aria-pressed', String(enabled));
       }
-      bslSlot.innerHTML = enabled ? `<native-bsl-interpreter></native-bsl-interpreter>` : '';
+      if (enabled) {
+        const { initCustomSignsIntoLexicon } = await import('../services/customSignStore');
+        initCustomSignsIntoLexicon();
+        await import('./NativeBslInterpreter');
+        bslSlot.innerHTML = `<native-bsl-interpreter></native-bsl-interpreter>`;
+      } else {
+        bslSlot.innerHTML = '';
+      }
     });
 
     // Inter-frame IPC listener

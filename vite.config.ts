@@ -182,6 +182,12 @@ export default defineConfig(({ mode }) => ({
           if (id.includes('node_modules/katex/')) {
             return 'vendor-katex';
           }
+          if (id.includes('bslLexicon') || id.includes('NativeBslInterpreter')) {
+            return 'bsl-engine';
+          }
+          if (id.includes('cartridgeStore') || id.includes('embeddedCoreCartridges')) {
+            return 'cartridge-vault';
+          }
         },
       },
     },

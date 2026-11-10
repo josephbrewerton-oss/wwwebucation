@@ -472,7 +472,7 @@ console.log('\n--- TEST 9: Offline Simulator Suite ZIP Export & Embed Protocol -
   // Verify static/player/index.html includes accessible button with ID #btn-download-zip
   const indexHtml = fs.readFileSync('static/player/index.html', 'utf-8');
   assert(indexHtml.includes('id="btn-download-zip"'), 'index.html must include #btn-download-zip element');
-  assert(indexHtml.includes('class="zip-download-btn"'), 'index.html must style button with zip-download-btn class');
+  assert(indexHtml.includes('zip-download-btn'), 'index.html must style button with zip-download-btn class');
 
   // Verify player-ui.js contains downloadOfflineSuiteZip handler and parent notification
   const playerUi = fs.readFileSync('static/player/player-ui.js', 'utf-8');

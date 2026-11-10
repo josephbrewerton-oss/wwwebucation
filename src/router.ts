@@ -52,8 +52,6 @@ const routes: Record<string, RouteHandler> = {
 };
 
 import { getBaseUrl } from './utils/url';
-import { resolveHarmonisedRoute } from './utils/harmonisedRouteResolver';
-import { getCartridgeByMount } from './services/cartridgeStore';
 
 export function normalizePath(rawPath: string): string {
   const base = getBaseUrl();
@@ -101,12 +99,14 @@ export async function handleRouteChange() {
 
   if (!handler) {
     // 1. Check if route matches a declared cartridge mount address (e.g. /curriculum/geometry/pythagoras)
+    const { getCartridgeByMount } = await import('./services/cartridgeStore');
     const mountedCartridge = getCartridgeByMount(normalized);
     if (mountedCartridge) {
       window.history.replaceState({}, '', `${getBaseUrl()}player?preset=${mountedCartridge.id}`);
       handler = routes['/player'];
     } else {
       // 2. Check harmonised curriculum route resolver for fuzzy and legacy aliases
+      const { resolveHarmonisedRoute } = await import('./utils/harmonisedRouteResolver');
       const resolution = resolveHarmonisedRoute(normalized, window.location.search);
       if (resolution && resolution.targetPath && resolution.targetPath !== normalized && resolution.targetPath !== '/') {
         window.history.replaceState({}, '', `${getBaseUrl()}${resolution.targetPath.replace(/^\//, '')}`);
