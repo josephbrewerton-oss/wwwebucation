@@ -40,12 +40,25 @@
         try {
           let binaryBytes = null;
 
-          // 1. Try browser fetch for standalone .wasm binary
-          if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
-            const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/wwwebucation/';
+          // 1. Instant zero-network initialization via inlined base64 binary (< 1.3 KB)
+          if (typeof FALLBACK_TRANSPILER_WASM_BASE64 === 'string' && FALLBACK_TRANSPILER_WASM_BASE64.length > 0) {
+            if (typeof atob === 'function') {
+              const binStr = atob(FALLBACK_TRANSPILER_WASM_BASE64);
+              const len = binStr.length;
+              binaryBytes = new Uint8Array(len);
+              for (let i = 0; i < len; i++) {
+                binaryBytes[i] = binStr.charCodeAt(i);
+              }
+            } else if (typeof Buffer !== 'undefined') {
+              binaryBytes = Buffer.from(FALLBACK_TRANSPILER_WASM_BASE64, 'base64');
+            }
+          }
+
+          // 2. Fallback browser fetch for standalone .wasm binary if base64 not present
+          if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
+            const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/';
             const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
             const candidates = [
-              `${cleanBase}static/player/wasm/ast-transpiler-engine.wasm`,
               `${cleanBase}player/wasm/ast-transpiler-engine.wasm`,
               './wasm/ast-transpiler-engine.wasm',
               './ast-transpiler-engine.wasm',
@@ -61,20 +74,6 @@
                   break;
                 }
               } catch (_) {}
-            }
-          }
-
-          // 2. Fallback to inlined zero-latency base64
-          if (!binaryBytes || binaryBytes.length === 0) {
-            if (typeof atob === 'function') {
-              const binStr = atob(FALLBACK_TRANSPILER_WASM_BASE64);
-              const len = binStr.length;
-              binaryBytes = new Uint8Array(len);
-              for (let i = 0; i < len; i++) {
-                binaryBytes[i] = binStr.charCodeAt(i);
-              }
-            } else if (typeof Buffer !== 'undefined') {
-              binaryBytes = Buffer.from(FALLBACK_TRANSPILER_WASM_BASE64, 'base64');
             }
           }
 

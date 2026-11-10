@@ -62,16 +62,26 @@ export class ASTTranspilerWasmBridge {
     if (this.isReady) return true;
 
     try {
-      let binaryBytes: Uint8Array | null = null;
+      // 1. Instant zero-network initialization via inlined base64 binary (< 1.3 KB)
+      if (typeof AST_TRANSPILER_WASM_BASE64 === 'string' && AST_TRANSPILER_WASM_BASE64.length > 0) {
+        if (typeof atob === 'function') {
+          const binStr = atob(AST_TRANSPILER_WASM_BASE64);
+          const len = binStr.length;
+          binaryBytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            binaryBytes[i] = binStr.charCodeAt(i);
+          }
+        } else if (typeof Buffer !== 'undefined') {
+          binaryBytes = Buffer.from(AST_TRANSPILER_WASM_BASE64, 'base64');
+        }
+      }
 
-      // 1. Try fetching standalone .wasm binary with base-aware paths
-      if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location?.protocol !== 'file:') {
+      // 2. Fallback to base-aware network fetch only if inlined binary unavailable
+      if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location?.protocol !== 'file:') {
         const basePath = (window as any).__AST_BASE_URL__ || (window as any).__AST_ASSET_BASE__ || (import.meta.env?.BASE_URL || '/').replace(/\/?$/, '/');
         const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
         const candidates = [
-          `${cleanBase}static/player/wasm/ast-transpiler-engine.wasm`,
           `${cleanBase}player/wasm/ast-transpiler-engine.wasm`,
-          './static/player/wasm/ast-transpiler-engine.wasm',
           './player/wasm/ast-transpiler-engine.wasm',
           './wasm/ast-transpiler-engine.wasm',
           '/player/wasm/ast-transpiler-engine.wasm',
@@ -85,20 +95,6 @@ export class ASTTranspilerWasmBridge {
               break;
             }
           } catch (_) {}
-        }
-      }
-
-      // 2. Fallback to inlined base64 binary
-      if (!binaryBytes || binaryBytes.length === 0) {
-        if (typeof atob === 'function') {
-          const binStr = atob(AST_TRANSPILER_WASM_BASE64);
-          const len = binStr.length;
-          binaryBytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            binaryBytes[i] = binStr.charCodeAt(i);
-          }
-        } else if (typeof Buffer !== 'undefined') {
-          binaryBytes = Buffer.from(AST_TRANSPILER_WASM_BASE64, 'base64');
         }
       }
 

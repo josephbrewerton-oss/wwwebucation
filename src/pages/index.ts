@@ -86,6 +86,7 @@ export function renderHomePage(): HTMLElement {
         <iframe 
           id="stage-viewport"
           src="${base}player.html?preset=welcome" 
+          loading="lazy"
           style="width: 100%; height: 500px; border: none; display: block;" 
           title="Featured Interactive Simulation">
         </iframe>

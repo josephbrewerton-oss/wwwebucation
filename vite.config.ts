@@ -144,9 +144,21 @@ function rawAstPlugin(): import('vite').Plugin {
   };
 }
 
+function nonBlockingCssPlugin(): import('vite').Plugin {
+  return {
+    name: 'non-blocking-css',
+    transformIndexHtml(html) {
+      return html.replace(
+        /<link rel="stylesheet" crossorigin href="([^"]+)">/g,
+        '<link rel="preload" as="style" href="$1" crossorigin onload="this.onload=null;this.rel=\'stylesheet\'"><noscript><link rel="stylesheet" href="$1" crossorigin></noscript>'
+      );
+    }
+  };
+}
+
 export default defineConfig(({ mode }) => ({
   base: process.env.BASE_URL || (mode === 'production' ? './' : '/'),
-  plugins: [astSceneAutoFinder(), rawAstPlugin()],
+  plugins: [astSceneAutoFinder(), rawAstPlugin(), nonBlockingCssPlugin()],
   publicDir: 'static',
   define: {
     'process.env': {},
