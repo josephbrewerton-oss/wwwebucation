@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-10T10:04:41.732Z",
+  "generatedAt": "2026-11-10T11:42:38.796Z",
   "totalScenes": 66,
   "scenes": [
     {
@@ -635,18 +635,18 @@
     },
     {
       "id": "phet-acid-base",
-      "type": "Slide",
-      "title": "PhET Acid-Base Distillation",
+      "type": "Sim",
+      "title": "Acid-Base Titration Lab",
       "stage": "KS3/KS4 CHEMISTRY",
-      "duration": 12,
+      "duration": 14,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/phet-acid-base.svg",
       "astFile": "cartridges/phet-acid-base.ast",
       "astbFile": "bytecode/phet-acid-base.astb",
-      "keyframeCount": 4,
-      "subtitleCount": 3,
-      "bindingsCount": 2
+      "keyframeCount": 0,
+      "subtitleCount": 0,
+      "bindingsCount": 3
     },
     {
       "id": "phet-balancing-chemical",

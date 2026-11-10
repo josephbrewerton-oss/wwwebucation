@@ -332,8 +332,8 @@
 
     (:cartridge
       :id "phet-acid-base"
-      :type "Slide"
-      :title "PhET Acid-Base Distillation"
+      :type "Sim"
+      :title "Acid-Base Titration Lab"
       :stage "KS3/KS4 CHEMISTRY"
       :oak-id "OAK-KS4-SCI-PHETACID"
       :bytecode "bytecode/phet-acid-base.astb")

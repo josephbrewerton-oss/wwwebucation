@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-10T10:04:40.046Z",
+  "generatedAt": "2026-11-10T11:42:37.219Z",
   "totalCartridges": 65,
   "units": [
     {
@@ -523,7 +523,7 @@
       "subject": "Science",
       "section": "Natural Sciences & Physics",
       "stage": "KS3/KS4 CHEMISTRY",
-      "title": "PhET Acid-Base Distillation",
+      "title": "Acid-Base Titration Lab",
       "cartridgeId": "phet-acid-base"
     },
     {
@@ -1756,22 +1756,22 @@
     {
       "id": "phet-acid-base",
       "base": "phet-acid-base",
-      "type": "Slide",
-      "title": "PhET Acid-Base Distillation",
+      "type": "Sim",
+      "title": "Acid-Base Titration Lab",
       "stage": "KS3/KS4 CHEMISTRY",
       "oakId": "OAK-KS4-SCI-PHETACID",
       "oakUnit": "ks4-science-phet-acid-base",
       "subject": "Science",
       "section": "Natural Sciences & Physics",
       "mount": "/curriculum/science/phet-acid-base",
-      "duration": 12,
+      "duration": 14,
       "svgFile": "cartridges/phet-acid-base.svg",
       "astFile": "cartridges/phet-acid-base.ast",
       "astbFile": "bytecode/phet-acid-base.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-balancing-chemical",
