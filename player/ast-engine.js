@@ -26,6 +26,98 @@
    * Real-time Euler integration: Gravity, inertia, air drag, elastic bouncing,
    * ground friction, canvas boundaries, and inter-body circle collisions.
    */
+
+  class ASTProfiler {
+  constructor(svgRoot, options = {}) {
+    this.svgRoot = svgRoot;
+    this.mode = options.mode || 'minimal';
+    this.strictAlarm = !!options.strictAlarm;
+    
+    this.lastFrameTs = 0;
+    this.frameCount = 0;
+    this.historyLen = 60;
+    this.frameDeltas = new Float32Array(this.historyLen);
+    this.computeTimes = new Float32Array(this.historyLen);
+    this.bufIndex = 0;
+
+    this._createHudElement();
+  }
+
+  _createHudElement() {
+    this.hudGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    this.hudGroup.setAttribute("id", "ast-engine-profiler-hud");
+    this.hudGroup.setAttribute("pointer-events", "none");
+
+    this.textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    this.textNode.setAttribute("x", "12");
+    this.textNode.setAttribute("y", "24");
+    this.textNode.setAttribute("fill", "#00FF66");
+    this.textNode.setAttribute("font-family", "monospace");
+    this.textNode.setAttribute("font-size", "11px");
+    this.textNode.setAttribute("font-weight", "bold");
+    this.textNode.textContent = "INITIALIZING...";
+
+    this.hudGroup.appendChild(this.textNode);
+    this.svgRoot.appendChild(this.hudGroup);
+  }
+
+  onFrame(ts) {
+    if (this.lastFrameTs > 0) {
+      this.frameDeltas[this.bufIndex] = ts - this.lastFrameTs;
+    }
+    this.lastFrameTs = ts;
+  }
+
+  onCompute(ms) {
+    this.computeTimes[this.bufIndex] = ms;
+    this.bufIndex = (this.bufIndex + 1) % this.historyLen;
+    this.frameCount++;
+
+    if (this.frameCount % 30 === 0) {
+      this._updateReadout();
+    }
+  }
+
+  _updateReadout() {
+    let sumDelta = 0;
+    let sumCompute = 0;
+    let maxCompute = 0;
+
+    for (let i = 0; i < this.historyLen; i++) {
+      const d = this.frameDeltas[i];
+      const c = this.computeTimes[i];
+      sumDelta += d;
+      sumCompute += c;
+      if (c > maxCompute) maxCompute = c;
+    }
+
+    const avgDelta = sumDelta / this.historyLen;
+    const avgCompute = sumCompute / this.historyLen;
+    const fps = avgDelta > 0 ? Math.round(1000 / avgDelta) : 0;
+
+    const overBudget = maxCompute > 16.66;
+    if (this.strictAlarm && overBudget) {
+      this.textNode.setAttribute("fill", "#FF3344");
+    } else {
+      this.textNode.setAttribute("fill", "#00FF66");
+    }
+
+    let mem = "";
+    if (this.mode === 'full' && performance.memory) {
+      const heapMB = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+      mem = ` | Heap: ${heapMB}MB`;
+    }
+
+    this.textNode.textContent = `FPS: ${fps} | VM: ${avgCompute.toFixed(2)}ms (peak ${maxCompute.toFixed(2)}ms)${mem}`;
+  }
+
+  destroy() {
+    if (this.hudGroup && this.hudGroup.parentNode) {
+      this.hudGroup.parentNode.removeChild(this.hudGroup);
+    }
+  }
+}
+
   class VectorMicroPhysics {
     constructor(engine, options = {}) {
       this.engine = engine;
@@ -2053,6 +2145,18 @@
       this.scormBridge = new MicroSCORMBridge(this);
       this.scormBridge.init();
       this.isBranching = false;
+      // Internal Hardware Telemetry & Zero-Allocation Profiler
+      this.profiler = null;
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true') {
+        const verbosity = localStorage.getItem('app_hud_verbosity') || 'minimal';
+        const strictAlarm = localStorage.getItem('app_frame_budget_alert') === 'true';
+
+        // Initialize profiler; UI overlay attaches once container/SVG mounts
+        this.profiler = new ASTProfiler({
+          mode: verbosity,
+          strictAlarm: strictAlarm
+        });
+      }
       this.activeBranches = null;
 
       // Container & Dynamic Bindings
@@ -8146,22 +8250,37 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
 
       function tick(ts) {
-        if (!lastTimestamp) lastTimestamp = ts;
-        const dt = Math.min(0.1, (ts - lastTimestamp) / 1000);
-        lastTimestamp = ts;
+      // Resolve profiler across closure/engine scope safely
+      const activeProfiler = (typeof profiler !== 'undefined' ? profiler : null) || 
+                             (typeof self !== 'undefined' && self.profiler) || 
+                             (typeof this !== 'undefined' && this.profiler);
 
-        if (isPlaying) {
-          progress += (dt * speed) / duration;
-          if (progress >= 1.0) {
-            progress = 1.0;
-            pause();
-          }
-          applyBindings(progress);
+      // 1. Hardware frame delta & compositor jitter tracking
+      if (activeProfiler) activeProfiler.onFrame(ts);
+
+      if (!lastTimestamp) lastTimestamp = ts;
+      const dt = Math.min(0.1, (ts - lastTimestamp) / 1000);
+      lastTimestamp = ts;
+
+      if (isPlaying) {
+        // 2. Start AST VM calculation timer
+        const t0 = performance.now();
+
+        progress += (dt * speed) / duration;
+        if (progress >= 1.0) {
+          progress = 1.0;
+          pause();
         }
-        if (isPlaying) {
-          animId = requestAnimationFrame(tick);
-        }
+        applyBindings(progress);
+
+        // 3. Record raw compute duration
+        if (activeProfiler) activeProfiler.onCompute(performance.now() - t0);
       }
+
+      if (isPlaying) {
+        animId = requestAnimationFrame(tick);
+      }
+    }
 
       function play() {
         if (progress >= 1.0) progress = 0.0;
