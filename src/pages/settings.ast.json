@@ -121,6 +121,51 @@
           "Runs exclusively on local vector assets to conserve mobile data."
         ]
       ]
-    }
+    },
+    {
+  "id": "diagnostics-telemetry",
+  "icon": "⚡",
+  "title": "Hardware & Engine Diagnostics",
+  "description": "Inspect local client performance, memory budgets, and offline runtime integrity.",
+  "items": [
+    [
+      "toggle",
+      "setting-perf-hud",
+      "Live Performance HUD",
+      "app_perf_hud_enabled",
+      false,
+      { 
+        "activeLabel": "📊 Engine HUD: VISIBLE", 
+        "inactiveLabel": "📊 Engine HUD: HIDDEN" 
+      },
+      "Overlays a zero-allocation vector HUD showing real-time FPS, AST step duration, and heap usage."
+    ],
+    [
+      "select",
+      "setting-hud-detail",
+      "HUD Detail Level",
+      "app_hud_verbosity",
+      "minimal",
+      [
+        ["minimal", "Minimal (FPS & VM ms Badge)"],
+        ["graph", "Vector Sparkline (Rolling Frame Buffer)"],
+        ["full", "Full Telemetry (FPS, Jitter, WASM Memory Pool, GC)"]
+      ],
+      "Configure the diagnostic resolution drawn onto the SVG viewport."
+    ],
+    [
+      "toggle",
+      "setting-strict-budget",
+      "Strict 16.6ms Budget Alarms",
+      "app_frame_budget_alert",
+      false,
+      { 
+        "activeLabel": "⏱️ Budget Alarms: ON", 
+        "inactiveLabel": "⏱️ Budget Alarms: OFF" 
+      },
+      "Highlights frames in amber or red whenever a simulation step consumes more than 16.6 ms."
+    ]
+  ]
+}
   ]
 }
