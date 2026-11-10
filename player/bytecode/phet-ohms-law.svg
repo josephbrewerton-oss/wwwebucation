@@ -1,0 +1,61 @@
+<svg id="stage-svg" viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16;">
+        <defs>
+          <linearGradient id="phet-wire" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stop-color="#3b82f6"/>
+            <stop offset="100%" stop-color="#60a5fa"/>
+          </linearGradient>
+          <filter id="phet-glow" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        <rect width="800" height="480" fill="#090d16"/>
+        <text x="400" y="42" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">
+          PhET Distilled: Ohm's Law (V = I × R)
+        </text>
+        <text x="400" y="68" fill="#94a3b8" font-size="13" text-anchor="middle" font-family="system-ui, sans-serif">
+          Transpiled from 12 MB PhET bundle to 3.5 KB AST Vector Invariant
+        </text>
+
+        <!-- Circuit Wire Loop -->
+        <rect x="140" y="110" width="520" height="260" rx="24" fill="none" stroke="#334155" stroke-width="12"/>
+        <rect id="active-wire" x="140" y="110" width="520" height="260" rx="24" fill="none" stroke="url(#phet-wire)" stroke-width="4" stroke-dasharray="16 12"/>
+
+        <!-- Battery (Voltage Source) -->
+        <g id="battery-unit" transform="translate(90, 200)">
+          <rect width="100" height="80" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="3"/>
+          <rect x="35" y="-12" width="30" height="12" rx="3" fill="#60a5fa"/>
+          <text x="50" y="44" fill="#38bdf8" font-size="18" font-weight="900" text-anchor="middle" font-family="monospace">12.0 V</text>
+          <text x="50" y="64" fill="#94a3b8" font-size="11" font-weight="700" text-anchor="middle">VOLTAGE (V)</text>
+        </g>
+
+        <!-- Resistor Unit -->
+        <g id="resistor-unit" transform="translate(360, 92)">
+          <rect width="80" height="36" rx="6" fill="#1e293b" stroke="#f59e0b" stroke-width="3"/>
+          <line x1="20" y1="6" x2="20" y2="30" stroke="#ef4444" stroke-width="4"/>
+          <line x1="34" y1="6" x2="34" y2="30" stroke="#10b981" stroke-width="4"/>
+          <line x1="48" y1="6" x2="48" y2="30" stroke="#f59e0b" stroke-width="4"/>
+          <line x1="62" y1="6" x2="62" y2="30" stroke="#eab308" stroke-width="4"/>
+          <text x="40" y="-10" fill="#facc15" font-size="14" font-weight="900" text-anchor="middle" font-family="monospace">4.0 &Omega;</text>
+        </g>
+
+        <!-- Lightbulb / Load -->
+        <g id="lightbulb" transform="translate(620, 205)">
+          <circle cx="40" cy="35" r="32" fill="rgba(250, 204, 21, 0.2)" stroke="#facc15" stroke-width="3" filter="url(#phet-glow)"/>
+          <path d="M 28 35 Q 40 15 52 35" fill="none" stroke="#fef08a" stroke-width="3"/>
+          <text x="40" y="85" fill="#fde047" font-size="12" font-weight="800" text-anchor="middle">LOAD</text>
+        </g>
+
+        <!-- Dynamic Current Display Readout -->
+        <g transform="translate(250, 400)">
+          <rect width="300" height="55" rx="10" fill="#0f172a" stroke="#22c55e" stroke-width="2"/>
+          <text x="150" y="24" fill="#86efac" font-size="11" font-weight="800" text-anchor="middle" letter-spacing="1">CALCULATED CURRENT (I = V / R)</text>
+          <text id="current-readout" x="150" y="46" fill="#22c55e" font-size="20" font-weight="900" text-anchor="middle" font-family="monospace">
+            I = 3.00 Amperes
+          </text>
+        </g>
+      </svg>
