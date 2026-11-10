@@ -1,5 +1,5 @@
 const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/sexprParser-D6MkEK0J.js","assets/rolldown-runtime-DK3Fl9T5.js","assets/cartridge-vault-C4AR5CJA.js"])))=>i.map(i=>d[i]);
-import{t as e}from"./index-DZJYLNPb.js";import{c as t,h as n}from"./cartridge-vault-C4AR5CJA.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`home-landing-stage`,i.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let a=`welcome`,o=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));i.innerHTML=`
+import{t as e}from"./index-Dq-M6qbw.js";import{c as t,h as n}from"./cartridge-vault-C4AR5CJA.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`home-landing-stage`,i.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let a=`welcome`,o=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));i.innerHTML=`
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
