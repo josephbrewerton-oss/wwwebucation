@@ -28,37 +28,107 @@
    */
 
   class ASTProfiler {
-  constructor(svgRoot, options = {}) {
-    this.svgRoot = svgRoot;
-    this.mode = options.mode || 'minimal';
-    this.strictAlarm = !!options.strictAlarm;
-    
-    this.lastFrameTs = 0;
-    this.frameCount = 0;
-    this.historyLen = 60;
-    this.frameDeltas = new Float32Array(this.historyLen);
-    this.computeTimes = new Float32Array(this.historyLen);
-    this.bufIndex = 0;
+    constructor(options = {}) {
+      this.mode = options.mode || 'minimal';
+      this.strictAlarm = !!options.strictAlarm;
+      
+      this.lastFrameTs = 0;
+      this.frameCount = 0;
+      this.historyLen = 60;
+      this.frameDeltas = new Float32Array(this.historyLen);
+      this.computeTimes = new Float32Array(this.historyLen);
+      this.bufIndex = 0;
 
-    this._createHudElement();
-  }
+      this.svgRoot = null;
+      this.hudGroup = null;
+      this.textNode = null;
 
-  _createHudElement() {
-    this.hudGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    this.hudGroup.setAttribute("id", "ast-engine-profiler-hud");
-    this.hudGroup.setAttribute("pointer-events", "none");
+      if (options.svgRoot) {
+        this.mount(options.svgRoot);
+      }
+    }
 
-    this.textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    this.textNode.setAttribute("x", "12");
-    this.textNode.setAttribute("y", "24");
-    this.textNode.setAttribute("fill", "#00FF66");
-    this.textNode.setAttribute("font-family", "monospace");
-    this.textNode.setAttribute("font-size", "11px");
-    this.textNode.setAttribute("font-weight", "bold");
-    this.textNode.textContent = "INITIALIZING...";
+    mount(svgRoot) {
+      if (!svgRoot) return;
+      if (this.hudGroup && this.hudGroup.parentNode) {
+        this.hudGroup.parentNode.removeChild(this.hudGroup);
+      }
+      this.svgRoot = svgRoot;
 
-    this.hudGroup.appendChild(this.textNode);
-    this.svgRoot.appendChild(this.hudGroup);
+      this.hudGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      this.hudGroup.setAttribute("id", "ast-engine-profiler-hud");
+      this.hudGroup.setAttribute("pointer-events", "none");
+
+      this.textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      this.textNode.setAttribute("x", "14");
+      this.textNode.setAttribute("y", "26");
+      this.textNode.setAttribute("fill", "#00FF66");
+      this.textNode.setAttribute("font-family", "ui-monospace, monospace");
+      this.textNode.setAttribute("font-size", "11px");
+      this.textNode.setAttribute("font-weight", "bold");
+      this.textNode.textContent = "INITIALIZING...";
+
+      this.hudGroup.appendChild(this.textNode);
+      this.svgRoot.appendChild(this.hudGroup);
+    }
+
+    onFrame(ts) {
+      if (this.lastFrameTs > 0) {
+        this.frameDeltas[this.bufIndex] = ts - this.lastFrameTs;
+      }
+      this.lastFrameTs = ts;
+    }
+
+    onCompute(ms) {
+      this.computeTimes[this.bufIndex] = ms;
+      this.bufIndex = (this.bufIndex + 1) % this.historyLen;
+      this.frameCount++;
+
+      if (this.frameCount % 30 === 0 && this.textNode) {
+        this._updateReadout();
+      }
+    }
+
+    _updateReadout() {
+      let sumDelta = 0;
+      let sumCompute = 0;
+      let maxCompute = 0;
+
+      for (let i = 0; i < this.historyLen; i++) {
+        const d = this.frameDeltas[i];
+        const c = this.computeTimes[i];
+        sumDelta += d;
+        sumCompute += c;
+        if (c > maxCompute) maxCompute = c;
+      }
+
+      const avgDelta = sumDelta / this.historyLen;
+      const avgCompute = sumCompute / this.historyLen;
+      const fps = avgDelta > 0 ? Math.round(1000 / avgDelta) : 0;
+
+      const overBudget = maxCompute > 16.66;
+      if (this.strictAlarm && overBudget) {
+        this.textNode.setAttribute("fill", "#FF3344");
+      } else {
+        this.textNode.setAttribute("fill", "#00FF66");
+      }
+
+      let mem = "";
+      if (this.mode === 'full' && typeof performance !== 'undefined' && performance.memory) {
+        const heapMB = (performance.memory.usedJSHeapSize / 1048576).toFixed(1);
+        mem = ` | Heap: ${heapMB}MB`;
+      }
+
+      this.textNode.textContent = `FPS: ${fps} | VM: ${avgCompute.toFixed(2)}ms (peak ${maxCompute.toFixed(2)}ms)${mem}`;
+    }
+
+    destroy() {
+      if (this.hudGroup && this.hudGroup.parentNode) {
+        this.hudGroup.parentNode.removeChild(this.hudGroup);
+      }
+      this.hudGroup = null;
+      this.textNode = null;
+    }
   }
 
   onFrame(ts) {
@@ -7610,7 +7680,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     if (!currentTimestamp && typeof performance !== 'undefined' && typeof performance.now === 'function') {
       currentTimestamp = performance.now();
     }
+
+    // 1. Hardware compositor delta & refresh cadence tracking
+    if (this.profiler) this.profiler.onFrame(currentTimestamp);
+
     if (this.lastTimestamp !== null) {
+      // 2. Start VM Compute Timer
+      const t0 = (this.profiler && typeof performance !== 'undefined') ? performance.now() : 0;
+
       const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
       const deltaSec = Math.min(rawDeltaSec, 0.1);
       this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
@@ -7678,6 +7755,20 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           });
         }
       }
+
+      this.applyBindings(this.progress, deltaSec);
+
+      // 3. Record raw AST/SVG compute duration (excludes compositor idle time)
+      if (this.profiler && t0 > 0) {
+        this.profiler.onCompute(performance.now() - t0);
+      }
+    }
+
+    this.lastTimestamp = currentTimestamp;
+    if (typeof requestAnimationFrame !== 'undefined') {
+      this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
+    }
+  }
 
       this.applyBindings(this.progress, deltaSec);
     }
