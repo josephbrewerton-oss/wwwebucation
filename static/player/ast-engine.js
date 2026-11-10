@@ -7713,15 +7713,6 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
   }
 
-      this.applyBindings(this.progress, deltaSec);
-    }
-
-    this.lastTimestamp = currentTimestamp;
-    if (typeof requestAnimationFrame !== 'undefined') {
-      this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
-    }
-  }
-
   hotReloadSvg(svgMarkup) {
     if (!svgMarkup || typeof svgMarkup !== 'string') return false;
     try {
