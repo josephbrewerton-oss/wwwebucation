@@ -108,6 +108,29 @@ header {
   flex-shrink: 0;
 }
 
+#btn-header-play {
+  background: #16a34a;
+  color: #ffffff;
+  border: 1px solid #22c55e;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+#btn-header-play:hover {
+  background: #15803d;
+  border-color: #4ade80;
+}
+
+#btn-header-play.active,
+#btn-header-play.is-playing {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #38bdf8;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.4);
+}
+
 #btn-bsl.active {
   background: rgba(56, 189, 248, 0.22) !important;
   color: #38bdf8 !important;
@@ -749,6 +772,15 @@ header,
     font-size: 12px;
     min-height: 28px;
     min-width: 28px;
+  }
+  #btn-header-play {
+    display: inline-flex !important;
+    min-width: 32px;
+    min-height: 28px;
+    font-size: 13px;
+    padding: 3px 8px;
+    font-weight: 900;
+    justify-content: center;
   }
   .header-actions button span.btn-label {
     display: none;

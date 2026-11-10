@@ -31,6 +31,9 @@
         timeReadout: document.getElementById('time-readout'),
         btnOpenFile: document.getElementById('btn-open-file'),
         btnPlay: document.getElementById('btn-play'),
+        btnHeaderPlay: document.getElementById('btn-header-play'),
+        headerPlayIcon: document.getElementById('header-play-icon'),
+        headerPlayLabel: document.getElementById('header-play-label'),
         btnPrev: document.getElementById('btn-prev'),
         btnNext: document.getElementById('btn-next'),
         btnReset: document.getElementById('btn-reset'),
@@ -1621,7 +1624,35 @@
           this.engine.applyBindings(0.0);
         }
       }
+      this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
       this.showToast('↺ Simulation Reset to Initial State');
+    }
+
+    updateHeaderPlayUI(playing, showRipple = false) {
+      const isPlaying = Boolean(playing);
+      const el = this.elements;
+      if (el.btnHeaderPlay) {
+        el.btnHeaderPlay.classList.toggle('active', isPlaying);
+        el.btnHeaderPlay.classList.toggle('is-playing', isPlaying);
+        if (el.headerPlayIcon) {
+          el.headerPlayIcon.textContent = isPlaying ? '⏸' : '▶';
+        }
+        if (el.headerPlayLabel) {
+          el.headerPlayLabel.textContent = isPlaying ? 'Pause' : 'Play';
+        }
+      }
+      if (el.btnPlay) {
+        el.btnPlay.textContent = isPlaying ? '⏸ Pause Sim' : '▶ Resume Sim';
+        el.btnPlay.classList.toggle('active', isPlaying);
+      }
+      if (showRipple) {
+        this.showPlayPauseRipple(isPlaying);
+      }
+      try {
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage({ type: 'PLAY_STATE_CHANGED', isPlaying }, '*');
+        }
+      } catch (_) {}
     }
 
     toggleTheme() {
@@ -1804,11 +1835,21 @@
         });
       }
 
+      if (el.btnHeaderPlay) {
+        el.btnHeaderPlay.addEventListener('click', () => {
+          if (this.engine) {
+            const playing = this.engine.togglePlay();
+            this.updateHeaderPlayUI(playing, true);
+          }
+        });
+      }
+
       if (el.btnPlay) {
         el.btnPlay.addEventListener('click', () => {
-          const playing = this.engine.togglePlay();
-          el.btnPlay.textContent = playing ? '⏹ Stop Sim' : '▶ Resume Sim';
-          el.btnPlay.classList.toggle('active', playing);
+          if (this.engine) {
+            const playing = this.engine.togglePlay();
+            this.updateHeaderPlayUI(playing, true);
+          }
         });
       }
 
@@ -2150,6 +2191,22 @@ window.addEventListener('message', (e) => {
     }
     if (this.engine) {
       this.engine.setPreset(safePreset, Boolean(data.play));
+      this.updateHeaderPlayUI(Boolean(data.play));
+    }
+  } else if (data.type === 'PLAY') {
+    if (this.engine) {
+      this.engine.play();
+      this.updateHeaderPlayUI(true, true);
+    }
+  } else if (data.type === 'PAUSE') {
+    if (this.engine) {
+      this.engine.pause();
+      this.updateHeaderPlayUI(false, true);
+    }
+  } else if (data.type === 'TOGGLE_PLAY') {
+    if (this.engine) {
+      const playing = this.engine.togglePlay();
+      this.updateHeaderPlayUI(playing, true);
     }
   } else if (data.type === 'TRIGGER_OPEN_LOCAL') {
     const fileInput = el.fileInputHidden || document.getElementById('file-input-hidden');
@@ -2177,6 +2234,7 @@ window.addEventListener('message', (e) => {
       } else {
         this.engine.loadScene(c.id, true);
       }
+      this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
     }
   }
 });
@@ -3096,7 +3154,14 @@ window.addEventListener('message', (e) => {
           if (this.stepMode) {
             this.stepToNextKeyframe();
           } else {
-            if (el.btnPlay) el.btnPlay.click();
+            if (this.engine) {
+              const playing = this.engine.togglePlay();
+              this.updateHeaderPlayUI(playing, true);
+            } else if (el.btnHeaderPlay) {
+              el.btnHeaderPlay.click();
+            } else if (el.btnPlay) {
+              el.btnPlay.click();
+            }
           }
         } else if (e.code === 'ArrowLeft' || e.code === 'PageUp') {
           e.preventDefault();
@@ -3671,10 +3736,7 @@ window.addEventListener('message', (e) => {
 
     bindEngineEvents() {
       // Synchronize initial play button state immediately with the engine's real current state
-      if (this.elements.btnPlay) {
-        this.elements.btnPlay.textContent = this.engine.isPlaying ? '⏸ Pause Sim' : '▶ Resume Sim';
-        this.elements.btnPlay.classList.toggle('active', Boolean(this.engine.isPlaying));
-      }
+      this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
 
       this.engine.on('timeupdate', () => {
         this.updateView();
@@ -3686,10 +3748,7 @@ window.addEventListener('message', (e) => {
           this.targetStop = null;
           this.engine.seek(reached);
           this.engine.pause();
-          if (this.elements.btnPlay) {
-            this.elements.btnPlay.textContent = '▶ Resume Sim';
-            this.elements.btnPlay.classList.remove('active');
-          }
+          this.updateHeaderPlayUI(false);
           this.onStopReached(reached);
         }
 
@@ -3700,9 +3759,8 @@ window.addEventListener('message', (e) => {
       });
 
       this.engine.on('statechange', (data) => {
-        if (this.elements.btnPlay) {
-          this.elements.btnPlay.textContent = data.isPlaying ? '⏹ Stop Sim' : '▶ Resume Sim';
-          this.elements.btnPlay.classList.toggle('active', data.isPlaying);
+        if (typeof data.isPlaying === 'boolean') {
+          this.updateHeaderPlayUI(data.isPlaying);
         }
         if (this.obs && this.obs.isConnected && this.obs.settings.syncRecording) {
           if (data.isPlaying) {
@@ -3828,10 +3886,7 @@ window.addEventListener('message', (e) => {
       if (this.stepMode) {
         this.targetStop = null;
         this.engine.pause();
-        if (this.elements.btnPlay) {
-          this.elements.btnPlay.textContent = '▶ Play';
-          this.elements.btnPlay.classList.remove('active');
-        }
+        this.updateHeaderPlayUI(false);
         this.playChime(659.25, 'triangle');
         this.showToast('👣 Clicker / Step Mode ON (Space / Next / Clicker)');
       } else {
@@ -3863,10 +3918,7 @@ window.addEventListener('message', (e) => {
         this.engine.pause();
         this.engine.seek(nextStop);
         this.onStopReached(nextStop);
-        if (this.elements.btnPlay) {
-          this.elements.btnPlay.textContent = '▶ Play';
-          this.elements.btnPlay.classList.remove('active');
-        }
+        this.updateHeaderPlayUI(false);
       } else {
         this.showToast('🏁 End of Lesson Slides');
       }
@@ -3878,10 +3930,7 @@ window.addEventListener('message', (e) => {
       const prevStops = stops.filter(s => s < curT - 0.02);
       this.targetStop = null;
       this.engine.pause();
-      if (this.elements.btnPlay) {
-        this.elements.btnPlay.textContent = '▶ Play';
-        this.elements.btnPlay.classList.remove('active');
-      }
+      this.updateHeaderPlayUI(false);
       if (prevStops.length > 0) {
         const prevStop = prevStops[prevStops.length - 1];
         this.engine.seek(prevStop);
