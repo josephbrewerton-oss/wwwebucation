@@ -1,0 +1,27 @@
+(:scene :id "phet-ohms-law" :type "Slide" :oak-id "OAK-KS4-SCI-PHETOHMS" :oak-unit "ks4-science-phet-ohms-law" :title "PhET Ohm's Law Distillation" :stage "KS3/KS4 PHYSICS" :duration 12.0
+        (:static (
+          (:element :target "#battery-unit" :cache true)
+          (:element :target "#resistor-unit" :cache true)
+        ))
+        (:actors (
+          (:actor :target "#active-wire" :kinematic true :will-change true)
+          (:actor :target "#current-readout" :kinematic true)
+          (:actor :target "#lightbulb" :kinematic true :will-change true)
+        ))
+        (:subtitles (
+          (:start 0.00 :end 3.50 :en "Ohm's Law governs electrical circuits: current is proportional to voltage and inversely proportional to resistance." :es "La ley de Ohm rige los circuitos: la corriente es proporcional al voltaje e inversamente a la resistencia.")
+          (:start 3.50 :end 7.50 :en "As voltage increases, more electric potential pushes electrons rapidly through the conductor." :es "Al aumentar el voltaje, mayor potencial empuja los electrones a través del conductor.")
+          (:start 7.50 :end 12.00 :en "Increasing resistance restricts electron drift velocity, dissipating thermal energy in the lattice." :es "Aumentar la resistencia restringe la velocidad de los electrones disipando energía térmica.")
+        ))
+        (:keyframes (
+          (:t 0.00 :title "Equilibrium Current" :rule "V = 12V, R = 4Ω -> I = 3.0A")
+          (:t 0.35 :title "Voltage Surge" :rule "V rises -> Current vector scales linearly")
+          (:t 0.70 :title "Resistance Imbalance" :rule "R quadruples -> Current drops precipitously")
+          (:t 1.00 :title "Conservation Verified" :rule "P = V × I power dissipation constant")
+        ))
+        (:bindings (
+          (:target "#active-wire" :attr "stroke-dashoffset" :expr "t * -380")
+          (:target "#current-readout" :attr "textContent" :expr "'I = ' + ((12 + Math.sin(t * Math.PI * 2) * 6) / 4).toFixed(2) + ' Amperes'")
+          (:target "#lightbulb" :attr "opacity" :expr "0.4 + 0.6 * ((12 + Math.sin(t * Math.PI * 2) * 6) / 18)")
+        ))
+      )

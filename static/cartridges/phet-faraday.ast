@@ -1,0 +1,27 @@
+(:scene :id "phet-faraday" :type "Slide" :oak-id "OAK-KS4-SCI-PHETFARAD" :oak-unit "ks4-science-phet-faraday" :title "PhET Faraday's Induction Distillation" :stage "KS4 PHYSICS" :duration 14.0
+        (:static (
+          (:element :target "#solenoid-coil" :cache true)
+          (:element :target "#galvanometer" :cache true)
+        ))
+        (:actors (
+          (:actor :target "#bar-magnet" :kinematic true :will-change true)
+          (:actor :target "#meter-needle" :kinematic true :will-change true)
+          (:actor :target "#emf-val" :kinematic true)
+        ))
+        (:subtitles (
+          (:start 0.00 :end 4.00 :en "Michael Faraday discovered that moving a magnet through a wire coil induces electric current." :es "Faraday descubrió que mover un imán a través de una bobina induce corriente eléctrica.")
+          (:start 4.00 :end 8.50 :en "The faster the magnetic flux changes (dΦ/dt), the greater the induced electromotive force." :es "Cuanto más rápido cambia el flujo magnético, mayor es la fuerza electromotriz inducida.")
+          (:start 8.50 :end 14.00 :en "Lenz's Law ensures the induced magnetic field opposes the original motion, conserving energy." :es "La ley de Lenz asegura que el campo inducido se opone al movimiento, conservando energía.")
+        ))
+        (:keyframes (
+          (:t 0.00 :title "Rest Position" :rule "No movement -> Zero magnetic flux change (EMF = 0)")
+          (:t 0.35 :title "North Pole Entry" :rule "Flux increases -> Positive induced current")
+          (:t 0.70 :title "Core Saturation" :rule "Inside coil center -> Flux derivative peaks")
+          (:t 1.00 :title "Reversal" :rule "Withdrawing magnet -> Current reverses direction")
+        ))
+        (:bindings (
+          (:target "#bar-magnet" :attr "transform" :expr "'translate(' + (180 + Math.sin(t * Math.PI * 2) * 160) + ', 175)'")
+          (:target "#meter-needle" :attr "transform" :expr "'rotate(' + (Math.cos(t * Math.PI * 2) * 45) + ' 60 60)'")
+          (:target "#emf-val" :attr "textContent" :expr "(Math.cos(t * Math.PI * 2) * 14.2).toFixed(1) + ' mV'")
+        ))
+      )

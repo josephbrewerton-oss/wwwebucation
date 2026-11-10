@@ -58,6 +58,37 @@ const ROSARY_MYSTERIES = {
 
 export type CatholicTab = 'overview' | 'altar-anatomy' | 'church-tour' | 'latin-prayers' | 'mass' | 'sacraments' | 'rosary' | 'cst';
 
+const VALID_TABS: readonly CatholicTab[] = ['overview', 'altar-anatomy', 'church-tour', 'latin-prayers', 'mass', 'sacraments', 'rosary', 'cst'] as const;
+
+function sanitizeTab(tab: unknown): CatholicTab {
+  if (typeof tab === 'string' && (VALID_TABS as readonly string[]).includes(tab)) {
+    return tab as CatholicTab;
+  }
+  return 'overview';
+}
+
+const VALID_CATHOLIC_SIMS = new Set([
+  'church-tour', 'altar-anatomy', 'holy-oils', 'holy-water-thurifer',
+  'latin-mass-prayers', 'order-of-the-mass', 'stations-of-the-cross',
+  'first-communion', 'liturgical-calendar', 'liturgical-postures'
+]);
+
+function sanitizeSimPreset(preset: unknown): string {
+  if (typeof preset === 'string' && VALID_CATHOLIC_SIMS.has(preset)) {
+    return preset;
+  }
+  return 'church-tour';
+}
+
+function escapeHtml(str: string): string {
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export function renderCatholicLifePage(): HTMLElement {
   const base = getBaseUrl();
   const container = document.createElement('div');
@@ -302,8 +333,9 @@ export function renderCatholicLifePage(): HTMLElement {
   }
 
   function renderInteractiveSim(activeId: string): string {
-    const isAltar = activeId === 'altar-anatomy';
-    const isChurch = activeId === 'church-tour';
+    const safeActiveId = sanitizeSimPreset(activeId);
+    const isAltar = safeActiveId === 'altar-anatomy';
+    const isChurch = safeActiveId === 'church-tour';
 
     const simPills = [
       { id: 'church-tour', label: '🏛️ Church Sanctuary Tour' },
@@ -333,7 +365,7 @@ export function renderCatholicLifePage(): HTMLElement {
                 'Interactive 60 FPS vector simulation grounded in Catholic theology and GIRM.'}
             </p>
           </div>
-          <a href="${base}player?preset=${activeId}" style="padding:8px 16px; background:#0284c7; color:#fff; border-radius:8px; font-weight:700; text-decoration:none; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
+          <a href="${escapeHtml(base)}player?preset=${encodeURIComponent(safeActiveId)}" style="padding:8px 16px; background:#0284c7; color:#fff; border-radius:8px; font-weight:700; text-decoration:none; font-size:0.86rem; display:inline-flex; align-items:center; gap:6px;">
             <span>↗ Fullscreen Studio</span>
           </a>
         </div>
@@ -345,9 +377,9 @@ export function renderCatholicLifePage(): HTMLElement {
             <button 
               type="button" 
               class="catholic-sim-pill" 
-              data-preset="${p.id}" 
-              style="padding:5px 12px; border-radius:999px; font-weight:700; font-size:0.78rem; cursor:pointer; border:1px solid ${p.id === activeId ? '#0284c7' : '#cbd5e1'}; background:${p.id === activeId ? '#0284c7' : '#ffffff'}; color:${p.id === activeId ? '#ffffff' : '#334155'};">
-              ${p.label}
+              data-preset="${escapeHtml(p.id)}" 
+              style="padding:5px 12px; border-radius:999px; font-weight:700; font-size:0.78rem; cursor:pointer; border:1px solid ${p.id === safeActiveId ? '#0284c7' : '#cbd5e1'}; background:${p.id === safeActiveId ? '#0284c7' : '#ffffff'}; color:${p.id === safeActiveId ? '#ffffff' : '#334155'};">
+              ${escapeHtml(p.label)}
             </button>
           `).join('')}
         </div>
@@ -356,7 +388,7 @@ export function renderCatholicLifePage(): HTMLElement {
         <div style="background:#090d16; border-radius:16px; border:1.5px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:1.5rem;">
           <iframe 
             id="catholic-sim-iframe"
-            src="${base}player.html?preset=${activeId}" 
+            src="${escapeHtml(base)}player.html?preset=${encodeURIComponent(safeActiveId)}" 
             style="width:100%; height:540px; border:none; display:block;" 
             title="Catholic Sanctuary Interactive Stage">
           </iframe>
@@ -619,8 +651,8 @@ export function renderCatholicLifePage(): HTMLElement {
     // Bind tab button listeners
     container.querySelectorAll('.sanctuary-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const targetTab = btn.getAttribute('data-tab') as CatholicTab;
-        currentTab = targetTab || 'overview';
+        const targetTab = sanitizeTab(btn.getAttribute('data-tab'));
+        currentTab = targetTab;
         if (targetTab === 'church-tour') activeCatholicSim = 'church-tour';
         if (targetTab === 'altar-anatomy') activeCatholicSim = 'altar-anatomy';
         updateView();
@@ -630,8 +662,8 @@ export function renderCatholicLifePage(): HTMLElement {
     // Direct overview card links
     container.querySelectorAll('.view-tab-direct').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const target = btn.getAttribute('data-target') as CatholicTab;
-        currentTab = target || 'overview';
+        const target = sanitizeTab(btn.getAttribute('data-target'));
+        currentTab = target;
         if (target === 'church-tour') activeCatholicSim = 'church-tour';
         if (target === 'altar-anatomy') activeCatholicSim = 'altar-anatomy';
         updateView();
@@ -641,7 +673,7 @@ export function renderCatholicLifePage(): HTMLElement {
     // Catholic sim pill switchers (inside church-tour tab)
     container.querySelectorAll('.catholic-sim-pill').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const preset = btn.getAttribute('data-preset') || 'church-tour';
+        const preset = sanitizeSimPreset(btn.getAttribute('data-preset'));
         activeCatholicSim = preset;
         if (preset === 'altar-anatomy') {
           currentTab = 'altar-anatomy';

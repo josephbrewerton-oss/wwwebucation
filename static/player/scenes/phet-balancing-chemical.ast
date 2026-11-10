@@ -1,0 +1,21 @@
+(:scene :id "phet-balancing-chemical" :type "Slide" :oak-id "OAK-KS4-SCI-PHETBALAN" :oak-unit "ks4-science-phet-balancing-chemical" :title "PhET Chemical Equations Distillation" :stage "KS3/KS4 CHEMISTRY" :duration 12.0
+        (:static (
+          (:element :target "#stage-svg text" :cache true)
+        ))
+        (:actors (
+          (:actor :target "#stage-svg" :kinematic true)
+        ))
+        (:subtitles (
+          (:start 0.00 :end 4.00 :en "Matter can neither be created nor destroyed in a chemical reaction." :es "La materia no se crea ni se destruye en una reacción química.")
+          (:start 4.00 :end 8.00 :en "We adjust stoichiometric coefficients so that the number of atoms on each side matches." :es "Ajustamos los coeficientes para que el número de átomos en cada lado coincida.")
+          (:start 8.00 :end 12.00 :en "Two molecules of hydrogen gas combine with one oxygen molecule to yield two water molecules." :es "Dos moléculas de hidrógeno se combinan con una de oxígeno para dar dos moléculas de agua.")
+        ))
+        (:keyframes (
+          (:t 0.00 :title "Unbalanced State" :rule "H2 + O2 -> H2O (Oxygen atom deficit on right)")
+          (:t 0.50 :title "Coefficient Increment" :rule "2 H2 + O2 -> 2 H2O stoichiometric balancing")
+          (:t 1.00 :title "Conservation Verified" :rule "Mass preserved exactly: 4H + 2O = 4H + 2O")
+        ))
+        (:bindings (
+          (:target "#stage-svg" :attr "opacity" :expr "0.95 + 0.05 * Math.sin(t * Math.PI)")
+        ))
+      )

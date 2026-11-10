@@ -1,0 +1,24 @@
+(:scene :id "phet-acid-base" :type "Slide" :oak-id "OAK-KS4-SCI-PHETACID" :oak-unit "ks4-science-phet-acid-base" :title "PhET Acid-Base Distillation" :stage "KS3/KS4 CHEMISTRY" :duration 12.0
+        (:static (
+          (:element :target "#ph-probe" :cache true)
+        ))
+        (:actors (
+          (:actor :target "#ph-val" :kinematic true)
+          (:actor :target "#beaker-fluid" :kinematic true :will-change true)
+        ))
+        (:subtitles (
+          (:start 0.00 :end 3.80 :en "Pure water has a neutral pH of 7.0 where hydronium [H3O+] equals hydroxide [OH-]." :es "El agua pura tiene un pH neutro de 7.0 donde los iones hidronio equivalen a hidróxido.")
+          (:start 3.80 :end 8.00 :en "Adding acid increases hydronium ion concentration, dropping the logarithmic pH scale towards 1." :es "Añadir ácido aumenta la concentración de hidronio, bajando la escala logarítmica de pH hacia 1.")
+          (:start 8.00 :end 12.00 :en "Adding alkali introduces excess OH- ions, driving the solution towards deep purple pH 14." :es "Añadir álcali introduce exceso de iones OH-, llevando la solución hacia pH 14.")
+        ))
+        (:keyframes (
+          (:t 0.00 :title "Neutral Baseline" :rule "pH = 7.00, [H3O+] = 1.0 × 10^-7 M")
+          (:t 0.35 :title "Acidic Influx" :rule "Strong acid addition -> pH drops to 2.4")
+          (:t 0.70 :title "Neutralization" :rule "Titration equivalence point restored")
+          (:t 1.00 :title "Basic Threshold" :rule "Hydroxide excess -> pH rises to 12.1")
+        ))
+        (:bindings (
+          (:target "#ph-val" :attr "textContent" :expr "'pH ' + (7.0 - Math.sin(t * Math.PI * 2) * 5.2).toFixed(1)")
+          (:target "#beaker-fluid" :attr "fill" :expr "(7.0 - Math.sin(t * Math.PI * 2) * 5.2) < 6 ? '#ef4444' : ((7.0 - Math.sin(t * Math.PI * 2) * 5.2) > 8 ? '#8b5cf6' : '#22c55e')")
+        ))
+      )

@@ -161,11 +161,11 @@ export function renderPlayerPage(): HTMLElement {
         ${otherGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
       </optgroup>
       <optgroup label="⚛️ PhET Ingestion &amp; Distillations" style="background:#0f172a; color:#38bdf8;">
-        <option value="__phet_ohms_law__">⚛️ PhET: Ohm's Law (V = I × R)</option>
-        <option value="__phet_faraday__">⚛️ PhET: Faraday's Induction (EMF)</option>
-        <option value="__phet_pendulum__">⚛️ PhET: Pendulum Laboratory</option>
-        <option value="__phet_acid_base__">⚛️ PhET: Acid-Base pH Solutions</option>
-        <option value="__phet_balancing__">⚛️ PhET: Balancing Chemical Equations</option>
+        <option value="phet-ohms-law" ${selectedId === 'phet-ohms-law' ? 'selected' : ''}>⚛️ PhET: Ohm's Law (V = I × R)</option>
+        <option value="phet-faraday" ${selectedId === 'phet-faraday' ? 'selected' : ''}>⚛️ PhET: Faraday's Induction (EMF)</option>
+        <option value="phet-pendulum" ${selectedId === 'phet-pendulum' ? 'selected' : ''}>⚛️ PhET: Pendulum Laboratory</option>
+        <option value="phet-acid-base" ${selectedId === 'phet-acid-base' ? 'selected' : ''}>⚛️ PhET: Acid-Base pH Solutions</option>
+        <option value="phet-balancing-chemical" ${selectedId === 'phet-balancing-chemical' ? 'selected' : ''}>⚛️ PhET: Balancing Chemical Equations</option>
         <option value="__open_local__">📥 Ingest Local PhET (.html / .phet) or SWF...</option>
       </optgroup>
       <optgroup label="⚡ Dynamic Auto-Finder" style="background:#0f172a; color:#94a3b8;">
@@ -737,27 +737,24 @@ export function renderPlayerPage(): HTMLElement {
 
   function loadBuiltinPhetModel(key: SupportedPhetPreset) {
     const model = PHET_BUILTIN_MODELS[key];
-    if (!model) return;
     const simId = `phet-${key}`;
-    const cart: CartridgeDefinition = {
-      id: simId,
-      title: model.title,
-      stage: model.stage || 'PHET DISTILLED',
-      category: model.subject || 'Physics',
-      desc: `PhET simulation transpiled to AST & hardware-accelerated SVG (< 4 KB payload). Invariants: ${model.invariants.join(', ')}.`,
-      icon: '⚛️',
-      source: 'phet',
-      svgMarkup: model.generateSvg(),
-      astSource: model.generateAst(),
-      updatedAt: Date.now(),
-    };
-    saveCustomCartridge(cart);
-    refreshDropdown();
+    if (model) {
+      const cart: CartridgeDefinition = {
+        id: simId,
+        title: model.title,
+        stage: model.stage || 'PHET DISTILLED',
+        category: model.subject || 'Physics',
+        desc: `PhET simulation transpiled to AST & hardware-accelerated SVG (< 4 KB payload). Invariants: ${model.invariants.join(', ')}.`,
+        icon: '⚛️',
+        source: 'phet',
+        svgMarkup: model.generateSvg(),
+        astSource: model.generateAst(),
+        updatedAt: Date.now(),
+      };
+      saveCustomCartridge(cart);
+      refreshDropdown();
+    }
     updatePreset(simId);
-    postToPlayer({
-      type: 'LOAD_CUSTOM_CARTRIDGE',
-      cartridge: cart,
-    });
   }
 
   // Preset selector change
@@ -766,15 +763,15 @@ export function renderPlayerPage(): HTMLElement {
     if (val === '__open_local__') {
       select.value = activePreset;
       fileInputHidden?.click();
-    } else if (val === '__phet_ohms_law__') {
+    } else if (val === '__phet_ohms_law__' || val === 'phet-ohms-law') {
       loadBuiltinPhetModel('ohms-law');
-    } else if (val === '__phet_faraday__') {
+    } else if (val === '__phet_faraday__' || val === 'phet-faraday') {
       loadBuiltinPhetModel('faraday');
-    } else if (val === '__phet_pendulum__') {
+    } else if (val === '__phet_pendulum__' || val === 'phet-pendulum') {
       loadBuiltinPhetModel('pendulum');
-    } else if (val === '__phet_acid_base__') {
+    } else if (val === '__phet_acid_base__' || val === 'phet-acid-base') {
       loadBuiltinPhetModel('acid-base');
-    } else if (val === '__phet_balancing__') {
+    } else if (val === '__phet_balancing__' || val === 'phet-balancing-chemical') {
       loadBuiltinPhetModel('balancing-chemical');
     } else if (val === '__custom_find__') {
       select.value = activePreset;

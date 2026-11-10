@@ -1,0 +1,36 @@
+<svg id="stage-svg" viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16;">
+        <rect width="800" height="480" fill="#090d16"/>
+        <text x="400" y="42" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle">
+          PhET Distilled: Balancing Chemical Equations
+        </text>
+        <text x="400" y="68" fill="#94a3b8" font-size="13" text-anchor="middle">
+          Conservation of Mass: 2 H₂ + O₂ &rarr; 2 H₂O
+        </text>
+
+        <!-- Left Pan (Reactants) -->
+        <g transform="translate(120, 160)">
+          <rect width="240" height="160" rx="12" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
+          <text x="120" y="30" fill="#93c5fd" font-size="14" font-weight="800" text-anchor="middle">REACTANTS</text>
+          <text x="120" y="75" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle">2 H₂ + 1 O₂</text>
+          <text x="120" y="115" fill="#60a5fa" font-size="13" font-weight="700" text-anchor="middle">4 Hydrogen &bull; 2 Oxygen</text>
+        </g>
+
+        <!-- Equal / Yield Arrow -->
+        <g transform="translate(380, 220)">
+          <path d="M 0 10 L 30 10 L 30 0 L 50 15 L 30 30 L 30 20 L 0 20 Z" fill="#22c55e"/>
+          <text x="25" y="55" fill="#4ade80" font-size="11" font-weight="800" text-anchor="middle">BALANCED</text>
+        </g>
+
+        <!-- Right Pan (Products) -->
+        <g transform="translate(440, 160)">
+          <rect width="240" height="160" rx="12" fill="#1e293b" stroke="#22c55e" stroke-width="2"/>
+          <text x="120" y="30" fill="#86efac" font-size="14" font-weight="800" text-anchor="middle">PRODUCTS</text>
+          <text x="120" y="75" fill="#f8fafc" font-size="22" font-weight="900" text-anchor="middle">2 H₂O</text>
+          <text x="120" y="115" fill="#4ade80" font-size="13" font-weight="700" text-anchor="middle">4 Hydrogen &bull; 2 Oxygen</text>
+        </g>
+
+        <rect x="200" y="380" width="400" height="45" rx="8" fill="#0f172a" stroke="#22c55e" stroke-width="1.5"/>
+        <text x="400" y="408" fill="#4ade80" font-size="15" font-weight="800" text-anchor="middle">
+          Law of Conservation: Total Reactant Atoms = Total Product Atoms
+        </text>
+      </svg>

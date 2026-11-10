@@ -1,0 +1,22 @@
+(:scene :id "phet-pendulum" :type "Slide" :oak-id "OAK-KS4-MAT-PHETPENDU" :oak-unit "ks4-mathematics-phet-pendulum" :title "PhET Pendulum Distillation" :stage "KS3/KS4 PHYSICS" :duration 10.0
+        (:static (
+          (:element :target "#stage-svg text" :cache true)
+        ))
+        (:actors (
+          (:actor :target "#pendulum-arm" :kinematic true :will-change true)
+        ))
+        (:subtitles (
+          (:start 0.00 :end 3.50 :en "A pendulum's period depends strictly on its length and gravitational acceleration." :es "El período de un péndulo depende estrictamente de su longitud y de la gravedad.")
+          (:start 3.50 :end 7.00 :en "At the highest amplitude, kinetic energy is zero and potential energy reaches maximum." :es "En la amplitud máxima, la energía cinética es cero y la energía potencial es máxima.")
+          (:start 7.00 :end 10.00 :en "At the center equilibrium point, all energy converts into maximum velocity." :es "En el punto de equilibrio central, toda la energía se convierte en velocidad máxima.")
+        ))
+        (:keyframes (
+          (:t 0.00 :title "Peak Displacement" :rule "θ = +30° -> PE maximum, KE zero")
+          (:t 0.25 :title "Equilibrium Velocity" :rule "θ = 0° -> PE zero, KE maximum")
+          (:t 0.50 :title "Opposite Amplitude" :rule "θ = -30° -> Complete harmonic inversion")
+          (:t 1.00 :title "Harmonic Cycle" :rule "T = 2π√(L/g) cycle completed")
+        ))
+        (:bindings (
+          (:target "#pendulum-arm" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 4) * 32) + ' 400 96)'")
+        ))
+      )

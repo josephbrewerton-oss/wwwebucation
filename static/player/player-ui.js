@@ -164,6 +164,9 @@
         obsLiveControls: document.getElementById('obs-live-controls'),
         obsSelectScene: document.getElementById('obs-select-scene'),
         btnObsRecordToggle: document.getElementById('btn-obs-record-toggle'),
+        btnStudioPanelToggle: document.getElementById('btn-studio-panel-toggle'),
+        studioControlPanel: document.getElementById('studio-control-panel'),
+        studioPanelClose: document.getElementById('studio-panel-close'),
         btnSettings: document.getElementById('btn-settings'),
         settingsLabel: document.getElementById('settings-label'),
         settingsDrawer: document.getElementById('settings-drawer'),
@@ -2169,7 +2172,11 @@ window.addEventListener('message', (e) => {
     this.saveToLocalVault(c);
     this.populatePresets();
     if (this.engine && c.svgMarkup && c.astSource) {
-      this.engine.loadScene(c.svgMarkup, c.astSource, c.id);
+      if (typeof this.engine.loadSceneData === 'function') {
+        this.engine.loadSceneData(c, true);
+      } else {
+        this.engine.loadScene(c.id, true);
+      }
     }
   }
 });
@@ -2958,6 +2965,39 @@ window.addEventListener('message', (e) => {
         });
       }
 
+      // Studio & Broadcast Control Panel Popover
+      if (el.btnStudioPanelToggle) {
+        el.btnStudioPanelToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.toggleStudioPanel();
+        });
+      }
+
+      if (el.studioPanelClose) {
+        el.studioPanelClose.addEventListener('click', (e) => {
+          e.stopPropagation();
+          this.closeStudioPanel();
+        });
+      }
+
+      // Close popover when clicking outside the panel
+      document.addEventListener('click', (e) => {
+        if (!el.studioControlPanel || el.studioControlPanel.classList.contains('hidden')) return;
+        const container = e.target && e.target.closest && e.target.closest('.studio-panel-container');
+        if (!container) {
+          this.closeStudioPanel();
+        }
+      });
+
+      // Auto-close popover when any action tool button is clicked
+      if (el.studioControlPanel) {
+        el.studioControlPanel.querySelectorAll('.studio-tool-btn').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            this.closeStudioPanel();
+          });
+        });
+      }
+
       // Display & Controls Settings Drawer
       if (el.btnSettings) {
         el.btnSettings.addEventListener('click', () => {
@@ -3129,7 +3169,9 @@ window.addEventListener('message', (e) => {
           e.preventDefault();
           this.toggleDevMode();
         } else if (e.code === 'Escape') {
-          if (this.elements.questDrawer && !this.elements.questDrawer.classList.contains('hidden')) {
+          if (this.elements.studioControlPanel && !this.elements.studioControlPanel.classList.contains('hidden')) {
+            this.closeStudioPanel();
+          } else if (this.elements.questDrawer && !this.elements.questDrawer.classList.contains('hidden')) {
             this.closeQuestMode();
           } else if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
             this.minimizeInteractiveCard();
@@ -3202,15 +3244,17 @@ window.addEventListener('message', (e) => {
     }
 
     getPresetProfile(mode) {
+      const isInsideIframe = typeof window !== 'undefined' && window.self !== window.top;
       const base = {
         mode: mode || 'classroom',
-        showPresetSelector: true,
-        showStageBadge: true,
+        showPresetSelector: !isInsideIframe,
+        showStageBadge: !isInsideIframe,
         showInteractiveCheckpoints: true,
         show3DControls: true,
-        showOpenFile: true,
+        showOpenFile: !isInsideIframe,
         showMarker: true,
         showStepMode: true,
+        showStudioPanel: true,
         showDevInspect: true,
         showDevStudio: true,
         showExportSpa: true,
@@ -3222,7 +3266,7 @@ window.addEventListener('message', (e) => {
         showPrintWorksheet: true,
         showCopySvg: true,
         showThemeToggle: true,
-        showFullscreen: true,
+        showFullscreen: !isInsideIframe,
         showTimelineScrubber: true,
         showPlaybackControls: true,
         showSpeedSelector: true,
@@ -3237,6 +3281,10 @@ window.addEventListener('message', (e) => {
 
       if (mode === 'suite' || mode === 'interactive-suite') {
         base.mode = 'suite';
+        base.showPresetSelector = false;
+        base.showStageBadge = false;
+        base.showOpenFile = false;
+        base.showFullscreen = false;
         base.showTimelineScrubber = false;
         base.showPlaybackControls = false;
         base.showSpeedSelector = false;
@@ -3319,8 +3367,14 @@ window.addEventListener('message', (e) => {
       const el = this.elements;
 
       // Top action buttons
+      const showLeft = (c.showPresetSelector !== false) || (c.showStageBadge !== false) || (c.showOpenFile !== false);
+      const headerLeft = document.querySelector('.header-left');
+      if (headerLeft) {
+        headerLeft.style.display = showLeft ? 'flex' : 'none';
+      }
       if (el.presetSelector) el.presetSelector.style.display = c.showPresetSelector !== false ? '' : 'none';
       if (el.badgeStage) el.badgeStage.style.display = c.showStageBadge !== false ? '' : 'none';
+      if (el.btnStudioPanelToggle) el.btnStudioPanelToggle.style.display = c.showStudioPanel !== false ? '' : 'none';
       if (el.btnInteractive) {
         el.btnInteractive.style.display = c.showInteractiveCheckpoints !== false ? '' : 'none';
         if (c.showInteractiveCheckpoints !== undefined) {
@@ -3456,6 +3510,38 @@ window.addEventListener('message', (e) => {
       inputs.forEach(({ el: inp, val }) => {
         if (inp) inp.checked = Boolean(val);
       });
+    }
+
+    toggleStudioPanel(force) {
+      if (!this.elements.studioControlPanel) return;
+      const willOpen = force !== undefined ? Boolean(force) : this.elements.studioControlPanel.classList.contains('hidden');
+      if (willOpen) {
+        this.openStudioPanel();
+      } else {
+        this.closeStudioPanel();
+      }
+    }
+
+    openStudioPanel() {
+      const panel = this.elements.studioControlPanel;
+      const btn = this.elements.btnStudioPanelToggle;
+      if (!panel) return;
+      panel.classList.remove('hidden');
+      if (btn) {
+        btn.classList.add('active');
+        btn.setAttribute('aria-expanded', 'true');
+      }
+    }
+
+    closeStudioPanel() {
+      const panel = this.elements.studioControlPanel;
+      const btn = this.elements.btnStudioPanelToggle;
+      if (!panel) return;
+      panel.classList.add('hidden');
+      if (btn) {
+        btn.classList.remove('active');
+        btn.setAttribute('aria-expanded', 'false');
+      }
     }
 
     toggleSettingsDrawer(force) {
