@@ -1,4 +1,4 @@
-import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curriculumSimMapping-Cbo2VeCc.js";function a(e){return e?e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`):``}function o(){let o=t(),s=document.createElement(`div`);s.className=`learning-zone-stage`,s.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let c=new URLSearchParams(window.location.search),l=c.get(`stage`)||`All`,u=c.get(`subject`)||`All`,d=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`].includes(l)?l:`All`,f=u.replace(/[<>"'&]/g,``),p=(c.get(`q`)||``).slice(0,100),m=c.get(`simOnly`)===`1`,h=c.get(`tab`)===`constellation`?`constellation`:c.get(`tab`)===`simulators`?`simulators`:`curriculum`,g=new Set,_=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],v=new Set;r.forEach(e=>{e.subjectTitle&&v.add(e.subjectTitle)});let y=[`All`,...Array.from(v).sort()];function b(){let e=p.toLowerCase().trim();return r.filter(t=>{if(d!==`All`&&t.stageTitle!==d||f!==`All`&&t.subjectTitle!==f||m&&!n(t.topicId,t.topicTitle,t.subjectTitle))return!1;if(e){let n=t.topicTitle.toLowerCase().includes(e),r=t.subjectTitle.toLowerCase().includes(e),i=t.axiom.toLowerCase().includes(e),a=t.cognitiveTrap.toLowerCase().includes(e),o=t.csn.toLowerCase().includes(e),s=t.lessons.some(t=>t.title.toLowerCase().includes(e));if(!n&&!r&&!i&&!a&&!o&&!s)return!1}return!0})}function x(){return r.filter(e=>n(e.topicId,e.topicTitle,e.subjectTitle)!==null).length}function S(){return r.reduce((e,t)=>e+(t.lessons?.length||0),0)}function C(t){if(!(`speechSynthesis`in window))return;window.speechSynthesis.cancel(),e({subtitle:t,isSpeaking:!0});let n=new SpeechSynthesisUtterance(t);n.rate=.9,n.pitch=1,n.lang=`en-GB`,n.onend=()=>e({isSpeaking:!1}),n.onerror=()=>e({isSpeaking:!1}),window.speechSynthesis.speak(n)}function w(){let e=r.length,t=x(),n=S();return`
+import{t as e}from"./index-BM0WF4rq.js";import{n as t,r as n,t as r}from"./curriculumSimMapping-DRVC2OJM.js";import{r as i}from"./bsl-engine-BbFRnN_a.js";function a(e){return e?e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`):``}function o(){let o=e(),s=document.createElement(`div`);s.className=`learning-zone-stage`,s.style.cssText=`max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let c=new URLSearchParams(window.location.search),l=c.get(`stage`)||`All`,u=c.get(`subject`)||`All`,d=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`].includes(l)?l:`All`,f=u.replace(/[<>"'&]/g,``),p=(c.get(`q`)||``).slice(0,100),m=c.get(`simOnly`)===`1`,h=c.get(`tab`)===`constellation`?`constellation`:c.get(`tab`)===`simulators`?`simulators`:`curriculum`,g=new Set,_=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],v=new Set;n.forEach(e=>{e.subjectTitle&&v.add(e.subjectTitle)});let y=[`All`,...Array.from(v).sort()];function b(){let e=p.toLowerCase().trim();return n.filter(n=>{if(d!==`All`&&n.stageTitle!==d||f!==`All`&&n.subjectTitle!==f||m&&!t(n.topicId,n.topicTitle,n.subjectTitle))return!1;if(e){let t=n.topicTitle.toLowerCase().includes(e),r=n.subjectTitle.toLowerCase().includes(e),i=n.axiom.toLowerCase().includes(e),a=n.cognitiveTrap.toLowerCase().includes(e),o=n.csn.toLowerCase().includes(e),s=n.lessons.some(t=>t.title.toLowerCase().includes(e));if(!t&&!r&&!i&&!a&&!o&&!s)return!1}return!0})}function x(){return n.filter(e=>t(e.topicId,e.topicTitle,e.subjectTitle)!==null).length}function S(){return n.reduce((e,t)=>e+(t.lessons?.length||0),0)}function C(e){if(!(`speechSynthesis`in window))return;window.speechSynthesis.cancel(),i({subtitle:e,isSpeaking:!0});let t=new SpeechSynthesisUtterance(e);t.rate=.9,t.pitch=1,t.lang=`en-GB`,t.onend=()=>i({isSpeaking:!1}),t.onerror=()=>i({isSpeaking:!1}),window.speechSynthesis.speak(t)}function w(){let e=n.length,t=x(),r=S();return`
       <section style="margin-bottom: 2rem;">
         <div style="display:flex; align-items:center; gap:8px; margin-bottom:0.75rem;">
           <a href="${o}" style="font-size:0.82rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
@@ -30,7 +30,7 @@ import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curricul
             </div>
             <div style="width:1px; height:28px; background:#e2e8f0;"></div>
             <div>
-              <div style="font-size:1.35rem; font-weight:800; color:#10b981; line-height:1;">${n}</div>
+              <div style="font-size:1.35rem; font-weight:800; color:#10b981; line-height:1;">${r}</div>
               <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Oak Lessons</div>
             </div>
             <div style="width:1px; height:28px; background:#e2e8f0;"></div>
@@ -105,7 +105,7 @@ import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curricul
           `:``}
         </div>
       </section>
-    `}function E(e){let t=n(e.topicId,e.topicTitle,e.subjectTitle),r=i(e.topicId),s=g.has(e.urn),c=e.lessons&&e.lessons.length>0;return e.questions&&e.questions.length,`
+    `}function E(e){let n=t(e.topicId,e.topicTitle,e.subjectTitle),i=r(e.topicId),s=g.has(e.urn),c=e.lessons&&e.lessons.length>0;return e.questions&&e.questions.length,`
       <article class="curriculum-unit-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03); margin-bottom:1.25rem;">
         <!-- Header row -->
         <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px; margin-bottom:0.75rem;">
@@ -133,12 +133,12 @@ import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curricul
             <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(e.axiom)}" title="Read axiom aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
               🔊 Listen
             </button>
-            <a href="${o}practice-lab?stage=${encodeURIComponent(e.stageTitle)}&subject=${encodeURIComponent(e.subjectTitle)}&q=${encodeURIComponent(e.topicTitle)}" title="${r?`Open Interactive Data Cartridge`:`Open Practice Lab`}" style="padding:6px 12px; border-radius:6px; background:${r?`#f0fdf4`:`#f8fafc`}; border:1px solid ${r?`#bbf7d0`:`#cbd5e1`}; color:${r?`#166534`:`#0f172a`}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
-              <span>${r?`📊 Data Cartridge`:`🎯 Practice Lab`}</span>
+            <a href="${o}practice-lab?stage=${encodeURIComponent(e.stageTitle)}&subject=${encodeURIComponent(e.subjectTitle)}&q=${encodeURIComponent(e.topicTitle)}" title="${i?`Open Interactive Data Cartridge`:`Open Practice Lab`}" style="padding:6px 12px; border-radius:6px; background:${i?`#f0fdf4`:`#f8fafc`}; border:1px solid ${i?`#bbf7d0`:`#cbd5e1`}; color:${i?`#166534`:`#0f172a`}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+              <span>${i?`📊 Data Cartridge`:`🎯 Practice Lab`}</span>
             </a>
-            ${t?`
-              <a href="${o}player?preset=${t.presetId}" title="${a(t.label)}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
-                <span>${t.icon} ${a(t.label)}</span> &rarr;
+            ${n?`
+              <a href="${o}player?preset=${n.presetId}" title="${a(n.label)}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
+                <span>${n.icon} ${a(n.label)}</span> &rarr;
               </a>
             `:``}
           </div>
@@ -207,7 +207,7 @@ import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curricul
           </div>
         `:``}
       </article>
-    `}function D(){let e=r.map(e=>({route:e,sim:n(e.topicId,e.topicTitle,e.subjectTitle)})).filter(e=>e.sim!==null),t=new Set;return`
+    `}function D(){let e=n.map(e=>({route:e,sim:t(e.topicId,e.topicTitle,e.subjectTitle)})).filter(e=>e.sim!==null),r=new Set;return`
       <section style="margin-bottom:3rem;">
         <div style="background:linear-gradient(135deg, #0f172a 0%, #1e293b 100%); border-radius:16px; padding:2rem; color:#ffffff; margin-bottom:2rem; border:1px solid #334155;">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
@@ -224,7 +224,7 @@ import{g as e,p as t}from"./index-BHrEiaYj.js";import{n,r,t as i}from"./curricul
           </p>
 
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
-            ${e.filter(e=>!t.has(e.sim.presetId)&&(t.add(e.sim.presetId),!0)).map(({route:e,sim:t})=>`
+            ${e.filter(e=>!r.has(e.sim.presetId)&&(r.add(e.sim.presetId),!0)).map(({route:e,sim:t})=>`
               <div style="background:#090d16; border:1px solid #1e293b; border-radius:12px; padding:1.25rem; display:flex; flex-direction:column; justify-content:space-between;">
                 <div>
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">

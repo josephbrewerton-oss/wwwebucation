@@ -1,4 +1,4 @@
-import{C as e,i as t,p as n}from"./index-BHrEiaYj.js";function r(){let r=n(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
+import{n as e,t}from"./index-BM0WF4rq.js";import{c as n}from"./cartridge-vault-tlNArMZD.js";function r(){let r=t(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
@@ -21,7 +21,7 @@ import{C as e,i as t,p as n}from"./index-BHrEiaYj.js";function r(){let r=n(),i=d
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
         <select id="beacon-cartridge-select" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0284c7; font-size:0.9rem; font-weight:700; flex:1; max-width:400px;">
-          ${t.map(e=>`
+          ${n.map(e=>`
             <option value="${e.id}">${e.label} (${e.stage})</option>
           `).join(``)}
         </select>
