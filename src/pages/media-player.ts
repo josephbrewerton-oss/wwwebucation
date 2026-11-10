@@ -205,7 +205,7 @@ export function renderPlayerPage(): HTMLElement {
     <!-- Main Interactive Stage Frame -->
     <div style="background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
       <!-- Stage Toolbar: Row 1 (Header & Primary Simulation Controls) -->
-      <div style="padding:10px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; min-height:48px; box-sizing:border-box;">
+      <div style="padding:10px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; min-height:48px; box-sizing:border-box; flex-wrap:wrap; gap:8px;">
         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
           <span style="font-size:1.3rem; flex-shrink:0;">🎮</span>
           <div style="min-width:0;">
@@ -225,14 +225,18 @@ export function renderPlayerPage(): HTMLElement {
         </div>
 
         <!-- Primary Execution Actions (Locked Dimensions to Eliminate Any Layout Shift) -->
-        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0;">
-          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Reset Simulation apparatus to initial conditions">
+        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
+          <button type="button" id="player-btn-play" style="padding:5px 14px; border-radius:6px; background:#16a34a; color:#ffffff; border:1px solid #22c55e; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; min-height:28px;" title="Play / Pause simulation loop (Spacebar)">
+            <span id="player-play-icon">▶</span>
+            <span id="player-play-text">Play</span>
+          </button>
+          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px;" title="Reset Simulation apparatus to initial conditions">
             ↺ Reset
           </button>
-          <button type="button" id="player-btn-bsl" style="padding:5px 12px; border-radius:6px; background:${bslActive ? '#0284c7' : '#1e293b'}; color:#ffffff; border:1px solid ${bslActive ? '#38bdf8' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; width:142px; text-align:center; flex-shrink:0;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
+          <button type="button" id="player-btn-bsl" style="padding:5px 12px; border-radius:6px; background:${bslActive ? '#0284c7' : '#1e293b'}; color:#ffffff; border:1px solid ${bslActive ? '#38bdf8' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; width:142px; text-align:center; flex-shrink:0; min-height:28px;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
             🖐️ BSL Signing: ${bslActive ? 'ON' : 'OFF'}
           </button>
-          <button type="button" id="player-btn-fullscreen" style="padding:5px 12px; border-radius:6px; background:#0284c7; color:#ffffff; border:none; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Toggle Fullscreen">
+          <button type="button" id="player-btn-fullscreen" style="padding:5px 12px; border-radius:6px; background:#0284c7; color:#ffffff; border:none; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; min-height:28px;" title="Toggle Fullscreen">
             ⛶ Fullscreen
           </button>
         </div>
@@ -355,6 +359,9 @@ export function renderPlayerPage(): HTMLElement {
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
   const stageBadgeEl = container.querySelector<HTMLElement>('#player-active-stage-badge')!;
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
+  const playBtn = container.querySelector<HTMLButtonElement>('#player-btn-play');
+  const playIcon = container.querySelector<HTMLElement>('#player-play-icon');
+  const playText = container.querySelector<HTMLElement>('#player-play-text');
   const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset');
   const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl');
   const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
@@ -381,10 +388,30 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'SET_BSL'; enabled: boolean }
     | { type: 'TOGGLE_BSL' }
     | { type: 'RESET_SIM' }
+    | { type: 'PLAY' }
+    | { type: 'PAUSE' }
+    | { type: 'TOGGLE_PLAY' }
     | Record<string, any>;
 
   function postToPlayer(msg: HostToPlayerMessage) {
     iframe?.contentWindow?.postMessage(msg, '*');
+  }
+
+  function updatePlayButtonUI(playing: boolean) {
+    if (!playBtn) return;
+    if (playing) {
+      playBtn.style.background = '#2563eb';
+      playBtn.style.borderColor = '#38bdf8';
+      playBtn.title = 'Pause simulation loop (Spacebar)';
+      if (playIcon) playIcon.textContent = '⏸';
+      if (playText) playText.textContent = 'Pause';
+    } else {
+      playBtn.style.background = '#16a34a';
+      playBtn.style.borderColor = '#22c55e';
+      playBtn.title = 'Play simulation loop (Spacebar)';
+      if (playIcon) playIcon.textContent = '▶';
+      if (playText) playText.textContent = 'Play';
+    }
   }
 
   let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | null = null;
@@ -820,7 +847,11 @@ export function renderPlayerPage(): HTMLElement {
     });
   }
 
-  // Wire Reset & BSL Toolbar buttons
+  // Wire Play, Reset & BSL Toolbar buttons
+  playBtn?.addEventListener('click', () => {
+    postToPlayer({ type: 'TOGGLE_PLAY' });
+  });
+
   resetBtn?.addEventListener('click', () => {
     postToPlayer({ type: 'RESET_SIM' });
   });
@@ -861,6 +892,11 @@ export function renderPlayerPage(): HTMLElement {
       if (activePreset) {
         postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
       }
+      updatePlayButtonUI(false);
+    }
+    if ((e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED' || e.data.type === 'statechange') && typeof (e.data.isPlaying ?? e.data.playing) === 'boolean') {
+      const playing = Boolean(e.data.isPlaying ?? e.data.playing);
+      updatePlayButtonUI(playing);
     }
     if ((e.data.type === 'PRESETCHANGE' || e.data.type === 'PLAYER_PRESET_CHANGED') && typeof e.data.preset === 'string') {
       const incomingId = normalizePresetId(e.data.preset);
