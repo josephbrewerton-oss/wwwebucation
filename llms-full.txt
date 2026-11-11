@@ -46,12 +46,12 @@
 - `/llms-full.txt` : Comprehensive full-system briefing file for large-context models.
 - `/agents.txt` : Directory of autonomous web agent capabilities, tools, and W3C WebMCP definitions.
 - `/robots.txt` : Web robot and AI bot discovery policy.
-- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 60 cartridges.
+- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 67 compiled cartridges.
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/sitemap.ast` : S-Expression sitemap indexing self-mounting cartridges.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 60 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of all 67 production vector simulation cartridges.
 - `/player/scenes-config.json` : Timeline keyframes, multilingual subtitles (EN/ES/FR/LA/DE/IT), and pause checkpoints.
 - `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
 - `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
@@ -83,7 +83,7 @@ $$\text{Tuple} = \Big\langle \mathbf{V}_{\text{vector}},\, \mathbf{V}_{\text{vid
 
 ## 4. Decoupled, Domain-Agnostic Flash-Caliber Engine
 
-The AST Vector Engine (`static/player/ast-engine.js` and `@stjosephs/ast-vector-player`) is fully decoupled from the React host portal and completely domain-agnostic:
+The AST Vector Engine (`static/player/ast-engine.js` and `@stjosephs/ast-vector-player`) is fully decoupled from the host application shell (built with Native Web Standards & Web Components, Zero React) and completely domain-agnostic:
 
 ### 4.1. Elimination of Domain-Specific Coupling
 - **Universal 3D Detection**: `has3D()` dynamically detects `:3d-node`, `:camera`, `:mesh`, `:3d-line`, `:3d-ring`, or `:3d-polygon` tags rather than checking hardcoded scene IDs.
@@ -281,7 +281,7 @@ The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/
 
 ## 11. Decoupled Headless Player Architecture & 4-Way Distribution
 
-The AST Vector Player engine is 100% decoupled from the React host portal. It carries zero framework dependencies, runs in under 35 KB gzipped, and distributes across four universal models:
+The AST Vector Player engine is 100% decoupled from the host application shell (Zero React, Native Web Standards). It carries zero framework dependencies, runs in under 35 KB gzipped, and distributes across four universal models:
 
 1. **Autonomous NPM Package (`@stjosephs/ast-vector-player`)**:
    - Ships with its own `package.json` (`static/player/package.json`).
@@ -334,9 +334,9 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 
 ### Available In-Browser WebMCP Tools:
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
-2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via React Router.
+2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via the native micro-router (`src/router.ts`).
 3. `launch_simulation` (Consequential): Programmatically open and render any interactive AST vector cartridge or synchronized educational film on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
+4. `list_ast_simulations` (Read-Only): Enumerate all 67 compiled vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
 
 ---
