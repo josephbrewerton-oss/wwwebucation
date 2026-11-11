@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 66
+  :count 67
   (:cartridges (
     (:cartridge
       :id "algebra-balance"
@@ -188,6 +188,14 @@
       :stage "CATHOLIC LIFE"
       :oak-id "OAK-KS3-RE-013"
       :bytecode "bytecode/latin-mass-prayers.astb")
+
+    (:cartridge
+      :id "lego-blocks"
+      :type "Sim"
+      :title "Modular Brick Engineering & 3D Spatial Geometry"
+      :stage "KS2/KS3 DESIGN & TECH"
+      :oak-id "OAK-KS3-DT-001"
+      :bytecode "bytecode/lego-blocks.astb")
 
     (:cartridge
       :id "liturgical-calendar"

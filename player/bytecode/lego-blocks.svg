@@ -1,0 +1,446 @@
+<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Workshop Floor Gradients -->
+    <radialGradient id="lego-bg" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="60%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Blueprint Grid Pattern -->
+    <pattern id="lego-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" stroke-width="0.75" stroke-opacity="0.35" />
+      <circle cx="24" cy="24" r="1" fill="#475569" fill-opacity="0.5" />
+    </pattern>
+
+    <!-- Turntable Radial Gradient -->
+    <radialGradient id="turntable-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="70%" stop-color="#0f172a" />
+      <stop offset="95%" stop-color="#020617" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.6" />
+    </radialGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="lego-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.75" />
+    </filter>
+
+    <filter id="lego-subtle-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <!-- Plastic Specular Highlight Filters -->
+    <linearGradient id="stud-bevel-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45" />
+      <stop offset="50%" stop-color="#ffffff" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.35" />
+    </linearGradient>
+
+    <linearGradient id="stud-side-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#000000" stop-opacity="0.3" />
+      <stop offset="35%" stop-color="#ffffff" stop-opacity="0.35" />
+      <stop offset="70%" stop-color="#ffffff" stop-opacity="0.05" />
+      <stop offset="100%" stop-color="#000000" stop-opacity="0.4" />
+    </linearGradient>
+
+    <!-- Color Palettes for Brick Body -->
+    <!-- Red (Default) -->
+    <linearGradient id="brick-grad-red-top" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f43f5e" />
+      <stop offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <linearGradient id="brick-grad-red-left" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#be123c" />
+      <stop offset="100%" stop-color="#881337" />
+    </linearGradient>
+    <linearGradient id="brick-grad-red-right" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e11d48" />
+      <stop offset="100%" stop-color="#9f1239" />
+    </linearGradient>
+
+    <!-- Dimension Marker Arrowhead -->
+    <marker id="arrow-start" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 10 2 L 0 5 L 10 8 z" fill="#38bdf8" />
+    </marker>
+    <marker id="arrow-end" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 2 L 10 5 L 0 8 z" fill="#38bdf8" />
+    </marker>
+  </defs>
+
+  <!-- 1. Workshop Floor & Background Grid -->
+  <rect width="800" height="480" fill="url(#lego-bg)" />
+  <rect width="800" height="480" fill="url(#lego-grid)" />
+
+  <!-- 2. Header Status & Title Bar -->
+  <g id="lego-header" transform="translate(24, 20)">
+    <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+    
+    <g transform="translate(14, 13)">
+      <rect x="0" y="0" width="16" height="16" rx="3" fill="#e11d48" />
+      <circle cx="5" cy="5" r="2.2" fill="#f43f5e" />
+      <circle cx="11" cy="5" r="2.2" fill="#f43f5e" />
+      <circle cx="5" cy="11" r="2.2" fill="#be123c" />
+      <circle cx="11" cy="11" r="2.2" fill="#be123c" />
+    </g>
+
+    <text x="44" y="22" fill="#f8fafc" font-size="13" font-weight="800" letter-spacing="0.5">MODULAR BRICK LAB: 3D SPATIAL KINEMATICS</text>
+    <text x="44" y="34" fill="#94a3b8" font-size="9.5" font-weight="600">KS2/KS3 Design &amp; Technology &bull; 8.0 mm Modular Pitch Matrix &bull; Real-Time Isometric Turntable</text>
+
+    <!-- Real-time Quick Metric Badge -->
+    <g transform="translate(560, 9)">
+      <rect x="0" y="0" width="180" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="lego-badge-text" x="90" y="16" fill="#38bdf8" font-size="10.5" font-weight="700" text-anchor="middle" font-family="ui-monospace, monospace">
+        32×16×9.6 mm &bull; 4.9 cm³
+      </text>
+    </g>
+  </g>
+
+  <!-- 3. The 3D Turntable Platform & Ground Plane -->
+  <g id="turntable-root" transform="translate(400, 260)">
+    <!-- Turntable Ellipse Cast Shadow -->
+    <ellipse cx="0" cy="80" rx="260" ry="85" fill="#000000" opacity="0.6" filter="url(#lego-drop-shadow)" />
+
+    <!-- Isometric Turntable Disc -->
+    <ellipse cx="0" cy="65" rx="220" ry="72" fill="url(#turntable-grad)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.8" />
+    <ellipse cx="0" cy="65" rx="190" ry="62" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="4 4" />
+    <ellipse cx="0" cy="65" rx="140" ry="45" fill="none" stroke="#1e293b" stroke-width="1.5" />
+
+    <!-- Degree Compass Notches -->
+    <g id="turntable-compass" opacity="0.7">
+      <text x="0" y="132" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">0° FRONT</text>
+      <text x="212" y="70" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="start">90°</text>
+      <text x="0" y="2" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="middle">180°</text>
+      <text x="-212" y="70" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="end">270°</text>
+    </g>
+
+    <!-- 4. Interactive 3D Spinning Brick Stage Node -->
+    <!-- Driven by AST bindings: rotate(yaw), pitch scale, and explode Y offset -->
+    <g id="brick-3d-stage" filter="url(#lego-drop-shadow)">
+      
+      <!-- Baseplate Substrate (Visible when in Stacked Wall mode) -->
+      <g id="brick-baseplate" opacity="0" style="transition: opacity 0.3s ease;">
+        <polygon points="-160,50 0,-30 160,50 0,130" fill="#15803d" stroke="#166534" stroke-width="2" />
+        <polygon points="-160,50 0,130 0,142 -160,62" fill="#14532d" />
+        <polygon points="0,130 160,50 160,62 0,142" fill="#166534" />
+      </g>
+
+      <!-- Bottom Interlocking Brick Layer (Visible in Stacked Wall Mode) -->
+      <g id="brick-bottom-layer" opacity="0" transform="translate(0, 40)" style="transition: opacity 0.3s ease, transform 0.3s ease;">
+        <!-- Left Sub-Brick -->
+        <g id="sub-brick-left" transform="translate(-60, 20)">
+          <!-- Top Face -->
+          <polygon points="-70,0 0,-35 70,0 0,35" fill="#2563eb" stroke="#1d4ed8" stroke-width="1" />
+          <!-- Left Wall -->
+          <polygon points="-70,0 0,35 0,70 -70,35" fill="#1d4ed8" />
+          <!-- Right Wall -->
+          <polygon points="0,35 70,0 70,35 0,70" fill="#1e40af" />
+        </g>
+        <!-- Right Sub-Brick -->
+        <g id="sub-brick-right" transform="translate(60, -20)">
+          <!-- Top Face -->
+          <polygon points="-70,0 0,-35 70,0 0,35" fill="#2563eb" stroke="#1d4ed8" stroke-width="1" />
+          <!-- Left Wall -->
+          <polygon points="-70,0 0,35 0,70 -70,35" fill="#1d4ed8" />
+          <!-- Right Wall -->
+          <polygon points="0,35 70,0 70,35 0,70" fill="#1e40af" />
+        </g>
+      </g>
+
+      <!-- Main Focal Brick Assembly -->
+      <g id="brick-main-group" transform="translate(0, 0)">
+        
+        <!-- Explode Clutch View Underneath (Internal Cylindrical Anti-Stud Tubes) -->
+        <g id="brick-bottom-tubes" opacity="0" transform="translate(0, 35)">
+          <!-- Bottom Cavity Opening -->
+          <polygon points="-120,40 0,-20 120,40 0,100" fill="#4c0519" stroke="#881337" stroke-width="1.5" />
+          
+          <!-- Tube 1 (Left) -->
+          <ellipse cx="-45" cy="35" rx="14" ry="7" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
+          <ellipse cx="-45" cy="35" rx="8" ry="4" fill="#4c0519" />
+          
+          <!-- Tube 2 (Center) -->
+          <ellipse cx="0" cy="40" rx="14" ry="7" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
+          <ellipse cx="0" cy="40" rx="8" ry="4" fill="#4c0519" />
+
+          <!-- Tube 3 (Right) -->
+          <ellipse cx="45" cy="45" rx="14" ry="7" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
+          <ellipse cx="45" cy="45" rx="8" ry="4" fill="#4c0519" />
+
+          <!-- Explode Callout Label -->
+          <text x="0" y="118" fill="#f43f5e" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">
+            ▲ 3× CLUTCH FRICTION TUBES (8mm PITCH)
+          </text>
+        </g>
+
+        <!-- Main Solid Brick Body -->
+        <g id="brick-solid-body">
+          <!-- 1. Left Lateral Wall (In Shadow) -->
+          <polygon id="brick-face-left" points="-120,0 0,60 0,120 -120,60" fill="url(#brick-grad-red-left)" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
+
+          <!-- 2. Right Lateral Wall (Diffuse Reflected) -->
+          <polygon id="brick-face-right" points="0,60 120,0 120,60 0,120" fill="url(#brick-grad-red-right)" stroke="#881337" stroke-width="1.5" stroke-linejoin="round" />
+
+          <!-- 3. Top Face (Direct Light Plane) -->
+          <polygon id="brick-face-top" points="-120,0 0,-60 120,0 0,60" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.5" stroke-linejoin="round" />
+
+          <!-- Edge Highlight Bevel Lines -->
+          <line x1="-120" y1="0" x2="0" y2="60" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.4" />
+          <line x1="0" y1="60" x2="120" y2="0" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
+          <line x1="0" y1="60" x2="0" y2="120" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
+
+          <!-- 4. Top Stud Array (8 Cylinders on a 2×4 Matrix) -->
+          <g id="brick-studs-container">
+            <!-- Row 1 (Back Diagonal) -->
+            <!-- Stud (0,0) -->
+            <g id="stud-00" transform="translate(-60, -30)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (1,0) -->
+            <g id="stud-10" transform="translate(-20, -10)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (2,0) -->
+            <g id="stud-20" transform="translate(20, 10)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (3,0) -->
+            <g id="stud-30" transform="translate(60, 30)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+
+            <!-- Row 2 (Front Diagonal) -->
+            <!-- Stud (0,1) -->
+            <g id="stud-01" transform="translate(-40, 0)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (1,1) -->
+            <g id="stud-11" transform="translate(0, 20)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (2,1) -->
+            <g id="stud-21" transform="translate(40, 40)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+            <!-- Stud (3,1) -->
+            <g id="stud-31" transform="translate(80, 60)">
+              <path d="M -14 0 C -14 5 14 5 14 0 L 14 -12 C 14 -17 -14 -17 -14 -12 Z" fill="#be123c" />
+              <ellipse cx="0" cy="-12" rx="14" ry="7" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+              <circle cx="0" cy="-12" r="3" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity="0.6" />
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- 5. Overlay Dimension Annotations (Toggleable) -->
+    <g id="lego-dimension-overlays" opacity="1">
+      <!-- Length Arrow (32.0 mm) -->
+      <line x1="-135" y1="5" x2="-15" y2="65" stroke="#38bdf8" stroke-width="1.5" marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+      <rect x="-95" y="24" width="56" height="18" rx="4" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
+      <text x="-67" y="36" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">32.0 mm</text>
+
+      <!-- Width Arrow (16.0 mm) -->
+      <line x1="15" y1="65" x2="135" y2="5" stroke="#38bdf8" stroke-width="1.5" marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+      <rect x="58" y="24" width="56" height="18" rx="4" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
+      <text x="86" y="36" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">16.0 mm</text>
+
+      <!-- Height Arrow (9.6 mm = 3 Plates) -->
+      <line x1="140" y1="0" x2="140" y2="60" stroke="#facc15" stroke-width="1.5" marker-start="url(#arrow-start)" marker-end="url(#arrow-end)" />
+      <rect x="146" y="21" width="54" height="18" rx="4" fill="#0b1120" stroke="#facc15" stroke-width="1" />
+      <text x="173" y="33" fill="#facc15" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">9.6 mm</text>
+
+      <!-- Stud Pitch Annotation -->
+      <line x1="-60" y1="-42" x2="-20" y2="-22" stroke="#34d399" stroke-width="1.2" stroke-dasharray="2 2" />
+      <text x="-40" y="-36" fill="#34d399" font-size="8.5" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">8.0 mm</text>
+    </g>
+  </g>
+
+  <!-- 6. Left Control Deck: Brick Models & Color Palette -->
+  <g id="lego-left-deck" transform="translate(24, 75)">
+    <!-- Palette Panel -->
+    <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+    
+    <!-- Title -->
+    <text x="16" y="24" fill="#94a3b8" font-size="9.5" font-weight="800" letter-spacing="0.5">SELECT BRICK GEOMETRY:</text>
+
+    <!-- Brick Type Selector Buttons -->
+    <g id="btn-type-2x4" class="lego-btn" transform="translate(14, 34)" cursor="pointer">
+      <rect width="152" height="30" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.5" />
+      <text x="12" y="19" fill="#ffffff" font-size="11" font-weight="800">🧱 2×4 Standard (8 Stud)</text>
+    </g>
+
+    <g id="btn-type-2x2" class="lego-btn" transform="translate(14, 70)" cursor="pointer">
+      <rect width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📦 2×2 Cube (4 Stud)</text>
+    </g>
+
+    <g id="btn-type-1x2" class="lego-btn" transform="translate(14, 106)" cursor="pointer">
+      <rect width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📏 1×2 Beam (2 Stud)</text>
+    </g>
+
+    <g id="btn-type-slope" class="lego-btn" transform="translate(14, 142)" cursor="pointer">
+      <rect width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📐 2×4 Roof Slope 45°</text>
+    </g>
+
+    <g id="btn-type-tile" class="lego-btn" transform="translate(14, 178)" cursor="pointer">
+      <rect width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">🛡️ 2×4 Smooth Tile</text>
+    </g>
+
+    <!-- Color Palette Section -->
+    <text x="16" y="230" fill="#94a3b8" font-size="9.5" font-weight="800" letter-spacing="0.5">MATERIAL &amp; COLOR:</text>
+    
+    <!-- Color Swatches Grid -->
+    <g transform="translate(16, 242)">
+      <!-- Red (Active) -->
+      <circle id="col-swatch-red" cx="14" cy="14" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" cursor="pointer" />
+      <!-- Blue -->
+      <circle id="col-swatch-blue" cx="48" cy="14" r="12" fill="#2563eb" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <!-- Yellow -->
+      <circle id="col-swatch-yellow" cx="82" cy="14" r="12" fill="#facc15" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <!-- Green -->
+      <circle id="col-swatch-green" cx="116" cy="14" r="12" fill="#16a34a" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+
+      <!-- Row 2 -->
+      <!-- Orange -->
+      <circle id="col-swatch-orange" cx="14" cy="46" r="12" fill="#ea580c" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <!-- White -->
+      <circle id="col-swatch-white" cx="48" cy="46" r="12" fill="#f8fafc" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <!-- Black -->
+      <circle id="col-swatch-black" cx="82" cy="46" r="12" fill="#1e293b" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <!-- Cyan / Trans-Neon -->
+      <circle id="col-swatch-cyan" cx="116" cy="46" r="12" fill="#38bdf8" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+    </g>
+
+    <!-- Stack Interlock Mode Toggle -->
+    <g id="btn-toggle-stack" transform="translate(14, 318)" cursor="pointer">
+      <rect width="152" height="16" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="txt-stack-mode" x="76" y="11.5" fill="#38bdf8" font-size="8.5" font-weight="700" text-anchor="middle">
+        🧱 WALL STACK: OFF
+      </text>
+    </g>
+  </g>
+
+  <!-- 7. Right Telemetry & Engineering Card -->
+  <g id="lego-right-card" transform="translate(596, 75)">
+    <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+    
+    <text x="16" y="24" fill="#38bdf8" font-size="10" font-weight="800" letter-spacing="0.5">📐 SPATIAL DIMENSIONS</text>
+
+    <!-- Metric Specs -->
+    <g transform="translate(16, 38)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8.5" font-weight="700">GRID PITCH:</text>
+      <text x="148" y="10" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">8.0 mm</text>
+
+      <text x="0" y="26" fill="#94a3b8" font-size="8.5" font-weight="700">BRICK HEIGHT:</text>
+      <text x="148" y="26" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">9.6 mm (3p)</text>
+
+      <text x="0" y="42" fill="#94a3b8" font-size="8.5" font-weight="700">PLATE HEIGHT:</text>
+      <text x="148" y="42" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">3.2 mm (1p)</text>
+
+      <text x="0" y="58" fill="#94a3b8" font-size="8.5" font-weight="700">STUD DIAMETER:</text>
+      <text x="148" y="58" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">4.8 mm</text>
+
+      <text x="0" y="74" fill="#94a3b8" font-size="8.5" font-weight="700">STUD HEIGHT:</text>
+      <text x="148" y="74" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">1.7 mm</text>
+
+      <text x="0" y="90" fill="#94a3b8" font-size="8.5" font-weight="700">WALL THICKNESS:</text>
+      <text x="148" y="90" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">1.6 mm</text>
+
+      <line x1="0" y1="102" x2="148" y2="102" stroke="#1e293b" stroke-width="1" />
+
+      <text x="0" y="118" fill="#38bdf8" font-size="9" font-weight="800">TOTAL VOLUME:</text>
+      <text id="stat-volume" x="148" y="118" fill="#facc15" font-size="9.5" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">4,915 mm³</text>
+
+      <text x="0" y="134" fill="#38bdf8" font-size="9" font-weight="800">CLUTCH FORCE:</text>
+      <text x="148" y="134" fill="#34d399" font-size="9.5" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">~3.2 N (Friction)</text>
+    </g>
+
+    <!-- Structural Engineering Lesson Card -->
+    <g transform="translate(14, 195)">
+      <rect width="152" height="132" rx="6" fill="#070b14" stroke="#1e293b" stroke-width="1" />
+      <text x="10" y="16" fill="#facc15" font-size="8.5" font-weight="800">💡 STAGGERED BOND RULE:</text>
+      <text x="10" y="32" fill="#94a3b8" font-size="7.8" font-weight="600">
+        Overlapping bricks across joints
+      </text>
+      <text x="10" y="44" fill="#94a3b8" font-size="7.8" font-weight="600">
+        distributes shear tension,
+      </text>
+      <text x="10" y="56" fill="#94a3b8" font-size="7.8" font-weight="600">
+        preventing continuous vertical
+      </text>
+      <text x="10" y="68" fill="#94a3b8" font-size="7.8" font-weight="600">
+        fracture lines in structures!
+      </text>
+      
+      <g transform="translate(10, 80)">
+        <!-- Diagram: Overlap vs Stack -->
+        <rect x="0" y="4" width="28" height="12" fill="#e11d48" rx="2" />
+        <rect x="30" y="4" width="28" height="12" fill="#e11d48" rx="2" />
+        <rect x="14" y="20" width="30" height="12" fill="#2563eb" rx="2" />
+        <text x="64" y="14" fill="#34d399" font-size="8" font-weight="800">✓ Overlap</text>
+        <text x="64" y="28" fill="#ef4444" font-size="8" font-weight="800">✕ Stack Seam</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 8. Bottom In-Stage Interactive Action Toolbar -->
+  <g id="lego-bottom-bar" transform="translate(24, 426)">
+    <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+
+    <!-- 360° Turntable Spin Control -->
+    <g id="btn-action-spin" class="lego-btn" transform="translate(14, 7)" cursor="pointer">
+      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-spin-btn" x="65" y="18" fill="#38bdf8" font-size="10.5" font-weight="800" text-anchor="middle">
+        ⚡ Spin 360°: ON
+      </text>
+    </g>
+
+    <!-- Explode View Toggle -->
+    <g id="btn-action-explode" class="lego-btn" transform="translate(152, 7)" cursor="pointer">
+      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.2" />
+      <text id="txt-explode-btn" x="65" y="18" fill="#f43f5e" font-size="10.5" font-weight="800" text-anchor="middle">
+        💥 Explode: OFF
+      </text>
+    </g>
+
+    <!-- Engineering Dimensions Toggle -->
+    <g id="btn-action-dimensions" class="lego-btn" transform="translate(290, 7)" cursor="pointer">
+      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#facc15" stroke-width="1.2" />
+      <text id="txt-dimensions-btn" x="65" y="18" fill="#facc15" font-size="10.5" font-weight="800" text-anchor="middle">
+        📏 Dimensions: ON
+      </text>
+    </g>
+
+    <!-- Manual Turntable Scrubber Track -->
+    <g transform="translate(434, 9)">
+      <text x="0" y="16" fill="#94a3b8" font-size="9" font-weight="700">TURNTABLE ORBIT:</text>
+      <rect x="110" y="6" width="140" height="10" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <!-- Indicator Knob -->
+      <circle id="lego-yaw-knob" cx="180" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
+    </g>
+
+    <!-- Reset View Button -->
+    <g id="btn-action-reset" class="lego-btn" transform="translate(696, 7)" cursor="pointer">
+      <rect width="44" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="22" y="18" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">↺</text>
+    </g>
+  </g>
+</svg>

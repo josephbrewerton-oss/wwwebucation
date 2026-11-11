@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-11T08:25:33.584Z",
-  "totalScenes": 65,
+  "generatedAt": "2026-11-11T08:38:03.414Z",
+  "totalScenes": 66,
   "inputDirs": [
     "static/cartridges",
     "static/player/cartridges"
@@ -1300,6 +1300,34 @@
       "bindingsCount": 13,
       "hasCheckpoints": false,
       "checkpointCount": 0
+    },
+    {
+      "id": "lego-blocks",
+      "base": "lego-blocks",
+      "type": "Sim",
+      "title": "Modular Brick Engineering & 3D Spatial Geometry",
+      "stage": "KS2/KS3 DESIGN & TECH",
+      "duration": 16,
+      "oakId": "OAK-KS3-DT-001",
+      "oakUnit": "ks3-design-technology-modular-structures-spatial-geometry",
+      "subject": "Computing",
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/lego-blocks.svg",
+      "astFile": "cartridges/lego-blocks.ast",
+      "astbFile": "bytecode/lego-blocks.astb",
+      "video": null,
+      "videoFit": "contain",
+      "hasVideo": false,
+      "isCore": true,
+      "tier": "core",
+      "mount": "/curriculum/computing/lego-blocks",
+      "section": "Computing & Technology",
+      "keyframeCount": 5,
+      "subtitleCount": 4,
+      "bindingsCount": 12,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "domino-multiplication",
