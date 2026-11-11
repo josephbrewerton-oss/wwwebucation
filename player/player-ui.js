@@ -186,6 +186,8 @@
         cfgStudio: document.getElementById('cfg-studio'),
         cfgExportSpa: document.getElementById('cfg-export-spa'),
         cfgPip: document.getElementById('cfg-pip'),
+        cfgPerfHud: document.getElementById('cfg-perf-hud'),
+        cfgStrictBudget: document.getElementById('cfg-strict-budget'),
         cfgObs: document.getElementById('cfg-obs'),
         cfgPrint: document.getElementById('cfg-print'),
         cfgCopySvg: document.getElementById('cfg-copy-svg'),
@@ -3125,6 +3127,29 @@ window.addEventListener('message', (e) => {
           });
         }
       });
+
+      if (el.cfgPerfHud) {
+        el.cfgPerfHud.checked = this.engine && Boolean(this.engine.profiler);
+        el.cfgPerfHud.addEventListener('change', () => {
+          const enabled = el.cfgPerfHud.checked;
+          window.postMessage({
+            type: 'SET_PERF_HUD',
+            enabled: enabled
+          }, '*');
+        });
+      }
+
+      if (el.cfgStrictBudget) {
+        el.cfgStrictBudget.checked = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
+        el.cfgStrictBudget.addEventListener('change', () => {
+          const strict = el.cfgStrictBudget.checked;
+          window.postMessage({
+            type: 'SET_PERF_HUD',
+            enabled: this.engine && Boolean(this.engine.profiler),
+            strictAlarm: strict
+          }, '*');
+        });
+      }
 
       // Keyboard navigation
       window.addEventListener('keydown', (e) => {
