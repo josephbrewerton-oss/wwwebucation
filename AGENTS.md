@@ -33,10 +33,13 @@
   - `:Sim` *(Continuous Dynamic State)*: Real-time kinematics locked to a 60 FPS $\Delta t$ clock with pointer grab/drag via `ast-gestures.js`.
   - `:Slide` *(Discrete Exploratory Decks)*: Decoupled clock for self-paced reading, CST virtues, and rubrics.
   - `:Film` *(Linear Narrative Choreography)*: Monotonically locked time curves ($t \in [0.0, 1.0]$) with synchronized audio synthesis and multilingual subtitles.
-- **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection with real-time procedural Web Audio synthesis (0 KB external audio files).
-- **28 Production Curriculum Cartridges**:
-  - *STEM & Computing*: `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`.
-  - *Humanities, Language & Formation*: `bsl-fingerspelling`, `church-tour`, `altar-anatomy`, `order-of-the-mass`, `seven-sacraments`, `catholic-rites`, `liturgical-calendar`, `liturgical-postures`, `liturgy-of-the-hours`, `first-communion`, `holy-oils`, `holy-water-thurifer`, `nicene-creed`, `cst-virtues`, `rosary-mysteries`, `stations-of-the-cross`, `ten-commandments`, `latin-mass-prayers`, `shakespeare-macbeth`.
+- **Pedagogical X-Ray, Sonification & Performance Diagnostics**:
+  - `data-pedagogical` discovery inspection with real-time procedural Web Audio synthesis (0 KB external audio files).
+  - Native in-stage `ASTProfiler` HUD (`SET_PERF_HUD`, `TOGGLE_PERF_HUD`, `?hud=1`) with live rolling sparkline, sub-0.2 ms VM compute measurement, and frame budget headroom.
+  - Dedicated `⚡ Diagnostics` drawer in `src/pages/media-player.ts` tracking 60 FPS headroom and WASM 7-page memory pool status.
+- **Canonical Curriculum Cartridges (67 Compiled Modules)**:
+  - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
+  - *Humanities, Language & Formation*: `bsl-fingerspelling`, `church-tour`, `altar-anatomy`, `order-of-the-mass`, `seven-sacraments`, `catholic-rites`, `liturgical-calendar`, `liturgical-postures`, `liturgy-of-the-hours`, `first-communion`, `holy-oils`, `holy-water-thurifer`, `nicene-creed`, `cst-virtues`, `rosary-mysteries`, `stations-of-the-cross`, `ten-commandments`, `latin-mass-prayers`, `shakespeare-macbeth`, `shakespeare`, `triduum-easter`, `sacred-objects`, `languages`, `eucharistic-procession-film`.
 
 ## Real-Time "In-Vision" BSL / Makaton Vector Interpreter
 - **Zero-Video Architectural Invariant**: Pure procedural SVG skeletal vector avatar running client-side at 60 FPS (< 15 KB uncompressed, 0 external video feeds, 0 MB video streaming bills).

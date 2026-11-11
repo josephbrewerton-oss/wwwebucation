@@ -85,7 +85,7 @@ Parameters:
   - autoPlay (boolean, optional): Begin immediate timeline playback (default: true)
 
 Tool: list_ast_simulations
-Description: Retrieves the catalog of all 60 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
+Description: Retrieves the catalog of all 67 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
 Parameters: none
 
 Tool: evaluate_math_kernel
