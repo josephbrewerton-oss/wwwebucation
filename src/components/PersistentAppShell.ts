@@ -352,12 +352,12 @@ export class PersistentAppShellElement extends HTMLElement {
             `).join('')}
           </div>
 
-          <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#64748b;">
+         <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#64748b;">
   St Joseph's Learning Portal &bull; Curriculum content licensed under 
   <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#38bdf8;">OGL v3.0</a>. 
   Engine code dual-licensed under 
   <a href="https://github.com/josephbrewerton-oss/schoolsample" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 (Source Repository)</a>. 
-  &bull; <a href="./docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#38bdf8; text-decoration:none;">Offline Architecture Paper (.ast)</a>. 
+  &bull; <a href=".public/docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#38bdf8; text-decoration:none;">Offline Architecture Paper (.ast)</a>. 
   Designed for zero-data offline learning.
 </div>
 </footer>
