@@ -48,8 +48,9 @@ export class PersistentAppShellElement extends HTMLElement {
     const btnNavSound = this.querySelector<HTMLButtonElement>('#nav-btn-sound');
     if (btnSound) {
       btnSound.textContent = enabled ? '🔊 Sound: ON' : '🔇 Mute';
-      btnSound.style.background = enabled ? '#0284c7' : '#1e293b';
+      btnSound.style.background = enabled ? '#0369a1' : '#1e293b';
       btnSound.style.borderColor = enabled ? '#38bdf8' : '#334155';
+      btnSound.style.color = '#ffffff';
       btnSound.setAttribute('aria-pressed', String(enabled));
     }
     if (btnNavSound) {
@@ -166,24 +167,24 @@ export class PersistentAppShellElement extends HTMLElement {
             </div>
 
             <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-              <!-- Font Size Controls -->
-              <div style="display:inline-flex; align-items:center; gap:2px; background:#1e293b; border-radius:4px; padding:2px; border:1px solid #334155;">
-                <button type="button" id="btn-font-normal" style="background:transparent; border:none; color:#f8fafc; font-size:0.75rem; min-width:24px; min-height:24px; cursor:pointer; padding:2px 4px; display:inline-flex; align-items:center; justify-content:center;" title="Standard Font" aria-label="Standard Font Size">A</button>
-                <button type="button" id="btn-font-large" style="background:transparent; border:none; color:#f8fafc; font-size:0.85rem; font-weight:700; min-width:24px; min-height:24px; cursor:pointer; padding:2px 4px; display:inline-flex; align-items:center; justify-content:center;" title="Large Font" aria-label="Large Font Size">A+</button>
+              <!-- Font Size Controls (Minimum 36x36px Mobile Touch Target) -->
+              <div style="display:inline-flex; align-items:center; gap:3px; background:#1e293b; border-radius:6px; padding:3px; border:1px solid #334155;">
+                <button type="button" id="btn-font-normal" style="background:transparent; border:none; color:#ffffff; font-size:0.8rem; font-weight:700; min-width:36px; min-height:36px; cursor:pointer; padding:4px 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:4px;" title="Standard Font" aria-label="Standard Font Size">A</button>
+                <button type="button" id="btn-font-large" style="background:transparent; border:none; color:#ffffff; font-size:0.92rem; font-weight:800; min-width:36px; min-height:36px; cursor:pointer; padding:4px 6px; display:inline-flex; align-items:center; justify-content:center; border-radius:4px;" title="Large Font" aria-label="Large Font Size">A+</button>
               </div>
 
               <!-- High Contrast Toggle -->
-              <button type="button" id="btn-contrast-toggle" aria-pressed="false" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; border-radius:4px; font-size:0.75rem; min-height:28px; padding:2px 8px; cursor:pointer; display:inline-flex; align-items:center;" title="Toggle High Contrast" aria-label="Toggle High Contrast Mode">
+              <button type="button" id="btn-contrast-toggle" aria-pressed="false" style="background:#1e293b; border:1px solid #334155; color:#ffffff; border-radius:6px; font-size:0.75rem; min-height:36px; padding:4px 10px; cursor:pointer; display:inline-flex; align-items:center; font-weight:700;" title="Toggle High Contrast" aria-label="Toggle High Contrast Mode">
                 🌓 Contrast
               </button>
 
               <!-- Master Audio / Sound Mute Toggle -->
-              <button type="button" id="top-bar-sound-btn" aria-pressed="${this.sound ? 'true' : 'false'}" style="background:${this.sound ? '#0284c7' : '#1e293b'}; border:1px solid ${this.sound ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.75rem; min-height:28px; padding:2px 8px; font-weight:700; cursor:pointer; min-width:86px; text-align:center; flex-shrink:0;" title="Toggle Classroom Sound Effects and Narration (M)" aria-label="Toggle Sound Effects and Narration Audio">
+              <button type="button" id="top-bar-sound-btn" aria-pressed="${this.sound ? 'true' : 'false'}" style="background:${this.sound ? '#0369a1' : '#1e293b'}; border:1px solid ${this.sound ? '#38bdf8' : '#334155'}; color:#ffffff; border-radius:6px; font-size:0.75rem; min-height:36px; padding:4px 10px; font-weight:800; cursor:pointer; min-width:88px; text-align:center; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;" title="Toggle Classroom Sound Effects and Narration (M)" aria-label="Toggle Sound Effects and Narration Audio">
                 ${this.sound ? '🔊 Sound: ON' : '🔇 Mute'}
               </button>
 
               <!-- BSL Quick Toggle -->
-              <button type="button" id="top-bar-bsl-btn" aria-pressed="${this.bsl ? 'true' : 'false'}" style="background:${this.bsl ? '#0284c7' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.75rem; min-height:28px; padding:2px 8px; font-weight:700; cursor:pointer; min-width:86px; text-align:center; flex-shrink:0;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
+              <button type="button" id="top-bar-bsl-btn" aria-pressed="${this.bsl ? 'true' : 'false'}" style="background:${this.bsl ? '#0369a1' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#ffffff; border-radius:6px; font-size:0.75rem; min-height:36px; padding:4px 10px; font-weight:800; cursor:pointer; min-width:88px; text-align:center; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
                 🖐️ BSL: ${this.bsl ? 'ON' : 'OFF'}
               </button>
             </div>
@@ -340,9 +341,9 @@ export class PersistentAppShellElement extends HTMLElement {
             ${NAV_GROUPS.map((group) => `
               <div class="shell-footer-col">
                 <strong style="display:block; color:#f8fafc; margin-bottom:12px; font-size:0.92rem;">${group.icon} ${group.label}</strong>
-                <div style="display:flex; flex-direction:column; gap:8px; font-size:0.84rem;">
+                <div style="display:flex; flex-direction:column; gap:6px; font-size:0.84rem;">
                   ${group.items.map((item) => `
-                    <a href="${base}${item.path}">
+                    <a href="${base}${item.path}" style="display:inline-flex; align-items:center; min-height:34px; padding:4px 0; gap:8px;">
                       <span>${item.icon}</span> ${item.label}
                     </a>
                   `).join('')}
@@ -578,8 +579,9 @@ export class PersistentAppShellElement extends HTMLElement {
       this.bsl = enabled;
       if (btnBsl) {
         btnBsl.textContent = `🖐️ BSL: ${enabled ? 'ON' : 'OFF'}`;
-        btnBsl.style.background = enabled ? '#0284c7' : '#1e293b';
+        btnBsl.style.background = enabled ? '#0369a1' : '#1e293b';
         btnBsl.style.borderColor = enabled ? '#38bdf8' : '#334155';
+        btnBsl.style.color = '#ffffff';
         btnBsl.setAttribute('aria-pressed', String(enabled));
       }
       if (enabled) {

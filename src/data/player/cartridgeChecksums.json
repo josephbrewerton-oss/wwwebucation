@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-10T10:00:42.612Z",
+  "generatedAt": "2026-11-11T08:19:41.027Z",
   "totalCartridges": 66,
-  "masterChecksum": "41ecf939d5789e861ba52da1ea24ae7f3e66ffddb7959c3c4b5ae63e26c32f64",
+  "masterChecksum": "14b01f128d0526737fb540210f35456bde830747b53d5d86c177b9f8c357443f",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -679,18 +679,18 @@
     },
     "phet-acid-base": {
       "id": "phet-acid-base",
-      "title": "PhET Acid-Base Distillation",
+      "title": "Acid-Base Titration Lab",
       "stage": "KS3/KS4 CHEMISTRY",
-      "type": "Slide",
-      "astSha256": "9f508b47a7f9b7453b64476d5c255e5c7e3125d64cc0a2199c78511d3012326e",
+      "type": "Sim",
+      "astSha256": "259b0f765385d4df25ba414d8ba59c025a8b967457a3cf9d971dbcd5ae8faaaf",
       "svgSha256": "569a21d60c594650c5f6c7783552c1d068a921aa14f0f9a894fb47a5f46f0e7c",
-      "astbSha256": "355ceb0e0fa29d9c30704ea0029e1b4f5c47d3b1619059b2494b412ddec305f3",
-      "astbBytes": 1180,
-      "astBytes": 1878,
+      "astbSha256": "d2d68c97375421438b6ee6ed5656a2e443cb36520190fa536abdf18040692664",
+      "astbBytes": 592,
+      "astBytes": 2583,
       "svgBytes": 2571,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "7c277c5f46efec6afa6c0c40f90ba53ecea5ee59ba3fe5f71df8e4687996ff7d",
+      "seal": "6ac0182ae5732397b6b22939ce1d08cc2666eff3628ebe6990d78aa97c60c007",
       "certified": true
     },
     "phet-balancing-chemical": {

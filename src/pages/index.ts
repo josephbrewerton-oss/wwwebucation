@@ -31,10 +31,10 @@ export function renderHomePage(): HTMLElement {
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
-        <span style="color: #16a34a; font-weight: 700; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 10px; border-radius: 9999px;">🕊️ Education should be free</span>
-        <span style="color: #0284c7; font-weight: 700; background: #eff6ff; border: 1px solid #bfdbfe; padding: 2px 10px; border-radius: 9999px;">🇬🇧 UK National Curriculum</span>
-        <span style="color: #b45309; font-weight: 700; background: #fefce8; border: 1px solid #fef08a; padding: 2px 10px; border-radius: 9999px;">⛪ Catholic Sanctuary</span>
-        <span style="color: #059669; font-weight: 700; background: #ecfdf5; border: 1px solid #a7f3d0; padding: 2px 10px; border-radius: 9999px;">💾 100% Offline (0 Data)</span>
+        <span style="color: #14532d; font-weight: 700; background: #dcfce7; border: 1px solid #86efac; padding: 2px 10px; border-radius: 9999px;">🕊️ Education should be free</span>
+        <span style="color: #0c4a6e; font-weight: 700; background: #e0f2fe; border: 1px solid #7dd3fc; padding: 2px 10px; border-radius: 9999px;">🇬🇧 UK National Curriculum</span>
+        <span style="color: #78350f; font-weight: 700; background: #fef3c7; border: 1px solid #fde68a; padding: 2px 10px; border-radius: 9999px;">⛪ Catholic Sanctuary</span>
+        <span style="color: #064e3b; font-weight: 700; background: #d1fae5; border: 1px solid #6ee7b7; padding: 2px 10px; border-radius: 9999px;">💾 100% Offline (0 Data)</span>
       </div>
 
       <h1 style="font-size: clamp(2rem, 4vw, 3rem); font-weight: 800; color: #0f172a; margin: 0 0 1rem; letter-spacing: -0.025em; line-height: 1.15;">

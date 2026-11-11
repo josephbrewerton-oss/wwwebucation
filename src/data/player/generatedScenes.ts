@@ -968,8 +968,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   {
     "id": "phet-acid-base",
     "base": "phet-acid-base",
-    "type": "Slide",
-    "label": "PhET Acid-Base Distillation",
+    "type": "Sim",
+    "label": "Acid-Base Titration Lab",
     "stage": "KS3/KS4 CHEMISTRY",
     "oakId": "OAK-KS4-SCI-PHETACID",
     "oakUnit": "ks4-science-phet-acid-base",
@@ -978,8 +978,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/science/phet-acid-base",
     "section": "Natural Sciences & Physics",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "phet-balancing-chemical",

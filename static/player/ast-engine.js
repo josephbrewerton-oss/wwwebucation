@@ -41,6 +41,8 @@
 
       this.svgRoot = null;
       this.hudGroup = null;
+      this.bgNode = null;
+      this.sparklineNode = null;
       this.textNode = null;
 
       if (options.svgRoot) {
@@ -58,18 +60,46 @@
       this.hudGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
       this.hudGroup.setAttribute("id", "ast-engine-profiler-hud");
       this.hudGroup.setAttribute("pointer-events", "none");
+      this.hudGroup.setAttribute("style", "user-select: none;");
+
+      // Semi-transparent glassmorphic background pill
+      this.bgNode = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      this.bgNode.setAttribute("x", "10");
+      this.bgNode.setAttribute("y", "8");
+      this.bgNode.setAttribute("width", "250");
+      this.bgNode.setAttribute("height", this.mode === 'graph' ? "44" : "24");
+      this.bgNode.setAttribute("rx", "5");
+      this.bgNode.setAttribute("ry", "5");
+      this.bgNode.setAttribute("fill", "rgba(15, 23, 42, 0.92)");
+      this.bgNode.setAttribute("stroke", "rgba(56, 189, 248, 0.5)");
+      this.bgNode.setAttribute("stroke-width", "1");
+      this.hudGroup.appendChild(this.bgNode);
+
+      // Sparkline for graph mode
+      if (this.mode === 'graph') {
+        this.sparklineNode = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        this.sparklineNode.setAttribute("fill", "none");
+        this.sparklineNode.setAttribute("stroke", "#38bdf8");
+        this.sparklineNode.setAttribute("stroke-width", "1.5");
+        this.sparklineNode.setAttribute("stroke-linecap", "round");
+        this.sparklineNode.setAttribute("stroke-linejoin", "round");
+        this.hudGroup.appendChild(this.sparklineNode);
+      } else {
+        this.sparklineNode = null;
+      }
 
       this.textNode = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      this.textNode.setAttribute("x", "14");
-      this.textNode.setAttribute("y", "26");
+      this.textNode.setAttribute("x", "18");
+      this.textNode.setAttribute("y", "24");
       this.textNode.setAttribute("fill", "#00FF66");
-      this.textNode.setAttribute("font-family", "ui-monospace, monospace");
+      this.textNode.setAttribute("font-family", "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace");
       this.textNode.setAttribute("font-size", "11px");
       this.textNode.setAttribute("font-weight", "bold");
-      this.textNode.textContent = "INITIALIZING...";
+      this.textNode.textContent = "FPS: 60 | VM: 0.1ms";
 
       this.hudGroup.appendChild(this.textNode);
       this.svgRoot.appendChild(this.hudGroup);
+      this._updateReadout();
     }
 
     onFrame(ts) {
@@ -84,33 +114,40 @@
       this.bufIndex = (this.bufIndex + 1) % this.historyLen;
       this.frameCount++;
 
-      if (this.frameCount % 30 === 0 && this.textNode) {
+      if ((this.frameCount % 15 === 0 || this.frameCount < 5) && this.textNode) {
         this._updateReadout();
       }
     }
 
     _updateReadout() {
+      if (!this.textNode) return;
       let sumDelta = 0;
       let sumCompute = 0;
       let maxCompute = 0;
+      let validFrames = 0;
 
       for (let i = 0; i < this.historyLen; i++) {
         const d = this.frameDeltas[i];
         const c = this.computeTimes[i];
-        sumDelta += d;
+        if (d > 0) {
+          sumDelta += d;
+          validFrames++;
+        }
         sumCompute += c;
         if (c > maxCompute) maxCompute = c;
       }
 
-      const avgDelta = sumDelta / this.historyLen;
-      const avgCompute = sumCompute / this.historyLen;
-      const fps = avgDelta > 0 ? Math.round(1000 / avgDelta) : 0;
+      const avgDelta = validFrames > 0 ? (sumDelta / validFrames) : 16.66;
+      const avgCompute = validFrames > 0 ? (sumCompute / validFrames) : (this.computeTimes[0] || 0.1);
+      const fps = avgDelta > 0 ? Math.min(120, Math.round(1000 / avgDelta)) : 60;
 
       const overBudget = maxCompute > 16.66;
       if (this.strictAlarm && overBudget) {
         this.textNode.setAttribute("fill", "#FF3344");
+        if (this.bgNode) this.bgNode.setAttribute("stroke", "rgba(239, 68, 68, 0.85)");
       } else {
-        this.textNode.setAttribute("fill", "#00FF66");
+        this.textNode.setAttribute("fill", fps >= 55 ? "#00FF66" : (fps >= 30 ? "#FACC15" : "#FF3344"));
+        if (this.bgNode) this.bgNode.setAttribute("stroke", "rgba(56, 189, 248, 0.5)");
       }
 
       let mem = "";
@@ -119,7 +156,30 @@
         mem = ` | Heap: ${heapMB}MB`;
       }
 
-      this.textNode.textContent = `FPS: ${fps} | VM: ${avgCompute.toFixed(2)}ms (peak ${maxCompute.toFixed(2)}ms)${mem}`;
+      const readoutText = `FPS: ${fps} | VM: ${avgCompute.toFixed(2)}ms (peak ${maxCompute.toFixed(1)}ms)${mem}`;
+      this.textNode.textContent = readoutText;
+
+      if (this.bgNode) {
+        const targetWidth = Math.max(160, Math.round(readoutText.length * 6.8 + 24));
+        this.bgNode.setAttribute("width", String(targetWidth));
+        this.bgNode.setAttribute("height", this.mode === 'graph' ? "44" : "24");
+      }
+
+      if (this.mode === 'graph' && this.sparklineNode) {
+        const points = [];
+        const startX = 18;
+        const baseY = 40;
+        const graphHeight = 12;
+        const stepX = 3.6;
+        for (let i = 0; i < Math.min(60, this.historyLen); i++) {
+          const idx = (this.bufIndex + i) % this.historyLen;
+          const c = this.computeTimes[idx] || 0;
+          const norm = Math.min(1.0, c / 20);
+          const y = baseY - (norm * graphHeight);
+          points.push(`${(startX + i * stepX).toFixed(1)},${y.toFixed(1)}`);
+        }
+        this.sparklineNode.setAttribute("points", points.join(" "));
+      }
     }
 
     destroy() {
@@ -127,6 +187,8 @@
         this.hudGroup.parentNode.removeChild(this.hudGroup);
       }
       this.hudGroup = null;
+      this.bgNode = null;
+      this.sparklineNode = null;
       this.textNode = null;
     }
   } // <--- ONLY CLOSE THE CLASS HERE!
@@ -2160,9 +2222,15 @@
       this.isBranching = false;
       // Internal Hardware Telemetry & Zero-Allocation Profiler
       this.profiler = null;
-      if (typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true') {
-        const verbosity = localStorage.getItem('app_hud_verbosity') || 'minimal';
-        const strictAlarm = localStorage.getItem('app_frame_budget_alert') === 'true';
+      const urlParams = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
+      const isHudParam = urlParams ? (urlParams.get('hud') === '1' || urlParams.get('hud') === 'true') : false;
+      const isHudStorage = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
+      const isHudWindow = typeof window !== 'undefined' && window.__AST_PERF_HUD__ === true;
+      const perfHudEnabled = isHudParam || isHudStorage || isHudWindow;
+
+      if (perfHudEnabled) {
+        const verbosity = (urlParams && urlParams.get('hud_verbosity')) || (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
+        const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || (typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true');
 
         // Initialize profiler; UI overlay attaches once container/SVG mounts
         this.profiler = new ASTProfiler({
@@ -7133,6 +7201,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       this.applyBindings(this.progress);
       this.translateInStageLabels();
+      if (this.profiler) {
+        this.profiler.mount(this.getStageSvg());
+      }
       if (typeof window !== 'undefined' && window.__astGestures && typeof window.__astGestures.enhanceSceneInteractivity === 'function') {
         window.__astGestures.enhanceSceneInteractivity();
       }
@@ -8809,6 +8880,41 @@ function setupPostMessageBridge(engine, uiController) {
           uiController.toggleSettingsDrawer();
         }
         break;
+      case 'SET_PERF_HUD':
+      case 'TOGGLE_PERF_HUD':
+      case 'UPDATE_PERF_HUD': {
+        const enabled = typeof data.enabled === 'boolean' ? data.enabled : (!engine.profiler);
+        if (enabled) {
+          const mode = data.mode || (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
+          const strictAlarm = typeof data.strictAlarm === 'boolean' ? data.strictAlarm : (typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true');
+          if (!engine.profiler) {
+            engine.profiler = new ASTProfiler({ mode, strictAlarm });
+          } else {
+            engine.profiler.mode = mode;
+            engine.profiler.strictAlarm = strictAlarm;
+          }
+          const stage = engine.getStageSvg();
+          if (stage) engine.profiler.mount(stage);
+        } else {
+          if (engine.profiler) {
+            engine.profiler.destroy();
+            engine.profiler = null;
+          }
+        }
+        if (typeof localStorage !== 'undefined') {
+          try {
+            localStorage.setItem('app_perf_hud_enabled', String(enabled));
+            if (data.mode) localStorage.setItem('app_hud_verbosity', data.mode);
+            if (typeof data.strictAlarm === 'boolean') localStorage.setItem('app_frame_budget_alert', String(data.strictAlarm));
+          } catch (_) {}
+        }
+        engine.notifyParent({
+          type: 'PERF_HUD_UPDATED',
+          enabled: Boolean(engine.profiler),
+          mode: engine.profiler ? engine.profiler.mode : 'minimal'
+        });
+        break;
+      }
       default:
         break;
     }

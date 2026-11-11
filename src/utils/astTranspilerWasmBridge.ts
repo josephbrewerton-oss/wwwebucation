@@ -62,6 +62,8 @@ export class ASTTranspilerWasmBridge {
     if (this.isReady) return true;
 
     try {
+      let binaryBytes: Uint8Array | null = null;
+
       // 1. Instant zero-network initialization via inlined base64 binary (< 1.3 KB)
       if (typeof AST_TRANSPILER_WASM_BASE64 === 'string' && AST_TRANSPILER_WASM_BASE64.length > 0) {
         if (typeof atob === 'function') {
