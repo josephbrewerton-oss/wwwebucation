@@ -1,5 +1,4 @@
-const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/sexprParser-CDFBALEW.js","assets/rolldown-runtime-DK3Fl9T5.js","assets/cartridge-vault-BhkKMAAS.js"])))=>i.map(i=>d[i]);
-import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-vault-BhkKMAAS.js";function r(){let r=e(),i=document.createElement(`div`);i.className=`home-landing-stage`,i.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let a=`welcome`,o=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));i.innerHTML=`
+import{t as e}from"./index-CL0tV1io.js";import{c as t}from"./cartridge-vault-BhkKMAAS.js";function n(){let n=e(),r=document.createElement(`div`);r.className=`home-landing-stage`,r.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let i=`welcome`,a=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));r.innerHTML=`
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
@@ -17,16 +16,16 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
       </p>
 
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
-        <a href="${r}catholic-life" style="padding: 11px 22px; background: #b45309; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(180,83,9,0.25);">
+        <a href="${n}catholic-life" style="padding: 11px 22px; background: #b45309; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(180,83,9,0.25);">
           <span>✝️ Catholic Sanctuary</span>
         </a>
-        <a href="${r}player" style="padding: 11px 22px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2,132,199,0.25);">
+        <a href="${n}player" style="padding: 11px 22px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2,132,199,0.25);">
           <span>🎮 Launch Simulators</span>
         </a>
-        <a href="${r}practice-lab" style="padding: 11px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <a href="${n}practice-lab" style="padding: 11px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
           <span>⚡ Practice Lab</span>
         </a>
-        <a href="${r}learning-zone" style="padding: 11px 20px; background: #ffffff; color: #0f172a; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
+        <a href="${n}learning-zone" style="padding: 11px 20px; background: #ffffff; color: #0f172a; border: 1.5px solid #cbd5e1; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
           <span>📖 Curriculum Lessons</span>
         </a>
       </div>
@@ -46,7 +45,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <select id="sim-selector" aria-label="Select Curriculum Simulation" style="padding: 8px 14px; border-radius: 8px; background: #1e293b; color: #fff; border: 1.5px solid #0284c7; font-weight: 700; font-size: 0.86rem; cursor: pointer;">
           </select>
-          <a href="${r}player" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Fullscreen Studio</a>
+          <a href="${n}player" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Fullscreen Studio</a>
         </div>
       </div>
 
@@ -57,7 +56,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
       <div style="border-radius: 12px; overflow: hidden; min-height: 480px; background: #090d16;">
         <iframe 
           id="stage-viewport"
-          src="${r}player.html?preset=welcome" 
+          src="${n}player.html?preset=welcome" 
           loading="lazy"
           style="width: 100%; height: 500px; border: none; display: block;" 
           title="Featured Interactive Simulation">
@@ -79,31 +78,31 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
             Explore the sacred traditions, High Altar rubrics, Latin prayers, liturgical calendar, and Catholic Social Teaching (CST) foundational to our school community.
           </p>
         </div>
-        <a href="${r}catholic-life" style="padding: 10px 20px; background: #ca8a04; color: #0f172a; font-weight: 800; border-radius: 8px; text-decoration: none; font-size: 0.88rem;">
+        <a href="${n}catholic-life" style="padding: 10px 20px; background: #ca8a04; color: #0f172a; font-weight: 800; border-radius: 8px; text-decoration: none; font-size: 0.88rem;">
           Enter Sanctuary →
         </a>
       </div>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem;">
-        <a href="${r}catholic-life?tab=altar-anatomy" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
+        <a href="${n}catholic-life?tab=altar-anatomy" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
           <span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">🕯️</span>
           <strong style="display: block; font-size: 1rem; color: #fde047; margin-bottom: 4px;">High Altar &amp; Sanctuary</strong>
           <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0; line-height: 1.4;">Interactive 16-point anatomical guide to sacred altar vessels, tabernacle, and rubrics.</p>
         </a>
 
-        <a href="${r}catholic-life?tab=latin-prayers" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
+        <a href="${n}catholic-life?tab=latin-prayers" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
           <span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">🇻🇦</span>
           <strong style="display: block; font-size: 1rem; color: #fde047; margin-bottom: 4px;">Latin Mass Prayers Chapel</strong>
           <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0; line-height: 1.4;">10 traditional Latin prayers with phonetic pronunciation guides and procedural audio recitation.</p>
         </a>
 
-        <a href="${r}catholic-life?tab=church-tour" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
+        <a href="${n}catholic-life?tab=church-tour" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
           <span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">🏛️</span>
           <strong style="display: block; font-size: 1rem; color: #fde047; margin-bottom: 4px;">Church Architecture 3D Tour</strong>
           <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0; line-height: 1.4;">Interactive vector tour exploring the nave, narthex, sanctuary, ambry, and crucifix.</p>
         </a>
 
-        <a href="${r}catholic-life?tab=cst" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
+        <a href="${n}catholic-life?tab=cst" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(202,138,4,0.3); border-radius: 10px; padding: 1.1rem; text-decoration: none; color: inherit; display: block; transition: all 0.15s ease;">
           <span style="font-size: 1.6rem; display: block; margin-bottom: 6px;">🌱</span>
           <strong style="display: block; font-size: 1rem; color: #fde047; margin-bottom: 4px;">Catholic Social Teaching (CST)</strong>
           <p style="font-size: 0.82rem; color: #cbd5e1; margin: 0; line-height: 1.4;">Caritas principles of Human Dignity, Common Good, and Solidarity aligned to school virtues.</p>
@@ -128,7 +127,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 1.25rem;">
         
         <!-- Simulators Card -->
-        <a href="${r}player" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}player" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🎮
@@ -142,7 +141,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Practice Lab Card -->
-        <a href="${r}practice-lab" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}practice-lab" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ⚡
@@ -156,7 +155,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Lessons & Units Card -->
-        <a href="${r}learning-zone" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}learning-zone" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               📖
@@ -170,7 +169,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Phonics Sound Mat Card -->
-        <a href="${r}phonics" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}phonics" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fce7f3; color: #db2777; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🔤
@@ -184,7 +183,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Languages & MFL Card -->
-        <a href="${r}languages" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}languages" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ede9fe; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🌍
@@ -198,7 +197,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Shakespeare Theatre Card -->
-        <a href="${r}shakespeare" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}shakespeare" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fff1f2; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🎭
@@ -212,7 +211,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- SlideScript Cartridge Studio Card -->
-        <a href="${r}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ✏️
@@ -226,7 +225,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Teacher Beacon Card -->
-        <a href="${r}teacher-beacon" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}teacher-beacon" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               📡
@@ -240,7 +239,7 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </a>
 
         <!-- Student Progress & Badges Card -->
-        <a href="${r}profile" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+        <a href="${n}profile" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #fefce8; color: #a16207; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ⭐
@@ -296,4 +295,4 @@ import{t as e}from"./index-NEE6B_Eh.js";import{c as t,h as n}from"./cartridge-va
         </div>
       </div>
     </section>
-  `;let s=i.querySelector(`#stage-viewport`),c=i.querySelector(`#sim-selector`),l=i.querySelector(`#sim-pill-nav`);function u(e){let t=String(e||``).replace(/[^a-zA-Z0-9_-]/g,``);a=t,s&&(s.src=`${r}player.html?preset=${encodeURIComponent(t)}`),c&&(c.value=t),l?.querySelectorAll(`.sim-pill`).forEach(e=>{let n=e.dataset.id===t;e.style.background=n?`#0284c7`:`#1e293b`,e.style.color=n?`#ffffff`:`#94a3b8`,e.style.borderColor=n?`#38bdf8`:`#334155`})}function d(){if(c&&l){c.replaceChildren();for(let e of o){let t=document.createElement(`option`);t.value=e.id,t.textContent=`${e.title} (${e.subject||`STEM`})`,e.id===a&&(t.selected=!0),c.appendChild(t)}l.replaceChildren();for(let e of o.slice(0,12)){let t=document.createElement(`button`);t.type=`button`,t.className=`sim-pill`,t.dataset.id=e.id;let n=e.id===a;t.style.cssText=`background: ${n?`#0284c7`:`#1e293b`}; color: ${n?`#ffffff`:`#94a3b8`}; border: 1px solid ${n?`#38bdf8`:`#334155`}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;`,t.textContent=e.title.split(`:`)[0],t.onclick=()=>u(e.id),l.appendChild(t)}}}return c?.addEventListener(`change`,e=>{u(e.target.value)}),fetch(`${r}sitemap.ast`).then(e=>e.ok?e.text():Promise.reject()).then(async e=>{let{parseSExpr:t}=await n(async()=>{let{parseSExpr:e}=await import(`./sexprParser-CDFBALEW.js`).then(e=>e.n);return{parseSExpr:e}},__vite__mapDeps([0,1,2])),r=t(e);if(Array.isArray(r)){let e=r.find(e=>Array.isArray(e)&&e[0]===`:sitemap`)?.find(e=>Array.isArray(e)&&e[0]===`:cartridges`);e&&Array.isArray(e[1])&&(o=e[1].map(e=>({id:Array.isArray(e)&&e.find(e=>Array.isArray(e)&&e[0]===`:id`)?.[1]||``,title:Array.isArray(e)&&e.find(e=>Array.isArray(e)&&e[0]===`:title`)?.[1]||``,mount:Array.isArray(e)&&e.find(e=>Array.isArray(e)&&e[0]===`:mount`)?.[1]||``,tier:Array.isArray(e)&&e.find(e=>Array.isArray(e)&&e[0]===`:tier`)?.[1]||`core`})).filter(e=>e.id),d())}}).catch(()=>{}),d(),i}export{r as default,r as renderHomePage};
+  `;let o=r.querySelector(`#stage-viewport`),s=r.querySelector(`#sim-selector`),c=r.querySelector(`#sim-pill-nav`);function l(e){let t=String(e||``).replace(/[^a-zA-Z0-9_-]/g,``);i=t,o&&(o.src=`${n}player.html?preset=${encodeURIComponent(t)}`),s&&(s.value=t),c?.querySelectorAll(`.sim-pill`).forEach(e=>{let n=e.dataset.id===t;e.style.background=n?`#0284c7`:`#1e293b`,e.style.color=n?`#ffffff`:`#94a3b8`,e.style.borderColor=n?`#38bdf8`:`#334155`})}function u(){if(s&&c){s.replaceChildren();for(let e of a){let t=document.createElement(`option`);t.value=e.id,t.textContent=`${e.title} (${e.subject||`STEM`})`,e.id===i&&(t.selected=!0),s.appendChild(t)}c.replaceChildren();for(let e of a.slice(0,12)){let t=document.createElement(`button`);t.type=`button`,t.className=`sim-pill`,t.dataset.id=e.id;let n=e.id===i;t.style.cssText=`background: ${n?`#0284c7`:`#1e293b`}; color: ${n?`#ffffff`:`#94a3b8`}; border: 1px solid ${n?`#38bdf8`:`#334155`}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;`,t.textContent=e.title.split(`:`)[0],t.onclick=()=>l(e.id),c.appendChild(t)}}}return s?.addEventListener(`change`,e=>{l(e.target.value)}),u(),r}export{n as default,n as renderHomePage};

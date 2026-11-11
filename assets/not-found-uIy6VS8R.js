@@ -1,4 +1,4 @@
-import{t as e}from"./index-NEE6B_Eh.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`not-found-stage`,n.style.cssText=`max-width: 700px; margin: 4rem auto; padding: 2rem 1rem; text-align: center; color: #0f172a;`,n.innerHTML=`
+import{t as e}from"./index-CL0tV1io.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`not-found-stage`,n.style.cssText=`max-width: 700px; margin: 4rem auto; padding: 2rem 1rem; text-align: center; color: #0f172a;`,n.innerHTML=`
     <div style="font-size: 3.5rem; margin-bottom: 1rem;">🧭</div>
     <h1 style="font-size: 2.2rem; font-weight: 800; margin: 0 0 0.75rem 0;">Page Not Found</h1>
     <p style="font-size: 1.05rem; color: #64748b; margin: 0 0 2rem 0; line-height: 1.5;">
