@@ -56,8 +56,8 @@
   ))
   (:bindings (
     (:target "#brick-3d-stage" :attr "transform" :expr "'rotate(' + ((vars.turntableYaw + (vars.autoSpin ? t * 360 * vars.spinSpeed : 0)) % 360) + ' 0 60)'")
-    (:target "#brick-top-view" :attr "opacity" :expr "(vars.flipUnderside || vars.cameraPitch < 0) ? 0 : 1")
-    (:target "#brick-top-view" :attr "display" :expr "(vars.flipUnderside || vars.cameraPitch < 0) ? 'none' : 'inline'")
+    (:target "#brick-top-view" :attr "opacity" :expr "1")
+    (:target "#brick-top-view" :attr "display" :expr "'inline'")
     (:target "#brick-underside-view" :attr "opacity" :expr "(vars.flipUnderside || vars.cameraPitch < 0) ? 1 : 0")
     (:target "#brick-underside-view" :attr "display" :expr "(vars.flipUnderside || vars.cameraPitch < 0) ? 'inline' : 'none'")
     (:target "#brick-main-group" :attr "transform" :expr "'translate(0, ' + (-vars.explodeOffset) + ')'")
