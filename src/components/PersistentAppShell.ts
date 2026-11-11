@@ -356,7 +356,7 @@ export class PersistentAppShellElement extends HTMLElement {
   St Joseph's Learning Portal &bull; Curriculum content licensed under 
   <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#38bdf8;">OGL v3.0</a>. 
   Engine code dual-licensed under 
-  <a href="https://github.com/josephbrewerton-oss/schoolsample" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 (Source Repository)</a>. 
+  <a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 (Source Repository)</a>. 
   &bull; <a href="./docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#38bdf8; text-decoration:none;">Offline Architecture Paper (.ast)</a>. 
   Designed for zero-data offline learning.
 </div>
