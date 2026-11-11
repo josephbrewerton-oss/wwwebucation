@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-11T08:19:20.272Z",
-  "totalCartridges": 65,
+  "generatedAt": "2026-11-11T08:33:28.223Z",
+  "totalCartridges": 66,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -399,6 +399,15 @@
       "stage": "BENCHMARK & STRESS LAB",
       "title": "Aquarium Stress Benchmark: Vector Point & FPS Limiter",
       "cartridgeId": "fish-tank"
+    },
+    {
+      "unit": "ks3-design-technology-modular-structures-spatial-geometry",
+      "oakId": "OAK-KS3-DT-001",
+      "subject": "Computing",
+      "section": "Computing & Technology",
+      "stage": "KS2/KS3 DESIGN & TECH",
+      "title": "Modular Brick Engineering & 3D Spatial Geometry",
+      "cartridgeId": "lego-blocks"
     },
     {
       "unit": "ks2-multiplication-arrays",
@@ -1492,6 +1501,26 @@
       "tier": "core",
       "hasCheckpoints": false,
       "checkpointCount": 0
+    },
+    {
+      "id": "lego-blocks",
+      "base": "lego-blocks",
+      "type": "Sim",
+      "title": "Modular Brick Engineering & 3D Spatial Geometry",
+      "stage": "KS2/KS3 DESIGN & TECH",
+      "oakId": "OAK-KS3-DT-001",
+      "oakUnit": "ks3-design-technology-modular-structures-spatial-geometry",
+      "subject": "Computing",
+      "section": "Computing & Technology",
+      "mount": "/curriculum/computing/lego-blocks",
+      "duration": 16,
+      "svgFile": "cartridges/lego-blocks.svg",
+      "astFile": "cartridges/lego-blocks.ast",
+      "astbFile": "bytecode/lego-blocks.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "domino-multiplication",

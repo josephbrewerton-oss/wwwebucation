@@ -1,0 +1,68 @@
+(:scene :id "lego-blocks" :type "Sim" :oak-id "OAK-KS3-DT-001" :oak-unit "ks3-design-technology-modular-structures-spatial-geometry" :title "Modular Brick Engineering & 3D Spatial Geometry" :stage "KS2/KS3 DESIGN & TECH" :duration 16.0
+  (:vars (
+    (:var :name "brickType" :val "2x4" :label "Brick Geometry Form Factor")
+    (:var :name "brickColor" :val "red" :label "ABS Injection Color")
+    (:var :name "turntableYaw" :val 0 :min 0 :max 360 :step 1 :unit "deg" :label "Turntable Orbit Yaw")
+    (:var :name "cameraPitch" :val 32 :min 10 :max 75 :step 1 :unit "deg" :label "Camera Elevation Angle")
+    (:var :name "autoSpin" :val true :label "Continuous 360° Orbit")
+    (:var :name "explodeOffset" :val 0 :min 0 :max 50 :step 2 :unit "mm" :label "Exploded Assembly Offset")
+    (:var :name "showDimensions" :val true :label "Engineering Dimension Overlays")
+    (:var :name "stackMode" :val false :label "3-Layer Staggered Wall Assembly")
+    (:var :name "spinSpeed" :val 1.0 :min 0.2 :max 4.0 :step 0.2 :label "Turntable Rotation Velocity")
+  ))
+  (:inputs (
+    (:switch :var "autoSpin" :label "Auto-Turntable 360° Spin")
+    (:slider :var "turntableYaw" :label "Manual Orbit Yaw Angle" :min 0 :max 360 :step 1)
+    (:slider :var "explodeOffset" :label "Explode Assembly Offset (mm)" :min 0 :max 50 :step 2)
+    (:switch :var "stackMode" :label "3-Layer Staggered Wall")
+    (:switch :var "showDimensions" :label "Engineering Dimensions")
+  ))
+  (:computed (
+    (:name "currentYaw" :expr "Math.round((vars.turntableYaw + (vars.autoSpin ? t * 360 * vars.spinSpeed : 0)) % 360)")
+    (:name "volumeMm3" :expr "vars.brickType === '2x2' ? 2458 : (vars.brickType === '1x2' ? 1229 : (vars.brickType === 'tile' ? 1638 : 4915))")
+    (:name "studCount" :expr "vars.brickType === '2x2' ? 4 : (vars.brickType === '1x2' ? 2 : (vars.brickType === 'tile' ? 0 : 8))")
+  ))
+  (:gestures (
+    (:draggable :target "#lego-yaw-knob" :axis "x" :min 110 :max 250)
+    (:draggable :target "#brick-3d-stage" :axis "x" :min -180 :max 180)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.28 :en "Welcome to the Modular Brick Lab! The universal 2×4 brick is engineered around an exact 8.0 mm modular stud matrix." :es "¡Bienvenidos al laboratorio de bloques modulares! El ladrillo clásico de 2×4 está diseñado con una matriz modular exacta de 8.0 mm.")
+    (:start 0.28 :end 0.60 :en "Observe the 3D isometric turntable. Tap Explode to reveal the internal cylindrical anti-stud tubes that create friction clutch power!" :es "Observa la plataforma giratoria isométrica 3D. ¡Activa Despiece para ver los tubos internos de fricción!")
+    (:start 0.60 :end 0.85 :en "In structural engineering, overlapping bricks across seams distributes lateral shear forces, preventing wall collapse." :es "En ingeniería estructural, solapar ladrillos distribuye las fuerzas de corte y evita el colapso.")
+    (:start 0.85 :end 1.00 :en "Experiment with different block types, vibrant palettes, and spin controls to master 3D spatial geometry." :es "Experimenta con diferentes tipos de bloques, paletas de colores y controles de giro para dominar la geometría espacial 3D.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Modular Grid Standard" :rule "The 8.0 mm stud pitch allows endless modular combinations across any axis.")
+    (:t 0.28 :title "Friction Clutch Mechanics" :rule "Internal cylindrical tubes press against top studs with ~3.2 N of holding tension.")
+    (:t 0.60 :title "Shear Load Distribution" :rule "Staggered brick overlapping eliminates continuous vertical fracture lines.")
+    (:t 0.85 :title "Spatial Volume & Geometry" :rule "Standard brick height is 9.6 mm—exactly three stacked 3.2 mm plates.")
+    (:t 1.00 :title "Master Structural Assembly" :rule "Interlocking modular bricks combine isometric math with tactile engineering.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.45
+      :prompt "What is the mathematical ratio between a standard brick's height (9.6 mm) and a flat construction plate's height (3.2 mm)?"
+      :options ("3 : 1 (3 plates stacked equal 1 standard brick)" "2 : 1 (2 plates equal 1 brick)" "4 : 1 (4 plates equal 1 brick)" "1 : 1 (they are identical)")
+      :answer 0
+      :explanation "Standard LEGO-compatible modular systems enforce an exact 3:1 height ratio: three plates stacked together (3 × 3.2 mm = 9.6 mm) equal exactly one brick height.")
+    (:checkpoint :t 0.80
+      :prompt "In masonry and modular brick architecture, why is staggered (overlapping) bonding far stronger than stack bonding?"
+      :options ("Overlapping distributes shear tension across adjacent units, preventing vertical seam cracks." "It uses fewer plastic polymers." "It reduces overall mass." "It allows bricks to slide freely.")
+      :answer 0
+      :explanation "Stack bonding creates unbroken vertical lines of weakness. Staggered interlocking distributes tensile and lateral forces across adjacent bricks, eliminating fault lines.")
+  ))
+  (:bindings (
+    (:target "#brick-3d-stage" :attr "transform" :expr "'rotate(' + ((vars.turntableYaw + (vars.autoSpin ? t * 360 * vars.spinSpeed : 0)) % 360) + ' 0 60)'")
+    (:target "#brick-main-group" :attr "transform" :expr "'translate(0, ' + (-vars.explodeOffset) + ')'")
+    (:target "#brick-bottom-tubes" :attr "opacity" :expr "vars.explodeOffset > 6 ? 1 : 0")
+    (:target "#brick-baseplate" :attr "opacity" :expr "vars.stackMode ? 1 : 0")
+    (:target "#brick-bottom-layer" :attr "opacity" :expr "vars.stackMode ? 1 : 0")
+    (:target "#lego-dimension-overlays" :attr "opacity" :expr "vars.showDimensions ? 1 : 0")
+    (:target "#txt-dimensions-btn" :attr "text" :expr "vars.showDimensions ? '📏 Dimensions: ON' : '📏 Dimensions: OFF'")
+    (:target "#txt-spin-btn" :attr "text" :expr "vars.autoSpin ? '⚡ Spin 360°: ON' : '⚡ Spin 360°: OFF'")
+    (:target "#txt-explode-btn" :attr "text" :expr "vars.explodeOffset > 0 ? '💥 Explode: ON' : '💥 Explode: OFF'")
+    (:target "#txt-stack-mode" :attr "text" :expr "vars.stackMode ? '🧱 WALL STACK: ACTIVE' : '🧱 WALL STACK: OFF'")
+    (:target "#lego-yaw-knob" :attr "cx" :expr "110 + (((vars.turntableYaw + (vars.autoSpin ? t * 360 * vars.spinSpeed : 0)) % 360) / 360) * 140")
+    (:target "#stat-volume" :attr "text" :expr "(vars.brickType === '2x2' ? 2458 : (vars.brickType === '1x2' ? 1229 : (vars.brickType === 'tile' ? 1638 : 4915))) + ' mm³'")
+  ))
+)

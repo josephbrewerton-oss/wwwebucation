@@ -758,6 +758,22 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 0
   },
   {
+    "id": "lego-blocks",
+    "base": "lego-blocks",
+    "type": "Sim",
+    "label": "Modular Brick Engineering & 3D Spatial Geometry",
+    "stage": "KS2/KS3 DESIGN & TECH",
+    "oakId": "OAK-KS3-DT-001",
+    "oakUnit": "ks3-design-technology-modular-structures-spatial-geometry",
+    "subject": "Computing",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/computing/lego-blocks",
+    "section": "Computing & Technology",
+    "hasCheckpoints": true,
+    "checkpointCount": 2
+  },
+  {
     "id": "domino-multiplication",
     "base": "domino-multiplication",
     "type": "Sim",

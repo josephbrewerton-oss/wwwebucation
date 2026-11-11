@@ -1,4 +1,4 @@
-(:scene :id "phet-acid-base" :type "InteractiveLab" :oak-id "OAK-KS4-SCI-PHETACID" :oak-unit "ks4-science-phet-acid-base" :title "Acid-Base Titration Lab" :stage "KS3/KS4 CHEMISTRY"
+(:scene :id "phet-acid-base" :type "Sim" :type "InteractiveLab" :oak-id "OAK-KS4-SCI-PHETACID" :oak-unit "ks4-science-phet-acid-base" :title "Acid-Base Titration Lab" :stage "KS3/KS4 CHEMISTRY"
   (:state (
     ;; Titrant volume in mL: negative = acid added, positive = alkali added, 0 = neutral water
     (:var :name "v_added" :init 0.0 :min -50.0 :max 50.0)

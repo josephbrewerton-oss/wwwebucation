@@ -333,6 +333,11 @@
         this.setupBbcMicroInteractivity();
       }
 
+      // 9bl. Modular Brick Engineering (LEGO compatible) Subsystem
+      if (this.stageSvg.querySelector('#lego-header') || (this.engine.scene && this.engine.scene.id === 'lego-blocks')) {
+        this.setupLegoBlocksInteractivity();
+      }
+
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -6770,6 +6775,308 @@ if (arrowLine) {
         };
         spacebar.addEventListener('pointerdown', onSpace);
         spacebar.addEventListener('click', onSpace);
+      }
+    }
+
+    setupLegoBlocksInteractivity() {
+      const palette = {
+        red: { top: '#f43f5e', side: '#e11d48', dark: '#be123c', border: '#fda4af' },
+        blue: { top: '#3b82f6', side: '#2563eb', dark: '#1d4ed8', border: '#93c5fd' },
+        yellow: { top: '#fde047', side: '#facc15', dark: '#ca8a04', border: '#fef08a' },
+        green: { top: '#4ade80', side: '#16a34a', dark: '#15803d', border: '#86efac' },
+        orange: { top: '#fb923c', side: '#ea580c', dark: '#c2410c', border: '#fed7aa' },
+        white: { top: '#ffffff', side: '#f1f5f9', dark: '#cbd5e1', border: '#e2e8f0' },
+        black: { top: '#475569', side: '#334155', dark: '#1e293b', border: '#64748b' },
+        cyan: { top: '#67e8f9', side: '#06b6d4', dark: '#0891b2', border: '#a5f3fc' }
+      };
+
+      const shapes = {
+        '2x4': {
+          title: '32×16×9.6 mm • 4.9 cm³',
+          vol: '4,915 mm³',
+          clutch: '~3.2 N (Friction)',
+          visibleStuds: ['stud-00', 'stud-10', 'stud-20', 'stud-30', 'stud-01', 'stud-11', 'stud-21', 'stud-31']
+        },
+        '2x2': {
+          title: '16×16×9.6 mm • 2.5 cm³',
+          vol: '2,458 mm³',
+          clutch: '~1.6 N (Friction)',
+          visibleStuds: ['stud-00', 'stud-10', 'stud-01', 'stud-11']
+        },
+        '1x2': {
+          title: '16×8×9.6 mm • 1.2 cm³',
+          vol: '1,229 mm³',
+          clutch: '~0.8 N (Friction)',
+          visibleStuds: ['stud-00', 'stud-01']
+        },
+        'slope': {
+          title: '32×16×9.6 mm (45°) • 3.1 cm³',
+          vol: '3,120 mm³',
+          clutch: '~1.6 N (Friction)',
+          visibleStuds: ['stud-00', 'stud-10', 'stud-20', 'stud-30']
+        },
+        'tile': {
+          title: '32×16×3.2 mm (Smooth) • 1.6 cm³',
+          vol: '1,638 mm³',
+          clutch: '0.0 N (Smooth)',
+          visibleStuds: []
+        }
+      };
+
+      const applyColor = (colorKey) => {
+        const c = palette[colorKey] || palette.red;
+        // 1. Highlight clicked swatch
+        Object.keys(palette).forEach(k => {
+          const sw = this.stageSvg.querySelector(`#col-swatch-${k}`);
+          if (sw) {
+            sw.setAttribute('stroke', k === colorKey ? '#ffffff' : '#334155');
+            sw.setAttribute('stroke-width', k === colorKey ? '2.5' : '1.5');
+          }
+        });
+
+        // 2. Recolor solid brick faces
+        const faceLeft = this.stageSvg.querySelector('#brick-face-left');
+        const faceRight = this.stageSvg.querySelector('#brick-face-right');
+        const faceTop = this.stageSvg.querySelector('#brick-face-top');
+        if (faceLeft) { faceLeft.setAttribute('fill', c.dark); faceLeft.setAttribute('stroke', c.dark); }
+        if (faceRight) { faceRight.setAttribute('fill', c.side); faceRight.setAttribute('stroke', c.dark); }
+        if (faceTop) { faceTop.setAttribute('fill', c.top); faceTop.setAttribute('stroke', c.border); }
+
+        // 3. Recolor all 8 studs
+        const allStudIds = ['stud-00', 'stud-10', 'stud-20', 'stud-30', 'stud-01', 'stud-11', 'stud-21', 'stud-31'];
+        allStudIds.forEach(id => {
+          const g = this.stageSvg.querySelector(`#${id}`);
+          if (g) {
+            const path = g.querySelector('path');
+            if (path) path.setAttribute('fill', c.dark);
+            const ell = g.querySelector('ellipse');
+            if (ell) {
+              ell.setAttribute('fill', c.top);
+              ell.setAttribute('stroke', c.border);
+            }
+          }
+        });
+
+        // 4. Recolor internal clutch tubes
+        const tubes = this.stageSvg.querySelectorAll('#brick-bottom-tubes ellipse');
+        tubes.forEach((tube, idx) => {
+          if (idx % 2 === 0) {
+            tube.setAttribute('fill', c.dark);
+            tube.setAttribute('stroke', c.top);
+          } else {
+            tube.setAttribute('fill', '#0f172a');
+          }
+        });
+
+        if (this.engine && this.engine.vars) {
+          this.engine.vars.brickColor = colorKey;
+          this.engine.applyBindings(this.engine.progress || 0);
+        }
+      };
+
+      const applyShape = (shapeKey) => {
+        const shape = shapes[shapeKey] || shapes['2x4'];
+        
+        // Highlight active shape button
+        ['2x4', '2x2', '1x2', 'slope', 'tile'].forEach(k => {
+          const btn = this.stageSvg.querySelector(`#btn-type-${k}`);
+          if (btn) {
+            const rect = btn.querySelector('rect');
+            const txt = btn.querySelector('text');
+            const isActive = k === shapeKey;
+            if (rect) {
+              rect.setAttribute('fill', isActive ? '#1e293b' : '#0f172a');
+              rect.setAttribute('stroke', isActive ? '#38bdf8' : '#334155');
+              rect.setAttribute('stroke-width', isActive ? '1.5' : '1');
+            }
+            if (txt) {
+              txt.setAttribute('fill', isActive ? '#ffffff' : '#94a3b8');
+            }
+          }
+        });
+
+        // Filter stud visibility
+        const allStudIds = ['stud-00', 'stud-10', 'stud-20', 'stud-30', 'stud-01', 'stud-11', 'stud-21', 'stud-31'];
+        allStudIds.forEach(id => {
+          const g = this.stageSvg.querySelector(`#${id}`);
+          if (g) {
+            g.style.display = shape.visibleStuds.includes(id) ? 'inline' : 'none';
+          }
+        });
+
+        // Update telemetry badge and stat text
+        const badge = this.stageSvg.querySelector('#lego-badge-text');
+        if (badge) badge.textContent = shape.title;
+        const statVol = this.stageSvg.querySelector('#stat-volume');
+        if (statVol) statVol.textContent = shape.vol;
+
+        if (this.engine && this.engine.vars) {
+          this.engine.vars.brickType = shapeKey;
+          this.engine.applyBindings(this.engine.progress || 0);
+        }
+      };
+
+      // 1. Color Palette Click Handlers
+      Object.keys(palette).forEach(colorKey => {
+        const sw = this.stageSvg.querySelector(`#col-swatch-${colorKey}`);
+        if (sw) {
+          const onClick = (e) => {
+            if (e) e.stopPropagation();
+            this.playAudioTone(880, 'sine', 0.04, 0.1);
+            applyColor(colorKey);
+          };
+          sw.addEventListener('pointerdown', onClick);
+          sw.addEventListener('click', onClick);
+        }
+      });
+
+      // 2. Shape Buttons Click Handlers
+      ['2x4', '2x2', '1x2', 'slope', 'tile'].forEach(shapeKey => {
+        const btn = this.stageSvg.querySelector(`#btn-type-${shapeKey}`);
+        if (btn) {
+          const onShapeClick = (e) => {
+            if (e) e.stopPropagation();
+            this.playAudioTone(640, 'triangle', 0.05, 0.12);
+            applyShape(shapeKey);
+          };
+          btn.addEventListener('pointerdown', onShapeClick);
+          btn.addEventListener('click', onShapeClick);
+        }
+      });
+
+      // 3. Action Toolbar: Spin 360° Toggle
+      const btnSpin = this.stageSvg.querySelector('#btn-action-spin');
+      if (btnSpin) {
+        const onSpinClick = (e) => {
+          if (e) e.stopPropagation();
+          this.playAudioTone(520, 'sine', 0.04, 0.1);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.autoSpin = !this.engine.vars.autoSpin;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        btnSpin.addEventListener('pointerdown', onSpinClick);
+        btnSpin.addEventListener('click', onSpinClick);
+      }
+
+      // 4. Action Toolbar: Explode View Toggle
+      const btnExplode = this.stageSvg.querySelector('#btn-action-explode');
+      if (btnExplode) {
+        const onExplodeClick = (e) => {
+          if (e) e.stopPropagation();
+          const isExploded = this.engine && this.engine.vars ? (this.engine.vars.explodeOffset > 0) : false;
+          this.playAudioTone(isExploded ? 400 : 700, 'sine', 0.06, 0.12);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.explodeOffset = isExploded ? 0 : 35;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        btnExplode.addEventListener('pointerdown', onExplodeClick);
+        btnExplode.addEventListener('click', onExplodeClick);
+      }
+
+      // 5. Action Toolbar: Dimensions Toggle
+      const btnDimensions = this.stageSvg.querySelector('#btn-action-dimensions');
+      if (btnDimensions) {
+        const onDimsClick = (e) => {
+          if (e) e.stopPropagation();
+          this.playAudioTone(600, 'sine', 0.04, 0.1);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.showDimensions = !this.engine.vars.showDimensions;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        btnDimensions.addEventListener('pointerdown', onDimsClick);
+        btnDimensions.addEventListener('click', onDimsClick);
+      }
+
+      // 6. Action Toolbar: Wall Stack Toggle
+      const btnStack = this.stageSvg.querySelector('#btn-toggle-stack');
+      if (btnStack) {
+        const onStackClick = (e) => {
+          if (e) e.stopPropagation();
+          this.playAudioTone(480, 'sawtooth', 0.05, 0.1);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.stackMode = !this.engine.vars.stackMode;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        btnStack.addEventListener('pointerdown', onStackClick);
+        btnStack.addEventListener('click', onStackClick);
+      }
+
+      // 7. Action Toolbar: Reset View
+      const btnReset = this.stageSvg.querySelector('#btn-action-reset');
+      if (btnReset) {
+        const onResetClick = (e) => {
+          if (e) e.stopPropagation();
+          this.playAudioTone(500, 'sine', 0.05, 0.1);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.turntableYaw = 0;
+            this.engine.vars.autoSpin = true;
+            this.engine.vars.explodeOffset = 0;
+            this.engine.vars.showDimensions = true;
+            this.engine.vars.stackMode = false;
+            this.engine.vars.brickType = '2x4';
+            this.engine.vars.brickColor = 'red';
+            applyColor('red');
+            applyShape('2x4');
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+        btnReset.addEventListener('pointerdown', onResetClick);
+        btnReset.addEventListener('click', onResetClick);
+      }
+
+      // 8. Turntable Direct Drag & Orbit Scrubber
+      const knob = this.stageSvg.querySelector('#lego-yaw-knob');
+      const turntableRoot = this.stageSvg.querySelector('#turntable-root');
+      
+      let isDraggingTurntable = false;
+      let startX = 0;
+      let startYaw = 0;
+
+      const onPointerDown = (e) => {
+        isDraggingTurntable = true;
+        startX = e.clientX;
+        startYaw = (this.engine && this.engine.vars) ? this.engine.vars.turntableYaw : 0;
+        if (this.engine && this.engine.vars) {
+          this.engine.vars.autoSpin = false;
+        }
+        if (e.target.setPointerCapture && e.pointerId) {
+          try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+
+      const onPointerMove = (e) => {
+        if (!isDraggingTurntable) return;
+        const dx = e.clientX - startX;
+        const newYaw = (startYaw + dx * 0.8) % 360;
+        const clampedYaw = (newYaw + 360) % 360;
+        if (this.engine && this.engine.vars) {
+          this.engine.vars.turntableYaw = Math.round(clampedYaw);
+          this.engine.applyBindings(this.engine.progress || 0);
+        }
+      };
+
+      const onPointerUp = (e) => {
+        isDraggingTurntable = false;
+        if (e.target.releasePointerCapture && e.pointerId) {
+          try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+        }
+      };
+
+      if (knob) {
+        knob.addEventListener('pointerdown', onPointerDown);
+        knob.addEventListener('pointermove', onPointerMove);
+        knob.addEventListener('pointerup', onPointerUp);
+        knob.addEventListener('pointercancel', onPointerUp);
+      }
+      if (turntableRoot) {
+        turntableRoot.addEventListener('pointerdown', onPointerDown);
+        turntableRoot.addEventListener('pointermove', onPointerMove);
+        turntableRoot.addEventListener('pointerup', onPointerUp);
+        turntableRoot.addEventListener('pointercancel', onPointerUp);
       }
     }
   }

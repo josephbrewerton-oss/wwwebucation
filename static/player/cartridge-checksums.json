@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-10T10:00:42.612Z",
-  "totalCartridges": 66,
-  "masterChecksum": "41ecf939d5789e861ba52da1ea24ae7f3e66ffddb7959c3c4b5ae63e26c32f64",
+  "generatedAt": "2026-11-11T08:31:47.677Z",
+  "totalCartridges": 67,
+  "masterChecksum": "cefbacccaeca466a0861db166174c0008dd67a0a4e39bc92746877e974074566",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -373,6 +373,22 @@
       "seal": "2e580817c7a1a1d638e021a68f655c2f00d870964c056f6db373c4fc48d261fa",
       "certified": true
     },
+    "lego-blocks": {
+      "id": "lego-blocks",
+      "title": "Modular Brick Engineering & 3D Spatial Geometry",
+      "stage": "KS2/KS3 DESIGN & TECH",
+      "type": "Sim",
+      "astSha256": "19c5a043aab2e8dfe651b7f8642d9957e6156b947ea91939430461ab946859b7",
+      "svgSha256": "7ec3a319b9dac25916df8faaab28aa16304f9a262bc1b0f55b40340b24776ac0",
+      "astbSha256": "22df026d69021a887e60d226c2a0ae9b39eae0308359b275c6557088ab7e769a",
+      "astbBytes": 3898,
+      "astBytes": 6394,
+      "svgBytes": 25348,
+      "tier": "native",
+      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
+      "seal": "14e35cfe169dfe9e605a3e0496d358922756d7ab9110d62fff394d2017ca3126",
+      "certified": true
+    },
     "liturgical-calendar": {
       "id": "liturgical-calendar",
       "title": "The Catholic Liturgical Year: Sacred Seasons & Colors",
@@ -679,18 +695,18 @@
     },
     "phet-acid-base": {
       "id": "phet-acid-base",
-      "title": "PhET Acid-Base Distillation",
+      "title": "Acid-Base Titration Lab",
       "stage": "KS3/KS4 CHEMISTRY",
-      "type": "Slide",
-      "astSha256": "9f508b47a7f9b7453b64476d5c255e5c7e3125d64cc0a2199c78511d3012326e",
+      "type": "Sim",
+      "astSha256": "259b0f765385d4df25ba414d8ba59c025a8b967457a3cf9d971dbcd5ae8faaaf",
       "svgSha256": "569a21d60c594650c5f6c7783552c1d068a921aa14f0f9a894fb47a5f46f0e7c",
-      "astbSha256": "355ceb0e0fa29d9c30704ea0029e1b4f5c47d3b1619059b2494b412ddec305f3",
-      "astbBytes": 1180,
-      "astBytes": 1878,
+      "astbSha256": "d2d68c97375421438b6ee6ed5656a2e443cb36520190fa536abdf18040692664",
+      "astbBytes": 592,
+      "astBytes": 2583,
       "svgBytes": 2571,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "7c277c5f46efec6afa6c0c40f90ba53ecea5ee59ba3fe5f71df8e4687996ff7d",
+      "seal": "6ac0182ae5732397b6b22939ce1d08cc2666eff3628ebe6990d78aa97c60c007",
       "certified": true
     },
     "phet-balancing-chemical": {
