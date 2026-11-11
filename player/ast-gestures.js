@@ -6858,11 +6858,21 @@ if (arrowLine) {
         });
 
         // 4. Recolor internal clutch tubes (Negative-space compound annular paths)
-        const tubeRims = this.stageSvg.querySelectorAll('#brick-bottom-tubes .tube-rim, #brick-bottom-tubes ellipse');
+        const tubeRims = this.stageSvg.querySelectorAll('#brick-bottom-tubes .tube-rim, #brick-bottom-tubes ellipse, #brick-underside-view .under-tube-rim');
         tubeRims.forEach((elem) => {
           elem.setAttribute('fill', c.dark);
           elem.setAttribute('stroke', c.top);
         });
+
+        // 5. Recolor underside cavity elements
+        const underWallLeft = this.stageSvg.querySelector('#under-wall-left');
+        const underWallRight = this.stageSvg.querySelector('#under-wall-right');
+        const underRimOuter = this.stageSvg.querySelector('#under-rim-outer');
+        const underCavityVoid = this.stageSvg.querySelector('#under-cavity-void');
+        if (underWallLeft) { underWallLeft.setAttribute('fill', c.dark); underWallLeft.setAttribute('stroke', c.dark); }
+        if (underWallRight) { underWallRight.setAttribute('fill', c.side); underWallRight.setAttribute('stroke', c.dark); }
+        if (underRimOuter) { underRimOuter.setAttribute('fill', c.top); underRimOuter.setAttribute('stroke', c.border); }
+        if (underCavityVoid) { underCavityVoid.setAttribute('stroke', c.dark); }
 
         if (this.engine && this.engine.vars) {
           this.engine.vars.brickColor = colorKey;
@@ -6899,6 +6909,24 @@ if (arrowLine) {
             g.style.display = shape.visibleStuds.includes(id) ? 'inline' : 'none';
           }
         });
+
+        // Filter underside clutch tube visibility by brick form factor
+        const tube1 = this.stageSvg.querySelector('#under-tube-1');
+        const tube2 = this.stageSvg.querySelector('#under-tube-2');
+        const tube3 = this.stageSvg.querySelector('#under-tube-3');
+        if (shapeKey === 'tile') {
+          if (tube1) tube1.style.display = 'none';
+          if (tube2) tube2.style.display = 'none';
+          if (tube3) tube3.style.display = 'none';
+        } else if (shapeKey === '2x2' || shapeKey === '1x2') {
+          if (tube1) tube1.style.display = 'none';
+          if (tube2) tube2.style.display = 'inline';
+          if (tube3) tube3.style.display = 'none';
+        } else {
+          if (tube1) tube1.style.display = 'inline';
+          if (tube2) tube2.style.display = 'inline';
+          if (tube3) tube3.style.display = 'inline';
+        }
 
         // Update telemetry badge and stat text
         const badge = this.stageSvg.querySelector('#lego-badge-text');
@@ -6955,7 +6983,29 @@ if (arrowLine) {
         btnSpin.addEventListener('click', onSpinClick);
       }
 
-      // 4. Action Toolbar: Explode View Toggle
+      // 4. Action Toolbar: Flip to Underside Cavity Toggle
+      const btnFlip = this.stageSvg.querySelector('#btn-action-flip');
+      const btnToggleFlip = this.stageSvg.querySelector('#btn-toggle-flip');
+      const onFlipClick = (e) => {
+        if (e) e.stopPropagation();
+        this.playAudioTone(580, 'sine', 0.05, 0.12);
+        if (this.engine && this.engine.vars) {
+          const isFlipped = !this.engine.vars.flipUnderside;
+          this.engine.vars.flipUnderside = isFlipped;
+          this.engine.vars.cameraPitch = isFlipped ? -35 : 32;
+          this.engine.applyBindings(this.engine.progress || 0);
+        }
+      };
+      if (btnFlip) {
+        btnFlip.addEventListener('pointerdown', onFlipClick);
+        btnFlip.addEventListener('click', onFlipClick);
+      }
+      if (btnToggleFlip) {
+        btnToggleFlip.addEventListener('pointerdown', onFlipClick);
+        btnToggleFlip.addEventListener('click', onFlipClick);
+      }
+
+      // 5. Action Toolbar: Explode View Toggle
       const btnExplode = this.stageSvg.querySelector('#btn-action-explode');
       if (btnExplode) {
         const onExplodeClick = (e) => {
@@ -6971,7 +7021,7 @@ if (arrowLine) {
         btnExplode.addEventListener('click', onExplodeClick);
       }
 
-      // 5. Action Toolbar: Dimensions Toggle
+      // 6. Action Toolbar: Dimensions Toggle
       const btnDimensions = this.stageSvg.querySelector('#btn-action-dimensions');
       if (btnDimensions) {
         const onDimsClick = (e) => {
@@ -6986,7 +7036,7 @@ if (arrowLine) {
         btnDimensions.addEventListener('click', onDimsClick);
       }
 
-      // 6. Action Toolbar: Wall Stack Toggle
+      // 7. Action Toolbar: Wall Stack Toggle
       const btnStack = this.stageSvg.querySelector('#btn-toggle-stack');
       if (btnStack) {
         const onStackClick = (e) => {
@@ -7001,7 +7051,7 @@ if (arrowLine) {
         btnStack.addEventListener('click', onStackClick);
       }
 
-      // 7. Action Toolbar: Reset View
+      // 8. Action Toolbar: Reset View
       const btnReset = this.stageSvg.querySelector('#btn-action-reset');
       if (btnReset) {
         const onResetClick = (e) => {
@@ -7009,6 +7059,8 @@ if (arrowLine) {
           this.playAudioTone(500, 'sine', 0.05, 0.1);
           if (this.engine && this.engine.vars) {
             this.engine.vars.turntableYaw = 0;
+            this.engine.vars.cameraPitch = 32;
+            this.engine.vars.flipUnderside = false;
             this.engine.vars.autoSpin = true;
             this.engine.vars.explodeOffset = 0;
             this.engine.vars.showDimensions = true;
@@ -7024,18 +7076,22 @@ if (arrowLine) {
         btnReset.addEventListener('click', onResetClick);
       }
 
-      // 8. Turntable Direct Drag & Orbit Scrubber
+      // 9. Turntable Direct Drag & Orbit Scrubber (2D Trackball: Horizontal Yaw + Vertical Pitch/Flip)
       const knob = this.stageSvg.querySelector('#lego-yaw-knob');
       const turntableRoot = this.stageSvg.querySelector('#turntable-root');
       
       let isDraggingTurntable = false;
       let startX = 0;
+      let startY = 0;
       let startYaw = 0;
+      let startPitch = 32;
 
       const onPointerDown = (e) => {
         isDraggingTurntable = true;
         startX = e.clientX;
+        startY = e.clientY;
         startYaw = (this.engine && this.engine.vars) ? this.engine.vars.turntableYaw : 0;
+        startPitch = (this.engine && this.engine.vars) ? (this.engine.vars.cameraPitch !== undefined ? this.engine.vars.cameraPitch : 32) : 32;
         if (this.engine && this.engine.vars) {
           this.engine.vars.autoSpin = false;
         }
@@ -7047,10 +7103,20 @@ if (arrowLine) {
       const onPointerMove = (e) => {
         if (!isDraggingTurntable) return;
         const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+
+        // Horizontal drag: Orbit Yaw (0° - 360°)
         const newYaw = (startYaw + dx * 0.8) % 360;
         const clampedYaw = (newYaw + 360) % 360;
+
+        // Vertical drag: Camera Pitch Elevation (-65° to +65°) & Seamless Underside Tumble
+        const newPitch = Math.max(-65, Math.min(65, startPitch - dy * 0.5));
+        const isUnderside = newPitch < 0;
+
         if (this.engine && this.engine.vars) {
           this.engine.vars.turntableYaw = Math.round(clampedYaw);
+          this.engine.vars.cameraPitch = Math.round(newPitch);
+          this.engine.vars.flipUnderside = isUnderside;
           this.engine.applyBindings(this.engine.progress || 0);
         }
       };
