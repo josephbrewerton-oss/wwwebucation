@@ -155,25 +155,22 @@
           <!-- Bottom Cavity Opening Inner Shadow -->
           <polygon points="-108,30 -36,-6 108,66 36,102" fill="#2d0510" stroke="#881337" stroke-width="1.5" />
           
-          <!-- Internal Tube 1 (Left) -->
+          <!-- Internal Tube 1 (Left, Compound Annular Negative Space Path) -->
           <g id="tube-1" transform="translate(-36, 12)">
             <path d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
-            <ellipse cx="0" cy="-14" rx="13" ry="6.5" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
-            <ellipse cx="0" cy="-14" rx="7.5" ry="3.8" fill="#2d0510" />
+            <path class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
           </g>
           
-          <!-- Internal Tube 2 (Center) -->
+          <!-- Internal Tube 2 (Center, Compound Annular Negative Space Path) -->
           <g id="tube-2" transform="translate(0, 30)">
             <path d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
-            <ellipse cx="0" cy="-14" rx="13" ry="6.5" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
-            <ellipse cx="0" cy="-14" rx="7.5" ry="3.8" fill="#2d0510" />
+            <path class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
           </g>
 
-          <!-- Internal Tube 3 (Right) -->
+          <!-- Internal Tube 3 (Right, Compound Annular Negative Space Path) -->
           <g id="tube-3" transform="translate(36, 48)">
             <path d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
-            <ellipse cx="0" cy="-14" rx="13" ry="6.5" fill="#be123c" stroke="#f43f5e" stroke-width="1.5" />
-            <ellipse cx="0" cy="-14" rx="7.5" ry="3.8" fill="#2d0510" />
+            <path class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
           </g>
 
           <!-- Explode Callout Label -->

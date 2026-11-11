@@ -378,32 +378,7 @@ export function renderHomePage(): HTMLElement {
     updateActivePreset((e.target as HTMLSelectElement).value);
   });
 
-  // 4. Async Ingestion from sitemap.ast (falls back instantly to local list if offline)
-  fetch(`${base}sitemap.ast`)
-    .then(r => r.ok ? r.text() : Promise.reject())
-    .then(async (raw) => {
-      const { parseSExpr } = await import('../utils/sexprParser');
-      const ast = parseSExpr(raw);
-      if (Array.isArray(ast)) {
-        const cartridgeNode = (ast as any[]).find((node: any) => Array.isArray(node) && node[0] === ':sitemap')
-          ?.find((sub: any) => Array.isArray(sub) && sub[0] === ':cartridges');
-
-        if (cartridgeNode && Array.isArray(cartridgeNode[1])) {
-          cartridges = cartridgeNode[1].map((c: any) => ({
-            id: Array.isArray(c) ? c.find((attr: any) => Array.isArray(attr) && attr[0] === ':id')?.[1] || '' : '',
-            title: Array.isArray(c) ? c.find((attr: any) => Array.isArray(attr) && attr[0] === ':title')?.[1] || '' : '',
-            mount: Array.isArray(c) ? c.find((attr: any) => Array.isArray(attr) && attr[0] === ':mount')?.[1] || '' : '',
-            tier: Array.isArray(c) ? c.find((attr: any) => Array.isArray(attr) && attr[0] === ':tier')?.[1] || 'core' : 'core'
-          })).filter((c: CartridgeRoute) => c.id);
-
-          renderSelectors();
-        }
-      }
-    })
-    .catch(() => {
-      // Fallback is already loaded
-    });
-
+  // 4. Render selectors directly from canonical precompiled cartridge manifest
   renderSelectors();
   return container;
 }

@@ -6,6 +6,11 @@
 - **Styling**: Tailwind CSS & scoped CSS without heavy framework overrides. `html { scrollbar-gutter: stable; }` must be preserved to prevent Cumulative Layout Shift (CLS).
 - **Static Assets**: Located in `static/` (served at `/` via Vite's `publicDir: 'static'`).
 - **Build & Verification**: `npm run build` runs icon generation, Oak manifest compilation, AST bytecode generation, and `vite build` into `dist/`. Build time must remain sub-second (< 1s). Do NOT re-introduce Docusaurus, React, or SSR build tools.
+- **Mobile PageSpeed & Zero-Forced-Reflow Invariant**:
+  - Never query geometric properties (`offsetWidth`, `getBoundingClientRect`, `scrollIntoView`, `scrollTo`) synchronously in the same callstack after modifying the DOM.
+  - On page boot, the browser viewport is already at `(0, 0)`; never call `window.scrollTo` on initial load. All route-change scroll adjustments must be deferred to `requestAnimationFrame` with a `window.scrollY` offset check.
+  - Non-critical iframes (e.g., `#neural-worker-guest-vm`) and AI hypervisor scripts must be loaded during idle via `requestIdleCallback`.
+  - Heavy on-demand chunks (`bsl-engine`, `cartridge-vault`, `vendor-webllm`, `hypervisor`) are strictly excluded from `<link rel="modulepreload">` in the HTML entry point to keep initial mobile downloads < 20 KB gzipped.
 - **Verification Invariants**: Test suites must pass cleanly:
   - `npm run test:ast` (End-to-End AST & Manifest determinism)
   - `npm run test:simulations` (Cross-subject simulation engine)

@@ -185,6 +185,17 @@ export default defineConfig(({ mode }) => ({
     outDir: 'dist',
     sourcemap: false,
     chunkSizeWarningLimit: 1000,
+    modulePreload: {
+      resolveDependencies(_filename, deps) {
+        // Exclude heavy lazy chunks from initial HTML head modulepreload to prevent critical chain bloat
+        return deps.filter((dep) => {
+          return !dep.includes('bsl-engine') &&
+                 !dep.includes('cartridge-vault') &&
+                 !dep.includes('hypervisor') &&
+                 !dep.includes('vendor-webllm');
+        });
+      },
+    },
     rollupOptions: {
       output: {
         manualChunks(id) {

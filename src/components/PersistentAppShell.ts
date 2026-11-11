@@ -363,17 +363,30 @@ export class PersistentAppShellElement extends HTMLElement {
 
         <div id="bsl-overlay-slot" style="position:fixed; bottom:0; right:0; pointer-events:none; z-index:9995;"></div>
         <div id="modal-slot"></div>
-        <iframe id="neural-worker-guest-vm" src="${base}worker.html?v=1.3.0" style="display:none;" title="neural-worker-guest-vm"></iframe>
       </div>
     `;
 
-    const vmFrame = this.querySelector<HTMLIFrameElement>('#neural-worker-guest-vm');
-    if (vmFrame) {
+    // Defer neural guest VM creation & hypervisor module load until main thread is idle
+    const mountGuestVm = () => {
+      if (this.querySelector('#neural-worker-guest-vm')) return;
+      const vmFrame = document.createElement('iframe');
+      vmFrame.id = 'neural-worker-guest-vm';
+      vmFrame.src = `${base}worker.html?v=1.3.0`;
+      vmFrame.style.display = 'none';
+      vmFrame.title = 'neural-worker-guest-vm';
+      this.appendChild(vmFrame);
+
       import('../engine/hypervisor').then(({ hypervisor }) => {
         hypervisor?.registerWorkerIframe?.(vmFrame);
       }).catch((err) => {
         console.warn('[PersistentAppShell] Could not initialize neural hypervisor:', err);
       });
+    };
+
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(mountGuestVm, { timeout: 4000 });
+    } else {
+      setTimeout(mountGuestVm, 2500);
     }
   }
 

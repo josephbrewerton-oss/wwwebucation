@@ -18,6 +18,8 @@ function resolveView(mod: any, namedFn?: string): RouteView {
   return '';
 }
 
+let isInitialBoot = true;
+
 const routes: Record<string, RouteHandler> = {
   '/': () => import('./pages/index').then(m => resolveView(m, 'renderHomePage')),
   '/player': () => import('./pages/media-player').then(m => resolveView(m, 'renderPlayerPage')),
@@ -127,14 +129,29 @@ export async function handleRouteChange() {
       outlet.appendChild(view);
     }
 
-    if (window.location.hash) {
-      const hashEl = document.querySelector(window.location.hash);
-      if (hashEl) {
-        hashEl.scrollIntoView({ behavior: 'smooth' });
-        return;
+    // Zero-Forced-Reflow Guarantee:
+    // Avoid synchronous layout queries (querySelector + scrollIntoView / scrollTo) immediately after mutating outlet DOM.
+    // Defer scrolling to requestAnimationFrame so styles & layout compute naturally during the browser's normal frame lifecycle.
+    const isBoot = isInitialBoot;
+    isInitialBoot = false;
+
+    requestAnimationFrame(() => {
+      if (window.location.hash) {
+        try {
+          const hashEl = document.querySelector(window.location.hash);
+          if (hashEl) {
+            hashEl.scrollIntoView({ behavior: 'smooth' });
+            return;
+          }
+        } catch (_) {}
       }
-    }
-    window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+
+      // On initial boot, the document is already at (0, 0). Never call scrollTo on boot.
+      // On subsequent SPA navigations, only scroll to top if the viewport was scrolled.
+      if (!isBoot && typeof window !== 'undefined' && (window.scrollY || window.pageYOffset)) {
+        window.scrollTo({ top: 0, behavior: 'instant' as ScrollBehavior });
+      }
+    });
   } catch (err) {
     console.error('Route navigation error:', err);
     outlet.innerHTML = `

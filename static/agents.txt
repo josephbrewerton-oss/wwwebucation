@@ -21,8 +21,9 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 # - UI Architecture: Custom Web Components (<app-shell>, <native-bsl-interpreter>)
 #   with in-memory micro-routing inside #ast-persistent-viewport via #page-outlet.
 # - Stability: html { scrollbar-gutter: stable; } prevents Cumulative Layout Shift (CLS).
-# - Cold Start: Sub-second build (< 1s Vite 8+ Rolldown/esbuild), instant client boot.
 # - Offline Guarantee: 100% operational offline via ServiceWorker cache & IndexedDB.
+# - Zero-Forced-Reflow: Geometric queries deferred to requestAnimationFrame; initial boot
+#   skips window.scrollTo (already at 0,0); lazy chunks excluded from head modulepreload.
 #
 # SYSTEM 2: THE AST VECTOR PLAYER & FANTASY ENGINE (/static/player/)
 # - Autonomy: Completely decoupled runtime (< 35 KB gzipped, < 150 KB uncompressed)

@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-11T11:43:45.621Z",
+  "generatedAt": "2026-11-11T12:29:24.127Z",
   "totalCartridges": 67,
-  "masterChecksum": "39cd3cda864cd29341a0f0c4170a39749e4daef769e9bff2fa80df270c936c27",
+  "masterChecksum": "e67e73cc0ebfd24a7a0b8d4c10d661c39cbc1ab7ce78a67dcacb39ef6a017d41",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -360,14 +360,14 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "stage": "KS3/KS4 PHYSICS & CHEMISTRY",
       "type": "Sim",
       "astSha256": "26874ab510433e6ea1a8163dd35fd38d0e6fa27c883b3e694b6aed1bf9df6f04",
-      "svgSha256": "f330c66373c2e5b84a175f5231e0512468a02d596fea8f908251c9e42f47b427",
+      "svgSha256": "d91747d06a127437c0ad704ea9766af11aaede0a056c673a67e4a7fb12fc6d0e",
       "astbSha256": "72931e7917951f8c9e1df7364dbeea825d114fc64bc80d5ba7b623a85211f04f",
       "astbBytes": 8304,
       "astBytes": 10601,
-      "svgBytes": 8187,
+      "svgBytes": 8235,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "ae244f4b44077912992262cd199afdde355876c41ab727887615f827c1ac2479",
+      "seal": "89e42fece976893ca51e5bc777d757e65a9380d640cbb12bcceec9708f21d926",
       "certified": true
     },
     "languages": {
@@ -408,14 +408,14 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "stage": "KS2/KS3 DESIGN & TECH",
       "type": "Sim",
       "astSha256": "19c5a043aab2e8dfe651b7f8642d9957e6156b947ea91939430461ab946859b7",
-      "svgSha256": "253b96f8906820854ee3b59b8bed53b98b3893c8907020e06a0774ea9ef38ecd",
+      "svgSha256": "3f5ccac77bbb680a8f09619acbd5aa870a0553b11ace1717a5161471cfeda28e",
       "astbSha256": "22df026d69021a887e60d226c2a0ae9b39eae0308359b275c6557088ab7e769a",
       "astbBytes": 3898,
       "astBytes": 6394,
-      "svgBytes": 27036,
+      "svgBytes": 27303,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "fd47a353e39e3a0685e2827dc9922741cea65d9d10aa91628c36c341202e6894",
+      "seal": "96ba075ee6961c808363aa8270bf9e48c7f13dff1926cd24a659ccf523dd25b1",
       "certified": true
     },
     "liturgical-calendar": {
