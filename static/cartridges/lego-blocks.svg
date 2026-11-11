@@ -179,84 +179,127 @@
           </text>
         </g>
 
-        <!-- Main Solid Brick Body -->
-        <g id="brick-solid-body">
-          <!-- 1. Left Lateral Wall (Long 32mm side, In Shadow) -->
-          <polygon id="brick-face-left" points="-108,-18 36,54 36,102 -108,30" fill="url(#brick-grad-red-left)" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
+        <!-- Main Solid Brick Body (Top View with Studs) -->
+        <g id="brick-top-view" opacity="1" style="transition: opacity 0.25s ease;">
+          <g id="brick-solid-body">
+            <!-- 1. Left Lateral Wall (Long 32mm side, In Shadow) -->
+            <polygon id="brick-face-left" points="-108,-18 36,54 36,102 -108,30" fill="url(#brick-grad-red-left)" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
 
-          <!-- 2. Right Lateral Wall (Short 16mm side, Diffuse Reflected) -->
-          <polygon id="brick-face-right" points="36,54 108,18 108,66 36,102" fill="url(#brick-grad-red-right)" stroke="#881337" stroke-width="1.5" stroke-linejoin="round" />
+            <!-- 2. Right Lateral Wall (Short 16mm side, Diffuse Reflected) -->
+            <polygon id="brick-face-right" points="36,54 108,18 108,66 36,102" fill="url(#brick-grad-red-right)" stroke="#881337" stroke-width="1.5" stroke-linejoin="round" />
 
-          <!-- 3. Top Face (Direct Light Plane, 2×4 Isometric Rhombus) -->
-          <polygon id="brick-face-top" points="-108,-18 -36,-54 108,18 36,54" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.5" stroke-linejoin="round" />
+            <!-- 3. Top Face (Direct Light Plane, 2×4 Isometric Rhombus) -->
+            <polygon id="brick-face-top" points="-108,-18 -36,-54 108,18 36,54" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.5" stroke-linejoin="round" />
 
-          <!-- Edge Highlight Bevel Lines -->
-          <line x1="-108" y1="-18" x2="36" y2="54" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.35" />
-          <line x1="36" y1="54" x2="108" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
-          <line x1="36" y1="54" x2="36" y2="102" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
+            <!-- Edge Highlight Bevel Lines -->
+            <line x1="-108" y1="-18" x2="36" y2="54" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.35" />
+            <line x1="36" y1="54" x2="108" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
+            <line x1="36" y1="54" x2="36" y2="102" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
 
-          <!-- 4. Top Stud Array (8 Cylinders on an exact 8.0 mm Modular Isometric Matrix) -->
-          <!-- Ordered Back-to-Front for flawless Z-index occlusion -->
-          <g id="brick-studs-container">
-            <!-- Row 1: Back Row (j = 1) -->
-            <!-- Stud (0,1) -->
-            <g id="stud-01" transform="translate(-36, -36)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
-            <!-- Stud (1,1) -->
-            <g id="stud-11" transform="translate(0, -18)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
-            <!-- Stud (2,1) -->
-            <g id="stud-21" transform="translate(36, 0)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
-            <!-- Stud (3,1) -->
-            <g id="stud-31" transform="translate(72, 18)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
+            <!-- 4. Top Stud Array (8 Cylinders on an exact 8.0 mm Modular Isometric Matrix) -->
+            <g id="brick-studs-container">
+              <!-- Row 1: Back Row (j = 1) -->
+              <g id="stud-01" transform="translate(-36, -36)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-11" transform="translate(0, -18)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-21" transform="translate(36, 0)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-31" transform="translate(72, 18)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
 
-            <!-- Row 2: Front Row (j = 0) -->
-            <!-- Stud (0,0) -->
-            <g id="stud-00" transform="translate(-72, -18)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              <!-- Row 2: Front Row (j = 0) -->
+              <g id="stud-00" transform="translate(-72, -18)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-10" transform="translate(-36, 0)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-20" transform="translate(0, 18)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
+              <g id="stud-30" transform="translate(36, 36)">
+                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
+                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
+                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+              </g>
             </g>
-            <!-- Stud (1,0) -->
-            <g id="stud-10" transform="translate(-36, 0)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
-            <!-- Stud (2,0) -->
-            <g id="stud-20" transform="translate(0, 18)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
-            <!-- Stud (3,0) -->
-            <g id="stud-30" transform="translate(36, 36)">
-              <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-              <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-              <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-              <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-            </g>
+          </g>
+        </g>
+
+        <!-- Underside Brick Assembly (Flipped View showing internal clutch tubes, cavity & ribs) -->
+        <g id="brick-underside-view" opacity="0" style="display:none; transition: opacity 0.25s ease;">
+          <!-- 1. Outer Inverted Perimeter Walls (Depth extending downwards in isometric view) -->
+          <polygon id="under-wall-left" points="-108,30 36,102 36,150 -108,78" fill="url(#brick-grad-red-left)" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
+          <polygon id="under-wall-right" points="36,102 108,66 108,114 36,150" fill="url(#brick-grad-red-right)" stroke="#881337" stroke-width="1.5" stroke-linejoin="round" />
+
+          <!-- 2. Underside Hollow Cavity Face with Compound Annular Wall Rim -->
+          <!-- Outer Rim Border (32×16mm) -->
+          <polygon id="under-rim-outer" points="-108,30 -36,-6 108,66 36,102" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.5" stroke-linejoin="round" />
+          
+          <!-- Deep Internal Hollow Cavity (1.5mm wall perimeter void) -->
+          <polygon id="under-cavity-void" points="-96,30 -32,4 96,66 32,92" fill="#180206" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
+
+          <!-- Internal Longitudinal Alignment Rib -->
+          <line x1="-36" y1="28" x2="36" y2="70" stroke="#4c0519" stroke-width="2" stroke-opacity="0.8" />
+
+          <!-- 3. Internal Cylindrical Friction Clutch Tubes -->
+          <!-- Tube 1 (Left: x=-36, y=32) -->
+          <g id="under-tube-1" transform="translate(-36, 32)">
+            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
+            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
+                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
+            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
+          </g>
+
+          <!-- Tube 2 (Center: x=0, y=50) -->
+          <g id="under-tube-2" transform="translate(0, 50)">
+            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
+            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
+                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
+            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
+          </g>
+
+          <!-- Tube 3 (Right: x=36, y=68) -->
+          <g id="under-tube-3" transform="translate(36, 68)">
+            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
+            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
+                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
+            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
+          </g>
+
+          <!-- 4. Underside Clutch Callout Overlays -->
+          <g id="under-callouts" transform="translate(0, 114)">
+            <rect x="-140" y="0" width="280" height="20" rx="5" fill="#0b1120" stroke="#f43f5e" stroke-width="1" />
+            <text x="0" y="13.5" fill="#f43f5e" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">
+              ▲ 3× CLUTCH FRICTION TUBES (Ø6.5 mm) • 8× VOIDS
+            </text>
           </g>
         </g>
       </g>
@@ -344,10 +387,18 @@
       <circle id="col-swatch-cyan" cx="116" cy="46" r="12" fill="#38bdf8" stroke="#334155" stroke-width="1.5" cursor="pointer" />
     </g>
 
+    <!-- View Flip Toggle (Studs vs Underside Cavity) -->
+    <g id="btn-toggle-flip" transform="translate(14, 296)" cursor="pointer">
+      <rect width="152" height="18" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-toggle-flip" x="76" y="12.5" fill="#38bdf8" font-size="8.5" font-weight="800" text-anchor="middle">
+        🔄 TOP STUDS VIEW
+      </text>
+    </g>
+
     <!-- Stack Interlock Mode Toggle -->
     <g id="btn-toggle-stack" transform="translate(14, 318)" cursor="pointer">
       <rect width="152" height="16" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
-      <text id="txt-stack-mode" x="76" y="11.5" fill="#38bdf8" font-size="8.5" font-weight="700" text-anchor="middle">
+      <text id="txt-stack-mode" x="76" y="11.5" fill="#94a3b8" font-size="8.5" font-weight="700" text-anchor="middle">
         🧱 WALL STACK: OFF
       </text>
     </g>
@@ -421,35 +472,43 @@
     <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
 
     <!-- 360° Turntable Spin Control -->
-    <g id="btn-action-spin" class="lego-btn" transform="translate(14, 7)" cursor="pointer">
-      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
-      <text id="txt-spin-btn" x="65" y="18" fill="#38bdf8" font-size="10.5" font-weight="800" text-anchor="middle">
+    <g id="btn-action-spin" class="lego-btn" transform="translate(12, 7)" cursor="pointer">
+      <rect width="116" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-spin-btn" x="58" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">
         ⚡ Spin 360°: ON
       </text>
     </g>
 
+    <!-- Flip Underside View Toggle -->
+    <g id="btn-action-flip" class="lego-btn" transform="translate(134, 7)" cursor="pointer">
+      <rect width="134" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-flip-btn" x="67" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">
+        🔄 View: TOP STUDS
+      </text>
+    </g>
+
     <!-- Explode View Toggle -->
-    <g id="btn-action-explode" class="lego-btn" transform="translate(152, 7)" cursor="pointer">
-      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.2" />
-      <text id="txt-explode-btn" x="65" y="18" fill="#f43f5e" font-size="10.5" font-weight="800" text-anchor="middle">
+    <g id="btn-action-explode" class="lego-btn" transform="translate(274, 7)" cursor="pointer">
+      <rect width="116" height="28" rx="6" fill="#1e293b" stroke="#f43f5e" stroke-width="1.2" />
+      <text id="txt-explode-btn" x="58" y="18" fill="#f43f5e" font-size="10" font-weight="800" text-anchor="middle">
         💥 Explode: OFF
       </text>
     </g>
 
     <!-- Engineering Dimensions Toggle -->
-    <g id="btn-action-dimensions" class="lego-btn" transform="translate(290, 7)" cursor="pointer">
-      <rect width="130" height="28" rx="6" fill="#1e293b" stroke="#facc15" stroke-width="1.2" />
-      <text id="txt-dimensions-btn" x="65" y="18" fill="#facc15" font-size="10.5" font-weight="800" text-anchor="middle">
+    <g id="btn-action-dimensions" class="lego-btn" transform="translate(396, 7)" cursor="pointer">
+      <rect width="116" height="28" rx="6" fill="#1e293b" stroke="#facc15" stroke-width="1.2" />
+      <text id="txt-dimensions-btn" x="58" y="18" fill="#facc15" font-size="10" font-weight="800" text-anchor="middle">
         📏 Dimensions: ON
       </text>
     </g>
 
     <!-- Manual Turntable Scrubber Track -->
-    <g transform="translate(434, 9)">
-      <text x="0" y="16" fill="#94a3b8" font-size="9" font-weight="700">TURNTABLE ORBIT:</text>
-      <rect x="110" y="6" width="140" height="10" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+    <g transform="translate(518, 9)">
+      <text x="0" y="16" fill="#94a3b8" font-size="8.5" font-weight="700">ORBIT:</text>
+      <rect x="42" y="6" width="124" height="10" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
       <!-- Indicator Knob -->
-      <circle id="lego-yaw-knob" cx="180" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
+      <circle id="lego-yaw-knob" cx="104" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
     </g>
 
     <!-- Reset View Button -->

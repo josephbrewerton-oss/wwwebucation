@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-11T12:29:49.668Z",
+  "generatedAt": "2026-11-11T13:13:10.031Z",
   "totalScenes": 66,
   "inputDirs": [
     "static/cartridges",
@@ -1325,7 +1325,7 @@
       "section": "Computing & Technology",
       "keyframeCount": 5,
       "subtitleCount": 4,
-      "bindingsCount": 12,
+      "bindingsCount": 18,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
