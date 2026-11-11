@@ -1,4 +1,4 @@
-import{t as e}from"./index-CL0tV1io.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`privacy-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{t as e}from"./index-DqbUGY44.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`privacy-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 9999px; background: #f0fdf4; border: 1px solid #bbf7d0; color: #15803d; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.75rem;">
