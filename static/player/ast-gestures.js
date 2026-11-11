@@ -6857,15 +6857,11 @@ if (arrowLine) {
           }
         });
 
-        // 4. Recolor internal clutch tubes
-        const tubes = this.stageSvg.querySelectorAll('#brick-bottom-tubes ellipse');
-        tubes.forEach((tube, idx) => {
-          if (idx % 2 === 0) {
-            tube.setAttribute('fill', c.dark);
-            tube.setAttribute('stroke', c.top);
-          } else {
-            tube.setAttribute('fill', '#0f172a');
-          }
+        // 4. Recolor internal clutch tubes (Negative-space compound annular paths)
+        const tubeRims = this.stageSvg.querySelectorAll('#brick-bottom-tubes .tube-rim, #brick-bottom-tubes ellipse');
+        tubeRims.forEach((elem) => {
+          elem.setAttribute('fill', c.dark);
+          elem.setAttribute('stroke', c.top);
         });
 
         if (this.engine && this.engine.vars) {

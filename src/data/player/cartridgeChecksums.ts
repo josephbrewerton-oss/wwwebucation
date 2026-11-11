@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-11T08:39:29.203Z",
+  "generatedAt": "2026-11-11T11:43:45.621Z",
   "totalCartridges": 67,
-  "masterChecksum": "cefbacccaeca466a0861db166174c0008dd67a0a4e39bc92746877e974074566",
+  "masterChecksum": "39cd3cda864cd29341a0f0c4170a39749e4daef769e9bff2fa80df270c936c27",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -408,14 +408,14 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "stage": "KS2/KS3 DESIGN & TECH",
       "type": "Sim",
       "astSha256": "19c5a043aab2e8dfe651b7f8642d9957e6156b947ea91939430461ab946859b7",
-      "svgSha256": "7ec3a319b9dac25916df8faaab28aa16304f9a262bc1b0f55b40340b24776ac0",
+      "svgSha256": "253b96f8906820854ee3b59b8bed53b98b3893c8907020e06a0774ea9ef38ecd",
       "astbSha256": "22df026d69021a887e60d226c2a0ae9b39eae0308359b275c6557088ab7e769a",
       "astbBytes": 3898,
       "astBytes": 6394,
-      "svgBytes": 25348,
+      "svgBytes": 27036,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "14e35cfe169dfe9e605a3e0496d358922756d7ab9110d62fff394d2017ca3126",
+      "seal": "fd47a353e39e3a0685e2827dc9922741cea65d9d10aa91628c36c341202e6894",
       "certified": true
     },
     "liturgical-calendar": {
