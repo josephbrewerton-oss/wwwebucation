@@ -453,29 +453,124 @@
         });
       }
 
-      // 10. Dynamic Declarative Scene Gestures
+      // 10. Dynamic Declarative Scene Gestures (Cartridge as Driver, Engine as Virtual Machine)
       const scene = this.engine && this.engine.scene;
       if (scene && scene.gestures && Array.isArray(scene.gestures)) {
         scene.gestures.forEach(g => {
           if (!g.target) return;
-          const el = this.stageSvg.querySelector(g.target);
-          if (el) {
+          const elements = this.stageSvg.querySelectorAll(g.target);
+          elements.forEach(el => {
             el.style.pointerEvents = 'auto';
             el.style.touchAction = 'none';
             el.querySelectorAll('*').forEach(child => {
               if (child && child.style) child.style.pointerEvents = 'auto';
             });
-            if (g.type === 'interactive') {
+
+            // A. Declarative Clickable Actions (Toggle, Set, Step)
+            if (g.type === 'clickable') {
               el.style.cursor = 'pointer';
-              el.setAttribute('data-interactive', g.action || 'toggle');
-              if (g.action) el.setAttribute('data-action', g.action);
-            } else if (g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
+              el.setAttribute('data-declarative-clickable', 'true');
+              el.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (!this.engine || !this.engine.vars) return;
+
+                if (g.toggleVar) {
+                  this.engine.vars[g.toggleVar] = !this.engine.vars[g.toggleVar];
+                } else if (g.setVar) {
+                  let val = g.val;
+                  if (g.attr && el.hasAttribute(g.attr)) {
+                    const rawAttr = el.getAttribute(g.attr);
+                    val = !isNaN(Number(rawAttr)) ? Number(rawAttr) : rawAttr;
+                  }
+                  this.engine.vars[g.setVar] = val;
+                } else if (g.stepVar) {
+                  const cur = typeof this.engine.vars[g.stepVar] === 'number' ? this.engine.vars[g.stepVar] : 0;
+                  const delta = typeof g.delta === 'number' ? g.delta : 1;
+                  const min = typeof g.min === 'number' ? g.min : -Infinity;
+                  const max = typeof g.max === 'number' ? g.max : Infinity;
+                  this.engine.vars[g.stepVar] = Math.max(min, Math.min(max, cur + delta));
+                }
+
+                if (typeof this.engine.applyBindings === 'function') {
+                  this.engine.applyBindings(this.engine.progress || 0);
+                }
+                this.playAudioTone(440, 'triangle', 0.05, 0.15);
+              });
+            }
+            // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
+            else if (g.type === 'trackball' || g.axis === 'trackball') {
+              el.style.cursor = 'grab';
+              el.setAttribute('data-declarative-trackball', 'true');
+
+              let isOrbiting = false;
+              let startX = 0;
+              let startY = 0;
+              let startYaw = 0;
+              let startPitch = 32;
+
+              const onOrbitDown = (e) => {
+                isOrbiting = true;
+                startX = e.clientX;
+                startY = e.clientY;
+                const yawKey = g.yawVar || 'turntableYaw';
+                const pitchKey = g.pitchVar || 'cameraPitch';
+                startYaw = (this.engine && this.engine.vars && typeof this.engine.vars[yawKey] === 'number') ? this.engine.vars[yawKey] : 0;
+                startPitch = (this.engine && this.engine.vars && typeof this.engine.vars[pitchKey] === 'number') ? this.engine.vars[pitchKey] : 32;
+                if (this.engine && this.engine.vars) {
+                  this.engine.vars.autoSpin = false;
+                }
+                if (e.target.setPointerCapture && e.pointerId) {
+                  try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+                }
+              };
+
+              const onOrbitMove = (e) => {
+                if (!isOrbiting) return;
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                const yawKey = g.yawVar || 'turntableYaw';
+                const pitchKey = g.pitchVar || 'cameraPitch';
+                const pMin = typeof g.pitchMin === 'number' ? g.pitchMin : -65;
+                const pMax = typeof g.pitchMax === 'number' ? g.pitchMax : 65;
+
+                const newYaw = (startYaw + dx * 0.8) % 360;
+                const clampedYaw = (newYaw + 360) % 360;
+                const newPitch = Math.max(pMin, Math.min(pMax, startPitch - dy * 0.5));
+
+                if (this.engine && this.engine.vars) {
+                  this.engine.vars[yawKey] = Math.round(clampedYaw);
+                  this.engine.vars[pitchKey] = Math.round(newPitch);
+                  if (pitchKey === 'cameraPitch') {
+                    this.engine.vars.flipUnderside = newPitch < 0;
+                  }
+                  if (typeof this.engine.applyBindings === 'function') {
+                    this.engine.applyBindings(this.engine.progress || 0);
+                  }
+                }
+              };
+
+              const onOrbitUp = (e) => {
+                isOrbiting = false;
+                if (e.target.releasePointerCapture && e.pointerId) {
+                  try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+                }
+              };
+
+              el.addEventListener('pointerdown', onOrbitDown);
+              el.addEventListener('pointermove', onOrbitMove);
+              el.addEventListener('pointerup', onOrbitUp);
+              el.addEventListener('pointercancel', onOrbitUp);
+            }
+            // C. Declarative 2D Rotatable Disk
+            else if (g.type === 'rotatable' || g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
               el.style.cursor = 'grab';
               el.setAttribute('data-draggable', 'rotate');
               el.setAttribute('data-gesture-cx', String(g.cx !== undefined ? g.cx : 400));
               el.setAttribute('data-gesture-cy', String(g.cy !== undefined ? g.cy : 240));
               if (g.var) el.setAttribute('data-gesture-var', g.var);
-            } else {
+            }
+            // D. Declarative 1D/2D Slider or Draggable Node
+            else {
               el.style.cursor = g.axis === 'y' ? 'ns-resize' : (g.axis === 'x' ? 'ew-resize' : 'grab');
               el.setAttribute('data-draggable', 'generic');
               el.setAttribute('data-gesture-axis', g.axis || 'xy');
@@ -485,7 +580,7 @@
               if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
               if (g.var) el.setAttribute('data-gesture-var', g.var);
             }
-          }
+          });
         });
       }
     }
@@ -6842,22 +6937,32 @@ if (arrowLine) {
         if (faceRight) { faceRight.setAttribute('fill', c.side); faceRight.setAttribute('stroke', c.dark); }
         if (faceTop) { faceTop.setAttribute('fill', c.top); faceTop.setAttribute('stroke', c.border); }
 
-        // 3. Recolor all 8 studs
-        const allStudIds = ['stud-00', 'stud-10', 'stud-20', 'stud-30', 'stud-01', 'stud-11', 'stud-21', 'stud-31'];
-        allStudIds.forEach(id => {
-          const g = this.stageSvg.querySelector(`#${id}`);
-          if (g) {
-            const path = g.querySelector('path');
-            if (path) path.setAttribute('fill', c.dark);
-            const ell = g.querySelector('ellipse');
-            if (ell) {
-              ell.setAttribute('fill', c.top);
-              ell.setAttribute('stroke', c.border);
-            }
-          }
-        });
+        // 3. Recolor master template definitions (automatically updates all instanced studs/tubes)
+        const masterStud = this.stageSvg.querySelector('#master-stud');
+        if (masterStud) {
+          const wall = masterStud.querySelector('.stud-wall');
+          const top = masterStud.querySelector('.stud-top');
+          if (wall) wall.setAttribute('fill', c.dark);
+          if (top) { top.setAttribute('fill', c.top); top.setAttribute('stroke', c.border); }
+        }
 
-        // 4. Recolor internal clutch tubes (Negative-space compound annular paths)
+        const masterAntiTube = this.stageSvg.querySelector('#master-anti-tube');
+        if (masterAntiTube) {
+          const wall = masterAntiTube.querySelector('.anti-tube-wall');
+          const rim = masterAntiTube.querySelector('.anti-tube-rim');
+          if (wall) wall.setAttribute('fill', c.dark);
+          if (rim) { rim.setAttribute('fill', c.top); rim.setAttribute('stroke', c.border); }
+        }
+
+        const masterPin = this.stageSvg.querySelector('#master-pin');
+        if (masterPin) {
+          const wall = masterPin.querySelector('.pin-wall');
+          const top = masterPin.querySelector('.pin-top');
+          if (wall) wall.setAttribute('fill', c.dark);
+          if (top) { top.setAttribute('fill', c.top); top.setAttribute('stroke', c.border); }
+        }
+
+        // 4. Recolor legacy/direct tube rims for backward compatibility
         const tubeRims = this.stageSvg.querySelectorAll('#brick-bottom-tubes .tube-rim, #brick-bottom-tubes ellipse, #brick-underside-view .under-tube-rim');
         tubeRims.forEach((elem) => {
           elem.setAttribute('fill', c.dark);
@@ -6877,6 +6982,22 @@ if (arrowLine) {
         if (this.engine && this.engine.vars) {
           this.engine.vars.brickColor = colorKey;
           this.engine.applyBindings(this.engine.progress || 0);
+        }
+      };
+
+      // Failsafe view visibility updater that guarantees brick NEVER disappears
+      const updateBrickViewVisibility = (isUnderside) => {
+        const topView = this.stageSvg.querySelector('#brick-top-view');
+        const underView = this.stageSvg.querySelector('#brick-underside-view');
+        if (topView) {
+          topView.style.display = isUnderside ? 'none' : 'inline';
+          topView.setAttribute('display', isUnderside ? 'none' : 'inline');
+          topView.setAttribute('opacity', isUnderside ? '0' : '1');
+        }
+        if (underView) {
+          underView.style.display = isUnderside ? 'inline' : 'none';
+          underView.setAttribute('display', isUnderside ? 'inline' : 'none');
+          underView.setAttribute('opacity', isUnderside ? '1' : '0');
         }
       };
 
@@ -6901,12 +7022,13 @@ if (arrowLine) {
           }
         });
 
-        // Filter stud visibility
+        // Filter stud visibility across instanced master studs
         const allStudIds = ['stud-00', 'stud-10', 'stud-20', 'stud-30', 'stud-01', 'stud-11', 'stud-21', 'stud-31'];
         allStudIds.forEach(id => {
-          const g = this.stageSvg.querySelector(`#${id}`);
-          if (g) {
-            g.style.display = shape.visibleStuds.includes(id) ? 'inline' : 'none';
+          const el = this.stageSvg.querySelector(`#${id}`);
+          if (el) {
+            el.style.display = shape.visibleStuds.includes(id) ? 'inline' : 'none';
+            el.setAttribute('display', shape.visibleStuds.includes(id) ? 'inline' : 'none');
           }
         });
 
@@ -6914,18 +7036,22 @@ if (arrowLine) {
         const tube1 = this.stageSvg.querySelector('#under-tube-1');
         const tube2 = this.stageSvg.querySelector('#under-tube-2');
         const tube3 = this.stageSvg.querySelector('#under-tube-3');
+        const ribs = this.stageSvg.querySelector('#under-ribs');
         if (shapeKey === 'tile') {
-          if (tube1) tube1.style.display = 'none';
-          if (tube2) tube2.style.display = 'none';
-          if (tube3) tube3.style.display = 'none';
+          if (tube1) { tube1.style.display = 'none'; tube1.setAttribute('display', 'none'); }
+          if (tube2) { tube2.style.display = 'none'; tube2.setAttribute('display', 'none'); }
+          if (tube3) { tube3.style.display = 'none'; tube3.setAttribute('display', 'none'); }
+          if (ribs) { ribs.style.display = 'none'; ribs.setAttribute('display', 'none'); }
         } else if (shapeKey === '2x2' || shapeKey === '1x2') {
-          if (tube1) tube1.style.display = 'none';
-          if (tube2) tube2.style.display = 'inline';
-          if (tube3) tube3.style.display = 'none';
+          if (tube1) { tube1.style.display = 'none'; tube1.setAttribute('display', 'none'); }
+          if (tube2) { tube2.style.display = 'inline'; tube2.setAttribute('display', 'inline'); }
+          if (tube3) { tube3.style.display = 'none'; tube3.setAttribute('display', 'none'); }
+          if (ribs) { ribs.style.display = 'inline'; ribs.setAttribute('display', 'inline'); }
         } else {
-          if (tube1) tube1.style.display = 'inline';
-          if (tube2) tube2.style.display = 'inline';
-          if (tube3) tube3.style.display = 'inline';
+          if (tube1) { tube1.style.display = 'inline'; tube1.setAttribute('display', 'inline'); }
+          if (tube2) { tube2.style.display = 'inline'; tube2.setAttribute('display', 'inline'); }
+          if (tube3) { tube3.style.display = 'inline'; tube3.setAttribute('display', 'inline'); }
+          if (ribs) { ribs.style.display = 'inline'; ribs.setAttribute('display', 'inline'); }
         }
 
         // Update telemetry badge and stat text
@@ -6993,6 +7119,7 @@ if (arrowLine) {
           const isFlipped = !this.engine.vars.flipUnderside;
           this.engine.vars.flipUnderside = isFlipped;
           this.engine.vars.cameraPitch = isFlipped ? -35 : 32;
+          updateBrickViewVisibility(isFlipped);
           this.engine.applyBindings(this.engine.progress || 0);
         }
       };
@@ -7069,6 +7196,7 @@ if (arrowLine) {
             this.engine.vars.brickColor = 'red';
             applyColor('red');
             applyShape('2x4');
+            updateBrickViewVisibility(false);
             this.engine.applyBindings(this.engine.progress || 0);
           }
         };
@@ -7117,6 +7245,7 @@ if (arrowLine) {
           this.engine.vars.turntableYaw = Math.round(clampedYaw);
           this.engine.vars.cameraPitch = Math.round(newPitch);
           this.engine.vars.flipUnderside = isUnderside;
+          updateBrickViewVisibility(isUnderside);
           this.engine.applyBindings(this.engine.progress || 0);
         }
       };
@@ -7139,6 +7268,84 @@ if (arrowLine) {
         turntableRoot.addEventListener('pointermove', onPointerMove);
         turntableRoot.addEventListener('pointerup', onPointerUp);
         turntableRoot.addEventListener('pointercancel', onPointerUp);
+      }
+    }
+
+    // 10. Lumina Sovereign Architecture Manifesto Interactive Deck Controller
+    if (this.currentSceneId === 'lumina-architecture-manifesto' || this.currentSceneId === 'lumina-architecture' || this.stageSvg.querySelector('#lumina-manifesto-root')) {
+      const stage = this.stageSvg;
+      const tabs = stage.querySelectorAll('.lumina-ch-tab');
+      tabs.forEach((tab) => {
+        tab.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const targetPage = parseInt(tab.getAttribute('data-page') || '0', 10);
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.page = targetPage;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        });
+      });
+
+      const btnPrev = stage.querySelector('#lumina-btn-prev');
+      const btnNext = stage.querySelector('#lumina-btn-next');
+      if (btnPrev) {
+        btnPrev.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.engine && this.engine.vars) {
+            const cur = typeof this.engine.vars.page === 'number' ? this.engine.vars.page : 0;
+            this.engine.vars.page = Math.max(0, cur - 1);
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        });
+      }
+      if (btnNext) {
+        btnNext.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (this.engine && this.engine.vars) {
+            const cur = typeof this.engine.vars.page === 'number' ? this.engine.vars.page : 0;
+            this.engine.vars.page = Math.min(3, cur + 1);
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        });
+      }
+
+      // Interactive CSG Aperture Drag
+      const csgHandle = stage.querySelector('#csg-aperture-scrubber');
+      if (csgHandle) {
+        let isScrubbing = false;
+        let startX = 0;
+        let startVal = 24;
+
+        const onScrubDown = (e) => {
+          isScrubbing = true;
+          startX = e.clientX;
+          startVal = (this.engine && this.engine.vars && typeof this.engine.vars.csgAperture === 'number') ? this.engine.vars.csgAperture : 24;
+          if (e.target.setPointerCapture && e.pointerId) {
+            try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
+          }
+        };
+
+        const onScrubMove = (e) => {
+          if (!isScrubbing) return;
+          const dx = e.clientX - startX;
+          const newVal = Math.max(8, Math.min(48, Math.round(startVal + dx * 0.3)));
+          if (this.engine && this.engine.vars) {
+            this.engine.vars.csgAperture = newVal;
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        };
+
+        const onScrubUp = (e) => {
+          isScrubbing = false;
+          if (e.target.releasePointerCapture && e.pointerId) {
+            try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
+          }
+        };
+
+        csgHandle.addEventListener('pointerdown', onScrubDown);
+        csgHandle.addEventListener('pointermove', onScrubMove);
+        csgHandle.addEventListener('pointerup', onScrubUp);
+        csgHandle.addEventListener('pointercancel', onScrubUp);
       }
     }
   }
