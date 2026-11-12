@@ -597,36 +597,62 @@
         }
       }
 
-     // B0. Check for 3D Trackball Orbit / Turntable Drag
-      const isLegoOrTrackballScene = Boolean(
-        this.stageSvg.querySelector('[data-declarative-trackball]') ||
-        this.stageSvg.querySelector('#turntable-root') ||
-        (this.engine && this.engine.scene && (this.engine.scene.id === 'lego-blocks' || (this.engine.scene.gestures && this.engine.scene.gestures.some(g => g.type === 'trackball'))))
-      );
-      const trackballIgnoreSelector = '[data-declarative-clickable], .lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, .interactive-card, #stage-glass-hud-ui, [data-action], [data-draggable], [data-interactive]';
-      let trackballEl = e.target.closest('[data-declarative-trackball], #turntable-root, #brick-3d-stage, #lego-yaw-knob, #turntable-hitbox');
-      if (!trackballEl && isLegoOrTrackballScene && !e.target.closest(trackballIgnoreSelector)) {
-        trackballEl = this.stageSvg.querySelector('[data-declarative-trackball]') || this.stageSvg.querySelector('#turntable-root') || this.stageSvg.querySelector('#brick-3d-stage');
+     // B0. Generic Declarative S-Expression Gestures (:clickable & :trackball)
+      const gestures = (this.engine && this.engine.scene && Array.isArray(this.engine.scene.gestures))
+        ? this.engine.scene.gestures
+        : [];
+
+      // 1. Declarative :clickable tuples (buttons, switches, brick selectors, color swatches)
+      for (let i = 0; i < gestures.length; i++) {
+        const g = gestures[i];
+        if (g.type !== 'clickable' || !g.target) continue;
+        if (!e.target.closest(g.target)) continue;
+
+        e.preventDefault();
+        if (this.engine && this.engine.vars) {
+          if (g.toggle) {
+            const next = !this.engine.vars[g.toggle];
+            if (typeof this.engine.setVar === 'function') this.engine.setVar(g.toggle, next);
+            else this.engine.vars[g.toggle] = next;
+          } else if (g.set !== undefined || g.setVar !== undefined) {
+            const k = g.set || g.setVar;
+            if (typeof this.engine.setVar === 'function') this.engine.setVar(k, g.val);
+            else this.engine.vars[k] = g.val;
+          } else if (g.step !== undefined || g.stepVar !== undefined) {
+            const k = g.step || g.stepVar;
+            const cur = typeof this.engine.vars[k] === 'number' ? this.engine.vars[k] : 0;
+            const next = cur + (typeof g.delta === 'number' ? g.delta : 1);
+            if (typeof this.engine.setVar === 'function') this.engine.setVar(k, next);
+            else this.engine.vars[k] = next;
+          }
+          if (typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+        }
+        this.playAudioTone(520, 'sine', 0.04, 0.1);
+        this.createTouchRipple(svgPt.x, svgPt.y);
+        return;
       }
 
-      if (trackballEl && !e.target.closest(trackballIgnoreSelector)) {
+      // 2. Declarative :trackball tuples (purely driven by scene.gestures, zero hardcoded IDs)
+      const activeTrackball = gestures.find(g => g.type === 'trackball' && g.target && e.target.closest(g.target));
+      if (activeTrackball) {
         e.preventDefault();
         this.isDragging = true;
         this.dragMode = 'trackball';
-        this.dragTarget = trackballEl;
+        this.dragTarget = e.target.closest(activeTrackball.target);
         this.dragStart = { x: e.clientX, y: e.clientY };
-        this.trackballYawVar = trackballEl.getAttribute('data-yaw-var') || 'turntableYaw';
-        this.trackballPitchVar = trackballEl.getAttribute('data-pitch-var') || 'cameraPitch';
-        this.trackballPitchMin = parseFloat(trackballEl.getAttribute('data-pitch-min') || '-65');
-        this.trackballPitchMax = parseFloat(trackballEl.getAttribute('data-pitch-max') || '65');
-        const yawKey = this.trackballYawVar;
-        const pitchKey = this.trackballPitchVar;
-        this.trackballStartYaw = (this.engine && this.engine.vars && typeof this.engine.vars[yawKey] === 'number') ? this.engine.vars[yawKey] : 0;
-        this.trackballStartPitch = (this.engine && this.engine.vars && typeof this.engine.vars[pitchKey] === 'number') ? this.engine.vars[pitchKey] : 32;
-        if (this.engine && this.engine.vars) {
-          this.engine.vars.autoSpin = false;
-        }
-        trackballEl.style.cursor = 'grabbing';
+        this.trackballYawVar = activeTrackball.yawVar || activeTrackball['yaw-var'] || 'turntableYaw';
+        this.trackballPitchVar = activeTrackball.pitchVar || activeTrackball['pitch-var'] || 'cameraPitch';
+        this.trackballPitchMin = typeof activeTrackball.pitchMin === 'number' ? activeTrackball.pitchMin : -65;
+        this.trackballPitchMax = typeof activeTrackball.pitchMax === 'number' ? activeTrackball.pitchMax : 65;
+        this.trackballStartYaw = (this.engine.vars && typeof this.engine.vars[this.trackballYawVar] === 'number')
+          ? this.engine.vars[this.trackballYawVar] : 0;
+        this.trackballStartPitch = (this.engine.vars && typeof this.engine.vars[this.trackballPitchVar] === 'number')
+          ? this.engine.vars[this.trackballPitchVar] : 32;
+        if (typeof this.engine.setVar === 'function') this.engine.setVar('autoSpin', false);
+        else if (this.engine.vars) this.engine.vars.autoSpin = false;
+        this.dragTarget.style.cursor = 'grabbing';
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
