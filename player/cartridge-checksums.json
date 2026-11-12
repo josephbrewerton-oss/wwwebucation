@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-12T19:45:32.671Z",
-  "totalCartridges": 67,
-  "masterChecksum": "f50ea925c0ad75e54af076914939b281a9dd5cfc5b7453d57ca0a4687e1d2d95",
+  "generatedAt": "2026-11-12T20:02:10.122Z",
+  "totalCartridges": 68,
+  "masterChecksum": "bba36f5417ce39797f3845a1b90d5e931705ad567b13a236c9def451fd3bff15",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -1027,6 +1027,22 @@
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
       "seal": "21f5719ce3e5dd15f0afce72a87044bac1af82fe78abadf2c1e8074de615281b",
+      "certified": true
+    },
+    "vector-racing": {
+      "id": "vector-racing",
+      "title": "Vector Racing",
+      "stage": "STEM",
+      "type": "Sim",
+      "astSha256": "a969d9a437f08a316cde3d2fc715ddb29c10b8f3c111b52c202713055fc9a2c2",
+      "svgSha256": "347bfd9f7dd2a1804707465dd76962c744fd63fae17d1c90bc44cd60f2f6c596",
+      "astbSha256": "6fb5d4d6aad1981c76cb37070ba4a101c4a8089e87c7c22eb9420f463dfd9aa5",
+      "astbBytes": 65,
+      "astBytes": 5439,
+      "svgBytes": 5020,
+      "tier": "native",
+      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
+      "seal": "6161a914e632c9e9c00badf11ac3ebd32c3f18a125c7ee5e9820457384287948",
       "certified": true
     },
     "velocity": {

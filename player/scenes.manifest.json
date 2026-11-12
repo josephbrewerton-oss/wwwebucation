@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-12T19:45:33.337Z",
-  "totalScenes": 67,
+  "generatedAt": "2026-11-12T20:02:10.802Z",
+  "totalScenes": 68,
   "scenes": [
     {
       "id": "algebra-balance",
@@ -962,6 +962,21 @@
       "keyframeCount": 5,
       "subtitleCount": 5,
       "bindingsCount": 4
+    },
+    {
+      "id": "vector-racing",
+      "type": "Sim",
+      "title": "Vector Racing",
+      "stage": "STEM",
+      "duration": 60,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/vector-racing.svg",
+      "astFile": "cartridges/vector-racing.ast",
+      "astbFile": "bytecode/vector-racing.astb",
+      "keyframeCount": 0,
+      "subtitleCount": 0,
+      "bindingsCount": 0
     },
     {
       "id": "velocity",

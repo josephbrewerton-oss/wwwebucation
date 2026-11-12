@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-12T19:45:32.210Z",
-  "totalCartridges": 66,
+  "generatedAt": "2026-11-12T20:02:09.628Z",
+  "totalCartridges": 67,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -579,6 +579,15 @@
       "stage": "KS3",
       "title": "Sample Physics Knowledge Nodes",
       "cartridgeId": "pipeline-sample"
+    },
+    {
+      "unit": "ks3-generalcurriculum-vector-racing",
+      "oakId": "OAK-KS3-GEN-VECTORRAC",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "stage": "STEM",
+      "title": "Vector Racing",
+      "cartridgeId": "vector-racing"
     }
   ],
   "cartridges": [
@@ -1897,6 +1906,26 @@
       "svgFile": "cartridges/pipeline-sample.svg",
       "astFile": "cartridges/pipeline-sample.ast",
       "astbFile": "bytecode/pipeline-sample.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": false,
+      "checkpointCount": 0
+    },
+    {
+      "id": "vector-racing",
+      "base": "vector-racing",
+      "type": "Sim",
+      "title": "Vector Racing",
+      "stage": "STEM",
+      "oakId": "OAK-KS3-GEN-VECTORRAC",
+      "oakUnit": "ks3-generalcurriculum-vector-racing",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "mount": "/curriculum/general/vector-racing",
+      "duration": 60,
+      "svgFile": "cartridges/vector-racing.svg",
+      "astFile": "cartridges/vector-racing.ast",
+      "astbFile": "bytecode/vector-racing.astb",
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": false,

@@ -1,4 +1,4 @@
-import{t as e}from"./index-BGUAOtcz.js";import{a as t,c as n,n as r,o as i,r as a,s as o}from"./cartridge-vault-BhkKMAAS.js";import{a as s,c,d as l,i as u,l as d,o as f,r as p,s as m,u as h}from"./bsl-engine-B-oxMaXy.js";import{t as g}from"./EdgeCognitiveEngine-BB1ZBCE3.js";function _(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{t as e}from"./index-av6r7wFC.js";import{a as t,c as n,n as r,o as i,r as a,s as o}from"./cartridge-vault-CZjl0PVx.js";import{a as s,c,d as l,i as u,l as d,o as f,r as p,s as m,u as h}from"./bsl-engine-B-oxMaXy.js";import{t as g}from"./EdgeCognitiveEngine-CE6c4B--.js";function _(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;

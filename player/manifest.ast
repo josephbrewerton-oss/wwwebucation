@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 67
+  :count 68
   (:cartridges (
     (:cartridge
       :id "algebra-balance"
@@ -504,6 +504,14 @@
       :stage "CATHOLIC LIFE"
       :oak-id "OAK-KS2-RE-006"
       :bytecode "bytecode/triduum-easter.astb")
+
+    (:cartridge
+      :id "vector-racing"
+      :type "Sim"
+      :title "Vector Racing"
+      :stage "STEM"
+      :oak-id "OAK-KS3-GEN-VECTORRAC"
+      :bytecode "bytecode/vector-racing.astb")
 
     (:cartridge
       :id "velocity"
