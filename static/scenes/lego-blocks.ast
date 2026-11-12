@@ -26,8 +26,14 @@
     (:name "studCount" :expr "vars.brickType === '2x2' ? 4 : (vars.brickType === '1x2' ? 2 : (vars.brickType === 'tile' ? 0 : 8))")
   ))
   (:gestures (
-    (:draggable :target "#lego-yaw-knob" :axis "x" :min 42 :max 166)
-    (:draggable :target "#brick-3d-stage" :axis "xy" :min -180 :max 180)
+    (:trackball :target "#turntable-root" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
+    (:trackball :target "#brick-3d-stage" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
+    (:trackball :target "#lego-yaw-knob" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
+    (:clickable :target "#btn-toggle-flip" :toggle "flipUnderside")
+    (:clickable :target "#btn-explode" :toggle "explodePlates")
+    (:clickable :target "#btn-dimensions" :toggle "showDimensions")
+    (:clickable :target "#btn-stack" :toggle "stackMode")
+    (:clickable :target "#btn-spin-auto" :toggle "autoSpin")
   ))
   (:subtitles (
     (:start 0.00 :end 0.28 :en "Welcome to the Modular Brick Lab! The universal 2×4 brick is engineered around an exact 8.0 mm modular stud matrix." :es "¡Bienvenidos al laboratorio de bloques modulares! El ladrillo clásico de 2×4 está diseñado con una matriz modular exacta de 8.0 mm.")

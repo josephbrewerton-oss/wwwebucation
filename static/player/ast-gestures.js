@@ -501,65 +501,10 @@
             else if (g.type === 'trackball' || g.axis === 'trackball') {
               el.style.cursor = 'grab';
               el.setAttribute('data-declarative-trackball', 'true');
-
-              let isOrbiting = false;
-              let startX = 0;
-              let startY = 0;
-              let startYaw = 0;
-              let startPitch = 32;
-
-              const onOrbitDown = (e) => {
-                isOrbiting = true;
-                startX = e.clientX;
-                startY = e.clientY;
-                const yawKey = g.yawVar || 'turntableYaw';
-                const pitchKey = g.pitchVar || 'cameraPitch';
-                startYaw = (this.engine && this.engine.vars && typeof this.engine.vars[yawKey] === 'number') ? this.engine.vars[yawKey] : 0;
-                startPitch = (this.engine && this.engine.vars && typeof this.engine.vars[pitchKey] === 'number') ? this.engine.vars[pitchKey] : 32;
-                if (this.engine && this.engine.vars) {
-                  this.engine.vars.autoSpin = false;
-                }
-                if (e.target.setPointerCapture && e.pointerId) {
-                  try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-                }
-              };
-
-              const onOrbitMove = (e) => {
-                if (!isOrbiting) return;
-                const dx = e.clientX - startX;
-                const dy = e.clientY - startY;
-                const yawKey = g.yawVar || 'turntableYaw';
-                const pitchKey = g.pitchVar || 'cameraPitch';
-                const pMin = typeof g.pitchMin === 'number' ? g.pitchMin : -65;
-                const pMax = typeof g.pitchMax === 'number' ? g.pitchMax : 65;
-
-                const newYaw = (startYaw + dx * 0.8) % 360;
-                const clampedYaw = (newYaw + 360) % 360;
-                const newPitch = Math.max(pMin, Math.min(pMax, startPitch - dy * 0.5));
-
-                if (this.engine && this.engine.vars) {
-                  this.engine.vars[yawKey] = Math.round(clampedYaw);
-                  this.engine.vars[pitchKey] = Math.round(newPitch);
-                  if (pitchKey === 'cameraPitch') {
-                    this.engine.vars.flipUnderside = newPitch < 0;
-                  }
-                  if (typeof this.engine.applyBindings === 'function') {
-                    this.engine.applyBindings(this.engine.progress || 0);
-                  }
-                }
-              };
-
-              const onOrbitUp = (e) => {
-                isOrbiting = false;
-                if (e.target.releasePointerCapture && e.pointerId) {
-                  try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
-                }
-              };
-
-              el.addEventListener('pointerdown', onOrbitDown);
-              el.addEventListener('pointermove', onOrbitMove);
-              el.addEventListener('pointerup', onOrbitUp);
-              el.addEventListener('pointercancel', onOrbitUp);
+              el.setAttribute('data-yaw-var', g.yawVar || 'turntableYaw');
+              el.setAttribute('data-pitch-var', g.pitchVar || 'cameraPitch');
+              el.setAttribute('data-pitch-min', String(g.pitchMin !== undefined ? g.pitchMin : -65));
+              el.setAttribute('data-pitch-max', String(g.pitchMax !== undefined ? g.pitchMax : 65));
             }
             // C. Declarative 2D Rotatable Disk
             else if (g.type === 'rotatable' || g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
@@ -614,6 +559,39 @@
           this.startInkStroke(svgPt);
           return;
         }
+      }
+
+      // B0. Check for 3D Trackball Orbit / Turntable Drag
+      const isLegoOrTrackballScene = Boolean(
+        this.stageSvg.querySelector('[data-declarative-trackball]') ||
+        this.stageSvg.querySelector('#turntable-root') ||
+        (this.engine && this.engine.scene && (this.engine.scene.id === 'lego-blocks' || (this.engine.scene.gestures && this.engine.scene.gestures.some(g => g.type === 'trackball'))))
+      );
+      let trackballEl = e.target.closest('[data-declarative-trackball], #turntable-root, #brick-3d-stage, #lego-yaw-knob, #turntable-hitbox');
+      if (!trackballEl && isLegoOrTrackballScene && !e.target.closest('.lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, .interactive-card, #stage-glass-hud-ui, [data-action], [data-draggable], [data-interactive]')) {
+        trackballEl = this.stageSvg.querySelector('[data-declarative-trackball]') || this.stageSvg.querySelector('#turntable-root') || this.stageSvg.querySelector('#brick-3d-stage');
+      }
+
+      if (trackballEl && !e.target.closest('.lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, [data-action], [data-draggable], [data-interactive]')) {
+        e.preventDefault();
+        this.isDragging = true;
+        this.dragMode = 'trackball';
+        this.dragTarget = trackballEl;
+        this.dragStart = { x: e.clientX, y: e.clientY };
+        this.trackballYawVar = trackballEl.getAttribute('data-yaw-var') || 'turntableYaw';
+        this.trackballPitchVar = trackballEl.getAttribute('data-pitch-var') || 'cameraPitch';
+        this.trackballPitchMin = parseFloat(trackballEl.getAttribute('data-pitch-min') || '-65');
+        this.trackballPitchMax = parseFloat(trackballEl.getAttribute('data-pitch-max') || '65');
+        const yawKey = this.trackballYawVar;
+        const pitchKey = this.trackballPitchVar;
+        this.trackballStartYaw = (this.engine && this.engine.vars && typeof this.engine.vars[yawKey] === 'number') ? this.engine.vars[yawKey] : 0;
+        this.trackballStartPitch = (this.engine && this.engine.vars && typeof this.engine.vars[pitchKey] === 'number') ? this.engine.vars[pitchKey] : 32;
+        if (this.engine && this.engine.vars) {
+          this.engine.vars.autoSpin = false;
+        }
+        trackballEl.style.cursor = 'grabbing';
+        this.createTouchRipple(svgPt.x, svgPt.y);
+        return;
       }
 
       // B. Check for interactive direct-grab targets or action buttons
@@ -949,6 +927,8 @@
           this.handleGenericDrag(this.dragTarget, svgPt);
         } else if (this.dragMode === 'rotate') {
           this.handleRotateDrag(this.dragTarget, svgPt);
+        } else if (this.dragMode === 'trackball') {
+          this.handleTrackballDrag(e);
         }
       } else if (this.isXRayActive) {
         const pedNode = e.target.closest('[data-pedagogical]');
@@ -1023,6 +1003,9 @@
         } else if (this.dragMode === 'rotate') {
           if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
           this.playAudioTone(440, 'sine', 0.05);
+        } else if (this.dragMode === 'trackball') {
+          if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
+          this.playAudioTone(440, 'triangle', 0.04, 0.1);
         }
 
         this.isDragging = false;
@@ -1034,6 +1017,44 @@
 
     handlePointerCancel(e) {
       this.handlePointerUp(e);
+    }
+
+    handleTrackballDrag(e) {
+      if (!this.engine || !this.engine.vars) return;
+      const dx = e.clientX - this.dragStart.x;
+      const dy = e.clientY - this.dragStart.y;
+      const yawKey = this.trackballYawVar || 'turntableYaw';
+      const pitchKey = this.trackballPitchVar || 'cameraPitch';
+      const pMin = typeof this.trackballPitchMin === 'number' ? this.trackballPitchMin : -65;
+      const pMax = typeof this.trackballPitchMax === 'number' ? this.trackballPitchMax : 65;
+
+      const newYaw = ((this.trackballStartYaw + dx * 0.8) % 360 + 360) % 360;
+      const newPitch = Math.max(pMin, Math.min(pMax, this.trackballStartPitch - dy * 0.5));
+      const isUnderside = newPitch < 0;
+
+      this.engine.vars[yawKey] = Math.round(newYaw);
+      this.engine.vars[pitchKey] = Math.round(newPitch);
+      if (pitchKey === 'cameraPitch') {
+        this.engine.vars.flipUnderside = isUnderside;
+      }
+
+      // Sync brick view visibility so it NEVER vanishes
+      const topView = this.stageSvg && this.stageSvg.querySelector('#brick-top-view');
+      const underView = this.stageSvg && this.stageSvg.querySelector('#brick-underside-view');
+      if (topView) {
+        topView.style.display = isUnderside ? 'none' : 'inline';
+        topView.setAttribute('display', isUnderside ? 'none' : 'inline');
+        topView.setAttribute('opacity', isUnderside ? '0' : '1');
+      }
+      if (underView) {
+        underView.style.display = isUnderside ? 'inline' : 'none';
+        underView.setAttribute('display', isUnderside ? 'inline' : 'none');
+        underView.setAttribute('opacity', isUnderside ? '1' : '0');
+      }
+
+      if (typeof this.engine.applyBindings === 'function') {
+        this.engine.applyBindings(this.engine.progress || 0);
+      }
     }
 
     handleGenericDrag(target, svgPt) {
@@ -7204,70 +7225,20 @@ if (arrowLine) {
         btnReset.addEventListener('click', onResetClick);
       }
 
-      // 9. Turntable Direct Drag & Orbit Scrubber (2D Trackball: Horizontal Yaw + Vertical Pitch/Flip)
+      // 9. Turntable Direct Drag & Orbit Scrubber (Delegated to generic AST Trackball VM)
       const knob = this.stageSvg.querySelector('#lego-yaw-knob');
       const turntableRoot = this.stageSvg.querySelector('#turntable-root');
-      
-      let isDraggingTurntable = false;
-      let startX = 0;
-      let startY = 0;
-      let startYaw = 0;
-      let startPitch = 32;
-
-      const onPointerDown = (e) => {
-        isDraggingTurntable = true;
-        startX = e.clientX;
-        startY = e.clientY;
-        startYaw = (this.engine && this.engine.vars) ? this.engine.vars.turntableYaw : 0;
-        startPitch = (this.engine && this.engine.vars) ? (this.engine.vars.cameraPitch !== undefined ? this.engine.vars.cameraPitch : 32) : 32;
-        if (this.engine && this.engine.vars) {
-          this.engine.vars.autoSpin = false;
-        }
-        if (e.target.setPointerCapture && e.pointerId) {
-          try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-        }
-      };
-
-      const onPointerMove = (e) => {
-        if (!isDraggingTurntable) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-
-        // Horizontal drag: Orbit Yaw (0° - 360°)
-        const newYaw = (startYaw + dx * 0.8) % 360;
-        const clampedYaw = (newYaw + 360) % 360;
-
-        // Vertical drag: Camera Pitch Elevation (-65° to +65°) & Seamless Underside Tumble
-        const newPitch = Math.max(-65, Math.min(65, startPitch - dy * 0.5));
-        const isUnderside = newPitch < 0;
-
-        if (this.engine && this.engine.vars) {
-          this.engine.vars.turntableYaw = Math.round(clampedYaw);
-          this.engine.vars.cameraPitch = Math.round(newPitch);
-          this.engine.vars.flipUnderside = isUnderside;
-          updateBrickViewVisibility(isUnderside);
-          this.engine.applyBindings(this.engine.progress || 0);
-        }
-      };
-
-      const onPointerUp = (e) => {
-        isDraggingTurntable = false;
-        if (e.target.releasePointerCapture && e.pointerId) {
-          try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
-        }
-      };
-
       if (knob) {
-        knob.addEventListener('pointerdown', onPointerDown);
-        knob.addEventListener('pointermove', onPointerMove);
-        knob.addEventListener('pointerup', onPointerUp);
-        knob.addEventListener('pointercancel', onPointerUp);
+        knob.style.cursor = 'grab';
+        knob.setAttribute('data-declarative-trackball', 'true');
+        knob.setAttribute('data-yaw-var', 'turntableYaw');
+        knob.setAttribute('data-pitch-var', 'cameraPitch');
       }
       if (turntableRoot) {
-        turntableRoot.addEventListener('pointerdown', onPointerDown);
-        turntableRoot.addEventListener('pointermove', onPointerMove);
-        turntableRoot.addEventListener('pointerup', onPointerUp);
-        turntableRoot.addEventListener('pointercancel', onPointerUp);
+        turntableRoot.style.cursor = 'grab';
+        turntableRoot.setAttribute('data-declarative-trackball', 'true');
+        turntableRoot.setAttribute('data-yaw-var', 'turntableYaw');
+        turntableRoot.setAttribute('data-pitch-var', 'cameraPitch');
       }
     }
 
