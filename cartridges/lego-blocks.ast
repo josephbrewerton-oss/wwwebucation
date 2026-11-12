@@ -27,6 +27,7 @@
   ))
   (:gestures (
     (:trackball :target "#turntable-root" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
+    (:trackball :target "#brick-3d-stage" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:trackball :target "#lego-yaw-knob" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:clickable :target "#btn-toggle-flip" :toggle "flipUnderside")
     (:clickable :target "#btn-explode" :toggle "explodePlates")

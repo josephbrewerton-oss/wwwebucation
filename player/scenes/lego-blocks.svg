@@ -121,6 +121,9 @@
 
   <!-- 3. The 3D Turntable Platform & Ground Plane -->
   <g id="turntable-root" transform="translate(400, 260)">
+    <!-- Turntable Catch Hitbox for Smooth Pointer Grab Anywhere Across Disc -->
+    <ellipse id="turntable-hitbox" cx="0" cy="65" rx="260" ry="110" fill="#000000" fill-opacity="0.001" pointer-events="all" style="cursor: grab;" />
+
     <!-- Turntable Ellipse Cast Shadow -->
     <ellipse cx="0" cy="80" rx="260" ry="85" fill="#000000" opacity="0.6" filter="url(#lego-drop-shadow)" />
 
