@@ -113,7 +113,7 @@ function extractSlot(text: string, key: string): string | null {
   if (m) {
     return m[1].replace(/\\"/g, '"').replace(/\\n/g, '\n').replace(/\\\\/g, '\\');
   }
-  const fallbackReg = new RegExp(`:${key}\\s+([^\s\)]+)`, 'i');
+  const fallbackReg = new RegExp(`:${key}\\s+([^\\s)]+)`, 'i');
   const fb = text.match(fallbackReg);
   return fb ? fb[1] : null;
 }
