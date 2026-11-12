@@ -2,197 +2,134 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/media-player</loc>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.95</priority>
   </url>
   <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/cartridges</loc>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/media-player</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>daily</changefreq>
-    <priority>0.92</priority>
+    <priority>0.95</priority>
+  </url>
+  <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/catholic-life</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/church-tour</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/altar-anatomy</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/first-communion</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
+  </url>
+  <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/latin-prayers</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.88</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/phonics</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.92</priority>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/languages</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.92</priority>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/shakespeare</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.92</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/bsl</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.92</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/languages/bsl-fingerspelling</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/english/theatre/macbeth</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/english/phonics/screening-check</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/catholic-life/rosary-mysteries</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/maths/geometry/pythagoras</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/science/physics/kinetic-gas</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/catholic-life/church-tour</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/catholic-life/stations-of-the-cross</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/catholic-life/altar-anatomy</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum/catholic-life/holy-oils</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.88</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player.html</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/practice-lab</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/learning-zone</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.85</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/curriculum-studio</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/catholic-life</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/first-communion</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/teacher-beacon</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/profile</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/settings</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.7</priority>
-  </url>
-  <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/news</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/blog</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.75</priority>
   </url>
   <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/licensing</loc>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/settings</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
+    <loc>https://josephbrewerton-oss.github.io/wwwebucation/licensing</loc>
+    <lastmod>2026-11-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/privacy</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   <url>
     <loc>https://josephbrewerton-oss.github.io/wwwebucation/child-safety</loc>
+    <lastmod>2026-11-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/llms.txt</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/llms-full.txt</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/sitemap.ast</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player/index.html</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player/demo-webcomponent.html</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player/micro-vector-player.js</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/player/README.md</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.75</priority>
-  </url>
-  <url>
-    <loc>https://josephbrewerton-oss.github.io/wwwebucation/docs/AST_PLAYER_SPECIFICATION.md</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.85</priority>
   </url>
 </urlset>

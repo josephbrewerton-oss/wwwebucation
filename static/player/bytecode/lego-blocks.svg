@@ -59,13 +59,36 @@
       <stop offset="100%" stop-color="#9f1239" />
     </linearGradient>
 
-    <!-- Dimension Marker Arrowhead -->
-    <marker id="arrow-start" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 10 2 L 0 5 L 10 8 z" fill="#38bdf8" />
-    </marker>
-    <marker id="arrow-end" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto">
-      <path d="M 0 2 L 10 5 L 0 8 z" fill="#38bdf8" />
-    </marker>
+    <!-- Master Parametric Subtractive Geometry Templates (Zero Bloat Instancing) -->
+    <!-- 1. Master Cylindrical Stud (Ø4.8mm, h=1.7mm, with 0.15mm micro-chamfer) -->
+    <g id="master-stud">
+      <path class="stud-wall" d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+      <ellipse class="stud-top" cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="0.8" />
+      <!-- 0.15mm Micro-Chamfer Specular Highlight -->
+      <ellipse cx="0" cy="-8" rx="11.2" ry="5.6" fill="none" stroke="#ffffff" stroke-width="0.6" stroke-opacity="0.6" />
+      <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.5" />
+      <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+    </g>
+
+    <!-- 2. Master Anti-Stud Friction Tube (Ø6.51mm OD, Ø4.8mm ID, with 0.15mm micro-chamfer & evenodd annular rim) -->
+    <g id="master-anti-tube">
+      <!-- Outer Cylindrical Wall (extending from inner roof down to z=0) -->
+      <path class="anti-tube-wall" d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
+      <!-- Subtractive Negative-Space Annular Clutch Rim (fill-rule: evenodd) -->
+      <path class="anti-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
+            d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
+      <!-- 0.15mm Micro-Chamfer Highlight on Annular Rim -->
+      <ellipse cx="0" cy="-18" rx="14.3" ry="7.1" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.5" />
+      <!-- Bore Void Depth Hole (recessed into inner cavity roof) -->
+      <ellipse class="anti-tube-bore" cx="0" cy="-18" rx="7.8" ry="3.9" fill="#140205" />
+    </g>
+
+    <!-- 3. Master Solid Center Pin (Ø3.2mm for 1×n bricks) -->
+    <g id="master-pin">
+      <path class="pin-wall" d="M -8 0 A 8 4 0 0 0 8 0 L 8 -18 A 8 4 0 0 1 -8 -18 Z" fill="#9f1239" />
+      <ellipse class="pin-top" cx="0" cy="-18" rx="8" ry="4" fill="#be123c" stroke="#f43f5e" stroke-width="0.8" />
+      <ellipse cx="0" cy="-18" rx="7.4" ry="3.7" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.5" />
+    </g>
   </defs>
 
   <!-- 1. Workshop Floor & Background Grid -->
@@ -196,109 +219,58 @@
             <line x1="36" y1="54" x2="108" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
             <line x1="36" y1="54" x2="36" y2="102" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
 
-            <!-- 4. Top Stud Array (8 Cylinders on an exact 8.0 mm Modular Isometric Matrix) -->
+            <!-- 4. Top Stud Array (8 Instanced Cylinders on 8.0 mm Modular Isometric Matrix) -->
             <g id="brick-studs-container">
               <!-- Row 1: Back Row (j = 1) -->
-              <g id="stud-01" transform="translate(-36, -36)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-11" transform="translate(0, -18)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-21" transform="translate(36, 0)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-31" transform="translate(72, 18)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
+              <use id="stud-01" href="#master-stud" x="-36" y="-36" />
+              <use id="stud-11" href="#master-stud" x="0" y="-18" />
+              <use id="stud-21" href="#master-stud" x="36" y="0" />
+              <use id="stud-31" href="#master-stud" x="72" y="18" />
 
               <!-- Row 2: Front Row (j = 0) -->
-              <g id="stud-00" transform="translate(-72, -18)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-10" transform="translate(-36, 0)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-20" transform="translate(0, 18)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
-              <g id="stud-30" transform="translate(36, 36)">
-                <path d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
-                <ellipse cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="1" />
-                <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.65" />
-                <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
-              </g>
+              <use id="stud-00" href="#master-stud" x="-72" y="-18" />
+              <use id="stud-10" href="#master-stud" x="-36" y="0" />
+              <use id="stud-20" href="#master-stud" x="0" y="18" />
+              <use id="stud-30" href="#master-stud" x="36" y="36" />
             </g>
           </g>
         </g>
 
-        <!-- Underside Brick Assembly (Flipped View showing internal clutch tubes, cavity & ribs) -->
-        <g id="brick-underside-view" opacity="0" style="display:none; transition: opacity 0.25s ease;">
+        <!-- Underside Subtractive CSG Assembly (Flipped View showing hollow cavity & clutch tubes) -->
+        <!-- Note: NO style="display:none" to prevent overriding presentation attributes! -->
+        <g id="brick-underside-view" opacity="0" display="none" style="transition: opacity 0.25s ease;">
           <!-- 1. Outer Inverted Perimeter Walls (Depth extending downwards in isometric view) -->
           <polygon id="under-wall-left" points="-108,30 36,102 36,150 -108,78" fill="url(#brick-grad-red-left)" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
           <polygon id="under-wall-right" points="36,102 108,66 108,114 36,150" fill="url(#brick-grad-red-right)" stroke="#881337" stroke-width="1.5" stroke-linejoin="round" />
 
-          <!-- 2. Underside Hollow Cavity Face with Compound Annular Wall Rim -->
-          <!-- Outer Rim Border (32×16mm) -->
-          <polygon id="under-rim-outer" points="-108,30 -36,-6 108,66 36,102" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.5" stroke-linejoin="round" />
+          <!-- 2. Subtractive Bottom Face Rim (Outer 32×16mm minus Inner 29.4×13.4mm Void Box = 1.2mm Perimeter Rim) -->
+          <!-- Single Compound Negative-Space Path via fill-rule="evenodd" (Boolean Difference in 1 Operation) -->
+          <path id="under-rim-outer" class="under-csg-rim" fill-rule="evenodd" fill="url(#brick-grad-red-top)" stroke="#fda4af" stroke-width="1.2" stroke-linejoin="round"
+                d="M -108 30 L 36 102 L 108 66 L -36 -6 Z M -96 32 L 32 94 L 96 64 L -32 2 Z" />
           
-          <!-- Deep Internal Hollow Cavity (1.5mm wall perimeter void) -->
-          <polygon id="under-cavity-void" points="-96,30 -32,4 96,66 32,92" fill="#180206" stroke="#4c0519" stroke-width="1.5" stroke-linejoin="round" />
+          <!-- 3. Subtracted Cavity Interior Roof (Inset 1.0mm from Top Deck, Matte ABS Finish ~0.45 Roughness) -->
+          <polygon id="under-cavity-void" points="-96,32 32,94 96,64 -32,2" fill="#180206" stroke="#4c0519" stroke-width="1.2" stroke-linejoin="round" />
 
-          <!-- Internal Longitudinal Alignment Rib -->
-          <line x1="-36" y1="28" x2="36" y2="70" stroke="#4c0519" stroke-width="2" stroke-opacity="0.8" />
-
-          <!-- 3. Internal Cylindrical Friction Clutch Tubes -->
-          <!-- Tube 1 (Left: x=-36, y=32) -->
-          <g id="under-tube-1" transform="translate(-36, 32)">
-            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
-            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
-                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
-            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
+          <!-- 4. Internal Structural Support Ribs (0.8mm thickness connecting tubes to outer walls) -->
+          <g id="under-ribs">
+            <line x1="-36" y1="28" x2="-36" y2="36" stroke="#be123c" stroke-width="1.6" stroke-linecap="round" />
+            <line x1="0" y1="46" x2="0" y2="54" stroke="#be123c" stroke-width="1.6" stroke-linecap="round" />
+            <line x1="36" y1="64" x2="36" y2="72" stroke="#be123c" stroke-width="1.6" stroke-linecap="round" />
+            <line x1="-36" y1="28" x2="36" y2="64" stroke="#4c0519" stroke-width="1.4" stroke-opacity="0.7" />
           </g>
 
-          <!-- Tube 2 (Center: x=0, y=50) -->
-          <g id="under-tube-2" transform="translate(0, 50)">
-            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
-            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
-                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
-            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
+          <!-- 5. Internal Anti-Stud Friction Tubes (Instanced from #master-anti-tube) -->
+          <g id="under-tubes-container">
+            <use id="under-tube-1" href="#master-anti-tube" x="-36" y="32" />
+            <use id="under-tube-2" href="#master-anti-tube" x="0" y="50" />
+            <use id="under-tube-3" href="#master-anti-tube" x="36" y="68" />
           </g>
 
-          <!-- Tube 3 (Right: x=36, y=68) -->
-          <g id="under-tube-3" transform="translate(36, 68)">
-            <path d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
-            <path class="under-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" 
-                  d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
-            <ellipse cx="0" cy="-18" rx="7.5" ry="3.8" fill="#120104" />
-          </g>
-
-          <!-- 4. Underside Clutch Callout Overlays -->
+          <!-- 6. Underside Clutch Callout Overlays -->
           <g id="under-callouts" transform="translate(0, 114)">
             <rect x="-140" y="0" width="280" height="20" rx="5" fill="#0b1120" stroke="#f43f5e" stroke-width="1" />
             <text x="0" y="13.5" fill="#f43f5e" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">
-              ▲ 3× CLUTCH FRICTION TUBES (Ø6.5 mm) • 8× VOIDS
+              ▲ SUBTRACTIVE CSG CAVITY: 1.2mm WALLS • Ø6.51mm TUBES
             </text>
           </g>
         </g>

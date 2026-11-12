@@ -5097,14 +5097,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const gBlock = gestureBlocks[0];
         const gEntries = extractSexprBlocks(gBlock, ':draggable')
           .concat(extractSexprBlocks(gBlock, ':interactive'))
+          .concat(extractSexprBlocks(gBlock, ':clickable'))
+          .concat(extractSexprBlocks(gBlock, ':trackball'))
           .concat(extractSexprBlocks(gBlock, ':rotatable'));
 
         gEntries.forEach(gText => {
           if (gText.startsWith('(:interactive (') || gText.startsWith('(:interactive\n')) return;
           const isDraggable = gText.startsWith('(:draggable');
           const isRotatable = gText.startsWith('(:rotatable');
+          const isTrackball = gText.startsWith('(:trackball');
+          const isClickable = gText.startsWith('(:clickable');
           const target = extractSlot.call(null, gText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, gText, /:target\s+([^\s\)]+)/i);
-          const axis = extractSlot.call(null, gText, /:axis\s+"([^"]+)"/i) || 'xy';
+          const axis = extractSlot.call(null, gText, /:axis\s+"([^"]+)"/i) || (isTrackball ? 'trackball' : 'xy');
           const action = extractSlot.call(null, gText, /:action\s+"([^"]+)"/i);
           const min = parseFloat(extractSlot.call(null, gText, /:min\s+([\d\.\-]+)/i) || '0');
           const max = parseFloat(extractSlot.call(null, gText, /:max\s+([\d\.\-]+)/i) || '800');
@@ -5112,11 +5116,26 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const maxX = parseFloat(extractSlot.call(null, gText, /:max-x\s+([\d\.\-]+)/i) || String(max));
           const minY = parseFloat(extractSlot.call(null, gText, /:min-y\s+([\d\.\-]+)/i) || String(min));
           const maxY = parseFloat(extractSlot.call(null, gText, /:max-y\s+([\d\.\-]+)/i) || String(max));
-          const varName = extractSlot.call(null, gText, /:var\s+"([^"]+)"/i);
+          const varName = extractSlot.call(null, gText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, gText, /:bind-var\s+"([^"]+)"/i);
+          const yawVar = extractSlot.call(null, gText, /:yaw-var\s+"([^"]+)"/i) || 'turntableYaw';
+          const pitchVar = extractSlot.call(null, gText, /:pitch-var\s+"([^"]+)"/i) || 'cameraPitch';
+          const pitchMin = parseFloat(extractSlot.call(null, gText, /:pitch-min\s+([\d\.\-]+)/i) || '-65');
+          const pitchMax = parseFloat(extractSlot.call(null, gText, /:pitch-max\s+([\d\.\-]+)/i) || '65');
+          const toggleVar = extractSlot.call(null, gText, /:toggle\s+"([^"]+)"/i);
+          const setVar = extractSlot.call(null, gText, /:set-var\s+"([^"]+)"/i);
+          const stepVar = extractSlot.call(null, gText, /:step-var\s+"([^"]+)"/i);
+          const delta = parseFloat(extractSlot.call(null, gText, /:delta\s+([\d\.\-]+)/i) || '1');
+          const attr = extractSlot.call(null, gText, /:attr\s+"([^"]+)"/i);
 
           if (target) {
+            let gestureType = 'draggable';
+            if (isClickable) gestureType = 'clickable';
+            else if (isTrackball) gestureType = 'trackball';
+            else if (isRotatable) gestureType = 'rotatable';
+            else if (!isDraggable) gestureType = 'interactive';
+
             gestures.push({
-              type: isDraggable ? 'draggable' : (isRotatable ? 'rotatable' : 'interactive'),
+              type: gestureType,
               target,
               axis,
               action,
@@ -5126,7 +5145,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               maxX,
               minY,
               maxY,
-              var: varName
+              var: varName,
+              yawVar,
+              pitchVar,
+              pitchMin,
+              pitchMax,
+              toggleVar,
+              setVar,
+              stepVar,
+              delta,
+              attr
             });
           }
         });
@@ -6069,7 +6097,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       id = `custom-${Date.now()}`;
     }
     const svgText = sceneData.svgText || sceneData.svgMarkup || sceneData.svg || '';
-    const astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
+    let astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
+    if (!astText && svgText && (svgText.includes('(:scene') || svgText.includes('(:cartridge'))) {
+      astText = svgText;
+    }
 
     // If raw AST text is provided, parse it to extract rich interactive properties
     let parsedAst = null;
@@ -6224,7 +6255,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               stateMachines: (parsed && parsed.stateMachines) || null,
               emitters: (parsed && parsed.emitters) || null,
               bindInputs: (parsed && parsed.bindInputs) || null,
-              svgText: ''
+              svgText: content.includes('<svg') ? content : ''
             };
             const loaded = this.loadSceneData(scene, shouldPlay);
             this.emit('fileloaded', { filename, type: 'ast', id: scene.id });

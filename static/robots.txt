@@ -287,6 +287,4 @@ Allow: /player/scenes/
 
 # Sitemap & Machine Briefings
 Sitemap: https://josephbrewerton-oss.github.io/wwwebucation/sitemap.xml
-Sitemap: https://josephbrewerton-oss.github.io/wwwebucation/sitemap.ast
-Sitemap: /sitemap.xml
-Sitemap: /sitemap.ast
+
