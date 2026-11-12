@@ -1,4 +1,4 @@
-import{t as e}from"./index-RzJXiEH3.js";import{c as t}from"./cartridge-vault-BhkKMAAS.js";function n(){let n=e(),r=document.createElement(`div`);r.className=`home-landing-stage`,r.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let i=`welcome`,a=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));r.innerHTML=`
+import{t as e}from"./index-BGUAOtcz.js";import{c as t}from"./cartridge-vault-BhkKMAAS.js";function n(){let n=e(),r=document.createElement(`div`);r.className=`home-landing-stage`,r.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let i=`welcome`,a=t.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));r.innerHTML=`
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
