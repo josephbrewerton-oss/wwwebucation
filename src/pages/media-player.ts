@@ -493,6 +493,7 @@ export function renderPlayerPage(): HTMLElement {
       const perfHud = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
       const verbosity = (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
       const budgetAlert = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
+      const targetFps = (typeof localStorage !== 'undefined' && localStorage.getItem('app_target_fps')) || 'adaptive';
 
       const activeMeta = getPresetMeta(activePreset);
       const isSim = activeMeta.type === 'Sim';
@@ -572,6 +573,16 @@ export function renderPlayerPage(): HTMLElement {
               </select>
             </div>
 
+            <div style="display:inline-flex; align-items:center; gap:6px;">
+              <label for="diag-select-fps" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Power &amp; FPS Profile:</label>
+              <select id="diag-select-fps" style="padding:4px 8px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;">
+                <option value="adaptive" ${targetFps === 'adaptive' ? 'selected' : ''}>⚡ Adaptive (Auto 60Hz–240Hz)</option>
+                <option value="120" ${targetFps === '120' ? 'selected' : ''}>🚀 Ultra Fluid (120Hz+ ProMotion)</option>
+                <option value="60" ${targetFps === '60' ? 'selected' : ''}>🔒 Locked 60 FPS (School Standard)</option>
+                <option value="30" ${targetFps === '30' ? 'selected' : ''}>🍃 Eco Battery Saver (30 FPS)</option>
+              </select>
+            </div>
+
             <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:0.8rem; font-weight:700;">
               <input type="checkbox" id="diag-toggle-budget" ${budgetAlert ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px;" />
               <span>⏱️ Strict 16.6ms Budget Alarms: <strong style="color:${budgetAlert ? '#ef4444' : '#94a3b8'};">${budgetAlert ? 'ON' : 'OFF'}</strong></span>
@@ -593,6 +604,7 @@ export function renderPlayerPage(): HTMLElement {
 
       const toggleHud = drawer.querySelector<HTMLInputElement>('#diag-toggle-hud');
       const selectVerbosity = drawer.querySelector<HTMLSelectElement>('#diag-select-verbosity');
+      const selectFps = drawer.querySelector<HTMLSelectElement>('#diag-select-fps');
       const toggleBudget = drawer.querySelector<HTMLInputElement>('#diag-toggle-budget');
       const btnPing = drawer.querySelector<HTMLButtonElement>('#diag-btn-ping');
 
@@ -600,16 +612,23 @@ export function renderPlayerPage(): HTMLElement {
         const hudEnabled = Boolean(toggleHud?.checked);
         const mode = selectVerbosity?.value || 'minimal';
         const budgetEnabled = Boolean(toggleBudget?.checked);
+        const fpsChoice = selectFps?.value || 'adaptive';
 
         localStorage.setItem('app_perf_hud_enabled', String(hudEnabled));
         localStorage.setItem('app_hud_verbosity', mode);
         localStorage.setItem('app_frame_budget_alert', String(budgetEnabled));
+        localStorage.setItem('app_target_fps', fpsChoice);
 
         postToPlayer({
           type: 'SET_PERF_HUD',
           enabled: hudEnabled,
           mode: mode,
           strictAlarm: budgetEnabled,
+        });
+
+        postToPlayer({
+          type: 'SET_TARGET_FPS',
+          fps: fpsChoice === 'adaptive' ? 0 : parseInt(fpsChoice, 10),
         });
 
         window.dispatchEvent(new CustomEvent('app-setting-changed', {
@@ -623,6 +642,10 @@ export function renderPlayerPage(): HTMLElement {
       });
 
       selectVerbosity?.addEventListener('change', () => {
+        syncHudSettings();
+      });
+
+      selectFps?.addEventListener('change', () => {
         syncHudSettings();
       });
 

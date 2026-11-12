@@ -139,7 +139,7 @@
 
       const avgDelta = validFrames > 0 ? (sumDelta / validFrames) : 16.66;
       const avgCompute = validFrames > 0 ? (sumCompute / validFrames) : (this.computeTimes[0] || 0.1);
-      const fps = avgDelta > 0 ? Math.min(120, Math.round(1000 / avgDelta)) : 60;
+      const fps = avgDelta > 0 ? Math.min(240, Math.round(1000 / avgDelta)) : 60;
 
       const overBudget = maxCompute > 16.66;
       if (this.strictAlarm && overBudget) {
@@ -2238,6 +2238,11 @@
           strictAlarm: strictAlarm
         });
       }
+
+      // Optional Framerate / Power Gating (0 = Adaptive VSync, 30 = Eco, 60 = Standard, 120/240 = Ultra)
+      const isFpsStorage = typeof localStorage !== 'undefined' ? localStorage.getItem('app_target_fps') : null;
+      const initialFps = (urlParams && urlParams.get('fps')) || isFpsStorage;
+      this.targetFps = initialFps && !isNaN(parseInt(initialFps, 10)) ? parseInt(initialFps, 10) : 0;
       this.activeBranches = null;
 
       // Container & Dynamic Bindings
@@ -7730,10 +7735,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     if (this.profiler) this.profiler.onFrame(currentTimestamp);
 
     if (this.lastTimestamp !== null) {
+      const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
+
+      // Optional Framerate / Power Gating (e.g. Eco 30 FPS saves mobile CPU cycles)
+      if (this.targetFps > 0) {
+        const minIntervalSec = (1.0 / this.targetFps) * 0.94;
+        if (rawDeltaSec < minIntervalSec) {
+          if (typeof requestAnimationFrame !== 'undefined') {
+            this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
+          }
+          return;
+        }
+      }
+
       // 2. Start VM Compute Timer
       const t0 = (this.profiler && typeof performance !== 'undefined') ? performance.now() : 0;
 
-      const rawDeltaSec = (currentTimestamp - this.lastTimestamp) / 1000.0;
       const deltaSec = Math.min(rawDeltaSec, 0.1);
       this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
 
@@ -8555,6 +8572,13 @@ function setupPostMessageBridge(engine, uiController) {
     if (!data || typeof data !== 'object') return;
 
     switch (data.type) {
+      case 'SET_TARGET_FPS':
+        if (typeof data.fps === 'number') {
+          engine.targetFps = data.fps;
+        } else if (data.fps === 'adaptive' || !data.fps) {
+          engine.targetFps = 0;
+        }
+        break;
       case 'SEEK':
         if (typeof data.progress === 'number') engine.seek(data.progress);
         break;
