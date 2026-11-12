@@ -118,7 +118,39 @@
 
       // Prevent default pinch-zoom or scrolling when dragging on interactive elements
       this.stageSvg.style.touchAction = 'none';
+      // Declarative Keyboard Listener for (:key :code "..." ...) tuples
+      if (!this._declarativeKeyBound) {
+        this._declarativeKeyBound = true;
+        window.addEventListener('keydown', (e) => {
+          if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.isContentEditable)) return;
+          const scene = this.engine && this.engine.scene;
+          if (!scene || !Array.isArray(scene.gestures) || !this.engine.vars) return;
 
+          const matchingKeys = scene.gestures.filter(g => g.type === 'key' && (g.code === e.code || g.key === e.key));
+          if (matchingKeys.length === 0) return;
+
+          e.preventDefault();
+          matchingKeys.forEach(g => {
+            if (g.toggleVar) {
+              this.engine.vars[g.toggleVar] = !this.engine.vars[g.toggleVar];
+            } else if (g.setVar) {
+              this.engine.vars[g.setVar] = g.val;
+            } else if (g.stepVar) {
+              const cur = typeof this.engine.vars[g.stepVar] === 'number' ? this.engine.vars[g.stepVar] : 0;
+              const delta = typeof g.delta === 'number' ? g.delta : 1;
+              const vMeta = scene.vars && scene.vars[g.stepVar];
+              const min = typeof g.min === 'number' ? g.min : (vMeta && typeof vMeta.min === 'number' ? vMeta.min : -Infinity);
+              const max = typeof g.max === 'number' ? g.max : (vMeta && typeof vMeta.max === 'number' ? vMeta.max : Infinity);
+              this.engine.vars[g.stepVar] = Math.max(min, Math.min(max, cur + delta));
+            }
+          });
+
+          if (typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0);
+          }
+          this.playAudioTone(440, 'triangle', 0.04, 0.12);
+        });
+      }
       // Whiteboard Ink message listener from parent window / WebRTC classroom mesh
       window.addEventListener('message', (ev) => {
         if (!ev.data) return;
@@ -474,21 +506,26 @@
                 e.stopPropagation();
                 if (!this.engine || !this.engine.vars) return;
 
-                if (g.toggleVar) {
-                  this.engine.vars[g.toggleVar] = !this.engine.vars[g.toggleVar];
-                } else if (g.setVar) {
+                const toggleKey = g.toggleVar || g.toggle;
+                const setKey = g.setVar || (g.var && g.val !== undefined ? g.var : null);
+                const stepKey = g.stepVar || (g.var && g.delta !== undefined ? g.var : null);
+
+                if (toggleKey) {
+                  this.engine.vars[toggleKey] = !this.engine.vars[toggleKey];
+                } else if (setKey) {
                   let val = g.val;
                   if (g.attr && el.hasAttribute(g.attr)) {
                     const rawAttr = el.getAttribute(g.attr);
                     val = !isNaN(Number(rawAttr)) ? Number(rawAttr) : rawAttr;
                   }
-                  this.engine.vars[g.setVar] = val;
-                } else if (g.stepVar) {
-                  const cur = typeof this.engine.vars[g.stepVar] === 'number' ? this.engine.vars[g.stepVar] : 0;
+                  this.engine.vars[setKey] = val;
+                } else if (stepKey) {
+                  const cur = typeof this.engine.vars[stepKey] === 'number' ? this.engine.vars[stepKey] : 0;
                   const delta = typeof g.delta === 'number' ? g.delta : 1;
-                  const min = typeof g.min === 'number' ? g.min : -Infinity;
-                  const max = typeof g.max === 'number' ? g.max : Infinity;
-                  this.engine.vars[g.stepVar] = Math.max(min, Math.min(max, cur + delta));
+                  const vMeta = scene.vars && scene.vars[stepKey];
+                  const min = typeof g.min === 'number' ? g.min : (vMeta && typeof vMeta.min === 'number' ? vMeta.min : -Infinity);
+                  const max = typeof g.max === 'number' ? g.max : (vMeta && typeof vMeta.max === 'number' ? vMeta.max : Infinity);
+                  this.engine.vars[stepKey] = Math.max(min, Math.min(max, cur + delta));
                 }
 
                 if (typeof this.engine.applyBindings === 'function') {
@@ -496,8 +533,7 @@
                 }
                 this.playAudioTone(440, 'triangle', 0.05, 0.15);
               });
-            }
-            // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
+            }            // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
             else if (g.type === 'trackball' || g.axis === 'trackball') {
               el.style.cursor = 'grab';
               el.setAttribute('data-declarative-trackball', 'true');
@@ -561,18 +597,19 @@
         }
       }
 
-      // B0. Check for 3D Trackball Orbit / Turntable Drag
+     // B0. Check for 3D Trackball Orbit / Turntable Drag
       const isLegoOrTrackballScene = Boolean(
         this.stageSvg.querySelector('[data-declarative-trackball]') ||
         this.stageSvg.querySelector('#turntable-root') ||
         (this.engine && this.engine.scene && (this.engine.scene.id === 'lego-blocks' || (this.engine.scene.gestures && this.engine.scene.gestures.some(g => g.type === 'trackball'))))
       );
+      const trackballIgnoreSelector = '[data-declarative-clickable], .lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, .interactive-card, #stage-glass-hud-ui, [data-action], [data-draggable], [data-interactive]';
       let trackballEl = e.target.closest('[data-declarative-trackball], #turntable-root, #brick-3d-stage, #lego-yaw-knob, #turntable-hitbox');
-      if (!trackballEl && isLegoOrTrackballScene && !e.target.closest('.lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, .interactive-card, #stage-glass-hud-ui, [data-action], [data-draggable], [data-interactive]')) {
+      if (!trackballEl && isLegoOrTrackballScene && !e.target.closest(trackballIgnoreSelector)) {
         trackballEl = this.stageSvg.querySelector('[data-declarative-trackball]') || this.stageSvg.querySelector('#turntable-root') || this.stageSvg.querySelector('#brick-3d-stage');
       }
 
-      if (trackballEl && !e.target.closest('.lego-btn, .col-swatch, #btn-action-reset, #hud-btn-reset, #lego-left-deck, #lego-right-deck, [data-action], [data-draggable], [data-interactive]')) {
+      if (trackballEl && !e.target.closest(trackballIgnoreSelector)) {
         e.preventDefault();
         this.isDragging = true;
         this.dragMode = 'trackball';
@@ -593,7 +630,6 @@
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
-
       // B. Check for interactive direct-grab targets or action buttons
       const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, #tt-laser-splitter');
 
