@@ -365,11 +365,6 @@
         this.setupBbcMicroInteractivity();
       }
 
-      // 9bl. Modular Brick Engineering (LEGO compatible) Subsystem
-      if (this.stageSvg.querySelector('#lego-header') || (this.engine.scene && this.engine.scene.id === 'lego-blocks')) {
-        this.setupLegoBlocksInteractivity();
-      }
-
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
 
@@ -6955,88 +6950,7 @@ if (arrowLine) {
         spacebar.addEventListener('click', onSpace);
       }
     }
-
-      
-
-    // 10. Lumina Sovereign Architecture Manifesto Interactive Deck Controller
-    if (this.currentSceneId === 'lumina-architecture-manifesto' || this.currentSceneId === 'lumina-architecture' || this.stageSvg.querySelector('#lumina-manifesto-root')) {
-      const stage = this.stageSvg;
-      const tabs = stage.querySelectorAll('.lumina-ch-tab');
-      tabs.forEach((tab) => {
-        tab.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const targetPage = parseInt(tab.getAttribute('data-page') || '0', 10);
-          if (this.engine && this.engine.vars) {
-            this.engine.vars.page = targetPage;
-            this.engine.applyBindings(this.engine.progress || 0);
-          }
-        });
-      });
-
-      const btnPrev = stage.querySelector('#lumina-btn-prev');
-      const btnNext = stage.querySelector('#lumina-btn-next');
-      if (btnPrev) {
-        btnPrev.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.engine && this.engine.vars) {
-            const cur = typeof this.engine.vars.page === 'number' ? this.engine.vars.page : 0;
-            this.engine.vars.page = Math.max(0, cur - 1);
-            this.engine.applyBindings(this.engine.progress || 0);
-          }
-        });
-      }
-      if (btnNext) {
-        btnNext.addEventListener('click', (e) => {
-          e.stopPropagation();
-          if (this.engine && this.engine.vars) {
-            const cur = typeof this.engine.vars.page === 'number' ? this.engine.vars.page : 0;
-            this.engine.vars.page = Math.min(3, cur + 1);
-            this.engine.applyBindings(this.engine.progress || 0);
-          }
-        });
-      }
-
-      // Interactive CSG Aperture Drag
-      const csgHandle = stage.querySelector('#csg-aperture-scrubber');
-      if (csgHandle) {
-        let isScrubbing = false;
-        let startX = 0;
-        let startVal = 24;
-
-        const onScrubDown = (e) => {
-          isScrubbing = true;
-          startX = e.clientX;
-          startVal = (this.engine && this.engine.vars && typeof this.engine.vars.csgAperture === 'number') ? this.engine.vars.csgAperture : 24;
-          if (e.target.setPointerCapture && e.pointerId) {
-            try { e.target.setPointerCapture(e.pointerId); } catch (_) {}
-          }
-        };
-
-        const onScrubMove = (e) => {
-          if (!isScrubbing) return;
-          const dx = e.clientX - startX;
-          const newVal = Math.max(8, Math.min(48, Math.round(startVal + dx * 0.3)));
-          if (this.engine && this.engine.vars) {
-            this.engine.vars.csgAperture = newVal;
-            this.engine.applyBindings(this.engine.progress || 0);
-          }
-        };
-
-        const onScrubUp = (e) => {
-          isScrubbing = false;
-          if (e.target.releasePointerCapture && e.pointerId) {
-            try { e.target.releasePointerCapture(e.pointerId); } catch (_) {}
-          }
-        };
-
-        csgHandle.addEventListener('pointerdown', onScrubDown);
-        csgHandle.addEventListener('pointermove', onScrubMove);
-        csgHandle.addEventListener('pointerup', onScrubUp);
-        csgHandle.addEventListener('pointercancel', onScrubUp);
-      }
-    }
   }
-
   // Expose globally
   global.ASTDirectGestureSubsystem = ASTDirectGestureSubsystem;
 
