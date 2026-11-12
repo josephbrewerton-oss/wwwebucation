@@ -6006,7 +6006,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       // Mount the declarative parameter dock directly inside the stage
       this.mountDeclarativeHud(scene);
+      
+        const activeSvg = this.container && this.container.querySelector('svg');
+          if (activeSvg && this.gestureController) {
+            this.gestureController.stageSvg = activeSvg;
+            this.gestureController.setupEventListeners();
+        }
 
+        
       // 1. Hide the "Loading AST Vector Scene..." overlay immediately
       const loaderEl = document.getElementById('loading-indicator') || 
                        document.getElementById('loading') ||
