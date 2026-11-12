@@ -3137,7 +3137,7 @@ ${strokeLines.join('\n')}
     // Procedural Audio Sonification
     // =========================================================================
     playAudioTone(frequency = 440, type = 'sine', duration = 0.1, gainVal = 0.15) {
-      if (!this.sonificationEnabled) return;
+      if (!this.sonificationEnabled || (this.engine && (this.engine.muted || this.engine.volume === 0))) return;
       try {
         if (!this.audioCtx) {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;

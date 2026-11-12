@@ -14,6 +14,8 @@ import {
   broadcastBslSpeech,
   subscribeVoice,
   setVoiceEnabled,
+  getVoiceEnabled,
+  toggleVoice,
 } from '../services/bslGlobalStore';
 import {
   renderPlayerEmbedModal,
@@ -80,6 +82,7 @@ export function renderPlayerPage(): HTMLElement {
   let activeCategory = 'All';
   let searchQuery = '';
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
+  let isMuted = !getVoiceEnabled();
 
   // Ensure presets are loaded from generatedScenes
   const presets: ScenePresetOption[] = Array.isArray(PRESET_OPTIONS) && PRESET_OPTIONS.length > 0
@@ -244,6 +247,10 @@ export function renderPlayerPage(): HTMLElement {
           <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px;" title="Reset Simulation apparatus to initial conditions">
             ↺ Reset
           </button>
+          <button type="button" id="player-btn-mute" style="padding:5px 12px; border-radius:6px; background:${isMuted ? '#451a03' : '#1e293b'}; color:#ffffff; border:1px solid ${isMuted ? '#d97706' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Mute / Unmute simulation audio and voice narration (M)">
+            <span id="player-mute-icon">${isMuted ? '🔇' : '🔊'}</span>
+            <span id="player-mute-text">${isMuted ? 'Muted' : 'Audio ON'}</span>
+          </button>
           <button type="button" id="player-btn-bsl" style="padding:5px 12px; border-radius:6px; background:${bslActive ? '#0284c7' : '#1e293b'}; color:#ffffff; border:1px solid ${bslActive ? '#38bdf8' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; width:142px; text-align:center; flex-shrink:0; min-height:28px;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
             🖐️ BSL Signing: ${bslActive ? 'ON' : 'OFF'}
           </button>
@@ -378,6 +385,7 @@ export function renderPlayerPage(): HTMLElement {
   const playIcon = container.querySelector<HTMLElement>('#player-play-icon');
   const playText = container.querySelector<HTMLElement>('#player-play-text');
   const resetBtn = container.querySelector<HTMLButtonElement>('#player-btn-reset');
+  const muteBtn = container.querySelector<HTMLButtonElement>('#player-btn-mute');
   const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl');
   const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
   const labDrawerBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab-drawer');
@@ -1054,6 +1062,27 @@ export function renderPlayerPage(): HTMLElement {
     postToPlayer({ type: 'RESET_SIM' });
   });
 
+  function updateMuteUi(muted: boolean) {
+    if (muteBtn) {
+      muteBtn.style.background = muted ? '#451a03' : '#1e293b';
+      muteBtn.style.borderColor = muted ? '#d97706' : '#334155';
+      muteBtn.title = muted ? 'Unmute simulation audio (M)' : 'Mute simulation audio (M)';
+    }
+    const icon = container.querySelector('#player-mute-icon');
+    const text = container.querySelector('#player-mute-text');
+    if (icon) icon.textContent = muted ? '🔇' : '🔊';
+    if (text) text.textContent = muted ? 'Muted' : 'Audio ON';
+  }
+
+  muteBtn?.addEventListener('click', () => {
+    const nextVoice = toggleVoice();
+    const muted = !nextVoice;
+    isMuted = muted;
+    updateMuteUi(muted);
+    postToPlayer({ type: 'SET_VOICE', enabled: nextVoice });
+    postToPlayer({ type: 'SET_MUTED', muted });
+  });
+
   bslBtn?.addEventListener('click', () => {
     toggleBsl();
   });
@@ -1078,10 +1107,27 @@ export function renderPlayerPage(): HTMLElement {
   // Synchronize voice narration and master mute between host and simulator iframe
   subscribeVoice((enabled) => {
     try {
+      const muted = !enabled;
+      isMuted = muted;
+      updateMuteUi(muted);
       postToPlayer({ type: 'SET_VOICE', enabled });
-      postToPlayer({ type: 'SET_MUTED', muted: !enabled });
+      postToPlayer({ type: 'SET_MUTED', muted });
     } catch (_) {}
   });
+
+  // Keyboard accessibility shortcuts: M to toggle mute, Space to toggle play/pause
+  const onKeyDown = (e: KeyboardEvent) => {
+    const activeTag = document.activeElement?.tagName.toLowerCase();
+    if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
+    if (e.key === 'm' || e.key === 'M') {
+      e.preventDefault();
+      muteBtn?.click();
+    } else if (e.code === 'Space' && !e.repeat) {
+      e.preventDefault();
+      playBtn?.click();
+    }
+  };
+  window.addEventListener('keydown', onKeyDown);
 
   window.addEventListener('message', (e) => {
     if (!e.data || typeof e.data !== 'object') return;
