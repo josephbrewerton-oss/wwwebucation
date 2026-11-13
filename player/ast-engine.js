@@ -4658,7 +4658,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               target: getStr(targetIdx),
               axis: axisVal === 2 ? 'y' : axisVal === 3 ? 'xy' : 'x',
               min: minVal,
-              max: maxVal
+              max: maxVal,
+              fromBytecode: true
             });
             break;
           }
@@ -6310,7 +6311,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               !parsedAst ||
               (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0)) ||
               !parsedAst.computed || parsedAst.computed.length === 0 ||
-              !parsedAst.gestures || parsedAst.gestures.length === 0
+              !parsedAst.gestures || parsedAst.gestures.length === 0 ||
+              parsedAst.gestures.some(g => g && g.fromBytecode)
             ) {
               const foundAst = await fetchAsset('ast');
               if (foundAst) {
@@ -6369,7 +6371,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if ((!parsedAst.stateMachines || parsedAst.stateMachines.length === 0) && textParsed.stateMachines) {
                   parsedAst.stateMachines = textParsed.stateMachines;
                 }
-                if (textParsed.gestures && textParsed.gestures.length > 0 && (!parsedAst.gestures || textParsed.gestures.length >= parsedAst.gestures.length)) {
+                if (
+                  textParsed.gestures &&
+                  textParsed.gestures.length > 0 &&
+                  (
+                    !parsedAst.gestures ||
+                    parsedAst.gestures.some(g => g && g.fromBytecode) ||
+                    textParsed.gestures.length >= parsedAst.gestures.length
+                  )
+                ) {
                   parsedAst.gestures = textParsed.gestures;
                 }
                 if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.some(b => b.type === 'var-update'))) {
@@ -9301,6 +9311,18 @@ function setupPostMessageBridge(engine, uiController) {
           }
         }
         break;
+      case 'FOCUS_STAGE': {
+        const svgEl = engine.getStageSvg();
+        if (svgEl && typeof svgEl.focus === 'function') {
+          try { svgEl.focus({ preventScroll: true }); } catch (_) {
+            try { svgEl.focus(); } catch (_) {}
+          }
+        }
+        if (typeof window.focus === 'function') {
+          try { window.focus(); } catch (_) {}
+        }
+        break;
+      }
       case 'ROTATE_3D':
         if (typeof data.deltaYaw === 'number' || typeof data.deltaPitch === 'number') {
           engine.rotateCamera(data.deltaYaw || 0, data.deltaPitch || 0);
