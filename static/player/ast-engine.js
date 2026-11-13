@@ -3918,16 +3918,167 @@
       this.emit('varchange', { name: '*', vars: { ...this.vars } });
     }
 
-    updateComputedVars() {
+    compileAstExpr(rawExpr) {
+      if (rawExpr === null || rawExpr === undefined) return '0';
+      let expr = String(rawExpr).trim();
+      if (!expr) return '0';
+
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(expr)) {
+        if (
+          expr === 't' || expr === 'true' || expr === 'false' ||
+          expr === 'null' || expr === 'undefined' || expr === 'NaN' ||
+          expr === 'Infinity' || expr === 'vars' || expr === 'computed' || expr === 'Math'
+        ) {
+          return expr;
+        }
+        return `vars[${JSON.stringify(expr)}]`;
+      }
+
+      if (expr.startsWith('(') && expr.endsWith(')')) {
+        const tokenizeLisp = (src) => {
+          const tokens = [];
+          let i = 0;
+          while (i < src.length) {
+            const ch = src[i];
+            if (/\s/.test(ch)) { i++; continue; }
+            if (ch === '(' || ch === ')') { tokens.push({ type: ch, val: ch }); i++; continue; }
+            if (ch === '"' || ch === "'") {
+              const quote = ch;
+              let s = '';
+              i++;
+              while (i < src.length) {
+                if (src[i] === '\\' && i + 1 < src.length) {
+                  const next = src[i + 1];
+                  if (next === 'n') s += '\n';
+                  else if (next === 't') s += '\t';
+                  else s += next;
+                  i += 2;
+                } else if (src[i] === quote) {
+                  i++;
+                  break;
+                } else {
+                  s += src[i++];
+                }
+              }
+              tokens.push({ type: 'str', val: s });
+              continue;
+            }
+            let atom = '';
+            while (i < src.length && !/[\s()]/.test(src[i])) {
+              atom += src[i++];
+            }
+            tokens.push({ type: 'atom', val: atom });
+          }
+          return tokens;
+        };
+
+        const tokens = tokenizeLisp(expr);
+        if (tokens.length >= 3 && tokens[0].type === '(') {
+          let pos = 0;
+          const parseForm = () => {
+            if (pos >= tokens.length) throw new Error('EOF');
+            const tok = tokens[pos++];
+            if (tok.type === '(') {
+              const list = [];
+              while (pos < tokens.length && tokens[pos].type !== ')') {
+                list.push(parseForm());
+              }
+              if (pos >= tokens.length || tokens[pos].type !== ')') throw new Error('Unbalanced');
+              pos++;
+              return list;
+            }
+            return tok;
+          };
+
+          try {
+            const ast = parseForm();
+            if (pos === tokens.length && Array.isArray(ast) && ast.length >= 1 && ast[0] && ast[0].type === 'atom') {
+              const head = ast[0].val;
+              const LISP_OPS = new Set([
+                '+', '-', '*', '/', '%', 'mod',
+                '>', '<', '>=', '<=', '=', '==', '===', '!=', '!==',
+                'and', 'or', 'not', 'if', ':if',
+                'clamp', 'lerp', 'map', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
+                'sqrt', 'abs', 'round', 'floor', 'ceil', 'min', 'max', 'pow', 'exp', 'log',
+                'concat', 'str', 'rad', 'deg', 'dist', 'sineWave', 'smoothstep'
+              ]);
+              if (LISP_OPS.has(head)) {
+                const emitNode = (node) => {
+                  if (!Array.isArray(node)) {
+                    if (node.type === 'str') return JSON.stringify(node.val);
+                    const a = node.val;
+                    if (a === 'true' || a === 'false' || a === 'null' || a === 't' || a === 'Math.PI' || a === 'Math.E') return a;
+                    if (a === 'PI') return 'Math.PI';
+                    if (a === 'E') return 'Math.E';
+                    if (/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(a)) return a;
+                    if (/^(?:vars|computed)\.[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
+                      const prop = a.split('.')[1];
+                      return `vars[${JSON.stringify(prop)}]`;
+                    }
+                    if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
+                      return `vars[${JSON.stringify(a)}]`;
+                    }
+                    return a;
+                  }
+                  if (node.length === 0) return 'undefined';
+                  const op = node[0].type === 'atom' ? node[0].val : '';
+                  const args = node.slice(1).map(emitNode);
+                  switch (op) {
+                    case '+': return args.length === 1 ? `(+${args[0]})` : `(${args.join(' + ')})`;
+                    case '-': return args.length === 1 ? `(-${args[0]})` : `(${args.join(' - ')})`;
+                    case '*': return `(${args.join(' * ')})`;
+                    case '/': return `(${args.join(' / ')})`;
+                    case '%': return `(${args[0]} % ${args[1]})`;
+                    case 'mod': return `((((${args[0]}) % (${args[1]})) + (${args[1]})) % (${args[1]}))`;
+                    case '>': case '<': case '>=': case '<=': case '!=': case '!==':
+                      return `(${args[0]} ${op} ${args[1]})`;
+                    case '=': case '==': case '===':
+                      return `(${args[0]} === ${args[1]})`;
+                    case 'and': return `(${args.join(' && ')})`;
+                    case 'or': return `(${args.join(' || ')})`;
+                    case 'not': return `(!(${args[0]}))`;
+                    case 'if': case ':if':
+                      return `((${args[0]}) ? (${args[1] !== undefined ? args[1] : 'undefined'}) : (${args[2] !== undefined ? args[2] : 'undefined'}))`;
+                    case 'concat': case 'str':
+                      return `("" + ${args.map(a => `(${a})`).join(' + ')})`;
+                    case 'clamp': case 'lerp': case 'map': case 'rad': case 'deg': case 'dist': case 'sineWave': case 'smoothstep':
+                      return `${op}(${args.join(', ')})`;
+                    case 'sin': case 'cos': case 'tan': case 'asin': case 'acos': case 'atan': case 'atan2':
+                    case 'sqrt': case 'abs': case 'round': case 'floor': case 'ceil': case 'min': case 'max': case 'pow': case 'exp': case 'log':
+                      return `Math.${op}(${args.join(', ')})`;
+                    default:
+                      return `${op}(${args.join(', ')})`;
+                  }
+                };
+                return emitNode(ast);
+              }
+            }
+          } catch (_) {}
+        }
+      }
+
+      expr = expr.replace(
+        /\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g,
+        '($1 ? $2 : $3)'
+      );
+      expr = expr.replace(/:([a-zA-Z_]\w*)/g, '$1');
+      return expr;
+    }
+
+    updateComputedVars(t) {
       if (!this.scene || !this.scene.computed || !this.scene.computed.length) return;
       const v = this.vars || {};
+      const evalT = t !== undefined
+        ? t
+        : ((this.isContinuousSim && v && typeof v.simClock === 'number') ? v.simClock : (this.progress || 0));
       for (let i = 0; i < this.scene.computed.length; i++) {
         const comp = this.scene.computed[i];
         try {
           if (!comp._eval) {
-            comp._eval = new Function('vars', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${comp.expr});`);
+            const compiled = this.compileAstExpr(comp.expr);
+            comp._eval = new Function('t', 'vars', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${compiled});`);
           }
-          v[comp.name] = comp._eval(v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
+          v[comp.name] = comp._eval(evalT, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
         } catch {}
       }
     }
@@ -4099,7 +4250,7 @@
     }
 
     getCurrentSubtitle() {
-      if (!this.scene.subtitles || !this.scene.subtitles.length) return '';
+      if (!this.scene || !Array.isArray(this.scene.subtitles) || !this.scene.subtitles.length) return '';
       const sub = this.scene.subtitles.find(s => this.progress >= s.start && this.progress <= s.end);
       if (!sub) return '';
       
@@ -4666,6 +4817,123 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         return blocks;
       };
 
+      // Extract either (:tag ( ... )) or plist-style :tag ( ... )
+      const extractKeywordBlocks = (text, tag) => {
+        const direct = extractSexprBlocks(text, tag);
+        if (direct.length > 0) return direct;
+        const blocks = [];
+        const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const kwRegex = new RegExp(`(?:^|[\\s(])${safeTag}\\s+\\(`, 'gi');
+        let m;
+        while ((m = kwRegex.exec(text)) !== null) {
+          const openIdx = text.indexOf('(', m.index + m[0].length - 1);
+          if (openIdx === -1) continue;
+          let depth = 0;
+          let inString = false;
+          let endIdx = -1;
+          for (let i = openIdx; i < text.length; i++) {
+            const char = text[i];
+            if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
+              inString = !inString;
+            } else if (!inString) {
+              if (char === '(') depth++;
+              else if (char === ')') {
+                depth--;
+                if (depth === 0) {
+                  endIdx = i + 1;
+                  break;
+                }
+              }
+            }
+          }
+          if (endIdx !== -1) {
+            blocks.push(text.slice(openIdx, endIdx));
+          }
+        }
+        return blocks;
+      };
+
+      // Extract direct child S-expressions from an enclosing list block
+      const extractChildForms = (blockText) => {
+        const forms = [];
+        if (!blockText) return forms;
+        let searchStart = blockText.indexOf('(');
+        if (searchStart === -1) return forms;
+        // If wrapped as (:tag (...)), unwrap outer form to inner list
+        const trimmed = blockText.slice(searchStart).trim();
+        let innerStart = 1;
+        if (/^\(:[a-zA-Z0-9_-]+\s+\(/.test(trimmed)) {
+          innerStart = trimmed.indexOf('(', 1) + 1;
+        }
+        let i = innerStart;
+        while (i < trimmed.length) {
+          const ch = trimmed[i];
+          if (ch === ';') {
+            while (i < trimmed.length && trimmed[i] !== '\n') i++;
+            continue;
+          }
+          if (ch === '"') {
+            i++;
+            while (i < trimmed.length) {
+              if (trimmed[i] === '\\') { i += 2; continue; }
+              if (trimmed[i] === '"') { i++; break; }
+              i++;
+            }
+            continue;
+          }
+          if (ch === '(') {
+            let depth = 0;
+            let inStr = false;
+            const fStart = i;
+            let fEnd = -1;
+            for (; i < trimmed.length; i++) {
+              const c = trimmed[i];
+              if (c === '"' && (i === 0 || trimmed[i - 1] !== '\\')) {
+                inStr = !inStr;
+              } else if (!inStr) {
+                if (c === '(') depth++;
+                else if (c === ')') {
+                  depth--;
+                  if (depth === 0) {
+                    fEnd = i + 1;
+                    i++;
+                    break;
+                  }
+                }
+              }
+            }
+            if (fEnd !== -1) {
+              forms.push(trimmed.slice(fStart, fEnd));
+              continue;
+            }
+          }
+          if (ch === ')' && i === trimmed.length - 1) break;
+          i++;
+        }
+        return forms;
+      };
+
+      const parseLiteralVal = (raw) => {
+        if (raw === null || raw === undefined) return undefined;
+        const clean = String(raw).replace(/^"|"$/g, '').replace(/\\"/g, '"');
+        if (clean === 'true') return true;
+        if (clean === 'false') return false;
+        if (clean !== '' && !isNaN(Number(clean))) return Number(clean);
+        return clean;
+      };
+
+      const extractSlotValue = (text, key) => {
+        if (!text || typeof text !== 'string') return undefined;
+        const safeK = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const qReg = new RegExp(`:${safeK}\\s+"((?:[^"\\\\]|\\\\.)*)"`, 'i');
+        const qm = text.match(qReg);
+        if (qm) return qm[1].replace(/\\"/g, '"');
+        const aReg = new RegExp(`:${safeK}\\s+([^\\s\\)]+)`, 'i');
+        const am = text.match(aReg);
+        if (!am) return undefined;
+        return parseLiteralVal(am[1]);
+      };
+
       // Camera definition with balanced parenthesis S-expression extraction
       const camBlocks = extractSexprBlocks(astContent, ':camera');
       let camera = { distance: 500, pitch: 20, yaw: 0, fov: 60 };
@@ -4707,7 +4975,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         subtitles.push(subObj);
       }
 
-      // Bindings (2D, 3D nodes, 3D lines, 3D rings, 3D polygons)
+      // Bindings (2D, Text, Var integration, 3D nodes, 3D lines, 3D rings, 3D polygons)
       const bindings = [];
       const bindBlocks = extractSexprBlocks(astContent, ':target');
 
@@ -4752,13 +5020,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             baseR: parseFloat(extractSlot.call(null, block, /:base-r\s+([\d\.]+)/i) || '8')
           });
         } else if (type === '3d-ring') {
-          const rStr = extractSlot.call(null, block, /:r\s+("[^"]+"|[\\d\\.]+)/i) || '100';
+          const rStr = extractSlot.call(null, block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
           const cx = extractSlot.call(null, block, /:cx\s+"([^"]+)"/i) || '0';
           const cy = extractSlot.call(null, block, /:cy\s+"([^"]+)"/i) || '0';
           const cz = extractSlot.call(null, block, /:cz\s+"([^"]+)"/i) || '0';
-          const tiltX = extractSlot.call(null, block, /:tilt-x\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
-          const tiltY = extractSlot.call(null, block, /:tilt-y\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
-          const tiltZ = extractSlot.call(null, block, /:tilt-z\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
+          const tiltX = extractSlot.call(null, block, /:tilt-x\s+("[^"]+"|[\d\.-]+)/i) || '0';
+          const tiltY = extractSlot.call(null, block, /:tilt-y\s+("[^"]+"|[\d\.-]+)/i) || '0';
+          const tiltZ = extractSlot.call(null, block, /:tilt-z\s+("[^"]+"|[\d\.-]+)/i) || '0';
           const segsStr = extractSlot.call(null, block, /:segments\s+([\d]+)/i);
           const segments = segsStr ? parseInt(segsStr, 10) : 24;
           const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
@@ -4796,6 +5064,36 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           });
         }
       });
+
+      // Also parse (:attr ...), (:text ...), and (:var ...) forms inside :bindings (...)
+      const bindListBlocks = extractKeywordBlocks(astContent, ':bindings');
+      if (bindListBlocks.length > 0) {
+        const bindForms = extractChildForms(bindListBlocks[0]);
+        bindForms.forEach(form => {
+          if (/^\(\s*:attr\b/i.test(form)) {
+            const target = extractQuoted(form, 'target');
+            const attrName = extractQuoted(form, 'name') || extractQuoted(form, 'attr');
+            const expr = extractQuoted(form, 'expr');
+            if (target && attrName && expr) {
+              bindings.push({ type: '2d-attr', target, attr: attrName, expr });
+            }
+          } else if (/^\(\s*:text\b/i.test(form)) {
+            const target = extractQuoted(form, 'target');
+            const expr = extractQuoted(form, 'expr');
+            if (target && expr) {
+              bindings.push({ type: '2d-attr', target, attr: 'textContent', expr });
+            }
+          } else if (/^\(\s*:var\b/i.test(form)) {
+            const vMatch = form.match(/^\(\s*:var\s+(?::name\s+)?"((?:[^"\\]|\\.)*)"/i)
+              || form.match(/^\(\s*:var\s+([^\s\)]+)/i);
+            const varName = vMatch ? vMatch[1].replace(/\\"/g, '"') : null;
+            const expr = extractQuoted(form, 'expr');
+            if (varName && expr) {
+              bindings.push({ type: 'var-update', varName, expr });
+            }
+          }
+        });
+      }
 
       // Checkpoints (Interactive Formative Assessment)
       const checkpoints = [];
@@ -4951,27 +5249,51 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         };
       }
 
-      // Reactive State Variables (:vars ((:var :name "volume" :val 1.0 :min 0.3 :max 1.0) ...))
+      // Reactive State Variables
+      // Supports (:vars ((:var :name "volume" :val 1.0 ...))) AND :vars ((posX :default 400.0 :min 90.0 :max 710.0) ...)
       const vars = {};
-      const varBlocks = extractSexprBlocks(astContent, ':vars');
+      const varBlocks = extractKeywordBlocks(astContent, ':vars');
       if (varBlocks.length > 0) {
         const vEntries = extractSexprBlocks(varBlocks[0], ':var');
         vEntries.forEach(vText => {
           const name = extractSlot.call(null, vText, /:name\s+"([^"]+)"/i) || extractSlot.call(null, vText, /:name\s+([^\s\)]+)/i);
-          const valMatch = vText.match(/:val\s+([^\s\)]+)/i);
+          const valRaw = extractSlotValue(vText, 'val') !== undefined ? extractSlotValue(vText, 'val') : extractSlotValue(vText, 'default');
           const minMatch = vText.match(/:min\s+([\d\.\-]+)/i);
           const maxMatch = vText.match(/:max\s+([\d\.\-]+)/i);
           const stepMatch = vText.match(/:step\s+([\d\.]+)/i);
           const unit = extractSlot.call(null, vText, /:unit\s+"([^"]+)"/i) || '';
           const label = extractSlot.call(null, vText, /:label\s+"([^"]+)"/i) || name;
-          if (name && valMatch) {
-            let parsedVal = valMatch[1].replace(/^"|"$/g, '');
-            if (parsedVal === 'true') parsedVal = true;
-            else if (parsedVal === 'false') parsedVal = false;
-            else if (!isNaN(Number(parsedVal))) parsedVal = Number(parsedVal);
+          if (name && valRaw !== undefined) {
             vars[name] = {
               name,
-              value: parsedVal,
+              value: valRaw,
+              defaultValue: valRaw,
+              min: minMatch ? parseFloat(minMatch[1]) : 0,
+              max: maxMatch ? parseFloat(maxMatch[1]) : 100,
+              step: stepMatch ? parseFloat(stepMatch[1]) : 1,
+              unit,
+              label
+            };
+          }
+        });
+
+        const directVarForms = extractChildForms(varBlocks[0]);
+        directVarForms.forEach(vText => {
+          if (/^\(\s*:var\b/i.test(vText)) return;
+          const headMatch = vText.match(/^\(\s*([a-zA-Z_$][a-zA-Z0-9_$-]*)\b/);
+          if (!headMatch) return;
+          const name = headMatch[1];
+          const valRaw = extractSlotValue(vText, 'default') !== undefined ? extractSlotValue(vText, 'default') : extractSlotValue(vText, 'val');
+          const minMatch = vText.match(/:min\s+([\d\.\-]+)/i);
+          const maxMatch = vText.match(/:max\s+([\d\.\-]+)/i);
+          const stepMatch = vText.match(/:step\s+([\d\.]+)/i);
+          const unit = extractSlot.call(null, vText, /:unit\s+"([^"]+)"/i) || '';
+          const label = extractSlot.call(null, vText, /:label\s+"([^"]+)"/i) || name;
+          if (name && valRaw !== undefined) {
+            vars[name] = {
+              name,
+              value: valRaw,
+              defaultValue: valRaw,
               min: minMatch ? parseFloat(minMatch[1]) : 0,
               max: maxMatch ? parseFloat(maxMatch[1]) : 100,
               step: stepMatch ? parseFloat(stepMatch[1]) : 1,
@@ -5081,9 +5403,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
       const inputs = uiControls;
 
-      // Derived & Computed Output Variables (:computed ((:name "pressure" :expr "101.3 / vars.volume") ...))
+      // Derived & Computed Output Variables
+      // Supports (:computed ((:name "pressure" :expr "..."))) AND :computed ((mult "...") ...)
       const computed = [];
-      const compBlocks = extractSexprBlocks(astContent, ':computed');
+      const compBlocks = extractKeywordBlocks(astContent, ':computed');
       if (compBlocks.length > 0) {
         const compEntries = extractSexprBlocks(compBlocks[0], ':name');
         compEntries.forEach(cText => {
@@ -5093,48 +5416,105 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             computed.push({ name, expr });
           }
         });
+
+        const compForms = extractChildForms(compBlocks[0]);
+        compForms.forEach(cText => {
+          if (/^\(\s*:name\b/i.test(cText)) return;
+          const pairMatch = cText.match(/^\(\s*([a-zA-Z_$][a-zA-Z0-9_$-]*)\s+"((?:[^"\\]|\\.)*)"\s*\)$/);
+          if (pairMatch) {
+            computed.push({
+              name: pairMatch[1],
+              expr: pairMatch[2].replace(/\\"/g, '"')
+            });
+          } else {
+            const headMatch = cText.match(/^\(\s*([a-zA-Z_$][a-zA-Z0-9_$-]*)\b/);
+            const expr = extractQuoted(cText, 'expr');
+            if (headMatch && expr) {
+              computed.push({ name: headMatch[1], expr });
+            }
+          }
+        });
       }
 
-      // Direct Manipulation Gestures (:gestures ((:draggable :target "#..." :axis "x" ...) (:interactive :target "#..." :action "...")))
+      // Direct Manipulation & Keyboard Gestures (100% Declarative S-Expression VM)
+      // Supports :draggable, :interactive, :clickable, :holdable, :trackball, :rotatable, :key
       const gestures = [];
-      const gestureBlocks = extractSexprBlocks(astContent, ':gestures');
+      const gestureBlocks = extractKeywordBlocks(astContent, ':gestures');
       if (gestureBlocks.length > 0) {
         const gBlock = gestureBlocks[0];
-        const gEntries = extractSexprBlocks(gBlock, ':draggable')
-          .concat(extractSexprBlocks(gBlock, ':interactive'))
-          .concat(extractSexprBlocks(gBlock, ':clickable'))
-          .concat(extractSexprBlocks(gBlock, ':trackball'))
-          .concat(extractSexprBlocks(gBlock, ':rotatable'));
+        const gEntries = extractChildForms(gBlock);
 
         gEntries.forEach(gText => {
           if (gText.startsWith('(:interactive (') || gText.startsWith('(:interactive\n')) return;
-          const isDraggable = gText.startsWith('(:draggable');
-          const isRotatable = gText.startsWith('(:rotatable');
-          const isTrackball = gText.startsWith('(:trackball');
-          const isClickable = gText.startsWith('(:clickable');
-          const target = extractSlot.call(null, gText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, gText, /:target\s+([^\s\)]+)/i);
-          const axis = extractSlot.call(null, gText, /:axis\s+"([^"]+)"/i) || (isTrackball ? 'trackball' : 'xy');
-          const action = extractSlot.call(null, gText, /:action\s+"([^"]+)"/i);
-          const min = parseFloat(extractSlot.call(null, gText, /:min\s+([\d\.\-]+)/i) || '0');
-          const max = parseFloat(extractSlot.call(null, gText, /:max\s+([\d\.\-]+)/i) || '800');
-          const minX = parseFloat(extractSlot.call(null, gText, /:min-x\s+([\d\.\-]+)/i) || String(min));
-          const maxX = parseFloat(extractSlot.call(null, gText, /:max-x\s+([\d\.\-]+)/i) || String(max));
-          const minY = parseFloat(extractSlot.call(null, gText, /:min-y\s+([\d\.\-]+)/i) || String(min));
-          const maxY = parseFloat(extractSlot.call(null, gText, /:max-y\s+([\d\.\-]+)/i) || String(max));
-          const varName = extractSlot.call(null, gText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, gText, /:bind-var\s+"([^"]+)"/i);
-          const yawVar = extractSlot.call(null, gText, /:yaw-var\s+"([^"]+)"/i) || 'turntableYaw';
-          const pitchVar = extractSlot.call(null, gText, /:pitch-var\s+"([^"]+)"/i) || 'cameraPitch';
-          const pitchMin = parseFloat(extractSlot.call(null, gText, /:pitch-min\s+([\d\.\-]+)/i) || '-65');
-          const pitchMax = parseFloat(extractSlot.call(null, gText, /:pitch-max\s+([\d\.\-]+)/i) || '65');
-          const toggleVar = extractSlot.call(null, gText, /:toggle\s+"([^"]+)"/i);
-          const setVar = extractSlot.call(null, gText, /:set-var\s+"([^"]+)"/i);
-          const stepVar = extractSlot.call(null, gText, /:step-var\s+"([^"]+)"/i);
-          const delta = parseFloat(extractSlot.call(null, gText, /:delta\s+([\d\.\-]+)/i) || '1');
-          const attr = extractSlot.call(null, gText, /:attr\s+"([^"]+)"/i);
+          const isDraggable = /^\(\s*:draggable\b/i.test(gText);
+          const isRotatable = /^\(\s*:rotatable\b/i.test(gText);
+          const isTrackball = /^\(\s*:trackball\b/i.test(gText);
+          const isClickable = /^\(\s*:clickable\b/i.test(gText);
+          const isHoldable = /^\(\s*:holdable\b/i.test(gText);
+          const isKey = /^\(\s*:key\b/i.test(gText);
+          const isInteractive = /^\(\s*:interactive\b/i.test(gText);
+          if (!isDraggable && !isRotatable && !isTrackball && !isClickable && !isHoldable && !isKey && !isInteractive) return;
 
-          if (target) {
+          const bodyText = gText.replace(/^\(\s*:[a-zA-Z0-9_-]+/, '(');
+          const target = extractSlot.call(null, bodyText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:target\s+([^\s\)]+)/i);
+          const code = extractSlot.call(null, bodyText, /:code\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:code\s+([^\s\)]+)/i);
+          const key = extractSlot.call(null, bodyText, /:key\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:key\s+([^\s\)]+)/i);
+          const axis = extractSlot.call(null, bodyText, /:axis\s+"([^"]+)"/i) || (isTrackball ? 'trackball' : 'xy');
+          const action = extractSlot.call(null, bodyText, /:action\s+"([^"]+)"/i);
+
+          const minStr = extractSlot.call(null, bodyText, /:min\s+([\d\.\-]+)/i);
+          const maxStr = extractSlot.call(null, bodyText, /:max\s+([\d\.\-]+)/i);
+          const useDragDefaults = isDraggable || isRotatable || isInteractive;
+          const min = minStr !== null ? parseFloat(minStr) : (useDragDefaults ? 0 : undefined);
+          const max = maxStr !== null ? parseFloat(maxStr) : (useDragDefaults ? 800 : undefined);
+
+          const minXStr = extractSlot.call(null, bodyText, /:min-x\s+([\d\.\-]+)/i);
+          const maxXStr = extractSlot.call(null, bodyText, /:max-x\s+([\d\.\-]+)/i);
+          const minYStr = extractSlot.call(null, bodyText, /:min-y\s+([\d\.\-]+)/i);
+          const maxYStr = extractSlot.call(null, bodyText, /:max-y\s+([\d\.\-]+)/i);
+          const minX = minXStr !== null ? parseFloat(minXStr) : min;
+          const maxX = maxXStr !== null ? parseFloat(maxXStr) : max;
+          const minY = minYStr !== null ? parseFloat(minYStr) : min;
+          const maxY = maxYStr !== null ? parseFloat(maxYStr) : max;
+
+          const varName = extractSlot.call(null, bodyText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:bind-var\s+"([^"]+)"/i);
+          const yawVar = extractSlot.call(null, bodyText, /:yaw-var\s+"([^"]+)"/i) || 'turntableYaw';
+          const pitchVar = extractSlot.call(null, bodyText, /:pitch-var\s+"([^"]+)"/i) || 'cameraPitch';
+          const pitchMin = parseFloat(extractSlot.call(null, bodyText, /:pitch-min\s+([\d\.\-]+)/i) || '-65');
+          const pitchMax = parseFloat(extractSlot.call(null, bodyText, /:pitch-max\s+([\d\.\-]+)/i) || '65');
+
+          const toggleVar = extractSlot.call(null, bodyText, /:toggle-var\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:toggle-var\s+([^\s\)]+)/i)
+            || extractSlot.call(null, bodyText, /:toggle\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:toggle\s+([^\s\)]+)/i);
+          const setVar = extractSlot.call(null, bodyText, /:set-var\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:set-var\s+([^\s\)]+)/i)
+            || extractSlot.call(null, bodyText, /:set\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:set\s+([^\s\)]+)/i);
+          const stepVar = extractSlot.call(null, bodyText, /:step-var\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:step-var\s+([^\s\)]+)/i)
+            || extractSlot.call(null, bodyText, /:step\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:step\s+([^\s\)]+)/i);
+          const holdVar = extractSlot.call(null, bodyText, /:hold-var\s+"([^"]+)"/i)
+            || extractSlot.call(null, bodyText, /:hold-var\s+([^\s\)]+)/i);
+
+          const val = extractSlotValue(bodyText, 'val');
+          const releaseVal = extractSlotValue(bodyText, 'release-val');
+          const holdRaw = extractSlotValue(bodyText, 'hold');
+          const hold = (isHoldable || holdRaw === true || Boolean(holdVar))
+            ? true
+            : (holdRaw === false ? false : undefined);
+          const deltaStr = extractSlot.call(null, bodyText, /:delta\s+([\d\.\-]+)/i);
+          const delta = deltaStr !== null ? parseFloat(deltaStr) : 1;
+          const rateStr = extractSlot.call(null, bodyText, /:rate\s+([\d\.\-]+)/i);
+          const rate = rateStr !== null ? parseFloat(rateStr) : undefined;
+          const attr = extractSlot.call(null, bodyText, /:attr\s+"([^"]+)"/i);
+
+          if ((isKey && (code || key)) || target) {
             let gestureType = 'draggable';
-            if (isClickable) gestureType = 'clickable';
+            if (isKey) gestureType = 'key';
+            else if (isHoldable) gestureType = 'holdable';
+            else if (isClickable) gestureType = 'clickable';
             else if (isTrackball) gestureType = 'trackball';
             else if (isRotatable) gestureType = 'rotatable';
             else if (!isDraggable) gestureType = 'interactive';
@@ -5142,6 +5522,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             gestures.push({
               type: gestureType,
               target,
+              code,
+              key,
               axis,
               action,
               min,
@@ -5158,7 +5540,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               toggleVar,
               setVar,
               stepVar,
+              holdVar,
+              val,
+              releaseVal,
+              hold,
               delta,
+              rate,
               attr
             });
           }
@@ -5874,7 +6261,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   parsedAst.inputs = textParsed.inputs;
                 }
                 if (textParsed.vars && typeof textParsed.vars === 'object') {
-                  parsedAst.vars = Object.assign({}, textParsed.vars, parsedAst.vars || {});
+                  parsedAst.vars = Object.assign({}, parsedAst.vars || {}, textParsed.vars);
                 }
                 if ((!parsedAst.computed || parsedAst.computed.length === 0) && textParsed.computed) {
                   parsedAst.computed = textParsed.computed;
@@ -5888,10 +6275,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if ((!parsedAst.stateMachines || parsedAst.stateMachines.length === 0) && textParsed.stateMachines) {
                   parsedAst.stateMachines = textParsed.stateMachines;
                 }
-                if ((!parsedAst.gestures || parsedAst.gestures.length === 0) && textParsed.gestures) {
+                if (textParsed.gestures && textParsed.gestures.length > 0 && (!parsedAst.gestures || textParsed.gestures.length >= parsedAst.gestures.length)) {
                   parsedAst.gestures = textParsed.gestures;
                 }
-                if ((!parsedAst.bindings || parsedAst.bindings.length === 0) && textParsed.bindings && textParsed.bindings.length > 0) {
+                if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.some(b => b.type === 'var-update'))) {
                   parsedAst.bindings = textParsed.bindings;
                 }
               }
@@ -6872,6 +7259,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
       this.ensureMasterDefs(container);
       this.activeBindings = [];
+      this.activeVarBindings = [];
       this.active3DNodes = [];
       this.active3DLines = [];
       this.active3DRings = [];
@@ -6954,8 +7342,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this._cachedElements = scene.mount(container);
       }
 
-      if (scene.rawBindings && scene.rawBindings.length) {
-        scene.rawBindings.forEach(b => {
+      const bindingsList = (scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []);
+      if (bindingsList && bindingsList.length) {
+        bindingsList.forEach(b => {
           if (b.type === '3d-node') {
             const node = container.querySelector(b.target);
             if (node) {
@@ -7051,6 +7440,24 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               this.active3DPolygons.push(item);
               this.active3DItems.push(item);
             }
+          } else if (b.type === 'var-update' && b.varName) {
+            const compiledVarExpr = this.compileAstExpr(b.expr || '0');
+            let varEvalFn = () => this.vars ? this.vars[b.varName] : 0;
+            try {
+              varEvalFn = new Function(
+                't', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor',
+                'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch',
+                'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate',
+                'scale', 'sineWave', 'smoothstep',
+                `"use strict"; return (${compiledVarExpr});`
+              );
+            } catch (e) {
+              console.warn('[AST Engine] Failed compiling var binding:', b.varName, b.expr, e);
+            }
+            this.activeVarBindings.push({
+              varName: b.varName,
+              evalFn: varEvalFn
+            });
           } else {
             const node = container.querySelector(b.target);
             if (node) {
@@ -7076,11 +7483,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 }
               }
 
-              rawExpr = rawExpr.replace(
-                /\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g,
-                '($1 ? $2 : $3)'
-              );
-              rawExpr = rawExpr.replace(/:([a-zA-Z_]\w*)/g, '$1');
+              rawExpr = this.compileAstExpr(rawExpr);
 
               try {
                 evalFn = new Function(
@@ -7182,6 +7585,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         if (scene.gestures && Array.isArray(scene.gestures)) {
           scene.gestures.forEach(g => {
+            if (!g || !g.target) return;
             const el = container.querySelector(g.target);
             if (el) dynamicTargets.add(el);
           });
@@ -7255,10 +7659,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
   }
 
-  applyBindings(t, dt = 0.016) {
+  applyBindings(t, dt = 0.016, isTickStep = false) {
     const isSim = Boolean(this.isContinuousSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim')));
     const effectiveT = (isSim && this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : t;
-    this.updateComputedVars();
+    this.updateComputedVars(effectiveT);
+
+    if (isTickStep && this.isPlaying && this.activeVarBindings && this.activeVarBindings.length > 0 && this.vars) {
+      const v = this.vars;
+      for (let i = 0; i < this.activeVarBindings.length; i++) {
+        const vb = this.activeVarBindings[i];
+        try {
+          const nextVal = vb.evalFn(
+            effectiveT, v, Math, v,
+            astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
+            AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
+            AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
+          );
+          if (nextVal !== undefined && (typeof nextVal !== 'number' || Number.isFinite(nextVal))) {
+            v[vb.varName] = nextVal;
+          }
+        } catch (_) {}
+      }
+      this.updateComputedVars(effectiveT);
+    }
 
     if (!this._isMounting && this._container && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== this._container)) {
       if (this.scene) {
@@ -7825,7 +8248,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       }
 
-      this.applyBindings(this.progress, deltaSec);
+      this.applyBindings(this.progress, deltaSec, true);
 
       // 3. Record raw AST/SVG compute duration (excludes compositor idle time)
       if (this.profiler && t0 > 0) {

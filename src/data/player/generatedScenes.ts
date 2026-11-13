@@ -1076,5 +1076,21 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "section": "Curriculum Cartridges",
     "hasCheckpoints": false,
     "checkpointCount": 0
+  },
+  {
+    "id": "vector-racing",
+    "base": "vector-racing",
+    "type": "Sim",
+    "label": "Vector Racing",
+    "stage": "STEM",
+    "oakId": "OAK-KS3-GEN-VECTORRAC",
+    "oakUnit": "ks3-generalcurriculum-vector-racing",
+    "subject": "General Curriculum",
+    "isCore": true,
+    "tier": "core",
+    "mount": "/curriculum/general/vector-racing",
+    "section": "Curriculum Cartridges",
+    "hasCheckpoints": false,
+    "checkpointCount": 0
   }
 ];

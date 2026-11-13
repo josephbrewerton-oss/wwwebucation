@@ -1,10 +1,10 @@
 (scene
-  :id "vector-racing"
+  :id "vector-racing" :oak-id "OAK-KS3-GEN-VECTORRAC" :oak-unit "ks3-generalcurriculum-vector-racing"
   :title "Vector Racing"
   :stage "STEM"
   :type "Sim"
   :duration 60.0
-  
+
   :vars (
     (carX :default 400.0 :min 90.0 :max 710.0)
     (carY :default 395.0 :min 65.0 :max 415.0)
@@ -14,29 +14,13 @@
     (throttleInput :default 0.65 :min -1.0 :max 1.5)
     (boostActive :default false)
     (autoPilot :default true)
-	(throttle :default 1.0 :min 0.0 :max 2.5)
-    (laneOffset :default 0.0 :min -32.0 :max 32.0)
-    (boostActive :default false)
   )
 
   :computed (
-	(mult "(if vars.boostActive 1.8 vars.throttle)")
-    (theta "(* t 6.2831853 mult)")
-    ;; Parametric oval matching the SVG track (center 400,240; radii 295 x 155)
-    (rx "(+ 295.0 vars.laneOffset)")
-    (ry "(+ 155.0 vars.laneOffset)")
-    (carX "(+ 400.0 (* rx (sin theta)))")
-    (carY "(+ 240.0 (* ry (cos theta)))")
-    ;; Tangent heading in degrees along the track
-    (vx "(* rx (cos theta))")
-    (vy "(* -1.0 ry (sin theta))")
-    (headingDeg "(* (atan2 vy vx) 57.29578)")
-    (mph "(round (* 85.0 mult))")
-    (hudReadout "(concat mph \" MPH | HDG \" (round (mod (+ headingDeg 360) 360)) \"°\")")
     (targetVel "(if vars.boostActive 10.5 (* vars.throttleInput 7.5))")
     (nextSpeed "(clamp (+ (* vars.speed 0.95) (* targetVel 0.05)) -3.0 12.0)")
     ;; Gentle oval cornering assist when autoPilot is true, full manual steer otherwise
-    (autoSteer "(if vars.autoPilot (if (> vars.carX 575) -0.58 (if (< vars.carX 225) -0.58 0.0)) 0.0)")
+    (autoSteer "(if vars.autoPilot (if (> vars.carX 575) -0.50 (if (< vars.carX 225) -0.50 0.0)) 0.0)")
     (effectiveSteer "(if vars.autoPilot autoSteer vars.steerInput)")
     (turnRate "(* effectiveSteer 3.6 (clamp (/ (abs nextSpeed) 3.5) 0.2 1.0))")
     (rad "(* vars.heading 0.01745329)")
@@ -47,7 +31,7 @@
   )
 
   :gestures (
-    ;; Keyboard Controls (disables autoPilot on manual input)
+    ;; Keyboard Controls (disables autoPilot on manual input; supports press-and-hold)
     (:key :code "ArrowUp"    :set-var "autoPilot" :val false)
     (:key :code "ArrowUp"    :step-var "throttleInput" :delta 0.25 :min -1.0 :max 1.5)
     (:key :code "KeyW"       :set-var "autoPilot" :val false)
@@ -72,27 +56,25 @@
     (:key :code "KeyR"       :set-var "carX" :val 400.0)
     (:key :code "KeyR"       :set-var "carY" :val 395.0)
     (:key :code "KeyR"       :set-var "heading" :val 0.0)
+    (:key :code "KeyR"       :set-var "speed" :val 5.5)
     (:key :code "KeyR"       :set-var "throttleInput" :val 0.65)
     (:key :code "KeyR"       :set-var "steerInput" :val 0.0)
+    (:key :code "KeyR"       :set-var "boostActive" :val false)
     (:key :code "KeyR"       :set-var "autoPilot" :val true)
 
-    ;; Mouse / Touch Declarative Clickables
+    ;; Mouse / Touch Declarative Press-and-Hold & Toggle Controls
     (:clickable :target "#btn-steer-left"  :set "autoPilot" :val false)
-    (:clickable :target "#btn-steer-left"  :step "steerInput" :delta -0.4)
+    (:clickable :target "#btn-steer-left"  :step "steerInput" :delta -0.35 :min -1.5 :max 1.5 :hold true)
     (:clickable :target "#btn-steer-right" :set "autoPilot" :val false)
-    (:clickable :target "#btn-steer-right" :step "steerInput" :delta 0.4)
+    (:clickable :target "#btn-steer-right" :step "steerInput" :delta 0.35 :min -1.5 :max 1.5 :hold true)
     (:clickable :target "#btn-gas"         :set "autoPilot" :val false)
-    (:clickable :target "#btn-gas"         :step "throttleInput" :delta 0.3)
+    (:clickable :target "#btn-gas"         :step "throttleInput" :delta 0.25 :min -1.0 :max 1.5 :hold true)
     (:clickable :target "#btn-brake"       :set "autoPilot" :val false)
-    (:clickable :target "#btn-brake"       :step "throttleInput" :delta -0.4)
+    (:clickable :target "#btn-brake"       :step "throttleInput" :delta -0.35 :min -1.0 :max 1.5 :hold true)
     (:clickable :target "#btn-boost"       :toggle "boostActive")
   )
 
   :bindings (
-	(:attr :target "#race-car" :name "transform"
-           :expr "(concat \"translate(\" (round carX) \",\" (round carY) \") rotate(\" (round headingDeg) \")\")")
-    (:attr :target "#boost-flame" :name "opacity" :expr "(if vars.boostActive 1.0 0.0)")
-    (:text :target "#telemetry-text" :expr "hudReadout")
     (:var "speed"   :expr "nextSpeed")
     (:var "heading" :expr "(+ vars.heading turnRate)")
     (:var "carX"    :expr "(clamp (+ vars.carX dx) 95.0 705.0)")

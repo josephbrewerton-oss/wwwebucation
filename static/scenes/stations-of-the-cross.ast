@@ -1,0 +1,75 @@
+(:scene :id "stations-of-the-cross" :type "Slide" :oak-id "OAK-KS2-RE-020" :oak-unit "ks2-re-catholic-via-crucis-stations" :title "The Stations of the Cross: Via Crucis & Sacred Passion" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "candleGlow" :val 1.0 :min 0.2 :max 1.5 :step 0.1 :label "Vigil Candle Flame")
+    (:var :name "pilgrimPace" :val 1.0 :min 0.5 :max 2.0 :step 0.25 :label "Pilgrim Walk Pace")
+  ))
+  (:inputs (
+    (:slider :var "candleGlow" :label "Devotional Flame" :min 0.2 :max 1.5 :step 0.1)
+    (:slider :var "pilgrimPace" :label "Pilgrim Walk Pace" :min 0.5 :max 2.0 :step 0.25)
+  ))
+  (:gestures (
+    (:draggable :target "#pilgrim-cross-beacon" :axis "xy" :min 60 :max 740)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.07 :en "Station I: Jesus is condemned to death by Pontius Pilate. The innocent Lamb accepts the unjust sentence for our redemption." :es "Estación I: Jesús es condenado a muerte. El Cordero inocente acepta la sentencia injusta por nuestra redención." :la "Adoramus te, Christe, et benedicimus tibi: Quia per sanctam crucem tuam redemisti mundum. Iesus condemnatur ad mortem.")
+    (:start 0.07 :end 0.14 :en "Station II: Jesus embraces His heavy Cross. The instrument of shame becomes the tree of life and altar of reconciliation." :es "Estación II: Jesús carga con su pesada Cruz. El madero de vergüenza se convierte en árbol de vida." :la "Iesus oneratur cruce: Cuius animam gementem pertransivit gladius.")
+    (:start 0.14 :end 0.21 :en "Station III: Jesus falls the first time under the crushing weight. Exhausted in body, He rises through pure divine love." :es "Estación III: Jesús cae por primera vez bajo el peso abrumador. Agotado, se levanta por puro amor divino." :la "Iesus prima vice cadit: Vere languores nostros ipse tulit et dolores nostros ipse portavit.")
+    (:start 0.21 :end 0.28 :en "Station IV: Jesus meets His sorrowful Mother. A sword of grief pierces Mary's immaculate heart as their eyes meet in shared sacrifice." :es "Estación IV: Jesús encuentra a su afligida Madre. Una espada de dolor traspasa el corazón inmaculado de María." :la "Iesus occurrit Matri suae: Et tuam ipsius animam pertransibit gladius.")
+    (:start 0.28 :end 0.35 :en "Station V: Simon of Cyrene is pressed into service to help carry the Cross. Sharing Christ's burden transforms reluctant duty into eternal grace." :es "Estación V: Simón de Cirene es obligado a ayudar a llevar la Cruz. Compartir la carga de Cristo transforma el deber en gracia." :la "Simon Cyrenaeus cruce oneratur: Angariaverunt praetereuntem Simonem Cyrenaeum ut tolleret crucem eius.")
+    (:start 0.35 :end 0.42 :en "Station VI: Veronica steps forward boldly to wipe the holy face of Jesus. Christ imprints His divine countenance upon her veil." :es "Estación VI: La Verónica enjuga con piedad el rostro de Jesús. Cristo imprime su santo rostro en el velo." :la "Veronica vultum Iesu abstergit: Facies tua, Domine, requiram; ne avertas faciem tuam a me.")
+    (:start 0.42 :end 0.49 :en "Station VII: Jesus falls the second time on the steep cobblestones. With immense humility, our Saviour rises once again." :es "Estación VII: Jesús cae por segunda vez sobre los adoquines empinados. Con inmensa humildad, nuestro Salvador se levanta." :la "Iesus secunda vice cadit: Pro peccatis suae gentis vidit Iesum in tormentis.")
+    (:start 0.49 :end 0.56 :en "Station VIII: Jesus consoles the weeping women of Jerusalem, calling them to genuine interior repentance and prayer for future generations." :es "Estación VIII: Jesús consuela a las mujeres de Jerusalén, llamándolas al arrepentimiento y la oración por sus hijos." :la "Iesus consolatur filias Ierusalem: Nolite flere super me, sed super vos ipsas flete et super filios vestros.")
+    (:start 0.56 :end 0.63 :en "Station IX: At the foot of Mount Calvary, Jesus falls a third time. In supreme physical weakness, His divine obedience conquers despair." :es "Estación IX: Al pie del Calvario, Jesús cae por tercera vez. En debilidad física, su obediencia vence la desesperación." :la "Iesus tertia vice cadit: Virtus in infirmitate perficitur; libenter gloriabor in infirmitatibus meis.")
+    (:start 0.63 :end 0.70 :en "Station X: Jesus is stripped of His garments on Golgotha. The King of Glory teaches us holy detachment and purity of heart." :es "Estación X: Jesús es despojado de sus vestiduras en el Gólgota. El Rey de la Gloria nos enseña desprendimiento y pureza." :la "Iesus vestibus spoliatur: Diviserunt sibi vestimenta mea, et super vestem meam miserunt sortem.")
+    (:start 0.70 :end 0.77 :en "Station XI: Jesus is nailed to the Cross with brutal iron spikes. From His altar of agony, He prays: 'Father, forgive them, for they know not what they do.'" :es "Estación XI: Jesús es clavado en la Cruz. Desde su agonía, ora: 'Padre, perdónalos, porque no saben lo que hacen.'" :la "Iesus cruci affigitur: Pater, dimitte illis; non enim sciunt quid faciunt.")
+    (:start 0.77 :end 0.84 :en "Station XII: Jesus dies on the Cross. 'It is finished.' Darkness covers the earth and the Temple veil is torn in two. (All kneel in silent adoration)." :es "Estación XII: Jesús muere en la Cruz. 'Todo está consumado.' Las tinieblas cubren la tierra y el velo del Templo se rasga." :la "Iesus in cruce moritur: Consummatum est. Et inclinato capite tradidit spiritum. Vere Filius Dei erat iste.")
+    (:start 0.84 :end 0.91 :en "Station XIII: Jesus is taken down from the Cross and placed into the loving arms of His sorrowful Mother (The Pietà)." :es "Estación XIII: Jesús es bajado de la Cruz y depositado en los brazos amorosos de su Madre dolorosa (La Piedad)." :la "Iesus de cruce deponitur: O vos omnes qui transitis per viam, attendite et videte si est dolor sicut dolor meus.")
+    (:start 0.91 :end 0.96 :en "Station XIV: Jesus is laid in the rock-hewn garden tomb. The great stone is sealed, awaiting the blessed dawn of the third day." :es "Estación XIV: Jesús es sepultado en el sepulcro excavado en la roca. La gran piedra es sellada esperando el tercer día." :la "Iesus in sepulcro deponitur: Posuit eum in monumento novo, et advolvit saxum magnum ad ostium monumenti.")
+    (:start 0.96 :end 1.00 :en "Station XV (Easter Epilogue): Christ is Risen! Alleluia! Death is swallowed up in victory and the Cross shines as the Tree of Life." :es "Estación XV (Epílogo Pascual): ¡Cristo ha resucitado! ¡Aleluya! La muerte ha sido vencida y la Cruz resplandece como Árbol de Vida." :la "Resurrectio Domini: Surrexit Christus spes mea! Mors absorpta est in victoria. Alleluia!")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "I. Condemned to Death" :rule "Iesus condemnatur ad mortem • Pontius Pilate condemns the innocent Lamb of God.")
+    (:t 0.07 :title "II. Taking up the Cross" :rule "Iesus oneratur cruce • Christ embraces the wood of redemption.")
+    (:t 0.14 :title "III. First Fall" :rule "Iesus prima vice cadit • The weight of human sin presses upon the Saviour.")
+    (:t 0.21 :title "IV. Meeting His Blessed Mother" :rule "Iesus occurrit Matri suae • Mutual glance of sorrow and unfailing love.")
+    (:t 0.28 :title "V. Simon of Cyrene Helps" :rule "Simon Cyrenaeus • Compelled duty becomes holy solidarity with Christ.")
+    (:t 0.35 :title "VI. Veronica's Holy Veil" :rule "Veronica vultum Iesu abstergit • Compassion imprints Christ's face upon our souls.")
+    (:t 0.42 :title "VII. Second Fall" :rule "Iesus secunda vice cadit • Rising again through humility and contrition.")
+    (:t 0.49 :title "VIII. Consoling the Women" :rule "Consolatur filias Ierusalem • Turn tears into genuine interior conversion.")
+    (:t 0.56 :title "IX. Third Fall" :rule "Iesus tertia vice cadit • Divine strength made perfect in human weakness.")
+    (:t 0.63 :title "X. Stripped of Garments" :rule "Iesus vestibus spoliatur • Purity, detachment, and human dignity defended.")
+    (:t 0.70 :title "XI. Nailed to the Cross" :rule "Iesus cruci affigitur • 'Father, forgive them, for they know not what they do.'")
+    (:t 0.77 :title "XII. Death on the Cross" :rule "Iesus in cruce moritur • 'It is finished.' All kneel in silent adoration.")
+    (:t 0.84 :title "XIII. The Pietà" :rule "Iesus de cruce deponitur • Mary cradles the lifeless body of her Son in sorrow and hope.")
+    (:t 0.91 :title "XIV. Laid in the Tomb" :rule "Iesus in sepulcro deponitur • The grain of wheat falls into the earth to bear eternal fruit.")
+    (:t 0.96 :title "XV. The Resurrection" :rule "Resurrectio Domini • The dawn of Easter: Death is conquered forever! Alleluia!")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.28
+      :prompt "Why was Simon of Cyrene conscripted to carry the Cross, and what does this signify for Christians today?"
+      :options ("Christ invites every disciple to take up their cross daily and carry it in solidarity with Him" "Roman law forbade condemned prisoners from carrying wood on Fridays" "Simon was a professional carpenter trained in moving heavy timber" "It was a punishment for not paying temple taxes")
+      :answer 0
+      :explanation "The Gospel recounts that soldiers forced Simon to carry the cross behind Jesus (Luke 23:26). Spiritually, Simon represents every Christian called by Jesus: 'If anyone would come after Me, let him deny himself and take up his cross daily and follow Me' (Luke 9:23). When we aid those who suffer, we share the cross of Christ.")
+    (:checkpoint :t 0.78
+      :prompt "What momentous theological sign occurred in the Jerusalem Temple at the moment Jesus died on the Cross?"
+      :options ("The veil separating the Holy of Holies was torn in two from top to bottom" "The golden menorah extinguished itself forever" "The high priest locked the bronze gates of Nicanor" "The Ark of the Covenant vanished into the clouds")
+      :answer 0
+      :explanation "Matthew 27:51 records that at the moment Jesus died, 'the veil of the temple was torn in two, from top to bottom.' In ancient Judaism, this veil blocked entry to the Holy of Holies where God's presence dwelt. The tearing from top to bottom proves that God Himself opened direct access to His holy presence for all humanity through the blood of Christ.")
+    (:checkpoint :t 0.94
+      :prompt "Why do Catholic schools and parishes celebrate the 14 Stations of the Cross with an eye toward the Resurrection?"
+      :options ("Because the Cross is not the end of the story; Christ's sacrifice is consummated and vindicated by His glorious Resurrection" "Because Roman law mandated a festive banquet after executions" "To shorten liturgical services during Holy Week" "Because traditional stations were invented exclusively for Easter Sunday")
+      :answer 0
+      :explanation "The Way of the Cross is fundamentally a path toward Easter life. As St. Paul proclaims in 1 Corinthians 15:14, 'If Christ has not been raised, our preaching is useless and so is your faith.' The darkness of the tomb gives way to the invincible dawn of Easter, revealing the Cross as the victorious Tree of Life.")
+  ))
+  (:bindings (
+    (:target "#candle-flicker-flame" :attr "opacity" :expr "(0.75 + Math.sin(t * Math.PI * 12) * 0.25) * (vars.candleGlow || 1.0)")
+    (:target "#pilgrim-cross-beacon" :attr "cx" :expr "60 + t * 680")
+    (:target "#pilgrim-cross-beacon" :attr "cy" :expr "t < 0.25 ? 360 - (t / 0.25) * 80 : (t < 0.70 ? 280 - ((t - 0.25) / 0.45) * 110 : (t < 0.85 ? 170 + ((t - 0.70) / 0.15) * 60 : 230 - ((t - 0.85) / 0.15) * 110))")
+    (:target "#station-hud-num" :attr "textContent" :expr "t < 0.07 ? 'STATION I' : (t < 0.14 ? 'STATION II' : (t < 0.21 ? 'STATION III' : (t < 0.28 ? 'STATION IV' : (t < 0.35 ? 'STATION V' : (t < 0.42 ? 'STATION VI' : (t < 0.49 ? 'STATION VII' : (t < 0.56 ? 'STATION VIII' : (t < 0.63 ? 'STATION IX' : (t < 0.70 ? 'STATION X' : (t < 0.77 ? 'STATION XI' : (t < 0.84 ? 'STATION XII' : (t < 0.91 ? 'STATION XIII' : (t < 0.96 ? 'STATION XIV' : 'STATION XV')))))))))))))")
+    (:target "#station-hud-title" :attr "textContent" :expr "t < 0.07 ? 'Jesus is Condemned to Death' : (t < 0.14 ? 'Jesus Takes Up His Cross' : (t < 0.21 ? 'Jesus Falls the First Time' : (t < 0.28 ? 'Jesus Meets His Mother Mary' : (t < 0.35 ? 'Simon of Cyrene Helps with Cross' : (t < 0.42 ? 'Veronica Wipes the Holy Face' : (t < 0.49 ? 'Jesus Falls the Second Time' : (t < 0.56 ? 'Jesus Consoles Weeping Women' : (t < 0.63 ? 'Jesus Falls the Third Time' : (t < 0.70 ? 'Jesus Stripped of His Garments' : (t < 0.77 ? 'Jesus Nailed to the Cross' : (t < 0.84 ? 'Jesus Dies on the Cross' : (t < 0.91 ? 'Taken Down from the Cross (Pietà)' : (t < 0.96 ? 'Jesus is Laid in the Tomb' : 'The Glorious Resurrection of Christ')))))))))))))")
+    (:target "#station-hud-latin" :attr "textContent" :expr "t < 0.07 ? 'Iesus condemnatur ad mortem' : (t < 0.14 ? 'Iesus oneratur cruce' : (t < 0.21 ? 'Iesus prima vice cadit' : (t < 0.28 ? 'Iesus occurrit Matri suae' : (t < 0.35 ? 'Simon Cyrenaeus cruce oneratur' : (t < 0.42 ? 'Veronica vultum Iesu abstergit' : (t < 0.49 ? 'Iesus secunda vice cadit' : (t < 0.56 ? 'Iesus consolatur filias Ierusalem' : (t < 0.63 ? 'Iesus tertia vice cadit' : (t < 0.70 ? 'Iesus vestibus spoliatur' : (t < 0.77 ? 'Iesus cruci affigitur' : (t < 0.84 ? 'Iesus in cruce moritur' : (t < 0.91 ? 'Iesus de cruce deponitur' : (t < 0.96 ? 'Iesus in sepulcro deponitur' : 'Resurrectio Domini Nostri')))))))))))))")
+    (:target "#station-hud-desc" :attr "textContent" :expr "t < 0.07 ? 'Pilate washes his hands; the innocent Christ accepts the sentence for our redemption.' : (t < 0.14 ? 'The heavy beam is laid on scourged shoulders; Christ embraces our salvation.' : (t < 0.21 ? 'Crushed under the wood, Jesus falls on the Jerusalem stones, then rises.' : (t < 0.28 ? 'Eyes meet in profound silence; Mother and Son united in redemptive sacrifice.' : (t < 0.35 ? 'Simon of Cyrene shares the burden; forced labor becomes eternal privilege.' : (t < 0.42 ? 'Veronica defies the armed cohort; charity leaves Christ imprint upon her veil.' : (t < 0.49 ? 'Physical strength falters on the incline; spiritual resolve remains absolute.' : (t < 0.56 ? 'Pastoral mercy in agony: weep not for Me, but for genuine conversion.' : (t < 0.63 ? 'At Golgotha base, Christ falls a third time; divine grace sustains Him to the end.' : (t < 0.70 ? 'Garments torn away; holy detachment, modest purity, and sacred dignity.' : (t < 0.77 ? 'Iron nails pierce hands and feet; Father, forgive them, for they know not what they do.' : (t < 0.84 ? 'It is finished. Veil of the Temple is torn; Christ breathes His spirit into the Father.' : (t < 0.91 ? 'Nicodemus and Joseph lower the Saviour; Mary cradles her divine Son in tears.' : (t < 0.96 ? 'Lain in rock garden tomb; the holy grain rests awaiting the dawn of eternal life.' : 'The stone is rolled away! Death is defeated! Christ is Risen, Alleluia!')))))))))))))")
+    (:target "#calvary-glow" :attr "opacity" :expr "t >= 0.70 && t <= 0.86 ? 0.95 : (t > 0.86 && t < 0.96 ? 0.35 : (t >= 0.96 ? 1.0 : 0.20))")
+    (:target "#easter-halo-sun" :attr "opacity" :expr "t >= 0.96 ? (0.6 + Math.sin(t * 10) * 0.4) : 0.0")
+  ))
+)
