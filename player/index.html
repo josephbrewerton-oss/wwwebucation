@@ -573,6 +573,51 @@
       const ui = new window.ASTPlayerUI(engine);
       ui.setTheme(theme);
       window.AST_ENGINE = engine;
+      window.AST_UI = ui;
+
+      // 4. Ingest Zero-Server URL Hash / Query Payloads (#ast=..., #script=..., #data=...)
+      const rawHash = window.location.hash ? window.location.hash.slice(1) : '';
+      const hashParams = new URLSearchParams(rawHash);
+      const astPayload = params.get('ast') || hashParams.get('ast');
+      const scriptPayload = params.get('script') || hashParams.get('script') || params.get('slidescript') || hashParams.get('slidescript');
+      const dataPayload = params.get('data') || hashParams.get('data');
+
+      if (astPayload) {
+        try { engine.loadFromPayload(astPayload, autoplay); } catch (e) { console.warn(e); }
+      } else if (scriptPayload) {
+        try { engine.loadFromPayload(scriptPayload, autoplay); } catch (e) { console.warn(e); }
+      } else if (dataPayload) {
+        try { engine.loadFromPayload(dataPayload, autoplay); } catch (e) { console.warn(e); }
+      } else if (src) {
+        engine.loadFromUrl(src, autoplay).catch(console.warn);
+      }
+
+      // 5. Load scenes manifest (federated from ?manifest=URL or default built-in catalog)
+      const federatedManifest = params.get('manifest') || params.get('catalog');
+      if (federatedManifest) {
+        ui.populatePresets();
+      } else if (window.ASTSceneRegistry && typeof window.ASTSceneRegistry.autoDiscover === 'function') {
+        window.ASTSceneRegistry.autoDiscover('./').then(() => {
+          ui.populatePresets();
+        }).catch(() => {
+          ui.populatePresets();
+        });
+      } else {
+        ui.populatePresets();
+      }
+
+      // 6. Setup postMessage bridge for parent iframe communication
+      window.setupPostMessageBridge(engine, ui);
+
+      // 7. Start timeline clock
+      engine.start();
+
+      // 8. Handshake with embedding chassis
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        try {
+          window.parent.postMessage({ type: 'PLAYER_READY', preset: preset || engine.activePresetId }, '*');
+        } catch (_) {}
+      }
     })();
   </script>
 </body>

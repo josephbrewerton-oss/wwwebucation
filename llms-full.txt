@@ -1,6 +1,6 @@
 # St Joseph's Curriculum Portal — Comprehensive LLM Architecture Dossier (llms-full.txt)
 
-> Deterministic, privacy-first, on-device AI educational portal running via in-browser WebRTC loopback channels, Chrome Prompt API (Gemini Nano), WebLLM, and autonomous 60 FPS vector media engines. The AST player serves a dual-market architecture: perpetually free for schools, Catholic organisations, and developing nations (Track A Humanitarian Commons), and commercially licensed for enterprise Digital Signage (DOOH), Programmatic Display Advertising, and Interactive Kiosks (Track B).
+> Deterministic, 0-dependency developing-world teaching aid running via Native Web Standards (**Vite `^8.3.6`**, **TypeScript `^5.6.3`**, Zero React), Chrome Prompt API (Gemini Nano), WebLLM, the autonomous `<35 KB` AST Vector Media Engine (v2.6.0), and a separate Procedural 3D BSL/Makaton In-Vision Avatar (`<native-bsl-interpreter>`). The AST player serves a dual-market architecture: perpetually free for schools, Catholic organisations, and developing nations (Track A Humanitarian Commons), and commercially licensed for enterprise Digital Signage (DOOH), Programmatic Display Advertising, and Interactive Kiosks (Track B).
 
 ---
 
@@ -9,7 +9,7 @@
 1. **Education Should Be Free**: The portal is perpetually free and open-source under a dual-licensing humanitarian model (GNU AGPLv3 for public and humanitarian use, commercial dual-licence for proprietary deployments).
 2. **Zero Cloud Leakage**: Student logs, responses, voice transcripts, and mastery progress remain strictly client-side in browser IndexedDB (`services/dbStore.ts`). No student data egresses to remote cloud servers.
 3. **Multi-Modal Tuples Architecture**: Unifies vector graphics, synchronized video underlays/overlays, procedural audio synthesis, reactive S-Expression data bindings, sub-pixel pointer gestures, and formative assessment gates into a coherent, atomic tuple structure.
-4. **Decoupled & Domain-Agnostic Engine**: The core vector engine is strictly **< 35 KB gzipped** (< 150 KB uncompressed) with zero external npm runtime dependencies. All domain-specific hardcoding has been eliminated; dynamic parameter HUDs discover variables, bounds, and interactive controls automatically for ANY domain (education, science, engineering, or digital signage).
+4. **Decoupled & Domain-Agnostic Engine**: Built as three discrete, independent parts—the **Vite `^8.3.6` Portal SPA** (`src/`), the **< 35 KB AST Vector Player VM** (`static/player/`, v2.6.0), and the **Procedural 3D BSL Avatar** (`src/components/NativeBslInterpreter.ts`)—with zero external framework dependencies. All domain-specific hardcoding has been eliminated; dynamic parameter HUDs discover variables, bounds, and interactive controls automatically for ANY domain (education, science, engineering, or digital signage).
 5. **Bandwidth & Hardware Sovereignty**: Designed to operate flawlessly on $30 legacy hardware, Chromebooks, and metered mobile 2G/3G connections. Cold start is < 15 ms, with a memory footprint < 8 MB RAM.
 6. **Air-Gap Classroom Readiness**: Standalone HTML cartridges and the full portal can be bundled as an air-gapped single file (`exportAirgapHtmlBundle.ts`), bootable directly from USB thumb drives in off-grid rural schools with zero internet connection.
 7. **Classroom Smartboard First**: Built-in quadratic Bézier ink whiteboard layer (`#annotation-ink-root`) optimized for stylus pen interaction on Promethean, SMART, ViewSonic boards, and iPads.
@@ -20,8 +20,8 @@
 
 ### User-Facing Routes
 - `/` : Portal Home, Subject Hub, Quick Practice Starters, and System Diagnostics.
-- `/media-player` : Full-featured AST Vector Media Player with interactive simulation stage, 3D camera controls, parameter sliders, teacher HUD, and audio sonification.
-- `/player` : Alias to `/media-player`.
+- `/media-player` : Full-featured AST Vector Media Player with interactive simulation stage, 3D camera controls, parameter sliders, teacher HUD, mute/volume controls, and audio sonification.
+- `/player` : Alias to `/media-player` (also accepts `?preset=lumina-architecture` or `?src=/docs/lumina-architecture.ast`).
 - `/player.html` : Lightweight zero-dependency embeddable vector stage, OBS studio broadcast controller, and developer inspection lathe.
 - `/cartridges` : Decentralized Cartridge Vault, offline ROM repository, PhET/SWF transpiler bridge, and cartridge compressor.
 - `/phonics` : EYFS & KS1 Phonics Sounds Suite, DfE Phases 2–5 soundboard, blending mat, Alien Words screening check & flashcards.
@@ -35,26 +35,26 @@
 - `/first-communion` : Catechetical module for First Holy Communion preparation.
 - `/teacher-beacon` : Teacher broadcast console, real-time classroom sync, and Smartboard remote presenter.
 - `/profile` : Learner mastery passport, streak history, diagnostic records, and achievement badges stored in IndexedDB.
-- `/settings` : Neural hardware probe, WebGPU check, Gemini Nano Prompt API toggles, and audio settings.
+- `/settings` : Neural hardware probe, WebGPU status, Gemini Nano Prompt API toggles, and audio settings.
 - `/news` & `/blog` : Technical dispatches, pedagogical essays, and system release announcements.
 - `/licensing` : Humanitarian Commons charter, GNU AGPLv3 terms, and educational covenant.
 - `/privacy` : GDPR-compliant zero-cloud sovereign privacy guarantee.
 - `/child-safety` : Safeguarding and on-device student safety standards.
 
 ### Machine-Readable Endpoints & Manifests
+- `/docs/lumina-architecture.ast` : Interactive 4-chapter Show & Tell architectural paper (`:type "Slide"` hybrid SVG+AST) viewable directly at `/player?preset=lumina-architecture`.
 - `/llms.txt` : Concise machine-readable context file following the llms.txt standard.
 - `/llms-full.txt` : Comprehensive full-system briefing file for large-context models.
 - `/agents.txt` : Directory of autonomous web agent capabilities, tools, and W3C WebMCP definitions.
 - `/robots.txt` : Web robot and AI bot discovery policy.
-- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 67 compiled cartridges.
+- `/cartridge-checksums.json` : Authoritative SHA-256 cryptographic verification registry for all 68 compiled cartridges.
 - `/sitemap.xml` : XML sitemap indexing all public curriculum portals and manifests.
 - `/sitemap.ast` : S-Expression sitemap indexing self-mounting cartridges.
 - `/manifests/catalog.json` : Master curriculum catalogue indexing subjects, units, and learning objectives.
 - `/manifests/rag-index.json` : Pre-indexed semantic embeddings for offline retrieval-augmented generation.
-- `/player/scenes.manifest.json` : Index of all 67 production vector simulation cartridges.
+- `/player/scenes.manifest.json` : Index of 67 unique production vector simulation scene IDs across 68 compiled cartridge files (v2.6.0).
 - `/player/scenes-config.json` : Timeline keyframes, multilingual subtitles (EN/ES/FR/LA/DE/IT), and pause checkpoints.
-- `/player/grammar/ast-sexpr.gbnf` : GGML/GBNF grammar defining AST S-Expression syntax for constrained AI decoding.
-- `/player/grammar/ast-scene.gbnf` : GGML/GBNF grammar defining full scene graph structure.
+- `/player/schema/ast-scene.schema.json` : Formal JSON Schema defining scene graph structure.
 - `/nano-map.ast` : Compact curriculum domain schema parsed by `sexprParser.ts`.
 
 ---
@@ -113,10 +113,12 @@ The AST Vector Engine (`static/player/ast-engine.js` and `@stjosephs/ast-vector-
 - **Bidirectional Variable Binding**: User adjustments update bound variables (`*volume*`, `*temp*`) in linear memory at 60 FPS without DOM re-renders or GC pause.
 - **Legacy HUD Auto-Discovery (`setupSimParametersHud`)**: For historical or bare numerical cartridges without explicit `(ui:controls ...)`, the engine falls back to auto-discovering numeric `:vars` and mounting parameter sliders automatically.
 
-### 4.3. Direct Canvas Manipulation (`ast-gestures.js`)
+### 4.3. Pure Direct Manipulation & Press-and-Hold Gesture VM (`ast-gestures.js`)
+- **Zero-Hardcoding VM Guarantee**: `ast-engine.js` and `ast-gestures.js` contain **zero hardcoded scene IDs or cartridge element selectors**. Every input mapping (`:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`) runs generically from the active `.ast` / `.astb` cartridge.
+- **Generic Press-and-Hold Loop (`requestAnimationFrame`)**: Maintains `_heldKeys` and `_heldPointerEntries` sets so held keyboard keys (`keydown`/`keyup`/`blur`, with `e.preventDefault()` on matched keys and `#stage-svg` focus capture) and held SVG pointers continuously step `:step-var` within `[min, max]` bounds or hold `:hold-var` until release (`:release-val`).
 - **Sub-Pixel Coordinate Translation**: Applies inverse Current Transformation Matrix ($\mathbf{CTM}^{-1}$) to convert pointer coordinates into exact SVG stage coordinates regardless of CSS scaling, letterboxing, or display DPI.
 - **PointerCapture Robustness**: Seamlessly captures high-speed drags across viewport boundaries, touchscreens, and mouse devices without dropping drag focus.
-- **Constrained Axis Motion**: Supports 1D horizontal (`:axis "x"`), 1D vertical (`:axis "y"`), rotational (`:axis "angle"`), or unconstrained 2D planar movement.
+- **Constrained Axis Motion**: Supports 1D horizontal (`:axis "x"`), 1D vertical (`:axis "y"`), curve probes (`:axis "curve"`), rotational, trackball 3D orbit, or unconstrained 2D planar (`:axis "xy"`) movement.
 
 ### 4.4. Classroom Smartboard Whiteboard Layer
 - **Native Ink Root (`#annotation-ink-root`)**: Renders high-fidelity drawing strokes directly inside the SVG document.
@@ -193,7 +195,7 @@ The portal features a built-in multilingual synthesis engine:
 
 ## 8. British Sign Language (BSL) In-Vision Vector Interpreter
 
-The player incorporates a world-first zero-video procedural 3D British Sign Language (BSL) "In-Vision" Vector Interpreter (`BslInterpreterOverlay.tsx` & `/lexicons/bsl-signs.ast`):
+The player incorporates a world-first zero-video procedural 3D British Sign Language (BSL) "In-Vision" Vector Interpreter (`src/components/NativeBslInterpreter.ts` rendering `<native-bsl-interpreter>` & `/lexicons/bsl-signs.ast`), running independently from the AST Vector Engine:
 - **Full 68-Sign Primary Curriculum Corpus**: Unlike legacy digital tools that rely on pre-recorded video files (15–50 MB/min) or flat fingerspelling cards, the interpreter runs an extensive 68-sign procedural 3D lexicon covering primary Religious Education (`JESUS`, `PRAY`, `CHURCH`, `ALTAR`, `GOD`, `CROSS`, `BIBLE`, `PEACE`), STEM (`SCIENCE`, `MATHS`, `TIME`, `ENERGY`, `FORCE`, `GRAVITY`, `EARTH`, `SUN`, `MOON`, `PLANET`, `ORBIT`), and Classroom Core (`WHAT`, `WHERE`, `WHO`, `WHY`, `WHEN`, `HOW`, `START`, `STOP`, `HELLO`, `GOODBYE`, `THANK YOU`, `SORRY`, `HAPPY`, `SAD`, `MORE`, `AGAIN`, `CORRECT`, `WRONG`).
 - **99.99% Compression Invariant**: The complete 68-sign lexicon is encoded as declarative AST S-Expressions in `static/lexicons/bsl-signs.ast`. Total payload size is **11.33 KB gzipped** (~170 bytes per sign) and parses in **< 8 ms** (< 0.4 ms/sign), eliminating the video bandwidth bottleneck for rural or low-bandwidth schools.
 - **Procedural 3D Kinematics & Coordinate Tuples**: Hand trajectories and finger joint poses are codified using 3D coordinate tuples `(:xyz [x y z])` with continuous 60 FPS cubic Hermite spline interpolation.
@@ -203,7 +205,7 @@ The player incorporates a world-first zero-video procedural 3D British Sign Lang
   - `:base-shift`: Base hand forms a stationary spatial anchor (representing an altar, table, or book) while dominant hand executes arbitrary directional motion.
 - **Grammatical Non-Manual Features (NMF) Facial Rig**: Synthesizes procedural facial expressions tied directly to linguistic interrogatives: raised eyebrows for polar yes/no questions, furrowed eyebrows for wh-questions, mouth morphemes, and head tilts without neural video hallucination.
 - **Interactive 360° Drag-to-Orbit Camera**: Learners and teachers can freely click and drag to orbit the 3D camera 360°, zoom in on knuckles, or toggle between first-person Signer POV (looking down from chest) and conversational Receiver POV (facing partner across table).
-- **Universal Site-Wide Integration (`bslGlobalStore`)**: BSL can be toggled anywhere across the portal via the persistent top header `UniversalTranslatorBar`, inside every embedded or full-screen `AstVectorMediaPlayer` toolbar, or using the global keyboard shortcut **`Shift + B`**. When active, the floating avatar automatically listens to speech boundary events (`SPEECH_BOUNDARY`) dispatched by any playing simulation cartridge.
+- **Universal Site-Wide Integration (`bslGlobalStore`)**: BSL can be toggled anywhere across the portal via the persistent top header `<app-shell>` bar, inside every embedded or full-screen `/media-player` toolbar, or using the global keyboard shortcut **`Shift + B`**. When active, the floating avatar automatically listens to speech boundary events (`SPEECH_BOUNDARY`) dispatched by any playing simulation cartridge.
 - **281 Verified Invariant Tests**: The BSL engine and AST codec are validated against a 281-assertion invariant test suite (`npm run test:bsl`), guaranteeing round-trip serialization fidelity, bounds checking, and sub-15 KB bundle constraints.
 
 ---
@@ -217,7 +219,7 @@ The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/
 
 ---
 
-## 10. Complete Production Curriculum Cartridge Catalog (60 Cartridges)
+## 10. Complete Production Curriculum Cartridge Catalog (68 Cartridges)
 
 ### 10.1. Mathematics & Quantitative Reasoning
 1. **Calculus: Tangent Slopes & Integrals (`calculus-curves`)**: GCSE/A-Level. Tangent slope $dy/dx$, stationary turning points, and Simpson's 1/3 numerical integrals with interactive curve selection.
@@ -283,18 +285,13 @@ The portal includes an automated transpiler bridge (`ast-phet-bridge.js` & `src/
 
 The AST Vector Player engine is 100% decoupled from the host application shell (Zero React, Native Web Standards). It carries zero framework dependencies, runs in under 35 KB gzipped, and distributes across four universal models:
 
-1. **Autonomous NPM Package (`@stjosephs/ast-vector-player`)**:
+1. **Autonomous NPM Package (`@stjosephs/ast-vector-player`, v2.6.0)**:
    - Ships with its own `package.json` (`static/player/package.json`).
    - Headless runtime: `import { AstEngine } from '@stjosephs/ast-vector-player'`.
-   - Allows developers to drive custom UIs, Three.js canvases, or programmatic headless workers with complete AST keyframe, variable, and gesture execution.
+   - Allows developers to drive custom UIs or programmatic headless workers with complete AST keyframe, variable, and gesture execution.
 
-2. **Native Web Component (`<micro-vector-player>`)**:
-   - Packaged in `static/player/micro-vector-player.js` (< 25 KB uncompressed).
-   - Zero-dependency Shadow DOM element that drops into any HTML page, WordPress, Webflow, or Shopify site:
-     ```html
-     <script src="micro-vector-player.js"></script>
-     <micro-vector-player preset="kinetic-gas" autoplay voice lang="en"></micro-vector-player>
-     ```
+2. **Embeddable Player Shell (`/player/index.html` & `/player.html`)**:
+   - Supports `?preset=`, `?src=/docs/lumina-architecture.ast`, `#ast=`, `#script=`, `?hud=1`, `?bsl=1`.
 
 3. **Embeddable Responsive LMS Iframe**:
    - Embedded into Canvas, Moodle, Blackboard, Google Classroom, and web intranets via standard `<iframe>` (`/player/index.html?preset=...`).
@@ -336,7 +333,7 @@ In accordance with the emerging W3C Web Machine Learning Community Group standar
 1. `catholic_catechism_search` (Read-Only): Query Roman Rite liturgical definitions, Holy Water (Aqua Benedicta) and Asperges, Thurifer (Thuriferarius) & Incensations, High Altar mensa and relics, Holy Oils, and Sanctuary pilgrim stations.
 2. `navigate_portal` (Consequential): Seamless client-side viewport navigation (`/catholic-life`, `/practice-lab`, `/cartridges`, `/curriculum`, `/jotter`) and tab selection via the native micro-router (`src/router.ts`).
 3. `launch_simulation` (Consequential): Programmatically open and render any interactive AST vector cartridge or synchronized educational film on the stage with autoPlay.
-4. `list_ast_simulations` (Read-Only): Enumerate all 67 compiled vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
+4. `list_ast_simulations` (Read-Only): Enumerate all 68 compiled vector cartridges across the four archetypes (`Sim`, `Slide`, `App`, `Film`) with learning invariants, subjects, video backdrops, and runtimes.
 5. `get_learner_status` (Read-Only): Anonymously inspect local on-device pupil mastery (stars earned, active key stage) strictly without cloud egress.
 
 ---

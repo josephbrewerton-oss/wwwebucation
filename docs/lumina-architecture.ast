@@ -127,16 +127,16 @@
 
       <g transform="translate(64, 142)">
         <rect x="0" y="0" width="450" height="66" rx="8" fill="#090d16" stroke="#1e293b" />
-        <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">01. ZERO NETWORK EGRESS & PRIVACY SOVEREIGNTY</text>
+        <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">01. ZERO NETWORK EGRESS &amp; PRIVACY SOVEREIGNTY</text>
         <text x="16" y="44" fill="#cbd5e1" font-size="11">No tracking beacons, cookies, or telemetry. Complete student safeguarding</text>
-        <text x="16" y="58" fill="#94a3b8" font-size="10.5">guaranteed by construction under UK GDPR Art. 25 & KCSIE standards.</text>
+        <text x="16" y="58" fill="#94a3b8" font-size="10.5">guaranteed by construction under UK GDPR Art. 25 &amp; KCSIE standards.</text>
       </g>
 
       <g transform="translate(64, 222)">
         <rect x="0" y="0" width="450" height="66" rx="8" fill="#090d16" stroke="#1e293b" />
         <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">02. MECHANICAL SYMPATHY OVER FRAMEWORK BLOAT</text>
         <text x="16" y="44" fill="#cbd5e1" font-size="11">Zero Virtual DOM diffing overhead. 60 FPS vector execution within low-power</text>
-        <text x="16" y="58" fill="#94a3b8" font-size="10.5">school hardware budgets (< 8 MB RAM, < 35 KB gzipped engine footprint).</text>
+        <text x="16" y="58" fill="#94a3b8" font-size="10.5">school hardware budgets (&lt; 8 MB RAM, &lt; 35 KB gzipped engine footprint).</text>
       </g>
 
       <g transform="translate(64, 302)">
@@ -200,7 +200,7 @@
     <g id="page-3" transform="translate(1600, 0)">
       <rect x="36" y="60" width="728" height="375" rx="12" fill="url(#pageCardGrad)" stroke="#334155" stroke-width="1.5" filter="url(#shadowFilter)" />
       
-      <text x="64" y="100" fill="#f8fafc" font-size="19" font-weight="800">III. Declarative S-Expressions & Subtractive CSG</text>
+      <text x="64" y="100" fill="#f8fafc" font-size="19" font-weight="800">III. Declarative S-Expressions &amp; Subtractive CSG</text>
       <text x="64" y="122" fill="#94a3b8" font-size="12">Mathematical evaluation maps directly into pure SVG hardware rasterization.</text>
 
       <g transform="translate(64, 142)">
@@ -213,7 +213,7 @@
 
       <g transform="translate(64, 252)">
         <rect x="0" y="0" width="370" height="60" rx="8" fill="#090d16" stroke="#1e293b" />
-        <text x="14" y="22" fill="#34d399" font-size="10.5" font-weight="800" font-family="ui-monospace, monospace">DOM REDUCTION & ZERO OVERDRAW:</text>
+        <text x="14" y="22" fill="#34d399" font-size="10.5" font-weight="800" font-family="ui-monospace, monospace">DOM REDUCTION &amp; ZERO OVERDRAW:</text>
         <text x="14" y="42" fill="#94a3b8" font-size="10.5">Cuts DOM elements by 40–80%. The GPU stencil rasterizes</text>
         <text x="14" y="56" fill="#94a3b8" font-size="10.5">the hollow volume in a single drawing pass with zero z-fighting.</text>
       </g>
@@ -223,7 +223,7 @@
           INSET: 24mm | COMPOUND VOID CARVED IN 1 OPERATION
         </text>
         <text x="0" y="32" fill="#64748b" font-size="9.5" font-family="ui-monospace, monospace">
-          APPLIED TO: LEGO Underside, BSL Avatar Handshapes, Flywheels, & Atom Shells
+          APPLIED TO: LEGO Underside, BSL Avatar Handshapes, Flywheels, &amp; Atom Shells
         </text>
       </g>
 
@@ -268,12 +268,12 @@
         <rect x="0" y="0" width="450" height="66" rx="8" fill="#090d16" stroke="#1e293b" />
         <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">01. 3-TIER EDGE AI INFERENCE HIERARCHY</text>
         <text x="16" y="44" fill="#cbd5e1" font-size="11">Tier 1: Chrome Prompt API (Gemini Nano) • Tier 2: WebLLM GPU shaders</text>
-        <text x="16" y="58" fill="#94a3b8" font-size="10.5">Tier 3: Deterministic Socratic engine (< 5ms, 0 GPU memory, 0 bps bandwidth).</text>
+        <text x="16" y="58" fill="#94a3b8" font-size="10.5">Tier 3: Deterministic Socratic engine (&lt; 5ms, 0 GPU memory, 0 bps bandwidth).</text>
       </g>
 
       <g transform="translate(64, 222)">
         <rect x="0" y="0" width="450" height="66" rx="8" fill="#090d16" stroke="#1e293b" />
-        <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">02. P2P SNEAKERNET & OPTICAL QR MESH</text>
+        <text x="16" y="24" fill="#38bdf8" font-size="11.5" font-weight="800" font-family="ui-monospace, monospace">02. P2P SNEAKERNET &amp; OPTICAL QR MESH</text>
         <text x="16" y="44" fill="#cbd5e1" font-size="11">High-density animated QR codes enable camera-to-camera optical transfer</text>
         <text x="16" y="58" fill="#94a3b8" font-size="10.5">of full AST binary cartridges without cables, Wi-Fi, or cellular connectivity.</text>
       </g>
