@@ -392,7 +392,7 @@
               g.holdVar ||
               g.type === 'holdable' ||
               g.hold === true ||
-              (hasStep && heldDuration >= 160)
+              (hasStep && g.hold !== false && heldDuration >= 160)
             );
             if (wantsContinuous && this._applyContinuousGestureStep(g, scene, dtSec)) {
               changed = true;

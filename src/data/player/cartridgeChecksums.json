@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-12T09:00:34.792Z",
-  "totalCartridges": 67,
-  "masterChecksum": "58a3b74587a250d07c1edfc91f2b2e682fd2fd79febb87919fc4612e13c8810a",
+  "generatedAt": "2026-11-13T08:31:49.743Z",
+  "totalCartridges": 68,
+  "masterChecksum": "3e441914aa96a05989e6652ecea686e1deec49f0cc052298b444e8e564587db0",
   "cartridges": {
     "algebra-balance": {
       "id": "algebra-balance",
@@ -378,15 +378,15 @@
       "title": "Modular Brick Engineering & 3D Spatial Geometry",
       "stage": "KS2/KS3 DESIGN & TECH",
       "type": "Sim",
-      "astSha256": "e2f540083838be8a2e16dc247c6e66fb66501d8c7e217b7fdac9c34ae2e0cc9f",
+      "astSha256": "dc1083ffdaebbaead306a35830e10e3c69403153957870299de77a41be4e130b",
       "svgSha256": "5785d0fa04fec82fa3bd43e8629e3b0c09a4e323ce1431d14a3775df4238b924",
-      "astbSha256": "228736eb4641428b07ce0087ea9a6da147583f8f97e551e0eca881b88300ec5a",
-      "astbBytes": 4545,
-      "astBytes": 7934,
+      "astbSha256": "4bace6cd09c083c02217fbc5f46150c906c4c0c6daf0db42e7c7361a493347ca",
+      "astbBytes": 5761,
+      "astBytes": 10933,
       "svgBytes": 29537,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "59c0f1ca13fc7ffc4d53917d7e8b4f912e0573ab7a4ef4752f87d7cafdb98483",
+      "seal": "8d29922e9b996746f904daf87c6df9f0a05bb2a1db1a3f592a100cef186f0a29",
       "certified": true
     },
     "liturgical-calendar": {
@@ -1027,6 +1027,22 @@
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
       "seal": "21f5719ce3e5dd15f0afce72a87044bac1af82fe78abadf2c1e8074de615281b",
+      "certified": true
+    },
+    "vector-racing": {
+      "id": "vector-racing",
+      "title": "Vector Racing",
+      "stage": "STEM",
+      "type": "Sim",
+      "astSha256": "4b23edbf0b108ef7e89866ac1b5992a8d5c892236a7218c5b885ea1ac5bbe15b",
+      "svgSha256": "347bfd9f7dd2a1804707465dd76962c744fd63fae17d1c90bc44cd60f2f6c596",
+      "astbSha256": "6fb5d4d6aad1981c76cb37070ba4a101c4a8089e87c7c22eb9420f463dfd9aa5",
+      "astbBytes": 65,
+      "astBytes": 4666,
+      "svgBytes": 5020,
+      "tier": "native",
+      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
+      "seal": "59ee2eb8c4ca18d7474508ed2a6ee9ca2356c5ef9411ecf29278860922e36d57",
       "certified": true
     },
     "velocity": {

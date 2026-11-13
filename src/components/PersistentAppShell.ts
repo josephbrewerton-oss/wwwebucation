@@ -357,7 +357,7 @@ export class PersistentAppShellElement extends HTMLElement {
   <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#38bdf8;">OGL v3.0</a>. 
   Engine code dual-licensed under 
   <a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 (Source Repository)</a>. 
-  &bull; <a href="./docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#38bdf8; text-decoration:none;">Offline Architecture Paper (.ast)</a>. 
+  &bull; <a href="${base}player?preset=lumina-architecture" style="color:#38bdf8; text-decoration:none; font-weight:600;">Interactive Architecture Manifesto (.ast)</a> (<a href="${base}docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#94a3b8; text-decoration:none;">Download</a>). 
   Designed for zero-data offline learning.
 </div>
 </footer>

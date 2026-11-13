@@ -8,15 +8,17 @@
 
 ## 1. Executive Philosophy & Purpose
 
-The **Abstract Scene Tree (AST) Vector Language** is a domain-specific declarative grammar engineered as an **autonomous, zero-bloat, open-standard replacement for Adobe/Macromedia Flash, Lottie/Bodymovin, and PhET simulations**. While battle-tested across rigorous educational curriculum simulations, its underlying mathematical vector runtime is designed for cross-industry deployment across **Digital Signage & DOOH (Digital Out-of-Home)**, **Interactive Display Advertising (IAB-compliant Rich Media)**, and **Embedded Touch Kiosks**.
+The **Abstract Scene Tree (AST) Vector Language** is a domain-specific declarative grammar engineered as an **autonomous, zero-bloat, open-standard replacement for Adobe/Macromedia Flash, Lottie/Bodymovin, and PhET simulations**. Built as the core Virtual Machine of a **0-dependency developing-world teaching aid**, it operates as a discrete subsystem alongside the Vite `^8.3.6` (Rolldown/esbuild) Native Web Standards Host Portal (`src/`) and the standalone Procedural 3D BSL/Makaton In-Vision Avatar (`<native-bsl-interpreter>`), while also supporting cross-industry deployment across **Digital Signage & DOOH**, **Interactive Display Advertising**, and **Embedded Touch Kiosks**.
 
 ### Core Invariants
 1. **Zero Bloat (< 35 KB gzipped, < 150 KB uncompressed):** Zero external framework dependencies. Native browser SVG DOM, JavaScript, and Web Audio API. Easily fits inside the strictest IAB 150 KB ad limits.
-2. **Deterministic Dual-Mode Delivery:**
-   - **Narrative Mode:** 60 FPS keyframed timeline, bilingual narration, formative checkpoints, and signage broadcast loops.
-   - **Direct Grab Sandbox Mode:** Direct mouse/stylus/touch drag-and-drop on live SVG elements with sub-pixel pointer capture.
-3. **Smartboard & Kiosk Native:** Built-in Whiteboard Pen layer with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, touch kiosks, and Apple Pencil displays.
-4. **Air-Gapped & Rural/Edge Ready:** Sub-15 ms cold start, zero cloud egress, standalone single-file packaging. Runs 24/7 on low-power ARM media players (< 8 MB RAM) with zero memory leaks.
+2. **Pure VM / Cartridge Separation:** `ast-engine.js` and `ast-gestures.js` contain **zero hardcoded scene IDs or cartridge DOM selectors**—all rules, keys, and interaction primitives are declared in `.ast` / `.astb` cartridges (including hybrid interactive documents such as `/docs/lumina-architecture.ast`).
+3. **Deterministic Multi-Mode Delivery:**
+   - **`:Sim` / `:App`:** Continuous 60 FPS kinematic integration with direct pointer/keyboard manipulation.
+   - **`:Slide`:** Discrete exploratory decks and interactive architecture papers decoupled from runaway clocks.
+   - **`:Film`:** Monotonic time-locked narrative choreography with speech synthesis and multilingual subtitles.
+4. **Smartboard & Kiosk Native:** Built-in Whiteboard Pen layer with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, touch kiosks, and Apple Pencil displays.
+5. **Air-Gapped & Rural/Edge Ready:** Sub-15 ms cold start, zero cloud egress, standalone single-file packaging. Runs 24/7 on low-power ARM media players (< 8 MB RAM) with zero memory leaks.
 
 ---
 
@@ -89,24 +91,40 @@ Checkpoint       ::= "(:checkpoint" ws ":t" ws Fraction ws
                      ":explanation" ws String ")"
 
 Gestures         ::= "(:gestures" ws "(" ws (Gesture)* ws ")" ws ")"
-Gesture          ::= "(:draggable" ws ":target" ws String ws 
+Gesture          ::= DraggableGesture | ClickHoldGesture | KeyGesture | TrackballGesture
+DraggableGesture ::= "(:draggable" ws ":target" ws String ws 
                      ":axis" ws ("\"x\"" | "\"y\"" | "\"xy\"" | "\"curve\"") ws 
-                     ":min" ws Number ws ":max" ws Number ")"
+                     ":min" ws Number ws ":max" ws Number 
+                     (ws ":var" ws String)? ")"
+ClickHoldGesture ::= "(:" ("clickable" | "holdable") ws ":target" ws String ws
+                     (ws ":set-var" ws String ws ":val" ws Literal)?
+                     (ws ":toggle-var" ws String)?
+                     (ws ":step-var" ws String ws ":delta" ws Number (ws ":min" ws Number)? (ws ":max" ws Number)?)?
+                     (ws ":hold-var" ws String (ws ":release-val" ws Literal)?)?
+                     (ws ":hold" ws Boolean)? (ws ":rate" ws Number)? ")"
+KeyGesture       ::= "(:key" ws (":code" ws String | ":key" ws String)
+                     (ws ":set-var" ws String ws ":val" ws Literal)?
+                     (ws ":toggle-var" ws String)?
+                     (ws ":step-var" ws String ws ":delta" ws Number (ws ":min" ws Number)? (ws ":max" ws Number)?)?
+                     (ws ":hold-var" ws String (ws ":release-val" ws Literal)?)?
+                     (ws ":hold" ws Boolean)? (ws ":rate" ws Number)? ")"
+TrackballGesture ::= "(:" ("trackball" | "rotatable") ws ":target" ws String ")"
 ```
 
 ---
 
-## 3. The 6 Subsystems of the AST Player
+## 3. The Subsystems of the AST Player
 
-### 3.1. Direct In-Stage Pointer Manipulation (`ast-gestures.js`)
-* Binds to `#stage-svg` with full `PointerCapture`.
+### 3.1. Direct In-Stage Pointer & Keyboard Gesture VM (`ast-gestures.js`)
+* Binds generically to `#stage-svg` with full `PointerCapture`, keyboard focus on pointer down, and `e.preventDefault()` on matched keys.
+* **Press-and-Hold Loop (`requestAnimationFrame`)**: Maintains `_heldKeys` and `_heldPointerEntries` sets so `:key`, `:holdable`, and continuous `:clickable` tuples step `:step-var` smoothly within `[min, max]` bounds or hold `:hold-var` until `keyup` / `pointerup` / `pointercancel` / `blur`, resetting cleanly to `:release-val`.
 * Coordinates mapped via SVG inverse screen transformation matrix:
   $$\begin{pmatrix} x_{\text{svg}} \\ y_{\text{svg}} \end{pmatrix} = \mathbf{M}_{\text{CTM}}^{-1} \begin{pmatrix} x_{\text{screen}} \\ y_{\text{screen}} \end{pmatrix}$$
-* Supported manipulation modes:
-  - `piston`: Horizontal cylinder compression with dynamic Boyle's law feedback ($P \propto \frac{1}{V}$).
-  - `tangent-probe`: Real-time sliding along $y = f(x)$ with instantaneous slope calculation ($\frac{dy}{dx} = f'(x)$) and stationary turning point chimes.
-  - `switch`: Bistable mechanical switch toggling with electron circuit disconnect.
-  - `xy-plane`: 2D physics dragging (weights, pulleys, lenses).
+* Supported declarative manipulation primitives:
+  - `:draggable`: Direct 1D/2D/curve pointer dragging (`x`, `y`, `xy`, `curve`) bound to element geometry or `:var`.
+  - `:clickable` / `:holdable`: Instant state mutation (`:set-var`, `:toggle-var`) and continuous hold/step loops (`:hold-var`, `:step-var`, `:delta`, `:rate`).
+  - `:key`: Keyboard event bindings (`:code`, `:key`) with discrete press and continuous `requestAnimationFrame` hold evaluation.
+  - `:trackball` / `:rotatable`: 3D spherical orbit rotation on 3D projected cartridges.
 
 ### 3.2. Classroom Whiteboard & Stylus Pen Ink Layer
 * Top-level vector group `#annotation-ink-root`.

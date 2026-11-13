@@ -1,7 +1,8 @@
 # St Joseph's Curriculum Portal — AI Agent Context & Rules
 
 ## Project Architecture
-- **Framework**: High-performance client-side Single Page Application (SPA) powered by **Vite 8+** (Rolldown / esbuild), **Native Web Standards / TypeScript (Zero React)**, and a lightweight native micro-router (`src/router.ts`).
+- **Framework**: High-performance client-side Single Page Application (SPA) powered by **Vite `^8.3.6`** (Rolldown / esbuild `^0.28.1`), **TypeScript `^5.6.3` (Native Web Standards / Zero React)**, and a lightweight native micro-router (`src/router.ts`).
+- **Discrete Subsystems (0-Dependency Developing-World Teaching Aid)**: The Host Portal SPA (`src/`), AST Vector Player Engine & Gesture VM (`static/player/`, v2.6.0), and Procedural BSL/Makaton In-Vision Avatar (`src/components/NativeBslInterpreter.ts` + `static/lexicons/bsl-signs.ast`) are strictly decoupled architectural parts communicating via `postMessage` and reactive stores (`bslGlobalStore`).
 - **Persistent App Shell**: The Universal Translator Bar, Persistent Navbar, and Footer are permanently mounted in `src/components/PersistentAppShell.ts` as `<app-shell>`. Route navigation occurs in-memory inside `#ast-persistent-viewport` via `#page-outlet`.
 - **Styling**: Tailwind CSS & scoped CSS without heavy framework overrides. `html { scrollbar-gutter: stable; }` must be preserved to prevent Cumulative Layout Shift (CLS).
 - **Static Assets**: Located in `static/` (served at `/` via Vite's `publicDir: 'static'`).
@@ -46,8 +47,10 @@
   - `data-pedagogical` discovery inspection with real-time procedural Web Audio synthesis (0 KB external audio files).
   - Native in-stage `ASTProfiler` HUD (`SET_PERF_HUD`, `TOGGLE_PERF_HUD`, `?hud=1`) with live rolling sparkline, sub-0.2 ms VM compute measurement, and frame budget headroom.
   - Dedicated `⚡ Diagnostics` drawer in `src/pages/media-player.ts` tracking 60 FPS headroom and WASM 7-page memory pool status.
-- **Canonical Curriculum Cartridges (67 Compiled Modules)**:
-  - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
+- **Pure VM & Cartridge Separation Invariant**: `static/player/ast-engine.js` and `static/player/ast-gestures.js` operate as a 100% generic, schema-driven Virtual Machine. NEVER hardcode scene IDs or cartridge-specific element selectors inside engine/gesture code. Gestures execute declaratively from `.ast` `:gestures` tuples (`:draggable`, `:clickable`, `:holdable`, `:key` with `requestAnimationFrame` press-and-hold loop, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`).
+- **Interactive System Architecture Document**: `static/docs/lumina-architecture.ast` is a hybrid SVG + S-expression `:type "Slide"` Show & Tell Manifesto, playable via `/player?preset=lumina-architecture` or `?src=/docs/lumina-architecture.ast`.
+- **Canonical Curriculum Cartridges (68 Compiled Modules)**:
+  - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `vector-racing` (Continuous Press-and-Hold Kinematic Driving), `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
   - *Humanities, Language & Formation*: `bsl-fingerspelling`, `church-tour`, `altar-anatomy`, `order-of-the-mass`, `seven-sacraments`, `catholic-rites`, `liturgical-calendar`, `liturgical-postures`, `liturgy-of-the-hours`, `first-communion`, `holy-oils`, `holy-water-thurifer`, `nicene-creed`, `cst-virtues`, `rosary-mysteries`, `stations-of-the-cross`, `ten-commandments`, `latin-mass-prayers`, `shakespeare-macbeth`, `shakespeare`, `triduum-easter`, `sacred-objects`, `languages`, `eucharistic-procession-film`.
 
 ## Real-Time "In-Vision" BSL / Makaton Vector Interpreter
@@ -64,7 +67,7 @@
   - Native browser Picture-in-Picture (`documentPictureInPicture`) uncoupling for multi-monitor, whiteboard, and split-screen instruction.
 
 ## AST Language Grammar & S-Expression Specification
-- **Language Codification**: Defined in `docs/AST_PLAYER_SPECIFICATION.md` and constrained by GGML grammars in `static/player/grammar/ast-sexpr.gbnf` and `ast-scene.gbnf`.
+- **Language Codification**: Defined in `docs/AST_PLAYER_SPECIFICATION.md` and `static/player/schema/ast-scene.schema.json` (with WebLLM XGrammar structured decoding via `@mlc-ai/web-llm`).
 - **Declarative Nodes**:
   - Metadata: `:scene`, `:id`, `:title`, `:stage`, `:duration`, `:easing`, `:type` ("Sim" | "Slide" | "App" | "Film")
   - Video Driving: `:video`, `:video-fit` ("contain" | "cover" | "fill")
@@ -72,7 +75,7 @@
   - Reactive Bindings & Inputs: `:vars`, `:inputs`, `:computed`, `:bindings`, `:bind-inputs`
   - State Machines & Emitters: `:state-machine`, `:state`, `:transition`, `:emitter`, `:particle-pool`
   - Formative Assessment: `:interactive`, `:checkpoint`, `:prompt`, `:options`, `:answer`, `:explanation`
-  - Direct Manipulation: `:gestures`, `:draggable`, `:axis`, `:min`, `:max`
+  - Direct Manipulation & Pure Gesture VM: `:gestures`, `:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`, `:axis`, `:min`, `:max`, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`, `:release-val`, `:delta`, `:rate`
 
 ## On-Device Edge AI & Developing-World Offline Invariants
 - **Zero Cloud Leakage**: Student logs, answers, and voice inputs never egress to cloud LLMs (UK GDPR Art. 25 & KCSIE compliant).

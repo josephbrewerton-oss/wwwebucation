@@ -5,8 +5,8 @@ Licensed under GNU AGPLv3 / Commercial Dual-License.
 
 # ⚡ St Joseph's Edge Learning Engine & AST Vector Suite
 
-> **Zero-Marginal-Cost, Sovereign On-Device AI Tutoring & Deterministic Vector Media Platform**  
-> Powered by the UK National Curriculum (Oak National Academy), Chromium Prompt API (Gemini Nano), bespoke `.astb` Bytecode Compilers, and Native SVG Vector Primitives.
+> **0-Dependency Developing-World Teaching Aid & Deterministic Vector Media Platform**  
+> Powered by Native Web Standards (Zero React, **Vite `^8.3.6`**, **TypeScript `^5.6.3`**), the UK National Curriculum (Oak National Academy), Chromium Prompt API (Gemini Nano), bespoke `.astb` Bytecode Compilers, and Native SVG Vector Primitives.
 
 [![Lighthouse Desktop](https://img.shields.io/badge/Lighthouse_Desktop-99%2F100-brightgreen)](https://pagespeed.web.dev/)
 [![Lighthouse Accessibility](https://img.shields.io/badge/Accessibility-96%2F100-brightgreen)](https://pagespeed.web.dev/)
@@ -26,7 +26,13 @@ Dedicated to St Joseph and created in the spirit of the Catholic Church’s pref
 
 ---
 
-## 🏗️ Core Architecture
+## 🏗️ Discrete Tri-System Architecture & Build Toolchain
+
+Designed as a **0-dependency developing-world teaching aid**, the platform separates execution into **three discrete, independently deployable subsystems** rather than a monolithic framework bundle:
+
+1. **Host Portal SPA (`src/`)**: Native Web Standards & Web Components (`<app-shell>`, zero React), bundled via **Vite `^8.3.6`** (Rolldown / esbuild) and **TypeScript `^5.6.3`** with custom plugins (`astSceneAutoFinder`, `vite-raw-ast`, `non-blocking-css`).
+2. **AST Vector Player & Pure Gesture VM (`static/player/`, v2.6.0)**: Completely standalone `< 35 KB` gzipped engine (`ast-engine.js`, `ast-gestures.js`, `player-ui.js`) with **0 runtime dependencies**. Executes any `.ast` / `.astb` cartridge generically with zero hardcoded scene IDs or cartridge selectors. Interactive manifesto available at `/docs/lumina-architecture.ast` (`/player?preset=lumina-architecture`).
+3. **Procedural 3D BSL / Makaton In-Vision Interpreter (`src/components/NativeBslInterpreter.ts`)**: Discrete, zero-video SVG skeletal vector avatar (`<native-bsl-interpreter>`) driven by `/lexicons/bsl-signs.ast` and synchronized over `bslGlobalStore` / `postMessage` (`SPEECH_BOUNDARY`, `TOGGLE_BSL`).
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -87,20 +93,22 @@ Tier 2 (WebLLM via WebGPU): Local shader inference (SmolLM2-360M-Instruct-q4f16_
 
 Tier 3 (Deterministic S-Expression Synthesizer): Sub-5ms procedural rule engine executing offline without GPU or neural dependencies.
 
-Decentralized Virtual Console & Self-Mounting Cartridges: Operates as a completely air-gapped, stateless execution console with 0 bytes transmitted to remote servers. Includes 67 canonical compiled vector cartridges (2.5 KB to 25 KB) self-declaring coordinates (:mount "/curriculum/..."), subject tags (:section), and access levels (:tier), including Design & Technology modular brick engineering (`lego-blocks`). Cold starts in under 15 ms using < 8 MB RAM with zero external audio assets.
+Decentralized Virtual Console & Self-Mounting Cartridges: Operates as a completely air-gapped, stateless execution console with 0 bytes transmitted to remote servers. Includes 68 canonical compiled vector cartridges (2.5 KB to 25 KB) self-declaring coordinates (:mount "/curriculum/..."), subject tags (:section), and access levels (:tier), including Design & Technology modular brick engineering (`lego-blocks`) and real-time vehicle kinematics (`vector-racing`). Cold starts in under 15 ms using < 8 MB RAM with zero external audio assets.
 
 Analytic 3D Ray-Math & Symbolic Spatial Telemetry (Zero-GPU): Replaces heavy vision frames and video streams with compact S-expression tokens ((:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0])). CPU-bound analytic geometry (< 15 KB JS) providing exact spatial hit-testing for real-time robotic and scientific kinematics.
 
-Decoupled, Headless AST Vector Player (< 35 KB): Framework-agnostic runtime (@stjosephs/ast-vector-player). Distributable as a headless engine, drop-in Web Component, LMS iframe (Canvas/Moodle/Google Classroom), or a single self-contained air-gapped .html bundle (< 45 KB) executable from a USB drive.
+Decoupled, Headless AST Vector Player (< 35 KB, v2.6.0): Framework-agnostic runtime (@stjosephs/ast-vector-player) built as a pure schema-driven VM (`ast-engine.js` + `ast-gestures.js` generic press-and-hold key/pointer loop). Distributable as a headless engine, drop-in embed, LMS iframe (Canvas/Moodle/Google Classroom), or a single self-contained air-gapped .html bundle (< 45 KB) executable from a USB drive.
 
 Live Engine Performance Profiler & Diagnostics: Built-in `ASTProfiler` overlay with real-time rolling sparkline, sub-0.2 ms AST VM compute measurement, frame budget headroom tracking, and an interactive `⚡ Diagnostics` drawer displaying 60 FPS loop stability and WASM 7-page linear memory pool utilization.
 
 Real-Time British Sign Language (BSL) & Shakespeare Globe Suites: Procedural, vector-driven BANZSL 2-handed signing overlays with 60 FPS Hermite spline co-articulation and Document PiP support. Mathematically accurate 1599 Bankside Globe Theatre 3D stage geometry with spoken iambic pentameter metronomes and multi-branch dramaturgy.
 
-🤖 Machine Dossiers & Agentic Discovery Endpoints
+🤖 Machine Dossiers & Interactive Architecture Show & Tell
+/docs/lumina-architecture.ast: Interactive 4-chapter Show & Tell Manifesto cartridge (`:type "Slide"`), loadable directly via `/player?preset=lumina-architecture` or `/player.html?src=/docs/lumina-architecture.ast`.
+
 /llms.txt: Concise machine context following the /llms.txt standard for fast agent retrieval.
 
-/llms-full.txt: Exhaustive technical dossier detailing the full 67-cartridge catalog, AST grammar, and dual-track architecture.
+/llms-full.txt: Exhaustive technical dossier detailing the full 68-cartridge catalog, AST grammar, and dual-track architecture.
 
 /robots.txt: Explicit permissions for search crawlers and AI agents (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.).
 
@@ -132,7 +140,9 @@ Statutory Compliance: Inherently compliant with UK GDPR (Article 25 Data Protect
 Prerequisites
 Node.js: v20.0.0 or higher
 
-Chromium-based browser: Built-in AI flags enabled (chrome://flags/#optimization-guide-on-device-model set to Enabled BypassPerfRequirement and chrome://flags/#prompt-api-for-gemini-nano set to Enabled).
+Build Toolchain: **Vite `^8.3.6`** (Rolldown / esbuild `^0.28.1`), **TypeScript `^5.6.3`** (Zero React, 0 UI framework bloat)
+
+Chromium-based browser (optional on-device AI): Built-in AI flags enabled (`chrome://flags/#optimization-guide-on-device-model` and `chrome://flags/#prompt-api-for-gemini-nano`).
 
 Installation
 Bash

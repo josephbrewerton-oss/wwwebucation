@@ -4076,9 +4076,9 @@
         try {
           if (!comp._eval) {
             const compiled = this.compileAstExpr(comp.expr);
-            comp._eval = new Function('t', 'vars', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${compiled});`);
+            comp._eval = new Function('t', 'vars', 'computed', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${compiled});`);
           }
-          v[comp.name] = comp._eval(evalT, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
+          v[comp.name] = comp._eval(evalT, v, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
         } catch {}
       }
     }
@@ -4733,6 +4733,33 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (u8) return this.decompileBytecode(u8);
       }
       if (typeof astContent !== 'string') return null;
+
+      if (astContent.includes('<svg') && (astContent.includes('(:scene') || astContent.includes('(:cartridge'))) {
+        const sStart = astContent.search(/\(:(?:scene|cartridge)\b/i);
+        if (sStart !== -1) {
+          let depth = 0;
+          let inStr = false;
+          let sEnd = -1;
+          for (let i = sStart; i < astContent.length; i++) {
+            const ch = astContent[i];
+            if (ch === '"' && (i === 0 || astContent[i - 1] !== '\\')) {
+              inStr = !inStr;
+            } else if (!inStr) {
+              if (ch === '(') depth++;
+              else if (ch === ')') {
+                depth--;
+                if (depth === 0) {
+                  sEnd = i + 1;
+                  break;
+                }
+              }
+            }
+          }
+          if (sEnd !== -1) {
+            astContent = astContent.slice(sStart, sEnd);
+          }
+        }
+      }
 
       const extractSlot = (a, b) => {
         const text = b ? a : astContent;
@@ -6142,10 +6169,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   `${repoBase}player/bytecode/${sceneId}.svg`,
                   `${repoBase}cartridges/${sceneId}.svg`,
                   `${repoBase}scenes/${sceneId}.svg`,
+                  `${repoBase}docs/${sceneId}.svg`,
                   `./player/scenes/${sceneId}.svg`,
                   `./scenes/${sceneId}.svg`,
                   `./bytecode/${sceneId}.svg`,
-                  `./cartridges/${sceneId}.svg`
+                  `./cartridges/${sceneId}.svg`,
+                  `./docs/${sceneId}.svg`,
+                  `../docs/${sceneId}.svg`
                 );
               } else if (ext === 'ast') {
                 if (registryScene?.astFile) {
@@ -6161,9 +6191,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   `${repoBase}player/scenes/${sceneId}.ast`,
                   `${repoBase}cartridges/${sceneId}.ast`,
                   `${repoBase}scenes/${sceneId}.ast`,
+                  `${repoBase}docs/${sceneId}.ast`,
                   `./player/scenes/${sceneId}.ast`,
                   `./scenes/${sceneId}.ast`,
-                  `./cartridges/${sceneId}.ast`
+                  `./cartridges/${sceneId}.ast`,
+                  `./docs/${sceneId}.ast`,
+                  `../docs/${sceneId}.ast`
                 );
               }
 
@@ -6195,7 +6228,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if (ext === 'svg' && !trimmed.includes('<svg')) {
                   continue;
                 }
-                if (ext === 'ast' && !trimmed.startsWith('(') && !trimmed.startsWith(';')) {
+                if (
+                  ext === 'ast' &&
+                  !trimmed.startsWith('(') &&
+                  !trimmed.startsWith(';') &&
+                  !trimmed.includes('(:scene') &&
+                  !trimmed.includes('(:cartridge') &&
+                  !trimmed.includes('<svg')
+                ) {
                   continue;
                 }
 
@@ -6222,9 +6262,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
               }
             }
-            if (!parsedAst || (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0))) {
+            if (
+              !parsedAst ||
+              (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0)) ||
+              !parsedAst.computed || parsedAst.computed.length === 0 ||
+              !parsedAst.gestures || parsedAst.gestures.length === 0
+            ) {
               const foundAst = await fetchAsset('ast');
-              if (foundAst) astText = foundAst;
+              if (foundAst) {
+                astText = foundAst;
+                if (!svgText && foundAst.includes('<svg')) {
+                  svgText = foundAst;
+                }
+              }
             }
           } catch (e) {
             console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
@@ -6449,6 +6499,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.seek(0);
       if (shouldPlay || isContinuousSim) {
         this.play();
+      } else if ((isSlide || !shouldPlay) && this.isPlaying) {
+        this.pause();
       }
       this._mountedSceneId = presetId;
 
@@ -6600,11 +6652,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           } else if (ext === 'svg' || (ext !== 'ast' && content.includes('<svg'))) {
             let embeddedAst = '';
             const metaMatch = content.match(/<metadata[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/metadata>/i)
-              || content.match(/<script[^>]*type=["']application\/ast-sexpr["'][^>]*>([\s\S]*?)<\/script>/i)
+              || content.match(/<script[^>]*type=["'](?:application\/ast-sexpr|text\/ast)["'][^>]*>([\s\S]*?)<\/script>/i)
               || content.match(/<ast-scene[^>]*>([\s\S]*?)<\/ast-scene>/i);
 
             if (metaMatch && metaMatch[1]) {
               embeddedAst = metaMatch[1].trim();
+            } else if (content.includes('(:scene') || content.includes('(:cartridge')) {
+              embeddedAst = content;
             }
 
             let parsed = null;
@@ -6618,6 +6672,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
             const scene = {
               id: (parsed && parsed.id) || id,
+              type: (parsed && parsed.type) || undefined,
+              cartridgeType: (parsed && (parsed.cartridgeType || parsed.type)) || undefined,
               title: (parsed && parsed.title) || filename,
               stage: (parsed && parsed.stage) || (embeddedAst ? 'HYBRID AST.SVG CAPSULE' : 'CUSTOM SVG'),
               duration: (parsed && parsed.duration) || 10.0,
@@ -6631,6 +6687,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               stateMachines: (parsed && parsed.stateMachines) || null,
               emitters: (parsed && parsed.emitters) || null,
               bindInputs: (parsed && parsed.bindInputs) || null,
+              vars: (parsed && parsed.vars) || {},
+              inputs: (parsed && (parsed.uiControls || parsed.inputs)) || [],
+              uiControls: (parsed && parsed.uiControls) || null,
+              computed: (parsed && parsed.computed) || [],
+              physics: (parsed && parsed.physics) || null,
+              actors: (parsed && parsed.actors) || [],
+              staticElements: (parsed && parsed.staticElements) || [],
+              astSource: embeddedAst || '',
               svgText: content
             };
 
@@ -6641,6 +6705,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const parsed = this.parseAst(content);
             const scene = {
               id: (parsed && parsed.id) || id,
+              type: (parsed && parsed.type) || undefined,
+              cartridgeType: (parsed && (parsed.cartridgeType || parsed.type)) || undefined,
               title: (parsed && parsed.title) || filename,
               stage: (parsed && parsed.stage) || 'CUSTOM AST',
               duration: (parsed && parsed.duration) || 10.0,
@@ -6654,6 +6720,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               stateMachines: (parsed && parsed.stateMachines) || null,
               emitters: (parsed && parsed.emitters) || null,
               bindInputs: (parsed && parsed.bindInputs) || null,
+              vars: (parsed && parsed.vars) || {},
+              inputs: (parsed && (parsed.uiControls || parsed.inputs)) || [],
+              uiControls: (parsed && parsed.uiControls) || null,
+              computed: (parsed && parsed.computed) || [],
+              physics: (parsed && parsed.physics) || null,
+              actors: (parsed && parsed.actors) || [],
+              staticElements: (parsed && parsed.staticElements) || [],
+              astSource: content,
               svgText: content.includes('<svg') ? content : ''
             };
             const loaded = this.loadSceneData(scene, shouldPlay);
@@ -6890,6 +6964,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const parsed = this.parseAst(content);
       const scene = {
         id: (parsed && parsed.id) || id,
+        type: (parsed && parsed.type) || undefined,
+        cartridgeType: (parsed && (parsed.cartridgeType || parsed.type)) || undefined,
         title: (parsed && parsed.title) || 'Decentralized Vector Simulation',
         stage: (parsed && parsed.stage) || 'DECENTRALIZED WEB',
         duration: (parsed && parsed.duration) || 10.0,
@@ -6903,7 +6979,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         stateMachines: (parsed && parsed.stateMachines) || null,
         emitters: (parsed && parsed.emitters) || null,
         bindInputs: (parsed && parsed.bindInputs) || null,
-        svgText: ''
+        vars: (parsed && parsed.vars) || {},
+        inputs: (parsed && (parsed.uiControls || parsed.inputs)) || [],
+        uiControls: (parsed && parsed.uiControls) || null,
+        computed: (parsed && parsed.computed) || [],
+        physics: (parsed && parsed.physics) || null,
+        actors: (parsed && parsed.actors) || [],
+        staticElements: (parsed && parsed.staticElements) || [],
+        astSource: content,
+        svgText: content.includes('<svg') ? content : ''
       };
       const loaded = this.loadSceneData(scene, shouldPlay);
       this.emit('fileloaded', { filename: `${scene.id}.ast`, type: 'ast-payload', id: scene.id });
@@ -6950,7 +7034,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const text = await res.text();
       const cleanUrl = url.split('?')[0];
       const filename = cleanUrl.split('/').pop() || 'remote-asset';
-      const blob = new Blob([text], { type: res.headers.get('content-type') || 'text/plain' });
+      const contentType = (res.headers && typeof res.headers.get === 'function' && res.headers.get('content-type')) || 'text/plain';
+      const blob = new Blob([text], { type: contentType });
       try {
         Object.defineProperty(blob, 'name', { value: filename, writable: false });
       } catch {}
@@ -7289,6 +7374,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (!doc.querySelector('parsererror')) {
               const rootSvg = doc.querySelector('svg');
               if (rootSvg) {
+                const vb = rootSvg.getAttribute('viewBox');
+                if (vb && stage) {
+                  stage.setAttribute('viewBox', vb);
+                  this._defaultViewBox = vb;
+                }
                 this.sanitizeSvgElement(rootSvg);
                 if (typeof container.replaceChildren === 'function') {
                   container.replaceChildren(...rootSvg.childNodes);
@@ -7303,6 +7393,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
               const rootSvg = htmlDoc.querySelector('svg');
               if (rootSvg) {
+                const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
+                if (vb && stage) {
+                  stage.setAttribute('viewBox', vb);
+                  this._defaultViewBox = vb;
+                }
                 this.sanitizeSvgElement(rootSvg);
                 if (typeof container.replaceChildren === 'function') {
                   container.replaceChildren(...rootSvg.childNodes);

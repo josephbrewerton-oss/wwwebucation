@@ -17,6 +17,7 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 # strictly standalone, zero-bloat systems unified by an asynchronous event bus:
 #
 # SYSTEM 1: THE PORTAL SITE SPA (Native Web Standards & Web Components)
+# - Toolchain: Vite ^8.3.6 (Rolldown / esbuild ^0.28.1) & TypeScript ^5.6.3.
 # - Framework: Zero React, Zero Virtual DOM, Zero Server-Side Hydration lag.
 # - UI Architecture: Custom Web Components (<app-shell>, <native-bsl-interpreter>)
 #   with in-memory micro-routing inside #ast-persistent-viewport via #page-outlet.
@@ -25,9 +26,11 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 # - Zero-Forced-Reflow: Geometric queries deferred to requestAnimationFrame; initial boot
 #   skips window.scrollTo (already at 0,0); lazy chunks excluded from head modulepreload.
 #
-# SYSTEM 2: THE AST VECTOR PLAYER & FANTASY ENGINE (/static/player/)
+# SYSTEM 2: THE AST VECTOR PLAYER & FANTASY ENGINE (/static/player/, v2.6.0)
 # - Autonomy: Completely decoupled runtime (< 35 KB gzipped, < 150 KB uncompressed)
-#   with zero external dependencies. Can run standalone, in an iframe, or in offline ZIP.
+#   with zero external dependencies. Pure schema-driven VM: ast-engine.js and ast-gestures.js
+#   contain zero hardcoded scene IDs or cartridge selectors; keyboard/pointer hold loops run
+#   declaratively via requestAnimationFrame. Can run standalone, in an iframe, or offline ZIP.
 # - Fixed WASM Linear Memory: Strictly operates in a 7-page (448 KB) WASM linear memory
 #   pool with zero dynamic heap allocations (no GC spikes) during 60 FPS physics loops.
 # - 70x Lighter Than PhET: Boots in < 15 ms with < 8 MB RAM footprint (vs PhET's 2–5 MB
@@ -68,7 +71,8 @@ Curriculum-Manifest: /player/scenes.manifest.json
 Cartridge-Checksums: /cartridge-checksums.json
 Cartridge-Directory: /cartridges/
 Bytecode-Directory: /player/bytecode/
-S-Expression-Grammar: /player/grammar/ast-sexpr.gbnf
+Interactive-Architecture-Manifesto: /docs/lumina-architecture.ast (/player?preset=lumina-architecture)
+JSON-Schema: /player/schema/ast-scene.schema.json
 BSL-Lexicon-AST: /lexicons/bsl-signs.ast
 BSL-Codebook-Lisp: /lexicons/bsl-codebook.lisp
 Curriculum-Mesh-AST: /manifests/curriculum-mesh.ast
@@ -89,7 +93,7 @@ Parameters:
   - autoPlay (boolean, optional): Begin immediate timeline playback (default: true)
 
 Tool: list_ast_simulations
-Description: Retrieves the catalog of all 67 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
+Description: Retrieves the catalog of all 68 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
 Parameters: none
 
 Tool: evaluate_math_kernel

@@ -27,7 +27,18 @@ import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { type PlayerDisplayMode } from '../types/playerConfig';
 
 const DEFAULT_PRESET_ID = 'kinetic-gas';
-const VALID_PRESET_IDS = new Set(PRESET_OPTIONS.map((p) => p.id));
+const EXTRA_DOC_PRESETS: ScenePresetOption[] = [
+  {
+    id: 'lumina-architecture',
+    label: 'Lumina: Sovereign Architectural Manifesto (4-Chapter Show & Tell)',
+    type: 'Slide',
+    stage: 'FOUNDATIONAL SYSTEM ARCHITECTURE',
+    subject: 'System Architecture',
+    section: 'System Architecture & Docs',
+  },
+];
+const ALL_BUILTIN_PRESETS: ScenePresetOption[] = [...PRESET_OPTIONS, ...EXTRA_DOC_PRESETS];
+const VALID_PRESET_IDS = new Set(ALL_BUILTIN_PRESETS.map((p) => p.id));
 
 function escapeHtml(str: string): string {
   return str
@@ -40,6 +51,7 @@ function escapeHtml(str: string): string {
 
 function normalizePresetId(raw: string | null | undefined): string {
   if (!raw) return DEFAULT_PRESET_ID;
+  if (raw === 'lumina-architecture-manifesto') return 'lumina-architecture';
   if (VALID_PRESET_IDS.has(raw)) return raw;
   try {
     const custom = getCustomCartridges();
@@ -48,18 +60,22 @@ function normalizePresetId(raw: string | null | undefined): string {
   return DEFAULT_PRESET_ID;
 }
 
-function buildPlayerSrc(base: string, presetId: string, bslActive: boolean): string {
+function buildPlayerSrc(base: string, presetId: string, bslActive: boolean, externalSrc?: string | null): string {
   const perfHud = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
   const verbosity = (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
   const budgetAlert = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
 
   const params = new URLSearchParams({
-    preset: presetId,
     bsl: bslActive ? '1' : '0',
     mode: 'suite',
     tools: '1',
     all: '1',
   });
+  if (externalSrc) {
+    params.set('src', externalSrc);
+  } else {
+    params.set('preset', presetId);
+  }
 
   if (perfHud) {
     params.set('hud', '1');
@@ -76,17 +92,22 @@ export function renderPlayerPage(): HTMLElement {
   container.className = 'ast-media-player-container';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;';
 
-  // Read initial preset from URL
+  // Read initial preset or external ?src= from URL
   const params = new URLSearchParams(window.location.search);
-  let activePreset = normalizePresetId(params.get('preset'));
+  const initialSrcParam = params.get('src') || params.get('file');
+  const resolvedInitialPreset = !params.get('preset') && initialSrcParam && initialSrcParam.includes('lumina-architecture')
+    ? 'lumina-architecture'
+    : normalizePresetId(params.get('preset'));
+  let activePreset = resolvedInitialPreset;
+  let initialExternalSrc = params.get('preset') ? null : initialSrcParam;
   let activeCategory = 'All';
   let searchQuery = '';
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
   let isMuted = !getVoiceEnabled();
 
-  // Ensure presets are loaded from generatedScenes
-  const presets: ScenePresetOption[] = Array.isArray(PRESET_OPTIONS) && PRESET_OPTIONS.length > 0
-    ? PRESET_OPTIONS
+  // Ensure presets are loaded from generatedScenes + architectural Show & Tell docs
+  const presets: ScenePresetOption[] = ALL_BUILTIN_PRESETS.length > EXTRA_DOC_PRESETS.length
+    ? ALL_BUILTIN_PRESETS
     : [
         { id: 'kinetic-gas', label: 'Kinetic Gas Theory & Thermodynamics', type: 'Sim', stage: 'KS3/KS4 PHYSICS' },
         { id: 'pythagoras', label: "Pythagoras' Theorem (a² + b² = c²)", type: 'Sim', stage: 'KS3/KS4 MATHEMATICS' },
@@ -96,27 +117,34 @@ export function renderPlayerPage(): HTMLElement {
         { id: 'algebra-balance', label: 'Algebraic Balance Scale', type: 'Sim', stage: 'KEY STAGE 3' },
         { id: 'church-tour', label: 'The Catholic Church Sanctuary & Altar', type: 'Slide', stage: 'WHOLE SCHOOL RE' },
         { id: 'phonics-lab', label: 'EYFS Phonics Sound Mat & Digraphs', type: 'App', stage: 'EYFS / KS1' },
+        ...EXTRA_DOC_PRESETS,
       ];
+
+  function isDocPreset(p: ScenePresetOption): boolean {
+    return p.id === 'lumina-architecture' || p.subject === 'System Architecture';
+  }
 
   function isCatholicPreset(p: ScenePresetOption): boolean {
     return (
-      p.stage === 'CATHOLIC LIFE' ||
-      p.subject === 'Religious Education' ||
-      (p.section && p.section.includes('Catholic')) ||
-      ['church-tour', 'altar-anatomy', 'holy-oils', 'holy-water-thurifer', 'latin-mass-prayers', 'catholic-rites', 'order-of-the-mass', 'stations-of-the-cross', 'first-communion', 'liturgical-calendar', 'liturgical-postures', 'liturgy-of-the-hours', 'triduum-easter'].includes(p.id)
+      !isDocPreset(p) && (
+        p.stage === 'CATHOLIC LIFE' ||
+        p.subject === 'Religious Education' ||
+        (p.section && p.section.includes('Catholic')) ||
+        ['church-tour', 'altar-anatomy', 'holy-oils', 'holy-water-thurifer', 'latin-mass-prayers', 'catholic-rites', 'order-of-the-mass', 'stations-of-the-cross', 'first-communion', 'liturgical-calendar', 'liturgical-postures', 'liturgy-of-the-hours', 'triduum-easter'].includes(p.id)
+      )
     );
   }
 
   function isStemPreset(p: ScenePresetOption): boolean {
-    return !isCatholicPreset(p) && (p.subject === 'Science' || (p.stage && p.stage.includes('PHYSICS')) || ['kinetic-gas', 'electric-circuits', 'solar-system', 'photosynthesis', 'atom', 'velocity', 'dna-helix'].includes(p.id));
+    return !isDocPreset(p) && !isCatholicPreset(p) && (p.subject === 'Science' || (p.stage && p.stage.includes('PHYSICS')) || ['kinetic-gas', 'electric-circuits', 'solar-system', 'photosynthesis', 'atom', 'velocity', 'dna-helix'].includes(p.id));
   }
 
   function isMathPreset(p: ScenePresetOption): boolean {
-    return !isCatholicPreset(p) && (p.subject === 'Mathematics' || ['pythagoras', 'fractions', 'algebra-balance', 'calculus-curves', 'bodmas', 'times-tables'].includes(p.id));
+    return !isDocPreset(p) && !isCatholicPreset(p) && (p.subject === 'Mathematics' || ['pythagoras', 'fractions', 'algebra-balance', 'calculus-curves', 'bodmas', 'times-tables'].includes(p.id));
   }
 
   function isOtherPreset(p: ScenePresetOption): boolean {
-    return !isCatholicPreset(p) && !isStemPreset(p) && !isMathPreset(p);
+    return !isDocPreset(p) && !isCatholicPreset(p) && !isStemPreset(p) && !isMathPreset(p);
   }
 
   function getCustomCartridgesList(): CartridgeDefinition[] {
@@ -151,6 +179,7 @@ export function renderPlayerPage(): HTMLElement {
   const stemGroup = presets.filter(isStemPreset);
   const mathGroup = presets.filter(isMathPreset);
   const otherGroup = presets.filter(isOtherPreset);
+  const docGroup = presets.filter(isDocPreset);
 
   function buildOptionsHtml(selectedId: string): string {
     const customList = getCustomCartridgesList();
@@ -174,6 +203,9 @@ export function renderPlayerPage(): HTMLElement {
       <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
         ${otherGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
       </optgroup>
+      <optgroup label="📖 System Architecture &amp; Docs" style="background:#0f172a; color:#e2e8f0;">
+        ${docGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      </optgroup>
       <optgroup label="⚛️ PhET Ingestion &amp; Distillations" style="background:#0f172a; color:#38bdf8;">
         <option value="phet-ohms-law" ${selectedId === 'phet-ohms-law' ? 'selected' : ''}>⚛️ PhET: Ohm's Law (V = I × R)</option>
         <option value="phet-faraday" ${selectedId === 'phet-faraday' ? 'selected' : ''}>⚛️ PhET: Faraday's Induction (EMF)</option>
@@ -195,7 +227,7 @@ export function renderPlayerPage(): HTMLElement {
   const safeStage = escapeHtml(meta.stage || '');
   const safeType = escapeHtml(meta.type || 'Sim');
   const safeLabel = escapeHtml(meta.label || '');
-  const safePlayerSrc = escapeHtml(buildPlayerSrc(base, activePreset, bslActive));
+  const safePlayerSrc = escapeHtml(buildPlayerSrc(base, activePreset, bslActive, initialExternalSrc));
 
   container.innerHTML = `
     <!-- Top Breadcrumbs -->
@@ -743,6 +775,7 @@ export function renderPlayerPage(): HTMLElement {
       catholicBanner.style.display = isCatholicPreset(item) ? 'flex' : 'none';
     }
 
+    initialExternalSrc = null;
     if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
       postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
     } else if (iframe && (!iframe.src || iframe.src === 'about:blank' || !isIframeReady)) {
@@ -757,6 +790,8 @@ export function renderPlayerPage(): HTMLElement {
     }
 
     const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.delete('src');
+    nextUrl.searchParams.delete('file');
     nextUrl.searchParams.set('preset', safePresetId);
     window.history.replaceState({}, '', nextUrl.toString());
 
@@ -880,12 +915,14 @@ export function renderPlayerPage(): HTMLElement {
           return;
         }
 
-        // Single .ast file
+        // Single .ast file (supports both pure S-expression and hybrid SVG+AST docs)
         if (file.name.endsWith('.ast')) {
           const baseName = file.name.replace(/\.[^/.]+$/, '');
           const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
           const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-          const svgMarkup = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16"/><g id="scene-root"></g></svg>`;
+          const svgMarkup = content.includes('<svg')
+            ? content
+            : `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16"/><g id="scene-root"></g></svg>`;
 
           const cart: CartridgeDefinition = {
             id: cleanId,
@@ -1133,7 +1170,9 @@ export function renderPlayerPage(): HTMLElement {
     if (!e.data || typeof e.data !== 'object') return;
     if (e.data.type === 'PLAYER_READY') {
       isIframeReady = true;
-      if (activePreset) {
+      if (initialExternalSrc) {
+        initialExternalSrc = null;
+      } else if (activePreset) {
         postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
       }
       updatePlayButtonUI(false);
