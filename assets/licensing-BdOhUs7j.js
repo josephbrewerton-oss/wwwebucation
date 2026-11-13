@@ -1,4 +1,4 @@
-import{r as e}from"./index-DELLkjsK.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`licensing-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{m as e}from"./cartridge-vault-IHcQuGeP.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`licensing-page-stage`,n.style.cssText=`max-width: 960px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 8px; padding: 4px 12px; border-radius: 9999px; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; font-size: 0.8rem; font-weight: 700; margin-bottom: 0.75rem;">
@@ -49,7 +49,7 @@ import{r as e}from"./index-DELLkjsK.js";function t(){let t=e(),n=document.create
         <li>
           <strong>GNU Affero General Public License v3.0 (<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">AGPLv3</a>):</strong> 
           100% free for educational use, research, and non-profit deployments. Inspect the complete source code on 
-          <a href="https://github.com/josephbrewerton-oss/schoolsample" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">GitHub (josephbrewerton-oss/schoolsample)</a>.
+          <a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">GitHub (josephbrewerton-oss/wwwebucation)</a>.
         </li>
         <li>
           <strong>Open Government Licence v3.0 (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">OGL v3</a>):</strong> 

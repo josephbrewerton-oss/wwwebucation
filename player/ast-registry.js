@@ -665,20 +665,37 @@
         return { totalScenes: Object.keys(scenes).length, scenes: SceneRegistry.list() };
       }
       this._hasDiscovered = true;
-      const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
-        ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
-        : './';
+      const loc = (typeof window !== 'undefined' && window.location) ? window.location : null;
+      const pathname = (loc && loc.pathname) ? loc.pathname : '/';
+      const currentDir = pathname.substring(0, pathname.lastIndexOf('/') + 1) || './';
       const base = (basePath || currentDir || './').replace(/\/?$/, '/');
 
-      // 1. Direct Static Configuration Manifest (authoritative and instantaneous)
-      const candidateUrls = [
-        './scenes.manifest.json',
-        '/player/scenes.manifest.json',
-        `${currentDir}scenes.manifest.json`,
-        './scenes-config.json',
-        '/scenes.manifest.json',
-        '/player/scenes-config.json'
-      ];
+      let repoBase = '';
+      if (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) {
+        repoBase = String(window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__).replace(/\/?$/, '/');
+      } else if (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) {
+        repoBase = document.querySelector('base').getAttribute('href').replace(/\/?$/, '/');
+      } else {
+        const playerIdx = pathname.indexOf('/player/');
+        if (playerIdx >= 0) {
+          repoBase = pathname.slice(0, playerIdx + 1);
+        } else if (loc && (loc.hostname === 'github.io' || (loc.hostname || '').endsWith('.github.io'))) {
+          const seg = pathname.split('/').filter(Boolean)[0];
+          repoBase = seg ? `/${seg}/` : '/';
+        } else {
+          repoBase = currentDir === '/' ? '/' : currentDir;
+        }
+      }
+
+      const isInPlayerSubdir = currentDir.endsWith('/player/');
+      const candidateUrls = Array.from(new Set([
+        `${base}scenes.manifest.json`,
+        `${base}scenes-config.json`,
+        isInPlayerSubdir ? './scenes.manifest.json' : './player/scenes.manifest.json',
+        isInPlayerSubdir ? './scenes-config.json' : './player/scenes-config.json',
+        `${repoBase}player/scenes.manifest.json`,
+        `${repoBase}player/scenes-config.json`,
+      ].filter(Boolean)));
 
       for (const url of candidateUrls) {
         const manifestRes = await this.loadConfig(url);

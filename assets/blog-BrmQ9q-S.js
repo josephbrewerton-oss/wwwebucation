@@ -1,4 +1,4 @@
-import{r as e}from"./index-DELLkjsK.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`news-blog-stage`,n.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
+import{m as e}from"./cartridge-vault-IHcQuGeP.js";function t(){let t=e(),n=document.createElement(`div`);return n.className=`news-blog-stage`,n.style.cssText=`max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; color: #0f172a;`,n.innerHTML=`
     <!-- Newsroom Header -->
     <div style="margin-bottom: 2.5rem; border-bottom: 1px solid #e2e8f0; padding-bottom: 1.5rem;">
       <div style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.82rem; font-weight: 700; color: #0284c7; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.04em;">

@@ -56,15 +56,28 @@
 
           // 2. Fallback browser fetch for standalone .wasm binary if base64 not present
           if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
-            const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/';
+            let basePath = (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)
+              || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href'))
+              || '';
+            if (!basePath) {
+              const p = window.location.pathname || '/';
+              const playerIdx = p.indexOf('/player/');
+              if (playerIdx >= 0) {
+                basePath = p.slice(0, playerIdx + 1);
+              } else if (window.location.hostname === 'github.io' || window.location.hostname.endsWith('.github.io')) {
+                const seg = p.split('/').filter(Boolean)[0];
+                basePath = seg ? `/${seg}/` : '/';
+              } else {
+                basePath = '/';
+              }
+            }
             const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-            const candidates = [
+            const candidates = Array.from(new Set([
               `${cleanBase}player/wasm/ast-transpiler-engine.wasm`,
               './wasm/ast-transpiler-engine.wasm',
               './ast-transpiler-engine.wasm',
               'wasm/ast-transpiler-engine.wasm',
-              '/player/wasm/ast-transpiler-engine.wasm',
-            ];
+            ]));
             for (const url of candidates) {
               try {
                 const resp = await fetch(url);

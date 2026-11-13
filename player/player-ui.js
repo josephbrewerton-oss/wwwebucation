@@ -4503,20 +4503,35 @@ window.addEventListener('message', (e) => {
           candidateUrls.push(new URL('../lumina-vector-player.zip', window.location.href).href);
         } catch (_) {}
 
-        let basePath = (this.engine && this.engine.options && this.engine.options.basePath) || '/';
+        let basePath = (this.engine && this.engine.options && this.engine.options.basePath) || '';
         const urlParamBase = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search).get('base') : null;
         if (urlParamBase && /^(\/|\.\/)[a-zA-Z0-9_\-\/]*$/.test(urlParamBase)) {
           basePath = urlParamBase;
+        } else if (!basePath && typeof window !== 'undefined' && window.location) {
+          if (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__) {
+            basePath = String(window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__);
+          } else {
+            const p = window.location.pathname || '/';
+            const h = window.location.hostname || '';
+            const playerIdx = p.indexOf('/player/');
+            if (playerIdx >= 0) {
+              basePath = p.slice(0, playerIdx + 1);
+            } else if (h === 'github.io' || h.endsWith('.github.io')) {
+              const seg = p.split('/').filter(Boolean)[0];
+              basePath = seg ? `/${seg}/` : '/';
+            } else {
+              basePath = '/';
+            }
+          }
         }
-        const cleanBase = basePath.endsWith('/') ? basePath : (basePath + '/');
+        const cleanBase = (basePath || '/').endsWith('/') ? (basePath || '/') : `${basePath}/`;
         const baseZipUrl = `${cleanBase}lumina-vector-player.zip`;
         const basePlayerZipUrl = `${cleanBase}player/lumina-vector-player.zip`;
 
         if (!candidateUrls.includes(baseZipUrl)) candidateUrls.push(baseZipUrl);
         if (!candidateUrls.includes(basePlayerZipUrl)) candidateUrls.push(basePlayerZipUrl);
-        if (!candidateUrls.includes('/lumina-vector-player.zip')) candidateUrls.push('/lumina-vector-player.zip');
 
-        const primaryUrl = candidateUrls[0] || '/lumina-vector-player.zip';
+        const primaryUrl = candidateUrls[0] || baseZipUrl;
 
         // 1. Notify host / parent application so top-level window can trigger browser download
         if (this.engine && typeof this.engine.notifyParent === 'function') {

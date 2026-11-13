@@ -32,17 +32,38 @@ class AST3DWasmBridgeImpl {
     if (this.isReady) return true;
     try {
       let binaryBytes = null;
-      if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
-        const basePath = (typeof window !== 'undefined' && (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)) || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) || '/wwwebucation/';
+      if (typeof AST_3D_WASM_BASE64 === 'string' && AST_3D_WASM_BASE64.length > 0 && typeof atob === 'function') {
+        const binStr = atob(AST_3D_WASM_BASE64);
+        const len = binStr.length;
+        binaryBytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          binaryBytes[i] = binStr.charCodeAt(i);
+        }
+      }
+
+      if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location && window.location.protocol !== 'file:') {
+        let basePath = (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__)
+          || (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href'))
+          || '';
+        if (!basePath) {
+          const p = window.location.pathname || '/';
+          const playerIdx = p.indexOf('/player/');
+          if (playerIdx >= 0) {
+            basePath = p.slice(0, playerIdx + 1);
+          } else if (window.location.hostname === 'github.io' || window.location.hostname.endsWith('.github.io')) {
+            const seg = p.split('/').filter(Boolean)[0];
+            basePath = seg ? `/${seg}/` : '/';
+          } else {
+            basePath = '/';
+          }
+        }
         const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-        const candidates = [
-          `${cleanBase}static/player/wasm/ast-3d-engine.wasm`,
+        const candidates = Array.from(new Set([
           `${cleanBase}player/wasm/ast-3d-engine.wasm`,
           './ast-3d-engine.wasm',
           './wasm/ast-3d-engine.wasm',
           'wasm/ast-3d-engine.wasm',
-          '/player/wasm/ast-3d-engine.wasm',
-        ];
+        ]));
         for (const url of candidates) {
           try {
             const resp = await fetch(url);
@@ -52,17 +73,6 @@ class AST3DWasmBridgeImpl {
               break;
             }
           } catch (_) {}
-        }
-      }
-
-      if (!binaryBytes || binaryBytes.length === 0) {
-        if (typeof atob === 'function') {
-          const binStr = atob(AST_3D_WASM_BASE64);
-          const len = binStr.length;
-          binaryBytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            binaryBytes[i] = binStr.charCodeAt(i);
-          }
         }
       }
 
