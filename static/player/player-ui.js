@@ -3172,6 +3172,17 @@ window.addEventListener('message', (e) => {
           return;
         }
 
+        // 1b. Yield immediately if the loaded cartridge declares a :key gesture for this key
+        const activeGestures = this.engine && this.engine.scene && Array.isArray(this.engine.scene.gestures)
+          ? this.engine.scene.gestures
+          : null;
+        if (activeGestures && activeGestures.some(g => g && g.type === 'key' && (
+          (g.code && e.code && g.code === e.code) ||
+          (g.key && e.key && (g.key === e.key || (g.key.length === 1 && e.key.length === 1 && g.key.toLowerCase() === e.key.toLowerCase())))
+        ))) {
+          return;
+        }
+
         // 2. Trap rogue 'Enter' presses so they don't trigger focused buttons or blow out the layout
         if (e.code === 'Enter' || e.key === 'Enter') {
           if (e.target.tagName === 'BUTTON') {

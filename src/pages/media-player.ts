@@ -455,6 +455,14 @@ export function renderPlayerPage(): HTMLElement {
     iframe?.contentWindow?.postMessage(msg, '*');
   }
 
+  function focusPlayerStage() {
+    try {
+      iframe?.focus({ preventScroll: true });
+      iframe?.contentWindow?.focus();
+    } catch (_) {}
+    postToPlayer({ type: 'FOCUS_STAGE' });
+  }
+
   function updatePlayButtonUI(playing: boolean) {
     if (!playBtn) return;
     if (playing) {
@@ -784,6 +792,7 @@ export function renderPlayerPage(): HTMLElement {
     }
     if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
       postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
+      focusPlayerStage();
     } else if (iframe && (!iframe.src || iframe.src === 'about:blank' || !isIframeReady)) {
       iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
     }
@@ -1099,10 +1108,12 @@ export function renderPlayerPage(): HTMLElement {
   // Wire Play, Reset & BSL Toolbar buttons
   playBtn?.addEventListener('click', () => {
     postToPlayer({ type: 'TOGGLE_PLAY' });
+    focusPlayerStage();
   });
 
   resetBtn?.addEventListener('click', () => {
     postToPlayer({ type: 'RESET_SIM' });
+    focusPlayerStage();
   });
 
   function updateMuteUi(muted: boolean) {

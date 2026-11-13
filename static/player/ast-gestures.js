@@ -374,7 +374,10 @@
         for (let i = 0; i < gestures.length; i++) {
           const g = gestures[i];
           if (g.type !== 'key') continue;
-          if (!this._heldKeys.has(g.code) && !this._heldKeys.has(g.key)) continue;
+          const keyMatched = this._heldKeys.has(g.code) ||
+            this._heldKeys.has(g.key) ||
+            (typeof g.key === 'string' && g.key.length === 1 && this._heldKeys.has(g.key.toLowerCase()));
+          if (!keyMatched) continue;
           const isContinuous = Boolean(g.holdVar || (g.stepVar || g.step) && g.hold !== false);
           if (isContinuous && this._applyContinuousGestureStep(g, scene, dtSec)) {
             changed = true;
@@ -412,6 +415,31 @@
       }
     }
 
+    _gestureMatchesKey(g, e) {
+      if (!g || g.type !== 'key') return false;
+      if (g.code && e.code && g.code === e.code) return true;
+      if (g.key && e.key) {
+        if (g.key === e.key) return true;
+        if (g.key.length === 1 && e.key.length === 1 && g.key.toLowerCase() === e.key.toLowerCase()) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    _ensureInteractiveSimPlaying() {
+      if (
+        this.engine &&
+        !this.engine.isPlaying &&
+        this.engine.isContinuousSim &&
+        Array.isArray(this.engine.activeVarBindings) &&
+        this.engine.activeVarBindings.length > 0 &&
+        typeof this.engine.play === 'function'
+      ) {
+        this.engine.play();
+      }
+    }
+
     handleKeyDown(e) {
       if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable)) {
         return;
@@ -419,16 +447,22 @@
       const scene = this.engine && this.engine.scene;
       if (!scene || !Array.isArray(scene.gestures) || !this.engine.vars) return;
 
-      const matchingKeys = scene.gestures.filter(g => g.type === 'key' && (g.code === e.code || g.key === e.key));
+      const matchingKeys = scene.gestures.filter(g => this._gestureMatchesKey(g, e));
       if (matchingKeys.length === 0) return;
 
       e.preventDefault();
+      if (typeof e.stopImmediatePropagation === 'function') {
+        e.stopImmediatePropagation();
+      }
 
       if (e.code) {
         this._heldKeys.add(e.code);
         if (e.key) this._heldKeyCodeMap.set(e.code, e.key);
       }
-      if (e.key) this._heldKeys.add(e.key);
+      if (e.key) {
+        this._heldKeys.add(e.key);
+        if (e.key.length === 1) this._heldKeys.add(e.key.toLowerCase());
+      }
 
       let needsHoldLoop = false;
       for (let i = 0; i < matchingKeys.length; i++) {
@@ -437,6 +471,8 @@
           needsHoldLoop = true;
         }
       }
+
+      this._ensureInteractiveSimPlaying();
 
       if (!e.repeat) {
         let changed = false;
@@ -474,16 +510,21 @@
       }
 
       const scene = this.engine && this.engine.scene;
-      if (scene && Array.isArray(scene.gestures) && this._activeHoldVars.size > 0) {
-        let resetOccurred = false;
-        const matchingKeys = scene.gestures.filter(g => g.type === 'key' && (g.code === e.code || g.key === e.key));
-        for (let i = 0; i < matchingKeys.length; i++) {
-          if (this._releaseHoldForGesture(matchingKeys[i])) {
-            resetOccurred = true;
-          }
+      if (scene && Array.isArray(scene.gestures)) {
+        const matchingKeys = scene.gestures.filter(g => this._gestureMatchesKey(g, e));
+        if (matchingKeys.length > 0 && typeof e.stopImmediatePropagation === 'function') {
+          e.stopImmediatePropagation();
         }
-        if (resetOccurred && typeof this.engine.applyBindings === 'function') {
-          this.engine.applyBindings(this.engine.progress || 0, 0, false);
+        if (this._activeHoldVars.size > 0) {
+          let resetOccurred = false;
+          for (let i = 0; i < matchingKeys.length; i++) {
+            if (this._releaseHoldForGesture(matchingKeys[i])) {
+              resetOccurred = true;
+            }
+          }
+          if (resetOccurred && typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0, 0, false);
+          }
         }
       }
 
@@ -915,6 +956,7 @@
 
       if (matchedPointerGestures.length > 0) {
         e.preventDefault();
+        this._ensureInteractiveSimPlaying();
         let needsHoldLoop = false;
         let changed = false;
 
