@@ -5955,16 +5955,32 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       });
     }
 
-    getFromVaultIndexedDb(presetId) {
-      if (typeof indexedDB === 'undefined') return Promise.resolve(null);
+    async getFromVaultIndexedDb(presetId) {
+      if (typeof indexedDB === 'undefined' && (!global.ASTLocalStore || typeof global.ASTLocalStore.getVaultCartridges !== 'function')) {
+        return null;
+      }
+      if (global.ASTLocalStore && typeof global.ASTLocalStore.getVaultCartridges === 'function') {
+        try {
+          const all = await global.ASTLocalStore.getVaultCartridges();
+          const hit = Array.isArray(all) ? all.find(item => item && item.id === presetId) : null;
+          if (hit) return hit;
+        } catch (_) {}
+      }
+      if (typeof indexedDB === 'undefined') return null;
       return new Promise((resolve) => {
         try {
-          const req = indexedDB.open('EdgeLearningEngineDB', 5);
+          const req = indexedDB.open('EdgeLearningEngineDB', 6);
           req.onerror = () => resolve(null);
           req.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('cartridges_vault')) {
               db.createObjectStore('cartridges_vault', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('app_state')) {
+              db.createObjectStore('app_state', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('curriculum_packs')) {
+              db.createObjectStore('curriculum_packs', { keyPath: 'id' });
             }
           };
           req.onsuccess = () => {
@@ -5992,16 +6008,30 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       });
     }
 
-    putIntoVaultIndexedDb(record) {
-      if (typeof indexedDB === 'undefined' || !record || !record.id) return Promise.resolve();
+    async putIntoVaultIndexedDb(record) {
+      if (!record || !record.id) return;
+      const payload = { ...record, updatedAt: Date.now() };
+      if (global.ASTLocalStore && typeof global.ASTLocalStore.putVaultCartridge === 'function') {
+        try {
+          await global.ASTLocalStore.putVaultCartridge(payload);
+          return;
+        } catch (_) {}
+      }
+      if (typeof indexedDB === 'undefined') return;
       return new Promise((resolve) => {
         try {
-          const req = indexedDB.open('EdgeLearningEngineDB', 5);
+          const req = indexedDB.open('EdgeLearningEngineDB', 6);
           req.onerror = () => resolve();
           req.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('cartridges_vault')) {
               db.createObjectStore('cartridges_vault', { keyPath: 'id' });
+            }
+            if (!db.objectStoreNames.contains('app_state')) {
+              db.createObjectStore('app_state', { keyPath: 'key' });
+            }
+            if (!db.objectStoreNames.contains('curriculum_packs')) {
+              db.createObjectStore('curriculum_packs', { keyPath: 'id' });
             }
           };
           req.onsuccess = () => {
@@ -6012,7 +6042,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             }
             const tx = db.transaction('cartridges_vault', 'readwrite');
             const store = tx.objectStore('cartridges_vault');
-            store.put({ ...record, updatedAt: Date.now() });
+            store.put(payload);
             tx.oncomplete = () => {
               db.close();
               resolve();
@@ -6161,60 +6191,57 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             }
 
             const sceneId = presetId;
+            const isInPlayerSubdir = currentDir.endsWith('/player/');
+            const resolveManifestUrl = (relPath) => {
+              const clean = relPath.replace(/^(?:\.\/|\.\.\/|static\/)/, '');
+              if (clean.startsWith('docs/')) {
+                return [`${repoBase}${clean}`, isInPlayerSubdir ? `../${clean}` : `./${clean}`];
+              }
+              if (clean.startsWith('player/')) {
+                const sub = clean.slice('player/'.length);
+                return [`${repoBase}${clean}`, isInPlayerSubdir ? `./${sub}` : `./${clean}`];
+              }
+              return [
+                isInPlayerSubdir ? `./${clean}` : `${repoBase}player/${clean}`,
+                `${repoBase}player/${clean}`,
+                `${repoBase}${clean}`
+              ];
+            };
+
             const fetchAsset = async (ext) => {
               const isBinary = ext === 'astb';
               const candidateUrls = [];
 
               if (isBinary) {
-                candidateUrls.push(
-                  `${repoBase}player/bytecode/${sceneId}.astb`,
-                  `./bytecode/${sceneId}.astb`,
-                  `${repoBase}bytecode/${sceneId}.astb`
-                );
+                if (registryScene?.astbFile) {
+                  candidateUrls.push(...resolveManifestUrl(registryScene.astbFile));
+                } else if (!registryScene?.astFile || !registryScene.astFile.endsWith('.ast') || registryScene.astFile.includes('scenes/') || registryScene.astFile.includes('cartridges/')) {
+                  candidateUrls.push(
+                    isInPlayerSubdir ? `./bytecode/${sceneId}.astb` : `${repoBase}player/bytecode/${sceneId}.astb`,
+                    `${repoBase}player/bytecode/${sceneId}.astb`
+                  );
+                }
               } else if (ext === 'svg') {
                 if (registryScene?.svgFile) {
-                  const cleanSvg = registryScene.svgFile.replace(/^(?:static\/|player\/)?/, '');
+                  candidateUrls.push(...resolveManifestUrl(registryScene.svgFile));
+                } else {
                   candidateUrls.push(
-                    `${repoBase}player/${cleanSvg}`,
-                    `${repoBase}${cleanSvg}`,
-                    `./player/${cleanSvg}`,
-                    `./${cleanSvg}`
+                    `${repoBase}player/scenes/${sceneId}.svg`,
+                    `${repoBase}cartridges/${sceneId}.svg`,
+                    isInPlayerSubdir ? `./scenes/${sceneId}.svg` : `./player/scenes/${sceneId}.svg`
                   );
                 }
-                candidateUrls.push(
-                  `${repoBase}player/scenes/${sceneId}.svg`,
-                  `${repoBase}player/bytecode/${sceneId}.svg`,
-                  `${repoBase}cartridges/${sceneId}.svg`,
-                  `${repoBase}scenes/${sceneId}.svg`,
-                  `${repoBase}docs/${sceneId}.svg`,
-                  `./player/scenes/${sceneId}.svg`,
-                  `./scenes/${sceneId}.svg`,
-                  `./bytecode/${sceneId}.svg`,
-                  `./cartridges/${sceneId}.svg`,
-                  `./docs/${sceneId}.svg`,
-                  `../docs/${sceneId}.svg`
-                );
               } else if (ext === 'ast') {
                 if (registryScene?.astFile) {
-                  const cleanAst = registryScene.astFile.replace(/^(?:static\/|player\/)?/, '');
+                  candidateUrls.push(...resolveManifestUrl(registryScene.astFile));
+                } else {
                   candidateUrls.push(
-                    `${repoBase}player/${cleanAst}`,
-                    `${repoBase}${cleanAst}`,
-                    `./player/${cleanAst}`,
-                    `./${cleanAst}`
+                    `${repoBase}player/scenes/${sceneId}.ast`,
+                    `${repoBase}cartridges/${sceneId}.ast`,
+                    isInPlayerSubdir ? `./scenes/${sceneId}.ast` : `./player/scenes/${sceneId}.ast`,
+                    `${repoBase}docs/${sceneId}.ast`
                   );
                 }
-                candidateUrls.push(
-                  `${repoBase}player/scenes/${sceneId}.ast`,
-                  `${repoBase}cartridges/${sceneId}.ast`,
-                  `${repoBase}scenes/${sceneId}.ast`,
-                  `${repoBase}docs/${sceneId}.ast`,
-                  `./player/scenes/${sceneId}.ast`,
-                  `./scenes/${sceneId}.ast`,
-                  `./cartridges/${sceneId}.ast`,
-                  `./docs/${sceneId}.ast`,
-                  `../docs/${sceneId}.ast`
-                );
               }
 
               for (const url of Array.from(new Set(candidateUrls.filter(Boolean)))) {

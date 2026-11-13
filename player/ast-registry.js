@@ -58,7 +58,8 @@
     { id: "cst-virtues", type: "Sim", title: "Catholic Social Teaching & Virtues: Gospel Love in Daily Action", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-012", oakUnit: "ks3-re-catholic-social-teaching-virtues", svgFile: "scenes/cst-virtues.svg", astFile: "scenes/cst-virtues.ast" },
     { id: "latin-mass-prayers", type: "Sim", title: "Latin Prayers & Gregorian Chant: The Universal Voice of the Church", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-013", oakUnit: "ks3-re-catholic-traditional-latin-prayers", svgFile: "scenes/latin-mass-prayers.svg", astFile: "scenes/latin-mass-prayers.ast" },
     { id: "nicene-creed", type: "Sim", title: "The Nicene & Apostles' Creed: The Profession of Faith", stage: "CATHOLIC LIFE", duration: 18, oakId: "OAK-KS3-RE-014", oakUnit: "ks3-re-catholic-creed-profession-faith", svgFile: "scenes/nicene-creed.svg", astFile: "scenes/nicene-creed.ast" },
-    { id: "inverted-pendulum-dyno", base: "pendulum_dyno", type: "Sim", title: "Inverted Pendulum Dynamical System: Cart-Pole State Control", stage: "KS3 PHYSICS", duration: 16, oakId: "OAK-KS3-SCI-010", oakUnit: "ks3-physics-inverted-pendulum-dyno", svgFile: "cartridges/pendulum_dyno.svg", astFile: "cartridges/pendulum_dyno.ast" }
+    { id: "inverted-pendulum-dyno", base: "pendulum_dyno", type: "Sim", title: "Inverted Pendulum Dynamical System: Cart-Pole State Control", stage: "KS3 PHYSICS", duration: 16, oakId: "OAK-KS3-SCI-010", oakUnit: "ks3-physics-inverted-pendulum-dyno", svgFile: "cartridges/pendulum_dyno.svg", astFile: "cartridges/pendulum_dyno.ast" },
+    { id: "lumina-architecture", type: "Slide", title: "Lumina: Sovereign Architectural Manifesto (4-Chapter Show & Tell)", stage: "FOUNDATIONAL SYSTEM ARCHITECTURE", duration: 24, svgFile: "docs/lumina-architecture.ast", astFile: "docs/lumina-architecture.ast" }
   ];
 
   const scenes = Object.create(null);
