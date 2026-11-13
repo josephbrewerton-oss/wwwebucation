@@ -1,6 +1,7 @@
 // src/services/offlineSyncService.ts
 // Offline-first curriculum preloader for low-connectivity schools and emerging nations
 import { getLocalState, setLocalState } from './localStateStore';
+import { getAssetUrl } from '../utils/url';
 
 export interface SyncProgress {
   total: number;
@@ -69,19 +70,22 @@ export async function downloadCurriculumForOffline(
       '/img/logo.png',
       '/nano-map.ast',
       '/manifests/rag-index.json',
-    ];
+    ].map((u) => getAssetUrl(u));
 
     let totalUrls = [...coreUrls];
 
     // 2. Discover all lesson manifests from RAG index
     try {
-      const ragRes = await fetch('/manifests/rag-index.json');
+      const ragRes = await fetch(getAssetUrl('/manifests/rag-index.json'));
       if (ragRes.ok) {
         const ragData = await ragRes.json();
         if (Array.isArray(ragData)) {
           ragData.forEach((item: any) => {
-            if (item.manifestPath && !totalUrls.includes(item.manifestPath)) {
-              totalUrls.push(item.manifestPath);
+            if (item.manifestPath) {
+              const resolved = getAssetUrl(item.manifestPath);
+              if (!totalUrls.includes(resolved)) {
+                totalUrls.push(resolved);
+              }
             }
           });
         }

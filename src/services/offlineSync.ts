@@ -7,13 +7,14 @@
  * use ZERO network data calls (true air-gapped / airplane mode operation).
  */
 import { getLocalState, setLocalState } from './localStateStore';
+import { getAssetUrl } from '../utils/url';
 
 const DEFAULT_CACHE_NAME = 'stj-manifest-v-8003ff2a2bff';
 let currentCacheName = DEFAULT_CACHE_NAME;
 
 export async function getActiveManifestCacheName(): Promise<string> {
   try {
-    const res = await fetch('/manifest-digests.json', { cache: 'no-cache' });
+    const res = await fetch(getAssetUrl('/manifest-digests.json'), { cache: 'no-cache' });
     if (res.ok) {
       const data = await res.json();
       if (data.compositeHash) {
@@ -143,7 +144,8 @@ export async function syncEntireCurriculumOffline(
       }
     });
 
-    const allUrls = Array.from(new Set([...CORE_OFFLINE_URLS, ...dynamicAssets]));
+    const resolvedCoreUrls = CORE_OFFLINE_URLS.map((u) => getAssetUrl(u));
+    const allUrls = Array.from(new Set([...resolvedCoreUrls, ...dynamicAssets]));
     const total = allUrls.length;
     let completed = 0;
 

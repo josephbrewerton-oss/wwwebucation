@@ -1,5 +1,7 @@
 // src/registerServiceWorker.ts
 // PWA Service Worker Registration & Lifecycle Management
+import { getAssetUrl } from './utils/url';
+
 export function registerServiceWorker(): void {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) {
     return;
@@ -7,8 +9,8 @@ export function registerServiceWorker(): void {
 
   // Allow registration in production or if explicitly enabled
   window.addEventListener('load', () => {
-    // Determine SW URL based on base URL
-    const swUrl = `${import.meta.env.BASE_URL || '/'}sw.js`;
+    // Determine SW URL dynamically relative to active portal base URL
+    const swUrl = getAssetUrl('/sw.js');
     
     navigator.serviceWorker
       .register(swUrl)

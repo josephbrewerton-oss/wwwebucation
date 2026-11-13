@@ -1,5 +1,6 @@
 // src/lib/browser-rag.ts
 import { findCurriculumKnowledge } from '../data/oakCurriculumKnowledge';
+import { getAssetUrl } from '../utils/url';
 
 const DB_NAME = 'SchoolCurriculumRAG';
 const DB_VERSION = 1;
@@ -44,7 +45,7 @@ export async function syncCurriculumIndex(db: IDBDatabase): Promise<void> {
   if (count > 0) return;
 
   try {
-    const res = await fetch('/manifests/rag-index.json');
+    const res = await fetch(getAssetUrl('/manifests/rag-index.json'));
     if (!res.ok) return;
     const indexData = await res.json();
     populateStore(db, indexData);
@@ -131,18 +132,14 @@ export async function getLessonManifest(
   if (cached?.manifest) return cached.manifest;
 
   const cleanPath = manifestPath.startsWith('/') ? manifestPath : `/${manifestPath}`;
-  const candidates = [
-    cleanPath.startsWith('/schoolsample') ? cleanPath : `/schoolsample${cleanPath}`,
-    cleanPath,
-    cleanPath.startsWith('/schoolsample')
-      ? cleanPath.replace('/schoolsample', '/schoolsample/manifests/lessons')
-      : `/schoolsample/manifests/lessons${cleanPath}`,
-    cleanPath.startsWith('/schoolsample')
-      ? cleanPath.replace('/schoolsample', '/schoolsample/manifests')
-      : `/schoolsample/manifests${cleanPath}`,
-    `/manifests/lessons${cleanPath}`,
-    `/manifests${cleanPath}`,
-  ];
+  const candidates = Array.from(
+    new Set([
+      getAssetUrl(cleanPath),
+      cleanPath.startsWith('/manifests/') ? getAssetUrl(cleanPath) : getAssetUrl(`/manifests/lessons${cleanPath}`),
+      cleanPath.startsWith('/manifests/') ? getAssetUrl(cleanPath) : getAssetUrl(`/manifests${cleanPath}`),
+      cleanPath,
+    ])
+  );
 
   let res: Response | null = null;
   for (const url of candidates) {
