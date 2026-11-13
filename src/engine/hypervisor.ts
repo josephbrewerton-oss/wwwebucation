@@ -13,6 +13,7 @@ import { saveVerifiedAST, saveVfsView } from '../services/dbStore';
 import { MathQuestionGenerator } from './mathQuestionGenerator';
 import { findCurriculumKnowledge } from '../data/oakCurriculumKnowledge';
 import { isStrictAirGapMode } from '../services/privacyGuard';
+import { getAssetUrl } from '../utils/url';
 import type { HyperMessage, HyperNodeResult } from './hypercall';
 import {
   decodeBinaryFrame,
@@ -248,9 +249,7 @@ export class HypervisorHost {
     if (!el) {
       el = document.createElement('iframe');
       el.id = 'neural-worker-guest-vm';
-      const basePath = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (import.meta as any).env?.BASE_URL || '/';
-      const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-      el.src = `${cleanBase}worker.html?v=1.3.0`;
+      el.src = getAssetUrl(`worker.html?v=1.3.0`);
       el.style.display = 'none';
       el.style.width = '0px';
       el.style.height = '0px';
@@ -274,9 +273,7 @@ export class HypervisorHost {
       const parent = existing.parentNode;
       const newIframe = document.createElement('iframe');
       newIframe.id = 'neural-worker-guest-vm';
-      const basePath = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (import.meta as any).env?.BASE_URL || '/';
-      const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-      newIframe.src = `${cleanBase}worker.html?v=${Date.now()}`;
+      newIframe.src = getAssetUrl(`worker.html?v=${Date.now()}`);
       newIframe.style.display = 'none';
       newIframe.style.width = '0px';
       newIframe.style.height = '0px';

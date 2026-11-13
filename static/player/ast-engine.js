@@ -6177,16 +6177,24 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
               : './';
 
-            // Resolve base repository prefix dynamically
+            // Resolve base repository prefix dynamically (zero hardcoded repo names)
             let repoBase = '/';
             if (typeof window !== 'undefined') {
-              if (window.__AST_BASE_URL__) {
-                repoBase = window.__AST_BASE_URL__.replace(/\/+$/, '') + '/';
-              } else if (window.location && window.location.pathname) {
-                const path = window.location.pathname;
-                const ghMatch = path.match(/^(\/[^\/]+)\//);
-                if (ghMatch && ghMatch[1] && !ghMatch[1].startsWith('/player') && !ghMatch[1].startsWith('/api') && !ghMatch[1].startsWith('/simulator') && !ghMatch[1].startsWith('/curriculum')) {
-                  repoBase = ghMatch[1] + '/';
+              if (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__) {
+                repoBase = String(window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__).replace(/\/+$/, '') + '/';
+              } else if (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) {
+                repoBase = document.querySelector('base').getAttribute('href').replace(/\/+$/, '') + '/';
+              } else if (window.location) {
+                const path = window.location.pathname || '/';
+                const host = window.location.hostname || '';
+                const playerIdx = path.indexOf('/player/');
+                if (playerIdx >= 0) {
+                  repoBase = path.slice(0, playerIdx + 1);
+                } else if (host === 'github.io' || host.endsWith('.github.io')) {
+                  const seg = path.split('/').filter(Boolean)[0];
+                  repoBase = seg ? `/${seg}/` : '/';
+                } else if (currentDir && currentDir !== '/' && (path.endsWith('/player.html') || path.endsWith('/worker.html'))) {
+                  repoBase = currentDir;
                 }
               }
             }
@@ -7081,7 +7089,25 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       throw err;
     }
     try {
-      const res = await fetch(url);
+      let resolvedUrl = url;
+      if (url.startsWith('/') && !url.startsWith('//') && typeof window !== 'undefined' && window.location) {
+        const path = window.location.pathname || '/';
+        const host = window.location.hostname || '';
+        let dynamicBase = (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__ || '').replace(/\/+$/, '') + '/';
+        if (dynamicBase === '/') {
+          const playerIdx = path.indexOf('/player/');
+          if (playerIdx >= 0) {
+            dynamicBase = path.slice(0, playerIdx + 1);
+          } else if (host === 'github.io' || host.endsWith('.github.io')) {
+            const seg = path.split('/').filter(Boolean)[0];
+            dynamicBase = seg ? `/${seg}/` : '/';
+          }
+        }
+        if (dynamicBase && dynamicBase !== '/' && !url.startsWith(dynamicBase)) {
+          resolvedUrl = dynamicBase.replace(/\/$/, '') + url;
+        }
+      }
+      const res = await fetch(resolvedUrl);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}: ${res.statusText}`);
       }

@@ -5,6 +5,8 @@
  * with the National Curriculum knowledge tree.
  */
 
+import { getBaseUrl } from './url';
+
 export interface RouteResolution {
   targetPath: string;
   targetLabel: string;
@@ -18,13 +20,10 @@ export interface RouteResolution {
 export function resolveHarmonisedRoute(rawPath: string, search: string = ''): RouteResolution {
   let clean = (rawPath || '/').toLowerCase();
 
-  // Strip known GitHub Pages subpath prefixes
-  const repoPrefixes = ['/wwweducation', '/wwwebucation', '/schoolsample'];
-  for (const prefix of repoPrefixes) {
-    if (clean.startsWith(prefix)) {
-      clean = clean.slice(prefix.length);
-      break;
-    }
+  // Dynamically strip any active deployment base subpath (e.g. /<repo-name>/)
+  const dynamicBase = getBaseUrl().replace(/\/+$/, '').toLowerCase();
+  if (dynamicBase && clean.startsWith(dynamicBase)) {
+    clean = clean.slice(dynamicBase.length);
   }
 
   clean = clean.replace(/\/+$/, '') || '/';

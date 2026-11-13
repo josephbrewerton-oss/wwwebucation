@@ -6,7 +6,7 @@
     <title>Page Not Found — St Joseph's Curriculum Portal</title>
     <meta name="robots" content="noindex, follow" />
     <meta name="description" content="St Joseph's Curriculum Portal page not found. Return to interactive curriculum, simulations, and lessons." />
-    <link rel="icon" type="image/x-icon" href="/wwwebucation/favicon.ico" />
+    <link rel="icon" type="image/x-icon" href="./favicon.ico" />
     <style>
       :root {
         --stj-bg: #f8fafc;
@@ -139,8 +139,6 @@
         var hostname = window.location.hostname;
         var isGh = hostname === 'github.io' || hostname.endsWith('.github.io');
         var base = (isGh && parts.length > 0) ? '/' + encodeURIComponent(parts[0]) + '/' : '/';
-        if (path.indexOf('/schoolsample/') === 0) base = '/schoolsample/';
-        if (path.indexOf('/wwwebucation/') === 0) base = '/wwwebucation/';
         if (path.indexOf(base) === 0 && path.length > base.length) {
           var segment = path.slice(base.length);
           // If not a static file with extension, redirect to base with hash

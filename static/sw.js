@@ -147,7 +147,7 @@ self.addEventListener('fetch', (event) => {
           const cachedShell =
             (await caches.match('./index.html')) ||
             (await caches.match(request)) ||
-            (await caches.match('/'));
+            (await caches.match('./'));
           if (cachedShell) return cachedShell;
           return new Response('Offline Portal Ready', {
             status: 200,

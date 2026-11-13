@@ -6,6 +6,7 @@
  */
 
 import { AST_3D_WASM_BASE64 } from '../../static/player/wasm/ast-3d-engine.bin.js';
+import { getAssetUrl } from './url';
 
 export interface Projected3DPoint {
   x: number;
@@ -58,18 +59,23 @@ export class AST3DWasmBridge {
     try {
       let binaryBytes: Uint8Array | null = null;
 
-      // 1. Try fetching standalone .wasm binary with base-aware paths
-      if (typeof fetch === 'function' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
-        const basePath = (window as any).__AST_BASE_URL__ || (window as any).__AST_ASSET_BASE__ || (import.meta.env?.BASE_URL || '/').replace(/\/?$/, '/');
-        const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-        const candidates = [
-          `${cleanBase}static/player/wasm/ast-3d-engine.wasm`,
-          `${cleanBase}player/wasm/ast-3d-engine.wasm`,
-          './static/player/wasm/ast-3d-engine.wasm',
+      // 1. Instant zero-network initialization via inlined base64 binary
+      if (typeof AST_3D_WASM_BASE64 === 'string' && AST_3D_WASM_BASE64.length > 0 && typeof atob === 'function') {
+        const binStr = atob(AST_3D_WASM_BASE64);
+        const len = binStr.length;
+        binaryBytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          binaryBytes[i] = binStr.charCodeAt(i);
+        }
+      }
+
+      // 2. Fallback to base-aware .wasm binary fetch only if inline base64 is unavailable
+      if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location.protocol !== 'file:') {
+        const candidates = Array.from(new Set([
+          getAssetUrl('/player/wasm/ast-3d-engine.wasm'),
           './player/wasm/ast-3d-engine.wasm',
           './wasm/ast-3d-engine.wasm',
-          '/player/wasm/ast-3d-engine.wasm',
-        ];
+        ]));
         for (const url of candidates) {
           try {
             const resp = await fetch(url);
@@ -82,17 +88,11 @@ export class AST3DWasmBridge {
         }
       }
 
-      // 2. Fallback to inlined base64 binary
       if (!binaryBytes || binaryBytes.length === 0) {
-        const binStr = atob(AST_3D_WASM_BASE64);
-        const len = binStr.length;
-        binaryBytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          binaryBytes[i] = binStr.charCodeAt(i);
-        }
+        throw new Error('WASM 3D binary unavailable');
       }
 
-      const wasmResult: any = await WebAssembly.instantiate(binaryBytes);
+      const wasmResult: any = await WebAssembly.instantiate(binaryBytes as BufferSource);
       const instance = wasmResult.instance || wasmResult;
       this.exports = instance.exports;
       this.memory = this.exports.memory;

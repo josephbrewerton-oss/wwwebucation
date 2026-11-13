@@ -56,7 +56,7 @@ export function renderLicensingPage(): HTMLElement {
         <li>
           <strong>GNU Affero General Public License v3.0 (<a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">AGPLv3</a>):</strong> 
           100% free for educational use, research, and non-profit deployments. Inspect the complete source code on 
-          <a href="https://github.com/josephbrewerton-oss/schoolsample" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">GitHub (josephbrewerton-oss/schoolsample)</a>.
+          <a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color: #0284c7; font-weight: 700; text-decoration: underline;">GitHub (josephbrewerton-oss/wwwebucation)</a>.
         </li>
         <li>
           <strong>Open Government Licence v3.0 (<a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color: #0284c7; text-decoration: underline;">OGL v3</a>):</strong> 

@@ -36,14 +36,6 @@ export function getBaseUrl(): string {
     }
   }
 
-  // 4. Known sub-path prefix fallback
-  if (currentPath.startsWith('/schoolsample/')) {
-    return '/schoolsample/';
-  }
-  if (currentPath.startsWith('/wwwebucation/')) {
-    return '/wwwebucation/';
-  }
-
   return (configuredBase && configuredBase !== './' ? configuredBase : '/').replace(/\/?$/, '/');
 }
 

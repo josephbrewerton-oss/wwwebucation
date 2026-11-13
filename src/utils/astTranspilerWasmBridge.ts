@@ -6,6 +6,7 @@
  */
 
 import { AST_TRANSPILER_WASM_BASE64 } from '../../static/player/wasm/ast-transpiler-engine.bin.js';
+import { getAssetUrl } from './url';
 
 export interface DecodedSwfHeader {
   signature: 'FWS' | 'CWS' | 'ZWS' | 'UNKNOWN';
@@ -80,14 +81,11 @@ export class ASTTranspilerWasmBridge {
 
       // 2. Fallback to base-aware network fetch only if inlined binary unavailable
       if ((!binaryBytes || binaryBytes.length === 0) && typeof fetch === 'function' && typeof window !== 'undefined' && window.location?.protocol !== 'file:') {
-        const basePath = (window as any).__AST_BASE_URL__ || (window as any).__AST_ASSET_BASE__ || (import.meta.env?.BASE_URL || '/').replace(/\/?$/, '/');
-        const cleanBase = basePath.endsWith('/') ? basePath : basePath + '/';
-        const candidates = [
-          `${cleanBase}player/wasm/ast-transpiler-engine.wasm`,
+        const candidates = Array.from(new Set([
+          getAssetUrl('/player/wasm/ast-transpiler-engine.wasm'),
           './player/wasm/ast-transpiler-engine.wasm',
           './wasm/ast-transpiler-engine.wasm',
-          '/player/wasm/ast-transpiler-engine.wasm',
-        ];
+        ]));
         for (const url of candidates) {
           try {
             const resp = await fetch(url);

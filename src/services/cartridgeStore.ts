@@ -26,6 +26,7 @@ import {
   type VaultCartridgeRecord,
 } from './dbStore';
 import { getLocalState, setLocalState } from './localStateStore';
+import { getAssetUrl } from '../utils/url';
 import {
   compressCartridge,
   decompressCartridge,
@@ -1136,12 +1137,9 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
   const knownMeta = PRESET_OPTIONS.find((p) => p.id === canonical);
   if (knownMeta && typeof fetch !== 'undefined') {
     try {
-      const rawBase = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
-      const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;
-
       const [svgRes, astRes] = await Promise.all([
-        fetch(`${cleanBase}cartridges/${canonical}.svg`).catch(() => null),
-        fetch(`${cleanBase}cartridges/${canonical}.ast`).catch(() => null),
+        fetch(getAssetUrl(`cartridges/${canonical}.svg`)).catch(() => null),
+        fetch(getAssetUrl(`cartridges/${canonical}.ast`)).catch(() => null),
       ]);
 
       let svgText = (svgRes && svgRes.ok) ? await svgRes.text() : '';
