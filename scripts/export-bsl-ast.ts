@@ -31,11 +31,11 @@ console.log(`📊 Average size per sign: ${(fileSize / Object.keys(BSL_CURRICULU
 
 // Verify round-trip parsing
 const parsed = parseAstToLexicon(astContent);
-const parsedCount = Object.keys(parsed).length;
-console.log(`🔍 Round-trip verification: parsed ${parsedCount} signs from AST S-Expressions.`);
-if (parsedCount === Object.keys(BSL_CURRICULUM_LEXICON).length) {
+const uniqueParsedCount = new Set(Object.values(parsed)).size;
+console.log(`🔍 Round-trip verification: parsed ${uniqueParsedCount} unique signs (${Object.keys(parsed).length} alias index keys) from AST S-Expressions.`);
+if (uniqueParsedCount === Object.keys(BSL_CURRICULUM_LEXICON).length) {
   console.log('🎉 100% Round-Trip AST S-Expression Verification Succeeded!');
 } else {
-  console.error(`❌ Mismatch: expected ${Object.keys(BSL_CURRICULUM_LEXICON).length}, got ${parsedCount}`);
+  console.error(`❌ Mismatch: expected ${Object.keys(BSL_CURRICULUM_LEXICON).length}, got ${uniqueParsedCount}`);
   process.exit(1);
 }

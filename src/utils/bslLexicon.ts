@@ -2121,7 +2121,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
     englishLabel: 'Reason / Because / Cause',
     gloss: 'REASON',
     description: 'Dominant index taps temple/forehead then extends forward with affirmative head nod.',
-    aliases: ['BECAUSE', 'CAUSE', 'EXPLANATION'],
+    aliases: ['BECAUSE', 'CAUSE', 'EXPLANATION', 'WHY-BECAUSE'],
     keyframes: [
       {
         label: 'Index at Temple',
@@ -2155,7 +2155,7 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
     englishLabel: 'Suppose / If / Hypothesis',
     gloss: 'SUPPOSE',
     description: 'Dominant pinky finger touches high cheekbone near eye twice with raised eyebrows, signaling condition.',
-    aliases: ['IF', 'HYPOTHESIS', 'ASSUME', 'CONDITION'],
+    aliases: ['IF', 'HYPOTHESIS', 'ASSUME', 'CONDITION', 'WHETHER'],
     keyframes: [
       {
         label: 'Pinky to Cheekbone',
@@ -3903,65 +3903,8 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
     ],
   },
 
-  'BECAUSE': {
-    id: 'because',
-    word: 'BECAUSE',
-    category: 'grammar',
-    englishLabel: 'Because / Reason',
-    gloss: 'BECAUSE',
-    description: 'Index finger taps side of forehead then drops into open flat hand.',
-    aliases: ['REASON', 'WHY-BECAUSE'],
-    keyframes: [
-      {
-        label: 'Tap Forehead',
-        rule: 'Dominant index taps side of forehead',
-        targetTip: { x: 28, y: -52, z: 22 },
-        targetKnuckle: { x: 55, y: -25, z: 12 },
-        targetWrist: { x: 85, y: 18, z: 0 },
-        shape: 'point',
-        nmf: { eyebrows: 'raised', mouth: 'because' },
-      },
-      {
-        label: 'Present Reason',
-        rule: 'Hand opens into flat palm up explaining the cause',
-        targetTip: { x: 25, y: 10, z: 35 },
-        targetKnuckle: { x: 50, y: 35, z: 25 },
-        targetWrist: { x: 85, y: 65, z: 10 },
-        shape: 'flat',
-        nmf: { eyebrows: 'neutral', mouth: 'reason' },
-      },
-    ],
-  },
-
-  'IF': {
-    id: 'if',
-    word: 'IF',
-    category: 'grammar',
-    englishLabel: 'If / Conditional',
-    gloss: 'IF',
-    description: 'Dominant little finger taps cheek twice in classical BSL conditional marker.',
-    aliases: ['SUPPOSE', 'WHETHER'],
-    keyframes: [
-      {
-        label: 'Pinky at Cheek',
-        rule: 'Pinky finger touches upper cheekbone',
-        targetTip: { x: 30, y: -45, z: 20 },
-        targetKnuckle: { x: 55, y: -20, z: 10 },
-        targetWrist: { x: 85, y: 22, z: -5 },
-        shape: 'point',
-        nmf: { eyebrows: 'raised', mouth: 'if' },
-      },
-      {
-        label: 'Pinky Tap',
-        rule: 'Pinky taps cheek twice with raised eyebrows indicating conditional clause',
-        targetTip: { x: 30, y: -43, z: 18 },
-        targetKnuckle: { x: 55, y: -18, z: 8 },
-        targetWrist: { x: 85, y: 24, z: -5 },
-        shape: 'point',
-        nmf: { eyebrows: 'raised', mouth: 'if' },
-      },
-    ],
-  },
+  // Canonical causal ('BECAUSE' -> 'REASON') and conditional ('IF' -> 'SUPPOSE')
+  // markers live under 'REASON' and 'SUPPOSE' to preserve Level 6 disambiguation.
 
   // =========================================================================
   // LEVEL 2/3 PRONOUNS & ENTITY REFERENCES
@@ -4515,6 +4458,333 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
         palm: 'in',
         nmf: { eyebrows: 'neutral', mouth: 'walk', headTilt: 'nod' },
         hold: 150,
+      },
+    ],
+  },
+
+  'BABY': {
+    id: 'baby',
+    word: 'BABY',
+    category: 'conversation',
+    englishLabel: 'Baby / Infant',
+    gloss: 'BABY',
+    makatonStage: 2,
+    description: 'Both arms fold gently together across the chest rocking side to side as if cradling a baby.',
+    aliases: ['INFANT', 'NEWBORN', 'BABIES'],
+    keyframes: [
+      {
+        label: 'Cradle Arms Left',
+        rule: 'Both flat forearms cradle gently in front of chest swaying left',
+        targetTip: { x: -20, y: 12, z: 24 },
+        targetKnuckle: { x: 8, y: 24, z: 16 },
+        targetWrist: { x: 45, y: 42, z: 4 },
+        shape: 'flat',
+        palm: 'up',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'smile', headTilt: 'tilt-left' },
+        hold: 130,
+      },
+      {
+        label: 'Cradle Rock Right',
+        rule: 'Arms rock gently right in tender cradling cadence',
+        targetTip: { x: -10, y: 14, z: 26 },
+        targetKnuckle: { x: 18, y: 26, z: 18 },
+        targetWrist: { x: 55, y: 44, z: 6 },
+        shape: 'flat',
+        palm: 'up',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'smile', headTilt: 'tilt-right' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'BOY': {
+    id: 'boy',
+    word: 'BOY',
+    category: 'conversation',
+    englishLabel: 'Boy / Lad',
+    gloss: 'BOY',
+    makatonStage: 2,
+    description: 'Dominant cupped hand strokes briskly upward twice under the chin.',
+    aliases: ['BOYS', 'LAD', 'SON'],
+    keyframes: [
+      {
+        label: 'Cup Hand Under Chin',
+        rule: 'Dominant C-shape hand cups lightly beneath chin',
+        targetTip: { x: 4, y: -38, z: 20 },
+        targetKnuckle: { x: 26, y: -16, z: 14 },
+        targetWrist: { x: 58, y: 22, z: 2 },
+        shape: 'c-shape',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'boy' },
+        hold: 110,
+      },
+      {
+        label: 'Brisk Forward Brush',
+        rule: 'Hand flicks lightly forward off the chin',
+        targetTip: { x: 6, y: -34, z: 32 },
+        targetKnuckle: { x: 28, y: -12, z: 22 },
+        targetWrist: { x: 60, y: 24, z: 8 },
+        shape: 'c-shape',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'boy', headTilt: 'nod' },
+        hold: 140,
+      },
+    ],
+  },
+
+  'GIRL': {
+    id: 'girl',
+    word: 'GIRL',
+    category: 'conversation',
+    englishLabel: 'Girl / Daughter',
+    gloss: 'GIRL',
+    makatonStage: 2,
+    description: 'Dominant curved index finger traces softly down the cheek twice (bonnet ribbon).',
+    aliases: ['GIRLS', 'DAUGHTER'],
+    keyframes: [
+      {
+        label: 'Index Top of Cheek',
+        rule: 'Dominant index rests lightly at upper right cheek',
+        targetTip: { x: 18, y: -56, z: 18 },
+        targetKnuckle: { x: 42, y: -30, z: 12 },
+        targetWrist: { x: 72, y: 12, z: 0 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'girl' },
+        hold: 110,
+      },
+      {
+        label: 'Trace Down Cheekbone',
+        rule: 'Index glides smoothly down cheek toward jawline',
+        targetTip: { x: 14, y: -42, z: 22 },
+        targetKnuckle: { x: 38, y: -16, z: 15 },
+        targetWrist: { x: 68, y: 24, z: 2 },
+        shape: 'point',
+        palm: 'in',
+        nmf: { eyebrows: 'neutral', mouth: 'girl', headTilt: 'nod' },
+        hold: 140,
+      },
+    ],
+  },
+
+  'MUSIC': {
+    id: 'music',
+    word: 'MUSIC',
+    category: 'school',
+    englishLabel: 'Music / Sing / Rhythm',
+    gloss: 'MUSIC',
+    makatonStage: 3,
+    description: 'Dominant open flat hand conducts rhythmically above the horizontally extended non-dominant forearm.',
+    aliases: ['SING', 'SONG', 'HYMN', 'MELODY'],
+    keyframes: [
+      {
+        label: 'Conduct Left Over Forearm',
+        rule: 'Dominant open hand sweeps gracefully left above base forearm',
+        targetTip: { x: -45, y: 5, z: 24 },
+        targetKnuckle: { x: -12, y: 25, z: 15 },
+        targetWrist: { x: 35, y: 58, z: 2 },
+        shape: 'flat',
+        palm: 'down',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'raised', mouth: 'music' },
+        hold: 120,
+      },
+      {
+        label: 'Conduct Right Cadence',
+        rule: 'Dominant hand sweeps back right in musical phrasing arc',
+        targetTip: { x: 10, y: 2, z: 28 },
+        targetKnuckle: { x: 36, y: 22, z: 18 },
+        targetWrist: { x: 70, y: 54, z: 4 },
+        shape: 'flat',
+        palm: 'down',
+        baseHandMode: 'base-hold',
+        nmf: { eyebrows: 'raised', mouth: 'smile', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'BALL': {
+    id: 'ball',
+    word: 'BALL',
+    category: 'school',
+    englishLabel: 'Ball / Sphere',
+    gloss: 'BALL',
+    makatonStage: 3,
+    description: 'Both curved claw hands face each other framing a round spherical ball shape.',
+    aliases: ['BALLS', 'SPHERE'],
+    keyframes: [
+      {
+        label: 'Cup Spherical Left-Right',
+        rule: 'Both curved claw hands frame round ball in mid chest space',
+        targetTip: { x: 18, y: -4, z: 28 },
+        targetKnuckle: { x: 42, y: 16, z: 18 },
+        targetWrist: { x: 74, y: 50, z: 4 },
+        shape: 'claw',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'round' },
+        hold: 120,
+      },
+      {
+        label: 'Gentle Bounce Hold',
+        rule: 'Both curved hands bounce sphere gently upward',
+        targetTip: { x: 18, y: -14, z: 30 },
+        targetKnuckle: { x: 42, y: 6, z: 20 },
+        targetWrist: { x: 74, y: 40, z: 6 },
+        shape: 'claw',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'round', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'GO': {
+    id: 'go',
+    word: 'GO',
+    category: 'conversation',
+    englishLabel: 'Go / Move Forward',
+    gloss: 'GO',
+    makatonStage: 4,
+    description: 'Both upright index fingers tilt forward together toward the addressee.',
+    aliases: ['GOES', 'GOING', 'WENT', 'DEPART'],
+    keyframes: [
+      {
+        label: 'Indices Upright Ready',
+        rule: 'Dominant index poised upright in chest signing space',
+        targetTip: { x: 12, y: -15, z: 22 },
+        targetKnuckle: { x: 35, y: 12, z: 14 },
+        targetWrist: { x: 66, y: 48, z: 2 },
+        shape: 'point',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'go' },
+        hold: 100,
+      },
+      {
+        label: 'Arc Forward Together',
+        rule: 'Both index fingers arc decisively forward',
+        targetTip: { x: 12, y: -8, z: 54 },
+        targetKnuckle: { x: 35, y: 18, z: 38 },
+        targetWrist: { x: 66, y: 50, z: 18 },
+        shape: 'point',
+        palm: 'out',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'raised', mouth: 'go', headTilt: 'nod' },
+        hold: 150,
+      },
+    ],
+  },
+
+  'NIGHT': {
+    id: 'night',
+    word: 'NIGHT',
+    category: 'temporal',
+    englishLabel: 'Night / Evening / Dark',
+    gloss: 'NIGHT',
+    makatonStage: 6,
+    description: 'Both flat open hands cross downward over the chest like curtains closing for darkness.',
+    aliases: ['NIGHTS', 'EVENING', 'DARK', 'DARKNESS'],
+    keyframes: [
+      {
+        label: 'Hands Open Above Chest',
+        rule: 'Both open flat hands poised wide at upper chest',
+        targetTip: { x: 35, y: -25, z: 26 },
+        targetKnuckle: { x: 58, y: 0, z: 16 },
+        targetWrist: { x: 85, y: 36, z: 2 },
+        shape: 'flat',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'night' },
+        hold: 120,
+      },
+      {
+        label: 'Curtain Close Across Chest',
+        rule: 'Both flat hands sweep inward across chest shutting out daylight',
+        targetTip: { x: -12, y: -8, z: 24 },
+        targetKnuckle: { x: 16, y: 16, z: 14 },
+        targetWrist: { x: 52, y: 50, z: 2 },
+        shape: 'flat',
+        palm: 'in',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'night', headTilt: 'nod' },
+        hold: 160,
+      },
+    ],
+  },
+
+  'RAIN': {
+    id: 'rain',
+    word: 'RAIN',
+    category: 'stem',
+    englishLabel: 'Rain / Showers',
+    gloss: 'RAIN',
+    makatonStage: 6,
+    description: 'Both splayed open 5-hands descend gently with fluttering fingers from forehead to chest.',
+    aliases: ['RAINING', 'RAINY', 'SHOWERS', 'RAINDROP'],
+    keyframes: [
+      {
+        label: 'Cloud Height Splay',
+        rule: 'Open spread fingers poised at upper signing space',
+        targetTip: { x: 24, y: -45, z: 28 },
+        targetKnuckle: { x: 48, y: -18, z: 18 },
+        targetWrist: { x: 76, y: 20, z: 4 },
+        shape: 'spread',
+        palm: 'down',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'rain' },
+        hold: 110,
+      },
+      {
+        label: 'Falling Raindrops',
+        rule: 'Both spread hands drift downward mimicking falling rain',
+        targetTip: { x: 24, y: 15, z: 28 },
+        targetKnuckle: { x: 48, y: 40, z: 18 },
+        targetWrist: { x: 76, y: 74, z: 4 },
+        shape: 'spread',
+        palm: 'down',
+        baseHandMode: 'mirror',
+        nmf: { eyebrows: 'neutral', mouth: 'mm', headTilt: 'nod' },
+        hold: 160,
+      },
+    ],
+  },
+
+  'STAR': {
+    id: 'star',
+    word: 'STAR',
+    category: 'stem',
+    englishLabel: 'Star / Sparkle',
+    gloss: 'STAR',
+    makatonStage: 6,
+    description: 'Dominant index and thumb open repeatedly into a twinkling sparkle up in the high sky register.',
+    aliases: ['STARS', 'TWINKLE', 'STARLIGHT'],
+    keyframes: [
+      {
+        label: 'Pinch in High Sky',
+        rule: 'Dominant hand raised high in pinched closed position',
+        targetTip: { x: 32, y: -62, z: 32 },
+        targetKnuckle: { x: 52, y: -32, z: 20 },
+        targetWrist: { x: 80, y: 8, z: 4 },
+        shape: 'pinch',
+        palm: 'out',
+        nmf: { eyebrows: 'raised', mouth: 'star' },
+        hold: 110,
+      },
+      {
+        label: 'Sparkle Open Starburst',
+        rule: 'Fingers flick open in twinkling starlight burst',
+        targetTip: { x: 34, y: -66, z: 34 },
+        targetKnuckle: { x: 54, y: -36, z: 22 },
+        targetWrist: { x: 82, y: 4, z: 6 },
+        shape: 'spread',
+        palm: 'out',
+        nmf: { eyebrows: 'raised', mouth: 'star', headTilt: 'nod' },
+        hold: 160,
       },
     ],
   },
@@ -7625,36 +7895,63 @@ export const BSL_CURRICULUM_LEXICON: Record<string, BslSign> = {
  * Fast alias lookup index for instant O(1) matching of inflected forms
  */
 const ALIAS_MAP: Record<string, string> = {};
+// Pass 1: Register all canonical keys & words first so aliases never shadow a canonical sign
 for (const [canonicalId, sign] of Object.entries(BSL_CURRICULUM_LEXICON)) {
-  ALIAS_MAP[canonicalId] = canonicalId;
-  ALIAS_MAP[sign.word] = canonicalId;
+  ALIAS_MAP[canonicalId.toUpperCase()] = canonicalId;
+  ALIAS_MAP[sign.word.toUpperCase()] = canonicalId;
+}
+// Pass 2: Register declared sign aliases only when they do not clobber an existing mapping
+for (const [canonicalId, sign] of Object.entries(BSL_CURRICULUM_LEXICON)) {
   if (sign.aliases) {
     for (const alias of sign.aliases) {
-      ALIAS_MAP[alias.toUpperCase()] = canonicalId;
+      const upperAlias = alias.toUpperCase();
+      if (!ALIAS_MAP[upperAlias]) {
+        ALIAS_MAP[upperAlias] = canonicalId;
+      }
     }
   }
 }
-for (const [rawWord, canonicalId] of Object.entries(BSL_LEXICON_ALIASES)) {
-  ALIAS_MAP[rawWord.toUpperCase()] = canonicalId.toUpperCase();
+// Pass 3: Merge external synonym table without overwriting existing canonical entries or pointing to missing keys
+for (const [rawWord, targetId] of Object.entries(BSL_LEXICON_ALIASES)) {
+  const upperRaw = rawWord.toUpperCase();
+  const upperTarget = targetId.toUpperCase();
+  if (BSL_CURRICULUM_LEXICON[upperRaw]) continue;
+  const resolvedCanonical = BSL_CURRICULUM_LEXICON[upperTarget] ? upperTarget : ALIAS_MAP[upperTarget];
+  if (resolvedCanonical && BSL_CURRICULUM_LEXICON[resolvedCanonical]) {
+    ALIAS_MAP[upperRaw] = resolvedCanonical;
+  }
 }
 
 /**
  * Registers new signs into the active in-memory curriculum lexicon at runtime
  */
 export function registerBslSigns(signs: Record<string, BslSign>): number {
-  let count = 0;
-  for (const [id, sign] of Object.entries(signs)) {
+  const uniqueSigns = new Map<string, BslSign>();
+  for (const sign of Object.values(signs)) {
     if (!sign || !sign.word) continue;
-    const key = sign.word.toUpperCase();
+    uniqueSigns.set(sign.word.toUpperCase(), sign);
+  }
+  let count = 0;
+  for (const [key, sign] of uniqueSigns.entries()) {
     BSL_CURRICULUM_LEXICON[key] = sign;
     ALIAS_MAP[key] = key;
-    if (sign.id) ALIAS_MAP[sign.id.toUpperCase()] = key;
-    if (sign.aliases) {
-      for (const alias of sign.aliases) {
-        ALIAS_MAP[alias.toUpperCase()] = key;
+    if (sign.id) {
+      const upperId = sign.id.toUpperCase();
+      if (!BSL_CURRICULUM_LEXICON[upperId] || upperId === key) {
+        ALIAS_MAP[upperId] = key;
       }
     }
     count++;
+  }
+  for (const [key, sign] of uniqueSigns.entries()) {
+    if (sign.aliases) {
+      for (const alias of sign.aliases) {
+        const upperAlias = alias.toUpperCase();
+        if (!BSL_CURRICULUM_LEXICON[upperAlias]) {
+          ALIAS_MAP[upperAlias] = key;
+        }
+      }
+    }
   }
   return count;
 }
@@ -7745,6 +8042,9 @@ export function signKeyframeToHandPose(sign: BslSign, kf: BslSignKeyframe, index
     targetWrist: kf.targetWrist,
     nmf: kf.nmf,
     shape: kf.shape,
+    palm: kf.palm,
+    hold: kf.hold,
+    ease: kf.ease,
     isWholeWordSign: true,
     baseHandMode,
     baseHandOverride: kf.baseHandOverride,

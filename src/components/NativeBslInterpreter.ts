@@ -50,6 +50,9 @@ import {
 import {
   subscribeBslSpeech,
   setBslEnabled,
+  getSignLanguage,
+  setSignLanguage,
+  subscribeSignLanguage,
   getVoiceEnabled,
   toggleVoice,
   subscribeVoice,
@@ -66,8 +69,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
   // Speech tracking to avoid restarting on word boundaries
   private lastSpokenSubtitle = '';
 
-  // Camera POV
+  // Camera POV & 360-degree drag orbit offsets
   private cameraMode: 'receiver' | 'signer' = 'receiver';
+  private orbitYawOffset = 0;
+  private orbitPitchOffset = 0;
   private readonly cameraConfigs = {
     receiver: { yaw: 180, pitch: -8, distance: 360, fov: 60 },
     signer: { yaw: 0, pitch: 26, distance: 360, fov: 60 },
@@ -84,6 +89,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private poseQueue: BslHandPose[] = [];
   private currentPoseStartTime = 0;
   private currentPoseDuration = 550; // ms per sign keyframe
+  private currentAnimProgress = 0;
   private holdRemaining = 0;
   private isIdle = true;
 
@@ -96,6 +102,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   // Subscriptions
   private unsubscribeSpeech?: () => void;
   private unsubscribeVoice?: () => void;
+  private unsubscribeSignLang?: () => void;
 
   // Blinking & Idle Breathing
   private eyeBlinkProgress = 0;
@@ -109,6 +116,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   connectedCallback() {
     this.voiceEnabled = getVoiceEnabled();
+    this.grammarMode = getSignLanguage() === 'MAKATON' ? 'makaton' : 'bsl-natural';
     this.render();
     this.bindDomEvents();
     this.subscribeStores();
@@ -122,6 +130,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
     this.unsubscribeSpeech?.();
     this.unsubscribeVoice?.();
+    this.unsubscribeSignLang?.();
     if (this.pipWindow) {
       this.pipWindow.close();
       this.pipWindow = null;
@@ -258,7 +267,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
               <div style="position:absolute; top:6px; right:8px; pointer-events:none; text-align:right; display:flex; flex-direction:column; gap:2px;">
                 <span id="bsl-hud-mode" style="background:rgba(15,23,42,0.8); border:1px solid #1e293b; color:#38bdf8; font-size:0.58rem; font-weight:700; padding:1px 4px; border-radius:3px;">
-                  BSL L6
+                  ${this.grammarMode === 'makaton' ? 'MAKATON' : 'BSL L6'}
                 </span>
                 <span id="bsl-hud-cl" style="background:rgba(15,23,42,0.8); border:1px solid #334155; color:#a855f7; font-size:0.58rem; padding:1px 4px; border-radius:3px;">
                   CL: NONE
@@ -271,17 +280,13 @@ export class NativeBslInterpreterElement extends HTMLElement {
               <!-- Mode selector & Quick Pills -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                 <select id="bsl-select-mode" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer;">
-                  <option value="bsl-natural" selected>BSL L6 (Natural OSV)</option>
-                  <option value="makaton">Makaton (Key Word)</option>
-                  <option value="fingerspell">Fingerspelling (A–Z)</option>
+                  <option value="bsl-natural" ${this.grammarMode === 'bsl-natural' ? 'selected' : ''}>BSL L6 (Natural OSV)</option>
+                  <option value="makaton" ${this.grammarMode === 'makaton' ? 'selected' : ''}>Makaton (Key Word)</option>
+                  <option value="fingerspell" ${this.grammarMode === 'fingerspell' ? 'selected' : ''}>Fingerspelling (A–Z)</option>
                 </select>
 
-                <div style="display:flex; gap:3px; overflow-x:auto; padding-bottom:2px; max-width:180px;">
-                  <button type="button" class="bsl-pill-btn" data-word="PRAY" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">PRAY</button>
-                  <button type="button" class="bsl-pill-btn" data-word="CHURCH" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">CHURCH</button>
-                  <button type="button" class="bsl-pill-btn" data-word="SCIENCE" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">SCIENCE</button>
-                  <button type="button" class="bsl-pill-btn" data-word="WHAT" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">WHAT</button>
-                  <button type="button" class="bsl-pill-btn" data-word="EQUAL" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">EQUAL</button>
+                <div id="bsl-quick-pills" style="display:flex; gap:3px; overflow-x:auto; padding-bottom:2px; max-width:180px;">
+                  ${this.getQuickPillsMarkup()}
                 </div>
               </div>
 
@@ -304,15 +309,99 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.avatarWrapper = this.querySelector('#bsl-avatar-wrapper');
   }
 
+  private getQuickPillsMarkup(): string {
+    const words =
+      this.grammarMode === 'makaton'
+        ? ['EAT', 'DRINK', 'HELP', 'PLEASE', 'THANK YOU', 'MORE']
+        : ['PRAY', 'CHURCH', 'SCIENCE', 'WHAT', 'EQUAL'];
+    return words
+      .map(
+        (w) =>
+          `<button type="button" class="bsl-pill-btn" data-word="${w}" style="background:#1e293b; border:1px solid #334155; color:${
+            this.grammarMode === 'makaton' ? '#34d399' : '#38bdf8'
+          }; font-size:0.6rem; padding:2px 5px; border-radius:3px; cursor:pointer; white-space:nowrap;">${w}</button>`
+      )
+      .join('');
+  }
+
+  private bindQuickPillListeners() {
+    const pillsRoot = this.queryAvatarElement('#bsl-quick-pills');
+    const btns = pillsRoot ? pillsRoot.querySelectorAll<HTMLButtonElement>('.bsl-pill-btn') : this.querySelectorAll<HTMLButtonElement>('.bsl-pill-btn');
+    btns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const word = btn.getAttribute('data-word');
+        if (word) this.processUtterance(word, true);
+      });
+    });
+  }
+
+  private applyModeUI(mode: BslGrammarMode) {
+    this.grammarMode = mode;
+    const hudMode = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-mode');
+    if (hudMode) {
+      hudMode.textContent =
+        mode === 'bsl-natural' ? 'BSL L6' : mode === 'makaton' ? 'MAKATON' : 'SPELLING';
+      hudMode.style.color = mode === 'makaton' ? '#34d399' : '#38bdf8';
+    }
+    const selectMode = this.queryAvatarElement<HTMLSelectElement>('#bsl-select-mode');
+    if (selectMode && selectMode.value !== mode) {
+      selectMode.value = mode;
+    }
+    const pillsRoot = this.queryAvatarElement<HTMLElement>('#bsl-quick-pills');
+    if (pillsRoot) {
+      pillsRoot.innerHTML = this.getQuickPillsMarkup();
+      this.bindQuickPillListeners();
+    }
+  }
+
   private bindDomEvents() {
     // POV toggle
     const btnPov = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
     btnPov?.addEventListener('click', () => {
       this.cameraMode = this.cameraMode === 'receiver' ? 'signer' : 'receiver';
+      this.orbitYawOffset = 0;
+      this.orbitPitchOffset = 0;
       if (btnPov) {
         btnPov.textContent = this.cameraMode === 'receiver' ? 'POV: Front' : 'POV: Signer';
       }
     });
+
+    // 360-degree drag-to-orbit on Avatar SVG viewport (double-click to reset)
+    const avatarSvg = this.querySelector<SVGSVGElement>('#bsl-avatar-svg');
+    if (avatarSvg) {
+      let orbiting = false;
+      let startX = 0;
+      let startY = 0;
+      let baseYaw = 0;
+      let basePitch = 0;
+      avatarSvg.style.cursor = 'grab';
+      avatarSvg.addEventListener('pointerdown', (e) => {
+        orbiting = true;
+        startX = e.clientX;
+        startY = e.clientY;
+        baseYaw = this.orbitYawOffset;
+        basePitch = this.orbitPitchOffset;
+        avatarSvg.style.cursor = 'grabbing';
+        avatarSvg.setPointerCapture?.(e.pointerId);
+      });
+      avatarSvg.addEventListener('pointermove', (e) => {
+        if (!orbiting) return;
+        this.orbitYawOffset = baseYaw + (e.clientX - startX) * 0.65;
+        this.orbitPitchOffset = Math.max(-45, Math.min(45, basePitch + (e.clientY - startY) * 0.45));
+      });
+      const stopOrbit = () => {
+        if (orbiting) {
+          orbiting = false;
+          avatarSvg.style.cursor = 'grab';
+        }
+      };
+      avatarSvg.addEventListener('pointerup', stopOrbit);
+      avatarSvg.addEventListener('pointercancel', stopOrbit);
+      avatarSvg.addEventListener('dblclick', () => {
+        this.orbitYawOffset = 0;
+        this.orbitPitchOffset = 0;
+      });
+    }
 
     // Voice toggle
     const btnVoice = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
@@ -330,25 +419,20 @@ export class NativeBslInterpreterElement extends HTMLElement {
       setBslEnabled(false);
     });
 
-    // Mode select
+    // Mode select (synchronizes Makaton / BSL choice with global store)
     const selectMode = this.querySelector<HTMLSelectElement>('#bsl-select-mode');
     selectMode?.addEventListener('change', (e) => {
-      this.grammarMode = (e.target as HTMLSelectElement).value as BslGrammarMode;
-      const hudMode = this.querySelector<HTMLSpanElement>('#bsl-hud-mode');
-      if (hudMode) {
-        hudMode.textContent =
-          this.grammarMode === 'bsl-natural' ? 'BSL L6' :
-          this.grammarMode === 'makaton' ? 'MAKATON' : 'SPELLING';
+      const nextMode = (e.target as HTMLSelectElement).value as BslGrammarMode;
+      this.applyModeUI(nextMode);
+      if (nextMode === 'makaton') {
+        setSignLanguage('MAKATON');
+      } else if (nextMode === 'bsl-natural') {
+        setSignLanguage('BSL');
       }
     });
 
     // Quick Pill Buttons (manual user intent -> speaks audio if voice and sound enabled)
-    this.querySelectorAll<HTMLButtonElement>('.bsl-pill-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const word = btn.getAttribute('data-word');
-        if (word) this.processUtterance(word, true);
-      });
-    });
+    this.bindQuickPillListeners();
 
     // Text Input Form (manual user intent -> speaks audio if voice and sound enabled)
     const textForm = this.querySelector<HTMLFormElement>('#bsl-text-form');
@@ -426,6 +510,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
         btnVoice.textContent = enabled ? '🔊 Audio' : '🔇 Mute';
         btnVoice.style.background = enabled ? '#0284c7' : '#1e293b';
         btnVoice.style.borderColor = enabled ? '#38bdf8' : '#334155';
+      }
+    });
+
+    this.unsubscribeSignLang = subscribeSignLanguage((code) => {
+      if (code === 'MAKATON' && this.grammarMode !== 'makaton') {
+        this.applyModeUI('makaton');
+      } else if (code === 'BSL' && this.grammarMode === 'makaton') {
+        this.applyModeUI('bsl-natural');
       }
     });
 
@@ -576,6 +668,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       const elapsed = now - this.currentPoseStartTime;
       progress = Math.min(1.0, elapsed / this.currentPoseDuration);
     }
+    this.currentAnimProgress = progress;
 
     const easeType = this.targetPose.ease || 'smooth';
     const easeT = evaluateBslEase(easeType, progress);
@@ -597,15 +690,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
     const activePalm = this.targetPose.palm || 'in';
     const activeNmf = this.targetPose.nmf || { eyebrows: 'neutral', mouth: 'closed', headTilt: 'neutral' };
 
-    // Authentic BSL Two-Handed Base Mode Resolution:
-    // In BANZSL, manual fingerspelling and core lexical signs are fundamentally two-handed.
+    // Authentic BSL & Makaton Base Mode Resolution:
+    // Respect explicit 'rest' (one-handed signs such as EAT, DRINK, GOD, SUN, MUM) without forcing vowel-board!
     let baseMode: BslBaseHandMode = this.targetPose.baseHandMode || 'rest';
-    if (!this.targetPose.baseHandMode || this.targetPose.baseHandMode === 'rest') {
+    if (!this.targetPose.baseHandMode) {
       const letter = this.targetPose.letter;
       if (this.targetPose.isVowel || (letter && letter.length === 1 && letter >= 'A' && letter <= 'Z')) {
         baseMode = (letter === 'B' || letter === 'W') ? 'mirror' : letter === 'G' ? 'base-hold' : 'vowel-board';
       } else if (!this.isIdle) {
-        // Bilateral whole-word signs default to mirror; others with active interactions default to base-hold
         const wordClean = (this.targetPose.label || '').toUpperCase();
         if (
           wordClean.includes('PRAY') || wordClean.includes('CHURCH') || wordClean.includes('EQUAL') ||
@@ -614,7 +706,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
         ) {
           baseMode = 'mirror';
         } else {
-          baseMode = 'vowel-board';
+          baseMode = 'rest';
         }
       } else {
         baseMode = 'rest';
@@ -634,12 +726,12 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.eyeBlinkProgress = Math.max(0, this.eyeBlinkProgress - 0.12);
     }
 
-    // Role-shift torso yaw
+    // Role-shift torso yaw + 360-degree user drag orbit offsets
     const roleYaw = activeNmf.roleShift?.yaw || 0;
     const rolePitch = activeNmf.roleShift?.elevation === 'high' ? -4 : activeNmf.roleShift?.elevation === 'low' ? 4 : 0;
     const activeCam = {
-      yaw: cam.yaw + (this.cameraMode === 'receiver' ? -roleYaw : roleYaw),
-      pitch: cam.pitch + rolePitch,
+      yaw: cam.yaw + (this.cameraMode === 'receiver' ? -roleYaw : roleYaw) + this.orbitYawOffset,
+      pitch: cam.pitch + rolePitch + this.orbitPitchOffset,
       distance: cam.distance,
       fov: cam.fov,
     };
@@ -745,8 +837,16 @@ export class NativeBslInterpreterElement extends HTMLElement {
     if (!headGroup) return;
 
     // Head center at y = -72, chin at y = -46, neck span = 22 units (~ 1/3 head proportion invariant)
-    const tiltModX = nmf.headTilt === 'tilt-left' ? -6 : nmf.headTilt === 'tilt-right' ? 6 : 0;
-    const tiltModY = nmf.headTilt === 'nod' ? 5 : 0;
+    const tiltModX =
+      nmf.headTilt === 'shake'
+        ? Math.sin(this.currentAnimProgress * Math.PI * 3.5) * 6.5
+        : nmf.headTilt === 'tilt-left'
+        ? -6
+        : nmf.headTilt === 'tilt-right'
+        ? 6
+        : 0;
+    const tiltModY =
+      nmf.headTilt === 'nod' ? Math.sin(this.currentAnimProgress * Math.PI * 2) * 4.5 : 0;
     const pHead = project3DToSvg({ x: tiltModX, y: -72 + tiltModY, z: 0 }, cam, ox, oy);
     const pNeck = project3DToSvg({ x: tiltModX * 0.5, y: -36 + tiltModY * 0.5, z: 0 }, cam, ox, oy);
     const pChin = project3DToSvg({ x: tiltModX, y: -46 + tiltModY, z: 0 }, cam, ox, oy);
@@ -867,6 +967,12 @@ export class NativeBslInterpreterElement extends HTMLElement {
         <rect x="${(pHead.x - 4).toFixed(1)}" y="${(mY - 2.5).toFixed(1)}" width="8" height="2.2" fill="#ffffff" rx="0.5" />
         <ellipse cx="${pHead.x.toFixed(1)}" cy="${(mY + 1).toFixed(1)}" rx="4.5" ry="2" fill="#f43f5e" />
       `;
+    } else if (mouthType === 'f-mouth') {
+      mouthSvg = `
+        <path d="M ${(pHead.x - 7).toFixed(1)} ${(mY - 1).toFixed(1)} Q ${pHead.x.toFixed(1)} ${(mY + 1).toFixed(1)} ${(pHead.x + 7).toFixed(1)} ${(mY - 1).toFixed(1)}" stroke="#c9564c" stroke-width="1.6" fill="none" />
+        <rect x="${(pHead.x - 4).toFixed(1)}" y="${(mY - 2).toFixed(1)}" width="8" height="2" fill="#ffffff" rx="0.6" />
+        <path d="M ${(pHead.x - 5).toFixed(1)} ${(mY + 1).toFixed(1)} Q ${pHead.x.toFixed(1)} ${(mY + 3.2).toFixed(1)} ${(pHead.x + 5).toFixed(1)} ${(mY + 1).toFixed(1)}" stroke="#e27c73" stroke-width="2" stroke-linecap="round" fill="none" />
+      `;
     } else if (mouthType === 'smile') {
       mouthSvg = `
         <path d="M ${(pHead.x - 8).toFixed(1)} ${(mY - 1).toFixed(1)} Q ${pHead.x.toFixed(1)} ${(mY + 6).toFixed(1)} ${(pHead.x + 8).toFixed(1)} ${(mY - 1).toFixed(1)} Z" fill="url(#bsl-lip-grad)" stroke="#c9564c" stroke-width="1" />
@@ -874,6 +980,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
         <!-- Smile dimple creases -->
         <line x1="${(pHead.x - 9).toFixed(1)}" y1="${(mY - 2).toFixed(1)}" x2="${(pHead.x - 8).toFixed(1)}" y2="${mY.toFixed(1)}" stroke="#d99564" stroke-width="1" />
         <line x1="${(pHead.x + 9).toFixed(1)}" y1="${(mY - 2).toFixed(1)}" x2="${(pHead.x + 8).toFixed(1)}" y2="${mY.toFixed(1)}" stroke="#d99564" stroke-width="1" />
+      `;
+    } else if (!this.isIdle && mouthType !== 'closed' && mouthType !== 'neutral') {
+      // Dynamic lexical lip articulation during active BSL / Makaton word mouthing
+      const pulse = Math.abs(Math.sin(this.currentAnimProgress * Math.PI * 2));
+      const openRy = 1.4 + pulse * 2.2;
+      mouthSvg = `
+        <ellipse cx="${pHead.x.toFixed(1)}" cy="${mY.toFixed(1)}" rx="6.2" ry="${openRy.toFixed(1)}" fill="#26100d" stroke="#c9564c" stroke-width="1.3" />
+        <ellipse cx="${pHead.x.toFixed(1)}" cy="${(mY - openRy * 0.4).toFixed(1)}" rx="3.8" ry="0.9" fill="#ffffff" opacity="0.85" />
       `;
     } else {
       // Natural resting lips with Cupid's bow
@@ -1057,6 +1171,49 @@ export class NativeBslInterpreterElement extends HTMLElement {
       return;
     }
 
+    // 3b. Override spatial anchor & Level 6 Discourse Buoys ('override', 'buoy-list', 'buoy-pointer')
+    if (mode === 'override' || mode === 'buoy-list' || mode === 'buoy-pointer') {
+      const ov = this.targetPose.baseHandOverride;
+      const anchorPalm: Point3D = ov?.palm || {
+        x: BSL_BASE_HAND.palm.x + (ov?.shiftX || 0),
+        y: BSL_BASE_HAND.palm.y + (ov?.shiftY || 0),
+        z: BSL_BASE_HAND.palm.z + (ov?.shiftZ || 10),
+      };
+      const anchorWrist: Point3D = ov?.wrist || {
+        x: anchorPalm.x - 16,
+        y: anchorPalm.y + 34,
+        z: anchorPalm.z - 8,
+      };
+      const anchorForearm: Point3D = { x: anchorWrist.x - 22, y: anchorWrist.y + 28, z: anchorWrist.z - 12 };
+      const pF = project3DToSvg(anchorForearm, cam, ox, oy);
+      const pW = project3DToSvg(anchorWrist, cam, ox, oy);
+      const pP = project3DToSvg(anchorPalm, cam, ox, oy);
+
+      const buoyCount = mode === 'buoy-pointer' ? 1 : this.targetPose.buoy?.count || 3;
+      let digitsSvg = '';
+      for (let d = 0; d < Math.min(4, buoyCount); d++) {
+        const fingerOffset = (d - 1.5) * 9;
+        const pD = project3DToSvg(
+          { x: anchorPalm.x + fingerOffset, y: anchorPalm.y - 26, z: anchorPalm.z + 6 },
+          cam,
+          ox,
+          oy
+        );
+        digitsSvg += `
+          <line x1="${pP.x.toFixed(1)}" y1="${pP.y.toFixed(1)}" x2="${pD.x.toFixed(1)}" y2="${pD.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.4" stroke-linecap="round" />
+          <circle cx="${pD.x.toFixed(1)}" cy="${pD.y.toFixed(1)}" r="2.8" fill="#38bdf8" stroke="#ffffff" stroke-width="1" />
+        `;
+      }
+
+      baseGroup.innerHTML = `
+        <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
+        <line x1="${pW.x.toFixed(1)}" y1="${pW.y.toFixed(1)}" x2="${pP.x.toFixed(1)}" y2="${pP.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
+        <ellipse cx="${pP.x.toFixed(1)}" cy="${pP.y.toFixed(1)}" rx="11" ry="8.5" fill="url(#bsl-hand-base)" stroke="#0284c7" stroke-width="1.5" />
+        ${digitsSvg}
+      `;
+      return;
+    }
+
     // 4. Two-Handed Ready Rest Posture ('rest')
     // Symmetrical resting posture in the lower signing space (mid-chest / upper abdomen)
     const baseForearm: Point3D = { x: -70, y: 80, z: 0 };
@@ -1145,7 +1302,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // 1. Feature detection: W3C Document Picture-in-Picture API
     if (!('documentPictureInPicture' in window)) {
       console.warn('[BSL Interpreter] Document Picture-in-Picture is not supported in this browser.');
-      alert('Document Picture-in-Picture is not supported by your current browser.');
+      const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
+      if (hudNmf) {
+        hudNmf.textContent = 'PiP unavailable in this browser (use Drag / POV)';
+      }
       return;
     }
 
