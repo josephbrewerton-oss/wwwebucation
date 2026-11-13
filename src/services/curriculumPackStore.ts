@@ -1,6 +1,12 @@
 // src/services/curriculumPackStore.ts
 import { StandardStage, StandardSubject, StandardTopic } from '../curriculum/curriculumAdapter';
 import { CurriculumTopicKnowledge } from '../data/oakCurriculumKnowledge';
+import {
+  getAllCurriculumPackRecords,
+  putCurriculumPackRecord,
+  deleteCurriculumPackRecord,
+} from './dbStore';
+import { getLocalState, setLocalState, removeLocalState } from './localStateStore';
 
 export interface CustomQuestionDistractor {
   answerText: string;
@@ -55,22 +61,50 @@ export interface CustomCurriculumPack {
 const STORAGE_KEY_CUSTOM_PACKS = 'stj_custom_curriculum_packs_v1';
 const STORAGE_KEY_ACTIVE_PACK_ID = 'stj_active_custom_curriculum_pack';
 
-// In-memory cache for fast synchronous lookups
-let inMemoryPacksCache: CustomCurriculumPack[] | null = null;
+// In-memory cache for fast synchronous lookups, hydrated from native IndexedDB
+let inMemoryPacksCache: CustomCurriculumPack[] = [];
+let packsHydrated = false;
+let packsInitPromise: Promise<void> | null = null;
+
+export async function initCurriculumPackStore(): Promise<void> {
+  if (packsHydrated) return;
+  if (packsInitPromise) return packsInitPromise;
+
+  packsInitPromise = (async () => {
+    try {
+      const dbPacks = await getAllCurriculumPackRecords<CustomCurriculumPack>();
+      if (dbPacks.length > 0) {
+        inMemoryPacksCache = dbPacks.sort((a, b) => (b.installedAt || 0) - (a.installedAt || 0));
+      } else {
+        const legacySerialized = getLocalState(STORAGE_KEY_CUSTOM_PACKS);
+        if (legacySerialized) {
+          const parsed = JSON.parse(legacySerialized);
+          if (Array.isArray(parsed)) {
+            inMemoryPacksCache = parsed;
+            for (const pack of parsed) {
+              if (pack && pack.id) {
+                await putCurriculumPackRecord(pack);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('[curriculumPackStore] Failed to hydrate packs from IndexedDB:', err);
+    } finally {
+      packsHydrated = true;
+    }
+  })();
+
+  return packsInitPromise;
+}
 
 export function getInstalledCurriculumPacks(): CustomCurriculumPack[] {
   if (typeof window === 'undefined') return [];
-  if (inMemoryPacksCache) return inMemoryPacksCache;
-
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_PACKS);
-    if (!raw) return [];
-    inMemoryPacksCache = JSON.parse(raw);
-    return inMemoryPacksCache || [];
-  } catch (err) {
-    console.warn('[curriculumPackStore] Failed to load custom packs:', err);
-    return [];
+  if (!packsHydrated) {
+    void initCurriculumPackStore();
   }
+  return inMemoryPacksCache;
 }
 
 export function saveCurriculumPack(pack: CustomCurriculumPack): void {
@@ -79,12 +113,11 @@ export function saveCurriculumPack(pack: CustomCurriculumPack): void {
   const updated = [pack, ...existing];
   inMemoryPacksCache = updated;
   try {
-    localStorage.setItem(STORAGE_KEY_CUSTOM_PACKS, JSON.stringify(updated));
-    localStorage.setItem(STORAGE_KEY_ACTIVE_PACK_ID, pack.id);
+    void putCurriculumPackRecord(pack);
+    setLocalState(STORAGE_KEY_ACTIVE_PACK_ID, pack.id);
     window.dispatchEvent(new Event('curriculum_packs_updated'));
-    window.dispatchEvent(new Event('storage'));
   } catch (err) {
-    console.error('[curriculumPackStore] Storage error saving pack:', err);
+    console.error('[curriculumPackStore] IndexedDB error saving pack:', err);
   }
 }
 
@@ -93,12 +126,11 @@ export function removeCurriculumPack(packId: string): void {
   const filtered = getInstalledCurriculumPacks().filter((p) => p.id !== packId);
   inMemoryPacksCache = filtered;
   try {
-    localStorage.setItem(STORAGE_KEY_CUSTOM_PACKS, JSON.stringify(filtered));
-    if (localStorage.getItem(STORAGE_KEY_ACTIVE_PACK_ID) === packId) {
-      localStorage.removeItem(STORAGE_KEY_ACTIVE_PACK_ID);
+    void deleteCurriculumPackRecord(packId);
+    if (getLocalState(STORAGE_KEY_ACTIVE_PACK_ID) === packId) {
+      removeLocalState(STORAGE_KEY_ACTIVE_PACK_ID);
     }
     window.dispatchEvent(new Event('curriculum_packs_updated'));
-    window.dispatchEvent(new Event('storage'));
   } catch (err) {
     console.error('[curriculumPackStore] Error removing pack:', err);
   }

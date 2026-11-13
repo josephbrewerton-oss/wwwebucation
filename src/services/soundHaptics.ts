@@ -11,6 +11,8 @@
  * - Full mute & privacy controls for quiet classrooms.
  */
 
+import { getLocalState, setLocalState } from './localStateStore';
+
 const SOUND_KEY = 'stj_sound_enabled';
 const HAPTICS_KEY = 'stj_haptics_enabled';
 
@@ -32,13 +34,13 @@ function getAudioContext(): AudioContext | null {
 
 export function isSoundEnabled(): boolean {
   if (typeof window === 'undefined') return false;
-  const val = localStorage.getItem(SOUND_KEY);
+  const val = getLocalState(SOUND_KEY);
   return val === null ? true : val === 'true';
 }
 
 export function setSoundEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(SOUND_KEY, String(enabled));
+  setLocalState(SOUND_KEY, String(enabled));
   if (!enabled && 'speechSynthesis' in window) {
     try { window.speechSynthesis.cancel(); } catch (_) {}
   }
@@ -47,13 +49,13 @@ export function setSoundEnabled(enabled: boolean): void {
 
 export function isHapticsEnabled(): boolean {
   if (typeof window === 'undefined') return false;
-  const val = localStorage.getItem(HAPTICS_KEY);
+  const val = getLocalState(HAPTICS_KEY);
   return val === null ? true : val === 'true';
 }
 
 export function setHapticsEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(HAPTICS_KEY, String(enabled));
+  setLocalState(HAPTICS_KEY, String(enabled));
   window.dispatchEvent(new CustomEvent('stj_sound_haptics_updated'));
 }
 

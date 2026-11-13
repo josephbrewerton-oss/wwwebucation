@@ -6,6 +6,7 @@ import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
 import { navigate } from '../router';
 import { getBaseUrl } from '../utils/url';
+import { getLocalState, setLocalState } from '../services/localStateStore';
 import { subscribeToPlayerCalls } from '../services/playerLauncher';
 import {
   NAV_GROUPS,
@@ -116,12 +117,16 @@ export class PersistentAppShellElement extends HTMLElement {
   };
 
   connectedCallback() {
-    this.colorMode = (localStorage.getItem('theme') as 'light' | 'dark') || 'light';
+    this.colorMode = (getLocalState('theme') as 'light' | 'dark') || 'light';
     this.dataSaver = isDataSaverActive();
     this.bsl = getBslEnabled();
     this.sound = isSoundEnabled();
     this.isOfflineSynced = isOfflineSyncComplete();
     document.documentElement.setAttribute('data-theme', this.colorMode);
+    const savedFontSize = getLocalState('app_font_size');
+    if (savedFontSize) document.documentElement.setAttribute('data-font-size', savedFontSize);
+    const savedHighContrast = getLocalState('app_high_contrast');
+    if (savedHighContrast) document.documentElement.setAttribute('data-high-contrast', savedHighContrast);
 
     this.render();
     this.bindEvents();
@@ -455,11 +460,11 @@ export class PersistentAppShellElement extends HTMLElement {
     const btnFontLarge = this.querySelector('#btn-font-large');
     btnFontNormal?.addEventListener('click', () => {
       document.documentElement.setAttribute('data-font-size', 'normal');
-      localStorage.setItem('app_font_size', 'normal');
+      setLocalState('app_font_size', 'normal');
     });
     btnFontLarge?.addEventListener('click', () => {
       document.documentElement.setAttribute('data-font-size', 'large');
-      localStorage.setItem('app_font_size', 'large');
+      setLocalState('app_font_size', 'large');
     });
 
     // Contrast
@@ -469,7 +474,7 @@ export class PersistentAppShellElement extends HTMLElement {
       const next = !current;
       document.documentElement.setAttribute('data-high-contrast', String(next));
       btnContrast.setAttribute('aria-pressed', String(next));
-      localStorage.setItem('app_high_contrast', String(next));
+      setLocalState('app_high_contrast', String(next));
     });
 
     // BSL top button
@@ -500,7 +505,7 @@ export class PersistentAppShellElement extends HTMLElement {
     btnTheme?.addEventListener('click', () => {
       this.colorMode = this.colorMode === 'dark' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-theme', this.colorMode);
-      localStorage.setItem('theme', this.colorMode);
+      setLocalState('theme', this.colorMode);
       if (btnTheme) btnTheme.textContent = this.colorMode === 'dark' ? '☀️' : '🌙';
     });
 

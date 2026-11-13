@@ -5,6 +5,7 @@
  * Synchronizes sign language interpreter overlay visibility, language tuples [spoken, sign],
  * BSL Sign Studio authoring modal, and speech boundaries across the entire app.
  */
+import { getLocalState, setLocalState, subscribeLocalState } from './localStateStore';
 
 export type SignLanguageCode = 'BSL' | 'MAKATON' | 'ASL' | 'LSE' | 'ISL' | 'OFF';
 export type SpokenLanguageCode = string; // e.g., 'en', 'es', 'la', 'fr', etc.
@@ -107,12 +108,11 @@ export interface SignStudioEventPayload {
 export function getSignLanguage(): SignLanguageCode {
   if (typeof window === 'undefined') return 'BSL';
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_SIGN_LANG);
+    const saved = getLocalState(STORAGE_KEY_SIGN_LANG);
     if (saved && (saved in SUPPORTED_SIGN_LANGUAGES)) {
       return saved as SignLanguageCode;
     }
-    // Fallback to legacy bsl_enabled
-    const legacyEnabled = localStorage.getItem(STORAGE_KEY_BSL_ENABLED) === 'true';
+    const legacyEnabled = getLocalState(STORAGE_KEY_BSL_ENABLED) === 'true';
     return legacyEnabled ? 'BSL' : 'OFF';
   } catch (_) {
     return 'BSL';
@@ -125,13 +125,13 @@ export function getSignLanguage(): SignLanguageCode {
 export function setSignLanguage(code: SignLanguageCode): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_SIGN_LANG, code);
-    localStorage.setItem(STORAGE_KEY_BSL_ENABLED, code !== 'OFF' ? 'true' : 'false');
+    setLocalState(STORAGE_KEY_SIGN_LANG, code);
+    setLocalState(STORAGE_KEY_BSL_ENABLED, code !== 'OFF' ? 'true' : 'false');
 
     // Update tuple
     const tuple = getLanguageTuple();
     tuple[1] = code;
-    localStorage.setItem(STORAGE_KEY_LANGUAGE_TUPLE, JSON.stringify(tuple));
+    setLocalState(STORAGE_KEY_LANGUAGE_TUPLE, JSON.stringify(tuple));
 
     window.dispatchEvent(new CustomEvent(SIGN_LANG_EVENT, { detail: { signLanguage: code } }));
     window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: { enabled: code !== 'OFF' } }));
@@ -145,14 +145,14 @@ export function setSignLanguage(code: SignLanguageCode): void {
 export function getLanguageTuple(): LanguageTuple {
   if (typeof window === 'undefined') return ['en', 'BSL'];
   try {
-    const savedTuple = localStorage.getItem(STORAGE_KEY_LANGUAGE_TUPLE);
+    const savedTuple = getLocalState(STORAGE_KEY_LANGUAGE_TUPLE);
     if (savedTuple) {
       const parsed = JSON.parse(savedTuple);
       if (Array.isArray(parsed) && parsed.length >= 2) {
         return [parsed[0] || 'en', (parsed[1] as SignLanguageCode) || 'OFF'];
       }
     }
-    const spoken = localStorage.getItem('app_saved_language') || 'en';
+    const spoken = getLocalState('portal_language') || getLocalState('app_saved_language') || 'en';
     const sign = getSignLanguage();
     return [spoken, sign];
   } catch (_) {
@@ -166,10 +166,11 @@ export function getLanguageTuple(): LanguageTuple {
 export function setLanguageTuple(tuple: LanguageTuple): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_LANGUAGE_TUPLE, JSON.stringify(tuple));
-    localStorage.setItem('app_saved_language', tuple[0]);
-    localStorage.setItem(STORAGE_KEY_SIGN_LANG, tuple[1]);
-    localStorage.setItem(STORAGE_KEY_BSL_ENABLED, tuple[1] !== 'OFF' ? 'true' : 'false');
+    setLocalState(STORAGE_KEY_LANGUAGE_TUPLE, JSON.stringify(tuple));
+    setLocalState('portal_language', tuple[0]);
+    setLocalState('app_saved_language', tuple[0]);
+    setLocalState(STORAGE_KEY_SIGN_LANG, tuple[1]);
+    setLocalState(STORAGE_KEY_BSL_ENABLED, tuple[1] !== 'OFF' ? 'true' : 'false');
 
     window.dispatchEvent(new CustomEvent(TUPLE_EVENT, { detail: { tuple } }));
     window.dispatchEvent(new CustomEvent(SIGN_LANG_EVENT, { detail: { signLanguage: tuple[1] } }));
@@ -188,10 +189,10 @@ export function subscribeLanguageTuple(callback: (tuple: LanguageTuple) => void)
     }
   };
   window.addEventListener(TUPLE_EVENT, handler);
-  window.addEventListener('storage', handler);
+  const unsubState = subscribeLocalState(() => callback(getLanguageTuple()), STORAGE_KEY_LANGUAGE_TUPLE);
   return () => {
     window.removeEventListener(TUPLE_EVENT, handler);
-    window.removeEventListener('storage', handler);
+    unsubState();
   };
 }
 
@@ -206,10 +207,10 @@ export function subscribeSignLanguage(callback: (code: SignLanguageCode) => void
     }
   };
   window.addEventListener(SIGN_LANG_EVENT, handler);
-  window.addEventListener('storage', handler);
+  const unsubState = subscribeLocalState(() => callback(getSignLanguage()), STORAGE_KEY_SIGN_LANG);
   return () => {
     window.removeEventListener(SIGN_LANG_EVENT, handler);
-    window.removeEventListener('storage', handler);
+    unsubState();
   };
 }
 
@@ -242,11 +243,11 @@ export function subscribeBsl(callback: (enabled: boolean) => void): () => void {
   };
 
   window.addEventListener(CHANGE_EVENT, handler);
-  window.addEventListener('storage', handler);
+  const unsubState = subscribeLocalState(() => callback(getBslEnabled()), STORAGE_KEY_BSL_ENABLED);
 
   return () => {
     window.removeEventListener(CHANGE_EVENT, handler);
-    window.removeEventListener('storage', handler);
+    unsubState();
   };
 }
 
@@ -256,7 +257,7 @@ export function subscribeBsl(callback: (enabled: boolean) => void): () => void {
 export function getVoiceEnabled(): boolean {
   if (typeof window === 'undefined') return true;
   try {
-    const val = localStorage.getItem(STORAGE_KEY_VOICE_ENABLED);
+    const val = getLocalState(STORAGE_KEY_VOICE_ENABLED);
     return val !== null ? val === 'true' : true;
   } catch (_) {
     return true;
@@ -269,7 +270,7 @@ export function getVoiceEnabled(): boolean {
 export function setVoiceEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(STORAGE_KEY_VOICE_ENABLED, String(enabled));
+    setLocalState(STORAGE_KEY_VOICE_ENABLED, String(enabled));
   } catch (_) {}
 
   // Immediate kill of any background speech buffers when muted
@@ -307,11 +308,11 @@ export function subscribeVoice(callback: (enabled: boolean) => void): () => void
   };
 
   window.addEventListener(VOICE_CHANGE_EVENT, handler);
-  window.addEventListener('storage', handler);
+  const unsubState = subscribeLocalState(() => callback(getVoiceEnabled()), STORAGE_KEY_VOICE_ENABLED);
 
   return () => {
     window.removeEventListener(VOICE_CHANGE_EVENT, handler);
-    window.removeEventListener('storage', handler);
+    unsubState();
   };
 }
 

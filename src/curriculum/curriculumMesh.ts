@@ -167,7 +167,7 @@ function compileCurriculumMesh() {
           return {
             id: l.id,
             title: l.title,
-            lessonNumber: l.lessonNumber,
+            lessonNumber: l.lessonNumber ?? lIdx + 1,
             urn: `${urn}:${l.id}`,
             questionRefId: matchedQ?.id,
             question: matchedQ,

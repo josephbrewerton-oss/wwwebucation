@@ -25,7 +25,19 @@ const PRECACHE_ASSETS = [
   './patterns/pair-sort.ast',
   './patterns/harmony.ast',
   './manifests/catalog.json',
-  './manifests/rag-index.json'
+  './manifests/rag-index.json',
+  './player.html',
+  './player/index.html',
+  './player/player.css',
+  './player/ast-local-store.js',
+  './player/ast-compiler.js',
+  './player/ast-phet-bridge.js',
+  './player/ast-registry.js',
+  './player/ast-engine.js',
+  './player/ast-webrtc-bus.js',
+  './player/obs-controller.js',
+  './player/player-ui.js',
+  './player/ast-gestures.js'
 ];
 
 self.addEventListener('install', (event) => {
@@ -147,24 +159,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Network-First with cache fallback for core player engine & player.html to prevent stale iframe bugs on deploy
-  const isPlayerCore = url.pathname.includes('player.html') || url.pathname.includes('player-ui.js') || url.pathname.includes('ast-engine.js') || url.pathname.includes('ast-registry.js');
-  if (isPlayerCore) {
-    event.respondWith(
-      fetch(request)
-        .then((networkResponse) => {
-          if (networkResponse && networkResponse.ok) {
-            const clone = networkResponse.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return networkResponse;
-        })
-        .catch(() => caches.match(request))
-    );
-    return;
-  }
-
-  // Cache-First Strategy for all static assets (scripts, styles, images, manifests, AST files)
+  // Cache-First Strategy for all static assets (scripts, styles, player runtime, images, manifests, AST files)
+  // This guarantees 0 bytes of cellular data and zero background network calls once cached.
   // This guarantees 0 bytes of cellular data are used for any asset already stored on the device.
   event.respondWith(
     caches.match(request).then((cachedResponse) => {

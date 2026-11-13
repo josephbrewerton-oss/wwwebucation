@@ -224,8 +224,9 @@
       this._orbitHintTimeout = null;
       this.bslEnabled = false;
       try {
-        if (typeof localStorage !== 'undefined') {
-          this.bslEnabled = localStorage.getItem('stj_bsl_enabled') === 'true';
+        const _store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        if (_store) {
+          this.bslEnabled = _store.getItem('stj_bsl_enabled') === 'true';
         }
       } catch (_) {}
 
@@ -914,36 +915,39 @@
         });
       }
 
-      // 4. Ingest In-Browser Local Vault (offline user simulations & custom cartridges)
+      // 4. Ingest In-Browser Local Vault (IndexedDB offline user simulations & custom cartridges)
       let vaultList = [];
-      try {
-        const rawVault = localStorage.getItem('ast_local_vault');
-        if (rawVault) {
-          const parsed = JSON.parse(rawVault);
-          if (Array.isArray(parsed)) {
-            vaultList = parsed.map(item => ({ ...item, _source: 'vault' }));
+      const _uiStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      if (_uiStore) {
+        try {
+          const rawVault = _uiStore.getItem('ast_local_vault');
+          if (rawVault) {
+            const parsed = JSON.parse(rawVault);
+            if (Array.isArray(parsed)) {
+              vaultList = parsed.map(item => ({ ...item, _source: 'vault' }));
+            }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
 
-      try {
-        const rawCustom = localStorage.getItem('stj_custom_cartridges_v1');
-        if (rawCustom) {
-          const parsed = JSON.parse(rawCustom);
-          if (Array.isArray(parsed)) {
-            parsed.forEach(c => {
-              if (c && c.id && !vaultList.some(v => v.id === c.id)) {
-                vaultList.push({
-                  id: c.id,
-                  title: c.title || c.id,
-                  stage: c.stage || 'LOCAL VAULT',
-                  _source: 'vault'
-                });
-              }
-            });
+        try {
+          const rawCustom = _uiStore.getItem('stj_custom_cartridges_v1');
+          if (rawCustom) {
+            const parsed = JSON.parse(rawCustom);
+            if (Array.isArray(parsed)) {
+              parsed.forEach(c => {
+                if (c && c.id && !vaultList.some(v => v.id === c.id)) {
+                  vaultList.push({
+                    id: c.id,
+                    title: c.title || c.id,
+                    stage: c.stage || 'LOCAL VAULT',
+                    _source: 'vault'
+                  });
+                }
+              });
+            }
           }
-        }
-      } catch (e) {}
+        } catch (e) {}
+      }
 
       if (!list.length && !vaultList.length) {
         list = [
@@ -1129,22 +1133,25 @@
           };
         }
 
-        // 2. Synchronize to localStorage 'stj_custom_cartridges_v1' and 'ast_local_vault'
-        try {
-          let customList = [];
-          const rawCustom = localStorage.getItem('stj_custom_cartridges_v1');
-          if (rawCustom) customList = JSON.parse(rawCustom) || [];
-          const filteredCustom = customList.filter(c => c.id !== id);
-          filteredCustom.unshift(item);
-          localStorage.setItem('stj_custom_cartridges_v1', JSON.stringify(filteredCustom.slice(0, 50)));
+        // 2. Synchronize index to IndexedDB-backed ASTLocalStore
+        const _saveStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        if (_saveStore) {
+          try {
+            let customList = [];
+            const rawCustom = _saveStore.getItem('stj_custom_cartridges_v1');
+            if (rawCustom) customList = JSON.parse(rawCustom) || [];
+            const filteredCustom = customList.filter(c => c.id !== id);
+            filteredCustom.unshift(item);
+            _saveStore.setItem('stj_custom_cartridges_v1', JSON.stringify(filteredCustom.slice(0, 50)));
 
-          let vaultStubs = [];
-          const rawVault = localStorage.getItem('ast_local_vault');
-          if (rawVault) vaultStubs = JSON.parse(rawVault) || [];
-          const filteredStubs = vaultStubs.filter(v => v.id !== id);
-          filteredStubs.unshift({ id, title, stage, savedAt: item.savedAt });
-          localStorage.setItem('ast_local_vault', JSON.stringify(filteredStubs.slice(0, 50)));
-        } catch (_) {}
+            let vaultStubs = [];
+            const rawVault = _saveStore.getItem('ast_local_vault');
+            if (rawVault) vaultStubs = JSON.parse(rawVault) || [];
+            const filteredStubs = vaultStubs.filter(v => v.id !== id);
+            filteredStubs.unshift({ id, title, stage, savedAt: item.savedAt });
+            _saveStore.setItem('ast_local_vault', JSON.stringify(filteredStubs.slice(0, 50)));
+          } catch (_) {}
+        }
 
         // 3. Register in runtime ASTSceneRegistry if available
         if (window.ASTSceneRegistry) {
@@ -1668,8 +1675,9 @@
         this.bslEnabled = !this.bslEnabled;
       }
       try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem('stj_bsl_enabled', this.bslEnabled ? 'true' : 'false');
+        const _bslStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        if (_bslStore) {
+          _bslStore.setItem('stj_bsl_enabled', this.bslEnabled ? 'true' : 'false');
         }
       } catch (_) {}
       this.updateBslButton();
@@ -3140,7 +3148,8 @@ window.addEventListener('message', (e) => {
       }
 
       if (el.cfgStrictBudget) {
-        el.cfgStrictBudget.checked = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
+        const _cfgStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        el.cfgStrictBudget.checked = Boolean(_cfgStore && _cfgStore.getItem('app_frame_budget_alert') === 'true');
         el.cfgStrictBudget.addEventListener('change', () => {
           const strict = el.cfgStrictBudget.checked;
           window.postMessage({
@@ -3318,7 +3327,8 @@ window.addEventListener('message', (e) => {
       const isInteractiveSimulation = Boolean(this.engine?.isContinuousSim || this.engine?.scene?.type === 'Sim' || this.engine?.scene?.cartridgeType === 'Sim');
 
       try {
-        const raw = localStorage.getItem('stj_player_display_config');
+        const _dispStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        const raw = _dispStore ? _dispStore.getItem('stj_player_display_config') : null;
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && typeof parsed === 'object') {
@@ -3446,7 +3456,10 @@ window.addEventListener('message', (e) => {
 
     saveDisplayConfig(config) {
       try {
-        localStorage.setItem('stj_player_display_config', JSON.stringify(config));
+        const _dispStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+        if (_dispStore) {
+          _dispStore.setItem('stj_player_display_config', JSON.stringify(config));
+        }
       } catch (e) {}
     }
 

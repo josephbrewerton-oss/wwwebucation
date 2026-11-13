@@ -1203,8 +1203,8 @@ export class HypervisorHost {
         misconceptions: (questionCandidate as any).misconceptions,
         socraticFollowUp: (questionCandidate as any).socraticFollowUp,
       },
-      req.subject,
-      req.unit
+      req.subject || 'General',
+      req.unit || 'General'
     );
 
     if (!governed.isValid || !governed.sanitizedQuestion) {

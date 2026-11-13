@@ -65,7 +65,7 @@ export class MindSpaceEngine {
     selectedCoordinate?: number | null;
   }): QuestionMindSpace {
     const { keyStage, subject, unit, prompt, options, answerKey, misconceptions, selectedCoordinate } = params;
-    const knowledge: CurriculumTopicKnowledge | undefined = findCurriculumKnowledge(keyStage, subject, unit);
+    const knowledge: CurriculumTopicKnowledge | undefined = findCurriculumKnowledge(keyStage, subject, unit) ?? undefined;
 
     const coreAxiom = knowledge?.coreAxiom || `Fundamental curriculum axiom for ${unit} in ${subject}.`;
     const cognitiveTrap = knowledge?.cognitiveTrap || `Common student misconception regarding ${unit}.`;

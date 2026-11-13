@@ -1,5 +1,6 @@
 // src/services/offlineSyncService.ts
 // Offline-first curriculum preloader for low-connectivity schools and emerging nations
+import { getLocalState, setLocalState } from './localStateStore';
 
 export interface SyncProgress {
   total: number;
@@ -30,7 +31,7 @@ export async function getOfflineStatus(): Promise<OfflineStatus> {
   try {
     const cache = await caches.open(CACHE_NAME);
     const keys = await cache.keys();
-    const lastSync = localStorage.getItem(SYNC_TIMESTAMP_KEY);
+    const lastSync = getLocalState(SYNC_TIMESTAMP_KEY);
 
     return {
       isCached: keys.length > 10,
@@ -128,7 +129,7 @@ export async function downloadCurriculumForOffline(
       );
     }
 
-    localStorage.setItem(SYNC_TIMESTAMP_KEY, Date.now().toString());
+    setLocalState(SYNC_TIMESTAMP_KEY, Date.now().toString());
 
     onProgress?.({
       total,

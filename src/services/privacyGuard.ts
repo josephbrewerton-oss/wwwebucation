@@ -15,16 +15,18 @@
  *    All neural and substrate communication falls back 100% to standard browser `postMessage`.
  */
 
+import { getLocalState, setLocalState, subscribeLocalState } from './localStateStore';
+
 const AIRGAP_MODE_KEY = 'stj_strict_airgap_mode';
 
 export function isStrictAirGapMode(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(AIRGAP_MODE_KEY) === 'true';
+  return getLocalState(AIRGAP_MODE_KEY) === 'true';
 }
 
 export function setStrictAirGapMode(enabled: boolean): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(AIRGAP_MODE_KEY, String(enabled));
+  setLocalState(AIRGAP_MODE_KEY, String(enabled));
   window.dispatchEvent(new CustomEvent('stj_airgap_mode_updated', { detail: { enabled } }));
 }
 
@@ -34,9 +36,9 @@ export function listenToAirGapChanges(callback: (enabled: boolean) => void): () 
     callback(isStrictAirGapMode());
   };
   window.addEventListener('stj_airgap_mode_updated', handler);
-  window.addEventListener('storage', handler);
+  const unsubState = subscribeLocalState(handler, AIRGAP_MODE_KEY);
   return () => {
     window.removeEventListener('stj_airgap_mode_updated', handler);
-    window.removeEventListener('storage', handler);
+    unsubState();
   };
 }

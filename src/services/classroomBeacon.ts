@@ -58,12 +58,9 @@ export interface TeacherBroadcastCommand {
 
 const BEACON_CHANNEL_NAME = 'st_josephs_classroom_beacon';
 
-// Public ICE servers for NAT traversal, prioritizing local host candidates
+// Strict local-first WebRTC configuration (host/LAN candidates only, zero external STUN traffic)
 const DEFAULT_ICE_CONFIG: RTCConfiguration = {
-  iceServers: [
-    { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' },
-  ],
+  iceServers: [],
   iceCandidatePoolSize: 2,
 };
 

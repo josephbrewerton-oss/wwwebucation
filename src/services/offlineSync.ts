@@ -6,6 +6,7 @@
  * onto their device (in CacheStorage and IndexedDB) so that all subsequent visits
  * use ZERO network data calls (true air-gapped / airplane mode operation).
  */
+import { getLocalState, setLocalState } from './localStateStore';
 
 const DEFAULT_CACHE_NAME = 'stj-manifest-v-8003ff2a2bff';
 let currentCacheName = DEFAULT_CACHE_NAME;
@@ -64,12 +65,12 @@ export interface SyncProgress {
 
 export function isOfflineSyncComplete(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(OFFLINE_SYNC_KEY) === 'true';
+  return getLocalState(OFFLINE_SYNC_KEY) === 'true';
 }
 
 export function getOfflineSyncDate(): string | null {
   if (typeof window === 'undefined') return null;
-  return localStorage.getItem(OFFLINE_SYNC_TIMESTAMP);
+  return getLocalState(OFFLINE_SYNC_TIMESTAMP);
 }
 
 export async function checkDeviceStorageSupport(): Promise<{
@@ -167,9 +168,9 @@ export async function syncEntireCurriculumOffline(
       completed++;
     }
 
-    // Mark sync complete in localStorage
-    localStorage.setItem(OFFLINE_SYNC_KEY, 'true');
-    localStorage.setItem(OFFLINE_SYNC_TIMESTAMP, new Date().toLocaleDateString());
+    // Mark sync complete in IndexedDB
+    setLocalState(OFFLINE_SYNC_KEY, 'true');
+    setLocalState(OFFLINE_SYNC_TIMESTAMP, new Date().toLocaleDateString());
     window.dispatchEvent(new CustomEvent('stj_offline_sync_updated', { detail: { complete: true } }));
 
     onProgress?.({

@@ -1565,7 +1565,7 @@ export function analyzeAndTransformBslGrammar(
         cleanWord: clean,
         gloss: timeSign?.gloss || clean,
         role: 'time',
-        sign: timeSign,
+        sign: timeSign ?? undefined,
         nmf: { eyebrows: 'neutral', mouth: clean.toLowerCase() },
       });
       continue;
@@ -1579,7 +1579,7 @@ export function analyzeAndTransformBslGrammar(
         cleanWord: clean,
         gloss: whSign?.gloss || clean,
         role: 'question',
-        sign: whSign,
+        sign: whSign ?? undefined,
         nmf: { eyebrows: 'furrowed', mouth: clean.toLowerCase(), headTilt: 'neutral' },
       });
       continue;
@@ -1593,7 +1593,7 @@ export function analyzeAndTransformBslGrammar(
         cleanWord: clean,
         gloss: 'NOT',
         role: 'negation',
-        sign: negSign,
+        sign: negSign ?? undefined,
         nmf: { eyebrows: 'neutral', mouth: 'no', headTilt: 'shake' },
       });
       continue;
@@ -1680,7 +1680,7 @@ export function analyzeAndTransformBslGrammar(
       raw,
       clean,
       lemma,
-      sign,
+      sign: sign ?? undefined,
       role,
       isPronoun1P: isPronoun1,
       isPronoun2P: isPronoun2,
@@ -2024,7 +2024,7 @@ export function analyzeAndTransformBslGrammar(
       reorderedTokens.push({
         originalWord: classifierPredicateToken.raw,
         cleanWord: classifierPredicateToken.clean,
-        gloss: classifierPredicateToken.gloss,
+        gloss: classifierPredicateToken.gloss ?? classifierPredicateToken.clean,
         role: 'classifier-predicate',
         directionalFrom: fromLocus,
         directionalTo: toLocus,

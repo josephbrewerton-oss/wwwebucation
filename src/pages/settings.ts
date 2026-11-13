@@ -1,4 +1,5 @@
 import { getBaseUrl } from '../utils/url';
+import { getLocalState, setLocalState } from '../services/localStateStore';
 import settingsAST from './settings.ast.json';
 
 type TupleSetting = [
@@ -18,7 +19,7 @@ export function renderSettingsPage(): HTMLElement {
   container.style.cssText = 'max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
   function getValue(key: string, fallback: any): any {
-    const raw = localStorage.getItem(key);
+    const raw = getLocalState(key);
     if (raw === null) return fallback;
     if (raw === 'true') return true;
     if (raw === 'false') return false;
@@ -26,7 +27,7 @@ export function renderSettingsPage(): HTMLElement {
   }
 
   function setValue(key: string, val: any, attr?: string) {
-    localStorage.setItem(key, String(val));
+    setLocalState(key, String(val));
     if (attr) document.documentElement.setAttribute(attr, String(val));
     window.dispatchEvent(new CustomEvent('app-setting-changed', { detail: { key, value: val } }));
   }

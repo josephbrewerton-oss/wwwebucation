@@ -25,6 +25,7 @@ import {
   hasVaultCartridge,
   type VaultCartridgeRecord,
 } from './dbStore';
+import { getLocalState, setLocalState } from './localStateStore';
 import {
   compressCartridge,
   decompressCartridge,
@@ -945,16 +946,16 @@ export async function initCartridgeVault(): Promise<void> {
       // 1. Read existing cartridges from IndexedDB vault
       const vaultItems = await getAllVaultCartridges();
 
-      // 2. Read legacy localStorage items
+      // 2. Check legacy IndexedDB app_state migration buffer (if any)
       let localItems: CartridgeDefinition[] = [];
       if (typeof window !== 'undefined') {
         try {
-          const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CARTRIDGES);
+          const raw = getLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES);
           if (raw) localItems = JSON.parse(raw);
         } catch {}
       }
 
-      // 3. Merge and migrate into IndexedDB
+      // 3. Merge into IndexedDB Vault
       const mergedMap = new Map<string, CartridgeDefinition>();
       vaultItems.forEach((v) => mergedMap.set(v.id, v as CartridgeDefinition));
 
@@ -1014,34 +1015,6 @@ export async function initCartridgeVault(): Promise<void> {
       }
 
       isVaultInitialized = true;
-
-      // 6. Autonomous background idle vault inflation:
-      // Gradually inflate registered curriculum cartridges into IndexedDB so student device never encounters 404s
-      if (typeof window !== 'undefined') {
-        const runBackgroundInflation = () => {
-          const uninflated = PRESET_OPTIONS.filter((opt) => !mergedMap.has(opt.id) || !mergedMap.get(opt.id)?.svgMarkup);
-          let i = 0;
-          const inflateNext = () => {
-            if (i >= uninflated.length) return;
-            const target = uninflated[i++];
-            inflateCartridgeToVault(target.id).finally(() => {
-              if (i < uninflated.length) {
-                if (typeof (window as any).requestIdleCallback === 'function') {
-                  (window as any).requestIdleCallback(inflateNext, { timeout: 1000 });
-                } else {
-                  setTimeout(inflateNext, 250);
-                }
-              }
-            });
-          };
-          if (typeof (window as any).requestIdleCallback === 'function') {
-            (window as any).requestIdleCallback(inflateNext, { timeout: 2000 });
-          } else {
-            setTimeout(inflateNext, 500);
-          }
-        };
-        runBackgroundInflation();
-      }
     } catch (err) {
       console.warn('[cartridgeStore] Failed to initialize cartridge vault:', err);
     }
@@ -1167,7 +1140,7 @@ export function getCustomCartridges(): CartridgeDefinition[] {
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_CUSTOM_CARTRIDGES);
+    const raw = getLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES);
     if (!raw) return [];
     const parsed = JSON.parse(raw);
     const result = Array.isArray(parsed) ? parsed : [];
@@ -1548,12 +1521,10 @@ export function saveCustomCartridge(cartridge: CartridgeDefinition): void {
     console.warn('[cartridgeStore] IndexedDB vault save error:', err);
   });
 
-  // 3. Fallback write to localStorage
+  // 3. Synchronize compact index to IndexedDB app_state
   try {
-    localStorage.setItem(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(updated));
-  } catch {
-    // If quota exceeded in localStorage, IndexedDB still holds the record!
-  }
+    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(updated));
+  } catch {}
 
   // 4. Synchronize into runtime ASTSceneRegistry if available
   const g = window as any;
@@ -1568,7 +1539,6 @@ export function saveCustomCartridge(cartridge: CartridgeDefinition): void {
   }
 
   window.dispatchEvent(new Event('cartridges_updated'));
-  window.dispatchEvent(new Event('storage'));
 }
 
 /**
@@ -1587,15 +1557,14 @@ export function deleteCustomCartridge(cartridgeId: string): void {
     console.warn('[cartridgeStore] IndexedDB vault delete error:', err);
   });
 
-  // 3. Update localStorage fallback
+  // 3. Synchronize compact index to IndexedDB app_state
   try {
-    localStorage.setItem(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(filtered));
+    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(filtered));
   } catch (err) {
-    console.error('[cartridgeStore] Failed to delete cartridge from localStorage:', err);
+    console.error('[cartridgeStore] Failed to update cartridge state:', err);
   }
 
   window.dispatchEvent(new Event('cartridges_updated'));
-  window.dispatchEvent(new Event('storage'));
 }
 
 /**

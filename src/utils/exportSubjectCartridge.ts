@@ -120,7 +120,7 @@ export function exportSubjectCartridge(cartridgeIdOrPackageId: string): void {
     targetScenes = [{
       id: cart.id,
       title: cart.title,
-      category: cart.category,
+      category: cart.category || 'General',
       svgMarkup: cart.svgMarkup || (EMBEDDED_CORE_CARTRIDGES[cart.id]?.svg) || '',
       astSource: cart.astSource || (EMBEDDED_CORE_CARTRIDGES[cart.id]?.ast) || '',
     }];

@@ -1,5 +1,6 @@
 // src/services/dataSaverStore.ts
 // Ultra-low bandwidth & battery saver controller for developing nations and metered networks
+import { getLocalState, setLocalState, subscribeLocalState } from './localStateStore';
 
 const STORAGE_KEY_DATA_SAVER = 'stj_data_saver_mode';
 const EVENT_NAME = 'stj_data_saver_changed';
@@ -12,7 +13,7 @@ const EVENT_NAME = 'stj_data_saver_changed';
 export function isDataSaverActive(): boolean {
   if (typeof window === 'undefined') return false;
 
-  const userPreference = localStorage.getItem(STORAGE_KEY_DATA_SAVER);
+  const userPreference = getLocalState(STORAGE_KEY_DATA_SAVER);
   if (userPreference !== null) {
     return userPreference === 'true';
   }
@@ -33,7 +34,7 @@ export function isDataSaverActive(): boolean {
  */
 export function setDataSaverMode(enabled: boolean): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEY_DATA_SAVER, enabled ? 'true' : 'false');
+  setLocalState(STORAGE_KEY_DATA_SAVER, enabled ? 'true' : 'false');
   applyDataSaverToDOM(enabled);
   window.dispatchEvent(new CustomEvent(EVENT_NAME, { detail: { enabled } }));
 }
@@ -56,20 +57,19 @@ export function applyDataSaverToDOM(enabled: boolean): void {
 export function listenToDataSaverChanges(callback: (enabled: boolean) => void): () => void {
   if (typeof window === 'undefined') return () => {};
 
-  const handler = (e: any) => {
+  const handler = (e: CustomEvent<{ enabled?: boolean }>) => {
     const enabled = e.detail?.enabled ?? isDataSaverActive();
     callback(enabled);
   };
 
-  window.addEventListener(EVENT_NAME, handler);
-  window.addEventListener('storage', (e) => {
-    if (e.key === STORAGE_KEY_DATA_SAVER) {
-      callback(isDataSaverActive());
-    }
-  });
+  window.addEventListener(EVENT_NAME, handler as EventListener);
+  const unsubState = subscribeLocalState(() => {
+    callback(isDataSaverActive());
+  }, STORAGE_KEY_DATA_SAVER);
 
   return () => {
-    window.removeEventListener(EVENT_NAME, handler);
+    window.removeEventListener(EVENT_NAME, handler as EventListener);
+    unsubState();
   };
 }
 

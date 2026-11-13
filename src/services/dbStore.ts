@@ -2,7 +2,7 @@
 import { DomainManifest } from '../types/learning-ast';
 
 const DB_NAME = 'EdgeLearningEngineDB';
-const DB_VERSION = 5; // Version 5: Decentralized Cartridge Vault & Zero-Disk Expansion
+const DB_VERSION = 6; // Version 6: Full IndexedDB-Only App State & Curriculum Pack Stores
 
 const STORE_MANIFESTS = 'manifests';
 const STORE_PROGRESS = 'student_progress';
@@ -11,6 +11,14 @@ const STORE_ADAPTERS = 'dynamic_adapters';
 const STORE_AST_BANK = 'ast_bank';
 const STORE_LESSONS = 'lessons';
 export const STORE_CARTRIDGES_VAULT = 'cartridges_vault';
+export const STORE_APP_STATE = 'app_state';
+export const STORE_CURRICULUM_PACKS = 'curriculum_packs';
+
+export interface AppStateRecord {
+  key: string;
+  value: string;
+  updatedAt: number;
+}
 
 export interface StudentRecord {
   cohortCode: string;
@@ -68,7 +76,7 @@ export interface CachedLessonRecord {
 
 /**
  * Permanent Core Syllabus Manifests & Question Banks Registry.
- * These are pinned permanently in local storage and are 100% exempt from LRU eviction.
+ * These are pinned permanently in IndexedDB storage and are 100% exempt from LRU eviction.
  */
 export const PINNED_CORE_MANIFESTS = new Set<string>([
   'catalog',
@@ -163,6 +171,16 @@ export function openLocalDB(): Promise<IDBDatabase> {
         cartStore.createIndex('source', 'source', { unique: false });
         cartStore.createIndex('updatedAt', 'updatedAt', { unique: false });
       }
+
+      // 8. Unified Native App State Key-Value Store (Preferences, Profile, Configs)
+      if (!db.objectStoreNames.contains(STORE_APP_STATE)) {
+        db.createObjectStore(STORE_APP_STATE, { keyPath: 'key' });
+      }
+
+      // 9. Structured Offline Curriculum Packs Store
+      if (!db.objectStoreNames.contains(STORE_CURRICULUM_PACKS)) {
+        db.createObjectStore(STORE_CURRICULUM_PACKS, { keyPath: 'id' });
+      }
     };
 
     request.onsuccess = () => resolve(request.result);
@@ -172,6 +190,104 @@ export function openLocalDB(): Promise<IDBDatabase> {
 
 // Alias for backwards compatibility
 export const getDB = openLocalDB;
+
+// --- Unified IndexedDB App State Operations ---
+
+export async function getAllAppStateRecords(): Promise<AppStateRecord[]> {
+  if (typeof indexedDB === 'undefined') return [];
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_APP_STATE, 'readonly');
+      const req = tx.objectStore(STORE_APP_STATE).getAll();
+      req.onsuccess = () => resolve((req.result as AppStateRecord[]) || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function putAppStateRecord(key: string, value: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_APP_STATE, 'readwrite');
+      const req = tx.objectStore(STORE_APP_STATE).put({
+        key,
+        value,
+        updatedAt: Date.now(),
+      } satisfies AppStateRecord);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to write app state record:', err);
+  }
+}
+
+export async function deleteAppStateRecord(key: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_APP_STATE, 'readwrite');
+      const req = tx.objectStore(STORE_APP_STATE).delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to delete app state record:', err);
+  }
+}
+
+// --- Native IndexedDB Curriculum Packs Operations ---
+
+export async function getAllCurriculumPackRecords<T = Record<string, unknown>>(): Promise<T[]> {
+  if (typeof indexedDB === 'undefined') return [];
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_CURRICULUM_PACKS, 'readonly');
+      const req = tx.objectStore(STORE_CURRICULUM_PACKS).getAll();
+      req.onsuccess = () => resolve((req.result as T[]) || []);
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+export async function putCurriculumPackRecord<T extends { id: string }>(pack: T): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_CURRICULUM_PACKS, 'readwrite');
+      const req = tx.objectStore(STORE_CURRICULUM_PACKS).put(pack);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to save curriculum pack:', err);
+  }
+}
+
+export async function deleteCurriculumPackRecord(packId: string): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_CURRICULUM_PACKS, 'readwrite');
+      const req = tx.objectStore(STORE_CURRICULUM_PACKS).delete(packId);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to delete curriculum pack:', err);
+  }
+}
 
 // --- Lesson Logic Inflation Operations ---
 

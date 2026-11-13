@@ -2,6 +2,7 @@
 import { SUPPORTED_LANGUAGES, SupportedLanguage, getSavedLanguage } from './operational-language';
 import { aiCaller, hasUserGrantedAiConsent } from './aicaller';
 import { broadcastBslSpeech } from '../services/bslGlobalStore';
+import { getLocalState, setLocalState } from '../services/localStateStore';
 
 // In-memory LRU-like cache
 const MEMORY_TRANSLATION_CACHE = new Map<string, string>();
@@ -17,7 +18,7 @@ function getCached(text: string, targetLang: string, sourceLang = 'en'): string 
   }
   if (typeof window !== 'undefined') {
     try {
-      const stored = localStorage.getItem(`cache_${key}`);
+      const stored = getLocalState(`cache_${key}`);
       if (stored) {
         MEMORY_TRANSLATION_CACHE.set(key, stored);
         return stored;
@@ -32,7 +33,7 @@ function setCached(text: string, targetLang: string, translated: string, sourceL
   MEMORY_TRANSLATION_CACHE.set(key, translated);
   if (typeof window !== 'undefined') {
     try {
-      localStorage.setItem(`cache_${key}`, translated);
+      setLocalState(`cache_${key}`, translated);
     } catch {}
   }
 }
@@ -471,7 +472,7 @@ export async function translateText(
           sourceLanguage: sourceLang,
           targetLanguage: targetLang,
         });
-        if (availability === 'readily' || availability === 'after-download' || availability === 'available') {
+        if (availability === 'readily' || availability === 'available') {
           const translator = await transApi.createTranslator({
             sourceLanguage: sourceLang,
             targetLanguage: targetLang,
@@ -515,35 +516,11 @@ Rules:
         return cleaned;
       }
     } catch {
-      // AI translation failed or timed out, proceed to Web API fallback
+      // On-device AI translation unavailable
     }
   }
 
-  // Tier 5: Free Online Translation API (MyMemory)
-  try {
-    const encoded = encodeURIComponent(text);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 4000);
-
-    const response = await fetch(
-      `https://api.mymemory.translated.net/get?q=${encoded}&langpair=${sourceLang}|${targetLang}`,
-      { signal: controller.signal }
-    );
-    clearTimeout(timeout);
-
-    if (response.ok) {
-      const data = await response.json();
-      const candidate = data?.responseData?.translatedText;
-      if (candidate && typeof candidate === 'string' && !candidate.startsWith('MYMEMORY WARNING')) {
-        setCached(text, targetLang, candidate, sourceLang);
-        return candidate;
-      }
-    }
-  } catch {
-    // Network fallback unavailable
-  }
-
-  // Fallback: return original text
+  // Fallback: return original local text (100% offline, zero external API calls)
   return text;
 }
 

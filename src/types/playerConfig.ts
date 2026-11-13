@@ -8,6 +8,8 @@
 
 export type PlayerDisplayMode = 'suite' | 'classroom' | 'student' | 'broadcast' | 'developer' | 'embedded' | 'custom';
 
+import { getLocalState, setLocalState } from '../services/localStateStore';
+
 export interface PlayerDisplayConfig {
   mode: PlayerDisplayMode;
   
@@ -307,8 +309,8 @@ export function loadSavedPlayerConfig(): PlayerDisplayConfig {
       return getPresetConfig('classroom');
     }
 
-    // 2. Check LocalStorage
-    const raw = localStorage.getItem(CONFIG_STORAGE_KEY);
+    // 2. Check IndexedDB App State
+    const raw = getLocalState(CONFIG_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
@@ -330,7 +332,7 @@ export function loadSavedPlayerConfig(): PlayerDisplayConfig {
 export function savePlayerConfig(config: PlayerDisplayConfig): void {
   if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(config));
+    setLocalState(CONFIG_STORAGE_KEY, JSON.stringify(config));
   } catch (err) {
     console.warn('[PlayerConfig] Error saving display config:', err);
   }

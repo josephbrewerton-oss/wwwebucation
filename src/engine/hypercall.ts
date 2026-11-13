@@ -392,8 +392,8 @@ const AST_NODE_MAP = new Map<string, { execute: (intent: string, payload: any) =
                   ...mathCandidate,
                   prompt: translated.prompt,
                   options: translated.displayOptions,
-                  hint: translated.hint,
-                  explanation: translated.explanation,
+                  hint: translated.hint ?? mathCandidate.hint,
+                  explanation: translated.explanation ?? mathCandidate.explanation,
                 };
               } catch {}
             }
@@ -484,8 +484,8 @@ const AST_NODE_MAP = new Map<string, { execute: (intent: string, payload: any) =
                   ...cartCandidate,
                   prompt: translated.prompt,
                   options: translated.displayOptions,
-                  hint: translated.hint,
-                  explanation: translated.explanation,
+                  hint: translated.hint ?? cartCandidate.hint,
+                  explanation: translated.explanation ?? cartCandidate.explanation,
                   misconceptions: translated.misconceptions || cartCandidate.misconceptions,
                 };
               } catch {}

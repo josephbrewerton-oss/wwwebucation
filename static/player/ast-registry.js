@@ -441,10 +441,10 @@
       if (scenes[norm]) return scenes[norm];
       if (!this.isUnsafeKey(id) && scenes[id]) return scenes[id];
 
-      // Check decentralized localStorage for custom or imported PhET cartridges
-      if (typeof localStorage !== 'undefined') {
+      // Check IndexedDB-backed local store for custom or imported cartridges
+      if (global.ASTLocalStore && typeof global.ASTLocalStore.getItem === 'function') {
         try {
-          const raw = localStorage.getItem('stj_custom_cartridges_v1');
+          const raw = global.ASTLocalStore.getItem('stj_custom_cartridges_v1');
           if (raw) {
             const list = JSON.parse(raw);
             if (Array.isArray(list)) {
@@ -684,19 +684,25 @@
         if (manifestRes) return manifestRes;
       }
 
-      // 2. Fallback: Optional dynamic discovery endpoints if running on custom server
-      const dynamicUrls = ['/api/scenes', '/player/api/scenes'];
-      for (const endpoint of dynamicUrls) {
+      // 2. Hydrate custom/offline cartridges from native IndexedDB Vault
+      if (global.ASTLocalStore && typeof global.ASTLocalStore.getVaultCartridges === 'function') {
         try {
-          const res = await fetch(endpoint).catch(() => null);
-          if (res && res.ok) {
-            const data = await res.json();
-            if (data && Array.isArray(data.scenes) && data.scenes.length > 0) {
-              data.scenes.forEach(sc => {
-                if (sc && sc.id) SceneRegistry.register(sc.id, sc);
-              });
-              return data;
-            }
+          const vaultList = await global.ASTLocalStore.getVaultCartridges();
+          if (Array.isArray(vaultList)) {
+            vaultList.forEach(c => {
+              if (c && c.id && c.svgMarkup && c.astSource) {
+                SceneRegistry.register(c.id, {
+                  id: c.id,
+                  title: c.title || c.id,
+                  stage: c.stage || 'LOCAL VAULT',
+                  duration: c.duration || 12.0,
+                  svgMarkup: c.svgMarkup,
+                  svgText: c.svgMarkup,
+                  astSource: c.astSource,
+                  astText: c.astSource,
+                });
+              }
+            });
           }
         } catch (_) {}
       }

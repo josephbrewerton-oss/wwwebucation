@@ -1,5 +1,6 @@
 // src/services/studentProfileStore.ts
 import { getAllProgressRecords, clearAllStudentProgress, StudentRecord } from './dbStore';
+import { getLocalState, setLocalState, removeLocalState } from './localStateStore';
 import { clearJotterDB } from './jotter-db';
 
 export interface LearnerProfile {
@@ -72,7 +73,7 @@ export function getLearnerProfile(): LearnerProfile {
   }
 
   try {
-    const raw = localStorage.getItem(STORAGE_KEY_PROFILE);
+    const raw = getLocalState(STORAGE_KEY_PROFILE);
     if (raw) {
       const parsed = JSON.parse(raw);
       return {
@@ -103,7 +104,7 @@ export function getLearnerProfile(): LearnerProfile {
 
   // Directly set storage to avoid the recursive loop
   try {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(initial));
+    setLocalState(STORAGE_KEY_PROFILE, JSON.stringify(initial));
   } catch (err) {
     console.warn('[ProfileStore] Error setting initial profile:', err);
   }
@@ -123,7 +124,7 @@ export function saveLearnerProfile(updates: Partial<LearnerProfile>): LearnerPro
   };
 
   try {
-    localStorage.setItem(STORAGE_KEY_PROFILE, JSON.stringify(updated));
+    setLocalState(STORAGE_KEY_PROFILE, JSON.stringify(updated));
     window.dispatchEvent(new CustomEvent('learner_profile_updated', { detail: updated }));
   } catch (err) {
     console.warn('[ProfileStore] Error saving learner profile:', err);
@@ -214,9 +215,9 @@ export async function getLearnerAnalytics(): Promise<LearnerAnalytics> {
  */
 export async function purgeAllLearnerData(): Promise<void> {
   if (typeof window !== 'undefined') {
-    localStorage.removeItem(STORAGE_KEY_PROFILE);
-    localStorage.removeItem('curriculum_standard');
-    localStorage.removeItem('oak_curriculum_standard');
+    removeLocalState(STORAGE_KEY_PROFILE);
+    removeLocalState('curriculum_standard');
+    removeLocalState('oak_curriculum_standard');
   }
 
   await clearAllStudentProgress();

@@ -16,6 +16,7 @@ import {
   saveVerifiedAST, 
   getRandomCachedAST 
 } from '../services/dbStore';
+import { getLocalState } from '../services/localStateStore';
 import { resolveSeedCoordinate } from '../../static/promptStrategies';
 import { healSExprString } from '../utils/astQuestionExtractor';
 import { parseAstNode, type ParsedAstNode } from '../utils/sexprParser';
@@ -252,7 +253,7 @@ export class EdgeCognitiveEngine {
     const nav = typeof navigator !== 'undefined' ? navigator : ({} as any);
 
     // Allow intentional administrator override
-    if (typeof localStorage !== 'undefined' && localStorage.getItem('force_webllm_override') === 'true') {
+    if (getLocalState('force_webllm_override') === 'true') {
       return {
         isEligible: true,
         reason: 'Manual override enabled (force_webllm_override)',

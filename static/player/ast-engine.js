@@ -2223,14 +2223,15 @@
       // Internal Hardware Telemetry & Zero-Allocation Profiler
       this.profiler = null;
       const urlParams = typeof location !== 'undefined' ? new URLSearchParams(location.search) : null;
+      const _store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
       const isHudParam = urlParams ? (urlParams.get('hud') === '1' || urlParams.get('hud') === 'true') : false;
-      const isHudStorage = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
+      const isHudStorage = Boolean(_store && _store.getItem('app_perf_hud_enabled') === 'true');
       const isHudWindow = typeof window !== 'undefined' && window.__AST_PERF_HUD__ === true;
       const perfHudEnabled = isHudParam || isHudStorage || isHudWindow;
 
       if (perfHudEnabled) {
-        const verbosity = (urlParams && urlParams.get('hud_verbosity')) || (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
-        const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || (typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true');
+        const verbosity = (urlParams && urlParams.get('hud_verbosity')) || (_store && _store.getItem('app_hud_verbosity')) || 'minimal';
+        const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || Boolean(_store && _store.getItem('app_frame_budget_alert') === 'true');
 
         // Initialize profiler; UI overlay attaches once container/SVG mounts
         this.profiler = new ASTProfiler({
@@ -2240,9 +2241,25 @@
       }
 
       // Optional Framerate / Power Gating (0 = Adaptive VSync, 30 = Eco, 60 = Standard, 120/240 = Ultra)
-      const isFpsStorage = typeof localStorage !== 'undefined' ? localStorage.getItem('app_target_fps') : null;
+      const isFpsStorage = _store ? _store.getItem('app_target_fps') : null;
       const initialFps = (urlParams && urlParams.get('fps')) || isFpsStorage;
       this.targetFps = initialFps && !isNaN(parseInt(initialFps, 10)) ? parseInt(initialFps, 10) : 0;
+
+      if (_store && _store.ready && typeof _store.isReady === 'function' && !_store.isReady()) {
+        _store.ready.then(() => {
+          const fpsVal = (urlParams && urlParams.get('fps')) || _store.getItem('app_target_fps');
+          if (fpsVal && !isNaN(parseInt(fpsVal, 10))) {
+            this.targetFps = parseInt(fpsVal, 10);
+          }
+          if (!this.profiler && (isHudParam || isHudWindow || _store.getItem('app_perf_hud_enabled') === 'true')) {
+            const verbosity = (urlParams && urlParams.get('hud_verbosity')) || _store.getItem('app_hud_verbosity') || 'minimal';
+            const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || _store.getItem('app_frame_budget_alert') === 'true';
+            this.profiler = new ASTProfiler({ mode: verbosity, strictAlarm });
+            const st = this.getStageSvg && this.getStageSvg();
+            if (st) this.profiler.mount(st);
+          }
+        });
+      }
       this.activeBranches = null;
 
       // Container & Dynamic Bindings
@@ -9463,10 +9480,11 @@ function setupPostMessageBridge(engine, uiController) {
       case 'SET_PERF_HUD':
       case 'TOGGLE_PERF_HUD':
       case 'UPDATE_PERF_HUD': {
+        const _hudStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
         const enabled = typeof data.enabled === 'boolean' ? data.enabled : (!engine.profiler);
         if (enabled) {
-          const mode = data.mode || (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
-          const strictAlarm = typeof data.strictAlarm === 'boolean' ? data.strictAlarm : (typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true');
+          const mode = data.mode || (_hudStore && _hudStore.getItem('app_hud_verbosity')) || 'minimal';
+          const strictAlarm = typeof data.strictAlarm === 'boolean' ? data.strictAlarm : Boolean(_hudStore && _hudStore.getItem('app_frame_budget_alert') === 'true');
           if (!engine.profiler) {
             engine.profiler = new ASTProfiler({ mode, strictAlarm });
           } else {
@@ -9481,11 +9499,11 @@ function setupPostMessageBridge(engine, uiController) {
             engine.profiler = null;
           }
         }
-        if (typeof localStorage !== 'undefined') {
+        if (_hudStore) {
           try {
-            localStorage.setItem('app_perf_hud_enabled', String(enabled));
-            if (data.mode) localStorage.setItem('app_hud_verbosity', data.mode);
-            if (typeof data.strictAlarm === 'boolean') localStorage.setItem('app_frame_budget_alert', String(data.strictAlarm));
+            _hudStore.setItem('app_perf_hud_enabled', String(enabled));
+            if (data.mode) _hudStore.setItem('app_hud_verbosity', data.mode);
+            if (typeof data.strictAlarm === 'boolean') _hudStore.setItem('app_frame_budget_alert', String(data.strictAlarm));
           } catch (_) {}
         }
         engine.notifyParent({

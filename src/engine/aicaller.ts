@@ -1,6 +1,7 @@
 // src/engine/aicaller.ts
 import { edgeCognitiveEngine } from './EdgeCognitiveEngine';
 import { validateStudentInput, sanitizeAiOutput } from '../services/childSafetyFilter';
+import { getLocalState, setLocalState } from '../services/localStateStore';
 
 export interface AiInferenceOptions {
   prompt: string;
@@ -32,17 +33,12 @@ export const CONSENT_STORAGE_KEY = 'ai_model_download_consent';
 
 export function hasUserGrantedAiConsent(): boolean {
   if (typeof window === 'undefined') return false;
-  return localStorage.getItem(CONSENT_STORAGE_KEY) === 'granted';
+  return getLocalState(CONSENT_STORAGE_KEY) === 'granted';
 }
 
 export function setUserAiConsent(granted: boolean): void {
   if (typeof window === 'undefined') return;
-  if (granted) {
-    localStorage.setItem(CONSENT_STORAGE_KEY, 'granted');
-  } else {
-    localStorage.setItem(CONSENT_STORAGE_KEY, 'denied');
-  }
-  window.dispatchEvent(new Event('storage'));
+  setLocalState(CONSENT_STORAGE_KEY, granted ? 'granted' : 'denied');
   window.dispatchEvent(new CustomEvent('ai_consent_changed', { detail: granted }));
 }
 

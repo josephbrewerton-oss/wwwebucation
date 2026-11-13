@@ -15,9 +15,6 @@ export function registerServiceWorker(): void {
       .then((registration) => {
         console.log('[PWA] Service Worker active. Offline-first zero-data engine initialized.');
 
-        // Immediately check for updates on load
-        registration.update().catch(() => {});
-
         registration.onupdatefound = () => {
           const installingWorker = registration.installing;
           if (installingWorker == null) return;
@@ -36,12 +33,5 @@ export function registerServiceWorker(): void {
       .catch((error) => {
         console.warn('[PWA] Service Worker registration note:', error);
       });
-
-    // Check for updates when window regains focus (e.g. returning to tab)
-    window.addEventListener('focus', () => {
-      navigator.serviceWorker.getRegistration().then((reg) => {
-        reg?.update().catch(() => {});
-      }).catch(() => {});
-    });
   });
 }

@@ -1,4 +1,5 @@
 import { getBaseUrl } from '../utils/url';
+import { getLocalState, setLocalState } from '../services/localStateStore';
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
 import {
   saveCustomCartridge,
@@ -61,9 +62,9 @@ function normalizePresetId(raw: string | null | undefined): string {
 }
 
 function buildPlayerSrc(base: string, presetId: string, bslActive: boolean, externalSrc?: string | null): string {
-  const perfHud = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
-  const verbosity = (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
-  const budgetAlert = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
+  const perfHud = getLocalState('app_perf_hud_enabled') === 'true';
+  const verbosity = getLocalState('app_hud_verbosity') || 'minimal';
+  const budgetAlert = getLocalState('app_frame_budget_alert') === 'true';
 
   const params = new URLSearchParams({
     bsl: bslActive ? '1' : '0',
@@ -530,10 +531,10 @@ export function renderPlayerPage(): HTMLElement {
       drawer.className = 'ast-diagnostics-drawer';
       drawer.style.cssText = 'padding: 1rem 1.25rem; color: #f8fafc; font-size: 0.82rem;';
 
-      const perfHud = typeof localStorage !== 'undefined' && localStorage.getItem('app_perf_hud_enabled') === 'true';
-      const verbosity = (typeof localStorage !== 'undefined' && localStorage.getItem('app_hud_verbosity')) || 'minimal';
-      const budgetAlert = typeof localStorage !== 'undefined' && localStorage.getItem('app_frame_budget_alert') === 'true';
-      const targetFps = (typeof localStorage !== 'undefined' && localStorage.getItem('app_target_fps')) || 'adaptive';
+      const perfHud = getLocalState('app_perf_hud_enabled') === 'true';
+      const verbosity = getLocalState('app_hud_verbosity') || 'minimal';
+      const budgetAlert = getLocalState('app_frame_budget_alert') === 'true';
+      const targetFps = getLocalState('app_target_fps') || 'adaptive';
 
       const activeMeta = getPresetMeta(activePreset);
       const isSim = activeMeta.type === 'Sim';
@@ -654,10 +655,10 @@ export function renderPlayerPage(): HTMLElement {
         const budgetEnabled = Boolean(toggleBudget?.checked);
         const fpsChoice = selectFps?.value || 'adaptive';
 
-        localStorage.setItem('app_perf_hud_enabled', String(hudEnabled));
-        localStorage.setItem('app_hud_verbosity', mode);
-        localStorage.setItem('app_frame_budget_alert', String(budgetEnabled));
-        localStorage.setItem('app_target_fps', fpsChoice);
+        setLocalState('app_perf_hud_enabled', String(hudEnabled));
+        setLocalState('app_hud_verbosity', mode);
+        setLocalState('app_frame_budget_alert', String(budgetEnabled));
+        setLocalState('app_target_fps', fpsChoice);
 
         postToPlayer({
           type: 'SET_PERF_HUD',
@@ -1221,9 +1222,9 @@ export function renderPlayerPage(): HTMLElement {
     if (e.detail && (e.detail.key === 'app_perf_hud_enabled' || e.detail.key === 'app_hud_verbosity' || e.detail.key === 'app_frame_budget_alert')) {
       postToPlayer({
         type: 'SET_PERF_HUD',
-        enabled: localStorage.getItem('app_perf_hud_enabled') === 'true',
-        mode: localStorage.getItem('app_hud_verbosity') || 'minimal',
-        strictAlarm: localStorage.getItem('app_frame_budget_alert') === 'true',
+        enabled: getLocalState('app_perf_hud_enabled') === 'true',
+        mode: getLocalState('app_hud_verbosity') || 'minimal',
+        strictAlarm: getLocalState('app_frame_budget_alert') === 'true',
       });
       if (activeDrawer === 'diagnostics') {
         renderActiveDrawer();
