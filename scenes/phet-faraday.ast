@@ -1,27 +1,54 @@
-(:scene :id "phet-faraday" :type "Slide" :oak-id "OAK-KS4-SCI-PHETFARAD" :oak-unit "ks4-science-phet-faraday" :title "PhET Faraday's Induction Distillation" :stage "KS4 PHYSICS" :duration 14.0
-        (:static (
-          (:element :target "#solenoid-coil" :cache true)
-          (:element :target "#galvanometer" :cache true)
-        ))
-        (:actors (
-          (:actor :target "#bar-magnet" :kinematic true :will-change true)
-          (:actor :target "#meter-needle" :kinematic true :will-change true)
-          (:actor :target "#emf-val" :kinematic true)
-        ))
-        (:subtitles (
-          (:start 0.00 :end 4.00 :en "Michael Faraday discovered that moving a magnet through a wire coil induces electric current." :es "Faraday descubrió que mover un imán a través de una bobina induce corriente eléctrica.")
-          (:start 4.00 :end 8.50 :en "The faster the magnetic flux changes (dΦ/dt), the greater the induced electromotive force." :es "Cuanto más rápido cambia el flujo magnético, mayor es la fuerza electromotriz inducida.")
-          (:start 8.50 :end 14.00 :en "Lenz's Law ensures the induced magnetic field opposes the original motion, conserving energy." :es "La ley de Lenz asegura que el campo inducido se opone al movimiento, conservando energía.")
-        ))
-        (:keyframes (
-          (:t 0.00 :title "Rest Position" :rule "No movement -> Zero magnetic flux change (EMF = 0)")
-          (:t 0.35 :title "North Pole Entry" :rule "Flux increases -> Positive induced current")
-          (:t 0.70 :title "Core Saturation" :rule "Inside coil center -> Flux derivative peaks")
-          (:t 1.00 :title "Reversal" :rule "Withdrawing magnet -> Current reverses direction")
-        ))
-        (:bindings (
-          (:target "#bar-magnet" :attr "transform" :expr "'translate(' + (180 + Math.sin(t * Math.PI * 2) * 160) + ', 175)'")
-          (:target "#meter-needle" :attr "transform" :expr "'rotate(' + (Math.cos(t * Math.PI * 2) * 45) + ' 60 60)'")
-          (:target "#emf-val" :attr "textContent" :expr "(Math.cos(t * Math.PI * 2) * 14.2).toFixed(1) + ' mV'")
-        ))
-      )
+(:scene :id "phet-faraday" :type "Sim" :oak-id "OAK-KS4-SCI-PHETFARAD" :oak-unit "ks4-science-phet-faraday" :title "PhET Faraday's Induction Distillation" :stage "KS4 PHYSICS" :duration 14.0
+  (:vars (
+    (:var :name "magnetOffset" :val 0 :min -150 :max 150 :step 5 :unit "mm" :label "Magnet Position Offset")
+    (:var :name "coilTurns" :val 4 :min 1 :max 8 :step 1 :unit "turns" :label "Solenoid Turns (N)")
+    (:var :name "oscSpeed" :val 1.0 :min 0.0 :max 3.0 :step 0.2 :label "Drive Frequency")
+  ))
+  (:inputs (
+    (:slider :var "coilTurns" :label "Solenoid Coil Turns (N)" :min 1 :max 8 :step 1)
+    (:slider :var "oscSpeed" :label "Flux Oscillation Speed" :min 0.0 :max 3.0 :step 0.2)
+    (:slider :var "magnetOffset" :label "Manual Magnet Position" :min -150 :max 150 :step 5)
+  ))
+  (:computed (
+    (:name "posX" :expr "200 + (vars.magnetOffset || 0) + Math.sin(t * Math.PI * 2 * (vars.oscSpeed !== undefined ? vars.oscSpeed : 1.0)) * 130")
+    (:name "emfMv" :expr "Math.cos(t * Math.PI * 2 * (vars.oscSpeed !== undefined ? vars.oscSpeed : 1.0)) * 3.55 * (vars.coilTurns || 4) * (vars.oscSpeed !== undefined ? vars.oscSpeed : 1.0)")
+    (:name "needleAngle" :expr "Math.max(-65, Math.min(65, computed.emfMv * 2.2))")
+  ))
+  (:gestures (
+    (:draggable :target "#bar-magnet" :axis "x" :min -150 :max 150 :var "magnetOffset")
+    (:key :code "ArrowRight" :step-var "magnetOffset" :delta 10 :min -150 :max 150)
+    (:key :code "ArrowLeft" :step-var "magnetOffset" :delta -10 :min -150 :max 150)
+    (:key :code "ArrowUp" :step-var "coilTurns" :delta 1 :min 1 :max 8)
+    (:key :code "ArrowDown" :step-var "coilTurns" :delta -1 :min 1 :max 8)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.30 :en "Michael Faraday discovered that moving a magnet through a wire coil induces electric current." :es "Faraday descubrió que mover un imán a través de una bobina induce corriente eléctrica.")
+    (:start 0.30 :end 0.65 :en "The faster the magnetic flux changes (dΦ/dt) and the more coil turns (N), the greater the induced EMF." :es "Cuanto más rápido cambia el flujo magnético y más espiras tiene la bobina, mayor es la FEM inducida.")
+    (:start 0.65 :end 1.00 :en "Lenz's Law ensures the induced magnetic field opposes the motion that created it, conserving total energy." :es "La ley de Lenz asegura que el campo inducido se opone al movimiento que lo creó, conservando la energía.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Rest / Turning Point" :rule "Zero instantaneous velocity -> Zero flux change (EMF = 0)")
+    (:t 0.35 :title "North Pole Entry" :rule "Increasing magnetic flux -> Positive induced EMF")
+    (:t 0.70 :title "Coil Multiplicity (N)" :rule "Doubling solenoid turns N doubles induced voltage")
+    (:t 1.00 :title "Lenz's Law Reversal" :rule "Withdrawing magnet reverses flux derivative & current polarity")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.38
+      :prompt "What is the induced EMF (voltage) in the copper coil if a strong magnet is held completely stationary inside it?"
+      :options ("0.0 mV — EMF is only induced when magnetic flux is changing over time" "Maximum constant DC voltage" "Infinite voltage" "Negative 100 V")
+      :answer 0
+      :explanation "By Faraday's Law ε = -N(ΔΦ/Δt), if the magnet does not move, ΔΦ/Δt = 0, so zero electromotive force is induced.")
+    (:checkpoint :t 0.78
+      :prompt "If you double both the number of coil turns (N) and the speed at which the magnet moves through the solenoid, how does peak EMF change?"
+      :options ("Peak induced EMF quadruples (4×)" "Peak induced EMF stays the same" "Peak induced EMF halves" "Peak induced EMF drops to zero")
+      :answer 0
+      :explanation "Induced EMF is proportional to both N and the rate of flux change (ΔΦ/Δt). Doubling N (2×) and doubling velocity (2×) multiplies peak EMF by 4×.")
+  ))
+  (:bindings (
+    (:target "#bar-magnet" :attr "transform" :expr "'translate(' + computed.posX.toFixed(1) + ', 175)'")
+    (:target "#coil-turns-label" :attr "textContent" :expr "(vars.coilTurns || 4) + '-Turn Solenoid Coil'")
+    (:target "#meter-needle" :attr "transform" :expr "'rotate(' + computed.needleAngle.toFixed(1) + ' 60 60)'")
+    (:target "#emf-val" :attr "textContent" :expr "(computed.emfMv >= 0 ? '+' : '') + computed.emfMv.toFixed(1) + ' mV'")
+    (:target "#faraday-eq-banner" :attr "textContent" :expr "'ε = -N × (ΔΦ / Δt)  •  N = ' + (vars.coilTurns || 4) + ' Turns  •  EMF = ' + computed.emfMv.toFixed(1) + ' mV'")
+  ))
+)

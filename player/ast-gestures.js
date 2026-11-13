@@ -851,13 +851,20 @@
       if (scene && scene.gestures && Array.isArray(scene.gestures)) {
         scene.gestures.forEach(g => {
           if (!g.target) return;
-          const elements = this.stageSvg.querySelectorAll(g.target);
-          elements.forEach(el => {
+          const matchedList = [];
+          if (this.stageSvg.matches && this.stageSvg.matches(g.target)) {
+            matchedList.push(this.stageSvg);
+          }
+          this.stageSvg.querySelectorAll(g.target).forEach(node => matchedList.push(node));
+
+          matchedList.forEach(el => {
             el.style.pointerEvents = 'auto';
             el.style.touchAction = 'none';
-            el.querySelectorAll('*').forEach(child => {
-              if (child && child.style) child.style.pointerEvents = 'auto';
-            });
+            if (el !== this.stageSvg && g.type !== 'trackball' && g.axis !== 'trackball') {
+              el.querySelectorAll('*').forEach(child => {
+                if (child && child.style) child.style.pointerEvents = 'auto';
+              });
+            }
 
             // A. Declarative Clickable / Holdable Actions (handled cleanly via pointerdown/pointerup/hold loop)
             if (g.type === 'clickable' || g.type === 'holdable') {
@@ -866,10 +873,10 @@
             }
             // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
             else if (g.type === 'trackball' || g.axis === 'trackball') {
-              el.style.cursor = 'grab';
+              if (el !== this.stageSvg) el.style.cursor = 'grab';
               el.setAttribute('data-declarative-trackball', 'true');
-              el.setAttribute('data-yaw-var', g.yawVar || 'turntableYaw');
-              el.setAttribute('data-pitch-var', g.pitchVar || 'cameraPitch');
+              if (g.yawVar) el.setAttribute('data-yaw-var', g.yawVar);
+              if (g.pitchVar) el.setAttribute('data-pitch-var', g.pitchVar);
               el.setAttribute('data-pitch-min', String(g.pitchMin !== undefined ? g.pitchMin : -65));
               el.setAttribute('data-pitch-max', String(g.pitchMax !== undefined ? g.pitchMax : 65));
             }
@@ -992,24 +999,47 @@
       }
 
       // 2. Declarative :trackball tuples (purely driven by scene.gestures, zero hardcoded IDs)
-      const activeTrackball = gestures.find(g => g.type === 'trackball' && g.target && e.target.closest(g.target));
+      const activeTrackball = gestures.find(g => {
+        if (g.type !== 'trackball' || !g.target) return false;
+        if (this.isXRayActive && e.target.closest('[data-pedagogical]')) return false;
+        const tbEl = e.target.closest(g.target);
+        if (!tbEl) return false;
+        // Yield if user clicked a more specific interactive child control inside a broad stage trackball
+        const childControl = e.target.closest('[data-action], [data-planet], [data-draggable], [data-interactive], [data-bind-input], .ast-hotspot');
+        if (childControl && childControl !== tbEl && tbEl.contains(childControl)) {
+          return false;
+        }
+        return true;
+      });
       if (activeTrackball) {
         e.preventDefault();
         this.isDragging = true;
         this.dragMode = 'trackball';
         this.dragTarget = e.target.closest(activeTrackball.target);
         this.dragStart = { x: e.clientX, y: e.clientY };
-        this.trackballYawVar = activeTrackball.yawVar || activeTrackball['yaw-var'] || 'turntableYaw';
-        this.trackballPitchVar = activeTrackball.pitchVar || activeTrackball['pitch-var'] || 'cameraPitch';
+        const hasVars = Boolean(this.engine && this.engine.vars);
+        const explicitYaw = activeTrackball.yawVar || activeTrackball['yaw-var'] || null;
+        const explicitPitch = activeTrackball.pitchVar || activeTrackball['pitch-var'] || null;
+        this.trackballYawVar = explicitYaw || (hasVars && typeof this.engine.vars.turntableYaw === 'number' ? 'turntableYaw' : null);
+        this.trackballPitchVar = explicitPitch || (hasVars && typeof this.engine.vars.cameraPitch === 'number' ? 'cameraPitch' : null);
         this.trackballPitchMin = typeof activeTrackball.pitchMin === 'number' ? activeTrackball.pitchMin : -65;
         this.trackballPitchMax = typeof activeTrackball.pitchMax === 'number' ? activeTrackball.pitchMax : 65;
-        this.trackballStartYaw = (this.engine.vars && typeof this.engine.vars[this.trackballYawVar] === 'number')
+        this.trackballStartYaw = (this.trackballYawVar && hasVars && typeof this.engine.vars[this.trackballYawVar] === 'number')
           ? this.engine.vars[this.trackballYawVar] : 0;
-        this.trackballStartPitch = (this.engine.vars && typeof this.engine.vars[this.trackballPitchVar] === 'number')
+        this.trackballStartPitch = (this.trackballPitchVar && hasVars && typeof this.engine.vars[this.trackballPitchVar] === 'number')
           ? this.engine.vars[this.trackballPitchVar] : 32;
-        if (typeof this.engine.setVar === 'function') this.engine.setVar('autoSpin', false);
-        else if (this.engine.vars) this.engine.vars.autoSpin = false;
-        this.dragTarget.style.cursor = 'grabbing';
+        this.trackballStartCamYaw = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.yawOffset) || 0) : 0;
+        this.trackballStartCamPitch = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.pitchOffset) || 0) : 0;
+        if (hasVars && 'autoSpin' in this.engine.vars) {
+          if (typeof this.engine.setVar === 'function') this.engine.setVar('autoSpin', false);
+          else this.engine.vars.autoSpin = false;
+        }
+        if (e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.setPointerCapture === 'function') {
+          try { this.stageSvg.setPointerCapture(e.pointerId); } catch (_) {}
+        }
+        if (this.dragTarget && this.dragTarget !== this.stageSvg) {
+          this.dragTarget.style.cursor = 'grabbing';
+        }
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
@@ -1237,7 +1267,7 @@
       } else if (this.isXRayActive) {
         const pedNode = e.target.closest('[data-pedagogical]');
         if (pedNode) {
-          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y);
+          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
         }
       } else {
         // Solar System: Proximity selection and backdrop dismissal
@@ -1352,7 +1382,7 @@
       } else if (this.isXRayActive) {
         const pedNode = e.target.closest('[data-pedagogical]');
         if (pedNode) {
-          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y);
+          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
         } else {
           this.hideXRayPopup();
         }
@@ -1449,36 +1479,48 @@
     }
 
     handleTrackballDrag(e) {
-      if (!this.engine || !this.engine.vars) return;
+      if (!this.engine) return;
       const dx = e.clientX - this.dragStart.x;
       const dy = e.clientY - this.dragStart.y;
-      const yawKey = this.trackballYawVar || 'turntableYaw';
-      const pitchKey = this.trackballPitchVar || 'cameraPitch';
+      const yawKey = this.trackballYawVar;
+      const pitchKey = this.trackballPitchVar;
       const pMin = typeof this.trackballPitchMin === 'number' ? this.trackballPitchMin : -65;
       const pMax = typeof this.trackballPitchMax === 'number' ? this.trackballPitchMax : 65;
+      const scene = this.engine.scene;
 
-      const newYaw = ((this.trackballStartYaw + dx * 0.8) % 360 + 360) % 360;
-      const newPitch = Math.max(pMin, Math.min(pMax, this.trackballStartPitch - dy * 0.5));
-      const isUnderside = newPitch < 0;
-
-      this.engine.vars[yawKey] = Math.round(newYaw);
-      this.engine.vars[pitchKey] = Math.round(newPitch);
-      if (pitchKey === 'cameraPitch') {
-        this.engine.vars.flipUnderside = isUnderside;
+      if (yawKey && this.engine.vars) {
+        const bounds = this._resolveVarBounds(scene, {}, yawKey);
+        const rawYaw = this.trackballStartYaw + dx * 0.8;
+        if (Number.isFinite(bounds.min) && Number.isFinite(bounds.max) && bounds.min < 0) {
+          const span = bounds.max - bounds.min || 360;
+          const wrapped = ((((rawYaw - bounds.min) % span) + span) % span) + bounds.min;
+          this.engine.vars[yawKey] = Math.round(wrapped);
+        } else {
+          this.engine.vars[yawKey] = Math.round(((rawYaw % 360) + 360) % 360);
+        }
       }
 
-      // Sync brick view visibility so it NEVER vanishes
-      const topView = this.stageSvg && this.stageSvg.querySelector('#brick-top-view');
-      const underView = this.stageSvg && this.stageSvg.querySelector('#brick-underside-view');
-      if (topView) {
-        topView.style.display = isUnderside ? 'none' : 'inline';
-        topView.setAttribute('display', isUnderside ? 'none' : 'inline');
-        topView.setAttribute('opacity', isUnderside ? '0' : '1');
+      if (pitchKey && this.engine.vars) {
+        const newPitch = Math.max(pMin, Math.min(pMax, this.trackballStartPitch - dy * 0.5));
+        this.engine.vars[pitchKey] = Math.round(newPitch);
+        if ('flipUnderside' in this.engine.vars && pitchKey === 'cameraPitch') {
+          this.engine.vars.flipUnderside = newPitch < 0;
+        }
       }
-      if (underView) {
-        underView.style.display = isUnderside ? 'inline' : 'none';
-        underView.setAttribute('display', isUnderside ? 'inline' : 'none');
-        underView.setAttribute('opacity', isUnderside ? '1' : '0');
+
+      if (scene && (scene.camera || scene.has3D)) {
+        if (!this.engine.cameraOrbit) {
+          this.engine.cameraOrbit = { yawOffset: 0, pitchOffset: 0, distanceScale: 1.0 };
+        }
+        if (!yawKey) {
+          this.engine.cameraOrbit.yawOffset = (this.trackballStartCamYaw || 0) + dx * 0.7;
+        }
+        if (!pitchKey) {
+          this.engine.cameraOrbit.pitchOffset = Math.max(
+            pMin,
+            Math.min(pMax, (this.trackballStartCamPitch || 0) - dy * 0.5)
+          );
+        }
       }
 
       if (typeof this.engine.applyBindings === 'function') {
@@ -3394,7 +3436,7 @@ ${strokeLines.join('\n')}
       this.xrayTooltip = tip;
     }
 
-    showXRayPopup(pedId, svgX, svgY) {
+    showXRayPopup(pedId, svgX, svgY, pedNode = null) {
       if (!this.xrayTooltip) return;
       const KNOWLEDGE_BASE = {
         'kg-piston': {
@@ -3524,7 +3566,26 @@ ${strokeLines.join('\n')}
         }
       };
 
-      const info = KNOWLEDGE_BASE[pedId];
+      let info = KNOWLEDGE_BASE[pedId];
+      if (!info && pedNode) {
+        const attrTitle = pedNode.getAttribute('data-pedagogical-title') || pedNode.getAttribute('data-pedagogical-label');
+        const attrEq = pedNode.getAttribute('data-pedagogical-eq') || '';
+        const attrDesc = pedNode.getAttribute('data-pedagogical-desc') || '';
+        if (attrTitle || attrDesc) {
+          info = {
+            title: attrTitle || pedId,
+            eq: attrEq || 'Lumina Vector X-Ray',
+            desc: attrDesc || attrTitle || ''
+          };
+        } else if (typeof pedId === 'string' && pedId.includes(':')) {
+          const colonIdx = pedId.indexOf(':');
+          info = {
+            title: pedId.slice(0, colonIdx).trim(),
+            eq: 'Interactive Vector Apparatus',
+            desc: pedId.slice(colonIdx + 1).trim()
+          };
+        }
+      }
       if (!info) return;
 
       this.xrayTooltip.innerHTML = `

@@ -25,6 +25,15 @@
     (:name "power" :expr "vars.switchClosed ? ((vars.voltage * vars.voltage) / (vars.resistance || 1.0)) : 0")
   ))
 
+  (:gestures (
+    (:clickable :target "#circuit-switch" :toggle-var "switchClosed")
+    (:key :code "Space" :toggle-var "switchClosed")
+    (:key :code "ArrowUp" :step-var "voltage" :delta 0.5 :min 1.5 :max 24.0)
+    (:key :code "ArrowDown" :step-var "voltage" :delta -0.5 :min 1.5 :max 24.0)
+    (:key :code "ArrowRight" :step-var "resistance" :delta 0.5 :min 1.0 :max 12.0)
+    (:key :code "ArrowLeft" :step-var "resistance" :delta -0.5 :min 1.0 :max 12.0)
+  ))
+
   (:keyframes (
     (:t 0.00 :title "1. Closed Loop Circuit" :rule "Current (I) only flows through an unbroken conductive loop from positive to negative terminal")
     (:t 0.35 :title "2. Voltage Drives Potential" :rule "Voltage (V) is electrical pressure. Higher voltage pushes more coulombs per second")
@@ -58,10 +67,12 @@
     (:target "#resistor-ohms-text" :attr "textContent" :expr "(vars.resistance || 4) + ' Ω'")
     (:target "#formula-legend-text" :attr "textContent" :expr "'Formula: Current I = ' + (vars.voltage || 12) + 'V ÷ ' + (vars.resistance || 4) + 'Ω = ' + Number(computed.current || 0).toFixed(2) + ' Amperes • Power P = ' + (vars.voltage || 12) + 'V × ' + Number(computed.current || 0).toFixed(2) + 'A = ' + Number(computed.power || 0).toFixed(1) + ' Watts'")
 
-    ;; Physical Knife Switch Arm & Label Visuals (Adjust 450 180 to match your SVG hinge)
+    ;; Physical Knife Switch Arm & Label Visuals (Local hinge at x=0, y=20 inside #circuit-switch)
     (:target "#circuit-switch" :attr "data-state" :expr "vars.switchClosed ? 'closed' : 'open'")
-    (:target "#switch-blade" :attr "transform" :expr "vars.switchClosed ? 'rotate(0 450 180)' : 'rotate(-35 450 180)'")
-    (:target "#switch-text" :attr "textContent" :expr "vars.switchClosed ? 'SWITCH: CLOSED (Click to toggle)' : 'SWITCH: OPEN (Click to toggle)'")
+    (:target "#switch-blade" :attr "transform" :expr "vars.switchClosed ? 'rotate(0 0 20)' : 'rotate(-32 0 20)'")
+    (:target "#switch-blade" :attr "stroke" :expr "vars.switchClosed ? '#22c55e' : '#ef4444'")
+    (:target "#switch-text" :attr "fill" :expr "vars.switchClosed ? '#4ade80' : '#f87171'")
+    (:target "#switch-text" :attr "textContent" :expr "vars.switchClosed ? 'SWITCH: CLOSED (Click or Space)' : 'SWITCH: OPEN (Click or Space)'")
 
     ;; Bulb Glow & Filament
     (:target "#bulb-halo" :attr "opacity" :expr "vars.switchClosed ? Math.min(1.0, 0.15 + (Number(computed.power || 0) / 120)) : 0.05")

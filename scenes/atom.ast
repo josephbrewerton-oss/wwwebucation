@@ -26,7 +26,12 @@
     (:name "cardCat" :expr "['', 'Reactive Non-metal (Gr 1)', 'Noble Gas (Gr 18)', 'Alkali Metal (Gr 1)', 'Alkaline Earth (Gr 2)', 'Metalloid (Gr 13)', 'Reactive Non-metal (Gr 14)', 'Reactive Non-metal (Gr 15)', 'Reactive Non-metal (Gr 16)', 'Halogen (Gr 17)', 'Noble Gas (Gr 18)', 'Alkali Metal (Gr 1)', 'Alkaline Earth (Gr 2)', 'Post-Transition Metal (Gr 13)', 'Metalloid (Gr 14)', 'Reactive Non-metal (Gr 15)', 'Reactive Non-metal (Gr 16)', 'Halogen (Gr 17)', 'Noble Gas (Gr 18)'][Math.max(1, Math.min(18, Math.round(vars.atomicNumber || 6)))]")
   ))
   (:gestures (
+    (:trackball :target "#stage-svg")
     (:draggable :target "#nucleus-p1" :axis "xy" :min -30 :max 30)
+    (:key :code "ArrowRight" :step-var "atomicNumber" :delta 1 :min 1 :max 18)
+    (:key :code "ArrowLeft" :step-var "atomicNumber" :delta -1 :min 1 :max 18)
+    (:key :code "ArrowUp" :step-var "orbitSpeed" :delta 0.2 :min 0.2 :max 3.0)
+    (:key :code "ArrowDown" :step-var "orbitSpeed" :delta -0.2 :min 0.2 :max 3.0)
   ))
   (:subtitles (
     (:start 0.00 :end 0.33 :en "At the center is the dense nucleus made of positively charged protons and neutral neutrons." :es "En el centro está el núcleo denso con protones positivos y neutrones neutros.")
@@ -45,6 +50,11 @@
       :options ("2 electrons (2n² = 2(1)²)" "8 electrons" "18 electrons" "4 electrons")
       :answer 0
       :explanation "The Pauli exclusion principle and Bohr orbital rules dictate that shell n holds up to 2n² electrons. For n=1, maximum capacity is 2(1)² = 2 electrons.")
+    (:checkpoint :t 0.85
+      :prompt "Why are Helium (Z=2), Neon (Z=10), and Argon (Z=18) chemically unreactive Noble Gases?"
+      :options ("Their outermost valence electron shells are completely full" "They have zero neutrons in their nuclei" "Their electrons do not carry negative charge" "They only have protons and no electrons")
+      :answer 0
+      :explanation "Elements with completely filled outer valence shells (2 for He; 2,8 for Ne; 2,8,8 for Ar) are energetically stable and rarely gain, lose, or share electrons.")
   ))
   (:bindings (
     <!-- Dynamic HUD Telemetry Text Bindings -->

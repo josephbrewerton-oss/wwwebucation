@@ -68,11 +68,11 @@
     <circle cx="260" cy="340" r="6" fill="#38bdf8"/>
     <circle cx="380" cy="230" r="6" fill="#facc15"/>
     <!-- Brownian Pollen Tracer -->
-    <circle id="brownian-grain" cx="200" cy="210" r="16" fill="#f59e0b" stroke="#fef3c7" stroke-width="3" opacity="0.9"/>
+    <circle id="brownian-grain" cx="200" cy="210" r="16" fill="#f59e0b" stroke="#fef3c7" stroke-width="3" opacity="0.9" data-pedagogical="kg-brownian"/>
   </g>
 
   <!-- Movable Piston Head &amp; Mechanical Shaft -->
-  <g id="piston-assembly" transform="translate(430, 0)">
+  <g id="piston-assembly" transform="translate(430, 0)" data-pedagogical="kg-piston">
     <!-- Piston Face -->
     <rect x="0" y="80" width="28" height="300" rx="4" fill="url(#piston-shaft)" stroke="#cbd5e1" stroke-width="2"/>
     <!-- Grip Ribs -->
@@ -87,7 +87,7 @@
   </g>
 
   <!-- Right Instrument Rack: Bourdon Pressure Gauge -->
-  <g id="pressure-gauge" transform="translate(630, 160)">
+  <g id="pressure-gauge" transform="translate(630, 160)" data-pedagogical="kg-gauge">
     <!-- Gauge Housing (Negative-Space Annular Bezel) -->
     <path fill-rule="evenodd" fill="#0f172a" stroke="#475569" stroke-width="2.5" d="M -64 0 A 64 64 0 1 0 64 0 A 64 64 0 1 0 -64 0 Z M -54 0 A 54 54 0 1 1 54 0 A 54 54 0 1 1 -54 0 Z"/>
     <!-- Gauge Dial Ticks -->
@@ -105,7 +105,7 @@
   </g>
 
   <!-- Thermometer Cylinder -->
-  <g id="thermometer-unit" transform="translate(730, 90)">
+  <g id="thermometer-unit" transform="translate(730, 90)" data-pedagogical="kg-thermo">
     <!-- Outer glass tube -->
     <rect x="0" y="0" width="22" height="180" rx="11" fill="#1e293b" stroke="#475569" stroke-width="2"/>
     <!-- Mercury / Alcohol Column -->
@@ -119,6 +119,18 @@
     <text x="11" y="228" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">
       (27°C)
     </text>
+  </g>
+
+  <!-- Direct Press-and-Hold Thermal Burner & Cryo Cooler Controls -->
+  <g id="thermal-hold-controls" transform="translate(560, 266)">
+    <g id="btn-heat-gas" style="cursor: pointer;">
+      <rect width="74" height="32" rx="6" fill="#450a0a" stroke="#ef4444" stroke-width="1.4"/>
+      <text x="37" y="20" fill="#fecaca" font-size="9.5" font-weight="900" text-anchor="middle">🔥 Hold Heat</text>
+    </g>
+    <g id="btn-cool-gas" transform="translate(80, 0)" style="cursor: pointer;">
+      <rect width="74" height="32" rx="6" fill="#082f49" stroke="#38bdf8" stroke-width="1.4"/>
+      <text x="37" y="20" fill="#bae6fd" font-size="9.5" font-weight="900" text-anchor="middle">❄️ Hold Cool</text>
+    </g>
   </g>
 
   <!-- State of Matter Indicator Pills -->

@@ -12,7 +12,17 @@
     (:name "hydrogenBonds" :expr "Math.round((1.0 - vars.unzipProgress) * 45)")
   ))
   (:gestures (
+    (:trackball :target "#stage-svg")
     (:draggable :target "#dna-line-0" :axis "xy" :min -50 :max 50)
+    (:clickable :target "#btn-dna-unzip-0" :set-var "unzipProgress" :val 0.0)
+    (:clickable :target "#btn-dna-unzip-50" :set-var "unzipProgress" :val 0.5)
+    (:clickable :target "#btn-dna-unzip-100" :set-var "unzipProgress" :val 1.0)
+    (:clickable :target "#btn-dna-speed-1" :set-var "rotSpeed" :val 1.0)
+    (:clickable :target "#btn-dna-speed-2" :set-var "rotSpeed" :val 2.0)
+    (:key :code "ArrowUp" :step-var "unzipProgress" :delta 0.05 :min 0.0 :max 1.0)
+    (:key :code "ArrowDown" :step-var "unzipProgress" :delta -0.05 :min 0.0 :max 1.0)
+    (:key :code "ArrowRight" :step-var "rotSpeed" :delta 0.2 :min 0.2 :max 3.0)
+    (:key :code "ArrowLeft" :step-var "rotSpeed" :delta -0.2 :min 0.2 :max 3.0)
   ))
   (:subtitles (
     (:start 0.00 :end 0.35 :en "DNA contains hereditary code structured as an anti-parallel double helix spiraling in 3D." :es "El ADN contiene el código genético estructurado como una doble hélice en 3D.")
@@ -31,6 +41,11 @@
       :options ("Thymine (T) via 2 hydrogen bonds" "Cytosine (C)" "Guanine (G)" "Uracil (only in RNA)")
       :answer 0
       :explanation "In double-stranded DNA, Adenine (A) always pairs specifically with Thymine (T) via 2 hydrogen bonds, while Guanine (G) pairs with Cytosine (C) via 3 hydrogen bonds.")
+    (:checkpoint :t 0.85
+      :prompt "Which enzyme unzips the hydrogen bonds between DNA strands at the replication fork?"
+      :options ("DNA Helicase" "Amylase" "Lipase" "Hemoglobin")
+      :answer 0
+      :explanation "DNA Helicase unwinds the double helix and breaks weak hydrogen bonds between complementary bases so each strand can serve as a template.")
   ))
   (:bindings (
     (:target "#dna-status-text" :attr "textContent" :expr "vars.unzipProgress > 0 ? ('Replication Fork: Helicase Active! ' + computed.hydrogenBonds + ' / 45 H-Bonds Intact (' + Math.round((1 - vars.unzipProgress) * 100) + '%)') : 'Strand A 5\\'→3\\' • Strand B 3\\'→5\\' • 45 Hydrogen Bonds (100% Intact)'")

@@ -166,7 +166,11 @@
   </g>
 
   <!-- Central Sun System (Clickable) -->
-  <g id="sun-group" style="cursor: pointer;" data-action="inspect-planet" data-planet="sun">
+  <g id="sun-group" style="cursor: pointer;" data-action="inspect-planet" data-planet="sun"
+     data-pedagogical="solar-sun"
+     data-pedagogical-title="G2V Main-Sequence Star (The Sun)"
+     data-pedagogical-eq="F_g = G × (M_☉ × m) / r²"
+     data-pedagogical-desc="Contains 99.86% of Solar System mass. Nuclear fusion in its 15-million-Kelvin core converts hydrogen into helium.">
     <circle id="sun-corona" cx="400" cy="240" r="42" fill="url(#sun-corona-rad)" opacity="0.65" filter="url(#solar-flare)" />
     <circle id="sun-body" cx="400" cy="240" r="26" fill="url(#sun-plasma)" stroke="#ffedd5" stroke-width="1.5" />
   </g>
@@ -191,7 +195,8 @@
   <text id="label-venus" x="480" y="259" fill="#fef08a" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="venus">Venus</text>
 
   <!-- 3. Earth & Moon -->
-  <circle id="planet-earth" cx="518" cy="240" r="8" fill="url(#planet-grad-earth)" stroke="#93c5fd" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth" />
+  <circle id="planet-earth" cx="518" cy="240" r="8" fill="url(#planet-grad-earth)" stroke="#93c5fd" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth"
+          data-pedagogical="solar-earth" data-pedagogical-title="Earth (1.00 AU Habitable Zone)" data-pedagogical-eq="v_orb = 29.78 km/s • Tilt = 23.4°" data-pedagogical-desc="Axial tilt of 23.4° produces Earth's four seasons as it completes a 365.25-day orbit around the Sun." />
   <text id="label-earth" x="518" y="260" fill="#7dd3fc" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="earth">Earth</text>
   <circle id="moon-earth" cx="534" cy="240" r="2.2" fill="url(#moon-grad)" stroke="#ffffff" stroke-width="0.4" style="cursor: pointer;" data-action="inspect-planet" data-planet="moon" />
 
@@ -200,12 +205,14 @@
   <text id="label-mars" x="555" y="257" fill="#fca5a5" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="mars">Mars</text>
 
   <!-- 5. Jupiter -->
-  <circle id="planet-jupiter" cx="610" cy="240" r="13" fill="url(#planet-grad-jupiter)" stroke="#ea580c" stroke-width="1" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter" />
+  <circle id="planet-jupiter" cx="610" cy="240" r="13" fill="url(#planet-grad-jupiter)" stroke="#ea580c" stroke-width="1" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter"
+          data-pedagogical="solar-jupiter" data-pedagogical-title="Jupiter (Jovian Gas Giant)" data-pedagogical-eq="M_J = 318 M_⊕ • Period = 11.86 yr" data-pedagogical-desc="Largest planet in the Solar System; its immense gravity shields inner rocky worlds by deflecting long-period comets." />
   <text id="label-jupiter" x="610" y="265" fill="#fed7aa" font-size="10.5" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="jupiter">Jupiter</text>
 
   <!-- 6. Saturn & Rings -->
   <path id="saturn-ring" fill="none" stroke="url(#saturn-ring-grad)" stroke-width="3.5" opacity="0.9" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn" />
-  <circle id="planet-saturn" cx="665" cy="240" r="10" fill="url(#planet-grad-saturn)" stroke="#ca8a04" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn" />
+  <circle id="planet-saturn" cx="665" cy="240" r="10" fill="url(#planet-grad-saturn)" stroke="#ca8a04" stroke-width="0.8" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn"
+          data-pedagogical="solar-saturn" data-pedagogical-title="Saturn &amp; Roche-Limit Ice Rings" data-pedagogical-eq="ρ = 0.687 g/cm³ (&lt; Water)" data-pedagogical-desc="Surrounded by billions of water-ice ring particles orbiting inside Saturn's gravitational Roche limit." />
   <text id="label-saturn" x="665" y="263" fill="#fef08a" font-size="10" font-weight="700" text-anchor="middle" filter="url(#planet-label-shadow)" style="cursor: pointer;" data-action="inspect-planet" data-planet="saturn">Saturn</text>
 
   <!-- 7. Uranus & Ring -->

@@ -1,4 +1,4 @@
-import{c as e,i as t,l as n,m as r,n as i,o as a,r as o,s}from"./cartridge-vault-IHcQuGeP.js";import{a as c,c as l,d as u,g as d,i as f,l as p,o as m,r as h,s as g,u as _,v}from"./bsl-engine-D_dCVfTn.js";import{t as y}from"./EdgeCognitiveEngine-BcCOssbq.js";function b(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{c as e,i as t,l as n,m as r,n as i,o as a,r as o,s}from"./cartridge-vault-DbeZk0QZ.js";import{a as c,c as l,d as u,g as d,i as f,l as p,o as m,r as h,s as g,u as _,v}from"./bsl-engine-D_dCVfTn.js";import{t as y}from"./EdgeCognitiveEngine-Be5ySFF9.js";function b(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;

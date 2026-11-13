@@ -12,7 +12,11 @@
     (:name "earthDays" :expr "Math.round((vars.warpSpeed || 1) * 365)")
   ))
   (:gestures (
+    (:trackball :target "#stage-svg")
     (:draggable :target "#sun-body" :axis "xy" :min -30 :max 30)
+    (:key :code "ArrowUp" :step-var "warpSpeed" :delta 0.4 :min 0.2 :max 10.0)
+    (:key :code "ArrowDown" :step-var "warpSpeed" :delta -0.4 :min 0.2 :max 10.0)
+    (:key :code "KeyO" :toggle-var "showOrbits")
   ))
   (:subtitles (
     (:start 0.00 :end 0.30 :en "At the focal center sits our Sun. Click any planet or use the Cosmic Ribbon to reveal its Cosmic Fact Card!" :es "En el centro se encuentra el Sol. ¡Haz clic en cualquier planeta o en la barra cósmica para ver su tarjeta cósmica de datos!")
@@ -31,6 +35,11 @@
       :options ("Mercury (closest orbital radius, 88 days)" "Earth (365 days)" "Jupiter (12 Earth years)" "Neptune (165 Earth years)")
       :answer 0
       :explanation "Planets closest to the Sun experience the strongest gravitational pull and have the smallest orbital circumference, resulting in the shortest orbital period (Mercury orbits in just 88 Earth days).")
+    (:checkpoint :t 0.80
+      :prompt "What keeps the eight planets moving in curved orbits around the Sun instead of flying off in a straight line into deep space?"
+      :options ("Centripetal gravitational force exerted by the Sun's 99.86% system mass" "Magnetic attraction from Earth's North Pole" "Solar wind pushing planets inward" "Friction from interplanetary air")
+      :answer 0
+      :explanation "By Newton's Law of Universal Gravitation, the Sun's immense mass provides the inward centripetal force that continuously bends each planet's tangential inertia into a closed orbit.")
   ))
   (:bindings (
     (:target "#sun-body" :type "3d-node" :x "0" :y "0" :z "0" :base-r 26 :depth-fog false)
@@ -44,6 +53,14 @@
     (:target "#orbit-saturn" :type "3d-ring" :r "265" :depth-fog true)
     (:target "#orbit-uranus" :type "3d-ring" :r "320" :depth-fog true)
     (:target "#orbit-neptune" :type "3d-ring" :r "370" :depth-fog true)
+    (:target "#orbit-mercury" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-venus" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-earth" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.55")
+    (:target "#orbit-mars" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-jupiter" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-saturn" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-uranus" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
+    (:target "#orbit-neptune" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
 
     (:target "#planet-mercury" :type "3d-node"
       :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.3714) * Math.PI * 2) * 50"

@@ -1,4 +1,4 @@
-import{l as e,m as t}from"./cartridge-vault-IHcQuGeP.js";function n(){let n=t(),r=document.createElement(`div`);return r.className=`curriculum-studio-stage`,r.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,r.innerHTML=`
+import{l as e,m as t}from"./cartridge-vault-DbeZk0QZ.js";function n(){let n=t(),r=document.createElement(`div`);return r.className=`curriculum-studio-stage`,r.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,r.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">

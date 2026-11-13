@@ -20,6 +20,10 @@
     (:draggable :target "#pyth-handle-b" :axis "x" :min 360 :max 680)
     (:draggable :target "#pyth-rect-a" :axis "y" :min 100 :max 350)
     (:draggable :target "#pyth-rect-b" :axis "x" :min 360 :max 680)
+    (:key :code "ArrowUp" :step-var "sideA" :delta 1 :min 1 :max 15)
+    (:key :code "ArrowDown" :step-var "sideA" :delta -1 :min 1 :max 15)
+    (:key :code "ArrowRight" :step-var "sideB" :delta 1 :min 1 :max 15)
+    (:key :code "ArrowLeft" :step-var "sideB" :delta -1 :min 1 :max 15)
   ))
   (:subtitles (
     (:start 0.00 :end 0.35 :en "Drag the handles or select Pythagorean triples to test right triangles." :es "Arrastra los controles o selecciona ternas pitagóricas para probar triángulos rectángulos.")
@@ -32,8 +36,18 @@
     (:t 0.70 :title "Vector Area Sum" :rule "Total square units: a² + b² = c²")
     (:t 1.00 :title "Hypotenuse Square c²" :rule "c = √(a² + b²) preserved across continuous geometry")
   ))
-  (:interactive false)
-  (:questions false)
+  (:interactive (
+    (:checkpoint :t 0.38
+      :prompt "In a right-angled triangle with perpendicular legs a = 3 units and b = 4 units, what is the exact length of hypotenuse c?"
+      :options ("5 units (since 3² + 4² = 9 + 16 = 25, and √25 = 5)" "7 units (3 + 4)" "12 units (3 × 4)" "25 units")
+      :answer 0
+      :explanation "3-4-5 is the classic Pythagorean triple: a² + b² = 9 + 16 = 25, so hypotenuse c = √25 = 5 units.")
+    (:checkpoint :t 0.78
+      :prompt "Does Pythagoras' Theorem (a² + b² = c²) hold true for ALL triangles, or only right-angled (90°) triangles?"
+      :options ("Strictly right-angled triangles where legs a and b meet at 90°" "Every acute and obtuse triangle equally" "Only equilateral triangles" "Only triangles with integer side lengths")
+      :answer 0
+      :explanation "Exact area conservation a² + b² = c² applies exclusively when legs a and b are perpendicular (90°); non-right triangles require the Law of Cosines.")
+  ))
   (:bindings (
     (:target "#pyth-txt-a" :attr "text" :expr "'a² = ' + (vars.sideA * vars.sideA)")
     (:target "#pyth-txt-b" :attr "text" :expr "'b² = ' + (vars.sideB * vars.sideB)")

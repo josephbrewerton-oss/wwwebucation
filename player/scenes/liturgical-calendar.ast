@@ -19,6 +19,13 @@
     ;; Normalized fraction of the year (0.0 to 1.0) used for all color, text, and halo switches:
     (:name "yearNorm" :expr "activeAngle / 360")
   ))
+  (:gestures (
+    (:rotatable :target "#liturgical-dial-needle" :cx 400 :cy 220 :var "seasonAngle")
+    (:key :code "ArrowRight" :step-var "seasonAngle" :delta 5.0 :min 0.0 :max 360.0)
+    (:key :code "ArrowLeft" :step-var "seasonAngle" :delta -5.0 :min 0.0 :max 360.0)
+    (:key :code "ArrowUp" :step-var "vestmentGlow" :delta 0.1 :min 0.4 :max 2.0)
+    (:key :code "ArrowDown" :step-var "vestmentGlow" :delta -0.1 :min 0.4 :max 2.0)
+  ))
   (:subtitles (
     (:start 0.00 :end 0.16 :en "Advent (Violet / Purple): Four weeks of joyful expectation, preparation, and penance awaiting the twofold coming of Christ: His birth in Bethlehem and His return in glory. Third Sunday: Rose (Gaudete)." :es "Adviento (Morado): Cuatro semanas de preparación alegre y penitencia esperando la venida de Cristo. Tercer domingo: Rosa (Gaudete)." :la "Tempus Adventus: Veni, veni Emmanuel, captivum solve Israel. Gaudete in Domino semper: iterum dico, gaudete.")
     (:start 0.16 :end 0.32 :en "Christmas Season (White & Gold): From the Nativity of the Lord on December 25th through the Epiphany of the Lord to the Baptism of the Lord. Celebrating the Incarnation—the Word made flesh." :es "Navidad (Blanco y Dorado): Del 25 de diciembre al Bautismo del Señor. Celebramos la Encarnación: el Verbo se hizo carne." :la "Tempus Nativitatis: Verbum caro factum est, et habitavit in nobis. Puer natus est nobis, et filius datus est nobis.")

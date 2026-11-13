@@ -1,21 +1,65 @@
-(:scene :id "phet-balancing-chemical" :type "Slide" :oak-id "OAK-KS4-SCI-PHETBALAN" :oak-unit "ks4-science-phet-balancing-chemical" :title "PhET Chemical Equations Distillation" :stage "KS3/KS4 CHEMISTRY" :duration 12.0
-        (:static (
-          (:element :target "#stage-svg text" :cache true)
-        ))
-        (:actors (
-          (:actor :target "#stage-svg" :kinematic true)
-        ))
-        (:subtitles (
-          (:start 0.00 :end 4.00 :en "Matter can neither be created nor destroyed in a chemical reaction." :es "La materia no se crea ni se destruye en una reacción química.")
-          (:start 4.00 :end 8.00 :en "We adjust stoichiometric coefficients so that the number of atoms on each side matches." :es "Ajustamos los coeficientes para que el número de átomos en cada lado coincida.")
-          (:start 8.00 :end 12.00 :en "Two molecules of hydrogen gas combine with one oxygen molecule to yield two water molecules." :es "Dos moléculas de hidrógeno se combinan con una de oxígeno para dar dos moléculas de agua.")
-        ))
-        (:keyframes (
-          (:t 0.00 :title "Unbalanced State" :rule "H2 + O2 -> H2O (Oxygen atom deficit on right)")
-          (:t 0.50 :title "Coefficient Increment" :rule "2 H2 + O2 -> 2 H2O stoichiometric balancing")
-          (:t 1.00 :title "Conservation Verified" :rule "Mass preserved exactly: 4H + 2O = 4H + 2O")
-        ))
-        (:bindings (
-          (:target "#stage-svg" :attr "opacity" :expr "0.95 + 0.05 * Math.sin(t * Math.PI)")
-        ))
-      )
+(:scene :id "phet-balancing-chemical" :type "Sim" :oak-id "OAK-KS4-SCI-PHETBALAN" :oak-unit "ks4-science-phet-balancing-chemical" :title "PhET Chemical Equations Distillation" :stage "KS3/KS4 CHEMISTRY" :duration 12.0
+  (:vars (
+    (:var :name "cH2" :val 2 :min 1 :max 6 :step 1 :label "H₂ Coefficient")
+    (:var :name "cO2" :val 1 :min 1 :max 4 :step 1 :label "O₂ Coefficient")
+    (:var :name "cH2O" :val 2 :min 1 :max 6 :step 1 :label "H₂O Coefficient")
+  ))
+  (:inputs (
+    (:slider :var "cH2" :label "Reactant H₂ Molecules" :min 1 :max 6 :step 1)
+    (:slider :var "cO2" :label "Reactant O₂ Molecules" :min 1 :max 4 :step 1)
+    (:slider :var "cH2O" :label "Product H₂O Molecules" :min 1 :max 6 :step 1)
+  ))
+  (:computed (
+    (:name "leftH" :expr "(vars.cH2 || 2) * 2")
+    (:name "leftO" :expr "(vars.cO2 || 1) * 2")
+    (:name "rightH" :expr "(vars.cH2O || 2) * 2")
+    (:name "rightO" :expr "(vars.cH2O || 2) * 1")
+    (:name "isBalanced" :expr "computed.leftH === computed.rightH && computed.leftO === computed.rightO")
+  ))
+  (:gestures (
+    (:clickable :target "#reactants-card" :step-var "cH2" :delta 1 :min 1 :max 6)
+    (:clickable :target "#products-card" :step-var "cH2O" :delta 1 :min 1 :max 6)
+    (:key :code "ArrowUp" :step-var "cH2" :delta 1 :min 1 :max 6)
+    (:key :code "ArrowDown" :step-var "cH2" :delta -1 :min 1 :max 6)
+    (:key :code "ArrowRight" :step-var "cH2O" :delta 1 :min 1 :max 6)
+    (:key :code "ArrowLeft" :step-var "cH2O" :delta -1 :min 1 :max 6)
+    (:key :code "KeyR" :set-var "cH2" :val 2)
+    (:key :code "KeyR" :set-var "cO2" :val 1)
+    (:key :code "KeyR" :set-var "cH2O" :val 2)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.33 :en "Lavoisier's Law of Conservation of Mass: atoms are neither created nor destroyed in any chemical reaction." :es "La materia no se crea ni se destruye en una reacción química.")
+    (:start 0.33 :end 0.67 :en "Adjust stoichiometric coefficients using sliders, clicks, or arrow keys until H and O atom totals match on both sides." :es "Ajusta los coeficientes estequiométricos para que el número de átomos en cada lado coincida.")
+    (:start 0.67 :end 1.00 :en "2 H₂ + 1 O₂ → 2 H₂O balances cleanly with 4 Hydrogen and 2 Oxygen atoms conserved across the yield arrow!" :es "2 H₂ + 1 O₂ → 2 H₂O conserva exactamente 4 átomos de hidrógeno y 2 de oxígeno.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Unbalanced vs Balanced" :rule "H₂ + O₂ → H₂O has an oxygen atom deficit on the product side")
+    (:t 0.50 :title "Stoichiometric Scaling" :rule "Doubling H₂O to 2 H₂O balances Oxygen (2O) and requires 2 H₂ (4H)")
+    (:t 1.00 :title "Conservation Verified" :rule "Lowest whole-number ratio: 2 H₂ + 1 O₂ → 2 H₂O")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.42
+      :prompt "Why is it scientifically incorrect to balance H₂ + O₂ → H₂O by changing the product formula to H₂O₂?"
+      :options ("Changing subscripts creates a completely different chemical substance (hydrogen peroxide instead of water)" "Subscripts only apply to gases" "Oxygen cannot bond with two hydrogens" "Coefficients are not allowed in chemistry")
+      :answer 0
+      :explanation "Chemical subscripts define the molecular identity of a compound (H₂O is water; H₂O₂ is hydrogen peroxide). Balancing equations only adjusts front coefficients.")
+    (:checkpoint :t 0.82
+      :prompt "In the balanced synthesis reaction 2 H₂ + 1 O₂ → 2 H₂O, how many total Hydrogen and Oxygen atoms exist on each side?"
+      :options ("4 Hydrogen atoms and 2 Oxygen atoms on each side" "2 Hydrogen atoms and 2 Oxygen atoms" "4 Hydrogen atoms and 4 Oxygen atoms" "6 Hydrogen atoms and 3 Oxygen atoms")
+      :answer 0
+      :explanation "2 molecules of H₂ give 2 × 2 = 4 H atoms, and 1 molecule of O₂ gives 2 O atoms, matching 2 molecules of H₂O (4 H and 2 O).")
+  ))
+  (:bindings (
+    (:target "#reactant-eq-txt" :attr "textContent" :expr "(vars.cH2 || 2) + ' H₂ + ' + (vars.cO2 || 1) + ' O₂'")
+    (:target "#reactant-atoms-txt" :attr "textContent" :expr "computed.leftH + ' Hydrogen • ' + computed.leftO + ' Oxygen'")
+    (:target "#product-eq-txt" :attr "textContent" :expr "(vars.cH2O || 2) + ' H₂O'")
+    (:target "#product-atoms-txt" :attr "textContent" :expr "computed.rightH + ' Hydrogen • ' + computed.rightO + ' Oxygen'")
+    (:target "#balance-arrow" :attr "fill" :expr "computed.isBalanced ? '#22c55e' : '#f59e0b'")
+    (:target "#balance-status-txt" :attr "fill" :expr "computed.isBalanced ? '#4ade80' : '#fbbf24'")
+    (:target "#balance-status-txt" :attr "textContent" :expr "computed.isBalanced ? 'BALANCED ✓' : 'UNBALANCED ⚠'")
+    (:target "#products-border" :attr "stroke" :expr "computed.isBalanced ? '#22c55e' : '#f59e0b'")
+    (:target "#balance-banner-rect" :attr "stroke" :expr "computed.isBalanced ? '#22c55e' : '#ef4444'")
+    (:target "#balance-banner-txt" :attr "fill" :expr "computed.isBalanced ? '#4ade80' : '#fca5a5'")
+    (:target "#balance-banner-txt" :attr "textContent" :expr "computed.isBalanced ? ('Conservation Verified: ' + computed.leftH + ' H & ' + computed.leftO + ' O (Left) = ' + computed.rightH + ' H & ' + computed.rightO + ' O (Right)') : ('Imbalance: Left (' + computed.leftH + 'H, ' + computed.leftO + 'O) ≠ Right (' + computed.rightH + 'H, ' + computed.rightO + 'O)')")
+  ))
+)

@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-13T09:50:21.784Z",
+  "generatedAt": "2026-11-13T10:29:33.690Z",
   "totalScenes": 68,
   "scenes": [
     {
@@ -196,7 +196,7 @@
       "astbFile": "bytecode/electric-circuits.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 13
+      "bindingsCount": 15
     },
     {
       "id": "eucharistic-procession-film",
@@ -659,13 +659,13 @@
       "svgFile": "cartridges/phet-acid-base.svg",
       "astFile": "cartridges/phet-acid-base.ast",
       "astbFile": "bytecode/phet-acid-base.astb",
-      "keyframeCount": 0,
-      "subtitleCount": 0,
-      "bindingsCount": 3
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 11
     },
     {
       "id": "phet-balancing-chemical",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Chemical Equations Distillation",
       "stage": "KS3/KS4 CHEMISTRY",
       "duration": 12,
@@ -676,11 +676,11 @@
       "astbFile": "bytecode/phet-balancing-chemical.astb",
       "keyframeCount": 3,
       "subtitleCount": 3,
-      "bindingsCount": 1
+      "bindingsCount": 11
     },
     {
       "id": "phet-faraday",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Faraday's Induction Distillation",
       "stage": "KS4 PHYSICS",
       "duration": 14,
@@ -691,11 +691,11 @@
       "astbFile": "bytecode/phet-faraday.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3
+      "bindingsCount": 5
     },
     {
       "id": "phet-ohms-law",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Ohm's Law Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "duration": 12,
@@ -706,11 +706,11 @@
       "astbFile": "bytecode/phet-ohms-law.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3
+      "bindingsCount": 7
     },
     {
       "id": "phet-pendulum",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Pendulum Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "duration": 10,
@@ -721,7 +721,7 @@
       "astbFile": "bytecode/phet-pendulum.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 1
+      "bindingsCount": 11
     },
     {
       "id": "phonics-lab",
@@ -886,7 +886,7 @@
       "astbFile": "bytecode/solar-system.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 21
+      "bindingsCount": 29
     },
     {
       "id": "spelling-bee",

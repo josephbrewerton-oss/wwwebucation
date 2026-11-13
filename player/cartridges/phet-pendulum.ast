@@ -1,22 +1,64 @@
-(:scene :id "phet-pendulum" :type "Slide" :oak-id "OAK-KS4-MAT-PHETPENDU" :oak-unit "ks4-mathematics-phet-pendulum" :title "PhET Pendulum Distillation" :stage "KS3/KS4 PHYSICS" :duration 10.0
-        (:static (
-          (:element :target "#stage-svg text" :cache true)
-        ))
-        (:actors (
-          (:actor :target "#pendulum-arm" :kinematic true :will-change true)
-        ))
-        (:subtitles (
-          (:start 0.00 :end 3.50 :en "A pendulum's period depends strictly on its length and gravitational acceleration." :es "El período de un péndulo depende estrictamente de su longitud y de la gravedad.")
-          (:start 3.50 :end 7.00 :en "At the highest amplitude, kinetic energy is zero and potential energy reaches maximum." :es "En la amplitud máxima, la energía cinética es cero y la energía potencial es máxima.")
-          (:start 7.00 :end 10.00 :en "At the center equilibrium point, all energy converts into maximum velocity." :es "En el punto de equilibrio central, toda la energía se convierte en velocidad máxima.")
-        ))
-        (:keyframes (
-          (:t 0.00 :title "Peak Displacement" :rule "θ = +30° -> PE maximum, KE zero")
-          (:t 0.25 :title "Equilibrium Velocity" :rule "θ = 0° -> PE zero, KE maximum")
-          (:t 0.50 :title "Opposite Amplitude" :rule "θ = -30° -> Complete harmonic inversion")
-          (:t 1.00 :title "Harmonic Cycle" :rule "T = 2π√(L/g) cycle completed")
-        ))
-        (:bindings (
-          (:target "#pendulum-arm" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 4) * 32) + ' 400 96)'")
-        ))
-      )
+(:scene :id "phet-pendulum" :type "Sim" :oak-id "OAK-KS4-MAT-PHETPENDU" :oak-unit "ks4-mathematics-phet-pendulum" :title "PhET Pendulum Distillation" :stage "KS3/KS4 PHYSICS" :duration 10.0
+  (:vars (
+    (:var :name "lengthM" :val 1.0 :min 0.4 :max 2.5 :step 0.1 :unit "m" :label "String Length (L)")
+    (:var :name "gravity" :val 9.8 :min 1.6 :max 24.8 :step 0.2 :unit "m/s²" :label "Gravity (g)")
+    (:var :name "massKg" :val 1.5 :min 0.5 :max 5.0 :step 0.5 :unit "kg" :label "Bob Mass (m)")
+  ))
+  (:inputs (
+    (:slider :var "lengthM" :label "Pendulum Length L (m)" :min 0.4 :max 2.5 :step 0.1)
+    (:slider :var "gravity" :label "Gravity g (Moon 1.6 • Earth 9.8 • Jupiter 24.8)" :min 1.6 :max 24.8 :step 0.2)
+    (:slider :var "massKg" :label "Bob Mass m (kg)" :min 0.5 :max 5.0 :step 0.5)
+  ))
+  (:computed (
+    (:name "periodT" :expr "2 * Math.PI * Math.sqrt((vars.lengthM || 1.0) / (vars.gravity || 9.8))")
+    (:name "phase" :expr "(t * 10.0 / computed.periodT) * Math.PI * 2")
+    (:name "thetaDeg" :expr "Math.cos(computed.phase) * 30")
+    (:name "bobY" :expr "96 + (vars.lengthM || 1.0) * 145")
+    (:name "totalE" :expr "(vars.massKg || 1.5) * (vars.gravity || 9.8) * (vars.lengthM || 1.0) * 0.134")
+    (:name "peJ" :expr "computed.totalE * Math.pow(Math.cos(computed.phase), 2)")
+    (:name "keJ" :expr "Math.max(0, computed.totalE - computed.peJ)")
+  ))
+  (:gestures (
+    (:rotatable :target "#pendulum-arm" :cx 400 :cy 96)
+    (:key :code "ArrowUp" :step-var "lengthM" :delta 0.1 :min 0.4 :max 2.5)
+    (:key :code "ArrowDown" :step-var "lengthM" :delta -0.1 :min 0.4 :max 2.5)
+    (:key :code "ArrowRight" :step-var "gravity" :delta 0.5 :min 1.6 :max 24.8)
+    (:key :code "ArrowLeft" :step-var "gravity" :delta -0.5 :min 1.6 :max 24.8)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "Galileo's Isochronism: A simple pendulum's period T = 2π√(L/g) depends strictly on length L and gravity g, never on bob mass!" :es "El período de un péndulo depende estrictamente de su longitud L y de la gravedad g, nunca de la masa.")
+    (:start 0.35 :end 0.70 :en "At peak swing amplitude (±30°), velocity pauses momentarily: gravitational potential energy (PE) is maximum and kinetic energy (KE) is zero." :es "En la amplitud máxima, la energía potencial es máxima y la energía cinética es cero.")
+    (:start 0.70 :end 1.00 :en "Passing through vertical equilibrium (0°), all potential energy converts cleanly into maximum kinetic velocity!" :es "Al pasar por el equilibrio vertical, toda la energía potencial se convierte en velocidad cinética máxima.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Peak Displacement" :rule "θ = +30° -> GPE maximum, KE = 0 J")
+    (:t 0.25 :title "Equilibrium Velocity" :rule "θ = 0° -> GPE = 0 J, KE maximum")
+    (:t 0.50 :title "Opposite Amplitude" :rule "θ = -30° -> Harmonic phase inversion")
+    (:t 1.00 :title "Isochronous Period Law" :rule "T = 2π√(L/g) independent of bob mass m")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.38
+      :prompt "If you double the mass of the pendulum bob from 1.5 kg to 3.0 kg while keeping string length L and gravity g unchanged, what happens to the time period T?"
+      :options ("Period T stays completely unchanged" "Period T doubles" "Period T halves" "The pendulum stops swinging")
+      :answer 0
+      :explanation "In T = 2π√(L/g), mass m cancels out because gravitational force and inertia both scale linearly with m.")
+    (:checkpoint :t 0.78
+      :prompt "What happens to the pendulum's oscillation period if you move it from Earth (g = 9.8 m/s²) to the Moon (g = 1.6 m/s²)?"
+      :options ("It swings more slowly (longer period T) because g is in the denominator" "It swings 6× faster" "Period stays identical" "Potential energy becomes negative")
+      :answer 0
+      :explanation "Because T = 2π√(L/g), weaker gravitational restoring force on the Moon produces a longer period and slower oscillation.")
+  ))
+  (:bindings (
+    (:target "#string-line" :attr "y2" :expr "computed.bobY.toFixed(1)")
+    (:target "#bob-circle" :attr "cy" :expr "computed.bobY.toFixed(1)")
+    (:target "#bob-circle" :attr "r" :expr "18 + (vars.massKg || 1.5) * 3.5")
+    (:target "#bob-mass-txt" :attr "y" :expr "(computed.bobY + 4).toFixed(1)")
+    (:target "#bob-mass-txt" :attr "textContent" :expr "Number(vars.massKg || 1.5).toFixed(1) + ' kg'")
+    (:target "#pendulum-arm" :attr "transform" :expr "'rotate(' + computed.thetaDeg.toFixed(1) + ' 400 96)'")
+    (:target "#ke-val-txt" :attr "textContent" :expr "'Kinetic (KE): ' + computed.keJ.toFixed(1) + ' J'")
+    (:target "#pe-val-txt" :attr "textContent" :expr "'Potential (PE): ' + computed.peJ.toFixed(1) + ' J'")
+    (:target "#total-e-txt" :attr "textContent" :expr "'Total E: ' + computed.totalE.toFixed(1) + ' J'")
+    (:target "#period-readout-txt" :attr "textContent" :expr "'Period T = ' + computed.periodT.toFixed(2) + ' s'")
+    (:target "#pendulum-invariant-banner" :attr "textContent" :expr "'T = 2π√(' + Number(vars.lengthM || 1.0).toFixed(1) + 'm / ' + Number(vars.gravity || 9.8).toFixed(1) + 'm/s²) = ' + computed.periodT.toFixed(2) + 's  •  Mass (' + Number(vars.massKg || 1.5).toFixed(1) + ' kg) cancels!'")
+  ))
+)

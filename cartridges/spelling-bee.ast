@@ -12,6 +12,10 @@
     (:name "scoreDisplay" :expr "'Score: ' + (vars.score || 0)")
     (:name "streakDisplay" :expr "'🍯 Streak: ' + (vars.streak || 0)")
   ))
+  (:gestures (
+    (:key :code "ArrowUp" :step-var "speechRate" :delta 0.1 :min 0.5 :max 1.5)
+    (:key :code "ArrowDown" :step-var "speechRate" :delta -0.1 :min 0.5 :max 1.5)
+  ))
   (:subtitles (
     (:start 0.00 :end 0.33 :en "Welcome to the Spelling Bee! Listen closely to the spoken word and National Curriculum definition." :es "¡Bienvenido al concurso de ortografía! Escucha la palabra y su definición.")
     (:start 0.33 :end 0.66 :en "Type letters using your keyboard or click the interactive letter tiles to construct the spelling." :es "Escribe letras con tu teclado o pulsa las fichas de letras para deletrear la palabra.")
