@@ -348,7 +348,7 @@
 
     (:cartridge
       :id "phet-balancing-chemical"
-      :type "Slide"
+      :type "Sim"
       :title "PhET Chemical Equations Distillation"
       :stage "KS3/KS4 CHEMISTRY"
       :oak-id "OAK-KS4-SCI-PHETBALAN"
@@ -356,7 +356,7 @@
 
     (:cartridge
       :id "phet-faraday"
-      :type "Slide"
+      :type "Sim"
       :title "PhET Faraday's Induction Distillation"
       :stage "KS4 PHYSICS"
       :oak-id "OAK-KS4-SCI-PHETFARAD"
@@ -364,7 +364,7 @@
 
     (:cartridge
       :id "phet-ohms-law"
-      :type "Slide"
+      :type "Sim"
       :title "PhET Ohm's Law Distillation"
       :stage "KS3/KS4 PHYSICS"
       :oak-id "OAK-KS4-SCI-PHETOHMS"
@@ -372,7 +372,7 @@
 
     (:cartridge
       :id "phet-pendulum"
-      :type "Slide"
+      :type "Sim"
       :title "PhET Pendulum Distillation"
       :stage "KS3/KS4 PHYSICS"
       :oak-id "OAK-KS4-MAT-PHETPENDU"

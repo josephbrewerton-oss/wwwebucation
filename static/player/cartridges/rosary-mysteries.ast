@@ -8,7 +8,10 @@
     (:slider :var "decade" :label "Rosary Decade (1 to 5)" :min 1 :max 5 :step 1)
   ))
   (:gestures (
+    (:trackball :target "#stage-svg")
     (:draggable :target "#crucifix-node" :axis "xy" :min -80 :max 80)
+    (:key :code "ArrowRight" :step-var "decade" :delta 1 :min 1 :max 5)
+    (:key :code "ArrowLeft" :step-var "decade" :delta -1 :min 1 :max 5)
   ))
   (:subtitles (
     (:start 0.00 :end 0.25 :en "The Holy Rosary is a scriptural, contemplative prayer meditating on the Life, Passion, and Glory of Jesus Christ across 20 Mysteries." :es "El Santo Rosario es una oración contemplativa y bíblica que medita en la Vida, Pasión y Gloria de Jesucristo en 20 Misterios.")
@@ -22,8 +25,18 @@
     (:t 0.50 :title "3. The 10 Hail Marys (Ave Maria)" :rule "Ave Maria, gratia plena, Dominus tecum. Benedicta tu in mulieribus.")
     (:t 0.75 :title "4. The Glory Be & Fatima Prayer" :rule "Gloria Patri, et Filio, et Spiritui Sancto. Sicut erat in principio.")
   ))
-  (:interactive false)
-  (:questions false)
+  (:interactive (
+    (:checkpoint :t 0.42
+      :prompt "Which three prayers structure each single decade of the Holy Rosary?"
+      :options ("1 Our Father (Pater Noster), 10 Hail Marys (Ave Maria), and 1 Glory Be (Gloria Patri)" "50 Apostles' Creeds" "3 Hail Holy Queens only" "7 Psalms of David")
+      :answer 0
+      :explanation "Every Rosary decade opens with one Our Father on the large bead, followed by ten Hail Marys while meditating on the Gospel Mystery, and concludes with the Glory Be.")
+    (:checkpoint :t 0.72
+      :prompt "What are the four Scriptural Mystery cycles of the 20-decade Rosary?"
+      :options ("Joyful, Luminous, Sorrowful, and Glorious Mysteries" "Advent, Lent, Easter, and Pentecost" "North, South, East, and West" "Matins, Lauds, Vespers, and Compline")
+      :answer 0
+      :explanation "The twenty Mysteries contemplate Christ's Incarnation (Joyful), Public Ministry (Luminous, added by St John Paul II in 2002), Passion (Sorrowful), and Resurrection (Glorious).")
+  ))
   (:bindings (
     <!-- 3D Bead Circle (Chaplet Decades) -->
     (:target "#rosary-ring" :type "3d-ring" :r "130" :tilt-x "25" :depth-fog true)

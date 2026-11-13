@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-13T09:45:37.203Z",
+  "generatedAt": "2026-11-13T10:23:23.066Z",
   "totalScenes": 67,
   "inputDirs": [
     "static/cartridges",
@@ -430,8 +430,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 8,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "stations-of-the-cross",
@@ -626,8 +626,8 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 1,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "math-fishing",
@@ -738,8 +738,8 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 6,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "algebra-balance",
@@ -823,7 +823,7 @@
       "subtitleCount": 5,
       "bindingsCount": 17,
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "atom",
@@ -851,7 +851,7 @@
       "subtitleCount": 3,
       "bindingsCount": 123,
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "photosynthesis",
@@ -907,7 +907,7 @@
       "subtitleCount": 3,
       "bindingsCount": 19,
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "solar-system",
@@ -933,9 +933,9 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 21,
+      "bindingsCount": 29,
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "velocity",
@@ -1242,8 +1242,8 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 20,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "bbc-model-b",
@@ -1381,7 +1381,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 13,
+      "bindingsCount": 15,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -1715,16 +1715,16 @@
       "tier": "core",
       "mount": "/curriculum/science/phet-acid-base",
       "section": "Natural Sciences & Physics",
-      "keyframeCount": 0,
-      "subtitleCount": 0,
-      "bindingsCount": 3,
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 11,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
     {
       "id": "phet-balancing-chemical",
       "base": "phet-balancing-chemical",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Chemical Equations Distillation",
       "stage": "KS3/KS4 CHEMISTRY",
       "duration": 12,
@@ -1745,14 +1745,14 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 3,
       "subtitleCount": 3,
-      "bindingsCount": 1,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "bindingsCount": 11,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-faraday",
       "base": "phet-faraday",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Faraday's Induction Distillation",
       "stage": "KS4 PHYSICS",
       "duration": 14,
@@ -1773,14 +1773,14 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "bindingsCount": 5,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-ohms-law",
       "base": "phet-ohms-law",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Ohm's Law Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "duration": 12,
@@ -1801,14 +1801,14 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 3,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "bindingsCount": 7,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-pendulum",
       "base": "phet-pendulum",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Pendulum Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "duration": 10,
@@ -1829,9 +1829,9 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 1,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "bindingsCount": 11,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "pipeline-sample",
@@ -1886,8 +1886,8 @@
       "keyframeCount": 0,
       "subtitleCount": 0,
       "bindingsCount": 0,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     }
   ]
 }

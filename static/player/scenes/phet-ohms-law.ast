@@ -1,27 +1,54 @@
-(:scene :id "phet-ohms-law" :type "Slide" :oak-id "OAK-KS4-SCI-PHETOHMS" :oak-unit "ks4-science-phet-ohms-law" :title "PhET Ohm's Law Distillation" :stage "KS3/KS4 PHYSICS" :duration 12.0
-        (:static (
-          (:element :target "#battery-unit" :cache true)
-          (:element :target "#resistor-unit" :cache true)
-        ))
-        (:actors (
-          (:actor :target "#active-wire" :kinematic true :will-change true)
-          (:actor :target "#current-readout" :kinematic true)
-          (:actor :target "#lightbulb" :kinematic true :will-change true)
-        ))
-        (:subtitles (
-          (:start 0.00 :end 3.50 :en "Ohm's Law governs electrical circuits: current is proportional to voltage and inversely proportional to resistance." :es "La ley de Ohm rige los circuitos: la corriente es proporcional al voltaje e inversamente a la resistencia.")
-          (:start 3.50 :end 7.50 :en "As voltage increases, more electric potential pushes electrons rapidly through the conductor." :es "Al aumentar el voltaje, mayor potencial empuja los electrones a través del conductor.")
-          (:start 7.50 :end 12.00 :en "Increasing resistance restricts electron drift velocity, dissipating thermal energy in the lattice." :es "Aumentar la resistencia restringe la velocidad de los electrones disipando energía térmica.")
-        ))
-        (:keyframes (
-          (:t 0.00 :title "Equilibrium Current" :rule "V = 12V, R = 4Ω -> I = 3.0A")
-          (:t 0.35 :title "Voltage Surge" :rule "V rises -> Current vector scales linearly")
-          (:t 0.70 :title "Resistance Imbalance" :rule "R quadruples -> Current drops precipitously")
-          (:t 1.00 :title "Conservation Verified" :rule "P = V × I power dissipation constant")
-        ))
-        (:bindings (
-          (:target "#active-wire" :attr "stroke-dashoffset" :expr "t * -380")
-          (:target "#current-readout" :attr "textContent" :expr "'I = ' + ((12 + Math.sin(t * Math.PI * 2) * 6) / 4).toFixed(2) + ' Amperes'")
-          (:target "#lightbulb" :attr "opacity" :expr "0.4 + 0.6 * ((12 + Math.sin(t * Math.PI * 2) * 6) / 18)")
-        ))
-      )
+(:scene :id "phet-ohms-law" :type "Sim" :oak-id "OAK-KS4-SCI-PHETOHMS" :oak-unit "ks4-science-phet-ohms-law" :title "PhET Ohm's Law Distillation" :stage "KS3/KS4 PHYSICS" :duration 12.0
+  (:vars (
+    (:var :name "voltage" :val 12.0 :min 1.5 :max 24.0 :step 0.5 :unit "V" :label "Source Voltage (V)")
+    (:var :name "resistance" :val 4.0 :min 1.0 :max 12.0 :step 0.5 :unit "Ω" :label "Load Resistance (Ω)")
+  ))
+  (:inputs (
+    (:slider :var "voltage" :label "Battery Voltage (V)" :min 1.5 :max 24.0 :step 0.5)
+    (:slider :var "resistance" :label "Circuit Resistance (Ω)" :min 1.0 :max 12.0 :step 0.5)
+  ))
+  (:computed (
+    (:name "current" :expr "(vars.voltage || 12.0) / (vars.resistance || 4.0)")
+    (:name "power" :expr "(vars.voltage || 12.0) * computed.current")
+  ))
+  (:gestures (
+    (:clickable :target "#battery-unit" :step-var "voltage" :delta 1.5 :min 1.5 :max 24.0)
+    (:clickable :target "#resistor-unit" :step-var "resistance" :delta 1.0 :min 1.0 :max 12.0)
+    (:key :code "ArrowUp" :step-var "voltage" :delta 0.5 :min 1.5 :max 24.0)
+    (:key :code "ArrowDown" :step-var "voltage" :delta -0.5 :min 1.5 :max 24.0)
+    (:key :code "ArrowRight" :step-var "resistance" :delta 0.5 :min 1.0 :max 12.0)
+    (:key :code "ArrowLeft" :step-var "resistance" :delta -0.5 :min 1.0 :max 12.0)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.33 :en "Ohm's Law governs electrical circuits: current is directly proportional to voltage and inversely proportional to resistance." :es "La ley de Ohm rige los circuitos: la corriente es proporcional al voltaje e inversamente a la resistencia.")
+    (:start 0.33 :end 0.67 :en "Increase Voltage (Up Arrow or slider): greater potential difference pushes more coulombs per second around the loop." :es "Aumenta el voltaje: mayor diferencia de potencial impulsa más culombios por segundo.")
+    (:start 0.67 :end 1.00 :en "Increase Resistance (Right Arrow or slider): lattice collisions oppose drift velocity, lowering current I = V / R." :es "Aumenta la resistencia: las colisiones se oponen al flujo, reduciendo la corriente I = V / R.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "Equilibrium Current" :rule "V = 12.0V, R = 4.0Ω -> I = 3.00 A (36.0 W)")
+    (:t 0.35 :title "Linear Voltage Scaling" :rule "At constant R, doubling V doubles current I")
+    (:t 0.70 :title "Inverse Ohmic Resistance" :rule "At constant V, doubling R halves current I")
+    (:t 1.00 :title "Joule Power Law" :rule "Power dissipated P = V × I = I²R Watts")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.40
+      :prompt "Using Ohm's Law (I = V / R), what current flows when a 18 V battery is connected across a 6 Ω resistor?"
+      :options ("3.00 Amperes" "108.0 Amperes" "0.33 Amperes" "12.0 Amperes")
+      :answer 0
+      :explanation "Dividing potential difference V = 18 V by resistance R = 6 Ω gives I = 18 / 6 = 3.00 Amperes.")
+    (:checkpoint :t 0.80
+      :prompt "If voltage stays fixed at 12 V and resistance increases from 4 Ω to 8 Ω, what happens to the current?"
+      :options ("Current halves from 3.00 A to 1.50 A" "Current doubles to 6.00 A" "Current stays at 3.00 A" "Current drops to 0 A")
+      :answer 0
+      :explanation "Current is inversely proportional to resistance at constant voltage: doubling R from 4 Ω to 8 Ω halves I from 3.00 A to 1.50 A.")
+  ))
+  (:bindings (
+    (:target "#phet-volt-txt" :attr "textContent" :expr "Number(vars.voltage || 12).toFixed(1) + ' V'")
+    (:target "#phet-res-txt" :attr "textContent" :expr "Number(vars.resistance || 4).toFixed(1) + ' Ω'")
+    (:target "#active-wire" :attr "stroke-dashoffset" :expr "-(t * 95 * computed.current)")
+    (:target "#current-readout" :attr "textContent" :expr "'I = ' + computed.current.toFixed(2) + ' A  (' + computed.power.toFixed(1) + ' W)'")
+    (:target "#phet-power-txt" :attr "textContent" :expr "computed.power.toFixed(1) + ' W'")
+    (:target "#lightbulb" :attr "opacity" :expr "Math.min(1.0, 0.25 + computed.power / 90)")
+    (:target "#phet-bulb-halo" :attr "r" :expr "24 + Math.min(28, computed.power * 0.25)")
+  ))
+)

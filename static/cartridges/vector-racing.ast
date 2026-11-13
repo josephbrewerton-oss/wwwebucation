@@ -53,6 +53,8 @@
     (:key :code "KeyD"       :step-var "steerInput" :delta 0.35 :min -1.5 :max 1.5)
 
     (:key :code "Space"      :toggle-var "boostActive")
+    (:key :code "ShiftLeft"  :hold-var "boostActive")
+    (:key :code "ShiftRight" :hold-var "boostActive")
     (:key :code "KeyR"       :set-var "carX" :val 400.0)
     (:key :code "KeyR"       :set-var "carY" :val 395.0)
     (:key :code "KeyR"       :set-var "heading" :val 0.0)
@@ -62,7 +64,7 @@
     (:key :code "KeyR"       :set-var "boostActive" :val false)
     (:key :code "KeyR"       :set-var "autoPilot" :val true)
 
-    ;; Mouse / Touch Declarative Press-and-Hold & Toggle Controls
+    ;; Mouse / Touch Declarative Press-and-Hold & Momentary Boost Controls
     (:clickable :target "#btn-steer-left"  :set "autoPilot" :val false)
     (:clickable :target "#btn-steer-left"  :step "steerInput" :delta -0.35 :min -1.5 :max 1.5 :hold true)
     (:clickable :target "#btn-steer-right" :set "autoPilot" :val false)
@@ -71,8 +73,21 @@
     (:clickable :target "#btn-gas"         :step "throttleInput" :delta 0.25 :min -1.0 :max 1.5 :hold true)
     (:clickable :target "#btn-brake"       :set "autoPilot" :val false)
     (:clickable :target "#btn-brake"       :step "throttleInput" :delta -0.35 :min -1.0 :max 1.5 :hold true)
-    (:clickable :target "#btn-boost"       :toggle "boostActive")
+    (:holdable  :target "#btn-boost"       :hold-var "boostActive")
   )
+
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "How is a race car's 2D velocity vector decomposed into horizontal (vx) and vertical (vy) components from speed v and heading angle θ?"
+      :options ("vx = v × cos(θ)  and  vy = v × sin(θ)" "vx = v + θ  and  vy = v - θ" "vx = v / θ  and  vy = v × θ" "Speed is a scalar so it has no direction")
+      :answer 0
+      :explanation "Trigonometric vector decomposition projects total speed v onto orthogonal axes: vx = v cos(θ) and vy = v sin(θ).")
+    (:checkpoint :t 0.75
+      :prompt "Why is velocity classified as a vector quantity whereas speedometer readout (MPH) alone is a scalar?"
+      :options ("Velocity specifies both magnitude (speed) and direction (heading angle θ)" "Velocity is measured in kilograms" "Speed can only be zero" "Scalars always point North")
+      :answer 0
+      :explanation "A scalar has magnitude only (e.g., 80 MPH), whereas a vector has both magnitude and direction (e.g., 80 MPH at heading 090° East).")
+  ))
 
   :bindings (
     (:var "speed"   :expr "nextSpeed")

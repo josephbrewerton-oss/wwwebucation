@@ -10,8 +10,13 @@
     (:slider :var "speed" :label "Signing Speed (x)" :min 0.2 :max 2.0 :step 0.1)
   ))
   (:gestures (
+    (:trackball :target "#stage-svg" :yaw-var "cameraYaw")
     (:draggable :target "#pointer-hand" :axis "xy" :min -120 :max 120)
     (:draggable :target "#orbit-control-dot" :axis "x" :min -180 :max 180 :var "cameraYaw")
+    (:key :code "ArrowRight" :step-var "cameraYaw" :delta 8 :min -180 :max 180)
+    (:key :code "ArrowLeft" :step-var "cameraYaw" :delta -8 :min -180 :max 180)
+    (:key :code "ArrowUp" :step-var "speed" :delta 0.1 :min 0.2 :max 2.0)
+    (:key :code "ArrowDown" :step-var "speed" :delta -0.1 :min 0.2 :max 2.0)
   ))
   (:subtitles (
     (:start 0.00 :end 0.25 :en "British Sign Language (BSL) uses a two-handed manual alphabet: the non-dominant hand is the base paper, and the dominant hand is the pen." :es "El lenguaje de señas británico (BSL) utiliza un alfabeto bimanual: la mano no dominante actúa como papel base y la dominante como pluma.")
@@ -25,8 +30,18 @@
     (:t 0.50 :title "3. Continuous Touch Contact" :rule "Point of contact must be firm and clearly oriented toward the conversation partner.")
     (:t 0.75 :title "4. Spatial Fluency & 360° Orientation" :rule "Keep hands at chest height. Never block facial expressions or mouth lip patterns.")
   ))
-  (:interactive false)
-  (:questions false)
+  (:interactive (
+    (:checkpoint :t 0.35
+      :prompt "In British Sign Language (BSL) two-handed fingerspelling, how are the 5 vowels (A, E, I, O, U) signed?"
+      :options ("By tapping the 5 fingertips sequentially from Thumb (A) to Pinky (U) on the non-dominant hand" "By using only one hand held above the head" "By spelling letters on the forehead" "BSL does not sign vowels")
+      :answer 0
+      :explanation "In BSL's two-handed manual alphabet, the non-dominant open palm displays the 5 vowels across its fingertips: Thumb = A, Index = E, Middle = I, Ring = O, Little finger = U.")
+    (:checkpoint :t 0.78
+      :prompt "Why should BSL fingerspelling be held cleanly at chest height in the signing space rather than directly in front of the face?"
+      :options ("So lip patterns and facial Non-Manual Features (NMFs) remain clearly visible" "Because hands cannot reach higher than the chest" "To hide the signs from other people" "Only for left-handed signers")
+      :answer 0
+      :explanation "Deaf communication combines manual handshapes with lip patterns and grammatical facial expressions (NMFs); keeping hands in the chest signing box preserves full visual clarity.")
+  ))
   (:bindings (
     <!-- 3D Base Hand (Non-Dominant Open Palm) -->
     (:target "#base-wrist" :type "3d-node" :x "-60" :y "80" :z "0" :base-r 18 :depth-fog true)

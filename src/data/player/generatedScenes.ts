@@ -258,8 +258,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/religious/rosary-mysteries",
     "section": "Catholic Life & Faith Formation",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "stations-of-the-cross",
@@ -370,8 +370,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/mathematics/times-tables",
     "section": "Mathematics & Geometry",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "math-fishing",
@@ -434,8 +434,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/mathematics/pythagoras",
     "section": "Mathematics & Geometry",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "algebra-balance",
@@ -483,7 +483,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "mount": "/curriculum/science/kinetic-gas",
     "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
-    "checkpointCount": 1
+    "checkpointCount": 2
   },
   {
     "id": "atom",
@@ -499,7 +499,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "mount": "/curriculum/science/atom",
     "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
-    "checkpointCount": 1
+    "checkpointCount": 2
   },
   {
     "id": "photosynthesis",
@@ -531,7 +531,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "mount": "/curriculum/science/dna-helix",
     "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
-    "checkpointCount": 1
+    "checkpointCount": 2
   },
   {
     "id": "solar-system",
@@ -547,7 +547,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "mount": "/curriculum/science/solar-system",
     "section": "Natural Sciences & Physics",
     "hasCheckpoints": true,
-    "checkpointCount": 1
+    "checkpointCount": 2
   },
   {
     "id": "velocity",
@@ -722,8 +722,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/english/bsl-fingerspelling",
     "section": "English Literature & Phonics",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "bbc-model-b",
@@ -1000,7 +1000,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   {
     "id": "phet-balancing-chemical",
     "base": "phet-balancing-chemical",
-    "type": "Slide",
+    "type": "Sim",
     "label": "PhET Chemical Equations Distillation",
     "stage": "KS3/KS4 CHEMISTRY",
     "oakId": "OAK-KS4-SCI-PHETBALAN",
@@ -1010,13 +1010,13 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/science/phet-balancing-chemical",
     "section": "Natural Sciences & Physics",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "phet-faraday",
     "base": "phet-faraday",
-    "type": "Slide",
+    "type": "Sim",
     "label": "PhET Faraday's Induction Distillation",
     "stage": "KS4 PHYSICS",
     "oakId": "OAK-KS4-SCI-PHETFARAD",
@@ -1026,13 +1026,13 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/science/phet-faraday",
     "section": "Natural Sciences & Physics",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "phet-ohms-law",
     "base": "phet-ohms-law",
-    "type": "Slide",
+    "type": "Sim",
     "label": "PhET Ohm's Law Distillation",
     "stage": "KS3/KS4 PHYSICS",
     "oakId": "OAK-KS4-SCI-PHETOHMS",
@@ -1042,13 +1042,13 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/science/phet-ohms-law",
     "section": "Natural Sciences & Physics",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "phet-pendulum",
     "base": "phet-pendulum",
-    "type": "Slide",
+    "type": "Sim",
     "label": "PhET Pendulum Distillation",
     "stage": "KS3/KS4 PHYSICS",
     "oakId": "OAK-KS4-MAT-PHETPENDU",
@@ -1058,8 +1058,8 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/mathematics/phet-pendulum",
     "section": "Mathematics & Geometry",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   },
   {
     "id": "pipeline-sample",
@@ -1090,7 +1090,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "tier": "core",
     "mount": "/curriculum/general/vector-racing",
     "section": "Curriculum Cartridges",
-    "hasCheckpoints": false,
-    "checkpointCount": 0
+    "hasCheckpoints": true,
+    "checkpointCount": 2
   }
 ];

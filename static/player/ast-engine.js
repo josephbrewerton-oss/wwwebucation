@@ -5523,8 +5523,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const maxY = maxYStr !== null ? parseFloat(maxYStr) : max;
 
           const varName = extractSlot.call(null, bodyText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:bind-var\s+"([^"]+)"/i);
-          const yawVar = extractSlot.call(null, bodyText, /:yaw-var\s+"([^"]+)"/i) || 'turntableYaw';
-          const pitchVar = extractSlot.call(null, bodyText, /:pitch-var\s+"([^"]+)"/i) || 'cameraPitch';
+          const yawVar = extractSlot.call(null, bodyText, /:yaw-var\s+"([^"]+)"/i) || null;
+          const pitchVar = extractSlot.call(null, bodyText, /:pitch-var\s+"([^"]+)"/i) || null;
           const pitchMin = parseFloat(extractSlot.call(null, bodyText, /:pitch-min\s+([\d\.\-]+)/i) || '-65');
           const pitchMax = parseFloat(extractSlot.call(null, bodyText, /:pitch-max\s+([\d\.\-]+)/i) || '65');
 

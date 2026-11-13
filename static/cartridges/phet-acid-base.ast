@@ -1,53 +1,72 @@
-(:scene :id "phet-acid-base" :type "Sim" :type "InteractiveLab" :oak-id "OAK-KS4-SCI-PHETACID" :oak-unit "ks4-science-phet-acid-base" :title "Acid-Base Titration Lab" :stage "KS3/KS4 CHEMISTRY"
-  (:state (
-    ;; Titrant volume in mL: negative = acid added, positive = alkali added, 0 = neutral water
-    (:var :name "v_added" :init 0.0 :min -50.0 :max 50.0)
+(:scene :id "phet-acid-base" :type "Sim" :oak-id "OAK-KS4-SCI-PHETACID" :oak-unit "ks4-science-phet-acid-base" :title "Acid-Base Titration Lab" :stage "KS3/KS4 CHEMISTRY" :duration 14.0
+  (:vars (
+    (:var :name "v_added" :val 0.0 :min -50.0 :max 50.0 :step 1.0 :unit "mL" :label "Net Titrant Added (mL)")
+    (:var :name "addingAcid" :val false :label "Dispensing Acid Stream")
+    (:var :name "addingBase" :val false :label "Dispensing Alkali Stream")
   ))
 
-  (:static (
-    (:element :target "#beaker-outline" :cache true)
-    (:element :target "#dropper-track" :cache true)
-    (:element :target "#ph-scale-legend" :cache true)
+  (:inputs (
+    (:slider :var "v_added" :label "Net Titrant Volume (-50 mL HCl to +50 mL NaOH)" :min -50.0 :max 50.0 :step 1.0)
   ))
 
-  (:actors (
-    (:actor :target "#dropper-handle" :draggable true :axis "x")
-    (:actor :target "#ph-probe" :draggable true :axis "xy")
-    (:actor :target "#ph-val" :kinematic true)
-    (:actor :target "#beaker-fluid" :kinematic true :will-change true)
+  (:computed (
+    (:name "ph" :expr "7.0 + ((vars.v_added || 0) < 0 ? -Math.min(5.8, Math.log10(1 + Math.abs(vars.v_added || 0) * 20)) : Math.min(6.8, Math.log10(1 + (vars.v_added || 0) * 20)))")
+    (:name "fluidColor" :expr "computed.ph < 3.0 ? '#ef4444' : (computed.ph < 6.0 ? '#f97316' : (computed.ph <= 8.0 ? '#22c55e' : (computed.ph < 11.0 ? '#3b82f6' : '#8b5cf6')))")
+    (:name "fluidStateLabel" :expr "computed.ph < 3.0 ? 'Strong Acid (pH ' + computed.ph.toFixed(1) + ')' : (computed.ph < 6.6 ? 'Weak Acid (pH ' + computed.ph.toFixed(1) + ')' : (computed.ph <= 7.4 ? 'Neutral Water (pH ' + computed.ph.toFixed(1) + ')' : (computed.ph < 11.0 ? 'Weak Alkali (pH ' + computed.ph.toFixed(1) + ')' : 'Strong Alkali (pH ' + computed.ph.toFixed(1) + ')')))")
+    (:name "ionBalanceText" :expr "computed.ph < 6.8 ? '[H₃O⁺] > [OH⁻] • ' + Math.abs(vars.v_added || 0).toFixed(1) + ' mL HCl' : (computed.ph > 7.2 ? '[OH⁻] > [H₃O⁺] • +' + (vars.v_added || 0).toFixed(1) + ' mL NaOH' : '[H₃O⁺] = [OH⁻] • Equivalence')")
+    (:name "fluidHeight" :expr "135 + Math.abs(vars.v_added || 0) * 1.4")
+    (:name "markerX" :expr "Math.max(8, Math.min(552, (computed.ph / 14.0) * 560))")
   ))
 
-  (:constraints (
-    ;; Lock dropper handle travel along the horizontal dosage track (e.g. x: 100 to 300)
-    (:drag-bounds :target "#dropper-handle" :min-x 100 :max-x 300 :min-y 60 :max-y 60)
-    ;; Map handle x coordinate (100-300) to v_added (-50.0 mL to +50.0 mL)
-    (:bind-var :target "#dropper-handle" :axis "x" :var "v_added" 
-               :transform "((x - 200) / 100) * 50.0")
+  (:gestures (
+    (:draggable :target "#ph-probe" :axis "xy" :min -60 :max 60)
+    (:holdable :target "#btn-add-acid" :hold-var "addingAcid")
+    (:holdable :target "#btn-add-acid" :step-var "v_added" :delta -2.0 :min -50.0 :max 50.0 :hold true)
+    (:holdable :target "#btn-add-base" :hold-var "addingBase")
+    (:holdable :target "#btn-add-base" :step-var "v_added" :delta 2.0 :min -50.0 :max 50.0 :hold true)
+    (:clickable :target "#btn-neutralize" :set-var "v_added" :val 0.0)
+    (:key :code "ArrowLeft" :step-var "v_added" :delta -2.0 :min -50.0 :max 50.0)
+    (:key :code "ArrowRight" :step-var "v_added" :delta 2.0 :min -50.0 :max 50.0)
+    (:key :code "KeyR" :set-var "v_added" :val 0.0)
   ))
 
-  ;; State equations: Derive pH from v_added
+  (:subtitles (
+    (:start 0.00 :end 0.33 :en "Pure water at 25°C self-ionizes equally into hydronium [H₃O⁺] and hydroxide [OH⁻] ions, establishing neutral pH 7.0." :es "El agua pura se autoioniza por igual en iones hidronio y oxidrilo, estableciendo un pH neutro de 7.0.")
+    (:start 0.33 :end 0.67 :en "Hold +Acid (HCl) or press Left Arrow: excess H₃O⁺ ions drive pH logarithmically downward, shifting Universal Indicator red." :es "Mantén pulsado +Ácido: el exceso de H₃O⁺ reduce el pH logarítmicamente, tornando rojo el indicador universal.")
+    (:start 0.67 :end 1.00 :en "Hold +Alkali (NaOH) or press Right Arrow: OH⁻ ions neutralize acid past the green equivalence point into royal violet!" :es "Mantén pulsado +Álcali: los iones OH⁻ neutralizan el ácido pasando del verde neutro al violeta alcalino.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. Neutral Auto-Ionization (pH 7.0)" :rule "[H₃O⁺] = [OH⁻] = 1.0 × 10⁻⁷ mol/dm³ -> Emerald green indicator")
+    (:t 0.35 :title "2. Acidic Dissociation (HCl)" :rule "Strong acid donates protons (H⁺) -> [H₃O⁺] rises 10× per pH unit drop")
+    (:t 0.70 :title "3. Sigmoidal Equivalence Point" :rule "H⁺(aq) + OH⁻(aq) → H₂O(l) neutralization steepens near pH 7.0")
+    (:t 1.00 :title "4. Alkaline Excess (NaOH)" :rule "Hydroxide [OH⁻] dominates -> pH climbs toward 14 (blue to violet)")
+  ))
+
+  (:interactive (
+    (:checkpoint :t 0.36
+      :prompt "Because the pH scale is logarithmic (pH = -log₁₀[H⁺]), how does the H⁺ ion concentration at pH 2 compare to pH 4?"
+      :options ("100× higher H⁺ concentration at pH 2 than at pH 4" "2× higher H⁺ concentration" "20× lower H⁺ concentration" "Equal H⁺ concentration")
+      :answer 0
+      :explanation "Each decrease of 1 pH unit increases [H⁺] by a factor of 10. Moving down 2 units from pH 4 to pH 2 increases [H⁺] by 10² = 100 times.")
+    (:checkpoint :t 0.78
+      :prompt "What ionic reaction occurs at the neutral equivalence point (pH 7.0) when hydrochloric acid reacts with sodium hydroxide?"
+      :options ("H⁺(aq) + OH⁻(aq) → H₂O(l)" "H₂(g) + O₂(g) → H₂O₂(l)" "Na⁺(aq) + Cl⁻(aq) → Cl₂(g)" "H₃O⁺(aq) → OH⁻(aq)")
+      :answer 0
+      :explanation "In aqueous neutralization, hydrogen ions from the acid combine in a 1:1 ratio with hydroxide ions from the alkali to form neutral water molecules.")
+  ))
+
   (:bindings (
-    ;; Sigmoidal titration curve: pH 7 at 0 mL, sharp drop with acid, sharp rise with alkali
-    (:target "#ph-val" :attr "textContent" 
-             :expr "'pH ' + (7.0 + (v_added < 0 ? -Math.min(5.8, Math.log10(1 + Math.abs(v_added) * 20)) : Math.min(6.8, Math.log10(1 + v_added * 20)))).toFixed(1)")
-
-    ;; Universal indicator chromatic shift based on computed pH
-    (:target "#beaker-fluid" :attr "fill" 
-             :expr "let ph = 7.0 + (v_added < 0 ? -Math.min(5.8, Math.log10(1 + Math.abs(v_added) * 20)) : Math.min(6.8, Math.log10(1 + v_added * 20)));
-                    ph < 3 ? '#ef4444' : (ph < 6 ? '#f97316' : (ph < 8 ? '#22c55e' : (ph < 11 ? '#3b82f6' : '#7c3aed')))")
-
-    ;; Dynamic fluid level displacement in beaker as liquid is added
-    (:target "#beaker-fluid" :attr "height" 
-             :expr "120 + Math.abs(v_added) * 0.6")
-  ))
-
-  ;; Socratic verification for deterministic evaluation (Tier 3 fallback)
-  (:checkpoints (
-    (:checkpoint :id "reach-strong-acid" 
-                 :condition "v_added <= -35.0" 
-                 :prompt "Notice the color change. What ion dominates at this low pH?")
-    (:checkpoint :id "reach-neutral" 
-                 :condition "Math.abs(v_added) < 2.0" 
-                 :prompt "The solution is balanced. What is the ratio of [H3O+] to [OH-]?")
+    (:target "#ph-val" :attr "textContent" :expr "'pH ' + computed.ph.toFixed(1)")
+    (:target "#ph-val" :attr "fill" :expr "computed.fluidColor")
+    (:target "#beaker-fluid" :attr "fill" :expr "computed.fluidColor")
+    (:target "#beaker-fluid" :attr "height" :expr "computed.fluidHeight")
+    (:target "#beaker-fluid" :attr "y" :expr "232 - computed.fluidHeight")
+    (:target "#fluid-label" :attr "textContent" :expr "computed.fluidStateLabel")
+    (:target "#ion-ratio-label" :attr "textContent" :expr "computed.ionBalanceText")
+    (:target "#titrant-volume-txt" :attr "textContent" :expr "(vars.v_added || 0) === 0 ? 'Net Titrant: 0.0 mL (Equivalence)' : ('Net Titrant: ' + ((vars.v_added || 0) > 0 ? '+' : '') + Number(vars.v_added || 0).toFixed(1) + ' mL')")
+    (:target "#ph-indicator-marker" :attr "transform" :expr "'translate(' + computed.markerX.toFixed(1) + ', 0)'")
+    (:target "#acid-stream" :attr "opacity" :expr "vars.addingAcid ? 0.95 : 0")
+    (:target "#base-stream" :attr "opacity" :expr "vars.addingBase ? 0.95 : 0")
   ))
 )

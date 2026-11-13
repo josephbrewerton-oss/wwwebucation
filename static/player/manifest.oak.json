@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-13T09:45:37.207Z",
+  "generatedAt": "2026-11-13T10:23:23.071Z",
   "totalCartridges": 67,
   "units": [
     {
@@ -888,8 +888,8 @@
       "astbFile": "bytecode/rosary-mysteries.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "stations-of-the-cross",
@@ -1028,8 +1028,8 @@
       "astbFile": "bytecode/times-tables.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "math-fishing",
@@ -1108,8 +1108,8 @@
       "astbFile": "bytecode/pythagoras.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "algebra-balance",
@@ -1169,7 +1169,7 @@
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "atom",
@@ -1189,7 +1189,7 @@
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "photosynthesis",
@@ -1229,7 +1229,7 @@
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "solar-system",
@@ -1249,7 +1249,7 @@
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
-      "checkpointCount": 1
+      "checkpointCount": 2
     },
     {
       "id": "velocity",
@@ -1468,8 +1468,8 @@
       "astbFile": "bytecode/bsl-fingerspelling.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "bbc-model-b",
@@ -1814,7 +1814,7 @@
     {
       "id": "phet-balancing-chemical",
       "base": "phet-balancing-chemical",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Chemical Equations Distillation",
       "stage": "KS3/KS4 CHEMISTRY",
       "oakId": "OAK-KS4-SCI-PHETBALAN",
@@ -1828,13 +1828,13 @@
       "astbFile": "bytecode/phet-balancing-chemical.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-faraday",
       "base": "phet-faraday",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Faraday's Induction Distillation",
       "stage": "KS4 PHYSICS",
       "oakId": "OAK-KS4-SCI-PHETFARAD",
@@ -1848,13 +1848,13 @@
       "astbFile": "bytecode/phet-faraday.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-ohms-law",
       "base": "phet-ohms-law",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Ohm's Law Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "oakId": "OAK-KS4-SCI-PHETOHMS",
@@ -1868,13 +1868,13 @@
       "astbFile": "bytecode/phet-ohms-law.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "phet-pendulum",
       "base": "phet-pendulum",
-      "type": "Slide",
+      "type": "Sim",
       "title": "PhET Pendulum Distillation",
       "stage": "KS3/KS4 PHYSICS",
       "oakId": "OAK-KS4-MAT-PHETPENDU",
@@ -1888,8 +1888,8 @@
       "astbFile": "bytecode/phet-pendulum.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "pipeline-sample",
@@ -1928,8 +1928,8 @@
       "astbFile": "bytecode/vector-racing.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     }
   ]
 }

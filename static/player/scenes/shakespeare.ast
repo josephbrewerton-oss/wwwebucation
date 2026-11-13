@@ -9,8 +9,13 @@
     (:slider :var "cameraYaw" :label "3D Orbit Rotation (°)" :min -180 :max 180 :step 5)
   ))
   (:gestures (
+    (:trackball :target "#stage-svg")
     (:draggable :target "#iambic-dot" :axis "x" :min 20 :max 580 :var "tempo")
     (:draggable :target "#globe-actor-soliloquy" :axis "xy" :min -50 :max 50)
+    (:key :code "ArrowUp" :step-var "tempo" :delta 4 :min 40 :max 140)
+    (:key :code "ArrowDown" :step-var "tempo" :delta -4 :min 40 :max 140)
+    (:key :code "ArrowRight" :step-var "cameraYaw" :delta 10 :min -180 :max 180)
+    (:key :code "ArrowLeft" :step-var "cameraYaw" :delta -10 :min -180 :max 180)
   ))
   (:subtitles (
     (:start 0.00 :end 0.25 :en "Welcome to the 1599 Globe Theatre on London's Bankside: a three-tiered wooden amphitheatre holding 3,000 spectators." :es "Bienvenidos al Globe Theatre de 1599: un anfiteatro de tres niveles para 3.000 espectadores.")

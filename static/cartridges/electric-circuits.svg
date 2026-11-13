@@ -32,7 +32,7 @@
   </g>
   
   <!-- Component 1: DC Battery (Left side) -->
-  <g transform="translate(110, 195)" data-pedagogical="ec-battery">
+  <g transform="translate(110, 195)" data-pedagogical="ec-battery" data-pedagogical-title="DC Cell / Battery Source (EMF)" data-pedagogical-eq="V = ΔE / Q (Joules per Coulomb)" data-pedagogical-desc="Provides electromotive potential difference, driving free electrons around the closed copper loop.">
     <rect x="0" y="0" width="80" height="70" rx="8" fill="#1e293b" stroke="#3b82f6" stroke-width="2"/>
     <text x="40" y="28" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">BATTERY</text>
     <text id="battery-voltage-text" x="40" y="52" fill="#60a5fa" font-size="16" font-weight="900" text-anchor="middle">12V</text>
@@ -43,14 +43,14 @@
   </g>
   
   <!-- Component 2: Resistor (Top side) -->
-  <g transform="translate(360, 75)" data-pedagogical="ec-resistor">
+  <g transform="translate(360, 75)" data-pedagogical="ec-resistor" data-pedagogical-title="Ohmic Load Resistor" data-pedagogical-eq="R = V / I (Ohms Ω)" data-pedagogical-desc="Opposes charge flow via lattice collisions. Increasing resistance reduces current proportionally at fixed voltage.">
     <rect x="0" y="10" width="80" height="40" rx="6" fill="#334155" stroke="#f59e0b" stroke-width="2"/>
     <text x="40" y="28" fill="#f8fafc" font-size="11" font-weight="800" text-anchor="middle">RESISTOR</text>
     <text id="resistor-ohms-text" x="40" y="44" fill="#fde047" font-size="13" font-weight="900" text-anchor="middle">4 Ω</text>
   </g>
   
   <!-- Component 3: Lightbulb (Right side) -->
-  <g transform="translate(650, 235)" data-pedagogical="ec-bulb">
+  <g transform="translate(650, 235)" data-pedagogical="ec-bulb" data-pedagogical-title="Incandescent Tungsten Filament" data-pedagogical-eq="P = V × I = I²R (Watts)" data-pedagogical-desc="Converts electrical power into thermal heat and visible radiant photons proportional to dissipated wattage.">
     <!-- Bulb Glow Aura -->
     <circle id="bulb-halo" cx="0" cy="0" r="60" fill="url(#ec-bulbGlow)" opacity="0.85"/>
     <!-- Glass Dome -->

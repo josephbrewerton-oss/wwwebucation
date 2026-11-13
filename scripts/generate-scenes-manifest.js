@@ -522,8 +522,9 @@ export function generateScenesManifest(options = {}) {
       fs.writeFileSync(targetPlayerAst, item.content, 'utf8');
     }
     if (fs.existsSync(item.svgPath)) {
-      if (!fs.existsSync(targetPlayerSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetPlayerSvg).size) {
-        fs.copyFileSync(item.svgPath, targetPlayerSvg);
+      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
+      if (!fs.existsSync(targetPlayerSvg) || fs.readFileSync(targetPlayerSvg, 'utf8') !== srcSvg) {
+        fs.writeFileSync(targetPlayerSvg, srcSvg, 'utf8');
       }
     }
 
@@ -534,8 +535,9 @@ export function generateScenesManifest(options = {}) {
       fs.writeFileSync(targetRootAst, item.content, 'utf8');
     }
     if (fs.existsSync(item.svgPath) && item.svgPath !== targetRootSvg) {
-      if (!fs.existsSync(targetRootSvg) || fs.statSync(item.svgPath).size !== fs.statSync(targetRootSvg).size) {
-        fs.copyFileSync(item.svgPath, targetRootSvg);
+      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
+      if (!fs.existsSync(targetRootSvg) || fs.readFileSync(targetRootSvg, 'utf8') !== srcSvg) {
+        fs.writeFileSync(targetRootSvg, srcSvg, 'utf8');
       }
     }
 
@@ -546,8 +548,9 @@ export function generateScenesManifest(options = {}) {
       fs.writeFileSync(legacySceneAst, item.content, 'utf8');
     }
     if (fs.existsSync(item.svgPath)) {
-      if (!fs.existsSync(legacySceneSvg) || fs.statSync(item.svgPath).size !== fs.statSync(legacySceneSvg).size) {
-        fs.copyFileSync(item.svgPath, legacySceneSvg);
+      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
+      if (!fs.existsSync(legacySceneSvg) || fs.readFileSync(legacySceneSvg, 'utf8') !== srcSvg) {
+        fs.writeFileSync(legacySceneSvg, srcSvg, 'utf8');
       }
     }
 
@@ -560,8 +563,9 @@ export function generateScenesManifest(options = {}) {
       fs.writeFileSync(rootSceneAst, item.content, 'utf8');
     }
     if (fs.existsSync(item.svgPath)) {
-      if (!fs.existsSync(rootSceneSvg) || fs.statSync(item.svgPath).size !== fs.statSync(rootSceneSvg).size) {
-        fs.copyFileSync(item.svgPath, rootSceneSvg);
+      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
+      if (!fs.existsSync(rootSceneSvg) || fs.readFileSync(rootSceneSvg, 'utf8') !== srcSvg) {
+        fs.writeFileSync(rootSceneSvg, srcSvg, 'utf8');
       }
     }
   }
