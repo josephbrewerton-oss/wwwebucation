@@ -113,6 +113,22 @@ export class PersistentAppShellElement extends HTMLElement {
       broadcastBslSpeech({ word: e.data.word, isSpeaking: true });
     } else if (e.data && (e.data.type === 'SPEECH_END' || e.data.type === 'SUBTITLE_CLEAR')) {
       broadcastBslSpeech({ isSpeaking: false });
+    } else if (e.data.type === 'CHECKPOINT_ANSWERED') {
+      const urlPreset = new URLSearchParams(window.location.search).get('preset') || '';
+      const rawSceneId = typeof e.data.sceneId === 'string' && e.data.sceneId.trim() ? e.data.sceneId.trim() : urlPreset || 'simulation_lab';
+      const cpIdx = typeof e.data.index === 'number' ? e.data.index : 0;
+      const isCorrect = Boolean(e.data.isCorrect);
+      const userAnswer = typeof e.data.selectedText === 'string' && e.data.selectedText
+        ? e.data.selectedText
+        : String(e.data.chosenIdx ?? '');
+      void import('../services/studentProfileStore').then(({ recordAssessmentAttempt }) =>
+        recordAssessmentAttempt({
+          challengeId: `sim_${rawSceneId}_cp_${cpIdx}`,
+          topicId: rawSceneId,
+          isCorrect,
+          userAnswer,
+        })
+      );
     }
   };
 

@@ -6,6 +6,7 @@ import { getBaseUrl } from '../utils/url';
 import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, CurriculumQuestionItem } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator } from '../curriculum/curriculumSimMapping';
 import { BUILTIN_DATA_CARTRIDGES } from '../data/player/dataCartridges';
+import { getLearnerProfile, recordAssessmentAttempt } from '../services/studentProfileStore';
 
 export interface PracticeQuestion {
   id: string;
@@ -121,8 +122,9 @@ export function renderPracticePage(): HTMLElement {
   let selectedStage = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'].includes(rawStage) ? rawStage : 'All';
   let selectedSubject = rawSubject.replace(/[<>"'&]/g, '');
   let searchQuery = (params.get('q') || '').slice(0, 100);
-  let score = 0;
-  let streak = 0;
+  const initialProfile = getLearnerProfile();
+  let score = initialProfile.starsEarned || 0;
+  let streak = initialProfile.currentStreak || 0;
   const answeredQuestions = new Set<string>();
 
   // Extract distinct stages and subjects
@@ -377,8 +379,21 @@ export function renderPracticePage(): HTMLElement {
 
         const isFirstAnswer = !answeredQuestions.has(drill.id);
         answeredQuestions.add(drill.id);
+        const isCorrect = optIdx === drill.correctIndex;
 
-        if (optIdx === drill.correctIndex) {
+        if (isFirstAnswer) {
+          const slugStage = (drill.stage || 'ks2').toLowerCase().replace(/key stage\s+/i, 'ks').replace(/[^a-z0-9]+/g, '');
+          const slugSubject = (drill.subject || 'general').toLowerCase().replace(/[^a-z0-9]+/g, '_');
+          const slugUnit = (drill.unit || drill.id).toLowerCase().replace(/[^a-z0-9]+/g, '_');
+          void recordAssessmentAttempt({
+            challengeId: drill.id,
+            topicId: `${slugStage}:${slugSubject}:${slugUnit}`,
+            isCorrect,
+            userAnswer: drill.options[optIdx] || String(optIdx),
+          });
+        }
+
+        if (isCorrect) {
           playSound('success');
           btn.setAttribute('style', 'text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #16a34a; background:#dcfce7; color:#166534; font-weight:700; font-size:0.88rem; line-height:1.4;');
           feedback.style.display = 'block';

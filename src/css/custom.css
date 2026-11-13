@@ -1311,3 +1311,272 @@ body {
   color: #38bdf8;
 }
 
+/* 8. Learner Assessment Passport & UK MIS Export Panels */
+.stj-page-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 2rem 1.25rem 4rem;
+  color: var(--stj-text);
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.stj-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  margin-bottom: 0.5rem;
+  color: var(--stj-text-muted);
+}
+
+.stj-breadcrumb a {
+  color: var(--stj-text-muted);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.stj-breadcrumb a:hover {
+  color: var(--stj-primary);
+  text-decoration: underline;
+}
+
+.stj-breadcrumb-current {
+  color: var(--stj-primary);
+  font-weight: 600;
+}
+
+.stj-page-heading {
+  font-size: clamp(1.75rem, 3vw, 2.25rem);
+  font-weight: 700;
+  color: var(--stj-text);
+  margin: 0 0 0.4rem 0;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+
+.stj-page-lead {
+  font-size: 0.96rem;
+  color: var(--stj-text-muted);
+  margin: 0;
+  max-width: 68ch;
+  line-height: 1.55;
+}
+
+.stj-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.stj-section-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--stj-text);
+  margin: 0;
+  letter-spacing: -0.015em;
+}
+
+.stj-section-subtitle {
+  font-size: 0.84rem;
+  color: var(--stj-text-muted);
+  margin: 0.25rem 0 0 0;
+  line-height: 1.5;
+}
+
+.stj-identity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: end;
+}
+
+.stj-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.stj-field-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--stj-text-muted);
+}
+
+.stj-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.stj-action-row-between {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.stj-status-notice {
+  padding: 0.75rem 1rem;
+  border-radius: var(--stj-radius-md);
+  border: 1px solid var(--stj-border);
+  background-color: var(--stj-canvas);
+  color: var(--stj-text);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.stj-status-notice-success {
+  border-color: var(--stj-success-border);
+  background-color: var(--stj-success-surface);
+  color: var(--stj-success);
+}
+
+.stj-status-notice-danger {
+  border-color: var(--stj-danger-border);
+  background-color: var(--stj-danger-surface);
+  color: var(--stj-danger);
+}
+
+.stj-hidden {
+  display: none !important;
+}
+
+.stj-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--stj-border);
+  border-radius: var(--stj-radius-md);
+}
+
+.stj-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.stj-table th {
+  padding: 0.75rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--stj-text-muted);
+  background-color: var(--stj-canvas);
+  border-bottom: 1px solid var(--stj-border);
+  white-space: nowrap;
+}
+
+.stj-table td {
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--stj-border-subtle);
+  color: var(--stj-text);
+  vertical-align: middle;
+}
+
+.stj-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stj-table-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-family: var(--stj-font-mono);
+}
+
+.stj-status-mastered {
+  color: var(--stj-success);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stj-status-practicing {
+  color: var(--stj-primary);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stj-status-exploring {
+  color: var(--stj-text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.stj-log-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.stj-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--stj-border-subtle);
+  font-size: 0.88rem;
+}
+
+.stj-log-row:last-child {
+  border-bottom: none;
+}
+
+.stj-empty-panel {
+  padding: 2.25rem 1.5rem;
+  text-align: center;
+  background-color: var(--stj-canvas);
+  border: 1px solid var(--stj-border);
+  border-radius: var(--stj-radius-md);
+}
+
+.stj-empty-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--stj-text);
+  margin: 0 0 0.4rem 0;
+}
+
+.stj-empty-desc {
+  font-size: 0.88rem;
+  color: var(--stj-text-muted);
+  margin: 0 auto 1.25rem auto;
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+.stj-beacon-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.stj-beacon-select {
+  flex: 1 1 280px;
+  max-width: 440px;
+}
+
+.stj-action-row-center {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+}
+
+.stj-mb-5 {
+  margin-bottom: 1.25rem;
+}
+
+.stj-mt-4 {
+  margin-top: 1rem;
+}
+
+
+

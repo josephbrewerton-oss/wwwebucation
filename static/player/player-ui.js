@@ -639,10 +639,14 @@
           const chosenOrigIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
 
           if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+            const selectedOpt = indexedOptions.find(o => o.originalIndex === chosenOrigIdx);
             window.parent.postMessage({
               type: 'CHECKPOINT_ANSWERED',
+              sceneId: (scene && scene.id) || '',
+              sceneTitle: (scene && scene.title) || '',
               index,
               chosenIdx: chosenOrigIdx,
+              selectedText: selectedOpt ? selectedOpt.text : String(chosenOrigIdx),
               isCorrect,
               prompt: checkpoint.prompt,
               answer: correctOriginalIndex,

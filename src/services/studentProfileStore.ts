@@ -1,5 +1,5 @@
 // src/services/studentProfileStore.ts
-import { getAllProgressRecords, clearAllStudentProgress, StudentRecord } from './dbStore';
+import { getAllProgressRecords, clearAllStudentProgress, logProgress, StudentRecord } from './dbStore';
 import { getLocalState, setLocalState, removeLocalState } from './localStateStore';
 import { clearJotterDB } from './jotter-db';
 
@@ -11,6 +11,7 @@ export interface LearnerProfile {
   createdAt: number;
   starsEarned: number;
   streakPeak: number;
+  currentStreak?: number;
 }
 
 export interface TopicMasteryStat {
@@ -84,6 +85,7 @@ export function getLearnerProfile(): LearnerProfile {
         createdAt: parsed.createdAt ?? Date.now(),
         starsEarned: parsed.starsEarned ?? 0,
         streakPeak: parsed.streakPeak ?? 0,
+        currentStreak: parsed.currentStreak ?? 0,
       };
     }
   } catch (err) {
@@ -139,13 +141,96 @@ export function formatTopicTitle(rawTopicId: string): string {
   // Grab the specific topic suffix if using namespaces like ks1:sci:1:plants
   const baseName = rawTopicId.includes(':') 
     ? rawTopicId.split(':').pop() || rawTopicId 
-    : rawTopicId;
+    : rawTopicId.replace(/^phet[-_]/i, '');
 
   return baseName
     .split(/[_-]/)
     .filter(Boolean)
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
     .join(' ');
+}
+
+export function inferMisSubjectDomain(rawTopicId: string): string {
+  const lower = (rawTopicId || '').toLowerCase();
+  if (!lower) return 'GENERAL';
+  if (lower.includes(':')) {
+    const parts = lower.split(':');
+    const candidate = parts.length >= 2 && /^ks\d/.test(parts[0]) ? parts[1] : parts[0];
+    if (candidate.startsWith('sci') || candidate.includes('phys') || candidate.includes('chem') || candidate.includes('bio')) return 'SCIENCE';
+    if (candidate.startsWith('math')) return 'MATHEMATICS';
+    if (candidate.startsWith('eng') || candidate.includes('phonics') || candidate.includes('shakespeare')) return 'ENGLISH';
+    if (candidate.startsWith('comp')) return 'COMPUTING';
+    if (candidate.startsWith('re') || candidate.includes('catholic') || candidate.includes('relig')) return 'RELIGIOUS EDUCATION';
+    if (candidate.startsWith('mfl') || candidate.includes('lang') || candidate.includes('french') || candidate.includes('spanish') || candidate.includes('latin')) return 'MODERN LANGUAGES';
+    if (candidate.includes('hist')) return 'HISTORY';
+    if (candidate.includes('geog')) return 'GEOGRAPHY';
+    return candidate.replace(/_/g, ' ').toUpperCase();
+  }
+  if (/phet|atom|dna|circuit|gas|pendulum|faraday|ohm|acid|solar|water-cycle|photosynthesis|fish-tank|velocity|vector-racing/.test(lower)) {
+    return 'SCIENCE';
+  }
+  if (/fraction|pythagoras|bodmas|algebra|calculus|times-tables|domino|math|elevation/.test(lower)) {
+    return 'MATHEMATICS';
+  }
+  if (/bbc-model|lego/.test(lower)) {
+    return 'COMPUTING & DT';
+  }
+  if (/phonics|spelling|shakespeare|macbeth/.test(lower)) {
+    return 'ENGLISH';
+  }
+  if (/bsl|languages|latin/.test(lower)) {
+    return 'LANGUAGES & BSL';
+  }
+  if (/mass|sacrament|church|altar|liturg|communion|holy|nicene|cst|rosary|station|commandment|triduum|catholic|eucharist/.test(lower)) {
+    return 'RELIGIOUS EDUCATION';
+  }
+  return lower.split(/[-_]/)[0].toUpperCase();
+}
+
+export function computeAttainmentBand(accuracyPercent: number): string {
+  if (accuracyPercent >= 85) return 'Exceeding / Mastered';
+  if (accuracyPercent >= 70) return 'Secure (Expected Standard)';
+  if (accuracyPercent >= 50) return 'Developing';
+  return 'Emerging';
+}
+
+export interface RecordAttemptInput {
+  challengeId: string;
+  topicId: string;
+  isCorrect: boolean;
+  userAnswer: string;
+  errorTag?: string;
+}
+
+/**
+ * Milestone-gated assessment logger.
+ * Writes strictly on discrete pedagogical checkpoints or quiz submissions (0 writes during 60 FPS sim loops).
+ */
+export async function recordAssessmentAttempt(input: RecordAttemptInput): Promise<void> {
+  const profile = getLearnerProfile();
+  const nextStreak = input.isCorrect ? (profile.currentStreak ?? 0) + 1 : 0;
+  const nextPeak = Math.max(profile.streakPeak ?? 0, nextStreak);
+  const nextStars = (profile.starsEarned ?? 0) + (input.isCorrect ? 10 : 0);
+
+  saveLearnerProfile({
+    starsEarned: nextStars,
+    currentStreak: nextStreak,
+    streakPeak: nextPeak,
+  });
+
+  await logProgress({
+    cohortCode: profile.cohortCode || 'Primary Group',
+    challengeId: input.challengeId,
+    topicId: input.topicId || 'general_practice',
+    answeredAt: Date.now(),
+    isCorrect: input.isCorrect,
+    userAnswer: input.userAnswer,
+    errorTag: input.errorTag,
+  });
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('learner_progress_recorded', { detail: input }));
+  }
 }
 
 export async function getLearnerAnalytics(): Promise<LearnerAnalytics> {
@@ -298,17 +383,14 @@ export async function exportLearnerArborCsv(): Promise<void> {
   const rows: string[][] = [];
 
   for (const topic of analytics.topicBreakdown) {
-    let attainmentBand = 'Emerging';
-    if (topic.accuracyPercent >= 85) attainmentBand = 'Exceeding / Mastered';
-    else if (topic.accuracyPercent >= 70) attainmentBand = 'Secure (Expected Standard)';
-    else if (topic.accuracyPercent >= 50) attainmentBand = 'Developing';
+    const attainmentBand = computeAttainmentBand(topic.accuracyPercent);
 
     rows.push([
       p.alias,
       p.alias,
       p.keyStage,
       p.cohortCode,
-      topic.topicId.split('-')[0].toUpperCase(),
+      inferMisSubjectDomain(topic.topicId),
       topic.displayName,
       String(topic.attempts),
       String(topic.correctCount),

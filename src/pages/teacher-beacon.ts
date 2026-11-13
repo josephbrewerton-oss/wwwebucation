@@ -1,68 +1,178 @@
 import { getBaseUrl } from '../utils/url';
 import { classroomBeacon } from '../services/classroomBeacon';
 import { PRESET_OPTIONS } from '../data/player/generatedScenes';
+import {
+  downloadLearnerCertificateHtml,
+  exportLearnerArborCsv,
+  exportLearnerPassportJson,
+  getLearnerAnalytics,
+} from '../services/studentProfileStore';
+
+function escapeHtml(str: string): string {
+  return (str || '').replace(/[&<>'"]/g, (ch) => {
+    switch (ch) {
+      case '&': return '&amp;';
+      case '<': return '&lt;';
+      case '>': return '&gt;';
+      case "'": return '&#39;';
+      case '"': return '&quot;';
+      default: return ch;
+    }
+  });
+}
 
 export function renderTeacherBeaconPage(): HTMLElement {
   const base = getBaseUrl();
   const container = document.createElement('div');
-  container.className = 'teacher-beacon-stage';
-  container.style.cssText = 'max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
+  container.className = 'stj-page-shell';
 
-  container.innerHTML = `
-    <!-- Header -->
-    <div style="margin-bottom: 2rem;">
-      <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
-        <a href="${base}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
-        <span style="color:#cbd5e1;">/</span>
-        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">📡 Teacher Beacon Console</span>
-      </div>
-      <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">Classroom Synchronizer &amp; Beacon</h1>
-      <p style="font-size:0.95rem; color:#64748b; margin:0;">
-        Broadcast simulation scenes, quiz checkpoints, and lesson directions to all student devices in real-time with 0 cloud lag.
-      </p>
-    </div>
+  async function renderConsole() {
+    const analytics = await getLearnerAnalytics();
+    const p = analytics.profile;
 
-    <!-- Broadcast Command Center -->
-    <div style="background:#ffffff; border:1.5px solid #0284c7; border-radius:14px; padding:1.75rem; margin-bottom:2rem; box-shadow:0 2px 8px rgba(2,132,199,0.06);">
-      <h2 style="font-size:1.25rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0;">📡 One-Click Classroom Scene Broadcast</h2>
-      <p style="font-size:0.88rem; color:#64748b; margin:0 0 1.25rem 0;">
-        Selecting a cartridge below sends an instant peer broadcast to all pupil Chromebooks and tablets on the local network.
-      </p>
+    container.innerHTML = `
+      <header>
+        <nav class="stj-breadcrumb" aria-label="Breadcrumb">
+          <a href="${base}">Home</a>
+          <span class="stj-meta-separator" aria-hidden="true">/</span>
+          <span class="stj-breadcrumb-current">Teacher Beacon &amp; MIS Console</span>
+        </nav>
+        <h1 class="stj-page-heading">Classroom Synchronizer &amp; MIS Markbook Console</h1>
+        <p class="stj-page-lead">
+          Broadcast interactive 60 FPS cartridges to pupil devices over local peer channels and export RFC 4180 attainment sheets directly into Arbor, Bromcom, or ESS SIMS.
+        </p>
+      </header>
 
-      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:1.5rem;">
-        <select id="beacon-cartridge-select" style="padding:8px 14px; border-radius:8px; border:1.5px solid #0284c7; font-size:0.9rem; font-weight:700; flex:1; max-width:400px;">
-          ${PRESET_OPTIONS.map(p => `
-            <option value="${p.id}">${p.label} (${p.stage})</option>
-          `).join('')}
-        </select>
-        <button type="button" id="btn-broadcast-scene" style="padding:8px 18px; border-radius:8px; background:#0284c7; color:#fff; border:none; font-weight:700; font-size:0.9rem; cursor:pointer;">
-          📢 Broadcast to Class
-        </button>
-      </div>
+      <!-- 01. Broadcast Command Center -->
+      <section class="stj-card" aria-labelledby="beacon-broadcast-heading">
+        <div class="stj-section-header">
+          <div>
+            <h2 id="beacon-broadcast-heading" class="stj-section-title">01. Classroom Cartridge Broadcast</h2>
+            <p class="stj-section-subtitle">
+              Push any verified simulation scene to connected classroom Chromebooks, smartboards, and tablets with zero cloud latency.
+            </p>
+          </div>
+          <div class="stj-meta-strip tabular-nums">
+            <span>${PRESET_OPTIONS.length} verified cartridges ready</span>
+          </div>
+        </div>
 
-      <div id="beacon-toast" style="display:none; padding:10px 14px; border-radius:8px; background:#dcfce7; color:#166534; font-size:0.88rem; font-weight:700;">
-        Command broadcast sent successfully!
-      </div>
-    </div>
-  `;
+        <div class="stj-beacon-controls">
+          <label for="beacon-cartridge-select" class="sr-only">Select curriculum cartridge to broadcast</label>
+          <select id="beacon-cartridge-select" class="stj-select stj-beacon-select">
+            ${PRESET_OPTIONS.map(
+              (preset) => `<option value="${escapeHtml(preset.id)}">${escapeHtml(preset.label)} (${escapeHtml(preset.stage)})</option>`
+            ).join('')}
+          </select>
+          <button type="button" id="btn-broadcast-scene" class="stj-btn stj-btn-primary">
+            Broadcast to Class
+          </button>
+          <a href="${base}player?preset=${encodeURIComponent(PRESET_OPTIONS[0]?.id || 'kinetic-gas')}" id="link-preview-selected" class="stj-btn stj-btn-secondary">
+            Open Selected Lab
+          </a>
+        </div>
 
-  // Attach broadcast handler
-  const btn = container.querySelector('#btn-broadcast-scene');
-  const select = container.querySelector<HTMLSelectElement>('#beacon-cartridge-select');
-  const toast = container.querySelector<HTMLDivElement>('#beacon-toast');
+        <div id="beacon-toast" role="status" aria-live="polite" class="stj-status-notice stj-status-notice-success stj-mt-4 stj-hidden"></div>
+      </section>
 
-  btn?.addEventListener('click', () => {
-    const val = select?.value;
-    if (val) {
-      classroomBeacon.broadcastAstScene(val);
-      if (toast) {
-        toast.style.display = 'block';
-        toast.textContent = `📢 Successfully broadcast scene [${val}] to the classroom!`;
-        setTimeout(() => { toast.style.display = 'none'; }, 4000);
+      <!-- 02. UK MIS Markbook & Attainment Export -->
+      <section class="stj-card" aria-labelledby="beacon-mis-heading">
+        <div class="stj-section-header">
+          <div>
+            <h2 id="beacon-mis-heading" class="stj-section-title">02. Arbor, Bromcom &amp; ESS SIMS Assessment Export</h2>
+            <p class="stj-section-subtitle">
+              Export local device checkpoint mastery into a direct-import MIS CSV sheet mapped to UK National Curriculum attainment bands.
+            </p>
+          </div>
+          <div class="stj-meta-strip">
+            <span>Identifier: ${escapeHtml(p.alias)}</span>
+            <span class="stj-meta-separator" aria-hidden="true">·</span>
+            <span>Cohort: ${escapeHtml(p.cohortCode)}</span>
+            <span class="stj-meta-separator" aria-hidden="true">·</span>
+            <a href="${base}profile">Edit Cohort / UPN</a>
+          </div>
+        </div>
+
+        <div class="stj-stat-grid stj-mb-5">
+          <div class="stj-stat-card">
+            <span class="stj-stat-label">Recorded Attempts</span>
+            <strong class="stj-stat-value tabular-nums">${analytics.totalAttempts}</strong>
+            <span class="stj-stat-desc">Checkpoints &amp; drills</span>
+          </div>
+          <div class="stj-stat-card">
+            <span class="stj-stat-label">Cohort Accuracy</span>
+            <strong class="stj-stat-value tabular-nums">${analytics.overallAccuracy}%</strong>
+            <span class="stj-stat-desc">${analytics.totalCorrect} correct responses</span>
+          </div>
+          <div class="stj-stat-card">
+            <span class="stj-stat-label">Units Practiced</span>
+            <strong class="stj-stat-value tabular-nums">${analytics.topicsPracticedCount}</strong>
+            <span class="stj-stat-desc">${analytics.topicsMasteredCount} units mastered</span>
+          </div>
+        </div>
+
+        <div class="stj-action-row">
+          <button type="button" id="btn-teacher-arbor-csv" class="stj-btn stj-btn-primary">
+            Export Arbor / Bromcom / SIMS CSV
+          </button>
+          <button type="button" id="btn-teacher-certificate" class="stj-btn stj-btn-secondary">
+            Printable Progress Certificate
+          </button>
+          <button type="button" id="btn-teacher-passport" class="stj-btn stj-btn-secondary">
+            Export JSON Learning Passport
+          </button>
+        </div>
+
+        <div id="mis-export-toast" role="status" aria-live="polite" class="stj-status-notice stj-status-notice-success stj-mt-4 stj-hidden"></div>
+      </section>
+    `;
+
+    const select = container.querySelector<HTMLSelectElement>('#beacon-cartridge-select');
+    const previewLink = container.querySelector<HTMLAnchorElement>('#link-preview-selected');
+    const beaconToast = container.querySelector<HTMLDivElement>('#beacon-toast');
+    const misToast = container.querySelector<HTMLDivElement>('#mis-export-toast');
+
+    select?.addEventListener('change', () => {
+      if (previewLink && select.value) {
+        previewLink.href = `${base}player?preset=${encodeURIComponent(select.value)}`;
       }
-    }
-  });
+    });
 
+    container.querySelector('#btn-broadcast-scene')?.addEventListener('click', () => {
+      const val = select?.value;
+      if (val) {
+        classroomBeacon.broadcastAstScene(val);
+        if (beaconToast) {
+          beaconToast.textContent = `Broadcasted cartridge "${val}" to active classroom devices.`;
+          beaconToast.classList.remove('stj-hidden');
+        }
+      }
+    });
+
+    const showMisToast = (msg: string) => {
+      if (misToast) {
+        misToast.textContent = msg;
+        misToast.classList.remove('stj-hidden');
+      }
+    };
+
+    container.querySelector('#btn-teacher-arbor-csv')?.addEventListener('click', async () => {
+      await exportLearnerArborCsv();
+      showMisToast('Exported RFC 4180 assessment CSV for Arbor, Bromcom, and ESS SIMS.');
+    });
+
+    container.querySelector('#btn-teacher-certificate')?.addEventListener('click', async () => {
+      await downloadLearnerCertificateHtml();
+      showMisToast('Downloaded printable HTML Progress Certificate.');
+    });
+
+    container.querySelector('#btn-teacher-passport')?.addEventListener('click', async () => {
+      await exportLearnerPassportJson();
+      showMisToast('Exported portable JSON Learning Passport.');
+    });
+  }
+
+  void renderConsole();
   return container;
 }
 
