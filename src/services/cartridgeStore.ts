@@ -994,6 +994,35 @@ export async function initCartridgeVault(): Promise<void> {
         }
       }
 
+      // 4b. Pre-expand modular built-in Data Cartridges (0 network calls, ready immediately in IndexedDB)
+      for (const dataDeck of BUILTIN_DATA_CARTRIDGES) {
+        const existing = mergedMap.get(dataDeck.id);
+        if (!existing || !existing.svgMarkup || !existing.astSource || (existing.source === 'builtin' && existing.astSource !== dataDeck.astSource)) {
+          const dataDef: CartridgeDefinition = {
+            ...(existing || {}),
+            id: dataDeck.id,
+            type: 'Data',
+            title: existing?.title || dataDeck.title,
+            stage: existing?.stage || dataDeck.stage,
+            subject: existing?.subject || dataDeck.subject,
+            oakId: existing?.oakId || dataDeck.oakId,
+            oakUnit: existing?.oakUnit || dataDeck.oakUnit,
+            category: existing?.category || dataDeck.category,
+            desc: existing?.desc || dataDeck.desc,
+            icon: existing?.icon || dataDeck.icon,
+            source: 'builtin',
+            isCore: true,
+            tier: 'core',
+            svgMarkup: dataDeck.svgMarkup,
+            astSource: dataDeck.astSource,
+            dataPayload: dataDeck.dataPayload,
+            updatedAt: Date.now(),
+          };
+          mergedMap.set(dataDeck.id, dataDef);
+          await putVaultCartridge(dataDef as VaultCartridgeRecord);
+        }
+      }
+
       inMemoryCartridgesCache = Array.from(mergedMap.values());
 
       // 5. Synchronize into runtime ASTSceneRegistry if present in global scope
@@ -1024,7 +1053,7 @@ export async function initCartridgeVault(): Promise<void> {
 }
 
 /**
- * Inflates a specific cartridge into the user's IndexedDB Cartridge Vault.
+ * Inflates a specific cartridge into the user's IndexedDB Cartridge Vault on demand.
  * Guarantees zero-network retrieval on subsequent loads and air-gapped readiness.
  */
 export async function inflateCartridgeToVault(cartridgeId: string): Promise<CartridgeDefinition | null> {
@@ -1048,7 +1077,38 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
     }
   } catch (_) {}
 
-  // 3. Check embedded core simulations (0ms air-gapped)
+  // 3. Check embedded Data Cartridges (0ms air-gapped, no network fetch)
+  const builtinData = BUILTIN_DATA_CARTRIDGES.find((d) => d.id === canonical);
+  if (builtinData) {
+    const def: CartridgeDefinition = {
+      id: builtinData.id,
+      type: 'Data',
+      title: builtinData.title,
+      stage: builtinData.stage,
+      subject: builtinData.subject,
+      oakId: builtinData.oakId,
+      oakUnit: builtinData.oakUnit,
+      category: builtinData.category,
+      desc: builtinData.desc,
+      icon: builtinData.icon,
+      source: 'builtin',
+      isCore: true,
+      tier: 'core',
+      svgMarkup: builtinData.svgMarkup,
+      astSource: builtinData.astSource,
+      dataPayload: builtinData.dataPayload,
+      updatedAt: Date.now(),
+    };
+    await putVaultCartridge(def as VaultCartridgeRecord);
+    if (inMemoryCartridgesCache) {
+      const idx = inMemoryCartridgesCache.findIndex((c) => c.id === canonical);
+      if (idx >= 0) inMemoryCartridgesCache[idx] = def;
+      else inMemoryCartridgesCache.push(def);
+    }
+    return def;
+  }
+
+  // 4. Check embedded core simulations (0ms air-gapped)
   if (EMBEDDED_CORE_CARTRIDGES[canonical]) {
     const core = EMBEDDED_CORE_CARTRIDGES[canonical];
     const def: CartridgeDefinition = {
@@ -1072,8 +1132,9 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
     return def;
   }
 
-  // 4. Fetch companion .svg and .ast to inflate into IndexedDB vault
-  if (typeof fetch !== 'undefined') {
+  // 5. Fetch companion .svg and .ast on-demand only for known manifest cartridges to avoid 404 calls
+  const knownMeta = PRESET_OPTIONS.find((p) => p.id === canonical);
+  if (knownMeta && typeof fetch !== 'undefined') {
     try {
       const rawBase = (typeof window !== 'undefined' && (window as any).__AST_BASE_URL__) || (typeof import.meta !== 'undefined' && import.meta.env?.BASE_URL) || '/';
       const cleanBase = rawBase.endsWith('/') ? rawBase : `${rawBase}/`;

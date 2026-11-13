@@ -4,6 +4,7 @@ import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScene
 import {
   saveCustomCartridge,
   getCustomCartridges,
+  inflateCartridgeToVault,
   type CartridgeDefinition,
 } from '../services/cartridgeStore';
 import { isPhetBundle, transpilePhetFile, PHET_BUILTIN_MODELS, type SupportedPhetPreset } from '../utils/phetBridge';
@@ -777,6 +778,10 @@ export function renderPlayerPage(): HTMLElement {
     }
 
     initialExternalSrc = null;
+    // Lazily inflate requested curriculum/data cartridge into native IndexedDB on-demand (zero background polling, zero 404s)
+    if (safePresetId !== 'lumina-architecture') {
+      inflateCartridgeToVault(safePresetId).catch(() => {});
+    }
     if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
       postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
     } else if (iframe && (!iframe.src || iframe.src === 'about:blank' || !isIframeReady)) {
