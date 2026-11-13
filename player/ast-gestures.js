@@ -3007,29 +3007,38 @@ ${strokeLines.join('\n')}
     }
 
     persistInkToSession() {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
+      const store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      if (!store) return;
       try {
         const sceneId = (this.engine && this.engine.activePresetId) || 'whiteboard';
         const key = `stj_whiteboard_ink_${sceneId}`;
         if (this.strokes.length === 0) {
-          sessionStorage.removeItem(key);
+          store.removeItem(key);
         } else {
-          sessionStorage.setItem(key, JSON.stringify(this.exportInkToJSON()));
+          store.setItem(key, JSON.stringify(this.exportInkToJSON()));
         }
       } catch {}
     }
 
     restoreInkFromSession() {
-      if (typeof window === 'undefined' || !window.sessionStorage) return;
-      try {
-        const sceneId = (this.engine && this.engine.activePresetId) || 'whiteboard';
-        const key = `stj_whiteboard_ink_${sceneId}`;
-        const stored = sessionStorage.getItem(key);
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          this.importInkFromJSON(parsed, { clearExisting: true });
-        }
-      } catch {}
+      const store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      if (!store) return;
+      const applyRestore = () => {
+        try {
+          const sceneId = (this.engine && this.engine.activePresetId) || 'whiteboard';
+          const key = `stj_whiteboard_ink_${sceneId}`;
+          const stored = store.getItem(key);
+          if (stored) {
+            const parsed = JSON.parse(stored);
+            this.importInkFromJSON(parsed, { clearExisting: true });
+          }
+        } catch {}
+      };
+      if (store.ready && typeof store.isReady === 'function' && !store.isReady()) {
+        store.ready.then(applyRestore);
+      } else {
+        applyRestore();
+      }
     }
 
     showFloatingNotice(message) {

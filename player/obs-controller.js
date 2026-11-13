@@ -54,6 +54,13 @@
       // Load persisted settings
       this.settings = this.loadSettings();
 
+      if (global.ASTLocalStore && global.ASTLocalStore.ready) {
+        global.ASTLocalStore.ready.then(() => {
+          const hydrated = this.loadSettings();
+          this.settings = Object.assign(this.settings, hydrated);
+        });
+      }
+
       // Auto-connect if configured or previously connected
       if (this.settings.autoConnect) {
         this.connect();
@@ -61,52 +68,35 @@
     }
 
     loadSettings() {
-      if (typeof window === 'undefined' || !window.localStorage) {
-        return {
-          url: this.options.defaultUrl,
-          password: '',
-          autoConnect: false,
-          syncRecording: this.options.syncRecording,
-          syncSubtitles: this.options.syncSubtitles,
-          subtitleSource: this.options.subtitleSource,
-          syncScenes: this.options.syncScenes,
-          transparent: false,
-        };
-      }
-      try {
-        const saved = localStorage.getItem('stj_obs_settings');
-        if (saved) {
-          return Object.assign({
-            url: this.options.defaultUrl,
-            password: '',
-            autoConnect: false,
-            syncRecording: true,
-            syncSubtitles: true,
-            subtitleSource: 'LessonSubtitles',
-            syncScenes: false,
-            transparent: false,
-          }, JSON.parse(saved));
-        }
-      } catch (e) {}
-
-      return {
+      const defaults = {
         url: this.options.defaultUrl,
         password: '',
         autoConnect: false,
-        syncRecording: true,
-        syncSubtitles: true,
-        subtitleSource: 'LessonSubtitles',
-        syncScenes: false,
+        syncRecording: this.options.syncRecording,
+        syncSubtitles: this.options.syncSubtitles,
+        subtitleSource: this.options.subtitleSource,
+        syncScenes: this.options.syncScenes,
         transparent: false,
       };
+      if (typeof window === 'undefined' || !global.ASTLocalStore) {
+        return defaults;
+      }
+      try {
+        const saved = global.ASTLocalStore.getItem('stj_obs_settings');
+        if (saved) {
+          return Object.assign(defaults, JSON.parse(saved));
+        }
+      } catch (e) {}
+
+      return defaults;
     }
 
     saveSettings(newSettings) {
       this.settings = Object.assign(this.settings, newSettings);
-      if (typeof window !== 'undefined' && window.localStorage) {
+      if (typeof window !== 'undefined' && global.ASTLocalStore) {
         try {
           const persistedSettings = Object.assign({}, this.settings, { password: '' });
-          localStorage.setItem('stj_obs_settings', JSON.stringify(persistedSettings));
+          global.ASTLocalStore.setItem('stj_obs_settings', JSON.stringify(persistedSettings));
         } catch (e) {}
       }
     }

@@ -62,10 +62,7 @@
         channelName: 'ast-mesh-bus',
         throttleMs: 16, // ~60 FPS rate limiting for continuous gesture/time broadcasts
         enableAi: true,
-        iceServers: [
-          { urls: 'stun:stun.l.google.com:19302' },
-          { urls: 'stun:stun1.l.google.com:19302' }
-        ]
+        iceServers: []
       }, options);
 
       this.pc = null;
