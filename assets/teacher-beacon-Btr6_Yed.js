@@ -1,4 +1,4 @@
-import{i as e,r as t}from"./index-CqMyeCBe.js";import{l as n}from"./cartridge-vault-Dkn7_WB_.js";function r(){let r=t(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
+import{i as e,r as t}from"./index-C0OHtTH5.js";import{l as n}from"./cartridge-vault-xX-2EBVr.js";function r(){let r=t(),i=document.createElement(`div`);i.className=`teacher-beacon-stage`,i.style.cssText=`max-width: 1000px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`,i.innerHTML=`
     <!-- Header -->
     <div style="margin-bottom: 2rem;">
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">

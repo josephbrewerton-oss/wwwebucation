@@ -1,4 +1,4 @@
-import{r as e}from"./index-CqMyeCBe.js";import{a as t,c as n,d as r,g as i,i as a,l as o,o as s,r as c,s as l,u,v as d}from"./bsl-engine-C2koXIIW.js";import{c as f,i as p,l as m,n as h,o as g,r as _,s as v}from"./cartridge-vault-Dkn7_WB_.js";import{t as y}from"./EdgeCognitiveEngine-CBKzWTe0.js";function b(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
+import{r as e}from"./index-C0OHtTH5.js";import{a as t,c as n,d as r,g as i,i as a,l as o,o as s,r as c,s as l,u,v as d}from"./bsl-engine-D_dCVfTn.js";import{c as f,i as p,l as m,n as h,o as g,r as _,s as v}from"./cartridge-vault-xX-2EBVr.js";import{t as y}from"./EdgeCognitiveEngine-ZfH0-yje.js";function b(e){if(!e.isOpen)return null;let{embedTargetMode:t,setEmbedTargetMode:n,copiedEmbed:r,onCopyEmbedCode:i,embedCode:a}=e,o=document.createElement(`div`);o.className=`ast-player-embed-modal`,o.style.cssText=`
     background: var(--stj-surface-raised, #0f172a);
     border-bottom: 1px solid var(--stj-border, #334155);
     padding: 12px 16px;
