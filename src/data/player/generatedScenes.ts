@@ -109,13 +109,13 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "stage": "CATHOLIC LIFE",
     "oakId": "OAK-KS2-RE-005",
     "oakUnit": "ks2-re-catholic-first-holy-communion",
-    "subject": "Religious Education",
+    "subject": "Catholic Life",
     "isCore": true,
     "tier": "core",
     "mount": "/curriculum/religious/first-communion",
-    "section": "Catholic Life & Faith Formation",
+    "section": "Sacred Liturgy & Sacraments",
     "hasCheckpoints": true,
-    "checkpointCount": 2
+    "checkpointCount": 3
   },
   {
     "id": "triduum-easter",

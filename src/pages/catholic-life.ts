@@ -12,6 +12,7 @@ import {
 } from '../data/catholic';
 import { renderAltarExplorer } from './catholic/AltarExplorer';
 import { renderLatinPrayersChapel } from './catholic/LatinPrayersChapel';
+import { renderFirstCommunionPrep } from './catholic/FirstCommunionPrep';
 
 const ROSARY_MYSTERIES = {
   Joyful: {
@@ -56,9 +57,9 @@ const ROSARY_MYSTERIES = {
   }
 };
 
-export type CatholicTab = 'overview' | 'altar-anatomy' | 'church-tour' | 'latin-prayers' | 'mass' | 'sacraments' | 'rosary' | 'cst';
+export type CatholicTab = 'overview' | 'first-communion' | 'altar-anatomy' | 'church-tour' | 'latin-prayers' | 'mass' | 'sacraments' | 'rosary' | 'cst';
 
-const VALID_TABS: readonly CatholicTab[] = ['overview', 'altar-anatomy', 'church-tour', 'latin-prayers', 'mass', 'sacraments', 'rosary', 'cst'] as const;
+const VALID_TABS: readonly CatholicTab[] = ['overview', 'first-communion', 'altar-anatomy', 'church-tour', 'latin-prayers', 'mass', 'sacraments', 'rosary', 'cst'] as const;
 
 function sanitizeTab(tab: unknown): CatholicTab {
   if (typeof tab === 'string' && (VALID_TABS as readonly string[]).includes(tab)) {
@@ -97,33 +98,43 @@ export function renderCatholicLifePage(): HTMLElement {
 
   const urlParams = new URLSearchParams(window.location.search);
   const path = window.location.pathname;
+  const tabParam = urlParams.get('tab');
+  const presetParam = urlParams.get('preset');
   let initialTab: CatholicTab = 'overview';
-  
-  if (path.includes('altar')) {
+
+  if (path.includes('first-communion')) {
+    initialTab = 'first-communion';
+  } else if (path.includes('altar')) {
     initialTab = 'altar-anatomy';
   } else if (path.includes('latin')) {
     initialTab = 'latin-prayers';
   } else if (path.includes('church-tour') || path.includes('tour')) {
     initialTab = 'church-tour';
-  } else if (urlParams.get('tab') === 'church-tour' || urlParams.get('tab') === 'tour') {
+  } else if (tabParam === 'first-communion' || tabParam === 'communion') {
+    initialTab = 'first-communion';
+  } else if (tabParam === 'church-tour' || tabParam === 'tour') {
     initialTab = 'church-tour';
-  } else if (urlParams.get('tab') === 'altar' || urlParams.get('tab') === 'altar-anatomy') {
+  } else if (tabParam === 'altar' || tabParam === 'altar-anatomy') {
     initialTab = 'altar-anatomy';
-  } else if (urlParams.get('tab') === 'latin' || urlParams.get('tab') === 'latin-prayers') {
+  } else if (tabParam === 'latin' || tabParam === 'latin-prayers') {
     initialTab = 'latin-prayers';
-  } else if (urlParams.get('tab') === 'mass') {
+  } else if (tabParam === 'mass') {
     initialTab = 'mass';
-  } else if (urlParams.get('tab') === 'sacraments') {
+  } else if (tabParam === 'sacraments') {
     initialTab = 'sacraments';
-  } else if (urlParams.get('tab') === 'rosary') {
+  } else if (tabParam === 'rosary') {
     initialTab = 'rosary';
-  } else if (urlParams.get('tab') === 'cst') {
+  } else if (tabParam === 'cst') {
     initialTab = 'cst';
+  } else if (presetParam && VALID_CATHOLIC_SIMS.has(presetParam)) {
+    initialTab = presetParam === 'first-communion' ? 'first-communion' : 'church-tour';
   }
 
   let currentTab: CatholicTab = initialTab;
   let activeRosaryCycle: 'Joyful' | 'Luminous' | 'Sorrowful' | 'Glorious' = 'Joyful';
-  let activeCatholicSim: string = currentTab === 'altar-anatomy' ? 'altar-anatomy' : 'church-tour';
+  let activeCatholicSim: string = (presetParam && VALID_CATHOLIC_SIMS.has(presetParam))
+    ? presetParam
+    : (currentTab === 'altar-anatomy' ? 'altar-anatomy' : currentTab === 'first-communion' ? 'first-communion' : 'church-tour');
 
   function renderHeader(): string {
     return `
@@ -152,6 +163,9 @@ export function renderCatholicLifePage(): HTMLElement {
         <div style="display:flex; gap:8px; flex-wrap:wrap;" id="catholic-nav-tabs">
           <button type="button" class="sanctuary-tab-btn" data-tab="overview" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'overview' ? '#facc15' : '#334155'}; color:${currentTab === 'overview' ? '#0f172a' : '#ffffff'};">
             📖 Sanctuary Overview
+          </button>
+          <button type="button" class="sanctuary-tab-btn" data-tab="first-communion" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'first-communion' ? '#facc15' : '#334155'}; color:${currentTab === 'first-communion' ? '#0f172a' : '#ffffff'};">
+            🍞 First Holy Communion
           </button>
           <button type="button" class="sanctuary-tab-btn" data-tab="altar-anatomy" style="padding:8px 16px; border-radius:8px; font-weight:700; font-size:0.85rem; cursor:pointer; border:none; background:${currentTab === 'altar-anatomy' ? '#facc15' : '#334155'}; color:${currentTab === 'altar-anatomy' ? '#0f172a' : '#ffffff'};">
             🕯️ High Altar Explorer
@@ -260,6 +274,28 @@ export function renderCatholicLifePage(): HTMLElement {
               </button>
             </div>
           </div>
+
+          <!-- First Holy Communion Featured Card -->
+          <div style="background:#0f172a; border:1.5px solid #ca8a04; border-radius:12px; padding:1.25rem; color:#f8fafc; display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                <span style="font-size:1.4rem;">🍞</span>
+                <span style="font-size:0.72rem; background:#422006; color:#fde047; padding:2px 8px; border-radius:999px; font-weight:700;">KS2 Sacramental Prep</span>
+              </div>
+              <h3 style="font-size:1.15rem; font-weight:800; color:#ffffff; margin:0 0 6px 0;">First Holy Communion &amp; First Confession</h3>
+              <p style="font-size:0.84rem; color:#94a3b8; line-height:1.5; margin:0 0 12px 0;">
+                Prepare your heart with our interactive 5-step Communion simulator, First Confession walkthrough, prayer memory practice, readiness checklist, and KS2 quiz.
+              </p>
+            </div>
+            <div style="display:flex; gap:8px; margin-top:8px;">
+              <button type="button" class="view-tab-direct" data-target="first-communion" style="flex:1; padding:8px 12px; border-radius:6px; background:#ca8a04; color:#0f172a; border:none; font-weight:800; font-size:0.82rem; cursor:pointer;">
+                🍞 Open First Communion Prep
+              </button>
+              <a href="${base}player?preset=first-communion" style="padding:8px 12px; border-radius:6px; background:#1e293b; color:#fde047; text-decoration:none; font-weight:700; font-size:0.82rem; border:1px solid #334155;">
+                ↗ Sim
+              </a>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -357,11 +393,13 @@ export function renderCatholicLifePage(): HTMLElement {
             <h2 style="font-size:1.6rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">
               ${isAltar ? 'The Catholic Altar: Sacred Anatomy &amp; Relics' : 
                 isChurch ? 'Tour of a Catholic Church: Sacred Architecture' : 
+                safeActiveId === 'first-communion' ? 'First Holy Communion &amp; Eucharistic Adoration' :
                 'Interactive Catholic Faith &amp; Liturgy Simulator'}
             </h2>
             <p style="font-size:0.95rem; color:#64748b; margin:0;">
               ${isAltar ? 'Interactive exploration of the Mensa, Altar Stone with Five Sacred Wounds, Martyrs Relics, and 2, 6, 7 Beeswax Candles Rule.' :
                 isChurch ? 'Explore the sacred architecture from the Narthex &amp; Holy Water Stoup to the Nave, Ambo, Altar, Tabernacle &amp; Baptistery.' :
+                safeActiveId === 'first-communion' ? 'Practise the 5 steps of First Holy Communion: Clean Heart, 1-Hour Fast, Reverent Bow, Amen!, and Thanksgiving.' :
                 'Interactive 60 FPS vector simulation grounded in Catholic theology and GIRM.'}
             </p>
           </div>
@@ -620,12 +658,14 @@ export function renderCatholicLifePage(): HTMLElement {
     let contentHtml = '';
     let customElement: HTMLElement | null = null;
 
-    if (currentTab === 'altar-anatomy') {
+    if (currentTab === 'first-communion') {
+      customElement = renderFirstCommunionPrep(base);
+    } else if (currentTab === 'altar-anatomy') {
       customElement = renderAltarExplorer();
     } else if (currentTab === 'latin-prayers') {
       customElement = renderLatinPrayersChapel();
     } else if (currentTab === 'church-tour') {
-      contentHtml = renderInteractiveSim('church-tour');
+      contentHtml = renderInteractiveSim(activeCatholicSim);
     } else if (currentTab === 'mass') {
       contentHtml = renderMass();
     } else if (currentTab === 'sacraments') {

@@ -1260,6 +1260,41 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
   passedTests++;
 }
 
+// =========================================================================
+// TEST 20: First Holy Communion Cartridge & Catholic Sanctuary Regression Guard
+// =========================================================================
+console.log('\n--- TEST 20: First Holy Communion AST & Sanctuary Routing Invariants ---');
+{
+  const fhcAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'first-communion.ast'), 'utf8');
+  const fhcSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'first-communion.svg'), 'utf8');
+
+  const engFhc = createHeadlessEngine();
+  const parsedFhc = engFhc.parseAst(fhcAst);
+
+  assert.strictEqual(parsedFhc.id, 'first-communion', 'Parsed scene id must be first-communion');
+  assert(parsedFhc.subtitles.length >= 5, `Expected >= 5 normalized subtitles, got ${parsedFhc.subtitles.length}`);
+  assert(parsedFhc.subtitles.every((s: any) => s.start >= 0 && s.end <= 1.0 && Boolean(s.en)), 'All subtitles must use normalized [0..1] :start/:end and :en text');
+  assert(parsedFhc.checkpoints.length >= 3, `Expected >= 3 checkpoints in first-communion.ast, got ${parsedFhc.checkpoints.length}`);
+  assert(parsedFhc.checkpoints.some((c: any) => Boolean(c.passExpr)), 'First Communion cartridge must include a :pass-expr manipulation goal');
+  assert(parsedFhc.checkpoints.some((c: any) => c.onWrong && Object.keys(c.onWrong).length >= 2), 'Doctrinal checkpoints must include :on-wrong misconception nudges');
+
+  const clickTargets = parsedFhc.gestures.filter((g: any) => g.type === 'clickable').map((g: any) => g.target);
+  for (let step = 1; step <= 5; step++) {
+    assert(clickTargets.includes(`#fhc-step-${step}`), `Gestures must declare clickable #fhc-step-${step}`);
+    assert(fhcSvg.includes(`id="fhc-step-${step}"`), `SVG must declare id="fhc-step-${step}"`);
+  }
+
+  // Verify catholic-life.ts fixes: dynamic activeCatholicSim and first-communion route/tab
+  const catholicLifeSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'pages', 'catholic-life.ts'), 'utf8');
+  assert(!catholicLifeSrc.includes("renderInteractiveSim('church-tour')"), 'catholic-life.ts must pass activeCatholicSim instead of hardcoded church-tour');
+  assert(catholicLifeSrc.includes('renderInteractiveSim(activeCatholicSim)'), 'catholic-life.ts must call renderInteractiveSim(activeCatholicSim)');
+  assert(catholicLifeSrc.includes("path.includes('first-communion')"), 'catholic-life.ts must route /first-communion to first-communion tab');
+  assert(catholicLifeSrc.includes('renderFirstCommunionPrep(base)'), 'catholic-life.ts must mount renderFirstCommunionPrep(base)');
+
+  console.log('[✅ PASS] Sim 20: First Holy Communion AST syntax, checkpoints, clickable steps, and catholic-life routing verified.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');

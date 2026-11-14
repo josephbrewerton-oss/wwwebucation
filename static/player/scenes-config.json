@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-14T09:03:07.748Z",
+  "generatedAt": "2026-11-14T09:20:47.553Z",
   "totalScenes": 71,
   "inputDirs": [
     "static/cartridges",
@@ -162,7 +162,7 @@
       "duration": 28,
       "oakId": "OAK-KS2-RE-005",
       "oakUnit": "ks2-re-catholic-first-holy-communion",
-      "subject": "Religious Education",
+      "subject": "Catholic Life",
       "has3D": true,
       "nodes3DCount": 0,
       "svgFile": "cartridges/first-communion.svg",
@@ -174,12 +174,12 @@
       "isCore": true,
       "tier": "core",
       "mount": "/curriculum/religious/first-communion",
-      "section": "Catholic Life & Faith Formation",
-      "keyframeCount": 0,
+      "section": "Sacred Liturgy & Sacraments",
+      "keyframeCount": 5,
       "subtitleCount": 6,
-      "bindingsCount": 4,
+      "bindingsCount": 18,
       "hasCheckpoints": true,
-      "checkpointCount": 2
+      "checkpointCount": 3
     },
     {
       "id": "triduum-easter",

@@ -1,57 +1,86 @@
-(:scene :id "first-communion" :type "Sim" :oak-id "OAK-KS2-RE-005" :oak-unit "ks2-re-catholic-first-holy-communion" :title "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love" :stage "CATHOLIC LIFE" :duration 28.0
+(:scene :id "first-communion" :type "Sim" :oak-id "OAK-KS2-RE-005" :oak-unit "ks2-re-catholic-first-holy-communion" :subject "Catholic Life" :section "Sacred Liturgy & Sacraments" :title "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love" :stage "CATHOLIC LIFE" :duration 28.0
   (:vars (
-    (:var :name "communionStep" :val 1.0 :min 1.0 :max 5.0 :step 1.0 :label "Steps of First Holy Communion (1: Clean Heart, 2: Fasting, 3: Reverence, 4: Reception, 5: Thanksgiving)")
-    (:var :name "adorationRadiance" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Eucharistic Adoration Divine Radiance")
-    (:var :name "reverentBow" :val 1.0 :min 0.0 :max 1.0 :step 0.1 :label "Communicant Reverent Bow Angle")
+    (:var :name "communionStep" :val 1.0 :min 1.0 :max 5.0 :step 1.0 :label "Steps of First Holy Communion")
+    (:var :name "adorationRadiance" :val 1.0 :min 0.2 :max 2.0 :step 0.1 :label "Eucharistic Adoration Radiance")
+    (:var :name "reverentBow" :val 0.6 :min 0.0 :max 1.0 :step 0.1 :label "Communicant Reverent Bow")
   ))
+
+  (ui:controls
+    (control:button :id "reset" :label "Reset Steps" :action (sim:reset))
+    (control:slider :id "communionStep" :label "Communion Step (1-5)" :min 1 :max 5 :default 1 :step 1 :bind *communionStep*)
+    (control:slider :id "adorationRadiance" :label "Adoration Radiance" :min 0.2 :max 2.0 :default 1.0 :step 0.1 :bind *adorationRadiance*)
+    (control:slider :id "reverentBow" :label "Reverent Bow" :min 0.0 :max 1.0 :default 0.6 :step 0.1 :bind *reverentBow*)
+  )
 
   (:camera :mode "2d" :viewBox "0 0 800 480")
 
   (:gestures (
-    (:draggable :target "#communion-steps-slider" :axis "x" :min 120 :max 680
-      (:bind-var "communionStep" :map "linear" :from-min 120 :from-max 680 :to-min 1.0 :to-max 5.0)
-    )
-    (:draggable :target "#adoration-radiance-dial" :axis "y" :min 90 :max 250
-      (:bind-var "adorationRadiance" :map "linear" :from-min 250 :from-max 90 :to-min 0.2 :to-max 2.0)
-    )
+    (:draggable :target "#communion-steps-slider" :axis "x" :min 60 :max 620 :var "communionStep")
+    (:clickable :target "#fhc-step-1" :set-var "communionStep" :val 1)
+    (:clickable :target "#fhc-step-2" :set-var "communionStep" :val 2)
+    (:clickable :target "#fhc-step-3" :set-var "communionStep" :val 3)
+    (:clickable :target "#fhc-step-4" :set-var "communionStep" :val 4)
+    (:clickable :target "#fhc-step-5" :set-var "communionStep" :val 5)
   ))
 
   (:subtitles (
-    (:start 0.0 :end 5.0 :text "Preparing for First Holy Communion is a sacred milestone: receiving the living Lord Jesus Christ into our heart and soul.")
-    (:start 5.0 :end 10.0 :text "Step 1: First Confession (Reconciliation) washes our soul clean so Jesus finds a bright, peaceful temple within us.")
-    (:start 10.0 :end 15.0 :text "Step 2: The Eucharistic Fast of 1 hour from food and drink awakens holy hunger for the True Bread of Life.")
-    (:start 15.0 :end 20.0 :text "Step 3: Approaching the Sanctuary, hands folded in prayer, we make a profound bow of reverence before the Blessed Sacrament.")
-    (:start 20.0 :end 24.5 :text "Step 4: The Priest proclaims 'The Body of Christ', and we proclaim our living faith with a clear, joyful 'Amen!'")
-    (:start 24.5 :end 28.0 :text "Step 5: In silent Thanksgiving and Eucharistic Adoration, we speak intimately with Jesus who now dwells within our heart.")
+    (:start 0.00 :end 0.18 :en "Preparing for First Holy Communion is a sacred milestone: receiving the living Lord Jesus Christ into our heart and soul.")
+    (:start 0.18 :end 0.36 :en "Step 1: First Confession (Reconciliation) washes our soul clean so Jesus finds a bright, peaceful temple within us.")
+    (:start 0.36 :end 0.54 :en "Step 2: The Eucharistic Fast of 1 hour from food and drink awakens holy hunger for the True Bread of Life.")
+    (:start 0.54 :end 0.72 :en "Step 3: Approaching the Sanctuary, hands folded in prayer, we make a profound bow of reverence before the Blessed Sacrament.")
+    (:start 0.72 :end 0.88 :en "Step 4: The Priest proclaims 'The Body of Christ', and we proclaim our living faith with a clear, joyful 'Amen!'")
+    (:start 0.88 :end 1.00 :en "Step 5: In silent Thanksgiving and Eucharistic Adoration, we speak intimately with Jesus who now dwells within our heart.")
+  ))
+
+  (:keyframes (
+    (:t 0.00 :title "1. Clean Heart (First Reconciliation)" :rule "CCC 1457: Confess sins with sorrow so Jesus dwells in a soul shining with sanctifying grace.")
+    (:t 0.25 :title "2. One-Hour Eucharistic Fast" :rule "Canon 919: Fast from food and drink (water and medicine always allowed) for 1 hour before Mass.")
+    (:t 0.50 :title "3. Reverent Bow Before Jesus" :rule "GIRM 160: Approach calmly with folded hands and bow our head before receiving the Blessed Sacrament.")
+    (:t 0.75 :title "4. The Body of Christ — 'Amen!'" :rule "CCC 1374: Answer 'Amen' with conviction, proclaiming faith in the Real Presence of Jesus.")
+    (:t 0.90 :title "5. Silent Thanksgiving & Adoration" :rule "Spend quiet moments kneeling in your pew thanking Jesus inside your heart.")
   ))
 
   (:interactive (
-    (:checkpoint :at 0.42
-      (:prompt "When the priest elevates the Sacred Host and proclaims 'The Body of Christ', what does our response 'Amen' mean?")
-      (:options
-        ("'I believe with all my heart that this is truly Jesus Christ, my Lord and God'" :correct true)
-        ("'Thank you for the snack'" :correct false)
-        ("'The ceremony is now finished'" :correct false)
-        ("'I hope everyone is watching me'" :correct false)
-      )
-      (:explanation "St Augustine explained: 'You hear the words The Body of Christ, and you answer Amen. Be then a member of Christ's Body, so that your Amen may be true!' Saying Amen is our solemn oath of faith in the Real Presence.")
-    )
-    (:checkpoint :at 0.76
-      (:prompt "What is the Catholic rule for the Eucharistic Fast before receiving Holy Communion?")
-      (:options
-        ("Fast from all food and drink (except water and medicine) for at least 1 full hour before receiving Holy Communion" :correct true)
-        ("Fast for 3 full days without water" :correct false)
-        ("Eating chewing gum and sweets during Holy Mass is encouraged" :correct false)
-        ("No fasting is ever observed" :correct false)
-      )
-      (:explanation "Canon Law (Can. 919) prescribes fasting from food and drink for at least one hour before Holy Communion. This ancient discipline teaches reverence, self-control, and spiritual preparation for the Lord's banquet.")
-    )
+    (:checkpoint :t 0.0
+      :title "Preparation Practice: Step 4 Reception"
+      :prompt "Click Step 4 or drag the golden milestone slider to '4. Receive Amen!' (or Step 5) to practise reverent reception of Holy Communion."
+      :pass-expr "Math.round(vars.communionStep || 1) >= 4"
+      :hold-duration 0.8
+      :explanation "Wonderful! At Step 4 the priest raises the Sacred Host saying 'The Body of Christ', and you answer 'Amen' ('I truly believe!').")
+    (:checkpoint :t 0.42
+      :title "The Meaning of 'Amen'"
+      :prompt "When the priest elevates the Sacred Host and proclaims 'The Body of Christ', what does our response 'Amen' mean?"
+      :options ("I believe with all my heart that this is truly Jesus Christ, my Lord and God" "Thank you for the snack" "The ceremony is now finished" "I hope everyone is watching me")
+      :answer 0
+      :on-wrong ((1 "Holy Communion is never an ordinary snack — at the Consecration, bread truly becomes Jesus Himself.") (2 "Mass continues into silent Thanksgiving and the Concluding Rites; 'Amen' is our act of faith.") (3 "Our focus belongs on Jesus present on the altar, not on people watching us."))
+      :explanation "St Augustine explained: 'You hear the words The Body of Christ, and you answer Amen.' Saying Amen is our solemn oath of faith in the Real Presence.")
+    (:checkpoint :t 0.78
+      :title "The Eucharistic Fast"
+      :prompt "What is the Catholic rule for the Eucharistic Fast before receiving Holy Communion?"
+      :options ("Fast from all food and drink (except water and medicine) for at least 1 full hour before receiving Holy Communion" "Fast for 3 full days without water" "Eating chewing gum and sweets during Holy Mass is encouraged" "No fasting is ever observed")
+      :answer 0
+      :on-wrong ((1 "Pure water and necessary medicine never break the Eucharistic fast, and the fast is 1 hour, not 3 days.") (2 "Chewing gum or eating sweets breaks the Eucharistic fast and shows lack of reverence in God's house.") (3 "Canon Law (Can. 919) asks Catholics to fast for at least 1 hour to prepare body and heart with love."))
+      :explanation "Canon Law (Can. 919) prescribes fasting from food and drink (except water and medicine) for at least one hour before Holy Communion.")
   ))
 
   (:bindings (
-    (:target "#eucharistic-monstrance-rays" :attr "transform" :expr "'rotate(' + (t * 6.0) + ' 400 170)'")
-    (:target "#host-living-glow" :attr "opacity" :expr "0.6 + 0.35 * sin(t * 3.0) * adorationRadiance")
-    (:target "#communicant-bow" :attr "transform" :expr "'rotate(' + (12 * reverentBow) + ' 280 340)'")
-    (:target "#adoration-light-cone" :attr "opacity" :expr "0.25 + 0.25 * adorationRadiance")
+    (:target "#eucharistic-monstrance-rays" :attr "transform" :expr "'rotate(' + (t * 6.0) + ')'")
+    (:target "#host-living-glow" :attr "opacity" :expr "0.55 + 0.35 * sin(t * 3.0) * (vars.adorationRadiance || 1.0) + (Math.round(vars.communionStep || 1) === 5 ? 0.15 : 0)")
+    (:target "#adoration-light-cone" :attr "opacity" :expr "0.22 + 0.24 * (vars.adorationRadiance || 1.0) + (Math.round(vars.communionStep || 1) >= 4 ? 0.18 : 0)")
+    (:target "#communicant-bow" :attr "transform" :expr "'rotate(' + (Math.round(vars.communionStep || 1) === 3 ? 16 : (12 * (vars.reverentBow || 0.6))) + ' 0 50)'")
+    (:target "#communicant-grace-aura" :attr "opacity" :expr "Math.round(vars.communionStep || 1) === 1 ? 0.95 : 0.35")
+    (:target "#fhc-fast-callout" :attr "opacity" :expr "Math.round(vars.communionStep || 1) === 2 ? 1.0 : 0.2")
+    (:target "#communicant-amen-bubble" :attr "opacity" :expr "Math.round(vars.communionStep || 1) === 4 ? 1.0 : 0.2")
+    (:target "#elevated-host-halo" :attr "opacity" :expr "Math.round(vars.communionStep || 1) === 4 ? 0.95 : 0.35")
+    (:target "#communion-steps-slider" :attr "transform" :expr "'translate(' + (60 + (Math.round(vars.communionStep || 1) - 1) * 140) + ', 13)'")
+    (:target "#communion-step-badge" :attr "textContent" :expr "'STEP ' + Math.round(vars.communionStep || 1) + ' / 5'")
+    (:target "#communion-step-title" :attr "textContent" :expr "Math.round(vars.communionStep || 1) === 1 ? '1. Clean Heart: First Reconciliation (Confession)' : (Math.round(vars.communionStep || 1) === 2 ? '2. One-Hour Eucharistic Fast' : (Math.round(vars.communionStep || 1) === 3 ? '3. Approach Sanctuary & Reverent Bow' : (Math.round(vars.communionStep || 1) === 4 ? '4. Receive Holy Communion: \"Amen!\"' : '5. Silent Thanksgiving & Eucharistic Adoration')))")
+    (:target "#communion-step-desc" :attr "textContent" :expr "Math.round(vars.communionStep || 1) === 1 ? 'Say sorry to Jesus in Confession so your soul shines in grace before welcoming Him.' : (Math.round(vars.communionStep || 1) === 2 ? 'Fast from food and drink for 1 hour (water and medicine allowed) to prepare with holy hunger.' : (Math.round(vars.communionStep || 1) === 3 ? 'Walk calmly with hands folded in prayer and make a slow, reverent bow of your head.' : (Math.round(vars.communionStep || 1) === 4 ? 'Answer \"Amen!\" clearly, form a throne with your hands (or receive on tongue), and consume right away.' : 'Kneel quietly in your pew, close your eyes, and thank Jesus who now lives inside your heart.')))")
+    (:target "#communion-step-rule" :attr "textContent" :expr "Math.round(vars.communionStep || 1) === 1 ? 'State of Grace' : (Math.round(vars.communionStep || 1) === 2 ? '1-Hr Fast (Can. 919)' : (Math.round(vars.communionStep || 1) === 3 ? 'Posture: Bow Head' : (Math.round(vars.communionStep || 1) === 4 ? 'Say \"Amen!\"' : 'Quiet Prayer')))")
+    (:target "#fhc-pill-1" :attr "fill" :expr "Math.round(vars.communionStep || 1) === 1 ? 'rgba(56, 189, 248, 0.32)' : 'rgba(15, 23, 42, 0.7)'")
+    (:target "#fhc-pill-2" :attr "fill" :expr "Math.round(vars.communionStep || 1) === 2 ? 'rgba(250, 204, 21, 0.30)' : 'rgba(15, 23, 42, 0.7)'")
+    (:target "#fhc-pill-3" :attr "fill" :expr "Math.round(vars.communionStep || 1) === 3 ? 'rgba(203, 213, 225, 0.28)' : 'rgba(15, 23, 42, 0.7)'")
+    (:target "#fhc-pill-4" :attr "fill" :expr "Math.round(vars.communionStep || 1) === 4 ? 'rgba(74, 222, 128, 0.30)' : 'rgba(15, 23, 42, 0.7)'")
+    (:target "#fhc-pill-5" :attr "fill" :expr "Math.round(vars.communionStep || 1) === 5 ? 'rgba(244, 114, 182, 0.30)' : 'rgba(15, 23, 42, 0.7)'")
   ))
 )

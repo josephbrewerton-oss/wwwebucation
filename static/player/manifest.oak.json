@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-14T09:03:07.751Z",
+  "generatedAt": "2026-11-14T09:20:47.555Z",
   "totalCartridges": 71,
   "units": [
     {
@@ -52,8 +52,8 @@
     {
       "unit": "ks2-re-catholic-first-holy-communion",
       "oakId": "OAK-KS2-RE-005",
-      "subject": "Religious Education",
-      "section": "Catholic Life & Faith Formation",
+      "subject": "Catholic Life",
+      "section": "Sacred Liturgy & Sacraments",
       "stage": "CATHOLIC LIFE",
       "title": "First Holy Communion & Eucharistic Adoration: Receiving Jesus with Reverence & Love",
       "cartridgeId": "first-communion"
@@ -717,8 +717,8 @@
       "stage": "CATHOLIC LIFE",
       "oakId": "OAK-KS2-RE-005",
       "oakUnit": "ks2-re-catholic-first-holy-communion",
-      "subject": "Religious Education",
-      "section": "Catholic Life & Faith Formation",
+      "subject": "Catholic Life",
+      "section": "Sacred Liturgy & Sacraments",
       "mount": "/curriculum/religious/first-communion",
       "duration": 28,
       "svgFile": "cartridges/first-communion.svg",
@@ -727,7 +727,7 @@
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,
-      "checkpointCount": 2
+      "checkpointCount": 3
     },
     {
       "id": "triduum-easter",
