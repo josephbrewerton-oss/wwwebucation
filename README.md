@@ -93,7 +93,7 @@ Tier 2 (WebLLM via WebGPU): Local shader inference (SmolLM2-360M-Instruct-q4f16_
 
 Tier 3 (Deterministic S-Expression Synthesizer): Sub-5ms procedural rule engine executing offline without GPU or neural dependencies.
 
-Decentralized Virtual Console & Self-Mounting Cartridges: Operates as a completely air-gapped, stateless execution console with 0 bytes transmitted to remote servers. Includes 68 canonical compiled vector cartridges (2.5 KB to 25 KB) self-declaring coordinates (:mount "/curriculum/..."), subject tags (:section), and access levels (:tier), including Design & Technology modular brick engineering (`lego-blocks`) and real-time vehicle kinematics (`vector-racing`). Cold starts in under 15 ms using < 8 MB RAM with zero external audio assets.
+Decentralized Virtual Console & Self-Mounting Cartridges: Operates as a completely air-gapped, stateless execution console with 0 bytes transmitted to remote servers. Includes 72 canonical compiled vector cartridges (2.5 KB to 25 KB) self-declaring coordinates (:mount "/curriculum/..."), subject tags (:section), and access levels (:tier), including Design & Technology modular brick engineering (`lego-blocks`) and real-time vehicle kinematics (`vector-racing`). Cold starts in under 15 ms using < 8 MB RAM with zero external audio assets.
 
 Analytic 3D Ray-Math & Symbolic Spatial Telemetry (Zero-GPU): Replaces heavy vision frames and video streams with compact S-expression tokens ((:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0])). CPU-bound analytic geometry (< 15 KB JS) providing exact spatial hit-testing for real-time robotic and scientific kinematics.
 
@@ -108,7 +108,7 @@ Real-Time British Sign Language (BSL) & Shakespeare Globe Suites: Procedural, ve
 
 /llms.txt: Concise machine context following the /llms.txt standard for fast agent retrieval.
 
-/llms-full.txt: Exhaustive technical dossier detailing the full 68-cartridge catalog, AST grammar, and dual-track architecture.
+/llms-full.txt: Exhaustive technical dossier detailing the full 72-cartridge catalog, AST grammar, and dual-track architecture.
 
 /robots.txt: Explicit permissions for search crawlers and AI agents (GPTBot, ClaudeBot, PerplexityBot, Google-Extended, etc.).
 

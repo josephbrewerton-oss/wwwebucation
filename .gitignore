@@ -7,6 +7,10 @@ build/
 dist-public-release/
 .cache-loader
 
+# AI Studio session artifacts & screenshots
+.aistudio/
+public/assets/aistudio/
+
 # Environment & local overrides (secrets must NEVER be stored in static/ or dist/)
 .env
 .env.local
