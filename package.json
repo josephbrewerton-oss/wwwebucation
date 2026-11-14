@@ -34,12 +34,9 @@
   "overrides": {
     "typescript": "^5.6.3",
     "esbuild": "^0.28.1",
-    "source-map-js": "^1.2.2",
-    "launch-editor": "^2.14.2"
+    "source-map-js": "^1.2.2"
   },
   "devDependencies": {
-    "@types/canvas-confetti": "^1.9.0",
-    "@types/katex": "^0.16.8",
     "@types/node": "^26.6.6",
     "typescript": "^5.6.3",
     "vite": "^8.3.6",
@@ -61,8 +58,6 @@
     "node": ">=20.0"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.87",
-    "canvas-confetti": "^1.9.4",
-    "katex": "^0.19.1"
+    "@mlc-ai/web-llm": "^0.2.87"
   }
 }

@@ -1,5 +1,5 @@
 // Auto-generated Domain Substrate: ENGINE
-export const ENGINE_AST_STRING = ";; Domain AST Manifest: engine\n(:domain-substrate :engine\n  (:symbol \"generateContextualFallback\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :function :return \"string\" :params ((:param \"topicKey\" :type \"string\") (:param \"isQuiz\" :type \"boolean\")))\n  (:symbol \"runLocalInference\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"prompt\" :type \"string\") (:param \"systemPrompt\" :type \"string\") (:param \"topicKey\" :type \"string\")))\n  (:symbol \"ParsedAstNode\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"InitProgressReport\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryGuardStatus\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryBudgetReport\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EdgeCognitiveEngine\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :class :return \"typeof EdgeCognitiveEngine\" :params ())\n  (:symbol \"edgeCognitiveEngine\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"EdgeCognitiveEngine\" :params ())\n  (:symbol \"hasUserGrantedAiConsent\" :from \"engine/aicaller.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setUserAiConsent\" :from \"engine/aicaller.ts\" :kind :function :return \"void\" :params ((:param \"granted\" :type \"boolean\")))\n  (:symbol \"resolveConstraintRegExp\" :from \"engine/aicaller.ts\" :kind :function :return \"RegExp\" :params ((:param \"constraint\" :type \"any\")))\n  (:symbol \"testConstraintRegExp\" :from \"engine/aicaller.ts\" :kind :function :return \"boolean\" :params ((:param \"regex\" :type \"RegExp\") (:param \"text\" :type \"string\")))\n  (:symbol \"parseAiActionTuples\" :from \"engine/aicaller.ts\" :kind :function :return \"{ actions: AiVisualAction[]; sayText: string; rawSExpr: string; }\" :params ((:param \"nanoOutput\" :type \"string\")))\n  (:symbol \"promptAiCoPilotDemonstration\" :from \"engine/aicaller.ts\" :kind :function :return \"Promise<AiVisualCommandPacket>\" :params ((:param \"telemetry\" :type \"Partial<PlayerTelemetryEvent>\") (:param \"pupilQuestion\" :type \"string\") (:param \"opts\" :type \"{ targetScene?: string; availableSelectors?: string[]; }\")))\n  (:symbol \"AiInferenceOptions\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ModelAvailability\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CONSENT_STORAGE_KEY\" :from \"engine/aicaller.ts\" :kind :const :return \"\"ai_model_download_consent\"\" :params ())\n  (:symbol \"aiCaller\" :from \"engine/aicaller.ts\" :kind :const :return \"AiRuntimeCaller\" :params ())\n  (:symbol \"PlayerSpatialTelemetry\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerTelemetryEvent\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AiVisualAction\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AiVisualCommandPacket\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NANO_ACT_TUPLE_REGEX\" :from \"engine/aicaller.ts\" :kind :const :return \"RegExp\" :params ())\n  (:symbol \"parseAST\" :from \"engine/ast-loader.ts\" :kind :function :return \"ASTNode\" :params ((:param \"source\" :type \"string\")))\n  (:symbol \"resolveTopicAST\" :from \"engine/ast-loader.ts\" :kind :function :return \"Promise<{ raw: string; ast: ASTNode; }>\" :params ((:param \"stage\" :type \"OakStage\") (:param \"subject\" :type \"OakSubject\") (:param \"topic\" :type \"OakTopic\")))\n  (:symbol \"ASTNode\" :from \"engine/ast-loader.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RawASTQuestion\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathCheckupResult\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GovernedQuestion\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTFlowGovernor\" :from \"engine/astGovernor.ts\" :kind :class :return \"typeof ASTFlowGovernor\" :params ())\n  (:symbol \"compileAstNode\" :from \"engine/astHydrator.ts\" :kind :function :return \"Promise<CurriculumAstNode>\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"rawAiOutput\" :type \"{ axiom?: string; trap?: string; hook?: string; guidedStep?: string; prompt?: string; }\")))\n  (:symbol \"CurriculumAstNode\" :from \"engine/astHydrator.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"measureLiveEnergyFootprint\" :from \"engine/energyMatrix.ts\" :kind :function :return \"EnergyAuditReport\" :params ())\n  (:symbol \"getEnergyAuditReport\" :from \"engine/energyMatrix.ts\" :kind :function :return \"EnergyAuditReport\" :params ())\n  (:symbol \"EnergyAuditReport\" :from \"engine/energyMatrix.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"engine/engine.ts\" :kind :const :return \"{ readonly folder: \"src/engine\"; readonly timestamp: 1787937755193; readonly totalModules: 6; readonly exports: readonly [{ readonly name: \"ASTNode\"; readonly isType: true; readonly sourceFile: \"ast-loader\"; }, ... 15 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"parseAST\" :from \"engine/engine.ts\" :kind :function :return \"ASTNode\" :params ((:param \"source\" :type \"string\")))\n  (:symbol \"resolveTopicAST\" :from \"engine/engine.ts\" :kind :function :return \"Promise<{ raw: string; ast: ASTNode; }>\" :params ((:param \"stage\" :type \"OakStage\") (:param \"subject\" :type \"OakSubject\") (:param \"topic\" :type \"OakTopic\")))\n  (:symbol \"ASTNode\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RawASTQuestion\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathCheckupResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GovernedQuestion\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTFlowGovernor\" :from \"engine/engine.ts\" :kind :class :return \"typeof ASTFlowGovernor\" :params ())\n  (:symbol \"generateContextualFallback\" :from \"engine/engine.ts\" :kind :function :return \"string\" :params ((:param \"topicKey\" :type \"string\") (:param \"isQuiz\" :type \"boolean\")))\n  (:symbol \"runLocalInference\" :from \"engine/engine.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"prompt\" :type \"string\") (:param \"systemPrompt\" :type \"string\") (:param \"topicKey\" :type \"string\")))\n  (:symbol \"ParsedAstNode\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"engine/engine.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"InitProgressReport\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryGuardStatus\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryBudgetReport\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EdgeCognitiveEngine\" :from \"engine/engine.ts\" :kind :class :return \"typeof EdgeCognitiveEngine\" :params ())\n  (:symbol \"edgeCognitiveEngine\" :from \"engine/engine.ts\" :kind :const :return \"EdgeCognitiveEngine\" :params ())\n  (:symbol \"GenerationRequest\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineFlow\" :from \"engine/engine.ts\" :kind :class :return \"typeof EngineFlow\" :params ())\n  (:symbol \"getSavedLanguage\" :from \"engine/engine.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"getSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"number\" :params ())\n  (:symbol \"setSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"speed\" :type \"number\")))\n  (:symbol \"listenToSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(speed: number) => void\")))\n  (:symbol \"setSavedLanguage\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"listenToLanguageChange\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(lang: string) => void\")))\n  (:symbol \"renderLanguageSelector\" :from \"engine/engine.ts\" :kind :function :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"SupportedLanguage\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SUPPORTED_LANGUAGES\" :from \"engine/engine.ts\" :kind :const :return \"Record<string, SupportedLanguage>\" :params ())\n  (:symbol \"DEFAULT_LANGUAGE\" :from \"engine/engine.ts\" :kind :const :return \"SupportedLanguage\" :params ())\n  (:symbol \"PORTAL_LANG_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_language\"\" :params ())\n  (:symbol \"PORTAL_PRACTICE_MODE_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_language_practice_mode\"\" :params ())\n  (:symbol \"PORTAL_SPEECH_SPEED_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_speech_speed\"\" :params ())\n  (:symbol \"LanguageSelector\" :from \"engine/engine.ts\" :kind :const :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"PromptInferenceParams\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PromptASTPreParser\" :from \"engine/engine.ts\" :kind :class :return \"typeof PromptASTPreParser\" :params ())\n  (:symbol \"GenerationRequest\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineResult\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineFlow\" :from \"engine/engineflow.ts\" :kind :class :return \"typeof EngineFlow\" :params ())\n  (:symbol \"invokeDomainSubstrate\" :from \"engine/fastEndpoint.ts\" :kind :function :return \"Promise<T>\" :params ((:param \"domain\" :type \"\"ui\" | \"engine\" | \"services\" | \"core\"\") (:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"invokeSubstrate\" :from \"engine/fastEndpoint.ts\" :kind :function :return \"Promise<T>\" :params ((:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"dispatch\" :from \"engine/hypercall.ts\" :kind :function :return \"Promise<HyperNodeResult<any>>\" :params ((:param \"targetOrMessage\" :type \"string | HyperMessage<any>\") (:param \"maybeMessage\" :type \"HyperMessage<any>\")))\n  (:symbol \"HyperMessage\" :from \"engine/hypercall.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HyperNodeResult\" :from \"engine/hypercall.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"setHypercallDispatcher\" :from \"engine/hypervisor.ts\" :kind :function :return \"void\" :params ((:param \"fn\" :type \"HypercallDispatcher\")))\n  (:symbol \"HypercallDispatcher\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GuestVMState\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorMetrics\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RuleAuditResult\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorInferenceRequest\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorInferenceResult\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorHost\" :from \"engine/hypervisor.ts\" :kind :class :return \"typeof HypervisorHost\" :params ())\n  (:symbol \"hypervisor\" :from \"engine/hypervisor.ts\" :kind :const :return \"HypervisorHost\" :params ())\n  (:symbol \"PedagogicalStage\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonProgressState\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SequencedQuestionTemplate\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonSequencer\" :from \"engine/lessonSequencer.ts\" :kind :class :return \"typeof LessonSequencer\" :params ())\n  (:symbol \"GeneratedMathQuestion\" :from \"engine/mathQuestionGenerator.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathQuestionGenerator\" :from \"engine/mathQuestionGenerator.ts\" :kind :class :return \"typeof MathQuestionGenerator\" :params ())\n  (:symbol \"MindSpaceCoordinates\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CognitiveDistractorVector\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"QuestionMindSpace\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MindSpaceEngine\" :from \"engine/mindSpaceEngine.ts\" :kind :class :return \"typeof MindSpaceEngine\" :params ())\n  (:symbol \"getSavedLanguage\" :from \"engine/operational-language.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"getSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"number\" :params ())\n  (:symbol \"setSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"speed\" :type \"number\")))\n  (:symbol \"listenToSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(speed: number) => void\")))\n  (:symbol \"setSavedLanguage\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"listenToLanguageChange\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(lang: string) => void\")))\n  (:symbol \"renderLanguageSelector\" :from \"engine/operational-language.ts\" :kind :function :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"SupportedLanguage\" :from \"engine/operational-language.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SUPPORTED_LANGUAGES\" :from \"engine/operational-language.ts\" :kind :const :return \"Record<string, SupportedLanguage>\" :params ())\n  (:symbol \"DEFAULT_LANGUAGE\" :from \"engine/operational-language.ts\" :kind :const :return \"SupportedLanguage\" :params ())\n  (:symbol \"PORTAL_LANG_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_language\"\" :params ())\n  (:symbol \"PORTAL_PRACTICE_MODE_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_language_practice_mode\"\" :params ())\n  (:symbol \"PORTAL_SPEECH_SPEED_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_speech_speed\"\" :params ())\n  (:symbol \"LanguageSelector\" :from \"engine/operational-language.ts\" :kind :const :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"PRNG\" :from \"engine/prng.ts\" :kind :class :return \"typeof PRNG\" :params ())\n  (:symbol \"playKeyframeChime\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"keyframeIndex\" :type \"number\") (:param \"volume\" :type \"number\")))\n  (:symbol \"playSliceCutSound\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playCelestialHum\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playProofResolvedChord\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playBbcMicroBeep\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"PromptInferenceParams\" :from \"engine/promptAstparser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PromptASTPreParser\" :from \"engine/promptAstparser.ts\" :kind :class :return \"typeof PromptASTPreParser\" :params ())\n  (:symbol \"calculateByteLength\" :from \"engine/seedInflationEngine.ts\" :kind :function :return \"number\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"inflateKnowledgeSeed\" :from \"engine/seedInflationEngine.ts\" :kind :function :return \"InflatedLessonExperience\" :params ((:param \"seedKey\" :type \"string\")))\n  (:symbol \"MisconceptionProfile\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ProceduralQuestionVariant\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTKnowledgeSeed\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InflationTelemetry\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InflatedLessonExperience\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"COMPRESSED_KNOWLEDGE_SEEDS\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"Record<string, ASTKnowledgeSeed>\" :params ())\n  (:symbol \"generateOfflineSocraticAnswer\" :from \"engine/socraticOfflineBrain.ts\" :kind :function :return \"string\" :params ((:param \"ctx\" :type \"SocraticQueryContext\")))\n  (:symbol \"SocraticQueryContext\" :from \"engine/socraticOfflineBrain.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CoordinateAttempt\" :from \"engine/trajectoryEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CognitiveTrajectoryState\" :from \"engine/trajectoryEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TrajectoryEngine\" :from \"engine/trajectoryEngine.ts\" :kind :class :return \"typeof TrajectoryEngine\" :params ())\n  (:symbol \"translateText\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"text\" :type \"string\") (:param \"targetLang\" :type \"string\") (:param \"sourceLang\" :type \"string\")))\n  (:symbol \"translateQuestionData\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<{ prompt: string; displayOptions: string[]; hint?: string; explanation?: string; misconceptions?: string[]; socraticFollowUp?: string; }>\" :params ((:param \"question\" :type \"{ prompt: string; displayOptions: string[]; hint?: string; explanation?: string; misconceptions?: string[]; socraticFollowUp?: string; }\") (:param \"targetLang\" :type \"string\")))\n  (:symbol \"translateLessonData\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<{ title: string; axiom: string; trap: string; hook: string; guidedStep: string; socraticCheck: string; fullText?: string; }>\" :params ((:param \"lesson\" :type \"{ title: string; axiom: string; trap: string; hook: string; guidedStep: string; socraticCheck: string; fullText?: string; }\") (:param \"targetLang\" :type \"string\")))\n  (:symbol \"speakInLanguage\" :from \"engine/translationService.ts\" :kind :function :return \"void\" :params ((:param \"text\" :type \"string\") (:param \"langCode\" :type \"string\") (:param \"options\" :type \"{ rate?: number; onEnd?: () => void; onError?: () => void; onBoundary?: (charIndex: number) => void; }\")))\n  (:symbol \"speakBilingual\" :from \"engine/translationService.ts\" :kind :function :return \"() => void\" :params ((:param \"primaryText\" :type \"string\") (:param \"primaryLang\" :type \"string\") (:param \"secondaryText\" :type \"string\") (:param \"secondaryLang\" :type \"string\") (:param \"options\" :type \"{ rate?: number; pauseMs?: number; onPhaseChange?: (phase: \"primary\" | \"secondary\" | \"idle\") => void; onEnd?: () => void; }\")))\n  (:symbol \"cancelSpeech\" :from \"engine/translationService.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"OFFLINE_LEXICON\" :from \"engine/translationService.ts\" :kind :const :return \"Record<string, Record<string, string>>\" :params ())\n  (:symbol \"translatePageDOM\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"restorePageDOM\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"enableUniversalObserver\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"speakCurrentPage\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"UNIVERSAL_UI_LEXICON\" :from \"engine/universalDomTranslator.ts\" :kind :const :return \"Record<string, Record<string, string>>\" :params ())\n)\n";
+export const ENGINE_AST_STRING = ";; Domain AST Manifest: engine\n(:domain-substrate :engine\n  (:symbol \"generateContextualFallback\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :function :return \"string\" :params ((:param \"topicKey\" :type \"string\") (:param \"isQuiz\" :type \"boolean\")))\n  (:symbol \"runLocalInference\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"prompt\" :type \"string\") (:param \"systemPrompt\" :type \"string\") (:param \"topicKey\" :type \"string\")))\n  (:symbol \"ParsedAstNode\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"InitProgressReport\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryGuardStatus\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryBudgetReport\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EdgeCognitiveEngine\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :class :return \"typeof EdgeCognitiveEngine\" :params ())\n  (:symbol \"edgeCognitiveEngine\" :from \"engine/EdgeCognitiveEngine.ts\" :kind :const :return \"EdgeCognitiveEngine\" :params ())\n  (:symbol \"hasUserGrantedAiConsent\" :from \"engine/aicaller.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setUserAiConsent\" :from \"engine/aicaller.ts\" :kind :function :return \"void\" :params ((:param \"granted\" :type \"boolean\")))\n  (:symbol \"resolveConstraintRegExp\" :from \"engine/aicaller.ts\" :kind :function :return \"RegExp\" :params ((:param \"constraint\" :type \"any\")))\n  (:symbol \"testConstraintRegExp\" :from \"engine/aicaller.ts\" :kind :function :return \"boolean\" :params ((:param \"regex\" :type \"RegExp\") (:param \"text\" :type \"string\")))\n  (:symbol \"parseAiActionTuples\" :from \"engine/aicaller.ts\" :kind :function :return \"{ actions: AiVisualAction[]; sayText: string; rawSExpr: string; }\" :params ((:param \"nanoOutput\" :type \"string\")))\n  (:symbol \"promptAiCoPilotDemonstration\" :from \"engine/aicaller.ts\" :kind :function :return \"Promise<AiVisualCommandPacket>\" :params ((:param \"telemetry\" :type \"Partial<PlayerTelemetryEvent>\") (:param \"pupilQuestion\" :type \"string\") (:param \"opts\" :type \"{ targetScene?: string; availableSelectors?: string[]; }\")))\n  (:symbol \"AiInferenceOptions\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ModelAvailability\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CONSENT_STORAGE_KEY\" :from \"engine/aicaller.ts\" :kind :const :return \"\"ai_model_download_consent\"\" :params ())\n  (:symbol \"aiCaller\" :from \"engine/aicaller.ts\" :kind :const :return \"AiRuntimeCaller\" :params ())\n  (:symbol \"PlayerSpatialTelemetry\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerTelemetryEvent\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AiVisualAction\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AiVisualCommandPacket\" :from \"engine/aicaller.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"NANO_ACT_TUPLE_REGEX\" :from \"engine/aicaller.ts\" :kind :const :return \"RegExp\" :params ())\n  (:symbol \"parseAST\" :from \"engine/ast-loader.ts\" :kind :function :return \"ASTNode\" :params ((:param \"source\" :type \"string\")))\n  (:symbol \"resolveTopicAST\" :from \"engine/ast-loader.ts\" :kind :function :return \"Promise<{ raw: string; ast: ASTNode; }>\" :params ((:param \"stage\" :type \"OakStage\") (:param \"subject\" :type \"OakSubject\") (:param \"topic\" :type \"OakTopic\")))\n  (:symbol \"ASTNode\" :from \"engine/ast-loader.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RawASTQuestion\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathCheckupResult\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GovernedQuestion\" :from \"engine/astGovernor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTFlowGovernor\" :from \"engine/astGovernor.ts\" :kind :class :return \"typeof ASTFlowGovernor\" :params ())\n  (:symbol \"compileAstNode\" :from \"engine/astHydrator.ts\" :kind :function :return \"Promise<CurriculumAstNode>\" :params ((:param \"stage\" :type \"string\") (:param \"subject\" :type \"string\") (:param \"topic\" :type \"string\") (:param \"rawAiOutput\" :type \"{ axiom?: string; trap?: string; hook?: string; guidedStep?: string; prompt?: string; }\")))\n  (:symbol \"CurriculumAstNode\" :from \"engine/astHydrator.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"measureLiveEnergyFootprint\" :from \"engine/energyMatrix.ts\" :kind :function :return \"EnergyAuditReport\" :params ())\n  (:symbol \"getEnergyAuditReport\" :from \"engine/energyMatrix.ts\" :kind :function :return \"EnergyAuditReport\" :params ())\n  (:symbol \"EnergyAuditReport\" :from \"engine/energyMatrix.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"FOLDER_MANIFEST\" :from \"engine/engine.ts\" :kind :const :return \"{ readonly folder: \"src/engine\"; readonly timestamp: 1787937755193; readonly totalModules: 6; readonly exports: readonly [{ readonly name: \"ASTNode\"; readonly isType: true; readonly sourceFile: \"ast-loader\"; }, ... 15 more ..., { ...; }]; }\" :params ())\n  (:symbol \"FolderExportNames\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"parseAST\" :from \"engine/engine.ts\" :kind :function :return \"ASTNode\" :params ((:param \"source\" :type \"string\")))\n  (:symbol \"resolveTopicAST\" :from \"engine/engine.ts\" :kind :function :return \"Promise<{ raw: string; ast: ASTNode; }>\" :params ((:param \"stage\" :type \"OakStage\") (:param \"subject\" :type \"OakSubject\") (:param \"topic\" :type \"OakTopic\")))\n  (:symbol \"ASTNode\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RawASTQuestion\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathCheckupResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GovernedQuestion\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTFlowGovernor\" :from \"engine/engine.ts\" :kind :class :return \"typeof ASTFlowGovernor\" :params ())\n  (:symbol \"generateContextualFallback\" :from \"engine/engine.ts\" :kind :function :return \"string\" :params ((:param \"topicKey\" :type \"string\") (:param \"isQuiz\" :type \"boolean\")))\n  (:symbol \"runLocalInference\" :from \"engine/engine.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"prompt\" :type \"string\") (:param \"systemPrompt\" :type \"string\") (:param \"topicKey\" :type \"string\")))\n  (:symbol \"ParsedAstNode\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineExecutionResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"AstParser\" :from \"engine/engine.ts\" :kind :class :return \"typeof AstParser\" :params ())\n  (:symbol \"InitProgressReport\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryGuardStatus\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MemoryBudgetReport\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EdgeCognitiveEngine\" :from \"engine/engine.ts\" :kind :class :return \"typeof EdgeCognitiveEngine\" :params ())\n  (:symbol \"edgeCognitiveEngine\" :from \"engine/engine.ts\" :kind :const :return \"EdgeCognitiveEngine\" :params ())\n  (:symbol \"GenerationRequest\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineResult\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineFlow\" :from \"engine/engine.ts\" :kind :class :return \"typeof EngineFlow\" :params ())\n  (:symbol \"getSavedLanguage\" :from \"engine/engine.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToLanguagePracticeMode\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"getSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"number\" :params ())\n  (:symbol \"setSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"speed\" :type \"number\")))\n  (:symbol \"listenToSpeechSpeed\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(speed: number) => void\")))\n  (:symbol \"setSavedLanguage\" :from \"engine/engine.ts\" :kind :function :return \"void\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"listenToLanguageChange\" :from \"engine/engine.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(lang: string) => void\")))\n  (:symbol \"renderLanguageSelector\" :from \"engine/engine.ts\" :kind :function :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"SupportedLanguage\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SUPPORTED_LANGUAGES\" :from \"engine/engine.ts\" :kind :const :return \"Record<string, SupportedLanguage>\" :params ())\n  (:symbol \"DEFAULT_LANGUAGE\" :from \"engine/engine.ts\" :kind :const :return \"SupportedLanguage\" :params ())\n  (:symbol \"PORTAL_LANG_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_language\"\" :params ())\n  (:symbol \"PORTAL_PRACTICE_MODE_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_language_practice_mode\"\" :params ())\n  (:symbol \"PORTAL_SPEECH_SPEED_STORAGE_KEY\" :from \"engine/engine.ts\" :kind :const :return \"\"portal_speech_speed\"\" :params ())\n  (:symbol \"LanguageSelector\" :from \"engine/engine.ts\" :kind :const :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"PromptInferenceParams\" :from \"engine/engine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PromptASTPreParser\" :from \"engine/engine.ts\" :kind :class :return \"typeof PromptASTPreParser\" :params ())\n  (:symbol \"GenerationRequest\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonViewContent\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineResult\" :from \"engine/engineflow.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineFlow\" :from \"engine/engineflow.ts\" :kind :class :return \"typeof EngineFlow\" :params ())\n  (:symbol \"estimateBpeTokenCount\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"number\" :params ((:param \"text\" :type \"string\")))\n  (:symbol \"computeAstVsJsonCompression\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"Promise<CompressionComparisonResult>\" :params ((:param \"liveSession\" :type \"any\")))\n  (:symbol \"formatEppReportMarkdown\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"string\" :params ((:param \"dossier\" :type \"EppTelemetryDossier\")))\n  (:symbol \"saveEppTelemetryDossier\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"dossier\" :type \"EppTelemetryDossier\")))\n  (:symbol \"loadLastEppTelemetryDossier\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"Promise<EppTelemetryDossier>\" :params ())\n  (:symbol \"triggerFileDownload\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"void\" :params ((:param \"filename\" :type \"string\") (:param \"content\" :type \"string\") (:param \"mimeType\" :type \"string\")))\n  (:symbol \"runEppContentionSuite\" :from \"engine/eppContentionBench.ts\" :kind :function :return \"Promise<EppTelemetryDossier>\" :params ((:param \"options\" :type \"{ transport: EppBenchTransport; sceneId: string; onProgress?: (progress: EppBenchProgress) => void; phaseADurationMs?: number; phaseCDurationMs?: number; }\")))\n  (:symbol \"EPP_DOSSIER_STATE_KEY\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"\"epp_last_telemetry_dossier\"\" :params ())\n  (:symbol \"ProfilerCaptureStats\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ProfilerActiveMetrics\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ProfilerCaptureResult\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"QuotaTurnMetric\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CompressionComparisonResult\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EppContentionPhaseMetrics\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EppTelemetryDossier\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EppBenchProgress\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EppBenchTransport\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CANONICAL_20_LINE_AST\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"\"(:scene :id \\\"hooke-spring-bench\\\" :title \\\"Hooke's Law Oscillator\\\" :stage \\\"KS4 PHYSICS\\\" :type \\\"Sim\\\" :duration 12.0\\n  (:physics :substeps 4 :restitution 0.85 :friction 0.04)\\n  (:vars\\n    ((:var :name \\\"k\\\" :label \\\"Spring k (N/m)\\\" :val 24 :min 5 :max 80 :step 1)\\n     (:var :name \\\"mass\\\" :label \\\"Mass (kg...\" :params ())\n  (:symbol \"EQUIVALENT_VERBOSE_JSON_SCENE\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"{ schemaVersion: string; sceneMetadata: { id: string; title: string; stage: string; type: string; durationSeconds: number; }; physicsConfiguration: { substeps: number; restitution: number; friction: number; }; ... 6 more ...; interactiveCheckpoints: { ...; }[]; }\" :params ())\n  (:symbol \"AST_SYNTHESIS_RESPONSE_SCHEMA\" :from \"engine/eppContentionBench.ts\" :kind :const :return \"{ type: string; properties: { sceneId: { type: string; }; title: { type: string; }; astSExpr: { type: string; }; socraticHint: { type: string; }; }; required: string[]; additionalProperties: boolean; }\" :params ())\n  (:symbol \"invokeDomainSubstrate\" :from \"engine/fastEndpoint.ts\" :kind :function :return \"Promise<T>\" :params ((:param \"domain\" :type \"\"ui\" | \"engine\" | \"services\" | \"core\"\") (:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"invokeSubstrate\" :from \"engine/fastEndpoint.ts\" :kind :function :return \"Promise<T>\" :params ((:param \"symbolName\" :type \"string\") (:param \"args\" :type \"any[]\")))\n  (:symbol \"dispatch\" :from \"engine/hypercall.ts\" :kind :function :return \"Promise<HyperNodeResult<any>>\" :params ((:param \"targetOrMessage\" :type \"string | HyperMessage<any>\") (:param \"maybeMessage\" :type \"HyperMessage<any>\")))\n  (:symbol \"HyperMessage\" :from \"engine/hypercall.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HyperNodeResult\" :from \"engine/hypercall.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"setHypercallDispatcher\" :from \"engine/hypervisor.ts\" :kind :function :return \"void\" :params ((:param \"fn\" :type \"HypercallDispatcher\")))\n  (:symbol \"HypercallDispatcher\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"GuestVMState\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorMetrics\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"RuleAuditResult\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorInferenceRequest\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorInferenceResult\" :from \"engine/hypervisor.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"HypervisorHost\" :from \"engine/hypervisor.ts\" :kind :class :return \"typeof HypervisorHost\" :params ())\n  (:symbol \"hypervisor\" :from \"engine/hypervisor.ts\" :kind :const :return \"HypervisorHost\" :params ())\n  (:symbol \"PedagogicalStage\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonProgressState\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SequencedQuestionTemplate\" :from \"engine/lessonSequencer.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"LessonSequencer\" :from \"engine/lessonSequencer.ts\" :kind :class :return \"typeof LessonSequencer\" :params ())\n  (:symbol \"GeneratedMathQuestion\" :from \"engine/mathQuestionGenerator.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MathQuestionGenerator\" :from \"engine/mathQuestionGenerator.ts\" :kind :class :return \"typeof MathQuestionGenerator\" :params ())\n  (:symbol \"MindSpaceCoordinates\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CognitiveDistractorVector\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"QuestionMindSpace\" :from \"engine/mindSpaceEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"MindSpaceEngine\" :from \"engine/mindSpaceEngine.ts\" :kind :class :return \"typeof MindSpaceEngine\" :params ())\n  (:symbol \"getSavedLanguage\" :from \"engine/operational-language.ts\" :kind :function :return \"string\" :params ())\n  (:symbol \"getLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"boolean\" :params ())\n  (:symbol \"setLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"enabled\" :type \"boolean\")))\n  (:symbol \"listenToLanguagePracticeMode\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(enabled: boolean) => void\")))\n  (:symbol \"getSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"number\" :params ())\n  (:symbol \"setSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"speed\" :type \"number\")))\n  (:symbol \"listenToSpeechSpeed\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(speed: number) => void\")))\n  (:symbol \"setSavedLanguage\" :from \"engine/operational-language.ts\" :kind :function :return \"void\" :params ((:param \"langCode\" :type \"string\")))\n  (:symbol \"listenToLanguageChange\" :from \"engine/operational-language.ts\" :kind :function :return \"() => void\" :params ((:param \"callback\" :type \"(lang: string) => void\")))\n  (:symbol \"renderLanguageSelector\" :from \"engine/operational-language.ts\" :kind :function :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"SupportedLanguage\" :from \"engine/operational-language.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"SUPPORTED_LANGUAGES\" :from \"engine/operational-language.ts\" :kind :const :return \"Record<string, SupportedLanguage>\" :params ())\n  (:symbol \"DEFAULT_LANGUAGE\" :from \"engine/operational-language.ts\" :kind :const :return \"SupportedLanguage\" :params ())\n  (:symbol \"PORTAL_LANG_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_language\"\" :params ())\n  (:symbol \"PORTAL_PRACTICE_MODE_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_language_practice_mode\"\" :params ())\n  (:symbol \"PORTAL_SPEECH_SPEED_STORAGE_KEY\" :from \"engine/operational-language.ts\" :kind :const :return \"\"portal_speech_speed\"\" :params ())\n  (:symbol \"LanguageSelector\" :from \"engine/operational-language.ts\" :kind :const :return \"HTMLElement\" :params ((:param \"options\" :type \"{ currentLang?: string; onSelect?: (langCode: string) => void; compact?: boolean; }\")))\n  (:symbol \"PRNG\" :from \"engine/prng.ts\" :kind :class :return \"typeof PRNG\" :params ())\n  (:symbol \"playKeyframeChime\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"keyframeIndex\" :type \"number\") (:param \"volume\" :type \"number\")))\n  (:symbol \"playSliceCutSound\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playCelestialHum\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playProofResolvedChord\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"playBbcMicroBeep\" :from \"engine/proceduralAudio.ts\" :kind :function :return \"void\" :params ((:param \"volume\" :type \"number\")))\n  (:symbol \"PromptInferenceParams\" :from \"engine/promptAstparser.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PromptASTPreParser\" :from \"engine/promptAstparser.ts\" :kind :class :return \"typeof PromptASTPreParser\" :params ())\n  (:symbol \"calculateByteLength\" :from \"engine/seedInflationEngine.ts\" :kind :function :return \"number\" :params ((:param \"str\" :type \"string\")))\n  (:symbol \"inflateKnowledgeSeed\" :from \"engine/seedInflationEngine.ts\" :kind :function :return \"InflatedLessonExperience\" :params ((:param \"seedKey\" :type \"string\")))\n  (:symbol \"MisconceptionProfile\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ProceduralQuestionVariant\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"ASTKnowledgeSeed\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InflationTelemetry\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"InflatedLessonExperience\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"COMPRESSED_KNOWLEDGE_SEEDS\" :from \"engine/seedInflationEngine.ts\" :kind :const :return \"Record<string, ASTKnowledgeSeed>\" :params ())\n  (:symbol \"generateOfflineSocraticAnswer\" :from \"engine/socraticOfflineBrain.ts\" :kind :function :return \"string\" :params ((:param \"ctx\" :type \"SocraticQueryContext\")))\n  (:symbol \"SocraticQueryContext\" :from \"engine/socraticOfflineBrain.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CoordinateAttempt\" :from \"engine/trajectoryEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"CognitiveTrajectoryState\" :from \"engine/trajectoryEngine.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"TrajectoryEngine\" :from \"engine/trajectoryEngine.ts\" :kind :class :return \"typeof TrajectoryEngine\" :params ())\n  (:symbol \"translateText\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<string>\" :params ((:param \"text\" :type \"string\") (:param \"targetLang\" :type \"string\") (:param \"sourceLang\" :type \"string\")))\n  (:symbol \"translateQuestionData\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<{ prompt: string; displayOptions: string[]; hint?: string; explanation?: string; misconceptions?: string[]; socraticFollowUp?: string; }>\" :params ((:param \"question\" :type \"{ prompt: string; displayOptions: string[]; hint?: string; explanation?: string; misconceptions?: string[]; socraticFollowUp?: string; }\") (:param \"targetLang\" :type \"string\")))\n  (:symbol \"translateLessonData\" :from \"engine/translationService.ts\" :kind :function :return \"Promise<{ title: string; axiom: string; trap: string; hook: string; guidedStep: string; socraticCheck: string; fullText?: string; }>\" :params ((:param \"lesson\" :type \"{ title: string; axiom: string; trap: string; hook: string; guidedStep: string; socraticCheck: string; fullText?: string; }\") (:param \"targetLang\" :type \"string\")))\n  (:symbol \"speakInLanguage\" :from \"engine/translationService.ts\" :kind :function :return \"void\" :params ((:param \"text\" :type \"string\") (:param \"langCode\" :type \"string\") (:param \"options\" :type \"{ rate?: number; onEnd?: () => void; onError?: () => void; onBoundary?: (charIndex: number) => void; }\")))\n  (:symbol \"speakBilingual\" :from \"engine/translationService.ts\" :kind :function :return \"() => void\" :params ((:param \"primaryText\" :type \"string\") (:param \"primaryLang\" :type \"string\") (:param \"secondaryText\" :type \"string\") (:param \"secondaryLang\" :type \"string\") (:param \"options\" :type \"{ rate?: number; pauseMs?: number; onPhaseChange?: (phase: \"primary\" | \"secondary\" | \"idle\") => void; onEnd?: () => void; }\")))\n  (:symbol \"cancelSpeech\" :from \"engine/translationService.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"OFFLINE_LEXICON\" :from \"engine/translationService.ts\" :kind :const :return \"Record<string, Record<string, string>>\" :params ())\n  (:symbol \"translatePageDOM\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"Promise<void>\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"restorePageDOM\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ())\n  (:symbol \"enableUniversalObserver\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"speakCurrentPage\" :from \"engine/universalDomTranslator.ts\" :kind :function :return \"void\" :params ((:param \"targetLang\" :type \"string\")))\n  (:symbol \"UNIVERSAL_UI_LEXICON\" :from \"engine/universalDomTranslator.ts\" :kind :const :return \"Record<string, Record<string, string>>\" :params ())\n  (:symbol \"detectWebMcpSurface\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"{ surface: WebMcpSurface; api: any; }\" :params ())\n  (:symbol \"clampVarValue\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"{ value: string | number; clamped: boolean; }\" :params ((:param \"rawValue\" :type \"string | number\") (:param \"meta\" :type \"EngineVarMeta\")))\n  (:symbol \"buildSafeActionTuple\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"{ tuple: string; sayText: string; rejectedSelectors: string[]; }\" :params ((:param \"args\" :type \"{ tuple?: string; seek?: number; highlight?: string; varName?: string; varValue?: string | number; say?: string; }\") (:param \"varMeta\" :type \"Record<string, EngineVarMeta>\")))\n  (:symbol \"createPlayerWebMcpTools\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"WebMcpToolDescriptor[]\" :params ((:param \"transport\" :type \"PlayerMcpTransport\")))\n  (:symbol \"registerWebMcpTools\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"WebMcpRegistrationHandle\" :params ((:param \"transport\" :type \"PlayerMcpTransport\")))\n  (:symbol \"runWebMcpBenchmark\" :from \"engine/webmcpBridge.ts\" :kind :function :return \"Promise<WebMcpBenchmarkResult>\" :params ((:param \"transport\" :type \"PlayerMcpTransport\") (:param \"existingTools\" :type \"WebMcpToolDescriptor[]\")))\n  (:symbol \"WebMcpSurface\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineVarMeta\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineLedgerSnapshot\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineCheckpointGoalSnapshot\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"EngineStateSummary\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"PlayerMcpTransport\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"WebMcpToolDescriptor\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"WebMcpRegistrationHandle\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n  (:symbol \"WebMcpBenchmarkResult\" :from \"engine/webmcpBridge.ts\" :kind :const :return \"any\" :params ())\n)\n";
 export const ENGINE_EXPORT_CATALOG = [
   {
     "name": "generateContextualFallback",
@@ -840,6 +840,204 @@ export const ENGINE_EXPORT_CATALOG = [
     "relPath": "engine/engineflow.ts"
   },
   {
+    "name": "estimateBpeTokenCount",
+    "kind": "function",
+    "returnType": "number",
+    "params": [
+      {
+        "name": "text",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "computeAstVsJsonCompression",
+    "kind": "function",
+    "returnType": "Promise<CompressionComparisonResult>",
+    "params": [
+      {
+        "name": "liveSession",
+        "type": "any"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "formatEppReportMarkdown",
+    "kind": "function",
+    "returnType": "string",
+    "params": [
+      {
+        "name": "dossier",
+        "type": "EppTelemetryDossier"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "saveEppTelemetryDossier",
+    "kind": "function",
+    "returnType": "Promise<void>",
+    "params": [
+      {
+        "name": "dossier",
+        "type": "EppTelemetryDossier"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "loadLastEppTelemetryDossier",
+    "kind": "function",
+    "returnType": "Promise<EppTelemetryDossier>",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "triggerFileDownload",
+    "kind": "function",
+    "returnType": "void",
+    "params": [
+      {
+        "name": "filename",
+        "type": "string"
+      },
+      {
+        "name": "content",
+        "type": "string"
+      },
+      {
+        "name": "mimeType",
+        "type": "string"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "runEppContentionSuite",
+    "kind": "function",
+    "returnType": "Promise<EppTelemetryDossier>",
+    "params": [
+      {
+        "name": "options",
+        "type": "{ transport: EppBenchTransport; sceneId: string; onProgress?: (progress: EppBenchProgress) => void; phaseADurationMs?: number; phaseCDurationMs?: number; }"
+      }
+    ],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EPP_DOSSIER_STATE_KEY",
+    "kind": "const",
+    "returnType": "\"epp_last_telemetry_dossier\"",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "ProfilerCaptureStats",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "ProfilerActiveMetrics",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "ProfilerCaptureResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "QuotaTurnMetric",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "CompressionComparisonResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EppContentionPhaseMetrics",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EppTelemetryDossier",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EppBenchProgress",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EppBenchTransport",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "CANONICAL_20_LINE_AST",
+    "kind": "const",
+    "returnType": "\"(:scene :id \\\"hooke-spring-bench\\\" :title \\\"Hooke's Law Oscillator\\\" :stage \\\"KS4 PHYSICS\\\" :type \\\"Sim\\\" :duration 12.0\\n  (:physics :substeps 4 :restitution 0.85 :friction 0.04)\\n  (:vars\\n    ((:var :name \\\"k\\\" :label \\\"Spring k (N/m)\\\" :val 24 :min 5 :max 80 :step 1)\\n     (:var :name \\\"mass\\\" :label \\\"Mass (kg...",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "EQUIVALENT_VERBOSE_JSON_SCENE",
+    "kind": "const",
+    "returnType": "{ schemaVersion: string; sceneMetadata: { id: string; title: string; stage: string; type: string; durationSeconds: number; }; physicsConfiguration: { substeps: number; restitution: number; friction: number; }; ... 6 more ...; interactiveCheckpoints: { ...; }[]; }",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
+    "name": "AST_SYNTHESIS_RESPONSE_SCHEMA",
+    "kind": "const",
+    "returnType": "{ type: string; properties: { sceneId: { type: string; }; title: { type: string; }; astSExpr: { type: string; }; socraticHint: { type: string; }; }; required: string[]; additionalProperties: boolean; }",
+    "params": [],
+    "sourceFile": "eppContentionBench.ts",
+    "relPath": "engine/eppContentionBench.ts"
+  },
+  {
     "name": "invokeDomainSubstrate",
     "kind": "function",
     "returnType": "Promise<T>",
@@ -1630,5 +1828,162 @@ export const ENGINE_EXPORT_CATALOG = [
     "params": [],
     "sourceFile": "universalDomTranslator.ts",
     "relPath": "engine/universalDomTranslator.ts"
+  },
+  {
+    "name": "detectWebMcpSurface",
+    "kind": "function",
+    "returnType": "{ surface: WebMcpSurface; api: any; }",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "clampVarValue",
+    "kind": "function",
+    "returnType": "{ value: string | number; clamped: boolean; }",
+    "params": [
+      {
+        "name": "rawValue",
+        "type": "string | number"
+      },
+      {
+        "name": "meta",
+        "type": "EngineVarMeta"
+      }
+    ],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "buildSafeActionTuple",
+    "kind": "function",
+    "returnType": "{ tuple: string; sayText: string; rejectedSelectors: string[]; }",
+    "params": [
+      {
+        "name": "args",
+        "type": "{ tuple?: string; seek?: number; highlight?: string; varName?: string; varValue?: string | number; say?: string; }"
+      },
+      {
+        "name": "varMeta",
+        "type": "Record<string, EngineVarMeta>"
+      }
+    ],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "createPlayerWebMcpTools",
+    "kind": "function",
+    "returnType": "WebMcpToolDescriptor[]",
+    "params": [
+      {
+        "name": "transport",
+        "type": "PlayerMcpTransport"
+      }
+    ],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "registerWebMcpTools",
+    "kind": "function",
+    "returnType": "WebMcpRegistrationHandle",
+    "params": [
+      {
+        "name": "transport",
+        "type": "PlayerMcpTransport"
+      }
+    ],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "runWebMcpBenchmark",
+    "kind": "function",
+    "returnType": "Promise<WebMcpBenchmarkResult>",
+    "params": [
+      {
+        "name": "transport",
+        "type": "PlayerMcpTransport"
+      },
+      {
+        "name": "existingTools",
+        "type": "WebMcpToolDescriptor[]"
+      }
+    ],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "WebMcpSurface",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "EngineVarMeta",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "EngineLedgerSnapshot",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "EngineCheckpointGoalSnapshot",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "EngineStateSummary",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "PlayerMcpTransport",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "WebMcpToolDescriptor",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "WebMcpRegistrationHandle",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
+  },
+  {
+    "name": "WebMcpBenchmarkResult",
+    "kind": "const",
+    "returnType": "any",
+    "params": [],
+    "sourceFile": "webmcpBridge.ts",
+    "relPath": "engine/webmcpBridge.ts"
   }
 ] as const;
