@@ -207,10 +207,10 @@ export function renderPracticePage(): HTMLElement {
         <!-- Score & Streak Status -->
         <div style="display:flex; gap:12px; align-items:center;">
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
-            <span>⭐</span> Score: <span id="score-val" style="font-size:1.1rem; font-weight:800;">${score}</span>
+            <span>⭐</span> Score: <span id="score-val" style="font-size:1.1rem; font-weight:800;">${escapeHtml(String(score))}</span>
           </div>
           <div style="background:#fffbeb; border:1px solid #fde68a; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#92400e; display:flex; align-items:center; gap:8px;">
-            <span>🔥</span> Streak: <span id="streak-val" style="font-size:1.1rem; font-weight:800;">${streak}</span>
+            <span>🔥</span> Streak: <span id="streak-val" style="font-size:1.1rem; font-weight:800;">${escapeHtml(String(streak))}</span>
           </div>
         </div>
       </div>
@@ -269,15 +269,15 @@ export function renderPracticePage(): HTMLElement {
             </p>
           </div>
         ` : drills.map((drill, qIdx) => `
-          <article class="drill-card" id="drill-${drill.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <article class="drill-card" id="drill-${escapeHtml(drill.id)}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">
-                  ${drill.stage}
+                  ${escapeHtml(drill.stage)}
                 </span>
                 <span style="color:#cbd5e1;">&bull;</span>
                 <span style="font-size:0.74rem; font-weight:700; color:#475569;">
-                  ${drill.subject} &bull; ${drill.unit}
+                  ${escapeHtml(drill.subject)} &bull; ${escapeHtml(drill.unit)}
                 </span>
                 ${drill.sourceDeck ? `
                   <span style="font-size:0.7rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">
@@ -286,14 +286,14 @@ export function renderPracticePage(): HTMLElement {
                 ` : ''}
               </div>
               ${drill.simPreset ? `
-                <a href="${base}player?preset=${drill.simPreset}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                <a href="${base}player?preset=${encodeURIComponent(drill.simPreset)}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                   <span>🎮 Open Simulator</span> &rarr;
                 </a>
               ` : ''}
             </div>
 
             <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; line-height:1.45;">
-              ${qIdx + 1}. ${drill.question}
+              ${qIdx + 1}. ${escapeHtml(drill.question)}
             </h3>
 
             <!-- Options Grid -->
@@ -302,13 +302,13 @@ export function renderPracticePage(): HTMLElement {
                 <button
                   type="button"
                   class="option-btn"
-                  data-drill-id="${drill.id}"
+                  data-drill-id="${escapeHtml(drill.id)}"
                   data-opt-idx="${optIdx}"
                   style="text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc; color:#0f172a; font-weight:600; font-size:0.88rem; cursor:pointer; transition:all 0.15s ease; line-height:1.4;">
                   <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:22px; font-size:0.76rem; margin-right:8px; font-weight:800;">
                     ${String.fromCharCode(65 + optIdx)}
                   </span>
-                  ${opt}
+                  ${escapeHtml(opt)}
                 </button>
               `).join('')}
             </div>
@@ -320,8 +320,8 @@ export function renderPracticePage(): HTMLElement {
               <button type="button" class="hint-toggle-btn" data-drill-id="${drill.id}" style="background:transparent; border:none; color:#0284c7; font-size:0.8rem; font-weight:700; cursor:pointer;">
                 💡 Need a clue?
               </button>
-              <div class="hint-text" id="hint-${drill.id}" style="display:none; font-size:0.82rem; color:#64748b; font-style:italic;">
-                ${drill.hint}
+              <div class="hint-text" id="hint-${escapeHtml(drill.id)}" style="display:none; font-size:0.82rem; color:#64748b; font-style:italic;">
+                ${escapeHtml(drill.hint)}
               </div>
             </div>
           </article>
