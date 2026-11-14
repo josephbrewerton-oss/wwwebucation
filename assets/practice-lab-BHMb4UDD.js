@@ -1,4 +1,4 @@
-import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curriculumSimMapping-DiVoIb7m.js";import{getLearnerProfile as i,recordAssessmentAttempt as a}from"./studentProfileStore-8jYkgwjD.js";function o(){let t=[],i=new Set;for(let n of e)if(n.dataPayload&&n.dataPayload.questions)for(let e of n.dataPayload.questions)i.has(e.id)||(i.add(e.id),t.push({id:e.id,stage:n.stage,subject:n.subject,unit:n.oakUnit||n.title,question:e.prompt,options:e.options,correctIndex:e.answer,hint:e.hint||`Carefully review the fundamental axioms.`,explanation:e.explanation||`Verified diagnostic response.`,sourceDeck:n.title}));for(let e of r){let r=n(e.topicId,e.topicTitle,e.subjectTitle),a=r?r.presetId:void 0;if(e.questions&&e.questions.length>0)for(let n of e.questions)i.has(n.id)||(i.add(n.id),t.push({id:n.id,stage:e.stageTitle,subject:e.subjectTitle,unit:e.topicTitle,question:n.prompt,options:n.options,correctIndex:n.answerKey,hint:n.hint,explanation:n.explanation,simPreset:a}));else t.push({id:`q_axiom_${e.stageId}_${e.topicId}`,stage:e.stageTitle,subject:e.subjectTitle,unit:e.topicTitle,question:`Which fundamental principle governs ${e.topicTitle}?`,options:[e.axiom,`It operates in reverse without regard for foundational invariants.`,`It only applies under hypothetical lab conditions with arbitrary constants.`,`It contradicts the standard National Curriculum frameworks.`],correctIndex:0,hint:e.guidedStep||`Focus on the defining conceptual axiom.`,explanation:`Correct! ${e.axiom}`,simPreset:a})}return t}function s(e){return e?e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`):``}function c(){let e=t(),n=document.createElement(`div`);n.className=`practice-arena-stage`,n.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let r=o(),c=new URLSearchParams(window.location.search),l=c.get(`stage`)||`All`,u=c.get(`subject`)||`All`,d=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`].includes(l)?l:`All`,f=u.replace(/[<>"'&]/g,``),p=(c.get(`q`)||``).slice(0,100),m=i(),h=m.starsEarned||0,g=m.currentStreak||0,_=new Set,v=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],y=new Set;r.forEach(e=>{e.subject&&y.add(e.subject)});let b=[`All`,...Array.from(y).sort()];function x(){let e=p.toLowerCase().trim();return r.filter(t=>{let n=d===`All`||t.stage===d,r=f===`All`||t.subject===f;if(!n||!r)return!1;if(e){let n=t.question.toLowerCase().includes(e),r=t.unit.toLowerCase().includes(e),i=t.explanation.toLowerCase().includes(e);if(!n&&!r&&!i)return!1}return!0})}function S(e){try{let t=window.AudioContext||window.webkitAudioContext;if(!t)return;let n=new t,r=n.createOscillator(),i=n.createGain();r.connect(i),i.connect(n.destination),e===`success`?(r.frequency.setValueAtTime(523.25,n.currentTime),r.frequency.exponentialRampToValueAtTime(659.25,n.currentTime+.1),i.gain.setValueAtTime(.15,n.currentTime),i.gain.exponentialRampToValueAtTime(.01,n.currentTime+.25),r.start(),r.stop(n.currentTime+.25)):(r.type=`sawtooth`,r.frequency.setValueAtTime(180,n.currentTime),r.frequency.linearRampToValueAtTime(120,n.currentTime+.2),i.gain.setValueAtTime(.12,n.currentTime),i.gain.exponentialRampToValueAtTime(.01,n.currentTime+.2),r.start(),r.stop(n.currentTime+.2))}catch{}}function C(){let t=x();n.innerHTML=`
+import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curriculumSimMapping-CuvTTBBz.js";import{getLearnerProfile as i,recordAssessmentAttempt as a}from"./studentProfileStore-8jYkgwjD.js";function o(){let t=[],i=new Set;for(let n of e)if(n.dataPayload&&n.dataPayload.questions)for(let e of n.dataPayload.questions)i.has(e.id)||(i.add(e.id),t.push({id:e.id,stage:n.stage,subject:n.subject,unit:n.oakUnit||n.title,question:e.prompt,options:e.options,correctIndex:e.answer,hint:e.hint||`Carefully review the fundamental axioms.`,explanation:e.explanation||`Verified diagnostic response.`,sourceDeck:n.title}));for(let e of r){let r=n(e.topicId,e.topicTitle,e.subjectTitle),a=r?r.presetId:void 0;if(e.questions&&e.questions.length>0)for(let n of e.questions)i.has(n.id)||(i.add(n.id),t.push({id:n.id,stage:e.stageTitle,subject:e.subjectTitle,unit:e.topicTitle,question:n.prompt,options:n.options,correctIndex:n.answerKey,hint:n.hint,explanation:n.explanation,simPreset:a}));else t.push({id:`q_axiom_${e.stageId}_${e.topicId}`,stage:e.stageTitle,subject:e.subjectTitle,unit:e.topicTitle,question:`Which fundamental principle governs ${e.topicTitle}?`,options:[e.axiom,`It operates in reverse without regard for foundational invariants.`,`It only applies under hypothetical lab conditions with arbitrary constants.`,`It contradicts the standard National Curriculum frameworks.`],correctIndex:0,hint:e.guidedStep||`Focus on the defining conceptual axiom.`,explanation:`Correct! ${e.axiom}`,simPreset:a})}return t}function s(e){return e?e.replace(/&/g,`&amp;`).replace(/</g,`&lt;`).replace(/>/g,`&gt;`).replace(/"/g,`&quot;`).replace(/'/g,`&#39;`):``}function c(){let e=t(),n=document.createElement(`div`);n.className=`practice-arena-stage`,n.style.cssText=`max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;`;let r=o(),c=new URLSearchParams(window.location.search),l=c.get(`stage`)||`All`,u=c.get(`subject`)||`All`,d=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`].includes(l)?l:`All`,f=u.replace(/[<>"'&]/g,``),p=(c.get(`q`)||``).slice(0,100),m=i(),h=m.starsEarned||0,g=m.currentStreak||0,_=new Set,v=[`All`,`Key Stage 1`,`Key Stage 2`,`Key Stage 3`,`Key Stage 4`],y=new Set;r.forEach(e=>{e.subject&&y.add(e.subject)});let b=[`All`,...Array.from(y).sort()];function x(){let e=p.toLowerCase().trim();return r.filter(t=>{let n=d===`All`||t.stage===d,r=f===`All`||t.subject===f;if(!n||!r)return!1;if(e){let n=t.question.toLowerCase().includes(e),r=t.unit.toLowerCase().includes(e),i=t.explanation.toLowerCase().includes(e);if(!n&&!r&&!i)return!1}return!0})}function S(e){try{let t=window.AudioContext||window.webkitAudioContext;if(!t)return;let n=new t,r=n.createOscillator(),i=n.createGain();r.connect(i),i.connect(n.destination),e===`success`?(r.frequency.setValueAtTime(523.25,n.currentTime),r.frequency.exponentialRampToValueAtTime(659.25,n.currentTime+.1),i.gain.setValueAtTime(.15,n.currentTime),i.gain.exponentialRampToValueAtTime(.01,n.currentTime+.25),r.start(),r.stop(n.currentTime+.25)):(r.type=`sawtooth`,r.frequency.setValueAtTime(180,n.currentTime),r.frequency.linearRampToValueAtTime(120,n.currentTime+.2),i.gain.setValueAtTime(.12,n.currentTime),i.gain.exponentialRampToValueAtTime(.01,n.currentTime+.2),r.start(),r.stop(n.currentTime+.2))}catch{}}function C(){let t=x();n.innerHTML=`
       <!-- Header -->
       <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; margin-bottom:1.75rem;">
         <div>
@@ -20,10 +20,10 @@ import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curri
         <!-- Score & Streak Status -->
         <div style="display:flex; gap:12px; align-items:center;">
           <div style="background:#f0fdf4; border:1px solid #bbf7d0; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#166534; display:flex; align-items:center; gap:8px;">
-            <span>⭐</span> Score: <span id="score-val" style="font-size:1.1rem; font-weight:800;">${h}</span>
+            <span>⭐</span> Score: <span id="score-val" style="font-size:1.1rem; font-weight:800;">${s(String(h))}</span>
           </div>
           <div style="background:#fffbeb; border:1px solid #fde68a; padding:8px 16px; border-radius:10px; font-size:0.88rem; font-weight:700; color:#92400e; display:flex; align-items:center; gap:8px;">
-            <span>🔥</span> Streak: <span id="streak-val" style="font-size:1.1rem; font-weight:800;">${g}</span>
+            <span>🔥</span> Streak: <span id="streak-val" style="font-size:1.1rem; font-weight:800;">${s(String(g))}</span>
           </div>
         </div>
       </div>
@@ -82,15 +82,15 @@ import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curri
             </p>
           </div>
         `:t.map((t,n)=>`
-          <article class="drill-card" id="drill-${t.id}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+          <article class="drill-card" id="drill-${s(t.id)}" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:8px;">
               <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
                 <span style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em;">
-                  ${t.stage}
+                  ${s(t.stage)}
                 </span>
                 <span style="color:#cbd5e1;">&bull;</span>
                 <span style="font-size:0.74rem; font-weight:700; color:#475569;">
-                  ${t.subject} &bull; ${t.unit}
+                  ${s(t.subject)} &bull; ${s(t.unit)}
                 </span>
                 ${t.sourceDeck?`
                   <span style="font-size:0.7rem; font-weight:700; color:#059669; background:#ecfdf5; border:1px solid #a7f3d0; padding:2px 8px; border-radius:6px;">
@@ -99,14 +99,14 @@ import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curri
                 `:``}
               </div>
               ${t.simPreset?`
-                <a href="${e}player?preset=${t.simPreset}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                <a href="${e}player?preset=${encodeURIComponent(t.simPreset)}" style="font-size:0.78rem; font-weight:700; color:#0284c7; text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
                   <span>🎮 Open Simulator</span> &rarr;
                 </a>
               `:``}
             </div>
 
             <h3 style="font-size:1.15rem; font-weight:800; color:#0f172a; margin:0 0 1rem 0; line-height:1.45;">
-              ${n+1}. ${t.question}
+              ${n+1}. ${s(t.question)}
             </h3>
 
             <!-- Options Grid -->
@@ -115,13 +115,13 @@ import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curri
                 <button
                   type="button"
                   class="option-btn"
-                  data-drill-id="${t.id}"
+                  data-drill-id="${s(t.id)}"
                   data-opt-idx="${n}"
                   style="text-align:left; padding:10px 14px; border-radius:8px; border:1.5px solid #cbd5e1; background:#f8fafc; color:#0f172a; font-weight:600; font-size:0.88rem; cursor:pointer; transition:all 0.15s ease; line-height:1.4;">
                   <span style="display:inline-block; width:22px; height:22px; border-radius:50%; background:#e2e8f0; text-align:center; line-height:22px; font-size:0.76rem; margin-right:8px; font-weight:800;">
                     ${String.fromCharCode(65+n)}
                   </span>
-                  ${e}
+                  ${s(e)}
                 </button>
               `).join(``)}
             </div>
@@ -133,8 +133,8 @@ import{a as e,m as t}from"./cartridge-vault-Bk3CgVQM.js";import{n,r}from"./curri
               <button type="button" class="hint-toggle-btn" data-drill-id="${t.id}" style="background:transparent; border:none; color:#0284c7; font-size:0.8rem; font-weight:700; cursor:pointer;">
                 💡 Need a clue?
               </button>
-              <div class="hint-text" id="hint-${t.id}" style="display:none; font-size:0.82rem; color:#64748b; font-style:italic;">
-                ${t.hint}
+              <div class="hint-text" id="hint-${s(t.id)}" style="display:none; font-size:0.82rem; color:#64748b; font-style:italic;">
+                ${s(t.hint)}
               </div>
             </div>
           </article>
