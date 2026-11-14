@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-14T09:08:13.231Z",
+  "generatedAt": "2026-11-14T09:24:58.796Z",
   "totalScenes": 72,
   "scenes": [
     {
@@ -254,9 +254,9 @@
       "svgFile": "cartridges/first-communion.svg",
       "astFile": "cartridges/first-communion.ast",
       "astbFile": "bytecode/first-communion.astb",
-      "keyframeCount": 0,
+      "keyframeCount": 5,
       "subtitleCount": 6,
-      "bindingsCount": 4
+      "bindingsCount": 18
     },
     {
       "id": "fish-tank",

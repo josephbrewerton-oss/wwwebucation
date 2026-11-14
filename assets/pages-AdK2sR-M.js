@@ -1,4 +1,4 @@
-import{l as e,m as t}from"./cartridge-vault-C_ymVyNu.js";function n(){let n=t(),r=document.createElement(`div`);r.className=`home-landing-stage`,r.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let i=`welcome`,a=e.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));r.innerHTML=`
+import{l as e,m as t}from"./cartridge-vault-DbbtB2hK.js";function n(){let n=t(),r=document.createElement(`div`);r.className=`home-landing-stage`,r.style.cssText=`padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;`;let i=`welcome`,a=e.slice(0,24).map(e=>({id:e.id,title:e.label,mount:e.mount||`/curriculum/${e.id}`,subject:e.subject||`STEM & Curriculum`,badge:e.stage||`Curriculum`}));r.innerHTML=`
     <!-- Hero Header -->
     <header style="text-align: center; margin-bottom: 3.5rem;">
       <div style="margin-bottom: 1.25rem; display: flex; gap: 8px; justify-content: center; align-items: center; flex-wrap: wrap; font-size: 0.85rem; color: #64748b;">
