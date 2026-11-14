@@ -54,15 +54,15 @@ Declarative S-Expression Animation: Scenes are defined via .ast manifests pairin
 
 Document Picture-in-Picture: Interactive simulations, 3D orbits, and active-recall checkpoints pop out into an always-on-top desktop window via documentPictureInPicture.
 
-Legacy SWF / Flash Transcompiler: Client-side decompiler in AstVectorMediaPlayer.tsx that ingests raw FWS/CWS Flash binaries, parses shape records and twips coordinates, and translates them directly into modern SVG paths and S-expression bindings.
+Legacy SWF / Flash Transcompiler: Client-side decompiler in `src/components/player/SwfTranspilerDrawer.ts` and `src/pages/media-player.ts` that ingests raw FWS/CWS Flash binaries, parses shape records and twips coordinates, and translates them directly into modern SVG paths and S-expression bindings.
 
-2.3 AST Route Harmoniser (AstHarmoniser.tsx)
+2.3 AST Route Harmoniser (`src/engine/harmonisedRouteResolver.ts` & `src/router.ts`)
 A zero-404 navigation substrate that intercepts non-canonical or legacy deep links, projects the request onto the hierarchical curriculum tree, and automatically redirects or renders dynamic AST views without broken paths.
 
 3. Directory Layout & Module Boundaries
-src/engine/: Core runtime orchestration, including aicaller.ts, hypercall.ts, and operational-language.ts.
+`src/engine/`: Core runtime orchestration, including `aicaller.ts`, `hypercall.ts`, `webmcpBridge.ts`, `eppContentionBench.ts`, and `operational-language.ts`.
 
-src/components/: Modular UI, including AstVectorMediaPlayer.tsx, PersistentAppShell.tsx, ConceptConstellation.tsx, and AstHarmoniser.tsx.
+`src/components/`: Native Web Components and UI controllers, including `PersistentAppShell.ts`, `NativeBslInterpreter.ts`, `componentsFlow.ts`, and `src/components/player/`.
 
 src/utils/sexprParser.ts: Recursive tokenizer and AST parser enforcing strict determinism and validation across all .ast files.
 

@@ -5,7 +5,7 @@
  * parses root slots (:id, :type ["Sim"|"Slide"|"App"|"Film"], :title, :stage, :duration), and emits:
  * 1. static/player/scenes.manifest.json & static/scenes.manifest.json
  * 2. static/player/manifest.oak.json & static/manifest.oak.json
- * 3. src/data/player/generatedScenes.ts (Single source of truth for React UI)
+ * 3. src/data/player/generatedScenes.ts (Single source of truth for Native Web UI)
  * 4. Synchronizes assets into static/player/cartridges/ for zero-404 iframe execution
  */
 
@@ -571,7 +571,7 @@ export function generateScenesManifest(options = {}) {
   }
   console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/cartridges/ and static/scenes/`);
 
-  // 4. Output strongly typed presets for React UI
+  // 4. Output strongly typed presets for Native Web UI
   const tsDataDir = path.dirname(tsExportPath);
   if (!fs.existsSync(tsDataDir)) {
     fs.mkdirSync(tsDataDir, { recursive: true });

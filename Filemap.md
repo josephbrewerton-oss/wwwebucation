@@ -1,11 +1,11 @@
 # St Joseph's Curriculum Portal — Filemap
 
-Current active repository structure (Vite 6+ SPA, Edge AI Engine, PWA):
+Current active repository structure (Vite 8+ SPA, Edge AI Engine, PWA):
 
 ## Root Configuration
 - `package.json` — Root dependency and script manifest (Pure Vite SPA, sub-second build)
 - `tsconfig.json` — TypeScript configuration
-- `vite.config.ts` — Vite 6 build configuration with rollup manual vendor chunking
+- `vite.config.ts` — Vite 8 build configuration with manual vendor chunking
 - `index.html` — Application entry point, critical inline CSS, PWA meta tags
 - `metadata.json` — AI Studio applet metadata (edge execution, no remote cloud dependencies)
 - `AGENTS.md` — Project context, on-device Gemini Nano and offline-first directives
@@ -37,17 +37,18 @@ Current active repository structure (Vite 6+ SPA, Edge AI Engine, PWA):
   - `src/engine/universalDomTranslator.ts` — Live DOM translation engine
   - `src/engine/EdgeCognitiveEngine.ts` — Local cognitive engine
 - `src/pages/`
-  - `src/pages/index.tsx` — Home portal dashboard & curriculum stream browser
-  - `src/pages/practice-lab.tsx` — Practice lab with real-time on-device feedback
-  - `src/pages/learning-zone.tsx` — Interactive learning zone & lesson viewer
-  - `src/pages/profile.tsx` — Student offline mastery profile & badges
-  - `src/pages/curriculum-studio.tsx` — Overseas curriculum importer & CSV editor
-  - `src/pages/teacher-beacon.tsx` — Local WebRTC peer-to-peer classroom sync
-  - `src/pages/settings.tsx` — Settings, PWA status, Nano AI consent, and Low-Bandwidth Data Saver
-  - `src/pages/licensing.tsx` — Perpetual free licensing declaration for Catholic schools & emerging nations
-  - `src/pages/privacy.tsx` — Zero-cloud leakage privacy policy
-  - `src/pages/blog.tsx` — News and updates
-  - `src/pages/not-found.tsx` — 404 handler
+  - `src/pages/index.ts` — Home portal dashboard & curriculum stream browser
+  - `src/pages/media-player.ts` — AST Vector Media Player, Diagnostics drawer & EPP Telemetry Test Bed
+  - `src/pages/practice-lab.ts` — Practice lab with real-time on-device feedback
+  - `src/pages/learning-zone.ts` — Interactive learning zone & lesson viewer
+  - `src/pages/profile.ts` — Student offline mastery profile & badges
+  - `src/pages/curriculum-studio.ts` — Overseas curriculum importer & CSV editor
+  - `src/pages/teacher-beacon.ts` — Local WebRTC peer-to-peer classroom sync
+  - `src/pages/settings.ts` — Settings, PWA status, Nano AI consent, and Low-Bandwidth Data Saver
+  - `src/pages/licensing.ts` — Perpetual free licensing declaration for Catholic schools & emerging nations
+  - `src/pages/privacy.ts` — Zero-cloud leakage privacy policy
+  - `src/pages/blog.ts` — News and updates
+  - `src/pages/not-found.ts` — 404 handler
 - `src/services/`
   - `src/services/dataSaverStore.ts` — Ultra-low bandwidth & battery saver controller
   - `src/services/offlineSyncService.ts` — One-click curriculum pre-cacher for offline learning

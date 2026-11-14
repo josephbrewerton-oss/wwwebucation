@@ -1,5 +1,5 @@
 import { getBaseUrl } from '../utils/url';
-// src/pages/catholic-life.tsx
+// src/pages/catholic-life.ts
 // St Joseph's Catholic Life & Faith Sanctuary
 // Pure Native TypeScript Single-Page View (Zero React)
 

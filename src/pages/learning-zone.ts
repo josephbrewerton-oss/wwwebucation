@@ -1,5 +1,5 @@
 import { getBaseUrl } from '../utils/url';
-// src/pages/learning-zone.tsx
+// src/pages/learning-zone.ts
 // St Joseph's Curriculum Portal - National Curriculum Learning Zone
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 

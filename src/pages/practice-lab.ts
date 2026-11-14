@@ -1,5 +1,5 @@
 import { getBaseUrl } from '../utils/url';
-// src/pages/practice-lab.tsx
+// src/pages/practice-lab.ts
 // St Joseph's Curriculum Portal - Interactive Practice Lab Arena
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 

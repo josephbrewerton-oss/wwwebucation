@@ -36,7 +36,7 @@ The **St Joseph's Engine** flips this paradigm. By running quantized neural infe
 │                              BROWSER TAB                                │
 │                                                                         │
 │   ┌────────────────────────┐              ┌──────────────────────────┐  │
-│   │    React 18 / DOM      │ ◄──────────► │    IndexedDB Storage     │  │
+│   │   Native TS / Web DOM  │ ◄──────────► │    IndexedDB Storage     │  │
 │   │ (Learning Zone / Lab)  │              │ (Curriculum Cache & VFS) │  │
 │   └───────────┬────────────┘              └──────────────────────────┘  │
 │               │                                                         │
@@ -105,13 +105,13 @@ Audited on production builds via Google PageSpeed Insights:
 
 ### Prerequisites
 
-* Node.js (v18.0.0 or higher)
+* Node.js (v20.0.0 or higher)
 * Chromium-based browser with Built-in AI flags enabled (`chrome://flags/#optimization-guide-on-device-model` set to *Enabled BypassPerfRequirement* and `chrome://flags/#prompt-api-for-gemini-nano` set to *Enabled*).
 
 ### Installation
 
 ```bash
-git clone [https://github.com/josephbrewerton-oss/wwwebucation.git](https://github.com/josephbrewerton-oss/wwwebucation.git)
+git clone https://github.com/josephbrewerton-oss/wwwebucation.git
 cd wwwebucation
 npm install
 
@@ -120,11 +120,11 @@ npm install
 ### Local Development
 
 ```bash
-npm run start
+npm run dev
 
 ```
 
-Runs the local development instance at `http://localhost:3000/wwwebucation/learning-zone`.
+Runs the local development instance at `http://localhost:3000`.
 
 ### Production Build & Deployment
 
