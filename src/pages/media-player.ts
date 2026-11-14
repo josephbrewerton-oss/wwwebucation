@@ -23,8 +23,18 @@ import {
   renderPlayerEmbedModal,
   renderNanoAiTutorDrawer,
   renderAstInteractiveLabDrawer,
+  renderEppDiagnosticsDrawer,
 } from '../components/player';
 import type { PlayerTelemetryEvent } from '../engine/aicaller';
+import {
+  registerWebMcpTools,
+  type PlayerMcpTransport,
+  type WebMcpRegistrationHandle,
+} from '../engine/webmcpBridge';
+import {
+  type EppBenchTransport,
+  type ProfilerCaptureResult,
+} from '../engine/eppContentionBench';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { appendLabCsvToJotter } from '../services/jotter-db';
 import { type PlayerDisplayMode } from '../types/playerConfig';
@@ -462,6 +472,102 @@ export function renderPlayerPage(): HTMLElement {
     iframe?.contentWindow?.postMessage(msg, '*');
   }
 
+  let reqSeq = 0;
+  const pendingRequests = new Map<
+    string,
+    { expectedType: string; resolve: (val: any) => void; reject: (err: Error) => void; timer: ReturnType<typeof setTimeout> }
+  >();
+
+  function postToPlayerWithAck<T = any>(
+    msg: Record<string, any>,
+    expectedType: string,
+    timeoutMs = 5000
+  ): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      if (!iframe?.contentWindow) {
+        reject(new Error('Simulation stage iframe is not ready yet.'));
+        return;
+      }
+      const requestId = `req_${++reqSeq}_${Date.now()}`;
+      const timer = setTimeout(() => {
+        if (pendingRequests.has(requestId)) {
+          pendingRequests.delete(requestId);
+          reject(new Error(`Timed out waiting for ${expectedType} from stage.`));
+        }
+      }, timeoutMs);
+
+      pendingRequests.set(requestId, { expectedType, resolve, reject, timer });
+      iframe.contentWindow.postMessage({ ...msg, requestId }, '*');
+    });
+  }
+
+  const mcpTransport: PlayerMcpTransport = {
+    readState: async (includeSvgBytes = true) => {
+      const res = await postToPlayerWithAck<any>(
+        { type: 'GET_ENGINE_STATE', includeSvgBytes },
+        'ENGINE_STATE_RESPONSE'
+      );
+      return res?.state || null;
+    },
+    setVar: async (name: string, value: number | string) => {
+      const res = await postToPlayerWithAck<any>(
+        { type: 'SET_VAR', name, value },
+        'SET_VAR_ACK'
+      );
+      return {
+        name: res?.name || name,
+        value: res?.value ?? value,
+        clamped: Boolean(res?.clamped),
+        state: res?.state || null,
+      };
+    },
+    execActionTuple: async (tuple: string) => {
+      const res = await postToPlayerWithAck<any>(
+        { type: 'EXEC_ACTION_TUPLE', tuple },
+        'EXEC_ACTION_RESULT'
+      );
+      return {
+        ok: Boolean(res?.ok),
+        executedActions: Array.isArray(res?.executedActions) ? res.executedActions : [],
+        state: res?.state || null,
+      };
+    },
+    onSay: (text: string) => {
+      broadcastBslSpeech({ subtitle: text, isSpeaking: true });
+    },
+  };
+
+  const webMcpHandle: WebMcpRegistrationHandle = registerWebMcpTools(mcpTransport);
+  window.addEventListener(
+    'pagehide',
+    () => {
+      webMcpHandle.unregister();
+    },
+    { once: true }
+  );
+
+  const benchTransport: EppBenchTransport = {
+    startProfCapture: async () => {
+      await postToPlayerWithAck<any>(
+        { type: 'START_PROF_CAPTURE', ensurePlaying: true },
+        'PROF_CAPTURE_STARTED'
+      );
+    },
+    stopProfCapture: async (): Promise<ProfilerCaptureResult> => {
+      const res = await postToPlayerWithAck<any>(
+        { type: 'STOP_PROF_CAPTURE' },
+        'PROF_CAPTURE_RESULT'
+      );
+      return {
+        stats: res.stats,
+        memory: res.memory,
+        activeMetrics: res.activeMetrics,
+      };
+    },
+    mcpTransport,
+    mcpTools: webMcpHandle.tools,
+  };
+
   function focusPlayerStage() {
     try {
       iframe?.focus({ preventScroll: true });
@@ -491,10 +597,28 @@ export function renderPlayerPage(): HTMLElement {
   let latestTelemetry: PlayerTelemetryEvent | null = null;
   let embedTargetMode: PlayerDisplayMode = 'classroom';
   let copiedEmbed = false;
+  let mountedDiagnosticsEl: HTMLElement | null = null;
+  let mountedDiagnosticsPreset = '';
 
-  function renderActiveDrawer() {
+  function renderActiveDrawer(forceRebuildDiagnostics = false) {
     if (!drawerMount) return;
+
+    // Preserve interactive diagnostics DOM and live benchmark state across telemetry ticks
+    if (
+      activeDrawer === 'diagnostics' &&
+      !forceRebuildDiagnostics &&
+      mountedDiagnosticsEl &&
+      mountedDiagnosticsEl.isConnected &&
+      mountedDiagnosticsPreset === activePreset
+    ) {
+      return;
+    }
+
     drawerMount.innerHTML = '';
+    if (activeDrawer !== 'diagnostics') {
+      mountedDiagnosticsEl = null;
+      mountedDiagnosticsPreset = '';
+    }
 
     if (aiTutorBtn) {
       aiTutorBtn.style.background = activeDrawer === 'ai-tutor' ? '#581c87' : '#1e293b';
@@ -543,183 +667,24 @@ export function renderPlayerPage(): HTMLElement {
       });
       if (drawerEl) drawerMount.appendChild(drawerEl);
     } else if (activeDrawer === 'diagnostics') {
-      const drawer = document.createElement('div');
-      drawer.className = 'ast-diagnostics-drawer';
-      drawer.style.cssText = 'padding: 1rem 1.25rem; color: #f8fafc; font-size: 0.82rem;';
-
-      const perfHud = getLocalState('app_perf_hud_enabled') === 'true';
-      const verbosity = getLocalState('app_hud_verbosity') || 'minimal';
-      const budgetAlert = getLocalState('app_frame_budget_alert') === 'true';
-      const targetFps = getLocalState('app_target_fps') || 'adaptive';
-
       const activeMeta = getPresetMeta(activePreset);
-      const isSim = activeMeta.type === 'Sim';
-
-      let memoryStats = 'Fixed Pool: 448 KB WASM';
-      if (typeof performance !== 'undefined' && (performance as any).memory) {
-        const heap = (((performance as any).memory.usedJSHeapSize) / 1048576).toFixed(1);
-        memoryStats += ` | JS Heap: ${heap} MB`;
-      }
-
-      drawer.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid #1e293b; padding-bottom:8px;">
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span style="font-size:1.1rem;">⚡</span>
-            <strong style="font-size:0.95rem; color:#f8fafc;">Hardware &amp; Engine Diagnostics</strong>
-            <span style="padding:2px 8px; border-radius:4px; font-size:0.7rem; font-weight:800; background:#064e3b; color:#34d399; border:1px solid #059669;">
-              60 FPS INVARIANT LOCKED
-            </span>
-          </div>
-          <button type="button" id="diag-btn-close" style="background:transparent; border:none; color:#94a3b8; font-size:1.2rem; cursor:pointer; padding:2px 6px;" title="Close Diagnostics">✕</button>
-        </div>
-
-        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; margin-bottom:14px;">
-          <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:10px 12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="color:#94a3b8; font-weight:700; font-size:0.75rem; text-transform:uppercase;">Frame Budget (60 FPS)</span>
-              <span style="color:#22c55e; font-weight:800; font-size:0.78rem;">16.66ms Target</span>
-            </div>
-            <div style="font-size:1.2rem; font-weight:800; color:#38bdf8; font-family:ui-monospace, monospace; margin-bottom:4px;">
-              ⚡ 60 FPS | VM &lt; 0.2ms
-            </div>
-            <div style="font-size:0.72rem; color:#64748b;">
-              Status: <span style="color:#34d399; font-weight:700;">Within Budget (99.0% Headroom)</span>
-            </div>
-          </div>
-
-          <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:10px 12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="color:#94a3b8; font-weight:700; font-size:0.75rem; text-transform:uppercase;">Memory Architecture</span>
-              <span style="color:#38bdf8; font-weight:800; font-size:0.78rem;">WASM SoA Pool</span>
-            </div>
-            <div style="font-size:0.95rem; font-weight:700; color:#f8fafc; margin-bottom:4px;">
-              ${memoryStats}
-            </div>
-            <div style="font-size:0.72rem; color:#64748b;">
-              Dynamic GC Allocations in loop: <span style="color:#34d399; font-weight:700;">0 bytes (Zero Bloat)</span>
-            </div>
-          </div>
-
-          <div style="background:#0b1120; border:1px solid #1e293b; border-radius:8px; padding:10px 12px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-              <span style="color:#94a3b8; font-weight:700; font-size:0.75rem; text-transform:uppercase;">Cartridge Kernel</span>
-              <span style="color:#fde047; font-weight:800; font-size:0.78rem;">${isSim ? ':Sim (Continuous)' : ':Slide (Decks)'}</span>
-            </div>
-            <div style="font-size:0.95rem; font-weight:700; color:#f8fafc; margin-bottom:4px; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">
-              ${escapeHtml(activeMeta.label)}
-            </div>
-            <div style="font-size:0.72rem; color:#64748b;">
-              Whiteboard Pen: <span style="color:#38bdf8; font-weight:700;">Bézier Vector Layer Ready</span>
-            </div>
-          </div>
-        </div>
-
-        <div style="background:#070b14; border:1px solid #1e293b; border-radius:8px; padding:12px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
-          <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
-            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:0.8rem; font-weight:700;">
-              <input type="checkbox" id="diag-toggle-hud" ${perfHud ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px;" />
-              <span>📊 Vector Canvas HUD: <strong style="color:${perfHud ? '#38bdf8' : '#94a3b8'};">${perfHud ? 'VISIBLE' : 'HIDDEN'}</strong></span>
-            </label>
-
-            <div style="display:inline-flex; align-items:center; gap:6px;">
-              <label for="diag-select-verbosity" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">HUD Detail:</label>
-              <select id="diag-select-verbosity" style="padding:4px 8px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;">
-                <option value="minimal" ${verbosity === 'minimal' ? 'selected' : ''}>Minimal (FPS &amp; VM ms)</option>
-                <option value="graph" ${verbosity === 'graph' ? 'selected' : ''}>Vector Sparkline Graph</option>
-                <option value="full" ${verbosity === 'full' ? 'selected' : ''}>Full Telemetry (FPS, Jitter, Memory)</option>
-              </select>
-            </div>
-
-            <div style="display:inline-flex; align-items:center; gap:6px;">
-              <label for="diag-select-fps" style="font-size:0.75rem; color:#94a3b8; font-weight:700;">Power &amp; FPS Profile:</label>
-              <select id="diag-select-fps" style="padding:4px 8px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer;">
-                <option value="adaptive" ${targetFps === 'adaptive' ? 'selected' : ''}>⚡ Adaptive (Auto 60Hz–240Hz)</option>
-                <option value="120" ${targetFps === '120' ? 'selected' : ''}>🚀 Ultra Fluid (120Hz+ ProMotion)</option>
-                <option value="60" ${targetFps === '60' ? 'selected' : ''}>🔒 Locked 60 FPS (School Standard)</option>
-                <option value="30" ${targetFps === '30' ? 'selected' : ''}>🍃 Eco Battery Saver (30 FPS)</option>
-              </select>
-            </div>
-
-            <label style="display:inline-flex; align-items:center; gap:8px; cursor:pointer; font-size:0.8rem; font-weight:700;">
-              <input type="checkbox" id="diag-toggle-budget" ${budgetAlert ? 'checked' : ''} style="cursor:pointer; width:16px; height:16px;" />
-              <span>⏱️ Strict 16.6ms Budget Alarms: <strong style="color:${budgetAlert ? '#ef4444' : '#94a3b8'};">${budgetAlert ? 'ON' : 'OFF'}</strong></span>
-            </label>
-          </div>
-
-          <div style="display:flex; gap:8px;">
-            <button type="button" id="diag-btn-ping" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.74rem; font-weight:700; cursor:pointer;">
-              ⚡ Ping Frame Budget
-            </button>
-          </div>
-        </div>
-      `;
-
-      drawer.querySelector('#diag-btn-close')?.addEventListener('click', () => {
-        activeDrawer = null;
-        renderActiveDrawer();
+      const drawerEl = renderEppDiagnosticsDrawer({
+        onClose: () => {
+          activeDrawer = null;
+          mountedDiagnosticsEl = null;
+          mountedDiagnosticsPreset = '';
+          renderActiveDrawer();
+        },
+        presetId: activePreset,
+        presetLabel: activeMeta.label,
+        presetType: activeMeta.type || 'Sim',
+        postToPlayer: (payload) => postToPlayer(payload),
+        benchTransport,
+        webMcpHandle,
       });
-
-      const toggleHud = drawer.querySelector<HTMLInputElement>('#diag-toggle-hud');
-      const selectVerbosity = drawer.querySelector<HTMLSelectElement>('#diag-select-verbosity');
-      const selectFps = drawer.querySelector<HTMLSelectElement>('#diag-select-fps');
-      const toggleBudget = drawer.querySelector<HTMLInputElement>('#diag-toggle-budget');
-      const btnPing = drawer.querySelector<HTMLButtonElement>('#diag-btn-ping');
-
-      const syncHudSettings = () => {
-        const hudEnabled = Boolean(toggleHud?.checked);
-        const mode = selectVerbosity?.value || 'minimal';
-        const budgetEnabled = Boolean(toggleBudget?.checked);
-        const fpsChoice = selectFps?.value || 'adaptive';
-
-        setLocalState('app_perf_hud_enabled', String(hudEnabled));
-        setLocalState('app_hud_verbosity', mode);
-        setLocalState('app_frame_budget_alert', String(budgetEnabled));
-        setLocalState('app_target_fps', fpsChoice);
-
-        postToPlayer({
-          type: 'SET_PERF_HUD',
-          enabled: hudEnabled,
-          mode: mode,
-          strictAlarm: budgetEnabled,
-        });
-
-        postToPlayer({
-          type: 'SET_TARGET_FPS',
-          fps: fpsChoice === 'adaptive' ? 0 : parseInt(fpsChoice, 10),
-        });
-
-        window.dispatchEvent(new CustomEvent('app-setting-changed', {
-          detail: { key: 'app_perf_hud_enabled', value: hudEnabled }
-        }));
-      };
-
-      toggleHud?.addEventListener('change', () => {
-        syncHudSettings();
-        renderActiveDrawer();
-      });
-
-      selectVerbosity?.addEventListener('change', () => {
-        syncHudSettings();
-      });
-
-      selectFps?.addEventListener('change', () => {
-        syncHudSettings();
-      });
-
-      toggleBudget?.addEventListener('change', () => {
-        syncHudSettings();
-        renderActiveDrawer();
-      });
-
-      btnPing?.addEventListener('click', () => {
-        syncHudSettings();
-        btnPing.textContent = '✓ Synchronized!';
-        setTimeout(() => {
-          if (btnPing) btnPing.textContent = '⚡ Ping Frame Budget';
-        }, 1500);
-      });
-
-      drawerMount.appendChild(drawer);
+      mountedDiagnosticsEl = drawerEl;
+      mountedDiagnosticsPreset = activePreset;
+      drawerMount.appendChild(drawerEl);
     } else if (activeDrawer === 'embed') {
       const getEmbedSnippet = (mode: PlayerDisplayMode) =>
         `<iframe src="${window.location.origin}${base}player.html?preset=${activePreset}&mode=${mode}" width="800" height="480" frameborder="0" allowfullscreen></iframe>`;
@@ -1192,6 +1157,15 @@ export function renderPlayerPage(): HTMLElement {
 
   window.addEventListener('message', (e) => {
     if (!e.data || typeof e.data !== 'object') return;
+    if (e.data.requestId && pendingRequests.has(e.data.requestId)) {
+      const pending = pendingRequests.get(e.data.requestId)!;
+      if (e.data.type === pending.expectedType) {
+        clearTimeout(pending.timer);
+        pendingRequests.delete(e.data.requestId);
+        pending.resolve(e.data);
+        return;
+      }
+    }
     if (e.data.type === 'PLAYER_READY') {
       isIframeReady = true;
       if (initialExternalSrc) {
@@ -1230,14 +1204,12 @@ export function renderPlayerPage(): HTMLElement {
     }
     if (e.data.type === 'TELEMETRY' || e.data.type === 'AST_TELEMETRY' || e.data.type === 'PLAYER_TELEMETRY') {
       latestTelemetry = e.data.telemetry || e.data.payload || e.data;
-      if (activeDrawer === 'ai-tutor' || activeDrawer === 'diagnostics') {
+      if (activeDrawer === 'ai-tutor') {
         renderActiveDrawer();
       }
     }
     if (e.data.type === 'PERF_HUD_UPDATED') {
-      if (activeDrawer === 'diagnostics') {
-        renderActiveDrawer();
-      }
+      // Handled cleanly inside mounted drawer without tearing down live benchmark state
     }
     if ((e.data.type === 'LOG_JOTTER_CSV' || e.data.type === 'JOTTER_CSV_RESPONSE') && typeof e.data.csv === 'string') {
       const targetId = typeof e.data.sceneId === 'string' ? e.data.sceneId : activePreset;

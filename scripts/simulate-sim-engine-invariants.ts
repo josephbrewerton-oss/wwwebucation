@@ -15,6 +15,18 @@ import { resolveConstraintRegExp, testConstraintRegExp, NANO_ACT_TUPLE_REGEX } f
 import vm from 'vm';
 import { SUITE_PRESET, CLASSROOM_PRESET } from '../src/types/playerConfig';
 import { evaluateSquashStretchMatrix6, formatSvgMatrix6 } from '../src/utils/astMathCompiler';
+import {
+  buildSafeActionTuple,
+  clampVarValue,
+  createPlayerWebMcpTools,
+  runWebMcpBenchmark,
+  type PlayerMcpTransport,
+} from '../src/engine/webmcpBridge';
+import {
+  computeAstVsJsonCompression,
+  formatEppReportMarkdown,
+  type EppTelemetryDossier,
+} from '../src/engine/eppContentionBench';
 
 console.log('=============================================================');
 console.log('🔬 St Joseph\'s Simulation Engine & Physical Invariant Harness');
@@ -900,6 +912,151 @@ console.log('\n--- TEST 17: 4 Canonical KS4 Chemistry & Biology Cartridges ---')
   }
 
   console.log('[✅ PASS] Sim 17: All 4 KS4 Chemistry & Biology cartridges passed E2E simulation, goal, scope, ledger, and CSV checks.');
+  passedTests++;
+}
+
+// =========================================================================
+// TEST 18: Chrome Built-in AI & WebMCP Telemetry Harness Invariants
+// =========================================================================
+console.log('\n--- TEST 18: Chrome EPP Contention Profiler, Compression & WebMCP Bridge ---');
+{
+  // 18a. ASTProfiler zero-GC capture ring buffer & percentile calculations
+  const code = fs.readFileSync('static/player/ast-engine.js', 'utf8');
+  const sb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set,
+    Float32Array, Int32Array, Uint8Array, RegExp, Error, JSON,
+    URLSearchParams, parseFloat, parseInt, isNaN, isFinite,
+    setTimeout, clearTimeout, performance: { now: () => Date.now() },
+  };
+  sb.globalThis = sb;
+  sb.self = sb;
+  vm.runInNewContext(code, sb, { filename: 'static/player/ast-engine.js' });
+
+  const profiler = new sb.ASTProfiler({ silent: true });
+  const deltaBufRef = profiler.captureDeltas;
+  const computeBufRef = profiler.captureComputes;
+  assert(deltaBufRef instanceof Float32Array && deltaBufRef.length === 1024, 'ASTProfiler must pre-allocate 1024-slot Float32Array capture buffer');
+  profiler.startCapture();
+  let fakeTs = 1000;
+  for (let i = 0; i < 100; i++) {
+    profiler.onFrame(fakeTs);
+    profiler.onCompute(i === 95 ? 0.45 : 0.12);
+    // 98 frames ~16.5ms, 2 frames spike 22.0ms (>16.67ms)
+    fakeTs += (i === 50 || i === 90) ? 22.0 : 16.5;
+  }
+  const profStats = profiler.stopCapture();
+  assert.strictEqual(profiler.captureDeltas, deltaBufRef, 'captureDeltas Float32Array must never reallocate in hot loop');
+  assert.strictEqual(profiler.captureComputes, computeBufRef, 'captureComputes Float32Array must never reallocate in hot loop');
+  assert.strictEqual(profStats.sampleCount, 99, `Expected 99 inter-frame delta samples, got ${profStats.sampleCount}`);
+  assert.strictEqual(profStats.framesOver16_67ms, 2, `Expected 2 over-budget frames (>16.67ms), got ${profStats.framesOver16_67ms}`);
+  assert(profStats.p99Ms >= 21.5, `Expected p99Ms >= 21.5ms, got ${profStats.p99Ms}`);
+
+  // 18b. Headless WebMCP tool schemas, [min, max] clamping, selector hygiene & DOM payload reduction
+  const engMcp = new sb.ASTVectorPlayerEngine({ container: null, autoplay: false, voiceEnabled: false });
+  const ratesAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.ast'), 'utf8');
+  const parsedRates = engMcp.parseAst(ratesAst);
+  await engMcp.loadSceneData(parsedRates);
+  engMcp.isPlaying = true;
+  engMcp.applyBindings(0.5, 1 / 60, true);
+
+  const clampedLow = clampVarValue(-10, { val: 25, min: 10, max: 80 });
+  const clampedHigh = clampVarValue(120, { val: 25, min: 10, max: 80 });
+  assert.strictEqual(clampedLow.value, 10);
+  assert.strictEqual(clampedLow.clamped, true);
+  assert.strictEqual(clampedHigh.value, 80);
+  assert.strictEqual(clampedHigh.clamped, true);
+
+  const unsafeTuple = buildSafeActionTuple({
+    highlight: 'svg onload=alert(1)',
+    say: 'Checking selector guard',
+  });
+  assert.strictEqual(unsafeTuple.rejectedSelectors.length, 1, 'Unsafe CSS selector must be rejected');
+
+  const headlessTransport: PlayerMcpTransport = {
+    readState: async (includeSvgBytes = true) => {
+      const s = engMcp.getEngineStateSummary(false);
+      // In Node headless mode without browser SVG DOM, synthesize realistic 18 KB SVG size from actual cartridge
+      const svgRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.svg'), 'utf8');
+      return {
+        ...s,
+        svgDomBytes: includeSvgBytes ? Buffer.byteLength(svgRaw, 'utf8') : 0,
+      };
+    },
+    setVar: async (name, value) => {
+      const meta = engMcp.scene?.vars?.[name];
+      const clamped = clampVarValue(value, meta);
+      engMcp.setMemoryVar(name, clamped.value, true);
+      return { name, value: clamped.value, clamped: clamped.clamped, state: engMcp.getEngineStateSummary(false) };
+    },
+    execActionTuple: async (tuple) => {
+      const hasSay = tuple.includes(':say');
+      return { ok: true, executedActions: hasSay ? ['say'] : ['seek'], state: engMcp.getEngineStateSummary(false) };
+    },
+  };
+
+  const mcpTools = createPlayerWebMcpTools(headlessTransport);
+  assert.strictEqual(mcpTools.length, 3, 'WebMCP must register exactly 3 structured tools');
+  assert.deepStrictEqual(mcpTools.map((t) => t.name), ['ast_set_var', 'ast_dispatch_action', 'ast_read_state']);
+  const mcpBench = await runWebMcpBenchmark(headlessTransport, mcpTools);
+  assert.strictEqual(mcpBench.clampingVerified, true, 'WebMCP live benchmark must verify [min, max] clamping');
+  assert(mcpBench.domPayloadReductionPct > 50, `MCP compact JSON must achieve > 50% byte reduction vs raw SVG (${mcpBench.domPayloadReductionPct}%)`);
+
+  // 18c. Canonical 20-line .ast vs Verbose JSON vs .astb compression benchmark
+  const comp = await computeAstVsJsonCompression();
+  assert.strictEqual(comp.astValid, true, 'Canonical 20-line .ast must parse cleanly');
+  assert.strictEqual(comp.jsonValid, true, 'Equivalent JSON schema must parse cleanly');
+  assert.strictEqual(comp.astbValid, true, 'Compiled .astb binary must round-trip cleanly');
+  assert(comp.astBytes < comp.jsonBytes, `.ast (${comp.astBytes}B) must be smaller than verbose JSON (${comp.jsonBytes}B)`);
+  assert(comp.astbBytes < comp.jsonBytes, `.astb (${comp.astbBytes}B) must be smaller than verbose JSON (${comp.jsonBytes}B)`);
+  assert(comp.astVsJsonTokenSavingsPct > 40, `.ast must save > 40% tokens vs verbose JSON (${comp.astVsJsonTokenSavingsPct}%)`);
+
+  // 18d. Markdown + JSON EPP Dossier Formatter
+  const sampleDossier: EppTelemetryDossier = {
+    dossierVersion: '1.0.0',
+    generatedAtIso: '2026-11-14T00:00:00.000Z',
+    sceneId: 'rates-of-reaction',
+    hardwareProfile: {
+      userAgent: 'HeadlessVerifier/1.0',
+      deviceMemoryGb: 8,
+      hardwareConcurrency: 8,
+      webgpuSupported: true,
+      wasmPoolBytes: 458752,
+      wasmPages: 7,
+      jsHeapStartMb: 12.4,
+      jsHeapEndMb: 12.6,
+      heapDeltaMb: 0.2,
+      bslAvatarActiveDuringRun: true,
+    },
+    promptApiStatus: {
+      present: false,
+      availability: 'unavailable',
+      activeTier: 'tier3-deterministic-ast',
+      cloneLatencyMs: null,
+      cloneDestroyedCleanly: false,
+      constraintSchemaUsed: false,
+    },
+    contentionPhases: {
+      phaseABaseline: { durationMs: 3000, stats: profStats, activeMetrics: { activeScopes: 1, activeLedgers: 1, physicsBodies: 4, physicsSprings: 0, substeps: 4, emitterParticles: 24 }, workloadLabel: 'Baseline' },
+      phaseBConcurrent: { durationMs: 1400, stats: profStats, activeMetrics: { activeScopes: 1, activeLedgers: 1, physicsBodies: 4, physicsSprings: 0, substeps: 4, emitterParticles: 24 }, workloadLabel: 'Concurrent' },
+      phaseCRecovery: { durationMs: 2000, stats: profStats, activeMetrics: { activeScopes: 1, activeLedgers: 1, physicsBodies: 4, physicsSprings: 0, substeps: 4, emitterParticles: 24 }, workloadLabel: 'Recovery' },
+      deltas: { phaseBMeanMsDelta: 0.1, phaseBP95MsDelta: 0.2, phaseBP99MsDelta: 0.3, phaseBMaxMsDelta: 0.5, phaseBOverBudgetFrameDelta: 0, phaseCMeanMsDelta: 0.0, phaseCP95MsDelta: 0.0 },
+    },
+    contextQuotaTrace: {
+      inputQuota: 6144,
+      finalInputUsage: 420,
+      totalQuotaOverflows: 0,
+      meanTtftMs: 42.5,
+      turns: [{ turn: 1, promptRole: 'ast-synthesis', promptBytes: 240, outputBytes: 512, ttftMs: 42.5, durationMs: 180.0, inputUsage: 420, inputQuota: 6144, quotaoverflowCount: 0, validOutput: true }],
+    },
+    compressionComparison: comp,
+    webmcpBenchmark: mcpBench,
+  };
+  const mdReport = formatEppReportMarkdown(sampleDossier);
+  assert(mdReport.includes('Chrome Built-in AI & WebMCP Field Telemetry Dossier'), 'Markdown dossier header present');
+  assert(mdReport.includes('Token & Byte Compression'), 'Markdown dossier compression section present');
+  assert(mdReport.includes(`${mcpBench.domPayloadReductionPct}% smaller payload`), 'Markdown dossier includes WebMCP reduction');
+
+  console.log(`[✅ PASS] Sim 18: Zero-GC profiler, WebMCP clamping (${mcpBench.domPayloadReductionPct}% DOM reduction), AST/JSON/ASTB compression (${comp.astVsJsonTokenSavingsPct}% token savings), & EPP dossier verified.`);
   passedTests++;
 }
 

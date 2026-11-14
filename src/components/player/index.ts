@@ -57,3 +57,9 @@ export {
   type AstChalkboardOptions,
   type AstChalkboardInstance,
 } from './AstChalkboardOverlay';
+
+export {
+  default as EppDiagnosticsDrawer,
+  renderEppDiagnosticsDrawer,
+  type EppDiagnosticsDrawerProps,
+} from './EppDiagnosticsDrawer';
