@@ -3588,11 +3588,29 @@ ${strokeLines.join('\n')}
       }
       if (!info) return;
 
-      this.xrayTooltip.innerHTML = `
-        <div style="color:#38bdf8; font-weight:800; font-size:11px; margin-bottom:2px;">${info.title}</div>
-        <div style="color:#fde047; font-family:monospace; font-weight:800; margin-bottom:3px;">${info.eq}</div>
-        <div style="color:#cbd5e1; font-size:10px;">${info.desc}</div>
-      `;
+      this.xrayTooltip.textContent = '';
+      const titleEl = document.createElement('div');
+      titleEl.style.color = '#38bdf8';
+      titleEl.style.fontWeight = '800';
+      titleEl.style.fontSize = '11px';
+      titleEl.style.marginBottom = '2px';
+      titleEl.textContent = info.title;
+
+      const eqEl = document.createElement('div');
+      eqEl.style.color = '#fde047';
+      eqEl.style.fontFamily = 'monospace';
+      eqEl.style.fontWeight = '800';
+      eqEl.style.marginBottom = '3px';
+      eqEl.textContent = info.eq;
+
+      const descEl = document.createElement('div');
+      descEl.style.color = '#cbd5e1';
+      descEl.style.fontSize = '10px';
+      descEl.textContent = info.desc;
+
+      this.xrayTooltip.appendChild(titleEl);
+      this.xrayTooltip.appendChild(eqEl);
+      this.xrayTooltip.appendChild(descEl);
 
       // Position relative to stage container
       const rect = this.stageSvg.getBoundingClientRect();
