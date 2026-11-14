@@ -3883,7 +3883,7 @@ window.addEventListener('message', (e) => {
     }
 
     async togglePictureInPicture() {
-      // 1. Notify parent iframe container (React wrapper) if embedded
+      // 1. Notify parent iframe container (host portal wrapper) if embedded
       if (window.parent && window.parent !== window) {
         if (this.engine && typeof this.engine.notifyParent === 'function') {
           this.engine.notifyParent({
