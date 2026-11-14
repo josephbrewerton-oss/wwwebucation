@@ -198,6 +198,9 @@ export interface ParsedAstNode {
   prompt: string;
   options: string[];
   answerKey: number;
+  passExpr?: string;
+  holdDuration?: number;
+  onWrong?: Record<number, string>;
 }
 
 /**
@@ -208,7 +211,7 @@ export interface ParsedAstNode {
  * - Nested parentheses and lists
  * - Multi-line strings
  * - S-expression comments (; or ;;)
- * - Shorthand keywords (:q, :opts, :choices, :answer, etc.)
+ * - Shorthand keywords (:q, :opts, :choices, :answer, :pass-expr, :hold-duration, :on-wrong, etc.)
  */
 export function parseAstNode(input: string | SExprAST): ParsedAstNode {
   const ast = typeof input === 'string' ? parseSExpr(input) : input;
@@ -221,6 +224,9 @@ export function parseAstNode(input: string | SExprAST): ParsedAstNode {
   let prompt: string | undefined = undefined;
   let options: string[] = [];
   let answerKey = 0;
+  let passExpr: string | undefined = undefined;
+  let holdDuration: number | undefined = undefined;
+  let onWrong: Record<number, string> | undefined = undefined;
 
   const extractString = (val: any): string => {
     if (val === null || val === undefined) return '';
@@ -233,6 +239,26 @@ export function parseAstNode(input: string | SExprAST): ParsedAstNode {
     return String(val);
   };
 
+  const processOnWrong = (rawWrong: any) => {
+    if (!rawWrong) return;
+    if (!onWrong) onWrong = {};
+    if (Array.isArray(rawWrong)) {
+      if (rawWrong.length >= 2 && typeof rawWrong[0] === 'number' && typeof rawWrong[1] === 'string') {
+        onWrong[rawWrong[0]] = rawWrong[1];
+      } else {
+        for (let i = 0; i < rawWrong.length; i++) {
+          const item = rawWrong[i];
+          if (Array.isArray(item) && item.length >= 2 && typeof item[0] === 'number') {
+            onWrong[item[0]] = extractString(item[1]);
+          } else if (typeof item === 'number' && i + 1 < rawWrong.length && typeof rawWrong[i + 1] === 'string') {
+            onWrong[item] = rawWrong[i + 1];
+            i++;
+          }
+        }
+      }
+    }
+  };
+
   const processProps = (props: Record<string, any>) => {
     if (!props || typeof props !== 'object') return;
     if (props.route && typeof props.route === 'string') route = props.route;
@@ -241,6 +267,21 @@ export function parseAstNode(input: string | SExprAST): ParsedAstNode {
     const rawPrompt = props.prompt ?? props.q ?? props.question ?? props.stem;
     if (rawPrompt !== undefined && rawPrompt !== null) {
       prompt = extractString(rawPrompt);
+    }
+
+    const rawPassExpr = props['pass-expr'] ?? props.passExpr;
+    if (rawPassExpr !== undefined && rawPassExpr !== null) {
+      passExpr = extractString(rawPassExpr);
+    }
+
+    const rawHold = props['hold-duration'] ?? props.holdDuration;
+    if (rawHold !== undefined && rawHold !== null && !isNaN(Number(rawHold))) {
+      holdDuration = Number(rawHold);
+    }
+
+    const rawWrong = props['on-wrong'] ?? props.onWrong;
+    if (rawWrong !== undefined && rawWrong !== null) {
+      processOnWrong(rawWrong);
     }
 
     const rawKey = props['answer-key'] ?? props.answerKey ?? props.answer ?? props.key;
@@ -305,11 +346,20 @@ export function parseAstNode(input: string | SExprAST): ParsedAstNode {
     throw new Error('Invalid AST: Missing :prompt token');
   }
 
-  if (options.length === 0) {
+  if (options.length === 0 && !passExpr) {
     options = ['Option A', 'Option B', 'Option C', 'Option D'];
   }
 
-  return { route, calc, prompt, options, answerKey };
+  return {
+    route,
+    calc,
+    prompt,
+    options,
+    answerKey,
+    ...(passExpr ? { passExpr } : {}),
+    ...(holdDuration !== undefined ? { holdDuration } : {}),
+    ...(onWrong ? { onWrong } : {}),
+  };
 }
 
 export interface CartridgeHeaderMetadata {

@@ -26,6 +26,7 @@ import {
 } from '../components/player';
 import type { PlayerTelemetryEvent } from '../engine/aicaller';
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
+import { appendLabCsvToJotter } from '../services/jotter-db';
 import { type PlayerDisplayMode } from '../types/playerConfig';
 
 const DEFAULT_PRESET_ID = 'kinetic-gas';
@@ -318,6 +319,10 @@ export function renderPlayerPage(): HTMLElement {
             ⚡ Diagnostics
           </button>
 
+          <button type="button" id="player-btn-log-csv" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Save sampled (t, vars, computed) lab table to local IndexedDB Jotter • Shift+Click to also download .csv">
+            📊 Log Data to Jotter (CSV)
+          </button>
+
           <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Transpile &amp; Ingest PhET Simulation (*.html, *.phet), Flash SWF, or AST Cartridge">
             ⚛️ PhET / Ingest
           </button>
@@ -327,7 +332,7 @@ export function renderPlayerPage(): HTMLElement {
             🚀 Embed
           </button>
 
-          <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Export Standalone Single-File HTML Lesson Capsule (< 45 KB)">
+          <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Export Standalone Single-File HTML Lesson Capsule (&lt; 45 KB)">
             📦 Airgap HTML
           </button>
         </div>
@@ -424,6 +429,7 @@ export function renderPlayerPage(): HTMLElement {
   const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
   const labDrawerBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab-drawer');
   const diagnosticsBtn = container.querySelector<HTMLButtonElement>('#player-btn-diagnostics');
+  const logCsvBtn = container.querySelector<HTMLButtonElement>('#player-btn-log-csv');
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
@@ -449,6 +455,7 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'PLAY' }
     | { type: 'PAUSE' }
     | { type: 'TOGGLE_PLAY' }
+    | { type: 'REQUEST_JOTTER_CSV'; download?: boolean }
     | Record<string, any>;
 
   function postToPlayer(msg: HostToPlayerMessage) {
@@ -1232,6 +1239,42 @@ export function renderPlayerPage(): HTMLElement {
         renderActiveDrawer();
       }
     }
+    if ((e.data.type === 'LOG_JOTTER_CSV' || e.data.type === 'JOTTER_CSV_RESPONSE') && typeof e.data.csv === 'string') {
+      const targetId = typeof e.data.sceneId === 'string' ? e.data.sceneId : activePreset;
+      const rows = Number(e.data.rowCount || 1);
+      const nodePath = typeof e.data.nodePath === 'string' ? e.data.nodePath : `lab/${targetId}`;
+      appendLabCsvToJotter(targetId, e.data.csv, nodePath)
+        .then(() => {
+          if (logCsvBtn) {
+            const origText = '📊 Log Data to Jotter (CSV)';
+            logCsvBtn.textContent = `✓ Logged ${rows} rows (CSV)`;
+            logCsvBtn.style.background = '#065f46';
+            logCsvBtn.style.borderColor = '#10b981';
+            logCsvBtn.style.color = '#ffffff';
+            setTimeout(() => {
+              logCsvBtn.textContent = origText;
+              logCsvBtn.style.background = '#1e293b';
+              logCsvBtn.style.borderColor = '#0284c7';
+              logCsvBtn.style.color = '#38bdf8';
+            }, 2400);
+          }
+        })
+        .catch(() => {});
+
+      if (e.data.download) {
+        try {
+          const blob = new Blob([e.data.csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${targetId || 'lab'}-data.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (_) {}
+      }
+    }
   });
 
   window.addEventListener('app-setting-changed', (e: any) => {
@@ -1267,6 +1310,10 @@ export function renderPlayerPage(): HTMLElement {
   diagnosticsBtn?.addEventListener('click', () => {
     activeDrawer = activeDrawer === 'diagnostics' ? null : 'diagnostics';
     renderActiveDrawer();
+  });
+
+  logCsvBtn?.addEventListener('click', (e) => {
+    postToPlayer({ type: 'REQUEST_JOTTER_CSV', download: Boolean(e.shiftKey) });
   });
 
   embedBtn?.addEventListener('click', () => {

@@ -43,15 +43,58 @@ export const OP_SCENE_META = 0x01; // [id_str: u16] [title_str: u16] [stage_str:
 export const OP_KEYFRAME   = 0x10; // [t_u16 (normalized 0..65535)] [title_str: u16] [rule_str: u16]
 export const OP_SUBTITLE   = 0x20; // [start_u16] [end_u16] [lang_count: u8] { [lang_str: u16] [text_str: u16] }*
 export const OP_BINDING    = 0x30; // [target_str: u16] [attr_str: u16] [expr_str: u16]
-export const OP_CHECKPOINT = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
-export const OP_GESTURE    = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
-export const OP_VAR        = 0x60; // [name_str: u16] [type_u8 (1:num, 2:str, 3:bool)] [num_val: f32 / str_val: u16] [min_f32] [max_f32] [step_f32] [label_str: u16]
-export const OP_INPUT      = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
-export const OP_CAMERA     = 0x80; // [dist_f32] [pitch_f32] [yaw_f32] [fov_f32]
-export const OP_EOF        = 0xFF;
+export const OP_CHECKPOINT      = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
+export const OP_CHECKPOINT_GOAL = 0x41; // [cp_idx: u16] [title_str: u16] [pass_expr_str: u16] [hold_dur: f32] [wrong_count: u8] { [opt_idx: u8] [hint_str: u16] }*
+export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
+export const OP_VAR             = 0x60; // [name_str: u16] [type_u8 (1:num, 2:str, 3:bool)] [num_val: f32 / str_val: u16] [min_f32] [max_f32] [step_f32] [label_str: u16]
+export const OP_INPUT           = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
+export const OP_CAMERA          = 0x80; // [dist_f32] [pitch_f32] [yaw_f32] [fov_f32]
+export const OP_SCOPE           = 0x90; // [target_str: u16] [x_expr_str: u16] [y_expr_str: u16] [samples: u16] [x_min: f32] [x_max: f32] [y_min: f32] [y_max: f32] [plot_x: f32] [plot_y: f32] [plot_w: f32] [plot_h: f32]
+export const OP_LEDGER          = 0x91; // [id_str: u16] [target_str: u16] [unit_str: u16] [max_expr_str: u16] [x: f32] [y: f32] [w: f32] [h: f32] [term_count: u8] { [label_str: u16] [expr_str: u16] [color_str: u16] }*
+export const OP_EOF             = 0xFF;
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder('utf-8', { fatal: false });
+
+export interface AstScopeConfig {
+  target: string;
+  xExpr: string;
+  yExpr: string;
+  samples: number;
+  xRange: [number, number];
+  yRange: [number, number];
+  plot?: [number, number, number, number];
+}
+
+export interface AstLedgerTerm {
+  label: string;
+  expr: string;
+  color: string;
+}
+
+export interface AstLedgerConfig {
+  id: string;
+  target?: string;
+  unit?: string;
+  maxExpr?: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  terms: AstLedgerTerm[];
+}
+
+export interface AstCheckpointConfig {
+  t: number;
+  title?: string;
+  prompt: string;
+  options: string[];
+  answer: number;
+  explanation: string;
+  passExpr?: string;
+  holdDuration?: number;
+  onWrong?: Record<number, string>;
+}
 
 export interface BytecodeCompiledScene {
   id: string;
@@ -67,7 +110,9 @@ export interface BytecodeCompiledScene {
   keyframes: Array<{ t: number; title: string; rule: string }>;
   subtitles: Array<{ start: number; end: number; en: string; es?: string; la?: string; [k: string]: any }>;
   bindings: Array<any>;
-  checkpoints: Array<{ t: number; prompt: string; options: string[]; answer: number; explanation: string }>;
+  checkpoints: AstCheckpointConfig[];
+  scopes?: AstScopeConfig[];
+  ledgers?: AstLedgerConfig[];
   gestures?: Array<{ target: string; axis: string; min: number; max: number }>;
   vars?: Record<string, any>;
   inputs?: Array<any>;
@@ -336,9 +381,10 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     }
   }
 
-  // 7. Checkpoints
+  // 7. Checkpoints (+ OP_CHECKPOINT_GOAL for :pass-expr, :hold-duration, :on-wrong)
   if (Array.isArray(scene.checkpoints)) {
-    for (const cp of scene.checkpoints) {
+    for (let cpIdx = 0; cpIdx < scene.checkpoints.length; cpIdx++) {
+      const cp = scene.checkpoints[cpIdx];
       appendU8(OP_CHECKPOINT);
       const normT = Math.max(0, Math.min(65535, Math.round((cp.t || 0) * 65535)));
       appendU16(normT);
@@ -350,6 +396,20 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       appendU8(opts.length);
       for (const opt of opts) {
         appendU16(strTable.intern(opt));
+      }
+
+      const wrongEntries = cp.onWrong ? Object.entries(cp.onWrong) : [];
+      if (cp.passExpr || (cp.holdDuration && cp.holdDuration > 0) || wrongEntries.length > 0 || (cp.title && cp.title !== 'Checkpoint')) {
+        appendU8(OP_CHECKPOINT_GOAL);
+        appendU16(cpIdx);
+        appendU16(strTable.intern(cp.title || 'Checkpoint'));
+        appendU16(strTable.intern(cp.passExpr || ''));
+        appendF32(typeof cp.holdDuration === 'number' ? cp.holdDuration : 0);
+        appendU8(wrongEntries.length);
+        for (const [optKey, hintText] of wrongEntries) {
+          appendU8(parseInt(optKey, 10) || 0);
+          appendU16(strTable.intern(String(hintText)));
+        }
       }
     }
   }
@@ -363,6 +423,50 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       appendU8(axisVal);
       appendF32(g.min || 0);
       appendF32(g.max || 100);
+    }
+  }
+
+  // 8b. Live Vector Oscilloscopes (:scope)
+  if (Array.isArray(scene.scopes)) {
+    for (const sc of scene.scopes) {
+      if (!sc || !sc.target) continue;
+      appendU8(OP_SCOPE);
+      appendU16(strTable.intern(sc.target));
+      appendU16(strTable.intern(sc.xExpr || 't'));
+      appendU16(strTable.intern(sc.yExpr || '0'));
+      appendU16(Math.max(8, Math.min(2048, Math.round(sc.samples || 96))));
+      appendF32(Array.isArray(sc.xRange) ? sc.xRange[0] : 0);
+      appendF32(Array.isArray(sc.xRange) ? sc.xRange[1] : 10);
+      appendF32(Array.isArray(sc.yRange) ? sc.yRange[0] : 0);
+      appendF32(Array.isArray(sc.yRange) ? sc.yRange[1] : 100);
+      const plot = Array.isArray(sc.plot) && sc.plot.length >= 4 ? sc.plot : [-1, -1, -1, -1];
+      appendF32(plot[0]);
+      appendF32(plot[1]);
+      appendF32(plot[2]);
+      appendF32(plot[3]);
+    }
+  }
+
+  // 8c. Conservation-Law & Energy-Ledger Meters (:ledger)
+  if (Array.isArray(scene.ledgers)) {
+    for (const ld of scene.ledgers) {
+      if (!ld || !ld.id || !Array.isArray(ld.terms)) continue;
+      appendU8(OP_LEDGER);
+      appendU16(strTable.intern(ld.id));
+      appendU16(strTable.intern(ld.target || `#${ld.id}`));
+      appendU16(strTable.intern(ld.unit || ''));
+      appendU16(strTable.intern(ld.maxExpr || ''));
+      appendF32(typeof ld.x === 'number' ? ld.x : 40);
+      appendF32(typeof ld.y === 'number' ? ld.y : 400);
+      appendF32(typeof ld.width === 'number' ? ld.width : 320);
+      appendF32(typeof ld.height === 'number' ? ld.height : 20);
+      const terms = ld.terms.slice(0, 16);
+      appendU8(terms.length);
+      for (const term of terms) {
+        appendU16(strTable.intern(term.label || 'Term'));
+        appendU16(strTable.intern(term.expr || '0'));
+        appendU16(strTable.intern(term.color || '#38bdf8'));
+      }
     }
   }
 
@@ -439,6 +543,8 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
     subtitles: [],
     bindings: [],
     checkpoints: [],
+    scopes: [],
+    ledgers: [],
     gestures: [],
     vars: {},
     inputs: [],
@@ -614,6 +720,84 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           options: opts,
           answer: ans,
           explanation: strTable.get(explIdx),
+        });
+        break;
+      }
+      case OP_CHECKPOINT_GOAL: {
+        const cpIdx = view.getUint16(offset, true); offset += 2;
+        const titleStr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const passExprStr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const holdDur = view.getFloat32(offset, true); offset += 4;
+        const wrongCount = bytes[offset++];
+        const wrongMap: Record<number, string> = {};
+        for (let i = 0; i < wrongCount; i++) {
+          const optIdx = bytes[offset++];
+          const hintStr = strTable.get(view.getUint16(offset, true)); offset += 2;
+          wrongMap[optIdx] = hintStr;
+        }
+        const targetCp = scene.checkpoints[cpIdx];
+        if (targetCp) {
+          if (titleStr) targetCp.title = titleStr;
+          if (passExprStr) targetCp.passExpr = passExprStr;
+          if (holdDur > 0) targetCp.holdDuration = Number(holdDur.toFixed(3));
+          if (wrongCount > 0) targetCp.onWrong = wrongMap;
+        }
+        break;
+      }
+      case OP_SCOPE: {
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const xExpr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const yExpr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const samples = view.getUint16(offset, true); offset += 2;
+        const xMin = view.getFloat32(offset, true); offset += 4;
+        const xMax = view.getFloat32(offset, true); offset += 4;
+        const yMin = view.getFloat32(offset, true); offset += 4;
+        const yMax = view.getFloat32(offset, true); offset += 4;
+        const plotX = view.getFloat32(offset, true); offset += 4;
+        const plotY = view.getFloat32(offset, true); offset += 4;
+        const plotW = view.getFloat32(offset, true); offset += 4;
+        const plotH = view.getFloat32(offset, true); offset += 4;
+        const scopeObj: AstScopeConfig = {
+          target,
+          xExpr,
+          yExpr,
+          samples,
+          xRange: [xMin, xMax],
+          yRange: [yMin, yMax],
+        };
+        if (plotW > 0 && plotH > 0) {
+          scopeObj.plot = [plotX, plotY, plotW, plotH];
+        }
+        scene.scopes!.push(scopeObj);
+        break;
+      }
+      case OP_LEDGER: {
+        const id = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const unit = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const maxExpr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const lx = view.getFloat32(offset, true); offset += 4;
+        const ly = view.getFloat32(offset, true); offset += 4;
+        const lw = view.getFloat32(offset, true); offset += 4;
+        const lh = view.getFloat32(offset, true); offset += 4;
+        const termCount = bytes[offset++];
+        const terms: AstLedgerTerm[] = [];
+        for (let i = 0; i < termCount; i++) {
+          const label = strTable.get(view.getUint16(offset, true)); offset += 2;
+          const expr = strTable.get(view.getUint16(offset, true)); offset += 2;
+          const color = strTable.get(view.getUint16(offset, true)); offset += 2;
+          terms.push({ label, expr, color });
+        }
+        scene.ledgers!.push({
+          id,
+          ...(target ? { target } : {}),
+          ...(unit ? { unit } : {}),
+          ...(maxExpr ? { maxExpr } : {}),
+          x: lx,
+          y: ly,
+          width: lw,
+          height: lh,
+          terms,
         });
         break;
       }
@@ -931,25 +1115,174 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     }
   }
 
-  // Checkpoints
-  const checkpoints: Array<{ t: number; prompt: string; options: string[]; answer: number; explanation: string }> = [];
-  const cpRegex = /\(:checkpoint\s+:t\s+([\d\.]+)\s+:prompt\s+"([^"]+)"\s+:options\s+\(([^)]+)\)\s+:answer\s+(\d+)\s+:explanation\s+"([^"]+)"\)/gi;
-  let cm: RegExpExecArray | null;
-  while ((cm = cpRegex.exec(astText)) !== null) {
-    const rawOpts = cm[3];
+  // Checkpoints (:pass-expr, :hold-duration, :on-wrong supported)
+  const checkpoints: AstCheckpointConfig[] = [];
+  const cpBlocks = extractSexprBlocks(astText, ':checkpoint');
+  for (const cpBlock of cpBlocks) {
+    const tStr = extractSlot(cpBlock, /:t\s+([\d\.]+)/i);
+    const cpTitle = extractQuoted(cpBlock, 'title') || 'Checkpoint';
+    const prompt = extractQuoted(cpBlock, 'prompt') || '';
+    const ansStr = extractSlot(cpBlock, /:answer\s+(\d+)/i);
+    const explanation = extractQuoted(cpBlock, 'explanation') || '';
+    const passExpr = extractQuoted(cpBlock, 'pass-expr') || extractQuoted(cpBlock, 'passExpr') || undefined;
+    const holdDurStr = extractSlot(cpBlock, /:hold-?duration\s+([\d\.]+)/i);
+    const holdDuration = holdDurStr !== null ? parseFloat(holdDurStr) : undefined;
+
     const opts: string[] = [];
-    const optRegex = /"([^"]+)"/g;
-    let om: RegExpExecArray | null;
-    while ((om = optRegex.exec(rawOpts)) !== null) {
-      opts.push(om[1]);
+    const optTagIdx = cpBlock.search(/:options\b/i);
+    if (optTagIdx !== -1) {
+      const startParen = cpBlock.indexOf('(', optTagIdx);
+      if (startParen !== -1) {
+        let depth = 0;
+        let inStr = false;
+        let endParen = -1;
+        for (let i = startParen; i < cpBlock.length; i++) {
+          const ch = cpBlock[i];
+          if (ch === '"' && (i === 0 || cpBlock[i - 1] !== '\\')) {
+            inStr = !inStr;
+          } else if (!inStr) {
+            if (ch === '(') depth++;
+            else if (ch === ')') {
+              depth--;
+              if (depth === 0) {
+                endParen = i;
+                break;
+              }
+            }
+          }
+        }
+        if (endParen !== -1) {
+          const inside = cpBlock.slice(startParen + 1, endParen);
+          const optRegex = /"((?:[^"\\]|\\.)*)"/g;
+          let om: RegExpExecArray | null;
+          while ((om = optRegex.exec(inside)) !== null) {
+            opts.push(om[1].replace(/\\"/g, '"'));
+          }
+        }
+      }
     }
-    checkpoints.push({
-      t: parseFloat(cm[1]),
-      prompt: cm[2],
-      options: opts,
-      answer: parseInt(cm[4], 10),
-      explanation: cm[5],
-    });
+
+    // Parse :on-wrong ((0 "hint") (1 "hint")) or multiple (:on-wrong (0 "hint")) entries
+    const onWrong: Record<number, string> = {};
+    let searchFrom = 0;
+    while (true) {
+      const owMatchIdx = cpBlock.slice(searchFrom).search(/:on-?wrong\s*\(/i);
+      if (owMatchIdx === -1) break;
+      const absIdx = searchFrom + owMatchIdx;
+      const pStart = cpBlock.indexOf('(', absIdx);
+      if (pStart === -1) break;
+      let depth = 0;
+      let inStr = false;
+      let pEnd = -1;
+      for (let i = pStart; i < cpBlock.length; i++) {
+        const ch = cpBlock[i];
+        if (ch === '"' && (i === 0 || cpBlock[i - 1] !== '\\')) {
+          inStr = !inStr;
+        } else if (!inStr) {
+          if (ch === '(') depth++;
+          else if (ch === ')') {
+            depth--;
+            if (depth === 0) {
+              pEnd = i;
+              break;
+            }
+          }
+        }
+      }
+      if (pEnd === -1) break;
+      const owContent = cpBlock.slice(pStart + 1, pEnd);
+      const pairRegex = /(\d+)\s+"((?:[^"\\]|\\.)*)"/g;
+      let pm: RegExpExecArray | null;
+      while ((pm = pairRegex.exec(owContent)) !== null) {
+        onWrong[parseInt(pm[1], 10)] = pm[2].replace(/\\"/g, '"');
+      }
+      searchFrom = pEnd + 1;
+    }
+
+    if (tStr && prompt) {
+      const cpObj: AstCheckpointConfig = {
+        t: parseFloat(tStr),
+        title: cpTitle,
+        prompt,
+        options: opts,
+        answer: ansStr !== null ? parseInt(ansStr, 10) : 0,
+        explanation,
+      };
+      if (passExpr) cpObj.passExpr = passExpr;
+      if (holdDuration !== undefined) cpObj.holdDuration = holdDuration;
+      if (Object.keys(onWrong).length > 0) cpObj.onWrong = onWrong;
+      checkpoints.push(cpObj);
+    }
+  }
+
+  // Scopes (:scope :target "#id" :x-expr "..." :y-expr "..." :samples 96 :x-range (0 30) :y-range (0 100))
+  const scopes: AstScopeConfig[] = [];
+  const scopeBlocks = extractSexprBlocks(astText, ':scope');
+  for (const sb of scopeBlocks) {
+    const target = extractQuoted(sb, 'target') || extractSlot(sb, /:target\s+([^\s\)]+)/i);
+    const xExpr = extractQuoted(sb, 'x-expr') || extractQuoted(sb, 'xExpr') || 't';
+    const yExpr = extractQuoted(sb, 'y-expr') || extractQuoted(sb, 'yExpr') || '0';
+    const samplesStr = extractSlot(sb, /:samples\s+(\d+)/i);
+    const samples = samplesStr ? parseInt(samplesStr, 10) : 96;
+
+    const xrMatch = sb.match(/:x-?range\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+    const yrMatch = sb.match(/:y-?range\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+    const plotMatch = sb.match(/:plot\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+
+    if (target) {
+      const scopeEntry: AstScopeConfig = {
+        target,
+        xExpr,
+        yExpr,
+        samples,
+        xRange: xrMatch ? [parseFloat(xrMatch[1]), parseFloat(xrMatch[2])] : [0, 30],
+        yRange: yrMatch ? [parseFloat(yrMatch[1]), parseFloat(yrMatch[2])] : [0, 100],
+      };
+      if (plotMatch) {
+        scopeEntry.plot = [
+          parseFloat(plotMatch[1]),
+          parseFloat(plotMatch[2]),
+          parseFloat(plotMatch[3]),
+          parseFloat(plotMatch[4]),
+        ];
+      }
+      scopes.push(scopeEntry);
+    }
+  }
+
+  // Ledgers (:ledger :id "..." :terms ((:label "..." :expr "..." :color "#...") ...))
+  const ledgers: AstLedgerConfig[] = [];
+  const ledgerBlocks = extractSexprBlocks(astText, ':ledger');
+  for (const lb of ledgerBlocks) {
+    const lid = extractQuoted(lb, 'id') || `ledger_${ledgers.length + 1}`;
+    const target = extractQuoted(lb, 'target') || `#${lid}`;
+    const unit = extractQuoted(lb, 'unit') || '';
+    const maxExpr = extractQuoted(lb, 'max') || '';
+    const lx = parseFloat(extractSlot(lb, /:x\s+([\d\.\-]+)/i) || '40');
+    const ly = parseFloat(extractSlot(lb, /:y\s+([\d\.\-]+)/i) || '400');
+    const lw = parseFloat(extractSlot(lb, /:width\s+([\d\.]+)/i) || '320');
+    const lh = parseFloat(extractSlot(lb, /:height\s+([\d\.]+)/i) || '20');
+    const termBlocks = extractSexprBlocks(lb, ':label');
+    const terms: AstLedgerTerm[] = [];
+    for (const tb of termBlocks) {
+      const label = extractQuoted(tb, 'label') || 'Term';
+      const expr = extractQuoted(tb, 'expr') || '0';
+      const color = extractQuoted(tb, 'color') || '#38bdf8';
+      terms.push({ label, expr, color });
+    }
+    if (terms.length > 0) {
+      ledgers.push({
+        id: lid,
+        target,
+        unit,
+        maxExpr,
+        x: lx,
+        y: ly,
+        width: lw,
+        height: lh,
+        terms,
+      });
+    }
   }
 
   // Gestures
@@ -1136,6 +1469,8 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     subtitles,
     bindings,
     checkpoints,
+    scopes,
+    ledgers,
     gestures,
     vars,
     inputs,

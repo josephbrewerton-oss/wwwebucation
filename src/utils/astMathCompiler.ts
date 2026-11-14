@@ -227,3 +227,56 @@ export function evaluateAffineMatrix6(
 export function formatSvgMatrix6(m: Float32Array): string {
   return `matrix(${m[0]},${m[1]},${m[2]},${m[3]},${m[4]},${m[5]})`;
 }
+
+/**
+ * Evaluates a volume-preserving (det = 1) velocity-aligned squash-and-stretch
+ * 2D affine transform R(theta) * S(1 - squash, 1 / (1 - squash)) * R(-theta)
+ * translated to (tx, ty) around local pivot (originX, originY), writing directly
+ * into a pre-allocated 6-float buffer [a, b, c, d, e, f] with zero heap allocations.
+ */
+export function evaluateSquashStretchMatrix6(
+  vx: number,
+  vy: number,
+  squash: number,
+  tx: number,
+  ty: number,
+  outMatrix: Float32Array,
+  originX = 0,
+  originY = 0
+): void {
+  const sq = Math.max(-0.45, Math.min(0.45, Number(squash) || 0));
+  let a = 1;
+  let b = 0;
+  let c = 0;
+  let d = 1;
+
+  if (Math.abs(sq) > 1e-4) {
+    const speedSq = vx * vx + vy * vy;
+    let ux = 0;
+    let uy = 1;
+    if (speedSq > 1e-8) {
+      const invSpeed = 1 / Math.sqrt(speedSq);
+      ux = vx * invSpeed;
+      uy = vy * invSpeed;
+    }
+    const sParallel = 1 - sq;
+    const sPerp = 1 / sParallel;
+    const diff = sParallel - sPerp;
+    const uxx = ux * ux;
+    const uyy = uy * uy;
+    const uxy = ux * uy;
+
+    a = sParallel * uxx + sPerp * uyy;
+    b = diff * uxy;
+    c = b;
+    d = sParallel * uyy + sPerp * uxx;
+  }
+
+  outMatrix[0] = a;
+  outMatrix[1] = b;
+  outMatrix[2] = c;
+  outMatrix[3] = d;
+  outMatrix[4] = tx - (a * originX + c * originY);
+  outMatrix[5] = ty - (b * originX + d * originY);
+}
+

@@ -156,6 +156,43 @@ function runTests() {
   const compiledFiles = fs.readdirSync(BYTECODE_DIR).filter(f => f.endsWith('.astb'));
   assert(compiledFiles.length >= files.length, `Target contains all compiled .astb files (found ${compiledFiles.length})`);
 
+  // Test 6: Manipulation Goals (0x41), Scope (0x90), Ledger (0x91) & New Bio/Chem Cartridges
+  console.log('\n6. Testing Manipulation Goal, Scope & Ledger Bytecode Opcodes (0x41, 0x90, 0x91):');
+  const labAst = `(:scene :id "lab-opcodes-test" :type "Sim" :title "Lab Opcode Fidelity" :stage "KS4" :duration 20.0
+    (:scope :target "#osc-line" :x-expr "vars.simClock" :y-expr "vars.y" :samples 64 :x-range (0 20) :y-range (0 100) :plot (450 100 300 160))
+    (:ledger :id "cons-ledger" :target "#cons-ledger" :x 430 :y 350 :width 320 :height 14 :unit "J" :max "100"
+      :terms ((:label "KE" :expr "vars.ke" :color "#38bdf8") (:label "PE" :expr "vars.pe" :color "#22c55e")))
+    (:interactive (
+      (:checkpoint :t 0.0 :title "Target Equilibrium" :prompt "Hold pressure at 202.6 kPa"
+        :pass-expr "Math.abs(vars.pressure - 202.6) < 4.0" :hold-duration 1.5
+        :explanation "Halving volume doubles pressure.")
+      (:checkpoint :t 0.5 :title "Conception Check" :prompt "Which option?"
+        :options ("Right" "Wrong A" "Wrong B") :answer 0
+        :on-wrong ((1 "Re-check volume term") (2 "Check temperature invariance"))
+        :explanation "Conservation law applies.")
+    ))
+  )`;
+  const labDec = decompileBytecodeToScene(compileAstTextToBytecode(labAst));
+  assert(labDec.scopes.length === 1, 'OP_SCOPE round-tripped');
+  assert(labDec.scopes[0].target === '#osc-line' && labDec.scopes[0].samples === 64, 'Scope target & sample capacity preserved');
+  assert(Array.isArray(labDec.scopes[0].plot) && labDec.scopes[0].plot[2] === 300, 'Scope plot bounds preserved');
+  assert(labDec.ledgers.length === 1 && labDec.ledgers[0].terms.length === 2, 'OP_LEDGER & terms preserved');
+  assert(labDec.ledgers[0].unit === 'J' && labDec.ledgers[0].maxExpr === '100', 'Ledger unit & maxExpr preserved');
+  assert(labDec.checkpoints.length === 2, 'Both OP_CHECKPOINT_GOAL and MCQ checkpoints decoded');
+  assert(labDec.checkpoints[0].passExpr === 'Math.abs(vars.pressure - 202.6) < 4.0', 'passExpr preserved in OP_CHECKPOINT_GOAL');
+  assert(Math.abs((labDec.checkpoints[0].holdDuration || 0) - 1.5) < 0.01, 'holdDuration preserved in OP_CHECKPOINT_GOAL');
+  assert(labDec.checkpoints[1].onWrong?.[1] === 'Re-check volume term', ':on-wrong distractor index 1 hint preserved');
+  assert(labDec.checkpoints[1].onWrong?.[2] === 'Check temperature invariance', ':on-wrong distractor index 2 hint preserved');
+
+  for (const cartId of ['rates-of-reaction', 'acid-alkali-titration', 'enzyme-denaturation', 'osmosis-membrane']) {
+    const raw = fs.readFileSync(path.join(CARTRIDGES_DIR, `${cartId}.ast`), 'utf8');
+    const dec = decompileBytecodeToScene(compileAstTextToBytecode(raw));
+    assert(dec.scopes.length >= 1, `${cartId} encodes at least 1 :scope into bytecode`);
+    assert(dec.ledgers.length >= 1, `${cartId} encodes at least 1 :ledger into bytecode`);
+    assert(dec.checkpoints.some(cp => Boolean(cp.passExpr)), `${cartId} encodes a :pass-expr manipulation goal`);
+    assert(dec.checkpoints.some(cp => Boolean(cp.onWrong && Object.keys(cp.onWrong).length > 0)), `${cartId} encodes :on-wrong distractor nudges`);
+  }
+
   console.log('\n==================================================');
   console.log(`Results: ${passedCount} passed, ${failedCount} failed.`);
   console.log('==================================================\n');

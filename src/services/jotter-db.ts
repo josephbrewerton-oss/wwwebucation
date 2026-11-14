@@ -53,6 +53,39 @@ export async function getRecentJotterEntries(sessionId: string, limit = 5): Prom
   });
 }
 
+export async function appendLabCsvToJotter(
+  presetId: string,
+  csv: string,
+  nodePath?: string,
+): Promise<void> {
+  const safeId = presetId || 'simulation';
+  await appendJotter({
+    sessionId: `lab-${safeId}`,
+    nodePath: nodePath || `lab/${safeId}`,
+    actor: 'student',
+    payload: csv,
+  });
+}
+
+export async function getLabCsvEntries(presetId?: string, limit = 20): Promise<JotterEntry[]> {
+  if (presetId) {
+    return getRecentJotterEntries(`lab-${presetId}`, limit);
+  }
+  const db = await openJotterDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const store = tx.objectStore(STORE_NAME);
+    const request = store.getAll();
+    request.onsuccess = () => {
+      const records: JotterEntry[] = (request.result || []).filter(
+        (r: JotterEntry) => typeof r.sessionId === 'string' && r.sessionId.startsWith('lab-'),
+      );
+      resolve(records.slice(-limit));
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 export async function clearJotterDB(): Promise<void> {
   const db = await openJotterDB();
   return new Promise((resolve, reject) => {

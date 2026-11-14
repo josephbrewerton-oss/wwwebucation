@@ -1,0 +1,79 @@
+(:scene :id "enzyme-denaturation" :type "Sim" :oak-id "OAK-KS4-BIO-001" :subject "Science" :section "Natural Sciences & Physics" :title "Enzyme Catalysis & Denaturation" :stage "KS4 GCSE BIOLOGY" :duration 16.0
+  (:vars (
+    (:var :name "temp" :val 20 :min 0 :max 80 :step 1 :unit "°C" :label "Temperature")
+    (:var :name "ph" :val 7.0 :min 2.0 :max 12.0 :step 0.2 :unit "pH" :label "Buffer pH")
+  ))
+  (ui:controls
+    (control:button :id "reset" :label "Reset Assay" :action (sim:reset))
+    (control:slider :id "temp" :label "Temperature (°C)" :min 0 :max 80 :default 20 :step 1 :bind *temp*)
+    (control:slider :id "ph" :label "Medium pH" :min 2.0 :max 12.0 :default 7.0 :step 0.2 :bind *ph*)
+  )
+  (:computed (
+    (:name "thermalFactor" :expr "((vars.temp || 20) <= 40 ? Math.min(1, 0.12 + 0.88 * Math.exp(-Math.pow(((vars.temp || 20) - 37) / 18, 2))) : Math.max(0, Math.exp(-Math.pow(((vars.temp || 20) - 40) / 10, 2))))")
+    (:name "phFactor" :expr "Math.max(0, Math.exp(-Math.pow(((vars.ph || 7.0) - 7.0) / 2.2, 2)))")
+    (:name "denaturedPct" :expr "Number(Math.min(100, Math.max(0, ((vars.temp || 20) > 42 ? (1 - Math.exp(-Math.pow(((vars.temp || 20) - 42) / 11, 2))) * 100 : 0) + (Math.abs((vars.ph || 7.0) - 7.0) > 2.2 ? Math.min(100, (Math.abs((vars.ph || 7.0) - 7.0) - 2.2) * 28) : 0))).toFixed(1))")
+    (:name "activePct" :expr "Number(Math.max(0, 100 - (vars.denaturedPct || 0)).toFixed(1))")
+    (:name "reactionRate" :expr "Number((100 * (vars.thermalFactor || 0) * (vars.phFactor || 0)).toFixed(1))")
+  ))
+  (:gestures (
+    (:clickable :target "#btn-temp-cold" :set-var "temp" :val 10)
+    (:clickable :target "#btn-temp-opt" :set-var "temp" :val 37)
+    (:clickable :target "#btn-temp-opt" :set-var "ph" :val 7.0)
+    (:clickable :target "#btn-temp-boil" :set-var "temp" :val 70)
+  ))
+  (:emitters (
+    (:particle-pool :id "substrate-pool" :phase-sync false :count 18 :speed 90
+      :speed-expr "30 + (vars.temp || 20) * 2.6"
+      :radius 3.8 :fill "#facc15" :minX 54 :maxX 268 :minY 248 :maxY 336 :wrapMode "bounce")
+  ))
+  (:scope :target "#enzyme-scope-line"
+    :x-expr "vars.temp || 20"
+    :y-expr "vars.reactionRate || 0"
+    :samples 120
+    :x-range (0 80)
+    :y-range (0 100)
+    :plot (455 114 295 160))
+  (:ledger :id "enzyme-ledger" :target "#enzyme-ledger" :x 434 :y 348 :width 322 :height 14 :unit "%" :max "100"
+    :terms (
+      (:label "Active Enzyme" :expr "vars.activePct || 0" :color "#22c55e")
+      (:label "Denatured" :expr "vars.denaturedPct || 0" :color "#ef4444")
+    ))
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "At low temperatures, substrates and enzymes move slowly with fewer effective collisions, though the active site stays intact.")
+    (:start 0.35 :end 0.70 :en "Near 37 °C and pH 7.0, kinetic energy peaks while the tertiary 3D active site matches the substrate shape cleanly.")
+    (:start 0.70 :end 1.00 :en "Above 45 °C or at extreme pH, hydrogen bonds break — the active site permanently loses its complementary shape (denaturation).")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Low Kinetic Activity" :rule "Substrate and enzyme intact, low thermal collision energy")
+    (:t 0.45 :title "2. Optimum Catalysis (~37 °C)" :rule "Max enzyme-substrate complex formation before thermal unfolding")
+    (:t 0.85 :title "3. Irreversible Denaturation" :rule "Active site warps; substrate can no longer bind lock-and-key")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.0
+      :title "Goal Challenge: Find Enzyme Optimum"
+      :prompt "Adjust temperature and pH sliders (or stage controls) to achieve peak catalysis (Reaction Rate >= 90% of Vmax) for 1.5 seconds without denaturing the active site."
+      :pass-expr "(vars.reactionRate || 0) >= 90"
+      :hold-duration 1.5
+      :explanation "Human amylase functions maximally near 37 °C and neutral pH 7.0 where kinetic collision energy is high without unfolding the protein.")
+    (:checkpoint :t 0.70
+      :title "Mechanism of Thermal Denaturation"
+      :prompt "Why does heating an enzyme solution from 37 °C to 70 °C drop the reaction rate sharply to zero?"
+      :options ("High thermal vibration breaks bonds maintaining tertiary structure, distorting the active site shape" "The enzyme molecules melt into acid gas" "Substrates freeze inside the active site" "Enzymes are alive and die from heatstroke")
+      :answer 0
+      :on-wrong ((1 "Enzymes remain dissolved proteins — their internal intramolecular bonds break and unfold.") (2 "Higher temperature increases kinetic motion rather than freezing substrates.") (3 "Enzymes are biological catalyst protein molecules, not living cells."))
+      :explanation "Denaturation changes the specific 3D geometry of the active site so the substrate is no longer complementary.")
+  ))
+  (:bindings (
+    (:target "#enzyme-body" :attr "d" :expr "astMorphPath('M 92 128 L 232 128 L 232 204 L 184 204 L 162 248 L 140 204 L 92 204 Z', 'M 86 132 L 238 132 L 238 198 L 204 206 L 162 184 L 120 208 L 86 198 Z', Math.min(1, (vars.denaturedPct || 0) / 100))")
+    (:target "#substrate-group" :attr "transform" :expr "'translate(0, ' + (Math.round((vars.denaturedPct || 0) > 35 ? 64 : (14 + Math.abs(Math.sin(t * 25)) * (38 - 28 * ((vars.reactionRate || 0) / 100))))) + ')'")
+    (:target "#enz-temp-readout" :attr "textContent" :expr "Math.round(vars.temp || 20) + ' °C'")
+    (:target "#enz-ph-readout" :attr "textContent" :expr "Number(vars.ph || 7.0).toFixed(1)")
+    (:target "#enz-rate-readout" :attr "textContent" :expr "Math.round(vars.reactionRate || 0) + '%'")
+    (:target "#enz-rate-readout" :attr "fill" :expr "(vars.denaturedPct || 0) > 40 ? '#ef4444' : ((vars.reactionRate || 0) >= 80 ? '#4ade80' : '#facc15')")
+    (:target "#active-site-label" :attr "textContent" :expr "(vars.denaturedPct || 0) > 40 ? 'Active Site: DENATURED' : 'Active Site: Complementary'")
+    (:target "#enz-state-readout" :attr "textContent" :expr "(vars.denaturedPct || 0) > 40 ? 'DENATURED' : ((vars.temp || 20) < 22 ? 'Low Kinetic Energy' : 'Optimal Fit')")
+    (:target "#enz-state-readout" :attr "fill" :expr "(vars.denaturedPct || 0) > 40 ? '#ef4444' : ((vars.temp || 20) < 22 ? '#38bdf8' : '#4ade80')")
+    (:target "#enzyme-cursor" :attr "cx" :expr "(455 + ((vars.temp || 20) / 80) * 295).toFixed(1)")
+    (:target "#enzyme-cursor" :attr "cy" :expr "(274 - ((vars.reactionRate || 0) / 100) * 160).toFixed(1)")
+  ))
+)

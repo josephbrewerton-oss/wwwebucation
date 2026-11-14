@@ -1,0 +1,85 @@
+(:scene :id "rates-of-reaction" :type "Sim" :oak-id "OAK-KS4-CHM-001" :subject "Science" :section "Natural Sciences & Physics" :title "Rates of Reaction & Collision Theory" :stage "KS4 GCSE CHEMISTRY" :duration 25.0
+  (:vars (
+    (:var :name "temp" :val 30 :min 20 :max 80 :step 2 :unit "°C" :label "Temperature (T)")
+    (:var :name "conc" :val 1.0 :min 0.5 :max 3.0 :step 0.25 :unit "M" :label "HCl Concentration")
+    (:var :name "surfaceArea" :val 1 :min 1 :max 3 :step 1 :unit "x" :label "Marble Chip Area")
+  ))
+  (ui:controls
+    (control:button :id "reset" :label "Reset Reaction" :action (sim:reset))
+    (control:slider :id "temp" :label "Temperature (°C)" :min 20 :max 80 :default 30 :step 2 :bind *temp*)
+    (control:slider :id "conc" :label "HCl Concentration (mol/dm³)" :min 0.5 :max 3.0 :default 1.0 :step 0.25 :bind *conc*)
+    (control:slider :id "surfaceArea" :label "Surface Area (1=Large, 3=Powder)" :min 1 :max 3 :default 1 :step 1 :bind *surfaceArea*)
+  )
+  (:computed (
+    (:name "kRate" :expr "Number((Math.pow(1.06, (vars.temp || 30) - 20) * (vars.conc || 1.0) * (vars.surfaceArea || 1)).toFixed(2))")
+    (:name "productVol" :expr "Number((80 * (1 - Math.exp(-0.08 * (vars.kRate || 1) * (vars.simClock || 0)))).toFixed(2))")
+    (:name "reactantRem" :expr "Number(Math.max(0, 80 - (vars.productVol || 0)).toFixed(2))")
+    (:name "instRate" :expr "Number((80 * 0.08 * (vars.kRate || 1) * Math.exp(-0.08 * (vars.kRate || 1) * (vars.simClock || 0))).toFixed(2))")
+  ))
+  (:gestures (
+    (:clickable :target "#btn-sa-large" :set-var "surfaceArea" :val 1)
+    (:clickable :target "#btn-sa-med" :set-var "surfaceArea" :val 2)
+    (:clickable :target "#btn-sa-powder" :set-var "surfaceArea" :val 3)
+  ))
+  (:emitters (
+    (:particle-pool :id "acid-ions" :phase-sync false :count 24 :speed 95
+      :speed-expr "75 * (1 + ((vars.temp || 30) - 20) / 35)"
+      :count-expr "Math.round(16 * (vars.conc || 1.0) + 8)"
+      :radius 4.2 :fill "#38bdf8" :minX 58 :maxX 256 :minY 166 :maxY 338 :wrapMode "bounce")
+    (:particle-pool :id "gas-bubbles" :phase-sync false :count 12 :speed 70
+      :speed-expr "45 + (vars.instRate || 0) * 14"
+      :count-expr "Math.max(5, Math.min(40, Math.round((vars.instRate || 1) * 4)))"
+      :radius 3.5 :fill "#4ade80" :minX 70 :maxX 240 :minY 170 :maxY 325 :wrapMode "bounce")
+  ))
+  (:scope :target "#rate-scope-line"
+    :x-expr "vars.simClock || 0"
+    :y-expr "vars.productVol || 0"
+    :samples 120
+    :x-range (0 25)
+    :y-range (0 80)
+    :plot (455 114 295 160))
+  (:ledger :id "reaction-ledger" :target "#reaction-ledger" :x 434 :y 348 :width 322 :height 14 :unit "cm³" :max "80"
+    :terms (
+      (:label "Reactant Left" :expr "vars.reactantRem || 0" :color "#38bdf8")
+      (:label "CO2 Gas Evolved" :expr "vars.productVol || 0" :color "#22c55e")
+    ))
+  (:subtitles (
+    (:start 0.00 :end 0.40 :en "Reacting marble chips (CaCO3) with hydrochloric acid produces carbon dioxide gas. Watch the gas syringe and scope curve climb.")
+    (:start 0.40 :end 0.75 :en "Increasing temperature raises kinetic energy and collision frequency; higher concentration or powdered chips provide more frequent successful collisions.")
+    (:start 0.75 :end 1.00 :en "When all limiting reactant is consumed (80 cm³ CO₂ total), the gradient flattens to zero and mass remains conserved.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Initial Collision State" :rule "Steepest initial slope occurs at t = 0 when reactant concentration is maximum")
+    (:t 0.45 :title "2. Decelerating Rate" :rule "As acid ions are consumed, successful collisions per second fall exponentially")
+    (:t 0.90 :title "3. Reaction Complete" :rule "Stoichiometric yield of 80 cm³ CO2 reached regardless of catalyst or temperature")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.0
+      :title "Goal Challenge: Fast Collision Rate"
+      :prompt "Increase temperature, HCl concentration, or marble chip surface area until the collision rate factor (kRate) reaches at least 4.5x and holds steady for 1.5 seconds."
+      :pass-expr "(vars.kRate || 0) >= 4.5"
+      :hold-duration 1.5
+      :explanation "Raising temperature, acid concentration, or surface area increases the frequency of successful collisions above activation energy.")
+    (:checkpoint :t 0.65
+      :title "Limiting Reactant Stoichiometry"
+      :prompt "When marble chips react at 60 °C instead of 20 °C (using identical masses and acid volumes), how does the final total volume of CO₂ gas compare?"
+      :options ("Same total gas volume, reached in less time" "Double the final CO₂ gas volume is created" "Less final CO₂ gas is produced" "Reaction never finishes")
+      :answer 0
+      :on-wrong ((1 "Temperature speeds up collisions per second, but it cannot create extra calcium carbonate or acid atoms.") (2 "Higher temperature increases rate without destroying reactant mass — check the CO₂ + Reactant ledger!") (3 "Reactions stop as soon as the limiting reactant is completely used up."))
+      :explanation "Temperature increases the rate of reaction (steeper curve), while the final product yield stays fixed by limiting reactant stoichiometry.")
+  ))
+  (:bindings (
+    (:target "#syringe-piston" :attr "transform" :expr "'translate(' + (226 + ((vars.productVol || 0) / 80) * 100).toFixed(1) + ', 89)'")
+    (:target "#co2-fill-bar" :attr "width" :expr "(((vars.productVol || 0) / 80) * 100).toFixed(1)")
+    (:target "#syringe-readout" :attr "textContent" :expr "'CO₂ Gas: ' + (vars.productVol || 0).toFixed(1) + ' cm³'")
+    (:target "#val-temp" :attr "textContent" :expr "Math.round(vars.temp || 30) + ' °C'")
+    (:target "#val-conc" :attr "textContent" :expr "Number(vars.conc || 1.0).toFixed(2) + ' M'")
+    (:target "#val-sa" :attr "textContent" :expr "(vars.surfaceArea >= 3 ? 'Powder (3x)' : (vars.surfaceArea >= 2 ? 'Medium (2x)' : 'Large (1x)'))")
+    (:target "#val-krate" :attr "textContent" :expr "Number(vars.kRate || 1).toFixed(2) + 'x'")
+    (:target "#val-rate" :attr "textContent" :expr "Number(vars.instRate || 0).toFixed(2) + ' cm³/s'")
+    (:target "#marble-chips-group" :attr "opacity" :expr "Math.max(0.15, (vars.reactantRem || 80) / 80).toFixed(2)")
+    (:target "#btn-sa-large rect" :attr "fill" :expr "Math.round(vars.surfaceArea || 1) === 1 ? '#0284c7' : '#1e293b'")
+    (:target "#btn-sa-med rect" :attr "fill" :expr "Math.round(vars.surfaceArea || 1) === 2 ? '#0284c7' : '#1e293b'")
+    (:target "#btn-sa-powder rect" :attr "fill" :expr "Math.round(vars.surfaceArea || 1) === 3 ? '#0284c7' : '#1e293b'")
+  ))
+)
