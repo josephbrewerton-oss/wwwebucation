@@ -19,9 +19,14 @@ import {
   buildSafeActionTuple,
   clampVarValue,
   createPlayerWebMcpTools,
+  registerWebMcpTools as registerPlayerWebMcpTools,
   runWebMcpBenchmark,
   type PlayerMcpTransport,
 } from '../src/engine/webmcpBridge';
+import {
+  registerWebMcpTools as registerPortalWebMcpTools,
+  unregisterWebMcpTools as unregisterPortalWebMcpTools,
+} from '../src/services/webMcpBridge';
 import {
   computeAstVsJsonCompression,
   formatEppReportMarkdown,
@@ -1057,6 +1062,201 @@ console.log('\n--- TEST 18: Chrome EPP Contention Profiler, Compression & WebMCP
   assert(mdReport.includes(`${mcpBench.domPayloadReductionPct}% smaller payload`), 'Markdown dossier includes WebMCP reduction');
 
   console.log(`[✅ PASS] Sim 18: Zero-GC profiler, WebMCP clamping (${mcpBench.domPayloadReductionPct}% DOM reduction), AST/JSON/ASTB compression (${comp.astVsJsonTokenSavingsPct}% token savings), & EPP dossier verified.`);
+  passedTests++;
+}
+
+// =========================================================================
+// TEST 19: RC1 WebMCP Coexistence, E2E postMessage Bridge & Release Hygiene
+// =========================================================================
+console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge & Release Hygiene ---');
+{
+  // 19a. Additive coexistence between portal WebMCP tools (5) and player WebMCP tools (3)
+  const prevWin = (globalThis as any).window;
+  const prevDoc = (globalThis as any).document;
+  const prevNav = (globalThis as any).navigator;
+  const prevCustomEvent = (globalThis as any).CustomEvent;
+
+  const registeredToolMap = new Map<string, any>();
+  let provideContextCalls = 0;
+  let clearContextCalls = 0;
+  const dispatchedEvents: string[] = [];
+
+  const sharedModelContext = {
+    registerTool: (tool: any, opts?: { signal?: AbortSignal }) => {
+      registeredToolMap.set(tool.name, tool);
+      if (opts?.signal) {
+        opts.signal.addEventListener('abort', () => {
+          registeredToolMap.delete(tool.name);
+        });
+      }
+    },
+    unregisterTool: (name: string) => {
+      registeredToolMap.delete(name);
+    },
+    provideContext: () => {
+      provideContextCalls++;
+    },
+    clearContext: () => {
+      clearContextCalls++;
+      registeredToolMap.clear();
+    },
+  };
+
+  try {
+    (globalThis as any).CustomEvent = class MockCustomEvent {
+      type: string;
+      detail: any;
+      constructor(type: string, init?: { detail?: any }) {
+        this.type = type;
+        this.detail = init?.detail;
+      }
+    };
+    (globalThis as any).window = {
+      dispatchEvent: (ev: any) => {
+        dispatchedEvents.push(ev?.type || 'unknown');
+        return true;
+      },
+    };
+    (globalThis as any).document = { modelContext: sharedModelContext };
+    Object.defineProperty(globalThis, 'navigator', {
+      value: { modelContext: sharedModelContext },
+      configurable: true,
+    });
+
+    const portalOk = await registerPortalWebMcpTools();
+    assert.strictEqual(portalOk, true, 'Portal WebMCP bridge must register on shared modelContext');
+    assert.strictEqual(registeredToolMap.size, 5, `Expected 5 portal tools, got ${registeredToolMap.size}`);
+
+    const noopTransport: PlayerMcpTransport = {
+      readState: async () => null,
+      setVar: async (name, value) => ({ name, value, clamped: false }),
+      execActionTuple: async () => ({ ok: true, executedActions: ['say'] }),
+    };
+
+    const playerHandle = registerPlayerWebMcpTools(noopTransport);
+    assert.strictEqual(playerHandle.registered, true, 'Player WebMCP bridge must register cleanly');
+    assert.strictEqual(playerHandle.mode, 'registerTool', 'Player WebMCP bridge must prefer additive registerTool mode');
+    assert.strictEqual(registeredToolMap.size, 8, `Expected 5 portal + 3 player = 8 coexisting tools, got ${registeredToolMap.size}`);
+    assert.strictEqual(provideContextCalls, 0, 'Must never call provideContext when registerTool is supported');
+
+    // Unregistering player tools must preserve all 5 portal tools untouched
+    playerHandle.unregister();
+    assert.strictEqual(clearContextCalls, 0, 'Player unregister must never wipe portal context via clearContext');
+    assert.strictEqual(registeredToolMap.size, 5, `Portal tools must remain intact after player unmount, got ${registeredToolMap.size}`);
+    assert(registeredToolMap.has('catholic_catechism_search'), 'Portal tool catholic_catechism_search preserved');
+    assert(!registeredToolMap.has('ast_set_var'), 'Player tool ast_set_var cleanly aborted');
+
+    unregisterPortalWebMcpTools();
+    assert.strictEqual(registeredToolMap.size, 0, 'All tools cleared after portal + player teardown');
+  } finally {
+    (globalThis as any).window = prevWin;
+    (globalThis as any).document = prevDoc;
+    (globalThis as any).CustomEvent = prevCustomEvent;
+    if (prevNav !== undefined) {
+      Object.defineProperty(globalThis, 'navigator', { value: prevNav, configurable: true });
+    }
+  }
+
+  // 19b. E2E setupPostMessageBridge request/response protocol inside isolated VM
+  const engineCode = fs.readFileSync('static/player/ast-engine.js', 'utf8');
+  const windowListeners: Record<string, Array<(evt: any) => void>> = {};
+  const postedMessages: Array<{ msg: any; origin: string }> = [];
+  const rafQueue = new Map<number, (ts: number) => void>();
+  let nextRafId = 1;
+  let simTimeNow = 1000;
+
+  const bridgeSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set,
+    Float32Array, Int32Array, Uint8Array, RegExp, Error, JSON,
+    URLSearchParams, parseFloat, parseInt, isNaN, isFinite,
+    setTimeout, clearTimeout,
+    performance: { now: () => simTimeNow },
+    requestAnimationFrame: (cb: (ts: number) => void) => {
+      const id = nextRafId++;
+      rafQueue.set(id, cb);
+      return id;
+    },
+    cancelAnimationFrame: (id: number) => {
+      rafQueue.delete(id);
+    },
+    addEventListener: (type: string, fn: (evt: any) => void) => {
+      if (!windowListeners[type]) windowListeners[type] = [];
+      windowListeners[type].push(fn);
+    },
+    location: { origin: 'https://localhost:3000', search: '' },
+    parent: {
+      postMessage: (msg: any, origin: string) => {
+        postedMessages.push({ msg, origin });
+      },
+    },
+  };
+  bridgeSb.globalThis = bridgeSb;
+  bridgeSb.self = bridgeSb;
+  bridgeSb.window = bridgeSb;
+  vm.runInNewContext(engineCode, bridgeSb, { filename: 'static/player/ast-engine.js' });
+
+  const engBridge = new bridgeSb.ASTVectorPlayerEngine({ container: null, autoplay: false, voiceEnabled: false });
+  const ratesAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.ast'), 'utf8');
+  await engBridge.loadSceneData(engBridge.parseAst(ratesAst), false);
+  bridgeSb.setupPostMessageBridge(engBridge, null);
+
+  const sendBridgeMsg = (payload: Record<string, any>) => {
+    for (const fn of windowListeners['message'] || []) {
+      fn({ origin: 'https://localhost:3000', data: payload });
+    }
+  };
+
+  sendBridgeMsg({ type: 'START_PROF_CAPTURE', requestId: 'rc1-start', ensurePlaying: true });
+  const startMsg = postedMessages.find((m) => m.msg.type === 'PROF_CAPTURE_STARTED' && m.msg.requestId === 'rc1-start');
+  assert(startMsg, 'START_PROF_CAPTURE must emit correlated PROF_CAPTURE_STARTED');
+
+  for (let i = 0; i < 6; i++) {
+    simTimeNow += 16.6;
+    const pending = Array.from(rafQueue.entries());
+    rafQueue.clear();
+    for (const [, cb] of pending) cb(simTimeNow);
+  }
+  engBridge.pause();
+
+  sendBridgeMsg({ type: 'STOP_PROF_CAPTURE', requestId: 'rc1-stop' });
+  const stopMsg = postedMessages.find((m) => m.msg.type === 'PROF_CAPTURE_RESULT' && m.msg.requestId === 'rc1-stop')?.msg;
+  assert(stopMsg, 'STOP_PROF_CAPTURE must emit correlated PROF_CAPTURE_RESULT');
+  assert(stopMsg.stats.sampleCount >= 4, `Expected >= 4 captured frame samples, got ${stopMsg.stats.sampleCount}`);
+  assert.strictEqual(stopMsg.memory.wasmPoolBytes, 458752, 'WASM pool byte metric must remain 448 KB (458752 B)');
+  assert(stopMsg.activeMetrics.activeScopes >= 1, 'Rates of reaction must report activeScopes >= 1');
+
+  const tempMax = engBridge.scene.vars.temp.max;
+  sendBridgeMsg({ type: 'SET_VAR', name: 'temp', value: tempMax + 50, requestId: 'rc1-setvar' });
+  const setVarAck = postedMessages.find((m) => m.msg.type === 'SET_VAR_ACK' && m.msg.requestId === 'rc1-setvar')?.msg;
+  assert(setVarAck, 'SET_VAR must emit SET_VAR_ACK when requestId is supplied');
+  assert.strictEqual(setVarAck.clamped, true, 'Overshoot SET_VAR must report clamped=true');
+  assert.strictEqual(setVarAck.value, tempMax, `Overshoot SET_VAR must clamp to max (${tempMax})`);
+
+  sendBridgeMsg({ type: 'GET_ENGINE_STATE', requestId: 'rc1-state', includeSvgBytes: false });
+  const stateResp = postedMessages.find((m) => m.msg.type === 'ENGINE_STATE_RESPONSE' && m.msg.requestId === 'rc1-state')?.msg;
+  assert.strictEqual(stateResp?.state?.sceneId, 'rates-of-reaction', 'GET_ENGINE_STATE must return active sceneId');
+
+  sendBridgeMsg({
+    type: 'EXEC_ACTION_TUPLE',
+    tuple: '(:act :seek 0.25 :var "temp" 55 :say "RC1 E2E verified")',
+    requestId: 'rc1-act',
+  });
+  const actResp = postedMessages.find((m) => m.msg.type === 'EXEC_ACTION_RESULT' && m.msg.requestId === 'rc1-act')?.msg;
+  assert.strictEqual(actResp?.ok, true, 'EXEC_ACTION_TUPLE must succeed');
+  assert(actResp.executedActions.includes('seek') && actResp.executedActions.includes('var') && actResp.executedActions.includes('say'));
+
+  sendBridgeMsg({ type: 'REQUEST_JOTTER_CSV', download: false });
+  const csvResp = postedMessages.find((m) => m.msg.type === 'JOTTER_CSV_RESPONSE')?.msg;
+  assert(csvResp && csvResp.sceneId === 'rates-of-reaction' && csvResp.csv.length > 0, 'REQUEST_JOTTER_CSV must return lab CSV payload');
+
+  // 19c. Release Candidate 1 version & UI hygiene check
+  const pkgJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+  assert.strictEqual(pkgJson.version, '1.0.0-rc.1', `Expected package.json version 1.0.0-rc.1, got ${pkgJson.version}`);
+  const settingsUi = fs.readFileSync('src/components/player/PlayerSettingsModal.ts', 'utf8');
+  assert(!settingsUi.includes('[Beta]'), 'PlayerSettingsModal must be promoted from [Beta] to [RC1]');
+  assert(fs.existsSync('static/lumina-vector-player.zip'), 'Offline vector player archive static/lumina-vector-player.zip must exist');
+
+  console.log('[✅ PASS] Sim 19: Additive WebMCP coexistence (5+3=8 tools), E2E postMessage round-trips, & RC1 version parity verified.');
   passedTests++;
 }
 

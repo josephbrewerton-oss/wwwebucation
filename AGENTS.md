@@ -21,7 +21,7 @@
 
 ## AST Vector Player & Zero-Bloat Fantasy Engine
 - **Decoupled Engine Core**: Located in `static/player/` (`ast-engine.js`, `ast-registry.js`, `ast-state-hex.js`, `ast-gestures.js`, `ast-phet-bridge.js`, `ast-compiler.js`, `ast-webrtc-bus.js`, `obs-controller.js`, `player-ui.js`).
-- **Zero-Bloat Invariant**: Engine runtime is strictly < 35 KB gzipped (< 150 KB uncompressed) with 0 external runtime dependencies. Sub-15 ms cold start, < 8 MB RAM footprint.
+- **Zero-Bloat Invariant**: Initial SPA boot bundle < 20 KB gzipped (verified ~16.3 kB JS + ~5.9 kB CSS). Core AST Player kernel (`static/player/ast-engine.js`) with embedded sub-stepped physics, `:scope` plotter, `:ledger`, & profiler is ~107 KB gzipped with 0 external runtime dependencies, sub-15 ms cold start, and < 8 MB RAM footprint.
 - **WASM Linear Memory Contract**:
   - Operates within a strictly fixed 7-page (448 KB) WASM linear memory pool (`docs/WASM_ARCHITECTURE_CONTRACT.md`).
   - Zero dynamic heap allocation (`new Object`, closures, array spreads) during hot 60 FPS animation/physics loops.
@@ -35,7 +35,7 @@
   - Pre-compiled binary bytecode (`.astb` and `.astbs` data packs via `scripts/compile-ast-bytecode.ts`) enabling sub-0.2 ms instant deserialization and zero GC pause on low-spec hardware.
   - Verified against `cartridge-checksums.json` and indexed in `scenes.manifest.json`.
 - **Architectural Superiority Over PhET**:
-  - **70× Lighter Footprint**: < 35 KB gzipped runtime vs PhET's 2,000–5,000 KB monolithic Scenery/Kite/Dot bundle.
+  - **20–45× Lighter Footprint**: ~107 KB gzipped all-in VM runtime (16.3 kB SPA shell) vs PhET's 2,000–5,000 KB monolithic Scenery/Kite/Dot bundle.
   - **Cold Start & Memory**: < 15 ms boot time, < 8 MB RAM vs PhET's 1,200–2,500 ms boot time, 45–90 MB RAM.
   - **On-Device Edge AI Generation**: Declarative S-Expressions allow Gemini Nano to generate working simulations in ~500 ms.
   - **Classroom Smartboard / Stylus Whiteboard**: Native in-stage quadratic Bézier ink layer (`#annotation-ink-root`) for Promethean, SMART, ViewSonic & iPad pens.
@@ -49,8 +49,8 @@
   - Dedicated `⚡ Diagnostics` drawer in `src/pages/media-player.ts` tracking 60 FPS headroom and WASM 7-page memory pool status.
 - **Pure VM & Cartridge Separation Invariant**: `static/player/ast-engine.js` and `static/player/ast-gestures.js` operate as a 100% generic, schema-driven Virtual Machine. NEVER hardcode scene IDs or cartridge-specific element selectors inside engine/gesture code. Gestures execute declaratively from `.ast` `:gestures` tuples (`:draggable`, `:clickable`, `:holdable`, `:key` with `requestAnimationFrame` press-and-hold loop, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`).
 - **Interactive System Architecture Document**: `static/docs/lumina-architecture.ast` is a hybrid SVG + S-expression `:type "Slide"` Show & Tell Manifesto, playable via `/player?preset=lumina-architecture` or `?src=/docs/lumina-architecture.ast`.
-- **Canonical Curriculum Cartridges (68 Compiled Modules)**:
-  - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `vector-racing` (Continuous Press-and-Hold Kinematic Driving), `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
+- **Canonical Curriculum Cartridges (72 Compiled Modules)**:
+  - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `vector-racing` (Continuous Press-and-Hold Kinematic Driving), `rates-of-reaction`, `acid-alkali-titration`, `enzyme-denaturation`, `osmosis-membrane`, `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
   - *Humanities, Language & Formation*: `bsl-fingerspelling`, `church-tour`, `altar-anatomy`, `order-of-the-mass`, `seven-sacraments`, `catholic-rites`, `liturgical-calendar`, `liturgical-postures`, `liturgy-of-the-hours`, `first-communion`, `holy-oils`, `holy-water-thurifer`, `nicene-creed`, `cst-virtues`, `rosary-mysteries`, `stations-of-the-cross`, `ten-commandments`, `latin-mass-prayers`, `shakespeare-macbeth`, `shakespeare`, `triduum-easter`, `sacred-objects`, `languages`, `eucharistic-procession-film`.
 
 ## Real-Time "In-Vision" BSL / Makaton Vector Interpreter

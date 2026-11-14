@@ -464,17 +464,26 @@ export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegist
 
   let mode: WebMcpRegistrationHandle['mode'] = 'headless-local';
   const registeredIndividual: string[] = [];
+  const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
 
   try {
-    if (typeof api.provideContext === 'function') {
-      api.provideContext({ tools });
-      mode = 'provideContext';
-    } else if (typeof api.registerTool === 'function') {
+    if (typeof api.registerTool === 'function') {
       for (const tool of tools) {
-        api.registerTool(tool);
+        if (abortController) {
+          try {
+            api.registerTool(tool, { signal: abortController.signal });
+          } catch {
+            api.registerTool(tool);
+          }
+        } else {
+          api.registerTool(tool);
+        }
         registeredIndividual.push(tool.name);
       }
       mode = 'registerTool';
+    } else if (typeof api.provideContext === 'function') {
+      api.provideContext({ tools });
+      mode = 'provideContext';
     }
   } catch (err) {
     console.warn('[WebMCP] Native registration failed, keeping local tool harness:', err);
@@ -490,12 +499,17 @@ export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegist
 
   const unregister = () => {
     try {
-      if (mode === 'provideContext' && typeof api.clearContext === 'function') {
-        api.clearContext();
-      } else if (mode === 'registerTool' && typeof api.unregisterTool === 'function') {
-        for (const name of registeredIndividual) {
-          api.unregisterTool(name);
+      if (mode === 'registerTool') {
+        if (abortController && !abortController.signal.aborted) {
+          abortController.abort();
         }
+        if (typeof api.unregisterTool === 'function') {
+          for (const name of registeredIndividual) {
+            api.unregisterTool(name);
+          }
+        }
+      } else if (mode === 'provideContext' && typeof api.clearContext === 'function') {
+        api.clearContext();
       }
     } catch {
       // Safe teardown
@@ -503,7 +517,7 @@ export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegist
   };
 
   return {
-    registered: true,
+    registered: mode !== 'headless-local',
     surface,
     mode,
     toolNames,
@@ -520,7 +534,7 @@ export async function runWebMcpBenchmark(
   transport: PlayerMcpTransport,
   existingTools?: WebMcpToolDescriptor[]
 ): Promise<WebMcpBenchmarkResult> {
-  const { surface } = detectWebMcpSurface();
+  const { surface, api } = detectWebMcpSurface();
   const tools = existingTools && existingTools.length === 3 ? existingTools : createPlayerWebMcpTools(transport);
   const setVarTool = tools.find((t) => t.name === 'ast_set_var')!;
   const dispatchTool = tools.find((t) => t.name === 'ast_dispatch_action')!;
@@ -590,9 +604,15 @@ export async function runWebMcpBenchmark(
       ? Number((latencies.reduce((acc, v) => acc + v, 0) / latencies.length).toFixed(3))
       : 0;
 
+  const registrationMode: WebMcpRegistrationHandle['mode'] = !api
+    ? 'headless-local'
+    : typeof api.registerTool === 'function'
+    ? 'registerTool'
+    : 'provideContext';
+
   return {
     surface,
-    registrationMode: surface === 'unavailable' ? 'headless-local' : 'provideContext',
+    registrationMode,
     toolsCount: tools.length,
     toolNames: tools.map((t) => t.name),
     readLatencyMs,

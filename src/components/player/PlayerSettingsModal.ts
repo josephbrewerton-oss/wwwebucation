@@ -217,7 +217,7 @@ export function renderPlayerSettingsModal(props: PlayerSettingsModalProps): HTML
     { key: 'showLoopToggle', label: '🔁 Auto-Repeat Loop Toggle' },
     { key: 'showVolumeControl', label: '🔊 Master Volume & Mute Controls' },
     { key: 'showPhysicsControls', label: '🪐 Micro-Physics & Gravity Subsystem' },
-    { key: 'ai_copilot_beta', label: '✨ Gemini Nano On-Device Co-Pilot [Beta] (:act bidirectional RPC)' },
+    { key: 'ai_copilot_beta', label: '✨ Gemini Nano On-Device Co-Pilot [RC1] (:act bidirectional RPC)' },
   ]);
 
   togglesGrid.appendChild(col1);
