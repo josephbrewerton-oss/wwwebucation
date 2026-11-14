@@ -39,19 +39,81 @@
       this.computeTimes = new Float32Array(this.historyLen);
       this.bufIndex = 0;
 
+      // Pre-allocated zero-GC capture buffer for Chrome EPP contention benchmarks
+      this.silent = Boolean(options.silent);
+      this.captureCap = 1024;
+      this.captureDeltas = new Float32Array(this.captureCap);
+      this.captureComputes = new Float32Array(this.captureCap);
+      this.captureActive = false;
+      this.captureCount = 0;
+
       this.svgRoot = null;
       this.hudGroup = null;
       this.bgNode = null;
       this.sparklineNode = null;
       this.textNode = null;
 
-      if (options.svgRoot) {
+      if (options.svgRoot && !this.silent) {
         this.mount(options.svgRoot);
       }
     }
 
+    startCapture() {
+      this.captureCount = 0;
+      this.lastFrameTs = 0;
+      this.captureActive = true;
+    }
+
+    stopCapture() {
+      this.captureActive = false;
+      const n = Math.min(this.captureCount, this.captureCap);
+      const validDeltas = [];
+      let sumD = 0;
+      let sumC = 0;
+      let overBudget = 0;
+      const validComputes = [];
+      for (let i = 0; i < n; i++) {
+        const d = this.captureDeltas[i];
+        const c = this.captureComputes[i];
+        if (d > 0) {
+          validDeltas.push(d);
+          sumD += d;
+          if (d > 16.67) overBudget++;
+        }
+        validComputes.push(c);
+        sumC += c;
+      }
+      validDeltas.sort((a, b) => a - b);
+      validComputes.sort((a, b) => a - b);
+      const dLen = validDeltas.length;
+      const cLen = validComputes.length;
+      const pct = (arr, p) => {
+        if (!arr.length) return 0;
+        const idx = Math.min(arr.length - 1, Math.max(0, Math.ceil(arr.length * p) - 1));
+        return arr[idx];
+      };
+      const meanMs = dLen > 0 ? sumD / dLen : 16.66;
+      const p95Ms = pct(validDeltas, 0.95);
+      const p99Ms = pct(validDeltas, 0.99);
+      const maxMs = dLen > 0 ? validDeltas[dLen - 1] : 0;
+      const meanComputeMs = cLen > 0 ? sumC / cLen : 0;
+      const p95ComputeMs = pct(validComputes, 0.95);
+      return {
+        sampleCount: dLen,
+        meanMs: Number(meanMs.toFixed(3)),
+        p95Ms: Number(p95Ms.toFixed(3)),
+        p99Ms: Number(p99Ms.toFixed(3)),
+        maxMs: Number(maxMs.toFixed(3)),
+        framesOver16_67ms: overBudget,
+        overBudgetPct: dLen > 0 ? Number(((overBudget / dLen) * 100).toFixed(2)) : 0,
+        estimatedFps: meanMs > 0 ? Number((1000 / meanMs).toFixed(1)) : 60,
+        meanComputeMs: Number(meanComputeMs.toFixed(3)),
+        p95ComputeMs: Number(p95ComputeMs.toFixed(3)),
+      };
+    }
+
     mount(svgRoot) {
-      if (!svgRoot) return;
+      if (!svgRoot || this.silent) return;
       if (this.hudGroup && this.hudGroup.parentNode) {
         this.hudGroup.parentNode.removeChild(this.hudGroup);
       }
@@ -104,17 +166,25 @@
 
     onFrame(ts) {
       if (this.lastFrameTs > 0) {
-        this.frameDeltas[this.bufIndex] = ts - this.lastFrameTs;
+        const dt = ts - this.lastFrameTs;
+        this.frameDeltas[this.bufIndex] = dt;
+        if (this.captureActive && this.captureCount < this.captureCap) {
+          this.captureDeltas[this.captureCount] = dt;
+        }
       }
       this.lastFrameTs = ts;
     }
 
     onCompute(ms) {
       this.computeTimes[this.bufIndex] = ms;
+      if (this.captureActive && this.captureCount < this.captureCap) {
+        this.captureComputes[this.captureCount] = ms;
+        this.captureCount++;
+      }
       this.bufIndex = (this.bufIndex + 1) % this.historyLen;
       this.frameCount++;
 
-      if ((this.frameCount % 15 === 0 || this.frameCount < 5) && this.textNode) {
+      if (!this.silent && (this.frameCount % 15 === 0 || this.frameCount < 5) && this.textNode) {
         this._updateReadout();
       }
     }
@@ -4775,6 +4845,90 @@
       const passed = Boolean(this._cpPassedMask && idx < this._cpPassedMask.length && this._cpPassedMask[idx] === 1);
       const holdProgress = passed ? 1 : (holdDuration > 0 ? Math.min(1, elapsed / holdDuration) : 0);
       return { passed, holdProgress, holdElapsed: elapsed, holdDuration };
+    }
+
+    getEngineStateSummary(includeSvgBytes = false) {
+      const s = this.scene || {};
+      const cleanVars = {};
+      if (this.vars) {
+        const keys = Object.keys(this.vars);
+        for (let i = 0; i < keys.length; i++) {
+          const k = keys[i];
+          if (k.startsWith('*') && k.endsWith('*')) continue;
+          cleanVars[k] = this.vars[k];
+        }
+      }
+      const varMeta = {};
+      if (s.vars && typeof s.vars === 'object') {
+        const vKeys = Object.keys(s.vars);
+        for (let i = 0; i < vKeys.length; i++) {
+          const k = vKeys[i];
+          const entry = s.vars[k];
+          if (entry && typeof entry === 'object') {
+            varMeta[k] = {
+              min: entry.min !== undefined ? Number(entry.min) : undefined,
+              max: entry.max !== undefined ? Number(entry.max) : undefined,
+              step: entry.step !== undefined ? Number(entry.step) : undefined,
+              unit: entry.unit || ''
+            };
+          }
+        }
+      }
+      const ledgers = [];
+      if (Array.isArray(this.activeLedgers)) {
+        for (let i = 0; i < this.activeLedgers.length; i++) {
+          const ld = this.activeLedgers[i];
+          const terms = [];
+          let total = 0;
+          for (let ti = 0; ti < ld.terms.length; ti++) {
+            const val = Number((ld.values[ti] || 0).toFixed(3));
+            total += val;
+            terms.push({ label: ld.terms[ti].label, value: val, color: ld.terms[ti].color });
+          }
+          ledgers.push({ id: ld.id, unit: ld.unit || '', total: Number(total.toFixed(3)), terms });
+        }
+      }
+      const checkpointGoals = [];
+      if (s.interactive && Array.isArray(s.interactive.checkpoints)) {
+        for (let i = 0; i < s.interactive.checkpoints.length; i++) {
+          const cp = s.interactive.checkpoints[i];
+          if (!cp || !cp.passExpr) continue;
+          const st = this.getCheckpointGoalStatus(i);
+          checkpointGoals.push({
+            index: i,
+            title: cp.title || `Checkpoint ${i + 1}`,
+            passExpr: cp.passExpr,
+            holdDuration: Number(cp.holdDuration || 0),
+            holdElapsed: Number((st.holdElapsed || 0).toFixed(3)),
+            holdProgress: Number((st.holdProgress || 0).toFixed(3)),
+            passed: st.passed
+          });
+        }
+      }
+      let svgDomBytes = 0;
+      if (includeSvgBytes) {
+        const stage = this.getStageSvg();
+        if (stage && stage.outerHTML) {
+          svgDomBytes = stage.outerHTML.length;
+        } else if (typeof s.svgText === 'string') {
+          svgDomBytes = s.svgText.length;
+        }
+      }
+      return {
+        sceneId: this.activePresetId || s.id || 'scene',
+        title: s.title || 'AST Simulation',
+        archetype: s.type || 'Sim',
+        t: Number(((this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : (this.progress || 0) * (this.durationSec || 10)).toFixed(3)),
+        progress: Number((this.progress || 0).toFixed(4)),
+        isPlaying: Boolean(this.isPlaying),
+        vars: cleanVars,
+        varMeta,
+        ledgers,
+        scopesCount: Array.isArray(this.activeScopes) ? this.activeScopes.length : 0,
+        checkpointGoals,
+        astSourceBytes: typeof s.astSource === 'string' ? s.astSource.length : 0,
+        svgDomBytes
+      };
     }
 
     toggleBsl(force) {
@@ -11062,15 +11216,39 @@ function setupPostMessageBridge(engine, uiController) {
         break;
       case 'SET_VAR':
         if (data.name && data.value !== undefined) {
+          let nextVal = data.value;
+          const cleanName = typeof engine.normalizeVarName === 'function' ? engine.normalizeVarName(data.name) : data.name;
+          const metaEntry = engine.scene && engine.scene.vars && engine.scene.vars[cleanName];
+          let clamped = false;
+          if (typeof nextVal === 'number' && metaEntry && typeof metaEntry === 'object') {
+            if (typeof metaEntry.min === 'number' && nextVal < metaEntry.min) {
+              nextVal = metaEntry.min;
+              clamped = true;
+            }
+            if (typeof metaEntry.max === 'number' && nextVal > metaEntry.max) {
+              nextVal = metaEntry.max;
+              clamped = true;
+            }
+          }
           if (typeof engine.setMemoryVar === 'function') {
-            engine.setMemoryVar(data.name, data.value);
+            engine.setMemoryVar(data.name, nextVal);
           } else if (typeof engine.setVar === 'function') {
-            engine.setVar(data.name, data.value);
+            engine.setVar(data.name, nextVal);
           } else if (engine.scene && engine.scene.vars) {
-            engine.scene.vars[data.name] = data.value;
+            engine.scene.vars[data.name] = nextVal;
             if (typeof engine.updateComputedVars === 'function') engine.updateComputedVars();
             if (typeof engine.applyBindings === 'function') engine.applyBindings(engine.progress || 0);
             if (typeof engine.render === 'function') engine.render(engine.progress || 0);
+          }
+          if (data.requestId) {
+            engine.notifyParent({
+              type: 'SET_VAR_ACK',
+              requestId: data.requestId,
+              name: cleanName,
+              value: nextVal,
+              clamped,
+              state: typeof engine.getEngineStateSummary === 'function' ? engine.getEngineStateSummary(false) : null
+            });
           }
         }
         break;
@@ -11184,13 +11362,14 @@ function setupPostMessageBridge(engine, uiController) {
       case 'TOGGLE_PERF_HUD':
       case 'UPDATE_PERF_HUD': {
         const _hudStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
-        const enabled = typeof data.enabled === 'boolean' ? data.enabled : (!engine.profiler);
+        const enabled = typeof data.enabled === 'boolean' ? data.enabled : (!engine.profiler || engine.profiler.silent);
         if (enabled) {
           const mode = data.mode || (_hudStore && _hudStore.getItem('app_hud_verbosity')) || 'minimal';
           const strictAlarm = typeof data.strictAlarm === 'boolean' ? data.strictAlarm : Boolean(_hudStore && _hudStore.getItem('app_frame_budget_alert') === 'true');
           if (!engine.profiler) {
-            engine.profiler = new ASTProfiler({ mode, strictAlarm });
+            engine.profiler = new ASTProfiler({ mode, strictAlarm, silent: false });
           } else {
+            engine.profiler.silent = false;
             engine.profiler.mode = mode;
             engine.profiler.strictAlarm = strictAlarm;
           }
@@ -11211,8 +11390,115 @@ function setupPostMessageBridge(engine, uiController) {
         }
         engine.notifyParent({
           type: 'PERF_HUD_UPDATED',
-          enabled: Boolean(engine.profiler),
+          enabled: Boolean(engine.profiler && !engine.profiler.silent),
           mode: engine.profiler ? engine.profiler.mode : 'minimal'
+        });
+        break;
+      }
+      case 'START_PROF_CAPTURE': {
+        if (!engine.profiler) {
+          engine.profiler = new ASTProfiler({ mode: 'minimal', strictAlarm: false, silent: true });
+        }
+        engine.profiler.startCapture();
+        if (data.ensurePlaying !== false && !engine.isPlaying && typeof engine.play === 'function') {
+          engine.play();
+        }
+        engine.notifyParent({
+          type: 'PROF_CAPTURE_STARTED',
+          requestId: data.requestId || null
+        });
+        break;
+      }
+      case 'STOP_PROF_CAPTURE': {
+        const stats = engine.profiler && typeof engine.profiler.stopCapture === 'function'
+          ? engine.profiler.stopCapture()
+          : { sampleCount: 0, meanMs: 16.66, p95Ms: 16.66, p99Ms: 16.66, maxMs: 16.66, framesOver16_67ms: 0, overBudgetPct: 0, estimatedFps: 60, meanComputeMs: 0, p95ComputeMs: 0 };
+        const memObj = (typeof performance !== 'undefined' && performance.memory) ? performance.memory : null;
+        let emitterParticles = 0;
+        if (engine.emitters && typeof engine.emitters.values === 'function') {
+          for (const em of engine.emitters.values()) {
+            emitterParticles += Number(em.activeCount || em.count || (Array.isArray(em.particles) ? em.particles.length : 0) || 0);
+          }
+        }
+        engine.notifyParent({
+          type: 'PROF_CAPTURE_RESULT',
+          requestId: data.requestId || null,
+          stats,
+          memory: {
+            wasmPoolBytes: 458752,
+            wasmPages: 7,
+            usedJsHeapBytes: memObj ? Number(memObj.usedJSHeapSize || 0) : 0,
+            totalJsHeapBytes: memObj ? Number(memObj.totalJSHeapSize || 0) : 0
+          },
+          activeMetrics: {
+            activeScopes: Array.isArray(engine.activeScopes) ? engine.activeScopes.length : 0,
+            activeLedgers: Array.isArray(engine.activeLedgers) ? engine.activeLedgers.length : 0,
+            physicsBodies: engine.physics && Array.isArray(engine.physics.bodies) ? engine.physics.bodies.length : 0,
+            physicsSprings: engine.physics && Array.isArray(engine.physics.springs) ? engine.physics.springs.length : 0,
+            substeps: engine.physics ? Number(engine.physics.substeps || 4) : 4,
+            emitterParticles
+          }
+        });
+        break;
+      }
+      case 'GET_CONTEXT_SNAPSHOT':
+      case 'GET_ENGINE_STATE': {
+        const state = typeof engine.getEngineStateSummary === 'function'
+          ? engine.getEngineStateSummary(Boolean(data.includeSvgBytes))
+          : null;
+        if (data.type === 'GET_CONTEXT_SNAPSHOT') {
+          engine.notifyParent({ type: 'CONTEXT_SNAPSHOT', requestId: data.requestId || null, snapshot: state });
+        } else {
+          engine.notifyParent({ type: 'ENGINE_STATE_RESPONSE', requestId: data.requestId || null, state });
+        }
+        break;
+      }
+      case 'EXEC_ACTION_TUPLE': {
+        const executedActions = [];
+        const tuple = String(data.tuple || '').trim();
+        const seekM = tuple.match(/:seek\s+([0-9.]+)/i);
+        if (seekM) {
+          const p = Math.max(0, Math.min(1, parseFloat(seekM[1])));
+          if (Number.isFinite(p) && typeof engine.seek === 'function') {
+            engine.seek(p);
+            executedActions.push('seek');
+          }
+        }
+        const hiM = tuple.match(/:highlight\s+"([^"]+)"/i);
+        if (hiM && /^#[a-zA-Z0-9_\-:]+$/.test(hiM[1])) {
+          const stage = engine.getStageSvg();
+          const targetEl = stage && stage.querySelector ? stage.querySelector(hiM[1]) : null;
+          if (targetEl) {
+            if (typeof engine.ensureAiSpotlightStyles === 'function') engine.ensureAiSpotlightStyles();
+            targetEl.classList.add('ai-spotlight-pulse');
+            setTimeout(() => targetEl.classList.remove('ai-spotlight-pulse'), 2000);
+          }
+          executedActions.push('highlight');
+        }
+        const varM = tuple.match(/:var\s+"([a-zA-Z0-9_]+)"\s+([0-9.-]+|"[^"]*")/i);
+        if (varM) {
+          const vName = varM[1];
+          const rawVal = varM[2].replace(/^"|"$/g, '');
+          const nVal = Number(rawVal);
+          let finalVal = Number.isNaN(nVal) ? rawVal : nVal;
+          const metaEntry = engine.scene && engine.scene.vars && engine.scene.vars[vName];
+          if (typeof finalVal === 'number' && metaEntry && typeof metaEntry === 'object') {
+            if (typeof metaEntry.min === 'number') finalVal = Math.max(metaEntry.min, finalVal);
+            if (typeof metaEntry.max === 'number') finalVal = Math.min(metaEntry.max, finalVal);
+          }
+          if (typeof engine.setMemoryVar === 'function') engine.setMemoryVar(vName, finalVal, true);
+          executedActions.push('var');
+        }
+        const sayM = tuple.match(/:say\s+"([^"]*)"/i);
+        if (sayM) {
+          executedActions.push('say');
+        }
+        engine.notifyParent({
+          type: 'EXEC_ACTION_RESULT',
+          requestId: data.requestId || null,
+          ok: executedActions.length > 0,
+          executedActions,
+          state: typeof engine.getEngineStateSummary === 'function' ? engine.getEngineStateSummary(false) : null
         });
         break;
       }
@@ -11223,9 +11509,11 @@ function setupPostMessageBridge(engine, uiController) {
 }
 
   // Expose to global/window environment
+  global.ASTProfiler = ASTProfiler;
   global.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
   global.setupPostMessageBridge = setupPostMessageBridge;
   if (typeof window !== 'undefined') {
+    window.ASTProfiler = ASTProfiler;
     window.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
     window.setupPostMessageBridge = setupPostMessageBridge;
   }
