@@ -196,17 +196,36 @@
   class VectorMicroPhysics {
     constructor(engine, options = {}) {
       this.engine = engine;
-      this.gravity = options.gravity !== undefined ? options.gravity : 980; // px/sec² (~9.8 m/s²)
-      this.friction = options.friction !== undefined ? options.friction : 0.985;
-      this.groundY = options.groundY !== undefined ? options.groundY : 420;
+      this.gravity = options.gravity !== undefined ? Number(options.gravity) : 980; // px/sec² (~9.8 m/s²)
+      this.restitution = options.restitution !== undefined
+        ? Math.max(0, Math.min(1.0, Number(options.restitution)))
+        : (options.bounce !== undefined ? Math.max(0, Math.min(1.0, Number(options.bounce))) : 0.45);
+      this.friction = options.friction !== undefined ? Math.max(0, Number(options.friction)) : 0.25;
+      this.drag = options.drag !== undefined ? Math.max(0, Number(options.drag)) : 0.0;
+      this.stiffness = options.stiffness !== undefined ? Math.max(0, Number(options.stiffness)) : 120;
+      this.damping = options.damping !== undefined ? Math.max(0, Number(options.damping)) : 4.0;
+      this.groundY = options.groundY !== undefined ? Number(options.groundY) : 420;
       this.enabled = options.enabled !== false;
+      this.substeps = options.substeps !== undefined ? Math.max(1, Math.min(32, Math.round(Number(options.substeps) || 4))) : 4;
+      this.fixedDt = 1 / (60 * this.substeps); // 1/240s at default 4 substeps per 60 FPS frame
+      this.maxFrameDt = 0.05;
+      this.accumulator = 0;
+      this.lastSubstepsExecuted = 0;
+      this.slop = options.slop !== undefined ? Math.max(0, Number(options.slop)) : 0.05;
+      this.correctionPercent = 0.8;
+      this.squashGain = options.squashGain !== undefined ? Math.max(0, Number(options.squashGain)) : 0.35;
+      this.squashDecayRate = 18.0;
       this.bounds = Object.assign({ minX: 10, maxX: 790, minY: 0, maxY: 480 }, options.bounds || {});
       this.bodies = [];
+      this.springs = [];
       this.initialStates = new Map();
+      this._dirty = true;
+      this._spDirty = true;
     }
 
     addBody(config = {}) {
       const id = config.id || (config.target ? String(config.target).replace(/^[#\.]/, '') : `body_${this.bodies.length + 1}`);
+      const restRaw = config.restitution !== undefined ? config.restitution : (config.bounce !== undefined ? config.bounce : this.restitution);
       const body = {
         id,
         target: config.target || `#${id}`,
@@ -215,42 +234,100 @@
         vx: Number(config.vx) || 0,
         vy: Number(config.vy) || 0,
         mass: Math.max(0.01, Number(config.mass) || 1.0),
-        bounce: config.bounce !== undefined ? Number(config.bounce) : 0.45,
-        friction: config.friction !== undefined ? Number(config.friction) : this.friction,
+        bounce: Math.max(0.0, Math.min(1.0, Number(restRaw))),
+        restitution: Math.max(0.0, Math.min(1.0, Number(restRaw))),
+        friction: config.friction !== undefined ? Math.max(0, Number(config.friction)) : this.friction,
         groundY: config.groundY !== undefined ? Number(config.groundY) : this.groundY,
-        radius: Number(config.radius) || 16,
+        radius: Math.max(0.5, Number(config.radius) || 16),
+        originX: Number(config.originX) || 0,
+        originY: Number(config.originY) || 0,
+        squash: 0,
         isGrounded: false,
-        isStatic: Boolean(config.isStatic),
-        element: null
+        isStatic: Boolean(config.isStatic || config.static),
+        element: null,
+        _matrixBuf: new Float32Array([1, 0, 0, 1, Number(config.x) || 0, Number(config.y) || 0]),
+        _lastTransform: ''
       };
 
       this.removeBody(body.id);
       this.bodies.push(body);
-      this.initialStates.set(body.id, Object.assign({}, body, { element: null }));
+      this.initialStates.set(body.id, Object.assign({}, body, { element: null, _matrixBuf: null }));
+      this._dirty = true;
+
+      if (config.stiffness !== undefined || config.anchorX !== undefined || config.anchorY !== undefined) {
+        const ax = config.anchorX !== undefined ? Number(config.anchorX) : body.x;
+        const ay = config.anchorY !== undefined ? Number(config.anchorY) : body.y;
+        const dx = body.x - ax;
+        const dy = body.y - ay;
+        const len = config.length !== undefined ? Number(config.length) : Math.hypot(dx, dy);
+        this.addSpring({
+          b: body.id,
+          anchorX: ax,
+          anchorY: ay,
+          length: len,
+          stiffness: config.stiffness !== undefined ? Number(config.stiffness) : this.stiffness,
+          damping: config.damping !== undefined ? Number(config.damping) : this.damping
+        });
+      }
       return body;
+    }
+
+    addSpring(config = {}) {
+      const spring = {
+        id: config.id || `spring_${this.springs.length + 1}`,
+        a: config.a || config.bodyA || config.from || null,
+        b: config.b || config.bodyB || config.target || config.to || null,
+        anchorX: Number(config.anchorX) || 0,
+        anchorY: Number(config.anchorY) || 0,
+        length: config.length !== undefined ? Math.max(0, Number(config.length)) : null,
+        stiffness: config.stiffness !== undefined ? Math.max(0, Number(config.stiffness)) : this.stiffness,
+        damping: config.damping !== undefined ? Math.max(0, Number(config.damping)) : this.damping,
+        lineTarget: config.line || config.lineTarget || null,
+        lineElement: null
+      };
+      this.springs.push(spring);
+      this._spDirty = true;
+      return spring;
     }
 
     removeBody(idOrTarget) {
       this.bodies = this.bodies.filter(b => b.id !== idOrTarget && b.target !== idOrTarget);
       this.initialStates.delete(idOrTarget);
+      this._dirty = true;
+      this._spDirty = true;
     }
 
     clear() {
       this.bodies = [];
+      this.springs = [];
       this.initialStates.clear();
+      this.accumulator = 0;
+      this.lastSubstepsExecuted = 0;
+      this._dirty = true;
+      this._spDirty = true;
     }
 
     reset() {
-      for (const b of this.bodies) {
+      this.accumulator = 0;
+      this.lastSubstepsExecuted = 0;
+      for (let i = 0; i < this.bodies.length; i++) {
+        const b = this.bodies[i];
         const init = this.initialStates.get(b.id);
         if (init) {
           b.x = init.x;
           b.y = init.y;
           b.vx = init.vx;
           b.vy = init.vy;
+          b.squash = 0;
           b.isGrounded = false;
+          if (b._matrixBuf) {
+            b._matrixBuf[0] = 1; b._matrixBuf[1] = 0;
+            b._matrixBuf[2] = 0; b._matrixBuf[3] = 1;
+            b._matrixBuf[4] = b.x - b.originX; b._matrixBuf[5] = b.y - b.originY;
+          }
         }
       }
+      this._dirty = true;
     }
 
     applyImpulse(idOrTarget, fx, fy) {
@@ -259,6 +336,7 @@
         b.vx += Number(fx || 0) / b.mass;
         b.vy += Number(fy || 0) / b.mass;
         b.isGrounded = false;
+        this._dirty = true;
       }
     }
 
@@ -267,220 +345,599 @@
       if (b && !b.isStatic && b.isGrounded) {
         b.vy = jumpVelocity;
         b.isGrounded = false;
+        this._dirty = true;
         return true;
       }
       return false;
     }
 
     setGravity(g) {
-      this.gravity = parseFloat(g) || 0;
+      this.gravity = Number.isFinite(parseFloat(g)) ? parseFloat(g) : 0;
     }
 
     setRestitution(bounce) {
-      const bVal = Math.max(0, Math.min(1.0, parseFloat(bounce) || 0));
-      for (const b of this.bodies) {
-        b.bounce = bVal;
+      const bVal = Math.max(0, Math.min(1.0, Number.isFinite(parseFloat(bounce)) ? parseFloat(bounce) : 0));
+      this.restitution = bVal;
+      for (let i = 0; i < this.bodies.length; i++) {
+        this.bodies[i].bounce = bVal;
+        this.bodies[i].restitution = bVal;
       }
+      this._dirty = true;
     }
 
     setFriction(friction) {
-      const fVal = Math.max(0.5, Math.min(1.0, parseFloat(friction) || 0.985));
+      const fVal = Math.max(0.0, Math.min(2.0, Number.isFinite(parseFloat(friction)) ? parseFloat(friction) : 0.25));
       this.friction = fVal;
-      for (const b of this.bodies) {
-        b.friction = fVal;
+      for (let i = 0; i < this.bodies.length; i++) {
+        this.bodies[i].friction = fVal;
       }
+      this._dirty = true;
+    }
+
+    setSubsteps(substeps) {
+      const s = Math.max(1, Math.min(32, Math.round(Number(substeps) || 4)));
+      this.substeps = s;
+      this.fixedDt = 1 / (60 * s);
     }
 
     _ensureBuffers() {
       const n = this.bodies.length;
       if (!this._bufferCapacity || this._bufferCapacity < n) {
         this._bufferCapacity = Math.max(32, Math.pow(2, Math.ceil(Math.log2(Math.max(1, n)))));
-        this._bufX = new Float32Array(this._bufferCapacity);
-        this._bufY = new Float32Array(this._bufferCapacity);
-        this._bufVx = new Float32Array(this._bufferCapacity);
-        this._bufVy = new Float32Array(this._bufferCapacity);
-        this._bufRadius = new Float32Array(this._bufferCapacity);
-        this._bufMass = new Float32Array(this._bufferCapacity);
-        this._bufBounce = new Float32Array(this._bufferCapacity);
-        this._bufFriction = new Float32Array(this._bufferCapacity);
-        this._bufGroundY = new Float32Array(this._bufferCapacity);
-        this._bufFlags = new Uint8Array(this._bufferCapacity); // bit 0: isStatic, bit 1: isGrounded
+        const cap = this._bufferCapacity;
+        this._bufX = new Float32Array(cap);
+        this._bufY = new Float32Array(cap);
+        this._bufVx = new Float32Array(cap);
+        this._bufVy = new Float32Array(cap);
+        this._bufFx = new Float32Array(cap);
+        this._bufFy = new Float32Array(cap);
+        this._bufRadius = new Float32Array(cap);
+        this._bufMass = new Float32Array(cap);
+        this._bufInvMass = new Float32Array(cap);
+        this._bufBounce = new Float32Array(cap);
+        this._bufFriction = new Float32Array(cap);
+        this._bufGroundY = new Float32Array(cap);
+        this._bufOriginX = new Float32Array(cap);
+        this._bufOriginY = new Float32Array(cap);
+        this._bufSquash = new Float32Array(cap);
+        this._bufSquashNx = new Float32Array(cap);
+        this._bufSquashNy = new Float32Array(cap);
+        this._bufFlags = new Uint8Array(cap); // bit 0: isStatic, bit 1: isGrounded
       }
 
-      for (let i = 0; i < n; i++) {
-        const b = this.bodies[i];
-        this._bufX[i] = b.x;
-        this._bufY[i] = b.y;
-        this._bufVx[i] = b.vx;
-        this._bufVy[i] = b.vy;
-        this._bufRadius[i] = b.radius;
-        this._bufMass[i] = b.mass;
-        this._bufBounce[i] = b.bounce;
-        this._bufFriction[i] = b.friction;
-        this._bufGroundY[i] = b.groundY !== undefined ? b.groundY : this.groundY;
-        this._bufFlags[i] = (b.isStatic ? 1 : 0) | (b.isGrounded ? 2 : 0);
+      if (this._dirty) {
+        for (let i = 0; i < n; i++) {
+          const b = this.bodies[i];
+          this._bufX[i] = b.x;
+          this._bufY[i] = b.y;
+          this._bufVx[i] = b.vx;
+          this._bufVy[i] = b.vy;
+          this._bufRadius[i] = b.radius;
+          this._bufMass[i] = b.mass;
+          this._bufInvMass[i] = b.isStatic ? 0 : (1 / b.mass);
+          this._bufBounce[i] = b.bounce;
+          this._bufFriction[i] = b.friction;
+          this._bufGroundY[i] = b.groundY !== undefined ? b.groundY : this.groundY;
+          this._bufOriginX[i] = b.originX || 0;
+          this._bufOriginY[i] = b.originY || 0;
+          this._bufSquash[i] = b.squash || 0;
+          this._bufSquashNx[i] = 0;
+          this._bufSquashNy[i] = 1;
+          this._bufFlags[i] = (b.isStatic ? 1 : 0) | (b.isGrounded ? 2 : 0);
+        }
+        this._dirty = false;
+      }
+
+      const sc = this.springs.length;
+      if (sc > 0 && (!this._spCapacity || this._spCapacity < sc)) {
+        this._spCapacity = Math.max(16, Math.pow(2, Math.ceil(Math.log2(sc))));
+        const scap = this._spCapacity;
+        this._spIdxA = new Int32Array(scap);
+        this._spIdxB = new Int32Array(scap);
+        this._spAnchorX = new Float32Array(scap);
+        this._spAnchorY = new Float32Array(scap);
+        this._spRestLen = new Float32Array(scap);
+        this._spStiffness = new Float32Array(scap);
+        this._spDamping = new Float32Array(scap);
+      }
+
+      if (sc > 0 && this._spDirty) {
+        for (let s = 0; s < sc; s++) {
+          const sp = this.springs[s];
+          let idxA = -1;
+          let idxB = -1;
+          for (let i = 0; i < n; i++) {
+            const b = this.bodies[i];
+            if (sp.a !== null && (b.id === sp.a || b.target === sp.a)) idxA = i;
+            if (sp.b !== null && (b.id === sp.b || b.target === sp.b)) idxB = i;
+          }
+          this._spIdxA[s] = idxA;
+          this._spIdxB[s] = idxB;
+          this._spAnchorX[s] = sp.anchorX;
+          this._spAnchorY[s] = sp.anchorY;
+          if (sp.length !== null) {
+            this._spRestLen[s] = sp.length;
+          } else if (idxB >= 0) {
+            const ax = idxA >= 0 ? this._bufX[idxA] : sp.anchorX;
+            const ay = idxA >= 0 ? this._bufY[idxA] : sp.anchorY;
+            this._spRestLen[s] = Math.hypot(this._bufX[idxB] - ax, this._bufY[idxB] - ay);
+          } else {
+            this._spRestLen[s] = 0;
+          }
+          this._spStiffness[s] = sp.stiffness;
+          this._spDamping[s] = sp.damping;
+        }
+        this._spDirty = false;
       }
     }
 
-    update(dt) {
-      if (!this.enabled || dt <= 0 || this.bodies.length === 0) return;
-      const root = (this.engine && this.engine.container) || (typeof document !== 'undefined' ? document : null);
-      if (!root) return;
-
-      const n = this.bodies.length;
-
-      // ⚡ High-Performance WebAssembly MicroPhysics Acceleration (docs/WASM_ARCHITECTURE_CONTRACT.md Page 3)
-      if (typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
-        if (window.ASTWasmBridge.microPhysicsStep(this.bodies, dt, this.gravity, this.bounds)) {
-          for (let i = 0; i < n; i++) {
-            const b = this.bodies[i];
-            let el = b.element;
-            if (!el && b.target) {
-              el = typeof b.target === 'string' ? root.querySelector(b.target) : b.target;
-              b.element = el;
-            }
-            if (el) {
-              el.setAttribute('cx', b.x.toFixed(1));
-              el.setAttribute('cy', b.y.toFixed(1));
-              el.setAttribute('transform', `translate(${b.x.toFixed(1)}, ${b.y.toFixed(1)})`);
-            }
-          }
-          return;
+    compileSquashMatrix6(vx, vy, squash, tx, ty, outMatrix, originX = 0, originY = 0) {
+      const sq = squash > 0.45 ? 0.45 : (squash < -0.45 ? -0.45 : squash);
+      let a = 1;
+      let b = 0;
+      let c = 0;
+      let d = 1;
+      if (sq > 0.0001 || sq < -0.0001) {
+        const spSq = vx * vx + vy * vy;
+        let ux = 0;
+        let uy = 1;
+        if (spSq > 1e-8) {
+          const inv = 1 / Math.sqrt(spSq);
+          ux = vx * inv;
+          uy = vy * inv;
         }
+        const sPar = 1 - sq;
+        const sPerp = 1 / sPar;
+        const diff = sPar - sPerp;
+        a = sPar * ux * ux + sPerp * uy * uy;
+        b = diff * ux * uy;
+        c = b;
+        d = sPar * uy * uy + sPerp * ux * ux;
       }
-      this._ensureBuffers();
+      outMatrix[0] = a;
+      outMatrix[1] = b;
+      outMatrix[2] = c;
+      outMatrix[3] = d;
+      outMatrix[4] = tx - (a * originX + c * originY);
+      outMatrix[5] = ty - (b * originX + d * originY);
+      return outMatrix;
+    }
 
+    _stepSubstep(dt) {
+      const n = this.bodies.length;
       const bufX = this._bufX;
       const bufY = this._bufY;
       const bufVx = this._bufVx;
       const bufVy = this._bufVy;
+      const bufFx = this._bufFx;
+      const bufFy = this._bufFy;
       const bufRadius = this._bufRadius;
       const bufMass = this._bufMass;
+      const bufInvMass = this._bufInvMass;
       const bufBounce = this._bufBounce;
       const bufFriction = this._bufFriction;
       const bufGroundY = this._bufGroundY;
+      const bufSquash = this._bufSquash;
+      const bufSquashNx = this._bufSquashNx;
+      const bufSquashNy = this._bufSquashNy;
       const bufFlags = this._bufFlags;
 
       const g = this.gravity;
       const minXBound = this.bounds.minX;
       const maxXBound = this.bounds.maxX;
+      const minYBound = this.bounds.minY;
+      const slop = this.slop;
+      const pct = this.correctionPercent;
+      const dragRate = this.drag;
+      const sqDecay = Math.exp(-this.squashDecayRate * dt);
 
-      // --- PASS 1: Native Contiguous Integration (SIMD Cache Friendly) ---
+      // --- PASS 1A: Force Accumulation (Gravity + Damped Hookean Springs F = -kx - cv) ---
       for (let i = 0; i < n; i++) {
-        if ((bufFlags[i] & 1) !== 0) continue; // static
+        bufFx[i] = 0;
+        bufFy[i] = (bufFlags[i] & 1) !== 0 ? 0 : bufMass[i] * g;
+      }
 
-        // 1. Gravity acceleration
-        bufVy[i] += g * dt;
-
-        // 2. Air resistance damping
-        const drag = Math.pow(bufFriction[i], dt * 60);
-        bufVx[i] *= drag;
-        bufVy[i] *= drag;
-
-        // 3. Integrate position
-        bufX[i] += bufVx[i] * dt;
-        bufY[i] += bufVy[i] * dt;
-
-        // 4. Ground collision
-        const effectiveGround = bufGroundY[i];
-        const r = bufRadius[i];
-        const bounce = bufBounce[i];
-
-        if (bufY[i] >= effectiveGround) {
-          bufY[i] = effectiveGround;
-          bufVy[i] = -bufVy[i] * bounce;
-          bufVx[i] *= 0.92;
-          if (Math.abs(bufVy[i]) < 20) {
-            bufVy[i] = 0;
-            bufFlags[i] |= 2; // isGrounded
+      const sc = this.springs.length;
+      if (sc > 0) {
+        const spA = this._spIdxA;
+        const spB = this._spIdxB;
+        const spAx = this._spAnchorX;
+        const spAy = this._spAnchorY;
+        const spLen = this._spRestLen;
+        const spK = this._spStiffness;
+        const spC = this._spDamping;
+        for (let s = 0; s < sc; s++) {
+          const iB = spB[s];
+          if (iB < 0) continue;
+          const iA = spA[s];
+          const ax = iA >= 0 ? bufX[iA] : spAx[s];
+          const ay = iA >= 0 ? bufY[iA] : spAy[s];
+          const avx = iA >= 0 ? bufVx[iA] : 0;
+          const avy = iA >= 0 ? bufVy[iA] : 0;
+          const dx = bufX[iB] - ax;
+          const dy = bufY[iB] - ay;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          const k = spK[s];
+          const c = spC[s];
+          let fx = 0;
+          let fy = 0;
+          if (dist > 1e-6) {
+            const invD = 1 / dist;
+            const ux = dx * invD;
+            const uy = dy * invD;
+            const ext = dist - spLen[s];
+            const vRel = (bufVx[iB] - avx) * ux + (bufVy[iB] - avy) * uy;
+            const fMag = -k * ext - c * vRel;
+            fx = fMag * ux;
+            fy = fMag * uy;
           } else {
-            bufFlags[i] &= ~2;
+            fx = -k * dx - c * (bufVx[iB] - avx);
+            fy = -k * dy - c * (bufVy[iB] - avy);
           }
-        } else {
-          bufFlags[i] &= ~2;
-        }
-
-        // 5. Canvas horizontal boundaries bounce
-        if (bufX[i] < minXBound + r) {
-          bufX[i] = minXBound + r;
-          bufVx[i] = -bufVx[i] * bounce;
-        } else if (bufX[i] > maxXBound - r) {
-          bufX[i] = maxXBound - r;
-          bufVx[i] = -bufVx[i] * bounce;
+          if ((bufFlags[iB] & 1) === 0) {
+            bufFx[iB] += fx;
+            bufFy[iB] += fy;
+          }
+          if (iA >= 0 && (bufFlags[iA] & 1) === 0) {
+            bufFx[iA] -= fx;
+            bufFy[iA] -= fy;
+          }
         }
       }
 
-      // --- PASS 2: Contiguous Circle Collision Physics Resolution ---
+      // --- PASS 1B: Semi-Implicit Euler Integration & Boundary Impulse Resolution ---
+      const restThresh = Math.abs(g) * dt * 2.5;
+      for (let i = 0; i < n; i++) {
+        if ((bufFlags[i] & 1) !== 0) continue;
+
+        const invM = bufInvMass[i];
+        let vx = bufVx[i] + bufFx[i] * invM * dt;
+        let vy = bufVy[i] + bufFy[i] * invM * dt;
+        if (dragRate > 0) {
+          const dMul = Math.max(0, 1 - dragRate * dt);
+          vx *= dMul;
+          vy *= dMul;
+        }
+        bufVx[i] = vx;
+        bufVy[i] = vy;
+
+        bufX[i] += vx * dt;
+        bufY[i] += vy * dt;
+
+        if (bufSquash[i] > 0) {
+          const sqNext = bufSquash[i] * sqDecay;
+          bufSquash[i] = sqNext < 0.001 ? 0 : sqNext;
+        }
+        bufFlags[i] &= ~2;
+
+        const r = bufRadius[i];
+        const e = bufBounce[i];
+        const mu = bufFriction[i];
+        const groundCenterY = bufGroundY[i] - r;
+
+        // Ground contact
+        if (bufY[i] >= groundCenterY) {
+          const pen = bufY[i] - groundCenterY;
+          if (pen > slop) {
+            bufY[i] -= (pen - slop) * pct;
+          }
+          const vn = bufVy[i];
+          if (vn > 0) {
+            const eEff = (g > 0 && vn < restThresh) ? 0 : e;
+            const dvN = (1 + eEff) * vn;
+            if (eEff === 0 && g > 0) {
+              bufVy[i] = 0;
+              bufFlags[i] |= 2;
+            } else {
+              bufVy[i] = -vn * eEff;
+            }
+            if (vn > 25 && this.squashGain > 0) {
+              const impSq = Math.min(0.42, (vn / 600) * this.squashGain);
+              if (impSq > bufSquash[i]) {
+                bufSquash[i] = impSq;
+                const sp = Math.sqrt(vx * vx + vn * vn);
+                bufSquashNx[i] = sp > 1e-4 ? (vx / sp) : 0;
+                bufSquashNy[i] = sp > 1e-4 ? (vn / sp) : 1;
+              }
+            }
+            const normalDv = Math.max(dvN, Math.abs(g) * dt);
+            const maxFricDv = mu * normalDv;
+            const curVx = bufVx[i];
+            if (Math.abs(curVx) <= maxFricDv) {
+              bufVx[i] = 0;
+            } else {
+              bufVx[i] = curVx - (curVx > 0 ? maxFricDv : -maxFricDv);
+            }
+          } else if (g > 0 && Math.abs(vn) <= restThresh) {
+            bufVy[i] = 0;
+            bufFlags[i] |= 2;
+            const maxFricDv = mu * Math.abs(g) * dt;
+            const curVx = bufVx[i];
+            if (Math.abs(curVx) <= maxFricDv) {
+              bufVx[i] = 0;
+            } else {
+              bufVx[i] = curVx - (curVx > 0 ? maxFricDv : -maxFricDv);
+            }
+          }
+        } else if (bufY[i] <= minYBound + r) {
+          const pen = (minYBound + r) - bufY[i];
+          if (pen > slop) {
+            bufY[i] += (pen - slop) * pct;
+          }
+          const vn = -bufVy[i];
+          if (vn > 0) {
+            const dvN = (1 + e) * vn;
+            bufVy[i] = vn * e;
+            if (vn > 25 && this.squashGain > 0) {
+              const impSq = Math.min(0.42, (vn / 600) * this.squashGain);
+              if (impSq > bufSquash[i]) {
+                bufSquash[i] = impSq;
+                const sp = Math.sqrt(vx * vx + vn * vn);
+                bufSquashNx[i] = sp > 1e-4 ? (vx / sp) : 0;
+                bufSquashNy[i] = sp > 1e-4 ? (-vn / sp) : -1;
+              }
+            }
+            const maxFricDv = mu * dvN;
+            const curVx = bufVx[i];
+            if (Math.abs(curVx) <= maxFricDv) bufVx[i] = 0;
+            else bufVx[i] = curVx - (curVx > 0 ? maxFricDv : -maxFricDv);
+          }
+        }
+
+        // Left / right wall contacts
+        if (bufX[i] <= minXBound + r) {
+          const pen = (minXBound + r) - bufX[i];
+          if (pen > slop) {
+            bufX[i] += (pen - slop) * pct;
+          }
+          const vn = -bufVx[i];
+          if (vn > 0) {
+            const dvN = (1 + e) * vn;
+            bufVx[i] = vn * e;
+            if (vn > 25 && this.squashGain > 0) {
+              const impSq = Math.min(0.42, (vn / 600) * this.squashGain);
+              if (impSq > bufSquash[i]) {
+                bufSquash[i] = impSq;
+                const sp = Math.sqrt(vn * vn + vy * vy);
+                bufSquashNx[i] = sp > 1e-4 ? (-vn / sp) : -1;
+                bufSquashNy[i] = sp > 1e-4 ? (vy / sp) : 0;
+              }
+            }
+            const maxFricDv = mu * dvN;
+            const curVy = bufVy[i];
+            if (Math.abs(curVy) <= maxFricDv) bufVy[i] = 0;
+            else bufVy[i] = curVy - (curVy > 0 ? maxFricDv : -maxFricDv);
+          }
+        } else if (bufX[i] >= maxXBound - r) {
+          const pen = bufX[i] - (maxXBound - r);
+          if (pen > slop) {
+            bufX[i] -= (pen - slop) * pct;
+          }
+          const vn = bufVx[i];
+          if (vn > 0) {
+            const dvN = (1 + e) * vn;
+            bufVx[i] = -vn * e;
+            if (vn > 25 && this.squashGain > 0) {
+              const impSq = Math.min(0.42, (vn / 600) * this.squashGain);
+              if (impSq > bufSquash[i]) {
+                bufSquash[i] = impSq;
+                const sp = Math.sqrt(vn * vn + vy * vy);
+                bufSquashNx[i] = sp > 1e-4 ? (vn / sp) : 1;
+                bufSquashNy[i] = sp > 1e-4 ? (vy / sp) : 0;
+              }
+            }
+            const maxFricDv = mu * dvN;
+            const curVy = bufVy[i];
+            if (Math.abs(curVy) <= maxFricDv) bufVy[i] = 0;
+            else bufVy[i] = curVy - (curVy > 0 ? maxFricDv : -maxFricDv);
+          }
+        }
+      }
+
+      // --- PASS 2: Contiguous Circle-Circle Impulse Restitution & Coulomb Friction ---
       for (let i = 0; i < n; i++) {
         const isStatic1 = (bufFlags[i] & 1) !== 0;
         const r1 = bufRadius[i];
-        const m1 = bufMass[i];
+        const invM1 = bufInvMass[i];
         const bnc1 = bufBounce[i];
+        const mu1 = bufFriction[i];
 
         for (let j = i + 1; j < n; j++) {
           const isStatic2 = (bufFlags[j] & 1) !== 0;
           if (isStatic1 && isStatic2) continue;
+
+          const invM2 = bufInvMass[j];
+          const invMassSum = invM1 + invM2;
+          if (invMassSum <= 0) continue;
 
           const dx = bufX[j] - bufX[i];
           const dy = bufY[j] - bufY[i];
           const distSq = dx * dx + dy * dy;
           const minDist = r1 + bufRadius[j];
 
-          if (distSq < minDist * minDist && distSq > 0.00001) {
-            const dist = Math.sqrt(distSq);
-            const nx = dx / dist;
-            const ny = dy / dist;
-            const overlap = minDist - dist;
-
-            // Separate overlapping bodies
-            if (!isStatic1 && !isStatic2) {
-              const half = overlap * 0.5;
-              bufX[i] -= nx * half;
-              bufY[i] -= ny * half;
-              bufX[j] += nx * half;
-              bufY[j] += ny * half;
-            } else if (!isStatic1) {
-              bufX[i] -= nx * overlap;
-              bufY[i] -= ny * overlap;
-            } else {
-              bufX[j] += nx * overlap;
-              bufY[j] += ny * overlap;
+          if (distSq < minDist * minDist) {
+            let nx = 0;
+            let ny = -1;
+            let dist = 0;
+            if (distSq > 1e-8) {
+              dist = Math.sqrt(distSq);
+              const invD = 1 / dist;
+              nx = dx * invD;
+              ny = dy * invD;
+            }
+            const pen = minDist - dist;
+            if (pen > slop) {
+              const corrMag = ((pen - slop) / invMassSum) * pct;
+              if (!isStatic1) {
+                bufX[i] -= corrMag * invM1 * nx;
+                bufY[i] -= corrMag * invM1 * ny;
+              }
+              if (!isStatic2) {
+                bufX[j] += corrMag * invM2 * nx;
+                bufY[j] += corrMag * invM2 * ny;
+              }
             }
 
-            // Impulse exchange
-            const kx = bufVx[i] - bufVx[j];
-            const ky = bufVy[i] - bufVy[j];
-            const m2 = bufMass[j];
-            const p = 2 * (nx * kx + ny * ky) / (m1 + m2);
-            const restitution = Math.min(bnc1, bufBounce[j]);
+            const rvx = bufVx[j] - bufVx[i];
+            const rvy = bufVy[j] - bufVy[i];
+            const velAlongNormal = rvx * nx + rvy * ny;
 
-            if (!isStatic1) {
-              bufVx[i] -= p * m2 * nx * (1 + restitution);
-              bufVy[i] -= p * m2 * ny * (1 + restitution);
-            }
-            if (!isStatic2) {
-              bufVx[j] += p * m1 * nx * (1 + restitution);
-              bufVy[j] += p * m1 * ny * (1 + restitution);
+            if (velAlongNormal < 0) {
+              const e = Math.min(bnc1, bufBounce[j]);
+              const eEff = (g !== 0 && Math.abs(velAlongNormal) < restThresh) ? 0 : e;
+              const jn = -(1 + eEff) * velAlongNormal / invMassSum;
+              const jx = jn * nx;
+              const jy = jn * ny;
+
+              if (!isStatic1) {
+                bufVx[i] -= jx * invM1;
+                bufVy[i] -= jy * invM1;
+              }
+              if (!isStatic2) {
+                bufVx[j] += jx * invM2;
+                bufVy[j] += jy * invM2;
+              }
+
+              const impactSpd = -velAlongNormal;
+              if (impactSpd > 25 && this.squashGain > 0) {
+                const impSq = Math.min(0.42, (impactSpd / 600) * this.squashGain);
+                if (!isStatic1 && impSq > bufSquash[i]) {
+                  bufSquash[i] = impSq;
+                  bufSquashNx[i] = nx;
+                  bufSquashNy[i] = ny;
+                }
+                if (!isStatic2 && impSq > bufSquash[j]) {
+                  bufSquash[j] = impSq;
+                  bufSquashNx[j] = -nx;
+                  bufSquashNy[j] = -ny;
+                }
+              }
+
+              // Coulomb tangential friction impulse
+              const tx = -ny;
+              const ty = nx;
+              const rvx2 = bufVx[j] - bufVx[i];
+              const rvy2 = bufVy[j] - bufVy[i];
+              const vt = rvx2 * tx + rvy2 * ty;
+              const jt = -vt / invMassSum;
+              const mu = Math.sqrt(Math.max(0, mu1) * Math.max(0, bufFriction[j]));
+              const maxJt = mu * Math.abs(jn);
+              const jtClamped = Math.abs(jt) <= maxJt ? jt : (jt > 0 ? maxJt : -maxJt);
+
+              if (!isStatic1) {
+                bufVx[i] -= jtClamped * invM1 * tx;
+                bufVy[i] -= jtClamped * invM1 * ty;
+              }
+              if (!isStatic2) {
+                bufVx[j] += jtClamped * invM2 * tx;
+                bufVy[j] += jtClamped * invM2 * ty;
+              }
             }
           }
         }
       }
+    }
 
-      // --- PASS 3: Writeback and Direct C++ DOM Transform Patching ---
+    update(rawDt) {
+      if (!this.enabled || rawDt <= 0 || this.bodies.length === 0) return;
+      const clampedDt = rawDt > this.maxFrameDt ? this.maxFrameDt : rawDt;
+      const root = (this.engine && this.engine.container) || (typeof document !== 'undefined' ? document : null);
+      const n = this.bodies.length;
+
+      // ⚡ High-Performance WebAssembly MicroPhysics Acceleration (docs/WASM_ARCHITECTURE_CONTRACT.md Page 3)
+      if (typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
+        if (window.ASTWasmBridge.microPhysicsStep(this.bodies, clampedDt, this.gravity, this.bounds)) {
+          if (root) {
+            for (let i = 0; i < n; i++) {
+              const b = this.bodies[i];
+              let el = b.element;
+              if (!el && b.target) {
+                el = typeof b.target === 'string' ? root.querySelector(b.target) : b.target;
+                b.element = el;
+              }
+              if (el) {
+                const mb = this.compileSquashMatrix6(b.vx, b.vy, b.squash || 0, b.x, b.y, b._matrixBuf, b.originX || 0, b.originY || 0);
+                el.setAttribute('transform', `matrix(${mb[0].toFixed(4)},${mb[1].toFixed(4)},${mb[2].toFixed(4)},${mb[3].toFixed(4)},${mb[4].toFixed(2)},${mb[5].toFixed(2)})`);
+              }
+            }
+          }
+          return;
+        }
+      }
+
+      this._ensureBuffers();
+
+      const subDt = this.fixedDt;
+      const maxSteps = this.substeps * 4;
+      let steps = 0;
+      this.accumulator += clampedDt;
+      while (this.accumulator + 1e-9 >= subDt && steps < maxSteps) {
+        this._stepSubstep(subDt);
+        this.accumulator -= subDt;
+        steps++;
+      }
+      if (this.accumulator < 0) this.accumulator = 0;
+      this.lastSubstepsExecuted = steps;
+
+      const bufX = this._bufX;
+      const bufY = this._bufY;
+      const bufVx = this._bufVx;
+      const bufVy = this._bufVy;
+      const bufSquash = this._bufSquash;
+      const bufSquashNx = this._bufSquashNx;
+      const bufSquashNy = this._bufSquashNy;
+      const bufOriginX = this._bufOriginX;
+      const bufOriginY = this._bufOriginY;
+      const bufFlags = this._bufFlags;
+
+      // --- PASS 3: SoA Writeback, 6-Float Affine Matrix Compilation & DOM Blit ---
       for (let i = 0; i < n; i++) {
         const b = this.bodies[i];
         b.x = bufX[i];
         b.y = bufY[i];
         b.vx = bufVx[i];
         b.vy = bufVy[i];
+        b.squash = bufSquash[i];
         b.isGrounded = (bufFlags[i] & 2) !== 0;
 
-        if (!b.element) {
-          b.element = root.querySelector ? root.querySelector(b.target) : null;
-        }
+        const mb = this.compileSquashMatrix6(
+          bufSquashNx[i], bufSquashNy[i], bufSquash[i],
+          b.x, b.y, b._matrixBuf, bufOriginX[i], bufOriginY[i]
+        );
 
-        if (b.element) {
-          b.element.setAttribute('transform', `translate(${b.x.toFixed(2)}, ${b.y.toFixed(2)})`);
+        if (root) {
+          if (!b.element) {
+            b.element = root.querySelector ? root.querySelector(b.target) : null;
+          }
+          if (b.element) {
+            const xformStr = `matrix(${mb[0].toFixed(4)},${mb[1].toFixed(4)},${mb[2].toFixed(4)},${mb[3].toFixed(4)},${mb[4].toFixed(2)},${mb[5].toFixed(2)})`;
+            if (b._lastTransform !== xformStr) {
+              b._lastTransform = xformStr;
+              b.element.setAttribute('transform', xformStr);
+            }
+          }
+        }
+      }
+
+      if (root && this.springs.length > 0) {
+        for (let s = 0; s < this.springs.length; s++) {
+          const sp = this.springs[s];
+          if (!sp.lineTarget) continue;
+          if (!sp.lineElement && root.querySelector) {
+            sp.lineElement = root.querySelector(sp.lineTarget);
+          }
+          if (sp.lineElement) {
+            const iA = this._spIdxA[s];
+            const iB = this._spIdxB[s];
+            if (iB >= 0) {
+              const ax = iA >= 0 ? bufX[iA] : this._spAnchorX[s];
+              const ay = iA >= 0 ? bufY[iA] : this._spAnchorY[s];
+              sp.lineElement.setAttribute('x1', ax.toFixed(1));
+              sp.lineElement.setAttribute('y1', ay.toFixed(1));
+              sp.lineElement.setAttribute('x2', bufX[iB].toFixed(1));
+              sp.lineElement.setAttribute('y2', bufY[iB].toFixed(1));
+            }
+          }
         }
       }
     }
@@ -881,7 +1338,17 @@
       this.radius = Number(config.radius) || 4;
       this.fill = config.fill || '#38bdf8';
       this.wrapMode = config.wrapMode || 'bounce';
+      this.restitution = config.restitution !== undefined ? Math.max(0, Math.min(1, Number(config.restitution))) : (config.bounce !== undefined ? Math.max(0, Math.min(1, Number(config.bounce))) : 1.0);
+      this.friction = config.friction !== undefined ? Math.max(0, Number(config.friction)) : 0.0;
+      this.substeps = config.substeps !== undefined ? Math.max(1, Math.min(16, Math.round(Number(config.substeps) || 4))) : 4;
       this.phaseState = config.phaseState || 'gas';
+      this.phaseSync = Boolean(config.phaseSync || this.id === 'gas-molecules');
+      this.speedExpr = config.speedExpr || null;
+      this.countExpr = config.countExpr || null;
+      this._speedEval = null;
+      this._countEval = null;
+      this._lastCountEval = -1;
+      this._lastSpeedEval = -1;
       this.obstacles = [];
       this.cachedSegments = [];
       this.lastAudioImpactTime = 0;
@@ -995,11 +1462,13 @@
     setSpeed(newSpeed) {
       const s = Math.max(10, Math.min(1000, Number(newSpeed) || 120));
       const ratio = s / (this.speed || 1);
+      if (Math.abs(ratio - 1) < 1e-4) return;
       this.speed = s;
-      this.pool.forEach(p => {
-        p.vx *= ratio;
-        p.vy *= ratio;
-      });
+      const pool = this.pool;
+      for (let i = 0; i < pool.length; i++) {
+        pool[i].vx *= ratio;
+        pool[i].vy *= ratio;
+      }
     }
 
     /**
@@ -1370,7 +1839,10 @@
       this.cachedSegments = newSegments;
     }
 
-    update(dt) {
+    update(rawDt) {
+      const dt = rawDt > 0.05 ? 0.05 : (rawDt > 0 ? rawDt : 0);
+      if (dt <= 0) return;
+
       if (this.phaseState === 'solid') {
         const time = (this.engine && this.engine.realtimeSec != null) ? this.engine.realtimeSec : (performance.now() / 1000);
         for (let i = 0; i < this.pool.length; i++) {
@@ -1412,135 +1884,162 @@
         }
       }
 
-      for (let i = 0; i < this.pool.length; i++) {
-        const p = this.pool[i];
-        const x0 = p.x;
-        const y0 = p.y;
-        p.vy += this.gravity * dt;
-        let x1 = x0 + p.vx * dt;
-        let y1 = y0 + p.vy * dt;
+      const steps = this.substeps || 4;
+      const subDt = dt / steps;
+      const eWall = this.restitution !== undefined ? this.restitution : 1.0;
+      const muWall = this.friction || 0;
 
-        // Discrete 2D Ray/Segment & Proximity Collision Pipeline
-        if (hasSegments) {
-          for (let s = 0; s < segments.length; s++) {
-            const seg = segments[s];
-            const sx = seg.sx;
-            const sy = seg.sy;
-            const segLenSq = seg.len * seg.len;
-            if (segLenSq < 0.25) continue;
+      for (let st = 0; st < steps; st++) {
+        for (let i = 0; i < this.pool.length; i++) {
+          const p = this.pool[i];
+          const x0 = p.x;
+          const y0 = p.y;
+          p.vy += this.gravity * subDt;
+          let x1 = x0 + p.vx * subDt;
+          let y1 = y0 + p.vy * subDt;
 
-            // 1. Segment-Circle Proximity Projection
-            const proj = Math.max(0, Math.min(1, ((x1 - seg.ax) * sx + (y1 - seg.ay) * sy) / segLenSq));
-            const cx = seg.ax + proj * sx;
-            const cy = seg.ay + proj * sy;
-            const distSq = (x1 - cx) * (x1 - cx) + (y1 - cy) * (y1 - cy);
+          // Discrete 2D Ray/Segment & Proximity Collision Pipeline
+          if (hasSegments) {
+            for (let s = 0; s < segments.length; s++) {
+              const seg = segments[s];
+              const sx = seg.sx;
+              const sy = seg.sy;
+              const segLenSq = seg.len * seg.len;
+              if (segLenSq < 0.25) continue;
 
-            // 2. Continuous 2D Ray-Segment Intersection (prevents high-speed tunneling)
-            const dx = x1 - x0;
-            const dy = y1 - y0;
-            const denom = dx * sy - dy * sx;
-            let hit = false;
+              const proj = Math.max(0, Math.min(1, ((x1 - seg.ax) * sx + (y1 - seg.ay) * sy) / segLenSq));
+              const cx = seg.ax + proj * sx;
+              const cy = seg.ay + proj * sy;
+              const distSq = (x1 - cx) * (x1 - cx) + (y1 - cy) * (y1 - cy);
 
-            if (Math.abs(denom) > 1e-6) {
-              const t = ((seg.ax - x0) * sy - (seg.ay - y0) * sx) / denom;
-              const u = ((seg.ax - x0) * dy - (seg.ay - y0) * dx) / denom;
-              if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+              const dx = x1 - x0;
+              const dy = y1 - y0;
+              const denom = dx * sy - dy * sx;
+              let hit = false;
+
+              if (Math.abs(denom) > 1e-6) {
+                const t = ((seg.ax - x0) * sy - (seg.ay - y0) * sx) / denom;
+                const u = ((seg.ax - x0) * dy - (seg.ay - y0) * dx) / denom;
+                if (t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+                  hit = true;
+                }
+              }
+
+              if (!hit && distSq <= (p.radius * p.radius)) {
                 hit = true;
               }
-            }
 
-            if (!hit && distSq <= (p.radius * p.radius)) {
-              hit = true;
-            }
+              if (hit) {
+                let nx = seg.nx;
+                let ny = seg.ny;
+                const vObsX = seg.vx || 0;
+                const vObsY = seg.vy || 0;
+                let vRelX = p.vx - vObsX;
+                let vRelY = p.vy - vObsY;
 
-            if (hit) {
-              // Ensure normal vector points against incoming relative particle velocity
-              let nx = seg.nx;
-              let ny = seg.ny;
-              const vObsX = seg.vx || 0;
-              const vObsY = seg.vy || 0;
-              let vRelX = p.vx - vObsX;
-              let vRelY = p.vy - vObsY;
-
-              if (vRelX * nx + vRelY * ny > 0) {
-                nx = -nx;
-                ny = -ny;
-              }
-
-              // A. Optics: Snell's Law Refraction & Total Internal Reflection
-              if (seg.refract && seg.refract > 1.0) {
-                const spd = Math.hypot(vRelX, vRelY) || 1e-4;
-                const dirX = vRelX / spd;
-                const dirY = vRelY / spd;
-                const cosI = -(dirX * nx + dirY * ny);
-                const eta = 1.0 / seg.refract;
-                const sin2T = eta * eta * (1.0 - cosI * cosI);
-
-                if (sin2T > 1.0) {
-                  // Total Internal Reflection (TIR)
-                  const dot = dirX * nx + dirY * ny;
-                  p.vx = (dirX - 2 * dot * nx) * spd + vObsX;
-                  p.vy = (dirY - 2 * dot * ny) * spd + vObsY;
-                  x1 = cx + nx * (p.radius + 1.2);
-                  y1 = cy + ny * (p.radius + 1.2);
-                } else {
-                  // Snell's Law Refraction
-                  const cosT = Math.sqrt(1.0 - sin2T);
-                  const refrX = eta * dirX + (eta * cosI - cosT) * nx;
-                  const refrY = eta * dirY + (eta * cosI - cosT) * ny;
-                  p.vx = refrX * spd + vObsX;
-                  p.vy = refrY * spd + vObsY;
-                  x1 = cx + refrX * (p.radius + 1.5);
-                  y1 = cy + refrY * (p.radius + 1.5);
+                if (vRelX * nx + vRelY * ny > 0) {
+                  nx = -nx;
+                  ny = -ny;
                 }
-              } else {
-                // B. Classical Mechanics: Elastic/Inelastic Momentum Transfer
-                const bounce = seg.bounce !== undefined ? seg.bounce : 1.0;
-                const vn = vRelX * nx + vRelY * ny;
-                if (vn < 0) {
-                  vRelX -= (1 + bounce) * vn * nx;
-                  vRelY -= (1 + bounce) * vn * ny;
-                  if (seg.friction) {
-                    const tx = -ny, ty = nx;
-                    const vt = vRelX * tx + vRelY * ty;
-                    vRelX -= vt * seg.friction * tx;
-                    vRelY -= vt * seg.friction * ty;
+
+                if (seg.refract && seg.refract > 1.0) {
+                  const spd = Math.hypot(vRelX, vRelY) || 1e-4;
+                  const dirX = vRelX / spd;
+                  const dirY = vRelY / spd;
+                  const cosI = -(dirX * nx + dirY * ny);
+                  const eta = 1.0 / seg.refract;
+                  const sin2T = eta * eta * (1.0 - cosI * cosI);
+
+                  if (sin2T > 1.0) {
+                    const dot = dirX * nx + dirY * ny;
+                    p.vx = (dirX - 2 * dot * nx) * spd + vObsX;
+                    p.vy = (dirY - 2 * dot * ny) * spd + vObsY;
+                    x1 = cx + nx * (p.radius + 1.2);
+                    y1 = cy + ny * (p.radius + 1.2);
+                  } else {
+                    const cosT = Math.sqrt(1.0 - sin2T);
+                    const refrX = eta * dirX + (eta * cosI - cosT) * nx;
+                    const refrY = eta * dirY + (eta * cosI - cosT) * ny;
+                    p.vx = refrX * spd + vObsX;
+                    p.vy = refrY * spd + vObsY;
+                    x1 = cx + refrX * (p.radius + 1.5);
+                    y1 = cy + refrY * (p.radius + 1.5);
                   }
-                  p.vx = vRelX + vObsX;
-                  p.vy = vRelY + vObsY;
-                  x1 = cx + nx * (p.radius + 0.6);
-                  y1 = cy + ny * (p.radius + 0.6);
+                } else {
+                  const bounce = seg.bounce !== undefined ? seg.bounce : eWall;
+                  const vn = vRelX * nx + vRelY * ny;
+                  if (vn < 0) {
+                    const dvN = -(1 + bounce) * vn;
+                    vRelX += dvN * nx;
+                    vRelY += dvN * ny;
+                    const mu = seg.friction || muWall;
+                    if (mu > 0) {
+                      const tx = -ny, ty = nx;
+                      const vt = vRelX * tx + vRelY * ty;
+                      const maxFric = mu * Math.abs(dvN);
+                      const jt = Math.abs(vt) <= maxFric ? -vt : (vt > 0 ? -maxFric : maxFric);
+                      vRelX += jt * tx;
+                      vRelY += jt * ty;
+                    }
+                    p.vx = vRelX + vObsX;
+                    p.vy = vRelY + vObsY;
+                    x1 = cx + nx * (p.radius + 0.6);
+                    y1 = cy + ny * (p.radius + 0.6);
+                  }
                 }
               }
             }
           }
-        }
 
-        if (this.wrapMode === 'bounce') {
-          if (x1 < minX + p.radius) {
-            x1 = minX + p.radius;
-            p.vx = Math.abs(p.vx);
-          } else if (x1 > maxX - p.radius) {
-            x1 = maxX - p.radius;
-            p.vx = -Math.abs(p.vx);
+          if (this.wrapMode === 'bounce') {
+            if (x1 < minX + p.radius) {
+              x1 = minX + p.radius;
+              const dvN = (1 + eWall) * Math.abs(p.vx);
+              p.vx = Math.abs(p.vx) * eWall;
+              if (muWall > 0) {
+                const maxF = muWall * dvN;
+                p.vy = Math.abs(p.vy) <= maxF ? 0 : (p.vy - (p.vy > 0 ? maxF : -maxF));
+              }
+            } else if (x1 > maxX - p.radius) {
+              x1 = maxX - p.radius;
+              const dvN = (1 + eWall) * Math.abs(p.vx);
+              p.vx = -Math.abs(p.vx) * eWall;
+              if (muWall > 0) {
+                const maxF = muWall * dvN;
+                p.vy = Math.abs(p.vy) <= maxF ? 0 : (p.vy - (p.vy > 0 ? maxF : -maxF));
+              }
+            }
+            if (y1 < minY + p.radius) {
+              y1 = minY + p.radius;
+              const dvN = (1 + eWall) * Math.abs(p.vy);
+              p.vy = Math.abs(p.vy) * eWall;
+              if (muWall > 0) {
+                const maxF = muWall * dvN;
+                p.vx = Math.abs(p.vx) <= maxF ? 0 : (p.vx - (p.vx > 0 ? maxF : -maxF));
+              }
+            } else if (y1 > maxY - p.radius) {
+              y1 = maxY - p.radius;
+              const dvN = (1 + eWall) * Math.abs(p.vy);
+              p.vy = -Math.abs(p.vy) * eWall;
+              if (muWall > 0) {
+                const maxF = muWall * dvN;
+                p.vx = Math.abs(p.vx) <= maxF ? 0 : (p.vx - (p.vx > 0 ? maxF : -maxF));
+              }
+            }
+          } else if (this.wrapMode === 'wrap') {
+            if (x1 < minX) x1 = maxX;
+            if (x1 > maxX) x1 = minX;
+            if (y1 < minY) y1 = maxY;
+            if (y1 > maxY) y1 = minY;
           }
-          if (y1 < minY + p.radius) {
-            y1 = minY + p.radius;
-            p.vy = Math.abs(p.vy);
-          } else if (y1 > maxY - p.radius) {
-            y1 = maxY - p.radius;
-            p.vy = -Math.abs(p.vy);
-          }
-        } else if (this.wrapMode === 'wrap') {
-          if (x1 < minX) x1 = maxX;
-          if (x1 > maxX) x1 = minX;
-          if (y1 < minY) y1 = maxY;
-          if (y1 > maxY) y1 = minY;
+
+          p.x = x1;
+          p.y = y1;
         }
+      }
 
-        p.x = x1;
-        p.y = y1;
-
+      for (let i = 0; i < this.pool.length; i++) {
+        const p = this.pool[i];
         if (p.node) {
           p.node.setAttribute('cx', p.x.toFixed(1));
           p.node.setAttribute('cy', p.y.toFixed(1));
@@ -1891,56 +2390,253 @@
   class VectorVerletPhysics {
     constructor(engine, options = {}) {
       this.engine = engine;
-      this.gravity = options.gravity !== undefined ? options.gravity : 980;
-      this.drag = options.drag !== undefined ? options.drag : 0.992;
+      this.gravity = options.gravity !== undefined ? Number(options.gravity) : 980;
+      this.drag = options.drag !== undefined ? Number(options.drag) : 0.992;
       this.iterations = options.iterations || 4;
+      this.substeps = options.substeps !== undefined ? Math.max(1, Math.min(32, Math.round(Number(options.substeps) || 4))) : 4;
+      this.fixedDt = 1 / (60 * this.substeps); // 1/240s at default 4 substeps
+      this.maxFrameDt = 0.05;
+      this.accumulator = 0;
       this.points = [];
       this.constraints = [];
       this.enabled = true;
+      this._dirty = true;
     }
 
-    addPoint(x, y, pinned = false, mass = 1.0, radius = 6) {
+    addPoint(x, y, pinned = false, mass = 1.0, radius = 6, vx = 0, vy = 0) {
+      const numX = Number(x) || 0;
+      const numY = Number(y) || 0;
+      const numVx = Number(vx) || 0;
+      const numVy = Number(vy) || 0;
       const p = {
-        x: Number(x) || 0,
-        y: Number(y) || 0,
-        px: Number(x) || 0,
-        py: Number(y) || 0,
+        x: numX,
+        y: numY,
+        px: numX - numVx * this.fixedDt,
+        py: numY - numVy * this.fixedDt,
+        vx: numVx,
+        vy: numVy,
         pinned: Boolean(pinned),
         mass: Math.max(0.05, Number(mass) || 1.0),
         radius: Number(radius) || 6
       };
       this.points.push(p);
+      this._dirty = true;
       return p;
     }
 
-    addConstraint(p1, p2, length = null, stiffness = 1.0) {
-      const dist = length !== null ? length : Math.hypot(p2.x - p1.x, p2.y - p1.y);
-      const c = { p1, p2, length: dist, stiffness: Math.min(1.0, Math.max(0.01, stiffness)) };
+    addConstraint(p1, p2, length = null, stiffness = 1.0, damping = 0.0, hookean = false) {
+      const dist = length !== null ? Number(length) : Math.hypot(p2.x - p1.x, p2.y - p1.y);
+      const isHookean = Boolean(hookean || damping > 0 || stiffness > 1.0);
+      const c = {
+        p1,
+        p2,
+        length: dist,
+        stiffness: isHookean ? Math.max(0, Number(stiffness)) : Math.min(1.0, Math.max(0.01, Number(stiffness))),
+        damping: Math.max(0, Number(damping) || 0),
+        hookean: isHookean
+      };
       this.constraints.push(c);
+      this._dirty = true;
       return c;
     }
 
     createPendulum(pivotX, pivotY, length = 160, bobRadius = 14, initialAngle = 0.5) {
       this.points = [];
       this.constraints = [];
+      this.accumulator = 0;
       const p0 = this.addPoint(pivotX, pivotY, true, 0, 4);
       const bobX = pivotX + Math.sin(initialAngle) * length;
       const bobY = pivotY + Math.cos(initialAngle) * length;
       const p1 = this.addPoint(bobX, bobY, false, 2.0, bobRadius);
-      this.addConstraint(p0, p1, length, 1.0);
+      this.addConstraint(p0, p1, length, 1.0, 0, false);
       return { pivot: p0, bob: p1 };
     }
 
-    createSpring(startX, startY, endX, endY, stiffness = 0.15) {
+    createSpring(startX, startY, endX, endY, stiffness = 80, damping = 2.0) {
       const p0 = this.addPoint(startX, startY, true, 0, 4);
       const p1 = this.addPoint(endX, endY, false, 1.5, 10);
-      this.addConstraint(p0, p1, Math.hypot(endX - startX, endY - startY), stiffness);
+      const useHookean = stiffness > 1.0 || damping > 0;
+      this.addConstraint(p0, p1, Math.hypot(endX - startX, endY - startY), stiffness, damping, useHookean);
       return { anchor: p0, weight: p1 };
     }
 
+    _ensureBuffers() {
+      const pn = this.points.length;
+      if (!this._pCap || this._pCap < pn) {
+        this._pCap = Math.max(32, Math.pow(2, Math.ceil(Math.log2(Math.max(1, pn)))));
+        const cap = this._pCap;
+        this._vpX = new Float32Array(cap);
+        this._vpY = new Float32Array(cap);
+        this._vpPx = new Float32Array(cap);
+        this._vpPy = new Float32Array(cap);
+        this._vpVx = new Float32Array(cap);
+        this._vpVy = new Float32Array(cap);
+        this._vpFx = new Float32Array(cap);
+        this._vpFy = new Float32Array(cap);
+        this._vpMass = new Float32Array(cap);
+        this._vpInvMass = new Float32Array(cap);
+        this._vpPinned = new Uint8Array(cap);
+        this._dirty = true;
+      }
+
+      const cn = this.constraints.length;
+      if (!this._cCap || this._cCap < cn) {
+        this._cCap = Math.max(32, Math.pow(2, Math.ceil(Math.log2(Math.max(1, cn)))));
+        const ccap = this._cCap;
+        this._vcP1 = new Int32Array(ccap);
+        this._vcP2 = new Int32Array(ccap);
+        this._vcLen = new Float32Array(ccap);
+        this._vcStiff = new Float32Array(ccap);
+        this._vcDamp = new Float32Array(ccap);
+        this._vcMode = new Uint8Array(ccap); // 0 = PBD constraint, 1 = damped Hookean spring
+        this._dirty = true;
+      }
+
+      if (this._dirty) {
+        for (let i = 0; i < pn; i++) {
+          const p = this.points[i];
+          this._vpX[i] = p.x;
+          this._vpY[i] = p.y;
+          this._vpPx[i] = p.px;
+          this._vpPy[i] = p.py;
+          this._vpVx[i] = p.vx || 0;
+          this._vpVy[i] = p.vy || 0;
+          this._vpMass[i] = p.mass;
+          this._vpInvMass[i] = p.pinned ? 0 : (1 / p.mass);
+          this._vpPinned[i] = p.pinned ? 1 : 0;
+        }
+        for (let i = 0; i < cn; i++) {
+          const c = this.constraints[i];
+          this._vcP1[i] = this.points.indexOf(c.p1);
+          this._vcP2[i] = this.points.indexOf(c.p2);
+          this._vcLen[i] = c.length;
+          this._vcStiff[i] = c.stiffness;
+          this._vcDamp[i] = c.damping || 0;
+          this._vcMode[i] = c.hookean ? 1 : 0;
+        }
+        this._dirty = false;
+      }
+    }
+
+    _stepSubstep(subDt) {
+      const pn = this.points.length;
+      const cn = this.constraints.length;
+      const vpX = this._vpX;
+      const vpY = this._vpY;
+      const vpPx = this._vpPx;
+      const vpPy = this._vpPy;
+      const vpVx = this._vpVx;
+      const vpVy = this._vpVy;
+      const vpFx = this._vpFx;
+      const vpFy = this._vpFy;
+      const vpMass = this._vpMass;
+      const vpInvMass = this._vpInvMass;
+      const vpPinned = this._vpPinned;
+
+      const vcP1 = this._vcP1;
+      const vcP2 = this._vcP2;
+      const vcLen = this._vcLen;
+      const vcStiff = this._vcStiff;
+      const vcDamp = this._vcDamp;
+      const vcMode = this._vcMode;
+
+      let hasHookean = false;
+      for (let i = 0; i < pn; i++) {
+        vpFx[i] = 0;
+        vpFy[i] = vpPinned[i] ? 0 : vpMass[i] * this.gravity;
+      }
+
+      // Accumulate damped Hookean spring-damper forces: F = -k * x - c * v
+      for (let i = 0; i < cn; i++) {
+        if (vcMode[i] !== 1) continue;
+        hasHookean = true;
+        const i1 = vcP1[i];
+        const i2 = vcP2[i];
+        if (i1 < 0 || i2 < 0) continue;
+        const dx = vpX[i2] - vpX[i1];
+        const dy = vpY[i2] - vpY[i1];
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const k = vcStiff[i];
+        const c = vcDamp[i];
+        let fx = 0;
+        let fy = 0;
+        if (dist > 1e-6) {
+          const invD = 1 / dist;
+          const ux = dx * invD;
+          const uy = dy * invD;
+          const ext = dist - vcLen[i];
+          const vRel = (vpVx[i2] - vpVx[i1]) * ux + (vpVy[i2] - vpVy[i1]) * uy;
+          const fMag = -k * ext - c * vRel;
+          fx = fMag * ux;
+          fy = fMag * uy;
+        } else {
+          fx = -k * dx - c * (vpVx[i2] - vpVx[i1]);
+          fy = -k * dy - c * (vpVy[i2] - vpVy[i1]);
+        }
+        if (!vpPinned[i1]) { vpFx[i1] -= fx; vpFy[i1] -= fy; }
+        if (!vpPinned[i2]) { vpFx[i2] += fx; vpFy[i2] += fy; }
+      }
+
+      if (hasHookean) {
+        // Semi-implicit Euler integration for exact spring-damper F = -kx - cv
+        for (let i = 0; i < pn; i++) {
+          if (vpPinned[i]) continue;
+          const invM = vpInvMass[i];
+          const vx = vpVx[i] + vpFx[i] * invM * subDt;
+          const vy = vpVy[i] + vpFy[i] * invM * subDt;
+          vpVx[i] = vx;
+          vpVy[i] = vy;
+          vpPx[i] = vpX[i];
+          vpPy[i] = vpY[i];
+          vpX[i] += vx * subDt;
+          vpY[i] += vy * subDt;
+        }
+      } else {
+        // Pure Position Verlet integration scaled to substep
+        const dragStep = Math.pow(this.drag, subDt * 60);
+        const gDtSq = this.gravity * subDt * subDt;
+        for (let i = 0; i < pn; i++) {
+          if (vpPinned[i]) continue;
+          const x = vpX[i];
+          const y = vpY[i];
+          const vxStep = (x - vpPx[i]) * dragStep;
+          const vyStep = (y - vpPy[i]) * dragStep;
+          vpPx[i] = x;
+          vpPy[i] = y;
+          vpX[i] = x + vxStep;
+          vpY[i] = y + vyStep + gDtSq;
+          vpVx[i] = vxStep / subDt;
+          vpVy[i] = (vyStep + gDtSq) / subDt;
+        }
+      }
+
+      // Distance constraint relaxation for rigid PBD constraints (vcMode === 0)
+      for (let iter = 0; iter < this.iterations; iter++) {
+        for (let i = 0; i < cn; i++) {
+          if (vcMode[i] !== 0) continue;
+          const i1 = vcP1[i];
+          const i2 = vcP2[i];
+          if (i1 < 0 || i2 < 0) continue;
+          const dx = vpX[i2] - vpX[i1];
+          const dy = vpY[i2] - vpY[i1];
+          const dist = Math.sqrt(dx * dx + dy * dy) || 0.001;
+          const diff = (vcLen[i] - dist) / dist;
+          const offset = diff * 0.5 * vcStiff[i];
+          if (!vpPinned[i1]) {
+            vpX[i1] -= dx * offset;
+            vpY[i1] -= dy * offset;
+          }
+          if (!vpPinned[i2]) {
+            vpX[i2] += dx * offset;
+            vpY[i2] += dy * offset;
+          }
+        }
+      }
+    }
+
     step(dt) {
-      if (!this.enabled || dt <= 0) return;
-      const clampedDt = Math.min(dt, 0.05);
+      if (!this.enabled || dt <= 0 || this.points.length === 0) return;
+      const clampedDt = dt > this.maxFrameDt ? this.maxFrameDt : dt;
 
       // ⚡ High-Performance WebAssembly Verlet Acceleration (docs/WASM_ARCHITECTURE_CONTRACT.md Page 3)
       if (typeof window !== 'undefined' && window.ASTWasmBridge && window.ASTWasmBridge.isReady) {
@@ -1949,37 +2645,27 @@
         }
       }
 
-      // 1. Verlet position update
+      this._ensureBuffers();
+
+      const subDt = this.fixedDt;
+      const maxSteps = this.substeps * 4;
+      let steps = 0;
+      this.accumulator += clampedDt;
+      while (this.accumulator + 1e-9 >= subDt && steps < maxSteps) {
+        this._stepSubstep(subDt);
+        this.accumulator -= subDt;
+        steps++;
+      }
+      if (this.accumulator < 0) this.accumulator = 0;
+
       for (let i = 0; i < this.points.length; i++) {
         const p = this.points[i];
-        if (p.pinned) continue;
-        const vx = (p.x - p.px) * this.drag;
-        const vy = (p.y - p.py) * this.drag;
-        p.px = p.x;
-        p.py = p.y;
-        p.x += vx;
-        p.y += vy + (this.gravity * clampedDt * clampedDt);
-      }
-
-      // 2. Constraint relaxation
-      for (let n = 0; n < this.iterations; n++) {
-        for (let i = 0; i < this.constraints.length; i++) {
-          const c = this.constraints[i];
-          const dx = c.p2.x - c.p1.x;
-          const dy = c.p2.y - c.p1.y;
-          const dist = Math.hypot(dx, dy) || 0.001;
-          const diff = (c.length - dist) / dist;
-          const offset = diff * 0.5 * c.stiffness;
-
-          if (!c.p1.pinned) {
-            c.p1.x -= dx * offset;
-            c.p1.y -= dy * offset;
-          }
-          if (!c.p2.pinned) {
-            c.p2.x += dx * offset;
-            c.p2.y += dy * offset;
-          }
-        }
+        p.x = this._vpX[i];
+        p.y = this._vpY[i];
+        p.px = this._vpPx[i];
+        p.py = this._vpPy[i];
+        p.vx = this._vpVx[i];
+        p.vy = this._vpVy[i];
       }
     }
   }
@@ -2354,7 +3040,8 @@
         varchange: [],
         simreset: [],
         bsltoggle: [],
-        voicetoggle: []
+        voicetoggle: [],
+        checkpoint_goal_passed: []
       };
 
       // Zero-Bloat Micro-Physics Subsystem (< 1.5 KB)
@@ -2364,6 +3051,19 @@
       this.stateMachines = new Map();
       this.emitters = new Map();
       this.activeBindInputs = [];
+
+      // Zero-GC Live Vector Oscilloscopes (:scope), Conservation Ledgers (:ledger),
+      // Manipulation Goal Checkpoints (:pass-expr / :hold-duration), & Lab CSV Ring Buffer
+      this.activeScopes = [];
+      this.activeLedgers = [];
+      this._cpHoldTimers = new Float32Array(32);
+      this._cpPassedMask = new Uint8Array(32);
+      this._labLogCapacity = 240;
+      this._labLogTimes = new Float64Array(this._labLogCapacity);
+      this._labLogCols = [];
+      this._labLogCount = 0;
+      this._labLogHead = 0;
+      this._labLogClock = 0;
 
       // Gemini Nano AI Co-Pilot State (betaplans.md)
       this.isAiDemonstrating = false;
@@ -3776,23 +4476,30 @@
 
       // Synchronize vector particle emitters with thermodynamic state variables
       if (this.emitters && this.emitters.size > 0) {
-        const gasEm = this.emitters.get('gas-molecules') || Array.from(this.emitters.values())[0];
-        if (gasEm) {
-          if (cleanName === 'particleCount' || cleanName === 'count' || cleanName === 'atoms') {
-            gasEm.setCount(val);
-          } else if (cleanName === 'temp' || cleanName === 'temperature') {
-            const numT = Number(val);
-            gasEm.setSpeed(160 * Math.sqrt(Math.max(50, numT) / 300));
-            if (!this.vars.state) {
-              if (numT <= 140) gasEm.setPhaseState('solid');
-              else if (numT <= 273) gasEm.setPhaseState('liquid');
-              else gasEm.setPhaseState('gas');
+        const gasEm = this.emitters.get('gas-molecules');
+        if (gasEm || Array.from(this.emitters.values()).some(e => e.phaseSync)) {
+          const targetEm = gasEm || Array.from(this.emitters.values()).find(e => e.phaseSync);
+          if (targetEm) {
+            if (cleanName === 'particleCount' || cleanName === 'count' || cleanName === 'atoms') {
+              targetEm.setCount(val);
+            } else if (cleanName === 'temp' || cleanName === 'temperature') {
+              const numT = Number(val);
+              targetEm.setSpeed(160 * Math.sqrt(Math.max(50, numT) / 300));
+              if (!this.vars.state) {
+                if (numT <= 140) targetEm.setPhaseState('solid');
+                else if (numT <= 273) targetEm.setPhaseState('liquid');
+                else targetEm.setPhaseState('gas');
+              }
+            } else if (cleanName === 'state' || cleanName === 'phase') {
+              targetEm.setPhaseState(String(val).toLowerCase());
+            } else if (cleanName === 'volume') {
+              const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
+              targetEm.clampToPistonX(pX);
             }
-          } else if (cleanName === 'state' || cleanName === 'phase') {
-            gasEm.setPhaseState(String(val).toLowerCase());
-          } else if (cleanName === 'volume') {
-            const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
-            gasEm.clampToPistonX(pX);
+          }
+        } else if (cleanName === 'particleCount' || cleanName === 'count') {
+          for (const em of this.emitters.values()) {
+            if (!em.countExpr) em.setCount(val);
           }
         }
       }
@@ -3878,18 +4585,196 @@
     }
 
     reset() {
-      this.seek(0.0);
-      this.resetVars();
-      this.updateComputedVars();
-      this.applyBindings(0.0);
-      if (this.physics && typeof this.physics.reset === 'function') {
-        this.physics.reset();
+      this._isResetting = true;
+      try {
+        this.seek(0.0);
+        if (this._cpHoldTimers) this._cpHoldTimers.fill(0);
+        if (this._cpPassedMask) this._cpPassedMask.fill(0);
+        if (this.activeScopes && this.activeScopes.length) {
+          for (let i = 0; i < this.activeScopes.length; i++) {
+            const sc = this.activeScopes[i];
+            sc.count = 0;
+            sc.head = 0;
+            sc.hasLast = false;
+            if (sc.node) sc.node.setAttribute('points', '');
+          }
+        }
+        this._labLogCount = 0;
+        this._labLogHead = 0;
+        this._labLogClock = 0;
+        this.resetVars();
+        if (this.vars) {
+          this.vars.simClock = 0;
+          this.vars.clock = 0;
+          this.vars._simClock = 0;
+        }
+        this.updateComputedVars(0);
+        this.applyBindings(0.0);
+        if (this.physics && typeof this.physics.reset === 'function') {
+          this.physics.reset();
+        }
+        if (typeof this.render === 'function') {
+          this.render(0.0);
+        }
+        this.emit('simreset', { time: 0.0 });
+        this.notifyParent({ type: 'SIM_RESET', time: 0.0 });
+      } finally {
+        this._isResetting = false;
       }
-      if (typeof this.render === 'function') {
-        this.render(0.0);
+    }
+
+    /**
+     * Initializes pre-allocated Float32Array columnar storage for zero-GC CSV lab logging.
+     */
+    _initLabLogBuffers() {
+      const colNames = [];
+      const sceneVars = (this.scene && this.scene.vars) || {};
+      const keys = Object.keys(sceneVars);
+      for (let i = 0; i < keys.length; i++) {
+        const k = keys[i];
+        if (k.startsWith('_') || k === 'simClock' || k === 'clock') continue;
+        const entry = sceneVars[k];
+        const val = entry && typeof entry === 'object' ? (entry.value !== undefined ? entry.value : entry.val) : entry;
+        if (typeof val === 'number') {
+          colNames.push(k);
+        }
       }
-      this.emit('simreset', { time: 0.0 });
-      this.notifyParent({ type: 'SIM_RESET', time: 0.0 });
+      const compList = (this.scene && this.scene.computed) || [];
+      for (let i = 0; i < compList.length; i++) {
+        const cname = compList[i] && compList[i].name;
+        if (cname && !colNames.includes(cname)) {
+          colNames.push(cname);
+        }
+      }
+      this._labLogCols = [];
+      for (let i = 0; i < colNames.length; i++) {
+        this._labLogCols.push({
+          name: colNames[i],
+          data: new Float32Array(this._labLogCapacity)
+        });
+      }
+      this._labLogCount = 0;
+      this._labLogHead = 0;
+      this._labLogClock = 0;
+    }
+
+    /**
+     * Appends one timestamped sample to pre-allocated columnar ring buffers (0 heap allocations).
+     */
+    _recordLabSample(timeSec) {
+      if (!this._labLogCols || this._labLogCols.length === 0) return;
+      const cap = this._labLogCapacity;
+      const idx = (this._labLogHead + this._labLogCount) % cap;
+      if (this._labLogCount < cap) {
+        this._labLogCount++;
+      } else {
+        this._labLogHead = (this._labLogHead + 1) % cap;
+      }
+      this._labLogTimes[idx] = timeSec;
+      const v = this.vars || {};
+      const cols = this._labLogCols;
+      for (let c = 0; c < cols.length; c++) {
+        const raw = v[cols[c].name];
+        const num = typeof raw === 'number' ? raw : parseFloat(raw);
+        cols[c].data[idx] = Number.isFinite(num) ? num : 0;
+      }
+    }
+
+    /**
+     * Generates an RFC-4180 CSV table of sampled (t, vars, computed) & :scope observations
+     * for UK GCSE Working Scientifically practicals.
+     */
+    exportLabCsv() {
+      const cols = this._labLogCols || [];
+      const escCsv = (s) => {
+        const str = String(s === undefined || s === null ? '' : s);
+        return (str.includes(',') || str.includes('"') || str.includes('\n'))
+          ? `"${str.replace(/"/g, '""')}"`
+          : str;
+      };
+      const header = ['time_s'];
+      for (let c = 0; c < cols.length; c++) header.push(escCsv(cols[c].name));
+      const scopeCount = this.activeScopes ? this.activeScopes.length : 0;
+      for (let s = 0; s < scopeCount; s++) {
+        header.push(`scope_${s + 1}_x`, `scope_${s + 1}_y`);
+      }
+
+      const lines = [header.join(',')];
+      const cap = this._labLogCapacity;
+      const loggedRows = this._labLogCount || 0;
+      let maxScopeRows = 0;
+      for (let s = 0; s < scopeCount; s++) {
+        if (this.activeScopes[s].count > maxScopeRows) maxScopeRows = this.activeScopes[s].count;
+      }
+
+      const rowCount = Math.max(loggedRows, maxScopeRows);
+      if (rowCount === 0) {
+        // Record immediate current snapshot row so export always contains valid data
+        const nowT = (this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : (this.realtimeSec || 0);
+        const row = [nowT.toFixed(3)];
+        const v = this.vars || {};
+        for (let c = 0; c < cols.length; c++) {
+          const val = v[cols[c].name];
+          row.push(val !== undefined ? Number(val).toFixed(4).replace(/\.?0+$/, (m) => m.startsWith('.') ? '' : m) : '0');
+        }
+        for (let s = 0; s < scopeCount; s++) {
+          row.push('', '');
+        }
+        lines.push(row.join(','));
+        return {
+          sceneId: (this.scene && this.scene.id) || this.activePresetId || 'simulation',
+          sceneTitle: (this.scene && this.scene.title) || 'Simulation',
+          rowCount: 1,
+          csv: lines.join('\n')
+        };
+      }
+
+      for (let r = 0; r < rowCount; r++) {
+        const row = [];
+        if (r < loggedRows) {
+          const idx = (this._labLogHead + r) % cap;
+          row.push(this._labLogTimes[idx].toFixed(3));
+          for (let c = 0; c < cols.length; c++) {
+            const val = cols[c].data[idx];
+            row.push(Number.isFinite(val) ? Number(val.toFixed(4)).toString() : '0');
+          }
+        } else {
+          row.push('');
+          for (let c = 0; c < cols.length; c++) row.push('');
+        }
+        for (let s = 0; s < scopeCount; s++) {
+          const sc = this.activeScopes[s];
+          if (r < sc.count) {
+            const sIdx = (sc.head + r) % sc.capacity;
+            row.push(Number(sc.rawX[sIdx].toFixed(4)).toString());
+            row.push(Number(sc.rawY[sIdx].toFixed(4)).toString());
+          } else {
+            row.push('', '');
+          }
+        }
+        lines.push(row.join(','));
+      }
+
+      return {
+        sceneId: (this.scene && this.scene.id) || this.activePresetId || 'simulation',
+        sceneTitle: (this.scene && this.scene.title) || 'Simulation',
+        rowCount,
+        csv: lines.join('\n')
+      };
+    }
+
+    getLabDataCsv() {
+      return this.exportLabCsv();
+    }
+
+    getCheckpointGoalStatus(idx) {
+      const cp = this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints[idx];
+      if (!cp) return { passed: false, holdProgress: 0, holdElapsed: 0, holdDuration: 0 };
+      const holdDuration = Number(cp.holdDuration || 0);
+      const elapsed = this._cpHoldTimers && idx < this._cpHoldTimers.length ? this._cpHoldTimers[idx] : 0;
+      const passed = Boolean(this._cpPassedMask && idx < this._cpPassedMask.length && this._cpPassedMask[idx] === 1);
+      const holdProgress = passed ? 1 : (holdDuration > 0 ? Math.min(1, elapsed / holdDuration) : 0);
+      return { passed, holdProgress, holdElapsed: elapsed, holdDuration };
     }
 
     toggleBsl(force) {
@@ -4470,6 +5355,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         subtitles: [],
         bindings: [],
         checkpoints: [],
+        scopes: [],
+        ledgers: [],
         gestures: [],
         vars: {},
         inputs: []
@@ -4646,6 +5533,84 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               options: opts,
               answer: ans,
               explanation: getStr(explIdx)
+            });
+            break;
+          }
+          case 0x41: { // OP_CHECKPOINT_GOAL
+            const cpIdx = view.getUint16(offset, true); offset += 2;
+            const titleStr = getStr(view.getUint16(offset, true)); offset += 2;
+            const passExprStr = getStr(view.getUint16(offset, true)); offset += 2;
+            const holdDur = view.getFloat32(offset, true); offset += 4;
+            const wrongCount = bytes[offset++];
+            const wrongMap = {};
+            for (let i = 0; i < wrongCount; i++) {
+              const optIdx = bytes[offset++];
+              const hintStr = getStr(view.getUint16(offset, true)); offset += 2;
+              wrongMap[optIdx] = hintStr;
+            }
+            const targetCp = scene.checkpoints[cpIdx];
+            if (targetCp) {
+              if (titleStr) targetCp.title = titleStr;
+              if (passExprStr) targetCp.passExpr = passExprStr;
+              if (holdDur > 0) targetCp.holdDuration = Number(holdDur.toFixed(3));
+              if (wrongCount > 0) targetCp.onWrong = wrongMap;
+            }
+            break;
+          }
+          case 0x90: { // OP_SCOPE
+            const target = getStr(view.getUint16(offset, true)); offset += 2;
+            const xExpr = getStr(view.getUint16(offset, true)); offset += 2;
+            const yExpr = getStr(view.getUint16(offset, true)); offset += 2;
+            const samples = view.getUint16(offset, true); offset += 2;
+            const xMin = view.getFloat32(offset, true); offset += 4;
+            const xMax = view.getFloat32(offset, true); offset += 4;
+            const yMin = view.getFloat32(offset, true); offset += 4;
+            const yMax = view.getFloat32(offset, true); offset += 4;
+            const plotX = view.getFloat32(offset, true); offset += 4;
+            const plotY = view.getFloat32(offset, true); offset += 4;
+            const plotW = view.getFloat32(offset, true); offset += 4;
+            const plotH = view.getFloat32(offset, true); offset += 4;
+            const scObj = {
+              target,
+              xExpr,
+              yExpr,
+              samples,
+              xRange: [xMin, xMax],
+              yRange: [yMin, yMax]
+            };
+            if (plotW > 0 && plotH > 0) {
+              scObj.plot = [plotX, plotY, plotW, plotH];
+            }
+            scene.scopes.push(scObj);
+            break;
+          }
+          case 0x91: { // OP_LEDGER
+            const id = getStr(view.getUint16(offset, true)); offset += 2;
+            const target = getStr(view.getUint16(offset, true)); offset += 2;
+            const unit = getStr(view.getUint16(offset, true)); offset += 2;
+            const maxExpr = getStr(view.getUint16(offset, true)); offset += 2;
+            const lx = view.getFloat32(offset, true); offset += 4;
+            const ly = view.getFloat32(offset, true); offset += 4;
+            const lw = view.getFloat32(offset, true); offset += 4;
+            const lh = view.getFloat32(offset, true); offset += 4;
+            const termCount = bytes[offset++];
+            const terms = [];
+            for (let i = 0; i < termCount; i++) {
+              const label = getStr(view.getUint16(offset, true)); offset += 2;
+              const expr = getStr(view.getUint16(offset, true)); offset += 2;
+              const color = getStr(view.getUint16(offset, true)); offset += 2;
+              terms.push({ label, expr, color });
+            }
+            scene.ledgers.push({
+              id,
+              target: target || `#${id}`,
+              unit,
+              maxExpr,
+              x: lx,
+              y: ly,
+              width: lw,
+              height: lh,
+              terms
             });
             break;
           }
@@ -5151,10 +6116,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const cpEntryBlocks = extractSexprBlocks(astContent, ':checkpoint');
         cpEntryBlocks.forEach(cpText => {
         const tMatch = cpText.match(/:t\s+([\d\.]+)/i);
-        const cpTitle = extractSlot.call(null, cpText, /:title\s+"([^"]+)"/i) || 'Checkpoint';
-        const prompt = extractSlot.call(null, cpText, /:prompt\s+"([^"]+)"/i) || '';
+        const cpTitle = extractQuoted(cpText, 'title') || extractSlot.call(null, cpText, /:title\s+"([^"]+)"/i) || 'Checkpoint';
+        const prompt = extractQuoted(cpText, 'prompt') || extractSlot.call(null, cpText, /:prompt\s+"([^"]+)"/i) || '';
         const ansMatch = cpText.match(/:answer\s+(\d+)/i);
-        const explanation = extractSlot.call(null, cpText, /:explanation\s+"([^"]+)"/i) || '';
+        const explanation = extractQuoted(cpText, 'explanation') || extractSlot.call(null, cpText, /:explanation\s+"([^"]+)"/i) || '';
+        const passExpr = extractQuoted(cpText, 'pass-expr') || extractQuoted(cpText, 'passExpr') || null;
+        const holdDurStr = extractSlot.call(null, cpText, /:hold-?duration\s+([\d\.]+)/i);
+        const holdDuration = holdDurStr !== null ? parseFloat(holdDurStr) : undefined;
 
         const options = [];
         const optTagIdx = cpText.indexOf(':options');
@@ -5184,21 +6152,60 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const optRegex = /"((?:[^"\\]|\\.)*)"/g;
               let om;
               while ((om = optRegex.exec(inside)) !== null) {
-                options.push(om[1]);
+                options.push(om[1].replace(/\\"/g, '"'));
               }
             }
           }
         }
 
+        const onWrong = {};
+        let owSearch = 0;
+        while (true) {
+          const relIdx = cpText.slice(owSearch).search(/:on-?wrong\s*\(/i);
+          if (relIdx === -1) break;
+          const pStart = cpText.indexOf('(', owSearch + relIdx);
+          if (pStart === -1) break;
+          let depth = 0;
+          let inStr = false;
+          let pEnd = -1;
+          for (let i = pStart; i < cpText.length; i++) {
+            const ch = cpText[i];
+            if (ch === '"' && (i === 0 || cpText[i - 1] !== '\\')) {
+              inStr = !inStr;
+            } else if (!inStr) {
+              if (ch === '(') depth++;
+              else if (ch === ')') {
+                depth--;
+                if (depth === 0) {
+                  pEnd = i;
+                  break;
+                }
+              }
+            }
+          }
+          if (pEnd === -1) break;
+          const owInside = cpText.slice(pStart + 1, pEnd);
+          const pairRe = /(\d+)\s+"((?:[^"\\]|\\.)*)"/g;
+          let pm;
+          while ((pm = pairRe.exec(owInside)) !== null) {
+            onWrong[parseInt(pm[1], 10)] = pm[2].replace(/\\"/g, '"');
+          }
+          owSearch = pEnd + 1;
+        }
+
         if (tMatch && prompt) {
-          checkpoints.push({
+          const cpEntry = {
             t: parseFloat(tMatch[1]),
             title: cpTitle,
             prompt: prompt,
-            options: options.length > 0 ? options : ['Correct', 'Incorrect'],
+            options: passExpr ? options : (options.length > 0 ? options : ['Correct', 'Incorrect']),
             answer: ansMatch ? parseInt(ansMatch[1], 10) : 0,
             explanation: explanation
-          });
+          };
+          if (passExpr) cpEntry.passExpr = passExpr;
+          if (holdDuration !== undefined) cpEntry.holdDuration = holdDuration;
+          if (Object.keys(onWrong).length > 0) cpEntry.onWrong = onWrong;
+          checkpoints.push(cpEntry);
         }
       });
 
@@ -5261,14 +6268,24 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       }
 
-      // Micro-physics block parsing (:physics (:gravity 980 ...) (:body ...))
+      // Micro-physics block parsing (:physics (:gravity 980 :restitution 0.7 :friction 0.25 :stiffness 120 :damping 4 :substeps 4) (:body ...) (:spring ...))
       const physicsBlocks = extractSexprBlocks(astContent, ':physics');
       let physics = null;
       if (physicsBlocks.length > 0) {
         const pb = physicsBlocks[0];
         const gMatch = pb.match(/:gravity\s+([\d\.\-]+)/i);
         const fMatch = pb.match(/:friction\s+([\d\.]+)/i);
-        const grMatch = pb.match(/:ground\s+([\d\.]+)/i);
+        const rMatch = pb.match(/:(?:restitution|bounce)\s+([\d\.]+)/i);
+        const stMatch = pb.match(/:stiffness\s+([\d\.]+)/i);
+        const dmpMatch = pb.match(/:damping\s+([\d\.]+)/i);
+        const subMatch = pb.match(/:substeps\s+(\d+)/i);
+        const drgMatch = pb.match(/:drag\s+([\d\.]+)/i);
+        const grMatch = pb.match(/:ground(?:Y)?\s+([\d\.]+)/i);
+
+        const defRestitution = rMatch ? parseFloat(rMatch[1]) : 0.45;
+        const defFriction = fMatch ? parseFloat(fMatch[1]) : 0.25;
+        const defStiffness = stMatch ? parseFloat(stMatch[1]) : 120;
+        const defDamping = dmpMatch ? parseFloat(dmpMatch[1]) : 4.0;
 
         const bodyBlocks = extractSexprBlocks(pb, ':body');
         const bodies = bodyBlocks.map(bText => {
@@ -5279,18 +6296,75 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const vx = parseFloat(extractSlot(bText, /:vx\s+([\d\.\-]+)/i) || 0);
           const vy = parseFloat(extractSlot(bText, /:vy\s+([\d\.\-]+)/i) || 0);
           const mass = parseFloat(extractSlot(bText, /:mass\s+([\d\.]+)/i) || 1.0);
-          const bounce = parseFloat(extractSlot(bText, /:bounce\s+([\d\.]+)/i) || 0.45);
+          const rStr = extractSlot(bText, /:(?:restitution|bounce)\s+([\d\.]+)/i);
+          const bounce = rStr !== null ? parseFloat(rStr) : defRestitution;
+          const bfStr = extractSlot(bText, /:friction\s+([\d\.]+)/i);
+          const bFriction = bfStr !== null ? parseFloat(bfStr) : defFriction;
           const radius = parseFloat(extractSlot(bText, /:radius\s+([\d\.]+)/i) || 16);
-          const groundYStr = extractSlot(bText, /:groundY\s+([\d\.]+)/i);
+          const groundYStr = extractSlot(bText, /:ground(?:Y)?\s+([\d\.]+)/i);
           const groundY = groundYStr ? parseFloat(groundYStr) : undefined;
-          return { id: bId, target: target || `#${bId}`, x, y, vx, vy, mass, bounce, radius, groundY };
+          const staticMatch = bText.match(/:(?:isStatic|static)\s+(true|false)/i);
+          const isStatic = staticMatch ? staticMatch[1] === 'true' : false;
+          const stStr = extractSlot(bText, /:stiffness\s+([\d\.]+)/i);
+          const dmStr = extractSlot(bText, /:damping\s+([\d\.]+)/i);
+          const lenStr = extractSlot(bText, /:length\s+([\d\.]+)/i);
+          const axStr = extractSlot(bText, /:anchor-?x\s+([\d\.\-]+)/i);
+          const ayStr = extractSlot(bText, /:anchor-?y\s+([\d\.\-]+)/i);
+          const entry = {
+            id: bId,
+            target: target || `#${bId}`,
+            x, y, vx, vy, mass,
+            bounce,
+            restitution: bounce,
+            friction: bFriction,
+            radius,
+            groundY,
+            isStatic
+          };
+          if (stStr !== null) entry.stiffness = parseFloat(stStr);
+          if (dmStr !== null) entry.damping = parseFloat(dmStr);
+          if (lenStr !== null) entry.length = parseFloat(lenStr);
+          if (axStr !== null) entry.anchorX = parseFloat(axStr);
+          if (ayStr !== null) entry.anchorY = parseFloat(ayStr);
+          return entry;
+        });
+
+        const springBlocks = extractSexprBlocks(pb, ':spring');
+        const springs = springBlocks.map((sText, sIdx) => {
+          const sId = extractSlot(sText, /:id\s+"([^"]+)"/i) || extractSlot(sText, /:id\s+([^\s\)]+)/i) || `spring_${sIdx + 1}`;
+          const a = extractSlot(sText, /:a\s+"([^"]+)"/i) || extractSlot(sText, /:a\s+([^\s\)]+)/i);
+          const b = extractSlot(sText, /:b\s+"([^"]+)"/i) || extractSlot(sText, /:b\s+([^\s\)]+)/i)
+            || extractSlot(sText, /:target\s+"([^"]+)"/i) || extractSlot(sText, /:target\s+([^\s\)]+)/i);
+          const lineTarget = extractSlot(sText, /:line\s+"([^"]+)"/i) || extractSlot(sText, /:line\s+([^\s\)]+)/i);
+          const axStr = extractSlot(sText, /:anchor-?x\s+([\d\.\-]+)/i);
+          const ayStr = extractSlot(sText, /:anchor-?y\s+([\d\.\-]+)/i);
+          const lenStr = extractSlot(sText, /:(?:rest-)?length\s+([\d\.]+)/i);
+          const kStr = extractSlot(sText, /:(?:stiffness|k)\s+([\d\.]+)/i);
+          const cStr = extractSlot(sText, /:(?:damping|c)\s+([\d\.]+)/i);
+          return {
+            id: sId,
+            a: a || null,
+            b: b || null,
+            lineTarget: lineTarget || null,
+            anchorX: axStr !== null ? parseFloat(axStr) : 0,
+            anchorY: ayStr !== null ? parseFloat(ayStr) : 0,
+            length: lenStr !== null ? parseFloat(lenStr) : undefined,
+            stiffness: kStr !== null ? parseFloat(kStr) : defStiffness,
+            damping: cStr !== null ? parseFloat(cStr) : defDamping
+          };
         });
 
         physics = {
           gravity: gMatch ? parseFloat(gMatch[1]) : 980,
-          friction: fMatch ? parseFloat(fMatch[1]) : 0.985,
+          restitution: defRestitution,
+          friction: defFriction,
+          stiffness: defStiffness,
+          damping: defDamping,
+          substeps: subMatch ? parseInt(subMatch[1], 10) : 4,
+          drag: drgMatch ? parseFloat(drgMatch[1]) : 0,
           groundY: grMatch ? parseFloat(grMatch[1]) : 420,
-          bodies
+          bodies,
+          springs
         };
       }
 
@@ -5635,12 +6709,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         });
       }
 
-      // Multi-Entity Particle Emitters & Obstacle Collision Pipelines
+      // Multi-Entity Particle Emitters, Pools & Obstacle Collision Pipelines
       const emitters = [];
       const emitterContainerBlocks = extractSexprBlocks(astContent, ':emitters');
       const emitterBlocks = emitterContainerBlocks.length > 0
-        ? extractSexprBlocks(emitterContainerBlocks[0], ':emitter')
-        : extractSexprBlocks(astContent, ':emitter');
+        ? extractSexprBlocks(emitterContainerBlocks[0], ':emitter').concat(extractSexprBlocks(emitterContainerBlocks[0], ':particle-pool'))
+        : extractSexprBlocks(astContent, ':emitter').concat(extractSexprBlocks(astContent, ':particle-pool'));
 
       emitterBlocks.forEach(emText => {
         const emId = extractSlot.call(null, emText, /:id\s+"([^"]+)"/i) || extractSlot.call(null, emText, /:id\s+([^\s\)]+)/i) || `emitter_${emitters.length + 1}`;
@@ -5651,6 +6725,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const fill = extractSlot.call(null, emText, /:fill\s+"([^"]+)"/i) || '#38bdf8';
         const wrapMode = extractSlot.call(null, emText, /:wrapMode\s+"([^"]+)"/i) || 'bounce';
         const boundsEl = extractSlot.call(null, emText, /:boundsElement\s+"([^"]+)"/i) || extractSlot.call(null, emText, /:boundsElement\s+([^\s\)]+)/i);
+        const emRestStr = extractSlot.call(null, emText, /:(?:restitution|bounce)\s+([\d\.]+)/i);
+        const emFricStr = extractSlot.call(null, emText, /:friction\s+([\d\.]+)/i);
+        const emSubStr = extractSlot.call(null, emText, /:substeps\s+(\d+)/i);
+        const speedExpr = extractQuoted(emText, 'speed-expr') || extractQuoted(emText, 'speedExpr') || null;
+        const countExpr = extractQuoted(emText, 'count-expr') || extractQuoted(emText, 'countExpr') || null;
+        const phaseSyncMatch = emText.match(/:phase-?sync\s+(true|false)/i);
+        const phaseSync = phaseSyncMatch ? phaseSyncMatch[1] === 'true' : (emId === 'gas-molecules');
 
         // Explicit Bounds
         const minX = parseFloat(extractSlot.call(null, emText, /:minX\s+([\d\.\-]+)/i) || '40');
@@ -5658,14 +6739,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const minY = parseFloat(extractSlot.call(null, emText, /:minY\s+([\d\.\-]+)/i) || '40');
         const maxY = parseFloat(extractSlot.call(null, emText, /:maxY\s+([\d\.\-]+)/i) || '440');
 
-        // Obstacles (:obstacles ((:obstacle :target "#piston-assembly" :bounce 1.0) ...))
+        // Obstacles (:obstacles ((:obstacle :target "#piston-assembly" :restitution 1.0 :friction 0.1) ...))
         const obstacles = [];
         const obsContainerBlocks = extractSexprBlocks(emText, ':obstacles');
         if (obsContainerBlocks.length > 0) {
           const obsEntries = extractSexprBlocks(obsContainerBlocks[0], ':obstacle');
           obsEntries.forEach(obText => {
             const target = extractSlot.call(null, obText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, obText, /:target\s+([^\s\)]+)/i);
-            const bounce = parseFloat(extractSlot.call(null, obText, /:bounce\s+([\d\.]+)/i) || '1.0');
+            const bounce = parseFloat(extractSlot.call(null, obText, /:(?:restitution|bounce)\s+([\d\.]+)/i) || '1.0');
             const refract = parseFloat(extractSlot.call(null, obText, /:refract\s+([\d\.]+)/i) || '0');
             const friction = parseFloat(extractSlot.call(null, obText, /:friction\s+([\d\.]+)/i) || '0');
             if (target) {
@@ -5678,10 +6759,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           id: emId,
           count,
           speed,
+          speedExpr,
+          countExpr,
+          phaseSync,
           radius,
           gravity,
           fill,
           wrapMode,
+          restitution: emRestStr !== null ? parseFloat(emRestStr) : 1.0,
+          friction: emFricStr !== null ? parseFloat(emFricStr) : 0.0,
+          substeps: emSubStr !== null ? parseInt(emSubStr, 10) : 4,
           bounds: { minX, maxX, minY, maxY },
           boundsElement: boundsEl,
           obstacles
@@ -5764,6 +6851,64 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         });
       });
 
+      // Live Vector Oscilloscopes (:scope)
+      const scopes = [];
+      const scopeBlocks = extractSexprBlocks(astContent, ':scope');
+      scopeBlocks.forEach(sb => {
+        const target = extractQuoted(sb, 'target') || extractSlot.call(null, sb, /:target\s+([^\s\)]+)/i);
+        const xExpr = extractQuoted(sb, 'x-expr') || extractQuoted(sb, 'xExpr') || 't';
+        const yExpr = extractQuoted(sb, 'y-expr') || extractQuoted(sb, 'yExpr') || '0';
+        const samplesStr = extractSlot.call(null, sb, /:samples\s+(\d+)/i);
+        const samples = samplesStr ? Math.max(8, Math.min(2048, parseInt(samplesStr, 10))) : 96;
+        const xrMatch = sb.match(/:x-?range\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+        const yrMatch = sb.match(/:y-?range\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+        const plotMatch = sb.match(/:plot\s*\(\s*([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s+([\d\.\-]+)\s*\)/i);
+        if (target) {
+          const sc = {
+            target,
+            xExpr,
+            yExpr,
+            samples,
+            xRange: xrMatch ? [parseFloat(xrMatch[1]), parseFloat(xrMatch[2])] : [0, 30],
+            yRange: yrMatch ? [parseFloat(yrMatch[1]), parseFloat(yrMatch[2])] : [0, 100]
+          };
+          if (plotMatch) {
+            sc.plot = [
+              parseFloat(plotMatch[1]),
+              parseFloat(plotMatch[2]),
+              parseFloat(plotMatch[3]),
+              parseFloat(plotMatch[4])
+            ];
+          }
+          scopes.push(sc);
+        }
+      });
+
+      // Conservation-Law & Energy-Ledger Meters (:ledger)
+      const ledgers = [];
+      const ledgerBlocks = extractSexprBlocks(astContent, ':ledger');
+      ledgerBlocks.forEach(lb => {
+        const lid = extractQuoted(lb, 'id') || `ledger_${ledgers.length + 1}`;
+        const target = extractQuoted(lb, 'target') || `#${lid}`;
+        const unit = extractQuoted(lb, 'unit') || '';
+        const maxExpr = extractQuoted(lb, 'max') || '';
+        const lx = parseFloat(extractSlot.call(null, lb, /:x\s+([\d\.\-]+)/i) || '40');
+        const ly = parseFloat(extractSlot.call(null, lb, /:y\s+([\d\.\-]+)/i) || '400');
+        const lw = parseFloat(extractSlot.call(null, lb, /:width\s+([\d\.]+)/i) || '320');
+        const lh = parseFloat(extractSlot.call(null, lb, /:height\s+([\d\.]+)/i) || '20');
+        const termBlocks = extractSexprBlocks(lb, ':label');
+        const terms = [];
+        termBlocks.forEach(tb => {
+          const label = extractQuoted(tb, 'label') || 'Term';
+          const expr = extractQuoted(tb, 'expr') || '0';
+          const color = extractQuoted(tb, 'color') || '#38bdf8';
+          terms.push({ label, expr, color });
+        });
+        if (terms.length > 0) {
+          ledgers.push({ id: lid, target, unit, maxExpr, x: lx, y: ly, width: lw, height: lh, terms });
+        }
+      });
+
       const has3D = Boolean((camBlocks && camBlocks.length > 0) || bindings.some(b => b.type && b.type.startsWith('3d-')));
 
       return {
@@ -5782,6 +6927,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         subtitles,
         bindings,
         checkpoints,
+        scopes,
+        ledgers,
         physics,
         stateMachines: stateMachines.length > 0 ? stateMachines : null,
         emitters: emitters.length > 0 ? emitters : null,
@@ -6379,6 +7526,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if ((!parsedAst.stateMachines || parsedAst.stateMachines.length === 0) && textParsed.stateMachines) {
                   parsedAst.stateMachines = textParsed.stateMachines;
                 }
+                if (!parsedAst.physics && textParsed.physics) {
+                  parsedAst.physics = textParsed.physics;
+                }
                 if (
                   textParsed.gestures &&
                   textParsed.gestures.length > 0 &&
@@ -6392,6 +7542,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 }
                 if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.some(b => b.type === 'var-update'))) {
                   parsedAst.bindings = textParsed.bindings;
+                }
+                if (textParsed.scopes && textParsed.scopes.length > 0 && (!parsedAst.scopes || parsedAst.scopes.length === 0)) {
+                  parsedAst.scopes = textParsed.scopes;
+                }
+                if (textParsed.ledgers && textParsed.ledgers.length > 0 && (!parsedAst.ledgers || parsedAst.ledgers.length === 0)) {
+                  parsedAst.ledgers = textParsed.ledgers;
                 }
               }
             }
@@ -6444,6 +7600,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
+          scopes: (parsedAst && parsedAst.scopes) || registryScene.scopes || [],
+          ledgers: (parsedAst && parsedAst.ledgers) || registryScene.ledgers || [],
           actors: (parsedAst && parsedAst.actors) || registryScene.actors || [],
           staticElements: (parsedAst && parsedAst.staticElements) || registryScene.staticElements || [],
           emitters: (parsedAst && parsedAst.emitters) || registryScene.emitters || [],
@@ -6495,11 +7653,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       );
       this.isContinuousSim = isContinuousSim;
 
-      // Mount into container
+      this._applyScenePhysics(scene);
+
+      // Mount into container (or initialize headless buffers if container is null)
       if (this.container) {
         this.container.innerHTML = '';
-        this.mountSceneAsset(scene, this.container);
       }
+      this.mountSceneAsset(scene, this.container || null);
       this.resetVars();
       this.updateComputedVars(); // Pre-paint computed state evaluation before initial frame
 
@@ -6514,10 +7674,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         
       // 1. Hide the "Loading AST Vector Scene..." overlay immediately
-      const loaderEl = document.getElementById('loading-indicator') || 
+      const loaderEl = typeof document !== 'undefined' ? (
+                       document.getElementById('loading-indicator') || 
                        document.getElementById('loading') ||
                        document.querySelector('.loading-badge') ||
-                       (this.container && this.container.parentElement && this.container.parentElement.querySelector('[id*="load"]'));
+                       (this.container && this.container.parentElement && this.container.parentElement.querySelector('[id*="load"]'))
+                       ) : null;
       if (loaderEl && loaderEl.style) {
         loaderEl.style.display = 'none';
       }
@@ -6647,6 +7809,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       uiControls: sceneData.uiControls || (parsedAst && parsedAst.uiControls) || sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
       computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
       gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
+      physics: sceneData.physics || (parsedAst && parsedAst.physics) || null,
+      scopes: sceneData.scopes || (parsedAst && parsedAst.scopes) || [],
+      ledgers: sceneData.ledgers || (parsedAst && parsedAst.ledgers) || [],
       svgText: svgText,
       mount: sceneData.mount,
       update: sceneData.update,
@@ -7410,11 +8575,40 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
   }
 
+  _applyScenePhysics(scene) {
+    if (!this.physics || !scene || !scene.physics) return;
+    this.physics.clear();
+    if (scene.physics.gravity !== undefined) this.physics.setGravity(scene.physics.gravity);
+    if (scene.physics.restitution !== undefined) this.physics.setRestitution(scene.physics.restitution);
+    if (scene.physics.friction !== undefined) this.physics.setFriction(scene.physics.friction);
+    if (scene.physics.substeps !== undefined) this.physics.setSubsteps(scene.physics.substeps);
+    if (scene.physics.stiffness !== undefined) this.physics.stiffness = scene.physics.stiffness;
+    if (scene.physics.damping !== undefined) this.physics.damping = scene.physics.damping;
+    if (scene.physics.drag !== undefined) this.physics.drag = scene.physics.drag;
+    if (scene.physics.groundY !== undefined) this.physics.groundY = scene.physics.groundY;
+    if (Array.isArray(scene.physics.bodies)) {
+      for (let i = 0; i < scene.physics.bodies.length; i++) {
+        const b = scene.physics.bodies[i];
+        if (b && typeof b === 'object') {
+          this.physics.addBody(b);
+        }
+      }
+    }
+    if (Array.isArray(scene.physics.springs)) {
+      for (let i = 0; i < scene.physics.springs.length; i++) {
+        const sp = scene.physics.springs[i];
+        if (sp && typeof sp === 'object') {
+          this.physics.addSpring(sp);
+        }
+      }
+    }
+  }
+
   mountSceneAsset(scene, container) {
-    if (!container || !scene || this._isMounting) return;
+    if (!scene || this._isMounting) return;
     this._isMounting = true;
     try {
-      this._mountedContainer = container;
+      this._mountedContainer = container || null;
       this._mountedSceneId = scene.id;
       this.setupBackdropVideo(scene);
       const stage = this.getStageSvg();
@@ -7422,7 +8616,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         stage.setAttribute('viewBox', '0 0 800 480');
         this._defaultViewBox = '0 0 800 480';
       }
-      this.ensureMasterDefs(container);
+      if (container) {
+        this.ensureMasterDefs(container);
+      }
       this.activeBindings = [];
       this.activeVarBindings = [];
       this.active3DNodes = [];
@@ -7430,9 +8626,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.active3DRings = [];
       this.active3DPolygons = [];
       this.active3DItems = [];
+      this.activeScopes = [];
+      this.activeLedgers = [];
+      if (this._cpHoldTimers) this._cpHoldTimers.fill(0);
+      if (this._cpPassedMask) this._cpPassedMask.fill(0);
       this._cachedElements = null;
 
-      if (scene.svgText) {
+      if (container && scene.svgText) {
         try {
           let safeSvg = this.sanitizeSvg(scene.svgText);
           safeSvg = safeSvg
@@ -7495,7 +8695,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         } catch (err) {
           console.warn('SVG mount bypassed due to parse failure:', err);
         }
-      } else if (typeof scene.render === 'function' && typeof scene.mount !== 'function') {
+      } else if (container && typeof scene.render === 'function' && typeof scene.mount !== 'function') {
         const rendered = scene.render(this.progress);
         if (typeof Node !== 'undefined' && rendered instanceof Node) {
           container.replaceChildren(rendered);
@@ -7513,21 +8713,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       }
 
-      if (typeof scene.mount === 'function') {
+      if (container && typeof scene.mount === 'function') {
         this._cachedElements = scene.mount(container);
       }
 
+      const hasDomQuery = Boolean(container && typeof container.querySelector === 'function');
       const bindingsList = (scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []);
       if (bindingsList && bindingsList.length) {
         bindingsList.forEach(b => {
           if (b.type === '3d-node') {
-            const node = container.querySelector(b.target);
+            const node = hasDomQuery ? container.querySelector(b.target) : null;
             if (node) {
               let evalX = () => 0, evalY = () => 0, evalZ = () => 0;
               try { evalX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x});`); } catch {}
               try { evalY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y});`); } catch {}
               try { evalZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z});`); } catch {}
-              const labelNode = b.label ? container.querySelector(b.label) : null;
+              const labelNode = (b.label && hasDomQuery) ? container.querySelector(b.label) : null;
               
               const item = {
                 type: '3d-node',
@@ -7543,7 +8744,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               this.active3DItems.push(item);
             }
           } else if (b.type === '3d-line') {
-            const line = container.querySelector(b.target);
+            const line = hasDomQuery ? container.querySelector(b.target) : null;
             if (line) {
               let evalX1 = () => 0, evalY1 = () => 0, evalZ1 = () => 0;
               let evalX2 = () => 0, evalY2 = () => 0, evalZ2 = () => 0;
@@ -7553,8 +8754,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               try { evalX2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x2});`); } catch {}
               try { evalY2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y2});`); } catch {}
               try { evalZ2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z2});`); } catch {}
-              const cap1 = b.cap1 ? container.querySelector(b.cap1) : null;
-              const cap2 = b.cap2 ? container.querySelector(b.cap2) : null;
+              const cap1 = (b.cap1 && hasDomQuery) ? container.querySelector(b.cap1) : null;
+              const cap2 = (b.cap2 && hasDomQuery) ? container.querySelector(b.cap2) : null;
 
               const item = {
                 type: '3d-line',
@@ -7570,7 +8771,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               this.active3DItems.push(item);
             }
           } else if (b.type === '3d-ring') {
-            const ringNode = container.querySelector(b.target);
+            const ringNode = hasDomQuery ? container.querySelector(b.target) : null;
             if (ringNode) {
               let evalR = () => 100, evalCX = () => 0, evalCY = () => 0, evalCZ = () => 0;
               let evalTiltX = () => 0, evalTiltY = () => 0, evalTiltZ = () => 0;
@@ -7596,7 +8797,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               this.active3DItems.push(item);
             }
           } else if (b.type === '3d-polygon') {
-            const polyNode = container.querySelector(b.target);
+            const polyNode = hasDomQuery ? container.querySelector(b.target) : null;
             if (polyNode) {
               let evalPts = () => [];
               try {
@@ -7634,7 +8835,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               evalFn: varEvalFn
             });
           } else {
-            const node = container.querySelector(b.target);
+            const node = hasDomQuery ? container.querySelector(b.target) : null;
             if (node) {
               let evalFn = () => 0;
               let rawExpr = String(b.expr || '0').trim();
@@ -7700,99 +8901,88 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         });
       }
 
-      if (this.physics && scene.physics) {
-        this.physics.clear();
-        if (scene.physics.gravity !== undefined) this.physics.setGravity(scene.physics.gravity);
-        if (scene.physics.friction !== undefined) this.physics.friction = scene.physics.friction;
-        if (scene.physics.groundY !== undefined) this.physics.groundY = scene.physics.groundY;
-        if (Array.isArray(scene.physics.bodies)) {
-          scene.physics.bodies.forEach(b => {
-            if (b && typeof b === 'object') {
-              this.physics.addBody(b);
-            }
-          });
-        }
-      }
+      this._applyScenePhysics(scene);
 
       this.resetVars();
       this.updateComputedVars();
 
       try {
-        if (!container) return;
-        const dynamicTargets = new Set();
-        
-        if (Array.isArray(this.activeBindings)) {
-          this.activeBindings.forEach(b => { 
-            if (b && b.node && b.node.isConnected) {
-              dynamicTargets.add(b.node); 
-            } else if (b && b.target) {
-              const freshEl = container.querySelector(b.target);
-              if (freshEl) {
-                b.node = freshEl;
-                dynamicTargets.add(freshEl);
+        if (container) {
+          const dynamicTargets = new Set();
+
+          if (Array.isArray(this.activeBindings)) {
+            this.activeBindings.forEach(b => {
+              if (b && b.node && b.node.isConnected) {
+                dynamicTargets.add(b.node);
+              } else if (b && b.target) {
+                const freshEl = container.querySelector(b.target);
+                if (freshEl) {
+                  b.node = freshEl;
+                  dynamicTargets.add(freshEl);
+                }
               }
+            });
+          }
+
+          if (Array.isArray(this.active3DItems)) {
+            this.active3DItems.forEach(item => {
+              if (item && item.domNode && item.domNode.isConnected) {
+                dynamicTargets.add(item.domNode);
+              }
+            });
+          }
+
+          if (scene.actors && Array.isArray(scene.actors)) {
+            scene.actors.forEach(a => {
+              if (a && a.target) {
+                const el = container.querySelector(a.target);
+                if (el) dynamicTargets.add(el);
+              }
+            });
+          }
+
+          dynamicTargets.forEach(el => {
+            if (el && el.style && typeof el.style.setProperty === 'function') {
+              el.style.setProperty('will-change', 'transform, opacity');
             }
           });
-        }
-        
-        if (Array.isArray(this.active3DItems)) {
-          this.active3DItems.forEach(item => { 
-            if (item && item.domNode && item.domNode.isConnected) {
-              dynamicTargets.add(item.domNode); 
-            }
-          });
-        }
-        
-        if (scene.actors && Array.isArray(scene.actors)) {
-          scene.actors.forEach(a => {
-            if (a && a.target) {
-              const el = container.querySelector(a.target);
+
+          if (scene.gestures && Array.isArray(scene.gestures)) {
+            scene.gestures.forEach(g => {
+              if (!g || !g.target) return;
+              const el = container.querySelector(g.target);
               if (el) dynamicTargets.add(el);
-            }
-          });
-        }
-
-        dynamicTargets.forEach(el => {
-          if (el && el.style && typeof el.style.setProperty === 'function') {
-            el.style.setProperty('will-change', 'transform, opacity');
+            });
           }
-        });
 
-        if (scene.gestures && Array.isArray(scene.gestures)) {
-          scene.gestures.forEach(g => {
-            if (!g || !g.target) return;
-            const el = container.querySelector(g.target);
-            if (el) dynamicTargets.add(el);
+          dynamicTargets.forEach(node => {
+            if (node && node.style) {
+              node.style.willChange = 'transform';
+              node.setAttribute('data-kinematic', 'true');
+              node.style.pointerEvents = 'auto';
+            }
           });
-        }
 
-        dynamicTargets.forEach(node => {
-          if (node && node.style) {
-            node.style.willChange = 'transform';
-            node.setAttribute('data-kinematic', 'true');
-            node.style.pointerEvents = 'auto';
+          if (scene.staticElements && Array.isArray(scene.staticElements)) {
+            scene.staticElements.forEach(s => {
+              const el = container.querySelector(s.target);
+              if (el && el.style) {
+                el.style.pointerEvents = 'none';
+                el.style.contain = 'paint layout';
+                el.setAttribute('data-static', 'true');
+              }
+            });
+          } else {
+            const directChildren = Array.from(container.children || []);
+            directChildren.forEach(child => {
+              if (child.id === 'annotation-ink-root' || child.id === 'dev-overlay-root') return;
+              const containsDynamic = Array.from(dynamicTargets).some(dt => child.contains(dt));
+              if (!containsDynamic && child.style) {
+                child.style.contain = 'paint layout';
+                child.setAttribute('data-static', 'true');
+              }
+            });
           }
-        });
-
-        if (scene.staticElements && Array.isArray(scene.staticElements)) {
-          scene.staticElements.forEach(s => {
-            const el = container.querySelector(s.target);
-            if (el && el.style) {
-              el.style.pointerEvents = 'none';
-              el.style.contain = 'paint layout';
-              el.setAttribute('data-static', 'true');
-            }
-          });
-        } else {
-          const directChildren = Array.from(container.children || []);
-          directChildren.forEach(child => {
-            if (child.id === 'annotation-ink-root' || child.id === 'dev-overlay-root') return;
-            const containsDynamic = Array.from(dynamicTargets).some(dt => child.contains(dt));
-            if (!containsDynamic && child.style) {
-              child.style.contain = 'paint layout';
-              child.setAttribute('data-static', 'true');
-            }
-          });
         }
       } catch (domOptErr) {
         console.warn('[AST Engine] DOM optimization notice:', domOptErr);
@@ -7801,7 +8991,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.emitters.clear();
       if (scene.emitters && Array.isArray(scene.emitters)) {
         scene.emitters.forEach(emConfig => {
-          this.addEmitter(emConfig);
+          const em = this.addEmitter(emConfig);
+          if (em.speedExpr) {
+            try {
+              const compiledSpd = this.compileAstExpr(em.speedExpr);
+              em._speedEval = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${compiledSpd});`);
+            } catch (_) {}
+          }
+          if (em.countExpr) {
+            try {
+              const compiledCnt = this.compileAstExpr(em.countExpr);
+              em._countEval = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${compiledCnt});`);
+            } catch (_) {}
+          }
         });
       }
       if (this.emitters && this.emitters.size > 0) {
@@ -7809,6 +9011,203 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           em.mount(container);
         }
       }
+
+      // Mount Live Vector Oscilloscopes (:scope) backed by pre-allocated Float32Array ring buffers
+      if (scene.scopes && Array.isArray(scene.scopes)) {
+        for (let s = 0; s < scene.scopes.length; s++) {
+          const scCfg = scene.scopes[s];
+          if (!scCfg || !scCfg.target) continue;
+          const node = container && typeof container.querySelector === 'function' ? container.querySelector(scCfg.target) : null;
+          let plotX = 480;
+          let plotY = 100;
+          let plotW = 280;
+          let plotH = 140;
+          if (Array.isArray(scCfg.plot) && scCfg.plot.length >= 4) {
+            plotX = scCfg.plot[0];
+            plotY = scCfg.plot[1];
+            plotW = scCfg.plot[2];
+            plotH = scCfg.plot[3];
+          } else if (node && typeof node.getAttribute === 'function') {
+            const dpx = parseFloat(node.getAttribute('data-plot-x'));
+            const dpy = parseFloat(node.getAttribute('data-plot-y'));
+            const dpw = parseFloat(node.getAttribute('data-plot-w'));
+            const dph = parseFloat(node.getAttribute('data-plot-h'));
+            if (Number.isFinite(dpx) && Number.isFinite(dpy) && dpw > 0 && dph > 0) {
+              plotX = dpx; plotY = dpy; plotW = dpw; plotH = dph;
+            }
+          }
+          let evalX = () => 0;
+          let evalY = () => 0;
+          try {
+            const cx = this.compileAstExpr(scCfg.xExpr || 't');
+            evalX = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cx});`);
+          } catch (_) {}
+          try {
+            const cy = this.compileAstExpr(scCfg.yExpr || '0');
+            evalY = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cy});`);
+          } catch (_) {}
+          const cap = Math.max(8, Math.min(2048, scCfg.samples || 96));
+          this.activeScopes.push({
+            target: scCfg.target,
+            node,
+            capacity: cap,
+            rawX: new Float32Array(cap),
+            rawY: new Float32Array(cap),
+            ptStrings: new Array(cap),
+            head: 0,
+            count: 0,
+            hasLast: false,
+            lastSampleX: 0,
+            lastSampleY: 0,
+            xMin: Array.isArray(scCfg.xRange) ? scCfg.xRange[0] : 0,
+            xMax: Array.isArray(scCfg.xRange) ? scCfg.xRange[1] : 30,
+            yMin: Array.isArray(scCfg.yRange) ? scCfg.yRange[0] : 0,
+            yMax: Array.isArray(scCfg.yRange) ? scCfg.yRange[1] : 100,
+            plotX,
+            plotY,
+            plotW,
+            plotH,
+            evalX,
+            evalY
+          });
+        }
+      }
+
+      // Mount Conservation-Law & Energy-Ledger Meters (:ledger) with pre-allocated Float32Array term buffers
+      if (scene.ledgers && Array.isArray(scene.ledgers)) {
+        for (let l = 0; l < scene.ledgers.length; l++) {
+          const ldCfg = scene.ledgers[l];
+          if (!ldCfg || !Array.isArray(ldCfg.terms) || ldCfg.terms.length === 0) continue;
+          const terms = ldCfg.terms;
+          const evalFns = [];
+          for (let ti = 0; ti < terms.length; ti++) {
+            let fn = () => 0;
+            try {
+              const cExpr = this.compileAstExpr(terms[ti].expr || '0');
+              fn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cExpr});`);
+            } catch (_) {}
+            evalFns.push(fn);
+          }
+          let maxEvalFn = null;
+          if (ldCfg.maxExpr) {
+            try {
+              const cMax = this.compileAstExpr(ldCfg.maxExpr);
+              maxEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cMax});`);
+            } catch (_) {}
+          }
+
+          let groupNode = container && typeof container.querySelector === 'function'
+            ? (container.querySelector(ldCfg.target || `#${ldCfg.id}`) || container.querySelector(`#${ldCfg.id}`))
+            : null;
+          const rectNodes = [];
+          const valueLabelNodes = [];
+          let totalNode = null;
+          const lx = typeof ldCfg.x === 'number' ? ldCfg.x : 40;
+          const ly = typeof ldCfg.y === 'number' ? ldCfg.y : 400;
+          const lw = typeof ldCfg.width === 'number' ? ldCfg.width : 320;
+          const lh = typeof ldCfg.height === 'number' ? ldCfg.height : 20;
+
+          if (typeof document !== 'undefined' && container) {
+            if (!groupNode) {
+              groupNode = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              groupNode.setAttribute('id', ldCfg.id);
+              groupNode.setAttribute('class', 'ast-conservation-ledger');
+              container.appendChild(groupNode);
+            } else {
+              groupNode.replaceChildren();
+            }
+            const track = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            track.setAttribute('x', String(lx));
+            track.setAttribute('y', String(ly));
+            track.setAttribute('width', String(lw));
+            track.setAttribute('height', String(lh));
+            track.setAttribute('rx', '4');
+            track.setAttribute('fill', '#0f172a');
+            track.setAttribute('stroke', '#334155');
+            track.setAttribute('stroke-width', '1.2');
+            groupNode.appendChild(track);
+
+            for (let ti = 0; ti < terms.length; ti++) {
+              const segRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              segRect.setAttribute('x', String(lx));
+              segRect.setAttribute('y', String(ly + 1));
+              segRect.setAttribute('width', '0');
+              segRect.setAttribute('height', String(Math.max(4, lh - 2)));
+              segRect.setAttribute('fill', terms[ti].color || '#38bdf8');
+              groupNode.appendChild(segRect);
+              rectNodes.push(segRect);
+
+              const swatch = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              const legX = lx + ti * Math.floor(lw / Math.min(3, terms.length));
+              const legY = ly + lh + 7;
+              swatch.setAttribute('x', String(legX));
+              swatch.setAttribute('y', String(legY));
+              swatch.setAttribute('width', '8');
+              swatch.setAttribute('height', '8');
+              swatch.setAttribute('rx', '2');
+              swatch.setAttribute('fill', terms[ti].color || '#38bdf8');
+              groupNode.appendChild(swatch);
+
+              const legTxt = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              legTxt.setAttribute('x', String(legX + 12));
+              legTxt.setAttribute('y', String(legY + 8));
+              legTxt.setAttribute('fill', '#cbd5e1');
+              legTxt.setAttribute('font-size', '9.5');
+              legTxt.setAttribute('font-family', 'monospace');
+              legTxt.textContent = `${terms[ti].label}: 0`;
+              groupNode.appendChild(legTxt);
+              valueLabelNodes.push(legTxt);
+            }
+
+            totalNode = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            totalNode.setAttribute('x', String(lx + lw));
+            totalNode.setAttribute('y', String(ly - 5));
+            totalNode.setAttribute('fill', '#94a3b8');
+            totalNode.setAttribute('font-size', '9.5');
+            totalNode.setAttribute('font-weight', '700');
+            totalNode.setAttribute('text-anchor', 'end');
+            totalNode.setAttribute('font-family', 'monospace');
+            totalNode.textContent = '';
+            groupNode.appendChild(totalNode);
+          }
+
+          this.activeLedgers.push({
+            id: ldCfg.id,
+            unit: ldCfg.unit || '',
+            x: lx,
+            y: ly,
+            width: lw,
+            height: lh,
+            terms,
+            evalFns,
+            maxEvalFn,
+            values: new Float32Array(terms.length),
+            lastValues: new Float32Array(terms.length),
+            hasLast: false,
+            rectNodes,
+            valueLabelNodes,
+            totalNode
+          });
+        }
+      }
+
+      // Pre-compile manipulation checkpoint :pass-expr evaluators
+      if (scene.interactive && Array.isArray(scene.interactive.checkpoints)) {
+        for (let ci = 0; ci < scene.interactive.checkpoints.length; ci++) {
+          const cp = scene.interactive.checkpoints[ci];
+          if (cp && cp.passExpr && !cp._passEvalFn) {
+            try {
+              const compiledPass = this.compileAstExpr(cp.passExpr);
+              cp._passEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return Boolean(${compiledPass});`);
+            } catch (_) {
+              cp._passEvalFn = () => false;
+            }
+          }
+        }
+      }
+
+      // Initialize zero-GC Lab CSV log columnar buffers
+      this._initLabLogBuffers();
 
       if (scene.bindInputs && Array.isArray(scene.bindInputs)) {
         scene.bindInputs.forEach(bi => this.registerBindInput(bi));
@@ -8272,7 +9671,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    const phaseEmitter = this.emitters && (this.emitters.get('gas-molecules') || Array.from(this.emitters.values()).find(e => typeof e.setPhaseState === 'function'));
+    const phaseEmitter = this.emitters && (this.emitters.get('gas-molecules') || Array.from(this.emitters.values()).find(e => e.phaseSync === true));
     if (phaseEmitter) {
       const gasEm = phaseEmitter;
       if (gasEm) {
@@ -8305,6 +9704,209 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
           gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
         }
+      }
+    }
+
+    // Generic declarative emitter expressions (:speed-expr, :count-expr)
+    if (this.emitters && this.emitters.size > 0) {
+      const v = this.vars || {};
+      for (const em of this.emitters.values()) {
+        if (em._speedEval) {
+          try {
+            const nextSpd = Number(em._speedEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+            if (Number.isFinite(nextSpd) && Math.abs(nextSpd - em._lastSpeedEval) >= 2) {
+              em._lastSpeedEval = nextSpd;
+              em.setSpeed(nextSpd);
+            }
+          } catch (_) {}
+        }
+        if (em._countEval) {
+          try {
+            const nextCnt = Math.round(Number(em._countEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map)));
+            if (Number.isFinite(nextCnt) && nextCnt !== em._lastCountEval) {
+              em._lastCountEval = nextCnt;
+              em.setCount(nextCnt);
+            }
+          } catch (_) {}
+        }
+      }
+    }
+
+    // Update Zero-GC Live Vector Oscilloscopes (:scope)
+    if (!this._isResetting && this.activeScopes && this.activeScopes.length > 0) {
+      const v = this.vars || {};
+      for (let s = 0; s < this.activeScopes.length; s++) {
+        const sc = this.activeScopes[s];
+        try {
+          const xv = Number(sc.evalX(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+          const yv = Number(sc.evalY(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+          if (!Number.isFinite(xv) || !Number.isFinite(yv)) continue;
+
+          const xSpan = Math.max(1e-6, sc.xMax - sc.xMin);
+          const ySpan = Math.max(1e-6, sc.yMax - sc.yMin);
+          const minStepX = xSpan / Math.max(8, sc.capacity);
+          const minStepY = ySpan * 0.015;
+          const dx = Math.abs(xv - sc.lastSampleX);
+          const dy = Math.abs(yv - sc.lastSampleY);
+
+          if (!sc.hasLast || dx >= minStepX || dy >= minStepY) {
+            const writeIdx = (sc.head + sc.count) % sc.capacity;
+            if (sc.count < sc.capacity) {
+              sc.count++;
+            } else {
+              sc.head = (sc.head + 1) % sc.capacity;
+            }
+            sc.rawX[writeIdx] = xv;
+            sc.rawY[writeIdx] = yv;
+            sc.lastSampleX = xv;
+            sc.lastSampleY = yv;
+            sc.hasLast = true;
+
+            if (sc.node) {
+              const pts = sc.ptStrings;
+              let ptsStr = '';
+              for (let k = 0; k < sc.count; k++) {
+                const rIdx = (sc.head + k) % sc.capacity;
+                let nx = (sc.rawX[rIdx] - sc.xMin) / xSpan;
+                let ny = (sc.rawY[rIdx] - sc.yMin) / ySpan;
+                if (nx < 0) nx = 0; else if (nx > 1) nx = 1;
+                if (ny < 0) ny = 0; else if (ny > 1) ny = 1;
+                const px = sc.plotX + nx * sc.plotW;
+                const py = sc.plotY + sc.plotH - ny * sc.plotH;
+                const token = `${px.toFixed(1)},${py.toFixed(1)}`;
+                pts[k] = token;
+                ptsStr += (k === 0 ? token : ' ' + token);
+              }
+              sc.node.setAttribute('points', ptsStr);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    // Update Zero-GC Conservation-Law & Energy-Ledger Meters (:ledger)
+    if (this.activeLedgers && this.activeLedgers.length > 0) {
+      const v = this.vars || {};
+      for (let l = 0; l < this.activeLedgers.length; l++) {
+        const ld = this.activeLedgers[l];
+        let total = 0;
+        let changed = !ld.hasLast;
+        const termCount = ld.evalFns.length;
+        for (let ti = 0; ti < termCount; ti++) {
+          let val = 0;
+          try {
+            val = Number(ld.evalFns[ti](effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+          } catch (_) { val = 0; }
+          if (!Number.isFinite(val) || val < 0) val = 0;
+          ld.values[ti] = val;
+          total += val;
+          if (!changed && Math.abs(val - ld.lastValues[ti]) > 1e-3) {
+            changed = true;
+          }
+        }
+        if (changed) {
+          let maxCap = total;
+          if (ld.maxEvalFn) {
+            try {
+              const m = Number(ld.maxEvalFn(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+              if (Number.isFinite(m) && m > 0) maxCap = m;
+            } catch (_) {}
+          }
+          if (maxCap < 1e-6) maxCap = 1;
+
+          let cursorX = ld.x;
+          for (let ti = 0; ti < termCount; ti++) {
+            const val = ld.values[ti];
+            ld.lastValues[ti] = val;
+            const frac = Math.min(1, val / maxCap);
+            const segW = Math.max(0, Math.min(ld.x + ld.width - cursorX, frac * ld.width));
+            if (ld.rectNodes[ti]) {
+              ld.rectNodes[ti].setAttribute('x', cursorX.toFixed(1));
+              ld.rectNodes[ti].setAttribute('width', segW.toFixed(1));
+            }
+            if (ld.valueLabelNodes[ti]) {
+              const unitSuffix = ld.unit ? ` ${ld.unit}` : '';
+              ld.valueLabelNodes[ti].textContent = `${ld.terms[ti].label}: ${val.toFixed(1)}${unitSuffix}`;
+            }
+            cursorX += segW;
+          }
+          if (ld.totalNode) {
+            const unitSuffix = ld.unit ? ` ${ld.unit}` : '';
+            ld.totalNode.textContent = `Total: ${total.toFixed(1)}${unitSuffix}`;
+          }
+          ld.hasLast = true;
+        }
+      }
+    }
+
+    // Evaluate Manipulation-Based Goal Checkpoints (:pass-expr & :hold-duration)
+    if (this.scene && this.scene.interactive && Array.isArray(this.scene.interactive.checkpoints)) {
+      const cps = this.scene.interactive.checkpoints;
+      const v = this.vars || {};
+      const stepDt = isTickStep ? dt : 0;
+      for (let ci = 0; ci < cps.length && ci < 32; ci++) {
+        const cp = cps[ci];
+        if (!cp || !cp.passExpr) continue;
+        if (!cp._passEvalFn) {
+          try {
+            const compiledPass = this.compileAstExpr(cp.passExpr);
+            cp._passEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return Boolean(${compiledPass});`);
+          } catch (_) {
+            cp._passEvalFn = () => false;
+          }
+        }
+        let condMet = false;
+        try {
+          condMet = Boolean(cp._passEvalFn(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+        } catch (_) {
+          condMet = false;
+        }
+        const holdDur = Number(cp.holdDuration || 0);
+        if (this._cpPassedMask[ci] === 0) {
+          if (condMet) {
+            if (holdDur <= 0) {
+              this._cpHoldTimers[ci] = 0;
+              this._cpPassedMask[ci] = 1;
+              cp._holdProgress = 1;
+              this.emit('checkpoint_goal_passed', { index: ci, checkpoint: cp });
+              this.notifyParent({
+                type: 'CHECKPOINT_GOAL_PASSED',
+                sceneId: (this.scene && this.scene.id) || '',
+                index: ci,
+                prompt: cp.prompt
+              });
+            } else {
+              this._cpHoldTimers[ci] = Math.min(holdDur, this._cpHoldTimers[ci] + stepDt);
+              cp._holdProgress = Math.min(1, this._cpHoldTimers[ci] / holdDur);
+              if (this._cpHoldTimers[ci] >= holdDur) {
+                this._cpPassedMask[ci] = 1;
+                cp._holdProgress = 1;
+                this.emit('checkpoint_goal_passed', { index: ci, checkpoint: cp });
+                this.notifyParent({
+                  type: 'CHECKPOINT_GOAL_PASSED',
+                  sceneId: (this.scene && this.scene.id) || '',
+                  index: ci,
+                  prompt: cp.prompt
+                });
+              }
+            }
+          } else {
+            this._cpHoldTimers[ci] = 0;
+            cp._holdProgress = 0;
+          }
+        } else {
+          cp._holdProgress = 1;
+        }
+      }
+    }
+
+    // Periodic zero-GC sampling into Lab CSV columnar ring buffer during active tick
+    if (isTickStep && this.isPlaying) {
+      this._labLogClock = (this._labLogClock || 0) + dt;
+      if (this._labLogClock >= 0.25) {
+        this._labLogClock = 0;
+        const sampleT = (this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : (this.realtimeSec || 0);
+        this._recordLabSample(sampleT);
       }
     }
 
@@ -8356,11 +9958,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       // 2. Start VM Compute Timer
       const t0 = (this.profiler && typeof performance !== 'undefined') ? performance.now() : 0;
 
-      const deltaSec = Math.min(rawDeltaSec, 0.1);
+      const deltaSec = Math.min(Math.max(rawDeltaSec, 0), 0.05);
       this.realtimeSec = (this.realtimeSec || 0) + deltaSec;
 
-      if (this.physics && this.physics.enabled && this.physics.bodies.length > 0) {
+      if (this.physics && this.physics.enabled && (this.physics.bodies.length > 0 || this.physics.springs.length > 0)) {
         this.physics.update(deltaSec);
+      }
+
+      if (this.verletPhysics && this.verletPhysics.enabled && this.verletPhysics.points.length > 0) {
+        this.verletPhysics.step(deltaSec);
       }
 
       for (const sm of this.stateMachines.values()) {
@@ -8481,6 +10087,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.scene.interactive = null;
       }
       if (parsed.camera) this.scene.camera = parsed.camera;
+      if (parsed.physics) this.scene.physics = parsed.physics;
+      this.scene.scopes = parsed.scopes || [];
+      this.scene.ledgers = parsed.ledgers || [];
       if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
       this.scene.astSource = typeof astInput === 'string' ? astInput : null;
 
@@ -9215,10 +10824,15 @@ function setupPostMessageBridge(engine, uiController) {
         if (typeof data.gravity === 'number' && engine.physics) engine.physics.setGravity(data.gravity);
         break;
       case 'SET_RESTITUTION':
-        if (typeof data.bounce === 'number' && engine.physics) engine.physics.setRestitution(data.bounce);
+        if (engine.physics && (typeof data.restitution === 'number' || typeof data.bounce === 'number')) {
+          engine.physics.setRestitution(data.restitution !== undefined ? data.restitution : data.bounce);
+        }
         break;
       case 'SET_FRICTION':
         if (typeof data.friction === 'number' && engine.physics) engine.physics.setFriction(data.friction);
+        break;
+      case 'SET_SUBSTEPS':
+        if (typeof data.substeps === 'number' && engine.physics) engine.physics.setSubsteps(data.substeps);
         break;
       case 'RESET_PHYSICS':
         if (engine.physics) engine.physics.reset();
@@ -9473,6 +11087,20 @@ function setupPostMessageBridge(engine, uiController) {
       case 'DOWNLOAD_OFFLINE_ZIP':
         if (typeof engine.downloadOfflineZipSuite === 'function') {
           engine.downloadOfflineZipSuite();
+        }
+        break;
+      case 'REQUEST_JOTTER_CSV':
+        if (typeof engine.exportLabCsv === 'function') {
+          const csvRes = engine.exportLabCsv();
+          engine.notifyParent({
+            type: 'JOTTER_CSV_RESPONSE',
+            sceneId: csvRes.sceneId,
+            sceneTitle: csvRes.sceneTitle,
+            rowCount: csvRes.rowCount,
+            csv: csvRes.csv,
+            nodePath: `lab/${csvRes.sceneId}`,
+            download: Boolean(data.download)
+          });
         }
         break;
       case 'INJECT_CHECKPOINT':

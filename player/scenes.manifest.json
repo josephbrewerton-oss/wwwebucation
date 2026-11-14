@@ -1,8 +1,23 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-14T07:56:56.920Z",
-  "totalScenes": 68,
+  "generatedAt": "2026-11-14T08:31:58.486Z",
+  "totalScenes": 72,
   "scenes": [
+    {
+      "id": "acid-alkali-titration",
+      "type": "Sim",
+      "title": "Acid-Alkali Titration & pH Curve",
+      "stage": "KS4 GCSE CHEMISTRY",
+      "duration": 20,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/acid-alkali-titration.svg",
+      "astFile": "cartridges/acid-alkali-titration.ast",
+      "astbFile": "bytecode/acid-alkali-titration.astb",
+      "keyframeCount": 3,
+      "subtitleCount": 3,
+      "bindingsCount": 14
+    },
     {
       "id": "algebra-balance",
       "type": "Sim",
@@ -197,6 +212,21 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 15
+    },
+    {
+      "id": "enzyme-denaturation",
+      "type": "Sim",
+      "title": "Enzyme Catalysis & Denaturation",
+      "stage": "KS4 GCSE BIOLOGY",
+      "duration": 16,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/enzyme-denaturation.svg",
+      "astFile": "cartridges/enzyme-denaturation.ast",
+      "astbFile": "bytecode/enzyme-denaturation.astb",
+      "keyframeCount": 3,
+      "subtitleCount": 3,
+      "bindingsCount": 11
     },
     {
       "id": "eucharistic-procession-film",
@@ -634,6 +664,21 @@
       "bindingsCount": 14
     },
     {
+      "id": "osmosis-membrane",
+      "type": "Sim",
+      "title": "Osmosis & Semi-Permeable Membrane Flux",
+      "stage": "KS4 GCSE BIOLOGY",
+      "duration": 20,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/osmosis-membrane.svg",
+      "astFile": "cartridges/osmosis-membrane.ast",
+      "astbFile": "bytecode/osmosis-membrane.astb",
+      "keyframeCount": 3,
+      "subtitleCount": 3,
+      "bindingsCount": 7
+    },
+    {
       "id": "pendulum_dyno",
       "type": "Sim",
       "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
@@ -797,6 +842,21 @@
       "keyframeCount": 4,
       "subtitleCount": 3,
       "bindingsCount": 6
+    },
+    {
+      "id": "rates-of-reaction",
+      "type": "Sim",
+      "title": "Rates of Reaction & Collision Theory",
+      "stage": "KS4 GCSE CHEMISTRY",
+      "duration": 25,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/rates-of-reaction.svg",
+      "astFile": "cartridges/rates-of-reaction.ast",
+      "astbFile": "bytecode/rates-of-reaction.astb",
+      "keyframeCount": 3,
+      "subtitleCount": 3,
+      "bindingsCount": 12
     },
     {
       "id": "rosary-mysteries",

@@ -1,0 +1,116 @@
+<svg id="stage-svg" viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16;">
+  <defs>
+    <linearGradient id="enzyme-native" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="substrate-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#facc15"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="480" fill="#090d16"/>
+  <rect x="0" y="0" width="800" height="480" fill="none" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Header -->
+  <text x="400" y="34" fill="#f8fafc" font-size="19" font-weight="800" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+    Enzyme Catalysis &amp; Thermal / pH Denaturation
+  </text>
+  <text x="400" y="54" fill="#94a3b8" font-size="11.5" font-weight="600" text-anchor="middle">
+    KS4 GCSE Biology · Lock-and-Key Active Site Model · Temperature &amp; pH Optimum Scope
+  </text>
+
+  <!-- Left Chamber: Lock & Key Active Site Stage -->
+  <rect x="30" y="76" width="375" height="310" rx="12" fill="#0b1120" stroke="#334155" stroke-width="2"/>
+
+  <!-- Reaction Chamber Box for Substrates -->
+  <rect x="46" y="92" width="230" height="250" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+
+  <!-- Enzyme Protein Molecule with Morphing Active Site Cleft -->
+  <path id="enzyme-body" d="M 92 128 L 232 128 L 232 204 L 184 204 L 162 248 L 140 204 L 92 204 Z" fill="url(#enzyme-native)" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round"/>
+  <text x="162" y="160" fill="#f8fafc" font-size="12" font-weight="800" text-anchor="middle">ENZYME (E)</text>
+  <text id="active-site-label" x="162" y="182" fill="#bae6fd" font-size="10" font-weight="700" text-anchor="middle">Active Site: Intact</text>
+
+  <!-- Complementary Triangular Substrate (Docking into Cleft) -->
+  <g id="substrate-group" transform="translate(0, 48)">
+    <polygon id="substrate-molecule" points="140,204 184,204 162,248" fill="url(#substrate-grad)" stroke="#fef08a" stroke-width="2"/>
+    <text x="162" y="270" fill="#fde047" font-size="10.5" font-weight="800" text-anchor="middle">SUBSTRATE (S)</text>
+  </g>
+
+  <!-- Quick Thermal Stress Presets inside SVG -->
+  <g transform="translate(46, 352)">
+    <g id="btn-temp-cold" style="cursor:pointer;">
+      <rect width="72" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="36" y="16" fill="#cbd5e1" font-size="9.5" font-weight="700" text-anchor="middle">10 °C Cold</text>
+    </g>
+    <g id="btn-temp-opt" transform="translate(79, 0)" style="cursor:pointer;">
+      <rect width="72" height="24" rx="4" fill="#059669" stroke="#10b981" stroke-width="1"/>
+      <text x="36" y="16" fill="#ffffff" font-size="9.5" font-weight="700" text-anchor="middle">37 °C Opt</text>
+    </g>
+    <g id="btn-temp-boil" transform="translate(158, 0)" style="cursor:pointer;">
+      <rect width="72" height="24" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="36" y="16" fill="#fca5a5" font-size="9.5" font-weight="700" text-anchor="middle">70 °C Boil</text>
+    </g>
+  </g>
+
+  <!-- Live Enzyme Telemetry Readout Card -->
+  <g transform="translate(286, 92)">
+    <rect width="106" height="250" rx="8" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+    <text x="53" y="22" fill="#94a3b8" font-size="9.5" font-weight="800" text-anchor="middle">KINETICS</text>
+
+    <text x="53" y="48" fill="#94a3b8" font-size="9" text-anchor="middle">Temp (T)</text>
+    <text id="enz-temp-readout" x="53" y="66" fill="#fca5a5" font-size="14" font-weight="900" text-anchor="middle" font-family="monospace">37 °C</text>
+
+    <text x="53" y="96" fill="#94a3b8" font-size="9" text-anchor="middle">Medium pH</text>
+    <text id="enz-ph-readout" x="53" y="114" fill="#38bdf8" font-size="14" font-weight="900" text-anchor="middle" font-family="monospace">7.0</text>
+
+    <line x1="12" y1="132" x2="94" y2="132" stroke="#1e293b" stroke-width="1.5"/>
+
+    <text x="53" y="152" fill="#94a3b8" font-size="9" font-weight="700" text-anchor="middle">Activity (%Vmax)</text>
+    <text id="enz-rate-readout" x="53" y="176" fill="#4ade80" font-size="18" font-weight="900" text-anchor="middle" font-family="monospace">98%</text>
+
+    <text x="53" y="206" fill="#94a3b8" font-size="9" text-anchor="middle">Protein State</text>
+    <text id="enz-state-readout" x="53" y="224" fill="#4ade80" font-size="11" font-weight="800" text-anchor="middle">Optimal Fit</text>
+  </g>
+
+  <!-- Right Panel: Reaction Rate vs Temperature Oscilloscope (:scope) -->
+  <rect x="420" y="76" width="350" height="240" rx="12" fill="#0b1120" stroke="#334155" stroke-width="2"/>
+  <text x="595" y="96" fill="#e2e8f0" font-size="12" font-weight="800" text-anchor="middle">
+    Enzyme Activity Scope (% Rate vs Temperature)
+  </text>
+
+  <g stroke="#1e293b" stroke-width="1">
+    <line x1="455" y1="114" x2="750" y2="114"/>
+    <line x1="455" y1="154" x2="750" y2="154"/>
+    <line x1="455" y1="194" x2="750" y2="194"/>
+    <line x1="455" y1="234" x2="750" y2="234"/>
+    <line x1="528" y1="114" x2="528" y2="274"/>
+    <line x1="591" y1="114" x2="591" y2="274" stroke="#22c55e" stroke-dasharray="4 3" opacity="0.5"/>
+    <line x1="676" y1="114" x2="676" y2="274"/>
+  </g>
+  <line x1="455" y1="114" x2="455" y2="274" stroke="#64748b" stroke-width="1.5"/>
+  <line x1="455" y1="274" x2="750" y2="274" stroke="#64748b" stroke-width="1.5"/>
+
+  <text x="448" y="118" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">100</text>
+  <text x="448" y="198" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">50</text>
+  <text x="448" y="278" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">0</text>
+  <text x="602" y="294" fill="#94a3b8" font-size="9.5" text-anchor="middle">Temperature (0 – 80 °C · Opt = 37 °C)</text>
+  <text x="434" y="194" fill="#94a3b8" font-size="9.5" text-anchor="middle" transform="rotate(-90 434 194)">Rate (%)</text>
+
+  <polyline id="enzyme-scope-line" fill="none" stroke="#facc15" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points=""/>
+  <circle id="enzyme-cursor" cx="591" cy="117" r="4.5" fill="#4ade80" stroke="#090d16" stroke-width="1.5"/>
+
+  <!-- Conservation Ledger Group (:ledger) -->
+  <rect x="420" y="328" width="350" height="58" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+  <g id="enzyme-ledger"></g>
+
+  <!-- Bottom Principle Strip -->
+  <g transform="translate(30, 400)">
+    <rect width="740" height="56" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+    <text x="20" y="22" fill="#38bdf8" font-size="11" font-weight="800">TERTIARY PROTEIN FOLDING &amp; DENATURATION:</text>
+    <text x="20" y="42" fill="#e2e8f0" font-size="12.5" font-weight="700" font-family="monospace">
+      Excess heat (&gt;45 °C) or extreme pH breaks hydrogen/ionic bonds → irreversible active-site loss
+    </text>
+  </g>
+</svg>

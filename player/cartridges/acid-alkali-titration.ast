@@ -1,0 +1,75 @@
+(:scene :id "acid-alkali-titration" :type "Sim" :oak-id "OAK-KS4-CHM-002" :subject "Science" :section "Natural Sciences & Physics" :title "Acid-Alkali Titration & pH Curve" :stage "KS4 GCSE CHEMISTRY" :duration 20.0
+  (:vars (
+    (:var :name "volBase" :val 0.0 :min 0.0 :max 50.0 :step 0.2 :unit "cm³" :label "NaOH Added")
+    (:var :name "autoDrip" :val 0.0 :min 0.0 :max 2.0 :step 0.2 :unit "cm³/s" :label "Auto-Drip Rate")
+  ))
+  (ui:controls
+    (control:button :id "reset" :label "Refill Burette" :action (sim:reset))
+    (control:slider :id "volBase" :label "Volume NaOH Added (cm³)" :min 0.0 :max 50.0 :default 0.0 :step 0.2 :bind *volBase*)
+    (control:slider :id "autoDrip" :label "Burette Auto-Drip (cm³/s)" :min 0.0 :max 2.0 :default 0.0 :step 0.2 :bind *autoDrip*)
+  )
+  (:computed (
+    (:name "ph" :expr "Number(((vars.volBase || 0) < 24.99 ? Math.max(0.7, Math.min(6.9, -Math.log10((0.10 * (25.0 - (vars.volBase || 0))) / (25.0 + (vars.volBase || 0))))) : ((vars.volBase || 0) > 25.01 ? Math.min(13.3, Math.max(7.1, 14.0 + Math.log10((0.10 * ((vars.volBase || 0) - 25.0)) / (25.0 + (vars.volBase || 0))))) : 7.0)).toFixed(2))")
+    (:name "acidIons" :expr "Number(Math.max(0, 2.5 - (vars.volBase || 0) * 0.1).toFixed(2))")
+    (:name "saltWater" :expr "Number((Math.min(25.0, (vars.volBase || 0)) * 0.1).toFixed(2))")
+    (:name "excessOh" :expr "Number(Math.max(0, ((vars.volBase || 0) - 25.0) * 0.1).toFixed(2))")
+  ))
+  (:gestures (
+    (:clickable :target "#btn-drop-1" :step-var "volBase" :delta 1.0 :min 0.0 :max 50.0)
+    (:clickable :target "#btn-drop-02" :step-var "volBase" :delta 0.2 :min 0.0 :max 50.0)
+  ))
+  (:scope :target "#titration-scope-line"
+    :x-expr "vars.volBase || 0"
+    :y-expr "vars.ph || 1.0"
+    :samples 160
+    :x-range (0 50)
+    :y-range (0 14)
+    :plot (455 114 295 160))
+  (:ledger :id "titration-ledger" :target "#titration-ledger" :x 434 :y 348 :width 322 :height 14 :unit "mmol"
+    :terms (
+      (:label "H+ Acid" :expr "vars.acidIons || 0" :color "#f87171")
+      (:label "NaCl + H2O" :expr "vars.saltWater || 0" :color "#22c55e")
+      (:label "OH- Base" :expr "vars.excessOh || 0" :color "#e879f9")
+    ))
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "Initially, 25.0 cm³ of 0.10 M hydrochloric acid starts at pH 1.00. Phenolphthalein stays colourless in acid.")
+    (:start 0.35 :end 0.70 :en "Near 25.0 cm³ of NaOH, pH jumps vertically through neutrality (pH 7.00) because only a drop flips H⁺ to OH⁻ excess.")
+    (:start 0.70 :end 1.00 :en "Beyond 25.0 cm³, phenolphthalein turns magenta pink as hydroxide ions dominate above pH 8.2.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Acidic Buffer Start" :rule "pH = -log10[H+] = 1.00 for 0.10 mol/dm³ HCl")
+    (:t 0.50 :title "2. Equivalence Point" :rule "n(HCl) = n(NaOH) = 2.50 mmol at V(NaOH) = 25.0 cm³ -> pH 7.00")
+    (:t 0.90 :title "3. Alkaline Endpoint" :rule "Excess OH- shifts pH above 8.2, turning phenolphthalein magenta pink")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.0
+      :title "Goal Challenge: Hit Equivalence Point"
+      :prompt "Carefully add NaOH until you neutralise the 25.0 cm³ of 0.10 M HCl at the equivalence point (pH near 7.0, volume between 24.6 and 25.4 cm³) and hold for 1.2s."
+      :pass-expr "Math.abs((vars.ph || 1) - 7.0) <= 1.2 && (vars.volBase || 0) >= 24.6 && (vars.volBase || 0) <= 25.4"
+      :hold-duration 1.2
+      :explanation "Exact 1:1 stoichiometric neutralisation of 25.0 cm³ of 0.10 M HCl requires 25.0 cm³ of 0.10 M NaOH.")
+    (:checkpoint :t 0.70
+      :title "Strong Acid – Strong Base Equivalence"
+      :prompt "Why does adding a single 0.2 cm³ drop of NaOH around 25.0 cm³ cause a sudden jump from pH 3 to pH 11?"
+      :options ("Because almost all H⁺ ions are already neutralised, so one drop shifts pH steeply on the logarithmic scale" "Because NaOH spontaneously doubles its molarity at 25.0 cm³" "Because water stops dissociating above 25 cm³" "Because HCl evaporates during titration")
+      :answer 0
+      :on-wrong ((1 "Molarity of the burette titrant never changes mid-experiment.") (2 "Water ionises reversibly throughout the reaction.") (3 "HCl ions are consumed by OH- forming NaCl + H2O, not evaporation."))
+      :explanation "Since pH = -log₁₀[H⁺], sweeping past zero excess H⁺ produces a vertical step on the titration curve.")
+  ))
+  (:bindings (
+    (:target "#vol-added-readout" :attr "textContent" :expr "Number(vars.volBase || 0).toFixed(1) + ' cm³'")
+    (:target "#ph-readout" :attr "textContent" :expr "Number(vars.ph || 1.0).toFixed(2)")
+    (:target "#ph-readout" :attr "fill" :expr "(vars.ph || 1) >= 8.2 ? '#f472b6' : ((vars.ph || 1) >= 6.0 ? '#4ade80' : '#38bdf8')")
+    (:target "#burette-liquid" :attr "y" :expr "(92 + ((vars.volBase || 0) / 50) * 140).toFixed(1)")
+    (:target "#burette-liquid" :attr "height" :expr "Math.max(2, 142 - ((vars.volBase || 0) / 50) * 140).toFixed(1)")
+    (:target "#burette-drop" :attr "cy" :expr "(vars.autoDrip || 0) > 0 ? (260 + ((t * 60) % 45)).toFixed(1) : 262")
+    (:target "#burette-drop" :attr "opacity" :expr "(vars.autoDrip || 0) > 0 ? '0.95' : '0.25'")
+    (:target "#flask-solution" :attr "fill" :expr "(vars.ph || 1) >= 8.2 ? '#ec4899' : ((vars.ph || 1) >= 7.0 ? '#f9a8d4' : '#cbd5e1')")
+    (:target "#indicator-label" :attr "textContent" :expr "(vars.ph || 1) >= 8.2 ? 'Magenta Pink (Alkali)' : ((vars.ph || 1) >= 7.0 ? 'Pale Pink (End-Point)' : 'Colourless (Acidic)')")
+    (:target "#regime-label" :attr "textContent" :expr "(vars.volBase || 0) > 25.05 ? 'Excess OH⁻ Ions' : ((vars.volBase || 0) < 24.95 ? 'Excess H⁺ Ions' : 'Neutral (Stoichiometric)')")
+    (:target "#regime-label" :attr "fill" :expr "(vars.volBase || 0) > 25.05 ? '#f472b6' : ((vars.volBase || 0) < 24.95 ? '#f87171' : '#4ade80')")
+    (:target "#titration-cursor" :attr "cx" :expr "(455 + ((vars.volBase || 0) / 50) * 295).toFixed(1)")
+    (:target "#titration-cursor" :attr "cy" :expr "(274 - ((vars.ph || 1) / 14) * 160).toFixed(1)")
+    (:target "var:volBase" :expr "clamp((vars.volBase || 0) + (vars.autoDrip || 0) * 0.016, 0, 50)")
+  ))
+)

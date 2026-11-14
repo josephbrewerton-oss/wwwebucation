@@ -61,6 +61,7 @@
         btnFullscreen: document.getElementById('btn-fullscreen'),
         btnPrint: document.getElementById('btn-print'),
         btnCopySvg: document.getElementById('btn-copy-svg'),
+        btnLogJotterCsv: document.getElementById('btn-log-jotter-csv'),
         btnPlayMode: document.getElementById('btn-play-mode'),
         btnPen: document.getElementById('btn-pen'),
         btnInteractive: document.getElementById('btn-interactive'),
@@ -511,6 +512,7 @@
     closeInteractiveCard(resumePlayback = false) {
       if (this.elements.interactiveCard) {
         this.elements.interactiveCard.classList.add('hidden');
+        this.elements.interactiveCard.classList.remove('goal-mode');
       }
       if (this.elements.checkpointMinimizedPill) {
         this.elements.checkpointMinimizedPill.classList.add('hidden');
@@ -518,6 +520,7 @@
       }
       this.minimizedCheckpoint = null;
       this.activeCheckpoint = null;
+      this._activeGoalCheckpointIndex = null;
       if (resumePlayback && this.engine) {
         this.engine.play();
       }
@@ -580,10 +583,39 @@
 
       this.activeCheckpoint = index;
       this.minimizedCheckpoint = null;
+      this._activeGoalCheckpointIndex = null;
+      this.elements.interactiveCard.classList.remove('goal-mode');
       if (this.elements.checkpointMinimizedPill) {
         this.elements.checkpointMinimizedPill.classList.add('hidden');
         this.elements.checkpointMinimizedPill.style.display = 'none';
       }
+
+      if (checkpoint.passExpr) {
+        this._activeGoalCheckpointIndex = index;
+        this.elements.interactiveCard.classList.add('goal-mode');
+        if (this.elements.interactiveBadge) {
+          this.elements.interactiveBadge.textContent = checkpoint.title || 'LAB GOAL CHALLENGE';
+        }
+        const holdDur = Number(checkpoint.holdDuration || 0);
+        const holdLabel = holdDur > 0 ? `0.0s / ${holdDur.toFixed(1)}s` : 'Adjust controls to satisfy goal';
+        this.elements.interactiveBody.innerHTML = `
+          <div class="interactive-prompt">${checkpoint.prompt}</div>
+          <div class="goal-progress-wrap">
+            <div class="goal-progress-header">
+              <span>Live Condition Status</span>
+              <span id="goal-hold-readout" class="goal-hold-readout">${holdLabel}</span>
+            </div>
+            <div class="goal-progress-track">
+              <div id="goal-progress-fill" class="goal-progress-fill"></div>
+            </div>
+          </div>
+          <div id="interactive-result" class="interactive-feedback" style="display: none;"></div>
+        `;
+        this.elements.interactiveCard.classList.remove('hidden');
+        this.updateGoalCheckpointProgress();
+        return;
+      }
+
       const isSlide = scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide');
       const isContinuousSim = !isSlide && Boolean(this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim'))));
       if (!isContinuousSim) {
@@ -637,6 +669,9 @@
         btn.addEventListener('click', () => {
           const isCorrect = btn.getAttribute('data-is-correct') === 'true';
           const chosenOrigIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
+          const distractorNudge = !isCorrect && checkpoint.onWrong
+            ? (checkpoint.onWrong[chosenOrigIdx] !== undefined ? checkpoint.onWrong[chosenOrigIdx] : checkpoint.onWrong[String(chosenOrigIdx)])
+            : null;
 
           if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
             const selectedOpt = indexedOptions.find(o => o.originalIndex === chosenOrigIdx);
@@ -653,9 +688,8 @@
             }, '*');
           }
 
-          optBtns.forEach(b => { b.disabled = true; });
-
           if (isCorrect) {
+            optBtns.forEach(b => { b.disabled = true; });
             btn.classList.add('correct');
             this.playChime(784, 'triangle'); // G5 happy chime
             this.completedCheckpoints.add(index);
@@ -671,7 +705,21 @@
             setTimeout(() => {
               this.closeInteractiveCard(true);
             }, 2200);
+          } else if (distractorNudge) {
+            // Distractor-specific Socratic nudge: keep remaining choices active for self-correction
+            btn.disabled = true;
+            btn.classList.add('hinted');
+            this.playChime(330, 'triangle');
+            if (resultBox) {
+              resultBox.style.display = 'block';
+              resultBox.style.color = '#fbbf24';
+              resultBox.innerHTML = `<strong>Guidance:</strong> ${distractorNudge}`;
+            }
+            if (this.engine.voiceEnabled) {
+              this.engine.speak(distractorNudge);
+            }
           } else {
+            optBtns.forEach(b => { b.disabled = true; });
             btn.classList.add('incorrect');
             const correctBtn = this.elements.interactiveBody.querySelector('[data-is-correct="true"]');
             if (correctBtn) correctBtn.classList.add('correct');
@@ -679,7 +727,7 @@
             if (resultBox) {
               resultBox.style.display = 'block';
               resultBox.style.color = '#f87171';
-              resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the previous sacred space!'}`;
+              resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the simulation parameters!'}`;
             }
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Remember: ${checkpoint.explanation || ''}`);
@@ -691,6 +739,154 @@
           }
         });
       });
+    }
+
+    updateGoalCheckpointProgress() {
+      if (this._activeGoalCheckpointIndex === null || this._activeGoalCheckpointIndex === undefined) return;
+      if (!this.engine || typeof this.engine.getCheckpointGoalStatus !== 'function') return;
+      const fillEl = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#goal-progress-fill');
+      const readoutEl = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#goal-hold-readout');
+      if (!fillEl && !readoutEl) return;
+      const st = this.engine.getCheckpointGoalStatus(this._activeGoalCheckpointIndex);
+      if (fillEl) {
+        fillEl.style.width = `${Math.round(Math.max(0, Math.min(1, st.holdProgress)) * 100)}%`;
+      }
+      if (readoutEl) {
+        if (st.passed) {
+          readoutEl.textContent = 'Target achieved';
+          readoutEl.style.color = '#34d399';
+        } else if (st.holdDuration > 0) {
+          readoutEl.textContent = `${st.holdElapsed.toFixed(1)}s / ${st.holdDuration.toFixed(1)}s`;
+          readoutEl.style.color = st.holdElapsed > 0 ? '#34d399' : '#38bdf8';
+        } else {
+          readoutEl.textContent = 'Adjust controls to satisfy goal';
+        }
+      }
+    }
+
+    handleGoalCheckpointPassed(data) {
+      if (!data || typeof data.index !== 'number') return;
+      const idx = data.index;
+      const cp = data.checkpoint;
+      this.completedCheckpoints.add(idx);
+      this.playChime(784, 'triangle');
+      const scene = this.engine && this.engine.scene;
+
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'CHECKPOINT_ANSWERED',
+          sceneId: (scene && scene.id) || '',
+          sceneTitle: (scene && scene.title) || '',
+          index: idx,
+          chosenIdx: 0,
+          selectedText: cp && cp.passExpr ? cp.passExpr : 'Goal passed',
+          isCorrect: true,
+          prompt: (cp && cp.prompt) || '',
+          answer: 0,
+          mode: 'pass-expr',
+        }, '*');
+      }
+
+      if (this._activeGoalCheckpointIndex === idx && this.elements.interactiveBody) {
+        const fillEl = this.elements.interactiveBody.querySelector('#goal-progress-fill');
+        const readoutEl = this.elements.interactiveBody.querySelector('#goal-hold-readout');
+        const resultBox = this.elements.interactiveBody.querySelector('#interactive-result');
+        if (fillEl) fillEl.style.width = '100%';
+        if (readoutEl) {
+          readoutEl.textContent = 'Target achieved';
+          readoutEl.style.color = '#34d399';
+        }
+        if (resultBox) {
+          resultBox.style.display = 'block';
+          resultBox.style.color = '#34d399';
+          resultBox.innerHTML = `<strong>✓ Goal Achieved!</strong> ${(cp && cp.explanation) || ''}`;
+        }
+        if (this.engine.voiceEnabled) {
+          this.engine.speak(`Goal achieved! ${(cp && cp.explanation) || ''}`);
+        }
+        setTimeout(() => {
+          if (this._activeGoalCheckpointIndex === idx) {
+            this.closeInteractiveCard(false);
+          }
+        }, 2600);
+      } else {
+        this.showToast(`✓ Goal Achieved: ${(cp && cp.title) || 'Lab Checkpoint'}`);
+      }
+    }
+
+    logDataToJotterCsv(forceDownload = false) {
+      if (!this.engine || typeof this.engine.exportLabCsv !== 'function') {
+        this.showToast('⚠️ Lab CSV logger not ready');
+        return;
+      }
+      const res = this.engine.exportLabCsv();
+      if (!res || !res.csv) {
+        this.showToast('⚠️ No simulation observations sampled yet');
+        return;
+      }
+
+      if (forceDownload && typeof document !== 'undefined') {
+        try {
+          const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${res.sceneId || 'lab'}-data.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+          this.showToast(`📥 Downloaded ${res.rowCount} CSV rows`);
+          return;
+        } catch (_) {}
+      }
+
+      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
+        window.parent.postMessage({
+          type: 'LOG_JOTTER_CSV',
+          sceneId: res.sceneId,
+          sceneTitle: res.sceneTitle,
+          rowCount: res.rowCount,
+          csv: res.csv,
+          nodePath: `lab/${res.sceneId}`,
+        }, '*');
+        this.showToast(`📊 Logged ${res.rowCount} rows to Jotter (CSV)`);
+        return;
+      }
+
+      if (typeof indexedDB !== 'undefined') {
+        try {
+          const req = indexedDB.open('SchoolAiJotter', 1);
+          req.onupgradeneeded = () => {
+            const db = req.result;
+            if (!db.objectStoreNames.contains('session_events')) {
+              const store = db.createObjectStore('session_events', { autoIncrement: true, keyPath: 'id' });
+              store.createIndex('sessionId', 'sessionId', { unique: false });
+            }
+          };
+          req.onsuccess = () => {
+            try {
+              const db = req.result;
+              const tx = db.transaction('session_events', 'readwrite');
+              tx.objectStore('session_events').add({
+                sessionId: `lab-${res.sceneId}`,
+                timestamp: Date.now(),
+                nodePath: `lab/${res.sceneId}`,
+                actor: 'student',
+                payload: res.csv,
+              });
+              tx.oncomplete = () => {
+                this.showToast(`📊 Logged ${res.rowCount} rows to SchoolAiJotter (CSV)`);
+              };
+            } catch (_) {
+              this.showToast('⚠️ Failed to write CSV to SchoolAiJotter');
+            }
+          };
+          req.onerror = () => this.showToast('⚠️ Unable to open SchoolAiJotter database');
+        } catch (_) {
+          this.showToast('⚠️ IndexedDB unavailable for CSV logging');
+        }
+      }
     }
 
     triggerFirstCheckpoint() {
@@ -2116,6 +2312,12 @@
 
       if (el.btnPrint) {
         el.btnPrint.addEventListener('click', () => window.print());
+      }
+
+      if (el.btnLogJotterCsv) {
+        el.btnLogJotterCsv.addEventListener('click', (e) => {
+          this.logDataToJotterCsv(Boolean(e && e.shiftKey));
+        });
       }
 
       if (el.btnCopySvg && el.stageSvg) {
@@ -3794,6 +3996,7 @@ window.addEventListener('message', (e) => {
       this.engine.on('timeupdate', () => {
         this.updateView();
         this.checkInteractiveCheckpoints();
+        this.updateGoalCheckpointProgress();
 
         // If stepping towards a target stop in Step Mode, stop when reached
         if (this.targetStop !== null && this.engine.progress >= this.targetStop - 0.008) {
@@ -3809,6 +4012,10 @@ window.addEventListener('message', (e) => {
         if (!this.engine.isContinuousSim && this.engine.scene?.type !== 'Sim' && this.engine.progress < 0.05 && this.completedCheckpoints.size > 0) {
           this.completedCheckpoints.clear();
         }
+      });
+
+      this.engine.on('checkpoint_goal_passed', (data) => {
+        this.handleGoalCheckpointPassed(data);
       });
 
       this.engine.on('statechange', (data) => {
@@ -3915,6 +4122,7 @@ window.addEventListener('message', (e) => {
         if (data && data.name) {
           this.syncProjectedControls(data.name, data.value);
         }
+        this.updateGoalCheckpointProgress();
       });
 
       this.engine.on('simreset', () => {
