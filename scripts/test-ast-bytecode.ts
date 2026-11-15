@@ -17,7 +17,14 @@ import {
   decompileBytecodeToScene,
   isAstBytecode,
   ASTB_MAGIC,
+  FLAG_HAS_SVG,
 } from '../src/utils/astBytecode';
+import {
+  EverymanBios,
+  TupleOp,
+  WASM_MAX_BYTES,
+  WASM_MAX_PAGES,
+} from '../src/engine/everymanBios';
 
 const ROOT_DIR = process.cwd();
 const CARTRIDGES_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
@@ -36,7 +43,7 @@ function assert(cond: boolean, msg: string) {
   }
 }
 
-function runTests() {
+async function runTests() {
   console.log('\n==================================================');
   console.log('🧪 AST Vector Bytecode Verification Suite');
   console.log('==================================================\n');
@@ -193,6 +200,59 @@ function runTests() {
     assert(dec.checkpoints.some(cp => Boolean(cp.onWrong && Object.keys(cp.onWrong).length > 0)), `${cartId} encodes :on-wrong distractor nudges`);
   }
 
+  // Test 7: .ast + .svg Duo Capsule (OP_SVG_COMPANION 0x81)
+  console.log('\n7. Testing .ast + .svg Duo Compilation & OP_SVG_COMPANION (0x81):');
+  const duoAst = `(:scene :id "duo-capsule" :type "Sim" :title "Duo Pendulum" :stage "KS3 PHYSICS" :duration 8.0
+    (:vars ((:var :name "length" :val 1.5 :min 0.5 :max 4.0 :step 0.1 :label "Rod Length (m)")))
+    (:bindings ((:target "#bob" :attr "cx" :expr "400 + Math.sin(t * 6.28) * 100")))
+    (:gestures ((:draggable :target "#bob" :axis "x" :min 250 :max 550))))`;
+  const duoSvg = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><circle id="bob" cx="400" cy="240" r="24" fill="#38bdf8"/></svg>`;
+  const duoBin = compileAstTextToBytecode(duoAst, { svgMarkup: duoSvg });
+  const duoDec = decompileBytecodeToScene(duoBin);
+  const duoFlags = new DataView(duoBin.buffer, duoBin.byteOffset, duoBin.byteLength).getUint16(14, true);
+
+  assert(Boolean(duoFlags & FLAG_HAS_SVG), 'Duo .astb sets FLAG_HAS_SVG (0x0010)');
+  assert(duoDec.svgMarkup === duoSvg, 'OP_SVG_COMPANION (0x81) round-trips full Duo SVG stage');
+  assert(duoDec.vars?.length === 1.5, 'Duo vars preserved alongside OP_SVG_COMPANION');
+
+  // Test 8: Everyman 448 KiB WASM Kernel BIOS ABI (STEM + Parish on identical .wasm)
+  console.log('\n8. Testing Everyman Chassis 448 KiB WASM Kernel BIOS ABI:');
+  const bios = new EverymanBios();
+  await bios.init();
+
+  // Boot Duo capsule with reactive var & hitbox
+  const duoBoot = bios.bootCartridge(duoBin);
+  assert(duoBoot.status === 0, 'WASM boot_cartridge() succeeded on Duo .astb');
+  assert(duoBoot.telemetry.linearMemoryBytes === WASM_MAX_BYTES, `WASM linear memory strictly locked to 448 KiB (${WASM_MAX_PAGES} pages)`);
+  assert(duoBoot.telemetry.hasEmbeddedSvg === true, 'WASM MCB registered OP_SVG_COMPANION vector ptr');
+  assert(bios.readEmbeddedSvg() === duoSvg, 'BIOS zero-copy readEmbeddedSvg() matches original Duo SVG');
+  assert(duoBoot.manifest.length >= 2, `3-Column Gemini Nano manifest populated (${duoBoot.manifest.length} rows)`);
+
+  // Mutate var via unified dispatch_tuple ABI + advance tick + read Display List + StateHex
+  const hexBefore = bios.readStateHex();
+  const varRow = duoBoot.manifest.find(r => r.semanticTag === 'length');
+  assert(Boolean(varRow), 'Manifest exposes semantic tag "length" for Gemini Nano/WebMCP');
+  if (varRow) {
+    bios.dispatchTuple(varRow.slotId, TupleOp.FOCUS, 0, 0);
+    bios.dispatchTuple(varRow.slotId, TupleOp.SET_VAL, 3.25, 0);
+  }
+  const dlCount = bios.tick(33.33);
+  const afterTel = bios.readTelemetry();
+  const hexAfter = bios.readStateHex();
+  assert(dlCount >= 4, `WASM tick() emitted ${dlCount} flat 32-byte Display-List commands at 0x068000`);
+  assert(afterTel.tickCount === 1 && afterTel.t > 0, 'WASM clock & normalized time t advanced');
+  assert(hexBefore !== hexAfter && hexAfter.length === 32, 'StateHex 16-byte register mutated deterministically');
+
+  // Boot BOTH a STEM cartridge (atom.astb) AND a Parish cartridge (church-tour.astb) on same WASM instance
+  const atomBin = new Uint8Array(fs.readFileSync(path.join(BYTECODE_DIR, 'atom.astb')));
+  const atomBoot = bios.bootCartridge(atomBin);
+  assert(atomBoot.status === 0 && atomBoot.manifest.length > 0, `Same WASM kernel booted STEM atom.astb (${atomBoot.manifest.length} manifest rows)`);
+
+  const churchBin = new Uint8Array(fs.readFileSync(path.join(BYTECODE_DIR, 'church-tour.astb')));
+  const churchBoot = bios.bootCartridge(churchBin);
+  assert(churchBoot.status === 0 && churchBoot.manifest.length > 0, `Same WASM kernel booted Parish church-tour.astb (${churchBoot.manifest.length} manifest rows)`);
+  assert(bios.readTelemetry().linearMemoryBytes === WASM_MAX_BYTES, 'Memory remained strictly 448 KiB across cartridge hot-swaps');
+
   console.log('\n==================================================');
   console.log(`Results: ${passedCount} passed, ${failedCount} failed.`);
   console.log('==================================================\n');
@@ -202,4 +262,7 @@ function runTests() {
   }
 }
 
-runTests();
+runTests().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

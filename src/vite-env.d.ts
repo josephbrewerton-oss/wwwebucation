@@ -39,3 +39,13 @@ declare module '*ast-transpiler-engine.bin.js' {
   export default _default;
 }
 
+declare module '*ast-wasm-engine.bin.js' {
+  export const AST_WASM_BASE64: string;
+  export const AST_3D_WASM_BASE64: string;
+  export const AST_WASM_BYTE_LENGTH: number;
+  export function getWasmBinaryBytes(): Uint8Array;
+  const _default: any;
+  export default _default;
+}
+
+

@@ -2,7 +2,7 @@
 import { DomainManifest } from '../types/learning-ast';
 
 const DB_NAME = 'EdgeLearningEngineDB';
-const DB_VERSION = 6; // Version 6: Full IndexedDB-Only App State & Curriculum Pack Stores
+const DB_VERSION = 7; // Version 7: Local FileSystemDirectoryHandle persistence (Nominated Local Build Folder)
 
 const STORE_MANIFESTS = 'manifests';
 const STORE_PROGRESS = 'student_progress';
@@ -13,6 +13,7 @@ const STORE_LESSONS = 'lessons';
 export const STORE_CARTRIDGES_VAULT = 'cartridges_vault';
 export const STORE_APP_STATE = 'app_state';
 export const STORE_CURRICULUM_PACKS = 'curriculum_packs';
+export const STORE_FS_HANDLES = 'fs_handles';
 
 export interface AppStateRecord {
   key: string;
@@ -180,6 +181,11 @@ export function openLocalDB(): Promise<IDBDatabase> {
       // 9. Structured Offline Curriculum Packs Store
       if (!db.objectStoreNames.contains(STORE_CURRICULUM_PACKS)) {
         db.createObjectStore(STORE_CURRICULUM_PACKS, { keyPath: 'id' });
+      }
+
+      // 10. Nominated Local Build Directory Handles (File System Access API)
+      if (!db.objectStoreNames.contains(STORE_FS_HANDLES)) {
+        db.createObjectStore(STORE_FS_HANDLES, { keyPath: 'id' });
       }
     };
 
@@ -998,3 +1004,69 @@ export async function hasVaultCartridge(id: string): Promise<boolean> {
   const found = await getVaultCartridge(id);
   return found !== null;
 }
+
+// =========================================================================
+// NOMINATED LOCAL DIRECTORY HANDLE PERSISTENCE (File System Access API)
+// =========================================================================
+
+export interface StoredDirectoryHandleRecord {
+  id: string;
+  name: string;
+  handle: any; // FileSystemDirectoryHandle (structured-cloneable in IndexedDB)
+  updatedAt: number;
+}
+
+export async function saveDirectoryHandleRecord(
+  id: string,
+  name: string,
+  handle: any
+): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  const db = await openLocalDB();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE_FS_HANDLES, 'readwrite');
+    const req = tx.objectStore(STORE_FS_HANDLES).put({
+      id,
+      name,
+      handle,
+      updatedAt: Date.now(),
+    } satisfies StoredDirectoryHandleRecord);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+export async function getDirectoryHandleRecord(
+  id: string = 'local-build-folder'
+): Promise<StoredDirectoryHandleRecord | null> {
+  if (typeof indexedDB === 'undefined') return null;
+  try {
+    const db = await openLocalDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(STORE_FS_HANDLES, 'readonly');
+      const req = tx.objectStore(STORE_FS_HANDLES).get(id);
+      req.onsuccess = () => resolve((req.result as StoredDirectoryHandleRecord) || null);
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function deleteDirectoryHandleRecord(
+  id: string = 'local-build-folder'
+): Promise<void> {
+  if (typeof indexedDB === 'undefined') return;
+  try {
+    const db = await openLocalDB();
+    await new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_FS_HANDLES, 'readwrite');
+      const req = tx.objectStore(STORE_FS_HANDLES).delete(id);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
+  } catch (err) {
+    console.warn('[dbStore] Failed to remove fs handle:', err);
+  }
+}
+

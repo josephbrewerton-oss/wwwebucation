@@ -10,6 +10,8 @@ import { renderSvgInspectorDrawer, type InspectedElementData } from './SvgInspec
 import { renderSwfTranspilerDrawer } from './SwfTranspilerDrawer';
 import { renderPhetTranspilerDrawer } from './PhetTranspilerDrawer';
 import { type SwfTranspileResult } from '../../utils/swfAstParser';
+import { compileAstTextToBytecode, decompileBytecodeToScene } from '../../utils/astBytecode';
+import { downloadAstbBinary } from '../../services/localCartridgeBuilder';
 
 export type StudioTabType = 'inspector' | 'svg' | 'ast' | 'templates' | 'swf' | 'phet';
 
@@ -163,6 +165,33 @@ export function renderDevStudioDrawer(props: DevStudioDrawerProps): HTMLElement 
   pullBtn.textContent = '↺ Pull from Stage';
   pullBtn.onclick = () => postToPlayer({ type: 'GET_STAGE_SVG' });
   actions.appendChild(pullBtn);
+
+  const exportStatus = document.createElement('span');
+  exportStatus.style.cssText = 'font-size: 0.72rem; color: #38bdf8; font-weight: 700;';
+
+  const compileDuoBtn = document.createElement('button');
+  compileDuoBtn.type = 'button';
+  compileDuoBtn.className = 'stj-btn stj-btn-secondary stj-btn-sm';
+  compileDuoBtn.style.cssText = 'font-size: 0.76rem; font-weight: 700; cursor: pointer;';
+  compileDuoBtn.title = 'Compile active .ast + .svg Duo into a standalone .astb binary capsule';
+  compileDuoBtn.textContent = '📦 Export Duo (.astb)';
+  compileDuoBtn.onclick = () => {
+    try {
+      const astSource = (customAstCode || '').trim() || '(:scene :id "custom-duo" :title "Custom Duo Scene" :stage "STUDIO" :duration 10.0)';
+      const svgSource = (customSvgCode || '').trim();
+      const bytes = compileAstTextToBytecode(astSource, {
+        svgMarkup: svgSource || undefined,
+      });
+      const dec = decompileBytecodeToScene(bytes);
+      downloadAstbBinary(dec.id || 'custom-duo', bytes);
+      exportStatus.textContent = `✓ ${dec.id}.astb (${bytes.byteLength} B)`;
+      setTimeout(() => { exportStatus.textContent = ''; }, 3500);
+    } catch (err: any) {
+      exportStatus.textContent = `✕ ${err?.message || 'Compile error'}`;
+    }
+  };
+  actions.appendChild(compileDuoBtn);
+  actions.appendChild(exportStatus);
 
   tabRow.appendChild(actions);
   container.appendChild(tabRow);

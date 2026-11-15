@@ -121,7 +121,19 @@ This document locks in the architectural boundaries and exact binary memory layo
 #### Page 5: Dynamic Collision Obstacles
 * `0x050000`: 256 Segments × 48 bytes: `[f32 ax, ay, bx, by, nx, ny, vx, vy, len, bounce, refract, friction]`
 
-#### Page 6: Whiteboard Ink & Command Mailbox
+#### Page 6: Whiteboard Ink, Display List & Command Mailbox
 * `0x060000`: Stylus Raw In (1024 × 12 bytes): `[f32 raw_x, raw_y, pressure]`
 * `0x064000`: Bézier Smoothed Out (1024 × 24 bytes): `[f32 mid_x, mid_y, cp_x, cp_y, stroke_width, u32 pad]`
-* `0x06C000`: Command Mailbox Ring Buffer (64 × 16 bytes): `[u32 opcode, f32 p1, f32 p2, u32 target_id]`
+* `0x068000` - `0x06DFFF`: **Everyman Flat Display-List Buffer** (768 × 32 B): `[u32 opcode, u32 slot_and_len, f32 x, f32 y, f32 w, f32 h, u32 rgba, u32 str_ptr]`
+* `0x06E000` - `0x06FFFF`: **Kernel Scratch / Display-List String Pool** (8 KiB)
+
+#### Page 0 Addendum: Everyman BIOS / Kernel Fixed Control Blocks (`0x00000` - `0x0FFFF`)
+* `0x00000` - `0x0000F` (16 B): **Interrupt Mailbox** (`u16 slot_id, u8 source_dev, u8 op, f32 arg1, f32 arg2, u32 seq_aux`)
+* `0x00010` - `0x000FF` (240 B): **Master Control Block** (`0x00088` = 16-byte `state_hex[16]`)
+* `0x00400` - `0x00BFF` (2 KiB): **Staged Tuple Register Table** (64 × 32 B fixed records)
+* `0x00C00` - `0x01FFF` (5 KiB): **3-Column Gemini Nano / WebMCP Manifest Slice** (16 B header + 96 × 32 B rows)
+* `0x02000` - `0x02BFF` (3 KiB): **Reactive Variable Registers** (128 × 24 B)
+* `0x02C00` - `0x02FFF` (1 KiB): **Spatial Pointer Hit-Test AABBs** (32 × 32 B)
+* `0x03000` - `0x03FFF` (4 KiB): **Zero-Copy String LUT** (512 × `[u32 ptr, u32 len]`)
+* `0x04000` - `0x0FFFF` (48 KiB): **Loaded `.astb` Cartridge Slot** (zero `memory.grow()`, strict `448 KiB` ceiling)
+

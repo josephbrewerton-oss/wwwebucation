@@ -37,6 +37,7 @@ export const FLAG_HAS_3D = 0x0001;
 export const FLAG_HAS_VIDEO = 0x0002;
 export const FLAG_HAS_CHECKPOINTS = 0x0004;
 export const FLAG_HAS_SUBTITLES = 0x0008;
+export const FLAG_HAS_SVG = 0x0010;
 
 // Opcodes
 export const OP_SCENE_META = 0x01; // [id_str: u16] [title_str: u16] [stage_str: u16] [video_str: u16] [video_fit_u8]
@@ -49,6 +50,7 @@ export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y,
 export const OP_VAR             = 0x60; // [name_str: u16] [type_u8 (1:num, 2:str, 3:bool)] [num_val: f32 / str_val: u16] [min_f32] [max_f32] [step_f32] [label_str: u16]
 export const OP_INPUT           = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
 export const OP_CAMERA          = 0x80; // [dist_f32] [pitch_f32] [yaw_f32] [fov_f32]
+export const OP_SVG_COMPANION   = 0x81; // [svg_str: u16] (optional embedded Duo SVG stage vector)
 export const OP_SCOPE           = 0x90; // [target_str: u16] [x_expr_str: u16] [y_expr_str: u16] [samples: u16] [x_min: f32] [x_max: f32] [y_min: f32] [y_max: f32] [plot_x: f32] [plot_y: f32] [plot_w: f32] [plot_h: f32]
 export const OP_LEDGER          = 0x91; // [id_str: u16] [target_str: u16] [unit_str: u16] [max_expr_str: u16] [x: f32] [y: f32] [w: f32] [h: f32] [term_count: u8] { [label_str: u16] [expr_str: u16] [color_str: u16] }*
 export const OP_EOF             = 0xFF;
@@ -117,6 +119,7 @@ export interface BytecodeCompiledScene {
   vars?: Record<string, any>;
   inputs?: Array<any>;
   uiControls?: Array<any>;
+  svgMarkup?: string;
 }
 
 /**
@@ -223,6 +226,7 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   if (scene.video || archetype === ARCHETYPE_FILM) flags |= FLAG_HAS_VIDEO;
   if (scene.checkpoints && scene.checkpoints.length > 0) flags |= FLAG_HAS_CHECKPOINTS;
   if (scene.subtitles && scene.subtitles.length > 0) flags |= FLAG_HAS_SUBTITLES;
+  if (scene.svgMarkup && scene.svgMarkup.trim().length > 0) flags |= FLAG_HAS_SVG;
 
   // Stream buffer for instructions
   const ops: number[] = [];
@@ -248,6 +252,12 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   appendU16(stageStr);
   appendU16(videoStr);
   appendU8(fitVal);
+
+  // 1b. Optional Duo SVG Vector Stage Companion (OP_SVG_COMPANION = 0x81)
+  if (scene.svgMarkup && scene.svgMarkup.trim().length > 0) {
+    appendU8(OP_SVG_COMPANION);
+    appendU16(strTable.intern(scene.svgMarkup));
+  }
 
   // 2. Camera (if 3D)
   if (scene.camera) {
@@ -582,6 +592,12 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         scene.has3D = true;
         break;
       }
+      case OP_SVG_COMPANION: {
+        const svgIdx = view.getUint16(offset, true); offset += 2;
+        const svgStr = strTable.get(svgIdx);
+        if (svgStr) scene.svgMarkup = svgStr;
+        break;
+      }
       case OP_KEYFRAME: {
         const normT = view.getUint16(offset, true); offset += 2;
         const titleIdx = view.getUint16(offset, true); offset += 2;
@@ -914,10 +930,17 @@ function extractSexprBlocks(text: string, tag: string): string[] {
   return blocks;
 }
 
+export interface AstBytecodeCompileOptions {
+  svgMarkup?: string;
+  idOverride?: string;
+  titleOverride?: string;
+  stageOverride?: string;
+}
+
 /**
- * Compiles S-Expression text directly into bytecode buffer
+ * Compiles S-Expression text (and optional paired SVG vector stage) directly into a compact .astb buffer
  */
-export function compileAstTextToBytecode(astText: string): Uint8Array {
+export function compileAstTextToBytecode(astText: string, options?: AstBytecodeCompileOptions): Uint8Array {
   if (!astText || typeof astText !== 'string') {
     throw new Error('Empty or invalid AST content for bytecode compilation');
   }
@@ -926,7 +949,8 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     || astText.match(/:id\s+("([^"]+)"|([^\s\)]+))/i)
     || astText.match(/\(id\s+("([^"]+)"|([^\s\)]+))\)/i)
     || astText.match(/meta[\s\S]*?\(id\s+("([^"]+)"|([^\s\)]+))\)/i);
-  const id = idMatch ? (idMatch[2] || idMatch[3] || idMatch[1] || '').replace(/^"|"$/g, '').trim() : 'unnamed';
+  const id = (options?.idOverride && options.idOverride.trim())
+    || (idMatch ? (idMatch[2] || idMatch[3] || idMatch[1] || '').replace(/^"|"$/g, '').trim() : 'unnamed');
 
   const typeMatch = astText.match(/\(:type\s+("([^"]+)"|([^\s\)]+))\)/i)
     || astText.match(/:type\s+("([^"]+)"|([^\s\)]+))/i)
@@ -953,12 +977,14 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
   const titleMatch = astText.match(/\(:title\s+"([^"]+)"\)/i)
     || astText.match(/:title\s+"([^"]+)"/i)
     || astText.match(/\(title\s+"([^"]+)"\)/i);
-  const title = titleMatch ? titleMatch[1] : (id !== 'unnamed' ? id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'AST Scene');
+  const title = (options?.titleOverride && options.titleOverride.trim())
+    || (titleMatch ? titleMatch[1] : (id !== 'unnamed' ? id.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : 'AST Scene'));
 
   const stageMatch = astText.match(/\(:stage\s+"([^"]+)"\)/i)
     || astText.match(/:stage\s+"([^"]+)"/i)
     || astText.match(/\(stage\s+"([^"]+)"\)/i);
-  const stage = stageMatch ? stageMatch[1] : 'CURRICULUM';
+  const stage = (options?.stageOverride && options.stageOverride.trim())
+    || (stageMatch ? stageMatch[1] : 'CURRICULUM');
 
   const durationMatch = astText.match(/\(:duration\s+([\d\.]+)\)/i)
     || astText.match(/:duration\s+([\d\.]+)/i)
@@ -1475,5 +1501,6 @@ export function compileAstTextToBytecode(astText: string): Uint8Array {
     vars,
     inputs,
     uiControls,
+    ...(options?.svgMarkup ? { svgMarkup: options.svgMarkup } : {}),
   });
 }
