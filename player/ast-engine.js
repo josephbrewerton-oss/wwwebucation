@@ -9809,19 +9809,21 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     const camera = Object.assign({ distance: 500, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
 
-    if (typeof camera.yaw === 'string') {
-      try {
-        const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
-        const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.yaw});`);
-        camera.yaw = yawFn(effectiveT, Math, this.vars || {}, clock);
-      } catch {}
-    }
-    if (typeof camera.pitch === 'string') {
-      try {
-        const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
-        const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${camera.pitch});`);
-        camera.pitch = pitchFn(effectiveT, Math, this.vars || {}, clock);
-      } catch {}
+    if (typeof camera.yaw === 'string' || typeof camera.pitch === 'string') {
+      const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
+      const camVars = { ...(this.vars || {}), clock };
+      if (typeof camera.yaw === 'string') {
+        try {
+          const yawFn = this.compileAstFn(camera.yaw);
+          camera.yaw = yawFn(effectiveT, camVars, this.computed || {}, Math);
+        } catch {}
+      }
+      if (typeof camera.pitch === 'string') {
+        try {
+          const pitchFn = this.compileAstFn(camera.pitch);
+          camera.pitch = pitchFn(effectiveT, camVars, this.computed || {}, Math);
+        } catch {}
+      }
     }
     const yawBase = typeof camera.yaw === 'number' ? camera.yaw : 0;
     const pitchBase = typeof camera.pitch === 'number' ? camera.pitch : 0;
