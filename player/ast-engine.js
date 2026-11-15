@@ -9198,10 +9198,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               .replace(/&deg;/g, '°');
 
             let mounted = false;
-            if (safeSvg && typeof DOMParser !== 'undefined') {
-              const parser = new DOMParser();
-              const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-              const rootSvg = htmlDoc.querySelector('svg');
+            if (safeSvg && typeof document !== 'undefined') {
+              const rootSvg = this._buildSafeSvgTree(safeSvg);
               if (rootSvg) {
                 const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
                 if (vb && stage) {
