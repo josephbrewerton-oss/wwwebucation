@@ -9740,8 +9740,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const cp = scene.interactive.checkpoints[ci];
           if (cp && cp.passExpr && !cp._passEvalFn) {
             try {
-              const compiledPass = this.compileAstExpr(cp.passExpr);
-              cp._passEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return Boolean(${compiledPass});`);
+              const rawPassFn = this.compileAstFn(cp.passExpr);
+              cp._passEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                Boolean(rawPassFn(t, vars, computed, MathObj, clamp, lerp, map));
             } catch (_) {
               cp._passEvalFn = () => false;
             }
