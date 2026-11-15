@@ -57,6 +57,7 @@ This document locks in the architectural boundaries and exact binary memory layo
 | **`micro-vector-player.js`** | Web Component Shadow DOM (`HTMLElement`) | **`[DOM_PERMANENT]`** | Custom element lifecycle (`connectedCallback`, `observedAttributes`). |
 | **`obs-controller.js`** | OBS WebSocket v5 Client | **`[DOM_PERMANENT]`** | Browser `WebSocket` API network calls. |
 | **`ast-registry.js`** | Scene Manifest Cache & Cartridge Preloading | **`[DOM_PERMANENT]`** | Fetch API, localStorage caching, JSON manifest parsing. |
+| **`ast-render-boundary.js`** | Standalone Shared Render Boundary (`SVG` + `Canvas` Display-List Blitter + `Nano` Surface Registry) | **`[INTERFACE_BOUNDARY]`** | Single shared DOM/Canvas surface adapter used identically by `ast-engine.js`, `everymanBios.ts`, and `nanoSiteManager.ts` (`site_get_manifest` / `site_manage_surface`). |
 
 ---
 

@@ -28,6 +28,8 @@ export class PersistentAppShellElement extends HTMLElement {
   private unsubscribeLang?: () => void;
   private unsubscribePlayerCalls?: () => void;
   private unsubscribeVoice?: () => void;
+  private cleanupWebMcp?: () => void;
+  private cleanupNanoSite?: () => void;
 
   // Dedicated class handlers for clean event detachment
   private handleDocumentClick = () => {
@@ -631,6 +633,25 @@ export class PersistentAppShellElement extends HTMLElement {
 
     // Inter-frame IPC listener
     window.addEventListener('message', this.handleWindowMessage);
+
+    // Idle registration of W3C WebMCP & Gemini Nano Site Control Plane (0ms boot impact)
+    const scheduleIdle =
+      typeof (window as any).requestIdleCallback === 'function'
+        ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 2500 })
+        : (cb: () => void) => window.setTimeout(cb, 300);
+    scheduleIdle(() => {
+      import('../services/webMcpBridge')
+        .then(({ initWebMcpBridge }) => {
+          this.cleanupWebMcp = initWebMcpBridge(navigate);
+        })
+        .catch(() => {});
+      import('../engine/nanoSiteManager')
+        .then(({ registerNanoSiteWebMcpTools }) => registerNanoSiteWebMcpTools(navigate))
+        .then((handle) => {
+          this.cleanupNanoSite = handle.unregister;
+        })
+        .catch(() => {});
+    });
   }
 
   private bindBeacon() {
@@ -663,6 +684,8 @@ export class PersistentAppShellElement extends HTMLElement {
     this.unsubscribeLang?.();
     this.unsubscribePlayerCalls?.();
     this.unsubscribeVoice?.();
+    this.cleanupWebMcp?.();
+    this.cleanupNanoSite?.();
 
     // 2. Beacon shutdown
     classroomBeacon.stopStudentBeacon();

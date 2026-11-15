@@ -24,6 +24,8 @@ import {
   renderNanoAiTutorDrawer,
   renderAstInteractiveLabDrawer,
   renderEppDiagnosticsDrawer,
+  type QuizCheckpointContext,
+  type NanoAiTutorDrawerHandle,
 } from '../components/player';
 import type { PlayerTelemetryEvent } from '../engine/aicaller';
 import {
@@ -31,6 +33,7 @@ import {
   type PlayerMcpTransport,
   type WebMcpRegistrationHandle,
 } from '../engine/webmcpBridge';
+import { bindSitePlayerAdapter } from '../engine/nanoSiteManager';
 import {
   type EppBenchTransport,
   type ProfilerCaptureResult,
@@ -538,10 +541,24 @@ export function renderPlayerPage(): HTMLElement {
   };
 
   const webMcpHandle: WebMcpRegistrationHandle = registerWebMcpTools(mcpTransport);
+  bindSitePlayerAdapter({
+    loadPreset: (presetId, autoplay = false) => {
+      updatePreset(normalizePresetId(presetId), true);
+      if (autoplay) postToPlayer({ type: 'PLAY' });
+    },
+    setVar: (name, value) => {
+      postToPlayer({ type: 'SET_VAR', name, value });
+    },
+    highlight: (selector) => {
+      postToPlayer({ type: 'EXEC_ACTION_TUPLE', tuple: `(:act :highlight "${selector}")` });
+    },
+    getActivePreset: () => activePreset,
+  });
   window.addEventListener(
     'pagehide',
     () => {
       webMcpHandle.unregister();
+      bindSitePlayerAdapter(null);
     },
     { once: true }
   );
@@ -595,18 +612,23 @@ export function renderPlayerPage(): HTMLElement {
 
   let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | 'diagnostics' | null = null;
   let latestTelemetry: PlayerTelemetryEvent | null = null;
+  let activeQuizContext: QuizCheckpointContext | null = null;
+  let isAiDemonstrating = false;
   let embedTargetMode: PlayerDisplayMode = 'classroom';
   let copiedEmbed = false;
   let mountedDiagnosticsEl: HTMLElement | null = null;
   let mountedDiagnosticsPreset = '';
+  let mountedAiTutorEl: HTMLElement | null = null;
+  let mountedAiTutorHandle: NanoAiTutorDrawerHandle | null = null;
+  let mountedAiTutorPreset = '';
 
-  function renderActiveDrawer(forceRebuildDiagnostics = false) {
+  function renderActiveDrawer(forceRebuild = false) {
     if (!drawerMount) return;
 
     // Preserve interactive diagnostics DOM and live benchmark state across telemetry ticks
     if (
       activeDrawer === 'diagnostics' &&
-      !forceRebuildDiagnostics &&
+      !forceRebuild &&
       mountedDiagnosticsEl &&
       mountedDiagnosticsEl.isConnected &&
       mountedDiagnosticsPreset === activePreset
@@ -614,10 +636,27 @@ export function renderPlayerPage(): HTMLElement {
       return;
     }
 
+    // Preserve active Gemini Nano Co-Pilot chatLog & quiz state across telemetry ticks
+    if (
+      activeDrawer === 'ai-tutor' &&
+      !forceRebuild &&
+      mountedAiTutorEl &&
+      mountedAiTutorEl.isConnected &&
+      mountedAiTutorPreset === activePreset
+    ) {
+      mountedAiTutorHandle?.updateTelemetry(latestTelemetry);
+      return;
+    }
+
     drawerMount.innerHTML = '';
     if (activeDrawer !== 'diagnostics') {
       mountedDiagnosticsEl = null;
       mountedDiagnosticsPreset = '';
+    }
+    if (activeDrawer !== 'ai-tutor') {
+      mountedAiTutorEl = null;
+      mountedAiTutorHandle = null;
+      mountedAiTutorPreset = '';
     }
 
     if (aiTutorBtn) {
@@ -654,8 +693,19 @@ export function renderPlayerPage(): HTMLElement {
         preset: activePreset,
         postToPlayer: (payload) => postToPlayer(payload),
         latestTelemetry,
+        activeQuiz: activeQuizContext,
+        isAiDemonstrating,
+        onCancelDemonstration: () => {
+          isAiDemonstrating = false;
+          mountedAiTutorHandle?.setDemonstrating(false);
+        },
       });
-      if (drawerEl) drawerMount.appendChild(drawerEl);
+      if (drawerEl) {
+        mountedAiTutorEl = drawerEl;
+        mountedAiTutorHandle = (drawerEl as any).__nanoDrawerHandle || null;
+        mountedAiTutorPreset = activePreset;
+        drawerMount.appendChild(drawerEl);
+      }
     } else if (activeDrawer === 'lab') {
       const drawerEl = renderAstInteractiveLabDrawer({
         isOpen: true,
@@ -1205,7 +1255,66 @@ export function renderPlayerPage(): HTMLElement {
     if (e.data.type === 'TELEMETRY' || e.data.type === 'AST_TELEMETRY' || e.data.type === 'PLAYER_TELEMETRY') {
       latestTelemetry = e.data.telemetry || e.data.payload || e.data;
       if (activeDrawer === 'ai-tutor') {
-        renderActiveDrawer();
+        mountedAiTutorHandle?.updateTelemetry(latestTelemetry);
+      }
+    }
+    if (e.data.type === 'AI_DEMO_START') {
+      isAiDemonstrating = true;
+      mountedAiTutorHandle?.setDemonstrating(true);
+    }
+    if (e.data.type === 'AI_DEMO_COMPLETE' || e.data.type === 'PUPIL_PREEMPTION') {
+      isAiDemonstrating = false;
+      mountedAiTutorHandle?.setDemonstrating(false);
+    }
+    if (e.data.type === 'CHECKPOINT_ANSWERED') {
+      if (!e.data.isCorrect && e.data.prompt) {
+        activeQuizContext = {
+          sceneId: typeof e.data.sceneId === 'string' && e.data.sceneId ? e.data.sceneId : activePreset,
+          sceneTitle: typeof e.data.sceneTitle === 'string' ? e.data.sceneTitle : undefined,
+          index: Number(e.data.index || 0),
+          mode: e.data.mode === 'pass-expr' ? 'pass-expr' : 'multiple-choice',
+          prompt: String(e.data.prompt),
+          options: Array.isArray(e.data.options) ? e.data.options : undefined,
+          chosenIndex: typeof e.data.chosenIdx === 'number' ? e.data.chosenIdx : null,
+          chosenText: typeof e.data.selectedText === 'string' ? e.data.selectedText : '',
+          answerIndex: typeof e.data.answer === 'number' ? e.data.answer : undefined,
+          explanation: typeof e.data.explanation === 'string' ? e.data.explanation : '',
+          distractorNudge: typeof e.data.distractorNudge === 'string' ? e.data.distractorNudge : '',
+          autoAsk: false,
+        };
+        if (activeDrawer === 'ai-tutor' && mountedAiTutorHandle) {
+          mountedAiTutorHandle.askCheckpoint(activeQuizContext, false);
+        }
+      } else if (e.data.isCorrect) {
+        activeQuizContext = null;
+      }
+    }
+    if (e.data.type === 'ASK_NANO_CHECKPOINT' || e.data.type === 'OPEN_NANO_TUTOR') {
+      activeQuizContext = {
+        sceneId: typeof e.data.sceneId === 'string' && e.data.sceneId ? e.data.sceneId : activePreset,
+        sceneTitle: typeof e.data.sceneTitle === 'string' ? e.data.sceneTitle : undefined,
+        index: Number(e.data.index || 0),
+        mode: e.data.mode === 'pass-expr' ? 'pass-expr' : 'multiple-choice',
+        prompt: String(e.data.prompt || ''),
+        options: Array.isArray(e.data.options) ? e.data.options : undefined,
+        chosenIndex: typeof e.data.chosenIndex === 'number' ? e.data.chosenIndex : null,
+        chosenText: typeof e.data.chosenText === 'string' ? e.data.chosenText : '',
+        answerIndex: typeof e.data.answerIndex === 'number' ? e.data.answerIndex : undefined,
+        correctText: typeof e.data.correctText === 'string' ? e.data.correctText : '',
+        explanation: typeof e.data.explanation === 'string' ? e.data.explanation : '',
+        distractorNudge: typeof e.data.distractorNudge === 'string' ? e.data.distractorNudge : '',
+        passExpr: typeof e.data.passExpr === 'string' ? e.data.passExpr : '',
+        targetSelector: typeof e.data.targetSelector === 'string' ? e.data.targetSelector : '',
+        vars: e.data.vars && typeof e.data.vars === 'object' ? e.data.vars : undefined,
+        computed: e.data.computed && typeof e.data.computed === 'object' ? e.data.computed : undefined,
+        progress: typeof e.data.progress === 'number' ? e.data.progress : undefined,
+        autoAsk: e.data.autoAsk !== false,
+      };
+      if (activeDrawer === 'ai-tutor' && mountedAiTutorHandle && mountedAiTutorPreset === activePreset) {
+        mountedAiTutorHandle.askCheckpoint(activeQuizContext, activeQuizContext.autoAsk !== false);
+      } else {
+        activeDrawer = 'ai-tutor';
+        renderActiveDrawer(true);
       }
     }
     if (e.data.type === 'PERF_HUD_UPDATED') {

@@ -1295,6 +1295,80 @@ console.log('\n--- TEST 20: First Holy Communion AST & Sanctuary Routing Invaria
   passedTests++;
 }
 
+// =========================================================================
+// TEST 21: In-Quiz "Ask Nano" Coaching Bridge & AI_VISUAL_COMMAND Execution
+// =========================================================================
+console.log('\n--- TEST 21: In-Quiz "Ask Nano" Bridge & AI_VISUAL_COMMAND Execution ---');
+{
+  const playerUiSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui.js'), 'utf8');
+  assert(playerUiSrc.includes('interactive-ask-nano-btn'), 'Checkpoint overlay must render interactive-ask-nano-btn');
+  assert(playerUiSrc.includes('interactive-mute-popups-btn'), 'Checkpoint overlay must render interactive-mute-popups-btn');
+  assert(playerUiSrc.includes("type: 'ASK_NANO_CHECKPOINT'"), 'PlayerUI must emit ASK_NANO_CHECKPOINT payload to parent host');
+  assert(playerUiSrc.includes('askNanoAboutCheckpoint('), 'PlayerUI must expose askNanoAboutCheckpoint method');
+
+  const mediaPlayerSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'pages', 'media-player.ts'), 'utf8');
+  assert(mediaPlayerSrc.includes("e.data.type === 'ASK_NANO_CHECKPOINT'"), 'media-player.ts must handle ASK_NANO_CHECKPOINT');
+  assert(mediaPlayerSrc.includes('mountedAiTutorHandle?.updateTelemetry'), 'media-player.ts must update Nano drawer telemetry without DOM teardown');
+
+  const engAi = createHeadlessEngine();
+  const astTxt = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.ast'), 'utf8');
+  await engAi.loadSceneData(engAi.parseAst(astTxt), false);
+
+  const aiPosted: Array<{ msg: any }> = [];
+  const aiListeners: Record<string, Function[]> = {};
+  const sbAi: any = vm.createContext({
+    window: {
+      location: { origin: 'https://localhost:3000', search: '' },
+      addEventListener: (ev: string, fn: Function) => {
+        (aiListeners[ev] = aiListeners[ev] || []).push(fn);
+      },
+      parent: {
+        postMessage: (msg: any) => aiPosted.push({ msg }),
+      },
+      postMessage: () => {},
+    },
+    self: {},
+    document: { getElementById: () => null, querySelector: () => null, createElement: () => ({ style: {} }), head: { appendChild: () => {} } },
+    performance,
+    requestAnimationFrame: (fn: Function) => setTimeout(() => fn(performance.now()), 1),
+    cancelAnimationFrame: (id: any) => clearTimeout(id),
+    console,
+    Math, Date, Number, String, Boolean, Array, Object, Set, Map, Float32Array, Uint8Array, RegExp, JSON,
+  });
+  sbAi.self = sbAi.window;
+  const engineCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-engine.js'), 'utf8');
+  vm.runInContext(engineCode, sbAi);
+  sbAi.window.setupPostMessageBridge(engAi, null);
+
+  let aiDemoStartCount = 0;
+  const origNotify = engAi.notifyParent.bind(engAi);
+  engAi.notifyParent = (m: any) => {
+    if (m?.type === 'AI_DEMO_START') aiDemoStartCount++;
+    origNotify(m);
+  };
+
+  for (const fn of aiListeners['message'] || []) {
+    fn({
+      origin: 'https://localhost:3000',
+      data: {
+        type: 'AI_VISUAL_COMMAND',
+        packet: {
+          type: 'AI_VISUAL_COMMAND',
+          transactionId: 'tx_quiz_nano_1',
+          actions: [{ type: 'SET_VARIABLE', variable: 'temp', value: 65 }],
+          pedagogicalIntent: 'SCAFFOLD_HINT',
+        },
+      },
+    });
+  }
+  await new Promise((r) => setTimeout(r, 20));
+  assert(aiDemoStartCount >= 1, 'AI_VISUAL_COMMAND via postMessageBridge must invoke executeAiVisualCommand');
+  assert.strictEqual(engAi.vars.temp, 65, 'AI_VISUAL_COMMAND SET_VARIABLE action must update engine vars cleanly');
+
+  console.log('[✅ PASS] Sim 21: In-Quiz Ask Nano button, host telemetry persistence, and AI_VISUAL_COMMAND execution verified.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');

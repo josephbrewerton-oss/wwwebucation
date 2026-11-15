@@ -14,6 +14,7 @@
  */
 
 import { getWasmBinaryBytes } from '../../static/player/wasm/ast-wasm-engine.bin.js';
+import { getSharedRenderBoundary, DisplayOp, type RenderMode } from './sharedRenderBoundary';
 
 export const WASM_MAX_PAGES = 7;
 export const WASM_MAX_BYTES = WASM_MAX_PAGES * 65536; // 458,752 B = 448 KiB
@@ -33,16 +34,7 @@ export const TupleOp = {
   SET_T: 7,
 } as const;
 
-export const DisplayOp = {
-  END_FRAME: 0,
-  CLEAR_RECT: 1,
-  FILL_RECT: 2,
-  STROKE_RECT: 3,
-  CIRCLE: 4,
-  TEXT: 5,
-  LINE: 6,
-  PROGRESS_BAR: 7,
-} as const;
+export { DisplayOp, type RenderMode };
 
 export interface BiosManifestRow {
   slotId: number;
@@ -97,10 +89,14 @@ export class EverymanBios {
   private exports: any = null;
   private u8!: Uint8Array;
   private dv!: DataView;
-  private rafId: number | null = null;
-  private lastTickMs = 0;
+  private stopLoopFn: (() => void) | null = null;
 
+  public readonly surfaceId: string;
   public ready = false;
+
+  constructor(surfaceId = 'everyman-bios') {
+    this.surfaceId = surfaceId;
+  }
 
   public async init(): Promise<void> {
     if (this.ready) return;
@@ -151,10 +147,29 @@ export class EverymanBios {
       throw new Error(`[EverymanBIOS] boot_cartridge() rejected binary with error code ${status}`);
     }
 
+    const manifest = this.readManifest();
+    const telemetry = this.readTelemetry();
+    const sceneRow = manifest.find((r) => r.kind === 'scene');
+    try {
+      const boundary = getSharedRenderBoundary();
+      boundary.registerSurface({
+        id: this.surfaceId,
+        label: sceneRow?.semanticTag || 'Everyman 448 KiB Kernel',
+        sceneId: sceneRow?.semanticTag || '',
+        bios: this,
+        metadata: {
+          archetype: telemetry.archetype,
+          durationSec: telemetry.durationSec,
+          varCount: telemetry.varCount,
+          hasEmbeddedSvg: telemetry.hasEmbeddedSvg,
+        },
+      });
+    } catch (_) {}
+
     return {
       status,
-      manifest: this.readManifest(),
-      telemetry: this.readTelemetry(),
+      manifest,
+      telemetry,
     };
   }
 
@@ -266,114 +281,77 @@ export class EverymanBios {
   }
 
   /**
-   * Dumb VGA/Vector Display-List Blitter (`0x068000`) -> `CanvasRenderingContext2D`.
-   * Interprets zero domain semantics; only executes flat 32-byte draw opcodes.
+   * Mounts embedded OP_SVG_COMPANION vector markup onto an SVG container through the
+   * exact same Shared Render Boundary used by the standalone player.
+   */
+  public mountCompanionSvg(
+    container: Element | null,
+    stageSvg?: SVGSVGElement | Element | null,
+    renderMode?: RenderMode
+  ): { mounted: boolean; viewBox: string } {
+    const svgMarkup = this.readEmbeddedSvg();
+    const boundary = getSharedRenderBoundary();
+    boundary.registerSurface({
+      id: this.surfaceId,
+      svgContainer: container,
+      stageSvg: stageSvg || null,
+      bios: this,
+      renderMode: renderMode || (svgMarkup ? 'hybrid' : 'canvas'),
+    });
+    if (!svgMarkup || !container) {
+      return { mounted: false, viewBox: '0 0 800 480' };
+    }
+    return boundary.mountSvgStage({
+      container,
+      stageSvg: stageSvg || null,
+      surfaceId: this.surfaceId,
+      svgMarkup,
+    });
+  }
+
+  /**
+   * Dumb VGA/Vector Display-List Blitter (`0x068000`) -> Shared Render Boundary Canvas.
+   * Zero domain semantics; executes flat 32-byte draw opcodes.
    */
   public blitDisplayList(ctx: CanvasRenderingContext2D): number {
     if (!this.ready) return 0;
     const dlPtr: number = this.exports.get_display_list_ptr();
-    const maxCmds = 768;
-    let count = 0;
-
-    for (let i = 0; i < maxCmds; i++) {
-      const p = dlPtr + i * 32;
-      const op = this.dv.getUint32(p + 0, true);
-      if (op === DisplayOp.END_FRAME) break;
-      count++;
-
-      const slotAndLen = this.dv.getUint32(p + 4, true);
-      const x = this.dv.getFloat32(p + 8, true);
-      const y = this.dv.getFloat32(p + 12, true);
-      const w = this.dv.getFloat32(p + 16, true);
-      const h = this.dv.getFloat32(p + 20, true);
-      const rgba = this.dv.getUint32(p + 24, true);
-      const strPtr = this.dv.getUint32(p + 28, true);
-
-      const r = (rgba >>> 24) & 0xff;
-      const g = (rgba >>> 16) & 0xff;
-      const b = (rgba >>> 8) & 0xff;
-      const a = (rgba & 0xff) / 255;
-      const fill = `rgba(${r},${g},${b},${a.toFixed(3)})`;
-
-      if (op === DisplayOp.CLEAR_RECT || op === DisplayOp.FILL_RECT) {
-        ctx.fillStyle = fill;
-        ctx.fillRect(x, y, w, h);
-      } else if (op === DisplayOp.STROKE_RECT) {
-        ctx.strokeStyle = fill;
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(x, y, w, h);
-      } else if (op === DisplayOp.CIRCLE) {
-        ctx.fillStyle = fill;
-        ctx.beginPath();
-        ctx.arc(x, y, Math.max(1, w), 0, Math.PI * 2);
-        ctx.fill();
-      } else if (op === DisplayOp.TEXT && strPtr > 0) {
-        const strLen = (slotAndLen >>> 16) & 0xffff;
-        const txt = this.decodeUtf8(strPtr, strLen);
-        ctx.fillStyle = fill;
-        ctx.font = `700 ${Math.max(10, Math.round(w || 13))}px ui-monospace, SFMono-Regular, Menlo, monospace`;
-        ctx.fillText(txt, x, y);
-      } else if (op === DisplayOp.LINE) {
-        ctx.strokeStyle = fill;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(w, h);
-        ctx.stroke();
-      }
-    }
-    return count;
+    return getSharedRenderBoundary().blitDisplayList(ctx, this.dv, this.u8, dlPtr, 768, utf8Decoder, this.surfaceId);
   }
 
   /**
-   * Starts a 60 FPS headless requestAnimationFrame BIOS loop driving a <canvas>.
+   * Starts a 60 FPS BIOS loop driving a <canvas> via the standalone Shared Render Boundary.
    */
   public startCanvasLoop(
     canvas: HTMLCanvasElement,
-    onFrame?: (telemetry: BiosKernelTelemetry) => void
+    onFrame?: (telemetry: BiosKernelTelemetry) => void,
+    renderMode: RenderMode = 'canvas'
   ): () => void {
     this.stopCanvasLoop();
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return () => {};
-
-    const onPointer = (phase: 0 | 1 | 2) => (ev: PointerEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      if (!rect.width || !rect.height) return;
-      const sx = ((ev.clientX - rect.left) / rect.width) * 800;
-      const sy = ((ev.clientY - rect.top) / rect.height) * 480;
-      this.pointerEvent(phase, sx, sy, ev.buttons || (phase === 1 ? 1 : 0));
-    };
-
-    const handleDown = onPointer(1);
-    const handleMove = onPointer(0);
-    const handleUp = onPointer(2);
-    canvas.addEventListener('pointerdown', handleDown);
-    canvas.addEventListener('pointermove', handleMove);
-    canvas.addEventListener('pointerup', handleUp);
-
-    this.lastTickMs = performance.now();
-    const step = (now: number) => {
-      const dt = Math.min(50, Math.max(1, now - this.lastTickMs));
-      this.lastTickMs = now;
-      this.tick(dt);
-      this.blitDisplayList(ctx);
-      if (onFrame) onFrame(this.readTelemetry());
-      this.rafId = requestAnimationFrame(step);
-    };
-    this.rafId = requestAnimationFrame(step);
-
+    const stop = getSharedRenderBoundary().bindCanvasLoop({
+      canvas,
+      surfaceId: this.surfaceId,
+      renderMode,
+      bios: this,
+      onPointer: (phase, sx, sy, buttons) => {
+        this.pointerEvent(phase, sx, sy, buttons);
+      },
+      onStep: (dtMs, ctx) => {
+        this.tick(dtMs);
+        this.blitDisplayList(ctx);
+        if (onFrame) onFrame(this.readTelemetry());
+      },
+    });
+    this.stopLoopFn = stop;
     return () => {
       this.stopCanvasLoop();
-      canvas.removeEventListener('pointerdown', handleDown);
-      canvas.removeEventListener('pointermove', handleMove);
-      canvas.removeEventListener('pointerup', handleUp);
     };
   }
 
   public stopCanvasLoop(): void {
-    if (this.rafId !== null) {
-      cancelAnimationFrame(this.rafId);
-      this.rafId = null;
+    if (this.stopLoopFn) {
+      this.stopLoopFn();
+      this.stopLoopFn = null;
     }
   }
 

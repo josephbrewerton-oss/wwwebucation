@@ -25,6 +25,13 @@ import {
   WASM_MAX_BYTES,
   WASM_MAX_PAGES,
 } from '../src/engine/everymanBios';
+import { getSharedRenderBoundary } from '../src/engine/sharedRenderBoundary';
+import {
+  getSiteManifest,
+  executeSiteDirective,
+  runNanoSitePrompt,
+  registerNanoSiteWebMcpTools,
+} from '../src/engine/nanoSiteManager';
 
 const ROOT_DIR = process.cwd();
 const CARTRIDGES_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
@@ -252,6 +259,56 @@ async function runTests() {
   const churchBoot = bios.bootCartridge(churchBin);
   assert(churchBoot.status === 0 && churchBoot.manifest.length > 0, `Same WASM kernel booted Parish church-tour.astb (${churchBoot.manifest.length} manifest rows)`);
   assert(bios.readTelemetry().linearMemoryBytes === WASM_MAX_BYTES, 'Memory remained strictly 448 KiB across cartridge hot-swaps');
+
+  // Test 9: Standalone Shared Rendering Boundary & Gemini Nano Site Control Plane
+  console.log('\n9. Testing Standalone Shared Render Boundary & Nano Site Control Plane:');
+  const boundary = getSharedRenderBoundary();
+  assert(boundary.version === '1.0.0-rc.1', 'SharedRenderBoundary exposes standalone version');
+  assert(boundary.listSurfaces().some((s) => s.id === bios.surfaceId), 'EverymanBios surface auto-registered on shared boundary');
+
+  const safeCheck = boundary.sanitizeSvg('<!DOCTYPE svg><svg><rect/></svg>');
+  assert(!safeCheck.includes('<!DOCTYPE'), 'SharedRenderBoundary strips DOCTYPE directives');
+
+  const modeChange = await executeSiteDirective({ action: 'set_render_mode', surfaceId: bios.surfaceId, mode: 'hybrid' });
+  assert(modeChange.ok === true && modeChange.manifest.renderBoundary.renderMode === 'hybrid', 'Nano site directive switches shared renderMode to hybrid');
+
+  const tupleExec = await executeSiteDirective({ action: 'dispatch_tuple', surfaceId: bios.surfaceId, slotId: 0, op: TupleOp.TOGGLE_PLAY });
+  assert(tupleExec.ok === true && typeof tupleExec.detail.stateHex === 'string', 'Nano site directive dispatches WASM mailbox tuple');
+
+  const siteManifest = getSiteManifest(bios.surfaceId);
+  const manifestBytes = Buffer.byteLength(JSON.stringify(siteManifest), 'utf8');
+  assert(siteManifest.wasmKernel?.active === true && siteManifest.wasmKernel.manifestSlice.length > 0, 'Nano SiteManifest includes live 3-column WASM manifest slice');
+  assert(manifestBytes < 3500, `Compact Nano SiteManifest (${manifestBytes} B) fits well inside Gemini Nano context budget`);
+
+  const navHistory: string[] = [];
+  const promptOutcome = await runNanoSitePrompt('Open catholic-life sanctuary', (r) => { navHistory.push(r); });
+  assert(promptOutcome.directive.action === 'navigate' && navHistory[0] === '/catholic-life', 'runNanoSitePrompt routes deterministically to /catholic-life');
+
+  // Additive WebMCP tool registration on mock modelContext
+  const prevNav = (globalThis as any).navigator;
+  const mockRegistered = new Map<string, any>();
+  Object.defineProperty(globalThis, 'navigator', {
+    value: {
+      modelContext: {
+        registerTool: (tool: any, opts?: { signal?: AbortSignal }) => {
+          mockRegistered.set(tool.name, tool);
+          opts?.signal?.addEventListener('abort', () => mockRegistered.delete(tool.name));
+        },
+      },
+    },
+    configurable: true,
+  });
+  try {
+    const nanoHandle = await registerNanoSiteWebMcpTools();
+    assert(nanoHandle.registered && nanoHandle.toolNames.length === 3, 'Registered 3 additive Nano site WebMCP tools');
+    assert(mockRegistered.has('site_get_manifest') && mockRegistered.has('site_manage_surface') && mockRegistered.has('site_dispatch_wasm_tuple'), 'All 3 Nano site WebMCP tools present on modelContext');
+    nanoHandle.unregister();
+    assert(mockRegistered.size === 0, 'Nano site WebMCP tools abort cleanly on unregister');
+  } finally {
+    if (prevNav !== undefined) {
+      Object.defineProperty(globalThis, 'navigator', { value: prevNav, configurable: true });
+    }
+  }
 
   console.log('\n==================================================');
   console.log(`Results: ${passedCount} passed, ${failedCount} failed.`);

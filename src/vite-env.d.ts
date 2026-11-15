@@ -48,4 +48,10 @@ declare module '*ast-wasm-engine.bin.js' {
   export default _default;
 }
 
+declare module '*ast-render-boundary.js' {
+  const _default: any;
+  export default _default;
+}
+
+
 

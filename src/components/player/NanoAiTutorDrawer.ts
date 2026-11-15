@@ -16,6 +16,27 @@ import {
   type AiVisualCommandPacket,
 } from '../../engine/aicaller';
 
+export interface QuizCheckpointContext {
+  sceneId: string;
+  sceneTitle?: string;
+  index: number;
+  mode?: 'multiple-choice' | 'pass-expr';
+  prompt: string;
+  options?: string[];
+  chosenIndex?: number | null;
+  chosenText?: string;
+  answerIndex?: number;
+  correctText?: string;
+  explanation?: string;
+  distractorNudge?: string;
+  passExpr?: string;
+  targetSelector?: string;
+  vars?: Record<string, any>;
+  computed?: Record<string, any>;
+  progress?: number;
+  autoAsk?: boolean;
+}
+
 export interface NanoAiTutorDrawerProps {
   isOpen: boolean;
   onClose: () => void;
@@ -24,8 +45,17 @@ export interface NanoAiTutorDrawerProps {
   currentProgress?: number;
   activeKeyframe?: { title: string; rule: string } | null;
   latestTelemetry?: PlayerTelemetryEvent | null;
+  activeQuiz?: QuizCheckpointContext | null;
   isAiDemonstrating?: boolean;
   onCancelDemonstration?: () => void;
+}
+
+export interface NanoAiTutorDrawerHandle {
+  element: HTMLElement;
+  updateTelemetry: (telemetry: PlayerTelemetryEvent | null) => void;
+  setDemonstrating: (demonstrating: boolean) => void;
+  askCheckpoint: (quiz: QuizCheckpointContext, autoRun?: boolean) => void;
+  askQuestion: (query: string, demonstrate?: boolean) => void;
 }
 
 export interface ContextSnapshot {
@@ -125,11 +155,12 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
     postToPlayer,
     currentProgress = 0,
     activeKeyframe,
-    latestTelemetry,
-    isAiDemonstrating = false,
     onCancelDemonstration,
   } = props;
 
+  let latestTelemetry: PlayerTelemetryEvent | null | undefined = props.latestTelemetry;
+  let activeQuiz: QuizCheckpointContext | null | undefined = props.activeQuiz || null;
+  let isAiDemonstrating = Boolean(props.isAiDemonstrating);
   let activeTab: 'copilot' | 'generator' | 'grader' = 'copilot';
   let hasConsent = hasUserGrantedAiConsent();
   let engineType = aiCaller.getActiveEngineType();
@@ -140,11 +171,13 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
   let generateError: string | null = null;
   let studentAnswer = '';
   let gradingResult: { feedback: string; score: number } | null = null;
+  let rayHitEl: HTMLElement | null = null;
+  let camStateEl: HTMLElement | null = null;
 
   const chatLog: ChatLogItem[] = [
     {
       sender: 'nano',
-      text: 'Hello! I am your on-device Gemini Nano tutor for this vector lab. Ask me anything, or click "✨ Show Me How" to watch me physically demonstrate on the simulation stage!',
+      text: 'Hello! I am your on-device Gemini Nano tutor for this vector lab. Ask me anything, answer a checkpoint quiz, or click "✨ Show Me How" to watch me physically demonstrate on the simulation stage!',
     },
   ];
 
@@ -246,6 +279,85 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
       const copilotContainer = document.createElement('div');
       copilotContainer.style.cssText = 'display: flex; flex-direction: column; gap: 10px;';
 
+      // Active Quiz Checkpoint Coaching Banner (when invoked from player quiz card)
+      if (activeQuiz && activeQuiz.prompt) {
+        const quizBanner = document.createElement('div');
+        quizBanner.style.cssText = 'padding: 10px 14px; background: linear-gradient(135deg, rgba(88, 28, 135, 0.35) 0%, rgba(15, 23, 42, 0.92) 100%); border: 1px solid rgba(192, 132, 252, 0.55); border-radius: 10px; display: flex; flex-direction: column; gap: 6px;';
+
+        const qHeader = document.createElement('div');
+        qHeader.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;';
+        const qTitle = document.createElement('span');
+        qTitle.style.cssText = 'font-size: 0.74rem; font-weight: 800; color: #e879f9; letter-spacing: 0.03em; text-transform: uppercase;';
+        qTitle.textContent = `🎯 Quiz Checkpoint #${(activeQuiz.index ?? 0) + 1} Context`;
+        qHeader.appendChild(qTitle);
+
+        const qActions = document.createElement('div');
+        qActions.style.cssText = 'display: flex; gap: 6px; align-items: center;';
+
+        const coachBtn = document.createElement('button');
+        coachBtn.type = 'button';
+        coachBtn.style.cssText = 'padding: 3px 9px; border-radius: 6px; background: #7e22ce; color: #ffffff; border: 1px solid #c084fc; font-size: 0.68rem; font-weight: 800; cursor: pointer;';
+        coachBtn.textContent = '✨ Coach & Highlight Stage';
+        coachBtn.disabled = isInferring;
+        coachBtn.onclick = () => askQuizCoaching(activeQuiz!);
+
+        const toGraderBtn = document.createElement('button');
+        toGraderBtn.type = 'button';
+        toGraderBtn.style.cssText = 'padding: 3px 9px; border-radius: 6px; background: #1e293b; color: #38bdf8; border: 1px solid #334155; font-size: 0.68rem; font-weight: 700; cursor: pointer;';
+        toGraderBtn.textContent = '📝 Explain in Grader';
+        toGraderBtn.onclick = () => {
+          activeTab = 'grader';
+          refresh();
+        };
+
+        const dismissQuizBtn = document.createElement('button');
+        dismissQuizBtn.type = 'button';
+        dismissQuizBtn.style.cssText = 'padding: 2px 7px; border-radius: 5px; background: transparent; color: #94a3b8; border: 1px solid #334155; font-size: 0.68rem; cursor: pointer;';
+        dismissQuizBtn.textContent = '✕';
+        dismissQuizBtn.title = 'Clear active quiz context';
+        dismissQuizBtn.onclick = () => {
+          activeQuiz = null;
+          refresh();
+        };
+
+        qActions.appendChild(coachBtn);
+        qActions.appendChild(toGraderBtn);
+        qActions.appendChild(dismissQuizBtn);
+        qHeader.appendChild(qActions);
+        quizBanner.appendChild(qHeader);
+
+        const qPrompt = document.createElement('div');
+        qPrompt.style.cssText = 'font-size: 0.82rem; font-weight: 700; color: #f8fafc; line-height: 1.35;';
+        qPrompt.textContent = activeQuiz.prompt;
+        quizBanner.appendChild(qPrompt);
+
+        if (activeQuiz.chosenText || activeQuiz.distractorNudge) {
+          const qMeta = document.createElement('div');
+          qMeta.style.cssText = 'font-size: 0.74rem; color: #e9d5ff; display: flex; flex-wrap: wrap; gap: 10px;';
+          if (activeQuiz.chosenText) {
+            const chosenSpan = document.createElement('span');
+            chosenSpan.innerHTML = `<strong>Your selection:</strong> `;
+            const chosenVal = document.createElement('span');
+            chosenVal.style.color = '#fbbf24';
+            chosenVal.textContent = activeQuiz.chosenText;
+            chosenSpan.appendChild(chosenVal);
+            qMeta.appendChild(chosenSpan);
+          }
+          if (activeQuiz.distractorNudge) {
+            const nudgeSpan = document.createElement('span');
+            nudgeSpan.innerHTML = `<strong>Clue:</strong> `;
+            const nudgeVal = document.createElement('span');
+            nudgeVal.style.color = '#fde047';
+            nudgeVal.textContent = activeQuiz.distractorNudge;
+            nudgeSpan.appendChild(nudgeVal);
+            qMeta.appendChild(nudgeSpan);
+          }
+          quizBanner.appendChild(qMeta);
+        }
+
+        copilotContainer.appendChild(quizBanner);
+      }
+
       // Preemption banner
       if (isAiDemonstrating) {
         const banner = document.createElement('div');
@@ -346,14 +458,18 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
       const rayHitVal = document.createElement('div');
       rayHitVal.style.cssText = 'font-weight: 700; overflow-x: auto; white-space: nowrap;';
       rayHitVal.textContent = latestTelemetry?.spatialTelemetry?.rayHitSExpr || '(:ray-hit :target "#coil-core" :dist 4.2 :norm [0.0 1.0 0.0] :xyz [12.0 45.0 -8.5])';
+      rayHitEl = rayHitVal;
       tokenBox.appendChild(rayHitVal);
 
+      const camStateVal = document.createElement('div');
+      camStateVal.style.cssText = 'color: #38bdf8; font-size: 0.70rem; overflow-x: auto; white-space: nowrap;';
       if (latestTelemetry?.spatialTelemetry?.cameraStateSExpr) {
-        const camStateVal = document.createElement('div');
-        camStateVal.style.cssText = 'color: #38bdf8; font-size: 0.70rem; overflow-x: auto; white-space: nowrap;';
         camStateVal.textContent = latestTelemetry.spatialTelemetry.cameraStateSExpr;
-        tokenBox.appendChild(camStateVal);
+      } else {
+        camStateVal.style.display = 'none';
       }
+      camStateEl = camStateVal;
+      tokenBox.appendChild(camStateVal);
       telemetryBox.appendChild(tokenBox);
       copilotContainer.appendChild(telemetryBox);
 
@@ -624,9 +740,11 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
       contextPrefix.textContent = 'Active Checkpoint Context: ';
 
       const contextValue = document.createElement('span');
-      contextValue.textContent = activeKeyframe
-        ? `"${activeKeyframe.title} — ${activeKeyframe.rule}"`
-        : `Simulation progress: ${(currentProgress * 100).toFixed(0)}% in ${preset}`;
+      contextValue.textContent = activeQuiz?.prompt
+        ? `Quiz #${(activeQuiz.index ?? 0) + 1}: "${activeQuiz.prompt}"`
+        : activeKeyframe
+          ? `"${activeKeyframe.title} — ${activeKeyframe.rule}"`
+          : `Simulation progress: ${(currentProgress * 100).toFixed(0)}% in ${preset}`;
 
       contextPill.appendChild(contextPrefix);
       contextPill.appendChild(contextValue);
@@ -685,8 +803,25 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
     }
   }
 
+  function formatQuizUserPrompt(quiz: QuizCheckpointContext): string {
+    if (quiz.chosenText) {
+      return `Quiz Question: "${quiz.prompt}" — I picked "${quiz.chosenText}". Help me understand why this works or what misconception to check.`;
+    }
+    if (quiz.passExpr) {
+      return `Lab Challenge: "${quiz.prompt}" (Goal condition: ${quiz.passExpr}). Show me which controls affect this!`;
+    }
+    return `Quiz Question: "${quiz.prompt}" — Can you guide me on the concept and point to the right part of the model?`;
+  }
+
+  function askQuizCoaching(quiz: QuizCheckpointContext) {
+    activeQuiz = quiz;
+    activeTab = 'copilot';
+    const userPrompt = formatQuizUserPrompt(quiz);
+    handleAskQuestion(userPrompt, true, quiz);
+  }
+
   // Question inference handler
-  async function handleAskQuestion(queryText?: string, isDemonstrate: boolean = true) {
+  async function handleAskQuestion(queryText?: string, isDemonstrate: boolean = true, quizCtx?: QuizCheckpointContext | null) {
     const promptToRun = (queryText || userQuery).trim();
     if (!promptToRun || isInferring) return;
 
@@ -695,6 +830,7 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
       hasConsent = true;
     }
 
+    const effectiveQuiz = quizCtx !== undefined ? quizCtx : activeQuiz;
     chatLog.push({ sender: 'user', text: promptToRun });
     userQuery = '';
     isInferring = true;
@@ -702,17 +838,29 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
     try {
       const telemetryForPrompt: Partial<PlayerTelemetryEvent> = latestTelemetry || {
-        sceneId: preset,
-        progress: currentProgress,
+        sceneId: effectiveQuiz?.sceneId || preset,
+        progress: effectiveQuiz?.progress ?? currentProgress,
         activeKeyframe: 0,
-        variables: {},
-        lastUserAction: 'QUESTION',
+        variables: effectiveQuiz?.vars || {},
+        lastUserAction: effectiveQuiz ? 'CHECKPOINT_HELP' : 'QUESTION',
         timestamp: Date.now(),
       };
 
-      const packet = await promptAiCoPilotDemonstration(telemetryForPrompt, promptToRun, {
-        targetScene: preset,
+      const enrichedQuestion = effectiveQuiz
+        ? `${promptToRun} [Context: prompt="${effectiveQuiz.prompt}"${effectiveQuiz.distractorNudge ? ` nudge="${effectiveQuiz.distractorNudge}"` : ''}${effectiveQuiz.explanation ? ` explanation="${effectiveQuiz.explanation}"` : ''}${effectiveQuiz.targetSelector ? ` target="${effectiveQuiz.targetSelector}"` : ''}]`
+        : promptToRun;
+
+      const packet = await promptAiCoPilotDemonstration(telemetryForPrompt, enrichedQuestion, {
+        targetScene: effectiveQuiz?.sceneId || preset,
       });
+
+      if (effectiveQuiz?.targetSelector && packet.actions && !packet.actions.some((a) => a.type === 'HIGHLIGHT')) {
+        packet.actions.unshift({
+          type: 'HIGHLIGHT',
+          selector: effectiveQuiz.targetSelector,
+          durationMs: 4000,
+        });
+      }
 
       if (isDemonstrate && packet.actions && packet.actions.length > 0) {
         postToPlayer({
@@ -723,15 +871,30 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
       chatLog.push({
         sender: 'nano',
-        text: packet.sayText || 'Observe the visual demonstration on the simulation stage.',
+        text: packet.sayText || effectiveQuiz?.explanation || 'Observe the visual demonstration on the simulation stage.',
         packet,
         rawSExpr: packet.rawSExpr,
       });
     } catch (err: any) {
       console.warn('[NanoAiTutorDrawer] Co-Pilot inference notice:', err);
+      const fallbackText = effectiveQuiz
+        ? `${effectiveQuiz.distractorNudge || ''} ${effectiveQuiz.explanation || `Look closely at how the active variables (${JSON.stringify(effectiveQuiz.vars || {})}) relate to the question in ${preset}.`}`.trim()
+        : `[Offline Local Response] In this ${preset} simulation, adjustments to the input variables directly update the SVG equations and animated vector properties. Notice how the keyframe timeline coordinates with the visual state.`;
+      if (isDemonstrate && effectiveQuiz?.targetSelector) {
+        postToPlayer({
+          type: 'AI_VISUAL_COMMAND',
+          packet: {
+            type: 'AI_VISUAL_COMMAND',
+            transactionId: `nano_fallback_${Date.now()}`,
+            actions: [{ type: 'HIGHLIGHT', selector: effectiveQuiz.targetSelector, durationMs: 3500 }],
+            sayText: fallbackText,
+            pedagogicalIntent: 'SCAFFOLD_HINT',
+          },
+        });
+      }
       chatLog.push({
         sender: 'nano',
-        text: `[Offline Local Response] In this ${preset} simulation, adjustments to the input variables directly update the SVG equations and animated vector properties. Notice how the keyframe timeline coordinates with the visual state.`,
+        text: fallbackText,
       });
     } finally {
       isInferring = false;
@@ -830,7 +993,11 @@ Rules:
     refresh();
 
     try {
-      const keyframeContext = activeKeyframe ? `Topic: "${activeKeyframe.title}" Rule: "${activeKeyframe.rule}"` : `Simulation: ${preset}`;
+      const keyframeContext = activeQuiz?.prompt
+        ? `Quiz Question: "${activeQuiz.prompt}". Concept Explanation: "${activeQuiz.explanation || ''}"`
+        : activeKeyframe
+          ? `Topic: "${activeKeyframe.title}" Rule: "${activeKeyframe.rule}"`
+          : `Simulation: ${preset}`;
       const systemPrompt = `You are a UK National Curriculum formative assessment specialist.
 Current Assessment: ${keyframeContext}.
 Evaluate student answer: "${studentAnswer}".
@@ -864,6 +1031,45 @@ Feedback: 2 sentences identifying conceptual strengths and one area for mastery 
   }
 
   refresh();
+
+  if (activeQuiz && activeQuiz.autoAsk) {
+    setTimeout(() => askQuizCoaching(activeQuiz!), 0);
+  }
+
+  const handle: NanoAiTutorDrawerHandle = {
+    element: container,
+    updateTelemetry: (nextTelemetry) => {
+      latestTelemetry = nextTelemetry;
+      if (rayHitEl && nextTelemetry?.spatialTelemetry?.rayHitSExpr) {
+        rayHitEl.textContent = nextTelemetry.spatialTelemetry.rayHitSExpr;
+      }
+      if (camStateEl && nextTelemetry?.spatialTelemetry?.cameraStateSExpr) {
+        camStateEl.style.display = 'block';
+        camStateEl.textContent = nextTelemetry.spatialTelemetry.cameraStateSExpr;
+      }
+    },
+    setDemonstrating: (demonstrating) => {
+      if (isAiDemonstrating !== Boolean(demonstrating)) {
+        isAiDemonstrating = Boolean(demonstrating);
+        refresh();
+      }
+    },
+    askCheckpoint: (quiz, autoRun = true) => {
+      if (autoRun) {
+        askQuizCoaching(quiz);
+      } else {
+        activeQuiz = quiz;
+        activeTab = 'copilot';
+        refresh();
+      }
+    },
+    askQuestion: (query, demonstrate = true) => {
+      activeTab = 'copilot';
+      handleAskQuestion(query, demonstrate);
+    },
+  };
+  (container as any).__nanoDrawerHandle = handle;
+
   return container;
 }
 

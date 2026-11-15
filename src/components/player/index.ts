@@ -41,6 +41,8 @@ export {
   default as NanoAiTutorDrawer,
   renderNanoAiTutorDrawer,
   type NanoAiTutorDrawerProps,
+  type QuizCheckpointContext,
+  type NanoAiTutorDrawerHandle,
   type ContextSnapshot,
   type ChatLogItem,
 } from './NanoAiTutorDrawer';

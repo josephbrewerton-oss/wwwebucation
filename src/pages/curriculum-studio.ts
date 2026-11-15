@@ -15,6 +15,8 @@ import {
   type LocalFolderBuildReport,
 } from '../services/localCartridgeBuilder';
 import { EverymanBios, TupleOp, type BiosKernelTelemetry } from '../engine/everymanBios';
+import { getSharedRenderBoundary, type RenderMode } from '../engine/sharedRenderBoundary';
+import { getSiteManifest, executeSiteDirective } from '../engine/nanoSiteManager';
 
 function escapeHtml(raw: string): string {
   return String(raw || '')
@@ -186,7 +188,15 @@ export function renderCurriculumStudioPage(): HTMLElement {
             Everyman Kernel Inspector
           </h2>
         </div>
-        <div style="display:flex; gap:6px; align-items:center;">
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <select id="sel-bios-render-mode" aria-label="Shared Render Boundary Mode" style="padding:5px 8px; border-radius:6px; border:1px solid #475569; background:#1e293b; color:#38bdf8; font-weight:700; font-size:0.76rem; cursor:pointer;">
+            <option value="canvas">Mode: WASM Canvas</option>
+            <option value="svg">Mode: Companion SVG</option>
+            <option value="hybrid">Mode: Hybrid Shared</option>
+          </select>
+          <button type="button" id="btn-bios-nano-manifest" style="padding:6px 10px; border-radius:6px; border:1px solid #7c3aed; background:#1e1b4b; color:#ddd6fe; font-weight:700; font-size:0.76rem; cursor:pointer;">
+            🤖 Nano Manifest
+          </button>
           <button type="button" id="btn-bios-play-pause" style="padding:6px 12px; border-radius:6px; border:none; background:#0284c7; color:#fff; font-weight:700; font-size:0.78rem; cursor:pointer;">
             ⏯ Play / Pause (Op 6)
           </button>
@@ -201,7 +211,12 @@ export function renderCurriculumStudioPage(): HTMLElement {
 
       <div style="display:grid; grid-template-columns: minmax(320px, 1.4fr) minmax(280px, 1fr); gap:14px;">
         <div>
-          <canvas id="everyman-bios-canvas" width="800" height="480" style="width:100%; height:auto; background:#090d16; border:1px solid #334155; border-radius:8px; display:block; cursor:pointer;"></canvas>
+          <div style="position:relative; width:100%; aspect-ratio:800/480; background:#090d16; border:1px solid #334155; border-radius:8px; overflow:hidden;">
+            <svg id="everyman-bios-svg" viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg" style="position:absolute; inset:0; width:100%; height:100%; display:none;">
+              <g id="everyman-bios-svg-root"></g>
+            </svg>
+            <canvas id="everyman-bios-canvas" width="800" height="480" style="position:relative; width:100%; height:100%; display:block; cursor:pointer;"></canvas>
+          </div>
           <div id="bios-telemetry-strip" style="margin-top:8px; font-family:ui-monospace, monospace; font-size:0.74rem; color:#94a3b8; display:flex; flex-wrap:wrap; gap:12px;"></div>
         </div>
         <div style="background:#1e293b; border:1px solid #334155; border-radius:8px; padding:10px; max-height:360px; overflow-y:auto;">
@@ -209,6 +224,7 @@ export function renderCurriculumStudioPage(): HTMLElement {
             3-Column Gemini Nano / WebMCP Manifest (0x00C00)
           </div>
           <div id="bios-manifest-list" style="display:flex; flex-direction:column; gap:6px; font-family:ui-monospace, monospace; font-size:0.72rem;"></div>
+          <pre id="bios-nano-manifest-pre" style="display:none; margin:8px 0 0 0; padding:8px; background:#090d16; border:1px solid #4c1d95; border-radius:6px; color:#e9d5ff; font-size:0.68rem; overflow-x:auto; white-space:pre-wrap;"></pre>
         </div>
       </div>
     </section>
@@ -254,9 +270,14 @@ export function renderCurriculumStudioPage(): HTMLElement {
 
   const biosPanel = container.querySelector('#everyman-bios-panel') as HTMLElement;
   const biosTitleEl = container.querySelector('#bios-panel-title') as HTMLElement;
+  const biosSvg = container.querySelector('#everyman-bios-svg') as unknown as SVGSVGElement;
+  const biosSvgRoot = container.querySelector('#everyman-bios-svg-root') as unknown as SVGGElement;
   const biosCanvas = container.querySelector('#everyman-bios-canvas') as HTMLCanvasElement;
   const biosTelemetryEl = container.querySelector('#bios-telemetry-strip') as HTMLElement;
   const biosManifestEl = container.querySelector('#bios-manifest-list') as HTMLElement;
+  const biosNanoPre = container.querySelector('#bios-nano-manifest-pre') as HTMLPreElement;
+  const selRenderMode = container.querySelector('#sel-bios-render-mode') as HTMLSelectElement;
+  const btnNanoManifest = container.querySelector('#btn-bios-nano-manifest') as HTMLButtonElement;
   const btnBiosPlay = container.querySelector('#btn-bios-play-pause') as HTMLButtonElement;
   const btnBiosReset = container.querySelector('#btn-bios-reset') as HTMLButtonElement;
   const btnBiosClose = container.querySelector('#btn-bios-close') as HTMLButtonElement;
@@ -345,11 +366,18 @@ export function renderCurriculumStudioPage(): HTMLElement {
         });
       };
 
+      const preferredMode: RenderMode = (selRenderMode.value as RenderMode) || (boot.telemetry.hasEmbeddedSvg ? 'hybrid' : 'canvas');
+      bios.mountCompanionSvg(biosSvgRoot, biosSvg, preferredMode);
       renderManifestRows();
       renderTelemetryAndManifest(boot.telemetry);
-      stopBiosLoop = bios.startCanvasLoop(biosCanvas, (tel) => {
-        renderTelemetryAndManifest(tel);
-      });
+      stopBiosLoop = bios.startCanvasLoop(
+        biosCanvas,
+        (tel) => {
+          renderTelemetryAndManifest(tel);
+        },
+        preferredMode
+      );
+      selRenderMode.value = getSharedRenderBoundary().getSurface(bios.surfaceId)?.renderMode || preferredMode;
     } catch (err: any) {
       biosTelemetryEl.textContent = `Kernel boot error: ${err?.message || err}`;
     }
@@ -594,6 +622,20 @@ export function renderCurriculumStudioPage(): HTMLElement {
     setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 500);
   };
 
+  selRenderMode.onchange = () => {
+    const mode = selRenderMode.value as RenderMode;
+    executeSiteDirective({ action: 'set_render_mode', surfaceId: bios.surfaceId, mode });
+  };
+  btnNanoManifest.onclick = () => {
+    const visible = biosNanoPre.style.display !== 'none';
+    if (visible) {
+      biosNanoPre.style.display = 'none';
+      return;
+    }
+    const manifestJson = JSON.stringify(getSiteManifest(bios.surfaceId), null, 2);
+    biosNanoPre.textContent = manifestJson;
+    biosNanoPre.style.display = 'block';
+  };
   btnBiosPlay.onclick = () => {
     bios.dispatchTuple(0, TupleOp.TOGGLE_PLAY, 0, 0);
   };
