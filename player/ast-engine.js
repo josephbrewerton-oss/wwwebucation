@@ -9209,7 +9209,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   if (typeof container.replaceChildren === 'function') {
                     container.replaceChildren(...rootSvg.childNodes);
                   } else {
-                    container.innerHTML = rootSvg.innerHTML;
+                    while (container.firstChild) {
+                      container.removeChild(container.firstChild);
+                    }
+                    while (rootSvg.firstChild) {
+                      container.appendChild(rootSvg.firstChild);
+                    }
                   }
                   mounted = true;
                 }
