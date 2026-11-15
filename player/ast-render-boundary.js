@@ -358,11 +358,15 @@
                 const nameLower = rawName.toLowerCase();
                 if (nameLower.startsWith('on')) continue;
                 const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
-                if ((nameLower === 'href' || nameLower === 'xlink:href') && /^\s*(javascript|data|vbscript):/i.test(val)) {
-                  continue;
+                if (nameLower === 'href' || nameLower === 'xlink:href') {
+                  const trimmedVal = val.trim();
+                  // Only allow local fragment references (e.g. "#id") to prevent redirect/phishing links.
+                  if (!/^#[A-Za-z_][\w:.-]*$/.test(trimmedVal)) {
+                    continue;
+                  }
                 }
                 if (nameLower === 'xlink:href') {
-                  el.setAttributeNS(XLINK_NS, 'xlink:href', val);
+                  el.setAttributeNS(XLINK_NS, 'xlink:href', val.trim());
                 } else {
                   el.setAttribute(rawName, val);
                 }
