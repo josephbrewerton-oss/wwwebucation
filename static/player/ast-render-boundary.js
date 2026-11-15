@@ -319,33 +319,97 @@
     let mounted = false;
     let viewBox = DEFAULT_VIEWBOX;
 
-    if (container && safeSvg && typeof DOMParser !== 'undefined') {
-      const parser = new DOMParser();
-      const tryMountDoc = (doc) => {
-        const rootSvg = doc && doc.querySelector ? doc.querySelector('svg') : null;
-        if (!rootSvg) return false;
-        const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
-        if (vb) {
-          viewBox = vb;
-          if (stageSvg && typeof stageSvg.setAttribute === 'function') {
-            stageSvg.setAttribute('viewBox', vb);
-          } else if (container.tagName && container.tagName.toLowerCase() === 'svg') {
-            container.setAttribute('viewBox', vb);
+    if (container && safeSvg && typeof document !== 'undefined') {
+      const buildSafeSvgTree = (svgMarkup) => {
+        const SVG_NS = 'http://www.w3.org/2000/svg';
+        const XLINK_NS = 'http://www.w3.org/1999/xlink';
+        const VOID_TAGS = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'stop', 'use', 'image', 'feBlend', 'feColorMatrix', 'feComposite', 'feFlood', 'feGaussianBlur', 'feMergeNode', 'feMorphology', 'feOffset', 'feTurbulence', 'animate', 'animateTransform', 'set']);
+        const decodeEntities = (str) => String(str)
+          .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
+          .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'")
+          .replace(/&amp;/g, '&');
+
+        let rootSvg = null;
+        const stack = [];
+        const tokenRx = /<!--[\s\S]*?-->|<\/([a-zA-Z0-9:-]+)\s*>|<([a-zA-Z0-9:-]+)((?:\s+[a-zA-Z0-9:-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*(\/?)>|([^<]+)/g;
+        let match;
+
+        while ((match = tokenRx.exec(svgMarkup)) !== null) {
+          const [, closeTag, openTag, attrStr, selfClose, textNode] = match;
+          if (closeTag) {
+            if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeTag.toLowerCase()) {
+              stack.pop();
+            }
+          } else if (openTag) {
+            const tagLower = openTag.toLowerCase();
+            if (tagLower === 'script' || tagLower === 'foreignobject' || tagLower === 'iframe' || tagLower === 'object' || tagLower === 'embed') {
+              continue;
+            }
+            const el = document.createElementNS(SVG_NS, openTag);
+            if (attrStr) {
+              const attrRx = /([a-zA-Z0-9:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
+              let aMatch;
+              while ((aMatch = attrRx.exec(attrStr)) !== null) {
+                const rawName = aMatch[1];
+                const nameLower = rawName.toLowerCase();
+                if (nameLower.startsWith('on')) continue;
+                const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
+                if ((nameLower === 'href' || nameLower === 'xlink:href') && /^\s*(javascript|data|vbscript):/i.test(val)) {
+                  continue;
+                }
+                if (nameLower === 'xlink:href') {
+                  el.setAttributeNS(XLINK_NS, 'xlink:href', val);
+                } else {
+                  el.setAttribute(rawName, val);
+                }
+              }
+            }
+            if (stack.length > 0) {
+              stack[stack.length - 1].appendChild(el);
+            } else if (tagLower === 'svg') {
+              rootSvg = el;
+            }
+            if (!selfClose && !VOID_TAGS.has(tagLower) && (stack.length > 0 || tagLower === 'svg')) {
+              stack.push(el);
+            }
+          } else if (textNode && stack.length > 0) {
+            stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(textNode)));
           }
         }
-        const sanitized = sanitizeSvgElement(rootSvg);
-        if (!sanitized) return false;
-        if (typeof container.replaceChildren === 'function') {
-          container.replaceChildren(...sanitized.childNodes);
-        } else {
-          container.innerHTML = sanitized.innerHTML;
-        }
-        return true;
+        return rootSvg;
       };
 
       try {
-        const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-        mounted = tryMountDoc(htmlDoc);
+        const rootSvg = buildSafeSvgTree(safeSvg);
+        if (rootSvg) {
+          const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
+          if (vb) {
+            viewBox = vb;
+            if (stageSvg && typeof stageSvg.setAttribute === 'function') {
+              stageSvg.setAttribute('viewBox', vb);
+            } else if (container.tagName && container.tagName.toLowerCase() === 'svg') {
+              container.setAttribute('viewBox', vb);
+            }
+          }
+          const sanitized = sanitizeSvgElement(rootSvg);
+          if (sanitized) {
+            if (typeof container.replaceChildren === 'function') {
+              container.replaceChildren(...sanitized.childNodes);
+            } else {
+              while (container.firstChild) {
+                container.removeChild(container.firstChild);
+              }
+              while (sanitized.firstChild) {
+                container.appendChild(sanitized.firstChild);
+              }
+            }
+            mounted = true;
+          }
+        }
       } catch (err) {
         if (typeof console !== 'undefined') {
           console.warn('[ASTSharedRenderBoundary] SVG mount fallback:', err);
@@ -365,7 +429,6 @@
 
     return { mounted, viewBox };
   }
-
   /**
    * Zero-GC DOM Attribute / Affine Transform Commit Boundary.
    */
