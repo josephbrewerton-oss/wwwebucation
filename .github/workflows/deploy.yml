@@ -60,7 +60,7 @@ jobs:
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
 
       # Backup to gh-pages branch runs LAST so it doesn't pollute artifact metadata
       - name: Deploy to GitHub Pages (gh-pages branch backup)
