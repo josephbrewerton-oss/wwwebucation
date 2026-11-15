@@ -4973,18 +4973,6 @@ window.addEventListener('message', (e) => {
         items.push({ id, tag: (tag || 'g').toLowerCase() });
       };
 
-      if (typeof DOMParser !== 'undefined') {
-        try {
-          const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
-          if (!doc.querySelector('parsererror')) {
-            doc.querySelectorAll('[id]').forEach((node) => {
-              addItem(node.getAttribute('id'), node.tagName);
-            });
-            return items;
-          }
-        } catch (_) {}
-      }
-
       const rx = /<([a-z0-9:-]+)[^>]*\bid=["']([^"']+)["']/gi;
       let m;
       while ((m = rx.exec(svgText)) !== null) {
