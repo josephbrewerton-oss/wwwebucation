@@ -9274,17 +9274,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           } else if (b.type === '3d-line') {
             const line = hasDomQuery ? container.querySelector(b.target) : null;
             if (line) {
-              let evalX1 = () => 0, evalY1 = () => 0, evalZ1 = () => 0;
-              let evalX2 = () => 0, evalY2 = () => 0, evalZ2 = () => 0;
-              try { evalX1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x1});`); } catch {}
-              try { evalY1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y1});`); } catch {}
-              try { evalZ1 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z1});`); } catch {}
-              try { evalX2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x2});`); } catch {}
-              try { evalY2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y2});`); } catch {}
-              try { evalZ2 = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z2});`); } catch {}
+              const wrap3d = (expr) => {
+            if (expr === undefined || expr === null) return () => 0;
+              const fn = this.compileAstFn(expr);
+              return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+            };
+            const evalX1 = wrap3d(b.x1), evalY1 = wrap3d(b.y1), evalZ1 = wrap3d(b.z1);
+            const evalX2 = wrap3d(b.x2), evalY2 = wrap3d(b.y2), evalZ2 = wrap3d(b.z2);
               const cap1 = (b.cap1 && hasDomQuery) ? container.querySelector(b.cap1) : null;
               const cap2 = (b.cap2 && hasDomQuery) ? container.querySelector(b.cap2) : null;
 
+              
               const item = {
                 type: '3d-line',
                 target: b.target,
@@ -9301,15 +9301,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           } else if (b.type === '3d-ring') {
             const ringNode = hasDomQuery ? container.querySelector(b.target) : null;
             if (ringNode) {
-              let evalR = () => 100, evalCX = () => 0, evalCY = () => 0, evalCZ = () => 0;
-              let evalTiltX = () => 0, evalTiltY = () => 0, evalTiltZ = () => 0;
-              try { evalR = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.r});`); } catch {}
-              try { evalCX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cx});`); } catch {}
-              try { evalCY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cy});`); } catch {}
-              try { evalCZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.cz});`); } catch {}
-              try { evalTiltX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltX});`); } catch {}
-              try { evalTiltY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltY});`); } catch {}
-              try { evalTiltZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.tiltZ});`); } catch {}
+              const wrap3d = (expr, fallback) => {
+                if (expr === undefined || expr === null) return () => fallback;
+                const fn = this.compileAstFn(expr);
+                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+              };
+              const evalR = wrap3d(b.r, 100);
+              const evalCX = wrap3d(b.cx, 0);
+              const evalCY = wrap3d(b.cy, 0);
+              const evalCZ = wrap3d(b.cz, 0);
+              const evalTiltX = wrap3d(b.tiltX, 0);
+              const evalTiltY = wrap3d(b.tiltY, 0);
+              const evalTiltZ = wrap3d(b.tiltZ, 0);
 
               const item = {
                 type: '3d-ring',
@@ -9328,9 +9331,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const polyNode = hasDomQuery ? container.querySelector(b.target) : null;
             if (polyNode) {
               let evalPts = () => [];
-              try {
-                evalPts = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.pointsExpr});`);
-              } catch {}
+              if (b.pointsExpr) {
+                const rawPtsFn = this.compileAstFn(b.pointsExpr);
+                evalPts = (t, vars, MathObj, computed) => rawPtsFn(t, vars, computed, MathObj) || [];
+              }
 
               const item = {
                 type: '3d-polygon',
@@ -9345,15 +9349,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               this.active3DItems.push(item);
             }
           } else if (b.type === 'var-update' && b.varName) {
-            const compiledVarExpr = this.compileAstExpr(b.expr || '0');
-            let varEvalFn = () => this.vars ? this.vars[b.varName] : 0;
+            let varEvalFn = () => (this.vars ? this.vars[b.varName] : 0);
             try {
-              varEvalFn = new Function(
-                't', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor',
-                'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch',
-                'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate',
-                'scale', 'sineWave', 'smoothstep',
-                `"use strict"; return (${compiledVarExpr});`
+              const rawVarFn = this.compileAstFn(b.expr || '0');
+              varEvalFn = (
+                t, vars, MathObj, computed, _astMorphPath, _astMorphColor,
+                _astEaseBack, _astEaseBounce, _astEaseElastic, _astSquashStretch,
+                clamp, lerp, map, rad, deg, dist, translate, rotate,
+                scale, sineWave, smoothstep
+              ) => rawVarFn(
+                t, vars, computed, MathObj,
+                clamp, lerp, map, rad, deg, dist, translate, rotate,
+                scale, sineWave, smoothstep
               );
             } catch (e) {
               console.warn('[AST Engine] Failed compiling var binding:', b.varName, b.expr, e);
@@ -9387,15 +9394,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 }
               }
 
-              rawExpr = this.compileAstExpr(rawExpr).replace(/\\\\'/g, "\\'");
-
               try {
-                evalFn = new Function(
-                  't', 'vars', 'Math', 'computed', 'astMorphPath', 'astMorphColor',
-                  'astEaseBack', 'astEaseBounce', 'astEaseElastic', 'astSquashStretch',
-                  'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate',
-                  'scale', 'sineWave', 'smoothstep',
-                  `"use strict"; return (${rawExpr});`
+                const rawBindFn = this.compileAstFn(rawExpr.replace(/\\\\'/g, "\\'"));
+                evalFn = (
+                  t, vars, MathObj, computed, _astMorphPath, _astMorphColor,
+                  _astEaseBack, _astEaseBounce, _astEaseElastic, _astSquashStretch,
+                  clamp, lerp, map, rad, deg, dist, translate, rotate,
+                  scale, sineWave, smoothstep
+                ) => rawBindFn(
+                  t, vars, computed, MathObj,
+                  clamp, lerp, map, rad, deg, dist, translate, rotate,
+                  scale, sineWave, smoothstep
                 );
               } catch (e) {
                 console.warn('[AST Engine] Failed compiling expr:', b.expr, e);
