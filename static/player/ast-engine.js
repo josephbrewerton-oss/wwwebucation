@@ -9611,16 +9611,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           for (let ti = 0; ti < terms.length; ti++) {
             let fn = () => 0;
             try {
-              const cExpr = this.compileAstExpr(terms[ti].expr || '0');
-              fn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cExpr});`);
+              const rawFn = this.compileAstFn(terms[ti].expr || '0');
+              fn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawFn(t, vars, computed, MathObj, clamp, lerp, map);
             } catch (_) {}
             evalFns.push(fn);
           }
           let maxEvalFn = null;
           if (ldCfg.maxExpr) {
             try {
-              const cMax = this.compileAstExpr(ldCfg.maxExpr);
-              maxEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cMax});`);
+              const rawMaxFn = this.compileAstFn(ldCfg.maxExpr);
+              maxEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawMaxFn(t, vars, computed, MathObj, clamp, lerp, map);
             } catch (_) {}
           }
 
