@@ -12,7 +12,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
         Learn with Confidence at St Joseph's
       </h1>
       <p style="font-size: 1.15rem; color: #475569; max-width: 780px; margin: 0 auto 2rem; line-height: 1.6;">
-        Interactive UK National Curriculum portal and zero-cloud educational engine. Featuring 60 FPS vector simulators, Catholic sanctuary catechesis, diagnostic practice drills, and in-vision British Sign Language.
+        Free UK National Curriculum lessons, interactive science and maths labs, Catholic sanctuary catechesis, diagnostic practice quizzes, and on-screen British Sign Language—working 100% offline.
       </p>
 
       <div style="display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap;">
@@ -20,7 +20,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
           <span>✝️ Catholic Sanctuary</span>
         </a>
         <a href="${n}player" style="padding: 11px 22px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2,132,199,0.25);">
-          <span>🎮 Launch Simulators</span>
+          <span>🎮 Open Interactive Labs</span>
         </a>
         <a href="${n}practice-lab" style="padding: 11px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
           <span>⚡ Practice Lab</span>
@@ -37,15 +37,15 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
         <div style="display: flex; align-items: center; gap: 10px;">
           <span style="font-size: 1.5rem;">🎮</span>
           <div>
-            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Curriculum Vector Apparatus</span>
-            <strong style="font-size: 1.05rem; color: #f8fafc;">Interactive 60 FPS Simulation Stage</strong>
+            <span style="display: block; font-size: 0.72rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.05em;">Featured Classroom Activity</span>
+            <strong style="font-size: 1.05rem; color: #f8fafc;">Explore &amp; Experiment Live</strong>
           </div>
         </div>
 
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <select id="sim-selector" aria-label="Select Curriculum Simulation" style="padding: 8px 14px; border-radius: 8px; background: #1e293b; color: #fff; border: 1.5px solid #0284c7; font-weight: 700; font-size: 0.86rem; cursor: pointer;">
           </select>
-          <a href="${n}player" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Fullscreen Studio</a>
+          <a href="${n}player" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Open Full Activity</a>
         </div>
       </div>
 
@@ -132,12 +132,12 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🎮
             </div>
-            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">AST Vector Simulators</strong>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Interactive Science &amp; Maths Labs</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              60 procedural vector apparatuses: kinetic gas, circuits, photosynthesis, Pythagoras, pendulum dyno, atom, and solar system.
+              Explore 60 hands-on models: kinetic gases, electric circuits, photosynthesis, Pythagoras, pendulums, atoms, and the solar system.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #0284c7;">Explore 60 Simulators →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #0284c7;">Explore 60 Interactive Labs →</span>
         </a>
 
         <!-- Practice Lab Card -->
@@ -148,7 +148,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Interactive Practice Lab</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              Procedural drills with diagnostic mistake checks, step-by-step hints, and mathematical calculation variations.
+              Guided practice quizzes with instant hints, step-by-step worked examples, and common-mistake checks.
             </p>
           </div>
           <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Start Practice Drills →</span>
@@ -162,7 +162,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Lessons &amp; Units</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              Explore National Curriculum units across Key Stages 1 to 4 with core axioms, common cognitive traps, and concept maps.
+              Browse National Curriculum units across Key Stages 1 to 4 with key concepts, worked methods, and common-mistake alerts.
             </p>
           </div>
           <span style="font-size: 0.84rem; font-weight: 700; color: #d97706;">Browse Curriculum Units →</span>
@@ -210,18 +210,18 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
           <span style="font-size: 0.84rem; font-weight: 700; color: #e11d48;">Enter Globe Theatre →</span>
         </a>
 
-        <!-- SlideScript Cartridge Studio Card -->
+        <!-- SlideScript Lesson Studio Card -->
         <a href="${n}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ✏️
             </div>
-            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">SlideScript Cartridge Studio</strong>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Create Your Own Lesson</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              Children write plain-English markdown or prompt on-device Gemini Nano to create and remix 60 FPS science and math cartridges with zero code syntax barriers.
+              Write plain-English notes or ask the on-device study assistant to build and remix interactive science and maths activities with no coding required.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Create a Cartridge →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Open Lesson Creator →</span>
         </a>
 
         <!-- Teacher Beacon Card -->
@@ -230,12 +230,12 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
             <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0e7ff; color: #4338ca; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               📡
             </div>
-            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Teacher Beacon Console</strong>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Whole-Class Sync (Teacher Beacon)</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              Air-gapped classroom synchronization via local WebRTC mesh to broadcast live simulation presets to student screens.
+              Share the current lesson or interactive activity straight to pupil screens on the classroom network without needing the internet.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #4338ca;">Launch Beacon →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #4338ca;">Launch Classroom Beacon →</span>
         </a>
 
         <!-- Student Progress & Badges Card -->
@@ -246,7 +246,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Student Progress &amp; Badges</strong>
             <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
-              Local mastery tracking, streak counters, and curriculum standard badges stored privately in your browser with zero telemetry.
+              Personal mastery tracking, streak counters, and curriculum topic badges saved privately on your device with zero tracking.
             </p>
           </div>
           <span style="font-size: 0.84rem; font-weight: 700; color: #a16207;">View Your Badges →</span>
@@ -258,7 +258,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
     <!-- Core Educational Guarantees & Safeguards -->
     <section style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 16px; padding: 2.25rem 2rem; margin-bottom: 2rem;">
       <h3 style="font-size: 1.4rem; font-weight: 800; color: #0f172a; margin: 0 0 1.25rem; text-align: center;">
-        St Joseph's Educational &amp; Architectural Guarantees
+        Our School &amp; Safeguarding Promises
       </h3>
 
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem;">
@@ -274,23 +274,23 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";function n(){let n=e(),
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">💾</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">100% Zero-Data Offline First</strong>
           <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
-            Engineered to run entirely from device storage without internet connectivity, ideal for developing nations and low-bandwidth environments.
+            Works directly from your device storage with no mobile data or Wi-Fi needed—ideal for school classrooms and remote communities.
           </p>
         </div>
 
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🛡️</span>
-          <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">Zero Cloud Leakage &amp; Edge AI</strong>
+          <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">Private &amp; KCSIE Safe</strong>
           <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
-            Pupil diagnostics, answers, and voice inputs never egress to cloud servers, strictly complying with UK GDPR Art. 25 and KCSIE standards.
+            Pupil work, quiz answers, and voice inputs never leave your device, complying with UK GDPR Art. 25 and KCSIE safeguarding standards.
           </p>
         </div>
 
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🖐️</span>
-          <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">In-Vision BSL &amp; Accessibility</strong>
+          <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">British Sign Language &amp; Accessibility</strong>
           <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
-            Real-time procedural 3D vector sign language avatar with Level 6 spatial grammar and multilingual live translation across 9 languages.
+            On-screen British Sign Language (BSL) interpreter and live translation across 9 languages for inclusive classrooms.
           </p>
         </div>
       </div>

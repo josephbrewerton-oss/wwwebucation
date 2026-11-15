@@ -4,19 +4,19 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";import{a as n,c as r,d 
       <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
         <a href="${p}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
-        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🛠️ Curriculum &amp; Local Build Studio</span>
+        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🛠️ Lesson Author Studio</span>
       </div>
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
         <div>
           <h1 style="font-size:2rem; font-weight:800; color:#0f172a; margin:0 0 6px 0;">
-            Client-Side Duo Compiler &amp; Nominated Folder Builder
+            Interactive Lesson Builder &amp; Offline Packager
           </h1>
           <p style="font-size:0.95rem; color:#475569; margin:0;">
-            Compile paired <code>.ast</code> + <code>.svg</code> Duo files into standalone <code>.astb</code> binaries, write builds to a nominated local folder, and execute on the 448 KiB Everyman WASM Kernel.
+            Package paired lesson scripts (<code>.ast</code>) and diagrams (<code>.svg</code>) into offline classroom activities (<code>.astb</code>), sync a local school folder, and preview them immediately.
           </p>
         </div>
         <a href="${p}player" style="padding:10px 18px; border-radius:8px; background:#0284c7; color:#fff; font-weight:700; font-size:0.86rem; text-decoration:none;">
-          Launch Player Studio &rarr;
+          Open Interactive Player &rarr;
         </a>
       </div>
     </div>
@@ -28,38 +28,38 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";import{a as n,c as r,d 
         <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px; margin-bottom:10px;">
           <div>
             <span style="font-size:0.7rem; font-weight:800; letter-spacing:0.06em; color:#0369a1; text-transform:uppercase;">
-              File System Access API + IndexedDB Persistence
+              Local Classroom Sync (Offline Storage)
             </span>
             <h2 style="font-size:1.15rem; font-weight:800; margin:2px 0 0 0; color:#0f172a;">
-              Nominated Local Build Folder
+              School Lesson Build Folder
             </h2>
           </div>
           <span id="fs-api-badge" style="font-size:0.72rem; font-weight:700; padding:3px 8px; border-radius:6px; background:${a()?`#dcfce7; color:#166534;`:`#fef3c7; color:#92400e;`}">
-            ${a()?`FS Access Ready`:`Fallback Mode`}
+            ${a()?`Folder Sync Ready`:`Read-Only Mode`}
           </span>
         </div>
         <p style="font-size:0.84rem; color:#475569; margin:0 0 12px 0; line-height:1.45;">
-          Nominate your local <code>cartridges/</code> folder once. The browser persists the directory handle in IndexedDB and builds <code>bytecode/*.astb</code>, <code>scenes.manifest.json</code>, and SHA-256 checksums straight to disk with zero cloud uploads.
+          Pick your local <code>cartridges/</code> folder once to remember it offline and rebuild lesson packages (<code>bytecode/*.astb</code>) and manifests straight to disk with zero cloud uploads.
         </p>
 
         <div id="nominated-folder-box" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:8px; padding:10px 12px; margin-bottom:12px; font-size:0.82rem;">
-          <div style="color:#64748b;">No folder nominated yet.</div>
+          <div style="color:#64748b;">No folder chosen yet.</div>
         </div>
 
         <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; color:#334155; font-weight:600; margin-bottom:12px; cursor:pointer;">
           <input type="checkbox" id="chk-write-disk" checked />
-          Write compiled <code>bytecode/*.astb</code> + manifests back into nominated folder
+          Save rebuilt lesson packages back into the chosen folder
         </label>
 
         <div style="display:flex; flex-wrap:wrap; gap:8px;">
           <button type="button" id="btn-nominate-folder" style="padding:8px 14px; border-radius:8px; border:none; background:#0f172a; color:#fff; font-weight:700; font-size:0.82rem; cursor:pointer;">
-            📁 Nominate Local Folder
+            📁 Pick School Folder
           </button>
           <button type="button" id="btn-run-folder-build" disabled style="padding:8px 14px; border-radius:8px; border:none; background:#0284c7; color:#fff; font-weight:700; font-size:0.82rem; cursor:pointer; opacity:0.55;">
-            ⚡ Build All Duos in Folder
+            ⚡ Build All Lessons in Folder
           </button>
           <button type="button" id="btn-fallback-dir" style="padding:8px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#fff; color:#334155; font-weight:700; font-size:0.8rem; cursor:pointer;">
-            📂 Scan Folder (Read-Only Fallback)
+            📂 Scan Folder (Read-Only)
           </button>
           <button type="button" id="btn-forget-folder" style="display:none; padding:8px 10px; border-radius:8px; border:1px solid #fecaca; background:#fef2f2; color:#991b1b; font-weight:700; font-size:0.78rem; cursor:pointer;">
             Forget
@@ -71,19 +71,19 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";import{a as n,c as r,d 
       <!-- Card B: Instant .ast + .svg Duo Compiler -->
       <section style="background:#ffffff; border:1px solid #cbd5e1; border-radius:14px; padding:1.35rem; box-shadow:0 2px 10px rgba(15,23,42,0.04);">
         <span style="font-size:0.7rem; font-weight:800; letter-spacing:0.06em; color:#7c3aed; text-transform:uppercase;">
-          OP_SVG_COMPANION (0x81) Capsule Encoder
+          Offline Activity Packager
         </span>
         <h2 style="font-size:1.15rem; font-weight:800; margin:2px 0 6px 0; color:#0f172a;">
-          Single &amp; Multi-File Duo (.ast + .svg &rarr; .astb)
+          Package Lesson + Diagram (.ast + .svg)
         </h2>
         <p style="font-size:0.84rem; color:#475569; margin:0 0 12px 0; line-height:1.45;">
-          Select or drop paired <code>name.ast</code> + <code>name.svg</code> files (or <code>.ast.svg</code> capsules) to pack them into a single binary <code>.astb</code> cartridge verified by the 448 KiB WASM kernel.
+          Select or drop matching lesson (<code>.ast</code>) and diagram (<code>.svg</code>) files to pack them into a portable offline <code>.astb</code> activity and preview it immediately.
         </p>
 
         <div id="duo-dropzone" style="border:2px dashed #94a3b8; border-radius:10px; padding:22px 16px; text-align:center; background:#f8fafc; cursor:pointer; transition:border-color 0.15s, background 0.15s;">
           <div style="font-size:1.5rem; margin-bottom:4px;">🧩</div>
-          <div style="font-weight:700; font-size:0.88rem; color:#0f172a;">Drop paired .ast + .svg Duo files here</div>
-          <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">or click to pick local Duo files (multiple allowed)</div>
+          <div style="font-weight:700; font-size:0.88rem; color:#0f172a;">Drop lesson (.ast) + diagram (.svg) files here</div>
+          <div style="font-size:0.78rem; color:#64748b; margin-top:4px;">or click to browse local files (multiple allowed)</div>
           <input type="file" id="input-duo-files" accept=".ast,.svg,.ast.svg" multiple style="display:none;" />
         </div>
 
@@ -214,7 +214,7 @@ import{h as e,s as t}from"./cartridge-vault-0OrINNC1.js";import{a as n,c as r,d 
             ${_===`granted`?`✓ Read/Write`:`⚠ Re-grant on Build`}
           </span>
         </div>
-      `,D.disabled=!1,D.style.opacity=`1`,k.style.display=`inline-block`):(w.innerHTML=`<div style="color:#64748b;">No folder nominated yet. Click <strong>Nominate Local Folder</strong> or use Read-Only Folder Scan.</div>`,D.disabled=!0,D.style.opacity=`0.55`,k.style.display=`none`)},Z=async e=>{b=e,z.style.display=`block`,B.textContent=`Everyman 448 KiB Kernel — ${e.title} (${e.id}.astb)`,C&&=(C(),null);try{await S.init();let t=S.bootCartridge(e.astbData),n=e=>{W.innerHTML=`
+      `,D.disabled=!1,D.style.opacity=`1`,k.style.display=`inline-block`):(w.innerHTML=`<div style="color:#64748b;">No folder chosen yet. Click <strong>Pick School Folder</strong> or use Read-Only Folder Scan.</div>`,D.disabled=!0,D.style.opacity=`0.55`,k.style.display=`none`)},Z=async e=>{b=e,z.style.display=`block`,B.textContent=`Everyman 448 KiB Kernel — ${e.title} (${e.id}.astb)`,C&&=(C(),null);try{await S.init();let t=S.bootCartridge(e.astbData),n=e=>{W.innerHTML=`
           <span><strong>Mem:</strong> ${(e.linearMemoryBytes/1024).toFixed(0)} KiB (${e.linearMemoryPages} pages)</span>
           <span><strong>t:</strong> ${e.t.toFixed(3)}</span>
           <span><strong>Tick:</strong> ${e.tickCount}</span>
