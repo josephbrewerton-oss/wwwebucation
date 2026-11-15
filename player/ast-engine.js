@@ -5549,6 +5549,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             scene.has3D = true;
             break;
           }
+          case 0x81: { // OP_SVG_COMPANION (Duo SVG embedded in .astb capsule)
+            const svgIdx = view.getUint16(offset, true); offset += 2;
+            const svgStr = getStr(svgIdx);
+            if (svgStr) scene.svgMarkup = svgStr;
+            break;
+          }
           case 0x10: { // OP_KEYFRAME
             const normT = view.getUint16(offset, true); offset += 2;
             const titleIdx = view.getUint16(offset, true); offset += 2;
@@ -7612,6 +7618,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (foundBytecode) {
               try {
                 parsedAst = this.decompileBytecode(foundBytecode);
+                if (!svgText && parsedAst && parsedAst.svgMarkup) {
+                  svgText = parsedAst.svgMarkup;
+                }
               } catch (err) {
                 console.warn('[AST Engine] Bytecode decompression failed, falling back to AST for', presetId, err);
               }
@@ -8021,8 +8030,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       };
       reader.onload = () => {
         try {
-          const content = String(reader.result || '').trim();
           const id = filename.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
+
+          if (ext === 'astb') {
+            const bytes = new Uint8Array(reader.result);
+            const parsed = this.decompileBytecode(bytes);
+            if (!parsed) {
+              throw new Error(`Invalid .astb binary cartridge: "${filename}"`);
+            }
+            const scene = Object.assign({}, parsed, {
+              id: parsed.id || id,
+              title: parsed.title || filename,
+              stage: parsed.stage || 'COMPILED .ASTB CARTRIDGE',
+              rawBindings: parsed.bindings || [],
+              inputs: parsed.uiControls || parsed.inputs || [],
+              svgText: parsed.svgMarkup || '',
+            });
+            const loaded = this.loadSceneData(scene, shouldPlay);
+            this.emit('fileloaded', { filename, type: 'astb', id: scene.id });
+            resolve(loaded);
+            return;
+          }
+
+          const content = String(reader.result || '').trim();
 
           if (ext === 'json') {
             const json = JSON.parse(content);
@@ -8172,7 +8202,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           reject(parseErr);
         }
       };
-      reader.readAsText(file);
+      if (ext === 'astb') {
+        reader.readAsArrayBuffer(file);
+      } else {
+        reader.readAsText(file);
+      }
     });
   }
 
@@ -8308,7 +8342,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       return loaded;
     }
 
-    const primaryFile = files.find(f => /\.(ast|svg|json|html|slidescript)$/i.test(f.name)) || files[0];
+    const primaryFile = files.find(f => /\.(astb|ast|svg|json|html|slidescript)$/i.test(f.name)) || files[0];
     return this.loadFromFile(primaryFile, shouldPlay);
   }
 

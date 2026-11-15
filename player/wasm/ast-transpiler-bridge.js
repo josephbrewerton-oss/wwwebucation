@@ -24,7 +24,8 @@
       this.f32View = null;
 
       this.STREAM_BUFFER_PTR = 0x010000;
-      this.OUTPUT_BUFFER_PTR = 0x080000;
+      this.MAX_LINEAR_BYTES = 7 * 65536; // Fixed 448 KiB ceiling (7 WASM pages, zero memory.grow)
+      this.STREAM_WINDOW_BYTES = 0x54000; // 336 KiB scan window within 0x010000..0x064000
 
       this._initPromise = null;
       this.init().catch(err => {
@@ -113,25 +114,28 @@
       return this._initPromise;
     }
 
+    _getWindowCapacity() {
+      if (!this.memory) return 0;
+      return Math.min(
+        this.STREAM_WINDOW_BYTES,
+        Math.max(0, this.memory.buffer.byteLength - this.STREAM_BUFFER_PTR)
+      );
+    }
+
     /**
      * Decodes an SWF (Flash) binary header into dimensions, fps, frame count
      */
     decodeSwfHeader(bytes) {
-      if (!this.isReady || !this.exports) return null;
+      if (!this.isReady || !this.exports || !this.u8View) return null;
       const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
       if (u8.length < 21) return null;
 
-      const needed = this.STREAM_BUFFER_PTR + u8.length;
-      if (this.memory.buffer.byteLength < needed) {
-        const extraPages = Math.ceil((needed - this.memory.buffer.byteLength) / 65536);
-        this.memory.grow(extraPages);
-        this.u8View = new Uint8Array(this.memory.buffer);
-        this.i32View = new Int32Array(this.memory.buffer);
-        this.f32View = new Float32Array(this.memory.buffer);
-      }
-
-      this.u8View.set(u8, this.STREAM_BUFFER_PTR);
-      const ok = this.exports.decode_swf_header(this.STREAM_BUFFER_PTR, u8.length);
+      // SWF header fits in first 64 bytes; copy fixed header slice within 448 KiB pool
+      const cap = this._getWindowCapacity();
+      if (cap < 64) return null;
+      const headerSliceLen = Math.min(u8.length, cap);
+      this.u8View.set(u8.subarray(0, headerSliceLen), this.STREAM_BUFFER_PTR);
+      const ok = this.exports.decode_swf_header(this.STREAM_BUFFER_PTR, headerSliceLen);
       if (!ok) return null;
 
       const sigCode = this.i32View[0];
@@ -157,22 +161,17 @@
     }
 
     /**
-     * Scans SWF tags across the binary stream
+     * Scans SWF tags across the binary stream (bounded strictly to fixed 448 KiB memory)
      */
     scanSwfTags(bytes, startOffset = 21) {
-      if (!this.isReady || !this.exports) return null;
+      if (!this.isReady || !this.exports || !this.u8View) return null;
       const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
-      const needed = this.STREAM_BUFFER_PTR + u8.length;
-      if (this.memory.buffer.byteLength < needed) {
-        const extraPages = Math.ceil((needed - this.memory.buffer.byteLength) / 65536);
-        this.memory.grow(extraPages);
-        this.u8View = new Uint8Array(this.memory.buffer);
-        this.i32View = new Int32Array(this.memory.buffer);
-        this.f32View = new Float32Array(this.memory.buffer);
-      }
+      const cap = this._getWindowCapacity();
+      if (cap < 64) return null;
 
-      this.u8View.set(u8, this.STREAM_BUFFER_PTR);
-      const tagCount = this.exports.scan_swf_tags(this.STREAM_BUFFER_PTR, startOffset, u8.length);
+      const boundedLen = Math.min(u8.length, cap);
+      this.u8View.set(u8.subarray(0, boundedLen), this.STREAM_BUFFER_PTR);
+      const tagCount = this.exports.scan_swf_tags(this.STREAM_BUFFER_PTR, Math.min(startOffset, boundedLen), boundedLen);
 
       return {
         tagCount,
@@ -184,10 +183,10 @@
     }
 
     /**
-     * High-speed linear memory byte scan across monolithic PhET bundles
+     * Fixed-window streaming scan across monolithic PhET bundles (zero memory.grow)
      */
     scanPhetStream(content) {
-      if (!this.isReady || !this.exports) return null;
+      if (!this.isReady || !this.exports || !this.u8View) return null;
 
       const u8 = typeof content === 'string'
         ? new TextEncoder().encode(content)
@@ -195,24 +194,26 @@
         ? content
         : new Uint8Array(content);
 
-      const needed = this.STREAM_BUFFER_PTR + u8.length;
-      if (this.memory.buffer.byteLength < needed) {
-        const extraPages = Math.ceil((needed - this.memory.buffer.byteLength) / 65536);
-        this.memory.grow(extraPages);
-        this.u8View = new Uint8Array(this.memory.buffer);
-        this.i32View = new Int32Array(this.memory.buffer);
-        this.f32View = new Float32Array(this.memory.buffer);
+      const cap = this._getWindowCapacity();
+      if (cap <= 0) return null;
+
+      let combinedMask = 0;
+      let totalProps = 0;
+      const overlap = 64;
+      for (let offset = 0; offset < u8.length; offset += Math.max(1, cap - overlap)) {
+        const end = Math.min(u8.length, offset + cap);
+        const chunkLen = end - offset;
+        this.u8View.set(u8.subarray(offset, end), this.STREAM_BUFFER_PTR);
+        combinedMask |= this.exports.scan_phet_stream(this.STREAM_BUFFER_PTR, chunkLen);
+        totalProps += this.i32View[13];
+        if (end >= u8.length) break;
       }
 
-      this.u8View.set(u8, this.STREAM_BUFFER_PTR);
-      const mask = this.exports.scan_phet_stream(this.STREAM_BUFFER_PTR, u8.length);
-      const propCount = this.i32View[13];
-
       return {
-        mask,
-        isCircuit: (mask & 1) !== 0,
-        isWave: (mask & 2) !== 0,
-        propertyCount: propCount,
+        mask: combinedMask,
+        isCircuit: (combinedMask & 1) !== 0,
+        isWave: (combinedMask & 2) !== 0,
+        propertyCount: totalProps,
       };
     }
 
