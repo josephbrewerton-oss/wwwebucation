@@ -31,9 +31,9 @@ export const CATHOLIC_SANCTUARY_ITEMS: NavRouteItem[] = [
 ];
 
 export const CURRICULUM_LAB_ITEMS: NavRouteItem[] = [
-  { id: 'simulators', path: 'player', label: 'AST Vector Simulators', icon: '🎮', description: '60 FPS interactive physics & STEM apparatus' },
+  { id: 'simulators', path: 'player', label: 'Interactive Labs & Models', icon: '🎮', description: 'Hands-on physics, chemistry, maths & faith models' },
   { id: 'lessons', path: 'learning-zone', label: 'Lessons & Units', icon: '📖', description: 'Oak National Curriculum syllabus' },
-  { id: 'constellation', path: 'learning-zone?tab=constellation', label: 'Concept Constellation', icon: '✨', description: 'Interactive visual topic knowledge graph' },
+  { id: 'constellation', path: 'learning-zone?tab=constellation', label: 'Topic Map', icon: '✨', description: 'Visual map linking school subjects and topics' },
   { id: 'practice-lab', path: 'practice-lab', label: 'Practice Lab Drills', icon: '⚡', description: 'Diagnostic questions & misconception coaching' },
   { id: 'languages', path: 'languages', label: 'Languages & MFL', icon: '🌍', description: 'Polyglot verb wheels & pronunciation' },
   { id: 'phonics', path: 'phonics', label: 'EYFS / KS1 Phonics', icon: '🔤', description: 'Sound mats & synthetic phonics drills' },
@@ -41,12 +41,12 @@ export const CURRICULUM_LAB_ITEMS: NavRouteItem[] = [
 ];
 
 export const SCHOOL_GOVERNANCE_ITEMS: NavRouteItem[] = [
-  { id: 'teacher-beacon', path: 'teacher-beacon', label: 'Teacher Beacon', icon: '📡', description: 'Classroom mesh broadcast console' },
-  { id: 'curriculum-studio', path: 'curriculum-studio', label: 'Curriculum Studio', icon: '🛠️', description: 'Authoring & S-Expression tooling' },
-  { id: 'licensing', path: 'licensing', label: 'Licensing & MAT SLA', icon: '⚖️', description: 'Dual-license charter & commercial MAT covenant' },
-  { id: 'privacy', path: 'privacy', label: 'Edge Privacy Guard', icon: '🛡️', description: 'UK GDPR Art. 25 zero-cloud data guarantees' },
+  { id: 'teacher-beacon', path: 'teacher-beacon', label: 'Classroom Beacon', icon: '📡', description: 'Share live class activities across pupil screens' },
+  { id: 'curriculum-studio', path: 'curriculum-studio', label: 'Lesson Author Studio', icon: '🛠️', description: 'Create and package custom interactive lessons' },
+  { id: 'licensing', path: 'licensing', label: 'School Licensing & Terms', icon: '⚖️', description: 'Free school charter & trust SLA' },
+  { id: 'privacy', path: 'privacy', label: 'Pupil Privacy (Zero Cloud)', icon: '🛡️', description: 'UK GDPR Art. 25 on-device privacy guarantees' },
   { id: 'child-safety', path: 'child-safety', label: 'Child Safety & KCSIE', icon: '🔒', description: 'Statutory safeguarding compliance' },
-  { id: 'settings', path: 'settings', label: 'System Settings', icon: '⚙️', description: 'Sensory preferences & accessibility controls' },
+  { id: 'settings', path: 'settings', label: 'Accessibility & Settings', icon: '⚙️', description: 'Sensory preferences & accessibility controls' },
 ];
 
 export const NAV_GROUPS: NavGroup[] = [

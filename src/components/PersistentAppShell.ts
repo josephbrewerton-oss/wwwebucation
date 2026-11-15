@@ -266,8 +266,8 @@ export class PersistentAppShellElement extends HTMLElement {
                   </div>
                 </div>
 
-                <a href="${base}player" class="shell-nav-link" title="Interactive STEM & Visual Simulators">
-                  🎮 Simulators
+                <a href="${base}player" class="shell-nav-link" title="Interactive Science, Maths &amp; Faith Labs">
+                  🎮 Interactive Labs
                 </a>
 
                 <!-- Educator & Admin Dropdown -->
@@ -304,7 +304,7 @@ export class PersistentAppShellElement extends HTMLElement {
                   📶 ${this.dataSaver ? 'Data Saver: ON' : 'Data Saver'}
                 </button>
 
-                <a href="${base}settings" id="nav-btn-settings" class="hidden sm:inline-flex" style="padding:0.35rem 0.6rem; font-size:0.8rem; font-weight:700; color:#475569; border:1px solid #cbd5e1; border-radius:6px; text-decoration:none; align-items:center; gap:4px;" title="System Settings" aria-label="System Settings">
+                <a href="${base}settings" id="nav-btn-settings" class="hidden sm:inline-flex" style="padding:0.35rem 0.6rem; font-size:0.8rem; font-weight:700; color:#475569; border:1px solid #cbd5e1; border-radius:6px; text-decoration:none; align-items:center; gap:4px;" title="Accessibility &amp; System Settings" aria-label="Accessibility and System Settings">
                   <span>⚙️</span> <span>Settings</span>
                 </a>
 
@@ -354,10 +354,10 @@ export class PersistentAppShellElement extends HTMLElement {
                 <strong style="color:#f8fafc; font-size:1.05rem;">St Joseph's Curriculum Portal</strong>
               </div>
               <p style="color:#94a3b8; font-size:0.84rem; line-height:1.6; margin:0 0 12px 0;">
-                High-performance offline educational technology engineered for Key Stages 1–4. Zero advertising, zero tracking, and 100% free forever for all pupils, Catholic schools, and families.
+                Free offline curriculum lessons, interactive science labs, and Catholic faith resources for Key Stages 1–4. Zero advertising, zero tracking, and 100% free forever for pupils, schools, and families.
               </p>
               <div style="display:flex; gap:8px; font-size:0.78rem; color:#38bdf8;">
-                <span>✝️ Catholic Ethos</span> &bull; <span>🌱 Works Offline</span> &bull; <span>⚡ Sub-15ms Launch</span>
+                <span>✝️ Catholic Ethos</span> &bull; <span>🌱 Works Offline</span> &bull; <span>📖 Key Stages 1–4</span>
               </div>
             </div>
 
@@ -378,9 +378,8 @@ export class PersistentAppShellElement extends HTMLElement {
          <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#64748b;">
   St Joseph's Learning Portal &bull; Curriculum content licensed under 
   <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#38bdf8;">OGL v3.0</a>. 
-  Engine code dual-licensed under 
-  <a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 (Source Repository)</a>. 
-  &bull; <a href="${base}player?preset=lumina-architecture" style="color:#38bdf8; text-decoration:none; font-weight:600;">Interactive Architecture Manifesto (.ast)</a> (<a href="${base}docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#94a3b8; text-decoration:none;">Download</a>). 
+  Open-source learning platform (<a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 Source</a>) 
+  &bull; <a href="${base}player?preset=lumina-architecture" style="color:#38bdf8; text-decoration:none; font-weight:600;">Technical Architecture (.ast)</a> (<a href="${base}docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#94a3b8; text-decoration:none;">Download</a>). 
   Designed for zero-data offline learning.
 </div>
 </footer>

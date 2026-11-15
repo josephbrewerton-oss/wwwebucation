@@ -251,7 +251,7 @@ export function renderPlayerPage(): HTMLElement {
       <div style="display:flex; align-items:center; gap:8px;">
         <a href="${safeBase}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
-        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🎬 AST Vector Player &amp; Simulator</span>
+        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🔬 Interactive Lab &amp; Lesson Player</span>
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
@@ -278,7 +278,7 @@ export function renderPlayerPage(): HTMLElement {
               <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace; white-space:nowrap;">
                 ${safeType}
               </span>
-              <span style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;" class="hidden sm:inline">&bull; Lumina AST Vector Engine</span>
+              <span style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;" class="hidden sm:inline">&bull; Interactive Classroom Stage</span>
             </div>
             <h2 id="player-active-title" style="font-size:1.1rem; font-weight:800; color:#f8fafc; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${safeLabel}
@@ -288,11 +288,11 @@ export function renderPlayerPage(): HTMLElement {
 
         <!-- Primary Execution Actions (Locked Dimensions to Eliminate Any Layout Shift) -->
         <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
-          <button type="button" id="player-btn-play" style="padding:5px 14px; border-radius:6px; background:#16a34a; color:#ffffff; border:1px solid #22c55e; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; min-height:28px;" title="Play / Pause simulation loop (Spacebar)">
+          <button type="button" id="player-btn-play" style="padding:5px 14px; border-radius:6px; background:#16a34a; color:#ffffff; border:1px solid #22c55e; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; min-height:28px;" title="Play / Pause activity (Spacebar)">
             <span id="player-play-icon">▶</span>
             <span id="player-play-text">Play</span>
           </button>
-          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px;" title="Reset Simulation apparatus to initial conditions">
+          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px;" title="Reset activity to starting position">
             ↺ Reset
           </button>
           <button type="button" id="player-btn-mute" style="padding:5px 12px; border-radius:6px; background:${isMuted ? '#451a03' : '#1e293b'}; color:#ffffff; border:1px solid ${isMuted ? '#d97706' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Mute / Unmute simulation audio and voice narration (M)">
@@ -308,46 +308,52 @@ export function renderPlayerPage(): HTMLElement {
         </div>
       </div>
 
-      <!-- Stage Toolbar: Row 2 (Cartridge Selector & Authoring / LMS Tools) -->
-      <div style="padding:8px 18px; background:#0b1120; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:42px; box-sizing:border-box; overflow-x:auto; flex-wrap:nowrap;">
+      <!-- Stage Toolbar: Row 2 (Activity Selector, Pupil Study Tools & Collapsible Teacher Tools) -->
+      <div style="padding:8px 18px; background:#0b1120; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:42px; box-sizing:border-box; overflow-x:auto; flex-wrap:wrap;">
         <div style="display:inline-flex; align-items:center; gap:6px; flex-shrink:0;">
           <label for="player-sim-selector" style="font-size:0.76rem; font-weight:800; color:#94a3b8; white-space:nowrap;">
-            🎮 Cartridge:
+            📚 Activity:
           </label>
           <select id="player-sim-selector" style="padding:4px 10px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #0284c7; font-size:0.8rem; font-weight:700; cursor:pointer; outline:none; max-width:280px;">
             ${optionsHtml}
           </select>
         </div>
 
-        <div style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0;">
-          <button type="button" id="player-btn-ai-tutor" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Ask Gemini Nano / Socratic Co-Pilot about misconceptions and simulation physics">
+        <div style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
+          <button type="button" id="player-btn-ai-tutor" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Ask your on-device study tutor for hints, worked steps, and explanations">
             🤖 Ask Nano
           </button>
 
-          <button type="button" id="player-btn-lab-drawer" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Adjust simulation physical invariants and mathematical parameters">
-            🎛️ Lab Drawer
+          <button type="button" id="player-btn-lab-drawer" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Adjust activity sliders, values, and experiment controls">
+            🎛️ Lab Controls
           </button>
 
-          <button type="button" id="player-btn-diagnostics" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#4ade80; border:1px solid #16a34a; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Inspect Engine Telemetry, FPS, 16.6ms Budget &amp; Vector HUD">
-            ⚡ Diagnostics
+          <button type="button" id="player-btn-log-csv" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Save your lab results table to your local Jotter • Shift+Click to download as CSV">
+            📊 Save Results to Jotter
           </button>
 
-          <button type="button" id="player-btn-log-csv" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Save sampled (t, vars, computed) lab table to local IndexedDB Jotter • Shift+Click to also download .csv">
-            📊 Log Data to Jotter (CSV)
+          <button type="button" id="player-btn-teacher-tools" aria-expanded="false" style="padding:4px 10px; border-radius:6px; background:#0f172a; color:#94a3b8; border:1px solid #334155; font-size:0.74rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Show or hide teacher &amp; technical authoring tools">
+            🧰 Teacher Tools ▾
           </button>
 
-          <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Transpile &amp; Ingest PhET Simulation (*.html, *.phet), Flash SWF, or AST Cartridge">
-            ⚛️ PhET / Ingest
-          </button>
-          <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
+          <div id="player-teacher-tools-group" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; padding-left:6px; border-left:1px solid #334155;">
+            <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local activity files or import a PhET / HTML simulation">
+              📂 Import Activity
+            </button>
+            <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
 
-          <button type="button" id="player-btn-embed" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
-            🚀 Embed
-          </button>
+            <button type="button" id="player-btn-embed" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
+              🔗 Embed in Class
+            </button>
 
-          <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Export Standalone Single-File HTML Lesson Capsule (&lt; 45 KB)">
-            📦 Airgap HTML
-          </button>
+            <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Save a standalone single-file HTML lesson that runs completely offline">
+              💾 Offline HTML
+            </button>
+
+            <button type="button" id="player-btn-diagnostics" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#4ade80; border:1px solid #16a34a; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Inspect Engine Telemetry, FPS, 16.6ms Budget &amp; Vector HUD">
+              ⚡ Diagnostics
+            </button>
+          </div>
         </div>
       </div>
 
@@ -401,7 +407,7 @@ export function renderPlayerPage(): HTMLElement {
           <input
             type="search"
             id="cartridge-search-input"
-            placeholder="Search cartridges (e.g. Altar, Pythagoras, circuits)..."
+            placeholder="Search activities (e.g. Altar, Pythagoras, circuits)..."
             style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none;"
           />
         </div>
@@ -412,17 +418,17 @@ export function renderPlayerPage(): HTMLElement {
       </div>
     </div>
 
-    <!-- Offline Architecture Invariant Badge -->
+    <!-- Classroom Offline Guarantee Card -->
     <div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:1.25rem 1.5rem; color:#cbd5e1; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
       <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.5rem;">⚡</span>
+        <span style="font-size:1.5rem;">🏫</span>
         <div>
-          <strong style="color:#38bdf8; display:block;">Zero-Bloat Vector Architecture</strong>
-          <span>Sub-15ms cold start, &lt;35 KB gzipped engine, and 100% offline operational execution.</span>
+          <strong style="color:#38bdf8; display:block;">100% Offline Classroom Lab</strong>
+          <span>Works without internet, saves results privately to your device, and includes British Sign Language &amp; smartboard annotation.</span>
         </div>
       </div>
       <div style="display:flex; gap:8px;">
-        <a href="${base}news" style="padding:6px 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.78rem; font-weight:700; text-decoration:none;">Architecture Notes &rarr;</a>
+        <a href="${base}news" style="padding:6px 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.78rem; font-weight:700; text-decoration:none;">Portal Updates &amp; Notes &rarr;</a>
       </div>
     </div>
   `;
@@ -442,6 +448,8 @@ export function renderPlayerPage(): HTMLElement {
   const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
   const labDrawerBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab-drawer');
   const diagnosticsBtn = container.querySelector<HTMLButtonElement>('#player-btn-diagnostics');
+  const teacherToolsBtn = container.querySelector<HTMLButtonElement>('#player-btn-teacher-tools');
+  const teacherToolsGroup = container.querySelector<HTMLDivElement>('#player-teacher-tools-group');
   const logCsvBtn = container.querySelector<HTMLButtonElement>('#player-btn-log-csv');
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
@@ -1327,8 +1335,8 @@ export function renderPlayerPage(): HTMLElement {
       appendLabCsvToJotter(targetId, e.data.csv, nodePath)
         .then(() => {
           if (logCsvBtn) {
-            const origText = '📊 Log Data to Jotter (CSV)';
-            logCsvBtn.textContent = `✓ Logged ${rows} rows (CSV)`;
+            const origText = '📊 Save Results to Jotter';
+            logCsvBtn.textContent = `✓ Saved ${rows} rows to Jotter`;
             logCsvBtn.style.background = '#065f46';
             logCsvBtn.style.borderColor = '#10b981';
             logCsvBtn.style.color = '#ffffff';
@@ -1386,6 +1394,16 @@ export function renderPlayerPage(): HTMLElement {
   labDrawerBtn?.addEventListener('click', () => {
     activeDrawer = activeDrawer === 'lab' ? null : 'lab';
     renderActiveDrawer();
+  });
+
+  teacherToolsBtn?.addEventListener('click', () => {
+    if (!teacherToolsGroup) return;
+    const isOpen = teacherToolsGroup.style.display === 'inline-flex';
+    teacherToolsGroup.style.display = isOpen ? 'none' : 'inline-flex';
+    teacherToolsBtn.setAttribute('aria-expanded', String(!isOpen));
+    teacherToolsBtn.style.background = isOpen ? '#0f172a' : '#1e293b';
+    teacherToolsBtn.style.color = isOpen ? '#94a3b8' : '#f8fafc';
+    teacherToolsBtn.textContent = isOpen ? '🧰 Teacher Tools ▾' : '🧰 Teacher Tools ▴';
   });
 
   diagnosticsBtn?.addEventListener('click', () => {

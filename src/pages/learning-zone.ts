@@ -115,14 +115,14 @@ export function renderLearningZonePage(): HTMLElement {
             <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
               <span style="font-size:1.6rem;">📚</span>
               <span style="font-size:0.75rem; font-weight:800; color:#0284c7; text-transform:uppercase; letter-spacing:0.06em;">
-                St Joseph's Knowledge Substrate &bull; Oak National Curriculum
+                St Joseph's Curriculum Library &bull; Oak National Curriculum
               </span>
             </div>
             <h1 style="font-size:2.25rem; font-weight:800; color:#0f172a; margin:0 0 8px 0; letter-spacing:-0.02em;">
               National Curriculum Learning Zone
             </h1>
             <p style="font-size:1rem; color:#475569; margin:0; line-height:1.6;">
-              Structured pedagogical unit trajectories across Key Stages 1 to 4. Every topic is grounded in core conceptual axioms, step-by-step reasoning scaffolds, cognitive trap misconception guards, and interactive 60 FPS vector simulations.
+              Structured unit pathways across Key Stages 1 to 4. Every topic includes the core big idea, a step-by-step worked method, common mistakes to avoid, and matching interactive labs.
             </p>
           </div>
 
@@ -140,7 +140,7 @@ export function renderLearningZonePage(): HTMLElement {
             <div style="width:1px; height:28px; background:#e2e8f0;"></div>
             <div>
               <div style="font-size:1.35rem; font-weight:800; color:#f59e0b; line-height:1;">${totalSims}</div>
-              <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Vector Simulators</div>
+              <div style="font-size:0.7rem; font-weight:700; color:#64748b; text-transform:uppercase;">Interactive Labs</div>
             </div>
           </div>
         </div>
@@ -151,10 +151,10 @@ export function renderLearningZonePage(): HTMLElement {
             📖 Units &amp; Lessons (${totalTopics})
           </button>
           <button type="button" id="tab-btn-simulators" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'simulators' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'simulators' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'simulators' ? '#ffffff' : '#334155'};">
-            🎮 Vector Simulators (${totalSims})
+            🎮 Interactive Labs (${totalSims})
           </button>
           <button type="button" id="tab-btn-constellation" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'constellation' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'constellation' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'constellation' ? '#ffffff' : '#334155'};">
-            ✨ Concept Constellation
+            ✨ Topic Map
           </button>
         </div>
       </section>
@@ -185,7 +185,7 @@ export function renderLearningZonePage(): HTMLElement {
             <!-- Sim only checkbox -->
             <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:700; color:#0369a1; cursor:pointer; margin-left:6px;">
               <input type="checkbox" id="filter-sim-only" ${filterSimOnly ? 'checked' : ''} style="cursor:pointer;" />
-              <span>🎮 Has 60 FPS Sim</span>
+              <span>🎮 Has Interactive Lab</span>
             </label>
           </div>
 
@@ -195,7 +195,7 @@ export function renderLearningZonePage(): HTMLElement {
               type="text" 
               id="filter-search-input" 
               value="${escapeHtml(searchQuery)}" 
-              placeholder="Search topics, axioms, misconceptions..." 
+              placeholder="Search topics, key ideas, or misconceptions..." 
               style="width:100%; box-sizing:border-box; padding:8px 36px 8px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#f8fafc; color:#0f172a;"
             />
             ${searchQuery ? `
@@ -248,11 +248,11 @@ export function renderLearningZonePage(): HTMLElement {
 
           <!-- Actions -->
           <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-            <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(node.axiom)}" title="Read axiom aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
+            <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(node.axiom)}" title="Read key idea aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
               🔊 Listen
             </button>
-            <a href="${base}practice-lab?stage=${encodeURIComponent(node.stageTitle)}&subject=${encodeURIComponent(node.subjectTitle)}&q=${encodeURIComponent(node.topicTitle)}" title="${hasCart ? 'Open Interactive Data Cartridge' : 'Open Practice Lab'}" style="padding:6px 12px; border-radius:6px; background:${hasCart ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${hasCart ? '#bbf7d0' : '#cbd5e1'}; color:${hasCart ? '#166534' : '#0f172a'}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
-              <span>${hasCart ? '📊 Data Cartridge' : '🎯 Practice Lab'}</span>
+            <a href="${base}practice-lab?stage=${encodeURIComponent(node.stageTitle)}&subject=${encodeURIComponent(node.subjectTitle)}&q=${encodeURIComponent(node.topicTitle)}" title="${hasCart ? 'Open Interactive Lab Activity' : 'Open Practice Lab'}" style="padding:6px 12px; border-radius:6px; background:${hasCart ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${hasCart ? '#bbf7d0' : '#cbd5e1'}; color:${hasCart ? '#166534' : '#0f172a'}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+              <span>${hasCart ? '📊 Interactive Drill' : '🎯 Practice Lab'}</span>
             </a>
             ${sim ? `
               <a href="${base}player?preset=${sim.presetId}" title="${escapeHtml(sim.label)}" style="padding:6px 14px; border-radius:6px; background:#0284c7; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:6px;">
@@ -262,10 +262,10 @@ export function renderLearningZonePage(): HTMLElement {
           </div>
         </div>
 
-        <!-- 1. The Core Big Idea (Axiom) -->
+        <!-- 1. The Core Big Idea -->
         <div style="margin-bottom:12px;">
           <div style="font-size:0.78rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:3px;">
-            💡 1. The Core Big Idea (Axiom)
+            💡 1. The Core Big Idea
           </div>
           <p style="font-size:0.92rem; color:#1e293b; line-height:1.55; margin:0; font-weight:500;">
             ${node.axiom}
@@ -347,14 +347,14 @@ export function renderLearningZonePage(): HTMLElement {
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:6px;">
             <span style="font-size:1.6rem;">🎮</span>
             <span style="font-size:0.76rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">
-              AST Vector Player Engine &bull; Sub-15ms Boot
+              Hands-On Classroom Models &bull; Works 100% Offline
             </span>
           </div>
           <h2 style="font-size:1.85rem; font-weight:800; color:#ffffff; margin:0 0 8px 0;">
-            Interactive Curriculum Vector Simulators
+            Interactive Curriculum Labs &amp; Simulators
           </h2>
           <p style="font-size:0.96rem; color:#cbd5e1; max-width:800px; margin:0 0 1.5rem 0; line-height:1.6;">
-            Every simulation runs on a strictly fixed 7-page WASM linear memory pool with zero dynamic heap allocations during 60 FPS animation loops. Tested for 100% offline Chromebook reliability.
+            Explore science experiments, maths manipulatives, computing models, and faith walkthroughs—tested to run smoothly offline on school Chromebooks, tablets, and interactive whiteboards.
           </p>
 
           <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:1.25rem;">
@@ -364,7 +364,7 @@ export function renderLearningZonePage(): HTMLElement {
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <span style="font-size:1.4rem;">${sim.icon}</span>
                     <span style="font-size:0.68rem; background:#1e293b; color:#38bdf8; padding:2px 8px; border-radius:4px; font-weight:700;">
-                      ${sim.type} &bull; 60 FPS
+                      ${sim.type} &bull; Interactive
                     </span>
                   </div>
                   <h3 style="font-size:1.05rem; font-weight:800; color:#f8fafc; margin:0 0 6px 0;">
@@ -378,7 +378,7 @@ export function renderLearningZonePage(): HTMLElement {
                   </p>
                 </div>
                 <a href="${base}player?preset=${sim.presetId}" style="display:block; text-align:center; padding:8px 12px; border-radius:6px; background:#0284c7; color:#ffffff; font-weight:700; font-size:0.82rem; text-decoration:none;">
-                  Launch Vector Sim &rarr;
+                  Open Interactive Lab &rarr;
                 </a>
               </div>
             `).join('')}
@@ -390,19 +390,19 @@ export function renderLearningZonePage(): HTMLElement {
 
   function renderConstellation(): string {
     return `
-      <!-- Concept Constellation Graph View -->
+      <!-- Topic Prerequisite Map View -->
       <section style="background:#090d16; border:1px solid #1e293b; border-radius:16px; padding:2rem; color:#ffffff; margin-bottom:2rem; box-shadow:0 8px 30px rgba(0,0,0,0.3);">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; flex-wrap:wrap; gap:8px;">
           <div>
-            <span style="font-size:0.75rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">Logseq-Style Prerequisite Graph</span>
-            <h2 style="font-size:1.6rem; font-weight:800; margin:2px 0 0;">Curriculum Concept Constellation</h2>
+            <span style="font-size:0.75rem; font-weight:800; color:#38bdf8; text-transform:uppercase; letter-spacing:0.05em;">How Subjects Connect Across Key Stages</span>
+            <h2 style="font-size:1.6rem; font-weight:800; margin:2px 0 0;">Curriculum Topic Map</h2>
           </div>
           <span style="font-size:0.75rem; background:#1e293b; color:#34d399; padding:4px 10px; border-radius:999px; font-weight:700;">
-            0 bps Offline Execution
+            Available 100% Offline
           </span>
         </div>
         <p style="font-size:0.92rem; color:#94a3b8; line-height:1.6; margin:0 0 1.75rem 0; max-width:820px;">
-          Curriculum concepts are not isolated silos; every secondary theorem relies on primary foundations. Explore prerequisite trajectories and observe how elementary fractions connect to physics mechanics, chemistry moles, and computer programming.
+          School topics build on one another across years. See how primary foundations in fractions, forces, and faith lead into GCSE physics, chemistry, and theology.
         </p>
 
         <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem;">
