@@ -5031,6 +5031,7 @@
           return tokens;
         };
 
+        
         const tokens = tokenizeLisp(expr);
         if (tokens.length >= 3 && tokens[0].type === '(') {
           let pos = 0;
@@ -5134,8 +5135,7 @@
         const comp = this.scene.computed[i];
         try {
           if (!comp._eval) {
-            const compiled = this.compileAstExpr(comp.expr);
-            comp._eval = new Function('t', 'vars', 'computed', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', `"use strict"; return (${compiled});`);
+            comp._eval = this.compileAstFn(comp.expr);
           }
           v[comp.name] = comp._eval(evalT, v, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
         } catch {}
@@ -5349,6 +5349,307 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
 
         this.lastSpokenIndex = activeIndex;
+      }
+    }
+
+    compileAstFn(rawExpr) {
+      const ZERO_FN = () => 0;
+      if (rawExpr === null || rawExpr === undefined) return ZERO_FN;
+      let expr = String(rawExpr).trim();
+      if (!expr) return ZERO_FN;
+
+      if (/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(expr)) {
+        const num = Number(expr);
+        return () => num;
+      }
+
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(expr)) {
+        if (expr === 't') return (t) => t;
+        if (expr === 'true') return () => true;
+        if (expr === 'false') return () => false;
+        if (expr === 'null') return () => null;
+        if (expr === 'undefined') return () => undefined;
+        if (expr === 'NaN') return () => NaN;
+        if (expr === 'Infinity') return () => Infinity;
+        if (expr === 'PI') return () => Math.PI;
+        if (expr === 'E') return () => Math.E;
+        return (t, vars, computed) => (vars && expr in vars ? vars[expr] : computed?.[expr]);
+      }
+
+      const resolveHelper = (name, args, M, helpers) => {
+        if (helpers[name]) return helpers[name](...args);
+        if (typeof M[name] === 'function') return M[name](...args);
+        if (typeof Math[name] === 'function') return Math[name](...args);
+        return 0;
+      };
+
+      // 1. S-expression / Lisp compiler -> fast nested closures
+      if (expr.startsWith('(') && expr.endsWith(')')) {
+        const tokenizeLisp = (src) => {
+          const tokens = [];
+          let i = 0;
+          while (i < src.length) {
+            const ch = src[i];
+            if (/\s/.test(ch)) { i++; continue; }
+            if (ch === '(' || ch === ')') { tokens.push({ type: ch, val: ch }); i++; continue; }
+            if (ch === '"' || ch === "'") {
+              const quote = ch;
+              let s = '';
+              i++;
+              while (i < src.length) {
+                if (src[i] === '\\' && i + 1 < src.length) {
+                  const next = src[i + 1];
+                  if (next === 'n') s += '\n';
+                  else if (next === 't') s += '\t';
+                  else s += next;
+                  i += 2;
+                } else if (src[i] === quote) {
+                  i++;
+                  break;
+                } else {
+                  s += src[i++];
+                }
+              }
+              tokens.push({ type: 'str', val: s });
+              continue;
+            }
+            let atom = '';
+            while (i < src.length && !/[\s()]/.test(src[i])) atom += src[i++];
+            tokens.push({ type: 'atom', val: atom });
+          }
+          return tokens;
+        };
+
+        const tokens = tokenizeLisp(expr);
+        if (tokens.length >= 3 && tokens[0].type === '(') {
+          let pos = 0;
+          const parseForm = () => {
+            if (pos >= tokens.length) throw new Error('EOF');
+            const tok = tokens[pos++];
+            if (tok.type === '(') {
+              const list = [];
+              while (pos < tokens.length && tokens[pos].type !== ')') list.push(parseForm());
+              if (pos >= tokens.length || tokens[pos].type !== ')') throw new Error('Unbalanced');
+              pos++;
+              return list;
+            }
+            return tok;
+          };
+
+          try {
+            const ast = parseForm();
+            if (pos === tokens.length && Array.isArray(ast) && ast.length >= 1 && ast[0]?.type === 'atom') {
+              const compileNode = (node) => {
+                if (!Array.isArray(node)) {
+                  if (node.type === 'str') { const v = node.val; return () => v; }
+                  const a = node.val;
+                  if (a === 't') return (t) => t;
+                  if (a === 'true') return () => true;
+                  if (a === 'false') return () => false;
+                  if (a === 'null') return () => null;
+                  if (a === 'PI' || a === 'Math.PI') return () => Math.PI;
+                  if (a === 'E' || a === 'Math.E') return () => Math.E;
+                  if (/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(a)) {
+                    const n = Number(a);
+                    return () => n;
+                  }
+                  if (/^(?:vars|computed)\.[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
+                    const prop = a.split('.')[1];
+                    return (t, vars, computed) => (vars && prop in vars ? vars[prop] : computed?.[prop]);
+                  }
+                  const cleanKey = a.startsWith(':') ? a.slice(1) : a;
+                  return (t, vars, computed) => (vars && cleanKey in vars ? vars[cleanKey] : computed?.[cleanKey]);
+                }
+                if (node.length === 0) return () => undefined;
+                const op = node[0].type === 'atom' ? node[0].val : '';
+                const fns = node.slice(1).map(compileNode);
+                switch (op) {
+                  case '+': return fns.length === 1
+                    ? (...ctx) => +fns[0](...ctx)
+                    : (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc + fn(...ctx), 0);
+                  case '-': return fns.length === 1
+                    ? (...ctx) => -fns[0](...ctx)
+                    : (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc - fn(...ctx), 0);
+                  case '*': return (...ctx) => fns.reduce((acc, fn) => acc * fn(...ctx), 1);
+                  case '/': return (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc / fn(...ctx), 0);
+                  case '%': return (...ctx) => fns[0](...ctx) % fns[1](...ctx);
+                  case 'mod': return (...ctx) => { const a = fns[0](...ctx), b = fns[1](...ctx); return ((a % b) + b) % b; };
+                  case '>': return (...ctx) => fns[0](...ctx) > fns[1](...ctx);
+                  case '<': return (...ctx) => fns[0](...ctx) < fns[1](...ctx);
+                  case '>=': return (...ctx) => fns[0](...ctx) >= fns[1](...ctx);
+                  case '<=': return (...ctx) => fns[0](...ctx) <= fns[1](...ctx);
+                  case '=': case '==': case '===': return (...ctx) => fns[0](...ctx) === fns[1](...ctx);
+                  case '!=': case '!==': return (...ctx) => fns[0](...ctx) !== fns[1](...ctx);
+                  case 'and': return (...ctx) => { let r = true; for (let i = 0; i < fns.length; i++) { r = fns[i](...ctx); if (!r) return r; } return r; };
+                  case 'or': return (...ctx) => { let r = false; for (let i = 0; i < fns.length; i++) { r = fns[i](...ctx); if (r) return r; } return r; };
+                  case 'not': return (...ctx) => !fns[0](...ctx);
+                  case 'if': case ':if': return (...ctx) => (fns[0](...ctx) ? fns[1]?.(...ctx) : fns[2]?.(...ctx));
+                  case 'concat': case 'str': return (...ctx) => fns.map(fn => String(fn(...ctx) ?? '')).join('');
+                  default:
+                    return (t, vars, computed, M = Math, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep) => {
+                      const helpers = { clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep };
+                      const vals = fns.map(fn => fn(t, vars, computed, M, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep));
+                      return resolveHelper(op, vals, M, helpers);
+                    };
+                }
+              };
+              return compileNode(ast);
+            }
+          } catch (_) {}
+        }
+      }
+
+      // 2. Safe recursive-descent parser for infix math/ternary expressions (zero eval)
+      let normalized = expr
+        .replace(/\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g, '($1 ? $2 : $3)')
+        .replace(/:([a-zA-Z_]\w*)/g, '$1');
+
+      const toks = [];
+      let idx = 0;
+      while (idx < normalized.length) {
+        const c = normalized[idx];
+        if (/\s/.test(c)) { idx++; continue; }
+        if (c === '"' || c === "'") {
+          const q = c; let s = ''; idx++;
+          while (idx < normalized.length && normalized[idx] !== q) {
+            if (normalized[idx] === '\\' && idx + 1 < normalized.length) { s += normalized[idx + 1]; idx += 2; }
+            else s += normalized[idx++];
+          }
+          idx++;
+          toks.push({ type: 'str', val: s });
+          continue;
+        }
+        if (/\d/.test(c) || (c === '.' && /\d/.test(normalized[idx + 1] || ''))) {
+          const m = normalized.slice(idx).match(/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/);
+          toks.push({ type: 'num', val: Number(m[0]) });
+          idx += m[0].length;
+          continue;
+        }
+        const multiOp = normalized.slice(idx).match(/^(?:===|!==|==|!=|<=|>=|&&|\|\||\*\*)/);
+        if (multiOp) { toks.push({ type: 'op', val: multiOp[0] }); idx += multiOp[0].length; continue; }
+        if ('+-*/%()?:,.<>!'.includes(c)) { toks.push({ type: 'op', val: c }); idx++; continue; }
+        if (/[a-zA-Z_$]/.test(c)) {
+          const m = normalized.slice(idx).match(/^[a-zA-Z_$][a-zA-Z0-9_$-]*/);
+          toks.push({ type: 'id', val: m[0] });
+          idx += m[0].length;
+          continue;
+        }
+        idx++;
+      }
+
+      let p = 0;
+      const peek = () => toks[p];
+      const eat = (val) => { if (peek() && (!val || peek().val === val)) return toks[p++]; return null; };
+
+      const parseTernary = () => {
+        const cond = parseOr();
+        if (eat('?')) {
+          const tBranch = parseTernary();
+          eat(':');
+          const fBranch = parseTernary();
+          return (...ctx) => (cond(...ctx) ? tBranch(...ctx) : fBranch(...ctx));
+        }
+        return cond;
+      };
+      const parseOr = () => {
+        let left = parseAnd();
+        while (eat('||')) { const r = parseAnd(); const l = left; left = (...ctx) => l(...ctx) || r(...ctx); }
+        return left;
+      };
+      const parseAnd = () => {
+        let left = parseEq();
+        while (eat('&&')) { const r = parseEq(); const l = left; left = (...ctx) => l(...ctx) && r(...ctx); }
+        return left;
+      };
+      const parseEq = () => {
+        let left = parseRel();
+        while (peek() && ['==', '===', '!=', '!=='].includes(peek().val)) {
+          const op = eat().val; const r = parseRel(); const l = left;
+          left = (...ctx) => (op === '==' || op === '===' ? l(...ctx) === r(...ctx) : l(...ctx) !== r(...ctx));
+        }
+        return left;
+      };
+      const parseRel = () => {
+        let left = parseAdd();
+        while (peek() && ['<', '<=', '>', '>='].includes(peek().val)) {
+          const op = eat().val; const r = parseAdd(); const l = left;
+          left = (...ctx) => {
+            const a = l(...ctx), b = r(...ctx);
+            return op === '<' ? a < b : op === '<=' ? a <= b : op === '>' ? a > b : a >= b;
+          };
+        }
+        return left;
+      };
+      const parseAdd = () => {
+        let left = parseMul();
+        while (peek() && (peek().val === '+' || peek().val === '-')) {
+          const op = eat().val; const r = parseMul(); const l = left;
+          left = (...ctx) => (op === '+' ? l(...ctx) + r(...ctx) : l(...ctx) - r(...ctx));
+        }
+        return left;
+      };
+      const parseMul = () => {
+        let left = parseUnary();
+        while (peek() && ['*', '/', '%', '**'].includes(peek().val)) {
+          const op = eat().val; const r = parseUnary(); const l = left;
+          left = (...ctx) => (op === '*' ? l(...ctx) * r(...ctx) : op === '/' ? l(...ctx) / r(...ctx) : op === '%' ? l(...ctx) % r(...ctx) : l(...ctx) ** r(...ctx));
+        }
+        return left;
+      };
+      const parseUnary = () => {
+        if (eat('!')) { const u = parseUnary(); return (...ctx) => !u(...ctx); }
+        if (eat('-')) { const u = parseUnary(); return (...ctx) => -u(...ctx); }
+        if (eat('+')) { const u = parseUnary(); return (...ctx) => +u(...ctx); }
+        return parsePrimary();
+      };
+      const parsePrimary = () => {
+        const tk = peek();
+        if (!tk) return ZERO_FN;
+        if (eat('(')) { const inner = parseTernary(); eat(')'); return inner; }
+        if (tk.type === 'num') { eat(); const v = tk.val; return () => v; }
+        if (tk.type === 'str') { eat(); const v = tk.val; return () => v; }
+        if (tk.type === 'id') {
+          const name = eat().val;
+          if (eat('.')) {
+            const prop = peek()?.type === 'id' ? eat().val : '';
+            if (eat('(')) {
+              const args = [];
+              if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
+              return (t, vars, computed, M = Math, ...rest) => {
+                const target = name === 'Math' ? M : name === 'vars' ? vars : name === 'computed' ? computed : null;
+                const fn = target?.[prop];
+                return typeof fn === 'function' ? fn.apply(target, args.map(a => a(t, vars, computed, M, ...rest))) : 0;
+              };
+            }
+            if (name === 'Math') return (t, vars, computed, M = Math) => M[prop];
+            return (t, vars, computed) => (vars && prop in vars ? vars[prop] : computed?.[prop]);
+          }
+          if (eat('(')) {
+            const args = [];
+            if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
+            return (t, vars, computed, M = Math, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep) => {
+              const helpers = { clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep };
+              const vals = args.map(a => a(t, vars, computed, M, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep));
+              return resolveHelper(name, vals, M, helpers);
+            };
+          }
+          if (name === 't') return (t) => t;
+          if (name === 'true') return () => true;
+          if (name === 'false') return () => false;
+          if (name === 'null') return () => null;
+          if (name === 'undefined') return () => undefined;
+          if (name === 'PI') return () => Math.PI;
+          if (name === 'E') return () => Math.E;
+          return (t, vars, computed) => (vars && name in vars ? vars[name] : computed?.[name]);
+        }
+        eat();
+        return ZERO_FN;
+      };
+
+      try {
+        return parseTernary();
+      } catch (_) {
+        return ZERO_FN;
       }
     }
 
