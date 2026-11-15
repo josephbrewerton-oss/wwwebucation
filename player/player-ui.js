@@ -105,16 +105,30 @@
         devColorStroke: document.getElementById('dev-color-stroke'),
         devPropStroke: document.getElementById('dev-prop-stroke'),
         devPropStrokew: document.getElementById('dev-prop-strokew'),
-        devRangeOpacity: document.getElementById('dev-range-opacity'),
+        devRangeOpacity: document.getElementById('dev-prop-opacity') || document.getElementById('dev-range-opacity'),
         devValOpacity: document.getElementById('dev-val-opacity'),
         devPropTransform: document.getElementById('dev-prop-transform'),
         btnCopySelector: document.getElementById('btn-copy-selector'),
-        btnCopyAstRule: document.getElementById('btn-copy-ast-rule'),
+        btnCopyAstRule: document.getElementById('dev-btn-export-ast') || document.getElementById('btn-copy-ast-rule'),
+        btnBindToStudio: document.getElementById('btn-bind-to-studio'),
+        btnDevDelete: document.getElementById('dev-btn-delete'),
         btnCopyNodeXml: document.getElementById('btn-copy-node-xml'),
         devActiveBindings: document.getElementById('dev-active-bindings'),
         devStudioDrawer: document.getElementById('dev-studio-drawer'),
         devStudioClose: document.getElementById('dev-studio-close'),
         btnStudioRun: document.getElementById('btn-studio-run'),
+        btnStudioSaveAs: document.getElementById('btn-studio-save-as'),
+        studioSaveAsBar: document.getElementById('studio-save-as-bar'),
+        remixTitleInput: document.getElementById('remix-title-input'),
+        remixIdInput: document.getElementById('remix-id-input'),
+        remixFilePreview: document.getElementById('remix-file-preview'),
+        btnRemixSaveVault: document.getElementById('btn-remix-save-vault'),
+        btnRemixSaveDuo: document.getElementById('btn-remix-save-duo'),
+        btnRemixSaveAstb: document.getElementById('btn-remix-save-astb'),
+        btnRemixCancel: document.getElementById('btn-remix-cancel'),
+        matcherSummaryBadge: document.getElementById('matcher-summary-badge'),
+        matcherBody: document.getElementById('matcher-body'),
+        btnMatcherAutofixAll: document.getElementById('btn-matcher-autofix-all'),
         btnStudioReset: document.getElementById('btn-studio-reset'),
         btnStudioExport: document.getElementById('btn-studio-export'),
         btnStudioExportSpa: document.getElementById('btn-studio-export-spa'),
@@ -2618,6 +2632,14 @@ window.addEventListener('message', (e) => {
       }
       this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
     }
+  } else if (data.type === 'OPEN_STUDIO') {
+    const requestedTab = typeof data.tab === 'string' ? data.tab : 'ast';
+    this.openDevStudio(requestedTab);
+    if (data.openSaveAs) {
+      this.openSaveAsBar();
+    }
+  } else if (data.type === 'REMIX_SAVED_ACK' && data.message) {
+    this.showToast(String(data.message));
   }
 });
 
@@ -2891,7 +2913,12 @@ window.addEventListener('message', (e) => {
       const syncAttr = (attr, val) => {
         if (!this.selectedElement) return;
         this.selectedElement.setAttribute(attr, val);
+        if (this.engine) this.engine._svgDirtyFromInspector = true;
         this.refreshSelectBox();
+        if (el.devEditorSvg && this.engine && typeof this.engine.getCleanCompanionSvg === 'function') {
+          el.devEditorSvg.value = this.engine.getCleanCompanionSvg();
+          this.refreshAstSvgMatcher();
+        }
         this.engine.notifyParent({
           type: 'DEV_ELEMENT_UPDATED',
           selector: this.selectedElementSelector,
@@ -2944,7 +2971,7 @@ window.addEventListener('message', (e) => {
       if (el.btnCopySelector) {
         el.btnCopySelector.addEventListener('click', () => {
           if (!this.selectedElementSelector) return;
-          navigator.clipboard.writeText(this.selectedElementSelector).then(() => {
+          navigator.clipboard?.writeText(this.selectedElementSelector).then(() => {
             this.showToast(`✓ Selector copied: ${this.selectedElementSelector}`);
           });
         });
@@ -2954,17 +2981,47 @@ window.addEventListener('message', (e) => {
         el.btnCopyAstRule.addEventListener('click', () => {
           if (!this.selectedElementSelector) return;
           const snippet = `(:target "${this.selectedElementSelector}" :attr "transform" :expr "'rotate(' + (t * 360) + ')'")`;
-          navigator.clipboard.writeText(snippet).then(() => {
-            this.showToast(`✓ AST rule copied`);
+          navigator.clipboard?.writeText(snippet).then(() => {
+            this.showToast('✓ AST rule copied');
           });
+        });
+      }
+
+      if (el.btnBindToStudio) {
+        el.btnBindToStudio.addEventListener('click', () => {
+          if (!this.selectedElement) return;
+          let targetId = this.selectedElement.id;
+          if (!targetId) {
+            targetId = `shape-${Math.random().toString(36).slice(2, 6)}`;
+            this.selectedElement.id = targetId;
+            if (this.engine) this.engine._svgDirtyFromInspector = true;
+            this.selectedElementSelector = `#${targetId}`;
+          }
+          this.openDevStudio('ast');
+          this.insertBindingForSvgId(targetId);
+        });
+      }
+
+      if (el.btnDevDelete) {
+        el.btnDevDelete.addEventListener('click', () => {
+          if (!this.selectedElement) return;
+          const deadSel = this.selectedElementSelector;
+          this.selectedElement.remove();
+          if (this.engine) this.engine._svgDirtyFromInspector = true;
+          this.closeInspectorDrawer();
+          if (el.devEditorSvg && this.engine && typeof this.engine.getCleanCompanionSvg === 'function') {
+            el.devEditorSvg.value = this.engine.getCleanCompanionSvg();
+            this.refreshAstSvgMatcher();
+          }
+          this.showToast(`🗑️ Deleted ${deadSel}`);
         });
       }
 
       if (el.btnCopyNodeXml) {
         el.btnCopyNodeXml.addEventListener('click', () => {
           if (!this.selectedElement) return;
-          navigator.clipboard.writeText(this.selectedElement.outerHTML).then(() => {
-            this.showToast(`✓ OuterXML copied`);
+          navigator.clipboard?.writeText(this.selectedElement.outerHTML).then(() => {
+            this.showToast('✓ OuterXML copied');
           });
         });
       }
@@ -2986,7 +3043,9 @@ window.addEventListener('message', (e) => {
           if (this.activeStudioTab === 'compiler') {
             if (global.ASTSlideScriptCompiler && el.devEditorSlideScript) {
               const scriptText = el.devEditorSlideScript.value;
-              const currentSvg = this.engine.getStageSvgSnapshot();
+              const currentSvg = (typeof this.engine.getCleanCompanionSvg === 'function')
+                ? this.engine.getCleanCompanionSvg()
+                : this.engine.getStageSvgSnapshot();
               const result = global.ASTSlideScriptCompiler.compile(scriptText, currentSvg);
               if (result.errors && result.errors.length > 0) {
                 this.playChime(220, 'sawtooth');
@@ -3000,6 +3059,7 @@ window.addEventListener('message', (e) => {
               this.engine.hotReloadSvg(result.svg);
               this.engine.hotReloadAst(result.ast);
               this.engine.seek(0.0);
+              this.refreshAstSvgMatcher();
               this.playChime(784, 'triangle');
               this.showToast('🚀 SlideScript Compiled & Playing Live!');
               return;
@@ -3013,6 +3073,7 @@ window.addEventListener('message', (e) => {
           if (el.devEditorAst && el.devEditorAst.value) {
             astOk = this.engine.hotReloadAst(el.devEditorAst.value);
           }
+          this.refreshAstSvgMatcher();
           if (svgOk && astOk) {
             this.playChime(784, 'triangle');
             this.showToast('⚡ Live Stage Hot-Reloaded!');
@@ -3021,6 +3082,61 @@ window.addEventListener('message', (e) => {
             this.showToast('Notice: Syntax issue in SVG or AST');
           }
         });
+      }
+
+      // Live .ast <-> .svg Auto-Matcher updates while typing
+      let matcherDebounce = null;
+      const scheduleMatcherRefresh = () => {
+        if (matcherDebounce) clearTimeout(matcherDebounce);
+        matcherDebounce = setTimeout(() => {
+          this.refreshAstSvgMatcher();
+        }, 180);
+      };
+      if (el.devEditorSvg) el.devEditorSvg.addEventListener('input', scheduleMatcherRefresh);
+      if (el.devEditorAst) el.devEditorAst.addEventListener('input', scheduleMatcherRefresh);
+
+      if (el.btnMatcherAutofixAll) {
+        el.btnMatcherAutofixAll.addEventListener('click', () => {
+          this.autoFixAllAstSvgMatches();
+        });
+      }
+
+      // Remix / Save As Bar Wiring
+      if (el.btnStudioSaveAs) {
+        el.btnStudioSaveAs.addEventListener('click', () => {
+          if (el.studioSaveAsBar && !el.studioSaveAsBar.classList.contains('hidden')) {
+            el.studioSaveAsBar.classList.add('hidden');
+          } else {
+            this.openSaveAsBar();
+          }
+        });
+      }
+      if (el.btnRemixCancel && el.studioSaveAsBar) {
+        el.btnRemixCancel.addEventListener('click', () => {
+          el.studioSaveAsBar.classList.add('hidden');
+        });
+      }
+      if (el.remixTitleInput && el.remixIdInput) {
+        el.remixTitleInput.addEventListener('input', () => {
+          if (!el.remixIdInput.dataset.manualEdit) {
+            el.remixIdInput.value = this.slugifyCartridgeId(el.remixTitleInput.value);
+          }
+          this.updateRemixPreviewLabel();
+        });
+        el.remixIdInput.addEventListener('input', () => {
+          el.remixIdInput.dataset.manualEdit = '1';
+          el.remixIdInput.value = this.slugifyCartridgeId(el.remixIdInput.value);
+          this.updateRemixPreviewLabel();
+        });
+      }
+      if (el.btnRemixSaveVault) {
+        el.btnRemixSaveVault.addEventListener('click', () => this.executeSaveRemixAs('vault'));
+      }
+      if (el.btnRemixSaveDuo) {
+        el.btnRemixSaveDuo.addEventListener('click', () => this.executeSaveRemixAs('duo'));
+      }
+      if (el.btnRemixSaveAstb) {
+        el.btnRemixSaveAstb.addEventListener('click', () => this.executeSaveRemixAs('astb'));
       }
 
       if (el.btnDecompileAst) {
@@ -4739,7 +4855,7 @@ window.addEventListener('message', (e) => {
       return path.length ? path.join(' > ') : node.tagName.toLowerCase();
     }
 
-    openDevStudio(tab = 'compiler') {
+    openDevStudio(tab = 'ast') {
       const el = this.elements;
       if (!el.devStudioDrawer) return;
 
@@ -4747,17 +4863,20 @@ window.addEventListener('message', (e) => {
       if (el.btnDevStudio) el.btnDevStudio.classList.add('active');
 
       if (el.devEditorSvg) {
-        el.devEditorSvg.value = this.engine.getStageSvgSnapshot();
+        el.devEditorSvg.value = (typeof this.engine.getCleanCompanionSvg === 'function')
+          ? this.engine.getCleanCompanionSvg()
+          : this.engine.getStageSvgSnapshot();
       }
       if (el.devEditorAst) {
         el.devEditorAst.value = this.engine.getCurrentAstSource();
       }
-      if (el.devEditorSlideScript && !el.devEditorSlideScript.value && global.ASTSlideScriptCompiler && this.engine.scene) {
+      if (el.devEditorSlideScript && global.ASTSlideScriptCompiler && this.engine.scene) {
         el.devEditorSlideScript.value = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
       }
 
       this.renderStarterTemplates();
       this.switchStudioTab(tab);
+      this.refreshAstSvgMatcher();
       this.showToast('💻 Live SVG & AST Code Studio Ready');
     }
 
@@ -4774,8 +4893,440 @@ window.addEventListener('message', (e) => {
       if (this.elements.devStudioDrawer && !this.elements.devStudioDrawer.classList.contains('hidden')) {
         this.closeDevStudio();
       } else {
-        this.openDevStudio('compiler');
+        this.openDevStudio('ast');
       }
+    }
+
+    slugifyCartridgeId(raw) {
+      return String(raw || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 48) || 'custom-remix';
+    }
+
+    extractSvgElementsInfo(svgText) {
+      const items = [];
+      const seen = new Set();
+      const skipIds = new Set(['stage-svg', 'scene-root', 'dev-overlay-root', 'dev-hover-box', 'dev-select-box', 'ast-master-defs', 'slidescript-shapes']);
+      if (!svgText || typeof svgText !== 'string') return items;
+
+      const addItem = (id, tag) => {
+        if (!id || seen.has(id) || skipIds.has(id)) return;
+        seen.add(id);
+        items.push({ id, tag: (tag || 'g').toLowerCase() });
+      };
+
+      if (typeof DOMParser !== 'undefined') {
+        try {
+          const doc = new DOMParser().parseFromString(svgText, 'image/svg+xml');
+          if (!doc.querySelector('parsererror')) {
+            doc.querySelectorAll('[id]').forEach((node) => {
+              addItem(node.getAttribute('id'), node.tagName);
+            });
+            return items;
+          }
+        } catch (_) {}
+      }
+
+      const rx = /<([a-z0-9:-]+)[^>]*\bid=["']([^"']+)["']/gi;
+      let m;
+      while ((m = rx.exec(svgText)) !== null) {
+        addItem(m[2], m[1]);
+      }
+      return items;
+    }
+
+    extractAstTargetsInfo(astText) {
+      const targets = [];
+      const seen = new Set();
+      if (!astText || typeof astText !== 'string') return targets;
+      const rx = /:(?:target|selector|label)\s+["']#([a-z0-9_-]+)["']/gi;
+      let m;
+      while ((m = rx.exec(astText)) !== null) {
+        const id = m[1];
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        targets.push(id);
+      }
+      return targets;
+    }
+
+    findClosestSvgId(targetId, svgItems) {
+      if (!targetId || !svgItems || svgItems.length === 0) return null;
+      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+      const targetNorm = norm(targetId);
+      let best = null;
+      let bestScore = -1;
+
+      for (const item of svgItems) {
+        const candNorm = norm(item.id);
+        if (!candNorm) continue;
+        if (candNorm === targetNorm) return item.id;
+        let score = 0;
+        if (candNorm.includes(targetNorm) || targetNorm.includes(candNorm)) {
+          score += 5;
+        }
+        const tTokens = String(targetId).toLowerCase().split(/[-_]+/).filter(Boolean);
+        const cTokens = item.id.toLowerCase().split(/[-_]+/).filter(Boolean);
+        for (const tok of tTokens) {
+          if (cTokens.includes(tok)) score += 3;
+        }
+        if (score > bestScore) {
+          bestScore = score;
+          best = item.id;
+        }
+      }
+      return bestScore >= 3 ? best : null;
+    }
+
+    refreshAstSvgMatcher() {
+      const el = this.elements;
+      if (!el.matcherBody || !el.matcherSummaryBadge) return;
+
+      const svgText = (el.devEditorSvg && el.devEditorSvg.value) ||
+        (this.engine && typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
+      const astText = (el.devEditorAst && el.devEditorAst.value) ||
+        (this.engine && typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
+
+      const svgItems = this.extractSvgElementsInfo(svgText);
+      const svgIdSet = new Set(svgItems.map((i) => i.id));
+      const astTargets = this.extractAstTargetsInfo(astText);
+      const astTargetSet = new Set(astTargets);
+
+      const matchedCount = astTargets.filter((id) => svgIdSet.has(id)).length;
+      const missingTargets = astTargets.filter((id) => !svgIdSet.has(id));
+
+      if (astTargets.length === 0) {
+        el.matcherSummaryBadge.innerHTML = `<span style="color:#94a3b8;">${svgItems.length} SVG IDs ready &middot; click one to bind</span>`;
+      } else if (missingTargets.length === 0) {
+        el.matcherSummaryBadge.innerHTML = `<span style="color:#4ade80; font-weight:700;">✓ ${matchedCount}/${astTargets.length} targets matched</span>`;
+      } else {
+        el.matcherSummaryBadge.innerHTML = `<span style="color:#fbbf24; font-weight:700;">⚠ ${missingTargets.length} missing in SVG (${matchedCount}/${astTargets.length} OK)</span>`;
+      }
+
+      if (el.btnMatcherAutofixAll) {
+        el.btnMatcherAutofixAll.style.display = missingTargets.length > 0 ? 'inline-flex' : 'none';
+      }
+
+      let html = '';
+
+      html += `<div>
+        <div class="matcher-section-label">AST Targets (${astTargets.length})</div>`;
+      if (astTargets.length === 0) {
+        html += `<div style="color:#64748b; font-size:10px; line-height:1.35;">No <code>:target "#id"</code> rules yet. Click any SVG shape below to animate it.</div>`;
+      } else {
+        astTargets.forEach((id) => {
+          const isOk = svgIdSet.has(id);
+          const suggestion = isOk ? null : this.findClosestSvgId(id, svgItems);
+          html += `
+            <div class="matcher-row ${isOk ? 'matched' : 'missing'}">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
+                <code style="color:${isOk ? '#86efac' : '#fde68a'}; font-weight:700;">#${this.escapeMatcherHtml(id)}</code>
+                <span style="font-size:10px; font-weight:700; color:${isOk ? '#4ade80' : '#fbbf24'};">${isOk ? '✓ SVG' : '⚠ Missing'}</span>
+              </div>
+              <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                ${isOk
+                  ? `<button type="button" class="dev-btn matcher-hl-btn" data-id="${this.escapeMatcherHtml(id)}" style="font-size:10px; padding:2px 6px;">👁 Highlight</button>`
+                  : `
+                    ${suggestion ? `<button type="button" class="dev-btn primary matcher-remap-btn" data-old="${this.escapeMatcherHtml(id)}" data-new="${this.escapeMatcherHtml(suggestion)}" style="font-size:10px; padding:2px 6px;">🔗 Match #${this.escapeMatcherHtml(suggestion)}</button>` : ''}
+                    <button type="button" class="dev-btn matcher-create-btn" data-id="${this.escapeMatcherHtml(id)}" style="font-size:10px; padding:2px 6px;">➕ Create Shape</button>
+                  `
+                }
+              </div>
+            </div>
+          `;
+        });
+      }
+      html += `</div>`;
+
+      html += `<div>
+        <div class="matcher-section-label">SVG Shape IDs (${svgItems.length}) — Click to Bind</div>
+        <div class="matcher-chip-grid">`;
+      if (svgItems.length === 0) {
+        html += `<div style="color:#64748b; font-size:10px;">No <code>id="..."</code> nodes detected in SVG yet.</div>`;
+      } else {
+        svgItems.slice(0, 48).forEach((item) => {
+          const isBound = astTargetSet.has(item.id);
+          html += `<button type="button" class="matcher-svg-chip ${isBound ? 'bound' : ''}" data-svg-id="${this.escapeMatcherHtml(item.id)}" title="&lt;${this.escapeMatcherHtml(item.tag)} id=&quot;${this.escapeMatcherHtml(item.id)}&quot;&gt; — Click to add AST binding">
+            <span>${isBound ? '✓' : '＋'}</span><span>#${this.escapeMatcherHtml(item.id)}</span>
+          </button>`;
+        });
+      }
+      html += `</div></div>`;
+
+      el.matcherBody.innerHTML = html;
+
+      el.matcherBody.querySelectorAll('.matcher-hl-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.highlightSvgIdOnStage(btn.getAttribute('data-id'));
+        });
+      });
+      el.matcherBody.querySelectorAll('.matcher-remap-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.rewriteAstTargetId(btn.getAttribute('data-old'), btn.getAttribute('data-new'));
+        });
+      });
+      el.matcherBody.querySelectorAll('.matcher-create-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          this.injectMissingSvgShape(btn.getAttribute('data-id'));
+        });
+      });
+      el.matcherBody.querySelectorAll('.matcher-svg-chip').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.getAttribute('data-svg-id');
+          this.highlightSvgIdOnStage(id);
+          this.insertBindingForSvgId(id);
+        });
+      });
+    }
+
+    escapeMatcherHtml(raw) {
+      return String(raw || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    highlightSvgIdOnStage(svgId) {
+      if (!svgId || typeof document === 'undefined') return;
+      const target = document.getElementById(svgId);
+      if (!target) return;
+      if (typeof this.selectElement === 'function' && this.devModeActive) {
+        this.selectElement(target);
+        return;
+      }
+      if (this.elements.devHoverBox && target.getBBox) {
+        try {
+          const bb = target.getBBox();
+          this.elements.devHoverBox.setAttribute('x', bb.x);
+          this.elements.devHoverBox.setAttribute('y', bb.y);
+          this.elements.devHoverBox.setAttribute('width', Math.max(6, bb.width));
+          this.elements.devHoverBox.setAttribute('height', Math.max(6, bb.height));
+          this.elements.devHoverBox.classList.remove('hidden');
+          setTimeout(() => {
+            if (!this.devModeActive && this.elements.devHoverBox) {
+              this.elements.devHoverBox.classList.add('hidden');
+            }
+          }, 1400);
+        } catch (_) {}
+      }
+    }
+
+    insertBindingForSvgId(svgId) {
+      const el = this.elements;
+      if (!svgId || !el.devEditorAst) return;
+      let astText = el.devEditorAst.value || (this.engine ? this.engine.getCurrentAstSource() : '');
+      const rule = `(:target "#${svgId}" :attr "opacity" :expr "0.45 + 0.55 * Math.abs(Math.sin(t * Math.PI))")`;
+
+      if (astText.includes(`:target "#${svgId}"`)) {
+        this.switchStudioTab('ast');
+        const idx = astText.indexOf(`#${svgId}`);
+        el.devEditorAst.focus();
+        if (idx >= 0 && typeof el.devEditorAst.setSelectionRange === 'function') {
+          el.devEditorAst.setSelectionRange(idx, idx + svgId.length + 1);
+        }
+        this.showToast(`🔍 Found #${svgId} in AST`);
+        return;
+      }
+
+      if (/\(:bindings\s*\(/i.test(astText)) {
+        astText = astText.replace(/(\(:bindings\s*\()/i, `$1\n    ${rule}`);
+      } else {
+        const lastParen = astText.lastIndexOf(')');
+        if (lastParen > 0) {
+          astText = `${astText.slice(0, lastParen)}  (:bindings (\n    ${rule}\n  ))\n)`;
+        } else {
+          astText += `\n(:bindings (\n  ${rule}\n))`;
+        }
+      }
+
+      el.devEditorAst.value = astText;
+      this.engine.hotReloadAst(astText);
+      this.switchStudioTab('ast');
+      this.refreshAstSvgMatcher();
+      this.playChime(740, 'triangle');
+      this.showToast(`🔗 Bound #${svgId} in .ast!`);
+    }
+
+    rewriteAstTargetId(oldId, newId) {
+      const el = this.elements;
+      if (!oldId || !newId || !el.devEditorAst) return;
+      const astText = el.devEditorAst.value || '';
+      const escaped = oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const nextAst = astText.replace(new RegExp(`#${escaped}(?=["'\\s)])`, 'g'), `#${newId}`);
+      el.devEditorAst.value = nextAst;
+      this.engine.hotReloadAst(nextAst);
+      this.refreshAstSvgMatcher();
+      this.playChime(784, 'triangle');
+      this.showToast(`🔗 Remapped #${oldId} → #${newId}`);
+    }
+
+    injectMissingSvgShape(missingId) {
+      const el = this.elements;
+      if (!missingId || !el.devEditorSvg) return;
+      let svgText = el.devEditorSvg.value || (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
+      if (!svgText.includes('</svg>')) {
+        svgText = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n</svg>`;
+      }
+      const shapeXml = `  <g id="${missingId}">\n    <circle cx="400" cy="240" r="34" fill="#38bdf8" fill-opacity="0.28" stroke="#38bdf8" stroke-width="3" />\n    <text x="400" y="245" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">${missingId}</text>\n  </g>\n`;
+      svgText = svgText.replace(/<\/svg>/i, `${shapeXml}</svg>`);
+      el.devEditorSvg.value = svgText;
+      this.engine.hotReloadSvg(svgText);
+      this.refreshAstSvgMatcher();
+      this.playChime(659.25, 'triangle');
+      this.showToast(`➕ Created <g id="${missingId}"> in SVG`);
+    }
+
+    autoFixAllAstSvgMatches() {
+      const el = this.elements;
+      const svgText = (el.devEditorSvg && el.devEditorSvg.value) || '';
+      const astText = (el.devEditorAst && el.devEditorAst.value) || '';
+      const svgItems = this.extractSvgElementsInfo(svgText);
+      const svgIdSet = new Set(svgItems.map((i) => i.id));
+      const missing = this.extractAstTargetsInfo(astText).filter((id) => !svgIdSet.has(id));
+      let fixed = 0;
+
+      for (const mId of missing) {
+        const currentSvgItems = this.extractSvgElementsInfo(el.devEditorSvg ? el.devEditorSvg.value : '');
+        const suggestion = this.findClosestSvgId(mId, currentSvgItems);
+        if (suggestion) {
+          this.rewriteAstTargetId(mId, suggestion);
+        } else {
+          this.injectMissingSvgShape(mId);
+        }
+        fixed++;
+      }
+      if (fixed > 0) {
+        this.showToast(`✨ Auto-matched ${fixed} .ast ↔ .svg target(s)!`);
+      }
+    }
+
+    syncSceneIdentityInAst(astText, newId, newTitle) {
+      let out = String(astText || '').trim();
+      const safeTitle = String(newTitle || newId).replace(/"/g, "'");
+      if (!out) {
+        return `(:scene :id "${newId}" :title "${safeTitle}" :stage "CUSTOM REMIX" :duration 10.0 (:bindings ()))`;
+      }
+      if (/:id\s+"[^"]*"/i.test(out)) {
+        out = out.replace(/:id\s+"[^"]*"/i, `:id "${newId}"`);
+      } else {
+        out = out.replace(/\(:scene/i, `(:scene :id "${newId}"`);
+      }
+      if (/:title\s+"[^"]*"/i.test(out)) {
+        out = out.replace(/:title\s+"[^"]*"/i, `:title "${safeTitle}"`);
+      } else {
+        out = out.replace(/:id\s+"[^"]*"/i, `:id "${newId}" :title "${safeTitle}"`);
+      }
+      return out;
+    }
+
+    openSaveAsBar() {
+      const el = this.elements;
+      if (!el.studioSaveAsBar) return;
+      const baseId = this.slugifyCartridgeId((this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'lesson');
+      const baseTitle = (this.engine.scene && this.engine.scene.title) || baseId;
+      const suggestedTitle = /\(Remix\)$/i.test(baseTitle) ? baseTitle : `${baseTitle} (Remix)`;
+      const suggestedId = /-remix$/i.test(baseId) ? `${baseId}-2` : `${baseId}-remix`;
+
+      if (el.remixTitleInput) el.remixTitleInput.value = suggestedTitle;
+      if (el.remixIdInput) {
+        delete el.remixIdInput.dataset.manualEdit;
+        el.remixIdInput.value = suggestedId;
+      }
+      el.studioSaveAsBar.classList.remove('hidden');
+      this.updateRemixPreviewLabel();
+      el.remixTitleInput?.focus();
+    }
+
+    updateRemixPreviewLabel() {
+      const el = this.elements;
+      if (!el.remixFilePreview || !el.remixIdInput) return;
+      const cleanId = this.slugifyCartridgeId(el.remixIdInput.value || 'my-remix');
+      el.remixFilePreview.textContent = `→ ${cleanId}.ast + ${cleanId}.svg`;
+    }
+
+    downloadTextFile(filename, content, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        a.remove();
+      }, 450);
+    }
+
+    executeSaveRemixAs(exportMode = 'vault') {
+      const el = this.elements;
+      const rawTitle = (el.remixTitleInput && el.remixTitleInput.value.trim()) || 'My Custom Remix';
+      const newId = this.slugifyCartridgeId((el.remixIdInput && el.remixIdInput.value.trim()) || rawTitle);
+
+      let svgMarkup = (el.devEditorSvg && el.devEditorSvg.value.trim()) ||
+        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : this.engine.getStageSvgSnapshot());
+      let astSource = (el.devEditorAst && el.devEditorAst.value.trim()) || this.engine.getCurrentAstSource();
+
+      astSource = this.syncSceneIdentityInAst(astSource, newId, rawTitle);
+      if (el.devEditorAst) el.devEditorAst.value = astSource;
+      if (el.devEditorSvg) el.devEditorSvg.value = svgMarkup;
+
+      const cartridge = {
+        id: newId,
+        title: rawTitle,
+        stage: (this.engine.scene && this.engine.scene.stage) || 'CUSTOM REMIX',
+        type: (this.engine.scene && this.engine.scene.type) || 'Sim',
+        category: 'Student Remixes',
+        desc: `Student remix forked from ${(this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'lesson'}.`,
+        icon: '🧪',
+        source: 'user',
+        svgMarkup,
+        astSource,
+        updatedAt: Date.now(),
+      };
+
+      if (window.ASTSceneRegistry && typeof window.ASTSceneRegistry.register === 'function') {
+        window.ASTSceneRegistry.register(newId, {
+          id: newId,
+          title: rawTitle,
+          stage: cartridge.stage,
+          svgMarkup,
+          astSource,
+        });
+      }
+
+      this.saveToLocalVault(cartridge);
+      if (typeof this.engine.hotReloadSvg === 'function') this.engine.hotReloadSvg(svgMarkup);
+      if (typeof this.engine.hotReloadAst === 'function') this.engine.hotReloadAst(astSource);
+      this.populatePresets();
+      if (el.presetSelector) el.presetSelector.value = newId;
+
+      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
+
+      if (exportMode === 'duo') {
+        this.downloadTextFile(`${newId}.ast`, astSource, 'text/plain;charset=utf-8');
+        setTimeout(() => {
+          this.downloadTextFile(`${newId}.svg`, svgMarkup, 'image/svg+xml;charset=utf-8');
+        }, 200);
+      } else if (exportMode === 'astb' && !isEmbedded) {
+        this.downloadStandaloneSvgApplet();
+      }
+
+      this.engine.notifyParent({
+        type: 'SAVE_REMIX_CARTRIDGE',
+        cartridge,
+        exportMode,
+      });
+
+      if (el.studioSaveAsBar) el.studioSaveAsBar.classList.add('hidden');
+      this.playChime(880, 'sine');
+      this.showToast(
+        exportMode === 'duo'
+          ? `📦 Saved Remix & Matched Pair: ${newId}.ast + ${newId}.svg`
+          : exportMode === 'astb'
+          ? `⚡ Compiling ${newId}.astb…`
+          : `💾 Saved Remix to Vault: ${rawTitle}`
+      );
     }
 
     switchStudioTab(tabName) {

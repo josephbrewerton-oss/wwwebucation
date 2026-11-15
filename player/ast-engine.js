@@ -10279,9 +10279,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.scene = { id: 'custom-scene', title: 'Custom SVG Scene', stage: 'DEVELOPER', duration: 10.0 };
       }
       this.scene.svgText = this.sanitizeSvg(svgMarkup);
+      this._svgDirtyFromInspector = false;
 
-      if (this._container) {
-        this.mountSceneAsset(this.scene, this._container);
+      const targetContainer = this._container || this.container;
+      if (targetContainer) {
+        this.mountSceneAsset(this.scene, targetContainer);
         this.applyBindings(this.progress);
       }
 
@@ -10305,6 +10307,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.scene.title = parsed.title || this.scene.title || 'Custom AST Scene';
       this.scene.stage = parsed.stage || this.scene.stage || 'DEVELOPER';
       this.scene.duration = parsed.duration || this.scene.duration || 10.0;
+      if (parsed.type) this.scene.type = parsed.type;
+      if (parsed.vars) this.scene.vars = parsed.vars;
+      if (parsed.uiControls) this.scene.uiControls = parsed.uiControls;
+      if (parsed.inputs) this.scene.inputs = parsed.inputs;
+      if (parsed.computed) this.scene.computed = parsed.computed;
+      if (parsed.gestures) this.scene.gestures = parsed.gestures;
       this.scene.keyframes = parsed.keyframes || [];
       this.scene.subtitles = parsed.subtitles || [];
       this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];
@@ -10322,11 +10330,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
       this.scene.astSource = typeof astInput === 'string' ? astInput : null;
 
+      this.activePresetId = this.scene.id || this.activePresetId;
       this.durationSec = this.scene.duration;
+      this.resetVars();
+      this.updateComputedVars();
 
-      if (this._container) {
-        this.mountSceneAsset(this.scene, this._container);
+      const targetContainer = this._container || this.container;
+      if (targetContainer) {
+        this.mountSceneAsset(this.scene, targetContainer);
         this.applyBindings(this.progress);
+      }
+      if (typeof this.mountDeclarativeHud === 'function') {
+        this.mountDeclarativeHud(this.scene);
       }
 
       this.emit('asthotreloaded', { ast: parsed, progress: this.progress });
@@ -10346,6 +10361,23 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     const devOverlay = clone.querySelector('#dev-overlay-root');
     if (devOverlay) devOverlay.remove();
     return clone.outerHTML;
+  }
+
+  getCleanCompanionSvg() {
+    if (!this._svgDirtyFromInspector && this.scene && typeof this.scene.svgText === 'string' && this.scene.svgText.trim().startsWith('<svg')) {
+      return this.scene.svgText.trim();
+    }
+    if (typeof document === 'undefined') return '';
+    const stage = document.getElementById('stage-svg');
+    const sceneRoot = document.getElementById('scene-root');
+    const vb = (stage && stage.getAttribute('viewBox')) || this._defaultViewBox || '0 0 800 480';
+    if (!sceneRoot) return this.getStageSvgSnapshot();
+    const clone = sceneRoot.cloneNode(true);
+    clone.querySelectorAll('[data-ast-spotlight]').forEach((node) => {
+      node.removeAttribute('data-ast-spotlight');
+    });
+    const inner = clone.innerHTML.trim();
+    return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">\n${inner}\n</svg>`;
   }
 
   getCurrentAstSource() {
