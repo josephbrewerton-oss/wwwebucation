@@ -128,7 +128,17 @@
         btnRemixCancel: document.getElementById('btn-remix-cancel'),
         matcherSummaryBadge: document.getElementById('matcher-summary-badge'),
         matcherBody: document.getElementById('matcher-body'),
+        btnMatcherNanoExplain: document.getElementById('btn-matcher-nano-explain'),
         btnMatcherAutofixAll: document.getElementById('btn-matcher-autofix-all'),
+        studioNanoInput: document.getElementById('studio-nano-input'),
+        btnStudioNanoAsk: document.getElementById('btn-studio-nano-ask'),
+        btnStudioNanoUndo: document.getElementById('btn-studio-nano-undo'),
+        studioNanoPreview: document.getElementById('studio-nano-preview'),
+        studioNanoEnginePill: document.getElementById('studio-nano-engine-pill'),
+        studioNanoExplanation: document.getElementById('studio-nano-explanation'),
+        studioNanoCheckBadge: document.getElementById('studio-nano-check-badge'),
+        btnStudioNanoApply: document.getElementById('btn-studio-nano-apply'),
+        btnStudioNanoDismiss: document.getElementById('btn-studio-nano-dismiss'),
         btnStudioReset: document.getElementById('btn-studio-reset'),
         btnStudioExport: document.getElementById('btn-studio-export'),
         btnStudioExportSpa: document.getElementById('btn-studio-export-spa'),
@@ -2640,6 +2650,8 @@ window.addEventListener('message', (e) => {
     }
   } else if (data.type === 'REMIX_SAVED_ACK' && data.message) {
     this.showToast(String(data.message));
+  } else if (data.type === 'NANO_REMIX_RESULT' && data.proposal) {
+    this.handleNanoRemixResult(data.proposal);
   }
 });
 
@@ -3098,6 +3110,50 @@ window.addEventListener('message', (e) => {
       if (el.btnMatcherAutofixAll) {
         el.btnMatcherAutofixAll.addEventListener('click', () => {
           this.autoFixAllAstSvgMatches();
+        });
+      }
+
+      if (el.btnMatcherNanoExplain) {
+        el.btnMatcherNanoExplain.addEventListener('click', () => {
+          this.requestNanoRemix('Fix any missing SVG matches or explain why selectors are mismatched');
+        });
+      }
+
+      // Gemini Nano Remix Co-Pilot Wiring
+      if (el.btnStudioNanoAsk) {
+        el.btnStudioNanoAsk.addEventListener('click', () => {
+          this.requestNanoRemix();
+        });
+      }
+      if (el.studioNanoInput) {
+        el.studioNanoInput.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            this.requestNanoRemix();
+          }
+        });
+      }
+      document.querySelectorAll('.nano-chip-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const promptText = btn.getAttribute('data-nano-prompt') || '';
+          if (el.studioNanoInput) el.studioNanoInput.value = promptText;
+          this.requestNanoRemix(promptText);
+        });
+      });
+      if (el.btnStudioNanoApply) {
+        el.btnStudioNanoApply.addEventListener('click', () => {
+          this.applyPendingNanoProposal();
+        });
+      }
+      if (el.btnStudioNanoDismiss && el.studioNanoPreview) {
+        el.btnStudioNanoDismiss.addEventListener('click', () => {
+          el.studioNanoPreview.classList.add('hidden');
+          this._pendingNanoProposal = null;
+        });
+      }
+      if (el.btnStudioNanoUndo) {
+        el.btnStudioNanoUndo.addEventListener('click', () => {
+          this.undoLastNanoEdit();
         });
       }
 
@@ -5197,6 +5253,253 @@ window.addEventListener('message', (e) => {
       if (fixed > 0) {
         this.showToast(`✨ Auto-matched ${fixed} .ast ↔ .svg target(s)!`);
       }
+    }
+
+    requestNanoRemix(promptOverride) {
+      const el = this.elements;
+      const rawPrompt = (typeof promptOverride === 'string' && promptOverride.trim())
+        ? promptOverride.trim()
+        : ((el.studioNanoInput && el.studioNanoInput.value.trim()) || '');
+
+      if (!rawPrompt) {
+        this.showToast('💬 Type what you want Nano to remix (or click a quick chip)');
+        el.studioNanoInput?.focus();
+        return;
+      }
+
+      const svgText = (el.devEditorSvg && el.devEditorSvg.value) ||
+        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
+      const astText = (el.devEditorAst && el.devEditorAst.value) ||
+        (typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
+
+      const svgItems = this.extractSvgElementsInfo(svgText);
+      const svgIdSet = new Set(svgItems.map((i) => i.id));
+      const astTargets = this.extractAstTargetsInfo(astText);
+      const missingTargets = astTargets.filter((id) => !svgIdSet.has(id));
+
+      const requestId = `nano_remix_${Date.now()}`;
+      this._activeNanoRemixRequestId = requestId;
+
+      const ctx = {
+        requestId,
+        sceneId: (this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'custom-remix',
+        sceneTitle: (this.engine.scene && this.engine.scene.title) || 'Custom Remix',
+        stage: (this.engine.scene && this.engine.scene.stage) || 'STEM',
+        activeTab: this.activeStudioTab || 'ast',
+        selectedSvgId: (this.selectedElement && this.selectedElement.id) || null,
+        svgIds: svgItems.slice(0, 40),
+        astTargets,
+        missingTargets,
+        currentAst: astText,
+        currentSlideScript: (el.devEditorSlideScript && el.devEditorSlideScript.value) || '',
+        currentVars: (this.engine && this.engine.vars) ? { ...this.engine.vars } : {},
+        prompt: rawPrompt,
+      };
+
+      if (el.btnStudioNanoAsk) {
+        el.btnStudioNanoAsk.disabled = true;
+        el.btnStudioNanoAsk.textContent = '⏳ Thinking…';
+      }
+      if (el.studioNanoPreview) {
+        el.studioNanoPreview.classList.remove('hidden');
+      }
+      if (el.studioNanoEnginePill) el.studioNanoEnginePill.textContent = 'NANO';
+      if (el.studioNanoExplanation) el.studioNanoExplanation.textContent = 'Inspecting your SVG IDs and AST S-Expression locally…';
+      if (el.studioNanoCheckBadge) el.studioNanoCheckBadge.textContent = '';
+      if (el.btnStudioNanoApply) el.btnStudioNanoApply.style.display = 'none';
+
+      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
+      if (isEmbedded) {
+        this.engine.notifyParent({ type: 'NANO_REMIX_REQUEST', context: ctx });
+        clearTimeout(this._nanoRemixTimeout);
+        this._nanoRemixTimeout = setTimeout(() => {
+          if (this._activeNanoRemixRequestId === requestId) {
+            this.handleNanoRemixResult(this.runStandaloneDeterministicRemix(ctx));
+          }
+        }, 19000);
+      } else {
+        this.runStandaloneNanoRemix(ctx).then((proposal) => {
+          this.handleNanoRemixResult(proposal);
+        });
+      }
+    }
+
+    async runStandaloneNanoRemix(ctx) {
+      try {
+        const lm = (typeof window !== 'undefined' && window.LanguageModel) ||
+          (typeof globalThis !== 'undefined' && globalThis.LanguageModel);
+        if (lm && typeof lm.create === 'function') {
+          const session = await lm.create({
+            initialPrompts: [{
+              role: 'system',
+              content: `You are Gemini Nano remixing an AST + SVG school simulation. Valid SVG IDs: ${ctx.svgIds.map((s) => '#' + s.id).join(', ')}. Reply with JSON {"explanation":"...","mode":"patch_ast","nextAst":"(:scene ...)"}`,
+            }],
+          });
+          const raw = await session.prompt(`Request: ${ctx.prompt}\nAST:\n${(ctx.currentAst || '').slice(0, 3200)}`);
+          session.destroy?.();
+          const m = String(raw || '').match(/\{[\s\S]*\}/);
+          if (m) {
+            const parsed = JSON.parse(m[0]);
+            if (parsed.nextAst && parsed.nextAst.includes('(:scene')) {
+              return {
+                requestId: ctx.requestId,
+                mode: 'patch_ast',
+                nextAst: parsed.nextAst,
+                explanation: parsed.explanation || 'Gemini Nano proposed an AST remix.',
+                engineUsed: 'chrome-builtin-nano',
+              };
+            }
+          }
+        }
+      } catch (_) {}
+      return this.runStandaloneDeterministicRemix(ctx);
+    }
+
+    runStandaloneDeterministicRemix(ctx) {
+      const targetId = ctx.selectedSvgId || (ctx.svgIds[0] && ctx.svgIds[0].id) || null;
+      const baseAst = ctx.currentAst || `(:scene :id "${ctx.sceneId}" :title "${ctx.sceneTitle}" :stage "${ctx.stage}" :duration 10.0 (:bindings ()))`;
+      if (/mismatch|fix|broken|missing/i.test(ctx.prompt) && ctx.missingTargets.length > 0) {
+        const firstMissing = ctx.missingTargets[0];
+        const shapeXml = `  <g id="${firstMissing}">\n    <circle cx="400" cy="240" r="32" fill="#38bdf8" fill-opacity="0.3" stroke="#38bdf8" stroke-width="3" />\n    <text x="400" y="245" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">${firstMissing}</text>\n  </g>\n`;
+        return {
+          requestId: ctx.requestId,
+          mode: 'patch_svg',
+          appendSvgXml: shapeXml,
+          explanation: `Created missing SVG shape <g id="${firstMissing}"> to match your AST target.`,
+          engineUsed: 'deterministic-remix',
+        };
+      }
+      if (targetId) {
+        const rule = `(:target "#${targetId}" :attr "transform" :expr "'rotate(' + (t * 360).toFixed(1) + ' 400 240)'")`;
+        const nextAst = /\(:bindings\s*\(/i.test(baseAst)
+          ? baseAst.replace(/(\(:bindings\s*\()/i, `$1\n    ${rule}`)
+          : baseAst.replace(/\)\s*$/, `\n  (:bindings (\n    ${rule}\n  ))\n)`);
+        return {
+          requestId: ctx.requestId,
+          mode: 'patch_ast',
+          nextAst,
+          explanation: `Added a smooth live animation binding to #${targetId}.`,
+          engineUsed: 'deterministic-remix',
+        };
+      }
+      return {
+        requestId: ctx.requestId,
+        mode: 'advice_only',
+        explanation: 'Add an id="..." attribute to an SVG shape first, then ask Nano to animate or bind a slider to it.',
+        engineUsed: 'deterministic-remix',
+      };
+    }
+
+    handleNanoRemixResult(proposal) {
+      const el = this.elements;
+      if (proposal.requestId && this._activeNanoRemixRequestId && proposal.requestId !== this._activeNanoRemixRequestId) {
+        return;
+      }
+      clearTimeout(this._nanoRemixTimeout);
+      this._activeNanoRemixRequestId = null;
+
+      if (el.btnStudioNanoAsk) {
+        el.btnStudioNanoAsk.disabled = false;
+        el.btnStudioNanoAsk.textContent = '🤖 Ask Nano';
+      }
+      if (!el.studioNanoPreview) return;
+
+      el.studioNanoPreview.classList.remove('hidden');
+      this._pendingNanoProposal = proposal;
+
+      const engineLabel = proposal.engineUsed === 'chrome-builtin-nano'
+        ? 'GEMINI NANO'
+        : proposal.engineUsed === 'webgpu-webllm'
+        ? 'WEBGPU LLM'
+        : 'OFFLINE CO-PILOT';
+      if (el.studioNanoEnginePill) el.studioNanoEnginePill.textContent = engineLabel;
+      if (el.studioNanoExplanation) el.studioNanoExplanation.textContent = proposal.explanation || 'Remix ready.';
+
+      const hasPatch = Boolean(proposal.nextAst || proposal.appendSvgXml);
+      if (el.studioNanoCheckBadge) {
+        if (hasPatch && typeof proposal.totalTargets === 'number') {
+          const missingLen = (proposal.missingAfterPatch || []).length;
+          el.studioNanoCheckBadge.style.color = missingLen === 0 ? '#4ade80' : '#fbbf24';
+          el.studioNanoCheckBadge.textContent = missingLen === 0
+            ? `✓ ${proposal.matchedCount}/${proposal.totalTargets} SVG targets verified`
+            : `⚠ ${missingLen} ID(s) can be auto-matched after apply`;
+        } else {
+          el.studioNanoCheckBadge.textContent = '';
+        }
+      }
+
+      if (el.btnStudioNanoApply) {
+        el.btnStudioNanoApply.style.display = hasPatch ? 'inline-flex' : 'none';
+      }
+      this.playChime(hasPatch ? 740 : 587, 'triangle');
+    }
+
+    applyPendingNanoProposal() {
+      const el = this.elements;
+      const proposal = this._pendingNanoProposal;
+      if (!proposal) return;
+
+      const currentSvg = (el.devEditorSvg && el.devEditorSvg.value) ||
+        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
+      const currentAst = (el.devEditorAst && el.devEditorAst.value) ||
+        (typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
+
+      this._lastRemixBackupBeforeNano = {
+        svg: currentSvg,
+        ast: currentAst,
+      };
+      if (el.btnStudioNanoUndo) {
+        el.btnStudioNanoUndo.classList.remove('hidden');
+      }
+
+      let nextSvg = currentSvg;
+      if (proposal.appendSvgXml) {
+        if (!nextSvg.includes('</svg>')) {
+          nextSvg = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n</svg>`;
+        }
+        nextSvg = nextSvg.replace(/<\/svg>/i, `${proposal.appendSvgXml}\n</svg>`);
+        if (el.devEditorSvg) el.devEditorSvg.value = nextSvg;
+        this.engine.hotReloadSvg(nextSvg);
+      }
+
+      if (proposal.nextAst) {
+        if (el.devEditorAst) el.devEditorAst.value = proposal.nextAst;
+        this.engine.hotReloadAst(proposal.nextAst);
+        if (el.devEditorSlideScript && global.ASTSlideScriptCompiler && this.engine.scene) {
+          el.devEditorSlideScript.value = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
+        }
+        this.switchStudioTab('ast');
+      } else if (proposal.appendSvgXml) {
+        this.switchStudioTab('svg');
+      }
+
+      this.refreshAstSvgMatcher();
+      if (el.studioNanoPreview) el.studioNanoPreview.classList.add('hidden');
+      this._pendingNanoProposal = null;
+      this.playChime(880, 'sine');
+      this.showToast('✨ Nano remix applied & running live!');
+    }
+
+    undoLastNanoEdit() {
+      const el = this.elements;
+      const backup = this._lastRemixBackupBeforeNano;
+      if (!backup) return;
+
+      if (el.devEditorSvg && backup.svg) {
+        el.devEditorSvg.value = backup.svg;
+        this.engine.hotReloadSvg(backup.svg);
+      }
+      if (el.devEditorAst && backup.ast) {
+        el.devEditorAst.value = backup.ast;
+        this.engine.hotReloadAst(backup.ast);
+      }
+      this._lastRemixBackupBeforeNano = null;
+      if (el.btnStudioNanoUndo) {
+        el.btnStudioNanoUndo.classList.add('hidden');
+      }
+      this.refreshAstSvgMatcher();
+      this.playChime(523.25, 'triangle');
+      this.showToast('↩ Reverted last Nano remix edit');
     }
 
     syncSceneIdentityInAst(astText, newId, newTitle) {

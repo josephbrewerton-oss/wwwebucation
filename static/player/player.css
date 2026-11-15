@@ -1708,6 +1708,125 @@ main#player-stage.dev-mode-active #scene-root * {
   gap: 4px;
 }
 
+/* On-Device Gemini Nano Remix Co-Pilot Bar */
+.studio-nano-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  background: linear-gradient(90deg, rgba(15, 23, 42, 0.96) 0%, rgba(12, 74, 110, 0.25) 100%);
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+
+.studio-nano-input-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.studio-nano-badge {
+  font-size: 10px;
+  font-weight: 800;
+  color: #7dd3fc;
+  background: rgba(56, 189, 248, 0.14);
+  border: 1px solid rgba(56, 189, 248, 0.35);
+  border-radius: 5px;
+  padding: 3px 7px;
+  white-space: nowrap;
+}
+
+.studio-nano-input {
+  flex: 1;
+  min-width: 180px;
+  background: #090d16;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: inherit;
+}
+
+.studio-nano-input:focus {
+  outline: none;
+  border-color: #38bdf8;
+}
+
+.studio-nano-chips {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.nano-chip-btn {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #bae6fd;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.nano-chip-btn:hover {
+  background: #0c4a6e;
+  border-color: #38bdf8;
+  color: #ffffff;
+}
+
+.studio-nano-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(2, 132, 199, 0.14);
+  border: 1px solid #38bdf8;
+  border-radius: 6px;
+  flex-wrap: wrap;
+}
+
+.studio-nano-preview.hidden,
+.dev-btn.hidden {
+  display: none !important;
+}
+
+.studio-nano-preview-text {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+  flex: 1;
+  font-size: 11px;
+  color: #e2e8f0;
+}
+
+.studio-nano-engine-pill {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #0c4a6e;
+  color: #7dd3fc;
+}
+
+.studio-nano-check-badge {
+  font-size: 10px;
+  font-weight: 700;
+  color: #4ade80;
+}
+
+.studio-nano-preview-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
 .matcher-svg-chip:hover {
   border-color: #38bdf8;
   color: #38bdf8;

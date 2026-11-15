@@ -473,6 +473,7 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'LOAD_CUSTOM_CARTRIDGE'; cartridge: CartridgeDefinition }
     | { type: 'OPEN_STUDIO'; tab?: string; openSaveAs?: boolean }
     | { type: 'REMIX_SAVED_ACK'; message: string }
+    | { type: 'NANO_REMIX_RESULT'; proposal: any }
     | { type: 'DISPATCH_ACTION'; action: string; args?: any[] }
     | { type: 'SET_VAR'; name: string; value: any }
     | { type: 'SET_VOICE'; enabled: boolean }
@@ -1429,6 +1430,28 @@ export function renderPlayerPage(): HTMLElement {
           })
           .catch(() => {});
       }
+    }
+    if (e.data.type === 'NANO_REMIX_REQUEST' && e.data.context) {
+      const remixCtx = e.data.context;
+      import('../engine/nanoRemixCopilot')
+        .then(async ({ promptAiRemixAssistant }) => {
+          const proposal = await promptAiRemixAssistant(remixCtx);
+          postToPlayer({
+            type: 'NANO_REMIX_RESULT',
+            proposal,
+          });
+        })
+        .catch((err) => {
+          postToPlayer({
+            type: 'NANO_REMIX_RESULT',
+            proposal: {
+              requestId: remixCtx.requestId,
+              mode: 'advice_only',
+              explanation: `Could not reach Nano Remix Co-Pilot: ${err?.message || 'offline error'}`,
+              engineUsed: 'deterministic-remix',
+            },
+          });
+        });
     }
   });
 

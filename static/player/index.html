@@ -211,6 +211,34 @@
         </div>
       </div>
 
+      <!-- On-Device Gemini Nano Remix Co-Pilot Bar -->
+      <div id="studio-nano-bar" class="studio-nano-bar">
+        <div class="studio-nano-input-row">
+          <span class="studio-nano-badge" title="100% On-Device Gemini Nano Remix Assistant (Zero Cloud Egress)">✨ Nano Co-Pilot</span>
+          <input type="text" id="studio-nano-input" class="studio-nano-input" placeholder="Ask Nano to remix… e.g. 'Add a slider for speed from 1 to 10', 'Make #planet spin', 'Fix mismatches'" />
+          <button type="button" id="btn-studio-nano-ask" class="dev-btn primary">🤖 Ask Nano</button>
+          <button type="button" id="btn-studio-nano-undo" class="dev-btn hidden" title="Undo last Nano edit and restore your previous SVG + AST">↩ Undo Nano</button>
+        </div>
+        <div class="studio-nano-chips">
+          <button type="button" class="nano-chip-btn" data-nano-prompt="Animate the selected shape smoothly">⚡ Animate Shape</button>
+          <button type="button" class="nano-chip-btn" data-nano-prompt="Add a slider for speed from 1 to 10">🎛 Add Slider</button>
+          <button type="button" class="nano-chip-btn" data-nano-prompt="Add a glowing blue circle shape called remix-orb">🎨 Add Shape</button>
+          <button type="button" class="nano-chip-btn" data-nano-prompt="Add a checkpoint quiz question at the midpoint">🎯 Add Checkpoint</button>
+          <button type="button" class="nano-chip-btn" data-nano-prompt="Fix any missing SVG matches or broken bindings">🔧 Fix Mismatches</button>
+        </div>
+        <div id="studio-nano-preview" class="studio-nano-preview hidden">
+          <div class="studio-nano-preview-text">
+            <span id="studio-nano-engine-pill" class="studio-nano-engine-pill">Nano</span>
+            <span id="studio-nano-explanation">Ready</span>
+            <span id="studio-nano-check-badge" class="studio-nano-check-badge"></span>
+          </div>
+          <div class="studio-nano-preview-actions">
+            <button type="button" id="btn-studio-nano-apply" class="dev-btn" style="background:#065f46; border-color:#10b981; color:#fff;">⚡ Apply &amp; Run</button>
+            <button type="button" id="btn-studio-nano-dismiss" class="dev-btn">✕</button>
+          </div>
+        </div>
+      </div>
+
       <div class="dev-studio-content dev-studio-main-split">
         <div class="dev-studio-editor-col">
           <!-- Natural Curriculum SlideScript Tab -->
@@ -315,7 +343,10 @@
               <div style="font-size:11px; font-weight:800; color:#38bdf8; letter-spacing:0.03em;">🔗 .ast ↔ .svg Matcher</div>
               <div id="matcher-summary-badge" style="font-size:10px; color:#94a3b8; margin-top:2px;">Scanning selectors...</div>
             </div>
-            <button type="button" id="btn-matcher-autofix-all" class="dev-btn" style="font-size:10px; padding:3px 7px;" title="Auto-match missing AST targets to closest SVG IDs or create missing SVG shapes">✨ Fix All</button>
+            <div style="display:flex; gap:4px; align-items:center;">
+              <button type="button" id="btn-matcher-nano-explain" class="dev-btn" style="font-size:10px; padding:3px 7px;" title="Ask Gemini Nano to explain or repair selector mismatches">🤖 Nano</button>
+              <button type="button" id="btn-matcher-autofix-all" class="dev-btn" style="font-size:10px; padding:3px 7px;" title="Auto-match missing AST targets to closest SVG IDs or create missing SVG shapes">✨ Fix All</button>
+            </div>
           </div>
           <div id="matcher-body" class="studio-matcher-body">
             <!-- Populated dynamically by player-ui.js -->
