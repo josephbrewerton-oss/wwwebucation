@@ -9176,48 +9176,26 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             let mounted = false;
             if (safeSvg && typeof DOMParser !== 'undefined') {
               const parser = new DOMParser();
-              let doc = parser.parseFromString(safeSvg, 'image/svg+xml');
-
-              if (!doc.querySelector('parsererror')) {
-                const rootSvg = doc.querySelector('svg');
-                if (rootSvg) {
-                  const vb = rootSvg.getAttribute('viewBox');
-                  if (vb && stage) {
-                    stage.setAttribute('viewBox', vb);
-                    this._defaultViewBox = vb;
-                  }
-                  this.sanitizeSvgElement(rootSvg);
-                  if (typeof container.replaceChildren === 'function') {
-                    container.replaceChildren(...rootSvg.childNodes);
-                  } else {
-                    container.innerHTML = rootSvg.innerHTML;
-                  }
-                  mounted = true;
+              const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
+              const rootSvg = htmlDoc.querySelector('svg');
+              if (rootSvg) {
+                const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
+                if (vb && stage) {
+                  stage.setAttribute('viewBox', vb);
+                  this._defaultViewBox = vb;
                 }
-              }
-
-              if (!mounted) {
-                const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-                const rootSvg = htmlDoc.querySelector('svg');
-                if (rootSvg) {
-                  const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
-                  if (vb && stage) {
-                    stage.setAttribute('viewBox', vb);
-                    this._defaultViewBox = vb;
+                this.sanitizeSvgElement(rootSvg);
+                if (typeof container.replaceChildren === 'function') {
+                  container.replaceChildren(...rootSvg.childNodes);
+                } else {
+                  while (container.firstChild) {
+                    container.removeChild(container.firstChild);
                   }
-                  this.sanitizeSvgElement(rootSvg);
-                  if (typeof container.replaceChildren === 'function') {
-                    container.replaceChildren(...rootSvg.childNodes);
-                  } else {
-                    while (container.firstChild) {
-                      container.removeChild(container.firstChild);
-                    }
-                    while (rootSvg.firstChild) {
-                      container.appendChild(rootSvg.firstChild);
-                    }
+                  while (rootSvg.firstChild) {
+                    container.appendChild(rootSvg.firstChild);
                   }
-                  mounted = true;
                 }
+                mounted = true;
               }
             }
 
