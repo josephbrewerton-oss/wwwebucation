@@ -364,9 +364,11 @@
                   if (!/^#[A-Za-z_][\w:.-]*$/.test(trimmedVal)) {
                     continue;
                   }
-                }
-                if (nameLower === 'xlink:href') {
-                  el.setAttributeNS(XLINK_NS, 'xlink:href', val.trim());
+                  if (nameLower === 'xlink:href') {
+                    el.setAttributeNS(XLINK_NS, 'xlink:href', trimmedVal);
+                  } else {
+                    el.setAttribute(rawName, trimmedVal);
+                  }
                 } else {
                   el.setAttribute(rawName, val);
                 }
