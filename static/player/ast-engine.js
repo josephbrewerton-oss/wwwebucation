@@ -9587,10 +9587,6 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             evalY = (t, vars, MathObj, computed, clamp, lerp, map) =>
               rawY(t, vars, computed, MathObj, clamp, lerp, map);
           } catch (_) {}
-          try {
-            const cy = this.compileAstExpr(scCfg.yExpr || '0');
-            evalY = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cy});`);
-          } catch (_) {}
           const cap = Math.max(8, Math.min(2048, scCfg.samples || 96));
           this.activeScopes.push({
             target: scCfg.target,
