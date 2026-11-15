@@ -323,7 +323,48 @@
       const buildSafeSvgTree = (svgMarkup) => {
         const SVG_NS = 'http://www.w3.org/2000/svg';
         const XLINK_NS = 'http://www.w3.org/1999/xlink';
-        const VOID_TAGS = new Set(['path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon', 'stop', 'use', 'image', 'feBlend', 'feColorMatrix', 'feComposite', 'feFlood', 'feGaussianBlur', 'feMergeNode', 'feMorphology', 'feOffset', 'feTurbulence', 'animate', 'animateTransform', 'set']);
+        const VOID_TAGS = new Set([
+          'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
+          'stop', 'use', 'image', 'feblend', 'fecolormatrix', 'fecomposite',
+          'feflood', 'fegaussianblur', 'femergenode', 'femorphology',
+          'feoffset', 'feturbulence', 'animate', 'animatetransform', 'set'
+        ]);
+        const ALLOWED_TAGS = new Set([
+          'svg', 'g', 'defs', 'symbol', 'use', 'path', 'rect', 'circle',
+          'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'textpath',
+          'image', 'lineargradient', 'radialgradient', 'stop', 'clippath',
+          'mask', 'pattern', 'marker', 'filter', 'feblend', 'fecolormatrix',
+          'fecomposite', 'feflood', 'fegaussianblur', 'femerge', 'femergenode',
+          'femorphology', 'feoffset', 'feturbulence', 'animate',
+          'animatetransform', 'set', 'title', 'desc', 'switch', 'style'
+        ]);
+        const ALLOWED_ATTRS = new Set([
+          'id', 'class', 'style', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy',
+          'r', 'rx', 'ry', 'd', 'points', 'width', 'height', 'viewbox',
+          'preserveaspectratio', 'transform', 'fill', 'fill-opacity',
+          'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
+          'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
+          'stroke-dashoffset', 'stroke-miterlimit', 'opacity', 'font-family',
+          'font-size', 'font-weight', 'font-style', 'text-anchor',
+          'dominant-baseline', 'letter-spacing', 'word-spacing', 'dx', 'dy',
+          'rotate', 'textlength', 'lengthadjust', 'startoffset', 'offset',
+          'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform',
+          'spreadmethod', 'patternunits', 'patterncontentunits',
+          'patterntransform', 'maskunits', 'maskcontentunits', 'clip-path',
+          'clip-rule', 'clippathunits', 'mask', 'filter', 'filterunits',
+          'primitiveunits', 'stddeviation', 'in', 'in2', 'result', 'k1', 'k2',
+          'k3', 'k4', 'type', 'values', 'mode', 'operator', 'flood-color',
+          'flood-opacity', 'basefrequency', 'numoctaves', 'seed', 'scale',
+          'xchannelselector', 'ychannelselector', 'edgeMode', 'edgemode',
+          'markerwidth', 'markerheight', 'refx', 'refy', 'orient',
+          'markerunits', 'marker-start', 'marker-mid', 'marker-end',
+          'attributename', 'attributetype', 'begin', 'dur', 'end', 'min',
+          'max', 'restart', 'repeatcount', 'repeatdur', 'from', 'to', 'by',
+          'calcmode', 'keysplines', 'keytimes', 'additive', 'accumulate',
+          'xmlns', 'xmlns:xlink', 'href', 'xlink:href', 'visibility', 'display',
+          'overflow', 'pointer-events', 'cursor', 'color', 'vector-effect',
+          'shape-rendering', 'text-rendering', 'image-rendering'
+        ]);
         const decodeEntities = (str) => String(str)
           .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
           .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
@@ -346,7 +387,7 @@
             }
           } else if (openTag) {
             const tagLower = openTag.toLowerCase();
-            if (tagLower === 'script' || tagLower === 'foreignobject' || tagLower === 'iframe' || tagLower === 'object' || tagLower === 'embed') {
+            if (!ALLOWED_TAGS.has(tagLower)) {
               continue;
             }
             const el = document.createElementNS(SVG_NS, openTag);
@@ -357,10 +398,12 @@
                 const rawName = aMatch[1];
                 const nameLower = rawName.toLowerCase();
                 if (nameLower.startsWith('on')) continue;
+                if (!ALLOWED_ATTRS.has(nameLower) && !nameLower.startsWith('data-') && !nameLower.startsWith('aria-')) {
+                  continue;
+                }
                 const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
                 if (nameLower === 'href' || nameLower === 'xlink:href') {
                   const trimmedVal = val.trim();
-                  // Only allow local fragment references (e.g. "#id") to prevent redirect/phishing links.
                   if (!/^#[A-Za-z_][\w:.-]*$/.test(trimmedVal)) {
                     continue;
                   }
@@ -388,7 +431,6 @@
         }
         return rootSvg;
       };
-
       try {
         const rootSvg = buildSafeSvgTree(safeSvg);
         if (rootSvg) {
