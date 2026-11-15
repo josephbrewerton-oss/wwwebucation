@@ -510,6 +510,10 @@
     }
 
     closeInteractiveCard(resumePlayback = false) {
+      if (this._interactiveCloseTimer) {
+        clearTimeout(this._interactiveCloseTimer);
+        this._interactiveCloseTimer = null;
+      }
       if (this.elements.interactiveCard) {
         this.elements.interactiveCard.classList.add('hidden');
         this.elements.interactiveCard.classList.remove('goal-mode');
@@ -574,12 +578,110 @@
       this.showToast(this.interactiveMode ? '🎯 Questions: ON' : '🎯 Questions: OFF (Uninterrupted Mode)');
     }
 
+    _resolveQuizTargetSelector(checkpoint) {
+      if (checkpoint && typeof checkpoint.target === 'string' && checkpoint.target.trim()) {
+        return checkpoint.target.trim();
+      }
+      const scene = this.engine && this.engine.scene;
+      if (scene && Array.isArray(scene.actors) && scene.actors[0] && scene.actors[0].target) {
+        return scene.actors[0].target;
+      }
+      if (scene && Array.isArray(scene.bindings) && scene.bindings[0] && scene.bindings[0].target) {
+        return scene.bindings[0].target;
+      }
+      return '';
+    }
+
+    async askNanoAboutCheckpoint(checkpoint, index, attemptState = {}) {
+      if (this._interactiveCloseTimer) {
+        clearTimeout(this._interactiveCloseTimer);
+        this._interactiveCloseTimer = null;
+      }
+      const scene = this.engine && this.engine.scene;
+      const options = Array.isArray(checkpoint && checkpoint.options) ? checkpoint.options : [];
+      const answerIndex = typeof checkpoint?.answer === 'number' ? checkpoint.answer : 0;
+      const payload = {
+        type: 'ASK_NANO_CHECKPOINT',
+        sceneId: (this.engine && this.engine.activePresetId) || (scene && scene.id) || '',
+        sceneTitle: (scene && scene.title) || '',
+        index,
+        mode: checkpoint && checkpoint.passExpr ? 'pass-expr' : 'multiple-choice',
+        prompt: (checkpoint && checkpoint.prompt) || '',
+        options,
+        chosenIndex: typeof attemptState.chosenOrigIdx === 'number' ? attemptState.chosenOrigIdx : null,
+        chosenText: attemptState.chosenText || '',
+        answerIndex,
+        correctText: options[answerIndex] || '',
+        explanation: (checkpoint && checkpoint.explanation) || '',
+        distractorNudge: attemptState.distractorNudge || '',
+        passExpr: (checkpoint && checkpoint.passExpr) || '',
+        targetSelector: this._resolveQuizTargetSelector(checkpoint),
+        vars: this.engine && this.engine.vars ? { ...this.engine.vars } : {},
+        computed: this.engine && this.engine.computedVars ? { ...this.engine.computedVars } : {},
+        progress: Number((this.engine && this.engine.progress) || 0),
+        autoAsk: true,
+      };
+
+      const nanoBox = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#interactive-nano-response');
+      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
+
+      if (payload.targetSelector && global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.highlightTarget === 'function') {
+        global.ASTSharedRenderBoundary.highlightTarget(payload.targetSelector, 3000, 'player-stage');
+      }
+
+      if (isEmbedded) {
+        try {
+          window.parent.postMessage(payload, '*');
+        } catch (_) {}
+      }
+
+      if (nanoBox) {
+        nanoBox.style.display = 'block';
+        nanoBox.textContent = isEmbedded
+          ? '✨ Opening Gemini Nano Co-Pilot for guided coaching...'
+          : '✨ Thinking on-device with Gemini Nano...';
+      }
+
+      if (!isEmbedded) {
+        let replyText = '';
+        try {
+          const lm = (typeof window !== 'undefined' && window.LanguageModel) || (typeof globalThis !== 'undefined' && globalThis.LanguageModel);
+          if (lm && typeof lm.create === 'function') {
+            const session = await lm.create({
+              systemPrompt: 'You are a concise, encouraging UK curriculum science & maths Socratic tutor. Explain in 2 short sentences without giving away spoilers if avoidable.',
+            });
+            const q = `Scene: ${payload.sceneTitle || payload.sceneId}. Quiz Question: "${payload.prompt}". Student picked: "${payload.chosenText || 'not answered yet'}". Hint: "${payload.distractorNudge || payload.explanation || payload.passExpr}". Current vars: ${JSON.stringify(payload.vars)}. Coach the pupil clearly.`;
+            replyText = await session.prompt(q);
+            if (typeof session.destroy === 'function') session.destroy();
+          }
+        } catch (_) {}
+
+        if (!replyText) {
+          if (payload.distractorNudge) {
+            replyText = `${payload.distractorNudge} ${payload.explanation ? 'Key concept: ' + payload.explanation : ''}`.trim();
+          } else if (payload.passExpr) {
+            replyText = `Focus on adjusting the lab controls toward the goal condition (${payload.passExpr}). ${payload.explanation || 'Watch how the active vector readout responds as you move sliders or drag elements.'}`;
+          } else {
+            replyText = payload.explanation || 'Observe the highlighted apparatus on the vector stage and compare how the active parameters change across the timeline.';
+          }
+        }
+        if (nanoBox) {
+          nanoBox.textContent = `🤖 Nano: ${replyText}`;
+        }
+      }
+    }
+
     triggerCheckpoint(checkpoint, index) {
       if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
       if (!this.interactiveMode) return;
       const scene = this.engine && this.engine.scene;
       const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
       if (!hasCheckpoints) return;
+
+      if (this._interactiveCloseTimer) {
+        clearTimeout(this._interactiveCloseTimer);
+        this._interactiveCloseTimer = null;
+      }
 
       this.activeCheckpoint = index;
       this.minimizedCheckpoint = null;
@@ -610,8 +712,24 @@
             </div>
           </div>
           <div id="interactive-result" class="interactive-feedback" style="display: none;"></div>
+          <div class="interactive-nano-actions">
+            <button type="button" id="interactive-ask-nano-btn" class="interactive-ask-nano-btn" title="Ask Gemini Nano Co-Pilot for a guided hint on this lab challenge">🤖 Ask Nano</button>
+            <button type="button" id="interactive-mute-popups-btn" class="interactive-dismiss-popups-btn" title="Turn off popup questions (re-enable via Interactive button or Settings)">🔕 Turn Off Popups</button>
+          </div>
+          <div id="interactive-nano-response" class="interactive-nano-response"></div>
         `;
         this.elements.interactiveCard.classList.remove('hidden');
+        const askGoalBtn = this.elements.interactiveBody.querySelector('#interactive-ask-nano-btn');
+        const muteGoalBtn = this.elements.interactiveBody.querySelector('#interactive-mute-popups-btn');
+        if (askGoalBtn) {
+          askGoalBtn.addEventListener('click', () => this.askNanoAboutCheckpoint(checkpoint, index, {}));
+        }
+        if (muteGoalBtn) {
+          muteGoalBtn.addEventListener('click', () => {
+            this.setInteractiveMode(false);
+            if (this.engine) this.engine.play();
+          });
+        }
         this.updateGoalCheckpointProgress();
         return;
       }
@@ -657,6 +775,14 @@
           `).join('')}
         </div>
         <div id="interactive-result" class="interactive-feedback" style="display: none;"></div>
+        <div class="interactive-nano-actions">
+          <button type="button" id="interactive-ask-nano-btn" class="interactive-ask-nano-btn" title="Ask Gemini Nano Co-Pilot about this question or why an option works">🤖 Ask Nano</button>
+          <div style="display:flex; gap:6px; align-items:center;">
+            <button type="button" id="interactive-continue-btn" class="interactive-dismiss-popups-btn" style="display:none; color:#38bdf8; border-color:#0284c7;">Continue ▶</button>
+            <button type="button" id="interactive-mute-popups-btn" class="interactive-dismiss-popups-btn" title="Turn off popup questions (re-enable via Interactive button or Settings)">🔕 Turn Off Popups</button>
+          </div>
+        </div>
+        <div id="interactive-nano-response" class="interactive-nano-response"></div>
       `;
 
       this.elements.interactiveBody.innerHTML = bodyHtml;
@@ -664,27 +790,57 @@
 
       const optBtns = this.elements.interactiveBody.querySelectorAll('.interactive-opt-btn');
       const resultBox = this.elements.interactiveBody.querySelector('#interactive-result');
+      const askNanoBtn = this.elements.interactiveBody.querySelector('#interactive-ask-nano-btn');
+      const mutePopupsBtn = this.elements.interactiveBody.querySelector('#interactive-mute-popups-btn');
+      const continueBtn = this.elements.interactiveBody.querySelector('#interactive-continue-btn');
+      const lastAttempt = { chosenOrigIdx: null, chosenText: '', distractorNudge: '', isCorrect: null };
+
+      if (askNanoBtn) {
+        askNanoBtn.addEventListener('click', () => {
+          askNanoBtn.classList.remove('nudge-highlight');
+          this.askNanoAboutCheckpoint(checkpoint, index, lastAttempt);
+        });
+      }
+      if (mutePopupsBtn) {
+        mutePopupsBtn.addEventListener('click', () => {
+          this.setInteractiveMode(false);
+          if (this.engine) this.engine.play();
+        });
+      }
+      if (continueBtn) {
+        continueBtn.addEventListener('click', () => {
+          this.closeInteractiveCard(true);
+        });
+      }
 
       optBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           const isCorrect = btn.getAttribute('data-is-correct') === 'true';
           const chosenOrigIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
+          const selectedOpt = indexedOptions.find(o => o.originalIndex === chosenOrigIdx);
           const distractorNudge = !isCorrect && checkpoint.onWrong
             ? (checkpoint.onWrong[chosenOrigIdx] !== undefined ? checkpoint.onWrong[chosenOrigIdx] : checkpoint.onWrong[String(chosenOrigIdx)])
             : null;
 
+          lastAttempt.chosenOrigIdx = chosenOrigIdx;
+          lastAttempt.chosenText = selectedOpt ? selectedOpt.text : String(chosenOrigIdx);
+          lastAttempt.distractorNudge = distractorNudge || '';
+          lastAttempt.isCorrect = isCorrect;
+
           if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-            const selectedOpt = indexedOptions.find(o => o.originalIndex === chosenOrigIdx);
             window.parent.postMessage({
               type: 'CHECKPOINT_ANSWERED',
               sceneId: (scene && scene.id) || '',
               sceneTitle: (scene && scene.title) || '',
               index,
               chosenIdx: chosenOrigIdx,
-              selectedText: selectedOpt ? selectedOpt.text : String(chosenOrigIdx),
+              selectedText: lastAttempt.chosenText,
               isCorrect,
               prompt: checkpoint.prompt,
+              options: rawOptions,
               answer: correctOriginalIndex,
+              explanation: checkpoint.explanation || '',
+              distractorNudge: distractorNudge || '',
             }, '*');
           }
 
@@ -701,8 +857,9 @@
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Correct! ${checkpoint.explanation || ''}`);
             }
-            // Resume after 2.2 seconds
-            setTimeout(() => {
+            if (continueBtn) continueBtn.style.display = 'inline-flex';
+            // Resume after 2.2 seconds unless Ask Nano is invoked
+            this._interactiveCloseTimer = setTimeout(() => {
               this.closeInteractiveCard(true);
             }, 2200);
           } else if (distractorNudge) {
@@ -714,6 +871,10 @@
               resultBox.style.display = 'block';
               resultBox.style.color = '#fbbf24';
               resultBox.innerHTML = `<strong>Guidance:</strong> ${distractorNudge}`;
+            }
+            if (askNanoBtn) {
+              askNanoBtn.textContent = '🤖 Ask Nano Why';
+              askNanoBtn.classList.add('nudge-highlight');
             }
             if (this.engine.voiceEnabled) {
               this.engine.speak(distractorNudge);
@@ -729,13 +890,18 @@
               resultBox.style.color = '#f87171';
               resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the simulation parameters!'}`;
             }
+            if (askNanoBtn) {
+              askNanoBtn.textContent = '🤖 Ask Nano Why';
+              askNanoBtn.classList.add('nudge-highlight');
+            }
+            if (continueBtn) continueBtn.style.display = 'inline-flex';
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Remember: ${checkpoint.explanation || ''}`);
             }
-            // Allow retry or resume after 3.2 seconds
-            setTimeout(() => {
+            // Keep open slightly longer so pupil can click Ask Nano Why or Continue
+            this._interactiveCloseTimer = setTimeout(() => {
               this.closeInteractiveCard(true);
-            }, 3200);
+            }, 4800);
           }
         });
       });

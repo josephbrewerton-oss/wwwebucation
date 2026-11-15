@@ -4139,6 +4139,9 @@
 
     applyAiHighlight(selector, pulseColor = '#38bdf8', durationMs = 4500) {
       this.ensureAiSpotlightStyles();
+      if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.highlightTarget === 'function') {
+        global.ASTSharedRenderBoundary.highlightTarget(selector, durationMs, 'player-stage');
+      }
       const stage = this.getStageSvg();
       if (!stage) return;
 
@@ -8511,6 +8514,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
   }
 
   sanitizeSvg(rawSvg) {
+    if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.sanitizeSvg === 'function') {
+      return global.ASTSharedRenderBoundary.sanitizeSvg(rawSvg);
+    }
     if (!rawSvg || typeof rawSvg !== 'string') return '';
     let clean = rawSvg.trim();
     if (/<!DOCTYPE|<!ENTITY/i.test(clean)) {
@@ -8522,6 +8528,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
   }
 
   sanitizeSvgElement(rootSvg) {
+    if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.sanitizeSvgElement === 'function') {
+      return global.ASTSharedRenderBoundary.sanitizeSvgElement(rootSvg);
+    }
     if (!rootSvg) return null;
     const dangerousTags = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
     if (rootSvg.tagName && dangerousTags.includes(rootSvg.tagName.toLowerCase())) return null;
@@ -8557,6 +8566,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
   }
 
   ensureMasterDefs(container) {
+    if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.ensureMasterDefs === 'function') {
+      global.ASTSharedRenderBoundary.ensureMasterDefs(container || this._container || this.container);
+      return;
+    }
     if (typeof document === 'undefined') return;
     const target = container || this._container || this.container;
     if (!target) return;
@@ -8820,65 +8833,91 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (this._cpPassedMask) this._cpPassedMask.fill(0);
       this._cachedElements = null;
 
+      if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.registerSurface === 'function') {
+        global.ASTSharedRenderBoundary.registerSurface({
+          id: 'player-stage',
+          label: scene.title || scene.id || 'AST Player Stage',
+          renderMode: 'svg',
+          sceneId: scene.id || '',
+          svgContainer: container || null,
+          stageSvg: stage || null,
+        });
+      }
+
       if (container && scene.svgText) {
         try {
-          let safeSvg = this.sanitizeSvg(scene.svgText);
-          safeSvg = safeSvg
-            .replace(/&times;/g, '×')
-            .replace(/&bull;/g, '•')
-            .replace(/&Omega;/g, 'Ω')
-            .replace(/&nbsp;/g, '&#160;')
-            .replace(/&divide;/g, '÷')
-            .replace(/&diams;/g, '♦')
-            .replace(/&mdash;/g, '—')
-            .replace(/&ne;/g, '≠')
-            .replace(/&deg;/g, '°');
+          if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.mountSvgStage === 'function') {
+            const mountRes = global.ASTSharedRenderBoundary.mountSvgStage({
+              container,
+              stageSvg: stage,
+              surfaceId: 'player-stage',
+              svgText: scene.svgText,
+            });
+            if (mountRes && mountRes.viewBox) {
+              this._defaultViewBox = mountRes.viewBox;
+            }
+            if (!mountRes || !mountRes.mounted) {
+              console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
+            }
+          } else {
+            let safeSvg = this.sanitizeSvg(scene.svgText);
+            safeSvg = safeSvg
+              .replace(/&times;/g, '×')
+              .replace(/&bull;/g, '•')
+              .replace(/&Omega;/g, 'Ω')
+              .replace(/&nbsp;/g, '&#160;')
+              .replace(/&divide;/g, '÷')
+              .replace(/&diams;/g, '♦')
+              .replace(/&mdash;/g, '—')
+              .replace(/&ne;/g, '≠')
+              .replace(/&deg;/g, '°');
 
-          let mounted = false;
-          if (safeSvg && typeof DOMParser !== 'undefined') {
-            const parser = new DOMParser();
-            let doc = parser.parseFromString(safeSvg, 'image/svg+xml');
+            let mounted = false;
+            if (safeSvg && typeof DOMParser !== 'undefined') {
+              const parser = new DOMParser();
+              let doc = parser.parseFromString(safeSvg, 'image/svg+xml');
 
-            if (!doc.querySelector('parsererror')) {
-              const rootSvg = doc.querySelector('svg');
-              if (rootSvg) {
-                const vb = rootSvg.getAttribute('viewBox');
-                if (vb && stage) {
-                  stage.setAttribute('viewBox', vb);
-                  this._defaultViewBox = vb;
+              if (!doc.querySelector('parsererror')) {
+                const rootSvg = doc.querySelector('svg');
+                if (rootSvg) {
+                  const vb = rootSvg.getAttribute('viewBox');
+                  if (vb && stage) {
+                    stage.setAttribute('viewBox', vb);
+                    this._defaultViewBox = vb;
+                  }
+                  this.sanitizeSvgElement(rootSvg);
+                  if (typeof container.replaceChildren === 'function') {
+                    container.replaceChildren(...rootSvg.childNodes);
+                  } else {
+                    container.innerHTML = rootSvg.innerHTML;
+                  }
+                  mounted = true;
                 }
-                this.sanitizeSvgElement(rootSvg);
-                if (typeof container.replaceChildren === 'function') {
-                  container.replaceChildren(...rootSvg.childNodes);
-                } else {
-                  container.innerHTML = rootSvg.innerHTML;
+              }
+
+              if (!mounted) {
+                const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
+                const rootSvg = htmlDoc.querySelector('svg');
+                if (rootSvg) {
+                  const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
+                  if (vb && stage) {
+                    stage.setAttribute('viewBox', vb);
+                    this._defaultViewBox = vb;
+                  }
+                  this.sanitizeSvgElement(rootSvg);
+                  if (typeof container.replaceChildren === 'function') {
+                    container.replaceChildren(...rootSvg.childNodes);
+                  } else {
+                    container.innerHTML = rootSvg.innerHTML;
+                  }
+                  mounted = true;
                 }
-                mounted = true;
               }
             }
 
-            if (!mounted) {
-              const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-              const rootSvg = htmlDoc.querySelector('svg');
-              if (rootSvg) {
-                const vb = rootSvg.getAttribute('viewBox') || rootSvg.getAttribute('viewbox');
-                if (vb && stage) {
-                  stage.setAttribute('viewBox', vb);
-                  this._defaultViewBox = vb;
-                }
-                this.sanitizeSvgElement(rootSvg);
-                if (typeof container.replaceChildren === 'function') {
-                  container.replaceChildren(...rootSvg.childNodes);
-                } else {
-                  container.innerHTML = rootSvg.innerHTML;
-                }
-                mounted = true;
-              }
+            if (!mounted && container) {
+              console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
             }
-          }
-
-          if (!mounted && container) {
-            console.warn('[AST Engine] SVG template mounting bypassed due to parse failure.');
           }
         } catch (err) {
           console.warn('SVG mount bypassed due to parse failure:', err);
@@ -9847,7 +9886,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             }
             if (b.lastVal !== val) {
               b.lastVal = val;
-              if (b.attr === 'textContent') {
+              if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function') {
+                global.ASTSharedRenderBoundary.commitBindingValue(b.node, b.attr, val);
+              } else if (b.attr === 'textContent') {
                 b.node.textContent = String(val);
               } else {
                 const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
@@ -11374,8 +11415,15 @@ function setupPostMessageBridge(engine, uiController) {
           engine.toggleVoiceRecognition();
         }
         break;
+      case 'AI_VISUAL_COMMAND':
+        if (typeof engine.executeAiVisualCommand === 'function') {
+          engine.executeAiVisualCommand(data.packet || data);
+        }
+        break;
       case 'PUPIL_INTERRUPT':
-        if (typeof engine.cancelSpeech === 'function') {
+        if (typeof engine.preemptAiDemonstration === 'function') {
+          engine.preemptAiDemonstration('PUPIL_INTERRUPT');
+        } else if (typeof engine.cancelSpeech === 'function') {
           engine.cancelSpeech();
         }
         break;
@@ -11502,12 +11550,16 @@ function setupPostMessageBridge(engine, uiController) {
         }
         const hiM = tuple.match(/:highlight\s+"([^"]+)"/i);
         if (hiM && /^#[a-zA-Z0-9_\-:]+$/.test(hiM[1])) {
-          const stage = engine.getStageSvg();
-          const targetEl = stage && stage.querySelector ? stage.querySelector(hiM[1]) : null;
-          if (targetEl) {
-            if (typeof engine.ensureAiSpotlightStyles === 'function') engine.ensureAiSpotlightStyles();
-            targetEl.classList.add('ai-spotlight-pulse');
-            setTimeout(() => targetEl.classList.remove('ai-spotlight-pulse'), 2000);
+          if (typeof engine.ensureAiSpotlightStyles === 'function') engine.ensureAiSpotlightStyles();
+          if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.highlightTarget === 'function') {
+            global.ASTSharedRenderBoundary.highlightTarget(hiM[1], 2000, 'player-stage');
+          } else {
+            const stage = engine.getStageSvg();
+            const targetEl = stage && stage.querySelector ? stage.querySelector(hiM[1]) : null;
+            if (targetEl) {
+              targetEl.classList.add('ai-spotlight-pulse');
+              setTimeout(() => targetEl.classList.remove('ai-spotlight-pulse'), 2000);
+            }
           }
           executedActions.push('highlight');
         }
