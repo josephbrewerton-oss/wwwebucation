@@ -10396,13 +10396,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const cp = cps[ci];
         if (!cp || !cp.passExpr) continue;
         if (!cp._passEvalFn) {
-          try {
-            const compiledPass = this.compileAstExpr(cp.passExpr);
-            cp._passEvalFn = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return Boolean(${compiledPass});`);
-          } catch (_) {
-            cp._passEvalFn = () => false;
-          }
-        }
+        try {
+          const rawPassFn = this.compileAstFn(cp.passExpr);
+          cp._passEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+            Boolean(rawPassFn(t, vars, computed, MathObj, clamp, lerp, map));
+        } catch (_) {
+          cp._passEvalFn = () => false;
+        }        }
         let condMet = false;
         try {
           condMet = Boolean(cp._passEvalFn(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
