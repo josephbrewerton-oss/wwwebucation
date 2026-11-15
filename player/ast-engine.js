@@ -9578,8 +9578,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           let evalX = () => 0;
           let evalY = () => 0;
           try {
-            const cx = this.compileAstExpr(scCfg.xExpr || 't');
-            evalX = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${cx});`);
+            const rawX = this.compileAstFn(scCfg.xExpr || 't');
+            evalX = (t, vars, MathObj, computed, clamp, lerp, map) =>
+              rawX(t, vars, computed, MathObj, clamp, lerp, map);
+          } catch (_) {}
+          try {
+            const rawY = this.compileAstFn(scCfg.yExpr || '0');
+            evalY = (t, vars, MathObj, computed, clamp, lerp, map) =>
+              rawY(t, vars, computed, MathObj, clamp, lerp, map);
           } catch (_) {}
           try {
             const cy = this.compileAstExpr(scCfg.yExpr || '0');
