@@ -9252,10 +9252,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (b.type === '3d-node') {
             const node = hasDomQuery ? container.querySelector(b.target) : null;
             if (node) {
-              let evalX = () => 0, evalY = () => 0, evalZ = () => 0;
-              try { evalX = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.x});`); } catch {}
-              try { evalY = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.y});`); } catch {}
-              try { evalZ = new Function('t', 'vars', 'Math', 'computed', `"use strict"; return (${b.z});`); } catch {}
+              const wrap3d = (expr) => {
+                if (expr === undefined || expr === null) return () => 0;
+                const fn = this.compileAstFn(expr);
+                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+              };
+              const evalX = wrap3d(b.x), evalY = wrap3d(b.y), evalZ = wrap3d(b.z);
               const labelNode = (b.label && hasDomQuery) ? container.querySelector(b.label) : null;
               
               const item = {
