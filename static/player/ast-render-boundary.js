@@ -344,14 +344,8 @@
       };
 
       try {
-        const xmlDoc = parser.parseFromString(safeSvg, 'image/svg+xml');
-        if (xmlDoc && !xmlDoc.querySelector('parsererror')) {
-          mounted = tryMountDoc(xmlDoc);
-        }
-        if (!mounted) {
-          const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
-          mounted = tryMountDoc(htmlDoc);
-        }
+        const htmlDoc = parser.parseFromString(safeSvg, 'text/html');
+        mounted = tryMountDoc(htmlDoc);
       } catch (err) {
         if (typeof console !== 'undefined') {
           console.warn('[ASTSharedRenderBoundary] SVG mount fallback:', err);
