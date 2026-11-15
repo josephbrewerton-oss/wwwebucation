@@ -7498,33 +7498,57 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         user-select: none;
       `;
 
-      hud.innerHTML = `
-        <div style="font-weight: 700; color: #38bdf8; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;">
-          <span>⚡ Parameters</span>
-          <span style="font-size: 9px; color: #94a3b8; font-family: monospace;">AST AUTO</span>
-        </div>
-        ${inputs.map(inp => {
-          const vName = inp.var || inp.id;
-          const curVal = this.scene?.vars?.[vName] !== undefined ? this.scene.vars[vName] : (inp.val ?? inp.default ?? 0);
-          if (inp.type === 'switch' || typeof curVal === 'boolean') {
-            return `
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-                <span>${inp.label || vName}:</span>
-                <button id="hud-btn-${vName}" type="button" style="cursor:pointer; background:${curVal ? '#0284c7' : '#475569'}; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-weight:600; font-size:11px;">
-                  ${curVal ? 'CLOSED' : 'OPEN'}
-                </button>
-              </div>
-            `;
-          }
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
-              <span>${inp.label || vName}: <b id="hud-val-${vName}" style="color:#fde047;">${curVal}</b></span>
-              <input type="range" id="hud-inp-${vName}" min="${inp.min}" max="${inp.max}" step="${inp.step || 1}" value="${curVal}" style="cursor:pointer; width:90px;">
-            </div>
-          `;
-        }).join('')}
-      `;
+      hud.textContent = '';
 
+      const header = document.createElement('div');
+      header.style.cssText = 'font-weight: 700; color: #38bdf8; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;';
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = '⚡ Parameters';
+      const badgeSpan = document.createElement('span');
+      badgeSpan.style.cssText = 'font-size: 9px; color: #94a3b8; font-family: monospace;';
+      badgeSpan.textContent = 'AST AUTO';
+      header.append(titleSpan, badgeSpan);
+      hud.appendChild(header);
+
+      for (const inp of inputs) {
+        const vName = String(inp.var || inp.id || '');
+        const curVal = this.scene?.vars?.[vName] !== undefined ? this.scene.vars[vName] : (inp.val ?? inp.default ?? 0);
+        const row = document.createElement('div');
+        row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px;';
+
+        if (inp.type === 'switch' || typeof curVal === 'boolean') {
+          const labelSpan = document.createElement('span');
+          labelSpan.textContent = `${inp.label || vName}:`;
+
+          const btn = document.createElement('button');
+          btn.id = `hud-btn-${vName}`;
+          btn.type = 'button';
+          btn.style.cssText = `cursor:pointer; background:${curVal ? '#0284c7' : '#475569'}; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-weight:600; font-size:11px;`;
+          btn.textContent = curVal ? 'CLOSED' : 'OPEN';
+
+          row.append(labelSpan, btn);
+        } else {
+          const labelSpan = document.createElement('span');
+          labelSpan.append(`${inp.label || vName}: `);
+          const valBold = document.createElement('b');
+          valBold.id = `hud-val-${vName}`;
+          valBold.style.color = '#fde047';
+          valBold.textContent = String(curVal);
+          labelSpan.appendChild(valBold);
+
+          const rangeInp = document.createElement('input');
+          rangeInp.type = 'range';
+          rangeInp.id = `hud-inp-${vName}`;
+          if (inp.min !== undefined) rangeInp.min = String(inp.min);
+          if (inp.max !== undefined) rangeInp.max = String(inp.max);
+          rangeInp.step = String(inp.step || 1);
+          rangeInp.value = String(curVal);
+          rangeInp.style.cssText = 'cursor:pointer; width:90px;';
+
+          row.append(labelSpan, rangeInp);
+        }
+        hud.appendChild(row);
+      }
       hostEl.appendChild(hud);
 
       inputs.forEach(inp => {
