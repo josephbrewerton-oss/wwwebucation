@@ -183,6 +183,20 @@ export function renderHomePage(): HTMLElement {
           <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Start Practice Drills →</span>
         </a>
 
+        <!-- GCSE Exam Prep & Flashcards Card -->
+        <a href="${base}revision" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
+          <div>
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #f3e8ff; color: #7c3aed; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+              📝
+            </div>
+            <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">GCSE Exam Prep &amp; Flashcards</strong>
+            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+              AQA, Edexcel &amp; OCR 6-mark walkthroughs with mark schemes, active-recall flashcards, and audio spelling dictation.
+            </p>
+          </div>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #7c3aed;">Open Exam &amp; Flashcard Studio →</span>
+        </a>
+
         <!-- Lessons & Units Card -->
         <a href="${base}learning-zone" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>

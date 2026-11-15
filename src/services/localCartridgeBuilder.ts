@@ -550,3 +550,50 @@ export function downloadAstbBinary(id: string, bytes: Uint8Array): void {
     a.remove();
   }, 500);
 }
+
+/**
+ * Compiles a student/teacher remix Duo (.ast + .svg) into an .astb artifact,
+ * mounts it to the local IndexedDB Vault, and writes the matched files + bytecode
+ * into the nominated local folder if permission is active.
+ */
+export async function saveRemixDuoToNominatedFolder(params: {
+  id: string;
+  astText: string;
+  svgText: string;
+}): Promise<{
+  artifact: BuiltCartridgeArtifact;
+  wroteToFolder: boolean;
+  folderName: string | null;
+}> {
+  const artifact = await compileDuoToArtifact({
+    id: params.id,
+    astText: params.astText,
+    svgText: params.svgText,
+    modeOverride: params.svgText.trim() ? 'duo' : 'ast-only',
+  });
+
+  await mountBuiltArtifactToVault(artifact);
+
+  let wroteToFolder = false;
+  let folderName: string | null = null;
+  try {
+    const restored = await restoreNominatedFolder(false);
+    if (restored.handle && restored.permission === 'granted') {
+      folderName = restored.name || 'Nominated Folder';
+      await writeTextFileToDir(restored.handle, `${artifact.id}.ast`, params.astText);
+      if (params.svgText.trim()) {
+        await writeTextFileToDir(restored.handle, `${artifact.id}.svg`, params.svgText);
+      }
+      const bytecodeDir = await restored.handle.getDirectoryHandle('bytecode', { create: true });
+      await writeBinaryFileToDir(bytecodeDir, `${artifact.id}.astb`, artifact.astbData);
+      if (params.svgText.trim()) {
+        await writeTextFileToDir(bytecodeDir, `${artifact.id}.svg`, params.svgText);
+      }
+      wroteToFolder = true;
+    }
+  } catch {
+    wroteToFolder = false;
+  }
+
+  return { artifact, wroteToFolder, folderName };
+}

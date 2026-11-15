@@ -1534,6 +1534,23 @@ main#player-stage.dev-mode-active #scene-root * {
   overflow: hidden;
 }
 
+.dev-studio-main-split {
+  display: flex;
+  flex-direction: row;
+  width: 100%;
+  min-height: 0;
+}
+
+.dev-studio-editor-col {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
+}
+
 .dev-editor-textarea {
   width: 100%;
   height: 100%;
@@ -1549,6 +1566,168 @@ main#player-stage.dev-mode-active #scene-root * {
   white-space: pre;
   overflow: auto;
   tab-size: 2;
+  box-sizing: border-box;
+}
+
+.studio-save-as-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 14px;
+  background: #082f49;
+  border-bottom: 1px solid #0284c7;
+  flex-shrink: 0;
+}
+
+.studio-save-as-bar.hidden {
+  display: none !important;
+}
+
+.studio-save-as-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.studio-save-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #bae6fd;
+}
+
+.studio-save-field input {
+  background: #090d16;
+  border: 1px solid #38bdf8;
+  color: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-family: inherit;
+  min-width: 150px;
+}
+
+.remix-file-preview {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 10px;
+  color: #7dd3fc;
+  background: rgba(9, 13, 22, 0.7);
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.studio-save-as-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.studio-matcher-panel {
+  width: 280px;
+  flex-shrink: 0;
+  background: #0b1120;
+  border-left: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.studio-matcher-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid #1e293b;
+  background: #0f172a;
+}
+
+.studio-matcher-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 11px;
+}
+
+.matcher-section-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+  margin-bottom: 4px;
+}
+
+.matcher-row {
+  background: #0f172a;
+  border: 1px solid #1e293b;
+  border-radius: 6px;
+  padding: 6px 8px;
+  margin-bottom: 5px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.matcher-row.matched {
+  border-color: rgba(34, 197, 94, 0.35);
+}
+
+.matcher-row.missing {
+  border-color: rgba(245, 158, 11, 0.55);
+  background: rgba(120, 53, 15, 0.16);
+}
+
+.matcher-chip-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.matcher-svg-chip {
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  padding: 3px 7px;
+  border-radius: 5px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.matcher-svg-chip:hover {
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+.matcher-svg-chip.bound {
+  border-color: rgba(34, 197, 94, 0.45);
+  color: #86efac;
+}
+
+@media (max-width: 720px) {
+  .dev-studio-main-split {
+    flex-direction: column;
+  }
+  .studio-matcher-panel {
+    width: 100%;
+    max-height: 150px;
+    border-left: none;
+    border-top: 1px solid #1e293b;
+  }
 }
 
 .dev-template-list {

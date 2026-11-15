@@ -328,6 +328,10 @@ export function renderPlayerPage(): HTMLElement {
             🎛️ Lab Controls
           </button>
 
+          <button type="button" id="player-btn-remix-code" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#86efac; border:1px solid #16a34a; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open Code &amp; Remix Studio: inspect SVG shapes, edit AST/SlideScript, auto-match IDs, and Save As a new file">
+            💻 Remix &amp; Code
+          </button>
+
           <button type="button" id="player-btn-log-csv" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Save your lab results table to your local Jotter • Shift+Click to download as CSV">
             📊 Save Results to Jotter
           </button>
@@ -447,6 +451,7 @@ export function renderPlayerPage(): HTMLElement {
   const bslBtn = container.querySelector<HTMLButtonElement>('#player-btn-bsl');
   const aiTutorBtn = container.querySelector<HTMLButtonElement>('#player-btn-ai-tutor');
   const labDrawerBtn = container.querySelector<HTMLButtonElement>('#player-btn-lab-drawer');
+  const remixCodeBtn = container.querySelector<HTMLButtonElement>('#player-btn-remix-code');
   const diagnosticsBtn = container.querySelector<HTMLButtonElement>('#player-btn-diagnostics');
   const teacherToolsBtn = container.querySelector<HTMLButtonElement>('#player-btn-teacher-tools');
   const teacherToolsGroup = container.querySelector<HTMLDivElement>('#player-teacher-tools-group');
@@ -466,6 +471,8 @@ export function renderPlayerPage(): HTMLElement {
   type HostToPlayerMessage =
     | { type: 'SET_PRESET'; preset: string; play?: boolean }
     | { type: 'LOAD_CUSTOM_CARTRIDGE'; cartridge: CartridgeDefinition }
+    | { type: 'OPEN_STUDIO'; tab?: string; openSaveAs?: boolean }
+    | { type: 'REMIX_SAVED_ACK'; message: string }
     | { type: 'DISPATCH_ACTION'; action: string; args?: any[] }
     | { type: 'SET_VAR'; name: string; value: any }
     | { type: 'SET_VOICE'; enabled: boolean }
@@ -1364,6 +1371,65 @@ export function renderPlayerPage(): HTMLElement {
         } catch (_) {}
       }
     }
+    if (e.data.type === 'SAVE_REMIX_CARTRIDGE' && e.data.cartridge) {
+      const incoming = e.data.cartridge as CartridgeDefinition;
+      const exportMode = typeof e.data.exportMode === 'string' ? e.data.exportMode : 'vault';
+      if (incoming.id && incoming.astSource && incoming.svgMarkup) {
+        const cleanCart: CartridgeDefinition = {
+          id: incoming.id,
+          title: incoming.title || incoming.id,
+          stage: incoming.stage || 'CUSTOM REMIX',
+          type: (incoming.type as any) || 'Sim',
+          category: incoming.category || 'Student Remixes',
+          desc: incoming.desc || 'Custom student remix saved offline.',
+          icon: incoming.icon || '🧪',
+          source: 'user',
+          svgMarkup: incoming.svgMarkup,
+          astSource: incoming.astSource,
+          createdAt: incoming.createdAt || Date.now(),
+          updatedAt: Date.now(),
+        };
+        saveCustomCartridge(cleanCart);
+        activePreset = cleanCart.id;
+        if (titleEl) titleEl.textContent = cleanCart.title;
+        if (stageBadgeEl) stageBadgeEl.textContent = cleanCart.stage;
+        if (typeBadgeEl) typeBadgeEl.textContent = cleanCart.type || 'Sim';
+        refreshDropdown();
+        renderGrid();
+
+        const nextUrl = new URL(window.location.href);
+        nextUrl.searchParams.set('preset', cleanCart.id);
+        window.history.replaceState({}, '', nextUrl.toString());
+
+        import('../services/localCartridgeBuilder')
+          .then(async ({ saveRemixDuoToNominatedFolder, downloadAstbBinary }) => {
+            const res = await saveRemixDuoToNominatedFolder({
+              id: cleanCart.id,
+              astText: cleanCart.astSource || '',
+              svgText: cleanCart.svgMarkup || '',
+            });
+            if (exportMode === 'astb') {
+              downloadAstbBinary(res.artifact.id, res.artifact.astbData);
+            }
+            const ackMsg = res.wroteToFolder && res.folderName
+              ? `✓ Saved ${cleanCart.id}.ast + .svg + bytecode/.astb into "${res.folderName}" & Vault!`
+              : exportMode === 'astb'
+              ? `⚡ Compiled & downloaded ${res.artifact.id}.astb (${res.artifact.bytecodeBytes} B)`
+              : `✓ Saved "${cleanCart.title}" to offline Vault!`;
+            postToPlayer({ type: 'REMIX_SAVED_ACK', message: ackMsg });
+            if (remixCodeBtn) {
+              const prev = remixCodeBtn.textContent;
+              remixCodeBtn.textContent = `✓ Saved ${cleanCart.id}`;
+              remixCodeBtn.style.background = '#065f46';
+              setTimeout(() => {
+                remixCodeBtn.textContent = prev || '💻 Remix & Code';
+                remixCodeBtn.style.background = '#1e293b';
+              }, 2600);
+            }
+          })
+          .catch(() => {});
+      }
+    }
   });
 
   window.addEventListener('app-setting-changed', (e: any) => {
@@ -1394,6 +1460,11 @@ export function renderPlayerPage(): HTMLElement {
   labDrawerBtn?.addEventListener('click', () => {
     activeDrawer = activeDrawer === 'lab' ? null : 'lab';
     renderActiveDrawer();
+  });
+
+  remixCodeBtn?.addEventListener('click', () => {
+    postToPlayer({ type: 'OPEN_STUDIO', tab: 'ast' });
+    focusPlayerStage();
   });
 
   teacherToolsBtn?.addEventListener('click', () => {

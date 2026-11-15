@@ -223,6 +223,8 @@ export function renderLearningZonePage(): HTMLElement {
     const hasLessons = node.lessons && node.lessons.length > 0;
     const hasQuestions = node.questions && node.questions.length > 0;
 
+    const isGcse = node.stageId === 'ks4' || node.stageTitle.includes('Key Stage 4');
+
     return `
       <article class="curriculum-unit-card" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.5rem; box-shadow:0 2px 6px rgba(0,0,0,0.03); margin-bottom:1.25rem;">
         <!-- Header row -->
@@ -236,6 +238,11 @@ export function renderLearningZonePage(): HTMLElement {
               <span style="font-size:0.72rem; font-weight:700; color:#475569;">
                 ${node.subjectTitle}
               </span>
+              ${isGcse ? `
+                <span style="font-size:0.68rem; font-weight:800; color:#6d28d9; background:#f3e8ff; border:1px solid #ddd6fe; padding:1px 7px; border-radius:999px;">
+                  AQA &bull; Edexcel &bull; OCR
+                </span>
+              ` : ''}
               <span style="color:#cbd5e1;">&bull;</span>
               <span style="font-size:0.68rem; font-family:monospace; color:#94a3b8; font-weight:600;">
                 ${node.csn}
@@ -251,6 +258,14 @@ export function renderLearningZonePage(): HTMLElement {
             <button type="button" class="speak-axiom-btn" data-axiom="${encodeURIComponent(node.axiom)}" title="Read key idea aloud" style="padding:6px 10px; border-radius:6px; background:#f1f5f9; border:1px solid #e2e8f0; font-size:0.8rem; cursor:pointer; color:#475569;">
               🔊 Listen
             </button>
+            <a href="${base}revision?tab=flashcards&amp;deck=curriculum-mesh&amp;stage=${encodeURIComponent(node.stageTitle)}" title="Practise key ideas with active-recall flashcards" style="padding:6px 11px; border-radius:6px; background:#f5f3ff; border:1px solid #ddd6fe; color:#5b21b6; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+              <span>🃏 Flashcards</span>
+            </a>
+            ${isGcse ? `
+              <a href="${base}revision?tab=exam&amp;subject=${encodeURIComponent(node.subjectTitle.replace(/\s*\(.*\)/, ''))}" title="Practise GCSE 6-mark exam questions &amp; mark schemes" style="padding:6px 11px; border-radius:6px; background:#7c3aed; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
+                <span>📝 Exam Prep</span>
+              </a>
+            ` : ''}
             <a href="${base}practice-lab?stage=${encodeURIComponent(node.stageTitle)}&subject=${encodeURIComponent(node.subjectTitle)}&q=${encodeURIComponent(node.topicTitle)}" title="${hasCart ? 'Open Interactive Lab Activity' : 'Open Practice Lab'}" style="padding:6px 12px; border-radius:6px; background:${hasCart ? '#f0fdf4' : '#f8fafc'}; border:1px solid ${hasCart ? '#bbf7d0' : '#cbd5e1'}; color:${hasCart ? '#166534' : '#0f172a'}; text-decoration:none; font-weight:700; font-size:0.78rem; display:inline-flex; align-items:center; gap:5px;">
               <span>${hasCart ? '📊 Interactive Drill' : '🎯 Practice Lab'}</span>
             </a>

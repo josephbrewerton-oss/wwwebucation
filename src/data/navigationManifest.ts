@@ -35,6 +35,7 @@ export const CURRICULUM_LAB_ITEMS: NavRouteItem[] = [
   { id: 'lessons', path: 'learning-zone', label: 'Lessons & Units', icon: '📖', description: 'Oak National Curriculum syllabus' },
   { id: 'constellation', path: 'learning-zone?tab=constellation', label: 'Topic Map', icon: '✨', description: 'Visual map linking school subjects and topics' },
   { id: 'practice-lab', path: 'practice-lab', label: 'Practice Lab Drills', icon: '⚡', description: 'Diagnostic questions & misconception coaching' },
+  { id: 'revision', path: 'revision', label: 'GCSE Exam & Flashcards', icon: '📝', description: 'AQA, Edexcel & OCR mark schemes, flashcards & spelling' },
   { id: 'languages', path: 'languages', label: 'Languages & MFL', icon: '🌍', description: 'Polyglot verb wheels & pronunciation' },
   { id: 'phonics', path: 'phonics', label: 'EYFS / KS1 Phonics', icon: '🔤', description: 'Sound mats & synthetic phonics drills' },
   { id: 'shakespeare', path: 'shakespeare', label: 'Shakespeare Theatre', icon: '🎭', description: 'Interactive drama & textual analysis' },

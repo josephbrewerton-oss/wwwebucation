@@ -215,6 +215,18 @@ export function renderPracticePage(): HTMLElement {
         </div>
       </div>
 
+      <!-- Mode Switch Banner -->
+      <div style="background:#f5f3ff; border:1px solid #ddd6fe; border-radius:12px; padding:10px 16px; margin-bottom:1.25rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+        <span style="font-size:0.86rem; color:#4c1d95; font-weight:600;">
+          Preparing for GCSE or memorising key terms? Practise <strong>AQA / Edexcel / OCR</strong> 6-mark answers, flip flashcards, or try audio spelling.
+        </span>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <a href="${base}revision?tab=exam" style="padding:5px 12px; border-radius:8px; background:#7c3aed; color:#ffffff; text-decoration:none; font-size:0.78rem; font-weight:700;">📝 6-Mark Exam Prep</a>
+          <a href="${base}revision?tab=flashcards" style="padding:5px 12px; border-radius:8px; background:#ffffff; border:1px solid #c4b5fd; color:#5b21b6; text-decoration:none; font-size:0.78rem; font-weight:700;">🃏 Flashcards</a>
+          <a href="${base}revision?tab=dictation" style="padding:5px 12px; border-radius:8px; background:#ffffff; border:1px solid #c4b5fd; color:#5b21b6; text-decoration:none; font-size:0.78rem; font-weight:700;">🎧 Listen &amp; Spell</a>
+        </div>
+      </div>
+
       <!-- Filters Toolbar -->
       <section style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:2rem; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
         <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">

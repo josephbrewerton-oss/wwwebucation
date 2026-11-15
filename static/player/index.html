@@ -151,129 +151,176 @@
         <input type="number" id="dev-prop-strokew" class="dev-prop-input" min="0" max="20" step="0.5" />
 
         <span class="dev-prop-label">Opacity</span>
-        <input type="range" id="dev-prop-opacity" class="dev-prop-range" min="0" max="1" step="0.05" />
+        <div style="display:flex; gap:6px; align-items:center;">
+          <input type="range" id="dev-prop-opacity" class="dev-prop-range" min="0" max="1" step="0.05" style="flex:1;" />
+          <span id="dev-val-opacity" style="font-size:10px; font-family:monospace; color:#38bdf8; min-width:28px;">1.00</span>
+        </div>
 
         <span class="dev-prop-label">Transform</span>
         <input type="text" id="dev-prop-transform" class="dev-prop-input" />
       </div>
 
-      <div class="dev-drawer-actions">
-        <button type="button" id="dev-btn-export-ast" class="dev-btn">📋 Copy S-Expr</button>
-        <button type="button" id="dev-btn-delete" class="dev-btn danger">🗑️ Delete Node</button>
+      <div id="dev-active-bindings" style="font-size:10px; color:#94a3b8; border-top:1px solid #334155; padding-top:6px;"></div>
+
+      <div class="dev-action-btn-row">
+        <button type="button" id="btn-copy-selector" class="dev-btn">📋 #ID</button>
+        <button type="button" id="dev-btn-export-ast" class="dev-btn">📋 Copy Rule</button>
+        <button type="button" id="btn-bind-to-studio" class="dev-btn primary">🔗 Bind in Studio</button>
+        <button type="button" id="dev-btn-delete" class="dev-btn danger">🗑️ Delete</button>
       </div>
     </div>
 
-    <!-- Live SVG / AST Developer Studio Panel -->
-    <div id="dev-studio-panel" class="dev-studio-panel hidden">
-      <div class="dev-studio-header">
+    <!-- Live SVG / AST Developer Studio Drawer -->
+    <div id="dev-studio-drawer" class="dev-studio-drawer hidden">
+      <div class="dev-studio-bar">
         <div class="dev-studio-tabs">
-          <button type="button" class="dev-studio-tab active" data-tab="slidescript">📝 SlideScript</button>
-          <button type="button" class="dev-studio-tab" data-tab="quizbuilder">🎯 Checkpoints</button>
-          <button type="button" class="dev-studio-tab" data-tab="svg">Interactive SVG</button>
-          <button type="button" class="dev-studio-tab" data-tab="ast">AST S-Expressions</button>
-          <button type="button" class="dev-studio-tab" data-tab="templates">Curriculum Templates</button>
+          <button type="button" class="dev-tab-btn active" data-tab="compiler">📝 SlideScript</button>
+          <button type="button" class="dev-tab-btn" data-tab="quizbuilder">🎯 Checkpoints</button>
+          <button type="button" class="dev-tab-btn" data-tab="svg">🎨 SVG</button>
+          <button type="button" class="dev-tab-btn" data-tab="ast">📜 AST</button>
+          <button type="button" class="dev-tab-btn" data-tab="templates">📚 Starters</button>
         </div>
-        <div style="display:flex; gap:8px; align-items:center;">
-          <button type="button" id="btn-studio-export-spa" class="dev-btn" title="Export current live simulation as an autonomous SVG applet">🚀 Export Capsule</button>
-          <button type="button" id="dev-btn-apply" class="dev-btn primary">⚡ Hot Reload</button>
-          <button type="button" id="dev-studio-close" class="dev-drawer-close">&times;</button>
+        <div style="display:flex; gap:6px; align-items:center; flex-wrap:wrap;">
+          <button type="button" id="btn-studio-run" class="dev-btn primary" title="Run & Hot-Reload Live Stage">⚡ Run</button>
+          <button type="button" id="btn-decompile-ast" class="dev-btn" title="Convert active AST scene into plain-English SlideScript">🔄 SlideScript</button>
+          <button type="button" id="btn-studio-save-as" class="dev-btn" style="background:#065f46; border-color:#10b981; color:#ffffff;" title="Save your modified cartridge under a new name & paired files">💾 Save Remix As…</button>
+          <button type="button" id="btn-studio-export-spa" class="dev-btn" title="Export current live simulation as an autonomous .ast.svg capsule">🚀 .ast.svg</button>
+          <button type="button" id="btn-studio-reset" class="dev-btn" title="Reset edits back to original loaded cartridge">↺ Reset</button>
+          <button type="button" id="dev-studio-close" class="dev-drawer-close" title="Close Studio">&times;</button>
         </div>
       </div>
 
-      <div class="dev-studio-body">
-        <!-- Natural Curriculum SlideScript Tab -->
-        <div id="dev-slidescript-tab" class="dev-tab-pane" style="display:flex; flex-direction:column; width:100%; height:100%; box-sizing:border-box;">
-          <div class="compiler-toolbar">
-            <span style="font-weight:700; font-size:12px; color:#38bdf8;">Natural Text Curriculum SlideScript:</span>
-            <button type="button" class="compiler-tpl-btn" data-tpl="photosynthesis">🌿 Photosynthesis</button>
-            <button type="button" class="compiler-tpl-btn" data-tpl="boyle-law">🔬 Boyle's Gas Law</button>
-            <button type="button" class="compiler-tpl-btn" data-tpl="force-vectors">🏎️ Force Vectors</button>
-            <button type="button" class="compiler-tpl-btn" data-tpl="osmosis">💧 Osmosis</button>
-            <span class="compiler-syntax-pill">Syntax: # Title | ## Step (time) | Rule: | Subtitles: | ## Checkpoint: | - Option [correct]</span>
-          </div>
-          <textarea id="dev-editor-slidescript" class="dev-editor-textarea" spellcheck="false" placeholder="# Title of your slide&#10;Stage: KS3 SCIENCE&#10;Duration: 10s&#10;&#10;## Step 1: Initial Principle (0s)&#10;Rule: High volume means lower collision frequency.&#10;Subtitles: Watch particles move within the open space.&#10;&#10;## Step 2: Mechanical Compression (4s)&#10;Rule: Halving the volume doubles the pressure!&#10;Subtitles: Notice the collision rate multiply.&#10;&#10;## Checkpoint: Conceptual Mastery (7s)&#10;Question: If container volume is reduced by half, what happens to pressure?&#10;- It halves&#10;- It doubles [correct]&#10;- It stays constant&#10;Explain: Boyle's Law states pressure is inversely proportional to volume."></textarea>
+      <!-- Inline Save Remix As / File Export Bar -->
+      <div id="studio-save-as-bar" class="studio-save-as-bar hidden">
+        <div class="studio-save-as-fields">
+          <label class="studio-save-field">
+            <span>New Title</span>
+            <input type="text" id="remix-title-input" placeholder="e.g. Pythagoras Theorem (My Remix)" />
+          </label>
+          <label class="studio-save-field">
+            <span>New File ID</span>
+            <input type="text" id="remix-id-input" placeholder="e.g. pythagoras-my-remix" />
+          </label>
+          <span id="remix-file-preview" class="remix-file-preview">→ my-remix.ast + my-remix.svg</span>
         </div>
+        <div class="studio-save-as-actions">
+          <button type="button" id="btn-remix-save-vault" class="dev-btn primary" title="Save copy to local Vault without altering original">💾 Save to Vault</button>
+          <button type="button" id="btn-remix-save-duo" class="dev-btn" style="background:#065f46; border-color:#10b981; color:#fff;" title="Save matched .ast + .svg pair as new files">📦 Save .ast + .svg</button>
+          <button type="button" id="btn-remix-save-astb" class="dev-btn" style="background:#312e81; border-color:#6366f1; color:#e0e7ff;" title="Compile matched duo into .astb bytecode">⚡ Save .astb</button>
+          <button type="button" id="btn-remix-cancel" class="dev-btn">Cancel</button>
+        </div>
+      </div>
 
-        <!-- Visual Checkpoint Builder Tab -->
-        <div id="dev-quizbuilder-tab" class="dev-tab-pane" style="display:none; width:100%; height:100%; overflow-y:auto; padding:12px; box-sizing:border-box;">
-          <div class="quizbuilder-container">
-            <div class="quizbuilder-card">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <span style="font-weight:700; font-size:13px; color:#38bdf8;">🎯 Create Active Teaching Checkpoint Challenge</span>
-                <span style="font-size:11px; color:#94a3b8;">Pauses lesson and checks understanding</span>
-              </div>
+      <div class="dev-studio-content dev-studio-main-split">
+        <div class="dev-studio-editor-col">
+          <!-- Natural Curriculum SlideScript Tab -->
+          <div id="dev-compiler-tab" class="dev-tab-pane" style="display:flex; flex-direction:column; width:100%; height:100%; box-sizing:border-box;">
+            <div class="compiler-toolbar">
+              <span style="font-weight:700; font-size:12px; color:#38bdf8;">SlideScript:</span>
+              <button type="button" class="compiler-tpl-btn" data-tpl="photosynthesis">🌿 Photosynthesis</button>
+              <button type="button" class="compiler-tpl-btn" data-tpl="boyle-law">🔬 Boyle's Gas Law</button>
+              <button type="button" class="compiler-tpl-btn" data-tpl="force-vectors">🏎️ Force Vectors</button>
+              <button type="button" class="compiler-tpl-btn" data-tpl="osmosis">💧 Osmosis</button>
+              <span class="compiler-syntax-pill">Syntax: # Title | ## Step (time) | Rule: | Subtitles: | ## Checkpoint:</span>
+            </div>
+            <textarea id="dev-editor-slidescript" class="dev-editor-textarea" spellcheck="false" placeholder="# Title of your slide&#10;Stage: KS3 SCIENCE&#10;Duration: 10s&#10;&#10;## Step 1: Initial Principle (0s)&#10;Rule: High volume means lower collision frequency.&#10;Subtitles: Watch particles move within the open space.&#10;&#10;## Step 2: Mechanical Compression (4s)&#10;Rule: Halving the volume doubles the pressure!&#10;Subtitles: Notice the collision rate multiply.&#10;&#10;## Checkpoint: Conceptual Mastery (7s)&#10;Question: If container volume is reduced by half, what happens to pressure?&#10;- It halves&#10;- It doubles [correct]&#10;- It stays constant&#10;Explain: Boyle's Law states pressure is inversely proportional to volume."></textarea>
+          </div>
 
-              <div class="quizbuilder-grid">
-                <div class="quizbuilder-row">
-                  <label class="quiz-label">Timestamp (t: 0.0 to 1.0):</label>
-                  <div style="display:flex; gap:6px; align-items:center;">
-                    <input type="number" id="qb-time" class="quiz-input" min="0" max="1" step="0.05" value="0.5" style="width:90px;" />
-                    <button type="button" id="qb-btn-capture-time" class="dev-btn" style="font-size:10px; padding:4px 8px;">📍 Capture Playhead</button>
-                    <span id="qb-time-seconds" style="font-size:11px; color:#94a3b8;">(= 5.0s)</span>
+          <!-- Visual Checkpoint Builder Tab -->
+          <div id="dev-quizbuilder-tab" class="dev-tab-pane" style="display:none; width:100%; height:100%; overflow-y:auto; padding:12px; box-sizing:border-box;">
+            <div class="quizbuilder-container">
+              <div class="quizbuilder-card">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                  <span style="font-weight:700; font-size:13px; color:#38bdf8;">🎯 Create Active Teaching Checkpoint Challenge</span>
+                  <span style="font-size:11px; color:#94a3b8;">Pauses lesson and checks understanding</span>
+                </div>
+
+                <div class="quizbuilder-grid">
+                  <div class="quizbuilder-row">
+                    <label class="quiz-label">Timestamp (t: 0.0 to 1.0):</label>
+                    <div style="display:flex; gap:6px; align-items:center;">
+                      <input type="number" id="qb-time" class="quiz-input" min="0" max="1" step="0.05" value="0.5" style="width:90px;" />
+                      <button type="button" id="qb-btn-capture-time" class="dev-btn" style="font-size:10px; padding:4px 8px;">📍 Capture Playhead</button>
+                      <span id="qb-time-seconds" style="font-size:11px; color:#94a3b8;">(= 5.0s)</span>
+                    </div>
+                  </div>
+
+                  <div class="quizbuilder-row">
+                    <label class="quiz-label">Station / Checkpoint Title:</label>
+                    <input type="text" id="qb-title" class="quiz-input" placeholder="e.g. Concept Mastery Check" value="Concept Mastery Check" />
+                  </div>
+
+                  <div class="quizbuilder-row">
+                    <label class="quiz-label">Question / Prompt:</label>
+                    <textarea id="qb-prompt" class="quiz-textarea" rows="2" placeholder="e.g. What happens to the vehicle velocity when forward thrust exceeds friction?"></textarea>
+                  </div>
+
+                  <div class="quizbuilder-row">
+                    <label class="quiz-label">Multiple-Choice Options (Select Radio for Correct):</label>
+                    <div class="quiz-options-list">
+                      <div class="quiz-opt-item">
+                        <input type="radio" name="qb-opt-correct" value="0" checked />
+                        <input type="text" id="qb-opt-0" class="quiz-input" placeholder="Option 1 (e.g. It accelerates forward)" />
+                      </div>
+                      <div class="quiz-opt-item">
+                        <input type="radio" name="qb-opt-correct" value="1" />
+                        <input type="text" id="qb-opt-1" class="quiz-input" placeholder="Option 2 (e.g. It decelerates and stops)" />
+                      </div>
+                      <div class="quiz-opt-item">
+                        <input type="radio" name="qb-opt-correct" value="2" />
+                        <input type="text" id="qb-opt-2" class="quiz-input" placeholder="Option 3 (e.g. It remains stationary)" />
+                      </div>
+                      <div class="quiz-opt-item">
+                        <input type="radio" name="qb-opt-correct" value="3" />
+                        <input type="text" id="qb-opt-3" class="quiz-input" placeholder="Option 4 (optional)" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="quizbuilder-row">
+                    <label class="quiz-label">Pedagogical Explanation / Feedback:</label>
+                    <textarea id="qb-explanation" class="quiz-textarea" rows="2" placeholder="e.g. Unbalanced forces create a net resultant force, producing acceleration according to Newton's Second Law (F = m · a)."></textarea>
                   </div>
                 </div>
 
-                <div class="quizbuilder-row">
-                  <label class="quiz-label">Station / Checkpoint Title:</label>
-                  <input type="text" id="qb-title" class="quiz-input" placeholder="e.g. Concept Mastery Check" value="Concept Mastery Check" />
-                </div>
-
-                <div class="quizbuilder-row">
-                  <label class="quiz-label">Question / Prompt:</label>
-                  <textarea id="qb-prompt" class="quiz-textarea" rows="2" placeholder="e.g. What happens to the vehicle velocity when forward thrust exceeds friction?"></textarea>
-                </div>
-
-                <div class="quizbuilder-row">
-                  <label class="quiz-label">Multiple-Choice Options (Select Radio for Correct):</label>
-                  <div class="quiz-options-list">
-                    <div class="quiz-opt-item">
-                      <input type="radio" name="qb-opt-correct" value="0" checked />
-                      <input type="text" id="qb-opt-0" class="quiz-input" placeholder="Option 1 (e.g. It accelerates forward)" />
-                    </div>
-                    <div class="quiz-opt-item">
-                      <input type="radio" name="qb-opt-correct" value="1" />
-                      <input type="text" id="qb-opt-1" class="quiz-input" placeholder="Option 2 (e.g. It decelerates and stops)" />
-                    </div>
-                    <div class="quiz-opt-item">
-                      <input type="radio" name="qb-opt-correct" value="2" />
-                      <input type="text" id="qb-opt-2" class="quiz-input" placeholder="Option 3 (e.g. It remains stationary)" />
-                    </div>
-                    <div class="quiz-opt-item">
-                      <input type="radio" name="qb-opt-correct" value="3" />
-                      <input type="text" id="qb-opt-3" class="quiz-input" placeholder="Option 4 (optional)" />
-                    </div>
-                  </div>
-                </div>
-
-                <div class="quizbuilder-row">
-                  <label class="quiz-label">Pedagogical Explanation / Feedback:</label>
-                  <textarea id="qb-explanation" class="quiz-textarea" rows="2" placeholder="e.g. Unbalanced forces create a net resultant force, producing acceleration according to Newton's Second Law (F = m · a)."></textarea>
+                <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
+                  <button type="button" id="qb-btn-insert" class="dev-btn primary" style="padding:6px 16px;">➕ Inject Checkpoint into Active Slide</button>
                 </div>
               </div>
 
-              <div style="margin-top:12px; display:flex; justify-content:flex-end; gap:8px;">
-                <button type="button" id="qb-btn-insert" class="dev-btn primary" style="padding:6px 16px;">➕ Inject Checkpoint into Active Slide</button>
-              </div>
-            </div>
-
-            <!-- Existing Checkpoints in Current Slide -->
-            <div class="quizbuilder-existing">
-              <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">Current Checkpoints in Active Slide</div>
-              <div id="qb-existing-list" style="display:flex; flex-direction:column; gap:6px;">
-                <!-- Populated dynamically -->
+              <!-- Existing Checkpoints in Current Slide -->
+              <div class="quizbuilder-existing">
+                <div style="font-size:11px; font-weight:700; color:#94a3b8; text-transform:uppercase; margin-bottom:6px;">Current Checkpoints in Active Slide</div>
+                <div id="qb-existing-list" style="display:flex; flex-direction:column; gap:6px;">
+                  <!-- Populated dynamically -->
+                </div>
               </div>
             </div>
           </div>
+
+          <!-- SVG Code Tab -->
+          <textarea id="dev-editor-svg" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Paste or edit raw &lt;svg&gt; XML nodes here..."></textarea>
+
+          <!-- AST Code Tab -->
+          <textarea id="dev-editor-ast" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Write or edit AST S-Expressions here (:scene :id ... (:bindings ...))"></textarea>
+
+          <!-- Templates Tab -->
+          <div id="dev-template-tab" class="dev-template-list" style="display:none;"></div>
         </div>
 
-        <!-- SVG Code Tab -->
-        <textarea id="dev-editor-svg" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Paste or edit raw &lt;svg&gt; XML nodes here..."></textarea>
-
-        <!-- AST Code Tab -->
-        <textarea id="dev-editor-ast" class="dev-editor-textarea" style="display:none;" spellcheck="false" placeholder="Write or edit AST S-Expressions here (:scene :id ... (:bindings ...))"></textarea>
-
-        <!-- Templates Tab -->
-        <div id="dev-template-tab" class="dev-template-list" style="display:none;"></div>
+        <!-- Live .ast <-> .svg Auto-Matcher Sidecar -->
+        <aside id="studio-matcher-panel" class="studio-matcher-panel">
+          <div class="studio-matcher-header">
+            <div>
+              <div style="font-size:11px; font-weight:800; color:#38bdf8; letter-spacing:0.03em;">🔗 .ast ↔ .svg Matcher</div>
+              <div id="matcher-summary-badge" style="font-size:10px; color:#94a3b8; margin-top:2px;">Scanning selectors...</div>
+            </div>
+            <button type="button" id="btn-matcher-autofix-all" class="dev-btn" style="font-size:10px; padding:3px 7px;" title="Auto-match missing AST targets to closest SVG IDs or create missing SVG shapes">✨ Fix All</button>
+          </div>
+          <div id="matcher-body" class="studio-matcher-body">
+            <!-- Populated dynamically by player-ui.js -->
+          </div>
+        </aside>
       </div>
     </div>
 
