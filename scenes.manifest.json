@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-16T20:34:49.536Z",
+  "generatedAt": "2026-11-16T20:42:25.758Z",
   "totalScenes": 71,
   "inputDirs": [
     "static/cartridges",
@@ -635,7 +635,7 @@
       "type": "App",
       "title": "Math Pond: Number Bonds Fishing Game",
       "stage": "KS1/KS2 MATHS",
-      "duration": 28,
+      "duration": 40,
       "oakId": "OAK-KS1-MAT-007",
       "oakUnit": "ks1-maths-arithmetic-number-bonds",
       "subject": "Mathematics",
