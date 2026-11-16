@@ -2,6 +2,7 @@
 Copyright (c) 2026 Joseph Brewerton
 Licensed under GNU AGPLv3 / Commercial Dual-License.
 -->
+### 🚀 [Open St Joseph's Curriculum Portal Live](https://josephbrewerton-oss.github.io/wwwebucation/)
 
 # ⚡ St Joseph's Edge Learning Engine & AST Vector Suite
 
