@@ -2074,17 +2074,58 @@
       requestAnimationFrame(animRing);
     }
 
+    _svgNode(tag, attrs, text) {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          if (v !== undefined && v !== null) el.setAttribute(k, String(v));
+        }
+      }
+      if (text !== undefined && text !== null) el.textContent = String(text);
+      return el;
+    }
+
+    _appendFishParts(g, val, color) {
+      g.appendChild(this._svgNode('polygon', {
+        class: 'fish-tail',
+        points: '-22,0 -34,-10 -34,10',
+        fill: color
+      }));
+      g.appendChild(this._svgNode('ellipse', {
+        cx: 0, cy: 0, rx: 22, ry: 13,
+        fill: color, stroke: '#ffffff', 'stroke-width': '1.5'
+      }));
+      g.appendChild(this._svgNode('circle', { cx: 12, cy: -4, r: 3, fill: '#ffffff' }));
+      g.appendChild(this._svgNode('circle', { cx: 13, cy: -4, r: 1.5, fill: '#000000' }));
+
+      const dots = this.getSubitisingDotPoints(val);
+      if (dots.length > 0) {
+        const dotsG = this._svgNode('g', { transform: 'translate(-1, 0)', opacity: '0.85' });
+        for (let dIdx = 0; dIdx < dots.length; dIdx++) {
+          dotsG.appendChild(this._svgNode('circle', {
+            cx: dots[dIdx].cx, cy: dots[dIdx].cy, r: 1.5, fill: '#ffffff'
+          }));
+        }
+        g.appendChild(dotsG);
+      }
+
+      g.appendChild(this._svgNode('circle', { cx: 0, cy: 0, r: 10, fill: '#0f172a', opacity: '0.8' }));
+      g.appendChild(this._svgNode('text', {
+        x: 0, y: 4, fill: '#ffffff', 'font-size': 12, 'font-weight': 900, 'text-anchor': 'middle'
+      }, val));
+    }
+
     updateTenFrameHud(sum, targetSum, caughtList) {
       const tfGroup = this.stageSvg && this.stageSvg.querySelector('#ten-frame-group');
       if (!tfGroup) return;
 
-      tfGroup.innerHTML = '';
+      if (typeof tfGroup.replaceChildren === 'function') tfGroup.replaceChildren();
+      else tfGroup.textContent = '';
       const totalSlots = Math.min(20, Math.max(5, targetSum));
 
       // Build color map for catches
       const catchColors = ['#fb923c', '#38bdf8', '#34d399', '#f472b6', '#a855f7'];
       let slotColors = [];
-      let currentVal = 0;
       if (Array.isArray(caughtList)) {
         caughtList.forEach((cVal, cIdx) => {
           const col = catchColors[cIdx % catchColors.length];
@@ -2099,32 +2140,35 @@
         const slotWidth = Math.floor(410 / totalSlots) - 4;
         const slotHeight = 22;
         for (let i = 0; i < totalSlots; i++) {
-          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+          const g = this._svgNode('g');
           const isFilled = i < sum;
           const col = slotColors[i] || '#38bdf8';
           const x = i * (slotWidth + 4);
 
-          g.innerHTML = `
-            <rect x="${x}" y="0" width="${slotWidth}" height="${slotHeight}" rx="4"
-                  fill="${isFilled ? col : '#1e293b'}"
-                  fill-opacity="${isFilled ? '0.9' : '0.6'}"
-                  stroke="${isFilled ? '#ffffff' : '#334155'}"
-                  stroke-width="${isFilled ? '1.5' : '1'}"
-                  stroke-dasharray="${isFilled ? 'none' : '3 2'}" />
-            ${isFilled ? `<circle cx="${x + slotWidth / 2}" cy="11" r="5" fill="#ffffff" />` : `<text x="${x + slotWidth / 2}" y="15" fill="#64748b" font-size="9" font-weight="700" text-anchor="middle">${i + 1}</text>`}
-          `;
+          g.appendChild(this._svgNode('rect', {
+            x, y: 0, width: slotWidth, height: slotHeight, rx: 4,
+            fill: isFilled ? col : '#1e293b',
+            'fill-opacity': isFilled ? '0.9' : '0.6',
+            stroke: isFilled ? '#ffffff' : '#334155',
+            'stroke-width': isFilled ? '1.5' : '1',
+            'stroke-dasharray': isFilled ? 'none' : '3 2'
+          }));
+          if (isFilled) {
+            g.appendChild(this._svgNode('circle', {
+              cx: x + slotWidth / 2, cy: 11, r: 5, fill: '#ffffff'
+            }));
+          } else {
+            g.appendChild(this._svgNode('text', {
+              x: x + slotWidth / 2, y: 15, fill: '#64748b', 'font-size': 9, 'font-weight': 700, 'text-anchor': 'middle'
+            }, i + 1));
+          }
           tfGroup.appendChild(g);
         }
 
         // Summary readout
-        const info = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        info.setAttribute('x', '435');
-        info.setAttribute('y', '15');
-        info.setAttribute('fill', sum === targetSum ? '#facc15' : '#38bdf8');
-        info.setAttribute('font-size', '10.5');
-        info.setAttribute('font-weight', '800');
-        info.textContent = `${sum} / ${targetSum}`;
-        tfGroup.appendChild(info);
+        tfGroup.appendChild(this._svgNode('text', {
+          x: 435, y: 15, fill: sum === targetSum ? '#facc15' : '#38bdf8', 'font-size': 10.5, 'font-weight': 800
+        }, `${sum} / ${targetSum}`));
 
       } else {
         // Double Ten-Frame (2 rows of 10 for target = 20)
@@ -2138,25 +2182,24 @@
           const isFilled = i < sum;
           const col = slotColors[i] || '#38bdf8';
 
-          const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
-          g.innerHTML = `
-            <rect x="${x}" y="${y}" width="${slotWidth}" height="${slotHeight}" rx="3"
-                  fill="${isFilled ? col : '#1e293b'}"
-                  stroke="${isFilled ? '#ffffff' : '#334155'}"
-                  stroke-width="${isFilled ? '1.2' : '1'}" />
-            ${isFilled ? `<circle cx="${x + slotWidth / 2}" cy="${y + 5.5}" r="3.5" fill="#ffffff" />` : ''}
-          `;
+          const g = this._svgNode('g');
+          g.appendChild(this._svgNode('rect', {
+            x, y, width: slotWidth, height: slotHeight, rx: 3,
+            fill: isFilled ? col : '#1e293b',
+            stroke: isFilled ? '#ffffff' : '#334155',
+            'stroke-width': isFilled ? '1.2' : '1'
+          }));
+          if (isFilled) {
+            g.appendChild(this._svgNode('circle', {
+              cx: x + slotWidth / 2, cy: y + 5.5, r: 3.5, fill: '#ffffff'
+            }));
+          }
           tfGroup.appendChild(g);
         }
 
-        const info = document.createElementNS('http://www.w3.org/2000/svg', 'text');
-        info.setAttribute('x', '425');
-        info.setAttribute('y', '18');
-        info.setAttribute('fill', sum === targetSum ? '#facc15' : '#38bdf8');
-        info.setAttribute('font-size', '10.5');
-        info.setAttribute('font-weight', '800');
-        info.textContent = `${sum} / ${targetSum}`;
-        tfGroup.appendChild(info);
+        tfGroup.appendChild(this._svgNode('text', {
+          x: 425, y: 18, fill: sum === targetSum ? '#facc15' : '#38bdf8', 'font-size': 10.5, 'font-weight': 800
+        }, `${sum} / ${targetSum}`));
       }
     }
 
@@ -2231,20 +2274,7 @@
         const newIdx = el.fishEls.length;
         g.setAttribute('data-fish-idx', String(newIdx));
 
-        const dots = this.getSubitisingDotPoints(val);
-        const dotsSvg = dots.length > 0
-          ? `<g transform="translate(-1, 0)" opacity="0.85">${dots.map(d => `<circle cx="${d.cx}" cy="${d.cy}" r="1.5" fill="#ffffff" />`).join('')}</g>`
-          : '';
-
-        g.innerHTML = `
-          <polygon class="fish-tail" points="-22,0 -34,-10 -34,10" fill="${color}" />
-          <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="12" cy="-4" r="3" fill="#ffffff" />
-          <circle cx="13" cy="-4" r="1.5" fill="#000000" />
-          ${dotsSvg}
-          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.8" />
-          <text x="0" y="4" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle">${val}</text>
-        `;
+        this._appendFishParts(g, val, color);
         fishGroup.appendChild(g);
 
         const startX = Math.random() > 0.5 ? 70 : 730;
@@ -2814,7 +2844,8 @@
         if (!this._undoStack) this._undoStack = [];
         this._undoStack.push(...this.strokes);
       }
-      this.inkRoot.innerHTML = '';
+      if (typeof this.inkRoot.replaceChildren === 'function') this.inkRoot.replaceChildren();
+      else this.inkRoot.textContent = '';
       this.strokes = [];
       this.persistInkToSession();
       this.playAudioTone(440, 'triangle', 0.1);
@@ -2872,7 +2903,8 @@ ${strokeLines.join('\n')}
       if (!this.inkRoot) return 0;
 
       if (options.clearExisting !== false) {
-        this.inkRoot.innerHTML = '';
+        if (typeof this.inkRoot.replaceChildren === 'function') this.inkRoot.replaceChildren();
+        else this.inkRoot.textContent = '';
         this.strokes = [];
       }
 
@@ -3013,7 +3045,8 @@ ${strokeLines.join('\n')}
       if (!this.inkRoot) return 0;
 
       if (options.clearExisting !== false) {
-        this.inkRoot.innerHTML = '';
+        if (typeof this.inkRoot.replaceChildren === 'function') this.inkRoot.replaceChildren();
+        else this.inkRoot.textContent = '';
         this.strokes = [];
       }
 
@@ -3385,7 +3418,7 @@ ${strokeLines.join('\n')}
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.title = title;
-      btn.innerHTML = icon;
+      btn.textContent = icon;
       btn.style.cssText = `
         background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.12);
@@ -3792,16 +3825,16 @@ ${strokeLines.join('\n')}
           badgeA.setAttribute('y', String(originY - sideALen / 2 - 13));
         }
         if (gridA) {
-          let linesA = '';
+          const linesA = [];
           if (clampedA <= 15) {
             for (let i = 1; i < clampedA; i++) {
-              const lx = originX - sideALen + i * s;
-              const ly = vertAy + i * s;
-              linesA += `<line x1="${lx.toFixed(1)}" y1="${vertAy.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${originY.toFixed(1)}" />`;
-              linesA += `<line x1="${(originX - sideALen).toFixed(1)}" y1="${ly.toFixed(1)}" x2="${originX.toFixed(1)}" y2="${ly.toFixed(1)}" />`;
+              const lx = (originX - sideALen + i * s).toFixed(1);
+              const ly = (vertAy + i * s).toFixed(1);
+              linesA.push(this._svgNode('line', { x1: lx, y1: vertAy.toFixed(1), x2: lx, y2: originY.toFixed(1) }));
+              linesA.push(this._svgNode('line', { x1: (originX - sideALen).toFixed(1), y1: ly, x2: originX.toFixed(1), y2: ly }));
             }
           }
-          gridA.innerHTML = linesA;
+          gridA.replaceChildren(...linesA);
         }
 
         // 3. Square B (extends down from horizontal leg b: area = b²)
@@ -3834,16 +3867,16 @@ ${strokeLines.join('\n')}
           badgeB.setAttribute('y', String(originY + sideBLen / 2 - 13));
         }
         if (gridB) {
-          let linesB = '';
+          const linesB = [];
           if (clampedB <= 15) {
             for (let i = 1; i < clampedB; i++) {
-              const lx = originX + i * s;
-              const ly = originY + i * s;
-              linesB += `<line x1="${lx.toFixed(1)}" y1="${originY.toFixed(1)}" x2="${lx.toFixed(1)}" y2="${(originY + sideBLen).toFixed(1)}" />`;
-              linesB += `<line x1="${originX.toFixed(1)}" y1="${ly.toFixed(1)}" x2="${(originX + sideBLen).toFixed(1)}" y2="${ly.toFixed(1)}" />`;
+              const lx = (originX + i * s).toFixed(1);
+              const ly = (originY + i * s).toFixed(1);
+              linesB.push(this._svgNode('line', { x1: lx, y1: originY.toFixed(1), x2: lx, y2: (originY + sideBLen).toFixed(1) }));
+              linesB.push(this._svgNode('line', { x1: originX.toFixed(1), y1: ly, x2: (originX + sideBLen).toFixed(1), y2: ly }));
             }
           }
-          gridB.innerHTML = linesB;
+          gridB.replaceChildren(...linesB);
         }
 
         // 4. Square C on hypotenuse (Exact area = a² + b² = c²)
@@ -3890,18 +3923,18 @@ ${strokeLines.join('\n')}
           badgeC.setAttribute('y', String((-cPx / 2 - 14).toFixed(1)));
         }
         if (gridC) {
-          let linesC = '';
+          const linesC = [];
           // Only render discrete unit tiles when c is an integer triple (e.g. 5, 10, 13, 15, 17)
           // To avoid confusing students with rounded tiles on irrational lengths (e.g. √18)
           if (isIntC && cInt <= 17) {
             const stepSize = s; // Exact same unit scale s as legs a & b!
             for (let i = 1; i < cInt; i++) {
               const pos = i * stepSize;
-              linesC += `<line x1="${pos.toFixed(1)}" y1="${(-cPx).toFixed(1)}" x2="${pos.toFixed(1)}" y2="0" />`;
-              linesC += `<line x1="0" y1="${(-cPx + pos).toFixed(1)}" x2="${cPx.toFixed(1)}" y2="${(-cPx + pos).toFixed(1)}" />`;
+              linesC.push(this._svgNode('line', { x1: pos.toFixed(1), y1: (-cPx).toFixed(1), x2: pos.toFixed(1), y2: '0' }));
+              linesC.push(this._svgNode('line', { x1: '0', y1: (-cPx + pos).toFixed(1), x2: cPx.toFixed(1), y2: (-cPx + pos).toFixed(1) }));
             }
           }
-          gridC.innerHTML = linesC;
+          gridC.replaceChildren(...linesC);
         }
 
         // 5. Manipulator Handles A & B
@@ -3987,11 +4020,17 @@ ${strokeLines.join('\n')}
         // 7. Banner formula text with exact algebraic consistency
         const banner = this.stageSvg.querySelector('tspan');
         if (banner && banner.parentNode) {
-          if (isIntC) {
-            banner.parentNode.innerHTML = `<tspan fill="#34d399">a² (${areaA})</tspan> + <tspan fill="#60a5fa">b² (${areaB})</tspan> = <tspan fill="#fbbf24">c² (${areaC})</tspan> ➔ ${clampedA}² + ${clampedB}² = ${cInt}² (c = ${cInt})`;
-          } else {
-            banner.parentNode.innerHTML = `<tspan fill="#34d399">a² (${areaA})</tspan> + <tspan fill="#60a5fa">b² (${areaB})</tspan> = <tspan fill="#fbbf24">c² (${areaC})</tspan> ➔ ${clampedA}² + ${clampedB}² = (√${areaC})² ➔ c = √${areaC} ≈ ${c.toFixed(2)}`;
-          }
+          const tail = isIntC
+            ? ` ➔ ${clampedA}² + ${clampedB}² = ${cInt}² (c = ${cInt})`
+            : ` ➔ ${clampedA}² + ${clampedB}² = (√${areaC})² ➔ c = √${areaC} ≈ ${c.toFixed(2)}`;
+          banner.parentNode.replaceChildren(
+            this._svgNode('tspan', { fill: '#34d399' }, `a² (${areaA})`),
+            document.createTextNode(' + '),
+            this._svgNode('tspan', { fill: '#60a5fa' }, `b² (${areaB})`),
+            document.createTextNode(' = '),
+            this._svgNode('tspan', { fill: '#fbbf24' }, `c² (${areaC})`),
+            document.createTextNode(tail)
+          );
         }
 
         // 8. Sync state & engine variables without re-triggering recursive render loops
@@ -4428,7 +4467,8 @@ ${strokeLines.join('\n')}
     setupMathFishingFish() {
       const fishGroup = this.stageSvg && this.stageSvg.querySelector("#fish-school-group");
       if (!fishGroup) return;
-      fishGroup.innerHTML = "";
+      if (typeof fishGroup.replaceChildren === 'function') fishGroup.replaceChildren();
+      else fishGroup.textContent = '';
 
       if (!this.engine._cachedElements) {
         this.engine._cachedElements = {};
@@ -4481,7 +4521,8 @@ ${strokeLines.join('\n')}
       // Spawn Rising Water Bubbles
       const bubblesGroup = this.stageSvg.querySelector('#pond-bubbles-group');
       if (bubblesGroup) {
-        bubblesGroup.innerHTML = '';
+        if (typeof bubblesGroup.replaceChildren === 'function') bubblesGroup.replaceChildren();
+        else bubblesGroup.textContent = '';
         for (let b = 0; b < 7; b++) {
           const bubble = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
           const bx = 90 + b * 100 + Math.random() * 40;
@@ -4517,20 +4558,7 @@ ${strokeLines.join('\n')}
         g.setAttribute('data-action', 'cast-to-fish');
         g.setAttribute('data-fish-idx', String(idx));
 
-        const dots = this.getSubitisingDotPoints(val);
-        const dotsSvg = dots.length > 0
-          ? `<g transform="translate(-1, 0)" opacity="0.85">${dots.map(d => `<circle cx="${d.cx}" cy="${d.cy}" r="1.5" fill="#ffffff" />`).join('')}</g>`
-          : '';
-
-        g.innerHTML = `
-          <polygon class="fish-tail" points="-22,0 -34,-10 -34,10" fill="${color}" />
-          <ellipse cx="0" cy="0" rx="22" ry="13" fill="${color}" stroke="#ffffff" stroke-width="1.5" />
-          <circle cx="12" cy="-4" r="3" fill="#ffffff" />
-          <circle cx="13" cy="-4" r="1.5" fill="#000000" />
-          ${dotsSvg}
-          <circle cx="0" cy="0" r="10" fill="#0f172a" opacity="0.8" />
-          <text x="0" y="4" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle">${val}</text>
-        `;
+        this._appendFishParts(g, val, color);
         fishGroup.appendChild(g);
 
         const startX = 110 + (idx % 4) * 160 + (Math.random() * 40 - 20);
@@ -4780,59 +4808,131 @@ ${strokeLines.join('\n')}
 
       const currentVars = this.engine.vars || {};
 
-      let html = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px;">
-          <span style="font-weight:800; font-size:12px; color:#38bdf8; display:flex; align-items:center; gap:5px;">
-            <span>🎛️</span> Parameters
-          </span>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button id="sim-btn-reset-vars" type="button" style="background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:6px; color:#94a3b8; font-size:10px; font-weight:700; padding:2px 7px; cursor:pointer;" title="Reset variables to defaults">↺ Reset</button>
-            <button id="sim-btn-collapse" type="button" style="background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer; padding:0 3px;">▲</button>
-          </div>
-        </div>
-        <div id="sim-param-body" style="display:flex; flex-direction:column; gap:8px;">
-      `;
+      const headerRow = document.createElement('div');
+      headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px;';
+      const titleSpan = document.createElement('span');
+      titleSpan.style.cssText = 'font-weight:800; font-size:12px; color:#38bdf8; display:flex; align-items:center; gap:5px;';
+      const titleIcon = document.createElement('span');
+      titleIcon.textContent = '🎛️';
+      titleSpan.append(titleIcon, document.createTextNode(' Parameters'));
+
+      const btnGroup = document.createElement('div');
+      btnGroup.style.cssText = 'display:flex; gap:6px; align-items:center;';
+      const resetVarsBtn = document.createElement('button');
+      resetVarsBtn.id = 'sim-btn-reset-vars';
+      resetVarsBtn.type = 'button';
+      resetVarsBtn.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:6px; color:#94a3b8; font-size:10px; font-weight:700; padding:2px 7px; cursor:pointer;';
+      resetVarsBtn.title = 'Reset variables to defaults';
+      resetVarsBtn.textContent = '↺ Reset';
+
+      const collapseBtn = document.createElement('button');
+      collapseBtn.id = 'sim-btn-collapse';
+      collapseBtn.type = 'button';
+      collapseBtn.style.cssText = 'background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer; padding:0 3px;';
+      collapseBtn.textContent = '▲';
+
+      btnGroup.append(resetVarsBtn, collapseBtn);
+      headerRow.append(titleSpan, btnGroup);
+
+      const paramBody = document.createElement('div');
+      paramBody.id = 'sim-param-body';
+      paramBody.style.cssText = 'display:flex; flex-direction:column; gap:8px;';
 
       inputs.forEach(inp => {
         const vName = inp.var;
         const curVal = currentVars[vName] !== undefined ? currentVars[vName] : (inp.min + (inp.max - inp.min) / 2);
         const unit = inp.unit || '';
-        html += `
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <span style="font-size:11px; font-weight:600; color:#cbd5e1;">${inp.label || vName}</span>
-              <div style="display:flex; align-items:center; gap:4px;">
-                <input type="number" min="${inp.min}" max="${inp.max}" step="${inp.step || 1}" value="${curVal}" data-var="${vName}" data-unit="${unit}" class="sim-param-num-input" style="width:48px; background:rgba(0,0,0,0.5); border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#38bdf8; font-family:ui-monospace, monospace; font-size:11px; font-weight:700; text-align:center; padding:1px 2px;" title="Type custom figure" />
-                ${unit ? `<span style="font-size:10px; color:#94a3b8;">${unit}</span>` : ''}
-              </div>
-            </div>
-            <input type="range" min="${inp.min}" max="${inp.max}" step="${inp.step}" value="${curVal}" data-var="${vName}" data-unit="${unit}" class="sim-param-slider" style="width:100%; accent-color:#38bdf8; cursor:pointer; height:6px; margin:0; display:block;" />
-          </div>
-        `;
+
+        const rowWrap = document.createElement('div');
+        const labelRow = document.createElement('div');
+        labelRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;';
+
+        const lblSpan = document.createElement('span');
+        lblSpan.style.cssText = 'font-size:11px; font-weight:600; color:#cbd5e1;';
+        lblSpan.textContent = inp.label || vName;
+
+        const valBox = document.createElement('div');
+        valBox.style.cssText = 'display:flex; align-items:center; gap:4px;';
+
+        const numInput = document.createElement('input');
+        numInput.type = 'number';
+        numInput.min = String(inp.min);
+        numInput.max = String(inp.max);
+        numInput.step = String(inp.step || 1);
+        numInput.value = String(curVal);
+        numInput.setAttribute('data-var', vName);
+        numInput.setAttribute('data-unit', unit);
+        numInput.className = 'sim-param-num-input';
+        numInput.style.cssText = 'width:48px; background:rgba(0,0,0,0.5); border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#38bdf8; font-family:ui-monospace, monospace; font-size:11px; font-weight:700; text-align:center; padding:1px 2px;';
+        numInput.title = 'Type custom figure';
+        valBox.appendChild(numInput);
+
+        if (unit) {
+          const unitSpan = document.createElement('span');
+          unitSpan.style.cssText = 'font-size:10px; color:#94a3b8;';
+          unitSpan.textContent = unit;
+          valBox.appendChild(unitSpan);
+        }
+
+        labelRow.append(lblSpan, valBox);
+
+        const slider = document.createElement('input');
+        slider.type = 'range';
+        slider.min = String(inp.min);
+        slider.max = String(inp.max);
+        if (inp.step !== undefined) slider.step = String(inp.step);
+        slider.value = String(curVal);
+        slider.setAttribute('data-var', vName);
+        slider.setAttribute('data-unit', unit);
+        slider.className = 'sim-param-slider';
+        slider.style.cssText = 'width:100%; accent-color:#38bdf8; cursor:pointer; height:6px; margin:0; display:block;';
+
+        rowWrap.append(labelRow, slider);
+        paramBody.appendChild(rowWrap);
       });
 
       // Special pedagogical dock for Pythagoras: Quick Integer Triples
       if (this.engine.scene && this.engine.scene.id === 'pythagoras') {
-        html += `
-          <div style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-              <span style="font-size:10px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.5px;">📐 Pythagorean Triples</span>
-              <span style="font-size:9px; color:#94a3b8;">a² + b² = c²</span>
-            </div>
-            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;">
-              <button type="button" class="pyth-triple-chip" data-a="3" data-b="4" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="3² + 4² = 5²">3 - 4 - 5</button>
-              <button type="button" class="pyth-triple-chip" data-a="6" data-b="8" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="6² + 8² = 10²">6 - 8 - 10</button>
-              <button type="button" class="pyth-triple-chip" data-a="5" data-b="12" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="5² + 12² = 13²">5 - 12 - 13</button>
-              <button type="button" class="pyth-triple-chip" data-a="8" data-b="15" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="8² + 15² = 17²">8 - 15 - 17</button>
-              <button type="button" class="pyth-triple-chip" data-a="9" data-b="12" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="9² + 12² = 15²">9 - 12 - 15</button>
-              <button type="button" class="pyth-triple-chip" data-a="1" data-b="1" style="background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;" title="Isosceles: 1² + 1² = (√2)²">1 - 1 - √2</button>
-            </div>
-          </div>
-        `;
+        const pythWrap = document.createElement('div');
+        pythWrap.style.cssText = 'margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);';
+
+        const pythHead = document.createElement('div');
+        pythHead.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;';
+        const pythTitle = document.createElement('span');
+        pythTitle.style.cssText = 'font-size:10px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.5px;';
+        pythTitle.textContent = '📐 Pythagorean Triples';
+        const pythSub = document.createElement('span');
+        pythSub.style.cssText = 'font-size:9px; color:#94a3b8;';
+        pythSub.textContent = 'a² + b² = c²';
+        pythHead.append(pythTitle, pythSub);
+
+        const chipGrid = document.createElement('div');
+        chipGrid.style.cssText = 'display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;';
+        const triples = [
+          { a: '3', b: '4', label: '3 - 4 - 5', title: '3² + 4² = 5²' },
+          { a: '6', b: '8', label: '6 - 8 - 10', title: '6² + 8² = 10²' },
+          { a: '5', b: '12', label: '5 - 12 - 13', title: '5² + 12² = 13²' },
+          { a: '8', b: '15', label: '8 - 15 - 17', title: '8² + 15² = 17²' },
+          { a: '9', b: '12', label: '9 - 12 - 15', title: '9² + 12² = 15²' },
+          { a: '1', b: '1', label: '1 - 1 - √2', title: 'Isosceles: 1² + 1² = (√2)²' }
+        ];
+        triples.forEach(tr => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'pyth-triple-chip';
+          btn.setAttribute('data-a', tr.a);
+          btn.setAttribute('data-b', tr.b);
+          btn.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;';
+          btn.title = tr.title;
+          btn.textContent = tr.label;
+          chipGrid.appendChild(btn);
+        });
+
+        pythWrap.append(pythHead, chipGrid);
+        paramBody.appendChild(pythWrap);
       }
 
-      html += `</div>`;
-      hud.innerHTML = html;
+      hud.replaceChildren(headerRow, paramBody);
 
       // Event listeners for Sliders & Number inputs
       const applyVal = (vName, val) => {
@@ -5540,7 +5640,8 @@ ${strokeLines.join('\n')}
       // 3. Render the 12 Standard School Rows (1 x Table to 12 x Table)
       const rowsContainer = this.stageSvg.querySelector('#tt-list-rows');
       if (rowsContainer) {
-        rowsContainer.innerHTML = '';
+        if (typeof rowsContainer.replaceChildren === 'function') rowsContainer.replaceChildren();
+        else rowsContainer.textContent = '';
         const rowH = 20;
         const rowGap = 2;
         const width = 352;
@@ -5656,7 +5757,8 @@ ${strokeLines.join('\n')}
 
       const visContainer = this.stageSvg.querySelector('#tt-visual-groups-container');
       if (visContainer) {
-        visContainer.innerHTML = '';
+        if (typeof visContainer.replaceChildren === 'function') visContainer.replaceChildren();
+        else visContainer.textContent = '';
         const maxGroups = mult;
         const barW = Math.max(16, Math.min(26, Math.floor(320 / maxGroups) - 3));
         const barH = 20;
@@ -5715,7 +5817,8 @@ ${strokeLines.join('\n')}
       if (!this.stageSvg) return;
       const matrixContainer = this.stageSvg.querySelector('#tt-12x12-matrix');
       if (!matrixContainer) return;
-      matrixContainer.innerHTML = '';
+      if (typeof matrixContainer.replaceChildren === 'function') matrixContainer.replaceChildren();
+      else matrixContainer.textContent = '';
 
       const table = this._ttTable || 7;
       const mult = this._ttMultiplier || 8;
@@ -6373,52 +6476,40 @@ ${strokeLines.join('\n')}
     renderSpellingBeeKeyboard() {
       if (!this.stageSvg) return;
 
+      const buildKeyRow = (letters, stepX, keyW, keyH, textX, textY) => {
+        const frag = document.createDocumentFragment();
+        letters.forEach((ch, idx) => {
+          const g = this._svgNode('g', {
+            class: 'bee-key-btn',
+            'data-action': 'bee-press-key',
+            'data-key': ch,
+            cursor: 'pointer',
+            transform: `translate(${idx * stepX}, 0)`
+          });
+          g.appendChild(this._svgNode('rect', {
+            width: keyW, height: keyH, rx: 6, fill: '#1e293b', stroke: '#475569', 'stroke-width': 1
+          }));
+          g.appendChild(this._svgNode('text', {
+            x: textX, y: textY, fill: '#f8fafc', 'font-size': 14, 'font-weight': 800, 'text-anchor': 'middle'
+          }, ch));
+          frag.appendChild(g);
+        });
+        return frag;
+      };
+
       const r1 = this.stageSvg.querySelector('#kb-row-1');
       if (r1 && !r1.children.length) {
-        const letters1 = ['Q','W','E','R','T','Y','U','I','O','P'];
-        let html1 = '';
-        letters1.forEach((ch, idx) => {
-          const x = idx * 72;
-          html1 += `
-            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
-              <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
-              <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
-            </g>
-          `;
-        });
-        r1.innerHTML = html1;
+        r1.replaceChildren(buildKeyRow(['Q','W','E','R','T','Y','U','I','O','P'], 72, 64, 34, 32, 22));
       }
 
       const r2 = this.stageSvg.querySelector('#kb-row-2');
       if (r2 && !r2.children.length) {
-        const letters2 = ['A','S','D','F','G','H','J','K','L'];
-        let html2 = '';
-        letters2.forEach((ch, idx) => {
-          const x = idx * 72;
-          html2 += `
-            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
-              <rect width="64" height="34" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
-              <text x="32" y="22" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
-            </g>
-          `;
-        });
-        r2.innerHTML = html2;
+        r2.replaceChildren(buildKeyRow(['A','S','D','F','G','H','J','K','L'], 72, 64, 34, 32, 22));
       }
 
       const r3 = this.stageSvg.querySelector('#kb-row-3-letters');
       if (r3 && !r3.children.length) {
-        const letters3 = ['Z','X','C','V','B','N','M'];
-        let html3 = '';
-        letters3.forEach((ch, idx) => {
-          const x = idx * 66;
-          html3 += `
-            <g class="bee-key-btn" data-action="bee-press-key" data-key="${ch}" cursor="pointer" transform="translate(${x}, 0)">
-              <rect width="58" height="36" rx="6" fill="#1e293b" stroke="#475569" stroke-width="1" />
-              <text x="29" y="23" fill="#f8fafc" font-size="14" font-weight="800" text-anchor="middle">${ch}</text>
-            </g>
-          `;
-        });
-        r3.innerHTML = html3;
+        r3.replaceChildren(buildKeyRow(['Z','X','C','V','B','N','M'], 66, 58, 36, 29, 23));
       }
     }
 
@@ -6504,7 +6595,7 @@ ${strokeLines.join('\n')}
       const totalRowW = targetLen * slotW + (targetLen - 1) * gap;
       const startX = Math.max(0, Math.floor((totalAvailW - totalRowW) / 2));
 
-      let html = '';
+      const slotsFrag = document.createDocumentFragment();
       for (let i = 0; i < targetLen; i++) {
         const x = startX + i * (slotW + gap);
         const letter = typed[i] || '';
@@ -6514,28 +6605,26 @@ ${strokeLines.join('\n')}
         const fill = isFilled ? '#1e293b' : (isCurrent ? '#0f172a' : '#090d16');
         const stroke = isFilled ? '#eab308' : (isCurrent ? '#38bdf8' : '#334155');
         const strokeWidth = isFilled || isCurrent ? '1.8' : '1';
-        const dash = isCurrent ? 'stroke-dasharray="3 2"' : '';
 
-        html += `
-          <g transform="translate(${x}, 6)">
-            <rect width="${slotW}" height="42" rx="6" fill="${fill}" stroke="${stroke}" stroke-width="${strokeWidth}" ${dash} />
-            <text x="${slotW / 2}" y="28" fill="${isFilled ? '#ffffff' : '#475569'}" font-size="${slotW > 36 ? '20' : '16'}" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif">
-              ${letter}
-            </text>
-          </g>
-        `;
+        const g = this._svgNode('g', { transform: `translate(${x}, 6)` });
+        const rectAttrs = {
+          width: slotW, height: 42, rx: 6, fill, stroke, 'stroke-width': strokeWidth
+        };
+        if (isCurrent) rectAttrs['stroke-dasharray'] = '3 2';
+        g.appendChild(this._svgNode('rect', rectAttrs));
+        g.appendChild(this._svgNode('text', {
+          x: slotW / 2,
+          y: 28,
+          fill: isFilled ? '#ffffff' : '#475569',
+          'font-size': slotW > 36 ? '20' : '16',
+          'font-weight': 900,
+          'text-anchor': 'middle',
+          'font-family': 'system-ui, sans-serif'
+        }, letter));
+        slotsFrag.appendChild(g);
       }
 
-      try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${html}</svg>`, 'image/svg+xml');
-        const svg = doc.querySelector('svg');
-        if (svg && !doc.querySelector('parsererror')) {
-          slotsRoot.replaceChildren(...svg.childNodes);
-          return;
-        }
-      } catch {}
-      slotsRoot.innerHTML = html;
+      slotsRoot.replaceChildren(slotsFrag);
     }
 
     handleSpellingBeeAction(action, targetNode, extraData) {
