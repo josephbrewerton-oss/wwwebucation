@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-16T11:03:44.314Z",
+  "generatedAt": "2026-11-16T18:00:31.491Z",
   "totalCartridges": 72,
-  "masterChecksum": "6df33580c1021d31e53bed9f5b7bdcff20a69fbbf7915a1457fecc9b59b5a733",
+  "masterChecksum": "5e5b5ab42acc6354679c7af7ee02886f3a21a06efb29724250e03380ff3e9a65",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -202,15 +202,15 @@
       "title": "🁊 Kinematic Domino Multiplication: Group Arrays",
       "stage": "KS2 MATHS",
       "type": "Sim",
-      "astSha256": "ee50d96e85adacb8c0e1abd4d601966df56f0fed38621a566990d2a7decb6e89",
+      "astSha256": "952ca7c447a75487f7a46c100e017fddbd041022bdfbb0d1d2094b1c4fbfc51e",
       "svgSha256": "4f8bd2bd78009e29ad2da2074f51e99077022ec3b6e83be7dadad55a30000482",
-      "astbSha256": "1bd03e5bb2c3dc676b9162db5673f5913dda716a65c767723e9fe518453ab9cb",
-      "astbBytes": 2513,
-      "astBytes": 3635,
+      "astbSha256": "e2ad904e37f54596b5ca1fa6623e17bda147220ee640bbb978caeefdf0e12696",
+      "astbBytes": 5597,
+      "astBytes": 9566,
       "svgBytes": 6639,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "71af17a2b4ffd4997159a5c8556e03797738fc8214de669e78e04d763f55fa96",
+      "seal": "3b183032b6b7ab738aa77b7d73f2bdbe7f9c3878f1b47229c2ed86435b72297a",
       "certified": true
     },
     "electric-circuits": {

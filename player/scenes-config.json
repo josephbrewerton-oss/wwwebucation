@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-16T11:03:45.085Z",
+  "generatedAt": "2026-11-16T18:00:32.356Z",
   "totalScenes": 72,
   "scenes": [
     {
@@ -196,7 +196,7 @@
       "astbFile": "bytecode/domino-multiplication.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 11
+      "bindingsCount": 56
     },
     {
       "id": "electric-circuits",
