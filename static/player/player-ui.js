@@ -695,6 +695,29 @@
       }
     }
 
+    _h(tag, opts, ...children) {
+      const node = document.createElement(tag);
+      if (opts) {
+        if (opts.id) node.id = opts.id;
+        if (opts.className) node.className = opts.className;
+        if (opts.type) node.type = opts.type;
+        if (opts.title) node.title = opts.title;
+        if (opts.text !== undefined) node.textContent = String(opts.text);
+        if (opts.css) node.style.cssText = opts.css;
+        if (opts.attrs) {
+          for (const [k, v] of Object.entries(opts.attrs)) {
+            if (v !== undefined && v !== null) node.setAttribute(k, String(v));
+          }
+        }
+      }
+      for (const ch of children) {
+        if (ch !== null && ch !== undefined && ch !== false) {
+          node.appendChild(typeof ch === 'string' || typeof ch === 'number' ? document.createTextNode(String(ch)) : ch);
+        }
+      }
+      return node;
+    }
+
     triggerCheckpoint(checkpoint, index) {
       if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
       if (!this.interactiveMode) return;
@@ -724,24 +747,30 @@
         }
         const holdDur = Number(checkpoint.holdDuration || 0);
         const holdLabel = holdDur > 0 ? `0.0s / ${holdDur.toFixed(1)}s` : 'Adjust controls to satisfy goal';
-        this.elements.interactiveBody.innerHTML = `
-          <div class="interactive-prompt">${checkpoint.prompt}</div>
-          <div class="goal-progress-wrap">
-            <div class="goal-progress-header">
-              <span>Live Condition Status</span>
-              <span id="goal-hold-readout" class="goal-hold-readout">${holdLabel}</span>
-            </div>
-            <div class="goal-progress-track">
-              <div id="goal-progress-fill" class="goal-progress-fill"></div>
-            </div>
-          </div>
-          <div id="interactive-result" class="interactive-feedback" style="display: none;"></div>
-          <div class="interactive-nano-actions">
-            <button type="button" id="interactive-ask-nano-btn" class="interactive-ask-nano-btn" title="Ask Gemini Nano Co-Pilot for a guided hint on this lab challenge">🤖 Ask Nano</button>
-            <button type="button" id="interactive-mute-popups-btn" class="interactive-dismiss-popups-btn" title="Turn off popup questions (re-enable via Interactive button or Settings)">🔕 Turn Off Popups</button>
-          </div>
-          <div id="interactive-nano-response" class="interactive-nano-response"></div>
-        `;
+        this.elements.interactiveBody.replaceChildren(
+          this._h('div', { className: 'interactive-prompt', text: checkpoint.prompt }),
+          this._h('div', { className: 'goal-progress-wrap' },
+            this._h('div', { className: 'goal-progress-header' },
+              this._h('span', { text: 'Live Condition Status' }),
+              this._h('span', { id: 'goal-hold-readout', className: 'goal-hold-readout', text: holdLabel })
+            ),
+            this._h('div', { className: 'goal-progress-track' },
+              this._h('div', { id: 'goal-progress-fill', className: 'goal-progress-fill' })
+            )
+          ),
+          this._h('div', { id: 'interactive-result', className: 'interactive-feedback', css: 'display: none;' }),
+          this._h('div', { className: 'interactive-nano-actions' },
+            this._h('button', {
+              type: 'button', id: 'interactive-ask-nano-btn', className: 'interactive-ask-nano-btn',
+              title: 'Ask Gemini Nano Co-Pilot for a guided hint on this lab challenge', text: '🤖 Ask Nano'
+            }),
+            this._h('button', {
+              type: 'button', id: 'interactive-mute-popups-btn', className: 'interactive-dismiss-popups-btn',
+              title: 'Turn off popup questions (re-enable via Interactive button or Settings)', text: '🔕 Turn Off Popups'
+            })
+          ),
+          this._h('div', { id: 'interactive-nano-response', className: 'interactive-nano-response' })
+        );
         this.elements.interactiveCard.classList.remove('hidden');
         const askGoalBtn = this.elements.interactiveBody.querySelector('#interactive-ask-nano-btn');
         const muteGoalBtn = this.elements.interactiveBody.querySelector('#interactive-mute-popups-btn');
@@ -789,27 +818,41 @@
         indexedOptions[j] = temp;
       }
 
-      const bodyHtml = `
-        <div class="interactive-prompt">${checkpoint.prompt}</div>
-        <div class="interactive-options">
-          ${indexedOptions.map((item, i) => `
-            <button type="button" class="interactive-opt-btn" data-opt-idx="${item.originalIndex}" data-is-correct="${item.isCorrect}">
-              <span style="font-weight:700; color:#38bdf8; margin-right:6px;">${String.fromCharCode(65 + i)}.</span> ${item.text}
-            </button>
-          `).join('')}
-        </div>
-        <div id="interactive-result" class="interactive-feedback" style="display: none;"></div>
-        <div class="interactive-nano-actions">
-          <button type="button" id="interactive-ask-nano-btn" class="interactive-ask-nano-btn" title="Ask Gemini Nano Co-Pilot about this question or why an option works">🤖 Ask Nano</button>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button type="button" id="interactive-continue-btn" class="interactive-dismiss-popups-btn" style="display:none; color:#38bdf8; border-color:#0284c7;">Continue ▶</button>
-            <button type="button" id="interactive-mute-popups-btn" class="interactive-dismiss-popups-btn" title="Turn off popup questions (re-enable via Interactive button or Settings)">🔕 Turn Off Popups</button>
-          </div>
-        </div>
-        <div id="interactive-nano-response" class="interactive-nano-response"></div>
-      `;
+      const optionsBox = this._h('div', { className: 'interactive-options' },
+        ...indexedOptions.map((item, i) =>
+          this._h('button', {
+            type: 'button',
+            className: 'interactive-opt-btn',
+            attrs: { 'data-opt-idx': item.originalIndex, 'data-is-correct': item.isCorrect }
+          },
+            this._h('span', { css: 'font-weight:700; color:#38bdf8; margin-right:6px;', text: `${String.fromCharCode(65 + i)}.` }),
+            ` ${item.text}`
+          )
+        )
+      );
 
-      this.elements.interactiveBody.innerHTML = bodyHtml;
+      this.elements.interactiveBody.replaceChildren(
+        this._h('div', { className: 'interactive-prompt', text: checkpoint.prompt }),
+        optionsBox,
+        this._h('div', { id: 'interactive-result', className: 'interactive-feedback', css: 'display: none;' }),
+        this._h('div', { className: 'interactive-nano-actions' },
+          this._h('button', {
+            type: 'button', id: 'interactive-ask-nano-btn', className: 'interactive-ask-nano-btn',
+            title: 'Ask Gemini Nano Co-Pilot about this question or why an option works', text: '🤖 Ask Nano'
+          }),
+          this._h('div', { css: 'display:flex; gap:6px; align-items:center;' },
+            this._h('button', {
+              type: 'button', id: 'interactive-continue-btn', className: 'interactive-dismiss-popups-btn',
+              css: 'display:none; color:#38bdf8; border-color:#0284c7;', text: 'Continue ▶'
+            }),
+            this._h('button', {
+              type: 'button', id: 'interactive-mute-popups-btn', className: 'interactive-dismiss-popups-btn',
+              title: 'Turn off popup questions (re-enable via Interactive button or Settings)', text: '🔕 Turn Off Popups'
+            })
+          )
+        ),
+        this._h('div', { id: 'interactive-nano-response', className: 'interactive-nano-response' })
+      );
       this.elements.interactiveCard.classList.remove('hidden');
 
       const optBtns = this.elements.interactiveBody.querySelectorAll('.interactive-opt-btn');
@@ -876,7 +919,10 @@
             if (resultBox) {
               resultBox.style.display = 'block';
               resultBox.style.color = '#34d399';
-              resultBox.innerHTML = `<strong>✓ Correct!</strong> ${checkpoint.explanation || ''}`;
+              resultBox.replaceChildren(
+                this._h('strong', { text: '✓ Correct!' }),
+                ` ${checkpoint.explanation || ''}`
+              );
             }
             if (this.engine.voiceEnabled) {
               this.engine.speak(`Correct! ${checkpoint.explanation || ''}`);
@@ -894,7 +940,10 @@
             if (resultBox) {
               resultBox.style.display = 'block';
               resultBox.style.color = '#fbbf24';
-              resultBox.innerHTML = `<strong>Guidance:</strong> ${distractorNudge}`;
+              resultBox.replaceChildren(
+                this._h('strong', { text: 'Guidance:' }),
+                ` ${distractorNudge}`
+              );
             }
             if (askNanoBtn) {
               askNanoBtn.textContent = '🤖 Ask Nano Why';
@@ -912,7 +961,10 @@
             if (resultBox) {
               resultBox.style.display = 'block';
               resultBox.style.color = '#f87171';
-              resultBox.innerHTML = `<strong>Hint:</strong> ${checkpoint.explanation || 'Try reviewing the simulation parameters!'}`;
+              resultBox.replaceChildren(
+                this._h('strong', { text: 'Hint:' }),
+                ` ${checkpoint.explanation || 'Try reviewing the simulation parameters!'}`
+              );
             }
             if (askNanoBtn) {
               askNanoBtn.textContent = '🤖 Ask Nano Why';
@@ -989,7 +1041,10 @@
         if (resultBox) {
           resultBox.style.display = 'block';
           resultBox.style.color = '#34d399';
-          resultBox.innerHTML = `<strong>✓ Goal Achieved!</strong> ${(cp && cp.explanation) || ''}`;
+          resultBox.replaceChildren(
+            this._h('strong', { text: '✓ Goal Achieved!' }),
+            ` ${(cp && cp.explanation) || ''}`
+          );
         }
         if (this.engine.voiceEnabled) {
           this.engine.speak(`Goal achieved! ${(cp && cp.explanation) || ''}`);
@@ -1346,7 +1401,8 @@
       }
 
       const activeId = this.engine.activePresetId || 'church-tour';
-      this.elements.presetSelector.innerHTML = '';
+      if (typeof this.elements.presetSelector.replaceChildren === 'function') this.elements.presetSelector.replaceChildren();
+      else this.elements.presetSelector.textContent = '';
 
       // Create Local Vault OptGroup if items exist
       if (vaultList.length > 0) {
@@ -1660,7 +1716,8 @@
 
       // Populate interactive slide deck pills
       if (this.elements.slideDeckPills) {
-        this.elements.slideDeckPills.innerHTML = '';
+        if (typeof this.elements.slideDeckPills.replaceChildren === 'function') this.elements.slideDeckPills.replaceChildren();
+        else this.elements.slideDeckPills.textContent = '';
         const kfs = (scene && scene.keyframes) || [];
         kfs.forEach((kf, idx) => {
           const pill = document.createElement('button');
@@ -1722,10 +1779,10 @@
         if (sub) {
           this.elements.subtitleOverlay.style.opacity = '1';
           if (typeof sub === 'object' && sub !== null && sub.localized && sub.en) {
-            this.elements.subtitleOverlay.innerHTML = `
-              <div style="font-size: 0.95em; color: #f8fafc; font-weight: 700; line-height: 1.3;">${sub.en}</div>
-              <div style="font-size: 0.84em; color: #38bdf8; font-weight: 600; line-height: 1.3; margin-top: 3px;">🌐 ${sub.localized}</div>
-            `;
+            this.elements.subtitleOverlay.replaceChildren(
+              this._h('div', { css: 'font-size: 0.95em; color: #f8fafc; font-weight: 700; line-height: 1.3;', text: sub.en }),
+              this._h('div', { css: 'font-size: 0.84em; color: #38bdf8; font-weight: 600; line-height: 1.3; margin-top: 3px;', text: `🌐 ${sub.localized}` })
+            );
           } else {
             this.elements.subtitleOverlay.textContent = typeof sub === 'string' ? sub : (sub.localized || sub.en || '');
           }
@@ -1840,32 +1897,36 @@
 
       if (!controls || controls.length === 0) {
         overlay.classList.add('hidden');
-        overlay.innerHTML = '';
+        if (typeof overlay.replaceChildren === 'function') overlay.replaceChildren();
+        else overlay.textContent = '';
         return;
       }
 
       overlay.classList.remove('hidden');
       const title = (scene && (scene.title || scene.id)) || 'Simulation Controls';
-      overlay.innerHTML = `
-        <div class="cartridge-controls-header">
-          <div class="cartridge-controls-title">
-            <span class="cartridge-controls-chip">⚡ LISP UI</span>
-            <span class="cartridge-controls-name">${title}</span>
-          </div>
-          <button type="button" class="cartridge-controls-min-btn" title="Toggle Controls Overlay">▾</button>
-        </div>
-        <div class="cartridge-controls-body"></div>
-      `;
+      const body = this._h('div', { className: 'cartridge-controls-body' });
+      const minBtn = this._h('button', {
+        type: 'button',
+        className: 'cartridge-controls-min-btn',
+        title: 'Toggle Controls Overlay',
+        text: '▾'
+      });
+      overlay.replaceChildren(
+        this._h('div', { className: 'cartridge-controls-header' },
+          this._h('div', { className: 'cartridge-controls-title' },
+            this._h('span', { className: 'cartridge-controls-chip', text: '⚡ LISP UI' }),
+            this._h('span', { className: 'cartridge-controls-name', text: title })
+          ),
+          minBtn
+        ),
+        body
+      );
 
-      const minBtn = overlay.querySelector('.cartridge-controls-min-btn');
-      const body = overlay.querySelector('.cartridge-controls-body');
-      if (minBtn && body) {
-        minBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          body.classList.toggle('collapsed');
-          minBtn.textContent = body.classList.contains('collapsed') ? '▸' : '▾';
-        });
-      }
+      minBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        body.classList.toggle('collapsed');
+        minBtn.textContent = body.classList.contains('collapsed') ? '▸' : '▾';
+      });
 
       controls.forEach(ctrl => {
         const type = ctrl.type || 'slider';
@@ -1880,106 +1941,115 @@
         itemEl.setAttribute('data-ctrl-id', id);
 
         if (type === 'button') {
-          itemEl.innerHTML = `
-            <button type="button" class="cartridge-ui-btn" id="ctrl-btn-${id}">
-              ${label}
-            </button>
-          `;
-          const btn = itemEl.querySelector('button');
-          if (btn) {
-            btn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              if (action && typeof this.engine.dispatchAction === 'function') {
-                this.engine.dispatchAction(action);
-              } else if (id === 'reset') {
-                this.resetSimulation();
-              }
-            });
-          }
+          const btn = this._h('button', {
+            type: 'button',
+            className: 'cartridge-ui-btn',
+            id: `ctrl-btn-${id}`,
+            text: label
+          });
+          itemEl.replaceChildren(btn);
+          btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (action && typeof this.engine.dispatchAction === 'function') {
+              this.engine.dispatchAction(action);
+            } else if (id === 'reset') {
+              this.resetSimulation();
+            }
+          });
         } else if (type === 'toggle') {
           const isChecked = Boolean(curVal);
-          itemEl.innerHTML = `
-            <div class="cartridge-ui-toggle-row">
-              <span class="cartridge-ui-label">${label}</span>
-              <button type="button" class="cartridge-ui-toggle ${isChecked ? 'active' : ''}" role="switch" aria-checked="${isChecked}" id="ctrl-toggle-${id}">
-                <span class="cartridge-ui-toggle-thumb"></span>
-                <span class="cartridge-ui-toggle-text">${isChecked ? 'ON' : 'OFF'}</span>
-              </button>
-            </div>
-          `;
-          const toggleBtn = itemEl.querySelector('button');
-          const toggleText = itemEl.querySelector('.cartridge-ui-toggle-text');
-          if (toggleBtn) {
-            toggleBtn.addEventListener('click', (e) => {
-              e.stopPropagation();
-              const nowChecked = toggleBtn.getAttribute('aria-checked') === 'true';
-              const nextChecked = !nowChecked;
-              toggleBtn.setAttribute('aria-checked', String(nextChecked));
-              toggleBtn.classList.toggle('active', nextChecked);
-              if (toggleText) toggleText.textContent = nextChecked ? 'ON' : 'OFF';
+          const toggleText = this._h('span', { className: 'cartridge-ui-toggle-text', text: isChecked ? 'ON' : 'OFF' });
+          const toggleBtn = this._h('button', {
+            type: 'button',
+            className: `cartridge-ui-toggle ${isChecked ? 'active' : ''}`,
+            id: `ctrl-toggle-${id}`,
+            attrs: { role: 'switch', 'aria-checked': String(isChecked) }
+          },
+            this._h('span', { className: 'cartridge-ui-toggle-thumb' }),
+            toggleText
+          );
+          itemEl.replaceChildren(
+            this._h('div', { className: 'cartridge-ui-toggle-row' },
+              this._h('span', { className: 'cartridge-ui-label', text: label }),
+              toggleBtn
+            )
+          );
+          toggleBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const nowChecked = toggleBtn.getAttribute('aria-checked') === 'true';
+            const nextChecked = !nowChecked;
+            toggleBtn.setAttribute('aria-checked', String(nextChecked));
+            toggleBtn.classList.toggle('active', nextChecked);
+            toggleText.textContent = nextChecked ? 'ON' : 'OFF';
 
-              if (action && typeof this.engine.dispatchAction === 'function') {
-                this.engine.dispatchAction(action, [nextChecked]);
-              }
-              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
-                this.engine.setMemoryVar(bindVar, nextChecked);
-              }
-            });
-          }
+            if (action && typeof this.engine.dispatchAction === 'function') {
+              this.engine.dispatchAction(action, [nextChecked]);
+            }
+            if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+              this.engine.setMemoryVar(bindVar, nextChecked);
+            }
+          });
         } else if (type === 'slider') {
           const val = curVal !== undefined ? curVal : (ctrl.min || 0);
-          itemEl.innerHTML = `
-            <div class="cartridge-ui-slider-box">
-              <div class="cartridge-ui-slider-header">
-                <span class="cartridge-ui-label">${label}</span>
-                <span class="cartridge-ui-badge" id="ctrl-val-${id}">${val}</span>
-              </div>
-              <input type="range" class="cartridge-ui-slider" id="ctrl-slider-${id}"
-                min="${ctrl.min !== undefined ? ctrl.min : 0}"
-                max="${ctrl.max !== undefined ? ctrl.max : 100}"
-                step="${ctrl.step !== undefined ? ctrl.step : 1}"
-                value="${val}" />
-            </div>
-          `;
-          const slider = itemEl.querySelector('input');
-          const readout = itemEl.querySelector(`#ctrl-val-${id}`);
-          if (slider) {
-            slider.addEventListener('input', (e) => {
-              const nextVal = parseFloat(e.target.value);
-              if (readout) readout.textContent = nextVal;
-              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
-                this.engine.setMemoryVar(bindVar, nextVal);
-              }
-              if (action && typeof this.engine.dispatchAction === 'function') {
-                this.engine.dispatchAction(action, [nextVal]);
-              }
-            });
-          }
+          const readout = this._h('span', { className: 'cartridge-ui-badge', id: `ctrl-val-${id}`, text: String(val) });
+          const slider = document.createElement('input');
+          slider.type = 'range';
+          slider.className = 'cartridge-ui-slider';
+          slider.id = `ctrl-slider-${id}`;
+          slider.min = String(ctrl.min !== undefined ? ctrl.min : 0);
+          slider.max = String(ctrl.max !== undefined ? ctrl.max : 100);
+          slider.step = String(ctrl.step !== undefined ? ctrl.step : 1);
+          slider.value = String(val);
+
+          itemEl.replaceChildren(
+            this._h('div', { className: 'cartridge-ui-slider-box' },
+              this._h('div', { className: 'cartridge-ui-slider-header' },
+                this._h('span', { className: 'cartridge-ui-label', text: label }),
+                readout
+              ),
+              slider
+            )
+          );
+          slider.addEventListener('input', (e) => {
+            const nextVal = parseFloat(e.target.value);
+            readout.textContent = nextVal;
+            if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+              this.engine.setMemoryVar(bindVar, nextVal);
+            }
+            if (action && typeof this.engine.dispatchAction === 'function') {
+              this.engine.dispatchAction(action, [nextVal]);
+            }
+          });
         } else if (type === 'select') {
           const optionsList = Array.isArray(ctrl.options) ? ctrl.options : [];
-          itemEl.innerHTML = `
-            <div class="cartridge-ui-select-box">
-              <span class="cartridge-ui-label">${label}</span>
-              <select class="cartridge-ui-select" id="ctrl-select-${id}">
-                ${optionsList.map(opt => `<option value="${opt}" ${opt === curVal ? 'selected' : ''}>${opt}</option>`).join('')}
-              </select>
-            </div>
-          `;
-          const sel = itemEl.querySelector('select');
-          if (sel) {
-            sel.addEventListener('change', (e) => {
-              const nextVal = e.target.value;
-              if (bindVar && typeof this.engine.setMemoryVar === 'function') {
-                this.engine.setMemoryVar(bindVar, nextVal);
-              }
-              if (action && typeof this.engine.dispatchAction === 'function') {
-                this.engine.dispatchAction(action, [nextVal]);
-              }
-            });
-          }
+          const sel = this._h('select', { className: 'cartridge-ui-select', id: `ctrl-select-${id}` },
+            ...optionsList.map(opt => {
+              const oEl = document.createElement('option');
+              oEl.value = String(opt);
+              oEl.textContent = String(opt);
+              if (opt === curVal) oEl.selected = true;
+              return oEl;
+            })
+          );
+          if (curVal !== undefined) sel.value = String(curVal);
+          itemEl.replaceChildren(
+            this._h('div', { className: 'cartridge-ui-select-box' },
+              this._h('span', { className: 'cartridge-ui-label', text: label }),
+              sel
+            )
+          );
+          sel.addEventListener('change', (e) => {
+            const nextVal = e.target.value;
+            if (bindVar && typeof this.engine.setMemoryVar === 'function') {
+              this.engine.setMemoryVar(bindVar, nextVal);
+            }
+            if (action && typeof this.engine.dispatchAction === 'function') {
+              this.engine.dispatchAction(action, [nextVal]);
+            }
+          });
         }
 
-        if (body) body.appendChild(itemEl);
+        body.appendChild(itemEl);
       });
     }
 
@@ -3379,7 +3449,11 @@ window.addEventListener('message', (e) => {
             this.updateWebRtcStatusUI(true, 'loopback_ai');
             this.showToast('✅ WebRTC Local Loopback Online');
             if (el.webrtcAiOutput) {
-              el.webrtcAiOutput.innerHTML = '✨ <strong>Loopback Bus Active</strong> (0 ms UDP). Chrome Prompt API &amp; Gemini Nano linked.';
+              el.webrtcAiOutput.replaceChildren(
+                '✨ ',
+                this._h('strong', { text: 'Loopback Bus Active' }),
+                ' (0 ms UDP). Chrome Prompt API & Gemini Nano linked.'
+              );
             }
           }
         });
@@ -3468,10 +3542,16 @@ window.addEventListener('message', (e) => {
           
           // Register listeners once on the bus lifecycle
           bus.on('aiToken', ({ token }) => {
-            if (el.webrtcAiOutput) el.webrtcAiOutput.innerText += token;
+            if (el.webrtcAiOutput) el.webrtcAiOutput.textContent += token;
           });
           bus.on('aiComplete', ({ fullText }) => {
-            if (el.webrtcAiOutput) el.webrtcAiOutput.innerHTML = `🤖 <strong>Tutor:</strong> ${fullText}`;
+            if (el.webrtcAiOutput) {
+              el.webrtcAiOutput.replaceChildren(
+                '🤖 ',
+                this._h('strong', { text: 'Tutor:' }),
+                ` ${fullText}`
+              );
+            }
           });
         }
 
@@ -3484,7 +3564,11 @@ window.addEventListener('message', (e) => {
           if (!query) return;
 
           if (el.webrtcAiOutput) {
-            el.webrtcAiOutput.innerHTML = '<span class="ai-dot-pulse"></span> <em>Gemini Nano is evaluating...</em>';
+            el.webrtcAiOutput.replaceChildren(
+              this._h('span', { className: 'ai-dot-pulse' }),
+              ' ',
+              this._h('em', { text: 'Gemini Nano is evaluating...' })
+            );
           }
           
           window.AST_WEBRTC.processAiPrompt(query);
@@ -4295,12 +4379,17 @@ window.addEventListener('message', (e) => {
             placeholder.style.color = '#fff';
             placeholder.style.textAlign = 'center';
             placeholder.style.padding = '20px';
-            placeholder.innerHTML = `
-              <div style="font-size:3rem; margin-bottom:12px;">📺</div>
-              <h3 style="margin:0 0 8px 0; font-size:1.2rem;">Floating in Picture-in-Picture</h3>
-              <p style="margin:0 0 16px 0; font-size:0.85rem; color:#94a3b8;">Stage is active in an always-on-top desktop window</p>
-              <button id="pip-return-btn" style="padding:8px 18px; border-radius:9999px; background:#6366f1; color:#fff; border:none; font-weight:700; cursor:pointer;">↩ Return to Page</button>
-            `;
+            placeholder.replaceChildren(
+              this._h('div', { css: 'font-size:3rem; margin-bottom:12px;', text: '📺' }),
+              this._h('h3', { css: 'margin:0 0 8px 0; font-size:1.2rem;', text: 'Floating in Picture-in-Picture' }),
+              this._h('p', { css: 'margin:0 0 16px 0; font-size:0.85rem; color:#94a3b8;', text: 'Stage is active in an always-on-top desktop window' }),
+              this._h('button', {
+                type: 'button',
+                id: 'pip-return-btn',
+                css: 'padding:8px 18px; border-radius:9999px; background:#6366f1; color:#fff; border:none; font-weight:700; cursor:pointer;',
+                text: '↩ Return to Page'
+              })
+            );
 
             originalParent.insertBefore(placeholder, appContainer);
             pip.document.body.appendChild(appContainer);
@@ -4575,19 +4664,21 @@ window.addEventListener('message', (e) => {
       this.elements.questScore.textContent = `⭐ ${this.questState.completedMissions.size}/${total} Stars • ${this.questState.score} Pts`;
 
       if (idx >= total) {
-        this.elements.questBody.innerHTML = `
-          <div style="text-align: center; padding: 12px 6px;">
-            <div style="font-size: 28px; margin-bottom: 6px;">🏆 ⛪ ⭐</div>
-            <div class="quest-mission-title" style="color: #facc15; font-size: 15px;">PILGRIM MASTER OF SACRED ARCHITECTURE!</div>
-            <div class="quest-mission-desc" style="margin: 8px 0 14px 0;">
-              Congratulations! You have explored all 6 sacred spaces in full 3D, mastering the Narthex, Nave Colonnade, Ambo, High Altar, Golden Tabernacle, Lady Chapel, and Baptismal Font!
-            </div>
-            <div style="display: flex; justify-content: center; gap: 8px;">
-              <button type="button" class="quest-action-btn" id="quest-replay-btn">🔄 Play Again</button>
-              <button type="button" class="quest-action-btn" id="quest-finish-btn" style="background:#059669; border-color:#10b981;">✓ Complete Tour</button>
-            </div>
-          </div>
-        `;
+        this.elements.questBody.replaceChildren(
+          this._h('div', { css: 'text-align: center; padding: 12px 6px;' },
+            this._h('div', { css: 'font-size: 28px; margin-bottom: 6px;', text: '🏆 ⛪ ⭐' }),
+            this._h('div', { className: 'quest-mission-title', css: 'color: #facc15; font-size: 15px;', text: 'PILGRIM MASTER OF SACRED ARCHITECTURE!' }),
+            this._h('div', {
+              className: 'quest-mission-desc',
+              css: 'margin: 8px 0 14px 0;',
+              text: 'Congratulations! You have explored all 6 sacred spaces in full 3D, mastering the Narthex, Nave Colonnade, Ambo, High Altar, Golden Tabernacle, Lady Chapel, and Baptismal Font!'
+            }),
+            this._h('div', { css: 'display: flex; justify-content: center; gap: 8px;' },
+              this._h('button', { type: 'button', className: 'quest-action-btn', id: 'quest-replay-btn', text: '🔄 Play Again' }),
+              this._h('button', { type: 'button', className: 'quest-action-btn', id: 'quest-finish-btn', css: 'background:#059669; border-color:#10b981;', text: '✓ Complete Tour' })
+            )
+          )
+        );
         const replayBtn = document.getElementById('quest-replay-btn');
         if (replayBtn) {
           replayBtn.addEventListener('click', () => {
@@ -4645,19 +4736,16 @@ window.addEventListener('message', (e) => {
 
       const q = m.activeQuestion;
 
-      let html = `
-        <div class="quest-mission-title">${m.title}</div>
-        <div class="quest-mission-desc">${m.desc}</div>
-        <div style="font-weight: 700; font-size: 12px; color: #f8fafc; margin-bottom: 6px;">${q.question}</div>
-        <div class="quest-options-grid">
-      `;
-
-      q.options.forEach((opt, optIdx) => {
-        html += `<button type="button" class="quest-option-btn" data-opt="${optIdx}">${opt}</button>`;
-      });
-
-      html += `</div>`;
-      this.elements.questBody.innerHTML = html;
+      this.elements.questBody.replaceChildren(
+        this._h('div', { className: 'quest-mission-title', text: m.title }),
+        this._h('div', { className: 'quest-mission-desc', text: m.desc }),
+        this._h('div', { css: 'font-weight: 700; font-size: 12px; color: #f8fafc; margin-bottom: 6px;', text: q.question }),
+        this._h('div', { className: 'quest-options-grid' },
+          ...q.options.map((opt, optIdx) =>
+            this._h('button', { type: 'button', className: 'quest-option-btn', attrs: { 'data-opt': optIdx }, text: opt })
+          )
+        )
+      );
 
       const optionBtns = this.elements.questBody.querySelectorAll('.quest-option-btn');
       optionBtns.forEach(btn => {
@@ -4701,15 +4789,19 @@ window.addEventListener('message', (e) => {
       feedbackDiv.style.border = isCorrect ? '1px solid #10b981' : '1px solid #ef4444';
       feedbackDiv.style.fontSize = '11px';
       feedbackDiv.style.lineHeight = '1.4';
-      feedbackDiv.innerHTML = `
-        <div style="font-weight: 700; color: ${isCorrect ? '#34d399' : '#f87171'}; margin-bottom: 4px;">
-          ${isCorrect ? '✓ Well answered, Pilgrim!' : 'Catechetical Insight:'}
-        </div>
-        <div style="color: #e2e8f0; margin-bottom: 8px;">${activeQ.explanation}</div>
-        <button type="button" class="quest-action-btn" id="btn-next-mission">
-          ${this.questState.missionIndex + 1 < this.questMissions.length ? 'Next Sacred Space ➜' : 'View Master Results 🏆'}
-        </button>
-      `;
+      feedbackDiv.replaceChildren(
+        this._h('div', {
+          css: `font-weight: 700; color: ${isCorrect ? '#34d399' : '#f87171'}; margin-bottom: 4px;`,
+          text: isCorrect ? '✓ Well answered, Pilgrim!' : 'Catechetical Insight:'
+        }),
+        this._h('div', { css: 'color: #e2e8f0; margin-bottom: 8px;', text: activeQ.explanation }),
+        this._h('button', {
+          type: 'button',
+          className: 'quest-action-btn',
+          id: 'btn-next-mission',
+          text: this.questState.missionIndex + 1 < this.questMissions.length ? 'Next Sacred Space ➜' : 'View Master Results 🏆'
+        })
+      );
       this.elements.questBody.appendChild(feedbackDiv);
 
       const nextBtn = document.getElementById('btn-next-mission');
@@ -4778,7 +4870,10 @@ window.addEventListener('message', (e) => {
         const idStr = targetNode.id ? `#${targetNode.id}` : '';
         const fill = targetNode.getAttribute('fill') || targetNode.style.fill || '';
         const stroke = targetNode.getAttribute('stroke') || targetNode.style.stroke || '';
-        this.elements.devHoverTooltip.innerHTML = `<strong>&lt;${tag}${idStr}&gt;</strong> [${Math.round(bbox.width)}×${Math.round(bbox.height)}]${fill ? ' • fill:' + fill : ''}${stroke ? ' • strk:' + stroke : ''}`;
+        this.elements.devHoverTooltip.replaceChildren(
+          this._h('strong', { text: `<${tag}${idStr}>` }),
+          ` [${Math.round(bbox.width)}×${Math.round(bbox.height)}]${fill ? ' • fill:' + fill : ''}${stroke ? ' • strk:' + stroke : ''}`
+        );
         this.elements.devHoverTooltip.classList.remove('hidden');
       } catch (_) {}
     }
@@ -4834,14 +4929,19 @@ window.addEventListener('message', (e) => {
         });
 
         if (matched.length) {
-          el.devActiveBindings.innerHTML = matched.map(m => `
-            <div style="margin-bottom:4px; padding:3px 6px; background:#090d16; border-radius:4px; border:1px solid #1e293b;">
-              <span style="color:#38bdf8; font-weight:700;">:${m.attr || m.type}</span>
-              <span style="color:#94a3b8; font-size:10px;">${m.expr || '(3D projection)'}</span>
-            </div>
-          `).join('');
+          el.devActiveBindings.replaceChildren(
+            ...matched.map(m =>
+              this._h('div', { css: 'margin-bottom:4px; padding:3px 6px; background:#090d16; border-radius:4px; border:1px solid #1e293b;' },
+                this._h('span', { css: 'color:#38bdf8; font-weight:700;', text: `:${m.attr || m.type}` }),
+                ' ',
+                this._h('span', { css: 'color:#94a3b8; font-size:10px;', text: m.expr || '(3D projection)' })
+              )
+            )
+          );
         } else {
-          el.devActiveBindings.innerHTML = `<span style="color:#64748b;">No mathematical AST bindings attached.</span>`;
+          el.devActiveBindings.replaceChildren(
+            this._h('span', { css: 'color:#64748b;', text: 'No mathematical AST bindings attached.' })
+          );
         }
       }
 
@@ -5042,64 +5142,102 @@ window.addEventListener('message', (e) => {
       const missingTargets = astTargets.filter((id) => !svgIdSet.has(id));
 
       if (astTargets.length === 0) {
-        el.matcherSummaryBadge.innerHTML = `<span style="color:#94a3b8;">${svgItems.length} SVG IDs ready &middot; click one to bind</span>`;
+        el.matcherSummaryBadge.replaceChildren(
+          this._h('span', { css: 'color:#94a3b8;', text: `${svgItems.length} SVG IDs ready · click one to bind` })
+        );
       } else if (missingTargets.length === 0) {
-        el.matcherSummaryBadge.innerHTML = `<span style="color:#4ade80; font-weight:700;">✓ ${matchedCount}/${astTargets.length} targets matched</span>`;
+        el.matcherSummaryBadge.replaceChildren(
+          this._h('span', { css: 'color:#4ade80; font-weight:700;', text: `✓ ${matchedCount}/${astTargets.length} targets matched` })
+        );
       } else {
-        el.matcherSummaryBadge.innerHTML = `<span style="color:#fbbf24; font-weight:700;">⚠ ${missingTargets.length} missing in SVG (${matchedCount}/${astTargets.length} OK)</span>`;
+        el.matcherSummaryBadge.replaceChildren(
+          this._h('span', { css: 'color:#fbbf24; font-weight:700;', text: `⚠ ${missingTargets.length} missing in SVG (${matchedCount}/${astTargets.length} OK)` })
+        );
       }
 
       if (el.btnMatcherAutofixAll) {
         el.btnMatcherAutofixAll.style.display = missingTargets.length > 0 ? 'inline-flex' : 'none';
       }
 
-      let html = '';
-
-      html += `<div>
-        <div class="matcher-section-label">AST Targets (${astTargets.length})</div>`;
+      const targetsSection = this._h('div', null,
+        this._h('div', { className: 'matcher-section-label', text: `AST Targets (${astTargets.length})` })
+      );
       if (astTargets.length === 0) {
-        html += `<div style="color:#64748b; font-size:10px; line-height:1.35;">No <code>:target "#id"</code> rules yet. Click any SVG shape below to animate it.</div>`;
+        targetsSection.appendChild(
+          this._h('div', { css: 'color:#64748b; font-size:10px; line-height:1.35;' },
+            'No ',
+            this._h('code', { text: ':target "#id"' }),
+            ' rules yet. Click any SVG shape below to animate it.'
+          )
+        );
       } else {
         astTargets.forEach((id) => {
           const isOk = svgIdSet.has(id);
           const suggestion = isOk ? null : this.findClosestSvgId(id, svgItems);
-          html += `
-            <div class="matcher-row ${isOk ? 'matched' : 'missing'}">
-              <div style="display:flex; justify-content:space-between; align-items:center; gap:6px;">
-                <code style="color:${isOk ? '#86efac' : '#fde68a'}; font-weight:700;">#${this.escapeMatcherHtml(id)}</code>
-                <span style="font-size:10px; font-weight:700; color:${isOk ? '#4ade80' : '#fbbf24'};">${isOk ? '✓ SVG' : '⚠ Missing'}</span>
-              </div>
-              <div style="display:flex; gap:4px; flex-wrap:wrap;">
-                ${isOk
-                  ? `<button type="button" class="dev-btn matcher-hl-btn" data-id="${this.escapeMatcherHtml(id)}" style="font-size:10px; padding:2px 6px;">👁 Highlight</button>`
-                  : `
-                    ${suggestion ? `<button type="button" class="dev-btn primary matcher-remap-btn" data-old="${this.escapeMatcherHtml(id)}" data-new="${this.escapeMatcherHtml(suggestion)}" style="font-size:10px; padding:2px 6px;">🔗 Match #${this.escapeMatcherHtml(suggestion)}</button>` : ''}
-                    <button type="button" class="dev-btn matcher-create-btn" data-id="${this.escapeMatcherHtml(id)}" style="font-size:10px; padding:2px 6px;">➕ Create Shape</button>
-                  `
-                }
-              </div>
-            </div>
-          `;
+          const actionRow = this._h('div', { css: 'display:flex; gap:4px; flex-wrap:wrap;' });
+          if (isOk) {
+            actionRow.appendChild(this._h('button', {
+              type: 'button', className: 'dev-btn matcher-hl-btn', attrs: { 'data-id': id },
+              css: 'font-size:10px; padding:2px 6px;', text: '👁 Highlight'
+            }));
+          } else {
+            if (suggestion) {
+              actionRow.appendChild(this._h('button', {
+                type: 'button', className: 'dev-btn primary matcher-remap-btn',
+                attrs: { 'data-old': id, 'data-new': suggestion },
+                css: 'font-size:10px; padding:2px 6px;', text: `🔗 Match #${suggestion}`
+              }));
+            }
+            actionRow.appendChild(this._h('button', {
+              type: 'button', className: 'dev-btn matcher-create-btn', attrs: { 'data-id': id },
+              css: 'font-size:10px; padding:2px 6px;', text: '➕ Create Shape'
+            }));
+          }
+          targetsSection.appendChild(
+            this._h('div', { className: `matcher-row ${isOk ? 'matched' : 'missing'}` },
+              this._h('div', { css: 'display:flex; justify-content:space-between; align-items:center; gap:6px;' },
+                this._h('code', { css: `color:${isOk ? '#86efac' : '#fde68a'}; font-weight:700;`, text: `#${id}` }),
+                this._h('span', { css: `font-size:10px; font-weight:700; color:${isOk ? '#4ade80' : '#fbbf24'};`, text: isOk ? '✓ SVG' : '⚠ Missing' })
+              ),
+              actionRow
+            )
+          );
         });
       }
-      html += `</div>`;
 
-      html += `<div>
-        <div class="matcher-section-label">SVG Shape IDs (${svgItems.length}) — Click to Bind</div>
-        <div class="matcher-chip-grid">`;
+      const chipGrid = this._h('div', { className: 'matcher-chip-grid' });
       if (svgItems.length === 0) {
-        html += `<div style="color:#64748b; font-size:10px;">No <code>id="..."</code> nodes detected in SVG yet.</div>`;
+        chipGrid.appendChild(
+          this._h('div', { css: 'color:#64748b; font-size:10px;' },
+            'No ',
+            this._h('code', { text: 'id="..."' }),
+            ' nodes detected in SVG yet.'
+          )
+        );
       } else {
         svgItems.slice(0, 48).forEach((item) => {
           const isBound = astTargetSet.has(item.id);
-          html += `<button type="button" class="matcher-svg-chip ${isBound ? 'bound' : ''}" data-svg-id="${this.escapeMatcherHtml(item.id)}" title="&lt;${this.escapeMatcherHtml(item.tag)} id=&quot;${this.escapeMatcherHtml(item.id)}&quot;&gt; — Click to add AST binding">
-            <span>${isBound ? '✓' : '＋'}</span><span>#${this.escapeMatcherHtml(item.id)}</span>
-          </button>`;
+          chipGrid.appendChild(
+            this._h('button', {
+              type: 'button',
+              className: `matcher-svg-chip ${isBound ? 'bound' : ''}`,
+              attrs: { 'data-svg-id': item.id },
+              title: `<${item.tag} id="${item.id}"> — Click to add AST binding`
+            },
+              this._h('span', { text: isBound ? '✓' : '＋' }),
+              this._h('span', { text: `#${item.id}` })
+            )
+          );
         });
       }
-      html += `</div></div>`;
 
-      el.matcherBody.innerHTML = html;
+      el.matcherBody.replaceChildren(
+        targetsSection,
+        this._h('div', null,
+          this._h('div', { className: 'matcher-section-label', text: `SVG Shape IDs (${svgItems.length}) — Click to Bind` }),
+          chipGrid
+        )
+      );
 
       el.matcherBody.querySelectorAll('.matcher-hl-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
@@ -5645,25 +5783,32 @@ window.addEventListener('message', (e) => {
       const scene = this.engine.scene;
       const checkpoints = (scene && scene.interactive && scene.interactive.checkpoints) || [];
       if (checkpoints.length === 0) {
-        el.qbExistingList.innerHTML = '<div style="font-size:11px; color:#64748b; font-style:italic; padding:6px 0;">No active checkpoints in this slide yet. Build and inject one above!</div>';
+        el.qbExistingList.replaceChildren(
+          this._h('div', {
+            css: 'font-size:11px; color:#64748b; font-style:italic; padding:6px 0;',
+            text: 'No active checkpoints in this slide yet. Build and inject one above!'
+          })
+        );
         return;
       }
       const dur = this.engine.durationSec || 10;
-      el.qbExistingList.innerHTML = checkpoints.map((cp, idx) => `
-        <div class="qb-existing-card">
-          <div style="display:flex; flex-direction:column; gap:2px; flex:1; margin-right:12px;">
-            <div style="display:flex; align-items:center; gap:6px;">
-              <span style="font-weight:700; color:#38bdf8;">t=${(cp.t).toFixed(2)} (${(cp.t * dur).toFixed(1)}s)</span>
-              <span style="color:#f8fafc; font-weight:600;">${cp.title}</span>
-            </div>
-            <div style="font-size:11px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${cp.prompt}</div>
-          </div>
-          <div style="display:flex; gap:6px; align-items:center;">
-            <button type="button" class="dev-btn qb-test-btn" data-idx="${idx}" style="font-size:10px; padding:3px 8px;">▶ Test</button>
-            <button type="button" class="dev-btn qb-del-btn" data-idx="${idx}" style="font-size:10px; padding:3px 8px; color:#f43f5e;">✕ Remove</button>
-          </div>
-        </div>
-      `).join('');
+      el.qbExistingList.replaceChildren(
+        ...checkpoints.map((cp, idx) =>
+          this._h('div', { className: 'qb-existing-card' },
+            this._h('div', { css: 'display:flex; flex-direction:column; gap:2px; flex:1; margin-right:12px;' },
+              this._h('div', { css: 'display:flex; align-items:center; gap:6px;' },
+                this._h('span', { css: 'font-weight:700; color:#38bdf8;', text: `t=${(cp.t).toFixed(2)} (${(cp.t * dur).toFixed(1)}s)` }),
+                this._h('span', { css: 'color:#f8fafc; font-weight:600;', text: cp.title })
+              ),
+              this._h('div', { css: 'font-size:11px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;', text: cp.prompt })
+            ),
+            this._h('div', { css: 'display:flex; gap:6px; align-items:center;' },
+              this._h('button', { type: 'button', className: 'dev-btn qb-test-btn', attrs: { 'data-idx': idx }, css: 'font-size:10px; padding:3px 8px;', text: '▶ Test' }),
+              this._h('button', { type: 'button', className: 'dev-btn qb-del-btn', attrs: { 'data-idx': idx }, css: 'font-size:10px; padding:3px 8px; color:#f43f5e;', text: '✕ Remove' })
+            )
+          )
+        )
+      );
 
       el.qbExistingList.querySelectorAll('.qb-test-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -5830,15 +5975,15 @@ window.addEventListener('message', (e) => {
     renderStarterTemplates() {
       const el = this.elements;
       if (!el.devTemplateTab) return;
-      el.devTemplateTab.innerHTML = this.starterTemplates.map(tpl => `
-        <div class="dev-template-card" data-template-id="${tpl.id}">
-          <div class="dev-template-title">${tpl.title}</div>
-          <div class="dev-template-desc">${tpl.desc}</div>
-          <button type="button" class="dev-btn primary" style="margin-top:8px; width:100%; justify-content:center;">
-            Load Starter ➜
-          </button>
-        </div>
-      `).join('');
+      el.devTemplateTab.replaceChildren(
+        ...this.starterTemplates.map(tpl =>
+          this._h('div', { className: 'dev-template-card', attrs: { 'data-template-id': tpl.id } },
+            this._h('div', { className: 'dev-template-title', text: tpl.title }),
+            this._h('div', { className: 'dev-template-desc', text: tpl.desc }),
+            this._h('button', { type: 'button', className: 'dev-btn primary', css: 'margin-top:8px; width:100%; justify-content:center;', text: 'Load Starter ➜' })
+          )
+        )
+      );
 
       el.devTemplateTab.querySelectorAll('.dev-template-card').forEach(card => {
         card.addEventListener('click', () => {
@@ -5895,7 +6040,8 @@ window.addEventListener('message', (e) => {
 
       this.obs.on('scenesListReceived', (data) => {
         if (!el.obsSelectScene) return;
-        el.obsSelectScene.innerHTML = '';
+        if (typeof el.obsSelectScene.replaceChildren === 'function') el.obsSelectScene.replaceChildren();
+        else el.obsSelectScene.textContent = '';
         (data.scenes || []).forEach(sc => {
           const opt = document.createElement('option');
           opt.value = sc;

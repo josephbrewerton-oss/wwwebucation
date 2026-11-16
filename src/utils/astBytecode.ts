@@ -374,16 +374,47 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       appendU16(strTable.intern(b.target));
       if (b.type === '3d-node') {
         appendU16(strTable.intern(':3d-node'));
-        appendU16(strTable.intern(`${b.x}|${b.y}|${b.z}|${b.baseR || 8}|${b.label || ''}|${b.depthFog !== false ? 1 : 0}`));
+        appendU16(strTable.intern(JSON.stringify({
+          x: b.x,
+          y: b.y,
+          z: b.z,
+          baseR: b.baseR || 8,
+          label: b.label || '',
+          depthFog: b.depthFog !== false,
+        })));
       } else if (b.type === '3d-ring') {
         appendU16(strTable.intern(':3d-ring'));
-        appendU16(strTable.intern(`${b.r}|${b.cx || 0}|${b.cy || 0}|${b.cz || 0}|${b.tiltX || 0}|${b.tiltY || 0}|${b.tiltZ || 0}|${b.segments || 24}|${b.depthFog !== false ? 1 : 0}`));
+        appendU16(strTable.intern(JSON.stringify({
+          r: b.r,
+          cx: b.cx || 0,
+          cy: b.cy || 0,
+          cz: b.cz || 0,
+          tiltX: b.tiltX || 0,
+          tiltY: b.tiltY || 0,
+          tiltZ: b.tiltZ || 0,
+          segments: b.segments || 24,
+          depthFog: b.depthFog !== false,
+        })));
       } else if (b.type === '3d-line') {
         appendU16(strTable.intern(':3d-line'));
-        appendU16(strTable.intern(`${b.x1}|${b.y1}|${b.z1}|${b.x2}|${b.y2}|${b.z2}|${b.cap1 || ''}|${b.cap2 || ''}|${b.baseR || 8}`));
+        appendU16(strTable.intern(JSON.stringify({
+          x1: b.x1,
+          y1: b.y1,
+          z1: b.z1,
+          x2: b.x2,
+          y2: b.y2,
+          z2: b.z2,
+          cap1: b.cap1 || '',
+          cap2: b.cap2 || '',
+          baseR: b.baseR || 8,
+        })));
       } else if (b.type === '3d-polygon') {
         appendU16(strTable.intern(':3d-polygon'));
-        appendU16(strTable.intern(`${b.depthFog !== false ? 1 : 0}|${b.cullBackface ? 1 : 0}|${b.pointsExpr}`));
+        appendU16(strTable.intern(JSON.stringify({
+          depthFog: b.depthFog !== false,
+          cullBackface: Boolean(b.cullBackface),
+          pointsExpr: b.pointsExpr,
+        })));
       } else {
         appendU16(strTable.intern(b.attr || 'attr'));
         appendU16(strTable.intern(b.expr || ''));
@@ -1389,6 +1420,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         .concat(extractSexprBlocks(blockText, ':toggle'))
         .concat(extractSexprBlocks(blockText, ':switch'))
         .concat(extractSexprBlocks(blockText, ':button'))
+        .concat(extractSexprBlocks(blockText, ':select'))
         .concat(extractSexprBlocks(blockText, ':number'))
         .concat(extractSexprBlocks(blockText, ':stepper'));
 
@@ -1426,13 +1458,23 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
           || extractSlot(inText, /:val\s+"?([^"\s\)]+)"?/i);
         const defaultVal = defaultStr !== null ? (isNaN(Number(defaultStr)) ? defaultStr : parseFloat(defaultStr)) : undefined;
 
+        let options: string[] = [];
+        const optMatch = inText.match(/:options\s*\(([^)]+)\)/i);
+        if (optMatch) {
+          const matches = optMatch[1].match(/"([^"]+)"|([^\s"]+)/g);
+          if (matches) {
+            options = matches.map((s) => s.replace(/^"|"$/g, ''));
+          }
+        }
+
         inputs.push({
-          type: ctrlType === 'toggle' ? 'switch' : (ctrlType === 'button' ? 'button' : 'slider'),
+          type: ctrlType === 'toggle' ? 'switch' : (ctrlType === 'button' ? 'button' : (ctrlType === 'select' ? 'select' : 'slider')),
           var: bind,
           label: inLabel,
           min,
           max,
           step,
+          ...(options.length > 0 ? { options } : {}),
         });
 
         uiControls.push({
@@ -1444,6 +1486,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
           max,
           step,
           default: defaultVal,
+          ...(options.length > 0 ? { options } : {}),
         });
       });
     });

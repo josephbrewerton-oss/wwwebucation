@@ -245,6 +245,22 @@
     return rootSvg;
   }
 
+  function createSvgNode(tag, attrs, children) {
+    const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+    if (attrs) {
+      const keys = Object.keys(attrs);
+      for (let i = 0; i < keys.length; i++) {
+        el.setAttribute(keys[i], String(attrs[keys[i]]));
+      }
+    }
+    if (Array.isArray(children)) {
+      for (let i = 0; i < children.length; i++) {
+        if (children[i]) el.appendChild(children[i]);
+      }
+    }
+    return el;
+  }
+
   function ensureMasterDefs(container) {
     if (typeof document === 'undefined' || !container) return null;
     const rootSvg = (container.tagName && container.tagName.toLowerCase() === 'svg')
@@ -259,35 +275,43 @@
       document.getElementById('ast-master-defs');
     if (existingDefs) return existingDefs;
 
-    const defsEl = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defsEl.setAttribute('id', 'ast-master-defs');
-    defsEl.innerHTML =
-      '<filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">' +
-        '<feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />' +
-      '</filter>' +
-      '<filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">' +
-        '<feGaussianBlur stdDeviation="3.5" result="blur" />' +
-        '<feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>' +
-      '</filter>' +
-      '<filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">' +
-        '<feGaussianBlur stdDeviation="3.5" result="blur" />' +
-        '<feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>' +
-      '</filter>' +
-      '<filter id="ast-glow-gold" x="-30%" y="-30%" width="160%" height="160%">' +
-        '<feGaussianBlur stdDeviation="3.5" result="blur" />' +
-        '<feComponentTransfer in="blur" result="cb">' +
-          '<feFuncR type="linear" slope="1.2" />' +
-          '<feFuncG type="linear" slope="0.9" />' +
-          '<feFuncB type="linear" slope="0.2" />' +
-        '</feComponentTransfer>' +
-        '<feMerge><feMergeNode in="cb" /><feMergeNode in="SourceGraphic" /></feMerge>' +
-      '</filter>' +
-      '<filter id="ast-drop-shadow" x="-20%" y="-20%" width="140%" height="140%">' +
-        '<feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55" />' +
-      '</filter>' +
-      '<filter id="ast-blur-soft" x="-20%" y="-20%" width="140%" height="140%">' +
-        '<feGaussianBlur stdDeviation="5" />' +
-      '</filter>';
+    const defsEl = createSvgNode('defs', { id: 'ast-master-defs' }, [
+      createSvgNode('filter', { id: 'pyth-shadow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvgNode('feDropShadow', { dx: '0', dy: '4', stdDeviation: '6', 'flood-color': '#000000', 'flood-opacity': '0.65' })
+      ]),
+      createSvgNode('filter', { id: 'pyth-glow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvgNode('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+        createSvgNode('feMerge', null, [
+          createSvgNode('feMergeNode', { in: 'blur' }),
+          createSvgNode('feMergeNode', { in: 'SourceGraphic' })
+        ])
+      ]),
+      createSvgNode('filter', { id: 'ast-glow-cyan', x: '-30%', y: '-30%', width: '160%', height: '160%' }, [
+        createSvgNode('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+        createSvgNode('feMerge', null, [
+          createSvgNode('feMergeNode', { in: 'blur' }),
+          createSvgNode('feMergeNode', { in: 'SourceGraphic' })
+        ])
+      ]),
+      createSvgNode('filter', { id: 'ast-glow-gold', x: '-30%', y: '-30%', width: '160%', height: '160%' }, [
+        createSvgNode('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+        createSvgNode('feComponentTransfer', { in: 'blur', result: 'cb' }, [
+          createSvgNode('feFuncR', { type: 'linear', slope: '1.2' }),
+          createSvgNode('feFuncG', { type: 'linear', slope: '0.9' }),
+          createSvgNode('feFuncB', { type: 'linear', slope: '0.2' })
+        ]),
+        createSvgNode('feMerge', null, [
+          createSvgNode('feMergeNode', { in: 'cb' }),
+          createSvgNode('feMergeNode', { in: 'SourceGraphic' })
+        ])
+      ]),
+      createSvgNode('filter', { id: 'ast-drop-shadow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvgNode('feDropShadow', { dx: '0', dy: '6', stdDeviation: '8', 'flood-color': '#000000', 'flood-opacity': '0.55' })
+      ]),
+      createSvgNode('filter', { id: 'ast-blur-soft', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvgNode('feGaussianBlur', { stdDeviation: '5' })
+      ])
+    ]);
 
     rootSvg.insertBefore(defsEl, rootSvg.firstChild || null);
     return defsEl;
@@ -343,20 +367,117 @@
           'feimage', 'femerge', 'femergenode', 'femorphology', 'feoffset',
           'fepointlight', 'fespecularlighting', 'fespotlight', 'fetile',
           'feturbulence', 'animate', 'animatemotion', 'animatetransform',
-          'mpath', 'set', 'title', 'desc', 'switch', 'style'
+          'mpath', 'set', 'title', 'desc', 'switch'
         ]);
+        const TAG_CANONICAL = {
+          lineargradient: 'linearGradient',
+          radialgradient: 'radialGradient',
+          clippath: 'clipPath',
+          textpath: 'textPath',
+          feblend: 'feBlend',
+          fecolormatrix: 'feColorMatrix',
+          fecomponenttransfer: 'feComponentTransfer',
+          fecomposite: 'feComposite',
+          feconvolvematrix: 'feConvolveMatrix',
+          fediffuselighting: 'feDiffuseLighting',
+          fedisplacementmap: 'feDisplacementMap',
+          fedistantlight: 'feDistantLight',
+          fedropshadow: 'feDropShadow',
+          feflood: 'feFlood',
+          fefunca: 'feFuncA',
+          fefuncb: 'feFuncB',
+          fefuncg: 'feFuncG',
+          fefuncr: 'feFuncR',
+          fegaussianblur: 'feGaussianBlur',
+          feimage: 'feImage',
+          femerge: 'feMerge',
+          femergenode: 'feMergeNode',
+          femorphology: 'feMorphology',
+          feoffset: 'feOffset',
+          fepointlight: 'fePointLight',
+          fespecularlighting: 'feSpecularLighting',
+          fespotlight: 'feSpotLight',
+          fetile: 'feTile',
+          feturbulence: 'feTurbulence',
+          animatemotion: 'animateMotion',
+          animatetransform: 'animateTransform'
+        };
+        const ATTR_CANONICAL = {
+          viewbox: 'viewBox',
+          preserveaspectratio: 'preserveAspectRatio',
+          pathlength: 'pathLength',
+          stddeviation: 'stdDeviation',
+          gradientunits: 'gradientUnits',
+          gradienttransform: 'gradientTransform',
+          spreadmethod: 'spreadMethod',
+          patternunits: 'patternUnits',
+          patterncontentunits: 'patternContentUnits',
+          patterntransform: 'patternTransform',
+          maskunits: 'maskUnits',
+          maskcontentunits: 'maskContentUnits',
+          clippathunits: 'clipPathUnits',
+          filterunits: 'filterUnits',
+          primitiveunits: 'primitiveUnits',
+          basefrequency: 'baseFrequency',
+          numoctaves: 'numOctaves',
+          stitchtiles: 'stitchTiles',
+          xchannelselector: 'xChannelSelector',
+          ychannelselector: 'yChannelSelector',
+          edgemode: 'edgeMode',
+          kernelmatrix: 'kernelMatrix',
+          targetx: 'targetX',
+          targety: 'targetY',
+          preservealpha: 'preserveAlpha',
+          surfacescale: 'surfaceScale',
+          diffuseconstant: 'diffuseConstant',
+          specularconstant: 'specularConstant',
+          specularexponent: 'specularExponent',
+          pointsatx: 'pointsAtX',
+          pointsaty: 'pointsAtY',
+          pointsatz: 'pointsAtZ',
+          limitingconeangle: 'limitingConeAngle',
+          tablevalues: 'tableValues',
+          markerwidth: 'markerWidth',
+          markerheight: 'markerHeight',
+          refx: 'refX',
+          refy: 'refY',
+          markerunits: 'markerUnits',
+          attributename: 'attributeName',
+          attributetype: 'attributeType',
+          repeatcount: 'repeatCount',
+          repeatdur: 'repeatDur',
+          calcmode: 'calcMode',
+          keysplines: 'keySplines',
+          keytimes: 'keyTimes',
+          textlength: 'textLength',
+          lengthadjust: 'lengthAdjust',
+          startoffset: 'startOffset',
+          fillopacity: 'fill-opacity',
+          fontfamily: 'font-family',
+          fontsize: 'font-size',
+          fontweight: 'font-weight',
+          letterspacing: 'letter-spacing',
+          pointerevents: 'pointer-events',
+          stopcolor: 'stop-color',
+          stopopacity: 'stop-opacity',
+          strokelinecap: 'stroke-linecap',
+          strokewidth: 'stroke-width',
+          textanchor: 'text-anchor'
+        };
         const ALLOWED_ATTRS = new Set([
           'id', 'class', 'style', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy',
           'fx', 'fy', 'fr', 'r', 'rx', 'ry', 'd', 'points', 'pathlength',
-          'width', 'height', 'viewbox', 'preserveaspectratio', 'transform',
-          'fill', 'fill-opacity', 'fill-rule', 'stroke', 'stroke-width',
-          'stroke-opacity', 'stroke-linecap', 'stroke-linejoin',
+          'dx', 'dy', 'rotate', 'width', 'height', 'viewbox', 'preserveaspectratio',
+          'transform', 'fill', 'fill-opacity', 'fillopacity', 'fill-rule',
+          'stroke', 'stroke-width', 'strokewidth', 'stroke-opacity',
+          'stroke-linecap', 'strokelinecap', 'stroke-linejoin',
           'stroke-dasharray', 'stroke-dashoffset', 'stroke-miterlimit',
-          'opacity', 'font-family', 'font-size', 'font-weight', 'font-style',
-          'text-anchor', 'dominant-baseline', 'letter-spacing', 'word-spacing',
-          'dx', 'dy', 'rotate', 'textlength', 'lengthadjust', 'startoffset',
-          'offset', 'stop-color', 'stop-opacity', 'gradientunits',
-          'gradienttransform', 'spreadmethod', 'patternunits',
+          'opacity', 'font-family', 'fontfamily', 'font-size', 'fontsize',
+          'font-weight', 'fontweight', 'font-style', 'text-anchor', 'textanchor',
+          'dominant-baseline', 'letter-spacing', 'letterspacing', 'word-spacing',
+          'text-transform', 'textlength', 'lengthadjust', 'startoffset', 'offset',
+          'stop-color', 'stopcolor', 'stop-opacity', 'stopopacity',
+          'gradientunits', 'gradienttransform', 'spreadmethod', 'patternunits',
           'patterncontentunits', 'patterntransform', 'maskunits',
           'maskcontentunits', 'clip-path', 'clip-rule', 'clippathunits',
           'mask', 'filter', 'filterunits', 'primitiveunits',
@@ -375,8 +496,8 @@
           'max', 'restart', 'repeatcount', 'repeatdur', 'from', 'to', 'by',
           'calcmode', 'keysplines', 'keytimes', 'additive', 'accumulate',
           'xmlns', 'xmlns:xlink', 'href', 'xlink:href', 'visibility', 'display',
-          'overflow', 'pointer-events', 'cursor', 'color', 'vector-effect',
-          'shape-rendering', 'text-rendering', 'image-rendering'
+          'overflow', 'pointer-events', 'pointerevents', 'cursor', 'color',
+          'vector-effect', 'shape-rendering', 'text-rendering', 'image-rendering'
         ]);
         const decodeEntities = (str) => String(str)
           .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
@@ -389,21 +510,33 @@
 
         let rootSvg = null;
         const stack = [];
+        const skipStack = [];
         const tokenRx = /<!--[\s\S]*?-->|<\/([a-zA-Z0-9:-]+)\s*>|<([a-zA-Z0-9:-]+)((?:\s+[a-zA-Z0-9:-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*(\/?)>|([^<]+)/g;
         let match;
 
         while ((match = tokenRx.exec(svgMarkup)) !== null) {
           const [, closeTag, openTag, attrStr, selfClose, textNode] = match;
           if (closeTag) {
-            if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeTag.toLowerCase()) {
+            const closeLower = closeTag.toLowerCase();
+            if (skipStack.length > 0) {
+              if (skipStack[skipStack.length - 1] === closeLower) {
+                skipStack.pop();
+              }
+              continue;
+            }
+            if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeLower) {
               stack.pop();
             }
           } else if (openTag) {
             const tagLower = openTag.toLowerCase();
-            if (!ALLOWED_TAGS.has(tagLower)) {
+            if (skipStack.length > 0 || !ALLOWED_TAGS.has(tagLower)) {
+              if (!selfClose && !VOID_TAGS.has(tagLower)) {
+                skipStack.push(tagLower);
+              }
               continue;
             }
-            const el = document.createElementNS(SVG_NS, openTag);
+            const canonicalTag = TAG_CANONICAL[tagLower] || openTag;
+            const el = document.createElementNS(SVG_NS, canonicalTag);
             if (attrStr) {
               const attrRx = /([a-zA-Z0-9:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
               let aMatch;
@@ -414,19 +547,22 @@
                 if (!ALLOWED_ATTRS.has(nameLower) && !nameLower.startsWith('data-') && !nameLower.startsWith('aria-')) {
                   continue;
                 }
+                const canonicalAttr = ATTR_CANONICAL[nameLower] || rawName;
                 const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
                 if (nameLower === 'href' || nameLower === 'xlink:href') {
                   const trimmedVal = val.trim();
-                  if (!/^#[A-Za-z_][\w:.-]*$/.test(trimmedVal)) {
+                  const isSafeLocalRef = /^#[A-Za-z_][\w:.-]*$/.test(trimmedVal);
+                  const isSafeDataImage = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmedVal);
+                  if (!isSafeLocalRef && !isSafeDataImage) {
                     continue;
                   }
                   if (nameLower === 'xlink:href') {
                     el.setAttributeNS(XLINK_NS, 'xlink:href', trimmedVal);
                   } else {
-                    el.setAttribute(rawName, trimmedVal);
+                    el.setAttribute('href', trimmedVal);
                   }
                 } else {
-                  el.setAttribute(rawName, val);
+                  el.setAttribute(canonicalAttr, val);
                 }
               }
             }
@@ -438,7 +574,7 @@
             if (!selfClose && !VOID_TAGS.has(tagLower) && (stack.length > 0 || tagLower === 'svg')) {
               stack.push(el);
             }
-          } else if (textNode && stack.length > 0) {
+          } else if (textNode && skipStack.length === 0 && stack.length > 0) {
             stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(textNode)));
           }
         }
@@ -495,7 +631,7 @@
    */
   function commitBindingValue(node, attr, val) {
     if (!node) return;
-    if (attr === 'textContent') {
+    if (attr === 'textContent' || attr === 'text') {
       node.textContent = String(val);
       return;
     }

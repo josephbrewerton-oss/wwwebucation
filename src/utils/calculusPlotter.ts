@@ -354,28 +354,193 @@ export const CALCULUS_PRESETS: {
 
 /**
  * Parses simple algebraic math strings (Desmos/GeoGebra format) into safe JavaScript functions
+ * using a pure recursive-descent evaluator (zero eval / new Function sinks).
  */
 export function parseMathExpression(expr: string): ((x: number) => number) | null {
-  const sanitized = expr
-    .trim()
-    .replace(/\^/g, '**')
-    .replace(/sin/g, 'Math.sin')
-    .replace(/cos/g, 'Math.cos')
-    .replace(/tan/g, 'Math.tan')
-    .replace(/exp/g, 'Math.exp')
-    .replace(/sqrt/g, 'Math.sqrt')
-    .replace(/ln/g, 'Math.log')
-    .replace(/abs/g, 'Math.abs')
-    .replace(/pi/gi, 'Math.PI')
-    .replace(/e\b/g, 'Math.E');
+  const src = String(expr || '').trim();
+  if (!src) return null;
+
+  type Tok =
+    | { type: 'num'; val: number }
+    | { type: 'id'; val: string }
+    | { type: 'op'; val: string };
+
+  const toks: Tok[] = [];
+  let i = 0;
+  while (i < src.length) {
+    const ch = src[i];
+    if (/\s/.test(ch)) {
+      i++;
+      continue;
+    }
+    if (/\d/.test(ch) || (ch === '.' && /\d/.test(src[i + 1] || ''))) {
+      const m = src.slice(i).match(/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/);
+      if (!m) return null;
+      toks.push({ type: 'num', val: Number(m[0]) });
+      i += m[0].length;
+      continue;
+    }
+    if (src.slice(i, i + 2) === '**') {
+      toks.push({ type: 'op', val: '**' });
+      i += 2;
+      continue;
+    }
+    if ('+-*/^%(),'.includes(ch)) {
+      toks.push({ type: 'op', val: ch });
+      i++;
+      continue;
+    }
+    if (/[a-zA-Z_]/.test(ch)) {
+      const m = src.slice(i).match(/^[a-zA-Z_][a-zA-Z0-9_]*/);
+      if (!m) return null;
+      toks.push({ type: 'id', val: m[0] });
+      i += m[0].length;
+      continue;
+    }
+    return null;
+  }
+
+  let p = 0;
+  const peek = (): Tok | undefined => toks[p];
+  const eat = (val?: string): Tok | null => {
+    const tk = toks[p];
+    if (tk && (!val || tk.val === val)) {
+      p++;
+      return tk;
+    }
+    return null;
+  };
+
+  const MATH_FUNCS: Record<string, (...args: number[]) => number> = {
+    sin: Math.sin,
+    cos: Math.cos,
+    tan: Math.tan,
+    asin: Math.asin,
+    acos: Math.acos,
+    atan: Math.atan,
+    atan2: Math.atan2,
+    sinh: Math.sinh,
+    cosh: Math.cosh,
+    tanh: Math.tanh,
+    exp: Math.exp,
+    sqrt: Math.sqrt,
+    cbrt: Math.cbrt,
+    ln: Math.log,
+    log: Math.log10,
+    log10: Math.log10,
+    log2: Math.log2,
+    abs: Math.abs,
+    floor: Math.floor,
+    ceil: Math.ceil,
+    round: Math.round,
+    sign: Math.sign,
+    min: Math.min,
+    max: Math.max,
+    pow: Math.pow,
+    hypot: Math.hypot,
+  };
+
+  const parseAdd = (): ((x: number) => number) => {
+    let left = parseMul();
+    while (peek()?.type === 'op' && (peek()!.val === '+' || peek()!.val === '-')) {
+      const op = eat()!.val;
+      const right = parseMul();
+      const l = left;
+      left = op === '+' ? (x) => l(x) + right(x) : (x) => l(x) - right(x);
+    }
+    return left;
+  };
+
+  const parseMul = (): ((x: number) => number) => {
+    let left = parsePow();
+    while (peek()?.type === 'op' && (peek()!.val === '*' || peek()!.val === '/' || peek()!.val === '%')) {
+      const op = eat()!.val;
+      const right = parsePow();
+      const l = left;
+      left = op === '*' ? (x) => l(x) * right(x) : op === '/' ? (x) => l(x) / right(x) : (x) => l(x) % right(x);
+    }
+    return left;
+  };
+
+  const parsePow = (): ((x: number) => number) => {
+    const base = parseUnary();
+    if (peek()?.type === 'op' && (peek()!.val === '^' || peek()!.val === '**')) {
+      eat();
+      const exp = parsePow();
+      return (x) => Math.pow(base(x), exp(x));
+    }
+    return base;
+  };
+
+  const parseUnary = (): ((x: number) => number) => {
+    if (eat('-')) {
+      const u = parseUnary();
+      return (x) => -u(x);
+    }
+    if (eat('+')) {
+      return parseUnary();
+    }
+    return parsePrimary();
+  };
+
+  const parsePrimary = (): ((x: number) => number) => {
+    const tk = peek();
+    if (!tk) throw new Error('Unexpected end of expression');
+    if (eat('(')) {
+      const inner = parseAdd();
+      if (!eat(')')) throw new Error('Expected closing parenthesis');
+      return inner;
+    }
+    if (tk.type === 'num') {
+      eat();
+      const v = tk.val;
+      return () => v;
+    }
+    if (tk.type === 'id') {
+      const name = eat()!.val;
+      if (name === 'Math' && eat('.')) {
+        const sub = eat();
+        if (!sub || sub.type !== 'id') throw new Error('Invalid Math member');
+        if (sub.val === 'PI') return () => Math.PI;
+        if (sub.val === 'E') return () => Math.E;
+        const mFn = MATH_FUNCS[sub.val];
+        if (!mFn || !eat('(')) throw new Error('Unsupported Math member');
+        const args: Array<(x: number) => number> = [];
+        if (!eat(')')) {
+          do {
+            args.push(parseAdd());
+          } while (eat(','));
+          if (!eat(')')) throw new Error('Expected )');
+        }
+        return (x) => mFn(...args.map((a) => a(x)));
+      }
+      if (eat('(')) {
+        const fnRef = MATH_FUNCS[name];
+        if (!fnRef) throw new Error('Unsupported math function: ' + name);
+        const args: Array<(x: number) => number> = [];
+        if (!eat(')')) {
+          do {
+            args.push(parseAdd());
+          } while (eat(','));
+          if (!eat(')')) throw new Error('Expected )');
+        }
+        return (x) => fnRef(...args.map((a) => a(x)));
+      }
+      const lower = name.toLowerCase();
+      if (lower === 'x') return (x) => x;
+      if (lower === 'pi') return () => Math.PI;
+      if (name === 'e' || name === 'E') return () => Math.E;
+      throw new Error('Unknown identifier: ' + name);
+    }
+    throw new Error('Unexpected token');
+  };
 
   try {
-    // Return safe numerical evaluation function
-    const fn = new Function('x', `with(Math) { return (${sanitized}); }`);
-    // Test evaluation at x = 1.0
+    const fn = parseAdd();
+    if (p !== toks.length) return null;
     const testVal = fn(1.0);
-    if (typeof testVal !== 'number' || isNaN(testVal)) return null;
-    return fn as (x: number) => number;
+    if (typeof testVal !== 'number' || Number.isNaN(testVal)) return null;
+    return fn;
   } catch {
     return null;
   }

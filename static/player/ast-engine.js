@@ -1308,10 +1308,12 @@
         for (const t of this.transitions) {
           if ((t.from === '*' || t.from === this.currentState) && t.trigger && t.to !== this.currentState) {
             try {
-              const keys = Object.keys(reactiveVars);
-              const vals = Object.values(reactiveVars);
-              const testFn = new Function(...keys, `"use strict"; return (${t.trigger});`);
-              if (testFn(...vals)) {
+              if (!t._triggerFn) {
+                t._triggerFn = (this.engine && typeof this.engine.compileAstFn === 'function')
+                  ? this.engine.compileAstFn(t.trigger)
+                  : () => t.trigger === 'true' || t.trigger === true;
+              }
+              if (t._triggerFn(0, reactiveVars, reactiveVars, Math)) {
                 this.transitionTo(t.to, t.duration);
                 break;
               }
@@ -3337,17 +3339,20 @@
       let pitchBase = camera.pitch;
       const t = this.progress || 0;
       const clock = this.realtimeSec != null ? this.realtimeSec : (t * (this.durationSec || 12.0));
-      if (typeof yawBase === 'string') {
-        try {
-          const yawFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${yawBase});`);
-          yawBase = yawFn(t, Math, this.vars || {}, clock);
-        } catch { yawBase = 0; }
-      }
-      if (typeof pitchBase === 'string') {
-        try {
-          const pitchFn = new Function('t', 'Math', 'vars', 'clock', `"use strict"; return (${pitchBase});`);
-          pitchBase = pitchFn(t, Math, this.vars || {}, clock);
-        } catch { pitchBase = 0; }
+      if (typeof yawBase === 'string' || typeof pitchBase === 'string') {
+        const camVars = { ...(this.vars || {}), clock };
+        if (typeof yawBase === 'string') {
+          try {
+            const yawFn = this.compileAstFn(yawBase);
+            yawBase = yawFn(t, camVars, this.computed || {}, Math);
+          } catch { yawBase = 0; }
+        }
+        if (typeof pitchBase === 'string') {
+          try {
+            const pitchFn = this.compileAstFn(pitchBase);
+            pitchBase = pitchFn(t, camVars, this.computed || {}, Math);
+          } catch { pitchBase = 0; }
+        }
       }
       yawBase = typeof yawBase === 'number' ? yawBase : 0;
       pitchBase = typeof pitchBase === 'number' ? pitchBase : 0;
@@ -4587,7 +4592,13 @@
     getMemoryVar(name) {
       if (!name || !this.vars) return undefined;
       const clean = this.normalizeVarName(name);
-      return this.vars[clean] !== undefined ? this.vars[clean] : this.vars[name];
+      const raw = this.vars[clean] !== undefined ? this.vars[clean] : this.vars[name];
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        if (raw.value !== undefined) return raw.value;
+        if (raw.val !== undefined) return raw.val;
+        if (raw.default !== undefined) return raw.default;
+      }
+      return raw;
     }
 
     setVar(name, val, isAi = false) {
@@ -4969,7 +4980,9 @@
       if (this.scene && this.scene.vars) {
         for (const k of Object.keys(this.scene.vars)) {
           const item = this.scene.vars[k];
-          this.vars[k] = item && item.value !== undefined ? item.value : item;
+          this.vars[k] = (item && typeof item === 'object' && !Array.isArray(item))
+            ? (item.value !== undefined ? item.value : (item.val !== undefined ? item.val : (item.default !== undefined ? item.default : item)))
+            : item;
         }
       }
       this.updateComputedVars();
@@ -5363,7 +5376,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         return () => num;
       }
 
-      if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(expr)) {
+      if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(expr)) {
         if (expr === 't') return (t) => t;
         if (expr === 'true') return () => true;
         if (expr === 'false') return () => false;
@@ -5373,13 +5386,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (expr === 'Infinity') return () => Infinity;
         if (expr === 'PI') return () => Math.PI;
         if (expr === 'E') return () => Math.E;
+        if (expr === 'Math') return (t, vars, computed, M = Math) => M;
+        if (expr === 'vars') return (t, vars) => vars || {};
+        if (expr === 'computed') return (t, vars, computed) => computed || vars || {};
         return (t, vars, computed) => (vars && expr in vars ? vars[expr] : computed?.[expr]);
       }
 
+      const BUILTINS = { String, Number, Boolean, parseInt, parseFloat, isNaN, isFinite };
       const resolveHelper = (name, args, M, helpers) => {
-        if (helpers[name]) return helpers[name](...args);
-        if (typeof M[name] === 'function') return M[name](...args);
+        if (helpers && helpers[name]) return helpers[name](...args);
+        if (M && typeof M[name] === 'function') return M[name](...args);
         if (typeof Math[name] === 'function') return Math[name](...args);
+        if (BUILTINS[name]) return BUILTINS[name](...args);
         return 0;
       };
 
@@ -5500,9 +5518,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
 
       // 2. Safe recursive-descent parser for infix math/ternary expressions (zero eval)
-      let normalized = expr
+      const strLiterals = [];
+      const masked = expr.replace(/"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g, (m) => {
+        const i = strLiterals.length;
+        strLiterals.push(m);
+        return `__AST_STR_${i}__`;
+      });
+      let normalized = masked
         .replace(/\(:if\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\s+([^()]+|\([^()]+\))\)/g, '($1 ? $2 : $3)')
-        .replace(/:([a-zA-Z_]\w*)/g, '$1');
+        .replace(/:([a-zA-Z_]\w*)/g, '$1')
+        .replace(/__AST_STR_(\d+)__/g, (_, i) => strLiterals[Number(i)]);
 
       const toks = [];
       let idx = 0;
@@ -5512,8 +5537,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (c === '"' || c === "'") {
           const q = c; let s = ''; idx++;
           while (idx < normalized.length && normalized[idx] !== q) {
-            if (normalized[idx] === '\\' && idx + 1 < normalized.length) { s += normalized[idx + 1]; idx += 2; }
-            else s += normalized[idx++];
+            if (normalized[idx] === '\\' && idx + 1 < normalized.length) {
+              const esc = normalized[idx + 1];
+              if (esc === 'n') s += '\n';
+              else if (esc === 't') s += '\t';
+              else s += esc;
+              idx += 2;
+            } else {
+              s += normalized[idx++];
+            }
           }
           idx++;
           toks.push({ type: 'str', val: s });
@@ -5527,9 +5559,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
         const multiOp = normalized.slice(idx).match(/^(?:===|!==|==|!=|<=|>=|&&|\|\||\*\*)/);
         if (multiOp) { toks.push({ type: 'op', val: multiOp[0] }); idx += multiOp[0].length; continue; }
-        if ('+-*/%()?:,.<>!'.includes(c)) { toks.push({ type: 'op', val: c }); idx++; continue; }
+        if ('+-*/%()[]?:,.<>!'.includes(c)) { toks.push({ type: 'op', val: c }); idx++; continue; }
         if (/[a-zA-Z_$]/.test(c)) {
-          const m = normalized.slice(idx).match(/^[a-zA-Z_$][a-zA-Z0-9_$-]*/);
+          const m = normalized.slice(idx).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
           toks.push({ type: 'id', val: m[0] });
           idx += m[0].length;
           continue;
@@ -5540,6 +5572,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       let p = 0;
       const peek = () => toks[p];
       const eat = (val) => { if (peek() && (!val || peek().val === val)) return toks[p++]; return null; };
+      const FORBIDDEN_PROPS = new Set(['__proto__', 'constructor', 'prototype', 'Function', 'eval']);
 
       const parseTernary = () => {
         const cond = parseOr();
@@ -5600,30 +5633,69 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (eat('!')) { const u = parseUnary(); return (...ctx) => !u(...ctx); }
         if (eat('-')) { const u = parseUnary(); return (...ctx) => -u(...ctx); }
         if (eat('+')) { const u = parseUnary(); return (...ctx) => +u(...ctx); }
-        return parsePrimary();
+        return parsePostfix();
+      };
+      const parsePostfix = () => {
+        let targetFn = parsePrimary();
+        while (peek() && (peek().val === '.' || peek().val === '[')) {
+          if (eat('.')) {
+            const prop = peek()?.type === 'id' ? eat().val : '';
+            if (!prop || FORBIDDEN_PROPS.has(prop)) {
+              if (eat('(')) { if (!eat(')')) { do { parseTernary(); } while (eat(',')); eat(')'); } }
+              targetFn = ZERO_FN;
+              continue;
+            }
+            if (eat('(')) {
+              const args = [];
+              if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
+              const recv = targetFn;
+              targetFn = (t, vars, computed, M = Math, ...rest) => {
+                const obj = recv(t, vars, computed, M, ...rest);
+                if (obj == null) return 0;
+                const fn = obj[prop];
+                if (typeof fn !== 'function') return 0;
+                return fn.apply(obj, args.map(a => a(t, vars, computed, M, ...rest)));
+              };
+            } else {
+              const recv = targetFn;
+              targetFn = (t, vars, computed, M = Math, ...rest) => {
+                const obj = recv(t, vars, computed, M, ...rest);
+                if (obj == null) return undefined;
+                const val = obj[prop];
+                if (val === undefined && (obj === vars || obj === computed)) {
+                  return computed && prop in computed ? computed[prop] : vars?.[prop];
+                }
+                return val;
+              };
+            }
+          } else if (eat('[')) {
+            const idxFn = parseTernary();
+            eat(']');
+            const recv = targetFn;
+            targetFn = (t, vars, computed, M = Math, ...rest) => {
+              const obj = recv(t, vars, computed, M, ...rest);
+              if (obj == null) return undefined;
+              const idxVal = idxFn(t, vars, computed, M, ...rest);
+              if (typeof idxVal === 'string' && FORBIDDEN_PROPS.has(idxVal)) return undefined;
+              return obj[idxVal];
+            };
+          }
+        }
+        return targetFn;
       };
       const parsePrimary = () => {
         const tk = peek();
         if (!tk) return ZERO_FN;
         if (eat('(')) { const inner = parseTernary(); eat(')'); return inner; }
+        if (eat('[')) {
+          const items = [];
+          if (!eat(']')) { do { items.push(parseTernary()); } while (eat(',')); eat(']'); }
+          return (...ctx) => items.map(fn => fn(...ctx));
+        }
         if (tk.type === 'num') { eat(); const v = tk.val; return () => v; }
         if (tk.type === 'str') { eat(); const v = tk.val; return () => v; }
         if (tk.type === 'id') {
           const name = eat().val;
-          if (eat('.')) {
-            const prop = peek()?.type === 'id' ? eat().val : '';
-            if (eat('(')) {
-              const args = [];
-              if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
-              return (t, vars, computed, M = Math, ...rest) => {
-                const target = name === 'Math' ? M : name === 'vars' ? vars : name === 'computed' ? computed : null;
-                const fn = target?.[prop];
-                return typeof fn === 'function' ? fn.apply(target, args.map(a => a(t, vars, computed, M, ...rest))) : 0;
-              };
-            }
-            if (name === 'Math') return (t, vars, computed, M = Math) => M[prop];
-            return (t, vars, computed) => (vars && prop in vars ? vars[prop] : computed?.[prop]);
-          }
           if (eat('(')) {
             const args = [];
             if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
@@ -5638,8 +5710,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (name === 'false') return () => false;
           if (name === 'null') return () => null;
           if (name === 'undefined') return () => undefined;
+          if (name === 'NaN') return () => NaN;
+          if (name === 'Infinity') return () => Infinity;
           if (name === 'PI') return () => Math.PI;
           if (name === 'E') return () => Math.E;
+          if (name === 'Math') return (t, vars, computed, M = Math) => M;
+          if (name === 'vars') return (t, vars) => vars || {};
+          if (name === 'computed') return (t, vars, computed) => computed || vars || {};
           return (t, vars, computed) => (vars && name in vars ? vars[name] : computed?.[name]);
         }
         eat();
@@ -7427,7 +7504,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       );
       this.isContinuousSim = isContinuousSim;
       if (this.container) {
-        this.container.innerHTML = '';
+        if (typeof this.container.replaceChildren === 'function') this.container.replaceChildren();
+        else this.container.textContent = '';
         this.mountSceneAsset(scene, this.container);
       }
       this.resetVars();
@@ -7462,18 +7540,28 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const existingHud = doc.querySelector('#ast-declarative-hud');
       if (existingHud) existingHud.remove();
 
-      const inputs = scene?.inputs;
+      const inputs = (scene && ((Array.isArray(scene.uiControls) && scene.uiControls.length > 0 ? scene.uiControls : scene.inputs))) || [];
       if (!Array.isArray(inputs) || inputs.length === 0) return;
 
       let hostEl = this.container;
-      if (hostEl instanceof SVGElement || hostEl.tagName?.toLowerCase() === 'svg') {
-        hostEl = hostEl.closest('div') || hostEl.parentElement || doc.body;
-      } else if (hostEl.parentElement && hostEl.parentElement.tagName?.toLowerCase() === 'svg') {
-        hostEl = hostEl.parentElement.closest('div') || hostEl.parentElement.parentElement || doc.body;
+      while (
+        hostEl &&
+        ((typeof SVGElement !== 'undefined' && hostEl instanceof SVGElement) ||
+          (hostEl.tagName && hostEl.tagName.toLowerCase() === 'svg'))
+      ) {
+        hostEl = hostEl.parentElement;
       }
+      if (!hostEl) {
+        hostEl = (typeof doc.getElementById === 'function' ? doc.getElementById('player-stage') : null) || doc.body;
+      }
+      if (!hostEl) return;
 
-      if (getComputedStyle(hostEl).position === 'static') {
-        hostEl.style.position = 'relative';
+      if (typeof getComputedStyle === 'function' && hostEl.style) {
+        try {
+          if (getComputedStyle(hostEl).position === 'static') {
+            hostEl.style.position = 'relative';
+          }
+        } catch (_) {}
       }
 
       const hud = doc.createElement('div');
@@ -7500,27 +7588,56 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       hud.textContent = '';
 
-      const header = document.createElement('div');
+      const header = doc.createElement('div');
       header.style.cssText = 'font-weight: 700; color: #38bdf8; display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid rgba(56, 189, 248, 0.2); padding-bottom: 4px;';
-      const titleSpan = document.createElement('span');
+      const titleSpan = doc.createElement('span');
       titleSpan.textContent = '⚡ Parameters';
-      const badgeSpan = document.createElement('span');
+      const badgeSpan = doc.createElement('span');
       badgeSpan.style.cssText = 'font-size: 9px; color: #94a3b8; font-family: monospace;';
       badgeSpan.textContent = 'AST AUTO';
       header.append(titleSpan, badgeSpan);
       hud.appendChild(header);
 
+      const getInitialVal = (vName, inp) => {
+        const memVal = typeof this.getMemoryVar === 'function' ? this.getMemoryVar(vName) : undefined;
+        if (memVal !== undefined) return memVal;
+        const rawSceneVar = this.scene?.vars?.[vName];
+        if (rawSceneVar !== undefined) {
+          if (rawSceneVar && typeof rawSceneVar === 'object' && !Array.isArray(rawSceneVar)) {
+            if (rawSceneVar.value !== undefined) return rawSceneVar.value;
+            if (rawSceneVar.val !== undefined) return rawSceneVar.val;
+            if (rawSceneVar.default !== undefined) return rawSceneVar.default;
+          }
+          return rawSceneVar;
+        }
+        return inp.val ?? inp.default ?? 0;
+      };
+
       for (const inp of inputs) {
-        const vName = String(inp.var || inp.id || '');
-        const curVal = this.scene?.vars?.[vName] !== undefined ? this.scene.vars[vName] : (inp.val ?? inp.default ?? 0);
-        const row = document.createElement('div');
+        const vName = String(inp.var || inp.bind || inp.id || '');
+        const curVal = getInitialVal(vName, inp);
+        const row = doc.createElement('div');
         row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; gap:10px;';
 
-        if (inp.type === 'switch' || typeof curVal === 'boolean') {
-          const labelSpan = document.createElement('span');
+        if (inp.type === 'select' || (Array.isArray(inp.options) && inp.options.length > 0)) {
+          const labelSpan = doc.createElement('span');
+          labelSpan.textContent = `${inp.label || vName}:`;
+          const sel = doc.createElement('select');
+          sel.id = `hud-sel-${vName}`;
+          sel.style.cssText = 'background:#1e293b; color:#f8fafc; border:1px solid rgba(56,189,248,0.4); border-radius:4px; padding:2px 6px; font-size:11px; cursor:pointer;';
+          (inp.options || []).forEach(optVal => {
+            const opt = doc.createElement('option');
+            opt.value = String(optVal);
+            opt.textContent = String(optVal);
+            if (String(optVal) === String(curVal)) opt.selected = true;
+            sel.appendChild(opt);
+          });
+          row.append(labelSpan, sel);
+        } else if (inp.type === 'switch' || inp.type === 'toggle' || typeof curVal === 'boolean') {
+          const labelSpan = doc.createElement('span');
           labelSpan.textContent = `${inp.label || vName}:`;
 
-          const btn = document.createElement('button');
+          const btn = doc.createElement('button');
           btn.id = `hud-btn-${vName}`;
           btn.type = 'button';
           btn.style.cssText = `cursor:pointer; background:${curVal ? '#0284c7' : '#475569'}; color:#fff; border:none; border-radius:4px; padding:2px 8px; font-weight:600; font-size:11px;`;
@@ -7528,15 +7645,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
           row.append(labelSpan, btn);
         } else {
-          const labelSpan = document.createElement('span');
+          const labelSpan = doc.createElement('span');
           labelSpan.append(`${inp.label || vName}: `);
-          const valBold = document.createElement('b');
+          const valBold = doc.createElement('b');
           valBold.id = `hud-val-${vName}`;
           valBold.style.color = '#fde047';
           valBold.textContent = String(curVal);
           labelSpan.appendChild(valBold);
 
-          const rangeInp = document.createElement('input');
+          const rangeInp = doc.createElement('input');
           rangeInp.type = 'range';
           rangeInp.id = `hud-inp-${vName}`;
           if (inp.min !== undefined) rangeInp.min = String(inp.min);
@@ -7551,41 +7668,48 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
       hostEl.appendChild(hud);
 
+      const commitVarChange = (vName, nextVal) => {
+        if (typeof this.setMemoryVar === 'function') {
+          this.setMemoryVar(vName, nextVal);
+          if (typeof this.render === 'function') this.render(this.progress || 0);
+          return;
+        }
+        if (this.vars) this.vars[vName] = nextVal;
+        if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
+        if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
+        if (typeof this.render === 'function') this.render(this.progress || 0);
+      };
+
       inputs.forEach(inp => {
-        const vName = inp.var || inp.id;
+        const vName = String(inp.var || inp.bind || inp.id || '');
         const slider = hud.querySelector(`#hud-inp-${vName}`);
         const btn = hud.querySelector(`#hud-btn-${vName}`);
+        const sel = hud.querySelector(`#hud-sel-${vName}`);
         const display = hud.querySelector(`#hud-val-${vName}`);
+
+        if (sel) {
+          sel.addEventListener('change', (e) => {
+            commitVarChange(vName, e.target.value);
+          });
+        }
 
         if (slider) {
           slider.addEventListener('input', (e) => {
             const val = parseFloat(e.target.value);
             if (display) display.textContent = val;
-            if (this.scene && this.scene.vars) {
-              this.scene.vars[vName] = val;
-            }
-            if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
-            if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
-            if (typeof this.render === 'function') this.render(this.progress || 0);
+            commitVarChange(vName, val);
           });
         }
 
         if (btn) {
           btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const currentVal = Boolean(this.scene?.vars?.[vName]);
+            const currentVal = Boolean(getInitialVal(vName, inp));
             const nextVal = !currentVal;
-
-            if (this.scene && this.scene.vars) {
-              this.scene.vars[vName] = nextVal;
-            }
 
             btn.style.background = nextVal ? '#0284c7' : '#475569';
             btn.textContent = nextVal ? 'CLOSED' : 'OPEN';
-
-            if (typeof this.updateComputedVars === 'function') this.updateComputedVars();
-            if (typeof this.applyBindings === 'function') this.applyBindings(this.progress || 0);
-            if (typeof this.render === 'function') this.render(this.progress || 0);
+            commitVarChange(vName, nextVal);
           });
         }
       });
@@ -7735,7 +7859,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           this.lastSpokenIndex = -1;
           this.resetCamera();
           if (this.container) {
-            this.container.innerHTML = '';
+            if (typeof this.container.replaceChildren === 'function') this.container.replaceChildren();
+            else this.container.textContent = '';
             this.mountSceneAsset(welcomeScene, this.container);
           }
           this.resetVars();
@@ -7782,7 +7907,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this._cachedElements = null;
         this._mountedSceneId = null;
 
-        // Note: Do not clear container.innerHTML here; preserve current apparatus until new scene is ready
+        // Note: Do not clear container DOM here; preserve current apparatus until new scene is ready
 
         let scene = this.sceneCache[presetId];
 
@@ -7956,6 +8081,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (
               !parsedAst ||
               (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0)) ||
+              (parsedAst.inputs && parsedAst.inputs.some(i => i && ((i.type === 'select' && (!i.options || i.options.length === 0)) || (i.min === 0 && i.max === 0 && !i.options)))) ||
+              (parsedAst.vars && Object.values(parsedAst.vars).some(v => typeof v === 'string')) ||
+              !parsedAst.bindings || parsedAst.bindings.length === 0 ||
               !parsedAst.computed || parsedAst.computed.length === 0 ||
               !parsedAst.gestures || parsedAst.gestures.length === 0 ||
               parsedAst.gestures.some(g => g && g.fromBytecode)
@@ -7996,10 +8124,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 parsedAst = textParsed;
               } else {
                 // Seamlessly merge rich interactive elements that compact bytecode may lack
-                if ((!parsedAst.uiControls || parsedAst.uiControls.length === 0) && textParsed.uiControls) {
+                const needsRichControls = !parsedAst.uiControls || parsedAst.uiControls.length === 0 ||
+                  (Array.isArray(textParsed.uiControls) && textParsed.uiControls.length > parsedAst.uiControls.length) ||
+                  (Array.isArray(textParsed.uiControls) && textParsed.uiControls.some(c => c && c.type === 'select' && c.options && c.options.length > 0) && !parsedAst.uiControls.some(c => c && c.type === 'select' && c.options && c.options.length > 0));
+                if (needsRichControls && textParsed.uiControls) {
                   parsedAst.uiControls = textParsed.uiControls;
                 }
-                if ((!parsedAst.inputs || parsedAst.inputs.length === 0) && textParsed.inputs && textParsed.inputs.length > 0) {
+                if (((!parsedAst.inputs || parsedAst.inputs.length === 0) || needsRichControls) && textParsed.inputs && textParsed.inputs.length > 0) {
                   parsedAst.inputs = textParsed.inputs;
                 }
                 if (textParsed.vars && typeof textParsed.vars === 'object') {
@@ -8031,7 +8162,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 ) {
                   parsedAst.gestures = textParsed.gestures;
                 }
-                if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.some(b => b.type === 'var-update'))) {
+                if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.length > parsedAst.bindings.length || textParsed.bindings.some(b => b.type === 'var-update'))) {
                   parsedAst.bindings = textParsed.bindings;
                 }
                 if (textParsed.scopes && textParsed.scopes.length > 0 && (!parsedAst.scopes || parsedAst.scopes.length === 0)) {
@@ -8088,6 +8219,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           render: registryScene.render,
           vars: (parsedAst && parsedAst.vars) || registryScene.vars || {},
           inputs: (parsedAst && parsedAst.inputs) || registryScene.inputs || [],
+          uiControls: (parsedAst && parsedAst.uiControls) || registryScene.uiControls || (parsedAst && parsedAst.inputs) || registryScene.inputs || [],
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
@@ -8148,7 +8280,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       // Mount into container (or initialize headless buffers if container is null)
       if (this.container) {
-        this.container.innerHTML = '';
+        if (typeof this.container.replaceChildren === 'function') this.container.replaceChildren();
+        else this.container.textContent = '';
       }
       this.mountSceneAsset(scene, this.container || null);
       this.resetVars();
@@ -8812,30 +8945,32 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
   }
 
   renderErrorPlaceholder(identifier, message) {
-    if (!this.container) return;
-    const escapeXmlText = (str) => String(str || '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-    const safeId = escapeXmlText(identifier || 'Unknown');
-    const safeMsg = escapeXmlText(message || 'Failed to load vector asset');
-    this.container.innerHTML = `
-      <svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16; border-radius:12px;">
-        <rect x="20" y="20" width="760" height="440" rx="16" fill="#0f172a" stroke="#ef4444" stroke-width="2" stroke-dasharray="6 6"/>
-        <circle cx="400" cy="180" r="42" fill="#ef4444" fill-opacity="0.12" stroke="#ef4444" stroke-width="2.5"/>
-        <text x="400" y="192" fill="#ef4444" font-size="34" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">⚠️</text>
-        <text x="400" y="260" fill="#f8fafc" font-size="20" font-weight="700" text-anchor="middle" font-family="system-ui, sans-serif">Scene Load Error</text>
-        <text x="400" y="295" fill="#94a3b8" font-size="14" text-anchor="middle" font-family="system-ui, sans-serif">${safeMsg}</text>
-        <text x="400" y="325" fill="#64748b" font-size="12" text-anchor="middle" font-family="monospace">Target: ${safeId}</text>
-        <g cursor="pointer" id="error-fallback-action" transform="translate(325, 360)">
-          <rect width="150" height="38" rx="19" fill="#2563eb"/>
-          <text x="75" y="24" fill="#ffffff" font-size="13" font-weight="bold" text-anchor="middle" font-family="system-ui, sans-serif">Load Default Scene</text>
-        </g>
-      </svg>
-    `;
-    const btn = this.container.querySelector('#error-fallback-action');
-    if (btn) {
-      btn.onclick = () => {
-        this.loadScene('welcome', true);
-      };
-    }
+    if (!this.container || typeof document === 'undefined') return;
+    const SVG_NS = 'http://www.w3.org/2000/svg';
+    const mk = (tag, attrs = {}, text = null) => {
+      const node = document.createElementNS(SVG_NS, tag);
+      for (const [k, v] of Object.entries(attrs)) node.setAttribute(k, String(v));
+      if (text !== null) node.textContent = String(text);
+      return node;
+    };
+    const svg = mk('svg', { viewBox: '0 0 800 480', width: '100%', height: '100%' });
+    svg.style.background = '#090d16';
+    svg.style.borderRadius = '12px';
+    svg.appendChild(mk('rect', { x: 20, y: 20, width: 760, height: 440, rx: 16, fill: '#0f172a', stroke: '#ef4444', 'stroke-width': 2, 'stroke-dasharray': '6 6' }));
+    svg.appendChild(mk('circle', { cx: 400, cy: 180, r: 42, fill: '#ef4444', 'fill-opacity': '0.12', stroke: '#ef4444', 'stroke-width': '2.5' }));
+    svg.appendChild(mk('text', { x: 400, y: 192, fill: '#ef4444', 'font-size': 34, 'font-weight': 'bold', 'text-anchor': 'middle', 'font-family': 'system-ui, sans-serif' }, '⚠️'));
+    svg.appendChild(mk('text', { x: 400, y: 260, fill: '#f8fafc', 'font-size': 20, 'font-weight': '700', 'text-anchor': 'middle', 'font-family': 'system-ui, sans-serif' }, 'Scene Load Error'));
+    svg.appendChild(mk('text', { x: 400, y: 295, fill: '#94a3b8', 'font-size': 14, 'text-anchor': 'middle', 'font-family': 'system-ui, sans-serif' }, message || 'Failed to load vector asset'));
+    svg.appendChild(mk('text', { x: 400, y: 325, fill: '#64748b', 'font-size': 12, 'text-anchor': 'middle', 'font-family': 'monospace' }, `Target: ${identifier || 'Unknown'}`));
+    const btnGroup = mk('g', { cursor: 'pointer', id: 'error-fallback-action', transform: 'translate(325, 360)' });
+    btnGroup.appendChild(mk('rect', { width: 150, height: 38, rx: 19, fill: '#2563eb' }));
+    btnGroup.appendChild(mk('text', { x: 75, y: 24, fill: '#ffffff', 'font-size': 13, 'font-weight': 'bold', 'text-anchor': 'middle', 'font-family': 'system-ui, sans-serif' }, 'Load Default Scene'));
+    btnGroup.onclick = () => {
+      this.loadScene('welcome', true);
+    };
+    svg.appendChild(btnGroup);
+    if (typeof this.container.replaceChildren === 'function') this.container.replaceChildren(svg);
+    else { this.container.textContent = ''; this.container.appendChild(svg); }
   }
 
   sanitizeSvg(rawSvg) {
@@ -8896,44 +9031,154 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     const VOID_TAGS = new Set([
       'path', 'rect', 'circle', 'ellipse', 'line', 'polyline', 'polygon',
       'stop', 'use', 'image', 'feblend', 'fecolormatrix', 'fecomposite',
-      'feflood', 'fegaussianblur', 'femergenode', 'femorphology',
-      'feoffset', 'feturbulence', 'animate', 'animatetransform', 'set'
+      'feconvolvematrix', 'fedisplacementmap', 'fedistantlight', 'fedropshadow',
+      'feflood', 'fefunca', 'fefuncb', 'fefuncg', 'fefuncr', 'fegaussianblur',
+      'feimage', 'femergenode', 'femorphology', 'feoffset', 'fepointlight',
+      'fespotlight', 'fetile', 'feturbulence', 'animate', 'animatemotion',
+      'animatetransform', 'mpath', 'set'
     ]);
     const ALLOWED_TAGS = new Set([
       'svg', 'g', 'defs', 'symbol', 'use', 'path', 'rect', 'circle',
       'ellipse', 'line', 'polyline', 'polygon', 'text', 'tspan', 'textpath',
       'image', 'lineargradient', 'radialgradient', 'stop', 'clippath',
       'mask', 'pattern', 'marker', 'filter', 'feblend', 'fecolormatrix',
-      'fecomposite', 'feflood', 'fegaussianblur', 'femerge', 'femergenode',
-      'femorphology', 'feoffset', 'feturbulence', 'animate',
-      'animatetransform', 'set', 'title', 'desc', 'switch', 'style'
+      'fecomponenttransfer', 'fecomposite', 'feconvolvematrix',
+      'fediffuselighting', 'fedisplacementmap', 'fedistantlight', 'fedropshadow',
+      'feflood', 'fefunca', 'fefuncb', 'fefuncg', 'fefuncr', 'fegaussianblur',
+      'feimage', 'femerge', 'femergenode', 'femorphology', 'feoffset',
+      'fepointlight', 'fespecularlighting', 'fespotlight', 'fetile',
+      'feturbulence', 'animate', 'animatemotion', 'animatetransform',
+      'mpath', 'set', 'title', 'desc', 'switch'
     ]);
+    const TAG_CANONICAL = {
+      lineargradient: 'linearGradient',
+      radialgradient: 'radialGradient',
+      clippath: 'clipPath',
+      textpath: 'textPath',
+      feblend: 'feBlend',
+      fecolormatrix: 'feColorMatrix',
+      fecomponenttransfer: 'feComponentTransfer',
+      fecomposite: 'feComposite',
+      feconvolvematrix: 'feConvolveMatrix',
+      fediffuselighting: 'feDiffuseLighting',
+      fedisplacementmap: 'feDisplacementMap',
+      fedistantlight: 'feDistantLight',
+      fedropshadow: 'feDropShadow',
+      feflood: 'feFlood',
+      fefunca: 'feFuncA',
+      fefuncb: 'feFuncB',
+      fefuncg: 'feFuncG',
+      fefuncr: 'feFuncR',
+      fegaussianblur: 'feGaussianBlur',
+      feimage: 'feImage',
+      femerge: 'feMerge',
+      femergenode: 'feMergeNode',
+      femorphology: 'feMorphology',
+      feoffset: 'feOffset',
+      fepointlight: 'fePointLight',
+      fespecularlighting: 'feSpecularLighting',
+      fespotlight: 'feSpotLight',
+      fetile: 'feTile',
+      feturbulence: 'feTurbulence',
+      animatemotion: 'animateMotion',
+      animatetransform: 'animateTransform'
+    };
+    const ATTR_CANONICAL = {
+      viewbox: 'viewBox',
+      preserveaspectratio: 'preserveAspectRatio',
+      pathlength: 'pathLength',
+      stddeviation: 'stdDeviation',
+      gradientunits: 'gradientUnits',
+      gradienttransform: 'gradientTransform',
+      spreadmethod: 'spreadMethod',
+      patternunits: 'patternUnits',
+      patterncontentunits: 'patternContentUnits',
+      patterntransform: 'patternTransform',
+      maskunits: 'maskUnits',
+      maskcontentunits: 'maskContentUnits',
+      clippathunits: 'clipPathUnits',
+      filterunits: 'filterUnits',
+      primitiveunits: 'primitiveUnits',
+      basefrequency: 'baseFrequency',
+      numoctaves: 'numOctaves',
+      stitchtiles: 'stitchTiles',
+      xchannelselector: 'xChannelSelector',
+      ychannelselector: 'yChannelSelector',
+      edgemode: 'edgeMode',
+      kernelmatrix: 'kernelMatrix',
+      targetx: 'targetX',
+      targety: 'targetY',
+      preservealpha: 'preserveAlpha',
+      surfacescale: 'surfaceScale',
+      diffuseconstant: 'diffuseConstant',
+      specularconstant: 'specularConstant',
+      specularexponent: 'specularExponent',
+      pointsatx: 'pointsAtX',
+      pointsaty: 'pointsAtY',
+      pointsatz: 'pointsAtZ',
+      limitingconeangle: 'limitingConeAngle',
+      tablevalues: 'tableValues',
+      markerwidth: 'markerWidth',
+      markerheight: 'markerHeight',
+      refx: 'refX',
+      refy: 'refY',
+      markerunits: 'markerUnits',
+      attributename: 'attributeName',
+      attributetype: 'attributeType',
+      repeatcount: 'repeatCount',
+      repeatdur: 'repeatDur',
+      calcmode: 'calcMode',
+      keysplines: 'keySplines',
+      keytimes: 'keyTimes',
+      textlength: 'textLength',
+      lengthadjust: 'lengthAdjust',
+      startoffset: 'startOffset',
+      fillopacity: 'fill-opacity',
+      fontfamily: 'font-family',
+      fontsize: 'font-size',
+      fontweight: 'font-weight',
+      letterspacing: 'letter-spacing',
+      pointerevents: 'pointer-events',
+      stopcolor: 'stop-color',
+      stopopacity: 'stop-opacity',
+      strokelinecap: 'stroke-linecap',
+      strokewidth: 'stroke-width',
+      textanchor: 'text-anchor'
+    };
     const ALLOWED_ATTRS = new Set([
       'id', 'class', 'style', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'cx', 'cy',
-      'r', 'rx', 'ry', 'd', 'points', 'width', 'height', 'viewbox',
-      'preserveaspectratio', 'transform', 'fill', 'fill-opacity',
-      'fill-rule', 'stroke', 'stroke-width', 'stroke-opacity',
-      'stroke-linecap', 'stroke-linejoin', 'stroke-dasharray',
-      'stroke-dashoffset', 'stroke-miterlimit', 'opacity', 'font-family',
-      'font-size', 'font-weight', 'font-style', 'text-anchor',
-      'dominant-baseline', 'letter-spacing', 'word-spacing', 'dx', 'dy',
-      'rotate', 'textlength', 'lengthadjust', 'startoffset', 'offset',
-      'stop-color', 'stop-opacity', 'gradientunits', 'gradienttransform',
-      'spreadmethod', 'patternunits', 'patterncontentunits',
-      'patterntransform', 'maskunits', 'maskcontentunits', 'clip-path',
-      'clip-rule', 'clippathunits', 'mask', 'filter', 'filterunits',
-      'primitiveunits', 'stddeviation', 'in', 'in2', 'result', 'k1', 'k2',
-      'k3', 'k4', 'type', 'values', 'mode', 'operator', 'flood-color',
-      'flood-opacity', 'basefrequency', 'numoctaves', 'seed', 'scale',
-      'xchannelselector', 'ychannelselector', 'edgemode',
+      'fx', 'fy', 'fr', 'r', 'rx', 'ry', 'd', 'points', 'pathlength',
+      'dx', 'dy', 'rotate', 'width', 'height', 'viewbox', 'preserveaspectratio',
+      'transform', 'fill', 'fill-opacity', 'fillopacity', 'fill-rule',
+      'stroke', 'stroke-width', 'strokewidth', 'stroke-opacity',
+      'stroke-linecap', 'strokelinecap', 'stroke-linejoin',
+      'stroke-dasharray', 'stroke-dashoffset', 'stroke-miterlimit',
+      'opacity', 'font-family', 'fontfamily', 'font-size', 'fontsize',
+      'font-weight', 'fontweight', 'font-style', 'text-anchor', 'textanchor',
+      'dominant-baseline', 'letter-spacing', 'letterspacing', 'word-spacing',
+      'text-transform', 'textlength', 'lengthadjust', 'startoffset', 'offset',
+      'stop-color', 'stopcolor', 'stop-opacity', 'stopopacity',
+      'gradientunits', 'gradienttransform', 'spreadmethod', 'patternunits',
+      'patterncontentunits', 'patterntransform', 'maskunits',
+      'maskcontentunits', 'clip-path', 'clip-rule', 'clippathunits',
+      'mask', 'filter', 'filterunits', 'primitiveunits',
+      'color-interpolation-filters', 'stddeviation', 'in', 'in2', 'result',
+      'k1', 'k2', 'k3', 'k4', 'type', 'values', 'mode', 'operator',
+      'flood-color', 'flood-opacity', 'basefrequency', 'numoctaves', 'seed',
+      'stitchtiles', 'scale', 'xchannelselector', 'ychannelselector',
+      'edgemode', 'kernelmatrix', 'order', 'divisor', 'bias', 'targetx',
+      'targety', 'preservealpha', 'surfacescale', 'diffuseconstant',
+      'specularconstant', 'specularexponent', 'azimuth', 'elevation',
+      'pointsatx', 'pointsaty', 'pointsatz', 'limitingconeangle', 'radius',
+      'tablevalues', 'slope', 'intercept', 'amplitude', 'exponent',
       'markerwidth', 'markerheight', 'refx', 'refy', 'orient',
       'markerunits', 'marker-start', 'marker-mid', 'marker-end',
       'attributename', 'attributetype', 'begin', 'dur', 'end', 'min',
       'max', 'restart', 'repeatcount', 'repeatdur', 'from', 'to', 'by',
       'calcmode', 'keysplines', 'keytimes', 'additive', 'accumulate',
       'xmlns', 'xmlns:xlink', 'href', 'xlink:href', 'visibility', 'display',
-      'overflow', 'pointer-events', 'cursor', 'color', 'vector-effect',
-      'shape-rendering', 'text-rendering', 'image-rendering'
+      'overflow', 'pointer-events', 'pointerevents', 'cursor', 'color',
+      'vector-effect', 'shape-rendering', 'text-rendering', 'image-rendering'
     ]);
     const decodeEntities = (str) => String(str)
       .replace(/&#(\d+);/g, (_, d) => String.fromCharCode(Number(d)))
@@ -8946,21 +9191,33 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     let rootSvg = null;
     const stack = [];
+    const skipStack = [];
     const tokenRx = /<!--[\s\S]*?-->|<\/([a-zA-Z0-9:-]+)\s*>|<([a-zA-Z0-9:-]+)((?:\s+[a-zA-Z0-9:-]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'=<>`]+))?)*)\s*(\/?)>|([^<]+)/g;
     let match;
 
     while ((match = tokenRx.exec(svgMarkup)) !== null) {
       const [, closeTag, openTag, attrStr, selfClose, textNode] = match;
       if (closeTag) {
-        if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeTag.toLowerCase()) {
+        const closeLower = closeTag.toLowerCase();
+        if (skipStack.length > 0) {
+          if (skipStack[skipStack.length - 1] === closeLower) {
+            skipStack.pop();
+          }
+          continue;
+        }
+        if (stack.length > 0 && stack[stack.length - 1].tagName.toLowerCase() === closeLower) {
           stack.pop();
         }
       } else if (openTag) {
         const tagLower = openTag.toLowerCase();
-        if (!ALLOWED_TAGS.has(tagLower)) {
+        if (skipStack.length > 0 || !ALLOWED_TAGS.has(tagLower)) {
+          if (!selfClose && !VOID_TAGS.has(tagLower)) {
+            skipStack.push(tagLower);
+          }
           continue;
         }
-        const el = document.createElementNS(SVG_NS, openTag);
+        const canonicalTag = TAG_CANONICAL[tagLower] || openTag;
+        const el = document.createElementNS(SVG_NS, canonicalTag);
         if (attrStr) {
           const attrRx = /([a-zA-Z0-9:-]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
           let aMatch;
@@ -8971,19 +9228,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (!ALLOWED_ATTRS.has(nameLower) && !nameLower.startsWith('data-') && !nameLower.startsWith('aria-')) {
               continue;
             }
+            const canonicalAttr = ATTR_CANONICAL[nameLower] || rawName;
             const val = decodeEntities(aMatch[2] ?? aMatch[3] ?? aMatch[4] ?? '');
             if (nameLower === 'href' || nameLower === 'xlink:href') {
               const trimmedVal = val.trim();
-              if (!/^#[A-Za-z_][\w:.-]*$/.test(trimmedVal)) {
+              const isSafeLocalRef = /^#[A-Za-z_][\w:.-]*$/.test(trimmedVal);
+              const isSafeDataImage = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmedVal);
+              if (!isSafeLocalRef && !isSafeDataImage) {
                 continue;
               }
               if (nameLower === 'xlink:href') {
                 el.setAttributeNS(XLINK_NS, 'xlink:href', trimmedVal);
               } else {
-                el.setAttribute(rawName, trimmedVal);
+                el.setAttribute('href', trimmedVal);
               }
             } else {
-              el.setAttribute(rawName, val);
+              el.setAttribute(canonicalAttr, val);
             }
           }
         }
@@ -8995,7 +9255,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (!selfClose && !VOID_TAGS.has(tagLower) && (stack.length > 0 || tagLower === 'svg')) {
           stack.push(el);
         }
-      } else if (textNode && stack.length > 0) {
+      } else if (textNode && skipStack.length === 0 && stack.length > 0) {
         stack[stack.length - 1].appendChild(document.createTextNode(decodeEntities(textNode)));
       }
     }
@@ -9017,104 +9277,100 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     if (rootSvg.querySelector('#ast-master-defs') || document.getElementById('ast-master-defs')) return;
 
-    const defsEl = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-    defsEl.setAttribute('id', 'ast-master-defs');
-    defsEl.innerHTML = `
-      <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
-      </filter>
-      <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-glow-cyan" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-glow-gold" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feComponentTransfer in="blur" result="cb">
-          <feFuncR type="linear" slope="1.2" />
-          <feFuncG type="linear" slope="0.9" />
-          <feFuncB type="linear" slope="0.2" />
-        </feComponentTransfer>
-        <feMerge><feMergeNode in="cb" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-glow-red" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-glow-emerald" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-glow-purple" x="-30%" y="-30%" width="160%" height="160%">
-        <feGaussianBlur stdDeviation="3.5" result="blur" />
-        <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-      </filter>
-      <filter id="ast-drop-shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.55" />
-      </filter>
-      <filter id="ast-blur-soft" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="5" />
-      </filter>
-      <marker id="ast-arrowhead" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
-      </marker>
-      <marker id="ast-arrow-start" markerWidth="8" markerHeight="6" refX="1" refY="3" orient="auto">
-        <polygon points="8 0, 0 3, 8 6" fill="#38bdf8" />
-      </marker>
-      <marker id="ast-arrow-cyan" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#38bdf8" />
-      </marker>
-      <marker id="ast-arrow-gold" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#f59e0b" />
-      </marker>
-      <marker id="ast-arrow-red" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#ef4444" />
-      </marker>
-      <marker id="ast-arrow-emerald" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto">
-        <polygon points="0 0, 8 3, 0 6" fill="#10b981" />
-      </marker>
-      <marker id="ast-vector-dot" markerWidth="6" markerHeight="6" refX="3" refY="3">
-        <circle cx="3" cy="3" r="2.5" fill="#38bdf8" />
-      </marker>
-      <pattern id="ast-grid-fine" width="20" height="20" patternUnits="userSpaceOnUse">
-        <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.5" />
-      </pattern>
-      <pattern id="ast-grid-dense" width="40" height="40" patternUnits="userSpaceOnUse">
-        <rect width="40" height="40" fill="none" />
-        <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#334155" stroke-width="1.2" stroke-opacity="0.6" />
-        <path d="M 20 0 L 20 40 M 0 20 L 40 20" fill="none" stroke="#1e293b" stroke-width="0.5" stroke-opacity="0.4" />
-      </pattern>
-      <pattern id="ast-grid-dots" width="20" height="20" patternUnits="userSpaceOnUse">
-        <circle cx="2" cy="2" r="1" fill="#475569" fill-opacity="0.6" />
-      </pattern>
-      <linearGradient id="ast-grad-cyan" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#38bdf8" />
-        <stop offset="100%" stop-color="#0284c7" />
-      </linearGradient>
-      <linearGradient id="ast-grad-gold" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#fef08a" />
-        <stop offset="100%" stop-color="#f59e0b" />
-      </linearGradient>
-      <linearGradient id="ast-grad-emerald" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#34d399" />
-        <stop offset="100%" stop-color="#059669" />
-      </linearGradient>
-      <linearGradient id="ast-grad-purple" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#c084fc" />
-        <stop offset="100%" stop-color="#7c3aed" />
-      </linearGradient>
-      <linearGradient id="ast-grad-crimson" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#f87171" />
-        <stop offset="100%" stop-color="#dc2626" />
-      </linearGradient>
-      <linearGradient id="ast-blueprint-backdrop" x1="0" y1="0" x2="0" y2="1">
-        <stop offset="0%" stop-color="#070e1b" />
-        <stop offset="100%" stop-color="#020617" />
-      </linearGradient>
-    `;
+    const createSvg = (tag, attrs, children) => {
+      const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+      if (attrs) {
+        for (const [k, v] of Object.entries(attrs)) {
+          el.setAttribute(k, String(v));
+        }
+      }
+      if (Array.isArray(children)) {
+        for (const ch of children) {
+          if (ch) el.appendChild(ch);
+        }
+      }
+      return el;
+    };
+
+    const makeGlowFilter = (id) => createSvg('filter', { id, x: '-30%', y: '-30%', width: '160%', height: '160%' }, [
+      createSvg('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+      createSvg('feMerge', null, [
+        createSvg('feMergeNode', { in: 'blur' }),
+        createSvg('feMergeNode', { in: 'SourceGraphic' })
+      ])
+    ]);
+
+    const makeArrowMarker = (id, fill, refX = 7, points = '0 0, 8 3, 0 6') =>
+      createSvg('marker', { id, markerWidth: '8', markerHeight: '6', refX: String(refX), refY: '3', orient: 'auto' }, [
+        createSvg('polygon', { points, fill })
+      ]);
+
+    const makeLinGrad = (id, c0, c1, y2 = '1', x2 = '1') =>
+      createSvg('linearGradient', { id, x1: '0', y1: '0', x2, y2 }, [
+        createSvg('stop', { offset: '0%', 'stop-color': c0 }),
+        createSvg('stop', { offset: '100%', 'stop-color': c1 })
+      ]);
+
+    const defsEl = createSvg('defs', { id: 'ast-master-defs' }, [
+      createSvg('filter', { id: 'pyth-shadow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvg('feDropShadow', { dx: '0', dy: '4', stdDeviation: '6', 'flood-color': '#000000', 'flood-opacity': '0.65' })
+      ]),
+      createSvg('filter', { id: 'pyth-glow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvg('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+        createSvg('feMerge', null, [
+          createSvg('feMergeNode', { in: 'blur' }),
+          createSvg('feMergeNode', { in: 'SourceGraphic' })
+        ])
+      ]),
+      makeGlowFilter('ast-glow-cyan'),
+      createSvg('filter', { id: 'ast-glow-gold', x: '-30%', y: '-30%', width: '160%', height: '160%' }, [
+        createSvg('feGaussianBlur', { stdDeviation: '3.5', result: 'blur' }),
+        createSvg('feComponentTransfer', { in: 'blur', result: 'cb' }, [
+          createSvg('feFuncR', { type: 'linear', slope: '1.2' }),
+          createSvg('feFuncG', { type: 'linear', slope: '0.9' }),
+          createSvg('feFuncB', { type: 'linear', slope: '0.2' })
+        ]),
+        createSvg('feMerge', null, [
+          createSvg('feMergeNode', { in: 'cb' }),
+          createSvg('feMergeNode', { in: 'SourceGraphic' })
+        ])
+      ]),
+      makeGlowFilter('ast-glow-red'),
+      makeGlowFilter('ast-glow-emerald'),
+      makeGlowFilter('ast-glow-purple'),
+      createSvg('filter', { id: 'ast-drop-shadow', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvg('feDropShadow', { dx: '0', dy: '6', stdDeviation: '8', 'flood-color': '#000000', 'flood-opacity': '0.55' })
+      ]),
+      createSvg('filter', { id: 'ast-blur-soft', x: '-20%', y: '-20%', width: '140%', height: '140%' }, [
+        createSvg('feGaussianBlur', { stdDeviation: '5' })
+      ]),
+      makeArrowMarker('ast-arrowhead', '#38bdf8', 7, '0 0, 8 3, 0 6'),
+      makeArrowMarker('ast-arrow-start', '#38bdf8', 1, '8 0, 0 3, 8 6'),
+      makeArrowMarker('ast-arrow-cyan', '#38bdf8', 7, '0 0, 8 3, 0 6'),
+      makeArrowMarker('ast-arrow-gold', '#f59e0b', 7, '0 0, 8 3, 0 6'),
+      makeArrowMarker('ast-arrow-red', '#ef4444', 7, '0 0, 8 3, 0 6'),
+      makeArrowMarker('ast-arrow-emerald', '#10b981', 7, '0 0, 8 3, 0 6'),
+      createSvg('marker', { id: 'ast-vector-dot', markerWidth: '6', markerHeight: '6', refX: '3', refY: '3' }, [
+        createSvg('circle', { cx: '3', cy: '3', r: '2.5', fill: '#38bdf8' })
+      ]),
+      createSvg('pattern', { id: 'ast-grid-fine', width: '20', height: '20', patternUnits: 'userSpaceOnUse' }, [
+        createSvg('path', { d: 'M 20 0 L 0 0 0 20', fill: 'none', stroke: '#1e293b', 'stroke-width': '0.75', 'stroke-opacity': '0.5' })
+      ]),
+      createSvg('pattern', { id: 'ast-grid-dense', width: '40', height: '40', patternUnits: 'userSpaceOnUse' }, [
+        createSvg('rect', { width: '40', height: '40', fill: 'none' }),
+        createSvg('path', { d: 'M 40 0 L 0 0 0 40', fill: 'none', stroke: '#334155', 'stroke-width': '1.2', 'stroke-opacity': '0.6' }),
+        createSvg('path', { d: 'M 20 0 L 20 40 M 0 20 L 40 20', fill: 'none', stroke: '#1e293b', 'stroke-width': '0.5', 'stroke-opacity': '0.4' })
+      ]),
+      createSvg('pattern', { id: 'ast-grid-dots', width: '20', height: '20', patternUnits: 'userSpaceOnUse' }, [
+        createSvg('circle', { cx: '2', cy: '2', r: '1', fill: '#475569', 'fill-opacity': '0.6' })
+      ]),
+      makeLinGrad('ast-grad-cyan', '#38bdf8', '#0284c7'),
+      makeLinGrad('ast-grad-gold', '#fef08a', '#f59e0b'),
+      makeLinGrad('ast-grad-emerald', '#34d399', '#059669'),
+      makeLinGrad('ast-grad-purple', '#c084fc', '#7c3aed'),
+      makeLinGrad('ast-grad-crimson', '#f87171', '#dc2626'),
+      makeLinGrad('ast-blueprint-backdrop', '#070e1b', '#020617', '1', '0')
+    ]);
     rootSvg.insertBefore(defsEl, rootSvg.firstChild);
   }
 
@@ -9346,11 +9602,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           container.replaceChildren(rendered);
         } else if (typeof rendered === 'string') {
           try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(`<svg xmlns="http://www.w3.org/2000/svg">${rendered}</svg>`, 'image/svg+xml');
-            const svgEl = doc.querySelector('svg');
-            if (svgEl && !doc.querySelector('parsererror')) {
-              container.replaceChildren(...svgEl.childNodes);
+            const safeRendered = this.sanitizeSvg(rendered);
+            const wrapped = safeRendered.trim().startsWith('<svg')
+              ? safeRendered
+              : `<svg xmlns="http://www.w3.org/2000/svg">${safeRendered}</svg>`;
+            const svgEl = this._buildSafeSvgTree(wrapped);
+            if (svgEl) {
+              this.sanitizeSvgElement(svgEl);
+              if (typeof container.replaceChildren === 'function') {
+                container.replaceChildren(...svgEl.childNodes);
+              } else {
+                container.textContent = '';
+                while (svgEl.firstChild) container.appendChild(svgEl.firstChild);
+              }
             }
           } catch (e) {
             console.warn('[AST Engine] Rendered SVG string failed to parse safely:', e);
@@ -9650,14 +9914,16 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const em = this.addEmitter(emConfig);
           if (em.speedExpr) {
             try {
-              const compiledSpd = this.compileAstExpr(em.speedExpr);
-              em._speedEval = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${compiledSpd});`);
+              const rawSpdFn = this.compileAstFn(em.speedExpr);
+              em._speedEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawSpdFn(t, vars, computed, MathObj, clamp, lerp, map);
             } catch (_) {}
           }
           if (em.countExpr) {
             try {
-              const compiledCnt = this.compileAstExpr(em.countExpr);
-              em._countEval = new Function('t', 'vars', 'Math', 'computed', 'clamp', 'lerp', 'map', `"use strict"; return (${compiledCnt});`);
+              const rawCntFn = this.compileAstFn(em.countExpr);
+              em._countEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawCntFn(t, vars, computed, MathObj, clamp, lerp, map);
             } catch (_) {}
           }
         });
@@ -9958,6 +10224,65 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       } else {
         this._container.style.transform = '';
         this._container.style.transition = '';
+      }
+    }
+
+    // Evaluate 2D reactive bindings BEFORE 3D node projection so newly revealed 3D nodes/groups
+    // have display="inline" and visibility state updated on the exact same frame.
+    if (this.activeBindings && this.activeBindings.length) {
+      const v = this.vars || {};
+      for (let i = 0; i < this.activeBindings.length; i++) {
+        const b = this.activeBindings[i];
+        if (b.node) {
+          try {
+            let val;
+            if (b.affine) {
+              const num = b.affine.m * effectiveT + b.affine.c;
+              if (b.matrixBuf) {
+                const mb = b.matrixBuf;
+                if (b.affine.transform === 'translateX') {
+                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = num; mb[5] = 0;
+                } else if (b.affine.transform === 'translateY') {
+                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = 0; mb[5] = num;
+                } else if (b.affine.transform === 'rotate') {
+                  const rad = num * (Math.PI / 180);
+                  const cos = Math.cos(rad);
+                  const sin = Math.sin(rad);
+                  mb[0] = cos; mb[1] = sin; mb[2] = -sin; mb[3] = cos;
+                  if (b.affine.originX != null && b.affine.originY != null) {
+                    const cx = b.affine.originX;
+                    const cy = b.affine.originY;
+                    mb[4] = cx - cx * cos + cy * sin;
+                    mb[5] = cy - cx * sin - cy * cos;
+                  } else {
+                    mb[4] = 0; mb[5] = 0;
+                  }
+                }
+                val = `matrix(${mb[0]},${mb[1]},${mb[2]},${mb[3]},${mb[4]},${mb[5]})`;
+              } else {
+                val = num;
+              }
+            } else {
+              val = b.evalFn(
+                effectiveT, v, Math, v,
+                astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
+                AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
+                AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
+              );
+            }
+            if (b.lastVal !== val) {
+              b.lastVal = val;
+              if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function') {
+                global.ASTSharedRenderBoundary.commitBindingValue(b.node, b.attr, val);
+              } else if (b.attr === 'textContent' || b.attr === 'text') {
+                b.node.textContent = String(val);
+              } else {
+                const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
+                b.node.setAttribute(b.attr, String(safeVal));
+              }
+            }
+          } catch (err) {}
+        }
       }
     }
 
@@ -10275,63 +10600,6 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               item.labelNode.parentNode.appendChild(item.labelNode);
             }
           });
-        }
-      }
-    }
-
-    if (this.activeBindings && this.activeBindings.length) {
-      const v = this.vars || {};
-      for (let i = 0; i < this.activeBindings.length; i++) {
-        const b = this.activeBindings[i];
-        if (b.node) {
-          try {
-            let val;
-            if (b.affine) {
-              const num = b.affine.m * effectiveT + b.affine.c;
-              if (b.matrixBuf) {
-                const mb = b.matrixBuf;
-                if (b.affine.transform === 'translateX') {
-                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = num; mb[5] = 0;
-                } else if (b.affine.transform === 'translateY') {
-                  mb[0] = 1; mb[1] = 0; mb[2] = 0; mb[3] = 1; mb[4] = 0; mb[5] = num;
-                } else if (b.affine.transform === 'rotate') {
-                  const rad = num * (Math.PI / 180);
-                  const cos = Math.cos(rad);
-                  const sin = Math.sin(rad);
-                  mb[0] = cos; mb[1] = sin; mb[2] = -sin; mb[3] = cos;
-                  if (b.affine.originX != null && b.affine.originY != null) {
-                    const cx = b.affine.originX;
-                    const cy = b.affine.originY;
-                    mb[4] = cx - cx * cos + cy * sin;
-                    mb[5] = cy - cx * sin - cy * cos;
-                  } else {
-                    mb[4] = 0; mb[5] = 0;
-                  }
-                }
-                val = `matrix(${mb[0]},${mb[1]},${mb[2]},${mb[3]},${mb[4]},${mb[5]})`;
-              } else {
-                val = num;
-              }
-            } else {
-              val = b.evalFn(
-                effectiveT, v, Math, v,
-                astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
-                AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
-                AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
-              );
-            }
-            if (b.lastVal !== val) {
-              b.lastVal = val;
-              if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function') {
-                global.ASTSharedRenderBoundary.commitBindingValue(b.node, b.attr, val);
-              } else if (b.attr === 'textContent') {
-                b.node.textContent = String(val);
-              } else {
-                const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
-                b.node.setAttribute(b.attr, String(safeVal));
-              }
-            }
-          } catch (err) {}
         }
       }
     }
@@ -10812,7 +11080,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     clone.querySelectorAll('[data-ast-spotlight]').forEach((node) => {
       node.removeAttribute('data-ast-spotlight');
     });
-    const inner = clone.innerHTML.trim();
+    const serializer = typeof XMLSerializer !== 'undefined' ? new XMLSerializer() : null;
+    const inner = serializer
+      ? Array.from(clone.childNodes).map(n => serializer.serializeToString(n)).join('').trim()
+      : '';
     return `<svg viewBox="${vb}" xmlns="http://www.w3.org/2000/svg">\n${inner}\n</svg>`;
   }
 
@@ -10899,10 +11170,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     const devOverlay = clone.querySelector('#dev-overlay-root');
     if (devOverlay) devOverlay.remove();
 
-    const innerSvg = clone.innerHTML;
+    const serializer = typeof XMLSerializer !== 'undefined' ? new XMLSerializer() : null;
+    const innerSvg = serializer
+      ? Array.from(clone.childNodes).map(n => serializer.serializeToString(n)).join('')
+      : '';
     const sceneId = this.scene?.id || this.activePresetId || 'scene';
-    const sceneTitle = this.scene?.title || 'Interactive Vector Lesson';
-    const sceneStage = this.scene?.stage || 'UK CURRICULUM';
+    const escXml = (s) => String(s || '').replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
+    const sceneTitle = escXml(this.scene?.title || 'Interactive Vector Lesson');
+    const sceneStage = escXml(this.scene?.stage || 'UK CURRICULUM');
     const duration = this.durationSec || 10.0;
     const subtitles = this.scene?.subtitles || [];
     const keyframes = this.scene?.keyframes || [];
@@ -11223,13 +11498,150 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       };
       Object.assign(Math, AstMath);
 
+      function compileSafeStandaloneExpr(raw) {
+        const expr = String(raw || '0').trim();
+        if (!expr) return () => 0;
+        const toks = [];
+        let idx = 0;
+        while (idx < expr.length) {
+          const c = expr[idx];
+          if (/\s/.test(c)) { idx++; continue; }
+          if (c === '"' || c === "'") {
+            const q = c; let s = ''; idx++;
+            while (idx < expr.length && expr[idx] !== q) {
+              if (expr[idx] === '\\' && idx + 1 < expr.length) { s += expr[idx + 1]; idx += 2; }
+              else s += expr[idx++];
+            }
+            idx++;
+            toks.push({ type: 'str', val: s });
+            continue;
+          }
+          if (/\d/.test(c) || (c === '.' && /\d/.test(expr[idx + 1] || ''))) {
+            const m = expr.slice(idx).match(/^(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?/);
+            toks.push({ type: 'num', val: Number(m[0]) });
+            idx += m[0].length;
+            continue;
+          }
+          const multiOp = expr.slice(idx).match(/^(?:===|!==|==|!=|<=|>=|&&|\|\||\*\*)/);
+          if (multiOp) { toks.push({ type: 'op', val: multiOp[0] }); idx += multiOp[0].length; continue; }
+          if ('+-*/%()[]?:,.<>!'.includes(c)) { toks.push({ type: 'op', val: c }); idx++; continue; }
+          if (/[a-zA-Z_$]/.test(c)) {
+            const m = expr.slice(idx).match(/^[a-zA-Z_$][a-zA-Z0-9_$]*/);
+            toks.push({ type: 'id', val: m[0] });
+            idx += m[0].length;
+            continue;
+          }
+          idx++;
+        }
+        let p = 0;
+        const peek = () => toks[p];
+        const eat = (v) => { if (peek() && (!v || peek().val === v)) return toks[p++]; return null; };
+        const BAD_PROPS = new Set(['__proto__', 'constructor', 'prototype', 'Function', 'eval']);
+        const HELPERS = Object.assign({}, AstMath, { String, Number, Boolean });
+        const parseTern = () => {
+          const c = parseOr();
+          if (eat('?')) { const tb = parseTern(); eat(':'); const fb = parseTern(); return (t) => c(t) ? tb(t) : fb(t); }
+          return c;
+        };
+        const parseOr = () => { let l = parseAnd(); while (eat('||')) { const r = parseAnd(), a = l; l = (t) => a(t) || r(t); } return l; };
+        const parseAnd = () => { let l = parseEq(); while (eat('&&')) { const r = parseEq(), a = l; l = (t) => a(t) && r(t); } return l; };
+        const parseEq = () => {
+          let l = parseRel();
+          while (peek() && ['==', '===', '!=', '!=='].includes(peek().val)) {
+            const op = eat().val, r = parseRel(), a = l;
+            l = (t) => (op[0] === '=' ? a(t) === r(t) : a(t) !== r(t));
+          }
+          return l;
+        };
+        const parseRel = () => {
+          let l = parseAdd();
+          while (peek() && ['<', '<=', '>', '>='].includes(peek().val)) {
+            const op = eat().val, r = parseAdd(), a = l;
+            l = (t) => { const x = a(t), y = r(t); return op === '<' ? x < y : op === '<=' ? x <= y : op === '>' ? x > y : x >= y; };
+          }
+          return l;
+        };
+        const parseAdd = () => {
+          let l = parseMul();
+          while (peek() && (peek().val === '+' || peek().val === '-')) {
+            const op = eat().val, r = parseMul(), a = l;
+            l = (t) => (op === '+' ? a(t) + r(t) : a(t) - r(t));
+          }
+          return l;
+        };
+        const parseMul = () => {
+          let l = parseUnary();
+          while (peek() && ['*', '/', '%', '**'].includes(peek().val)) {
+            const op = eat().val, r = parseUnary(), a = l;
+            l = (t) => (op === '*' ? a(t) * r(t) : op === '/' ? a(t) / r(t) : op === '%' ? a(t) % r(t) : a(t) ** r(t));
+          }
+          return l;
+        };
+        const parseUnary = () => {
+          if (eat('!')) { const u = parseUnary(); return (t) => !u(t); }
+          if (eat('-')) { const u = parseUnary(); return (t) => -u(t); }
+          if (eat('+')) { const u = parseUnary(); return (t) => +u(t); }
+          return parsePost();
+        };
+        const parsePost = () => {
+          let fn = parsePrim();
+          while (peek() && (peek().val === '.' || peek().val === '[')) {
+            if (eat('.')) {
+              const prop = peek()?.type === 'id' ? eat().val : '';
+              if (!prop || BAD_PROPS.has(prop)) {
+                if (eat('(')) { if (!eat(')')) { do { parseTern(); } while (eat(',')); eat(')'); } }
+                fn = () => 0; continue;
+              }
+              if (eat('(')) {
+                const args = [];
+                if (!eat(')')) { do { args.push(parseTern()); } while (eat(',')); eat(')'); }
+                const recv = fn;
+                fn = (t) => { const o = recv(t); return o && typeof o[prop] === 'function' ? o[prop].apply(o, args.map(a => a(t))) : 0; };
+              } else {
+                const recv = fn;
+                fn = (t) => { const o = recv(t); return o == null ? undefined : o[prop]; };
+              }
+            } else if (eat('[')) {
+              const idxFn = parseTern(); eat(']'); const recv = fn;
+              fn = (t) => { const o = recv(t), iv = idxFn(t); return (o == null || (typeof iv === 'string' && BAD_PROPS.has(iv))) ? undefined : o[iv]; };
+            }
+          }
+          return fn;
+        };
+        const parsePrim = () => {
+          const tk = peek();
+          if (!tk) return () => 0;
+          if (eat('(')) { const i = parseTern(); eat(')'); return i; }
+          if (eat('[')) {
+            const arr = []; if (!eat(']')) { do { arr.push(parseTern()); } while (eat(',')); eat(']'); }
+            return (t) => arr.map(f => f(t));
+          }
+          if (tk.type === 'num' || tk.type === 'str') { eat(); const v = tk.val; return () => v; }
+          if (tk.type === 'id') {
+            const nm = eat().val;
+            if (eat('(')) {
+              const args = []; if (!eat(')')) { do { args.push(parseTern()); } while (eat(',')); eat(')'); }
+              return (t) => { const f = HELPERS[nm] || Math[nm]; return typeof f === 'function' ? f(...args.map(a => a(t))) : 0; };
+            }
+            if (nm === 't') return (t) => t;
+            if (nm === 'true') return () => true;
+            if (nm === 'false') return () => false;
+            if (nm === 'null') return () => null;
+            if (nm === 'Math') return () => Math;
+            return () => 0;
+          }
+          eat(); return () => 0;
+        };
+        try { return parseTern(); } catch (_) { return () => 0; }
+      }
+
       const compiledBindings = (data.bindings || []).map(b => {
         if (!b.expr) return null;
         try {
           return {
             target: b.target,
             attr: b.attr,
-            fn: new Function('t', 'Math', 'clamp', 'lerp', 'map', 'rad', 'deg', 'dist', 'translate', 'rotate', 'scale', 'sineWave', 'smoothstep', 'return (' + b.expr + ');')
+            fn: compileSafeStandaloneExpr(b.expr)
           };
         } catch (e) {
           return null;
@@ -11242,10 +11654,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const nodes = document.querySelectorAll(b.target);
           if (!nodes || !nodes.length) continue;
           try {
-            const val = b.fn(t, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
+            const val = b.fn(t);
             for (let j = 0; j < nodes.length; j++) {
               const n = nodes[j];
-              if (b.attr === 'textContent') {
+              if (b.attr === 'textContent' || b.attr === 'text') {
                 n.textContent = String(val);
               } else if (b.attr === 'style' || b.attr.startsWith('style.')) {
                 const prop = b.attr.replace(/^style\./, '');
