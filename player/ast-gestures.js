@@ -844,10 +844,43 @@
               });
             }
 
-            // A. Declarative Clickable / Holdable Actions (handled cleanly via pointerdown/pointerup/hold loop)
+            // A. Declarative Clickable / Holdable Actions
             if (g.type === 'clickable' || g.type === 'holdable') {
               el.style.cursor = 'pointer';
               el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
+              if (g.type === 'clickable' && !el.dataset.vmClickBound) {
+                el.dataset.vmClickBound = '1';
+                el.addEventListener('pointerdown', (e) => {
+                  e.stopPropagation();
+                  const vars = (this.engine && this.engine.vars) || {};
+                  if (g.setVar !== undefined) {
+                    if (this.engine && typeof this.engine.setVar === 'function') {
+                      this.engine.setVar(g.setVar, g.val);
+                    } else {
+                      vars[g.setVar] = g.val;
+                    }
+                  }
+                  if (g.expr) {
+                    try {
+                      new Function('vars', 'engine', g.expr)(vars, this.engine);
+                    } catch (err) {
+                      console.warn('[ASTGestures] Click expr error:', g.expr, err);
+                    }
+                  }
+                  if (g.tone && typeof this.playAudioTone === 'function') {
+                    String(g.tone).split(',').forEach((freq, idx) => {
+                      const hz = parseFloat(freq.trim());
+                      if (!Number.isNaN(hz)) {
+                        setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
+                      }
+                    });
+                  }
+                  if (this.engine) {
+                    if (typeof this.engine.applyBindings === 'function') this.engine.applyBindings(this.engine.currentTime || 0);
+                    else if (typeof this.engine.render === 'function') this.engine.render();
+                  }
+                });
+              }
             }
             // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
             else if (g.type === 'trackball' || g.axis === 'trackball') {
@@ -876,12 +909,12 @@
               if (g.minY !== undefined) el.setAttribute('data-gesture-min-y', String(g.minY));
               if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
               if (g.var) el.setAttribute('data-gesture-var', g.var);
+              if (g.varX) el.setAttribute('data-gesture-var-x', g.varX);
+              if (g.varY) el.setAttribute('data-gesture-var-y', g.varY);
             }
           });
         });
       }
-    }
-
     /**
      * Primary PointerDown Handler
      */
@@ -1615,6 +1648,12 @@
       let angleDeg = angleRad * (180 / Math.PI);
       if (angleDeg < 0) angleDeg += 360;
       target.setAttribute('transform', `rotate(${angleDeg.toFixed(1)} ${cx} ${cy})`);
+      const varX = target.getAttribute('data-gesture-var-x');
+      const varY = target.getAttribute('data-gesture-var-y');
+      if (this.engine && typeof this.engine.setVar === 'function') {
+        if (varX) this.engine.setVar(varX, Math.round(targetTx));
+        if (varY) this.engine.setVar(varY, Math.round(targetTy));
+      }
       if (varName && this.engine && typeof this.engine.setVar === 'function') {
         this.engine.setVar(varName, parseFloat(angleDeg.toFixed(1)));
       }
