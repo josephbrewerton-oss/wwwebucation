@@ -9233,8 +9233,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (nameLower === 'href' || nameLower === 'xlink:href') {
               const trimmedVal = val.trim();
               const isSafeLocalRef = /^#[A-Za-z_][\w:.-]*$/.test(trimmedVal);
-              const isSafeDataImage = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmedVal);
-              if (!isSafeLocalRef && !isSafeDataImage) {
+              if (!isSafeLocalRef) {
                 continue;
               }
               if (nameLower === 'xlink:href') {
