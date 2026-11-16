@@ -254,10 +254,25 @@
         this._writeEngineVar(stepKey, next);
         changed = true;
       }
+      if (g.expr) {
+        try {
+          new Function('vars', 'el', 'engine', g.expr)(this.engine.vars, matchedEl, this.engine);
+          changed = true;
+        } catch (err) {
+          console.warn('[ASTGestures] Gesture expr error:', g.expr, err);
+        }
+      }
+      if (g.tone && typeof this.playAudioTone === 'function') {
+        String(g.tone).split(',').forEach((freq, idx) => {
+          const hz = parseFloat(freq.trim());
+          if (!Number.isNaN(hz)) {
+            setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
+          }
+        });
+      }
 
       return changed;
     }
-
     _applyContinuousGestureStep(g, scene, dtSec) {
       if (!this.engine || !this.engine.vars) return false;
       let changed = false;
