@@ -62,7 +62,7 @@
     <use href="#single-domino" x="54" y="0" id="domino-1-4" transform="rotate(0, 60, 70)" />
     <use href="#single-domino" x="72" y="0" id="domino-1-5" transform="rotate(0, 78, 70)" />
     <use href="#single-domino" x="90" y="0" id="domino-1-6" transform="rotate(0, 96, 70)" />
-    <text x="50" y="92" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle" opacity="0.7">Group 1 (6)</text>
+    <text id="label-1" x="50" y="92" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle" opacity="0.85">Group 1 (6)</text>
   </g>
 
   <!-- Cluster 2 -->
@@ -73,7 +73,7 @@
     <use href="#single-domino" x="48" y="0" id="domino-2-4" transform="rotate(0, 54, 70)" />
     <use href="#single-domino" x="64" y="0" id="domino-2-5" transform="rotate(0, 70, 70)" />
     <use href="#single-domino" x="80" y="0" id="domino-2-6" transform="rotate(0, 86, 70)" />
-    <text x="45" y="88" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle" opacity="0.7">Group 2 (12)</text>
+    <text id="label-2" x="45" y="88" fill="#38bdf8" font-size="11" font-family="monospace" text-anchor="middle" opacity="0.85">Group 2 (12)</text>
   </g>
 
   <!-- Cluster 3 -->
@@ -84,7 +84,7 @@
     <use href="#single-domino" x="42" y="0" id="domino-3-4" transform="rotate(0, 48, 70)" />
     <use href="#single-domino" x="56" y="0" id="domino-3-5" transform="rotate(0, 62, 70)" />
     <use href="#single-domino" x="70" y="0" id="domino-3-6" transform="rotate(0, 76, 70)" />
-    <text x="40" y="84" fill="#38bdf8" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.7">Group 3 (18)</text>
+    <text id="label-3" x="40" y="84" fill="#38bdf8" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.85">Group 3 (18)</text>
   </g>
 
   <!-- Cluster 4 -->
@@ -95,7 +95,7 @@
     <use href="#single-domino" x="36" y="0" id="domino-4-4" transform="rotate(0, 42, 70)" />
     <use href="#single-domino" x="48" y="0" id="domino-4-5" transform="rotate(0, 54, 70)" />
     <use href="#single-domino" x="60" y="0" id="domino-4-6" transform="rotate(0, 66, 70)" />
-    <text x="35" y="80" fill="#38bdf8" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.7">Group 4 (24)</text>
+    <text id="label-4" x="35" y="80" fill="#38bdf8" font-size="10" font-family="monospace" text-anchor="middle" opacity="0.85">Group 4 (24)</text>
   </g>
 
   <!-- Mechanical Finish Bell -->
@@ -106,13 +106,13 @@
   </g>
 
   <!-- Realtime Heads-Up Display (Mathematical Counter) -->
-  <g id="hud-panel" transform="translate(250, 20)">
-    <rect width="300" height="60" rx="8" fill="#0f172a" opacity="0.9" stroke="#1e293b" stroke-width="1.5" />
-    <text id="math-display" x="150" y="38" fill="#38bdf8" font-size="20" font-weight="bold" font-family="monospace" text-anchor="middle">
-      6 × 4 = 24
+  <g id="hud-panel" transform="translate(230, 20)">
+    <rect width="340" height="62" rx="8" fill="#0f172a" opacity="0.95" stroke="#334155" stroke-width="1.5" />
+    <text id="math-display" x="170" y="29" fill="#38bdf8" font-size="19" font-weight="bold" font-family="monospace" text-anchor="middle">
+      4 groups × 6 tiles = 24
     </text>
-    <text id="cadence-status" x="150" y="52" fill="#94a3b8" font-size="10" font-family="sans-serif" text-anchor="middle">
-      Cascading Momentum: 0 Fallen
+    <text id="cadence-status" x="170" y="49" fill="#cbd5e1" font-size="11" font-family="sans-serif" text-anchor="middle">
+      Repeated Addition: 6 + 6 + 6 + 6 = 24
     </text>
   </g>
 </svg>
