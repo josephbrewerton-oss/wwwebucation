@@ -2655,6 +2655,9 @@
 
 window.addEventListener('message', (e) => {
   if (e.source !== window.parent && e.source !== window) return;
+  if (typeof e.origin !== 'string') return;
+  const localOrigin = window.location && typeof window.location.origin === 'string' ? window.location.origin : '';
+  if (e.origin !== localOrigin && e.origin !== 'null') return;
 
   const data = e.data;
   if (!data || typeof data !== 'object' || typeof data.type !== 'string') return;

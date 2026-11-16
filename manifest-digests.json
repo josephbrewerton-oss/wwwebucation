@@ -1,12 +1,12 @@
 {
   "version": "1.0.0",
-  "compositeHash": "accb12fe7159",
-  "generatedAt": "2026-11-16T10:27:09.085Z",
+  "compositeHash": "fe29f681b167",
+  "generatedAt": "2026-11-16T10:30:52.260Z",
   "files": {
     "nano-map.ast": "568a99c10f2f08b8",
     "manifest.json": "5b581a737ccec74d",
     "player.html": "22f4569c262550a8",
-    "player/player-ui.js": "5b6dd4ab84f6e3e2",
+    "player/player-ui.js": "1ad7c16433e95004",
     "player/ast-engine.js": "79be78534b5e0302",
     "player/ast-compiler.js": "aa790f6c38d5681a",
     "player/ast-gestures.js": "a65f92f98c2e5ec8",
