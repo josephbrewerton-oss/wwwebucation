@@ -116,8 +116,68 @@
   <!-- Floating Air Bubbles Container -->
   <g id="pond-bubbles-group"></g>
 
-  <!-- Group for Animated Swimming Fish School -->
-  <g id="fish-school-group"></g>
+  <!-- Group for Animated Swimming Fish School (Declarative Cartridge Entities) -->
+  <g id="fish-school-group">
+    <g id="fish-1" transform="translate(260, 225)" style="cursor: pointer;">
+      <g id="fish-1-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-clown)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-clown)" stroke="#fff7ed" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-1-label" x="-2" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">4</text>
+    </g>
+
+    <g id="fish-2" transform="translate(520, 275)" style="cursor: pointer;">
+      <g id="fish-2-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-blue)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-blue)" stroke="#e0f2fe" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-2-label" x="-2" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">6</text>
+    </g>
+
+    <g id="fish-3" transform="translate(340, 325)" style="cursor: pointer;">
+      <g id="fish-3-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-gold)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-gold)" stroke="#fef9c3" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-3-label" x="-2" y="5" fill="#0f172a" font-size="14" font-weight="900" text-anchor="middle">3</text>
+    </g>
+
+    <g id="fish-4" transform="translate(580, 370)" style="cursor: pointer;">
+      <g id="fish-4-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-coral)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-coral)" stroke="#fce7f3" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-4-label" x="-2" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">7</text>
+    </g>
+
+    <g id="fish-5" transform="translate(220, 415)" style="cursor: pointer;">
+      <g id="fish-5-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-emerald)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-emerald)" stroke="#d1fae5" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-5-label" x="-2" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">2</text>
+    </g>
+
+    <g id="fish-6" transform="translate(460, 250)" style="cursor: pointer;">
+      <g id="fish-6-body">
+        <polygon points="-24,0 -38,-12 -34,0 -38,12" fill="url(#fish-purple)" />
+        <ellipse cx="0" cy="0" rx="26" ry="15" fill="url(#fish-purple)" stroke="#f3e8ff" stroke-width="1.5" />
+        <circle cx="14" cy="-4" r="3" fill="#0f172a" />
+        <circle cx="15" cy="-5" r="1" fill="#ffffff" />
+      </g>
+      <text id="fish-6-label" x="-2" y="5" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle">8</text>
+    </g>
+  </g>
 
   <!-- Water Splash / Ripple Particle Layer -->
   <g id="pond-fx-layer"></g>
@@ -128,7 +188,7 @@
     <ellipse cx="50" cy="56" rx="44" ry="10" fill="#78350f" opacity="0.4" />
 
     <!-- Metal Tackle Bucket -->
-    <g id="tackle-bucket" style="cursor: pointer;" data-action="pond-release">
+    <g id="tackle-bucket" style="cursor: pointer;">
       <path d="M 22,28 L 30,58 Q 50,62 70,58 L 78,28 Q 50,24 22,28 Z" fill="url(#bucket-grad)" stroke="#334155" stroke-width="1.5" />
       <ellipse cx="50" cy="28" rx="28" ry="6" fill="#0284c7" stroke="#475569" stroke-width="1.5" />
       <!-- Copper bands -->
@@ -152,20 +212,20 @@
     <rect x="0" y="0" width="105" height="48" rx="8" fill="#0f172a" fill-opacity="0.85" stroke="#334155" stroke-width="1" />
     <text x="52" y="12" fill="#94a3b8" font-size="8" font-weight="800" text-anchor="middle" letter-spacing="0.5">TARGET PRESET</text>
     <!-- Buttons -->
-    <g class="pond-preset-btn" data-action="pond-target-10" style="cursor: pointer;" transform="translate(6, 17)">
+    <g class="pond-preset-btn" style="cursor: pointer;" transform="translate(6, 17)">
       <rect width="28" height="18" rx="4" fill="#0284c7" stroke="#38bdf8" stroke-width="1" />
       <text x="14" y="12" fill="#ffffff" font-size="9" font-weight="900" text-anchor="middle">10</text>
     </g>
-    <g class="pond-preset-btn" data-action="pond-target-20" style="cursor: pointer;" transform="translate(38, 17)">
+    <g class="pond-preset-btn" style="cursor: pointer;" transform="translate(38, 17)">
       <rect width="28" height="18" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
       <text x="14" y="12" fill="#94a3b8" font-size="9" font-weight="900" text-anchor="middle">20</text>
     </g>
-    <g class="pond-preset-btn" data-action="pond-target-5" style="cursor: pointer;" transform="translate(70, 17)">
+    <g class="pond-preset-btn" style="cursor: pointer;" transform="translate(70, 17)">
       <rect width="28" height="18" rx="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
       <text x="14" y="12" fill="#94a3b8" font-size="9" font-weight="900" text-anchor="middle">5</text>
     </g>
     <!-- Restock Pond Chip -->
-    <g class="pond-preset-btn" data-action="pond-restock" style="cursor: pointer;" transform="translate(6, 37)">
+    <g class="pond-preset-btn" style="cursor: pointer;" transform="translate(6, 37)">
       <text x="46" y="7" fill="#38bdf8" font-size="7.5" font-weight="700" text-anchor="middle">🔄 Restock Pond</text>
     </g>
   </g>
@@ -182,9 +242,19 @@
     <!-- Equation Line -->
     <text id="math-hud-equation" x="271" y="36" fill="#38bdf8" font-size="17" font-weight="900" text-anchor="middle">Catch fish to make 10! (e.g. 4 + 6 = 10)</text>
 
-    <!-- Pedagogical Ten-Frame / Twenty-Frame Container -->
+    <!-- Pedagogical Ten-Frame Container -->
     <g id="ten-frame-group" transform="translate(26, 44)">
-      <!-- Rendered dynamically by ast-gestures.js with ten-frame slots -->
+      <rect x="0" y="0" width="490" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle id="tf-dot-1" cx="25" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-2" cx="74" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-3" cx="123" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-4" cx="172" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-5" cx="221" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-6" cx="270" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-7" cx="319" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-8" cx="368" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-9" cx="417" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+      <circle id="tf-dot-10" cx="466" cy="12" r="8" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
     </g>
   </g>
 
