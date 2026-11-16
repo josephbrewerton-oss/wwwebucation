@@ -634,19 +634,6 @@
       const ra = this.stageSvg.querySelector('#pyth-right-angle');
       if (ra) ra.setAttribute('data-pedagogical', 'pyth-right-angle');
 
-      // 6. Math Fishing Pond Hook & Bobber Manipulation
-      const bobber = this.stageSvg.querySelector('#fishing-bobber');
-      const hook = this.stageSvg.querySelector('#fishing-hook');
-      if (bobber) {
-        bobber.style.cursor = 'grab';
-        bobber.setAttribute('data-draggable', 'fishing-hook');
-        bobber.setAttribute('data-pedagogical', 'math-bobber');
-      }
-      if (hook) {
-        hook.style.cursor = 'grab';
-        hook.setAttribute('data-draggable', 'fishing-hook');
-        hook.setAttribute('data-pedagogical', 'math-hook');
-      }
 
       // 7. Mountain Climber Beacon
       const climberMarker = this.stageSvg.querySelector('#climber-marker');
@@ -661,15 +648,6 @@
         climberPulse.setAttribute('data-draggable', 'climber');
       }
 
-      // 8. Procedural Scene Ingestions (Fish Pond & Aquarium Boids)
-      const fishGroup = this.stageSvg.querySelector('#fish-school-group');
-      if (fishGroup) {
-        if (hook) {
-          this.setupMathFishingFish();
-        } else if (this.stageSvg.querySelector('#tank-water') || this.stageSvg.querySelector('#benchmark-hud')) {
-          this.setupFishTankBoids();
-        }
-      }
 
       // 9. Pythagoras Geometry Initialization
       if (pythHandleA && pythHandleB) {
