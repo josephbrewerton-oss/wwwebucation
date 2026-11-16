@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-16T19:29:09.482Z",
+  "generatedAt": "2026-11-16T20:34:50.968Z",
   "totalScenes": 72,
   "scenes": [
     {
@@ -443,7 +443,7 @@
       "type": "App",
       "title": "Math Pond: Number Bonds Fishing Game",
       "stage": "KS1/KS2 MATHS",
-      "duration": 14,
+      "duration": 28,
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/math-fishing.svg",
@@ -451,7 +451,7 @@
       "astbFile": "bytecode/math-fishing.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 27
+      "bindingsCount": 35
     },
     {
       "id": "mountain-elevation",

@@ -1,4 +1,4 @@
-(:scene :id "math-fishing" :type "App" :oak-id "OAK-KS1-MAT-007" :oak-unit "ks1-maths-arithmetic-number-bonds" :title "Math Pond: Number Bonds Fishing Game" :stage "KS1/KS2 MATHS" :duration 14.0
+(:scene :id "math-fishing" :type "App" :oak-id "OAK-KS1-MAT-007" :oak-unit "ks1-maths-arithmetic-number-bonds" :title "Math Pond: Number Bonds Fishing Game" :stage "KS1/KS2 MATHS" :duration 28.0
   (:vars (
     (:var :name "targetSum" :val 10 :min 5 :max 20 :step 1 :label "Target Bond Goal")
     (:var :name "caughtA" :val 0 :min 0 :max 20 :step 1 :label "First Fish Caught")
@@ -73,6 +73,24 @@
     ;; Fish 6 (Value 8)
     (:target "#fish-6" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 5.2) * 245).toFixed(1) + ', ' + (250 + Math.sin(t * Math.PI * 5) * 7).toFixed(1) + ')'")
     (:target "#fish-6-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 5.2) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 7 (Value 1)
+    (:target "#fish-7" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 0.7) * 265).toFixed(1) + ', ' + (200 + Math.sin(t * Math.PI * 3) * 7).toFixed(1) + ')'")
+    (:target "#fish-7-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 0.7) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 8 (Value 5)
+    (:target "#fish-8" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 2.6) * 255).toFixed(1) + ', ' + (300 + Math.cos(t * Math.PI * 4) * 8).toFixed(1) + ')'")
+    (:target "#fish-8-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 2.6) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 9 (Value 9)
+    (:target "#fish-9" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 4.8) * 270).toFixed(1) + ', ' + (350 + Math.sin(t * Math.PI * 3) * 6).toFixed(1) + ')'")
+    (:target "#fish-9-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 4.8) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 10 (Value 10)
+    (:target "#fish-10" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 1.6) * 240).toFixed(1) + ', ' + (395 + Math.cos(t * Math.PI * 3) * 7).toFixed(1) + ')'")
+    (:target "#fish-10-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 2 * (vars.bobberSpeed || 1) + 1.6) >= 0 ? 1 : -1) + ', 1)'")
+
+
 
     ;; Live HUD Text & Counters
     (:target "#math-hud-title" :attr "textContent" :expr "'NUMBER BONDS TARGET: ' + vars.targetSum")
