@@ -507,6 +507,17 @@
           .replace(/&quot;/g, '"')
           .replace(/&apos;/g, "'")
           .replace(/&amp;/g, '&');
+        const sanitizeUntrustedSvgHref = (tagName, hrefValue) => {
+          const tagLower = String(tagName || '').toLowerCase();
+          if (tagLower !== 'use' && tagLower !== 'image') return null;
+          const trimmed = String(hrefValue || '').trim();
+          if (!trimmed) return null;
+          if (/[\u0000-\u001F\u007F]/.test(trimmed)) return null;
+          if (/\s/.test(trimmed)) return null;
+          if (/^#[A-Za-z_][\w:.-]*$/.test(trimmed)) return trimmed;
+          if (/^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmed)) return trimmed;
+          return null;
+        };
 
         let rootSvg = null;
         const stack = [];
@@ -553,19 +564,12 @@
                   // Reject legacy xlink URL attributes from untrusted SVG input.
                   continue;
                 } else if (nameLower === 'href') {
-                  const trimmedVal = val.trim();
-                  const tagName = (el.tagName || '').toLowerCase();
-                  const allowsHref = tagName === 'use' || tagName === 'image';
-                  if (!allowsHref) {
-                    // Block navigational href on untrusted SVG nodes (e.g. <a>) to prevent phishing redirects.
+                  const safeHref = sanitizeUntrustedSvgHref(el.tagName, val);
+                  if (!safeHref) {
+                    // Block navigational and non-canonical href values on untrusted SVG nodes.
                     continue;
                   }
-                  const isSafeLocalRef = /^#[A-Za-z_][\w:.-]*$/.test(trimmedVal);
-                  const isSafeDataImage = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmedVal);
-                  if (!isSafeLocalRef && !isSafeDataImage) {
-                    continue;
-                  }
-                  el.setAttribute('href', trimmedVal);
+                  el.setAttribute('href', safeHref);
                 } else {
                   el.setAttribute(canonicalAttr, val);
                 }
