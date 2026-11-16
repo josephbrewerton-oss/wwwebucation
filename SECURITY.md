@@ -2,30 +2,32 @@
 
 ## Supported Versions
 
-We actively provide security patches and updates to the current release branch.
+St Joseph's Curriculum Portal is continuously deployed from `main` to GitHub Pages. Security patches and safeguarding updates are applied directly to the live production branch.
 
-| Version | Supported          |
-| ------- | ------------------ |
-| 1.x.x   | :white_check_mark: |
-| < 1.0   | :x:                |
+| Version / Branch | Supported          |
+| ---------------- | ------------------ |
+| `main` (Live)    | :white_check_mark: |
+| Older snapshots  | :x:                |
 
 ## Zero-Egress Safeguarding Architecture
 
-The St Joseph's Curriculum Portal is engineered as a zero-cloud-egress, client-side application. Student queries, answers, voice inputs, and progress records remain strictly inside the local browser sandbox (IndexedDB) and do not transit external servers.
+The St Joseph's Curriculum Portal is engineered as a zero-cloud-egress, client-side application:
+- **Local Storage Only:** Student queries, answers, voice inputs, and progress records remain strictly inside the local browser sandbox (`IndexedDB` / Cache Storage) and never transit external servers.
+- **On-Device AI & Deterministic Cartridges:** Where built-in browser AI (`LanguageModel`) is available, inference executes locally on the user's device and is constrained by deterministic S-expression AST rules.
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability or potential data privacy concern within this project, please report it privately:
+Please **do not** report security vulnerabilities or safeguarding concerns through public GitHub Issues, Discussions, or Pull Requests. Instead, report them privately:
 
-1. **GitHub Private Vulnerability Reporting (Preferred):** Use the "Report a vulnerability" button under the **Security** tab of this repository.
-2. **Direct Email:** If you cannot use GitHub's reporting tool, email: **joseph.brewerton@gmail.com**.
+1. **GitHub Private Vulnerability Reporting (Preferred):** Use the **"Report a vulnerability"** button under the **Security** tab of this repository.
+2. **Direct Email:** If you cannot use GitHub's reporting tool, email **joseph.brewerton@gmail.com**.
 
 ### What to Include
-* A description of the issue and potential impact.
-* Step-by-step reproduction instructions or a minimal proof of concept.
-* Browser version, operating system, and hardware environment.
+- A clear description of the issue and potential safeguarding or security impact.
+- Step-by-step reproduction instructions or a minimal proof of concept.
+- Browser version, operating system, and hardware environment.
 
 ### Our Commitment
-* We will acknowledge receipt of your vulnerability report within **48 hours**.
-* We will provide a status update or fix timeline within **7 business days**.
-* Please do not disclose vulnerabilities publicly until a patch has been released and deployed.
+- We will acknowledge receipt of your report within **48 hours**.
+- We will provide a triage update or remediation timeline within **7 business days**.
+- Please allow us to deploy a fix before any public disclosure.
