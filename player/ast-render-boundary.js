@@ -554,6 +554,12 @@
                   continue;
                 } else if (nameLower === 'href') {
                   const trimmedVal = val.trim();
+                  const tagName = (el.tagName || '').toLowerCase();
+                  const allowsHref = tagName === 'use' || tagName === 'image';
+                  if (!allowsHref) {
+                    // Block navigational href on untrusted SVG nodes (e.g. <a>) to prevent phishing redirects.
+                    continue;
+                  }
                   const isSafeLocalRef = /^#[A-Za-z_][\w:.-]*$/.test(trimmedVal);
                   const isSafeDataImage = /^data:image\/(?:png|jpe?g|gif|webp);base64,[A-Za-z0-9+/=]+$/i.test(trimmedVal);
                   if (!isSafeLocalRef && !isSafeDataImage) {
