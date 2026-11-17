@@ -19,6 +19,7 @@ import {
   buildSafeActionTuple,
   clampVarValue,
   createPlayerWebMcpTools,
+  detectWebMcpSurface,
   registerWebMcpTools as registerPlayerWebMcpTools,
   runWebMcpBenchmark,
   type PlayerMcpTransport,
@@ -949,12 +950,26 @@ console.log('\n--- TEST 18: Chrome EPP Contention Profiler, Compression & WebMCP
     // 98 frames ~16.5ms, 2 frames spike 22.0ms (>16.67ms)
     fakeTs += (i === 50 || i === 90) ? 22.0 : 16.5;
   }
-  const profStats = profiler.stopCapture();
+  const profStats = profiler.stopCapture(16.67);
   assert.strictEqual(profiler.captureDeltas, deltaBufRef, 'captureDeltas Float32Array must never reallocate in hot loop');
   assert.strictEqual(profiler.captureComputes, computeBufRef, 'captureComputes Float32Array must never reallocate in hot loop');
   assert.strictEqual(profStats.sampleCount, 99, `Expected 99 inter-frame delta samples, got ${profStats.sampleCount}`);
   assert.strictEqual(profStats.framesOver16_67ms, 2, `Expected 2 over-budget frames (>16.67ms), got ${profStats.framesOver16_67ms}`);
+  assert.strictEqual(profStats.rawVsyncOverruns, 2, `Expected 2 raw vsync overruns at 60Hz, got ${profStats.rawVsyncOverruns}`);
+  assert.strictEqual(profStats.severeFrameDrops, 2, `Expected 2 severe drops (>19.17ms) at 60Hz, got ${profStats.severeFrameDrops}`);
   assert(profStats.p99Ms >= 21.5, `Expected p99Ms >= 21.5ms, got ${profStats.p99Ms}`);
+
+  // Verify dynamic high-refresh vsync threshold (e.g., 120Hz -> 8.33ms, severe > 9.58ms)
+  profiler.startCapture();
+  let fake120Ts = 1000;
+  for (let i = 0; i < 20; i++) {
+    profiler.onFrame(fake120Ts);
+    profiler.onCompute(0.1);
+    fake120Ts += i === 10 ? 9.0 : 8.2; // 1 raw overrun >8.33ms, 0 severe drops >9.58ms
+  }
+  const prof120 = profiler.stopCapture(8.33);
+  assert.strictEqual(prof120.rawVsyncOverruns, 1, `Expected 1 raw vsync overrun (>8.33ms), got ${prof120.rawVsyncOverruns}`);
+  assert.strictEqual(prof120.severeFrameDrops, 0, `Expected 0 severe drops (>9.58ms), got ${prof120.severeFrameDrops}`);
 
   // 18b. Headless WebMCP tool schemas, [min, max] clamping, selector hygiene & DOM payload reduction
   const engMcp = new sb.ASTVectorPlayerEngine({ container: null, autoplay: false, voiceEnabled: false });
@@ -1002,8 +1017,12 @@ console.log('\n--- TEST 18: Chrome EPP Contention Profiler, Compression & WebMCP
   const mcpTools = createPlayerWebMcpTools(headlessTransport);
   assert.strictEqual(mcpTools.length, 3, 'WebMCP must register exactly 3 structured tools');
   assert.deepStrictEqual(mcpTools.map((t) => t.name), ['ast_set_var', 'ast_dispatch_action', 'ast_read_state']);
+  assert.strictEqual(mcpTools.find((t) => t.name === 'ast_read_state')?.annotations?.readOnlyHint, true, 'ast_read_state must declare readOnlyHint: true');
+  assert.strictEqual(mcpTools.find((t) => t.name === 'ast_set_var')?.annotations?.readOnlyHint, false, 'ast_set_var must declare readOnlyHint: false');
+  assert.strictEqual(mcpTools.find((t) => t.name === 'ast_dispatch_action')?.annotations?.readOnlyHint, false, 'ast_dispatch_action must declare readOnlyHint: false');
   const mcpBench = await runWebMcpBenchmark(headlessTransport, mcpTools);
   assert.strictEqual(mcpBench.clampingVerified, true, 'WebMCP live benchmark must verify [min, max] clamping');
+  assert(mcpBench.clampingTrace && mcpBench.clampingTrace.unclampedInput !== mcpBench.clampingTrace.clampedOutput, 'WebMCP benchmark must record clampingTrace unclamped vs clamped values');
   assert(mcpBench.domPayloadReductionPct > 50, `MCP compact JSON must achieve > 50% byte reduction vs raw SVG (${mcpBench.domPayloadReductionPct}%)`);
 
   // 18c. Canonical 20-line .ast vs Verbose JSON vs .astb compression benchmark
@@ -1082,7 +1101,10 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
   const dispatchedEvents: string[] = [];
 
   const sharedModelContext = {
-    registerTool: (tool: any, opts?: { signal?: AbortSignal }) => {
+    registerTool: async (tool: any, opts?: { signal?: AbortSignal }) => {
+      if (registeredToolMap.has(tool.name)) {
+        throw new Error(`Duplicate WebMCP tool registration: ${tool.name}`);
+      }
       registeredToolMap.set(tool.name, tool);
       if (opts?.signal) {
         opts.signal.addEventListener('abort', () => {
@@ -1117,14 +1139,18 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
         return true;
       },
     };
-    (globalThis as any).document = { modelContext: sharedModelContext };
+    // Verify exclusive document.modelContext surface (legacy navigator.modelContext ignored)
+    (globalThis as any).document = {};
     Object.defineProperty(globalThis, 'navigator', {
       value: { modelContext: sharedModelContext },
       configurable: true,
     });
+    assert.strictEqual(detectWebMcpSurface().surface, 'unavailable', 'Must ignore legacy navigator.modelContext when document.modelContext is absent');
+
+    (globalThis as any).document = { modelContext: sharedModelContext };
 
     const portalOk = await registerPortalWebMcpTools();
-    assert.strictEqual(portalOk, true, 'Portal WebMCP bridge must register on shared modelContext');
+    assert.strictEqual(portalOk, true, 'Portal WebMCP bridge must register on shared document.modelContext');
     assert.strictEqual(registeredToolMap.size, 5, `Expected 5 portal tools, got ${registeredToolMap.size}`);
 
     const noopTransport: PlayerMcpTransport = {
@@ -1134,10 +1160,12 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
     };
 
     const playerHandle = registerPlayerWebMcpTools(noopTransport);
+    await playerHandle.ready;
     assert.strictEqual(playerHandle.registered, true, 'Player WebMCP bridge must register cleanly');
-    assert.strictEqual(playerHandle.mode, 'registerTool', 'Player WebMCP bridge must prefer additive registerTool mode');
+    assert.strictEqual(playerHandle.surface, 'document.modelContext', 'Player WebMCP bridge must use document.modelContext');
+    assert.strictEqual(playerHandle.mode, 'registerTool', 'Player WebMCP bridge must use registerTool mode');
     assert.strictEqual(registeredToolMap.size, 8, `Expected 5 portal + 3 player = 8 coexisting tools, got ${registeredToolMap.size}`);
-    assert.strictEqual(provideContextCalls, 0, 'Must never call provideContext when registerTool is supported');
+    assert.strictEqual(provideContextCalls, 0, 'Must never call provideContext fallback');
 
     // Unregistering player tools must preserve all 5 portal tools untouched
     playerHandle.unregister();
@@ -1366,6 +1394,241 @@ console.log('\n--- TEST 21: In-Quiz "Ask Nano" Bridge & AI_VISUAL_COMMAND Execut
   assert.strictEqual(engAi.vars.temp, 65, 'AI_VISUAL_COMMAND SET_VARIABLE action must update engine vars cleanly');
 
   console.log('[✅ PASS] Sim 21: In-Quiz Ask Nano button, host telemetry persistence, and AI_VISUAL_COMMAND execution verified.');
+  passedTests++;
+}
+
+// =========================================================================
+// TEST 22: Section 10 Declarative Gesture VM (100% Scene-Agnostic)
+// =========================================================================
+console.log('\n--- TEST 22: Section 10 Declarative Gesture VM Invariants ---');
+{
+  const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+  const engParse = createHeadlessEngine();
+
+  // 22a. Verify ast-engine.js :gestures parser extracts :var-x, :var-y, :cx, :cy, :expr, :tone, :speak, and numeric :step
+  const fishingAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'math-fishing.ast'), 'utf8');
+  const parsedFishing = engParse.parseAst(fishingAst);
+  const hookGesture = parsedFishing.gestures.find((g: any) => g.target === '#fishing-hook');
+  assert(hookGesture && hookGesture.varX === 'hookX' && hookGesture.varY === 'hookY', 'Parser must extract :var-x and :var-y on draggable gestures');
+  const fish1Gesture = parsedFishing.gestures.find((g: any) => g.target === '#fish-1');
+  assert(fish1Gesture && fish1Gesture.expr && fish1Gesture.tone === '523.25,659.25', 'Parser must extract :expr and :tone on clickable gestures');
+
+  const syntheticAst = `(:scene :id "vm-generic-test" :type "Sim" :duration 10.0
+    (:vars (
+      (:var :name "customMetric" :val 2 :min 1 :max 6 :step 1)
+      (:var :name "angleDeg" :val 0 :min 0 :max 360 :step 1)
+    ))
+    (:gestures (
+      (:draggable :target "#slider-a" :axis "x" :min 100 :max 600 :var "customMetric" :step 1)
+      (:clickable :target "#btn-speak" :set-var "customMetric" :val 4 :expr "vars.customMetric = vars.customMetric + 1;" :tone "440" :speak "Metric updated")
+    ))
+  )`;
+  const parsedSynth = engParse.parseAst(syntheticAst);
+  const sliderG = parsedSynth.gestures.find((g: any) => g.target === '#slider-a');
+  const speakG = parsedSynth.gestures.find((g: any) => g.target === '#btn-speak');
+  assert.strictEqual(sliderG?.step, 1, 'Numeric :step must parse into numeric step field');
+  assert.strictEqual(sliderG?.stepVar, null, 'Numeric :step must not pollute stepVar');
+  assert.strictEqual(speakG?.speak, 'Metric updated', 'Parser must extract :speak directive');
+
+  // Verify Section 10 does not contain removed scene hacks
+  const section10Idx = gesturesSrc.indexOf('10. Dynamic Declarative Scene Gestures');
+  const section10EndIdx = gesturesSrc.indexOf('handleBindInputDrag(');
+  const section10Block = gesturesSrc.slice(section10Idx, section10EndIdx);
+  assert(!section10Block.includes("activePresetId === 'algebra-balance'"), 'handleGenericDrag must not contain algebra-balance hack');
+  assert(!section10Block.includes("varName === 'selectedRite'"), 'handleGenericDrag must not contain selectedRite hack');
+  assert(!section10Block.includes("flipUnderside"), 'handleTrackballDrag must not contain flipUnderside hack');
+  assert(!section10Block.includes("targetTx"), 'handleRotateDrag must not reference undeclared targetTx');
+
+  // 22b. Execute ASTDirectGestureSubsystem inside isolated VM with lightweight DOM stubs
+  const makeMockEl = (id: string, attrs: Record<string, string> = {}) => {
+    const attrMap = new Map<string, string>(Object.entries(attrs));
+    const el: any = {
+      id,
+      style: {},
+      dataset: {},
+      setAttribute: (k: string, v: string) => attrMap.set(k, String(v)),
+      getAttribute: (k: string) => (attrMap.has(k) ? attrMap.get(k)! : null),
+      hasAttribute: (k: string) => attrMap.has(k),
+      appendChild: (c: any) => c,
+      append: () => {},
+      replaceChildren: () => {},
+      insertBefore: (c: any) => c,
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      closest: (sel: string) => (el.matches(sel) ? el : null),
+      matches: (sel: string) =>
+        sel.split(',').some((s) => {
+          const t = s.trim();
+          if (t === `#${id}`) return true;
+          const m = /^\[data-draggable="([^"]+)"\]$/.exec(t);
+          if (m && attrMap.get('data-draggable') === m[1]) return true;
+          return false;
+        }),
+      contains: (other: any) => other === el,
+      getBBox: () => ({ x: 100, y: 20, width: 20, height: 20 }),
+    };
+    return el;
+  };
+
+  const containerStub = makeMockEl('stage-container');
+  const stageSvg = makeMockEl('stage-svg');
+  stageSvg.parentElement = containerStub;
+  stageSvg.parentNode = containerStub;
+  const multiClickEl = makeMockEl('multi-btn');
+  const holdEl = makeMockEl('hold-btn');
+  const sliderEl = makeMockEl('slider-a', { transform: 'translate(100, 18)' });
+  const xyDragEl = makeMockEl('fishing-hook', { transform: 'translate(440, 240)' });
+  const rotateEl = makeMockEl('dial-needle');
+  const allEls = [multiClickEl, holdEl, sliderEl, xyDragEl, rotateEl];
+  stageSvg.querySelectorAll = (sel: string) => allEls.filter((n) => n.matches(sel));
+  stageSvg.querySelector = (sel: string) => allEls.find((n) => n.matches(sel)) || null;
+  stageSvg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform: function () { return { x: this.x, y: this.y }; } });
+  stageSvg.getScreenCTM = () => ({ inverse: () => ({}) });
+
+  const setVarCalls: Array<{ name: string; val: any }> = [];
+  const spokenTexts: string[] = [];
+  const appliedProgress: number[] = [];
+
+  const mockEngine: any = {
+    progress: 0.42,
+    isPlaying: false,
+    isContinuousSim: false,
+    computed: {},
+    vars: { mode: 'init', charge: 10, holdActive: false, level: 1, hookX: 440, hookY: 240, dialAngle: 0, yaw: 0, pitch: 10, flipUnderside: false },
+    scene: {
+      id: 'any-generic-scene',
+      vars: {
+        level: { min: 1, max: 6, step: 1, val: 1 },
+        dialAngle: { min: 0, max: 360, step: 1, val: 0 },
+      },
+      inputs: [{ var: 'level', min: 1, max: 6, step: 1 }],
+      gestures: [
+        { type: 'clickable', target: '#multi-btn', setVar: 'mode', val: 'active', tone: '523.25', speak: 'Mode active' },
+        { type: 'clickable', target: '#multi-btn', expr: 'vars.charge = (vars.charge || 0) + 5;' },
+        { type: 'holdable', target: '#hold-btn', holdVar: 'holdActive', val: true, releaseVal: false, expr: 'vars.charge = (vars.charge || 0) + 1;', tone: '660', speak: 'Holding' },
+        { type: 'draggable', target: '#slider-a', axis: 'x', minX: 100, maxX: 600, var: 'level', step: 1 },
+        { type: 'draggable', target: '#fishing-hook', axis: 'xy', minX: 80, maxX: 740, minY: 165, maxY: 440, varX: 'hookX', varY: 'hookY' },
+        { type: 'rotatable', target: '#dial-needle', cx: 400, cy: 240, var: 'dialAngle' },
+      ],
+    },
+    setVar(name: string, val: any) {
+      this.vars[name] = val;
+      setVarCalls.push({ name, val });
+    },
+    applyBindings(t: number) {
+      appliedProgress.push(t);
+    },
+    updateComputedVars() {},
+    speak(text: string) {
+      spokenTexts.push(text);
+    },
+  };
+
+  let rafPending: Function | null = null;
+  const gSb: any = {
+    window: {
+      addEventListener: () => {},
+      focus: () => {},
+    },
+    document: {
+      getElementById: () => null,
+      createElementNS: () => makeMockEl('tmp'),
+      createElement: () => makeMockEl('tmp'),
+      createTextNode: (t: string) => ({ textContent: t }),
+    },
+    performance: { now: () => 1000 },
+    requestAnimationFrame: (cb: Function) => {
+      rafPending = cb;
+      return 1;
+    },
+    cancelAnimationFrame: () => {
+      rafPending = null;
+    },
+    setTimeout: (fn: Function) => { fn(); return 1; },
+    clearTimeout: () => {},
+    console,
+    Math, Number, String, Boolean, Array, Object, Set, Map, Date, Function, parseFloat, parseInt, isNaN,
+  };
+  gSb.globalThis = gSb;
+  gSb.self = gSb.window;
+  vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+
+  const gesturesVm = new gSb.window.ASTDirectGestureSubsystem(mockEngine);
+  const tonesPlayed: number[] = [];
+  gesturesVm.playAudioTone = (hz: number) => tonesPlayed.push(hz);
+  gesturesVm.createTouchRipple = () => {};
+  gesturesVm.init(stageSvg, null);
+
+  // Test multi-tuple :clickable (:set-var + :expr + :tone + :speak + applyBindings(progress))
+  gesturesVm.handlePointerDown({
+    target: multiClickEl,
+    clientX: 150,
+    clientY: 150,
+    pointerId: 1,
+    preventDefault: () => {},
+  });
+  assert.strictEqual(mockEngine.vars.mode, 'active', ':clickable must execute :set-var via engine.setVar');
+  assert.strictEqual(mockEngine.vars.charge, 15, ':clickable must execute second matching :expr tuple against engine.vars');
+  assert(tonesPlayed.includes(523.25), ':clickable must play :tone');
+  assert(spokenTexts.includes('Mode active'), ':clickable must speak :speak');
+  assert(appliedProgress.includes(0.42), ':clickable must call engine.applyBindings(engine.progress)');
+
+  // Test :holdable (:hold-var + :expr + :tone + :speak + continuous rAF tick + pointerup release)
+  appliedProgress.length = 0;
+  gesturesVm.handlePointerDown({
+    target: holdEl,
+    clientX: 200,
+    clientY: 200,
+    pointerId: 2,
+    preventDefault: () => {},
+  });
+  assert.strictEqual(mockEngine.vars.holdActive, true, ':holdable must set :hold-var on press');
+  assert.strictEqual(mockEngine.vars.charge, 16, ':holdable must execute :expr on press');
+  assert(tonesPlayed.includes(660), ':holdable must play :tone');
+  assert(spokenTexts.includes('Holding'), ':holdable must speak :speak');
+  assert(appliedProgress.includes(0.42), ':holdable must call engine.applyBindings(engine.progress)');
+  if (rafPending) {
+    rafPending(1016);
+    assert.strictEqual(mockEngine.vars.charge, 17, ':holdable rAF loop must step :expr continuously');
+  }
+  gesturesVm.handlePointerUp({ pointerId: 2 });
+  assert.strictEqual(mockEngine.vars.holdActive, false, ':holdable must reset :hold-var to :release-val on release');
+
+  // Test handleGenericDrag :var normalized range (scene-agnostic)
+  gesturesVm.dragStart = { x: 100, y: 18 };
+  gesturesVm.targetInitial = { transform: 'translate(100, 18)', initTx: 100, initTy: 18, x: 100, y: 18 };
+  gesturesVm.handleGenericDrag(sliderEl, { x: 600, y: 18 });
+  assert.strictEqual(mockEngine.vars.level, 6, 'handleGenericDrag must map normalized slider end to vMax=6 via engine.setVar');
+  gesturesVm.handleGenericDrag(sliderEl, { x: 300, y: 18 });
+  assert.strictEqual(mockEngine.vars.level, 3, 'handleGenericDrag must map normalized slider midpoint (40%) cleanly to 3');
+
+  // Test handleGenericDrag :var-x and :var-y raw SVG coordinate mapping via engine.setVar
+  setVarCalls.length = 0;
+  gesturesVm.dragStart = { x: 440, y: 240 };
+  gesturesVm.targetInitial = { transform: 'translate(440, 240)', initTx: 440, initTy: 240, x: 440, y: 240 };
+  gesturesVm.handleGenericDrag(xyDragEl, { x: 520, y: 310 });
+  assert.strictEqual(mockEngine.vars.hookX, 520, 'handleGenericDrag must set :var-x raw SVG X coordinate via engine.setVar');
+  assert.strictEqual(mockEngine.vars.hookY, 310, 'handleGenericDrag must set :var-y raw SVG Y coordinate via engine.setVar');
+  assert(setVarCalls.some((c) => c.name === 'hookX' && c.val === 520), 'hookX update must route through engine.setVar');
+  assert(setVarCalls.some((c) => c.name === 'hookY' && c.val === 310), 'hookY update must route through engine.setVar');
+
+  // Test handleRotateDrag (no undeclared targetTx/targetTy error, calls setVar & applyBindings)
+  gesturesVm.handleRotateDrag(rotateEl, { x: 400, y: 340 }); // 90 deg below (400, 240)
+  assert.strictEqual(mockEngine.vars.dialAngle, 90, 'handleRotateDrag must write computed angle via engine.setVar');
+
+  // Test handleTrackballDrag without flipUnderside coupling
+  gesturesVm.trackballYawVar = 'yaw';
+  gesturesVm.trackballPitchVar = 'pitch';
+  gesturesVm.trackballStartYaw = 0;
+  gesturesVm.trackballStartPitch = 10;
+  gesturesVm.dragStart = { x: 100, y: 100 };
+  gesturesVm.handleTrackballDrag({ clientX: 150, clientY: 160 });
+  assert(mockEngine.vars.pitch < 0, 'handleTrackballDrag must update negative pitch declaratively');
+  assert.strictEqual(mockEngine.vars.flipUnderside, false, 'handleTrackballDrag must not mutate unrelated flipUnderside var');
+
+  console.log('[✅ PASS] Sim 22: Section 10 Declarative Gesture VM (clickable, holdable, generic var/var-x/var-y, rotate, trackball) verified.');
   passedTests++;
 }
 

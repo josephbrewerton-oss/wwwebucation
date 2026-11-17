@@ -1,6 +1,6 @@
 // src/engine/webmcpBridge.ts
 /**
- * W3C WebMCP (navigator.modelContext / document.modelContext) Bridge & Benchmark
+ * W3C WebMCP (document.modelContext) Bridge & Benchmark
  *
  * Registers structured JSON-Schema tools for AI agents and the Chrome Built-in AI
  * Early Preview Program without exposing raw DOM trees or requiring cloud round-trips.
@@ -8,7 +8,6 @@
  */
 
 export type WebMcpSurface =
-  | 'navigator.modelContext'
   | 'document.modelContext'
   | 'unavailable';
 
@@ -72,20 +71,35 @@ export interface PlayerMcpTransport {
   onSay?: (text: string) => void;
 }
 
+export interface WebMcpToolAnnotations {
+  readOnlyHint?: boolean;
+  consequentialHint?: boolean;
+}
+
 export interface WebMcpToolDescriptor {
   name: string;
   description: string;
   inputSchema: Record<string, any>;
+  annotations?: WebMcpToolAnnotations;
   execute: (args: Record<string, any>, client?: unknown) => Promise<any>;
 }
 
 export interface WebMcpRegistrationHandle {
   registered: boolean;
   surface: WebMcpSurface;
-  mode: 'provideContext' | 'registerTool' | 'headless-local';
+  mode: 'registerTool' | 'headless-local';
   toolNames: string[];
   tools: WebMcpToolDescriptor[];
+  ready?: Promise<void>;
   unregister: () => void;
+}
+
+export interface WebMcpClampingTrace {
+  varName: string;
+  bounds: { min: number | null; max: number | null };
+  unclampedInput: number | string;
+  clampedOutput: number | string;
+  restoredValue: number | string | null;
 }
 
 export interface WebMcpBenchmarkResult {
@@ -102,6 +116,7 @@ export interface WebMcpBenchmarkResult {
   domPayloadReductionPct: number;
   clampingVerified: boolean;
   sampleVarTested: string | null;
+  clampingTrace?: WebMcpClampingTrace | null;
   timestamp: number;
 }
 
@@ -122,9 +137,6 @@ function nowMs(): number {
 }
 
 export function detectWebMcpSurface(): { surface: WebMcpSurface; api: any | null } {
-  if (typeof navigator !== 'undefined' && (navigator as any).modelContext) {
-    return { surface: 'navigator.modelContext', api: (navigator as any).modelContext };
-  }
   if (typeof document !== 'undefined' && (document as any).modelContext) {
     return { surface: 'document.modelContext', api: (document as any).modelContext };
   }
@@ -262,8 +274,10 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
     name: 'ast_set_var',
     description:
       'Mutates a declared simulation :var parameter strictly clamped to its [min, max] bounds and updates reactive bindings.',
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: 'object',
+      description: 'Parameters for mutating a declared simulation :var safely within [min, max] bounds.',
       properties: {
         name: {
           type: 'string',
@@ -272,7 +286,7 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
         },
         value: {
           oneOf: [{ type: 'number' }, { type: 'string' }],
-          description: 'Target value; numeric inputs are clamped to [min, max].',
+          description: 'Target numeric or string value; numeric inputs are automatically clamped to declared [min, max] bounds.',
         },
       },
       required: ['name', 'value'],
@@ -318,8 +332,10 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
     name: 'ast_dispatch_action',
     description:
       'Executes the 4-slot AST Vector Player action tuple (:seek, :highlight, :var, :say) with selector sanitization.',
+    annotations: { readOnlyHint: false },
     inputSchema: {
       type: 'object',
+      description: 'Structured or raw 4-slot (:act ...) action dispatch arguments with SVG selector sanitization.',
       properties: {
         tuple: {
           type: 'string',
@@ -382,12 +398,14 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
     name: 'ast_read_state',
     description:
       'Returns compact current simulation state: clock t, normalized progress, :vars, :ledger conservation totals, and :pass-expr checkpoint status.',
+    annotations: { readOnlyHint: true },
     inputSchema: {
       type: 'object',
+      description: 'Read-only inspection parameters for compact simulation telemetry.',
       properties: {
         includeSvgBytes: {
           type: 'boolean',
-          description: 'Include raw SVG DOM serialized byte count for payload comparison.',
+          description: 'Include raw SVG DOM serialized byte count to compare against compact MCP JSON bytes.',
         },
       },
       additionalProperties: false,
@@ -443,92 +461,124 @@ export function createPlayerWebMcpTools(transport: PlayerMcpTransport): WebMcpTo
   return [astSetVarTool, astDispatchActionTool, astReadStateTool];
 }
 
+let activePlayerRegistrationAbort: AbortController | null = null;
+
 /**
- * Registers the 3 structured WebMCP tools on navigator.modelContext (or document.modelContext fallback).
+ * Registers the 3 structured WebMCP tools exclusively on document.modelContext
+ * using AbortSignal cleanup and async registerTool Promise handling.
  */
 export function registerWebMcpTools(transport: PlayerMcpTransport): WebMcpRegistrationHandle {
   const tools = createPlayerWebMcpTools(transport);
   const toolNames = tools.map((t) => t.name);
   const { surface, api } = detectWebMcpSurface();
 
-  if (!api) {
-    return {
-      registered: false,
-      surface: 'unavailable',
-      mode: 'headless-local',
-      toolNames,
-      tools,
-      unregister: () => {},
-    };
+  if (activePlayerRegistrationAbort && !activePlayerRegistrationAbort.signal.aborted) {
+    try {
+      activePlayerRegistrationAbort.abort();
+    } catch {
+      // Safe prior cleanup
+    }
+    activePlayerRegistrationAbort = null;
   }
 
-  let mode: WebMcpRegistrationHandle['mode'] = 'headless-local';
-  const registeredIndividual: string[] = [];
-  const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
-
-  try {
-    if (typeof api.registerTool === 'function') {
-      for (const tool of tools) {
-        if (abortController) {
-          try {
-            api.registerTool(tool, { signal: abortController.signal });
-          } catch {
-            api.registerTool(tool);
-          }
-        } else {
-          api.registerTool(tool);
-        }
-        registeredIndividual.push(tool.name);
-      }
-      mode = 'registerTool';
-    } else if (typeof api.provideContext === 'function') {
-      api.provideContext({ tools });
-      mode = 'provideContext';
-    }
-  } catch (err) {
-    console.warn('[WebMCP] Native registration failed, keeping local tool harness:', err);
+  if (!api || typeof api.registerTool !== 'function') {
     return {
       registered: false,
       surface,
       mode: 'headless-local',
       toolNames,
       tools,
+      ready: Promise.resolve(),
       unregister: () => {},
     };
   }
 
-  const unregister = () => {
-    try {
-      if (mode === 'registerTool') {
-        if (abortController && !abortController.signal.aborted) {
-          abortController.abort();
-        }
-        if (typeof api.unregisterTool === 'function') {
-          for (const name of registeredIndividual) {
-            api.unregisterTool(name);
-          }
-        }
-      } else if (mode === 'provideContext' && typeof api.clearContext === 'function') {
-        api.clearContext();
-      }
-    } catch {
-      // Safe teardown
-    }
-  };
+  const abortController = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  activePlayerRegistrationAbort = abortController;
 
-  return {
-    registered: mode !== 'headless-local',
+  const registeredIndividual: string[] = [];
+  const pendingRegistrations: Array<{ name: string; promise: Promise<any> }> = [];
+
+  for (const tool of tools) {
+    const toolDef = {
+      name: tool.name,
+      description: tool.description,
+      inputSchema: tool.inputSchema,
+      annotations: tool.annotations,
+      execute: tool.execute,
+    };
+    try {
+      const result = abortController
+        ? api.registerTool(toolDef, { signal: abortController.signal })
+        : api.registerTool(toolDef);
+      registeredIndividual.push(tool.name);
+      if (result && typeof result.then === 'function') {
+        pendingRegistrations.push({ name: tool.name, promise: result });
+      }
+    } catch (err) {
+      console.warn(`[WebMCP] Synchronous registerTool failure for '${tool.name}':`, err);
+    }
+  }
+
+  const mode: WebMcpRegistrationHandle['mode'] =
+    registeredIndividual.length > 0 ? 'registerTool' : 'headless-local';
+
+  const handle: WebMcpRegistrationHandle = {
+    registered: mode === 'registerTool',
     surface,
     mode,
     toolNames,
     tools,
-    unregister,
+    ready: Promise.resolve(),
+    unregister: () => {
+      try {
+        if (abortController && !abortController.signal.aborted) {
+          abortController.abort();
+        }
+        if (activePlayerRegistrationAbort === abortController) {
+          activePlayerRegistrationAbort = null;
+        }
+        if (typeof api.unregisterTool === 'function') {
+          for (const name of registeredIndividual) {
+            try {
+              api.unregisterTool(name);
+            } catch {
+              // Ignore if already unregistered by AbortSignal
+            }
+          }
+        }
+      } catch {
+        // Safe teardown
+      }
+    },
   };
+
+  if (pendingRegistrations.length > 0) {
+    handle.ready = (async () => {
+      let okCount = 0;
+      const settled = await Promise.allSettled(pendingRegistrations.map((p) => p.promise));
+      for (let i = 0; i < settled.length; i++) {
+        const res = settled[i];
+        const toolName = pendingRegistrations[i].name;
+        if (res.status === 'fulfilled') {
+          okCount += 1;
+        } else {
+          console.warn(`[WebMCP] Async registerTool rejected for '${toolName}':`, res.reason);
+        }
+      }
+      if (okCount === 0 && registeredIndividual.length === pendingRegistrations.length) {
+        handle.registered = false;
+        handle.mode = 'headless-local';
+      }
+    })();
+  }
+
+  return handle;
 }
 
 /**
  * Runs a live round-trip actuation benchmark across all 3 WebMCP tools against the mounted simulation stage,
- * verifying numeric [min, max] clamping and measuring MCP payload compactness vs raw SVG DOM bytes.
+ * verifying numeric [min, max] clamping with unclamped->clamped trace and measuring MCP payload compactness vs raw SVG DOM bytes.
  */
 export async function runWebMcpBenchmark(
   transport: PlayerMcpTransport,
@@ -552,6 +602,7 @@ export async function runWebMcpBenchmark(
   let originalVal: number | string | null = null;
   let setVarLatencyMs = 0;
   let clampingVerified = false;
+  let clampingTrace: WebMcpClampingTrace | null = null;
 
   const varMeta: Record<string, EngineVarMeta> = readResult.varMeta || {};
   for (const [vName, meta] of Object.entries(varMeta)) {
@@ -564,12 +615,20 @@ export async function runWebMcpBenchmark(
     ) {
       sampleVarTested = vName;
       originalVal = readResult.vars?.[vName] ?? meta.val ?? meta.min;
+      const unclampedInput = meta.max + 25;
       const overshootRes = await setVarTool.execute({
         name: vName,
-        value: meta.max + 25,
+        value: unclampedInput,
       });
       setVarLatencyMs = Number(overshootRes.latencyMs || 0);
       clampingVerified = Boolean(overshootRes.clamped) && Number(overshootRes.appliedValue) === meta.max;
+      clampingTrace = {
+        varName: vName,
+        bounds: { min: meta.min, max: meta.max },
+        unclampedInput,
+        clampedOutput: overshootRes.appliedValue,
+        restoredValue: originalVal,
+      };
 
       // Restore original variable value immediately so we don't leave test perturbation behind
       if (originalVal !== null) {
@@ -583,10 +642,18 @@ export async function runWebMcpBenchmark(
   if (!sampleVarTested) {
     const tStart = nowMs();
     try {
-      const pingRes = await setVarTool.execute({ name: 'simClock', value: Number(readResult.t || 0) });
+      const pingVal = Number(readResult.t || 0);
+      const pingRes = await setVarTool.execute({ name: 'simClock', value: pingVal });
       setVarLatencyMs = Number(pingRes.latencyMs || (nowMs() - tStart));
       clampingVerified = true; // no numeric overshoot bounds present
       sampleVarTested = 'simClock';
+      clampingTrace = {
+        varName: 'simClock',
+        bounds: { min: null, max: null },
+        unclampedInput: pingVal,
+        clampedOutput: pingRes.appliedValue ?? pingVal,
+        restoredValue: pingVal,
+      };
     } catch {
       setVarLatencyMs = Number((nowMs() - tStart).toFixed(3));
     }
@@ -604,11 +671,8 @@ export async function runWebMcpBenchmark(
       ? Number((latencies.reduce((acc, v) => acc + v, 0) / latencies.length).toFixed(3))
       : 0;
 
-  const registrationMode: WebMcpRegistrationHandle['mode'] = !api
-    ? 'headless-local'
-    : typeof api.registerTool === 'function'
-    ? 'registerTool'
-    : 'provideContext';
+  const registrationMode: WebMcpRegistrationHandle['mode'] =
+    api && typeof api.registerTool === 'function' ? 'registerTool' : 'headless-local';
 
   return {
     surface,
@@ -624,6 +688,7 @@ export async function runWebMcpBenchmark(
     domPayloadReductionPct,
     clampingVerified,
     sampleVarTested,
+    clampingTrace,
     timestamp: Date.now(),
   };
 }

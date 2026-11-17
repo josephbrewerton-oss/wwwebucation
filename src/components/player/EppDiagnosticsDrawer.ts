@@ -12,12 +12,14 @@ import {
   computeAstVsJsonCompression,
   formatEppReportMarkdown,
   loadLastEppTelemetryDossier,
+  probeHostHardwareProfile,
   runEppContentionSuite,
   triggerFileDownload,
   type CompressionComparisonResult,
   type EppBenchProgress,
   type EppBenchTransport,
   type EppTelemetryDossier,
+  type HostHardwareProfile,
 } from '../../engine/eppContentionBench';
 import {
   detectWebMcpSurface,
@@ -34,6 +36,8 @@ export interface EppDiagnosticsDrawerProps {
   postToPlayer: (msg: Record<string, any>) => void;
   benchTransport: EppBenchTransport;
   webMcpHandle: WebMcpRegistrationHandle | null;
+  autoRunBenchmark?: boolean;
+  onAutoRunConsumed?: () => void;
 }
 
 function escapeHtml(str: string): string {
@@ -95,10 +99,12 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
   let isRunning = false;
   let progressState: EppBenchProgress | null = null;
   let activeDossier: EppTelemetryDossier | null = null;
+  let hostHardware: HostHardwareProfile | null = null;
   let quickCompression: CompressionComparisonResult | null = null;
   let quickWebMcp: WebMcpBenchmarkResult | null = null;
   let lmAvailability = 'probing...';
   let statusNotice = '';
+  let autoRunStarted = false;
 
   function getMemorySummary(): string {
     const parts = ['448 KB WASM SoA'];
@@ -110,6 +116,32 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
     if (typeof nav.deviceMemory === 'number') parts.push(`${nav.deviceMemory} GB RAM`);
     if (typeof nav.hardwareConcurrency === 'number') parts.push(`${nav.hardwareConcurrency}T CPU`);
     return parts.join(' · ');
+  }
+
+  function getHardwareDisplaySummary(): string {
+    const hw = activeDossier?.hardwareProfile || hostHardware;
+    if (!hw) {
+      return 'Probing GPU adapter, display refresh (Hz), OS/CPU & WebNN...';
+    }
+    const gpuLabel =
+      hw.gpuDescription ||
+      hw.gpuDevice ||
+      hw.gpuVendor ||
+      (hw.gpuBackend === 'unavailable' ? 'No WebGPU/WebGL2 adapter' : 'Adapter unknown');
+    const backendTag = hw.gpuBackend ? hw.gpuBackend : hw.webgpuSupported ? 'webgpu' : 'webgl2';
+    const maxBuf = typeof hw.gpuMaxBufferSizeMb === 'number' ? ` · MaxBuf ${hw.gpuMaxBufferSizeMb} MB` : '';
+    const refresh = hw.estimatedRefreshHz ? `${hw.estimatedRefreshHz}Hz` : '60Hz';
+    const budget = hw.vsyncBudgetMs ? `${hw.vsyncBudgetMs.toFixed(2)}ms` : '16.67ms';
+    const res = hw.screenResolution || 'n/a';
+    const dpr = typeof hw.devicePixelRatio === 'number' ? ` @${hw.devicePixelRatio}x` : '';
+    const osArch = [
+      hw.osPlatform ? `${hw.osPlatform}${hw.osPlatformVersion ? ` ${hw.osPlatformVersion}` : ''}` : null,
+      hw.cpuArchitecture ? `${hw.cpuArchitecture}${hw.cpuBitness ? `-${hw.cpuBitness}` : ''}` : null,
+    ]
+      .filter(Boolean)
+      .join(' ');
+    const webnn = hw.webnnAvailable ? 'WebNN: ON' : 'WebNN: OFF';
+    return `${osArch ? `${osArch} · ` : ''}GPU[${backendTag}]: ${gpuLabel}${maxBuf} · Display: ${res}${dpr} (${refresh} / ${budget}) · ${webnn}`;
   }
 
   function renderBody() {
@@ -125,6 +157,14 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
 
     const phases = activeDossier?.contentionPhases;
     const quota = activeDossier?.contextQuotaTrace;
+    const vsyncMs =
+      phases?.vsyncBudgetMs ??
+      activeDossier?.hardwareProfile?.vsyncBudgetMs ??
+      hostHardware?.vsyncBudgetMs ??
+      16.67;
+    const severeMs =
+      phases?.severeDropThresholdMs ??
+      Number((vsyncMs * 1.15).toFixed(2));
 
     drawer.innerHTML = `
       <!-- Header -->
@@ -140,6 +180,9 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
             <span style="font-size:0.74rem; color:#94a3b8; font-family:ui-monospace, monospace; font-variant-numeric:tabular-nums;">
               ${escapeHtml(getMemorySummary())}
             </span>
+          </div>
+          <div style="font-size:0.71rem; color:#38bdf8; font-family:ui-monospace, monospace; font-variant-numeric:tabular-nums; margin-top:3px;">
+            ${escapeHtml(getHardwareDisplaySummary())}
           </div>
         </div>
 
@@ -283,7 +326,8 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
                   <th style="padding:4px 6px;">p95</th>
                   <th style="padding:4px 6px;">p99</th>
                   <th style="padding:4px 6px;">Max</th>
-                  <th style="padding:4px 6px;">&gt;16.67ms</th>
+                  <th style="padding:4px 6px;">&gt;${vsyncMs.toFixed(2)}ms</th>
+                  <th style="padding:4px 6px;">Drops (&gt;${severeMs.toFixed(2)}ms)</th>
                   <th style="padding:4px 6px;">FPS</th>
                   <th style="padding:4px 6px;">VM ms</th>
                 </tr>
@@ -293,7 +337,12 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
                   { name: 'A · Baseline', p: phases.phaseABaseline },
                   { name: 'B · Concurrent', p: phases.phaseBConcurrent },
                   { name: 'C · Recovery', p: phases.phaseCRecovery },
-                ].map(({ name, p }) => `
+                ].map(({ name, p }) => {
+                  const rawOver = p.stats.rawVsyncOverruns ?? p.stats.framesOver16_67ms;
+                  const rawPct = p.stats.rawVsyncOverrunPct ?? p.stats.overBudgetPct;
+                  const severeDrops = p.stats.severeFrameDrops ?? 0;
+                  const severePct = p.stats.severeFrameDropPct ?? 0;
+                  return `
                   <tr style="border-bottom:1px solid #111827; text-align:right; color:#e2e8f0;">
                     <td style="text-align:left; padding:5px 6px; font-weight:700; color:#f8fafc;">${name}</td>
                     <td style="padding:5px 6px;">${p.stats.sampleCount}</td>
@@ -301,11 +350,13 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
                     <td style="padding:5px 6px;">${p.stats.p95Ms.toFixed(2)}ms</td>
                     <td style="padding:5px 6px;">${p.stats.p99Ms.toFixed(2)}ms</td>
                     <td style="padding:5px 6px;">${p.stats.maxMs.toFixed(2)}ms</td>
-                    <td style="padding:5px 6px; color:${p.stats.framesOver16_67ms > 0 ? '#fbbf24' : '#34d399'};">${p.stats.framesOver16_67ms} (${p.stats.overBudgetPct}%)</td>
+                    <td style="padding:5px 6px; color:${rawOver > 0 ? '#fbbf24' : '#34d399'};">${rawOver} (${rawPct}%)</td>
+                    <td style="padding:5px 6px; color:${severeDrops > 0 ? '#f87171' : '#34d399'};">${severeDrops} (${severePct}%)</td>
                     <td style="padding:5px 6px; color:#38bdf8;">${p.stats.estimatedFps.toFixed(1)}</td>
                     <td style="padding:5px 6px;">${p.stats.meanComputeMs.toFixed(3)}ms</td>
                   </tr>
-                `).join('')}
+                `;
+                }).join('')}
               </tbody>
             </table>
           </div>
@@ -316,18 +367,18 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
         <!-- Quota & Socratic Telemetry Card -->
         <div style="background:#0b1120; border:1px solid #1e293b; border-radius:6px; padding:10px 12px;">
           <div style="font-size:0.72rem; font-weight:700; text-transform:uppercase; letter-spacing:0.04em; color:#94a3b8; margin-bottom:6px;">
-            Context Quota, TTFT &amp; session.clone()
+            Context Window, TTFT &amp; session.clone()
           </div>
           ${quota ? `
             <div style="font-size:0.73rem; font-family:ui-monospace, monospace; font-variant-numeric:tabular-nums; color:#cbd5e1; margin-bottom:6px;">
-              Quota: ${quota.finalInputUsage ?? 'N/A'} / ${quota.inputQuota ?? 'N/A'} · Overflows: ${quota.totalQuotaOverflows} · Mean TTFT: ${quota.meanTtftMs ?? 'N/A'} ms · Clone: ${activeDossier?.promptApiStatus.cloneLatencyMs !== null && activeDossier?.promptApiStatus.cloneLatencyMs !== undefined ? `${activeDossier.promptApiStatus.cloneLatencyMs} ms` : 'N/A'}
+              Context: ${quota.finalInputUsage ?? 'N/A'} / ${quota.inputQuota ?? 'N/A'} · Overflows: ${quota.totalQuotaOverflows} · Mean TTFT: ${quota.meanTtftMs ?? 'N/A'} ms · Clone: ${activeDossier?.promptApiStatus.cloneLatencyMs !== null && activeDossier?.promptApiStatus.cloneLatencyMs !== undefined ? `${activeDossier.promptApiStatus.cloneLatencyMs} ms` : 'N/A'}
             </div>
             <div style="font-size:0.71rem; font-family:ui-monospace, monospace; font-variant-numeric:tabular-nums; color:#94a3b8;">
-              ${quota.turns.map((t) => `T${t.turn}(${t.promptRole}): ${t.ttftMs}ms TTFT / ${t.durationMs}ms total · ${t.outputBytes}B`).join('<br/>')}
+              ${quota.turns.map((t) => `T${t.turn}(${t.promptRole}): ${t.ttftMs}ms TTFT / ${t.durationMs}ms total · ${t.inputUsage ?? 'N/A'}/${t.inputQuota ?? 'N/A'} tok · ${t.outputBytes}B`).join('<br/>')}
             </div>
           ` : `
             <div style="font-size:0.74rem; color:#64748b;">
-              Run the contention suite to log live <code>inputQuota</code>, <code>quotaoverflow</code>, <code>session.clone()</code>, and per-turn TTFT metrics.
+              Run the contention suite to log live <code>contextWindow</code>/<code>contextUsage</code>, <code>contextoverflow</code>, <code>session.clone()</code>, and per-turn TTFT metrics.
             </div>
           `}
         </div>
@@ -341,7 +392,7 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
             <div style="font-size:0.73rem; font-family:ui-monospace, monospace; font-variant-numeric:tabular-nums; color:#cbd5e1; line-height:1.55;">
               <div>ast_read_state: <strong>${mcpRes.readLatencyMs}ms</strong> · ast_set_var: <strong>${mcpRes.setVarLatencyMs}ms</strong> · ast_dispatch_action: <strong>${mcpRes.dispatchLatencyMs}ms</strong></div>
               <div>Payload: <strong>${mcpRes.mcpPayloadBytes} B</strong> MCP JSON vs <strong>${mcpRes.rawSvgBytes} B</strong> SVG DOM (<strong style="color:#34d399;">${mcpRes.domPayloadReductionPct}% smaller</strong>)</div>
-              <div>[min, max] Clamping Guard (<code>${escapeHtml(mcpRes.sampleVarTested || 'none')}</code>): <strong style="color:${mcpRes.clampingVerified ? '#34d399' : '#f87171'};">${mcpRes.clampingVerified ? 'PASS' : 'FAIL'}</strong></div>
+              <div>[min, max] Clamping Guard (<code>${escapeHtml(mcpRes.sampleVarTested || 'none')}</code>): <strong style="color:${mcpRes.clampingVerified ? '#34d399' : '#f87171'};">${mcpRes.clampingVerified ? 'PASS' : 'FAIL'}</strong>${mcpRes.clampingTrace ? ` · ${escapeHtml(String(mcpRes.clampingTrace.unclampedInput))} &rarr; ${escapeHtml(String(mcpRes.clampingTrace.clampedOutput))}` : ''}</div>
             </div>
           ` : `
             <div style="font-size:0.74rem; color:#64748b;">
@@ -372,6 +423,47 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
     `;
 
     wireEvents();
+  }
+
+  async function triggerContentionRun() {
+    if (isRunning) return;
+    isRunning = true;
+    statusNotice = '';
+    progressState = { phase: 'init', pct: 2, label: 'Initializing 3-phase empirical contention harness...' };
+    if (drawer.isConnected) renderBody();
+
+    try {
+      const dossier = await runEppContentionSuite({
+        transport: benchTransport,
+        sceneId: presetId,
+        onProgress: (prog) => {
+          progressState = prog;
+          if (!drawer.isConnected) return;
+          renderBody();
+        },
+      });
+      activeDossier = dossier;
+      quickCompression = dossier.compressionComparison;
+      quickWebMcp = dossier.webmcpBenchmark;
+      lmAvailability = dossier.promptApiStatus.availability;
+      statusNotice = `Dossier captured & saved in EdgeLearningEngineDB. Exporting Markdown + JSON telemetry...`;
+      const stamp = dossier.generatedAtIso.replace(/[:.]/g, '-').slice(0, 19);
+      const md = formatEppReportMarkdown(dossier);
+      triggerFileDownload(`chrome-epp-telemetry-${presetId}-${stamp}.md`, md, 'text/markdown;charset=utf-8');
+      setTimeout(() => {
+        triggerFileDownload(
+          `chrome-epp-telemetry-${presetId}-${stamp}.json`,
+          JSON.stringify(dossier, null, 2),
+          'application/json;charset=utf-8'
+        );
+      }, 150);
+    } catch (err: any) {
+      statusNotice = `Telemetry suite aborted: ${err?.message || 'Unexpected error'}`;
+    } finally {
+      isRunning = false;
+      if (!drawer.isConnected) return;
+      renderBody();
+    }
   }
 
   function wireEvents() {
@@ -444,44 +536,12 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
       } catch (err: any) {
         statusNotice = `WebMCP ping note: ${err?.message || 'Stage unavailable'}`;
       }
+      if (!drawer.isConnected) return;
       renderBody();
     });
 
-    drawer.querySelector('#diag-btn-run-epp')?.addEventListener('click', async () => {
-      if (isRunning) return;
-      isRunning = true;
-      statusNotice = '';
-      progressState = { phase: 'init', pct: 2, label: 'Initializing 3-phase empirical contention harness...' };
-      renderBody();
-
-      try {
-        const dossier = await runEppContentionSuite({
-          transport: benchTransport,
-          sceneId: presetId,
-          onProgress: (prog) => {
-            progressState = prog;
-            renderBody();
-          },
-        });
-        activeDossier = dossier;
-        quickCompression = dossier.compressionComparison;
-        quickWebMcp = dossier.webmcpBenchmark;
-        lmAvailability = dossier.promptApiStatus.availability;
-        statusNotice = `Dossier captured & saved in EdgeLearningEngineDB. Exporting Markdown + JSON telemetry...`;
-        const stamp = dossier.generatedAtIso.replace(/[:.]/g, '-').slice(0, 19);
-        const md = formatEppReportMarkdown(dossier);
-        triggerFileDownload(`chrome-epp-telemetry-${presetId}-${stamp}.md`, md, 'text/markdown;charset=utf-8');
-        triggerFileDownload(
-          `chrome-epp-telemetry-${presetId}-${stamp}.json`,
-          JSON.stringify(dossier, null, 2),
-          'application/json;charset=utf-8'
-        );
-      } catch (err: any) {
-        statusNotice = `Telemetry suite aborted: ${err?.message || 'Unexpected error'}`;
-      } finally {
-        isRunning = false;
-        renderBody();
-      }
+    drawer.querySelector('#diag-btn-run-epp')?.addEventListener('click', () => {
+      void triggerContentionRun();
     });
 
     drawer.querySelector('#diag-btn-export-md')?.addEventListener('click', () => {
@@ -509,10 +569,10 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
       try {
         await navigator.clipboard?.writeText(formatEppReportMarkdown(activeDossier));
         statusNotice = 'Markdown dossier copied to clipboard.';
-        renderBody();
+        if (drawer.isConnected) renderBody();
       } catch {
         statusNotice = 'Clipboard unavailable in this frame; use Export .md Dossier.';
-        renderBody();
+        if (drawer.isConnected) renderBody();
       }
     });
   }
@@ -524,16 +584,32 @@ export function renderEppDiagnosticsDrawer(props: EppDiagnosticsDrawerProps): HT
     probeAvailabilityLabel(),
     computeAstVsJsonCompression(),
     loadLastEppTelemetryDossier(),
+    probeHostHardwareProfile(),
   ])
-    .then(([avail, comp, last]) => {
+    .then(([avail, comp, last, hw]) => {
       lmAvailability = avail;
       quickCompression = comp;
+      hostHardware = hw;
       if (last && !activeDossier) {
         activeDossier = last;
       }
       if (drawer.isConnected) renderBody();
     })
     .catch(() => {});
+
+  if (props.autoRunBenchmark && !autoRunStarted) {
+    autoRunStarted = true;
+    const scheduleAutoRun = () => {
+      if (!drawer.isConnected) return;
+      props.onAutoRunConsumed?.();
+      void triggerContentionRun();
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(() => setTimeout(scheduleAutoRun, 50));
+    } else {
+      setTimeout(scheduleAutoRun, 50);
+    }
+  }
 
   return drawer;
 }

@@ -1,36 +1,130 @@
-(:scene :id "math-fishing" :type "App" :oak-id "OAK-KS1-MAT-007" :oak-unit "ks1-maths-arithmetic-number-bonds" :title "Math Pond: Number Bonds Fishing Game" :stage "KS1/KS2 MATHS" :duration 14.0
+(:scene :id "math-fishing" :type "App" :oak-id "OAK-KS1-MAT-007" :oak-unit "ks1-maths-arithmetic-number-bonds" :title "Math Pond: Number Bonds Fishing Game" :stage "KS1/KS2 MATHS" :duration 28.0
   (:vars (
     (:var :name "targetSum" :val 10 :min 5 :max 20 :step 1 :label "Target Bond Goal")
+    (:var :name "caughtA" :val 0 :min 0 :max 20 :step 1 :label "First Fish Caught")
+    (:var :name "caughtB" :val 0 :min 0 :max 20 :step 1 :label "Second Fish Caught")
+    (:var :name "bondsCount" :val 0 :min 0 :max 99 :step 1 :label "Completed Bonds")
+    (:var :name "streakCount" :val 0 :min 0 :max 99 :step 1 :label "Streak")
     (:var :name "hookX" :val 440 :min 80 :max 740 :step 1 :label "Hook X Position")
-    (:var :name "hookY" :val 240 :min 120 :max 440 :step 1 :label "Hook Y Depth")
-    (:var :name "bobberSpeed" :val 1.0 :min 0.5 :max 3.0 :step 0.25 :label "Reeling Current Pace")
+    (:var :name "hookY" :val 240 :min 155 :max 440 :step 1 :label "Hook Y Depth")
+    (:var :name "bobberSpeed" :val 0.5 :min 0.2 :max 2.0 :step 0.1 :label "Reeling Current Pace")
   ))
   (:inputs (
     (:slider :var "targetSum" :label "Number Bond Target" :min 5 :max 20 :step 1)
-    (:slider :var "bobberSpeed" :label "Water Current Velocity" :min 0.5 :max 3.0 :step 0.25)
+    (:slider :var "bobberSpeed" :label "Water Current Velocity" :min 0.2 :max 2.0 :step 0.1)
   ))
   (:computed (
-    (:name "bondComplement" :expr "vars.targetSum - 4")
+    (:name "bondComplement" :expr "Math.max(0, vars.targetSum - vars.caughtA)")
+    (:name "isMatch" :expr "vars.caughtA > 0 && vars.caughtB > 0 && (vars.caughtA + vars.caughtB === vars.targetSum)")
   ))
   (:gestures (
-    (:draggable :target "#fishing-bobber-rig" :axis "xy" :min-x 80 :max-x 740 :min-y 120 :max-y 440)
-    (:draggable :target "#fishing-hook" :axis "xy" :min-x 80 :max-x 740 :min-y 120 :max-y 440)
+    ;; Hook & Bobber piped into hookX / hookY
+    (:draggable :target "#fishing-bobber-rig" :axis "x" :min-x 80 :max-x 740 :var-x "hookX")
+    (:draggable :target "#fishing-hook" :axis "xy" :min-x 80 :max-x 740 :min-y 165 :max-y 440 :var-x "hookX" :var-y "hookY")
+
+    ;; Target Presets & Reset
+    (:clickable :target "[data-action='pond-target-5']" :expr "vars.targetSum = 5; vars.caughtA = 0; vars.caughtB = 0;" :tone "523.25")
+    (:clickable :target "[data-action='pond-target-10']" :expr "vars.targetSum = 10; vars.caughtA = 0; vars.caughtB = 0;" :tone "587.33")
+    (:clickable :target "[data-action='pond-target-20']" :expr "vars.targetSum = 20; vars.caughtA = 0; vars.caughtB = 0;" :tone "659.25")
+    (:clickable :target "[data-action='pond-restock']" :expr "vars.caughtA = 0; vars.caughtB = 0;" :tone "440")
+    (:clickable :target "#hook-release-btn" :expr "vars.caughtA = 0; vars.caughtB = 0;" :tone "392")
+
+    ;; All 10 Fish Clickable Catch Handlers
+    (:clickable :target "#fish-1" :expr "if (vars.caughtA === 0) { vars.caughtA = 4; } else if (vars.caughtB === 0) { vars.caughtB = 4; if (vars.caughtA + 4 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-2" :expr "if (vars.caughtA === 0) { vars.caughtA = 6; } else if (vars.caughtB === 0) { vars.caughtB = 6; if (vars.caughtA + 6 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-3" :expr "if (vars.caughtA === 0) { vars.caughtA = 3; } else if (vars.caughtB === 0) { vars.caughtB = 3; if (vars.caughtA + 3 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-4" :expr "if (vars.caughtA === 0) { vars.caughtA = 7; } else if (vars.caughtB === 0) { vars.caughtB = 7; if (vars.caughtA + 7 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-5" :expr "if (vars.caughtA === 0) { vars.caughtA = 2; } else if (vars.caughtB === 0) { vars.caughtB = 2; if (vars.caughtA + 2 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-6" :expr "if (vars.caughtA === 0) { vars.caughtA = 8; } else if (vars.caughtB === 0) { vars.caughtB = 8; if (vars.caughtA + 8 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-7" :expr "if (vars.caughtA === 0) { vars.caughtA = 1; } else if (vars.caughtB === 0) { vars.caughtB = 1; if (vars.caughtA + 1 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-8" :expr "if (vars.caughtA === 0) { vars.caughtA = 5; } else if (vars.caughtB === 0) { vars.caughtB = 5; if (vars.caughtA + 5 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-9" :expr "if (vars.caughtA === 0) { vars.caughtA = 9; } else if (vars.caughtB === 0) { vars.caughtB = 9; if (vars.caughtA + 9 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
+    (:clickable :target "#fish-10" :expr "if (vars.caughtA === 0) { vars.caughtA = 10; } else if (vars.caughtB === 0) { vars.caughtB = 10; if (vars.caughtA + 10 === vars.targetSum) { vars.bondsCount += 1; vars.streakCount += 1; } else { vars.streakCount = 0; } }" :tone "523.25,659.25")
   ))
   (:subtitles (
-    (:start 0.00 :end 0.35 :en "Welcome to the Math Pond! Watch how catching fish with numbers builds our number bonds." :es "¡Bienvenidos a la laguna matemática! Mira cómo pescar números construye los vínculos numéricos." :fr "Bienvenue dans l'étang des maths ! Observez comment la pêche aux nombres forme nos liaisons numériques." :la "Bene veneritis ad stagnum mathematicum! Videte quomodo pisces capere vincula numerorum aedificat.")
-    (:start 0.35 :end 0.70 :en "We have a 4 on our line. To make 10, we must find and catch a fish with 6!" :es "Tenemos un 4 en la caña. ¡Para formar 10, debemos buscar y pescar un 6!" :fr "Nous avons un 4 sur notre ligne. Pour faire 10, nous devons trouver et attraper un 6 !" :la "Quattuor in lino tenemus. Ad decem conficiendum, piscem cum sex capere debemus!")
-    (:start 0.70 :end 1.00 :en "4 plus 6 equals 10! A perfect number bond stored right in our tackle bucket." :es "¡4 más 6 es igual a 10! Un vínculo numérico perfecto guardado en la cubeta." :fr "4 plus 6 égale 10 ! Une liaison numérique parfaite rangée dans notre seau." :la "Quattuor et sex decem faciunt! Perfectum vinculum numerorum in situla nostra repositum.")
+    (:start 0.00 :end 0.35 :en "Welcome to the Math Pond! Click or hook two fish whose numbers add up to the target." :es "¡Bienvenidos a la laguna matemática! Haz clic o pesca dos peces cuyos números sumen el objetivo." :fr "Bienvenue dans l'étang des maths ! Cliquez ou pêchez deux poissons dont la somme atteint la cible." :la "Bene veneritis ad stagnum mathematicum! Duos pisces capite quorum numeri summam efficiunt.")
+    (:start 0.35 :end 0.70 :en "Catch a 4 first—then find its number bond partner 6 to make 10!" :es "Pesca primero un 4 y luego busca su pareja 6 para formar 10." :fr "Attrapez d'abord un 4, puis trouvez son complément 6 pour faire 10 !" :la "Primum quattuor cape, deinde sex quaere ut decem facias!")
+    (:start 0.70 :end 1.00 :en "4 plus 6 equals 10! A complete number bond stored in your tackle bucket." :es "¡4 más 6 es igual a 10! Un vínculo numérico completo guardado en tu cubeta." :fr "4 plus 6 égale 10 ! Une liaison numérique complète rangée dans votre seau." :la "Quattuor et sex decem faciunt! Perfectum vinculum numerorum in situla repositum.")
   ))
   (:keyframes (
     (:t 0.00 :title "Step 1: Pond Inspection" :rule "Scanning swimming fish numerals, ten-frame dots and target goal")
-    (:t 0.35 :title "Step 2: First Catch (4)" :rule "Reeling in 4: calculating complement needed to reach target 10")
-    (:t 0.70 :title "Step 3: Number Bond Hook (6)" :rule "Matching 4 + 6 = 10 with tactile audio chime")
-    (:t 1.00 :title "Step 4: Mastery Victory" :rule "Bonds to 10 and 20 provide the foundation for mental arithmetic")
+    (:t 0.35 :title "Step 2: First Catch (4)" :rule "Selecting first addend and calculating complement needed")
+    (:t 0.70 :title "Step 3: Number Bond Match (6)" :rule "Matching 4 + 6 = 10 to complete the bond")
+    (:t 1.00 :title "Step 4: Mastery Victory" :rule "Bonds to 10 and 20 build mental arithmetic fluency")
   ))
-  (:interactive false)
+  (:interactive true)
   (:questions false)
   (:bindings (
-    (:target "#water-wave-1" :attr "d" :expr "'M 0,' + (155 + Math.sin(t * Math.PI * 4 * (vars.bobberSpeed || 1)) * 3) + ' Q 100,' + (150 + Math.cos(t * Math.PI * 4 * (vars.bobberSpeed || 1)) * 4) + ' 200,155 T 400,155 T 600,155 T 800,155'")
-    (:target "#water-wave-2" :attr "d" :expr "'M 0,' + (165 + Math.cos(t * Math.PI * 3.5 * (vars.bobberSpeed || 1)) * 3) + ' Q 150,' + (160 + Math.sin(t * Math.PI * 3.5 * (vars.bobberSpeed || 1)) * 3) + ' 300,165 T 600,165 T 800,165'")
+    ;; Gentle Water Surface Waves
+    (:target "#water-wave-1" :attr "d" :expr "'M 0,' + (155 + Math.sin(t * Math.PI * 1.5 * (vars.bobberSpeed || 0.5)) * 2.5) + ' Q 100,' + (151 + Math.cos(t * Math.PI * 1.5 * (vars.bobberSpeed || 0.5)) * 3) + ' 200,155 T 400,155 T 600,155 T 800,155'")
+    (:target "#water-wave-2" :attr "d" :expr "'M 0,' + (165 + Math.cos(t * Math.PI * 1.2 * (vars.bobberSpeed || 0.5)) * 2.5) + ' Q 150,' + (161 + Math.sin(t * Math.PI * 1.2 * (vars.bobberSpeed || 0.5)) * 2.5) + ' 300,165 T 600,165 T 800,165'")
+
+    ;; Fishing Rod, Bobber & Line Piped to hookX / hookY
+    (:target "#fishing-rod" :attr "d" :expr "'M 330,126 Q 370,80 ' + vars.hookX + ',55'")
+    (:target "#fishing-line" :attr "x1" :expr "String(vars.hookX)")
+    (:target "#fishing-line" :attr "x2" :expr "String(vars.hookX)")
+    (:target "#fishing-line" :attr "y2" :expr "String(vars.hookY)")
+    (:target "#fishing-bobber-rig" :attr "transform" :expr "'translate(' + vars.hookX + ', ' + (155 + Math.sin(t * Math.PI * 2) * 2).toFixed(1) + ')'")
+    (:target "#fishing-hook" :attr "transform" :expr "'translate(' + vars.hookX + ', ' + vars.hookY + ')'")
+
+    ;; Slow, Relaxed Swim Paths (0.5 * Math.PI frequency; only -body flips)
+    ;; Fish 1 (Value 4)
+    (:target "#fish-1" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5)) * 270).toFixed(1) + ', ' + (225 + Math.cos(t * Math.PI * 1.0) * 6).toFixed(1) + ')'")
+    (:target "#fish-1-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5)) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 2 (Value 6)
+    (:target "#fish-2" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 2.1) * 260).toFixed(1) + ', ' + (275 + Math.sin(t * Math.PI * 1.0) * 7).toFixed(1) + ')'")
+    (:target "#fish-2-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 2.1) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 3 (Value 3)
+    (:target "#fish-3" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 4.2) * 280).toFixed(1) + ', ' + (325 + Math.cos(t * Math.PI * 0.8) * 6).toFixed(1) + ')'")
+    (:target "#fish-3-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 4.2) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 4 (Value 7)
+    (:target "#fish-4" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 1.0) * 250).toFixed(1) + ', ' + (370 + Math.sin(t * Math.PI * 0.8) * 5).toFixed(1) + ')'")
+    (:target "#fish-4-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 1.0) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 5 (Value 2)
+    (:target "#fish-5" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 3.1) * 275).toFixed(1) + ', ' + (415 + Math.cos(t * Math.PI * 1.0) * 5).toFixed(1) + ')'")
+    (:target "#fish-5-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 3.1) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 6 (Value 8)
+    (:target "#fish-6" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 5.2) * 245).toFixed(1) + ', ' + (250 + Math.sin(t * Math.PI * 1.2) * 5).toFixed(1) + ')'")
+    (:target "#fish-6-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 5.2) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 7 (Value 1)
+    (:target "#fish-7" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 0.7) * 265).toFixed(1) + ', ' + (200 + Math.sin(t * Math.PI * 0.8) * 5).toFixed(1) + ')'")
+    (:target "#fish-7-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 0.7) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 8 (Value 5)
+    (:target "#fish-8" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 2.6) * 255).toFixed(1) + ', ' + (300 + Math.cos(t * Math.PI * 1.0) * 6).toFixed(1) + ')'")
+    (:target "#fish-8-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 2.6) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 9 (Value 9)
+    (:target "#fish-9" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 4.8) * 270).toFixed(1) + ', ' + (350 + Math.sin(t * Math.PI * 0.8) * 5).toFixed(1) + ')'")
+    (:target "#fish-9-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 4.8) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Fish 10 (Value 10)
+    (:target "#fish-10" :attr "transform" :expr "'translate(' + (400 + Math.sin(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 1.6) * 240).toFixed(1) + ', ' + (395 + Math.cos(t * Math.PI * 0.8) * 5).toFixed(1) + ')'")
+    (:target "#fish-10-body" :attr "transform" :expr "'scale(' + (Math.cos(t * Math.PI * 0.5 * (vars.bobberSpeed || 0.5) + 1.6) >= 0 ? 1 : -1) + ', 1)'")
+
+    ;; Live HUD Text & Counters
+    (:target "#math-hud-title" :attr "textContent" :expr "'NUMBER BONDS TARGET: ' + vars.targetSum")
+    (:target "#math-hud-equation" :attr "textContent" :expr "vars.caughtA === 0 ? ('Catch fish to make ' + vars.targetSum + '! (e.g. 4 + ' + (vars.targetSum - 4) + ' = ' + vars.targetSum + ')') : (vars.caughtB === 0 ? (vars.caughtA + ' + ? = ' + vars.targetSum + ' (Need ' + Math.max(0, vars.targetSum - vars.caughtA) + ')') : (vars.caughtA + ' + ' + vars.caughtB + (vars.caughtA + vars.caughtB === vars.targetSum ? ' = ' + vars.targetSum + ' ✅ BOND!' : ' = ' + (vars.caughtA + vars.caughtB) + ' (Try again!)')))")
+    (:target "#score-bonds-count" :attr "textContent" :expr "String(vars.bondsCount)")
+    (:target "#score-streak-text" :attr "textContent" :expr "'Streak: ' + vars.streakCount + ' 🔥'")
+    (:target "#hook-release-btn" :attr "display" :expr "vars.caughtA > 0 ? 'inline' : 'none'")
+
+    ;; Ten-Frame Dots (1..10) lit dynamically by caughtA + caughtB
+    (:target "#tf-dot-1" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 1 ? (vars.caughtA >= 1 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-2" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 2 ? (vars.caughtA >= 2 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-3" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 3 ? (vars.caughtA >= 3 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-4" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 4 ? (vars.caughtA >= 4 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-5" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 5 ? (vars.caughtA >= 5 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-6" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 6 ? (vars.caughtA >= 6 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-7" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 7 ? (vars.caughtA >= 7 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-8" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 8 ? (vars.caughtA >= 8 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-9" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 9 ? (vars.caughtA >= 9 ? '#fb923c' : '#38bdf8') : '#1e293b'")
+    (:target "#tf-dot-10" :attr "fill" :expr "(vars.caughtA + vars.caughtB) >= 10 ? (vars.caughtA >= 10 ? '#fb923c' : '#38bdf8') : '#1e293b'")
   ))
 )

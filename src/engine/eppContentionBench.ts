@@ -41,6 +41,11 @@ export interface ProfilerCaptureStats {
   maxMs: number;
   framesOver16_67ms: number;
   overBudgetPct: number;
+  vsyncBudgetMs?: number;
+  rawVsyncOverruns?: number;
+  rawVsyncOverrunPct?: number;
+  severeFrameDrops?: number;
+  severeFrameDropPct?: number;
   estimatedFps: number;
   meanComputeMs: number;
   p95ComputeMs: number;
@@ -103,15 +108,54 @@ export interface EppContentionPhaseMetrics {
   workloadLabel: string;
 }
 
+export interface HostHardwareProfile {
+  userAgent: string;
+  osPlatform: string | null;
+  osPlatformVersion: string | null;
+  cpuArchitecture: string | null;
+  cpuBitness: string | null;
+  deviceMemoryGb: number | null;
+  hardwareConcurrency: number | null;
+  webgpuSupported: boolean;
+  gpuVendor: string | null;
+  gpuArchitecture: string | null;
+  gpuDevice: string | null;
+  gpuDescription: string | null;
+  gpuBackend: 'webgpu' | 'webgl2-fallback' | 'unavailable';
+  gpuMaxBufferSizeMb: number | null;
+  isFallbackAdapter: boolean | null;
+  estimatedRefreshHz: number;
+  vsyncBudgetMs: number;
+  screenResolution: string | null;
+  devicePixelRatio: number | null;
+  webnnAvailable: boolean;
+}
+
 export interface EppTelemetryDossier {
   dossierVersion: '1.0.0';
   generatedAtIso: string;
   sceneId: string;
   hardwareProfile: {
     userAgent: string;
+    osPlatform?: string | null;
+    osPlatformVersion?: string | null;
+    cpuArchitecture?: string | null;
+    cpuBitness?: string | null;
     deviceMemoryGb: number | null;
     hardwareConcurrency: number | null;
     webgpuSupported: boolean;
+    gpuVendor?: string | null;
+    gpuArchitecture?: string | null;
+    gpuDevice?: string | null;
+    gpuDescription?: string | null;
+    gpuBackend?: 'webgpu' | 'webgl2-fallback' | 'unavailable';
+    gpuMaxBufferSizeMb?: number | null;
+    isFallbackAdapter?: boolean | null;
+    estimatedRefreshHz?: number;
+    vsyncBudgetMs?: number;
+    screenResolution?: string | null;
+    devicePixelRatio?: number | null;
+    webnnAvailable?: boolean;
     wasmPoolBytes: number;
     wasmPages: number;
     jsHeapStartMb: number | null;
@@ -128,6 +172,8 @@ export interface EppTelemetryDossier {
     constraintSchemaUsed: boolean;
   };
   contentionPhases: {
+    vsyncBudgetMs?: number;
+    severeDropThresholdMs?: number;
     phaseABaseline: EppContentionPhaseMetrics;
     phaseBConcurrent: EppContentionPhaseMetrics;
     phaseCRecovery: EppContentionPhaseMetrics;
@@ -137,6 +183,8 @@ export interface EppTelemetryDossier {
       phaseBP99MsDelta: number;
       phaseBMaxMsDelta: number;
       phaseBOverBudgetFrameDelta: number;
+      phaseBRawOverrunDelta?: number;
+      phaseBSevereDropDelta?: number;
       phaseCMeanMsDelta: number;
       phaseCP95MsDelta: number;
     };
@@ -160,7 +208,7 @@ export interface EppBenchProgress {
 
 export interface EppBenchTransport {
   startProfCapture: () => Promise<void>;
-  stopProfCapture: () => Promise<ProfilerCaptureResult>;
+  stopProfCapture: (vsyncBudgetMs?: number) => Promise<ProfilerCaptureResult>;
   mcpTransport: PlayerMcpTransport;
   mcpTools?: WebMcpToolDescriptor[];
 }
@@ -313,6 +361,248 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+const REFRESH_HZ_SNAP_TARGETS = [60, 75, 90, 120, 144, 165, 240];
+
+function snapRefreshHz(rawHz: number): number {
+  if (!Number.isFinite(rawHz) || rawHz <= 0) return 60;
+  let best = 60;
+  let bestDiff = Infinity;
+  for (const candidate of REFRESH_HZ_SNAP_TARGETS) {
+    const diff = Math.abs(candidate - rawHz);
+    if (diff < bestDiff) {
+      bestDiff = diff;
+      best = candidate;
+    }
+  }
+  return best;
+}
+
+async function measureDisplayRefreshHz(windowMs = 250): Promise<number> {
+  if (typeof requestAnimationFrame !== 'function') {
+    return 60;
+  }
+  return new Promise<number>((resolve) => {
+    const timestamps: number[] = [];
+    let rafId = 0;
+    let settled = false;
+    const finish = () => {
+      if (settled) return;
+      settled = true;
+      if (rafId && typeof cancelAnimationFrame === 'function') {
+        try { cancelAnimationFrame(rafId); } catch {}
+      }
+      if (timestamps.length < 4) {
+        resolve(60);
+        return;
+      }
+      const deltas: number[] = [];
+      for (let i = 1; i < timestamps.length; i++) {
+        const dt = timestamps[i] - timestamps[i - 1];
+        if (dt > 1.5 && dt < 100) deltas.push(dt);
+      }
+      if (deltas.length < 3) {
+        resolve(60);
+        return;
+      }
+      deltas.sort((a, b) => a - b);
+      // Use trimmed median window to prevent one GC jitter spike from skewing refresh rate
+      const mid = Math.floor(deltas.length / 2);
+      const medianDt = deltas[mid];
+      resolve(snapRefreshHz(1000 / medianDt));
+    };
+
+    const guardTimer = setTimeout(finish, windowMs + 150);
+    const start = nowMs();
+    const step = (ts: number) => {
+      timestamps.push(typeof ts === 'number' && Number.isFinite(ts) ? ts : nowMs());
+      if (nowMs() - start >= windowMs || timestamps.length >= 90) {
+        clearTimeout(guardTimer);
+        finish();
+        return;
+      }
+      rafId = requestAnimationFrame(step);
+    };
+    rafId = requestAnimationFrame(step);
+  });
+}
+
+function probeWebGl2FallbackGpu(): {
+  gpuVendor: string | null;
+  gpuDescription: string | null;
+  gpuDevice: string | null;
+  available: boolean;
+} {
+  if (typeof document === 'undefined' || typeof document.createElement !== 'function') {
+    return { gpuVendor: null, gpuDescription: null, gpuDevice: null, available: false };
+  }
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') as WebGL2RenderingContext | null;
+    if (!gl) {
+      return { gpuVendor: null, gpuDescription: null, gpuDevice: null, available: false };
+    }
+    const debugExt = gl.getExtension('WEBGL_debug_renderer_info');
+    if (debugExt) {
+      const vendor = String(gl.getParameter(debugExt.UNMASKED_VENDOR_WEBGL) || '').trim() || null;
+      const renderer = String(gl.getParameter(debugExt.UNMASKED_RENDERER_WEBGL) || '').trim() || null;
+      return {
+        gpuVendor: vendor,
+        gpuDescription: renderer,
+        gpuDevice: renderer,
+        available: true,
+      };
+    }
+    const baseRenderer = String(gl.getParameter(gl.RENDERER) || '').trim() || null;
+    const baseVendor = String(gl.getParameter(gl.VENDOR) || '').trim() || null;
+    return {
+      gpuVendor: baseVendor,
+      gpuDescription: baseRenderer,
+      gpuDevice: baseRenderer,
+      available: true,
+    };
+  } catch {
+    return { gpuVendor: null, gpuDescription: null, gpuDevice: null, available: false };
+  }
+}
+
+/**
+ * Probes host OS, CPU architecture/bitness, WebGPU (with WebGL2 fallback), WebNN, and display refresh rate.
+ */
+export async function probeHostHardwareProfile(): Promise<HostHardwareProfile> {
+  const nav = typeof navigator !== 'undefined' ? (navigator as any) : {};
+  let osPlatform: string | null = typeof nav.platform === 'string' && nav.platform ? nav.platform : null;
+  let osPlatformVersion: string | null = null;
+  let cpuArchitecture: string | null = null;
+  let cpuBitness: string | null = null;
+
+  if (nav.userAgentData) {
+    if (typeof nav.userAgentData.platform === 'string' && nav.userAgentData.platform) {
+      osPlatform = nav.userAgentData.platform;
+    }
+    if (typeof nav.userAgentData.getHighEntropyValues === 'function') {
+      try {
+        const he = await nav.userAgentData.getHighEntropyValues([
+          'platform',
+          'platformVersion',
+          'architecture',
+          'bitness',
+        ]);
+        if (he?.platform) osPlatform = String(he.platform);
+        if (he?.platformVersion) osPlatformVersion = String(he.platformVersion);
+        if (he?.architecture) cpuArchitecture = String(he.architecture);
+        if (he?.bitness) cpuBitness = String(he.bitness);
+      } catch {
+        // Fallback to navigator.platform retained cleanly
+      }
+    }
+  }
+
+  let gpuVendor: string | null = null;
+  let gpuArchitecture: string | null = null;
+  let gpuDevice: string | null = null;
+  let gpuDescription: string | null = null;
+  let gpuBackend: HostHardwareProfile['gpuBackend'] = 'unavailable';
+  let gpuMaxBufferSizeMb: number | null = null;
+  let isFallbackAdapter: boolean | null = null;
+  const webgpuSupported = Boolean(nav.gpu);
+
+  if (nav.gpu && typeof nav.gpu.requestAdapter === 'function') {
+    try {
+      const adapter = await nav.gpu.requestAdapter({ powerPreference: 'high-performance' });
+      if (adapter) {
+        let info: any = adapter.info || null;
+        if (!info && typeof adapter.requestAdapterInfo === 'function') {
+          try {
+            info = await adapter.requestAdapterInfo();
+          } catch {}
+        }
+        gpuVendor = info?.vendor ? String(info.vendor) : null;
+        gpuArchitecture = info?.architecture ? String(info.architecture) : null;
+        gpuDevice = info?.device ? String(info.device) : null;
+        gpuDescription = info?.description ? String(info.description) : null;
+        const maxBuf = Number(adapter.limits?.maxBufferSize || 0);
+        gpuMaxBufferSizeMb = Number.isFinite(maxBuf) && maxBuf > 0 ? round2(maxBuf / 1048576) : null;
+        const fallbackFlag =
+          typeof adapter.isFallbackAdapter === 'boolean'
+            ? adapter.isFallbackAdapter
+            : typeof info?.isFallbackAdapter === 'boolean'
+            ? info.isFallbackAdapter
+            : null;
+        isFallbackAdapter = fallbackFlag;
+        gpuBackend = 'webgpu';
+      }
+    } catch {
+      // Fall through to WebGL2 fallback below
+    }
+  }
+
+  if (gpuBackend === 'unavailable') {
+    const gl2 = probeWebGl2FallbackGpu();
+    if (gl2.available) {
+      gpuVendor = gl2.gpuVendor;
+      gpuDescription = gl2.gpuDescription;
+      gpuDevice = gl2.gpuDevice;
+      gpuBackend = 'webgl2-fallback';
+    }
+  }
+
+  const estimatedRefreshHz = await measureDisplayRefreshHz(250);
+  const vsyncBudgetMs = round2(1000 / estimatedRefreshHz);
+  const screenResolution =
+    typeof screen !== 'undefined' && typeof screen.width === 'number' && typeof screen.height === 'number'
+      ? `${screen.width}x${screen.height}`
+      : null;
+  const devicePixelRatio =
+    typeof window !== 'undefined' && typeof window.devicePixelRatio === 'number'
+      ? round2(window.devicePixelRatio)
+      : null;
+  const webnnAvailable = Boolean(nav.ml);
+
+  return {
+    userAgent: String(nav.userAgent || 'Unknown'),
+    osPlatform,
+    osPlatformVersion,
+    cpuArchitecture,
+    cpuBitness,
+    deviceMemoryGb: typeof nav.deviceMemory === 'number' ? nav.deviceMemory : null,
+    hardwareConcurrency: typeof nav.hardwareConcurrency === 'number' ? nav.hardwareConcurrency : null,
+    webgpuSupported,
+    gpuVendor,
+    gpuArchitecture,
+    gpuDevice,
+    gpuDescription,
+    gpuBackend,
+    gpuMaxBufferSizeMb,
+    isFallbackAdapter,
+    estimatedRefreshHz,
+    vsyncBudgetMs,
+    screenResolution,
+    devicePixelRatio,
+    webnnAvailable,
+  };
+}
+
+async function measureSessionTokens(session: any, text: string): Promise<number | null> {
+  if (!session) return null;
+  const tryMeasure = async (fnName: 'measureContextUsage' | 'measureInputUsage'): Promise<number | null> => {
+    const fn = session[fnName];
+    if (typeof fn !== 'function') return null;
+    try {
+      const raw = await fn.call(session, text);
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) return Math.round(n);
+    } catch {
+      try {
+        const rawArr = await fn.call(session, [{ role: 'user', content: text }]);
+        const n = Number(rawArr);
+        if (Number.isFinite(n) && n > 0) return Math.round(n);
+      } catch {}
+    }
+    return null;
+  };
+  return (await tryMeasure('measureContextUsage')) ?? (await tryMeasure('measureInputUsage'));
+}
+
 /**
  * Computes empirical A/B size & token efficiency comparing homoiconic .ast, verbose JSON, and binary .astb.
  */
@@ -361,10 +651,10 @@ export async function computeAstVsJsonCompression(
   let astMeasuredTokens: number | null = null;
   let jsonMeasuredTokens: number | null = null;
 
-  if (liveSession && typeof liveSession.measureInputUsage === 'function') {
+  if (liveSession) {
     try {
-      astMeasuredTokens = Number(await liveSession.measureInputUsage(astText));
-      jsonMeasuredTokens = Number(await liveSession.measureInputUsage(jsonText));
+      astMeasuredTokens = await measureSessionTokens(liveSession, astText);
+      jsonMeasuredTokens = await measureSessionTokens(liveSession, jsonText);
     } catch {
       astMeasuredTokens = null;
       jsonMeasuredTokens = null;
@@ -434,23 +724,20 @@ async function queryLanguageModelAvailability(lm: any): Promise<string> {
   return 'unavailable';
 }
 
+function pickFiniteNumber(...candidates: any[]): number | null {
+  for (const c of candidates) {
+    if (typeof c === 'number' && Number.isFinite(c)) return Math.round(c);
+  }
+  return null;
+}
+
 function readSessionQuotaState(session: any): {
   inputUsage: number | null;
   inputQuota: number | null;
 } {
   if (!session) return { inputUsage: null, inputQuota: null };
-  const inputUsage =
-    typeof session.inputUsage === 'number'
-      ? session.inputUsage
-      : typeof session.tokensSoFar === 'number'
-      ? session.tokensSoFar
-      : null;
-  const inputQuota =
-    typeof session.inputQuota === 'number'
-      ? session.inputQuota
-      : typeof session.maxTokens === 'number'
-      ? session.maxTokens
-      : null;
+  const inputUsage = pickFiniteNumber(session.contextUsage, session.inputUsage, session.tokensSoFar);
+  const inputQuota = pickFiniteNumber(session.contextWindow, session.inputQuota, session.maxTokens);
   return { inputUsage, inputQuota };
 }
 
@@ -460,6 +747,32 @@ function readSessionQuotaState(session: any): {
 export function formatEppReportMarkdown(dossier: EppTelemetryDossier): string {
   const { hardwareProfile, promptApiStatus, contentionPhases, contextQuotaTrace, compressionComparison, webmcpBenchmark } = dossier;
   const { phaseABaseline: pA, phaseBConcurrent: pB, phaseCRecovery: pC, deltas } = contentionPhases;
+  const refreshHz = hardwareProfile.estimatedRefreshHz ?? 60;
+  const vsyncMs = contentionPhases.vsyncBudgetMs ?? hardwareProfile.vsyncBudgetMs ?? round2(1000 / refreshHz);
+  const severeDropMs = contentionPhases.severeDropThresholdMs ?? round2(vsyncMs * 1.15);
+
+  const gpuParts = [
+    hardwareProfile.gpuVendor,
+    hardwareProfile.gpuDevice,
+    hardwareProfile.gpuArchitecture,
+    hardwareProfile.gpuDescription,
+  ].filter(Boolean);
+  const gpuLabel = gpuParts.length > 0 ? gpuParts.join(' / ') : 'Unavailable';
+
+  const formatPhaseOverruns = (s: ProfilerCaptureStats): string => {
+    const raw = s.rawVsyncOverruns ?? s.framesOver16_67ms ?? 0;
+    const rawPct = s.rawVsyncOverrunPct ?? s.overBudgetPct ?? 0;
+    return `${raw} (${rawPct}%)`;
+  };
+  const formatSevereDrops = (s: ProfilerCaptureStats): string => {
+    const sev = s.severeFrameDrops ?? 0;
+    const sevPct = s.severeFrameDropPct ?? 0;
+    return `${sev} (${sevPct}%)`;
+  };
+
+  const clampTraceText = webmcpBenchmark.clampingTrace
+    ? ` (${webmcpBenchmark.clampingTrace.bounds.min !== null ? `[${webmcpBenchmark.clampingTrace.bounds.min}, ${webmcpBenchmark.clampingTrace.bounds.max}]` : 'unbounded'}; unclamped \`${webmcpBenchmark.clampingTrace.unclampedInput}\` -> clamped \`${webmcpBenchmark.clampingTrace.clampedOutput}\`)`
+    : '';
 
   const lines: string[] = [
     `# Chrome Built-in AI & WebMCP Field Telemetry Dossier`,
@@ -472,35 +785,40 @@ export function formatEppReportMarkdown(dossier: EppTelemetryDossier): string {
     `| Metric | Measured Value |`,
     `|---|---|`,
     `| User Agent | \`${hardwareProfile.userAgent.replace(/\|/g, '/')}\` |`,
+    `| OS Platform | ${hardwareProfile.osPlatform ? `\`${hardwareProfile.osPlatform}${hardwareProfile.osPlatformVersion ? ` ${hardwareProfile.osPlatformVersion}` : ''}\`` : 'Not exposed'} |`,
+    `| CPU Architecture | ${hardwareProfile.cpuArchitecture ? `\`${hardwareProfile.cpuArchitecture}${hardwareProfile.cpuBitness ? ` (${hardwareProfile.cpuBitness}-bit)` : ''}\`` : 'Not exposed'} |`,
     `| \`navigator.deviceMemory\` | ${hardwareProfile.deviceMemoryGb !== null ? `${hardwareProfile.deviceMemoryGb} GB` : 'Not exposed'} |`,
     `| \`navigator.hardwareConcurrency\` | ${hardwareProfile.hardwareConcurrency !== null ? `${hardwareProfile.hardwareConcurrency} threads` : 'Not exposed'} |`,
-    `| WebGPU Adapter Surface | ${hardwareProfile.webgpuSupported ? 'Present' : 'Absent'} |`,
+    `| GPU Adapter (\`${hardwareProfile.gpuBackend || (hardwareProfile.webgpuSupported ? 'webgpu' : 'unavailable')}\`) | \`${gpuLabel.replace(/\|/g, '/')}\`${hardwareProfile.gpuMaxBufferSizeMb !== null && hardwareProfile.gpuMaxBufferSizeMb !== undefined ? ` (maxBuffer: ${hardwareProfile.gpuMaxBufferSizeMb} MB, fallbackAdapter: ${hardwareProfile.isFallbackAdapter ?? 'N/A'})` : ''} |`,
+    `| Display & Vsync Budget | ${hardwareProfile.screenResolution || 'Unknown'} @ ${hardwareProfile.devicePixelRatio ?? 1}x DPR · ~${refreshHz} Hz (${vsyncMs} ms frame budget; severe > ${severeDropMs} ms) |`,
+    `| WebNN (\`navigator.ml\`) | ${hardwareProfile.webnnAvailable ? 'Present' : 'Absent'} |`,
     `| WASM Fixed Linear Pool | ${(hardwareProfile.wasmPoolBytes / 1024).toFixed(0)} KB (${hardwareProfile.wasmPages} pages, 0 dynamic allocs in loop) |`,
     `| JS Heap (Start -> End) | ${hardwareProfile.jsHeapStartMb !== null ? `${hardwareProfile.jsHeapStartMb} MB -> ${hardwareProfile.jsHeapEndMb} MB (Δ ${hardwareProfile.heapDeltaMb} MB)` : 'Not exposed'} |`,
     `| BSL Vector Avatar Active | ${hardwareProfile.bslAvatarActiveDuringRun ? 'Yes (60 FPS procedural skeleton)' : 'No'} |`,
     ``,
-    `## 2. Concurrent 60 FPS Vector Simulation + On-Device Inference Contention`,
-    `- **Phase A (Baseline)**: ${pA.durationMs} ms of pure 60 FPS vector physics + BSL avatar (zero AI activity)`,
+    `## 2. Concurrent Vector Simulation + On-Device Inference Contention`,
+    `- **Dynamic Vsync Budget**: \`${vsyncMs} ms\` (~${refreshHz} Hz) · **Severe Frame Drop Threshold (>1.15× vsync)**: \`>${severeDropMs} ms\``,
+    `- **Phase A (Baseline)**: ${pA.durationMs} ms of pure vector physics + BSL avatar (zero AI activity)`,
     `- **Phase B (Concurrent)**: ${pB.durationMs} ms concurrent workload (\`${pB.workloadLabel}\`)`,
     `- **Phase C (Recovery)**: ${pC.durationMs} ms post-inference compositor & GC recovery`,
     ``,
-    `| Phase | Samples | Mean (ms) | p95 (ms) | p99 (ms) | Max (ms) | Frames > 16.67ms | Est. FPS | VM Compute Mean (ms) |`,
-    `|---|---:|---:|---:|---:|---:|---:|---:|---:|`,
-    `| Phase A (Baseline) | ${pA.stats.sampleCount} | ${pA.stats.meanMs} | ${pA.stats.p95Ms} | ${pA.stats.p99Ms} | ${pA.stats.maxMs} | ${pA.stats.framesOver16_67ms} (${pA.stats.overBudgetPct}%) | ${pA.stats.estimatedFps} | ${pA.stats.meanComputeMs} |`,
-    `| Phase B (Concurrent) | ${pB.stats.sampleCount} | ${pB.stats.meanMs} | ${pB.stats.p95Ms} | ${pB.stats.p99Ms} | ${pB.stats.maxMs} | ${pB.stats.framesOver16_67ms} (${pB.stats.overBudgetPct}%) | ${pB.stats.estimatedFps} | ${pB.stats.meanComputeMs} |`,
-    `| Phase C (Recovery) | ${pC.stats.sampleCount} | ${pC.stats.meanMs} | ${pC.stats.p95Ms} | ${pC.stats.p99Ms} | ${pC.stats.maxMs} | ${pC.stats.framesOver16_67ms} (${pC.stats.overBudgetPct}%) | ${pC.stats.estimatedFps} | ${pC.stats.meanComputeMs} |`,
+    `| Phase | Samples | Mean (ms) | p95 (ms) | p99 (ms) | Max (ms) | Raw Overruns (>${vsyncMs}ms) | Severe Drops (>${severeDropMs}ms) | Est. FPS | VM Compute Mean (ms) |`,
+    `|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|`,
+    `| Phase A (Baseline) | ${pA.stats.sampleCount} | ${pA.stats.meanMs} | ${pA.stats.p95Ms} | ${pA.stats.p99Ms} | ${pA.stats.maxMs} | ${formatPhaseOverruns(pA.stats)} | ${formatSevereDrops(pA.stats)} | ${pA.stats.estimatedFps} | ${pA.stats.meanComputeMs} |`,
+    `| Phase B (Concurrent) | ${pB.stats.sampleCount} | ${pB.stats.meanMs} | ${pB.stats.p95Ms} | ${pB.stats.p99Ms} | ${pB.stats.maxMs} | ${formatPhaseOverruns(pB.stats)} | ${formatSevereDrops(pB.stats)} | ${pB.stats.estimatedFps} | ${pB.stats.meanComputeMs} |`,
+    `| Phase C (Recovery) | ${pC.stats.sampleCount} | ${pC.stats.meanMs} | ${pC.stats.p95Ms} | ${pC.stats.p99Ms} | ${pC.stats.maxMs} | ${formatPhaseOverruns(pC.stats)} | ${formatSevereDrops(pC.stats)} | ${pC.stats.estimatedFps} | ${pC.stats.meanComputeMs} |`,
     ``,
-    `- **Phase B Contention Deltas vs Baseline**: \`Δmean = ${deltas.phaseBMeanMsDelta >= 0 ? '+' : ''}${deltas.phaseBMeanMsDelta} ms\`, \`Δp95 = ${deltas.phaseBP95MsDelta >= 0 ? '+' : ''}${deltas.phaseBP95MsDelta} ms\`, \`Δp99 = ${deltas.phaseBP99MsDelta >= 0 ? '+' : ''}${deltas.phaseBP99MsDelta} ms\`, \`ΔoverBudgetFrames = ${deltas.phaseBOverBudgetFrameDelta >= 0 ? '+' : ''}${deltas.phaseBOverBudgetFrameDelta}\``,
+    `- **Phase B Contention Deltas vs Baseline**: \`Δmean = ${deltas.phaseBMeanMsDelta >= 0 ? '+' : ''}${deltas.phaseBMeanMsDelta} ms\`, \`Δp95 = ${deltas.phaseBP95MsDelta >= 0 ? '+' : ''}${deltas.phaseBP95MsDelta} ms\`, \`Δp99 = ${deltas.phaseBP99MsDelta >= 0 ? '+' : ''}${deltas.phaseBP99MsDelta} ms\`, \`ΔrawOverruns = ${(deltas.phaseBRawOverrunDelta ?? deltas.phaseBOverBudgetFrameDelta) >= 0 ? '+' : ''}${deltas.phaseBRawOverrunDelta ?? deltas.phaseBOverBudgetFrameDelta}\`, \`ΔsevereDrops = ${(deltas.phaseBSevereDropDelta ?? 0) >= 0 ? '+' : ''}${deltas.phaseBSevereDropDelta ?? 0}\``,
     `- **Phase C Recovery Delta vs Baseline**: \`Δmean = ${deltas.phaseCMeanMsDelta >= 0 ? '+' : ''}${deltas.phaseCMeanMsDelta} ms\`, \`Δp95 = ${deltas.phaseCP95MsDelta >= 0 ? '+' : ''}${deltas.phaseCP95MsDelta} ms\``,
     `- **Session Clone Latency**: ${promptApiStatus.cloneLatencyMs !== null ? `${promptApiStatus.cloneLatencyMs} ms (clone.destroy() cleanly executed: ${promptApiStatus.cloneDestroyedCleanly})` : 'N/A (Prompt API session inactive)'}`,
     ``,
-    `## 3. Context Quota & Multi-Turn Socratic Checkpoint Telemetry`,
-    `- \`session.inputQuota\`: ${contextQuotaTrace.inputQuota !== null ? contextQuotaTrace.inputQuota : 'N/A'}`,
-    `- Final \`session.inputUsage\`: ${contextQuotaTrace.finalInputUsage !== null ? contextQuotaTrace.finalInputUsage : 'N/A'}`,
-    `- \`quotaoverflow\` Events Fired: ${contextQuotaTrace.totalQuotaOverflows}`,
+    `## 3. Context Window & Multi-Turn Socratic Checkpoint Telemetry`,
+    `- \`session.contextWindow ?? inputQuota\`: ${contextQuotaTrace.inputQuota !== null ? contextQuotaTrace.inputQuota : 'N/A'}`,
+    `- Final \`session.contextUsage ?? inputUsage\`: ${contextQuotaTrace.finalInputUsage !== null ? contextQuotaTrace.finalInputUsage : 'N/A'}`,
+    `- \`contextoverflow\` / \`quotaoverflow\` Events Fired: ${contextQuotaTrace.totalQuotaOverflows}`,
     `- Mean Time-To-First-Token (TTFT): ${contextQuotaTrace.meanTtftMs !== null ? `${contextQuotaTrace.meanTtftMs} ms` : 'N/A'}`,
     ``,
-    `| Turn | Role | Prompt Bytes | Output Bytes | TTFT (ms) | Duration (ms) | Input Usage | Overflows | Valid |`,
+    `| Turn | Role | Prompt Bytes | Output Bytes | TTFT (ms) | Duration (ms) | Context Usage | Overflows | Valid |`,
     `|---:|---|---:|---:|---:|---:|---:|---:|---|`,
     ...contextQuotaTrace.turns.map(
       (t) =>
@@ -514,11 +832,11 @@ export function formatEppReportMarkdown(dossier: EppTelemetryDossier): string {
     `| Verbose JSON Schema | ${compressionComparison.jsonBytes} B | ${compressionComparison.jsonMeasuredTokens ?? compressionComparison.jsonEstimatedTokens} ${compressionComparison.jsonMeasuredTokens !== null ? '(Nano tokenizer)' : '(est.)'} | ${compressionComparison.jsonValid ? 'PASS' : 'FAIL'} | Baseline (0%) |`,
     `| Pre-compiled \`.astb\` Bytecode | ${compressionComparison.astbBytes} B | N/A (Zero-copy binary) | ${compressionComparison.astbValid ? 'PASS' : 'FAIL'} | ${compressionComparison.astbVsJsonByteSavingsPct}% bytes |`,
     ``,
-    `## 5. WebMCP (\`navigator.modelContext\`) Live Tool & Actuation Benchmark`,
+    `## 5. WebMCP (\`document.modelContext\`) Live Tool & Actuation Benchmark`,
     `- **WebMCP Surface**: \`${webmcpBenchmark.surface}\` (Mode: \`${webmcpBenchmark.registrationMode}\`)`,
     `- **Registered Tools (${webmcpBenchmark.toolsCount})**: \`${webmcpBenchmark.toolNames.join('`, `')}\``,
     `- **\`ast_read_state\` Round-Trip**: ${webmcpBenchmark.readLatencyMs} ms`,
-    `- **\`ast_set_var\` Round-Trip**: ${webmcpBenchmark.setVarLatencyMs} ms (\`[min, max]\` clamping verified on \`${webmcpBenchmark.sampleVarTested}\`: ${webmcpBenchmark.clampingVerified ? 'PASS' : 'FAIL'})`,
+    `- **\`ast_set_var\` Round-Trip**: ${webmcpBenchmark.setVarLatencyMs} ms (\`[min, max]\` clamping verified on \`${webmcpBenchmark.sampleVarTested}\`: ${webmcpBenchmark.clampingVerified ? 'PASS' : 'FAIL'}${clampTraceText})`,
     `- **\`ast_dispatch_action\` 4-Slot Tuple Round-Trip**: ${webmcpBenchmark.dispatchLatencyMs} ms`,
     `- **Compact MCP JSON vs Raw SVG DOM**: ${webmcpBenchmark.mcpPayloadBytes} B vs ${webmcpBenchmark.rawSvgBytes} B (**${webmcpBenchmark.domPayloadReductionPct}% smaller payload**)`,
     ``,
@@ -588,8 +906,31 @@ export async function runEppContentionSuite(options: {
   onProgress?.({
     phase: 'init',
     pct: 5,
-    label: `Probing hardware & Prompt API availability (${availability})...`,
+    label: `Probing hardware, display refresh & Prompt API (${availability})...`,
   });
+
+  const hostHardware = await probeHostHardwareProfile();
+  const vsyncBudgetMs = hostHardware.vsyncBudgetMs;
+  const severeDropThresholdMs = round2(vsyncBudgetMs * 1.15);
+
+  const normalizePhaseStats = (stats: ProfilerCaptureStats): ProfilerCaptureStats => {
+    const raw = stats.rawVsyncOverruns ?? stats.framesOver16_67ms ?? 0;
+    const rawPct =
+      stats.rawVsyncOverrunPct ??
+      (stats.sampleCount > 0 ? round2((raw / stats.sampleCount) * 100) : stats.overBudgetPct ?? 0);
+    const severe = stats.severeFrameDrops ?? 0;
+    const severePct =
+      stats.severeFrameDropPct ??
+      (stats.sampleCount > 0 ? round2((severe / stats.sampleCount) * 100) : 0);
+    return {
+      ...stats,
+      vsyncBudgetMs: stats.vsyncBudgetMs ?? vsyncBudgetMs,
+      rawVsyncOverruns: raw,
+      rawVsyncOverrunPct: rawPct,
+      severeFrameDrops: severe,
+      severeFrameDropPct: severePct,
+    };
+  };
 
   // Drive BSL procedural avatar concurrently alongside simulation physics, then restore prior state cleanly
   let bslDrivenForBench = wasBslActive;
@@ -624,18 +965,18 @@ export async function runEppContentionSuite(options: {
     onProgress?.({
       phase: 'phase-a',
       pct: 15,
-      label: `Phase A (Baseline): Capturing ${Math.round(phaseADurationMs / 1000)}s of pure 60 FPS physics + BSL...`,
+      label: `Phase A (Baseline): Capturing ${Math.round(phaseADurationMs / 1000)}s of pure ${hostHardware.estimatedRefreshHz}Hz physics + BSL...`,
     });
 
     const aStart = nowMs();
     await transport.startProfCapture();
     await sleep(phaseADurationMs);
-    const aCap = await transport.stopProfCapture();
+    const aCap = await transport.stopProfCapture(vsyncBudgetMs);
     phaseABaseline = {
       durationMs: Math.round(nowMs() - aStart),
-      stats: aCap.stats,
+      stats: normalizePhaseStats(aCap.stats),
       activeMetrics: aCap.activeMetrics,
-      workloadLabel: 'Pure 60 FPS vector + BSL kinematics (Zero AI)',
+      workloadLabel: `Pure ${hostHardware.estimatedRefreshHz}Hz (${vsyncBudgetMs}ms) vector + BSL kinematics (Zero AI)`,
     };
 
     // Snapshot live simulation telemetry for multi-turn drill payload
@@ -695,6 +1036,7 @@ export async function runEppContentionSuite(options: {
         }
 
         if (session && typeof session.addEventListener === 'function') {
+          session.addEventListener('contextoverflow', onOverflow);
           session.addEventListener('quotaoverflow', onOverflow);
         }
 
@@ -824,6 +1166,7 @@ export async function runEppContentionSuite(options: {
         console.warn('[EPPBench] Native Prompt API invocation failed, dropping to Tier-2/3:', nanoErr);
       } finally {
         if (session) {
+          try { session.removeEventListener?.('contextoverflow', onOverflow); } catch {}
           try { session.removeEventListener?.('quotaoverflow', onOverflow); } catch {}
         }
       }
@@ -915,10 +1258,10 @@ export async function runEppContentionSuite(options: {
       }
     }
 
-    const bCap = await transport.stopProfCapture();
+    const bCap = await transport.stopProfCapture(vsyncBudgetMs);
     phaseBConcurrent = {
       durationMs: Math.round(nowMs() - bStart),
-      stats: bCap.stats,
+      stats: normalizePhaseStats(bCap.stats),
       activeMetrics: bCap.activeMetrics,
       workloadLabel,
     };
@@ -935,10 +1278,10 @@ export async function runEppContentionSuite(options: {
     const cStart = nowMs();
     await transport.startProfCapture();
     await sleep(phaseCDurationMs);
-    const cCap = await transport.stopProfCapture();
+    const cCap = await transport.stopProfCapture(vsyncBudgetMs);
     phaseCRecovery = {
       durationMs: Math.round(nowMs() - cStart),
-      stats: cCap.stats,
+      stats: normalizePhaseStats(cCap.stats),
       activeMetrics: cCap.activeMetrics,
       workloadLabel: 'Post-inference GPU/NPU & GC recovery',
     };
@@ -969,15 +1312,17 @@ export async function runEppContentionSuite(options: {
         ? round2(validTtfts.reduce((acc, v) => acc + v, 0) / validTtfts.length)
         : null;
 
+    const pARaw = phaseABaseline.stats.rawVsyncOverruns ?? phaseABaseline.stats.framesOver16_67ms;
+    const pBRaw = phaseBConcurrent.stats.rawVsyncOverruns ?? phaseBConcurrent.stats.framesOver16_67ms;
+    const pASev = phaseABaseline.stats.severeFrameDrops ?? 0;
+    const pBSev = phaseBConcurrent.stats.severeFrameDrops ?? 0;
+
     const dossier: EppTelemetryDossier = {
       dossierVersion: '1.0.0',
       generatedAtIso: new Date().toISOString(),
       sceneId,
       hardwareProfile: {
-        userAgent: String(nav.userAgent || 'Unknown'),
-        deviceMemoryGb: typeof nav.deviceMemory === 'number' ? nav.deviceMemory : null,
-        hardwareConcurrency: typeof nav.hardwareConcurrency === 'number' ? nav.hardwareConcurrency : null,
-        webgpuSupported: 'gpu' in nav,
+        ...hostHardware,
         wasmPoolBytes: cCap.memory.wasmPoolBytes || 458752,
         wasmPages: cCap.memory.wasmPages || 7,
         jsHeapStartMb: heapStartMb,
@@ -994,6 +1339,8 @@ export async function runEppContentionSuite(options: {
         constraintSchemaUsed,
       },
       contentionPhases: {
+        vsyncBudgetMs,
+        severeDropThresholdMs,
         phaseABaseline,
         phaseBConcurrent,
         phaseCRecovery,
@@ -1004,6 +1351,8 @@ export async function runEppContentionSuite(options: {
           phaseBMaxMsDelta: round2(phaseBConcurrent.stats.maxMs - phaseABaseline.stats.maxMs),
           phaseBOverBudgetFrameDelta:
             phaseBConcurrent.stats.framesOver16_67ms - phaseABaseline.stats.framesOver16_67ms,
+          phaseBRawOverrunDelta: pBRaw - pARaw,
+          phaseBSevereDropDelta: pBSev - pASev,
           phaseCMeanMsDelta: round2(phaseCRecovery.stats.meanMs - phaseABaseline.stats.meanMs),
           phaseCP95MsDelta: round2(phaseCRecovery.stats.p95Ms - phaseABaseline.stats.p95Ms),
         },

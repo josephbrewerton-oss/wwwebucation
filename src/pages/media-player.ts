@@ -116,6 +116,7 @@ export function renderPlayerPage(): HTMLElement {
     : normalizePresetId(params.get('preset'));
   let activePreset = resolvedInitialPreset;
   let initialExternalSrc = params.get('preset') ? null : initialSrcParam;
+  let pendingAutoEppBench = params.get('epp-bench') === '1' || params.get('epp-bench') === 'true';
   let activeCategory = 'All';
   let searchQuery = '';
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
@@ -556,7 +557,22 @@ export function renderPlayerPage(): HTMLElement {
     },
   };
 
-  const webMcpHandle: WebMcpRegistrationHandle = registerWebMcpTools(mcpTransport);
+  let webMcpHandle: WebMcpRegistrationHandle = registerWebMcpTools(mcpTransport);
+  let mcpRegEpoch = 0;
+
+  async function refreshPlayerWebMcpRegistration() {
+    const epoch = ++mcpRegEpoch;
+    const prevReady = webMcpHandle.ready;
+    webMcpHandle.unregister();
+    if (prevReady) {
+      await prevReady.catch(() => {});
+    }
+    await Promise.resolve();
+    if (!container.isConnected || epoch !== mcpRegEpoch) return;
+    webMcpHandle = registerWebMcpTools(mcpTransport);
+    benchTransport.mcpTools = webMcpHandle.tools;
+  }
+
   bindSitePlayerAdapter({
     loadPreset: (presetId, autoplay = false) => {
       updatePreset(normalizePresetId(presetId), true);
@@ -570,14 +586,33 @@ export function renderPlayerPage(): HTMLElement {
     },
     getActivePreset: () => activePreset,
   });
-  window.addEventListener(
-    'pagehide',
-    () => {
-      webMcpHandle.unregister();
-      bindSitePlayerAdapter(null);
-    },
-    { once: true }
-  );
+
+  let pageDisposed = false;
+  let wasContainerConnected = false;
+  let unmountObserver: MutationObserver | null = null;
+  const cleanupPlayerLifecycle = () => {
+    if (pageDisposed) return;
+    pageDisposed = true;
+    mcpRegEpoch++;
+    webMcpHandle.unregister();
+    bindSitePlayerAdapter(null);
+    unmountObserver?.disconnect();
+    unmountObserver = null;
+    window.removeEventListener('pagehide', cleanupPlayerLifecycle);
+    window.removeEventListener('keydown', onKeyDown);
+  };
+
+  window.addEventListener('pagehide', cleanupPlayerLifecycle, { once: true });
+  if (typeof MutationObserver !== 'undefined' && typeof document !== 'undefined' && document.body) {
+    unmountObserver = new MutationObserver(() => {
+      if (container.isConnected) {
+        wasContainerConnected = true;
+      } else if (wasContainerConnected) {
+        cleanupPlayerLifecycle();
+      }
+    });
+    unmountObserver.observe(document.body, { childList: true, subtree: true });
+  }
 
   const benchTransport: EppBenchTransport = {
     startProfCapture: async () => {
@@ -586,9 +621,9 @@ export function renderPlayerPage(): HTMLElement {
         'PROF_CAPTURE_STARTED'
       );
     },
-    stopProfCapture: async (): Promise<ProfilerCaptureResult> => {
+    stopProfCapture: async (vsyncBudgetMs?: number): Promise<ProfilerCaptureResult> => {
       const res = await postToPlayerWithAck<any>(
-        { type: 'STOP_PROF_CAPTURE' },
+        { type: 'STOP_PROF_CAPTURE', vsyncBudgetMs },
         'PROF_CAPTURE_RESULT'
       );
       return {
@@ -634,6 +669,7 @@ export function renderPlayerPage(): HTMLElement {
   let copiedEmbed = false;
   let mountedDiagnosticsEl: HTMLElement | null = null;
   let mountedDiagnosticsPreset = '';
+  let autoRunEppBenchOnce = false;
   let mountedAiTutorEl: HTMLElement | null = null;
   let mountedAiTutorHandle: NanoAiTutorDrawerHandle | null = null;
   let mountedAiTutorPreset = '';
@@ -734,6 +770,8 @@ export function renderPlayerPage(): HTMLElement {
       if (drawerEl) drawerMount.appendChild(drawerEl);
     } else if (activeDrawer === 'diagnostics') {
       const activeMeta = getPresetMeta(activePreset);
+      const shouldAutoRun = autoRunEppBenchOnce;
+      autoRunEppBenchOnce = false;
       const drawerEl = renderEppDiagnosticsDrawer({
         onClose: () => {
           activeDrawer = null;
@@ -747,6 +785,10 @@ export function renderPlayerPage(): HTMLElement {
         postToPlayer: (payload) => postToPlayer(payload),
         benchTransport,
         webMcpHandle,
+        autoRunBenchmark: shouldAutoRun,
+        onAutoRunConsumed: () => {
+          autoRunEppBenchOnce = false;
+        },
       });
       mountedDiagnosticsEl = drawerEl;
       mountedDiagnosticsPreset = activePreset;
@@ -837,6 +879,9 @@ export function renderPlayerPage(): HTMLElement {
 
     // Broadcast lesson change to BSL interpreter
     broadcastBslSpeech({ subtitle: `${item.label}. ${item.stage}`, isSpeaking: true });
+
+    // Cleanly cycle AbortSignal registration for document.modelContext when switching cartridges
+    void refreshPlayerWebMcpRegistration();
 
     if (activeDrawer) {
       renderActiveDrawer();
@@ -1236,10 +1281,29 @@ export function renderPlayerPage(): HTMLElement {
       isIframeReady = true;
       if (initialExternalSrc) {
         initialExternalSrc = null;
-      } else if (activePreset) {
+      } else if (activePreset && (!e.data.preset || e.data.preset !== activePreset)) {
         postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
       }
       updatePlayButtonUI(false);
+
+      if (pendingAutoEppBench && (!e.data.preset || e.data.preset === activePreset)) {
+        pendingAutoEppBench = false;
+        setTimeout(() => {
+          if (!container.isConnected || pageDisposed) return;
+          if (teacherToolsGroup) {
+            teacherToolsGroup.style.display = 'inline-flex';
+          }
+          if (teacherToolsBtn) {
+            teacherToolsBtn.setAttribute('aria-expanded', 'true');
+            teacherToolsBtn.style.background = '#1e293b';
+            teacherToolsBtn.style.color = '#f8fafc';
+            teacherToolsBtn.textContent = '🧰 Teacher Tools ▴';
+          }
+          activeDrawer = 'diagnostics';
+          autoRunEppBenchOnce = true;
+          renderActiveDrawer(true);
+        }, 150);
+      }
     }
     if ((e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED' || e.data.type === 'statechange') && typeof (e.data.isPlaying ?? e.data.playing) === 'boolean') {
       const playing = Boolean(e.data.isPlaying ?? e.data.playing);
