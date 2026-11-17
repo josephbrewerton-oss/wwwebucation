@@ -11,6 +11,9 @@
 
   (:gestures (
     (:draggable :target "#creed-trinity-slider" :axis "x" :min 175 :max 585 :var "creedArticle")
+    (:clickable :target "#creed-tab-1" :set-var "creedArticle" :val 1 :tone "523.25" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.00);")
+    (:clickable :target "#creed-tab-2" :set-var "creedArticle" :val 2 :tone "659.25" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.45);")
+    (:clickable :target "#creed-tab-3" :set-var "creedArticle" :val 3 :tone "783.99" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.88);")
   ))
 
   (:subtitles (

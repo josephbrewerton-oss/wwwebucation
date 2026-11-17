@@ -194,7 +194,7 @@
     </g>
 
     <!-- Indicator Knob -->
-    <g id="category-slider-knob" pointer-events="none" transform="translate(72, 17)">
+    <g id="category-slider-knob" cursor="ew-resize" transform="translate(72, 17)">
       <circle cx="0" cy="0" r="14" fill="#facc15" stroke="#ffffff" stroke-width="2" />
       <polygon points="-3,-4 4,0 -3,4" fill="#1e1b4b" />
     </g>

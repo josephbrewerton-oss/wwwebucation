@@ -11,6 +11,8 @@
 
   (:gestures (
     (:draggable :target "#tablet-toggle-knob" :axis "x" :min 260 :max 530 :var "selectedTablet")
+    (:clickable :target "#tablet-tab-1" :set-var "selectedTablet" :val 1 :tone "440" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.20);")
+    (:clickable :target "#tablet-tab-2" :set-var "selectedTablet" :val 2 :tone "554.37" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.70);")
   ))
 
   (:subtitles (

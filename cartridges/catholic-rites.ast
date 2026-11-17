@@ -13,6 +13,12 @@
 
   (:gestures (
     (:draggable :target "#rite-selector-knob" :axis "x" :min 140 :max 660 :var "selectedRite")
+    (:clickable :target "#station-1-btn" :set-var "selectedRite" :val 1 :tone "523.25" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.00);")
+    (:clickable :target "#station-2-btn" :set-var "selectedRite" :val 2 :tone "587.33" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.20);")
+    (:clickable :target "#station-3-btn" :set-var "selectedRite" :val 3 :tone "659.25" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.38);")
+    (:clickable :target "#station-4-btn" :set-var "selectedRite" :val 4 :tone "783.99" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.56);")
+    (:clickable :target "#station-5-btn" :set-var "selectedRite" :val 5 :tone "880.00" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.74);")
+    (:clickable :target "#station-6-btn" :set-var "selectedRite" :val 6 :tone "1046.50" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.90);")
   ))
 
   (:subtitles (

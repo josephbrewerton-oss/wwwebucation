@@ -140,10 +140,19 @@
     <!-- Selector Track -->
     <rect x="140" y="5" width="520" height="24" rx="12" fill="#0f172a" stroke="#334155" stroke-width="2" />
     
-    <!-- Ticks & Labels -->
-    <text x="175" y="21" fill="#93c5fd" font-size="11" font-weight="bold" font-family="sans-serif">1. The Father &amp; Creation</text>
-    <text x="380" y="21" fill="#fde047" font-size="11" font-weight="bold" font-family="sans-serif">2. The Son &amp; Redemption</text>
-    <text x="560" y="21" fill="#fdba74" font-size="11" font-weight="bold" font-family="sans-serif">3. Holy Spirit &amp; Church</text>
+    <!-- Ticks & Clickable Tab Hit Targets -->
+    <g id="creed-tab-1" cursor="pointer">
+      <rect x="140" y="5" width="195" height="24" rx="12" fill="transparent" />
+      <text x="175" y="21" fill="#93c5fd" font-size="11" font-weight="bold" font-family="sans-serif">1. The Father &amp; Creation</text>
+    </g>
+    <g id="creed-tab-2" cursor="pointer">
+      <rect x="335" y="5" width="175" height="24" fill="transparent" />
+      <text x="380" y="21" fill="#fde047" font-size="11" font-weight="bold" font-family="sans-serif">2. The Son &amp; Redemption</text>
+    </g>
+    <g id="creed-tab-3" cursor="pointer">
+      <rect x="510" y="5" width="150" height="24" rx="12" fill="transparent" />
+      <text x="560" y="21" fill="#fdba74" font-size="11" font-weight="bold" font-family="sans-serif">3. Holy Spirit &amp; Church</text>
+    </g>
 
     <!-- Draggable Knob -->
     <g id="creed-trinity-slider" cursor="ew-resize" transform="translate(175, 17)">
