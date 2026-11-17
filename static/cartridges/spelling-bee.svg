@@ -65,23 +65,23 @@
       <g transform="translate(290, 6)">
         <!-- KS1 -->
         <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS1" cursor="pointer" transform="translate(0, 0)">
-          <rect width="66" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-          <text x="33" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS1 (Y1/2)</text>
+          <rect id="bee-ks-rect-KS1" width="66" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="bee-ks-txt-KS1" x="33" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS1 (Y1/2)</text>
         </g>
         <!-- KS2 Lower -->
         <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS2L" cursor="pointer" transform="translate(72, 0)">
-          <rect width="72" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-          <text x="36" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS2L (Y3/4)</text>
+          <rect id="bee-ks-rect-KS2L" width="72" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="bee-ks-txt-KS2L" x="36" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS2L (Y3/4)</text>
         </g>
         <!-- KS2 Upper (Active by default) -->
         <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS2U" cursor="pointer" transform="translate(150, 0)">
-          <rect width="72" height="32" rx="6" fill="#eab308" stroke="#facc15" stroke-width="1.5" />
-          <text x="36" y="20" fill="#0f172a" font-size="11" font-weight="900" text-anchor="middle">KS2U (Y5/6)</text>
+          <rect id="bee-ks-rect-KS2U" width="72" height="32" rx="6" fill="#eab308" stroke="#facc15" stroke-width="1.5" />
+          <text id="bee-ks-txt-KS2U" x="36" y="20" fill="#0f172a" font-size="11" font-weight="900" text-anchor="middle">KS2U (Y5/6)</text>
         </g>
         <!-- KS3 Academic -->
         <g class="bee-ks-btn" data-action="bee-set-ks" data-ks="KS3" cursor="pointer" transform="translate(228, 0)">
-          <rect width="70" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
-          <text x="35" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS3 (Y7-9)</text>
+          <rect id="bee-ks-rect-KS3" width="70" height="32" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+          <text id="bee-ks-txt-KS3" x="35" y="20" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">KS3 (Y7-9)</text>
         </g>
       </g>
 
@@ -169,12 +169,22 @@
     <g id="bee-letter-assembly" transform="translate(16, 206)">
       <rect width="768" height="66" rx="10" fill="#0b1120" fill-opacity="0.94" stroke="#ca8a04" stroke-width="1.5" />
 
-      <!-- Letter Display Slots Root (Populated Dynamically by JS Engine) -->
+      <!-- Letter Display Slots Root (14 Pre-Rendered Declarative Slots) -->
       <g id="bee-letter-slots" transform="translate(14, 11)">
-        <!-- Placeholder fallback letters -->
-        <text id="bee-slots-empty-hint" x="370" y="30" fill="#64748b" font-size="13" font-weight="600" text-anchor="middle" font-style="italic">
-          Click the letter tiles below or type on your keyboard...
-        </text>
+        <g id="bee-slot-0" transform="translate(87, 6)"><rect id="bee-slot-rect-0" width="46" height="42" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.8" stroke-dasharray="3 2" /><text id="bee-slot-txt-0" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-1" transform="translate(139, 6)"><rect id="bee-slot-rect-1" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-1" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-2" transform="translate(191, 6)"><rect id="bee-slot-rect-2" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-2" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-3" transform="translate(243, 6)"><rect id="bee-slot-rect-3" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-3" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-4" transform="translate(295, 6)"><rect id="bee-slot-rect-4" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-4" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-5" transform="translate(347, 6)"><rect id="bee-slot-rect-5" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-5" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-6" transform="translate(399, 6)"><rect id="bee-slot-rect-6" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-6" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-7" transform="translate(451, 6)"><rect id="bee-slot-rect-7" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-7" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-8" transform="translate(503, 6)"><rect id="bee-slot-rect-8" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-8" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-9" transform="translate(555, 6)"><rect id="bee-slot-rect-9" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-9" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-10" transform="translate(607, 6)"><rect id="bee-slot-rect-10" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-10" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-11" transform="translate(659, 6)" display="none"><rect id="bee-slot-rect-11" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-11" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-12" transform="translate(659, 6)" display="none"><rect id="bee-slot-rect-12" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-12" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
+        <g id="bee-slot-13" transform="translate(659, 6)" display="none"><rect id="bee-slot-rect-13" width="46" height="42" rx="6" fill="#090d16" stroke="#334155" stroke-width="1" /><text id="bee-slot-txt-13" x="23" y="28" fill="#475569" font-size="20" font-weight="900" text-anchor="middle" font-family="system-ui, sans-serif"></text></g>
       </g>
 
       <!-- Feedback / Result Banner Overlay -->
