@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T19:19:01.273Z",
+  "generatedAt": "2026-11-17T19:25:17.845Z",
   "totalScenes": 72,
   "inputDirs": [
     "static/cartridges",
@@ -1445,7 +1445,7 @@
       "id": "alphabet-basics",
       "base": "alphabet-basics",
       "type": "App",
-      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "title": "Alphabet Basics",
       "stage": "CURRICULUM",
       "duration": 14,
       "oakId": "OAK-KS3-GEN-ALPHABETB",

@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-17T19:19:01.274Z",
+  "generatedAt": "2026-11-17T19:25:17.860Z",
   "totalCartridges": 72,
   "units": [
     {
@@ -433,7 +433,7 @@
       "subject": "General Curriculum",
       "section": "Curriculum Cartridges",
       "stage": "CURRICULUM",
-      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "title": "Alphabet Basics",
       "cartridgeId": "alphabet-basics"
     },
     {
@@ -1642,7 +1642,7 @@
       "id": "alphabet-basics",
       "base": "alphabet-basics",
       "type": "App",
-      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "title": "Alphabet Basics",
       "stage": "CURRICULUM",
       "oakId": "OAK-KS3-GEN-ALPHABETB",
       "oakUnit": "ks3-generalcurriculum-alphabet-basics",
