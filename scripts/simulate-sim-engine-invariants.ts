@@ -1632,6 +1632,196 @@ console.log('\n--- TEST 22: Section 10 Declarative Gesture VM Invariants ---');
   passedTests++;
 }
 
+// =========================================================================
+// TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartridges)
+// =========================================================================
+console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartridges) ---');
+{
+  const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+  const removedSymbols = [
+    'setupCatholicRitesInteractivity',
+    'handleRiteSelectorDrag',
+    'setupNiceneCreedInteractivity',
+    'handleCreedSliderDrag',
+    'setupTenCommandmentsInteractivity',
+    'handleTabletKnobDrag',
+    'setupSacredObjectsInteractivity',
+    'handleCategoryKnobDrag',
+  ];
+  for (const sym of removedSymbols) {
+    assert(!gesturesSrc.includes(sym), `Legacy Batch 1 handler "${sym}" must be deleted from static/player/ast-gestures.js`);
+  }
+
+  const reCases = [
+    {
+      id: 'catholic-rites',
+      knobId: '#rite-selector-knob',
+      initTx: 140,
+      dragToX: 660,
+      expectedDragVarVal: 6,
+      clickId: '#station-3-btn',
+      expectedClickVarVal: 3,
+      expectedSeek: 0.38,
+      varName: 'selectedRite',
+      expectedTone: 659.25,
+    },
+    {
+      id: 'nicene-creed',
+      knobId: '#creed-trinity-slider',
+      initTx: 175,
+      dragToX: 380,
+      expectedDragVarVal: 2,
+      clickId: '#creed-tab-3',
+      expectedClickVarVal: 3,
+      expectedSeek: 0.88,
+      varName: 'creedArticle',
+      expectedTone: 783.99,
+    },
+    {
+      id: 'ten-commandments',
+      knobId: '#tablet-toggle-knob',
+      initTx: 260,
+      dragToX: 530,
+      expectedDragVarVal: 2,
+      clickId: '#tablet-tab-1',
+      expectedClickVarVal: 1,
+      expectedSeek: 0.2,
+      varName: 'selectedTablet',
+      expectedTone: 440,
+    },
+    {
+      id: 'sacred-objects',
+      knobId: '#category-slider-knob',
+      initTx: 72,
+      dragToX: 617,
+      expectedDragVarVal: 5,
+      clickId: '#tab-vestments',
+      expectedClickVarVal: 4,
+      expectedSeek: 0.68,
+      varName: 'categoryIndex',
+      expectedTone: 635,
+    },
+  ];
+
+  const makeEl = (id: string, attrs: Record<string, string> = {}) => {
+    const attrMap = new Map<string, string>(Object.entries(attrs));
+    const el: any = {
+      id,
+      style: {},
+      dataset: {},
+      setAttribute: (k: string, v: string) => attrMap.set(k, String(v)),
+      getAttribute: (k: string) => (attrMap.has(k) ? attrMap.get(k)! : null),
+      hasAttribute: (k: string) => attrMap.has(k),
+      appendChild: (c: any) => c,
+      append: () => {},
+      replaceChildren: () => {},
+      insertBefore: (c: any) => c,
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      closest: (sel: string) => (el.matches(sel) ? el : null),
+      matches: (sel: string) =>
+        sel.split(',').some((s) => {
+          const t = s.trim();
+          if (t === `#${id}`) return true;
+          const bare = /^\[([a-zA-Z0-9_-]+)\]$/.exec(t);
+          if (bare && attrMap.has(bare[1])) return true;
+          const m = /^\[([a-zA-Z0-9_-]+)="([^"]+)"\]$/.exec(t);
+          if (m && attrMap.get(m[1]) === m[2]) return true;
+          return false;
+        }),
+      contains: (other: any) => other === el,
+      getBBox: () => ({ x: 0, y: 0, width: 20, height: 20 }),
+    };
+    return el;
+  };
+
+  for (const rc of reCases) {
+    const astRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', `${rc.id}.ast`), 'utf8');
+    const svgRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', `${rc.id}.svg`), 'utf8');
+    const parseEng = createHeadlessEngine();
+    const parsedScene = parseEng.parseAst(astRaw);
+    await parseEng.loadSceneData(parsedScene, false);
+
+    // Ensure SVG exposes the declarative target IDs
+    const knobIdClean = rc.knobId.replace(/^#/, '');
+    const clickIdClean = rc.clickId.replace(/^#/, '');
+    assert(svgRaw.includes(`id="${knobIdClean}"`), `${rc.id}.svg must contain ${knobIdClean}`);
+    assert(svgRaw.includes(`id="${clickIdClean}"`), `${rc.id}.svg must contain ${clickIdClean}`);
+
+    const containerStub = makeEl('stage-container');
+    const stageSvg = makeEl('stage-svg');
+    stageSvg.parentElement = containerStub;
+    stageSvg.parentNode = containerStub;
+    const knobEl = makeEl(knobIdClean, { transform: `translate(${rc.initTx}, 17)` });
+    const clickEl = makeEl(clickIdClean);
+    const els = [knobEl, clickEl];
+    stageSvg.querySelectorAll = (sel: string) => els.filter((n) => n.matches(sel));
+    stageSvg.querySelector = (sel: string) => els.find((n) => n.matches(sel)) || null;
+    stageSvg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform: function () { return { x: this.x, y: this.y }; } });
+    stageSvg.getScreenCTM = () => ({ inverse: () => ({}) });
+
+    const seeks: number[] = [];
+    const tones: number[] = [];
+    const vmEngine: any = {
+      progress: 0,
+      isPlaying: false,
+      isContinuousSim: false,
+      scene: parsedScene,
+      vars: { ...parseEng.vars },
+      computed: {},
+      setVar(name: string, val: any) { this.vars[name] = val; },
+      applyBindings() {},
+      updateComputedVars() {},
+      seek(t: number) { seeks.push(t); this.progress = t; },
+      pause() { this.isPlaying = false; },
+    };
+
+    const gSb: any = {
+      window: { addEventListener: () => {}, focus: () => {} },
+      document: {
+        getElementById: () => null,
+        createElementNS: () => makeEl('tmp'),
+        createElement: () => makeEl('tmp'),
+        createTextNode: (t: string) => ({ textContent: t }),
+      },
+      performance: { now: () => 1000 },
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {},
+      setTimeout: (fn: Function) => { fn(); return 1; },
+      clearTimeout: () => {},
+      console,
+      Math, Number, String, Boolean, Array, Object, Set, Map, Date, Function, parseFloat, parseInt, isNaN,
+    };
+    gSb.globalThis = gSb;
+    gSb.self = gSb.window;
+    vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+
+    const gVm = new gSb.window.ASTDirectGestureSubsystem(vmEngine);
+    gVm.playAudioTone = (hz: number) => tones.push(hz);
+    gVm.createTouchRipple = () => {};
+    gVm.init(stageSvg, null);
+
+    // 1. Declarative slider drag via handleGenericDrag
+    assert.strictEqual(knobEl.getAttribute('data-draggable'), 'generic', `${rc.id} knob must register declaratively as generic draggable`);
+    gVm.handlePointerDown({ target: knobEl, clientX: rc.initTx, clientY: 17, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(gVm.dragMode, 'generic', `${rc.id} knob pointerdown must route to generic dragMode`);
+    gVm.handlePointerMove({ clientX: rc.dragToX, clientY: 17, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars[rc.varName], rc.expectedDragVarVal, `${rc.id} drag must update ${rc.varName} to ${rc.expectedDragVarVal}`);
+    gVm.handlePointerUp({ pointerId: 1 });
+
+    // 2. Declarative tab/station click via :clickable
+    gVm.handlePointerDown({ target: clickEl, clientX: 200, clientY: 430, pointerId: 2, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars[rc.varName], rc.expectedClickVarVal, `${rc.id} click on ${rc.clickId} must update ${rc.varName} to ${rc.expectedClickVarVal}`);
+    assert(tones.includes(rc.expectedTone), `${rc.id} click on ${rc.clickId} must play tone ${rc.expectedTone}Hz`);
+    assert(seeks.includes(rc.expectedSeek), `${rc.id} click on ${rc.clickId} must pause-safe seek to ${rc.expectedSeek}`);
+  }
+
+  console.log('[✅ PASS] Sim 23: All 4 Batch 1 RE slider cartridges verified cleanly on declarative Section 10 VM.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');

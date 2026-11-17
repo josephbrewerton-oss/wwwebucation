@@ -12,11 +12,12 @@
   ))
 
   (:gestures (
-    (:interactive :target "#tab-vessels" :action "set-var" :var "categoryIndex" :val 1.0)
-    (:interactive :target "#tab-linens" :action "set-var" :var "categoryIndex" :val 2.0)
-    (:interactive :target "#tab-appointments" :action "set-var" :var "categoryIndex" :val 3.0)
-    (:interactive :target "#tab-vestments" :action "set-var" :var "categoryIndex" :val 4.0)
-    (:interactive :target "#tab-monstrance" :action "set-var" :var "categoryIndex" :val 5.0)
+    (:draggable :target "#category-slider-knob" :axis "x" :min 72 :max 617 :var "categoryIndex")
+    (:clickable :target "#tab-vessels" :set-var "categoryIndex" :val 1 :tone "440" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.00);")
+    (:clickable :target "#tab-linens" :set-var "categoryIndex" :val 2 :tone "505" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.20);")
+    (:clickable :target "#tab-appointments" :set-var "categoryIndex" :val 3 :tone "570" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.44);")
+    (:clickable :target "#tab-vestments" :set-var "categoryIndex" :val 4 :tone "635" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.68);")
+    (:clickable :target "#tab-monstrance" :set-var "categoryIndex" :val 5 :tone "700" :expr "if (engine && !engine.isPlaying && typeof engine.seek === 'function') engine.seek(0.88);")
   ))
 
   (:subtitles (
