@@ -2032,6 +2032,258 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   passedTests++;
 }
 
+// =========================================================================
+// TEST 25: Batch 3 STEM Geometry & Elevation Drag Handles (Mountain Elevation, Calculus Curves, Pythagoras)
+// =========================================================================
+{
+  console.log('\n[Test 25] Auditing Batch 3 STEM declarative VM migration (mountain-elevation, calculus-curves, pythagoras)...');
+  const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+  for (const legacySym of [
+    'handleClimberDrag',
+    'handleTangentProbeDrag',
+    'handlePythagorasDragA',
+    'handlePythagorasDragB',
+    'renderPythagorasGeometry',
+    'pyth-triple-chip',
+  ]) {
+    assert(
+      !gesturesSrc.includes(legacySym),
+      `ast-gestures.js must not contain removed Batch 3 symbol "${legacySym}"`
+    );
+  }
+
+  const makeEl = (id: string, attrs: Record<string, string> = {}) => {
+    const attrMap = new Map<string, string>(Object.entries(attrs));
+    const el: any = {
+      id,
+      isConnected: true,
+      textContent: '',
+      style: {},
+      dataset: {},
+      setAttribute: (k: string, v: string) => attrMap.set(k, String(v)),
+      getAttribute: (k: string) => (attrMap.has(k) ? attrMap.get(k)! : null),
+      hasAttribute: (k: string) => attrMap.has(k),
+      appendChild: (c: any) => c,
+      append: () => {},
+      replaceChildren: () => {},
+      insertBefore: (c: any) => c,
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      closest: (sel: string) => (el.matches(sel) ? el : null),
+      matches: (sel: string) =>
+        sel.split(',').some((s) => {
+          const t = s.trim();
+          if (t === `#${id}`) return true;
+          if (t.startsWith('.')) {
+            const cls = t.slice(1);
+            const classes = (attrMap.get('class') || '').split(/\s+/).filter(Boolean);
+            if (classes.includes(cls)) return true;
+          }
+          const bare = /^\[([a-zA-Z0-9_-]+)\]$/.exec(t);
+          if (bare && attrMap.has(bare[1])) return true;
+          const m = /^\[([a-zA-Z0-9_-]+)="([^"]+)"\]$/.exec(t);
+          if (m && attrMap.get(m[1]) === m[2]) return true;
+          return false;
+        }),
+      contains: (other: any) => other === el,
+      getBBox: () => ({ x: 0, y: 0, width: 20, height: 20 }),
+    };
+    return el;
+  };
+
+  const bootBatch3Stage = async (sceneId: string, elements: any[]) => {
+    const astRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', `${sceneId}.ast`), 'utf8');
+    const engine = createHeadlessEngine();
+    const parsedScene = engine.parseAst(astRaw);
+    parsedScene.svgText = '';
+
+    const containerStub = makeEl('stage-container');
+    const stageSvg = makeEl('stage-svg');
+    stageSvg.parentElement = containerStub;
+    stageSvg.parentNode = containerStub;
+    stageSvg.querySelectorAll = (sel: string) => elements.filter((n) => n.matches(sel));
+    stageSvg.querySelector = (sel: string) => elements.find((n) => n.matches(sel)) || null;
+    stageSvg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform: function () { return { x: this.x, y: this.y }; } });
+    stageSvg.getScreenCTM = () => ({ inverse: () => ({}) });
+
+    engine.scene = parsedScene;
+    engine.activePresetId = parsedScene.id || sceneId;
+    engine.durationSec = parsedScene.duration || 10.0;
+    engine.isContinuousSim = parsedScene.type === 'Sim';
+    engine._container = stageSvg;
+    engine.container = stageSvg;
+    engine.mountSceneAsset(parsedScene, stageSvg);
+    engine.applyBindings(0);
+
+    const seeks: number[] = [];
+    const origSeek = engine.seek.bind(engine);
+    engine.seek = (p: number) => {
+      seeks.push(p);
+      return origSeek(p, true);
+    };
+
+    const gSb: any = {
+      window: { addEventListener: () => {}, focus: () => {} },
+      document: {
+        getElementById: () => null,
+        createElementNS: () => makeEl('tmp'),
+        createElement: () => makeEl('tmp'),
+        createTextNode: (t: string) => ({ textContent: t }),
+      },
+      performance: { now: () => 1000 },
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {},
+      setTimeout: (fn: Function) => { fn(); return 1; },
+      clearTimeout: () => {},
+      console,
+      Math, Number, String, Boolean, Array, Object, Set, Map, Date, Function, parseFloat, parseInt, isNaN,
+    };
+    gSb.globalThis = gSb;
+    gSb.self = gSb.window;
+    vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+
+    const tones: number[] = [];
+    const gVm = new gSb.window.ASTDirectGestureSubsystem(engine);
+    gVm.playAudioTone = (hz: number) => tones.push(hz);
+    gVm.createTouchRipple = () => {};
+    gVm.init(stageSvg, null);
+
+    return { parsedScene, engine, gVm, tones, seeks };
+  };
+
+  // 1. Mountain Elevation
+  {
+    const mtnSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'mountain-elevation.svg'), 'utf8');
+    assert(!mtnSvg.includes('data-interactive='), 'mountain-elevation.svg must not contain legacy data-interactive attribute');
+    const climberBeacon = makeEl('climber-beacon', { transform: 'translate(180, 380)' });
+    const verticalLine = makeEl('vertical-line');
+    const baseLine = makeEl('base-line');
+    const altitudeText = makeEl('altitude-text');
+    const tempText = makeEl('temp-text');
+    const hypotenuseText = makeEl('hypotenuse-text');
+
+    const { engine, gVm, seeks } = await bootBatch3Stage('mountain-elevation', [
+      climberBeacon, verticalLine, baseLine, altitudeText, tempText, hypotenuseText,
+    ]);
+
+    assert.strictEqual(climberBeacon.getAttribute('data-draggable'), 'generic', 'mountain-elevation #climber-beacon must register as generic draggable');
+    assert.strictEqual(climberBeacon.getAttribute('data-gesture-seek'), 'true', 'mountain-elevation #climber-beacon must carry data-gesture-seek="true"');
+    assert.strictEqual(climberBeacon.getAttribute('data-gesture-invert'), 'true', 'mountain-elevation #climber-beacon must carry data-gesture-invert="true"');
+
+    gVm.handlePointerDown({ target: climberBeacon, clientX: 180, clientY: 380, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(gVm.dragMode, 'generic', 'climber pointerdown must route to generic dragMode');
+    gVm.handlePointerMove({ clientX: 290, clientY: 260, preventDefault: () => {} });
+    assert(Math.abs(seeks[seeks.length - 1] - 0.5) < 1e-6, 'dragging climber halfway up ridge must seek to 0.5');
+    assert.strictEqual(climberBeacon.getAttribute('transform'), 'translate(290.0, 260.0)', 'seek(0.5) must move #climber-beacon to translate(290.0, 260.0)');
+    assert.strictEqual(altitudeText.textContent, 'Altitude: 1500 m', 'seek(0.5) must update #altitude-text to 1500 m');
+
+    gVm.handlePointerMove({ clientX: 400, clientY: 140, preventDefault: () => {} });
+    assert(Math.abs(seeks[seeks.length - 1] - 1.0) < 1e-6, 'dragging climber to summit must seek to 1.0');
+    assert.strictEqual(climberBeacon.getAttribute('transform'), 'translate(400.0, 140.0)', 'seek(1.0) must move #climber-beacon to summit translate(400.0, 140.0)');
+    assert.strictEqual(altitudeText.textContent, 'Altitude: 3000 m', 'seek(1.0) must update #altitude-text to 3000 m');
+    gVm.handlePointerUp({ pointerId: 1 });
+  }
+
+  // 2. Calculus Curves
+  {
+    const tangentAssembly = makeEl('tangent-assembly', { transform: 'translate(300, 235)' });
+    const tangentLine = makeEl('tangent-line');
+    const cardSlopeVal = makeEl('card-slope-val');
+    const integralArea = makeEl('integral-shaded-area');
+    const theoremNote = makeEl('calc-theorem-note');
+
+    const { engine, gVm } = await bootBatch3Stage('calculus-curves', [
+      tangentAssembly, tangentLine, cardSlopeVal, integralArea, theoremNote,
+    ]);
+
+    assert.strictEqual(engine.vars.probeX, 1.0, 'calculus-curves initial probeX must be 1.0');
+    assert.strictEqual(tangentAssembly.getAttribute('transform'), 'translate(300.0, 235.0)', 'initial #tangent-assembly must sit at vertex (300.0, 235.0)');
+    assert.strictEqual(tangentLine.getAttribute('transform'), 'rotate(0.0)', 'initial #tangent-line at vertex x=1 must be horizontal (rotate(0.0))');
+    assert.strictEqual(cardSlopeVal.textContent, 'm = +0.00', 'initial slope card must display m = +0.00');
+
+    gVm.handlePointerDown({ target: tangentAssembly, clientX: 300, clientY: 235, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(gVm.dragMode, 'generic', 'calculus-curves pointerdown must route to generic dragMode');
+    gVm.handlePointerMove({ clientX: 350, clientY: 210, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.probeX, 2, 'dragging #tangent-assembly +50px must set probeX to 2');
+    assert.strictEqual(tangentAssembly.getAttribute('transform'), 'translate(350.0, 210.0)', 'x=2 binding must move #tangent-assembly to translate(350.0, 210.0)');
+    assert.strictEqual(tangentLine.getAttribute('transform'), 'rotate(-63.4)', 'x=2 derivative (dy/dx=2) must rotate #tangent-line by -63.4 deg');
+    assert.strictEqual(cardSlopeVal.textContent, 'm = +2.00', 'x=2 slope card must display m = +2.00');
+    gVm.handlePointerUp({ pointerId: 1 });
+  }
+
+  // 3. Pythagoras
+  {
+    const pythSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'pythagoras.svg'), 'utf8');
+    assert(!pythSvg.includes('data-draggable="pyth-handle-'), 'pythagoras.svg must not contain legacy data-draggable attributes');
+
+    const pythIds = [
+      'pyth-triangle', 'pyth-right-angle', 'pyth-right-angle-dot',
+      'pyth-rect-a', 'pyth-pat-a', 'pyth-pat-a-path', 'pyth-grid-a', 'pyth-badge-a', 'pyth-txt-a',
+      'pyth-rect-b', 'pyth-pat-b', 'pyth-pat-b-path', 'pyth-grid-b', 'pyth-badge-b', 'pyth-txt-b',
+      'pyth-group-c', 'pyth-rect-c', 'pyth-pat-c', 'pyth-pat-c-path', 'pyth-grid-c', 'pyth-badge-c', 'pyth-txt-c',
+      'pyth-handle-a', 'pyth-handle-b',
+      'pyth-label-a-bg', 'pyth-label-a', 'pyth-label-b-bg', 'pyth-label-b', 'pyth-label-c-bg', 'pyth-label-c',
+      'pyth-banner-tspan-a', 'pyth-banner-tspan-b', 'pyth-banner-tspan-c', 'pyth-banner-tail',
+      'pyth-chip-345', 'pyth-chip-6810', 'pyth-chip-51213', 'pyth-chip-81517', 'pyth-chip-91215', 'pyth-chip-112',
+      'pyth-chip-grid', 'pyth-chip-grid-bg',
+    ];
+    const pythEls = new Map<string, any>();
+    for (const id of pythIds) {
+      pythEls.set(id, makeEl(id));
+    }
+    pythEls.get('pyth-group-c')!.setAttribute('transform', 'translate(360, 196) rotate(36.87)');
+    pythEls.get('pyth-handle-a')!.setAttribute('transform', 'translate(360, 196)');
+    pythEls.get('pyth-handle-b')!.setAttribute('transform', 'translate(472, 280)');
+
+    const { engine, gVm, tones } = await bootBatch3Stage('pythagoras', Array.from(pythEls.values()));
+
+    // Initial (3, 4, 5) geometry & positive hypotenuse square rotation (+36.87 deg)
+    assert.strictEqual(
+      pythEls.get('pyth-group-c')!.getAttribute('transform'),
+      'translate(360.0, 196.0) rotate(36.87)',
+      'initial 3-4-5 #pyth-group-c transform must use positive 36.87 deg rotation'
+    );
+    assert.strictEqual(pythEls.get('pyth-grid-c')!.getAttribute('opacity'), '0.5', 'initial 3-4-5 must show hypotenuse unit tile grid');
+
+    // Relative + inverted vertical drag on #pyth-handle-a (dy = -40 -> delta +2 units -> sideA = 5)
+    const handleA = pythEls.get('pyth-handle-a')!;
+    assert.strictEqual(handleA.getAttribute('data-gesture-relative'), 'true', '#pyth-handle-a must carry data-gesture-relative="true"');
+    assert.strictEqual(handleA.getAttribute('data-gesture-invert'), 'true', '#pyth-handle-a must carry data-gesture-invert="true"');
+    gVm.handlePointerDown({ target: handleA, clientX: 360, clientY: 196, pointerId: 1, preventDefault: () => {} });
+    gVm.handlePointerMove({ clientX: 360, clientY: 196, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.sideA, 3, '0px drag on relative #pyth-handle-a must produce zero jump');
+    gVm.handlePointerMove({ clientX: 360, clientY: 156, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.sideA, 5, '-40px upward drag on #pyth-handle-a must set sideA = 5');
+    gVm.handlePointerUp({ pointerId: 1 });
+
+    // Click triple chip 5-12-13
+    gVm.handlePointerDown({ target: pythEls.get('pyth-chip-51213')!, clientX: 320, clientY: 455, pointerId: 2, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.sideA, 5, 'clicking #pyth-chip-51213 must set sideA=5');
+    assert.strictEqual(engine.vars.sideB, 12, 'clicking #pyth-chip-51213 must set sideB=12');
+    assert.strictEqual(engine.vars.areaC, 169, '5-12-13 must compute areaC=169');
+    assert.strictEqual(engine.vars.hypotenuse, 13, '5-12-13 must compute hypotenuse=13');
+    assert.strictEqual(pythEls.get('pyth-grid-c')!.getAttribute('opacity'), '0.5', 'integer triple 5-12-13 must keep hypotenuse unit grid visible');
+    assert(tones.includes(880), 'clicking #pyth-chip-51213 must play 880Hz tone');
+
+    // Click irrational 1-1-sqrt(2) chip
+    gVm.handlePointerDown({ target: pythEls.get('pyth-chip-112')!, clientX: 570, clientY: 455, pointerId: 3, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.sideA, 1, 'clicking #pyth-chip-112 must set sideA=1');
+    assert.strictEqual(engine.vars.sideB, 1, 'clicking #pyth-chip-112 must set sideB=1');
+    assert.strictEqual(engine.vars.areaC, 2, '1-1-sqrt(2) must compute areaC=2');
+    assert.strictEqual(pythEls.get('pyth-grid-c')!.getAttribute('opacity'), '0', 'irrational hypotenuse c=sqrt(2) must hide hypotenuse tile grid');
+
+    // Toggle unit grid off
+    gVm.handlePointerDown({ target: pythEls.get('pyth-chip-grid')!, clientX: 645, clientY: 455, pointerId: 4, preventDefault: () => {} });
+    assert.strictEqual(engine.vars.showGrid, false, 'clicking #pyth-chip-grid must toggle showGrid=false');
+    assert.strictEqual(pythEls.get('pyth-grid-a')!.getAttribute('opacity'), '0', 'showGrid=false must hide square A unit tile grid');
+  }
+
+  console.log('[✅ PASS] Sim 25: Batch 3 STEM declarative VM migration (mountain-elevation, calculus-curves, pythagoras) verified cleanly.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');

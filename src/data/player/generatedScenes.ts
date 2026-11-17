@@ -680,7 +680,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   {
     "id": "mountain-elevation",
     "base": "mountain-elevation",
-    "type": "Sim",
+    "type": "Slide",
     "label": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
     "stage": "KS2/KS3 MATHS & GEOGRAPHY",
     "oakId": "OAK-KS2-GEO-002",

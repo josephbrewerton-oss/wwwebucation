@@ -5585,13 +5585,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       let p = 0;
       const peek = () => toks[p];
       const eat = (val) => { if (peek() && (!val || peek().val === val)) return toks[p++]; return null; };
+      const eatOp = (val) => { if (peek() && peek().type === 'op' && (!val || peek().val === val)) return toks[p++]; return null; };
+      const isOpIn = (vals) => Boolean(peek() && peek().type === 'op' && vals.includes(peek().val));
       const FORBIDDEN_PROPS = new Set(['__proto__', 'constructor', 'prototype', 'Function', 'eval']);
 
       const parseTernary = () => {
         const cond = parseOr();
-        if (eat('?')) {
+        if (eatOp('?')) {
           const tBranch = parseTernary();
-          eat(':');
+          eatOp(':');
           const fBranch = parseTernary();
           return (...ctx) => (cond(...ctx) ? tBranch(...ctx) : fBranch(...ctx));
         }
@@ -5599,26 +5601,26 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       };
       const parseOr = () => {
         let left = parseAnd();
-        while (eat('||')) { const r = parseAnd(); const l = left; left = (...ctx) => l(...ctx) || r(...ctx); }
+        while (eatOp('||')) { const r = parseAnd(); const l = left; left = (...ctx) => l(...ctx) || r(...ctx); }
         return left;
       };
       const parseAnd = () => {
         let left = parseEq();
-        while (eat('&&')) { const r = parseEq(); const l = left; left = (...ctx) => l(...ctx) && r(...ctx); }
+        while (eatOp('&&')) { const r = parseEq(); const l = left; left = (...ctx) => l(...ctx) && r(...ctx); }
         return left;
       };
       const parseEq = () => {
         let left = parseRel();
-        while (peek() && ['==', '===', '!=', '!=='].includes(peek().val)) {
-          const op = eat().val; const r = parseRel(); const l = left;
+        while (isOpIn(['==', '===', '!=', '!=='])) {
+          const op = eatOp().val; const r = parseRel(); const l = left;
           left = (...ctx) => (op === '==' || op === '===' ? l(...ctx) === r(...ctx) : l(...ctx) !== r(...ctx));
         }
         return left;
       };
       const parseRel = () => {
         let left = parseAdd();
-        while (peek() && ['<', '<=', '>', '>='].includes(peek().val)) {
-          const op = eat().val; const r = parseAdd(); const l = left;
+        while (isOpIn(['<', '<=', '>', '>='])) {
+          const op = eatOp().val; const r = parseAdd(); const l = left;
           left = (...ctx) => {
             const a = l(...ctx), b = r(...ctx);
             return op === '<' ? a < b : op === '<=' ? a <= b : op === '>' ? a > b : a >= b;
@@ -5628,39 +5630,39 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       };
       const parseAdd = () => {
         let left = parseMul();
-        while (peek() && (peek().val === '+' || peek().val === '-')) {
-          const op = eat().val; const r = parseMul(); const l = left;
+        while (isOpIn(['+', '-'])) {
+          const op = eatOp().val; const r = parseMul(); const l = left;
           left = (...ctx) => (op === '+' ? l(...ctx) + r(...ctx) : l(...ctx) - r(...ctx));
         }
         return left;
       };
       const parseMul = () => {
         let left = parseUnary();
-        while (peek() && ['*', '/', '%', '**'].includes(peek().val)) {
-          const op = eat().val; const r = parseUnary(); const l = left;
+        while (isOpIn(['*', '/', '%', '**'])) {
+          const op = eatOp().val; const r = parseUnary(); const l = left;
           left = (...ctx) => (op === '*' ? l(...ctx) * r(...ctx) : op === '/' ? l(...ctx) / r(...ctx) : op === '%' ? l(...ctx) % r(...ctx) : l(...ctx) ** r(...ctx));
         }
         return left;
       };
       const parseUnary = () => {
-        if (eat('!')) { const u = parseUnary(); return (...ctx) => !u(...ctx); }
-        if (eat('-')) { const u = parseUnary(); return (...ctx) => -u(...ctx); }
-        if (eat('+')) { const u = parseUnary(); return (...ctx) => +u(...ctx); }
+        if (eatOp('!')) { const u = parseUnary(); return (...ctx) => !u(...ctx); }
+        if (eatOp('-')) { const u = parseUnary(); return (...ctx) => -u(...ctx); }
+        if (eatOp('+')) { const u = parseUnary(); return (...ctx) => +u(...ctx); }
         return parsePostfix();
       };
       const parsePostfix = () => {
         let targetFn = parsePrimary();
-        while (peek() && (peek().val === '.' || peek().val === '[')) {
-          if (eat('.')) {
+        while (isOpIn(['.', '['])) {
+          if (eatOp('.')) {
             const prop = peek()?.type === 'id' ? eat().val : '';
             if (!prop || FORBIDDEN_PROPS.has(prop)) {
-              if (eat('(')) { if (!eat(')')) { do { parseTernary(); } while (eat(',')); eat(')'); } }
+              if (eatOp('(')) { if (!eatOp(')')) { do { parseTernary(); } while (eatOp(',')); eatOp(')'); } }
               targetFn = ZERO_FN;
               continue;
             }
-            if (eat('(')) {
+            if (eatOp('(')) {
               const args = [];
-              if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
+              if (!eatOp(')')) { do { args.push(parseTernary()); } while (eatOp(',')); eatOp(')'); }
               const recv = targetFn;
               targetFn = (t, vars, computed, M = Math, ...rest) => {
                 const obj = recv(t, vars, computed, M, ...rest);
@@ -5681,9 +5683,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 return val;
               };
             }
-          } else if (eat('[')) {
+          } else if (eatOp('[')) {
             const idxFn = parseTernary();
-            eat(']');
+            eatOp(']');
             const recv = targetFn;
             targetFn = (t, vars, computed, M = Math, ...rest) => {
               const obj = recv(t, vars, computed, M, ...rest);
@@ -5699,19 +5701,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const parsePrimary = () => {
         const tk = peek();
         if (!tk) return ZERO_FN;
-        if (eat('(')) { const inner = parseTernary(); eat(')'); return inner; }
-        if (eat('[')) {
+        if (eatOp('(')) { const inner = parseTernary(); eatOp(')'); return inner; }
+        if (eatOp('[')) {
           const items = [];
-          if (!eat(']')) { do { items.push(parseTernary()); } while (eat(',')); eat(']'); }
+          if (!eatOp(']')) { do { items.push(parseTernary()); } while (eatOp(',')); eatOp(']'); }
           return (...ctx) => items.map(fn => fn(...ctx));
         }
         if (tk.type === 'num') { eat(); const v = tk.val; return () => v; }
         if (tk.type === 'str') { eat(); const v = tk.val; return () => v; }
         if (tk.type === 'id') {
           const name = eat().val;
-          if (eat('(')) {
+          if (eatOp('(')) {
             const args = [];
-            if (!eat(')')) { do { args.push(parseTernary()); } while (eat(',')); eat(')'); }
+            if (!eatOp(')')) { do { args.push(parseTernary()); } while (eatOp(',')); eatOp(')'); }
             return (t, vars, computed, M = Math, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep) => {
               const helpers = { clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep };
               const vals = args.map(a => a(t, vars, computed, M, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep));
@@ -7189,6 +7191,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const hold = (isHoldable || holdRaw === true || Boolean(holdVar))
             ? true
             : (holdRaw === false ? false : undefined);
+          const invert = extractSlotValue(bodyText, 'invert') === true;
+          const relative = extractSlotValue(bodyText, 'relative') === true;
+          const seek = extractSlotValue(bodyText, 'seek') === true;
           const deltaStr = extractSlot.call(null, bodyText, /:delta\s+([\d\.\-]+)/i);
           const delta = deltaStr !== null ? parseFloat(deltaStr) : 1;
           const rateStr = extractSlot.call(null, bodyText, /:rate\s+([\d\.\-]+)/i);
@@ -7237,6 +7242,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               val,
               releaseVal,
               hold,
+              invert,
+              relative,
+              seek,
               delta,
               rate,
               attr

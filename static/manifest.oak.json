@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-17T08:39:33.210Z",
+  "generatedAt": "2026-11-17T08:55:56.478Z",
   "totalCartridges": 71,
   "units": [
     {
@@ -1432,7 +1432,7 @@
     {
       "id": "mountain-elevation",
       "base": "mountain-elevation",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
       "stage": "KS2/KS3 MATHS & GEOGRAPHY",
       "oakId": "OAK-KS2-GEO-002",

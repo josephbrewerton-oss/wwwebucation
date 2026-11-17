@@ -70,13 +70,13 @@
     <text x="242" y="224" fill="#64748b" font-size="10" font-weight="700">0</text>
 
     <!-- Shaded Area Under Curve: Definite Integral -->
-    <path id="integral-shaded-area" d="M 250 210 L 250 210 Q 325 150 400 90 L 400 210 Z" fill="url(#integral-fill-grad)" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="3 3"/>
+    <path id="integral-shaded-area" d="M 250 210 L 250 210 Q 325 150 400 90 L 400 210 Z" fill="url(#integral-fill-grad)" stroke="#22c55e" stroke-width="1.5" stroke-dasharray="3 3" data-pedagogical="cc-integral"/>
 
     <!-- Dynamic Function Curve y = f(x) -->
     <path id="curve-path" d="M 50 270 Q 150 240 250 210 T 450 60" fill="none" stroke="url(#curve-gradient)" stroke-width="4" stroke-linecap="round"/>
 
     <!-- Tangent Slope Line dy/dx -->
-    <g id="tangent-assembly" transform="translate(300, 180)">
+    <g id="tangent-assembly" transform="translate(300, 235)" data-pedagogical="cc-probe" style="cursor: grab;">
       <!-- Tangent Extended Line -->
       <line id="tangent-line" x1="-90" y1="45" x2="90" y2="-45" stroke="#f43f5e" stroke-width="3" stroke-linecap="round" filter="url(#glow-tangent)"/>
       <!-- Normal Line (Perpendicular) -->

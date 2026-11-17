@@ -29,7 +29,7 @@
       // Pointer Drag State
       this.isDragging = false;
       this.dragTarget = null;
-      this.dragMode = null; // 'piston', 'tangent-probe', 'switch', 'generic-x', 'generic-xy'
+      this.dragMode = null; // 'generic', 'rotatable', 'trackball'
       this.dragStart = { x: 0, y: 0 };
       this.targetInitial = { x: 0, y: 0 };
 
@@ -636,61 +636,6 @@
       // Restore any persisted annotations for this scene
       this.restoreInkFromSession();
 
-      // Calculus Tangent Probe
-      const tangentAssembly = this.stageSvg.querySelector('#cc-tangent-assembly') || this.stageSvg.querySelector('#tangent-assembly') || this.stageSvg.querySelector('#tangent-probe');
-      if (tangentAssembly) {
-        tangentAssembly.style.cursor = 'grab';
-        tangentAssembly.setAttribute('data-draggable', 'tangent-probe');
-        tangentAssembly.setAttribute('data-pedagogical', 'cc-probe');
-      }
-
-      const integralArea = this.stageSvg.querySelector('#cc-integral-area') || this.stageSvg.querySelector('#integral-shaded-area');
-      if (integralArea) integralArea.setAttribute('data-pedagogical', 'cc-integral');
-
-      // 5. Pythagoras Theorem Draggable Handles & Action Buttons
-      const pythHandleA = this.stageSvg.querySelector('#pyth-handle-a');
-      if (pythHandleA) {
-        pythHandleA.style.cursor = 'ns-resize';
-        pythHandleA.setAttribute('data-draggable', 'pyth-handle-a');
-        pythHandleA.setAttribute('data-pedagogical', 'pyth-handle-a');
-      }
-      const pythHandleB = this.stageSvg.querySelector('#pyth-handle-b');
-      if (pythHandleB) {
-        pythHandleB.style.cursor = 'ew-resize';
-        pythHandleB.setAttribute('data-draggable', 'pyth-handle-b');
-        pythHandleB.setAttribute('data-pedagogical', 'pyth-handle-b');
-      }
-      const sqA = this.stageSvg.querySelector('#pyth-poly-a');
-      if (sqA) sqA.setAttribute('data-pedagogical', 'pyth-sq-a');
-      const sqB = this.stageSvg.querySelector('#pyth-poly-b');
-      if (sqB) sqB.setAttribute('data-pedagogical', 'pyth-sq-b');
-      const sqC = this.stageSvg.querySelector('#pyth-poly-c');
-      if (sqC) sqC.setAttribute('data-pedagogical', 'pyth-sq-c');
-      const tri = this.stageSvg.querySelector('#pyth-triangle');
-      if (tri) tri.setAttribute('data-pedagogical', 'pyth-triangle');
-      const ra = this.stageSvg.querySelector('#pyth-right-angle');
-      if (ra) ra.setAttribute('data-pedagogical', 'pyth-right-angle');
-
-
-      // 7. Mountain Climber Beacon
-      const climberMarker = this.stageSvg.querySelector('#climber-marker');
-      const climberPulse = this.stageSvg.querySelector('#climber-pulse');
-      if (climberMarker) {
-        climberMarker.style.cursor = 'grab';
-        climberMarker.setAttribute('data-draggable', 'climber');
-        climberMarker.setAttribute('data-pedagogical', 'mtn-climber');
-      }
-      if (climberPulse) {
-        climberPulse.style.cursor = 'grab';
-        climberPulse.setAttribute('data-draggable', 'climber');
-      }
-
-
-      // 9. Pythagoras Geometry Initialization
-      if (pythHandleA && pythHandleB) {
-        this.renderPythagorasGeometry(3, 4);
-      }
-
       // 9b. Circuit Electron Flow Loop
       if (this.stageSvg.querySelector('#circuit-switch') || this.stageSvg.querySelector('.e-dot')) {
         this.startCircuitElectronsLoop();
@@ -781,6 +726,10 @@
               if (g.minY !== undefined) el.setAttribute('data-gesture-min-y', String(g.minY));
               if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
               if (typeof g.step === 'number') el.setAttribute('data-gesture-step', String(g.step));
+              if (g.invert === true) el.setAttribute('data-gesture-invert', 'true');
+              if (g.relative === true) el.setAttribute('data-gesture-relative', 'true');
+              if (g.seek === true) el.setAttribute('data-gesture-seek', 'true');
+              if (g.tone) el.setAttribute('data-gesture-tone', String(g.tone));
               if (g.var) el.setAttribute('data-gesture-var', g.var);
               if (g.varX) el.setAttribute('data-gesture-var-x', g.varX);
               if (g.varY) el.setAttribute('data-gesture-var-y', g.varY);
@@ -935,7 +884,7 @@
         return;
       }
       // B. Check for interactive direct-grab targets or action buttons
-      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #tt-laser-splitter');
+      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #tt-laser-splitter');
 
       if (target) {
         // Direct Cosmic Planet Click / Fact Card Trigger (Tap again to toggle closed)
@@ -966,7 +915,7 @@
           return;
         }
 
-        // Direct Action Buttons (e.g. Pythagoras steppers, presets, toggles, pond actions, times-table chips)
+        // Direct Action Buttons (e.g. pond actions, times-table chips)
         const actionTarget = target.hasAttribute('data-action') ? target : target.closest('[data-action]');
         if (actionTarget) {
           e.preventDefault();
@@ -985,29 +934,10 @@
         this.dragStart = { x: svgPt.x, y: svgPt.y };
 
         // Determine specific drag mode
-        if (target.id === 'mtn-climber' || target.id === 'climber-marker' || target.id === 'climber-pulse' || target.getAttribute('data-draggable') === 'climber' || target.closest('#mtn-climber')) {
-          this.dragMode = 'climber';
-          target.style.cursor = 'grabbing';
-          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
-          this.playAudioTone(440, 'triangle', 0.08);
-        } else if (target.id === 'pyth-handle-a' || target.getAttribute('data-draggable') === 'pyth-handle-a' || target.closest('#pyth-handle-a') || target.closest('[data-draggable="pyth-handle-a"]')) {
-          this.dragMode = 'pyth-handle-a';
-          target.style.cursor = 'ns-resize';
-          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
-          this.playAudioTone(440, 'triangle', 0.08);
-        } else if (target.id === 'pyth-handle-b' || target.getAttribute('data-draggable') === 'pyth-handle-b' || target.closest('#pyth-handle-b') || target.closest('[data-draggable="pyth-handle-b"]')) {
-          this.dragMode = 'pyth-handle-b';
-          target.style.cursor = 'ew-resize';
-          if (this.engine && this.engine._cachedElements) this.engine._cachedElements.isUserControlled = true;
-          this.playAudioTone(554.37, 'triangle', 0.08);
-        } else if (target.hasAttribute('data-bind-input') || (this.engine && this.engine.activeBindInputs && this.engine.activeBindInputs.some(b => b.node === target || b.target === '#' + target.id || (target.id && b.target === target.id)))) {
+        if (target.hasAttribute('data-bind-input') || (this.engine && this.engine.activeBindInputs && this.engine.activeBindInputs.some(b => b.node === target || b.target === '#' + target.id || (target.id && b.target === target.id)))) {
           this.dragMode = 'bind-input';
           target.style.cursor = 'grabbing';
           this.playAudioTone(380, 'sine', 0.05);
-        } else if (target.id === 'cc-tangent-assembly' || target.id === 'tangent-assembly' || target.id === 'tangent-probe' || target.getAttribute('data-draggable') === 'tangent-probe') {
-          this.dragMode = 'tangent-probe';
-          target.style.cursor = 'grabbing';
-          this.playAudioTone(440, 'sine', 0.08);
         } else if (target.id === 'fishing-hook' || target.id === 'fishing-bobber' || target.id === 'fishing-bobber-rig' || target.getAttribute('data-draggable') === 'fishing-hook' || target.closest('#fishing-rod-group')) {
           if (this._hookedFish) {
             this.reelHookToSurface();
@@ -1041,12 +971,17 @@
             initX = parseFloat(genTarget.getAttribute('x') || genTarget.getAttribute('cx') || '0');
             initY = parseFloat(genTarget.getAttribute('y') || genTarget.getAttribute('cy') || '0');
           }
+          const gVarName = genTarget.getAttribute('data-gesture-var');
+          const initVarVal = (gVarName && this.engine && this.engine.vars && typeof this.engine.vars[gVarName] === 'number')
+            ? this.engine.vars[gVarName]
+            : undefined;
           this.targetInitial = {
             transform: tr,
             initTx,
             initTy,
             x: initX,
-            y: initY
+            y: initY,
+            initVarVal
           };
           this.playAudioTone(380, 'triangle', 0.06);
         } else if (target.getAttribute('data-draggable') === 'rotate' || target.closest('[data-draggable="rotate"]')) {
@@ -1143,16 +1078,8 @@
       if (this.isDragging && this.dragTarget) {
         e.preventDefault();
 
-        if (this.dragMode === 'climber') {
-          this.handleClimberDrag(svgPt);
-        } else if (this.dragMode === 'tangent-probe') {
-          this.handleTangentProbeDrag(svgPt.x);
-        } else if (this.dragMode === 'bind-input') {
+        if (this.dragMode === 'bind-input') {
           this.handleBindInputDrag(this.dragTarget, svgPt);
-        } else if (this.dragMode === 'pyth-handle-a') {
-          this.handlePythagorasDragA(svgPt.y);
-        } else if (this.dragMode === 'pyth-handle-b') {
-          this.handlePythagorasDragB(svgPt.x);
         } else if (this.dragMode === 'fishing-hook') {
           this.handleFishingHookDrag(svgPt);
         } else if (this.dragMode === 'tt-splitter') {
@@ -1206,18 +1133,9 @@
           this.stageSvg.releasePointerCapture(e.pointerId);
         } catch {}
 
-        if (this.dragMode === 'tangent-probe') {
-          this.dragTarget.style.cursor = 'grab';
-          this.playAudioTone(523.25, 'sine', 0.06);
-        } else if (this.dragMode === 'bind-input') {
+        if (this.dragMode === 'bind-input') {
           this.dragTarget.style.cursor = 'grab';
           this.playAudioTone(520, 'sine', 0.04);
-        } else if (this.dragMode === 'pyth-handle-a') {
-          this.dragTarget.style.cursor = 'ns-resize';
-          this.playAudioTone(523.25, 'triangle', 0.08);
-        } else if (this.dragMode === 'pyth-handle-b') {
-          this.dragTarget.style.cursor = 'ew-resize';
-          this.playAudioTone(659.25, 'triangle', 0.08);
         } else if (this.dragMode === 'fishing-hook') {
           if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
           this.finishFishingHookDrag();
@@ -1310,6 +1228,10 @@
       const varY = target.getAttribute('data-gesture-var-y');
       const attrStepRaw = target.getAttribute('data-gesture-step');
       const attrStep = attrStepRaw !== null ? parseFloat(attrStepRaw) : NaN;
+      const isInverted = target.getAttribute('data-gesture-invert') === 'true';
+      const isRelative = target.getAttribute('data-gesture-relative') === 'true';
+      const isSeek = target.getAttribute('data-gesture-seek') === 'true';
+      const dragTone = target.getAttribute('data-gesture-tone');
 
       const initTx = (this.targetInitial && this.targetInitial.initTx) || 0;
       const initTy = (this.targetInitial && this.targetInitial.initTy) || 0;
@@ -1354,7 +1276,9 @@
         }
       }
 
-      target.setAttribute('transform', `translate(${targetTx.toFixed(1)}, ${targetTy.toFixed(1)})`);
+      if (!isRelative) {
+        target.setAttribute('transform', `translate(${targetTx.toFixed(1)}, ${targetTy.toFixed(1)})`);
+      }
 
       if (varX && axis !== 'y') {
         let coordX;
@@ -1376,11 +1300,26 @@
         this._writeEngineVar(varY, Math.round(coordY));
       }
 
-      if (varName) {
-        const ratio = axis === 'y'
+      let ratio;
+      if (axis === 'xy' && isSeek && hasBoundsX && hasBoundsY) {
+        const sx = minX;
+        const ex = maxX;
+        const sy = isInverted ? maxY : minY;
+        const ey = isInverted ? minY : maxY;
+        const segDx = ex - sx;
+        const segDy = ey - sy;
+        const segLenSq = (segDx * segDx + segDy * segDy) || 1;
+        const px = (initTx !== 0 ? initTx + dx : svgPt.x) - sx;
+        const py = (initTy !== 0 ? initTy + dy : svgPt.y) - sy;
+        ratio = Math.max(0, Math.min(1, (px * segDx + py * segDy) / segLenSq));
+      } else {
+        ratio = axis === 'y'
           ? Math.max(0, Math.min(1, (effectiveY - minY) / ((maxY - minY) || 1)))
           : Math.max(0, Math.min(1, (effectiveX - minX) / ((maxX - minX) || 1)));
+        if (isInverted) ratio = 1 - ratio;
+      }
 
+      if (varName) {
         let vMin = 0;
         let vMax = 100;
         let stepVal = (!Number.isNaN(attrStep) && attrStep > 0) ? attrStep : 1;
@@ -1406,17 +1345,43 @@
           }
         }
 
-        const mapped = vMin + ratio * (vMax - vMin);
+        let mapped;
+        if (isRelative && this.targetInitial && typeof this.targetInitial.initVarVal === 'number') {
+          const spanPx = axis === 'y' ? ((maxY - minY) || 1) : ((maxX - minX) || 1);
+          const rawDelta = axis === 'y' ? (isInverted ? -dy : dy) : (isInverted ? -dx : dx);
+          mapped = this.targetInitial.initVarVal + (rawDelta / spanPx) * (vMax - vMin);
+        } else {
+          mapped = vMin + ratio * (vMax - vMin);
+        }
         const rawStepped = stepVal > 0
           ? (vMin + Math.round((mapped - vMin) / stepVal) * stepVal)
           : mapped;
         const clampedVal = Math.max(vMin, Math.min(vMax, rawStepped));
         const decimals = (String(stepVal).split('.')[1] || '').length;
         const finalVal = Number(clampedVal.toFixed(Math.min(6, decimals)));
+        const prevVal = this.engine && this.engine.vars ? this.engine.vars[varName] : undefined;
         this._writeEngineVar(varName, finalVal);
+
+        if (dragTone && finalVal !== prevVal && typeof this.playAudioTone === 'function') {
+          const now = Date.now();
+          if (!this._lastDragToneAt || now - this._lastDragToneAt > 45) {
+            this._lastDragToneAt = now;
+            const hz = parseFloat(dragTone);
+            if (!Number.isNaN(hz)) this.playAudioTone(hz, 'triangle', 0.04, 0.1);
+          }
+        }
       }
 
-      if (this.engine && typeof this.engine.applyBindings === 'function') {
+      if (this.engine && Array.isArray(this.engine.activeBindings)) {
+        for (let i = 0; i < this.engine.activeBindings.length; i++) {
+          const b = this.engine.activeBindings[i];
+          if (b && b.node === target) b.lastVal = undefined;
+        }
+      }
+
+      if (isSeek && this.engine && typeof this.engine.seek === 'function') {
+        this.engine.seek(ratio);
+      } else if (this.engine && typeof this.engine.applyBindings === 'function') {
         this.engine.applyBindings(this.engine.progress || 0);
       }
     }
@@ -1476,120 +1441,6 @@
       ratio = Math.max(0, Math.min(1, ratio));
       const val = binding.min + ratio * (binding.max - binding.min);
       this.engine.setVar(binding.var, Number(val.toFixed(2)));
-    }
-
-    // =========================================================================
-    // Direct Manipulation Action: Calculus Curve Tangent Probe Dragging
-    // =========================================================================
-    handleTangentProbeDrag(svgX) {
-      // Grid domain: x from 70 to 470 (center origin at x=250)
-      const clampedX = Math.max(80, Math.min(460, svgX));
-      const mathX = (clampedX - 250) / 50; // -3.4 to +4.2
-      // Parabola equation: y = x^2 - 2x
-      const mathY = mathX * mathX - 2 * mathX;
-      // SVG Y: origin at 210, 25px per math unit
-      const svgY = 210 - mathY * 25;
-
-      const assembly = this.stageSvg.querySelector('#cc-tangent-assembly') || this.stageSvg.querySelector('#tangent-assembly');
-      if (assembly) {
-        assembly.setAttribute('transform', `translate(${clampedX.toFixed(1)}, ${svgY.toFixed(1)})`);
-      }
-
-      // Derivative slope: dy/dx = 2x - 2
-      const slope = 2 * mathX - 2;
-      const angleDeg = (-Math.atan(slope) * 180) / Math.PI;
-
-      const line = this.stageSvg.querySelector('#cc-tangent-line') || this.stageSvg.querySelector('#tangent-line');
-      if (line) {
-        line.setAttribute('transform', `rotate(${angleDeg.toFixed(1)})`);
-      }
-
-      const slopeVal = this.stageSvg.querySelector('#cc-slope-val') || this.stageSvg.querySelector('#card-slope-val');
-      if (slopeVal) {
-        slopeVal.textContent = `m = ${slope >= 0 ? '+' : ''}${slope.toFixed(2)}`;
-      }
-
-      // Sync with Engine Reactive State Variables and Scene Cache
-      if (this.engine && this.engine._cachedElements) {
-        this.engine._cachedElements.userProbeX = clampedX;
-      }
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar('probeX', parseFloat(mathX.toFixed(2)));
-        this.engine.setVar('probeY', parseFloat(mathY.toFixed(2)));
-        this.engine.setVar('slope', parseFloat(slope.toFixed(2)));
-      }
-
-      // Detect Stationary Turning Point (dy/dx ≈ 0)
-      if (Math.abs(slope) < 0.12) {
-        if (!this._lastStationarySound || Date.now() - this._lastStationarySound > 800) {
-          this.playAudioTone(880, 'sine', 0.25, 0.2); // Bright chime
-          this._lastStationarySound = Date.now();
-        }
-      }
-    }
-
-    // =========================================================================
-    // Direct Manipulation Action 4: Pythagoras Theorem PhET Geometry & Controls
-    // =========================================================================
-    handlePythagorasDragA(svgY) {
-      const originY = this._pythOriginY !== undefined ? this._pythOriginY : 280;
-      const s = this._pythScale || 28;
-      const rawA = (originY - svgY) / s;
-      const clampedA = Math.max(1, Math.min(15, Math.round(rawA)));
-      const curB = (this._pythState && this._pythState.b) || (this.engine && this.engine.vars && this.engine.vars.sideB) || 4;
-      this.renderPythagorasGeometry(clampedA, curB);
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar('sideA', clampedA);
-      }
-      this.playAudioTone(300 + clampedA * 30, 'triangle', 0.05, 0.12);
-    }
-
-    handlePythagorasDragB(svgX) {
-      const originX = this._pythOriginX !== undefined ? this._pythOriginX : 360;
-      const s = this._pythScale || 28;
-      const rawB = (svgX - originX) / s;
-      const clampedB = Math.max(1, Math.min(15, Math.round(rawB)));
-      const curA = (this._pythState && this._pythState.a) || (this.engine && this.engine.vars && this.engine.vars.sideA) || 3;
-      this.renderPythagorasGeometry(curA, clampedB);
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar('sideB', clampedB);
-      }
-      this.playAudioTone(320 + clampedB * 25, 'triangle', 0.05, 0.12);
-    }
-
-    /**
-     * Direct Manipulation of Mountain Elevation Climber
-     * Projects pointer position onto slope line segment from (180, 380) to (400, 140)
-     */
-    handleClimberDrag(svgPt) {
-      const startX = 180, startY = 380;
-      const endX = 400, endY = 140;
-      const dx = endX - startX;
-      const dy = endY - startY;
-      const segLenSq = dx * dx + dy * dy;
-
-      const px = svgPt.x - startX;
-      const py = svgPt.y - startY;
-      const dot = px * dx + py * dy;
-      let t = dot / segLenSq;
-      t = Math.max(0, Math.min(1, t));
-
-      if (this.engine) {
-        this.engine.seek(t);
-      }
-      const el = this.engine && this.engine._cachedElements;
-      if (el) {
-        el.isUserControlled = true;
-        if (typeof el.updateGeometry === 'function') el.updateGeometry(t);
-      }
-
-      // Footstep & altitude audio feedback
-      const freq = 360 + t * 300;
-      this.playAudioTone(freq, 'sine', 0.04, 0.08);
-
-      if (t >= 0.98) {
-        this.playAudioTone(880, 'triangle', 0.2, 0.2);
-      }
     }
 
     /**
@@ -2317,80 +2168,6 @@
         }
       }
 
-      // -----------------------------------------------------------------------
-      // Pythagoras Theorem Apparatus Actions
-      // -----------------------------------------------------------------------
-      if (typeof this.renderPythagorasGeometry === 'function' || (el && typeof el.renderGeometry === 'function')) {
-        const renderPyth = (a, b) => {
-          if (typeof this.renderPythagorasGeometry === 'function') {
-            this.renderPythagorasGeometry(a, b);
-          } else if (el && typeof el.renderGeometry === 'function') {
-            el.renderGeometry(a, b);
-          }
-        };
-        const curA = (this._pythState && this._pythState.a) || (el && el.curA) || (this.engine && this.engine.vars && this.engine.vars.sideA) || 3;
-        const curB = (this._pythState && this._pythState.b) || (el && el.curB) || (this.engine && this.engine.vars && this.engine.vars.sideB) || 4;
-
-        if (action === 'pyth-dec-a') {
-          const newA = Math.max(1, curA - 1);
-          renderPyth(newA, curB);
-          if (this.engine && this.engine.setVar) this.engine.setVar('sideA', newA);
-          this.playAudioTone(380, 'sine', 0.06);
-          return;
-        } else if (action === 'pyth-inc-a') {
-          const newA = Math.min(15, curA + 1);
-          renderPyth(newA, curB);
-          if (this.engine && this.engine.setVar) this.engine.setVar('sideA', newA);
-          this.playAudioTone(460, 'sine', 0.06);
-          return;
-        } else if (action === 'pyth-dec-b') {
-          const newB = Math.max(1, curB - 1);
-          renderPyth(curA, newB);
-          if (this.engine && this.engine.setVar) this.engine.setVar('sideB', newB);
-          this.playAudioTone(420, 'sine', 0.06);
-          return;
-        } else if (action === 'pyth-inc-b') {
-          const newB = Math.min(15, curB + 1);
-          renderPyth(curA, newB);
-          if (this.engine && this.engine.setVar) this.engine.setVar('sideB', newB);
-          this.playAudioTone(520, 'sine', 0.06);
-          return;
-        } else if (action === 'pyth-pre-345') {
-          renderPyth(3, 4);
-          if (this.engine && this.engine.setVar) { this.engine.setVar('sideA', 3); this.engine.setVar('sideB', 4); }
-          this.playAudioTone(660, 'triangle', 0.15);
-          return;
-        } else if (action === 'pyth-pre-6810') {
-          renderPyth(6, 8);
-          if (this.engine && this.engine.setVar) { this.engine.setVar('sideA', 6); this.engine.setVar('sideB', 8); }
-          this.playAudioTone(880, 'triangle', 0.15);
-          return;
-        } else if (action === 'pyth-pre-51213') {
-          renderPyth(5, 12);
-          if (this.engine && this.engine.setVar) { this.engine.setVar('sideA', 5); this.engine.setVar('sideB', 12); }
-          this.playAudioTone(1046.5, 'triangle', 0.18);
-          return;
-        } else if (action === 'pyth-toggle-grid') {
-          if (el) el.showGrid = !el.showGrid;
-          renderPyth(curA, curB);
-          this.playAudioTone(600, 'sine', 0.06);
-          return;
-        } else if (action === 'pyth-toggle-liquid') {
-          if (el) {
-            el.liquidMode = !el.liquidMode;
-            if (el.liquidMode && typeof el.animateLiquidPour === 'function') el.animateLiquidPour();
-          }
-          renderPyth(curA, curB);
-          this.playAudioTone(587.33, 'sine', 0.12);
-          return;
-        } else if (action === 'pyth-reset') {
-          if (el) { el.isUserControlled = false; el.showGrid = true; el.liquidMode = false; }
-          renderPyth(3, 4);
-          if (this.engine && this.engine.setVar) { this.engine.setVar('sideA', 3); this.engine.setVar('sideB', 4); }
-          this.playAudioTone(440, 'sine', 0.15);
-          return;
-        }
-      }
     }
 
     // =========================================================================
@@ -3399,351 +3176,6 @@ ${strokeLines.join('\n')}
       } catch {}
     }
 
-    // =========================================================================
-    // Direct Manipulation Action 5: Pythagoras Theorem Geometry Synthesis
-    // =========================================================================
-    renderPythagorasGeometry(a, b) {
-      if (!this.stageSvg) return;
-      if (this._isRenderingPyth) return;
-      this._isRenderingPyth = true;
-
-      try {
-        const clampedA = Math.max(1, Math.min(20, Math.round(a || 3)));
-        const clampedB = Math.max(1, Math.min(20, Math.round(b || 4)));
-        this._pythState = { a: clampedA, b: clampedB };
-
-        // Calculate exact algebraic quantities
-        const areaA = clampedA * clampedA;
-        const areaB = clampedB * clampedB;
-        const areaC = areaA + areaB; // Always exact integer: a² + b²
-        const c = Math.sqrt(areaC);
-        const isIntC = Math.abs(c - Math.round(c)) < 1e-5;
-        const cInt = Math.round(c);
-
-        // Adaptive scaling & centering to guarantee full viewport fit
-        // Geometry bounding box: Width = (2a + b)*s, Height = (a + 2b)*s
-        const maxAvailW = 560;
-        const maxAvailH = 340;
-        let s = 28;
-        if (clampedA === 3 && clampedB === 4) {
-          s = 28;
-        } else {
-          const reqW = 2 * clampedA + clampedB;
-          const reqH = clampedA + 2 * clampedB;
-          s = Math.min(28, maxAvailW / reqW, maxAvailH / reqH);
-        }
-
-        let originX = 360;
-        let originY = 280;
-        if (clampedA === 3 && clampedB === 4) {
-          originX = 360;
-          originY = 280;
-        } else {
-          // Center the bounding box around stage center (400, 260)
-          originX = Math.round(400 - (clampedB / 2) * s);
-          originY = Math.round(260 + (clampedA / 2) * s);
-        }
-
-        this._pythScale = s;
-        this._pythOriginX = originX;
-        this._pythOriginY = originY;
-
-        const vertAx = originX;
-        const vertAy = originY - clampedA * s;
-        const vertBx = originX + clampedB * s;
-        const vertBy = originY;
-
-        // 1. Triangle polygon
-        const tri = this.stageSvg.querySelector('#pyth-triangle') || this.stageSvg.querySelector('polygon[filter*="pyth-glow"]');
-        if (tri) {
-          tri.setAttribute('points', `${originX},${originY} ${vertBx},${vertBy} ${vertAx},${vertAy}`);
-        }
-
-        // Right-angle symbol alignment
-        const rightAngle = this.stageSvg.querySelector('#pyth-right-angle');
-        if (rightAngle) {
-          const raSize = Math.max(10, Math.min(18, Math.round(s * 0.6)));
-          rightAngle.setAttribute('x', String(originX));
-          rightAngle.setAttribute('y', String(originY - raSize));
-          rightAngle.setAttribute('width', String(raSize));
-          rightAngle.setAttribute('height', String(raSize));
-          const dot = rightAngle.nextElementSibling;
-          if (dot && dot.tagName.toLowerCase() === 'circle') {
-            dot.setAttribute('cx', String(originX + raSize / 2));
-            dot.setAttribute('cy', String(originY - raSize / 2));
-          }
-        }
-
-        // Remove any group-level rasterizing filters that blur SVG vector text and children
-        const groupA = this.stageSvg.querySelector('#pyth-group-a');
-        if (groupA) groupA.removeAttribute('filter');
-        const groupB = this.stageSvg.querySelector('#pyth-group-b');
-        if (groupB) groupB.removeAttribute('filter');
-        const bannerGroup = this.stageSvg.querySelector('#pyth-hud-banner');
-        if (bannerGroup) bannerGroup.removeAttribute('filter');
-
-        // 2. Square A (extends left from vertical leg a: area = a²)
-        const rectA = this.stageSvg.querySelector('#pyth-rect-a');
-        const txtA = this.stageSvg.querySelector('#pyth-txt-a');
-        const gridA = this.stageSvg.querySelector('#pyth-grid-a');
-        const badgeA = this.stageSvg.querySelector('#pyth-badge-a');
-        const sideALen = clampedA * s;
-
-        if (rectA) {
-          rectA.setAttribute('x', String(originX - sideALen));
-          rectA.setAttribute('y', String(vertAy));
-          rectA.setAttribute('width', String(sideALen));
-          rectA.setAttribute('height', String(sideALen));
-          rectA.setAttribute('opacity', '1');
-          if (!rectA.getAttribute('filter')) rectA.setAttribute('filter', 'url(#pyth-shadow)');
-        }
-        if (txtA) {
-          txtA.setAttribute('x', String(originX - sideALen / 2));
-          txtA.setAttribute('y', String(originY - sideALen / 2 + 5));
-          txtA.textContent = `a² = ${areaA}`;
-          txtA.setAttribute('opacity', '1');
-          txtA.removeAttribute('filter');
-          txtA.setAttribute('text-rendering', 'geometricPrecision');
-        }
-        if (badgeA) {
-          const badgeW = areaA >= 100 ? 76 : 64;
-          badgeA.setAttribute('width', String(badgeW));
-          badgeA.setAttribute('x', String(originX - sideALen / 2 - badgeW / 2));
-          badgeA.setAttribute('y', String(originY - sideALen / 2 - 13));
-        }
-        if (gridA) {
-          const linesA = [];
-          if (clampedA <= 15) {
-            for (let i = 1; i < clampedA; i++) {
-              const lx = (originX - sideALen + i * s).toFixed(1);
-              const ly = (vertAy + i * s).toFixed(1);
-              linesA.push(this._svgNode('line', { x1: lx, y1: vertAy.toFixed(1), x2: lx, y2: originY.toFixed(1) }));
-              linesA.push(this._svgNode('line', { x1: (originX - sideALen).toFixed(1), y1: ly, x2: originX.toFixed(1), y2: ly }));
-            }
-          }
-          gridA.replaceChildren(...linesA);
-        }
-
-        // 3. Square B (extends down from horizontal leg b: area = b²)
-        const rectB = this.stageSvg.querySelector('#pyth-rect-b');
-        const txtB = this.stageSvg.querySelector('#pyth-txt-b');
-        const gridB = this.stageSvg.querySelector('#pyth-grid-b');
-        const badgeB = this.stageSvg.querySelector('#pyth-badge-b');
-        const sideBLen = clampedB * s;
-
-        if (rectB) {
-          rectB.setAttribute('x', String(originX));
-          rectB.setAttribute('y', String(originY));
-          rectB.setAttribute('width', String(sideBLen));
-          rectB.setAttribute('height', String(sideBLen));
-          rectB.setAttribute('opacity', '1');
-          if (!rectB.getAttribute('filter')) rectB.setAttribute('filter', 'url(#pyth-shadow)');
-        }
-        if (txtB) {
-          txtB.setAttribute('x', String(originX + sideBLen / 2));
-          txtB.setAttribute('y', String(originY + sideBLen / 2 + 5));
-          txtB.textContent = `b² = ${areaB}`;
-          txtB.setAttribute('opacity', '1');
-          txtB.removeAttribute('filter');
-          txtB.setAttribute('text-rendering', 'geometricPrecision');
-        }
-        if (badgeB) {
-          const badgeW = areaB >= 100 ? 76 : 68;
-          badgeB.setAttribute('width', String(badgeW));
-          badgeB.setAttribute('x', String(originX + sideBLen / 2 - badgeW / 2));
-          badgeB.setAttribute('y', String(originY + sideBLen / 2 - 13));
-        }
-        if (gridB) {
-          const linesB = [];
-          if (clampedB <= 15) {
-            for (let i = 1; i < clampedB; i++) {
-              const lx = (originX + i * s).toFixed(1);
-              const ly = (originY + i * s).toFixed(1);
-              linesB.push(this._svgNode('line', { x1: lx, y1: originY.toFixed(1), x2: lx, y2: (originY + sideBLen).toFixed(1) }));
-              linesB.push(this._svgNode('line', { x1: originX.toFixed(1), y1: ly, x2: (originX + sideBLen).toFixed(1), y2: ly }));
-            }
-          }
-          gridB.replaceChildren(...linesB);
-        }
-
-        // 4. Square C on hypotenuse (Exact area = a² + b² = c²)
-        const angleRad = Math.atan2(clampedA, clampedB);
-        const angleDeg = (angleRad * 180) / Math.PI;
-        const groupC = this.stageSvg.querySelector('#pyth-group-c');
-        const rotC = this.stageSvg.querySelector('#pyth-rot-c');
-        const rectC = this.stageSvg.querySelector('#pyth-rect-c');
-        const txtC = this.stageSvg.querySelector('#pyth-txt-c');
-        const badgeC = this.stageSvg.querySelector('#pyth-badge-c');
-        const gridC = this.stageSvg.querySelector('#pyth-grid-c');
-        const cPx = c * s;
-
-        // Clear static nested transform so only authoritative outer transform applies
-        if (rotC) {
-          rotC.removeAttribute('transform');
-        }
-        if (groupC) {
-          groupC.removeAttribute('filter');
-          groupC.setAttribute('transform', `translate(${vertAx.toFixed(1)}, ${vertAy.toFixed(1)}) rotate(${angleDeg.toFixed(2)})`);
-        }
-        if (rectC) {
-          rectC.setAttribute('x', '0');
-          rectC.setAttribute('y', String((-cPx).toFixed(1)));
-          rectC.setAttribute('width', String(cPx.toFixed(1)));
-          rectC.setAttribute('height', String(cPx.toFixed(1)));
-          rectC.setAttribute('opacity', '1');
-          if (!rectC.getAttribute('filter')) rectC.setAttribute('filter', 'url(#pyth-shadow)');
-        }
-        if (txtC) {
-          txtC.setAttribute('x', String((cPx / 2).toFixed(1)));
-          txtC.setAttribute('y', String((-cPx / 2 + 5).toFixed(1)));
-          txtC.textContent = isIntC
-            ? `c² = ${areaC} (c = ${cInt})`
-            : `c² = ${areaC} (c = √${areaC} ≈ ${c.toFixed(2)})`;
-          txtC.setAttribute('opacity', '1');
-          txtC.removeAttribute('filter');
-          txtC.setAttribute('text-rendering', 'geometricPrecision');
-        }
-        if (badgeC) {
-          const badgeW = isIntC ? 120 : 156;
-          badgeC.setAttribute('width', String(badgeW));
-          badgeC.setAttribute('x', String((cPx / 2 - badgeW / 2).toFixed(1)));
-          badgeC.setAttribute('y', String((-cPx / 2 - 14).toFixed(1)));
-        }
-        if (gridC) {
-          const linesC = [];
-          // Only render discrete unit tiles when c is an integer triple (e.g. 5, 10, 13, 15, 17)
-          // To avoid confusing students with rounded tiles on irrational lengths (e.g. √18)
-          if (isIntC && cInt <= 17) {
-            const stepSize = s; // Exact same unit scale s as legs a & b!
-            for (let i = 1; i < cInt; i++) {
-              const pos = i * stepSize;
-              linesC.push(this._svgNode('line', { x1: pos.toFixed(1), y1: (-cPx).toFixed(1), x2: pos.toFixed(1), y2: '0' }));
-              linesC.push(this._svgNode('line', { x1: '0', y1: (-cPx + pos).toFixed(1), x2: cPx.toFixed(1), y2: (-cPx + pos).toFixed(1) }));
-            }
-          }
-          gridC.replaceChildren(...linesC);
-        }
-
-        // 5. Manipulator Handles A & B
-        const handleA = this.stageSvg.querySelector('#pyth-handle-a');
-        const handleB = this.stageSvg.querySelector('#pyth-handle-b');
-        if (handleA) {
-          handleA.setAttribute('transform', `translate(${vertAx.toFixed(1)}, ${vertAy.toFixed(1)})`);
-        }
-        if (handleB) {
-          handleB.setAttribute('transform', `translate(${vertBx.toFixed(1)}, ${vertBy.toFixed(1)})`);
-        }
-
-        // 6. Side labels and dimension badge callouts
-        const lblA = this.stageSvg.querySelector('#pyth-label-a');
-        const lblB = this.stageSvg.querySelector('#pyth-label-b');
-        const lblC = this.stageSvg.querySelector('#pyth-label-c');
-        const midAy = originY - sideALen / 2;
-        const midBx = originX + sideBLen / 2;
-
-        // Hypotenuse midpoint placed neatly inside the right triangle so it never overlaps square C
-        const midHypX = (vertAx + vertBx) / 2;
-        const midHypY = (vertAy + vertBy) / 2;
-        const midCx = midHypX + 0.22 * (originX - midHypX);
-        const midCy = midHypY + 0.22 * (originY - midHypY);
-
-        if (lblA) {
-          lblA.textContent = `a = ${clampedA}`;
-          lblA.setAttribute('x', String(originX + 16));
-          lblA.setAttribute('y', String(midAy + 5));
-          lblA.removeAttribute('filter');
-          lblA.setAttribute('text-rendering', 'geometricPrecision');
-          const rectBgA = lblA.previousElementSibling;
-          if (rectBgA && rectBgA.tagName.toLowerCase() === 'rect') {
-            rectBgA.setAttribute('x', String(originX + 4));
-            rectBgA.setAttribute('y', String(midAy - 11));
-          }
-        }
-        if (lblB) {
-          lblB.textContent = `b = ${clampedB}`;
-          lblB.setAttribute('x', String(midBx));
-          lblB.setAttribute('y', String(originY - 12));
-          lblB.removeAttribute('filter');
-          lblB.setAttribute('text-rendering', 'geometricPrecision');
-          const rectBgB = lblB.previousElementSibling;
-          if (rectBgB && rectBgB.tagName.toLowerCase() === 'rect') {
-            rectBgB.setAttribute('x', String(midBx - 23));
-            rectBgB.setAttribute('y', String(originY - 26));
-          }
-        }
-        if (lblC) {
-          lblC.textContent = isIntC ? `c = ${cInt}` : `c = √${areaC} ≈ ${c.toFixed(2)}`;
-          lblC.setAttribute('x', String(midCx.toFixed(1)));
-          lblC.setAttribute('y', String((midCy + 5).toFixed(1)));
-          lblC.removeAttribute('filter');
-          lblC.setAttribute('text-rendering', 'geometricPrecision');
-          const rectBgC = lblC.previousElementSibling;
-          if (rectBgC && rectBgC.tagName.toLowerCase() === 'rect') {
-            const badgeW = isIntC ? 56 : 94;
-            rectBgC.setAttribute('width', String(badgeW));
-            rectBgC.setAttribute('x', String((midCx - badgeW / 2).toFixed(1)));
-            rectBgC.setAttribute('y', String((midCy - 11).toFixed(1)));
-          }
-        }
-
-        const sideTexts = this.stageSvg.querySelectorAll('text');
-        sideTexts.forEach(tNode => {
-          tNode.removeAttribute('filter');
-          tNode.setAttribute('text-rendering', 'geometricPrecision');
-          const text = (tNode.textContent || '').trim();
-          if (text.startsWith('a =') && tNode.id !== 'pyth-label-a') {
-            tNode.textContent = `a = ${clampedA}`;
-            tNode.setAttribute('y', String(midAy + 5));
-          } else if (text.startsWith('b =') && tNode.id !== 'pyth-label-b') {
-            tNode.textContent = `b = ${clampedB}`;
-            tNode.setAttribute('x', String(midBx));
-          } else if (text.startsWith('c =') && tNode.id !== 'pyth-label-c') {
-            tNode.textContent = isIntC ? `c = ${cInt}` : `c = √${areaC} ≈ ${c.toFixed(2)}`;
-            tNode.setAttribute('x', String(midCx.toFixed(1)));
-            tNode.setAttribute('y', String((midCy + 5).toFixed(1)));
-          }
-        });
-
-        // 7. Banner formula text with exact algebraic consistency
-        const banner = this.stageSvg.querySelector('tspan');
-        if (banner && banner.parentNode) {
-          const tail = isIntC
-            ? ` ➔ ${clampedA}² + ${clampedB}² = ${cInt}² (c = ${cInt})`
-            : ` ➔ ${clampedA}² + ${clampedB}² = (√${areaC})² ➔ c = √${areaC} ≈ ${c.toFixed(2)}`;
-          banner.parentNode.replaceChildren(
-            this._svgNode('tspan', { fill: '#34d399' }, `a² (${areaA})`),
-            document.createTextNode(' + '),
-            this._svgNode('tspan', { fill: '#60a5fa' }, `b² (${areaB})`),
-            document.createTextNode(' = '),
-            this._svgNode('tspan', { fill: '#fbbf24' }, `c² (${areaC})`),
-            document.createTextNode(tail)
-          );
-        }
-
-        // 8. Sync state & engine variables without re-triggering recursive render loops
-        if (this.engine) {
-          if (!this.engine.vars) this.engine.vars = {};
-          this.engine.vars.sideA = clampedA;
-          this.engine.vars.sideB = clampedB;
-          this.engine.vars.hypotenuse = isIntC ? cInt : Number(c.toFixed(2));
-          this.engine.vars.areaA = areaA;
-          this.engine.vars.areaB = areaB;
-          this.engine.vars.areaC = areaC;
-        }
-
-        // 9. Two-way sync to parameters HUD inputs
-        const numA = document.querySelector('.sim-param-num-input[data-var="sideA"]');
-        const numB = document.querySelector('.sim-param-num-input[data-var="sideB"]');
-        const sliderA = document.querySelector('.sim-param-slider[data-var="sideA"]');
-        const sliderB = document.querySelector('.sim-param-slider[data-var="sideB"]');
-        if (numA && Number(numA.value) !== clampedA) numA.value = clampedA;
-        if (numB && Number(numB.value) !== clampedB) numB.value = clampedB;
-        if (sliderA && Number(sliderA.value) !== clampedA) sliderA.value = clampedA;
-        if (sliderB && Number(sliderB.value) !== clampedB) sliderB.value = clampedB;
-      } finally {
-        this._isRenderingPyth = false;
-      }
-    }
 
     // =========================================================================
     // Fish Tank Aquarium Boids Simulation (Living Reef & Hydrodynamics)
@@ -4578,47 +4010,6 @@ ${strokeLines.join('\n')}
         paramBody.appendChild(rowWrap);
       });
 
-      // Special pedagogical dock for Pythagoras: Quick Integer Triples
-      if (this.engine.scene && this.engine.scene.id === 'pythagoras') {
-        const pythWrap = document.createElement('div');
-        pythWrap.style.cssText = 'margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.12);';
-
-        const pythHead = document.createElement('div');
-        pythHead.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;';
-        const pythTitle = document.createElement('span');
-        pythTitle.style.cssText = 'font-size:10px; font-weight:800; color:#fbbf24; text-transform:uppercase; letter-spacing:0.5px;';
-        pythTitle.textContent = '📐 Pythagorean Triples';
-        const pythSub = document.createElement('span');
-        pythSub.style.cssText = 'font-size:9px; color:#94a3b8;';
-        pythSub.textContent = 'a² + b² = c²';
-        pythHead.append(pythTitle, pythSub);
-
-        const chipGrid = document.createElement('div');
-        chipGrid.style.cssText = 'display:grid; grid-template-columns: repeat(3, 1fr); gap:4px;';
-        const triples = [
-          { a: '3', b: '4', label: '3 - 4 - 5', title: '3² + 4² = 5²' },
-          { a: '6', b: '8', label: '6 - 8 - 10', title: '6² + 8² = 10²' },
-          { a: '5', b: '12', label: '5 - 12 - 13', title: '5² + 12² = 13²' },
-          { a: '8', b: '15', label: '8 - 15 - 17', title: '8² + 15² = 17²' },
-          { a: '9', b: '12', label: '9 - 12 - 15', title: '9² + 12² = 15²' },
-          { a: '1', b: '1', label: '1 - 1 - √2', title: 'Isosceles: 1² + 1² = (√2)²' }
-        ];
-        triples.forEach(tr => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'pyth-triple-chip';
-          btn.setAttribute('data-a', tr.a);
-          btn.setAttribute('data-b', tr.b);
-          btn.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(56,189,248,0.3); border-radius:5px; color:#f8fafc; font-size:10px; font-weight:700; padding:4px 2px; cursor:pointer; text-align:center;';
-          btn.title = tr.title;
-          btn.textContent = tr.label;
-          chipGrid.appendChild(btn);
-        });
-
-        pythWrap.append(pythHead, chipGrid);
-        paramBody.appendChild(pythWrap);
-      }
-
       hud.replaceChildren(headerRow, paramBody);
 
       // Event listeners for Sliders & Number inputs
@@ -4630,13 +4021,6 @@ ${strokeLines.join('\n')}
         const num = hud.querySelector(`.sim-param-num-input[data-var="${vName}"]`);
         if (s && Number(s.value) !== val) s.value = val;
         if (num && Number(num.value) !== val) num.value = val;
-
-        if (this.engine.scene && this.engine.scene.id === 'pythagoras') {
-          const curVars = this.engine.vars || {};
-          const newA = vName === 'sideA' ? val : (curVars.sideA || 3);
-          const newB = vName === 'sideB' ? val : (curVars.sideB || 4);
-          this.renderPythagorasGeometry(newA, newB);
-        }
 
         if (this.engine.scene && this.engine.scene.id === 'atom') {
           if (vName === 'atomicNumber') {
@@ -4664,18 +4048,6 @@ ${strokeLines.join('\n')}
             applyVal(vName, val);
             this.playAudioTone(440 + val * 12, 'triangle', 0.03, 0.08);
           }
-        });
-      });
-
-      // Quick integer triple chips
-      const tripleChips = hud.querySelectorAll('.pyth-triple-chip');
-      tripleChips.forEach(chip => {
-        chip.addEventListener('click', () => {
-          const aVal = parseFloat(chip.getAttribute('data-a'));
-          const bVal = parseFloat(chip.getAttribute('data-b'));
-          applyVal('sideA', aVal);
-          applyVal('sideB', bVal);
-          this.playAudioTone(587.33, 'triangle', 0.08, 0.2);
         });
       });
 
@@ -4716,14 +4088,6 @@ ${strokeLines.join('\n')}
                 }
               }
             });
-          }
-
-          if (this.engine.scene && this.engine.scene.id === 'pythagoras') {
-            const curA = this.engine.vars && this.engine.vars.sideA;
-            const curB = this.engine.vars && this.engine.vars.sideB;
-            if (curA && curB && (!this._pythState || curA !== this._pythState.a || curB !== this._pythState.b)) {
-              this.renderPythagorasGeometry(curA, curB);
-            }
           }
 
           if (this.engine.scene && this.engine.scene.id === 'solar-system') {
