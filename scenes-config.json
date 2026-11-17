@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T09:02:15.751Z",
+  "generatedAt": "2026-11-17T09:39:55.330Z",
   "totalScenes": 71,
   "inputDirs": [
     "static/cartridges",
@@ -625,7 +625,7 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 1,
+      "bindingsCount": 356,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -1073,7 +1073,7 @@
       "section": "English Literature & Phonics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 2,
+      "bindingsCount": 195,
       "hasCheckpoints": false,
       "checkpointCount": 0
     },

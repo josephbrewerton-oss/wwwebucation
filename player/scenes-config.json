@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T09:02:17.037Z",
+  "generatedAt": "2026-11-17T09:39:56.618Z",
   "totalScenes": 72,
   "scenes": [
     {
@@ -961,7 +961,7 @@
       "astbFile": "bytecode/spelling-bee.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 2
+      "bindingsCount": 195
     },
     {
       "id": "stations-of-the-cross",
@@ -1006,7 +1006,7 @@
       "astbFile": "bytecode/times-tables.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 1
+      "bindingsCount": 356
     },
     {
       "id": "triduum-easter",
