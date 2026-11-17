@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-17T13:46:35.895Z",
-  "totalCartridges": 71,
+  "generatedAt": "2026-11-17T19:07:14.328Z",
+  "totalCartridges": 72,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -426,6 +426,15 @@
       "stage": "KS4 GCSE BIOLOGY",
       "title": "Osmosis & Semi-Permeable Membrane Flux",
       "cartridgeId": "osmosis-membrane"
+    },
+    {
+      "unit": "ks3-generalcurriculum-alphabet-basics",
+      "oakId": "OAK-KS3-GEN-ALPHABETB",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "stage": "CURRICULUM",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "cartridgeId": "alphabet-basics"
     },
     {
       "unit": "ks2-multiplication-arrays",
@@ -1628,6 +1637,26 @@
       "tier": "core",
       "hasCheckpoints": true,
       "checkpointCount": 2
+    },
+    {
+      "id": "alphabet-basics",
+      "base": "alphabet-basics",
+      "type": "App",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "stage": "CURRICULUM",
+      "oakId": "OAK-KS3-GEN-ALPHABETB",
+      "oakUnit": "ks3-generalcurriculum-alphabet-basics",
+      "subject": "General Curriculum",
+      "section": "Curriculum Cartridges",
+      "mount": "/curriculum/general/alphabet-basics",
+      "duration": 14,
+      "svgFile": "cartridges/alphabet-basics.svg",
+      "astFile": "cartridges/alphabet-basics.ast",
+      "astbFile": "bytecode/alphabet-basics.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     },
     {
       "id": "domino-multiplication",

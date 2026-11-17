@@ -1,0 +1,111 @@
+;; ============================================================================
+;; St Joseph's Curriculum Portal & AST Engine — Cartridge: Alphabet Basics
+;; Copyright (c) 2026 Joseph Brewerton — Licensed under Track A (AGPLv3 / OGL v3.0)
+;; Layout: 3 Paired Letters per Slide (Uppercase + Lowercase) | 9 Slides (A-Z)
+;; Pedagogical Bridge: Letter Name <-> Phonics Sound + Handwriting Baseline Guides
+;; ============================================================================
+
+(cartridge
+  (meta
+    (id "alphabet-basics")
+    (title "Alphabet Basics: Paired Case & Sound Bridge")
+    (level "EYFS / SEND / Adult Foundation Literacy")
+    (viewport 1920 1080)
+    (theme
+      (bg "#F8FAFC")
+      (card-bg "#FFFFFF")
+      (ink "#0F172A")
+      (accent-upper "#1E40AF")
+      (accent-lower "#047857")
+      (guide-sky "#93C5FD")
+      (guide-grass "#6EE7B7")
+      (guide-soil "#FCA5A5")))
+
+  ;; Helper macro definition for 3-column handwriting baseline & dual-case card
+  (template letter-card (col-x upper lower name phoneme keyword bsl-tag)
+    (group (id (concat "card-" upper)) (translate col-x 190)
+      (rect (w 540) (h 740) (rx 24) (fill "@card-bg") (stroke "#CBD5E1") (stroke-width 3))
+      ;; Handwriting Reference Lines (Ascender/Cap, X-Height, Baseline, Descender)
+      (line (x1 40) (y1 150) (x2 500) (y2 150) (stroke "@guide-sky") (stroke-width 2) (dash "8 6"))
+      (line (x1 40) (y1 255) (x2 500) (y2 255) (stroke "@guide-grass") (stroke-width 2) (dash "6 6"))
+      (line (x1 40) (y1 380) (x2 500) (y2 380) (stroke "#64748B") (stroke-width 3))
+      (line (x1 40) (y1 450) (x2 500) (y2 450) (stroke "@guide-soil") (stroke-width 2) (dash "8 6"))
+      ;; Paired Uppercase & Lowercase Glyphs
+      (text (x 175) (y 380) (size 230) (weight 700) (fill "@accent-upper") (anchor "middle") upper)
+      (text (x 375) (y 380) (size 230) (weight 700) (fill "@accent-lower") (anchor "middle") lower)
+      ;; Case Labels
+      (text (x 175) (y 495) (size 22) (weight 600) (fill "@accent-upper") (anchor "middle") "CAPITAL")
+      (text (x 375) (y 495) (size 22) (weight 600) (fill "@accent-lower") (anchor "middle") "small")
+      ;; Name <-> Sound Bridge Pill
+      (rect (x 40) (y 535) (w 460) (h 110) (rx 16) (fill "#EFF6FF"))
+      (text (x 270) (y 582) (size 30) (weight 700) (fill "@ink") (anchor "middle")
+        (concat "Name: "" name ""   |   Sound: " phoneme))
+      (text (x 270) (y 624) (size 26) (weight 500) (fill "#334155") (anchor "middle")
+        (concat "Anchor: " keyword))
+      ;; BSL Fingerspelling Hook & Interactive Speech Trigger
+      (badge (x 40) (y 668) (w 460) (h 48) (rx 12) (fill "#F1F5F9")
+        (bsl-sign bsl-tag)
+        (speak (concat "Letter " name ". Capital " upper ", small " lower ". Makes the sound " phoneme ", as in " keyword ".")))))
+
+  ;; SLIDE 1: A B C
+  (slide (id "s1-abc") (title "Letters 1–3: A  B  C") (range "A B C")
+    (call letter-card 100 "A" "a" "Ay" "/a/" "Apple" "bsl-a")
+    (call letter-card 690 "B" "b" "Bee" "/b/" "Ball" "bsl-b")
+    (call letter-card 1280 "C" "c" "See" "/k/" "Cat" "bsl-c"))
+
+  ;; SLIDE 2: D E F
+  (slide (id "s2-def") (title "Letters 4–6: D  E  F") (range "D E F")
+    (call letter-card 100 "D" "d" "Dee" "/d/" "Dog" "bsl-d")
+    (call letter-card 690 "E" "e" "Ee" "/e/" "Egg" "bsl-e")
+    (call letter-card 1280 "F" "f" "Eff" "/f/" "Fish" "bsl-f"))
+
+  ;; SLIDE 3: G H I
+  (slide (id "s3-ghi") (title "Letters 7–9: G  H  I") (range "G H I")
+    (call letter-card 100 "G" "g" "Jee" "/g/" "Goat" "bsl-g")
+    (call letter-card 690 "H" "h" "Aitch" "/h/" "Hat" "bsl-h")
+    (call letter-card 1280 "I" "i" "Eye" "/i/" "Insect" "bsl-i"))
+
+  ;; SLIDE 4: J K L
+  (slide (id "s4-jkl") (title "Letters 10–12: J  K  L") (range "J K L")
+    (call letter-card 100 "J" "j" "Jay" "/j/" "Jam" "bsl-j")
+    (call letter-card 690 "K" "k" "Kay" "/k/" "Kite" "bsl-k")
+    (call letter-card 1280 "L" "l" "El" "/l/" "Leaf" "bsl-l"))
+
+  ;; SLIDE 5: M N O
+  (slide (id "s5-mno") (title "Letters 13–15: M  N  O") (range "M N O")
+    (call letter-card 100 "M" "m" "Em" "/m/" "Moon" "bsl-m")
+    (call letter-card 690 "N" "n" "En" "/n/" "Net" "bsl-n")
+    (call letter-card 1280 "O" "o" "Oh" "/o/" "Orange" "bsl-o"))
+
+  ;; SLIDE 6: P Q R
+  (slide (id "s6-pqr") (title "Letters 16–18: P  Q  R") (range "P Q R")
+    (call letter-card 100 "P" "p" "Pee" "/p/" "Pen" "bsl-p")
+    (call letter-card 690 "Q" "q" "Kyoo" "/kw/" "Queen" "bsl-q")
+    (call letter-card 1280 "R" "r" "Ar" "/r/" "Rain" "bsl-r"))
+
+  ;; SLIDE 7: S T U
+  (slide (id "s7-stu") (title "Letters 19–21: S  T  U") (range "S T U")
+    (call letter-card 100 "S" "s" "Ess" "/s/" "Sun" "bsl-s")
+    (call letter-card 690 "T" "t" "Tee" "/t/" "Tree" "bsl-t")
+    (call letter-card 1280 "U" "u" "Yoo" "/u/" "Umbrella" "bsl-u"))
+
+  ;; SLIDE 8: V W X
+  (slide (id "s8-vwx") (title "Letters 22–24: V  W  X") (range "V W X")
+    (call letter-card 100 "V" "v" "Vee" "/v/" "Van" "bsl-v")
+    (call letter-card 690 "W" "w" "Double-yoo" "/w/" "Web" "bsl-w")
+    (call letter-card 1280 "X" "x" "Eks" "/ks/" "Box (end)" "bsl-x"))
+
+  ;; SLIDE 9: Y Z + Complete Alphabet Strip
+  (slide (id "s9-yz") (title "Letters 25–26: Y  Z  & Full Alphabet Bridge") (range "Y Z")
+    (call letter-card 100 "Y" "y" "Wye" "/y/" "Yo-yo" "bsl-y")
+    (call letter-card 690 "Z" "z" "Zed" "/z/" "Zip" "bsl-z")
+    (group (id "card-bridge-summary") (translate 1280 190)
+      (rect (w 540) (h 740) (rx 24) (fill "#1E3A8A") (stroke "#1E40AF") (stroke-width 3))
+      (text (x 270) (y 110) (size 34) (weight 700) (fill "#FFFFFF") (anchor "middle") "26 Letters Unlocked")
+      (text (x 270) (y 175) (size 24) (weight 400) (fill "#DBEAFE") (anchor "middle") "Every letter has:")
+      (text (x 270) (y 250) (size 28) (weight 700) (fill "#93C5FD") (anchor "middle") "1. Two Shapes (A / a)")
+      (text (x 270) (y 325) (size 28) (weight 700) (fill "#6EE7B7") (anchor "middle") "2. A Letter Name (Ay)")
+      (text (x 270) (y 400) (size 28) (weight 700) (fill "#FDE68A") (anchor "middle") "3. A Phonics Sound (/a/)")
+      (rect (x 50) (y 480) (w 440) (h 180) (rx 16) (fill "#172554"))
+      (text (x 270) (y 545) (size 24) (weight 600) (fill "#FFFFFF") (anchor "middle") "Ready for Phonics Blending")
+      (text (x 270) (y 595) (size 22) (weight 400) (fill "#93C5FD") (anchor "middle") "Next Cartridge: CVC Sound Builders"))))

@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 72
+  :count 73
   (:cartridges (
     (:cartridge
       :id "acid-alkali-titration"
@@ -20,6 +20,13 @@
       :stage "KS2/KS3 MATHS"
       :oak-id "OAK-KS3-MAT-003"
       :bytecode "bytecode/algebra-balance.astb")
+
+    (:cartridge
+      :id "alphabet-basics"
+      :type "Sim"
+      :title "Alphabet Basics"
+      :stage "PORTAL APPARATUS"
+      :bytecode "bytecode/alphabet-basics.astb")
 
     (:cartridge
       :id "altar-anatomy"

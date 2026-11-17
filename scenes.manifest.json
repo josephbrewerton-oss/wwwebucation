@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T13:46:35.893Z",
-  "totalScenes": 71,
+  "generatedAt": "2026-11-17T19:07:14.326Z",
+  "totalScenes": 72,
   "inputDirs": [
     "static/cartridges",
     "static/player/cartridges"
@@ -1440,6 +1440,34 @@
       "bindingsCount": 7,
       "hasCheckpoints": true,
       "checkpointCount": 2
+    },
+    {
+      "id": "alphabet-basics",
+      "base": "alphabet-basics",
+      "type": "App",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "stage": "CURRICULUM",
+      "duration": 14,
+      "oakId": "OAK-KS3-GEN-ALPHABETB",
+      "oakUnit": "ks3-generalcurriculum-alphabet-basics",
+      "subject": "General Curriculum",
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/alphabet-basics.svg",
+      "astFile": "cartridges/alphabet-basics.ast",
+      "astbFile": "bytecode/alphabet-basics.astb",
+      "video": null,
+      "videoFit": "contain",
+      "hasVideo": false,
+      "isCore": true,
+      "tier": "core",
+      "mount": "/curriculum/general/alphabet-basics",
+      "section": "Curriculum Cartridges",
+      "keyframeCount": 0,
+      "subtitleCount": 0,
+      "bindingsCount": 0,
+      "hasCheckpoints": false,
+      "checkpointCount": 0
     },
     {
       "id": "domino-multiplication",
