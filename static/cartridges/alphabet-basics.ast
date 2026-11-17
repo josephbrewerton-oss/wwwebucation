@@ -39,7 +39,7 @@
       ;; Name <-> Sound Bridge Pill
       (rect (x 40) (y 535) (w 460) (h 110) (rx 16) (fill "#EFF6FF"))
       (text (x 270) (y 582) (size 30) (weight 700) (fill "@ink") (anchor "middle")
-        (concat "Name: "" name ""   |   Sound: " phoneme))
+        (concat "Name: \"" name "\"   |   Sound: " phoneme))
       (text (x 270) (y 624) (size 26) (weight 500) (fill "#334155") (anchor "middle")
         (concat "Anchor: " keyword))
       ;; BSL Fingerspelling Hook & Interactive Speech Trigger
