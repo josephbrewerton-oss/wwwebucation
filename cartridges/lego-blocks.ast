@@ -34,9 +34,10 @@
     (:name "absHexShade" :expr "vars.brickColor === 'blue' ? '#003A84' : (vars.brickColor === 'yellow' ? '#C7A317' : (vars.brickColor === 'green' ? '#16522B' : (vars.brickColor === 'white' ? '#D0D0D0' : (vars.brickColor === 'dark-gray' ? '#434042' : '#8F1105'))))")
   ))
   (:gestures (
+    (:trackball :target "#stage-svg" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:trackball :target "#turntable-root" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
     (:trackball :target "#brick-3d-stage" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
-    (:trackball :target "#lego-yaw-knob" :yaw-var "turntableYaw" :pitch-var "cameraPitch" :pitch-min -65 :pitch-max 65)
+    (:draggable :target "#lego-yaw-knob" :axis "x" :min-x 42 :max-x 166 :var "turntableYaw" :relative true)
     (:clickable :target "#btn-toggle-flip" :toggle "flipUnderside")
     (:clickable :target "#btn-explode" :toggle "explodeView")
     (:clickable :target "#btn-dimensions" :toggle "showDimensions")
