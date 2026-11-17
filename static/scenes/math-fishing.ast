@@ -3,13 +3,13 @@
     (:var :name "targetSum" :val 10 :min 5 :max 20 :step 1 :label "Target Bond Goal")
     (:var :name "caughtA" :val 0 :min 0 :max 20 :step 1 :label "First Fish Caught")
     (:var :name "caughtB" :val 0 :min 0 :max 20 :step 1 :label "Second Fish Caught")
+    (:var :name "lastHookedId" :val 0 :min 0 :max 10 :step 1 :label "Hook Cooldown ID")
     (:var :name "bondsCount" :val 0 :min 0 :max 99 :step 1 :label "Completed Bonds")
     (:var :name "streakCount" :val 0 :min 0 :max 99 :step 1 :label "Streak")
     (:var :name "hookX" :val 440 :min 80 :max 740 :step 1 :label "Hook X Position")
-    (:var :name "hookY" :val 240 :min 155 :max 440 :step 1 :label "Hook Y Depth")
+    (:var :name "hookY" :val 175 :min 155 :max 440 :step 1 :label "Hook Y Depth")
     (:var :name "bobberSpeed" :val 0.5 :min 0.2 :max 2.0 :step 0.1 :label "Reeling Current Pace")
-  ))
-  (:inputs (
+  ))  (:inputs (
     (:slider :var "targetSum" :label "Number Bond Target" :min 5 :max 20 :step 1)
     (:slider :var "bobberSpeed" :label "Water Current Velocity" :min 0.2 :max 2.0 :step 0.1)
   ))
