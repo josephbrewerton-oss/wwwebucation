@@ -207,8 +207,23 @@
     }
 
     _writeEngineVar(varName, value) {
-      if (!this.engine || !this.engine.vars || !varName) return;
-      this.engine.vars[varName] = value;
+      if (!this.engine || !varName) return;
+      if (typeof this.engine.setVar === 'function') {
+        this.engine.setVar(varName, value);
+      } else if (this.engine.vars) {
+        this.engine.vars[varName] = value;
+      }
+    }
+
+    _speakGestureText(rawText) {
+      if (!rawText || !this.engine) return;
+      const text = String(rawText).trim();
+      if (!text) return;
+      if (typeof this.engine.speak === 'function') {
+        this.engine.speak(text);
+      } else if (typeof this.engine.speakText === 'function') {
+        this.engine.speakText(text);
+      }
     }
 
     _applyGesturePress(g, matchedEl, scene) {
@@ -217,7 +232,7 @@
 
       const toggleKey = g.toggleVar || g.toggle;
       const setKey = g.setVar || g.set || (g.var && g.val !== undefined ? g.var : null);
-      const stepKey = g.stepVar || g.step || (!setKey && g.var && g.delta !== undefined ? g.var : null);
+      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!setKey && g.var && g.delta !== undefined ? g.var : null);
       const holdKey = g.holdVar;
 
       if (toggleKey) {
@@ -256,7 +271,15 @@
       }
       if (g.expr) {
         try {
-          new Function('vars', 'el', 'engine', g.expr)(this.engine.vars, matchedEl, this.engine);
+          new Function('vars', 'el', 'engine', 'computed', g.expr)(
+            this.engine.vars,
+            matchedEl,
+            this.engine,
+            this.engine.computed || {}
+          );
+          if (typeof this.engine.updateComputedVars === 'function') {
+            this.engine.updateComputedVars(this.engine.progress || 0);
+          }
           changed = true;
         } catch (err) {
           console.warn('[ASTGestures] Gesture expr error:', g.expr, err);
@@ -270,10 +293,14 @@
           }
         });
       }
+      if (g.speak) {
+        this._speakGestureText(g.speak);
+      }
 
       return changed;
     }
-    _applyContinuousGestureStep(g, scene, dtSec) {
+
+    _applyContinuousGestureStep(g, scene, dtSec, matchedEl = null) {
       if (!this.engine || !this.engine.vars) return false;
       let changed = false;
 
@@ -285,7 +312,7 @@
         }
       }
 
-      const stepKey = g.stepVar || g.step || (g.var && g.delta !== undefined ? g.var : null);
+      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!g.setVar && g.var && g.delta !== undefined ? g.var : null);
       if (stepKey) {
         const cur = typeof this.engine.vars[stepKey] === 'number' ? this.engine.vars[stepKey] : 0;
         const delta = typeof g.delta === 'number' ? g.delta : 1;
@@ -295,6 +322,24 @@
         if (next !== cur) {
           this._writeEngineVar(stepKey, next);
           changed = true;
+        }
+      }
+
+      if (g.expr && (g.type === 'holdable' || g.hold === true)) {
+        try {
+          new Function('vars', 'el', 'engine', 'dt', 'computed', g.expr)(
+            this.engine.vars,
+            matchedEl,
+            this.engine,
+            dtSec,
+            this.engine.computed || {}
+          );
+          if (typeof this.engine.updateComputedVars === 'function') {
+            this.engine.updateComputedVars(this.engine.progress || 0);
+          }
+          changed = true;
+        } catch (err) {
+          console.warn('[ASTGestures] Hold expr error:', g.expr, err);
         }
       }
 
@@ -393,8 +438,8 @@
             this._heldKeys.has(g.key) ||
             (typeof g.key === 'string' && g.key.length === 1 && this._heldKeys.has(g.key.toLowerCase()));
           if (!keyMatched) continue;
-          const isContinuous = Boolean(g.holdVar || (g.stepVar || g.step) && g.hold !== false);
-          if (isContinuous && this._applyContinuousGestureStep(g, scene, dtSec)) {
+          const isContinuous = Boolean(g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false));
+          if (isContinuous && this._applyContinuousGestureStep(g, scene, dtSec, null)) {
             changed = true;
           }
         }
@@ -405,14 +450,15 @@
           const heldDuration = now - entry.pressedAt;
           for (let i = 0; i < entry.gestures.length; i++) {
             const g = entry.gestures[i];
-            const hasStep = Boolean(g.stepVar || g.step);
+            const hasStep = Boolean(g.stepVar || typeof g.step === 'string');
             const wantsContinuous = Boolean(
               g.holdVar ||
               g.type === 'holdable' ||
               g.hold === true ||
               (hasStep && g.hold !== false && heldDuration >= 160)
             );
-            if (wantsContinuous && this._applyContinuousGestureStep(g, scene, dtSec)) {
+            const matchedEl = entry.matchedEls ? entry.matchedEls[i] : null;
+            if (wantsContinuous && this._applyContinuousGestureStep(g, scene, dtSec, matchedEl)) {
               changed = true;
             }
           }
@@ -482,7 +528,7 @@
       let needsHoldLoop = false;
       for (let i = 0; i < matchingKeys.length; i++) {
         const g = matchingKeys[i];
-        if (g.holdVar || ((g.stepVar || g.step) && g.hold !== false)) {
+        if (g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false)) {
           needsHoldLoop = true;
         }
       }
@@ -499,7 +545,9 @@
         if (changed && typeof this.engine.applyBindings === 'function') {
           this.engine.applyBindings(this.engine.progress || 0, 0, false);
         }
-        this.playAudioTone(440, 'triangle', 0.04, 0.12);
+        if (!matchingKeys.some(g => Boolean(g.tone))) {
+          this.playAudioTone(440, 'triangle', 0.04, 0.12);
+        }
       }
 
       if (needsHoldLoop) {
@@ -859,43 +907,10 @@
               });
             }
 
-            // A. Declarative Clickable / Holdable Actions
+            // A. Declarative Clickable / Holdable Actions (executed via unified VM pointer handler)
             if (g.type === 'clickable' || g.type === 'holdable') {
               el.style.cursor = 'pointer';
               el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
-              if (g.type === 'clickable' && !el.dataset.vmClickBound) {
-                el.dataset.vmClickBound = '1';
-                el.addEventListener('pointerdown', (e) => {
-                  e.stopPropagation();
-                  const vars = (this.engine && this.engine.vars) || {};
-                  if (g.setVar !== undefined) {
-                    if (this.engine && typeof this.engine.setVar === 'function') {
-                      this.engine.setVar(g.setVar, g.val);
-                    } else {
-                      vars[g.setVar] = g.val;
-                    }
-                  }
-                  if (g.expr) {
-                    try {
-                      new Function('vars', 'engine', g.expr)(vars, this.engine);
-                    } catch (err) {
-                      console.warn('[ASTGestures] Click expr error:', g.expr, err);
-                    }
-                  }
-                  if (g.tone && typeof this.playAudioTone === 'function') {
-                    String(g.tone).split(',').forEach((freq, idx) => {
-                      const hz = parseFloat(freq.trim());
-                      if (!Number.isNaN(hz)) {
-                        setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
-                      }
-                    });
-                  }
-                  if (this.engine) {
-                    if (typeof this.engine.applyBindings === 'function') this.engine.applyBindings(this.engine.currentTime || 0);
-                    else if (typeof this.engine.render === 'function') this.engine.render();
-                  }
-                });
-              }
             }
             // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
             else if (g.type === 'trackball' || g.axis === 'trackball') {
@@ -923,6 +938,7 @@
               if (g.maxX !== undefined) el.setAttribute('data-gesture-max-x', String(g.maxX));
               if (g.minY !== undefined) el.setAttribute('data-gesture-min-y', String(g.minY));
               if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
+              if (typeof g.step === 'number') el.setAttribute('data-gesture-step', String(g.step));
               if (g.var) el.setAttribute('data-gesture-var', g.var);
               if (g.varX) el.setAttribute('data-gesture-var-x', g.varX);
               if (g.varY) el.setAttribute('data-gesture-var-y', g.varY);
@@ -930,6 +946,8 @@
           });
         });
       }
+    }
+
     /**
      * Primary PointerDown Handler
      */
@@ -998,7 +1016,7 @@
           if (this._applyGesturePress(g, matchedEls[i], scene)) {
             changed = true;
           }
-          if (g.type === 'holdable' || g.hold === true || g.holdVar || g.stepVar || g.step) {
+          if (g.type === 'holdable' || g.hold === true || g.holdVar || g.stepVar || typeof g.step === 'string') {
             needsHoldLoop = true;
           }
         }
@@ -1008,6 +1026,7 @@
           const now = typeof performance !== 'undefined' ? performance.now() : Date.now();
           this._heldPointerEntries.set(pointerId, {
             gestures: matchedPointerGestures,
+            matchedEls,
             pressedAt: now
           });
           if (e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.setPointerCapture === 'function') {
@@ -1016,10 +1035,16 @@
           this._ensureHoldLoop();
         }
 
-        if (changed && this.engine && typeof this.engine.applyBindings === 'function') {
-          this.engine.applyBindings(this.engine.progress || 0, 0, false);
+        if (this.engine) {
+          if (typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0);
+          } else if (typeof this.engine.render === 'function') {
+            this.engine.render();
+          }
         }
-        this.playAudioTone(520, 'sine', 0.04, 0.1);
+        if (!matchedPointerGestures.some(g => Boolean(g.tone))) {
+          this.playAudioTone(520, 'sine', 0.04, 0.1);
+        }
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
@@ -1044,10 +1069,8 @@
         this.dragTarget = e.target.closest(activeTrackball.target);
         this.dragStart = { x: e.clientX, y: e.clientY };
         const hasVars = Boolean(this.engine && this.engine.vars);
-        const explicitYaw = activeTrackball.yawVar || activeTrackball['yaw-var'] || null;
-        const explicitPitch = activeTrackball.pitchVar || activeTrackball['pitch-var'] || null;
-        this.trackballYawVar = explicitYaw || (hasVars && typeof this.engine.vars.turntableYaw === 'number' ? 'turntableYaw' : null);
-        this.trackballPitchVar = explicitPitch || (hasVars && typeof this.engine.vars.cameraPitch === 'number' ? 'cameraPitch' : null);
+        this.trackballYawVar = activeTrackball.yawVar || activeTrackball['yaw-var'] || null;
+        this.trackballPitchVar = activeTrackball.pitchVar || activeTrackball['pitch-var'] || null;
         this.trackballPitchMin = typeof activeTrackball.pitchMin === 'number' ? activeTrackball.pitchMin : -65;
         this.trackballPitchMax = typeof activeTrackball.pitchMax === 'number' ? activeTrackball.pitchMax : 65;
         this.trackballStartYaw = (this.trackballYawVar && hasVars && typeof this.engine.vars[this.trackballYawVar] === 'number')
@@ -1517,21 +1540,20 @@
       if (yawKey && this.engine.vars) {
         const bounds = this._resolveVarBounds(scene, {}, yawKey);
         const rawYaw = this.trackballStartYaw + dx * 0.8;
+        let nextYaw;
         if (Number.isFinite(bounds.min) && Number.isFinite(bounds.max) && bounds.min < 0) {
           const span = bounds.max - bounds.min || 360;
           const wrapped = ((((rawYaw - bounds.min) % span) + span) % span) + bounds.min;
-          this.engine.vars[yawKey] = Math.round(wrapped);
+          nextYaw = Math.round(wrapped);
         } else {
-          this.engine.vars[yawKey] = Math.round(((rawYaw % 360) + 360) % 360);
+          nextYaw = Math.round(((rawYaw % 360) + 360) % 360);
         }
+        this._writeEngineVar(yawKey, nextYaw);
       }
 
       if (pitchKey && this.engine.vars) {
         const newPitch = Math.max(pMin, Math.min(pMax, this.trackballStartPitch - dy * 0.5));
-        this.engine.vars[pitchKey] = Math.round(newPitch);
-        if ('flipUnderside' in this.engine.vars && pitchKey === 'cameraPitch') {
-          this.engine.vars.flipUnderside = newPitch < 0;
-        }
+        this._writeEngineVar(pitchKey, Math.round(newPitch));
       }
 
       if (scene && (scene.camera || scene.has3D)) {
@@ -1557,100 +1579,124 @@
     handleGenericDrag(target, svgPt) {
       if (!target) return;
 
-      // Special physical resolution for Algebraic Balance Scale
-      if (this.engine && this.engine.activePresetId === 'algebra-balance') {
-        const dy = svgPt.y - this.dragStart.y;
-        const curX = (this.engine.vars && this.engine.vars.xVal) || 5;
-        const targetX = Math.max(1, Math.min(10, Math.round(5 - dy / 18)));
-        if (targetX !== curX) {
-          this.engine.setVar('xVal', targetX);
-          this.playAudioTone(300 + targetX * 35, 'triangle', 0.04, 0.12);
-        }
-        return;
-      }
-
       const axis = target.getAttribute('data-gesture-axis') || 'xy';
       const minX = parseFloat(target.getAttribute('data-gesture-min-x') || '0');
       const maxX = parseFloat(target.getAttribute('data-gesture-max-x') || '800');
       const minY = parseFloat(target.getAttribute('data-gesture-min-y') || '0');
       const maxY = parseFloat(target.getAttribute('data-gesture-max-y') || '480');
       const varName = target.getAttribute('data-gesture-var');
+      const varX = target.getAttribute('data-gesture-var-x');
+      const varY = target.getAttribute('data-gesture-var-y');
+      const attrStepRaw = target.getAttribute('data-gesture-step');
+      const attrStep = attrStepRaw !== null ? parseFloat(attrStepRaw) : NaN;
+
+      const initTx = (this.targetInitial && this.targetInitial.initTx) || 0;
+      const initTy = (this.targetInitial && this.targetInitial.initTy) || 0;
+      const initX = (this.targetInitial && this.targetInitial.x) || 0;
+      const initY = (this.targetInitial && this.targetInitial.y) || 0;
 
       const dx = svgPt.x - this.dragStart.x;
       const dy = svgPt.y - this.dragStart.y;
 
-      let targetTx = (this.targetInitial.initTx || 0) + (axis !== 'y' ? dx : 0);
-      let targetTy = (this.targetInitial.initTy || 0) + (axis !== 'x' ? dy : 0);
+      let targetTx = initTx + (axis !== 'y' ? dx : 0);
+      let targetTy = initTy + (axis !== 'x' ? dy : 0);
+      let effectiveX = targetTx;
+      let effectiveY = targetTy;
 
+      const hasBoundsX = !Number.isNaN(minX) && !Number.isNaN(maxX) && maxX > minX;
+      const useAbsX = hasBoundsX && initTx === 0 && minX >= 0 && initX >= minX - 20;
       if (axis === 'x' || axis === 'xy') {
-        if (!isNaN(minX) && !isNaN(maxX) && maxX > minX) {
-          if (this.targetInitial.initTx !== 0 || targetTx >= minX - 20) {
-            targetTx = Math.max(minX, Math.min(maxX, targetTx));
+        if (hasBoundsX) {
+          if (useAbsX) {
+            const absX = Math.max(minX, Math.min(maxX, initX + dx));
+            targetTx = absX - initX;
+            effectiveX = absX;
           } else {
-            const absX = (this.targetInitial.x || 0) + (targetTx - (this.targetInitial.initTx || 0));
-            if (absX < minX) targetTx = (this.targetInitial.initTx || 0) + (minX - (this.targetInitial.x || 0));
-            if (absX > maxX) targetTx = (this.targetInitial.initTx || 0) + (maxX - (this.targetInitial.x || 0));
+            targetTx = Math.max(minX, Math.min(maxX, targetTx));
+            effectiveX = targetTx;
           }
         }
       }
+
+      const hasBoundsY = !Number.isNaN(minY) && !Number.isNaN(maxY) && maxY > minY;
+      const useAbsY = hasBoundsY && initTy === 0 && minY >= 0 && initY >= minY - 20;
       if (axis === 'y' || axis === 'xy') {
-        if (!isNaN(minY) && !isNaN(maxY) && maxY > minY) {
-          if (this.targetInitial.initTy !== 0 || targetTy >= minY - 20) {
-            targetTy = Math.max(minY, Math.min(maxY, targetTy));
+        if (hasBoundsY) {
+          if (useAbsY) {
+            const absY = Math.max(minY, Math.min(maxY, initY + dy));
+            targetTy = absY - initY;
+            effectiveY = absY;
           } else {
-            const absY = (this.targetInitial.y || 0) + (targetTy - (this.targetInitial.initTy || 0));
-            if (absY < minY) targetTy = (this.targetInitial.initTy || 0) + (minY - (this.targetInitial.y || 0));
-            if (absY > maxY) targetTy = (this.targetInitial.initTy || 0) + (maxY - (this.targetInitial.y || 0));
+            targetTy = Math.max(minY, Math.min(maxY, targetTy));
+            effectiveY = targetTy;
           }
         }
       }
 
       target.setAttribute('transform', `translate(${targetTx.toFixed(1)}, ${targetTy.toFixed(1)})`);
 
-      if (varName && this.engine && typeof this.engine.setVar === 'function') {
+      if (varX && axis !== 'y') {
+        let coordX;
+        if (initTx !== 0 || (hasBoundsX && minX < 0) || useAbsX) {
+          coordX = effectiveX;
+        } else {
+          coordX = hasBoundsX ? Math.max(minX, Math.min(maxX, svgPt.x)) : svgPt.x;
+        }
+        this._writeEngineVar(varX, Math.round(coordX));
+      }
+
+      if (varY && axis !== 'x') {
+        let coordY;
+        if (initTy !== 0 || (hasBoundsY && minY < 0) || useAbsY) {
+          coordY = effectiveY;
+        } else {
+          coordY = hasBoundsY ? Math.max(minY, Math.min(maxY, svgPt.y)) : svgPt.y;
+        }
+        this._writeEngineVar(varY, Math.round(coordY));
+      }
+
+      if (varName) {
         const ratio = axis === 'y'
-          ? Math.max(0, Math.min(1, (targetTy - minY) / (maxY - minY || 1)))
-          : Math.max(0, Math.min(1, (targetTx - minX) / (maxX - minX || 1)));
+          ? Math.max(0, Math.min(1, (effectiveY - minY) / ((maxY - minY) || 1)))
+          : Math.max(0, Math.min(1, (effectiveX - minX) / ((maxX - minX) || 1)));
 
         let vMin = 0;
         let vMax = 100;
-        let stepVal = 1;
+        let stepVal = (!Number.isNaN(attrStep) && attrStep > 0) ? attrStep : 1;
         let foundConfig = false;
 
-        const sceneInputs = this.engine.scene && this.engine.scene.inputs;
+        const sceneInputs = this.engine && this.engine.scene && this.engine.scene.inputs;
         if (Array.isArray(sceneInputs)) {
           const inp = sceneInputs.find(i => i && i.var === varName);
           if (inp) {
             if (typeof inp.min === 'number') vMin = inp.min;
             if (typeof inp.max === 'number') vMax = inp.max;
-            if (typeof inp.step === 'number') stepVal = inp.step;
+            if (typeof inp.step === 'number' && Number.isNaN(attrStep)) stepVal = inp.step;
             foundConfig = true;
           }
         }
 
-        if (!foundConfig && this.engine.scene && this.engine.scene.vars) {
+        if (!foundConfig && this.engine && this.engine.scene && this.engine.scene.vars) {
           const rawVar = this.engine.scene.vars[varName];
           if (rawVar && typeof rawVar === 'object') {
             if (typeof rawVar.min === 'number') vMin = rawVar.min;
             if (typeof rawVar.max === 'number') vMax = rawVar.max;
-            if (typeof rawVar.step === 'number') stepVal = rawVar.step;
-            foundConfig = true;
+            if (typeof rawVar.step === 'number' && Number.isNaN(attrStep)) stepVal = rawVar.step;
           }
         }
 
-        if (!foundConfig && varName === 'selectedRite') {
-          vMin = 1.0;
-          vMax = 6.0;
-          stepVal = 1.0;
-        }
-
         const mapped = vMin + ratio * (vMax - vMin);
-        const stepped = Math.round(mapped / stepVal) * stepVal;
-        this.engine.setVar(varName, stepped);
+        const rawStepped = stepVal > 0
+          ? (vMin + Math.round((mapped - vMin) / stepVal) * stepVal)
+          : mapped;
+        const clampedVal = Math.max(vMin, Math.min(vMax, rawStepped));
+        const decimals = (String(stepVal).split('.')[1] || '').length;
+        const finalVal = Number(clampedVal.toFixed(Math.min(6, decimals)));
+        this._writeEngineVar(varName, finalVal);
       }
 
-      if (this.engine) {
-        this.engine.applyBindings(this.engine.progress);
+      if (this.engine && typeof this.engine.applyBindings === 'function') {
+        this.engine.applyBindings(this.engine.progress || 0);
       }
     }
 
@@ -1663,17 +1709,11 @@
       let angleDeg = angleRad * (180 / Math.PI);
       if (angleDeg < 0) angleDeg += 360;
       target.setAttribute('transform', `rotate(${angleDeg.toFixed(1)} ${cx} ${cy})`);
-      const varX = target.getAttribute('data-gesture-var-x');
-      const varY = target.getAttribute('data-gesture-var-y');
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        if (varX) this.engine.setVar(varX, Math.round(targetTx));
-        if (varY) this.engine.setVar(varY, Math.round(targetTy));
-      }
-      if (varName && this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar(varName, parseFloat(angleDeg.toFixed(1)));
+      if (varName) {
+        this._writeEngineVar(varName, parseFloat(angleDeg.toFixed(1)));
       }
       if (this.engine && typeof this.engine.applyBindings === 'function') {
-        this.engine.applyBindings(this.engine.progress);
+        this.engine.applyBindings(this.engine.progress || 0);
       }
     }
 

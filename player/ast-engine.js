@@ -64,13 +64,19 @@
       this.captureActive = true;
     }
 
-    stopCapture() {
+    stopCapture(vsyncBudgetMs = 16.67) {
       this.captureActive = false;
+      const budget = typeof vsyncBudgetMs === 'number' && Number.isFinite(vsyncBudgetMs) && vsyncBudgetMs > 0
+        ? vsyncBudgetMs
+        : 16.67;
+      const severeBudget = budget * 1.15;
       const n = Math.min(this.captureCount, this.captureCap);
       const validDeltas = [];
       let sumD = 0;
       let sumC = 0;
       let overBudget = 0;
+      let rawVsyncOverruns = 0;
+      let severeFrameDrops = 0;
       const validComputes = [];
       for (let i = 0; i < n; i++) {
         const d = this.captureDeltas[i];
@@ -79,6 +85,8 @@
           validDeltas.push(d);
           sumD += d;
           if (d > 16.67) overBudget++;
+          if (d > budget) rawVsyncOverruns++;
+          if (d > severeBudget) severeFrameDrops++;
         }
         validComputes.push(c);
         sumC += c;
@@ -92,7 +100,7 @@
         const idx = Math.min(arr.length - 1, Math.max(0, Math.ceil(arr.length * p) - 1));
         return arr[idx];
       };
-      const meanMs = dLen > 0 ? sumD / dLen : 16.66;
+      const meanMs = dLen > 0 ? sumD / dLen : budget;
       const p95Ms = pct(validDeltas, 0.95);
       const p99Ms = pct(validDeltas, 0.99);
       const maxMs = dLen > 0 ? validDeltas[dLen - 1] : 0;
@@ -106,7 +114,12 @@
         maxMs: Number(maxMs.toFixed(3)),
         framesOver16_67ms: overBudget,
         overBudgetPct: dLen > 0 ? Number(((overBudget / dLen) * 100).toFixed(2)) : 0,
-        estimatedFps: meanMs > 0 ? Number((1000 / meanMs).toFixed(1)) : 60,
+        vsyncBudgetMs: Number(budget.toFixed(2)),
+        rawVsyncOverruns,
+        rawVsyncOverrunPct: dLen > 0 ? Number(((rawVsyncOverruns / dLen) * 100).toFixed(2)) : 0,
+        severeFrameDrops,
+        severeFrameDropPct: dLen > 0 ? Number(((severeFrameDrops / dLen) * 100).toFixed(2)) : 0,
+        estimatedFps: meanMs > 0 ? Number((1000 / meanMs).toFixed(1)) : Number((1000 / budget).toFixed(1)),
         meanComputeMs: Number(meanComputeMs.toFixed(3)),
         p95ComputeMs: Number(p95ComputeMs.toFixed(3)),
       };
@@ -7137,7 +7150,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const minY = minYStr !== null ? parseFloat(minYStr) : min;
           const maxY = maxYStr !== null ? parseFloat(maxYStr) : max;
 
-          const varName = extractSlot.call(null, bodyText, /:var\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:bind-var\s+"([^"]+)"/i);
+          const cxStr = extractSlot.call(null, bodyText, /:cx\s+([\d\.\-]+)/i);
+          const cyStr = extractSlot.call(null, bodyText, /:cy\s+([\d\.\-]+)/i);
+          const cx = cxStr !== null ? parseFloat(cxStr) : undefined;
+          const cy = cyStr !== null ? parseFloat(cyStr) : undefined;
+
+          const varName = extractQuoted(bodyText, 'var') || extractQuoted(bodyText, 'bind-var');
+          const varX = extractQuoted(bodyText, 'var-x') || extractQuoted(bodyText, 'varX');
+          const varY = extractQuoted(bodyText, 'var-y') || extractQuoted(bodyText, 'varY');
           const yawVar = extractSlot.call(null, bodyText, /:yaw-var\s+"([^"]+)"/i) || null;
           const pitchVar = extractSlot.call(null, bodyText, /:pitch-var\s+"([^"]+)"/i) || null;
           const pitchMin = parseFloat(extractSlot.call(null, bodyText, /:pitch-min\s+([\d\.\-]+)/i) || '-65');
@@ -7151,12 +7171,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             || extractSlot.call(null, bodyText, /:set-var\s+([^\s\)]+)/i)
             || extractSlot.call(null, bodyText, /:set\s+"([^"]+)"/i)
             || extractSlot.call(null, bodyText, /:set\s+([^\s\)]+)/i);
-          const stepVar = extractSlot.call(null, bodyText, /:step-var\s+"([^"]+)"/i)
-            || extractSlot.call(null, bodyText, /:step-var\s+([^\s\)]+)/i)
-            || extractSlot.call(null, bodyText, /:step\s+"([^"]+)"/i)
-            || extractSlot.call(null, bodyText, /:step\s+([^\s\)]+)/i);
+          const rawStepAttr = extractSlotValue(bodyText, 'step');
+          const stepVar = extractQuoted(bodyText, 'step-var')
+            || (typeof rawStepAttr === 'string' ? rawStepAttr : null);
+          const step = typeof rawStepAttr === 'number' ? rawStepAttr : undefined;
           const holdVar = extractSlot.call(null, bodyText, /:hold-var\s+"([^"]+)"/i)
             || extractSlot.call(null, bodyText, /:hold-var\s+([^\s\)]+)/i);
+
+          const expr = extractQuoted(bodyText, 'expr');
+          const toneRaw = extractSlotValue(bodyText, 'tone');
+          const tone = toneRaw !== undefined && toneRaw !== null ? String(toneRaw) : null;
+          const speak = extractQuoted(bodyText, 'speak');
 
           const val = extractSlotValue(bodyText, 'val');
           const releaseVal = extractSlotValue(bodyText, 'release-val');
@@ -7192,7 +7217,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               maxX,
               minY,
               maxY,
+              cx,
+              cy,
               var: varName,
+              varX,
+              varY,
               yawVar,
               pitchVar,
               pitchMin,
@@ -7200,7 +7229,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               toggleVar,
               setVar,
               stepVar,
+              step,
               holdVar,
+              expr,
+              tone,
+              speak,
               val,
               releaseVal,
               hold,
@@ -12373,9 +12406,28 @@ function setupPostMessageBridge(engine, uiController) {
         break;
       }
       case 'STOP_PROF_CAPTURE': {
+        const vsyncBudgetMs = typeof data.vsyncBudgetMs === 'number' && Number.isFinite(data.vsyncBudgetMs) && data.vsyncBudgetMs > 0
+          ? data.vsyncBudgetMs
+          : 16.67;
         const stats = engine.profiler && typeof engine.profiler.stopCapture === 'function'
-          ? engine.profiler.stopCapture()
-          : { sampleCount: 0, meanMs: 16.66, p95Ms: 16.66, p99Ms: 16.66, maxMs: 16.66, framesOver16_67ms: 0, overBudgetPct: 0, estimatedFps: 60, meanComputeMs: 0, p95ComputeMs: 0 };
+          ? engine.profiler.stopCapture(vsyncBudgetMs)
+          : {
+              sampleCount: 0,
+              meanMs: vsyncBudgetMs,
+              p95Ms: vsyncBudgetMs,
+              p99Ms: vsyncBudgetMs,
+              maxMs: vsyncBudgetMs,
+              framesOver16_67ms: 0,
+              overBudgetPct: 0,
+              vsyncBudgetMs: Number(vsyncBudgetMs.toFixed(2)),
+              rawVsyncOverruns: 0,
+              rawVsyncOverrunPct: 0,
+              severeFrameDrops: 0,
+              severeFrameDropPct: 0,
+              estimatedFps: Number((1000 / vsyncBudgetMs).toFixed(1)),
+              meanComputeMs: 0,
+              p95ComputeMs: 0
+            };
         const memObj = (typeof performance !== 'undefined' && performance.memory) ? performance.memory : null;
         let emitterParticles = 0;
         if (engine.emitters && typeof engine.emitters.values === 'function') {
