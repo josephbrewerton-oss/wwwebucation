@@ -1822,6 +1822,216 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   passedTests++;
 }
 
+// =========================================================================
+// TEST 24: Batch 2 STEM Controls Declarative VM Migration (Electric Circuits, Kinetic Gas, DNA Helix)
+// =========================================================================
+{
+  console.log('\n[Test 24] Auditing Batch 2 STEM declarative VM migration (electric-circuits, kinetic-gas, dna-helix)...');
+  const gesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-gestures.js'), 'utf8');
+  for (const legacySym of ['handlePistonDrag', 'toggleSwitch', 'dna-control-ribbon']) {
+    assert(
+      !gesturesSrc.includes(legacySym),
+      `ast-gestures.js must not contain removed Batch 2 symbol "${legacySym}"`
+    );
+  }
+
+  const makeEl = (id: string, attrs: Record<string, string> = {}) => {
+    const attrMap = new Map<string, string>(Object.entries(attrs));
+    const el: any = {
+      id,
+      style: {},
+      dataset: {},
+      setAttribute: (k: string, v: string) => attrMap.set(k, String(v)),
+      getAttribute: (k: string) => (attrMap.has(k) ? attrMap.get(k)! : null),
+      hasAttribute: (k: string) => attrMap.has(k),
+      appendChild: (c: any) => c,
+      append: () => {},
+      replaceChildren: () => {},
+      insertBefore: (c: any) => c,
+      querySelectorAll: () => [],
+      querySelector: () => null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      closest: (sel: string) => (el.matches(sel) ? el : null),
+      matches: (sel: string) =>
+        sel.split(',').some((s) => {
+          const t = s.trim();
+          if (t === `#${id}`) return true;
+          if (t.startsWith('.')) {
+            const cls = t.slice(1);
+            const classes = (attrMap.get('class') || '').split(/\s+/).filter(Boolean);
+            if (classes.includes(cls)) return true;
+          }
+          const bare = /^\[([a-zA-Z0-9_-]+)\]$/.exec(t);
+          if (bare && attrMap.has(bare[1])) return true;
+          const m = /^\[([a-zA-Z0-9_-]+)="([^"]+)"\]$/.exec(t);
+          if (m && attrMap.get(m[1]) === m[2]) return true;
+          return false;
+        }),
+      contains: (other: any) => other === el,
+      getBBox: () => ({ x: 0, y: 0, width: 20, height: 20 }),
+    };
+    return el;
+  };
+
+  const bootHeadlessStage = async (sceneId: string, elements: any[]) => {
+    const astRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', `${sceneId}.ast`), 'utf8');
+    const parseEng = createHeadlessEngine();
+    const parsedScene = parseEng.parseAst(astRaw);
+    await parseEng.loadSceneData(parsedScene, false);
+
+    const containerStub = makeEl('stage-container');
+    const stageSvg = makeEl('stage-svg');
+    stageSvg.parentElement = containerStub;
+    stageSvg.parentNode = containerStub;
+    stageSvg.querySelectorAll = (sel: string) => elements.filter((n) => n.matches(sel));
+    stageSvg.querySelector = (sel: string) => elements.find((n) => n.matches(sel)) || null;
+    stageSvg.createSVGPoint = () => ({ x: 0, y: 0, matrixTransform: function () { return { x: this.x, y: this.y }; } });
+    stageSvg.getScreenCTM = () => ({ inverse: () => ({}) });
+
+    const tones: number[] = [];
+    const vmEngine: any = {
+      progress: 0,
+      isPlaying: false,
+      isContinuousSim: true,
+      scene: parsedScene,
+      vars: { ...parseEng.vars },
+      computed: {},
+      setVar(name: string, val: any) { this.vars[name] = val; },
+      applyBindings() {},
+      updateComputedVars() {},
+      seek(t: number) { this.progress = t; },
+      pause() { this.isPlaying = false; },
+    };
+
+    const gSb: any = {
+      window: { addEventListener: () => {}, focus: () => {} },
+      document: {
+        getElementById: () => null,
+        createElementNS: () => makeEl('tmp'),
+        createElement: () => makeEl('tmp'),
+        createTextNode: (t: string) => ({ textContent: t }),
+      },
+      performance: { now: () => 1000 },
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {},
+      setTimeout: (fn: Function) => { fn(); return 1; },
+      clearTimeout: () => {},
+      console,
+      Math, Number, String, Boolean, Array, Object, Set, Map, Date, Function, parseFloat, parseInt, isNaN,
+    };
+    gSb.globalThis = gSb;
+    gSb.self = gSb.window;
+    vm.runInNewContext(gesturesSrc, gSb, { filename: 'static/player/ast-gestures.js' });
+
+    const gVm = new gSb.window.ASTDirectGestureSubsystem(vmEngine);
+    gVm.playAudioTone = (hz: number) => tones.push(hz);
+    gVm.createTouchRipple = () => {};
+    gVm.init(stageSvg, null);
+
+    return { parsedScene, vmEngine, gVm, tones };
+  };
+
+  // 1. Electric Circuits
+  {
+    const ecSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'electric-circuits.svg'), 'utf8');
+    assert(!ecSvg.includes('data-interactive="switch"'), 'electric-circuits.svg must not contain legacy data-interactive="switch"');
+    const switchEl = makeEl('circuit-switch', { 'data-state': 'closed' });
+    const { vmEngine, gVm, tones } = await bootHeadlessStage('electric-circuits', [switchEl]);
+    assert.strictEqual(vmEngine.vars.switchClosed, true, 'electric-circuits must default switchClosed to true');
+    gVm.handlePointerDown({ target: switchEl, clientX: 370, clientY: 365, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.switchClosed, false, 'clicking #circuit-switch must toggle switchClosed to false');
+    assert(tones.includes(360), 'clicking #circuit-switch must play 360Hz snap tone');
+    gVm.handlePointerDown({ target: switchEl, clientX: 370, clientY: 365, pointerId: 2, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.switchClosed, true, 'clicking #circuit-switch again must toggle switchClosed back to true');
+  }
+
+  // 2. Kinetic Gas
+  {
+    const kgSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'kinetic-gas.svg'), 'utf8');
+    assert(!kgSvg.includes('data-interactive="gas-state"'), 'kinetic-gas.svg must not contain legacy data-interactive="gas-state"');
+    const pistonEl = makeEl('piston-assembly', { transform: 'translate(430, 0)' });
+    const indSolid = makeEl('ind-solid');
+    const indLiquid = makeEl('ind-liquid');
+    const indGas = makeEl('ind-gas');
+    const { vmEngine, gVm, tones } = await bootHeadlessStage('kinetic-gas', [pistonEl, indSolid, indLiquid, indGas]);
+
+    assert.strictEqual(pistonEl.getAttribute('data-draggable'), 'generic', 'kinetic-gas #piston-assembly must register as generic draggable');
+    gVm.handlePointerDown({ target: pistonEl, clientX: 430, clientY: 200, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(gVm.dragMode, 'generic', 'piston pointerdown must route to generic dragMode');
+    gVm.handlePointerMove({ clientX: 250, clientY: 200, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.volume, 0.35, 'dragging piston to x=250 must compress volume to 0.35');
+    gVm.handlePointerMove({ clientX: 340, clientY: 200, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.volume, 0.68, 'dragging piston to midpoint x=340 must set volume to 0.68');
+    gVm.handlePointerUp({ pointerId: 1 });
+
+    gVm.handlePointerDown({ target: indSolid, clientX: 590, clientY: 330, pointerId: 2, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.state, 'solid', 'clicking #ind-solid must set state="solid"');
+    assert.strictEqual(vmEngine.vars.temp, 85, 'clicking #ind-solid must set temp=85');
+    assert(tones.includes(220), 'clicking #ind-solid must play 220Hz tone');
+
+    gVm.handlePointerDown({ target: indLiquid, clientX: 650, clientY: 330, pointerId: 3, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.state, 'liquid', 'clicking #ind-liquid must set state="liquid"');
+    assert.strictEqual(vmEngine.vars.temp, 220, 'clicking #ind-liquid must set temp=220');
+    assert(tones.includes(440), 'clicking #ind-liquid must play 440Hz tone');
+
+    gVm.handlePointerDown({ target: indGas, clientX: 720, clientY: 330, pointerId: 4, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.state, 'gas', 'clicking #ind-gas must set state="gas"');
+    assert.strictEqual(vmEngine.vars.temp, 300, 'clicking #ind-gas must set temp=300');
+    assert(tones.includes(660), 'clicking #ind-gas must play 660Hz tone');
+  }
+
+  // 3. DNA Helix
+  {
+    const dnaSvg = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'dna-helix.svg'), 'utf8');
+    assert(!dnaSvg.includes('data-action="dna-'), 'dna-helix.svg must not contain legacy data-action="dna-*"');
+    const btnUnzip50 = makeEl('btn-dna-unzip-50');
+    const btnFilterAt = makeEl('btn-dna-filter-at');
+    const btnSpeed2 = makeEl('btn-dna-speed-2');
+    const rung0 = makeEl('dna-line-0', { class: 'dna-rung-at', 'data-rung': '1' });
+    const rung1 = makeEl('dna-ca-1', { class: 'dna-rung-cg', 'data-rung': '2' });
+
+    const { parsedScene, vmEngine, gVm, tones } = await bootHeadlessStage('dna-helix', [
+      btnUnzip50, btnFilterAt, btnSpeed2, rung0, rung1,
+    ]);
+
+    // First click rung 0 (A=T), verify chord + inspectedRung=1
+    gVm.handlePointerDown({ target: rung0, clientX: 400, clientY: 60, pointerId: 1, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.inspectedRung, 1, 'clicking .dna-rung-at must set inspectedRung=1');
+    assert(tones.includes(523.25) && tones.includes(659.25), 'clicking A=T rung must play 523.25Hz + 659.25Hz');
+
+    // Click rung 1 (C=G), verify chord + inspectedRung=2
+    gVm.handlePointerDown({ target: rung1, clientX: 300, clientY: 80, pointerId: 2, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.inspectedRung, 2, 'clicking .dna-rung-cg must set inspectedRung=2');
+    assert(tones.includes(440) && tones.includes(554.37), 'clicking C=G rung must play C=G chord');
+
+    // Click unzip 50 -> resets inspectedRung=0 and sets unzipProgress=0.5
+    gVm.handlePointerDown({ target: btnUnzip50, clientX: 250, clientY: 440, pointerId: 3, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.unzipProgress, 0.5, 'clicking #btn-dna-unzip-50 must set unzipProgress=0.5');
+    assert.strictEqual(vmEngine.vars.inspectedRung, 0, 'clicking #btn-dna-unzip-50 must clear inspectedRung to 0');
+    assert(tones.includes(554.37), 'clicking #btn-dna-unzip-50 must play 554.37Hz');
+
+    // Click speed 2x and filter AT
+    gVm.handlePointerDown({ target: btnSpeed2, clientX: 730, clientY: 440, pointerId: 4, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.rotSpeed, 2.0, 'clicking #btn-dna-speed-2 must set rotSpeed=2.0');
+    assert(tones.includes(600), 'clicking #btn-dna-speed-2 must play 600Hz');
+
+    gVm.handlePointerDown({ target: btnFilterAt, clientX: 520, clientY: 440, pointerId: 5, preventDefault: () => {} });
+    assert.strictEqual(vmEngine.vars.baseFilter, 'at', 'clicking #btn-dna-filter-at must set baseFilter="at"');
+    assert(tones.includes(659.25), 'clicking #btn-dna-filter-at must play 659.25Hz');
+
+    // Verify binding expressions for DNA status & baseFilter exist
+    const cgLineBinding = (parsedScene.bindings || []).find((b: any) => b.target === '#dna-line-1' && b.attr === 'stroke-opacity');
+    assert(cgLineBinding, 'dna-helix.ast must declare stroke-opacity binding for #dna-line-1');
+    const evalFilter = new Function('vars', 'return ' + cgLineBinding.expr);
+    assert.strictEqual(evalFilter({ baseFilter: 'at' }), '0.12', 'dna-line-1 stroke-opacity must dim to 0.12 when baseFilter="at"');
+    assert.strictEqual(evalFilter({ baseFilter: 'all' }), '1.0', 'dna-line-1 stroke-opacity must be 1.0 when baseFilter="all"');
+  }
+
+  console.log('[✅ PASS] Sim 24: Batch 2 STEM declarative VM migration (electric-circuits, kinetic-gas, dna-helix) verified cleanly.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');
