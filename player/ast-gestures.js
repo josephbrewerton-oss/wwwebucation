@@ -1475,8 +1475,7 @@
       }
 
       if (options.bareStrokes) {
-        return strokeLines.join('
-');
+        return strokeLines.join('\n');
       }
 
       return `(:ink-session
@@ -1484,8 +1483,7 @@
   :timestamp ${timestamp}
   :stroke-count ${this.strokes.length}
   (:strokes (
-${strokeLines.join('
-')}
+${strokeLines.join('\n')}
   ))
 )`;
     }
@@ -1512,7 +1510,7 @@ ${strokeLines.join('
         for (let i = pos; i < astString.length; i++) {
           const ch = astString[i];
           if (escape) { escape = false; continue; }
-          if (ch === '\') { escape = true; continue; }
+          if (ch === '\\') { escape = true; continue; }
           if (ch === '"') { inQuote = !inQuote; continue; }
           if (!inQuote) {
             if (ch === '(') depth++;
