@@ -1,4 +1,4 @@
-(:scene :id "mountain-elevation" :type "Sim" :oak-id "OAK-KS2-GEO-002" :title "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science" :stage "KS2/KS3 MATHS & GEOGRAPHY" :duration 16.0
+(:scene :id "mountain-elevation" :type "Slide" :oak-id "OAK-KS2-GEO-002" :title "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science" :stage "KS2/KS3 MATHS & GEOGRAPHY" :duration 16.0
   (:vars (
     (:var :name "seaLevelTemp" :val 20 :min 0 :max 35 :step 1 :unit "°C" :label "Sea Level Temperature")
     (:var :name "peakHeight" :val 3000 :min 1000 :max 5000 :step 200 :unit "m" :label "Mountain Summit Height")
@@ -14,7 +14,7 @@
     (:name "clampedT" :expr "Math.min(1.0, Math.max(0.0, t))")
   ))
   (:gestures (
-    (:draggable :target "#climber-marker" :axis "xy" :min 180 :max 400)
+    (:draggable :target "#climber-beacon" :axis "xy" :min-x 180 :max-x 400 :min-y 140 :max-y 380 :invert true :seek true :tone 440)
   ))
   (:subtitles (
     (:start 0.00 :end 0.30 :en "Watch the climber depart Base Camp (0m). Notice the difference between walking distance along the slope and true vertical height!" :es "¡Mira al escalador salir del campamento base (0m)! Nota la diferencia entre la distancia caminada y la altura vertical real.")
@@ -40,10 +40,7 @@
     )
   ))
   (:bindings (
-    (:target "#climber-marker" :attr "cx" :expr "180 + Math.min(1, t) * 220")
-    (:target "#climber-marker" :attr "cy" :expr "380 - Math.min(1, t) * 240")
-    (:target "#climber-pulse"  :attr "cx" :expr "180 + Math.min(1, t) * 220")
-    (:target "#climber-pulse"  :attr "cy" :expr "380 - Math.min(1, t) * 240")
+    (:target "#climber-beacon" :attr "transform" :expr "'translate(' + (180 + Math.min(1, t) * 220).toFixed(1) + ', ' + (380 - Math.min(1, t) * 240).toFixed(1) + ')'")
     
     (:target "#vertical-line" :attr "x1" :expr "180 + Math.min(1, t) * 220")
     (:target "#vertical-line" :attr "x2" :expr "180 + Math.min(1, t) * 220")
@@ -54,9 +51,6 @@
     (:target "#base-line" :attr "x2" :expr "180 + Math.min(1, t) * 220")
     
     (:target "#altitude-text" :attr "textContent" :expr "'Altitude: ' + Math.round(Math.min(1, t) * (vars.peakHeight || 3000)) + ' m'")
-    (:target "#altitude-text" :attr "x" :expr "195 + Math.min(1, t) * 220")
-    (:target "#altitude-text" :attr "y" :expr "380 - (Math.min(1, t) * 240) / 2")
-    
     (:target "#temp-text" :attr "textContent" :expr "'Temp: ' + ((vars.seaLevelTemp || 20) - (Math.min(1, t) * (vars.peakHeight / 1000) * 6.5)).toFixed(1) + ' °C'")
     (:target "#hypotenuse-text" :attr "textContent" :expr "'Slope Distance: ' + Math.round(Math.min(1, t) * Math.sqrt(Math.pow(vars.peakHeight || 3000, 2) + Math.pow((vars.peakHeight || 3000) * 1.154, 2))) + ' m'")
   ))

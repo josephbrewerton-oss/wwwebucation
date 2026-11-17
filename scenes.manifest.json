@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T08:44:41.054Z",
+  "generatedAt": "2026-11-17T09:02:15.751Z",
   "totalScenes": 71,
   "inputDirs": [
     "static/cartridges",
@@ -737,7 +737,7 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 6,
+      "bindingsCount": 88,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -1164,7 +1164,7 @@
     {
       "id": "mountain-elevation",
       "base": "mountain-elevation",
-      "type": "Sim",
+      "type": "Slide",
       "title": "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science",
       "stage": "KS2/KS3 MATHS & GEOGRAPHY",
       "duration": 16,
@@ -1185,7 +1185,7 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 15,
+      "bindingsCount": 10,
       "hasCheckpoints": true,
       "checkpointCount": 1
     },

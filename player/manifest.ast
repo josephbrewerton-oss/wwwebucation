@@ -247,7 +247,7 @@
 
     (:cartridge
       :id "mountain-elevation"
-      :type "Sim"
+      :type "Slide"
       :title "Mountain Altitude: Elevation, Hypotenuse & Atmospheric Science"
       :stage "KS2/KS3 MATHS & GEOGRAPHY"
       :oak-id "OAK-KS2-GEO-002"

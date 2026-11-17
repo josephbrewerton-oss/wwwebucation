@@ -46,8 +46,10 @@
   <line x1="180" y1="380" x2="400" y2="140" stroke="#f59e0b" stroke-width="2" stroke-dasharray="5,3" opacity="0.8" />
 
   <!-- Active Climber Beacon -->
-  <circle id="climber-pulse" cx="180" cy="380" r="14" fill="#ef4444" opacity="0.25" />
-  <circle id="climber-marker" cx="180" cy="380" r="7" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
+  <g id="climber-beacon" transform="translate(180, 380)" data-pedagogical="mtn-climber" style="cursor: grab;">
+    <circle id="climber-pulse" cx="0" cy="0" r="14" fill="#ef4444" opacity="0.25" />
+    <circle id="climber-marker" cx="0" cy="0" r="7" fill="#ef4444" stroke="#ffffff" stroke-width="2" />
+  </g>
 
   <!-- HUD Telemetry Labels -->
   <g id="telemetry-hud" transform="translate(20, 25)">
