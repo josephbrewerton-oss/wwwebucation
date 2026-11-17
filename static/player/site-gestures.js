@@ -1,21 +1,87 @@
 /**
- * static/player/ast-gestures.js
+ * static/player/site-gestures.js
  *
- * St Joseph's Educational Media Suite - Zero-Bloat Flash-Caliber Direct Manipulation Subsystem
+ * St Joseph's Educational Media Suite - Declarative Site Gesture Bridge & Direct Manipulation VM
  * Copyright (c) 2026 Joseph Brewerton.
  * SPDX-License-Identifier: AGPL-3.0-or-later OR Commercial-License
  *
- * Pure Declarative Virtual Machine for Cartridge-Driven Direct Interactivity:
- * 1. Declarative Pointer & Keyboard VM (:clickable, :holdable, :trackball, :rotatable, 1D/2D :draggable)
- * 2. Bidirectional Slider-to-Variable Direct Stage Binding (data-bind-input)
- * 3. Stage-Embedded Glassmorphism Floating HUD & Live Parameter Dock
- * 4. Smartboard & Stylus Pen Vector Annotation Whiteboard Layer (120Hz-240Hz coalesced)
- * 5. Interactive Pedagogical X-Ray Hotspot Inspector
- * 6. Multi-sensory Procedural WebAudio Sonification
+ * Reads platform rules, tools, palette, tones, and default switches from player-gestures.ast,
+ * merges per-cartridge (:controls ...) overrides, and drives the SVG stage hardware bridge.
  */
 
 (function (global) {
   'use strict';
+
+  const DEFAULT_CONTROLS = {
+    'arrow-step': true,
+    'num-jump': true,
+    'scrub': true,
+    'space-play': true,
+    'quiz-keys': true,
+    'whiteboard': true,
+    'xray': true,
+    'audio': true,
+    'param-hud': true
+  };
+
+  const DEFAULT_UNIVERSAL_KEYS = [
+    { code: 'ArrowRight', switch: 'arrow-step', action: 'step-primary-var', delta: 1, tone: 440 },
+    { code: 'PageDown',   switch: 'arrow-step', action: 'step-primary-var', delta: 1, tone: 440 },
+    { code: 'ArrowLeft',  switch: 'arrow-step', action: 'step-primary-var', delta: -1, tone: 440 },
+    { code: 'PageUp',     switch: 'arrow-step', action: 'step-primary-var', delta: -1, tone: 440 },
+    { code: 'Home',       switch: 'arrow-step', action: 'jump-primary-min', tone: 523 },
+    { code: 'End',        switch: 'arrow-step', action: 'jump-primary-max', tone: 523 },
+    { code: 'Digit1',     switch: 'num-jump',   action: 'set-primary-var', val: 1, tone: 440 },
+    { code: 'Digit2',     switch: 'num-jump',   action: 'set-primary-var', val: 2, tone: 440 },
+    { code: 'Digit3',     switch: 'num-jump',   action: 'set-primary-var', val: 3, tone: 440 },
+    { code: 'Digit4',     switch: 'num-jump',   action: 'set-primary-var', val: 4, tone: 440 },
+    { code: 'Digit5',     switch: 'num-jump',   action: 'set-primary-var', val: 5, tone: 440 },
+    { code: 'Digit6',     switch: 'num-jump',   action: 'set-primary-var', val: 6, tone: 440 },
+    { code: 'Digit7',     switch: 'num-jump',   action: 'set-primary-var', val: 7, tone: 440 },
+    { code: 'Digit8',     switch: 'num-jump',   action: 'set-primary-var', val: 8, tone: 440 },
+    { code: 'Digit9',     switch: 'num-jump',   action: 'set-primary-var', val: 9, tone: 440 },
+    { code: 'Space',      switch: 'space-play', action: 'toggle-play' },
+    { key: 'w',           switch: 'whiteboard', action: 'toggle-pen' }
+  ];
+
+  const DEFAULT_WHITEBOARD = {
+    tools: [
+      { id: 'pen',         icon: '✏️', title: 'Precision Pen (Smooth 2px-4px)', width: 3.5 },
+      { id: 'marker',      icon: '🖍️', title: 'Whiteboard Marker (Rich 6px)', width: 6.0 },
+      { id: 'highlighter', icon: '✨', title: 'Pedagogical Highlighter (Soft Glow 12px)', width: 12.0 },
+      { id: 'eraser',      icon: '🧽', title: 'Smart Stroke Eraser', width: 24.0 }
+    ],
+    widths: [2.5, 5.5, 11.0],
+    palette: [
+      { hex: '#facc15', name: 'Gold' },
+      { hex: '#38bdf8', name: 'Cyan' },
+      { hex: '#4ade80', name: 'Green' },
+      { hex: '#f43f5e', name: 'Red' },
+      { hex: '#c084fc', name: 'Purple' },
+      { hex: '#ffffff', name: 'White' },
+      { hex: '#0f172a', name: 'Charcoal' }
+    ]
+  };
+
+  const DEFAULT_TONES = {
+    click:   { freq: 520, wave: 'sine',     duration: 0.04, gain: 0.10 },
+    key:     { freq: 440, wave: 'triangle', duration: 0.04, gain: 0.12 },
+    grab:    { freq: 380, wave: 'triangle', duration: 0.06, gain: 0.15 },
+    release: { freq: 440, wave: 'sine',     duration: 0.05, gain: 0.15 },
+    erase:   { freq: 220, wave: 'sine',     duration: 0.04, gain: 0.15 },
+    undo:    { freq: 330, wave: 'sine',     duration: 0.05, gain: 0.15 },
+    redo:    { freq: 523, wave: 'sine',     duration: 0.05, gain: 0.15 }
+  };
+
+  // Resolve script base URL at load time so player-gestures.ast can be fetched reliably
+  const SCRIPT_BASE_URL = (() => {
+    try {
+      if (typeof document !== 'undefined' && document.currentScript && document.currentScript.src) {
+        return document.currentScript.src.replace(/[^/]+$/, '');
+      }
+    } catch {}
+    return '';
+  })();
 
   class ASTDirectGestureSubsystem {
     constructor(engine, options = {}) {
@@ -27,6 +93,20 @@
       this.hudRoot = null;
       this.xrayTooltip = null;
 
+      // Player Gesture Profile & Active Cartridge Controls
+      this.playerProfile = {
+        defaults: { ...DEFAULT_CONTROLS },
+        universalKeys: [...DEFAULT_UNIVERSAL_KEYS],
+        whiteboard: {
+          tools: [...DEFAULT_WHITEBOARD.tools],
+          widths: [...DEFAULT_WHITEBOARD.widths],
+          palette: [...DEFAULT_WHITEBOARD.palette]
+        },
+        tones: { ...DEFAULT_TONES }
+      };
+      this.activeControls = { ...DEFAULT_CONTROLS };
+      this._profileLoaded = false;
+
       // Pointer Drag State
       this.isDragging = false;
       this.dragTarget = null;
@@ -37,8 +117,8 @@
 
       // Pen Annotation Whiteboard State
       this.isPenActive = false;
-      this.currentTool = 'pen'; // 'pen', 'marker', 'highlighter', 'eraser'
-      this.currentInkColor = '#facc15'; // Neon Gold default
+      this.currentTool = 'pen';
+      this.currentInkColor = '#facc15';
       this.currentInkWidth = 3.5;
       this.isDrawing = false;
       this.currentStroke = null;
@@ -87,7 +167,15 @@
       this.setupEventListeners();
       this.setupGlassHud();
       this.setupXRayTooltip();
+      this._syncCartridgeControls();
       this.enhanceSceneInteractivity();
+
+      // Load player-gestures.ast asynchronously and re-apply HUD/controls once loaded
+      this.loadPlayerGesturesProfile().then(() => {
+        this._rebuildGlassHud();
+        this._syncCartridgeControls();
+        this.enhanceSceneInteractivity();
+      });
 
       // Listen for scene load changes (guard duplicate registration)
       if (!this._presetListenerBound && this.engine && typeof this.engine.on === 'function') {
@@ -99,16 +187,358 @@
           this.dragMode = null;
           this._wasPlayingBeforeDrag = false;
           this.hideXRayPopup();
-          setTimeout(() => this.enhanceSceneInteractivity(), 50);
+          setTimeout(() => {
+            this._syncCartridgeControls();
+            this.enhanceSceneInteractivity();
+          }, 50);
         });
       }
     }
 
+    // =========================================================================
+    // player-gestures.ast Loader & Cartridge (:controls ...) Parser
+    // =========================================================================
+
+    async loadPlayerGesturesProfile() {
+      if (this._profileLoaded) return this.playerProfile;
+      const candidates = [
+        this.options.gesturesAstUrl,
+        SCRIPT_BASE_URL ? `${SCRIPT_BASE_URL}player-gestures.ast` : null,
+        'player-gestures.ast',
+        '/static/player/player-gestures.ast'
+      ].filter(Boolean);
+
+      for (const url of candidates) {
+        try {
+          const res = await fetch(url);
+          if (res && res.ok) {
+            const text = await res.text();
+            if (text && text.includes(':player-gestures')) {
+              this._parsePlayerGesturesAST(text);
+              this._profileLoaded = true;
+              return this.playerProfile;
+            }
+          }
+        } catch {
+          // Try next candidate or keep built-in fallbacks (offline / file:// safe)
+        }
+      }
+      this._profileLoaded = true;
+      return this.playerProfile;
+    }
+
+    _extractSexpBlock(source, headToken) {
+      if (!source || typeof source !== 'string') return null;
+      const start = source.indexOf(headToken);
+      if (start === -1) return null;
+      let depth = 0;
+      let inQuote = false;
+      let escape = false;
+      for (let i = start; i < source.length; i++) {
+        const ch = source[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (!inQuote) {
+          if (ch === '(') depth++;
+          else if (ch === ')') {
+            depth--;
+            if (depth === 0) return source.slice(start, i + 1);
+          }
+        }
+      }
+      return null;
+    }
+
+    _extractChildSexps(block) {
+      if (!block) return [];
+      const results = [];
+      let depth = 0;
+      let inQuote = false;
+      let escape = false;
+      let childStart = -1;
+      for (let i = 0; i < block.length; i++) {
+        const ch = block[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (!inQuote) {
+          if (ch === '(') {
+            if (depth === 1) childStart = i;
+            depth++;
+          } else if (ch === ')') {
+            depth--;
+            if (depth === 1 && childStart !== -1) {
+              results.push(block.slice(childStart, i + 1));
+              childStart = -1;
+            }
+          }
+        }
+      }
+      return results;
+    }
+
+    _parseKeywordAttrs(sexp) {
+      const attrs = {};
+      if (!sexp) return attrs;
+      const clean = sexp.replace(/;;[^\n]*/g, '').replace(/^\(\s*:[a-zA-Z0-9_-]+/, '').replace(/\)$/, '');
+      const tokenRegex = /:([a-zA-Z0-9_-]+)\s+("[^"]*"|:[a-zA-Z0-9_-]+|-?\d+(?:\.\d+)?)/g;
+      let m;
+      while ((m = tokenRegex.exec(clean)) !== null) {
+        const k = m[1];
+        const rawVal = m[2];
+        if (rawVal.startsWith('"')) attrs[k] = rawVal.slice(1, -1);
+        else if (rawVal === ':on' || rawVal === ':true') attrs[k] = true;
+        else if (rawVal === ':off' || rawVal === ':false') attrs[k] = false;
+        else if (rawVal.startsWith(':')) attrs[k] = rawVal.slice(1);
+        else attrs[k] = Number(rawVal);
+      }
+      return attrs;
+    }
+
+    _parseControlsBlock(blockText) {
+      const parsed = {};
+      if (!blockText) return parsed;
+      const clean = blockText.replace(/;;[^\n]*/g, '');
+      const pairRegex = /\(\s*:([a-zA-Z0-9_-]+)\s+(:on|:off|true|false)\s*\)/gi;
+      let m;
+      while ((m = pairRegex.exec(clean)) !== null) {
+        const flag = m[1].toLowerCase();
+        const valToken = m[2].toLowerCase();
+        parsed[flag] = (valToken === ':on' || valToken === 'true');
+      }
+      return parsed;
+    }
+
+    _parsePlayerGesturesAST(astText) {
+      const clean = astText.replace(/;;[^\n]*/g, '');
+
+      // 1. (:defaults ...)
+      const defaultsBlock = this._extractSexpBlock(clean, '(:defaults');
+      if (defaultsBlock) {
+        this.playerProfile.defaults = {
+          ...DEFAULT_CONTROLS,
+          ...this._parseControlsBlock(defaultsBlock)
+        };
+      }
+
+      // 2. (:universal-keys ...)
+      const keysBlock = this._extractSexpBlock(clean, '(:universal-keys');
+      if (keysBlock) {
+        const keyItems = this._extractChildSexps(keysBlock)
+          .map(item => this._parseKeywordAttrs(item))
+          .filter(k => k.code || k.key);
+        if (keyItems.length > 0) {
+          this.playerProfile.universalKeys = keyItems;
+        }
+      }
+
+      // 3. (:whiteboard ...)
+      const wbBlock = this._extractSexpBlock(clean, '(:whiteboard');
+      if (wbBlock) {
+        const toolsBlock = this._extractSexpBlock(wbBlock, '(:tools');
+        if (toolsBlock) {
+          const parsedTools = this._extractChildSexps(toolsBlock).map(t => {
+            const a = this._parseKeywordAttrs(t);
+            const fallback = DEFAULT_WHITEBOARD.tools.find(dt => dt.id === a.id);
+            return {
+              id: a.id || 'pen',
+              icon: a.icon || (fallback ? fallback.icon : '✏️'),
+              title: a.title || (fallback ? fallback.title : a.id),
+              width: typeof a.width === 'number' ? a.width : 3.5,
+              opacity: a.opacity,
+              cap: a.cap,
+              blend: a.blend
+            };
+          });
+          if (parsedTools.length > 0) this.playerProfile.whiteboard.tools = parsedTools;
+        }
+
+        const widthsMatch = wbBlock.match(/\(:widths\s+\(([^)]+)\)\)/);
+        if (widthsMatch) {
+          const wList = widthsMatch[1].trim().split(/\s+/).map(Number).filter(n => !Number.isNaN(n));
+          if (wList.length > 0) this.playerProfile.whiteboard.widths = wList;
+        }
+
+        const paletteBlock = this._extractSexpBlock(wbBlock, '(:palette');
+        if (paletteBlock) {
+          const parsedPalette = this._extractChildSexps(paletteBlock)
+            .map(c => this._parseKeywordAttrs(c))
+            .filter(c => c.hex);
+          if (parsedPalette.length > 0) this.playerProfile.whiteboard.palette = parsedPalette;
+        }
+      }
+
+      // 4. (:sonification ...)
+      const sonBlock = this._extractSexpBlock(clean, '(:sonification');
+      if (sonBlock) {
+        const toneItems = this._extractChildSexps(sonBlock).map(t => this._parseKeywordAttrs(t));
+        toneItems.forEach(t => {
+          if (t.event && typeof t.freq === 'number') {
+            this.playerProfile.tones[t.event] = {
+              freq: t.freq,
+              wave: t.wave || 'sine',
+              duration: typeof t.duration === 'number' ? t.duration : 0.05,
+              gain: typeof t.gain === 'number' ? t.gain : 0.12
+            };
+          }
+        });
+      }
+    }
+
+    _getRawCartridgeAst() {
+      if (!this.engine) return '';
+      const scene = this.engine.scene || {};
+      return (
+        scene.rawAst ||
+        scene.astSource ||
+        scene.source ||
+        this.engine.rawAst ||
+        this.engine.currentAstText ||
+        this.engine.astText ||
+        ''
+      );
+    }
+
+    _syncCartridgeControls() {
+      const merged = { ...this.playerProfile.defaults };
+      const scene = this.engine && this.engine.scene;
+
+      // 1. Check pre-parsed scene.controls if engine provides it
+      if (scene && scene.controls && typeof scene.controls === 'object') {
+        Object.entries(scene.controls).forEach(([k, v]) => {
+          const key = k.replace(/^:/, '').toLowerCase();
+          if (typeof v === 'boolean') merged[key] = v;
+          else if (v === ':on' || v === 'on' || v === 'true') merged[key] = true;
+          else if (v === ':off' || v === 'off' || v === 'false') merged[key] = false;
+        });
+      }
+
+      // 2. Parse (:controls ...) directly from raw cartridge AST text (no ast-engine.js edit needed)
+      const rawAst = this._getRawCartridgeAst();
+      if (rawAst) {
+        const ctrlBlock = this._extractSexpBlock(rawAst, '(:controls');
+        if (ctrlBlock) {
+          Object.assign(merged, this._parseControlsBlock(ctrlBlock));
+        }
+      }
+
+      this.activeControls = merged;
+      this._applyControlVisibility();
+    }
+
+    _isControlEnabled(flagName) {
+      return this.activeControls[flagName] !== false;
+    }
+
+    _applyControlVisibility() {
+      const wbOn = this._isControlEnabled('whiteboard');
+      const xrayOn = this._isControlEnabled('xray');
+      const audioOn = this._isControlEnabled('audio');
+      const paramHudOn = this._isControlEnabled('param-hud');
+
+      if (!wbOn && this.isPenActive) {
+        this.togglePen(false);
+      }
+      if (!xrayOn && this.isXRayActive) {
+        this.isXRayActive = false;
+        this.hideXRayPopup();
+      }
+      this.sonificationEnabled = audioOn;
+
+      const penBtn = document.getElementById('stage-hud-pen-btn');
+      const xrayBtn = document.getElementById('stage-hud-xray-btn');
+      const soundBtn = document.getElementById('stage-hud-sound-btn');
+      const glassHud = document.getElementById('stage-glass-hud-ui');
+
+      if (penBtn) penBtn.style.display = wbOn ? 'flex' : 'none';
+      if (xrayBtn) {
+        xrayBtn.style.display = xrayOn ? 'flex' : 'none';
+        xrayBtn.style.background = this.isXRayActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
+        xrayBtn.style.color = this.isXRayActive ? '#090d16' : '#ffffff';
+      }
+      if (soundBtn) {
+        soundBtn.style.display = audioOn ? 'flex' : 'none';
+        soundBtn.textContent = this.sonificationEnabled ? '🔊' : '🔇';
+        soundBtn.style.opacity = this.sonificationEnabled ? '1.0' : '0.5';
+      }
+      if (glassHud) {
+        glassHud.style.display = (wbOn || xrayOn || audioOn) ? 'flex' : 'none';
+      }
+
+      const paramHud = document.getElementById('stage-sim-parameters');
+      if (paramHud && !paramHudOn) {
+        paramHud.style.display = 'none';
+      }
+    }
+
+    _playNamedTone(eventName) {
+      const t = this.playerProfile.tones[eventName] || DEFAULT_TONES[eventName];
+      if (t) {
+        this.playAudioTone(t.freq, t.wave, t.duration, t.gain);
+      }
+    }
+
     /**
-     * Creates dedicated SVG layers for annotations and HUD feedback
+     * Normalizes cartridge gesture dictionaries so both older (:clickable / :setVar)
+     * and newer (:interactive / :action "set-var") syntaxes work identically.
      */
+    _normalizeGesture(g) {
+      if (!g || typeof g !== 'object') return g;
+      const norm = { ...g };
+
+      if (norm.type === 'interactive') {
+        norm.type = 'clickable';
+      }
+      if (norm.action === 'set-var') {
+        if (!norm.setVar && norm.var) norm.setVar = norm.var;
+        if (norm.val === undefined && norm.value !== undefined) norm.val = norm.value;
+      } else if (norm.action === 'step-var') {
+        if (!norm.stepVar && norm.var) norm.stepVar = norm.var;
+        if (norm.delta === undefined && norm.step !== undefined && typeof norm.step === 'number') {
+          norm.delta = norm.step;
+        }
+      } else if (norm.action === 'toggle-var') {
+        if (!norm.toggleVar && norm.var) norm.toggleVar = norm.var;
+      }
+
+      return norm;
+    }
+
+    _getNormalizedSceneGestures(scene) {
+      if (!scene || !Array.isArray(scene.gestures)) return [];
+      return scene.gestures.map(g => this._normalizeGesture(g));
+    }
+
+    /**
+     * Finds the primary discrete stepped variable (:step 1) in the active scene
+     */
+    _findPrimarySteppedVar(scene) {
+      if (!scene || !scene.vars || typeof scene.vars !== 'object') return null;
+      const entries = Object.entries(scene.vars);
+
+      // 1. Prefer explicit numeric variable with :step 1
+      for (const [name, meta] of entries) {
+        if (meta && typeof meta === 'object' && meta.step === 1 && typeof meta.min === 'number' && typeof meta.max === 'number') {
+          return { name, min: meta.min, max: meta.max, step: 1 };
+        }
+      }
+
+      // 2. Fallback to any bounded integer variable
+      for (const [name, meta] of entries) {
+        if (meta && typeof meta === 'object' && typeof meta.min === 'number' && typeof meta.max === 'number') {
+          return { name, min: meta.min, max: meta.max, step: typeof meta.step === 'number' ? meta.step : 1 };
+        }
+      }
+
+      return null;
+    }
+
+    // =========================================================================
+    // DOM Layers & Event Listeners
+    // =========================================================================
+
     setupDomLayers() {
-      // 1. Whiteboard Ink Layer
       let inkGroup = this.stageSvg.querySelector('#annotation-ink-root');
       if (!inkGroup) {
         inkGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -118,7 +548,6 @@
       }
       this.inkRoot = inkGroup;
 
-      // 2. Stage Drag Feedback Layer
       let hudGroup = this.stageSvg.querySelector('#stage-hud-root');
       if (!hudGroup) {
         hudGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -129,13 +558,9 @@
       this.hudRoot = hudGroup;
     }
 
-    /**
-     * Attaches Pointer Events & Generic Declarative Keyboard/Hold Listeners
-     */
     setupEventListeners() {
       if (!this.stageSvg) return;
 
-      // Make stage SVG focusable so clicks/taps immediately enable keyboard events
       if (!this.stageSvg.hasAttribute('tabindex')) {
         this.stageSvg.setAttribute('tabindex', '0');
       }
@@ -162,7 +587,6 @@
         window.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('blur', this.handleWindowBlur);
 
-        // Whiteboard Ink message listener from parent window / WebRTC classroom mesh
         window.addEventListener('message', (ev) => {
           if (!ev.data) return;
           if (ev.data.type === 'IMPORT_WHITEBOARD_INK' || ev.data.type === 'LOAD_WHITEBOARD_INK') {
@@ -289,7 +713,7 @@
           }
           changed = true;
         } catch (err) {
-          console.warn('[ASTGestures] Gesture expr error:', g.expr, err);
+          console.warn('[SiteGestures] Gesture expr error:', g.expr, err);
         }
       }
       if (g.tone && typeof this.playAudioTone === 'function') {
@@ -346,7 +770,7 @@
           }
           changed = true;
         } catch (err) {
-          console.warn('[ASTGestures] Hold expr error:', g.expr, err);
+          console.warn('[SiteGestures] Hold expr error:', g.expr, err);
         }
       }
 
@@ -435,7 +859,7 @@
       }
 
       let changed = false;
-      const gestures = Array.isArray(scene.gestures) ? scene.gestures : [];
+      const gestures = this._getNormalizedSceneGestures(scene);
 
       if (this._heldKeys.size > 0) {
         for (let i = 0; i < gestures.length; i++) {
@@ -484,7 +908,7 @@
     }
 
     _gestureMatchesKey(g, e) {
-      if (!g || g.type !== 'key') return false;
+      if (!g) return false;
       if (g.code && e.code && g.code === e.code) return true;
       if (g.key && e.key) {
         if (g.key === e.key) return true;
@@ -508,57 +932,203 @@
       }
     }
 
+    // =========================================================================
+    // Priority 1, 2 & 3 Keyboard & Switch Navigation Handler
+    // =========================================================================
+
+    _handleCheckpointModalKeys(e) {
+      if (!this._isControlEnabled('quiz-keys')) return false;
+
+      const modal = document.querySelector(
+        '.interactive-card:not(.hidden), #interactive-modal:not(.hidden), [data-checkpoint-modal="true"]'
+      );
+      if (!modal || modal.offsetParent === null) return false;
+
+      const keyLower = (e.key || '').toLowerCase();
+      const optionMap = { '1': 0, 'a': 0, '2': 1, 'b': 1, '3': 2, 'c': 2, '4': 3, 'd': 3 };
+
+      if (keyLower in optionMap) {
+        const options = modal.querySelectorAll('button[data-option], .checkpoint-option, .quiz-option, button');
+        const targetBtn = options[optionMap[keyLower]];
+        if (targetBtn && !targetBtn.disabled) {
+          e.preventDefault();
+          targetBtn.click();
+          this._playNamedTone('click');
+          return true;
+        }
+      }
+
+      if (e.code === 'Enter' || e.code === 'Space') {
+        const confirmBtn = modal.querySelector(
+          '#btn-checkpoint-continue, #btn-checkpoint-close, [data-checkpoint-confirm], button.primary, button'
+        );
+        if (confirmBtn && !confirmBtn.disabled) {
+          e.preventDefault();
+          confirmBtn.click();
+          this._playNamedTone('click');
+          return true;
+        }
+      }
+
+      return false;
+    }
+
+    _executeUniversalKeyRule(rule, scene) {
+      if (!rule || !this.engine) return false;
+      const action = rule.action;
+
+      if (action === 'toggle-play') {
+        if (typeof this.engine.togglePlay === 'function') {
+          this.engine.togglePlay();
+          return true;
+        }
+        if (this.engine.isPlaying && typeof this.engine.pause === 'function') {
+          this.engine.pause();
+          return true;
+        }
+        if (!this.engine.isPlaying && typeof this.engine.play === 'function') {
+          this.engine.play();
+          return true;
+        }
+        return false;
+      }
+
+      if (action === 'toggle-pen') {
+        if (this._isControlEnabled('whiteboard')) {
+          this.togglePen();
+          return true;
+        }
+        return false;
+      }
+
+      // Check standard DOM prev/next buttons first if present for step-primary-var
+      if (action === 'step-primary-var') {
+        const delta = typeof rule.delta === 'number' ? rule.delta : 1;
+        const btnSelector = delta > 0 ? '#btn-next-page, #btn-next' : '#btn-prev-page, #btn-prev';
+        const navBtn = document.querySelector(btnSelector);
+        if (navBtn && !navBtn.disabled && navBtn.offsetParent !== null) {
+          navBtn.click();
+          if (typeof rule.tone === 'number') this.playAudioTone(rule.tone, 'triangle', 0.04, 0.12);
+          return true;
+        }
+      }
+
+      const primary = this._findPrimarySteppedVar(scene);
+      if (!primary || !this.engine.vars) return false;
+
+      const cur = typeof this.engine.vars[primary.name] === 'number'
+        ? this.engine.vars[primary.name]
+        : primary.min;
+      let next = cur;
+
+      if (action === 'step-primary-var') {
+        const delta = typeof rule.delta === 'number' ? rule.delta : 1;
+        next = Math.max(primary.min, Math.min(primary.max, cur + delta));
+      } else if (action === 'set-primary-var') {
+        const targetVal = typeof rule.val === 'number' ? rule.val : primary.min;
+        if (targetVal < primary.min || targetVal > primary.max) return false;
+        next = targetVal;
+      } else if (action === 'jump-primary-min') {
+        next = primary.min;
+      } else if (action === 'jump-primary-max') {
+        next = primary.max;
+      } else {
+        return false;
+      }
+
+      this._writeEngineVar(primary.name, next);
+      if (typeof this.engine.applyBindings === 'function') {
+        this.engine.applyBindings(this.engine.progress || 0, 0, false);
+      }
+      if (typeof rule.tone === 'number') {
+        this.playAudioTone(rule.tone, 'triangle', 0.04, 0.12);
+      }
+      return true;
+    }
+
     handleKeyDown(e) {
-      if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT' || e.target.isContentEditable)) {
+      if (
+        e.target &&
+        (e.target.tagName === 'INPUT' ||
+          e.target.tagName === 'TEXTAREA' ||
+          e.target.tagName === 'SELECT' ||
+          e.target.isContentEditable)
+      ) {
         return;
       }
+
+      // Priority 1: Checkpoint Modal Hotkeys
+      if (this._handleCheckpointModalKeys(e)) {
+        if (typeof e.stopImmediatePropagation === 'function') e.stopImmediatePropagation();
+        return;
+      }
+
       const scene = this.engine && this.engine.scene;
-      if (!scene || !Array.isArray(scene.gestures) || !this.engine.vars) return;
+      if (!scene || !this.engine.vars) return;
 
-      const matchingKeys = scene.gestures.filter(g => this._gestureMatchesKey(g, e));
-      if (matchingKeys.length === 0) return;
+      // Priority 2: Cartridge Explicit (:key ...) Rules
+      const gestures = this._getNormalizedSceneGestures(scene);
+      const matchingKeys = gestures.filter(g => g.type === 'key' && this._gestureMatchesKey(g, e));
 
-      e.preventDefault();
-      if (typeof e.stopImmediatePropagation === 'function') {
-        e.stopImmediatePropagation();
-      }
-
-      if (e.code) {
-        this._heldKeys.add(e.code);
-        if (e.key) this._heldKeyCodeMap.set(e.code, e.key);
-      }
-      if (e.key) {
-        this._heldKeys.add(e.key);
-        if (e.key.length === 1) this._heldKeys.add(e.key.toLowerCase());
-      }
-
-      let needsHoldLoop = false;
-      for (let i = 0; i < matchingKeys.length; i++) {
-        const g = matchingKeys[i];
-        if (g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false)) {
-          needsHoldLoop = true;
+      if (matchingKeys.length > 0) {
+        e.preventDefault();
+        if (typeof e.stopImmediatePropagation === 'function') {
+          e.stopImmediatePropagation();
         }
-      }
 
-      this._ensureInteractiveSimPlaying();
+        if (e.code) {
+          this._heldKeys.add(e.code);
+          if (e.key) this._heldKeyCodeMap.set(e.code, e.key);
+        }
+        if (e.key) {
+          this._heldKeys.add(e.key);
+          if (e.key.length === 1) this._heldKeys.add(e.key.toLowerCase());
+        }
 
-      if (!e.repeat) {
-        let changed = false;
+        let needsHoldLoop = false;
         for (let i = 0; i < matchingKeys.length; i++) {
-          if (this._applyGesturePress(matchingKeys[i], null, scene)) {
-            changed = true;
+          const g = matchingKeys[i];
+          if (g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false)) {
+            needsHoldLoop = true;
           }
         }
-        if (changed && typeof this.engine.applyBindings === 'function') {
-          this.engine.applyBindings(this.engine.progress || 0, 0, false);
+
+        this._ensureInteractiveSimPlaying();
+
+        if (!e.repeat) {
+          let changed = false;
+          for (let i = 0; i < matchingKeys.length; i++) {
+            if (this._applyGesturePress(matchingKeys[i], null, scene)) {
+              changed = true;
+            }
+          }
+          if (changed && typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0, 0, false);
+          }
+          if (!matchingKeys.some(g => Boolean(g.tone))) {
+            this._playNamedTone('key');
+          }
         }
-        if (!matchingKeys.some(g => Boolean(g.tone))) {
-          this.playAudioTone(440, 'triangle', 0.04, 0.12);
+
+        if (needsHoldLoop) {
+          this._ensureHoldLoop();
         }
+        return;
       }
 
-      if (needsHoldLoop) {
-        this._ensureHoldLoop();
+      // Priority 3: Universal Keys from player-gestures.ast (gated by active :controls switches)
+      if (!e.repeat) {
+        const universalMatch = this.playerProfile.universalKeys.find(rule => {
+          if (rule.switch && !this._isControlEnabled(rule.switch)) return false;
+          return this._gestureMatchesKey(rule, e);
+        });
+
+        if (universalMatch && this._executeUniversalKeyRule(universalMatch, scene)) {
+          e.preventDefault();
+          if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation();
+          }
+        }
       }
     }
 
@@ -580,8 +1150,9 @@
       }
 
       const scene = this.engine && this.engine.scene;
-      if (scene && Array.isArray(scene.gestures)) {
-        const matchingKeys = scene.gestures.filter(g => this._gestureMatchesKey(g, e));
+      if (scene) {
+        const gestures = this._getNormalizedSceneGestures(scene);
+        const matchingKeys = gestures.filter(g => g.type === 'key' && this._gestureMatchesKey(g, e));
         if (matchingKeys.length > 0 && typeof e.stopImmediatePropagation === 'function') {
           e.stopImmediatePropagation();
         }
@@ -635,80 +1206,70 @@
     }
 
     /**
-     * Compiles declarative scene gesture bindings onto SVG stage nodes (Cartridge as Driver, Engine as VM)
+     * Compiles declarative scene gesture bindings onto SVG stage nodes
      */
     enhanceSceneInteractivity() {
       if (!this.stageSvg) return;
 
-      // Restore any persisted annotations for this scene
       this.restoreInkFromSession();
-
-      // Live Simulation Parameters HUD Dock (auto-populates when cartridge omits custom ui:controls)
       this.setupSimParametersHud();
 
-      // Dynamic Declarative Scene Gestures
       const scene = this.engine && this.engine.scene;
-      if (scene && scene.gestures && Array.isArray(scene.gestures)) {
-        scene.gestures.forEach(g => {
-          if (!g.target) return;
-          const matchedList = [];
-          if (this.stageSvg.matches && this.stageSvg.matches(g.target)) {
-            matchedList.push(this.stageSvg);
+      const gestures = this._getNormalizedSceneGestures(scene);
+      const scrubAllowed = this._isControlEnabled('scrub');
+
+      gestures.forEach(g => {
+        if (!g.target) return;
+        const matchedList = [];
+        if (this.stageSvg.matches && this.stageSvg.matches(g.target)) {
+          matchedList.push(this.stageSvg);
+        }
+        this.stageSvg.querySelectorAll(g.target).forEach(node => matchedList.push(node));
+
+        matchedList.forEach(el => {
+          el.style.pointerEvents = 'auto';
+          el.style.touchAction = 'none';
+          if (el !== this.stageSvg && g.type !== 'trackball' && g.axis !== 'trackball') {
+            el.querySelectorAll('*').forEach(child => {
+              if (child && child.style) child.style.pointerEvents = 'auto';
+            });
           }
-          this.stageSvg.querySelectorAll(g.target).forEach(node => matchedList.push(node));
 
-          matchedList.forEach(el => {
-            el.style.pointerEvents = 'auto';
-            el.style.touchAction = 'none';
-            if (el !== this.stageSvg && g.type !== 'trackball' && g.axis !== 'trackball') {
-              el.querySelectorAll('*').forEach(child => {
-                if (child && child.style) child.style.pointerEvents = 'auto';
-              });
-            }
-
-            // A. Declarative Clickable / Holdable Actions (executed via unified VM pointer handler)
-            if (g.type === 'clickable' || g.type === 'holdable') {
-              el.style.cursor = 'pointer';
-              el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
-            }
-            // B. Declarative 3D Trackball Orbit (Yaw + Pitch)
-            else if (g.type === 'trackball' || g.axis === 'trackball') {
-              if (el !== this.stageSvg) el.style.cursor = 'grab';
-              el.setAttribute('data-declarative-trackball', 'true');
-              if (g.yawVar) el.setAttribute('data-yaw-var', g.yawVar);
-              if (g.pitchVar) el.setAttribute('data-pitch-var', g.pitchVar);
-              el.setAttribute('data-pitch-min', String(g.pitchMin !== undefined ? g.pitchMin : -65));
-              el.setAttribute('data-pitch-max', String(g.pitchMax !== undefined ? g.pitchMax : 65));
-            }
-            // C. Declarative 2D Rotatable Disk
-            else if (g.type === 'rotatable' || g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
-              el.style.cursor = 'grab';
-              el.setAttribute('data-draggable', 'rotate');
-              el.setAttribute('data-gesture-cx', String(g.cx !== undefined ? g.cx : 400));
-              el.setAttribute('data-gesture-cy', String(g.cy !== undefined ? g.cy : 240));
-              if (g.var) el.setAttribute('data-gesture-var', g.var);
-            }
-            // D. Declarative 1D/2D Slider or Draggable Node
-            else {
-              el.style.cursor = g.axis === 'y' ? 'ns-resize' : (g.axis === 'x' ? 'ew-resize' : 'grab');
-              el.setAttribute('data-draggable', 'generic');
-              el.setAttribute('data-gesture-axis', g.axis || 'xy');
-              if (g.minX !== undefined) el.setAttribute('data-gesture-min-x', String(g.minX));
-              if (g.maxX !== undefined) el.setAttribute('data-gesture-max-x', String(g.maxX));
-              if (g.minY !== undefined) el.setAttribute('data-gesture-min-y', String(g.minY));
-              if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
-              if (typeof g.step === 'number') el.setAttribute('data-gesture-step', String(g.step));
-              if (g.invert === true) el.setAttribute('data-gesture-invert', 'true');
-              if (g.relative === true) el.setAttribute('data-gesture-relative', 'true');
-              if (g.seek === true) el.setAttribute('data-gesture-seek', 'true');
-              if (g.tone) el.setAttribute('data-gesture-tone', String(g.tone));
-              if (g.var) el.setAttribute('data-gesture-var', g.var);
-              if (g.varX) el.setAttribute('data-gesture-var-x', g.varX);
-              if (g.varY) el.setAttribute('data-gesture-var-y', g.varY);
-            }
-          });
+          if (g.type === 'clickable' || g.type === 'holdable') {
+            el.style.cursor = 'pointer';
+            el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
+          } else if (g.type === 'trackball' || g.axis === 'trackball') {
+            if (el !== this.stageSvg) el.style.cursor = scrubAllowed ? 'grab' : 'default';
+            el.setAttribute('data-declarative-trackball', 'true');
+            if (g.yawVar) el.setAttribute('data-yaw-var', g.yawVar);
+            if (g.pitchVar) el.setAttribute('data-pitch-var', g.pitchVar);
+            el.setAttribute('data-pitch-min', String(g.pitchMin !== undefined ? g.pitchMin : -65));
+            el.setAttribute('data-pitch-max', String(g.pitchMax !== undefined ? g.pitchMax : 65));
+          } else if (g.type === 'rotatable' || g.type === 'rotate' || g.action === 'rotate' || g.axis === 'rotate' || g.axis === 'angular') {
+            el.style.cursor = scrubAllowed ? 'grab' : 'default';
+            el.setAttribute('data-draggable', 'rotate');
+            el.setAttribute('data-gesture-cx', String(g.cx !== undefined ? g.cx : 400));
+            el.setAttribute('data-gesture-cy', String(g.cy !== undefined ? g.cy : 240));
+            if (g.var) el.setAttribute('data-gesture-var', g.var);
+          } else {
+            el.style.cursor = !scrubAllowed ? 'default' : (g.axis === 'y' ? 'ns-resize' : (g.axis === 'x' ? 'ew-resize' : 'grab'));
+            el.setAttribute('data-draggable', 'generic');
+            el.setAttribute('data-gesture-axis', g.axis || 'xy');
+            if (g.minX !== undefined) el.setAttribute('data-gesture-min-x', String(g.minX));
+            if (g.maxX !== undefined) el.setAttribute('data-gesture-max-x', String(g.maxX));
+            if (g.minY !== undefined) el.setAttribute('data-gesture-min-y', String(g.minY));
+            if (g.maxY !== undefined) el.setAttribute('data-gesture-max-y', String(g.maxY));
+            if (typeof g.step === 'number') el.setAttribute('data-gesture-step', String(g.step));
+            if (g.invert === true) el.setAttribute('data-gesture-invert', 'true');
+            if (g.relative === true) el.setAttribute('data-gesture-relative', 'true');
+            if (g.seek === true) el.setAttribute('data-gesture-seek', 'true');
+            if (g.tone) el.setAttribute('data-gesture-tone', String(g.tone));
+            if (g.var) el.setAttribute('data-gesture-var', g.var);
+            if (g.varX) el.setAttribute('data-gesture-var-x', g.varX);
+            if (g.varY) el.setAttribute('data-gesture-var-y', g.varY);
+          }
         });
-      }
+      });
     }
 
     /**
@@ -723,28 +1284,25 @@
         return;
       }
 
-      // Focus stage/window immediately on canvas interaction so declarative keyboard gestures work
       if (this.stageSvg && typeof this.stageSvg.focus === 'function') {
-        try { this.stageSvg.focus({ preventScroll: true }); } catch (_) {
-          try { this.stageSvg.focus(); } catch (_) {}
+        try { this.stageSvg.focus({ preventScroll: true }); } catch {
+          try { this.stageSvg.focus(); } catch {}
         }
       }
       if (typeof window !== 'undefined' && typeof window.focus === 'function') {
-        try { window.focus(); } catch (_) {}
+        try { window.focus(); } catch {}
       }
 
       const svgPt = this.screenToSvg(e.clientX, e.clientY);
 
-      // A. If Whiteboard Pen Mode is active, draw ink stroke or erase
-      if (this.isPenActive) {
+      // A. Whiteboard Pen Mode (only if :whiteboard switch is :on)
+      if (this.isPenActive && this._isControlEnabled('whiteboard')) {
         if (this.currentTool === 'eraser') {
           e.preventDefault();
           this.eraseStrokeAt(svgPt);
           return;
         }
-        if (this.stylusOnlyMode && e.pointerType !== 'pen') {
-          // Touch in stylus-only mode falls through to direct apparatus drag
-        } else {
+        if (!(this.stylusOnlyMode && e.pointerType !== 'pen')) {
           e.preventDefault();
           this.isDrawing = true;
           this.startInkStroke(svgPt);
@@ -752,11 +1310,10 @@
         }
       }
 
-      // B0. Generic Declarative S-Expression Gestures (:clickable, :holdable & :trackball)
       const scene = this.engine && this.engine.scene;
-      const gestures = (scene && Array.isArray(scene.gestures)) ? scene.gestures : [];
+      const gestures = this._getNormalizedSceneGestures(scene);
 
-      // 1. Declarative :clickable / :holdable tuples (process ALL matching tuples on target)
+      // B1. Declarative :clickable / :holdable tuples
       const matchedPointerGestures = [];
       const matchedEls = [];
       for (let i = 0; i < gestures.length; i++) {
@@ -790,7 +1347,7 @@
             pressedAt: now
           });
           if (e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.setPointerCapture === 'function') {
-            try { this.stageSvg.setPointerCapture(e.pointerId); } catch (_) {}
+            try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
           }
           this._ensureHoldLoop();
         }
@@ -803,120 +1360,127 @@
           }
         }
         if (!matchedPointerGestures.some(g => Boolean(g.tone))) {
-          this.playAudioTone(520, 'sine', 0.04, 0.1);
+          this._playNamedTone('click');
         }
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
 
-      // 2. Declarative :trackball tuples (purely driven by scene.gestures)
-      const activeTrackball = gestures.find(g => {
-        if (g.type !== 'trackball' || !g.target) return false;
-        if (this.isXRayActive && e.target.closest('[data-pedagogical]')) return false;
-        const tbEl = e.target.closest(g.target);
-        if (!tbEl) return false;
-        // Yield if user clicked a more specific interactive child control inside a broad stage trackball
-        const childControl = e.target.closest('[data-declarative-clickable], [data-declarative-holdable], [data-draggable], [data-interactive], [data-bind-input], .ast-hotspot');
-        if (childControl && childControl !== tbEl && tbEl.contains(childControl)) {
-          return false;
-        }
-        return true;
-      });
-      if (activeTrackball) {
-        e.preventDefault();
-        this.isDragging = true;
-        this.dragMode = 'trackball';
-        this.dragTarget = e.target.closest(activeTrackball.target);
-        this.dragStart = { x: e.clientX, y: e.clientY };
-        const hasVars = Boolean(this.engine && this.engine.vars);
-        this.trackballYawVar = activeTrackball.yawVar || activeTrackball['yaw-var'] || null;
-        this.trackballPitchVar = activeTrackball.pitchVar || activeTrackball['pitch-var'] || null;
-        this.trackballPitchMin = typeof activeTrackball.pitchMin === 'number' ? activeTrackball.pitchMin : -65;
-        this.trackballPitchMax = typeof activeTrackball.pitchMax === 'number' ? activeTrackball.pitchMax : 65;
-        this.trackballStartYaw = (this.trackballYawVar && hasVars && typeof this.engine.vars[this.trackballYawVar] === 'number')
-          ? this.engine.vars[this.trackballYawVar] : 0;
-        this.trackballStartPitch = (this.trackballPitchVar && hasVars && typeof this.engine.vars[this.trackballPitchVar] === 'number')
-          ? this.engine.vars[this.trackballPitchVar] : 32;
-        this.trackballStartCamYaw = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.yawOffset) || 0) : 0;
-        this.trackballStartCamPitch = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.pitchOffset) || 0) : 0;
-        if (hasVars && 'autoSpin' in this.engine.vars) {
-          if (typeof this.engine.setVar === 'function') this.engine.setVar('autoSpin', false);
-          else this.engine.vars.autoSpin = false;
-        }
-        if (e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.setPointerCapture === 'function') {
-          try { this.stageSvg.setPointerCapture(e.pointerId); } catch (_) {}
-        }
-        if (this.dragTarget && this.dragTarget !== this.stageSvg) {
-          this.dragTarget.style.cursor = 'grabbing';
-        }
-        this.createTouchRipple(svgPt.x, svgPt.y);
-        return;
-      }
-
-      // B. Declarative Direct-Grab Targets (:draggable, :rotatable, data-bind-input)
-      const target = e.target.closest('[data-draggable], [data-bind-input]');
-
-      if (target) {
-        e.preventDefault();
-        try {
-          this.stageSvg.setPointerCapture(e.pointerId);
-        } catch {}
-
-        this.isDragging = true;
-        this.dragTarget = target;
-        this.dragStart = { x: svgPt.x, y: svgPt.y };
-
-        if (target.hasAttribute('data-bind-input') || (this.engine && this.engine.activeBindInputs && this.engine.activeBindInputs.some(b => b.node === target || b.target === '#' + target.id || (target.id && b.target === target.id)))) {
-          this.dragMode = 'bind-input';
-          target.style.cursor = 'grabbing';
-          this.playAudioTone(380, 'sine', 0.05);
-        } else if (target.getAttribute('data-draggable') === 'generic' || target.closest('[data-draggable="generic"]')) {
-          const genTarget = target.getAttribute('data-draggable') === 'generic' ? target : target.closest('[data-draggable="generic"]');
-          this.dragTarget = genTarget;
-          this.dragMode = 'generic';
-          genTarget.style.cursor = 'grabbing';
-          const isContinuousScene = Boolean(this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim'))));
-          if (this.engine && !isContinuousScene && this.engine.isPlaying) {
-            this._wasPlayingBeforeDrag = true;
-            this.engine.pause();
+      // B2. Drag / Scrubbing Targets (gated by :scrub switch)
+      if (this._isControlEnabled('scrub')) {
+        const activeTrackball = gestures.find(g => {
+          if (g.type !== 'trackball' || !g.target) return false;
+          if (this.isXRayActive && this._isControlEnabled('xray') && e.target.closest('[data-pedagogical]')) return false;
+          const tbEl = e.target.closest(g.target);
+          if (!tbEl) return false;
+          const childControl = e.target.closest('[data-declarative-clickable], [data-declarative-holdable], [data-draggable], [data-interactive], [data-bind-input], .ast-hotspot');
+          if (childControl && childControl !== tbEl && tbEl.contains(childControl)) {
+            return false;
           }
-          let initX = 0;
-          let initY = 0;
-          const tr = genTarget.getAttribute('transform') || '';
-          const trM = /translate\(\s*([\d\.\-]+)(?:[\s,]+([\d\.\-]+))?\s*\)/i.exec(tr);
-          const initTx = trM ? parseFloat(trM[1]) : 0;
-          const initTy = (trM && trM[2]) ? parseFloat(trM[2]) : 0;
+          return true;
+        });
+
+        if (activeTrackball) {
+          e.preventDefault();
+          this.isDragging = true;
+          this.dragMode = 'trackball';
+          this.dragTarget = e.target.closest(activeTrackball.target);
+          this.dragStart = { x: e.clientX, y: e.clientY };
+          const hasVars = Boolean(this.engine && this.engine.vars);
+          this.trackballYawVar = activeTrackball.yawVar || activeTrackball['yaw-var'] || null;
+          this.trackballPitchVar = activeTrackball.pitchVar || activeTrackball['pitch-var'] || null;
+          this.trackballPitchMin = typeof activeTrackball.pitchMin === 'number' ? activeTrackball.pitchMin : -65;
+          this.trackballPitchMax = typeof activeTrackball.pitchMax === 'number' ? activeTrackball.pitchMax : 65;
+          this.trackballStartYaw = (this.trackballYawVar && hasVars && typeof this.engine.vars[this.trackballYawVar] === 'number')
+            ? this.engine.vars[this.trackballYawVar] : 0;
+          this.trackballStartPitch = (this.trackballPitchVar && hasVars && typeof this.engine.vars[this.trackballPitchVar] === 'number')
+            ? this.engine.vars[this.trackballPitchVar] : 32;
+          this.trackballStartCamYaw = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.yawOffset) || 0) : 0;
+          this.trackballStartCamPitch = (this.engine && this.engine.cameraOrbit) ? (Number(this.engine.cameraOrbit.pitchOffset) || 0) : 0;
+          if (hasVars && 'autoSpin' in this.engine.vars) {
+            if (typeof this.engine.setVar === 'function') this.engine.setVar('autoSpin', false);
+            else this.engine.vars.autoSpin = false;
+          }
+          if (e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.setPointerCapture === 'function') {
+            try { this.stageSvg.setPointerCapture(e.pointerId); } catch {}
+          }
+          if (this.dragTarget && this.dragTarget !== this.stageSvg) {
+            this.dragTarget.style.cursor = 'grabbing';
+          }
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+
+        const target = e.target.closest('[data-draggable], [data-bind-input]');
+        if (target) {
+          e.preventDefault();
           try {
-            const bbox = genTarget.getBBox();
-            initX = bbox.x;
-            initY = bbox.y;
-          } catch (_) {
-            initX = parseFloat(genTarget.getAttribute('x') || genTarget.getAttribute('cx') || '0');
-            initY = parseFloat(genTarget.getAttribute('y') || genTarget.getAttribute('cy') || '0');
-          }
-          const gVarName = genTarget.getAttribute('data-gesture-var');
-          const initVarVal = (gVarName && this.engine && this.engine.vars && typeof this.engine.vars[gVarName] === 'number')
-            ? this.engine.vars[gVarName]
-            : undefined;
-          this.targetInitial = {
-            transform: tr,
-            initTx,
-            initTy,
-            x: initX,
-            y: initY,
-            initVarVal
-          };
-          this.playAudioTone(380, 'triangle', 0.06);
-        } else if (target.getAttribute('data-draggable') === 'rotate' || target.closest('[data-draggable="rotate"]')) {
-          const rotTarget = target.getAttribute('data-draggable') === 'rotate' ? target : target.closest('[data-draggable="rotate"]');
-          this.dragTarget = rotTarget;
-          this.dragMode = 'rotate';
-          rotTarget.style.cursor = 'grabbing';
-          this.playAudioTone(380, 'triangle', 0.06);
-        }
+            this.stageSvg.setPointerCapture(e.pointerId);
+          } catch {}
 
-        this.createTouchRipple(svgPt.x, svgPt.y);
-      } else if (this.isXRayActive) {
+          this.isDragging = true;
+          this.dragTarget = target;
+          this.dragStart = { x: svgPt.x, y: svgPt.y };
+
+          if (
+            target.hasAttribute('data-bind-input') ||
+            (this.engine && this.engine.activeBindInputs && this.engine.activeBindInputs.some(b => b.node === target || b.target === '#' + target.id || (target.id && b.target === target.id)))
+          ) {
+            this.dragMode = 'bind-input';
+            target.style.cursor = 'grabbing';
+            this._playNamedTone('grab');
+          } else if (target.getAttribute('data-draggable') === 'generic' || target.closest('[data-draggable="generic"]')) {
+            const genTarget = target.getAttribute('data-draggable') === 'generic' ? target : target.closest('[data-draggable="generic"]');
+            this.dragTarget = genTarget;
+            this.dragMode = 'generic';
+            genTarget.style.cursor = 'grabbing';
+            const isContinuousScene = Boolean(this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim'))));
+            if (this.engine && !isContinuousScene && this.engine.isPlaying) {
+              this._wasPlayingBeforeDrag = true;
+              this.engine.pause();
+            }
+            let initX = 0;
+            let initY = 0;
+            const tr = genTarget.getAttribute('transform') || '';
+            const trM = /translate\(\s*([\d.-]+)(?:[\s,]+([\d.-]+))?\s*\)/i.exec(tr);
+            const initTx = trM ? parseFloat(trM[1]) : 0;
+            const initTy = (trM && trM[2]) ? parseFloat(trM[2]) : 0;
+            try {
+              const bbox = genTarget.getBBox();
+              initX = bbox.x;
+              initY = bbox.y;
+            } catch {
+              initX = parseFloat(genTarget.getAttribute('x') || genTarget.getAttribute('cx') || '0');
+              initY = parseFloat(genTarget.getAttribute('y') || genTarget.getAttribute('cy') || '0');
+            }
+            const gVarName = genTarget.getAttribute('data-gesture-var');
+            const initVarVal = (gVarName && this.engine && this.engine.vars && typeof this.engine.vars[gVarName] === 'number')
+              ? this.engine.vars[gVarName]
+              : undefined;
+            this.targetInitial = {
+              transform: tr,
+              initTx,
+              initTy,
+              x: initX,
+              y: initY,
+              initVarVal
+            };
+            this._playNamedTone('grab');
+          } else if (target.getAttribute('data-draggable') === 'rotate' || target.closest('[data-draggable="rotate"]')) {
+            const rotTarget = target.getAttribute('data-draggable') === 'rotate' ? target : target.closest('[data-draggable="rotate"]');
+            this.dragTarget = rotTarget;
+            this.dragMode = 'rotate';
+            rotTarget.style.cursor = 'grabbing';
+            this._playNamedTone('grab');
+          }
+
+          this.createTouchRipple(svgPt.x, svgPt.y);
+          return;
+        }
+      }
+
+      // C. Pedagogical X-Ray Tap Inspection (gated by :xray switch)
+      if (this.isXRayActive && this._isControlEnabled('xray')) {
         const pedNode = e.target.closest('[data-pedagogical]');
         if (pedNode) {
           this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
@@ -924,14 +1488,10 @@
       }
     }
 
-    /**
-     * Primary PointerMove Handler with Native Browser C++ Hardware Event Coalescing
-     */
     handlePointerMove(e) {
       const rawEvents = (typeof e.getCoalescedEvents === 'function') ? e.getCoalescedEvents() : [e];
       const eventsToProcess = (rawEvents && rawEvents.length > 0) ? rawEvents : [e];
 
-      // A. Whiteboard Pen Drawing: Process every hardware coordinate
       if (this.isDrawing && this.currentStroke) {
         e.preventDefault();
         for (let i = 0; i < eventsToProcess.length; i++) {
@@ -942,8 +1502,7 @@
         return;
       }
 
-      // Whiteboard Eraser continuous scrubbing while dragging
-      if (this.isPenActive && this.currentTool === 'eraser' && (e.buttons > 0 || (e.pressure && e.pressure > 0))) {
+      if (this.isPenActive && this._isControlEnabled('whiteboard') && this.currentTool === 'eraser' && (e.buttons > 0 || (e.pressure && e.pressure > 0))) {
         e.preventDefault();
         for (let i = 0; i < eventsToProcess.length; i++) {
           const subEv = eventsToProcess[i];
@@ -956,7 +1515,6 @@
       const latestEv = eventsToProcess[eventsToProcess.length - 1];
       const svgPt = this.screenToSvg(latestEv.clientX, latestEv.clientY);
 
-      // B. Direct Canvas Dragging
       if (this.isDragging && this.dragTarget) {
         e.preventDefault();
 
@@ -969,7 +1527,7 @@
         } else if (this.dragMode === 'trackball') {
           this.handleTrackballDrag(e);
         }
-      } else if (this.isXRayActive) {
+      } else if (this.isXRayActive && this._isControlEnabled('xray')) {
         const pedNode = e.target.closest('[data-pedagogical]');
         if (pedNode) {
           this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
@@ -978,7 +1536,6 @@
         }
       }
 
-      // C. Direct Analytic Ray-Math: Update cursor ray hit for spatial proprioception
       if (this.engine && typeof this.engine.updateCursorRay === 'function' && !this.isDrawing && !this.isDragging) {
         const now = performance.now();
         if (!this._lastRayCastTime || (now - this._lastRayCastTime > 120)) {
@@ -988,9 +1545,6 @@
       }
     }
 
-    /**
-     * Primary PointerUp Handler
-     */
     handlePointerUp(e) {
       const pointerId = e && e.pointerId !== undefined ? e.pointerId : 'mouse';
       const didResetHold = this._releasePointerEntry(pointerId);
@@ -1009,20 +1563,20 @@
       if (this.isDragging && this.dragTarget) {
         if (this.dragMode === 'bind-input') {
           this.dragTarget.style.cursor = 'grab';
-          this.playAudioTone(520, 'sine', 0.04);
+          this._playNamedTone('release');
         } else if (this.dragMode === 'generic') {
           const axis = this.dragTarget.getAttribute('data-gesture-axis') || 'xy';
           this.dragTarget.style.cursor = axis === 'y' ? 'ns-resize' : (axis === 'x' ? 'ew-resize' : 'grab');
-          this.playAudioTone(440, 'sine', 0.05);
+          this._playNamedTone('release');
           if (this.engine && !this.engine.isPlaying && this._wasPlayingBeforeDrag) {
             this.engine.play();
           }
         } else if (this.dragMode === 'rotate') {
           if (this.dragTarget) this.dragTarget.style.cursor = 'grab';
-          this.playAudioTone(440, 'sine', 0.05);
+          this._playNamedTone('release');
         } else if (this.dragMode === 'trackball') {
           if (this.dragTarget && this.dragTarget !== this.stageSvg) this.dragTarget.style.cursor = 'grab';
-          this.playAudioTone(440, 'triangle', 0.04, 0.1);
+          this._playNamedTone('release');
         }
 
         this.isDragging = false;
@@ -1274,9 +1828,6 @@
       }
     }
 
-    // =========================================================================
-    // Bidirectional Slider-to-Variable Stage Binding Drag
-    // =========================================================================
     handleBindInputDrag(target, svgPt) {
       if (!this.engine || !this.engine.activeBindInputs) return;
       const binding = this.engine.activeBindInputs.find(b => b.node === target || b.target === '#' + target.id || (target.id && b.target === target.id));
@@ -1315,8 +1866,9 @@
     }
 
     // =========================================================================
-    // Whiteboard & Stylus Pen Ink Drawing Layer (Promethean / SMART / iPads)
+    // Whiteboard & Stylus Pen Ink Drawing Layer (Driven by player-gestures.ast)
     // =========================================================================
+
     startInkStroke(pt) {
       if (!this.inkRoot) return;
       const x = Number(pt.x.toFixed(1));
@@ -1326,19 +1878,20 @@
       path.setAttribute('stroke', this.currentInkColor);
       path.setAttribute('stroke-width', this.currentInkWidth.toString());
 
+      const toolCfg = this.playerProfile.whiteboard.tools.find(t => t.id === this.currentTool);
       if (this.currentTool === 'highlighter') {
-        path.setAttribute('stroke-opacity', '0.45');
-        path.setAttribute('stroke-linecap', 'square');
+        path.setAttribute('stroke-opacity', String(toolCfg && toolCfg.opacity !== undefined ? toolCfg.opacity : 0.45));
+        path.setAttribute('stroke-linecap', (toolCfg && toolCfg.cap) || 'square');
         path.setAttribute('stroke-linejoin', 'bevel');
-        path.style.mixBlendMode = 'multiply';
+        path.style.mixBlendMode = (toolCfg && toolCfg.blend) || 'multiply';
       } else if (this.currentTool === 'marker') {
-        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linecap', (toolCfg && toolCfg.cap) || 'round');
         path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('stroke-opacity', '0.92');
+        path.setAttribute('stroke-opacity', String(toolCfg && toolCfg.opacity !== undefined ? toolCfg.opacity : 0.92));
       } else {
-        path.setAttribute('stroke-linecap', 'round');
+        path.setAttribute('stroke-linecap', (toolCfg && toolCfg.cap) || 'round');
         path.setAttribute('stroke-linejoin', 'round');
-        path.setAttribute('stroke-opacity', '1.0');
+        path.setAttribute('stroke-opacity', String(toolCfg && toolCfg.opacity !== undefined ? toolCfg.opacity : 1.0));
       }
 
       path.setAttribute('d', `M ${x} ${y} `);
@@ -1413,7 +1966,7 @@
 
       if (erasedAny) {
         this.persistInkToSession();
-        this.playAudioTone(220, 'sine', 0.04);
+        this._playNamedTone('erase');
       }
     }
 
@@ -1429,7 +1982,7 @@
         this._undoStack.push(last);
       }
       this.persistInkToSession();
-      this.playAudioTone(330, 'sine', 0.05);
+      this._playNamedTone('undo');
     }
 
     redoLastStroke() {
@@ -1441,7 +1994,7 @@
         }
         this.strokes.push(restored);
         this.persistInkToSession();
-        this.playAudioTone(523, 'sine', 0.05);
+        this._playNamedTone('redo');
       }
     }
 
@@ -1780,6 +2333,8 @@ ${strokeLines.join('\n')}
     }
 
     togglePen(forceState) {
+      if (forceState !== false && !this._isControlEnabled('whiteboard')) return;
+
       this.isPenActive = (forceState !== undefined) ? Boolean(forceState) : !this.isPenActive;
       const penBtn = document.getElementById('stage-hud-pen-btn');
       if (penBtn) {
@@ -1790,7 +2345,9 @@ ${strokeLines.join('\n')}
       if (headerPen) {
         headerPen.classList.toggle('active', this.isPenActive);
       }
-      this.stageSvg.style.cursor = this.isPenActive ? (this.currentTool === 'eraser' ? 'cell' : 'crosshair') : 'default';
+      if (this.stageSvg) {
+        this.stageSvg.style.cursor = this.isPenActive ? (this.currentTool === 'eraser' ? 'cell' : 'crosshair') : 'default';
+      }
 
       const penTools = document.getElementById('stage-hud-pen-tools');
       const penPalette = document.getElementById('stage-hud-pen-palette');
@@ -1806,12 +2363,23 @@ ${strokeLines.join('\n')}
       if (clearBtn) clearBtn.style.display = displayVal;
 
       this.playAudioTone(this.isPenActive ? 660 : 440, 'sine', 0.06);
-      this.showFloatingNotice(this.isPenActive ? '🖊️ Whiteboard Marker Active' : 'Whiteboard Inactive');
+      if (this._isControlEnabled('whiteboard')) {
+        this.showFloatingNotice(this.isPenActive ? '🖊️ Whiteboard Marker Active' : 'Whiteboard Inactive');
+      }
     }
 
     // =========================================================================
-    // Stage-Embedded Glass HUD Floating Bar
+    // Stage-Embedded Glass HUD Floating Bar (Built from player-gestures.ast)
     // =========================================================================
+
+    _rebuildGlassHud() {
+      const container = this.stageSvg && this.stageSvg.parentNode;
+      if (!container) return;
+      const existing = container.querySelector('#stage-glass-hud-ui');
+      if (existing) existing.remove();
+      this.setupGlassHud();
+    }
+
     setupGlassHud() {
       const container = this.stageSvg.parentNode;
       if (!container || container.querySelector('#stage-glass-hud-ui')) return;
@@ -1835,19 +2403,14 @@ ${strokeLines.join('\n')}
         user-select: none;
       `;
 
-      // 1. Tool Selection Pills
+      // 1. Tool Selection Pills (from player-gestures.ast :whiteboard :tools)
       const penTools = document.createElement('div');
       penTools.id = 'stage-hud-pen-tools';
       penTools.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
-      const tools = [
-        { id: 'pen', icon: '✏️', title: 'Precision Pen (Smooth 2px-4px)', width: 3.5 },
-        { id: 'marker', icon: '🖍️', title: 'Whiteboard Marker (Rich 6px)', width: 6.0 },
-        { id: 'highlighter', icon: '✨', title: 'Pedagogical Highlighter (Soft Glow 12px)', width: 12.0 },
-        { id: 'eraser', icon: '🧽', title: 'Smart Stroke Eraser', width: 24.0 },
-      ];
+      const tools = this.playerProfile.whiteboard.tools;
       const toolBtns = [];
       tools.forEach(t => {
-        const btn = this.createHudButton(t.icon, t.title, () => {
+        const btn = this.createHudButton(t.icon, t.title || t.id, () => {
           this.currentTool = t.id;
           this.currentInkWidth = t.width;
           this.stageSvg.style.cursor = (t.id === 'eraser') ? 'cell' : 'crosshair';
@@ -1865,47 +2428,39 @@ ${strokeLines.join('\n')}
         penTools.appendChild(btn);
       });
 
-      // 2. Stroke Thickness Pills
+      // 2. Stroke Thickness Pills (from player-gestures.ast :whiteboard :widths)
       const penWidths = document.createElement('div');
       penWidths.id = 'stage-hud-pen-widths';
       penWidths.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
-      const widths = [
-        { label: '•', width: 2.5, title: 'Fine Stroke' },
-        { label: '●', width: 5.5, title: 'Medium Stroke' },
-        { label: '■', width: 11.0, title: 'Broad Stroke' },
-      ];
+      const widthValues = this.playerProfile.whiteboard.widths;
+      const widthLabels = ['•', '●', '■'];
+      const widthTitles = ['Fine Stroke', 'Medium Stroke', 'Broad Stroke'];
       const widthBtns = [];
-      widths.forEach(w => {
-        const btn = this.createHudButton(w.label, w.title, () => {
-          this.currentInkWidth = w.width;
+      widthValues.forEach((w, idx) => {
+        const label = widthLabels[idx] || '●';
+        const title = widthTitles[idx] || `Stroke ${w}px`;
+        const btn = this.createHudButton(label, title, () => {
+          this.currentInkWidth = w;
           widthBtns.forEach(wb => {
-            wb.el.style.borderColor = (wb.w === w.width) ? '#facc15' : 'rgba(255, 255, 255, 0.12)';
-            wb.el.style.color = (wb.w === w.width) ? '#facc15' : '#f8fafc';
+            wb.el.style.borderColor = (wb.w === w) ? '#facc15' : 'rgba(255, 255, 255, 0.12)';
+            wb.el.style.color = (wb.w === w) ? '#facc15' : '#f8fafc';
           });
           this.playAudioTone(700, 'triangle', 0.03);
         });
-        btn.style.fontSize = w.width > 8 ? '16px' : (w.width > 4 ? '13px' : '10px');
-        widthBtns.push({ w: w.width, el: btn });
+        btn.style.fontSize = w > 8 ? '16px' : (w > 4 ? '13px' : '10px');
+        widthBtns.push({ w, el: btn });
         penWidths.appendChild(btn);
       });
 
-      // 3. Smartboard 7-Color Palette Pills
+      // 3. Smartboard Palette Pills (from player-gestures.ast :whiteboard :palette)
       const penPalette = document.createElement('div');
       penPalette.id = 'stage-hud-pen-palette';
       penPalette.style.cssText = 'display:none; align-items:center; gap:4px; margin-right:4px;';
-      const colors = [
-        { hex: '#facc15', name: 'Gold' },
-        { hex: '#38bdf8', name: 'Cyan' },
-        { hex: '#4ade80', name: 'Green' },
-        { hex: '#f43f5e', name: 'Red' },
-        { hex: '#c084fc', name: 'Purple' },
-        { hex: '#ffffff', name: 'White' },
-        { hex: '#0f172a', name: 'Charcoal' }
-      ];
+      const colors = this.playerProfile.whiteboard.palette;
       colors.forEach(col => {
         const dot = document.createElement('button');
         dot.type = 'button';
-        dot.title = col.name;
+        dot.title = col.name || col.hex;
         dot.style.cssText = `width:18px; height:18px; border-radius:50%; background:${col.hex}; border:1.5px solid rgba(255,255,255,0.45); cursor:pointer; padding:0; transition: transform 0.12s ease;`;
         dot.onmouseenter = () => dot.style.transform = 'scale(1.25)';
         dot.onmouseleave = () => dot.style.transform = 'scale(1.0)';
@@ -1971,12 +2526,14 @@ ${strokeLines.join('\n')}
 
       // 7. X-Ray Discovery Button
       const xrayBtn = this.createHudButton('🔬', 'Pedagogical X-Ray Inspection', () => {
+        if (!this._isControlEnabled('xray')) return;
         this.isXRayActive = !this.isXRayActive;
         xrayBtn.style.background = this.isXRayActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
         xrayBtn.style.color = this.isXRayActive ? '#090d16' : '#ffffff';
         if (!this.isXRayActive) this.hideXRayPopup();
         this.playAudioTone(this.isXRayActive ? 784 : 392, 'sine', 0.08);
       });
+      xrayBtn.id = 'stage-hud-xray-btn';
 
       // 8. Audio Sonification Button
       const soundBtn = this.createHudButton('🔊', 'Multi-sensory Procedural Audio', () => {
@@ -1985,6 +2542,7 @@ ${strokeLines.join('\n')}
         soundBtn.style.opacity = this.sonificationEnabled ? '1.0' : '0.5';
         if (this.sonificationEnabled) this.playAudioTone(523, 'sine', 0.05);
       });
+      soundBtn.id = 'stage-hud-sound-btn';
 
       hud.appendChild(penTools);
       hud.appendChild(penWidths);
@@ -2023,8 +2581,9 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // X-Ray Pedagogical Knowledge Tooltip (Cartridge Attribute-Driven)
+    // X-Ray Pedagogical Knowledge Tooltip
     // =========================================================================
+
     setupXRayTooltip() {
       const container = this.stageSvg.parentNode;
       if (!container || container.querySelector('#stage-xray-tooltip')) return;
@@ -2053,7 +2612,7 @@ ${strokeLines.join('\n')}
     }
 
     showXRayPopup(pedId, svgX, svgY, pedNode = null) {
-      if (!this.xrayTooltip) return;
+      if (!this.xrayTooltip || !this._isControlEnabled('xray')) return;
       let info = null;
 
       if (pedNode) {
@@ -2119,9 +2678,6 @@ ${strokeLines.join('\n')}
       }
     }
 
-    // =========================================================================
-    // Touch Feedback Ripple
-    // =========================================================================
     createTouchRipple(x, y) {
       if (!this.hudRoot) return;
       const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -2142,10 +2698,17 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // Procedural WebAudio Sonification
+    // Procedural WebAudio Sonification (Gated by :audio switch)
     // =========================================================================
+
     playAudioTone(frequency = 440, type = 'sine', duration = 0.1, gainVal = 0.15) {
-      if (!this.sonificationEnabled || (this.engine && (this.engine.muted || this.engine.volume === 0))) return;
+      if (
+        !this._isControlEnabled('audio') ||
+        !this.sonificationEnabled ||
+        (this.engine && (this.engine.muted || this.engine.volume === 0))
+      ) {
+        return;
+      }
       try {
         if (!this.audioCtx) {
           const AudioContextClass = window.AudioContext || window.webkitAudioContext;
@@ -2171,15 +2734,22 @@ ${strokeLines.join('\n')}
     }
 
     // =========================================================================
-    // Live Simulation Parameters & Controls HUD Dock (Generic Fallback)
+    // Live Simulation Parameters & Controls HUD Dock (Gated by :param-hud)
     // =========================================================================
+
     setupSimParametersHud() {
       const container = this.stageSvg && this.stageSvg.parentNode;
       if (!container || !this.engine) return;
 
       let hud = container.querySelector('#stage-sim-parameters');
       const scene = this.engine.scene;
-      if (!scene || (scene.uiControls && scene.uiControls.length > 0) || container.querySelector('#cartridge-controls-overlay')) {
+
+      if (
+        !this._isControlEnabled('param-hud') ||
+        !scene ||
+        (scene.uiControls && scene.uiControls.length > 0) ||
+        container.querySelector('#cartridge-controls-overlay')
+      ) {
         if (hud) hud.style.display = 'none';
         return;
       }
@@ -2394,7 +2964,8 @@ ${strokeLines.join('\n')}
     }
   }
 
-  // Expose globally
+  // Expose globally (maintaining backward compatibility with existing index.html bootstrap)
   global.ASTDirectGestureSubsystem = ASTDirectGestureSubsystem;
+  global.ASTSiteGestures = ASTDirectGestureSubsystem;
 
 })(typeof window !== 'undefined' ? window : globalThis);
