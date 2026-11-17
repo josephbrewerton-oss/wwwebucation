@@ -24,8 +24,9 @@
     (:cartridge
       :id "alphabet-basics"
       :type "Sim"
-      :title "Alphabet Basics"
-      :stage "PORTAL APPARATUS"
+      :title "Alphabet Basics: Paired Case & Sound Bridge"
+      :stage "EYFS & LANGUAGES"
+      :oak-id "EYFS-LIT-001"
       :bytecode "bytecode/alphabet-basics.astb")
 
     (:cartridge

@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T19:25:17.845Z",
+  "generatedAt": "2026-11-17T19:32:42.266Z",
   "totalScenes": 72,
   "inputDirs": [
     "static/cartridges",
@@ -1444,13 +1444,13 @@
     {
       "id": "alphabet-basics",
       "base": "alphabet-basics",
-      "type": "App",
-      "title": "Alphabet Basics",
-      "stage": "CURRICULUM",
-      "duration": 14,
-      "oakId": "OAK-KS3-GEN-ALPHABETB",
-      "oakUnit": "ks3-generalcurriculum-alphabet-basics",
-      "subject": "General Curriculum",
+      "type": "Sim",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "stage": "EYFS & LANGUAGES",
+      "duration": 36,
+      "oakId": "EYFS-LIT-001",
+      "oakUnit": "eyfs-send-alphabet-basics",
+      "subject": "Languages",
       "has3D": false,
       "nodes3DCount": 0,
       "svgFile": "cartridges/alphabet-basics.svg",
@@ -1461,13 +1461,13 @@
       "hasVideo": false,
       "isCore": true,
       "tier": "core",
-      "mount": "/curriculum/general/alphabet-basics",
-      "section": "Curriculum Cartridges",
+      "mount": "/curriculum/languages/alphabet-basics",
+      "section": "Languages & Inclusion",
       "keyframeCount": 0,
-      "subtitleCount": 0,
-      "bindingsCount": 0,
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "subtitleCount": 9,
+      "bindingsCount": 23,
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "domino-multiplication",

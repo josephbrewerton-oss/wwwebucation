@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-17T19:25:17.860Z",
+  "generatedAt": "2026-11-17T19:32:42.268Z",
   "totalCartridges": 72,
   "units": [
     {
@@ -428,12 +428,12 @@
       "cartridgeId": "osmosis-membrane"
     },
     {
-      "unit": "ks3-generalcurriculum-alphabet-basics",
-      "oakId": "OAK-KS3-GEN-ALPHABETB",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "stage": "CURRICULUM",
-      "title": "Alphabet Basics",
+      "unit": "eyfs-send-alphabet-basics",
+      "oakId": "EYFS-LIT-001",
+      "subject": "Languages",
+      "section": "Languages & Inclusion",
+      "stage": "EYFS & LANGUAGES",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
       "cartridgeId": "alphabet-basics"
     },
     {
@@ -1641,22 +1641,22 @@
     {
       "id": "alphabet-basics",
       "base": "alphabet-basics",
-      "type": "App",
-      "title": "Alphabet Basics",
-      "stage": "CURRICULUM",
-      "oakId": "OAK-KS3-GEN-ALPHABETB",
-      "oakUnit": "ks3-generalcurriculum-alphabet-basics",
-      "subject": "General Curriculum",
-      "section": "Curriculum Cartridges",
-      "mount": "/curriculum/general/alphabet-basics",
-      "duration": 14,
+      "type": "Sim",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "stage": "EYFS & LANGUAGES",
+      "oakId": "EYFS-LIT-001",
+      "oakUnit": "eyfs-send-alphabet-basics",
+      "subject": "Languages",
+      "section": "Languages & Inclusion",
+      "mount": "/curriculum/languages/alphabet-basics",
+      "duration": 36,
       "svgFile": "cartridges/alphabet-basics.svg",
       "astFile": "cartridges/alphabet-basics.ast",
       "astbFile": "bytecode/alphabet-basics.astb",
       "isCore": true,
       "tier": "core",
-      "hasCheckpoints": false,
-      "checkpointCount": 0
+      "hasCheckpoints": true,
+      "checkpointCount": 2
     },
     {
       "id": "domino-multiplication",

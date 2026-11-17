@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-17T19:25:18.496Z",
+  "generatedAt": "2026-11-17T19:32:42.992Z",
   "totalCartridges": 73,
-  "masterChecksum": "2d499f84511194856f446ad8c7ae54ad71198029594f70a23ee06e7e1d0475cb",
+  "masterChecksum": "f03dadbdd688940a4b72f615400a6f2cee31a41ca67471bdadd8f85b28edf93c",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -39,18 +39,18 @@
     },
     "alphabet-basics": {
       "id": "alphabet-basics",
-      "title": "alphabet-basics",
-      "stage": "CURRICULUM",
+      "title": "Alphabet Basics: Paired Case & Sound Bridge",
+      "stage": "EYFS & LANGUAGES",
       "type": "Sim",
-      "astSha256": "dbbe8d9f8f72e24bff8c23cc6795f63c1094f367120a5f5f130bf6940534961e",
+      "astSha256": "e5ff1749c9739da6c4e37c1d01e820fe67355fe63b81a0588fcc87fa5ff85a06",
       "svgSha256": "e5ea4d9485cfec5d480d98b31c59022aa350abac5a2de3149d1f2aae33b86f81",
-      "astbSha256": "6ed982d1ae54c9bd31fe1097e446d3f999bc55b25872897131b5c651b457a33a",
-      "astbBytes": 61,
-      "astBytes": 87827,
+      "astbSha256": "4dbb4e1412e8c4700e46b371b1b32c10d5d278995b2f5fb6fa0330b16cbd2837",
+      "astbBytes": 2531,
+      "astBytes": 7760,
       "svgBytes": 70511,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "e1237f5c115760dff70f3ce00326e9e1f1d17f117f44165a5006c2feb0bfb3df",
+      "seal": "a245eb03073b4a166902ff220f6a368251e414bbf23b1bbed3d1d1f75f1e679c",
       "certified": true
     },
     "altar-anatomy": {
