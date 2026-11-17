@@ -636,39 +636,13 @@
       // Restore any persisted annotations for this scene
       this.restoreInkFromSession();
 
-      // 1. Kinetic Gas Piston Handle
-      const piston = this.stageSvg.querySelector('#kg-piston') || this.stageSvg.querySelector('#piston-assembly');
-      if (piston) {
-        piston.style.cursor = 'ew-resize';
-        piston.setAttribute('data-draggable', 'piston');
-        piston.setAttribute('data-pedagogical', 'kg-piston');
-      }
-
-      // 2. Calculus Tangent Probe
+      // Calculus Tangent Probe
       const tangentAssembly = this.stageSvg.querySelector('#cc-tangent-assembly') || this.stageSvg.querySelector('#tangent-assembly') || this.stageSvg.querySelector('#tangent-probe');
       if (tangentAssembly) {
         tangentAssembly.style.cursor = 'grab';
         tangentAssembly.setAttribute('data-draggable', 'tangent-probe');
         tangentAssembly.setAttribute('data-pedagogical', 'cc-probe');
       }
-
-      // 3. Electrical Switch
-      const switchEl = this.stageSvg.querySelector('[data-action="toggle-switch"]') || this.stageSvg.querySelector('#circuit-switch') || this.stageSvg.querySelector('#switch-assembly');
-      if (switchEl) {
-        switchEl.style.cursor = 'pointer';
-        switchEl.setAttribute('data-interactive', 'switch');
-        switchEl.setAttribute('data-pedagogical', 'ec-switch');
-      }
-
-      // 4. Bourdon Gauge & Thermometer
-      const gauge = this.stageSvg.querySelector('#kg-gauge-needle')?.parentNode;
-      if (gauge) gauge.setAttribute('data-pedagogical', 'kg-gauge');
-
-      const thermo = this.stageSvg.querySelector('#kg-thermo-fluid')?.parentNode;
-      if (thermo) thermo.setAttribute('data-pedagogical', 'kg-thermo');
-
-      const brownian = this.stageSvg.querySelector('#kg-brownian');
-      if (brownian) brownian.setAttribute('data-pedagogical', 'kg-brownian');
 
       const integralArea = this.stageSvg.querySelector('#cc-integral-area') || this.stageSvg.querySelector('#integral-shaded-area');
       if (integralArea) integralArea.setAttribute('data-pedagogical', 'cc-integral');
@@ -754,118 +728,6 @@
 
       // 9c. Simulation Parameters Live Controls Dock
       this.setupSimParametersHud();
-
-      // 9d. DNA Double Helix Base-Pair Rung Inspection (Zero-Bloat Harmonic Discovery)
-      const dnaStrands = this.stageSvg.querySelector('#dna-strands');
-      if (dnaStrands) {
-        for (let i = 0; i < 18; i++) {
-          const line = this.stageSvg.querySelector(`#dna-line-${i}`);
-          const ca = this.stageSvg.querySelector(`#dna-ca-${i}`);
-          const cb = this.stageSvg.querySelector(`#dna-cb-${i}`);
-          const isAT = (i % 2 === 0);
-          const baseName = isAT ? 'Adenine = Thymine (2 Hydrogen Bonds)' : 'Cytosine ≡ Guanine (3 Hydrogen Bonds)';
-          const targets = [line, ca, cb].filter(Boolean);
-          targets.forEach(node => {
-            node.style.cursor = 'pointer';
-            node.setAttribute('data-pedagogical', `dna-rung-${i}`);
-            node.setAttribute('data-pedagogical-label', baseName);
-            if (!node._hasDnaClick) {
-              node._hasDnaClick = true;
-              node.addEventListener('pointerdown', (ev) => {
-                ev.stopPropagation();
-                if (isAT) {
-                  this.playAudioTone(523.25, 'sine', 0.12, 0.18);
-                  setTimeout(() => this.playAudioTone(659.25, 'sine', 0.14, 0.2), 60);
-                } else {
-                  this.playAudioTone(440.0, 'sine', 0.12, 0.18);
-                  setTimeout(() => this.playAudioTone(554.37, 'sine', 0.12, 0.2), 60);
-                  setTimeout(() => this.playAudioTone(659.25, 'sine', 0.16, 0.22), 120);
-                }
-                const statusEl = this.stageSvg.querySelector('#dna-status-text');
-                if (statusEl) {
-                  statusEl.textContent = `Inspected Rung #${i + 1}: ${baseName}`;
-                  statusEl.setAttribute('fill', isAT ? '#f87171' : '#60a5fa');
-                }
-              });
-            }
-          });
-        }
-      }
-
-      // 9e. DNA Interactive Control Ribbon (Helicase Unzip, Base Filters, Speed Chips)
-      const dnaRibbon = this.stageSvg.querySelector('#dna-control-ribbon');
-      if (dnaRibbon) {
-        const setUnzipUI = (val) => {
-          if (this.engine) this.engine.setVar('unzipProgress', val);
-          const b0 = dnaRibbon.querySelector('#btn-dna-unzip-0 rect');
-          const b50 = dnaRibbon.querySelector('#btn-dna-unzip-50 rect');
-          const b100 = dnaRibbon.querySelector('#btn-dna-unzip-100 rect');
-          if (b0) b0.setAttribute('fill', val === 0 ? '#0284c7' : '#1e293b');
-          if (b50) b50.setAttribute('fill', Math.abs(val - 0.5) < 0.1 ? '#0284c7' : '#1e293b');
-          if (b100) b100.setAttribute('fill', val === 1.0 ? '#0284c7' : '#1e293b');
-        };
-
-        const setSpeedUI = (spd) => {
-          if (this.engine) this.engine.setVar('rotSpeed', spd);
-          const s1 = dnaRibbon.querySelector('#btn-dna-speed-1 rect');
-          const s2 = dnaRibbon.querySelector('#btn-dna-speed-2 rect');
-          if (s1) s1.setAttribute('fill', spd <= 1.2 ? '#0284c7' : '#1e293b');
-          if (s2) s2.setAttribute('fill', spd > 1.2 ? '#0284c7' : '#1e293b');
-        };
-
-        const setFilterUI = (mode) => {
-          const fAll = dnaRibbon.querySelector('#btn-dna-filter-all rect');
-          const fAt = dnaRibbon.querySelector('#btn-dna-filter-at rect');
-          const fCg = dnaRibbon.querySelector('#btn-dna-filter-cg rect');
-          if (fAll) fAll.setAttribute('fill', mode === 'all' ? '#0284c7' : '#1e293b');
-          if (fAt) fAt.setAttribute('fill', mode === 'at' ? '#0284c7' : '#1e293b');
-          if (fCg) fCg.setAttribute('fill', mode === 'cg' ? '#0284c7' : '#1e293b');
-
-          for (let i = 0; i < 18; i++) {
-            const line = this.stageSvg.querySelector(`#dna-line-${i}`);
-            const ca = this.stageSvg.querySelector(`#dna-ca-${i}`);
-            const cb = this.stageSvg.querySelector(`#dna-cb-${i}`);
-            const isAT = (i % 2 === 0);
-            const visible = (mode === 'all') || (mode === 'at' && isAT) || (mode === 'cg' && !isAT);
-            const op = visible ? '1.0' : '0.12';
-            if (line) line.setAttribute('opacity', op);
-            if (ca) ca.setAttribute('opacity', op);
-            if (cb) cb.setAttribute('opacity', op);
-          }
-        };
-
-        dnaRibbon.querySelectorAll('[data-action]').forEach(btn => {
-          btn.addEventListener('pointerdown', (ev) => {
-            ev.stopPropagation();
-            const act = btn.getAttribute('data-action');
-            if (act === 'dna-unzip-0') {
-              setUnzipUI(0.0);
-              this.playAudioTone(440, 'sine', 0.1, 0.2);
-            } else if (act === 'dna-unzip-50') {
-              setUnzipUI(0.5);
-              this.playAudioTone(554.37, 'sine', 0.1, 0.2);
-            } else if (act === 'dna-unzip-100') {
-              setUnzipUI(1.0);
-              this.playAudioTone(659.25, 'triangle', 0.12, 0.25);
-            } else if (act === 'dna-speed-1') {
-              setSpeedUI(1.0);
-              this.playAudioTone(480, 'sine', 0.08, 0.15);
-            } else if (act === 'dna-speed-2') {
-              setSpeedUI(2.0);
-              this.playAudioTone(600, 'sine', 0.08, 0.15);
-            } else if (act === 'dna-filter-all') {
-              setFilterUI('all');
-              this.playAudioTone(523.25, 'triangle', 0.08, 0.18);
-            } else if (act === 'dna-filter-at') {
-              setFilterUI('at');
-              this.playAudioTone(659.25, 'triangle', 0.08, 0.18);
-            } else if (act === 'dna-filter-cg') {
-              setFilterUI('cg');
-              this.playAudioTone(783.99, 'triangle', 0.08, 0.18);
-            }
-          });
-        });
-      }
 
       // 10. Dynamic Declarative Scene Gestures (Cartridge as Driver, Engine as Virtual Machine)
       const scene = this.engine && this.engine.scene;
@@ -1073,7 +935,7 @@
         return;
       }
       // B. Check for interactive direct-grab targets or action buttons
-      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #circuit-switch, #kg-piston, #piston-assembly, #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, #tt-laser-splitter');
+      const target = e.target.closest('[data-draggable], [data-interactive], [data-action], [data-planet], #cc-tangent-assembly, #tangent-assembly, #tangent-probe, #pyth-handle-a, #pyth-handle-b, #fishing-hook, #fishing-bobber, #fishing-bobber-rig, #climber-marker, #climber-pulse, #mtn-climber, #tt-laser-splitter');
 
       if (target) {
         // Direct Cosmic Planet Click / Fact Card Trigger (Tap again to toggle closed)
@@ -1100,39 +962,6 @@
           this.dragTarget = this.stageSvg.querySelector('#tt-laser-splitter') || target;
           this.dragMode = 'tt-splitter';
           this.playAudioTone(480, 'sine', 0.08);
-          this.createTouchRipple(svgPt.x, svgPt.y);
-          return;
-        }
-
-        // Direct Phase State Indicator Click Check (Solid, Liquid, Gas)
-        const stateNode = (target.id && (target.id.includes('ind-') || target.id.includes('txt-'))) ? target : target.closest('#ind-solid, #ind-liquid, #ind-gas, #txt-solid, #txt-liquid, #txt-gas, [data-interactive="gas-state"]');
-        if (stateNode) {
-          e.preventDefault();
-          let st = 'gas';
-          const nid = stateNode.id || stateNode.getAttribute('data-gas-state') || '';
-          if (nid.includes('solid')) st = 'solid';
-          else if (nid.includes('liquid')) st = 'liquid';
-          else if (nid.includes('gas')) st = 'gas';
-
-          let temp = 300;
-          if (st === 'solid') temp = 85;
-          else if (st === 'liquid') temp = 220;
-          else if (st === 'gas') temp = 300;
-
-          if (this.engine && typeof this.engine.setVar === 'function') {
-            this.engine.setVar('state', st);
-            this.engine.setVar('temp', temp);
-          }
-          this.playAudioTone(st === 'solid' ? 220 : (st === 'liquid' ? 440 : 660), 'sine', 0.08);
-          this.createTouchRipple(svgPt.x, svgPt.y);
-          return;
-        }
-
-        // Direct Knife Switch Click Toggle Check
-        const switchNode = target.id === 'circuit-switch' ? target : target.closest('#circuit-switch');
-        if (switchNode || target.getAttribute('data-interactive') === 'switch' || target.getAttribute('data-action') === 'toggle-switch') {
-          e.preventDefault();
-          this.toggleSwitch(switchNode || target);
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
@@ -1175,10 +1004,6 @@
           this.dragMode = 'bind-input';
           target.style.cursor = 'grabbing';
           this.playAudioTone(380, 'sine', 0.05);
-        } else if (target.id === 'kg-piston' || target.id === 'piston-assembly' || target.getAttribute('data-draggable') === 'piston') {
-          this.dragMode = 'piston';
-          target.style.cursor = 'grabbing';
-          this.playAudioTone(330, 'triangle', 0.08);
         } else if (target.id === 'cc-tangent-assembly' || target.id === 'tangent-assembly' || target.id === 'tangent-probe' || target.getAttribute('data-draggable') === 'tangent-probe') {
           this.dragMode = 'tangent-probe';
           target.style.cursor = 'grabbing';
@@ -1230,9 +1055,6 @@
           this.dragMode = 'rotate';
           rotTarget.style.cursor = 'grabbing';
           this.playAudioTone(380, 'triangle', 0.06);
-        } else if (target.getAttribute('data-interactive') === 'switch' || target.getAttribute('data-interactive') === 'toggle-switch' || target.getAttribute('data-action') === 'toggle-switch') {
-          this.toggleSwitch(target);
-          return;
         }
 
         // Show live touch ripples
@@ -1323,8 +1145,6 @@
 
         if (this.dragMode === 'climber') {
           this.handleClimberDrag(svgPt);
-        } else if (this.dragMode === 'piston') {
-          this.handlePistonDrag(svgPt.x);
         } else if (this.dragMode === 'tangent-probe') {
           this.handleTangentProbeDrag(svgPt.x);
         } else if (this.dragMode === 'bind-input') {
@@ -1386,10 +1206,7 @@
           this.stageSvg.releasePointerCapture(e.pointerId);
         } catch {}
 
-        if (this.dragMode === 'piston') {
-          this.dragTarget.style.cursor = 'ew-resize';
-          this.playAudioTone(220, 'sine', 0.05);
-        } else if (this.dragMode === 'tangent-probe') {
+        if (this.dragMode === 'tangent-probe') {
           this.dragTarget.style.cursor = 'grab';
           this.playAudioTone(523.25, 'sine', 0.06);
         } else if (this.dragMode === 'bind-input') {
@@ -1662,58 +1479,7 @@
     }
 
     // =========================================================================
-    // Direct Manipulation Action 1: Kinetic Gas Piston Direct Compression
-    // =========================================================================
-    handlePistonDrag(svgX) {
-      // Piston bounds: 200 (compressed) to 450 (decompressed)
-      const clampedX = Math.max(200, Math.min(450, svgX));
-      
-      // Update Piston Transform
-      const pistonEl = this.stageSvg.querySelector('#kg-piston') || this.stageSvg.querySelector('#piston-assembly');
-      if (pistonEl) {
-        pistonEl.setAttribute('transform', `translate(${clampedX.toFixed(1)}, 0)`);
-      }
-
-      // Volume ratio: 1.0 at 450, 0.40 at 200
-      const volRatio = (clampedX - 150) / 300;
-      // Boyle's Law: P = P0 / V
-      const pressureKpa = (101.3 / Math.max(0.35, volRatio)).toFixed(1);
-
-      // Gauge needle angle: -45 deg at 101.3 kPa, +85 deg at 289 kPa
-      const gaugeAngle = -45 + (1.0 - volRatio) * 130;
-      const needle = this.stageSvg.querySelector('#kg-gauge-needle') || this.stageSvg.querySelector('#gauge-needle');
-      if (needle) {
-        needle.setAttribute('transform', `rotate(${gaugeAngle.toFixed(1)} 0 0)`);
-      }
-
-      const gaugeVal = this.stageSvg.querySelector('#kg-gauge-val') || this.stageSvg.querySelector('#gauge-value');
-      if (gaugeVal) {
-        gaugeVal.textContent = `${pressureKpa} kPa`;
-      }
-
-      const eqCard = this.stageSvg.querySelector('#kg-pv-eq') || this.stageSvg.querySelector('#pv-equation');
-      if (eqCard) {
-        eqCard.textContent = `P × V = ${(parseFloat(pressureKpa) * volRatio).toFixed(0)}  •  [Boyle's Law Direct Grab: V=${(volRatio * 100).toFixed(0)}%]`;
-      }
-
-      // Sync with Engine Reactive State Variables and Scene Cache
-      if (this.engine && this.engine._cachedElements) {
-        this.engine._cachedElements.userPistonX = clampedX;
-      }
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar('volume', parseFloat(volRatio.toFixed(3)));
-        this.engine.setVar('pressure', parseFloat(pressureKpa));
-      }
-
-      // Procedural audio: compression pitch rises as pressure spikes
-      if (this.sonificationEnabled && Math.random() < 0.15) {
-        const freq = 200 + (1.0 - volRatio) * 400;
-        this.playAudioTone(freq, 'sawtooth', 0.03, 0.05);
-      }
-    }
-
-    // =========================================================================
-    // Direct Manipulation Action 2: Calculus Curve Tangent Probe Dragging
+    // Direct Manipulation Action: Calculus Curve Tangent Probe Dragging
     // =========================================================================
     handleTangentProbeDrag(svgX) {
       // Grid domain: x from 70 to 470 (center origin at x=250)
@@ -1759,52 +1525,6 @@
           this.playAudioTone(880, 'sine', 0.25, 0.2); // Bright chime
           this._lastStationarySound = Date.now();
         }
-      }
-    }
-
-    // =========================================================================
-    // Direct Manipulation Action 3: Electrical Knife Switch Toggle
-    // =========================================================================
-    toggleSwitch(switchEl) {
-      const isClosed = switchEl.getAttribute('data-state') !== 'open';
-      const newState = isClosed ? 'open' : 'closed';
-      switchEl.setAttribute('data-state', newState);
-
-      // Sync with Engine Reactive State Variables
-      if (this.engine && typeof this.engine.setVar === 'function') {
-        this.engine.setVar('switchClosed', newState === 'closed');
-      }
-
-      // Play authentic mechanical snap click
-      this.playAudioTone(isClosed ? 180 : 360, 'square', 0.04, 0.3);
-
-      const bulbGlow = this.stageSvg.querySelector('#bulb-halo');
-      const blade = this.stageSvg.querySelector('#switch-blade');
-      const swText = this.stageSvg.querySelector('#switch-text');
-      const dots = this.stageSvg.querySelectorAll('.e-dot');
-
-      if (blade) {
-        if (newState === 'open') {
-          blade.setAttribute('x2', '45');
-          blade.setAttribute('y2', '0');
-          blade.setAttribute('stroke', '#ef4444');
-        } else {
-          blade.setAttribute('x2', '60');
-          blade.setAttribute('y2', '20');
-          blade.setAttribute('stroke', '#22c55e');
-        }
-      }
-      if (swText) {
-        swText.textContent = newState === 'open' ? 'SWITCH: OPEN (Click to close)' : 'SWITCH: CLOSED (Click to open)';
-        swText.setAttribute('fill', newState === 'open' ? '#f87171' : '#4ade80');
-      }
-
-      if (newState === 'open') {
-        if (bulbGlow) bulbGlow.setAttribute('opacity', '0.05');
-        if (dots) dots.forEach(d => d.setAttribute('opacity', '0.2'));
-      } else {
-        if (bulbGlow) bulbGlow.setAttribute('opacity', '0.9');
-        if (dots) dots.forEach(d => d.setAttribute('opacity', '1.0'));
       }
     }
 
@@ -2595,15 +2315,6 @@
           this.playAudioTone(440, 'sine', 0.12);
           return;
         }
-      }
-
-      // -----------------------------------------------------------------------
-      // Electrical Knife Switch Toggle
-      // -----------------------------------------------------------------------
-      if (action === 'toggle-switch') {
-        const sw = this.stageSvg && (this.stageSvg.querySelector('#circuit-switch') || this.stageSvg.querySelector('[data-action="toggle-switch"]'));
-        if (sw) this.toggleSwitch(sw);
-        return;
       }
 
       // -----------------------------------------------------------------------

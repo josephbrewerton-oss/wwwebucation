@@ -61,7 +61,7 @@
   </g>
   
   <!-- Component 4: Interactive Knife Switch (Bottom side) -->
-  <g id="circuit-switch" data-interactive="switch" data-state="closed" transform="translate(370, 345)" style="cursor: pointer;" data-pedagogical="ec-switch">
+  <g id="circuit-switch" data-state="closed" transform="translate(370, 345)" style="cursor: pointer;" data-pedagogical="ec-switch">
     <rect x="-10" y="0" width="80" height="60" fill="transparent"/>
     <circle cx="0" cy="20" r="5" fill="#22c55e"/>
     <line id="switch-blade" x1="0" y1="20" x2="60" y2="20" stroke="#22c55e" stroke-width="4"/>

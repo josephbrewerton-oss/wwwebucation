@@ -26,7 +26,7 @@
   ))
 
   (:gestures (
-    (:clickable :target "#circuit-switch" :toggle-var "switchClosed")
+    (:clickable :target "#circuit-switch" :toggle-var "switchClosed" :tone "360")
     (:key :code "Space" :toggle-var "switchClosed")
     (:key :code "ArrowUp" :step-var "voltage" :delta 0.5 :min 1.5 :max 24.0)
     (:key :code "ArrowDown" :step-var "voltage" :delta -0.5 :min 1.5 :max 24.0)

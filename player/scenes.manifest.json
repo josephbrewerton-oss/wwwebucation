@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T08:34:13.346Z",
+  "generatedAt": "2026-11-17T08:44:42.284Z",
   "totalScenes": 72,
   "scenes": [
     {
@@ -181,7 +181,7 @@
       "astbFile": "bytecode/dna-helix.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 19
+      "bindingsCount": 118
     },
     {
       "id": "domino-multiplication",

@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-17T08:34:12.306Z",
+  "generatedAt": "2026-11-17T08:44:41.054Z",
   "totalScenes": 71,
   "inputDirs": [
     "static/cartridges",
@@ -905,7 +905,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 19,
+      "bindingsCount": 118,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
