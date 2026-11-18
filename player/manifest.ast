@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 73
+  :count 72
   (:cartridges (
     (:cartridge
       :id "acid-alkali-titration"
@@ -180,13 +180,6 @@
       :stage "CATHOLIC LIFE"
       :oak-id "OAK-KS2-RE-004"
       :bytecode "bytecode/holy-water-thurifer.astb")
-
-    (:cartridge
-      :id "inverted-pendulum-dyno"
-      :type "Sim"
-      :title "Inverted Pendulum Dyno"
-      :stage "PORTAL APPARATUS"
-      :bytecode "bytecode/inverted-pendulum-dyno.astb")
 
     (:cartridge
       :id "kinetic-gas"
