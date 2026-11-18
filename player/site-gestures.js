@@ -196,6 +196,8 @@
           this.dragMode = null;
           this._wasPlayingBeforeDrag = false;
           this.hideXRayPopup();
+          this._syncCartridgeControls();
+          this.enhanceSceneInteractivity();
           setTimeout(() => {
             this._syncCartridgeControls();
             this.enhanceSceneInteractivity();

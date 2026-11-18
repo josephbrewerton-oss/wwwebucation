@@ -2064,22 +2064,32 @@
     syncProjectedControls(varName, value) {
       const overlay = document.getElementById('cartridge-controls-overlay');
       if (!overlay) return;
-      const cleanVar = this.engine && typeof this.engine.normalizeVarName === 'function'
+      const isBatchReset = varName === '*';
+      const cleanVar = !isBatchReset && this.engine && typeof this.engine.normalizeVarName === 'function'
         ? this.engine.normalizeVarName(varName)
-        : varName.replace(/^\*|\*$/g, '');
+        : String(varName || '').replace(/^\*|\*$/g, '');
 
       const items = overlay.querySelectorAll('.cartridge-ctrl-item');
       items.forEach(item => {
         const id = item.getAttribute('data-ctrl-id');
+        const resolvedVal = isBatchReset
+          ? (this.engine && typeof this.engine.getMemoryVar === 'function' ? this.engine.getMemoryVar(id) : undefined)
+          : value;
+        const matches = isBatchReset || id === cleanVar || id === varName;
+
         const slider = item.querySelector('.cartridge-ui-slider');
-        if (slider && (id === cleanVar || id === varName)) {
-          slider.value = value;
+        if (slider && matches && resolvedVal !== undefined) {
+          slider.value = resolvedVal;
           const badge = item.querySelector(`#ctrl-val-${id}`);
-          if (badge) badge.textContent = value;
+          if (badge) badge.textContent = resolvedVal;
+        }
+        const sel = item.querySelector('.cartridge-ui-select');
+        if (sel && matches && resolvedVal !== undefined && sel.value !== String(resolvedVal)) {
+          sel.value = String(resolvedVal);
         }
         const toggle = item.querySelector('.cartridge-ui-toggle');
-        if (toggle && (id === cleanVar || id === varName || (id === 'switch' && cleanVar === 'switchClosed') || (id === 'bsl' && cleanVar === 'bslActive'))) {
-          const boolVal = Boolean(value);
+        if (toggle && (matches || (id === 'switch' && cleanVar === 'switchClosed') || (id === 'bsl' && cleanVar === 'bslActive')) && resolvedVal !== undefined) {
+          const boolVal = Boolean(resolvedVal);
           toggle.setAttribute('aria-checked', String(boolVal));
           toggle.classList.toggle('active', boolVal);
           const txt = item.querySelector('.cartridge-ui-toggle-text');

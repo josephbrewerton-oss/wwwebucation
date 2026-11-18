@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-18T08:48:21.574Z",
+  "generatedAt": "2026-11-18T09:09:30.704Z",
   "totalScenes": 73,
   "scenes": [
     {
@@ -406,7 +406,7 @@
       "astbFile": "bytecode/lego-blocks.astb",
       "keyframeCount": 5,
       "subtitleCount": 4,
-      "bindingsCount": 26
+      "bindingsCount": 119
     },
     {
       "id": "liturgical-calendar",
