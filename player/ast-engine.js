@@ -8253,18 +8253,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const isInPlayerSubdir = currentDir.endsWith('/player/');
             const resolveManifestUrl = (relPath) => {
               const clean = relPath.replace(/^(?:\.\/|\.\.\/|static\/)/, '');
-              if (clean.startsWith('docs/')) {
-                return [`${repoBase}${clean}`, isInPlayerSubdir ? `../${clean}` : `./${clean}`];
-              }
               if (clean.startsWith('player/')) {
                 const sub = clean.slice('player/'.length);
                 return [`${repoBase}${clean}`, isInPlayerSubdir ? `./${sub}` : `./${clean}`];
               }
               return [
-                isInPlayerSubdir ? `./${clean}` : `${repoBase}player/${clean}`,
-                `${repoBase}player/${clean}`,
-                `${repoBase}${clean}`
-              ];
+                `${repoBase}${clean}`,
+                `./${clean}`,
+                isInPlayerSubdir ? `../${clean}` : null
+              ].filter(Boolean);
             };
 
             const fetchAsset = async (ext) => {
@@ -8274,10 +8271,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               if (isBinary) {
                 if (registryScene?.astbFile) {
                   candidateUrls.push(...resolveManifestUrl(registryScene.astbFile));
-                } else if (!registryScene?.astFile || !registryScene.astFile.endsWith('.ast') || registryScene.astFile.includes('scenes/') || registryScene.astFile.includes('cartridges/')) {
+                } else if (!registryScene?.astFile || !registryScene.astFile.endsWith('.ast') || registryScene.astFile.includes('cartridges/')) {
                   candidateUrls.push(
-                    isInPlayerSubdir ? `./bytecode/${sceneId}.astb` : `${repoBase}player/bytecode/${sceneId}.astb`,
-                    `${repoBase}player/bytecode/${sceneId}.astb`
+                    `${repoBase}bytecode/${sceneId}.astb`,
+                    `./bytecode/${sceneId}.astb`,
+                    isInPlayerSubdir ? `../bytecode/${sceneId}.astb` : null
                   );
                 }
               } else if (ext === 'svg') {
@@ -8285,9 +8283,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   candidateUrls.push(...resolveManifestUrl(registryScene.svgFile));
                 } else {
                   candidateUrls.push(
-                    `${repoBase}player/scenes/${sceneId}.svg`,
                     `${repoBase}cartridges/${sceneId}.svg`,
-                    isInPlayerSubdir ? `./scenes/${sceneId}.svg` : `./player/scenes/${sceneId}.svg`
+                    `./cartridges/${sceneId}.svg`,
+                    isInPlayerSubdir ? `../cartridges/${sceneId}.svg` : null
                   );
                 }
               } else if (ext === 'ast') {
@@ -8295,9 +8293,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   candidateUrls.push(...resolveManifestUrl(registryScene.astFile));
                 } else {
                   candidateUrls.push(
-                    `${repoBase}player/scenes/${sceneId}.ast`,
                     `${repoBase}cartridges/${sceneId}.ast`,
-                    isInPlayerSubdir ? `./scenes/${sceneId}.ast` : `./player/scenes/${sceneId}.ast`,
+                    `./cartridges/${sceneId}.ast`,
+                    isInPlayerSubdir ? `../cartridges/${sceneId}.ast` : null,
                     `${repoBase}docs/${sceneId}.ast`
                   );
                 }
@@ -8352,6 +8350,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           };
 
           parsedAst = null;
+          var loadedAstbBuffer = null;
           try {
             const [foundBytecode, foundSvg] = await Promise.all([
               fetchAsset('astb'),
@@ -8359,6 +8358,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             ]);
             if (foundSvg) svgText = foundSvg;
             if (foundBytecode) {
+              loadedAstbBuffer = foundBytecode;
               try {
                 parsedAst = this.decompileBytecode(foundBytecode);
                 if (!svgText && parsedAst && parsedAst.svgMarkup) {
@@ -8520,6 +8520,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           rawBindings: (parsedAst && parsedAst.bindings) || [],
           svgText: svgText,
           astSource: astText || '',
+          _rawAstbBuffer: typeof loadedAstbBuffer !== 'undefined' ? loadedAstbBuffer : null,
           mount: registryScene.mount,
           update: registryScene.update,
           render: registryScene.render,
@@ -8561,8 +8562,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             stage: scene.stage,
             duration: scene.duration,
             has3D: scene.has3D,
-            svgFile: `scenes/${presetId}.svg`,
-            astFile: `scenes/${presetId}.ast`
+            svgFile: `cartridges/${presetId}.svg`,
+            astFile: `cartridges/${presetId}.ast`,
+            astbFile: `bytecode/${presetId}.astb`
           });
         }
         this.emit('scene_registered', { id: presetId, scene });
@@ -8668,6 +8670,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           this.speakText(initialSub);
         }
       }
+
+      // Asynchronously verify cryptographic SHA-256 cartridge authenticity without blocking 60 FPS paint
+      this.verifyLoadedCartridge(this.scene).catch(() => {});
 
       return this.scene;
     })();
@@ -11310,6 +11315,159 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
   }
 
+  async _computeSha256Hex(data) {
+    if (data === null || data === undefined) return '';
+    const subtle = (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle)
+      || (typeof window !== 'undefined' && window.crypto && window.crypto.subtle);
+    if (!subtle || typeof subtle.digest !== 'function') return '';
+    let u8;
+    if (typeof data === 'string') {
+      u8 = new TextEncoder().encode(data);
+    } else if (data instanceof Uint8Array) {
+      u8 = data;
+    } else if (data instanceof ArrayBuffer) {
+      u8 = new Uint8Array(data);
+    } else {
+      return '';
+    }
+    const digest = await subtle.digest('SHA-256', u8);
+    const bytes = new Uint8Array(digest);
+    let hex = '';
+    for (let i = 0; i < bytes.length; i++) {
+      hex += bytes[i].toString(16).padStart(2, '0');
+    }
+    return hex;
+  }
+
+  async _loadChecksumRegistry() {
+    if (this._checksumRegistryCache) return this._checksumRegistryCache;
+    if (typeof fetch === 'undefined') return null;
+    const candidates = ['/cartridge-checksums.json', './cartridge-checksums.json', '../cartridge-checksums.json'];
+    for (const url of candidates) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const text = await res.text();
+        if (!text || text.trim().startsWith('<')) continue;
+        const json = JSON.parse(text);
+        if (json && json.cartridges) {
+          this._checksumRegistryCache = json;
+          return json;
+        }
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  async verifyLoadedCartridge(scene) {
+    if (!scene || !scene.id) return null;
+    const id = String(scene.id).trim().toLowerCase();
+    const shortFmt = (h) => (h && h.length >= 12 ? `${h.slice(0, 6)}...${h.slice(-6)}` : (h || 'unsigned'));
+    const registry = await this._loadChecksumRegistry();
+    const record = registry && registry.cartridges ? registry.cartridges[id] : null;
+
+    const [computedAstb, computedAst, computedSvg] = await Promise.all([
+      scene._rawAstbBuffer ? this._computeSha256Hex(scene._rawAstbBuffer) : Promise.resolve(''),
+      scene.astSource ? this._computeSha256Hex(scene.astSource) : Promise.resolve(''),
+      scene.svgText ? this._computeSha256Hex(scene.svgText) : Promise.resolve('')
+    ]);
+
+    let result;
+    if (!record) {
+      const activeHash = computedAstb || computedAst || computedSvg;
+      result = {
+        cartridgeId: id,
+        status: 'unverified-external',
+        isNative: false,
+        isVerified: false,
+        tier: 'community',
+        shortHash: activeHash ? shortFmt(activeHash) : 'external',
+        computedAstbSha256: computedAstb || undefined,
+        computedAstSha256: computedAst || undefined,
+        computedSvgSha256: computedSvg || undefined,
+        authority: 'Third-Party / Community Author',
+        badgeText: 'Community Cartridge',
+        badgeTooltip: `Unregistered external or custom cartridge (${scene.title || id}). SHA-256: ${activeHash ? shortFmt(activeHash) : 'n/a'}`
+      };
+    } else {
+      // Note: fetchAsset trims text responses; check raw or trimmed match for AST/SVG if ASTB wasn't the sole source
+      const astbMatch = !computedAstb || !record.astbSha256 || computedAstb === record.astbSha256.toLowerCase();
+      let astMatch = true;
+      if (computedAst && record.astSha256 && !computedAstb) {
+        astMatch = computedAst === record.astSha256.toLowerCase();
+        if (!astMatch && scene.astSource) {
+          const nlAst = await this._computeSha256Hex(scene.astSource + '\n');
+          if (nlAst === record.astSha256.toLowerCase()) astMatch = true;
+        }
+      }
+      let svgMatch = true;
+      if (computedSvg && record.svgSha256 && scene._svgEditedManually) {
+        svgMatch = computedSvg === record.svgSha256.toLowerCase();
+        if (!svgMatch && scene.svgText) {
+          const nlSvg = await this._computeSha256Hex(scene.svgText + '\n');
+          if (nlSvg === record.svgSha256.toLowerCase()) svgMatch = true;
+        }
+      }
+      if (scene._astEditedManually && computedAst && record.astSha256) {
+        astMatch = computedAst === record.astSha256.toLowerCase();
+        if (!astMatch && scene.astSource) {
+          const nlAst = await this._computeSha256Hex(scene.astSource + '\n');
+          if (nlAst === record.astSha256.toLowerCase()) astMatch = true;
+        }
+      }
+
+      if (!astbMatch || !astMatch || !svgMatch) {
+        const activeHash = computedAst || computedSvg || computedAstb || record.astSha256;
+        result = {
+          cartridgeId: id,
+          status: 'tampered',
+          isNative: true,
+          isVerified: false,
+          tier: 'modified',
+          seal: record.seal,
+          shortHash: shortFmt(activeHash),
+          computedAstbSha256: computedAstb || undefined,
+          computedAstSha256: computedAst || undefined,
+          computedSvgSha256: computedSvg || undefined,
+          expectedAstbSha256: record.astbSha256,
+          expectedAstSha256: record.astSha256,
+          expectedSvgSha256: record.svgSha256,
+          authority: record.authority,
+          badgeText: 'Cartridge Modified',
+          badgeTooltip: `Modified / Remixed copy of ${record.title}. Live SHA-256 (${shortFmt(activeHash)}) differs from signed authority seal (${shortFmt(record.seal)}).`
+        };
+      } else {
+        result = {
+          cartridgeId: id,
+          status: 'verified-native',
+          isNative: true,
+          isVerified: true,
+          tier: 'native',
+          seal: record.seal,
+          shortHash: shortFmt(record.seal || record.astSha256),
+          computedAstbSha256: computedAstb || record.astbSha256,
+          computedAstSha256: computedAst || record.astSha256,
+          computedSvgSha256: computedSvg || record.svgSha256,
+          expectedAstbSha256: record.astbSha256,
+          expectedAstSha256: record.astSha256,
+          expectedSvgSha256: record.svgSha256,
+          authority: record.authority,
+          badgeText: "Official Signed Cartridge",
+          badgeTooltip: `Cryptographically verified original cartridge (${record.title}). Signed by ${record.authority} • Seal: ${shortFmt(record.seal)}`
+        };
+      }
+    }
+
+    this.lastIntegrity = result;
+    this.emit('integrityverified', result);
+    this.notifyParent({
+      type: 'CARTRIDGE_INTEGRITY',
+      preset: id,
+      integrity: result
+    });
+    return result;
+  }
+
   hotReloadSvg(svgMarkup) {
     if (!svgMarkup || typeof svgMarkup !== 'string') return false;
     try {
@@ -11317,6 +11475,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.scene = { id: 'custom-scene', title: 'Custom SVG Scene', stage: 'DEVELOPER', duration: 10.0 };
       }
       this.scene.svgText = this.sanitizeSvg(svgMarkup);
+      this.scene._rawAstbBuffer = null;
+      this.scene._svgEditedManually = true;
       this._svgDirtyFromInspector = false;
 
       const targetContainer = this._container || this.container;
@@ -11327,6 +11487,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       this.emit('svghotreloaded', { svg: this.scene.svgText, progress: this.progress });
       this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'svg' });
+      this.verifyLoadedCartridge(this.scene).catch(() => {});
       return true;
     } catch (err) {
       console.error('[AST Engine] Failed to hot-reload SVG:', err);
@@ -11368,6 +11529,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       this.scene.ledgers = parsed.ledgers || [];
       if (typeof parsed.has3D === 'boolean') this.scene.has3D = parsed.has3D;
       this.scene.astSource = typeof astInput === 'string' ? astInput : null;
+      this.scene._rawAstbBuffer = null;
+      this.scene._astEditedManually = true;
 
       this.activePresetId = this.scene.id || this.activePresetId;
       this.durationSec = this.scene.duration;
@@ -11385,6 +11548,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       this.emit('asthotreloaded', { ast: parsed, progress: this.progress });
       this.notifyParent({ type: 'DEV_HOT_RELOAD_SUCCESS', target: 'ast' });
+      this.verifyLoadedCartridge(this.scene).catch(() => {});
       return true;
     } catch (err) {
       console.error('[AST Engine] Failed to hot-reload AST:', err);

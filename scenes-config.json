@@ -1,10 +1,9 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-18T09:52:33.494Z",
+  "generatedAt": "2026-11-18T10:32:13.859Z",
   "totalScenes": 72,
   "inputDirs": [
-    "static/cartridges",
-    "static/player/cartridges"
+    "static/cartridges"
   ],
   "types": [
     "Sim",
