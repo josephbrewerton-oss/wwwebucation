@@ -2,6 +2,7 @@
   :id "vector-racing" :oak-id "OAK-KS3-GEN-VECTORRAC" :oak-unit "ks3-generalcurriculum-vector-racing"
   :title "Vector Racing"
   :stage "STEM"
+  :subject "Science"
   :type "Sim"
   :duration 60.0
 

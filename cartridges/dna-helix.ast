@@ -160,74 +160,110 @@
     (:target "#dna-line-0" :type "3d-line"
       :x1 "-110 * Math.cos((0/18)*Math.PI*3)" :y1 "(0/18)*360 - 180" :z1 "-110 * Math.sin((0/18)*Math.PI*3)"
       :x2 "110 * Math.cos((0/18)*Math.PI*3)" :y2 "(0/18)*360 - 180" :z2 "110 * Math.sin((0/18)*Math.PI*3)"
-      :cap1 "#dna-ca-0" :cap2 "#dna-cb-0" :base-r 8)
+      :cap1 "#dna-ca-0" :cap2 "#dna-cb-0" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (0/18) <= vars.unzipProgress) ? (vars.unzipProgress - (0/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 0)
     (:target "#dna-line-1" :type "3d-line"
       :x1 "-110 * Math.cos((1/18)*Math.PI*3)" :y1 "(1/18)*360 - 180" :z1 "-110 * Math.sin((1/18)*Math.PI*3)"
       :x2 "110 * Math.cos((1/18)*Math.PI*3)" :y2 "(1/18)*360 - 180" :z2 "110 * Math.sin((1/18)*Math.PI*3)"
-      :cap1 "#dna-ca-1" :cap2 "#dna-cb-1" :base-r 8)
+      :cap1 "#dna-ca-1" :cap2 "#dna-cb-1" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (1/18) <= vars.unzipProgress) ? (vars.unzipProgress - (1/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 1)
     (:target "#dna-line-2" :type "3d-line"
       :x1 "-110 * Math.cos((2/18)*Math.PI*3)" :y1 "(2/18)*360 - 180" :z1 "-110 * Math.sin((2/18)*Math.PI*3)"
       :x2 "110 * Math.cos((2/18)*Math.PI*3)" :y2 "(2/18)*360 - 180" :z2 "110 * Math.sin((2/18)*Math.PI*3)"
-      :cap1 "#dna-ca-2" :cap2 "#dna-cb-2" :base-r 8)
+      :cap1 "#dna-ca-2" :cap2 "#dna-cb-2" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (2/18) <= vars.unzipProgress) ? (vars.unzipProgress - (2/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 2)
     (:target "#dna-line-3" :type "3d-line"
       :x1 "-110 * Math.cos((3/18)*Math.PI*3)" :y1 "(3/18)*360 - 180" :z1 "-110 * Math.sin((3/18)*Math.PI*3)"
       :x2 "110 * Math.cos((3/18)*Math.PI*3)" :y2 "(3/18)*360 - 180" :z2 "110 * Math.sin((3/18)*Math.PI*3)"
-      :cap1 "#dna-ca-3" :cap2 "#dna-cb-3" :base-r 8)
+      :cap1 "#dna-ca-3" :cap2 "#dna-cb-3" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (3/18) <= vars.unzipProgress) ? (vars.unzipProgress - (3/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 3)
     (:target "#dna-line-4" :type "3d-line"
       :x1 "-110 * Math.cos((4/18)*Math.PI*3)" :y1 "(4/18)*360 - 180" :z1 "-110 * Math.sin((4/18)*Math.PI*3)"
       :x2 "110 * Math.cos((4/18)*Math.PI*3)" :y2 "(4/18)*360 - 180" :z2 "110 * Math.sin((4/18)*Math.PI*3)"
-      :cap1 "#dna-ca-4" :cap2 "#dna-cb-4" :base-r 8)
+      :cap1 "#dna-ca-4" :cap2 "#dna-cb-4" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (4/18) <= vars.unzipProgress) ? (vars.unzipProgress - (4/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 4)
     (:target "#dna-line-5" :type "3d-line"
       :x1 "-110 * Math.cos((5/18)*Math.PI*3)" :y1 "(5/18)*360 - 180" :z1 "-110 * Math.sin((5/18)*Math.PI*3)"
       :x2 "110 * Math.cos((5/18)*Math.PI*3)" :y2 "(5/18)*360 - 180" :z2 "110 * Math.sin((5/18)*Math.PI*3)"
-      :cap1 "#dna-ca-5" :cap2 "#dna-cb-5" :base-r 8)
+      :cap1 "#dna-ca-5" :cap2 "#dna-cb-5" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (5/18) <= vars.unzipProgress) ? (vars.unzipProgress - (5/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 5)
     (:target "#dna-line-6" :type "3d-line"
       :x1 "-110 * Math.cos((6/18)*Math.PI*3)" :y1 "(6/18)*360 - 180" :z1 "-110 * Math.sin((6/18)*Math.PI*3)"
       :x2 "110 * Math.cos((6/18)*Math.PI*3)" :y2 "(6/18)*360 - 180" :z2 "110 * Math.sin((6/18)*Math.PI*3)"
-      :cap1 "#dna-ca-6" :cap2 "#dna-cb-6" :base-r 8)
+      :cap1 "#dna-ca-6" :cap2 "#dna-cb-6" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (6/18) <= vars.unzipProgress) ? (vars.unzipProgress - (6/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 6)
     (:target "#dna-line-7" :type "3d-line"
       :x1 "-110 * Math.cos((7/18)*Math.PI*3)" :y1 "(7/18)*360 - 180" :z1 "-110 * Math.sin((7/18)*Math.PI*3)"
       :x2 "110 * Math.cos((7/18)*Math.PI*3)" :y2 "(7/18)*360 - 180" :z2 "110 * Math.sin((7/18)*Math.PI*3)"
-      :cap1 "#dna-ca-7" :cap2 "#dna-cb-7" :base-r 8)
+      :cap1 "#dna-ca-7" :cap2 "#dna-cb-7" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (7/18) <= vars.unzipProgress) ? (vars.unzipProgress - (7/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 7)
     (:target "#dna-line-8" :type "3d-line"
       :x1 "-110 * Math.cos((8/18)*Math.PI*3)" :y1 "(8/18)*360 - 180" :z1 "-110 * Math.sin((8/18)*Math.PI*3)"
       :x2 "110 * Math.cos((8/18)*Math.PI*3)" :y2 "(8/18)*360 - 180" :z2 "110 * Math.sin((8/18)*Math.PI*3)"
-      :cap1 "#dna-ca-8" :cap2 "#dna-cb-8" :base-r 8)
+      :cap1 "#dna-ca-8" :cap2 "#dna-cb-8" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (8/18) <= vars.unzipProgress) ? (vars.unzipProgress - (8/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 8)
     (:target "#dna-line-9" :type "3d-line"
       :x1 "-110 * Math.cos((9/18)*Math.PI*3)" :y1 "(9/18)*360 - 180" :z1 "-110 * Math.sin((9/18)*Math.PI*3)"
       :x2 "110 * Math.cos((9/18)*Math.PI*3)" :y2 "(9/18)*360 - 180" :z2 "110 * Math.sin((9/18)*Math.PI*3)"
-      :cap1 "#dna-ca-9" :cap2 "#dna-cb-9" :base-r 8)
+      :cap1 "#dna-ca-9" :cap2 "#dna-cb-9" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (9/18) <= vars.unzipProgress) ? (vars.unzipProgress - (9/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 9)
     (:target "#dna-line-10" :type "3d-line"
       :x1 "-110 * Math.cos((10/18)*Math.PI*3)" :y1 "(10/18)*360 - 180" :z1 "-110 * Math.sin((10/18)*Math.PI*3)"
       :x2 "110 * Math.cos((10/18)*Math.PI*3)" :y2 "(10/18)*360 - 180" :z2 "110 * Math.sin((10/18)*Math.PI*3)"
-      :cap1 "#dna-ca-10" :cap2 "#dna-cb-10" :base-r 8)
+      :cap1 "#dna-ca-10" :cap2 "#dna-cb-10" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (10/18) <= vars.unzipProgress) ? (vars.unzipProgress - (10/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 10)
     (:target "#dna-line-11" :type "3d-line"
       :x1 "-110 * Math.cos((11/18)*Math.PI*3)" :y1 "(11/18)*360 - 180" :z1 "-110 * Math.sin((11/18)*Math.PI*3)"
       :x2 "110 * Math.cos((11/18)*Math.PI*3)" :y2 "(11/18)*360 - 180" :z2 "110 * Math.sin((11/18)*Math.PI*3)"
-      :cap1 "#dna-ca-11" :cap2 "#dna-cb-11" :base-r 8)
+      :cap1 "#dna-ca-11" :cap2 "#dna-cb-11" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (11/18) <= vars.unzipProgress) ? (vars.unzipProgress - (11/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 11)
     (:target "#dna-line-12" :type "3d-line"
       :x1 "-110 * Math.cos((12/18)*Math.PI*3)" :y1 "(12/18)*360 - 180" :z1 "-110 * Math.sin((12/18)*Math.PI*3)"
       :x2 "110 * Math.cos((12/18)*Math.PI*3)" :y2 "(12/18)*360 - 180" :z2 "110 * Math.sin((12/18)*Math.PI*3)"
-      :cap1 "#dna-ca-12" :cap2 "#dna-cb-12" :base-r 8)
+      :cap1 "#dna-ca-12" :cap2 "#dna-cb-12" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (12/18) <= vars.unzipProgress) ? (vars.unzipProgress - (12/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 12)
     (:target "#dna-line-13" :type "3d-line"
       :x1 "-110 * Math.cos((13/18)*Math.PI*3)" :y1 "(13/18)*360 - 180" :z1 "-110 * Math.sin((13/18)*Math.PI*3)"
       :x2 "110 * Math.cos((13/18)*Math.PI*3)" :y2 "(13/18)*360 - 180" :z2 "110 * Math.sin((13/18)*Math.PI*3)"
-      :cap1 "#dna-ca-13" :cap2 "#dna-cb-13" :base-r 8)
+      :cap1 "#dna-ca-13" :cap2 "#dna-cb-13" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (13/18) <= vars.unzipProgress) ? (vars.unzipProgress - (13/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 13)
     (:target "#dna-line-14" :type "3d-line"
       :x1 "-110 * Math.cos((14/18)*Math.PI*3)" :y1 "(14/18)*360 - 180" :z1 "-110 * Math.sin((14/18)*Math.PI*3)"
       :x2 "110 * Math.cos((14/18)*Math.PI*3)" :y2 "(14/18)*360 - 180" :z2 "110 * Math.sin((14/18)*Math.PI*3)"
-      :cap1 "#dna-ca-14" :cap2 "#dna-cb-14" :base-r 8)
+      :cap1 "#dna-ca-14" :cap2 "#dna-cb-14" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (14/18) <= vars.unzipProgress) ? (vars.unzipProgress - (14/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 14)
     (:target "#dna-line-15" :type "3d-line"
       :x1 "-110 * Math.cos((15/18)*Math.PI*3)" :y1 "(15/18)*360 - 180" :z1 "-110 * Math.sin((15/18)*Math.PI*3)"
       :x2 "110 * Math.cos((15/18)*Math.PI*3)" :y2 "(15/18)*360 - 180" :z2 "110 * Math.sin((15/18)*Math.PI*3)"
-      :cap1 "#dna-ca-15" :cap2 "#dna-cb-15" :base-r 8)
+      :cap1 "#dna-ca-15" :cap2 "#dna-cb-15" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (15/18) <= vars.unzipProgress) ? (vars.unzipProgress - (15/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 15)
     (:target "#dna-line-16" :type "3d-line"
       :x1 "-110 * Math.cos((16/18)*Math.PI*3)" :y1 "(16/18)*360 - 180" :z1 "-110 * Math.sin((16/18)*Math.PI*3)"
       :x2 "110 * Math.cos((16/18)*Math.PI*3)" :y2 "(16/18)*360 - 180" :z2 "110 * Math.sin((16/18)*Math.PI*3)"
-      :cap1 "#dna-ca-16" :cap2 "#dna-cb-16" :base-r 8)
+      :cap1 "#dna-ca-16" :cap2 "#dna-cb-16" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (16/18) <= vars.unzipProgress) ? (vars.unzipProgress - (16/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 16)
     (:target "#dna-line-17" :type "3d-line"
       :x1 "-110 * Math.cos((17/18)*Math.PI*3)" :y1 "(17/18)*360 - 180" :z1 "-110 * Math.sin((17/18)*Math.PI*3)"
       :x2 "110 * Math.cos((17/18)*Math.PI*3)" :y2 "(17/18)*360 - 180" :z2 "110 * Math.sin((17/18)*Math.PI*3)"
-      :cap1 "#dna-ca-17" :cap2 "#dna-cb-17" :base-r 8)
+      :cap1 "#dna-ca-17" :cap2 "#dna-cb-17" :base-r 8
+      :split-expr "(vars.unzipProgress > 0 && (17/18) <= vars.unzipProgress) ? (vars.unzipProgress - (17/18) + 0.1) * 35 : 0"
+      :spline-a "#dna-backbone-a" :spline-b "#dna-backbone-b" :spline-index 17)
   ))
 )
