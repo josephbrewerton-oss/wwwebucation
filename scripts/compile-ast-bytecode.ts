@@ -26,19 +26,20 @@ function run() {
     process.exit(1);
   }
 
+  const files = fs.readdirSync(SOURCE_DIR);
+  const astFiles = files.filter(f => f.endsWith('.ast'));
+  const validAstbNames = new Set(astFiles.map(f => f.replace(/\.ast$/, '.astb')));
+
   if (!fs.existsSync(TARGET_DIR)) {
     fs.mkdirSync(TARGET_DIR, { recursive: true });
   } else {
-    // Ensure bytecode store stays pure (.astb binaries only, zero duplicate .svg files)
+    // Ensure bytecode store stays pure (.astb binaries for active cartridges only, zero duplicate .svg or stale .astb files)
     for (const existing of fs.readdirSync(TARGET_DIR)) {
-      if (!existing.endsWith('.astb')) {
+      if (!existing.endsWith('.astb') || !validAstbNames.has(existing)) {
         fs.rmSync(path.join(TARGET_DIR, existing), { force: true });
       }
     }
   }
-
-  const files = fs.readdirSync(SOURCE_DIR);
-  const astFiles = files.filter(f => f.endsWith('.ast'));
 
   console.log(`[AST Bytecode Compiler] Found ${astFiles.length} canonical cartridges in ${SOURCE_DIR}`);
 

@@ -95,6 +95,7 @@ export interface BslSpeechPayload {
   word?: string;
   subtitle?: string;
   isSpeaking?: boolean;
+  stopSigning?: boolean;
 }
 
 export interface SignStudioEventPayload {

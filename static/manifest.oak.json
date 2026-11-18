@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-18T10:28:02.582Z",
+  "generatedAt": "2026-11-18T12:07:22.393Z",
   "totalCartridges": 72,
   "units": [
     {
@@ -1300,7 +1300,7 @@
     },
     {
       "id": "inverted-pendulum-dyno",
-      "base": "inverted-pendulum-dyno",
+      "base": "pendulum_dyno",
       "type": "Sim",
       "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
       "stage": "KS3 PHYSICS",
@@ -1310,9 +1310,9 @@
       "section": "Natural Sciences & Physics",
       "mount": "/curriculum/science/inverted-pendulum-dyno",
       "duration": 16,
-      "svgFile": "cartridges/inverted-pendulum-dyno.svg",
-      "astFile": "cartridges/inverted-pendulum-dyno.ast",
-      "astbFile": "bytecode/inverted-pendulum-dyno.astb",
+      "svgFile": "cartridges/pendulum_dyno.svg",
+      "astFile": "cartridges/pendulum_dyno.ast",
+      "astbFile": "bytecode/pendulum_dyno.astb",
       "isCore": true,
       "tier": "core",
       "hasCheckpoints": true,

@@ -673,7 +673,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
   },
   {
     "id": "inverted-pendulum-dyno",
-    "base": "inverted-pendulum-dyno",
+    "base": "pendulum_dyno",
     "type": "Sim",
     "kind": "lab",
     "isPlayableScene": true,

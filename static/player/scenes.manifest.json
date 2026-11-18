@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-18T10:28:02.579Z",
+  "generatedAt": "2026-11-18T12:07:22.390Z",
   "totalScenes": 72,
   "inputDirs": [
     "static/cartridges"
@@ -1034,7 +1034,7 @@
     },
     {
       "id": "inverted-pendulum-dyno",
-      "base": "inverted-pendulum-dyno",
+      "base": "pendulum_dyno",
       "type": "Sim",
       "kind": "lab",
       "isPlayableScene": true,
@@ -1046,9 +1046,9 @@
       "subject": "Science",
       "has3D": false,
       "nodes3DCount": 0,
-      "svgFile": "cartridges/inverted-pendulum-dyno.svg",
-      "astFile": "cartridges/inverted-pendulum-dyno.ast",
-      "astbFile": "bytecode/inverted-pendulum-dyno.astb",
+      "svgFile": "cartridges/pendulum_dyno.svg",
+      "astFile": "cartridges/pendulum_dyno.ast",
+      "astbFile": "bytecode/pendulum_dyno.astb",
       "video": null,
       "videoFit": "contain",
       "hasVideo": false,
@@ -1058,7 +1058,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 4,
-      "bindingsCount": 6,
+      "bindingsCount": 14,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },

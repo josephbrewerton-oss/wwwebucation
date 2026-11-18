@@ -97,6 +97,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   // Animation Loop State
   private animationFrameId: number | null = null;
+  private animationFrameWindow: Window | null = null;
   private currentPose: BslHandPose;
   private targetPose: BslHandPose;
   private poseQueue: BslHandPose[] = [];
@@ -105,6 +106,24 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private currentAnimProgress = 0;
   private holdRemaining = 0;
   private isIdle = true;
+  private hasResetIdleHud = true;
+
+  // Continuous 3D Joint Tracking for Seamless C0 Return-to-Rest (Dominant, Base & Torso)
+  private liveTip: Point3D = { x: 28, y: 44, z: 16 };
+  private liveKnuckle: Point3D = { x: 42, y: 50, z: 14 };
+  private liveWrist: Point3D = { x: 58, y: 62, z: 8 };
+  private liveBaseForearm: Point3D = { x: -70, y: 80, z: 0 };
+  private liveBaseWrist: Point3D = { x: -55, y: 60, z: 10 };
+  private liveBasePalm: Point3D = { x: -40, y: 48, z: 15 };
+  private liveBaseTip: Point3D = { x: -28, y: 42, z: 16 };
+  private prevBaseForearm: Point3D = { x: -70, y: 80, z: 0 };
+  private prevBaseWrist: Point3D = { x: -55, y: 60, z: 10 };
+  private prevBasePalm: Point3D = { x: -40, y: 48, z: 15 };
+  private prevBaseTip: Point3D = { x: -28, y: 42, z: 16 };
+  private liveRoleYaw = 0;
+  private liveRolePitch = 0;
+  private prevRoleYaw = 0;
+  private prevRolePitch = 0;
 
   // Active Telemetry
   private currentGloss = 'READY';
@@ -155,10 +174,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   disconnectedCallback() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
+    this.stopAnimationLoop();
     this.unsubscribeSpeech?.();
     this.unsubscribeVoice?.();
     this.unsubscribeSignLang?.();
@@ -176,8 +192,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.boundWindowResize = undefined;
     }
     if (this.pipWindow) {
-      this.pipWindow.close();
-      this.pipWindow = null;
+      this.dockBackFromPiP(true);
     }
   }
 
@@ -227,16 +242,32 @@ export class NativeBslInterpreterElement extends HTMLElement {
     setLocalJson(BSL_PIP_LAYOUT_STORAGE_KEY, this.layoutState);
   }
 
+  private computeClampedFloatingCoords(rawLeft: number, rawTop: number): { left: number; top: number } {
+    const isCompact = this.layoutState.compact;
+    const cardW = isCompact ? 224 : 300;
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
+    const maxLeft = Math.max(8, vw - cardW - 8);
+    const maxTop = Math.max(56, vh - 160);
+    return {
+      left: Math.max(8, Math.min(maxLeft, rawLeft)),
+      top: Math.max(56, Math.min(maxTop, rawTop)),
+    };
+  }
+
   private applyPipLayout() {
     const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const stageContainer = this.querySelector<HTMLElement>('#bsl-stage-container');
+    const pipDockedNotice = this.querySelector<HTMLElement>('#bsl-pip-docked-notice');
     const deck = this.queryAvatarElement<HTMLElement>('#bsl-interactive-deck');
     const titleEl = this.querySelector<HTMLElement>('#bsl-header-title');
     const povBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
     const voiceBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
     const compactBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-compact');
+    const redockBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
 
     const isCompact = this.layoutState.compact;
+    const isPoppedOut = Boolean(this.pipWindow && !this.pipWindow.closed);
     const cardW = isCompact ? 224 : 300;
     const stageH = isCompact ? 210 : 308;
 
@@ -245,16 +276,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
       floatingCard.setAttribute('data-dock-corner', this.layoutState.mode === 'floating' ? 'floating' : this.layoutState.corner);
 
       if (this.layoutState.mode === 'floating' && typeof this.layoutState.left === 'number' && typeof this.layoutState.top === 'number') {
-        const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
-        const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
-        const maxLeft = Math.max(8, vw - cardW - 8);
-        const maxTop = Math.max(64, vh - (stageH + 40) - 8);
-        const clampedLeft = Math.max(8, Math.min(maxLeft, this.layoutState.left));
-        const clampedTop = Math.max(64, Math.min(maxTop, this.layoutState.top));
-        this.layoutState.left = clampedLeft;
-        this.layoutState.top = clampedTop;
-        floatingCard.style.left = `${clampedLeft}px`;
-        floatingCard.style.top = `${clampedTop}px`;
+        const clamped = this.computeClampedFloatingCoords(this.layoutState.left, this.layoutState.top);
+        this.layoutState.left = clamped.left;
+        this.layoutState.top = clamped.top;
+        floatingCard.style.left = `${clamped.left}px`;
+        floatingCard.style.top = `${clamped.top}px`;
         floatingCard.style.right = 'auto';
         floatingCard.style.bottom = 'auto';
       } else {
@@ -286,10 +312,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
 
     if (stageContainer) {
+      stageContainer.style.display = isPoppedOut ? 'none' : 'flex';
       stageContainer.style.height = `${stageH}px`;
     }
+    if (pipDockedNotice) {
+      pipDockedNotice.style.display = isPoppedOut ? 'flex' : 'none';
+    }
     if (deck) {
-      deck.style.display = (isCompact && !this.pipWindow) ? 'none' : 'flex';
+      deck.style.display = (isCompact && !isPoppedOut) ? 'none' : 'flex';
     }
     if (titleEl) {
       titleEl.textContent = isCompact ? 'BSL L6' : 'BSL L6 & MAKATON';
@@ -309,6 +339,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
       compactBtn.title = isCompact ? 'Expand signing deck' : 'Compact In-Vision mode';
       compactBtn.setAttribute('aria-label', compactBtn.title);
     }
+    if (redockBtn) {
+      redockBtn.style.display = this.layoutState.mode === 'floating' ? 'inline-flex' : 'none';
+    }
 
     const cornerBtns = this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn');
     cornerBtns.forEach((btn) => {
@@ -322,6 +355,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
   public setDockCorner(corner: BslDockCorner) {
     this.layoutState.mode = 'docked';
     this.layoutState.corner = corner;
+    delete this.layoutState.left;
+    delete this.layoutState.top;
     this.applyPipLayout();
     this.saveLayout();
   }
@@ -343,6 +378,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
             <span id="bsl-header-title" style="font-size:0.7rem; font-weight:800; color:#38bdf8; letter-spacing:0.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">BSL L6</span>
           </div>
           <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+            <button type="button" id="bsl-btn-redock" style="display:none; align-items:center; justify-content:center; background:#0369a1; border:1px solid #38bdf8; color:#ffffff; border-radius:4px; font-size:0.65rem; font-weight:700; padding:1px 5px; cursor:pointer;" title="Return to docked corner">
+              ⚓
+            </button>
             <button type="button" id="bsl-btn-pov" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.65rem; font-weight:700; padding:2px 5px; cursor:pointer;" title="Toggle Camera POV (Receiver Front / Signer 1P)">
               POV
             </button>
@@ -365,6 +403,12 @@ export class NativeBslInterpreterElement extends HTMLElement {
               ✕
             </button>
           </div>
+        </div>
+
+        <!-- Compact Pop-out Notice When Avatar is Undocked in Document PiP -->
+        <div id="bsl-pip-docked-notice" style="display:none; padding:8px 10px; background:#090d16; align-items:center; justify-content:space-between; gap:8px; font-size:0.7rem; color:#94a3b8;">
+          <span>Popped out in window</span>
+          <button type="button" id="bsl-pip-notice-return" style="background:#0284c7; border:none; color:#ffffff; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 7px; cursor:pointer;">⚓ Return</button>
         </div>
 
         <!-- Stage Container Hosting Live Avatar Wrapper -->
@@ -647,10 +691,27 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
     });
 
-    // Make floating card draggable via Pointer Events (touch, stylus & mouse) with viewport clamping
+    // Re-dock from floating mode button & PiP return button
+    const btnRedock = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
+    btnRedock?.addEventListener('click', () => {
+      this.setDockCorner(this.layoutState.corner || 'bottom-right');
+    });
+    const btnPipNoticeReturn = this.querySelector<HTMLButtonElement>('#bsl-pip-notice-return');
+    btnPipNoticeReturn?.addEventListener('click', () => {
+      this.dockBackFromPiP(true);
+    });
+
+    // Make floating card draggable via Pointer Events (with pointer capture over iframes)
     const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const headerBar = this.querySelector<HTMLElement>('#bsl-header-bar');
     if (floatingCard && headerBar) {
+      headerBar.addEventListener('dblclick', (e) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        if (this.layoutState.mode === 'floating') {
+          this.setDockCorner(this.layoutState.corner || 'bottom-right');
+        }
+      });
+
       headerBar.addEventListener('pointerdown', (e: PointerEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
         e.preventDefault();
@@ -659,18 +720,27 @@ export class NativeBslInterpreterElement extends HTMLElement {
         this.dragStartX = e.clientX;
         this.dragStartY = e.clientY;
         const rect = floatingCard.getBoundingClientRect();
-        this.dragInitialLeft = rect.left;
-        this.dragInitialTop = rect.top;
+        const startCoords = this.computeClampedFloatingCoords(rect.left, rect.top);
+        this.dragInitialLeft = startCoords.left;
+        this.dragInitialTop = startCoords.top;
         this.layoutState.mode = 'floating';
-        this.layoutState.left = rect.left;
-        this.layoutState.top = rect.top;
+        this.layoutState.left = startCoords.left;
+        this.layoutState.top = startCoords.top;
         floatingCard.setAttribute('data-dock-corner', 'floating');
         floatingCard.style.bottom = 'auto';
         floatingCard.style.right = 'auto';
-        floatingCard.style.left = `${rect.left}px`;
-        floatingCard.style.top = `${rect.top}px`;
+        floatingCard.style.left = `${startCoords.left}px`;
+        floatingCard.style.top = `${startCoords.top}px`;
         headerBar.style.cursor = 'grabbing';
-        this.applyPipLayout();
+        try {
+          headerBar.setPointerCapture?.(e.pointerId);
+        } catch (_) {}
+        const redockBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
+        if (redockBtn) redockBtn.style.display = 'inline-flex';
+        this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn').forEach((btn) => {
+          btn.style.background = '#334155';
+          btn.setAttribute('aria-pressed', 'false');
+        });
       });
 
       this.boundPointerMove = (e: PointerEvent) => {
@@ -678,26 +748,32 @@ export class NativeBslInterpreterElement extends HTMLElement {
         if (this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
         const dx = e.clientX - this.dragStartX;
         const dy = e.clientY - this.dragStartY;
-        const cardW = floatingCard.offsetWidth || (this.layoutState.compact ? 224 : 300);
-        const cardH = floatingCard.offsetHeight || 246;
-        const maxLeft = Math.max(8, window.innerWidth - cardW - 8);
-        const maxTop = Math.max(64, window.innerHeight - Math.min(cardH, 160) - 8);
-        const clampedLeft = Math.max(8, Math.min(maxLeft, this.dragInitialLeft + dx));
-        const clampedTop = Math.max(64, Math.min(maxTop, this.dragInitialTop + dy));
-        this.layoutState.left = clampedLeft;
-        this.layoutState.top = clampedTop;
-        floatingCard.style.left = `${clampedLeft}px`;
-        floatingCard.style.top = `${clampedTop}px`;
+        const clamped = this.computeClampedFloatingCoords(this.dragInitialLeft + dx, this.dragInitialTop + dy);
+        this.layoutState.left = clamped.left;
+        this.layoutState.top = clamped.top;
+        floatingCard.style.left = `${clamped.left}px`;
+        floatingCard.style.top = `${clamped.top}px`;
       };
 
-      this.boundPointerUp = (e: PointerEvent) => {
+      const finishCardDrag = (e?: PointerEvent) => {
         if (!this.isDraggingCard) return;
-        if (this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
+        if (e && this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
+        const pid = this.activeDragPointerId;
         this.isDraggingCard = false;
         this.activeDragPointerId = null;
         headerBar.style.cursor = 'grab';
+        if (pid !== null) {
+          try {
+            if (headerBar.hasPointerCapture?.(pid)) {
+              headerBar.releasePointerCapture(pid);
+            }
+          } catch (_) {}
+        }
         this.saveLayout();
       };
+
+      this.boundPointerUp = finishCardDrag;
+      headerBar.addEventListener('lostpointercapture', () => finishCardDrag());
 
       this.boundWindowResize = () => {
         if (this.layoutState.mode === 'floating') {
@@ -734,6 +810,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
     });
 
     this.unsubscribeSpeech = subscribeBslSpeech((payload: BslSpeechPayload) => {
+      if (payload.stopSigning) {
+        this.lastSpokenSubtitle = '';
+        this.returnToRest();
+        return;
+      }
       if (payload.subtitle) {
         if (payload.subtitle !== this.lastSpokenSubtitle) {
           this.lastSpokenSubtitle = payload.subtitle;
@@ -742,7 +823,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       } else if (payload.word) {
         // Highlighting current spoken word boundary in HUD without resetting the sentence queue
         const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
-        if (hudGloss) {
+        if (hudGloss && !this.isIdle) {
           hudGloss.textContent = `WORD: ${payload.word.toUpperCase()}`;
         }
         if (!this.lastSpokenSubtitle && this.isIdle) {
@@ -751,6 +832,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
       if (payload.isSpeaking === false) {
         this.lastSpokenSubtitle = '';
+        if (this.isIdle && this.currentAnimProgress >= 1.0) {
+          this.resetHudToStandby();
+        }
       }
     });
   }
@@ -823,31 +907,103 @@ export class NativeBslInterpreterElement extends HTMLElement {
     if (analysis.stream && analysis.stream.length > 0) {
       this.poseQueue = [...analysis.stream];
       this.isIdle = false;
+      this.hasResetIdleHud = false;
       this.advanceToNextPose();
     }
   }
 
+  private snapshotLivePose() {
+    this.currentPose = {
+      ...this.targetPose,
+      targetTip: { ...this.liveTip },
+      targetKnuckle: { ...this.liveKnuckle },
+      targetWrist: { ...this.liveWrist },
+    };
+    this.prevBaseForearm = { ...this.liveBaseForearm };
+    this.prevBaseWrist = { ...this.liveBaseWrist };
+    this.prevBasePalm = { ...this.liveBasePalm };
+    this.prevBaseTip = { ...this.liveBaseTip };
+    this.prevRoleYaw = this.liveRoleYaw;
+    this.prevRolePitch = this.liveRolePitch;
+  }
+
+  private resetHudToStandby() {
+    this.currentGloss = 'READY';
+    this.currentSentenceType = 'STANDBY';
+    this.currentNmfText = 'NMF: Neutral';
+    this.activeClassifierText = 'CL: NONE';
+    const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
+    if (hudGloss) hudGloss.textContent = 'GLOSS: READY';
+    const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
+    if (hudNmf) hudNmf.textContent = 'NMF: Neutral';
+    const hudCl = this.queryAvatarElement('#bsl-hud-cl');
+    if (hudCl) hudCl.textContent = 'CL: NONE';
+    this.hasResetIdleHud = true;
+  }
+
+  public returnToRest() {
+    this.poseQueue = [];
+    if (this.isIdle && this.targetPose.letter === 'REST') {
+      if (this.currentAnimProgress >= 1.0) {
+        this.resetHudToStandby();
+      }
+      return;
+    }
+    this.snapshotLivePose();
+    this.targetPose = this.createRestPose();
+    this.currentPoseDuration = 420;
+    this.currentPoseStartTime = performance.now();
+    this.currentAnimProgress = 0;
+    this.holdRemaining = 0;
+    this.isIdle = true;
+    this.hasResetIdleHud = false;
+  }
+
   private advanceToNextPose() {
+    this.snapshotLivePose();
+
     if (this.poseQueue.length === 0) {
-      // Transition smoothly back to neutral rest pose
+      // Transition smoothly from exact live 3D pose back to neutral rest pose
       this.targetPose = this.createRestPose();
       this.currentPoseDuration = 450;
       this.currentPoseStartTime = performance.now();
+      this.currentAnimProgress = 0;
       this.holdRemaining = 0;
       this.isIdle = true;
+      this.hasResetIdleHud = false;
       return;
     }
 
-    this.currentPose = { ...this.targetPose };
     this.targetPose = this.poseQueue.shift()!;
     this.currentPoseDuration = this.targetPose.hold ? Math.max(300, this.targetPose.hold + 200) : 480;
     this.currentPoseStartTime = performance.now();
+    this.currentAnimProgress = 0;
     this.holdRemaining = this.targetPose.hold || 80;
     this.isIdle = false;
+    this.hasResetIdleHud = false;
 
     const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
     if (hudGloss) {
       hudGloss.textContent = `SIGN: ${this.targetPose.label || this.targetPose.letter}`;
+    }
+  }
+
+  private stopAnimationLoop() {
+    if (this.animationFrameId !== null) {
+      const targetWin = this.animationFrameWindow || window;
+      try {
+        if (typeof targetWin.cancelAnimationFrame === 'function') {
+          targetWin.cancelAnimationFrame(this.animationFrameId);
+        } else {
+          window.cancelAnimationFrame(this.animationFrameId);
+        }
+      } catch (_) {
+        try {
+          window.cancelAnimationFrame(this.animationFrameId);
+        } catch (_) {}
+      }
+      this.animationFrameId = null;
+      this.animationFrameWindow = null;
     }
   }
 
@@ -856,18 +1012,18 @@ export class NativeBslInterpreterElement extends HTMLElement {
    * Dynamically tracks PiP window vs main window requestAnimationFrame.
    */
   private startAnimationLoop() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
+    this.stopAnimationLoop();
+    const scheduleNext = (cb: FrameRequestCallback) => {
+      const usePip = Boolean(this.pipWindow && !this.pipWindow.closed && typeof this.pipWindow.requestAnimationFrame === 'function');
+      const win = usePip ? this.pipWindow! : window;
+      this.animationFrameWindow = win;
+      this.animationFrameId = win.requestAnimationFrame(cb);
+    };
     const loop = (now: number) => {
       this.updateAvatar(now);
-      const raf = (this.pipWindow && typeof this.pipWindow.requestAnimationFrame === 'function')
-        ? this.pipWindow.requestAnimationFrame.bind(this.pipWindow)
-        : window.requestAnimationFrame.bind(window);
-      this.animationFrameId = raf(loop);
+      scheduleNext(loop);
     };
-    this.animationFrameId = requestAnimationFrame(loop);
+    scheduleNext(loop);
   }
 
   private updateAvatar(now: number) {
@@ -877,26 +1033,34 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // Advance timeline interpolation
     let progress = 1.0;
     if (this.currentPoseDuration > 0) {
-      const elapsed = now - this.currentPoseStartTime;
+      const elapsed = Math.max(0, now - this.currentPoseStartTime);
       progress = Math.min(1.0, elapsed / this.currentPoseDuration);
     }
-    this.currentAnimProgress = progress;
-
-    const easeType = this.targetPose.ease || 'smooth';
-    const easeT = evaluateBslEase(easeType, progress);
 
     if (progress >= 1.0 && !this.isIdle) {
       if (this.holdRemaining > 0) {
         this.holdRemaining -= 16.6;
       } else {
         this.advanceToNextPose();
+        progress = 0.0;
       }
     }
 
-    // Interpolate current dominant hand skeletal target vectors
+    this.currentAnimProgress = progress;
+    if (this.isIdle && progress >= 1.0 && !this.hasResetIdleHud) {
+      this.resetHudToStandby();
+    }
+
+    const easeType = this.targetPose.ease || 'smooth';
+    const easeT = evaluateBslEase(easeType, progress);
+
+    // Interpolate current dominant hand skeletal target vectors and record live 3D coordinates
     const tip = interpolatePoint3D(this.currentPose.targetTip, this.targetPose.targetTip, easeT);
     const knuckle = interpolatePoint3D(this.currentPose.targetKnuckle, this.targetPose.targetKnuckle, easeT);
     const wrist = interpolatePoint3D(this.currentPose.targetWrist, this.targetPose.targetWrist, easeT);
+    this.liveTip = tip;
+    this.liveKnuckle = knuckle;
+    this.liveWrist = wrist;
 
     const activeShape = this.targetPose.shape || 'flat';
     const activePalm = this.targetPose.palm || 'in';
@@ -938,9 +1102,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.eyeBlinkProgress = Math.max(0, this.eyeBlinkProgress - 0.12);
     }
 
-    // Role-shift torso yaw + 360-degree user drag orbit offsets
-    const roleYaw = activeNmf.roleShift?.yaw || 0;
-    const rolePitch = activeNmf.roleShift?.elevation === 'high' ? -4 : activeNmf.roleShift?.elevation === 'low' ? 4 : 0;
+    // Smoothly interpolate Role-Shift torso yaw & elevation pitch so return-to-rest never snaps
+    const targetRoleYaw = activeNmf.roleShift?.yaw || 0;
+    const targetRolePitch = activeNmf.roleShift?.elevation === 'high' ? -4 : activeNmf.roleShift?.elevation === 'low' ? 4 : 0;
+    const roleYaw = this.prevRoleYaw + (targetRoleYaw - this.prevRoleYaw) * easeT;
+    const rolePitch = this.prevRolePitch + (targetRolePitch - this.prevRolePitch) * easeT;
+    this.liveRoleYaw = roleYaw;
+    this.liveRolePitch = rolePitch;
+
     const activeCam = {
       yaw: cam.yaw + (this.cameraMode === 'receiver' ? -roleYaw : roleYaw) + this.orbitYawOffset,
       pitch: cam.pitch + rolePitch + this.orbitPitchOffset,
@@ -952,7 +1121,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.renderLociLayer(activeCam, originX, originY);
     this.renderBodyLayer(activeCam, originX, originY);
     this.renderHeadLayer(activeCam, originX, originY, activeNmf);
-    this.renderBaseHandLayer(activeCam, originX, originY, baseMode, wrist, knuckle, tip, activeShape, activePalm);
+    this.renderBaseHandLayer(activeCam, originX, originY, baseMode, wrist, knuckle, tip, activeShape, activePalm, easeT);
     this.renderDominantHandLayer(activeCam, originX, originY, wrist, knuckle, tip, activeShape, activePalm);
   }
 
@@ -1270,7 +1439,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
     knuckle: Point3D,
     tip: Point3D,
     activeShape: any,
-    activePalm: any
+    activePalm: any,
+    easeT = 1.0
   ) {
     const baseGroup = this.queryAvatarElement('#bsl-layer-base-hand');
     if (!baseGroup) return;
@@ -1278,13 +1448,17 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // 1. Bilateral Symmetrical Kinematics (PRAY, CHURCH, EQUAL, WHAT, SCIENCE, BIBLE, etc.)
     if (mode === 'mirror') {
       const solvedDom = solveHandKinematics(wrist, knuckle, tip, activeShape, activePalm);
+      this.liveBaseForearm = { x: -solvedDom.forearm.x, y: solvedDom.forearm.y, z: solvedDom.forearm.z };
+      this.liveBaseWrist = { x: -solvedDom.wrist.x, y: solvedDom.wrist.y, z: solvedDom.wrist.z };
+      this.liveBasePalm = { x: -solvedDom.palm.x, y: solvedDom.palm.y, z: solvedDom.palm.z };
+      this.liveBaseTip = { x: -solvedDom.tipIndex.x, y: solvedDom.tipIndex.y, z: solvedDom.tipIndex.z };
 
       // Anatomical sagittal mirror (x -> -x) reflects the dominant right hand into an authentic left hand
-      const pForearm = project3DToSvg({ x: -solvedDom.forearm.x, y: solvedDom.forearm.y, z: solvedDom.forearm.z }, cam, ox, oy);
-      const pWrist = project3DToSvg({ x: -solvedDom.wrist.x, y: solvedDom.wrist.y, z: solvedDom.wrist.z }, cam, ox, oy);
-      const pPalm = project3DToSvg({ x: -solvedDom.palm.x, y: solvedDom.palm.y, z: solvedDom.palm.z }, cam, ox, oy);
+      const pForearm = project3DToSvg(this.liveBaseForearm, cam, ox, oy);
+      const pWrist = project3DToSvg(this.liveBaseWrist, cam, ox, oy);
+      const pPalm = project3DToSvg(this.liveBasePalm, cam, ox, oy);
       const pKnuckleIndex = project3DToSvg({ x: -solvedDom.knuckleIndex.x, y: solvedDom.knuckleIndex.y, z: solvedDom.knuckleIndex.z }, cam, ox, oy);
-      const pTipIndex = project3DToSvg({ x: -solvedDom.tipIndex.x, y: solvedDom.tipIndex.y, z: solvedDom.tipIndex.z }, cam, ox, oy);
+      const pTipIndex = project3DToSvg(this.liveBaseTip, cam, ox, oy);
       const pTipMid = project3DToSvg({ x: -solvedDom.tipMid.x, y: solvedDom.tipMid.y, z: solvedDom.tipMid.z }, cam, ox, oy);
       const pTipRing = project3DToSvg({ x: -solvedDom.tipRing.x, y: solvedDom.tipRing.y, z: solvedDom.tipRing.z }, cam, ox, oy);
       const pTipPinky = project3DToSvg({ x: -solvedDom.tipPinky.x, y: solvedDom.tipPinky.y, z: solvedDom.tipPinky.z }, cam, ox, oy);
@@ -1324,13 +1498,35 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     // 2. BANZSL Two-Handed Manual Alphabet / Vowel Board ('vowel-board')
     if (mode === 'vowel-board') {
-      const pForearm = project3DToSvg({ x: -78, y: 95, z: -5 }, cam, ox, oy);
-      const pWrist = project3DToSvg(BSL_BASE_HAND.wrist, cam, ox, oy);
-      const pPalm = project3DToSvg(BSL_BASE_HAND.palm, cam, ox, oy);
+      const targetForearm: Point3D = { x: -78, y: 95, z: -5 };
+      const iForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
+      const iWrist = interpolatePoint3D(this.prevBaseWrist, BSL_BASE_HAND.wrist, easeT);
+      const iPalm = interpolatePoint3D(this.prevBasePalm, BSL_BASE_HAND.palm, easeT);
+      const palmShiftX = iPalm.x - BSL_BASE_HAND.palm.x;
+      const palmShiftY = iPalm.y - BSL_BASE_HAND.palm.y;
+      const palmShiftZ = iPalm.z - BSL_BASE_HAND.palm.z;
+
+      this.liveBaseForearm = iForearm;
+      this.liveBaseWrist = iWrist;
+      this.liveBasePalm = iPalm;
+      this.liveBaseTip = {
+        x: BSL_BASE_HAND.fingertips[2].x + palmShiftX,
+        y: BSL_BASE_HAND.fingertips[2].y + palmShiftY,
+        z: BSL_BASE_HAND.fingertips[2].z + palmShiftZ,
+      };
+
+      const pForearm = project3DToSvg(iForearm, cam, ox, oy);
+      const pWrist = project3DToSvg(iWrist, cam, ox, oy);
+      const pPalm = project3DToSvg(iPalm, cam, ox, oy);
 
       let fingersSvg = '';
       BSL_BASE_HAND.fingertips.forEach((tipPt, idx) => {
-        const pTip = project3DToSvg(tipPt, cam, ox, oy);
+        const shiftedTip: Point3D = {
+          x: tipPt.x + palmShiftX,
+          y: tipPt.y + palmShiftY,
+          z: tipPt.z + palmShiftZ,
+        };
+        const pTip = project3DToSvg(shiftedTip, cam, ox, oy);
         const isTarget = this.targetPose.isVowel && this.targetPose.activeVowelIndex === idx;
         const color = isTarget ? '#f59e0b' : '#38bdf8';
         fingersSvg += `
@@ -1359,15 +1555,25 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     // 3. Base Workbench Anchor ('base-hold')
     if (mode === 'base-hold') {
-      const baseForearm: Point3D = { x: -80, y: 75, z: 0 };
-      const baseWrist: Point3D = { x: -65, y: 55, z: 10 };
-      const baseHoldAnchor: Point3D = { x: -45, y: 35, z: 15 };
+      const targetForearm: Point3D = { x: -80, y: 75, z: 0 };
+      const targetWrist: Point3D = { x: -65, y: 55, z: 10 };
+      const targetPalm: Point3D = { x: -45, y: 35, z: 15 };
+      const targetTip: Point3D = { x: -25, y: 32, z: 15 };
+
+      const baseForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
+      const baseWrist = interpolatePoint3D(this.prevBaseWrist, targetWrist, easeT);
+      const baseHoldAnchor = interpolatePoint3D(this.prevBasePalm, targetPalm, easeT);
+      const baseTip = interpolatePoint3D(this.prevBaseTip, targetTip, easeT);
+
+      this.liveBaseForearm = baseForearm;
+      this.liveBaseWrist = baseWrist;
+      this.liveBasePalm = baseHoldAnchor;
+      this.liveBaseTip = baseTip;
+
       const pF = project3DToSvg(baseForearm, cam, ox, oy);
       const pW = project3DToSvg(baseWrist, cam, ox, oy);
       const pP = project3DToSvg(baseHoldAnchor, cam, ox, oy);
-      
-      // Horizontal extended digits forming workbench
-      const pFingers = project3DToSvg({ x: -25, y: 32, z: 15 }, cam, ox, oy);
+      const pFingers = project3DToSvg(baseTip, cam, ox, oy);
 
       baseGroup.innerHTML = `
         <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
@@ -1386,17 +1592,27 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // 3b. Override spatial anchor & Level 6 Discourse Buoys ('override', 'buoy-list', 'buoy-pointer')
     if (mode === 'override' || mode === 'buoy-list' || mode === 'buoy-pointer') {
       const ov = this.targetPose.baseHandOverride;
-      const anchorPalm: Point3D = ov?.palm || {
+      const targetPalm: Point3D = ov?.palm || {
         x: BSL_BASE_HAND.palm.x + (ov?.shiftX || 0),
         y: BSL_BASE_HAND.palm.y + (ov?.shiftY || 0),
         z: BSL_BASE_HAND.palm.z + (ov?.shiftZ || 10),
       };
-      const anchorWrist: Point3D = ov?.wrist || {
-        x: anchorPalm.x - 16,
-        y: anchorPalm.y + 34,
-        z: anchorPalm.z - 8,
+      const targetWrist: Point3D = ov?.wrist || {
+        x: targetPalm.x - 16,
+        y: targetPalm.y + 34,
+        z: targetPalm.z - 8,
       };
-      const anchorForearm: Point3D = { x: anchorWrist.x - 22, y: anchorWrist.y + 28, z: anchorWrist.z - 12 };
+      const targetForearm: Point3D = { x: targetWrist.x - 22, y: targetWrist.y + 28, z: targetWrist.z - 12 };
+
+      const anchorForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
+      const anchorWrist = interpolatePoint3D(this.prevBaseWrist, targetWrist, easeT);
+      const anchorPalm = interpolatePoint3D(this.prevBasePalm, targetPalm, easeT);
+
+      this.liveBaseForearm = anchorForearm;
+      this.liveBaseWrist = anchorWrist;
+      this.liveBasePalm = anchorPalm;
+      this.liveBaseTip = { x: anchorPalm.x, y: anchorPalm.y - 26, z: anchorPalm.z + 6 };
+
       const pF = project3DToSvg(anchorForearm, cam, ox, oy);
       const pW = project3DToSvg(anchorWrist, cam, ox, oy);
       const pP = project3DToSvg(anchorPalm, cam, ox, oy);
@@ -1426,12 +1642,21 @@ export class NativeBslInterpreterElement extends HTMLElement {
       return;
     }
 
-    // 4. Two-Handed Ready Rest Posture ('rest')
-    // Symmetrical resting posture in the lower signing space (mid-chest / upper abdomen)
-    const baseForearm: Point3D = { x: -70, y: 80, z: 0 };
-    const baseWrist: Point3D = { x: -55, y: 60, z: 10 };
-    const basePalm: Point3D = { x: -40, y: 48, z: 15 };
-    const baseTip: Point3D = { x: -28, y: 42, z: 16 };
+    // 4. Two-Handed Ready Rest Posture ('rest') — smoothly interpolated from previous base hand position!
+    const restForearm: Point3D = { x: -70, y: 80, z: 0 };
+    const restWrist: Point3D = { x: -55, y: 60, z: 10 };
+    const restPalm: Point3D = { x: -40, y: 48, z: 15 };
+    const restTip: Point3D = { x: -28, y: 42, z: 16 };
+
+    const baseForearm = interpolatePoint3D(this.prevBaseForearm, restForearm, easeT);
+    const baseWrist = interpolatePoint3D(this.prevBaseWrist, restWrist, easeT);
+    const basePalm = interpolatePoint3D(this.prevBasePalm, restPalm, easeT);
+    const baseTip = interpolatePoint3D(this.prevBaseTip, restTip, easeT);
+
+    this.liveBaseForearm = baseForearm;
+    this.liveBaseWrist = baseWrist;
+    this.liveBasePalm = basePalm;
+    this.liveBaseTip = baseTip;
 
     const pF = project3DToSvg(baseForearm, cam, ox, oy);
     const pW = project3DToSvg(baseWrist, cam, ox, oy);
@@ -1506,6 +1731,37 @@ export class NativeBslInterpreterElement extends HTMLElement {
     `;
   }
 
+  private dockBackFromPiP(closeWindow = false) {
+    const pipWin = this.pipWindow;
+    this.stopAnimationLoop();
+    this.pipWindow = null;
+
+    if (closeWindow && pipWin && !pipWin.closed) {
+      try {
+        pipWin.close();
+      } catch (_) {}
+    }
+
+    if (this.avatarWrapper && this.stageHostContainer && this.avatarWrapper.parentElement !== this.stageHostContainer) {
+      try {
+        document.adoptNode(this.avatarWrapper);
+      } catch (_) {}
+      this.stageHostContainer.appendChild(this.avatarWrapper);
+    }
+
+    const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
+    if (pipBtn) {
+      pipBtn.style.background = '#1e293b';
+      pipBtn.style.color = '#38bdf8';
+      pipBtn.title = 'Pop-out Window (Document Picture-in-Picture)';
+    }
+
+    this.applyPipLayout();
+    if (this.isConnected) {
+      this.startAnimationLoop();
+    }
+  }
+
   /**
    * Native Browser Document Picture-in-Picture Uncoupling
    * Pops out the entire live 60 FPS vector avatar into an always-on-top desktop window.
@@ -1521,50 +1777,45 @@ export class NativeBslInterpreterElement extends HTMLElement {
       return;
     }
 
-    // 2. If already popped out, close PiP and dock back cleanly
-    if (this.pipWindow) {
-      this.pipWindow.close();
-      this.pipWindow = null;
+    // 2. If already popped out, close PiP and dock back cleanly via idempotent handler
+    if (this.pipWindow && !this.pipWindow.closed) {
+      this.dockBackFromPiP(true);
       return;
     }
 
     try {
       // 3. Request native always-on-top Document PiP window
-      this.pipWindow = await (window as any).documentPictureInPicture.requestWindow({
+      const pipWin: Window = await (window as any).documentPictureInPicture.requestWindow({
         width: 340,
         height: 480,
         disallowReturnToOpener: false,
       });
 
-      if (!this.pipWindow || !this.avatarWrapper || !this.stageHostContainer) return;
+      if (!pipWin || !this.avatarWrapper || !this.stageHostContainer) return;
+      this.pipWindow = pipWin;
 
       // 4. Copy styles to PiP window
       [...document.styleSheets].forEach((styleSheet) => {
         try {
           const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
-          const style = this.pipWindow!.document.createElement('style');
+          const style = pipWin.document.createElement('style');
           style.textContent = cssRules;
-          this.pipWindow!.document.head.appendChild(style);
+          pipWin.document.head.appendChild(style);
         } catch (_) {
-          const link = this.pipWindow!.document.createElement('link');
+          const link = pipWin.document.createElement('link');
           link.rel = 'stylesheet';
           link.type = styleSheet.type;
           link.href = (styleSheet as CSSStyleSheet).href || '';
-          this.pipWindow!.document.head.appendChild(link);
+          pipWin.document.head.appendChild(link);
         }
       });
 
-      // 5. Setup PiP body styles
-      this.pipWindow.document.body.style.margin = '0';
-      this.pipWindow.document.body.style.padding = '0';
-      this.pipWindow.document.body.style.background = '#020617';
-      this.pipWindow.document.body.style.color = '#f8fafc';
-      this.pipWindow.document.body.style.fontFamily = 'system-ui, -apple-system, sans-serif';
-      this.pipWindow.document.body.style.overflow = 'hidden';
+      // 5. Setup PiP body styles as flex column so avatar fills remaining height cleanly
+      pipWin.document.body.style.cssText = 'margin:0; padding:0; width:100vw; height:100vh; display:flex; flex-direction:column; background:#020617; color:#f8fafc; font-family:system-ui, -apple-system, sans-serif; overflow:hidden;';
 
       // 5b. Header Bar for PiP window with prominent Dock button
-      const pipHeader = this.pipWindow.document.createElement('div');
-      pipHeader.style.cssText = 'background:#0f172a; padding:6px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; user-select:none;';
+      const pipHeader = pipWin.document.createElement('div');
+      pipHeader.style.cssText = 'background:#0f172a; padding:6px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; user-select:none; flex-shrink:0;';
       pipHeader.innerHTML = `
         <div style="display:flex; align-items:center; gap:6px;">
           <span style="font-size:0.9rem;">🧏</span>
@@ -1574,18 +1825,15 @@ export class NativeBslInterpreterElement extends HTMLElement {
           ⚓ Dock to Page
         </button>
       `;
-      this.pipWindow.document.body.appendChild(pipHeader);
+      pipWin.document.body.appendChild(pipHeader);
       pipHeader.querySelector('#pip-btn-redock')?.addEventListener('click', () => {
-        if (this.pipWindow) {
-          this.pipWindow.close();
-        }
+        this.dockBackFromPiP(true);
       });
 
       // 6. Transfer live avatar wrapper and re-bind animation loop to PiP
       const deck = this.avatarWrapper.querySelector<HTMLElement>('#bsl-interactive-deck');
       if (deck) deck.style.display = 'flex';
-      this.pipWindow.document.body.appendChild(this.avatarWrapper);
-      this.startAnimationLoop();
+      pipWin.document.body.appendChild(this.avatarWrapper);
 
       const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
       if (pipBtn) {
@@ -1594,26 +1842,20 @@ export class NativeBslInterpreterElement extends HTMLElement {
         pipBtn.title = 'Dock BSL Avatar Back Home';
       }
 
-      // 7. Dock back home on PiP window close
-      this.pipWindow.addEventListener('pagehide', () => {
-        if (this.animationFrameId) {
-          cancelAnimationFrame(this.animationFrameId);
-          this.animationFrameId = null;
+      this.applyPipLayout();
+      this.startAnimationLoop();
+
+      // 7. Dock back home on PiP window close (pagehide + unload fallback)
+      const onPipClosed = () => {
+        if (this.pipWindow === pipWin) {
+          this.dockBackFromPiP(false);
         }
-        if (this.avatarWrapper && this.stageHostContainer) {
-          this.stageHostContainer.appendChild(this.avatarWrapper);
-        }
-        this.pipWindow = null;
-        this.applyPipLayout();
-        if (pipBtn) {
-          pipBtn.style.background = '#1e293b';
-          pipBtn.style.color = '#38bdf8';
-          pipBtn.title = 'Pop-out Window (Document Picture-in-Picture)';
-        }
-        this.startAnimationLoop();
-      });
+      };
+      pipWin.addEventListener('pagehide', onPipClosed);
+      pipWin.addEventListener('unload', onPipClosed);
     } catch (err) {
       console.error('[BSL Interpreter] Failed to open Document PiP window:', err);
+      this.dockBackFromPiP(false);
     }
   }
 }

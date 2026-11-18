@@ -113,8 +113,12 @@ export class PersistentAppShellElement extends HTMLElement {
       }
     } else if (e.data.type === 'SPEECH_BOUNDARY' && e.data.word) {
       broadcastBslSpeech({ word: e.data.word, isSpeaking: true });
-    } else if (e.data && (e.data.type === 'SPEECH_END' || e.data.type === 'SUBTITLE_CLEAR')) {
+    } else if (e.data && e.data.type === 'SUBTITLE_CLEAR') {
+      broadcastBslSpeech({ isSpeaking: false, stopSigning: true });
+    } else if (e.data && e.data.type === 'SPEECH_END') {
       broadcastBslSpeech({ isSpeaking: false });
+    } else if (e.data && (e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED') && (e.data.isPlaying === false || e.data.playing === false)) {
+      broadcastBslSpeech({ isSpeaking: false, stopSigning: true });
     } else if (e.data.type === 'CHECKPOINT_ANSWERED') {
       const urlPreset = new URLSearchParams(window.location.search).get('preset') || '';
       const rawSceneId = typeof e.data.sceneId === 'string' && e.data.sceneId.trim() ? e.data.sceneId.trim() : urlPreset || 'simulation_lab';
@@ -621,10 +625,14 @@ export class PersistentAppShellElement extends HTMLElement {
         btnBsl.setAttribute('aria-pressed', String(enabled));
       }
       if (enabled) {
-        const { initCustomSignsIntoLexicon } = await import('../services/customSignStore');
-        initCustomSignsIntoLexicon();
-        await import('./NativeBslInterpreter');
-        bslSlot.innerHTML = `<native-bsl-interpreter></native-bsl-interpreter>`;
+        if (!bslSlot.querySelector('native-bsl-interpreter')) {
+          const { initCustomSignsIntoLexicon } = await import('../services/customSignStore');
+          initCustomSignsIntoLexicon();
+          await import('./NativeBslInterpreter');
+          if (this.bsl && !bslSlot.querySelector('native-bsl-interpreter')) {
+            bslSlot.innerHTML = `<native-bsl-interpreter></native-bsl-interpreter>`;
+          }
+        }
       } else {
         bslSlot.innerHTML = '';
       }

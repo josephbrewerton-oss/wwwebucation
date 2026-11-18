@@ -30,9 +30,9 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-18T10:26:49.473Z",
-  "totalCartridges": 73,
-  "masterChecksum": "1a976e6e092a62e7943b5cb85d1d76392a4ad0341784f0109fecba164d1a2941",
+  "generatedAt": "2026-11-18T12:06:34.870Z",
+  "totalCartridges": 72,
+  "masterChecksum": "20aef41a7978aa879954e892a68aaef8e941b813cff238710ee6fdc9a04feddc",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -72,14 +72,14 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "stage": "EYFS & LANGUAGES",
       "type": "Sim",
       "astSha256": "e5ff1749c9739da6c4e37c1d01e820fe67355fe63b81a0588fcc87fa5ff85a06",
-      "svgSha256": "5bf739d58c5c62b0d13b57298ebce76203c70b659e9e05f9d6ea5ce6e75d4b6a",
+      "svgSha256": "f08cbb09d7e1927c48c1316487a4693ea2dd93d3a1152098a74bc930ffeb9c56",
       "astbSha256": "4dbb4e1412e8c4700e46b371b1b32c10d5d278995b2f5fb6fa0330b16cbd2837",
       "astbBytes": 2531,
       "astBytes": 7760,
-      "svgBytes": 69548,
+      "svgBytes": 70044,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "463abe379cc82bfa756152e7b14616fc9fc21037307ecf5a8c7ad142e039670e",
+      "seal": "16a4429653ec05fea72d41be25b02fa83387bd68ea1067ce6d95fe5e403275e8",
       "certified": true
     },
     "altar-anatomy": {
@@ -384,22 +384,6 @@ export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
       "seal": "e6d38057dd1c302fc40a9ddced488718ae96b40682819c4d0a368abe5867d716",
-      "certified": true
-    },
-    "inverted-pendulum-dyno": {
-      "id": "inverted-pendulum-dyno",
-      "title": "Inverted Pendulum Dynamical System: Cart-Pole State Control",
-      "stage": "KS3 PHYSICS",
-      "type": "Sim",
-      "astSha256": "0336fb71c855b32db24125c8cb60fbd7f74d03e1da64ece000c71bacc5289403",
-      "svgSha256": "cc1cf199c38e9d999ce814b9d12160c6f7671c95882db79ad39b82d060f86fbc",
-      "astbSha256": "0a2c64133d880b3b33638cd26c7485b847704e187a1bd4d769fa292de1021c97",
-      "astbBytes": 3689,
-      "astBytes": 5360,
-      "svgBytes": 2161,
-      "tier": "native",
-      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "5595d9bba7db3092eb60f58c3bf5835e2681f4123b5e233408adf5fd06c88de9",
       "certified": true
     },
     "kinetic-gas": {

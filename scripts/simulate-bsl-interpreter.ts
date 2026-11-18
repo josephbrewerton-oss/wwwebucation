@@ -791,6 +791,41 @@ for (const word of discourseWords) {
   assert(updatedCodebook.includes(`:id "${word.toLowerCase()}"`), `static/lexicons/bsl-codebook.lisp contains '${word.toLowerCase()}'`);
 }
 
+// ---------------------------------------------------------
+// Test 17: Return-to-Rest Continuity & In-Stage Word-Boundary Invariants
+// ---------------------------------------------------------
+console.log('\n17. Testing Return-to-Rest Continuity & In-Stage Word Boundaries:');
+for (const testMode of ['fingerspell', 'sse', 'makaton', 'bsl-natural'] as const) {
+  const modeRes = analyzeAndTransformBslGrammar('hello thank you friend', testMode);
+  const boundaryFrames = modeRes.stream.filter((p) => p.letter === ' ');
+  for (const bf of boundaryFrames) {
+    const rx = project3DToSvg(bf.targetWrist, cameras[1], 110, 105);
+    assert(
+      rx.x >= 20 && rx.x <= 200 && rx.y >= 20 && rx.y <= 200,
+      `Mode '${testMode}' word-boundary wrist stays cleanly inside 220x210 signing stage (x=${rx.x.toFixed(1)}, y=${rx.y.toFixed(1)})`
+    );
+  }
+}
+
+// Simulate stopping mid-sign at progress=0.45 and interpolating smoothly back to rest
+const activeSignPose = BSL_ALPHABET_POSES['E'];
+const midProgressT = evaluateBslEase('smooth', 0.45);
+const liveSnapshotTip = interpolatePoint3D(DOMINANT_REST_POSE, activeSignPose.targetTip, midProgressT);
+const returnFrame0Tip = interpolatePoint3D(liveSnapshotTip, DOMINANT_REST_POSE, evaluateBslEase('smooth', 0));
+const returnFrameMidTip = interpolatePoint3D(liveSnapshotTip, DOMINANT_REST_POSE, evaluateBslEase('smooth', 0.5));
+const returnFrameEndTip = interpolatePoint3D(liveSnapshotTip, DOMINANT_REST_POSE, evaluateBslEase('smooth', 1.0));
+
+const jumpAtStart = Math.hypot(
+  returnFrame0Tip.x - liveSnapshotTip.x,
+  returnFrame0Tip.y - liveSnapshotTip.y,
+  returnFrame0Tip.z - liveSnapshotTip.z
+);
+assert(jumpAtStart < 1e-6, `C0 continuous return-to-rest has zero frame-0 teleport (delta=${jumpAtStart.toFixed(6)})`);
+const distStart = Math.hypot(liveSnapshotTip.x - DOMINANT_REST_POSE.x, liveSnapshotTip.y - DOMINANT_REST_POSE.y, liveSnapshotTip.z - DOMINANT_REST_POSE.z);
+const distMid = Math.hypot(returnFrameMidTip.x - DOMINANT_REST_POSE.x, returnFrameMidTip.y - DOMINANT_REST_POSE.y, returnFrameMidTip.z - DOMINANT_REST_POSE.z);
+const distEnd = Math.hypot(returnFrameEndTip.x - DOMINANT_REST_POSE.x, returnFrameEndTip.y - DOMINANT_REST_POSE.y, returnFrameEndTip.z - DOMINANT_REST_POSE.z);
+assert(distStart > distMid && distMid > distEnd && distEnd < 1e-6, 'Return-to-rest converges monotonically to neutral posture');
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

@@ -194,10 +194,10 @@ export const BSL_BASE_REST_HAND = {
   ],
 };
 
-// Dominant pointer hand neutral rest position (The "Pen")
-export const DOMINANT_REST_POSE: Point3D = { x: 70, y: 35, z: 5 };
-export const DOMINANT_REST_KNUCKLE: Point3D = { x: 95, y: 50, z: -5 };
-export const DOMINANT_REST_WRIST: Point3D = { x: 135, y: 90, z: -20 };
+// Dominant pointer hand neutral rest position (in-frame symmetrical ready posture)
+export const DOMINANT_REST_POSE: Point3D = { x: 28, y: 44, z: 16 };
+export const DOMINANT_REST_KNUCKLE: Point3D = { x: 42, y: 50, z: 14 };
+export const DOMINANT_REST_WRIST: Point3D = { x: 58, y: 62, z: 8 };
 
 /**
  * Anatomical 3D Target Coordinates for the BSL 2-Handed Manual Alphabet
@@ -593,9 +593,12 @@ export function evaluateBslEase(ease: BslEaseCurve | undefined, t: number): numb
         return n1 * x * x + 0.984375;
       }
     }
+    case 'ease-in':
+      return clamped * clamped;
+    case 'smooth':
     case 'ease-out':
     default:
-      // Smooth Hermite cubic ease out
+      // Smooth Hermite cubic smoothstep
       return clamped * clamped * (3 - 2 * clamped);
   }
 }
