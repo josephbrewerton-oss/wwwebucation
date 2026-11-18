@@ -184,9 +184,8 @@
     (:cartridge
       :id "inverted-pendulum-dyno"
       :type "Sim"
-      :title "Inverted Pendulum Dynamical System: Cart-Pole State Control"
-      :stage "KS3 PHYSICS"
-      :oak-id "OAK-KS3-SCI-010"
+      :title "Inverted Pendulum Dyno"
+      :stage "PORTAL APPARATUS"
       :bytecode "bytecode/inverted-pendulum-dyno.astb")
 
     (:cartridge
