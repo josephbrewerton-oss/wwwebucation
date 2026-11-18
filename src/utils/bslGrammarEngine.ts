@@ -2158,13 +2158,13 @@ export function analyzeAndTransformBslGrammar(
         label: 'Boundary',
         rule: 'Neutral transition between signs',
         isVowel: false,
-        targetTip: { x: 28, y: 44, z: 16 },
-        targetKnuckle: { x: 42, y: 50, z: 14 },
-        targetWrist: { x: 58, y: 62, z: 8 },
+        targetTip: { ...DOMINANT_REST_POSE },
+        targetKnuckle: { ...DOMINANT_REST_KNUCKLE },
+        targetWrist: { ...DOMINANT_REST_WRIST },
         baseHandMode: 'rest',
-        shape: 'flat',
+        shape: 'flat-closed',
         palm: 'in',
-        ease: 'smooth',
+        ease: 'spring',
       });
     }
   }

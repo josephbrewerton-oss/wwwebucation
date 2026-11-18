@@ -82,10 +82,13 @@ export class NativeBslInterpreterElement extends HTMLElement {
   // Speech tracking to avoid restarting on word boundaries
   private lastSpokenSubtitle = '';
 
-  // Camera POV & 360-degree drag orbit offsets
+  // Camera POV & 360-degree drag orbit offsets + elastic spring-back velocity
   private cameraMode: 'receiver' | 'signer' = 'receiver';
+  private isOrbitingAvatar = false;
   private orbitYawOffset = 0;
   private orbitPitchOffset = 0;
+  private orbitYawVel = 0;
+  private orbitPitchVel = 0;
   private readonly cameraConfigs = {
     receiver: { yaw: 180, pitch: -8, distance: 360, fov: 60 },
     signer: { yaw: 0, pitch: 26, distance: 360, fov: 60 },
@@ -102,24 +105,26 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private targetPose: BslHandPose;
   private poseQueue: BslHandPose[] = [];
   private currentPoseStartTime = 0;
-  private currentPoseDuration = 550; // ms per sign keyframe
-  private currentAnimProgress = 0;
+  private currentPoseDuration = 380; // ms per sign keyframe
+  private currentAnimProgress = 1;
   private holdRemaining = 0;
   private isIdle = true;
   private hasResetIdleHud = true;
 
-  // Continuous 3D Joint Tracking for Seamless C0 Return-to-Rest (Dominant, Base & Torso)
-  private liveTip: Point3D = { x: 28, y: 44, z: 16 };
-  private liveKnuckle: Point3D = { x: 42, y: 50, z: 14 };
-  private liveWrist: Point3D = { x: 58, y: 62, z: 8 };
-  private liveBaseForearm: Point3D = { x: -70, y: 80, z: 0 };
-  private liveBaseWrist: Point3D = { x: -55, y: 60, z: 10 };
-  private liveBasePalm: Point3D = { x: -40, y: 48, z: 15 };
-  private liveBaseTip: Point3D = { x: -28, y: 42, z: 16 };
-  private prevBaseForearm: Point3D = { x: -70, y: 80, z: 0 };
-  private prevBaseWrist: Point3D = { x: -55, y: 60, z: 10 };
-  private prevBasePalm: Point3D = { x: -40, y: 48, z: 15 };
-  private prevBaseTip: Point3D = { x: -28, y: 42, z: 16 };
+  // Continuous 3D Joint Tracking for Seamless C0 Spring-Back (Dominant, Base & Torso)
+  private liveTip: Point3D = { ...DOMINANT_REST_POSE };
+  private liveKnuckle: Point3D = { ...DOMINANT_REST_KNUCKLE };
+  private liveWrist: Point3D = { ...DOMINANT_REST_WRIST };
+  private liveBaseForearm: Point3D = { x: -66, y: 36, z: -5 };
+  private liveBaseWrist: Point3D = { x: -DOMINANT_REST_WRIST.x, y: DOMINANT_REST_WRIST.y, z: DOMINANT_REST_WRIST.z };
+  private liveBaseKnuckle: Point3D = { x: -DOMINANT_REST_KNUCKLE.x, y: DOMINANT_REST_KNUCKLE.y, z: DOMINANT_REST_KNUCKLE.z };
+  private liveBasePalm: Point3D = { x: -38, y: 54, z: 14 };
+  private liveBaseTip: Point3D = { x: -DOMINANT_REST_POSE.x, y: DOMINANT_REST_POSE.y, z: DOMINANT_REST_POSE.z };
+  private prevBaseForearm: Point3D = { x: -66, y: 36, z: -5 };
+  private prevBaseWrist: Point3D = { x: -DOMINANT_REST_WRIST.x, y: DOMINANT_REST_WRIST.y, z: DOMINANT_REST_WRIST.z };
+  private prevBaseKnuckle: Point3D = { x: -DOMINANT_REST_KNUCKLE.x, y: DOMINANT_REST_KNUCKLE.y, z: DOMINANT_REST_KNUCKLE.z };
+  private prevBasePalm: Point3D = { x: -38, y: 54, z: 14 };
+  private prevBaseTip: Point3D = { x: -DOMINANT_REST_POSE.x, y: DOMINANT_REST_POSE.y, z: DOMINANT_REST_POSE.z };
   private liveRoleYaw = 0;
   private liveRolePitch = 0;
   private prevRoleYaw = 0;
@@ -142,6 +147,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     corner: 'bottom-right',
     compact: true,
   };
+  private isPointerDownHeader = false;
   private isDraggingCard = false;
   private isFloatingPopout = false;
   private activeDragPointerId: number | null = null;
@@ -203,14 +209,22 @@ export class NativeBslInterpreterElement extends HTMLElement {
       label: 'Neutral Resting Hand',
       rule: 'Hands rest relaxed in ready signing posture',
       isVowel: false,
-      targetTip: { x: 28, y: 44, z: 16 },
-      targetKnuckle: { x: 42, y: 50, z: 14 },
-      targetWrist: { x: 58, y: 62, z: 8 },
+      targetTip: { ...DOMINANT_REST_POSE },
+      targetKnuckle: { ...DOMINANT_REST_KNUCKLE },
+      targetWrist: { ...DOMINANT_REST_WRIST },
       baseHandMode: 'rest',
-      shape: 'flat',
+      shape: 'flat-closed',
       palm: 'in',
-      ease: 'smooth',
+      ease: 'spring',
       nmf: { eyebrows: 'neutral', mouth: 'closed', headTilt: 'neutral' },
+    };
+  }
+
+  private lerpRaw3D(a: Point3D, b: Point3D, t: number): Point3D {
+    return {
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      z: a.z + (b.z - a.z) * t,
     };
   }
 
@@ -622,40 +636,58 @@ export class NativeBslInterpreterElement extends HTMLElement {
       });
     });
 
-    // 360-degree drag-to-orbit on Avatar SVG viewport (double-click to reset)
+    // 360-degree drag-to-orbit on Avatar SVG viewport (springs back to front on release)
     const avatarSvg = this.querySelector<SVGSVGElement>('#bsl-avatar-svg');
     if (avatarSvg) {
-      let orbiting = false;
+      let orbitPointerId: number | null = null;
       let startX = 0;
       let startY = 0;
       let baseYaw = 0;
       let basePitch = 0;
       avatarSvg.style.cursor = 'grab';
       avatarSvg.addEventListener('pointerdown', (e) => {
-        orbiting = true;
+        this.isOrbitingAvatar = true;
+        orbitPointerId = e.pointerId;
+        this.orbitYawVel = 0;
+        this.orbitPitchVel = 0;
         startX = e.clientX;
         startY = e.clientY;
         baseYaw = this.orbitYawOffset;
         basePitch = this.orbitPitchOffset;
         avatarSvg.style.cursor = 'grabbing';
-        avatarSvg.setPointerCapture?.(e.pointerId);
+        try {
+          avatarSvg.setPointerCapture?.(e.pointerId);
+        } catch (_) {}
       });
       avatarSvg.addEventListener('pointermove', (e) => {
-        if (!orbiting) return;
-        this.orbitYawOffset = baseYaw + (e.clientX - startX) * 0.65;
+        if (!this.isOrbitingAvatar) return;
+        if (orbitPointerId !== null && e.pointerId !== orbitPointerId) return;
+        this.orbitYawOffset = Math.max(-150, Math.min(150, baseYaw + (e.clientX - startX) * 0.65));
         this.orbitPitchOffset = Math.max(-45, Math.min(45, basePitch + (e.clientY - startY) * 0.45));
       });
       const stopOrbit = () => {
-        if (orbiting) {
-          orbiting = false;
+        if (this.isOrbitingAvatar) {
+          this.isOrbitingAvatar = false;
           avatarSvg.style.cursor = 'grab';
+          if (orbitPointerId !== null) {
+            try {
+              if (avatarSvg.hasPointerCapture?.(orbitPointerId)) {
+                avatarSvg.releasePointerCapture(orbitPointerId);
+              }
+            } catch (_) {}
+            orbitPointerId = null;
+          }
         }
       };
       avatarSvg.addEventListener('pointerup', stopOrbit);
       avatarSvg.addEventListener('pointercancel', stopOrbit);
+      avatarSvg.addEventListener('lostpointercapture', stopOrbit);
       avatarSvg.addEventListener('dblclick', () => {
+        this.isOrbitingAvatar = false;
         this.orbitYawOffset = 0;
         this.orbitPitchOffset = 0;
+        this.orbitYawVel = 0;
+        this.orbitPitchVel = 0;
       });
     }
 
@@ -712,7 +744,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.dockBackFromPiP(true);
     });
 
-    // Make floating card draggable via Pointer Events (with pointer capture over iframes)
+    // Make floating card draggable via Pointer Events (4px threshold + magnetic corner snap)
     const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const headerBar = this.querySelector<HTMLElement>('#bsl-header-bar');
     if (floatingCard && headerBar) {
@@ -725,8 +757,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
       headerBar.addEventListener('pointerdown', (e: PointerEvent) => {
         if ((e.target as HTMLElement).closest('button')) return;
-        e.preventDefault();
-        this.isDraggingCard = true;
+        this.isPointerDownHeader = true;
+        this.isDraggingCard = false;
         this.activeDragPointerId = e.pointerId;
         this.dragStartX = e.clientX;
         this.dragStartY = e.clientY;
@@ -734,31 +766,33 @@ export class NativeBslInterpreterElement extends HTMLElement {
         const startCoords = this.computeClampedFloatingCoords(rect.left, rect.top);
         this.dragInitialLeft = startCoords.left;
         this.dragInitialTop = startCoords.top;
-        this.layoutState.mode = 'floating';
-        this.layoutState.left = startCoords.left;
-        this.layoutState.top = startCoords.top;
-        floatingCard.setAttribute('data-dock-corner', 'floating');
-        floatingCard.style.bottom = 'auto';
-        floatingCard.style.right = 'auto';
-        floatingCard.style.left = `${startCoords.left}px`;
-        floatingCard.style.top = `${startCoords.top}px`;
-        headerBar.style.cursor = 'grabbing';
-        try {
-          headerBar.setPointerCapture?.(e.pointerId);
-        } catch (_) {}
-        const redockBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
-        if (redockBtn) redockBtn.style.display = 'inline-flex';
-        this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn').forEach((btn) => {
-          btn.style.background = '#334155';
-          btn.setAttribute('aria-pressed', 'false');
-        });
       });
 
       this.boundPointerMove = (e: PointerEvent) => {
-        if (!this.isDraggingCard) return;
+        if (!this.isPointerDownHeader) return;
         if (this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
         const dx = e.clientX - this.dragStartX;
         const dy = e.clientY - this.dragStartY;
+
+        if (!this.isDraggingCard) {
+          if (Math.hypot(dx, dy) < 5) return;
+          this.isDraggingCard = true;
+          this.layoutState.mode = 'floating';
+          floatingCard.setAttribute('data-dock-corner', 'floating');
+          floatingCard.style.bottom = 'auto';
+          floatingCard.style.right = 'auto';
+          headerBar.style.cursor = 'grabbing';
+          try {
+            headerBar.setPointerCapture?.(e.pointerId);
+          } catch (_) {}
+          const redockBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
+          if (redockBtn) redockBtn.style.display = 'inline-flex';
+          this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn').forEach((btn) => {
+            btn.style.background = '#334155';
+            btn.setAttribute('aria-pressed', 'false');
+          });
+        }
+
         const clamped = this.computeClampedFloatingCoords(this.dragInitialLeft + dx, this.dragInitialTop + dy);
         this.layoutState.left = clamped.left;
         this.layoutState.top = clamped.top;
@@ -767,9 +801,11 @@ export class NativeBslInterpreterElement extends HTMLElement {
       };
 
       const finishCardDrag = (e?: PointerEvent) => {
-        if (!this.isDraggingCard) return;
+        if (!this.isPointerDownHeader && !this.isDraggingCard) return;
         if (e && this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
+        const wasDragging = this.isDraggingCard;
         const pid = this.activeDragPointerId;
+        this.isPointerDownHeader = false;
         this.isDraggingCard = false;
         this.activeDragPointerId = null;
         headerBar.style.cursor = 'grab';
@@ -780,7 +816,33 @@ export class NativeBslInterpreterElement extends HTMLElement {
             }
           } catch (_) {}
         }
-        this.saveLayout();
+
+        if (wasDragging) {
+          // Magnetic snap-back if dropped near one of the 4 dock corners
+          const vw = window.innerWidth;
+          const vh = window.innerHeight;
+          const rect = floatingCard.getBoundingClientRect();
+          const SNAP_DIST = 36;
+          if (!this.isFloatingPopout) {
+            if (rect.left <= SNAP_DIST && vh - rect.bottom <= SNAP_DIST + 20) {
+              this.setDockCorner('bottom-left');
+              return;
+            }
+            if (vw - rect.right <= SNAP_DIST && vh - rect.bottom <= SNAP_DIST + 20) {
+              this.setDockCorner('bottom-right');
+              return;
+            }
+            if (rect.left <= SNAP_DIST && rect.top <= 74 + SNAP_DIST) {
+              this.setDockCorner('top-left');
+              return;
+            }
+            if (vw - rect.right <= SNAP_DIST && rect.top <= 74 + SNAP_DIST) {
+              this.setDockCorner('top-right');
+              return;
+            }
+          }
+          this.saveLayout();
+        }
       };
 
       this.boundPointerUp = finishCardDrag;
@@ -932,6 +994,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     };
     this.prevBaseForearm = { ...this.liveBaseForearm };
     this.prevBaseWrist = { ...this.liveBaseWrist };
+    this.prevBaseKnuckle = { ...this.liveBaseKnuckle };
     this.prevBasePalm = { ...this.liveBasePalm };
     this.prevBaseTip = { ...this.liveBaseTip };
     this.prevRoleYaw = this.liveRoleYaw;
@@ -962,7 +1025,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
     this.snapshotLivePose();
     this.targetPose = this.createRestPose();
-    this.currentPoseDuration = 420;
+    this.currentPoseDuration = 320;
     this.currentPoseStartTime = performance.now();
     this.currentAnimProgress = 0;
     this.holdRemaining = 0;
@@ -974,9 +1037,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.snapshotLivePose();
 
     if (this.poseQueue.length === 0) {
-      // Transition smoothly from exact live 3D pose back to neutral rest pose
+      // Spring briskly from exact live 3D pose back to neutral chest rest pose
       this.targetPose = this.createRestPose();
-      this.currentPoseDuration = 450;
+      this.currentPoseDuration = 340;
       this.currentPoseStartTime = performance.now();
       this.currentAnimProgress = 0;
       this.holdRemaining = 0;
@@ -986,10 +1049,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
 
     this.targetPose = this.poseQueue.shift()!;
-    this.currentPoseDuration = this.targetPose.hold ? Math.max(300, this.targetPose.hold + 200) : 480;
+    this.currentPoseDuration = this.targetPose.hold ? Math.max(240, this.targetPose.hold + 160) : 380;
     this.currentPoseStartTime = performance.now();
     this.currentAnimProgress = 0;
-    this.holdRemaining = this.targetPose.hold || 80;
+    this.holdRemaining = this.targetPose.hold || 60;
     this.isIdle = false;
     this.hasResetIdleHud = false;
 
@@ -1030,8 +1093,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.animationFrameWindow = win;
       this.animationFrameId = win.requestAnimationFrame(cb);
     };
-    const loop = (now: number) => {
-      this.updateAvatar(now);
+    const loop = () => {
+      this.updateAvatar(performance.now());
       scheduleNext(loop);
     };
     scheduleNext(loop);
@@ -1041,9 +1104,25 @@ export class NativeBslInterpreterElement extends HTMLElement {
     const svg = this.queryAvatarElement<SVGSVGElement>('#bsl-avatar-svg');
     if (!svg) return;
 
-    // Advance timeline interpolation
+    // Elastic spring-back for 3D camera orbit when pointer is released
+    if (!this.isOrbitingAvatar && (this.orbitYawOffset !== 0 || this.orbitPitchOffset !== 0 || this.orbitYawVel !== 0 || this.orbitPitchVel !== 0)) {
+      this.orbitYawVel = (this.orbitYawVel - this.orbitYawOffset * 0.16) * 0.74;
+      this.orbitPitchVel = (this.orbitPitchVel - this.orbitPitchOffset * 0.16) * 0.74;
+      this.orbitYawOffset += this.orbitYawVel;
+      this.orbitPitchOffset += this.orbitPitchVel;
+      if (Math.abs(this.orbitYawOffset) < 0.08 && Math.abs(this.orbitYawVel) < 0.08) {
+        this.orbitYawOffset = 0;
+        this.orbitYawVel = 0;
+      }
+      if (Math.abs(this.orbitPitchOffset) < 0.08 && Math.abs(this.orbitPitchVel) < 0.08) {
+        this.orbitPitchOffset = 0;
+        this.orbitPitchVel = 0;
+      }
+    }
+
+    // Advance timeline interpolation using unified performance.now() timebase
     let progress = 1.0;
-    if (this.currentPoseDuration > 0) {
+    if (this.currentPoseDuration > 0 && this.currentPoseStartTime > 0) {
       const elapsed = Math.max(0, now - this.currentPoseStartTime);
       progress = Math.min(1.0, elapsed / this.currentPoseDuration);
     }
@@ -1062,23 +1141,27 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.resetHudToStandby();
     }
 
-    const easeType = this.targetPose.ease || 'smooth';
+    const easeType = this.targetPose.ease || (this.isIdle ? 'spring' : 'smooth');
     const easeT = evaluateBslEase(easeType, progress);
 
-    // Interpolate current dominant hand skeletal target vectors and record live 3D coordinates
-    const tip = interpolatePoint3D(this.currentPose.targetTip, this.targetPose.targetTip, easeT);
-    const knuckle = interpolatePoint3D(this.currentPose.targetKnuckle, this.targetPose.targetKnuckle, easeT);
-    const wrist = interpolatePoint3D(this.currentPose.targetWrist, this.targetPose.targetWrist, easeT);
+    // Subtle idle breathing oscillation once hands settle at rest
+    const idleBreathY = this.isIdle && progress >= 1.0 ? Math.sin(now * 0.0026) * 1.4 : 0;
+
+    // Single-pass kinematic interpolation (no double-smoothstep sluggishness)
+    const rawTip = this.lerpRaw3D(this.currentPose.targetTip, this.targetPose.targetTip, easeT);
+    const rawKnuckle = this.lerpRaw3D(this.currentPose.targetKnuckle, this.targetPose.targetKnuckle, easeT);
+    const rawWrist = this.lerpRaw3D(this.currentPose.targetWrist, this.targetPose.targetWrist, easeT);
+    const tip: Point3D = { x: rawTip.x, y: rawTip.y + idleBreathY, z: rawTip.z };
+    const knuckle: Point3D = { x: rawKnuckle.x, y: rawKnuckle.y + idleBreathY, z: rawKnuckle.z };
+    const wrist: Point3D = { x: rawWrist.x, y: rawWrist.y + idleBreathY, z: rawWrist.z };
     this.liveTip = tip;
     this.liveKnuckle = knuckle;
     this.liveWrist = wrist;
 
-    const activeShape = this.targetPose.shape || 'flat';
+    const activeShape = this.targetPose.shape || 'flat-closed';
     const activePalm = this.targetPose.palm || 'in';
     const activeNmf = this.targetPose.nmf || { eyebrows: 'neutral', mouth: 'closed', headTilt: 'neutral' };
 
-    // Authentic BSL & Makaton Base Mode Resolution:
-    // Respect explicit 'rest' (one-handed signs such as EAT, DRINK, GOD, SUN, MUM) without forcing vowel-board!
     let baseMode: BslBaseHandMode = this.targetPose.baseHandMode || 'rest';
     if (!this.targetPose.baseHandMode) {
       const letter = this.targetPose.letter;
@@ -1113,7 +1196,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.eyeBlinkProgress = Math.max(0, this.eyeBlinkProgress - 0.12);
     }
 
-    // Smoothly interpolate Role-Shift torso yaw & elevation pitch so return-to-rest never snaps
+    // Smoothly spring-interpolate Role-Shift torso yaw & elevation pitch
     const targetRoleYaw = activeNmf.roleShift?.yaw || 0;
     const targetRolePitch = activeNmf.roleShift?.elevation === 'high' ? -4 : activeNmf.roleShift?.elevation === 'low' ? 4 : 0;
     const roleYaw = this.prevRoleYaw + (targetRoleYaw - this.prevRoleYaw) * easeT;
@@ -1128,12 +1211,24 @@ export class NativeBslInterpreterElement extends HTMLElement {
       fov: cam.fov,
     };
 
+    // Dynamic anatomical 3D elbows shared between sleeves and forearms so arms never detach
+    const rightElbow3D: Point3D = {
+      x: Math.max(54, Math.min(74, 58 + wrist.x * 0.16)),
+      y: Math.max(24, Math.min(46, 32 + (wrist.y - 45) * 0.2)),
+      z: -5,
+    };
+    const leftElbow3D: Point3D = {
+      x: Math.min(-54, Math.max(-74, -58 + this.liveBaseWrist.x * 0.16)),
+      y: Math.max(24, Math.min(46, 32 + (this.liveBaseWrist.y - 45) * 0.2)),
+      z: -5,
+    };
+
     // Render Layers
     this.renderLociLayer(activeCam, originX, originY);
-    this.renderBodyLayer(activeCam, originX, originY);
+    this.renderBodyLayer(activeCam, originX, originY, leftElbow3D, rightElbow3D);
     this.renderHeadLayer(activeCam, originX, originY, activeNmf);
-    this.renderBaseHandLayer(activeCam, originX, originY, baseMode, wrist, knuckle, tip, activeShape, activePalm, easeT);
-    this.renderDominantHandLayer(activeCam, originX, originY, wrist, knuckle, tip, activeShape, activePalm);
+    this.renderBaseHandLayer(activeCam, originX, originY, baseMode, wrist, knuckle, tip, activeShape, activePalm, easeT, leftElbow3D, idleBreathY);
+    this.renderDominantHandLayer(activeCam, originX, originY, wrist, knuckle, tip, activeShape, activePalm, rightElbow3D);
   }
 
   private renderLociLayer(cam: any, ox: number, oy: number) {
@@ -1160,7 +1255,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     lociGroup.innerHTML = html;
   }
 
-  private renderBodyLayer(cam: any, ox: number, oy: number) {
+  private renderBodyLayer(cam: any, ox: number, oy: number, leftElbow3D: Point3D, rightElbow3D: Point3D) {
     const bodyGroup = this.queryAvatarElement('#bsl-layer-body');
     if (!bodyGroup) return;
 
@@ -1172,9 +1267,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
     const pWaistLeft = project3DToSvg({ x: -44, y: 75, z: -10 }, cam, ox, oy);
     const pWaistRight = project3DToSvg({ x: 44, y: 75, z: -10 }, cam, ox, oy);
 
-    // Anatomical Elbows & Arms
-    const pLeftElbow = project3DToSvg({ x: -68, y: 35, z: -5 }, cam, ox, oy);
-    const pRightElbow = project3DToSvg({ x: 68, y: 35, z: -5 }, cam, ox, oy);
+    // Anatomical Elbows shared with Forearms
+    const pLeftElbow = project3DToSvg(leftElbow3D, cam, ox, oy);
+    const pRightElbow = project3DToSvg(rightElbow3D, cam, ox, oy);
 
     // Torso silhouette with soft athletic waist taper
     const torsoPath = `M ${pLeftShoulder.x.toFixed(1)} ${pLeftShoulder.y.toFixed(1)}
@@ -1451,24 +1546,40 @@ export class NativeBslInterpreterElement extends HTMLElement {
     tip: Point3D,
     activeShape: any,
     activePalm: any,
-    easeT = 1.0
+    easeT = 1.0,
+    leftElbow3D: Point3D = { x: -66, y: 35, z: -5 },
+    idleBreathY = 0
   ) {
     const baseGroup = this.queryAvatarElement('#bsl-layer-base-hand');
     if (!baseGroup) return;
 
     // 1. Bilateral Symmetrical Kinematics (PRAY, CHURCH, EQUAL, WHAT, SCIENCE, BIBLE, etc.)
     if (mode === 'mirror') {
-      const solvedDom = solveHandKinematics(wrist, knuckle, tip, activeShape, activePalm);
-      this.liveBaseForearm = { x: -solvedDom.forearm.x, y: solvedDom.forearm.y, z: solvedDom.forearm.z };
-      this.liveBaseWrist = { x: -solvedDom.wrist.x, y: solvedDom.wrist.y, z: solvedDom.wrist.z };
+      const targetMirrorWrist: Point3D = { x: -this.targetPose.targetWrist.x, y: this.targetPose.targetWrist.y + idleBreathY, z: this.targetPose.targetWrist.z };
+      const targetMirrorKnuckle: Point3D = { x: -this.targetPose.targetKnuckle.x, y: this.targetPose.targetKnuckle.y + idleBreathY, z: this.targetPose.targetKnuckle.z };
+      const targetMirrorTip: Point3D = { x: -this.targetPose.targetTip.x, y: this.targetPose.targetTip.y + idleBreathY, z: this.targetPose.targetTip.z };
+
+      const mWrist = this.lerpRaw3D(this.prevBaseWrist, targetMirrorWrist, easeT);
+      const mKnuckle = this.lerpRaw3D(this.prevBaseKnuckle, targetMirrorKnuckle, easeT);
+      const mTip = this.lerpRaw3D(this.prevBaseTip, targetMirrorTip, easeT);
+
+      const solvedDom = solveHandKinematics(
+        { x: -mWrist.x, y: mWrist.y, z: mWrist.z },
+        { x: -mKnuckle.x, y: mKnuckle.y, z: mKnuckle.z },
+        { x: -mTip.x, y: mTip.y, z: mTip.z },
+        activeShape,
+        activePalm
+      );
+      this.liveBaseForearm = { ...leftElbow3D };
+      this.liveBaseWrist = mWrist;
+      this.liveBaseKnuckle = { x: -solvedDom.knuckleIndex.x, y: solvedDom.knuckleIndex.y, z: solvedDom.knuckleIndex.z };
       this.liveBasePalm = { x: -solvedDom.palm.x, y: solvedDom.palm.y, z: solvedDom.palm.z };
       this.liveBaseTip = { x: -solvedDom.tipIndex.x, y: solvedDom.tipIndex.y, z: solvedDom.tipIndex.z };
 
-      // Anatomical sagittal mirror (x -> -x) reflects the dominant right hand into an authentic left hand
-      const pForearm = project3DToSvg(this.liveBaseForearm, cam, ox, oy);
+      const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
       const pWrist = project3DToSvg(this.liveBaseWrist, cam, ox, oy);
       const pPalm = project3DToSvg(this.liveBasePalm, cam, ox, oy);
-      const pKnuckleIndex = project3DToSvg({ x: -solvedDom.knuckleIndex.x, y: solvedDom.knuckleIndex.y, z: solvedDom.knuckleIndex.z }, cam, ox, oy);
+      const pKnuckleIndex = project3DToSvg(this.liveBaseKnuckle, cam, ox, oy);
       const pTipIndex = project3DToSvg(this.liveBaseTip, cam, ox, oy);
       const pTipMid = project3DToSvg({ x: -solvedDom.tipMid.x, y: solvedDom.tipMid.y, z: solvedDom.tipMid.z }, cam, ox, oy);
       const pTipRing = project3DToSvg({ x: -solvedDom.tipRing.x, y: solvedDom.tipRing.y, z: solvedDom.tipRing.z }, cam, ox, oy);
@@ -1477,30 +1588,19 @@ export class NativeBslInterpreterElement extends HTMLElement {
       const pThumbKnuckle = project3DToSvg({ x: -solvedDom.thumbKnuckle.x, y: solvedDom.thumbKnuckle.y, z: solvedDom.thumbKnuckle.z }, cam, ox, oy);
 
       baseGroup.innerHTML = `
-        <!-- Mirrored Base Forearm in Natural Skin Tone -->
         <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="10" stroke-linecap="round" />
-        
-        <!-- Mirrored Wrist to Palm Cushion -->
         <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9" stroke-linecap="round" />
         <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="10" ry="8.5" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.4" />
-        
-        <!-- Mirrored Thumb -->
         <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pThumbKnuckle.x.toFixed(1)}" y2="${pThumbKnuckle.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
         <line x1="${pThumbKnuckle.x.toFixed(1)}" y1="${pThumbKnuckle.y.toFixed(1)}" x2="${pThumbTip.x.toFixed(1)}" y2="${pThumbTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4" stroke-linecap="round" />
         <circle cx="${pThumbTip.x.toFixed(1)}" cy="${pThumbTip.y.toFixed(1)}" r="3" fill="#ffedd5" stroke="#cb7c49" stroke-width="1" />
-
-        <!-- Mirrored Index Finger -->
         <line x1="${pKnuckleIndex.x.toFixed(1)}" y1="${pKnuckleIndex.y.toFixed(1)}" x2="${pTipIndex.x.toFixed(1)}" y2="${pTipIndex.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="5.2" stroke-linecap="round" />
         <circle cx="${pKnuckleIndex.x.toFixed(1)}" cy="${pKnuckleIndex.y.toFixed(1)}" r="2.8" fill="#f8be93" />
         <circle cx="${pTipIndex.x.toFixed(1)}" cy="${pTipIndex.y.toFixed(1)}" r="3.5" fill="#ffffff" stroke="#0284c7" stroke-width="1.2" filter="url(#bsl-glow)" />
-
-        <!-- Mirrored Secondary Fingers (Mid, Ring, Pinky) -->
         <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipMid.x.toFixed(1)}" y2="${pTipMid.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.2" stroke-linecap="round" />
         <circle cx="${pTipMid.x.toFixed(1)}" cy="${pTipMid.y.toFixed(1)}" r="2.5" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-
         <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipRing.x.toFixed(1)}" y2="${pTipRing.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.8" stroke-linecap="round" />
         <circle cx="${pTipRing.x.toFixed(1)}" cy="${pTipRing.y.toFixed(1)}" r="2.3" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
-
         <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipPinky.x.toFixed(1)}" y2="${pTipPinky.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.2" stroke-linecap="round" />
         <circle cx="${pTipPinky.x.toFixed(1)}" cy="${pTipPinky.y.toFixed(1)}" r="2" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
       `;
@@ -1509,16 +1609,15 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     // 2. BANZSL Two-Handed Manual Alphabet / Vowel Board ('vowel-board')
     if (mode === 'vowel-board') {
-      const targetForearm: Point3D = { x: -78, y: 95, z: -5 };
-      const iForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
-      const iWrist = interpolatePoint3D(this.prevBaseWrist, BSL_BASE_HAND.wrist, easeT);
-      const iPalm = interpolatePoint3D(this.prevBasePalm, BSL_BASE_HAND.palm, easeT);
+      const iWrist = this.lerpRaw3D(this.prevBaseWrist, BSL_BASE_HAND.wrist, easeT);
+      const iPalm = this.lerpRaw3D(this.prevBasePalm, BSL_BASE_HAND.palm, easeT);
       const palmShiftX = iPalm.x - BSL_BASE_HAND.palm.x;
       const palmShiftY = iPalm.y - BSL_BASE_HAND.palm.y;
       const palmShiftZ = iPalm.z - BSL_BASE_HAND.palm.z;
 
-      this.liveBaseForearm = iForearm;
+      this.liveBaseForearm = { ...leftElbow3D };
       this.liveBaseWrist = iWrist;
+      this.liveBaseKnuckle = { x: iPalm.x, y: iPalm.y - 12, z: iPalm.z + 2 };
       this.liveBasePalm = iPalm;
       this.liveBaseTip = {
         x: BSL_BASE_HAND.fingertips[2].x + palmShiftX,
@@ -1526,7 +1625,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
         z: BSL_BASE_HAND.fingertips[2].z + palmShiftZ,
       };
 
-      const pForearm = project3DToSvg(iForearm, cam, ox, oy);
+      const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
       const pWrist = project3DToSvg(iWrist, cam, ox, oy);
       const pPalm = project3DToSvg(iPalm, cam, ox, oy);
 
@@ -1541,24 +1640,17 @@ export class NativeBslInterpreterElement extends HTMLElement {
         const isTarget = this.targetPose.isVowel && this.targetPose.activeVowelIndex === idx;
         const color = isTarget ? '#f59e0b' : '#38bdf8';
         fingersSvg += `
-          <!-- Articulated finger segment from palm to tip -->
           <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTip.x.toFixed(1)}" y2="${pTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
-          <!-- Fingertip vowel pad / target anchor -->
           <circle cx="${pTip.x.toFixed(1)}" cy="${pTip.y.toFixed(1)}" r="${isTarget ? '5.4' : '4'}" fill="${color}" stroke="#ffffff" stroke-width="1.2" filter="${isTarget ? 'url(#bsl-glow)' : 'none'}" />
           <circle cx="${pTip.x.toFixed(1)}" cy="${pTip.y.toFixed(1)}" r="1.5" fill="#ffffff" />
         `;
       });
 
       baseGroup.innerHTML = `
-        <!-- Base Forearm Limb -->
         <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
         <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-        
-        <!-- Non-Dominant Base Palm ("Paper" Vowel Board) -->
         <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="11.5" ry="9.5" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.5" />
         <path d="M ${(pPalm.x - 5).toFixed(1)} ${pPalm.y.toFixed(1)} Q ${pPalm.x.toFixed(1)} ${(pPalm.y + 3).toFixed(1)} ${(pPalm.x + 5).toFixed(1)} ${pPalm.y.toFixed(1)}" stroke="#d99564" stroke-width="1" fill="none" />
-        
-        <!-- 5 Articulated Vowel/Consonant Base Fingertips -->
         ${fingersSvg}
       `;
       return;
@@ -1566,22 +1658,21 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     // 3. Base Workbench Anchor ('base-hold')
     if (mode === 'base-hold') {
-      const targetForearm: Point3D = { x: -80, y: 75, z: 0 };
-      const targetWrist: Point3D = { x: -65, y: 55, z: 10 };
-      const targetPalm: Point3D = { x: -45, y: 35, z: 15 };
-      const targetTip: Point3D = { x: -25, y: 32, z: 15 };
+      const targetWrist: Point3D = { x: -58, y: 52, z: 10 };
+      const targetPalm: Point3D = { x: -42, y: 36, z: 15 };
+      const targetTip: Point3D = { x: -22, y: 33, z: 16 };
 
-      const baseForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
-      const baseWrist = interpolatePoint3D(this.prevBaseWrist, targetWrist, easeT);
-      const baseHoldAnchor = interpolatePoint3D(this.prevBasePalm, targetPalm, easeT);
-      const baseTip = interpolatePoint3D(this.prevBaseTip, targetTip, easeT);
+      const baseWrist = this.lerpRaw3D(this.prevBaseWrist, targetWrist, easeT);
+      const baseHoldAnchor = this.lerpRaw3D(this.prevBasePalm, targetPalm, easeT);
+      const baseTip = this.lerpRaw3D(this.prevBaseTip, targetTip, easeT);
 
-      this.liveBaseForearm = baseForearm;
+      this.liveBaseForearm = { ...leftElbow3D };
       this.liveBaseWrist = baseWrist;
+      this.liveBaseKnuckle = baseHoldAnchor;
       this.liveBasePalm = baseHoldAnchor;
       this.liveBaseTip = baseTip;
 
-      const pF = project3DToSvg(baseForearm, cam, ox, oy);
+      const pF = project3DToSvg(leftElbow3D, cam, ox, oy);
       const pW = project3DToSvg(baseWrist, cam, ox, oy);
       const pP = project3DToSvg(baseHoldAnchor, cam, ox, oy);
       const pFingers = project3DToSvg(baseTip, cam, ox, oy);
@@ -1589,11 +1680,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       baseGroup.innerHTML = `
         <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
         <line x1="${pW.x.toFixed(1)}" y1="${pW.y.toFixed(1)}" x2="${pP.x.toFixed(1)}" y2="${pP.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
-        
-        <!-- Workbench Base Palm Cushion -->
         <ellipse cx="${pP.x.toFixed(1)}" cy="${pP.y.toFixed(1)}" rx="12" ry="7.5" fill="url(#bsl-hand-base)" stroke="#0284c7" stroke-width="1.8" />
-        
-        <!-- Flat horizontal workbench fingers -->
         <line x1="${pP.x.toFixed(1)}" y1="${pP.y.toFixed(1)}" x2="${pFingers.x.toFixed(1)}" y2="${pFingers.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="6.5" stroke-linecap="round" />
         <circle cx="${pFingers.x.toFixed(1)}" cy="${pFingers.y.toFixed(1)}" r="3" fill="#ffedd5" stroke="#cb7c49" stroke-width="1" />
       `;
@@ -1610,21 +1697,20 @@ export class NativeBslInterpreterElement extends HTMLElement {
       };
       const targetWrist: Point3D = ov?.wrist || {
         x: targetPalm.x - 16,
-        y: targetPalm.y + 34,
+        y: targetPalm.y + 28,
         z: targetPalm.z - 8,
       };
-      const targetForearm: Point3D = { x: targetWrist.x - 22, y: targetWrist.y + 28, z: targetWrist.z - 12 };
 
-      const anchorForearm = interpolatePoint3D(this.prevBaseForearm, targetForearm, easeT);
-      const anchorWrist = interpolatePoint3D(this.prevBaseWrist, targetWrist, easeT);
-      const anchorPalm = interpolatePoint3D(this.prevBasePalm, targetPalm, easeT);
+      const anchorWrist = this.lerpRaw3D(this.prevBaseWrist, targetWrist, easeT);
+      const anchorPalm = this.lerpRaw3D(this.prevBasePalm, targetPalm, easeT);
 
-      this.liveBaseForearm = anchorForearm;
+      this.liveBaseForearm = { ...leftElbow3D };
       this.liveBaseWrist = anchorWrist;
+      this.liveBaseKnuckle = anchorPalm;
       this.liveBasePalm = anchorPalm;
       this.liveBaseTip = { x: anchorPalm.x, y: anchorPalm.y - 26, z: anchorPalm.z + 6 };
 
-      const pF = project3DToSvg(anchorForearm, cam, ox, oy);
+      const pF = project3DToSvg(leftElbow3D, cam, ox, oy);
       const pW = project3DToSvg(anchorWrist, cam, ox, oy);
       const pP = project3DToSvg(anchorPalm, cam, ox, oy);
 
@@ -1653,33 +1739,57 @@ export class NativeBslInterpreterElement extends HTMLElement {
       return;
     }
 
-    // 4. Two-Handed Ready Rest Posture ('rest') — smoothly interpolated from previous base hand position!
-    const restForearm: Point3D = { x: -70, y: 80, z: 0 };
-    const restWrist: Point3D = { x: -55, y: 60, z: 10 };
-    const restPalm: Point3D = { x: -40, y: 48, z: 15 };
-    const restTip: Point3D = { x: -28, y: 42, z: 16 };
+    // 4. Symmetrical 5-Finger Ready Rest Posture ('rest') — springs smoothly from any prior base hand pose
+    const targetRestWrist: Point3D = { x: -DOMINANT_REST_WRIST.x, y: DOMINANT_REST_WRIST.y + idleBreathY, z: DOMINANT_REST_WRIST.z };
+    const targetRestKnuckle: Point3D = { x: -DOMINANT_REST_KNUCKLE.x, y: DOMINANT_REST_KNUCKLE.y + idleBreathY, z: DOMINANT_REST_KNUCKLE.z };
+    const targetRestTip: Point3D = { x: -DOMINANT_REST_POSE.x, y: DOMINANT_REST_POSE.y + idleBreathY, z: DOMINANT_REST_POSE.z };
 
-    const baseForearm = interpolatePoint3D(this.prevBaseForearm, restForearm, easeT);
-    const baseWrist = interpolatePoint3D(this.prevBaseWrist, restWrist, easeT);
-    const basePalm = interpolatePoint3D(this.prevBasePalm, restPalm, easeT);
-    const baseTip = interpolatePoint3D(this.prevBaseTip, restTip, easeT);
+    const baseWrist = this.lerpRaw3D(this.prevBaseWrist, targetRestWrist, easeT);
+    const baseKnuckle = this.lerpRaw3D(this.prevBaseKnuckle, targetRestKnuckle, easeT);
+    const baseTip = this.lerpRaw3D(this.prevBaseTip, targetRestTip, easeT);
 
-    this.liveBaseForearm = baseForearm;
+    // Solve 5-finger left hand kinematics by mirroring across sagittal plane
+    const solvedMirror = solveHandKinematics(
+      { x: -baseWrist.x, y: baseWrist.y, z: baseWrist.z },
+      { x: -baseKnuckle.x, y: baseKnuckle.y, z: baseKnuckle.z },
+      { x: -baseTip.x, y: baseTip.y, z: baseTip.z },
+      'flat-closed',
+      'in'
+    );
+
+    this.liveBaseForearm = { ...leftElbow3D };
     this.liveBaseWrist = baseWrist;
-    this.liveBasePalm = basePalm;
+    this.liveBaseKnuckle = baseKnuckle;
+    this.liveBasePalm = { x: -solvedMirror.palm.x, y: solvedMirror.palm.y, z: solvedMirror.palm.z };
     this.liveBaseTip = baseTip;
 
-    const pF = project3DToSvg(baseForearm, cam, ox, oy);
-    const pW = project3DToSvg(baseWrist, cam, ox, oy);
-    const pP = project3DToSvg(basePalm, cam, ox, oy);
-    const pT = project3DToSvg(baseTip, cam, ox, oy);
+    const pForearm = project3DToSvg(leftElbow3D, cam, ox, oy);
+    const pWrist = project3DToSvg(baseWrist, cam, ox, oy);
+    const pPalm = project3DToSvg(this.liveBasePalm, cam, ox, oy);
+    const pKnuckleIndex = project3DToSvg({ x: -solvedMirror.knuckleIndex.x, y: solvedMirror.knuckleIndex.y, z: solvedMirror.knuckleIndex.z }, cam, ox, oy);
+    const pTipIndex = project3DToSvg({ x: -solvedMirror.tipIndex.x, y: solvedMirror.tipIndex.y, z: solvedMirror.tipIndex.z }, cam, ox, oy);
+    const pTipMid = project3DToSvg({ x: -solvedMirror.tipMid.x, y: solvedMirror.tipMid.y, z: solvedMirror.tipMid.z }, cam, ox, oy);
+    const pTipRing = project3DToSvg({ x: -solvedMirror.tipRing.x, y: solvedMirror.tipRing.y, z: solvedMirror.tipRing.z }, cam, ox, oy);
+    const pTipPinky = project3DToSvg({ x: -solvedMirror.tipPinky.x, y: solvedMirror.tipPinky.y, z: solvedMirror.tipPinky.z }, cam, ox, oy);
+    const pThumbTip = project3DToSvg({ x: -solvedMirror.thumbTip.x, y: solvedMirror.thumbTip.y, z: solvedMirror.thumbTip.z }, cam, ox, oy);
+    const pThumbKnuckle = project3DToSvg({ x: -solvedMirror.thumbKnuckle.x, y: solvedMirror.thumbKnuckle.y, z: solvedMirror.thumbKnuckle.z }, cam, ox, oy);
 
     baseGroup.innerHTML = `
-      <line x1="${pF.x.toFixed(1)}" y1="${pF.y.toFixed(1)}" x2="${pW.x.toFixed(1)}" y2="${pW.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9" stroke-linecap="round" />
-      <line x1="${pW.x.toFixed(1)}" y1="${pW.y.toFixed(1)}" x2="${pP.x.toFixed(1)}" y2="${pP.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8" stroke-linecap="round" />
-      <ellipse cx="${pP.x.toFixed(1)}" cy="${pP.y.toFixed(1)}" rx="9.5" ry="8" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.2" />
-      <line x1="${pP.x.toFixed(1)}" y1="${pP.y.toFixed(1)}" x2="${pT.x.toFixed(1)}" y2="${pT.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="5" stroke-linecap="round" />
-      <circle cx="${pT.x.toFixed(1)}" cy="${pT.y.toFixed(1)}" r="2.5" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
+      <line x1="${pForearm.x.toFixed(1)}" y1="${pForearm.y.toFixed(1)}" x2="${pWrist.x.toFixed(1)}" y2="${pWrist.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="9.5" stroke-linecap="round" />
+      <line x1="${pWrist.x.toFixed(1)}" y1="${pWrist.y.toFixed(1)}" x2="${pPalm.x.toFixed(1)}" y2="${pPalm.y.toFixed(1)}" stroke="url(#bsl-skin-base)" stroke-width="8.5" stroke-linecap="round" />
+      <ellipse cx="${pPalm.x.toFixed(1)}" cy="${pPalm.y.toFixed(1)}" rx="9.5" ry="8" fill="url(#bsl-hand-base)" stroke="#cb7c49" stroke-width="1.3" />
+      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pThumbKnuckle.x.toFixed(1)}" y2="${pThumbKnuckle.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.5" stroke-linecap="round" />
+      <line x1="${pThumbKnuckle.x.toFixed(1)}" y1="${pThumbKnuckle.y.toFixed(1)}" x2="${pThumbTip.x.toFixed(1)}" y2="${pThumbTip.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.8" stroke-linecap="round" />
+      <circle cx="${pThumbTip.x.toFixed(1)}" cy="${pThumbTip.y.toFixed(1)}" r="2.8" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.9" />
+      <line x1="${pKnuckleIndex.x.toFixed(1)}" y1="${pKnuckleIndex.y.toFixed(1)}" x2="${pTipIndex.x.toFixed(1)}" y2="${pTipIndex.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4.8" stroke-linecap="round" />
+      <circle cx="${pKnuckleIndex.x.toFixed(1)}" cy="${pKnuckleIndex.y.toFixed(1)}" r="2.5" fill="#f8be93" />
+      <circle cx="${pTipIndex.x.toFixed(1)}" cy="${pTipIndex.y.toFixed(1)}" r="2.8" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.9" />
+      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipMid.x.toFixed(1)}" y2="${pTipMid.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="4" stroke-linecap="round" />
+      <circle cx="${pTipMid.x.toFixed(1)}" cy="${pTipMid.y.toFixed(1)}" r="2.3" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
+      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipRing.x.toFixed(1)}" y2="${pTipRing.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.6" stroke-linecap="round" />
+      <circle cx="${pTipRing.x.toFixed(1)}" cy="${pTipRing.y.toFixed(1)}" r="2.1" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
+      <line x1="${pPalm.x.toFixed(1)}" y1="${pPalm.y.toFixed(1)}" x2="${pTipPinky.x.toFixed(1)}" y2="${pTipPinky.y.toFixed(1)}" stroke="url(#bsl-hand-base)" stroke-width="3.1" stroke-linecap="round" />
+      <circle cx="${pTipPinky.x.toFixed(1)}" cy="${pTipPinky.y.toFixed(1)}" r="1.9" fill="#ffedd5" stroke="#cb7c49" stroke-width="0.8" />
     `;
   }
 
@@ -1691,15 +1801,16 @@ export class NativeBslInterpreterElement extends HTMLElement {
     knuckle: Point3D,
     tip: Point3D,
     shape: any,
-    palm: any
+    palm: any,
+    rightElbow3D: Point3D = { x: 66, y: 35, z: -5 }
   ) {
     const domGroup = this.queryAvatarElement('#bsl-layer-dominant-hand');
     if (!domGroup) return;
 
-    // Kinematic Hand Solver
+    // Kinematic Hand Solver with forearm anchored directly to the anatomical right elbow
     const solved = solveHandKinematics(wrist, knuckle, tip, shape, palm);
 
-    const pForearm = project3DToSvg(solved.forearm, cam, ox, oy);
+    const pForearm = project3DToSvg(rightElbow3D, cam, ox, oy);
     const pWrist = project3DToSvg(solved.wrist, cam, ox, oy);
     const pPalm = project3DToSvg(solved.palm, cam, ox, oy);
     const pKnuckleIndex = project3DToSvg(solved.knuckleIndex, cam, ox, oy);

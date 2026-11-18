@@ -57,7 +57,7 @@ export type BslHandShape =
 
 export type BslPalmOrientation = 'in' | 'out' | 'down' | 'up' | 'side' | 'lateral' | Point3D | [number, number, number];
 
-export type BslEaseCurve = 'snap' | 'ease-out' | 'ease-in' | 'smooth' | 'linear' | 'bounce' | string;
+export type BslEaseCurve = 'snap' | 'ease-out' | 'ease-in' | 'smooth' | 'spring' | 'linear' | 'bounce' | string;
 
 export type BslBaseHandMode = 'rest' | 'vowel-board' | 'mirror' | 'override' | 'base-hold' | 'buoy-list' | 'buoy-pointer';
 
@@ -194,10 +194,10 @@ export const BSL_BASE_REST_HAND = {
   ],
 };
 
-// Dominant pointer hand neutral rest position (in-frame symmetrical ready posture)
-export const DOMINANT_REST_POSE: Point3D = { x: 28, y: 44, z: 16 };
-export const DOMINANT_REST_KNUCKLE: Point3D = { x: 42, y: 50, z: 14 };
-export const DOMINANT_REST_WRIST: Point3D = { x: 58, y: 62, z: 8 };
+// Dominant pointer hand neutral rest position (chest-height interpreter ready posture)
+export const DOMINANT_REST_POSE: Point3D = { x: 14, y: 46, z: 20 };
+export const DOMINANT_REST_KNUCKLE: Point3D = { x: 30, y: 50, z: 16 };
+export const DOMINANT_REST_WRIST: Point3D = { x: 48, y: 58, z: 10 };
 
 /**
  * Anatomical 3D Target Coordinates for the BSL 2-Handed Manual Alphabet
@@ -592,6 +592,12 @@ export function evaluateBslEase(ease: BslEaseCurve | undefined, t: number): numb
         x -= 2.625 / d1;
         return n1 * x * x + 0.984375;
       }
+    }
+    case 'spring': {
+      // Crisp elastic spring-back curve normalized so f(0)=0 and f(1)=1
+      if (clamped <= 0) return 0;
+      if (clamped >= 1) return 1;
+      return 1 - Math.exp(-6.2 * clamped) * Math.cos(6.8 * clamped);
     }
     case 'ease-in':
       return clamped * clamped;

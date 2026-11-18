@@ -826,6 +826,13 @@ const distMid = Math.hypot(returnFrameMidTip.x - DOMINANT_REST_POSE.x, returnFra
 const distEnd = Math.hypot(returnFrameEndTip.x - DOMINANT_REST_POSE.x, returnFrameEndTip.y - DOMINANT_REST_POSE.y, returnFrameEndTip.z - DOMINANT_REST_POSE.z);
 assert(distStart > distMid && distMid > distEnd && distEnd < 1e-6, 'Return-to-rest converges monotonically to neutral posture');
 
+const springStart = evaluateBslEase('spring', 0);
+const springPeak = evaluateBslEase('spring', 0.48);
+const springEnd = evaluateBslEase('spring', 1.0);
+assert(Math.abs(springStart) < 1e-9, `Spring easing starts cleanly at 0 (got ${springStart})`);
+assert(Math.abs(springEnd - 1.0) < 1e-9, `Spring easing settles cleanly at 1.0 (got ${springEnd})`);
+assert(springPeak > 1.0 && springPeak < 1.15, `Spring easing exhibits natural elastic overshoot (${springPeak.toFixed(4)})`);
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

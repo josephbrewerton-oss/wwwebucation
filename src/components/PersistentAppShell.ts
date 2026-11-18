@@ -21,6 +21,7 @@ export class PersistentAppShellElement extends HTMLElement {
   private colorMode: 'light' | 'dark' = 'light';
   private dataSaver = false;
   private bsl = false;
+  private playerIsPlaying = false;
   private sound = true;
   private isOfflineSynced = false;
   private unsubscribeBsl?: () => void;
@@ -110,7 +111,10 @@ export class PersistentAppShellElement extends HTMLElement {
         this.updateSoundUi(e.data.enabled);
       }
     } else if (e.data.type === 'SUBTITLE_UPDATE' || e.data.type === 'SPEECH_START') {
-      const text = e.data.text || e.data.subtitle;
+      const rawText = e.data.text || e.data.subtitle;
+      const text = typeof rawText === 'string'
+        ? rawText
+        : (rawText && typeof rawText === 'object' ? (rawText.en || rawText.localized || '') : '');
       if (text && typeof text === 'string') {
         broadcastBslSpeech({ subtitle: text, isSpeaking: true });
       }
@@ -120,8 +124,15 @@ export class PersistentAppShellElement extends HTMLElement {
       broadcastBslSpeech({ isSpeaking: false, stopSigning: true });
     } else if (e.data && e.data.type === 'SPEECH_END') {
       broadcastBslSpeech({ isSpeaking: false });
-    } else if (e.data && (e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED') && (e.data.isPlaying === false || e.data.playing === false)) {
-      broadcastBslSpeech({ isSpeaking: false, stopSigning: true });
+    } else if (e.data && (e.data.type === 'PLAY_STATE_CHANGED' || e.data.type === 'STATE_CHANGED')) {
+      const rawPlaying = typeof e.data.isPlaying === 'boolean' ? e.data.isPlaying : e.data.playing;
+      if (typeof rawPlaying === 'boolean') {
+        const wasPlaying = this.playerIsPlaying;
+        this.playerIsPlaying = rawPlaying;
+        if (wasPlaying && !rawPlaying) {
+          broadcastBslSpeech({ isSpeaking: false, stopSigning: true });
+        }
+      }
     } else if (e.data.type === 'CHECKPOINT_ANSWERED') {
       const urlPreset = new URLSearchParams(window.location.search).get('preset') || '';
       const rawSceneId = typeof e.data.sceneId === 'string' && e.data.sceneId.trim() ? e.data.sceneId.trim() : urlPreset || 'simulation_lab';
