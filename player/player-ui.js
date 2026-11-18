@@ -480,6 +480,9 @@
     }
 
     playChime(freq = 523.25, type = 'sine') {
+      if (window.__astGestures && typeof window.__astGestures._isControlEnabled === 'function' && !window.__astGestures._isControlEnabled('audio')) {
+        return;
+      }
       try {
         const AudioCtx = window.AudioContext || window.webkitAudioContext;
         if (!AudioCtx) return;
@@ -1434,7 +1437,12 @@
       }
 
       // Built-in / Auto-Found Curriculum Groups categorized by 3 types: Sim, Slide, App
-      const builtInItems = list.filter(item => item._source === 'builtin');
+      // Exclude non-media :cartridge data packs (oak-data-*, pipeline-sample) unless actively loaded
+      const builtInItems = list.filter(
+        item => item._source === 'builtin' && (
+          item.id === activeId || (item.isPlayableScene !== false && item.kind !== 'data')
+        )
+      );
       
       const simItems = builtInItems.filter(item => {
         const t = (item.type || 'Sim').toLowerCase();
@@ -2645,6 +2653,8 @@
       if (stage) {
         stage.addEventListener('mousedown', (e) => {
           if (this.devModeActive || e.target.closest('button') || e.target.closest('select') || e.target.closest('.interactive-card') || e.target.closest('.dev-inspector-drawer') || e.target.closest('.dev-studio-drawer')) return;
+          if (e.target.closest('[data-draggable], [data-bind-input], [data-declarative-clickable], [data-declarative-holdable], [data-declarative-trackball]')) return;
+          if (window.__astGestures && typeof window.__astGestures._isControlEnabled === 'function' && !window.__astGestures._isControlEnabled('scrub')) return;
           if (this.engine.has3D()) {
             this.isOrbitDragging = true;
             startOrbitX = e.clientX;
@@ -3824,8 +3834,11 @@ window.addEventListener('message', (e) => {
           return;
         }
 
+        const isControlOn = (flag) => !window.__astGestures || typeof window.__astGestures._isControlEnabled !== 'function' || window.__astGestures._isControlEnabled(flag);
+
         // 3. Main player shortcuts
         if (e.code === 'Space') {
+          if (!isControlOn('space-play')) return;
           e.preventDefault();
           if (this.stepMode) {
             this.stepToNextKeyframe();
@@ -3840,6 +3853,7 @@ window.addEventListener('message', (e) => {
             }
           }
         } else if (e.code === 'ArrowLeft' || e.code === 'PageUp') {
+          if (!isControlOn('arrow-step')) return;
           e.preventDefault();
           const scene = this.engine && this.engine.scene;
           if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
@@ -3848,6 +3862,7 @@ window.addEventListener('message', (e) => {
             this.engine.step(-0.05);
           }
         } else if (e.code === 'ArrowRight' || e.code === 'PageDown') {
+          if (!isControlOn('arrow-step')) return;
           e.preventDefault();
           const scene = this.engine && this.engine.scene;
           if (this.stepMode || (scene && scene.keyframes && scene.keyframes.length > 0)) {
@@ -3891,6 +3906,7 @@ window.addEventListener('message', (e) => {
           e.preventDefault();
           if (el.btnPlayMode) el.btnPlayMode.click();
         } else if ((e.code === 'KeyW' || e.key === 'w' || e.key === 'W') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          if (!isControlOn('whiteboard')) return;
           e.preventDefault();
           if (window.__astGestures && typeof window.__astGestures.togglePen === 'function') {
             window.__astGestures.togglePen();
@@ -3898,6 +3914,7 @@ window.addEventListener('message', (e) => {
             window.postMessage({ type: 'TOGGLE_PEN' }, '*');
           }
         } else if (e.code === 'Home' || e.code === 'Digit0' || e.code === 'Numpad0') {
+          if (!isControlOn('arrow-step')) return;
           e.preventDefault();
           if (el.btnReset) el.btnReset.click();
         } else if (e.key === '?' || (e.code === 'Slash' && e.shiftKey)) {

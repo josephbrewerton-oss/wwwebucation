@@ -140,8 +140,11 @@
       this._activeHoldVars = new Map();
       this._holdRafId = null;
       this._holdLastTs = 0;
+      // Bound listeners & extension registries
       this._boundStageSvg = null;
       this._windowListenersBound = false;
+      this._customActions = new Map();
+      this._customGestureSkills = new Map();
 
       // Bind methods
       this.handlePointerDown = this.handlePointerDown.bind(this);
@@ -171,11 +174,17 @@
       this.enhanceSceneInteractivity();
 
       // Load player-gestures.ast asynchronously and re-apply HUD/controls once loaded
-      this.loadPlayerGesturesProfile().then(() => {
-        this._rebuildGlassHud();
-        this._syncCartridgeControls();
-        this.enhanceSceneInteractivity();
-      });
+      this.loadPlayerGesturesProfile()
+        .then(() => {
+          const wasPenActive = this.isPenActive;
+          this._rebuildGlassHud();
+          this._syncCartridgeControls();
+          if (wasPenActive && this._isControlEnabled('whiteboard') && !this.isPenActive) {
+            this.togglePen(true);
+          }
+          this.enhanceSceneInteractivity();
+        })
+        .catch(() => {});
 
       // Listen for scene load changes (guard duplicate registration)
       if (!this._presetListenerBound && this.engine && typeof this.engine.on === 'function') {
@@ -227,15 +236,70 @@
       return this.playerProfile;
     }
 
-    _extractSexpBlock(source, headToken) {
-      if (!source || typeof source !== 'string') return null;
-      const start = source.indexOf(headToken);
-      if (start === -1) return null;
-      let depth = 0;
+    _stripSexpComments(source) {
+      if (!source || typeof source !== 'string') return '';
+      let out = '';
       let inQuote = false;
       let escape = false;
-      for (let i = start; i < source.length; i++) {
+      for (let i = 0; i < source.length; i++) {
         const ch = source[i];
+        if (inQuote) {
+          out += ch;
+          if (escape) {
+            escape = false;
+          } else if (ch === '\\') {
+            escape = true;
+          } else if (ch === '"') {
+            inQuote = false;
+          }
+          continue;
+        }
+        if (ch === '"') {
+          inQuote = true;
+          out += ch;
+          continue;
+        }
+        if (ch === ';') {
+          while (i < source.length && source[i] !== '\n') i++;
+          if (i < source.length && source[i] === '\n') out += '\n';
+          continue;
+        }
+        out += ch;
+      }
+      return out;
+    }
+
+    _extractSexpBlock(source, headToken) {
+      if (!source || typeof source !== 'string' || !headToken) return null;
+      const cleanSrc = this._stripSexpComments(source);
+      const tokenBody = headToken.replace(/^\(/, '');
+      const escapedBody = tokenBody.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const headRegex = new RegExp(`\\(\\s*${escapedBody}(?=[\\s)]|$)`, 'i');
+
+      // Find first occurrence outside quotes
+      let start = -1;
+      let inQuote = false;
+      let escape = false;
+      for (let i = 0; i < cleanSrc.length; i++) {
+        const ch = cleanSrc[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (!inQuote && ch === '(') {
+          const slice = cleanSrc.slice(i, i + headToken.length + 12);
+          if (headRegex.test(slice)) {
+            start = i;
+            break;
+          }
+        }
+      }
+      if (start === -1) return null;
+
+      let depth = 0;
+      inQuote = false;
+      escape = false;
+      for (let i = start; i < cleanSrc.length; i++) {
+        const ch = cleanSrc[i];
         if (escape) { escape = false; continue; }
         if (ch === '\\') { escape = true; continue; }
         if (ch === '"') { inQuote = !inQuote; continue; }
@@ -243,7 +307,7 @@
           if (ch === '(') depth++;
           else if (ch === ')') {
             depth--;
-            if (depth === 0) return source.slice(start, i + 1);
+            if (depth === 0) return cleanSrc.slice(start, i + 1);
           }
         }
       }
@@ -281,15 +345,18 @@
     _parseKeywordAttrs(sexp) {
       const attrs = {};
       if (!sexp) return attrs;
-      const clean = sexp.replace(/;;[^\n]*/g, '').replace(/^\(\s*:[a-zA-Z0-9_-]+/, '').replace(/\)$/, '');
-      const tokenRegex = /:([a-zA-Z0-9_-]+)\s+("[^"]*"|:[a-zA-Z0-9_-]+|-?\d+(?:\.\d+)?)/g;
+      const clean = this._stripSexpComments(sexp)
+        .replace(/^\(\s*:[a-zA-Z0-9_-]+/, '')
+        .replace(/\)$/, '');
+      const tokenRegex = /:([a-zA-Z0-9_-]+)\s+("(?:[^"\\]|\\.)*"|:[a-zA-Z0-9_-]+|true|false|-?\d+(?:\.\d+)?)/gi;
       let m;
       while ((m = tokenRegex.exec(clean)) !== null) {
         const k = m[1];
         const rawVal = m[2];
-        if (rawVal.startsWith('"')) attrs[k] = rawVal.slice(1, -1);
-        else if (rawVal === ':on' || rawVal === ':true') attrs[k] = true;
-        else if (rawVal === ':off' || rawVal === ':false') attrs[k] = false;
+        const lowerVal = rawVal.toLowerCase();
+        if (rawVal.startsWith('"')) attrs[k] = rawVal.slice(1, -1).replace(/\\"/g, '"');
+        else if (lowerVal === ':on' || lowerVal === ':true' || lowerVal === 'true') attrs[k] = true;
+        else if (lowerVal === ':off' || lowerVal === ':false' || lowerVal === 'false') attrs[k] = false;
         else if (rawVal.startsWith(':')) attrs[k] = rawVal.slice(1);
         else attrs[k] = Number(rawVal);
       }
@@ -299,19 +366,27 @@
     _parseControlsBlock(blockText) {
       const parsed = {};
       if (!blockText) return parsed;
-      const clean = blockText.replace(/;;[^\n]*/g, '');
-      const pairRegex = /\(\s*:([a-zA-Z0-9_-]+)\s+(:on|:off|true|false)\s*\)/gi;
+      const clean = this._stripSexpComments(blockText);
+      const pairRegex = /\(\s*:([a-zA-Z0-9_-]+)\s+(:on|:off|:true|:false|true|false)\s*\)/gi;
       let m;
       while ((m = pairRegex.exec(clean)) !== null) {
         const flag = m[1].toLowerCase();
         const valToken = m[2].toLowerCase();
-        parsed[flag] = (valToken === ':on' || valToken === 'true');
+        parsed[flag] = (valToken === ':on' || valToken === ':true' || valToken === 'true');
+      }
+      const plistBody = clean.replace(/^\(\s*:controls\b/i, '').replace(/\([^()]*\)/g, ' ');
+      const plistRegex = /:([a-zA-Z0-9_-]+)\s+(:on|:off|:true|:false|true|false)(?=[\s)]|$)/gi;
+      let pm;
+      while ((pm = plistRegex.exec(plistBody)) !== null) {
+        const flag = pm[1].toLowerCase();
+        const valToken = pm[2].toLowerCase();
+        parsed[flag] = (valToken === ':on' || valToken === ':true' || valToken === 'true');
       }
       return parsed;
     }
 
     _parsePlayerGesturesAST(astText) {
-      const clean = astText.replace(/;;[^\n]*/g, '');
+      const clean = this._stripSexpComments(astText);
 
       // 1. (:defaults ...)
       const defaultsBlock = this._extractSexpBlock(clean, '(:defaults');
@@ -322,7 +397,15 @@
         };
       }
 
-      // 2. (:universal-keys ...)
+      // 2. (:primitives ...) metadata for runtime capability introspection
+      const primBlock = this._extractSexpBlock(clean, '(:primitives');
+      if (primBlock) {
+        this.playerProfile.primitives = this._extractChildSexps(primBlock)
+          .map(item => this._parseKeywordAttrs(item))
+          .filter(p => p.type);
+      }
+
+      // 3. (:universal-keys ...)
       const keysBlock = this._extractSexpBlock(clean, '(:universal-keys');
       if (keysBlock) {
         const keyItems = this._extractChildSexps(keysBlock)
@@ -333,7 +416,7 @@
         }
       }
 
-      // 3. (:whiteboard ...)
+      // 4. (:whiteboard ...)
       const wbBlock = this._extractSexpBlock(clean, '(:whiteboard');
       if (wbBlock) {
         const toolsBlock = this._extractSexpBlock(wbBlock, '(:tools');
@@ -369,7 +452,7 @@
         }
       }
 
-      // 4. (:sonification ...)
+      // 5. (:sonification ...)
       const sonBlock = this._extractSexpBlock(clean, '(:sonification');
       if (sonBlock) {
         const toneItems = this._extractChildSexps(sonBlock).map(t => this._parseKeywordAttrs(t));
@@ -414,7 +497,7 @@
         });
       }
 
-      // 2. Parse (:controls ...) directly from raw cartridge AST text (no ast-engine.js edit needed)
+      // 2. Fallback: parse (:controls ...) directly from raw cartridge AST text
       const rawAst = this._getRawCartridgeAst();
       if (rawAst) {
         const ctrlBlock = this._extractSexpBlock(rawAst, '(:controls');
@@ -431,11 +514,29 @@
       return this.activeControls[flagName] !== false;
     }
 
+    _setElementControlVisibility(el, enabled) {
+      if (!el) return;
+      if (!enabled) {
+        if (el.dataset.astCtlHidden !== '1') {
+          el.dataset.astPrevDisplay = el.style.display || '';
+          el.dataset.astCtlHidden = '1';
+        }
+        el.style.display = 'none';
+      } else if (el.dataset.astCtlHidden === '1') {
+        el.style.display = el.dataset.astPrevDisplay || '';
+        delete el.dataset.astCtlHidden;
+        delete el.dataset.astPrevDisplay;
+      }
+    }
+
     _applyControlVisibility() {
       const wbOn = this._isControlEnabled('whiteboard');
       const xrayOn = this._isControlEnabled('xray');
       const audioOn = this._isControlEnabled('audio');
       const paramHudOn = this._isControlEnabled('param-hud');
+      const scrubOn = this._isControlEnabled('scrub');
+      const spacePlayOn = this._isControlEnabled('space-play');
+      const arrowStepOn = this._isControlEnabled('arrow-step');
 
       if (!wbOn && this.isPenActive) {
         this.togglePen(false);
@@ -465,6 +566,14 @@
       if (glassHud) {
         glassHud.style.display = (wbOn || xrayOn || audioOn) ? 'flex' : 'none';
       }
+
+      // Sync outer host player chrome controls with active :controls flags
+      this._setElementControlVisibility(document.getElementById('btn-pen'), wbOn);
+      this._setElementControlVisibility(document.getElementById('scrubber-box'), scrubOn);
+      this._setElementControlVisibility(document.getElementById('btn-play'), spacePlayOn);
+      this._setElementControlVisibility(document.getElementById('btn-header-play'), spacePlayOn);
+      this._setElementControlVisibility(document.getElementById('btn-prev'), arrowStepOn);
+      this._setElementControlVisibility(document.getElementById('btn-next'), arrowStepOn);
 
       const paramHud = document.getElementById('stage-sim-parameters');
       if (paramHud && !paramHudOn) {
@@ -501,6 +610,16 @@
       } else if (norm.action === 'toggle-var') {
         if (!norm.toggleVar && norm.var) norm.toggleVar = norm.var;
       }
+
+      const ifExpr = norm.ifExpr !== undefined ? norm.ifExpr : norm.if;
+      if (ifExpr !== undefined && norm.ifExpr === undefined) {
+        norm.ifExpr = ifExpr;
+      }
+      if (norm.valExpr === undefined && norm['val-expr'] !== undefined) norm.valExpr = norm['val-expr'];
+      if (norm.toneExpr === undefined && norm['tone-expr'] !== undefined) norm.toneExpr = norm['tone-expr'];
+      if (norm.speakExpr === undefined && norm['speak-expr'] !== undefined) norm.speakExpr = norm['speak-expr'];
+      if (norm.speakRateVar === undefined && norm['speak-rate-var'] !== undefined) norm.speakRateVar = norm['speak-rate-var'];
+      if (norm.speakPitch === undefined && norm['speak-pitch'] !== undefined) norm.speakPitch = norm['speak-pitch'];
 
       return norm;
     }
@@ -589,6 +708,17 @@
 
         window.addEventListener('message', (ev) => {
           if (!ev.data) return;
+          const isInkCmd = (
+            ev.data.type === 'IMPORT_WHITEBOARD_INK' ||
+            ev.data.type === 'LOAD_WHITEBOARD_INK' ||
+            ev.data.type === 'CLEAR_WHITEBOARD_INK' ||
+            ev.data.type === 'UNDO_WHITEBOARD_INK' ||
+            ev.data.type === 'REDO_WHITEBOARD_INK' ||
+            ev.data.type === 'EXPORT_WHITEBOARD_INK' ||
+            ev.data.type === 'TOGGLE_PEN'
+          );
+          if (isInkCmd && !this._isControlEnabled('whiteboard')) return;
+
           if (ev.data.type === 'IMPORT_WHITEBOARD_INK' || ev.data.type === 'LOAD_WHITEBOARD_INK') {
             const raw = ev.data.data || ev.data.ast || ev.data.json;
             if (typeof raw === 'string') {
@@ -646,23 +776,62 @@
       }
     }
 
-    _speakGestureText(rawText) {
+    _speakGestureText(rawText, opts = {}) {
+      if (!this._isControlEnabled('audio')) return;
       if (!rawText || !this.engine) return;
       const text = String(rawText).trim();
       if (!text) return;
       if (typeof this.engine.speak === 'function') {
-        this.engine.speak(text);
+        this.engine.speak(text, opts);
       } else if (typeof this.engine.speakText === 'function') {
-        this.engine.speakText(text);
+        this.engine.speakText(text, opts);
+      }
+    }
+
+    _readMatchedElementAttr(g, matchedEl) {
+      if (matchedEl && g.attr && matchedEl.hasAttribute(g.attr)) {
+        const rawAttr = matchedEl.getAttribute(g.attr);
+        return (rawAttr !== '' && !isNaN(Number(rawAttr))) ? Number(rawAttr) : rawAttr;
+      }
+      return undefined;
+    }
+
+    _evalGestureExpr(exprText, matchedEl, attrVal, asReturnValue = true) {
+      if (!exprText || !this.engine) return undefined;
+      const body = asReturnValue ? `return (${exprText})` : exprText;
+      const fn = new Function('vars', 'el', 'engine', 'computed', '_attr', body);
+      return fn(
+        this.engine.vars || {},
+        matchedEl || null,
+        this.engine,
+        this.engine.computed || {},
+        attrVal
+      );
+    }
+
+    _evalConditionExpr(condExpr, matchedEl, attrVal) {
+      if (!condExpr) return true;
+      try {
+        return Boolean(this._evalGestureExpr(condExpr, matchedEl, attrVal, true));
+      } catch (err) {
+        console.warn('[SiteGestures] Condition :if error:', condExpr, err);
+        return false;
       }
     }
 
     _applyGesturePress(g, matchedEl, scene) {
       if (!this.engine || !this.engine.vars) return false;
+      const attrVal = this._readMatchedElementAttr(g, matchedEl);
+      const condExpr = g.ifExpr !== undefined ? g.ifExpr : g.if;
+      if (condExpr && !this._evalConditionExpr(condExpr, matchedEl, attrVal)) {
+        return false;
+      }
+
       let changed = false;
+      let exprConsumedBySetVar = false;
 
       const toggleKey = g.toggleVar || g.toggle;
-      const setKey = g.setVar || g.set || (g.var && g.val !== undefined ? g.var : null);
+      const setKey = g.setVar || g.set || (g.var && (g.val !== undefined || g.valExpr !== undefined || g.expr !== undefined || attrVal !== undefined) ? g.var : null);
       const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!setKey && g.var && g.delta !== undefined ? g.var : null);
       const holdKey = g.holdVar;
 
@@ -672,12 +841,27 @@
       }
       if (setKey) {
         let val = g.val;
-        if (matchedEl && g.attr && matchedEl.hasAttribute(g.attr)) {
-          const rawAttr = matchedEl.getAttribute(g.attr);
-          val = !isNaN(Number(rawAttr)) ? Number(rawAttr) : rawAttr;
+        if (attrVal !== undefined) {
+          val = attrVal;
         }
-        this._writeEngineVar(setKey, val);
-        changed = true;
+        if (g.valExpr) {
+          try {
+            val = this._evalGestureExpr(g.valExpr, matchedEl, attrVal, true);
+          } catch (err) {
+            console.warn('[SiteGestures] Gesture :val-expr error:', g.valExpr, err);
+          }
+        } else if (val === undefined && g.expr) {
+          try {
+            val = this._evalGestureExpr(g.expr, matchedEl, attrVal, true);
+            exprConsumedBySetVar = true;
+          } catch (err) {
+            // Fall through to statement execution below if expr wasn't a pure expression
+          }
+        }
+        if (val !== undefined) {
+          this._writeEngineVar(setKey, val);
+          changed = true;
+        }
       }
       if (holdKey) {
         let entry = this._activeHoldVars.get(holdKey);
@@ -700,13 +884,17 @@
         this._writeEngineVar(stepKey, next);
         changed = true;
       }
-      if (g.expr) {
+      if (changed && typeof this.engine.updateComputedVars === 'function') {
+        this.engine.updateComputedVars(this.engine.progress || 0);
+      }
+      if (g.expr && !exprConsumedBySetVar) {
         try {
-          new Function('vars', 'el', 'engine', 'computed', g.expr)(
+          new Function('vars', 'el', 'engine', 'computed', '_attr', g.expr)(
             this.engine.vars,
             matchedEl,
             this.engine,
-            this.engine.computed || {}
+            this.engine.computed || {},
+            attrVal
           );
           if (typeof this.engine.updateComputedVars === 'function') {
             this.engine.updateComputedVars(this.engine.progress || 0);
@@ -716,16 +904,47 @@
           console.warn('[SiteGestures] Gesture expr error:', g.expr, err);
         }
       }
-      if (g.tone && typeof this.playAudioTone === 'function') {
-        String(g.tone).split(',').forEach((freq, idx) => {
+
+      let toneSpec = g.tone;
+      if (g.toneExpr) {
+        try {
+          const evaluatedTone = this._evalGestureExpr(g.toneExpr, matchedEl, attrVal, true);
+          if (evaluatedTone !== undefined && evaluatedTone !== null) {
+            toneSpec = String(evaluatedTone);
+          }
+        } catch (err) {
+          console.warn('[SiteGestures] Gesture :tone-expr error:', g.toneExpr, err);
+        }
+      }
+      if (toneSpec && typeof this.playAudioTone === 'function') {
+        String(toneSpec).split(',').forEach((freq, idx) => {
           const hz = parseFloat(freq.trim());
           if (!Number.isNaN(hz)) {
             setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
           }
         });
       }
-      if (g.speak) {
-        this._speakGestureText(g.speak);
+
+      let speakText = g.speak;
+      if (g.speakExpr) {
+        try {
+          const evaluatedSpeak = this._evalGestureExpr(g.speakExpr, matchedEl, attrVal, true);
+          if (evaluatedSpeak !== undefined && evaluatedSpeak !== null) {
+            speakText = String(evaluatedSpeak);
+          }
+        } catch (err) {
+          console.warn('[SiteGestures] Gesture :speak-expr error:', g.speakExpr, err);
+        }
+      }
+      if (speakText) {
+        const speechOpts = {};
+        if (g.speakRateVar && typeof this.engine.vars[g.speakRateVar] === 'number') {
+          speechOpts.rate = this.engine.vars[g.speakRateVar];
+        }
+        if (typeof g.speakPitch === 'number') {
+          speechOpts.pitch = g.speakPitch;
+        }
+        this._speakGestureText(speakText, speechOpts);
       }
 
       return changed;
@@ -948,9 +1167,9 @@
       const optionMap = { '1': 0, 'a': 0, '2': 1, 'b': 1, '3': 2, 'c': 2, '4': 3, 'd': 3 };
 
       if (keyLower in optionMap) {
-        const options = modal.querySelectorAll('button[data-option], .checkpoint-option, .quiz-option, button');
+        const options = modal.querySelectorAll('.interactive-opt-btn, button[data-option], .checkpoint-option, .quiz-option');
         const targetBtn = options[optionMap[keyLower]];
-        if (targetBtn && !targetBtn.disabled) {
+        if (targetBtn && !targetBtn.disabled && targetBtn.offsetParent !== null) {
           e.preventDefault();
           targetBtn.click();
           this._playNamedTone('click');
@@ -960,9 +1179,9 @@
 
       if (e.code === 'Enter' || e.code === 'Space') {
         const confirmBtn = modal.querySelector(
-          '#btn-checkpoint-continue, #btn-checkpoint-close, [data-checkpoint-confirm], button.primary, button'
+          '#interactive-continue-btn, #btn-checkpoint-continue, #btn-checkpoint-close, [data-checkpoint-confirm], button.primary'
         );
-        if (confirmBtn && !confirmBtn.disabled) {
+        if (confirmBtn && !confirmBtn.disabled && confirmBtn.offsetParent !== null) {
           e.preventDefault();
           confirmBtn.click();
           this._playNamedTone('click');
@@ -976,6 +1195,13 @@
     _executeUniversalKeyRule(rule, scene) {
       if (!rule || !this.engine) return false;
       const action = rule.action;
+
+      // 0. Check extensible Action Registry (instance or global)
+      const customHandler = (this._customActions && this._customActions.get(action))
+        || (ASTDirectGestureSubsystem._customActions && ASTDirectGestureSubsystem._customActions.get(action));
+      if (typeof customHandler === 'function') {
+        return customHandler.call(this, rule, scene, this) !== false;
+      }
 
       if (action === 'toggle-play') {
         if (typeof this.engine.togglePlay === 'function') {
@@ -996,6 +1222,43 @@
       if (action === 'toggle-pen') {
         if (this._isControlEnabled('whiteboard')) {
           this.togglePen();
+          return true;
+        }
+        return false;
+      }
+
+      if (action === 'toggle-xray') {
+        if (!this._isControlEnabled('xray')) return false;
+        this.isXRayActive = !this.isXRayActive;
+        const xrayBtn = document.getElementById('stage-hud-xray-btn');
+        if (xrayBtn) {
+          xrayBtn.style.background = this.isXRayActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
+          xrayBtn.style.color = this.isXRayActive ? '#090d16' : '#ffffff';
+        }
+        if (!this.isXRayActive) this.hideXRayPopup();
+        this.playAudioTone(this.isXRayActive ? 784 : 392, 'sine', 0.08);
+        return true;
+      }
+
+      if (action === 'toggle-audio') {
+        if (!this._isControlEnabled('audio')) return false;
+        this.sonificationEnabled = !this.sonificationEnabled;
+        const soundBtn = document.getElementById('stage-hud-sound-btn');
+        if (soundBtn) {
+          soundBtn.textContent = this.sonificationEnabled ? '🔊' : '🔇';
+          soundBtn.style.opacity = this.sonificationEnabled ? '1.0' : '0.5';
+        }
+        if (this.sonificationEnabled) this.playAudioTone(523, 'sine', 0.05);
+        return true;
+      }
+
+      if (action === 'reset-vars') {
+        if (typeof this.engine.resetVars === 'function') {
+          this.engine.resetVars();
+          if (typeof this.engine.applyBindings === 'function') {
+            this.engine.applyBindings(this.engine.progress || 0, 0, false);
+          }
+          this._playNamedTone('release');
           return true;
         }
         return false;
@@ -1063,6 +1326,11 @@
         return;
       }
 
+      // Do not intercept browser/studio modifier combos (Ctrl+Z, Cmd+R, Ctrl+I, etc.)
+      if (e.ctrlKey || e.metaKey || e.altKey) {
+        return;
+      }
+
       const scene = this.engine && this.engine.scene;
       if (!scene || !this.engine.vars) return;
 
@@ -1097,15 +1365,18 @@
 
         if (!e.repeat) {
           let changed = false;
+          let hasCustomTone = false;
           for (let i = 0; i < matchingKeys.length; i++) {
-            if (this._applyGesturePress(matchingKeys[i], null, scene)) {
+            const g = matchingKeys[i];
+            if (g.tone || g.toneExpr) hasCustomTone = true;
+            if (this._applyGesturePress(g, null, scene)) {
               changed = true;
             }
           }
           if (changed && typeof this.engine.applyBindings === 'function') {
             this.engine.applyBindings(this.engine.progress || 0, 0, false);
           }
-          if (!matchingKeys.some(g => Boolean(g.tone))) {
+          if (!hasCustomTone && changed) {
             this._playNamedTone('key');
           }
         }
@@ -1117,13 +1388,20 @@
       }
 
       // Priority 3: Universal Keys from player-gestures.ast (gated by active :controls switches)
-      if (!e.repeat) {
-        const universalMatch = this.playerProfile.universalKeys.find(rule => {
-          if (rule.switch && !this._isControlEnabled(rule.switch)) return false;
-          return this._gestureMatchesKey(rule, e);
-        });
+      const universalMatch = this.playerProfile.universalKeys.find(rule => {
+        if (rule.switch && !this._isControlEnabled(rule.switch)) return false;
+        return this._gestureMatchesKey(rule, e);
+      });
 
-        if (universalMatch && this._executeUniversalKeyRule(universalMatch, scene)) {
+      if (universalMatch) {
+        if (e.repeat) {
+          e.preventDefault();
+          if (typeof e.stopImmediatePropagation === 'function') {
+            e.stopImmediatePropagation();
+          }
+          return;
+        }
+        if (this._executeUniversalKeyRule(universalMatch, scene)) {
           e.preventDefault();
           if (typeof e.stopImmediatePropagation === 'function') {
             e.stopImmediatePropagation();
@@ -1235,7 +1513,11 @@
             });
           }
 
-          if (g.type === 'clickable' || g.type === 'holdable') {
+          const customSkill = (this._customGestureSkills && this._customGestureSkills.get(g.type))
+            || (ASTDirectGestureSubsystem._customGestureSkills && ASTDirectGestureSubsystem._customGestureSkills.get(g.type));
+          if (customSkill && typeof customSkill.enhance === 'function') {
+            customSkill.enhance.call(this, el, g, scene, this);
+          } else if (g.type === 'clickable' || g.type === 'holdable') {
             el.style.cursor = 'pointer';
             el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
           } else if (g.type === 'trackball' || g.axis === 'trackball') {
@@ -1313,6 +1595,19 @@
       const scene = this.engine && this.engine.scene;
       const gestures = this._getNormalizedSceneGestures(scene);
 
+      // B0. Custom Registered Gesture Skills
+      for (let i = 0; i < gestures.length; i++) {
+        const g = gestures[i];
+        const customSkill = (this._customGestureSkills && this._customGestureSkills.get(g.type))
+          || (ASTDirectGestureSubsystem._customGestureSkills && ASTDirectGestureSubsystem._customGestureSkills.get(g.type));
+        if (customSkill && typeof customSkill.onPointerDown === 'function' && g.target) {
+          const hitEl = e.target.closest(g.target);
+          if (hitEl && customSkill.onPointerDown.call(this, e, g, hitEl, svgPt, scene, this) === true) {
+            return;
+          }
+        }
+      }
+
       // B1. Declarative :clickable / :holdable tuples
       const matchedPointerGestures = [];
       const matchedEls = [];
@@ -1329,9 +1624,11 @@
         e.preventDefault();
         this._ensureInteractiveSimPlaying();
         let needsHoldLoop = false;
+        let hasCustomTone = false;
 
         for (let i = 0; i < matchedPointerGestures.length; i++) {
           const g = matchedPointerGestures[i];
+          if (g.tone || g.toneExpr) hasCustomTone = true;
           this._applyGesturePress(g, matchedEls[i], scene);
           if (g.type === 'holdable' || g.hold === true || g.holdVar || g.stepVar || typeof g.step === 'string') {
             needsHoldLoop = true;
@@ -1359,7 +1656,7 @@
             this.engine.render();
           }
         }
-        if (!matchedPointerGestures.some(g => Boolean(g.tone))) {
+        if (!hasCustomTone) {
           this._playNamedTone('click');
         }
         this.createTouchRipple(svgPt.x, svgPt.y);
@@ -2273,6 +2570,11 @@ ${strokeLines.join('\n')}
     }
 
     restoreInkFromSession() {
+      this.strokes = [];
+      this._undoStack = [];
+      if (this.inkRoot) {
+        this.inkRoot.replaceChildren();
+      }
       const store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
       if (!store) return;
       const applyRestore = () => {
@@ -2333,8 +2635,10 @@ ${strokeLines.join('\n')}
     }
 
     togglePen(forceState) {
-      if (forceState !== false && !this._isControlEnabled('whiteboard')) return;
+      const wbAllowed = this._isControlEnabled('whiteboard');
+      if (forceState !== false && !wbAllowed) return;
 
+      const prevActive = this.isPenActive;
       this.isPenActive = (forceState !== undefined) ? Boolean(forceState) : !this.isPenActive;
       const penBtn = document.getElementById('stage-hud-pen-btn');
       if (penBtn) {
@@ -2362,8 +2666,8 @@ ${strokeLines.join('\n')}
       if (inkExtraActions) inkExtraActions.style.display = displayVal;
       if (clearBtn) clearBtn.style.display = displayVal;
 
-      this.playAudioTone(this.isPenActive ? 660 : 440, 'sine', 0.06);
-      if (this._isControlEnabled('whiteboard')) {
+      if (wbAllowed && this.isPenActive !== prevActive) {
+        this.playAudioTone(this.isPenActive ? 660 : 440, 'sine', 0.06);
         this.showFloatingNotice(this.isPenActive ? '🖊️ Whiteboard Marker Active' : 'Whiteboard Inactive');
       }
     }
@@ -2962,7 +3266,68 @@ ${strokeLines.join('\n')}
         });
       }
     }
+
+    /**
+     * Registers a named universal key/skill action on this instance without editing core dispatch.
+     */
+    registerAction(name, handler) {
+      if (name && typeof handler === 'function') {
+        this._customActions.set(String(name), handler);
+      }
+      return this;
+    }
+
+    /**
+     * Registers a declarative gesture skill primitive type on this instance.
+     * spec: { enhance?(el, g, scene, vm), onPointerDown?(e, g, el, svgPt, scene, vm) }
+     */
+    registerGestureSkill(type, spec) {
+      if (type && spec && typeof spec === 'object') {
+        this._customGestureSkills.set(String(type), spec);
+      }
+      return this;
+    }
+
+    /**
+     * Returns active switches, parsed player-gestures.ast primitives, and registered skills.
+     */
+    getCapabilities() {
+      return {
+        controls: { ...this.activeControls },
+        defaults: { ...this.playerProfile.defaults },
+        primitives: Array.isArray(this.playerProfile.primitives) ? [...this.playerProfile.primitives] : [],
+        universalActions: Array.from(new Set([
+          ...this.playerProfile.universalKeys.map(k => k.action).filter(Boolean),
+          'toggle-xray',
+          'toggle-audio',
+          'reset-vars',
+          ...Array.from(ASTDirectGestureSubsystem._customActions.keys()),
+          ...Array.from(this._customActions.keys())
+        ])),
+        customGestureSkills: Array.from(new Set([
+          ...Array.from(ASTDirectGestureSubsystem._customGestureSkills.keys()),
+          ...Array.from(this._customGestureSkills.keys())
+        ]))
+      };
+    }
   }
+
+  ASTDirectGestureSubsystem._customActions = new Map();
+  ASTDirectGestureSubsystem._customGestureSkills = new Map();
+
+  ASTDirectGestureSubsystem.registerAction = function (name, handler) {
+    if (name && typeof handler === 'function') {
+      ASTDirectGestureSubsystem._customActions.set(String(name), handler);
+    }
+    return ASTDirectGestureSubsystem;
+  };
+
+  ASTDirectGestureSubsystem.registerGestureSkill = function (type, spec) {
+    if (type && spec && typeof spec === 'object') {
+      ASTDirectGestureSubsystem._customGestureSkills.set(String(type), spec);
+    }
+    return ASTDirectGestureSubsystem;
+  };
 
   // Expose globally (maintaining backward compatibility with existing index.html bootstrap)
   global.ASTDirectGestureSubsystem = ASTDirectGestureSubsystem;
