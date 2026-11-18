@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-18T08:40:29.914Z",
+  "generatedAt": "2026-11-18T09:04:06.132Z",
   "totalCartridges": 73,
-  "masterChecksum": "4585d3ded550019198899a17eb47e7160c509938c909f95a22382a6f672b1c99",
+  "masterChecksum": "658637b1acb9fca14daea8b875ab36d29bdef31135f614c1d1b6641c7972af4b",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -426,15 +426,15 @@
       "title": "Modular Brick Engineering & 3D Spatial Geometry",
       "stage": "KS2/KS3 DESIGN & TECH",
       "type": "Sim",
-      "astSha256": "11fc3fa01e0df4a35a70bd3b07f2b645291ddad1eeb210986306dbecb176d40d",
-      "svgSha256": "5785d0fa04fec82fa3bd43e8629e3b0c09a4e323ce1431d14a3775df4238b924",
-      "astbSha256": "b74ad3dc19a1544a886e13923bc9add76db72ed46c262e946c30f8ecb59f3afb",
-      "astbBytes": 6290,
-      "astBytes": 11037,
-      "svgBytes": 29537,
+      "astSha256": "4a1aca308a1a4e49497203497c7e5473b7af099619448515953042bdea042539",
+      "svgSha256": "02e7e7aeb7c2ec15a8fc55c5a83ea2323aadb5063716399af2fe9cbe60c3e879",
+      "astbSha256": "482b6be56c864d9d8a4703bad73c20863f16c5f54eb66430fe99bf1db9844ed5",
+      "astbBytes": 11071,
+      "astBytes": 24369,
+      "svgBytes": 36372,
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
-      "seal": "a7bff097ce5a4e8c5502bf26716519f35e61eec9899e9f404ce0c3bf25d036a5",
+      "seal": "b1b9093f390c57d88c9d49fc66df1ae62e54979b041be01a6305f1191378fd8f",
       "certified": true
     },
     "liturgical-calendar": {

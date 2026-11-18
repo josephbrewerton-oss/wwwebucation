@@ -4553,12 +4553,22 @@
       this.vars[`*${cleanName}*`] = val;
 
       if (this.scene && this.scene.vars) {
-        if (this.scene.vars[cleanName] !== undefined) {
-          if (typeof this.scene.vars[cleanName] === 'object' && this.scene.vars[cleanName] !== null) {
-            this.scene.vars[cleanName].value = val;
-          } else {
-            this.scene.vars[cleanName] = val;
+        if (!this.scene._defaultVars || this.scene._defaultVarsSource !== this.scene.vars) {
+          const snapshot = {};
+          for (const k of Object.keys(this.scene.vars)) {
+            const item = this.scene.vars[k];
+            snapshot[k] = (item && typeof item === 'object' && !Array.isArray(item))
+              ? (item.defaultValue !== undefined ? item.defaultValue
+                : (item.default !== undefined ? item.default
+                  : (item.val !== undefined ? item.val
+                    : (item.value !== undefined ? item.value : item))))
+              : item;
           }
+          this.scene._defaultVars = snapshot;
+          this.scene._defaultVarsSource = this.scene.vars;
+        }
+        if (this.scene.vars[cleanName] !== undefined && typeof this.scene.vars[cleanName] === 'object' && this.scene.vars[cleanName] !== null) {
+          this.scene.vars[cleanName].value = val;
         }
       }
 
@@ -4991,11 +5001,27 @@
     resetVars() {
       this.vars = {};
       if (this.scene && this.scene.vars) {
-        for (const k of Object.keys(this.scene.vars)) {
+        if (!this.scene._defaultVars || this.scene._defaultVarsSource !== this.scene.vars) {
+          const snapshot = {};
+          for (const k of Object.keys(this.scene.vars)) {
+            const item = this.scene.vars[k];
+            snapshot[k] = (item && typeof item === 'object' && !Array.isArray(item))
+              ? (item.defaultValue !== undefined ? item.defaultValue
+                : (item.default !== undefined ? item.default
+                  : (item.val !== undefined ? item.val
+                    : (item.value !== undefined ? item.value : item))))
+              : item;
+          }
+          this.scene._defaultVars = snapshot;
+          this.scene._defaultVarsSource = this.scene.vars;
+        }
+        for (const k of Object.keys(this.scene._defaultVars)) {
+          const defVal = this.scene._defaultVars[k];
+          this.vars[k] = defVal;
           const item = this.scene.vars[k];
-          this.vars[k] = (item && typeof item === 'object' && !Array.isArray(item))
-            ? (item.value !== undefined ? item.value : (item.val !== undefined ? item.val : (item.default !== undefined ? item.default : item)))
-            : item;
+          if (item && typeof item === 'object' && !Array.isArray(item)) {
+            item.value = defVal;
+          }
         }
       }
       this.updateComputedVars();
