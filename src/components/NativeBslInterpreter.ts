@@ -97,6 +97,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   // Grammar & Mode
   private grammarMode: BslGrammarMode = 'bsl-natural';
   private voiceEnabled = true;
+  private lastUtteranceText = '';
 
   // Animation Loop State
   private animationFrameId: number | null = null;
@@ -337,7 +338,15 @@ export class NativeBslInterpreterElement extends HTMLElement {
       deck.style.display = (isCompact && !isPoppedOut) ? 'none' : 'flex';
     }
     if (titleEl) {
-      titleEl.textContent = isCompact ? 'BSL L6' : 'BSL L6 & MAKATON';
+      const isMakaton = this.grammarMode === 'makaton';
+      const isSpell = this.grammarMode === 'fingerspell';
+      titleEl.textContent = isMakaton
+        ? (isCompact ? '🤝 MAKATON' : '🤝 MAKATON (KEY WORD)')
+        : isSpell
+        ? (isCompact ? '🔤 A–Z' : '🔤 FINGERSPELLING')
+        : (isCompact ? '🇬🇧 BSL L6' : '🇬🇧 BSL LEVEL 6 (OSV)');
+      titleEl.style.color = isMakaton ? '#34d399' : isSpell ? '#fbbf24' : '#38bdf8';
+      titleEl.style.borderColor = isMakaton ? 'rgba(52,211,153,0.45)' : isSpell ? 'rgba(251,191,36,0.45)' : 'rgba(56,189,248,0.45)';
     }
     if (povBtn) {
       povBtn.textContent = this.cameraMode === 'receiver'
@@ -399,8 +408,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
         <!-- Header Bar / Drag Handle -->
         <div id="bsl-header-bar" style="background:#0f172a; padding:6px 8px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; gap:4px; cursor:grab; touch-action:none;">
           <div style="display:flex; align-items:center; gap:4px; min-width:0;">
-            <span style="font-size:0.85rem;">🧏</span>
-            <span id="bsl-header-title" style="font-size:0.7rem; font-weight:800; color:#38bdf8; letter-spacing:0.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">BSL L6</span>
+            <button type="button" id="bsl-header-title" style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.45); border-radius:4px; padding:1px 5px; font-size:0.66rem; font-weight:800; color:#38bdf8; letter-spacing:0.35px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer;" title="Click to switch between BSL Level 6 (OSV) and Makaton Key Word Signing (SVO + Symbols)">🇬🇧 BSL L6</button>
           </div>
           <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
             <button type="button" id="bsl-btn-redock" style="display:none; align-items:center; justify-content:center; background:#0369a1; border:1px solid #38bdf8; color:#ffffff; border-radius:4px; font-size:0.65rem; font-weight:700; padding:1px 5px; cursor:pointer;" title="Return to docked corner">
@@ -509,22 +517,28 @@ export class NativeBslInterpreterElement extends HTMLElement {
               </svg>
 
               <!-- In-Stage HUD Telemetry -->
-              <div style="position:absolute; top:6px; left:8px; pointer-events:none; display:flex; flex-direction:column; gap:2px;">
-                <span id="bsl-hud-gloss" style="background:rgba(2,132,199,0.85); color:#ffffff; font-size:0.65rem; font-weight:800; padding:1px 5px; border-radius:3px; letter-spacing:0.5px; text-transform:uppercase;">
-                  GLOSS: READY
+              <div style="position:absolute; top:6px; left:8px; pointer-events:none; display:flex; flex-direction:column; gap:2px; max-width:62%;">
+                <span id="bsl-hud-gloss" style="background:${this.grammarMode === 'makaton' ? 'rgba(5,150,105,0.9)' : 'rgba(2,132,199,0.85)'}; color:#ffffff; font-size:0.63rem; font-weight:800; padding:1px 5px; border-radius:3px; letter-spacing:0.4px; text-transform:uppercase; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${this.grammarMode === 'makaton' ? 'KEY WORD: READY' : 'GLOSS: READY'}
                 </span>
-                <span id="bsl-hud-nmf" style="background:rgba(15,23,42,0.8); border:1px solid #334155; color:#94a3b8; font-size:0.58rem; padding:1px 4px; border-radius:3px;">
-                  NMF: Neutral
+                <span id="bsl-hud-nmf" style="background:rgba(15,23,42,0.82); border:1px solid #334155; color:#94a3b8; font-size:0.56rem; padding:1px 4px; border-radius:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                  ${this.grammarMode === 'makaton' ? 'Speech + Sign + Symbol (SVO)' : 'NMF: Neutral'}
                 </span>
               </div>
 
               <div style="position:absolute; top:6px; right:8px; pointer-events:none; text-align:right; display:flex; flex-direction:column; gap:2px;">
-                <span id="bsl-hud-mode" style="background:rgba(15,23,42,0.8); border:1px solid #1e293b; color:#38bdf8; font-size:0.58rem; font-weight:700; padding:1px 4px; border-radius:3px;">
+                <span id="bsl-hud-mode" style="background:rgba(15,23,42,0.85); border:1px solid #1e293b; color:${this.grammarMode === 'makaton' ? '#34d399' : '#38bdf8'}; font-size:0.58rem; font-weight:800; padding:1px 4px; border-radius:3px;">
                   ${this.grammarMode === 'makaton' ? 'MAKATON' : 'BSL L6'}
                 </span>
-                <span id="bsl-hud-cl" style="background:rgba(15,23,42,0.8); border:1px solid #334155; color:#a855f7; font-size:0.58rem; padding:1px 4px; border-radius:3px;">
-                  CL: NONE
+                <span id="bsl-hud-cl" style="background:rgba(15,23,42,0.85); border:1px solid #334155; color:${this.grammarMode === 'makaton' ? '#34d399' : '#a855f7'}; font-size:0.56rem; font-weight:700; padding:1px 4px; border-radius:3px;">
+                  ${this.grammarMode === 'makaton' ? 'SEN SVO' : 'CL: NONE'}
                 </span>
+              </div>
+
+              <!-- Makaton High-Contrast Pictographic Concept Symbol Card (Active Exclusively in Makaton Mode) -->
+              <div id="bsl-makaton-symbol-card" style="display:none; position:absolute; bottom:7px; left:8px; width:56px; background:#ffffff; border:2px solid #059669; border-radius:7px; box-shadow:0 6px 14px rgba(0,0,0,0.45); padding:3px 3px 2px; flex-direction:column; align-items:center; justify-content:center; pointer-events:none;">
+                <div id="bsl-makaton-symbol-svg" style="width:34px; height:34px; display:flex; align-items:center; justify-content:center;"></div>
+                <span id="bsl-makaton-symbol-word" style="font-size:0.58rem; font-weight:800; color:#0f172a; line-height:1.1; text-align:center; text-transform:lowercase; max-width:50px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;"></span>
               </div>
             </div>
 
@@ -588,14 +602,55 @@ export class NativeBslInterpreterElement extends HTMLElement {
     });
   }
 
-  private applyModeUI(mode: BslGrammarMode) {
+  private applyModeUI(mode: BslGrammarMode, replayLast = false) {
     this.grammarMode = mode;
+    const isMakaton = mode === 'makaton';
+    const isSpell = mode === 'fingerspell';
+
+    const titleEl = this.querySelector<HTMLElement>('#bsl-header-title');
+    if (titleEl) {
+      const isCompact = this.layoutState.compact && !(this.pipWindow && !this.pipWindow.closed);
+      titleEl.textContent = isMakaton
+        ? (isCompact ? '🤝 MAKATON' : '🤝 MAKATON (KEY WORD)')
+        : isSpell
+        ? (isCompact ? '🔤 A–Z' : '🔤 FINGERSPELLING')
+        : (isCompact ? '🇬🇧 BSL L6' : '🇬🇧 BSL LEVEL 6 (OSV)');
+      titleEl.style.color = isMakaton ? '#34d399' : isSpell ? '#fbbf24' : '#38bdf8';
+      titleEl.style.borderColor = isMakaton ? 'rgba(52,211,153,0.45)' : isSpell ? 'rgba(251,191,36,0.45)' : 'rgba(56,189,248,0.45)';
+    }
+
     const hudMode = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-mode');
     if (hudMode) {
       hudMode.textContent =
-        mode === 'bsl-natural' ? 'BSL L6' : mode === 'makaton' ? 'MAKATON' : 'SPELLING';
-      hudMode.style.color = mode === 'makaton' ? '#34d399' : '#38bdf8';
+        mode === 'bsl-natural' ? 'BSL L6' : isMakaton ? 'MAKATON' : 'SPELLING';
+      hudMode.style.color = isMakaton ? '#34d399' : isSpell ? '#fbbf24' : '#38bdf8';
     }
+
+    const hudGloss = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-gloss');
+    if (hudGloss) {
+      hudGloss.style.background = isMakaton ? 'rgba(5,150,105,0.9)' : 'rgba(2,132,199,0.85)';
+      if (this.isIdle) {
+        hudGloss.textContent = isMakaton ? 'KEY WORD: READY' : 'GLOSS: READY';
+      }
+    }
+
+    const hudNmf = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-nmf');
+    if (hudNmf && this.isIdle) {
+      hudNmf.textContent = isMakaton ? 'Speech + Sign + Symbol (SVO)' : 'NMF: Neutral';
+    }
+
+    const hudCl = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-cl');
+    if (hudCl) {
+      hudCl.style.color = isMakaton ? '#34d399' : '#a855f7';
+      if (this.isIdle) {
+        hudCl.textContent = isMakaton ? 'SEN SVO' : 'CL: NONE';
+      }
+    }
+
+    if (!isMakaton) {
+      this.updateMakatonSymbolCard(null);
+    }
+
     const selectMode = this.queryAvatarElement<HTMLSelectElement>('#bsl-select-mode');
     if (selectMode && selectMode.value !== mode) {
       selectMode.value = mode;
@@ -605,9 +660,22 @@ export class NativeBslInterpreterElement extends HTMLElement {
       pillsRoot.innerHTML = this.getQuickPillsMarkup();
       this.bindQuickPillListeners();
     }
+
+    if (replayLast && this.lastUtteranceText) {
+      this.processUtterance(this.lastUtteranceText, false);
+    }
   }
 
   private bindDomEvents() {
+    // 1-Click Header Mode Badge Toggle (works even in Compact docked mode)
+    const btnHeaderMode = this.querySelector<HTMLButtonElement>('#bsl-header-title');
+    btnHeaderMode?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nextMode: BslGrammarMode = this.grammarMode === 'makaton' ? 'bsl-natural' : 'makaton';
+      this.applyModeUI(nextMode, true);
+      setSignLanguage(nextMode === 'makaton' ? 'MAKATON' : 'BSL');
+    });
+
     // POV toggle
     const btnPov = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
     btnPov?.addEventListener('click', () => {
@@ -711,7 +779,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     const selectMode = this.querySelector<HTMLSelectElement>('#bsl-select-mode');
     selectMode?.addEventListener('change', (e) => {
       const nextMode = (e.target as HTMLSelectElement).value as BslGrammarMode;
-      this.applyModeUI(nextMode);
+      this.applyModeUI(nextMode, true);
       if (nextMode === 'makaton') {
         setSignLanguage('MAKATON');
       } else if (nextMode === 'bsl-natural') {
@@ -876,9 +944,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     this.unsubscribeSignLang = subscribeSignLanguage((code) => {
       if (code === 'MAKATON' && this.grammarMode !== 'makaton') {
-        this.applyModeUI('makaton');
+        this.applyModeUI('makaton', true);
       } else if (code === 'BSL' && this.grammarMode === 'makaton') {
-        this.applyModeUI('bsl-natural');
+        this.applyModeUI('bsl-natural', true);
       }
     });
 
@@ -930,6 +998,81 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   /**
+   * Generates a crisp black-on-white procedural SEN line-art pictogram for Makaton Concept Symbol cards.
+   */
+  private getMakatonSymbolPictogram(wordUpper: string): string {
+    const s = 'stroke="#0f172a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" fill="none"';
+    if (wordUpper === 'EAT' || wordUpper === 'FOOD') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="19" r="10" ${s}/><circle cx="18" cy="19" r="5.5" ${s}/><line x1="5" y1="11" x2="5" y2="27" ${s}/><line x1="31" y1="11" x2="31" y2="27" ${s}/></svg>`;
+    }
+    if (wordUpper === 'DRINK' || wordUpper === 'WATER' || wordUpper === 'RAIN' || wordUpper === 'WASH') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M10 9 L26 9 L23 29 L13 29 Z" ${s}/><path d="M12 16 Q18 19 24 16" ${s}/></svg>`;
+    }
+    if (wordUpper === 'BOOK' || wordUpper === 'READ' || wordUpper === 'WRITE' || wordUpper === 'BIBLE' || wordUpper === 'LEARN') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M6 10 Q12 8 18 11 Q24 8 30 10 L30 27 Q24 25 18 28 Q12 25 6 27 Z" ${s}/><line x1="18" y1="11" x2="18" y2="28" ${s}/></svg>`;
+    }
+    if (wordUpper === 'SCHOOL' || wordUpper === 'HOME' || wordUpper === 'HOUSE' || wordUpper === 'CHURCH' || wordUpper === 'TABERNACLE') {
+      const cross = (wordUpper === 'CHURCH' || wordUpper === 'TABERNACLE') ? `<line x1="18" y1="3" x2="18" y2="9" ${s}/><line x1="15" y1="5.5" x2="21" y2="5.5" ${s}/>` : '';
+      return `<svg viewBox="0 0 36 36" width="32" height="32">${cross}<path d="M6 17 L18 8 L30 17" ${s}/><path d="M9 16 L9 29 L27 29 L27 16" ${s}/><rect x="15" y="21" width="6" height="8" ${s}/></svg>`;
+    }
+    if (wordUpper === 'JESUS' || wordUpper === 'GOD' || wordUpper === 'PRAY' || wordUpper === 'CROSS' || wordUpper === 'HOLY' || wordUpper === 'CHALICE' || wordUpper === 'EUCHARIST' || wordUpper === 'CONSECRATE' || wordUpper === 'INCENSE' || wordUpper === 'GENUFLECT') {
+      if (wordUpper === 'CHALICE' || wordUpper === 'EUCHARIST' || wordUpper === 'CONSECRATE') {
+        return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="9" r="4.5" ${s}/><path d="M11 16 Q18 26 25 16 Z" ${s}/><line x1="18" y1="22" x2="18" y2="30" ${s}/><line x1="12" y1="30" x2="24" y2="30" ${s}/></svg>`;
+      }
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><line x1="18" y1="6" x2="18" y2="30" ${s}/><line x1="9" y1="14" x2="27" y2="14" ${s}/></svg>`;
+    }
+    if (wordUpper === 'LOVE' || wordUpper === 'LIKE' || wordUpper === 'PLEASE' || wordUpper === 'THANK YOU' || wordUpper === 'FRIEND' || wordUpper === 'PEACE') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M18 29 C18 29 7 21 7 13.5 C7 9.5 10.5 7 14 7 C16.2 7 18 8.6 18 10.2 C18 8.6 19.8 7 22 7 C25.5 7 29 9.5 29 13.5 C29 21 18 29 18 29 Z" ${s}/></svg>`;
+    }
+    if (wordUpper === 'HAPPY' || wordUpper === 'GOOD' || wordUpper === 'YES' || wordUpper === 'CORRECT') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="18" r="12" ${s}/><circle cx="13.5" cy="15" r="1.3" fill="#0f172a"/><circle cx="22.5" cy="15" r="1.3" fill="#0f172a"/><path d="M12.5 21 Q18 26 23.5 21" ${s}/></svg>`;
+    }
+    if (wordUpper === 'SAD' || wordUpper === 'NO' || wordUpper === 'WRONG' || wordUpper === 'SORRY') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="18" r="12" ${s}/><circle cx="13.5" cy="15" r="1.3" fill="#0f172a"/><circle cx="22.5" cy="15" r="1.3" fill="#0f172a"/><path d="M13 24 Q18 19.5 23 24" ${s}/></svg>`;
+    }
+    if (wordUpper === 'SUN' || wordUpper === 'LIGHT' || wordUpper === 'DAY' || wordUpper === 'MORNING' || wordUpper === 'ENERGY') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="18" r="6.5" ${s}/><line x1="18" y1="5" x2="18" y2="8.5" ${s}/><line x1="18" y1="27.5" x2="18" y2="31" ${s}/><line x1="5" y1="18" x2="8.5" y2="18" ${s}/><line x1="27.5" y1="18" x2="31" y2="18" ${s}/><line x1="9" y1="9" x2="11.5" y2="11.5" ${s}/><line x1="24.5" y1="24.5" x2="27" y2="27" ${s}/></svg>`;
+    }
+    if (wordUpper === 'SCIENCE' || wordUpper === 'ATOM' || wordUpper === 'PLANET' || wordUpper === 'EARTH' || wordUpper === 'ORBIT' || wordUpper === 'GRAVITY') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><circle cx="18" cy="18" r="3" fill="#0f172a"/><ellipse cx="18" cy="18" rx="13" ry="5.5" transform="rotate(28 18 18)" ${s}/><ellipse cx="18" cy="18" rx="13" ry="5.5" transform="rotate(-28 18 18)" ${s}/></svg>`;
+    }
+    if (wordUpper === 'MATHS' || wordUpper === 'EQUAL' || wordUpper === 'NUMBER' || wordUpper === 'FRACTION' || wordUpper === 'MORE' || wordUpper === 'AGAIN') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><line x1="8" y1="13" x2="18" y2="13" ${s}/><line x1="13" y1="8" x2="13" y2="18" ${s}/><line x1="19" y1="21" x2="29" y2="21" ${s}/><line x1="19" y1="26" x2="29" y2="26" ${s}/></svg>`;
+    }
+    if (wordUpper === 'WHAT' || wordUpper === 'WHERE' || wordUpper === 'WHO' || wordUpper === 'WHEN' || wordUpper === 'HOW' || wordUpper === 'QUESTION') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M13 12.5 C13 9 23 9 23 14 C23 17.5 18 18 18 22" ${s}/><circle cx="18" cy="27.5" r="1.6" fill="#0f172a"/></svg>`;
+    }
+    if (wordUpper === 'LOOK') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M5 18 Q18 8 31 18 Q18 28 5 18 Z" ${s}/><circle cx="18" cy="18" r="3.5" fill="#0f172a"/></svg>`;
+    }
+    if (wordUpper === 'STOP' || wordUpper === 'WAIT' || wordUpper === 'HELLO' || wordUpper === 'GOODBYE' || wordUpper === 'HELP') {
+      return `<svg viewBox="0 0 36 36" width="32" height="32"><path d="M13 18 L13 9 M17 17 L17 7 M21 17 L21 8 M25 19 L25 11 M10 19 L10 14 C10 25 13 29 19 29 C24 29 26 25 26 19" ${s}/></svg>`;
+    }
+    return `<svg viewBox="0 0 36 36" width="32" height="32"><rect x="7" y="7" width="22" height="22" rx="5" ${s}/><circle cx="18" cy="15" r="3.5" ${s}/><path d="M12 24 Q18 20 24 24" ${s}/></svg>`;
+  }
+
+  private updateMakatonSymbolCard(pose: BslHandPose | null) {
+    const card = this.queryAvatarElement<HTMLElement>('#bsl-makaton-symbol-card');
+    if (!card) return;
+    if (this.grammarMode !== 'makaton' || !pose || !pose.letter || pose.letter === ' ' || pose.letter === 'REST') {
+      card.style.display = 'none';
+      return;
+    }
+    const svgSlot = this.queryAvatarElement<HTMLElement>('#bsl-makaton-symbol-svg');
+    const wordSlot = this.queryAvatarElement<HTMLElement>('#bsl-makaton-symbol-word');
+    const rawWord = (pose.letter || '').trim().toUpperCase();
+    const displayWord = ((pose.label || '').split('•')[1] || rawWord).trim().toLowerCase();
+
+    if (svgSlot) {
+      svgSlot.innerHTML = this.getMakatonSymbolPictogram(rawWord);
+    }
+    if (wordSlot) {
+      wordSlot.textContent = displayWord;
+    }
+    card.style.display = 'flex';
+  }
+
+  /**
    * Parses natural text through the BSL Level 6 grammar engine / Makaton lexicon
    * and queues 3D skeletal keyframe trajectories.
    */
@@ -937,6 +1080,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     if (!text || typeof text !== 'string') return;
     const cleanText = text.trim();
     if (!cleanText) return;
+    this.lastUtteranceText = cleanText;
 
     // Optional audio narration via Web Speech API (only if explicitly requested by manual user action,
     // and both voice narration and master sound are active)
@@ -944,7 +1088,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
       try {
         window.speechSynthesis.cancel();
         const utterance = new SpeechSynthesisUtterance(cleanText);
-        utterance.rate = 1.0;
+        // Makaton pairs slightly slower, clearer spoken English alongside key word signs
+        utterance.rate = this.grammarMode === 'makaton' ? 0.9 : 1.0;
         utterance.pitch = 1.0;
         window.speechSynthesis.speak(utterance);
       } catch (err) {
@@ -954,27 +1099,45 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     // Linguistic Grammar Analysis (BSL Level 6 / Makaton / Fingerspelling)
     const analysis: BslGrammarAnalysis = analyzeAndTransformBslGrammar(cleanText, this.grammarMode);
+    const isMakaton = this.grammarMode === 'makaton';
 
     this.currentGloss = analysis.glossSequence || cleanText.toUpperCase();
     this.currentSentenceType = analysis.sentenceType.toUpperCase();
-    this.currentNmfText = `Eyebrows: ${analysis.nmfSummary.eyebrows} | Mouth: ${analysis.nmfSummary.mouthCue || 'natural'} | Head: ${analysis.nmfSummary.headTilt}`;
+    this.currentNmfText = isMakaton
+      ? `SVO Key Words • Lip-read: "${cleanText.slice(0, 18)}"`
+      : `Eyebrows: ${analysis.nmfSummary.eyebrows} | Mouth: ${analysis.nmfSummary.mouthCue || 'natural'} | Head: ${analysis.nmfSummary.headTilt}`;
 
     // Update HUD
-    const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
-    if (hudGloss) hudGloss.textContent = `GLOSS: ${this.currentGloss.slice(0, 24)}`;
+    const hudGloss = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-gloss');
+    if (hudGloss) {
+      hudGloss.style.background = isMakaton ? 'rgba(5,150,105,0.9)' : 'rgba(2,132,199,0.85)';
+      hudGloss.textContent = isMakaton
+        ? `KEY WORDS: ${this.currentGloss.slice(0, 22)}`
+        : `GLOSS: ${this.currentGloss.slice(0, 24)}`;
+    }
 
     const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
     if (hudNmf) hudNmf.textContent = this.currentNmfText;
 
-    // Check if classifier is active
-    const clToken = analysis.tokens.find((t) => t.role === 'classifier-predicate' || t.classifier);
-    if (clToken && clToken.classifier) {
-      this.activeClassifierText = `CL: ${clToken.classifier.type} (${clToken.aspect || 'normal'})`;
+    // Distinguish Makaton Stage telemetry vs BSL Level 6 Classifier telemetry
+    if (isMakaton) {
+      const signedStages = Array.from(
+        new Set(analysis.tokens.filter((t) => t.makatonStage !== undefined).map((t) => `S${t.makatonStage}`))
+      );
+      this.activeClassifierText = signedStages.length > 0 ? `STAGE ${signedStages.join(',')}` : 'SPEECH ONLY';
     } else {
-      this.activeClassifierText = 'CL: NONE';
+      const clToken = analysis.tokens.find((t) => t.role === 'classifier-predicate' || t.classifier);
+      if (clToken && clToken.classifier) {
+        this.activeClassifierText = `CL: ${clToken.classifier.type} (${clToken.aspect || 'normal'})`;
+      } else {
+        this.activeClassifierText = 'CL: NONE';
+      }
     }
-    const hudCl = this.queryAvatarElement('#bsl-hud-cl');
-    if (hudCl) hudCl.textContent = this.activeClassifierText;
+    const hudCl = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-cl');
+    if (hudCl) {
+      hudCl.style.color = isMakaton ? '#34d399' : '#a855f7';
+      hudCl.textContent = this.activeClassifierText;
+    }
 
     // Queue keyframe poses
     if (analysis.stream && analysis.stream.length > 0) {
@@ -982,6 +1145,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.isIdle = false;
       this.hasResetIdleHud = false;
       this.advanceToNextPose();
+    } else if (isMakaton) {
+      // In Makaton, sentences with zero core keywords remain in calm ready posture without fingerspelling clutter
+      this.updateMakatonSymbolCard(null);
+      this.returnToRest();
     }
   }
 
@@ -1002,21 +1169,30 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   private resetHudToStandby() {
+    const isMakaton = this.grammarMode === 'makaton';
     this.currentGloss = 'READY';
     this.currentSentenceType = 'STANDBY';
-    this.currentNmfText = 'NMF: Neutral';
-    this.activeClassifierText = 'CL: NONE';
-    const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
-    if (hudGloss) hudGloss.textContent = 'GLOSS: READY';
+    this.currentNmfText = isMakaton ? 'Speech + Sign + Symbol (SVO)' : 'NMF: Neutral';
+    this.activeClassifierText = isMakaton ? 'SEN SVO' : 'CL: NONE';
+    const hudGloss = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-gloss');
+    if (hudGloss) {
+      hudGloss.style.background = isMakaton ? 'rgba(5,150,105,0.9)' : 'rgba(2,132,199,0.85)';
+      hudGloss.textContent = isMakaton ? 'KEY WORD: READY' : 'GLOSS: READY';
+    }
     const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
-    if (hudNmf) hudNmf.textContent = 'NMF: Neutral';
-    const hudCl = this.queryAvatarElement('#bsl-hud-cl');
-    if (hudCl) hudCl.textContent = 'CL: NONE';
+    if (hudNmf) hudNmf.textContent = this.currentNmfText;
+    const hudCl = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-cl');
+    if (hudCl) {
+      hudCl.style.color = isMakaton ? '#34d399' : '#a855f7';
+      hudCl.textContent = this.activeClassifierText;
+    }
+    this.updateMakatonSymbolCard(null);
     this.hasResetIdleHud = true;
   }
 
   public returnToRest() {
     this.poseQueue = [];
+    this.updateMakatonSymbolCard(null);
     if (this.isIdle && this.targetPose.letter === 'REST') {
       if (this.currentAnimProgress >= 1.0) {
         this.resetHudToStandby();
@@ -1038,6 +1214,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     if (this.poseQueue.length === 0) {
       // Spring briskly from exact live 3D pose back to neutral chest rest pose
+      this.updateMakatonSymbolCard(null);
       this.targetPose = this.createRestPose();
       this.currentPoseDuration = 340;
       this.currentPoseStartTime = performance.now();
@@ -1049,16 +1226,31 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
 
     this.targetPose = this.poseQueue.shift()!;
-    this.currentPoseDuration = this.targetPose.hold ? Math.max(240, this.targetPose.hold + 160) : 380;
+    const isMakaton = this.grammarMode === 'makaton';
+    const isBoundary = this.targetPose.letter === ' ';
+
+    // Makaton uses a measured, deliberate SEN Key Word cadence (~540ms + 240ms visual apex hold)
+    // whereas BSL Level 6 executes crisp fluent natural signing (~360ms + 60ms hold)
+    if (isMakaton) {
+      this.currentPoseDuration = isBoundary ? 260 : (this.targetPose.hold ? Math.max(480, this.targetPose.hold + 280) : 540);
+      this.holdRemaining = isBoundary ? 140 : Math.max(240, (this.targetPose.hold || 120) + 120);
+    } else {
+      this.currentPoseDuration = isBoundary ? 190 : (this.targetPose.hold ? Math.max(240, this.targetPose.hold + 150) : 360);
+      this.holdRemaining = isBoundary ? 30 : (this.targetPose.hold || 60);
+    }
+
     this.currentPoseStartTime = performance.now();
     this.currentAnimProgress = 0;
-    this.holdRemaining = this.targetPose.hold || 60;
     this.isIdle = false;
     this.hasResetIdleHud = false;
 
+    this.updateMakatonSymbolCard(isBoundary ? null : this.targetPose);
+
     const hudGloss = this.queryAvatarElement('#bsl-hud-gloss');
-    if (hudGloss) {
-      hudGloss.textContent = `SIGN: ${this.targetPose.label || this.targetPose.letter}`;
+    if (hudGloss && !isBoundary) {
+      hudGloss.textContent = isMakaton
+        ? `KEY WORD: ${this.targetPose.label || this.targetPose.letter}`
+        : `SIGN: ${this.targetPose.label || this.targetPose.letter}`;
     }
   }
 
@@ -1234,6 +1426,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private renderLociLayer(cam: any, ox: number, oy: number) {
     const lociGroup = this.queryAvatarElement('#bsl-layer-loci');
     if (!lociGroup) return;
+    if (this.grammarMode === 'makaton') {
+      if (lociGroup.innerHTML) lociGroup.innerHTML = '';
+      return;
+    }
 
     // Draw subtle 3D spatial register coordinates
     const loci = [

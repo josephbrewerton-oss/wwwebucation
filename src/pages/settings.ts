@@ -1,5 +1,6 @@
 import { getBaseUrl } from '../utils/url';
 import { getLocalState, setLocalState } from '../services/localStateStore';
+import { getSignLanguage, setSignLanguage, SignLanguageCode } from '../services/bslGlobalStore';
 import settingsAST from './settings.ast.json';
 
 type TupleSetting = [
@@ -19,6 +20,9 @@ export function renderSettingsPage(): HTMLElement {
   container.style.cssText = 'max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
   function getValue(key: string, fallback: any): any {
+    if (key === 'stj_sign_language') {
+      return getSignLanguage();
+    }
     const raw = getLocalState(key);
     if (raw === null) return fallback;
     if (raw === 'true') return true;
@@ -27,6 +31,11 @@ export function renderSettingsPage(): HTMLElement {
   }
 
   function setValue(key: string, val: any, attr?: string) {
+    if (key === 'stj_sign_language') {
+      setSignLanguage(val as SignLanguageCode);
+      window.dispatchEvent(new CustomEvent('app-setting-changed', { detail: { key, value: val } }));
+      return;
+    }
     setLocalState(key, String(val));
     if (attr) document.documentElement.setAttribute(attr, String(val));
     window.dispatchEvent(new CustomEvent('app-setting-changed', { detail: { key, value: val } }));

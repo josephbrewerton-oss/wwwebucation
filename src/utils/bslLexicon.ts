@@ -8199,45 +8199,45 @@ export const MAKATON_CORE_STAGES: Record<number, MakatonStageInfo> = {
   },
   3: {
     stage: 3,
-    name: 'Food & Activities',
+    name: 'Food, Size & Activities',
     category: 'Daily Living',
-    description: 'Everyday nourishment, play, and engaging leisure activities.',
-    coreWords: ['BOOK', 'PLAY', 'WATER', 'FOOD', 'MUSIC', 'BALL'],
+    description: 'Everyday nourishment, play, size concepts, and engaging leisure activities.',
+    coreWords: ['BOOK', 'PLAY', 'WATER', 'FOOD', 'MUSIC', 'BALL', 'BIG', 'SMALL', 'WHERE'],
   },
   4: {
     stage: 4,
-    name: 'Actions & Daily Routines',
+    name: 'Actions, Questions & Daily Routines',
     category: 'Core Verbs & Directives',
-    description: 'Classroom instructions, movement, hygiene, and guidance.',
-    coreWords: ['LOOK', 'LISTEN', 'WAIT', 'STOP', 'START', 'GO', 'WASH', 'WALK', 'LIKE', 'STAND', 'SIT'],
+    description: 'Classroom instructions, core interrogatives, movement, hygiene, and guidance.',
+    coreWords: ['LOOK', 'LISTEN', 'WAIT', 'STOP', 'START', 'GO', 'WASH', 'WALK', 'LIKE', 'STAND', 'SIT', 'WHAT', 'WHO', 'FAST', 'SLOW'],
   },
   5: {
     stage: 5,
     name: 'School, Feelings & Community',
     category: 'Education & Social-Emotional',
-    description: 'School learning, educators, peers, and emotional states.',
-    coreWords: ['SCHOOL', 'TEACHER', 'PUPIL', 'FRIEND', 'HAPPY', 'SAD', 'GOOD', 'WRITE', 'READ', 'LEARN'],
+    description: 'School learning, educators, peers, classroom completion, and emotional states.',
+    coreWords: ['SCHOOL', 'TEACHER', 'PUPIL', 'FRIEND', 'HAPPY', 'SAD', 'GOOD', 'WRITE', 'READ', 'LEARN', 'FINISH', 'TODAY', 'TOMORROW', 'QUESTION', 'CORRECT', 'WRONG'],
   },
   6: {
     stage: 6,
     name: 'Time & Natural World',
     category: 'Environment',
-    description: 'Daily rhythms, weather, and the physical cosmos.',
-    coreWords: ['SUN', 'MOON', 'EARTH', 'DAY', 'NIGHT', 'RAIN', 'STAR', 'TIME'],
+    description: 'Daily rhythms, weather, time concepts, and the physical cosmos.',
+    coreWords: ['SUN', 'MOON', 'EARTH', 'DAY', 'NIGHT', 'RAIN', 'STAR', 'TIME', 'NOW', 'YESTERDAY', 'WHEN', 'HOW', 'MORNING', 'AFTERNOON', 'LIGHT'],
   },
   7: {
     stage: 7,
     name: 'Faith, Prayer & Community Life',
     category: 'Spiritual & Catholic Life',
     description: 'Sacred life, worship, and reverence in Catholic education.',
-    coreWords: ['JESUS', 'GOD', 'PRAY', 'CHURCH', 'BIBLE', 'CROSS', 'LOVE', 'PEACE', 'CHALICE', 'TABERNACLE', 'EUCHARIST', 'CONSECRATE', 'INCENSE', 'GENUFLECT'],
+    coreWords: ['JESUS', 'GOD', 'PRAY', 'CHURCH', 'BIBLE', 'CROSS', 'HOLY', 'LOVE', 'PEACE', 'CHALICE', 'TABERNACLE', 'EUCHARIST', 'CONSECRATE', 'INCENSE', 'GENUFLECT'],
   },
   8: {
     stage: 8,
     name: 'Expanding Concepts & STEM',
     category: 'STEM & Reasoning',
     description: 'Higher curriculum concepts, quantification, and spatial logic.',
-    coreWords: ['MATHS', 'NUMBER', 'EQUAL', 'SCIENCE', 'ENERGY', 'FORCE', 'GRAVITY', 'PLANET', 'ORBIT', 'PRESSURE', 'CURRENT', 'VOLTAGE', 'RESISTANCE', 'ATOM', 'VELOCITY', 'ACCELERATION', 'FRACTION', 'SLOPE', 'PENDULUM'],
+    coreWords: ['MATHS', 'NUMBER', 'EQUAL', 'ALL', 'SCIENCE', 'ENERGY', 'FORCE', 'GRAVITY', 'PLANET', 'ORBIT', 'PRESSURE', 'CURRENT', 'VOLTAGE', 'RESISTANCE', 'ATOM', 'VELOCITY', 'ACCELERATION', 'FRACTION', 'SLOPE', 'PENDULUM'],
   },
 };
 
@@ -8259,14 +8259,17 @@ export function getMakatonSigns(stage?: number): BslSign[] {
  */
 export function isMakatonWord(word: string): boolean {
   if (!word) return false;
-  const clean = word.trim().toUpperCase().replace(/[^A-Z-]/g, '');
+  const clean = word.trim().toUpperCase().replace(/[^A-Z\s-]/g, '');
   const sign = lookupBslSign(clean);
-  if (sign && sign.makatonStage !== undefined) return true;
-  return Object.values(MAKATON_CORE_STAGES).some(stg => stg.coreWords.includes(clean));
+  if (!sign) return false;
+  if (sign.makatonStage !== undefined) return true;
+  return Object.values(MAKATON_CORE_STAGES).some(stg => stg.coreWords.includes(sign.word) || stg.coreWords.includes(clean));
 }
 
 /**
- * Looks up a Makaton sign with stage metadata attached
+ * Looks up a Makaton Key Word sign strictly within Makaton Core Stages 1–8.
+ * Non-Makaton auxiliary verbs, pronouns, and BSL Level 6 discourse operators return null
+ * so Makaton genuinely signs only essential Key Words alongside speech.
  */
 export function lookupMakatonSign(word: string): { sign: BslSign; stage: number } | null {
   const sign = lookupBslSign(word);
@@ -8274,11 +8277,12 @@ export function lookupMakatonSign(word: string): { sign: BslSign; stage: number 
   if (sign.makatonStage !== undefined) {
     return { sign, stage: sign.makatonStage };
   }
+  const clean = word.trim().toUpperCase().replace(/[^A-Z\s-]/g, '');
   for (const [stgNum, stgInfo] of Object.entries(MAKATON_CORE_STAGES)) {
-    if (stgInfo.coreWords.includes(sign.word)) {
+    if (stgInfo.coreWords.includes(sign.word) || stgInfo.coreWords.includes(clean)) {
       return { sign, stage: Number(stgNum) };
     }
   }
-  return { sign, stage: 1 };
+  return null;
 }
 

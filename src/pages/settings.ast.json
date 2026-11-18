@@ -95,13 +95,17 @@
           null
         ],
         [
-          "toggle",
+          "select",
           "setting-bsl",
-          "BSL In-Vision Interpreter",
-          "app_bsl_enabled",
-          false,
-          { "activeLabel": "🖐️ BSL Signing: ON", "inactiveLabel": "🖐️ BSL Signing: OFF" },
-          "Our in-vision procedural vector interpreter signs synchronously with speech."
+          "In-Vision Sign Interpreter System",
+          "stj_sign_language",
+          "OFF",
+          [
+            ["OFF", "🚫 Sign Interpreter: OFF"],
+            ["BSL", "🇬🇧 British Sign Language — BSL Level 6 (OSV + Classifiers)"],
+            ["MAKATON", "🤝 Makaton — SEN Key Word Signing + Symbols (English SVO)"]
+          ],
+          "Choose authentic BSL Level 6 visual-spatial grammar or Makaton Key Word Signing with pictographic concept symbols."
         ]
       ]
     },

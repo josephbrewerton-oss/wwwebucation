@@ -833,6 +833,45 @@ assert(Math.abs(springStart) < 1e-9, `Spring easing starts cleanly at 0 (got ${s
 assert(Math.abs(springEnd - 1.0) < 1e-9, `Spring easing settles cleanly at 1.0 (got ${springEnd})`);
 assert(springPeak > 1.0 && springPeak < 1.15, `Spring easing exhibits natural elastic overshoot (${springPeak.toFixed(4)})`);
 
+// ---------------------------------------------------------
+// Test 18: Side-by-Side BSL Level 6 vs Makaton Differential Invariants
+// ---------------------------------------------------------
+console.log('\n18. Testing Side-by-Side BSL Level 6 vs Makaton Divergence:');
+const diffSentence1 = 'What will the pupil eat tomorrow?';
+const bslQ = analyzeAndTransformBslGrammar(diffSentence1, 'bsl-natural');
+const makQ = analyzeAndTransformBslGrammar(diffSentence1, 'makaton');
+
+const bslQOrder = bslQ.tokens.map((t) => t.cleanWord);
+const makQSigned = makQ.tokens.filter((t) => t.sign).map((t) => t.cleanWord);
+
+assert(bslQOrder[0] === 'TOMORROW', `BSL Level 6 moves Time marker 'TOMORROW' to front (got ${bslQOrder.join(' -> ')})`);
+assert(bslQOrder[bslQOrder.length - 1] === 'WHAT', `BSL Level 6 moves WH-interrogative 'WHAT' to end (got ${bslQOrder.join(' -> ')})`);
+assert(bslQ.nmfSummary.eyebrows === 'furrowed', 'BSL Level 6 WH-question uses grammatical furrowed eyebrows');
+
+assert(makQSigned[0] === 'WHAT' && makQSigned[makQSigned.length - 1] === 'TOMORROW',
+  `Makaton preserves spoken English SVO order: WHAT -> PUPIL -> EAT -> TOMORROW (got ${makQSigned.join(' -> ')})`);
+assert(makQ.nmfSummary.eyebrows === 'raised', 'Makaton maintains warm encouraging raised-eyebrow affect');
+
+const diffSentence2 = 'The pupil wants to eat because he understands';
+const bslDiscourse = analyzeAndTransformBslGrammar(diffSentence2, 'bsl-natural');
+const makDiscourse = analyzeAndTransformBslGrammar(diffSentence2, 'makaton');
+
+assert(bslDiscourse.tokens.some((t) => t.role === 'rhq' && t.cleanWord === 'WHY-RHQ'),
+  "BSL Level 6 transforms 'because' into [RHQ] WHY-RHQ");
+assert(lookupMakatonSign('WHY-RHQ') === null && lookupMakatonSign('WANT') === null && lookupMakatonSign('UNDERSTAND') === null,
+  'lookupMakatonSign strictly rejects non-Makaton BSL discourse operators and secondary verbs');
+const makDiscourseSigned = makDiscourse.tokens.filter((t) => t.sign).map((t) => t.cleanWord);
+assert(makDiscourseSigned.length === 2 && makDiscourseSigned[0] === 'PUPIL' && makDiscourseSigned[1] === 'EAT',
+  `Makaton filters sentence strictly down to Core Key Words [PUPIL, EAT] (got ${makDiscourseSigned.join(', ')})`);
+
+const diffSentence3 = 'Hello Joseph';
+const bslName = analyzeAndTransformBslGrammar(diffSentence3, 'bsl-natural');
+const makName = analyzeAndTransformBslGrammar(diffSentence3, 'makaton');
+assert(bslName.tokens.some((t) => t.cleanWord === 'JOSEPH' && t.isFingerspelled),
+  'BSL Level 6 fingerspells unlisted proper noun JOSEPH');
+assert(makName.tokens.every((t) => !t.isFingerspelled) && makName.stream.length < bslName.stream.length,
+  'Makaton signs HELLO and omits manual fingerspelling of JOSEPH');
+
 console.log(`\n==================================================`);
 console.log(`Results: ${passedTests} passed, ${failedTests} failed.`);
 console.log(`==================================================\n`);

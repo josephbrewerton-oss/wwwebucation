@@ -1,6 +1,18 @@
 import { classroomBeacon } from '../services/classroomBeacon';
 import { playSuccessChime, triggerHapticSuccess, isSoundEnabled, setSoundEnabled } from '../services/soundHaptics';
-import { toggleBsl, setBslEnabled, subscribeBsl, getBslEnabled, broadcastBslSpeech, setVoiceEnabled, subscribeVoice } from '../services/bslGlobalStore';
+import {
+  toggleBsl,
+  setBslEnabled,
+  subscribeBsl,
+  getBslEnabled,
+  getSignLanguage,
+  setSignLanguage,
+  subscribeSignLanguage,
+  SignLanguageCode,
+  broadcastBslSpeech,
+  setVoiceEnabled,
+  subscribeVoice,
+} from '../services/bslGlobalStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
 import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
@@ -21,10 +33,12 @@ export class PersistentAppShellElement extends HTMLElement {
   private colorMode: 'light' | 'dark' = 'light';
   private dataSaver = false;
   private bsl = false;
+  private signLang: SignLanguageCode = 'OFF';
   private playerIsPlaying = false;
   private sound = true;
   private isOfflineSynced = false;
   private unsubscribeBsl?: () => void;
+  private unsubscribeSignLang?: () => void;
   private unsubscribeDataSaver?: () => void;
   private unsubscribeLang?: () => void;
   private unsubscribePlayerCalls?: () => void;
@@ -156,6 +170,7 @@ export class PersistentAppShellElement extends HTMLElement {
     this.colorMode = (getLocalState('theme') as 'light' | 'dark') || 'light';
     this.dataSaver = isDataSaverActive();
     this.bsl = getBslEnabled();
+    this.signLang = getSignLanguage();
     this.sound = isSoundEnabled();
     this.isOfflineSynced = isOfflineSyncComplete();
     document.documentElement.setAttribute('data-theme', this.colorMode);
@@ -224,10 +239,15 @@ export class PersistentAppShellElement extends HTMLElement {
                 ${this.sound ? '🔊 Sound: ON' : '🔇 Mute'}
               </button>
 
-              <!-- BSL Quick Toggle -->
-              <button type="button" id="top-bar-bsl-btn" aria-pressed="${this.bsl ? 'true' : 'false'}" style="background:${this.bsl ? '#0369a1' : '#1e293b'}; border:1px solid ${this.bsl ? '#38bdf8' : '#334155'}; color:#ffffff; border-radius:6px; font-size:0.75rem; min-height:36px; padding:4px 10px; font-weight:800; cursor:pointer; min-width:88px; text-align:center; flex-shrink:0; display:inline-flex; align-items:center; justify-content:center;" title="British Sign Language (Shift+B)" aria-label="Toggle British Sign Language Interpreter">
-                🖐️ BSL: ${this.bsl ? 'ON' : 'OFF'}
-              </button>
+              <!-- BSL / Makaton Quick Toggle & Mode Switcher -->
+              <div style="display:inline-flex; align-items:center; gap:4px; flex-shrink:0;">
+                <button type="button" id="top-bar-bsl-btn" aria-pressed="${this.bsl ? 'true' : 'false'}" style="background:${this.bsl ? (this.signLang === 'MAKATON' ? '#047857' : '#0369a1') : '#1e293b'}; border:1px solid ${this.bsl ? (this.signLang === 'MAKATON' ? '#34d399' : '#38bdf8') : '#334155'}; color:#ffffff; border-radius:6px; font-size:0.75rem; min-height:36px; padding:4px 10px; font-weight:800; cursor:pointer; min-width:88px; text-align:center; display:inline-flex; align-items:center; justify-content:center;" title="Toggle In-Vision Sign Interpreter (Shift+B)" aria-label="Toggle In-Vision Sign Interpreter">
+                  ${this.bsl ? (this.signLang === 'MAKATON' ? '🤝 Makaton: ON' : '🖐️ BSL: ON') : '🖐️ BSL: OFF'}
+                </button>
+                <button type="button" id="top-bar-sign-mode-btn" style="display:${this.bsl ? 'inline-flex' : 'none'}; align-items:center; justify-content:center; background:#1e293b; border:1px solid ${this.signLang === 'MAKATON' ? '#34d399' : '#38bdf8'}; color:${this.signLang === 'MAKATON' ? '#34d399' : '#38bdf8'}; border-radius:6px; font-size:0.7rem; min-height:36px; padding:4px 8px; font-weight:800; cursor:pointer;" title="Switch between BSL Level 6 (OSV) and Makaton Key Word Signing (SVO + Symbols)" aria-label="Switch between BSL and Makaton">
+                  ${this.signLang === 'MAKATON' ? '⇄ Switch to BSL' : '⇄ Makaton'}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -512,10 +532,15 @@ export class PersistentAppShellElement extends HTMLElement {
       setLocalState('app_high_contrast', String(next));
     });
 
-    // BSL top button
+    // BSL / Makaton top buttons
     const btnBsl = this.querySelector<HTMLButtonElement>('#top-bar-bsl-btn');
+    const btnSignMode = this.querySelector<HTMLButtonElement>('#top-bar-sign-mode-btn');
     btnBsl?.addEventListener('click', () => {
       toggleBsl();
+    });
+    btnSignMode?.addEventListener('click', () => {
+      const next = getSignLanguage() === 'MAKATON' ? 'BSL' : 'MAKATON';
+      setSignLanguage(next);
     });
 
     // Data saver button
@@ -627,17 +652,28 @@ export class PersistentAppShellElement extends HTMLElement {
     // Global Keyboard Shortcuts
     window.addEventListener('keydown', this.handleKeyDown);
 
-    // BSL on-demand lazy subscriber + immediate boot hydration when persisted ON
+    // BSL / Makaton on-demand lazy subscriber + immediate boot hydration when persisted ON
     const bslSlot = this.querySelector('#bsl-overlay-slot')!;
-    const syncBslOverlay = async (enabled: boolean) => {
+    const updateTopSignButtons = (enabled: boolean, code: SignLanguageCode) => {
       this.bsl = enabled;
+      this.signLang = code;
+      const isMakaton = code === 'MAKATON';
       if (btnBsl) {
-        btnBsl.textContent = `🖐️ BSL: ${enabled ? 'ON' : 'OFF'}`;
-        btnBsl.style.background = enabled ? '#0369a1' : '#1e293b';
-        btnBsl.style.borderColor = enabled ? '#38bdf8' : '#334155';
+        btnBsl.textContent = enabled ? (isMakaton ? '🤝 Makaton: ON' : '🖐️ BSL: ON') : '🖐️ BSL: OFF';
+        btnBsl.style.background = enabled ? (isMakaton ? '#047857' : '#0369a1') : '#1e293b';
+        btnBsl.style.borderColor = enabled ? (isMakaton ? '#34d399' : '#38bdf8') : '#334155';
         btnBsl.style.color = '#ffffff';
         btnBsl.setAttribute('aria-pressed', String(enabled));
       }
+      if (btnSignMode) {
+        btnSignMode.style.display = enabled ? 'inline-flex' : 'none';
+        btnSignMode.textContent = isMakaton ? '⇄ Switch to BSL' : '⇄ Makaton';
+        btnSignMode.style.borderColor = isMakaton ? '#34d399' : '#38bdf8';
+        btnSignMode.style.color = isMakaton ? '#34d399' : '#38bdf8';
+      }
+    };
+    const syncBslOverlay = async (enabled: boolean) => {
+      updateTopSignButtons(enabled, getSignLanguage());
       if (enabled) {
         if (!bslSlot.querySelector('native-bsl-interpreter')) {
           try {
@@ -658,6 +694,9 @@ export class PersistentAppShellElement extends HTMLElement {
     this.syncBslOverlay = syncBslOverlay;
     this.unsubscribeBsl = subscribeBsl((enabled) => {
       void syncBslOverlay(enabled);
+    });
+    this.unsubscribeSignLang = subscribeSignLanguage((code) => {
+      updateTopSignButtons(code !== 'OFF', code);
     });
     if (this.bsl) {
       void syncBslOverlay(true);
@@ -712,6 +751,7 @@ export class PersistentAppShellElement extends HTMLElement {
   disconnectedCallback() {
     // 1. Reactive store unsubscribes
     this.unsubscribeBsl?.();
+    this.unsubscribeSignLang?.();
     this.unsubscribeDataSaver?.();
     this.unsubscribeLang?.();
     this.unsubscribePlayerCalls?.();

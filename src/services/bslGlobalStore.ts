@@ -81,6 +81,7 @@ export const SUPPORTED_SIGN_LANGUAGES: Record<SignLanguageCode, SignLanguageInfo
 
 const STORAGE_KEY_BSL_ENABLED = 'stj_bsl_enabled';
 const STORAGE_KEY_SIGN_LANG = 'stj_sign_language';
+const STORAGE_KEY_PREFERRED_SIGN_LANG = 'stj_preferred_sign_language';
 const STORAGE_KEY_LANGUAGE_TUPLE = 'stj_language_tuple';
 const STORAGE_KEY_VOICE_ENABLED = 'stj_voice_enabled';
 
@@ -128,6 +129,9 @@ export function setSignLanguage(code: SignLanguageCode): void {
   try {
     setLocalState(STORAGE_KEY_SIGN_LANG, code);
     setLocalState(STORAGE_KEY_BSL_ENABLED, code !== 'OFF' ? 'true' : 'false');
+    if (code !== 'OFF') {
+      setLocalState(STORAGE_KEY_PREFERRED_SIGN_LANG, code);
+    }
 
     // Update tuple
     const tuple = getLanguageTuple();
@@ -215,13 +219,37 @@ export function subscribeSignLanguage(callback: (code: SignLanguageCode) => void
   };
 }
 
+export function getPreferredSignLanguage(): SignLanguageCode {
+  if (typeof window === 'undefined') return 'BSL';
+  try {
+    const cur = getSignLanguage();
+    if (cur !== 'OFF') return cur;
+    const savedPref = getLocalState(STORAGE_KEY_PREFERRED_SIGN_LANG);
+    if (savedPref && savedPref !== 'OFF' && (savedPref in SUPPORTED_SIGN_LANGUAGES)) {
+      return savedPref as SignLanguageCode;
+    }
+  } catch (_) {}
+  return 'BSL';
+}
+
 // Backward compatibility methods for existing BSL callers:
 export function getBslEnabled(): boolean {
   return getSignLanguage() !== 'OFF';
 }
 
 export function setBslEnabled(enabled: boolean): void {
-  setSignLanguage(enabled ? 'BSL' : 'OFF');
+  if (!enabled) {
+    const cur = getSignLanguage();
+    if (cur !== 'OFF') {
+      try {
+        setLocalState(STORAGE_KEY_PREFERRED_SIGN_LANG, cur);
+      } catch (_) {}
+    }
+    setSignLanguage('OFF');
+    return;
+  }
+  const activeOrPreferred = getPreferredSignLanguage();
+  setSignLanguage(activeOrPreferred);
 }
 
 export function toggleBsl(): boolean {

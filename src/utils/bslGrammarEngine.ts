@@ -1418,14 +1418,20 @@ export function analyzeAndTransformBslGrammar(
             makatonStage: stage,
           });
           const total = sign.keyframes.length;
+          const phraseLabel = `${raw} ${rawWords[wIdx + 1]}`.toLowerCase();
           sign.keyframes.forEach((kf, idx) => {
             const pose = signKeyframeToHandPose(sign, kf, idx, total);
             stream.push({
               ...pose,
-              label: `Makaton Stage ${stage} • ${sign.englishLabel}`,
+              letter: sign.word,
+              label: `Makaton S${stage} • ${sign.englishLabel || phraseLabel}`,
+              classifier: undefined,
+              aspect: undefined,
+              buoy: undefined,
+              ease: 'smooth',
               nmf: {
                 eyebrows: 'raised',
-                mouth: raw,
+                mouth: phraseLabel,
                 headTilt: 'nod',
               },
             });
@@ -1437,16 +1443,20 @@ export function analyzeAndTransformBslGrammar(
               label: 'Makaton Keyword Pause',
               rule: 'Gentle pause between core concepts',
               isVowel: false,
-              targetTip: DOMINANT_REST_POSE,
-              targetKnuckle: DOMINANT_REST_KNUCKLE,
-              targetWrist: DOMINANT_REST_WRIST,
+              targetTip: { ...DOMINANT_REST_POSE },
+              targetKnuckle: { ...DOMINANT_REST_KNUCKLE },
+              targetWrist: { ...DOMINANT_REST_WRIST },
+              baseHandMode: 'rest',
+              shape: 'flat-closed',
+              palm: 'in',
+              ease: 'spring',
             });
           }
           continue;
         }
       }
 
-      // 2. Single keyword lookup in Makaton & BSL Core Lexicon
+      // 2. Single keyword lookup strictly in Makaton Core Stages 1–8
       const lemma = normalizeToBslLemma(clean);
       const makatonMatch = lookupMakatonSign(lemma) || lookupMakatonSign(clean);
 
@@ -1465,16 +1475,21 @@ export function analyzeAndTransformBslGrammar(
           const pose = signKeyframeToHandPose(sign, kf, idx, total);
           stream.push({
             ...pose,
-            label: `Makaton Stage ${stage} • ${sign.englishLabel}`,
+            letter: sign.word,
+            label: `Makaton S${stage} • ${sign.englishLabel || raw.toLowerCase()}`,
+            classifier: undefined,
+            aspect: undefined,
+            buoy: undefined,
+            ease: 'smooth',
             nmf: {
               eyebrows: 'raised',
-              mouth: raw,
+              mouth: raw.toLowerCase(),
               headTilt: 'nod',
             },
           });
         });
       } else {
-        // In Makaton, untranslated words are spoken naturally without fingerspelling overload
+        // In Makaton, untranslated or secondary words are spoken naturally without fingerspelling overload
         tokens.push({
           originalWord: raw,
           cleanWord: clean,
@@ -1491,9 +1506,13 @@ export function analyzeAndTransformBslGrammar(
             label: 'Makaton Keyword Pause',
             rule: 'Gentle pause between core concepts',
             isVowel: false,
-            targetTip: DOMINANT_REST_POSE,
-            targetKnuckle: DOMINANT_REST_KNUCKLE,
-            targetWrist: DOMINANT_REST_WRIST,
+            targetTip: { ...DOMINANT_REST_POSE },
+            targetKnuckle: { ...DOMINANT_REST_KNUCKLE },
+            targetWrist: { ...DOMINANT_REST_WRIST },
+            baseHandMode: 'rest',
+            shape: 'flat-closed',
+            palm: 'in',
+            ease: 'spring',
           });
         }
       }
