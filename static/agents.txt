@@ -73,7 +73,7 @@ LLMS-Full: /llms-full.txt
 Curriculum-Manifest: /player/scenes.manifest.json
 Cartridge-Checksums: /cartridge-checksums.json
 Cartridge-Directory: /cartridges/
-Bytecode-Directory: /player/bytecode/
+Bytecode-Directory: /bytecode/
 Interactive-Architecture-Manifesto: /docs/lumina-architecture.ast (/player?preset=lumina-architecture)
 JSON-Schema: /player/schema/ast-scene.schema.json
 BSL-Lexicon-AST: /lexicons/bsl-signs.ast
@@ -130,8 +130,8 @@ Allow-Agent: true
 Allow-Read: /
 Allow-Read: /media-player
 Allow-Read: /cartridges/
+Allow-Read: /bytecode/
 Allow-Read: /player/
-Allow-Read: /player/bytecode/
 Allow-Read: /learning-zone
 Allow-Read: /practice-lab
 Allow-Read: /phonics

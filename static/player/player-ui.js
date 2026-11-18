@@ -2472,7 +2472,25 @@
       if (el.badgeNativeSeal) {
         el.badgeNativeSeal.addEventListener('click', () => {
           const currentPreset = this.engine && (this.engine.activePresetId || this.engine.preset);
-          this.showToast(`🛡️ Verified: Native to St Joseph's Curriculum Authority [${currentPreset || 'Simulation'}]`, 4000);
+          const info = this.engine && this.engine.lastIntegrity;
+          if (info && info.status === 'verified-native') {
+            this.showToast(
+              `🛡️ Official Signed [${info.cartridgeId}] • Seal ${info.shortHash} • ${info.authority}`,
+              4800
+            );
+          } else if (info && info.status === 'tampered') {
+            this.showToast(
+              `✎ Modified Remix [${info.cartridgeId}] • Live SHA-256 ${info.shortHash} (differs from official seal)`,
+              4800
+            );
+          } else if (info) {
+            this.showToast(
+              `◈ Community / Custom Cartridge [${info.cartridgeId}] • SHA-256 ${info.shortHash}`,
+              4500
+            );
+          } else {
+            this.showToast(`🛡️ Verifying SHA-256 seal for [${currentPreset || 'Simulation'}]...`, 3200);
+          }
         });
       }
 
@@ -4431,6 +4449,34 @@ window.addEventListener('message', (e) => {
         }
         this.updateView();
       });
+
+      this.engine.on('integrityverified', (info) => {
+        this.updateIntegrityBadge(info);
+      });
+
+      if (this.engine.lastIntegrity) {
+        this.updateIntegrityBadge(this.engine.lastIntegrity);
+      }
+    }
+
+    updateIntegrityBadge(info) {
+      const badge = this.elements && this.elements.badgeNativeSeal;
+      if (!badge || !info) return;
+      badge.classList.remove('verified', 'modified', 'community');
+      const shortCode = info.shortHash ? String(info.shortHash).slice(0, 6) : '';
+      if (info.status === 'verified-native') {
+        badge.classList.add('verified');
+        badge.textContent = shortCode ? `🛡️ ${shortCode}` : '🛡️ Official';
+        badge.title = info.badgeTooltip || `Official Signed Cartridge • Seal: ${info.shortHash}`;
+      } else if (info.status === 'tampered') {
+        badge.classList.add('modified');
+        badge.textContent = shortCode ? `✎ ${shortCode}` : '✎ Modified';
+        badge.title = info.badgeTooltip || `Modified / Remixed Cartridge • Live SHA-256: ${info.shortHash}`;
+      } else {
+        badge.classList.add('community');
+        badge.textContent = '◈ Custom';
+        badge.title = info.badgeTooltip || `Community / Unregistered Cartridge • SHA-256: ${info.shortHash}`;
+      }
     }
 
     // --- Step-by-Step Didactic Mode & Clicker Navigation Methods ---

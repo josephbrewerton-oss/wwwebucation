@@ -35,7 +35,7 @@ import {
 
 const ROOT_DIR = process.cwd();
 const CARTRIDGES_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
-const BYTECODE_DIR = path.join(ROOT_DIR, 'static', 'player', 'bytecode');
+const BYTECODE_DIR = path.join(ROOT_DIR, 'static', 'bytecode');
 
 let passedCount = 0;
 let failedCount = 0;
@@ -164,11 +164,13 @@ async function runTests() {
   assert(avgTime < 1.0, `Average decompilation time (${avgTime.toFixed(3)} ms) is strictly < 1.0 ms`);
   assert(totalTime < 100, 'Total compilation + decompilation suite runtime is strictly < 100 ms');
 
-  // Test 5: Bytecode Files in static/player/bytecode/
-  console.log('\n5. Testing Compiled Target Artifacts in static/player/bytecode/:');
-  assert(fs.existsSync(BYTECODE_DIR), 'static/player/bytecode/ directory exists');
-  const compiledFiles = fs.readdirSync(BYTECODE_DIR).filter(f => f.endsWith('.astb'));
+  // Test 5: Bytecode Files in static/bytecode/
+  console.log('\n5. Testing Compiled Target Artifacts in static/bytecode/:');
+  assert(fs.existsSync(BYTECODE_DIR), 'static/bytecode/ directory exists');
+  const allBytecodeDirFiles = fs.readdirSync(BYTECODE_DIR);
+  const compiledFiles = allBytecodeDirFiles.filter(f => f.endsWith('.astb'));
   assert(compiledFiles.length >= files.length, `Target contains all compiled .astb files (found ${compiledFiles.length})`);
+  assert(allBytecodeDirFiles.every(f => f.endsWith('.astb')), 'static/bytecode/ contains strictly .astb binaries (zero duplicate .svg files)');
 
   // Test 6: Manipulation Goals (0x41), Scope (0x90), Ledger (0x91) & New Bio/Chem Cartridges
   console.log('\n6. Testing Manipulation Goal, Scope & Ledger Bytecode Opcodes (0x41, 0x90, 0x91):');

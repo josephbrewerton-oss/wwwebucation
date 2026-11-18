@@ -69,18 +69,22 @@ async function runSimulation() {
 
     const fileBase = scene.base || id;
 
-    // 1. Check Canonical Authoring Files (static/cartridges/)
+    // 1. Check Canonical Source Pair Store (static/cartridges/)
     const authoringAst = path.join(ROOT_DIR, 'static', scene.astFile || `cartridges/${fileBase}.ast`);
     const authoringSvg = path.join(ROOT_DIR, 'static', scene.svgFile || `cartridges/${fileBase}.svg`);
     assert(fs.existsSync(authoringAst), `Missing authoring AST for ${id}: ${authoringAst}`);
     assert(fs.existsSync(authoringSvg), `Missing authoring SVG for ${id}: ${authoringSvg}`);
     stats.diskAstVerified++;
 
-    // 2. Check Runtime Bytecode Files (static/player/bytecode/)
-    const runtimeAstb = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${fileBase}.astb`);
-    const runtimeSvg = path.join(ROOT_DIR, 'static', 'player', 'bytecode', `${fileBase}.svg`);
+    // Validate canonical SVG in static/cartridges/
+    const svgContent = fs.readFileSync(authoringSvg, 'utf8');
+    assert(svgContent.includes('<svg'), `Invalid SVG markup for ${id}`);
+    stats.diskSvgVerified++;
+
+    // 2. Check Canonical Bytecode Store (static/bytecode/ — .astb binaries ONLY)
+    const runtimeAstb = path.join(ROOT_DIR, 'static', scene.astbFile || `bytecode/${fileBase}.astb`);
     assert(fs.existsSync(runtimeAstb), `Missing runtime ASTB for ${id}: ${runtimeAstb}`);
-    assert(fs.existsSync(runtimeSvg), `Missing runtime SVG for ${id}: ${runtimeSvg}`);
+    assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'bytecode', `${fileBase}.svg`)), `Duplicate SVG should not exist in static/bytecode/ for ${id}`);
 
     // Validate magic header in disk file
     const astbBuf = fs.readFileSync(runtimeAstb);
@@ -93,28 +97,24 @@ async function runSimulation() {
       `Magic header mismatch in ${id}.astb`
     );
     stats.diskAstbVerified++;
-
-    // Validate companion SVG
-    const svgContent = fs.readFileSync(runtimeSvg, 'utf8');
-    assert(svgContent.includes('<svg'), `Invalid SVG markup for ${id}`);
-    stats.diskSvgVerified++;
   }
-  console.log(`  ✅ All ${stats.totalCartridges} cartridges verified on disk:`);
-  console.log(`     - 45/45 static/cartridges/*.ast (Authoring S-Expressions)`);
-  console.log(`     - 45/45 static/cartridges/*.svg (Authoring Vector Stages)`);
-  console.log(`     - 45/45 static/player/bytecode/*.astb (Token-Efficient Binary Payloads)`);
-  console.log(`     - 45/45 static/player/bytecode/*.svg (Zero-Hop Player Companion SVGs)`);
+  assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'scenes')), 'Legacy static/scenes mirror must not exist');
+  assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'player', 'cartridges')), 'Legacy static/player/cartridges mirror must not exist');
+  assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'player', 'scenes')), 'Legacy static/player/scenes mirror must not exist');
+  assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'player', 'bytecode')), 'Legacy static/player/bytecode mirror must not exist');
+  console.log(`  ✅ All ${stats.totalCartridges} cartridges verified across strictly TWO canonical stores:`);
+  console.log(`     - ${stats.diskAstVerified}/${stats.totalCartridges} static/cartridges/*.ast + *.svg (Source Pairs)`);
+  console.log(`     - ${stats.diskAstbVerified}/${stats.totalCartridges} static/bytecode/*.astb (Pure Compiled Bytecode)`);
 
   console.log('\n--- PHASE 2: Player Engine Runtime Path Resolution (HTTP Simulation) ---');
-  // Emulate player iframe running at /player/index.html
+  // Emulate player resolving canonical /bytecode/*.astb and /cartridges/*.svg
   for (const scene of scenes) {
     const id = scene.id;
     const fileBase = scene.base || id;
 
     // Emulate candidate URLs prioritized by ast-engine.js
-    const playerRelativeAstbUrl = `${DEV_SERVER_BASE}/player/bytecode/${fileBase}.astb`;
-    const playerRelativeSvgUrl = `${DEV_SERVER_BASE}/player/bytecode/${fileBase}.svg`;
-    const portalCartridgeSvgUrl = `${DEV_SERVER_BASE}/cartridges/${fileBase}.svg`;
+    const playerRelativeAstbUrl = `${DEV_SERVER_BASE}/bytecode/${fileBase}.astb`;
+    const playerRelativeSvgUrl = `${DEV_SERVER_BASE}/cartridges/${fileBase}.svg`;
 
     // 1. Fetch .astb bytecode
     const t0 = performance.now();
@@ -156,11 +156,11 @@ async function runSimulation() {
     let astFetched = false;
     const fetchAssetMock = async (ext: string, id: string) => {
       if (ext === 'astb') {
-        const res = await fetch(`${DEV_SERVER_BASE}/player/bytecode/${id}.astb`);
+        const res = await fetch(`${DEV_SERVER_BASE}/bytecode/${id}.astb`);
         return await res.arrayBuffer();
       }
       if (ext === 'svg') {
-        const res = await fetch(`${DEV_SERVER_BASE}/player/bytecode/${id}.svg`);
+        const res = await fetch(`${DEV_SERVER_BASE}/cartridges/${id}.svg`);
         return await res.text();
       }
       if (ext === 'ast') {

@@ -29,6 +29,7 @@ import { CARTRIDGE_CHECKSUMS } from '../src/data/player/cartridgeChecksums';
 
 const ROOT_DIR = process.cwd();
 const CARTRIDGES_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
+const BYTECODE_DIR = path.join(ROOT_DIR, 'static', 'bytecode');
 
 async function runIntegrityTests() {
   console.log('🧪 Running St Joseph\'s Cartridge Checksum & Integrity Invariant Tests...\n');
@@ -72,17 +73,29 @@ async function runIntegrityTests() {
     const expectedSeal = await computeAuthoritySeal(id, record!.astSha256, record!.svgSha256);
     assert.strictEqual(result.seal, expectedSeal, `Cryptographic authority seal mismatch for "${id}"`);
 
+    // Verify compiled .astb + .svg runtime pair integrity as well
+    const svgPath = path.join(CARTRIDGES_DIR, `${id}.svg`);
+    const astbPath = path.join(BYTECODE_DIR, `${id}.astb`);
+    if (fs.existsSync(astbPath) && fs.existsSync(svgPath)) {
+      const astbBuf = fs.readFileSync(astbPath);
+      const svgBuf = fs.readFileSync(svgPath);
+      const runtimeRes = await verifyCartridgeIntegrity(id, { astb: astbBuf, svg: svgBuf });
+      assert.strictEqual(runtimeRes.status, 'verified-native', `Runtime .astb+.svg for "${id}" must verify as native`);
+      assert.strictEqual(runtimeRes.computedAstbSha256, record!.astbSha256, `Computed .astb hash must match registry for "${id}"`);
+      testCount += 2;
+    }
+
     testCount += 7;
   }
-  console.log(`   ✅ All ${astFiles.length} disk cartridges cryptographically validated with 0 errors.\n`);
+  console.log(`   ✅ All ${astFiles.length} disk cartridges (.ast, .svg, and .astb) cryptographically validated with 0 errors.\n`);
 
-  // 3. Tamper Detection Invariants
-  console.log('3. Testing Tamper Detection Engine...');
+  // 3. Tamper Detection Invariants (.ast and .astb)
+  console.log('3. Testing Tamper Detection Engine (.ast and .astb)...');
   const testCartridgeId = 'calculus-curves';
   const realAstPath = path.join(CARTRIDGES_DIR, `${testCartridgeId}.ast`);
   const originalAst = fs.readFileSync(realAstPath, 'utf8');
 
-  // Tamper by 1 byte (add a whitespace)
+  // Tamper .ast by 1 byte (add a whitespace)
   const tamperedAst = originalAst + ' ';
   const tamperedResult = await verifyCartridgeIntegrity(testCartridgeId, tamperedAst);
 
@@ -91,8 +104,15 @@ async function runIntegrityTests() {
   assert.strictEqual(tamperedResult.isNative, true, 'Tampered AST is still recognized as an official cartridge ID');
   assert.strictEqual(tamperedResult.badgeText, 'Cartridge Modified', 'Tampered badge text must warn "Cartridge Modified"');
   assert.notStrictEqual(tamperedResult.computedAstSha256, tamperedResult.expectedAstSha256, 'Hashes must differ');
-  testCount += 5;
-  console.log('   ✅ 1-byte tamper successfully intercepted and flagged with warning.\n');
+
+  // Tamper compiled .astb by 1 bit
+  const realAstbBuf = new Uint8Array(fs.readFileSync(path.join(BYTECODE_DIR, `${testCartridgeId}.astb`)));
+  realAstbBuf[realAstbBuf.length - 1] ^= 0xff;
+  const tamperedAstbResult = await verifyCartridgeIntegrity(testCartridgeId, { astb: realAstbBuf });
+  assert.strictEqual(tamperedAstbResult.status, 'tampered', '1-byte tampered .astb must return status "tampered"');
+  assert.strictEqual(tamperedAstbResult.isVerified, false, 'Tampered .astb must not be verified');
+  testCount += 7;
+  console.log('   ✅ 1-byte tamper on both .ast and .astb successfully intercepted and flagged with warning.\n');
 
   // 4. External / Community Cartridge Invariants
   console.log('4. Testing Third-Party / Community Cartridge Handling...');

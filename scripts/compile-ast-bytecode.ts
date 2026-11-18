@@ -12,11 +12,11 @@ import { compileAstTextToBytecode, decompileBytecodeToScene, isAstBytecode } fro
 
 const ROOT_DIR = process.cwd();
 
-// Canonical single source of truth for authoring
+// Canonical single source of truth for authoring (.svg + .ast pairs)
 const SOURCE_DIR = path.join(ROOT_DIR, 'static', 'cartridges');
 
-// Canonical single target for compiled bytecode and companion runtime assets
-const TARGET_DIR = path.join(ROOT_DIR, 'static', 'player', 'bytecode');
+// Canonical single target for compiled .astb bytecode binaries ONLY
+const TARGET_DIR = path.join(ROOT_DIR, 'static', 'bytecode');
 
 function run() {
   console.log('[AST Bytecode Compiler] Compiling canonical cartridges to binary .astb payloads...');
@@ -28,6 +28,13 @@ function run() {
 
   if (!fs.existsSync(TARGET_DIR)) {
     fs.mkdirSync(TARGET_DIR, { recursive: true });
+  } else {
+    // Ensure bytecode store stays pure (.astb binaries only, zero duplicate .svg files)
+    for (const existing of fs.readdirSync(TARGET_DIR)) {
+      if (!existing.endsWith('.astb')) {
+        fs.rmSync(path.join(TARGET_DIR, existing), { force: true });
+      }
+    }
   }
 
   const files = fs.readdirSync(SOURCE_DIR);
@@ -61,15 +68,8 @@ function run() {
         throw new Error(`Decompilation sanity check failed for ${id}`);
       }
 
-      // 1. Write compiled bytecode to static/player/bytecode/
+      // Write compiled bytecode to static/bytecode/ (companion .svg stays solely in static/cartridges/)
       fs.writeFileSync(targetAstbPath, binBuffer);
-
-      // 2. Copy matching SVG companion to static/player/bytecode/ if present
-      const svgSrcPath = path.join(SOURCE_DIR, `${id}.svg`);
-      const targetSvgPath = path.join(TARGET_DIR, `${id}.svg`);
-      if (fs.existsSync(svgSrcPath)) {
-        fs.copyFileSync(svgSrcPath, targetSvgPath);
-      }
 
       const binSize = binBuffer.byteLength;
       totalBytecodeBytes += binSize;

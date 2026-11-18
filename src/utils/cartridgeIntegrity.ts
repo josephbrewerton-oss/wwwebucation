@@ -31,8 +31,10 @@ export interface CartridgeIntegrityResult {
   isVerified: boolean;
   computedAstSha256?: string;
   computedSvgSha256?: string;
+  computedAstbSha256?: string;
   expectedAstSha256?: string;
   expectedSvgSha256?: string;
+  expectedAstbSha256?: string;
   shortHash: string;
   authority: string;
   seal?: string;
@@ -130,7 +132,7 @@ export function getTotalCertifiedCartridges(): number {
  */
 export async function verifyCartridgeIntegrity(
   cartridgeId: string,
-  content?: string | { ast?: string | ArrayBuffer; svg?: string | ArrayBuffer; astb?: ArrayBuffer }
+  content?: string | { ast?: string | ArrayBuffer | Uint8Array; svg?: string | ArrayBuffer | Uint8Array; astb?: ArrayBuffer | Uint8Array }
 ): Promise<CartridgeIntegrityResult> {
   const canonicalId = cartridgeId.trim().toLowerCase();
   const record = getOfficialCartridgeRecord(canonicalId);
@@ -139,7 +141,7 @@ export async function verifyCartridgeIntegrity(
   if (!record) {
     let computedHash = '';
     if (content) {
-      const targetData = typeof content === 'string' ? content : content.ast || content.svg || '';
+      const targetData = typeof content === 'string' ? content : content.astb || content.ast || content.svg || '';
       computedHash = await computeSha256(targetData);
     }
     return {
@@ -158,11 +160,14 @@ export async function verifyCartridgeIntegrity(
   }
 
   // 2. If content is provided: calculate real SHA-256 and verify against expected digest
+  let computedAst: string | undefined = undefined;
+  let computedSvg: string | undefined = undefined;
+  let computedAstb: string | undefined = undefined;
+
   if (content) {
     let astMatch = true;
     let svgMatch = true;
-    let computedAst: string | undefined = undefined;
-    let computedSvg: string | undefined = undefined;
+    let astbMatch = true;
 
     if (typeof content === 'string') {
       computedAst = await computeSha256(content);
@@ -176,9 +181,14 @@ export async function verifyCartridgeIntegrity(
         computedSvg = await computeSha256(content.svg);
         svgMatch = computedSvg.toLowerCase() === record.svgSha256.toLowerCase();
       }
+      if (content.astb !== undefined && record.astbSha256) {
+        computedAstb = await computeSha256(content.astb);
+        astbMatch = computedAstb.toLowerCase() === record.astbSha256.toLowerCase();
+      }
     }
 
-    if (!astMatch || !svgMatch) {
+    if (!astMatch || !svgMatch || !astbMatch) {
+      const activeHash = computedAstb || computedAst || computedSvg || record.astSha256;
       return {
         cartridgeId: canonicalId,
         status: 'tampered',
@@ -186,9 +196,11 @@ export async function verifyCartridgeIntegrity(
         isVerified: false,
         computedAstSha256: computedAst,
         computedSvgSha256: computedSvg,
+        computedAstbSha256: computedAstb,
         expectedAstSha256: record.astSha256,
         expectedSvgSha256: record.svgSha256,
-        shortHash: computedAst ? formatShortHash(computedAst) : formatShortHash(record.astSha256),
+        expectedAstbSha256: record.astbSha256,
+        shortHash: formatShortHash(activeHash),
         authority: CURRICULUM_AUTHORITY_NAME,
         seal: record.seal,
         tier: 'modified',
@@ -205,11 +217,13 @@ export async function verifyCartridgeIntegrity(
     status: 'verified-native',
     isNative: true,
     isVerified: true,
-    computedAstSha256: record.astSha256,
-    computedSvgSha256: record.svgSha256,
+    computedAstSha256: computedAst || record.astSha256,
+    computedSvgSha256: computedSvg || record.svgSha256,
+    computedAstbSha256: computedAstb || record.astbSha256,
     expectedAstSha256: record.astSha256,
     expectedSvgSha256: record.svgSha256,
-    shortHash: formatShortHash(record.astSha256),
+    expectedAstbSha256: record.astbSha256,
+    shortHash: formatShortHash(record.seal || record.astSha256),
     authority: CURRICULUM_AUTHORITY_NAME,
     seal: record.seal,
     tier: 'native',

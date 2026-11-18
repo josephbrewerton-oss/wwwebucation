@@ -41,6 +41,13 @@ import {
 import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { appendLabCsvToJotter } from '../services/jotter-db';
 import { type PlayerDisplayMode } from '../types/playerConfig';
+import {
+  getRegisteredRecord,
+  formatShortHash,
+  getMasterRegistryChecksum,
+  getTotalCertifiedCartridges,
+  CURRICULUM_AUTHORITY_NAME,
+} from '../utils/cartridgeIntegrity';
 
 const DEFAULT_PRESET_ID =
   PRESET_OPTIONS.find((p) => p.kind === 'lab' && p.isPlayableScene !== false)?.id || 'welcome';
@@ -303,6 +310,14 @@ export function renderPlayerPage(): HTMLElement {
   const safeType = escapeHtml(meta.type || 'Sim');
   const safeLabel = escapeHtml(meta.label || '');
   const safePlayerSrc = escapeHtml(buildPlayerSrc(base, activePreset, bslActive, initialExternalSrc));
+  const initialRecord = getRegisteredRecord(activePreset);
+  const initialSealCode = initialRecord?.seal ? initialRecord.seal.slice(0, 6) : '';
+  const initialSealLabel = initialRecord
+    ? `🛡️ Official • ${initialSealCode}`
+    : '◈ Custom / External';
+  const initialSealTitle = initialRecord
+    ? `Official Signed Cartridge (${initialRecord.title}) • Authority: ${CURRICULUM_AUTHORITY_NAME} • Seal: ${formatShortHash(initialRecord.seal)} — Click to view SHA-256 digests`
+    : 'Custom, imported, or documentation cartridge — Click to inspect SHA-256 provenance';
 
   container.innerHTML = `
     <!-- Top Breadcrumbs -->
@@ -330,13 +345,20 @@ export function renderPlayerPage(): HTMLElement {
         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
           <span style="font-size:1.3rem; flex-shrink:0;">🎮</span>
           <div style="min-width:0;">
-            <div style="display:flex; align-items:center; gap:6px;">
+            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em; white-space:nowrap;">
                 ${safeStage}
               </span>
               <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace; white-space:nowrap;">
                 ${safeType}
               </span>
+              <button
+                type="button"
+                id="player-integrity-badge"
+                title="${escapeHtml(initialSealTitle)}"
+                style="font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:4px; background:${initialRecord ? 'rgba(16,185,129,0.16)' : 'rgba(148,163,184,0.16)'}; color:${initialRecord ? '#34d399' : '#cbd5e1'}; border:1px solid ${initialRecord ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.4)'}; font-family:monospace; white-space:nowrap; cursor:pointer; line-height:1.3;">
+                ${escapeHtml(initialSealLabel)}
+              </button>
               <span style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;" class="hidden sm:inline">&bull; Interactive Classroom Stage</span>
             </div>
             <h2 id="player-active-title" style="font-size:1.1rem; font-weight:800; color:#f8fafc; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
@@ -365,6 +387,12 @@ export function renderPlayerPage(): HTMLElement {
             ⛶ Fullscreen
           </button>
         </div>
+      </div>
+
+      <!-- Collapsible Cryptographic Cartridge Provenance & SHA-256 Readout -->
+      <div id="player-integrity-readout" style="display:none; padding:8px 18px; background:#07101f; border-bottom:1px solid #1e293b; font-size:0.73rem; color:#cbd5e1; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+        <div id="player-integrity-readout-body" style="display:flex; align-items:center; flex-wrap:wrap; gap:12px;"></div>
+        <button type="button" id="player-integrity-readout-close" style="background:transparent; border:1px solid #334155; color:#94a3b8; border-radius:4px; padding:1px 7px; font-size:0.7rem; cursor:pointer;">Close &times;</button>
       </div>
 
       <!-- Stage Toolbar: Row 2 (Activity Selector, Pupil Study Tools & Collapsible Teacher Tools) -->
@@ -559,6 +587,10 @@ export function renderPlayerPage(): HTMLElement {
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
   const stageBadgeEl = container.querySelector<HTMLElement>('#player-active-stage-badge')!;
   const typeBadgeEl = container.querySelector<HTMLElement>('#player-active-type-badge')!;
+  const integrityBadgeEl = container.querySelector<HTMLButtonElement>('#player-integrity-badge');
+  const integrityReadoutEl = container.querySelector<HTMLDivElement>('#player-integrity-readout');
+  const integrityReadoutBodyEl = container.querySelector<HTMLDivElement>('#player-integrity-readout-body');
+  const integrityReadoutCloseBtn = container.querySelector<HTMLButtonElement>('#player-integrity-readout-close');
   const playBtn = container.querySelector<HTMLButtonElement>('#player-btn-play');
   const playIcon = container.querySelector<HTMLElement>('#player-play-icon');
   const playText = container.querySelector<HTMLElement>('#player-play-text');
@@ -974,6 +1006,92 @@ export function renderPlayerPage(): HTMLElement {
     isIframeReady = true;
   });
 
+  let lastLiveIntegrity: Record<string, any> | null = null;
+
+  function renderIntegrityReadoutContent(presetId: string, liveInfo?: Record<string, any> | null) {
+    if (!integrityReadoutBodyEl) return;
+    const rec = getRegisteredRecord(presetId);
+    const status = liveInfo?.status || (rec ? 'verified-native' : 'unverified-external');
+    const astbHash = liveInfo?.computedAstbSha256 || rec?.astbSha256 || '';
+    const astHash = liveInfo?.computedAstSha256 || rec?.astSha256 || '';
+    const svgHash = liveInfo?.computedSvgSha256 || rec?.svgSha256 || '';
+    const sealHash = liveInfo?.seal || rec?.seal || '';
+
+    if (status === 'verified-native') {
+      integrityReadoutBodyEl.innerHTML = `
+        <span style="color:#34d399; font-weight:800;">🛡️ VERIFIED OFFICIAL CARTRIDGE</span>
+        <span>Authority: <strong style="color:#f8fafc;">${escapeHtml(liveInfo?.authority || CURRICULUM_AUTHORITY_NAME)}</strong></span>
+        ${sealHash ? `<span>Seal: <code style="color:#38bdf8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
+        ${astbHash ? `<span>.astb: <code style="color:#a7f3d0;">${escapeHtml(formatShortHash(astbHash))}</code></span>` : ''}
+        ${astHash ? `<span>.ast: <code style="color:#cbd5e1;">${escapeHtml(formatShortHash(astHash))}</code></span>` : ''}
+        ${svgHash ? `<span>.svg: <code style="color:#cbd5e1;">${escapeHtml(formatShortHash(svgHash))}</code></span>` : ''}
+      `;
+    } else if (status === 'tampered') {
+      integrityReadoutBodyEl.innerHTML = `
+        <span style="color:#fbbf24; font-weight:800;">✎ MODIFIED / REMIXED CARTRIDGE</span>
+        <span>Live SHA-256: <code style="color:#fde68a;">${escapeHtml(liveInfo?.shortHash || 'modified')}</code></span>
+        ${sealHash ? `<span>Original Seal: <code style="color:#94a3b8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
+        <span style="color:#94a3b8;">Content differs from signed curriculum pair</span>
+      `;
+    } else {
+      integrityReadoutBodyEl.innerHTML = `
+        <span style="color:#cbd5e1; font-weight:800;">◈ CUSTOM / EXTERNAL CARTRIDGE</span>
+        <span>ID: <code style="color:#38bdf8;">${escapeHtml(presetId)}</code></span>
+        ${liveInfo?.shortHash ? `<span>SHA-256: <code style="color:#cbd5e1;">${escapeHtml(String(liveInfo.shortHash))}</code></span>` : ''}
+        <span style="color:#94a3b8;">Not in official St Joseph's signed registry (${getTotalCertifiedCartridges()} certified)</span>
+      `;
+    }
+  }
+
+  function updateHostIntegrityBadge(presetId: string, liveInfo?: Record<string, any> | null) {
+    if (!integrityBadgeEl) return;
+    const cleanId = normalizePresetId(presetId);
+    const customOverride = getCustomCartridges().some((c) => c.id === cleanId);
+    const rec = getRegisteredRecord(cleanId);
+    lastLiveIntegrity = liveInfo || null;
+
+    const effectiveStatus = liveInfo?.status
+      || (rec && customOverride ? 'tampered' : rec ? 'verified-native' : 'unverified-external');
+
+    if (effectiveStatus === 'verified-native') {
+      const code = (liveInfo?.shortHash || rec?.seal || '').slice(0, 6);
+      integrityBadgeEl.textContent = code ? `🛡️ Official • ${code}` : '🛡️ Official';
+      integrityBadgeEl.style.background = 'rgba(16,185,129,0.16)';
+      integrityBadgeEl.style.color = '#34d399';
+      integrityBadgeEl.style.borderColor = 'rgba(16,185,129,0.45)';
+      integrityBadgeEl.title = liveInfo?.badgeTooltip
+        || `Verified Official Cartridge (${rec?.title || cleanId}) • Authority Seal: ${formatShortHash(rec?.seal || '')} — Click to inspect SHA-256 digests`;
+    } else if (effectiveStatus === 'tampered') {
+      const code = (liveInfo?.shortHash || rec?.seal || '').slice(0, 6);
+      integrityBadgeEl.textContent = code ? `✎ Modified • ${code}` : '✎ Modified';
+      integrityBadgeEl.style.background = 'rgba(245,158,11,0.18)';
+      integrityBadgeEl.style.color = '#fbbf24';
+      integrityBadgeEl.style.borderColor = 'rgba(245,158,11,0.5)';
+      integrityBadgeEl.title = liveInfo?.badgeTooltip
+        || `Modified / Remixed Cartridge (${cleanId}) — Live SHA-256 differs from official authority seal. Click to inspect.`;
+    } else {
+      integrityBadgeEl.textContent = '◈ Custom / Vault';
+      integrityBadgeEl.style.background = 'rgba(148,163,184,0.16)';
+      integrityBadgeEl.style.color = '#cbd5e1';
+      integrityBadgeEl.style.borderColor = 'rgba(148,163,184,0.4)';
+      integrityBadgeEl.title = liveInfo?.badgeTooltip
+        || `Custom or external cartridge (${cleanId}) — Click to inspect SHA-256 provenance`;
+    }
+
+    renderIntegrityReadoutContent(cleanId, liveInfo || (customOverride && rec ? { status: 'tampered', seal: rec.seal } : null));
+  }
+
+  integrityBadgeEl?.addEventListener('click', () => {
+    if (!integrityReadoutEl) return;
+    const isHidden = integrityReadoutEl.style.display === 'none';
+    renderIntegrityReadoutContent(activePreset, lastLiveIntegrity);
+    integrityReadoutEl.style.display = isHidden ? 'flex' : 'none';
+  });
+
+  integrityReadoutCloseBtn?.addEventListener('click', () => {
+    if (integrityReadoutEl) integrityReadoutEl.style.display = 'none';
+  });
+
   function updatePreset(presetId: string, skipPostMessage = false) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
@@ -983,6 +1101,7 @@ export function renderPlayerPage(): HTMLElement {
     if (titleEl) titleEl.textContent = item.label;
     if (stageBadgeEl) stageBadgeEl.textContent = item.stage;
     if (typeBadgeEl) typeBadgeEl.textContent = item.type || 'Sim';
+    updateHostIntegrityBadge(safePresetId, null);
     if (select) {
       if (isNonMediaOrUtility(item)) refreshDropdown();
       else select.value = safePresetId;
@@ -1239,7 +1358,8 @@ export function renderPlayerPage(): HTMLElement {
     }
     if (resultsSummaryEl) {
       const scopeLabel = includeNonMediaExtras ? 'activities (including recall data & docs)' : 'visual labs & lessons';
-      resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel}`;
+      const masterShort = getMasterRegistryChecksum().slice(0, 8);
+      resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel} · 🛡️ ${getTotalCertifiedCartridges()} Official Signed (Master SHA-256: ${masterShort}…)`;
     }
 
     if (filtered.length === 0) {
@@ -1247,19 +1367,31 @@ export function renderPlayerPage(): HTMLElement {
       return;
     }
 
+    const customIds = new Set(getCustomCartridges().map((c) => c.id));
+
     gridContainer.innerHTML = filtered.map((p) => {
       const isSelected = p.id === activePreset;
       const subjLabel = p.subject || 'Curriculum';
       const kindSuffix = p.kind === 'data' ? ' · Recall Data Pack' : p.kind === 'benchmark' ? ' · Benchmark' : p.kind === 'doc' ? ' · Architecture Doc' : '';
       const formatLabel = p.has3D ? `${p.type || 'Sim'} (3D)` : (p.type || 'Sim');
+      const officialRec = getRegisteredRecord(p.id);
+      const isModifiedCustom = Boolean(officialRec && customIds.has(p.id));
+      const sealBadgeHtml = isModifiedCustom
+        ? `<span title="Modified local remix of official cartridge (${escapeHtml(p.id)})" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">✎ Remix</span>`
+        : officialRec
+        ? `<span title="Verified Official Cartridge • Seal SHA-256: ${escapeHtml(officialRec.seal)}" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">🛡️ ${escapeHtml(officialRec.seal.slice(0, 6))}</span>`
+        : `<span title="Custom or Architecture Cartridge" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">◈ Custom</span>`;
       return `
         <div
           class="cartridge-card"
           data-id="${escapeHtml(p.id)}"
           style="padding:12px 14px; border-radius:10px; border:1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#ffffff'}; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
           <div>
-            <div style="font-size:0.72rem; color:#64748b; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${escapeHtml(formatLabel)} &middot; ${escapeHtml(subjLabel)} &middot; ${escapeHtml(p.stage)}${escapeHtml(kindSuffix)}
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:4px;">
+              <div style="font-size:0.72rem; color:#64748b; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                ${escapeHtml(formatLabel)} &middot; ${escapeHtml(subjLabel)} &middot; ${escapeHtml(p.stage)}${escapeHtml(kindSuffix)}
+              </div>
+              ${sealBadgeHtml}
             </div>
             <strong style="display:block; font-size:0.88rem; color:#0f172a; line-height:1.35;">${escapeHtml(p.label)}</strong>
           </div>
@@ -1496,6 +1628,12 @@ export function renderPlayerPage(): HTMLElement {
       refreshDropdown();
       renderGrid();
     }
+    if (e.data.type === 'CARTRIDGE_INTEGRITY' && e.data.integrity) {
+      const targetId = typeof e.data.preset === 'string' && e.data.preset ? e.data.preset : activePreset;
+      if (normalizePresetId(targetId) === normalizePresetId(activePreset)) {
+        updateHostIntegrityBadge(targetId, e.data.integrity);
+      }
+    }
     if ((e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') && typeof e.data.enabled === 'boolean') {
       setVoiceEnabled(e.data.enabled);
     }
@@ -1636,6 +1774,7 @@ export function renderPlayerPage(): HTMLElement {
         if (titleEl) titleEl.textContent = cleanCart.title;
         if (stageBadgeEl) stageBadgeEl.textContent = cleanCart.stage;
         if (typeBadgeEl) typeBadgeEl.textContent = cleanCart.type || 'Sim';
+        updateHostIntegrityBadge(cleanCart.id, null);
         refreshDropdown();
         renderGrid();
 

@@ -94,8 +94,7 @@ export function getControlledInputDirs(options = {}) {
   }
 
   const defaultCandidates = [
-    path.join(rootDir, 'static', 'cartridges'),
-    path.join(rootDir, 'static', 'player', 'cartridges')
+    path.join(rootDir, 'static', 'cartridges')
   ];
 
   return defaultCandidates.filter((d) => fs.existsSync(d));
@@ -550,32 +549,11 @@ export function generateScenesManifest(options = {}) {
   fs.writeFileSync(rootOakManifestPath, oakJsonStr, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote Oak manifest to ${playerOakManifestPath} and ${rootOakManifestPath}`);
 
-  // 3. Synchronize assets into static/player/cartridges/ (matches manifest svgFile/astFile paths)
-  const playerCartridgesDir = path.join(rootDir, 'static', 'player', 'cartridges');
-  if (!fs.existsSync(playerCartridgesDir)) fs.mkdirSync(playerCartridgesDir, { recursive: true });
-
+  // 3. Ensure any external inputDir cartridges are registered in canonical static/cartridges/
   const rootCartridgesDir = path.join(rootDir, 'static', 'cartridges');
   if (!fs.existsSync(rootCartridgesDir)) fs.mkdirSync(rootCartridgesDir, { recursive: true });
 
-  // Fallback scenes directory for backward compatibility
-  const playerScenesDir = path.join(rootDir, 'static', 'player', 'scenes');
-  if (!fs.existsSync(playerScenesDir)) fs.mkdirSync(playerScenesDir, { recursive: true });
-
-  for (const [id, item] of allCartridgeFiles.entries()) {
-    // A. Sync to static/player/cartridges/
-    const targetPlayerAst = path.join(playerCartridgesDir, `${item.base}.ast`);
-    const targetPlayerSvg = path.join(playerCartridgesDir, `${item.base}.svg`);
-    if (!fs.existsSync(targetPlayerAst) || fs.readFileSync(targetPlayerAst, 'utf8') !== item.content) {
-      fs.writeFileSync(targetPlayerAst, item.content, 'utf8');
-    }
-    if (fs.existsSync(item.svgPath)) {
-      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
-      if (!fs.existsSync(targetPlayerSvg) || fs.readFileSync(targetPlayerSvg, 'utf8') !== srcSvg) {
-        fs.writeFileSync(targetPlayerSvg, srcSvg, 'utf8');
-      }
-    }
-
-    // B. Sync to static/cartridges/ (if discovered from player/cartridges)
+  for (const [, item] of allCartridgeFiles.entries()) {
     const targetRootAst = path.join(rootCartridgesDir, `${item.base}.ast`);
     const targetRootSvg = path.join(rootCartridgesDir, `${item.base}.svg`);
     if (!fs.existsSync(targetRootAst) || fs.readFileSync(targetRootAst, 'utf8') !== item.content) {
@@ -587,36 +565,8 @@ export function generateScenesManifest(options = {}) {
         fs.writeFileSync(targetRootSvg, srcSvg, 'utf8');
       }
     }
-
-    // C. Backward-compatibility mirror in static/player/scenes/
-    const legacySceneAst = path.join(playerScenesDir, `${item.base}.ast`);
-    const legacySceneSvg = path.join(playerScenesDir, `${item.base}.svg`);
-    if (!fs.existsSync(legacySceneAst) || fs.readFileSync(legacySceneAst, 'utf8') !== item.content) {
-      fs.writeFileSync(legacySceneAst, item.content, 'utf8');
-    }
-    if (fs.existsSync(item.svgPath)) {
-      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
-      if (!fs.existsSync(legacySceneSvg) || fs.readFileSync(legacySceneSvg, 'utf8') !== srcSvg) {
-        fs.writeFileSync(legacySceneSvg, srcSvg, 'utf8');
-      }
-    }
-
-    // D. Root static/scenes/ mirror for direct asset resolution
-    const rootScenesDir = path.join(rootDir, 'static', 'scenes');
-    if (!fs.existsSync(rootScenesDir)) fs.mkdirSync(rootScenesDir, { recursive: true });
-    const rootSceneAst = path.join(rootScenesDir, `${item.base}.ast`);
-    const rootSceneSvg = path.join(rootScenesDir, `${item.base}.svg`);
-    if (!fs.existsSync(rootSceneAst) || fs.readFileSync(rootSceneAst, 'utf8') !== item.content) {
-      fs.writeFileSync(rootSceneAst, item.content, 'utf8');
-    }
-    if (fs.existsSync(item.svgPath)) {
-      const srcSvg = fs.readFileSync(item.svgPath, 'utf8');
-      if (!fs.existsSync(rootSceneSvg) || fs.readFileSync(rootSceneSvg, 'utf8') !== srcSvg) {
-        fs.writeFileSync(rootSceneSvg, srcSvg, 'utf8');
-      }
-    }
   }
-  console.log(`[Manifest Generator] Synchronized ${allCartridgeFiles.size} asset pairs to static/player/cartridges/ and static/scenes/`);
+  console.log(`[Manifest Generator] Verified ${allCartridgeFiles.size} canonical (.svg + .ast) pairs in static/cartridges/`);
 
   // 4. Output strongly typed presets for Native Web UI
   const tsDataDir = path.dirname(tsExportPath);

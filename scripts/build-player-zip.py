@@ -12,8 +12,12 @@ import zipfile
 import shutil
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-PLAYER_DIR = os.path.join(ROOT_DIR, 'static', 'player')
-STATIC_ZIP = os.path.join(ROOT_DIR, 'static', 'lumina-vector-player.zip')
+STATIC_DIR = os.path.join(ROOT_DIR, 'static')
+PLAYER_DIR = os.path.join(STATIC_DIR, 'player')
+CARTRIDGES_DIR = os.path.join(STATIC_DIR, 'cartridges')
+BYTECODE_DIR = os.path.join(STATIC_DIR, 'bytecode')
+CHECKSUMS_FILE = os.path.join(STATIC_DIR, 'cartridge-checksums.json')
+STATIC_ZIP = os.path.join(STATIC_DIR, 'lumina-vector-player.zip')
 PLAYER_ZIP = os.path.join(PLAYER_DIR, 'lumina-vector-player.zip')
 DIST_ZIP = os.path.join(ROOT_DIR, 'dist', 'lumina-vector-player.zip')
 DIST_PLAYER_ZIP = os.path.join(ROOT_DIR, 'dist', 'player', 'lumina-vector-player.zip')
@@ -25,16 +29,47 @@ def build_zip():
         os.remove(temp_zip)
 
     count = 0
+    seen_arcnames = set()
     with zipfile.ZipFile(temp_zip, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+        # 1. Core standalone player runtime (static/player/)
         for root, dirs, files in os.walk(PLAYER_DIR):
             for file in files:
-                # Do not re-pack existing zip bundles
                 if file.endswith('.zip') or file.endswith('.tmp'):
                     continue
                 full_path = os.path.join(root, file)
                 rel_path = os.path.relpath(full_path, PLAYER_DIR)
-                zf.write(full_path, arcname=rel_path)
-                count += 1
+                if rel_path not in seen_arcnames:
+                    zf.write(full_path, arcname=rel_path)
+                    seen_arcnames.add(rel_path)
+                    count += 1
+
+        # 2. Canonical source cartridge pairs (static/cartridges/ -> cartridges/)
+        if os.path.isdir(CARTRIDGES_DIR):
+            for file in sorted(os.listdir(CARTRIDGES_DIR)):
+                if file.endswith('.svg') or file.endswith('.ast'):
+                    full_path = os.path.join(CARTRIDGES_DIR, file)
+                    arc = os.path.join('cartridges', file)
+                    if arc not in seen_arcnames:
+                        zf.write(full_path, arcname=arc)
+                        seen_arcnames.add(arc)
+                        count += 1
+
+        # 3. Canonical compiled bytecode store (static/bytecode/ -> bytecode/)
+        if os.path.isdir(BYTECODE_DIR):
+            for file in sorted(os.listdir(BYTECODE_DIR)):
+                if file.endswith('.astb'):
+                    full_path = os.path.join(BYTECODE_DIR, file)
+                    arc = os.path.join('bytecode', file)
+                    if arc not in seen_arcnames:
+                        zf.write(full_path, arcname=arc)
+                        seen_arcnames.add(arc)
+                        count += 1
+
+        # 4. Canonical cryptographic checksum registry
+        if os.path.isfile(CHECKSUMS_FILE) and 'cartridge-checksums.json' not in seen_arcnames:
+            zf.write(CHECKSUMS_FILE, arcname='cartridge-checksums.json')
+            seen_arcnames.add('cartridge-checksums.json')
+            count += 1
 
     os.replace(temp_zip, STATIC_ZIP)
     shutil.copy2(STATIC_ZIP, PLAYER_ZIP)
