@@ -12,7 +12,7 @@ An ultra-lightweight, zero-dependency sandboxed vector animation and interactive
 7. **Zero-Asset Procedural Audio**: Mathematical Web Audio synthesis (clicks, chimes, confirmation beeps) with 0 KB audio assets.
 8. **Universal LMS & Web Embed**: Directly embeds into Canvas, Google Classroom, Moodle, digital signage CMSs, and ad servers.
 9. **Real-Time British Sign Language (BSL) Integration**: Syncs via `postMessage` (`SUBTITLE_UPDATE`, `SPEECH_BOUNDARY`, `TOGGLE_BSL`) with the discrete Procedural 3D BSL In-Vision Vector Interpreter (`<native-bsl-interpreter>`, zero video streams).
-10. **Headless, Pure VM & Autonomous (v2.6.0)**: Completely decoupled from the Vite `^8.3.6` host portal and zero-dependency at runtime (`@stjosephs/ast-vector-player`). `ast-engine.js` and `ast-gestures.js` contain zero hardcoded scene IDs or cartridge selectors—only schema-driven S-expression evaluators and generic keyboard/pointer press-and-hold loops.
+10. **Headless, Pure VM & Autonomous (v2.6.0)**: Completely decoupled from the Vite `^8.3.6` host portal and zero-dependency at runtime (`@stjosephs/ast-vector-player`). `ast-engine.js`, `site-gestures.js`, and `player-gestures.ast` contain zero hardcoded scene IDs or cartridge selectors—only schema-driven S-expression evaluators, per-cartridge `(:controls ...)` feature switches, extensible `registerAction()` / `registerGestureSkill()` hooks, and generic keyboard/pointer press-and-hold loops.
 
 ## Directory Structure
 ```
@@ -20,7 +20,8 @@ static/player/
 ├── index.html              # Clean HTML5 Sandboxed Player Shell (supports ?preset=, ?src=, ?file=, ?hud=1)
 ├── player.css              # Responsive, zero-CLS Dark/Light styling
 ├── ast-engine.js           # Pure VM runtime, S-expr parser, bytecode reader, speech & postMessage bridge
-├── ast-gestures.js         # Generic PointerCapture, trackball, draggable, clickable, holdable & key rAF VM
+├── site-gestures.js        # Refactored Declarative Gesture VM, Skill/Action Registry & Smartboard Ink Bridge
+├── player-gestures.ast     # Declarative defaults (:controls), universal keys, whiteboard palette & tones
 ├── ast-registry.js         # Streaming scene catalog loader & ASTSceneRegistry
 ├── ast-compiler.js         # SlideScript & compact declarative compiler
 ├── ast-phet-bridge.js      # PhET HTML5 / JSON distillation adapter

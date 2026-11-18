@@ -116,37 +116,68 @@ export function resolveCartridgeCurriculumMetadata(id, astContent, stage) {
   const declaredSection = extractSlot(astContent, /:section\s+"([^"]+)"/i);
 
   const normStage = (stage || '').toUpperCase();
+  const oakSubjCodeMatch = declaredOakId ? declaredOakId.match(/OAK-[A-Z0-9]+-([A-Z]+)-/i) : null;
+  const oakSubjCode = oakSubjCodeMatch ? oakSubjCodeMatch[1].toUpperCase() : '';
+
   let inferSubject = 'General Curriculum';
   let inferSection = 'Curriculum Cartridges';
   let inferPrefix = 'GEN';
 
-  if (/MATH|GEOMETRY|ALGEBRA|CALCULUS|ARITHMETIC/.test(normStage) || /math|pythagoras|algebra|calculus|fractions|bodmas|times|pendulum/.test(id)) {
-    inferSubject = 'Mathematics';
-    inferSection = 'Mathematics & Geometry';
-    inferPrefix = 'MAT';
-  } else if (/SCIENCE|PHYSICS|CHEMISTRY|BIOLOGY/.test(normStage) || /gas|circuit|atom|photo|dna|solar|velocity/.test(id)) {
-    inferSubject = 'Science';
-    inferSection = 'Natural Sciences & Physics';
-    inferPrefix = 'SCI';
-  } else if (/CATHOLIC|RE|FAITH|RELIGIOUS/.test(normStage) || /church|altar|holy|rosary|station|cross|triduum|easter|liturgy|sacrament|posture|calendar|rite|cst|virtue|latin|prayer|creed|commandment|mass|sacred|communion|eucharistic|film/.test(id)) {
+  if (
+    oakSubjCode === 'RE' ||
+    /\b(CATHOLIC|RE|FAITH|RELIGIOUS|LITURGY|SACRAMENT)\b/.test(normStage) ||
+    /\b(church|altar|holy-oils|holy-water|thurifer|rosary|stations-of-the-cross|triduum|easter|liturgy|liturgical|sacraments?|communion|catholic|creed|commandments|order-of-the-mass|latin-mass|sacred-objects|eucharistic|cst-virtues)\b/i.test(id)
+  ) {
     inferSubject = 'Religious Education';
     inferSection = 'Catholic Life & Faith Formation';
     inferPrefix = 'RE';
-  } else if (/ENGLISH|PHONICS|LITERATURE|SPELLING/.test(normStage) || /phonics|spelling|shakespeare/.test(id)) {
+  } else if (
+    oakSubjCode === 'MAT' ||
+    /\b(MATH|MATHS|MATHEMATICS|GEOMETRY|ALGEBRA|CALCULUS|ARITHMETIC)\b/.test(normStage) ||
+    /\b(math|pythagoras|algebra|calculus|fractions|bodmas|times-tables|domino-multiplication)\b/i.test(id)
+  ) {
+    inferSubject = 'Mathematics';
+    inferSection = 'Mathematics & Geometry';
+    inferPrefix = 'MAT';
+  } else if (
+    oakSubjCode === 'SCI' || oakSubjCode === 'BIO' || oakSubjCode === 'CHM' || oakSubjCode === 'PHY' ||
+    /\b(SCIENCE|SCIENCES|PHYSICS|CHEMISTRY|BIOLOGY|STEM)\b/.test(normStage) ||
+    /\b(kinetic-gas|electric-circuits|atom|photosynthesis|dna-helix|solar-system|velocity|pendulum|enzyme|reaction|titration|osmosis|acid-base|balancing-chemical|faraday|ohms-law|vector-racing)\b/i.test(id)
+  ) {
+    inferSubject = 'Science';
+    inferSection = 'Natural Sciences & Physics';
+    inferPrefix = 'SCI';
+  } else if (
+    oakSubjCode === 'ENG' ||
+    /\b(ENGLISH|PHONICS|LITERATURE|SPELLING|LITERACY)\b/.test(normStage) ||
+    /\b(phonics|spelling|shakespeare|alphabet-basics)\b/i.test(id)
+  ) {
     inferSubject = 'English';
     inferSection = 'English Literature & Phonics';
     inferPrefix = 'ENG';
-  } else if (/GEOGRAPHY/.test(normStage) || /water-cycle|mountain|elevation/.test(id)) {
+  } else if (
+    oakSubjCode === 'GEO' ||
+    /\bGEOGRAPHY\b/.test(normStage) ||
+    /\b(water-cycle|mountain-elevation)\b/i.test(id)
+  ) {
     inferSubject = 'Geography';
     inferSection = 'Geography & Earth Sciences';
     inferPrefix = 'GEO';
-  } else if (/LANGUAGES|MFL|INCLUSION|BSL/.test(normStage) || /language|bsl/.test(id)) {
+  } else if (
+    oakSubjCode === 'MFL' || oakSubjCode === 'LAN' || oakSubjCode === 'INC' ||
+    /\b(LANGUAGES|MFL|INCLUSION|BSL|SPANISH|FRENCH|LATIN)\b/.test(normStage) ||
+    /\b(languages|bsl|spanish)\b/i.test(id)
+  ) {
     inferSubject = 'Languages';
     inferSection = 'Languages & Inclusion';
     inferPrefix = 'LAN';
-  } else if (/COMPUTING|BENCHMARK|TECH/.test(normStage) || /fish-tank/.test(id)) {
+  } else if (
+    oakSubjCode === 'COM' || oakSubjCode === 'DT' ||
+    /\b(COMPUTING|BENCHMARK|STRESS|TECH|TECHNOLOGY|DESIGN)\b/.test(normStage) ||
+    /\b(fish-tank|bbc-model-b|lego-blocks|algorithms)\b/i.test(id)
+  ) {
     inferSubject = 'Computing';
-    inferSection = 'Computing & Technology';
+    inferSection = 'Computing & Design Technology';
     inferPrefix = 'COM';
   }
 
@@ -218,10 +249,22 @@ function parseAstHeader(astContent, filename, base) {
   const has3D = /:camera\s+|:type\s+"3d-/i.test(astContent);
   const nodes3DCount = (astContent.match(/:type\s+"3d-/gi) || []).length;
 
+  const strippedHeader = astContent.replace(/;[^\n]*/g, '').trim();
+  const isCartridgeData = /^\(:cartridge\b/i.test(strippedHeader) || /:type\s+:data\b/i.test(astContent);
+  const isPlayableScene = !isCartridgeData;
+  let kind = 'lab';
+  if (isCartridgeData) {
+    kind = 'data';
+  } else if (/BENCHMARK|STRESS/i.test(stage)) {
+    kind = 'benchmark';
+  } else if (/ARCHITECTURE|SYSTEM DOC/i.test(stage)) {
+    kind = 'doc';
+  }
+
   const tierMatch = extractSlot(astContent, /:tier\s+("Core"|"core"|"phet"|"user"|"[^"]+"|[^\s\)]+)/i);
   const coreExplicit = /:core\s+(true|t)\b/i.test(astContent);
-  const tier = tierMatch ? tierMatch.toLowerCase() : 'core';
-  const isCore = coreExplicit || tier === 'core';
+  const tier = isCartridgeData ? 'recall' : (tierMatch ? tierMatch.toLowerCase() : 'core');
+  const isCore = !isCartridgeData && (coreExplicit || tier === 'core');
 
   const curriculumMeta = resolveCartridgeCurriculumMetadata(id, astContent, stage);
 
@@ -233,6 +276,8 @@ function parseAstHeader(astContent, filename, base) {
     base: fallbackBase,
     type,
     rawType,
+    kind,
+    isPlayableScene,
     title: title || id,
     stage,
     duration,
@@ -363,6 +408,8 @@ export function generateScenesManifest(options = {}) {
         id: meta.id,
         base: base,
         type: meta.type,
+        kind: meta.kind || 'lab',
+        isPlayableScene: meta.isPlayableScene !== false,
         title: meta.title,
         stage: meta.stage,
         duration: meta.duration,
@@ -581,6 +628,9 @@ export function generateScenesManifest(options = {}) {
     id: m.id,
     base: m.base,
     type: m.type,
+    kind: m.kind || 'lab',
+    isPlayableScene: m.isPlayableScene !== false,
+    has3D: Boolean(m.has3D),
     label: `${m.title}`,
     stage: m.stage,
     oakId: m.oakId,
@@ -598,11 +648,15 @@ export function generateScenesManifest(options = {}) {
 // DO NOT EDIT MANUALLY - Derived directly from controlled cartridge input directories
 
 export type CartridgeType = 'Sim' | 'Slide' | 'App' | 'Film';
+export type CartridgeKind = 'lab' | 'data' | 'benchmark' | 'doc';
 
 export interface ScenePresetOption {
   id: string;
   base?: string;
   type: CartridgeType;
+  kind?: CartridgeKind;
+  isPlayableScene?: boolean;
+  has3D?: boolean;
   label: string;
   stage: string;
   oakId?: string;

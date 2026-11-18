@@ -37,7 +37,8 @@ const PRECACHE_ASSETS = [
   './player/ast-webrtc-bus.js',
   './player/obs-controller.js',
   './player/player-ui.js',
-  './player/ast-gestures.js'
+  './player/site-gestures.js',
+  './player/player-gestures.ast'
 ];
 
 self.addEventListener('install', (event) => {

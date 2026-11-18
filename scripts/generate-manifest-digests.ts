@@ -25,6 +25,8 @@ function scanAndDigest() {
     'player/player-ui.js',
     'player/ast-engine.js',
     'player/ast-compiler.js',
+    'player/site-gestures.js',
+    'player/player-gestures.ast',
     'player/ast-gestures.js',
     'player/player.css'
   ];

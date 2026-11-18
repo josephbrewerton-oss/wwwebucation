@@ -44,7 +44,7 @@ This document locks in the architectural boundaries and exact binary memory layo
 | **`ast-compiler.js`** | SlideScript Tokenizer & AST Line Parser | **`[WASM_CANDIDATE]`** | Fast zero-allocation byte scanning of markdown directives, shape extraction, and checkpoint parsing. |
 | | GBNF Grammar Validator (`ast-sexpr.gbnf`) | **`[WASM_CANDIDATE]`** | Deterministic finite state machine checking Lisp S-expression syntax compliance. |
 | | SVG Template XML String Generation | **`[DOM_PERMANENT]`** | String templating for initial SVG document creation. |
-| **`ast-gestures.js`** | Pointer Capture (`setPointerCapture`, `pointerdown/move/up`) | **`[DOM_PERMANENT]`** | Browser DOM PointerEvents. |
+| **`site-gestures.js`**<br>+ `player-gestures.ast` | Pointer Capture (`setPointerCapture`, `pointerdown/move/up`), `:controls` switches & Skill Registry | **`[DOM_PERMANENT]`** | Browser DOM PointerEvents & declarative `.ast` profile loading. |
 | | Inverse CTM coordinate projection (`grpCTM.inverse()`) | **`[INTERFACE_BOUNDARY]`** | SVG screen matrix inversion; feeds stage-space `(x, y)` into the WASM gesture state. |
 | | Whiteboard Stylus Ink Bézier Smoothing | **`[WASM_CANDIDATE]`** | Quadratic Bézier mid-point calculation and stroke width pressure interpolation. |
 | | Ink SVG Path Generation (`<path d="...">`) & HUD DOM | **`[DOM_PERMANENT]`** | Whiteboard layer SVG DOM nodes. |

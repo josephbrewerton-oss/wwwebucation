@@ -48,6 +48,8 @@ const EXTRA_DOC_PRESETS: ScenePresetOption[] = [
     id: 'lumina-architecture',
     label: 'Lumina: Sovereign Architectural Manifesto (4-Chapter Show & Tell)',
     type: 'Slide',
+    kind: 'doc',
+    isPlayableScene: true,
     stage: 'FOUNDATIONAL SYSTEM ARCHITECTURE',
     subject: 'System Architecture',
     section: 'System Architecture & Docs',
@@ -55,6 +57,12 @@ const EXTRA_DOC_PRESETS: ScenePresetOption[] = [
 ];
 const ALL_BUILTIN_PRESETS: ScenePresetOption[] = [...PRESET_OPTIONS, ...EXTRA_DOC_PRESETS];
 const VALID_PRESET_IDS = new Set(ALL_BUILTIN_PRESETS.map((p) => p.id));
+
+type SubjectFilterId = 'All' | 'Science' | 'Maths' | 'Catholic' | 'English' | 'Computing' | 'Languages' | 'Geography';
+type FormatFilterId = 'All' | 'Sim' | 'Slide' | 'App' | 'Film' | '3D';
+type StageFilterId = 'All' | 'KS1' | 'KS2' | 'KS3' | 'KS4';
+
+const RECENT_PRESETS_STORAGE_KEY = 'stj_player_recent_presets_v1';
 
 function escapeHtml(str: string): string {
   return str
@@ -117,7 +125,10 @@ export function renderPlayerPage(): HTMLElement {
   let activePreset = resolvedInitialPreset;
   let initialExternalSrc = params.get('preset') ? null : initialSrcParam;
   let pendingAutoEppBench = params.get('epp-bench') === '1' || params.get('epp-bench') === 'true';
-  let activeCategory = 'All';
+  let activeSubject: SubjectFilterId = 'All';
+  let activeFormat: FormatFilterId = 'All';
+  let activeStage: StageFilterId = 'All';
+  let includeNonMediaExtras = false;
   let searchQuery = '';
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
   let isMuted = !getVoiceEnabled();
@@ -126,42 +137,74 @@ export function renderPlayerPage(): HTMLElement {
   const presets: ScenePresetOption[] = ALL_BUILTIN_PRESETS.length > EXTRA_DOC_PRESETS.length
     ? ALL_BUILTIN_PRESETS
     : [
-        { id: 'kinetic-gas', label: 'Kinetic Gas Theory & Thermodynamics', type: 'Sim', stage: 'KS3/KS4 PHYSICS' },
-        { id: 'pythagoras', label: "Pythagoras' Theorem (a² + b² = c²)", type: 'Sim', stage: 'KS3/KS4 MATHEMATICS' },
-        { id: 'fractions', label: 'Fractions: Why Common Denominators Rule', type: 'Slide', stage: 'KEY STAGE 2' },
-        { id: 'electric-circuits', label: 'Electrical Circuits & Ohm’s Law', type: 'Sim', stage: 'KEY STAGE 3' },
-        { id: 'solar-system', label: 'Solar System: Heliocentric Planetary Motion', type: 'Sim', stage: 'KEY STAGE 2/3' },
-        { id: 'algebra-balance', label: 'Algebraic Balance Scale', type: 'Sim', stage: 'KEY STAGE 3' },
-        { id: 'church-tour', label: 'The Catholic Church Sanctuary & Altar', type: 'Slide', stage: 'WHOLE SCHOOL RE' },
-        { id: 'phonics-lab', label: 'EYFS Phonics Sound Mat & Digraphs', type: 'App', stage: 'EYFS / KS1' },
+        { id: 'kinetic-gas', label: 'Kinetic Gas Theory & Thermodynamics', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3/KS4 PHYSICS', subject: 'Science' },
+        { id: 'pythagoras', label: "Pythagoras' Theorem (a² + b² = c²)", type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3/KS4 MATHEMATICS', subject: 'Mathematics' },
+        { id: 'fractions', label: 'Fractions: Why Common Denominators Rule', type: 'Slide', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 2', subject: 'Mathematics' },
+        { id: 'electric-circuits', label: 'Electrical Circuits & Ohm’s Law', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 3', subject: 'Science' },
+        { id: 'solar-system', label: 'Solar System: Heliocentric Planetary Motion', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 2/3', subject: 'Science' },
+        { id: 'algebra-balance', label: 'Algebraic Balance Scale', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3', subject: 'Mathematics' },
+        { id: 'church-tour', label: 'The Catholic Church Sanctuary & Altar', type: 'Slide', kind: 'lab', isPlayableScene: true, stage: 'CATHOLIC LIFE', subject: 'Religious Education' },
+        { id: 'phonics-lab', label: 'EYFS Phonics Sound Mat & Digraphs', type: 'App', kind: 'lab', isPlayableScene: true, stage: 'EYFS / KS1', subject: 'English' },
         ...EXTRA_DOC_PRESETS,
       ];
 
-  function isDocPreset(p: ScenePresetOption): boolean {
-    return p.id === 'lumina-architecture' || p.subject === 'System Architecture';
+  function isNonMediaOrUtility(p: ScenePresetOption): boolean {
+    if (p.kind === 'data' || p.kind === 'benchmark' || p.kind === 'doc') return true;
+    if (p.isPlayableScene === false) return true;
+    if (p.id === 'lumina-architecture' || p.id === 'pipeline-sample' || p.id.startsWith('oak-data-')) return true;
+    return p.subject === 'System Architecture';
   }
 
   function isCatholicPreset(p: ScenePresetOption): boolean {
+    const subj = (p.subject || '').toLowerCase();
     return (
-      !isDocPreset(p) && (
-        p.stage === 'CATHOLIC LIFE' ||
-        p.subject === 'Religious Education' ||
-        (p.section && p.section.includes('Catholic')) ||
-        ['church-tour', 'altar-anatomy', 'holy-oils', 'holy-water-thurifer', 'latin-mass-prayers', 'catholic-rites', 'order-of-the-mass', 'stations-of-the-cross', 'first-communion', 'liturgical-calendar', 'liturgical-postures', 'liturgy-of-the-hours', 'triduum-easter'].includes(p.id)
-      )
+      subj.includes('religious') ||
+      subj === 'catholic life' ||
+      p.stage === 'CATHOLIC LIFE' ||
+      Boolean(p.section && p.section.includes('Catholic'))
     );
   }
 
-  function isStemPreset(p: ScenePresetOption): boolean {
-    return !isDocPreset(p) && !isCatholicPreset(p) && (p.subject === 'Science' || (p.stage && p.stage.includes('PHYSICS')) || ['kinetic-gas', 'electric-circuits', 'solar-system', 'photosynthesis', 'atom', 'velocity', 'dna-helix'].includes(p.id));
+  function getNormalizedSubject(p: ScenePresetOption): SubjectFilterId {
+    if (isCatholicPreset(p)) return 'Catholic';
+    const subj = (p.subject || '').toLowerCase();
+    if (subj.includes('science') || subj.includes('physics') || subj.includes('chem') || subj.includes('bio') || p.id === 'vector-racing') return 'Science';
+    if (subj.includes('math')) return 'Maths';
+    if (subj.includes('english') || subj.includes('phonics')) return 'English';
+    if (subj.includes('comput') || subj.includes('design')) return 'Computing';
+    if (subj.includes('language') || subj.includes('spanish') || subj.includes('french') || subj.includes('latin')) return 'Languages';
+    if (subj.includes('geograph')) return 'Geography';
+    return 'All';
   }
 
-  function isMathPreset(p: ScenePresetOption): boolean {
-    return !isDocPreset(p) && !isCatholicPreset(p) && (p.subject === 'Mathematics' || ['pythagoras', 'fractions', 'algebra-balance', 'calculus-curves', 'bodmas', 'times-tables'].includes(p.id));
+  function matchesKeyStage(p: ScenePresetOption, stageFilter: StageFilterId): boolean {
+    if (stageFilter === 'All') return true;
+    const raw = `${p.stage || ''} ${p.oakId || ''}`.toUpperCase();
+    if (stageFilter === 'KS1') return raw.includes('EYFS') || raw.includes('KS1') || raw.includes('KEY STAGE 1') || raw.includes('EARLY YEARS');
+    if (stageFilter === 'KS2') return raw.includes('KS2') || raw.includes('KEY STAGE 2') || raw.includes('WHOLE SCHOOL');
+    if (stageFilter === 'KS3') return raw.includes('KS3') || raw.includes('KEY STAGE 3');
+    if (stageFilter === 'KS4') return raw.includes('KS4') || raw.includes('GCSE') || raw.includes('A-LEVEL') || raw.includes('KEY STAGE 4');
+    return true;
   }
 
-  function isOtherPreset(p: ScenePresetOption): boolean {
-    return !isDocPreset(p) && !isCatholicPreset(p) && !isStemPreset(p) && !isMathPreset(p);
+  function getRecentPresetIds(): string[] {
+    try {
+      const raw = getLocalState(RECENT_PRESETS_STORAGE_KEY);
+      if (!raw) return [];
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter((id) => typeof id === 'string') : [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function recordRecentPreset(id: string) {
+    if (!id || id.startsWith('__')) return;
+    try {
+      const prev = getRecentPresetIds().filter((x) => x !== id);
+      const next = [id, ...prev].slice(0, 5);
+      setLocalState(RECENT_PRESETS_STORAGE_KEY, JSON.stringify(next));
+    } catch (_) {}
   }
 
   function getCustomCartridgesList(): CartridgeDefinition[] {
@@ -184,6 +227,8 @@ export function renderPlayerPage(): HTMLElement {
           label: custom.title,
           stage: custom.stage || 'LOCAL VAULT',
           type: (custom.type as any) || 'Sim',
+          kind: 'lab',
+          isPlayableScene: true,
           subject: custom.subject || 'Custom Ingestion',
         };
       }
@@ -191,12 +236,9 @@ export function renderPlayerPage(): HTMLElement {
     return presets[0];
   }
 
-  // Build options for select dropdown
-  const catholicGroup = presets.filter(isCatholicPreset);
-  const stemGroup = presets.filter(isStemPreset);
-  const mathGroup = presets.filter(isMathPreset);
-  const otherGroup = presets.filter(isOtherPreset);
-  const docGroup = presets.filter(isDocPreset);
+  // Playable visual curriculum labs (excludes non-media data packs & utility benchmarks by default)
+  const corePlayableLabs = presets.filter((p) => !isNonMediaOrUtility(p));
+  const hiddenExtrasCount = presets.length - corePlayableLabs.length;
 
   function buildOptionsHtml(selectedId: string): string {
     const customList = getCustomCartridgesList();
@@ -206,33 +248,61 @@ export function renderPlayerPage(): HTMLElement {
       </optgroup>
     ` : '';
 
+    const dropdownLabs = corePlayableLabs.filter((p) => !p.id.startsWith('phet-'));
+    const phetLabs = corePlayableLabs.filter((p) => p.id.startsWith('phet-'));
+
+    const scienceOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Science');
+    const mathOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Maths');
+    const catholicOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Catholic');
+    const englishOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'English');
+    const computingOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Computing');
+    const languageOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Languages');
+    const geoOtherOpts = dropdownLabs.filter((p) => {
+      const s = getNormalizedSubject(p);
+      return s === 'Geography' || s === 'All';
+    });
+
+    const renderOpts = (arr: ScenePresetOption[]) =>
+      arr.map((p) => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} · ${escapeHtml(p.type)} (${escapeHtml(p.stage)})</option>`).join('');
+
+    // Preserve deep-linked utility/data preset in dropdown if directly selected via URL
+    const selectedPreset = presets.find((p) => p.id === selectedId);
+    const activeExtraHtml = selectedPreset && isNonMediaOrUtility(selectedPreset)
+      ? `<optgroup label="📎 Active Reference / Benchmark" style="background:#0f172a; color:#cbd5e1;">
+          <option value="${escapeHtml(selectedPreset.id)}" selected>${escapeHtml(selectedPreset.label)} (${escapeHtml(selectedPreset.stage)})</option>
+        </optgroup>`
+      : '';
+
     return `
       ${customGroupHtml}
-      <optgroup label="✝️ Catholic Sanctuary &amp; Liturgy" style="background:#0f172a; color:#fde047;">
-        ${catholicGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      ${activeExtraHtml}
+      <optgroup label="🔬 Sciences (Physics, Chemistry &amp; Biology)" style="background:#0f172a; color:#38bdf8;">
+        ${renderOpts(scienceOpts)}
       </optgroup>
-      <optgroup label="🔬 STEM &amp; Natural Sciences" style="background:#0f172a; color:#38bdf8;">
-        ${stemGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      <optgroup label="📐 Mathematics &amp; Geometry" style="background:#0f172a; color:#34d399;">
+        ${renderOpts(mathOpts)}
       </optgroup>
-      <optgroup label="📐 Mathematics &amp; Logic" style="background:#0f172a; color:#34d399;">
-        ${mathGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      <optgroup label="✝️ Catholic Faith &amp; Liturgy" style="background:#0f172a; color:#fde047;">
+        ${renderOpts(catholicOpts)}
       </optgroup>
-      <optgroup label="🔤 EYFS, Languages &amp; Computing" style="background:#0f172a; color:#fbbf24;">
-        ${otherGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      <optgroup label="📖 English, Literature &amp; Phonics" style="background:#0f172a; color:#fbbf24;">
+        ${renderOpts(englishOpts)}
       </optgroup>
-      <optgroup label="📖 System Architecture &amp; Docs" style="background:#0f172a; color:#e2e8f0;">
-        ${docGroup.map(p => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} (${escapeHtml(p.stage)})</option>`).join('')}
+      <optgroup label="💻 Computing &amp; Design Technology" style="background:#0f172a; color:#c084fc;">
+        ${renderOpts(computingOpts)}
       </optgroup>
-      <optgroup label="⚛️ PhET Ingestion &amp; Distillations" style="background:#0f172a; color:#38bdf8;">
-        <option value="phet-ohms-law" ${selectedId === 'phet-ohms-law' ? 'selected' : ''}>⚛️ PhET: Ohm's Law (V = I × R)</option>
-        <option value="phet-faraday" ${selectedId === 'phet-faraday' ? 'selected' : ''}>⚛️ PhET: Faraday's Induction (EMF)</option>
-        <option value="phet-pendulum" ${selectedId === 'phet-pendulum' ? 'selected' : ''}>⚛️ PhET: Pendulum Laboratory</option>
-        <option value="phet-acid-base" ${selectedId === 'phet-acid-base' ? 'selected' : ''}>⚛️ PhET: Acid-Base pH Solutions</option>
-        <option value="phet-balancing-chemical" ${selectedId === 'phet-balancing-chemical' ? 'selected' : ''}>⚛️ PhET: Balancing Chemical Equations</option>
-        <option value="__open_local__">📥 Ingest Local PhET (.html / .phet) or SWF...</option>
+      <optgroup label="🗣️ Languages &amp; BSL" style="background:#0f172a; color:#f472b6;">
+        ${renderOpts(languageOpts)}
       </optgroup>
-      <optgroup label="⚡ Dynamic Auto-Finder" style="background:#0f172a; color:#94a3b8;">
-        <option value="__custom_find__">🔍 Open Any Scene by Name / ID...</option>
+      <optgroup label="🌍 Geography &amp; Portal Showcase" style="background:#0f172a; color:#60a5fa;">
+        ${renderOpts(geoOtherOpts)}
+      </optgroup>
+      <optgroup label="⚛️ PhET Distillations" style="background:#0f172a; color:#38bdf8;">
+        ${renderOpts(phetLabs)}
+        <option value="__open_local__">📥 Import Local PhET (.html / .phet) or SWF...</option>
+      </optgroup>
+      <optgroup label="🔍 Discovery" style="background:#0f172a; color:#94a3b8;">
+        <option value="__custom_find__">🔍 Search &amp; Filter All Labs Below...</option>
       </optgroup>
     `;
   }
@@ -391,37 +461,94 @@ export function renderPlayerPage(): HTMLElement {
       </a>
     </div>
 
-    <!-- Category Filter Tabs & Search -->
-    <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:1.75rem;">
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:12px;">
-        <div style="display:flex; gap:6px; flex-wrap:wrap;" id="category-filter-buttons">
-          ${[
-            { id: 'All', label: '🌟 All (' + presets.length + ')' },
-            { id: 'Catholic', label: '✝️ Catholic Faith (' + catholicGroup.length + ')' },
-            { id: 'STEM', label: '🔬 STEM Sciences (' + stemGroup.length + ')' },
-            { id: 'Maths', label: '📐 Mathematics (' + mathGroup.length + ')' },
-            { id: 'EYFS', label: '🔤 EYFS & Languages (' + otherGroup.length + ')' },
-          ].map(cat => `
-            <button type="button" class="cat-pill-btn" data-cat="${cat.id}" style="padding:5px 12px; border-radius:999px; font-size:0.8rem; font-weight:700; cursor:pointer; border:1px solid ${cat.id === activeCategory ? '#0284c7' : '#cbd5e1'}; background:${cat.id === activeCategory ? '#0284c7' : '#f8fafc'}; color:${cat.id === activeCategory ? '#ffffff' : '#475569'};">
-              ${cat.label}
-            </button>
-          `).join('')}
+    <!-- Interactive Labs Library & Multi-Facet Filter -->
+    <section id="labs-catalog-section" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:1.75rem;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div>
+          <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#0f172a;">Browse Visual Labs &amp; Lessons</h3>
+          <p id="catalog-results-summary" style="margin:2px 0 0; font-size:0.8rem; color:#64748b; font-variant-numeric:tabular-nums;">
+            Showing interactive simulations, guided slides, and educational apps
+          </p>
         </div>
 
-        <div style="display:flex; align-items:center; gap:8px;">
+        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
           <input
             type="search"
             id="cartridge-search-input"
-            placeholder="Search activities (e.g. Altar, Pythagoras, circuits)..."
-            style="padding:6px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none;"
+            placeholder="Search by title, topic, stage, or ID (e.g. titration, altar, ks2)..."
+            style="padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:270px; outline:none; color:#0f172a; background:#ffffff;"
           />
+          <select id="stage-filter-select" aria-label="Filter by Key Stage" style="padding:7px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.82rem; font-weight:600; color:#334155; background:#f8fafc; cursor:pointer;">
+            <option value="All">All Key Stages</option>
+            <option value="KS1">EYFS &amp; KS1</option>
+            <option value="KS2">Key Stage 2</option>
+            <option value="KS3">Key Stage 3</option>
+            <option value="KS4">KS4 / GCSE &amp; A-Level</option>
+          </select>
+          <button type="button" id="btn-clear-catalog-filters" style="display:none; padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">
+            Reset Filters
+          </button>
         </div>
       </div>
 
-      <!-- Presets Grid Container -->
-      <div id="cartridges-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; max-height:480px; overflow-y:auto; padding-right:4px;">
+      <!-- Subject Tabs -->
+      <div style="display:flex; gap:4px; flex-wrap:wrap; padding:4px; background:#f1f5f9; border-radius:10px; margin-bottom:10px;" id="subject-filter-buttons">
+        ${([
+          { id: 'All', label: 'All Labs' },
+          { id: 'Science', label: 'Science' },
+          { id: 'Maths', label: 'Mathematics' },
+          { id: 'Catholic', label: 'Catholic Faith' },
+          { id: 'English', label: 'English & Phonics' },
+          { id: 'Computing', label: 'Computing & D&T' },
+          { id: 'Languages', label: 'Languages & BSL' },
+          { id: 'Geography', label: 'Geography' },
+        ] as { id: SubjectFilterId; label: string }[]).map((cat) => {
+          const count = cat.id === 'All'
+            ? corePlayableLabs.length
+            : corePlayableLabs.filter((p) => getNormalizedSubject(p) === cat.id).length;
+          const isAct = cat.id === activeSubject;
+          return `
+            <button type="button" class="cat-pill-btn" data-cat="${cat.id}" style="padding:6px 12px; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer; border:none; white-space:nowrap; font-variant-numeric:tabular-nums; background:${isAct ? '#ffffff' : 'transparent'}; color:${isAct ? '#0f172a' : '#475569'}; box-shadow:${isAct ? '0 1px 3px rgba(15,23,42,0.1)' : 'none'};">
+              ${cat.label} <span style="opacity:0.65; font-weight:600;">(${count})</span>
+            </button>
+          `;
+        }).join('')}
       </div>
-    </div>
+
+      <!-- Format & Scope Bar -->
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid #e2e8f0;">
+        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;" id="format-filter-buttons">
+          <span style="font-size:0.76rem; font-weight:700; color:#64748b; margin-right:2px;">Format:</span>
+          ${([
+            { id: 'All', label: 'All Formats' },
+            { id: 'Sim', label: 'Interactive Labs (Sim)' },
+            { id: 'Slide', label: 'Guided Lessons (Slide)' },
+            { id: 'App', label: 'Games & Studios (App)' },
+            { id: 'Film', label: 'Films' },
+            { id: '3D', label: '3D Models' },
+          ] as { id: FormatFilterId; label: string }[]).map((fmt) => {
+            const isAct = fmt.id === activeFormat;
+            return `
+              <button type="button" class="format-filter-btn" data-format="${fmt.id}" style="padding:4px 10px; border-radius:6px; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap; border:1px solid ${isAct ? '#0284c7' : '#e2e8f0'}; background:${isAct ? '#e0f2fe' : '#f8fafc'}; color:${isAct ? '#0369a1' : '#475569'};">
+                ${fmt.label}
+              </button>
+            `;
+          }).join('')}
+        </div>
+
+        <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; color:#475569; font-weight:600; cursor:pointer; user-select:none;" title="Recall data packs belong primarily in Practice Lab and Revision Suite">
+          <input type="checkbox" id="toggle-include-nonmedia" style="cursor:pointer; accent-color:#0284c7;" />
+          <span>Include recall data packs, benchmarks &amp; docs (${hiddenExtrasCount})</span>
+        </label>
+      </div>
+
+      <!-- Recent Quick-Switch Strip -->
+      <div id="recent-labs-strip" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.78rem;"></div>
+
+      <!-- Presets Grid Container -->
+      <div id="cartridges-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; max-height:520px; overflow-y:auto; padding-right:4px;">
+      </div>
+    </section>
 
     <!-- Classroom Offline Guarantee Card -->
     <div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:1.25rem 1.5rem; color:#cbd5e1; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
@@ -464,8 +591,14 @@ export function renderPlayerPage(): HTMLElement {
   const fileInputHidden = container.querySelector<HTMLInputElement>('#media-player-file-input')!;
   const fullscreenBtn = container.querySelector<HTMLButtonElement>('#player-btn-fullscreen')!;
   const searchInput = container.querySelector<HTMLInputElement>('#cartridge-search-input')!;
+  const stageFilterSelect = container.querySelector<HTMLSelectElement>('#stage-filter-select');
+  const includeNonMediaCheckbox = container.querySelector<HTMLInputElement>('#toggle-include-nonmedia');
+  const clearFiltersBtn = container.querySelector<HTMLButtonElement>('#btn-clear-catalog-filters');
+  const resultsSummaryEl = container.querySelector<HTMLElement>('#catalog-results-summary');
+  const recentStripEl = container.querySelector<HTMLDivElement>('#recent-labs-strip');
   const gridContainer = container.querySelector<HTMLDivElement>('#cartridges-grid')!;
   const catButtons = container.querySelectorAll<HTMLButtonElement>('.cat-pill-btn');
+  const formatButtons = container.querySelectorAll<HTMLButtonElement>('.format-filter-btn');
   const iframeWrapper = container.querySelector<HTMLDivElement>('#player-iframe-wrapper')!;
 
   // Strict Typed postMessage Protocol between Host Chassis & Unified Cartridge Player Kernel
@@ -835,14 +968,17 @@ export function renderPlayerPage(): HTMLElement {
   }
 
   function getAllAvailablePresets(): ScenePresetOption[] {
-    const customList = getCustomCartridgesList().map((c) => ({
+    const customList: ScenePresetOption[] = getCustomCartridgesList().map((c) => ({
       id: c.id,
       label: c.title,
       stage: c.stage || 'LOCAL VAULT',
       type: (c.type as any) || 'Sim',
+      kind: 'lab',
+      isPlayableScene: true,
       subject: c.subject || 'Custom Ingested',
     }));
-    return [...customList, ...presets];
+    const baseList = includeNonMediaExtras ? presets : corePlayableLabs;
+    return [...customList, ...baseList];
   }
 
   let isIframeReady = false;
@@ -854,11 +990,15 @@ export function renderPlayerPage(): HTMLElement {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
     activePreset = safePresetId;
+    recordRecentPreset(safePresetId);
     const item = getPresetMeta(safePresetId);
     if (titleEl) titleEl.textContent = item.label;
     if (stageBadgeEl) stageBadgeEl.textContent = item.stage;
     if (typeBadgeEl) typeBadgeEl.textContent = item.type || 'Sim';
-    if (select) select.value = safePresetId;
+    if (select) {
+      if (isNonMediaOrUtility(item)) refreshDropdown();
+      else select.value = safePresetId;
+    }
 
     const catholicBanner = container.querySelector<HTMLElement>('#catholic-sanctuary-banner');
     if (catholicBanner) {
@@ -1052,42 +1192,93 @@ export function renderPlayerPage(): HTMLElement {
     }
   }
 
+  function renderRecentStrip() {
+    if (!recentStripEl) return;
+    const recentIds = getRecentPresetIds().filter((id) => id !== activePreset);
+    const items = recentIds
+      .map((id) => presets.find((p) => p.id === id))
+      .filter((p): p is ScenePresetOption => Boolean(p))
+      .slice(0, 4);
+
+    if (items.length === 0) {
+      recentStripEl.style.display = 'none';
+      recentStripEl.replaceChildren();
+      return;
+    }
+
+    recentStripEl.style.display = 'flex';
+    recentStripEl.innerHTML = `
+      <span style="color:#64748b; font-weight:700;">Recently opened:</span>
+      ${items.map((p) => `
+        <button type="button" class="recent-lab-btn" data-id="${escapeHtml(p.id)}" style="padding:3px 10px; border-radius:6px; border:1px solid #e2e8f0; background:#f8fafc; color:#0f172a; font-size:0.76rem; font-weight:600; cursor:pointer; max-width:220px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          ${escapeHtml(p.label)}
+        </button>
+      `).join('')}
+    `;
+    recentStripEl.querySelectorAll('.recent-lab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        if (id) updatePreset(id);
+      });
+    });
+  }
+
   function renderGrid() {
     if (!gridContainer) return;
+    renderRecentStrip();
+
     const q = searchQuery.toLowerCase().trim();
     const allAvailable = getAllAvailablePresets();
     const filtered = allAvailable.filter((p) => {
-      let matchCat = true;
-      if (activeCategory === 'Catholic') matchCat = isCatholicPreset(p);
-      else if (activeCategory === 'STEM') matchCat = isStemPreset(p);
-      else if (activeCategory === 'Maths') matchCat = isMathPreset(p);
-      else if (activeCategory === 'EYFS') matchCat = isOtherPreset(p);
-      else if (activeCategory !== 'All') matchCat = (p.type || 'Sim') === activeCategory;
+      const matchSubject = activeSubject === 'All' || getNormalizedSubject(p) === activeSubject;
+      let matchFormat = true;
+      if (activeFormat === '3D') matchFormat = Boolean(p.has3D);
+      else if (activeFormat !== 'All') matchFormat = (p.type || 'Sim') === activeFormat;
 
-      const matchQ = !q || p.label.toLowerCase().includes(q) || p.stage.toLowerCase().includes(q) || p.id.toLowerCase().includes(q);
-      return matchCat && matchQ;
+      const matchStage = matchesKeyStage(p, activeStage);
+      const matchQ = !q ||
+        p.label.toLowerCase().includes(q) ||
+        p.stage.toLowerCase().includes(q) ||
+        p.id.toLowerCase().includes(q) ||
+        (p.subject || '').toLowerCase().includes(q) ||
+        (p.oakUnit || '').toLowerCase().includes(q);
+      return matchSubject && matchFormat && matchStage && matchQ;
     });
 
+    const hasActiveFilters = Boolean(q || activeSubject !== 'All' || activeFormat !== 'All' || activeStage !== 'All' || includeNonMediaExtras);
+    if (clearFiltersBtn) {
+      clearFiltersBtn.style.display = hasActiveFilters ? 'inline-block' : 'none';
+    }
+    if (resultsSummaryEl) {
+      const scopeLabel = includeNonMediaExtras ? 'activities (including recall data & docs)' : 'visual labs & lessons';
+      resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel}`;
+    }
+
     if (filtered.length === 0) {
-      gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#94a3b8;">No matching cartridges found.</div>`;
+      gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#64748b;">No matching labs found for your active filters.</div>`;
       return;
     }
 
     gridContainer.innerHTML = filtered.map((p) => {
       const isSelected = p.id === activePreset;
+      const subjLabel = p.subject || 'Curriculum';
+      const kindSuffix = p.kind === 'data' ? ' · Recall Data Pack' : p.kind === 'benchmark' ? ' · Benchmark' : p.kind === 'doc' ? ' · Architecture Doc' : '';
+      const formatLabel = p.has3D ? `${p.type || 'Sim'} (3D)` : (p.type || 'Sim');
       return `
-        <div 
-          class="cartridge-card" 
+        <div
+          class="cartridge-card"
           data-id="${escapeHtml(p.id)}"
-          style="padding:12px; border-radius:10px; border:1.5px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#f8fafc'}; cursor:pointer; transition:all 0.15s ease;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-            <span style="font-size:0.68rem; font-weight:800; padding:1px 6px; border-radius:4px; background:${p.type === 'Slide' ? '#dcfce7' : p.type === 'App' ? '#fef3c7' : '#e0f2fe'}; color:${p.type === 'Slide' ? '#166534' : p.type === 'App' ? '#92400e' : '#0369a1'};">
-              ${escapeHtml(p.type || 'Sim')}
-            </span>
-            <span style="font-size:0.68rem; color:#64748b; font-weight:600;">${escapeHtml(p.stage)}</span>
+          style="padding:12px 14px; border-radius:10px; border:1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#ffffff'}; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+          <div>
+            <div style="font-size:0.72rem; color:#64748b; font-weight:600; margin-bottom:4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+              ${escapeHtml(formatLabel)} &middot; ${escapeHtml(subjLabel)} &middot; ${escapeHtml(p.stage)}${escapeHtml(kindSuffix)}
+            </div>
+            <strong style="display:block; font-size:0.88rem; color:#0f172a; line-height:1.35;">${escapeHtml(p.label)}</strong>
           </div>
-          <strong style="display:block; font-size:0.86rem; color:#0f172a; margin-bottom:6px; line-height:1.3;">${escapeHtml(p.label)}</strong>
-          <span style="font-size:0.75rem; color:#0284c7; font-weight:700;">${isSelected ? '▶ Currently Playing' : 'Launch &rarr;'}</span>
+          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem;">
+            <span style="color:${isSelected ? '#0369a1' : '#0284c7'}; font-weight:700;">${isSelected ? '▶ Currently Loaded' : 'Launch Lab &rarr;'}</span>
+            ${p.hasCheckpoints && p.checkpointCount ? `<span style="color:#64748b; font-variant-numeric:tabular-nums;">${p.checkpointCount} checks</span>` : ''}
+          </div>
         </div>
       `;
     }).join('');
@@ -1143,10 +1334,8 @@ export function renderPlayerPage(): HTMLElement {
       loadBuiltinPhetModel('balancing-chemical');
     } else if (val === '__custom_find__') {
       select.value = activePreset;
-      const targetId = window.prompt('Enter Cartridge or Scene ID (e.g. calculus-curves, bbc-model-b, stations-of-the-cross):');
-      if (targetId && targetId.trim()) {
-        updatePreset(targetId.trim());
-      }
+      searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      searchInput?.focus();
     } else {
       updatePreset(val);
     }
@@ -1593,18 +1782,67 @@ export function renderPlayerPage(): HTMLElement {
     }
   });
 
-  // Category buttons
+  function syncSubjectTabStyles() {
+    catButtons.forEach((b) => {
+      const isCur = b.getAttribute('data-cat') === activeSubject;
+      b.style.background = isCur ? '#ffffff' : 'transparent';
+      b.style.color = isCur ? '#0f172a' : '#475569';
+      b.style.boxShadow = isCur ? '0 1px 3px rgba(15,23,42,0.1)' : 'none';
+    });
+  }
+
+  function syncFormatButtonStyles() {
+    formatButtons.forEach((b) => {
+      const isCur = b.getAttribute('data-format') === activeFormat;
+      b.style.background = isCur ? '#e0f2fe' : '#f8fafc';
+      b.style.color = isCur ? '#0369a1' : '#475569';
+      b.style.borderColor = isCur ? '#0284c7' : '#e2e8f0';
+    });
+  }
+
+  // Subject buttons
   catButtons.forEach((btn) => {
     btn.addEventListener('click', () => {
-      activeCategory = btn.getAttribute('data-cat') || 'All';
-      catButtons.forEach((b) => {
-        const isCur = b.getAttribute('data-cat') === activeCategory;
-        b.style.background = isCur ? '#0284c7' : '#f8fafc';
-        b.style.color = isCur ? '#ffffff' : '#475569';
-        b.style.borderColor = isCur ? '#0284c7' : '#cbd5e1';
-      });
+      activeSubject = (btn.getAttribute('data-cat') as SubjectFilterId) || 'All';
+      syncSubjectTabStyles();
       renderGrid();
     });
+  });
+
+  // Format filter buttons
+  formatButtons.forEach((btn) => {
+    btn.addEventListener('click', () => {
+      activeFormat = (btn.getAttribute('data-format') as FormatFilterId) || 'All';
+      syncFormatButtonStyles();
+      renderGrid();
+    });
+  });
+
+  // Key stage filter
+  stageFilterSelect?.addEventListener('change', () => {
+    activeStage = (stageFilterSelect.value as StageFilterId) || 'All';
+    renderGrid();
+  });
+
+  // Include non-media recall data / docs / benchmarks toggle
+  includeNonMediaCheckbox?.addEventListener('change', () => {
+    includeNonMediaExtras = Boolean(includeNonMediaCheckbox.checked);
+    renderGrid();
+  });
+
+  // Clear filters button
+  clearFiltersBtn?.addEventListener('click', () => {
+    activeSubject = 'All';
+    activeFormat = 'All';
+    activeStage = 'All';
+    includeNonMediaExtras = false;
+    searchQuery = '';
+    if (searchInput) searchInput.value = '';
+    if (stageFilterSelect) stageFilterSelect.value = 'All';
+    if (includeNonMediaCheckbox) includeNonMediaCheckbox.checked = false;
+    syncSubjectTabStyles();
+    syncFormatButtonStyles();
+    renderGrid();
   });
 
   // Search input

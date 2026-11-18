@@ -10,7 +10,7 @@
     (control:slider :id "sideA" :label "Triangle Leg a" :min 1 :max 15 :default 3 :step 1 :bind *sideA*)
     (control:slider :id "sideB" :label "Triangle Leg b" :min 1 :max 15 :default 4 :step 1 :bind *sideB*)
   )
- (:computed (
+  (:computed (
     (:name "pythA" :expr "Math.max(1, Math.min(20, Math.round(Number(vars.sideA) || 3)))")
     (:name "pythB" :expr "Math.max(1, Math.min(20, Math.round(Number(vars.sideB) || 4)))")
     (:name "areaA" :expr "vars.pythA * vars.pythA")
@@ -20,10 +20,9 @@
     (:name "pythIsIntC" :expr "Math.abs(vars.pythC - Math.round(vars.pythC)) < 0.00001")
     (:name "pythCInt" :expr "Math.round(vars.pythC)")
     (:name "hypotenuse" :expr "vars.pythIsIntC ? vars.pythCInt : Number(vars.pythC.toFixed(2))")
-    (:name "pythBaseS" :expr "(vars.pythA === 3 && vars.pythB === 4) ? 28 : Math.min(28, 540 / (2 * vars.pythA + vars.pythB), 300 / (vars.pythA + 2 * vars.pythB))")
-    (:name "pythS" :expr "vars.pythBaseS * (Number(vars.zoom) || 1)")
-    (:name "pythOx" :expr "((vars.pythA === 3 && vars.pythB === 4) ? 360 : Math.round(400 - (vars.pythB / 2) * vars.pythBaseS)) + (Number(vars.panX) || 0)")
-    (:name "pythOy" :expr "((vars.pythA === 3 && vars.pythB === 4) ? 280 : Math.round(280 + (vars.pythA / 2) * vars.pythBaseS)) + (Number(vars.panY) || 0)")
+    (:name "pythS" :expr "(vars.pythA === 3 && vars.pythB === 4) ? 28 : Math.min(28, 560 / (2 * vars.pythA + vars.pythB), 340 / (vars.pythA + 2 * vars.pythB))")
+    (:name "pythOx" :expr "(vars.pythA === 3 && vars.pythB === 4) ? 360 : Math.round(400 - (vars.pythB / 2) * vars.pythS)")
+    (:name "pythOy" :expr "(vars.pythA === 3 && vars.pythB === 4) ? 280 : Math.round(260 + (vars.pythA / 2) * vars.pythS)")
     (:name "pythLenA" :expr "vars.pythA * vars.pythS")
     (:name "pythLenB" :expr "vars.pythB * vars.pythS")
     (:name "pythLenC" :expr "vars.pythC * vars.pythS")

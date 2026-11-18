@@ -5273,11 +5273,11 @@
       }
     }
 
-    speak(text) {
-      this.speakText(text);
+    speak(text, opts) {
+      this.speakText(text, opts);
     }
 
-    speakText(text) {
+    speakText(text, opts = {}) {
       if (typeof window === 'undefined' || !window.speechSynthesis || !this.voiceEnabled || !text) return;
 
       if (this._speakDebounceTimer) {
@@ -5296,7 +5296,12 @@
         try {
           window.speechSynthesis.cancel();
           const utterance = new SpeechSynthesisUtterance(text);
-          utterance.rate = this.speechRate || 0.95;
+          const customRate = opts && typeof opts.rate === 'number' && Number.isFinite(opts.rate) ? opts.rate : null;
+          const customPitch = opts && typeof opts.pitch === 'number' && Number.isFinite(opts.pitch) ? opts.pitch : null;
+          utterance.rate = customRate !== null ? Math.max(0.1, Math.min(4.0, customRate)) : (this.speechRate || 0.95);
+          if (customPitch !== null) {
+            utterance.pitch = Math.max(0.0, Math.min(2.0, customPitch));
+          }
           utterance.volume = this.muted ? 0.0 : Math.max(0, Math.min(1.0, this.volume));
           const langMap = {
             es: 'es-ES',
@@ -7181,9 +7186,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             || extractSlot.call(null, bodyText, /:hold-var\s+([^\s\)]+)/i);
 
           const expr = extractQuoted(bodyText, 'expr');
+          const condExpr = extractQuoted(bodyText, 'if');
+          const valExpr = extractQuoted(bodyText, 'val-expr') || extractQuoted(bodyText, 'valExpr');
           const toneRaw = extractSlotValue(bodyText, 'tone');
           const tone = toneRaw !== undefined && toneRaw !== null ? String(toneRaw) : null;
+          const toneExpr = extractQuoted(bodyText, 'tone-expr') || extractQuoted(bodyText, 'toneExpr');
           const speak = extractQuoted(bodyText, 'speak');
+          const speakExpr = extractQuoted(bodyText, 'speak-expr') || extractQuoted(bodyText, 'speakExpr');
+          const speakRateVar = extractQuoted(bodyText, 'speak-rate-var') || extractQuoted(bodyText, 'speakRateVar');
+          const speakPitchRaw = extractSlotValue(bodyText, 'speak-pitch');
+          const speakPitchAlt = speakPitchRaw === undefined ? extractSlotValue(bodyText, 'speakPitch') : speakPitchRaw;
+          const speakPitch = typeof speakPitchAlt === 'number' ? speakPitchAlt : undefined;
 
           const val = extractSlotValue(bodyText, 'val');
           const releaseVal = extractSlotValue(bodyText, 'release-val');
@@ -7237,8 +7250,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               step,
               holdVar,
               expr,
+              ifExpr: condExpr,
+              valExpr,
               tone,
+              toneExpr,
               speak,
+              speakExpr,
+              speakRateVar,
+              speakPitch,
               val,
               releaseVal,
               hold,
@@ -7491,6 +7510,31 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       });
 
+      // Cartridge Feature & UI Controls (:controls (:arrow-step :off) ... or plist)
+      let controls = null;
+      const controlsBlocks = extractSexprBlocks(astContent, ':controls');
+      if (controlsBlocks.length > 0) {
+        controls = {};
+        controlsBlocks.forEach(cb => {
+          const pairRe = /\(\s*:([a-zA-Z0-9_-]+)\s+(:on|:off|:true|:false|true|false)\s*\)/gi;
+          let pm;
+          while ((pm = pairRe.exec(cb)) !== null) {
+            const flag = pm[1].toLowerCase();
+            const tok = pm[2].toLowerCase();
+            controls[flag] = (tok === ':on' || tok === ':true' || tok === 'true');
+          }
+          const plistBody = cb.replace(/^\(\s*:controls\b/i, '').replace(/\([^\)]*\)/g, ' ');
+          const plistRe = /:([a-zA-Z0-9_-]+)\s+(:on|:off|:true|:false|true|false)(?=[\s)]|$)/gi;
+          let plm;
+          while ((plm = plistRe.exec(plistBody)) !== null) {
+            const flag = plm[1].toLowerCase();
+            const tok = plm[2].toLowerCase();
+            controls[flag] = (tok === ':on' || tok === ':true' || tok === 'true');
+          }
+        });
+        if (Object.keys(controls).length === 0) controls = null;
+      }
+
       const has3D = Boolean((camBlocks && camBlocks.length > 0) || bindings.some(b => b.type && b.type.startsWith('3d-')));
 
       return {
@@ -7521,6 +7565,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         staticElements,
         actors,
         gestures,
+        controls,
         interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
       };
     }
@@ -8212,6 +8257,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if (textParsed.ledgers && textParsed.ledgers.length > 0 && (!parsedAst.ledgers || parsedAst.ledgers.length === 0)) {
                   parsedAst.ledgers = textParsed.ledgers;
                 }
+                if (textParsed.controls && !parsedAst.controls) {
+                  parsedAst.controls = textParsed.controls;
+                }
               }
             }
           } catch (err) {
@@ -8255,6 +8303,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           subtitles: (parsedAst && parsedAst.subtitles && parsedAst.subtitles.length) ? parsedAst.subtitles : (registryScene.subtitles || []),
           rawBindings: (parsedAst && parsedAst.bindings) || [],
           svgText: svgText,
+          astSource: astText || '',
           mount: registryScene.mount,
           update: registryScene.update,
           render: registryScene.render,
@@ -8263,6 +8312,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           uiControls: (parsedAst && parsedAst.uiControls) || registryScene.uiControls || (parsedAst && parsedAst.inputs) || registryScene.inputs || [],
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
+          controls: (parsedAst && parsedAst.controls) || registryScene.controls || null,
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
           scopes: (parsedAst && parsedAst.scopes) || registryScene.scopes || [],
           ledgers: (parsedAst && parsedAst.ledgers) || registryScene.ledgers || [],
@@ -8474,10 +8524,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       uiControls: sceneData.uiControls || (parsedAst && parsedAst.uiControls) || sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
       computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
       gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
+      controls: sceneData.controls || (parsedAst && parsedAst.controls) || null,
       physics: sceneData.physics || (parsedAst && parsedAst.physics) || null,
       scopes: sceneData.scopes || (parsedAst && parsedAst.scopes) || [],
       ledgers: sceneData.ledgers || (parsedAst && parsedAst.ledgers) || [],
       svgText: svgText,
+      astSource: astText || '',
       mount: sceneData.mount,
       update: sceneData.update,
       render: sceneData.render
@@ -11057,6 +11109,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (parsed.inputs) this.scene.inputs = parsed.inputs;
       if (parsed.computed) this.scene.computed = parsed.computed;
       if (parsed.gestures) this.scene.gestures = parsed.gestures;
+      if (parsed.controls) this.scene.controls = parsed.controls;
       this.scene.keyframes = parsed.keyframes || [];
       this.scene.subtitles = parsed.subtitles || [];
       this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];

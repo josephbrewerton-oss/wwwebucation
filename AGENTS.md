@@ -20,7 +20,7 @@
   - `npm run test:bsl` (BSL Level 6 avatar kinematics & spatial grammar)
 
 ## AST Vector Player & Zero-Bloat Fantasy Engine
-- **Decoupled Engine Core**: Located in `static/player/` (`ast-engine.js`, `ast-registry.js`, `ast-state-hex.js`, `ast-gestures.js`, `ast-phet-bridge.js`, `ast-compiler.js`, `ast-webrtc-bus.js`, `obs-controller.js`, `player-ui.js`).
+- **Decoupled Engine Core**: Located in `static/player/` (`ast-engine.js`, `ast-registry.js`, `ast-state-hex.js`, `site-gestures.js`, `player-gestures.ast`, `ast-phet-bridge.js`, `ast-compiler.js`, `ast-webrtc-bus.js`, `obs-controller.js`, `player-ui.js`; legacy `ast-gestures.js` retained on disk only for historical invariant tests).
 - **Zero-Bloat Invariant**: Initial SPA boot bundle < 20 KB gzipped (verified ~16.3 kB JS + ~5.9 kB CSS). Core AST Player kernel (`static/player/ast-engine.js`) with embedded sub-stepped physics, `:scope` plotter, `:ledger`, & profiler is ~107 KB gzipped with 0 external runtime dependencies, sub-15 ms cold start, and < 8 MB RAM footprint.
 - **WASM Linear Memory Contract**:
   - Operates within a strictly fixed 7-page (448 KB) WASM linear memory pool (`docs/WASM_ARCHITECTURE_CONTRACT.md`).
@@ -40,14 +40,14 @@
   - **On-Device Edge AI Generation**: Declarative S-Expressions allow Gemini Nano to generate working simulations in ~500 ms.
   - **Classroom Smartboard / Stylus Whiteboard**: Native in-stage quadratic Bézier ink layer (`#annotation-ink-root`) for Promethean, SMART, ViewSonic & iPad pens.
 - **Tri-Mode Execution Engine**:
-  - `:Sim` *(Continuous Dynamic State)*: Real-time kinematics locked to a 60 FPS $\Delta t$ clock with pointer grab/drag via `ast-gestures.js`.
+  - `:Sim` *(Continuous Dynamic State)*: Real-time kinematics locked to a 60 FPS $\Delta t$ clock with pointer grab/drag via `site-gestures.js`.
   - `:Slide` *(Discrete Exploratory Decks)*: Decoupled clock for self-paced reading, CST virtues, and rubrics.
   - `:Film` *(Linear Narrative Choreography)*: Monotonically locked time curves ($t \in [0.0, 1.0]$) with synchronized audio synthesis and multilingual subtitles.
 - **Pedagogical X-Ray, Sonification & Performance Diagnostics**:
-  - `data-pedagogical` discovery inspection with real-time procedural Web Audio synthesis (0 KB external audio files).
+  - `data-pedagogical` discovery inspection with real-time procedural Web Audio synthesis (0 KB external audio files), configured via `player-gestures.ast` `:sonification`.
   - Native in-stage `ASTProfiler` HUD (`SET_PERF_HUD`, `TOGGLE_PERF_HUD`, `?hud=1`) with live rolling sparkline, sub-0.2 ms VM compute measurement, and frame budget headroom.
   - Dedicated `⚡ Diagnostics` drawer in `src/pages/media-player.ts` tracking 60 FPS headroom and WASM 7-page memory pool status.
-- **Pure VM & Cartridge Separation Invariant**: `static/player/ast-engine.js` and `static/player/ast-gestures.js` operate as a 100% generic, schema-driven Virtual Machine. NEVER hardcode scene IDs or cartridge-specific element selectors inside engine/gesture code. Gestures execute declaratively from `.ast` `:gestures` tuples (`:draggable`, `:clickable`, `:holdable`, `:key` with `requestAnimationFrame` press-and-hold loop, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`).
+- **Pure VM & Declarative Gesture/Skill Architecture (`site-gestures.js` + `player-gestures.ast`)**: `static/player/ast-engine.js` and `static/player/site-gestures.js` operate as a 100% generic, schema-driven Virtual Machine. NEVER hardcode scene IDs or cartridge-specific element selectors inside engine/gesture code. Platform defaults (switches, universal keyboard rules, whiteboard tools/palette, and tones) live declaratively in `static/player/player-gestures.ast`, merged with per-cartridge `(:controls ...)` overrides (`:arrow-step`, `:num-jump`, `:scrub`, `:space-play`, `:quiz-keys`, `:whiteboard`, `:xray`, `:audio`, `:param-hud`). Extensible without touching core dispatch via `ASTDirectGestureSubsystem.registerAction(name, fn)` and `registerGestureSkill(type, spec)` (`getCapabilities()`). Gestures execute declaratively from `.ast` `:gestures` tuples (`:draggable`, `:clickable`, `:holdable`, `:rotatable`, `:trackball`, `:key` with `requestAnimationFrame` press-and-hold loop, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`, `:release-val`, `:delta`, `:rate`, `:if`, `:val-expr`, `:tone-expr`, `:speak-expr`, `:speak-rate-var`, `:speak-pitch`, `:attr`).
 - **Interactive System Architecture Document**: `static/docs/lumina-architecture.ast` is a hybrid SVG + S-expression `:type "Slide"` Show & Tell Manifesto, playable via `/player?preset=lumina-architecture` or `?src=/docs/lumina-architecture.ast`.
 - **Canonical Curriculum Cartridges (72 Compiled Modules)**:
   - *STEM, Computing & Design & Technology*: `lego-blocks` (Modular Brick Engineering & 3D Spatial Geometry), `vector-racing` (Continuous Press-and-Hold Kinematic Driving), `rates-of-reaction`, `acid-alkali-titration`, `enzyme-denaturation`, `osmosis-membrane`, `calculus-curves`, `kinetic-gas`, `electric-circuits`, `math-fishing`, `mountain-elevation`, `fish-tank`, `fractions`, `solar-system`, `photosynthesis`, `pythagoras`, `water-cycle`, `atom`, `velocity`, `dna-helix`, `bodmas`, `phonics-lab`, `times-tables`, `bbc-model-b`, `inverted-pendulum-dyno`, `algebra-balance`, `domino-multiplication`, `phonics-screening`, `spelling-bee`.
@@ -75,7 +75,7 @@
   - Reactive Bindings & Inputs: `:vars`, `:inputs`, `:computed`, `:bindings`, `:bind-inputs`
   - State Machines & Emitters: `:state-machine`, `:state`, `:transition`, `:emitter`, `:particle-pool`
   - Formative Assessment: `:interactive`, `:checkpoint`, `:prompt`, `:options`, `:answer`, `:explanation`
-  - Direct Manipulation & Pure Gesture VM: `:gestures`, `:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`, `:axis`, `:min`, `:max`, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`, `:release-val`, `:delta`, `:rate`
+  - Direct Manipulation, Feature Switches & Gesture VM: `:controls` (`:arrow-step`, `:num-jump`, `:scrub`, `:space-play`, `:quiz-keys`, `:whiteboard`, `:xray`, `:audio`, `:param-hud`), `:gestures`, `:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`, `:axis`, `:min`, `:max`, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`, `:release-val`, `:delta`, `:rate`, `:if`, `:val-expr`, `:tone-expr`, `:speak-expr`, `:speak-rate-var`, `:speak-pitch`, `:attr`
 
 ## On-Device Edge AI & Developing-World Offline Invariants
 - **Zero Cloud Leakage**: Student logs, answers, and voice inputs never egress to cloud LLMs (UK GDPR Art. 25 & KCSIE compliant).

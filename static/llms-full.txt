@@ -113,17 +113,19 @@ The AST Vector Engine (`static/player/ast-engine.js` and `@stjosephs/ast-vector-
 - **Bidirectional Variable Binding**: User adjustments update bound variables (`*volume*`, `*temp*`) in linear memory at 60 FPS without DOM re-renders or GC pause.
 - **Legacy HUD Auto-Discovery (`setupSimParametersHud`)**: For historical or bare numerical cartridges without explicit `(ui:controls ...)`, the engine falls back to auto-discovering numeric `:vars` and mounting parameter sliders automatically.
 
-### 4.3. Pure Direct Manipulation & Press-and-Hold Gesture VM (`ast-gestures.js`)
-- **Zero-Hardcoding VM Guarantee**: `ast-engine.js` and `ast-gestures.js` contain **zero hardcoded scene IDs or cartridge element selectors**. Every input mapping (`:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`) runs generically from the active `.ast` / `.astb` cartridge.
+### 4.3. Declarative Site Gesture VM & Skill Registry (`site-gestures.js` + `player-gestures.ast`)
+- **Zero-Hardcoding VM Guarantee**: `ast-engine.js`, `site-gestures.js`, and `player-gestures.ast` contain **zero hardcoded scene IDs or cartridge element selectors**. Every input mapping (`:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`) and expression predicate (`:if`, `:val-expr`, `:tone-expr`, `:speak-expr`, `:speak-rate-var`) runs generically from the active `.ast` / `.astb` cartridge.
+- **Platform Profile & Cartridge `:controls` Switching**: `player-gestures.ast` declares default feature switches (`:arrow-step`, `:num-jump`, `:scrub`, `:space-play`, `:quiz-keys`, `:whiteboard`, `:xray`, `:audio`, `:param-hud`), universal keyboard navigation rules, whiteboard tools/widths/palette, and WebAudio sonification tones. Cartridges override switches declaratively with `(:controls ...)`.
+- **Extensible Skill & Action Registry**: New skills and universal shortcuts plug cleanly into `ASTDirectGestureSubsystem.registerAction(name, fn)` and `registerGestureSkill(type, spec)` (introspectable via `getCapabilities()`) without modifying core pointer/keyboard dispatch.
 - **Generic Press-and-Hold Loop (`requestAnimationFrame`)**: Maintains `_heldKeys` and `_heldPointerEntries` sets so held keyboard keys (`keydown`/`keyup`/`blur`, with `e.preventDefault()` on matched keys and `#stage-svg` focus capture) and held SVG pointers continuously step `:step-var` within `[min, max]` bounds or hold `:hold-var` until release (`:release-val`).
 - **Sub-Pixel Coordinate Translation**: Applies inverse Current Transformation Matrix ($\mathbf{CTM}^{-1}$) to convert pointer coordinates into exact SVG stage coordinates regardless of CSS scaling, letterboxing, or display DPI.
 - **PointerCapture Robustness**: Seamlessly captures high-speed drags across viewport boundaries, touchscreens, and mouse devices without dropping drag focus.
 - **Constrained Axis Motion**: Supports 1D horizontal (`:axis "x"`), 1D vertical (`:axis "y"`), curve probes (`:axis "curve"`), rotational, trackball 3D orbit, or unconstrained 2D planar (`:axis "xy"`) movement.
 
 ### 4.4. Classroom Smartboard Whiteboard Layer
-- **Native Ink Root (`#annotation-ink-root`)**: Renders high-fidelity drawing strokes directly inside the SVG document.
+- **Native Ink Root (`#annotation-ink-root`)**: Renders high-fidelity drawing strokes directly inside the SVG document (gated per cartridge by `:whiteboard`).
 - **Quadratic Bézier Smoothing**: Interpolates raw pointer events using quadratic Bézier curves to eliminate jitter and produce smooth calligraphic handwriting from interactive styluses (Promethean, SMART, ViewSonic, iPad Pencil).
-- **Teacher Toolbar**: Provides pen colors, highlighter transparency, stroke widths, eraser modes, and instant canvas clearing without altering underlying simulation elements.
+- **Teacher Toolbar**: Dynamically built from `player-gestures.ast` (`:whiteboard`), providing pen/marker/highlighter tools, palette swatches, stroke widths, eraser/undo/redo, stylus palm rejection, AST ink export, and WebRTC classroom broadcast without altering underlying simulation elements.
 
 ### 4.5. Formative Assessment & Checkpoint Control Subsystem
 - **Runtime Fisher-Yates Shuffling**: Every formative checkpoint dynamically randomizes answer choice order at runtime, decoupling correct answers from index 0/Option A while tracking the true answer key transparently.
@@ -315,7 +317,7 @@ While forged for rigorous educational simulations, `@stjosephs/ast-vector-player
 ### 12.2. Digital Out-of-Home (DOOH) & Commercial Digital Signage
 - **Extreme Tolerance for Low-Spec Hardware**: Fast-food digital menu boards, airport transit displays, supermarket shelf-edge screens, and bus-stop displays run on cheap quad-core ARM chips (Raspberry Pi CM4, Rockchip, Android 11 sticks, LG webOS, Samsung Tizen) with 1–2 GB RAM. Standard Chromium kiosk loops crash every 48–72 hours from memory leaks. AST runs with **< 8 MB RAM and 0 GC thrashing**, operating continuously for 365 days without crashing or thermal throttling.
 - **Infinite DPI Resolution Independence**: Pure mathematical vector projection scales identically from a 2-inch electronic shelf label to a 100-foot 8K Times Square LED billboard with **zero pixelation** and **zero bandwidth cost**.
-- **Interactive Retail Kiosks & Wayfinding**: Sub-pixel `PointerCapture` dragging (`ast-gestures.js`) and quadratic Bézier smoothing provide instant, lag-free touch and stylus interaction for mall directories and retail product configurators.
+- **Interactive Retail Kiosks & Wayfinding**: Sub-pixel `PointerCapture` dragging (`site-gestures.js`) and quadratic Bézier smoothing provide instant, lag-free touch and stylus interaction for mall directories and retail product configurators.
 - **Procedural 0 KB Audio Feedback**: Native Web Audio API synthesizes UI feedback, chimes, and scanner clicks without downloading external audio files.
 - **Air-Gapped Reliability**: Displays function continuously offline with zero remote CDN dependencies.
 

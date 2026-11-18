@@ -12,7 +12,7 @@ The **Abstract Scene Tree (AST) Vector Language** is a domain-specific declarati
 
 ### Core Invariants
 1. **Zero Bloat (< 35 KB gzipped, < 150 KB uncompressed):** Zero external framework dependencies. Native browser SVG DOM, JavaScript, and Web Audio API. Easily fits inside the strictest IAB 150 KB ad limits.
-2. **Pure VM / Cartridge Separation:** `ast-engine.js` and `ast-gestures.js` contain **zero hardcoded scene IDs or cartridge DOM selectors**—all rules, keys, and interaction primitives are declared in `.ast` / `.astb` cartridges (including hybrid interactive documents such as `/docs/lumina-architecture.ast`).
+2. **Pure VM / Cartridge Separation:** `ast-engine.js`, `site-gestures.js`, and `player-gestures.ast` contain **zero hardcoded scene IDs or cartridge DOM selectors**—all rules, switches (`:controls`), keys, and interaction primitives are declared in `.ast` / `.astb` cartridges (including hybrid interactive documents such as `/docs/lumina-architecture.ast`), with extensible hooks via `ASTDirectGestureSubsystem.registerAction()` / `registerGestureSkill()`.
 3. **Deterministic Multi-Mode Delivery:**
    - **`:Sim` / `:App`:** Continuous 60 FPS kinematic integration with direct pointer/keyboard manipulation.
    - **`:Slide`:** Discrete exploratory decks and interactive architecture papers decoupled from runaway clocks.
@@ -97,32 +97,43 @@ DraggableGesture ::= "(:draggable" ws ":target" ws String ws
                      ":min" ws Number ws ":max" ws Number 
                      (ws ":var" ws String)? ")"
 ClickHoldGesture ::= "(:" ("clickable" | "holdable") ws ":target" ws String ws
-                     (ws ":set-var" ws String ws ":val" ws Literal)?
+                     (ws ":if" ws MathExpr)?
+                     (ws ":attr" ws String)?
+                     (ws ":set-var" ws String ws (":val" ws Literal | ":val-expr" ws MathExpr))?
                      (ws ":toggle-var" ws String)?
                      (ws ":step-var" ws String ws ":delta" ws Number (ws ":min" ws Number)? (ws ":max" ws Number)?)?
                      (ws ":hold-var" ws String (ws ":release-val" ws Literal)?)?
+                     (ws ":tone" ws String | ws ":tone-expr" ws MathExpr)?
+                     (ws ":speak" ws String | ws ":speak-expr" ws MathExpr)?
+                     (ws ":speak-rate-var" ws String)? (ws ":speak-pitch" ws Number)?
                      (ws ":hold" ws Boolean)? (ws ":rate" ws Number)? ")"
 KeyGesture       ::= "(:key" ws (":code" ws String | ":key" ws String)
-                     (ws ":set-var" ws String ws ":val" ws Literal)?
+                     (ws ":if" ws MathExpr)?
+                     (ws ":set-var" ws String ws (":val" ws Literal | ":val-expr" ws MathExpr))?
                      (ws ":toggle-var" ws String)?
                      (ws ":step-var" ws String ws ":delta" ws Number (ws ":min" ws Number)? (ws ":max" ws Number)?)?
                      (ws ":hold-var" ws String (ws ":release-val" ws Literal)?)?
+                     (ws ":tone" ws String | ws ":tone-expr" ws MathExpr)?
+                     (ws ":speak" ws String | ws ":speak-expr" ws MathExpr)?
                      (ws ":hold" ws Boolean)? (ws ":rate" ws Number)? ")"
 TrackballGesture ::= "(:" ("trackball" | "rotatable") ws ":target" ws String ")"
+Controls         ::= "(:controls" ws ("(:" Flag ws (":on" | ":off" | Boolean) ")")+ ")"
 ```
 
 ---
 
 ## 3. The Subsystems of the AST Player
 
-### 3.1. Direct In-Stage Pointer & Keyboard Gesture VM (`ast-gestures.js`)
-* Binds generically to `#stage-svg` with full `PointerCapture`, keyboard focus on pointer down, and `e.preventDefault()` on matched keys.
+### 3.1. Declarative Pointer, Keyboard & Skill Gesture VM (`site-gestures.js` + `player-gestures.ast`)
+* Loads platform defaults (`:defaults`, `:universal-keys`, `:whiteboard`, `:sonification`) from `player-gestures.ast` and merges per-cartridge `(:controls ...)` feature switches (`:arrow-step`, `:num-jump`, `:scrub`, `:space-play`, `:quiz-keys`, `:whiteboard`, `:xray`, `:audio`, `:param-hud`).
+* Binds generically to `#stage-svg` with full `PointerCapture`, keyboard focus on pointer down, and `e.preventDefault()` on matched keys (yielding to form controls and modifier shortcuts).
+* **Extensible Skill & Action Registry**: `ASTDirectGestureSubsystem.registerAction(name, fn)` and `registerGestureSkill(type, spec)` allow adding new universal actions (including built-ins `toggle-xray`, `toggle-audio`, `reset-vars`) and custom gesture primitives cleanly (`getCapabilities()`).
 * **Press-and-Hold Loop (`requestAnimationFrame`)**: Maintains `_heldKeys` and `_heldPointerEntries` sets so `:key`, `:holdable`, and continuous `:clickable` tuples step `:step-var` smoothly within `[min, max]` bounds or hold `:hold-var` until `keyup` / `pointerup` / `pointercancel` / `blur`, resetting cleanly to `:release-val`.
 * Coordinates mapped via SVG inverse screen transformation matrix:
   $$\begin{pmatrix} x_{\text{svg}} \\ y_{\text{svg}} \end{pmatrix} = \mathbf{M}_{\text{CTM}}^{-1} \begin{pmatrix} x_{\text{screen}} \\ y_{\text{screen}} \end{pmatrix}$$
 * Supported declarative manipulation primitives:
   - `:draggable`: Direct 1D/2D/curve pointer dragging (`x`, `y`, `xy`, `curve`) bound to element geometry or `:var`.
-  - `:clickable` / `:holdable`: Instant state mutation (`:set-var`, `:toggle-var`) and continuous hold/step loops (`:hold-var`, `:step-var`, `:delta`, `:rate`).
+  - `:clickable` / `:holdable`: Instant or conditional (`:if`) state mutation (`:set-var`, `:val-expr`, `:toggle-var`, `:attr`), continuous hold/step loops (`:hold-var`, `:step-var`, `:delta`, `:rate`), and expression audio/speech (`:tone-expr`, `:speak-expr`, `:speak-rate-var`, `:speak-pitch`).
   - `:key`: Keyboard event bindings (`:code`, `:key`) with discrete press and continuous `requestAnimationFrame` hold evaluation.
   - `:trackball` / `:rotatable`: 3D spherical orbit rotation on 3D projected cartridges.
 
@@ -167,7 +178,7 @@ TrackballGesture ::= "(:" ("trackball" | "rotatable") ws ":target" ws String ")"
 * ViewBox & Inverse CTM Inversion: Dynamically projects boundaries across SVG viewBox scaling, 3D camera transforms, and moving SVG assembly elements using inverse matrix projection.
 
 ### 3.9. Bidirectional Slider-to-Variable Binding (:bind-input)
-* Directly links on-stage SVG interactive slider handles, knobs, and levers (`ast-gestures.js`) to reactive state variables.
+* Directly links on-stage SVG interactive slider handles, knobs, and levers (`site-gestures.js`) to reactive state variables.
 * Supports linear axes (`x`, `y`) and rotational dials (`rotary`).
 * Full two-way synchronisation: dragging the SVG handle mutates the variable; programmatic or state machine variable changes smoothly translate the handle in real time.
 
@@ -265,7 +276,7 @@ While AST was perfected on high-rigour mathematical curriculum simulations, its 
 - **Zero CPU Battery Drain:** Efficient native SVG transforms ensure high viewability scores without triggering browser CPU throttling.
 
 ### 5.3. Interactive Retail Kiosks & Wayfinding
-- Sub-pixel touch gesture capture (`ast-gestures.js`) with quadratic Bézier smoothing provides instant feedback on touch glass.
+- Sub-pixel touch gesture capture (`site-gestures.js`) with quadratic Bézier smoothing provides instant feedback on touch glass.
 - Native procedural Web Audio API synthesizes UI feedback, chimes, and clicks with **0 KB external audio files**.
 
 ---
