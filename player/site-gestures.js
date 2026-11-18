@@ -1608,6 +1608,10 @@
         }
       }
 
+      const pedNode = (this.isXRayActive && this._isControlEnabled('xray'))
+        ? e.target.closest('[data-pedagogical]')
+        : null;
+
       // B1. Declarative :clickable / :holdable tuples
       const matchedPointerGestures = [];
       const matchedEls = [];
@@ -1659,6 +1663,9 @@
         if (!hasCustomTone) {
           this._playNamedTone('click');
         }
+        if (pedNode) {
+          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
+        }
         this.createTouchRipple(svgPt.x, svgPt.y);
         return;
       }
@@ -1667,7 +1674,7 @@
       if (this._isControlEnabled('scrub')) {
         const activeTrackball = gestures.find(g => {
           if (g.type !== 'trackball' || !g.target) return false;
-          if (this.isXRayActive && this._isControlEnabled('xray') && e.target.closest('[data-pedagogical]')) return false;
+          if (pedNode) return false;
           const tbEl = e.target.closest(g.target);
           if (!tbEl) return false;
           const childControl = e.target.closest('[data-declarative-clickable], [data-declarative-holdable], [data-draggable], [data-interactive], [data-bind-input], .ast-hotspot');
@@ -1771,17 +1778,17 @@
             this._playNamedTone('grab');
           }
 
+          if (pedNode) {
+            this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
+          }
           this.createTouchRipple(svgPt.x, svgPt.y);
           return;
         }
       }
 
       // C. Pedagogical X-Ray Tap Inspection (gated by :xray switch)
-      if (this.isXRayActive && this._isControlEnabled('xray')) {
-        const pedNode = e.target.closest('[data-pedagogical]');
-        if (pedNode) {
-          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
-        }
+      if (pedNode) {
+        this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
       }
     }
 

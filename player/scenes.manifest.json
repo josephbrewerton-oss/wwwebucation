@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-18T08:33:28.873Z",
+  "generatedAt": "2026-11-18T08:48:21.574Z",
   "totalScenes": 73,
   "scenes": [
     {
@@ -961,7 +961,7 @@
       "astbFile": "bytecode/solar-system.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 29
+      "bindingsCount": 90
     },
     {
       "id": "spelling-bee",
