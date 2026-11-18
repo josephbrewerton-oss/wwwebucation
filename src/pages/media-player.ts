@@ -168,7 +168,7 @@ export function renderPlayerPage(): HTMLElement {
   function getNormalizedSubject(p: ScenePresetOption): SubjectFilterId {
     if (isCatholicPreset(p)) return 'Catholic';
     const subj = (p.subject || '').toLowerCase();
-    if (subj.includes('science') || subj.includes('physics') || subj.includes('chem') || subj.includes('bio') || p.id === 'vector-racing') return 'Science';
+    if (subj.includes('science') || subj.includes('physics') || subj.includes('chem') || subj.includes('bio')) return 'Science';
     if (subj.includes('math')) return 'Maths';
     if (subj.includes('english') || subj.includes('phonics')) return 'English';
     if (subj.includes('comput') || subj.includes('design')) return 'Computing';

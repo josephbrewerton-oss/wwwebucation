@@ -381,6 +381,9 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
           baseR: b.baseR || 8,
           label: b.label || '',
           depthFog: b.depthFog !== false,
+          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
+          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
+          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
         })));
       } else if (b.type === '3d-ring') {
         appendU16(strTable.intern(':3d-ring'));
@@ -394,6 +397,9 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
           tiltZ: b.tiltZ || 0,
           segments: b.segments || 24,
           depthFog: b.depthFog !== false,
+          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
+          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
+          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
         })));
       } else if (b.type === '3d-line') {
         appendU16(strTable.intern(':3d-line'));
@@ -407,6 +413,13 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
           cap1: b.cap1 || '',
           cap2: b.cap2 || '',
           baseR: b.baseR || 8,
+          ...(b.splitExpr ? { splitExpr: b.splitExpr } : {}),
+          ...(b.splineA ? { splineA: b.splineA } : {}),
+          ...(b.splineB ? { splineB: b.splineB } : {}),
+          ...(b.splineIndex !== undefined ? { splineIndex: b.splineIndex } : {}),
+          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
+          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
+          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
         })));
       } else if (b.type === '3d-polygon') {
         appendU16(strTable.intern(':3d-polygon'));
@@ -414,6 +427,9 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
           depthFog: b.depthFog !== false,
           cullBackface: Boolean(b.cullBackface),
           pointsExpr: b.pointsExpr,
+          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
+          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
+          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
         })));
       } else {
         appendU16(strTable.intern(b.attr || 'attr'));
@@ -1074,6 +1090,12 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     const attr = extractQuoted(block, 'attr') || extractSlot(block, /:attr\s+"([^"]+)"/i);
     const expr = extractQuoted(block, 'expr') || extractSlot(block, /:expr\s+"([^"]+)"/i);
 
+    const zLayerStr = extractSlot(block, /:z-?layer\s+([\d\.\-]+)/i);
+    const zLayer = zLayerStr !== null ? parseFloat(zLayerStr) : undefined;
+    const sortAfter = extractQuoted(block, 'sort-after') || extractQuoted(block, 'sortAfter') || undefined;
+    const zBiasStr = extractSlot(block, /:z-?bias\s+([\d\.\-]+)/i);
+    const zBias = zBiasStr !== null ? parseFloat(zBiasStr) : undefined;
+
     if (nodeType === '3d-node') {
       const x = extractSlot(block, /:x\s+"([^"]+)"/i) || '0';
       const y = extractSlot(block, /:y\s+"([^"]+)"/i) || '0';
@@ -1093,8 +1115,16 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         baseR,
         label,
         depthFog,
+        zLayer,
+        sortAfter,
+        zBias,
       });
     } else if (nodeType === '3d-line') {
+      const splitExpr = extractQuoted(block, 'split-expr') || extractQuoted(block, 'splitExpr') || undefined;
+      const splineA = extractQuoted(block, 'spline-a') || extractQuoted(block, 'splineA') || undefined;
+      const splineB = extractQuoted(block, 'spline-b') || extractQuoted(block, 'splineB') || undefined;
+      const splineIdxStr = extractSlot(block, /:spline-?index\s+(\d+)/i);
+      const splineIndex = splineIdxStr !== null ? parseInt(splineIdxStr, 10) : undefined;
       bindings.push({
         type: '3d-line',
         target,
@@ -1107,15 +1137,22 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         cap1: extractSlot(block, /:cap1\s+"([^"]+)"/i),
         cap2: extractSlot(block, /:cap2\s+"([^"]+)"/i),
         baseR: parseFloat(extractSlot(block, /:base-r\s+([\d\.]+)/i) || '8'),
+        splitExpr,
+        splineA,
+        splineB,
+        splineIndex,
+        zLayer,
+        sortAfter,
+        zBias,
       });
     } else if (nodeType === '3d-ring') {
-      const rStr = extractSlot(block, /:r\s+("[^"]+"|[\\d\\.]+)/i) || '100';
+      const rStr = extractSlot(block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
       const cx = extractSlot(block, /:cx\s+"([^"]+)"/i) || '0';
       const cy = extractSlot(block, /:cy\s+"([^"]+)"/i) || '0';
       const cz = extractSlot(block, /:cz\s+"([^"]+)"/i) || '0';
-      const tiltX = extractSlot(block, /:tilt-x\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
-      const tiltY = extractSlot(block, /:tilt-y\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
-      const tiltZ = extractSlot(block, /:tilt-z\s+("[^"]+"|[\\d\\.-]+)/i) || '0';
+      const tiltX = extractSlot(block, /:tilt-x\s+("[^"]+"|[\d\.-]+)/i) || '0';
+      const tiltY = extractSlot(block, /:tilt-y\s+("[^"]+"|[\d\.-]+)/i) || '0';
+      const tiltZ = extractSlot(block, /:tilt-z\s+("[^"]+"|[\d\.-]+)/i) || '0';
       const segsStr = extractSlot(block, /:segments\s+([\d]+)/i);
       const segments = segsStr ? parseInt(segsStr, 10) : 24;
       const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
@@ -1133,6 +1170,9 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         tiltZ,
         segments,
         depthFog,
+        zLayer,
+        sortAfter,
+        zBias,
       });
     } else if (nodeType === '3d-polygon') {
       const ptsStr = extractSlot(block, /:points\s+"([^"]+)"/i) || extractSlot(block, /:pts\s+"([^"]+)"/i);
@@ -1147,6 +1187,9 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         pointsExpr: ptsStr,
         depthFog,
         cullBackface,
+        zLayer,
+        sortAfter,
+        zBias,
       });
     } else if (target && attr && expr) {
       bindings.push({
