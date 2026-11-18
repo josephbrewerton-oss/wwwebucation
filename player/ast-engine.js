@@ -1416,22 +1416,35 @@
       this.pool = [];
       this.group = null;
       this.bounds = Object.assign({ minX: 40, maxX: 760, minY: 40, maxY: 440 }, config.bounds || {});
+      this.defaultBounds = Object.assign({}, this.bounds);
       this.boundsElement = config.boundsElement || null;
       this.gravity = Number(config.gravity) || 0;
       this.speed = Number(config.speed) || 120;
+      this.defaultSpeed = this.speed;
       this.shape = config.shape || 'circle';
       this.radius = Number(config.radius) || 4;
+      this.defaultRadius = this.radius;
       this.fill = config.fill || '#38bdf8';
+      this.defaultFill = this.fill;
+      this.liquidMinY = config.liquidMinY !== undefined && config.liquidMinY !== null
+        ? Number(config.liquidMinY)
+        : Math.round(this.defaultBounds.minY + (this.defaultBounds.maxY - this.defaultBounds.minY) * 0.465);
+      this.placeholderSelector = config.placeholderSelector || null;
       this.wrapMode = config.wrapMode || 'bounce';
       this.restitution = config.restitution !== undefined ? Math.max(0, Math.min(1, Number(config.restitution))) : (config.bounce !== undefined ? Math.max(0, Math.min(1, Number(config.bounce))) : 1.0);
       this.friction = config.friction !== undefined ? Math.max(0, Number(config.friction)) : 0.0;
       this.substeps = config.substeps !== undefined ? Math.max(1, Math.min(16, Math.round(Number(config.substeps) || 4))) : 4;
       this.phaseState = config.phaseState || 'gas';
-      this.phaseSync = Boolean(config.phaseSync || this.id === 'gas-molecules');
+      this.phaseSync = Boolean(config.phaseSync);
+      this.phaseExpr = config.phaseExpr || null;
+      this.clampXExpr = config.clampXExpr || null;
       this.speedExpr = config.speedExpr || null;
       this.countExpr = config.countExpr || null;
+      this._phaseEval = null;
+      this._clampXEval = null;
       this._speedEval = null;
       this._countEval = null;
+      this._lastPhaseEval = '';
       this._lastCountEval = -1;
       this._lastSpeedEval = -1;
       this.obstacles = [];
@@ -1465,14 +1478,9 @@
 
     mount(container) {
       if (!container) return;
-      // If mounting the gas molecules emitter in a chamber with static placeholder seed dots, clean them up
-      if (this.id === 'gas-molecules') {
-        const staticGroup = container.querySelector('#gas-particles-group');
-        if (staticGroup) {
-          // Keep brownian grain tracer if present, remove static seed placeholder dots
-          const staticCircles = staticGroup.querySelectorAll('circle:not(#brownian-grain)');
-          staticCircles.forEach(c => c.remove());
-        }
+      if (this.placeholderSelector && typeof container.querySelectorAll === 'function') {
+        const staticPlaceholders = container.querySelectorAll(this.placeholderSelector);
+        staticPlaceholders.forEach(c => c.remove());
       }
 
       let g = container.querySelector(`#emitter-${this.id}`);
@@ -1561,7 +1569,8 @@
      */
     clampToPistonX(pistonFaceX) {
       if (typeof pistonFaceX !== 'number' || isNaN(pistonFaceX)) return;
-      const limit = Math.min(494, pistonFaceX - this.radius);
+      const maxBound = (this.defaultBounds && Number.isFinite(this.defaultBounds.maxX)) ? this.defaultBounds.maxX : 760;
+      const limit = Math.min(maxBound, pistonFaceX - this.radius);
       this.bounds.maxX = limit;
       for (let i = 0; i < this.pool.length; i++) {
         const p = this.pool[i];
@@ -1579,6 +1588,12 @@
       const s = String(state || 'gas').toLowerCase();
       if (this.phaseState === s) return;
       this.phaseState = s;
+      this._lastSpeedEval = -1;
+
+      const defMinX = (this.defaultBounds && Number.isFinite(this.defaultBounds.minX)) ? this.defaultBounds.minX : 40;
+      const defMinY = (this.defaultBounds && Number.isFinite(this.defaultBounds.minY)) ? this.defaultBounds.minY : 40;
+      const defMaxY = (this.defaultBounds && Number.isFinite(this.defaultBounds.maxY)) ? this.defaultBounds.maxY : 440;
+      const defR = String(this.defaultRadius || 4);
 
       if (s === 'solid') {
         this.fill = '#a7f3d0';
@@ -1588,8 +1603,8 @@
         // Compute lattice anchor coordinates in a stable crystal grid
         const cols = Math.min(15, Math.ceil(Math.sqrt(this.pool.length * 1.8)));
         const rows = Math.ceil(this.pool.length / cols);
-        const startX = 80;
-        const startY = 160;
+        const startX = defMinX + 34;
+        const startY = defMinY + 74;
         const spacingX = Math.min(24, 200 / Math.max(1, cols - 1));
         const spacingY = Math.min(24, 180 / Math.max(1, rows - 1));
 
@@ -1611,39 +1626,40 @@
         this.speed = 65;
         this.gravity = 140;
         this.wrapMode = 'bounce';
-        this.bounds.minY = 220;
-        this.bounds.maxY = 374;
+        this.bounds.minY = this.liquidMinY;
+        this.bounds.maxY = defMaxY;
+        const spanY = Math.max(20, (defMaxY - this.liquidMinY) * 0.5);
         for (let i = 0; i < this.pool.length; i++) {
           const p = this.pool[i];
           p.latticeX = null;
           p.latticeY = null;
-          if (p.y < 220) p.y = 220 + Math.random() * 80;
+          if (p.y < this.liquidMinY) p.y = this.liquidMinY + Math.random() * spanY;
           const angle = Math.random() * Math.PI * 2;
           p.vx = Math.cos(angle) * 65;
           p.vy = Math.sin(angle) * 65;
           if (p.node) {
             p.node.setAttribute('fill', '#06b6d4');
-            p.node.setAttribute('r', '4.5');
+            p.node.setAttribute('r', defR);
           }
         }
       } else {
         // Gas state: elastic chaos filling the entire volume
-        this.fill = '#38bdf8';
-        this.speed = 160;
+        this.fill = this.defaultFill || '#38bdf8';
+        this.speed = this.defaultSpeed || 160;
         this.gravity = 0;
         this.wrapMode = 'bounce';
-        this.bounds.minY = 86;
-        this.bounds.maxY = 374;
+        this.bounds.minY = defMinY;
+        this.bounds.maxY = defMaxY;
         for (let i = 0; i < this.pool.length; i++) {
           const p = this.pool[i];
           p.latticeX = null;
           p.latticeY = null;
           const angle = Math.random() * Math.PI * 2;
-          p.vx = Math.cos(angle) * 160;
-          p.vy = Math.sin(angle) * 160;
+          p.vx = Math.cos(angle) * this.speed;
+          p.vy = Math.sin(angle) * this.speed;
           if (p.node) {
-            p.node.setAttribute('fill', '#38bdf8');
-            p.node.setAttribute('r', '4.5');
+            p.node.setAttribute('fill', this.fill);
+            p.node.setAttribute('r', defR);
           }
         }
       }
@@ -4533,9 +4549,9 @@
     normalizeVarName(name) {
       if (!name || typeof name !== 'string') return '';
       let clean = name.trim().replace(/^\*|\*$/g, '');
-      if (clean === 'bsl-active') return 'bslActive';
-      if (clean === 'switch-closed') return 'switchClosed';
-      if (clean === 'particle-count') return 'particleCount';
+      if (clean.includes('-')) {
+        clean = clean.replace(/-([a-zA-Z0-9])/g, (_, ch) => ch.toUpperCase());
+      }
       return clean;
     }
 
@@ -4575,33 +4591,9 @@
       this.updateComputedVars();
       this.syncBindInputs(cleanName, val);
 
-      // Synchronize vector particle emitters with thermodynamic state variables
-      if (this.emitters && this.emitters.size > 0) {
-        const gasEm = this.emitters.get('gas-molecules');
-        if (gasEm || Array.from(this.emitters.values()).some(e => e.phaseSync)) {
-          const targetEm = gasEm || Array.from(this.emitters.values()).find(e => e.phaseSync);
-          if (targetEm) {
-            if (cleanName === 'particleCount' || cleanName === 'count' || cleanName === 'atoms') {
-              targetEm.setCount(val);
-            } else if (cleanName === 'temp' || cleanName === 'temperature') {
-              const numT = Number(val);
-              targetEm.setSpeed(160 * Math.sqrt(Math.max(50, numT) / 300));
-              if (!this.vars.state) {
-                if (numT <= 140) targetEm.setPhaseState('solid');
-                else if (numT <= 273) targetEm.setPhaseState('liquid');
-                else targetEm.setPhaseState('gas');
-              }
-            } else if (cleanName === 'state' || cleanName === 'phase') {
-              targetEm.setPhaseState(String(val).toLowerCase());
-            } else if (cleanName === 'volume') {
-              const pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, val)) - 0.35) / 0.65;
-              targetEm.clampToPistonX(pX);
-            }
-          }
-        } else if (cleanName === 'particleCount' || cleanName === 'count') {
-          for (const em of this.emitters.values()) {
-            if (!em.countExpr) em.setCount(val);
-          }
+      if (this.emitters && this.emitters.size > 0 && cleanName === 'count') {
+        for (const em of this.emitters.values()) {
+          if (!em.countExpr) em.setCount(val);
         }
       }
 
@@ -6380,6 +6372,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       const stage = extractSlot(/:stage\s+"([^"]+)"/i) || 'CURRICULUM';
       const durationStr = extractSlot(/:duration\s+([\d\.]+)/i);
       const duration = durationStr ? parseFloat(durationStr) : 10.0;
+      const bootSound = extractQuoted(astContent, 'boot-sound') || extractQuoted(astContent, 'bootSound') || null;
 
       // Helper to extract S-expression blocks with balanced parentheses and string quote protection
       const extractSexprBlocks = (text, tag) => {
@@ -6582,6 +6575,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const attr = extractQuoted(block, 'attr') || extractSlot.call(null, block, /:attr\s+"([^"]+)"/i);
         const expr = extractQuoted(block, 'expr') || extractSlot.call(null, block, /:expr\s+"([^"]+)"/i);
 
+        const zLayerStr = extractSlot.call(null, block, /:z-layer\s+([\d\.\-]+)/i);
+        const zLayer = zLayerStr !== null ? parseFloat(zLayerStr) : undefined;
+        const zBiasStr = extractSlot.call(null, block, /:z-bias\s+([\d\.\-]+)/i);
+        const zBias = zBiasStr !== null ? parseFloat(zBiasStr) : undefined;
+        const sortAfter = extractQuoted(block, 'sort-after') || extractQuoted(block, 'sortAfter') || undefined;
+
         if (type === '3d-node') {
           const x = extractSlot.call(null, block, /:x\s+"([^"]+)"/i) || '0';
           const y = extractSlot.call(null, block, /:y\s+"([^"]+)"/i) || '0';
@@ -6592,7 +6591,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
           const depthFog = depthFogStr !== 'false';
 
-          bindings.push({
+          const entry = {
             type: '3d-node',
             target,
             x,
@@ -6601,9 +6600,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             baseR,
             label,
             depthFog
-          });
+          };
+          if (zLayer !== undefined) entry.zLayer = zLayer;
+          if (zBias !== undefined) entry.zBias = zBias;
+          if (sortAfter) entry.sortAfter = sortAfter;
+          bindings.push(entry);
         } else if (type === '3d-line') {
-          bindings.push({
+          const splitExpr = extractQuoted(block, 'split-expr') || extractQuoted(block, 'splitExpr') || undefined;
+          const splineA = extractQuoted(block, 'spline-a') || extractQuoted(block, 'splineA') || undefined;
+          const splineB = extractQuoted(block, 'spline-b') || extractQuoted(block, 'splineB') || undefined;
+          const splineIndexStr = extractSlot.call(null, block, /:spline-index\s+(\d+)/i);
+          const splineIndex = splineIndexStr !== null ? parseInt(splineIndexStr, 10) : undefined;
+          const entry = {
             type: '3d-line',
             target,
             x1: extractSlot.call(null, block, /:x1\s+"([^"]+)"/i) || '0',
@@ -6615,7 +6623,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             cap1: extractSlot.call(null, block, /:cap1\s+"([^"]+)"/i),
             cap2: extractSlot.call(null, block, /:cap2\s+"([^"]+)"/i),
             baseR: parseFloat(extractSlot.call(null, block, /:base-r\s+([\d\.]+)/i) || '8')
-          });
+          };
+          if (zLayer !== undefined) entry.zLayer = zLayer;
+          if (zBias !== undefined) entry.zBias = zBias;
+          if (sortAfter) entry.sortAfter = sortAfter;
+          if (splitExpr) entry.splitExpr = splitExpr;
+          if (splineA) entry.splineA = splineA;
+          if (splineB) entry.splineB = splineB;
+          if (splineIndex !== undefined) entry.splineIndex = splineIndex;
+          bindings.push(entry);
         } else if (type === '3d-ring') {
           const rStr = extractSlot.call(null, block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
           const cx = extractSlot.call(null, block, /:cx\s+"([^"]+)"/i) || '0';
@@ -6629,7 +6645,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
           const depthFog = depthFogStr !== 'false';
 
-          bindings.push({
+          const entry = {
             type: '3d-ring',
             target,
             r: rStr,
@@ -6637,7 +6653,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             tiltX, tiltY, tiltZ,
             segments,
             depthFog
-          });
+          };
+          if (zLayer !== undefined) entry.zLayer = zLayer;
+          if (zBias !== undefined) entry.zBias = zBias;
+          if (sortAfter) entry.sortAfter = sortAfter;
+          bindings.push(entry);
         } else if (type === '3d-polygon') {
           const ptsStr = extractSlot.call(null, block, /:points\s+"([^"]+)"/i) || extractSlot.call(null, block, /:pts\s+"([^"]+)"/i);
           const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
@@ -6645,13 +6665,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const cullBackfaceStr = extractSlot.call(null, block, /:cull-backface\s+([^\s\)]+)/i);
           const cullBackface = cullBackfaceStr === 'true';
 
-          bindings.push({
+          const entry = {
             type: '3d-polygon',
             target,
             pointsExpr: ptsStr,
             depthFog,
             cullBackface
-          });
+          };
+          if (zLayer !== undefined) entry.zLayer = zLayer;
+          if (zBias !== undefined) entry.zBias = zBias;
+          if (sortAfter) entry.sortAfter = sortAfter;
+          bindings.push(entry);
         } else if (target && attr && expr) {
           bindings.push({
             type: '2d-attr',
@@ -6798,7 +6822,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
         // Also extract questions from (:questions ((:q ...))) if no explicit :checkpoint entries were defined
         if (checkpoints.length === 0) {
-          const qEntryBlocks = extractSexprBlocks(astContent, ':q').concat(extractSexprBlocks(astContent, ':question'));
+          const nonQuestAst = extractSexprBlocks(astContent, ':quests').reduce((acc, qb) => acc.replace(qb, ''), astContent);
+          const qEntryBlocks = extractSexprBlocks(nonQuestAst, ':q').concat(extractSexprBlocks(nonQuestAst, ':question'));
           if (qEntryBlocks.length > 0) {
             const count = qEntryBlocks.length;
             const dur = Math.max(12.0, count * 3.0);
@@ -7357,8 +7382,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const emSubStr = extractSlot.call(null, emText, /:substeps\s+(\d+)/i);
         const speedExpr = extractQuoted(emText, 'speed-expr') || extractQuoted(emText, 'speedExpr') || null;
         const countExpr = extractQuoted(emText, 'count-expr') || extractQuoted(emText, 'countExpr') || null;
+        const phaseExpr = extractQuoted(emText, 'phase-expr') || extractQuoted(emText, 'phaseExpr') || null;
+        const clampXExpr = extractQuoted(emText, 'clamp-x-expr') || extractQuoted(emText, 'clampXExpr') || null;
+        const placeholderSelector = extractQuoted(emText, 'placeholder-selector') || extractQuoted(emText, 'placeholderSelector') || null;
+        const liquidMinYStr = extractSlot.call(null, emText, /:liquid-min-y\s+([\d\.\-]+)/i);
+        const liquidMinY = liquidMinYStr !== null ? parseFloat(liquidMinYStr) : undefined;
         const phaseSyncMatch = emText.match(/:phase-?sync\s+(true|false)/i);
-        const phaseSync = phaseSyncMatch ? phaseSyncMatch[1] === 'true' : (emId === 'gas-molecules');
+        const phaseSync = phaseSyncMatch ? phaseSyncMatch[1] === 'true' : false;
 
         // Explicit Bounds
         const minX = parseFloat(extractSlot.call(null, emText, /:minX\s+([\d\.\-]+)/i) || '40');
@@ -7388,6 +7418,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           speed,
           speedExpr,
           countExpr,
+          phaseExpr,
+          clampXExpr,
+          placeholderSelector,
+          liquidMinY,
           phaseSync,
           radius,
           gravity,
@@ -7561,6 +7595,139 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (Object.keys(controls).length === 0) controls = null;
       }
 
+      // Declarative 3D Camera Viewpoint Stops (:camera-stops ((:stop :id ... :aliases ... :yaw ... :pitch ... :scale ... :t ... :toast ...)))
+      let cameraStops = null;
+      const camStopBlocks = extractSexprBlocks(astContent, ':camera-stops');
+      if (camStopBlocks.length > 0) {
+        const stops = [];
+        const stopForms = extractSexprBlocks(camStopBlocks[0], ':stop');
+        stopForms.forEach(st => {
+          const sid = extractQuoted(st, 'id') || extractSlot.call(null, st, /:id\s+([^\s\)]+)/i);
+          if (!sid) return;
+          const rawAliases = extractQuoted(st, 'aliases') || '';
+          const aliases = rawAliases
+            ? rawAliases.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
+            : [];
+          const yawStr = extractSlot.call(null, st, /:yaw\s+([\d\.\-]+)/i);
+          const pitchStr = extractSlot.call(null, st, /:pitch\s+([\d\.\-]+)/i);
+          const scaleStr = extractSlot.call(null, st, /:scale\s+([\d\.\-]+)/i);
+          const tStr = extractSlot.call(null, st, /:t\s+([\d\.\-]+)/i);
+          const toast = extractQuoted(st, 'toast') || '';
+          stops.push({
+            id: sid.toLowerCase(),
+            aliases,
+            yaw: yawStr !== null ? parseFloat(yawStr) : 0,
+            pitch: pitchStr !== null ? parseFloat(pitchStr) : 0,
+            scale: scaleStr !== null ? parseFloat(scaleStr) : 1.0,
+            t: tStr !== null ? parseFloat(tStr) : undefined,
+            toast
+          });
+        });
+        if (stops.length > 0) cameraStops = stops;
+      }
+
+      // Declarative Guided Quest Missions (:quests :title ... (:missions ((:mission ... (:questions ((:q ...)))))))
+      let quests = null;
+      const questBlocks = extractSexprBlocks(astContent, ':quests');
+      if (questBlocks.length > 0) {
+        const qb = questBlocks[0];
+        const missionsBlocks = extractSexprBlocks(qb, ':missions');
+        const headerOnly = missionsBlocks.length > 0 ? qb.replace(missionsBlocks[0], '') : qb;
+        const qTitle = extractQuoted(headerOnly, 'title') || '3D Explorer Quest Started!';
+        const completionTitle = extractQuoted(headerOnly, 'completion-title') || 'QUEST COMPLETE!';
+        const completionDesc = extractQuoted(headerOnly, 'completion-desc') || 'Congratulations! You have completed every mission in this scene.';
+        const feedbackWrong = extractQuoted(headerOnly, 'feedback-wrong') || 'Key Insight:';
+        const correctToast = extractQuoted(headerOnly, 'correct-toast') || '⭐ Correct! +100 Points';
+        const wrongToast = extractQuoted(headerOnly, 'wrong-toast') || 'Notice: Review the explanation below';
+
+        const missionForms = extractSexprBlocks(missionsBlocks.length > 0 ? missionsBlocks[0] : qb, ':mission');
+        const missions = [];
+        missionForms.forEach((mb, mIdx) => {
+          const qSubBlocks = extractSexprBlocks(mb, ':questions');
+          const mHeader = qSubBlocks.length > 0 ? mb.replace(qSubBlocks[0], '') : mb;
+          const mid = extractQuoted(mHeader, 'id') || `mission_${mIdx + 1}`;
+          const mTitle = extractQuoted(mHeader, 'title') || `Mission ${mIdx + 1}`;
+          const mDesc = extractQuoted(mHeader, 'desc') || '';
+          const tStr = extractSlot.call(null, mHeader, /:t\s+([\d\.\-]+)/i);
+          const yawStr = extractSlot.call(null, mHeader, /:yaw\s+([\d\.\-]+)/i);
+          const pitchStr = extractSlot.call(null, mHeader, /:pitch\s+([\d\.\-]+)/i);
+          const scaleStr = extractSlot.call(null, mHeader, /:scale\s+([\d\.\-]+)/i);
+          const hasCam = yawStr !== null || pitchStr !== null || scaleStr !== null;
+
+          const qForms = extractSexprBlocks(qSubBlocks.length > 0 ? qSubBlocks[0] : mb, ':q');
+          const questionPool = [];
+          qForms.forEach(qf => {
+            const prompt = extractQuoted(qf, 'prompt') || '';
+            const ansMatch = qf.match(/:answer\s+(\d+)/i);
+            const explanation = extractQuoted(qf, 'explanation') || '';
+            const options = [];
+            const optIdx = qf.indexOf(':options');
+            if (optIdx !== -1) {
+              const sParen = qf.indexOf('(', optIdx);
+              if (sParen !== -1) {
+                let depth = 0;
+                let inStr = false;
+                let eParen = -1;
+                for (let i = sParen; i < qf.length; i++) {
+                  const ch = qf[i];
+                  if (ch === '"' && (i === 0 || qf[i - 1] !== '\\')) inStr = !inStr;
+                  else if (!inStr) {
+                    if (ch === '(') depth++;
+                    else if (ch === ')') {
+                      depth--;
+                      if (depth === 0) { eParen = i; break; }
+                    }
+                  }
+                }
+                if (eParen !== -1) {
+                  const inside = qf.slice(sParen + 1, eParen);
+                  const optRe = /"((?:[^"\\]|\\.)*)"/g;
+                  let om;
+                  while ((om = optRe.exec(inside)) !== null) {
+                    options.push(om[1].replace(/\\"/g, '"'));
+                  }
+                }
+              }
+            }
+            if (prompt && options.length > 0) {
+              questionPool.push({
+                question: prompt,
+                options,
+                correct: ansMatch ? parseInt(ansMatch[1], 10) : 0,
+                explanation
+              });
+            }
+          });
+
+          if (questionPool.length > 0) {
+            missions.push({
+              id: mid,
+              targetT: tStr !== null ? parseFloat(tStr) : 0,
+              cam: hasCam ? {
+                yaw: yawStr !== null ? parseFloat(yawStr) : 0,
+                pitch: pitchStr !== null ? parseFloat(pitchStr) : 0,
+                scale: scaleStr !== null ? parseFloat(scaleStr) : 1.0
+              } : null,
+              title: mTitle,
+              desc: mDesc,
+              questionPool
+            });
+          }
+        });
+
+        if (missions.length > 0) {
+          quests = {
+            title: qTitle,
+            completionTitle,
+            completionDesc,
+            feedbackWrong,
+            correctToast,
+            wrongToast,
+            missions
+          };
+        }
+      }
+
       const has3D = Boolean((camBlocks && camBlocks.length > 0) || bindings.some(b => b.type && b.type.startsWith('3d-')));
 
       return {
@@ -7570,10 +7737,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         type,
         cartridgeType: type,
         duration,
+        bootSound,
         video: video || null,
         videoFit: videoFit || 'contain',
         hasVideo: Boolean(video),
         camera: (camBlocks && camBlocks.length > 0) ? camera : null,
+        cameraStops,
+        quests,
         has3D,
         keyframes,
         subtitles,
@@ -7594,6 +7764,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         controls,
         interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
       };
+    }
+
+    _playSceneBootSound(scene) {
+      if (!scene || !scene.bootSound || !this.synth) return;
+      try {
+        const bs = String(scene.bootSound).trim().toLowerCase();
+        if (bs === 'bbc-beep') {
+          if (typeof this.synth.playBbcBeep === 'function') this.synth.playBbcBeep();
+        } else if (!isNaN(Number(bs)) && typeof this.synth.playTone === 'function') {
+          this.synth.playTone(Number(bs), 0.25, 'square');
+        }
+      } catch (_) {}
     }
 
     /**
@@ -7632,11 +7814,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       } catch (bindErr) {
         console.warn('[AST Engine] Initial frame bind notice:', bindErr);
       }
-      if ((scene.id === 'bbc-model-b' || scene.id === 'bbc-micro') && this.synth) {
-        try {
-          this.synth.playBbcBeep();
-        } catch (_) {}
-      }
+      this._playSceneBootSound(scene);
       if (typeof this.mountDeclarativeHud === 'function') {
         this.mountDeclarativeHud(scene);
       }
@@ -8254,7 +8432,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if ((!parsedAst.bindInputs || parsedAst.bindInputs.length === 0) && textParsed.bindInputs) {
                   parsedAst.bindInputs = textParsed.bindInputs;
                 }
-                if ((!parsedAst.emitters || parsedAst.emitters.length === 0) && textParsed.emitters) {
+                if (textParsed.emitters && textParsed.emitters.length > 0) {
                   parsedAst.emitters = textParsed.emitters;
                 }
                 if ((!parsedAst.stateMachines || parsedAst.stateMachines.length === 0) && textParsed.stateMachines) {
@@ -8274,7 +8452,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 ) {
                   parsedAst.gestures = textParsed.gestures;
                 }
-                if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.length > parsedAst.bindings.length || textParsed.bindings.some(b => b.type === 'var-update'))) {
+                if (textParsed.bindings && textParsed.bindings.length > 0 && (!parsedAst.bindings || parsedAst.bindings.length === 0 || textParsed.bindings.length >= parsedAst.bindings.length || textParsed.bindings.some(b => b.type === 'var-update'))) {
                   parsedAst.bindings = textParsed.bindings;
                 }
                 if (textParsed.scopes && textParsed.scopes.length > 0 && (!parsedAst.scopes || parsedAst.scopes.length === 0)) {
@@ -8285,6 +8463,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 }
                 if (textParsed.controls && !parsedAst.controls) {
                   parsedAst.controls = textParsed.controls;
+                }
+                if (textParsed.bootSound && !parsedAst.bootSound) {
+                  parsedAst.bootSound = textParsed.bootSound;
+                }
+                if (textParsed.cameraStops && (!parsedAst.cameraStops || parsedAst.cameraStops.length === 0)) {
+                  parsedAst.cameraStops = textParsed.cameraStops;
+                }
+                if (textParsed.quests && !parsedAst.quests) {
+                  parsedAst.quests = textParsed.quests;
                 }
               }
             }
@@ -8319,10 +8506,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           title: (parsedAst && parsedAst.title) || registryScene.title || presetId,
           stage: (parsedAst && parsedAst.stage) || registryScene.stage || 'CURRICULUM',
           duration: (parsedAst && parsedAst.duration) || registryScene.duration || 10.0,
+          bootSound: (parsedAst && parsedAst.bootSound) || registryScene.bootSound || null,
           video: (parsedAst && parsedAst.video) || registryScene.video || null,
           videoFit: (parsedAst && parsedAst.videoFit) || registryScene.videoFit || 'contain',
           hasVideo: Boolean((parsedAst && parsedAst.video) || registryScene.video),
           camera: has3D ? ((parsedAst && parsedAst.camera) || registryScene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }) : null,
+          cameraStops: (parsedAst && parsedAst.cameraStops) || registryScene.cameraStops || null,
+          quests: (parsedAst && parsedAst.quests) || registryScene.quests || null,
           has3D: has3D,
           interactive: shouldHaveQuestions ? ((parsedAst && parsedAst.interactive) || (parsedAst && parsedAst.checkpoints && parsedAst.checkpoints.length ? { checkpoints: parsedAst.checkpoints, hotspots: [] } : null)) : null,
           keyframes: (parsedAst && parsedAst.keyframes && parsedAst.keyframes.length) ? parsedAst.keyframes : (registryScene.keyframes || []),
@@ -8435,6 +8625,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       } catch (bindErr) {
         console.warn('[AST Engine] Initial frame bind notice:', bindErr);
       }
+      this._playSceneBootSound(scene);
         
       this.emit('presetchange', {
         preset: this.activePresetId,
@@ -8536,7 +8727,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       stage: resolvedStage,
       type: resolvedType,
       duration: parseFloat(sceneData.duration || (parsedAst && parsedAst.duration)) || 10.0,
+      bootSound: sceneData.bootSound || (parsedAst && parsedAst.bootSound) || null,
       camera: sceneData.camera || (parsedAst && parsedAst.camera) || null,
+      cameraStops: sceneData.cameraStops || (parsedAst && parsedAst.cameraStops) || null,
+      quests: sceneData.quests || (parsedAst && parsedAst.quests) || null,
       has3D: Boolean(sceneData.has3D || sceneData.camera || (parsedAst && parsedAst.has3D)),
       interactive: sceneData.interactive || (parsedAst && parsedAst.interactive) || null,
       keyframes: (sceneData.keyframes && sceneData.keyframes.length) ? sceneData.keyframes : ((parsedAst && parsedAst.keyframes) || []),
@@ -8899,7 +9093,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         title,
         stage: `DUAL PAIR (${astFile.name} + ${svgFile.name})`,
         duration,
+        bootSound: (parsed && parsed.bootSound) || null,
         camera: (parsed && parsed.camera) || null,
+        cameraStops: (parsed && parsed.cameraStops) || null,
+        quests: (parsed && parsed.quests) || null,
         has3D: Boolean(parsed && parsed.has3D),
         keyframes,
         subtitles,
@@ -8909,6 +9106,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         stateMachines,
         emitters,
         bindInputs,
+        astSource: astContent,
         svgText: svgContent
       };
 
@@ -9767,6 +9965,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 evalX, evalY, evalZ,
                 baseR: b.baseR,
                 depthFog: b.depthFog,
+                zLayer: b.zLayer !== undefined ? Number(b.zLayer) : 0,
+                zBias: b.zBias !== undefined ? Number(b.zBias) : 0,
+                sortAfter: b.sortAfter || null,
                 meanZ: 0
               };
               this.active3DNodes.push(item);
@@ -9776,16 +9977,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const line = hasDomQuery ? container.querySelector(b.target) : null;
             if (line) {
               const wrap3d = (expr) => {
-            if (expr === undefined || expr === null) return () => 0;
-              const fn = this.compileAstFn(expr);
-              return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
-            };
-            const evalX1 = wrap3d(b.x1), evalY1 = wrap3d(b.y1), evalZ1 = wrap3d(b.z1);
-            const evalX2 = wrap3d(b.x2), evalY2 = wrap3d(b.y2), evalZ2 = wrap3d(b.z2);
+                if (expr === undefined || expr === null) return () => 0;
+                const fn = this.compileAstFn(expr);
+                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+              };
+              const evalX1 = wrap3d(b.x1), evalY1 = wrap3d(b.y1), evalZ1 = wrap3d(b.z1);
+              const evalX2 = wrap3d(b.x2), evalY2 = wrap3d(b.y2), evalZ2 = wrap3d(b.z2);
+              const evalSplit = b.splitExpr ? wrap3d(b.splitExpr) : null;
               const cap1 = (b.cap1 && hasDomQuery) ? container.querySelector(b.cap1) : null;
               const cap2 = (b.cap2 && hasDomQuery) ? container.querySelector(b.cap2) : null;
+              const splineANode = (b.splineA && hasDomQuery) ? container.querySelector(b.splineA) : null;
+              const splineBNode = (b.splineB && hasDomQuery) ? container.querySelector(b.splineB) : null;
+              const splineIndex = (b.splineIndex !== undefined && b.splineIndex !== null) ? Number(b.splineIndex) : null;
 
-              
               const item = {
                 type: '3d-line',
                 target: b.target,
@@ -9794,6 +9998,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 baseR: b.baseR,
                 evalX1, evalY1, evalZ1,
                 evalX2, evalY2, evalZ2,
+                evalSplit,
+                splineANode,
+                splineBNode,
+                splineIndex,
+                zLayer: b.zLayer !== undefined ? Number(b.zLayer) : 0,
+                zBias: b.zBias !== undefined ? Number(b.zBias) : 0,
+                sortAfter: b.sortAfter || null,
                 meanZ: 0
               };
               this.active3DLines.push(item);
@@ -9823,6 +10034,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 evalTiltX, evalTiltY, evalTiltZ,
                 segments: b.segments || 24,
                 depthFog: b.depthFog,
+                zLayer: b.zLayer !== undefined ? Number(b.zLayer) : 0,
+                zBias: b.zBias !== undefined ? Number(b.zBias) : 0,
+                sortAfter: b.sortAfter || null,
                 meanZ: 0
               };
               this.active3DRings.push(item);
@@ -9844,6 +10058,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 evalPts,
                 depthFog: b.depthFog,
                 cullBackface: b.cullBackface,
+                zLayer: b.zLayer !== undefined ? Number(b.zLayer) : 0,
+                zBias: b.zBias !== undefined ? Number(b.zBias) : 0,
+                sortAfter: b.sortAfter || null,
                 meanZ: 0
               };
               this.active3DPolygons.push(item);
@@ -10030,6 +10247,20 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (scene.emitters && Array.isArray(scene.emitters)) {
         scene.emitters.forEach(emConfig => {
           const em = this.addEmitter(emConfig);
+          if (em.phaseExpr) {
+            try {
+              const rawPhFn = this.compileAstFn(em.phaseExpr);
+              em._phaseEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawPhFn(t, vars, computed, MathObj, clamp, lerp, map);
+            } catch (_) {}
+          }
+          if (em.clampXExpr) {
+            try {
+              const rawCxFn = this.compileAstFn(em.clampXExpr);
+              em._clampXEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                rawCxFn(t, vars, computed, MathObj, clamp, lerp, map);
+            } catch (_) {}
+          }
           if (em.speedExpr) {
             try {
               const rawSpdFn = this.compileAstFn(em.speedExpr);
@@ -10405,8 +10636,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
 
     if (this.active3DItems && this.active3DItems.length) {
-      let dnaStrandA = null;
-      let dnaStrandB = null;
+      let splineChains = null;
       const v = this.vars || {};
       const comp = v;
       for (let i = 0; i < this.active3DItems.length; i++) {
@@ -10482,34 +10712,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           item.worldP1 = [x1, y1, z1];
           item.worldP2 = [x2, y2, z2];
 
-          const unzip = (this.vars && typeof this.vars.unzipProgress === 'number') ? this.vars.unzipProgress : 0;
-          let unzipOffset = 0;
-          let isUnzipped = false;
-          if (item.target && item.target.startsWith('#dna-line-')) {
-            const idxMatch = item.target.match(/\d+/);
-            if (idxMatch) {
-              const idx = parseInt(idxMatch[0], 10);
-              if (unzip > 0 && (idx / 18) <= unzip) {
-                isUnzipped = true;
-                unzipOffset = (unzip - (idx / 18) + 0.1) * 35;
-              }
-              if (!dnaStrandA) dnaStrandA = [];
-              if (!dnaStrandB) dnaStrandB = [];
-            }
+          let splitOffset = 0;
+          if (item.evalSplit) {
+            splitOffset = Number(item.evalSplit(effectiveT, v, Math, comp)) || 0;
           }
+          const isSplit = splitOffset > 0;
 
-          const p1 = this.project3D(x1 - unzipOffset, y1, z1, camera, 400, 240);
-          const p2 = this.project3D(x2 + unzipOffset, y2, z2, camera, 400, 240);
+          const p1 = this.project3D(x1 - splitOffset, y1, z1, camera, 400, 240);
+          const p2 = this.project3D(x2 + splitOffset, y2, z2, camera, 400, 240);
           const z1Val = Number.isFinite(p1.z) ? p1.z : 0;
           const z2Val = Number.isFinite(p2.z) ? p2.z : 0;
           item.meanZ = (z1Val + z2Val) / 2;
 
-          if (item.target && item.target.startsWith('#dna-line-')) {
-            const idxMatch = item.target.match(/\d+/);
-            if (idxMatch) {
-              const idx = parseInt(idxMatch[0], 10);
-              dnaStrandA[idx] = p1;
-              dnaStrandB[idx] = p2;
+          if (Number.isFinite(item.splineIndex) && (item.splineANode || item.splineBNode)) {
+            if (!splineChains) splineChains = new Map();
+            if (item.splineANode) {
+              let arrA = splineChains.get(item.splineANode);
+              if (!arrA) { arrA = []; splineChains.set(item.splineANode, arrA); }
+              arrA[item.splineIndex] = p1;
+            }
+            if (item.splineBNode) {
+              let arrB = splineChains.get(item.splineBNode);
+              if (!arrB) { arrB = []; splineChains.set(item.splineBNode, arrB); }
+              arrB[item.splineIndex] = p2;
             }
           }
 
@@ -10525,7 +10750,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             item.domNode.setAttribute('y1', py1.toFixed(1));
             item.domNode.setAttribute('x2', px2.toFixed(1));
             item.domNode.setAttribute('y2', py2.toFixed(1));
-            if (isUnzipped) {
+            if (isSplit) {
               item.domNode.setAttribute('opacity', '0.15');
               item.domNode.setAttribute('stroke-dasharray', '3,4');
             } else {
@@ -10666,33 +10891,39 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             }
           }
         }
+      }
 
-        if (dnaStrandA && dnaStrandA.length > 1) {
-          const bbA = this._container && this._container.querySelector('#dna-backbone-a');
-          if (bbA) {
-            bbA.setAttribute('d', this._pointsToSpline(dnaStrandA));
+      if (splineChains) {
+        splineChains.forEach((pts, node) => {
+          if (node && pts && pts.length > 1) {
+            const dense = pts.filter(Boolean);
+            if (dense.length > 1) {
+              node.setAttribute('d', this._pointsToSpline(dense));
+            }
           }
-        }
-        if (dnaStrandB && dnaStrandB.length > 1) {
-          const bbB = this._container && this._container.querySelector('#dna-backbone-b');
-          if (bbB) {
-            bbB.setAttribute('d', this._pointsToSpline(dnaStrandB));
-          }
-        }
+        });
       }
 
       if (this.active3DItems.length > 1) {
         const sorted = [...this.active3DItems].sort((a, b) => {
-          const isOrbitA = a.type === '3d-ring' && a.target && a.target.includes('orbit');
-          const isOrbitB = b.type === '3d-ring' && b.target && b.target.includes('orbit');
-          if (isOrbitA && !isOrbitB) return -1;
-          if (!isOrbitA && isOrbitB) return 1;
-
-          if (a.target === '#saturn-ring' && b.target === '#planet-saturn') return 1;
-          if (a.target === '#planet-saturn' && b.target === '#saturn-ring') return -1;
-
-          return b.meanZ - a.meanZ;
+          const la = a.zLayer || 0;
+          const lb = b.zLayer || 0;
+          if (la !== lb) return la - lb;
+          return ((b.meanZ || 0) + (b.zBias || 0)) - ((a.meanZ || 0) + (a.zBias || 0));
         });
+
+        for (let k = 0; k < this.active3DItems.length; k++) {
+          const anchored = this.active3DItems[k];
+          if (!anchored.sortAfter) continue;
+          const curIdx = sorted.indexOf(anchored);
+          if (curIdx !== -1) sorted.splice(curIdx, 1);
+          const anchorIdx = sorted.findIndex(it => it.target === anchored.sortAfter);
+          if (anchorIdx !== -1) {
+            sorted.splice(anchorIdx + 1, 0, anchored);
+          } else {
+            sorted.push(anchored);
+          }
+        }
 
         let orderChanged = false;
         if (!this._last3DSortKeys || this._last3DSortKeys.length !== sorted.length) {
@@ -10727,52 +10958,23 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    const phaseEmitter = this.emitters && (this.emitters.get('gas-molecules') || Array.from(this.emitters.values()).find(e => e.phaseSync === true));
-    if (phaseEmitter) {
-      const gasEm = phaseEmitter;
-      if (gasEm) {
-        const manualState = this.vars && this.vars.state;
-        const manualTemp = this.vars && this.vars.temp;
-        let currentPhase = 'gas';
-        if (manualState) {
-          currentPhase = String(manualState).toLowerCase();
-        } else if (manualTemp !== undefined) {
-          if (manualTemp <= 140) currentPhase = 'solid';
-          else if (manualTemp <= 273) currentPhase = 'liquid';
-          else currentPhase = 'gas';
-        } else {
-          if (t >= 0.87) currentPhase = 'solid';
-          else if (t >= 0.74) currentPhase = 'liquid';
-          else currentPhase = 'gas';
-        }
-
-        gasEm.setPhaseState(currentPhase);
-
-        let pX = 430;
-        if (this.vars && this.vars.volume !== undefined && this.vars.volume !== null) {
-          pX = 250 + 180 * (Math.max(0.35, Math.min(1.0, this.vars.volume)) - 0.35) / 0.65;
-        } else {
-          pX = t < 0.25 ? 430 : (t < 0.51 ? (430 - 180 * Math.min(1, (t - 0.25) / 0.26)) : (t < 0.74 ? 250 : (250 + 180 * Math.min(1, (t - 0.74) / 0.13))));
-        }
-        gasEm.clampToPistonX(pX);
-
-        if (currentPhase === 'gas') {
-          const currentTemp = (this.vars && this.vars.temp) || (t < 0.51 ? 300 : (t < 0.74 ? (300 + 300 * ((t - 0.51) / 0.23)) : 300));
-          gasEm.setSpeed(160 * Math.sqrt(currentTemp / 300));
-        }
-      }
-    }
-
-    // Generic declarative emitter expressions (:speed-expr, :count-expr)
+    // Generic declarative emitter expressions (:phase-expr, :clamp-x-expr, :count-expr, :speed-expr)
     if (this.emitters && this.emitters.size > 0) {
       const v = this.vars || {};
       for (const em of this.emitters.values()) {
-        if (em._speedEval) {
+        if (em._phaseEval) {
           try {
-            const nextSpd = Number(em._speedEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
-            if (Number.isFinite(nextSpd) && Math.abs(nextSpd - em._lastSpeedEval) >= 2) {
-              em._lastSpeedEval = nextSpd;
-              em.setSpeed(nextSpd);
+            const nextPhase = String(em._phaseEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map) || 'gas').toLowerCase();
+            if (nextPhase && nextPhase !== em.phaseState) {
+              em.setPhaseState(nextPhase);
+            }
+          } catch (_) {}
+        }
+        if (em._clampXEval) {
+          try {
+            const nextClampX = Number(em._clampXEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+            if (Number.isFinite(nextClampX)) {
+              em.clampToPistonX(nextClampX);
             }
           } catch (_) {}
         }
@@ -10782,6 +10984,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (Number.isFinite(nextCnt) && nextCnt !== em._lastCountEval) {
               em._lastCountEval = nextCnt;
               em.setCount(nextCnt);
+            }
+          } catch (_) {}
+        }
+        if (em._speedEval) {
+          try {
+            const nextSpd = Number(em._speedEval(effectiveT, v, Math, v, AstMath.clamp, AstMath.lerp, AstMath.map));
+            if (Number.isFinite(nextSpd) && Math.abs(nextSpd - em._lastSpeedEval) >= 2) {
+              em._lastSpeedEval = nextSpd;
+              em.setSpeed(nextSpd);
             }
           } catch (_) {}
         }
