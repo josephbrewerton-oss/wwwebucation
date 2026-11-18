@@ -59,6 +59,19 @@ import {
   BslSpeechPayload,
 } from '../services/bslGlobalStore';
 import { isSoundEnabled } from '../services/soundHaptics';
+import { getLocalJson, setLocalJson } from '../services/localStateStore';
+
+type BslDockCorner = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left';
+
+interface BslPipLayoutState {
+  mode: 'docked' | 'floating';
+  corner: BslDockCorner;
+  compact: boolean;
+  left?: number;
+  top?: number;
+}
+
+const BSL_PIP_LAYOUT_STORAGE_KEY = 'stj_bsl_pip_layout';
 
 export class NativeBslInterpreterElement extends HTMLElement {
   // PiP and Window state
@@ -104,6 +117,22 @@ export class NativeBslInterpreterElement extends HTMLElement {
   private unsubscribeVoice?: () => void;
   private unsubscribeSignLang?: () => void;
 
+  // PiP Docking & Drag State
+  private layoutState: BslPipLayoutState = {
+    mode: 'docked',
+    corner: 'bottom-right',
+    compact: true,
+  };
+  private isDraggingCard = false;
+  private activeDragPointerId: number | null = null;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private dragInitialLeft = 0;
+  private dragInitialTop = 0;
+  private boundPointerMove?: (e: PointerEvent) => void;
+  private boundPointerUp?: (e: PointerEvent) => void;
+  private boundWindowResize?: () => void;
+
   // Blinking & Idle Breathing
   private eyeBlinkProgress = 0;
   private nextBlinkTime = 0;
@@ -117,7 +146,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
   connectedCallback() {
     this.voiceEnabled = getVoiceEnabled();
     this.grammarMode = getSignLanguage() === 'MAKATON' ? 'makaton' : 'bsl-natural';
+    this.loadSavedLayout();
     this.render();
+    this.applyPipLayout();
     this.bindDomEvents();
     this.subscribeStores();
     this.startAnimationLoop();
@@ -131,6 +162,19 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.unsubscribeSpeech?.();
     this.unsubscribeVoice?.();
     this.unsubscribeSignLang?.();
+    if (this.boundPointerMove) {
+      window.removeEventListener('pointermove', this.boundPointerMove);
+      this.boundPointerMove = undefined;
+    }
+    if (this.boundPointerUp) {
+      window.removeEventListener('pointerup', this.boundPointerUp);
+      window.removeEventListener('pointercancel', this.boundPointerUp);
+      this.boundPointerUp = undefined;
+    }
+    if (this.boundWindowResize) {
+      window.removeEventListener('resize', this.boundWindowResize);
+      this.boundWindowResize = undefined;
+    }
     if (this.pipWindow) {
       this.pipWindow.close();
       this.pipWindow = null;
@@ -154,37 +198,177 @@ export class NativeBslInterpreterElement extends HTMLElement {
     };
   }
 
+  private loadSavedLayout() {
+    const saved = getLocalJson<Partial<BslPipLayoutState>>(BSL_PIP_LAYOUT_STORAGE_KEY);
+    if (!saved || typeof saved !== 'object') return;
+    const validCorners: BslDockCorner[] = ['bottom-right', 'bottom-left', 'top-right', 'top-left'];
+    if (saved.corner && validCorners.includes(saved.corner)) {
+      this.layoutState.corner = saved.corner;
+    }
+    if (typeof saved.compact === 'boolean') {
+      this.layoutState.compact = saved.compact;
+    }
+    if (
+      saved.mode === 'floating' &&
+      typeof saved.left === 'number' &&
+      Number.isFinite(saved.left) &&
+      typeof saved.top === 'number' &&
+      Number.isFinite(saved.top)
+    ) {
+      this.layoutState.mode = 'floating';
+      this.layoutState.left = saved.left;
+      this.layoutState.top = saved.top;
+    } else {
+      this.layoutState.mode = 'docked';
+    }
+  }
+
+  private saveLayout() {
+    setLocalJson(BSL_PIP_LAYOUT_STORAGE_KEY, this.layoutState);
+  }
+
+  private applyPipLayout() {
+    const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
+    const stageContainer = this.querySelector<HTMLElement>('#bsl-stage-container');
+    const deck = this.queryAvatarElement<HTMLElement>('#bsl-interactive-deck');
+    const titleEl = this.querySelector<HTMLElement>('#bsl-header-title');
+    const povBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
+    const voiceBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
+    const compactBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-compact');
+
+    const isCompact = this.layoutState.compact;
+    const cardW = isCompact ? 224 : 300;
+    const stageH = isCompact ? 210 : 308;
+
+    if (floatingCard) {
+      floatingCard.style.width = `${cardW}px`;
+      floatingCard.setAttribute('data-dock-corner', this.layoutState.mode === 'floating' ? 'floating' : this.layoutState.corner);
+
+      if (this.layoutState.mode === 'floating' && typeof this.layoutState.left === 'number' && typeof this.layoutState.top === 'number') {
+        const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+        const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
+        const maxLeft = Math.max(8, vw - cardW - 8);
+        const maxTop = Math.max(64, vh - (stageH + 40) - 8);
+        const clampedLeft = Math.max(8, Math.min(maxLeft, this.layoutState.left));
+        const clampedTop = Math.max(64, Math.min(maxTop, this.layoutState.top));
+        this.layoutState.left = clampedLeft;
+        this.layoutState.top = clampedTop;
+        floatingCard.style.left = `${clampedLeft}px`;
+        floatingCard.style.top = `${clampedTop}px`;
+        floatingCard.style.right = 'auto';
+        floatingCard.style.bottom = 'auto';
+      } else {
+        const c = this.layoutState.corner;
+        const topOffset = 74;
+        const edgeOffset = 12;
+        if (c === 'top-left') {
+          floatingCard.style.top = `${topOffset}px`;
+          floatingCard.style.left = `${edgeOffset}px`;
+          floatingCard.style.right = 'auto';
+          floatingCard.style.bottom = 'auto';
+        } else if (c === 'top-right') {
+          floatingCard.style.top = `${topOffset}px`;
+          floatingCard.style.right = `${edgeOffset}px`;
+          floatingCard.style.left = 'auto';
+          floatingCard.style.bottom = 'auto';
+        } else if (c === 'bottom-left') {
+          floatingCard.style.bottom = `${edgeOffset}px`;
+          floatingCard.style.left = `${edgeOffset}px`;
+          floatingCard.style.top = 'auto';
+          floatingCard.style.right = 'auto';
+        } else {
+          floatingCard.style.bottom = `${edgeOffset}px`;
+          floatingCard.style.right = `${edgeOffset}px`;
+          floatingCard.style.top = 'auto';
+          floatingCard.style.left = 'auto';
+        }
+      }
+    }
+
+    if (stageContainer) {
+      stageContainer.style.height = `${stageH}px`;
+    }
+    if (deck) {
+      deck.style.display = (isCompact && !this.pipWindow) ? 'none' : 'flex';
+    }
+    if (titleEl) {
+      titleEl.textContent = isCompact ? 'BSL L6' : 'BSL L6 & MAKATON';
+    }
+    if (povBtn) {
+      povBtn.textContent = this.cameraMode === 'receiver'
+        ? (isCompact ? 'POV' : 'POV: Front')
+        : (isCompact ? '1P' : 'POV: Signer');
+    }
+    if (voiceBtn) {
+      voiceBtn.textContent = this.voiceEnabled
+        ? (isCompact ? '🔊' : '🔊 Audio')
+        : (isCompact ? '🔇' : '🔇 Mute');
+    }
+    if (compactBtn) {
+      compactBtn.textContent = isCompact ? '⊞' : '⊟';
+      compactBtn.title = isCompact ? 'Expand signing deck' : 'Compact In-Vision mode';
+      compactBtn.setAttribute('aria-label', compactBtn.title);
+    }
+
+    const cornerBtns = this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn');
+    cornerBtns.forEach((btn) => {
+      const c = btn.getAttribute('data-corner');
+      const isActive = this.layoutState.mode === 'docked' && c === this.layoutState.corner;
+      btn.style.background = isActive ? '#38bdf8' : '#334155';
+      btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+  }
+
+  public setDockCorner(corner: BslDockCorner) {
+    this.layoutState.mode = 'docked';
+    this.layoutState.corner = corner;
+    this.applyPipLayout();
+    this.saveLayout();
+  }
+
+  public toggleCompactMode() {
+    this.layoutState.compact = !this.layoutState.compact;
+    this.applyPipLayout();
+    this.saveLayout();
+  }
+
   private render() {
     this.innerHTML = `
-      <div id="bsl-floating-card" class="bsl-interpreter-dock" style="position:fixed; bottom:20px; right:20px; width:340px; background:#020617; border:1.5px solid #1e293b; border-radius:12px; box-shadow:0 20px 40px -8px rgba(0,0,0,0.7); z-index:9995; overflow:hidden; font-family:system-ui, -apple-system, sans-serif; display:flex; flex-direction:column; user-select:none; pointer-events:auto;">
+      <div id="bsl-floating-card" class="bsl-interpreter-dock" data-dock-corner="bottom-right" style="position:fixed; bottom:12px; right:12px; width:224px; background:#020617; border:1.5px solid #1e293b; border-radius:12px; box-shadow:0 20px 40px -8px rgba(0,0,0,0.7); z-index:9995; overflow:hidden; font-family:system-ui, -apple-system, sans-serif; display:flex; flex-direction:column; user-select:none; pointer-events:auto;">
         
         <!-- Header Bar / Drag Handle -->
-        <div id="bsl-header-bar" style="background:#0f172a; padding:8px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; cursor:grab;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <span style="font-size:0.95rem;">🧏</span>
-            <span style="font-size:0.75rem; font-weight:800; color:#38bdf8; letter-spacing:0.5px;">BSL LEVEL 6 &amp; MAKATON</span>
+        <div id="bsl-header-bar" style="background:#0f172a; padding:6px 8px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; gap:4px; cursor:grab; touch-action:none;">
+          <div style="display:flex; align-items:center; gap:4px; min-width:0;">
+            <span style="font-size:0.85rem;">🧏</span>
+            <span id="bsl-header-title" style="font-size:0.7rem; font-weight:800; color:#38bdf8; letter-spacing:0.4px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">BSL L6</span>
           </div>
-          <div style="display:flex; align-items:center; gap:4px;">
-            <button type="button" id="bsl-btn-pov" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Toggle Camera POV (Receiver Front / Signer 1P)">
-              POV: Front
+          <div style="display:flex; align-items:center; gap:3px; flex-shrink:0;">
+            <button type="button" id="bsl-btn-pov" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.65rem; font-weight:700; padding:2px 5px; cursor:pointer;" title="Toggle Camera POV (Receiver Front / Signer 1P)">
+              POV
             </button>
-            <button type="button" id="bsl-btn-voice" style="background:${this.voiceEnabled ? '#0284c7' : '#1e293b'}; border:1px solid ${this.voiceEnabled ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Speech Narration Audio Toggle">
-              ${this.voiceEnabled ? '🔊 Audio' : '🔇 Mute'}
+            <button type="button" id="bsl-btn-voice" style="background:${this.voiceEnabled ? '#0284c7' : '#1e293b'}; border:1px solid ${this.voiceEnabled ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.65rem; font-weight:700; padding:2px 5px; cursor:pointer;" title="Speech Narration Audio Toggle">
+              ${this.voiceEnabled ? '🔊' : '🔇'}
             </button>
-            <button type="button" id="bsl-btn-redock" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Dock avatar back to bottom right corner">
-              ⚓ Dock
+            <button type="button" id="bsl-btn-compact" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.72rem; font-weight:700; padding:1px 5px; cursor:pointer;" title="Expand signing deck">
+              ⊞
             </button>
-            <button type="button" id="bsl-btn-pip" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; border-radius:4px; font-size:0.75rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Pop-out Window (Document Picture-in-Picture)">
+            <div id="bsl-corner-grid" role="group" aria-label="Dock corner presets" title="Snap to any screen corner" style="display:grid; grid-template-columns:1fr 1fr; gap:1.5px; padding:2px; background:#020617; border:1px solid #334155; border-radius:4px;">
+              <button type="button" class="bsl-corner-btn" data-corner="top-left" title="Dock Top-Left" aria-label="Dock Top-Left" style="width:9px; height:7px; padding:0; border:none; border-radius:1px; cursor:pointer; background:#334155;"></button>
+              <button type="button" class="bsl-corner-btn" data-corner="top-right" title="Dock Top-Right" aria-label="Dock Top-Right" style="width:9px; height:7px; padding:0; border:none; border-radius:1px; cursor:pointer; background:#334155;"></button>
+              <button type="button" class="bsl-corner-btn" data-corner="bottom-left" title="Dock Bottom-Left" aria-label="Dock Bottom-Left" style="width:9px; height:7px; padding:0; border:none; border-radius:1px; cursor:pointer; background:#334155;"></button>
+              <button type="button" class="bsl-corner-btn" data-corner="bottom-right" title="Dock Bottom-Right" aria-label="Dock Bottom-Right" style="width:9px; height:7px; padding:0; border:none; border-radius:1px; cursor:pointer; background:#38bdf8;"></button>
+            </div>
+            <button type="button" id="bsl-btn-pip" style="background:#1e293b; border:1px solid #334155; color:#38bdf8; border-radius:4px; font-size:0.72rem; font-weight:700; padding:1px 5px; cursor:pointer;" title="Pop-out Window (Document Picture-in-Picture)">
               ⧉
             </button>
-            <button type="button" id="bsl-btn-close" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:4px; font-size:0.75rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Close BSL Interpreter">
+            <button type="button" id="bsl-btn-close" style="background:#1e293b; border:1px solid #334155; color:#94a3b8; border-radius:4px; font-size:0.72rem; font-weight:700; padding:1px 5px; cursor:pointer;" title="Close BSL Interpreter">
               ✕
             </button>
           </div>
         </div>
 
         <!-- Stage Container Hosting Live Avatar Wrapper -->
-        <div id="bsl-stage-container" style="background:#020617; position:relative; width:100%; height:320px; display:flex; flex-direction:column; overflow:hidden;">
+        <div id="bsl-stage-container" style="background:#020617; position:relative; width:100%; height:210px; display:flex; flex-direction:column; overflow:hidden;">
           
           <div id="bsl-avatar-wrapper" style="width:100%; height:100%; display:flex; flex-direction:column; position:relative;">
             
@@ -276,7 +460,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
             </div>
 
             <!-- Bottom Interactive Deck -->
-            <div style="background:#090d16; border-top:1px solid #1e293b; padding:8px 10px; display:flex; flex-direction:column; gap:6px;">
+            <div id="bsl-interactive-deck" style="background:#090d16; border-top:1px solid #1e293b; padding:8px 10px; display:flex; flex-direction:column; gap:6px;">
               <!-- Mode selector & Quick Pills -->
               <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
                 <select id="bsl-select-mode" style="background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.68rem; padding:3px 6px; border-radius:4px; cursor:pointer;">
@@ -362,8 +546,25 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.orbitYawOffset = 0;
       this.orbitPitchOffset = 0;
       if (btnPov) {
-        btnPov.textContent = this.cameraMode === 'receiver' ? 'POV: Front' : 'POV: Signer';
+        btnPov.textContent = this.cameraMode === 'receiver'
+          ? (this.layoutState.compact ? 'POV' : 'POV: Front')
+          : (this.layoutState.compact ? '1P' : 'POV: Signer');
       }
+    });
+
+    // Compact / Expanded toggle
+    const btnCompact = this.querySelector<HTMLButtonElement>('#bsl-btn-compact');
+    btnCompact?.addEventListener('click', () => {
+      this.toggleCompactMode();
+    });
+
+    // 4-Corner Dock Presets
+    const cornerBtns = this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn');
+    cornerBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const corner = btn.getAttribute('data-corner') as BslDockCorner | null;
+        if (corner) this.setDockCorner(corner);
+      });
     });
 
     // 360-degree drag-to-orbit on Avatar SVG viewport (double-click to reset)
@@ -446,59 +647,68 @@ export class NativeBslInterpreterElement extends HTMLElement {
       }
     });
 
-    // Make floating card draggable with safe viewport boundary clamping
+    // Make floating card draggable via Pointer Events (touch, stylus & mouse) with viewport clamping
     const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const headerBar = this.querySelector<HTMLElement>('#bsl-header-bar');
     if (floatingCard && headerBar) {
-      let isDragging = false;
-      let startX = 0;
-      let startY = 0;
-      let initialLeft = 0;
-      let initialTop = 0;
-
-      headerBar.addEventListener('mousedown', (e) => {
-        if ((e.target as HTMLElement).tagName === 'BUTTON') return;
-        isDragging = true;
-        startX = e.clientX;
-        startY = e.clientY;
+      headerBar.addEventListener('pointerdown', (e: PointerEvent) => {
+        if ((e.target as HTMLElement).closest('button')) return;
+        e.preventDefault();
+        this.isDraggingCard = true;
+        this.activeDragPointerId = e.pointerId;
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
         const rect = floatingCard.getBoundingClientRect();
-        initialLeft = rect.left;
-        initialTop = rect.top;
+        this.dragInitialLeft = rect.left;
+        this.dragInitialTop = rect.top;
+        this.layoutState.mode = 'floating';
+        this.layoutState.left = rect.left;
+        this.layoutState.top = rect.top;
+        floatingCard.setAttribute('data-dock-corner', 'floating');
         floatingCard.style.bottom = 'auto';
         floatingCard.style.right = 'auto';
-        floatingCard.style.left = `${initialLeft}px`;
-        floatingCard.style.top = `${initialTop}px`;
+        floatingCard.style.left = `${rect.left}px`;
+        floatingCard.style.top = `${rect.top}px`;
         headerBar.style.cursor = 'grabbing';
+        this.applyPipLayout();
       });
 
-      // Quick re-dock to bottom right corner
-      const btnRedock = this.querySelector<HTMLButtonElement>('#bsl-btn-redock');
-      btnRedock?.addEventListener('click', () => {
-        floatingCard.style.bottom = '20px';
-        floatingCard.style.right = '20px';
-        floatingCard.style.left = 'auto';
-        floatingCard.style.top = 'auto';
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!isDragging) return;
-        const dx = e.clientX - startX;
-        const dy = e.clientY - startY;
-        const cardW = floatingCard.offsetWidth || 340;
-        const maxLeft = Math.max(10, window.innerWidth - cardW - 10);
-        const maxTop = Math.max(50, window.innerHeight - 100);
-        const clampedLeft = Math.max(10, Math.min(maxLeft, initialLeft + dx));
-        const clampedTop = Math.max(50, Math.min(maxTop, initialTop + dy));
+      this.boundPointerMove = (e: PointerEvent) => {
+        if (!this.isDraggingCard) return;
+        if (this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
+        const dx = e.clientX - this.dragStartX;
+        const dy = e.clientY - this.dragStartY;
+        const cardW = floatingCard.offsetWidth || (this.layoutState.compact ? 224 : 300);
+        const cardH = floatingCard.offsetHeight || 246;
+        const maxLeft = Math.max(8, window.innerWidth - cardW - 8);
+        const maxTop = Math.max(64, window.innerHeight - Math.min(cardH, 160) - 8);
+        const clampedLeft = Math.max(8, Math.min(maxLeft, this.dragInitialLeft + dx));
+        const clampedTop = Math.max(64, Math.min(maxTop, this.dragInitialTop + dy));
+        this.layoutState.left = clampedLeft;
+        this.layoutState.top = clampedTop;
         floatingCard.style.left = `${clampedLeft}px`;
         floatingCard.style.top = `${clampedTop}px`;
-      });
+      };
 
-      window.addEventListener('mouseup', () => {
-        if (isDragging) {
-          isDragging = false;
-          headerBar.style.cursor = 'grab';
+      this.boundPointerUp = (e: PointerEvent) => {
+        if (!this.isDraggingCard) return;
+        if (this.activeDragPointerId !== null && e.pointerId !== this.activeDragPointerId) return;
+        this.isDraggingCard = false;
+        this.activeDragPointerId = null;
+        headerBar.style.cursor = 'grab';
+        this.saveLayout();
+      };
+
+      this.boundWindowResize = () => {
+        if (this.layoutState.mode === 'floating') {
+          this.applyPipLayout();
         }
-      });
+      };
+
+      window.addEventListener('pointermove', this.boundPointerMove);
+      window.addEventListener('pointerup', this.boundPointerUp);
+      window.addEventListener('pointercancel', this.boundPointerUp);
+      window.addEventListener('resize', this.boundWindowResize);
     }
   }
 
@@ -507,7 +717,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.voiceEnabled = enabled;
       const btnVoice = this.querySelector<HTMLButtonElement>('#bsl-btn-voice');
       if (btnVoice) {
-        btnVoice.textContent = enabled ? '🔊 Audio' : '🔇 Mute';
+        btnVoice.textContent = enabled
+          ? (this.layoutState.compact ? '🔊' : '🔊 Audio')
+          : (this.layoutState.compact ? '🔇' : '🔇 Mute');
         btnVoice.style.background = enabled ? '#0284c7' : '#1e293b';
         btnVoice.style.borderColor = enabled ? '#38bdf8' : '#334155';
       }
@@ -1370,6 +1582,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
       });
 
       // 6. Transfer live avatar wrapper and re-bind animation loop to PiP
+      const deck = this.avatarWrapper.querySelector<HTMLElement>('#bsl-interactive-deck');
+      if (deck) deck.style.display = 'flex';
       this.pipWindow.document.body.appendChild(this.avatarWrapper);
       this.startAnimationLoop();
 
@@ -1390,6 +1604,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
           this.stageHostContainer.appendChild(this.avatarWrapper);
         }
         this.pipWindow = null;
+        this.applyPipLayout();
         if (pipBtn) {
           pipBtn.style.background = '#1e293b';
           pipBtn.style.color = '#38bdf8';

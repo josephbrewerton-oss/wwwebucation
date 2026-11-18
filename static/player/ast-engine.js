@@ -10413,10 +10413,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const baseR = Number(item.baseR) || 8;
             const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
             const r = Math.max(1, baseR * scale);
+            const tagName = item.domNode.tagName ? item.domNode.tagName.toLowerCase() : '';
 
-            item.domNode.setAttribute('cx', cx.toFixed(1));
-            item.domNode.setAttribute('cy', cy.toFixed(1));
-            item.domNode.setAttribute('r', r.toFixed(1));
+            if (tagName === 'g' || tagName === 'text') {
+              item.domNode.setAttribute('transform', `translate(${cx.toFixed(1)}, ${cy.toFixed(1)})`);
+            } else {
+              item.domNode.setAttribute('cx', cx.toFixed(1));
+              item.domNode.setAttribute('cy', cy.toFixed(1));
+              item.domNode.setAttribute('r', r.toFixed(1));
+            }
             if (item.depthFog) {
               const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
               item.domNode.setAttribute('opacity', op.toFixed(2));

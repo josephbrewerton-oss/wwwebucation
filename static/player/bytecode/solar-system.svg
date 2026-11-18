@@ -175,7 +175,8 @@
     <circle id="sun-body" cx="400" cy="240" r="26" fill="url(#sun-plasma)" stroke="#ffedd5" stroke-width="1.5" />
   </g>
 
-  <!-- Dynamic 3D Planetary Orbits (Luminescent Trails) -->
+  <!-- Dynamic 3D Planetary Orbits, Planets & Targeting Reticle -->
+  <g id="solar-3d-stage">
   <path id="orbit-mercury" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
   <path id="orbit-venus" fill="none" stroke="#475569" stroke-width="1.2" stroke-dasharray="3 6" opacity="0.6" />
   <path id="orbit-earth" fill="none" stroke="#38bdf8" stroke-width="1.2" stroke-dasharray="4 6" opacity="0.55" />
@@ -233,9 +234,10 @@
     <line x1="0" y1="-26" x2="0" y2="-16" stroke="#38bdf8" stroke-width="1.5" />
     <line x1="0" y1="16" x2="0" y2="26" stroke="#38bdf8" stroke-width="1.5" />
   </g>
+  </g>
 
   <!-- Top Simulation HUD & Quick Controls -->
-  <g id="solar-hud" transform="translate(18, 14)">
+  <g id="solar-hud" transform="translate(18, 14)" data-interactive="true">
     <rect width="460" height="36" rx="8" fill="#0f172a" fill-opacity="0.92" stroke="#334155" stroke-width="1" />
     <text id="solar-hud-banner" x="14" y="22" fill="#38bdf8" font-size="11" font-weight="800">🪐 Tap any planet to explore its Cosmic Fact Card!</text>
 
@@ -261,7 +263,7 @@
   </g>
 
   <!-- Bottom Cosmic Planetary Quick-Select Ribbon (Guaranteed 1-Tap Access for Touch & Smartboard) -->
-  <g id="solar-planet-ribbon" transform="translate(18, 432)">
+  <g id="solar-planet-ribbon" transform="translate(18, 432)" data-interactive="true">
     <!-- Backdrop Pill -->
     <rect width="470" height="38" rx="10" fill="#0b1120" fill-opacity="0.94" stroke="#1e293b" stroke-width="1.2" />
 
@@ -338,7 +340,7 @@
   </g>
 
   <!-- Interactive Top Trumps Card Dock (Appears when planet is clicked) -->
-  <g id="solar-top-trumps-card" transform="translate(506, 16)" display="none">
+  <g id="solar-top-trumps-card" transform="translate(506, 16)" display="none" data-interactive="true">
     <!-- Card Frame & Drop Shadow -->
     <rect width="278" height="448" rx="14" fill="url(#trumps-card-bg)" stroke="#38bdf8" stroke-width="2" filter="drop-shadow(0 8px 16px rgba(0,0,0,0.8))" />
 

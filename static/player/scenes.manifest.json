@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-18T08:27:58.913Z",
+  "generatedAt": "2026-11-18T08:43:58.324Z",
   "totalScenes": 72,
   "inputDirs": [
     "static/cartridges",
@@ -986,7 +986,7 @@
       "oakUnit": "ks3-physics-space-solar-system-gravity",
       "subject": "Science",
       "has3D": true,
-      "nodes3DCount": 21,
+      "nodes3DCount": 22,
       "svgFile": "cartridges/solar-system.svg",
       "astFile": "cartridges/solar-system.ast",
       "astbFile": "bytecode/solar-system.astb",
@@ -999,7 +999,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 29,
+      "bindingsCount": 90,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },

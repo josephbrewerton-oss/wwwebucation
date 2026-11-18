@@ -1150,7 +1150,8 @@ body {
 }
 
 @media (max-width: 640px) {
-  .bsl-interpreter-dock:not([style*="top:"]),
+  .bsl-interpreter-dock[data-dock-corner="bottom-left"],
+  .bsl-interpreter-dock[data-dock-corner="bottom-right"],
   .bsl-interpreter-minimized:not([style*="top:"]) {
     bottom: calc(66px + env(safe-area-inset-bottom, 0px)) !important;
   }
