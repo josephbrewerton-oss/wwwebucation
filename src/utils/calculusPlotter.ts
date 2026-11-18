@@ -497,7 +497,8 @@ export function parseMathExpression(expr: string): ((x: number) => number) | nul
       return () => v;
     }
     if (tk.type === 'id') {
-      const name = eat()!.val;
+      const name = tk.val;
+      eat();
       if (name === 'Math' && eat('.')) {
         const sub = eat();
         if (!sub || sub.type !== 'id') throw new Error('Invalid Math member');

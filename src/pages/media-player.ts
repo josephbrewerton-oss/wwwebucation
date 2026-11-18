@@ -42,7 +42,8 @@ import { exportAirgapHtmlBundle } from '../utils/exportAirgapHtmlBundle';
 import { appendLabCsvToJotter } from '../services/jotter-db';
 import { type PlayerDisplayMode } from '../types/playerConfig';
 
-const DEFAULT_PRESET_ID = 'kinetic-gas';
+const DEFAULT_PRESET_ID =
+  PRESET_OPTIONS.find((p) => p.kind === 'lab' && p.isPlayableScene !== false)?.id || 'welcome';
 const EXTRA_DOC_PRESETS: ScenePresetOption[] = [
   {
     id: 'lumina-architecture',
@@ -133,25 +134,12 @@ export function renderPlayerPage(): HTMLElement {
   let bslActive = getBslEnabled() || params.get('bsl') === '1';
   let isMuted = !getVoiceEnabled();
 
-  // Ensure presets are loaded from generatedScenes + architectural Show & Tell docs
-  const presets: ScenePresetOption[] = ALL_BUILTIN_PRESETS.length > EXTRA_DOC_PRESETS.length
-    ? ALL_BUILTIN_PRESETS
-    : [
-        { id: 'kinetic-gas', label: 'Kinetic Gas Theory & Thermodynamics', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3/KS4 PHYSICS', subject: 'Science' },
-        { id: 'pythagoras', label: "Pythagoras' Theorem (a² + b² = c²)", type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3/KS4 MATHEMATICS', subject: 'Mathematics' },
-        { id: 'fractions', label: 'Fractions: Why Common Denominators Rule', type: 'Slide', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 2', subject: 'Mathematics' },
-        { id: 'electric-circuits', label: 'Electrical Circuits & Ohm’s Law', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 3', subject: 'Science' },
-        { id: 'solar-system', label: 'Solar System: Heliocentric Planetary Motion', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KEY STAGE 2/3', subject: 'Science' },
-        { id: 'algebra-balance', label: 'Algebraic Balance Scale', type: 'Sim', kind: 'lab', isPlayableScene: true, stage: 'KS3', subject: 'Mathematics' },
-        { id: 'church-tour', label: 'The Catholic Church Sanctuary & Altar', type: 'Slide', kind: 'lab', isPlayableScene: true, stage: 'CATHOLIC LIFE', subject: 'Religious Education' },
-        { id: 'phonics-lab', label: 'EYFS Phonics Sound Mat & Digraphs', type: 'App', kind: 'lab', isPlayableScene: true, stage: 'EYFS / KS1', subject: 'English' },
-        ...EXTRA_DOC_PRESETS,
-      ];
+  // Presets are loaded declaratively from generatedScenes + architectural Show & Tell docs
+  const presets: ScenePresetOption[] = ALL_BUILTIN_PRESETS;
 
   function isNonMediaOrUtility(p: ScenePresetOption): boolean {
     if (p.kind === 'data' || p.kind === 'benchmark' || p.kind === 'doc') return true;
     if (p.isPlayableScene === false) return true;
-    if (p.id === 'lumina-architecture' || p.id === 'pipeline-sample' || p.id.startsWith('oak-data-')) return true;
     return p.subject === 'System Architecture';
   }
 

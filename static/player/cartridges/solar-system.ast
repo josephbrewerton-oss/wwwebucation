@@ -80,14 +80,14 @@
     (:target "#sun-body" :type "3d-node" :x "0" :y "0" :z "0" :base-r 26 :depth-fog false)
     (:target "#sun-corona" :type "3d-node" :x "0" :y "0" :z "0" :base-r 42 :depth-fog false)
     
-    (:target "#orbit-mercury" :type "3d-ring" :r "50" :depth-fog true)
-    (:target "#orbit-venus" :type "3d-ring" :r "80" :depth-fog true)
-    (:target "#orbit-earth" :type "3d-ring" :r "118" :depth-fog true)
-    (:target "#orbit-mars" :type "3d-ring" :r "155" :depth-fog true)
-    (:target "#orbit-jupiter" :type "3d-ring" :r "210" :depth-fog true)
-    (:target "#orbit-saturn" :type "3d-ring" :r "265" :depth-fog true)
-    (:target "#orbit-uranus" :type "3d-ring" :r "320" :depth-fog true)
-    (:target "#orbit-neptune" :type "3d-ring" :r "370" :depth-fog true)
+    (:target "#orbit-mercury" :type "3d-ring" :r "50" :depth-fog true :z-layer -1)
+    (:target "#orbit-venus" :type "3d-ring" :r "80" :depth-fog true :z-layer -1)
+    (:target "#orbit-earth" :type "3d-ring" :r "118" :depth-fog true :z-layer -1)
+    (:target "#orbit-mars" :type "3d-ring" :r "155" :depth-fog true :z-layer -1)
+    (:target "#orbit-jupiter" :type "3d-ring" :r "210" :depth-fog true :z-layer -1)
+    (:target "#orbit-saturn" :type "3d-ring" :r "265" :depth-fog true :z-layer -1)
+    (:target "#orbit-uranus" :type "3d-ring" :r "320" :depth-fog true :z-layer -1)
+    (:target "#orbit-neptune" :type "3d-ring" :r "370" :depth-fog true :z-layer -1)
     (:target "#orbit-mercury" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
     (:target "#orbit-venus" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.6")
     (:target "#orbit-earth" :attr "opacity" :expr "vars.showOrbits === false ? 0.06 : 0.55")
@@ -153,6 +153,7 @@
       :tilt-x "25"
       :tilt-z "15"
       :depth-fog true
+      :sort-after "#planet-saturn"
     )
     (:target "#planet-uranus" :type "3d-node"
       :x "Math.cos(((vars._solarClock !== undefined ? vars._solarClock : t * 14) * 0.0371) * Math.PI * 2) * 320"

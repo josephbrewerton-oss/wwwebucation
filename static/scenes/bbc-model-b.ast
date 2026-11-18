@@ -1,4 +1,4 @@
-(:scene :id "bbc-model-b" :type "Sim" :oak-id "OAK-KS2-COM-012" :oak-unit "ks2-computing-history-algorithms-bbc-micro" :title "BBC Micro Model B: 6502 Computing & BBC BASIC" :stage "KS2 & KS3 COMPUTING" :duration 16.0
+(:scene :id "bbc-model-b" :type "Sim" :oak-id "OAK-KS2-COM-012" :oak-unit "ks2-computing-history-algorithms-bbc-micro" :title "BBC Micro Model B: 6502 Computing & BBC BASIC" :stage "KS2 & KS3 COMPUTING" :duration 16.0 :boot-sound "bbc-beep"
   (:vars (
     (:var :name "clockMhz" :val 2.0 :min 0.5 :max 8.0 :step 0.5 :label "6502 Clock Frequency (MHz)")
     (:var :name "progMode" :val 1 :min 1 :max 4 :step 1 :label "BBC BASIC Demo Routine")
