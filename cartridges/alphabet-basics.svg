@@ -48,7 +48,7 @@
 
       <!-- Paired Uppercase & Lowercase Glyphs -->
       <text class="glyph-upper" x="74" y="158" fill="#1e40af" font-size="96" font-weight="700" text-anchor="middle">A</text>
-      <text class="glyph-lower" x="158" y="158" fill="#047857" font-size="96" font-weight="700" text-anchor="middle">a</text>
+      <path class="glyph-lower" fill="#047857" d="M 176 105 C 171 101 164 99 156 99 C 141 99 131 111 131 129 C 131 147 141 159 156 159 C 164 159 171 156 175 151 L 175 158 L 187 158 L 187 100 L 176 100 Z M 158 148 C 149 148 143 140 143 129 C 143 118 149 110 158 110 C 168 110 175 118 175 129 C 175 140 168 148 158 148 Z"/>
 
       <!-- Case Pills -->
       <rect x="38" y="198" width="72" height="16" rx="8" fill="#dbeafe"/>
@@ -280,7 +280,7 @@
 
       <!-- Paired Uppercase & Lowercase Glyphs -->
       <text class="glyph-upper" x="74" y="158" fill="#1e40af" font-size="96" font-weight="700" text-anchor="middle">G</text>
-      <text class="glyph-lower" x="158" y="158" fill="#047857" font-size="96" font-weight="700" text-anchor="middle">g</text>
+      <path class="glyph-lower" fill="#047857" d="M 176 105 C 171 101 164 99 156 99 C 141 99 131 111 131 129 C 131 146 141 157 156 157 C 164 157 171 154 175 149 L 175 164 C 175 174 169 180 158 180 C 151 180 146 177 144 171 L 132 173 C 135 184 145 190 158 190 C 176 190 187 180 187 163 L 187 100 L 176 100 Z M 158 146 C 149 146 143 139 143 128 C 143 117 149 110 158 110 C 168 110 175 117 175 128 C 175 139 168 146 158 146 Z"/>
 
       <!-- Case Pills -->
       <rect x="38" y="198" width="72" height="16" rx="8" fill="#dbeafe"/>
