@@ -143,6 +143,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     compact: true,
   };
   private isDraggingCard = false;
+  private isFloatingPopout = false;
   private activeDragPointerId: number | null = null;
   private dragStartX = 0;
   private dragStartY = 0;
@@ -342,6 +343,15 @@ export class NativeBslInterpreterElement extends HTMLElement {
     if (redockBtn) {
       redockBtn.style.display = this.layoutState.mode === 'floating' ? 'inline-flex' : 'none';
     }
+    const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
+    if (pipBtn) {
+      const activePopout = isPoppedOut || (this.isFloatingPopout && this.layoutState.mode === 'floating');
+      pipBtn.style.background = activePopout ? '#0284c7' : '#1e293b';
+      pipBtn.style.color = activePopout ? '#ffffff' : '#38bdf8';
+      pipBtn.title = activePopout
+        ? 'Dock BSL Avatar Back to Corner'
+        : 'Pop-out / Undock BSL Window';
+    }
 
     const cornerBtns = this.querySelectorAll<HTMLButtonElement>('.bsl-corner-btn');
     cornerBtns.forEach((btn) => {
@@ -353,6 +363,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   public setDockCorner(corner: BslDockCorner) {
+    this.isFloatingPopout = false;
     this.layoutState.mode = 'docked';
     this.layoutState.corner = corner;
     delete this.layoutState.left;
@@ -1762,24 +1773,52 @@ export class NativeBslInterpreterElement extends HTMLElement {
     }
   }
 
-  /**
-   * Native Browser Document Picture-in-Picture Uncoupling
-   * Pops out the entire live 60 FPS vector avatar into an always-on-top desktop window.
-   */
-  public async toggleDocumentPiP() {
-    // 1. Feature detection: W3C Document Picture-in-Picture API
-    if (!('documentPictureInPicture' in window)) {
-      console.warn('[BSL Interpreter] Document Picture-in-Picture is not supported in this browser.');
-      const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
-      if (hudNmf) {
-        hudNmf.textContent = 'PiP unavailable in this browser (use Drag / POV)';
-      }
+  private toggleInPageFloatingPopout() {
+    if (this.isFloatingPopout && this.layoutState.mode === 'floating') {
+      this.isFloatingPopout = false;
+      this.layoutState.compact = true;
+      this.setDockCorner(this.layoutState.corner || 'bottom-right');
       return;
     }
 
-    // 2. If already popped out, close PiP and dock back cleanly via idempotent handler
+    this.isFloatingPopout = true;
+    this.layoutState.compact = false;
+    this.layoutState.mode = 'floating';
+    const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
+    const coords = this.computeClampedFloatingCoords(vw - 324, 84);
+    this.layoutState.left = coords.left;
+    this.layoutState.top = coords.top;
+    this.applyPipLayout();
+    this.saveLayout();
+
+    const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
+    if (hudNmf && this.isIdle) {
+      hudNmf.textContent = 'Undocked window • Drag header to move';
+    }
+  }
+
+  /**
+   * Native Browser Document Picture-in-Picture Uncoupling
+   * Pops out the entire live 60 FPS vector avatar into an always-on-top desktop window,
+   * with automatic in-viewport floating window fallback when running inside an iframe.
+   */
+  public async toggleDocumentPiP() {
+    // 1. If already popped out in native OS PiP, close PiP and dock back cleanly
     if (this.pipWindow && !this.pipWindow.closed) {
       this.dockBackFromPiP(true);
+      return;
+    }
+
+    // 2. Detect embedded iframe context (W3C Document PiP is restricted to top-level browsing contexts)
+    let isEmbeddedIframe = false;
+    try {
+      isEmbeddedIframe = window.self !== window.top;
+    } catch (_) {
+      isEmbeddedIframe = true;
+    }
+
+    if (isEmbeddedIframe || !('documentPictureInPicture' in window)) {
+      this.toggleInPageFloatingPopout();
       return;
     }
 
@@ -1793,6 +1832,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
       if (!pipWin || !this.avatarWrapper || !this.stageHostContainer) return;
       this.pipWindow = pipWin;
+      this.isFloatingPopout = false;
 
       // 4. Copy styles to PiP window
       [...document.styleSheets].forEach((styleSheet) => {
@@ -1835,13 +1875,6 @@ export class NativeBslInterpreterElement extends HTMLElement {
       if (deck) deck.style.display = 'flex';
       pipWin.document.body.appendChild(this.avatarWrapper);
 
-      const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
-      if (pipBtn) {
-        pipBtn.style.background = '#0284c7';
-        pipBtn.style.color = '#ffffff';
-        pipBtn.title = 'Dock BSL Avatar Back Home';
-      }
-
       this.applyPipLayout();
       this.startAnimationLoop();
 
@@ -1854,8 +1887,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
       pipWin.addEventListener('pagehide', onPipClosed);
       pipWin.addEventListener('unload', onPipClosed);
     } catch (err) {
-      console.error('[BSL Interpreter] Failed to open Document PiP window:', err);
+      console.warn('[BSL Interpreter] Native Document PiP unavailable, falling back to floating pop-out:', err);
       this.dockBackFromPiP(false);
+      this.toggleInPageFloatingPopout();
     }
   }
 }

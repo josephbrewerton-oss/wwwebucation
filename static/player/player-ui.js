@@ -249,9 +249,16 @@
       this._orbitHintTimeout = null;
       this.bslEnabled = false;
       try {
-        const _store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
-        if (_store) {
-          this.bslEnabled = _store.getItem('stj_bsl_enabled') === 'true';
+        const _urlBsl = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('bsl') : null;
+        if (_urlBsl === '1' || _urlBsl === 'true') {
+          this.bslEnabled = true;
+        } else if (_urlBsl === '0' || _urlBsl === 'false') {
+          this.bslEnabled = false;
+        } else {
+          const _store = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+          if (_store) {
+            this.bslEnabled = _store.getItem('stj_bsl_enabled') === 'true';
+          }
         }
       } catch (_) {}
 

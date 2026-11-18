@@ -30,6 +30,7 @@ export class PersistentAppShellElement extends HTMLElement {
   private unsubscribeVoice?: () => void;
   private cleanupWebMcp?: () => void;
   private cleanupNanoSite?: () => void;
+  private syncBslOverlay?: (enabled: boolean) => Promise<void>;
 
   // Dedicated class handlers for clean event detachment
   private handleDocumentClick = () => {
@@ -98,10 +99,12 @@ export class PersistentAppShellElement extends HTMLElement {
     if (!e.data || typeof e.data !== 'object') return;
 
     if (e.data.type === 'TOGGLE_BSL' || e.data.type === 'BSL_STATE_CHANGED') {
-      const enabled = typeof e.data.enabled === 'boolean' ? e.data.enabled : e.data.active;
-      if (typeof enabled === 'boolean' && enabled !== this.bsl) {
-        setBslEnabled(enabled);
+      const rawEnabled = typeof e.data.enabled === 'boolean' ? e.data.enabled : e.data.active;
+      const nextEnabled = typeof rawEnabled === 'boolean' ? rawEnabled : !this.bsl;
+      if (nextEnabled !== this.bsl) {
+        setBslEnabled(nextEnabled);
       }
+      void this.syncBslOverlay?.(nextEnabled);
     } else if (e.data.type === 'VOICE_TOGGLE' || e.data.type === 'SET_VOICE') {
       if (typeof e.data.enabled === 'boolean') {
         this.updateSoundUi(e.data.enabled);
@@ -613,9 +616,9 @@ export class PersistentAppShellElement extends HTMLElement {
     // Global Keyboard Shortcuts
     window.addEventListener('keydown', this.handleKeyDown);
 
-    // BSL on-demand lazy subscriber
+    // BSL on-demand lazy subscriber + immediate boot hydration when persisted ON
     const bslSlot = this.querySelector('#bsl-overlay-slot')!;
-    this.unsubscribeBsl = subscribeBsl(async (enabled) => {
+    const syncBslOverlay = async (enabled: boolean) => {
       this.bsl = enabled;
       if (btnBsl) {
         btnBsl.textContent = `🖐️ BSL: ${enabled ? 'ON' : 'OFF'}`;
@@ -626,8 +629,12 @@ export class PersistentAppShellElement extends HTMLElement {
       }
       if (enabled) {
         if (!bslSlot.querySelector('native-bsl-interpreter')) {
-          const { initCustomSignsIntoLexicon } = await import('../services/customSignStore');
-          initCustomSignsIntoLexicon();
+          try {
+            const { initCustomSignsIntoLexicon } = await import('../services/customSignStore');
+            initCustomSignsIntoLexicon();
+          } catch (err) {
+            console.warn('[PersistentAppShell] Custom BSL lexicon init skipped:', err);
+          }
           await import('./NativeBslInterpreter');
           if (this.bsl && !bslSlot.querySelector('native-bsl-interpreter')) {
             bslSlot.innerHTML = `<native-bsl-interpreter></native-bsl-interpreter>`;
@@ -636,7 +643,14 @@ export class PersistentAppShellElement extends HTMLElement {
       } else {
         bslSlot.innerHTML = '';
       }
+    };
+    this.syncBslOverlay = syncBslOverlay;
+    this.unsubscribeBsl = subscribeBsl((enabled) => {
+      void syncBslOverlay(enabled);
     });
+    if (this.bsl) {
+      void syncBslOverlay(true);
+    }
 
     // Inter-frame IPC listener
     window.addEventListener('message', this.handleWindowMessage);

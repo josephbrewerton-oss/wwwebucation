@@ -138,7 +138,10 @@ export function renderPlayerPage(): HTMLElement {
   let activeStage: StageFilterId = 'All';
   let includeNonMediaExtras = false;
   let searchQuery = '';
-  let bslActive = getBslEnabled() || params.get('bsl') === '1';
+  if (params.get('bsl') === '1' && !getBslEnabled()) {
+    setBslEnabled(true);
+  }
+  let bslActive = getBslEnabled();
   let isMuted = !getVoiceEnabled();
 
   // Presets are loaded declaratively from generatedScenes + architectural Show & Tell docs
