@@ -564,7 +564,7 @@ export async function translateText(
       zh: '计算：',
       la: 'Computa: ',
     };
-    if (prefixes[targetLang]) {
+    if (Object.prototype.hasOwnProperty.call(prefixes, targetLang)) {
       const res = `${prefixes[targetLang]}${expr}`;
       setCached(text, targetLang, res, sourceLang);
       return res;
@@ -575,42 +575,43 @@ export async function translateText(
   const whatIsMatch = text.match(/^What is\s+(.+)\?$/i);
   if (whatIsMatch) {
     const expr = whatIsMatch[1].trim();
-    const templates: Record<string, (e: string) => string> = {
-      sw: (e) => `Ni nini ${e}?`,
-      yo: (e) => `Kí ni ${e}?`,
-      ig: (e) => `Gịnị bụ ${e}?`,
-      ha: (e) => `Mene ne ${e}?`,
-      zu: (e) => `Yini i-${e}?`,
-      am: (e) => `${e} ስንት ነው?`,
-      so: (e) => `Waa maxay ${e}?`,
-      rw: (e) => `${e} bingana iki?`,
-      ak: (e) => `Dɛn ne ${e}?`,
-      es: (e) => `¿Cuánto es ${e}?`,
-      pt: (e) => `Quanto é ${e}?`,
-      fr: (e) => `Combien fait ${e} ?`,
-      de: (e) => `Was ist ${e}?`,
-      pl: (e) => `Ile to jest ${e}?`,
-      uk: (e) => `Скільки буде ${e}?`,
-      ar: (e) => `ما هو ${e}؟`,
-      fa: (e) => `${e} چقدر است؟`,
-      ps: (e) => `${e} څومره کېږي؟`,
-      ur: (e) => `${e} کیا ہے؟`,
-      bn: (e) => `${e} কত?`,
-      hi: (e) => `${e} क्या है?`,
-      ta: (e) => `${e} என்ன?`,
-      te: (e) => `${e} ఎంత?`,
-      mr: (e) => `${e} किती आहे?`,
-      ne: (e) => `${e} कति हो?`,
-      tl: (e) => `Ano ang ${e}?`,
-      id: (e) => `Berapa ${e}?`,
-      ms: (e) => `Berapakah ${e}?`,
-      vi: (e) => `${e} bằng bao nhiêu?`,
-      ht: (e) => `Konbyen ${e} fè?`,
-      zh: (e) => `${e} 是多少？`,
-      la: (e) => `Quid est ${e}?`,
-    };
-    if (templates[targetLang]) {
-      const res = templates[targetLang](expr);
+    const templates = new Map<string, string>([
+      ['sw', 'Ni nini {0}?'],
+      ['yo', 'Kí ni {0}?'],
+      ['ig', 'Gịnị bụ {0}?'],
+      ['ha', 'Mene ne {0}?'],
+      ['zu', 'Yini i-{0}?'],
+      ['am', '{0} ስንት ነው?'],
+      ['so', 'Waa maxay {0}?'],
+      ['rw', '{0} bingana iki?'],
+      ['ak', 'Dɛn ne {0}?'],
+      ['es', '¿Cuánto es {0}?'],
+      ['pt', 'Quanto é {0}?'],
+      ['fr', 'Combien fait {0} ?'],
+      ['de', 'Was ist {0}?'],
+      ['pl', 'Ile to jest {0}?'],
+      ['uk', 'Скільки буде {0}?'],
+      ['ar', 'ما هو {0}؟'],
+      ['fa', '{0} چقدر است؟'],
+      ['ps', '{0} څومره کېږي؟'],
+      ['ur', '{0} کیا ہے؟'],
+      ['bn', '{0} কত?'],
+      ['hi', '{0} क्या है?'],
+      ['ta', '{0} என்ன?'],
+      ['te', '{0} ఎంత?'],
+      ['mr', '{0} किती आहे?'],
+      ['ne', '{0} कति हो?'],
+      ['tl', 'Ano ang {0}?'],
+      ['id', 'Berapa {0}?'],
+      ['ms', 'Berapakah {0}?'],
+      ['vi', '{0} bằng bao nhiêu?'],
+      ['ht', 'Konbyen {0} fè?'],
+      ['zh', '{0} 是多少？'],
+      ['la', 'Quid est {0}?'],
+    ]);
+    const tpl = templates.get(targetLang);
+    if (tpl) {
+      const res = tpl.replace('{0}', expr);
       setCached(text, targetLang, res, sourceLang);
       return res;
     }
@@ -620,28 +621,29 @@ export async function translateText(
   const equivMatch = text.match(/^Which fraction is equivalent to\s+(.+)\?$/i);
   if (equivMatch) {
     const frac = equivMatch[1].trim();
-    const templates: Record<string, (f: string) => string> = {
-      sw: (f) => `Ni sehemu gani iliyo sawa na ${f}?`,
-      tl: (f) => `Aling bahagi ang katumbas ng ${f}?`,
-      id: (f) => `Pecahan mana yang senilai dengan ${f}?`,
-      vi: (f) => `Phân số nào tương đương với ${f}?`,
-      hi: (f) => `कौन सा भिन्न ${f} के बराबर है?`,
-      bn: (f) => `কোন ভগ্নাংশটি ${f}-এর সমতুল্য?`,
-      ur: (f) => `کون سا کسر ${f} کے برابر ہے؟`,
-      ta: (f) => `எந்த பின்னம் ${f} இக்கு சமமானது?`,
-      es: (f) => `¿Qué fracción es equivalente a ${f}?`,
-      pt: (f) => `Qual fração é equivalente a ${f}?`,
-      fr: (f) => `Quelle fraction est équivalente à ${f} ?`,
-      de: (f) => `Welcher Bruch entspricht ${f}?`,
-      pl: (f) => `Który ułamek jest równoważny ${f}?`,
-      uk: (f) => `Який дріб еквівалентний ${f}?`,
-      ar: (f) => `أي كسر يكافئ ${f}؟`,
-      fa: (f) => `کدام کسر با ${f} برابر است؟`,
-      ht: (f) => `Ki fraksyon ki egal a ${f}?`,
-      zh: (f) => `哪个分数等同于 ${f}？`,
-    };
-    if (templates[targetLang]) {
-      const res = templates[targetLang](frac);
+    const templates = new Map<string, string>([
+      ['sw', 'Ni sehemu gani iliyo sawa na {0}?'],
+      ['tl', 'Aling bahagi ang katumbas ng {0}?'],
+      ['id', 'Pecahan mana yang senilai dengan {0}?'],
+      ['vi', 'Phân số nào tương đương với {0}?'],
+      ['hi', 'कौन सा भिन्न {0} के बराबर है?'],
+      ['bn', 'কোন ভগ্নাংশটি {0}-এর সমতুল্য?'],
+      ['ur', 'کون سا کسر {0} کے برابر ہے؟'],
+      ['ta', 'எந்த பின்னம் {0} இக்கு சமமானது?'],
+      ['es', '¿Qué fracción es equivalente a {0}?'],
+      ['pt', 'Qual fração é equivalente a {0}?'],
+      ['fr', 'Quelle fraction est équivalente à {0} ?'],
+      ['de', 'Welcher Bruch entspricht {0}?'],
+      ['pl', 'Który ułamek jest równoważny {0}?'],
+      ['uk', 'Який дріб еквівалентний {0}?'],
+      ['ar', 'أي كسر يكافئ {0}؟'],
+      ['fa', 'کدام کسر با {0} برابر است؟'],
+      ['ht', 'Ki fraksyon ki egal a {0}?'],
+      ['zh', '哪个分数等同于 {0}？'],
+    ]);
+    const tpl = templates.get(targetLang);
+    if (tpl) {
+      const res = tpl.replace('{0}', frac);
       setCached(text, targetLang, res, sourceLang);
       return res;
     }

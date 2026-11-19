@@ -756,7 +756,14 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
 </svg>
 `;
 
-  const pageTextExpr = `[${book.pages.map((p) => `'${p.text.replace(/'/g, "\\'")}'`).join(', ')}][vars.page || 0] || ''`;
+  const jsSingleQuoteEsc = (s: string): string =>
+    s
+      .replace(/\\/g, '\\\\')
+      .replace(/'/g, "\\'")
+      .replace(/\r/g, '\\r')
+      .replace(/\n/g, '\\n');
+
+  const pageTextExpr = `[${book.pages.map((p) => `'${jsSingleQuoteEsc(p.text)}'`).join(', ')}][vars.page || 0] || ''`;
 
   const subtitlesBlock = book.pages
     .map((p, idx) => {
