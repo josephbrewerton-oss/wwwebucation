@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 72
+  :count 77
   (:cartridges (
     (:cartridge
       :id "acid-alkali-titration"
@@ -448,6 +448,46 @@
       :stage "KS4 GCSE CHEMISTRY"
       :oak-id "OAK-KS4-CHM-001"
       :bytecode "bytecode/rates-of-reaction.astb")
+
+    (:cartridge
+      :id "reader-cake-lake"
+      :type "Slide"
+      :title "Decodable Book 5: The Cake by the Lake (Level 5 · Split Digraphs & Alternatives)"
+      :stage "EYFS/KS1 PHONICS"
+      :oak-id "OAK-KS1-ENG-R05"
+      :bytecode "bytecode/reader-cake-lake.astb")
+
+    (:cartridge
+      :id "reader-frog-log"
+      :type "Slide"
+      :title "Decodable Book 4: The Frog on a Log (Level 4 · Consonant Blends)"
+      :stage "EYFS/KS1 PHONICS"
+      :oak-id "OAK-KS1-ENG-R04"
+      :bytecode "bytecode/reader-frog-log.astb")
+
+    (:cartridge
+      :id "reader-pat-sat"
+      :type "Slide"
+      :title "Decodable Book 1: Pat Sat (Level 1 · Set 1 & 2 (SATPIN))"
+      :stage "EYFS/KS1 PHONICS"
+      :oak-id "OAK-KS1-ENG-R01"
+      :bytecode "bytecode/reader-pat-sat.astb")
+
+    (:cartridge
+      :id "reader-red-dog"
+      :type "Slide"
+      :title "Decodable Book 2: The Red Dog (Level 2 · Phase 2 CVC)"
+      :stage "EYFS/KS1 PHONICS"
+      :oak-id "OAK-KS1-ENG-R02"
+      :bytecode "bytecode/reader-red-dog.astb")
+
+    (:cartridge
+      :id "reader-ship-rain"
+      :type "Slide"
+      :title "Decodable Book 3: A Ship in the Rain (Level 3 · Phase 3 Digraphs)"
+      :stage "EYFS/KS1 PHONICS"
+      :oak-id "OAK-KS1-ENG-R03"
+      :bytecode "bytecode/reader-ship-rain.astb")
 
     (:cartridge
       :id "rosary-mysteries"
