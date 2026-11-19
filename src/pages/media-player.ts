@@ -1,3 +1,4 @@
+import { getSavedLanguage } from '../engine/operational-language';
 import { getBaseUrl } from '../utils/url';
 import { getLocalState, setLocalState } from '../services/localStateStore';
 import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
@@ -113,6 +114,11 @@ function buildPlayerSrc(base: string, presetId: string, bslActive: boolean, exte
     params.set('hud', '1');
     params.set('hud_verbosity', verbosity);
     if (budgetAlert) params.set('budget_alert', '1');
+  }
+
+  const activeLang = getSavedLanguage();
+  if (activeLang && activeLang !== 'en') {
+    params.set('lang', activeLang);
   }
 
   return `${base}player.html?${params.toString()}`;
@@ -1007,6 +1013,12 @@ export function renderPlayerPage(): HTMLElement {
   let isIframeReady = false;
   iframe?.addEventListener('load', () => {
     isIframeReady = true;
+    const activeLang = getSavedLanguage();
+    if (activeLang && activeLang !== 'en') {
+      try {
+        iframe.contentWindow?.postMessage({ type: 'SET_LANGUAGE', lang: activeLang }, '*');
+      } catch {}
+    }
   });
 
   let lastLiveIntegrity: Record<string, any> | null = null;

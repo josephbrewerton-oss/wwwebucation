@@ -6,7 +6,82 @@ import {
   setSavedLanguage,
   isRtlLanguage,
 } from './operational-language';
-import { translateText, speakInLanguage, OFFLINE_LEXICON } from './translationService';
+import {
+  translateText,
+  speakInLanguage,
+  OFFLINE_LEXICON,
+  detectNativeTranslatorCapability,
+} from './translationService';
+import { hasUserGrantedAiConsent } from './aicaller';
+import { getBaseUrl } from '../utils/url';
+
+export interface TranslationModeStatus {
+  lang: string;
+  mode: 'english' | 'native-translator' | 'offline-pack' | 'nano-ai' | 'offline-ui';
+  badge: string;
+  tooltip: string;
+}
+
+const AVAILABLE_OFFLINE_PACKS = new Set(['sw', 'hi', 'ur', 'bn', 'tl', 'ar', 'fr', 'es', 'pt', 'yo']);
+const LOADED_I18N_PACKS = new Map<string, { exact: Record<string, string>; lower: Record<string, string> } | null>();
+const I18N_CACHE_NAME = 'stj-offline-i18n-v1';
+
+async function loadOfflineLanguagePack(
+  targetLang: string
+): Promise<{ exact: Record<string, string>; lower: Record<string, string> } | null> {
+  if (!AVAILABLE_OFFLINE_PACKS.has(targetLang)) return null;
+  if (LOADED_I18N_PACKS.has(targetLang)) {
+    return LOADED_I18N_PACKS.get(targetLang) || null;
+  }
+
+  const url = `${getBaseUrl()}i18n/${encodeURIComponent(targetLang)}.json`;
+  let raw: Record<string, string> | null = null;
+
+  try {
+    if (typeof caches !== 'undefined') {
+      const cache = await caches.open(I18N_CACHE_NAME);
+      const cached = await cache.match(url);
+      if (cached && cached.ok) {
+        raw = await cached.json();
+      }
+      if (!raw) {
+        const res = await fetch(url);
+        if (res.ok) {
+          cache.put(url, res.clone()).catch(() => {});
+          raw = await res.json();
+        }
+      }
+    } else {
+      const res = await fetch(url);
+      if (res.ok) raw = await res.json();
+    }
+  } catch {
+    raw = null;
+  }
+
+  if (!raw || typeof raw !== 'object') {
+    LOADED_I18N_PACKS.set(targetLang, null);
+    return null;
+  }
+
+  const exact: Record<string, string> = {};
+  const lower: Record<string, string> = {};
+  for (const [k, v] of Object.entries(raw)) {
+    if (typeof v !== 'string') continue;
+    const normKey = k.trim().replace(/\s+/g, ' ');
+    exact[normKey] = v;
+    lower[normKey.toLowerCase()] = v;
+  }
+  const bundle = { exact, lower };
+  LOADED_I18N_PACKS.set(targetLang, bundle);
+  return bundle;
+}
+
+function emitTranslationStatus(status: TranslationModeStatus): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('portal_translation_status', { detail: status }));
+  }
+}
 
 // WeakMap storing original English text of DOM text nodes for 100% fidelity restoration
 const ORIGINAL_TEXT_NODES = new WeakMap<Text, string>();
@@ -1300,6 +1375,60 @@ const DEVELOPING_WORLD_UI_LEXICON: Record<string, Record<string, string>> = {
     ar: "الدروس والوحدات", fa: "درس‌ها و بخش‌ها", ht: "Leson ak Inite", es: "Lecciones y Unidades", pt: "Lições e Unidades", fr: "Leçons et Unités",
     de: "Lektionen & Einheiten", pl: "Lekcje i Działy", uk: "Уроки та Розділи", la: "Lectiones et Unitates",
   },
+  "Learn with Confidence at St Joseph's": {
+    sw: "Jifunze kwa Kujiamini katika St Joseph's", yo: "Kọ́ ẹ̀kọ́ pẹ̀lú ìgbẹ́kẹ̀lé ní St Joseph's", ig: "Mụta ihe n'obi ike na St Joseph's", ha: "Koyi da Ƙarfin Gwiwa a St Joseph's", ak: "Sua Ade wɔ Ahotoso Mu wɔ St Joseph's", zu: "Funda Ngokuzethemba e-St Joseph's", am: "በSt Joseph's በራስ መተማመን ይማሩ",
+    so: "Ku Baro Kalsooni St Joseph's", rw: "Iga Wifitiye Icyizere kuri St Joseph's",
+    hi: "सेंट जोसेफ में आत्मविश्वास के साथ सीखें", bn: "সেন্ট জোসেফে আত্মবিশ্বাসের সাথে শিখুন", ur: "سینٹ جوزف میں اعتماد کے ساتھ سیکھیں", ta: "செயின்ட் ஜோசப்பில் தன்னம்பிக்கையுடன் கற்றுக்கொள்ளுங்கள்", te: "సెయింట్ జోసెఫ్‌లో ఆత్మవిశ్వాసంతో నేర్చుకోండి", mr: "सेंट जोसेफमध्ये आत्मविश्वासाने शिका", ne: "सेन्ट जोसेफमा आत्मविश्वासका साथ सिक्नुहोस्",
+    tl: "Matuto nang may Kumpiyansa sa St Joseph's", id: "Belajar dengan Percaya Diri di St Joseph's", ms: "Belajar dengan Yakin di St Joseph's", vi: "Học Tập Tự Tin tại St Joseph's", zh: "在圣约瑟夫自信学习",
+    ar: "تعلّم بثقة في سانت جوزيف", fa: "با اعتمادبه‌نفس در سنت جوزف بیاموزید", ps: "په سینټ جوزف کې په باور سره زده کړه وکړئ", ht: "Aprann ak Konfyans nan St Joseph's", es: "Aprende con Confianza en San José", pt: "Aprenda com Confiança em São José", fr: "Apprenez avec Confiance à Saint-Joseph",
+    de: "Sicher lernen an der St. Joseph's", pl: "Ucz się z pewnością siebie w St Joseph's", uk: "Навчайтеся впевнено у St Joseph's", la: "Disce cum Fiducia apud Sanctum Iosephum",
+  },
+  "UK National Curriculum": {
+    sw: "Mtaala wa Kitaifa wa Uingereza", yo: "Ètò Ẹ̀kọ́ Orílẹ̀-èdè UK", ig: "Usoro Mmụta Mba UK", ha: "Manhajar Ƙasar Birtaniya", ak: "UK Ɔman Adesua Nhyehyɛe", zu: "Ikharikhulamu Kazwelonke yase-UK", am: "የዩኬ ብሔራዊ ሥርዓተ ትምህርት",
+    hi: "यूके राष्ट्रीय पाठ्यक्रम", bn: "যুক্তরাজ্য জাতীয় পাঠ্যক্রম", ur: "برطانوی قومی نصاب", ta: "யுகே தேசிய பாடத்திட்டம்",
+    tl: "Pambansang Kurikulum ng UK", id: "Kurikulum Nasional Inggris", ms: "Kurikulum Kebangsaan UK", vi: "Chương Trình Quốc Gia Vương Quốc Anh", zh: "英国国家课程",
+    ar: "المنهج الوطني البريطاني", fa: "برنامه درسی ملی بریتانیا", ht: "Kourikoulòm Nasyonal UK", es: "Currículo Nacional del Reino Unido", pt: "Currículo Nacional do Reino Unido", fr: "Programme National du Royaume-Uni",
+    de: "Britischer Nationaler Lehrplan", pl: "Brytyjski Program Nauczania", uk: "Національна Програма Великої Британії", la: "Curriculum Nationale Britannicum",
+  },
+  "100% Offline (0 Data)": {
+    sw: "100% Nje ya Mtandao (Data 0)", yo: "100% Láìsí Íńtánẹ́ẹ̀tì (Dátà 0)", ig: "100% Na-enweghị Ịntanetị (Data 0)", ha: "100% Ba Intanet (Bayanai 0)", ak: "100% Intanɛt Nni Mu (Data 0)", zu: "100% Ungaxhunyiwe (Idatha 0)", am: "100% ከመስመር ውጭ (0 ዳታ)",
+    hi: "100% ऑफ़लाइन (0 डेटा)", bn: "১০০% অফলাইন (০ ডেটা)", ur: "100% آف لائن (0 ڈیٹا)", ta: "100% ஆஃப்லைன் (0 டேட்டா)",
+    tl: "100% Offline (0 Data)", id: "100% Offline (0 Kuota)", ms: "100% Luar Talian (0 Data)", vi: "100% Ngoại Tuyến (0 Dữ liệu)", zh: "100% 离线（零流量）",
+    ar: "100% دون إنترنت (0 بيانات)", fa: "100% آفلاین (۰ داده)", ht: "100% San Entènèt (0 Done)", es: "100% Sin Conexión (0 Datos)", pt: "100% Offline (0 Dados)", fr: "100% Hors Ligne (0 Données)",
+    de: "100% Offline (0 Daten)", pl: "100% Offline (0 Danych)", uk: "100% Офлайн (0 Трафіку)", la: "100% Sine Rete",
+  },
+  "Open Interactive Labs": {
+    sw: "Fungua Maabara za Maingiliano", yo: "Ṣí Yàrá Ìbáṣepọ̀", ig: "Mepee Ụlọ Nnwale", ha: "Buɗe Dakunan Gwaji", ak: "Bue Nyansahu Dan", zu: "Vula Amalebhu Asebenzisanayo", am: "በይነተገናኝ ላብራቶሪዎችን ክፈት",
+    hi: "इंटरैक्टिव लैब्स खोलें", bn: "ইন্টারেক্টিভ ল্যাব খুলুন", ur: "انٹرایکٹو لیبز کھولیں", ta: "ஊடாடும் ஆய்வகங்களைத் திற",
+    tl: "Buksan ang mga Interaktibong Lab", id: "Buka Lab Interaktif", ms: "Buka Makmal Interaktif", vi: "Mở Phòng Thí Nghiệm Tương Tác", zh: "打开互动实验室",
+    ar: "افتح المختبرات التفاعلية", fa: "باز کردن آزمایشگاه‌های تعاملی", ht: "Louvri Laboratwa Entèaktif", es: "Abrir Laboratorios Interactivos", pt: "Abrir Laboratórios Interativos", fr: "Ouvrir les Laboratoires Interactifs",
+    de: "Interaktive Labore öffnen", pl: "Otwórz Laboratoria Interaktywne", uk: "Відкрити Інтерактивні Лабораторії", la: "Aperi Officinas Interactivas",
+  },
+  "Curriculum Lessons": {
+    sw: "Masomo ya Mtaala", yo: "Àwọn Ẹ̀kọ́ Ètò Ẹ̀kọ́", ig: "Ihe Ọmụmụ Usoro", ha: "Darussan Manhaja", ak: "Adesua Nhyehyɛe", zu: "Izifundo Zekharikhulamu", am: "የሥርዓተ ትምህርት ትምህርቶች",
+    hi: "पाठ्यक्रम पाठ", bn: "পাঠ্যক্রম পাঠ", ur: "نصابی اسباق", ta: "பாடத்திட்டப் பாடங்கள்",
+    tl: "Mga Aralin sa Kurikulum", id: "Pelajaran Kurikulum", ms: "Pelajaran Kurikulum", vi: "Bài Học Chương Trình", zh: "课程内容",
+    ar: "دروس المنهج", fa: "درس‌های برنامه درسی", ht: "Leson Kourikoulòm", es: "Lecciones del Currículo", pt: "Lições do Currículo", fr: "Leçons du Programme",
+    de: "Lehrplan-Lektionen", pl: "Lekcje Programowe", uk: "Уроки Програми", la: "Lectiones Curriculi",
+  },
+  "Featured Classroom Activity": {
+    sw: "Shughuli Maalum ya Darasani", hi: "प्रमुख कक्षा गतिविधि", bn: "বিশেষ শ্রেণিকক্ষ কার্যক্রম", ur: "نمایاں کلاس روم سرگرمی",
+    tl: "Tampok na Gawain sa Silid-Aralan", id: "Aktivitas Kelas Unggulan", vi: "Hoạt Động Lớp Học Nổi Bật", zh: "精选课堂活动",
+    ar: "نشاط صفي مميز", fa: "فعالیت ویژه کلاس", es: "Actividad Destacada del Aula", pt: "Atividade em Destaque", fr: "Activité de Classe Vedette",
+    de: "Ausgewählte Klassenaktivität", pl: "Wyróżnione Ćwiczenie Klasowe", uk: "Рекомендована Класна Активність", la: "Actio Scholae Selecta",
+  },
+  "Explore & Experiment Live": {
+    sw: "Gundua na Fanya Majaribio Moja kwa Moja", hi: "लाइव खोजें और प्रयोग करें", bn: "লাইভ অন্বেষণ ও পরীক্ষা করুন", ur: "براہ راست دریافت اور تجربہ کریں",
+    tl: "Tuklasin at Mag-eksperimento nang Live", id: "Jelajahi & Bereksperimen Langsung", vi: "Khám Phá & Thí Nghiệm Trực Tiếp", zh: "实时探索与实验",
+    ar: "استكشف وجرّب مباشرة", fa: "کاوش و آزمایش زنده", es: "Explora y Experimenta en Vivo", pt: "Explore e Experimente ao Vivo", fr: "Explorez et Expérimentez en Direct",
+    de: "Live entdecken & experimentieren", pl: "Odkrywaj i Eksperymentuj na Żywo", uk: "Досліджуйте та Експериментуйте Наживо", la: "Explora et Experire",
+  },
+  "Curriculum Learning Pathways": {
+    sw: "Njia za Kujifunza za Mtaala", hi: "पाठ्यक्रम शिक्षण मार्ग", bn: "পাঠ্যক্রম শিক্ষার পথ", ur: "نصابی تعلیمی راستے",
+    tl: "Mga Landas sa Pagkatuto ng Kurikulum", id: "Jalur Pembelajaran Kurikulum", vi: "Lộ Trình Học Tập Chương Trình", zh: "课程学习路径",
+    ar: "مسارات تعلم المنهج", fa: "مسیرهای یادگیری برنامه درسی", es: "Rutas de Aprendizaje del Currículo", pt: "Trilhas de Aprendizagem do Currículo", fr: "Parcours d'Apprentissage du Programme",
+    de: "Lehrplan-Lernpfade", pl: "Ścieżki Nauki Programowej", uk: "Навчальні Маршрути Програми", la: "Viae Discendi Curriculi",
+  },
 };
 
 for (const [phrase, translations] of Object.entries(DEVELOPING_WORLD_UI_LEXICON)) {
@@ -1357,19 +1486,30 @@ function isExcludedFromTranslation(node: Node): boolean {
 }
 
 /**
- * Looks up direct lexicon match with trimmed case-insensitivity and symbol/emoji extraction
+ * Looks up direct offline pack & lexicon match with whitespace normalization,
+ * case-insensitivity, and leading/trailing symbol or emoji preservation.
  */
-function getLexiconTranslation(text: string, targetLang: string): string | null {
-  const trimmed = text.trim();
-  if (!trimmed) return null;
+function getLexiconTranslation(
+  text: string,
+  targetLang: string,
+  offlinePack: { exact: Record<string, string>; lower: Record<string, string> } | null
+): string | null {
+  const normalized = text.trim().replace(/\s+/g, ' ');
+  if (!normalized) return null;
+  const lower = normalized.toLowerCase();
+
+  // 0. Full offline language pack (static/i18n/<lang>.json)
+  if (offlinePack) {
+    if (offlinePack.exact[normalized]) return offlinePack.exact[normalized];
+    if (offlinePack.lower[lower]) return offlinePack.lower[lower];
+  }
 
   // 1. Direct exact match in UNIVERSAL_UI_LEXICON
-  if (UNIVERSAL_UI_LEXICON[trimmed] && UNIVERSAL_UI_LEXICON[trimmed][targetLang]) {
-    return UNIVERSAL_UI_LEXICON[trimmed][targetLang];
+  if (UNIVERSAL_UI_LEXICON[normalized] && UNIVERSAL_UI_LEXICON[normalized][targetLang]) {
+    return UNIVERSAL_UI_LEXICON[normalized][targetLang];
   }
 
   // 2. Direct exact or lower match in OFFLINE_LEXICON
-  const lower = trimmed.toLowerCase();
   if (OFFLINE_LEXICON[lower] && OFFLINE_LEXICON[lower][targetLang]) {
     return OFFLINE_LEXICON[lower][targetLang];
   }
@@ -1381,16 +1521,20 @@ function getLexiconTranslation(text: string, targetLang: string): string | null 
     }
   }
 
-  // 4. Leading/Trailing Emoji or Symbol extraction (e.g. "🏠 Home" -> "🏠 Inicio", "📖 Learning" -> "📖 Aprendizaje")
-  const symbolPrefixMatch = trimmed.match(/^([^\p{L}\p{N}]*\s*)([\p{L}\p{N}].*?)(\s*[^\p{L}\p{N}]*)$/u);
+  // 4. Leading/Trailing Emoji or Symbol extraction (e.g. "🕊️ Education should be free", "↗ Open Full Activity")
+  const symbolPrefixMatch = normalized.match(/^([^\p{L}\p{N}]*\s*)([\p{L}\p{N}].*?)(\s*[^\p{L}\p{N}]*)$/u);
   if (symbolPrefixMatch) {
     const [, prefix, core, suffix] = symbolPrefixMatch;
     const coreTrimmed = core.trim();
     if (coreTrimmed) {
+      const coreLower = coreTrimmed.toLowerCase();
+      if (offlinePack) {
+        if (offlinePack.exact[coreTrimmed]) return `${prefix}${offlinePack.exact[coreTrimmed]}${suffix}`;
+        if (offlinePack.lower[coreLower]) return `${prefix}${offlinePack.lower[coreLower]}${suffix}`;
+      }
       if (UNIVERSAL_UI_LEXICON[coreTrimmed]?.[targetLang]) {
         return `${prefix}${UNIVERSAL_UI_LEXICON[coreTrimmed][targetLang]}${suffix}`;
       }
-      const coreLower = coreTrimmed.toLowerCase();
       if (OFFLINE_LEXICON[coreLower]?.[targetLang]) {
         return `${prefix}${OFFLINE_LEXICON[coreLower][targetLang]}${suffix}`;
       }
@@ -1423,6 +1567,12 @@ export async function translatePageDOM(targetLang: string): Promise<void> {
   // If returning to English, restore all nodes from the WeakMap
   if (!targetLang || targetLang === 'en') {
     restorePageDOM();
+    emitTranslationStatus({
+      lang: 'en',
+      mode: 'english',
+      badge: '',
+      tooltip: 'English (Original)',
+    });
     return;
   }
 
@@ -1433,6 +1583,45 @@ export async function translatePageDOM(targetLang: string): Promise<void> {
   isUniversalTranslationRunning = true;
 
   try {
+    // Load lazy offline language pack (if available for this language) and probe Chrome native translator in parallel
+    const [offlinePack, nativeCap] = await Promise.all([
+      loadOfflineLanguagePack(targetLang),
+      detectNativeTranslatorCapability(targetLang, 'en'),
+    ]);
+
+    const langMeta = SUPPORTED_LANGUAGES[targetLang];
+    const langName = langMeta ? langMeta.nativeLabel : targetLang;
+
+    if (nativeCap === 'available' || nativeCap === 'downloadable') {
+      emitTranslationStatus({
+        lang: targetLang,
+        mode: 'native-translator',
+        badge: '⚡ On-Device Neural',
+        tooltip: `Full page & lessons translated locally via Chrome Built-in Translator API (${langName}, zero cloud egress).`,
+      });
+    } else if (offlinePack) {
+      emitTranslationStatus({
+        lang: targetLang,
+        mode: 'offline-pack',
+        badge: '📦 Offline Pack',
+        tooltip: `Full portal offline language pack active for ${langName} (0 data). Open in a top-level Chrome 138+ tab or enable Nano AI for arbitrary lesson prose.`,
+      });
+    } else if (hasUserGrantedAiConsent()) {
+      emitTranslationStatus({
+        lang: targetLang,
+        mode: 'nano-ai',
+        badge: '✨ Nano AI',
+        tooltip: `Translating ${langName} on-device via Gemini Nano (zero cloud egress).`,
+      });
+    } else {
+      emitTranslationStatus({
+        lang: targetLang,
+        mode: 'offline-ui',
+        badge: '📖 Offline UI',
+        tooltip: `Menus & key terms translated offline for ${langName}. Open in a top-level Chrome 138+ tab or enable Nano AI for full paragraph translation.`,
+      });
+    }
+
     const rootScope = document.body;
     const walker = document.createTreeWalker(
       rootScope,
@@ -1484,8 +1673,8 @@ export async function translatePageDOM(targetLang: string): Promise<void> {
               return;
             }
 
-            // 1. Instant dictionary lookup
-            const dictMatch = getLexiconTranslation(trimmed, targetLang);
+            // 1. Instant offline pack & dictionary lookup
+            const dictMatch = getLexiconTranslation(trimmed, targetLang, offlinePack);
             if (dictMatch) {
               const leadingSpace = originalText.match(/^\s*/)?.[0] || '';
               const trailingSpace = originalText.match(/\s*$/)?.[0] || '';
@@ -1494,10 +1683,11 @@ export async function translatePageDOM(targetLang: string): Promise<void> {
               return;
             }
 
-            // 2. Multi-tier translation (only for compact phrases to avoid blocking network limits)
-            if (trimmed.length < 120) {
-              const translated = await translateText(trimmed, targetLang, 'en');
-              if (translated && translated !== trimmed) {
+            // 2. On-device multi-tier translation (Local Cache -> Offline Lexicon -> Chrome Translator API -> Optional Nano)
+            const normalized = trimmed.replace(/\s+/g, ' ');
+            if (normalized.length < 600) {
+              const translated = await translateText(normalized, targetLang, 'en');
+              if (translated && translated !== normalized) {
                 const leadingSpace = originalText.match(/^\s*/)?.[0] || '';
                 const trailingSpace = originalText.match(/\s*$/)?.[0] || '';
                 textNode.nodeValue = `${leadingSpace}${translated}${trailingSpace}`;
@@ -1531,6 +1721,12 @@ export function restorePageDOM(): void {
   document.documentElement.lang = 'en';
   document.documentElement.dir = 'ltr';
   currentActiveTargetLang = 'en';
+  emitTranslationStatus({
+    lang: 'en',
+    mode: 'english',
+    badge: '',
+    tooltip: 'English (Original)',
+  });
 
   const rootScope = document.body;
   const walker = document.createTreeWalker(
@@ -1552,6 +1748,7 @@ export function restorePageDOM(): void {
     if (original !== undefined) {
       textNode.nodeValue = original;
     }
+    TRANSLATED_TEXT_NODES.delete(textNode);
     currentNode = walker.nextNode();
   }
 }

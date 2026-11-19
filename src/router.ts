@@ -136,6 +136,9 @@ export async function handleRouteChange() {
       outlet.appendChild(view);
     }
 
+    // Notify PersistentAppShell (universal translator, iframe language sync, etc.)
+    window.dispatchEvent(new CustomEvent('spa:route-rendered', { detail: { path: normalized } }));
+
     // Zero-Forced-Reflow Guarantee:
     // Avoid synchronous layout queries (querySelector + scrollIntoView / scrollTo) immediately after mutating outlet DOM.
     // Defer scrolling to requestAnimationFrame so styles & layout compute naturally during the browser's normal frame lifecycle.

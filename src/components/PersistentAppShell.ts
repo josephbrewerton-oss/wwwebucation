@@ -55,17 +55,30 @@ export class PersistentAppShellElement extends HTMLElement {
   private syncBslOverlay?: (enabled: boolean) => Promise<void>;
   private translationApplied = false;
 
+  private syncIframesLanguage(langCode: string) {
+    const iframes = document.querySelectorAll<HTMLIFrameElement>('iframe');
+    iframes.forEach((frame) => {
+      if (frame.id === 'neural-worker-guest-vm') return;
+      try {
+        frame.contentWindow?.postMessage({ type: 'SET_LANGUAGE', lang: langCode }, '*');
+      } catch {}
+      if (!frame.dataset.langSyncBound) {
+        frame.dataset.langSyncBound = '1';
+        frame.addEventListener('load', () => {
+          try {
+            frame.contentWindow?.postMessage({ type: 'SET_LANGUAGE', lang: getSavedLanguage() }, '*');
+          } catch {}
+        });
+      }
+    });
+  }
+
   private async applyPageTranslation(langCode: string) {
     document.documentElement.lang = langCode;
     document.documentElement.dir = isRtlLanguage(langCode) ? 'rtl' : 'ltr';
 
-    // Synchronize active AST Player iframe subtitles/narration language
-    const playerIframe = document.querySelector<HTMLIFrameElement>('#player-iframe');
-    if (playerIframe?.contentWindow) {
-      try {
-        playerIframe.contentWindow.postMessage({ type: 'SET_LANGUAGE', lang: langCode }, '*');
-      } catch {}
-    }
+    // Synchronize all active AST Player iframes (#stage-viewport, #ast-player-iframe, #catholic-sim-iframe, etc.)
+    this.syncIframesLanguage(langCode);
 
     if (!langCode || langCode === 'en') {
       if (this.translationApplied) {
@@ -86,6 +99,28 @@ export class PersistentAppShellElement extends HTMLElement {
       await translatePageDOM(langCode);
     } catch {}
   }
+
+  private handleRouteRendered = () => {
+    const activeLang = getSavedLanguage();
+    this.syncIframesLanguage(activeLang);
+    if (activeLang && activeLang !== 'en') {
+      void this.applyPageTranslation(activeLang);
+    }
+  };
+
+  private handleTranslationStatus = (e: Event) => {
+    const detail = (e as CustomEvent).detail as { badge?: string; tooltip?: string; mode?: string } | undefined;
+    const badgeEl = this.querySelector<HTMLSpanElement>('#stj-lang-mode-badge');
+    if (!badgeEl) return;
+    if (!detail || !detail.badge || detail.mode === 'english') {
+      badgeEl.style.display = 'none';
+      badgeEl.textContent = '';
+      return;
+    }
+    badgeEl.style.display = 'inline-flex';
+    badgeEl.textContent = detail.badge;
+    badgeEl.title = detail.tooltip || '';
+  };
 
   // Dedicated class handlers for clean event detachment
   private handleDocumentClick = () => {
@@ -254,6 +289,10 @@ export class PersistentAppShellElement extends HTMLElement {
                 <select id="stj-lang-select" aria-label="Select Portal Language" style="background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; font-size:0.72rem; padding:2px 6px; max-width:210px; cursor:pointer;">
                   ${buildLanguageSelectOptionsHtml(currentLang)}
                 </select>
+                <button type="button" id="stj-lang-speak-btn" title="Read Page Aloud in Selected Language" aria-label="Read Page Aloud in Selected Language" style="background:#1e293b; color:#38bdf8; border:1px solid #334155; border-radius:4px; font-size:0.72rem; padding:2px 6px; cursor:pointer; font-weight:700;">
+                  🗣️
+                </button>
+                <span id="stj-lang-mode-badge" style="display:none; align-items:center; background:#1e293b; color:#a7f3d0; border:1px solid #10b981; border-radius:4px; font-size:0.68rem; font-weight:700; padding:1px 6px; white-space:nowrap;"></span>
               </div>
             </div>
 
@@ -541,12 +580,18 @@ export class PersistentAppShellElement extends HTMLElement {
     // Attach global click to bound method
     document.addEventListener('click', this.handleDocumentClick);
 
-    // Language select
+    // Language select (setSavedLanguage notifies unsubscribeLang below for single-pass translation)
     const langSelect = this.querySelector<HTMLSelectElement>('#stj-lang-select');
     langSelect?.addEventListener('change', (e) => {
       const newLang = (e.target as HTMLSelectElement).value;
       setSavedLanguage(newLang);
-      void this.applyPageTranslation(newLang);
+    });
+
+    const btnLangSpeak = this.querySelector<HTMLButtonElement>('#stj-lang-speak-btn');
+    btnLangSpeak?.addEventListener('click', () => {
+      void import('../engine/universalDomTranslator').then(({ speakCurrentPage }) => {
+        speakCurrentPage(getSavedLanguage());
+      });
     });
 
     this.unsubscribeLang = listenToLanguageChange((lang) => {
@@ -555,6 +600,10 @@ export class PersistentAppShellElement extends HTMLElement {
       }
       void this.applyPageTranslation(lang);
     });
+
+    // Re-apply active translation & sync iframes immediately on every SPA route transition
+    window.addEventListener('spa:route-rendered', this.handleRouteRendered);
+    window.addEventListener('portal_translation_status', this.handleTranslationStatus);
 
     // Font size
     const btnFontNormal = this.querySelector('#btn-font-normal');
@@ -847,6 +896,8 @@ export class PersistentAppShellElement extends HTMLElement {
     window.removeEventListener('stj_sound_haptics_updated', this.handleSoundUpdated);
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('message', this.handleWindowMessage);
+    window.removeEventListener('spa:route-rendered', this.handleRouteRendered);
+    window.removeEventListener('portal_translation_status', this.handleTranslationStatus);
   }
 }
 

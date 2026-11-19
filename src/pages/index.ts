@@ -334,7 +334,7 @@ export function renderHomePage(): HTMLElement {
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🖐️</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">British Sign Language &amp; Accessibility</strong>
           <p style="font-size: 0.84rem; color: #475569; margin: 0; line-height: 1.5;">
-            On-screen British Sign Language (BSL) interpreter and live translation across 9 languages for inclusive classrooms.
+            On-screen British Sign Language (BSL) interpreter and live offline translation across 45 languages for inclusive classrooms.
           </p>
         </div>
       </div>
