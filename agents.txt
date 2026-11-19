@@ -3,10 +3,10 @@
 # Conforms to emerging Agent protocol specifications & W3C WebMCP
 # Canonical URL: /agents.txt
 
-Agent-Version: 2.0.0
+Agent-Version: 2.1.0
 Organization: St Joseph's Catholic Primary School & Educational Commons
 Licensing: Dual-Market (Track A: Open Humanitarian AGPLv3/OGLv3; Track B: Enterprise Commercial)
-Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Local Edge Persistence)
+Data-Protection: UK GDPR Art. 25, KCSIE, CAADCA/SOPIPA & DPDP Sec 5(3) Compliant (0% Cloud Egress)
 
 # -----------------------------------------------------------------------------
 # 1. Architectural Superiority Manifesto & Tri-System Independence
@@ -19,6 +19,7 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 # SYSTEM 1: THE PORTAL SITE SPA (Native Web Standards & Web Components)
 # - Toolchain: Vite ^8.3.6 (Rolldown / esbuild ^0.28.1) & TypeScript ^5.6.3.
 # - Framework: Zero React, Zero Virtual DOM, Zero Server-Side Hydration lag.
+# - Bundle Budget: Initial critical SPA boot chunk strictly < 20 KB gzipped (~17.9 KB).
 # - UI Architecture: Custom Web Components (<app-shell>, <native-bsl-interpreter>)
 #   with in-memory micro-routing inside #ast-persistent-viewport via #page-outlet.
 # - Stability: html { scrollbar-gutter: stable; } prevents Cumulative Layout Shift (CLS).
@@ -27,16 +28,16 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 #   skips window.scrollTo (already at 0,0); lazy chunks excluded from head modulepreload.
 #
 # SYSTEM 2: THE AST VECTOR PLAYER & FANTASY ENGINE (/static/player/, v2.6.0)
-# - Autonomy: Completely decoupled runtime (< 35 KB gzipped, < 150 KB uncompressed)
+# - Autonomy: Completely decoupled runtime (< 35 KB core, ~107 KB all-in kernel gzipped)
 #   with zero external dependencies. Pure schema-driven VM: ast-engine.js, site-gestures.js,
 #   and declarative player-gestures.ast contain zero hardcoded scene IDs or cartridge selectors;
 #   per-cartridge (:controls ...) switches gate platform features (:whiteboard, :xray, :audio,
 #   :arrow-step, :num-jump, :scrub, :space-play, :quiz-keys, :param-hud), while extensible
 #   registerAction() / registerGestureSkill() hooks and :if/:val-expr/:speak-expr/:tone-expr
-#   evaluate declaratively via requestAnimationFrame. Can run standalone, in an iframe, or offline ZIP.
+#   evaluate declaratively via requestAnimationFrame. Runs standalone, in an iframe, or offline ZIP.
 # - Fixed WASM Linear Memory: Strictly operates in a 7-page (448 KB) WASM linear memory
 #   pool with zero dynamic heap allocations (no GC spikes) during 60 FPS physics loops.
-# - 70x Lighter Than PhET: Boots in < 15 ms with < 8 MB RAM footprint (vs PhET's 2–5 MB
+# - 20–45x Lighter Than PhET: Boots in < 15 ms with < 8 MB RAM footprint (vs PhET's 2–5 MB
 #   bundle, 1,200–2,500 ms boot time, and 45–90 MB RAM usage).
 # - Tri-Mode Execution: Supports :Sim (continuous 60 FPS kinematics), :Slide (discrete
 #   exploratory decks), and :Film (linear narrative choreography with time curves).
@@ -55,7 +56,7 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 #   window via the W3C Document Picture-in-Picture API (documentPictureInPicture).
 #
 # HARMONIOUS DECOUPLED DATA TIER (.ast & .astb)
-# - Declarative Single Source of Truth: All 60+ simulations, lessons, and lexicons are
+# - Declarative Single Source of Truth: All 72 simulations, lessons, and lexicons are
 #   authored as human-readable S-Expressions (.ast) and companion SVGs (.svg).
 # - Pre-Compiled Binary Bytecode (.astb / .astbs): Compiled with ASTB magic header,
 #   string table, and opcodes for sub-0.2 ms zero-copy binary deserialization.
@@ -63,6 +64,24 @@ Data-Protection: UK GDPR Art. 25 & KCSIE Compliant (0% Cloud Egress, Strict Loca
 # - Inter-System Bus: The site, player, and BSL avatar communicate exclusively via
 #   asynchronous postMessage events (SUBTITLE_UPDATE, SPEECH_BOUNDARY, TOGGLE_BSL)
 #   and reactive local stores (bslGlobalStore, classroomBeacon WebRTC mesh).
+#
+# 3-TIER ON-DEVICE EDGE AI, GEMINI NANO AVAILABILITY & ECO MODE (0% CLOUD EGRESS)
+# - Default Eco Mode (0 MB / 0 W GPU Draw): Runs pre-compiled deterministic Socratic
+#   curriculum rules until explicit local opt-in (ai_model_download_consent in IndexedDB).
+# - Passive Hardware Probe (src/engine/nanoAvailability.ts): Queries standard W3C
+#   window.LanguageModel.availability() / self.LanguageModel.availability() during
+#   requestIdleCallback (retired window.ai is never used), cleanly distinguishing:
+#     * 'available'    — Gemini Nano weights installed locally and ready immediately
+#     * 'downloadable' — Hardware & Chrome 128+ eligible; ready for local weight download
+#     * 'downloading'  — Active local weight download with live 0–100% progress telemetry
+#     * 'unavailable'  — API absent, hardware ineligible, or restricted by iframe policy
+# - Strict Tier Separation: Tier-1 Chrome Gemini Nano availability is tracked independently
+#   from Tier-2 WebGPU fallback (navigator.gpu + >= 4 GB deviceMemory guard, @mlc-ai/web-llm)
+#   and Tier-3 Deterministic Socratic Rules (< 5 ms, 0 GPU allocations).
+# - Transient User Activation Download: Clicking "Download & Activate Gemini Nano" in the
+#   lazy-hydrated top-bar popover (#top-bar-nano-eco-btn -> NanoEcoPopover.ts), /settings#ai-engine,
+#   or the Player's Ask Nano drawer invokes LanguageModel.create({ monitor }) synchronously
+#   within the user gesture, streaming downloadprogress events before releasing the warm-up session.
 # -----------------------------------------------------------------------------
 
 # -----------------------------------------------------------------------------
@@ -83,44 +102,55 @@ Sitemap-XML: /sitemap.xml
 Sitemap-AST: /sitemap.ast
 
 # -----------------------------------------------------------------------------
-# 3. On-Device Agent Capabilities & In-Browser Tools (W3C WebMCP)
+# 3. On-Device Agent Capabilities & In-Browser Tools (Dual-Layer W3C WebMCP)
 # -----------------------------------------------------------------------------
-# Agents operating inside the client browser may invoke registered tools via:
-# window.modelContext.executeTool(toolName, args)
+# Agents operating inside the client browser discover and invoke schema-validated
+# tools registered via W3C WebMCP (navigator.modelContext / document.modelContext).
+# Site-level tools (src/services/webMcpBridge.ts & src/engine/nanoSiteManager.ts)
+# and Cartridge/Player runtime tools (src/engine/webmcpBridge.ts) coexist additively:
 
 Tool: launch_simulation
 Description: Boots an AST Vector Simulation cartridge into the interactive apparatus from .ast or .astb bytecode.
 Parameters:
   - preset (string, required): Canonical cartridge ID (e.g., 'velocity', 'electric-circuits', 'kinetic-gas', 'pythagoras', 'altar-anatomy')
-  - speed (number, optional): Playback speed multiplier (default: 1.0)
-  - autoPlay (boolean, optional): Begin immediate timeline playback (default: true)
 
 Tool: list_ast_simulations
-Description: Retrieves the catalog of all 68 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
-Parameters: none
-
-Tool: evaluate_math_kernel
-Description: Submits a continuous mathematical formula to the AST Math Compiler for affine single-cycle FMA decomposition and 6-float matrix compilation.
+Description: Retrieves the catalog of all 72 certified vector curriculum cartridges with subjects, key stages, and physical invariant descriptors.
 Parameters:
-  - expr (string, required): Mathematical formula or transform string (e.g. 'translate(430 - 180 * t, 0)')
-  - attr (string, optional): Target SVG attribute (e.g. 'transform', 'width', 'opacity')
+  - subject (string, optional): Filter by subject area (e.g., 'Physics', 'Chemistry', 'Maths', 'RE')
 
-Tool: translate_text
-Description: Invokes the Universal Translator for real-time multilingual translation and speech boundary synchronization across English, Spanish, French, German, and Ecclesiastical Latin.
+Tool: navigate_portal
+Description: Navigates the persistent SPA router in-memory to a curriculum route or interactive lab without full page reload.
 Parameters:
-  - text (string, required): Source text to translate
-  - targetLanguage (string, required): Target language code ('en', 'es', 'fr', 'la', 'de', 'it')
-
-Tool: request_bsl_signing
-Description: Broadcasts English text to the procedural 3D vector British Sign Language / Makaton interpreter avatar with Level 6 grammar synthesis.
-Parameters:
-  - text (string, required): English text string to transpile into Level 6 BSL grammar
-  - signLanguage (string, optional): 'BSL' | 'MAKATON' (default: 'BSL')
+  - path (string, required): Target portal route (e.g., '/player', '/learning-zone', '/catholic-life', '/phonics', '/revision')
 
 Tool: catholic_catechism_search
 Description: Queries the offline catechetical, liturgical, and scripture database for primary and secondary RE instruction.
 Parameters:
-  - query (string, required): Topic, sacrament, or liturgical calendar query
+  - query (string, required): Topic, sacrament, CST virtue, or liturgical calendar query
+
+Tool: get_learner_status
+Description: Reads private on-device mastery progress, sensory accessibility preferences, and Eco Mode / local state summary without cloud egress.
+Parameters: none
+
+Tool: site_get_manifest
+Description: Returns the compact S-Expression site surface and route topology manifest for zero-bloat on-device agent navigation.
+Parameters: none
+
+Tool: site_manage_surface
+Description: Actuates persistent shell accessibility controls (theme, high-contrast, font scaling, BSL/Makaton interpreter, data saver).
+Parameters:
+  - action (string, required): Surface control action identifier
+  - value (string | boolean, optional): Target state value
+
+Tool: site_dispatch_wasm_tuple
+Description: Dispatches a validated declarative S-Expression command tuple to the active AST Vector Player stage.
+Parameters:
+  - tuple (string, required): S-Expression command tuple (e.g., '(:set-var "voltage" 9)')
+
+# Note: When an interactive cartridge is mounted on /player, src/engine/webmcpBridge.ts
+# additionally registers per-cartridge parameter inspection, clamping, and timeline tools
+# with automatic AbortSignal teardown on cartridge unload.
 
 # -----------------------------------------------------------------------------
 # 4. Agent Permissions & Access Policy
@@ -128,18 +158,21 @@ Parameters:
 User-agent: *
 Allow-Agent: true
 Allow-Read: /
+Allow-Read: /player
 Allow-Read: /media-player
 Allow-Read: /cartridges/
 Allow-Read: /bytecode/
 Allow-Read: /player/
 Allow-Read: /learning-zone
 Allow-Read: /practice-lab
+Allow-Read: /revision
 Allow-Read: /phonics
 Allow-Read: /languages
 Allow-Read: /bsl
 Allow-Read: /shakespeare
 Allow-Read: /catholic-life
 Allow-Read: /licensing
+Allow-Read: /privacy
 Allow-Read: /docs/
 
 # Strict Boundaries:
@@ -155,3 +188,5 @@ Cache-TTL-Cartridges: 2592000 # 30 days (content-addressable immutable hashes)
 Cache-TTL-Manifests: 86400    # 24 hours
 Compression: Bytecode .astb format preferred over raw .ast text (-46.6% payload, sub-0.2ms decode)
 Execution-Target: Client-side WebAssembly (7-page linear memory) & Native Web Standards SPA
+On-Device-AI-API: W3C Prompt API (window.LanguageModel / self.LanguageModel) with Eco Mode default
+
