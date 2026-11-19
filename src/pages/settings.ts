@@ -1,7 +1,13 @@
 import { getBaseUrl } from '../utils/url';
 import { getLocalState, setLocalState } from '../services/localStateStore';
 import { getSignLanguage, setSignLanguage, SignLanguageCode } from '../services/bslGlobalStore';
-import { getSavedLanguage } from '../engine/operational-language';
+import {
+  getSavedLanguage,
+  setSavedLanguage,
+  listenToLanguageChange,
+  buildLanguageSelectOptionsHtml,
+  SUPPORTED_LANGUAGES,
+} from '../engine/operational-language';
 import { getComplianceCaveat } from '../data/complianceCaveats';
 import {
   getNanoStateSnapshot,
@@ -35,6 +41,9 @@ export function renderSettingsPage(): HTMLElement {
     if (key === 'stj_sign_language') {
       return getSignLanguage();
     }
+    if (key === 'app_language') {
+      return getSavedLanguage();
+    }
     const raw = getLocalState(key);
     if (raw === null) return fallback;
     if (raw === 'true') return true;
@@ -45,6 +54,12 @@ export function renderSettingsPage(): HTMLElement {
   function setValue(key: string, val: any, attr?: string) {
     if (key === 'stj_sign_language') {
       setSignLanguage(val as SignLanguageCode);
+      window.dispatchEvent(new CustomEvent('app-setting-changed', { detail: { key, value: val } }));
+      return;
+    }
+    if (key === 'app_language') {
+      setSavedLanguage(String(val));
+      setLocalState(key, String(val));
       window.dispatchEvent(new CustomEvent('app-setting-changed', { detail: { key, value: val } }));
       return;
     }
@@ -277,13 +292,20 @@ export function renderSettingsPage(): HTMLElement {
             </button>
           `;
         } else if (type === 'select') {
-          const options = (meta as [string, string][])
-            .map(([val, optLabel]) => `<option value="${val}" ${currentVal === val ? 'selected' : ''}>${optLabel}</option>`)
-            .join('');
+          const isLangSelect = id === 'setting-lang';
+          const options = isLangSelect
+            ? buildLanguageSelectOptionsHtml(String(currentVal))
+            : (meta as [string, string][])
+                .map(([val, optLabel]) => `<option value="${val}" ${currentVal === val ? 'selected' : ''}>${optLabel}</option>`)
+                .join('');
+          const langCountBadge = isLangSelect
+            ? `<div style="font-size:0.74rem; color:#065f46; font-weight:700; margin-top:5px;">✓ ${Object.keys(SUPPORTED_LANGUAGES).length} languages configured · Africa, South Asia, SE Asia, MENA, Americas &amp; Europe</div>`
+            : '';
           controlHtml = `
-            <select id="${id}" aria-label="${label}" style="width:100%; max-width:360px; padding:8px 12px; border-radius:8px; border:1.5px solid #0369a1; background:#fff; color:#0f172a; font-size:0.9rem; font-weight:700; cursor:pointer;">
+            <select id="${id}" ${isLangSelect ? 'class="notranslate" translate="no"' : ''} aria-label="${label}" style="width:100%; max-width:360px; padding:8px 12px; border-radius:8px; border:1.5px solid #0369a1; background:#fff; color:#0f172a; font-size:0.9rem; font-weight:700; cursor:pointer;">
               ${options}
             </select>
+            ${langCountBadge}
           `;
         } else if (type === 'segmented') {
           const buttons = (meta as [string, string][])
@@ -416,6 +438,17 @@ export function renderSettingsPage(): HTMLElement {
       return;
     }
     render();
+  });
+
+  const unsubscribeLang = listenToLanguageChange((lang) => {
+    if (!container.isConnected) {
+      unsubscribeLang();
+      return;
+    }
+    const sel = container.querySelector<HTMLSelectElement>('#setting-lang');
+    if (sel && sel.value !== lang) {
+      sel.value = lang;
+    }
   });
 
   // Trigger a fresh hardware probe when visiting /settings

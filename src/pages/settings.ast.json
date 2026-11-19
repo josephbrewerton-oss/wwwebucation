@@ -81,18 +81,8 @@
           "Default Portal Language",
           "app_language",
           "en",
-          [
-            ["en", "🇬🇧 English"],
-            ["es", "🇪🇸 Español"],
-            ["fr", "🇫🇷 Français"],
-            ["la", "🇻🇦 Latina"],
-            ["de", "🇩🇪 Deutsch"],
-            ["pl", "🇵🇱 Polski"],
-            ["uk", "🇺🇦 Українська"],
-            ["pt", "🇵🇹 Português"],
-            ["ar", "🇸🇦 العربية"]
-          ],
-          null
+          [],
+          "45 developing-world, global, and liturgical languages powered by instant offline lexicons, browser-native W3C Translator API, and optional on-device Gemini Nano (zero cloud egress)."
         ],
         [
           "select",

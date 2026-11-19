@@ -4,6 +4,7 @@ import {
   getSavedLanguage,
   listenToLanguageChange,
   setSavedLanguage,
+  isRtlLanguage,
 } from './operational-language';
 import { translateText, speakInLanguage, OFFLINE_LEXICON } from './translationService';
 
@@ -1155,6 +1156,159 @@ export const UNIVERSAL_UI_LEXICON: Record<string, Record<string, string>> = {
   },
 };
 
+// Developing-World & Global South UI Dictionary (merged into UNIVERSAL_UI_LEXICON)
+const DEVELOPING_WORLD_UI_LEXICON: Record<string, Record<string, string>> = {
+  "Home": {
+    sw: "Nyumbani", yo: "Ilé", ig: "Ụlọ", ha: "Gida", ak: "Fie", zu: "Ikhaya", am: "መነሻ",
+    so: "Bogga Hore", rw: "Ahabanza", sn: "Kumba", ny: "Kunyumbako", om: "Fuula Duraa", lg: "Awaka",
+    hi: "होम", bn: "হোম", ur: "ہوم", ta: "முகப்பு", te: "హోమ్", mr: "मुख्यपृष्ठ", pa: "ਮੁੱਖ ਪੰਨਾ", gu: "હોમ", ne: "गृहपृष्ठ", si: "මුල් පිටුව",
+    tl: "Tahanan", id: "Beranda", ms: "Utama", vi: "Trang chủ", my: "ပင်မစာမျက်နှာ", km: "ទំព័រដើម", zh: "首页",
+    ar: "الرئيسية", fa: "خانه", ps: "کورپاڼه", ht: "Akèy", es: "Inicio", pt: "Início", fr: "Accueil",
+    de: "Startseite", pl: "Strona główna", uk: "Головна", it: "Home", tr: "Ana Sayfa", la: "Domus",
+  },
+  "Learning Zone": {
+    sw: "Eneo la Kujifunza", yo: "Agbègbè Ẹ̀kọ́", ig: "Ebe Mmụta", ha: "Yankin Koyo", ak: "Adesua Bea", zu: "Indawo Yokufunda", am: "የትምህርት ክፍል",
+    so: "Goobta Waxbarashada", rw: "Ahantu ho Kwiga", sn: "Nzvimbo Yekudzidza", ny: "Malo Ophunzirira",
+    hi: "लर्निंग ज़ोन", bn: "শেখার অঞ্চল", ur: "سیکھنے کا زون", ta: "கற்றல் பகுதி", te: "అభ్యాస ప్రాంతం", mr: "शिक्षण क्षेत्र", ne: "सिकाइ क्षेत्र",
+    tl: "Sona ng Pagkatuto", id: "Zona Belajar", ms: "Zon Pembelajaran", vi: "Khu Học Tập", zh: "学习区",
+    ar: "منطقة التعلم", fa: "بخش یادگیری", ps: "د زده کړې برخه", ht: "Zòn Aprantisaj", es: "Zona de Aprendizaje", pt: "Zona de Aprendizagem", fr: "Espace d'Apprentissage",
+    de: "Lernbereich", pl: "Strefa Nauki", uk: "Зона Навчання", it: "Area di Apprendimento", tr: "Öğrenme Alanı", la: "Zona Discendi",
+  },
+  "Practice Lab": {
+    sw: "Maabara ya Mazoezi", yo: "Yàrá Ìdánwò", ig: "Ụlọ Nnwale", ha: "Dakin Gwaji", ak: "Nsɔhwɛ Dan", zu: "Ilebhu Yokuzilolonga", am: "የልምምድ ላብራቶሪ",
+    so: "Shaybaarka Tababarka", rw: "Laboratwari y'Imyitozo", sn: "Imba Yekudzidzira", ny: "Malo Oyesera",
+    hi: "अभ्यास प्रयोगशाला", bn: "অনুশীলন ল্যাব", ur: "مشق لیب", ta: "பயிற்சி ஆய்வகம்", te: "అభ్యాస ప్రయోగశాల", mr: "सराव प्रयोगशाळा", ne: "अभ्यास प्रयोगशाला",
+    tl: "Laboratoryo ng Pagsasanay", id: "Lab Latihan", ms: "Makmal Latihan", vi: "Phòng Thực Hành", zh: "练习实验室",
+    ar: "مختبر التدريب", fa: "آزمایشگاه تمرین", ps: "د تمرین لابراتوار", ht: "Laboratwa Pratik", es: "Laboratorio de Práctica", pt: "Laboratório de Prática", fr: "Laboratoire d'Exercices",
+    de: "Übungslabor", pl: "Laboratorium Ćwiczeń", uk: "Лабораторія Практики", it: "Laboratorio di Pratica", tr: "Uygulama Laboratuvarı", la: "Officina Exercitationis",
+  },
+  "Interactive Labs": {
+    sw: "Maabara za Maingiliano", yo: "Yàrá Ìbáṣepọ̀", ig: "Ụlọ Nnwale Mmekọrịta", ha: "Dakunan Gwaji", ak: "Nyansahu Dan", zu: "Amalebhu Asebenzisanayo", am: "በይነተገናኝ ላብራቶሪዎች",
+    so: "Shaybaarada Isdhexgalka", rw: "Laboratwari Zikora", sn: "Marabhoritari", ny: "Zoyesera",
+    hi: "इंटरैक्टिव लैब्स", bn: "ইন্টারেক্টিভ ল্যাব", ur: "انٹرایکٹو لیبز", ta: "ஊடாடும் ஆய்வகங்கள்", te: "ఇంటరాక్టివ్ ల్యాబ్స్", mr: "संवादात्मक प्रयोगशाळा", ne: "अन्तरक्रियात्मक प्रयोगशाला",
+    tl: "Mga Interaktibong Lab", id: "Lab Interaktif", ms: "Makmal Interaktif", vi: "Phòng Thí Nghiệm Tương Tác", zh: "互动实验室",
+    ar: "المختبرات التفاعلية", fa: "آزمایشگاه‌های تعاملی", ps: "متقابل لابراتوارونه", ht: "Laboratwa Entèaktif", es: "Laboratorios Interactivos", pt: "Laboratórios Interativos", fr: "Laboratoires Interactifs",
+    de: "Interaktive Labore", pl: "Interaktywne Laboratoria", uk: "Інтерактивні Лабораторії", it: "Laboratori Interattivi", tr: "Etkileşimli Laboratuvarlar", la: "Officinae Interactivae",
+  },
+  "Teaching & Curriculum": {
+    sw: "Ufundishaji na Mtaala", yo: "Ìkọ́ni àti Ètò Ẹ̀kọ́", ig: "Nkuzi na Usoro Mmụta", ha: "Koyarwa da Manhaja", ak: "Nkyerɛkyerɛ ne Adesua", zu: "Ukufundisa Nekharikhulamu", am: "ማስተማር እና ሥርዓተ ትምህርት",
+    so: "Baridda & Manhajka", rw: "Kwigisha n'Integanyanyigisho",
+    hi: "शिक्षण और पाठ्यक्रम", bn: "শিক্ষাদান ও পাঠ্যক্রম", ur: "تدریس اور نصاب", ta: "கற்பித்தல் மற்றும் பாடத்திட்டம்", te: "బోధన & పాఠ్యప్రణాళిక", mr: "शिक्षण आणि अभ्यासक्रम", ne: "शिक्षण र पाठ्यक्रम",
+    tl: "Pagtuturo at Kurikulum", id: "Pengajaran & Kurikulum", ms: "Pengajaran & Kurikulum", vi: "Giảng Dạy & Chương Trình", zh: "教学与课程",
+    ar: "التدريس والمنهج", fa: "آموزش و برنامه درسی", ps: "تدریس او نصاب", ht: "Ansèyman ak Kourikoulòm", es: "Enseñanza y Currículo", pt: "Ensino e Currículo", fr: "Enseignement et Programme",
+    de: "Unterricht & Lehrplan", pl: "Nauczanie i Program", uk: "Навчання та Програма", la: "Doctrina et Curriculum",
+  },
+  "Catholic Sanctuary": {
+    sw: "Patakatifu pa Kikatoliki", yo: "Ibi Mímọ́ Kátólíìkì", ig: "Ebe Nsọ Katọlik", ha: "Wurin Ibada na Katolika", zu: "Indawo Engcwele YamaKhatholika", am: "የካቶሊክ መቅደስ",
+    hi: "कैथोलिक अभयारण्य", bn: "ক্যাথলিক উপাসনালয়", ur: "کیتھولک مقدس مقام", ta: "கத்தோலிக்க திருத்தலம்",
+    tl: "Santuwaryong Katoliko", id: "Ruang Suci Katolik", vi: "Thánh Đường Công Giáo", zh: "天主教圣所",
+    ar: "الحرم الكاثوليكي", fa: "مقدس‌سرای کاتولیک", ht: "Sanktyè Katolik", es: "Santuario Católico", pt: "Santuário Católico", fr: "Sanctuaire Catholique",
+    de: "Katholisches Heiligtum", pl: "Sanktuarium Katolickie", uk: "Католицька Святиня", la: "Sanctuarium Catholicum",
+  },
+  "Overseas Curriculums": {
+    sw: "Mitaala ya Kimataifa", yo: "Ètò Ẹ̀kọ́ Àgbáyé", ig: "Usoro Mmụta Mba Ọzọ", ha: "Manhajar Ƙasashen Waje", ak: "Amanɔne Adesua Nhyehyɛe", zu: "Amakharikhulamu Aphesheya", am: "ዓለም አቀፍ ሥርዓተ ትምህርት",
+    so: "Manhajyada Caalamiga ah", rw: "Integanyanyigisho Mpuzamahanga",
+    hi: "अंतर्राष्ट्रीय पाठ्यक्रम", bn: "আন্তর্জাতিক পাঠ্যক্রম", ur: "بین الاقوامی نصاب", ta: "பன்னாட்டுப் பாடத்திட்டங்கள்", te: "అంతర్జాతీయ పాఠ్యప్రణాళికలు", mr: "आंतरराष्ट्रीय अभ्यासक्रम", ne: "अन्तर्राष्ट्रिय पाठ्यक्रम",
+    tl: "Mga Kurikulum sa Ibang Bansa", id: "Kurikulum Internasional", ms: "Kurikulum Antarabangsa", vi: "Chương Trình Quốc Tế", zh: "国际课程",
+    ar: "المناهج الدولية", fa: "برنامه‌های درسی بین‌المللی", ps: "نړیوال نصابونه", ht: "Kourikoulòm Entènasyonal", es: "Currículos Internacionales", pt: "Currículos Internacionais", fr: "Programmes Internationaux",
+    de: "Internationale Lehrpläne", pl: "Programy Międzynarodowe", uk: "Міжнародні Програми", la: "Curricula Extera",
+  },
+  "Settings": {
+    sw: "Mipangilio", yo: "Àwọn Ètò", ig: "Ntọala", ha: "Saituna", ak: "Nhyehyɛe", zu: "Izilungiselelo", am: "ቅንብሮች",
+    so: "Dejinta", rw: "Igenamiterere", sn: "Zvirongwa", ny: "Zokonda",
+    hi: "सेटिंग्स", bn: "সেটিংস", ur: "ترتیبات", ta: "அமைப்புகள்", te: "సెట్టింగ్‌లు", mr: "सेटिंग्ज", pa: "ਸੈਟਿੰਗਾਂ", gu: "સેટિંગ્સ", ne: "सेटिङहरू", si: "සැකසුම්",
+    tl: "Mga Setting", id: "Pengaturan", ms: "Tetapan", vi: "Cài đặt", my: "ဆက်တင်များ", km: "ការកំណត់", zh: "设置",
+    ar: "الإعدادات", fa: "تنظیمات", ps: "تنظیمات", ht: "Paramèt", es: "Configuración", pt: "Configurações", fr: "Paramètres",
+    de: "Einstellungen", pl: "Ustawienia", uk: "Налаштування", it: "Impostazioni", tr: "Ayarlar", la: "Optiones",
+  },
+  "Save Offline": {
+    sw: "Hifadhi Nje ya Mtandao", yo: "Fipamọ́ láìsí Íńtánẹ́ẹ̀tì", ig: "Chekwaa na-enweghị Ịntanetị", ha: "Ajiye Ba Tare da Intanet ba", ak: "Sie Wɔ Intanɛt Akyi", zu: "Londoloza Ungaxhunyiwe", am: "ከመስመር ውጭ አስቀምጥ",
+    so: "Kaydi Offline", rw: "Bika Udafite Interineti",
+    hi: "ऑफ़लाइन सहेजें", bn: "অফলাইনে সংরক্ষণ করুন", ur: "آف لائن محفوظ کریں", ta: "ஆஃப்லைனில் சேமி", te: "ఆఫ్‌లైన్‌లో సేవ్ చేయండి", mr: "ऑफलाइन जतन करा", ne: "अफलाइन सुरक्षित गर्नुहोस्",
+    tl: "I-save nang Offline", id: "Simpan Offline", ms: "Simpan Luar Talian", vi: "Lưu Ngoại Tuyến", zh: "离线保存",
+    ar: "حفظ دون إنترنت", fa: "ذخیره آفلاین", ps: "آفلاین خوندي کړئ", ht: "Anrejistre San Entènèt", es: "Guardar sin conexión", pt: "Salvar Offline", fr: "Enregistrer hors ligne",
+    de: "Offline speichern", pl: "Zapisz offline", uk: "Зберегти офлайн", la: "Serva Sine Rete",
+  },
+  "Data Saver": {
+    sw: "Kiokoa Data", yo: "Olùpamọ́ Dátà", ig: "Nchekwa Data", ha: "Adana Bayanai", ak: "Data Korafo", zu: "Isilondolozi Sedatha", am: "ዳታ ቆጣቢ",
+    so: "Kaydiyaha Xogta", rw: "Kuzigama Interineti",
+    hi: "डेटा सेवर", bn: "ডেটা সেভার", ur: "ڈیٹا سیور", ta: "டேட்டா சேவர்", te: "డేటా సేవర్", mr: "डेटा सेव्हर", ne: "डाटा बचत",
+    tl: "Tipid sa Data", id: "Hemat Data", ms: "Penjimat Data", vi: "Tiết kiệm dữ liệu", zh: "省流模式",
+    ar: "توفير البيانات", fa: "صرفه‌جویی داده", ps: "د معلوماتو سپما", ht: "Ekonomize Done", es: "Ahorro de datos", pt: "Economia de Dados", fr: "Économiseur de données",
+    de: "Datensparmodus", pl: "Oszczędzanie danych", uk: "Економія трафіку", la: "Parcimonia Datorum",
+  },
+  "News": {
+    sw: "Habari", yo: "Ìròyìn", ig: "Akụkọ", ha: "Labarai", ak: "Kaseɛbɔ", zu: "Izindaba", am: "ዜና",
+    so: "Wararka", rw: "Amakuru",
+    hi: "समाचार", bn: "সংবাদ", ur: "خبریں", ta: "செய்திகள்", te: "వార్తలు", mr: "बातम्या", ne: "समाचार",
+    tl: "Balita", id: "Berita", ms: "Berita", vi: "Tin tức", zh: "新闻",
+    ar: "الأخبار", fa: "اخبار", ps: "خبرونه", ht: "Nouvèl", es: "Noticias", pt: "Notícias", fr: "Actualités",
+    de: "Neuigkeiten", pl: "Aktualności", uk: "Новини", it: "Notizie", tr: "Haberler", la: "Nuntii",
+  },
+  "Educator": {
+    sw: "Mwalimu", yo: "Olùkọ́", ig: "Onye Nkuzi", ha: "Malami", ak: "Ɔkyerɛkyerɛfo", zu: "Uthisha", am: "አስተማሪ",
+    so: "Macallin", rw: "Umwarimu",
+    hi: "शिक्षक", bn: "শিক্ষক", ur: "معلم", ta: "ஆசிரியர்", te: "ఉపాధ్యాయుడు", mr: "शिक्षक", ne: "शिक्षक",
+    tl: "Guro", id: "Pendidik", ms: "Pendidik", vi: "Giáo viên", zh: "教师",
+    ar: "المعلم", fa: "آموزگار", ps: "ښوونکی", ht: "Edikatè", es: "Docente", pt: "Educador", fr: "Enseignant",
+    de: "Lehrkraft", pl: "Nauczyciel", uk: "Вчитель", la: "Magister",
+  },
+  "Education should be free": {
+    sw: "Elimu inapaswa kuwa bure", yo: "Ẹ̀kọ́ yẹ kí ó jẹ́ ọ̀fẹ́", ig: "Agụmakwụkwọ kwesịrị ịbụ n'efu", ha: "Ilimi ya kamata ya zama kyauta", ak: "Adesua sɛ sɛ ɛyɛ kwa", zu: "Imfundo kufanele ibe mahhala", am: "ትምህርት ነፃ መሆን አለበት",
+    so: "Waxbarashadu waa inay noqoto bilaash", rw: "Uburezi bukwiye kuba ubuntu",
+    hi: "शिक्षा निःशुल्क होनी चाहिए", bn: "শিক্ষা বিনামূল্যে হওয়া উচিত", ur: "تعلیم مفت ہونی چاہیے", ta: "கல்வி இலவசமாக இருக்க வேண்டும்", te: "విద్య ఉచితంగా ఉండాలి", mr: "शिक्षण मोफत असावे", ne: "शिक्षा निःशुल्क हुनुपर्छ",
+    tl: "Ang edukasyon ay dapat libre", id: "Pendidikan harus gratis", ms: "Pendidikan harus percuma", vi: "Giáo dục phải miễn phí", zh: "教育应当免费",
+    ar: "يجب أن يكون التعليم مجانياً", fa: "آموزش باید رایگان باشد", ps: "زده کړه باید وړیا وي", ht: "Edikasyon ta dwe gratis", es: "La educación debe ser gratuita", pt: "A educação deve ser gratuita", fr: "L'éducation doit être gratuite",
+    de: "Bildung sollte kostenlos sein", pl: "Edukacja powinna być bezpłatna", uk: "Освіта має бути безкоштовною", la: "Educatio gratuita esse debet",
+  },
+  "Science": {
+    sw: "Sayansi", yo: "Sáyẹ́ǹsì", ig: "Sayensị", ha: "Kimiyya", ak: "Abɔdeɛ Mu Nyansapɛ", zu: "Isayensi", am: "ሳይንስ",
+    so: "Sayniska", rw: "Siyansi",
+    hi: "विज्ञान", bn: "বিজ্ঞান", ur: "سائنس", ta: "அறிவியல்", te: "విజ్ఞాన శాస్త్రం", mr: "विज्ञान", ne: "विज्ञान",
+    tl: "Agham", id: "Sains", ms: "Sains", vi: "Khoa học", zh: "科学",
+    ar: "العلوم", fa: "علوم", ps: "ساینس", ht: "Syans", es: "Ciencias", pt: "Ciências", fr: "Sciences",
+    de: "Naturwissenschaften", pl: "Nauki ścisłe", uk: "Природознавство", la: "Scientia",
+  },
+  "Mathematics": {
+    sw: "Hisabati", yo: "Ìṣirò", ig: "Mgbakọ na Mwepụ", ha: "Lissafi", ak: "Akontaabu", zu: "Izibalo", am: "ሒሳብ",
+    so: "Xisaabta", rw: "Imibare",
+    hi: "गणित", bn: "গণিত", ur: "ریاضی", ta: "கணிதம்", te: "గణితం", mr: "गणित", ne: "गणित",
+    tl: "Matematika", id: "Matematika", ms: "Matematik", vi: "Toán học", zh: "数学",
+    ar: "الرياضيات", fa: "ریاضیات", ps: "ریاضي", ht: "Matematik", es: "Matemáticas", pt: "Matemática", fr: "Mathématiques",
+    de: "Mathematik", pl: "Matematyka", uk: "Математика", la: "Mathematica",
+  },
+  "History": {
+    sw: "Historia", yo: "Ìtàn", ig: "Akụkọ Ihe Mere Eme", ha: "Tarihi", ak: "Abakɔsɛm", zu: "Umlando", am: "ታሪክ",
+    so: "Taariikhda", rw: "Amateka",
+    hi: "इतिहास", bn: "ইतिहास", ur: "تاریخ", ta: "வரலாறு", te: "చరిత్ర", mr: "इतिहास", ne: "इतिहास",
+    tl: "Kasaysayan", id: "Sejarah", ms: "Sejarah", vi: "Lịch sử", zh: "历史",
+    ar: "التاريخ", fa: "تاریخ", ps: "تاریخ", ht: "Istwa", es: "Historia", pt: "História", fr: "Histoire",
+    de: "Geschichte", pl: "Historia", uk: "Історія", la: "Historia",
+  },
+  "Geography": {
+    sw: "Jiografia", yo: "Jọ́gíráfì", ig: "Ọdịdị Ala", ha: "Labarin Ƙasa", ak: "Asase Ho Adesua", zu: "IJografi", am: "ጂኦግራፊ",
+    so: "Juqraafi", rw: "Ubumenyi bw'Isi",
+    hi: "भूगोल", bn: "ভূগোল", ur: "جغرافیہ", ta: "புவியியல்", te: "భూగోళశాస్త్రం", mr: "भूगोल", ne: "भूगोल",
+    tl: "Heograpiya", id: "Geografi", ms: "Geografi", vi: "Địa lý", zh: "地理",
+    ar: "الجغرافيا", fa: "جغرافیا", ps: "جغرافیه", ht: "Jewografi", es: "Geografía", pt: "Geografia", fr: "Géographie",
+    de: "Geografie", pl: "Geografia", uk: "Географія", la: "Geographia",
+  },
+  "Lessons & Units": {
+    sw: "Masomo na Mada", yo: "Àwọn Ẹ̀kọ́", ig: "Ihe Ọmụmụ", ha: "Darussa da Sashe", ak: "Adesua Afa", zu: "Izifundo", am: "ትምህርቶች እና ምዕራፎች",
+    hi: "पाठ और इकाइयाँ", bn: "পাঠ ও অধ্যায়", ur: "اسباق اور یونٹس", ta: "பாடங்கள் மற்றும் அலகுகள்",
+    tl: "Mga Aralin at Yunit", id: "Pelajaran & Unit", ms: "Pelajaran & Unit", vi: "Bài học & Chủ đề", zh: "课程与单元",
+    ar: "الدروس والوحدات", fa: "درس‌ها و بخش‌ها", ht: "Leson ak Inite", es: "Lecciones y Unidades", pt: "Lições e Unidades", fr: "Leçons et Unités",
+    de: "Lektionen & Einheiten", pl: "Lekcje i Działy", uk: "Уроки та Розділи", la: "Lectiones et Unitates",
+  },
+};
+
+for (const [phrase, translations] of Object.entries(DEVELOPING_WORLD_UI_LEXICON)) {
+  UNIVERSAL_UI_LEXICON[phrase] = {
+    ...(UNIVERSAL_UI_LEXICON[phrase] || {}),
+    ...translations,
+  };
+}
+
 // Elements to strictly ignore during DOM tree traversal
 const IGNORED_TAGS = new Set([
   'SCRIPT',
@@ -1162,6 +1316,10 @@ const IGNORED_TAGS = new Set([
   'CODE',
   'PRE',
   'TEXTAREA',
+  'SELECT',
+  'OPTION',
+  'OPTGROUP',
+  'INPUT',
   'SVG',
   'NOSCRIPT',
   'IFRAME',
@@ -1184,6 +1342,9 @@ function isExcludedFromTranslation(node: Node): boolean {
       parent.getAttribute('translate') === 'no' ||
       parent.hasAttribute('data-no-translate') ||
       parent.id === 'universal-translator-bar' ||
+      parent.id === 'stj-universal-translator-bar' ||
+      parent.id === 'stj-lang-select' ||
+      parent.id === 'setting-lang' ||
       parent.id === 'neural-worker-guest-vm' ||
       parent.classList.contains('katex') ||
       parent.classList.contains('math-formula')
@@ -1254,8 +1415,8 @@ export async function translatePageDOM(targetLang: string): Promise<void> {
 
   currentActiveTargetLang = targetLang;
 
-  // Apply Direction & HTML attributes
-  const isRTL = targetLang === 'ar' || targetLang === 'ur';
+  // Apply Direction & HTML attributes (covers Arabic, Urdu, Persian/Dari, Pashto)
+  const isRTL = isRtlLanguage(targetLang);
   document.documentElement.lang = targetLang;
   document.documentElement.dir = isRTL ? 'rtl' : 'ltr';
 
@@ -1416,9 +1577,15 @@ export function enableUniversalObserver(targetLang: string): void {
     const hasAddedElements = mutations.some(
       (m) =>
         m.addedNodes &&
-        Array.from(m.addedNodes).some(
-          (n) => n.nodeType === Node.ELEMENT_NODE && (n as HTMLElement).id !== 'universal-translator-bar'
-        )
+        Array.from(m.addedNodes).some((n) => {
+          if (n.nodeType !== Node.ELEMENT_NODE) return false;
+          const el = n as HTMLElement;
+          return (
+            el.id !== 'universal-translator-bar' &&
+            el.id !== 'stj-universal-translator-bar' &&
+            !el.closest('#stj-universal-translator-bar')
+          );
+        })
     );
     if (!hasAddedElements) return;
 

@@ -2,8 +2,18 @@
 /**
  * Operational Language Engine
  * 100% Zero-React, pure TypeScript module.
+ * Compact registry supporting 45 Global South, European, and Liturgical languages
+ * while preserving the <20 KB initial SPA boot bundle budget.
  */
 import { getLocalState, setLocalState, subscribeLocalState } from '../services/localStateStore';
+
+export type LanguageRegion =
+  | 'core'
+  | 'africa'
+  | 'south-asia'
+  | 'se-asia'
+  | 'mena-americas'
+  | 'europe';
 
 export interface SupportedLanguage {
   code: string;
@@ -11,159 +21,150 @@ export interface SupportedLanguage {
   nativeLabel: string;
   ttsVoiceLang: string; // For Web Speech API synthesis
   promptCondition: string;
+  flag?: string;
+  region?: LanguageRegion;
+  rtl?: boolean;
 }
 
-export const SUPPORTED_LANGUAGES: Record<string, SupportedLanguage> = {
-  en: {
-    code: 'en',
-    label: 'English',
-    nativeLabel: 'UK',
-    ttsVoiceLang: 'en-GB',
-    promptCondition: 'Formulate all explanations, question text, and hints in clear English.',
-  },
-  es: {
-    code: 'es',
-    label: 'Spanish',
-    nativeLabel: 'Español',
-    ttsVoiceLang: 'es-ES',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in standard Spanish (Español).',
-  },
-  fr: {
-    code: 'fr',
-    label: 'French',
-    nativeLabel: 'Français',
-    ttsVoiceLang: 'fr-FR',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in French (Français).',
-  },
-  de: {
-    code: 'de',
-    label: 'German',
-    nativeLabel: 'Deutsch',
-    ttsVoiceLang: 'de-DE',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in German (Deutsch).',
-  },
-  pl: {
-    code: 'pl',
-    label: 'Polish',
-    nativeLabel: 'Polski',
-    ttsVoiceLang: 'pl-PL',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Polish (Język polski).',
-  },
-  uk: {
-    code: 'uk',
-    label: 'Ukrainian',
-    nativeLabel: 'Українська',
-    ttsVoiceLang: 'uk-UA',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Ukrainian (Українська мова).',
-  },
-  ar: {
-    code: 'ar',
-    label: 'Arabic',
-    nativeLabel: 'العربية',
-    ttsVoiceLang: 'ar-SA',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Modern Standard Arabic (العربية).',
-  },
-  bn: {
-    code: 'bn',
-    label: 'Bengali',
-    nativeLabel: 'বাংলা',
-    ttsVoiceLang: 'bn-BD',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Bengali (বাংলা).',
-  },
-  ur: {
-    code: 'ur',
-    label: 'Urdu',
-    nativeLabel: 'اردو',
-    ttsVoiceLang: 'ur-PK',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Urdu (اردو).',
-  },
-  hi: {
-    code: 'hi',
-    label: 'Hindi',
-    nativeLabel: 'हिन्दी',
-    ttsVoiceLang: 'hi-IN',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Hindi (हिन्दी).',
-  },
-  pt: {
-    code: 'pt',
-    label: 'Portuguese',
-    nativeLabel: 'Português',
-    ttsVoiceLang: 'pt-PT',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Portuguese (Português).',
-  },
-  it: {
-    code: 'it',
-    label: 'Italian',
-    nativeLabel: 'Italiano',
-    ttsVoiceLang: 'it-IT',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Italian (Italiano).',
-  },
-  tr: {
-    code: 'tr',
-    label: 'Turkish',
-    nativeLabel: 'Türkçe',
-    ttsVoiceLang: 'tr-TR',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Turkish (Türkçe).',
-  },
-  zh: {
-    code: 'zh',
-    label: 'Chinese',
-    nativeLabel: '中文',
-    ttsVoiceLang: 'zh-CN',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Simplified Chinese (简体中文).',
-  },
-  sw: {
-    code: 'sw',
-    label: 'Swahili',
-    nativeLabel: 'Kiswahili',
-    ttsVoiceLang: 'sw-KE',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Kiswahili.',
-  },
-  yo: {
-    code: 'yo',
-    label: 'Yoruba',
-    nativeLabel: 'Èdè Yorùbá',
-    ttsVoiceLang: 'yo-NG',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Yoruba.',
-  },
-  ig: {
-    code: 'ig',
-    label: 'Igbo',
-    nativeLabel: 'Asụsụ Igbo',
-    ttsVoiceLang: 'ig-NG',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Igbo.',
-  },
-  ha: {
-    code: 'ha',
-    label: 'Hausa',
-    nativeLabel: 'Harshen Hausa',
-    ttsVoiceLang: 'ha-NE',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Hausa.',
-  },
-  zu: {
-    code: 'zu',
-    label: 'Zulu',
-    nativeLabel: 'isiZulu',
-    ttsVoiceLang: 'zu-ZA',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in isiZulu.',
-  },
-  am: {
-    code: 'am',
-    label: 'Amharic',
-    nativeLabel: 'አማርኛ',
-    ttsVoiceLang: 'am-ET',
-    promptCondition: 'Formulate all explanations, question text, and hints strictly in Amharic.',
-  },
+export const LANGUAGE_REGION_LABELS: Record<LanguageRegion, string> = {
+  core: 'Core',
+  africa: 'Africa',
+  'south-asia': 'South Asia',
+  'se-asia': 'Southeast & East Asia',
+  'mena-americas': 'Middle East, Americas & Caribbean',
+  europe: 'Europe & Liturgical',
 };
+
+const REGION_ORDER: LanguageRegion[] = [
+  'core',
+  'africa',
+  'south-asia',
+  'se-asia',
+  'mena-americas',
+  'europe',
+];
+
+function defineLang(
+  code: string,
+  label: string,
+  nativeLabel: string,
+  ttsVoiceLang: string,
+  flag: string,
+  region: LanguageRegion,
+  rtl = false
+): SupportedLanguage {
+  return {
+    code,
+    label,
+    nativeLabel,
+    ttsVoiceLang,
+    flag,
+    region,
+    rtl,
+    promptCondition:
+      code === 'en'
+        ? 'Formulate all explanations, question text, and hints in clear English.'
+        : `Formulate all explanations, question text, and hints strictly in ${label} (${nativeLabel}).`,
+  };
+}
+
+const LANGUAGE_LIST: SupportedLanguage[] = [
+  // Core
+  defineLang('en', 'English', 'English', 'en-GB', '🇬🇧', 'core'),
+
+  // Africa (Developing-world partner & curriculum languages)
+  defineLang('sw', 'Swahili', 'Kiswahili', 'sw-KE', '🇰🇪', 'africa'),
+  defineLang('yo', 'Yoruba', 'Èdè Yorùbá', 'yo-NG', '🇳🇬', 'africa'),
+  defineLang('ig', 'Igbo', 'Asụsụ Igbo', 'ig-NG', '🇳🇬', 'africa'),
+  defineLang('ha', 'Hausa', 'Harshen Hausa', 'ha-NG', '🇳🇬', 'africa'),
+  defineLang('ak', 'Twi / Akan', 'Akan (Twi)', 'ak-GH', '🇬🇭', 'africa'),
+  defineLang('zu', 'Zulu', 'isiZulu', 'zu-ZA', '🇿🇦', 'africa'),
+  defineLang('am', 'Amharic', 'አማርኛ', 'am-ET', '🇪🇹', 'africa'),
+  defineLang('om', 'Oromo', 'Afaan Oromoo', 'om-ET', '🇪🇹', 'africa'),
+  defineLang('ti', 'Tigrinya', 'ትግርኛ', 'ti-ET', '🇪🇷', 'africa'),
+  defineLang('so', 'Somali', 'Soomaali', 'so-SO', '🇸🇴', 'africa'),
+  defineLang('rw', 'Kinyarwanda', 'Ikinyarwanda', 'rw-RW', '🇷🇼', 'africa'),
+  defineLang('lg', 'Luganda', 'Luganda', 'lg-UG', '🇺🇬', 'africa'),
+  defineLang('sn', 'Shona', 'chiShona', 'sn-ZW', '🇿🇼', 'africa'),
+  defineLang('ny', 'Chichewa', 'Chichewa', 'ny-MW', '🇲🇼', 'africa'),
+
+  // South Asia
+  defineLang('hi', 'Hindi', 'हिन्दी', 'hi-IN', '🇮🇳', 'south-asia'),
+  defineLang('bn', 'Bengali', 'বাংলা', 'bn-BD', '🇧🇩', 'south-asia'),
+  defineLang('ur', 'Urdu', 'اردو', 'ur-PK', '🇵🇰', 'south-asia', true),
+  defineLang('ta', 'Tamil', 'தமிழ்', 'ta-IN', '🇮🇳', 'south-asia'),
+  defineLang('te', 'Telugu', 'తెలుగు', 'te-IN', '🇮🇳', 'south-asia'),
+  defineLang('mr', 'Marathi', 'मराठी', 'mr-IN', '🇮🇳', 'south-asia'),
+  defineLang('pa', 'Punjabi', 'ਪੰਜਾਬੀ', 'pa-IN', '🇮🇳', 'south-asia'),
+  defineLang('gu', 'Gujarati', 'ગુજરાતી', 'gu-IN', '🇮🇳', 'south-asia'),
+  defineLang('ne', 'Nepali', 'नेपाली', 'ne-NP', '🇳🇵', 'south-asia'),
+  defineLang('si', 'Sinhala', 'සිංහල', 'si-LK', '🇱🇰', 'south-asia'),
+
+  // Southeast & East Asia
+  defineLang('tl', 'Filipino / Tagalog', 'Filipino', 'fil-PH', '🇵🇭', 'se-asia'),
+  defineLang('id', 'Indonesian', 'Bahasa Indonesia', 'id-ID', '🇮🇩', 'se-asia'),
+  defineLang('ms', 'Malay', 'Bahasa Melayu', 'ms-MY', '🇲🇾', 'se-asia'),
+  defineLang('vi', 'Vietnamese', 'Tiếng Việt', 'vi-VN', '🇻🇳', 'se-asia'),
+  defineLang('my', 'Burmese', 'မြန်မာဘာသာ', 'my-MM', '🇲🇲', 'se-asia'),
+  defineLang('km', 'Khmer', 'ភាសាខ្មែរ', 'km-KH', '🇰🇭', 'se-asia'),
+  defineLang('zh', 'Chinese', '中文', 'zh-CN', '🇨🇳', 'se-asia'),
+
+  // Middle East, Americas & Caribbean
+  defineLang('ar', 'Arabic', 'العربية', 'ar-SA', '🇸🇦', 'mena-americas', true),
+  defineLang('fa', 'Persian / Dari', 'فارسی / دری', 'fa-IR', '🇦🇫', 'mena-americas', true),
+  defineLang('ps', 'Pashto', 'پښتو', 'ps-AF', '🇦🇫', 'mena-americas', true),
+  defineLang('ht', 'Haitian Creole', 'Kreyòl Ayisyen', 'ht-HT', '🇭🇹', 'mena-americas'),
+  defineLang('es', 'Spanish', 'Español', 'es-ES', '🇪🇸', 'mena-americas'),
+  defineLang('pt', 'Portuguese', 'Português', 'pt-BR', '🇧🇷', 'mena-americas'),
+  defineLang('fr', 'French', 'Français', 'fr-FR', '🇫🇷', 'mena-americas'),
+
+  // Europe & Liturgical
+  defineLang('de', 'German', 'Deutsch', 'de-DE', '🇩🇪', 'europe'),
+  defineLang('pl', 'Polish', 'Polski', 'pl-PL', '🇵🇱', 'europe'),
+  defineLang('uk', 'Ukrainian', 'Українська', 'uk-UA', '🇺🇦', 'europe'),
+  defineLang('it', 'Italian', 'Italiano', 'it-IT', '🇮🇹', 'europe'),
+  defineLang('tr', 'Turkish', 'Türkçe', 'tr-TR', '🇹🇷', 'europe'),
+  defineLang('la', 'Latin', 'Lingua Latina', 'la', '🇻🇦', 'europe'),
+];
+
+export const SUPPORTED_LANGUAGES: Record<string, SupportedLanguage> = Object.fromEntries(
+  LANGUAGE_LIST.map((l) => [l.code, l])
+);
 
 export const DEFAULT_LANGUAGE = SUPPORTED_LANGUAGES.en;
 export const PORTAL_LANG_STORAGE_KEY = 'portal_language';
 export const PORTAL_PRACTICE_MODE_STORAGE_KEY = 'portal_language_practice_mode';
 export const PORTAL_SPEECH_SPEED_STORAGE_KEY = 'portal_speech_speed';
 
+export function isRtlLanguage(langCode: string): boolean {
+  return Boolean(SUPPORTED_LANGUAGES[langCode]?.rtl);
+}
+
+/**
+ * Generates grouped <optgroup>/<option> HTML for language dropdowns
+ * so both the Universal Access top bar and Settings stay 100% in sync.
+ */
+export function buildLanguageSelectOptionsHtml(currentLang: string): string {
+  return REGION_ORDER.map((region) => {
+    const items = LANGUAGE_LIST.filter((l) => l.region === region);
+    const opts = items
+      .map((l) => {
+        const display =
+          l.nativeLabel === l.label
+            ? `${l.flag || ''} ${l.label}`
+            : `${l.flag || ''} ${l.nativeLabel} (${l.label})`;
+        return `<option value="${l.code}"${currentLang === l.code ? ' selected' : ''}>${display.trim()}</option>`;
+      })
+      .join('');
+    if (region === 'core') return opts;
+    return `<optgroup label="${LANGUAGE_REGION_LABELS[region]}">${opts}</optgroup>`;
+  }).join('');
+}
+
 export function getSavedLanguage(): string {
   if (typeof window === 'undefined') return 'en';
-  return getLocalState(PORTAL_LANG_STORAGE_KEY) || 'en';
+  const saved = getLocalState(PORTAL_LANG_STORAGE_KEY) || 'en';
+  return SUPPORTED_LANGUAGES[saved] ? saved : 'en';
 }
 
 export function getLanguagePracticeMode(): boolean {
@@ -272,6 +273,8 @@ export function renderLanguageSelector(options: {
   let activeLang = currentLang || getSavedLanguage();
 
   const container = document.createElement('div');
+  container.className = 'notranslate';
+  container.setAttribute('translate', 'no');
   container.style.cssText = `
     display: inline-flex;
     align-items: center;
@@ -296,6 +299,9 @@ export function renderLanguageSelector(options: {
   container.appendChild(label);
 
   const select = document.createElement('select');
+  select.className = 'notranslate';
+  select.setAttribute('translate', 'no');
+  select.setAttribute('aria-label', 'Select Language');
   select.style.cssText = `
     padding: ${compact ? '0.25rem 0.5rem' : '0.35rem 0.65rem'};
     border-radius: 6px;
@@ -307,14 +313,7 @@ export function renderLanguageSelector(options: {
     cursor: pointer;
     outline: none;
   `;
-
-  Object.values(SUPPORTED_LANGUAGES).forEach((lang) => {
-    const opt = document.createElement('option');
-    opt.value = lang.code;
-    opt.textContent = `${lang.label} (${lang.nativeLabel})`;
-    if (lang.code === activeLang) opt.selected = true;
-    select.appendChild(opt);
-  });
+  select.innerHTML = buildLanguageSelectOptionsHtml(activeLang);
 
   select.onchange = (e) => {
     const val = (e.target as HTMLSelectElement).value;

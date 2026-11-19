@@ -15,7 +15,13 @@ import {
 } from '../services/bslGlobalStore';
 import { isDataSaverActive, setDataSaverMode, listenToDataSaverChanges } from '../services/dataSaverStore';
 import { isOfflineSyncComplete, syncEntireCurriculumOffline } from '../services/offlineSync';
-import { getSavedLanguage, setSavedLanguage, listenToLanguageChange } from '../engine/operational-language';
+import {
+  getSavedLanguage,
+  setSavedLanguage,
+  listenToLanguageChange,
+  buildLanguageSelectOptionsHtml,
+  isRtlLanguage,
+} from '../engine/operational-language';
 import { navigate } from '../router';
 import { getBaseUrl } from '../utils/url';
 import { getLocalState, setLocalState } from '../services/localStateStore';
@@ -47,6 +53,39 @@ export class PersistentAppShellElement extends HTMLElement {
   private cleanupWebMcp?: () => void;
   private cleanupNanoSite?: () => void;
   private syncBslOverlay?: (enabled: boolean) => Promise<void>;
+  private translationApplied = false;
+
+  private async applyPageTranslation(langCode: string) {
+    document.documentElement.lang = langCode;
+    document.documentElement.dir = isRtlLanguage(langCode) ? 'rtl' : 'ltr';
+
+    // Synchronize active AST Player iframe subtitles/narration language
+    const playerIframe = document.querySelector<HTMLIFrameElement>('#player-iframe');
+    if (playerIframe?.contentWindow) {
+      try {
+        playerIframe.contentWindow.postMessage({ type: 'SET_LANGUAGE', lang: langCode }, '*');
+      } catch {}
+    }
+
+    if (!langCode || langCode === 'en') {
+      if (this.translationApplied) {
+        this.translationApplied = false;
+        try {
+          const { restorePageDOM, enableUniversalObserver } = await import('../engine/universalDomTranslator');
+          enableUniversalObserver('en');
+          restorePageDOM();
+        } catch {}
+      }
+      return;
+    }
+
+    this.translationApplied = true;
+    try {
+      const { translatePageDOM, enableUniversalObserver } = await import('../engine/universalDomTranslator');
+      enableUniversalObserver(langCode);
+      await translatePageDOM(langCode);
+    } catch {}
+  }
 
   // Dedicated class handlers for clean event detachment
   private handleDocumentClick = () => {
@@ -210,18 +249,10 @@ export class PersistentAppShellElement extends HTMLElement {
                 <span>🌐</span> St Joseph's Universal Access
               </span>
               <span aria-hidden="true" style="color:#94a3b8;">|</span>
-              <div style="display:inline-flex; align-items:center; gap:5px;">
+              <div class="notranslate" translate="no" style="display:inline-flex; align-items:center; gap:5px;">
                 <label for="stj-lang-select" style="color:#cbd5e1; font-size:0.72rem;">Language:</label>
-                <select id="stj-lang-select" style="background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; font-size:0.72rem; padding:1px 6px; cursor:pointer;">
-                  <option value="en" ${currentLang === 'en' ? 'selected' : ''}>🇬🇧 English</option>
-                  <option value="es" ${currentLang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
-                  <option value="fr" ${currentLang === 'fr' ? 'selected' : ''}>🇫🇷 Français</option>
-                  <option value="la" ${currentLang === 'la' ? 'selected' : ''}>🇻🇦 Latina (Ecclesiastical)</option>
-                  <option value="de" ${currentLang === 'de' ? 'selected' : ''}>🇩🇪 Deutsch</option>
-                  <option value="pl" ${currentLang === 'pl' ? 'selected' : ''}>🇵🇱 Polski</option>
-                  <option value="uk" ${currentLang === 'uk' ? 'selected' : ''}>🇺🇦 Українська</option>
-                  <option value="pt" ${currentLang === 'pt' ? 'selected' : ''}>🇵🇹 Português</option>
-                  <option value="ar" ${currentLang === 'ar' ? 'selected' : ''}>🇸🇦 العربية</option>
+                <select id="stj-lang-select" aria-label="Select Portal Language" style="background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; font-size:0.72rem; padding:2px 6px; max-width:210px; cursor:pointer;">
+                  ${buildLanguageSelectOptionsHtml(currentLang)}
                 </select>
               </div>
             </div>
@@ -515,12 +546,14 @@ export class PersistentAppShellElement extends HTMLElement {
     langSelect?.addEventListener('change', (e) => {
       const newLang = (e.target as HTMLSelectElement).value;
       setSavedLanguage(newLang);
+      void this.applyPageTranslation(newLang);
     });
 
     this.unsubscribeLang = listenToLanguageChange((lang) => {
       if (langSelect && langSelect.value !== lang) {
         langSelect.value = lang;
       }
+      void this.applyPageTranslation(lang);
     });
 
     // Font size
@@ -752,6 +785,10 @@ export class PersistentAppShellElement extends HTMLElement {
         ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 2500 })
         : (cb: () => void) => window.setTimeout(cb, 300);
     scheduleIdle(() => {
+      const savedLang = getSavedLanguage();
+      if (savedLang && savedLang !== 'en') {
+        void this.applyPageTranslation(savedLang);
+      }
       void ensureNanoController();
       import('../services/webMcpBridge')
         .then(({ initWebMcpBridge }) => {

@@ -6,9 +6,106 @@ import { getLocalState, setLocalState } from '../services/localStateStore';
 
 // In-memory LRU-like cache
 const MEMORY_TRANSLATION_CACHE = new Map<string, string>();
+// Cached W3C/Chrome Native Translator instances (null = unavailable for pair)
+const NATIVE_TRANSLATOR_CACHE = new Map<string, Promise<any | null>>();
 
 function getCacheKey(text: string, targetLang: string, sourceLang = 'en'): string {
   return `trans_${sourceLang}_${targetLang}_${text.trim().toLowerCase().slice(0, 80)}`;
+}
+
+/**
+ * Probes whether Chrome's built-in on-device Translator API supports a language pair.
+ * Checks modern W3C `window.Translator` first, then legacy `window.translation`.
+ */
+export async function detectNativeTranslatorCapability(
+  targetLang: string,
+  sourceLang = 'en'
+): Promise<'available' | 'downloadable' | 'unavailable'> {
+  if (typeof window === 'undefined' || !targetLang || targetLang === sourceLang) {
+    return 'unavailable';
+  }
+  const win = window as any;
+  const modernApi = win.Translator || (typeof self !== 'undefined' ? (self as any).Translator : null);
+  if (modernApi && typeof modernApi.availability === 'function') {
+    try {
+      const status = await modernApi.availability({
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+      });
+      if (status === 'available' || status === 'readily') return 'available';
+      if (status === 'downloadable' || status === 'after-download' || status === 'downloading') {
+        return 'downloadable';
+      }
+    } catch {}
+  }
+  const legacyApi = win.translation || (typeof self !== 'undefined' ? (self as any).translation : null);
+  if (legacyApi && typeof legacyApi.canTranslate === 'function') {
+    try {
+      const status = await legacyApi.canTranslate({
+        sourceLanguage: sourceLang,
+        targetLanguage: targetLang,
+      });
+      if (status === 'readily' || status === 'available') return 'available';
+      if (status === 'after-download' || status === 'downloadable') return 'downloadable';
+    } catch {}
+  }
+  return 'unavailable';
+}
+
+function getOrCreateNativeTranslator(sourceLang: string, targetLang: string): Promise<any | null> {
+  const pairKey = `${sourceLang}->${targetLang}`;
+  const existing = NATIVE_TRANSLATOR_CACHE.get(pairKey);
+  if (existing) return existing;
+
+  const promise = (async () => {
+    if (typeof window === 'undefined') return null;
+    const win = window as any;
+
+    // 1. Modern W3C Translator API (Chrome 138+ / Built-in On-Device Neural Translation)
+    const modernApi = win.Translator || (typeof self !== 'undefined' ? (self as any).Translator : null);
+    if (modernApi && typeof modernApi.availability === 'function' && typeof modernApi.create === 'function') {
+      try {
+        const availability = await modernApi.availability({
+          sourceLanguage: sourceLang,
+          targetLanguage: targetLang,
+        });
+        if (availability === 'available' || availability === 'readily' || availability === 'downloadable') {
+          const translator = await modernApi.create({
+            sourceLanguage: sourceLang,
+            targetLanguage: targetLang,
+          });
+          if (translator && typeof translator.translate === 'function') {
+            return translator;
+          }
+        }
+      } catch {}
+    }
+
+    // 2. Legacy Chrome window.translation API fallback
+    const legacyApi = win.translation || (typeof self !== 'undefined' ? (self as any).translation : null);
+    if (legacyApi && typeof legacyApi.canTranslate === 'function' && typeof legacyApi.createTranslator === 'function') {
+      try {
+        const availability = await legacyApi.canTranslate({
+          sourceLanguage: sourceLang,
+          targetLanguage: targetLang,
+        });
+        if (availability === 'readily' || availability === 'available') {
+          const translator = await legacyApi.createTranslator({
+            sourceLanguage: sourceLang,
+            targetLanguage: targetLang,
+          });
+          if (translator && typeof translator.translate === 'function') {
+            return translator;
+          }
+        }
+      } catch {}
+    }
+
+    return null;
+  })();
+
+  NATIVE_TRANSLATOR_CACHE.set(pairKey, promise);
+  return promise;
 }
 
 function getCached(text: string, targetLang: string, sourceLang = 'en'): string | null {
@@ -61,6 +158,23 @@ export const OFFLINE_LEXICON: Record<string, Record<string, string>> = {
     ha: 'Sabon Tambaya',
     zu: 'Umbuzo Omusha',
     am: 'አዲስ ጥያቄ',
+    so: 'Su\'aal Cusub',
+    rw: 'Ikibazo Gishya',
+    ak: 'Asɛmmisa Foforo',
+    sn: 'Mubvunzo Mutsva',
+    ny: 'Funso Latsopano',
+    ta: 'புதிய கேள்வி',
+    te: 'కొత్త ప్రశ్న',
+    mr: 'नवीन प्रश्न',
+    ne: 'नयाँ प्रश्न',
+    tl: 'Bagong Tanong',
+    id: 'Pertanyaan Baru',
+    ms: 'Soalan Baharu',
+    vi: 'Câu hỏi mới',
+    fa: 'پرسش جدید',
+    ps: 'نوې پوښتنه',
+    ht: 'Nouvo Kesyon',
+    la: 'Quaestio Nova',
   },
   'next question': {
     es: 'Siguiente pregunta',
@@ -82,6 +196,23 @@ export const OFFLINE_LEXICON: Record<string, Record<string, string>> = {
     ha: 'Tambaya ta Gaba',
     zu: 'Umbuzo Olandelayo',
     am: 'ቀጣይ ጥያቄ',
+    so: 'Su\'aasha Xigta',
+    rw: 'Ikibazo Gikurikira',
+    ak: 'Asɛmmisa a Edi Hɔ',
+    sn: 'Mubvunzo Unotevera',
+    ny: 'Funso Lotsatira',
+    ta: 'அடுத்த கேள்வி',
+    te: 'తదుపరి ప్రశ్న',
+    mr: 'पुढील प्रश्न',
+    ne: 'अर्को प्रश्न',
+    tl: 'Susunod na Tanong',
+    id: 'Pertanyaan Berikutnya',
+    ms: 'Soalan Seterusnya',
+    vi: 'Câu hỏi tiếp theo',
+    fa: 'پرسش بعدی',
+    ps: 'بله پوښتنه',
+    ht: 'Pwochen Kesyon',
+    la: 'Quaestio Sequens',
   },
   'spot on! correct conceptual deduction.': {
     es: '¡Exacto! Deducción conceptual correcta.',
@@ -399,16 +530,39 @@ export async function translateText(
     const expr = calcMatch[1].trim();
     const prefixes: Record<string, string> = {
       sw: 'Hesabu: ',
+      yo: 'Ṣírò: ',
+      ig: 'Gụọ: ',
+      ha: 'Lissafa: ',
+      zu: 'Bala: ',
+      am: 'አስላ: ',
+      so: 'Xisaabi: ',
+      rw: 'Bara: ',
+      ak: 'Bu akontaa: ',
+      sn: 'Verenga: ',
+      ny: 'Werengani: ',
       es: 'Calcula: ',
+      pt: 'Calcule: ',
       fr: 'Calculez : ',
       de: 'Berechne: ',
       pl: 'Oblicz: ',
       uk: 'Обчисліть: ',
       ar: 'احسب: ',
+      fa: 'محاسبه کنید: ',
+      ps: 'محاسبه کړئ: ',
       ur: 'حساب کریں: ',
       bn: 'গণনা করুন: ',
       hi: 'गणना करें: ',
+      ta: 'கணக்கிடுக: ',
+      te: 'లెక్కించండి: ',
+      mr: 'गणना करा: ',
+      ne: 'गणना गर्नुहोस्: ',
+      tl: 'Kalkulahin: ',
+      id: 'Hitung: ',
+      ms: 'Kira: ',
+      vi: 'Tính: ',
+      ht: 'Kalkile: ',
       zh: '计算：',
+      la: 'Computa: ',
     };
     if (prefixes[targetLang]) {
       const res = `${prefixes[targetLang]}${expr}`;
@@ -423,16 +577,37 @@ export async function translateText(
     const expr = whatIsMatch[1].trim();
     const templates: Record<string, (e: string) => string> = {
       sw: (e) => `Ni nini ${e}?`,
+      yo: (e) => `Kí ni ${e}?`,
+      ig: (e) => `Gịnị bụ ${e}?`,
+      ha: (e) => `Mene ne ${e}?`,
+      zu: (e) => `Yini i-${e}?`,
+      am: (e) => `${e} ስንት ነው?`,
+      so: (e) => `Waa maxay ${e}?`,
+      rw: (e) => `${e} bingana iki?`,
+      ak: (e) => `Dɛn ne ${e}?`,
       es: (e) => `¿Cuánto es ${e}?`,
+      pt: (e) => `Quanto é ${e}?`,
       fr: (e) => `Combien fait ${e} ?`,
       de: (e) => `Was ist ${e}?`,
       pl: (e) => `Ile to jest ${e}?`,
       uk: (e) => `Скільки буде ${e}?`,
       ar: (e) => `ما هو ${e}؟`,
+      fa: (e) => `${e} چقدر است؟`,
+      ps: (e) => `${e} څومره کېږي؟`,
       ur: (e) => `${e} کیا ہے؟`,
       bn: (e) => `${e} কত?`,
       hi: (e) => `${e} क्या है?`,
+      ta: (e) => `${e} என்ன?`,
+      te: (e) => `${e} ఎంత?`,
+      mr: (e) => `${e} किती आहे?`,
+      ne: (e) => `${e} कति हो?`,
+      tl: (e) => `Ano ang ${e}?`,
+      id: (e) => `Berapa ${e}?`,
+      ms: (e) => `Berapakah ${e}?`,
+      vi: (e) => `${e} bằng bao nhiêu?`,
+      ht: (e) => `Konbyen ${e} fè?`,
       zh: (e) => `${e} 是多少？`,
+      la: (e) => `Quid est ${e}?`,
     };
     if (templates[targetLang]) {
       const res = templates[targetLang](expr);
@@ -447,12 +622,22 @@ export async function translateText(
     const frac = equivMatch[1].trim();
     const templates: Record<string, (f: string) => string> = {
       sw: (f) => `Ni sehemu gani iliyo sawa na ${f}?`,
+      tl: (f) => `Aling bahagi ang katumbas ng ${f}?`,
+      id: (f) => `Pecahan mana yang senilai dengan ${f}?`,
+      vi: (f) => `Phân số nào tương đương với ${f}?`,
+      hi: (f) => `कौन सा भिन्न ${f} के बराबर है?`,
+      bn: (f) => `কোন ভগ্নাংশটি ${f}-এর সমতুল্য?`,
+      ur: (f) => `کون سا کسر ${f} کے برابر ہے؟`,
+      ta: (f) => `எந்த பின்னம் ${f} இக்கு சமமானது?`,
       es: (f) => `¿Qué fracción es equivalente a ${f}?`,
+      pt: (f) => `Qual fração é equivalente a ${f}?`,
       fr: (f) => `Quelle fraction est équivalente à ${f} ?`,
       de: (f) => `Welcher Bruch entspricht ${f}?`,
       pl: (f) => `Który ułamek jest równoważny ${f}?`,
       uk: (f) => `Який дріб еквівалентний ${f}?`,
       ar: (f) => `أي كسر يكافئ ${f}؟`,
+      fa: (f) => `کدام کسر با ${f} برابر است؟`,
+      ht: (f) => `Ki fraksyon ki egal a ${f}?`,
       zh: (f) => `哪个分数等同于 ${f}？`,
     };
     if (templates[targetLang]) {
@@ -462,30 +647,19 @@ export async function translateText(
     }
   }
 
-  // Tier 3: Chromium Native Translator API (W3C translation specification)
+  // Tier 3: Browser Built-in On-Device Translator API (W3C window.Translator + legacy fallback)
   if (typeof window !== 'undefined') {
-    const win = window as any;
-    const transApi = win.translation || (typeof self !== 'undefined' ? (self as any).translation : null);
-    if (transApi && typeof transApi.canTranslate === 'function') {
-      try {
-        const availability = await transApi.canTranslate({
-          sourceLanguage: sourceLang,
-          targetLanguage: targetLang,
-        });
-        if (availability === 'readily' || availability === 'available') {
-          const translator = await transApi.createTranslator({
-            sourceLanguage: sourceLang,
-            targetLanguage: targetLang,
-          });
-          const translated = await translator.translate(text);
-          if (translated && typeof translated === 'string' && translated.trim().length > 0) {
-            setCached(text, targetLang, translated, sourceLang);
-            return translated;
-          }
+    try {
+      const translator = await getOrCreateNativeTranslator(sourceLang, targetLang);
+      if (translator) {
+        const translated = await translator.translate(text);
+        if (translated && typeof translated === 'string' && translated.trim().length > 0) {
+          setCached(text, targetLang, translated, sourceLang);
+          return translated;
         }
-      } catch (err) {
-        // Native translator failed, proceed to next tier
       }
+    } catch {
+      // Native translator failed, proceed to next tier
     }
   }
 
