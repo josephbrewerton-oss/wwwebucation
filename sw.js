@@ -43,18 +43,24 @@ const PRECACHE_ASSETS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      // Precache critical shell assets, catching any missing files gracefully
-      return Promise.allSettled(
-        PRECACHE_ASSETS.map((url) =>
-          fetch(url, { cache: 'no-cache' })
-            .then((res) => {
-              if (res.ok) return cache.put(url, res);
-            })
-            .catch(() => {})
-        )
-      );
-    }).then(() => self.skipWaiting())
+    (async () => {
+      const cache = await caches.open(CACHE_NAME);
+      // Precache in small batches of 4 using HTTP cache so foreground fetches are never starved
+      const batchSize = 4;
+      for (let i = 0; i < PRECACHE_ASSETS.length; i += batchSize) {
+        const batch = PRECACHE_ASSETS.slice(i, i + batchSize);
+        await Promise.allSettled(
+          batch.map((url) =>
+            fetch(url)
+              .then((res) => {
+                if (res.ok) return cache.put(url, res);
+              })
+              .catch(() => {})
+          )
+        );
+      }
+      await self.skipWaiting();
+    })()
   );
 });
 
@@ -102,9 +108,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(request.url);
 
-  // Never intercept non-http protocols or Vite dev server internals & HMR endpoints
+  // Never intercept non-http protocols, crawler/agent discovery text files, or Vite dev server internals
   if (
     url.protocol !== 'http:' && url.protocol !== 'https:' ||
+    url.pathname.endsWith('/llms.txt') ||
+    url.pathname.endsWith('/llms-full.txt') ||
+    url.pathname.endsWith('/agents.txt') ||
+    url.pathname.endsWith('/robots.txt') ||
+    url.pathname.endsWith('/sitemap.xml') ||
     url.pathname.startsWith('/@') ||
     url.pathname.startsWith('/src/') ||
     url.pathname.startsWith('/node_modules/') ||
