@@ -3061,27 +3061,33 @@ ${strokeLines.join('\n')}
         !this._isControlEnabled('param-hud') ||
         !scene ||
         (scene.uiControls && scene.uiControls.length > 0) ||
-        container.querySelector('#cartridge-controls-overlay')
+        container.querySelector('#cartridge-controls-overlay:not(.hidden)') ||
+        container.querySelector('#ast-declarative-hud')
       ) {
         if (hud) hud.style.display = 'none';
         return;
       }
 
-      let inputs = Array.isArray(scene.inputs) && scene.inputs.length > 0 ? [...scene.inputs] : [];
-      if (inputs.length === 0 && scene.vars && typeof scene.vars === 'object') {
-        Object.entries(scene.vars).forEach(([k, v]) => {
-          if (v && typeof v === 'object' && typeof v.min === 'number' && typeof v.max === 'number') {
-            inputs.push({
-              type: 'slider',
-              var: k,
-              label: v.label || k,
-              min: v.min,
-              max: v.max,
-              step: v.step || 1,
-              unit: v.unit || ''
-            });
-          }
-        });
+      let inputs = [];
+      if (typeof this.engine.resolveParameterControls === 'function') {
+        inputs = this.engine.resolveParameterControls(scene).filter(c => c && c.type === 'slider');
+      } else {
+        inputs = Array.isArray(scene.inputs) && scene.inputs.length > 0 ? [...scene.inputs] : [];
+        if (inputs.length === 0 && scene.vars && typeof scene.vars === 'object') {
+          Object.entries(scene.vars).forEach(([k, v]) => {
+            if (v && typeof v === 'object' && v.hasExplicitBounds !== false && typeof v.min === 'number' && typeof v.max === 'number' && v.min < v.max) {
+              inputs.push({
+                type: 'slider',
+                var: k,
+                label: v.label || k,
+                min: v.min,
+                max: v.max,
+                step: v.step || 1,
+                unit: v.unit || ''
+              });
+            }
+          });
+        }
       }
 
       if (inputs.length === 0) {
@@ -3094,10 +3100,14 @@ ${strokeLines.join('\n')}
         hud.id = 'stage-sim-parameters';
         hud.style.cssText = `
           position: absolute;
-          top: 14px;
-          right: 14px;
+          top: clamp(58px, 11.5%, 76px);
+          right: 12px;
           min-width: 230px;
-          max-width: 280px;
+          max-width: min(270px, calc(100% - 24px));
+          max-height: calc(100% - 136px);
+          overflow: hidden;
+          display: flex;
+          flex-direction: column;
           background: rgba(15, 23, 42, 0.92);
           backdrop-filter: blur(12px);
           border: 1px solid rgba(255, 255, 255, 0.16);
@@ -3105,7 +3115,7 @@ ${strokeLines.join('\n')}
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
           padding: 10px 14px;
           color: #f8fafc;
-          z-index: 35;
+          z-index: 45;
           user-select: none;
           font-family: ui-sans-serif, system-ui, sans-serif;
           font-size: 12px;
@@ -3113,13 +3123,13 @@ ${strokeLines.join('\n')}
         `;
         container.appendChild(hud);
       } else {
-        hud.style.display = 'block';
+        hud.style.display = 'flex';
       }
 
       const currentVars = this.engine.vars || {};
 
       const headerRow = document.createElement('div');
-      headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px;';
+      headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; flex-shrink:0;';
       const titleSpan = document.createElement('span');
       titleSpan.style.cssText = 'font-weight:800; font-size:12px; color:#38bdf8; display:flex; align-items:center; gap:5px;';
       const titleIcon = document.createElement('span');
@@ -3146,7 +3156,7 @@ ${strokeLines.join('\n')}
 
       const paramBody = document.createElement('div');
       paramBody.id = 'sim-param-body';
-      paramBody.style.cssText = 'display:flex; flex-direction:column; gap:8px;';
+      paramBody.style.cssText = 'display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1 1 auto; min-height:0; overscroll-behavior:contain;';
 
       inputs.forEach(inp => {
         const vName = inp.var;

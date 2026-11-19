@@ -2284,6 +2284,237 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   passedTests++;
 }
 
+// Sim 26: Parameters UI Deduplication (:inputs wins over :vars), WebMCP varMeta bounds & bidirectional sync
+{
+  const createTreeMockDoc = () => {
+    const matchesSimple = (node: any, sel: string): boolean => {
+      return sel.split(',').some((part) => {
+        const s = part.trim();
+        if (!s) return false;
+        if (s.startsWith('#')) {
+          const rest = s.slice(1);
+          const [idPart, ...pseudos] = rest.split(':');
+          if (node.id !== idPart) return false;
+          if (pseudos.includes('not(.hidden)') && node._classes?.has('hidden')) return false;
+          return true;
+        }
+        const tagAttr = /^([a-zA-Z0-9_-]+)\[([a-zA-Z0-9_-]+)(?:="([^"]*)")?\]$/.exec(s);
+        if (tagAttr) {
+          if (node.tagName.toLowerCase() !== tagAttr[1].toLowerCase()) return false;
+          const av = node.getAttribute(tagAttr[2]);
+          return tagAttr[3] !== undefined ? av === tagAttr[3] : av !== null;
+        }
+        const bareAttr = /^\[([a-zA-Z0-9_-]+)(?:="([^"]*)")?\]$/.exec(s);
+        if (bareAttr) {
+          const av = node.getAttribute(bareAttr[1]);
+          return bareAttr[2] !== undefined ? av === bareAttr[2] : av !== null;
+        }
+        if (s.startsWith('.')) return node._classes?.has(s.slice(1));
+        return node.tagName.toLowerCase() === s.toLowerCase();
+      });
+    };
+
+    const doc: any = {};
+    const makeNode = (tagName: string): any => {
+      const attrs = new Map<string, string>();
+      const listeners = new Map<string, Function[]>();
+      const node: any = {
+        tagName: tagName.toUpperCase(),
+        children: [] as any[],
+        get childNodes() { return this.children; },
+        parentElement: null,
+        parentNode: null,
+        ownerDocument: doc,
+        style: {},
+        _classes: new Set<string>(),
+        _textContent: '',
+        _value: '',
+        get id() { return attrs.get('id') || ''; },
+        set id(v: string) { attrs.set('id', String(v)); },
+        get type() { return attrs.get('type') || ''; },
+        set type(v: string) { attrs.set('type', String(v)); },
+        get min() { return attrs.get('min') || ''; },
+        set min(v: string) { attrs.set('min', String(v)); },
+        get max() { return attrs.get('max') || ''; },
+        set max(v: string) { attrs.set('max', String(v)); },
+        get step() { return attrs.get('step') || ''; },
+        set step(v: string) { attrs.set('step', String(v)); },
+        get value() { return this._value; },
+        set value(v: string) { this._value = String(v); },
+        get textContent() { return this._textContent; },
+        set textContent(v: string) { this._textContent = String(v); },
+        get className() { return Array.from(this._classes).join(' '); },
+        set className(v: string) {
+          this._classes = new Set(String(v).split(/\s+/).filter(Boolean));
+        },
+        setAttribute: (k: string, v: string) => {
+          attrs.set(k, String(v));
+          if (k === 'class') node.className = v;
+        },
+        getAttribute: (k: string) => (attrs.has(k) ? attrs.get(k)! : null),
+        hasAttribute: (k: string) => attrs.has(k),
+        appendChild: (c: any) => {
+          c.parentElement = node;
+          c.parentNode = node;
+          c.ownerDocument = doc;
+          node.children.push(c);
+          return c;
+        },
+        append: (...items: any[]) => items.forEach((it) => node.appendChild(it)),
+        replaceChildren: (...items: any[]) => {
+          node.children = [];
+          items.forEach((it) => node.appendChild(it));
+        },
+        insertBefore: (c: any) => node.appendChild(c),
+        remove: () => {
+          if (node.parentNode && Array.isArray(node.parentNode.children)) {
+            node.parentNode.children = node.parentNode.children.filter((x: any) => x !== node);
+          }
+          node.parentNode = null;
+          node.parentElement = null;
+        },
+        contains: (target: any): boolean => {
+          if (target === node) return true;
+          return node.children.some((ch: any) => ch.contains(target));
+        },
+        querySelectorAll: (sel: string): any[] => {
+          const out: any[] = [];
+          const walk = (n: any) => {
+            for (const ch of n.children) {
+              if (matchesSimple(ch, sel)) out.push(ch);
+              walk(ch);
+            }
+          };
+          walk(node);
+          return out;
+        },
+        querySelector: (sel: string): any => node.querySelectorAll(sel)[0] || null,
+        addEventListener: (evt: string, fn: Function) => {
+          if (!listeners.has(evt)) listeners.set(evt, []);
+          listeners.get(evt)!.push(fn);
+        },
+        dispatchEvent: (evt: any) => {
+          const fns = listeners.get(evt.type) || [];
+          fns.forEach((fn) => fn(evt));
+        },
+      };
+      return node;
+    };
+
+    const body = makeNode('body');
+    const stage = makeNode('div');
+    stage.id = 'player-stage';
+    const stageSvg = makeNode('svg');
+    stageSvg.id = 'stage-svg';
+    stage.appendChild(stageSvg);
+    body.appendChild(stage);
+
+    doc.body = body;
+    doc.createElement = (t: string) => makeNode(t);
+    doc.createElementNS = (_ns: string, t: string) => makeNode(t);
+    doc.createTextNode = (txt: string) => {
+      const n = makeNode('#text');
+      n.textContent = txt;
+      return n;
+    };
+    doc.getElementById = (id: string) => body.querySelector(`#${id}`);
+    doc.querySelector = (sel: string) => body.querySelector(sel);
+    doc.querySelectorAll = (sel: string) => body.querySelectorAll(sel);
+    return { doc, stage, stageSvg };
+  };
+
+  // A. solar-system.ast: 1 warpSpeed slider + 1 showOrbits toggle, :inputs label wins, varMeta intact, bidirectional sync
+  {
+    const solarAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'solar-system.ast'), 'utf8');
+    const { doc, stageSvg } = createTreeMockDoc();
+    const engine = createHeadlessEngine();
+    const parsedSolar = engine.parseAst(solarAst);
+    const controls = engine.resolveParameterControls(parsedSolar);
+
+    assert.strictEqual(controls.length, 2, `solar-system must resolve exactly 2 deduplicated controls (got ${controls.length})`);
+    assert.strictEqual(controls[0].var, 'warpSpeed', 'solar-system first control must preserve :inputs order (warpSpeed)');
+    assert.strictEqual(controls[0].type, 'slider', 'warpSpeed control must be a slider');
+    assert.strictEqual(controls[0].label, 'Orbital Speed Multiplier', 'explicit :inputs label must win for warpSpeed');
+    assert.strictEqual(controls[1].var, 'showOrbits', 'solar-system second control must be showOrbits');
+    assert.strictEqual(controls[1].type, 'toggle', 'showOrbits control must be a toggle');
+    assert.strictEqual(controls[1].label, 'Orbital Paths', 'explicit :inputs label must win for showOrbits');
+
+    engine.container = stageSvg;
+    engine._container = stageSvg;
+    engine.initScene(parsedSolar);
+
+    const summary = engine.getEngineStateSummary(false);
+    assert.strictEqual(summary.varMeta.warpSpeed.min, 0.2, 'varMeta.warpSpeed.min must remain preserved at 0.2');
+    assert.strictEqual(summary.varMeta.warpSpeed.max, 10, 'varMeta.warpSpeed.max must remain preserved at 10');
+    assert.strictEqual(summary.varMeta.warpSpeed.step, 0.2, 'varMeta.warpSpeed.step must remain preserved at 0.2');
+
+    const hud = doc.querySelector('#ast-declarative-hud');
+    assert.ok(hud, 'mountDeclarativeHud must mount #ast-declarative-hud for solar-system');
+    assert.strictEqual(hud.querySelectorAll('input[type="range"]').length, 1, 'solar-system Parameters must render strictly 1 slider');
+    assert.strictEqual(hud.querySelectorAll('button[role="switch"]').length, 1, 'solar-system Parameters must render strictly 1 switch');
+
+    // Simulate external state updates (WebMCP ast_set_var / solar-warp-* chip / keyboard step)
+    engine.setMemoryVar('warpSpeed', 5.0);
+    const sliderEl = hud.querySelector('input[type="range"]');
+    const readoutEl = hud.querySelector('[data-param-readout="warpSpeed"]');
+    assert.strictEqual(sliderEl.value, '5', 'slider value must sync to 5 on external setMemoryVar');
+    assert.strictEqual(readoutEl.textContent, '5', 'slider readout must sync to 5 on external setMemoryVar');
+
+    engine.resetVars();
+    assert.strictEqual(sliderEl.value, '1', 'slider value must sync back to default 1 on resetVars');
+  }
+
+  // B. Cartridge with ONLY (:vars ...) bounds and no (:inputs ...) still auto-generates sliders cleanly
+  {
+    const vectorRacingAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'vector-racing.ast'), 'utf8');
+    const engine = createHeadlessEngine();
+    const parsedRacing = engine.parseAst(vectorRacingAst);
+    const racingControls = engine.resolveParameterControls(parsedRacing);
+    assert.ok(racingControls.length >= 1, 'vector-racing (:vars-only bounds) must auto-generate Parameter controls');
+    assert.ok(racingControls.some((c: any) => c.var === 'speed' && c.type === 'slider'), 'vector-racing must auto-generate speed slider');
+    assert.ok(racingControls.some((c: any) => c.var === 'autoPilot' && c.type === 'toggle'), 'vector-racing must auto-generate autoPilot toggle');
+
+    const luminaRaw = fs.readFileSync(path.join(process.cwd(), 'static', 'docs', 'lumina-architecture.ast'), 'utf8');
+    const luminaVarsOnly = luminaRaw.replace(/\(:inputs[\s\S]*?\)\s*\)\s*(?=\(:computed)/m, '');
+    const { doc, stageSvg } = createTreeMockDoc();
+    const parsedLumina = engine.parseAst(luminaVarsOnly);
+    const luminaControls = engine.resolveParameterControls(parsedLumina);
+    assert.strictEqual(luminaControls.length, 3, 'vars-only lumina-architecture must auto-generate 3 bounded sliders');
+    engine.container = stageSvg;
+    engine._container = stageSvg;
+    engine.initScene(parsedLumina);
+    const hud = doc.querySelector('#ast-declarative-hud');
+    assert.strictEqual(hud.querySelectorAll('input[type="range"]').length, 3, 'vars-only scene must mount all 3 bounded sliders');
+  }
+
+  // C. Mixed cartridge: explicit :inputs claim matching vars while remaining bounded :vars still appear
+  {
+    const mixedAst = `
+      (:scene :id "mixed-params" :type "Sim" :title "Mixed Params" :duration 5.0
+        (:vars (
+          (:var :name "gain" :val 2 :min 1 :max 10 :step 1 :label "Var Gain")
+          (:var :name "damping" :val 0.5 :min 0.1 :max 2.0 :step 0.1 :label "Damping Ratio")
+          (:var :name "modeLabel" :val "auto")
+        ))
+        (:inputs (
+          (:slider :var "gain" :label "Amplifier Gain" :min 1 :max 10 :step 1)
+        ))
+      )
+    `;
+    const engine = createHeadlessEngine();
+    const parsedMixed = engine.parseAst(mixedAst);
+    const mixedControls = engine.resolveParameterControls(parsedMixed);
+    assert.strictEqual(mixedControls.length, 2, 'mixed cartridge must produce 1 explicit gain + 1 auto damping slider');
+    assert.strictEqual(mixedControls[0].var, 'gain');
+    assert.strictEqual(mixedControls[0].label, 'Amplifier Gain');
+    assert.strictEqual(mixedControls[1].var, 'damping');
+    assert.strictEqual(mixedControls[1].label, 'Damping Ratio');
+  }
+
+  console.log('[✅ PASS] Sim 26: Parameters UI deduplication, :inputs precedence, varMeta clamping integrity & bidirectional sync verified cleanly.');
+  passedTests++;
+}
+
 console.log('\n=============================================================');
 console.log(`🎉 ALL ${passedTests} SIMULATION INVARIANT TESTS PASSED!`);
 console.log('=============================================================');

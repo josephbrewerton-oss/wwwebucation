@@ -1752,6 +1752,11 @@
       const stage = this.elements.playerStage || document.getElementById('player-stage') || document.body;
       if (!stage) return;
 
+      const staleDeclarativeHud = document.getElementById('ast-declarative-hud');
+      if (staleDeclarativeHud) staleDeclarativeHud.remove();
+      const staleSimHud = document.getElementById('stage-sim-parameters');
+      if (staleSimHud) staleSimHud.style.display = 'none';
+
       let overlay = document.getElementById('cartridge-controls-overlay');
       if (!overlay) {
         overlay = document.createElement('div');
@@ -1760,8 +1765,23 @@
         stage.appendChild(overlay);
       }
 
-      // Read controls from scene.uiControls or scene.inputs (data-as-code)
-      const controls = (scene && (scene.uiControls || scene.inputs)) || [];
+      const paramHudOff = scene && scene.controls && (
+        scene.controls['param-hud'] === false ||
+        scene.controls[':param-hud'] === false ||
+        scene.controls['param-hud'] === ':off' ||
+        scene.controls['param-hud'] === 'off' ||
+        scene.controls.paramHud === false
+      );
+
+      // Resolve deduplicated Parameters controls from engine (explicit :inputs win over :vars fallback)
+      let controls = [];
+      if (!paramHudOff && scene) {
+        if (this.engine && typeof this.engine.resolveParameterControls === 'function') {
+          controls = this.engine.resolveParameterControls(scene);
+        } else {
+          controls = scene.uiControls || scene.inputs || [];
+        }
+      }
 
       if (!controls || controls.length === 0) {
         overlay.classList.add('hidden');
@@ -1771,29 +1791,29 @@
       }
 
       overlay.classList.remove('hidden');
-      const title = (scene && (scene.title || scene.id)) || 'Simulation Controls';
+      const title = (scene && (scene.title || scene.id)) || 'Parameters';
       const body = this._h('div', { className: 'cartridge-controls-body' });
       const minBtn = this._h('button', {
         type: 'button',
         className: 'cartridge-controls-min-btn',
-        title: 'Toggle Controls Overlay',
+        title: 'Toggle Parameters',
+        attrs: { 'aria-label': 'Toggle Parameters', 'aria-expanded': 'true' },
         text: '▾'
       });
-      overlay.replaceChildren(
-        this._h('div', { className: 'cartridge-controls-header' },
-          this._h('div', { className: 'cartridge-controls-title' },
-            this._h('span', { className: 'cartridge-controls-chip', text: '⚡ LISP UI' }),
-            this._h('span', { className: 'cartridge-controls-name', text: title })
-          ),
-          minBtn
+      const headerEl = this._h('div', { className: 'cartridge-controls-header' },
+        this._h('div', { className: 'cartridge-controls-title' },
+          this._h('span', { className: 'cartridge-controls-chip', text: '⚡ Parameters' }),
+          this._h('span', { className: 'cartridge-controls-name', text: title })
         ),
-        body
+        minBtn
       );
+      overlay.replaceChildren(headerEl, body);
 
       minBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        body.classList.toggle('collapsed');
-        minBtn.textContent = body.classList.contains('collapsed') ? '▸' : '▾';
+        const isCollapsed = body.classList.toggle('collapsed');
+        minBtn.textContent = isCollapsed ? '▸' : '▾';
+        minBtn.setAttribute('aria-expanded', String(!isCollapsed));
       });
 
       controls.forEach(ctrl => {
@@ -1883,7 +1903,7 @@
           );
           slider.addEventListener('input', (e) => {
             const nextVal = parseFloat(e.target.value);
-            readout.textContent = nextVal;
+            readout.textContent = String(nextVal);
             if (bindVar && typeof this.engine.setMemoryVar === 'function') {
               this.engine.setMemoryVar(bindVar, nextVal);
             }
@@ -1931,10 +1951,11 @@
       const cleanVar = !isBatchReset && this.engine && typeof this.engine.normalizeVarName === 'function'
         ? this.engine.normalizeVarName(varName)
         : String(varName || '').replace(/^\*|\*$/g, '');
+      const cleanLower = cleanVar.toLowerCase();
 
       const items = overlay.querySelectorAll('.cartridge-ctrl-item');
       items.forEach(item => {
-        const id = item.getAttribute('data-ctrl-id');
+        const id = item.getAttribute('data-ctrl-id') || '';
         const rawBind = item.getAttribute('data-ctrl-bind') || id;
         const normBind = this.engine && typeof this.engine.normalizeVarName === 'function'
           ? this.engine.normalizeVarName(rawBind)
@@ -1942,13 +1963,18 @@
         const resolvedVal = isBatchReset
           ? (this.engine && typeof this.engine.getMemoryVar === 'function' ? this.engine.getMemoryVar(rawBind || id) : undefined)
           : value;
-        const matches = isBatchReset || id === cleanVar || id === varName || normBind === cleanVar || rawBind === varName;
+        const matches = isBatchReset ||
+          id === cleanVar ||
+          id === varName ||
+          normBind === cleanVar ||
+          normBind.toLowerCase() === cleanLower ||
+          rawBind === varName;
 
         const slider = item.querySelector('.cartridge-ui-slider');
         if (slider && matches && resolvedVal !== undefined) {
-          slider.value = resolvedVal;
-          const badge = item.querySelector(`#ctrl-val-${id}`);
-          if (badge) badge.textContent = resolvedVal;
+          slider.value = String(resolvedVal);
+          const badge = item.querySelector('.cartridge-ui-badge');
+          if (badge) badge.textContent = String(resolvedVal);
         }
         const sel = item.querySelector('.cartridge-ui-select');
         if (sel && matches && resolvedVal !== undefined && sel.value !== String(resolvedVal)) {
@@ -4447,6 +4473,10 @@ window.addEventListener('message', (e) => {
       });
 
       this.engine.on('simreset', () => {
+        this.projectControls(this.engine && this.engine.scene);
+      });
+
+      this.engine.on('asthotreloaded', () => {
         this.projectControls(this.engine && this.engine.scene);
       });
 

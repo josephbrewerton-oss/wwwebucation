@@ -2876,18 +2876,18 @@ body.embedded-mode header {
    ========================================================================== */
 .cartridge-controls-overlay {
   position: absolute;
-  top: 12px;
+  top: clamp(58px, 11.5%, 76px);
   right: 12px;
-  max-width: 270px;
+  max-width: min(270px, calc(100% - 24px));
   width: calc(100% - 24px);
-  max-height: calc(100% - 24px);
+  max-height: calc(100% - 136px);
   background: rgba(15, 23, 42, 0.88);
   border: 1px solid rgba(56, 189, 248, 0.35);
   border-radius: 10px;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.05);
-  z-index: 40;
+  z-index: 45;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -2958,7 +2958,9 @@ body.embedded-mode header {
   flex-direction: column;
   gap: 10px;
   overflow-y: auto;
-  max-height: 380px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overscroll-behavior: contain;
 }
 
 .cartridge-controls-body.collapsed {
