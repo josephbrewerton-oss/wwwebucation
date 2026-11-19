@@ -78,9 +78,13 @@
   - Direct Manipulation, Feature Switches & Gesture VM: `:controls` (`:arrow-step`, `:num-jump`, `:scrub`, `:space-play`, `:quiz-keys`, `:whiteboard`, `:xray`, `:audio`, `:param-hud`), `:gestures`, `:draggable`, `:clickable`, `:holdable`, `:key`, `:trackball`, `:rotatable`, `:axis`, `:min`, `:max`, `:step-var`, `:hold-var`, `:set-var`, `:toggle-var`, `:release-val`, `:delta`, `:rate`, `:if`, `:val-expr`, `:tone-expr`, `:speak-expr`, `:speak-rate-var`, `:speak-pitch`, `:attr`
 
 ## On-Device Edge AI & Developing-World Offline Invariants
-- **Zero Cloud Leakage**: Student logs, answers, and voice inputs never egress to cloud LLMs (UK GDPR Art. 25 & KCSIE compliant).
+- **Zero Cloud Leakage**: Student logs, answers, and voice inputs never egress to cloud LLMs (UK GDPR Art. 25, KCSIE, CAADCA/SOPIPA & DPDP Sec 5(3) compliant).
+- **Default Eco Mode & Passive Nano Availability Detection (`src/engine/nanoAvailability.ts`)**:
+  - Defaults to **Eco Mode** (`0 MB` download, `0 W` GPU draw, pre-compiled deterministic curriculum rules) until explicit local consent (`ai_model_download_consent` in IndexedDB).
+  - Passively probes `window.LanguageModel.availability()` / `self.LanguageModel.availability()` during `requestIdleCallback` (without downloading weights or inflating the `< 20 KB` initial bundle via lazy `src/components/NanoEcoPopover.ts`), distinguishing `'available'`, `'downloadable'`, `'downloading'` (`0–100%` progress), and `'unavailable'` independently from Tier-2 WebGPU.
+  - Exposes live hardware diagnostics, Eco Mode switching, and Transient User Activation `LanguageModel.create({ monitor })` weight downloads in the Universal Access top bar (`#top-bar-nano-eco-btn`), `/settings#ai-engine`, and `NanoAiTutorDrawer.ts`.
 - **3-Tier Inference Hierarchy**:
-  - **Tier 1**: Native Chromium Prompt API / Gemini Nano via `window.LanguageModel` or `self.LanguageModel` (`src/engine/aicaller.ts`). Legacy `window.ai` namespace is strictly retired.
+  - **Tier 1**: Native Chromium Prompt API / Gemini Nano via `window.LanguageModel` or `self.LanguageModel` (`src/engine/aicaller.ts` + `src/engine/nanoAvailability.ts`). Legacy `window.ai` namespace is strictly retired.
   - **Tier 2**: WebLLM compute pipeline (`@mlc-ai/web-llm`) with automated device memory guard (`deviceMemory < 4GB`, iOS Jetsam mitigation).
   - **Tier 3**: Local deterministic Socratic rule synthesizer (< 5 ms, 0 GPU allocations, 0 bps bandwidth).
 - **Offline Mesh & Flash Memory Wear Guard**:
