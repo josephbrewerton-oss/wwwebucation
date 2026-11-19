@@ -16,13 +16,14 @@
     (:param-hud  :on))
 
   ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
+  ;; Zero-JS declarative actions handled natively by site-gestures.js so Nano can reason in pure AST.
   (:primitives
-    (:primitive :type "clickable" :actions ("setVar" "toggleVar" "stepVar" "expr" "tone" "speak"))
-    (:primitive :type "holdable"  :actions ("holdVar" "stepVar" "expr") :hold-delay-ms 160)
+    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak"))
+    (:primitive :type "holdable"  :actions ("hold-var" "step-var") :hold-delay-ms 160)
     (:primitive :type "draggable" :axes ("x" "y" "xy") :modes ("generic" "bind-input") :attrs ("minX" "maxX" "minY" "maxY" "step" "invert" "relative" "seek" "tone"))
     (:primitive :type "rotatable" :attrs ("cx" "cy" "var"))
     (:primitive :type "trackball" :attrs ("yawVar" "pitchVar" "pitchMin" "pitchMax") :default-pitch-min -65 :default-pitch-max 65)
-    (:primitive :type "key"       :attrs ("code" "key" "setVar" "toggleVar" "stepVar" "holdVar" "delta" "rate" "expr" "tone" "speak")))
+    (:primitive :type "key"       :attrs ("code" "key" "action" "delta" "count" "var" "set-var" "toggle-var" "step-var" "hold-var" "clear-var" "reset-var" "reset-val" "rate" "tone" "speak" "speak-var")))
 
   ;; 3. Universal Keyboard & Switch Navigation Rules (Inherited by all cartridges)
   (:universal-keys
@@ -75,4 +76,24 @@
     (:tone :event "erase"   :freq 220 :wave "sine"     :duration 0.04 :gain 0.15)
     (:tone :event "undo"    :freq 330 :wave "sine"     :duration 0.05 :gain 0.15)
     (:tone :event "redo"    :freq 523 :wave "sine"     :duration 0.05 :gain 0.15))
+
+  ;; 6. Declarative Reusable Player Skills (Activated by any cartridge via (:use-skill "<id>" ...))
+  ;; 100% pure AST intent — ZERO inline JavaScript. site-gestures.js executes every action
+  ;; natively so Gemini Nano can read, reason about, and author skills/cartridges cleanly.
+  (:skills
+    (:skill :id "storybook-reader"
+      :pages 5
+      :hint-default "Tap any word above to see & hear its sounds"
+      (:controls (:param-hud :off))
+      (:gestures
+        (:key       :code "ArrowLeft"      :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:key       :code "ArrowRight"     :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target "#btn-prev-page" :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:clickable :target "#btn-next-page" :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target ".page-dot"    :action "goto-slide" :attr "data-page" :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "440")
+        (:clickable :target "#btn-toggle-sb" :toggle-var "showButtons" :tone "493.88")
+        (:clickable :target "#btn-read-page" :speak-var "pageText" :tone "523.25,659.25")
+        (:clickable :target ".book-word"   :set-var "activeWord" :from-attr "data-hint" :speak-attr "data-word" :tone "523.25")
+        (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
+        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25"))))
 )
