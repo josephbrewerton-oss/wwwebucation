@@ -258,7 +258,7 @@ export class PersistentAppShellElement extends HTMLElement {
               <!-- Brand -->
               <div style="display:flex; align-items:center; gap:0.75rem; flex-shrink:0;">
                 <a href="${base}" aria-label="St Joseph's Curriculum Portal Homepage" style="display:flex; align-items:center; gap:0.6rem; text-decoration:none; color:inherit;">
-                  <img src="${base}img/logo.svg" alt="St Joseph's Logo" style="width:28px; height:28px; display:block;" onerror="this.onerror=null; this.src='${base}img/favicon-32x32.png';" />
+                  <img src="${base}img/logo.svg" alt="St Joseph's Logo" width="28" height="28" style="width:28px; height:28px; display:block;" onerror="this.onerror=null; this.src='${base}img/favicon-32x32.png';" />
                   <span style="font-weight:800; font-size:1.05rem; letter-spacing:-0.01em; color:var(--stj-text, #0f172a);">
                     St Joseph's Portal
                   </span>
@@ -388,7 +388,7 @@ export class PersistentAppShellElement extends HTMLElement {
           <div class="shell-footer-grid">
             <div>
               <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
-                <img src="${base}img/logo.svg" alt="Logo" style="width:24px; height:24px;" onerror="this.onerror=null; this.src='${base}img/favicon-32x32.png';" />
+                <img src="${base}img/logo.svg" alt="St Joseph's Logo" width="24" height="24" style="width:24px; height:24px;" onerror="this.onerror=null; this.src='${base}img/favicon-32x32.png';" />
                 <strong style="color:#f8fafc; font-size:1.05rem;">St Joseph's Curriculum Portal</strong>
               </div>
               <p style="color:#cbd5e1; font-size:0.84rem; line-height:1.6; margin:0 0 12px 0;">
