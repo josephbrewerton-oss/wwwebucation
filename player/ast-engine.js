@@ -3108,27 +3108,27 @@
       // Reactive State Variables & User Interaction
       this.vars = {};
 
-      // Fantasy Console / Lisp Machine Canonical Action Dispatch Table
-      this.actionDispatch = {
-        'sim:reset': () => this.reset(),
-        'sim:play': () => this.play(),
-        'sim:pause': () => this.pause(),
-        'sim:toggle-play': () => this.togglePlay(),
-        'sim:step': (args) => this.step(args && args[0] !== undefined ? Number(args[0]) : (1 / 60)),
-        'sim:seek': (args) => this.seek(Number(args?.[0] || 0)),
-        'player:toggle-bsl': (args) => this.toggleBsl(args?.[0]),
-        'player:toggle-voice': (args) => this.toggleVoice(args?.[0]),
-        'player:fullscreen': () => this.toggleFullscreen(),
-        'set-var': (args) => {
+      // Fantasy Console / Lisp Machine Canonical Action Dispatch Table (Map prevents prototype dispatch)
+      this.actionDispatch = new Map([
+        ['sim:reset', () => this.reset()],
+        ['sim:play', () => this.play()],
+        ['sim:pause', () => this.pause()],
+        ['sim:toggle-play', () => this.togglePlay()],
+        ['sim:step', (args) => this.step(args && args[0] !== undefined ? Number(args[0]) : (1 / 60))],
+        ['sim:seek', (args) => this.seek(Number(args?.[0] || 0))],
+        ['player:toggle-bsl', (args) => this.toggleBsl(args?.[0])],
+        ['player:toggle-voice', (args) => this.toggleVoice(args?.[0])],
+        ['player:fullscreen', () => this.toggleFullscreen()],
+        ['set-var', (args) => {
           if (args && args.length >= 2) this.setMemoryVar(args[0], args[1]);
-        },
-        'toggle-var': (args) => {
+        }],
+        ['toggle-var', (args) => {
           if (args && args.length >= 1) {
             const cur = Boolean(this.getMemoryVar(args[0]));
             this.setMemoryVar(args[0], !cur);
           }
-        }
-      };
+        }]
+      ]);
 
       // Event listeners
       this.listeners = {
@@ -4658,8 +4658,11 @@
         args.push(...fallbackArgs);
       }
 
-      if (this.actionDispatch && typeof this.actionDispatch[op] === 'function') {
-        this.actionDispatch[op](args);
+      if (this.actionDispatch instanceof Map && this.actionDispatch.has(op)) {
+        const handler = this.actionDispatch.get(op);
+        if (typeof handler === 'function') {
+          handler(args);
+        }
       } else if (op.startsWith('sim:')) {
         const sub = op.slice(4);
         if (sub === 'reset') this.reset();
@@ -4679,7 +4682,7 @@
         const cur = Boolean(this.getMemoryVar(args[0]));
         this.setMemoryVar(args[0], !cur);
       } else {
-        console.warn(`[AST Kernel] Unhandled action dispatch: ${op}`, args);
+        console.warn('[AST Kernel] Unhandled action dispatch: %s', String(op), args);
       }
     }
 
