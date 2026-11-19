@@ -43,6 +43,7 @@ export class PersistentAppShellElement extends HTMLElement {
   private unsubscribeLang?: () => void;
   private unsubscribePlayerCalls?: () => void;
   private unsubscribeVoice?: () => void;
+  private cleanupNanoEco?: () => void;
   private cleanupWebMcp?: () => void;
   private cleanupNanoSite?: () => void;
   private syncBslOverlay?: (enabled: boolean) => Promise<void>;
@@ -52,13 +53,16 @@ export class PersistentAppShellElement extends HTMLElement {
     const menuCatholic = this.querySelector<HTMLDivElement>('#nav-dropdown-catholic-menu');
     const menuLearning = this.querySelector<HTMLDivElement>('#nav-dropdown-learning-menu');
     const menuAdmin = this.querySelector<HTMLDivElement>('#nav-dropdown-admin-menu');
+    const nanoPopover = this.querySelector<HTMLDivElement>('#nano-eco-popover');
     if (menuCatholic) menuCatholic.style.display = 'none';
     if (menuLearning) menuLearning.style.display = 'none';
     if (menuAdmin) menuAdmin.style.display = 'none';
+    if (nanoPopover) nanoPopover.style.display = 'none';
 
     this.querySelector('#nav-dropdown-catholic-btn')?.setAttribute('aria-expanded', 'false');
     this.querySelector('#nav-dropdown-learning-btn')?.setAttribute('aria-expanded', 'false');
     this.querySelector('#nav-dropdown-admin-btn')?.setAttribute('aria-expanded', 'false');
+    this.querySelector('#top-bar-nano-eco-btn')?.setAttribute('aria-expanded', 'false');
   };
 
   private updateSoundUi = (enabled: boolean) => {
@@ -247,6 +251,15 @@ export class PersistentAppShellElement extends HTMLElement {
                 <button type="button" id="top-bar-sign-mode-btn" style="display:${this.bsl ? 'inline-flex' : 'none'}; align-items:center; justify-content:center; background:#1e293b; border:1px solid ${this.signLang === 'MAKATON' ? '#34d399' : '#38bdf8'}; color:${this.signLang === 'MAKATON' ? '#34d399' : '#38bdf8'}; border-radius:6px; font-size:0.7rem; min-height:36px; padding:4px 8px; font-weight:800; cursor:pointer;" title="Switch between BSL Level 6 (OSV) and Makaton Key Word Signing (SVO + Symbols)" aria-label="Switch between BSL and Makaton">
                   ${this.signLang === 'MAKATON' ? '⇄ Switch to BSL' : '⇄ Makaton'}
                 </button>
+              </div>
+
+              <!-- Eco Mode & On-Device Gemini Nano Hardware Detector -->
+              <div style="position:relative; display:inline-flex; align-items:center; flex-shrink:0;">
+                <button type="button" id="top-bar-nano-eco-btn" aria-haspopup="dialog" aria-expanded="false" aria-controls="nano-eco-popover" style="background:#1e293b; border:1px solid #34d399; color:#ffffff; border-radius:6px; font-size:0.74rem; min-height:36px; padding:4px 10px; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; justify-content:center; gap:4px; white-space:nowrap;" title="Eco Mode &amp; On-Device Gemini Nano Status" aria-label="Eco Mode and On-Device Gemini Nano Status">
+                  🌱 Nano AI: Eco
+                </button>
+                <div id="nano-eco-popover" role="dialog" aria-label="On-Device AI and Eco Mode Controls" style="display:none; position:absolute; top:calc(100% + 6px); right:0; width:320px; max-width:92vw; background:#0f172a; color:#f8fafc; border:1px solid #38bdf8; border-radius:10px; padding:12px 14px; box-shadow:0 12px 28px rgba(0,0,0,0.5); z-index:1005; flex-direction:column; gap:10px;">
+                </div>
               </div>
             </div>
           </div>
@@ -702,15 +715,44 @@ export class PersistentAppShellElement extends HTMLElement {
       void syncBslOverlay(true);
     }
 
+    // Eco Mode & On-Device Gemini Nano Status Button + Lazy Popover
+    const btnNanoEco = this.querySelector<HTMLButtonElement>('#top-bar-nano-eco-btn');
+    const nanoPopover = this.querySelector<HTMLDivElement>('#nano-eco-popover');
+    if (btnNanoEco && getLocalState('ai_model_download_consent') === 'granted') {
+      btnNanoEco.textContent = '✨ Nano AI: ON';
+      btnNanoEco.style.background = '#047857';
+    }
+
+    let nanoControllerPromise: Promise<import('./NanoEcoPopover').NanoEcoControllerHandle | null> | null = null;
+    const ensureNanoController = () => {
+      if (!btnNanoEco || !nanoPopover) return Promise.resolve(null);
+      if (!nanoControllerPromise) {
+        nanoControllerPromise = import('./NanoEcoPopover')
+          .then(({ mountNanoEcoPopoverController }) => {
+            const ctrl = mountNanoEcoPopoverController(btnNanoEco, nanoPopover, base, this.handleDocumentClick);
+            this.cleanupNanoEco = ctrl.destroy;
+            return ctrl;
+          })
+          .catch(() => null);
+      }
+      return nanoControllerPromise;
+    };
+
+    btnNanoEco?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      void ensureNanoController().then((ctrl) => ctrl?.openOrToggle());
+    });
+
     // Inter-frame IPC listener
     window.addEventListener('message', this.handleWindowMessage);
 
-    // Idle registration of W3C WebMCP & Gemini Nano Site Control Plane (0ms boot impact)
+    // Idle registration of W3C WebMCP, passive Gemini Nano hardware probe & Site Control Plane (0ms boot impact)
     const scheduleIdle =
       typeof (window as any).requestIdleCallback === 'function'
         ? (cb: () => void) => (window as any).requestIdleCallback(cb, { timeout: 2500 })
         : (cb: () => void) => window.setTimeout(cb, 300);
     scheduleIdle(() => {
+      void ensureNanoController();
       import('../services/webMcpBridge')
         .then(({ initWebMcpBridge }) => {
           this.cleanupWebMcp = initWebMcpBridge(navigate);
@@ -756,6 +798,7 @@ export class PersistentAppShellElement extends HTMLElement {
     this.unsubscribeLang?.();
     this.unsubscribePlayerCalls?.();
     this.unsubscribeVoice?.();
+    this.cleanupNanoEco?.();
     this.cleanupWebMcp?.();
     this.cleanupNanoSite?.();
 

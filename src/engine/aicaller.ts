@@ -1,7 +1,27 @@
 // src/engine/aicaller.ts
 import { edgeCognitiveEngine } from './EdgeCognitiveEngine';
 import { validateStudentInput, sanitizeAiOutput } from '../services/childSafetyFilter';
-import { getLocalState, setLocalState } from '../services/localStateStore';
+import {
+  CONSENT_STORAGE_KEY,
+  hasUserGrantedAiConsent,
+  setUserAiConsent,
+  isEcoModeActive,
+  getLanguageModelRoot,
+  probeNanoAvailability,
+  getNanoStateSnapshot,
+  type NanoAvailabilityStatus,
+  type NanoStateSnapshot,
+} from './nanoAvailability';
+
+export {
+  CONSENT_STORAGE_KEY,
+  hasUserGrantedAiConsent,
+  setUserAiConsent,
+  isEcoModeActive,
+  probeNanoAvailability,
+  getNanoStateSnapshot,
+};
+export type { NanoAvailabilityStatus, NanoStateSnapshot };
 
 export interface AiInferenceOptions {
   prompt: string;
@@ -24,22 +44,11 @@ export interface AiInferenceOptions {
   omitResponseConstraintInput?: boolean;
 }
 export interface ModelAvailability {
-  status: 'readily' | 'after-download' | 'no';
+  status: 'readily' | 'after-download' | 'downloading' | 'no';
+  nanoStatus?: NanoAvailabilityStatus;
+  tier?: 'chrome-builtin-nano' | 'webgpu-webllm' | 'rule-engine';
   maxTokens?: number;
   temperature?: number;
-}
-
-export const CONSENT_STORAGE_KEY = 'ai_model_download_consent';
-
-export function hasUserGrantedAiConsent(): boolean {
-  if (typeof window === 'undefined') return false;
-  return getLocalState(CONSENT_STORAGE_KEY) === 'granted';
-}
-
-export function setUserAiConsent(granted: boolean): void {
-  if (typeof window === 'undefined') return;
-  setLocalState(CONSENT_STORAGE_KEY, granted ? 'granted' : 'denied');
-  window.dispatchEvent(new CustomEvent('ai_consent_changed', { detail: granted }));
 }
 
 /**
@@ -92,14 +101,7 @@ class AiRuntimeCaller {
    * Deprecated window.ai namespace has been retired.
    */
   private getAiRoot(): any {
-    if (typeof window === 'undefined') return null;
-    const win = window as any;
-    const scope = typeof self !== 'undefined' ? (self as any) : win;
-
-    if (typeof win.LanguageModel !== 'undefined') return win.LanguageModel;
-    if (typeof scope.LanguageModel !== 'undefined') return scope.LanguageModel;
-
-    return null;
+    return getLanguageModelRoot();
   }
 
   /**
@@ -118,10 +120,16 @@ class AiRuntimeCaller {
   }
 
   /**
-   * Identifies the active on-device engine tier
+   * Identifies the active on-device engine tier, factoring in probed Gemini Nano status if available.
    */
   public getActiveEngineType(): 'chrome-builtin-nano' | 'webgpu-webllm' | 'rule-engine' {
-    if (this.hasNativePromptApi()) return 'chrome-builtin-nano';
+    if (this.hasNativePromptApi()) {
+      const snap = getNanoStateSnapshot();
+      if (snap.lastCheckedAt !== null && snap.nanoStatus === 'unavailable') {
+        return edgeCognitiveEngine.isSupported() ? 'webgpu-webllm' : 'rule-engine';
+      }
+      return 'chrome-builtin-nano';
+    }
     if (edgeCognitiveEngine.isSupported()) return 'webgpu-webllm';
     return 'rule-engine';
   }
@@ -132,6 +140,10 @@ class AiRuntimeCaller {
   public isPromptApiAvailableSync(): boolean {
     if (!hasUserGrantedAiConsent()) return false;
     if (this.hasNativePromptApi()) {
+      const snap = getNanoStateSnapshot();
+      if (snap.lastCheckedAt !== null && snap.nanoStatus === 'unavailable') {
+        return edgeCognitiveEngine.isSupported();
+      }
       if (this.cachedAvailability && this.cachedAvailability.status === 'no') return false;
       return true;
     }
@@ -141,88 +153,74 @@ class AiRuntimeCaller {
   }
 
   /**
-   * Diagnostic check across Desktop & Mobile runtimes (hardware capability check only)
+   * Diagnostic check across Desktop & Mobile runtimes (hardware capability check only).
+   * Preserves exact Gemini Nano ('available', 'downloadable', 'downloading', 'unavailable')
+   * distinction alongside Tier-2 WebGPU fallback.
    */
-  async checkAvailability(): Promise<ModelAvailability> {
-    if (this.cachedAvailability) {
+  async checkAvailability(forceRefresh = false): Promise<ModelAvailability> {
+    if (!forceRefresh && this.cachedAvailability) {
       return this.cachedAvailability;
     }
 
-    if (this.availabilityPromise) {
+    if (!forceRefresh && this.availabilityPromise) {
       return this.availabilityPromise;
-    }
-
-    const lm = this.getAiRoot();
-    if (!lm) {
-      // Check WebLLM / WebGPU fallback for Safari / Firefox / non-Chromium
-      if (edgeCognitiveEngine.isSupported()) {
-        this.cachedAvailability = {
-          status: 'readily',
-          maxTokens: 4096,
-          temperature: 0.2,
-        };
-        return this.cachedAvailability;
-      }
-
-      this.cachedAvailability = { status: 'no' };
-      return this.cachedAvailability;
     }
 
     this.availabilityPromise = (async () => {
       try {
-        if (typeof lm.availability === 'function') {
-          let status: any = 'no';
-          try {
-            // Modern W3C availability check
-            status = await lm.availability({
-              expectedInputs: [{ type: 'text', languages: ['en'] }],
-              expectedOutputs: [{ type: 'text', languages: ['en'] }],
-              outputLanguage: 'en',
-              expectedInputLanguages: ['en'],
-              expectedOutputLanguages: ['en'],
-            });
-          } catch {
-            try {
-              status = await lm.availability({
-                outputLanguage: 'en',
-                expectedInputLanguages: ['en'],
-                expectedOutputLanguages: ['en'],
-              });
-            } catch {
-              status = await lm.availability();
-            }
-          }
+        const snap = await probeNanoAvailability(forceRefresh);
 
-          const mappedStatus =
-            status === 'readily' || status === 'available'
-              ? 'readily'
-              : status === 'after-download' || status === 'downloadable'
-              ? 'after-download'
-              : 'no';
-          this.cachedAvailability = { status: mappedStatus };
-          return this.cachedAvailability;
-        }
-
-        if (typeof lm.capabilities === 'function') {
-          const caps = await lm.capabilities();
-          const mappedStatus =
-            caps?.available === 'readily' || caps?.available === 'available'
-              ? 'readily'
-              : caps?.available === 'after-download' || caps?.available === 'downloadable'
-              ? 'after-download'
-              : caps?.available || 'no';
+        if (snap.nanoStatus === 'available') {
           this.cachedAvailability = {
-            status: mappedStatus,
-            maxTokens: caps?.maxTokens,
-            temperature: caps?.defaultTemperature,
+            status: 'readily',
+            nanoStatus: 'available',
+            tier: 'chrome-builtin-nano',
           };
           return this.cachedAvailability;
         }
 
-        this.cachedAvailability = { status: 'no' };
+        if (snap.nanoStatus === 'downloadable') {
+          this.cachedAvailability = {
+            status: 'after-download',
+            nanoStatus: 'downloadable',
+            tier: 'chrome-builtin-nano',
+          };
+          return this.cachedAvailability;
+        }
+
+        if (snap.nanoStatus === 'downloading') {
+          this.cachedAvailability = {
+            status: 'downloading',
+            nanoStatus: 'downloading',
+            tier: 'chrome-builtin-nano',
+          };
+          return this.cachedAvailability;
+        }
+
+        // Native Gemini Nano unavailable — check Tier-2 WebGPU fallback
+        if (edgeCognitiveEngine.isSupported()) {
+          this.cachedAvailability = {
+            status: edgeCognitiveEngine.isReady() ? 'readily' : 'after-download',
+            nanoStatus: 'unavailable',
+            tier: 'webgpu-webllm',
+            maxTokens: 4096,
+            temperature: 0.2,
+          };
+          return this.cachedAvailability;
+        }
+
+        this.cachedAvailability = {
+          status: 'no',
+          nanoStatus: 'unavailable',
+          tier: 'rule-engine',
+        };
         return this.cachedAvailability;
       } catch {
-        this.cachedAvailability = { status: 'no' };
+        this.cachedAvailability = {
+          status: 'no',
+          nanoStatus: 'unavailable',
+          tier: 'rule-engine',
+        };
         return this.cachedAvailability;
       } finally {
         this.availabilityPromise = null;

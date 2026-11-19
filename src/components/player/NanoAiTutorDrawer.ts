@@ -15,6 +15,13 @@ import {
   type PlayerTelemetryEvent,
   type AiVisualCommandPacket,
 } from '../../engine/aicaller';
+import {
+  getNanoStateSnapshot,
+  probeNanoAvailability,
+  activateAndDownloadNano,
+  enableEcoMode,
+  subscribeNanoState,
+} from '../../engine/nanoAvailability';
 
 export interface QuizCheckpointContext {
   sceneId: string;
@@ -163,7 +170,7 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
   let isAiDemonstrating = Boolean(props.isAiDemonstrating);
   let activeTab: 'copilot' | 'generator' | 'grader' = 'copilot';
   let hasConsent = hasUserGrantedAiConsent();
-  let engineType = aiCaller.getActiveEngineType();
+  let nanoSnap = getNanoStateSnapshot();
   let isInferring = false;
   let userQuery = '';
   let generatorPrompt = '';
@@ -199,6 +206,10 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
   // Render function to re-paint the dynamic content without tearing down container
   function refresh() {
+    hasConsent = hasUserGrantedAiConsent();
+    nanoSnap = getNanoStateSnapshot();
+    const engineType = aiCaller.getActiveEngineType();
+    const pct = nanoSnap.downloadProgress ?? 0;
     container.innerHTML = '';
 
     // --- 1. Top Header Bar ---
@@ -207,15 +218,50 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
 
     const headerLeft = document.createElement('div');
     headerLeft.style.cssText = 'display: flex; align-items: center; gap: 10px;';
-    const badgeBg = engineType === 'chrome-builtin-nano' ? 'rgba(34, 197, 94, 0.2)' : 'rgba(168, 85, 247, 0.2)';
-    const badgeColor = engineType === 'chrome-builtin-nano' ? '#4ade80' : '#c084fc';
-    const badgeBorder = engineType === 'chrome-builtin-nano' ? '#22c55e' : '#a855f7';
-    const badgeText = engineType === 'chrome-builtin-nano' ? '🟢 Chrome Prompt API (Built-in Nano)' : engineType === 'webgpu-webllm' ? '🟣 WebGPU On-Device LLM' : '⚪ Local Rule Engine';
+
+    let badgeBg = 'rgba(148, 163, 184, 0.2)';
+    let badgeColor = '#e2e8f0';
+    let badgeBorder = '#64748b';
+    let badgeText = '🌱 Eco Mode · Local Rule Engine';
+
+    if (nanoSnap.nanoStatus === 'downloading') {
+      badgeBg = 'rgba(14, 165, 233, 0.22)';
+      badgeColor = '#7dd3fc';
+      badgeBorder = '#38bdf8';
+      badgeText = `⏳ Downloading Gemini Nano (${pct}%)`;
+    } else if (nanoSnap.ecoMode) {
+      badgeBg = 'rgba(16, 185, 129, 0.18)';
+      badgeColor = '#6ee7b7';
+      badgeBorder = '#10b981';
+      badgeText =
+        nanoSnap.nanoStatus === 'available'
+          ? '🌱 Eco Mode (Gemini Nano Ready)'
+          : nanoSnap.nanoStatus === 'downloadable'
+          ? '🌱 Eco Mode (Gemini Nano Downloadable)'
+          : '🌱 Eco Mode (0 MB Deterministic Rules)';
+    } else if (nanoSnap.nanoStatus === 'available') {
+      badgeBg = 'rgba(34, 197, 94, 0.2)';
+      badgeColor = '#4ade80';
+      badgeBorder = '#22c55e';
+      badgeText = '🟢 Chrome Prompt API (Gemini Nano Ready)';
+    } else if (nanoSnap.nanoStatus === 'downloadable') {
+      badgeBg = 'rgba(14, 165, 233, 0.22)';
+      badgeColor = '#7dd3fc';
+      badgeBorder = '#38bdf8';
+      badgeText = '⬇️ Gemini Nano Downloadable';
+    } else if (engineType === 'webgpu-webllm') {
+      badgeBg = 'rgba(168, 85, 247, 0.2)';
+      badgeColor = '#c084fc';
+      badgeBorder = '#a855f7';
+      badgeText = '🟣 WebGPU On-Device LLM';
+    } else {
+      badgeText = '⚪ Local Rule Engine (Nano Unavailable)';
+    }
 
     headerLeft.innerHTML = `
       <span style="font-size: 1.4rem;">✨</span>
       <div>
-        <div style="display: flex; align-items: center; gap: 8px;">
+        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #ffffff;">
             Gemini Nano Edge AI Co-Pilot
           </h3>
@@ -273,6 +319,56 @@ export function renderNanoAiTutorDrawer(props: NanoAiTutorDrawerProps): HTMLElem
     header.appendChild(headerLeft);
     header.appendChild(headerRight);
     container.appendChild(header);
+
+    // --- 1b. Eco Mode / Downloadable Nano Action Bar ---
+    if (nanoSnap.ecoMode || nanoSnap.nanoStatus === 'downloadable' || nanoSnap.nanoStatus === 'downloading') {
+      const modeBar = document.createElement('div');
+      modeBar.style.cssText =
+        'display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; padding:8px 12px; border-radius:8px; background:#0f172a; border:1px solid #334155;';
+
+      const modeText = document.createElement('span');
+      modeText.style.cssText = 'font-size:0.75rem; color:#cbd5e1;';
+      modeText.textContent =
+        nanoSnap.nanoStatus === 'downloading'
+          ? `⏳ Downloading Gemini Nano weights locally (${pct}%)...`
+          : nanoSnap.nanoStatus === 'downloadable'
+          ? '⬇️ Chrome Gemini Nano is supported on this device and ready to download locally.'
+          : nanoSnap.nanoStatus === 'available'
+          ? '🌱 Currently in Eco Mode (0 W GPU). Gemini Nano is installed and ready whenever you activate it.'
+          : '🌱 Eco Mode active: Running deterministic curriculum rules (0 MB download).';
+      modeBar.appendChild(modeText);
+
+      const modeBtns = document.createElement('div');
+      modeBtns.style.cssText = 'display:flex; gap:6px; align-items:center;';
+
+      if (nanoSnap.nanoStatus === 'downloadable' || (nanoSnap.ecoMode && (nanoSnap.nanoStatus === 'available' || nanoSnap.webGpuEligible))) {
+        const actBtn = document.createElement('button');
+        actBtn.type = 'button';
+        actBtn.style.cssText =
+          'padding:4px 10px; border-radius:6px; background:#0284c7; color:#ffffff; border:1px solid #38bdf8; font-size:0.72rem; font-weight:800; cursor:pointer;';
+        actBtn.textContent =
+          nanoSnap.nanoStatus === 'downloadable'
+            ? '⬇️ Download & Activate Nano'
+            : '✨ Activate Private AI';
+        actBtn.onclick = () => {
+          void activateAndDownloadNano();
+        };
+        modeBtns.appendChild(actBtn);
+      } else if (!nanoSnap.ecoMode) {
+        const ecoSwitchBtn = document.createElement('button');
+        ecoSwitchBtn.type = 'button';
+        ecoSwitchBtn.style.cssText =
+          'padding:4px 10px; border-radius:6px; background:#1e293b; color:#6ee7b7; border:1px solid #10b981; font-size:0.72rem; font-weight:800; cursor:pointer;';
+        ecoSwitchBtn.textContent = '🌱 Eco Mode';
+        ecoSwitchBtn.onclick = () => {
+          enableEcoMode();
+        };
+        modeBtns.appendChild(ecoSwitchBtn);
+      }
+
+      modeBar.appendChild(modeBtns);
+      container.appendChild(modeBar);
+    }
 
     // --- 2. Tab Contents ---
     if (activeTab === 'copilot') {
@@ -1031,6 +1127,17 @@ Feedback: 2 sentences identifying conceptual strengths and one area for mastery 
   }
 
   refresh();
+
+  const unsubscribeNano = subscribeNanoState(() => {
+    if (!container.isConnected) {
+      unsubscribeNano();
+      return;
+    }
+    if (!isInferring) {
+      refresh();
+    }
+  });
+  void probeNanoAvailability(false);
 
   if (activeQuiz && activeQuiz.autoAsk) {
     setTimeout(() => askQuizCoaching(activeQuiz!), 0);
