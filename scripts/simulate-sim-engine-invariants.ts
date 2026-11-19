@@ -1279,7 +1279,7 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
 
   // 19c. Release Candidate 1 version & UI hygiene check
   const pkgJson = JSON.parse(fs.readFileSync('package.json', 'utf8'));
-  assert.strictEqual(pkgJson.version, '1.0.0-rc.1', `Expected package.json version 1.0.0-rc.1, got ${pkgJson.version}`);
+  assert.strictEqual(pkgJson.version, '1.0.0', `Expected package.json version 1.0.0, got ${pkgJson.version}`);
   const settingsUi = fs.readFileSync('src/components/player/PlayerSettingsModal.ts', 'utf8');
   assert(!settingsUi.includes('[Beta]'), 'PlayerSettingsModal must be promoted from [Beta] to [RC1]');
   assert(fs.existsSync('static/lumina-vector-player.zip'), 'Offline vector player archive static/lumina-vector-player.zip must exist');

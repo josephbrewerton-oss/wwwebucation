@@ -208,7 +208,7 @@ export function getSiteManifest(surfaceId?: string): NanoSiteManifest {
     schemaVersion: 'stj-nano-site/1.0',
     site: {
       name: "St Joseph's Curriculum Portal",
-      version: '1.0.0-rc.1',
+      version: '1.0.0',
       currentRoute,
       routes: VALID_ROUTES,
     },

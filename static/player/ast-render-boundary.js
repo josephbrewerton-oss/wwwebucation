@@ -16,7 +16,7 @@
 (function (global) {
   'use strict';
 
-  const BOUNDARY_VERSION = '1.0.0-rc.1';
+  const BOUNDARY_VERSION = '1.0.0';
 
   const DisplayOp = Object.freeze({
     END_FRAME: 0,
