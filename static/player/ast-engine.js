@@ -7763,6 +7763,28 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       }
 
+      // Declarative Player AST Skill activations (:use-skill "skill-id" :param val ...)
+      const skills = [];
+      const useSkillBlocks = extractSexprBlocks(astContent, ':use-skill');
+      useSkillBlocks.forEach(sb => {
+        const idMatch = sb.match(/^\(\s*:use-skill\s+"([^"]+)"/i) || sb.match(/:id\s+"([^"]+)"/i);
+        const skillId = idMatch ? idMatch[1] : null;
+        if (!skillId) return;
+        const params = {};
+        const attrRe = /:([a-zA-Z0-9_-]+)\s+("(?:[^"\\]|\\.)*"|true|false|-?\d+(?:\.\d+)?)/gi;
+        let am;
+        while ((am = attrRe.exec(sb)) !== null) {
+          const k = am[1];
+          if (k === 'id' || k === 'use-skill') continue;
+          const raw = am[2];
+          if (raw.startsWith('"')) params[k] = raw.slice(1, -1).replace(/\\([\\"])/g, '$1');
+          else if (raw === 'true') params[k] = true;
+          else if (raw === 'false') params[k] = false;
+          else params[k] = Number(raw);
+        }
+        skills.push({ id: skillId, params });
+      });
+
       const has3D = Boolean((camBlocks && camBlocks.length > 0) || bindings.some(b => b.type && b.type.startsWith('3d-')));
 
       return {
@@ -7796,6 +7818,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         staticElements,
         actors,
         gestures,
+        skills,
         controls,
         interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
       };
@@ -8769,6 +8792,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 if (textParsed.ledgers && textParsed.ledgers.length > 0 && (!parsedAst.ledgers || parsedAst.ledgers.length === 0)) {
                   parsedAst.ledgers = textParsed.ledgers;
                 }
+                if (textParsed.skills && textParsed.skills.length > 0) {
+                  parsedAst.skills = textParsed.skills;
+                }
                 if (textParsed.controls && !parsedAst.controls) {
                   parsedAst.controls = textParsed.controls;
                 }
@@ -8837,6 +8863,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           uiControls: (parsedAst && parsedAst.uiControls) || registryScene.uiControls || (parsedAst && parsedAst.inputs) || registryScene.inputs || [],
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
+          skills: (parsedAst && parsedAst.skills) || registryScene.skills || [],
           controls: (parsedAst && parsedAst.controls) || registryScene.controls || null,
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
           scopes: (parsedAst && parsedAst.scopes) || registryScene.scopes || [],

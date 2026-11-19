@@ -657,6 +657,8 @@ function renderBookPageWordsSvg(
 
 function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta): void {
   const pageGroupsSvg: string[] = [];
+  const pageCount = book.pages.length;
+  const maxPageIdx = Math.max(1, pageCount - 1);
 
   book.pages.forEach((page, idx) => {
     const { wordsMarkup, soundButtonsMarkup } = renderBookPageWordsSvg(
@@ -666,7 +668,7 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
     );
     const sceneArt = spec.scenes[idx] || spec.scenes[0];
     pageGroupsSvg.push(`
-      <g id="book-page-${idx}" display="${idx === 0 ? 'block' : 'none'}">
+      <g id="book-page-${idx}" display="${idx === 0 ? 'inline' : 'none'}">
         <g clip-path="url(#art-clip)">
           ${sceneArt}
         </g>
@@ -679,7 +681,7 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
 
   const dotsSvg = book.pages
     .map((_, idx) => {
-      const dx = 636 + idx * 18;
+      const dx = 626 + idx * 16;
       return `<circle id="page-dot-${idx}" class="page-dot" data-page="${idx}" cx="${dx}" cy="442" r="5.5" fill="${idx === 0 ? spec.accent : '#cbd5e1'}" style="cursor:pointer;"/>`;
     })
     .join('\n      ');
@@ -723,9 +725,9 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
   </g>
 
   <!-- Page Indicator -->
-  <text id="book-page-num" x="764" y="42" text-anchor="end" font-size="13" font-weight="800" fill="#475569">Page 1 of ${book.pages.length}</text>
+  <text id="book-page-num" x="764" y="42" text-anchor="end" font-size="13" font-weight="800" fill="#475569">Page 1 of ${pageCount}</text>
 
-  <!-- 5 Illustrated Story Pages -->
+  <!-- ${pageCount} Illustrated Story Pages -->
   ${pageGroupsSvg.join('\n')}
 
   <!-- Bottom Interactive Word Decoder & Page Navigation Bar -->
@@ -737,21 +739,21 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
 
   <!-- Sound Out Pure Phonemes Button -->
   <g id="btn-sound-out" style="cursor:pointer;">
-    <rect x="434" y="418" width="112" height="48" rx="12" fill="${spec.accent}"/>
-    <text x="490" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
+    <rect x="434" y="418" width="110" height="48" rx="12" fill="${spec.accent}"/>
+    <text x="489" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
   </g>
 
   <!-- Page Navigation -->
   <g id="btn-prev-page" style="cursor:pointer;">
-    <rect x="558" y="422" width="60" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
-    <text x="588" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
+    <rect x="554" y="422" width="58" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="583" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
   </g>
 
   ${dotsSvg}
 
   <g id="btn-next-page" style="cursor:pointer;">
-    <rect x="704" y="422" width="60" height="40" rx="10" fill="#0f172a"/>
-    <text x="734" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
+    <rect x="706" y="422" width="58" height="40" rx="10" fill="#0f172a"/>
+    <text x="735" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
   </g>
 </svg>
 `;
@@ -763,26 +765,30 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
       .replace(/\r/g, '\\r')
       .replace(/\n/g, '\\n');
 
-  const pageTextExpr = `[${book.pages.map((p) => `'${jsSingleQuoteEsc(p.text)}'`).join(', ')}][vars.page || 0] || ''`;
+  // Strict integer page index [0..maxPageIdx] driven directly by slide clock t so
+  // Slide pills, timeline scrubber, Play, Arrow keys, Prev/Next buttons, and Page Dots
+  // stay 100% synchronized and can never land on a fractional blank page.
+  const activePageExpr = `Math.max(0, Math.min(${maxPageIdx}, Math.floor((t || 0) * ${pageCount})))`;
+  const pageTextExpr = `[${book.pages.map((p) => `'${jsSingleQuoteEsc(p.text)}'`).join(', ')}][${activePageExpr}] || ''`;
 
   const subtitlesBlock = book.pages
     .map((p, idx) => {
-      const start = (idx / book.pages.length).toFixed(2);
-      const end = ((idx + 1) / book.pages.length).toFixed(2);
+      const start = (idx / pageCount).toFixed(2);
+      const end = ((idx + 1) / pageCount).toFixed(2);
       return `    (:start ${start} :end ${end} :en "${lispEsc(p.text)}")`;
     })
     .join('\n');
 
   const keyframesBlock = book.pages
     .map((p, idx) => {
-      const tVal = (idx / Math.max(1, book.pages.length - 1)).toFixed(2);
+      const tVal = (idx / maxPageIdx).toFixed(2);
       return `    (:t ${tVal} :title "Page ${idx + 1}: ${lispEsc(book.title)}" :rule "${lispEsc(p.text)}")`;
     })
     .join('\n');
 
   const checkpointsBlock = book.quiz
     .map((q, qIdx) => {
-      const tVal = qIdx === 0 ? '0.50' : '0.92';
+      const tVal = qIdx === 0 ? '0.50' : '1.00';
       const correctIdx = Math.max(0, q.options.findIndex((o) => o.isCorrect));
       const opts = q.options.map((o) => `"${lispEsc(`${o.icon} ${o.label}`)}"`).join(' ');
       const correctOpt = q.options[correctIdx];
@@ -796,37 +802,26 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
 
   const pageBindings = book.pages
     .map(
-      (_, idx) => `    (:target "#book-page-${idx}" :attr "display" :expr "(vars.page || 0) === ${idx} ? 'block' : 'none'")
+      (_, idx) => `    (:target "#book-page-${idx}" :attr "display" :expr "${activePageExpr} === ${idx} ? 'inline' : 'none'")
     (:target "#sb-page-${idx}" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-${idx}" :attr "fill" :expr "(vars.page || 0) === ${idx} ? '${spec.accent}' : '#cbd5e1'")`
+    (:target "#page-dot-${idx}" :attr "fill" :expr "${activePageExpr} === ${idx} ? '${spec.accent}' : '#cbd5e1'")`
     )
     .join('\n');
 
   const astContent = `(:scene :id "${spec.cartridgeId}" :type "Slide" :oak-id "${spec.oakId}" :oak-unit "${spec.oakUnit}" :title "Decodable Book ${book.level}: ${lispEsc(book.title)} (${lispEsc(book.levelLabel)})" :stage "EYFS/KS1 PHONICS" :duration 20.0
+  (:use-skill "storybook-reader" :pages ${pageCount})
   (:vars (
-    (:var :name "page" :val 0 :min 0 :max ${book.pages.length - 1} :step 1 :label "Story Page")
+    (:var :name "page" :val 0 :min 0 :max ${maxPageIdx} :step 1 :label "Story Page")
     (:var :name "showButtons" :val true :label "Show Sound Buttons")
     (:var :name "activeWord" :val "Tap any word above to see & hear its sounds" :label "Selected Word Helper")
     (:var :name "activePhonemes" :val "" :label "Selected Word Phonemes")
   ))
   (:inputs (
-    (:slider :var "page" :label "Turn Page (1 to ${book.pages.length})" :min 0 :max ${book.pages.length - 1} :step 1)
     (:switch :var "showButtons" :label "Show DfE Sound Buttons (• / ━━ / ♥)")
   ))
   (:computed (
+    (:name "activePage" :expr "${activePageExpr}")
     (:name "pageText" :expr "${lispEsc(pageTextExpr)}")
-  ))
-  (:gestures (
-    (:key :code "ArrowLeft" :step-var "page" :delta -1 :min 0 :max ${book.pages.length - 1})
-    (:key :code "ArrowRight" :step-var "page" :delta 1 :min 0 :max ${book.pages.length - 1})
-    (:clickable :target "#btn-prev-page" :step-var "page" :delta -1 :min 0 :max ${book.pages.length - 1} :tone "392")
-    (:clickable :target "#btn-next-page" :step-var "page" :delta 1 :min 0 :max ${book.pages.length - 1} :tone "523.25")
-    (:clickable :target ".page-dot" :attr "data-page" :set-var "page" :tone "440")
-    (:clickable :target "#btn-toggle-sb" :toggle-var "showButtons" :tone "493.88")
-    (:clickable :target "#btn-read-page" :tone "523.25,659.25" :speak-expr "computed.pageText")
-    (:clickable :target ".book-word" :set-var "activeWord" :val-expr "el.getAttribute('data-hint')" :tone "523.25" :speak-expr "el.getAttribute('data-word')")
-    (:clickable :target ".book-word" :set-var "activePhonemes" :val-expr "el.getAttribute('data-phonemes')")
-    (:clickable :target "#btn-sound-out" :tone "440,523.25,659.25" :speak-expr "vars.activePhonemes || computed.pageText")
   ))
   (:subtitles (
 ${subtitlesBlock}
@@ -839,7 +834,7 @@ ${checkpointsBlock}
   ))
   (:bindings (
 ${pageBindings}
-    (:target "#book-page-num" :attr "textContent" :expr "'Page ' + ((vars.page || 0) + 1) + ' of ${book.pages.length}'")
+    (:target "#book-page-num" :attr "textContent" :expr "'Page ' + (${activePageExpr} + 1) + ' of ${pageCount}'")
     (:target "#decoder-hint-txt" :attr "textContent" :expr "vars.activeWord || 'Tap any word above to see & hear its sounds'")
     (:target "#btn-toggle-sb-txt" :attr "textContent" :expr "vars.showButtons ? '● Sound Buttons: ON' : '○ Sound Buttons: OFF'")
     (:target "#btn-toggle-sb-rect" :attr "fill" :expr "vars.showButtons ? '${spec.accentLight}' : '#f1f5f9'")
@@ -849,7 +844,7 @@ ${pageBindings}
 
   fs.writeFileSync(path.join(outDir, `${spec.cartridgeId}.svg`), svgContent, 'utf8');
   fs.writeFileSync(path.join(outDir, `${spec.cartridgeId}.ast`), astContent, 'utf8');
-  console.log(`[ReaderBooks] Generated ${spec.cartridgeId}.svg + .ast (${book.pages.length} spreads)`);
+  console.log(`[ReaderBooks] Generated ${spec.cartridgeId}.svg + .ast (${pageCount} spreads)`);
 }
 
 for (const spec of BOOK_CARTRIDGE_SPECS) {

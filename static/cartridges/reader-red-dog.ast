@@ -1,4 +1,5 @@
 (:scene :id "reader-red-dog" :type "Slide" :oak-id "OAK-KS1-ENG-R02" :oak-unit "eyfs-english-decodable-book-2-red-dog" :title "Decodable Book 2: The Red Dog (Level 2 · Phase 2 CVC)" :stage "EYFS/KS1 PHONICS" :duration 20.0
+  (:use-skill "storybook-reader" :pages 5)
   (:vars (
     (:var :name "page" :val 0 :min 0 :max 4 :step 1 :label "Story Page")
     (:var :name "showButtons" :val true :label "Show Sound Buttons")
@@ -6,23 +7,11 @@
     (:var :name "activePhonemes" :val "" :label "Selected Word Phonemes")
   ))
   (:inputs (
-    (:slider :var "page" :label "Turn Page (1 to 5)" :min 0 :max 4 :step 1)
     (:switch :var "showButtons" :label "Show DfE Sound Buttons (• / ━━ / ♥)")
   ))
   (:computed (
-    (:name "pageText" :expr "['The big red dog ran in the sun.', 'The dog can hop on a big log.', 'A duck is in the mud. No, dog, no!', 'Go into the tub, red dog!', 'The dog sat on a bed in a red hat.'][vars.page || 0] || ''")
-  ))
-  (:gestures (
-    (:key :code "ArrowLeft" :step-var "page" :delta -1 :min 0 :max 4)
-    (:key :code "ArrowRight" :step-var "page" :delta 1 :min 0 :max 4)
-    (:clickable :target "#btn-prev-page" :step-var "page" :delta -1 :min 0 :max 4 :tone "392")
-    (:clickable :target "#btn-next-page" :step-var "page" :delta 1 :min 0 :max 4 :tone "523.25")
-    (:clickable :target ".page-dot" :attr "data-page" :set-var "page" :tone "440")
-    (:clickable :target "#btn-toggle-sb" :toggle-var "showButtons" :tone "493.88")
-    (:clickable :target "#btn-read-page" :tone "523.25,659.25" :speak-expr "computed.pageText")
-    (:clickable :target ".book-word" :set-var "activeWord" :val-expr "el.getAttribute('data-hint')" :tone "523.25" :speak-expr "el.getAttribute('data-word')")
-    (:clickable :target ".book-word" :set-var "activePhonemes" :val-expr "el.getAttribute('data-phonemes')")
-    (:clickable :target "#btn-sound-out" :tone "440,523.25,659.25" :speak-expr "vars.activePhonemes || computed.pageText")
+    (:name "activePage" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5)))")
+    (:name "pageText" :expr "['The big red dog ran in the sun.', 'The dog can hop on a big log.', 'A duck is in the mud. No, dog, no!', 'Go into the tub, red dog!', 'The dog sat on a bed in a red hat.'][Math.max(0, Math.min(4, Math.floor((t || 0) * 5)))] || ''")
   ))
   (:subtitles (
     (:start 0.00 :end 0.20 :en "The big red dog ran in the sun.")
@@ -44,29 +33,29 @@
       :options ("🦆 A duck" "🐱 A cat" "🐝 A bee")
       :answer 0
       :explanation "Great reading! In 'The Red Dog', the answer is A duck.")
-    (:checkpoint :t 0.92
+    (:checkpoint :t 1.00
       :prompt "Where did the red dog go to get clean?"
       :options ("📦 Into a box" "🛁 Into the tub" "🚌 Into a bus")
       :answer 1
       :explanation "Great reading! In 'The Red Dog', the answer is Into the tub.")
   ))
   (:bindings (
-    (:target "#book-page-0" :attr "display" :expr "(vars.page || 0) === 0 ? 'block' : 'none'")
+    (:target "#book-page-0" :attr "display" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 0 ? 'inline' : 'none'")
     (:target "#sb-page-0" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-0" :attr "fill" :expr "(vars.page || 0) === 0 ? '#dc2626' : '#cbd5e1'")
-    (:target "#book-page-1" :attr "display" :expr "(vars.page || 0) === 1 ? 'block' : 'none'")
+    (:target "#page-dot-0" :attr "fill" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 0 ? '#dc2626' : '#cbd5e1'")
+    (:target "#book-page-1" :attr "display" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 1 ? 'inline' : 'none'")
     (:target "#sb-page-1" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-1" :attr "fill" :expr "(vars.page || 0) === 1 ? '#dc2626' : '#cbd5e1'")
-    (:target "#book-page-2" :attr "display" :expr "(vars.page || 0) === 2 ? 'block' : 'none'")
+    (:target "#page-dot-1" :attr "fill" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 1 ? '#dc2626' : '#cbd5e1'")
+    (:target "#book-page-2" :attr "display" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 2 ? 'inline' : 'none'")
     (:target "#sb-page-2" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-2" :attr "fill" :expr "(vars.page || 0) === 2 ? '#dc2626' : '#cbd5e1'")
-    (:target "#book-page-3" :attr "display" :expr "(vars.page || 0) === 3 ? 'block' : 'none'")
+    (:target "#page-dot-2" :attr "fill" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 2 ? '#dc2626' : '#cbd5e1'")
+    (:target "#book-page-3" :attr "display" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 3 ? 'inline' : 'none'")
     (:target "#sb-page-3" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-3" :attr "fill" :expr "(vars.page || 0) === 3 ? '#dc2626' : '#cbd5e1'")
-    (:target "#book-page-4" :attr "display" :expr "(vars.page || 0) === 4 ? 'block' : 'none'")
+    (:target "#page-dot-3" :attr "fill" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 3 ? '#dc2626' : '#cbd5e1'")
+    (:target "#book-page-4" :attr "display" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 4 ? 'inline' : 'none'")
     (:target "#sb-page-4" :attr "opacity" :expr "vars.showButtons ? '1' : '0'")
-    (:target "#page-dot-4" :attr "fill" :expr "(vars.page || 0) === 4 ? '#dc2626' : '#cbd5e1'")
-    (:target "#book-page-num" :attr "textContent" :expr "'Page ' + ((vars.page || 0) + 1) + ' of 5'")
+    (:target "#page-dot-4" :attr "fill" :expr "Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) === 4 ? '#dc2626' : '#cbd5e1'")
+    (:target "#book-page-num" :attr "textContent" :expr "'Page ' + (Math.max(0, Math.min(4, Math.floor((t || 0) * 5))) + 1) + ' of 5'")
     (:target "#decoder-hint-txt" :attr "textContent" :expr "vars.activeWord || 'Tap any word above to see & hear its sounds'")
     (:target "#btn-toggle-sb-txt" :attr "textContent" :expr "vars.showButtons ? '● Sound Buttons: ON' : '○ Sound Buttons: OFF'")
     (:target "#btn-toggle-sb-rect" :attr "fill" :expr "vars.showButtons ? '#fee2e2' : '#f1f5f9'")

@@ -73,6 +73,25 @@
     redo:    { freq: 523, wave: 'sine',     duration: 0.05, gain: 0.15 }
   };
 
+  // Offline / file:// AST fallback for declarative player skills (100% pure AST — zero inline JS;
+  // parsed by the exact same generic _parseSkillsBlock AST parser as static/player/player-gestures.ast).
+  const DEFAULT_SKILLS_AST = `(:skills
+    (:skill :id "storybook-reader"
+      :pages 5
+      :hint-default "Tap any word above to see & hear its sounds"
+      (:controls (:param-hud :off))
+      (:gestures
+        (:key       :code "ArrowLeft"      :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:key       :code "ArrowRight"     :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target "#btn-prev-page" :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:clickable :target "#btn-next-page" :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target ".page-dot"    :action "goto-slide" :attr "data-page" :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "440")
+        (:clickable :target "#btn-toggle-sb" :toggle-var "showButtons" :tone "493.88")
+        (:clickable :target "#btn-read-page" :speak-var "pageText" :tone "523.25,659.25")
+        (:clickable :target ".book-word"   :set-var "activeWord" :from-attr "data-hint" :speak-attr "data-word" :tone "523.25")
+        (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
+        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25"))))`;
+
   // Resolve script base URL at load time so player-gestures.ast can be fetched reliably
   const SCRIPT_BASE_URL = (() => {
     try {
@@ -102,7 +121,8 @@
           widths: [...DEFAULT_WHITEBOARD.widths],
           palette: [...DEFAULT_WHITEBOARD.palette]
         },
-        tones: { ...DEFAULT_TONES }
+        tones: { ...DEFAULT_TONES },
+        skills: this._parseSkillsBlock(DEFAULT_SKILLS_AST)
       };
       this.activeControls = { ...DEFAULT_CONTROLS };
       this._profileLoaded = false;
@@ -344,6 +364,201 @@
       return results;
     }
 
+    _extractAllSexpBlocks(source, headToken) {
+      if (!source || typeof source !== 'string' || !headToken) return [];
+      const cleanSrc = this._stripSexpComments(source);
+      const tokenBody = headToken.replace(/^\(/, '');
+      const escapedBody = tokenBody.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const headRegex = new RegExp(`^\\(\\s*${escapedBody}(?=[\\s)]|$)`, 'i');
+      const results = [];
+      let inQuote = false;
+      let escape = false;
+
+      for (let i = 0; i < cleanSrc.length; i++) {
+        const ch = cleanSrc[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inQuote = !inQuote; continue; }
+        if (!inQuote && ch === '(') {
+          const slice = cleanSrc.slice(i, i + headToken.length + 12);
+          if (headRegex.test(slice)) {
+            let depth = 0;
+            let q = false;
+            let esc = false;
+            for (let j = i; j < cleanSrc.length; j++) {
+              const c2 = cleanSrc[j];
+              if (esc) { esc = false; continue; }
+              if (c2 === '\\') { esc = true; continue; }
+              if (c2 === '"') { q = !q; continue; }
+              if (!q) {
+                if (c2 === '(') depth++;
+                else if (c2 === ')') {
+                  depth--;
+                  if (depth === 0) {
+                    results.push(cleanSrc.slice(i, j + 1));
+                    i = j;
+                    break;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+      return results;
+    }
+
+    _stripChildSexps(block) {
+      if (!block || typeof block !== 'string') return '';
+      let out = '';
+      let depth = 0;
+      let inQuote = false;
+      let escape = false;
+      for (let i = 0; i < block.length; i++) {
+        const ch = block[i];
+        if (escape) {
+          if (depth <= 1) out += ch;
+          escape = false;
+          continue;
+        }
+        if (ch === '\\') {
+          if (depth <= 1) out += ch;
+          escape = true;
+          continue;
+        }
+        if (ch === '"') {
+          inQuote = !inQuote;
+          if (depth <= 1) out += ch;
+          continue;
+        }
+        if (!inQuote) {
+          if (ch === '(') {
+            depth++;
+            if (depth === 1) out += ch;
+            continue;
+          }
+          if (ch === ')') {
+            if (depth === 1) out += ch;
+            depth = Math.max(0, depth - 1);
+            continue;
+          }
+        }
+        if (depth <= 1) out += ch;
+      }
+      return out;
+    }
+
+    _kebabToCamel(key) {
+      return String(key || '').replace(/-([a-z0-9])/gi, (_, ch) => ch.toUpperCase());
+    }
+
+    _escapeTemplateValue(val) {
+      if (typeof val === 'number') return Number.isFinite(val) ? String(val) : '0';
+      if (typeof val === 'boolean') return val ? 'true' : 'false';
+      return String(val)
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/\r/g, '\\r')
+        .replace(/\n/g, '\\n');
+    }
+
+    _resolveSkillParams(skillDef, usageParams) {
+      const merged = {
+        ...(skillDef && skillDef.defaults ? skillDef.defaults : {}),
+        ...(usageParams && typeof usageParams === 'object' ? usageParams : {})
+      };
+      const resolved = {};
+      Object.entries(merged).forEach(([k, v]) => {
+        resolved[k] = v;
+        const camel = this._kebabToCamel(k);
+        if (camel && resolved[camel] === undefined) {
+          resolved[camel] = v;
+        }
+      });
+      if (resolved.pages !== undefined) {
+        const pagesNum = Number(resolved.pages);
+        if (Number.isFinite(pagesNum) && pagesNum >= 1) {
+          const roundedPages = Math.round(pagesNum);
+          resolved.pages = roundedPages;
+          if (resolved.maxIndex === undefined && resolved['max-index'] === undefined) {
+            const maxIdx = Math.max(1, roundedPages - 1);
+            resolved.maxIndex = maxIdx;
+            resolved['max-index'] = maxIdx;
+          }
+        }
+      }
+      return resolved;
+    }
+
+    _expandSkillTemplate(raw, params, isJsExprField = false) {
+      if (typeof raw !== 'string' || !raw.includes('{{')) return raw;
+      // If the entire token is a single placeholder (e.g. :count "{{pages}}"), preserve its native type
+      const exactMatch = raw.match(/^\{\{([a-zA-Z0-9_-]+)\}\}$/);
+      if (exactMatch) {
+        const key = exactMatch[1];
+        let val = params[key];
+        if (val === undefined) val = params[this._kebabToCamel(key)];
+        if (val !== undefined) {
+          return isJsExprField ? this._escapeTemplateValue(val) : val;
+        }
+        return raw;
+      }
+      return raw.replace(/\{\{([a-zA-Z0-9_-]+)\}\}/g, (match, key) => {
+        let val = params[key];
+        if (val === undefined) {
+          val = params[this._kebabToCamel(key)];
+        }
+        if (val === undefined) return match;
+        return isJsExprField ? this._escapeTemplateValue(val) : String(val);
+      });
+    }
+
+    _parseSkillsBlock(skillsBlock) {
+      const skillsMap = new Map();
+      if (!skillsBlock) return skillsMap;
+      const clean = this._stripSexpComments(skillsBlock);
+      const rootBlock = clean.trim().startsWith('(:skills')
+        ? clean.trim()
+        : this._extractSexpBlock(clean, '(:skills');
+      if (!rootBlock) return skillsMap;
+
+      const skillItems = this._extractChildSexps(rootBlock);
+      for (const skillSexp of skillItems) {
+        if (!/^\(\s*:skill(?:\s|$)/i.test(skillSexp)) continue;
+        const topOnly = this._stripChildSexps(skillSexp);
+        const topAttrs = this._parseKeywordAttrs(topOnly);
+        const id = topAttrs.id;
+        if (!id || typeof id !== 'string') continue;
+
+        const defaults = {};
+        Object.entries(topAttrs).forEach(([k, v]) => {
+          if (k !== 'id') defaults[k] = v;
+        });
+
+        const ctrlBlock = this._extractSexpBlock(skillSexp, '(:controls');
+        const controls = ctrlBlock ? this._parseControlsBlock(ctrlBlock) : {};
+
+        const gestures = [];
+        const gesturesBlock = this._extractSexpBlock(skillSexp, '(:gestures');
+        if (gesturesBlock) {
+          let gestureChildren = this._extractChildSexps(gesturesBlock);
+          if (gestureChildren.length === 1 && !/^\(\s*:/i.test(gestureChildren[0])) {
+            gestureChildren = this._extractChildSexps(gestureChildren[0]);
+          }
+          for (const gSexp of gestureChildren) {
+            const typeMatch = gSexp.match(/^\(\s*:([a-zA-Z0-9_-]+)/);
+            if (!typeMatch) continue;
+            const gAttrs = this._parseKeywordAttrs(gSexp);
+            gAttrs.type = typeMatch[1];
+            gestures.push(gAttrs);
+          }
+        }
+
+        skillsMap.set(id, { id, defaults, controls, gestures });
+      }
+      return skillsMap;
+    }
+
     _parseKeywordAttrs(sexp) {
       const attrs = {};
       if (!sexp) return attrs;
@@ -356,7 +571,7 @@
         const k = m[1];
         const rawVal = m[2];
         const lowerVal = rawVal.toLowerCase();
-        if (rawVal.startsWith('"')) attrs[k] = rawVal.slice(1, -1).replace(/\\"/g, '"');
+        if (rawVal.startsWith('"')) attrs[k] = rawVal.slice(1, -1).replace(/\\([\\"])/g, '$1');
         else if (lowerVal === ':on' || lowerVal === ':true' || lowerVal === 'true') attrs[k] = true;
         else if (lowerVal === ':off' || lowerVal === ':false' || lowerVal === 'false') attrs[k] = false;
         else if (rawVal.startsWith(':')) attrs[k] = rawVal.slice(1);
@@ -469,6 +684,15 @@
           }
         });
       }
+
+      // 6. (:skills ...) declarative reusable player skills
+      const skillsBlock = this._extractSexpBlock(clean, '(:skills');
+      if (skillsBlock) {
+        const parsedSkills = this._parseSkillsBlock(skillsBlock);
+        if (parsedSkills.size > 0) {
+          this.playerProfile.skills = parsedSkills;
+        }
+      }
     }
 
     _getRawCartridgeAst() {
@@ -485,11 +709,61 @@
       );
     }
 
+    _resolveSceneSkillUsages(scene) {
+      if (scene && Array.isArray(scene.skills) && scene.skills.length > 0) {
+        return scene.skills;
+      }
+      const rawAst = (scene && (scene.rawAst || scene.astSource || scene.source)) || this._getRawCartridgeAst();
+      if (!rawAst) return [];
+      const blocks = this._extractAllSexpBlocks(rawAst, '(:use-skill');
+      const usages = [];
+      for (const b of blocks) {
+        const idMatch = b.match(/^\(\s*:use-skill\s+"([^"]+)"/i) || b.match(/:id\s+"([^"]+)"/i);
+        if (!idMatch) continue;
+        const attrs = this._parseKeywordAttrs(b);
+        delete attrs.id;
+        usages.push({ id: idMatch[1], params: attrs });
+      }
+      return usages;
+    }
+
+    _resolveSkillGestures(scene) {
+      if (!scene || !this.playerProfile || !(this.playerProfile.skills instanceof Map)) return [];
+      const usages = this._resolveSceneSkillUsages(scene);
+      if (usages.length === 0) return [];
+
+      const expanded = [];
+      for (const usage of usages) {
+        if (!usage || !usage.id) continue;
+        const skillDef = this.playerProfile.skills.get(usage.id);
+        if (!skillDef || !Array.isArray(skillDef.gestures)) continue;
+        const resolvedParams = this._resolveSkillParams(skillDef, usage.params);
+        for (const rawGesture of skillDef.gestures) {
+          const clone = {};
+          Object.entries(rawGesture).forEach(([k, v]) => {
+            const isJsExpr = k === 'expr' || k === 'if' || k === 'ifExpr' || k.endsWith('Expr') || k.endsWith('-expr');
+            clone[k] = typeof v === 'string' ? this._expandSkillTemplate(v, resolvedParams, isJsExpr) : v;
+          });
+          expanded.push(this._normalizeGesture(clone));
+        }
+      }
+      return expanded;
+    }
+
     _syncCartridgeControls() {
       const merged = { ...this.playerProfile.defaults };
       const scene = this.engine && this.engine.scene;
 
-      // 1. Check pre-parsed scene.controls if engine provides it
+      // 1. Apply active AST skill controls before cartridge-level overrides
+      const skillUsages = this._resolveSceneSkillUsages(scene);
+      for (const usage of skillUsages) {
+        const skillDef = this.playerProfile.skills && this.playerProfile.skills.get(usage.id);
+        if (skillDef && skillDef.controls) {
+          Object.assign(merged, skillDef.controls);
+        }
+      }
+
+      // 2. Check pre-parsed scene.controls if engine provides it
       if (scene && scene.controls && typeof scene.controls === 'object') {
         Object.entries(scene.controls).forEach(([k, v]) => {
           const key = k.replace(/^:/, '').toLowerCase();
@@ -499,7 +773,7 @@
         });
       }
 
-      // 2. Fallback: parse (:controls ...) directly from raw cartridge AST text
+      // 3. Fallback: parse (:controls ...) directly from raw cartridge AST text
       const rawAst = this._getRawCartridgeAst();
       if (rawAst) {
         const ctrlBlock = this._extractSexpBlock(rawAst, '(:controls');
@@ -617,6 +891,26 @@
       if (ifExpr !== undefined && norm.ifExpr === undefined) {
         norm.ifExpr = ifExpr;
       }
+      if (norm.setVar === undefined && norm['set-var'] !== undefined) norm.setVar = norm['set-var'];
+      if (norm.toggleVar === undefined && norm['toggle-var'] !== undefined) norm.toggleVar = norm['toggle-var'];
+      if (norm.stepVar === undefined && norm['step-var'] !== undefined) norm.stepVar = norm['step-var'];
+      if (norm.holdVar === undefined && norm['hold-var'] !== undefined) norm.holdVar = norm['hold-var'];
+      if (norm.releaseVal === undefined && norm['release-val'] !== undefined) norm.releaseVal = norm['release-val'];
+      if (norm.yawVar === undefined && norm['yaw-var'] !== undefined) norm.yawVar = norm['yaw-var'];
+      if (norm.pitchVar === undefined && norm['pitch-var'] !== undefined) norm.pitchVar = norm['pitch-var'];
+      if (norm.pitchMin === undefined && norm['pitch-min'] !== undefined) norm.pitchMin = norm['pitch-min'];
+      if (norm.pitchMax === undefined && norm['pitch-max'] !== undefined) norm.pitchMax = norm['pitch-max'];
+      if (norm.minX === undefined && norm['min-x'] !== undefined) norm.minX = norm['min-x'];
+      if (norm.maxX === undefined && norm['max-x'] !== undefined) norm.maxX = norm['max-x'];
+      if (norm.minY === undefined && norm['min-y'] !== undefined) norm.minY = norm['min-y'];
+      if (norm.maxY === undefined && norm['max-y'] !== undefined) norm.maxY = norm['max-y'];
+      if (norm.fromAttr === undefined && norm['from-attr'] !== undefined) norm.fromAttr = norm['from-attr'];
+      if (norm.speakVar === undefined && norm['speak-var'] !== undefined) norm.speakVar = norm['speak-var'];
+      if (norm.fallbackVar === undefined && norm['fallback-var'] !== undefined) norm.fallbackVar = norm['fallback-var'];
+      if (norm.speakAttr === undefined && norm['speak-attr'] !== undefined) norm.speakAttr = norm['speak-attr'];
+      if (norm.clearVar === undefined && norm['clear-var'] !== undefined) norm.clearVar = norm['clear-var'];
+      if (norm.resetVar === undefined && norm['reset-var'] !== undefined) norm.resetVar = norm['reset-var'];
+      if (norm.resetVal === undefined && norm['reset-val'] !== undefined) norm.resetVal = norm['reset-val'];
       if (norm.valExpr === undefined && norm['val-expr'] !== undefined) norm.valExpr = norm['val-expr'];
       if (norm.toneExpr === undefined && norm['tone-expr'] !== undefined) norm.toneExpr = norm['tone-expr'];
       if (norm.speakExpr === undefined && norm['speak-expr'] !== undefined) norm.speakExpr = norm['speak-expr'];
@@ -627,8 +921,12 @@
     }
 
     _getNormalizedSceneGestures(scene) {
-      if (!scene || !Array.isArray(scene.gestures)) return [];
-      return scene.gestures.map(g => this._normalizeGesture(g));
+      if (!scene) return [];
+      const skillGestures = this._resolveSkillGestures(scene);
+      const cartridgeGestures = Array.isArray(scene.gestures)
+        ? scene.gestures.map(g => this._normalizeGesture(g))
+        : [];
+      return [...skillGestures, ...cartridgeGestures];
     }
 
     /**
@@ -821,6 +1119,58 @@
       }
     }
 
+    /**
+     * Executes pure declarative AST actions natively in JS (zero inline JS in .ast files).
+     * Returns true if the action was handled so legacy bare-:var fallbacks don't double-apply.
+     */
+    _executeDeclarativeAction(g, matchedEl, attrVal, scene) {
+      if (!g || !g.action || !this.engine) return false;
+      const action = g.action;
+
+      // 0. Check extensible Action Registry (instance or global)
+      const customHandler = (this._customActions && this._customActions.get(action))
+        || (ASTDirectGestureSubsystem._customActions && ASTDirectGestureSubsystem._customActions.get(action));
+      if (typeof customHandler === 'function') {
+        return customHandler.call(this, g, scene, this, matchedEl, attrVal) !== false;
+      }
+
+      if (action === 'step-slide' || action === 'goto-slide') {
+        const keyframeCount = scene && Array.isArray(scene.keyframes) && scene.keyframes.length >= 2
+          ? scene.keyframes.length
+          : 2;
+        const parsedCount = Number(g.count);
+        const count = Number.isFinite(parsedCount) && parsedCount >= 2 ? Math.round(parsedCount) : keyframeCount;
+        const maxIdx = Math.max(1, count - 1);
+
+        let targetIdx = 0;
+        if (action === 'step-slide') {
+          const delta = typeof g.delta === 'number' ? g.delta : 1;
+          const curIdx = Math.max(0, Math.min(maxIdx, Math.floor(((this.engine.progress || 0)) * count)));
+          targetIdx = Math.max(0, Math.min(maxIdx, curIdx + delta));
+        } else {
+          const rawTarget = attrVal !== undefined ? attrVal : g.val;
+          const numTarget = Number(rawTarget);
+          targetIdx = Math.max(0, Math.min(maxIdx, Number.isFinite(numTarget) ? Math.round(numTarget) : 0));
+        }
+
+        if (g.var) {
+          this._writeEngineVar(g.var, targetIdx);
+        }
+        if (g.clearVar) {
+          this._writeEngineVar(g.clearVar, '');
+        }
+        if (g.resetVar) {
+          this._writeEngineVar(g.resetVar, g.resetVal !== undefined ? g.resetVal : '');
+        }
+        if (typeof this.engine.seek === 'function') {
+          this.engine.seek(targetIdx / maxIdx);
+        }
+        return true;
+      }
+
+      return false;
+    }
+
     _applyGesturePress(g, matchedEl, scene) {
       if (!this.engine || !this.engine.vars) return false;
       const attrVal = this._readMatchedElementAttr(g, matchedEl);
@@ -832,9 +1182,15 @@
       let changed = false;
       let exprConsumedBySetVar = false;
 
+      // 1. Native JS execution of pure declarative AST actions (:action "step-slide", "goto-slide", etc.)
+      const actionHandled = this._executeDeclarativeAction(g, matchedEl, attrVal, scene);
+      if (actionHandled) {
+        changed = true;
+      }
+
       const toggleKey = g.toggleVar || g.toggle;
-      const setKey = g.setVar || g.set || (g.var && (g.val !== undefined || g.valExpr !== undefined || g.expr !== undefined || attrVal !== undefined) ? g.var : null);
-      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!setKey && g.var && g.delta !== undefined ? g.var : null);
+      const setKey = g.setVar || g.set || (!actionHandled && g.var && (g.val !== undefined || g.fromAttr !== undefined || g.valExpr !== undefined || g.expr !== undefined || attrVal !== undefined) ? g.var : null);
+      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!actionHandled && !setKey && g.var && g.delta !== undefined ? g.var : null);
       const holdKey = g.holdVar;
 
       if (toggleKey) {
@@ -843,7 +1199,10 @@
       }
       if (setKey) {
         let val = g.val;
-        if (attrVal !== undefined) {
+        if (g.fromAttr && matchedEl && typeof matchedEl.getAttribute === 'function') {
+          const fromVal = matchedEl.getAttribute(g.fromAttr);
+          if (fromVal !== null) val = fromVal;
+        } else if (attrVal !== undefined) {
           val = attrVal;
         }
         if (g.valExpr) {
@@ -928,6 +1287,24 @@
       }
 
       let speakText = g.speak;
+      if (!speakText && g.speakAttr && matchedEl && typeof matchedEl.getAttribute === 'function') {
+        const attrSpeech = matchedEl.getAttribute(g.speakAttr);
+        if (attrSpeech !== null && String(attrSpeech).trim() !== '') {
+          speakText = String(attrSpeech);
+        }
+      }
+      if (!speakText && g.speakVar) {
+        const vSpeech = this.engine.vars[g.speakVar];
+        if (vSpeech !== undefined && vSpeech !== null && String(vSpeech).trim() !== '') {
+          speakText = String(vSpeech);
+        }
+      }
+      if (!speakText && g.fallbackVar) {
+        const fSpeech = this.engine.vars[g.fallbackVar];
+        if (fSpeech !== undefined && fSpeech !== null && String(fSpeech).trim() !== '') {
+          speakText = String(fSpeech);
+        }
+      }
       if (g.speakExpr) {
         try {
           const evaluatedSpeak = this._evalGestureExpr(g.speakExpr, matchedEl, attrVal, true);
@@ -1636,7 +2013,7 @@
           const g = matchedPointerGestures[i];
           if (g.tone || g.toneExpr) hasCustomTone = true;
           this._applyGesturePress(g, matchedEls[i], scene);
-          if (g.type === 'holdable' || g.hold === true || g.holdVar || g.stepVar || typeof g.step === 'string') {
+          if (g.type === 'holdable' || g.hold === true || g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false)) {
             needsHoldLoop = true;
           }
         }
@@ -3317,6 +3694,8 @@ ${strokeLines.join('\n')}
         primitives: Array.isArray(this.playerProfile.primitives) ? [...this.playerProfile.primitives] : [],
         universalActions: Array.from(new Set([
           ...this.playerProfile.universalKeys.map(k => k.action).filter(Boolean),
+          'step-slide',
+          'goto-slide',
           'toggle-xray',
           'toggle-audio',
           'reset-vars',
@@ -3326,7 +3705,10 @@ ${strokeLines.join('\n')}
         customGestureSkills: Array.from(new Set([
           ...Array.from(ASTDirectGestureSubsystem._customGestureSkills.keys()),
           ...Array.from(this._customGestureSkills.keys())
-        ]))
+        ])),
+        astSkills: this.playerProfile && this.playerProfile.skills instanceof Map
+          ? Array.from(this.playerProfile.skills.keys())
+          : []
       };
     }
   }

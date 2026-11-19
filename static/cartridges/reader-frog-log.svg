@@ -41,7 +41,7 @@
 
   <!-- 5 Illustrated Story Pages -->
   
-      <g id="book-page-0" display="block">
+      <g id="book-page-0" display="inline">
         <g clip-path="url(#art-clip)">
           
         <rect x="36" y="64" width="728" height="146" fill="url(#skyGrad)"/>
@@ -461,24 +461,24 @@
 
   <!-- Sound Out Pure Phonemes Button -->
   <g id="btn-sound-out" style="cursor:pointer;">
-    <rect x="434" y="418" width="112" height="48" rx="12" fill="#15803d"/>
-    <text x="490" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
+    <rect x="434" y="418" width="110" height="48" rx="12" fill="#15803d"/>
+    <text x="489" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
   </g>
 
   <!-- Page Navigation -->
   <g id="btn-prev-page" style="cursor:pointer;">
-    <rect x="558" y="422" width="60" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
-    <text x="588" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
+    <rect x="554" y="422" width="58" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="583" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
   </g>
 
-  <circle id="page-dot-0" class="page-dot" data-page="0" cx="636" cy="442" r="5.5" fill="#15803d" style="cursor:pointer;"/>
-      <circle id="page-dot-1" class="page-dot" data-page="1" cx="654" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
-      <circle id="page-dot-2" class="page-dot" data-page="2" cx="672" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
-      <circle id="page-dot-3" class="page-dot" data-page="3" cx="690" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
-      <circle id="page-dot-4" class="page-dot" data-page="4" cx="708" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+  <circle id="page-dot-0" class="page-dot" data-page="0" cx="626" cy="442" r="5.5" fill="#15803d" style="cursor:pointer;"/>
+      <circle id="page-dot-1" class="page-dot" data-page="1" cx="642" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-2" class="page-dot" data-page="2" cx="658" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-3" class="page-dot" data-page="3" cx="674" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-4" class="page-dot" data-page="4" cx="690" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
 
   <g id="btn-next-page" style="cursor:pointer;">
-    <rect x="704" y="422" width="60" height="40" rx="10" fill="#0f172a"/>
-    <text x="734" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
+    <rect x="706" y="422" width="58" height="40" rx="10" fill="#0f172a"/>
+    <text x="735" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
   </g>
 </svg>
