@@ -3,10 +3,11 @@ import { getBaseUrl } from '../utils/url';
 // St Joseph's Curriculum Portal - Interactive Practice Lab Arena
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 
-import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, CurriculumQuestionItem } from '../curriculum/curriculumMesh';
+import { ALL_CURRICULUM_ROUTES, refreshCustomPacksInMesh } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator } from '../curriculum/curriculumSimMapping';
 import { BUILTIN_DATA_CARTRIDGES } from '../data/player/dataCartridges';
 import { getLearnerProfile, recordAssessmentAttempt } from '../services/studentProfileStore';
+import { initCurriculumPackStore, getInstalledCurriculumPacks } from '../services/curriculumPackStore';
 
 export interface PracticeQuestion {
   id: string;
@@ -50,10 +51,13 @@ function assembleAllPracticeQuestions(): PracticeQuestion[] {
     }
   }
 
-  // 2. Assemble practice items from the national curriculum routes (zero hardcoded static data bloat)
+  // 2. Assemble practice items from the national & installed overseas curriculum routes
   for (const route of ALL_CURRICULUM_ROUTES) {
     const sim = resolveTopicSimulator(route.topicId, route.topicTitle, route.subjectTitle);
     const simPreset = sim ? sim.presetId : undefined;
+    const packDeckLabel = route.countryOrRegion
+      ? `${route.countryOrRegion}${route.packTitle ? ` • ${route.packTitle}` : ''}`
+      : undefined;
 
     if (route.questions && route.questions.length > 0) {
       for (const q of route.questions) {
@@ -70,27 +74,33 @@ function assembleAllPracticeQuestions(): PracticeQuestion[] {
           hint: q.hint,
           explanation: q.explanation,
           simPreset,
+          sourceDeck: packDeckLabel,
         });
       }
     } else {
       // Fallback: generate a core axiom check question
-      list.push({
-        id: `q_axiom_${route.stageId}_${route.topicId}`,
-        stage: route.stageTitle,
-        subject: route.subjectTitle,
-        unit: route.topicTitle,
-        question: `Which fundamental principle governs ${route.topicTitle}?`,
-        options: [
-          route.axiom,
-          `It operates in reverse without regard for foundational invariants.`,
-          `It only applies under hypothetical lab conditions with arbitrary constants.`,
-          `It contradicts the standard National Curriculum frameworks.`,
-        ],
-        correctIndex: 0,
-        hint: route.guidedStep || 'Focus on the defining conceptual axiom.',
-        explanation: `Correct! ${route.axiom}`,
-        simPreset,
-      });
+      const fallbackId = `q_axiom_${route.packId || 'oak'}_${route.stageId}_${route.topicId}`;
+      if (!seenIds.has(fallbackId)) {
+        seenIds.add(fallbackId);
+        list.push({
+          id: fallbackId,
+          stage: route.stageTitle,
+          subject: route.subjectTitle,
+          unit: route.topicTitle,
+          question: `Which fundamental principle governs ${route.topicTitle}?`,
+          options: [
+            route.axiom,
+            route.cognitiveTrap || `It operates in reverse without regard for foundational invariants.`,
+            `It only applies under hypothetical lab conditions with arbitrary constants.`,
+            `It has no observable relationship with ${route.subjectTitle}.`,
+          ],
+          correctIndex: 0,
+          hint: route.guidedStep || 'Focus on the defining conceptual axiom.',
+          explanation: `Correct! ${route.axiom}`,
+          simPreset,
+          sourceDeck: packDeckLabel,
+        });
+      }
     }
   }
 
@@ -113,27 +123,35 @@ export function renderPracticePage(): HTMLElement {
   container.className = 'practice-arena-stage';
   container.style.cssText = 'max-width: 1100px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  const allQuestions = assembleAllPracticeQuestions();
+  let allQuestions = assembleAllPracticeQuestions();
 
-  // Read initial filter from URL params if linked from Learning Zone
+  // Read initial filter from URL params if linked from Learning Zone or Overseas Studio
   const params = new URLSearchParams(window.location.search);
-  const rawStage = params.get('stage') || 'All';
-  const rawSubject = params.get('subject') || 'All';
-  let selectedStage = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'].includes(rawStage) ? rawStage : 'All';
-  let selectedSubject = rawSubject.replace(/[<>"'&]/g, '');
-  let searchQuery = (params.get('q') || '').slice(0, 100);
+  const rawStage = (params.get('stage') || params.get('ks') || 'All').replace(/[<>"']/g, '');
+  const rawSubject = (params.get('subject') || params.get('sub') || 'All').replace(/[<>"']/g, '');
+  let selectedStage = rawStage || 'All';
+  let selectedSubject = rawSubject || 'All';
+  let searchQuery = (params.get('q') || params.get('unit') || '').slice(0, 100);
   const initialProfile = getLearnerProfile();
   let score = initialProfile.starsEarned || 0;
   let streak = initialProfile.currentStreak || 0;
   const answeredQuestions = new Set<string>();
 
-  // Extract distinct stages and subjects
-  const stages = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'];
-  const subjectsSet = new Set<string>();
-  allQuestions.forEach((q) => {
-    if (q.subject) subjectsSet.add(q.subject);
-  });
-  const subjects = ['All', ...Array.from(subjectsSet).sort()];
+  function getDynamicStagesAndSubjects(): { stages: string[]; subjects: string[] } {
+    const baseStages = ['Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'];
+    const customStages = new Set<string>();
+    const subjectsSet = new Set<string>();
+    allQuestions.forEach((q) => {
+      if (q.stage && !baseStages.includes(q.stage)) customStages.add(q.stage);
+      if (q.subject) subjectsSet.add(q.subject);
+    });
+    const stages = ['All', ...baseStages, ...Array.from(customStages)];
+    const subjects = ['All', ...Array.from(subjectsSet).sort()];
+    if (selectedStage !== 'All' && !stages.includes(selectedStage) && customStages.size > 0) {
+      selectedStage = 'All';
+    }
+    return { stages, subjects };
+  }
 
   function getFilteredDrills(): PracticeQuestion[] {
     const q = searchQuery.toLowerCase().trim();
@@ -183,6 +201,7 @@ export function renderPracticePage(): HTMLElement {
   }
 
   function render() {
+    const { stages, subjects } = getDynamicStagesAndSubjects();
     const drills = getFilteredDrills();
 
     container.innerHTML = `
@@ -224,6 +243,7 @@ export function renderPracticePage(): HTMLElement {
           <a href="${base}revision?tab=exam" style="padding:5px 12px; border-radius:8px; background:#7c3aed; color:#ffffff; text-decoration:none; font-size:0.78rem; font-weight:700;">📝 6-Mark Exam Prep</a>
           <a href="${base}revision?tab=flashcards" style="padding:5px 12px; border-radius:8px; background:#ffffff; border:1px solid #c4b5fd; color:#5b21b6; text-decoration:none; font-size:0.78rem; font-weight:700;">🃏 Flashcards</a>
           <a href="${base}revision?tab=dictation" style="padding:5px 12px; border-radius:8px; background:#ffffff; border:1px solid #c4b5fd; color:#5b21b6; text-decoration:none; font-size:0.78rem; font-weight:700;">🎧 Listen &amp; Spell</a>
+          <a href="${base}curriculum-studio?tab=overseas" style="padding:5px 12px; border-radius:8px; background:#ecfdf5; border:1px solid #a7f3d0; color:#065f46; text-decoration:none; font-size:0.78rem; font-weight:700;">🌍 Overseas Curriculums${getInstalledCurriculumPacks().length > 0 ? ` (${getInstalledCurriculumPacks().length})` : ''}</a>
         </div>
       </div>
 
@@ -232,16 +252,16 @@ export function renderPracticePage(): HTMLElement {
         <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; justify-content:space-between;">
           <div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <label for="practice-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Key Stage:</label>
+              <label for="practice-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Stage / Grade:</label>
               <select id="practice-stage-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${stages.map(st => `<option value="${st}" ${st === selectedStage ? 'selected' : ''}>${st}</option>`).join('')}
+                ${stages.map(st => `<option value="${escapeHtml(st)}" ${st === selectedStage ? 'selected' : ''}>${escapeHtml(st)}</option>`).join('')}
               </select>
             </div>
 
             <div style="display:flex; align-items:center; gap:6px;">
               <label for="practice-subject-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Subject:</label>
               <select id="practice-subject-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${subjects.map(sub => `<option value="${sub}" ${sub === selectedSubject ? 'selected' : ''}>${sub}</option>`).join('')}
+                ${subjects.map(sub => `<option value="${escapeHtml(sub)}" ${sub === selectedSubject ? 'selected' : ''}>${escapeHtml(sub)}</option>`).join('')}
               </select>
             </div>
           </div>
@@ -451,6 +471,24 @@ export function renderPracticePage(): HTMLElement {
       });
     });
   }
+
+  const onMeshUpdated = () => {
+    if (!container.isConnected) {
+      window.removeEventListener('curriculum_mesh_updated', onMeshUpdated);
+      return;
+    }
+    allQuestions = assembleAllPracticeQuestions();
+    if (rawStage && rawStage !== 'All') {
+      const hasMatch = allQuestions.some((q) => q.stage === rawStage);
+      if (hasMatch) selectedStage = rawStage;
+    }
+    render();
+  };
+  window.addEventListener('curriculum_mesh_updated', onMeshUpdated);
+
+  void initCurriculumPackStore().then(() => {
+    refreshCustomPacksInMesh();
+  });
 
   render();
   return container;

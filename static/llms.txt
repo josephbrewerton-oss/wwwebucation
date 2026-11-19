@@ -10,7 +10,8 @@ St Joseph's Curriculum Portal operates with zero cloud data leakage, zero studen
 - [Standalone Micro-Vector Player](/player.html): Embeddable zero-dependency vector stage, OBS broadcast link, and live SlideScript / AST Code Studio
 - [Interactive Practice Lab](/practice-lab): Diagnostic curriculum drills with step-by-step hints and misconception checks
 - [GCSE Exam Prep & Flashcards](/revision): AQA, Edexcel, and OCR 6-mark walkthroughs, active-recall flashcards, and audio dictation
-- [Curriculum Lessons & Units](/learning-zone): Oak National Academy aligned lessons across Key Stages 1 to 4
+- [Curriculum Lessons & Units](/learning-zone): Oak National Academy aligned lessons across Key Stages 1 to 4 plus installed overseas Ministry packs
+- [Overseas Curriculums & Lesson Studio](/curriculum-studio): One-click Kenya KICD, India CBSE/NCERT, Ghana GES/NaCCA, and Philippines DepEd MATATAG syllabi, CSV/JSON pack importer, and offline `.astb` lab packager
 - [Catholic Life & Faith Sanctuary](/catholic-life): High Altar anatomy, Church architecture 3D tour, Latin Mass prayers, Sacraments, and Catholic Social Teaching
 - [EYFS & KS1 Phonics Lab](/phonics): DfE Phases 2–5 synthetic phonics sound mat, blending builder, and Year 1 screening check
 - [Languages & Polyglot Studio](/languages): Spanish, French, German, and Ecclesiastical Latin phonics and verb conjugation wheels

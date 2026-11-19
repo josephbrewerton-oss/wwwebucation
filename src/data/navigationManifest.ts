@@ -39,11 +39,12 @@ export const CURRICULUM_LAB_ITEMS: NavRouteItem[] = [
   { id: 'languages', path: 'languages', label: 'Languages & MFL', icon: '🌍', description: 'Polyglot verb wheels & pronunciation' },
   { id: 'phonics', path: 'phonics', label: 'EYFS / KS1 Phonics', icon: '🔤', description: 'Sound mats & synthetic phonics drills' },
   { id: 'shakespeare', path: 'shakespeare', label: 'Shakespeare Theatre', icon: '🎭', description: 'Interactive drama & textual analysis' },
+  { id: 'overseas-curriculums', path: 'curriculum-studio?tab=overseas', label: 'Overseas Curriculums', icon: '🌍', description: 'Import Kenya, India, Ghana, Philippines, CSV & JSON syllabi' },
 ];
 
 export const SCHOOL_GOVERNANCE_ITEMS: NavRouteItem[] = [
   { id: 'teacher-beacon', path: 'teacher-beacon', label: 'Classroom Beacon', icon: '📡', description: 'Share live class activities across pupil screens' },
-  { id: 'curriculum-studio', path: 'curriculum-studio', label: 'Lesson Author Studio', icon: '🛠️', description: 'Create and package custom interactive lessons' },
+  { id: 'curriculum-studio', path: 'curriculum-studio', label: 'Curriculum & Author Studio', icon: '🛠️', description: 'Import overseas syllabi (CSV/JSON) & package .astb labs' },
   { id: 'licensing', path: 'licensing', label: 'School Licensing & Terms', icon: '⚖️', description: 'Free school charter & trust SLA' },
   { id: 'privacy', path: 'privacy', label: 'Pupil Privacy (Zero Cloud)', icon: '🛡️', description: 'UK GDPR Art. 25 on-device privacy guarantees' },
   { id: 'child-safety', path: 'child-safety', label: 'Child Safety & KCSIE', icon: '🔒', description: 'Statutory safeguarding compliance' },

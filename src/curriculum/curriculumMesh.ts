@@ -10,7 +10,7 @@
 import { OAK_CURRICULUM_CATALOGUE, OakStage, OakLesson } from './oakCatalogue';
 import { findCurriculumKnowledge, CurriculumTopicKnowledge } from '../data/oakCurriculumKnowledge';
 import { MathQuestionGenerator } from '../engine/mathQuestionGenerator';
-import { getInstalledCurriculumPacks } from '../services/curriculumPackStore';
+import { initCurriculumPackStore, getInstalledCurriculumPacks } from '../services/curriculumPackStore';
 import { saveVfsView, getVfsView } from '../services/dbStore';
 import { stripPromptDecorators } from '../utils/astQuestionExtractor';
 
@@ -60,6 +60,10 @@ export interface CurriculumRouteNode {
   };
   lessons: CurriculumLessonNode[];
   questions: CurriculumQuestionItem[];
+  packId?: string;
+  packTitle?: string;
+  countryOrRegion?: string;
+  authorOrMinistry?: string;
 }
 
 // -------------------------------------------------------------
@@ -256,10 +260,11 @@ export function registerRouteNode(node: CurriculumRouteNode): void {
  * Dynamically ingests an arbitrary CustomCurriculumPack into the Mesh.
  */
 export function ingestCustomCurriculumPack(pack: any): number {
-  if (!pack || !pack.stages) return 0;
+  if (!pack || (!pack.stages && !Array.isArray(pack.lessons))) return 0;
   let registeredCount = 0;
+  const coveredLessonKeys = new Set<string>();
 
-  for (const [stageKey, stageData] of Object.entries<any>(pack.stages)) {
+  for (const [stageKey, stageData] of Object.entries<any>(pack.stages || {})) {
     const stageId = stageData.id || stageKey;
     const stageTitle = stageData.title || stageKey;
 
@@ -271,28 +276,48 @@ export function ingestCustomCurriculumPack(pack: any): number {
             (l.subjectTitle === sub.title || l.subjectTitle === sub.id) &&
             (l.topicTitle === top.title || l.topicTitle === top.id || l.unitTitle === top.title)
         );
+        for (const ml of matchingLessons) {
+          coveredLessonKeys.add(`${ml.stageTitle}|${ml.subjectTitle}|${ml.topicTitle}`);
+        }
 
         const questions: CurriculumQuestionItem[] = matchingLessons.flatMap((l: any, lIdx: number) =>
           (l.questions || []).map((q: any, qIdx: number) => {
             const correctOpt = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer;
-            const distractorTexts = (q.distractors || []).map((d: any) => (typeof d === 'string' ? d : d.answerText));
-            const allOptions = [correctOpt, ...distractorTexts].filter(Boolean);
+            const rawDistractors = (q.distractors || []).map((d: any) =>
+              typeof d === 'string'
+                ? { answerText: d, feedback: 'Common misconception.' }
+                : { answerText: d.answerText, feedback: d.feedback || 'Common misconception.' }
+            );
+            const baseOptions = [
+              { text: correctOpt, feedback: 'Correct! Accurately applies curriculum rules.', isCorrect: true },
+              ...rawDistractors
+                .filter((d: any) => Boolean(d.answerText))
+                .map((d: any) => ({ text: d.answerText, feedback: d.feedback, isCorrect: false })),
+            ].filter((o) => Boolean(o.text));
+
+            const targetIndex = baseOptions.length > 1 ? (lIdx + qIdx + 1) % baseOptions.length : 0;
+            const rotated = [...baseOptions];
+            if (rotated.length > 1 && targetIndex !== 0) {
+              const tmp = rotated[0];
+              rotated[0] = rotated[targetIndex];
+              rotated[targetIndex] = tmp;
+            }
 
             return {
               id: `${pack.id}_${stageId}_${sub.id}_${top.id}_${lIdx}_${qIdx}`,
               prompt: q.questionText,
-              options: allOptions,
-              answerKey: 0,
+              options: rotated.map((o) => o.text),
+              answerKey: targetIndex,
               explanation: q.explanation || l.axiom || 'Core curriculum invariant.',
               hint: q.hint || 'Review the key definition.',
-              misconceptions: (q.distractors || []).map((d: any) => (typeof d === 'object' ? d.feedback : 'Common misconception.')),
+              misconceptions: rotated.map((o) => o.feedback),
               stageBadge: `${stageTitle} • ${sub.title}`,
               stepLabel: top.title,
             };
           })
         );
 
-        const urn = `urn:curriculum:${stageId}:${sub.id}:${top.id}`;
+        const urn = `urn:curriculum:${pack.id}:${stageId}:${sub.id}:${top.id}`;
         const path = `${stageId}/${sub.id}/${top.id}`;
         const csn = generateCurriculumStockNumber(stageId, sub.id, top.id);
 
@@ -307,20 +332,44 @@ export function ingestCustomCurriculumPack(pack: any): number {
           topicId: top.id,
           topicTitle: top.title,
           executionEngine: 'curriculum_bank',
-          axiom: matchingLessons[0]?.axiom || `Axiomatic foundation of ${top.title}.`,
-          cognitiveTrap: matchingLessons[0]?.trap || `Characteristic cognitive trap for ${top.title}.`,
-          hook: matchingLessons[0]?.hook || `Real-world inquiry context for ${top.title}.`,
-          guidedStep: matchingLessons[0]?.guidedStep || `Step-by-step reasoning for ${top.title}.`,
-          socraticPivot: matchingLessons[0]?.socraticCheck || `Inquiry question for ${top.title}?`,
-          lessons: matchingLessons.map((l: any, idx: number) => ({
-            id: l.id || `l_${idx + 1}`,
-            title: l.unitTitle || l.topicTitle || `Lesson ${idx + 1}`,
-            lessonNumber: idx + 1,
-            urn: `${urn}:${l.id || idx + 1}`,
-            questionRefId: questions[idx]?.id,
-            question: questions[idx],
-          })),
+          axiom:
+            matchingLessons[0]?.axiom ||
+            `Core curriculum principle for ${top.title} (${pack.countryOrRegion || 'International'} — ${stageTitle}).`,
+          cognitiveTrap:
+            matchingLessons[0]?.trap ||
+            `Watch out for surface-level assumptions when applying ${top.title} without checking foundational definitions.`,
+          hook:
+            matchingLessons[0]?.hook ||
+            `How does ${top.title} connect to everyday life and regional problem-solving in ${pack.countryOrRegion || 'your community'}?`,
+          guidedStep:
+            matchingLessons[0]?.guidedStep ||
+            `Identify the core variables in ${top.title}, apply the curriculum rule step by step, and verify units and evidence.`,
+          socraticPivot:
+            matchingLessons[0]?.socraticCheck ||
+            `How would you explain the core principle of ${top.title} to a classmate?`,
+          lessons:
+            matchingLessons.length > 0
+              ? matchingLessons.map((l: any, idx: number) => ({
+                  id: l.id || `l_${idx + 1}`,
+                  title: l.topicTitle || l.unitTitle || `Lesson ${idx + 1}`,
+                  lessonNumber: idx + 1,
+                  urn: `${urn}:${l.id || idx + 1}`,
+                  questionRefId: questions[idx]?.id,
+                  question: questions[idx],
+                }))
+              : [
+                  {
+                    id: top.id,
+                    title: top.title,
+                    lessonNumber: 1,
+                    urn: `${urn}:1`,
+                  },
+                ],
           questions,
+          packId: pack.id,
+          packTitle: pack.title,
+          countryOrRegion: pack.countryOrRegion,
+          authorOrMinistry: pack.authorOrMinistry,
         };
 
         registerRouteNode(routeNode);
@@ -329,7 +378,114 @@ export function ingestCustomCurriculumPack(pack: any): number {
     }
   }
 
+  // Also register any standalone lessons in pack.lessons not explicitly listed under pack.stages
+  for (const [lIdx, l] of (pack.lessons || []).entries()) {
+    const key = `${l.stageTitle}|${l.subjectTitle}|${l.topicTitle}`;
+    if (coveredLessonKeys.has(key)) continue;
+    coveredLessonKeys.add(key);
+
+    const stageTitle = l.stageTitle || 'General Stage';
+    const subjectTitle = l.subjectTitle || 'General Studies';
+    const topicTitle = l.topicTitle || `Lesson ${lIdx + 1}`;
+    const stageId = normalizeToken(stageTitle) || 'custom-stage';
+    const subId = normalizeToken(subjectTitle) || 'custom-sub';
+    const topId = normalizeToken(l.id || topicTitle) || `topic-${lIdx + 1}`;
+    const urn = `urn:curriculum:${pack.id}:${stageId}:${subId}:${topId}`;
+    const csn = generateCurriculumStockNumber(stageId, subId, topId);
+
+    const questions: CurriculumQuestionItem[] = (l.questions || []).map((q: any, qIdx: number) => {
+      const correctOpt = Array.isArray(q.correctAnswer) ? q.correctAnswer[0] : q.correctAnswer;
+      const rawDistractors = (q.distractors || []).map((d: any) =>
+        typeof d === 'string'
+          ? { answerText: d, feedback: 'Common misconception.' }
+          : { answerText: d.answerText, feedback: d.feedback || 'Common misconception.' }
+      );
+      const baseOptions = [
+        { text: correctOpt, feedback: 'Correct! Accurately applies curriculum rules.' },
+        ...rawDistractors
+          .filter((d: any) => Boolean(d.answerText))
+          .map((d: any) => ({ text: d.answerText, feedback: d.feedback })),
+      ].filter((o) => Boolean(o.text));
+      const targetIndex = baseOptions.length > 1 ? (lIdx + qIdx + 1) % baseOptions.length : 0;
+      const rotated = [...baseOptions];
+      if (rotated.length > 1 && targetIndex !== 0) {
+        const tmp = rotated[0];
+        rotated[0] = rotated[targetIndex];
+        rotated[targetIndex] = tmp;
+      }
+      return {
+        id: `${pack.id}_${stageId}_${subId}_${topId}_${qIdx}`,
+        prompt: q.questionText,
+        options: rotated.map((o) => o.text),
+        answerKey: targetIndex,
+        explanation: q.explanation || l.axiom || 'Core curriculum invariant.',
+        hint: q.hint || 'Review the key definition.',
+        misconceptions: rotated.map((o) => o.feedback),
+        stageBadge: `${stageTitle} • ${subjectTitle}`,
+        stepLabel: topicTitle,
+      };
+    });
+
+    registerRouteNode({
+      csn,
+      urn,
+      path: `${stageId}/${subId}/${topId}`,
+      stageId,
+      stageTitle,
+      subjectId: subId,
+      subjectTitle,
+      topicId: topId,
+      topicTitle,
+      executionEngine: 'curriculum_bank',
+      axiom: l.axiom || `Core curriculum principle for ${topicTitle}.`,
+      cognitiveTrap: l.trap || `Watch out for common misconceptions regarding ${topicTitle}.`,
+      hook: l.hook || `Real-world context for ${topicTitle}.`,
+      guidedStep: l.guidedStep || `Apply the core rule of ${topicTitle} step by step.`,
+      socraticPivot: l.socraticCheck || `How would you explain ${topicTitle} in your own words?`,
+      lessons: [
+        {
+          id: l.id || topId,
+          title: topicTitle,
+          lessonNumber: 1,
+          urn: `${urn}:1`,
+          questionRefId: questions[0]?.id,
+          question: questions[0],
+        },
+      ],
+      questions,
+      packId: pack.id,
+      packTitle: pack.title,
+      countryOrRegion: pack.countryOrRegion,
+      authorOrMinistry: pack.authorOrMinistry,
+    });
+    registeredCount++;
+  }
+
   return registeredCount;
+}
+
+/**
+ * Synchronizes ALL_CURRICULUM_ROUTES with currently installed CustomCurriculumPacks
+ * (handling async IndexedDB hydration, live pack installs, and pack removals cleanly).
+ */
+export function refreshCustomPacksInMesh(): void {
+  // Remove previously registered custom pack nodes while preserving core Oak National Curriculum nodes
+  for (let i = ALL_CURRICULUM_ROUTES.length - 1; i >= 0; i--) {
+    const node = ALL_CURRICULUM_ROUTES[i];
+    if (node.packId) {
+      ALL_CURRICULUM_ROUTES.splice(i, 1);
+      ROUTE_MAP_BY_URN.delete(node.urn);
+    }
+  }
+
+  const installed = getInstalledCurriculumPacks();
+  for (const p of installed) {
+    ingestCustomCurriculumPack(p);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('curriculum_mesh_updated'));
+  }
 }
 
 // -------------------------------------------------------------
@@ -352,13 +508,16 @@ export async function syncMeshToIndexedDB(): Promise<void> {
   }
 }
 
-// Hydrate custom installed packs and schedule background IndexedDB sync on client startup
+// Hydrate custom installed packs (including async IndexedDB hydration) and keep mesh synced on changes
 if (typeof window !== 'undefined') {
   try {
-    const installed = getInstalledCurriculumPacks();
-    for (const p of installed) {
-      ingestCustomCurriculumPack(p);
-    }
+    refreshCustomPacksInMesh();
+    void initCurriculumPackStore().then(() => {
+      refreshCustomPacksInMesh();
+    });
+    window.addEventListener('curriculum_packs_updated', () => {
+      refreshCustomPacksInMesh();
+    });
   } catch {}
 
   // Defer IndexedDB background sync until main thread is idle

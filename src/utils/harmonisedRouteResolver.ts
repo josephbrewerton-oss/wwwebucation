@@ -130,7 +130,29 @@ export function resolveHarmonisedRoute(rawPath: string, search: string = ''): Ro
     };
   }
 
-  // 5. Lessons / Learning Zone / Curriculum
+  // 5. International Curriculum Studio / Overseas Importer (must precede generic 'curriculum' match)
+  if (
+    clean.includes('studio') ||
+    clean.includes('import') ||
+    clean.includes('pack') ||
+    clean.includes('csv') ||
+    clean.includes('overseas') ||
+    clean.includes('international') ||
+    clean.includes('kicd') ||
+    clean.includes('cbse') ||
+    clean.includes('ncert') ||
+    clean.includes('nacca') ||
+    clean.includes('matatag')
+  ) {
+    return {
+      targetPath: '/curriculum-studio?tab=overseas',
+      targetLabel: '🌍 Overseas & Custom Curriculum Studio',
+      category: 'Curriculum Authoring & Importer',
+      reason: 'Reconciled overseas/import pack inquiry to the Curriculum Studio.',
+    };
+  }
+
+  // 6. Lessons / Learning Zone / Curriculum
   if (
     clean.includes('lesson') ||
     clean.includes('learn') ||
@@ -143,22 +165,6 @@ export function resolveHarmonisedRoute(rawPath: string, search: string = ''): Ro
       targetLabel: '📖 Curriculum Lessons & S-Expressions',
       category: 'National Curriculum Directory',
       reason: 'Reconciled lesson inquiry to the Curriculum Learning Zone.',
-    };
-  }
-
-  // 6. International Curriculum Studio / Importer
-  if (
-    clean.includes('studio') ||
-    clean.includes('import') ||
-    clean.includes('pack') ||
-    clean.includes('csv') ||
-    clean.includes('overseas')
-  ) {
-    return {
-      targetPath: '/curriculum-studio',
-      targetLabel: '🌍 International Curriculum Studio',
-      category: 'Curriculum Authoring & Importer',
-      reason: 'Reconciled pack/import inquiry to the Curriculum Studio.',
     };
   }
 

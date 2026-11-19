@@ -171,6 +171,8 @@ Allow-Read: /languages
 Allow-Read: /bsl
 Allow-Read: /shakespeare
 Allow-Read: /catholic-life
+Allow-Read: /curriculum-studio
+Allow-Read: /overseas-curriculums
 Allow-Read: /licensing
 Allow-Read: /privacy
 Allow-Read: /docs/

@@ -3,9 +3,10 @@ import { getBaseUrl } from '../utils/url';
 // St Joseph's Curriculum Portal - National Curriculum Learning Zone
 // Pure Native TypeScript Single-Page View (Zero React, Zero Bloat)
 
-import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode } from '../curriculum/curriculumMesh';
+import { ALL_CURRICULUM_ROUTES, CurriculumRouteNode, refreshCustomPacksInMesh } from '../curriculum/curriculumMesh';
 import { resolveTopicSimulator, SimPresetBadge, hasDataCartridge } from '../curriculum/curriculumSimMapping';
 import { broadcastBslSpeech } from '../services/bslGlobalStore';
+import { initCurriculumPackStore, getInstalledCurriculumPacks } from '../services/curriculumPackStore';
 
 function escapeHtml(str: string): string {
   if (!str) return '';
@@ -23,12 +24,12 @@ export function renderLearningZonePage(): HTMLElement {
   container.className = 'learning-zone-stage';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 4rem; color: #0f172a;';
 
-  // Read URL query params for initial filters
+  // Read URL query params for initial filters (preserve custom/overseas stage names)
   const params = new URLSearchParams(window.location.search);
-  const rawStage = params.get('stage') || 'All';
-  const rawSubject = params.get('subject') || 'All';
-  let selectedStage = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'].includes(rawStage) ? rawStage : 'All';
-  let selectedSubject = rawSubject.replace(/[<>"'&]/g, '');
+  const rawStage = (params.get('stage') || 'All').replace(/[<>"']/g, '');
+  const rawSubject = (params.get('subject') || 'All').replace(/[<>"']/g, '');
+  let selectedStage = rawStage || 'All';
+  let selectedSubject = rawSubject || 'All';
   let searchQuery = (params.get('q') || '').slice(0, 100);
   let filterSimOnly = params.get('simOnly') === '1';
   let activeTab: 'curriculum' | 'constellation' | 'simulators' = 
@@ -36,13 +37,28 @@ export function renderLearningZonePage(): HTMLElement {
     params.get('tab') === 'simulators' ? 'simulators' : 'curriculum';
   let expandedLessonUrns = new Set<string>();
 
-  // Extract distinct stages and subjects from ALL_CURRICULUM_ROUTES
-  const stages = ['All', 'Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'];
-  const subjectsSet = new Set<string>();
-  ALL_CURRICULUM_ROUTES.forEach((r) => {
-    if (r.subjectTitle) subjectsSet.add(r.subjectTitle);
-  });
-  const subjects = ['All', ...Array.from(subjectsSet).sort()];
+  function getDynamicStagesAndSubjects(): { stages: string[]; subjects: string[] } {
+    const baseStages = ['Key Stage 1', 'Key Stage 2', 'Key Stage 3', 'Key Stage 4'];
+    const customStagesSet = new Set<string>();
+    const subjectsSet = new Set<string>();
+
+    ALL_CURRICULUM_ROUTES.forEach((r) => {
+      if (r.stageTitle && !baseStages.includes(r.stageTitle)) {
+        customStagesSet.add(r.stageTitle);
+      }
+      if (r.subjectTitle) {
+        subjectsSet.add(r.subjectTitle);
+      }
+    });
+
+    const stages = ['All', ...baseStages, ...Array.from(customStagesSet)];
+    const subjects = ['All', ...Array.from(subjectsSet).sort()];
+    if (selectedStage !== 'All' && !stages.includes(selectedStage)) {
+      // Keep rawStage if packs are still hydrating, otherwise fallback gracefully if empty
+      if (customStagesSet.size > 0) selectedStage = 'All';
+    }
+    return { stages, subjects };
+  }
 
   function getFilteredRoutes(): CurriculumRouteNode[] {
     const q = searchQuery.toLowerCase().trim();
@@ -67,8 +83,9 @@ export function renderLearningZonePage(): HTMLElement {
         const matchAxiom = r.axiom.toLowerCase().includes(q);
         const matchTrap = r.cognitiveTrap.toLowerCase().includes(q);
         const matchCsn = r.csn.toLowerCase().includes(q);
+        const matchCountry = (r.countryOrRegion || '').toLowerCase().includes(q) || (r.packTitle || '').toLowerCase().includes(q);
         const matchLessons = r.lessons.some((l) => l.title.toLowerCase().includes(q));
-        if (!matchTitle && !matchSubject && !matchAxiom && !matchTrap && !matchCsn && !matchLessons) {
+        if (!matchTitle && !matchSubject && !matchAxiom && !matchTrap && !matchCsn && !matchCountry && !matchLessons) {
           return false;
         }
       }
@@ -146,22 +163,28 @@ export function renderLearningZonePage(): HTMLElement {
         </div>
 
         <!-- Navigation Tabs Bar -->
-        <div style="display:flex; gap:8px; margin-top:1.5rem; border-bottom:1px solid #e2e8f0; padding-bottom:12px; flex-wrap:wrap;">
-          <button type="button" id="tab-btn-curriculum" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'curriculum' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'curriculum' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'curriculum' ? '#ffffff' : '#334155'};">
-            📖 Units &amp; Lessons (${totalTopics})
-          </button>
-          <button type="button" id="tab-btn-simulators" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'simulators' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'simulators' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'simulators' ? '#ffffff' : '#334155'};">
-            🎮 Interactive Labs (${totalSims})
-          </button>
-          <button type="button" id="tab-btn-constellation" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'constellation' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'constellation' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'constellation' ? '#ffffff' : '#334155'};">
-            ✨ Topic Map
-          </button>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; margin-top:1.5rem; border-bottom:1px solid #e2e8f0; padding-bottom:12px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" id="tab-btn-curriculum" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'curriculum' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'curriculum' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'curriculum' ? '#ffffff' : '#334155'};">
+              📖 Units &amp; Lessons (${totalTopics})
+            </button>
+            <button type="button" id="tab-btn-simulators" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'simulators' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'simulators' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'simulators' ? '#ffffff' : '#334155'};">
+              🎮 Interactive Labs (${totalSims})
+            </button>
+            <button type="button" id="tab-btn-constellation" style="padding:8px 18px; border-radius:8px; font-weight:700; font-size:0.86rem; cursor:pointer; border:1px solid ${activeTab === 'constellation' ? '#0284c7' : '#cbd5e1'}; background:${activeTab === 'constellation' ? '#0284c7' : '#ffffff'}; color:${activeTab === 'constellation' ? '#ffffff' : '#334155'};">
+              ✨ Topic Map
+            </button>
+          </div>
+          <a href="${base}curriculum-studio?tab=overseas" style="padding:8px 14px; border-radius:8px; font-weight:700; font-size:0.82rem; text-decoration:none; border:1px solid #a7f3d0; background:#ecfdf5; color:#065f46; display:inline-flex; align-items:center; gap:6px;">
+            <span>🌍 Overseas &amp; Custom Curriculums${getInstalledCurriculumPacks().length > 0 ? ` (${getInstalledCurriculumPacks().length} Installed)` : ''}</span> &rarr;
+          </a>
         </div>
       </section>
     `;
   }
 
   function renderFilterControls(routesCount: number): string {
+    const { stages, subjects } = getDynamicStagesAndSubjects();
     return `
       <!-- Filters and Search Toolbar -->
       <section style="background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.25rem 1.5rem; margin-bottom:1.75rem; box-shadow:0 1px 4px rgba(0,0,0,0.03);">
@@ -169,16 +192,16 @@ export function renderLearningZonePage(): HTMLElement {
           <!-- Left Controls: Stage & Subject dropdowns -->
           <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
             <div style="display:flex; align-items:center; gap:6px;">
-              <label for="filter-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Key Stage:</label>
+              <label for="filter-stage-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Stage / Grade:</label>
               <select id="filter-stage-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${stages.map(st => `<option value="${st}" ${st === selectedStage ? 'selected' : ''}>${st}</option>`).join('')}
+                ${stages.map(st => `<option value="${escapeHtml(st)}" ${st === selectedStage ? 'selected' : ''}>${escapeHtml(st)}</option>`).join('')}
               </select>
             </div>
 
             <div style="display:flex; align-items:center; gap:6px;">
               <label for="filter-subject-select" style="font-size:0.82rem; font-weight:700; color:#475569;">Subject:</label>
               <select id="filter-subject-select" style="padding:6px 12px; font-size:0.84rem; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#0f172a; font-weight:600; cursor:pointer;">
-                ${subjects.map(sub => `<option value="${sub}" ${sub === selectedSubject ? 'selected' : ''}>${sub}</option>`).join('')}
+                ${subjects.map(sub => `<option value="${escapeHtml(sub)}" ${sub === selectedSubject ? 'selected' : ''}>${escapeHtml(sub)}</option>`).join('')}
               </select>
             </div>
 
@@ -243,9 +266,14 @@ export function renderLearningZonePage(): HTMLElement {
                   AQA &bull; Edexcel &bull; OCR
                 </span>
               ` : ''}
+              ${node.countryOrRegion ? `
+                <span style="font-size:0.68rem; font-weight:800; color:#065f46; background:#ecfdf5; border:1px solid #a7f3d0; padding:1px 8px; border-radius:999px;">
+                  🌍 ${escapeHtml(node.countryOrRegion)}${node.authorOrMinistry ? ` &bull; ${escapeHtml(node.authorOrMinistry.split('/')[0].trim())}` : ''}
+                </span>
+              ` : ''}
               <span style="color:#cbd5e1;">&bull;</span>
-              <span style="font-size:0.68rem; font-family:monospace; color:#94a3b8; font-weight:600;">
-                ${node.csn}
+              <span style="font-size:0.68rem; font-family:monospace; color:#475569; font-weight:600;">
+                ${escapeHtml(node.csn)}
               </span>
             </div>
             <h2 style="font-size:1.35rem; font-weight:800; color:#0f172a; margin:0;">
@@ -589,6 +617,23 @@ export function renderLearningZonePage(): HTMLElement {
       });
     });
   }
+
+  const onMeshUpdated = () => {
+    if (!container.isConnected) {
+      window.removeEventListener('curriculum_mesh_updated', onMeshUpdated);
+      return;
+    }
+    if (rawStage && rawStage !== 'All') {
+      const hasMatch = ALL_CURRICULUM_ROUTES.some((r) => r.stageTitle === rawStage);
+      if (hasMatch) selectedStage = rawStage;
+    }
+    renderView();
+  };
+  window.addEventListener('curriculum_mesh_updated', onMeshUpdated);
+
+  void initCurriculumPackStore().then(() => {
+    refreshCustomPacksInMesh();
+  });
 
   renderView();
   return container;
