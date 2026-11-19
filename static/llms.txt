@@ -1,157 +1,55 @@
-# St Joseph's Curriculum Portal — LLM & Edge Inference Map
+# St Joseph's Curriculum Portal
 
-> Deterministic, 0-dependency developing-world teaching aid running via Native Web Standards (**Vite `^8.3.6`**, **TypeScript `^5.6.3`**, Zero React), Chrome Prompt API (Gemini Nano), WebLLM, the autonomous `<35 KB` AST Vector Media Engine (v2.6.0), and a separate Procedural 3D BSL/Makaton In-Vision Avatar (`<native-bsl-interpreter>`). Interactive architecture Show & Tell document available at `/docs/lumina-architecture.ast` (`/player?preset=lumina-architecture`). The AST player serves a dual-market architecture: perpetually free for schools and humanitarian commons (Track A), and commercially licensed for enterprise Digital Signage (DOOH), Programmatic Display Advertising, and Interactive Kiosks (Track B).
+> Free, offline-first UK National Curriculum portal (EYFS to Key Stage 4), Catholic faith sanctuary, procedural 3D British Sign Language (BSL) & Makaton interpreter, and deterministic `<35 KB` AST Vector Media Engine powered by native Web Standards and optional on-device edge AI (Gemini Nano, WebLLM, and W3C WebMCP).
 
-## Core Portal Endpoints & Route Map
-- [Portal Home](/) - Overview, Quick Starters, and Subject Hub
-- [AST Vector Media Player](/media-player) - Full-featured vector stage, 3D viewpoints, interactive parameter HUD, smartboard chalkboard overlay, and procedural sonification
-- [Decentralized Cartridge Vault](/cartridges) - Offline curriculum ROM repository, PhET/SWF transpiler bridge, and cartridge compressor
-- [Standalone Micro-Vector Player](/player.html) - Zero-dependency embeddable vector stage, OBS studio broadcaster, and Developer Studio
-- [Interactive System Architecture Manifesto](/player?preset=lumina-architecture) - 4-chapter interactive Show & Tell slide cartridge loaded from `/docs/lumina-architecture.ast`
-- [EYFS & KS1 Phonics Sounds Suite](/phonics) - DfE Phases 2–5 soundboard, sound buttons blending mat, Alien Words screening check & flashcards
-- [MFL & Polyglot Languages Studio](/languages) - Spanish, French & Latin comparative phonics, verb wheels, etymology bridges & vocab sprints
-- [3D British Sign Language (BSL) Studio](/bsl) - 360° rotatable 3D two-handed manual alphabet, A-E-I-O-U vowel tap positions, Signer vs Receiver POV
-- [Shakespeare Globe Theatre Suite](/shakespeare) - 1599 Wooden O 3D stage geometry, 5-Act dramatic play-throughs, spoken blank verse & metronomes
-- [Practice Arena](/practice-lab) - Interactive AST questions, Professor Turing AI hints, instant mistake diagnostics
-- [Curriculum Lessons](/learning-zone) - Oak National Academy aligned interactive lesson viewer
-- [International Curriculum Studio](/curriculum-studio) - Visual AST S-Expression graph generator and prompt hydrator
-- [Sacred Spaces & Catholic Life](/catholic-life) - 3D Sanctuary, Holy Water & Thurifer simulator, liturgy explorer, and sacred architecture tours
-- [First Holy Communion](/first-communion) - Catechetical sacraments explorer and liturgical preparation
-- [Teacher Beacon](/teacher-beacon) - Classroom synchronization, live telemetry, and Smartboard broadcast controller
-- [Learner Passport & Badges](/profile) - IndexedDB mastery log, streak tracker, diagnostic reports
-- [Neural Settings](/settings) - Hardware probe, WebGPU status, Chrome Prompt API toggle
-- [Latest School News & Technical Dispatches](/news) - Dispatches on sovereign AI, procedural vector teaching, and platform releases
-- [Technical & Pedagogical Blog](/blog) - Deep dives into edge AI pedagogy, vector rendering, and open curriculum
-- [Dual-Licensing Charter & Covenant](/licensing) - Track A Humanitarian Commons GNU AGPLv3/OGLv3 vs Track B Enterprise Commercial License
-- [Privacy Policy](/privacy) - Zero-cloud egress, on-device IndexedDB storage, and GDPR compliance
-- [Child Safety Policy](/child-safety) - Strict safeguarding standards, local AI inference, and student data protection
-- [Autonomous Agent Directory](/agents.txt) - Machine-readable tools, permissions, and W3C WebMCP discovery
+St Joseph's Curriculum Portal operates with zero cloud data leakage, zero student tracking, and 100% offline execution via IndexedDB, a fixed 448 KB WebAssembly linear memory pool, and declarative S-Expression vector cartridges (`.ast` / `.astb`). Dual-licensed under GNU AGPLv3 / OGL v3.0 for schools and humanitarian education (Track A) and commercial terms for enterprise signage (Track B).
 
-## Architectural Overview & Engine Upgrades
-- **Zero Cloud Leakage & Zero Server Data**: The site holds 0 student or user data on remote servers. All logs, answers, voice inputs, and progress records remain exclusively within client-side IndexedDB (`services/dbStore.ts`, `services/jotter-db.ts`).
-- **Single-Cycle FMA Math Compiler & 6-Float Matrix Vectorization**: Built-in AST Math Compiler (`astMathCompiler.ts`) automatically extracts linear affine relationships (m*t + c) and compiles transforms to direct 6-element homogeneous affine matrices (`matrix(a, b, c, d, e, f)`). Pre-allocated flat buffers evaluate in single-cycle FMA math with zero dynamic heap allocations, 1.7× faster 60 FPS frame loops, and zero JIT micro-compiles on scene mount.
-- **Multi-Modal Synchronized Tuples**: Full multi-modal tuple binding: `[AST Vector Stage + Synchronized Video Underlay/Overlay + Procedural Web Audio Synth + S-Expression Reactive Data-Flow + Sub-pixel Pointer Gestures + Formative Assessment Checkpoints]`. Video and vector playback are locked to a single master clock with configurable `video-fit` ("contain" | "cover"), frame-accurate timeline scrubbing, and reactive HUD overlays that dynamically bind to video timestamps.
-- **Decoupled, Domain-Agnostic Flash-Caliber Engine (<35 KB gzipped)**: The AST Vector Engine (`@stjosephs/ast-vector-player`) is fully decoupled from host frameworks (built with Native Web Standards & Web Components) and purged of hardcoded scene logic. It runs with 0 external runtime dependencies, sub-15 ms cold start, and <8 MB RAM. It features dynamic parameter and selector HUD auto-discovery (`setupSimParametersHud`), which automatically parses `:inputs`, `:vars`, numerical bounds, step sizes, labels, and selector controls (such as DNA base-pair unzipping and nucleotides, kinetic gas pressure valves, electric circuit switches, calculus tangent probes, or DOOH commercial dials) for ANY scene or domain.
-- **In-Stage Performance Profiler & Diagnostics HUD**: Built-in vector `ASTProfiler` (`SET_PERF_HUD`, `TOGGLE_PERF_HUD`, `?hud=1`) rendering real-time rolling sparklines, sub-0.2 ms AST VM compute measurement, and frame budget headroom (99% headroom @ 60 FPS), with a dedicated `⚡ Diagnostics` drawer displaying WASM 7-page linear memory pool utilization.
-- **High-Performance AST Binary Bytecode (.astb)**: Vector scenes can be compiled and streamed as ultra-dense binary bytecode (`.astb`) via `src/utils/astBytecode.ts` and `ast-engine.js`. The zero-allocation binary reader decodes opcodes for stages, reactive bindings, 3D meshes, keyframes, computed expressions, state machines, and emitters with sub-millisecond parsing and a 99.8% size reduction over legacy web bundles.
-- **On-Device Edge AI & Gemini Nano Synergy**: Powered by the Chrome Prompt API (`window.LanguageModel`) and local WebLLM. This pairing is historically unique: while generative models struggle to output 2–5 MB of imperative JavaScript (e.g. PhET bundles) at runtime, they can generate 1–4 KB declarative AST S-Expressions constrained by GBNF grammar (`ast-sexpr.gbnf` / `ast-scene.gbnf`) in ~500 ms with mathematical syntax guarantees. Students receive instant, personalized pedagogical hints and formative scaffolds completely offline with zero cloud data egress.
-- **Universal Translator & Multilingual Voice/Subtitles**: Procedural speech synthesis and bilingual subtitles in English, Spanish, French, Latin, German, and Italian, perfectly locked to AST keyframe intervals.
-- **Procedural 3D British Sign Language (BSL) In-Vision Interpreter**: World-first zero-video procedural 3D signing engine (11.3 KB gzipped for the entire 68-sign primary curriculum corpus, ~170 bytes/sign, 99.99% video bandwidth reduction). Operates via declarative AST S-Expressions (`/lexicons/bsl-signs.ast`) with 3D coordinate tuples `(:xyz [x y z])` and 60 FPS cubic Hermite spline interpolation. Features native dual-hand coordination modes (`:mirror` for bilateral symmetry, `:vowel-board` for 5-finger manual tap palettes, and `:base-shift` for independent base hand spatial anchors), grammatical Non-Manual Features (NMF procedural facial morphemes for eyebrows, mouth shapes, and head tilts), interactive 360° drag-to-orbit camera for inspecting knuckle and thumb depth, W3C Document Picture-in-Picture (PiP), universal keyboard shortcut `Shift + B`, and real-time speech boundary event bus synchronization across every player on the portal (`bslGlobalStore`).
-- **Oak National Academy Curriculum Code Mapping**: Full synchronous alignment between Oak curriculum codes and AST cartridges. 20 Oak Religious Education units (`OAK-KS2-RE-001` through `020` and KS3 units) are synchronously registered in the player catalog (`static/player/ast-registry.js` and `scenes.manifest.json`), mapping directly to dedicated Catholic Life 3D vector cartridges without broken links or 404 fallbacks.
-- **Smartboard & Stylus Pen Overlay**: Native in-stage whiteboard ink layer (`#annotation-ink-root`) with quadratic Bézier smoothing for Promethean, SMART, ViewSonic, and iPad stylus pens.
-- **Pedagogical X-Ray & Sonification**: `data-pedagogical` discovery inspection across science, math, and liturgical architecture with zero-asset mathematical Web Audio synthesis.
-- **PhET & Legacy Flash Transpiler Bridge (`ast-phet-bridge.js` & `phetBridge.ts`)**: Distills 12 MB legacy PhET HTML5/JSON bundles and Flash SWFs down into <4 KB AST S-Expressions (99.8% payload reduction) while preserving physical conservation laws, zero-asset Web Audio, and SCORM auto-reporting.
-- **Discrete Tri-System Architecture & Extensible Declarative Gesture VM (`site-gestures.js` + `player-gestures.ast`)**: Built on **Vite `^8.3.6`** (Rolldown / esbuild `^0.28.1`) and **TypeScript `^5.6.3`** (Zero React), the host portal, `< 35 KB` AST Vector Player (v2.6.0), and Procedural BSL Avatar (`NativeBslInterpreter.ts`) remain cleanly decoupled. `ast-engine.js`, `site-gestures.js`, and `player-gestures.ast` form a 100% generic Virtual Machine executing declarative `:draggable`, `:clickable`, `:holdable`, `:rotatable`, `:trackball`, and `:key` press-and-hold `requestAnimationFrame` loops (with `:if`, `:val-expr`, `:tone-expr`, `:speak-expr`, `:controls` switches, and `registerAction` / `registerGestureSkill` hooks) without scene-specific JS.
-- **W3C WebMCP Native Agent Tool Registry**: Implements the W3C Web Machine Learning Community Group WebMCP specification via `document.modelContext.registerTool(...)` (`services/webMcpBridge.ts`), exposing typed client-side tools (`catholic_catechism_search`, `navigate_portal`, `launch_simulation`, `list_ast_simulations`, `get_learner_status`) for browser AI agents without DOM scraping or computer vision fragility.
-- **Decoupled 4-Way Distribution**: The engine distributes across four universal formats: (1) Headless npm package (`@stjosephs/ast-vector-player` v2.6.0); (2) Standalone Sandbox (`/player.html?preset=...` or `?src=/docs/lumina-architecture.ast`); (3) Embeddable responsive LMS iframe (`/player/index.html?preset=...`) with bidirectional `postMessage` telemetry; and (4) Single-file air-gapped HTML bundle (`<45 KB`) running from `file://` or USB thumb drives.
-- **Fantasy Console & Lisp Machine Paradigm ("Lisp as the Substrate / Oil")**: The entire simulator, curriculum bank, and accessibility engine runs on a strict Lisp Machine architecture. The player runtime (`ast-engine.js`, `ast-compiler.js`, WASM linear memory pool) acts as the bare-metal kernel. The cartridge (`.ast`, `.lisp`, and pre-compiled `.astb` bytecode) is 100% pure Lisp code (S-expressions). TypeScript/JavaScript does not invent or hardcode simulation buttons, sliders, or UI in templates; instead, cartridges declare `(ui:controls (control:button ...) (control:toggle ...) (control:slider ...) (control:select ...))` as first-class AST nodes. When a cartridge mounts, the player runtime's AST walker (`projectControls`) dynamically projects controls into the in-stage glass overlay (`⚡ LISP UI`), binding sliders and toggles directly into the S-expression evaluator's linear memory environment and mapping actions via an action dispatch table (`(sim:reset)`, `(player:toggle-bsl)`).
-- **Two-Handed BSL Level 6 Linguistic Syntax in Lisp**: The procedural 3D British Sign Language (BSL) and Makaton interpreter operates directly from declarative Lisp codebooks (`static/lexicons/bsl-codebook.lisp`) and AST sign dictionaries (`static/lexicons/bsl-signs.ast`). Directional agreement verbs ($\vec{v}(t) = \vec{L}_{dest} - \vec{L}_{src}$), 10-point spatial registers, aspectual modulators, and polycomponential handshape predicates evaluate through the unified S-expression grammar at 60 FPS with zero video streaming costs.
-- **Cross-Industry DOOH & AdTech Ready (Track B)**: Meets strict IAB display advertising weight limits (<45 KB total ad weight vs 150 KB cap), runs 24/7 on low-power quad-core ARM chips (Raspberry Pi, Android 11 sticks, LG webOS, Samsung Tizen) with <8 MB RAM, scales infinitely from 2-inch shelf labels to 100-ft 8K billboards with zero pixelation, and executes Dynamic Creative Optimization (DCO) over `postMessage`.
+## Core Portal Endpoints
+- [Portal Home](/): Overview, featured live simulation stage, and curriculum learning pathways
+- [Interactive Science, Maths & Faith Labs](/player): 60 FPS AST Vector Media Player with 72 interactive simulations, parameter controls, smartboard ink, and procedural sonification
+- [Standalone Micro-Vector Player](/player.html): Embeddable zero-dependency vector stage, OBS broadcast link, and live SlideScript / AST Code Studio
+- [Interactive Practice Lab](/practice-lab): Diagnostic curriculum drills with step-by-step hints and misconception checks
+- [GCSE Exam Prep & Flashcards](/revision): AQA, Edexcel, and OCR 6-mark walkthroughs, active-recall flashcards, and audio dictation
+- [Curriculum Lessons & Units](/learning-zone): Oak National Academy aligned lessons across Key Stages 1 to 4
+- [Catholic Life & Faith Sanctuary](/catholic-life): High Altar anatomy, Church architecture 3D tour, Latin Mass prayers, Sacraments, and Catholic Social Teaching
+- [EYFS & KS1 Phonics Lab](/phonics): DfE Phases 2–5 synthetic phonics sound mat, blending builder, and Year 1 screening check
+- [Languages & Polyglot Studio](/languages): Spanish, French, German, and Ecclesiastical Latin phonics and verb conjugation wheels
+- [Shakespeare Globe Theatre](/shakespeare): 1599 Wooden O 3D stage anatomy and annotated 5-Act play-throughs
+- [Whole-Class Sync (Teacher Beacon)](/teacher-beacon): Peer-to-peer WebRTC classroom lesson synchronization without internet access
+- [Student Progress & Badges](/profile): Private on-device mastery passport and UK MIS export tools
+- [Accessibility & System Settings](/settings): High-contrast mode, font scaling, data saver, BSL/Makaton interpreter controls, and on-device AI status
 
-## Complete Production Curriculum Cartridge Catalog (68 Cartridges)
+## Featured STEM & Computing Cartridges
+- [Kinetic Gas Theory & Boyle's Law](/player?preset=kinetic-gas): Molecular gas dynamics, PV = nRT pressure gauge, and phase transitions
+- [Electrical Circuits & Ohm's Law](/player?preset=electric-circuits): Series and parallel circuits, knife switches, and live ammeter/voltmeter telemetry
+- [Calculus: Tangent Slopes & Integrals](/player?preset=calculus-curves): Derivative tangent probes, turning points, and numerical integration
+- [Pythagoras' Geometric Proof](/player?preset=pythagoras): Dynamic Euclidean area conservation and right-triangle proof
+- [Solar System 3D Heliocentric Orbits](/player?preset=solar-system): Keplerian orbital mechanics, time-dilation warp, and 3D inclination camera
+- [Bohr Atomic Structure](/player?preset=atom): Interactive electron shells, atomic mass/number, and 3D orbital tilt
+- [Rates of Reaction](/player?preset=rates-of-reaction): Collision theory, activation energy, oscilloscope plotter, and conservation ledger
+- [Acid-Alkali Titration](/player?preset=acid-alkali-titration): Equivalence curve plotting, pH indicator transitions, and burette control
+- [DNA Double Helix & Transcription](/player?preset=dna-helix): 3D base-pair hydrogen bonding and interactive strand unzipping
+- [Photosynthesis & Water Cycle](/player?preset=photosynthesis): Chloroplast light/Calvin reactions alongside Earth hydrology simulations
+- [Inverted Pendulum & BBC Micro 6502](/player?preset=inverted-pendulum-dyno): LQR control systems and historical Acorn MOS 6502 architecture
 
-### Mathematics & Quantitative Reasoning
-1. [Calculus: Tangent Slopes & Integrals](/curriculum/maths/calculus/tangent-slopes) (`calculus-curves`) - Tangent slope dy/dx, stationary turning points, and Riemann Simpson's 1/3 numerical integrals.
-2. [Algebra Balance Scale Lab](/curriculum/maths/algebra/balance-scale) (`algebra-balance`) - Two-pan balance scale, algebraic equation balancing (2x + 5 = 15), and zero-pair cancelations.
-3. [Pythagoras' Geometric Proof](/curriculum/maths/geometry/pythagoras) (`pythagoras`) - Euclidean shear proof, dynamic square slicing, area conservation, and algebraic a² + b² = c² verification.
-4. [BODMAS / BIDMAS Forcefield Clamping](/curriculum/maths/algebra/bodmas) (`bodmas`) - Visual operation precedence clamps, bracket forcefields, and step-by-step arithmetic evaluations.
-5. [Fraction Wall & Slicing](/curriculum/maths/arithmetic/fractions) (`fractions`) - Visual fraction wall, dynamic denominator slicing, equivalent fractions, and common denominator arithmetic.
-6. [Times Tables 2D Multiplication Array](/curriculum/maths/arithmetic/times-tables) (`times-tables`) - 2× to 12× multiplication arrays, distributive property slicing, and commutative proofs.
-7. [Maths Fishing: Number Bonds to 10/20](/curriculum/maths/arithmetic/number-bonds) (`math-fishing`) - Gamified number bond rods, hook physics, and complementary addition calculations.
+## Humanities, Literacy & Catholic Sanctuary Cartridges
+- [3D BSL Two-Handed Fingerspelling](/player?preset=bsl-fingerspelling): 360-degree Signer and Receiver POV British Sign Language alphabet rig
+- [Sacred Church Architecture 3D Tour](/player?preset=church-tour): Nave, sanctuary, tabernacle, ambo, and baptismal font exploration
+- [High Altar Anatomy](/player?preset=altar-anatomy): Mensa, altar stone, GIRM candle rubrics, tabernacle, and sacred vessels
+- [Order of the Mass & Seven Sacraments](/player?preset=order-of-the-mass): Liturgical structure, sacramental rites, and bilingual Latin/English responses
+- [Stations of the Cross & Holy Rosary](/player?preset=stations-of-the-cross): 14 Via Dolorosa stations and 3D chaplet mysteries
+- [System Architecture Manifesto](/player?preset=lumina-architecture): Interactive 4-chapter technical Slide deck of the Lumina AST Vector Engine
 
-### Physics, Chemistry, Computing & Design & Technology
-8. [Kinetic Gas Theory & Boyle's Law](/curriculum/science/physics/kinetic-gas) (`kinetic-gas`) - Molecular gas dynamics, Boyle's Law PV = nRT, Gay-Lussac's Law, wall impulse pressure gauge, and solid/liquid/gas phase changes.
-9. [Electrical Circuits Lab & Ohm's Law](/curriculum/science/physics/electric-circuits) (`electric-circuits`) - Interactive knife switches, Ohm's law V = IR, series/parallel branches, and live ammeter/voltmeter readouts.
-10. [Bohr Atomic Structure & Electron Shells](/curriculum/science/chemistry/atomic-structure) (`atom`) - 2,8,8 orbital electron configurations, atomic number vs mass, and 3D shell inclination tilt.
-11. [Kinematics: Velocity & Distance-Time Vectors](/curriculum/science/physics/velocity-vectors) (`velocity`) - Distance-time and velocity-time graphs with synchronized vector sprites and acceleration vectors.
-12. [Solar System 3D Heliocentric Orbits](/curriculum/science/physics/solar-system) (`solar-system`) - Heliocentric planetary orbits, Keplerian velocities, axial tilts, and 3D inclination angles.
-13. [BBC Micro Model B & MOS 6502 Architecture](/curriculum/computing/bbc-micro) (`bbc-micro`) - Sophie Wilson 1981 Acorn MOS 6502 system, 54-key matrix, SAA5050 Ceefax teletext Mode 7 overlay, and native CRT phosphor scanline optics.
-14. [Inverted Pendulum & Cart-Pole LQR Balance](/curriculum/computing/cart-pole) (`cart-pole`) - Deterministic continuous 60 FPS state-space feedback control, real-time telemetry HUD, and kinematic disturbance injection.
-15. [Modular Brick Engineering & 3D Spatial Geometry](/curriculum/design-technology/lego-blocks) (`lego-blocks`) - KS2/KS3 Design & Technology 8.0 mm modular pitch matrix, 3D isometric turntable, internal friction clutch tubes, and staggered shear bonding.
-16. [Vector Racing Kinematic Physics Lab](/player?preset=vector-racing) (`vector-racing`) - Real-time velocity, steering drag, and continuous press-and-hold `:key` / `:clickable` controls.
+## Machine Manifests, Governance & Specifications
+- [Autonomous Agent & WebMCP Directory](/agents.txt): W3C WebMCP (`document.modelContext`) client-side tool schemas and capabilities
+- [AST Vector Scene Manifest](/player/scenes.manifest.json): Machine-readable index of all 72 compiled `.ast` / `.astb` curriculum cartridges
+- [AST Scene JSON Schema](/player/schema/ast-scene.schema.json): Validation schema for declarative S-Expression vector cartridges
+- [Master Curriculum Catalog](/manifests/catalog.json): Oak-aligned UK National Curriculum topic and unit catalog
+- [BSL 3D S-Expression Lexicon](/lexicons/bsl-signs.ast): Declarative 3D British Sign Language sign corpus and non-manual features
+- [AST Player Technical Specification](/docs/AST_PLAYER_SPECIFICATION.md): Grammar, opcodes, reactive bindings, and gesture VM reference
+- [Dual-Licensing Charter](/licensing): Open Government Licence v3.0 & GNU AGPLv3 humanitarian terms vs commercial licensing
+- [Privacy & KCSIE Child Safety](/privacy): Zero-cloud student data architecture, UK GDPR Art. 25, and safeguarding policies
 
-### Biology & Earth Sciences
-17. [DNA Watson-Crick Double Helix & Transcription](/curriculum/science/biology/dna-helix) (`dna-helix`) - Hydrogen-bonded base pairing (A-T, C-G) in 3D projected helical twist with interactive unzipping and transcription controls.
-18. [Photosynthesis Solar Engine](/curriculum/science/biology/photosynthesis) (`photosynthesis`) - Chloroplast inner thylakoids, light-dependent reactions, Calvin cycle, and carbon dioxide absorption.
-19. [Water Cycle Continuous Earth Engine](/curriculum/geography/water-cycle) (`water-cycle`) - Evaporation, transpiration, condensation, precipitation, and percolation cycle.
-20. [Mountain Elevation & Atmospheric Science](/curriculum/geography/mountain-elevation) (`mountain-elevation`) - Altitude hypotenuse, clinometer elevation angles, and atmospheric boiling point shifts.
-21. [Aquarium Living Ecosystem Stress Benchmark](/curriculum/computing/stress-benchmark) (`fish-tank`) - Vector stress benchmark, multi-species aquatic food web, nitrogen cycle, and water chemistry parameters.
-
-### Early Literacy, Phonics & English Language Arts
-22. [Early Phonics Laboratory](/curriculum/english/phonics/phonics-lab) (`phonics-lab`) - Grapheme-phoneme sound buttons, blending mat, and procedural speech synthesis.
-23. [Year 1 Phonics Screening Check](/curriculum/english/phonics/screening-check) (`phonics-screening`) - DfE official 40-word screening check simulator with alien pseudo-words, sound button dots & dashes, and diagnostics.
-24. [Spelling Bee Championship Arena](/curriculum/english/spelling/spelling-bee) (`spelling-bee`) - Interactive phonetic spelling arena, tiered national curriculum word lists, and sound-button synthesis.
-25. [Shakespeare Globe Theatre 1599 Anatomy](/curriculum/english/theatre/globe) (`shakespeare`) - 1599 Wooden O 3D stage geometry, Heaven/Hell/Earth trapdoors, and iambic pentameter metronomes.
-26. [Macbeth: 5-Act Dramatic Soliloquy](/curriculum/english/theatre/macbeth) (`shakespeare-macbeth`) - 5-Act interactive play-through on Bankside Globe stage, spoken blank verse audio, and canon vs what-if branches.
-
-### Languages, Polyglot & Accessibility
-27. [MFL & Polyglot Languages Studio](/curriculum/languages/mfl-polyglot) (`languages`) - Spanish, French & Latin comparative phonics, conversational speech synthesis, and regular verb conjugation wheels.
-28. [3D British Sign Language (BSL) Two-Handed Fingerspelling](/curriculum/languages/bsl-fingerspelling) (`bsl-fingerspelling`) - 360° rotatable 3D two-handed manual alphabet rig, A-E-I-O-U vowel tap positions, and Signer POV vs Receiver POV orbits.
-
-### Catholic Life, Liturgy & Sacraments
-29. [Solemn Eucharistic Procession Film](/curriculum/catholic-life/film) (`eucharistic-procession-film`) - Synchronized liturgical film and vector HUD overlay, Blessed Sacrament canopy, thurible incensation streams, Tantum Ergo hymns, and humeral veil benediction.
-30. [Sacred Altar Anatomy & Types](/curriculum/catholic-life/altar-anatomy) (`altar-anatomy`) - Consecrated Mensa, Altar Stone with Five Wounds, sealed martyrs' relics, 2/6/7 beeswax candle rules (GIRM 117), seasonal Antependium, Tabernacle, and Credence table.
-31. [Sacred Church Tour & Architecture](/curriculum/catholic-life/church-tour) (`church-tour`) - 3D Sanctuary, Tabernacle, High Altar, Lectern (Ambo), Baptismal Font, Stained Glass Windows, and Pedagogical X-Ray discovery exploration.
-32. [The Stations of the Cross (Via Crucis)](/curriculum/catholic-life/stations-of-the-cross) (`stations-of-the-cross`) - The 14 sacred stations of the Via Dolorosa, Golgotha Calvary hill, Roman praetorium, Holy Sepulchre tomb, and glorious Easter Resurrection.
-33. [Holy Oils & Sacred Ambry (Olea Sancta)](/curriculum/catholic-life/holy-oils) (`holy-oils`) - Liturgical oils reservoir, Oleum Infirmorum (OI), Oleum Catechumenorum (OC), Sanctum Chrisma (SC), ambry cabinet, and sacramental anointing rites.
-34. [Holy Water & The Thurible (Asperges & Incense)](/curriculum/catholic-life/holy-water-thurifer) (`holy-water-thurifer`) - Holy Water fonts, Aspergillum & Aspersorium, Thurible censing swings, charcoal boat, and sacramental purification rites.
-35. [The Holy Rosary: 3D Beads & 20 Mysteries](/curriculum/catholic-life/rosary-mysteries) (`rosary-mysteries`) - Contemplative 3D chaplet ring with Our Father and Hail Mary beads, depth-fog lighting, 4 scriptural mystery cycles (Joyful, Luminous, Sorrowful, Glorious), and Latin prayers.
-36. [First Holy Communion & Eucharistic Adoration](/curriculum/catholic-life/first-communion) (`first-communion`) - Catechetical preparation for First Holy Communion, Real Presence, Transubstantiation, and Eucharistic Adoration in the Monstrance.
-37. [The Seven Holy Sacraments](/curriculum/catholic-life/seven-sacraments) (`seven-sacraments`) - Sacraments of Initiation (Baptism, Confirmation, Eucharist), Healing (Reconciliation, Anointing), and Service (Holy Orders, Matrimony).
-38. [The Order of the Holy Mass](/curriculum/catholic-life/order-of-the-mass) (`order-of-the-mass`) - Introductory Rites, Liturgy of the Word, Liturgy of the Eucharist, and Concluding Rites with Latin & English dialogs.
-39. [The Sacred Paschal Triduum & Easter](/curriculum/catholic-life/triduum-easter) (`triduum-easter`) - Holy Thursday Mass of the Lord's Supper, Good Friday Passion, Easter Vigil Lucernarium (Lumen Christi), and Easter Sunday Resurrection.
-40. [The Catholic Liturgical Year & Seasons](/curriculum/catholic-life/liturgical-calendar) (`liturgical-calendar`) - Seasonal cycle of Advent, Christmas, Lent, Triduum, Easter, and Ordinary Time with liturgical color symbolism.
-41. [Sacred Postures & Gestures in Prayer](/curriculum/catholic-life/liturgical-postures) (`liturgical-postures`) - Genuflection, bowing, kneeling, standing, Sign of the Cross, and Orans posture with theological meanings.
-42. [The Liturgy of the Hours (Divine Office)](/curriculum/catholic-life/liturgy-of-the-hours) (`liturgy-of-the-hours`) - Sanctification of daily time through Matins, Lauds, Terce, Sext, None, Vespers, and Compline.
-43. [The Nicene & Apostles' Creed](/curriculum/catholic-life/nicene-creed) (`nicene-creed`) - Systematic exploration of the Credo in Unum Deum, Trinitarian theology, Christology, and Four Marks of the Church.
-44. [The Ten Commandments & Moral Law](/curriculum/catholic-life/ten-commandments) (`ten-commandments`) - The Decalogue on the Two Tablets of Sinai, love of God and neighbor, and Catholic moral theology.
-45. [Sacred Vessels, Linens & Vestments](/curriculum/catholic-life/sacred-objects) (`sacred-objects`) - Chalice, Ciborium, Paten, Monstrance, Corporal, Purificator, Alb, Cincture, Stole, Chasuble, and Humeral Veil.
-46. [Latin Prayers & Gregorian Chant](/curriculum/catholic-life/latin-mass-prayers) (`latin-mass-prayers`) - Pater Noster, Ave Maria, Gloria Patri, Salve Regina, and Gregorian neume notation.
-47. [The 24 Catholic Rites & Churches](/curriculum/catholic-life/catholic-rites) (`catholic-rites`) - Universal communion across Western Latin Rite and Eastern Catholic Rites (Byzantine, Alexandrian, Antiochene, Armenian, Chaldean).
-48. [Catholic Social Teaching & Gospel Virtues](/curriculum/catholic-life/cst-virtues) (`cst-virtues`) - Seven principles of CST (Human Dignity, Subsidiarity, Common Good, Option for the Poor, Solidarity) and theological/cardinal virtues.
-49. [Sample Physics Knowledge Pipeline](/curriculum/science/physics/pipeline-sample) (`pipeline-sample`) - Algorithmic physics pipeline and kinetic energy vector calculation testbed.
-50. [Portal Welcome & Simulator Onboarding](/curriculum/portal/welcome) (`welcome`) - Guided onboarding tour of the AST vector canvas, camera orbit controls, and smartboard stylus whiteboard tools.
-
-## Structured Substrates & Machine Manifests
-- [Master Curriculum Catalog](/manifests/catalog.json) - Machine-readable Oak-aligned curriculum manifest
-- [Offline Semantic RAG Index](/manifests/rag-index.json) - Pre-computed curriculum embeddings and retrieval vectors
-- [AST Vector Scene Manifest](/player/scenes.manifest.json) - Production vector modules and metadata (67 unique scene IDs across 68 compiled cartridge files, v2.6.0)
-- [AST Vector Configuration](/player/scenes-config.json) - Keyframes, subtitles, and formative pause checkpoints
-- [AST Scene JSON Schema](/player/schema/ast-scene.schema.json) - Declarative AST scene validation schema
-- [Interactive System Architecture Manifesto](/docs/lumina-architecture.ast) - 4-chapter Show & Tell `:type "Slide"` document (`/player?preset=lumina-architecture`)
-- [BSL 3D S-Expression Corpus](/lexicons/bsl-signs.ast) - Declarative 68-sign BSL primary curriculum corpus with 3D coordinate tuples and NMF rules (11.3 KB gzipped)
-- [Full LLM Specification](/llms-full.txt) - Exhaustive technical and architectural dossier for LLMs
-
-## Model Consumption & Generation Guidelines
-- **Zero Cloud Egress**: Student logs, answers, and evaluations must stay on client-side IndexedDB.
-- **Strict Grammar Validation**: Validate all generated S-Expressions against `/player/grammar/ast-sexpr.gbnf`.
-- **Declarative Tuple Composition**: When composing interactive lessons or slides, declare multi-modal tuples containing vector keyframes, reactive bindings, sound sonification hooks, and formative assessment gates.
-- **Coordinate Space Invariant**: Standardize on `<svg viewBox="0 0 800 480">` with responsive element IDs matching `:bindings` declarations.
-- **Dynamic Parameters**: Emit `:inputs` and `:vars` blocks with explicit `:label`, `:min`, `:max`, `:step`, and `:default` properties to trigger the engine's generic parameter HUD automatically without custom JavaScript.
-- **Scene Execution Typology**: Always declare the correct `:type` in the root `(:scene ...)` tag:
-  - `:type "Sim"` for continuous $\Delta t$ dynamic integration (kinematics, pendulums, orbits, gas laws).
-  - `:type "Slide"` for discrete conceptual inspection decks (CST virtues, liturgical postures, grammar rubrics) without a runaway clock.
-  - `:type "Film"` for strictly monotonic timeline choreography ($t \in [0.0, 1.0]$) bound to audio or video duration.
-- **Token Efficiency**: Rely on concise AST S-Expressions rather than prose; S-Expressions consume 75% fewer tokens and execute deterministically at 60 FPS in native SVG.
-## Real-World Thermodynamic & Grid-Scale Footprint (Scope 3 Avoidance)
-
-The architectural discipline of the St Joseph's Engine (sub-35 KB runtime, 448 KB WASM linear memory pool, local neural execution) eliminates the hidden thermodynamic and physical supply-chain costs incurred by cloud-tethered EdTech and remote hyperscaler inference:
-
-### 1. Avoided Data-Center Freshwater Evaporation
-- **Cloud LLM Baseline:** Data centers consume an estimated **0.3 to 0.5 mL of potable freshwater per query** via industrial evaporative cooling towers to cool high-density accelerator clusters (H100/TPU racks).
-- **St Joseph's Invariant:** **0.00 mL / query.** All generative Socratic hints, misconception checks, and evaluation steps run purely on-device via local NPU/GPU/CPU silicon (Chromium Prompt API / WebLLM) or deterministic AST rulebooks. Zero municipal water is evaporated across regional watersheds.
-
-### 2. Upstream Grid Peak Draw & Peaker-Plant Avoidance
-- **Remote Cloud API Toll:** A standard cloud-hosted Socratic interaction typically consumes **0.3 to 2.5 Watt-hours (Wh)** (1,000 to 9,000 Joules) when accounting for server draw, network hops, router switching, and facility Power Usage Effectiveness (PUE).
-- **Synchronized Classroom Spikes:** Concurrent 9:00 AM school starts create instantaneous grid surges that are frequently balanced by fossil-fueled peaker plants supplying remote data halls.
-- **Avoided Grid Overhead:** Sparing ~1.0 Wh per query across a standard trust of **1,000 pupils completing 30 daily interactions** eliminates **~30 kWh/day (~5.7 MWh/school year)** of external grid demand.
-
-### 3. Client Battery Chemistry & Silicon Preservation
-- **Unconstrained Canvas Baselines:** Monolithic HTML5/canvas engines (e.g. PhET, commercial LMS widgets) run continuous, unthrottled `requestAnimationFrame` loops consuming 100% of a CPU core, drawing **8 to 15 Watts** on budget laptops and inducing thermal throttling within 20 minutes.
-- **Dirty-State RAF Cancellation:** The AST engine halts animation ticks entirely when the stage reaches equilibrium, dropping incremental processor draw to **< 0.2 Watts (< 0.5% CPU)** while reading or thinking.
-- **Audio Thread Suspension:** The procedural Web Audio synthesizer auto-suspends (`audioCtx.suspend()`) after 300 ms of silence, cutting audio thread drain by up to 15%.
-- **Operational Endurance:** Extends battery runtime from ~2.5–3.0 hours to **6.0–8.0+ hours** on standard 40 Wh Chromebooks, directly halving battery thermal degradation and reducing premature e-waste replacements.
-
-### 4. Flash Storage (eMMC) Wear Guard
-- **Continuous I/O Thrashing Baseline:** Conventional web platforms continuously write telemetry, caching chunks, and tracking state to disk, rapidly exhausting the limited program-erase (P/E) cycles of low-cost eMMC flash memory in budget educational hardware.
-- **Milestone-Gated Persistence:** The AST engine performs **strictly 0 disk writes/second during active simulation manipulation**. State is maintained in volatile `Float32Array` buffers and only flushed asynchronously to IndexedDB upon discrete pedagogical milestones (e.g., question completion, badge award) with a 500 ms trailing debounce.
+## Optional
+- [Full Technical & Architectural LLM Dossier](/llms-full.txt): Exhaustive engineering specification, complete 72-cartridge directory, and thermodynamic benchmarks
+- [Raw System Architecture Slide Deck](/docs/lumina-architecture.ast): Hybrid SVG + S-Expression architecture cartridge source

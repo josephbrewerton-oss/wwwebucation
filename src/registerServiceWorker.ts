@@ -7,33 +7,43 @@ export function registerServiceWorker(): void {
     return;
   }
 
-  // Allow registration in production or if explicitly enabled
+  // Defer SW registration until post-load idle so critical navigation & agent discovery fetches (/llms.txt) finish uncongested
   window.addEventListener('load', () => {
-    // Determine SW URL dynamically relative to active portal base URL
-    const swUrl = getAssetUrl('/sw.js');
-    
-    navigator.serviceWorker
-      .register(swUrl)
-      .then((registration) => {
-        console.log('[PWA] Service Worker active. Offline-first zero-data engine initialized.');
+    const mountSw = () => {
+      const swUrl = getAssetUrl('/sw.js');
 
-        registration.onupdatefound = () => {
-          const installingWorker = registration.installing;
-          if (installingWorker == null) return;
-          installingWorker.onstatechange = () => {
-            if (installingWorker.state === 'installed') {
-              if (navigator.serviceWorker.controller) {
-                console.log('[PWA] Stored new curriculum substrate on device. Activating update...');
-                installingWorker.postMessage({ type: 'SKIP_WAITING' });
-              } else {
-                console.log('[PWA] Content is permanently stored on device for offline use.');
+      navigator.serviceWorker
+        .register(swUrl)
+        .then((registration) => {
+          console.log('[PWA] Service Worker active. Offline-first zero-data engine initialized.');
+
+          registration.onupdatefound = () => {
+            const installingWorker = registration.installing;
+            if (installingWorker == null) return;
+            installingWorker.onstatechange = () => {
+              if (installingWorker.state === 'installed') {
+                if (navigator.serviceWorker.controller) {
+                  console.log('[PWA] Stored new curriculum substrate on device. Activating update...');
+                  installingWorker.postMessage({ type: 'SKIP_WAITING' });
+                } else {
+                  console.log('[PWA] Content is permanently stored on device for offline use.');
+                }
               }
-            }
+            };
           };
-        };
-      })
-      .catch((error) => {
-        console.warn('[PWA] Service Worker registration note:', error);
-      });
+        })
+        .catch((error) => {
+          console.warn('[PWA] Service Worker registration note:', error);
+        });
+    };
+
+    setTimeout(() => {
+      if ('requestIdleCallback' in window) {
+        (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+          .requestIdleCallback(mountSw, { timeout: 4000 });
+      } else {
+        mountSw();
+      }
+    }, 2500);
   });
 }

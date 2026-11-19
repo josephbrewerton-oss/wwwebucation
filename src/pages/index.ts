@@ -85,7 +85,8 @@ export function renderHomePage(): HTMLElement {
       <div style="border-radius: 12px; overflow: hidden; min-height: 480px; background: #090d16;">
         <iframe 
           id="stage-viewport"
-          src="${base}player.html?preset=welcome" 
+          src="about:blank"
+          data-initial-src="${base}player.html?preset=welcome"
           loading="lazy"
           style="width: 100%; height: 500px; border: none; display: block;" 
           title="Featured Interactive Simulation">
@@ -394,6 +395,21 @@ export function renderHomePage(): HTMLElement {
 
   // 4. Render selectors directly from canonical precompiled cartridge manifest
   renderSelectors();
+
+  // 5. Hydrate featured stage iframe during idle window so initial paint & agent discovery (/llms.txt) finish uncongested
+  const mountFeaturedStage = () => {
+    if (!iframe || !iframe.isConnected) return;
+    if (iframe.getAttribute('src') === 'about:blank') {
+      iframe.src = `${base}player.html?preset=${encodeURIComponent(activePreset)}`;
+    }
+  };
+  if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+    (window as Window & { requestIdleCallback: (cb: () => void, opts?: { timeout: number }) => number })
+      .requestIdleCallback(mountFeaturedStage, { timeout: 1800 });
+  } else {
+    setTimeout(mountFeaturedStage, 600);
+  }
+
   return container;
 }
 
