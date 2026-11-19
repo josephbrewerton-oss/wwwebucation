@@ -19,20 +19,20 @@
   --stj-primary-border: rgba(37, 99, 235, 0.18);
 
   /* Semantic Feedback */
-  --stj-success: #059669;
-  --stj-success-hover: #047857;
-  --stj-success-surface: rgba(5, 150, 105, 0.06);
-  --stj-success-border: rgba(5, 150, 105, 0.18);
+  --stj-success: #047857;
+  --stj-success-hover: #065f46;
+  --stj-success-surface: rgba(4, 120, 87, 0.06);
+  --stj-success-border: rgba(4, 120, 87, 0.18);
 
-  --stj-warning: #d97706;
-  --stj-warning-hover: #b45309;
-  --stj-warning-surface: rgba(217, 119, 6, 0.06);
-  --stj-warning-border: rgba(217, 119, 6, 0.18);
+  --stj-warning: #b45309;
+  --stj-warning-hover: #92400e;
+  --stj-warning-surface: rgba(180, 83, 9, 0.06);
+  --stj-warning-border: rgba(180, 83, 9, 0.18);
 
-  --stj-danger: #e11d48;
-  --stj-danger-hover: #be123c;
-  --stj-danger-surface: rgba(225, 29, 72, 0.06);
-  --stj-danger-border: rgba(225, 29, 72, 0.18);
+  --stj-danger: #be123c;
+  --stj-danger-hover: #9f1239;
+  --stj-danger-surface: rgba(190, 18, 60, 0.06);
+  --stj-danger-border: rgba(190, 18, 60, 0.18);
 
   /* Surfaces & Structural Neutrals (60-30-10 Canvas Distribution) */
   --stj-canvas: #f8fafc;
@@ -42,7 +42,7 @@
   --stj-border-subtle: rgba(15, 23, 42, 0.04);
   --stj-text: #0f172a;
   --stj-text-muted: #475569;
-  --stj-text-subtle: #94a3b8;
+  --stj-text-subtle: #475569;
 
   /* Spatial Geometry & Radii */
   --stj-radius-xs: 4px;
@@ -87,8 +87,8 @@
   --stj-border: rgba(255, 255, 255, 0.08);
   --stj-border-subtle: rgba(255, 255, 255, 0.04);
   --stj-text: #f8fafc;
-  --stj-text-muted: #94a3b8;
-  --stj-text-subtle: #64748b;
+  --stj-text-muted: #cbd5e1;
+  --stj-text-subtle: #94a3b8;
 
   --stj-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
   --stj-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.45);
@@ -1300,7 +1300,7 @@ body {
 }
 
 .shell-footer-col a {
-  color: #94a3b8;
+  color: #cbd5e1;
   text-decoration: none;
   display: flex;
   align-items: center;
@@ -1308,8 +1308,11 @@ body {
   transition: color 0.15s ease;
 }
 
-.shell-footer-col a:hover {
-  color: #38bdf8;
+.shell-footer-col a:hover,
+.shell-footer-col a:focus-visible {
+  color: #7dd3fc;
+  text-decoration: underline;
+  text-underline-offset: 2px;
 }
 
 /* 8. Learner Assessment Passport & UK MIS Export Panels */

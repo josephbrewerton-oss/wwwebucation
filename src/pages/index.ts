@@ -48,7 +48,7 @@ export function renderHomePage(): HTMLElement {
         <a href="${base}catholic-life" style="padding: 11px 22px; background: #b45309; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(180,83,9,0.25);">
           <span>✝️ Catholic Sanctuary</span>
         </a>
-        <a href="${base}player" style="padding: 11px 22px; background: #0284c7; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(2,132,199,0.25);">
+        <a href="${base}player" style="padding: 11px 22px; background: #0369a1; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; box-shadow: 0 2px 6px rgba(3,105,161,0.25);">
           <span>🎮 Open Interactive Labs</span>
         </a>
         <a href="${base}practice-lab" style="padding: 11px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none; display: inline-flex; align-items: center; gap: 6px;">
@@ -142,13 +142,13 @@ export function renderHomePage(): HTMLElement {
     <!-- Primary Curriculum Pathways Directory Grid -->
     <section style="margin-bottom: 3.5rem;">
       <div style="text-align: center; margin-bottom: 2rem;">
-        <span style="font-size: 0.78rem; font-weight: 800; color: #0284c7; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">
+        <span style="font-size: 0.78rem; font-weight: 800; color: #0369a1; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 4px;">
           All Subjects &bull; EYFS to Key Stage 4
         </span>
         <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; margin: 0 0 8px;">
           Curriculum Learning Pathways
         </h2>
-        <p style="font-size: 1.05rem; color: #64748b; max-width: 650px; margin: 0 auto;">
+        <p style="font-size: 1.05rem; color: #475569; max-width: 650px; margin: 0 auto;">
           Choose an interactive learning zone to start drills, review foundational rules, or practice.
         </p>
       </div>
@@ -158,29 +158,29 @@ export function renderHomePage(): HTMLElement {
         <!-- Simulators Card -->
         <a href="${base}player" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0284c7; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #e0f2fe; color: #0369a1; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🎮
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Interactive Science &amp; Maths Labs</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Explore 60 hands-on models: kinetic gases, electric circuits, photosynthesis, Pythagoras, pendulums, atoms, and the solar system.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #0284c7;">Explore 60 Interactive Labs →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #0369a1;">Explore 60 Interactive Labs →</span>
         </a>
 
         <!-- Practice Lab Card -->
         <a href="${base}practice-lab" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ⚡
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Interactive Practice Lab</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Guided practice quizzes with instant hints, step-by-step worked examples, and common-mistake checks.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Start Practice Drills →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #047857;">Start Practice Drills →</span>
         </a>
 
         <!-- GCSE Exam Prep & Flashcards Card -->
@@ -190,7 +190,7 @@ export function renderHomePage(): HTMLElement {
               📝
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">GCSE Exam Prep &amp; Flashcards</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               AQA, Edexcel &amp; OCR 6-mark walkthroughs with mark schemes, active-recall flashcards, and audio spelling dictation.
             </p>
           </div>
@@ -200,29 +200,29 @@ export function renderHomePage(): HTMLElement {
         <!-- Lessons & Units Card -->
         <a href="${base}learning-zone" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #d97706; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fef3c7; color: #b45309; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               📖
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Lessons &amp; Units</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Browse National Curriculum units across Key Stages 1 to 4 with key concepts, worked methods, and common-mistake alerts.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #d97706;">Browse Curriculum Units →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #b45309;">Browse Curriculum Units →</span>
         </a>
 
         <!-- Phonics Sound Mat Card -->
         <a href="${base}phonics" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fce7f3; color: #db2777; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fce7f3; color: #be185d; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🔤
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">EYFS &amp; KS1 Phonics Lab</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Systematic synthetic phonics sound mat across Phases 2 through 5 with audio pronunciation and decodable word builders.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #db2777;">Open Phonics Lab →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #be185d;">Open Phonics Lab →</span>
         </a>
 
         <!-- Languages & MFL Card -->
@@ -232,7 +232,7 @@ export function renderHomePage(): HTMLElement {
               🌍
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Languages &amp; Verb Wheels</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Polyglot studio for Spanish, French, German, and Latin featuring interactive verb conjugation wheels and tense drills.
             </p>
           </div>
@@ -242,29 +242,29 @@ export function renderHomePage(): HTMLElement {
         <!-- Shakespeare Theatre Card -->
         <a href="${base}shakespeare" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fff1f2; color: #e11d48; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fff1f2; color: #be123c; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               🎭
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Shakespeare Globe Theatre</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Explore Macbeth, Romeo and Juliet, and Hamlet with line-by-line stage directions, themes, and soliloquy annotations.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #e11d48;">Enter Globe Theatre →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #be123c;">Enter Globe Theatre →</span>
         </a>
 
         <!-- SlideScript Lesson Studio Card -->
         <a href="${base}player" style="background: #ffffff; border: 1.5px solid #a7f3d0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(16,185,129,0.08); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #059669; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #ecfdf5; color: #047857; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ✏️
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Create Your Own Lesson</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Write plain-English notes or ask the on-device study assistant to build and remix interactive science and maths activities with no coding required.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #059669;">Open Lesson Creator →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #047857;">Open Lesson Creator →</span>
         </a>
 
         <!-- Teacher Beacon Card -->
@@ -274,7 +274,7 @@ export function renderHomePage(): HTMLElement {
               📡
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Whole-Class Sync (Teacher Beacon)</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Share the current lesson or interactive activity straight to pupil screens on the classroom network without needing the internet.
             </p>
           </div>
@@ -284,15 +284,15 @@ export function renderHomePage(): HTMLElement {
         <!-- Student Progress & Badges Card -->
         <a href="${base}profile" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.5rem; text-decoration: none; color: inherit; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 2px 6px rgba(0,0,0,0.04); transition: transform 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fefce8; color: #a16207; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
+            <div style="width: 44px; height: 44px; border-radius: 10px; background: #fefce8; color: #854d0e; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; margin-bottom: 1rem;">
               ⭐
             </div>
             <strong style="font-size: 1.15rem; color: #0f172a; display: block; margin-bottom: 6px;">Student Progress &amp; Badges</strong>
-            <p style="font-size: 0.88rem; color: #64748b; margin: 0 0 1rem; line-height: 1.5;">
+            <p style="font-size: 0.88rem; color: #475569; margin: 0 0 1rem; line-height: 1.5;">
               Personal mastery tracking, streak counters, and curriculum topic badges saved privately on your device with zero tracking.
             </p>
           </div>
-          <span style="font-size: 0.84rem; font-weight: 700; color: #a16207;">View Your Badges →</span>
+          <span style="font-size: 0.84rem; font-weight: 700; color: #854d0e;">View Your Badges →</span>
         </a>
 
       </div>
@@ -308,7 +308,7 @@ export function renderHomePage(): HTMLElement {
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🕊️</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">Education Should Be Free</strong>
-          <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
+          <p style="font-size: 0.84rem; color: #475569; margin: 0; line-height: 1.5;">
             No subscriptions, no paywalls, no tracking. Perpetually free under the Open Government Licence (OGL v3.0).
           </p>
         </div>
@@ -316,7 +316,7 @@ export function renderHomePage(): HTMLElement {
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">💾</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">100% Zero-Data Offline First</strong>
-          <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
+          <p style="font-size: 0.84rem; color: #475569; margin: 0; line-height: 1.5;">
             Works directly from your device storage with no mobile data or Wi-Fi needed—ideal for school classrooms and remote communities.
           </p>
         </div>
@@ -324,7 +324,7 @@ export function renderHomePage(): HTMLElement {
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🛡️</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">Private &amp; KCSIE Safe</strong>
-          <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
+          <p style="font-size: 0.84rem; color: #475569; margin: 0; line-height: 1.5;">
             Pupil work, quiz answers, and voice inputs never leave your device, complying with UK GDPR Art. 25 and KCSIE safeguarding standards.
           </p>
         </div>
@@ -332,7 +332,7 @@ export function renderHomePage(): HTMLElement {
         <div>
           <span style="font-size: 1.5rem; display: block; margin-bottom: 6px;">🖐️</span>
           <strong style="font-size: 0.98rem; color: #0f172a; display: block; margin-bottom: 4px;">British Sign Language &amp; Accessibility</strong>
-          <p style="font-size: 0.84rem; color: #64748b; margin: 0; line-height: 1.5;">
+          <p style="font-size: 0.84rem; color: #475569; margin: 0; line-height: 1.5;">
             On-screen British Sign Language (BSL) interpreter and live translation across 9 languages for inclusive classrooms.
           </p>
         </div>
@@ -354,8 +354,8 @@ export function renderHomePage(): HTMLElement {
     // Update pill buttons visual state
     pillNav?.querySelectorAll<HTMLButtonElement>('.sim-pill').forEach((btn) => {
       const isSelected = btn.dataset.id === cleanId;
-      btn.style.background = isSelected ? '#0284c7' : '#1e293b';
-      btn.style.color = isSelected ? '#ffffff' : '#94a3b8';
+      btn.style.background = isSelected ? '#0369a1' : '#1e293b';
+      btn.style.color = isSelected ? '#ffffff' : '#cbd5e1';
       btn.style.borderColor = isSelected ? '#38bdf8' : '#334155';
     });
   }
@@ -381,7 +381,7 @@ export function renderHomePage(): HTMLElement {
       btn.className = 'sim-pill';
       btn.dataset.id = c.id;
       const isSelected = c.id === activePreset;
-      btn.style.cssText = `background: ${isSelected ? '#0284c7' : '#1e293b'}; color: ${isSelected ? '#ffffff' : '#94a3b8'}; border: 1px solid ${isSelected ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;`;
+      btn.style.cssText = `background: ${isSelected ? '#0369a1' : '#1e293b'}; color: ${isSelected ? '#ffffff' : '#cbd5e1'}; border: 1px solid ${isSelected ? '#38bdf8' : '#334155'}; border-radius: 9999px; padding: 4px 12px; font-size: 0.74rem; font-weight: 700; cursor: pointer; transition: all 0.15s ease;`;
       btn.textContent = c.title.split(':')[0];
       btn.onclick = () => updateActivePreset(c.id);
       pillNav.appendChild(btn);

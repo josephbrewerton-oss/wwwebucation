@@ -196,7 +196,7 @@ export class PersistentAppShellElement extends HTMLElement {
 
     this.innerHTML = `
       <div id="app-root-shell" style="display:flex; flex-direction:column; min-height:100vh; width:100%;">
-        <div id="broadcast-banner" role="alert" style="display:none; padding:10px 16px; background:#0284c7; color:#fff; font-weight:700; font-size:0.9rem; align-items:center; justify-content:center; gap:8px;"></div>
+        <div id="broadcast-banner" role="alert" style="display:none; padding:10px 16px; background:#0369a1; color:#fff; font-weight:700; font-size:0.9rem; align-items:center; justify-content:center; gap:8px;"></div>
         
         <header id="persistent-header-group" style="position:sticky; top:0; z-index:990; width:100%; box-shadow:0 1px 3px rgba(0,0,0,0.08);">
           <!-- Universal Translator & Sensory Bar -->
@@ -205,9 +205,9 @@ export class PersistentAppShellElement extends HTMLElement {
               <span style="display:inline-flex; align-items:center; gap:4px; color:#38bdf8; font-weight:700;">
                 <span>🌐</span> St Joseph's Universal Access
               </span>
-              <span style="color:#475569;">|</span>
+              <span aria-hidden="true" style="color:#94a3b8;">|</span>
               <div style="display:inline-flex; align-items:center; gap:5px;">
-                <label for="stj-lang-select" style="color:#94a3b8; font-size:0.72rem;">Language:</label>
+                <label for="stj-lang-select" style="color:#cbd5e1; font-size:0.72rem;">Language:</label>
                 <select id="stj-lang-select" style="background:#1e293b; color:#f8fafc; border:1px solid #334155; border-radius:4px; font-size:0.72rem; padding:1px 6px; cursor:pointer;">
                   <option value="en" ${currentLang === 'en' ? 'selected' : ''}>🇬🇧 English</option>
                   <option value="es" ${currentLang === 'es' ? 'selected' : ''}>🇪🇸 Español</option>
@@ -263,7 +263,7 @@ export class PersistentAppShellElement extends HTMLElement {
                     St Joseph's Portal
                   </span>
                 </a>
-                <span class="hidden lg:inline-flex" style="font-size:0.75rem; color:#64748b; font-weight:500;">
+                <span class="hidden lg:inline-flex" style="font-size:0.75rem; color:#475569; font-weight:500;">
                   Education should be free
                 </span>
               </div>
@@ -338,7 +338,7 @@ export class PersistentAppShellElement extends HTMLElement {
                   ${this.isOfflineSynced ? '💾 Saved (0 Data)' : '💾 Save Offline'}
                 </button>
 
-                <button type="button" id="nav-btn-data-saver" aria-pressed="${this.dataSaver ? 'true' : 'false'}" class="hidden sm:inline-flex" style="background:${this.dataSaver ? '#ecfdf5' : 'transparent'}; color:${this.dataSaver ? '#065f46' : '#64748b'}; border:1px solid ${this.dataSaver ? '#10b981' : '#cbd5e1'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Low Bandwidth Data Saver" aria-label="Toggle Low Bandwidth Data Saver Mode">
+                <button type="button" id="nav-btn-data-saver" aria-pressed="${this.dataSaver ? 'true' : 'false'}" class="hidden sm:inline-flex" style="background:${this.dataSaver ? '#ecfdf5' : 'transparent'}; color:${this.dataSaver ? '#065f46' : '#475569'}; border:1px solid ${this.dataSaver ? '#10b981' : '#cbd5e1'}; border-radius:6px; padding:0.35rem 0.6rem; font-size:0.78rem; font-weight:700; cursor:pointer;" title="Low Bandwidth Data Saver" aria-label="Toggle Low Bandwidth Data Saver Mode">
                   📶 ${this.dataSaver ? 'Data Saver: ON' : 'Data Saver'}
                 </button>
 
@@ -358,7 +358,7 @@ export class PersistentAppShellElement extends HTMLElement {
 
             <!-- Mobile Drawer -->
             <div id="nav-mobile-drawer" class="shell-mobile-drawer">
-              <div style="font-weight:700; font-size:0.8rem; color:#64748b; text-transform:uppercase;">Navigation Menu</div>
+              <div style="font-weight:700; font-size:0.8rem; color:#475569; text-transform:uppercase;">Navigation Menu</div>
               <button type="button" id="mobile-btn-offline-sync" style="padding:10px; border-radius:6px; background:${this.isOfflineSynced ? '#ecfdf5' : '#eff6ff'}; color:${this.isOfflineSynced ? '#065f46' : '#1d4ed8'}; border:1px solid ${this.isOfflineSynced ? '#10b981' : '#93c5fd'}; font-weight:700; font-size:0.85rem; cursor:pointer; text-align:left;">
                 ${this.isOfflineSynced ? '💾 Saved to Device (0 Data)' : '💾 Save to Device (0 Data Offline)'}
               </button>
@@ -391,7 +391,7 @@ export class PersistentAppShellElement extends HTMLElement {
                 <img src="${base}img/logo.svg" alt="Logo" style="width:24px; height:24px;" onerror="this.onerror=null; this.src='${base}img/favicon-32x32.png';" />
                 <strong style="color:#f8fafc; font-size:1.05rem;">St Joseph's Curriculum Portal</strong>
               </div>
-              <p style="color:#94a3b8; font-size:0.84rem; line-height:1.6; margin:0 0 12px 0;">
+              <p style="color:#cbd5e1; font-size:0.84rem; line-height:1.6; margin:0 0 12px 0;">
                 Free offline curriculum lessons, interactive science labs, and Catholic faith resources for Key Stages 1–4. Zero advertising, zero tracking, and 100% free forever for pupils, schools, and families.
               </p>
               <div style="display:flex; gap:8px; font-size:0.78rem; color:#38bdf8;">
@@ -413,11 +413,11 @@ export class PersistentAppShellElement extends HTMLElement {
             `).join('')}
           </div>
 
-         <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#64748b;">
+         <div style="max-width:1200px; margin:0 auto; padding-top:1.5rem; border-top:1px solid #1e293b; text-align:center; font-size:0.8rem; color:#cbd5e1;">
   St Joseph's Learning Portal &bull; Curriculum content licensed under 
-  <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#38bdf8;">OGL v3.0</a>. 
-  Open-source learning platform (<a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#38bdf8;">AGPLv3 Source</a>) 
-  &bull; <a href="${base}player?preset=lumina-architecture" style="color:#38bdf8; text-decoration:none; font-weight:600;">Technical Architecture (.ast)</a> (<a href="${base}docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#94a3b8; text-decoration:none;">Download</a>). 
+  <a href="https://www.nationalarchives.gov.uk/doc/open-government-licence/version/3/" target="_blank" rel="noreferrer" style="color:#7dd3fc; text-decoration:underline; text-underline-offset:2px;">OGL v3.0</a>. 
+  Open-source learning platform (<a href="https://github.com/josephbrewerton-oss/wwwebucation" target="_blank" rel="noreferrer" style="color:#7dd3fc; text-decoration:underline; text-underline-offset:2px;">AGPLv3 Source</a>) 
+  &bull; <a href="${base}player?preset=lumina-architecture" style="color:#7dd3fc; text-decoration:underline; text-underline-offset:2px; font-weight:600;">Technical Architecture (.ast)</a> (<a href="${base}docs/lumina-architecture.ast" download="lumina-architecture.ast" style="color:#7dd3fc; text-decoration:underline; text-underline-offset:2px;">Download</a>). 
   Designed for zero-data offline learning.
 </div>
 </footer>
@@ -555,7 +555,7 @@ export class PersistentAppShellElement extends HTMLElement {
         btnDataSaver.textContent = active ? '📶 Data Saver: ON' : '📶 Data Saver';
         btnDataSaver.setAttribute('aria-pressed', String(active));
         btnDataSaver.style.background = active ? '#ecfdf5' : 'transparent';
-        btnDataSaver.style.color = active ? '#065f46' : '#64748b';
+        btnDataSaver.style.color = active ? '#065f46' : '#475569';
         btnDataSaver.style.borderColor = active ? '#10b981' : '#cbd5e1';
       }
     });
