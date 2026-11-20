@@ -130,15 +130,19 @@ export function renderPlayerPage(): HTMLElement {
   container.className = 'ast-media-player-container';
   container.style.cssText = 'max-width: 1200px; margin: 0 auto; padding: 1.5rem 1rem 3rem;';
 
-  // Read initial preset or external ?src= from URL
+  // Read initial preset (?preset= or ?app=) or external ?src= from URL
   const params = new URLSearchParams(window.location.search);
+  const requestedPresetParam = params.get('preset') || params.get('app');
   const initialSrcParam = params.get('src') || params.get('file');
-  const resolvedInitialPreset = !params.get('preset') && initialSrcParam && initialSrcParam.includes('lumina-architecture')
+  const resolvedInitialPreset = !requestedPresetParam && initialSrcParam && initialSrcParam.includes('lumina-architecture')
     ? 'lumina-architecture'
-    : normalizePresetId(params.get('preset'));
+    : normalizePresetId(requestedPresetParam);
   let activePreset = resolvedInitialPreset;
-  let initialExternalSrc = params.get('preset') ? null : initialSrcParam;
+  let initialExternalSrc = requestedPresetParam ? null : initialSrcParam;
   let pendingAutoEppBench = params.get('epp-bench') === '1' || params.get('epp-bench') === 'true';
+  // Launcher-First Grid: keep player iframe unloaded (0 KB engine download, 0% CPU) until a lab is selected or deep-linked
+  let isStageOpen = Boolean(requestedPresetParam || initialSrcParam || pendingAutoEppBench);
+  let pendingCustomCartridge: CartridgeDefinition | null = null;
   let activeSubject: SubjectFilterId = 'All';
   let activeFormat: FormatFilterId = 'All';
   let activeStage: StageFilterId = 'All';
@@ -318,7 +322,9 @@ export function renderPlayerPage(): HTMLElement {
   const safeStage = escapeHtml(meta.stage || '');
   const safeType = escapeHtml(meta.type || 'Sim');
   const safeLabel = escapeHtml(meta.label || '');
-  const safePlayerSrc = escapeHtml(buildPlayerSrc(base, activePreset, bslActive, initialExternalSrc));
+  const safePlayerSrc = isStageOpen
+    ? escapeHtml(buildPlayerSrc(base, activePreset, bslActive, initialExternalSrc))
+    : 'about:blank';
   const initialRecord = getRegisteredRecord(activePreset);
   const initialSealCode = initialRecord?.seal ? initialRecord.seal.slice(0, 6) : '';
   const initialSealLabel = initialRecord
@@ -331,10 +337,16 @@ export function renderPlayerPage(): HTMLElement {
   container.innerHTML = `
     <!-- Top Breadcrumbs -->
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
-      <div style="display:flex; align-items:center; gap:8px;">
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
         <a href="${safeBase}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
         <span style="color:#cbd5e1;">/</span>
-        <span style="font-size:0.84rem; color:#0284c7; font-weight:700;">🔬 Interactive Lab &amp; Lesson Player</span>
+        <button type="button" id="player-breadcrumb-labs" style="background:none; border:none; padding:0; font-size:0.84rem; color:#0284c7; font-weight:700; cursor:${isStageOpen ? 'pointer' : 'default'};">
+          🔬 Interactive Labs
+        </button>
+        <span id="player-breadcrumb-sep" style="display:${isStageOpen ? 'inline' : 'none'}; color:#cbd5e1;">/</span>
+        <span id="player-breadcrumb-active" style="display:${isStageOpen ? 'inline' : 'none'}; font-size:0.84rem; color:#0f172a; font-weight:700;">
+          ${safeLabel}
+        </span>
       </div>
 
       <div style="display:flex; gap:8px; align-items:center;">
@@ -347,12 +359,18 @@ export function renderPlayerPage(): HTMLElement {
       </div>
     </div>
 
-    <!-- Main Interactive Stage Frame -->
-    <div style="background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
+    <!-- Main Interactive Stage Frame (Mounted on demand when a lab is launched or deep-linked) -->
+    <div id="player-stage-shell" style="display:${isStageOpen ? 'block' : 'none'}; background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
       <!-- Stage Toolbar: Row 1 (Header & Primary Simulation Controls) -->
       <div style="padding:10px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; min-height:48px; box-sizing:border-box; flex-wrap:wrap; gap:8px;">
         <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-          <span style="font-size:1.3rem; flex-shrink:0;">🎮</span>
+          <button
+            type="button"
+            id="player-btn-back-to-grid"
+            title="Close activity and return to the Interactive Labs grid"
+            style="padding:5px 11px; border-radius:7px; background:#0f172a; color:#e2e8f0; border:1px solid #475569; font-size:0.76rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; min-height:28px;">
+            &larr; All Labs
+          </button>
           <div style="min-width:0;">
             <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
               <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em; white-space:nowrap;">
@@ -368,7 +386,6 @@ export function renderPlayerPage(): HTMLElement {
                 style="font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:4px; background:${initialRecord ? 'rgba(16,185,129,0.16)' : 'rgba(148,163,184,0.16)'}; color:${initialRecord ? '#34d399' : '#cbd5e1'}; border:1px solid ${initialRecord ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.4)'}; font-family:monospace; white-space:nowrap; cursor:pointer; line-height:1.3;">
                 ${escapeHtml(initialSealLabel)}
               </button>
-              <span style="color:#94a3b8; font-size:0.75rem; white-space:nowrap;" class="hidden sm:inline">&bull; Interactive Classroom Stage</span>
             </div>
             <h2 id="player-active-title" style="font-size:1.1rem; font-weight:800; color:#f8fafc; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
               ${safeLabel}
@@ -473,7 +490,7 @@ export function renderPlayerPage(): HTMLElement {
     </div>
 
     <!-- Catholic Sanctuary Linkage Banner -->
-    <div id="catholic-sanctuary-banner" style="display:${isCatholicPreset(meta) ? 'flex' : 'none'}; background:linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%); border:1.5px solid #ca8a04; border-radius:10px; padding:10px 16px; margin-bottom:1.5rem; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; color:#ffffff; box-shadow:0 4px 14px rgba(202,138,4,0.15);">
+    <div id="catholic-sanctuary-banner" style="display:${isStageOpen && isCatholicPreset(meta) ? 'flex' : 'none'}; background:linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%); border:1.5px solid #ca8a04; border-radius:10px; padding:10px 16px; margin-bottom:1.5rem; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; color:#ffffff; box-shadow:0 4px 14px rgba(202,138,4,0.15);">
       <div style="display:flex; align-items:center; gap:8px;">
         <span style="font-size:1.3rem;">✝️</span>
         <div>
@@ -486,13 +503,13 @@ export function renderPlayerPage(): HTMLElement {
       </a>
     </div>
 
-    <!-- Interactive Labs Library & Multi-Facet Filter -->
-    <section id="labs-catalog-section" style="background:#ffffff; border:1px solid #e2e8f0; border-radius:12px; padding:1.25rem; margin-bottom:1.75rem;">
+    <!-- Interactive Labs Grid Launcher & Multi-Facet Filter -->
+    <section id="labs-catalog-section" style="display:${isStageOpen ? 'none' : 'block'}; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.35rem; margin-bottom:1.75rem; box-shadow:0 4px 18px rgba(15,23,42,0.04);">
       <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
         <div>
-          <h3 style="margin:0; font-size:1.05rem; font-weight:800; color:#0f172a;">Browse Visual Labs &amp; Lessons</h3>
-          <p id="catalog-results-summary" style="margin:2px 0 0; font-size:0.8rem; color:#64748b; font-variant-numeric:tabular-nums;">
-            Showing interactive simulations, guided slides, and educational apps
+          <h1 style="margin:0; font-size:1.35rem; font-weight:800; color:#0f172a; letter-spacing:-0.01em;">Interactive Labs &amp; Lessons</h1>
+          <p id="catalog-results-summary" style="margin:3px 0 0; font-size:0.82rem; color:#64748b; font-variant-numeric:tabular-nums;">
+            Select any verified cartridge to launch the interactive stage
           </p>
         </div>
 
@@ -501,7 +518,7 @@ export function renderPlayerPage(): HTMLElement {
             type="search"
             id="cartridge-search-input"
             placeholder="Search by title, topic, stage, or ID (e.g. titration, altar, ks2)..."
-            style="padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:270px; outline:none; color:#0f172a; background:#ffffff;"
+            style="padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none; color:#0f172a; background:#ffffff;"
           />
           <select id="stage-filter-select" aria-label="Filter by Key Stage" style="padding:7px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.82rem; font-weight:600; color:#334155; background:#f8fafc; cursor:pointer;">
             <option value="All">All Key Stages</option>
@@ -510,6 +527,9 @@ export function renderPlayerPage(): HTMLElement {
             <option value="KS3">Key Stage 3</option>
             <option value="KS4">KS4 / GCSE &amp; A-Level</option>
           </select>
+          <button type="button" id="launcher-btn-import" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#f0f9ff; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Open local .ast / .svg cartridge or import a PhET / HTML simulation">
+            📂 Open File
+          </button>
           <button type="button" id="btn-clear-catalog-filters" style="display:none; padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">
             Reset Filters
           </button>
@@ -570,8 +590,8 @@ export function renderPlayerPage(): HTMLElement {
       <!-- Recent Quick-Switch Strip -->
       <div id="recent-labs-strip" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.78rem;"></div>
 
-      <!-- Presets Grid Container -->
-      <div id="cartridges-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; max-height:520px; overflow-y:auto; padding-right:4px;">
+      <!-- Presets Grid Container (Full-page launcher flow without cramped inner scrollbox) -->
+      <div id="cartridges-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px;">
       </div>
     </section>
 
@@ -591,6 +611,13 @@ export function renderPlayerPage(): HTMLElement {
   `;
 
   // Attach DOM Listeners
+  const stageShell = container.querySelector<HTMLDivElement>('#player-stage-shell')!;
+  const catalogSection = container.querySelector<HTMLElement>('#labs-catalog-section')!;
+  const backToGridBtn = container.querySelector<HTMLButtonElement>('#player-btn-back-to-grid');
+  const breadcrumbLabsBtn = container.querySelector<HTMLButtonElement>('#player-breadcrumb-labs');
+  const breadcrumbSepEl = container.querySelector<HTMLElement>('#player-breadcrumb-sep');
+  const breadcrumbActiveEl = container.querySelector<HTMLElement>('#player-breadcrumb-active');
+  const launcherImportBtn = container.querySelector<HTMLButtonElement>('#launcher-btn-import');
   const iframe = container.querySelector<HTMLIFrameElement>('#ast-player-iframe')!;
   const select = container.querySelector<HTMLSelectElement>('#player-sim-selector')!;
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
@@ -769,6 +796,7 @@ export function renderPlayerPage(): HTMLElement {
     unmountObserver = null;
     window.removeEventListener('pagehide', cleanupPlayerLifecycle);
     window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('popstate', onPopState);
   };
 
   window.addEventListener('pagehide', cleanupPlayerLifecycle, { once: true });
@@ -1114,9 +1142,67 @@ export function renderPlayerPage(): HTMLElement {
     if (integrityReadoutEl) integrityReadoutEl.style.display = 'none';
   });
 
-  function updatePreset(presetId: string, skipPostMessage = false) {
+  function syncLauncherStageVisibility(itemMeta?: ScenePresetOption) {
+    if (stageShell) stageShell.style.display = isStageOpen ? 'block' : 'none';
+    if (catalogSection) catalogSection.style.display = isStageOpen ? 'none' : 'block';
+    const catholicBanner = container.querySelector<HTMLElement>('#catholic-sanctuary-banner');
+    if (catholicBanner) {
+      const m = itemMeta || getPresetMeta(activePreset);
+      catholicBanner.style.display = isStageOpen && isCatholicPreset(m) ? 'flex' : 'none';
+    }
+    if (breadcrumbLabsBtn) {
+      breadcrumbLabsBtn.style.cursor = isStageOpen ? 'pointer' : 'default';
+      breadcrumbLabsBtn.style.textDecoration = isStageOpen ? 'underline' : 'none';
+    }
+    if (breadcrumbSepEl) breadcrumbSepEl.style.display = isStageOpen ? 'inline' : 'none';
+    if (breadcrumbActiveEl) {
+      breadcrumbActiveEl.style.display = isStageOpen ? 'inline' : 'none';
+      if (itemMeta) breadcrumbActiveEl.textContent = itemMeta.label;
+    }
+  }
+
+  function closeStageToLauncher(updateHistory = true) {
+    if (!isStageOpen) return;
+    isStageOpen = false;
+    isIframeReady = false;
+    pendingCustomCartridge = null;
+    initialExternalSrc = null;
+    activeDrawer = null;
+    renderActiveDrawer();
+    if (integrityReadoutEl) integrityReadoutEl.style.display = 'none';
+    // Unload the stage iframe completely to stop audio/physics loops and free RAM on low-spec hardware
+    if (iframe) {
+      iframe.src = 'about:blank';
+    }
+    updatePlayButtonUI(false);
+    syncLauncherStageVisibility();
+    if (updateHistory) {
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('preset');
+      cleanUrl.searchParams.delete('app');
+      cleanUrl.searchParams.delete('src');
+      cleanUrl.searchParams.delete('file');
+      window.history.pushState({ launcher: true }, '', cleanUrl.toString());
+    }
+    renderGrid();
+    requestAnimationFrame(() => {
+      if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  backToGridBtn?.addEventListener('click', () => closeStageToLauncher(true));
+  breadcrumbLabsBtn?.addEventListener('click', () => {
+    if (isStageOpen) closeStageToLauncher(true);
+  });
+  launcherImportBtn?.addEventListener('click', () => {
+    fileInputHidden?.click();
+  });
+
+  function updatePreset(presetId: string, skipPostMessage = false, pushHistoryIfOpening = true) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
     const safePresetId = normalizePresetId(presetId);
+    const wasStageOpen = isStageOpen;
+    isStageOpen = true;
     activePreset = safePresetId;
     recordRecentPreset(safePresetId);
     const item = getPresetMeta(safePresetId);
@@ -1129,20 +1215,19 @@ export function renderPlayerPage(): HTMLElement {
       else select.value = safePresetId;
     }
 
-    const catholicBanner = container.querySelector<HTMLElement>('#catholic-sanctuary-banner');
-    if (catholicBanner) {
-      catholicBanner.style.display = isCatholicPreset(item) ? 'flex' : 'none';
-    }
+    syncLauncherStageVisibility(item);
 
     initialExternalSrc = null;
     // Lazily inflate requested curriculum/data cartridge into native IndexedDB on-demand (zero background polling, zero 404s)
     if (safePresetId !== 'lumina-architecture') {
       inflateCartridgeToVault(safePresetId, getRegisteredRecord(safePresetId)?.seal).catch(() => {});
     }
-    if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
+    const iframeIsUnloaded = !iframe || !iframe.src || iframe.src === 'about:blank' || iframe.getAttribute('src') === 'about:blank';
+    if (!skipPostMessage && isIframeReady && !iframeIsUnloaded && iframe && iframe.contentWindow) {
       postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
       focusPlayerStage();
-    } else if (iframe && (!iframe.src || iframe.src === 'about:blank' || !isIframeReady)) {
+    } else if (iframe && (iframeIsUnloaded || !isIframeReady)) {
+      isIframeReady = false;
       iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
     }
 
@@ -1159,10 +1244,50 @@ export function renderPlayerPage(): HTMLElement {
     const nextUrl = new URL(window.location.href);
     nextUrl.searchParams.delete('src');
     nextUrl.searchParams.delete('file');
+    nextUrl.searchParams.delete('app');
     nextUrl.searchParams.set('preset', safePresetId);
-    window.history.replaceState({}, '', nextUrl.toString());
+    if (!wasStageOpen && pushHistoryIfOpening) {
+      window.history.pushState({ preset: safePresetId }, '', nextUrl.toString());
+    } else {
+      window.history.replaceState({ preset: safePresetId }, '', nextUrl.toString());
+    }
 
     renderGrid();
+    if (!wasStageOpen) {
+      requestAnimationFrame(() => {
+        if (window.scrollY > 0) window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+  }
+
+  const onPopState = () => {
+    const p = new URLSearchParams(window.location.search);
+    const nextPreset = p.get('preset') || p.get('app');
+    const nextSrc = p.get('src') || p.get('file');
+    if (nextPreset) {
+      updatePreset(nextPreset, false, false);
+    } else if (nextSrc) {
+      isStageOpen = true;
+      initialExternalSrc = nextSrc;
+      isIframeReady = false;
+      syncLauncherStageVisibility();
+      if (iframe) iframe.src = buildPlayerSrc(base, activePreset, bslActive, nextSrc);
+    } else if (isStageOpen) {
+      closeStageToLauncher(false);
+    }
+  };
+  window.addEventListener('popstate', onPopState);
+
+  function launchCustomCartridge(cart: CartridgeDefinition) {
+    const alreadyLive = Boolean(isIframeReady && iframe?.contentWindow && iframe.getAttribute('src') !== 'about:blank');
+    if (!alreadyLive) {
+      pendingCustomCartridge = cart;
+    }
+    updatePreset(cart.id, true);
+    if (alreadyLive && iframe?.contentWindow) {
+      iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: cart }, '*');
+      focusPlayerStage();
+    }
   }
 
   async function handleUploadedFiles(files: File[]) {
@@ -1195,15 +1320,7 @@ export function renderPlayerPage(): HTMLElement {
 
         saveCustomCartridge(cart);
         refreshDropdown();
-        updatePreset(cleanId);
-
-        iframe?.contentWindow?.postMessage(
-          {
-            type: 'LOAD_CUSTOM_CARTRIDGE',
-            cartridge: cart,
-          },
-          '*'
-        );
+        launchCustomCartridge(cart);
         return;
       }
 
@@ -1231,14 +1348,7 @@ export function renderPlayerPage(): HTMLElement {
             };
             saveCustomCartridge(cart);
             refreshDropdown();
-            updatePreset(simId);
-            iframe?.contentWindow?.postMessage(
-              {
-                type: 'LOAD_CUSTOM_CARTRIDGE',
-                cartridge: cart,
-              },
-              '*'
-            );
+            launchCustomCartridge(cart);
             return;
           }
         }
@@ -1271,14 +1381,7 @@ export function renderPlayerPage(): HTMLElement {
           };
           saveCustomCartridge(cart);
           refreshDropdown();
-          updatePreset(cleanId);
-          iframe?.contentWindow?.postMessage(
-            {
-              type: 'LOAD_CUSTOM_CARTRIDGE',
-              cartridge: cart,
-            },
-            '*'
-          );
+          launchCustomCartridge(cart);
           return;
         }
 
@@ -1305,14 +1408,7 @@ export function renderPlayerPage(): HTMLElement {
           };
           saveCustomCartridge(cart);
           refreshDropdown();
-          updatePreset(cleanId);
-          iframe?.contentWindow?.postMessage(
-            {
-              type: 'LOAD_CUSTOM_CARTRIDGE',
-              cartridge: cart,
-            },
-            '*'
-          );
+          launchCustomCartridge(cart);
           return;
         }
       }
@@ -1323,7 +1419,7 @@ export function renderPlayerPage(): HTMLElement {
 
   function renderRecentStrip() {
     if (!recentStripEl) return;
-    const recentIds = getRecentPresetIds().filter((id) => id !== activePreset);
+    const recentIds = getRecentPresetIds().filter((id) => !isStageOpen || id !== activePreset);
     const items = recentIds
       .map((id) => presets.find((p) => p.id === id))
       .filter((p): p is ScenePresetOption => Boolean(p))
@@ -1396,7 +1492,7 @@ export function renderPlayerPage(): HTMLElement {
     );
 
     gridContainer.innerHTML = filtered.map((p) => {
-      const isSelected = p.id === activePreset;
+      const isSelected = isStageOpen && p.id === activePreset;
       const subjLabel = p.subject || 'Curriculum';
       const kindSuffix = p.kind === 'data' ? ' · Recall Data Pack' : p.kind === 'benchmark' ? ' · Benchmark' : p.kind === 'doc' ? ' · Architecture Doc' : '';
       const formatLabel = p.has3D ? `${p.type || 'Sim'} (3D)` : (p.type || 'Sim');
@@ -1410,16 +1506,18 @@ export function renderPlayerPage(): HTMLElement {
       return `
         <div
           class="cartridge-card"
+          role="button"
+          tabindex="0"
           data-id="${escapeHtml(p.id)}"
-          style="padding:12px 14px; border-radius:10px; border:1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#ffffff'}; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:8px;">
+          style="padding:13px 15px; border-radius:10px; border:1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#ffffff'}; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:10px; transition:border-color 0.15s ease, box-shadow 0.15s ease;">
           <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:4px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:5px;">
               <div style="font-size:0.72rem; color:#64748b; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                 ${escapeHtml(formatLabel)} &middot; ${escapeHtml(subjLabel)} &middot; ${escapeHtml(p.stage)}${escapeHtml(kindSuffix)}
               </div>
               ${sealBadgeHtml}
             </div>
-            <strong style="display:block; font-size:0.88rem; color:#0f172a; line-height:1.35;">${escapeHtml(p.label)}</strong>
+            <strong style="display:block; font-size:0.9rem; color:#0f172a; line-height:1.35;">${escapeHtml(p.label)}</strong>
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem;">
             <span style="color:${isSelected ? '#0369a1' : '#0284c7'}; font-weight:700;">${isSelected ? '▶ Currently Loaded' : 'Launch Lab &rarr;'}</span>
@@ -1429,12 +1527,16 @@ export function renderPlayerPage(): HTMLElement {
       `;
     }).join('');
 
-    gridContainer.querySelectorAll('.cartridge-card').forEach((card) => {
-      card.addEventListener('click', () => {
+    gridContainer.querySelectorAll<HTMLElement>('.cartridge-card').forEach((card) => {
+      const launchCard = () => {
         const id = card.getAttribute('data-id');
-        if (id) {
-          updatePreset(id);
-          iframe?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        if (id) updatePreset(id);
+      };
+      card.addEventListener('click', launchCard);
+      card.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          launchCard();
         }
       });
     });
@@ -1458,6 +1560,8 @@ export function renderPlayerPage(): HTMLElement {
       };
       saveCustomCartridge(cart);
       refreshDropdown();
+      launchCustomCartridge(cart);
+      return;
     }
     updatePreset(simId);
   }
@@ -1480,7 +1584,7 @@ export function renderPlayerPage(): HTMLElement {
       loadBuiltinPhetModel('balancing-chemical');
     } else if (val === '__custom_find__') {
       select.value = activePreset;
-      searchInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      closeStageToLauncher(true);
       searchInput?.focus();
     } else {
       updatePreset(val);
@@ -1500,28 +1604,29 @@ export function renderPlayerPage(): HTMLElement {
     }
   });
 
-  // Drag & drop file loading on stage wrapper
-  if (iframeWrapper) {
-    iframeWrapper.addEventListener('dragover', (e) => {
+  // Drag & drop file loading on stage wrapper and Grid Launcher
+  [iframeWrapper, catalogSection].forEach((dropTarget) => {
+    if (!dropTarget) return;
+    dropTarget.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      iframeWrapper.style.outline = '3px dashed #38bdf8';
-      iframeWrapper.style.outlineOffset = '-4px';
+      dropTarget.style.outline = '3px dashed #38bdf8';
+      dropTarget.style.outlineOffset = '-4px';
     });
-    iframeWrapper.addEventListener('dragleave', (e) => {
+    dropTarget.addEventListener('dragleave', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      iframeWrapper.style.outline = 'none';
+      dropTarget.style.outline = 'none';
     });
-    iframeWrapper.addEventListener('drop', (e) => {
+    dropTarget.addEventListener('drop', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      iframeWrapper.style.outline = 'none';
+      dropTarget.style.outline = 'none';
       if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
         handleUploadedFiles(Array.from(e.dataTransfer.files));
       }
     });
-  }
+  });
 
   // Wire Play, Reset & BSL Toolbar buttons
   playBtn?.addEventListener('click', () => {
@@ -1587,8 +1692,9 @@ export function renderPlayerPage(): HTMLElement {
     } catch (_) {}
   });
 
-  // Keyboard accessibility shortcuts: M to toggle mute, Space to toggle play/pause
+  // Keyboard accessibility shortcuts: M to toggle mute, Space to toggle play/pause (active only when stage is open)
   const onKeyDown = (e: KeyboardEvent) => {
+    if (!isStageOpen) return;
     const activeTag = document.activeElement?.tagName.toLowerCase();
     if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') return;
     if (e.key === 'm' || e.key === 'M') {
@@ -1613,8 +1719,13 @@ export function renderPlayerPage(): HTMLElement {
       }
     }
     if (e.data.type === 'PLAYER_READY') {
+      if (!isStageOpen) return;
       isIframeReady = true;
-      if (initialExternalSrc) {
+      if (pendingCustomCartridge) {
+        const queued = pendingCustomCartridge;
+        pendingCustomCartridge = null;
+        postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: queued });
+      } else if (initialExternalSrc) {
         initialExternalSrc = null;
       } else if (activePreset && (!e.data.preset || e.data.preset !== activePreset)) {
         postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
