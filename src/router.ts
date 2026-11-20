@@ -56,8 +56,6 @@ const routes: Record<string, RouteHandler> = {
   '/licensing': () => import('./pages/licensing').then(m => resolveView(m, 'renderLicensingPage')),
   '/privacy': () => import('./pages/privacy').then(m => resolveView(m, 'renderPrivacyPage')),
   '/child-safety': () => import('./pages/child-safety').then(m => resolveView(m, 'renderChildSafetyPage')),
-  '/accessibility': () => import('./pages/accessibility').then(m => resolveView(m, 'renderAccessibilityPage')),
-  '/accessibility-statement': () => import('./pages/accessibility').then(m => resolveView(m, 'renderAccessibilityPage')),
   '/profile': () => import('./pages/profile').then(m => resolveView(m, 'renderProfilePage')),
   '/404': () => import('./pages/not-found').then(m => resolveView(m, 'renderNotFoundPage')),
 };

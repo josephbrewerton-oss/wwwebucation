@@ -48,7 +48,6 @@ export const SCHOOL_GOVERNANCE_ITEMS: NavRouteItem[] = [
   { id: 'licensing', path: 'licensing', label: 'School Licensing & Terms', icon: '⚖️', description: 'Free school charter & trust SLA' },
   { id: 'privacy', path: 'privacy', label: 'Pupil Privacy (Zero Cloud)', icon: '🛡️', description: 'UK GDPR Art. 25 on-device privacy guarantees' },
   { id: 'child-safety', path: 'child-safety', label: 'Child Safety & KCSIE', icon: '🔒', description: 'Statutory safeguarding compliance' },
-  { id: 'accessibility', path: 'accessibility', label: 'Accessibility Statement', icon: '♿', description: 'WCAG 2.1 AA & SEND inclusion statement' },
   { id: 'settings', path: 'settings', label: 'Accessibility & Settings', icon: '⚙️', description: 'Sensory preferences & accessibility controls' },
 ];
 
