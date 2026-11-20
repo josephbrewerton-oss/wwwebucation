@@ -23,6 +23,7 @@
   "files": [
     "index.html",
     "player.css",
+    "ast-profiler.js",
     "ast-engine.js",
     "site-gestures.js",
     "player-gestures.ast",
