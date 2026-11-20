@@ -17,6 +17,7 @@
     (:route :path "/news"              :view "blog"            :title "Technical Architecture Dispatches")
     (:route :path "/licensing"         :view "licensing"       :title "Dual-Licensing Charter & Covenant")[cite: 4, 6]
     (:route :path "/privacy"           :view "privacy"         :title "Statutory Safeguarding & Privacy")[cite: 4]
+    (:route :path "/accessibility"     :view "accessibility"   :title "WCAG 2.1 AA Accessibility Statement")
   ))
 
   ;; Production Cartridge Registry (ROMs & Binary Bytecode)
