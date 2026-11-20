@@ -180,7 +180,7 @@ export function renderPlayerPage(): HTMLElement {
     if (subj.includes('math')) return 'Maths';
     if (subj.includes('english') || subj.includes('phonics')) return 'English';
     if (subj.includes('comput') || subj.includes('design')) return 'Computing';
-    if (subj.includes('language') || subj.includes('spanish') || subj.includes('french') || subj.includes('latin')) return 'Languages';
+    if (subj.includes('language') || subj.includes('spanish') || subj.includes('french') || subj.includes('latin') || subj.includes('bsl') || subj.includes('sign')) return 'Languages';
     if (subj.includes('geograph')) return 'Geography';
     return 'All';
   }
@@ -590,8 +590,8 @@ export function renderPlayerPage(): HTMLElement {
       <!-- Recent Quick-Switch Strip -->
       <div id="recent-labs-strip" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.78rem;"></div>
 
-      <!-- Presets Grid Container (Full-page launcher flow without cramped inner scrollbox) -->
-      <div id="cartridges-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px;">
+      <!-- Subject Breakdown Grid Container (Full-page launcher grouped by curriculum subject) -->
+      <div id="cartridges-grid" style="display:flex; flex-direction:column; gap:18px;">
       </div>
     </section>
 
@@ -1481,7 +1481,7 @@ export function renderPlayerPage(): HTMLElement {
     }
 
     if (filtered.length === 0) {
-      gridContainer.innerHTML = `<div style="grid-column: 1 / -1; text-align:center; padding:2rem; color:#64748b;">No matching labs found for your active filters.</div>`;
+      gridContainer.innerHTML = `<div style="text-align:center; padding:2.5rem 1rem; color:#64748b; border:1px dashed #cbd5e1; border-radius:12px;">No matching labs found for your active filters.</div>`;
       return;
     }
 
@@ -1491,7 +1491,7 @@ export function renderPlayerPage(): HTMLElement {
         .map((c) => c.id)
     );
 
-    gridContainer.innerHTML = filtered.map((p) => {
+    const renderCardHtml = (p: ScenePresetOption) => {
       const isSelected = isStageOpen && p.id === activePreset;
       const subjLabel = p.subject || 'Curriculum';
       const kindSuffix = p.kind === 'data' ? ' · Recall Data Pack' : p.kind === 'benchmark' ? ' · Benchmark' : p.kind === 'doc' ? ' · Architecture Doc' : '';
@@ -1525,7 +1525,93 @@ export function renderPlayerPage(): HTMLElement {
           </div>
         </div>
       `;
+    };
+
+    type SubjectBucketKey = Exclude<SubjectFilterId, 'All'> | 'Custom' | 'Other';
+    const SUBJECT_SECTIONS: {
+      key: SubjectBucketKey;
+      filterId?: SubjectFilterId;
+      icon: string;
+      title: string;
+      subtitle: string;
+      accent: string;
+      bg: string;
+      border: string;
+    }[] = [
+      { key: 'Science', filterId: 'Science', icon: '🔬', title: 'Science', subtitle: 'Physics, Chemistry & Biology', accent: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
+      { key: 'Maths', filterId: 'Maths', icon: '📐', title: 'Mathematics', subtitle: 'Number, Algebra & Geometry', accent: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
+      { key: 'Catholic', filterId: 'Catholic', icon: '✝️', title: 'Catholic Faith & Liturgy', subtitle: 'Sacraments, Scripture & Formation', accent: '#b45309', bg: '#fffbeb', border: '#fde68a' },
+      { key: 'English', filterId: 'English', icon: '📖', title: 'English & Phonics', subtitle: 'Decodable Readers, Phonics & Literature', accent: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
+      { key: 'Computing', filterId: 'Computing', icon: '💻', title: 'Computing & D&T', subtitle: 'Systems, Engineering & Logic', accent: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
+      { key: 'Languages', filterId: 'Languages', icon: '🗣️', title: 'Languages & BSL', subtitle: 'Modern Languages & British Sign Language', accent: '#be185d', bg: '#fdf2f8', border: '#fbcfe8' },
+      { key: 'Geography', filterId: 'Geography', icon: '🌍', title: 'Geography', subtitle: 'Earth, Elevation & Water Systems', accent: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
+      { key: 'Custom', icon: '💾', title: 'Local Vault & Imported Files', subtitle: 'Your locally loaded cartridges', accent: '#334155', bg: '#f8fafc', border: '#cbd5e1' },
+      { key: 'Other', icon: '📎', title: 'Portal Showcase, Benchmarks & Docs', subtitle: 'Architecture, recall packs & utilities', accent: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
+    ];
+
+    const grouped = new Map<SubjectBucketKey, ScenePresetOption[]>();
+    for (const p of filtered) {
+      let bucket: SubjectBucketKey;
+      if (!VALID_PRESET_IDS.has(p.id)) {
+        bucket = 'Custom';
+      } else {
+        const norm = getNormalizedSubject(p);
+        bucket = norm === 'All' ? 'Other' : norm;
+      }
+      const list = grouped.get(bucket);
+      if (list) list.push(p);
+      else grouped.set(bucket, [p]);
+    }
+
+    const visibleSections = SUBJECT_SECTIONS.filter((sec) => (grouped.get(sec.key)?.length || 0) > 0);
+    const isSingleSubjectFocus = activeSubject !== 'All';
+
+    gridContainer.innerHTML = visibleSections.map((sec) => {
+      const items = grouped.get(sec.key) || [];
+      const countLabel = `${items.length} ${items.length === 1 ? 'lab' : 'labs'}`;
+      const actionBtnHtml = !isSingleSubjectFocus && sec.filterId
+        ? `<button type="button" class="subject-focus-btn" data-focus-subject="${sec.filterId}" style="padding:4px 10px; border-radius:6px; border:1px solid ${sec.border}; background:#ffffff; color:${sec.accent}; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;">Focus Subject &rarr;</button>`
+        : isSingleSubjectFocus
+        ? `<button type="button" class="subject-focus-btn" data-focus-subject="All" style="padding:4px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#334155; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;">&larr; All Subjects</button>`
+        : '';
+
+      return `
+        <details open class="subject-breakdown-group" data-subject-group="${sec.key}" style="border:1px solid #e2e8f0; border-radius:12px; background:#ffffff; overflow:hidden;">
+          <summary style="list-style:none; cursor:pointer; padding:11px 15px; background:${sec.bg}; border-bottom:1px solid ${sec.border}; border-left:4px solid ${sec.accent}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; user-select:none;">
+            <div style="display:flex; align-items:center; gap:9px; min-width:0;">
+              <span style="font-size:1.15rem; line-height:1;" aria-hidden="true">${sec.icon}</span>
+              <div>
+                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+                  <strong style="font-size:0.95rem; color:#0f172a;">${escapeHtml(sec.title)}</strong>
+                  <span style="font-size:0.72rem; font-weight:800; padding:1px 8px; border-radius:9999px; background:#ffffff; color:${sec.accent}; border:1px solid ${sec.border}; font-variant-numeric:tabular-nums;">
+                    ${countLabel}
+                  </span>
+                </div>
+                <div style="font-size:0.76rem; color:#64748b; margin-top:1px;">${escapeHtml(sec.subtitle)}</div>
+              </div>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              ${actionBtnHtml}
+              <span style="font-size:0.72rem; color:#64748b; font-weight:700;" aria-hidden="true">▾</span>
+            </div>
+          </summary>
+          <div style="padding:14px; display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; background:#f8fafc;">
+            ${items.map(renderCardHtml).join('')}
+          </div>
+        </details>
+      `;
     }).join('');
+
+    gridContainer.querySelectorAll<HTMLButtonElement>('.subject-focus-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const nextSubj = (btn.getAttribute('data-focus-subject') as SubjectFilterId) || 'All';
+        activeSubject = nextSubj;
+        syncSubjectTabStyles();
+        renderGrid();
+      });
+    });
 
     gridContainer.querySelectorAll<HTMLElement>('.cartridge-card').forEach((card) => {
       const launchCard = () => {

@@ -323,6 +323,7 @@ export const TRICKY_WORDS: TrickyWord[] = [
   { id: 'tw-all', word: 'all', phase: 3, trickyPart: 'a', trickyExplanation: 'The "a" makes an /or/ sound before double l.', exampleSentence: 'All the stars were shining.' },
   { id: 'tw-are', word: 'are', phase: 3, trickyPart: 'are', trickyExplanation: 'The whole word just sounds like the letter name "R" (/ar/)!', exampleSentence: 'We are ready.' },
   { id: 'tw-my', word: 'my', phase: 3, trickyPart: 'y', trickyExplanation: 'The "y" acts as a vowel making a long /eye/ sound.', exampleSentence: 'This is my cat.' },
+  { id: 'tw-by', word: 'by', phase: 3, trickyPart: 'y', trickyExplanation: 'The "y" acts as a vowel making a long /eye/ sound, just like "my".', exampleSentence: 'The frog sat by the pond.' },
   { id: 'tw-her', word: 'her', phase: 3, trickyPart: 'er', trickyExplanation: 'The "er" makes a purring /er/ sound.', exampleSentence: 'Give her the book.' },
 
   // Phase 4 Tricky Words

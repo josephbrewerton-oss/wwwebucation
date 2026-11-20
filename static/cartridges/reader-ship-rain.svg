@@ -70,42 +70,42 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="We" data-hint="♥ We — Tricky Word: The single &quot;e&quot; makes a long /ee/ sound." data-phonemes="We. Tricky word. We" style="cursor:pointer;">
-          <rect x="78" y="308" width="68" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="78" y="308" width="68" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="112" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">We</text>
         </g>
       
         <g class="book-word" data-word="see" data-hint="s · ee  ➔  see" data-phonemes="ssss, ee ... see" style="cursor:pointer;">
-          <rect x="158" y="308" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="158" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="196" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">see</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="246" y="308" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="246" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="269.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="big" data-hint="b · i · g  ➔  big" data-phonemes="buh, ih, guh ... big" style="cursor:pointer;">
-          <rect x="305" y="308" width="70" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="305" y="308" width="70" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="340" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">big</text>
         </g>
       
         <g class="book-word" data-word="ship" data-hint="sh · i · p  ➔  ship" data-phonemes="shhh, ih, puh ... ship" style="cursor:pointer;">
-          <rect x="387" y="308" width="85" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="387" y="308" width="85" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="429.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">ship</text>
         </g>
       
         <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
-          <rect x="484" y="308" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="484" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="511.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="551" y="308" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="551" y="308" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="587" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="rain" data-hint="r · ai · n  ➔  rain" data-phonemes="rrr, ay, nnn ... rain" style="cursor:pointer;">
-          <rect x="635" y="308" width="88" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="635" y="308" width="88" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="679" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">rain.</text>
         </g>
       
@@ -141,46 +141,49 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
-          <rect x="99" y="290" width="50" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="99" y="290" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="124" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
         </g>
       
         <g class="book-word" data-word="deep" data-hint="d · ee · p  ➔  deep" data-phonemes="duh, ee, puh ... deep" style="cursor:pointer;">
-          <rect x="161" y="290" width="91" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="161" y="290" width="91" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="206.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">deep</text>
         </g>
       
         <g class="book-word" data-word="fish" data-hint="f · i · sh  ➔  fish" data-phonemes="fff, ih, shhh ... fish" style="cursor:pointer;">
-          <rect x="264" y="290" width="81" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="264" y="290" width="81" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="304.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">fish</text>
         </g>
       
         <g class="book-word" data-word="can" data-hint="c · a · n  ➔  can" data-phonemes="kuh, ah, nnn ... can" style="cursor:pointer;">
-          <rect x="357" y="290" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="357" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="395" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">can</text>
         </g>
       
         <g class="book-word" data-word="zoom" data-hint="z · oo · m  ➔  zoom" data-phonemes="zzz, ooo, mmm ... zoom" style="cursor:pointer;">
-          <rect x="445" y="290" width="98" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="445" y="290" width="98" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="494" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">zoom</text>
         </g>
       
-        <g class="book-word" data-word="by" data-hint="b · y  ➔  by" data-phonemes="buh, yuh ... by" style="cursor:pointer;">
-          <rect x="555" y="290" width="62" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
-          <text x="586" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">by</text>
+        <g class="book-word" data-word="by" data-hint="♥ by — Tricky Word: The &quot;y&quot; acts as a vowel making a long /eye/ sound, just like &quot;my&quot;." data-phonemes="by. Tricky word. by" style="cursor:pointer;">
+          <rect x="555" y="290" width="62" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="586" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">by</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="629" y="290" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="629" y="290" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="665" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="boat" data-hint="b · oa · t  ➔  boat" data-phonemes="buh, oh, tuh ... boat" style="cursor:pointer;">
-          <rect x="353" y="340" width="94" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="353" y="340" width="94" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="400" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">boat.</text>
         </g>
       
-        <g id="sb-page-1" pointer-events="none"><circle cx="124.0" cy="326" r="3.4" fill="#0369a1"/><circle cx="184.3" cy="326" r="3.4" fill="#0369a1"/><rect x="193.5" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="228.7" cy="326" r="3.4" fill="#0369a1"/><circle cx="285.4" cy="326" r="3.4" fill="#0369a1"/><circle cx="294.9" cy="326" r="3.4" fill="#0369a1"/><rect x="300.9" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="380.2" cy="326" r="3.4" fill="#0369a1"/><circle cx="395.0" cy="326" r="3.4" fill="#0369a1"/><circle cx="409.8" cy="326" r="3.4" fill="#0369a1"/><circle cx="468.5" cy="326" r="3.4" fill="#0369a1"/><rect x="477.6" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="516.2" cy="326" r="3.4" fill="#0369a1"/><circle cx="578.6" cy="326" r="3.4" fill="#0369a1"/><circle cx="593.4" cy="326" r="3.4" fill="#0369a1"/>
+        <g id="sb-page-1" pointer-events="none"><circle cx="124.0" cy="326" r="3.4" fill="#0369a1"/><circle cx="184.3" cy="326" r="3.4" fill="#0369a1"/><rect x="193.5" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="228.7" cy="326" r="3.4" fill="#0369a1"/><circle cx="285.4" cy="326" r="3.4" fill="#0369a1"/><circle cx="294.9" cy="326" r="3.4" fill="#0369a1"/><rect x="300.9" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="380.2" cy="326" r="3.4" fill="#0369a1"/><circle cx="395.0" cy="326" r="3.4" fill="#0369a1"/><circle cx="409.8" cy="326" r="3.4" fill="#0369a1"/><circle cx="468.5" cy="326" r="3.4" fill="#0369a1"/><rect x="477.6" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="516.2" cy="326" r="3.4" fill="#0369a1"/>
+          <line x1="569.2" y1="326" x2="602.8" y2="326" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="586.0" y="327" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        
           <line x1="643.0" y1="326" x2="687.1" y2="326" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
           <text x="665.0" y="327" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
         <circle cx="376.2" cy="376" r="3.4" fill="#0369a1"/><rect x="385.4" y="373.6" width="26.1" height="4.8" rx="2.4" fill="#0369a1"/><circle cx="418.5" cy="376" r="3.4" fill="#0369a1"/></g>
@@ -206,52 +209,52 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="At" data-hint="a · t  ➔  At" data-phonemes="ah, tuh ... At" style="cursor:pointer;">
-          <rect x="62" y="290" width="60" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="62" y="290" width="60" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="92" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">At</text>
         </g>
       
         <g class="book-word" data-word="night" data-hint="n · igh · t  ➔  night" data-phonemes="nnn, eye, tuh ... night" style="cursor:pointer;">
-          <rect x="134" y="290" width="95" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="134" y="290" width="95" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="181.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">night</text>
         </g>
       
         <g class="book-word" data-word="we" data-hint="♥ we — Tricky Word: The single &quot;e&quot; makes a long /ee/ sound." data-phonemes="we. Tricky word. we" style="cursor:pointer;">
-          <rect x="241" y="290" width="68" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="241" y="290" width="68" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="275" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">we</text>
         </g>
       
         <g class="book-word" data-word="see" data-hint="s · ee  ➔  see" data-phonemes="ssss, ee ... see" style="cursor:pointer;">
-          <rect x="321" y="290" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="321" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="359" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">see</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="409" y="290" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="409" y="290" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="445" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="moon" data-hint="m · oo · n  ➔  moon" data-phonemes="mmm, ooo, nnn ... moon" style="cursor:pointer;">
-          <rect x="493" y="290" width="98" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="493" y="290" width="98" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="542" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">moon</text>
         </g>
       
         <g class="book-word" data-word="and" data-hint="a · n · d  ➔  and" data-phonemes="ah, nnn, duh ... and" style="cursor:pointer;">
-          <rect x="603" y="290" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="603" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="641" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">and</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="691" y="290" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="691" y="290" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="714.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="bright" data-hint="b · r · igh · t  ➔  bright" data-phonemes="buh, rrr, eye, tuh ... bright" style="cursor:pointer;">
-          <rect x="296" y="340" width="106" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="296" y="340" width="106" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="349" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">bright</text>
         </g>
       
         <g class="book-word" data-word="star" data-hint="s · t · ar  ➔  star" data-phonemes="ssss, tuh, ar ... star" style="cursor:pointer;">
-          <rect x="414" y="340" width="90" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="414" y="340" width="90" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="459" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">star.</text>
         </g>
       
@@ -286,52 +289,52 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="He" data-hint="♥ He — Tricky Word: The single &quot;e&quot; makes a long /ee/ sound." data-phonemes="He. Tricky word. He" style="cursor:pointer;">
-          <rect x="73" y="290" width="64" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="73" y="290" width="64" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="105" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">He</text>
         </g>
       
         <g class="book-word" data-word="can" data-hint="c · a · n  ➔  can" data-phonemes="kuh, ah, nnn ... can" style="cursor:pointer;">
-          <rect x="149" y="290" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="149" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="187" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">can</text>
         </g>
       
         <g class="book-word" data-word="see" data-hint="s · ee  ➔  see" data-phonemes="ssss, ee ... see" style="cursor:pointer;">
-          <rect x="237" y="290" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="237" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="275" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">see</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="325" y="290" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="325" y="290" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="348.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="high" data-hint="h · igh  ➔  high" data-phonemes="huh, eye ... high" style="cursor:pointer;">
-          <rect x="384" y="290" width="85" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="384" y="290" width="85" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="426.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">high</text>
         </g>
       
         <g class="book-word" data-word="light" data-hint="l · igh · t  ➔  light" data-phonemes="lll, eye, tuh ... light" style="cursor:pointer;">
-          <rect x="481" y="290" width="89" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="481" y="290" width="89" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="525.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">light</text>
         </g>
       
         <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
-          <rect x="582" y="290" width="62" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="582" y="290" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="613" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="656" y="290" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="656" y="290" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="692" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="dark" data-hint="d · ar · k  ➔  dark" data-phonemes="duh, ar, kuh ... dark" style="cursor:pointer;">
-          <rect x="304" y="340" width="87" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="304" y="340" width="87" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="347.5" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dark</text>
         </g>
       
         <g class="book-word" data-word="rock" data-hint="r · o · ck  ➔  rock" data-phonemes="rrr, off, kuh ... rock" style="cursor:pointer;">
-          <rect x="403" y="340" width="94" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="403" y="340" width="94" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="450" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">rock.</text>
         </g>
       
@@ -365,57 +368,57 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="The" data-hint="♥ The — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="The. Tricky word. The" style="cursor:pointer;">
-          <rect x="58" y="290" width="79" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="58" y="290" width="79" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="97.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">The</text>
         </g>
       
         <g class="book-word" data-word="rain" data-hint="r · ai · n  ➔  rain" data-phonemes="rrr, ay, nnn ... rain" style="cursor:pointer;">
-          <rect x="149" y="290" width="81" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="149" y="290" width="81" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="189.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">rain</text>
         </g>
       
         <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
-          <rect x="242" y="290" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="242" y="290" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="269.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
         </g>
       
         <g class="book-word" data-word="off" data-hint="o · ff  ➔  off" data-phonemes="off, fff ... off" style="cursor:pointer;">
-          <rect x="309" y="290" width="75" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="309" y="290" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="346.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">off!</text>
         </g>
       
         <g class="book-word" data-word="The" data-hint="♥ The — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="The. Tricky word. The" style="cursor:pointer;">
-          <rect x="396" y="290" width="79" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="396" y="290" width="79" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="435.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">The</text>
         </g>
       
         <g class="book-word" data-word="ship" data-hint="sh · i · p  ➔  ship" data-phonemes="shhh, ih, puh ... ship" style="cursor:pointer;">
-          <rect x="487" y="290" width="85" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="487" y="290" width="85" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="529.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">ship</text>
         </g>
       
         <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
-          <rect x="584" y="290" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="584" y="290" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="611.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
         </g>
       
         <g class="book-word" data-word="back" data-hint="b · a · ck  ➔  back" data-phonemes="buh, ah, kuh ... back" style="cursor:pointer;">
-          <rect x="651" y="290" width="91" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="651" y="290" width="91" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="696.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">back</text>
         </g>
       
         <g class="book-word" data-word="at" data-hint="a · t  ➔  at" data-phonemes="ah, tuh ... at" style="cursor:pointer;">
-          <rect x="274" y="340" width="57" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="274" y="340" width="57" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="302.5" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">at</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="343" y="340" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="343" y="340" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="379" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="dock" data-hint="d · o · ck  ➔  dock" data-phonemes="duh, off, kuh ... dock" style="cursor:pointer;">
-          <rect x="427" y="340" width="99" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="427" y="340" width="99" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="476.5" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dock.</text>
         </g>
       

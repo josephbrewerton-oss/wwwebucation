@@ -519,7 +519,7 @@ export const DECODABLE_MINI_BOOKS: DecodableMiniBook[] = [
     subtitle: 'Your very first book using just s, a, t, p, i, n, m, d!',
     coverEmoji: '🚰',
     targetSounds: ['s', 'a', 't', 'p', 'i', 'n', 'm', 'd'],
-    trickyPreview: ['a'],
+    trickyPreview: ['a', 'the'],
     pages: [
       {
         sceneEmoji: '🧒🪑',
@@ -635,7 +635,7 @@ export const DECODABLE_MINI_BOOKS: DecodableMiniBook[] = [
     subtitle: 'Practise sh, ai, ee, oo, ar, oa, and igh in a sea adventure.',
     coverEmoji: '🚢',
     targetSounds: ['sh', 'ai', 'ee', 'oo', 'ar', 'oa', 'igh'],
-    trickyPreview: ['the', 'we', 'see', 'to', 'he'],
+    trickyPreview: ['the', 'we', 'he', 'by'],
     pages: [
       {
         sceneEmoji: '🚢🌧️',
@@ -693,7 +693,7 @@ export const DECODABLE_MINI_BOOKS: DecodableMiniBook[] = [
     subtitle: 'Read adjacent consonants (fr, gr, st, mp, sw, cl) smoothly.',
     coverEmoji: '🐸',
     targetSounds: ['fr', 'gr', 'st', 'mp', 'sw', 'cl', 'nd'],
-    trickyPreview: ['the', 'said', 'was', 'they', 'have'],
+    trickyPreview: ['the', 'me', 'said', 'they', 'by'],
     pages: [
       {
         sceneEmoji: '🐸🪵',
@@ -751,7 +751,7 @@ export const DECODABLE_MINI_BOOKS: DecodableMiniBook[] = [
     subtitle: 'Master magic-e split digraphs (a-e, i-e, o-e) and ay, ea, ou.',
     coverEmoji: '🎂',
     targetSounds: ['a-e', 'i-e', 'o-e', 'ay', 'ea', 'ou'],
-    trickyPreview: ['the', 'said', 'like', 'some', 'come'],
+    trickyPreview: ['the', 'to', 'he', 'we', 'was', 'by', 'said', 'some', 'come'],
     pages: [
       {
         sceneEmoji: '🚴🏞️',
@@ -909,9 +909,10 @@ const EXTRA_STORY_SEGMENTS: Record<string, SoundSegment[]> = {
     { letters: 'oo', type: 'digraph', soundHint: 'ooo' },
     { letters: 'm', type: 'single', soundHint: 'mmm' },
   ],
-  by: [
-    { letters: 'b', type: 'single', soundHint: 'buh' },
-    { letters: 'y', type: 'single', soundHint: 'eye' },
+  like: [
+    { letters: 'l', type: 'single', soundHint: 'lll' },
+    { letters: 'i-e', type: 'split', soundHint: 'eye' },
+    { letters: 'k', type: 'single', soundHint: 'kuh' },
   ],
   and: [
     { letters: 'a', type: 'single', soundHint: 'ah' },
@@ -1168,12 +1169,15 @@ const DIGRAPHS = new Set([
  * 1) A Tricky "Heart" Word with explanation, or
  * 2) Exact DfE sound-button segments (• single, — digraph/trigraph, or split-digraph).
  */
-export function decodeWordForReader(rawWord: string): DecodedReaderWord {
+export function decodeWordForReader(rawWord: string, bookLevel?: number): DecodedReaderWord {
   const cleanWord = rawWord.replace(/^[^a-zA-Z]+|[^a-zA-Z]+$/g, '');
   const lower = cleanWord.toLowerCase();
 
-  // 1. Check Tricky Words first (except single-letter "a" which is handled cleanly)
-  const tricky = TRICKY_MAP.get(lower);
+  // In Phase 5 (Level 5+), words that were only "tricky" in Phase 4 because split digraphs hadn't been taught yet (e.g. "like") become 100% decodable
+  const phase5DecodableOverride = Boolean(bookLevel && bookLevel >= 5 && lower === 'like');
+
+  // 1. Check Tricky Words first (except single-letter "a" and Phase 5+ unlocked split digraphs)
+  const tricky = phase5DecodableOverride ? undefined : TRICKY_MAP.get(lower);
   if (tricky) {
     return { kind: 'tricky', rawWord, cleanWord, tricky };
   }

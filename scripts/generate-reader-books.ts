@@ -565,14 +565,15 @@ function measureTextSpan(text: string): number {
 function renderBookPageWordsSvg(
   sentence: string,
   pageIdx: number,
-  accent: string
+  accent: string,
+  bookLevel?: number
 ): { wordsMarkup: string; soundButtonsMarkup: string } {
   const tokens = sentence.split(/\s+/).filter(Boolean);
   const padX = 16;
   const gap = 12;
 
   const tiles = tokens.map((raw) => {
-    const decoded = decodeWordForReader(raw);
+    const decoded = decodeWordForReader(raw, bookLevel);
     const leadingPunct = raw.match(/^[^a-zA-Z]+/)?.[0] || '';
     const trailingPunct = raw.match(/[^a-zA-Z]+$/)?.[0] || '';
     const cleanWord = decoded.cleanWord || raw;
@@ -647,7 +648,7 @@ function renderBookPageWordsSvg(
 
       wordsParts.push(`
         <g class="book-word" data-word="${xmlEsc(decoded.cleanWord)}" data-hint="${xmlEsc(dataHint)}" data-phonemes="${xmlEsc(dataPhonemes)}" style="cursor:pointer;">
-          <rect x="${cursorX}" y="${baseY - 26}" width="${tile.width}" height="42" rx="10" fill="${tileFill}" stroke="${tileStroke}" stroke-width="1.8"/>
+          <rect x="${cursorX}" y="${baseY - 26}" width="${tile.width}" height="45" rx="10" fill="${tileFill}" stroke="${tileStroke}" stroke-width="1.8"/>
           <text x="${cx}" y="${baseY + 2}" text-anchor="middle" font-size="25" font-weight="800" fill="${textFill}">${xmlEsc(tile.raw)}</text>
         </g>
       `);
@@ -696,7 +697,7 @@ function renderBookPageWordsSvg(
             const silentEIdx = Math.min(cleanChars.length - 1, charCursor + 1 + consonantLen);
             const silentEX = charCenterAt(silentEIdx);
             const midX = (vowelX + silentEX) / 2;
-            sbParts.push(`<path d="M ${vowelX.toFixed(1)} ${sbY - 1} Q ${midX.toFixed(1)} ${sbY + 8} ${silentEX.toFixed(1)} ${sbY - 1}" stroke="${accent}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
+            sbParts.push(`<path d="M ${vowelX.toFixed(1)} ${(sbY + 0.5).toFixed(1)} Q ${midX.toFixed(1)} ${(sbY + 13.5).toFixed(1)} ${silentEX.toFixed(1)} ${(sbY + 0.5).toFixed(1)}" stroke="${accent}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
             charCursor += 1;
           } else {
             const len = Math.max(1, seg.letters.length);
@@ -739,7 +740,8 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
     const { wordsMarkup, soundButtonsMarkup } = renderBookPageWordsSvg(
       page.text,
       idx,
-      spec.accent
+      spec.accent,
+      book.level
     );
     const sceneArt = spec.scenes[idx] || spec.scenes[0];
     pageGroupsSvg.push(`
