@@ -1080,6 +1080,11 @@ const EXTRA_STORY_SEGMENTS: Record<string, SoundSegment[]> = {
     { letters: 'i-e', type: 'split', soundHint: 'eye' },
     { letters: 'd', type: 'single', soundHint: 'duh' },
   ],
+  bike: [
+    { letters: 'b', type: 'single', soundHint: 'buh' },
+    { letters: 'i-e', type: 'split', soundHint: 'eye' },
+    { letters: 'k', type: 'single', soundHint: 'kuh' },
+  ],
   his: [
     { letters: 'h', type: 'single', soundHint: 'huh' },
     { letters: 'i', type: 'single', soundHint: 'ih' },
@@ -1150,11 +1155,12 @@ const DECODABLE_MAP = new Map<string, DecodableWord>(
   ALL_DECODABLE_WORDS.map((dw) => [dw.word.toLowerCase(), dw])
 );
 
-const TRIGRAPHS = new Set(['igh', 'ear', 'air']);
+const TRIGRAPHS = new Set(['igh', 'ear', 'air', 'ure']);
 const DIGRAPHS = new Set([
   'ck', 'ss', 'll', 'ff', 'zz', 'qu', 'ch', 'sh', 'th', 'ng',
   'ai', 'ee', 'oa', 'oo', 'ar', 'or', 'ur', 'ow', 'oi', 'er',
   'ay', 'ou', 'ie', 'ea', 'oy', 'ir', 'ue', 'aw', 'wh', 'ph',
+  'ew', 'oe', 'au',
 ]);
 
 /**

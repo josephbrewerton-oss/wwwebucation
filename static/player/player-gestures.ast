@@ -83,6 +83,11 @@
   (:skills
     (:skill :id "storybook-reader"
       :pages 5
+      :sync-timeline-var "page"
+      :sync-count "{{pages}}"
+      :sync-clear-var "activePhonemes"
+      :sync-reset-var "activeWord"
+      :sync-reset-val "{{hintDefault}}"
       :hint-default "Tap any word above to see & hear its sounds"
       (:controls (:param-hud :off))
       (:gestures

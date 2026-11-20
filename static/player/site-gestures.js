@@ -78,6 +78,11 @@
   const DEFAULT_SKILLS_AST = `(:skills
     (:skill :id "storybook-reader"
       :pages 5
+      :sync-timeline-var "page"
+      :sync-count "{{pages}}"
+      :sync-clear-var "activePhonemes"
+      :sync-reset-var "activeWord"
+      :sync-reset-val "{{hintDefault}}"
       :hint-default "Tap any word above to see & hear its sounds"
       (:controls (:param-hud :off))
       (:gestures
@@ -165,6 +170,9 @@
       this._windowListenersBound = false;
       this._customActions = new Map();
       this._customGestureSkills = new Map();
+      this._syncingTimelineVar = false;
+      this._lastSyncedTimelineVal = null;
+      this._timelineSyncBound = false;
 
       // Bind methods
       this.handlePointerDown = this.handlePointerDown.bind(this);
@@ -211,6 +219,7 @@
         this._presetListenerBound = true;
         this.engine.on('presetchange', () => {
           this._releaseAllHeldInputs(false);
+          this._lastSyncedTimelineVal = null;
           this.isDragging = false;
           this.dragTarget = null;
           this.dragMode = null;
@@ -224,6 +233,8 @@
           }, 50);
         });
       }
+
+      this._bindTimelineVarSync();
     }
 
     // =========================================================================
@@ -750,6 +761,130 @@
       return expanded;
     }
 
+    /**
+     * Resolves declarative two-way timeline<->var synchronization metadata from any active AST skill
+     * (e.g. :sync-timeline-var "page" :sync-count "{{pages}}"). Purely generic; zero hardcoded scene IDs.
+     */
+    _getActiveTimelineSyncSpec(scene) {
+      if (!scene || !this.playerProfile || !(this.playerProfile.skills instanceof Map)) return null;
+      const usages = this._resolveSceneSkillUsages(scene);
+      for (const usage of usages) {
+        if (!usage || !usage.id) continue;
+        const skillDef = this.playerProfile.skills.get(usage.id);
+        if (!skillDef) continue;
+        const resolvedParams = this._resolveSkillParams(skillDef, usage.params);
+        const rawVar = resolvedParams.syncTimelineVar || resolvedParams['sync-timeline-var'];
+        if (!rawVar) continue;
+
+        const varName = String(this._expandSkillTemplate(String(rawVar), resolvedParams, false)).trim();
+        if (!varName) continue;
+
+        const rawCount = resolvedParams.syncCount !== undefined
+          ? this._expandSkillTemplate(resolvedParams.syncCount, resolvedParams, false)
+          : (resolvedParams['sync-count'] !== undefined
+            ? this._expandSkillTemplate(resolvedParams['sync-count'], resolvedParams, false)
+            : resolvedParams.pages);
+        const keyframeCount = Array.isArray(scene.keyframes) && scene.keyframes.length >= 2
+          ? scene.keyframes.length
+          : 2;
+        const parsedCount = Number(rawCount);
+        const count = Number.isFinite(parsedCount) && parsedCount >= 2 ? Math.round(parsedCount) : keyframeCount;
+
+        const rawClear = resolvedParams.syncClearVar || resolvedParams['sync-clear-var'] || '';
+        const clearVar = rawClear ? String(this._expandSkillTemplate(String(rawClear), resolvedParams, false)).trim() : '';
+
+        const rawReset = resolvedParams.syncResetVar || resolvedParams['sync-reset-var'] || '';
+        const resetVar = rawReset ? String(this._expandSkillTemplate(String(rawReset), resolvedParams, false)).trim() : '';
+
+        const rawResetVal = resolvedParams.syncResetVal !== undefined
+          ? resolvedParams.syncResetVal
+          : resolvedParams['sync-reset-val'];
+        const resetVal = rawResetVal !== undefined
+          ? this._expandSkillTemplate(rawResetVal, resolvedParams, false)
+          : '';
+
+        return {
+          varName,
+          count,
+          maxIdx: Math.max(1, count - 1),
+          clearVar,
+          resetVar,
+          resetVal
+        };
+      }
+      return null;
+    }
+
+    /**
+     * Keeps timeline progress (t) and a discrete page/step variable synchronized in both directions
+     * without feedback loops whenever an active AST skill declares :sync-timeline-var.
+     */
+    _bindTimelineVarSync() {
+      if (this._timelineSyncBound || !this.engine || typeof this.engine.on !== 'function') return;
+      this._timelineSyncBound = true;
+
+      // 1. Timeline scrubbing / playback (t -> vars[syncVar])
+      this.engine.on('timeupdate', (data) => {
+        if (this._syncingTimelineVar) return;
+        const spec = this._getActiveTimelineSyncSpec(this.engine.scene);
+        if (!spec) return;
+
+        const progress = data && typeof data.progress === 'number'
+          ? data.progress
+          : (this.engine.progress || 0);
+        const nextIdx = Math.max(0, Math.min(spec.maxIdx, Math.floor((progress || 0) * spec.count)));
+        const rawCur = this.engine.vars ? this.engine.vars[spec.varName] : undefined;
+        const curNum = Number(rawCur);
+        const curIdx = Number.isFinite(curNum) ? Math.max(0, Math.min(spec.maxIdx, Math.round(curNum))) : -1;
+
+        if (nextIdx !== curIdx) {
+          this._syncingTimelineVar = true;
+          try {
+            this._lastSyncedTimelineVal = nextIdx;
+            this._writeEngineVar(spec.varName, nextIdx);
+            if (spec.clearVar) this._writeEngineVar(spec.clearVar, '');
+            if (spec.resetVar) this._writeEngineVar(spec.resetVar, spec.resetVal);
+          } finally {
+            this._syncingTimelineVar = false;
+          }
+        }
+      });
+
+      // 2. Variable updates from Turn Page parameter control / WebMCP / buttons (vars[syncVar] -> t)
+      this.engine.on('varchange', (data) => {
+        if (this._syncingTimelineVar) return;
+        const spec = this._getActiveTimelineSyncSpec(this.engine.scene);
+        if (!spec || !data || data.name !== spec.varName) return;
+
+        const rawVal = Number(data.value);
+        const targetIdx = Math.max(0, Math.min(spec.maxIdx, Number.isFinite(rawVal) ? Math.round(rawVal) : 0));
+        const targetProgress = targetIdx / spec.maxIdx;
+        const needsClamp = !Number.isFinite(rawVal) || rawVal !== targetIdx;
+        const pageChanged = this._lastSyncedTimelineVal !== targetIdx;
+        const needsSeek = typeof this.engine.seek === 'function'
+          && Math.abs((this.engine.progress || 0) - targetProgress) > 1e-4;
+
+        if (!needsClamp && !pageChanged && !needsSeek) return;
+
+        this._syncingTimelineVar = true;
+        try {
+          this._lastSyncedTimelineVal = targetIdx;
+          if (needsClamp) {
+            this._writeEngineVar(spec.varName, targetIdx);
+          }
+          if (pageChanged) {
+            if (spec.clearVar) this._writeEngineVar(spec.clearVar, '');
+            if (spec.resetVar) this._writeEngineVar(spec.resetVar, spec.resetVal);
+          }
+          if (needsSeek) {
+            this.engine.seek(targetProgress);
+          }
+        } finally {
+          this._syncingTimelineVar = false;
+        }
+      });
+    }
+
     _syncCartridgeControls() {
       const merged = { ...this.playerProfile.defaults };
       const scene = this.engine && this.engine.scene;
@@ -1171,7 +1306,10 @@
         let targetIdx = 0;
         if (action === 'step-slide') {
           const delta = typeof g.delta === 'number' ? g.delta : 1;
-          const curIdx = Math.max(0, Math.min(maxIdx, Math.floor(((this.engine.progress || 0)) * count)));
+          const rawVarCur = g.var && this.engine.vars ? Number(this.engine.vars[g.var]) : NaN;
+          const curIdx = Number.isFinite(rawVarCur)
+            ? Math.max(0, Math.min(maxIdx, Math.round(rawVarCur)))
+            : Math.max(0, Math.min(maxIdx, Math.floor((this.engine.progress || 0) * count)));
           targetIdx = Math.max(0, Math.min(maxIdx, curIdx + delta));
         } else {
           const rawTarget = attrVal !== undefined ? attrVal : g.val;
@@ -1179,17 +1317,23 @@
           targetIdx = Math.max(0, Math.min(maxIdx, Number.isFinite(numTarget) ? Math.round(numTarget) : 0));
         }
 
-        if (g.var) {
-          this._writeEngineVar(g.var, targetIdx);
-        }
-        if (g.clearVar) {
-          this._writeEngineVar(g.clearVar, '');
-        }
-        if (g.resetVar) {
-          this._writeEngineVar(g.resetVar, g.resetVal !== undefined ? g.resetVal : '');
-        }
-        if (typeof this.engine.seek === 'function') {
-          this.engine.seek(targetIdx / maxIdx);
+        this._syncingTimelineVar = true;
+        try {
+          this._lastSyncedTimelineVal = targetIdx;
+          if (g.var) {
+            this._writeEngineVar(g.var, targetIdx);
+          }
+          if (g.clearVar) {
+            this._writeEngineVar(g.clearVar, '');
+          }
+          if (g.resetVar) {
+            this._writeEngineVar(g.resetVar, g.resetVal !== undefined ? g.resetVal : '');
+          }
+          if (typeof this.engine.seek === 'function') {
+            this.engine.seek(targetIdx / maxIdx);
+          }
+        } finally {
+          this._syncingTimelineVar = false;
         }
         return true;
       }

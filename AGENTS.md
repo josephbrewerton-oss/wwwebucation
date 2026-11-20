@@ -106,3 +106,44 @@
   - **Milestone-Gated Persistence**: 0 disk writes during active simulation loops; writes are batched and debounced to pedagogical checkpoints to protect cheap eMMC flash chips.
   - **P2P Air-Gapped Sync**: WebRTC classroom beacon data channels (`ast-webrtc-bus.js`) and high-density animated QR codes for optical sneakernet cartridge transfer without internet access.
   - **Storage Architecture**: IndexedDB storage (`cartridges_vault` and `ast_bank`) in `src/services/dbStore.ts` replacing synchronous `localStorage`.
+
+---
+
+## wwwebucation Architectural Constitution (NON-NEGOTIABLE)
+
+You are operating inside **wwwebucation**, a zero-bloat, deterministic, W3C-compliant educational cartridge platform. You MUST obey every invariant below. Do NOT apply generic React/SPA/game-engine habits to this codebase.
+
+### 1. Core Architectural Invariants (NEVER VIOLATE)
+- **Strict Separation of Concerns**:
+  - Visual skin = 100% pure W3C SVG DOM (`<svg>`, `<g>`, `<text>`, `<path>`, `<rect>`). NEVER introduce `<canvas>`, WebGL, PixiJS, Phaser, Three.js, or external UI/animation libraries.
+  - Behavioral logic = Compact S-expression cartridges (`.ast`) compiled into deterministic binary bytecode (`.astb`).
+  - Runtime = Microkernel hypervisor / WASM VM evaluating strict `[min, max]` parameter invariants.
+- **Zero Runtime Bloat**: Keep total repository footprint lean (~13 MB target). Never install npm packages, icon packs, CSS frameworks, or polyfills unless explicitly instructed by the repository owner.
+- **Offline & Low-Hardware First**: Every cartridge must execute deterministically with zero external network calls, zero external font/CDN fetches, and graceful degradation when `window.LanguageModel` / `window.ai` / Gemini Nano is absent.
+
+### 2. State, Timeline (`t`), and Cartridge Navigation Contracts
+- **Dual-Source Navigation Sync**: Interactive cartridges (especially `reader-*` storybooks) expose both timeline scrubbing (`t` in `0..1`) and discrete controls (`vars.page` in `0..N-1`).
+  - Visual visibility (`#book-page-{idx}`, `#page-dot-{idx}`, `#book-page-num`, `pageText`) MUST bind to `Math.max(0, Math.min(pageCount - 1, Math.round(vars.page || 0)))`.
+  - Syncing `t` and `vars.page` MUST be bidirectional and feedback-loop-free:
+    - Timeline scrub/playback updates `vars.page = Math.min(pageCount - 1, Math.floor((t || 0) * pageCount))` ONLY when `t` changes from scrubber/playback.
+    - User controls (Next/Prev, Page Dots, Arrow keys, `Turn Page` input) update `vars.page` (clamped `0..pageCount-1`) and seek `t = vars.page / (pageCount - 1)`.
+- **Build Pipeline Integrity**: Whenever modifying cartridge generators (`scripts/generate-reader-books.ts`) or `.ast` sources, ALWAYS re-run the generator and recompile `.astb` bytecode so committed binaries match source definitions.
+
+### 3. Accessibility & W3C DOM Standards
+- **Screen-Reader Safety**:
+  - Inactive spreads/pages (`#book-page-{idx}`) MUST use `display="none"` (never `opacity="0"` alone) so assistive technologies do not read hidden spreads aloud.
+  - Purely decorative shapes and sound-button dots/dashes MUST carry `aria-hidden="true"`.
+  - Interactive SVG `<g>` controls (Next/Prev, word tiles, page dots) MUST include `role="button"`, `tabindex="0"`, and descriptive `aria-label` attributes.
+
+### 4. UK DfE Phonics & Pedagogy Contracts
+- **Greedy Grapheme Segmentation (`decodeWordForReader`)**: Always match UK DfE Phase 3/5 digraphs and trigraphs (`ai`, `ee`, `igh`, `oa`, `oo`, `ar`, `or`, `ur`, `ow`, `oi`, `ear`, `air`, `ure`, `er`, `ay`, `ou`, `ie`, `ea`, `oy`, `ir`, `ue`, `aw`, `wh`, `ph`, `ew`, `oe`, `au`) greedily BEFORE single-letter graphemes. Never split vowel digraphs into individual dots.
+- **Punctuation Isolation**: Sound-button widths and dot/dash spans (`renderBookPageWordsSvg`) MUST be calculated strictly from `decoded.cleanWord.length` (excluding trailing `.`, `!`, `?`, `,`), never raw token length.
+
+### 5. GitHub Pages Deployment & SEO Rules
+- **Subdirectory Base Path**: Production deploys to `https://josephbrewerton-oss.github.io/wwwebucation/`. Never emit root-relative `/...` asset or sitemap paths that drop `/wwwebucation/`.
+- **Launcher-First Discovery**: Cartridge entry points use clean query parameters (`?app=<cartridge-id>`), never hash fragments (`#/...`), and `public/sitemap.xml` must list full `https://josephbrewerton-oss.github.io/wwwebucation/?app=...` URLs.
+
+### 6. Execution Protocol for AI Agents
+1. **No Speculative Refactoring**: Touch ONLY the files explicitly named in the prompt. Do not rename existing IDs, `.ast` opcodes, or public cartridge slugs.
+2. **Verify Before Finishing**: After any edit to `.ts` generators or `.ast` files, run the build/compile step and confirm zero TypeScript errors and updated `.astb` output.
+

@@ -544,21 +544,52 @@ function lispEsc(s: string): string {
   return s.replace(/\\/g, '\\\\').replace(/"/g, '\\"');
 }
 
+function estimateCharWidth(ch: string): number {
+  if (ch === 'i' || ch === 'l' || ch === 'I' || ch === 'j') return 8.5;
+  if (ch === 'f' || ch === 'r' || ch === 't') return 10.5;
+  if (ch === 'm' || ch === 'w' || ch === 'M' || ch === 'W') return 21.5;
+  if (ch === '.' || ch === ',' || ch === '!' || ch === ';' || ch === ':') return 7.5;
+  if (ch === '?') return 13.0;
+  if (ch >= 'A' && ch <= 'Z') return 17.5;
+  return 14.8;
+}
+
+function measureTextSpan(text: string): number {
+  let w = 0;
+  for (let i = 0; i < text.length; i++) {
+    w += estimateCharWidth(text[i]);
+  }
+  return w;
+}
+
 function renderBookPageWordsSvg(
   sentence: string,
   pageIdx: number,
   accent: string
 ): { wordsMarkup: string; soundButtonsMarkup: string } {
   const tokens = sentence.split(/\s+/).filter(Boolean);
-  // Estimate pixel width of each word tile at 27px bold sans-serif
-  const charW = 16.5;
   const padX = 16;
   const gap = 12;
 
   const tiles = tokens.map((raw) => {
     const decoded = decodeWordForReader(raw);
-    const width = Math.max(46, Math.round(raw.length * charW + padX * 2));
-    return { raw, decoded, width };
+    const leadingPunct = raw.match(/^[^a-zA-Z]+/)?.[0] || '';
+    const trailingPunct = raw.match(/[^a-zA-Z]+$/)?.[0] || '';
+    const cleanWord = decoded.cleanWord || raw;
+    const leadingW = measureTextSpan(leadingPunct);
+    const cleanW = measureTextSpan(cleanWord);
+    const trailingW = measureTextSpan(trailingPunct);
+    const totalTextW = leadingW + cleanW + trailingW;
+    const width = Math.max(46, Math.round(totalTextW + padX * 2));
+    return {
+      raw,
+      decoded,
+      cleanWord,
+      leadingW,
+      cleanW,
+      totalTextW,
+      width,
+    };
   });
 
   // Split into 1 or 2 centered lines if total width > 700px
@@ -621,28 +652,72 @@ function renderBookPageWordsSvg(
         </g>
       `);
 
-      // Sound buttons positioned directly beneath the word inside #sb-page-{pageIdx}
+      // Sound buttons positioned strictly beneath decoded.cleanWord (excluding leading/trailing punctuation)
       const sbY = baseY + 10;
+      const wordLeft = cx - tile.totalTextW / 2 + tile.leadingW;
+      const wordRight = wordLeft + tile.cleanW;
+      const wordCenter = (wordLeft + wordRight) / 2;
+
       if (decoded.kind === 'tricky') {
+        const lineX1 = Math.max(cursorX + 8, wordLeft - 2);
+        const lineX2 = Math.min(cursorX + tile.width - 8, wordRight + 2);
         sbParts.push(`
-          <line x1="${cursorX + 10}" y1="${sbY}" x2="${cursorX + tile.width - 10}" y2="${sbY}" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
-          <text x="${cx}" y="${sbY + 1}" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+          <line x1="${lineX1.toFixed(1)}" y1="${sbY}" x2="${lineX2.toFixed(1)}" y2="${sbY}" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="${wordCenter.toFixed(1)}" y="${sbY + 1}" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
         `);
       } else {
-        const segCount = decoded.segments.length;
-        const innerW = tile.width - 24;
-        const segStep = segCount > 0 ? innerW / segCount : innerW;
-        decoded.segments.forEach((seg, sIdx) => {
-          const sx = cursorX + 12 + segStep * sIdx + segStep / 2;
-          if (seg.type === 'single') {
-            sbParts.push(`<circle cx="${sx.toFixed(1)}" cy="${sbY}" r="3.4" fill="${accent}"/>`);
-          } else if (seg.type === 'split') {
-            sbParts.push(`<path d="M ${(sx - 10).toFixed(1)} ${sbY - 1} Q ${sx.toFixed(1)} ${sbY + 7} ${(sx + 10).toFixed(1)} ${sbY - 1}" stroke="${accent}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
+        // Precompute exact horizontal boundaries for each letter in cleanWord
+        const cleanChars = tile.cleanWord;
+        const charStarts: number[] = [];
+        const charWidths: number[] = [];
+        let xAcc = wordLeft;
+        for (let ci = 0; ci < cleanChars.length; ci++) {
+          const cw = estimateCharWidth(cleanChars[ci]);
+          charStarts.push(xAcc);
+          charWidths.push(cw);
+          xAcc += cw;
+        }
+
+        const charCenterAt = (idx: number): number => {
+          const clamped = Math.max(0, Math.min(cleanChars.length - 1, idx));
+          return charStarts[clamped] + charWidths[clamped] / 2;
+        };
+
+        let charCursor = 0;
+        const segs = decoded.segments;
+        for (let sIdx = 0; sIdx < segs.length; sIdx++) {
+          const seg = segs[sIdx];
+          if (seg.type === 'split') {
+            // Split digraph (e.g. a-e, i-e, o-e): vowel sits at charCursor,
+            // intervening consonant (next segment) follows, and silent 'e' sits right after it.
+            const nextSeg = segs[sIdx + 1];
+            const consonantLen = nextSeg ? Math.max(1, nextSeg.letters.replace(/-/g, '').length) : 1;
+            const vowelX = charCenterAt(charCursor);
+            const silentEIdx = Math.min(cleanChars.length - 1, charCursor + 1 + consonantLen);
+            const silentEX = charCenterAt(silentEIdx);
+            const midX = (vowelX + silentEX) / 2;
+            sbParts.push(`<path d="M ${vowelX.toFixed(1)} ${sbY - 1} Q ${midX.toFixed(1)} ${sbY + 8} ${silentEX.toFixed(1)} ${sbY - 1}" stroke="${accent}" stroke-width="2.4" fill="none" stroke-linecap="round"/>`);
+            charCursor += 1;
           } else {
-            const barW = Math.min(segStep - 4, seg.type === 'trigraph' ? 28 : 20);
-            sbParts.push(`<rect x="${(sx - barW / 2).toFixed(1)}" y="${sbY - 2.5}" width="${barW.toFixed(1)}" height="5" rx="2.5" fill="${accent}"/>`);
+            const len = Math.max(1, seg.letters.length);
+            const startIdx = Math.max(0, Math.min(cleanChars.length - 1, charCursor));
+            const endIdx = Math.max(startIdx, Math.min(cleanChars.length - 1, charCursor + len - 1));
+            const spanLeft = charStarts[startIdx];
+            const spanRight = charStarts[endIdx] + charWidths[endIdx];
+            const spanW = Math.max(8, spanRight - spanLeft);
+            const sx = (spanLeft + spanRight) / 2;
+
+            if (seg.type === 'single') {
+              sbParts.push(`<circle cx="${sx.toFixed(1)}" cy="${sbY}" r="3.4" fill="${accent}"/>`);
+            } else {
+              // Digraph / trigraph sound bar: unmistakably wider than a single dot, anchored under its exact letters
+              const minBarW = seg.type === 'trigraph' ? 30 : 21;
+              const barW = Math.min(Math.max(minBarW, spanW - 3.5), spanW + 3);
+              sbParts.push(`<rect x="${(sx - barW / 2).toFixed(1)}" y="${sbY - 2.4}" width="${barW.toFixed(1)}" height="4.8" rx="2.4" fill="${accent}"/>`);
+            }
+            charCursor += len;
           }
-        });
+        }
       }
 
       cursorX += tile.width + gap;
@@ -765,10 +840,9 @@ function generateBookCartridge(book: DecodableMiniBook, spec: BookCartridgeMeta)
       .replace(/\r/g, '\\r')
       .replace(/\n/g, '\\n');
 
-  // Strict integer page index [0..maxPageIdx] driven directly by slide clock t so
-  // Slide pills, timeline scrubber, Play, Arrow keys, Prev/Next buttons, and Page Dots
-  // stay 100% synchronized and can never land on a fractional blank page.
-  const activePageExpr = `Math.max(0, Math.min(${maxPageIdx}, Math.floor((t || 0) * ${pageCount})))`;
+  // Strict integer page index [0..maxPageIdx] driven directly by vars.page while the
+  // storybook-reader skill keeps vars.page and timeline progress t synchronized both ways.
+  const activePageExpr = `Math.max(0, Math.min(${maxPageIdx}, Math.round(vars.page || 0)))`;
   const pageTextExpr = `[${book.pages.map((p) => `'${jsSingleQuoteEsc(p.text)}'`).join(', ')}][${activePageExpr}] || ''`;
 
   const subtitlesBlock = book.pages
