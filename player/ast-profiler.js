@@ -253,4 +253,8 @@ class ASTProfiler {
       this.textNode = null;
     }
   } // <--- ONLY CLOSE THE CLASS HERE!
-
+global.ASTProfiler = ASTProfiler;
+  if (typeof window !== 'undefined') {
+    window.ASTProfiler = ASTProfiler;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this);
