@@ -33,6 +33,7 @@ const PRECACHE_ASSETS = [
   './player/ast-compiler.js',
   './player/ast-phet-bridge.js',
   './player/ast-registry.js',
+  './player/ast-profiler.js',
   './player/ast-engine.js',
   './player/ast-webrtc-bus.js',
   './player/obs-controller.js',

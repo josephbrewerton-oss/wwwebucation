@@ -23,6 +23,7 @@ function scanAndDigest() {
     'manifest.json',
     'player.html',
     'player/player-ui.js',
+    'player/ast-profiler.js',
     'player/ast-engine.js',
     'player/ast-compiler.js',
     'player/site-gestures.js',
