@@ -13637,11 +13637,16 @@ function setupPostMessageBridge(engine, uiController) {
 }
 
   // Expose to global/window environment
-  global.ASTProfiler = ASTProfiler;
+  const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
+  if (_ASTProfiler) {
+    global.ASTProfiler = _ASTProfiler;
+    if (typeof window !== 'undefined') {
+      window.ASTProfiler = _ASTProfiler;
+    }
+  }
   global.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
   global.setupPostMessageBridge = setupPostMessageBridge;
   if (typeof window !== 'undefined') {
-    window.ASTProfiler = ASTProfiler;
     window.ASTVectorPlayerEngine = ASTVectorPlayerEngine;
     window.setupPostMessageBridge = setupPostMessageBridge;
   }
