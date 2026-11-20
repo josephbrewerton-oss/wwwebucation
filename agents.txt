@@ -54,9 +54,12 @@ Data-Protection: UK GDPR Art. 25, KCSIE, CAADCA/SOPIPA & DPDP Sec 5(3) Compliant
 #   AST skills (:skills in player-gestures.ast, activated via (:use-skill "<id>" ...))
 #   and per-cartridge (:controls ...) switches gate platform features (:whiteboard, :xray,
 #   :audio, :arrow-step, :num-jump, :scrub, :space-play, :quiz-keys, :param-hud), while
-#   native zero-JS actions (step-slide, goto-slide, from-attr, speak-var, fallback-var,
+#   native zero-JS actions (step-slide, goto-slide, navigate, load-cartridge, toggle-bsl,
+#   toggle-sound, open-tutor, set-render-mode, from-attr, speak-var, fallback-var,
 #   speak-attr, clear-var, reset-var) and extensible registerAction() / registerGestureSkill()
-#   hooks run cleanly standalone, in an iframe, or offline ZIP.
+#   hooks run cleanly standalone, in an iframe, or offline ZIP. Both Gemini Nano (WebMCP)
+#   and AST cartridges (via SITE_DIRECTIVE) share the exact same Hypervisor-gated
+#   executeSiteDirective() allowlist so the Hypervisor always retains authority.
 # - Fixed WASM Linear Memory: Strictly operates in a 7-page (448 KB) WASM linear memory
 #   pool with zero dynamic heap allocations (no GC spikes) during 60 FPS physics loops.
 # - 20–45x Lighter Than PhET: Boots in < 15 ms with < 8 MB RAM footprint (vs PhET's 2–5 MB

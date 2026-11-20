@@ -18,12 +18,12 @@
   ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
   ;; Zero-JS declarative actions handled natively by site-gestures.js so Nano can reason in pure AST.
   (:primitives
-    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak"))
+    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "navigate" "load-cartridge" "toggle-bsl" "toggle-sound" "open-tutor" "set-render-mode" "site-directive" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak"))
     (:primitive :type "holdable"  :actions ("hold-var" "step-var") :hold-delay-ms 160)
     (:primitive :type "draggable" :axes ("x" "y" "xy") :modes ("generic" "bind-input") :attrs ("minX" "maxX" "minY" "maxY" "step" "invert" "relative" "seek" "tone"))
     (:primitive :type "rotatable" :attrs ("cx" "cy" "var"))
     (:primitive :type "trackball" :attrs ("yawVar" "pitchVar" "pitchMin" "pitchMax") :default-pitch-min -65 :default-pitch-max 65)
-    (:primitive :type "key"       :attrs ("code" "key" "action" "delta" "count" "var" "set-var" "toggle-var" "step-var" "hold-var" "clear-var" "reset-var" "reset-val" "rate" "tone" "speak" "speak-var")))
+    (:primitive :type "key"       :attrs ("code" "key" "action" "delta" "count" "var" "route" "preset" "prompt" "set-var" "toggle-var" "step-var" "hold-var" "clear-var" "reset-var" "reset-val" "rate" "tone" "speak" "speak-var")))
 
   ;; 3. Universal Keyboard & Switch Navigation Rules (Inherited by all cartridges)
   (:universal-keys
