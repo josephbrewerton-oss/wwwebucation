@@ -653,7 +653,7 @@ import{h as e}from"./cartridge-vault-BPdGmEvy.js";import{C as t,S as n,T as r,_ 
               Learn to Read Studio
             </h1>
             <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
-              A DfE Reading Framework-aligned systematic synthetic phonics practice aid — from first sounds to reading full illustrated decodable books independently.
+              A step-by-step phonics journey from first sounds to reading full illustrated books independently.
             </p>
           </div>
           <a
