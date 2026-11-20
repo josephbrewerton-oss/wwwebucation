@@ -2278,54 +2278,116 @@
       this.muted = false;
       this.humOsc = null;
       this.humGain = null;
+      this._unlocked = false;
+    }
+
+    _getSharedHost() {
+      if (typeof window === 'undefined') return null;
+      try {
+        if (window.top && window.top !== window && window.top.location && window.top.location.origin === window.location.origin) {
+          return window.top;
+        }
+      } catch (_) {}
+      return window;
     }
 
     init() {
-      if (this.ctx) return;
+      if (this.ctx && this.ctx.state !== 'closed') return;
       try {
+        const host = this._getSharedHost();
+        if (host && host.__astSharedAudioCtx && host.__astSharedAudioCtx.state !== 'closed') {
+          this.ctx = host.__astSharedAudioCtx;
+          return;
+        }
         const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
         if (AudioContextClass) {
           this.ctx = new AudioContextClass();
+          if (host) host.__astSharedAudioCtx = this.ctx;
+          if (typeof window !== 'undefined') window.__astSharedAudioCtx = this.ctx;
         }
       } catch (e) {
         console.warn('[AudioSynth] Web Audio not available:', e);
       }
     }
 
+    unlock() {
+      try {
+        if (typeof navigator !== 'undefined' && navigator.audioSession && navigator.audioSession.type !== 'playback') {
+          navigator.audioSession.type = 'playback';
+        }
+      } catch (_) {}
+      this.init();
+      if (!this.ctx) return false;
+      try {
+        if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
+          const p = this.ctx.resume();
+          if (p && typeof p.catch === 'function') p.catch(() => {});
+        }
+        if (!this._unlocked) {
+          // 1-sample silent buffer unlock required by iOS Safari / standalone PWAs
+          const silentBuf = this.ctx.createBuffer(1, 1, 22050);
+          const src = this.ctx.createBufferSource();
+          src.buffer = silentBuf;
+          src.connect(this.ctx.destination);
+          if (typeof src.start === 'function') src.start(0);
+          this._unlocked = true;
+        }
+      } catch (_) {}
+      return true;
+    }
+
     ensureContext() {
       this.init();
-      if (this.ctx && this.ctx.state === 'suspended') {
-        this.ctx.resume().catch(() => {});
+      if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
+        const p = this.ctx.resume();
+        if (p && typeof p.catch === 'function') p.catch(() => {});
       }
       return Boolean(this.ctx);
     }
 
-    playClick(freq = 900) {
-      if (this.muted || !this.ensureContext()) return;
+    withRunningContext(fn) {
+      if (this.muted || !this.ensureContext() || !this.ctx) return;
+      const ctx = this.ctx;
+      if (ctx.state === 'running') {
+        try { fn(ctx); } catch (_) {}
+        return;
+      }
       try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+        const res = ctx.resume();
+        if (res && typeof res.then === 'function') {
+          res.then(() => {
+            if (!this.muted && ctx.state === 'running') {
+              try { fn(ctx); } catch (_) {}
+            }
+          }).catch(() => {});
+        }
+      } catch (_) {}
+    }
+
+    playClick(freq = 900) {
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(120, now + 0.03);
         gain.gain.setValueAtTime(0.15, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.035);
-      } catch (e) {}
+      });
     }
 
     playSuccessChime() {
-      if (this.muted || !this.ensureContext()) return;
-      try {
+      this.withRunningContext((ctx) => {
         const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
-        const now = this.ctx.currentTime;
+        const now = ctx.currentTime;
         notes.forEach((freq, idx) => {
-          const osc = this.ctx.createOscillator();
-          const gain = this.ctx.createGain();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
           const noteTime = now + (idx * 0.08);
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, noteTime);
@@ -2333,67 +2395,64 @@
           gain.gain.linearRampToValueAtTime(0.18, noteTime + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
           osc.connect(gain);
-          gain.connect(this.ctx.destination);
+          gain.connect(ctx.destination);
           osc.start(noteTime);
           osc.stop(noteTime + 0.36);
         });
-      } catch (e) {}
+      });
     }
 
     playFailBuzz() {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(140, now);
         osc.frequency.linearRampToValueAtTime(90, now + 0.2);
         gain.gain.setValueAtTime(0.12, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.23);
-      } catch (e) {}
+      });
     }
 
     playSpring(freq = 440) {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.25);
         gain.gain.setValueAtTime(0.18, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.26);
-      } catch (e) {}
+      });
     }
 
     setHum(freq = 60, volume = 0.05) {
-      if (this.muted || !this.ensureContext()) return;
-      try {
+      this.withRunningContext((ctx) => {
         if (!this.humOsc) {
-          this.humOsc = this.ctx.createOscillator();
-          this.humGain = this.ctx.createGain();
+          this.humOsc = ctx.createOscillator();
+          this.humGain = ctx.createGain();
           this.humOsc.type = 'sine';
-          this.humOsc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          this.humGain.gain.setValueAtTime(0.001, this.ctx.currentTime);
-          this.humGain.gain.linearRampToValueAtTime(volume, this.ctx.currentTime + 0.1);
+          this.humOsc.frequency.setValueAtTime(freq, ctx.currentTime);
+          this.humGain.gain.setValueAtTime(0.001, ctx.currentTime);
+          this.humGain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.1);
           this.humOsc.connect(this.humGain);
-          this.humGain.connect(this.ctx.destination);
+          this.humGain.connect(ctx.destination);
           this.humOsc.start();
         } else {
-          this.humOsc.frequency.setValueAtTime(freq, this.ctx.currentTime);
-          this.humGain.gain.setValueAtTime(volume, this.ctx.currentTime);
+          this.humOsc.frequency.setValueAtTime(freq, ctx.currentTime);
+          this.humGain.gain.setValueAtTime(volume, ctx.currentTime);
         }
-      } catch (e) {}
+      });
     }
 
     stopHum() {
@@ -2417,11 +2476,10 @@
     }
 
     playBoing(baseFreq = 220) {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'sine';
         osc.frequency.setValueAtTime(baseFreq, now);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.4, now + 0.12);
@@ -2429,18 +2487,17 @@
         gain.gain.setValueAtTime(0.2, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.31);
-      } catch (e) {}
+      });
     }
 
     playSlideWhistle(startFreq = 280, endFreq = 840, duration = 0.35) {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(startFreq, now);
         osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
@@ -2449,78 +2506,75 @@
         gain.gain.setValueAtTime(0.16, now + duration - 0.04);
         gain.gain.linearRampToValueAtTime(0.001, now + duration);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + duration + 0.02);
-      } catch (e) {}
+      });
     }
 
     playPop(freq = 620) {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        const now = this.ctx.currentTime;
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.25, now + 0.04);
         gain.gain.setValueAtTime(0.22, now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
         osc.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + 0.045);
-      } catch (e) {}
+      });
     }
 
     playWhoosh() {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const bufferSize = Math.floor(this.ctx.sampleRate * 0.25);
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      this.withRunningContext((ctx) => {
+        const bufferSize = Math.floor(ctx.sampleRate * 0.25);
+        const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
         for (let i = 0; i < bufferSize; i++) {
           data[i] = Math.random() * 2 - 1;
         }
-        const noise = this.ctx.createBufferSource();
+        const noise = ctx.createBufferSource();
         noise.buffer = buffer;
-        const filter = this.ctx.createBiquadFilter();
+        const filter = ctx.createBiquadFilter();
         filter.type = 'bandpass';
         filter.Q.value = 3.0;
-        const now = this.ctx.currentTime;
+        const now = ctx.currentTime;
         filter.frequency.setValueAtTime(200, now);
         filter.frequency.exponentialRampToValueAtTime(1400, now + 0.12);
         filter.frequency.exponentialRampToValueAtTime(300, now + 0.24);
-        const gain = this.ctx.createGain();
+        const gain = ctx.createGain();
         gain.gain.setValueAtTime(0.001, now);
         gain.gain.linearRampToValueAtTime(0.25, now + 0.1);
         gain.gain.linearRampToValueAtTime(0.001, now + 0.24);
         noise.connect(filter);
         filter.connect(gain);
-        gain.connect(this.ctx.destination);
+        gain.connect(ctx.destination);
         noise.start(now);
         noise.stop(now + 0.25);
-      } catch (e) {}
+      });
     }
 
     playBbcBeep() {
-      if (this.muted || !this.ensureContext()) return;
-      try {
-        const now = this.ctx.currentTime;
-        const osc1 = this.ctx.createOscillator();
-        const gain1 = this.ctx.createGain();
+      this.withRunningContext((ctx) => {
+        const now = ctx.currentTime;
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
         osc1.type = 'square';
         osc1.frequency.setValueAtTime(1200, now);
         gain1.gain.setValueAtTime(0.08, now);
         gain1.gain.setValueAtTime(0.08, now + 0.08);
         gain1.gain.linearRampToValueAtTime(0.0001, now + 0.09);
         osc1.connect(gain1);
-        gain1.connect(this.ctx.destination);
+        gain1.connect(ctx.destination);
         osc1.start(now);
         osc1.stop(now + 0.095);
 
-        const osc2 = this.ctx.createOscillator();
-        const gain2 = this.ctx.createGain();
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
         const t2 = now + 0.095;
         osc2.type = 'square';
         osc2.frequency.setValueAtTime(800, t2);
@@ -2528,10 +2582,10 @@
         gain2.gain.setValueAtTime(0.08, t2 + 0.12);
         gain2.gain.linearRampToValueAtTime(0.0001, t2 + 0.135);
         osc2.connect(gain2);
-        gain2.connect(this.ctx.destination);
+        gain2.connect(ctx.destination);
         osc2.start(t2);
         osc2.stop(t2 + 0.14);
-      } catch (e) {}
+      });
     }
   }
 
@@ -3187,10 +3241,27 @@
             this.preemptAiDemonstration('USER_INPUT');
           }
         };
+        const unlockMobileAudio = () => {
+          if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
+            this.audioSynth.unlock();
+          }
+          const synth = this._getSpeechSynth ? this._getSpeechSynth() : null;
+          if (synth) {
+            try {
+              if (typeof synth.getVoices === 'function') synth.getVoices();
+              if (synth.paused && typeof synth.resume === 'function') synth.resume();
+            } catch (_) {}
+          }
+        };
         window.addEventListener('pointerdown', handlePreempt, { passive: true });
         window.addEventListener('touchstart', handlePreempt, { passive: true });
         window.addEventListener('wheel', handlePreempt, { passive: true });
+        window.addEventListener('pointerdown', unlockMobileAudio, { passive: true, capture: true });
+        window.addEventListener('touchstart', unlockMobileAudio, { passive: true, capture: true });
+        window.addEventListener('touchend', unlockMobileAudio, { passive: true, capture: true });
+        window.addEventListener('click', unlockMobileAudio, { passive: true, capture: true });
         window.addEventListener('keydown', (e) => {
+          unlockMobileAudio();
           if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyP', 'KeyR'].includes(e.code)) {
             handlePreempt();
           }
@@ -4486,6 +4557,10 @@
     }
 
    play() {
+      if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
+        this.audioSynth.unlock();
+      }
+      const wasPlaying = this.isPlaying;
       if (!this.isPlaying) {
         this.isPlaying = true;
         this.lastTimestamp = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
@@ -4493,6 +4568,19 @@
           this.backdropVideo.play().catch(() => {});
         }
         this.emit('statechange', { isPlaying: true, speed: this.speed });
+      }
+
+      // On mobile PWAs, initial scene load speech is often blocked before the first user tap.
+      // Speaking the current subtitle synchronously inside play() unlocks SpeechSynthesis and plays keyframe 0.
+      if (!wasPlaying && this.voiceEnabled && !this.muted && this.scene) {
+        const synth = this._getSpeechSynth ? this._getSpeechSynth() : null;
+        const notCurrentlySpeaking = !synth || (!synth.speaking && !synth.pending);
+        if (notCurrentlySpeaking && (!this._speechStartedOnDevice || this.progress <= 0.01)) {
+          const currentSub = this.getCurrentSubtitle() || (this.scene.keyframes && this.scene.keyframes[0] ? `${this.scene.keyframes[0].title}. ${this.scene.keyframes[0].rule}` : '');
+          if (currentSub) {
+            this.speakText(currentSub, { immediate: true });
+          }
+        }
       }
 
       if (this.animationFrameId) {
@@ -5380,16 +5468,50 @@
       return this.muted;
     }
 
+    _getSpeechSynth() {
+      if (typeof window === 'undefined') return null;
+      try {
+        if (
+          window.top &&
+          window.top !== window &&
+          window.top.location &&
+          window.top.location.origin === window.location.origin &&
+          window.top.speechSynthesis
+        ) {
+          return window.top.speechSynthesis;
+        }
+      } catch (_) {}
+      return window.speechSynthesis || null;
+    }
+
+    _getSpeechUtteranceCtor() {
+      if (typeof window === 'undefined') return null;
+      try {
+        if (
+          window.top &&
+          window.top !== window &&
+          window.top.location &&
+          window.top.location.origin === window.location.origin &&
+          window.top.SpeechSynthesisUtterance
+        ) {
+          return window.top.SpeechSynthesisUtterance;
+        }
+      } catch (_) {}
+      return window.SpeechSynthesisUtterance || null;
+    }
+
     cancelSpeech() {
       if (this._speakDebounceTimer) {
         clearTimeout(this._speakDebounceTimer);
         this._speakDebounceTimer = null;
       }
-      if (typeof window !== 'undefined' && window.speechSynthesis) {
+      const synth = this._getSpeechSynth();
+      if (synth) {
         try {
-          window.speechSynthesis.cancel();
+          if (synth.speaking || synth.pending) synth.cancel();
         } catch (err) {}
       }
+      this._activeUtterance = null;
     }
 
     speak(text, opts) {
@@ -5397,24 +5519,33 @@
     }
 
     speakText(text, opts = {}) {
-      if (typeof window === 'undefined' || !window.speechSynthesis || !this.voiceEnabled || !text) return;
+      const synth = this._getSpeechSynth();
+      const UtteranceCtor = this._getSpeechUtteranceCtor();
+      const spokenText = typeof text === 'string'
+        ? text
+        : (text && typeof text === 'object' ? String(text.localized || text.en || '') : '');
+      if (!synth || !UtteranceCtor || !this.voiceEnabled || !spokenText) return;
 
       if (this._speakDebounceTimer) {
         clearTimeout(this._speakDebounceTimer);
         this._speakDebounceTimer = null;
       }
 
-      try {
-        window.speechSynthesis.cancel();
-      } catch (err) {}
-
-      this._speakDebounceTimer = setTimeout(() => {
-        this._speakDebounceTimer = null;
-        if (!this.voiceEnabled || typeof window === 'undefined' || !window.speechSynthesis) return;
+      const performSpeak = () => {
+        if (!this.voiceEnabled) return;
+        const activeSynth = this._getSpeechSynth();
+        const ActiveUtterance = this._getSpeechUtteranceCtor();
+        if (!activeSynth || !ActiveUtterance) return;
 
         try {
-          window.speechSynthesis.cancel();
-          const utterance = new SpeechSynthesisUtterance(text);
+          if (activeSynth.speaking || activeSynth.pending) {
+            activeSynth.cancel();
+          }
+          if (activeSynth.paused && typeof activeSynth.resume === 'function') {
+            activeSynth.resume();
+          }
+
+          const utterance = new ActiveUtterance(spokenText);
           const customRate = opts && typeof opts.rate === 'number' && Number.isFinite(opts.rate) ? opts.rate : null;
           const customPitch = opts && typeof opts.pitch === 'number' && Number.isFinite(opts.pitch) ? opts.pitch : null;
           utterance.rate = customRate !== null ? Math.max(0.1, Math.min(4.0, customRate)) : (this.speechRate || 0.95);
@@ -5434,28 +5565,62 @@
             la: 'it-IT',
             en: 'en-GB'
           };
-          utterance.lang = langMap[this.currentLang] || 'en-GB';
+          const targetLang = langMap[this.currentLang] || 'en-GB';
+          utterance.lang = targetLang;
+
+          // Explicitly bind a matching installed voice when loaded (improves iOS Safari & Android PWA reliability)
+          try {
+            const voices = typeof activeSynth.getVoices === 'function' ? activeSynth.getVoices() : [];
+            if (voices && voices.length) {
+              const langPrefix = targetLang.slice(0, 2).toLowerCase();
+              const matched =
+                voices.find(v => v.lang && v.lang.toLowerCase() === targetLang.toLowerCase()) ||
+                voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langPrefix));
+              if (matched) utterance.voice = matched;
+            }
+          } catch (_) {}
+
+          // Retain strong reference until completion so mobile WebKit/Chromium cannot GC the utterance mid-flight
+          this._activeUtterance = utterance;
           utterance.onboundary = (e) => {
             if (e.name === 'word') {
-              const word = text.slice(e.charIndex).split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
-              this.notifyParent({ type: 'SPEECH_BOUNDARY', word, fullText: text, charIndex: e.charIndex });
+              const word = spokenText.slice(e.charIndex).split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
+              this.notifyParent({ type: 'SPEECH_BOUNDARY', word, fullText: spokenText, charIndex: e.charIndex });
             }
           };
           utterance.onstart = () => {
-            this.notifyParent({ type: 'SPEECH_START', text });
+            this._speechStartedOnDevice = true;
+            this.notifyParent({ type: 'SPEECH_START', text: spokenText });
           };
           utterance.onend = () => {
+            if (this._activeUtterance === utterance) this._activeUtterance = null;
             this.notifyParent({ type: 'SPEECH_END' });
           };
           utterance.onerror = () => {
+            if (this._activeUtterance === utterance) this._activeUtterance = null;
             this.notifyParent({ type: 'SPEECH_END' });
           };
-          this.notifyParent({ type: 'SUBTITLE_UPDATE', text });
-          window.speechSynthesis.speak(utterance);
+          this.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
+          activeSynth.speak(utterance);
         } catch (err) {
           console.warn('SpeechSynthesis error:', err);
         }
-      }, 100);
+      };
+
+      // On mobile PWAs (iOS Safari & Android Chrome), speechSynthesis.speak() MUST run synchronously inside
+      // user activation (taps on words, Read Page, Sound Out, Play); delaying via setTimeout drops the gesture token.
+      const hasUserActivation = Boolean(
+        (opts && opts.immediate) ||
+        (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive)
+      );
+      if (hasUserActivation) {
+        performSpeak();
+      } else {
+        this._speakDebounceTimer = setTimeout(() => {
+          this._speakDebounceTimer = null;
+          performSpeak();
+        }, 80);
+      }
     }
 
     getCurrentSubtitle() {
@@ -13132,14 +13297,28 @@ function setupPostMessageBridge(engine, uiController) {
         engine.toggleLoop();
         break;
       case 'SET_VOLUME':
-        if (typeof data.volume === 'number') engine.setVolume(data.volume);
+        if (typeof data.volume === 'number') {
+          if (data.volume > 0 && engine.audioSynth && typeof engine.audioSynth.unlock === 'function') {
+            engine.audioSynth.unlock();
+          }
+          engine.setVolume(data.volume);
+        }
         break;
       case 'SET_MUTED':
-        if (typeof data.muted === 'boolean') engine.setMuted(data.muted);
+        if (typeof data.muted === 'boolean') {
+          if (!data.muted && engine.audioSynth && typeof engine.audioSynth.unlock === 'function') {
+            engine.audioSynth.unlock();
+          }
+          engine.setMuted(data.muted);
+        }
         break;
-      case 'TOGGLE_MUTE':
-        engine.toggleMute();
+      case 'TOGGLE_MUTE': {
+        const nowMuted = engine.toggleMute();
+        if (!nowMuted && engine.audioSynth && typeof engine.audioSynth.unlock === 'function') {
+          engine.audioSynth.unlock();
+        }
         break;
+      }
       case 'SET_GRAVITY':
         if (typeof data.gravity === 'number' && engine.physics) engine.physics.setGravity(data.gravity);
         break;
@@ -13264,6 +13443,8 @@ function setupPostMessageBridge(engine, uiController) {
           engine.voiceEnabled = data.enabled;
           if (!engine.voiceEnabled) {
             engine.cancelSpeech();
+          } else if (engine.audioSynth && typeof engine.audioSynth.unlock === 'function') {
+            engine.audioSynth.unlock();
           }
           if (uiController && uiController.elements && uiController.elements.btnNarrate) {
             uiController.elements.btnNarrate.classList.toggle('active', engine.voiceEnabled);
