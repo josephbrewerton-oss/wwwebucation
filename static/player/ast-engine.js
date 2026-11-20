@@ -940,7 +940,11 @@
               }
               if (el) {
                 const mb = this.compileSquashMatrix6(b.vx, b.vy, b.squash || 0, b.x, b.y, b._matrixBuf, b.originX || 0, b.originY || 0);
-                el.setAttribute('transform', `matrix(${mb[0].toFixed(4)},${mb[1].toFixed(4)},${mb[2].toFixed(4)},${mb[3].toFixed(4)},${mb[4].toFixed(2)},${mb[5].toFixed(2)})`);
+                const xformStr = `matrix(${mb[0].toFixed(4)},${mb[1].toFixed(4)},${mb[2].toFixed(4)},${mb[3].toFixed(4)},${mb[4].toFixed(2)},${mb[5].toFixed(2)})`;
+                if (b._lastTransform !== xformStr) {
+                  b._lastTransform = xformStr;
+                  el.setAttribute('transform', xformStr);
+                }
               }
             }
           }
@@ -1015,10 +1019,14 @@
             if (iB >= 0) {
               const ax = iA >= 0 ? bufX[iA] : this._spAnchorX[s];
               const ay = iA >= 0 ? bufY[iA] : this._spAnchorY[s];
-              sp.lineElement.setAttribute('x1', ax.toFixed(1));
-              sp.lineElement.setAttribute('y1', ay.toFixed(1));
-              sp.lineElement.setAttribute('x2', bufX[iB].toFixed(1));
-              sp.lineElement.setAttribute('y2', bufY[iB].toFixed(1));
+              const x1s = ax.toFixed(1);
+              const y1s = ay.toFixed(1);
+              const x2s = bufX[iB].toFixed(1);
+              const y2s = bufY[iB].toFixed(1);
+              if (sp._lx1 !== x1s) { sp._lx1 = x1s; sp.lineElement.setAttribute('x1', x1s); }
+              if (sp._ly1 !== y1s) { sp._ly1 = y1s; sp.lineElement.setAttribute('y1', y1s); }
+              if (sp._lx2 !== x2s) { sp._lx2 = x2s; sp.lineElement.setAttribute('x2', x2s); }
+              if (sp._ly2 !== y2s) { sp._ly2 = y2s; sp.lineElement.setAttribute('y2', y2s); }
             }
           }
         }
@@ -1449,6 +1457,9 @@
       this._lastSpeedEval = -1;
       this.obstacles = [];
       this.cachedSegments = [];
+      this._boundsEl = null;
+      this._boundsElSelector = null;
+      this._effectiveBoundsOut = { minX: this.bounds.minX, maxX: this.bounds.maxX, minY: this.bounds.minY, maxY: this.bounds.maxY };
       this.lastAudioImpactTime = 0;
       if (config.obstacles) {
         this.setObstacles(config.obstacles);
@@ -1681,11 +1692,37 @@
      * or SVG viewBox aspect ratio preservation.
      */
     getEffectiveBounds() {
+      const out = this._effectiveBoundsOut || (this._effectiveBoundsOut = { minX: 40, maxX: 760, minY: 40, maxY: 440 });
       // A. Dynamic tracking of an explicit SVG bounding element (e.g. moving piston or chamber)
       if (this.boundsElement && typeof document !== 'undefined') {
-        const el = typeof this.boundsElement === 'string'
-          ? (document.querySelector(this.boundsElement) || (this.engine && this.engine.container && this.engine.container.querySelector(this.boundsElement)))
-          : this.boundsElement;
+        let el = null;
+        if (typeof this.boundsElement === 'string') {
+          if (this._boundsEl && this._boundsElSelector === this.boundsElement && this._boundsEl.isConnected) {
+            el = this._boundsEl;
+          } else {
+            el = (this.engine && this.engine.container && this.engine.container.querySelector(this.boundsElement))
+              || document.querySelector(this.boundsElement);
+            this._boundsEl = el || null;
+            this._boundsElSelector = this.boundsElement;
+          }
+        } else {
+          el = this.boundsElement;
+        }
+
+        // Fast zero-reflow path for axis-aligned untransformed <rect> bounds sharing the same SVG coordinate space
+        if (el && el.tagName && el.tagName.toLowerCase() === 'rect' && !el.getAttribute('transform') && (!this.group || !this.group.getAttribute('transform'))) {
+          const rx = parseFloat(el.getAttribute('x'));
+          const ry = parseFloat(el.getAttribute('y'));
+          const rw = parseFloat(el.getAttribute('width'));
+          const rh = parseFloat(el.getAttribute('height'));
+          if (Number.isFinite(rx) && Number.isFinite(ry) && Number.isFinite(rw) && Number.isFinite(rh) && rw > 0 && rh > 0) {
+            out.minX = rx;
+            out.maxX = rx + rw;
+            out.minY = ry;
+            out.maxY = ry + rh;
+            return out;
+          }
+        }
 
         if (el && typeof el.getBBox === 'function' && this.group && typeof this.group.getScreenCTM === 'function') {
           try {
@@ -1701,12 +1738,11 @@
               const p2 = this.transformPoint(bbox.x, bbox.y + bbox.height, xform);
               const p3 = this.transformPoint(bbox.x + bbox.width, bbox.y + bbox.height, xform);
 
-              return {
-                minX: Math.min(p0.x, p1.x, p2.x, p3.x),
-                maxX: Math.max(p0.x, p1.x, p2.x, p3.x),
-                minY: Math.min(p0.y, p1.y, p2.y, p3.y),
-                maxY: Math.max(p0.y, p1.y, p2.y, p3.y)
-              };
+              out.minX = Math.min(p0.x, p1.x, p2.x, p3.x);
+              out.maxX = Math.max(p0.x, p1.x, p2.x, p3.x);
+              out.minY = Math.min(p0.y, p1.y, p2.y, p3.y);
+              out.maxY = Math.max(p0.y, p1.y, p2.y, p3.y);
+              return out;
             }
           } catch (err) {}
         }
@@ -1717,12 +1753,11 @@
         const svg = this.group.ownerSVGElement;
         if (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width > 0) {
           const vb = svg.viewBox.baseVal;
-          return {
-            minX: vb.x + this.radius,
-            maxX: vb.x + vb.width - this.radius,
-            minY: vb.y + this.radius,
-            maxY: vb.y + vb.height - this.radius
-          };
+          out.minX = vb.x + this.radius;
+          out.maxX = vb.x + vb.width - this.radius;
+          out.minY = vb.y + this.radius;
+          out.maxY = vb.y + vb.height - this.radius;
+          return out;
         }
       }
 
@@ -1909,7 +1944,18 @@
 
         const selector = obs.target || obs.selector;
         if (!selector) continue;
-        const el = typeof selector === 'string' ? root.querySelector(selector) : selector;
+        let el = null;
+        if (typeof selector === 'string') {
+          if (obs._el && obs._elSelector === selector && obs._el.isConnected) {
+            el = obs._el;
+          } else {
+            el = root.querySelector(selector);
+            obs._el = el || null;
+            obs._elSelector = selector;
+          }
+        } else {
+          el = selector;
+        }
         if (!el) continue;
 
         let xform = null;
@@ -1952,8 +1998,10 @@
             p.x = p.latticeX + Math.sin(time * 16 + i * 1.6) * 1.5;
             p.y = p.latticeY + Math.cos(time * 20 + i * 2.2) * 1.5;
             if (p.node) {
-              p.node.setAttribute('cx', p.x.toFixed(1));
-              p.node.setAttribute('cy', p.y.toFixed(1));
+              const cxStr = p.x.toFixed(1);
+              const cyStr = p.y.toFixed(1);
+              if (p._lastCx !== cxStr) { p._lastCx = cxStr; p.node.setAttribute('cx', cxStr); }
+              if (p._lastCy !== cyStr) { p._lastCy = cyStr; p.node.setAttribute('cy', cyStr); }
             }
           }
         }
@@ -1977,8 +2025,10 @@
           for (let i = 0; i < this.pool.length; i++) {
             const p = this.pool[i];
             if (p.node) {
-              p.node.setAttribute('cx', p.x.toFixed(1));
-              p.node.setAttribute('cy', p.y.toFixed(1));
+              const cxStr = p.x.toFixed(1);
+              const cyStr = p.y.toFixed(1);
+              if (p._lastCx !== cxStr) { p._lastCx = cxStr; p.node.setAttribute('cx', cxStr); }
+              if (p._lastCy !== cyStr) { p._lastCy = cyStr; p.node.setAttribute('cy', cyStr); }
             }
           }
           return;
@@ -2142,8 +2192,10 @@
       for (let i = 0; i < this.pool.length; i++) {
         const p = this.pool[i];
         if (p.node) {
-          p.node.setAttribute('cx', p.x.toFixed(1));
-          p.node.setAttribute('cy', p.y.toFixed(1));
+          const cxStr = p.x.toFixed(1);
+          const cyStr = p.y.toFixed(1);
+          if (p._lastCx !== cxStr) { p._lastCx = cxStr; p.node.setAttribute('cx', cxStr); }
+          if (p._lastCy !== cyStr) { p._lastCy = cyStr; p.node.setAttribute('cy', cyStr); }
         }
       }
     }
@@ -3061,6 +3113,46 @@
       this._cachedElements = null;
       this._mountedSceneId = null;
       this._mountedContainer = null;
+
+      // Pre-allocated Zero-GC Hot-Loop Scratch Buffers & Memoization Caches
+      this._boundTick = this.tick.bind(this);
+      this._exprCache = new Map();
+      this._cameraFrame = { distance: 500, pitch: 20, yaw: 0, roll: 0, fov: 60 };
+      this._camBasis = {
+        cosY: 1, sinY: 0, cosP: 1, sinP: 0, cosR: 1, sinR: 0,
+        focalLength: 692.820323, totalDist: 500, invFocalAtDist: 1.0,
+        yawBase: 0, pitchBase: 0, rollBase: 0, fov: 60
+      };
+      this._projOutA = { x: 400, y: 240, z: 0, scale: 1, opacity: 1, safeZ: 500 };
+      this._projOutB = { x: 400, y: 240, z: 0, scale: 1, opacity: 1, safeZ: 500 };
+      this._sorted3D = [];
+      this._timeUpdatePayload = { progress: 0, currentTime: 0, duration: 0 };
+      this._lastOrbitTransform = '';
+      this._lastOrbitTransition = '';
+      this._isSlideScene = false;
+      this._isDynamicScene = false;
+      this._suspendedByVisibility = false;
+
+      if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+        this._visibilityHandler = () => {
+          if (document.hidden) {
+            if (this.animationFrameId) {
+              this._suspendedByVisibility = true;
+              if (typeof cancelAnimationFrame !== 'undefined') {
+                cancelAnimationFrame(this.animationFrameId);
+              }
+              this.animationFrameId = null;
+              this.lastTimestamp = null;
+            }
+          } else if (this._suspendedByVisibility) {
+            this._suspendedByVisibility = false;
+            if (this.isPlaying || (this.physics && this.physics.enabled && this.physics.bodies.length > 0) || (this.emitters && this.emitters.size > 0)) {
+              this.start();
+            }
+          }
+        };
+        document.addEventListener('visibilitychange', this._visibilityHandler, { passive: true });
+      }
 
       // Interactive Camera Orbit State
       this.cameraOrbit = {
@@ -4364,10 +4456,14 @@
     }
 
     start() {
+      if (typeof document !== 'undefined' && document.hidden) {
+        this._suspendedByVisibility = true;
+        return;
+      }
       if (!this.animationFrameId) {
         this.lastTimestamp = (typeof performance !== 'undefined' && performance.now) ? performance.now() : Date.now();
         if (typeof requestAnimationFrame !== 'undefined') {
-          this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
+          this.animationFrameId = requestAnimationFrame(this._boundTick);
         }
       }
       if (this.isPlaying) {
@@ -5410,37 +5506,90 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       let expr = String(rawExpr).trim();
       if (!expr) return ZERO_FN;
 
+      if (!this._exprCache) this._exprCache = new Map();
+      const cachedFn = this._exprCache.get(expr);
+      if (cachedFn) return cachedFn;
+
+      const storeAndReturn = (fn) => {
+        if (this._exprCache.size > 2048) this._exprCache.clear();
+        this._exprCache.set(expr, fn);
+        return fn;
+      };
+
       if (/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(expr)) {
         const num = Number(expr);
-        return () => num;
+        return storeAndReturn(() => num);
       }
 
       if (/^[a-zA-Z_$][a-zA-Z0-9_$]*$/.test(expr)) {
-        if (expr === 't') return (t) => t;
-        if (expr === 'true') return () => true;
-        if (expr === 'false') return () => false;
-        if (expr === 'null') return () => null;
-        if (expr === 'undefined') return () => undefined;
-        if (expr === 'NaN') return () => NaN;
-        if (expr === 'Infinity') return () => Infinity;
-        if (expr === 'PI') return () => Math.PI;
-        if (expr === 'E') return () => Math.E;
-        if (expr === 'Math') return (t, vars, computed, M = Math) => M;
-        if (expr === 'vars') return (t, vars) => vars || {};
-        if (expr === 'computed') return (t, vars, computed) => computed || vars || {};
-        return (t, vars, computed) => (vars && expr in vars ? vars[expr] : computed?.[expr]);
+        if (expr === 't') return storeAndReturn((t) => t);
+        if (expr === 'true') return storeAndReturn(() => true);
+        if (expr === 'false') return storeAndReturn(() => false);
+        if (expr === 'null') return storeAndReturn(() => null);
+        if (expr === 'undefined') return storeAndReturn(() => undefined);
+        if (expr === 'NaN') return storeAndReturn(() => NaN);
+        if (expr === 'Infinity') return storeAndReturn(() => Infinity);
+        if (expr === 'PI') return storeAndReturn(() => Math.PI);
+        if (expr === 'E') return storeAndReturn(() => Math.E);
+        if (expr === 'Math') return storeAndReturn((t, vars, computed, M = Math) => M);
+        if (expr === 'vars') return storeAndReturn((t, vars) => vars || {});
+        if (expr === 'computed') return storeAndReturn((t, vars, computed) => computed || vars || {});
+        return storeAndReturn((t, vars, computed) => (vars && expr in vars ? vars[expr] : computed?.[expr]));
       }
 
-      const BUILTINS = { String, Number, Boolean, parseInt, parseFloat, isNaN, isFinite };
-      const resolveHelper = (name, args, M, helpers) => {
-        if (helpers && helpers[name]) return helpers[name](...args);
-        if (M && typeof M[name] === 'function') return M[name](...args);
-        if (typeof Math[name] === 'function') return Math[name](...args);
-        if (BUILTINS[name]) return BUILTINS[name](...args);
-        return 0;
+      // Compile-time resolved helper map (zero per-call object or rest-array allocations)
+      const STATIC_HELPERS = {
+        clamp: AstMath.clamp,
+        lerp: AstMath.lerp,
+        map: AstMath.map,
+        rad: AstMath.rad,
+        deg: AstMath.deg,
+        dist: AstMath.dist,
+        translate: AstMath.translate,
+        rotate: AstMath.rotate,
+        scale: AstMath.scale,
+        sineWave: AstMath.sineWave,
+        smoothstep: AstMath.smoothstep,
+        astMorphPath,
+        astMorphColor,
+        astEaseBack,
+        astEaseBounce,
+        astEaseElastic,
+        astSquashStretch,
+        String,
+        Number,
+        Boolean,
+        parseInt,
+        parseFloat,
+        isNaN,
+        isFinite
       };
 
-      // 1. S-expression / Lisp compiler -> fast nested closures
+      const makeHelperCall = (name, argFns) => {
+        const staticFn = STATIC_HELPERS[name] || (typeof Math[name] === 'function' ? Math[name] : null);
+        const arity = argFns.length;
+        if (staticFn) {
+          if (arity === 0) return () => staticFn();
+          if (arity === 1) { const a0 = argFns[0]; return (t, v, c, M) => staticFn(a0(t, v, c, M)); }
+          if (arity === 2) { const a0 = argFns[0], a1 = argFns[1]; return (t, v, c, M) => staticFn(a0(t, v, c, M), a1(t, v, c, M)); }
+          if (arity === 3) { const a0 = argFns[0], a1 = argFns[1], a2 = argFns[2]; return (t, v, c, M) => staticFn(a0(t, v, c, M), a1(t, v, c, M), a2(t, v, c, M)); }
+          if (arity === 4) { const a0 = argFns[0], a1 = argFns[1], a2 = argFns[2], a3 = argFns[3]; return (t, v, c, M) => staticFn(a0(t, v, c, M), a1(t, v, c, M), a2(t, v, c, M), a3(t, v, c, M)); }
+          const scratch = new Array(arity);
+          return (t, v, c, M) => {
+            for (let k = 0; k < arity; k++) scratch[k] = argFns[k](t, v, c, M);
+            return staticFn.apply(null, scratch);
+          };
+        }
+        const scratch = new Array(arity);
+        return (t, v, c, M = Math) => {
+          const fn = M && typeof M[name] === 'function' ? M[name] : null;
+          if (!fn) return 0;
+          for (let k = 0; k < arity; k++) scratch[k] = argFns[k](t, v, c, M);
+          return fn.apply(M, scratch);
+        };
+      };
+
+      // 1. S-expression / Lisp compiler -> zero-GC fixed-arity closures
       if (expr.startsWith('(') && expr.endsWith(')')) {
         const tokenizeLisp = (src) => {
           const tokens = [];
@@ -5498,7 +5647,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (pos === tokens.length && Array.isArray(ast) && ast.length >= 1 && ast[0]?.type === 'atom') {
               const compileNode = (node) => {
                 if (!Array.isArray(node)) {
-                  if (node.type === 'str') { const v = node.val; return () => v; }
+                  if (node.type === 'str') { const val = node.val; return () => val; }
                   const a = node.val;
                   if (a === 't') return (t) => t;
                   if (a === 'true') return () => true;
@@ -5512,51 +5661,62 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   }
                   if (/^(?:vars|computed)\.[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
                     const prop = a.split('.')[1];
-                    return (t, vars, computed) => (vars && prop in vars ? vars[prop] : computed?.[prop]);
+                    return (t, v, c) => (v && prop in v ? v[prop] : c?.[prop]);
                   }
                   const cleanKey = a.startsWith(':') ? a.slice(1) : a;
-                  return (t, vars, computed) => (vars && cleanKey in vars ? vars[cleanKey] : computed?.[cleanKey]);
+                  return (t, v, c) => (v && cleanKey in v ? v[cleanKey] : c?.[cleanKey]);
                 }
                 if (node.length === 0) return () => undefined;
                 const op = node[0].type === 'atom' ? node[0].val : '';
                 const fns = node.slice(1).map(compileNode);
+                const len = fns.length;
+                const f0 = fns[0], f1 = fns[1], f2 = fns[2];
                 switch (op) {
-                  case '+': return fns.length === 1
-                    ? (...ctx) => +fns[0](...ctx)
-                    : (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc + fn(...ctx), 0);
-                  case '-': return fns.length === 1
-                    ? (...ctx) => -fns[0](...ctx)
-                    : (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc - fn(...ctx), 0);
-                  case '*': return (...ctx) => fns.reduce((acc, fn) => acc * fn(...ctx), 1);
-                  case '/': return (...ctx) => fns.reduce((acc, fn, idx) => idx === 0 ? fn(...ctx) : acc / fn(...ctx), 0);
-                  case '%': return (...ctx) => fns[0](...ctx) % fns[1](...ctx);
-                  case 'mod': return (...ctx) => { const a = fns[0](...ctx), b = fns[1](...ctx); return ((a % b) + b) % b; };
-                  case '>': return (...ctx) => fns[0](...ctx) > fns[1](...ctx);
-                  case '<': return (...ctx) => fns[0](...ctx) < fns[1](...ctx);
-                  case '>=': return (...ctx) => fns[0](...ctx) >= fns[1](...ctx);
-                  case '<=': return (...ctx) => fns[0](...ctx) <= fns[1](...ctx);
-                  case '=': case '==': case '===': return (...ctx) => fns[0](...ctx) === fns[1](...ctx);
-                  case '!=': case '!==': return (...ctx) => fns[0](...ctx) !== fns[1](...ctx);
-                  case 'and': return (...ctx) => { let r = true; for (let i = 0; i < fns.length; i++) { r = fns[i](...ctx); if (!r) return r; } return r; };
-                  case 'or': return (...ctx) => { let r = false; for (let i = 0; i < fns.length; i++) { r = fns[i](...ctx); if (r) return r; } return r; };
-                  case 'not': return (...ctx) => !fns[0](...ctx);
-                  case 'if': case ':if': return (...ctx) => (fns[0](...ctx) ? fns[1]?.(...ctx) : fns[2]?.(...ctx));
-                  case 'concat': case 'str': return (...ctx) => fns.map(fn => String(fn(...ctx) ?? '')).join('');
+                  case '+':
+                    if (len === 1) return (t, v, c, M) => +f0(t, v, c, M);
+                    if (len === 2) return (t, v, c, M) => f0(t, v, c, M) + f1(t, v, c, M);
+                    return (t, v, c, M) => { let acc = f0(t, v, c, M); for (let i = 1; i < len; i++) acc += fns[i](t, v, c, M); return acc; };
+                  case '-':
+                    if (len === 1) return (t, v, c, M) => -f0(t, v, c, M);
+                    if (len === 2) return (t, v, c, M) => f0(t, v, c, M) - f1(t, v, c, M);
+                    return (t, v, c, M) => { let acc = f0(t, v, c, M); for (let i = 1; i < len; i++) acc -= fns[i](t, v, c, M); return acc; };
+                  case '*':
+                    if (len === 2) return (t, v, c, M) => f0(t, v, c, M) * f1(t, v, c, M);
+                    return (t, v, c, M) => { let acc = 1; for (let i = 0; i < len; i++) acc *= fns[i](t, v, c, M); return acc; };
+                  case '/':
+                    if (len === 2) return (t, v, c, M) => f0(t, v, c, M) / f1(t, v, c, M);
+                    return (t, v, c, M) => { let acc = f0(t, v, c, M); for (let i = 1; i < len; i++) acc /= fns[i](t, v, c, M); return acc; };
+                  case '%': return (t, v, c, M) => f0(t, v, c, M) % f1(t, v, c, M);
+                  case 'mod': return (t, v, c, M) => { const a = f0(t, v, c, M), b = f1(t, v, c, M); return ((a % b) + b) % b; };
+                  case '>': return (t, v, c, M) => f0(t, v, c, M) > f1(t, v, c, M);
+                  case '<': return (t, v, c, M) => f0(t, v, c, M) < f1(t, v, c, M);
+                  case '>=': return (t, v, c, M) => f0(t, v, c, M) >= f1(t, v, c, M);
+                  case '<=': return (t, v, c, M) => f0(t, v, c, M) <= f1(t, v, c, M);
+                  case '=': case '==': case '===': return (t, v, c, M) => f0(t, v, c, M) === f1(t, v, c, M);
+                  case '!=': case '!==': return (t, v, c, M) => f0(t, v, c, M) !== f1(t, v, c, M);
+                  case 'and': return (t, v, c, M) => { let r = true; for (let i = 0; i < len; i++) { r = fns[i](t, v, c, M); if (!r) return r; } return r; };
+                  case 'or': return (t, v, c, M) => { let r = false; for (let i = 0; i < len; i++) { r = fns[i](t, v, c, M); if (r) return r; } return r; };
+                  case 'not': return (t, v, c, M) => !f0(t, v, c, M);
+                  case 'if': case ':if': return (t, v, c, M) => (f0(t, v, c, M) ? (f1 ? f1(t, v, c, M) : undefined) : (f2 ? f2(t, v, c, M) : undefined));
+                  case 'concat': case 'str': return (t, v, c, M) => {
+                    let s = '';
+                    for (let i = 0; i < len; i++) {
+                      const part = fns[i](t, v, c, M);
+                      if (part !== null && part !== undefined) s += part;
+                    }
+                    return s;
+                  };
                   default:
-                    return (t, vars, computed, M = Math, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep) => {
-                      const helpers = { clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep };
-                      const vals = fns.map(fn => fn(t, vars, computed, M, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep));
-                      return resolveHelper(op, vals, M, helpers);
-                    };
+                    return makeHelperCall(op, fns);
                 }
               };
-              return compileNode(ast);
+              return storeAndReturn(compileNode(ast));
             }
           } catch (_) {}
         }
       }
 
-      // 2. Safe recursive-descent parser for infix math/ternary expressions (zero eval)
+      // 2. Safe recursive-descent parser for infix math/ternary expressions (zero eval, zero per-node rest/spread)
       const strLiterals = [];
       const masked = expr.replace(/"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/g, (m) => {
         const i = strLiterals.length;
@@ -5621,25 +5781,27 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           const tBranch = parseTernary();
           eatOp(':');
           const fBranch = parseTernary();
-          return (...ctx) => (cond(...ctx) ? tBranch(...ctx) : fBranch(...ctx));
+          return (t, v, c, M) => (cond(t, v, c, M) ? tBranch(t, v, c, M) : fBranch(t, v, c, M));
         }
         return cond;
       };
       const parseOr = () => {
         let left = parseAnd();
-        while (eatOp('||')) { const r = parseAnd(); const l = left; left = (...ctx) => l(...ctx) || r(...ctx); }
+        while (eatOp('||')) { const r = parseAnd(); const l = left; left = (t, v, c, M) => l(t, v, c, M) || r(t, v, c, M); }
         return left;
       };
       const parseAnd = () => {
         let left = parseEq();
-        while (eatOp('&&')) { const r = parseEq(); const l = left; left = (...ctx) => l(...ctx) && r(...ctx); }
+        while (eatOp('&&')) { const r = parseEq(); const l = left; left = (t, v, c, M) => l(t, v, c, M) && r(t, v, c, M); }
         return left;
       };
       const parseEq = () => {
         let left = parseRel();
         while (isOpIn(['==', '===', '!=', '!=='])) {
           const op = eatOp().val; const r = parseRel(); const l = left;
-          left = (...ctx) => (op === '==' || op === '===' ? l(...ctx) === r(...ctx) : l(...ctx) !== r(...ctx));
+          left = (op === '==' || op === '===')
+            ? (t, v, c, M) => l(t, v, c, M) === r(t, v, c, M)
+            : (t, v, c, M) => l(t, v, c, M) !== r(t, v, c, M);
         }
         return left;
       };
@@ -5647,10 +5809,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         let left = parseAdd();
         while (isOpIn(['<', '<=', '>', '>='])) {
           const op = eatOp().val; const r = parseAdd(); const l = left;
-          left = (...ctx) => {
-            const a = l(...ctx), b = r(...ctx);
-            return op === '<' ? a < b : op === '<=' ? a <= b : op === '>' ? a > b : a >= b;
-          };
+          if (op === '<') left = (t, v, c, M) => l(t, v, c, M) < r(t, v, c, M);
+          else if (op === '<=') left = (t, v, c, M) => l(t, v, c, M) <= r(t, v, c, M);
+          else if (op === '>') left = (t, v, c, M) => l(t, v, c, M) > r(t, v, c, M);
+          else left = (t, v, c, M) => l(t, v, c, M) >= r(t, v, c, M);
         }
         return left;
       };
@@ -5658,7 +5820,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         let left = parseMul();
         while (isOpIn(['+', '-'])) {
           const op = eatOp().val; const r = parseMul(); const l = left;
-          left = (...ctx) => (op === '+' ? l(...ctx) + r(...ctx) : l(...ctx) - r(...ctx));
+          left = op === '+'
+            ? (t, v, c, M) => l(t, v, c, M) + r(t, v, c, M)
+            : (t, v, c, M) => l(t, v, c, M) - r(t, v, c, M);
         }
         return left;
       };
@@ -5666,14 +5830,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         let left = parseUnary();
         while (isOpIn(['*', '/', '%', '**'])) {
           const op = eatOp().val; const r = parseUnary(); const l = left;
-          left = (...ctx) => (op === '*' ? l(...ctx) * r(...ctx) : op === '/' ? l(...ctx) / r(...ctx) : op === '%' ? l(...ctx) % r(...ctx) : l(...ctx) ** r(...ctx));
+          if (op === '*') left = (t, v, c, M) => l(t, v, c, M) * r(t, v, c, M);
+          else if (op === '/') left = (t, v, c, M) => l(t, v, c, M) / r(t, v, c, M);
+          else if (op === '%') left = (t, v, c, M) => l(t, v, c, M) % r(t, v, c, M);
+          else left = (t, v, c, M) => l(t, v, c, M) ** r(t, v, c, M);
         }
         return left;
       };
       const parseUnary = () => {
-        if (eatOp('!')) { const u = parseUnary(); return (...ctx) => !u(...ctx); }
-        if (eatOp('-')) { const u = parseUnary(); return (...ctx) => -u(...ctx); }
-        if (eatOp('+')) { const u = parseUnary(); return (...ctx) => +u(...ctx); }
+        if (eatOp('!')) { const u = parseUnary(); return (t, v, c, M) => !u(t, v, c, M); }
+        if (eatOp('-')) { const u = parseUnary(); return (t, v, c, M) => -u(t, v, c, M); }
+        if (eatOp('+')) { const u = parseUnary(); return (t, v, c, M) => +u(t, v, c, M); }
         return parsePostfix();
       };
       const parsePostfix = () => {
@@ -5690,21 +5857,57 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const args = [];
               if (!eatOp(')')) { do { args.push(parseTernary()); } while (eatOp(',')); eatOp(')'); }
               const recv = targetFn;
-              targetFn = (t, vars, computed, M = Math, ...rest) => {
-                const obj = recv(t, vars, computed, M, ...rest);
-                if (obj == null) return 0;
-                const fn = obj[prop];
-                if (typeof fn !== 'function') return 0;
-                return fn.apply(obj, args.map(a => a(t, vars, computed, M, ...rest)));
-              };
+              const arity = args.length;
+              if (arity === 0) {
+                targetFn = (t, v, c, M) => {
+                  const obj = recv(t, v, c, M);
+                  if (obj == null) return 0;
+                  const fn = obj[prop];
+                  return typeof fn === 'function' ? fn.call(obj) : 0;
+                };
+              } else if (arity === 1) {
+                const a0 = args[0];
+                targetFn = (t, v, c, M) => {
+                  const obj = recv(t, v, c, M);
+                  if (obj == null) return 0;
+                  const fn = obj[prop];
+                  return typeof fn === 'function' ? fn.call(obj, a0(t, v, c, M)) : 0;
+                };
+              } else if (arity === 2) {
+                const a0 = args[0], a1 = args[1];
+                targetFn = (t, v, c, M) => {
+                  const obj = recv(t, v, c, M);
+                  if (obj == null) return 0;
+                  const fn = obj[prop];
+                  return typeof fn === 'function' ? fn.call(obj, a0(t, v, c, M), a1(t, v, c, M)) : 0;
+                };
+              } else if (arity === 3) {
+                const a0 = args[0], a1 = args[1], a2 = args[2];
+                targetFn = (t, v, c, M) => {
+                  const obj = recv(t, v, c, M);
+                  if (obj == null) return 0;
+                  const fn = obj[prop];
+                  return typeof fn === 'function' ? fn.call(obj, a0(t, v, c, M), a1(t, v, c, M), a2(t, v, c, M)) : 0;
+                };
+              } else {
+                const scratch = new Array(arity);
+                targetFn = (t, v, c, M) => {
+                  const obj = recv(t, v, c, M);
+                  if (obj == null) return 0;
+                  const fn = obj[prop];
+                  if (typeof fn !== 'function') return 0;
+                  for (let k = 0; k < arity; k++) scratch[k] = args[k](t, v, c, M);
+                  return fn.apply(obj, scratch);
+                };
+              }
             } else {
               const recv = targetFn;
-              targetFn = (t, vars, computed, M = Math, ...rest) => {
-                const obj = recv(t, vars, computed, M, ...rest);
+              targetFn = (t, v, c, M) => {
+                const obj = recv(t, v, c, M);
                 if (obj == null) return undefined;
                 const val = obj[prop];
-                if (val === undefined && (obj === vars || obj === computed)) {
-                  return computed && prop in computed ? computed[prop] : vars?.[prop];
+                if (val === undefined && (obj === v || obj === c)) {
+                  return c && prop in c ? c[prop] : v?.[prop];
                 }
                 return val;
               };
@@ -5713,10 +5916,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const idxFn = parseTernary();
             eatOp(']');
             const recv = targetFn;
-            targetFn = (t, vars, computed, M = Math, ...rest) => {
-              const obj = recv(t, vars, computed, M, ...rest);
+            targetFn = (t, v, c, M) => {
+              const obj = recv(t, v, c, M);
               if (obj == null) return undefined;
-              const idxVal = idxFn(t, vars, computed, M, ...rest);
+              const idxVal = idxFn(t, v, c, M);
               if (typeof idxVal === 'string' && FORBIDDEN_PROPS.has(idxVal)) return undefined;
               return obj[idxVal];
             };
@@ -5731,20 +5934,21 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (eatOp('[')) {
           const items = [];
           if (!eatOp(']')) { do { items.push(parseTernary()); } while (eatOp(',')); eatOp(']'); }
-          return (...ctx) => items.map(fn => fn(...ctx));
+          const len = items.length;
+          return (t, v, c, M) => {
+            const arr = new Array(len);
+            for (let k = 0; k < len; k++) arr[k] = items[k](t, v, c, M);
+            return arr;
+          };
         }
-        if (tk.type === 'num') { eat(); const v = tk.val; return () => v; }
-        if (tk.type === 'str') { eat(); const v = tk.val; return () => v; }
+        if (tk.type === 'num') { eat(); const val = tk.val; return () => val; }
+        if (tk.type === 'str') { eat(); const val = tk.val; return () => val; }
         if (tk.type === 'id') {
           const name = eat().val;
           if (eatOp('(')) {
             const args = [];
             if (!eatOp(')')) { do { args.push(parseTernary()); } while (eatOp(',')); eatOp(')'); }
-            return (t, vars, computed, M = Math, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep) => {
-              const helpers = { clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep };
-              const vals = args.map(a => a(t, vars, computed, M, clamp, lerp, map, rad, deg, dist, translate, rotate, scale, sineWave, smoothstep));
-              return resolveHelper(name, vals, M, helpers);
-            };
+            return makeHelperCall(name, args);
           }
           if (name === 't') return (t) => t;
           if (name === 'true') return () => true;
@@ -5755,17 +5959,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (name === 'Infinity') return () => Infinity;
           if (name === 'PI') return () => Math.PI;
           if (name === 'E') return () => Math.E;
-          if (name === 'Math') return (t, vars, computed, M = Math) => M;
-          if (name === 'vars') return (t, vars) => vars || {};
-          if (name === 'computed') return (t, vars, computed) => computed || vars || {};
-          return (t, vars, computed) => (vars && name in vars ? vars[name] : computed?.[name]);
+          if (name === 'Math') return (t, v, c, M = Math) => M;
+          if (name === 'vars') return (t, v) => v || {};
+          if (name === 'computed') return (t, v, c) => c || v || {};
+          return (t, v, c) => (v && name in v ? v[name] : c?.[name]);
         }
         eat();
         return ZERO_FN;
       };
 
       try {
-        return parseTernary();
+        return storeAndReturn(parseTernary());
       } catch (_) {
         return ZERO_FN;
       }
@@ -5780,70 +5984,93 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
      * Projects world space (X, Y, Z) to 2D SVG canvas (x, y, scale, depthOpacity)
      * Incorporates interactive camera orbit (yawOffset, pitchOffset, distanceScale)
      */
-    project3D(x, y, z, camera, cx = 400, cy = 240) {
-      // Numerical sanitization: ensure coordinates are finite numbers
-      x = Number.isFinite(Number(x)) ? Number(x) : 0;
-      y = Number.isFinite(Number(y)) ? Number(y) : 0;
-      z = Number.isFinite(Number(z)) ? Number(z) : 0;
-      cx = Number.isFinite(Number(cx)) ? Number(cx) : 400;
-      cy = Number.isFinite(Number(cy)) ? Number(cy) : 240;
-
-      // ⚡ High-performance WebAssembly 3D Kernel (docs/WASM_ARCHITECTURE_CONTRACT.md Page 4)
-      if (typeof window !== 'undefined' && window.AST3DWasmBridge && window.AST3DWasmBridge.isReady) {
-        const wasmRes = window.AST3DWasmBridge.projectPoint(x, y, z, camera, cx, cy, this.cameraOrbit);
-        if (wasmRes && Number.isFinite(wasmRes.x) && Number.isFinite(wasmRes.y)) return wasmRes;
-      }
-
+    _prepareCameraBasis(camera) {
+      const basis = this._camBasis || (this._camBasis = {
+        cosY: 1, sinY: 0, cosP: 1, sinP: 0, cosR: 1, sinR: 0,
+        focalLength: 692.820323, totalDist: 500, invFocalAtDist: 1.0,
+        yawBase: 0, pitchBase: 0, rollBase: 0, fov: 60
+      });
       const yawBase = Number(camera && camera.yaw) || 0;
       const pitchBase = Number(camera && camera.pitch) || 0;
       const rollBase = Number(camera && camera.roll) || 0;
       const distBase = Number(camera && camera.distance) || 450;
       const fov = Number(camera && camera.fov) || 60;
 
-      const totalYaw = yawBase + (this.cameraOrbit ? (Number(this.cameraOrbit.yawOffset) || 0) : 0);
-      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (this.cameraOrbit ? (Number(this.cameraOrbit.pitchOffset) || 0) : 0)));
-      const totalDist = Math.max(80, distBase * (this.cameraOrbit ? (Number(this.cameraOrbit.distanceScale) || 1.0) : 1.0));
+      const orb = this.cameraOrbit;
+      const totalYaw = yawBase + (orb ? (Number(orb.yawOffset) || 0) : 0);
+      const totalPitch = Math.max(-85, Math.min(85, pitchBase + (orb ? (Number(orb.pitchOffset) || 0) : 0)));
+      const totalDist = Math.max(80, distBase * (orb ? (Number(orb.distanceScale) || 1.0) : 1.0));
 
-      const yawRad = totalYaw * (Math.PI / 180);
-      const pitchRad = totalPitch * (Math.PI / 180);
-      const rollRad = rollBase * (Math.PI / 180);
+      const DEG2RAD = Math.PI / 180;
+      const yawRad = totalYaw * DEG2RAD;
+      const pitchRad = totalPitch * DEG2RAD;
+      const rollRad = rollBase * DEG2RAD;
       const tanFov = Math.tan((fov * Math.PI) / 360) || 0.577;
       const focalLength = 400 / tanFov;
 
-      // 1. Yaw rotation (around Y axis)
-      const x1 = x * Math.cos(yawRad) + z * Math.sin(yawRad);
-      const y1 = y;
-      const z1 = -x * Math.sin(yawRad) + z * Math.cos(yawRad);
+      basis.cosY = Math.cos(yawRad);
+      basis.sinY = Math.sin(yawRad);
+      basis.cosP = Math.cos(pitchRad);
+      basis.sinP = Math.sin(pitchRad);
+      basis.cosR = Math.cos(rollRad);
+      basis.sinR = Math.sin(rollRad);
+      basis.focalLength = focalLength;
+      basis.totalDist = totalDist;
+      basis.invFocalAtDist = totalDist > 0 ? (totalDist / focalLength) : 1.0;
+      return basis;
+    }
 
-      // 2. Pitch rotation (around X axis)
-      const x2 = x1;
-      const y2 = y1 * Math.cos(pitchRad) - z1 * Math.sin(pitchRad);
-      const z2 = y1 * Math.sin(pitchRad) + z1 * Math.cos(pitchRad);
+    _project3DInto(x, y, z, camera, basis, cx, cy, out) {
+      const nx = typeof x === 'number' && Number.isFinite(x) ? x : (Number.isFinite(Number(x)) ? Number(x) : 0);
+      const ny = typeof y === 'number' && Number.isFinite(y) ? y : (Number.isFinite(Number(y)) ? Number(y) : 0);
+      const nz = typeof z === 'number' && Number.isFinite(z) ? z : (Number.isFinite(Number(z)) ? Number(z) : 0);
 
-      // 3. Roll rotation (around Z axis)
-      const x3 = x2 * Math.cos(rollRad) - y2 * Math.sin(rollRad);
-      const y3 = x2 * Math.sin(rollRad) + y2 * Math.cos(rollRad);
-      const z3 = z2;
+      // ⚡ High-performance WebAssembly 3D Kernel (docs/WASM_ARCHITECTURE_CONTRACT.md Page 4)
+      if (typeof window !== 'undefined' && window.AST3DWasmBridge && window.AST3DWasmBridge.isReady) {
+        const wasmRes = window.AST3DWasmBridge.projectPoint(nx, ny, nz, camera, cx, cy, this.cameraOrbit);
+        if (wasmRes && Number.isFinite(wasmRes.x) && Number.isFinite(wasmRes.y)) {
+          out.x = wasmRes.x;
+          out.y = wasmRes.y;
+          out.z = Number.isFinite(wasmRes.z) ? wasmRes.z : 0;
+          out.scale = Number.isFinite(wasmRes.scale) ? wasmRes.scale : 1.0;
+          out.opacity = Number.isFinite(wasmRes.opacity) ? wasmRes.opacity : 1.0;
+          out.safeZ = wasmRes.safeZ || 20;
+          return out;
+        }
+      }
 
-      // 4. Camera distance offset & safe divide guard
-      const zCam = z3 + totalDist;
-      const safeZ = Math.max(20, Number.isFinite(zCam) ? zCam : 20);
+      const x1 = nx * basis.cosY + nz * basis.sinY;
+      const z1 = -nx * basis.sinY + nz * basis.cosY;
 
-      // 5. Perspective projection with NaN immunity
-      const scale = Number.isFinite(focalLength / safeZ) ? (focalLength / safeZ) : 1.0;
-      const projX = Number.isFinite(cx + x3 * scale) ? (cx + x3 * scale) : cx;
-      const projY = Number.isFinite(cy + y3 * scale) ? (cy + y3 * scale) : cy;
-      const depthRatio = totalDist > 0 ? (scale / (focalLength / totalDist)) : 1.0;
-      const depthOpacity = Math.min(1.0, Math.max(0.45, 0.55 + 0.45 * (Number.isFinite(depthRatio) ? depthRatio : 1.0)));
+      const y2 = ny * basis.cosP - z1 * basis.sinP;
+      const z2 = ny * basis.sinP + z1 * basis.cosP;
 
-      return {
-        x: projX,
-        y: projY,
-        z: Number.isFinite(z3) ? z3 : 0,
-        scale: Number.isFinite(scale) ? scale : 1.0,
-        opacity: Number.isFinite(depthOpacity) ? depthOpacity : 1.0,
-        safeZ
-      };
+      const x3 = x1 * basis.cosR - y2 * basis.sinR;
+      const y3 = x1 * basis.sinR + y2 * basis.cosR;
+
+      const zCam = z2 + basis.totalDist;
+      const safeZ = zCam > 20 ? zCam : 20;
+      const scale = basis.focalLength / safeZ;
+      const projX = cx + x3 * scale;
+      const projY = cy + y3 * scale;
+      const depthRatio = scale * basis.invFocalAtDist;
+      let depthOpacity = 0.55 + 0.45 * depthRatio;
+      if (depthOpacity > 1.0) depthOpacity = 1.0;
+      else if (depthOpacity < 0.45) depthOpacity = 0.45;
+
+      out.x = Number.isFinite(projX) ? projX : cx;
+      out.y = Number.isFinite(projY) ? projY : cy;
+      out.z = Number.isFinite(z2) ? z2 : 0;
+      out.scale = Number.isFinite(scale) ? scale : 1.0;
+      out.opacity = Number.isFinite(depthOpacity) ? depthOpacity : 1.0;
+      out.safeZ = safeZ;
+      return out;
+    }
+
+    project3D(x, y, z, camera, cx = 400, cy = 240) {
+      const basis = this._prepareCameraBasis(camera);
+      const out = { x: 0, y: 0, z: 0, scale: 1.0, opacity: 1.0, safeZ: 20 };
+      return this._project3DInto(x, y, z, camera, basis, Number.isFinite(Number(cx)) ? Number(cx) : 400, Number.isFinite(Number(cy)) ? Number(cy) : 240, out);
     }
 
     /**
@@ -10441,17 +10668,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           } else if (b.type === 'var-update' && b.varName) {
             let varEvalFn = () => (this.vars ? this.vars[b.varName] : 0);
             try {
-              const rawVarFn = this.compileAstFn(b.expr || '0');
-              varEvalFn = (
-                t, vars, MathObj, computed, _astMorphPath, _astMorphColor,
-                _astEaseBack, _astEaseBounce, _astEaseElastic, _astSquashStretch,
-                clamp, lerp, map, rad, deg, dist, translate, rotate,
-                scale, sineWave, smoothstep
-              ) => rawVarFn(
-                t, vars, computed, MathObj,
-                clamp, lerp, map, rad, deg, dist, translate, rotate,
-                scale, sineWave, smoothstep
-              );
+              varEvalFn = this.compileAstFn(b.expr || '0');
             } catch (e) {
               console.warn('[AST Engine] Failed compiling var binding:', b.varName, b.expr, e);
             }
@@ -10462,7 +10679,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           } else {
             const node = hasDomQuery ? container.querySelector(b.target) : null;
             if (node) {
-              let evalFn = () => 0;
+              let rawBindFn = null;
               let rawExpr = String(b.expr || '0').trim();
               let affine = b.affine || null;
 
@@ -10484,22 +10701,34 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 }
               }
 
+              const isTransformAttr = b.attr === 'transform';
               try {
-                const rawBindFn = this.compileAstFn(rawExpr.replace(/\\\\'/g, "\\'"));
-                evalFn = (
-                  t, vars, MathObj, computed, _astMorphPath, _astMorphColor,
-                  _astEaseBack, _astEaseBounce, _astEaseElastic, _astSquashStretch,
-                  clamp, lerp, map, rad, deg, dist, translate, rotate,
-                  scale, sineWave, smoothstep
-                ) => rawBindFn(
-                  t, vars, computed, MathObj,
-                  clamp, lerp, map, rad, deg, dist, translate, rotate,
-                  scale, sineWave, smoothstep
-                );
+                rawBindFn = this.compileAstFn(rawExpr.replace(/\\\\'/g, "\\'"));
               } catch (e) {
                 console.warn('[AST Engine] Failed compiling expr:', b.expr, e);
-                evalFn = b.attr === 'transform' ? () => '' : () => 0;
+                rawBindFn = isTransformAttr ? () => '' : () => 0;
               }
+
+              const boundEval = isTransformAttr
+                ? (t, vars, MathObj, comp) => {
+                    let val;
+                    try {
+                      val = rawBindFn(t, vars, comp, MathObj);
+                    } catch {
+                      return '';
+                    }
+                    if (val === 0 || val === '0' || !val) return '';
+                    if (typeof val === 'number') return `translate(${val}, 0)`;
+                    if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
+                    return val;
+                  }
+                : (t, vars, MathObj, comp) => {
+                    try {
+                      return rawBindFn(t, vars, comp, MathObj);
+                    } catch {
+                      return 0;
+                    }
+                  };
 
               this.activeBindings.push({
                 target: b.target,
@@ -10507,21 +10736,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 node,
                 affine,
                 matrixBuf: affine && (affine.transform === 'translateX' || affine.transform === 'translateY' || affine.transform === 'rotate') ? new Float32Array(6) : null,
-                evalFn: (t, vars, Math, comp, ...helpers) => {
-                  let val;
-                  try {
-                    val = evalFn(t, vars, Math, comp, ...helpers);
-                  } catch {
-                    val = b.attr === 'transform' ? '' : 0;
-                  }
-
-                  if (b.attr === 'transform') {
-                    if (val === 0 || val === '0' || !val) return '';
-                    if (typeof val === 'number') return `translate(${val}, 0)`;
-                    if (typeof val === 'string' && !val.includes('(')) return `translate(${val}, 0)`;
-                  }
-                  return val;
-                }
+                evalFn: boundEval
               });
             }
           }
@@ -10698,6 +10913,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             capacity: cap,
             rawX: new Float32Array(cap),
             rawY: new Float32Array(cap),
+            slotTokens: new Array(cap),
             ptStrings: new Array(cap),
             head: 0,
             count: 0,
@@ -10868,6 +11084,19 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         });
       }
 
+      // Pre-classify scene execution mode once per mount (eliminates per-frame Object.keys allocation in tick)
+      this._isSlideScene = Boolean(scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide'));
+      this._isDynamicScene = !this._isSlideScene && Boolean(
+        this.isContinuousSim || this.isDynamicSim || (scene && (
+          scene.continuous || scene.isContinuous || scene.type === 'Sim' || scene.cartridgeType === 'Sim' ||
+          (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
+          typeof scene.mount === 'function'
+        ))
+      );
+      this._lastOrbitTransform = '';
+      this._lastOrbitTransition = '';
+      this._last3DSortKeys = null;
+
       this.applyBindings(this.progress);
       this.translateInStageLabels();
       if (this.profiler) {
@@ -10888,21 +11117,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     if (isTickStep && this.isPlaying && this.activeVarBindings && this.activeVarBindings.length > 0 && this.vars) {
       const v = this.vars;
+      let varChanged = false;
       for (let i = 0; i < this.activeVarBindings.length; i++) {
         const vb = this.activeVarBindings[i];
         try {
-          const nextVal = vb.evalFn(
-            effectiveT, v, Math, v,
-            astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
-            AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
-            AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
-          );
+          const nextVal = vb.evalFn(effectiveT, v, v, Math);
           if (nextVal !== undefined && (typeof nextVal !== 'number' || Number.isFinite(nextVal))) {
-            v[vb.varName] = nextVal;
+            if (v[vb.varName] !== nextVal) {
+              v[vb.varName] = nextVal;
+              varChanged = true;
+            }
           }
         } catch (_) {}
       }
-      this.updateComputedVars(effectiveT);
+      if (varChanged) {
+        this.updateComputedVars(effectiveT);
+      }
     }
 
     if (!this._isMounting && this._container && (this._mountedSceneId !== this.activePresetId || this._mountedContainer !== this._container)) {
@@ -10911,40 +11141,55 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    const camera = Object.assign({ distance: 500, pitch: 20, yaw: 0, fov: 60 }, (this.scene && this.scene.camera) || {});
+    const sceneCam = this.scene && this.scene.camera;
+    const camera = this._cameraFrame || (this._cameraFrame = { distance: 500, pitch: 20, yaw: 0, roll: 0, fov: 60 });
+    camera.distance = (sceneCam && sceneCam.distance !== undefined) ? sceneCam.distance : 500;
+    camera.pitch = (sceneCam && sceneCam.pitch !== undefined) ? sceneCam.pitch : 20;
+    camera.yaw = (sceneCam && sceneCam.yaw !== undefined) ? sceneCam.yaw : 0;
+    camera.roll = (sceneCam && sceneCam.roll !== undefined) ? sceneCam.roll : 0;
+    camera.fov = (sceneCam && sceneCam.fov !== undefined) ? sceneCam.fov : 60;
 
     if (typeof camera.yaw === 'string' || typeof camera.pitch === 'string') {
-      const clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
-      const camVars = { ...(this.vars || {}), clock };
+      const v = this.vars || {};
+      const prevClock = v.clock;
+      v.clock = this.realtimeSec != null ? this.realtimeSec : (effectiveT * (this.durationSec || 12.0));
       if (typeof camera.yaw === 'string') {
         try {
           const yawFn = this.compileAstFn(camera.yaw);
-          camera.yaw = yawFn(effectiveT, camVars, this.computed || {}, Math);
+          camera.yaw = yawFn(effectiveT, v, this.computed || v, Math);
         } catch {}
       }
       if (typeof camera.pitch === 'string') {
         try {
           const pitchFn = this.compileAstFn(camera.pitch);
-          camera.pitch = pitchFn(effectiveT, camVars, this.computed || {}, Math);
+          camera.pitch = pitchFn(effectiveT, v, this.computed || v, Math);
         } catch {}
       }
+      if (prevClock !== undefined) v.clock = prevClock;
     }
-    const yawBase = typeof camera.yaw === 'number' ? camera.yaw : 0;
-    const pitchBase = typeof camera.pitch === 'number' ? camera.pitch : 0;
     const totalScale = Math.max(0.2, Math.min(4.0, (this.cameraOrbit ? this.cameraOrbit.distanceScale : 1.0)));
 
     const hasSoftware3D = Boolean(this.active3DItems && this.active3DItems.length > 0);
     if (this._container && this._container.style) {
+      let nextTransform = '';
+      let nextTransition = '';
       if (!hasSoftware3D && (this.cameraOrbit && (this.cameraOrbit.yawOffset !== 0 || this.cameraOrbit.pitchOffset !== 0 || this.cameraOrbit.distanceScale !== 1.0))) {
         const orbitYaw = Math.max(-45, Math.min(45, this.cameraOrbit.yawOffset));
         const orbitPitch = Math.max(-45, Math.min(45, this.cameraOrbit.pitchOffset));
-        this._container.style.transformOrigin = '400px 240px';
-        this._container.style.transformBox = 'view-box';
-        this._container.style.transform = `perspective(800px) rotateX(${orbitPitch.toFixed(1)}deg) rotateY(${orbitYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
-        this._container.style.transition = this.isOrbitDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
-      } else {
-        this._container.style.transform = '';
-        this._container.style.transition = '';
+        nextTransform = `perspective(800px) rotateX(${orbitPitch.toFixed(1)}deg) rotateY(${orbitYaw.toFixed(1)}deg) scale(${totalScale.toFixed(2)})`;
+        nextTransition = this.isOrbitDragging ? 'none' : 'transform 0.28s cubic-bezier(0.16, 1, 0.3, 1)';
+      }
+      if (this._lastOrbitTransform !== nextTransform) {
+        this._lastOrbitTransform = nextTransform;
+        if (nextTransform) {
+          this._container.style.transformOrigin = '400px 240px';
+          this._container.style.transformBox = 'view-box';
+        }
+        this._container.style.transform = nextTransform;
+      }
+      if (this._lastOrbitTransition !== nextTransition) {
+        this._lastOrbitTransition = nextTransition;
+        this._container.style.transition = nextTransition;
       }
     }
 
@@ -10952,6 +11197,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     // have display="inline" and visibility state updated on the exact same frame.
     if (this.activeBindings && this.activeBindings.length) {
       const v = this.vars || {};
+      const renderBoundary = global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function'
+        ? global.ASTSharedRenderBoundary
+        : null;
       for (let i = 0; i < this.activeBindings.length; i++) {
         const b = this.activeBindings[i];
         if (b.node) {
@@ -10984,17 +11232,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 val = num;
               }
             } else {
-              val = b.evalFn(
-                effectiveT, v, Math, v,
-                astMorphPath, astMorphColor, astEaseBack, astEaseBounce, astEaseElastic, astSquashStretch,
-                AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist,
-                AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep
-              );
+              val = b.evalFn(effectiveT, v, Math, v);
             }
             if (b.lastVal !== val) {
               b.lastVal = val;
-              if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function') {
-                global.ASTSharedRenderBoundary.commitBindingValue(b.node, b.attr, val);
+              if (renderBoundary) {
+                renderBoundary.commitBindingValue(b.node, b.attr, val);
               } else if (b.attr === 'textContent' || b.attr === 'text') {
                 b.node.textContent = String(val);
               } else {
@@ -11007,17 +11250,22 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    if (this.active3DItems && this.active3DItems.length) {
+    if (hasSoftware3D) {
       let splineChains = null;
       const v = this.vars || {};
       const comp = v;
+      const basis = this._prepareCameraBasis(camera);
+      const projA = this._projOutA || (this._projOutA = { x: 400, y: 240, z: 0, scale: 1, opacity: 1, safeZ: 500 });
+      const projB = this._projOutB || (this._projOutB = { x: 400, y: 240, z: 0, scale: 1, opacity: 1, safeZ: 500 });
+      const DEG2RAD = Math.PI / 180;
+
       for (let i = 0; i < this.active3DItems.length; i++) {
         const item = this.active3DItems[i];
 
         if (item.domNode && (item.domNode.getAttribute('display') === 'none' || item.domNode.style.display === 'none')) {
-          if (item.labelNode) item.labelNode.setAttribute('opacity', '0');
-          if (item.cap1) item.cap1.setAttribute('opacity', '0');
-          if (item.cap2) item.cap2.setAttribute('opacity', '0');
+          if (item.labelNode && item._lastLabelOp !== '0') { item._lastLabelOp = '0'; item.labelNode.setAttribute('opacity', '0'); }
+          if (item.cap1 && item._lastCap1Op !== '0') { item._lastCap1Op = '0'; item.cap1.setAttribute('opacity', '0'); }
+          if (item.cap2 && item._lastCap2Op !== '0') { item._lastCap2Op = '0'; item.cap2.setAttribute('opacity', '0'); }
           continue;
         }
 
@@ -11032,41 +11280,43 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           item.worldX = wx;
           item.worldY = wy;
           item.worldZ = wz;
-          const proj = this.project3D(wx, wy, wz, camera, 400, 240);
+          const proj = this._project3DInto(wx, wy, wz, camera, basis, 400, 240, projA);
           item.meanZ = Number.isFinite(proj.z) ? proj.z : 0;
 
-          if (item.domNode) {
-            const cx = Number.isFinite(proj.x) ? proj.x : 400;
-            const cy = Number.isFinite(proj.y) ? proj.y : 240;
-            const baseR = Number(item.baseR) || 8;
-            const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
-            const r = Math.max(1, baseR * scale);
-            const tagName = item.domNode.tagName ? item.domNode.tagName.toLowerCase() : '';
+          const cx = Number.isFinite(proj.x) ? proj.x : 400;
+          const cy = Number.isFinite(proj.y) ? proj.y : 240;
+          const baseR = Number(item.baseR) || 8;
+          const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
 
-            if (tagName === 'g' || tagName === 'text') {
-              item.domNode.setAttribute('transform', `translate(${cx.toFixed(1)}, ${cy.toFixed(1)})`);
+          if (item.domNode) {
+            if (item._tagName === undefined) {
+              item._tagName = item.domNode.tagName ? item.domNode.tagName.toLowerCase() : '';
+            }
+            if (item._tagName === 'g' || item._tagName === 'text') {
+              const tf = `translate(${cx.toFixed(1)}, ${cy.toFixed(1)})`;
+              if (item._lastTf !== tf) { item._lastTf = tf; item.domNode.setAttribute('transform', tf); }
             } else {
-              item.domNode.setAttribute('cx', cx.toFixed(1));
-              item.domNode.setAttribute('cy', cy.toFixed(1));
-              item.domNode.setAttribute('r', r.toFixed(1));
+              const cxStr = cx.toFixed(1);
+              const cyStr = cy.toFixed(1);
+              const rStr = Math.max(1, baseR * scale).toFixed(1);
+              if (item._lastCx !== cxStr) { item._lastCx = cxStr; item.domNode.setAttribute('cx', cxStr); }
+              if (item._lastCy !== cyStr) { item._lastCy = cyStr; item.domNode.setAttribute('cy', cyStr); }
+              if (item._lastR !== rStr) { item._lastR = rStr; item.domNode.setAttribute('r', rStr); }
             }
             if (item.depthFog) {
-              const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-              item.domNode.setAttribute('opacity', op.toFixed(2));
+              const opStr = (Number.isFinite(proj.opacity) ? proj.opacity : 1.0).toFixed(2);
+              if (item._lastOp !== opStr) { item._lastOp = opStr; item.domNode.setAttribute('opacity', opStr); }
             }
           }
 
           if (item.labelNode) {
-            const lx = Number.isFinite(proj.x) ? proj.x : 400;
-            const ly = Number.isFinite(proj.y) ? proj.y : 240;
-            const baseR = Number(item.baseR) || 8;
-            const scale = Number.isFinite(proj.scale) ? proj.scale : 1.0;
-            const r = baseR * scale;
-            item.labelNode.setAttribute('x', lx.toFixed(1));
-            item.labelNode.setAttribute('y', (ly + r + 14).toFixed(1));
+            const lxStr = cx.toFixed(1);
+            const lyStr = (cy + baseR * scale + 14).toFixed(1);
+            if (item._lastLx !== lxStr) { item._lastLx = lxStr; item.labelNode.setAttribute('x', lxStr); }
+            if (item._lastLy !== lyStr) { item._lastLy = lyStr; item.labelNode.setAttribute('y', lyStr); }
             if (item.depthFog) {
-              const op = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-              item.labelNode.setAttribute('opacity', op.toFixed(2));
+              const opStr = (Number.isFinite(proj.opacity) ? proj.opacity : 1.0).toFixed(2);
+              if (item._lastLabelOp !== opStr) { item._lastLabelOp = opStr; item.labelNode.setAttribute('opacity', opStr); }
             }
           }
         } else if (item.type === '3d-line') {
@@ -11081,8 +11331,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             x1 += (off[0] || 0); y1 += (off[1] || 0); z1 += (off[2] || 0);
             x2 += (off[0] || 0); y2 += (off[1] || 0); z2 += (off[2] || 0);
           }
-          item.worldP1 = [x1, y1, z1];
-          item.worldP2 = [x2, y2, z2];
+          if (!item.worldP1) item.worldP1 = [0, 0, 0];
+          if (!item.worldP2) item.worldP2 = [0, 0, 0];
+          item.worldP1[0] = x1; item.worldP1[1] = y1; item.worldP1[2] = z1;
+          item.worldP2[0] = x2; item.worldP2[1] = y2; item.worldP2[2] = z2;
 
           let splitOffset = 0;
           if (item.evalSplit) {
@@ -11090,8 +11342,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           }
           const isSplit = splitOffset > 0;
 
-          const p1 = this.project3D(x1 - splitOffset, y1, z1, camera, 400, 240);
-          const p2 = this.project3D(x2 + splitOffset, y2, z2, camera, 400, 240);
+          const p1 = this._project3DInto(x1 - splitOffset, y1, z1, camera, basis, 400, 240, projA);
+          const p2 = this._project3DInto(x2 + splitOffset, y2, z2, camera, basis, 400, 240, projB);
           const z1Val = Number.isFinite(p1.z) ? p1.z : 0;
           const z2Val = Number.isFinite(p2.z) ? p2.z : 0;
           item.meanZ = (z1Val + z2Val) / 2;
@@ -11101,56 +11353,59 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (item.splineANode) {
               let arrA = splineChains.get(item.splineANode);
               if (!arrA) { arrA = []; splineChains.set(item.splineANode, arrA); }
-              arrA[item.splineIndex] = p1;
+              arrA[item.splineIndex] = { x: p1.x, y: p1.y };
             }
             if (item.splineBNode) {
               let arrB = splineChains.get(item.splineBNode);
               if (!arrB) { arrB = []; splineChains.set(item.splineBNode, arrB); }
-              arrB[item.splineIndex] = p2;
+              arrB[item.splineIndex] = { x: p2.x, y: p2.y };
             }
           }
 
           if (item.domNode) {
-            const px1 = Number.isFinite(p1.x) ? p1.x : 0;
-            const py1 = Number.isFinite(p1.y) ? p1.y : 0;
-            const px2 = Number.isFinite(p2.x) ? p2.x : 0;
-            const py2 = Number.isFinite(p2.y) ? p2.y : 0;
+            const x1s = (Number.isFinite(p1.x) ? p1.x : 0).toFixed(1);
+            const y1s = (Number.isFinite(p1.y) ? p1.y : 0).toFixed(1);
+            const x2s = (Number.isFinite(p2.x) ? p2.x : 0).toFixed(1);
+            const y2s = (Number.isFinite(p2.y) ? p2.y : 0).toFixed(1);
             const op1 = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
             const op2 = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
 
-            item.domNode.setAttribute('x1', px1.toFixed(1));
-            item.domNode.setAttribute('y1', py1.toFixed(1));
-            item.domNode.setAttribute('x2', px2.toFixed(1));
-            item.domNode.setAttribute('y2', py2.toFixed(1));
+            if (item._lx1 !== x1s) { item._lx1 = x1s; item.domNode.setAttribute('x1', x1s); }
+            if (item._ly1 !== y1s) { item._ly1 = y1s; item.domNode.setAttribute('y1', y1s); }
+            if (item._lx2 !== x2s) { item._lx2 = x2s; item.domNode.setAttribute('x2', x2s); }
+            if (item._ly2 !== y2s) { item._ly2 = y2s; item.domNode.setAttribute('y2', y2s); }
             if (isSplit) {
-              item.domNode.setAttribute('opacity', '0.15');
-              item.domNode.setAttribute('stroke-dasharray', '3,4');
+              if (item._lastOp !== '0.15') { item._lastOp = '0.15'; item.domNode.setAttribute('opacity', '0.15'); }
+              if (item._lastSplit !== true) { item._lastSplit = true; item.domNode.setAttribute('stroke-dasharray', '3,4'); }
             } else {
-              item.domNode.setAttribute('opacity', ((op1 + op2) / 2).toFixed(2));
-              item.domNode.removeAttribute('stroke-dasharray');
+              const opStr = ((op1 + op2) / 2).toFixed(2);
+              if (item._lastOp !== opStr) { item._lastOp = opStr; item.domNode.setAttribute('opacity', opStr); }
+              if (item._lastSplit !== false) { item._lastSplit = false; item.domNode.removeAttribute('stroke-dasharray'); }
             }
           }
           if (item.cap1) {
-            const c1x = Number.isFinite(p1.x) ? p1.x : 0;
-            const c1y = Number.isFinite(p1.y) ? p1.y : 0;
-            const c1op = Number.isFinite(p1.opacity) ? p1.opacity : 1.0;
+            const c1x = (Number.isFinite(p1.x) ? p1.x : 0).toFixed(1);
+            const c1y = (Number.isFinite(p1.y) ? p1.y : 0).toFixed(1);
+            const c1op = (Number.isFinite(p1.opacity) ? p1.opacity : 1.0).toFixed(2);
             const baseR = Number(item.baseR) || 8;
             const scale = Number.isFinite(p1.scale) ? p1.scale : 1.0;
-            item.cap1.setAttribute('cx', c1x.toFixed(1));
-            item.cap1.setAttribute('cy', c1y.toFixed(1));
-            item.cap1.setAttribute('opacity', c1op.toFixed(2));
-            item.cap1.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
+            const c1r = Math.max(1, baseR * scale).toFixed(1);
+            if (item._c1x !== c1x) { item._c1x = c1x; item.cap1.setAttribute('cx', c1x); }
+            if (item._c1y !== c1y) { item._c1y = c1y; item.cap1.setAttribute('cy', c1y); }
+            if (item._lastCap1Op !== c1op) { item._lastCap1Op = c1op; item.cap1.setAttribute('opacity', c1op); }
+            if (item._c1r !== c1r) { item._c1r = c1r; item.cap1.setAttribute('r', c1r); }
           }
           if (item.cap2) {
-            const c2x = Number.isFinite(p2.x) ? p2.x : 0;
-            const c2y = Number.isFinite(p2.y) ? p2.y : 0;
-            const c2op = Number.isFinite(p2.opacity) ? p2.opacity : 1.0;
+            const c2x = (Number.isFinite(p2.x) ? p2.x : 0).toFixed(1);
+            const c2y = (Number.isFinite(p2.y) ? p2.y : 0).toFixed(1);
+            const c2op = (Number.isFinite(p2.opacity) ? p2.opacity : 1.0).toFixed(2);
             const baseR = Number(item.baseR) || 8;
             const scale = Number.isFinite(p2.scale) ? p2.scale : 1.0;
-            item.cap2.setAttribute('cx', c2x.toFixed(1));
-            item.cap2.setAttribute('cy', c2y.toFixed(1));
-            item.cap2.setAttribute('opacity', c2op.toFixed(2));
-            item.cap2.setAttribute('r', Math.max(1, baseR * scale).toFixed(1));
+            const c2r = Math.max(1, baseR * scale).toFixed(1);
+            if (item._c2x !== c2x) { item._c2x = c2x; item.cap2.setAttribute('cx', c2x); }
+            if (item._c2y !== c2y) { item._c2y = c2y; item.cap2.setAttribute('cy', c2y); }
+            if (item._lastCap2Op !== c2op) { item._lastCap2Op = c2op; item.cap2.setAttribute('opacity', c2op); }
+            if (item._c2r !== c2r) { item._c2r = c2r; item.cap2.setAttribute('r', c2r); }
           }
         } else if (item.type === '3d-ring') {
           let r = Number(item.evalR(effectiveT, v, Math, comp)) || 100;
@@ -11161,73 +11416,81 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             const off = this.nodeOffsets.get(item.target);
             cx += (off[0] || 0); cy += (off[1] || 0); cz += (off[2] || 0);
           }
-          item.worldCenter = [cx, cy, cz];
+          if (!item.worldCenter) item.worldCenter = [0, 0, 0];
+          item.worldCenter[0] = cx; item.worldCenter[1] = cy; item.worldCenter[2] = cz;
           item.worldRadius = r;
           const tiltXDeg = Number(item.evalTiltX(effectiveT, v, Math, comp)) || 0;
           const tiltYDeg = Number(item.evalTiltY(effectiveT, v, Math, comp)) || 0;
           const tiltZDeg = Number(item.evalTiltZ(effectiveT, v, Math, comp)) || 0;
 
-          const rxRad = tiltXDeg * (Math.PI / 180);
-          const ryRad = tiltYDeg * (Math.PI / 180);
-          const rzRad = tiltZDeg * (Math.PI / 180);
+          // Hoist ring tilt trig once per ring (instead of recomputing 6x inside every vertex)
+          const hasTiltX = tiltXDeg !== 0;
+          const hasTiltY = tiltYDeg !== 0;
+          const hasTiltZ = tiltZDeg !== 0;
+          const cosRx = hasTiltX ? Math.cos(tiltXDeg * DEG2RAD) : 1;
+          const sinRx = hasTiltX ? Math.sin(tiltXDeg * DEG2RAD) : 0;
+          const cosRy = hasTiltY ? Math.cos(tiltYDeg * DEG2RAD) : 1;
+          const sinRy = hasTiltY ? Math.sin(tiltYDeg * DEG2RAD) : 0;
+          const cosRz = hasTiltZ ? Math.cos(tiltZDeg * DEG2RAD) : 1;
+          const sinRz = hasTiltZ ? Math.sin(tiltZDeg * DEG2RAD) : 0;
 
           const n = Math.max(3, item.segments || 24);
+          const stepTheta = (Math.PI * 2) / n;
           let pathD = '';
           let totalZ = 0;
           let totalOpacity = 0;
 
           for (let k = 0; k < n; k++) {
-            const theta = (k / n) * Math.PI * 2;
+            const theta = k * stepTheta;
             let px = r * Math.cos(theta);
             let py = 0;
             let pz = r * Math.sin(theta);
 
-            if (tiltXDeg !== 0) {
-              const py1 = py * Math.cos(rxRad) - pz * Math.sin(rxRad);
-              const pz1 = py * Math.sin(rxRad) + pz * Math.cos(rxRad);
+            if (hasTiltX) {
+              const py1 = py * cosRx - pz * sinRx;
+              const pz1 = py * sinRx + pz * cosRx;
               py = py1; pz = pz1;
             }
-            if (tiltYDeg !== 0) {
-              const px1 = px * Math.cos(ryRad) + pz * Math.sin(ryRad);
-              const pz1 = -px * Math.sin(ryRad) + pz * Math.cos(ryRad);
+            if (hasTiltY) {
+              const px1 = px * cosRy + pz * sinRy;
+              const pz1 = -px * sinRy + pz * cosRy;
               px = px1; pz = pz1;
             }
-            if (tiltZDeg !== 0) {
-              const px1 = px * Math.cos(rzRad) - py * Math.sin(rzRad);
-              const py1 = px * Math.sin(rzRad) + py * Math.cos(rzRad);
+            if (hasTiltZ) {
+              const px1 = px * cosRz - py * sinRz;
+              const py1 = px * sinRz + py * cosRz;
               px = px1; py = py1;
             }
 
-            const proj = this.project3D(cx + px, cy + py, cz + pz, camera, 400, 240);
-            const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
-            const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-            totalZ += pzVal;
-            totalOpacity += popVal;
+            const proj = this._project3DInto(cx + px, cy + py, cz + pz, camera, basis, 400, 240, projA);
+            totalZ += Number.isFinite(proj.z) ? proj.z : 0;
+            totalOpacity += Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
 
             const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
             const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
 
             if (k === 0) {
-              pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
+              pathD = `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
             } else {
               pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
             }
           }
           pathD += ' Z';
           item.meanZ = totalZ / n;
-          const avgOpacity = totalOpacity / n;
 
           if (item.domNode) {
-            item.domNode.setAttribute('d', pathD);
+            if (item._lastD !== pathD) { item._lastD = pathD; item.domNode.setAttribute('d', pathD); }
             if (item.depthFog) {
-              item.domNode.setAttribute('opacity', avgOpacity.toFixed(2));
+              const opStr = (totalOpacity / n).toFixed(2);
+              if (item._lastOp !== opStr) { item._lastOp = opStr; item.domNode.setAttribute('opacity', opStr); }
             }
           }
         } else if (item.type === '3d-polygon') {
           let rawPts = item.evalPts(effectiveT, v, Math, comp);
-          if (this.nodeOffsets && this.nodeOffsets.has(item.target) && Array.isArray(rawPts)) {
+          let offX = 0, offY = 0, offZ = 0;
+          if (this.nodeOffsets && this.nodeOffsets.has(item.target)) {
             const off = this.nodeOffsets.get(item.target);
-            rawPts = rawPts.map(pt => [(pt[0] || 0) + (off[0] || 0), (pt[1] || 0) + (off[1] || 0), (pt[2] || 0) + (off[2] || 0)]);
+            offX = off[0] || 0; offY = off[1] || 0; offZ = off[2] || 0;
           }
           item.worldPts = rawPts;
           if (Array.isArray(rawPts) && rawPts.length >= 3) {
@@ -11237,17 +11500,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
             for (let k = 0; k < rawPts.length; k++) {
               const pt = rawPts[k];
-              const proj = this.project3D(pt[0] || 0, pt[1] || 0, pt[2] || 0, camera, 400, 240);
-              const pzVal = Number.isFinite(proj.z) ? proj.z : 0;
-              const popVal = Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
-              totalZ += pzVal;
-              totalOpacity += popVal;
+              const proj = this._project3DInto((pt[0] || 0) + offX, (pt[1] || 0) + offY, (pt[2] || 0) + offZ, camera, basis, 400, 240, projA);
+              totalZ += Number.isFinite(proj.z) ? proj.z : 0;
+              totalOpacity += Number.isFinite(proj.opacity) ? proj.opacity : 1.0;
 
               const pxVal = Number.isFinite(proj.x) ? proj.x : 400;
               const pyVal = Number.isFinite(proj.y) ? proj.y : 240;
 
               if (k === 0) {
-                pathD += `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
+                pathD = `M ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
               } else {
                 pathD += ` L ${pxVal.toFixed(1)} ${pyVal.toFixed(1)}`;
               }
@@ -11256,9 +11517,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             item.meanZ = totalZ / rawPts.length;
 
             if (item.domNode) {
-              item.domNode.setAttribute('d', pathD);
+              if (item._lastD !== pathD) { item._lastD = pathD; item.domNode.setAttribute('d', pathD); }
               if (item.depthFog) {
-                item.domNode.setAttribute('opacity', (totalOpacity / rawPts.length).toFixed(2));
+                const opStr = (totalOpacity / rawPts.length).toFixed(2);
+                if (item._lastOp !== opStr) { item._lastOp = opStr; item.domNode.setAttribute('opacity', opStr); }
               }
             }
           }
@@ -11270,21 +11532,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (node && pts && pts.length > 1) {
             const dense = pts.filter(Boolean);
             if (dense.length > 1) {
-              node.setAttribute('d', this._pointsToSpline(dense));
+              const splineD = this._pointsToSpline(dense);
+              if (node._astLastSplineD !== splineD) {
+                node._astLastSplineD = splineD;
+                node.setAttribute('d', splineD);
+              }
             }
           }
         });
       }
 
       if (this.active3DItems.length > 1) {
-        const sorted = [...this.active3DItems].sort((a, b) => {
+        const sorted = this._sorted3D || (this._sorted3D = []);
+        const itemCount = this.active3DItems.length;
+        sorted.length = itemCount;
+        for (let k = 0; k < itemCount; k++) sorted[k] = this.active3DItems[k];
+        sorted.sort((a, b) => {
           const la = a.zLayer || 0;
           const lb = b.zLayer || 0;
           if (la !== lb) return la - lb;
           return ((b.meanZ || 0) + (b.zBias || 0)) - ((a.meanZ || 0) + (a.zBias || 0));
         });
 
-        for (let k = 0; k < this.active3DItems.length; k++) {
+        for (let k = 0; k < itemCount; k++) {
           const anchored = this.active3DItems[k];
           if (!anchored.sortAfter) continue;
           const curIdx = sorted.indexOf(anchored);
@@ -11310,9 +11580,12 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
 
         if (orderChanged) {
-          this._last3DSortKeys = sorted.map(it => it.target);
-          sorted.forEach(item => {
-            const cont = this._container;
+          if (!this._last3DSortKeys) this._last3DSortKeys = new Array(sorted.length);
+          this._last3DSortKeys.length = sorted.length;
+          const cont = this._container;
+          for (let k = 0; k < sorted.length; k++) {
+            const item = sorted[k];
+            this._last3DSortKeys[k] = item.target;
             if (item.domNode && item.domNode.parentNode && cont && cont.contains(item.domNode)) {
               item.domNode.parentNode.appendChild(item.domNode);
             }
@@ -11325,7 +11598,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             if (item.labelNode && item.labelNode.parentNode && cont && cont.contains(item.labelNode)) {
               item.labelNode.parentNode.appendChild(item.labelNode);
             }
-          });
+          }
         }
       }
     }
@@ -11371,7 +11644,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       }
     }
 
-    // Update Zero-GC Live Vector Oscilloscopes (:scope)
+    // Update Zero-GC Live Vector Oscilloscopes (:scope) with per-slot cached coordinate tokens
     if (!this._isResetting && this.activeScopes && this.activeScopes.length > 0) {
       const v = this.vars || {};
       for (let s = 0; s < this.activeScopes.length; s++) {
@@ -11401,22 +11674,25 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             sc.lastSampleY = yv;
             sc.hasLast = true;
 
+            let nx = (xv - sc.xMin) / xSpan;
+            let ny = (yv - sc.yMin) / ySpan;
+            if (nx < 0) nx = 0; else if (nx > 1) nx = 1;
+            if (ny < 0) ny = 0; else if (ny > 1) ny = 1;
+            const px = sc.plotX + nx * sc.plotW;
+            const py = sc.plotY + sc.plotH - ny * sc.plotH;
+            if (!sc.slotTokens) sc.slotTokens = new Array(sc.capacity);
+            sc.slotTokens[writeIdx] = `${px.toFixed(1)},${py.toFixed(1)}`;
+
             if (sc.node) {
               const pts = sc.ptStrings;
-              let ptsStr = '';
+              pts.length = sc.count;
+              const cap = sc.capacity;
+              const head = sc.head;
+              const slots = sc.slotTokens;
               for (let k = 0; k < sc.count; k++) {
-                const rIdx = (sc.head + k) % sc.capacity;
-                let nx = (sc.rawX[rIdx] - sc.xMin) / xSpan;
-                let ny = (sc.rawY[rIdx] - sc.yMin) / ySpan;
-                if (nx < 0) nx = 0; else if (nx > 1) nx = 1;
-                if (ny < 0) ny = 0; else if (ny > 1) ny = 1;
-                const px = sc.plotX + nx * sc.plotW;
-                const py = sc.plotY + sc.plotH - ny * sc.plotH;
-                const token = `${px.toFixed(1)},${py.toFixed(1)}`;
-                pts[k] = token;
-                ptsStr += (k === 0 ? token : ' ' + token);
+                pts[k] = slots[(head + k) % cap];
               }
-              sc.node.setAttribute('points', ptsStr);
+              sc.node.setAttribute('points', pts.join(' '));
             }
           }
         } catch (_) {}
@@ -11588,7 +11864,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const minIntervalSec = (1.0 / this.targetFps) * 0.94;
         if (rawDeltaSec < minIntervalSec) {
           if (typeof requestAnimationFrame !== 'undefined') {
-            this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
+            this.animationFrameId = requestAnimationFrame(this._boundTick);
           }
           return;
         }
@@ -11616,8 +11892,18 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         em.update(deltaSec);
       }
 
-      const isSlide = Boolean(this.scene && (this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide'));
-      const isDynamicScene = !isSlide && Boolean(this.isContinuousSim || this.isDynamicSim || (this.scene && (this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' || (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) || typeof this.scene.mount === 'function')));
+      if (this._classifiedScene !== this.scene) {
+        this._classifiedScene = this.scene;
+        this._isSlideScene = Boolean(this.scene && (this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide'));
+        this._isDynamicScene = !this._isSlideScene && Boolean(
+          this.isContinuousSim || this.isDynamicSim || (this.scene && (
+            this.scene.continuous || this.scene.isContinuous || this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim' ||
+            (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0)) ||
+            typeof this.scene.mount === 'function'
+          ))
+        );
+      }
+      const isDynamicScene = !this._isSlideScene && (this._isDynamicScene || Boolean(this.isContinuousSim || this.isDynamicSim));
 
       if (this.isPlaying) {
         if (!isDynamicScene) {
@@ -11660,11 +11946,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
 
         if (this.scene) {
-          this.emit('timeupdate', {
-            progress: isDynamicScene ? 0 : this.progress,
-            currentTime: isDynamicScene ? 0 : this.progress * (this.durationSec || 10.0),
-            duration: isDynamicScene ? 0 : this.durationSec
-          });
+          const tp = this._timeUpdatePayload || (this._timeUpdatePayload = { progress: 0, currentTime: 0, duration: 0 });
+          tp.progress = isDynamicScene ? 0 : this.progress;
+          tp.currentTime = isDynamicScene ? 0 : this.progress * (this.durationSec || 10.0);
+          tp.duration = isDynamicScene ? 0 : this.durationSec;
+          this.emit('timeupdate', tp);
         }
       }
 
@@ -11678,7 +11964,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
     this.lastTimestamp = currentTimestamp;
     if (typeof requestAnimationFrame !== 'undefined') {
-      this.animationFrameId = requestAnimationFrame((ts) => this.tick(ts));
+      this.animationFrameId = requestAnimationFrame(this._boundTick);
     }
   }
 
