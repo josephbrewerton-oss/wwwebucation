@@ -3465,13 +3465,13 @@
         if (typeof yawBase === 'string') {
           try {
             const yawFn = this.compileAstFn(yawBase);
-            yawBase = yawFn(t, camVars, this.computed || {}, Math);
+            yawBase = typeof yawFn === 'function' ? yawFn(t, camVars, this.computed || {}, Math) : 0;
           } catch { yawBase = 0; }
         }
         if (typeof pitchBase === 'string') {
           try {
             const pitchFn = this.compileAstFn(pitchBase);
-            pitchBase = pitchFn(t, camVars, this.computed || {}, Math);
+            pitchBase = typeof pitchFn === 'function' ? pitchFn(t, camVars, this.computed || {}, Math) : 0;
           } catch { pitchBase = 0; }
         }
       }
@@ -5277,10 +5277,12 @@
       for (let i = 0; i < this.scene.computed.length; i++) {
         const comp = this.scene.computed[i];
         try {
-          if (!comp._eval) {
+          if (typeof comp._eval !== 'function') {
             comp._eval = this.compileAstFn(comp.expr);
           }
-          v[comp.name] = comp._eval(evalT, v, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
+          if (typeof comp._eval === 'function') {
+            v[comp.name] = comp._eval(evalT, v, v, Math, AstMath.clamp, AstMath.lerp, AstMath.map, AstMath.rad, AstMath.deg, AstMath.dist, AstMath.translate, AstMath.rotate, AstMath.scale, AstMath.sineWave, AstMath.smoothstep);
+          }
         } catch {}
       }
     }
@@ -5508,9 +5510,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
 
       if (!this._exprCache) this._exprCache = new Map();
       const cachedFn = this._exprCache.get(expr);
-      if (cachedFn) return cachedFn;
+      if (typeof cachedFn === 'function') return cachedFn;
 
       const storeAndReturn = (fn) => {
+        if (typeof fn !== 'function') return ZERO_FN;
         if (this._exprCache.size > 2048) this._exprCache.clear();
         this._exprCache.set(expr, fn);
         return fn;
@@ -5537,8 +5540,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         return storeAndReturn((t, vars, computed) => (vars && expr in vars ? vars[expr] : computed?.[expr]));
       }
 
-      // Compile-time resolved helper map (zero per-call object or rest-array allocations)
-      const STATIC_HELPERS = {
+      // Compile-time resolved null-prototype helper map (zero per-call allocations, immune to prototype lookups)
+      const STATIC_HELPERS = Object.assign(Object.create(null), {
         clamp: AstMath.clamp,
         lerp: AstMath.lerp,
         map: AstMath.map,
@@ -5563,12 +5566,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         parseFloat,
         isNaN,
         isFinite
-      };
+      });
 
       const makeHelperCall = (name, argFns) => {
-        const staticFn = STATIC_HELPERS[name] || (typeof Math[name] === 'function' ? Math[name] : null);
+        const ownHelper = Object.prototype.hasOwnProperty.call(STATIC_HELPERS, name) ? STATIC_HELPERS[name] : null;
+        const ownMath = !ownHelper && Object.prototype.hasOwnProperty.call(Math, name) && typeof Math[name] === 'function' ? Math[name] : null;
+        const staticFn = typeof ownHelper === 'function' ? ownHelper : ownMath;
         const arity = argFns.length;
-        if (staticFn) {
+        if (typeof staticFn === 'function') {
           if (arity === 0) return () => staticFn();
           if (arity === 1) { const a0 = argFns[0]; return (t, v, c, M) => staticFn(a0(t, v, c, M)); }
           if (arity === 2) { const a0 = argFns[0], a1 = argFns[1]; return (t, v, c, M) => staticFn(a0(t, v, c, M), a1(t, v, c, M)); }
@@ -5582,8 +5587,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
         const scratch = new Array(arity);
         return (t, v, c, M = Math) => {
-          const fn = M && typeof M[name] === 'function' ? M[name] : null;
-          if (!fn) return 0;
+          const fn = M && Object.prototype.hasOwnProperty.call(M, name) && typeof M[name] === 'function' ? M[name] : null;
+          if (typeof fn !== 'function') return 0;
           for (let k = 0; k < arity; k++) scratch[k] = argFns[k](t, v, c, M);
           return fn.apply(M, scratch);
         };
@@ -10551,7 +10556,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const wrap3d = (expr) => {
                 if (expr === undefined || expr === null) return () => 0;
                 const fn = this.compileAstFn(expr);
-                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+                if (typeof fn !== 'function') return () => 0;
+                return (t, vars, MathObj, computed) => (typeof fn === 'function' ? fn(t, vars, computed, MathObj) : 0);
               };
               const evalX = wrap3d(b.x), evalY = wrap3d(b.y), evalZ = wrap3d(b.z);
               const labelNode = (b.label && hasDomQuery) ? container.querySelector(b.label) : null;
@@ -10578,7 +10584,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const wrap3d = (expr) => {
                 if (expr === undefined || expr === null) return () => 0;
                 const fn = this.compileAstFn(expr);
-                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+                if (typeof fn !== 'function') return () => 0;
+                return (t, vars, MathObj, computed) => (typeof fn === 'function' ? fn(t, vars, computed, MathObj) : 0);
               };
               const evalX1 = wrap3d(b.x1), evalY1 = wrap3d(b.y1), evalZ1 = wrap3d(b.z1);
               const evalX2 = wrap3d(b.x2), evalY2 = wrap3d(b.y2), evalZ2 = wrap3d(b.z2);
@@ -10615,7 +10622,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               const wrap3d = (expr, fallback) => {
                 if (expr === undefined || expr === null) return () => fallback;
                 const fn = this.compileAstFn(expr);
-                return (t, vars, MathObj, computed) => fn(t, vars, computed, MathObj);
+                if (typeof fn !== 'function') return () => fallback;
+                return (t, vars, MathObj, computed) => (typeof fn === 'function' ? fn(t, vars, computed, MathObj) : fallback);
               };
               const evalR = wrap3d(b.r, 100);
               const evalCX = wrap3d(b.cx, 0);
@@ -10647,7 +10655,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
               let evalPts = () => [];
               if (b.pointsExpr) {
                 const rawPtsFn = this.compileAstFn(b.pointsExpr);
-                evalPts = (t, vars, MathObj, computed) => rawPtsFn(t, vars, computed, MathObj) || [];
+                if (typeof rawPtsFn === 'function') {
+                  evalPts = (t, vars, MathObj, computed) => (typeof rawPtsFn === 'function' ? rawPtsFn(t, vars, computed, MathObj) : null) || [];
+                }
               }
 
               const item = {
@@ -10713,7 +10723,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                 ? (t, vars, MathObj, comp) => {
                     let val;
                     try {
-                      val = rawBindFn(t, vars, comp, MathObj);
+                      val = typeof rawBindFn === 'function' ? rawBindFn(t, vars, comp, MathObj) : '';
                     } catch {
                       return '';
                     }
@@ -10724,7 +10734,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   }
                 : (t, vars, MathObj, comp) => {
                     try {
-                      return rawBindFn(t, vars, comp, MathObj);
+                      return typeof rawBindFn === 'function' ? rawBindFn(t, vars, comp, MathObj) : 0;
                     } catch {
                       return 0;
                     }
@@ -10837,29 +10847,37 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (em.phaseExpr) {
             try {
               const rawPhFn = this.compileAstFn(em.phaseExpr);
-              em._phaseEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawPhFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawPhFn === 'function') {
+                em._phaseEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawPhFn === 'function' ? rawPhFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
           }
           if (em.clampXExpr) {
             try {
               const rawCxFn = this.compileAstFn(em.clampXExpr);
-              em._clampXEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawCxFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawCxFn === 'function') {
+                em._clampXEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawCxFn === 'function' ? rawCxFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
           }
           if (em.speedExpr) {
             try {
               const rawSpdFn = this.compileAstFn(em.speedExpr);
-              em._speedEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawSpdFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawSpdFn === 'function') {
+                em._speedEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawSpdFn === 'function' ? rawSpdFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
           }
           if (em.countExpr) {
             try {
               const rawCntFn = this.compileAstFn(em.countExpr);
-              em._countEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawCntFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawCntFn === 'function') {
+                em._countEval = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawCntFn === 'function' ? rawCntFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
           }
         });
@@ -10898,13 +10916,17 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           let evalY = () => 0;
           try {
             const rawX = this.compileAstFn(scCfg.xExpr || 't');
-            evalX = (t, vars, MathObj, computed, clamp, lerp, map) =>
-              rawX(t, vars, computed, MathObj, clamp, lerp, map);
+            if (typeof rawX === 'function') {
+              evalX = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                (typeof rawX === 'function' ? rawX(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+            }
           } catch (_) {}
           try {
             const rawY = this.compileAstFn(scCfg.yExpr || '0');
-            evalY = (t, vars, MathObj, computed, clamp, lerp, map) =>
-              rawY(t, vars, computed, MathObj, clamp, lerp, map);
+            if (typeof rawY === 'function') {
+              evalY = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                (typeof rawY === 'function' ? rawY(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+            }
           } catch (_) {}
           const cap = Math.max(8, Math.min(2048, scCfg.samples || 96));
           this.activeScopes.push({
@@ -10945,8 +10967,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             let fn = () => 0;
             try {
               const rawFn = this.compileAstFn(terms[ti].expr || '0');
-              fn = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawFn === 'function') {
+                fn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawFn === 'function' ? rawFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
             evalFns.push(fn);
           }
@@ -10954,8 +10978,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (ldCfg.maxExpr) {
             try {
               const rawMaxFn = this.compileAstFn(ldCfg.maxExpr);
-              maxEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                rawMaxFn(t, vars, computed, MathObj, clamp, lerp, map);
+              if (typeof rawMaxFn === 'function') {
+                maxEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
+                  (typeof rawMaxFn === 'function' ? rawMaxFn(t, vars, computed, MathObj, clamp, lerp, map) : 0);
+              }
             } catch (_) {}
           }
 
@@ -11061,8 +11087,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           if (cp && cp.passExpr && !cp._passEvalFn) {
             try {
               const rawPassFn = this.compileAstFn(cp.passExpr);
-              cp._passEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
-                Boolean(rawPassFn(t, vars, computed, MathObj, clamp, lerp, map));
+              cp._passEvalFn = typeof rawPassFn === 'function'
+                ? (t, vars, MathObj, computed, clamp, lerp, map) =>
+                    Boolean(typeof rawPassFn === 'function' ? rawPassFn(t, vars, computed, MathObj, clamp, lerp, map) : false)
+                : () => false;
             } catch (_) {
               cp._passEvalFn = () => false;
             }
@@ -11156,13 +11184,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (typeof camera.yaw === 'string') {
         try {
           const yawFn = this.compileAstFn(camera.yaw);
-          camera.yaw = yawFn(effectiveT, v, this.computed || v, Math);
+          if (typeof yawFn === 'function') camera.yaw = yawFn(effectiveT, v, this.computed || v, Math);
         } catch {}
       }
       if (typeof camera.pitch === 'string') {
         try {
           const pitchFn = this.compileAstFn(camera.pitch);
-          camera.pitch = pitchFn(effectiveT, v, this.computed || v, Math);
+          if (typeof pitchFn === 'function') camera.pitch = pitchFn(effectiveT, v, this.computed || v, Math);
         } catch {}
       }
       if (prevClock !== undefined) v.clock = prevClock;
@@ -11765,8 +11793,10 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         if (!cp._passEvalFn) {
         try {
           const rawPassFn = this.compileAstFn(cp.passExpr);
-          cp._passEvalFn = (t, vars, MathObj, computed, clamp, lerp, map) =>
-            Boolean(rawPassFn(t, vars, computed, MathObj, clamp, lerp, map));
+          cp._passEvalFn = typeof rawPassFn === 'function'
+            ? (t, vars, MathObj, computed, clamp, lerp, map) =>
+                Boolean(typeof rawPassFn === 'function' ? rawPassFn(t, vars, computed, MathObj, clamp, lerp, map) : false)
+            : () => false;
         } catch (_) {
           cp._passEvalFn = () => false;
         }        }
