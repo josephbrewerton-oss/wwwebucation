@@ -1615,6 +1615,7 @@ export function renderPlayerPage(): HTMLElement {
 
     gridContainer.querySelectorAll<HTMLElement>('.cartridge-card').forEach((card) => {
       const launchCard = () => {
+        unlockMobilePwaAudio();
         const id = card.getAttribute('data-id');
         if (id) updatePreset(id);
       };
@@ -1714,13 +1715,60 @@ export function renderPlayerPage(): HTMLElement {
     });
   });
 
+  // Unlock shared Web Audio & SpeechSynthesis synchronously inside host tap gestures
+  // so mobile PWAs (iOS Safari & Android Chrome) inherit audio permission inside the player iframe.
+  function unlockMobilePwaAudio(): void {
+    try {
+      const navAny = navigator as Navigator & { audioSession?: { type: string } };
+      if (navAny.audioSession && navAny.audioSession.type !== 'playback') {
+        navAny.audioSession.type = 'playback';
+      }
+    } catch (_) {}
+
+    try {
+      const winAny = window as Window & {
+        __astSharedAudioCtx?: AudioContext;
+        webkitAudioContext?: typeof AudioContext;
+      };
+      const AudioCtx = window.AudioContext || winAny.webkitAudioContext;
+      if (AudioCtx) {
+        let ctx = winAny.__astSharedAudioCtx;
+        if (!ctx || ctx.state === 'closed') {
+          ctx = new AudioCtx();
+          winAny.__astSharedAudioCtx = ctx;
+        }
+        if (ctx.state !== 'running') {
+          ctx.resume().catch(() => {});
+        }
+        const silentBuf = ctx.createBuffer(1, 1, 22050);
+        const src = ctx.createBufferSource();
+        src.buffer = silentBuf;
+        src.connect(ctx.destination);
+        src.start(0);
+      }
+    } catch (_) {}
+
+    try {
+      if ('speechSynthesis' in window && window.speechSynthesis) {
+        if (typeof window.speechSynthesis.getVoices === 'function') {
+          window.speechSynthesis.getVoices();
+        }
+        if (window.speechSynthesis.paused && typeof window.speechSynthesis.resume === 'function') {
+          window.speechSynthesis.resume();
+        }
+      }
+    } catch (_) {}
+  }
+
   // Wire Play, Reset & BSL Toolbar buttons
   playBtn?.addEventListener('click', () => {
+    unlockMobilePwaAudio();
     postToPlayer({ type: 'TOGGLE_PLAY' });
     focusPlayerStage();
   });
 
   resetBtn?.addEventListener('click', () => {
+    unlockMobilePwaAudio();
     postToPlayer({ type: 'RESET_SIM' });
     focusPlayerStage();
   });
@@ -1740,6 +1788,9 @@ export function renderPlayerPage(): HTMLElement {
   muteBtn?.addEventListener('click', () => {
     const nextVoice = toggleVoice();
     const muted = !nextVoice;
+    if (nextVoice) {
+      unlockMobilePwaAudio();
+    }
     isMuted = muted;
     updateMuteUi(muted);
     postToPlayer({ type: 'SET_VOICE', enabled: nextVoice });
@@ -1807,6 +1858,8 @@ export function renderPlayerPage(): HTMLElement {
     if (e.data.type === 'PLAYER_READY') {
       if (!isStageOpen) return;
       isIframeReady = true;
+      postToPlayer({ type: 'SET_VOICE', enabled: !isMuted });
+      postToPlayer({ type: 'SET_MUTED', muted: isMuted });
       if (pendingCustomCartridge) {
         const queued = pendingCustomCartridge;
         pendingCustomCartridge = null;

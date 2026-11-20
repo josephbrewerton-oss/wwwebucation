@@ -1218,10 +1218,11 @@
       if (!rawText || !this.engine) return;
       const text = String(rawText).trim();
       if (!text) return;
+      const speakOpts = Object.assign({ immediate: true }, opts || {});
       if (typeof this.engine.speak === 'function') {
-        this.engine.speak(text, opts);
+        this.engine.speak(text, speakOpts);
       } else if (typeof this.engine.speakText === 'function') {
-        this.engine.speakText(text, opts);
+        this.engine.speakText(text, speakOpts);
       }
     }
 
@@ -3628,27 +3629,46 @@ ${strokeLines.join('\n')}
       ) {
         return;
       }
+      const scheduleTone = (ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        osc.type = type;
+        osc.frequency.setValueAtTime(frequency, now);
+        gain.gain.setValueAtTime(gainVal, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + duration + 0.01);
+      };
       try {
-        if (!this.audioCtx) {
-          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-          if (AudioContextClass) this.audioCtx = new AudioContextClass();
+        if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.withRunningContext === 'function') {
+          this.engine.audioSynth.unlock();
+          this.engine.audioSynth.withRunningContext(scheduleTone);
+          return;
         }
-        if (this.audioCtx && this.audioCtx.state === 'suspended') {
-          this.audioCtx.resume();
+        if (!this.audioCtx || this.audioCtx.state === 'closed') {
+          const shared = typeof window !== 'undefined' ? window.__astSharedAudioCtx : null;
+          if (shared && shared.state !== 'closed') {
+            this.audioCtx = shared;
+          } else {
+            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+            if (AudioContextClass) {
+              this.audioCtx = new AudioContextClass();
+              window.__astSharedAudioCtx = this.audioCtx;
+            }
+          }
         }
         if (!this.audioCtx) return;
-
-        const osc = this.audioCtx.createOscillator();
-        const gain = this.audioCtx.createGain();
-        osc.type = type;
-        osc.frequency.setValueAtTime(frequency, this.audioCtx.currentTime);
-        gain.gain.setValueAtTime(gainVal, this.audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, this.audioCtx.currentTime + duration);
-
-        osc.connect(gain);
-        gain.connect(this.audioCtx.destination);
-        osc.start();
-        osc.stop(this.audioCtx.currentTime + duration);
+        if (this.audioCtx.state === 'running') {
+          scheduleTone(this.audioCtx);
+        } else if (this.audioCtx.state === 'suspended' || this.audioCtx.state === 'interrupted') {
+          const ctx = this.audioCtx;
+          ctx.resume().then(() => {
+            if (ctx.state === 'running') scheduleTone(ctx);
+          }).catch(() => {});
+        }
       } catch {}
     }
 

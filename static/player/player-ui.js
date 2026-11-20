@@ -316,20 +316,40 @@
       if (window.__astGestures && typeof window.__astGestures._isControlEnabled === 'function' && !window.__astGestures._isControlEnabled('audio')) {
         return;
       }
-      try {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        if (!AudioCtx) return;
-        const ctx = new AudioCtx();
+      if (this.engine && (this.engine.muted || this.engine.volume === 0)) return;
+      const schedule = (ctx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
+        const now = ctx.currentTime;
         osc.type = type;
-        osc.frequency.setValueAtTime(freq, ctx.currentTime);
-        gain.gain.setValueAtTime(0.12, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+        osc.frequency.setValueAtTime(freq, now);
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.36);
+        osc.start(now);
+        osc.stop(now + 0.36);
+      };
+      try {
+        if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.withRunningContext === 'function') {
+          this.engine.audioSynth.unlock();
+          this.engine.audioSynth.withRunningContext(schedule);
+          return;
+        }
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        let ctx = window.__astSharedAudioCtx;
+        if (!ctx || ctx.state === 'closed') {
+          ctx = new AudioCtx();
+          window.__astSharedAudioCtx = ctx;
+        }
+        if (ctx.state === 'running') {
+          schedule(ctx);
+        } else if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+          ctx.resume().then(() => {
+            if (ctx.state === 'running') schedule(ctx);
+          }).catch(() => {});
+        }
       } catch (_) {}
     }
 
@@ -2278,6 +2298,9 @@
         el.volumeSlider.value = this.engine.volume;
         el.volumeSlider.addEventListener('input', (e) => {
           const vol = parseFloat(e.target.value);
+          if (vol > 0 && this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
+            this.engine.audioSynth.unlock();
+          }
           this.engine.setVolume(vol);
           if (el.btnVolumeMute) {
             el.btnVolumeMute.textContent = vol === 0 ? '🔇' : (vol < 0.5 ? '🔉' : '🔊');
@@ -2288,6 +2311,9 @@
       if (el.btnVolumeMute) {
         el.btnVolumeMute.addEventListener('click', () => {
           const muted = this.engine.toggleMute();
+          if (!muted && this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
+            this.engine.audioSynth.unlock();
+          }
           el.btnVolumeMute.textContent = muted ? '🔇' : (this.engine.volume < 0.5 ? '🔉' : '🔊');
           if (el.volumeSlider) {
             el.volumeSlider.value = muted ? 0 : this.engine.volume;
@@ -2443,8 +2469,11 @@
           el.btnNarrate.classList.toggle('active', enabled);
           el.btnNarrate.textContent = enabled ? '🔊 Voice: ON' : '🔊 Voice';
           if (enabled) {
+            if (this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
+              this.engine.audioSynth.unlock();
+            }
             const currentSub = this.engine.getCurrentSubtitle() || (this.engine.scene && this.engine.scene.title) || '';
-            if (currentSub) this.engine.speakText(currentSub);
+            if (currentSub) this.engine.speakText(currentSub, { immediate: true });
           }
         });
       }
