@@ -4,17 +4,30 @@
 
 import {
   CATHOLIC_PRAYERS,
+  MASS_DIALOGUE_RESPONSES,
   SACRAMENTS_QUIZ_QUESTIONS,
   CATHOLIC_KS2_KNOWLEDGE,
 } from '../../data/catholic';
 import { broadcastBslSpeech } from '../../services/bslGlobalStore';
 
 const READINESS_STORAGE_KEY = 'stj_fhc_readiness_v1';
+const SPURS_STORAGE_KEY = 'stj_fhc_spurs_v1';
+
+const REQUIRED_PRAYERS_FOR_SPUR = 4;
+const REQUIRED_QUIZ_FOR_SPUR = 8;
 
 interface ReadinessMilestone {
   id: string;
   label: string;
   detail: string;
+}
+
+interface SpursProgress {
+  masteredPrayerIds: string[];
+  masteredDialogueIds: string[];
+  correctQuizIds: string[];
+  simulatorPassed: boolean;
+  candidateName: string;
 }
 
 const READINESS_MILESTONES: ReadinessMilestone[] = [
@@ -209,35 +222,149 @@ function saveReadinessState(state: Record<string, boolean>): void {
   }
 }
 
+function loadSpursProgress(): SpursProgress {
+  const fallback: SpursProgress = {
+    masteredPrayerIds: [],
+    masteredDialogueIds: [],
+    correctQuizIds: [],
+    simulatorPassed: false,
+    candidateName: '',
+  };
+  try {
+    const raw = window.localStorage.getItem(SPURS_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return fallback;
+    return {
+      masteredPrayerIds: Array.isArray(parsed.masteredPrayerIds) ? parsed.masteredPrayerIds.filter((x: unknown) => typeof x === 'string') : [],
+      masteredDialogueIds: Array.isArray(parsed.masteredDialogueIds) ? parsed.masteredDialogueIds.filter((x: unknown) => typeof x === 'string') : [],
+      correctQuizIds: Array.isArray(parsed.correctQuizIds) ? parsed.correctQuizIds.filter((x: unknown) => typeof x === 'string') : [],
+      simulatorPassed: Boolean(parsed.simulatorPassed),
+      candidateName: typeof parsed.candidateName === 'string' ? parsed.candidateName.slice(0, 48) : '',
+    };
+  } catch {
+    return fallback;
+  }
+}
+
+function saveSpursProgress(progress: SpursProgress): void {
+  try {
+    window.localStorage.setItem(SPURS_STORAGE_KEY, JSON.stringify(progress));
+  } catch {
+    // Ignore quota/private mode failures
+  }
+}
+
+function ensureCertificatePrintStyles(): void {
+  if (typeof document === 'undefined' || document.getElementById('fhc-cert-print-style')) return;
+  const style = document.createElement('style');
+  style.id = 'fhc-cert-print-style';
+  style.textContent = `
+    @media print {
+      body.fhc-printing-cert * { visibility: hidden !important; }
+      body.fhc-printing-cert #fhc-certificate-print-area,
+      body.fhc-printing-cert #fhc-certificate-print-area * { visibility: visible !important; }
+      body.fhc-printing-cert #fhc-certificate-print-area {
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100% !important;
+        padding: 16px !important;
+        background: #ffffff !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        z-index: 99999 !important;
+      }
+      body.fhc-printing-cert #fhc-certificate-print-area svg {
+        width: 100% !important;
+        max-width: 780px !important;
+        height: auto !important;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export function renderFirstCommunionPrep(base: string): HTMLElement {
   const container = document.createElement('div');
   container.className = 'first-communion-prep-hub';
 
+  ensureCertificatePrintStyles();
+
   let readinessState: Record<string, boolean> = loadReadinessState();
+  let spurs: SpursProgress = loadSpursProgress();
   // Strictly ephemeral state — never saved to localStorage/IndexedDB for child privacy & Seal of Confession
   const ephemeralReflectionIds = new Set<string>();
-  let activePrayerId: string = CATHOLIC_PRAYERS[0]?.id || 'act-of-contrition';
+  let activePrayerId: string = CATHOLIC_PRAYERS[0]?.id || 'our-father';
   let prayerSelections: Record<string, string> = {};
   let prayerChecked = false;
+  let prayerWasRevealed = false;
   let speakingTag: string | null = null;
+  let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+  // Mass dialogue call-and-response selection state (per dialogue id)
+  const dialogueSelected: Record<string, string> = {};
+  let showCertificatePreview = false;
 
   const fullDeck = buildUnifiedQuizDeck();
   let quizCategory: QuizCategory = 'All';
   let quizCursor = 0;
   let selectedQuizOption: number | null = null;
   let showQuizHint = false;
-  let quizScore = 0;
-  let answeredQuizIds = new Set<string>();
+  const answeredQuizIds = new Set<string>(spurs.correctQuizIds);
+  let quizScore = spurs.correctQuizIds.length;
 
   function getFilteredDeck(): UnifiedQuizQuestion[] {
     if (quizCategory === 'All') return fullDeck;
     return fullDeck.filter((q) => q.category === quizCategory);
   }
 
+  function computeSpursSummary() {
+    const prayersDone = spurs.masteredPrayerIds.length;
+    const dialoguesDone = spurs.masteredDialogueIds.length;
+    const quizDone = spurs.correctQuizIds.length;
+    const readinessDone = READINESS_MILESTONES.filter((m) => readinessState[m.id]).length;
+
+    const spurPrayers = prayersDone >= REQUIRED_PRAYERS_FOR_SPUR;
+    const spurMass = dialoguesDone >= MASS_DIALOGUE_RESPONSES.length;
+    const spurQuiz = quizDone >= Math.min(REQUIRED_QUIZ_FOR_SPUR, fullDeck.length);
+    const spurReadiness = readinessDone >= READINESS_MILESTONES.length;
+
+    const earnedCount = [spurPrayers, spurMass, spurQuiz, spurReadiness].filter(Boolean).length;
+    const allEarned = earnedCount === 4;
+
+    return {
+      prayersDone,
+      dialoguesDone,
+      quizDone,
+      readinessDone,
+      spurPrayers,
+      spurMass,
+      spurQuiz,
+      spurReadiness,
+      earnedCount,
+      allEarned,
+    };
+  }
+
+  function unlockMobileAudioSession(): void {
+    try {
+      const navAny = navigator as Navigator & { audioSession?: { type: string } };
+      if (navAny.audioSession && navAny.audioSession.type !== 'playback') {
+        navAny.audioSession.type = 'playback';
+      }
+    } catch (_) {}
+  }
+
   function stopSpeech(): void {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
+    if ('speechSynthesis' in window && window.speechSynthesis) {
+      try {
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
+      } catch (_) {}
     }
+    activeUtterance = null;
     broadcastBslSpeech({ isSpeaking: false });
     speakingTag = null;
   }
@@ -245,32 +372,56 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
   function speakText(tag: string, text: string): void {
     if (speakingTag === tag) {
       stopSpeech();
-      updateView();
+      updateDynamicSections();
       return;
     }
+    unlockMobileAudioSession();
     stopSpeech();
     broadcastBslSpeech({ subtitle: text, isSpeaking: true });
-    if (!('speechSynthesis' in window)) {
+    if (!('speechSynthesis' in window) || !window.speechSynthesis) {
       speakingTag = tag;
-      updateView();
+      updateDynamicSections();
       return;
     }
-    const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = 'en-GB';
-    utter.rate = 0.9;
-    speakingTag = tag;
-    updateView();
-    utter.onend = () => {
-      broadcastBslSpeech({ isSpeaking: false });
+    const synth = window.speechSynthesis;
+    try {
+      if (synth.paused && typeof synth.resume === 'function') {
+        synth.resume();
+      }
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'en-GB';
+      utter.rate = 0.9;
+      try {
+        const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
+        if (voices.length) {
+          const matched =
+            voices.find((v) => v.lang && v.lang.toLowerCase() === 'en-gb') ||
+            voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en'));
+          if (matched) utter.voice = matched;
+        }
+      } catch (_) {}
+
+      activeUtterance = utter;
+      speakingTag = tag;
+      utter.onend = () => {
+        if (activeUtterance === utter) activeUtterance = null;
+        broadcastBslSpeech({ isSpeaking: false });
+        speakingTag = null;
+        updateDynamicSections();
+      };
+      utter.onerror = () => {
+        if (activeUtterance === utter) activeUtterance = null;
+        broadcastBslSpeech({ isSpeaking: false });
+        speakingTag = null;
+        updateDynamicSections();
+      };
+      // Speak synchronously inside the tap gesture before re-rendering UI so mobile PWAs keep user activation
+      synth.speak(utter);
+      updateDynamicSections();
+    } catch (_) {
       speakingTag = null;
-      updateView();
-    };
-    utter.onerror = () => {
-      broadcastBslSpeech({ isSpeaking: false });
-      speakingTag = null;
-      updateView();
-    };
-    window.speechSynthesis.speak(utter);
+      updateDynamicSections();
+    }
   }
 
   function buildClozeSegments(prayerText: string, missingWords: string[]): Array<{ type: 'text'; value: string } | { type: 'blank'; index: number; answer: string; choices: string[] }> {
@@ -302,6 +453,72 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
       segments.push({ type: 'text', value: remaining });
     }
     return segments;
+  }
+
+  function renderSpursBanner(): string {
+    const s = computeSpursSummary();
+    const quizGoal = Math.min(REQUIRED_QUIZ_FOR_SPUR, fullDeck.length);
+    const badges = [
+      {
+        title: 'Core Prayers',
+        status: `${s.prayersDone} / ${REQUIRED_PRAYERS_FOR_SPUR} mastered`,
+        earned: s.spurPrayers,
+        icon: '🙏',
+      },
+      {
+        title: 'Mass Responses',
+        status: `${s.dialoguesDone} / ${MASS_DIALOGUE_RESPONSES.length} mastered`,
+        earned: s.spurMass,
+        icon: '⛪',
+      },
+      {
+        title: 'Catechesis Quiz',
+        status: `${s.quizDone} / ${quizGoal} correct`,
+        earned: s.spurQuiz,
+        icon: '📖',
+      },
+      {
+        title: 'Readiness Journey',
+        status: `${s.readinessDone} / ${READINESS_MILESTONES.length} steps${spurs.simulatorPassed ? ' + Sim ★' : ''}`,
+        earned: s.spurReadiness,
+        icon: '🕊️',
+      },
+    ];
+
+    return `
+      <section style="background:linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%); border:1.5px solid #ca8a04; border-radius:16px; padding:1.35rem 1.5rem; margin-bottom:2rem; color:#f8fafc; box-shadow:0 8px 24px rgba(15,23,42,0.16);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+          <div>
+            <span style="font-size:0.72rem; font-weight:800; color:#fde047; text-transform:uppercase; letter-spacing:0.08em;">
+              🏅 Sacramental Mastery Pathway
+            </span>
+            <h3 style="font-size:1.25rem; font-weight:800; color:#ffffff; margin:2px 0 3px;">
+              ${s.allEarned ? 'All 4 First Holy Communion Badges Earned!' : `Earn Your First Holy Communion Badges (${s.earnedCount} / 4)`}
+            </h3>
+            <p style="font-size:0.83rem; color:#cbd5e1; margin:0;">
+              Complete all 4 areas below to unlock your printable First Holy Communion Readiness Certificate (saved privately on this device).
+            </p>
+          </div>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button type="button" id="fhc-toggle-cert-btn" style="padding:7px 14px; border-radius:8px; border:1px solid #facc15; background:${s.allEarned ? '#facc15' : 'rgba(250,204,21,0.14)'}; color:${s.allEarned ? '#0f172a' : '#fef08a'}; font-weight:800; font-size:0.8rem; cursor:pointer;">
+              ${showCertificatePreview || s.allEarned ? '📜 View Certificate Below ↓' : '📜 Preview Certificate'}
+            </button>
+          </div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px, 1fr)); gap:0.75rem;">
+          ${badges.map((b) => `
+            <div style="background:${b.earned ? 'rgba(22,163,74,0.22)' : 'rgba(255,255,255,0.06)'}; border:1.5px solid ${b.earned ? '#22c55e' : 'rgba(148,163,184,0.3)'}; border-radius:10px; padding:0.75rem 0.9rem; display:flex; align-items:center; gap:10px;">
+              <span style="font-size:1.3rem;" aria-hidden="true">${b.earned ? '✅' : b.icon}</span>
+              <div>
+                <strong style="display:block; font-size:0.86rem; color:${b.earned ? '#bbf7d0' : '#ffffff'};">${escapeHtml(b.title)}</strong>
+                <span style="display:block; font-size:0.75rem; color:${b.earned ? '#86efac' : '#cbd5e1'}; font-weight:600;">${escapeHtml(b.status)}</span>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </section>
+    `;
   }
 
   function renderReadinessSection(): string {
@@ -415,6 +632,86 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
     `;
   }
 
+  function renderMassDialogueSection(): string {
+    const masteredCount = spurs.masteredDialogueIds.length;
+    return `
+      <section style="background:#ffffff; border:1.5px solid #bae6fd; border-radius:16px; padding:1.5rem; margin-bottom:2rem; box-shadow:0 4px 14px rgba(2,132,199,0.06);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+          <div>
+            <span style="font-size:0.74rem; font-weight:800; color:#0369a1; text-transform:uppercase; letter-spacing:0.06em;">Spoken Mass Responses</span>
+            <h3 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:2px 0 4px;">At Mass: Father Says &rarr; I Reply!</h3>
+            <p style="font-size:0.86rem; color:#475569; margin:0;">Practise answering clearly with the congregation so you feel confident during your First Holy Communion Mass.</p>
+          </div>
+          <span style="font-size:0.84rem; font-weight:800; background:${masteredCount === MASS_DIALOGUE_RESPONSES.length ? '#dcfce7' : '#e0f2fe'}; color:${masteredCount === MASS_DIALOGUE_RESPONSES.length ? '#166534' : '#0369a1'}; padding:5px 12px; border-radius:999px;">
+            ${masteredCount} / ${MASS_DIALOGUE_RESPONSES.length} Mastered
+          </span>
+        </div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(310px, 1fr)); gap:1rem;">
+          ${MASS_DIALOGUE_RESPONSES.map((item, idx) => {
+            const isMastered = spurs.masteredDialogueIds.includes(item.id);
+            const chosen = dialogueSelected[item.id] || '';
+            const isPlaying = speakingTag === `dialogue-${item.id}`;
+            const { options } = buildDeterministicOptions(
+              [item.correctReply, ...item.distractors],
+              item.correctReply,
+              idx + 2
+            );
+            const showTip = Boolean(chosen) || isMastered;
+
+            return `
+              <div style="background:${isMastered ? '#f0fdf4' : '#f8fafc'}; border:1.5px solid ${isMastered ? '#22c55e' : '#e2e8f0'}; border-radius:12px; padding:1rem; display:flex; flex-direction:column; gap:8px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                  <span style="font-size:0.72rem; font-weight:800; color:#0369a1; text-transform:uppercase;">${escapeHtml(item.moment)}</span>
+                  <button type="button" class="fhc-speak-dialogue" data-id="${escapeHtml(item.id)}" data-text="${escapeHtml(`Father says: ${item.priestSays}`)}" style="padding:3px 9px; border-radius:6px; border:1px solid #cbd5e1; background:${isPlaying ? '#dc2626' : '#ffffff'}; color:${isPlaying ? '#ffffff' : '#0369a1'}; font-size:0.73rem; font-weight:700; cursor:pointer;">
+                    ${isPlaying ? '⏹ Stop' : '🔊 Hear Father'}
+                  </button>
+                </div>
+
+                <div style="background:#ffffff; border:1px solid #e2e8f0; border-radius:8px; padding:8px 10px; font-size:0.86rem; color:#0f172a; font-weight:700; line-height:1.4;">
+                  <span style="color:#64748b; font-weight:600; font-size:0.75rem; display:block; margin-bottom:2px;">Priest:</span>
+                  “${escapeHtml(item.priestSays)}”
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  ${options.map((opt) => {
+                    const isPicked = chosen === opt;
+                    const isRight = opt === item.correctReply;
+                    let bg = '#ffffff';
+                    let border = '#cbd5e1';
+                    let col = '#1e293b';
+                    if (isPicked || (isMastered && isRight)) {
+                      if (isRight) {
+                        bg = '#dcfce7';
+                        border = '#16a34a';
+                        col = '#14532d';
+                      } else {
+                        bg = '#fee2e2';
+                        border = '#dc2626';
+                        col = '#991b1b';
+                      }
+                    }
+                    return `
+                      <button type="button" class="fhc-dialogue-opt" data-id="${escapeHtml(item.id)}" data-reply="${escapeHtml(opt)}" style="text-align:left; padding:7px 10px; border-radius:7px; border:1.5px solid ${border}; background:${bg}; color:${col}; font-size:0.81rem; font-weight:700; cursor:pointer; line-height:1.35;">
+                        ${isRight && (isPicked || isMastered) ? '✓ ' : ''}“${escapeHtml(opt)}”
+                      </button>
+                    `;
+                  }).join('')}
+                </div>
+
+                ${showTip ? `
+                  <div style="font-size:0.76rem; color:${isMastered ? '#166534' : '#b45309'}; background:${isMastered ? '#dcfce7' : '#fef9c3'}; border-radius:7px; padding:6px 9px; line-height:1.4;">
+                    ${isMastered ? '🌟 ' : '💡 '}${escapeHtml(item.tip)}
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
   function renderPrayerClozeSection(): string {
     const prayer = CATHOLIC_PRAYERS.find((p) => p.id === activePrayerId) || CATHOLIC_PRAYERS[0];
     const segments = buildClozeSegments(prayer.text, prayer.missingWords);
@@ -423,14 +720,15 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
       (s) => s.type === 'blank' && (prayerSelections[String(s.index)] || '').toLowerCase() === s.answer.toLowerCase()
     ).length;
     const isPlayingPrayer = speakingTag === `prayer-${prayer.id}`;
+    const isMastered = spurs.masteredPrayerIds.includes(prayer.id);
 
     return `
       <section style="background:#ffffff; border:1.5px solid #fde68a; border-radius:16px; padding:1.5rem; margin-bottom:2rem; box-shadow:0 4px 14px rgba(202,138,4,0.06);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
           <div>
-            <span style="font-size:0.74rem; font-weight:800; color:#b45309; text-transform:uppercase; letter-spacing:0.06em;">Prayer Memory Practice</span>
+            <span style="font-size:0.74rem; font-weight:800; color:#b45309; text-transform:uppercase; letter-spacing:0.06em;">Prayer Memory Practice (${CATHOLIC_PRAYERS.length} Prayers)</span>
             <h3 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:2px 0 4px;">Fill in the Missing Prayer Words</h3>
-            <p style="font-size:0.86rem; color:#64748b; margin:0;">Practise your First Reconciliation and First Holy Communion prayers word by word.</p>
+            <p style="font-size:0.86rem; color:#64748b; margin:0;">Practise your core First Holy Communion prayers (★) word by word. Get 100% without peeking to earn a Prayer Checkmark!</p>
           </div>
           <button type="button" id="fhc-speak-prayer" data-id="${escapeHtml(prayer.id)}" data-text="${escapeHtml(`${prayer.title}. ${prayer.text}`)}" style="padding:8px 14px; border-radius:8px; border:none; background:${isPlayingPrayer ? '#dc2626' : '#ca8a04'}; color:#ffffff; font-weight:700; font-size:0.82rem; cursor:pointer;">
             ${isPlayingPrayer ? '⏹ Stop Prayer Audio' : '🔊 Listen & BSL Sign'}
@@ -438,15 +736,22 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
         </div>
 
         <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:1rem;">
-          ${CATHOLIC_PRAYERS.map((p) => `
-            <button type="button" class="fhc-prayer-tab" data-id="${escapeHtml(p.id)}" style="padding:6px 12px; border-radius:999px; font-weight:700; font-size:0.78rem; cursor:pointer; border:1px solid ${p.id === prayer.id ? '#ca8a04' : '#cbd5e1'}; background:${p.id === prayer.id ? '#ca8a04' : '#f8fafc'}; color:${p.id === prayer.id ? '#ffffff' : '#334155'};">
-              ${escapeHtml(p.title)}
-            </button>
-          `).join('')}
+          ${CATHOLIC_PRAYERS.map((p) => {
+            const done = spurs.masteredPrayerIds.includes(p.id);
+            const active = p.id === prayer.id;
+            return `
+              <button type="button" class="fhc-prayer-tab" data-id="${escapeHtml(p.id)}" style="padding:6px 12px; border-radius:999px; font-weight:700; font-size:0.78rem; cursor:pointer; border:1px solid ${active ? '#ca8a04' : done ? '#22c55e' : '#cbd5e1'}; background:${active ? '#ca8a04' : done ? '#f0fdf4' : '#f8fafc'}; color:${active ? '#ffffff' : done ? '#166534' : '#334155'};">
+                ${done ? '✓ ' : (p.coreFirstCommunion ? '★ ' : '')}${escapeHtml(p.title)}
+              </button>
+            `;
+          }).join('')}
         </div>
 
         <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:1.25rem; margin-bottom:1rem;">
-          <div style="font-size:0.76rem; font-weight:800; color:#92400e; margin-bottom:6px;">Occasion: ${escapeHtml(prayer.occasion)}</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:6px; margin-bottom:6px;">
+            <span style="font-size:0.76rem; font-weight:800; color:#92400e;">Occasion: ${escapeHtml(prayer.occasion)}</span>
+            ${isMastered ? `<span style="font-size:0.72rem; font-weight:800; background:#dcfce7; color:#166534; padding:2px 8px; border-radius:999px;">✓ Prayer Mastered</span>` : ''}
+          </div>
           <div style="font-size:1.03rem; color:#1e293b; line-height:2.1;">
             ${segments.map((seg) => {
               if (seg.type === 'text') return escapeHtml(seg.value);
@@ -483,7 +788,9 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
           ${prayerChecked ? `
             <span style="font-size:0.86rem; font-weight:800; color:${correctCount === blankCount ? '#166534' : '#b45309'};">
               ${correctCount === blankCount
-                ? `🌟 Well done! All ${blankCount} words match the prayer!`
+                ? (prayerWasRevealed
+                  ? `📖 Full prayer shown — now click Clear Blanks and try from memory to earn your badge!`
+                  : `🌟 Well done! All ${blankCount} words match — prayer mastered!`)
                 : `You have ${correctCount} of ${blankCount} words right — keep trying!`}
             </span>
           ` : ''}
@@ -499,15 +806,15 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
     const categories: QuizCategory[] = ['All', 'Seven Sacraments', 'First Confession', 'Last Supper & Real Presence', 'Receiving at Mass'];
 
     return `
-      <section style="background:#0f172a; border:1.5px solid #334155; border-radius:16px; padding:1.5rem; color:#f8fafc; box-shadow:0 8px 24px rgba(15,23,42,0.18);">
+      <section style="background:#0f172a; border:1.5px solid #334155; border-radius:16px; padding:1.5rem; margin-bottom:2rem; color:#f8fafc; box-shadow:0 8px 24px rgba(15,23,42,0.18);">
         <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
           <div>
             <span style="font-size:0.74rem; font-weight:800; color:#fde047; text-transform:uppercase; letter-spacing:0.06em;">KS2 Catechesis Check</span>
             <h3 style="font-size:1.35rem; font-weight:800; color:#ffffff; margin:2px 0 4px;">First Holy Communion &amp; Sacraments Quiz (${fullDeck.length} Questions)</h3>
-            <p style="font-size:0.85rem; color:#94a3b8; margin:0;">Practise what Jesus teaches about Baptism, First Confession, the Real Presence, and receiving at Mass.</p>
+            <p style="font-size:0.85rem; color:#94a3b8; margin:0;">Practise what Jesus teaches about Baptism, First Confession, the Real Presence, and receiving at Mass. Progress is saved on this device.</p>
           </div>
           <span style="font-size:0.84rem; font-weight:800; background:rgba(34,197,94,0.18); color:#86efac; border:1px solid rgba(34,197,94,0.4); padding:5px 12px; border-radius:999px;">
-            Score: ${quizScore} / ${answeredQuizIds.size} answered
+            Mastered: ${spurs.correctQuizIds.length} / ${fullDeck.length} (Session: ${quizScore}/${answeredQuizIds.size})
           </span>
         </div>
 
@@ -521,8 +828,11 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
 
         ${q ? `
           <div style="background:#1e293b; border:1px solid #334155; border-radius:12px; padding:1.25rem;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-              <span style="font-size:0.74rem; font-weight:800; color:#38bdf8;">Question ${safeIdx + 1} of ${deck.length} &bull; ${escapeHtml(q.category)}</span>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; flex-wrap:wrap; gap:6px;">
+              <span style="font-size:0.74rem; font-weight:800; color:#38bdf8;">
+                Question ${safeIdx + 1} of ${deck.length} &bull; ${escapeHtml(q.category)}
+                ${spurs.correctQuizIds.includes(q.id) ? ' • ✓ Mastered' : ''}
+              </span>
               <button type="button" id="fhc-quiz-hint-btn" style="padding:4px 10px; font-size:0.74rem; font-weight:700; border-radius:6px; border:1px solid #475569; background:#0f172a; color:#fde047; cursor:pointer;">
                 ${showQuizHint ? 'Hide Hint' : '💡 Need a Hint?'}
               </button>
@@ -588,111 +898,291 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
     `;
   }
 
-  function updateView(): void {
-    const safeBase = escapeHtml(base);
+  function renderCertificateSection(): string {
+    const s = computeSpursSummary();
+    if (!s.allEarned && !showCertificatePreview) {
+      return '';
+    }
+    const displayName = spurs.candidateName.trim() || 'First Holy Communion Candidate';
+    const dateStr = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    const quizGoal = Math.min(REQUIRED_QUIZ_FOR_SPUR, fullDeck.length);
 
-    container.innerHTML = `
-      <div class="fhc-prep-wrapper" style="display:flex; flex-direction:column; gap:0.25rem;">
-        <!-- Interactive First Holy Communion Vector Simulator -->
-        <section style="margin-bottom:2rem;">
-          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
-            <div>
-              <span style="font-size:0.75rem; font-weight:800; color:#ca8a04; text-transform:uppercase; letter-spacing:0.06em;">
-                🕊️ KS2 Sacramental Preparation &bull; Interactive 60 FPS Simulator
-              </span>
-              <h2 style="font-size:1.65rem; font-weight:800; color:#0f172a; margin:4px 0;">
-                First Holy Communion &amp; Eucharistic Adoration
-              </h2>
-              <p style="font-size:0.94rem; color:#64748b; margin:0;">
-                Click or drag across the 5 sacred steps inside the sanctuary below to practise preparing your heart, keeping the 1-hour fast, bowing, and answering "Amen!".
-              </p>
-            </div>
-            <a href="${safeBase}player?preset=first-communion" style="padding:8px 16px; background:#ca8a04; color:#ffffff; border-radius:8px; font-weight:800; text-decoration:none; font-size:0.85rem;">
-              ↗ Open Fullscreen Studio
-            </a>
+    return `
+      <section id="fhc-certificate-section" style="background:#fffbeb; border:2px solid #ca8a04; border-radius:16px; padding:1.5rem; box-shadow:0 8px 24px rgba(202,138,4,0.14);">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-bottom:1rem;">
+          <div>
+            <span style="font-size:0.74rem; font-weight:800; color:#b45309; text-transform:uppercase; letter-spacing:0.06em;">
+              ${s.allEarned ? '🏅 Earned Keepsake Certificate' : '📜 Catechist / Family Preview'}
+            </span>
+            <h3 style="font-size:1.3rem; font-weight:800; color:#0f172a; margin:2px 0 4px;">
+              First Holy Communion Readiness Certificate
+            </h3>
+            <p style="font-size:0.84rem; color:#78350f; margin:0;">
+              ${s.allEarned
+                ? 'Congratulations! Enter your first name below to personalise and print your keepsake certificate (never uploaded).'
+                : `You have earned ${s.earnedCount} of 4 badges so far. Complete all 4 badges above to stamp your official certificate!`}
+            </p>
           </div>
-
-          <div style="background:#090d16; border-radius:16px; border:1.5px solid #ca8a04; overflow:hidden; box-shadow:0 12px 32px rgba(15,23,42,0.28);">
-            <iframe
-              id="fhc-sim-iframe"
-              src="${safeBase}player.html?preset=first-communion"
-              style="width:100%; height:540px; border:none; display:block;"
-              title="First Holy Communion & Eucharistic Adoration Interactive Simulator">
-            </iframe>
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input
+              type="text"
+              id="fhc-cert-name-input"
+              value="${escapeHtml(spurs.candidateName)}"
+              maxlength="48"
+              placeholder="First name (optional)"
+              aria-label="Candidate first name for certificate"
+              style="padding:7px 12px; border-radius:8px; border:1.5px solid #ca8a04; background:#ffffff; color:#0f172a; font-size:0.85rem; font-weight:600; min-width:190px;"
+            />
+            <button type="button" id="fhc-print-cert-btn" style="padding:8px 16px; border-radius:8px; border:none; background:#0f172a; color:#fde047; font-weight:800; font-size:0.84rem; cursor:pointer;">
+              🖨️ Print / Save PDF
+            </button>
           </div>
-        </section>
+        </div>
 
-        ${renderReadinessSection()}
-        ${renderConfessionSection()}
-        ${renderPrayerClozeSection()}
-        ${renderQuizSection()}
-      </div>
+        <div id="fhc-certificate-print-area" style="background:#ffffff; border-radius:12px; padding:10px; border:1px solid #fde68a;">
+          <svg viewBox="0 0 800 540" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="First Holy Communion Readiness Certificate for ${escapeHtml(displayName)}" style="width:100%; height:auto; display:block;">
+            <rect x="8" y="8" width="784" height="524" rx="16" fill="#fffdf7" stroke="#b45309" stroke-width="5" />
+            <rect x="20" y="20" width="760" height="500" rx="10" fill="none" stroke="#eab308" stroke-width="1.8" stroke-dasharray="6 4" />
+
+            <!-- Chalice & Host Crest -->
+            <g transform="translate(400, 74)">
+              <circle cx="0" cy="-22" r="20" fill="#fef9c3" stroke="#ca8a04" stroke-width="2" />
+              <path d="M0 -34 V-10 M-10 -22 H10" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" />
+              <path d="M-20 -2 H20 C18 16 10 24 0 26 C-10 24 -18 16 -20 -2 Z" fill="#eab308" stroke="#92400e" stroke-width="2" />
+              <rect x="-4" y="26" width="8" height="16" fill="#ca8a04" />
+              <path d="M-18 44 H18 L12 38 H-12 Z" fill="#b45309" />
+            </g>
+
+            <text x="400" y="148" text-anchor="middle" font-family="Georgia, serif" font-size="14" font-weight="700" fill="#b45309" letter-spacing="3">
+              ST JOSEPH’S CATHOLIC CATECHESIS SANCTUARY
+            </text>
+            <text x="400" y="186" text-anchor="middle" font-family="Georgia, serif" font-size="30" font-weight="700" fill="#0f172a">
+              First Holy Communion Readiness
+            </text>
+            <text x="400" y="214" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#475569">
+              This certifies with joy that
+            </text>
+
+            <text x="400" y="262" text-anchor="middle" font-family="Georgia, serif" font-size="34" font-weight="700" fill="#1e3a8a">
+              ${escapeHtml(displayName)}
+            </text>
+            <line x1="170" y1="274" x2="630" y2="274" stroke="#ca8a04" stroke-width="1.5" />
+
+            <text x="400" y="302" text-anchor="middle" font-family="system-ui, sans-serif" font-size="14" fill="#334155">
+              has faithfully prepared in prayer, First Reconciliation, Mass responses, and love for Jesus in the Eucharist.
+            </text>
+
+            <!-- 4 Mastery Seals -->
+            <g transform="translate(60, 330)">
+              <rect x="0" y="0" width="155" height="72" rx="10" fill="${s.spurPrayers ? '#f0fdf4' : '#f8fafc'}" stroke="${s.spurPrayers ? '#16a34a' : '#cbd5e1'}" stroke-width="1.8" />
+              <text x="77" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="${s.spurPrayers ? '#166534' : '#475569'}">${s.spurPrayers ? '✓ ' : ''}Core Prayers</text>
+              <text x="77" y="50" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#475569">${s.prayersDone}/${REQUIRED_PRAYERS_FOR_SPUR} Mastered</text>
+
+              <rect x="175" y="0" width="155" height="72" rx="10" fill="${s.spurMass ? '#f0fdf4' : '#f8fafc'}" stroke="${s.spurMass ? '#16a34a' : '#cbd5e1'}" stroke-width="1.8" />
+              <text x="252" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="${s.spurMass ? '#166534' : '#475569'}">${s.spurMass ? '✓ ' : ''}Mass Replies</text>
+              <text x="252" y="50" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#475569">${s.dialoguesDone}/${MASS_DIALOGUE_RESPONSES.length} Mastered</text>
+
+              <rect x="350" y="0" width="155" height="72" rx="10" fill="${s.spurQuiz ? '#f0fdf4' : '#f8fafc'}" stroke="${s.spurQuiz ? '#16a34a' : '#cbd5e1'}" stroke-width="1.8" />
+              <text x="427" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="${s.spurQuiz ? '#166534' : '#475569'}">${s.spurQuiz ? '✓ ' : ''}Catechesis Quiz</text>
+              <text x="427" y="50" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#475569">${s.quizDone}/${quizGoal} Correct</text>
+
+              <rect x="525" y="0" width="155" height="72" rx="10" fill="${s.spurReadiness ? '#f0fdf4' : '#f8fafc'}" stroke="${s.spurReadiness ? '#16a34a' : '#cbd5e1'}" stroke-width="1.8" />
+              <text x="602" y="28" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" fill="${s.spurReadiness ? '#166534' : '#475569'}">${s.spurReadiness ? '✓ ' : ''}Readiness Steps</text>
+              <text x="602" y="50" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" fill="#475569">${s.readinessDone}/${READINESS_MILESTONES.length} Ready</text>
+            </g>
+
+            <text x="400" y="438" text-anchor="middle" font-family="Georgia, serif" font-style="italic" font-size="15" fill="#92400e">
+              “I am the living bread that came down from heaven.” — John 6:51
+            </text>
+
+            <line x1="90" y1="484" x2="290" y2="484" stroke="#94a3b8" stroke-width="1.2" />
+            <text x="190" y="502" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Catechist / Parent Signature</text>
+
+            <text x="400" y="492" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="700" fill="#0f172a">
+              ${s.allEarned ? '★ ALL 4 BADGES EARNED ★' : `${s.earnedCount} / 4 BADGES IN PROGRESS`}
+            </text>
+
+            <line x1="510" y1="484" x2="710" y2="484" stroke="#94a3b8" stroke-width="1.2" />
+            <text x="610" y="478" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" fill="#0f172a">${escapeHtml(dateStr)}</text>
+            <text x="610" y="502" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" fill="#64748b">Date Prepared</text>
+          </svg>
+        </div>
+      </section>
+    `;
+  }
+
+  // Mount static wrapper ONCE so the simulator iframe NEVER reloads when interactive sections re-render
+  const safeBase = escapeHtml(base);
+  container.innerHTML = `
+    <div class="fhc-prep-wrapper" style="display:flex; flex-direction:column; gap:0.25rem;">
+      <!-- Interactive First Holy Communion Vector Simulator (Mounted Once) -->
+      <section style="margin-bottom:2rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:1rem;">
+          <div>
+            <span style="font-size:0.75rem; font-weight:800; color:#ca8a04; text-transform:uppercase; letter-spacing:0.06em;">
+              🕊️ KS2 Sacramental Preparation &bull; Interactive 60 FPS Simulator
+            </span>
+            <h2 style="font-size:1.65rem; font-weight:800; color:#0f172a; margin:4px 0;">
+              First Holy Communion &amp; Eucharistic Adoration
+            </h2>
+            <p style="font-size:0.94rem; color:#64748b; margin:0;">
+              Click or drag across the 5 sacred steps inside the sanctuary below to practise preparing your heart, keeping the 1-hour fast, bowing, and answering "Amen!".
+            </p>
+          </div>
+          <a href="${safeBase}player?preset=first-communion" style="padding:8px 16px; background:#ca8a04; color:#ffffff; border-radius:8px; font-weight:800; text-decoration:none; font-size:0.85rem;">
+            ↗ Open Fullscreen Studio
+          </a>
+        </div>
+
+        <div style="background:#090d16; border-radius:16px; border:1.5px solid #ca8a04; overflow:hidden; box-shadow:0 12px 32px rgba(15,23,42,0.28);">
+          <iframe
+            id="fhc-sim-iframe"
+            src="${safeBase}player.html?preset=first-communion"
+            style="width:100%; height:540px; border:none; display:block;"
+            title="First Holy Communion & Eucharistic Adoration Interactive Simulator">
+          </iframe>
+        </div>
+      </section>
+
+      <div id="fhc-dynamic-root"></div>
+    </div>
+  `;
+
+  const dynamicRoot = container.querySelector<HTMLDivElement>('#fhc-dynamic-root')!;
+
+  // Listen for simulator checkpoint mastery from the embedded First Communion iframe
+  const onSimMessage = (ev: MessageEvent) => {
+    if (!container.isConnected) {
+      window.removeEventListener('message', onSimMessage);
+      return;
+    }
+    const data = ev.data;
+    if (
+      data &&
+      typeof data === 'object' &&
+      data.type === 'CHECKPOINT_ANSWERED' &&
+      data.isCorrect === true &&
+      (!data.sceneId || data.sceneId === 'first-communion') &&
+      !spurs.simulatorPassed
+    ) {
+      spurs.simulatorPassed = true;
+      saveSpursProgress(spurs);
+      updateDynamicSections();
+    }
+  };
+  window.addEventListener('message', onSimMessage);
+
+  function updateDynamicSections(): void {
+    dynamicRoot.innerHTML = `
+      ${renderSpursBanner()}
+      ${renderReadinessSection()}
+      ${renderConfessionSection()}
+      ${renderMassDialogueSection()}
+      ${renderPrayerClozeSection()}
+      ${renderQuizSection()}
+      ${renderCertificateSection()}
     `;
 
+    // Spurs banner certificate button
+    dynamicRoot.querySelector('#fhc-toggle-cert-btn')?.addEventListener('click', () => {
+      showCertificatePreview = true;
+      updateDynamicSections();
+      requestAnimationFrame(() => {
+        dynamicRoot.querySelector('#fhc-certificate-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+
     // Bind readiness checkboxes
-    container.querySelectorAll('.fhc-readiness-checkbox').forEach((el) => {
+    dynamicRoot.querySelectorAll('.fhc-readiness-checkbox').forEach((el) => {
       el.addEventListener('change', (ev) => {
         const input = ev.currentTarget as HTMLInputElement;
         const id = input.getAttribute('data-id');
         if (id) {
           readinessState[id] = input.checked;
           saveReadinessState(readinessState);
-          updateView();
+          updateDynamicSections();
         }
       });
     });
 
-    container.querySelector('#fhc-reset-readiness')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-reset-readiness')?.addEventListener('click', () => {
       readinessState = {};
       saveReadinessState(readinessState);
-      updateView();
+      updateDynamicSections();
     });
 
     // Confession audio & BSL button
-    container.querySelector('#fhc-speak-confession')?.addEventListener('click', (ev) => {
+    dynamicRoot.querySelector('#fhc-speak-confession')?.addEventListener('click', (ev) => {
       const text = (ev.currentTarget as HTMLElement).getAttribute('data-text') || '';
       speakText('confession-walkthrough', text);
     });
 
     // Ephemeral examination checkboxes
-    container.querySelectorAll('.fhc-exam-checkbox').forEach((el) => {
+    dynamicRoot.querySelectorAll('.fhc-exam-checkbox').forEach((el) => {
       el.addEventListener('change', (ev) => {
         const input = ev.currentTarget as HTMLInputElement;
         const id = input.getAttribute('data-id');
         if (id) {
           if (input.checked) ephemeralReflectionIds.add(id);
           else ephemeralReflectionIds.delete(id);
-          updateView();
+          updateDynamicSections();
         }
       });
     });
 
-    container.querySelector('#fhc-clear-examination')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-clear-examination')?.addEventListener('click', () => {
       ephemeralReflectionIds.clear();
-      updateView();
+      updateDynamicSections();
+    });
+
+    // Mass dialogue handlers
+    dynamicRoot.querySelectorAll('.fhc-speak-dialogue').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        const target = ev.currentTarget as HTMLElement;
+        const id = target.getAttribute('data-id') || 'dialogue';
+        const text = target.getAttribute('data-text') || '';
+        speakText(`dialogue-${id}`, text);
+      });
+    });
+
+    dynamicRoot.querySelectorAll('.fhc-dialogue-opt').forEach((btn) => {
+      btn.addEventListener('click', (ev) => {
+        const target = ev.currentTarget as HTMLElement;
+        const id = target.getAttribute('data-id');
+        const reply = target.getAttribute('data-reply') || '';
+        if (!id) return;
+        dialogueSelected[id] = reply;
+        const item = MASS_DIALOGUE_RESPONSES.find((d) => d.id === id);
+        if (item && reply === item.correctReply && !spurs.masteredDialogueIds.includes(id)) {
+          spurs.masteredDialogueIds.push(id);
+          saveSpursProgress(spurs);
+        }
+        updateDynamicSections();
+      });
     });
 
     // Prayer cloze tabs & handlers
-    container.querySelectorAll('.fhc-prayer-tab').forEach((btn) => {
+    dynamicRoot.querySelectorAll('.fhc-prayer-tab').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-id');
         if (id) {
           activePrayerId = id;
           prayerSelections = {};
           prayerChecked = false;
-          updateView();
+          prayerWasRevealed = false;
+          updateDynamicSections();
         }
       });
     });
 
-    container.querySelector('#fhc-speak-prayer')?.addEventListener('click', (ev) => {
+    dynamicRoot.querySelector('#fhc-speak-prayer')?.addEventListener('click', (ev) => {
       const btn = ev.currentTarget as HTMLElement;
       const id = btn.getAttribute('data-id') || 'prayer';
       const text = btn.getAttribute('data-text') || '';
       speakText(`prayer-${id}`, text);
     });
 
-    container.querySelectorAll('.fhc-cloze-select').forEach((sel) => {
+    dynamicRoot.querySelectorAll('.fhc-cloze-select').forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const selectEl = ev.currentTarget as HTMLSelectElement;
         const idx = selectEl.getAttribute('data-index');
@@ -703,12 +1193,22 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
       });
     });
 
-    container.querySelector('#fhc-check-prayer')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-check-prayer')?.addEventListener('click', () => {
       prayerChecked = true;
-      updateView();
+      const activePrayer = CATHOLIC_PRAYERS.find((p) => p.id === activePrayerId) || CATHOLIC_PRAYERS[0];
+      const segs = buildClozeSegments(activePrayer.text, activePrayer.missingWords);
+      const blanks = segs.filter((s) => s.type === 'blank');
+      const allRight = blanks.length > 0 && blanks.every(
+        (s) => s.type === 'blank' && (prayerSelections[String(s.index)] || '').toLowerCase() === s.answer.toLowerCase()
+      );
+      if (allRight && !prayerWasRevealed && !spurs.masteredPrayerIds.includes(activePrayer.id)) {
+        spurs.masteredPrayerIds.push(activePrayer.id);
+        saveSpursProgress(spurs);
+      }
+      updateDynamicSections();
     });
 
-    container.querySelector('#fhc-reveal-prayer')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-reveal-prayer')?.addEventListener('click', () => {
       const activePrayer = CATHOLIC_PRAYERS.find((p) => p.id === activePrayerId) || CATHOLIC_PRAYERS[0];
       const segs = buildClozeSegments(activePrayer.text, activePrayer.missingWords);
       segs.forEach((s) => {
@@ -716,18 +1216,20 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
           prayerSelections[String(s.index)] = s.answer;
         }
       });
+      prayerWasRevealed = true;
       prayerChecked = true;
-      updateView();
+      updateDynamicSections();
     });
 
-    container.querySelector('#fhc-reset-prayer')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-reset-prayer')?.addEventListener('click', () => {
       prayerSelections = {};
       prayerChecked = false;
-      updateView();
+      prayerWasRevealed = false;
+      updateDynamicSections();
     });
 
     // Quiz handlers
-    container.querySelectorAll('.fhc-quiz-cat').forEach((btn) => {
+    dynamicRoot.querySelectorAll('.fhc-quiz-cat').forEach((btn) => {
       btn.addEventListener('click', () => {
         const cat = btn.getAttribute('data-cat') as QuizCategory | null;
         if (cat) {
@@ -735,17 +1237,17 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
           quizCursor = 0;
           selectedQuizOption = null;
           showQuizHint = false;
-          updateView();
+          updateDynamicSections();
         }
       });
     });
 
-    container.querySelector('#fhc-quiz-hint-btn')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-quiz-hint-btn')?.addEventListener('click', () => {
       showQuizHint = !showQuizHint;
-      updateView();
+      updateDynamicSections();
     });
 
-    container.querySelectorAll('.fhc-quiz-opt').forEach((btn) => {
+    dynamicRoot.querySelectorAll('.fhc-quiz-opt').forEach((btn) => {
       btn.addEventListener('click', () => {
         const deck = getFilteredDeck();
         const curQ = deck[Math.min(quizCursor, Math.max(0, deck.length - 1))];
@@ -759,29 +1261,55 @@ export function renderFirstCommunionPrep(base: string): HTMLElement {
             quizScore++;
           }
         }
-        updateView();
+        if (idx === curQ.correctIndex && !spurs.correctQuizIds.includes(curQ.id)) {
+          spurs.correctQuizIds.push(curQ.id);
+          saveSpursProgress(spurs);
+        }
+        updateDynamicSections();
       });
     });
 
-    container.querySelector('#fhc-quiz-prev')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-quiz-prev')?.addEventListener('click', () => {
       if (quizCursor > 0) {
         quizCursor--;
         selectedQuizOption = null;
         showQuizHint = false;
-        updateView();
+        updateDynamicSections();
       }
     });
 
-    container.querySelector('#fhc-quiz-next')?.addEventListener('click', () => {
+    dynamicRoot.querySelector('#fhc-quiz-next')?.addEventListener('click', () => {
       const deck = getFilteredDeck();
       quizCursor = quizCursor + 1 < deck.length ? quizCursor + 1 : 0;
       selectedQuizOption = null;
       showQuizHint = false;
-      updateView();
+      updateDynamicSections();
+    });
+
+    // Certificate name input & print handler (update SVG text live without losing input focus)
+    const nameInput = dynamicRoot.querySelector<HTMLInputElement>('#fhc-cert-name-input');
+    nameInput?.addEventListener('input', () => {
+      spurs.candidateName = nameInput.value.slice(0, 48);
+      saveSpursProgress(spurs);
+      const nameText = dynamicRoot.querySelector('#fhc-certificate-print-area svg text[fill="#1e3a8a"]');
+      if (nameText) {
+        nameText.textContent = spurs.candidateName.trim() || 'First Holy Communion Candidate';
+      }
+    });
+
+    dynamicRoot.querySelector('#fhc-print-cert-btn')?.addEventListener('click', () => {
+      document.body.classList.add('fhc-printing-cert');
+      const cleanup = () => {
+        document.body.classList.remove('fhc-printing-cert');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+      setTimeout(cleanup, 1500);
     });
   }
 
-  updateView();
+  updateDynamicSections();
   return container;
 }
 
