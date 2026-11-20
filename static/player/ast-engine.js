@@ -8539,14 +8539,35 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           let parsedAst = null;
 
           // 1. Check decentralized IndexedDB Cartridge Vault first (Zero Network Overhead & Zero 404s)
+          let offlineVaultFallback = null;
+          let officialRegistryRecord = null;
+          try {
+            const reg = await this._loadChecksumRegistry();
+            if (reg && reg.cartridges) {
+              officialRegistryRecord = reg.cartridges[String(presetId).trim().toLowerCase()] || null;
+            }
+          } catch (_) {}
+
           if (!svgText || !astText) {
             try {
               const vaultItem = await this.getFromVaultIndexedDb(presetId);
               if (vaultItem && (vaultItem.svgMarkup || vaultItem.svgText)) {
-                svgText = vaultItem.svgMarkup || vaultItem.svgText;
-                astText = vaultItem.astSource || vaultItem.astText || '';
-                if (!registryScene.title && vaultItem.title) {
-                  registryScene = { ...registryScene, ...vaultItem };
+                const isBuiltinCache = !vaultItem.source || vaultItem.source === 'builtin';
+                const isStaleBuiltin = Boolean(
+                  isBuiltinCache &&
+                  officialRegistryRecord &&
+                  officialRegistryRecord.seal &&
+                  vaultItem.seal !== officialRegistryRecord.seal
+                );
+                if (isStaleBuiltin) {
+                  // Keep as offline fallback only; allow fresh signed fetch below to refresh stale builtin copy
+                  offlineVaultFallback = vaultItem;
+                } else {
+                  svgText = vaultItem.svgMarkup || vaultItem.svgText;
+                  astText = vaultItem.astSource || vaultItem.astText || '';
+                  if (!registryScene.title && vaultItem.title) {
+                    registryScene = { ...registryScene, ...vaultItem };
+                  }
                 }
               }
             } catch (_) {}
@@ -8671,7 +8692,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
                   continue;
                 }
 
-                return trimmed;
+                // Return exact untrimmed text so runtime SHA-256 verification matches signed disk digests byte-for-byte
+                return text;
               } catch (_) {
                 // Fall through to next candidate URL
               }
@@ -8719,6 +8741,15 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
             }
           } catch (e) {
             console.warn('[AST Engine] Asset fetch notice for:', presetId, e);
+          }
+        }
+
+        // Offline air-gap fallback to cached builtin vault entry if network fetch was unavailable
+        if (!svgText && offlineVaultFallback) {
+          svgText = offlineVaultFallback.svgMarkup || offlineVaultFallback.svgText || '';
+          astText = offlineVaultFallback.astSource || offlineVaultFallback.astText || '';
+          if (!registryScene.title && offlineVaultFallback.title) {
+            registryScene = { ...registryScene, ...offlineVaultFallback };
           }
         }
 
@@ -8886,6 +8917,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           svgMarkup: svgText,
           astSource: astText || '',
           source: 'builtin',
+          seal: (officialRegistryRecord && officialRegistryRecord.seal) || '',
           updatedAt: Date.now()
         });
 
@@ -11674,10 +11706,38 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     return hex;
   }
 
+  _resolveChecksumBaseUrl() {
+    let repoBase = '/';
+    if (typeof window !== 'undefined') {
+      if (window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__) {
+        repoBase = String(window.__AST_BASE_URL__ || window.__AST_ASSET_BASE__).replace(/\/+$/, '') + '/';
+      } else if (typeof document !== 'undefined' && document.querySelector('base')?.getAttribute('href')) {
+        repoBase = document.querySelector('base').getAttribute('href').replace(/\/+$/, '') + '/';
+      } else if (window.location) {
+        const pathname = window.location.pathname || '/';
+        const host = window.location.hostname || '';
+        const playerIdx = pathname.indexOf('/player/');
+        if (playerIdx >= 0) {
+          repoBase = pathname.slice(0, playerIdx + 1);
+        } else if (host === 'github.io' || host.endsWith('.github.io')) {
+          const seg = pathname.split('/').filter(Boolean)[0];
+          repoBase = seg ? `/${seg}/` : '/';
+        }
+      }
+    }
+    return repoBase;
+  }
+
   async _loadChecksumRegistry() {
     if (this._checksumRegistryCache) return this._checksumRegistryCache;
     if (typeof fetch === 'undefined') return null;
-    const candidates = ['/cartridge-checksums.json', './cartridge-checksums.json', '../cartridge-checksums.json'];
+    const repoBase = this._resolveChecksumBaseUrl();
+    const candidates = Array.from(new Set([
+      `${repoBase}cartridge-checksums.json`,
+      '../cartridge-checksums.json',
+      './cartridge-checksums.json',
+      '/cartridge-checksums.json'
+    ]));
     for (const url of candidates) {
       try {
         const res = await fetch(url);
@@ -11725,30 +11785,29 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         badgeTooltip: `Unregistered external or custom cartridge (${scene.title || id}). SHA-256: ${activeHash ? shortFmt(activeHash) : 'n/a'}`
       };
     } else {
-      // Note: fetchAsset trims text responses; check raw or trimmed match for AST/SVG if ASTB wasn't the sole source
+      const matchesTextDigest = async (rawText, computedHash, expectedHash) => {
+        if (!expectedHash) return true;
+        const target = expectedHash.toLowerCase();
+        if (computedHash === target) return true;
+        if (!rawText) return false;
+        const normalizedLf = rawText.replace(/\r\n/g, '\n');
+        const trimmed = normalizedLf.trim();
+        const variants = [normalizedLf, trimmed, trimmed + '\n', trimmed + '\n\n'];
+        for (const variant of variants) {
+          const h = await this._computeSha256Hex(variant);
+          if (h === target) return true;
+        }
+        return false;
+      };
+
       const astbMatch = !computedAstb || !record.astbSha256 || computedAstb === record.astbSha256.toLowerCase();
       let astMatch = true;
-      if (computedAst && record.astSha256 && !computedAstb) {
-        astMatch = computedAst === record.astSha256.toLowerCase();
-        if (!astMatch && scene.astSource) {
-          const nlAst = await this._computeSha256Hex(scene.astSource + '\n');
-          if (nlAst === record.astSha256.toLowerCase()) astMatch = true;
-        }
+      if (computedAst && record.astSha256 && (!computedAstb || scene._astEditedManually)) {
+        astMatch = await matchesTextDigest(scene.astSource, computedAst, record.astSha256);
       }
       let svgMatch = true;
       if (computedSvg && record.svgSha256 && scene._svgEditedManually) {
-        svgMatch = computedSvg === record.svgSha256.toLowerCase();
-        if (!svgMatch && scene.svgText) {
-          const nlSvg = await this._computeSha256Hex(scene.svgText + '\n');
-          if (nlSvg === record.svgSha256.toLowerCase()) svgMatch = true;
-        }
-      }
-      if (scene._astEditedManually && computedAst && record.astSha256) {
-        astMatch = computedAst === record.astSha256.toLowerCase();
-        if (!astMatch && scene.astSource) {
-          const nlAst = await this._computeSha256Hex(scene.astSource + '\n');
-          if (nlAst === record.astSha256.toLowerCase()) astMatch = true;
-        }
+        svgMatch = await matchesTextDigest(scene.svgText, computedSvg, record.svgSha256);
       }
 
       if (!astbMatch || !astMatch || !svgMatch) {
@@ -11768,8 +11827,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           expectedAstSha256: record.astSha256,
           expectedSvgSha256: record.svgSha256,
           authority: record.authority,
-          badgeText: 'Cartridge Modified',
-          badgeTooltip: `Modified / Remixed copy of ${record.title}. Live SHA-256 (${shortFmt(activeHash)}) differs from signed authority seal (${shortFmt(record.seal)}).`
+          badgeText: 'Cartridge Altered',
+          badgeTooltip: `Altered / Remixed copy of ${record.title}. Live SHA-256 (${shortFmt(activeHash)}) differs from St Joseph's Curriculum seal (${shortFmt(record.seal)}).`
         };
       } else {
         result = {
@@ -11786,9 +11845,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
           expectedAstbSha256: record.astbSha256,
           expectedAstSha256: record.astSha256,
           expectedSvgSha256: record.svgSha256,
-          authority: record.authority,
-          badgeText: "Official Signed Cartridge",
-          badgeTooltip: `Cryptographically verified original cartridge (${record.title}). Signed by ${record.authority} • Seal: ${shortFmt(record.seal)}`
+          authority: record.authority || "St Joseph's Catholic Primary School Curriculum Authority",
+          badgeText: "St Joseph's Curriculum",
+          badgeTooltip: `Verified St Joseph's Curriculum Cartridge (${record.title}). Signed by ${record.authority} • Seal: ${shortFmt(record.seal)}`
         };
       }
     }

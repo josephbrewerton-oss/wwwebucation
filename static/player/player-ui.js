@@ -2508,12 +2508,12 @@
           const info = this.engine && this.engine.lastIntegrity;
           if (info && info.status === 'verified-native') {
             this.showToast(
-              `🛡️ Official Signed [${info.cartridgeId}] • Seal ${info.shortHash} • ${info.authority}`,
+              `🛡️ Verified • St Joseph's Curriculum [${info.cartridgeId}] • Seal ${info.shortHash} • ${info.authority}`,
               4800
             );
           } else if (info && info.status === 'tampered') {
             this.showToast(
-              `✎ Modified Remix [${info.cartridgeId}] • Live SHA-256 ${info.shortHash} (differs from official seal)`,
+              `✎ Altered / Remix [${info.cartridgeId}] • Live SHA-256 ${info.shortHash} (differs from St Joseph's Curriculum seal)`,
               4800
             );
           } else if (info) {
@@ -2522,7 +2522,7 @@
               4500
             );
           } else {
-            this.showToast(`🛡️ Verifying SHA-256 seal for [${currentPreset || 'Simulation'}]...`, 3200);
+            this.showToast(`🛡️ Verifying St Joseph's Curriculum SHA-256 seal for [${currentPreset || 'Simulation'}]...`, 3200);
           }
         });
       }
@@ -4503,15 +4503,15 @@ window.addEventListener('message', (e) => {
       const shortCode = info.shortHash ? String(info.shortHash).slice(0, 6) : '';
       if (info.status === 'verified-native') {
         badge.classList.add('verified');
-        badge.textContent = shortCode ? `🛡️ ${shortCode}` : '🛡️ Official';
-        badge.title = info.badgeTooltip || `Official Signed Cartridge • Seal: ${info.shortHash}`;
+        badge.textContent = "🛡️ St Joseph's Curriculum";
+        badge.title = info.badgeTooltip || `Verified St Joseph's Curriculum Cartridge • Seal: ${info.shortHash}`;
       } else if (info.status === 'tampered') {
         badge.classList.add('modified');
-        badge.textContent = shortCode ? `✎ ${shortCode}` : '✎ Modified';
-        badge.title = info.badgeTooltip || `Modified / Remixed Cartridge • Live SHA-256: ${info.shortHash}`;
+        badge.textContent = shortCode ? `✎ Altered • ${shortCode}` : '✎ Altered';
+        badge.title = info.badgeTooltip || `Altered / Remixed Cartridge • Live SHA-256: ${info.shortHash}`;
       } else {
         badge.classList.add('community');
-        badge.textContent = '◈ Custom';
+        badge.textContent = '◈ Community';
         badge.title = info.badgeTooltip || `Community / Unregistered Cartridge • SHA-256: ${info.shortHash}`;
       }
     }

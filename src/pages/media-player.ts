@@ -322,10 +322,10 @@ export function renderPlayerPage(): HTMLElement {
   const initialRecord = getRegisteredRecord(activePreset);
   const initialSealCode = initialRecord?.seal ? initialRecord.seal.slice(0, 6) : '';
   const initialSealLabel = initialRecord
-    ? `🛡️ Official • ${initialSealCode}`
+    ? `🛡️ St Joseph's Curriculum • ${initialSealCode}`
     : '◈ Custom / External';
   const initialSealTitle = initialRecord
-    ? `Official Signed Cartridge (${initialRecord.title}) • Authority: ${CURRICULUM_AUTHORITY_NAME} • Seal: ${formatShortHash(initialRecord.seal)} — Click to view SHA-256 digests`
+    ? `Verified St Joseph's Curriculum Cartridge (${initialRecord.title}) • Authority: ${CURRICULUM_AUTHORITY_NAME} • Seal: ${formatShortHash(initialRecord.seal)} — Click to view SHA-256 digests`
     : 'Custom, imported, or documentation cartridge — Click to inspect SHA-256 provenance';
 
   container.innerHTML = `
@@ -1041,7 +1041,7 @@ export function renderPlayerPage(): HTMLElement {
 
     if (status === 'verified-native') {
       integrityReadoutBodyEl.innerHTML = `
-        <span style="color:#34d399; font-weight:800;">🛡️ VERIFIED OFFICIAL CARTRIDGE</span>
+        <span style="color:#34d399; font-weight:800;">🛡️ VERIFIED • ST JOSEPH'S CURRICULUM</span>
         <span>Authority: <strong style="color:#f8fafc;">${escapeHtml(liveInfo?.authority || CURRICULUM_AUTHORITY_NAME)}</strong></span>
         ${sealHash ? `<span>Seal: <code style="color:#38bdf8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
         ${astbHash ? `<span>.astb: <code style="color:#a7f3d0;">${escapeHtml(formatShortHash(astbHash))}</code></span>` : ''}
@@ -1050,17 +1050,17 @@ export function renderPlayerPage(): HTMLElement {
       `;
     } else if (status === 'tampered') {
       integrityReadoutBodyEl.innerHTML = `
-        <span style="color:#fbbf24; font-weight:800;">✎ MODIFIED / REMIXED CARTRIDGE</span>
+        <span style="color:#fbbf24; font-weight:800;">✎ ALTERED / REMIXED CARTRIDGE</span>
         <span>Live SHA-256: <code style="color:#fde68a;">${escapeHtml(liveInfo?.shortHash || 'modified')}</code></span>
         ${sealHash ? `<span>Original Seal: <code style="color:#94a3b8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
-        <span style="color:#94a3b8;">Content differs from signed curriculum pair</span>
+        <span style="color:#94a3b8;">Content differs from signed St Joseph's Curriculum pair</span>
       `;
     } else {
       integrityReadoutBodyEl.innerHTML = `
         <span style="color:#cbd5e1; font-weight:800;">◈ CUSTOM / EXTERNAL CARTRIDGE</span>
         <span>ID: <code style="color:#38bdf8;">${escapeHtml(presetId)}</code></span>
         ${liveInfo?.shortHash ? `<span>SHA-256: <code style="color:#cbd5e1;">${escapeHtml(String(liveInfo.shortHash))}</code></span>` : ''}
-        <span style="color:#94a3b8;">Not in official St Joseph's signed registry (${getTotalCertifiedCartridges()} certified)</span>
+        <span style="color:#94a3b8;">Not in St Joseph's Curriculum signed registry (${getTotalCertifiedCartridges()} certified)</span>
       `;
     }
   }
@@ -1068,7 +1068,7 @@ export function renderPlayerPage(): HTMLElement {
   function updateHostIntegrityBadge(presetId: string, liveInfo?: Record<string, any> | null) {
     if (!integrityBadgeEl) return;
     const cleanId = normalizePresetId(presetId);
-    const customOverride = getCustomCartridges().some((c) => c.id === cleanId);
+    const customOverride = getCustomCartridges().some((c) => c.id === cleanId && c.source !== 'builtin');
     const rec = getRegisteredRecord(cleanId);
     lastLiveIntegrity = liveInfo || null;
 
@@ -1077,20 +1077,20 @@ export function renderPlayerPage(): HTMLElement {
 
     if (effectiveStatus === 'verified-native') {
       const code = (liveInfo?.shortHash || rec?.seal || '').slice(0, 6);
-      integrityBadgeEl.textContent = code ? `🛡️ Official • ${code}` : '🛡️ Official';
+      integrityBadgeEl.textContent = code ? `🛡️ St Joseph's Curriculum • ${code}` : "🛡️ St Joseph's Curriculum";
       integrityBadgeEl.style.background = 'rgba(16,185,129,0.16)';
       integrityBadgeEl.style.color = '#34d399';
       integrityBadgeEl.style.borderColor = 'rgba(16,185,129,0.45)';
       integrityBadgeEl.title = liveInfo?.badgeTooltip
-        || `Verified Official Cartridge (${rec?.title || cleanId}) • Authority Seal: ${formatShortHash(rec?.seal || '')} — Click to inspect SHA-256 digests`;
+        || `Verified St Joseph's Curriculum Cartridge (${rec?.title || cleanId}) • Authority Seal: ${formatShortHash(rec?.seal || '')} — Click to inspect SHA-256 digests`;
     } else if (effectiveStatus === 'tampered') {
       const code = (liveInfo?.shortHash || rec?.seal || '').slice(0, 6);
-      integrityBadgeEl.textContent = code ? `✎ Modified • ${code}` : '✎ Modified';
+      integrityBadgeEl.textContent = code ? `✎ Altered • ${code}` : '✎ Altered';
       integrityBadgeEl.style.background = 'rgba(245,158,11,0.18)';
       integrityBadgeEl.style.color = '#fbbf24';
       integrityBadgeEl.style.borderColor = 'rgba(245,158,11,0.5)';
       integrityBadgeEl.title = liveInfo?.badgeTooltip
-        || `Modified / Remixed Cartridge (${cleanId}) — Live SHA-256 differs from official authority seal. Click to inspect.`;
+        || `Altered / Remixed Cartridge (${cleanId}) — Live SHA-256 differs from St Joseph's Curriculum seal. Click to inspect.`;
     } else {
       integrityBadgeEl.textContent = '◈ Custom / Vault';
       integrityBadgeEl.style.background = 'rgba(148,163,184,0.16)';
@@ -1137,7 +1137,7 @@ export function renderPlayerPage(): HTMLElement {
     initialExternalSrc = null;
     // Lazily inflate requested curriculum/data cartridge into native IndexedDB on-demand (zero background polling, zero 404s)
     if (safePresetId !== 'lumina-architecture') {
-      inflateCartridgeToVault(safePresetId).catch(() => {});
+      inflateCartridgeToVault(safePresetId, getRegisteredRecord(safePresetId)?.seal).catch(() => {});
     }
     if (!skipPostMessage && isIframeReady && iframe && iframe.contentWindow) {
       postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
@@ -1381,7 +1381,7 @@ export function renderPlayerPage(): HTMLElement {
     if (resultsSummaryEl) {
       const scopeLabel = includeNonMediaExtras ? 'activities (including recall data & docs)' : 'visual labs & lessons';
       const masterShort = getMasterRegistryChecksum().slice(0, 8);
-      resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel} · 🛡️ ${getTotalCertifiedCartridges()} Official Signed (Master SHA-256: ${masterShort}…)`;
+      resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel} · 🛡️ ${getTotalCertifiedCartridges()} Verified to St Joseph's Curriculum (Master SHA-256: ${masterShort}…)`;
     }
 
     if (filtered.length === 0) {
@@ -1389,7 +1389,11 @@ export function renderPlayerPage(): HTMLElement {
       return;
     }
 
-    const customIds = new Set(getCustomCartridges().map((c) => c.id));
+    const customIds = new Set(
+      getCustomCartridges()
+        .filter((c) => c.source !== 'builtin')
+        .map((c) => c.id)
+    );
 
     gridContainer.innerHTML = filtered.map((p) => {
       const isSelected = p.id === activePreset;
@@ -1399,9 +1403,9 @@ export function renderPlayerPage(): HTMLElement {
       const officialRec = getRegisteredRecord(p.id);
       const isModifiedCustom = Boolean(officialRec && customIds.has(p.id));
       const sealBadgeHtml = isModifiedCustom
-        ? `<span title="Modified local remix of official cartridge (${escapeHtml(p.id)})" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">✎ Remix</span>`
+        ? `<span title="Altered local remix of St Joseph's Curriculum cartridge (${escapeHtml(p.id)})" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">✎ Remix</span>`
         : officialRec
-        ? `<span title="Verified Official Cartridge • Seal SHA-256: ${escapeHtml(officialRec.seal)}" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">🛡️ ${escapeHtml(officialRec.seal.slice(0, 6))}</span>`
+        ? `<span title="Verified St Joseph's Curriculum Cartridge • Seal SHA-256: ${escapeHtml(officialRec.seal)}" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">🛡️ St Joseph's • ${escapeHtml(officialRec.seal.slice(0, 6))}</span>`
         : `<span title="Custom or Architecture Cartridge" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">◈ Custom</span>`;
       return `
         <div

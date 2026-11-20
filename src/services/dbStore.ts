@@ -903,6 +903,7 @@ export interface VaultCartridgeRecord {
   astFile?: string;
   author?: string;
   version?: string;
+  seal?: string;
   invariants?: string[];
   createdAt?: number;
   updatedAt?: number;

@@ -72,6 +72,7 @@ export interface CartridgeDefinition {
   dataPayload?: DataCartridgePayload;
   author?: string;
   version?: string;
+  seal?: string;
   invariants?: string[];
   createdAt?: number;
   updatedAt?: number;
@@ -967,10 +968,11 @@ export async function initCartridgeVault(): Promise<void> {
         }
       }
 
-      // 4. Pre-expand embedded core simulations (e.g. Pythagoras, Church Tour, Catholic Rites) into vault
+      // 4. Pre-expand embedded core simulations ONLY as offline seed when vault entry is absent
+      //    (never overwrite a signed builtin copy fetched from static/cartridges/)
       for (const [id, core] of Object.entries(EMBEDDED_CORE_CARTRIDGES)) {
         const existing = mergedMap.get(id);
-        if (!existing || !existing.svgMarkup || !existing.astSource || (existing.source === 'builtin' && existing.astSource !== core.ast)) {
+        if (!existing || !existing.svgMarkup || !existing.astSource) {
           const isCatholic = id.includes('church') || id.includes('rites');
           const title = id === 'church-tour'
             ? 'Tour of a Catholic Church: Sacred Architecture & Sacred Spaces'
@@ -986,6 +988,7 @@ export async function initCartridgeVault(): Promise<void> {
             desc: existing?.desc || 'Pre-expanded offline core vector simulation.',
             icon: existing?.icon || (id.includes('church') ? '⛪' : id.includes('rites') ? '🌍' : '📐'),
             source: 'builtin',
+            seal: '',
             svgMarkup: core.svg,
             astSource: core.ast,
             updatedAt: Date.now(),
@@ -1057,24 +1060,38 @@ export async function initCartridgeVault(): Promise<void> {
  * Inflates a specific cartridge into the user's IndexedDB Cartridge Vault on demand.
  * Guarantees zero-network retrieval on subsequent loads and air-gapped readiness.
  */
-export async function inflateCartridgeToVault(cartridgeId: string): Promise<CartridgeDefinition | null> {
+export async function inflateCartridgeToVault(
+  cartridgeId: string,
+  expectedSeal?: string
+): Promise<CartridgeDefinition | null> {
   const canonical = normalizeCartridgeId(cartridgeId);
   if (!canonical) return null;
 
+  const isFreshBuiltin = (item: { source?: string; seal?: string } | null | undefined): boolean => {
+    if (!item) return false;
+    if (item.source && item.source !== 'builtin') return true;
+    if (!expectedSeal) return true;
+    return item.seal === expectedSeal;
+  };
+
   // 1. Check in-memory cache
   const inMem = inMemoryCartridgesCache?.find((c) => c.id === canonical);
-  if (inMem && inMem.svgMarkup && inMem.astSource) {
+  if (inMem && inMem.svgMarkup && inMem.astSource && isFreshBuiltin(inMem)) {
     return inMem;
   }
 
-  // 2. Check IndexedDB cartridge vault
+  // 2. Check IndexedDB cartridge vault (preserve stale builtin as offline fallback only)
+  let staleFallback: CartridgeDefinition | null = null;
   try {
     const vaultItem = await getVaultCartridge(canonical);
     if (vaultItem && vaultItem.svgMarkup && vaultItem.astSource) {
-      if (inMemoryCartridgesCache && !inMemoryCartridgesCache.some((c) => c.id === canonical)) {
-        inMemoryCartridgesCache.push(vaultItem as CartridgeDefinition);
+      if (isFreshBuiltin(vaultItem)) {
+        if (inMemoryCartridgesCache && !inMemoryCartridgesCache.some((c) => c.id === canonical)) {
+          inMemoryCartridgesCache.push(vaultItem as CartridgeDefinition);
+        }
+        return vaultItem as CartridgeDefinition;
       }
-      return vaultItem as CartridgeDefinition;
+      staleFallback = vaultItem as CartridgeDefinition;
     }
   } catch (_) {}
 
@@ -1095,6 +1112,7 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
       source: 'builtin',
       isCore: true,
       tier: 'core',
+      seal: expectedSeal || '',
       svgMarkup: builtinData.svgMarkup,
       astSource: builtinData.astSource,
       dataPayload: builtinData.dataPayload,
@@ -1109,31 +1127,7 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
     return def;
   }
 
-  // 4. Check embedded core simulations (0ms air-gapped)
-  if (EMBEDDED_CORE_CARTRIDGES[canonical]) {
-    const core = EMBEDDED_CORE_CARTRIDGES[canonical];
-    const def: CartridgeDefinition = {
-      id: canonical,
-      title: canonical.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
-      stage: 'CURRICULUM',
-      category: 'STEM',
-      desc: 'Pre-expanded offline core vector simulation.',
-      icon: '📐',
-      source: 'builtin',
-      svgMarkup: core.svg,
-      astSource: core.ast,
-      updatedAt: Date.now(),
-    };
-    await putVaultCartridge(def as VaultCartridgeRecord);
-    if (inMemoryCartridgesCache) {
-      const idx = inMemoryCartridgesCache.findIndex((c) => c.id === canonical);
-      if (idx >= 0) inMemoryCartridgesCache[idx] = def;
-      else inMemoryCartridgesCache.push(def);
-    }
-    return def;
-  }
-
-  // 5. Fetch companion .svg and .ast on-demand only for known manifest cartridges to avoid 404 calls
+  // 4. Fetch official signed companion .svg and .ast first so vault always matches St Joseph's Curriculum checksums
   const knownMeta = PRESET_OPTIONS.find((p) => p.id === canonical);
   if (knownMeta && typeof fetch !== 'undefined') {
     try {
@@ -1157,9 +1151,10 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
           subject: meta?.subject,
           type: meta?.type || 'Sim',
           category: meta?.subject || 'Curriculum',
-          desc: `Oak National Curriculum aligned cartridge: ${canonical}.`,
+          desc: `St Joseph's Curriculum cartridge: ${canonical}.`,
           icon: meta?.type === 'Sim' ? '🎮' : meta?.type === 'Slide' ? '📑' : '💻',
           source: 'builtin',
+          seal: expectedSeal || '',
           svgMarkup: svgText,
           astSource: astText,
           updatedAt: Date.now(),
@@ -1173,6 +1168,32 @@ export async function inflateCartridgeToVault(cartridgeId: string): Promise<Cart
         return def;
       }
     } catch (_) {}
+  }
+
+  // 5. Offline / air-gap fallback to cached vault entry or embedded core simulations
+  if (staleFallback) return staleFallback;
+  if (EMBEDDED_CORE_CARTRIDGES[canonical]) {
+    const core = EMBEDDED_CORE_CARTRIDGES[canonical];
+    const def: CartridgeDefinition = {
+      id: canonical,
+      title: canonical.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      stage: 'CURRICULUM',
+      category: 'STEM',
+      desc: 'Pre-expanded offline core vector simulation.',
+      icon: '📐',
+      source: 'builtin',
+      seal: '',
+      svgMarkup: core.svg,
+      astSource: core.ast,
+      updatedAt: Date.now(),
+    };
+    await putVaultCartridge(def as VaultCartridgeRecord);
+    if (inMemoryCartridgesCache) {
+      const idx = inMemoryCartridgesCache.findIndex((c) => c.id === canonical);
+      if (idx >= 0) inMemoryCartridgesCache[idx] = def;
+      else inMemoryCartridgesCache.push(def);
+    }
+    return def;
   }
 
   return null;
