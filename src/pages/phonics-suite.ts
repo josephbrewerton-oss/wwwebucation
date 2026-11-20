@@ -40,6 +40,7 @@ import {
   triggerHapticSuccess,
   triggerHapticError,
   triggerHapticClick,
+  unlockSoundEngine,
 } from '../services/soundHaptics';
 
 type StudioStage =
@@ -139,15 +140,34 @@ export function renderPhonicsPage(): HTMLElement {
   let screeningHighlightIdx = -1;
   let screeningScores: Record<string, 'pass' | 'retry'> = {};
 
+  let activeUtterance: SpeechSynthesisUtterance | null = null;
+
+  function selectBritishVoice(synth: SpeechSynthesis): SpeechSynthesisVoice | null {
+    try {
+      const voices = typeof synth.getVoices === 'function' ? synth.getVoices() : [];
+      if (!voices.length) return null;
+      return (
+        voices.find((v) => v.lang && v.lang.toLowerCase() === 'en-gb') ||
+        voices.find((v) => v.lang && v.lang.toLowerCase().startsWith('en')) ||
+        null
+      );
+    } catch {
+      return null;
+    }
+  }
+
   function clearSpeechAndTimers(): void {
     speechRunId += 1;
     for (const id of activeTimers) {
       window.clearTimeout(id);
     }
     activeTimers = [];
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    activeUtterance = null;
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       try {
-        window.speechSynthesis.cancel();
+        if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+          window.speechSynthesis.cancel();
+        }
       } catch {
         // ignore synthesis cancel errors
       }
@@ -167,6 +187,7 @@ export function renderPhonicsPage(): HTMLElement {
     text: string,
     opts: { subtitle?: string; bslWord?: string; rate?: number; onEnd?: () => void } = {}
   ): void {
+    unlockSoundEngine();
     clearSpeechAndTimers();
     const runId = speechRunId;
     const rate = opts.rate ?? 0.84;
@@ -177,22 +198,33 @@ export function renderPhonicsPage(): HTMLElement {
       isSpeaking: true,
     });
 
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
       try {
+        const synth = window.speechSynthesis;
+        if (synth.paused && typeof synth.resume === 'function') {
+          synth.resume();
+        }
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = 'en-GB';
         utterance.rate = rate;
+        const voice = selectBritishVoice(synth);
+        if (voice) utterance.voice = voice;
+
+        // Retain strong reference so mobile WebKit/Chromium cannot GC the utterance mid-speech
+        activeUtterance = utterance;
         utterance.onend = () => {
+          if (activeUtterance === utterance) activeUtterance = null;
           if (speechRunId !== runId) return;
           broadcastBslSpeech({ isSpeaking: false });
           opts.onEnd?.();
         };
         utterance.onerror = () => {
+          if (activeUtterance === utterance) activeUtterance = null;
           if (speechRunId !== runId) return;
           broadcastBslSpeech({ isSpeaking: false });
           opts.onEnd?.();
         };
-        window.speechSynthesis.speak(utterance);
+        synth.speak(utterance);
         return;
       } catch {
         // fall through to timer fallback
@@ -219,12 +251,14 @@ export function renderPhonicsPage(): HTMLElement {
     gapMs: number,
     onAllDone?: () => void
   ): void {
+    unlockSoundEngine();
     clearSpeechAndTimers();
     const runId = speechRunId;
 
     const runStep = (idx: number) => {
       if (speechRunId !== runId) return;
       if (idx >= items.length) {
+        activeUtterance = null;
         broadcastBslSpeech({ isSpeaking: false });
         onAllDone?.();
         return;
@@ -241,20 +275,29 @@ export function renderPhonicsPage(): HTMLElement {
         scheduleTimeout(() => runStep(idx + 1), gapMs);
       };
 
-      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window && window.speechSynthesis) {
         try {
+          const synth = window.speechSynthesis;
+          if (synth.paused && typeof synth.resume === 'function') {
+            synth.resume();
+          }
           const u = new SpeechSynthesisUtterance(item.spoken);
           u.lang = 'en-GB';
           u.rate = item.rate ?? 0.8;
+          const voice = selectBritishVoice(synth);
+          if (voice) u.voice = voice;
+
+          activeUtterance = u;
           let finished = false;
           const finishOnce = () => {
             if (finished) return;
             finished = true;
+            if (activeUtterance === u) activeUtterance = null;
             next();
           };
           u.onend = finishOnce;
           u.onerror = finishOnce;
-          window.speechSynthesis.speak(u);
+          synth.speak(u);
           // Safety timer in case headless/mobile browser drops onend
           scheduleTimeout(finishOnce, 2200);
           return;

@@ -16,20 +16,69 @@ import { getLocalState, setLocalState } from './localStateStore';
 const SOUND_KEY = 'stj_sound_enabled';
 const HAPTICS_KEY = 'stj_haptics_enabled';
 
+type MobileWindow = Window & {
+  __astSharedAudioCtx?: AudioContext;
+  webkitAudioContext?: typeof AudioContext;
+};
+
 let audioCtx: AudioContext | null = null;
+let audioUnlocked = false;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
-    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+  const win = window as MobileWindow;
+  if (win.__astSharedAudioCtx && win.__astSharedAudioCtx.state !== 'closed') {
+    audioCtx = win.__astSharedAudioCtx;
+  } else if (!audioCtx || audioCtx.state === 'closed') {
+    const AudioContextClass = window.AudioContext || win.webkitAudioContext;
     if (AudioContextClass) {
       audioCtx = new AudioContextClass();
+      win.__astSharedAudioCtx = audioCtx;
     }
   }
-  if (audioCtx && audioCtx.state === 'suspended') {
-    audioCtx.resume().catch(() => {});
-  }
   return audioCtx;
+}
+
+export function unlockSoundEngine(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const navAny = navigator as Navigator & { audioSession?: { type: string } };
+    if (navAny.audioSession && navAny.audioSession.type !== 'playback') {
+      navAny.audioSession.type = 'playback';
+    }
+  } catch (_) {}
+
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  try {
+    if (ctx.state !== 'running') {
+      ctx.resume().catch(() => {});
+    }
+    if (!audioUnlocked) {
+      const silentBuf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = silentBuf;
+      src.connect(ctx.destination);
+      src.start(0);
+      audioUnlocked = true;
+    }
+  } catch (_) {}
+}
+
+function withRunningAudioContext(fn: (ctx: AudioContext) => void): void {
+  if (!isSoundEnabled()) return;
+  unlockSoundEngine();
+  const ctx = getAudioContext();
+  if (!ctx) return;
+
+  if (ctx.state === 'running') {
+    fn(ctx);
+  } else {
+    ctx.resume().then(() => {
+      if (ctx.state === 'running') fn(ctx);
+    }).catch(() => {});
+  }
 }
 
 export function isSoundEnabled(): boolean {
@@ -41,8 +90,14 @@ export function isSoundEnabled(): boolean {
 export function setSoundEnabled(enabled: boolean): void {
   if (typeof window === 'undefined') return;
   setLocalState(SOUND_KEY, String(enabled));
-  if (!enabled && 'speechSynthesis' in window) {
-    try { window.speechSynthesis.cancel(); } catch (_) {}
+  if (enabled) {
+    unlockSoundEngine();
+  } else if ('speechSynthesis' in window) {
+    try {
+      if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
+        window.speechSynthesis.cancel();
+      }
+    } catch (_) {}
   }
   window.dispatchEvent(new CustomEvent('stj_sound_haptics_updated'));
 }
@@ -64,37 +119,35 @@ export function setHapticsEnabled(enabled: boolean): void {
  * Major triad: C5 (523Hz) -> E5 (659Hz) -> G5 (784Hz)
  */
 export function playSuccessChime(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
+      const now = ctx.currentTime;
 
-  try {
-    const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-    const now = ctx.currentTime;
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, now + idx * 0.08);
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+        // Envelope: gentle attack, pleasant ring, smooth exponential fade
+        const startTime = now + idx * 0.08;
+        const duration = 0.28;
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.12, startTime + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
-      // Envelope: gentle attack, pleasant ring, smooth exponential fade
-      const startTime = now + idx * 0.08;
-      const duration = 0.28;
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.12, startTime + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    });
-  } catch (err) {
-    console.warn('[Sound Engine] Chime play error:', err);
-  }
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      });
+    } catch (err) {
+      console.warn('[Sound Engine] Chime play error:', err);
+    }
+  });
 }
 
 /**
@@ -103,94 +156,88 @@ export function playSuccessChime(): void {
  * Purposefully designed to be gentle, friendly, and non-punitive.
  */
 export function playIncorrectTone(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-  try {
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(220, now); // A3
+      osc.frequency.exponentialRampToValueAtTime(174.61, now + 0.16); // F3
 
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(220, now); // A3
-    osc.frequency.exponentialRampToValueAtTime(174.61, now + 0.16); // F3
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
 
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.exponentialRampToValueAtTime(0.09, now + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.24);
-  } catch (err) {
-    console.warn('[Sound Engine] Tone play error:', err);
-  }
+      osc.start(now);
+      osc.stop(now + 0.24);
+    } catch (err) {
+      console.warn('[Sound Engine] Tone play error:', err);
+    }
+  });
 }
 
 /**
  * Subtle 10ms micro-click for interactive tactile button presses.
  */
 export function playClickTone(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
 
-  try {
-    const now = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      osc.frequency.exponentialRampToValueAtTime(400, now + 0.015);
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    osc.frequency.exponentialRampToValueAtTime(400, now + 0.015);
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.exponentialRampToValueAtTime(0.05, now + 0.003);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
 
-    gain.gain.setValueAtTime(0.001, now);
-    gain.gain.exponentialRampToValueAtTime(0.05, now + 0.003);
-    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.015);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
 
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.015);
-  } catch (err) {}
+      osc.start(now);
+      osc.stop(now + 0.015);
+    } catch (err) {}
+  });
 }
 
 /**
  * Celebratory 4-note ascending fanfare when a student completes a unit/lab.
  */
 export function playCelebrationFanfare(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
+      const now = ctx.currentTime;
 
-  try {
-    const notes = [523.25, 659.25, 783.99, 1046.5]; // C5, E5, G5, C6
-    const now = ctx.currentTime;
+      notes.forEach((freq, idx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-    notes.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+        osc.type = idx === notes.length - 1 ? 'triangle' : 'sine';
+        const startTime = now + idx * 0.1;
+        const duration = idx === notes.length - 1 ? 0.45 : 0.25;
 
-      osc.type = idx === notes.length - 1 ? 'triangle' : 'sine';
-      const startTime = now + idx * 0.1;
-      const duration = idx === notes.length - 1 ? 0.45 : 0.25;
+        osc.frequency.setValueAtTime(freq, startTime);
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.03);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
-      osc.frequency.setValueAtTime(freq, startTime);
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    });
-  } catch (err) {}
+        osc.start(startTime);
+        osc.stop(startTime + duration);
+      });
+    } catch (err) {}
+  });
 }
 
 /**
@@ -225,76 +272,74 @@ export function triggerHapticClick(): void {
  * 0 KB download, pure Web Audio mathematical synthesis.
  */
 export function playLumenChristiChant(elevation: 1 | 2 | 3 = 1): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const baseFreqs = {
+        1: [349.23, 392.00, 440.00], // F4, G4, A4
+        2: [392.00, 440.00, 493.88], // G4, A4, B4
+        3: [440.00, 493.88, 554.37], // A4, B4, C#5
+      }[elevation];
 
-  try {
-    const baseFreqs = {
-      1: [349.23, 392.00, 440.00], // F4, G4, A4
-      2: [392.00, 440.00, 493.88], // G4, A4, B4
-      3: [440.00, 493.88, 554.37], // A4, B4, C#5
-    }[elevation];
+      const now = ctx.currentTime;
 
-    const now = ctx.currentTime;
-
-    // Deacon chant: "Lu - men - Chri-sti"
-    baseFreqs.forEach((freq, idx) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc.type = 'sine';
-      const startTime = now + idx * 0.32;
-      const duration = idx === 2 ? 0.75 : 0.32;
-
-      osc.frequency.setValueAtTime(freq, startTime);
-
-      // Warm chant vocal envelope
-      gain.gain.setValueAtTime(0.001, startTime);
-      gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.06);
-      gain.gain.setValueAtTime(0.12, startTime + duration - 0.1);
-      gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
-
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(startTime);
-      osc.stop(startTime + duration);
-    });
-
-    // Assembly response after pause: "De - o   gra - ti - as" (harmonic chord)
-    const responseStart = now + 1.25;
-    const responseNotes = [
-      [baseFreqs[1], baseFreqs[2]], // De-
-      [baseFreqs[0], baseFreqs[1]], // o
-      [baseFreqs[0], baseFreqs[2]], // gra-
-      [baseFreqs[0] * 0.75, baseFreqs[0], baseFreqs[2]], // ti-as (full warm resolution)
-    ];
-
-    responseNotes.forEach((chord, step) => {
-      const stepStart = responseStart + step * 0.35;
-      const stepDuration = step === 3 ? 0.95 : 0.35;
-
-      chord.forEach((note) => {
+      // Deacon chant: "Lu - men - Chri-sti"
+      baseFreqs.forEach((freq, idx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'triangle';
 
-        osc.frequency.setValueAtTime(note, stepStart);
-        gain.gain.setValueAtTime(0.001, stepStart);
-        gain.gain.exponentialRampToValueAtTime(0.07, stepStart + 0.05);
-        gain.gain.exponentialRampToValueAtTime(0.0001, stepStart + stepDuration);
+        osc.type = 'sine';
+        const startTime = now + idx * 0.32;
+        const duration = idx === 2 ? 0.75 : 0.32;
+
+        osc.frequency.setValueAtTime(freq, startTime);
+
+        // Warm chant vocal envelope
+        gain.gain.setValueAtTime(0.001, startTime);
+        gain.gain.exponentialRampToValueAtTime(0.14, startTime + 0.06);
+        gain.gain.setValueAtTime(0.12, startTime + duration - 0.1);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
 
         osc.connect(gain);
         gain.connect(ctx.destination);
 
-        osc.start(stepStart);
-        osc.stop(stepStart + stepDuration);
+        osc.start(startTime);
+        osc.stop(startTime + duration);
       });
-    });
-  } catch (err) {
-    console.warn('[Sound Engine] Lumen Christi chant error:', err);
-  }
+
+      // Assembly response after pause: "De - o   gra - ti - as" (harmonic chord)
+      const responseStart = now + 1.25;
+      const responseNotes = [
+        [baseFreqs[1], baseFreqs[2]], // De-
+        [baseFreqs[0], baseFreqs[1]], // o
+        [baseFreqs[0], baseFreqs[2]], // gra-
+        [baseFreqs[0] * 0.75, baseFreqs[0], baseFreqs[2]], // ti-as (full warm resolution)
+      ];
+
+      responseNotes.forEach((chord, step) => {
+        const stepStart = responseStart + step * 0.35;
+        const stepDuration = step === 3 ? 0.95 : 0.35;
+
+        chord.forEach((note) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+
+          osc.frequency.setValueAtTime(note, stepStart);
+          gain.gain.setValueAtTime(0.001, stepStart);
+          gain.gain.exponentialRampToValueAtTime(0.07, stepStart + 0.05);
+          gain.gain.exponentialRampToValueAtTime(0.0001, stepStart + stepDuration);
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start(stepStart);
+          osc.stop(stepStart + stepDuration);
+        });
+      });
+    } catch (err) {
+      console.warn('[Sound Engine] Lumen Christi chant error:', err);
+    }
+  });
 }
 
 /**
@@ -302,75 +347,71 @@ export function playLumenChristiChant(elevation: 1 | 2 | 3 = 1): void {
  * Simulates real bronze church bells with non-harmonic overtones and rich decays.
  */
 export function playEasterBells(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const bellPitches = [659.25, 830.61, 987.77, 1108.73, 1318.51]; // E5, G#5, B5, C#6, E6
+      const now = ctx.currentTime;
 
-  try {
-    const bellPitches = [659.25, 830.61, 987.77, 1108.73, 1318.51]; // E5, G#5, B5, C#6, E6
-    const now = ctx.currentTime;
+      // Change ringing pattern: 6 cascading strikes
+      const strikeDelays = [0.0, 0.18, 0.36, 0.54, 0.74, 0.96, 1.2];
+      strikeDelays.forEach((delay, i) => {
+        const pitch = bellPitches[i % bellPitches.length];
+        const strikeTime = now + delay;
+        const duration = 1.4;
 
-    // Change ringing pattern: 6 cascading strikes
-    const strikeDelays = [0.0, 0.18, 0.36, 0.54, 0.74, 0.96, 1.2];
-    strikeDelays.forEach((delay, i) => {
-      const pitch = bellPitches[i % bellPitches.length];
-      const strikeTime = now + delay;
-      const duration = 1.4;
+        // Strike note + strike overtone
+        [pitch, pitch * 2.01, pitch * 2.76].forEach((f, overtoneIdx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
 
-      // Strike note + strike overtone
-      [pitch, pitch * 2.01, pitch * 2.76].forEach((f, overtoneIdx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
+          osc.type = overtoneIdx === 0 ? 'sine' : 'triangle';
+          osc.frequency.setValueAtTime(f, strikeTime);
 
-        osc.type = overtoneIdx === 0 ? 'sine' : 'triangle';
-        osc.frequency.setValueAtTime(f, strikeTime);
+          const amp = overtoneIdx === 0 ? 0.12 : 0.05;
+          gain.gain.setValueAtTime(0.001, strikeTime);
+          gain.gain.exponentialRampToValueAtTime(amp, strikeTime + 0.015);
+          gain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + duration);
 
-        const amp = overtoneIdx === 0 ? 0.12 : 0.05;
-        gain.gain.setValueAtTime(0.001, strikeTime);
-        gain.gain.exponentialRampToValueAtTime(amp, strikeTime + 0.015);
-        gain.gain.exponentialRampToValueAtTime(0.0001, strikeTime + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
 
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-
-        osc.start(strikeTime);
-        osc.stop(strikeTime + duration);
+          osc.start(strikeTime);
+          osc.stop(strikeTime + duration);
+        });
       });
-    });
-  } catch (err) {
-    console.warn('[Sound Engine] Easter bells error:', err);
-  }
+    } catch (err) {
+      console.warn('[Sound Engine] Easter bells error:', err);
+    }
+  });
 }
 
 /**
  * Procedural wooden clapper (crotalus / strepitu) sound used when bells are silenced during Triduum.
  */
 export function playCrotalusClapper(): void {
-  if (!isSoundEnabled()) return;
-  const ctx = getAudioContext();
-  if (!ctx) return;
+  withRunningAudioContext((ctx) => {
+    try {
+      const now = ctx.currentTime;
+      // 3 rapid dry wooden knocks
+      [0.0, 0.09, 0.18].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
 
-  try {
-    const now = ctx.currentTime;
-    // 3 rapid dry wooden knocks
-    [0.0, 0.09, 0.18].forEach((offset) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(240, now + offset);
+        osc.frequency.exponentialRampToValueAtTime(80, now + offset + 0.025);
 
-      osc.type = 'square';
-      osc.frequency.setValueAtTime(240, now + offset);
-      osc.frequency.exponentialRampToValueAtTime(80, now + offset + 0.025);
+        gain.gain.setValueAtTime(0.001, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.003);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.035);
 
-      gain.gain.setValueAtTime(0.001, now + offset);
-      gain.gain.exponentialRampToValueAtTime(0.18, now + offset + 0.003);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.035);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
 
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-
-      osc.start(now + offset);
-      osc.stop(now + offset + 0.035);
-    });
-  } catch (err) {}
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.035);
+      });
+    } catch (err) {}
+  });
 }
 
