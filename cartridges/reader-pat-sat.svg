@@ -72,27 +72,27 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
-          <rect x="205" y="308" width="75" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="205" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="242.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
         </g>
       
         <g class="book-word" data-word="sat" data-hint="s · a · t  ➔  sat" data-phonemes="ssss, ah, tuh ... sat" style="cursor:pointer;">
-          <rect x="292" y="308" width="72" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="292" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="328" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sat</text>
         </g>
       
         <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
-          <rect x="376" y="308" width="62" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="376" y="308" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="407" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="450" y="308" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="450" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="473.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="mat" data-hint="m · a · t  ➔  mat" data-phonemes="mmm, ah, tuh ... mat" style="cursor:pointer;">
-          <rect x="509" y="308" width="86" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="509" y="308" width="86" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="552" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">mat.</text>
         </g>
       
@@ -127,27 +127,27 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
-          <rect x="211" y="308" width="75" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="211" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="248.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
         </g>
       
         <g class="book-word" data-word="sat" data-hint="s · a · t  ➔  sat" data-phonemes="ssss, ah, tuh ... sat" style="cursor:pointer;">
-          <rect x="298" y="308" width="72" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="298" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="334" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sat</text>
         </g>
       
         <g class="book-word" data-word="at" data-hint="a · t  ➔  at" data-phonemes="ah, tuh ... at" style="cursor:pointer;">
-          <rect x="382" y="308" width="57" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="382" y="308" width="57" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="410.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">at</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="451" y="308" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="451" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="474.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
-          <rect x="510" y="308" width="80" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="510" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="550" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap.</text>
         </g>
       
@@ -176,37 +176,37 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
-          <rect x="136" y="308" width="50" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="136" y="308" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="161" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
         </g>
       
         <g class="book-word" data-word="tin" data-hint="t · i · n  ➔  tin" data-phonemes="tuh, ih, nnn ... tin" style="cursor:pointer;">
-          <rect x="198" y="308" width="66" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="198" y="308" width="66" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="231" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tin</text>
         </g>
       
         <g class="book-word" data-word="pan" data-hint="p · a · n  ➔  pan" data-phonemes="puh, ah, nnn ... pan" style="cursor:pointer;">
-          <rect x="276" y="308" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="276" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="314" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">pan</text>
         </g>
       
         <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
-          <rect x="364" y="308" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="364" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="391.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
         </g>
       
         <g class="book-word" data-word="at" data-hint="a · t  ➔  at" data-phonemes="ah, tuh ... at" style="cursor:pointer;">
-          <rect x="431" y="308" width="57" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="431" y="308" width="57" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="459.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">at</text>
         </g>
       
         <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
-          <rect x="500" y="308" width="72" height="42" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <rect x="500" y="308" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
           <text x="536" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
         </g>
       
         <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
-          <rect x="584" y="308" width="80" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="584" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="624" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap.</text>
         </g>
       
@@ -243,42 +243,42 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="Tap" data-hint="t · a · p  ➔  Tap" data-phonemes="tuh, ah, puh ... Tap" style="cursor:pointer;">
-          <rect x="67" y="308" width="87" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="67" y="308" width="87" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="110.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Tap,</text>
         </g>
       
         <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
-          <rect x="166" y="308" width="80" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="166" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="206" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap,</text>
         </g>
       
         <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
-          <rect x="258" y="308" width="80" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="258" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="298" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap!</text>
         </g>
       
         <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
-          <rect x="350" y="308" width="50" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="350" y="308" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="375" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
         </g>
       
         <g class="book-word" data-word="tin" data-hint="t · i · n  ➔  tin" data-phonemes="tuh, ih, nnn ... tin" style="cursor:pointer;">
-          <rect x="412" y="308" width="66" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="412" y="308" width="66" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="445" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tin</text>
         </g>
       
         <g class="book-word" data-word="pan" data-hint="p · a · n  ➔  pan" data-phonemes="puh, ah, nnn ... pan" style="cursor:pointer;">
-          <rect x="490" y="308" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="490" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="528" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">pan</text>
         </g>
       
         <g class="book-word" data-word="did" data-hint="d · i · d  ➔  did" data-phonemes="duh, ih, duh ... did" style="cursor:pointer;">
-          <rect x="578" y="308" width="70" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="578" y="308" width="70" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="613" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">did</text>
         </g>
       
         <g class="book-word" data-word="tip" data-hint="t · i · p  ➔  tip" data-phonemes="tuh, ih, puh ... tip" style="cursor:pointer;">
-          <rect x="660" y="308" width="73" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="660" y="308" width="73" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="696.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tip.</text>
         </g>
       
@@ -311,42 +311,42 @@
         <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
         
         <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
-          <rect x="107" y="308" width="75" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="107" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="144.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
         </g>
       
         <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
-          <rect x="194" y="308" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="194" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="221.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
         </g>
       
         <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
-          <rect x="261" y="308" width="55" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="261" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="288.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="328" y="308" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="328" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="351.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="nap" data-hint="n · a · p  ➔  nap" data-phonemes="nnn, ah, puh ... nap" style="cursor:pointer;">
-          <rect x="387" y="308" width="76" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="387" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="425" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">nap</text>
         </g>
       
         <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
-          <rect x="475" y="308" width="62" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="475" y="308" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="506" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
         </g>
       
         <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
-          <rect x="549" y="308" width="47" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="549" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="572.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
         </g>
       
         <g class="book-word" data-word="mat" data-hint="m · a · t  ➔  mat" data-phonemes="mmm, ah, tuh ... mat" style="cursor:pointer;">
-          <rect x="608" y="308" width="86" height="42" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <rect x="608" y="308" width="86" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
           <text x="651" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">mat.</text>
         </g>
       
