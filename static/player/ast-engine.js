@@ -5601,27 +5601,6 @@
             this.notifyParent({ type: 'SPEECH_END' });
           };
           this.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
-          activeSynth.speak(utterance);
-        } catch (err) {
-          console.warn('SpeechSynthesis error:', err);
-        }
-      };
-
-      // On mobile PWAs (iOS Safari & Android Chrome), speechSynthesis.speak() MUST run synchronously inside
-      // user activation (taps on words, Read Page, Sound Out, Play); delaying via setTimeout drops the gesture token.
-      const hasUserActivation = Boolean(
-        (opts && opts.immediate) ||
-        (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive)
-      );
-      if (hasUserActivation) {
-        performSpeak();
-      } else {
-        this._speakDebounceTimer = setTimeout(() => {
-          this._speakDebounceTimer = null;
-          performSpeak();
-        }, 80);
-      }
-    }
 
     getCurrentSubtitle() {
       if (!this.scene || !Array.isArray(this.scene.subtitles) || !this.scene.subtitles.length) return '';
@@ -5660,7 +5639,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.notifyParent({ type: 'SUBTITLE_UPDATE', text: subText });
 
         if (this.voiceEnabled && (this.isPlaying || userSeeking)) {
-          this.speakText(subText);
+          this.speakText(subText, { immediate: userSeeking });
         }
 
         this.lastSpokenIndex = activeIndex;
