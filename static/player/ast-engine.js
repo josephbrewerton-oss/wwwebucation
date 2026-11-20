@@ -3241,58 +3241,32 @@
             this.preemptAiDemonstration('USER_INPUT');
           }
         };
-        const unlockMobileAudio = () => {
-          if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
-            this.audioSynth.unlock();
-          }
-          const synth = this._getSpeechSynth ? this._getSpeechSynth() : null;
-          if (synth) {
-            try {
-              if (typeof synth.getVoices === 'function') synth.getVoices();
-              if (synth.paused && typeof synth.resume === 'function') synth.resume();
-            } catch (_) {}
-          }
-        };
-        window.addEventListener('pointerdown', handlePreempt, { passive: true });
-        window.addEventListener('touchstart', handlePreempt, { passive: true });
-        window.addEventListener('wheel', handlePreempt, { passive: true });
-        window.addEventListener('pointerdown', unlockMobileAudio, { passive: true, capture: true });
-        window.addEventListener('touchstart', unlockMobileAudio, { passive: true, capture: true });
-        window.addEventListener('touchend', unlockMobileAudio, { passive: true, capture: true });
-        window.addEventListener('click', unlockMobileAudio, { passive: true, capture: true });
-        window.addEventListener('keydown', (e) => {
-          unlockMobileAudio();
-          if (['Space', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'KeyP', 'KeyR'].includes(e.code)) {
-            handlePreempt();
-          }
-        }, { passive: true });
+        let speechPrimed = false;
+const unlockMobileAudio = () => {
+  if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
+    this.audioSynth.unlock();
+  }
+  const synth = this._getSpeechSynth ? this._getSpeechSynth() : null;
+  const UtteranceCtor = this._getSpeechUtteranceCtor ? this._getSpeechUtteranceCtor() : null;
+  if (synth) {
+    try {
+      if (typeof synth.getVoices === 'function') synth.getVoices();
+      if (synth.paused && typeof synth.resume === 'function') synth.resume();
+
+      // Only prime once, and never interrupt an already-speaking/pending real utterance
+      if (!speechPrimed && UtteranceCtor && !synth.speaking && !synth.pending) {
+        synth.cancel(); // Clears any stale iOS WebKit queue lock before first speak()
+        const primer = new UtteranceCtor('');
+        primer.volume = 0;
+        primer.rate = 10;
+        primer.onend = () => { speechPrimed = true; };
+        primer.onerror = () => { speechPrimed = true; };
+        synth.speak(primer);
+        speechPrimed = true;
       }
-
-      // Reactive State Variables & User Interaction
-      this.vars = {};
-
-      // Fantasy Console / Lisp Machine Canonical Action Dispatch Table (Map prevents prototype dispatch)
-      this.actionDispatch = new Map([
-        ['sim:reset', () => this.reset()],
-        ['sim:play', () => this.play()],
-        ['sim:pause', () => this.pause()],
-        ['sim:toggle-play', () => this.togglePlay()],
-        ['sim:step', (args) => this.step(args && args[0] !== undefined ? Number(args[0]) : (1 / 60))],
-        ['sim:seek', (args) => this.seek(Number(args?.[0] || 0))],
-        ['player:toggle-bsl', (args) => this.toggleBsl(args?.[0])],
-        ['player:toggle-voice', (args) => this.toggleVoice(args?.[0])],
-        ['player:fullscreen', () => this.toggleFullscreen()],
-        ['set-var', (args) => {
-          if (args && args.length >= 2) this.setMemoryVar(args[0], args[1]);
-        }],
-        ['toggle-var', (args) => {
-          if (args && args.length >= 1) {
-            const cur = Boolean(this.getMemoryVar(args[0]));
-            this.setMemoryVar(args[0], !cur);
-          }
-        }]
-      ]);
-
+    } catch (_) {}
+  }
+};
       // Event listeners
       this.listeners = {
         timeupdate: [],
@@ -5601,6 +5575,27 @@
             this.notifyParent({ type: 'SPEECH_END' });
           };
           this.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
+          activeSynth.speak(utterance);
+        } catch (err) {
+          console.warn('SpeechSynthesis error:', err);
+        }
+      };
+
+      // On mobile PWAs (iOS Safari & Android Chrome), speechSynthesis.speak() MUST run synchronously inside
+      // user activation (taps on words, Read Page, Sound Out, Play); delaying via setTimeout drops the gesture token.
+      const hasUserActivation = Boolean(
+        (opts && opts.immediate) ||
+        (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive)
+      );
+      if (hasUserActivation) {
+        performSpeak();
+      } else {
+        this._speakDebounceTimer = setTimeout(() => {
+          this._speakDebounceTimer = null;
+          performSpeak();
+        }, 80);
+      }
+    }
 
     getCurrentSubtitle() {
       if (!this.scene || !Array.isArray(this.scene.subtitles) || !this.scene.subtitles.length) return '';
@@ -5639,7 +5634,7 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         this.notifyParent({ type: 'SUBTITLE_UPDATE', text: subText });
 
         if (this.voiceEnabled && (this.isPlaying || userSeeking)) {
-          this.speakText(subText, { immediate: userSeeking });
+          this.speakText(subText);
         }
 
         this.lastSpokenIndex = activeIndex;
