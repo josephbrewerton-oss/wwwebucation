@@ -34,7 +34,7 @@ import {
   type PlayerMcpTransport,
   type WebMcpRegistrationHandle,
 } from '../engine/webmcpBridge';
-import { bindSitePlayerAdapter } from '../engine/nanoSiteManager';
+import { bindSitePlayerAdapter, dispatchCartridgeSiteDirective } from '../engine/nanoSiteManager';
 import {
   type EppBenchTransport,
   type ProfilerCaptureResult,
@@ -745,6 +745,13 @@ export function renderPlayerPage(): HTMLElement {
     },
     highlight: (selector) => {
       postToPlayer({ type: 'EXEC_ACTION_TUPLE', tuple: `(:act :highlight "${selector}")` });
+    },
+    openTutor: (prompt?: string) => {
+      activeDrawer = 'ai-tutor';
+      renderActiveDrawer(true);
+      if (prompt && mountedAiTutorHandle) {
+        mountedAiTutorHandle.askQuestion(prompt, false);
+      }
     },
     getActivePreset: () => activePreset,
   });
@@ -1661,6 +1668,19 @@ export function renderPlayerPage(): HTMLElement {
       bslActive = e.data.enabled;
       updateBslUi(e.data.enabled);
       setBslEnabled(e.data.enabled);
+    }
+    if (e.data.type === 'SITE_DIRECTIVE' && e.data.directive && typeof e.data.directive === 'object') {
+      if (iframe?.contentWindow && e.source && e.source !== iframe.contentWindow) {
+        return;
+      }
+      dispatchCartridgeSiteDirective(e.data.directive)
+        .then((res) => {
+          if (res.ok && res.action === 'toggle_bsl' && typeof res.detail.bslEnabled === 'boolean') {
+            bslActive = res.detail.bslEnabled;
+            updateBslUi(res.detail.bslEnabled);
+          }
+        })
+        .catch(() => {});
     }
     if (e.data.type === 'TELEMETRY' || e.data.type === 'AST_TELEMETRY' || e.data.type === 'PLAYER_TELEMETRY') {
       latestTelemetry = e.data.telemetry || e.data.payload || e.data;

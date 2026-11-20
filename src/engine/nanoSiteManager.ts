@@ -27,7 +27,19 @@ export type NanoSiteAction =
   | 'set_var'
   | 'highlight_target'
   | 'toggle_bsl'
-  | 'toggle_sound';
+  | 'toggle_sound'
+  | 'open_tutor';
+
+/** Strict allowlist of host site actions that an AST cartridge may request via SITE_DIRECTIVE. */
+export const CARTRIDGE_ALLOWED_SITE_ACTIONS: ReadonlySet<NanoSiteAction> = new Set<NanoSiteAction>([
+  'navigate',
+  'load_cartridge',
+  'toggle_bsl',
+  'toggle_sound',
+  'open_tutor',
+  'set_render_mode',
+  'highlight_target',
+]);
 
 export interface NanoSiteDirective {
   action: NanoSiteAction;
@@ -44,6 +56,7 @@ export interface NanoSiteDirective {
   value?: number;
   selector?: string;
   enabled?: boolean;
+  prompt?: string;
 }
 
 export interface NanoSiteManifest {
@@ -81,22 +94,31 @@ export interface PlayerBridgeAdapter {
   loadPreset: (presetId: string, autoplay?: boolean) => void;
   setVar?: (name: string, value: number) => void;
   highlight?: (selector: string) => void;
+  openTutor?: (prompt?: string) => void;
   getActivePreset?: () => string;
 }
 
 const VALID_ROUTES = [
   '/',
   '/player',
+  '/media-player',
   '/catholic-life',
   '/practice-lab',
   '/learning-zone',
+  '/revision',
   '/curriculum-studio',
   '/phonics',
   '/languages',
+  '/bsl',
   '/shakespeare',
+  '/overseas-curriculums',
+  '/licensing',
+  '/privacy',
   '/profile',
   '/settings',
 ];
+
+const SAFE_PRESET_ID_RE = /^[a-z0-9][a-z0-9_-]{0,63}$/i;
 
 const DIRECTIVE_JSON_SCHEMA = {
   type: 'object',
@@ -113,6 +135,7 @@ const DIRECTIVE_JSON_SCHEMA = {
         'highlight_target',
         'toggle_bsl',
         'toggle_sound',
+        'open_tutor',
       ],
     },
     route: { type: 'string' },
@@ -127,6 +150,7 @@ const DIRECTIVE_JSON_SCHEMA = {
     value: { type: 'number' },
     selector: { type: 'string' },
     enabled: { type: 'boolean' },
+    prompt: { type: 'string' },
   },
   required: ['action'],
 };
@@ -245,9 +269,13 @@ export async function executeSiteDirective(
     }
 
     case 'navigate': {
-      const targetRoute = directive.route && VALID_ROUTES.includes(directive.route)
-        ? directive.route
-        : '/player';
+      const requested = typeof directive.route === 'string' ? directive.route.trim() : '';
+      if (!requested || !VALID_ROUTES.includes(requested)) {
+        ok = false;
+        detail.reason = `Route not in hypervisor allowlist: ${requested || '(empty)'}`;
+        break;
+      }
+      const targetRoute = requested;
       if (nav) {
         await nav(targetRoute);
         detail.navigatedTo = targetRoute;
@@ -266,9 +294,9 @@ export async function executeSiteDirective(
 
     case 'load_cartridge': {
       const presetId = (directive.presetId || '').trim();
-      if (!presetId) {
+      if (!presetId || !SAFE_PRESET_ID_RE.test(presetId)) {
         ok = false;
-        detail.reason = 'Missing presetId';
+        detail.reason = 'Invalid or missing presetId';
         break;
       }
       if (boundPlayerBridge) {
@@ -372,6 +400,19 @@ export async function executeSiteDirective(
       break;
     }
 
+    case 'open_tutor': {
+      const prompt = typeof directive.prompt === 'string' ? directive.prompt.trim().slice(0, 400) : '';
+      if (boundPlayerBridge?.openTutor) {
+        boundPlayerBridge.openTutor(prompt || undefined);
+        detail.openedTutor = true;
+        if (prompt) detail.prompt = prompt;
+      } else {
+        ok = false;
+        detail.reason = 'No active player tutor surface mounted';
+      }
+      break;
+    }
+
     default:
       ok = false;
       detail.reason = `Unsupported action: ${String((directive as any).action)}`;
@@ -383,6 +424,44 @@ export async function executeSiteDirective(
     detail,
     manifest: getSiteManifest(directive.surfaceId),
   };
+}
+
+/**
+ * Hypervisor gatekeeper for incoming SITE_DIRECTIVE requests from AST cartridges.
+ * Enforces the explicit CARTRIDGE_ALLOWED_SITE_ACTIONS allowlist before forwarding
+ * into executeSiteDirective so neither cartridges nor Nano bypass host authority.
+ */
+export async function dispatchCartridgeSiteDirective(
+  rawDirective: unknown,
+  explicitNavigator?: SiteRouteNavigator
+): Promise<{
+  ok: boolean;
+  action: string;
+  detail: Record<string, any>;
+  manifest: NanoSiteManifest;
+}> {
+  const dir = rawDirective && typeof rawDirective === 'object' ? (rawDirective as Record<string, any>) : null;
+  const rawAction = dir && typeof dir.action === 'string' ? dir.action.trim().replace(/-/g, '_') : '';
+  if (!rawAction || !CARTRIDGE_ALLOWED_SITE_ACTIONS.has(rawAction as NanoSiteAction)) {
+    return {
+      ok: false,
+      action: rawAction || 'unknown',
+      detail: { reason: `Blocked by hypervisor allowlist: ${rawAction || '(empty)'}` },
+      manifest: getSiteManifest(),
+    };
+  }
+  const normalized: NanoSiteDirective = {
+    action: rawAction as NanoSiteAction,
+    route: typeof dir?.route === 'string' ? dir.route : undefined,
+    presetId: typeof dir?.presetId === 'string' ? dir.presetId : (typeof dir?.preset === 'string' ? dir.preset : undefined),
+    autoplay: typeof dir?.autoplay === 'boolean' ? dir.autoplay : undefined,
+    surfaceId: typeof dir?.surfaceId === 'string' ? dir.surfaceId : undefined,
+    mode: dir?.mode === 'svg' || dir?.mode === 'canvas' || dir?.mode === 'hybrid' ? dir.mode : undefined,
+    selector: typeof dir?.selector === 'string' ? dir.selector : undefined,
+    enabled: typeof dir?.enabled === 'boolean' ? dir.enabled : undefined,
+    prompt: typeof dir?.prompt === 'string' ? dir.prompt : undefined,
+  };
+  return executeSiteDirective(normalized, explicitNavigator);
 }
 
 /**
@@ -536,7 +615,7 @@ export async function registerNanoSiteWebMcpTools(
         properties: {
           action: {
             type: 'string',
-            enum: ['navigate', 'load_cartridge', 'set_render_mode', 'set_var', 'highlight_target', 'toggle_bsl', 'toggle_sound'],
+            enum: ['navigate', 'load_cartridge', 'set_render_mode', 'set_var', 'highlight_target', 'toggle_bsl', 'toggle_sound', 'open_tutor'],
           },
           route: { type: 'string' },
           presetId: { type: 'string' },

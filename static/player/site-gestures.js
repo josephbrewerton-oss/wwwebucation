@@ -911,6 +911,8 @@
       if (norm.clearVar === undefined && norm['clear-var'] !== undefined) norm.clearVar = norm['clear-var'];
       if (norm.resetVar === undefined && norm['reset-var'] !== undefined) norm.resetVar = norm['reset-var'];
       if (norm.resetVal === undefined && norm['reset-val'] !== undefined) norm.resetVal = norm['reset-val'];
+      if (norm.presetId === undefined && norm['preset-id'] !== undefined) norm.presetId = norm['preset-id'];
+      if (norm.renderMode === undefined && norm['render-mode'] !== undefined) norm.renderMode = norm['render-mode'];
       if (norm.valExpr === undefined && norm['val-expr'] !== undefined) norm.valExpr = norm['val-expr'];
       if (norm.toneExpr === undefined && norm['tone-expr'] !== undefined) norm.toneExpr = norm['tone-expr'];
       if (norm.speakExpr === undefined && norm['speak-expr'] !== undefined) norm.speakExpr = norm['speak-expr'];
@@ -1120,6 +1122,30 @@
     }
 
     /**
+     * Emits a typed, hypervisor-gated SITE_DIRECTIVE upward to the host site shell.
+     * The host Hypervisor (nanoSiteManager.ts) enforces allowlists and route/preset validation.
+     */
+    _emitSiteDirective(directive, scene) {
+      if (!directive || typeof directive !== 'object' || !directive.action) return false;
+      const payload = {
+        type: 'SITE_DIRECTIVE',
+        source: 'ast-cartridge',
+        sceneId: (scene && scene.id) || (this.engine && this.engine.scene && this.engine.scene.id) || '',
+        directive
+      };
+      try {
+        if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
+          window.parent.postMessage(payload, '*');
+        } else if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
+          window.dispatchEvent(new CustomEvent('stj:site-directive', { detail: payload }));
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    /**
      * Executes pure declarative AST actions natively in JS (zero inline JS in .ast files).
      * Returns true if the action was handled so legacy bare-:var fallbacks don't double-apply.
      */
@@ -1166,6 +1192,65 @@
           this.engine.seek(targetIdx / maxIdx);
         }
         return true;
+      }
+
+      // Hypervisor-gated Site Directive Bridge (Cartridge -> Host Site Control Plane)
+      if (action === 'navigate') {
+        const route = String(g.route || attrVal || '').trim();
+        if (!route) return false;
+        return this._emitSiteDirective({ action: 'navigate', route }, scene);
+      }
+
+      if (action === 'load-cartridge') {
+        const presetId = String(g.preset || g.presetId || attrVal || '').trim();
+        if (!presetId) return false;
+        return this._emitSiteDirective({
+          action: 'load_cartridge',
+          presetId,
+          autoplay: Boolean(g.autoplay)
+        }, scene);
+      }
+
+      if (action === 'toggle-bsl') {
+        const directive = { action: 'toggle_bsl' };
+        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
+        return this._emitSiteDirective(directive, scene);
+      }
+
+      if (action === 'toggle-sound') {
+        const directive = { action: 'toggle_sound' };
+        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
+        return this._emitSiteDirective(directive, scene);
+      }
+
+      if (action === 'open-tutor') {
+        let prompt = typeof g.prompt === 'string' ? g.prompt : '';
+        if (!prompt && g.speakVar && this.engine.vars && this.engine.vars[g.speakVar]) {
+          prompt = String(this.engine.vars[g.speakVar]);
+        }
+        if (!prompt && attrVal !== undefined) {
+          prompt = String(attrVal);
+        }
+        return this._emitSiteDirective({ action: 'open_tutor', prompt }, scene);
+      }
+
+      if (action === 'set-render-mode') {
+        const mode = String(g.mode || g.renderMode || attrVal || '').trim();
+        if (!mode) return false;
+        return this._emitSiteDirective({ action: 'set_render_mode', mode }, scene);
+      }
+
+      if (action === 'site-directive') {
+        const subAction = String(g.directive || '').trim().replace(/-/g, '_');
+        if (!subAction) return false;
+        const directive = { action: subAction };
+        if (g.route) directive.route = String(g.route);
+        if (g.preset || g.presetId) directive.presetId = String(g.preset || g.presetId);
+        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
+        if (g.mode || g.renderMode) directive.mode = String(g.mode || g.renderMode);
+        if (g.prompt) directive.prompt = String(g.prompt);
+        if (g.selector) directive.selector = String(g.selector);
+        return this._emitSiteDirective(directive, scene);
       }
 
       return false;
@@ -3696,6 +3781,13 @@ ${strokeLines.join('\n')}
           ...this.playerProfile.universalKeys.map(k => k.action).filter(Boolean),
           'step-slide',
           'goto-slide',
+          'navigate',
+          'load-cartridge',
+          'toggle-bsl',
+          'toggle-sound',
+          'open-tutor',
+          'set-render-mode',
+          'site-directive',
           'toggle-xray',
           'toggle-audio',
           'reset-vars',
