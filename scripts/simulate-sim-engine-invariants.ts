@@ -501,16 +501,40 @@ console.log('\n--- TEST 9: Offline Simulator Suite ZIP Export & Embed Protocol -
   assert(playerUi.includes('btnDownloadZip: document.getElementById(\'btn-download-zip\')'), 'player-ui.js must bind btnDownloadZip element');
   assert(playerUi.includes('type: \'DOWNLOAD_ZIP\''), 'player-ui.js must post DOWNLOAD_ZIP notification to parent');
 
-  // Verify ast-engine.js dispatches DOWNLOAD_OFFLINE_ZIP
-  const astEngine = fs.readFileSync('static/player/ast-engine.js', 'utf-8');
-  assert(astEngine.includes('DOWNLOAD_OFFLINE_ZIP'), 'ast-engine.js must listen for DOWNLOAD_OFFLINE_ZIP');
+  // Verify ast-bridge.js dispatches DOWNLOAD_OFFLINE_ZIP
+  const astBridge = fs.readFileSync('static/player/ast-bridge.js', 'utf-8');
+  assert(astBridge.includes('DOWNLOAD_OFFLINE_ZIP'), 'ast-bridge.js must listen for DOWNLOAD_OFFLINE_ZIP');
 
   console.log(`[✅ PASS] Sim 9: Offline Simulator Suite ZIP Bundle (${(staticZipSize / 1024).toFixed(1)} KB), postMessage protocol, and UI binding verified.`);
   passedTests++;
 }
 
+const AST_PLAYER_RUNTIME_MODULES = [
+  'ast-profiler.js',
+  'ast-audio-speech.js',
+  'ast-physics.js',
+  'ast-parser.js',
+  'ast-3d.js',
+  'ast-bridge.js',
+  'ast-exporter.js',
+  'ast-hud-controls.js',
+  'ast-ai-director.js',
+  'ast-loader.js',
+  'ast-state-scorm.js',
+  'ast-engine.js',
+];
+
+function loadAstPlayerRuntimeIntoSandbox(sandbox: any, isExistingContext = false) {
+  const ctx = isExistingContext ? sandbox : vm.createContext(sandbox);
+  for (const mod of AST_PLAYER_RUNTIME_MODULES) {
+    const filePath = path.join(process.cwd(), 'static', 'player', mod);
+    const modCode = fs.readFileSync(filePath, 'utf8');
+    vm.runInContext(modCode, ctx, { filename: `static/player/${mod}` });
+  }
+  return ctx;
+}
+
 function createHeadlessEngine() {
-  const code = fs.readFileSync('static/player/ast-engine.js', 'utf8');
   const sandbox: any = {
     console,
     Math,
@@ -521,9 +545,15 @@ function createHeadlessEngine() {
     Object,
     Map,
     Set,
+    WeakSet,
+    ArrayBuffer,
+    DataView,
     Float32Array,
+    Float64Array,
     Int32Array,
     Uint8Array,
+    TextDecoder,
+    TextEncoder,
     RegExp,
     Error,
     JSON,
@@ -538,7 +568,7 @@ function createHeadlessEngine() {
   };
   sandbox.globalThis = sandbox;
   sandbox.self = sandbox;
-  vm.runInNewContext(code, sandbox, { filename: 'static/player/ast-engine.js' });
+  loadAstPlayerRuntimeIntoSandbox(sandbox);
   return new sandbox.ASTVectorPlayerEngine({ container: null, autoplay: false, voiceEnabled: false });
 }
 
@@ -927,16 +957,16 @@ console.log('\n--- TEST 17: 4 Canonical KS4 Chemistry & Biology Cartridges ---')
 console.log('\n--- TEST 18: Chrome EPP Contention Profiler, Compression & WebMCP Bridge ---');
 {
   // 18a. ASTProfiler zero-GC capture ring buffer & percentile calculations
-  const code = fs.readFileSync('static/player/ast-engine.js', 'utf8');
   const sb: any = {
-    console, Math, Number, String, Boolean, Array, Object, Map, Set,
-    Float32Array, Int32Array, Uint8Array, RegExp, Error, JSON,
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet,
+    ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+    TextDecoder, TextEncoder, RegExp, Error, JSON,
     URLSearchParams, parseFloat, parseInt, isNaN, isFinite,
     setTimeout, clearTimeout, performance: { now: () => Date.now() },
   };
   sb.globalThis = sb;
   sb.self = sb;
-  vm.runInNewContext(code, sb, { filename: 'static/player/ast-engine.js' });
+  loadAstPlayerRuntimeIntoSandbox(sb);
 
   const profiler = new sb.ASTProfiler({ silent: true });
   const deltaBufRef = profiler.captureDeltas;
@@ -1186,7 +1216,6 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
   }
 
   // 19b. E2E setupPostMessageBridge request/response protocol inside isolated VM
-  const engineCode = fs.readFileSync('static/player/ast-engine.js', 'utf8');
   const windowListeners: Record<string, Array<(evt: any) => void>> = {};
   const postedMessages: Array<{ msg: any; origin: string }> = [];
   const rafQueue = new Map<number, (ts: number) => void>();
@@ -1194,8 +1223,9 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
   let simTimeNow = 1000;
 
   const bridgeSb: any = {
-    console, Math, Number, String, Boolean, Array, Object, Map, Set,
-    Float32Array, Int32Array, Uint8Array, RegExp, Error, JSON,
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet,
+    ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+    TextDecoder, TextEncoder, RegExp, Error, JSON,
     URLSearchParams, parseFloat, parseInt, isNaN, isFinite,
     setTimeout, clearTimeout,
     performance: { now: () => simTimeNow },
@@ -1221,7 +1251,7 @@ console.log('\n--- TEST 19: RC1 WebMCP Additive Coexistence, postMessage Bridge 
   bridgeSb.globalThis = bridgeSb;
   bridgeSb.self = bridgeSb;
   bridgeSb.window = bridgeSb;
-  vm.runInNewContext(engineCode, bridgeSb, { filename: 'static/player/ast-engine.js' });
+  loadAstPlayerRuntimeIntoSandbox(bridgeSb);
 
   const engBridge = new bridgeSb.ASTVectorPlayerEngine({ container: null, autoplay: false, voiceEnabled: false });
   const ratesAst = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'rates-of-reaction.ast'), 'utf8');
@@ -1361,11 +1391,12 @@ console.log('\n--- TEST 21: In-Quiz "Ask Nano" Bridge & AI_VISUAL_COMMAND Execut
     requestAnimationFrame: (fn: Function) => setTimeout(() => fn(performance.now()), 1),
     cancelAnimationFrame: (id: any) => clearTimeout(id),
     console,
-    Math, Date, Number, String, Boolean, Array, Object, Set, Map, Float32Array, Uint8Array, RegExp, JSON,
+    Math, Date, Number, String, Boolean, Array, Object, Set, Map, WeakSet,
+    ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+    TextDecoder, TextEncoder, RegExp, JSON,
   });
   sbAi.self = sbAi.window;
-  const engineCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-engine.js'), 'utf8');
-  vm.runInContext(engineCode, sbAi);
+  loadAstPlayerRuntimeIntoSandbox(sbAi, true);
   sbAi.window.setupPostMessageBridge(engAi, null);
 
   let aiDemoStartCount = 0;
