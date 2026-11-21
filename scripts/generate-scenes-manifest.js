@@ -475,7 +475,7 @@ export function generateScenesManifest(options = {}) {
   });
 
   // 1. Output runtime JSON manifests
-  const output = {
+  const rootOutput = {
     version: '2.6.0',
     generatedAt: new Date().toISOString(),
     totalScenes: manifest.length,
@@ -484,18 +484,31 @@ export function generateScenesManifest(options = {}) {
     scenes: manifest
   };
 
-  const jsonStr = JSON.stringify(output, null, 2) + '\n';
-  fs.writeFileSync(manifestPath, jsonStr, 'utf8');
+  const playerOutput = {
+    ...rootOutput,
+    scenes: manifest.map((s) => ({
+      ...s,
+      svgFile: `../${s.svgFile}`,
+      astFile: `../${s.astFile}`,
+      astbFile: `../${s.astbFile}`,
+      video: s.video && s.video.startsWith('/') ? `..${s.video}` : s.video
+    }))
+  };
+
+  const rootJsonStr = JSON.stringify(rootOutput, null, 2) + '\n';
+  const playerJsonStr = JSON.stringify(playerOutput, null, 2) + '\n';
+
+  fs.writeFileSync(manifestPath, playerJsonStr, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote ${manifest.length} scenes to ${manifestPath}`);
 
   const rootManifestPath = path.join(rootDir, 'static', 'scenes.manifest.json');
-  fs.writeFileSync(rootManifestPath, jsonStr, 'utf8');
+  fs.writeFileSync(rootManifestPath, rootJsonStr, 'utf8');
 
   const legacyConfigPath = path.join(rootDir, 'static', 'player', 'scenes-config.json');
-  fs.writeFileSync(legacyConfigPath, jsonStr, 'utf8');
+  fs.writeFileSync(legacyConfigPath, playerJsonStr, 'utf8');
   const rootLegacyConfigPath = path.join(rootDir, 'static', 'scenes-config.json');
-  fs.writeFileSync(rootLegacyConfigPath, jsonStr, 'utf8');
-
+  fs.writeFileSync(rootLegacyConfigPath, rootJsonStr, 'utf8');
+  
   // 2. Output manifest.oak.json
   const oakUnits = [];
   const seenUnits = new Set();
