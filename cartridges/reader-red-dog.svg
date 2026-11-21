@@ -1,0 +1,450 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%" id="reader-red-dog-root" style="background:#0f172a; font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <clipPath id="art-clip">
+      <rect x="36" y="64" width="728" height="220" rx="14"/>
+    </clipPath>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#f0f9ff"/>
+    </linearGradient>
+    <linearGradient id="warmRoomGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="100%" stop-color="#fef3c7"/>
+    </linearGradient>
+    <linearGradient id="sunsetGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Picture Book Cream Spread -->
+  <rect x="16" y="12" width="768" height="476" rx="18" fill="#fffdf7" stroke="#cbd5e1" stroke-width="2"/>
+
+  <!-- Top Book Chrome -->
+  <text x="36" y="34" font-size="11" font-weight="800" fill="#dc2626" letter-spacing="0.06em">LEVEL 2 · PHASE 2 CVC</text>
+  <text x="36" y="53" font-size="19" font-weight="800" fill="#0f172a">The Red Dog</text>
+
+  <!-- Toggle Sound Buttons Control -->
+  <g id="btn-toggle-sb" style="cursor:pointer;">
+    <rect id="btn-toggle-sb-rect" x="394" y="21" width="154" height="32" rx="10" fill="#fee2e2" stroke="#dc2626" stroke-width="1.5"/>
+    <text id="btn-toggle-sb-txt" x="471" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#dc2626">● Sound Buttons: ON</text>
+  </g>
+
+  <!-- Read Page Aloud Control -->
+  <g id="btn-read-page" style="cursor:pointer;">
+    <rect x="558" y="21" width="122" height="32" rx="10" fill="#dc2626"/>
+    <text x="619" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#ffffff">🔊 Read Page</text>
+  </g>
+
+  <!-- Page Indicator -->
+  <text id="book-page-num" x="764" y="42" text-anchor="end" font-size="13" font-weight="800" fill="#475569">Page 1 of 5</text>
+
+  <!-- 5 Illustrated Story Pages -->
+  
+      <g id="book-page-0" display="inline">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="150" fill="url(#skyGrad)"/>
+        <rect x="36" y="206" width="728" height="78" fill="#4ade80"/>
+        <circle cx="660" cy="112" r="30" fill="#fde047" stroke="#facc15" stroke-width="4"/>
+        <!-- Running Red Dog -->
+        <g id="anim-dog-0">
+          <ellipse cx="385" cy="202" rx="64" ry="30" fill="#dc2626"/>
+          <circle cx="448" cy="176" r="24" fill="#dc2626"/>
+          <ellipse cx="468" cy="182" rx="14" ry="9" fill="#ef4444"/>
+          <circle cx="479" cy="179" r="4" fill="#0f172a"/>
+          <ellipse cx="436" cy="178" rx="9" ry="18" fill="#991b1b"/>
+          <circle cx="456" cy="170" r="3.2" fill="#0f172a"/>
+          <path d="M 322 192 Q 294 170 306 154" stroke="#dc2626" stroke-width="10" stroke-linecap="round" fill="none"/>
+          <line x1="348" y1="224" x2="328" y2="252" stroke="#991b1b" stroke-width="10" stroke-linecap="round"/>
+          <line x1="376" y1="224" x2="366" y2="256" stroke="#b91c1c" stroke-width="10" stroke-linecap="round"/>
+          <line x1="418" y1="224" x2="438" y2="252" stroke="#991b1b" stroke-width="10" stroke-linecap="round"/>
+          <line x1="436" y1="222" x2="462" y2="246" stroke="#b91c1c" stroke-width="10" stroke-linecap="round"/>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="The" data-hint="♥ The — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="The. Tricky word. The" style="cursor:pointer;">
+          <rect x="68" y="308" width="79" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="107.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">The</text>
+        </g>
+      
+        <g class="book-word" data-word="big" data-hint="b · i · g  ➔  big" data-phonemes="buh, ih, guh ... big" style="cursor:pointer;">
+          <rect x="159" y="308" width="70" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="194" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">big</text>
+        </g>
+      
+        <g class="book-word" data-word="red" data-hint="r · e · d  ➔  red" data-phonemes="rrr, eh, duh ... red" style="cursor:pointer;">
+          <rect x="241" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="277" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">red</text>
+        </g>
+      
+        <g class="book-word" data-word="dog" data-hint="d · o · g  ➔  dog" data-phonemes="duh, off, guh ... dog" style="cursor:pointer;">
+          <rect x="325" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="363" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dog</text>
+        </g>
+      
+        <g class="book-word" data-word="ran" data-hint="r · a · n  ➔  ran" data-phonemes="rrr, ah, nnn ... ran" style="cursor:pointer;">
+          <rect x="413" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="449" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">ran</text>
+        </g>
+      
+        <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
+          <rect x="497" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="524.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
+        </g>
+      
+        <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
+          <rect x="564" y="308" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="600" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
+        </g>
+      
+        <g class="book-word" data-word="sun" data-hint="s · u · n  ➔  sun" data-phonemes="ssss, uh, nnn ... sun" style="cursor:pointer;">
+          <rect x="648" y="308" width="84" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="690" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sun.</text>
+        </g>
+      
+        <g id="sb-page-0" pointer-events="none">
+          <line x1="82.0" y1="344" x2="133.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="107.5" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="182.3" cy="344" r="3.4" fill="#dc2626"/><circle cx="194.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="205.7" cy="344" r="3.4" fill="#dc2626"/><circle cx="262.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="274.9" cy="344" r="3.4" fill="#dc2626"/><circle cx="289.6" cy="344" r="3.4" fill="#dc2626"/><circle cx="348.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="363.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="377.8" cy="344" r="3.4" fill="#dc2626"/><circle cx="434.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="446.9" cy="344" r="3.4" fill="#dc2626"/><circle cx="461.6" cy="344" r="3.4" fill="#dc2626"/><circle cx="517.1" cy="344" r="3.4" fill="#dc2626"/><circle cx="528.8" cy="344" r="3.4" fill="#dc2626"/>
+          <line x1="578.0" y1="344" x2="622.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="600.0" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="671.4" cy="344" r="3.4" fill="#dc2626"/><circle cx="686.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="701.0" cy="344" r="3.4" fill="#dc2626"/></g>
+      </g>
+    
+
+      <g id="book-page-1" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="150" fill="url(#skyGrad)"/>
+        <rect x="36" y="206" width="728" height="78" fill="#4ade80"/>
+        <!-- Big Brown Log -->
+        <rect x="270" y="218" width="260" height="44" rx="22" fill="#92400e" stroke="#78350f" stroke-width="3"/>
+        <ellipse cx="520" cy="240" rx="14" ry="22" fill="#fde68a" stroke="#78350f" stroke-width="3"/>
+        <!-- Dog perched on log -->
+        <g id="anim-dog-1">
+          <ellipse cx="390" cy="178" rx="52" ry="25" fill="#dc2626"/>
+          <circle cx="442" cy="154" r="22" fill="#dc2626"/>
+          <ellipse cx="430" cy="158" rx="8" ry="16" fill="#991b1b"/>
+          <circle cx="450" cy="148" r="3" fill="#0f172a"/>
+          <circle cx="466" cy="156" r="4" fill="#0f172a"/>
+          <line x1="358" y1="196" x2="358" y2="220" stroke="#991b1b" stroke-width="9" stroke-linecap="round"/>
+          <line x1="422" y1="196" x2="422" y2="220" stroke="#991b1b" stroke-width="9" stroke-linecap="round"/>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="The" data-hint="♥ The — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="The. Tricky word. The" style="cursor:pointer;">
+          <rect x="76" y="308" width="79" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="115.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">The</text>
+        </g>
+      
+        <g class="book-word" data-word="dog" data-hint="d · o · g  ➔  dog" data-phonemes="duh, off, guh ... dog" style="cursor:pointer;">
+          <rect x="167" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="205" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dog</text>
+        </g>
+      
+        <g class="book-word" data-word="can" data-hint="c · a · n  ➔  can" data-phonemes="kuh, ah, nnn ... can" style="cursor:pointer;">
+          <rect x="255" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="293" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">can</text>
+        </g>
+      
+        <g class="book-word" data-word="hop" data-hint="h · o · p  ➔  hop" data-phonemes="huh, off, puh ... hop" style="cursor:pointer;">
+          <rect x="343" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="381" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">hop</text>
+        </g>
+      
+        <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
+          <rect x="431" y="308" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="462" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="505" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="528.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="big" data-hint="b · i · g  ➔  big" data-phonemes="buh, ih, guh ... big" style="cursor:pointer;">
+          <rect x="564" y="308" width="70" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="599" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">big</text>
+        </g>
+      
+        <g class="book-word" data-word="log" data-hint="l · o · g  ➔  log" data-phonemes="lll, off, guh ... log" style="cursor:pointer;">
+          <rect x="646" y="308" width="78" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="685" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">log.</text>
+        </g>
+      
+        <g id="sb-page-1" pointer-events="none">
+          <line x1="90.0" y1="344" x2="141.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="115.5" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="190.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="205.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="219.8" cy="344" r="3.4" fill="#dc2626"/><circle cx="278.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="293.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="307.8" cy="344" r="3.4" fill="#dc2626"/><circle cx="366.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="381.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="395.8" cy="344" r="3.4" fill="#dc2626"/><circle cx="454.6" cy="344" r="3.4" fill="#dc2626"/><circle cx="469.4" cy="344" r="3.4" fill="#dc2626"/><circle cx="528.5" cy="344" r="3.4" fill="#dc2626"/><circle cx="587.4" cy="344" r="3.4" fill="#dc2626"/><circle cx="599.0" cy="344" r="3.4" fill="#dc2626"/><circle cx="610.6" cy="344" r="3.4" fill="#dc2626"/><circle cx="666.5" cy="344" r="3.4" fill="#dc2626"/><circle cx="678.1" cy="344" r="3.4" fill="#dc2626"/><circle cx="692.9" cy="344" r="3.4" fill="#dc2626"/></g>
+      </g>
+    
+
+      <g id="book-page-2" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="146" fill="#e0f2fe"/>
+        <rect x="36" y="206" width="728" height="78" fill="#86efac"/>
+        <!-- Mud puddle -->
+        <ellipse cx="470" cy="248" rx="150" ry="24" fill="#78350f"/>
+        <ellipse cx="470" cy="246" rx="115" ry="15" fill="#92400e"/>
+        <!-- Yellow Duck in mud -->
+        <ellipse cx="485" cy="222" rx="34" ry="22" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+        <circle cx="514" cy="196" r="18" fill="#facc15" stroke="#ca8a04" stroke-width="2"/>
+        <polygon points="530,194 550,200 530,206" fill="#f97316"/>
+        <circle cx="520" cy="192" r="2.8" fill="#0f172a"/>
+        <!-- Muddy red dog peering -->
+        <ellipse cx="280" cy="212" rx="48" ry="24" fill="#dc2626"/>
+        <circle cx="328" cy="190" r="20" fill="#dc2626"/>
+        <circle cx="335" cy="186" r="3" fill="#0f172a"/>
+        <circle cx="348" cy="192" r="4" fill="#0f172a"/>
+        <circle cx="290" cy="220" r="7" fill="#78350f"/>
+        <circle cx="310" cy="212" r="5" fill="#78350f"/>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
+          <rect x="73" y="290" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="98" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
+        </g>
+      
+        <g class="book-word" data-word="duck" data-hint="d · u · ck  ➔  duck" data-phonemes="duh, uh, kuh ... duck" style="cursor:pointer;">
+          <rect x="135" y="290" width="91" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="180.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">duck</text>
+        </g>
+      
+        <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
+          <rect x="238" y="290" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="265.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
+        </g>
+      
+        <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
+          <rect x="305" y="290" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="332.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
+        </g>
+      
+        <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
+          <rect x="372" y="290" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="408" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
+        </g>
+      
+        <g class="book-word" data-word="mud" data-hint="m · u · d  ➔  mud" data-phonemes="mmm, uh, duh ... mud" style="cursor:pointer;">
+          <rect x="456" y="290" width="91" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="501.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">mud.</text>
+        </g>
+      
+        <g class="book-word" data-word="No" data-hint="♥ No — Tricky Word: The &quot;o&quot; makes an open long /oh/ sound." data-phonemes="No. Tricky word. No" style="cursor:pointer;">
+          <rect x="559" y="290" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="595" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">No,</text>
+        </g>
+      
+        <g class="book-word" data-word="dog" data-hint="d · o · g  ➔  dog" data-phonemes="duh, off, guh ... dog" style="cursor:pointer;">
+          <rect x="643" y="290" width="84" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="685" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dog,</text>
+        </g>
+      
+        <g class="book-word" data-word="no" data-hint="♥ no — Tricky Word: The &quot;o&quot; makes an open long /oh/ sound." data-phonemes="no. Tricky word. no" style="cursor:pointer;">
+          <rect x="366" y="340" width="69" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="400.5" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">no!</text>
+        </g>
+      
+        <g id="sb-page-2" pointer-events="none"><circle cx="98.0" cy="326" r="3.4" fill="#dc2626"/><circle cx="158.3" cy="326" r="3.4" fill="#dc2626"/><circle cx="173.1" cy="326" r="3.4" fill="#dc2626"/><rect x="182.3" y="323.6" width="26.1" height="4.8" rx="2.4" fill="#dc2626"/><circle cx="258.1" cy="326" r="3.4" fill="#dc2626"/><circle cx="269.8" cy="326" r="3.4" fill="#dc2626"/><circle cx="325.1" cy="326" r="3.4" fill="#dc2626"/><circle cx="336.8" cy="326" r="3.4" fill="#dc2626"/>
+          <line x1="385.9" y1="326" x2="430.1" y2="326" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="408.0" y="327" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="482.9" cy="326" r="3.4" fill="#dc2626"/><circle cx="501.1" cy="326" r="3.4" fill="#dc2626"/><circle cx="515.9" cy="326" r="3.4" fill="#dc2626"/>
+          <line x1="573.1" y1="326" x2="609.4" y2="326" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="591.3" y="327" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="666.4" cy="326" r="3.4" fill="#dc2626"/><circle cx="681.2" cy="326" r="3.4" fill="#dc2626"/><circle cx="696.0" cy="326" r="3.4" fill="#dc2626"/>
+          <line x1="379.9" y1="376" x2="413.6" y2="376" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="396.8" y="377" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        </g>
+      </g>
+    
+
+      <g id="book-page-3" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#ecfeff"/>
+        <rect x="36" y="226" width="728" height="58" fill="#cbd5e1"/>
+        <!-- White Bath Tub -->
+        <path d="M 270 184 L 530 184 L 508 254 Q 504 264 490 264 L 310 264 Q 296 264 292 254 Z" fill="#ffffff" stroke="#64748b" stroke-width="3.5"/>
+        <rect x="260" y="174" width="280" height="14" rx="7" fill="#f8fafc" stroke="#64748b" stroke-width="3"/>
+        <!-- Red dog head poking out of bubbles -->
+        <circle cx="400" cy="148" r="26" fill="#dc2626"/>
+        <ellipse cx="378" cy="154" rx="9" ry="18" fill="#991b1b"/>
+        <ellipse cx="422" cy="154" rx="9" ry="18" fill="#991b1b"/>
+        <circle cx="390" cy="144" r="3.2" fill="#0f172a"/>
+        <circle cx="410" cy="144" r="3.2" fill="#0f172a"/>
+        <circle cx="400" cy="156" r="5" fill="#0f172a"/>
+        <!-- Bubbles -->
+        <g id="anim-bubbles-3" fill="#e0f2fe" stroke="#38bdf8" stroke-width="2">
+          <circle cx="315" cy="174" r="16"/>
+          <circle cx="350" cy="170" r="20"/>
+          <circle cx="445" cy="172" r="19"/>
+          <circle cx="485" cy="176" r="15"/>
+          <circle cx="340" cy="118" r="9"/>
+          <circle cx="460" cy="108" r="12"/>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="Go" data-hint="♥ Go — Tricky Word: The &quot;o&quot; makes a long /oh/ sound instead of short /o/." data-phonemes="Go. Tricky word. Go" style="cursor:pointer;">
+          <rect x="144" y="308" width="64" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="176" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">Go</text>
+        </g>
+      
+        <g class="book-word" data-word="into" data-hint="♥ into — Tricky Word: Two small words together: in + to (/too/)." data-phonemes="into. Tricky word. into" style="cursor:pointer;">
+          <rect x="220" y="308" width="81" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="260.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">into</text>
+        </g>
+      
+        <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
+          <rect x="313" y="308" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="349" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
+        </g>
+      
+        <g class="book-word" data-word="tub" data-hint="t · u · b  ➔  tub" data-phonemes="tuh, uh, buh ... tub" style="cursor:pointer;">
+          <rect x="397" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="437" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tub,</text>
+        </g>
+      
+        <g class="book-word" data-word="red" data-hint="r · e · d  ➔  red" data-phonemes="rrr, eh, duh ... red" style="cursor:pointer;">
+          <rect x="489" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="525" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">red</text>
+        </g>
+      
+        <g class="book-word" data-word="dog" data-hint="d · o · g  ➔  dog" data-phonemes="duh, off, guh ... dog" style="cursor:pointer;">
+          <rect x="573" y="308" width="84" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="615" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dog!</text>
+        </g>
+      
+        <g id="sb-page-3" pointer-events="none">
+          <line x1="157.8" y1="344" x2="194.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="176.0" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        
+          <line x1="234.2" y1="344" x2="286.8" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="260.5" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        
+          <line x1="326.9" y1="344" x2="371.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="349.0" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="418.4" cy="344" r="3.4" fill="#dc2626"/><circle cx="431.1" cy="344" r="3.4" fill="#dc2626"/><circle cx="445.9" cy="344" r="3.4" fill="#dc2626"/><circle cx="510.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="522.9" cy="344" r="3.4" fill="#dc2626"/><circle cx="537.6" cy="344" r="3.4" fill="#dc2626"/><circle cx="596.4" cy="344" r="3.4" fill="#dc2626"/><circle cx="611.2" cy="344" r="3.4" fill="#dc2626"/><circle cx="626.0" cy="344" r="3.4" fill="#dc2626"/></g>
+      </g>
+    
+
+      <g id="book-page-4" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#fefce8"/>
+        <rect x="36" y="224" width="728" height="60" fill="#fde68a"/>
+        <!-- Cozy Dog Bed -->
+        <ellipse cx="400" cy="242" rx="145" ry="28" fill="#1d4ed8"/>
+        <ellipse cx="400" cy="236" rx="115" ry="18" fill="#93c5fd"/>
+        <!-- Happy clean Red Dog wearing red hat -->
+        <ellipse cx="400" cy="206" rx="52" ry="26" fill="#dc2626"/>
+        <circle cx="400" cy="166" r="26" fill="#dc2626"/>
+        <ellipse cx="376" cy="172" rx="9" ry="18" fill="#991b1b"/>
+        <ellipse cx="424" cy="172" rx="9" ry="18" fill="#991b1b"/>
+        <circle cx="390" cy="164" r="3.2" fill="#0f172a"/>
+        <circle cx="410" cy="164" r="3.2" fill="#0f172a"/>
+        <circle cx="400" cy="174" r="5" fill="#0f172a"/>
+        <!-- Stylish Red Hat -->
+        <rect x="366" y="138" width="68" height="8" rx="4" fill="#b91c1c"/>
+        <path d="M 380 138 L 386 112 L 414 112 L 420 138 Z" fill="#ef4444" stroke="#991b1b" stroke-width="2"/>
+        <rect x="382" y="130" width="36" height="6" fill="#fde047"/>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="The" data-hint="♥ The — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="The. Tricky word. The" style="cursor:pointer;">
+          <rect x="59" y="290" width="79" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="98.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">The</text>
+        </g>
+      
+        <g class="book-word" data-word="dog" data-hint="d · o · g  ➔  dog" data-phonemes="duh, off, guh ... dog" style="cursor:pointer;">
+          <rect x="150" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="188" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">dog</text>
+        </g>
+      
+        <g class="book-word" data-word="sat" data-hint="s · a · t  ➔  sat" data-phonemes="ssss, ah, tuh ... sat" style="cursor:pointer;">
+          <rect x="238" y="290" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="274" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sat</text>
+        </g>
+      
+        <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
+          <rect x="322" y="290" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="353" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="396" y="290" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="419.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="bed" data-hint="b · e · d  ➔  bed" data-phonemes="buh, eh, duh ... bed" style="cursor:pointer;">
+          <rect x="455" y="290" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="493" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">bed</text>
+        </g>
+      
+        <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
+          <rect x="543" y="290" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="570.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="610" y="290" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="633.5" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="red" data-hint="r · e · d  ➔  red" data-phonemes="rrr, eh, duh ... red" style="cursor:pointer;">
+          <rect x="669" y="290" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="705" y="318" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">red</text>
+        </g>
+      
+        <g class="book-word" data-word="hat" data-hint="h · a · t  ➔  hat" data-phonemes="huh, ah, tuh ... hat" style="cursor:pointer;">
+          <rect x="360" y="340" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="400" y="368" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">hat.</text>
+        </g>
+      
+        <g id="sb-page-4" pointer-events="none">
+          <line x1="73.0" y1="326" x2="124.0" y2="326" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="98.5" y="327" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="173.2" cy="326" r="3.4" fill="#dc2626"/><circle cx="188.0" cy="326" r="3.4" fill="#dc2626"/><circle cx="202.8" cy="326" r="3.4" fill="#dc2626"/><circle cx="261.4" cy="326" r="3.4" fill="#dc2626"/><circle cx="276.1" cy="326" r="3.4" fill="#dc2626"/><circle cx="288.8" cy="326" r="3.4" fill="#dc2626"/><circle cx="345.6" cy="326" r="3.4" fill="#dc2626"/><circle cx="360.4" cy="326" r="3.4" fill="#dc2626"/><circle cx="419.5" cy="326" r="3.4" fill="#dc2626"/><circle cx="478.2" cy="326" r="3.4" fill="#dc2626"/><circle cx="493.0" cy="326" r="3.4" fill="#dc2626"/><circle cx="507.8" cy="326" r="3.4" fill="#dc2626"/><circle cx="563.1" cy="326" r="3.4" fill="#dc2626"/><circle cx="574.8" cy="326" r="3.4" fill="#dc2626"/><circle cx="633.5" cy="326" r="3.4" fill="#dc2626"/><circle cx="690.2" cy="326" r="3.4" fill="#dc2626"/><circle cx="702.9" cy="326" r="3.4" fill="#dc2626"/><circle cx="717.6" cy="326" r="3.4" fill="#dc2626"/><circle cx="383.6" cy="376" r="3.4" fill="#dc2626"/><circle cx="398.4" cy="376" r="3.4" fill="#dc2626"/><circle cx="411.1" cy="376" r="3.4" fill="#dc2626"/></g>
+      </g>
+    
+
+  <!-- Bottom Interactive Word Decoder & Page Navigation Bar -->
+  <line x1="36" y1="406" x2="764" y2="406" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Word Decoder Helper Box -->
+  <rect x="36" y="418" width="388" height="48" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text id="decoder-hint-txt" x="52" y="447" font-size="14" font-weight="700" fill="#334155">Tap any word above to see &amp; hear its sounds</text>
+
+  <!-- Sound Out Pure Phonemes Button -->
+  <g id="btn-sound-out" style="cursor:pointer;">
+    <rect x="434" y="418" width="110" height="48" rx="12" fill="#dc2626"/>
+    <text x="489" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
+  </g>
+
+  <!-- Page Navigation -->
+  <g id="btn-prev-page" style="cursor:pointer;">
+    <rect x="554" y="422" width="58" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="583" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
+  </g>
+
+  <circle id="page-dot-0" class="page-dot" data-page="0" cx="626" cy="442" r="5.5" fill="#dc2626" style="cursor:pointer;"/>
+      <circle id="page-dot-1" class="page-dot" data-page="1" cx="642" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-2" class="page-dot" data-page="2" cx="658" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-3" class="page-dot" data-page="3" cx="674" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-4" class="page-dot" data-page="4" cx="690" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+
+  <g id="btn-next-page" style="cursor:pointer;">
+    <rect x="706" y="422" width="58" height="40" rx="10" fill="#0f172a"/>
+    <text x="735" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
+  </g>
+</svg>

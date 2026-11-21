@@ -1,0 +1,49 @@
+(:cartridge :type :data :id "oak-data-phonics-screening" :title "Phonics, Digraphs & Alien Words" :stage "Key Stage 1" :subject "English" :unit "Phonics & Simple Sentences"
+  (:axiom "Spoken English words are constructed from individual sound units (phonemes) represented by letters or letter groups (graphemes) decoded through synthetic blending.")
+  (:trap "Guessing whole words from initial letters or shapes rather than decoding grapheme-phoneme correspondences sequentially.")
+  (:socratic-pivot "Can you sound out each phoneme button individually before blending them into the whole word?")
+  (:hook "Helping friendly alien monsters decode alien words before launching their spaceship.")
+  (:guided-step "Identify single letters, digraphs, and trigraphs, press the sound buttons, then blend left to right.")
+  (:questions (
+    (:q :id "ph-1" :prompt "In the word \"ship\", how many distinct phonemes (speech sounds) can you hear when sounding it out?"
+        :options ("3 phonemes: /sh/ - /i/ - /p/" "4 phonemes: /s/ - /h/ - /i/ - /p/" "2 phonemes: /shi/ - /p/" "1 phoneme: /ship/")
+        :answer 0
+        :tier "recall"
+        :hint "The letters \"s\" and \"h\" combine into a consonant digraph making one single sound."
+        :explanation "\"sh\" is a digraph representing one single phoneme /sh/. Together with /i/ and /p/, \"ship\" contains exactly 3 phonemes: /sh/-/i/-/p/."
+        :misconceptions ("Correct! \"sh\" forms a single digraph phoneme, giving 3 sounds in total." "Misconception: Counting individual letters rather than phonemes (sounds). \"sh\" is two letters but one sound." "Misconception: Grouping /sh/ and /i/ together instead of separating the vowel." "Misconception: Hearing the whole word without segmenting into individual phonemes.")
+    )
+    (:q :id "ph-2" :prompt "Which of the following is a pseudo-word (\"alien word\") used to test pure phonetic decoding without sight memory?"
+        :options ("plog" "frog" "flag" "plug")
+        :answer 0
+        :tier "application"
+        :hint "An alien word follows real English phonics rules but has no real meaning in the dictionary."
+        :explanation "\"plog\" is a valid decodable non-word (/p/-/l/-/o/-/g/). It tests whether a child can apply grapheme-phoneme correspondences without relying on memorised vocabulary."
+        :misconceptions ("Correct! \"plog\" is a pseudo-word used in the Year 1 Phonics Screening Check." "Misconception: \"frog\" is a real English noun for an amphibian." "Misconception: \"flag\" is a real English noun." "Misconception: \"plug\" is a real English word.")
+    )
+    (:q :id "ph-3" :prompt "Which vowel digraph correctly completes the word \"r _ _ n\" for water falling from clouds?"
+        :options ("ai (rain)" "ee (reen)" "oa (roan)" "oo (roon)")
+        :answer 0
+        :tier "recall"
+        :hint "Think of the /eɪ/ sound found in snail, train, and paint."
+        :explanation "The vowel sound /eɪ/ in the middle of words is commonly spelled with the digraph \"ai\", spelling \"rain\"."
+        :misconceptions ("Correct! \"ai\" produces the long /eɪ/ vowel sound in \"rain\"." "Misconception: \"ee\" produces the long /iː/ vowel sound (as in tree)." "Misconception: \"oa\" produces the /oʊ/ sound (as in boat)." "Misconception: \"oo\" produces /uː/ or /ʊ/ (as in moon or book).")
+    )
+    (:q :id "ph-4" :prompt "What type of grapheme is \"igh\" in the word \"night\"?"
+        :options ("A trigraph (three letters making one sound)" "A split digraph" "A consonant cluster" "A silent letter")
+        :answer 0
+        :tier "recall"
+        :hint "Count how many letters work together to create the single /aɪ/ vowel sound."
+        :explanation "A trigraph is a group of three letters that represent a single phoneme. In \"night\", the letters i-g-h represent the single vowel phoneme /aɪ/."
+        :misconceptions ("Correct! \"igh\" is a trigraph because three letters produce one vowel sound." "Misconception: A split digraph has a consonant separating the vowels (e.g. \"a-e\" in cake)." "Misconception: \"igh\" contains vowels and consonants forming a vowel phoneme, not a consonant cluster." "Misconception: The letters \"gh\" are part of the trigraph, not an isolated silent artifact.")
+    )
+    (:q :id "ph-5" :prompt "When blending the split digraph in the word \"b-i-k-e\", which sound does the \"i-e\" make?"
+        :options ("Long /aɪ/ sound (like in \"pie\" or \"time\")" "Short /ɪ/ sound (like in \"pin\" or \"sit\")" "Long /iː/ sound (like in \"bee\")" "Short /e/ sound (like in \"bed\")")
+        :answer 0
+        :tier "application"
+        :hint "The magic \"e\" at the end tells the preceding vowel to say its name."
+        :explanation "The split digraph \"i-e\" modifies the vowel so it produces the long vowel sound /aɪ/, making /b/-/aɪ/-/k/ (\"bike\")."
+        :misconceptions ("Correct! The split digraph \"i-e\" produces the long /aɪ/ phoneme." "Misconception: Without the final \"e\", the word would be \"bik\" with a short /ɪ/ sound." "Misconception: /iː/ is spelled with \"ee\" or \"ea\"." "Misconception: /e/ is spelled with \"e\" as in \"bed\".")
+    )
+  ))
+)

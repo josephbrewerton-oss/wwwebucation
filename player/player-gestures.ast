@@ -1,0 +1,104 @@
+(:player-gestures
+  :id "stj-player-gestures"
+  :version "1.0"
+  :stage-space (:width 800 :height 480)
+
+  ;; 1. Default Feature Switches (Overridable per cartridge via (:controls ...))
+  (:defaults
+    (:arrow-step :on)
+    (:num-jump   :on)
+    (:scrub      :on)
+    (:space-play :on)
+    (:quiz-keys  :on)
+    (:whiteboard :on)
+    (:xray       :on)
+    (:audio      :on)
+    (:param-hud  :on))
+
+  ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
+  ;; Zero-JS declarative actions handled natively by site-gestures.js so Nano can reason in pure AST.
+  (:primitives
+    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "navigate" "load-cartridge" "toggle-bsl" "toggle-sound" "open-tutor" "set-render-mode" "site-directive" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak"))
+    (:primitive :type "holdable"  :actions ("hold-var" "step-var") :hold-delay-ms 160)
+    (:primitive :type "draggable" :axes ("x" "y" "xy") :modes ("generic" "bind-input") :attrs ("minX" "maxX" "minY" "maxY" "step" "invert" "relative" "seek" "tone"))
+    (:primitive :type "rotatable" :attrs ("cx" "cy" "var"))
+    (:primitive :type "trackball" :attrs ("yawVar" "pitchVar" "pitchMin" "pitchMax") :default-pitch-min -65 :default-pitch-max 65)
+    (:primitive :type "key"       :attrs ("code" "key" "action" "delta" "count" "var" "route" "preset" "prompt" "set-var" "toggle-var" "step-var" "hold-var" "clear-var" "reset-var" "reset-val" "rate" "tone" "speak" "speak-var")))
+
+  ;; 3. Universal Keyboard & Switch Navigation Rules (Inherited by all cartridges)
+  (:universal-keys
+    ;; Slide / Stepped Variable Navigation (targets first :var with :step 1 when :arrow-step is :on)
+    (:key :code "ArrowRight" :switch :arrow-step :action "step-primary-var" :delta 1  :tone 440)
+    (:key :code "PageDown"   :switch :arrow-step :action "step-primary-var" :delta 1  :tone 440)
+    (:key :code "ArrowLeft"  :switch :arrow-step :action "step-primary-var" :delta -1 :tone 440)
+    (:key :code "PageUp"     :switch :arrow-step :action "step-primary-var" :delta -1 :tone 440)
+    (:key :code "Home"       :switch :arrow-step :action "jump-primary-min" :tone 523)
+    (:key :code "End"        :switch :arrow-step :action "jump-primary-max" :tone 523)
+
+    ;; Direct 1-9 Tab / Slide Jumps (when :num-jump is :on)
+    (:key :code "Digit1" :switch :num-jump :action "set-primary-var" :val 1 :tone 440)
+    (:key :code "Digit2" :switch :num-jump :action "set-primary-var" :val 2 :tone 440)
+    (:key :code "Digit3" :switch :num-jump :action "set-primary-var" :val 3 :tone 440)
+    (:key :code "Digit4" :switch :num-jump :action "set-primary-var" :val 4 :tone 440)
+    (:key :code "Digit5" :switch :num-jump :action "set-primary-var" :val 5 :tone 440)
+    (:key :code "Digit6" :switch :num-jump :action "set-primary-var" :val 6 :tone 440)
+    (:key :code "Digit7" :switch :num-jump :action "set-primary-var" :val 7 :tone 440)
+    (:key :code "Digit8" :switch :num-jump :action "set-primary-var" :val 8 :tone 440)
+    (:key :code "Digit9" :switch :num-jump :action "set-primary-var" :val 9 :tone 440)
+
+    ;; Timeline Playback & Whiteboard Shortcuts
+    (:key :code "Space" :switch :space-play :action "toggle-play")
+    (:key :key  "w"     :switch :whiteboard :action "toggle-pen"))
+
+  ;; 4. Smartboard Whiteboard Ink Tools & Palette Defaults
+  (:whiteboard
+    (:tools
+      (:tool :id "pen"         :icon "✏️" :width 3.5  :opacity 1.0  :cap "round")
+      (:tool :id "marker"      :icon "🖍️" :width 6.0  :opacity 0.92 :cap "round")
+      (:tool :id "highlighter" :icon "✨" :width 12.0 :opacity 0.45 :cap "square" :blend "multiply")
+      (:tool :id "eraser"      :icon "🧽" :width 24.0 :min-radius 16))
+    (:widths (2.5 5.5 11.0))
+    (:palette
+      (:color :name "Gold"     :hex "#facc15")
+      (:color :name "Cyan"     :hex "#38bdf8")
+      (:color :name "Green"    :hex "#4ade80")
+      (:color :name "Red"      :hex "#f43f5e")
+      (:color :name "Purple"   :hex "#c084fc")
+      (:color :name "White"    :hex "#ffffff")
+      (:color :name "Charcoal" :hex "#0f172a")))
+
+  ;; 5. Procedural WebAudio Sonification Defaults
+  (:sonification
+    (:tone :event "click"   :freq 520 :wave "sine"     :duration 0.04 :gain 0.10)
+    (:tone :event "key"     :freq 440 :wave "triangle" :duration 0.04 :gain 0.12)
+    (:tone :event "grab"    :freq 380 :wave "triangle" :duration 0.06 :gain 0.15)
+    (:tone :event "release" :freq 440 :wave "sine"     :duration 0.05 :gain 0.15)
+    (:tone :event "erase"   :freq 220 :wave "sine"     :duration 0.04 :gain 0.15)
+    (:tone :event "undo"    :freq 330 :wave "sine"     :duration 0.05 :gain 0.15)
+    (:tone :event "redo"    :freq 523 :wave "sine"     :duration 0.05 :gain 0.15))
+
+  ;; 6. Declarative Reusable Player Skills (Activated by any cartridge via (:use-skill "<id>" ...))
+  ;; 100% pure AST intent — ZERO inline JavaScript. site-gestures.js executes every action
+  ;; natively so Gemini Nano can read, reason about, and author skills/cartridges cleanly.
+  (:skills
+    (:skill :id "storybook-reader"
+      :pages 5
+      :sync-timeline-var "page"
+      :sync-count "{{pages}}"
+      :sync-clear-var "activePhonemes"
+      :sync-reset-var "activeWord"
+      :sync-reset-val "{{hintDefault}}"
+      :hint-default "Tap any word above to see & hear its sounds"
+      (:controls (:param-hud :off))
+      (:gestures
+        (:key       :code "ArrowLeft"      :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:key       :code "ArrowRight"     :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target "#btn-prev-page" :action "step-slide" :delta -1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "392")
+        (:clickable :target "#btn-next-page" :action "step-slide" :delta  1 :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "523.25")
+        (:clickable :target ".page-dot"    :action "goto-slide" :attr "data-page" :count "{{pages}}" :var "page" :clear-var "activePhonemes" :reset-var "activeWord" :reset-val "{{hintDefault}}" :tone "440")
+        (:clickable :target "#btn-toggle-sb" :toggle-var "showButtons" :tone "493.88")
+        (:clickable :target "#btn-read-page" :speak-var "pageText" :tone "523.25,659.25")
+        (:clickable :target ".book-word"   :set-var "activeWord" :from-attr "data-hint" :speak-attr "data-word" :tone "523.25")
+        (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
+        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25"))))
+)

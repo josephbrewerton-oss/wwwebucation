@@ -1,0 +1,33 @@
+(:cartridge :type :data :id "oak-data-re-nicene-creed" :title "The Nicene Creed & Trinity" :stage "Key Stage 2" :subject "Religious Education (Catholic)" :unit "The Nicene Creed & Trinity"
+  (:axiom "The central Christian mystery is the Most Holy Trinity: one God in three distinct Divine Persons (Father, Son, and Holy Spirit), co-equal, co-eternal, and of one substance (consubstantial).")
+  (:trap "Modalism (believing God merely wears 3 different masks), or Tritheism (believing in 3 separate gods).")
+  (:socratic-pivot "Why does the Nicene Creed say Jesus is \"consubstantial with the Father\" (of the same divine essence)?")
+  (:hook "Standing every Sunday at Mass to recite the ancient 1,700-year-old Creed formulated at the Council of Nicaea (AD 325).")
+  (:guided-step "Trace the four marks of the Church (One, Holy, Catholic, and Apostolic) and the Trinitarian confession of faith.")
+  (:questions (
+    (:q :id "creed-1" :prompt "What does the Catholic dogma of the Holy Trinity profess?"
+        :options ("There is one God in three co-equal Divine Persons: Father, Son, and Holy Spirit" "There are three separate gods who take turns ruling the universe" "God is one person who transforms into three different characters over time" "The Father created the Son as an angel, who then created the Holy Spirit")
+        :answer 0
+        :tier "recall"
+        :hint "We baptise in the singular \"name\" of the Father, and of the Son, and of the Holy Spirit."
+        :explanation "The Catholic Church professes monotheism: one divine nature subsisting in three distinct persons—the Father, the Son, and the Holy Spirit—who are co-eternal and co-equal (CCC 253-255)."
+        :misconceptions ("Correct! The Holy Trinity is One God in Three Divine Persons." "Misconception: Polytheism / Tritheism contradicts Christian monotheism." "Misconception: Modalism (Sabellianism) falsely claims God is one person wearing different masks." "Misconception: Arianism falsely claimed the Son was a created being rather than God.")
+    )
+    (:q :id "creed-2" :prompt "In the Nicene Creed, what does the Greek theological term \"consubstantial\" (homoousios) mean regarding Jesus Christ and the Father?"
+        :options ("Jesus is of the exact same divine substance and essence as God the Father" "Jesus was a very good human teacher who became God as a reward" "Jesus and the Father have completely opposite wills and desires" "Jesus is an illusion that merely appeared human")
+        :answer 0
+        :tier "analysis"
+        :hint "The Council of Nicaea in AD 325 affirmed \"God from God, Light from Light, true God from true God, consubstantial with the Father\"."
+        :explanation "\"Consubstantial\" (Latin: consubstantialis; Greek: homoousios) means of the same being or substance. Jesus is fully and truly God, possessing the identical divine nature as the Father."
+        :misconceptions ("Correct! Consubstantial means sharing the identical divine essence with the Father." "Misconception: Adoptionism falsely claimed Jesus was an ordinary man adopted by God." "Misconception: The Trinity possesses one united divine will and nature." "Misconception: Docetism falsely claimed Christ's humanity was merely an optical illusion.")
+    )
+    (:q :id "creed-3" :prompt "What are the four essential marks of the Church professed in the Nicene Creed?"
+        :options ("One, Holy, Catholic, and Apostolic" "Rich, Powerful, Famous, and Ancient" "English, Latin, Greek, and Hebrew" "Baptised, Confirmed, Married, and Ordained")
+        :answer 0
+        :tier "recall"
+        :hint "\"I believe in one, holy, catholic and apostolic Church...\""
+        :explanation "The four marks of the Church are One (unity in Christ), Holy (sanctified by the Holy Spirit), Catholic (universal and complete across all nations), and Apostolic (founded on the apostles and their successors)."
+        :misconceptions ("Correct! The four marks are One, Holy, Catholic, and Apostolic." "Misconception: Material power and wealth are worldly qualities, not marks of the Church." "Misconception: These are liturgical and historical languages, not marks of the Church." "Misconception: These are sacraments, not marks of the Church.")
+    )
+  ))
+)

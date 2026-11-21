@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 650" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Canvas Background -->
+  <rect width="1000" height="650" fill="url(#bgGrad)"/>
+  
+  <!-- Header Banner -->
+  <g transform="translate(50, 40)">
+    <text x="0" y="30" fill="#38bdf8" font-family="system-ui, sans-serif" font-size="28" font-weight="700" letter-spacing="1">PHYSICS KNOWLEDGE APPARATUS</text>
+    <text x="0" y="58" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="14">Canonical AST Substrate • Core Physical Conservation Laws</text>
+  </g>
+
+  <!-- Node 1: Boyle's Law P1V1 = P2V2 -->
+  <g id="node-boyle" transform="translate(50, 120)">
+    <rect width="280" height="460" rx="16" fill="url(#cardGrad)" stroke="#0284c7" stroke-width="2"/>
+    <rect x="20" y="20" width="80" height="26" rx="6" fill="#0369a1"/>
+    <text x="32" y="38" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12" font-weight="700">PHYS-01</text>
+    <text x="20" y="80" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="20" font-weight="700">Boyle's Law</text>
+    <text x="20" y="105" fill="#38bdf8" font-family="system-ui, sans-serif" font-size="16" font-weight="600">P₁V₁ = P₂V₂</text>
+    <text x="20" y="135" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13" width="240">
+      <tspan x="20" dy="0">At constant temperature,</tspan>
+      <tspan x="20" dy="20">pressure is inversely</tspan>
+      <tspan x="20" dy="20">proportional to volume.</tspan>
+    </text>
+
+    <!-- Schematic Cylinder -->
+    <g id="piston" transform="translate(40, 230)">
+      <rect x="0" y="0" width="200" height="180" rx="8" fill="#0f172a" stroke="#38bdf8" stroke-width="2"/>
+      <rect id="piston-head" x="10" y="60" width="180" height="20" rx="4" fill="#38bdf8" filter="url(#glow)"/>
+      <line x1="100" y1="0" x2="100" y2="60" stroke="#7dd3fc" stroke-width="6"/>
+      <!-- Gas particles -->
+      <circle cx="50" cy="110" r="5" fill="#f43f5e"/>
+      <circle cx="90" cy="140" r="5" fill="#f43f5e"/>
+      <circle cx="150" cy="120" r="5" fill="#f43f5e"/>
+      <circle cx="120" cy="95" r="5" fill="#f43f5e"/>
+      <circle cx="70" cy="155" r="5" fill="#f43f5e"/>
+      <circle cx="160" cy="160" r="5" fill="#f43f5e"/>
+    </g>
+  </g>
+
+  <!-- Node 2: Hooke's Law F = kx -->
+  <g id="node-hooke" transform="translate(360, 120)">
+    <rect width="280" height="460" rx="16" fill="url(#cardGrad)" stroke="#10b981" stroke-width="2"/>
+    <rect x="20" y="20" width="80" height="26" rx="6" fill="#059669"/>
+    <text x="32" y="38" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12" font-weight="700">PHYS-02</text>
+    <text x="20" y="80" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="20" font-weight="700">Hooke's Law</text>
+    <text x="20" y="105" fill="#34d399" font-family="system-ui, sans-serif" font-size="16" font-weight="600">F = k · x</text>
+    <text x="20" y="135" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13">
+      <tspan x="20" dy="0">Extension of a spring</tspan>
+      <tspan x="20" dy="20">is directly proportional</tspan>
+      <tspan x="20" dy="20">to the tensile force applied.</tspan>
+    </text>
+
+    <!-- Schematic Spring -->
+    <g id="spring" transform="translate(50, 230)">
+      <line x1="20" y1="20" x2="160" y2="20" stroke="#64748b" stroke-width="4"/>
+      <path d="M 90 20 L 90 50 Q 120 60 90 70 Q 60 80 90 90 Q 120 100 90 110 Q 60 120 90 130 L 90 150" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round"/>
+      <rect x="70" y="150" width="40" height="35" rx="4" fill="#059669" stroke="#10b981" stroke-width="2"/>
+      <text x="82" y="173" fill="#ffffff" font-family="system-ui, sans-serif" font-size="14" font-weight="700">10N</text>
+    </g>
+  </g>
+
+  <!-- Node 3: Ohm's Law V = IR -->
+  <g id="node-ohm" transform="translate(670, 120)">
+    <rect width="280" height="460" rx="16" fill="url(#cardGrad)" stroke="#f59e0b" stroke-width="2"/>
+    <rect x="20" y="20" width="80" height="26" rx="6" fill="#d97706"/>
+    <text x="32" y="38" fill="#ffffff" font-family="system-ui, sans-serif" font-size="12" font-weight="700">PHYS-03</text>
+    <text x="20" y="80" fill="#f8fafc" font-family="system-ui, sans-serif" font-size="20" font-weight="700">Ohm's Law</text>
+    <text x="20" y="105" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="16" font-weight="600">V = I · R</text>
+    <text x="20" y="135" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13">
+      <tspan x="20" dy="0">Current through a</tspan>
+      <tspan x="20" dy="20">conductor is directly</tspan>
+      <tspan x="20" dy="20">proportional to voltage.</tspan>
+    </text>
+
+    <!-- Schematic Resistor -->
+    <g id="circuit-resistor" transform="translate(40, 230)">
+      <rect x="0" y="0" width="200" height="180" rx="8" fill="#0f172a" stroke="#d97706" stroke-width="2"/>
+      <path d="M 20 90 L 50 90 L 60 70 L 80 110 L 100 70 L 120 110 L 140 70 L 150 90 L 180 90" fill="none" stroke="#fbbf24" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="75" y="55" fill="#fbbf24" font-family="system-ui, sans-serif" font-size="16" font-weight="700">R = 4 Ω</text>
+      <text x="70" y="145" fill="#94a3b8" font-family="system-ui, sans-serif" font-size="13">I = 12V / 4Ω = 3A</text>
+    </g>
+  </g>
+</svg>

@@ -1,0 +1,57 @@
+(:cartridge :type :data :id "oak-data-states-of-matter" :title "States of Matter & Particle Theory" :stage "Key Stage 2" :subject "Science" :unit "States of Matter"
+  (:axiom "Matter consists of particles in continuous motion; thermal energy transfers alter physical state without changing chemical identity.")
+  (:trap "Believing that gases have zero mass, or confusing boiling with smoke.")
+  (:socratic-pivot "What happens to the spacing and speed of particles when thermal energy is transferred to a solid?")
+  (:hook "Why does an ice lolly melt in the summer sun, but puddle water disappears without boiling?")
+  (:guided-step "Trace particle kinetic velocity and intermolecular bonding across solid, liquid, and gas phases.")
+  (:questions (
+    (:q :id "som-1" :prompt "Why does liquid water take the shape of its container, whereas ice retains a rigid fixed shape?"
+        :options ("Water particles can slide past each other, while ice particles are fixed in a vibrating lattice" "Ice particles are completely motionless with zero kinetic energy" "Water molecules are physically smaller and lighter than ice molecules" "Ice particles are held together by gravitational pull rather than chemical bonds")
+        :answer 0
+        :tier "application"
+        :hint "Think about whether the particles are locked in place or free to move around one another."
+        :explanation "In a solid (ice), particles vibrate in fixed positions within a rigid lattice. In a liquid (water), particles have enough kinetic energy to slide past each other while remaining in contact."
+        :misconceptions ("Correct! Fluidity emerges from particles being able to slide past one another." "Misconception: Solid particles continuously vibrate at all temperatures above absolute zero (-273.15°C)." "Misconception: Ice and liquid water consist of identical H2O molecules with the same mass." "Misconception: Intermolecular forces, not gravity, hold microscopic particles together.")
+    )
+    (:q :id "som-2" :prompt "When water boils at 100°C in an open kettle, what happens to the bubbles that rise to the surface?"
+        :options ("They are gaseous water vapor (steam) produced by liquid water changing state" "They are trapped air bubbles that were dissolved in the cold water" "They are pure heat energy that has separated from the water" "They are pockets of hydrogen and oxygen gas broken into separate elements")
+        :answer 0
+        :tier "analysis"
+        :hint "A physical phase change does not split the water molecule into separate chemicals."
+        :explanation "Boiling is a bulk phase transition. The bubbles consist of gaseous water (steam) formed when liquid water turns into gas throughout the liquid."
+        :misconceptions ("Correct! Steam is water in its gaseous state." "Misconception: Dissolved air leaves during early heating; rapid continuous boiling bubbles are 100% water vapor." "Misconception: Heat is energy transfer, not a physical substance that forms bubbles." "Misconception: Boiling is a physical change, not chemical electrolysis.")
+    )
+    (:q :id "som-3" :prompt "If you place 100 grams of solid ice into a sealed, airtight container and allow it to melt completely into water, what will the total mass be?"
+        :options ("Exactly 100 grams, because mass is conserved during physical phase changes" "Less than 100 grams, because liquid water is denser than ice" "More than 100 grams, because the container warms up and adds thermal weight" "Zero grams, because solids lose all mass when they transition to liquid")
+        :answer 0
+        :tier "recall"
+        :hint "Recall the Law of Conservation of Mass in a closed system."
+        :explanation "In any closed system, the total mass remains constant during a physical change. The number of water particles remains identical."
+        :misconceptions ("Correct! The Law of Conservation of Mass applies across all phase changes." "Misconception: Density affects volume, not mass. 100g of ice becomes 100g of liquid water." "Misconception: Thermal energy does not add measurable mass in chemical or physical systems." "Misconception: Matter never loses mass simply by changing state.")
+    )
+    (:q :id "som-4" :prompt "Which process describes water vapor in the atmosphere turning directly into tiny liquid water droplets that form clouds?"
+        :options ("Condensation, where gas particles lose thermal energy and move closer together" "Evaporation, where liquid particles gain energy and escape into the air" "Precipitation, where water falls from clouds due to gravity" "Transpiration, where plants release water vapor through their stomata")
+        :answer 0
+        :tier "recall"
+        :hint "Think about the phase transition from gas back to liquid when cooling occurs."
+        :explanation "Condensation occurs when water vapor cools down, loses kinetic energy, and transitions into tiny liquid droplets that suspend in air as clouds."
+        :misconceptions ("Correct! Cooling causes water vapor to condense into liquid cloud droplets." "Misconception: Evaporation is the opposite phase change (liquid turning into gas)." "Misconception: Precipitation is the subsequent falling of rain, snow, or hail to the ground." "Misconception: Transpiration is biological release of vapor from plant leaves.")
+    )
+    (:q :id "som-5" :prompt "Why does an inflated balloon expand when placed in a warm room and shrink when placed in a cold freezer?"
+        :options ("Gas particles move faster and collide with greater force against the balloon walls when heated" "New gas particles are created inside the balloon by the ambient heat" "The rubber elastic naturally stretches more when cooled down" "Cold air destroys gas particles, reducing the internal particle count")
+        :answer 0
+        :tier "application"
+        :hint "Think about kinetic particle theory and how temperature relates to particle speed and collisions."
+        :explanation "According to kinetic gas theory, temperature is a measure of average particle kinetic energy. Heating causes gas particles to move faster and collide harder, exerting outward pressure."
+        :misconceptions ("Correct! Increased particle kinetic velocity generates higher internal pressure, expanding the balloon." "Misconception: Thermal energy cannot create matter or generate new particles in a sealed balloon." "Misconception: Rubber contracts slightly when cooled, but the primary driver is internal gas pressure change." "Misconception: Particles are never destroyed by cooling; they merely slow down.")
+    )
+    (:q :id "som-6" :prompt "What happens to the temperature of pure water while it is actively boiling at standard atmospheric pressure?"
+        :options ("The temperature remains constant at 100°C until all liquid has vaporized" "The temperature rapidly rises to 150°C to push the steam out" "The temperature drops to 50°C because boiling releases all trapped heat" "The temperature fluctuates wildly between 0°C and 200°C every few seconds")
+        :answer 0
+        :tier "analysis"
+        :hint "During a phase transition, additional thermal energy is used to break intermolecular bonds rather than increase kinetic speed."
+        :explanation "During a phase change (latent heat of vaporization), added thermal energy breaks intermolecular forces rather than increasing particle temperature. The temperature stays constant at 100°C until boiling finishes."
+        :misconceptions ("Correct! Latent heat of vaporization keeps the temperature flat at 100°C throughout the boiling transition." "Misconception: Liquid water under normal pressure cannot exceed 100°C; extra heat accelerates vaporization." "Misconception: Boiling requires continuous energy input and does not drop in temperature." "Misconception: Pure substances have fixed, deterministic boiling points under steady pressure.")
+    )
+  ))
+)

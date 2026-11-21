@@ -1,0 +1,102 @@
+(:scene :id "alphabet-basics" :type "Sim" :oak-id "EYFS-LIT-001" :oak-unit "eyfs-send-alphabet-basics" :title "Alphabet Basics: Paired Case & Sound Bridge" :stage "EYFS & LANGUAGES" :duration 36.0
+  (:vars (
+    (:var :name "letterPage" :val 1.0 :min 1.0 :max 9.0 :step 1.0 :label "Letter Group (1: ABC, 2: DEF, 3: GHI, 4: JKL, 5: MNO, 6: PQR, 7: STU, 8: VWX, 9: YZ)")
+    (:var :name "showGuides" :val 1.0 :min 0.0 :max 1.0 :step 1.0 :label "Handwriting Line Guides (0: Off, 1: On)")
+    (:var :name "caseFocus" :val 0.0 :min 0.0 :max 2.0 :step 1.0 :label "Case Highlight (0: Both, 1: CAPITAL, 2: small)")
+  ))
+
+  (:inputs (
+    (:slider :var "letterPage" :label "Letter Group (1–9)" :min 1.0 :max 9.0 :step 1.0)
+    (:slider :var "showGuides" :label "Handwriting Guides" :min 0.0 :max 1.0 :step 1.0)
+    (:slider :var "caseFocus" :label "Case Focus (0–2)" :min 0.0 :max 2.0 :step 1.0)
+  ))
+
+  (:gestures (
+    (:interactive :target "#btn-page-1" :action "set-var" :var "letterPage" :val 1.0)
+    (:interactive :target "#btn-page-2" :action "set-var" :var "letterPage" :val 2.0)
+    (:interactive :target "#btn-page-3" :action "set-var" :var "letterPage" :val 3.0)
+    (:interactive :target "#btn-page-4" :action "set-var" :var "letterPage" :val 4.0)
+    (:interactive :target "#btn-page-5" :action "set-var" :var "letterPage" :val 5.0)
+    (:interactive :target "#btn-page-6" :action "set-var" :var "letterPage" :val 6.0)
+    (:interactive :target "#btn-page-7" :action "set-var" :var "letterPage" :val 7.0)
+    (:interactive :target "#btn-page-8" :action "set-var" :var "letterPage" :val 8.0)
+    (:interactive :target "#btn-page-9" :action "set-var" :var "letterPage" :val 9.0)
+    (:interactive :target "#btn-prev-page" :action "set-var" :var "letterPage" :expr "Math.max(1.0, Math.round(vars.letterPage || 1) - 1)")
+    (:interactive :target "#btn-next-page" :action "set-var" :var "letterPage" :expr "Math.min(9.0, Math.round(vars.letterPage || 1) + 1)")
+    (:draggable :target "#page-scrubber-knob" :axis "x" :min 100 :max 700
+      (:bind-var "letterPage" :map "linear" :from-min 100 :from-max 700 :to-min 1.0 :to-max 9.0)
+    )
+  ))
+
+  (:subtitles (
+    (:start 0.0 :end 4.0 :text "Group 1: A, B, C. Every letter has two shapes — a tall CAPITAL and a small lowercase — a letter name, and a speech sound.")
+    (:start 4.0 :end 8.0 :text "Group 2: D, E, F. D says /d/ as in Dog, E says /e/ as in Egg, and F says /f/ as in Fish.")
+    (:start 8.0 :end 12.0 :text "Group 3: G, H, I. Notice how lowercase g drops its tail below the baseline while h reaches up to the top line.")
+    (:start 12.0 :end 16.0 :text "Group 4: J, K, L. J says /j/ as in Jam, K says /k/ as in Kite, and L says /l/ as in Leaf.")
+    (:start 16.0 :end 20.0 :text "Group 5: M, N, O. M says /m/ as in Moon, N says /n/ as in Net, and O says /o/ as in Orange.")
+    (:start 20.0 :end 24.0 :text "Group 6: P, Q, R. Lowercase p and q both drop their tails below the line, while r stays neatly between middle and base.")
+    (:start 24.0 :end 28.0 :text "Group 7: S, T, U. S says /s/ as in Sun, T says /t/ as in Tree, and U says /u/ as in Umbrella.")
+    (:start 28.0 :end 32.0 :text "Group 8: V, W, X. V says /v/ as in Van, W says /w/ as in Web, and X makes the /ks/ sound at the end of Box.")
+    (:start 32.0 :end 36.0 :text "Group 9: Y, Z. All 26 letters are now unlocked and connected — ready to blend into CVC phonics words!")
+  ))
+
+  (:interactive (
+    (:checkpoint :at 0.35
+      (:prompt "Why do we pair CAPITAL and small letters side-by-side (like G and g)?")
+      (:options
+        ("They are the exact same letter with the same name and speech sound, just in two different shapes" :correct true)
+        ("They are two completely different letters with different sounds" :correct false)
+        ("Only capital letters are used in reading books" :correct false)
+        ("Small letters do not have a phonics sound" :correct false)
+      )
+      (:explanation "Pairing uppercase and lowercase glyphs shows learners that 'G' and 'g' share one identity, one letter name ('Jee'), and one speech sound (/g/).")
+    )
+    (:checkpoint :at 0.78
+      (:prompt "Which red dashed guide line shows where letters like g, j, p, q, and y drop down?")
+      (:options
+        ("The TAIL (descender) line below the solid BASE line" :correct true)
+        ("The TOP LINE above the capital letters" :correct false)
+        ("The MIDDLE line" :correct false)
+        ("Letters never go below the base line" :correct false)
+      )
+      (:explanation "Tail letters (descenders) hang below the solid base line down to the red tail guide, giving each word a clear visual silhouette.")
+    )
+  ))
+
+  (:bindings (
+    ;; HUD Heading
+    (:target "#page-heading" :attr "textContent" :expr "['1. LETTERS A B C', '2. LETTERS D E F', '3. LETTERS G H I', '4. LETTERS J K L', '5. LETTERS M N O', '6. LETTERS P Q R', '7. LETTERS S T U', '8. LETTERS V W X', '9. LETTERS Y Z & BRIDGE'][Math.round(vars.letterPage || 1) - 1]")
+
+    ;; Bottom Scrubber Knob Position (x = 100 to 700 across 9 tabs -> step 75px)
+    (:target "#page-scrubber-knob" :attr "transform" :expr "'translate(' + (100 + ((vars.letterPage || 1.0) - 1.0) * 75.0) + ', 0)'")
+
+    ;; Layer Opacities & Pointer Events for Pages 1–9
+    (:target "#layer-page-1" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 1 ? 1.0 : 0.0")
+    (:target "#layer-page-2" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 2 ? 1.0 : 0.0")
+    (:target "#layer-page-3" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 3 ? 1.0 : 0.0")
+    (:target "#layer-page-4" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 4 ? 1.0 : 0.0")
+    (:target "#layer-page-5" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 5 ? 1.0 : 0.0")
+    (:target "#layer-page-6" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 6 ? 1.0 : 0.0")
+    (:target "#layer-page-7" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 7 ? 1.0 : 0.0")
+    (:target "#layer-page-8" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 8 ? 1.0 : 0.0")
+    (:target "#layer-page-9" :attr "opacity" :expr "Math.round(vars.letterPage || 1) === 9 ? 1.0 : 0.0")
+
+    ;; Active Tab Label Highlights (Gold #fef08a when active, Slate #cbd5e1 when inactive)
+    (:target "#lbl-page-1" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 1 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-2" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 2 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-3" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 3 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-4" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 4 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-5" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 5 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-6" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 6 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-7" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 7 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-8" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 8 ? '#fef08a' : '#cbd5e1'")
+    (:target "#lbl-page-9" :attr "fill" :expr "Math.round(vars.letterPage || 1) === 9 ? '#fef08a' : '#cbd5e1'")
+
+    ;; Handwriting Line Guides Toggle
+    (:target ".handwriting-guides" :attr "opacity" :expr "(vars.showGuides ?? 1.0) >= 0.5 ? 1.0 : 0.1")
+
+    ;; Case Focus Highlight (0 = Both full opacity, 1 = Dim lowercase, 2 = Dim uppercase)
+    (:target ".glyph-upper" :attr "opacity" :expr "Math.round(vars.caseFocus || 0) === 2 ? 0.22 : 1.0")
+    (:target ".glyph-lower" :attr "opacity" :expr "Math.round(vars.caseFocus || 0) === 1 ? 0.22 : 1.0")
+  ))
+)

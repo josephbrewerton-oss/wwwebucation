@@ -1,0 +1,49 @@
+(:cartridge :type :data :id "oak-data-electric-circuits" :title "Electric Circuits & Conductors" :stage "Key Stage 2" :subject "Science" :unit "Circuits and Conductors"
+  (:axiom "An electric current requires a continuous unbroken loop of conducting material driven by a voltage source (cell) for electrons to flow.")
+  (:trap "Believing electricity \"gets used up\" by a component, or confusing an open switch with a working connection.")
+  (:socratic-pivot "If you remove one bulb from a simple series circuit, why do all the other bulbs immediately go dark?")
+  (:hook "Why does flipping a single plastic knife switch instantly illuminate every bulb on the runway?")
+  (:guided-step "Trace the unbroken conductive pathway from the positive cell terminal, through switches and loads, to the negative terminal.")
+  (:questions (
+    (:q :id "circ-1" :prompt "Why must an electrical circuit form a complete, unbroken loop for a lightbulb to shine?"
+        :options ("Electric current requires a continuous closed pathway for electrical charge to flow from one terminal of the cell to the other" "Bulbs need air pressure inside the wire to push the light out" "Electricity gathers in open gaps and evaporates into the air" "Wires only work when tied in circular knots")
+        :answer 0
+        :tier "recall"
+        :hint "Consider what happens to the flow of electrons when there is a break or gap in the wire."
+        :explanation "Electric current is the continuous drift of charged particles (electrons). If there is any break in the loop (an open switch or loose wire), charge cannot circulate and current drops to zero."
+        :misconceptions ("Correct! An unbroken closed circuit is required for charge to circulate." "Misconception: Electricity is moving electrical charge, not pneumatic air pressure." "Misconception: Charge does not evaporate; an open circuit simply prevents current from starting." "Misconception: Physical geometry does not require knots; it requires conductive continuity.")
+    )
+    (:q :id "circ-2" :prompt "Which of the following materials is an electrical conductor that will allow current to flow when inserted into a circuit gap?"
+        :options ("A copper coin" "A wooden ruler" "A plastic drinking straw" "A glass marble")
+        :answer 0
+        :tier "application"
+        :hint "Metals generally contain free, delocalised electrons that allow electrical charge to move easily."
+        :explanation "Metals such as copper, iron, and aluminium have free electrons that easily move, making them excellent electrical conductors. Wood, plastic, and glass are electrical insulators."
+        :misconceptions ("Correct! Copper is a metal with free electrons, making it a good conductor." "Misconception: Wood is an electrical insulator because its electrons are tightly bound in chemical bonds." "Misconception: Plastic is an insulator used to coat cables safely." "Misconception: Glass is an electrical insulator.")
+    )
+    (:q :id "circ-3" :prompt "What happens to the brightness of two identical bulbs in a series circuit when you add a second identical 1.5V cell?"
+        :options ("Both bulbs glow noticeably brighter because the total voltage and current increase" "Both bulbs become much dimmer because the second cell absorbs electrical energy" "The first bulb glows brighter but the second bulb turns completely off" "Nothing changes because bulb brightness is fixed at the factory")
+        :answer 0
+        :tier "analysis"
+        :hint "Think about how adding more electromotive force (volts) pushes more current through the resistive filaments."
+        :explanation "Connecting cells in series adds their voltages together (1.5V + 1.5V = 3.0V). The higher voltage pushes greater current through the bulbs, increasing power and brightness."
+        :misconceptions ("Correct! Doubling voltage in a simple series circuit increases current and filament brightness." "Misconception: Cells supply electrical energy; they do not absorb it." "Misconception: In a series circuit, identical current flows through every component equally." "Misconception: Brightness is governed by voltage and current, not fixed factory settings.")
+    )
+    (:q :id "circ-4" :prompt "In standard electrical circuit diagrams, what does a straight line with a break where a slanted line is lifted up represent?"
+        :options ("An open switch" "A burnt-out battery" "A solar panel" "A buzzer")
+        :answer 0
+        :tier "recall"
+        :hint "When a bridge is lifted, cars cannot cross. When a switch is open, current cannot cross."
+        :explanation "A slanted line lifted away from a contact represents an open switch. When open, it creates a physical gap that halts the current flow."
+        :misconceptions ("Correct! The lifted line symbolises an open switch breaking the circuit." "Misconception: A battery is represented by parallel long and short lines." "Misconception: A buzzer has a semi-circular umbrella symbol." "Misconception: A solar panel or cell has distinct plate lines.")
+    )
+    (:q :id "circ-5" :prompt "Why are household electrical appliance cords coated with flexible plastic or rubber?"
+        :options ("Plastic and rubber are electrical insulators that prevent electric shocks by blocking current leakage" "Plastic makes the wires heavier so they don't blow away in the wind" "Plastic speeds up the electricity flowing inside the copper wire" "Plastic cools down the room like a tiny refrigerator")
+        :answer 0
+        :tier "application"
+        :hint "Think about electrical safety and touching live cables."
+        :explanation "Plastic and rubber have extremely high electrical resistance, acting as insulators. They prevent electrical current from flowing into our hands, protecting against hazardous electric shocks."
+        :misconceptions ("Correct! Electrical insulators prevent hazardous shocks and short-circuits." "Misconception: Insulation is for electrical safety, not structural ballast." "Misconception: Current speed is determined by material resistivity and electric fields, not outer plastic." "Misconception: Plastic does not act as a refrigeration unit.")
+    )
+  ))
+)

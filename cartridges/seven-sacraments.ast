@@ -1,0 +1,55 @@
+(:scene :id "seven-sacraments" :type "Sim" :oak-id "OAK-KS2-RE-008" :oak-unit "ks2-re-catholic-seven-sacraments" :title "The Seven Holy Sacraments: Visible Signs of Invisible Grace" :stage "CATHOLIC LIFE" :duration 28.0
+  (:vars (
+    (:var :name "sacramentIndex" :val 0.0 :min 0.0 :max 6.0 :step 1.0 :label "Sacrament Selector")
+    (:var :name "graceGlow" :val 1.0 :min 0.2 :max 2.0 :step 0.2 :label "Sacramental Grace Radiance")
+    (:var :name "indelibleMark" :val 1.0 :min 0.0 :max 1.0 :step 1.0 :label "Indelible Character X-Ray")
+  ))
+  (:inputs (
+    (:slider :var "sacramentIndex" :label "Sacrament (Baptism, Confirmation, Eucharist, Penance, Anointing, Orders, Matrimony)" :min 0.0 :max 6.0 :step 1.0)
+    (:slider :var "graceGlow" :label "Divine Grace Radiance" :min 0.2 :max 2.0 :step 0.2)
+    (:slider :var "indelibleMark" :label "Indelible Sacramental Character" :min 0.0 :max 1.0 :step 1.0)
+  ))
+  (:gestures (
+    (:draggable :target "#sacramental-grace-source" :axis "xy" :min 80 :max 720)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.15 :en "Baptism (Sacrament of Initiation): The gateway to life in the Spirit. Water poured three times with the Trinitarian formula washes away original sin and imprints an indelible seal on the soul." :es "Bautismo: Puerta de la vida en el Espíritu. El agua derramada con la fórmula trinitaria borra el pecado original e imprime carácter indeleble." :la "Baptismus: Ego te baptizo in nomine Patris, et Filii, et Spiritus Sancti. Fons regenerationis et janua vitae spiritualis.")
+    (:start 0.15 :end 0.28 :en "Confirmation (Sacrament of Initiation): Anointing on the forehead with Sacred Chrism and laying on of hands. Completes baptismal grace and seals the candidate with the seven gifts of the Holy Spirit." :es "Confirmación: Unción con el Santo Crisma e imposición de manos. Sella al cristiano con los siete dones del Espíritu Santo." :la "Confirmatio: Accipe signaculum Doni Spiritus Sancti. Unctio chrismatis et robur ad Christi testimonium.")
+    (:start 0.28 :end 0.44 :en "The Holy Eucharist (Source & Summit): Unleavened wheat bread and grape wine substantially become the true Body, Blood, Soul, and Divinity of Jesus Christ through transubstantiation at Mass." :es "La Sagrada Eucaristía: Fuente y cumbre de la vida cristiana. El pan y el vino se convierten sustancialmente en el Cuerpo y la Sangre de Cristo." :la "Sanctissima Eucharistia: Hoc est enim Corpus meum. Hic est enim Calix Sanguinis mei. Fons et culmen totius vitae christianae.")
+    (:start 0.44 :end 0.58 :en "Penance & Reconciliation (Sacrament of Healing): Contrition, confession of sins to a validly ordained priest, and absolution restore divine friendship and heal the baptismal garment." :es "Penitencia y Reconciliación: Contrición, confesión y absolución sacerdotal restauran la gracia santificante y la paz del alma." :la "Poenitentia: Ego te absolvo a peccatis tuis in nomine Patris, et Filii, et Spiritus Sancti. Misericordia et pax.")
+    (:start 0.58 :end 0.72 :en "Anointing of the Sick (Sacrament of Healing): Anointing the forehead and hands of the seriously ill or elderly with consecrated olive oil (Oleum Infirmorum), bringing spiritual strength and forgiveness." :es "Unción de los Enfermos: Unción con el Óleo sagrado que otorga fortaleza espiritual, paz y el perdón de los pecados en la debilidad." :la "Unctio Infirmorum: Per istam sanctam unctionem indulgeat tibi Dominus quidquid deliquisti. Sanitas animae et corporis.")
+    (:start 0.72 :end 0.86 :en "Holy Orders (Sacrament at the Service of Communion): Laying on of hands by the Bishop consecrating deacons, priests, and bishops in apostolic succession to serve Christ and His Church." :es "Orden Sacerdotal: Imposición de manos del Obispo que confiere el carácter sagrado a diáconos, presbíteros y obispos en sucesión apostólica." :la "Ordo: Impositio manuum episcopalis et oratio consecrationis. Sacerdotium Christi in aeternum.")
+    (:start 0.86 :end 1.00 :en "Holy Matrimony (Sacrament at the Service of Communion): A baptized man and woman establish an indissoluble covenant of faithful mutual love and openness to life, reflecting Christ's love for His Church." :es "Matrimonio: Alianza indisoluble entre varón y mujer bautizados, reflejo del amor fiel e infinito de Cristo por su Iglesia." :la "Matrimonium: Quod Deus coniunxit, homo non separet. Foedus vitae et amoris ad imaginem Christi et Ecclesiae.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "I. Holy Baptism (Initiation)" :rule "Baptismus • Living water, Trinitarian formula, white garment, baptismal candle, indelible seal.")
+    (:t 0.15 :title "II. Confirmation (Initiation)" :rule "Confirmatio • Sacred Chrism, bishop's laying on of hands, 7 gifts of the Holy Spirit.")
+    (:t 0.28 :title "III. Holy Eucharist (Source & Summit)" :rule "Eucharistia • Wheat bread, grape wine, transubstantiation, Real Presence of Christ.")
+    (:t 0.44 :title "IV. Penance & Reconciliation (Healing)" :rule "Reconciliatio • Contrition, confession, priest absolution, restoration of grace.")
+    (:t 0.58 :title "V. Anointing of the Sick (Healing)" :rule "Unctio Infirmorum • Oleum Infirmorum (O.I.), spiritual fortitude, James 5:14.")
+    (:t 0.72 :title "VI. Holy Orders (Service of Communion)" :rule "Ordo • Bishop's apostolic succession, indelible mark, deacon, priest, bishop.")
+    (:t 0.86 :title "VII. Holy Matrimony (Service of Communion)" :rule "Matrimonium • Mutual marital consent, unitive and procreative covenant, rings.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.12
+      :prompt "Which three Sacraments imprint an indelible spiritual mark (character) upon the soul and can therefore NEVER be repeated?"
+      :options ("Baptism, Confirmation, and Holy Orders" "Eucharist, Penance, and Anointing" "Baptism, Matrimony, and Penance" "Confirmation, Eucharist, and Matrimony")
+      :answer 0
+      :explanation "Under CCC 1121, Baptism, Confirmation, and Holy Orders confer an indelible sacramental character that configures the recipient permanently to Christ. For this reason, these three sacraments are received only once in a lifetime.")
+    (:checkpoint :t 0.38
+      :prompt "What theological term describes the miraculous conversion of the entire substance of bread and wine into Christ's Body and Blood?"
+      :options ("Transubstantiation (Council of Trent; CCC 1376)" "Consubstantiation" "Symbolic Metaphor" "Spiritual Representation")
+      :answer 0
+      :explanation "At the words of consecration spoken by the priest in persona Christi, the substance of the bread and wine changes into the actual Body, Blood, Soul, and Divinity of Jesus Christ, while the physical appearances (accidents) remain.")
+    (:checkpoint :t 0.78
+      :prompt "Who is the essential minister of the Sacrament of Holy Matrimony in the Western Latin Church?"
+      :options ("The bride and groom themselves, who mutually confer the sacrament through their marriage consent" "The officiating priest or deacon only" "The civil registrar" "The godparents of the couple")
+      :answer 0
+      :explanation "In the Latin Rite (CCC 1623), the spouses, as ministers of Christ's grace, mutually confer upon each other the Sacrament of Matrimony by expressing their irrevocable consent before the Church's authorized witness (priest or deacon).")
+  ))
+  (:bindings (
+    (:target "#sacrament-center-icon" :attr "transform" :expr "'scale(' + (0.95 + Math.sin(t * Math.PI * 14) * 0.08) + ') rotate(' + (t * 40) + ')'")
+    (:target "#indelible-seal-glow" :attr "opacity" :expr "vars.indelibleMark > 0.5 ? (t < 0.28 || (t >= 0.72 && t < 0.86) ? 0.95 : 0.1) : 0.0")
+    (:target "#seven-rays-radiance" :attr "stroke-width" :expr "(2 + Math.sin(t * 16) * 1.5) * (vars.graceGlow || 1.0)")
+  ))
+)

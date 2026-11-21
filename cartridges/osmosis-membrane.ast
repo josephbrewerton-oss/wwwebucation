@@ -1,0 +1,75 @@
+(:scene :id "osmosis-membrane" :type "Sim" :oak-id "OAK-KS4-BIO-002" :subject "Science" :section "Natural Sciences & Physics" :title "Osmosis & Semi-Permeable Membrane Flux" :stage "KS4 GCSE BIOLOGY" :duration 20.0
+  (:vars (
+    (:var :name "soluteIn" :val 0.40 :min 0.10 :max 0.80 :step 0.02 :unit "M" :label "Intracellular [Sucrose]")
+    (:var :name "soluteOut" :val 0.15 :min 0.00 :max 1.00 :step 0.02 :unit "M" :label "Extracellular [Sucrose]")
+    (:var :name "cellWater" :val 100.0 :min 70.0 :max 130.0 :step 0.5 :unit "%" :label "Cell Water Mass")
+  ))
+  (ui:controls
+    (control:button :id "reset" :label "Reset Tissue Sample" :action (sim:reset))
+    (control:slider :id "soluteOut" :label "Extracellular [Sucrose] (M)" :min 0.00 :max 1.00 :default 0.15 :step 0.02 :bind *soluteOut*)
+    (control:slider :id "soluteIn" :label "Cytoplasm [Sucrose] (M)" :min 0.10 :max 0.80 :default 0.40 :step 0.02 :bind *soluteIn*)
+  )
+  (:computed (
+    (:name "targetMass" :expr "Number(Math.max(72, Math.min(128, 100 + ((vars.soluteIn || 0.4) - (vars.soluteOut || 0.15)) * 45)).toFixed(2))")
+    (:name "netWaterFlux" :expr "Number((((vars.soluteIn || 0.4) - (vars.soluteOut || 0.15)) * 12).toFixed(2))")
+    (:name "extraWater" :expr "Number(Math.max(0, 200 - (vars.cellWater || 100)).toFixed(2))")
+  ))
+  (:gestures (
+    (:clickable :target "#btn-osm-hypo" :set-var "soluteOut" :val 0.00)
+    (:clickable :target "#btn-osm-iso" :set-var "soluteOut" :val 0.40)
+    (:clickable :target "#btn-osm-hyper" :set-var "soluteOut" :val 0.90)
+  ))
+  (:emitters (
+    (:particle-pool :id "water-molecules" :phase-sync false :count 28 :speed 105
+      :radius 3.2 :fill "#38bdf8" :minX 54 :maxX 380 :minY 122 :maxY 290 :wrapMode "bounce")
+    (:particle-pool :id "sucrose-out" :phase-sync false :count 8 :speed 42
+      :count-expr "Math.max(2, Math.min(36, Math.round((vars.soluteOut || 0) * 34 + 1)))"
+      :radius 6.0 :fill "#facc15" :minX 224 :maxX 380 :minY 122 :maxY 290 :wrapMode "bounce")
+  ))
+  (:scope :target "#osmosis-scope-line"
+    :x-expr "vars.simClock || 0"
+    :y-expr "vars.cellWater || 100"
+    :samples 120
+    :x-range (0 20)
+    :y-range (70 130)
+    :plot (455 114 295 160))
+  (:ledger :id "osmosis-ledger" :target "#osmosis-ledger" :x 434 :y 348 :width 322 :height 14 :unit "%" :max "200"
+    :terms (
+      (:label "Cell Water" :expr "vars.cellWater || 100" :color "#38bdf8")
+      (:label "Bath Water" :expr "vars.extraWater || 100" :color "#64748b")
+    ))
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "Small water molecules cross the semi-permeable membrane freely while large sucrose molecules cannot pass.")
+    (:start 0.35 :end 0.70 :en "When extracellular sucrose is lower (hypotonic), net osmosis flows into the cell until turgor or equilibrium develops.")
+    (:start 0.70 :end 1.00 :en "At isotonic solute concentrations (equal water potential), water diffuses equally in both directions with zero net mass change.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Water Potential Gradient" :rule "Water moves from dilute (higher ψ) to concentrated (lower ψ)")
+    (:t 0.50 :title "2. Dynamic Isotonic Balance" :rule "Equal sucrose inside & outside gives zero net flux")
+    (:t 0.90 :title "3. Hypertonic Plasmolysis" :rule "Concentrated bath draws intracellular water out, reducing potato mass")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.0
+      :title "Goal Challenge: Isotonic Point"
+      :prompt "Adjust extracellular [Sucrose] to match the cytoplasm concentration (|soluteOut - soluteIn| <= 0.04 M) and hold isotonic equilibrium for 1.5 seconds."
+      :pass-expr "Math.abs((vars.soluteOut || 0) - (vars.soluteIn || 0.4)) <= 0.04"
+      :hold-duration 1.5
+      :explanation "Isotonic solutions share the same water potential: forward and reverse osmosis rates balance so percentage mass change is 0%.")
+    (:checkpoint :t 0.65
+      :title "Membrane Selectivity in Osmosis"
+      :prompt "In a potato cylinder placed into 0.90 M concentrated sucrose solution, which particles undergo net movement across the membrane?"
+      :options ("Water molecules diffuse out of the potato cells into the sucrose bath" "Sucrose molecules rush into the potato cells down their gradient" "Both sucrose and starch diffuse out equally" "All water stops crossing the membrane completely")
+      :answer 0
+      :on-wrong ((1 "Sucrose molecules are too large to pass through the selectively permeable membrane pores.") (2 "Starch and sucrose stay trapped on their side of the membrane; only solvent water moves.") (3 "Even at isotonic equilibrium, water still moves across in both directions dynamically."))
+      :explanation "A partially permeable membrane blocks large solute molecules like sucrose, allowing net diffusion of water from higher to lower water potential.")
+  ))
+  (:bindings (
+    (:target "var:cellWater" :expr "clamp((vars.cellWater || 100) + (((vars.targetMass || 100) - (vars.cellWater || 100)) * 0.04), 70, 130)")
+    (:target "#cell-mass-readout" :attr "textContent" :expr "Number(vars.cellWater || 100).toFixed(1) + '%'")
+    (:target "#solute-out-readout" :attr "textContent" :expr "Number(vars.soluteOut || 0).toFixed(2) + ' M'")
+    (:target "#flux-arrow-text" :attr "textContent" :expr "Math.abs((vars.soluteOut || 0) - (vars.soluteIn || 0.4)) <= 0.04 ? '⇌ Balanced' : ((vars.soluteOut || 0) < (vars.soluteIn || 0.4) ? '◀ Water IN' : 'Water OUT ▶')")
+    (:target "#flux-arrow-text" :attr "fill" :expr "Math.abs((vars.soluteOut || 0) - (vars.soluteIn || 0.4)) <= 0.04 ? '#4ade80' : '#38bdf8'")
+    (:target "#osmosis-state-text" :attr "textContent" :expr "Math.abs((vars.soluteOut || 0) - (vars.soluteIn || 0.4)) <= 0.04 ? 'Isotonic Equilibrium' : ((vars.soluteOut || 0) < (vars.soluteIn || 0.4) ? 'Hypotonic (Turgid Gain)' : 'Hypertonic (Plasmolysis Loss)')")
+    (:target "#osmosis-state-text" :attr "fill" :expr "Math.abs((vars.soluteOut || 0) - (vars.soluteIn || 0.4)) <= 0.04 ? '#4ade80' : ((vars.soluteOut || 0) < (vars.soluteIn || 0.4) ? '#38bdf8' : '#f87171')")
+  ))
+)

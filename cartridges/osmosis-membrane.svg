@@ -1,0 +1,109 @@
+<svg id="stage-svg" viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" style="background:#090d16;">
+  <defs>
+    <linearGradient id="cytoplasm-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0369a1" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#0ea5e9" stop-opacity="0.22"/>
+    </linearGradient>
+    <linearGradient id="extracell-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e293b" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.7"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="800" height="480" fill="#090d16"/>
+  <rect x="0" y="0" width="800" height="480" fill="none" stroke="#1e293b" stroke-width="2"/>
+
+  <!-- Header -->
+  <text x="400" y="34" fill="#f8fafc" font-size="19" font-weight="800" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif">
+    Osmosis Across a Partially Permeable Membrane
+  </text>
+  <text x="400" y="54" fill="#94a3b8" font-size="11.5" font-weight="600" text-anchor="middle">
+    KS4 GCSE Biology · Water Potential Gradient · Net Water Flux Scope &amp; Fluid Conservation Ledger
+  </text>
+
+  <!-- Left Osmometer Dual-Chamber Tank -->
+  <rect x="30" y="76" width="375" height="310" rx="12" fill="#0b1120" stroke="#334155" stroke-width="2"/>
+
+  <!-- Intracellular Chamber (Left) & Extracellular Chamber (Right) -->
+  <rect x="48" y="96" width="166" height="202" rx="6" fill="url(#cytoplasm-grad)" stroke="#0284c7" stroke-width="1.5"/>
+  <rect x="218" y="96" width="168" height="202" rx="6" fill="url(#extracell-grad)" stroke="#64748b" stroke-width="1.5"/>
+
+  <!-- Partially Permeable Membrane Divider -->
+  <line id="semi-membrane" x1="216" y1="98" x2="216" y2="296" stroke="#facc15" stroke-width="4" stroke-dasharray="10 7"/>
+  <text x="131" y="114" fill="#bae6fd" font-size="10" font-weight="800" text-anchor="middle">CELL CYTOPLASM</text>
+  <text x="302" y="114" fill="#cbd5e1" font-size="10" font-weight="800" text-anchor="middle">BATH SOLUTION</text>
+
+  <!-- Net Water Flux Directional Arrow -->
+  <g id="flux-arrow-group" transform="translate(216, 196)">
+    <rect x="-34" y="-12" width="68" height="24" rx="12" fill="#090d16" stroke="#38bdf8" stroke-width="1.5"/>
+    <text id="flux-arrow-text" x="0" y="4" fill="#38bdf8" font-size="11" font-weight="900" text-anchor="middle">⇌ 0</text>
+  </g>
+
+  <!-- Dynamic Plant Cell Vacuole State Box -->
+  <g transform="translate(48, 306)">
+    <rect width="338" height="44" rx="6" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+    <text x="12" y="18" fill="#94a3b8" font-size="9.5" font-weight="700">Cell State:</text>
+    <text id="osmosis-state-text" x="12" y="34" fill="#4ade80" font-size="12" font-weight="800">Isotonic Equilibrium</text>
+
+    <text x="180" y="18" fill="#94a3b8" font-size="9.5" font-weight="700">Mass Change:</text>
+    <text id="cell-mass-readout" x="180" y="34" fill="#38bdf8" font-size="12" font-weight="800" font-family="monospace">100.0%</text>
+
+    <text x="274" y="18" fill="#94a3b8" font-size="9.5" font-weight="700">[Sucrose Out]:</text>
+    <text id="solute-out-readout" x="274" y="34" fill="#facc15" font-size="12" font-weight="800" font-family="monospace">0.15 M</text>
+  </g>
+
+  <!-- Quick Osmotic Regime Buttons inside SVG -->
+  <g transform="translate(48, 356)">
+    <g id="btn-osm-hypo" style="cursor:pointer;">
+      <rect width="108" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="54" y="15" fill="#bae6fd" font-size="9.5" font-weight="700" text-anchor="middle">0.0 M (Water)</text>
+    </g>
+    <g id="btn-osm-iso" transform="translate(115, 0)" style="cursor:pointer;">
+      <rect width="108" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="54" y="15" fill="#86efac" font-size="9.5" font-weight="700" text-anchor="middle">0.40 M (Isotonic)</text>
+    </g>
+    <g id="btn-osm-hyper" transform="translate(230, 0)" style="cursor:pointer;">
+      <rect width="108" height="22" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+      <text x="54" y="15" fill="#fca5a5" font-size="9.5" font-weight="700" text-anchor="middle">0.90 M (Conc.)</text>
+    </g>
+  </g>
+
+  <!-- Right Panel: Cell Mass Change Curve (:scope) -->
+  <rect x="420" y="76" width="350" height="240" rx="12" fill="#0b1120" stroke="#334155" stroke-width="2"/>
+  <text x="595" y="96" fill="#e2e8f0" font-size="12" font-weight="800" text-anchor="middle">
+    Live Potato Tissue Mass Scope (% vs Time)
+  </text>
+
+  <g stroke="#1e293b" stroke-width="1">
+    <line x1="455" y1="114" x2="750" y2="114"/>
+    <line x1="455" y1="154" x2="750" y2="154"/>
+    <line x1="455" y1="194" x2="750" y2="194" stroke="#22c55e" stroke-dasharray="4 3" opacity="0.5"/>
+    <line x1="455" y1="234" x2="750" y2="234"/>
+    <line x1="528" y1="114" x2="528" y2="274"/>
+    <line x1="602" y1="114" x2="602" y2="274"/>
+    <line x1="676" y1="114" x2="676" y2="274"/>
+  </g>
+  <line x1="455" y1="114" x2="455" y2="274" stroke="#64748b" stroke-width="1.5"/>
+  <line x1="455" y1="274" x2="750" y2="274" stroke="#64748b" stroke-width="1.5"/>
+
+  <text x="448" y="118" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">130</text>
+  <text x="448" y="198" fill="#4ade80" font-size="9" text-anchor="end" font-family="monospace">100</text>
+  <text x="448" y="278" fill="#94a3b8" font-size="9" text-anchor="end" font-family="monospace">70</text>
+  <text x="602" y="294" fill="#94a3b8" font-size="9.5" text-anchor="middle">Elapsed Time (0 – 20 s)</text>
+  <text x="434" y="194" fill="#94a3b8" font-size="9.5" text-anchor="middle" transform="rotate(-90 434 194)">Mass (%)</text>
+
+  <polyline id="osmosis-scope-line" fill="none" stroke="#38bdf8" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points=""/>
+
+  <!-- Conservation Ledger Group (:ledger) -->
+  <rect x="420" y="328" width="350" height="58" rx="10" fill="#0f172a" stroke="#334155" stroke-width="1.5"/>
+  <g id="osmosis-ledger"></g>
+
+  <!-- Bottom Principle Strip -->
+  <g transform="translate(30, 400)">
+    <rect width="740" height="56" rx="10" fill="#0f172a" stroke="#1e293b" stroke-width="1.5"/>
+    <text x="20" y="22" fill="#38bdf8" font-size="11" font-weight="800">GCSE OSMOSIS REQUIRED PRACTICAL:</text>
+    <text x="20" y="42" fill="#e2e8f0" font-size="12.5" font-weight="700" font-family="monospace">
+      Water diffuses passively from high water potential (dilute) to low water potential (concentrated)
+    </text>
+  </g>
+</svg>

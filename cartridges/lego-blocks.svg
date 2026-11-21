@@ -1,0 +1,516 @@
+<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Workshop Floor Gradients -->
+    <radialGradient id="lego-bg" cx="50%" cy="45%" r="75%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="60%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Blueprint Grid Pattern -->
+    <pattern id="lego-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" stroke-width="0.75" stroke-opacity="0.35" />
+      <circle cx="24" cy="24" r="1" fill="#475569" fill-opacity="0.5" />
+    </pattern>
+
+    <!-- Turntable Radial Gradient -->
+    <radialGradient id="turntable-grad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="70%" stop-color="#0f172a" />
+      <stop offset="95%" stop-color="#020617" />
+      <stop offset="100%" stop-color="#38bdf8" stop-opacity="0.6" />
+    </radialGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="lego-drop-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="14" flood-color="#000000" flood-opacity="0.75" />
+    </filter>
+
+    <filter id="lego-subtle-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.5" />
+    </filter>
+
+    <!-- Dynamic ABS Color Gradients for Active Brick Body (Driven by AST stop-color bindings) -->
+    <linearGradient id="brick-grad-red-top" x1="0" y1="0" x2="1" y2="1">
+      <stop id="brick-grad-top-0" offset="0%" stop-color="#f43f5e" />
+      <stop id="brick-grad-top-1" offset="100%" stop-color="#e11d48" />
+    </linearGradient>
+    <linearGradient id="brick-grad-red-left" x1="0" y1="0" x2="0" y2="1">
+      <stop id="brick-grad-left-0" offset="0%" stop-color="#be123c" />
+      <stop id="brick-grad-left-1" offset="100%" stop-color="#881337" />
+    </linearGradient>
+    <linearGradient id="brick-grad-red-right" x1="0" y1="0" x2="0" y2="1">
+      <stop id="brick-grad-right-0" offset="0%" stop-color="#e11d48" />
+      <stop id="brick-grad-right-1" offset="100%" stop-color="#9f1239" />
+    </linearGradient>
+
+    <!-- Master Parametric Subtractive Geometry Templates (Zero Bloat Instancing) -->
+    <!-- 1. Master Cylindrical Stud (Ø4.8mm, h=1.7mm, with 0.15mm micro-chamfer) -->
+    <g id="master-stud">
+      <path id="master-stud-wall" class="stud-wall" d="M -12 0 A 12 6 0 0 0 12 0 L 12 -8 A 12 6 0 0 1 -12 -8 Z" fill="#be123c" />
+      <ellipse id="master-stud-top" class="stud-top" cx="0" cy="-8" rx="12" ry="6" fill="#f43f5e" stroke="#fda4af" stroke-width="0.8" />
+      <!-- 0.15mm Micro-Chamfer Specular Highlight -->
+      <ellipse cx="0" cy="-8" rx="11.2" ry="5.6" fill="none" stroke="#ffffff" stroke-width="0.6" stroke-opacity="0.6" />
+      <ellipse cx="0" cy="-8" rx="5" ry="2.5" fill="none" stroke="#ffffff" stroke-width="0.75" stroke-opacity="0.5" />
+      <ellipse cx="-2.5" cy="-9.5" rx="2.5" ry="1.2" fill="#ffffff" fill-opacity="0.5" />
+    </g>
+
+    <!-- 2. Master Anti-Stud Friction Tube (Ø6.51mm OD, Ø4.8mm ID, with 0.15mm micro-chamfer & evenodd annular rim) -->
+    <g id="master-anti-tube">
+      <path id="master-anti-tube-wall" class="anti-tube-wall" d="M -15 0 A 15 7.5 0 0 0 15 0 L 15 -18 A 15 7.5 0 0 1 -15 -18 Z" fill="#9f1239" />
+      <path id="master-anti-tube-rim" class="anti-tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2"
+            d="M -15 -18 A 15 7.5 0 1 0 15 -18 A 15 7.5 0 1 0 -15 -18 Z M -8.5 -18 A 8.5 4.2 0 1 1 8.5 -18 A 8.5 4.2 0 1 1 -8.5 -18 Z" />
+      <ellipse cx="0" cy="-18" rx="14.3" ry="7.1" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.5" />
+      <ellipse class="anti-tube-bore" cx="0" cy="-18" rx="7.8" ry="3.9" fill="#090d16" />
+    </g>
+
+    <!-- 3. Master Solid Center Pin (Ø3.2mm for 1×n bricks) -->
+    <g id="master-pin">
+      <path id="master-pin-wall" class="pin-wall" d="M -8 0 A 8 4 0 0 0 8 0 L 8 -18 A 8 4 0 0 1 -8 -18 Z" fill="#9f1239" />
+      <ellipse id="master-pin-top" class="pin-top" cx="0" cy="-18" rx="8" ry="4" fill="#be123c" stroke="#f43f5e" stroke-width="0.8" />
+      <ellipse cx="0" cy="-18" rx="7.4" ry="3.7" fill="none" stroke="#ffffff" stroke-width="0.5" stroke-opacity="0.5" />
+    </g>
+  </defs>
+
+  <!-- 1. Workshop Floor & Background Grid -->
+  <rect width="800" height="480" fill="url(#lego-bg)" />
+  <rect width="800" height="480" fill="url(#lego-grid)" />
+
+  <!-- 2. Header Status & Title Bar -->
+  <g id="lego-header" data-interactive="true" transform="translate(24, 20)">
+    <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+
+    <g transform="translate(14, 13)">
+      <rect id="lego-logo-base" x="0" y="0" width="16" height="16" rx="3" fill="#e11d48" />
+      <circle cx="5" cy="5" r="2.2" fill="#ffffff" fill-opacity="0.35" />
+      <circle cx="11" cy="5" r="2.2" fill="#ffffff" fill-opacity="0.35" />
+      <circle cx="5" cy="11" r="2.2" fill="#000000" fill-opacity="0.25" />
+      <circle cx="11" cy="11" r="2.2" fill="#000000" fill-opacity="0.25" />
+    </g>
+
+    <text x="44" y="22" fill="#f8fafc" font-size="13" font-weight="800" letter-spacing="0.5">MODULAR BRICK LAB: 3D SPATIAL KINEMATICS</text>
+    <text x="44" y="34" fill="#94a3b8" font-size="9.5" font-weight="600">KS2/KS3 Design &amp; Technology &bull; 8.0 mm Modular Pitch Matrix &bull; Real-Time Isometric Turntable</text>
+
+    <!-- Real-time Quick Metric Badge -->
+    <g transform="translate(552, 9)">
+      <rect x="0" y="0" width="188" height="24" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="lego-badge-text" x="94" y="16" fill="#38bdf8" font-size="10" font-weight="700" text-anchor="middle" font-family="ui-monospace, monospace">32×16×9.6 mm • 4.9 cm³</text>
+    </g>
+  </g>
+
+  <!-- 3. The 3D Turntable Platform & Ground Plane -->
+  <g id="turntable-root" transform="translate(400, 260)">
+    <!-- Turntable Catch Hitbox for Smooth Pointer Grab Anywhere Across Disc -->
+    <ellipse id="turntable-hitbox" cx="0" cy="65" rx="260" ry="110" fill="#000000" fill-opacity="0.001" pointer-events="all" style="cursor: grab;" />
+
+    <!-- Turntable Ellipse Cast Shadow -->
+    <ellipse cx="0" cy="80" rx="260" ry="85" fill="#000000" opacity="0.6" filter="url(#lego-drop-shadow)" />
+
+    <!-- Isometric Turntable Disc -->
+    <ellipse cx="0" cy="65" rx="220" ry="72" fill="url(#turntable-grad)" stroke="#38bdf8" stroke-width="2" stroke-opacity="0.8" />
+    <ellipse cx="0" cy="65" rx="190" ry="62" fill="none" stroke="#334155" stroke-width="1" stroke-dasharray="4 4" />
+    <ellipse cx="0" cy="65" rx="140" ry="45" fill="none" stroke="#1e293b" stroke-width="1.5" />
+
+    <!-- Degree Compass Notches -->
+    <g id="turntable-compass" opacity="0.7">
+      <text x="0" y="132" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">0° FRONT</text>
+      <text x="212" y="70" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="start">90°</text>
+      <text x="0" y="2" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="middle">180°</text>
+      <text x="-212" y="70" fill="#64748b" font-size="8.5" font-weight="700" text-anchor="end">270°</text>
+    </g>
+
+    <!-- 4. Interactive 3D Spinning Brick Stage Node -->
+    <g id="brick-3d-stage" filter="url(#lego-drop-shadow)">
+
+      <!-- Baseplate Substrate (Visible when in Stacked Wall mode) -->
+      <g id="brick-baseplate" opacity="0" style="transition: opacity 0.3s ease;">
+        <polygon points="-160,50 0,-30 160,50 0,130" fill="#15803d" stroke="#166534" stroke-width="2" />
+        <polygon points="-160,50 0,130 0,142 -160,62" fill="#14532d" />
+        <polygon points="0,130 160,50 160,62 0,142" fill="#166534" />
+      </g>
+
+      <!-- Bottom Interlocking Brick Layer (Visible in Stacked Wall Mode) -->
+      <g id="brick-bottom-layer" opacity="0" transform="translate(0, 40)" style="transition: opacity 0.3s ease, transform 0.3s ease;">
+        <!-- Left Sub-Brick -->
+        <g id="sub-brick-left" transform="translate(-60, 20)">
+          <polygon points="-70,0 0,-35 70,0 0,35" fill="#2563eb" stroke="#1d4ed8" stroke-width="1" />
+          <polygon points="-70,0 0,35 0,70 -70,35" fill="#1d4ed8" />
+          <polygon points="0,35 70,0 70,35 0,70" fill="#1e40af" />
+        </g>
+        <!-- Right Sub-Brick -->
+        <g id="sub-brick-right" transform="translate(60, -20)">
+          <polygon points="-70,0 0,-35 70,0 0,35" fill="#2563eb" stroke="#1d4ed8" stroke-width="1" />
+          <polygon points="-70,0 0,35 0,70 -70,35" fill="#1d4ed8" />
+          <polygon points="0,35 70,0 70,35 0,70" fill="#1e40af" />
+        </g>
+      </g>
+
+      <!-- Main Focal Brick Assembly -->
+      <g id="brick-main-group" transform="translate(0, 0)">
+
+        <!-- Explode Clutch View Underneath (Internal Cylindrical Anti-Stud Tubes) -->
+        <g id="brick-bottom-tubes" opacity="0" transform="translate(0, 40)">
+          <!-- Cavity Shadow Base (scaled per type) -->
+          <polygon id="explode-cavity-2x4" points="-108,30 -36,-6 108,66 36,102" fill="#090d16" fill-opacity="0.88" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.2" display="inline" />
+          <polygon id="explode-cavity-2x2" points="-72,48 0,12 72,48 0,84" fill="#090d16" fill-opacity="0.88" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.2" display="none" />
+          <polygon id="explode-cavity-1x2" points="-54,39 -18,21 54,57 18,75" fill="#090d16" fill-opacity="0.88" stroke="#38bdf8" stroke-opacity="0.45" stroke-width="1.2" display="none" />
+
+          <!-- Outer / Side Tubes for 4-stud-long bricks (2x4, slope, tile) -->
+          <g id="explode-tubes-outer" display="inline">
+            <g id="tube-1" transform="translate(-36, 12)">
+              <path id="tube-1-wall" d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
+              <path id="tube-1-rim" class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
+            </g>
+            <g id="tube-3" transform="translate(36, 48)">
+              <path id="tube-3-wall" d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
+              <path id="tube-3-rim" class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
+            </g>
+          </g>
+
+          <!-- Center Tube (for 2x4, 2x2, slope, tile) -->
+          <g id="explode-tube-center" display="inline">
+            <g id="tube-2" transform="translate(0, 48)">
+              <path id="tube-2-wall" d="M -13 0 A 13 6.5 0 0 0 13 0 L 13 -14 A 13 6.5 0 0 1 -13 -14 Z" fill="#9f1239" />
+              <path id="tube-2-rim" class="tube-rim" fill-rule="evenodd" fill="#be123c" stroke="#f43f5e" stroke-width="1.2" d="M -13 -14 A 13 6.5 0 1 0 13 -14 A 13 6.5 0 1 0 -13 -14 Z M -7.5 -14 A 7.5 3.8 0 1 1 7.5 -14 A 7.5 3.8 0 1 1 -7.5 -14 Z" />
+            </g>
+          </g>
+
+          <!-- Center Solid Pin (for 1x2 beam) -->
+          <g id="explode-pin-1x2" display="none">
+            <use href="#master-pin" x="0" y="48" />
+          </g>
+
+          <!-- Explode Callout Label -->
+          <text id="explode-callout-text" x="0" y="118" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">▲ 3× CLUTCH FRICTION TUBES (8mm PITCH)</text>
+        </g>
+
+        <!-- Main Solid Brick Body (Top View with Studs) -->
+        <g id="brick-top-view" opacity="1" style="transition: opacity 0.25s ease;">
+
+          <!-- A. 2x4 Standard Brick (8 Studs, 32x16x9.6mm) -->
+          <g id="brick-geom-2x4" display="inline">
+            <polygon points="-108,-18 36,54 36,102 -108,30" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="36,54 108,18 108,66 36,102" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="-108,-18 -36,-54 108,18 36,54" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round" />
+            <line x1="-108" y1="-18" x2="36" y2="54" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.35" />
+            <line x1="36" y1="54" x2="108" y2="18" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
+            <line x1="36" y1="54" x2="36" y2="102" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
+            <g id="brick-studs-2x4">
+              <use href="#master-stud" x="-36" y="-36" />
+              <use href="#master-stud" x="0" y="-18" />
+              <use href="#master-stud" x="36" y="0" />
+              <use href="#master-stud" x="72" y="18" />
+              <use href="#master-stud" x="-72" y="-18" />
+              <use href="#master-stud" x="-36" y="0" />
+              <use href="#master-stud" x="0" y="18" />
+              <use href="#master-stud" x="36" y="36" />
+            </g>
+          </g>
+
+          <!-- B. 2x2 Cube Brick (4 Studs, 16x16x9.6mm) -->
+          <g id="brick-geom-2x2" display="none">
+            <polygon points="-72,0 0,36 0,84 -72,48" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="0,36 72,0 72,48 0,84" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="-72,0 0,-36 72,0 0,36" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round" />
+            <line x1="-72" y1="0" x2="0" y2="36" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.35" />
+            <line x1="0" y1="36" x2="72" y2="0" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
+            <line x1="0" y1="36" x2="0" y2="84" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
+            <g id="brick-studs-2x2">
+              <use href="#master-stud" x="0" y="-18" />
+              <use href="#master-stud" x="-36" y="0" />
+              <use href="#master-stud" x="36" y="0" />
+              <use href="#master-stud" x="0" y="18" />
+            </g>
+          </g>
+
+          <!-- C. 1x2 Beam Brick (2 Studs, 16x8x9.6mm) -->
+          <g id="brick-geom-1x2" display="none">
+            <polygon points="-54,-9 18,27 18,75 -54,39" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="18,27 54,9 54,57 18,75" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="-54,-9 -18,-27 54,9 18,27" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round" />
+            <line x1="-54" y1="-9" x2="18" y2="27" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.35" />
+            <line x1="18" y1="27" x2="54" y2="9" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.25" />
+            <line x1="18" y1="27" x2="18" y2="75" stroke="#ffffff" stroke-width="1.5" stroke-opacity="0.3" />
+            <g id="brick-studs-1x2">
+              <use href="#master-stud" x="-18" y="-9" />
+              <use href="#master-stud" x="18" y="9" />
+            </g>
+          </g>
+
+          <!-- D. 2x4 Roof Slope 45° Brick (4 Ridge Studs + 45° Ramp) -->
+          <g id="brick-geom-slope" display="none">
+            <!-- Front Vertical Toe Lip -->
+            <polygon points="-108,20 36,92 36,102 -108,30" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.4" stroke-linejoin="round" />
+            <!-- Right Profile Gable Wall -->
+            <polygon points="72,36 108,18 108,66 36,102 36,92" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+            <!-- 45° Sloped Front Ramp -->
+            <polygon points="-72,0 72,36 36,92 -108,20" fill="url(#brick-grad-red-left)" stroke="#ffffff" stroke-opacity="0.35" stroke-width="1.2" stroke-linejoin="round" />
+            <!-- Top Horizontal Ridge Strip (1 stud deep) -->
+            <polygon points="-36,-54 108,18 72,36 -72,0" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round" />
+            <!-- Edge Specular Bevels -->
+            <line x1="-72" y1="0" x2="72" y2="36" stroke="#ffffff" stroke-width="1.6" stroke-opacity="0.45" />
+            <line x1="-108" y1="20" x2="36" y2="92" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.3" />
+            <line x1="72" y1="36" x2="36" y2="92" stroke="#ffffff" stroke-width="1.2" stroke-opacity="0.3" />
+            <!-- Back Ridge 4-Stud Row -->
+            <g id="brick-studs-slope">
+              <use href="#master-stud" x="-36" y="-36" />
+              <use href="#master-stud" x="0" y="-18" />
+              <use href="#master-stud" x="36" y="0" />
+              <use href="#master-stud" x="72" y="18" />
+            </g>
+          </g>
+
+          <!-- E. 2x4 Smooth Tile Plate (0 Studs, 32x16x3.2mm = 1/3 height) -->
+          <g id="brick-geom-tile" display="none">
+            <polygon points="-108,14 36,86 36,102 -108,30" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="36,86 108,50 108,66 36,102" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.4" stroke-linejoin="round" />
+            <polygon points="-108,14 -36,-22 108,50 36,86" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.45" stroke-width="1.2" stroke-linejoin="round" />
+            <!-- Smooth Gloss Center Groove / Chamfer -->
+            <polygon points="-96,14 -36,-16 96,50 36,80" fill="none" stroke="#ffffff" stroke-width="0.9" stroke-opacity="0.25" />
+            <line x1="-108" y1="14" x2="36" y2="86" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.4" />
+            <line x1="36" y1="86" x2="108" y2="50" stroke="#ffffff" stroke-width="1.4" stroke-opacity="0.3" />
+          </g>
+        </g>
+
+        <!-- Underside Subtractive CSG Assembly (Flipped View showing hollow cavity & clutch tubes) -->
+        <g id="brick-underside-view" opacity="0" display="none" style="transition: opacity 0.25s ease;">
+
+          <!-- A. 2x4 / Slope Underside Cavity (32x16mm, 3 Clutch Tubes) -->
+          <g id="under-geom-2x4" display="inline">
+            <polygon points="-108,30 36,102 36,150 -108,78" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round" />
+            <polygon points="36,102 108,66 108,114 36,150" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round" />
+            <path class="under-csg-rim" fill-rule="evenodd" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round"
+                  d="M -108 30 L 36 102 L 108 66 L -36 -6 Z M -96 32 L 32 94 L 96 64 L -32 2 Z" />
+            <polygon points="-96,32 32,94 96,64 -32,2" fill="#0b1120" stroke="#020617" stroke-width="1.2" stroke-linejoin="round" />
+            <g class="under-ribs">
+              <line x1="-36" y1="28" x2="-36" y2="36" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+              <line x1="0" y1="46" x2="0" y2="54" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+              <line x1="36" y1="64" x2="36" y2="72" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+              <line x1="-36" y1="28" x2="36" y2="64" stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.4" />
+            </g>
+            <g>
+              <use href="#master-anti-tube" x="-36" y="32" />
+              <use href="#master-anti-tube" x="0" y="50" />
+              <use href="#master-anti-tube" x="36" y="68" />
+            </g>
+          </g>
+
+          <!-- B. 2x2 Underside Cavity (16x16mm, 1 Center Clutch Tube) -->
+          <g id="under-geom-2x2" display="none">
+            <polygon points="-72,48 0,84 0,132 -72,96" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round" />
+            <polygon points="0,84 72,48 72,96 0,132" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round" />
+            <path class="under-csg-rim" fill-rule="evenodd" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round"
+                  d="M -72 48 L 0 84 L 72 48 L 0 12 Z M -60 48 L 0 78 L 60 48 L 0 18 Z" />
+            <polygon points="-60,48 0,78 60,48 0,18" fill="#0b1120" stroke="#020617" stroke-width="1.2" stroke-linejoin="round" />
+            <use href="#master-anti-tube" x="0" y="48" />
+          </g>
+
+          <!-- C. 1x2 Underside Cavity (16x8mm, 1 Center Solid Pin) -->
+          <g id="under-geom-1x2" display="none">
+            <polygon points="-54,39 18,75 18,123 -54,87" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round" />
+            <polygon points="18,75 54,57 54,105 18,123" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round" />
+            <path class="under-csg-rim" fill-rule="evenodd" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round"
+                  d="M -54 39 L 18 75 L 54 57 L -18 21 Z M -44 39 L 16 69 L 44 55 L -16 25 Z" />
+            <polygon points="-44,39 16,69 44,55 -16,25" fill="#0b1120" stroke="#020617" stroke-width="1.2" stroke-linejoin="round" />
+            <use href="#master-pin" x="0" y="48" />
+          </g>
+
+          <!-- D. 2x4 Tile Shallow Underside Cavity (16px depth, 32x16x3.2mm) -->
+          <g id="under-geom-tile" display="none">
+            <polygon points="-108,30 36,102 36,118 -108,46" fill="url(#brick-grad-red-left)" stroke="#020617" stroke-opacity="0.55" stroke-width="1.5" stroke-linejoin="round" />
+            <polygon points="36,102 108,66 108,82 36,118" fill="url(#brick-grad-red-right)" stroke="#020617" stroke-opacity="0.5" stroke-width="1.5" stroke-linejoin="round" />
+            <path class="under-csg-rim" fill-rule="evenodd" fill="url(#brick-grad-red-top)" stroke="#ffffff" stroke-opacity="0.4" stroke-width="1.2" stroke-linejoin="round"
+                  d="M -108 30 L 36 102 L 108 66 L -36 -6 Z M -96 32 L 32 94 L 96 64 L -32 2 Z" />
+            <polygon points="-96,32 32,94 96,64 -32,2" fill="#0b1120" stroke="#020617" stroke-width="1.2" stroke-linejoin="round" />
+            <line x1="-36" y1="28" x2="-36" y2="36" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+            <line x1="0" y1="46" x2="0" y2="54" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+            <line x1="36" y1="64" x2="36" y2="72" stroke="#ffffff" stroke-opacity="0.25" stroke-width="1.6" stroke-linecap="round" />
+          </g>
+
+          <!-- 6. Underside Clutch Callout Overlays -->
+          <g id="under-callouts" transform="translate(0, 128)">
+            <rect x="-145" y="0" width="290" height="20" rx="5" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
+            <text id="under-callout-text" x="0" y="13.5" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">▲ SUBTRACTIVE CSG CAVITY: 1.2mm WALLS • Ø6.51mm TUBES</text>
+          </g>
+        </g>
+      </g>
+    </g>
+
+    <!-- 5. Overlay Dimension Annotations (Toggleable) -->
+    <g id="lego-dimension-overlays" opacity="1">
+      <line x1="-122" y1="-8" x2="22" y2="64" stroke="#38bdf8" stroke-width="1.5" />
+      <rect x="-82" y="16" width="56" height="18" rx="4" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
+      <text id="dim-length-text" x="-54" y="28" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">32.0 mm</text>
+
+      <line x1="48" y1="62" x2="120" y2="26" stroke="#38bdf8" stroke-width="1.5" />
+      <rect x="58" y="32" width="56" height="18" rx="4" fill="#0b1120" stroke="#38bdf8" stroke-width="1" />
+      <text id="dim-width-text" x="86" y="44" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">16.0 mm</text>
+
+      <line x1="124" y1="18" x2="124" y2="66" stroke="#facc15" stroke-width="1.5" />
+      <rect x="130" y="33" width="54" height="18" rx="4" fill="#0b1120" stroke="#facc15" stroke-width="1" />
+      <text id="dim-height-text" x="157" y="45" fill="#facc15" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">9.6 mm</text>
+
+      <g id="dim-pitch-group">
+        <line x1="-72" y1="-30" x2="-36" y2="-12" stroke="#34d399" stroke-width="1.2" stroke-dasharray="2 2" />
+        <text x="-54" y="-25" fill="#34d399" font-size="8.5" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">8.0 mm</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 6. Left Control Deck: Brick Models & Color Palette -->
+  <g id="lego-left-deck" data-interactive="true" transform="translate(24, 75)">
+    <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+
+    <text x="16" y="24" fill="#94a3b8" font-size="9.5" font-weight="800" letter-spacing="0.5">SELECT BRICK GEOMETRY:</text>
+
+    <!-- Brick Type Selector Buttons -->
+    <g id="btn-type-2x4" class="lego-btn" transform="translate(14, 34)" cursor="pointer">
+      <rect id="btn-type-2x4-rect" width="152" height="30" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.6" />
+      <text id="btn-type-2x4-txt" x="12" y="19" fill="#ffffff" font-size="11" font-weight="800">🧱 2×4 Standard (8 Stud)</text>
+    </g>
+
+    <g id="btn-type-2x2" class="lego-btn" transform="translate(14, 70)" cursor="pointer">
+      <rect id="btn-type-2x2-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text id="btn-type-2x2-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📦 2×2 Cube (4 Stud)</text>
+    </g>
+
+    <g id="btn-type-1x2" class="lego-btn" transform="translate(14, 106)" cursor="pointer">
+      <rect id="btn-type-1x2-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text id="btn-type-1x2-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📏 1×2 Beam (2 Stud)</text>
+    </g>
+
+    <g id="btn-type-slope" class="lego-btn" transform="translate(14, 142)" cursor="pointer">
+      <rect id="btn-type-slope-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text id="btn-type-slope-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">📐 2×4 Roof Slope 45°</text>
+    </g>
+
+    <g id="btn-type-tile" class="lego-btn" transform="translate(14, 178)" cursor="pointer">
+      <rect id="btn-type-tile-rect" width="152" height="30" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1" />
+      <text id="btn-type-tile-txt" x="12" y="19" fill="#94a3b8" font-size="11" font-weight="700">🛡️ 2×4 Smooth Tile</text>
+    </g>
+
+    <!-- Color Palette Section -->
+    <text x="16" y="230" fill="#94a3b8" font-size="9.5" font-weight="800" letter-spacing="0.5">MATERIAL &amp; COLOR:</text>
+
+    <!-- Color Swatches Grid -->
+    <g transform="translate(16, 242)">
+      <circle id="col-swatch-red" cx="14" cy="14" r="12" fill="#e11d48" stroke="#ffffff" stroke-width="2.5" cursor="pointer" />
+      <circle id="col-swatch-blue" cx="48" cy="14" r="12" fill="#2563eb" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <circle id="col-swatch-yellow" cx="82" cy="14" r="12" fill="#facc15" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <circle id="col-swatch-green" cx="116" cy="14" r="12" fill="#16a34a" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+
+      <circle id="col-swatch-orange" cx="14" cy="46" r="12" fill="#ea580c" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <circle id="col-swatch-white" cx="48" cy="46" r="12" fill="#f8fafc" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <circle id="col-swatch-black" cx="82" cy="46" r="12" fill="#1e293b" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+      <circle id="col-swatch-cyan" cx="116" cy="46" r="12" fill="#38bdf8" stroke="#334155" stroke-width="1.5" cursor="pointer" />
+    </g>
+
+    <!-- View Flip Toggle (Studs vs Underside Cavity) -->
+    <g id="btn-toggle-flip" transform="translate(14, 296)" cursor="pointer">
+      <rect id="btn-toggle-flip-rect" width="152" height="18" rx="4" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-toggle-flip" x="76" y="12.5" fill="#38bdf8" font-size="8.5" font-weight="800" text-anchor="middle">🔄 TOP STUDS VIEW</text>
+    </g>
+
+    <!-- Stack Interlock Mode Toggle -->
+    <g id="btn-toggle-stack" transform="translate(14, 318)" cursor="pointer">
+      <rect id="btn-toggle-stack-rect" width="152" height="16" rx="4" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="txt-stack-mode" x="76" y="11.5" fill="#94a3b8" font-size="8.5" font-weight="700" text-anchor="middle">🧱 WALL STACK: OFF</text>
+    </g>
+  </g>
+
+  <!-- 7. Right Telemetry & Engineering Card -->
+  <g id="lego-right-card" data-interactive="true" transform="translate(596, 75)">
+    <rect width="180" height="340" rx="10" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+
+    <text x="16" y="24" fill="#38bdf8" font-size="10" font-weight="800" letter-spacing="0.5">📐 SPATIAL DIMENSIONS</text>
+
+    <!-- Metric Specs -->
+    <g transform="translate(16, 38)">
+      <text x="0" y="10" fill="#94a3b8" font-size="8.5" font-weight="700">GRID PITCH:</text>
+      <text x="148" y="10" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">8.0 mm</text>
+
+      <text x="0" y="26" fill="#94a3b8" font-size="8.5" font-weight="700">BRICK HEIGHT:</text>
+      <text id="stat-brick-height" x="148" y="26" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">9.6 mm (3p)</text>
+
+      <text x="0" y="42" fill="#94a3b8" font-size="8.5" font-weight="700">FORM FACTOR:</text>
+      <text id="stat-brick-type" x="148" y="42" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">2X4</text>
+
+      <text x="0" y="58" fill="#94a3b8" font-size="8.5" font-weight="700">STUD DIAMETER:</text>
+      <text x="148" y="58" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">4.8 mm</text>
+
+      <text x="0" y="74" fill="#94a3b8" font-size="8.5" font-weight="700">STUD COUNT:</text>
+      <text id="stat-studs" x="148" y="74" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">8 studs</text>
+
+      <text x="0" y="90" fill="#94a3b8" font-size="8.5" font-weight="700">WALL THICKNESS:</text>
+      <text x="148" y="90" fill="#f8fafc" font-size="9" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">1.6 mm</text>
+
+      <line x1="0" y1="102" x2="148" y2="102" stroke="#1e293b" stroke-width="1" />
+
+      <text x="0" y="118" fill="#38bdf8" font-size="9" font-weight="800">TOTAL VOLUME:</text>
+      <text id="stat-volume" x="148" y="118" fill="#facc15" font-size="9.5" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">4,915 mm³</text>
+
+      <text x="0" y="134" fill="#38bdf8" font-size="9" font-weight="800">CLUTCH FORCE:</text>
+      <text id="stat-clutch" x="148" y="134" fill="#34d399" font-size="9.5" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">~3.2 N (3 tubes)</text>
+    </g>
+
+    <!-- Structural Engineering Lesson Card -->
+    <g transform="translate(14, 195)">
+      <rect width="152" height="132" rx="6" fill="#070b14" stroke="#1e293b" stroke-width="1" />
+      <text x="10" y="16" fill="#facc15" font-size="8.5" font-weight="800">💡 STAGGERED BOND RULE:</text>
+      <text x="10" y="32" fill="#94a3b8" font-size="7.8" font-weight="600">Overlapping bricks across joints</text>
+      <text x="10" y="44" fill="#94a3b8" font-size="7.8" font-weight="600">distributes shear tension,</text>
+      <text x="10" y="56" fill="#94a3b8" font-size="7.8" font-weight="600">preventing continuous vertical</text>
+      <text x="10" y="68" fill="#94a3b8" font-size="7.8" font-weight="600">fracture lines in structures!</text>
+
+      <g transform="translate(10, 80)">
+        <rect x="0" y="4" width="28" height="12" fill="#e11d48" rx="2" />
+        <rect x="30" y="4" width="28" height="12" fill="#e11d48" rx="2" />
+        <rect x="14" y="20" width="30" height="12" fill="#2563eb" rx="2" />
+        <text x="64" y="14" fill="#34d399" font-size="8" font-weight="800">✓ Overlap</text>
+        <text x="64" y="28" fill="#ef4444" font-size="8" font-weight="800">✕ Stack Seam</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- 8. Bottom In-Stage Interactive Action Toolbar -->
+  <g id="lego-bottom-bar" data-interactive="true" transform="translate(24, 426)">
+    <rect width="752" height="42" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.5" />
+
+    <!-- 360° Turntable Spin Control -->
+    <g id="btn-action-spin" class="lego-btn" transform="translate(12, 7)" cursor="pointer">
+      <rect id="btn-spin-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-spin-btn" x="58" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">⚡ Spin 360°: ON</text>
+    </g>
+
+    <!-- Flip Underside View Toggle -->
+    <g id="btn-action-flip" class="lego-btn" transform="translate(134, 7)" cursor="pointer">
+      <rect id="btn-flip-rect" width="134" height="28" rx="6" fill="#1e293b" stroke="#38bdf8" stroke-width="1.2" />
+      <text id="txt-flip-btn" x="67" y="18" fill="#38bdf8" font-size="10" font-weight="800" text-anchor="middle">🔄 View: TOP STUDS</text>
+    </g>
+
+    <!-- Explode View Toggle -->
+    <g id="btn-action-explode" class="lego-btn" transform="translate(274, 7)" cursor="pointer">
+      <rect id="btn-explode-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text id="txt-explode-btn" x="58" y="18" fill="#94a3b8" font-size="10" font-weight="800" text-anchor="middle">💥 Explode: OFF</text>
+    </g>
+
+    <!-- Engineering Dimensions Toggle -->
+    <g id="btn-action-dimensions" class="lego-btn" transform="translate(396, 7)" cursor="pointer">
+      <rect id="btn-dimensions-rect" width="116" height="28" rx="6" fill="#1e293b" stroke="#facc15" stroke-width="1.2" />
+      <text id="txt-dimensions-btn" x="58" y="18" fill="#facc15" font-size="10" font-weight="800" text-anchor="middle">📏 Dimensions: ON</text>
+    </g>
+
+    <!-- Manual Turntable Scrubber Track -->
+    <g transform="translate(518, 9)">
+      <text x="0" y="16" fill="#94a3b8" font-size="8.5" font-weight="700">ORBIT:</text>
+      <rect x="42" y="6" width="124" height="10" rx="5" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <circle id="lego-yaw-knob" cx="42" cy="11" r="7" fill="#38bdf8" stroke="#ffffff" stroke-width="1.5" cursor="ew-resize" />
+    </g>
+
+    <!-- Reset View Button -->
+    <g id="btn-action-reset" class="lego-btn" transform="translate(696, 7)" cursor="pointer">
+      <rect width="44" height="28" rx="6" fill="#1e293b" stroke="#334155" stroke-width="1" />
+      <text x="22" y="18" fill="#cbd5e1" font-size="11" font-weight="800" text-anchor="middle">↺</text>
+    </g>
+  </g>
+</svg>

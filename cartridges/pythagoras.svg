@@ -1,0 +1,183 @@
+<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Background Blueprint Vignette -->
+    <radialGradient id="pyth-bg-glow" cx="50%" cy="50%" r="75%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="60%" stop-color="#090d16" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Blueprint Grid Pattern (28px unit grid matching simulation scale) -->
+    <pattern id="pyth-blueprint-grid" width="28" height="28" patternUnits="userSpaceOnUse">
+      <path d="M 28 0 L 0 0 0 28" fill="none" stroke="#1e293b" stroke-width="0.75" stroke-opacity="0.6" />
+      <circle cx="28" cy="28" r="1" fill="#334155" fill-opacity="0.8" />
+    </pattern>
+
+    <!-- Adaptive Unit Tile Patterns for Squares a², b², c² -->
+    <pattern id="pyth-pat-a" width="28" height="28" x="276" y="196" patternUnits="userSpaceOnUse">
+      <path id="pyth-pat-a-path" d="M 28 0 V 28 M 0 28 H 28" fill="none" stroke="#ffffff" stroke-width="1" />
+    </pattern>
+    <pattern id="pyth-pat-b" width="28" height="28" x="360" y="280" patternUnits="userSpaceOnUse">
+      <path id="pyth-pat-b-path" d="M 28 0 V 28 M 0 28 H 28" fill="none" stroke="#ffffff" stroke-width="1" />
+    </pattern>
+    <pattern id="pyth-pat-c" width="28" height="28" x="0" y="-140" patternUnits="userSpaceOnUse">
+      <path id="pyth-pat-c-path" d="M 28 0 V 28 M 0 28 H 28" fill="none" stroke="#ffffff" stroke-width="1" />
+    </pattern>
+
+    <!-- Precision Drop Shadows and Neon Halos -->
+    <filter id="pyth-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <filter id="pyth-shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+
+    <!-- Color Gradients -->
+    <!-- Leg a: Emerald -->
+    <linearGradient id="pyth-grad-a" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#34d399" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#059669" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- Leg b: Sapphire -->
+    <linearGradient id="pyth-grad-b" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#60a5fa" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#1d4ed8" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- Hypotenuse c: Amber / Gold -->
+    <linearGradient id="pyth-grad-c" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.9" />
+      <stop offset="100%" stop-color="#d97706" stop-opacity="0.75" />
+    </linearGradient>
+
+    <!-- HUD Glass Gradient -->
+    <linearGradient id="pyth-hud-glass" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.95" />
+      <stop offset="50%" stop-color="#1e293b" stop-opacity="0.90" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.95" />
+    </linearGradient>
+  </defs>
+
+  <!-- Stage Background & Engineering Grid -->
+  <rect width="800" height="480" fill="url(#pyth-bg-glow)" />
+  <rect width="800" height="480" fill="url(#pyth-blueprint-grid)" />
+
+  <!-- Technical Axis Origin Guides -->
+  <g opacity="0.35">
+    <line x1="40" y1="280" x2="760" y2="280" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 3" />
+    <line x1="360" y1="40" x2="360" y2="435" stroke="#38bdf8" stroke-width="1" stroke-dasharray="3 3" />
+  </g>
+
+  <!-- Interactive Precision Formula Header HUD -->
+  <g id="pyth-hud-banner" transform="translate(130, 16)">
+    <rect width="540" height="52" rx="14" fill="url(#pyth-hud-glass)" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.8" filter="url(#pyth-shadow)" />
+    <path d="M 14 1 L 526 1" stroke="#ffffff" stroke-width="1" stroke-opacity="0.25" />
+
+    <text id="pyth-banner-text" x="270" y="33" fill="#f8fafc" font-size="16" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision">
+      <tspan id="pyth-banner-tspan-a" fill="#34d399">a² (9)</tspan><tspan> + </tspan><tspan id="pyth-banner-tspan-b" fill="#60a5fa">b² (16)</tspan><tspan> = </tspan><tspan id="pyth-banner-tspan-c" fill="#fbbf24">c² (25)</tspan><tspan id="pyth-banner-tail"> ➔ 3² + 4² = 5² (c = 5)</tspan>
+    </text>
+  </g>
+
+  <!-- Square a² (Emerald Leg A) -->
+  <g id="pyth-group-a">
+    <rect id="pyth-rect-a" x="276" y="196" width="84" height="84" rx="6" fill="url(#pyth-grad-a)" stroke="#10b981" stroke-width="2.5" filter="url(#pyth-shadow)" data-pedagogical="pyth-sq-a" style="cursor:ns-resize;" />
+    <rect id="pyth-grid-a" x="276" y="196" width="84" height="84" rx="6" fill="url(#pyth-pat-a)" opacity="0.5" pointer-events="none" />
+    <rect id="pyth-badge-a" x="286" y="226" width="64" height="26" rx="6" fill="#064e3b" fill-opacity="0.9" stroke="#34d399" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-a" x="318" y="244" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">a² = 9</text>
+  </g>
+
+  <!-- Square b² (Sapphire Leg B) -->
+  <g id="pyth-group-b">
+    <rect id="pyth-rect-b" x="360" y="280" width="112" height="112" rx="6" fill="url(#pyth-grad-b)" stroke="#3b82f6" stroke-width="2.5" filter="url(#pyth-shadow)" data-pedagogical="pyth-sq-b" style="cursor:ew-resize;" />
+    <rect id="pyth-grid-b" x="360" y="280" width="112" height="112" rx="6" fill="url(#pyth-pat-b)" opacity="0.5" pointer-events="none" />
+    <rect id="pyth-badge-b" x="382" y="323" width="68" height="26" rx="6" fill="#1e3a8a" fill-opacity="0.9" stroke="#60a5fa" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-b" x="416" y="341" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">b² = 16</text>
+  </g>
+
+  <!-- Square c² (Amber Hypotenuse C) -->
+  <g id="pyth-group-c" transform="translate(360, 196) rotate(36.87)">
+    <rect id="pyth-rect-c" x="0" y="-140" width="140" height="140" rx="6" fill="url(#pyth-grad-c)" stroke="#f59e0b" stroke-width="2.5" filter="url(#pyth-shadow)" data-pedagogical="pyth-sq-c" />
+    <rect id="pyth-grid-c" x="0" y="-140" width="140" height="140" rx="6" fill="url(#pyth-pat-c)" opacity="0.5" pointer-events="none" />
+    <rect id="pyth-badge-c" x="10" y="-84" width="120" height="28" rx="6" fill="#78350f" fill-opacity="0.9" stroke="#fbbf24" stroke-width="1.5" pointer-events="none" />
+    <text id="pyth-txt-c" x="70" y="-65" fill="#ffffff" font-size="14" font-weight="900" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" text-rendering="geometricPrecision" pointer-events="none">c² = 25 (c = 5)</text>
+  </g>
+
+  <!-- Central Euclidean Right Triangle -->
+  <polygon id="pyth-triangle" points="360,280 472,280 360,196" fill="#0e7490" fill-opacity="0.25" stroke="#38bdf8" stroke-width="3.5" stroke-linejoin="round" filter="url(#pyth-glow)" data-pedagogical="pyth-triangle" />
+
+  <!-- Precision Drafting Right-Angle Symbol -->
+  <g id="pyth-right-angle-group">
+    <rect id="pyth-right-angle" x="360" y="262" width="18" height="18" fill="none" stroke="#94a3b8" stroke-width="2" data-pedagogical="pyth-right-angle" />
+    <circle id="pyth-right-angle-dot" cx="369" cy="271" r="2" fill="#38bdf8" />
+  </g>
+
+  <!-- Side Dimension Badges -->
+  <g id="pyth-labels-group" pointer-events="none" font-family="system-ui, -apple-system, sans-serif">
+    <!-- Leg a Label -->
+    <rect id="pyth-label-a-bg" x="364" y="227" width="46" height="22" rx="4" fill="#0f172a" fill-opacity="0.85" stroke="#10b981" stroke-width="1" />
+    <text id="pyth-label-a" x="376" y="243" fill="#34d399" font-size="12" font-weight="900" text-anchor="start" text-rendering="geometricPrecision">a = 3</text>
+
+    <!-- Leg b Label -->
+    <rect id="pyth-label-b-bg" x="393" y="254" width="46" height="22" rx="4" fill="#0f172a" fill-opacity="0.85" stroke="#3b82f6" stroke-width="1" />
+    <text id="pyth-label-b" x="416" y="268" fill="#60a5fa" font-size="12" font-weight="900" text-anchor="middle" text-rendering="geometricPrecision">b = 4</text>
+
+    <!-- Hypotenuse c Label -->
+    <rect id="pyth-label-c-bg" x="375" y="236" width="56" height="22" rx="4" fill="#0f172a" fill-opacity="0.85" stroke="#f59e0b" stroke-width="1" />
+    <text id="pyth-label-c" x="403" y="252" fill="#fbbf24" font-size="12" font-weight="900" text-anchor="middle" text-rendering="geometricPrecision">c = 5</text>
+  </g>
+
+  <!-- Manipulator Handle A (Top Vertex / Leg a Controller) -->
+  <g id="pyth-handle-a" transform="translate(360, 196)" data-pedagogical="pyth-handle-a" style="cursor:ns-resize;">
+    <circle cx="0" cy="0" r="22" fill="#10b981" fill-opacity="0.2" stroke="#10b981" stroke-width="1" stroke-dasharray="3 3" />
+    <circle cx="0" cy="0" r="15" fill="#10b981" stroke="#ffffff" stroke-width="2.5" filter="url(#pyth-glow)" />
+    <text x="0" y="5" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" pointer-events="none">↕</text>
+  </g>
+
+  <!-- Manipulator Handle B (Right Vertex / Leg b Controller) -->
+  <g id="pyth-handle-b" transform="translate(472, 280)" data-pedagogical="pyth-handle-b" style="cursor:ew-resize;">
+    <circle cx="0" cy="0" r="22" fill="#3b82f6" fill-opacity="0.2" stroke="#3b82f6" stroke-width="1" stroke-dasharray="3 3" />
+    <circle cx="0" cy="0" r="15" fill="#3b82f6" stroke="#ffffff" stroke-width="2.5" filter="url(#pyth-glow)" />
+    <text x="0" y="5" fill="#ffffff" font-size="12" font-weight="900" text-anchor="middle" pointer-events="none">↔</text>
+  </g>
+
+  <!-- Bottom Interactive Pythagorean Triples & Unit Grid Dock -->
+  <g id="pyth-triples-dock" transform="translate(95, 442)" font-family="system-ui, -apple-system, sans-serif">
+    <rect x="0" y="0" width="610" height="30" rx="8" fill="#0f172a" fill-opacity="0.92" stroke="#334155" stroke-width="1.2" />
+    <text x="12" y="19" fill="#fbbf24" font-size="10" font-weight="900" letter-spacing="0.4">TRIPLES:</text>
+
+    <g id="pyth-chip-345" transform="translate(72, 4)" style="cursor:pointer;">
+      <rect width="68" height="22" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="34" y="15" fill="#f8fafc" font-size="10.5" font-weight="800" text-anchor="middle">3-4-5</text>
+    </g>
+    <g id="pyth-chip-6810" transform="translate(146, 4)" style="cursor:pointer;">
+      <rect width="72" height="22" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="36" y="15" fill="#f8fafc" font-size="10.5" font-weight="800" text-anchor="middle">6-8-10</text>
+    </g>
+    <g id="pyth-chip-51213" transform="translate(224, 4)" style="cursor:pointer;">
+      <rect width="76" height="22" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="38" y="15" fill="#f8fafc" font-size="10.5" font-weight="800" text-anchor="middle">5-12-13</text>
+    </g>
+    <g id="pyth-chip-81517" transform="translate(306, 4)" style="cursor:pointer;">
+      <rect width="76" height="22" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="38" y="15" fill="#f8fafc" font-size="10.5" font-weight="800" text-anchor="middle">8-15-17</text>
+    </g>
+    <g id="pyth-chip-91215" transform="translate(388, 4)" style="cursor:pointer;">
+      <rect width="76" height="22" rx="5" fill="#1e293b" stroke="#38bdf8" stroke-width="1" />
+      <text x="38" y="15" fill="#f8fafc" font-size="10.5" font-weight="800" text-anchor="middle">9-12-15</text>
+    </g>
+    <g id="pyth-chip-112" transform="translate(470, 4)" style="cursor:pointer;">
+      <rect width="68" height="22" rx="5" fill="#1e293b" stroke="#f59e0b" stroke-width="1" />
+      <text x="34" y="15" fill="#fde68a" font-size="10.5" font-weight="800" text-anchor="middle">1-1-√2</text>
+    </g>
+    <g id="pyth-chip-grid" transform="translate(544, 4)" style="cursor:pointer;">
+      <rect id="pyth-chip-grid-bg" width="56" height="22" rx="5" fill="#064e3b" stroke="#34d399" stroke-width="1" />
+      <text x="28" y="15" fill="#d1fae5" font-size="10" font-weight="800" text-anchor="middle">⊞ Grid</text>
+    </g>
+  </g>
+</svg>

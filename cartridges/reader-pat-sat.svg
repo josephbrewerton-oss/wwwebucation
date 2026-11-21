@@ -1,0 +1,386 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%" id="reader-pat-sat-root" style="background:#0f172a; font-family:system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+  <defs>
+    <clipPath id="art-clip">
+      <rect x="36" y="64" width="728" height="220" rx="14"/>
+    </clipPath>
+    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#bae6fd"/>
+      <stop offset="100%" stop-color="#f0f9ff"/>
+    </linearGradient>
+    <linearGradient id="warmRoomGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fef9c3"/>
+      <stop offset="100%" stop-color="#fef3c7"/>
+    </linearGradient>
+    <linearGradient id="sunsetGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#fed7aa"/>
+      <stop offset="100%" stop-color="#fef08a"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Picture Book Cream Spread -->
+  <rect x="16" y="12" width="768" height="476" rx="18" fill="#fffdf7" stroke="#cbd5e1" stroke-width="2"/>
+
+  <!-- Top Book Chrome -->
+  <text x="36" y="34" font-size="11" font-weight="800" fill="#0284c7" letter-spacing="0.06em">LEVEL 1 · SET 1 &amp; 2 (SATPIN)</text>
+  <text x="36" y="53" font-size="19" font-weight="800" fill="#0f172a">Pat Sat</text>
+
+  <!-- Toggle Sound Buttons Control -->
+  <g id="btn-toggle-sb" style="cursor:pointer;">
+    <rect id="btn-toggle-sb-rect" x="394" y="21" width="154" height="32" rx="10" fill="#e0f2fe" stroke="#0284c7" stroke-width="1.5"/>
+    <text id="btn-toggle-sb-txt" x="471" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#0284c7">● Sound Buttons: ON</text>
+  </g>
+
+  <!-- Read Page Aloud Control -->
+  <g id="btn-read-page" style="cursor:pointer;">
+    <rect x="558" y="21" width="122" height="32" rx="10" fill="#0284c7"/>
+    <text x="619" y="42" text-anchor="middle" font-size="12" font-weight="800" fill="#ffffff">🔊 Read Page</text>
+  </g>
+
+  <!-- Page Indicator -->
+  <text id="book-page-num" x="764" y="42" text-anchor="end" font-size="13" font-weight="800" fill="#475569">Page 1 of 5</text>
+
+  <!-- 5 Illustrated Story Pages -->
+  
+      <g id="book-page-0" display="inline">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="url(#warmRoomGrad)"/>
+        <rect x="36" y="216" width="728" height="68" fill="#fde68a"/>
+        <line x1="36" y1="216" x2="764" y2="216" stroke="#f59e0b" stroke-width="2" opacity="0.5"/>
+        <!-- Window -->
+        <rect x="550" y="84" width="130" height="92" rx="8" fill="#bae6fd" stroke="#78350f" stroke-width="5"/>
+        <line x1="615" y1="84" x2="615" y2="176" stroke="#78350f" stroke-width="4"/>
+        <line x1="550" y1="130" x2="680" y2="130" stroke="#78350f" stroke-width="4"/>
+        <circle cx="648" cy="108" r="14" fill="#fde047"/>
+        <!-- Woven Mat -->
+        <ellipse cx="370" cy="248" rx="165" ry="26" fill="#0284c7"/>
+        <ellipse cx="370" cy="248" rx="140" ry="18" fill="#38bdf8" stroke="#e0f2fe" stroke-width="3" stroke-dasharray="10 6"/>
+        <!-- Pat sitting happily -->
+        <g id="anim-pat-0">
+          <ellipse cx="370" cy="222" rx="34" ry="26" fill="#ef4444"/>
+          <path d="M 338 238 Q 320 250 344 252 L 396 252 Q 420 250 402 238 Z" fill="#1e3a8a"/>
+          <circle cx="370" cy="176" r="28" fill="#fed7aa" stroke="#9a3412" stroke-width="2"/>
+          <path d="M 342 172 Q 345 142 370 144 Q 395 142 398 172 Q 384 158 370 160 Q 356 158 342 172 Z" fill="#78350f"/>
+          <circle cx="360" cy="174" r="3" fill="#0f172a"/>
+          <circle cx="380" cy="174" r="3" fill="#0f172a"/>
+          <path d="M 360 186 Q 370 195 380 186" stroke="#9a3412" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+          <!-- Waving arm -->
+          <path d="M 400 208 Q 426 190 434 176" stroke="#fed7aa" stroke-width="11" stroke-linecap="round" fill="none"/>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
+          <rect x="205" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="242.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
+        </g>
+      
+        <g class="book-word" data-word="sat" data-hint="s · a · t  ➔  sat" data-phonemes="ssss, ah, tuh ... sat" style="cursor:pointer;">
+          <rect x="292" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="328" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sat</text>
+        </g>
+      
+        <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
+          <rect x="376" y="308" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="407" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="450" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="473.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="mat" data-hint="m · a · t  ➔  mat" data-phonemes="mmm, ah, tuh ... mat" style="cursor:pointer;">
+          <rect x="509" y="308" width="86" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="552" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">mat.</text>
+        </g>
+      
+        <g id="sb-page-0" pointer-events="none"><circle cx="229.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="246.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="258.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="315.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="330.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="342.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="399.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="414.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="473.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="535.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="553.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="566.4" cy="344" r="3.4" fill="#0284c7"/></g>
+      </g>
+    
+
+      <g id="book-page-1" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#ecfeff"/>
+        <rect x="36" y="218" width="728" height="66" fill="#cbd5e1"/>
+        <!-- Sink & Chrome Tap -->
+        <rect x="440" y="176" width="190" height="104" rx="10" fill="#f8fafc" stroke="#94a3b8" stroke-width="3"/>
+        <ellipse cx="535" cy="184" rx="68" ry="14" fill="#bae6fd" stroke="#64748b" stroke-width="2"/>
+        <path d="M 595 178 L 595 126 Q 595 104 565 104 L 540 104 Q 528 104 528 122" stroke="#64748b" stroke-width="14" stroke-linecap="round" fill="none"/>
+        <path d="M 595 178 L 595 126 Q 595 104 565 104 L 540 104 Q 528 104 528 122" stroke="#cbd5e1" stroke-width="7" stroke-linecap="round" fill="none"/>
+        <rect x="576" y="128" width="38" height="8" rx="4" fill="#0284c7"/>
+        <!-- Animated water drop -->
+        <g id="anim-drop-1">
+          <path d="M 528 134 Q 535 148 528 156 Q 521 148 528 134 Z" fill="#0ea5e9"/>
+        </g>
+        <!-- Pat sitting near tap -->
+        <ellipse cx="300" cy="236" rx="34" ry="26" fill="#ef4444"/>
+        <circle cx="300" cy="190" r="27" fill="#fed7aa" stroke="#9a3412" stroke-width="2"/>
+        <path d="M 273 186 Q 276 158 300 160 Q 324 158 327 186 Q 312 172 300 174 Q 288 172 273 186 Z" fill="#78350f"/>
+        <circle cx="292" cy="188" r="3" fill="#0f172a"/>
+        <circle cx="310" cy="188" r="3" fill="#0f172a"/>
+        <path d="M 294 200 Q 302 207 312 200" stroke="#9a3412" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
+          <rect x="211" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="248.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
+        </g>
+      
+        <g class="book-word" data-word="sat" data-hint="s · a · t  ➔  sat" data-phonemes="ssss, ah, tuh ... sat" style="cursor:pointer;">
+          <rect x="298" y="308" width="72" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="334" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">sat</text>
+        </g>
+      
+        <g class="book-word" data-word="at" data-hint="a · t  ➔  at" data-phonemes="ah, tuh ... at" style="cursor:pointer;">
+          <rect x="382" y="308" width="57" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="410.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">at</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="451" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="474.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
+          <rect x="510" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="550" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap.</text>
+        </g>
+      
+        <g id="sb-page-1" pointer-events="none"><circle cx="235.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="252.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="264.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="321.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="336.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="348.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="405.3" cy="344" r="3.4" fill="#0284c7"/><circle cx="417.9" cy="344" r="3.4" fill="#0284c7"/><circle cx="474.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="531.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="544.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="558.9" cy="344" r="3.4" fill="#0284c7"/></g>
+      </g>
+    
+
+      <g id="book-page-2" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#f0f9ff"/>
+        <rect x="36" y="218" width="728" height="66" fill="#e2e8f0"/>
+        <!-- Big Chrome Tap -->
+        <path d="M 490 220 L 490 124 Q 490 96 452 96 L 410 96 Q 394 96 394 118" stroke="#475569" stroke-width="18" stroke-linecap="round" fill="none"/>
+        <path d="M 490 220 L 490 124 Q 490 96 452 96 L 410 96 Q 394 96 394 118" stroke="#cbd5e1" stroke-width="9" stroke-linecap="round" fill="none"/>
+        <!-- Shiny Tin Pan -->
+        <g id="anim-pan-2">
+          <rect x="240" y="206" width="90" height="12" rx="6" fill="#334155"/>
+          <path d="M 326 196 L 462 196 L 448 248 L 340 248 Z" fill="#94a3b8" stroke="#475569" stroke-width="3"/>
+          <ellipse cx="394" cy="196" rx="68" ry="12" fill="#e2e8f0" stroke="#475569" stroke-width="2.5"/>
+          <ellipse cx="394" cy="198" rx="54" ry="7" fill="#38bdf8" opacity="0.65"/>
+        </g>
+        <path d="M 394 134 Q 402 152 394 162 Q 386 152 394 134 Z" fill="#0ea5e9"/>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
+          <rect x="136" y="308" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="161" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
+        </g>
+      
+        <g class="book-word" data-word="tin" data-hint="t · i · n  ➔  tin" data-phonemes="tuh, ih, nnn ... tin" style="cursor:pointer;">
+          <rect x="198" y="308" width="66" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="231" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tin</text>
+        </g>
+      
+        <g class="book-word" data-word="pan" data-hint="p · a · n  ➔  pan" data-phonemes="puh, ah, nnn ... pan" style="cursor:pointer;">
+          <rect x="276" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="314" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">pan</text>
+        </g>
+      
+        <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
+          <rect x="364" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="391.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
+        </g>
+      
+        <g class="book-word" data-word="at" data-hint="a · t  ➔  at" data-phonemes="ah, tuh ... at" style="cursor:pointer;">
+          <rect x="431" y="308" width="57" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="459.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">at</text>
+        </g>
+      
+        <g class="book-word" data-word="the" data-hint="♥ the — Tricky Word: The &quot;e&quot; doesn’t say /e/, it makes a soft unaccented &quot;uh&quot; (schwa) sound." data-phonemes="the. Tricky word. the" style="cursor:pointer;">
+          <rect x="500" y="308" width="72" height="45" rx="10" fill="#fff1f2" stroke="#fda4af" stroke-width="1.8"/>
+          <text x="536" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#be123c">the</text>
+        </g>
+      
+        <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
+          <rect x="584" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="624" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap.</text>
+        </g>
+      
+        <g id="sb-page-2" pointer-events="none"><circle cx="161.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="219.3" cy="344" r="3.4" fill="#0284c7"/><circle cx="228.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="240.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="299.2" cy="344" r="3.4" fill="#0284c7"/><circle cx="314.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="328.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="384.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="395.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="454.3" cy="344" r="3.4" fill="#0284c7"/><circle cx="466.9" cy="344" r="3.4" fill="#0284c7"/>
+          <line x1="514.0" y1="344" x2="558.1" y2="344" stroke="#e11d48" stroke-width="2.5" stroke-dasharray="4 3"/>
+          <text x="536.0" y="345" text-anchor="middle" font-size="9" font-weight="800" fill="#e11d48">♥</text>
+        <circle cx="605.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="618.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="632.9" cy="344" r="3.4" fill="#0284c7"/></g>
+      </g>
+    
+
+      <g id="book-page-3" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#eff6ff"/>
+        <rect x="36" y="222" width="728" height="62" fill="#cbd5e1"/>
+        <!-- Water puddle & splashes -->
+        <ellipse cx="420" cy="256" rx="145" ry="16" fill="#38bdf8" opacity="0.75"/>
+        <!-- Tipped Tin Pan -->
+        <g transform="rotate(-24 390 205)">
+          <rect x="255" y="198" width="84" height="11" rx="5" fill="#334155"/>
+          <path d="M 335 186 L 455 186 L 442 234 L 348 234 Z" fill="#94a3b8" stroke="#475569" stroke-width="3"/>
+          <ellipse cx="395" cy="186" rx="60" ry="11" fill="#e2e8f0" stroke="#475569" stroke-width="2.5"/>
+        </g>
+        <!-- Splash droplets -->
+        <g id="anim-splash-3" fill="#0284c7">
+          <circle cx="475" cy="180" r="7"/>
+          <circle cx="505" cy="196" r="5"/>
+          <circle cx="456" cy="158" r="5"/>
+          <circle cx="520" cy="222" r="6"/>
+          <text x="530" y="148" font-size="24" font-weight="800" fill="#0284c7">TAP! TAP!</text>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="Tap" data-hint="t · a · p  ➔  Tap" data-phonemes="tuh, ah, puh ... Tap" style="cursor:pointer;">
+          <rect x="67" y="308" width="87" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="110.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Tap,</text>
+        </g>
+      
+        <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
+          <rect x="166" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="206" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap,</text>
+        </g>
+      
+        <g class="book-word" data-word="tap" data-hint="t · a · p  ➔  tap" data-phonemes="tuh, ah, puh ... tap" style="cursor:pointer;">
+          <rect x="258" y="308" width="80" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="298" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tap!</text>
+        </g>
+      
+        <g class="book-word" data-word="A" data-hint="a  ➔  A" data-phonemes="ah ... A" style="cursor:pointer;">
+          <rect x="350" y="308" width="50" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="375" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">A</text>
+        </g>
+      
+        <g class="book-word" data-word="tin" data-hint="t · i · n  ➔  tin" data-phonemes="tuh, ih, nnn ... tin" style="cursor:pointer;">
+          <rect x="412" y="308" width="66" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="445" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tin</text>
+        </g>
+      
+        <g class="book-word" data-word="pan" data-hint="p · a · n  ➔  pan" data-phonemes="puh, ah, nnn ... pan" style="cursor:pointer;">
+          <rect x="490" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="528" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">pan</text>
+        </g>
+      
+        <g class="book-word" data-word="did" data-hint="d · i · d  ➔  did" data-phonemes="duh, ih, duh ... did" style="cursor:pointer;">
+          <rect x="578" y="308" width="70" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="613" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">did</text>
+        </g>
+      
+        <g class="book-word" data-word="tip" data-hint="t · i · p  ➔  tip" data-phonemes="tuh, ih, puh ... tip" style="cursor:pointer;">
+          <rect x="660" y="308" width="73" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="696.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">tip.</text>
+        </g>
+      
+        <g id="sb-page-3" pointer-events="none"><circle cx="92.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="108.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="122.9" cy="344" r="3.4" fill="#0284c7"/><circle cx="187.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="200.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="214.9" cy="344" r="3.4" fill="#0284c7"/><circle cx="279.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="292.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="306.9" cy="344" r="3.4" fill="#0284c7"/><circle cx="375.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="433.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="442.9" cy="344" r="3.4" fill="#0284c7"/><circle cx="454.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="513.2" cy="344" r="3.4" fill="#0284c7"/><circle cx="528.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="542.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="601.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="613.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="624.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="681.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="690.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="702.3" cy="344" r="3.4" fill="#0284c7"/></g>
+      </g>
+    
+
+      <g id="book-page-4" display="none">
+        <g clip-path="url(#art-clip)">
+          
+        <rect x="36" y="64" width="728" height="220" fill="#fefce8"/>
+        <rect x="36" y="216" width="728" height="68" fill="#fde68a"/>
+        <!-- Cozy Mat -->
+        <ellipse cx="400" cy="248" rx="185" ry="26" fill="#0284c7"/>
+        <ellipse cx="400" cy="248" rx="158" ry="18" fill="#38bdf8" stroke="#e0f2fe" stroke-width="3" stroke-dasharray="10 6"/>
+        <!-- Pillow & Pat napping -->
+        <rect x="275" y="218" width="66" height="24" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+        <circle cx="318" cy="216" r="24" fill="#fed7aa" stroke="#9a3412" stroke-width="2"/>
+        <path d="M 308 214 Q 314 218 320 214" stroke="#0f172a" stroke-width="2.2" fill="none"/>
+        <path d="M 326 214 Q 332 218 338 214" stroke="#0f172a" stroke-width="2.2" fill="none"/>
+        <path d="M 342 214 L 468 214 Q 486 214 486 238 L 342 238 Z" fill="#ef4444"/>
+        <!-- Floating Zzz -->
+        <g id="anim-zzz-4" fill="#0284c7" font-weight="800">
+          <text x="348" y="176" font-size="20">z</text>
+          <text x="370" y="152" font-size="26">z</text>
+          <text x="398" y="126" font-size="32">Z</text>
+        </g>
+      
+        </g>
+        <rect x="36" y="64" width="728" height="220" rx="14" fill="none" stroke="#cbd5e1" stroke-width="2"/>
+        
+        <g class="book-word" data-word="Pat" data-hint="p · a · t  ➔  Pat" data-phonemes="puh, ah, tuh ... Pat" style="cursor:pointer;">
+          <rect x="107" y="308" width="75" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="144.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">Pat</text>
+        </g>
+      
+        <g class="book-word" data-word="is" data-hint="i · s  ➔  is" data-phonemes="ih, ssss ... is" style="cursor:pointer;">
+          <rect x="194" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="221.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">is</text>
+        </g>
+      
+        <g class="book-word" data-word="in" data-hint="i · n  ➔  in" data-phonemes="ih, nnn ... in" style="cursor:pointer;">
+          <rect x="261" y="308" width="55" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="288.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">in</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="328" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="351.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="nap" data-hint="n · a · p  ➔  nap" data-phonemes="nnn, ah, puh ... nap" style="cursor:pointer;">
+          <rect x="387" y="308" width="76" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="425" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">nap</text>
+        </g>
+      
+        <g class="book-word" data-word="on" data-hint="o · n  ➔  on" data-phonemes="off, nnn ... on" style="cursor:pointer;">
+          <rect x="475" y="308" width="62" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="506" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">on</text>
+        </g>
+      
+        <g class="book-word" data-word="a" data-hint="a  ➔  a" data-phonemes="ah ... a" style="cursor:pointer;">
+          <rect x="549" y="308" width="47" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="572.5" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">a</text>
+        </g>
+      
+        <g class="book-word" data-word="mat" data-hint="m · a · t  ➔  mat" data-phonemes="mmm, ah, tuh ... mat" style="cursor:pointer;">
+          <rect x="608" y="308" width="86" height="45" rx="10" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.8"/>
+          <text x="651" y="336" text-anchor="middle" font-size="25" font-weight="800" fill="#0f172a">mat.</text>
+        </g>
+      
+        <g id="sb-page-4" pointer-events="none"><circle cx="131.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="148.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="160.7" cy="344" r="3.4" fill="#0284c7"/><circle cx="214.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="225.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="281.1" cy="344" r="3.4" fill="#0284c7"/><circle cx="292.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="351.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="410.2" cy="344" r="3.4" fill="#0284c7"/><circle cx="425.0" cy="344" r="3.4" fill="#0284c7"/><circle cx="439.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="498.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="513.4" cy="344" r="3.4" fill="#0284c7"/><circle cx="572.5" cy="344" r="3.4" fill="#0284c7"/><circle cx="634.6" cy="344" r="3.4" fill="#0284c7"/><circle cx="652.8" cy="344" r="3.4" fill="#0284c7"/><circle cx="665.4" cy="344" r="3.4" fill="#0284c7"/></g>
+      </g>
+    
+
+  <!-- Bottom Interactive Word Decoder & Page Navigation Bar -->
+  <line x1="36" y1="406" x2="764" y2="406" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Word Decoder Helper Box -->
+  <rect x="36" y="418" width="388" height="48" rx="12" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+  <text id="decoder-hint-txt" x="52" y="447" font-size="14" font-weight="700" fill="#334155">Tap any word above to see &amp; hear its sounds</text>
+
+  <!-- Sound Out Pure Phonemes Button -->
+  <g id="btn-sound-out" style="cursor:pointer;">
+    <rect x="434" y="418" width="110" height="48" rx="12" fill="#0284c7"/>
+    <text x="489" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">🌊 Sound Out</text>
+  </g>
+
+  <!-- Page Navigation -->
+  <g id="btn-prev-page" style="cursor:pointer;">
+    <rect x="554" y="422" width="58" height="40" rx="10" fill="#f1f5f9" stroke="#cbd5e1" stroke-width="1.5"/>
+    <text x="583" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#334155">◀ Prev</text>
+  </g>
+
+  <circle id="page-dot-0" class="page-dot" data-page="0" cx="626" cy="442" r="5.5" fill="#0284c7" style="cursor:pointer;"/>
+      <circle id="page-dot-1" class="page-dot" data-page="1" cx="642" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-2" class="page-dot" data-page="2" cx="658" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-3" class="page-dot" data-page="3" cx="674" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+      <circle id="page-dot-4" class="page-dot" data-page="4" cx="690" cy="442" r="5.5" fill="#cbd5e1" style="cursor:pointer;"/>
+
+  <g id="btn-next-page" style="cursor:pointer;">
+    <rect x="706" y="422" width="58" height="40" rx="10" fill="#0f172a"/>
+    <text x="735" y="447" text-anchor="middle" font-size="13" font-weight="800" fill="#ffffff">Next ▶</text>
+  </g>
+</svg>

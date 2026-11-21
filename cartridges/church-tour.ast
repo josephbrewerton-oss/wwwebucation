@@ -1,0 +1,159 @@
+(:scene :id "church-tour" :type "Slide" :oak-id "OAK-KS2-RE-001" :oak-unit "ks2-re-catholic-sacred-architecture" :title "Tour of a Catholic Church: Sacred Architecture & Sacred Spaces" :stage "CATHOLIC LIFE" :duration 60.0
+  (:vars (
+    (:var :name "candleGlow" :val 1.0 :min 0.2 :max 1.5 :step 0.1 :label "Sanctuary Lamp Flame")
+    (:var :name "pilgrimSpeed" :val 1.0 :min 0.5 :max 2.0 :step 0.25 :label "Tour Progression Pace")
+  ))
+  (:inputs (
+    (:slider :var "candleGlow" :label "Sanctuary Lamp Flame" :min 0.2 :max 1.5 :step 0.1)
+    (:slider :var "pilgrimSpeed" :label "Pilgrim Walk Pace" :min 0.5 :max 2.0 :step 0.25)
+  ))
+  (:gestures (
+    (:draggable :target "#spot-dot" :axis "xy" :min 80 :max 440)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 0.20 :en "We enter through the Narthex, blessing ourselves with Holy Water in the Name of the Father, Son, and Holy Spirit." :es "Entramos por el Nártex, bendiciéndonos con Agua Bendita en el Nombre del Padre, del Hijo y del Espíritu Santo." :la "In nomine Patris, et Filii, et Spiritus Sancti. Aqua benedicta ad memoriam baptismi.")
+    (:start 0.20 :end 0.40 :en "Walking up the central aisle of the Nave, we genuflect on our right knee toward the Tabernacle before entering our pew." :es "Por el pasillo de la Nave, hacemos una genuflexión con la rodilla derecha hacia el Sagrario antes de sentarnos." :la "Ad Tabernaculum flectamus genua, Christum Dominum verum Deum adorantes.")
+    (:start 0.40 :end 0.60 :en "The Ambo is the Table of the Word, where the Holy Gospel and readings of Sacred Scripture are proclaimed." :es "El Ambón es la Mesa de la Palabra, donde se proclaman las lecturas de la Sagrada Escritura y el Evangelio." :la "Ambo est mensa Verbi Dei, unde Sanctum Evangelium fidelibus annuntiatur.")
+    (:start 0.60 :end 0.80 :en "The Altar is the sacred center representing Christ Himself, where the bread and wine become His Body and Blood." :es "El Altar es el centro sagrado que representa a Cristo, donde el pan y el vino se convierten en Su Cuerpo y Sangre." :la "Altare est Christus: hic sacrificium eucharisticum in remissionem peccatorum offertur.")
+    (:start 0.80 :end 0.92 :en "The golden Tabernacle holds the Real Presence of Christ in the Eucharist, watched over by the burning red Sanctuary Lamp." :es "El Sagrario dorado guarda la Presencia Real de Jesús en la Eucaristía, acompañado por la lámpara roja del Santuario." :la "In Tabernaculo Christus vere et substantialiter praesens permanet.")
+    (:start 0.92 :end 1.00 :en "We visit the Lady Chapel for quiet prayer with Our Lady, and contemplate the Baptismal Font where eternal life begins." :es "Visitamos la Capilla de la Virgen para la oración, y contemplamos la Pila Bautismal donde comienza la vida eterna." :la "Fons baptismatis et sacellum beatae Mariae Virginis.")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Narthex & Holy Water Stoup" :rule "Vestibulum: We bless ourselves with Holy Water to recall our Baptism.")
+    (:t 0.20 :title "2. Nave & Central Aisle" :rule "Navis: The Pilgrim People of God; we genuflect towards the Tabernacle before entering our pew.")
+    (:t 0.40 :title "3. Ambo (Lectern)" :rule "Mensa Verbi: The Table of the Word from which the Holy Gospel is proclaimed.")
+    (:t 0.60 :title "4. High Altar of Sacrifice" :rule "Altare Christi: Represents Christ Himself and the Holy Sacrifice of the Mass.")
+    (:t 0.80 :title "5. Tabernacle & Sanctuary Lamp" :rule "Tabernaculum: Houses the Blessed Sacrament; red lamp indicates Christ's Real Presence.")
+    (:t 0.92 :title "6. Lady Chapel & Baptismal Font" :rule "Fons & Sacellum: Devotional side chapel of Our Lady and the waters of new birth.")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.20
+      :prompt "Why do Catholics genuflect on the right knee toward the Tabernacle when entering the Nave?"
+      :options ("To adore Jesus Christ truly and substantially present in the Blessed Sacrament" "As a greeting to the choir in the loft" "To test the church kneeler alignment" "To stretch before long liturgies")
+      :answer 0
+      :explanation "Genuflecting on our right knee is a sacred act of adoration directed specifically to Jesus Christ physically and divinely present in the consecrated Eucharist within the Tabernacle.")
+    (:checkpoint :t 0.60
+      :prompt "What does the High Altar represent in Catholic sacred architecture?"
+      :options ("Christ Himself, the living stone and center of the Eucharistic Sacrifice" "A podium for secular parish announcements" "A storage table exclusively for liturgical books" "A commemorative plaque to ancient benefactors")
+      :answer 0
+      :explanation "The altar represents Christ Himself, who is Priest, Altar, and Lamb of Sacrifice. The General Instruction of the Roman Missal emphasizes that the altar is the center of the thanksgiving accomplished through the Eucharist.")
+    (:checkpoint :t 0.81
+      :prompt "Why does a red Sanctuary Lamp burn day and night beside the Catholic Tabernacle?"
+      :options ("To signify the Real Presence of Jesus Christ in the Blessed Sacrament" "To provide night illumination for the sacristan" "To mark where incense is stored" "As an architectural fire exit indicator")
+      :answer 0
+      :explanation "Canon Law specifies that a special lamp or candle must shine continuously beside the Tabernacle to honor and signify the Eucharistic Real Presence of Christ.")
+  ))
+  (:bindings (
+    (:target "#church-lamp" :attr "opacity" :expr "(0.70 + Math.sin(t * Math.PI * 8) * 0.30) * (vars.candleGlow || 1.0)")
+    (:target "#spot-dot" :attr "cx" :expr "t < 0.20 ? 400 : (t < 0.40 ? 400 : (t < 0.60 ? 400 - ((t - 0.40)/0.20)*59 : (t < 0.80 ? 341 + ((t - 0.60)/0.20)*59 : (t < 0.92 ? 400 : 400 - Math.cos(((t - 0.92)/0.08)*Math.PI)*180))))")
+    (:target "#spot-dot" :attr "cy" :expr "t < 0.20 ? 435 - (t/0.20)*35 : (t < 0.40 ? 400 - ((t - 0.20)/0.20)*120 : (t < 0.60 ? 280 - ((t - 0.40)/0.20)*140 : (t < 0.80 ? 140 - ((t - 0.60)/0.20)*12 : (t < 0.92 ? 128 - ((t - 0.80)/0.12)*56 : 190))))")
+    (:target "#spot-halo" :attr "cx" :expr "t < 0.20 ? 400 : (t < 0.40 ? 400 : (t < 0.60 ? 400 - ((t - 0.40)/0.20)*59 : (t < 0.80 ? 341 + ((t - 0.60)/0.20)*59 : (t < 0.92 ? 400 : 400 - Math.cos(((t - 0.92)/0.08)*Math.PI)*180))))")
+    (:target "#spot-halo" :attr "cy" :expr "t < 0.20 ? 435 - (t/0.20)*35 : (t < 0.40 ? 400 - ((t - 0.20)/0.20)*120 : (t < 0.60 ? 280 - ((t - 0.40)/0.20)*140 : (t < 0.80 ? 140 - ((t - 0.60)/0.20)*12 : (t < 0.92 ? 128 - ((t - 0.80)/0.12)*56 : 190))))")
+    (:target "#spot-core" :attr "cx" :expr "t < 0.20 ? 400 : (t < 0.40 ? 400 : (t < 0.60 ? 400 - ((t - 0.40)/0.20)*59 : (t < 0.80 ? 341 + ((t - 0.60)/0.20)*59 : (t < 0.92 ? 400 : 400 - Math.cos(((t - 0.92)/0.08)*Math.PI)*180))))")
+    (:target "#spot-core" :attr "cy" :expr "t < 0.20 ? 435 - (t/0.20)*35 : (t < 0.40 ? 400 - ((t - 0.20)/0.20)*120 : (t < 0.60 ? 280 - ((t - 0.40)/0.20)*140 : (t < 0.80 ? 140 - ((t - 0.60)/0.20)*12 : (t < 0.92 ? 128 - ((t - 0.80)/0.12)*56 : 190))))")
+    (:target "#church-hud-title" :attr "textContent" :expr "t < 0.20 ? '1. NARTHEX & HOLY WATER STOUP' : (t < 0.40 ? '2. THE NAVE & PEWS' : (t < 0.60 ? '3. THE AMBO (LECTERN)' : (t < 0.80 ? '4. THE HIGH ALTAR OF SACRIFICE' : (t < 0.92 ? '5. THE TABERNACLE & SANCTUARY LAMP' : '6. LADY CHAPEL & BAPTISMAL FONT'))))")
+    (:target "#church-hud-desc" :attr "textContent" :expr "t < 0.20 ? 'Vestibulum & Aqua Benedicta • Blessing ourselves with Holy Water...' : (t < 0.40 ? 'Navis Ecclesiae • The Pilgrim People of God genuflect to Tabernacle...' : (t < 0.60 ? 'Mensa Verbi Dei • Proclaiming Sacred Scriptures & Holy Gospel...' : (t < 0.80 ? 'Altare Christi • Holy Sacrifice of the Mass & Eucharist...' : (t < 0.92 ? 'Tabernaculum Domini • Real Presence watched by burning red lamp...' : 'Sacellum Marianum & Fons • Devotional prayer & new birth...'))))")
+  ))
+  (:camera-stops (
+    (:stop :id "entrance" :aliases "nave" :yaw 0 :pitch 18 :scale 1.05 :t 0.05 :toast "⛪ Nave Entrance 3D Perspective")
+    (:stop :id "altar" :aliases "high altar" :yaw 0 :pitch 26 :scale 1.45 :t 0.60 :toast "✨ High Altar Focus (3D Zoom)")
+    (:stop :id "tabernacle" :yaw 14 :pitch 28 :scale 1.70 :t 0.80 :toast "🕯️ Golden Tabernacle Focus")
+    (:stop :id "ambo" :yaw -24 :pitch 22 :scale 1.45 :t 0.40 :toast "📖 Ambo (Table of the Word)")
+    (:stop :id "overhead" :yaw 0 :pitch 58 :scale 1.25 :toast "🦅 Bird's-Eye 3D Perspective")
+  ))
+  (:quests
+    :title "3D Pilgrim Quest: Sacred Space Explorer Started!"
+    :completion-title "PILGRIM MASTER OF SACRED ARCHITECTURE!"
+    :completion-desc "Congratulations! You have explored all 6 sacred spaces in full 3D, mastering the Narthex, Nave Colonnade, Ambo, High Altar, Golden Tabernacle, Lady Chapel, and Baptismal Font!"
+    :feedback-wrong "Catechetical Insight:"
+    :correct-toast "⭐ Correct! +100 Pilgrim Points"
+    :wrong-toast "Notice: Review the sacred symbolism"
+    (:missions (
+      (:mission :id "narthex" :t 0.00 :yaw 0 :pitch 12 :scale 1.0
+        :title "Mission 1: The Narthex & Holy Water Stoup"
+        :desc "Find where Christians first enter the sacred space and bless themselves with Holy Water."
+        (:questions (
+          (:q :prompt "Why do we bless ourselves with Holy Water upon entering the church?"
+            :options ("To recall our Holy Baptism and bless ourselves in the Name of the Father, Son, and Holy Spirit" "To wash physical dust off our hands before entering" "As an ancient medieval heating custom")
+            :answer 0
+            :explanation "Blessing ourselves with Holy Water at the Narthex stoup reminds us of our Baptism, cleansing our thoughts as we enter God's holy house.")
+          (:q :prompt "What is the primary spiritual purpose of the church Narthex (vestibule)?"
+            :options ("To mark the sacred transition from the secular, busy outside world into the reverent presence of God" "To serve as an overflow cloakroom and umbrella store" "To act as an administrative office for parish accounting")
+            :answer 0
+            :explanation "The Narthex is the holy threshold where the pilgrim prepares their heart to transition from worldly distraction into divine contemplation.")
+        ))
+      )
+      (:mission :id "nave" :t 0.20 :yaw 0 :pitch 10 :scale 0.9
+        :title "Mission 2: The Nave Colonnade & Central Aisle"
+        :desc "Walk down the central aisle where the pilgrim people of God gather."
+        (:questions (
+          (:q :prompt "Why do Catholics genuflect on the right knee toward the Tabernacle before entering the pew?"
+            :options ("To adore Jesus Christ truly and bodily present in the Eucharist inside the Tabernacle" "To show formal etiquette to fellow parishioners" "To stretch after walking up the nave")
+            :answer 0
+            :explanation "Genuflection is a sacred posture of royal adoration before Christ our Lord truly present in the Blessed Sacrament.")
+          (:q :prompt "What does the Latin root of the word \"Nave\" (navis, meaning ship) symbolize?"
+            :options ("The Church as the Barque of St Peter carrying the faithful through the storms of life" "That historical stone basilicas were constructed exclusively by sailors" "The storage holds used for grain in ancient churches")
+            :answer 0
+            :explanation "The Nave represents the Ark or Barque of Peter—the Church journeying across earthly waves toward the eternal harbor of Heaven.")
+        ))
+      )
+      (:mission :id "ambo" :t 0.40 :yaw -22 :pitch 8 :scale 0.7
+        :title "Mission 3: The Ambo (Table of the Word)"
+        :desc "Locate the sacred pulpit from which Sacred Scripture is read."
+        (:questions (
+          (:q :prompt "What sacred proclamation takes place at the Ambo?"
+            :options ("The Holy Gospel and the Word of God for the Liturgy of the Word" "Parish social announcements and ticket sales only" "Rehearsals for the pipe organists")
+            :answer 0
+            :explanation "The Ambo is the Table of the Word, dignified and consecrated for the proclamation of Sacred Scripture and the Holy Gospel.")
+          (:q :prompt "Why do the faithful stand and sing the Alleluia when the Gospel is proclaimed from the Ambo?"
+            :options ("To give joyful reverence and honor to Christ Himself speaking directly in the Gospel" "Because the priest asks for a posture change to keep the congregation awake" "To signal that the liturgy is almost finished")
+            :answer 0
+            :explanation "We stand and sing Alleluia because in the Gospel reading, Christ is personally present and speaking His living words to us.")
+        ))
+      )
+      (:mission :id "altar" :t 0.60 :yaw 0 :pitch 8 :scale 0.65
+        :title "Mission 4: The High Altar of Sacrifice"
+        :desc "Examine the sacred focal center of the Catholic basilica."
+        (:questions (
+          (:q :prompt "What does the High Altar represent and what occurs upon it?"
+            :options ("It represents Christ Himself; upon it the Holy Sacrifice of the Mass is offered" "It is a dining table for parish council meetings" "It is purely an architectural stone decoration with no liturgical function")
+            :answer 0
+            :explanation "The altar is Christ! During Mass, bread and wine become Christ's real Body and Blood in the Holy Eucharist.")
+          (:q :prompt "Why does the priest kiss the High Altar at the beginning and end of Mass?"
+            :options ("To venerate Jesus Christ, whom the altar symbolizes, and the relics of the saints embedded within it" "Because Catholic rubrics require inspecting the altar cloth for dust" "To cue the cantor to cease singing the entrance hymn")
+            :answer 0
+            :explanation "Kissing the altar is an act of deep veneration to Christ Jesus, the Living Stone and Eternal High Priest.")
+        ))
+      )
+      (:mission :id "tabernacle" :t 0.80 :yaw 0 :pitch 6 :scale 0.5
+        :title "Mission 5: The Golden Tabernacle & Sanctuary Lamp"
+        :desc "Locate the golden ark in the apse and note the burning red lamp."
+        (:questions (
+          (:q :prompt "Why does the red Sanctuary Lamp burn day and night beside the Tabernacle?"
+            :options ("To indicate the Real Presence of Christ reserved in the Blessed Sacrament" "To provide emergency fire exit lighting in the dark" "To illuminate the priest's liturgical books in the sanctuary")
+            :answer 0
+            :explanation "The sanctuary lamp is an undying beacon signaling to all pilgrims that Christ is truly present in the Tabernacle.")
+          (:q :prompt "What sacred vessel is used to hold the consecrated Hosts reserved inside the Tabernacle?"
+            :options ("The Ciborium (a covered sacred chalice)" "The Cruet for water and wine" "The Thurible for incense burning")
+            :answer 0
+            :explanation "The Ciborium (from the Latin cibus meaning food) is the consecrated, covered golden vessel that holds the Holy Eucharist inside the Tabernacle.")
+        ))
+      )
+      (:mission :id "lady-and-font" :t 1.00 :yaw 22 :pitch 10 :scale 0.75
+        :title "Mission 6: The Lady Chapel & Baptismal Font"
+        :desc "Explore the devotional side chapel of Our Lady and the Baptismal Font."
+        (:questions (
+          (:q :prompt "Which Sacrament of Initiation is received at the Baptismal Font?"
+            :options ("Holy Baptism, which washes away original sin and welcomes us into God's family" "Holy Orders, consecrating priests and bishops" "Anointing of the Sick for bodily and spiritual healing")
+            :answer 0
+            :explanation "At the Baptismal Font, the holy waters of regeneration give new spiritual life in Christ, washing away original sin.")
+          (:q :prompt "Why is a devotional side chapel dedicated to Our Lady (the Virgin Mary) present in Catholic churches?"
+            :options ("To honor Mary as the Mother of God and ask for her maternal intercession" "To serve as a private waiting room for altar servers" "Strictly as a gallery for seasonal floral arrangements")
+            :answer 0
+            :explanation "Catholics honor Mary as the Queen of Heaven and Mother of the Church, lighting votive candles and seeking her maternal prayers.")
+        ))
+      )
+    ))
+  )
+)
+

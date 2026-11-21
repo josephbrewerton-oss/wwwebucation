@@ -1,0 +1,104 @@
+(:scene :id "domino-multiplication" :type "Sim" :oak-id "OAK-KS2-MAT-DOM" :oak-unit "ks2-multiplication-arrays" :title "🁊 Kinematic Domino Multiplication: Group Arrays" :stage "KS2 MATHS" :duration 10.0
+  (:vars (
+    (:var :name "groups" :val 4.0 :min 1.0 :max 4.0 :step 1.0 :label "Number of Groups")
+    (:var :name "perGroup" :val 6.0 :min 1.0 :max 6.0 :step 1.0 :label "Tiles per Group")
+  ))
+  (:inputs (
+    (:slider :var "groups" :label "Number of Groups" :min 1.0 :max 4.0 :step 1.0)
+    (:slider :var "perGroup" :label "Tiles per Group" :min 1.0 :max 6.0 :step 1.0)
+  ))
+  (:gestures (
+    (:draggable :target "#release-trigger-lever" :axis "y" :min 0 :max 30)
+  ))
+  (:subtitles (
+    (:start 0.00 :end 3.00 :en "Multiplication is equal groups! Adjust the sliders to build equal clusters of dominoes." :es "¡Multiplicar es agrupar en partes iguales! Ajusta los controles para formar grupos iguales.")
+    (:start 3.00 :end 6.50 :en "Watch the momentum cascade rhythmically through each group of tiles." :es "Observa cómo el impulso cae rítmicamente a través de cada grupo de fichas.")
+    (:start 6.50 :end 10.00 :en "Total tiles fallen = Groups × Tiles per Group. Count each equal cluster!" :es "Total de fichas caídas = Grupos × Fichas por grupo. ¡Cuenta cada grupo igual!")
+  ))
+  (:keyframes (
+    (:t 0.00 :title "1. Factor Grouping" :rule "Equal groups prepared on the isometric track")
+    (:t 0.25 :title "2. First Wave" :rule "Group 1 cascades sequentially")
+    (:t 0.55 :title "3. Mid-Cascade" :rule "Repeated addition builds across active clusters")
+    (:t 0.90 :title "4. Product Reached" :rule "Final cluster completes the total product")
+  ))
+  (:interactive (
+    (:checkpoint :t 0.28
+      :prompt "If we have 4 groups with 6 dominoes in each group, how many tiles fall in total?"
+      :options ("24 tiles (4 × 6)" "20 tiles (4 + 6 + 10)" "10 tiles (4 + 6)")
+      :answer 0
+      :explanation "Multiplication represents repeated addition: 6 + 6 + 6 + 6 = 24.")
+  ))
+  (:bindings (
+    ;; Lever tilt on release
+    (:target "#release-trigger-lever" :attr "transform" :expr "'rotate(' + (t > 0.01 ? Math.min(42, t * 900) : 0).toFixed(1) + ', 108, 282)'")
+
+    ;; Show/hide entire groups based on vars.groups (1..4)
+    (:target "#group-1" :attr "opacity" :expr "(vars.groups || 4) >= 1 ? '1' : '0.12'")
+    (:target "#group-2" :attr "opacity" :expr "(vars.groups || 4) >= 2 ? '1' : '0.12'")
+    (:target "#group-3" :attr "opacity" :expr "(vars.groups || 4) >= 3 ? '1' : '0.12'")
+    (:target "#group-4" :attr "opacity" :expr "(vars.groups || 4) >= 4 ? '1' : '0.12'")
+
+    ;; Group 1 sequential cascade (tiles 1..6) + perGroup visibility
+    (:target "#domino-1-1" :attr "opacity" :expr "(vars.perGroup || 6) >= 1 ? '1' : '0'")
+    (:target "#domino-1-2" :attr "opacity" :expr "(vars.perGroup || 6) >= 2 ? '1' : '0'")
+    (:target "#domino-1-3" :attr "opacity" :expr "(vars.perGroup || 6) >= 3 ? '1' : '0'")
+    (:target "#domino-1-4" :attr "opacity" :expr "(vars.perGroup || 6) >= 4 ? '1' : '0'")
+    (:target "#domino-1-5" :attr "opacity" :expr "(vars.perGroup || 6) >= 5 ? '1' : '0'")
+    (:target "#domino-1-6" :attr "opacity" :expr "(vars.perGroup || 6) >= 6 ? '1' : '0'")
+    (:target "#domino-1-1" :attr "transform" :expr "'rotate(' + (t > 0.04 ? Math.min(64, (t - 0.04) * 520) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-1-2" :attr "transform" :expr "'rotate(' + (t > 0.07 ? Math.min(64, (t - 0.07) * 520) : 0).toFixed(1) + ', 24, 70)'")
+    (:target "#domino-1-3" :attr "transform" :expr "'rotate(' + (t > 0.10 ? Math.min(64, (t - 0.10) * 520) : 0).toFixed(1) + ', 42, 70)'")
+    (:target "#domino-1-4" :attr "transform" :expr "'rotate(' + (t > 0.13 ? Math.min(64, (t - 0.13) * 520) : 0).toFixed(1) + ', 60, 70)'")
+    (:target "#domino-1-5" :attr "transform" :expr "'rotate(' + (t > 0.16 ? Math.min(64, (t - 0.16) * 520) : 0).toFixed(1) + ', 78, 70)'")
+    (:target "#domino-1-6" :attr "transform" :expr "'rotate(' + (t > 0.19 ? Math.min(64, (t - 0.19) * 520) : 0).toFixed(1) + ', 96, 70)'")
+
+    ;; Group 2 sequential cascade (tiles 1..6)
+    (:target "#domino-2-1" :attr "opacity" :expr "(vars.perGroup || 6) >= 1 ? '1' : '0'")
+    (:target "#domino-2-2" :attr "opacity" :expr "(vars.perGroup || 6) >= 2 ? '1' : '0'")
+    (:target "#domino-2-3" :attr "opacity" :expr "(vars.perGroup || 6) >= 3 ? '1' : '0'")
+    (:target "#domino-2-4" :attr "opacity" :expr "(vars.perGroup || 6) >= 4 ? '1' : '0'")
+    (:target "#domino-2-5" :attr "opacity" :expr "(vars.perGroup || 6) >= 5 ? '1' : '0'")
+    (:target "#domino-2-6" :attr "opacity" :expr "(vars.perGroup || 6) >= 6 ? '1' : '0'")
+    (:target "#domino-2-1" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.28 ? Math.min(64, (t - 0.28) * 520) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-2-2" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.31 ? Math.min(64, (t - 0.31) * 520) : 0).toFixed(1) + ', 22, 70)'")
+    (:target "#domino-2-3" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.34 ? Math.min(64, (t - 0.34) * 520) : 0).toFixed(1) + ', 38, 70)'")
+    (:target "#domino-2-4" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.37 ? Math.min(64, (t - 0.37) * 520) : 0).toFixed(1) + ', 54, 70)'")
+    (:target "#domino-2-5" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.40 ? Math.min(64, (t - 0.40) * 520) : 0).toFixed(1) + ', 70, 70)'")
+    (:target "#domino-2-6" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 2 && t > 0.43 ? Math.min(64, (t - 0.43) * 520) : 0).toFixed(1) + ', 86, 70)'")
+
+    ;; Group 3 sequential cascade (tiles 1..6)
+    (:target "#domino-3-1" :attr "opacity" :expr "(vars.perGroup || 6) >= 1 ? '1' : '0'")
+    (:target "#domino-3-2" :attr "opacity" :expr "(vars.perGroup || 6) >= 2 ? '1' : '0'")
+    (:target "#domino-3-3" :attr "opacity" :expr "(vars.perGroup || 6) >= 3 ? '1' : '0'")
+    (:target "#domino-3-4" :attr "opacity" :expr "(vars.perGroup || 6) >= 4 ? '1' : '0'")
+    (:target "#domino-3-5" :attr "opacity" :expr "(vars.perGroup || 6) >= 5 ? '1' : '0'")
+    (:target "#domino-3-6" :attr "opacity" :expr "(vars.perGroup || 6) >= 6 ? '1' : '0'")
+    (:target "#domino-3-1" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.52 ? Math.min(64, (t - 0.52) * 520) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-3-2" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.55 ? Math.min(64, (t - 0.55) * 520) : 0).toFixed(1) + ', 20, 70)'")
+    (:target "#domino-3-3" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.58 ? Math.min(64, (t - 0.58) * 520) : 0).toFixed(1) + ', 34, 70)'")
+    (:target "#domino-3-4" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.61 ? Math.min(64, (t - 0.61) * 520) : 0).toFixed(1) + ', 48, 70)'")
+    (:target "#domino-3-5" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.64 ? Math.min(64, (t - 0.64) * 520) : 0).toFixed(1) + ', 62, 70)'")
+    (:target "#domino-3-6" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 3 && t > 0.67 ? Math.min(64, (t - 0.67) * 520) : 0).toFixed(1) + ', 76, 70)'")
+
+    ;; Group 4 sequential cascade (tiles 1..6)
+    (:target "#domino-4-1" :attr "opacity" :expr "(vars.perGroup || 6) >= 1 ? '1' : '0'")
+    (:target "#domino-4-2" :attr "opacity" :expr "(vars.perGroup || 6) >= 2 ? '1' : '0'")
+    (:target "#domino-4-3" :attr "opacity" :expr "(vars.perGroup || 6) >= 3 ? '1' : '0'")
+    (:target "#domino-4-4" :attr "opacity" :expr "(vars.perGroup || 6) >= 4 ? '1' : '0'")
+    (:target "#domino-4-5" :attr "opacity" :expr "(vars.perGroup || 6) >= 5 ? '1' : '0'")
+    (:target "#domino-4-6" :attr "opacity" :expr "(vars.perGroup || 6) >= 6 ? '1' : '0'")
+    (:target "#domino-4-1" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.76 ? Math.min(64, (t - 0.76) * 520) : 0).toFixed(1) + ', 6, 70)'")
+    (:target "#domino-4-2" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.79 ? Math.min(64, (t - 0.79) * 520) : 0).toFixed(1) + ', 18, 70)'")
+    (:target "#domino-4-3" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.82 ? Math.min(64, (t - 0.82) * 520) : 0).toFixed(1) + ', 30, 70)'")
+    (:target "#domino-4-4" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.85 ? Math.min(64, (t - 0.85) * 520) : 0).toFixed(1) + ', 42, 70)'")
+    (:target "#domino-4-5" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.88 ? Math.min(64, (t - 0.88) * 520) : 0).toFixed(1) + ', 54, 70)'")
+    (:target "#domino-4-6" :attr "transform" :expr "'rotate(' + ((vars.groups || 4) >= 4 && t > 0.91 ? Math.min(64, (t - 0.91) * 520) : 0).toFixed(1) + ', 66, 70)'")
+
+    ;; Bell vibration scales dynamically to whichever group is the last active group
+    (:target "#finish-bell" :attr "transform" :expr "(t > ((vars.groups || 4) * 0.23)) ? 'translate(640, 160) rotate(' + (Math.sin(t * 80) * 10).toFixed(1) + ', 20, 10)' : 'translate(640, 160)'")
+
+    ;; Dynamic Live HUD Equation & Repeated-Addition Readout
+    (:target "#math-display" :attr "textContent" :expr "(vars.groups || 4) + ' groups × ' + (vars.perGroup || 6) + ' tiles = ' + ((vars.groups || 4) * (vars.perGroup || 6))")
+    (:target "#cadence-status" :attr "textContent" :expr "'Repeated Addition: ' + Array.from({length: Math.round(vars.groups || 4)}, () => Math.round(vars.perGroup || 6)).join(' + ') + ' = ' + ((vars.groups || 4) * (vars.perGroup || 6))")
+  ))
+)
