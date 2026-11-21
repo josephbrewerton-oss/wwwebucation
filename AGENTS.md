@@ -145,5 +145,6 @@ You are operating inside **wwwebucation**, a zero-bloat, deterministic, W3C-comp
 
 ### 6. Execution Protocol for AI Agents
 1. **No Speculative Refactoring**: Touch ONLY the files explicitly named in the prompt. Do not rename existing IDs, `.ast` opcodes, or public cartridge slugs.
-2. **Verify Before Finishing**: After any edit to `.ts` generators or `.ast` files, run the build/compile step and confirm zero TypeScript errors and updated `.astb` output.
+2. When authoring, editing, or parsing .ast files in /cartridges/, always read and obey cartridges/TUPLES.md first.
+3. **Verify Before Finishing**: After any edit to `.ts` generators or `.ast` files, run the build/compile step and confirm zero TypeScript errors and updated `.astb` output.
 
