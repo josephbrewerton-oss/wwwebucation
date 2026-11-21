@@ -53,14 +53,17 @@ jobs:
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v6
 
-      - name: Upload Pages artifact
+     - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: ./dist
 
-      - name: Deploy to GitHub Pages
+     - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
 
       # Backup to gh-pages branch runs LAST so it doesn't pollute artifact metadata
       - name: Deploy to GitHub Pages (gh-pages branch backup)
