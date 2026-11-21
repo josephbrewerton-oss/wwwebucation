@@ -35,6 +35,8 @@
     "ast-loader.js",
     "ast-state-scorm.js",
     "ast-engine.js",
+    "site-gestures-profile.js",
+    "site-gestures-whiteboard.js",
     "site-gestures.js",
     "player-gestures.ast",
     "ast-gestures.js",
