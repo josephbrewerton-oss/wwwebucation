@@ -162,6 +162,7 @@
       this._heldKeys = new Set();
       this._heldKeyCodeMap = new Map();
       this._heldPointerEntries = new Map();
+      this._pendingTouchAudio = new Map();
       this._activeHoldVars = new Map();
       this._holdRafId = null;
       this._holdLastTs = 0;
@@ -180,6 +181,7 @@
       this.handlePointerUp = this.handlePointerUp.bind(this);
       this.handlePointerCancel = this.handlePointerCancel.bind(this);
       this.handlePointerLeave = this.handlePointerLeave.bind(this);
+      this.handleTouchEnd = this.handleTouchEnd.bind(this);
       this.handleKeyDown = this.handleKeyDown.bind(this);
       this.handleKeyUp = this.handleKeyUp.bind(this);
       this.handleWindowBlur = this.handleWindowBlur.bind(this);
@@ -1139,6 +1141,7 @@
         window.addEventListener('pointermove', this.handlePointerMove, { passive: false });
         window.addEventListener('pointerup', this.handlePointerUp);
         window.addEventListener('pointercancel', this.handlePointerCancel);
+        window.addEventListener('touchend', this.handleTouchEnd, { passive: true });
         window.addEventListener('keydown', this.handleKeyDown);
         window.addEventListener('keyup', this.handleKeyUp);
         window.addEventListener('blur', this.handleWindowBlur);
@@ -1224,6 +1227,63 @@
       } else if (typeof this.engine.speakText === 'function') {
         this.engine.speakText(text, speakOpts);
       }
+    }
+
+    _playToneSpec(toneSpec) {
+      if (!toneSpec || typeof this.playAudioTone !== 'function') return;
+      const freqs = String(toneSpec).split(',');
+      for (let idx = 0; idx < freqs.length; idx++) {
+        const hz = parseFloat(freqs[idx].trim());
+        if (Number.isNaN(hz)) continue;
+        // Play the first note synchronously inside the user-activation stack so
+        // suspended mobile AudioContexts resume cleanly on Android Chrome / PWAs.
+        if (idx === 0) {
+          this.playAudioTone(hz, 'sine', 0.12, 0.2);
+        } else {
+          setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
+        }
+      }
+    }
+
+    _flushPendingTouchAudio(pointerId = null) {
+      if (!this._pendingTouchAudio || this._pendingTouchAudio.size === 0) return;
+      let queued = null;
+      if (pointerId !== null && pointerId !== undefined && this._pendingTouchAudio.has(pointerId)) {
+        queued = this._pendingTouchAudio.get(pointerId);
+        this._pendingTouchAudio.delete(pointerId);
+      } else if (pointerId === null || pointerId === undefined) {
+        const firstKey = this._pendingTouchAudio.keys().next().value;
+        if (firstKey !== undefined) {
+          queued = this._pendingTouchAudio.get(firstKey);
+          this._pendingTouchAudio.delete(firstKey);
+        }
+      }
+      if (!queued || !queued.length) return;
+
+      try {
+        if (typeof global !== 'undefined' && typeof global.primeMobileAudioAndTts === 'function') {
+          global.primeMobileAudioAndTts(this.engine && this.engine.audioSynth);
+        } else if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
+          this.engine.audioSynth.unlock();
+        }
+      } catch (_) {}
+
+      for (let i = 0; i < queued.length; i++) {
+        const item = queued[i];
+        if (!item) continue;
+        if (item.toneSpec) {
+          this._playToneSpec(item.toneSpec);
+        } else if (item.namedTone) {
+          this._playNamedTone(item.namedTone);
+        }
+        if (item.speakText) {
+          this._speakGestureText(item.speakText, item.speechOpts || {});
+        }
+      }
+    }
+
+    handleTouchEnd() {
+      this._flushPendingTouchAudio(null);
     }
 
     _readMatchedElementAttr(g, matchedEl) {
@@ -1401,7 +1461,7 @@
       return false;
     }
 
-    _applyGesturePress(g, matchedEl, scene) {
+    _applyGesturePress(g, matchedEl, scene, audioQueue = null) {
       if (!this.engine || !this.engine.vars) return false;
       const attrVal = this._readMatchedElementAttr(g, matchedEl);
       const condExpr = g.ifExpr !== undefined ? g.ifExpr : g.if;
@@ -1507,13 +1567,12 @@
           console.warn('[SiteGestures] Gesture :tone-expr error:', g.toneExpr, err);
         }
       }
-      if (toneSpec && typeof this.playAudioTone === 'function') {
-        String(toneSpec).split(',').forEach((freq, idx) => {
-          const hz = parseFloat(freq.trim());
-          if (!Number.isNaN(hz)) {
-            setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
-          }
-        });
+      if (toneSpec) {
+        if (Array.isArray(audioQueue)) {
+          audioQueue.push({ toneSpec });
+        } else {
+          this._playToneSpec(toneSpec);
+        }
       }
 
       let speakText = g.speak;
@@ -1553,7 +1612,11 @@
         if (typeof g.speakPitch === 'number') {
           speechOpts.pitch = g.speakPitch;
         }
-        this._speakGestureText(speakText, speechOpts);
+        if (Array.isArray(audioQueue)) {
+          audioQueue.push({ speakText, speechOpts });
+        } else {
+          this._speakGestureText(speakText, speechOpts);
+        }
       }
 
       return changed;
@@ -2234,18 +2297,31 @@
       }
 
       if (matchedPointerGestures.length > 0) {
-        e.preventDefault();
-        this._ensureInteractiveSimPlaying();
         let needsHoldLoop = false;
         let hasCustomTone = false;
-
         for (let i = 0; i < matchedPointerGestures.length; i++) {
           const g = matchedPointerGestures[i];
           if (g.tone || g.toneExpr) hasCustomTone = true;
-          this._applyGesturePress(g, matchedEls[i], scene);
           if (g.type === 'holdable' || g.hold === true || g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false)) {
             needsHoldLoop = true;
           }
+        }
+
+        const isTouchPointer = e && e.pointerType === 'touch';
+        // On Android Chrome / PWAs, touch pointerdown does NOT grant transient user activation
+        // (Chromium grants activation on pointerup/touchend/click). Defer audio & TTS for touch
+        // taps until pointerup/touchend while applying visual/var updates immediately, and avoid
+        // e.preventDefault() on pure non-holdable touch taps (touch-action: none already prevents scroll).
+        if (!isTouchPointer || needsHoldLoop) {
+          e.preventDefault();
+        }
+        this._ensureInteractiveSimPlaying();
+
+        const deferTouchAudio = isTouchPointer && !needsHoldLoop;
+        const pendingAudio = deferTouchAudio ? [] : null;
+        for (let i = 0; i < matchedPointerGestures.length; i++) {
+          const g = matchedPointerGestures[i];
+          this._applyGesturePress(g, matchedEls[i], scene, pendingAudio);
         }
 
         if (needsHoldLoop) {
@@ -2270,7 +2346,15 @@
           }
         }
         if (!hasCustomTone) {
-          this._playNamedTone('click');
+          if (pendingAudio) {
+            pendingAudio.push({ namedTone: 'click' });
+          } else {
+            this._playNamedTone('click');
+          }
+        }
+        if (pendingAudio && pendingAudio.length > 0) {
+          const pointerId = e.pointerId !== undefined ? e.pointerId : 'touch';
+          this._pendingTouchAudio.set(pointerId, pendingAudio);
         }
         if (pedNode) {
           this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
@@ -2460,6 +2544,7 @@
 
     handlePointerUp(e) {
       const pointerId = e && e.pointerId !== undefined ? e.pointerId : 'mouse';
+      this._flushPendingTouchAudio(pointerId);
       const didResetHold = this._releasePointerEntry(pointerId);
       if (didResetHold && this.engine && typeof this.engine.applyBindings === 'function') {
         this.engine.applyBindings(this.engine.progress || 0, 0, false);
@@ -2500,6 +2585,11 @@
     }
 
     handlePointerCancel(e) {
+      if (this._pendingTouchAudio) {
+        const pointerId = e && e.pointerId !== undefined ? e.pointerId : null;
+        if (pointerId !== null) this._pendingTouchAudio.delete(pointerId);
+        else this._pendingTouchAudio.clear();
+      }
       this._releaseAllHeldInputs(true);
       this.handlePointerUp(e);
     }

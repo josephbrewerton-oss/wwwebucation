@@ -1758,6 +1758,14 @@ export function renderPlayerPage(): HTMLElement {
         }
       }
     } catch (_) {}
+
+    // Also prime the player iframe's own local AudioContext & SpeechSynthesis inside this tap gesture
+    try {
+      const iframeWin = iframe?.contentWindow as (Window & { primeMobileAudioAndTts?: () => void }) | null | undefined;
+      if (iframeWin && typeof iframeWin.primeMobileAudioAndTts === 'function') {
+        iframeWin.primeMobileAudioAndTts();
+      }
+    } catch (_) {}
   }
 
   // Wire Play, Reset & BSL Toolbar buttons
