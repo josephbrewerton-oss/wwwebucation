@@ -86,7 +86,7 @@ export function renderHomePage(): HTMLElement {
         <iframe 
           id="stage-viewport"
           src="about:blank"
-          data-initial-src="${base}player.html?preset=welcome"
+          data-initial-src="${base}player/player.html?preset=welcome"
           loading="lazy"
           style="width: 100%; height: 500px; border: none; display: block;" 
           title="Featured Interactive Simulation">
@@ -349,9 +349,9 @@ export function renderHomePage(): HTMLElement {
   function updateActivePreset(id: string) {
     const cleanId = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '');
     activePreset = cleanId;
-    if (iframe) iframe.src = `${base}player.html?preset=${encodeURIComponent(cleanId)}`;
+    if (iframe) iframe.src = `${base}player/player.html?preset=${encodeURIComponent(cleanId)}`;
     if (select) select.value = cleanId;
-
+    
     // Update pill buttons visual state
     pillNav?.querySelectorAll<HTMLButtonElement>('.sim-pill').forEach((btn) => {
       const isSelected = btn.dataset.id === cleanId;
