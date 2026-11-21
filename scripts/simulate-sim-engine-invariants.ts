@@ -534,6 +534,22 @@ function loadAstPlayerRuntimeIntoSandbox(sandbox: any, isExistingContext = false
   return ctx;
 }
 
+const SITE_GESTURES_RUNTIME_MODULES = [
+  'site-gestures-profile.js',
+  'site-gestures-whiteboard.js',
+  'site-gestures.js',
+];
+
+function loadSiteGesturesRuntimeIntoSandbox(sandbox: any, isExistingContext = false) {
+  const ctx = isExistingContext ? sandbox : vm.createContext(sandbox);
+  for (const mod of SITE_GESTURES_RUNTIME_MODULES) {
+    const filePath = path.join(process.cwd(), 'static', 'player', mod);
+    const modCode = fs.readFileSync(filePath, 'utf8');
+    vm.runInContext(modCode, ctx, { filename: `static/player/${mod}` });
+  }
+  return ctx;
+}
+
 function createHeadlessEngine() {
   const sandbox: any = {
     console,
@@ -2850,7 +2866,159 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   vm.runInNewContext(uiCode, uiOnlySb, { filename: 'static/player/player-ui.js' });
   assert.strictEqual(typeof (uiOnlySb.ASTPlayerUI || uiOnlySb.window.ASTPlayerUI), 'function', 'player-ui.js must export ASTPlayerUI standalone');
 
-  console.log('[✅ PASS] Sim 27: Modular AST engine & UI peer module integrity, load order, exports & standalone safety verified.');
+  // 27e. Verify modular site-gestures peer modules plumbing, load order, exports, pure-VM invariant & standalone safety
+  const siteGesturesPeerModules = SITE_GESTURES_RUNTIME_MODULES.filter((m) => m !== 'site-gestures.js');
+  const sgIdxRoot = playerHtml.indexOf('player/site-gestures.js');
+  const sgIdxStandalone = playerIndexHtml.indexOf('./site-gestures.js');
+  assert.ok(sgIdxRoot > -1 && sgIdxStandalone > -1, 'player.html and player/index.html must load site-gestures.js');
+
+  for (const mod of siteGesturesPeerModules) {
+    const modPath = path.join(process.cwd(), 'static', 'player', mod);
+    assert.ok(fs.existsSync(modPath), `Modular gesture file static/player/${mod} must exist`);
+    assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+    assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+    assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
+    assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+    assert.ok(playerHtml.indexOf(`player/${mod}`) < sgIdxRoot, `player.html must load ${mod} strictly before site-gestures.js`);
+    assert.ok(playerIndexHtml.indexOf(`./${mod}`) < sgIdxStandalone, `player/index.html must load ${mod} strictly before site-gestures.js`);
+
+    // Pure Generic VM check: zero hardcoded cartridge/scene hacks in any gesture module
+    const modSrc = fs.readFileSync(modPath, 'utf8');
+    assert.ok(!modSrc.includes("activePresetId === 'algebra-balance'"), `${mod} must remain 100% generic (no algebra-balance hack)`);
+    assert.ok(!modSrc.includes("varName === 'selectedRite'"), `${mod} must remain 100% generic (no selectedRite hack)`);
+    assert.ok(!modSrc.includes('flipUnderside'), `${mod} must remain 100% generic (no flipUnderside hack)`);
+  }
+
+  // Verify site-gestures-profile.js exports, AST controls parser, skill compiler & gesture normalization
+  const profileSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: {},
+  };
+  profileSb.globalThis = profileSb;
+  profileSb.self = profileSb.window;
+  const profileCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-profile.js'), 'utf8');
+  vm.runInNewContext(profileCode, profileSb, { filename: 'static/player/site-gestures-profile.js' });
+  const profExports = profileSb.ASTGesturesProfile || profileSb.window.ASTGesturesProfile;
+  assert.ok(profExports, 'site-gestures-profile.js must export ASTGesturesProfile');
+  for (const fnName of [
+    'createDefaultProfile', 'loadPlayerGesturesProfile', '_stripSexpComments', '_extractSexpBlock',
+    '_extractChildSexps', '_extractAllSexpBlocks', '_stripChildSexps', '_parseSkillsBlock',
+    '_parseKeywordAttrs', '_parseControlsBlock', '_parsePlayerGesturesAST', '_resolveSceneSkillUsages',
+    '_resolveSkillGestures', '_getActiveTimelineSyncSpec', '_bindTimelineVarSync', '_syncCartridgeControls',
+    '_isControlEnabled', '_applyControlVisibility', '_normalizeGesture', '_getNormalizedSceneGestures', '_findPrimarySteppedVar',
+  ]) {
+    assert.strictEqual(typeof profExports[fnName], 'function', `ASTGesturesProfile must export function ${fnName}`);
+  }
+  const parsedCtrls = profExports._parseControlsBlock.call(profExports, '(:controls (:param-hud :off) (:whiteboard :on))');
+  assert.strictEqual(parsedCtrls['param-hud'], false, '_parseControlsBlock must parse :off as false');
+  assert.strictEqual(parsedCtrls.whiteboard, true, '_parseControlsBlock must parse :on as true');
+  const defaultProf = profExports.createDefaultProfile.call(profExports);
+  assert.ok(defaultProf.skills instanceof Map && defaultProf.skills.has('storybook-reader'), 'createDefaultProfile must compile storybook-reader skill from AST');
+  const normG = profExports._normalizeGesture({ type: 'interactive', action: 'set-var', var: 'step', value: 3, 'speak-attr': 'data-word' });
+  assert.strictEqual(normG.type, 'clickable', '_normalizeGesture must map interactive -> clickable');
+  assert.strictEqual(normG.setVar, 'step', '_normalizeGesture must map set-var :var -> setVar');
+  assert.strictEqual(normG.val, 3, '_normalizeGesture must map :value -> val');
+  assert.strictEqual(normG.speakAttr, 'data-word', '_normalizeGesture must normalize kebab-case speak-attr');
+
+  // Verify site-gestures-whiteboard.js exports, Bézier stroke drawing, undo/redo & AST/JSON round-trip serialization
+  const wbCreatedPaths: any[] = [];
+  const wbMockInkRoot: any = {
+    children: [] as any[],
+    appendChild(el: any) { el.parentNode = this; this.children.push(el); return el; },
+    removeChild(el: any) { const idx = this.children.indexOf(el); if (idx >= 0) this.children.splice(idx, 1); el.parentNode = null; return el; },
+    replaceChildren() { this.children.forEach((c: any) => { c.parentNode = null; }); this.children = []; },
+  };
+  const wbSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+    window: { dispatchEvent: () => {} },
+    document: {
+      createElementNS(_ns: string, tag: string) {
+        const attrs: Record<string, string> = {};
+        const el = {
+          tagName: tag,
+          style: {} as Record<string, string>,
+          parentNode: null as any,
+          setAttribute(k: string, v: string) { attrs[k] = String(v); },
+          getAttribute(k: string) { return attrs[k] !== undefined ? attrs[k] : null; },
+        };
+        wbCreatedPaths.push(el);
+        return el;
+      },
+      getElementById: () => null,
+      body: null,
+    },
+  };
+  wbSb.globalThis = wbSb;
+  wbSb.self = wbSb.window;
+  const wbCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-whiteboard.js'), 'utf8');
+  vm.runInNewContext(wbCode, wbSb, { filename: 'static/player/site-gestures-whiteboard.js' });
+  const wbExports = wbSb.ASTGesturesWhiteboard || wbSb.window.ASTGesturesWhiteboard;
+  assert.ok(wbExports, 'site-gestures-whiteboard.js must export ASTGesturesWhiteboard');
+  for (const fnName of [
+    'handleWhiteboardMessage', 'startInkStroke', 'continueInkStroke', 'endInkStroke', 'eraseStrokeAt',
+    'undoLastStroke', 'redoLastStroke', 'clearWhiteboardInk', 'exportInkToAST', 'importInkFromAST',
+    'exportInkToJSON', 'importInkFromJSON', 'broadcastInkSession', 'persistInkToSession',
+    'restoreInkFromSession', 'showFloatingNotice', 'togglePen',
+  ]) {
+    assert.strictEqual(typeof wbExports[fnName], 'function', `ASTGesturesWhiteboard must export function ${fnName}`);
+  }
+  const mockWbHost: any = {
+    engine: { activePresetId: 'fractions' },
+    inkRoot: wbMockInkRoot,
+    stageSvg: { style: {}, parentNode: null },
+    playerProfile: { whiteboard: { tools: [{ id: 'pen', opacity: 1.0, cap: 'round' }] } },
+    isPenActive: false,
+    currentTool: 'pen',
+    currentInkColor: '#38bdf8',
+    currentInkWidth: 4,
+    currentStroke: null,
+    strokes: [],
+    _undoStack: [],
+    _isControlEnabled: () => true,
+    _playNamedTone: () => {},
+    playAudioTone: () => {},
+    persistInkToSession: () => {},
+    showFloatingNotice: () => {},
+    setupDomLayers: () => {},
+  };
+  wbExports.startInkStroke.call(mockWbHost, { x: 10, y: 20 });
+  wbExports.continueInkStroke.call(mockWbHost, { x: 30, y: 50 });
+  wbExports.endInkStroke.call(mockWbHost);
+  assert.strictEqual(mockWbHost.strokes.length, 1, 'start/continue/endInkStroke must record 1 Bézier stroke');
+  assert.ok(mockWbHost.strokes[0].d.includes('Q 10.0 20.0, 20.0 35.0'), 'continueInkStroke must generate quadratic Bézier path');
+  const exportedInkAst = wbExports.exportInkToAST.call(mockWbHost);
+  assert.ok(exportedInkAst.includes('(:ink-session') && exportedInkAst.includes('#38bdf8'), 'exportInkToAST must serialize stroke color and session');
+  wbExports.undoLastStroke.call(mockWbHost);
+  assert.strictEqual(mockWbHost.strokes.length, 0, 'undoLastStroke must pop stroke');
+  wbExports.redoLastStroke.call(mockWbHost);
+  assert.strictEqual(mockWbHost.strokes.length, 1, 'redoLastStroke must restore stroke');
+  const importedAstCount = wbExports.importInkFromAST.call(mockWbHost, exportedInkAst);
+  assert.strictEqual(importedAstCount, 1, 'importInkFromAST must round-trip exported ink session');
+  assert.strictEqual(mockWbHost.strokes[0].color, '#38bdf8', 'importInkFromAST must preserve stroke color');
+  const exportedInkJson = wbExports.exportInkToJSON.call(mockWbHost);
+  assert.strictEqual(exportedInkJson.strokeCount, 1, 'exportInkToJSON must report strokeCount 1');
+  const importedJsonCount = wbExports.importInkFromJSON.call(mockWbHost, exportedInkJson);
+  assert.strictEqual(importedJsonCount, 1, 'importInkFromJSON must round-trip JSON ink session');
+
+  // Verify site-gestures.js evaluates and constructs cleanly standalone (without peer gesture modules loaded)
+  const sgOnlySb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: { addEventListener: () => {} },
+    document: { getElementById: () => null, querySelector: () => null },
+  };
+  sgOnlySb.globalThis = sgOnlySb;
+  sgOnlySb.self = sgOnlySb.window;
+  const sgStandaloneCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures.js'), 'utf8');
+  vm.runInNewContext(sgStandaloneCode, sgOnlySb, { filename: 'static/player/site-gestures.js' });
+  const StandaloneGesturesCtor = sgOnlySb.ASTDirectGestureSubsystem || sgOnlySb.window.ASTDirectGestureSubsystem;
+  assert.strictEqual(typeof StandaloneGesturesCtor, 'function', 'site-gestures.js must export ASTDirectGestureSubsystem standalone');
+  const standaloneSg = new StandaloneGesturesCtor({});
+  assert.ok(standaloneSg, 'Standalone ASTDirectGestureSubsystem must construct cleanly without peer gesture modules');
+
+  console.log('[✅ PASS] Sim 27: Modular AST engine, UI & gesture peer module integrity, load order, exports & standalone safety verified.');
   passedTests++;
 }
 
@@ -3038,8 +3206,7 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   assert.strictEqual(spokenOnIframe.length, 2, '25ms handoff must execute speak() for the replacement utterance');
   assert.strictEqual(spokenOnIframe[1].text, 'Second word', 'Replacement utterance text must match');
 
-  // 28b. Verify site-gestures.js defers touch-tap audio/TTS to pointerup/touchend AND plays first :tone synchronously
-  const siteGesturesSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures.js'), 'utf8');
+  // 28b. Verify modular site-gestures runtime defers touch-tap audio/TTS to pointerup/touchend AND plays first :tone synchronously
   const siteTimeouts: Array<{ fn: Function; ms: number }> = [];
   const siteSpoken: string[] = [];
   const siteTones: number[] = [];
@@ -3103,7 +3270,7 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   };
   sgSb.globalThis = sgSb;
   sgSb.self = sgWin;
-  vm.runInNewContext(siteGesturesSrc, sgSb, { filename: 'static/player/site-gestures.js' });
+  loadSiteGesturesRuntimeIntoSandbox(sgSb);
 
   const sg = new sgSb.window.ASTDirectGestureSubsystem(siteEngineMock);
   sg.playAudioTone = (hz: number) => siteTones.push(hz);

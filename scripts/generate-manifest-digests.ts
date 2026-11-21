@@ -42,6 +42,8 @@ function scanAndDigest() {
     'player/ast-state-scorm.js',
     'player/ast-engine.js',
     'player/ast-compiler.js',
+    'player/site-gestures-profile.js',
+    'player/site-gestures-whiteboard.js',
     'player/site-gestures.js',
     'player/player-gestures.ast',
     'player/ast-gestures.js',
