@@ -2628,8 +2628,8 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   const standaloneEng = new StandaloneEngineCtor({});
   assert.ok(standaloneEng, 'Standalone ASTVectorPlayerEngine must construct cleanly without peer modules');
 
-  // 27d. Verify modular player-ui peer modules (studio, checkpoints, voice, broadcast) plumbing, load order, exports & standalone safety
-  const playerUiPeerModules = ['player-ui-studio.js', 'player-ui-checkpoints.js', 'player-ui-voice.js', 'player-ui-broadcast.js'];
+  // 27d. Verify modular player-ui peer modules (studio, checkpoints, voice, broadcast, display, controls) plumbing, load order, exports & standalone safety
+  const playerUiPeerModules = ['player-ui-studio.js', 'player-ui-checkpoints.js', 'player-ui-voice.js', 'player-ui-broadcast.js', 'player-ui-display.js', 'player-ui-controls.js'];
   const uiIdxRoot = playerHtml.indexOf('player/player-ui.js');
   const uiIdxStandalone = playerIndexHtml.indexOf('./player-ui.js');
   assert.ok(uiIdxRoot > -1 && uiIdxStandalone > -1, 'player.html and player/index.html must load player-ui.js');
@@ -2756,6 +2756,86 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   bcExports.updateWebRtcStatusUI.call(mockBcUi, true, 'host');
   assert.strictEqual(mockBcUi.elements.webrtcDrawerBadge.textContent, 'CONNECTED (HOST)', 'updateWebRtcStatusUI must update badge text');
   assert.strictEqual(mockBcUi.elements.webrtcRoleReadout.textContent, 'HOST', 'updateWebRtcStatusUI must update role readout');
+
+  // Verify player-ui-display.js exports & display preset profile generation
+  const displaySb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date, URLSearchParams,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: { self: null, top: null },
+  };
+  displaySb.window.self = displaySb.window;
+  displaySb.window.top = displaySb.window;
+  displaySb.globalThis = displaySb;
+  displaySb.self = displaySb.window;
+  const displayCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-display.js'), 'utf8');
+  vm.runInNewContext(displayCode, displaySb, { filename: 'static/player/player-ui-display.js' });
+  const dispExports = displaySb.ASTPlayerUIDisplay || displaySb.window.ASTPlayerUIDisplay;
+  assert.ok(dispExports, 'player-ui-display.js must export ASTPlayerUIDisplay');
+  for (const fnName of [
+    'bindDisplayDOMEvents', 'setTheme', 'toggleTheme', 'toggleBsl', 'updateBslButton',
+    'initDisplayConfig', 'getPresetProfile', 'setDisplayMode', 'saveDisplayConfig', 'applyDisplayConfig',
+    'toggleShortcutsModal', 'closeShortcutsModal', 'syncSettingsDrawerUI',
+    'toggleStudioPanel', 'openStudioPanel', 'closeStudioPanel', 'toggleSettingsDrawer', 'closeSettingsDrawer', 'togglePictureInPicture',
+  ]) {
+    assert.strictEqual(typeof dispExports[fnName], 'function', `ASTPlayerUIDisplay must export function ${fnName}`);
+  }
+  const suiteProfile = dispExports.getPresetProfile('suite');
+  assert.strictEqual(suiteProfile.mode, 'suite', 'getPresetProfile("suite") must return suite mode');
+  assert.strictEqual(suiteProfile.showTimelineScrubber, false, 'suite mode must hide timeline scrubber');
+  const minimalProfile = dispExports.getPresetProfile('minimal');
+  assert.strictEqual(minimalProfile.showDevStudio, false, 'minimal mode must hide dev studio');
+
+  // Verify player-ui-controls.js exports, 3D camera stop application & simulation reset delegation
+  const controlsSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date, URLSearchParams,
+    parseInt, parseFloat, isNaN, isFinite,
+    setTimeout, clearTimeout,
+    window: {},
+  };
+  controlsSb.globalThis = controlsSb;
+  controlsSb.self = controlsSb.window;
+  const controlsCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-controls.js'), 'utf8');
+  vm.runInNewContext(controlsCode, controlsSb, { filename: 'static/player/player-ui-controls.js' });
+  const ctrlExports = controlsSb.ASTPlayerUIControls || controlsSb.window.ASTPlayerUIControls;
+  assert.ok(ctrlExports, 'player-ui-controls.js must export ASTPlayerUIControls');
+  for (const fnName of [
+    'getSceneCameraStops', 'applyCameraStop', 'update3DStatus',
+    'populatePresets', 'saveToLocalVault', 'setupKeyframeMarkers',
+    'projectControls', 'syncProjectedControls', 'resetSimulation', 'bindControlsDOMEvents',
+  ]) {
+    assert.strictEqual(typeof ctrlExports[fnName], 'function', `ASTPlayerUIControls must export function ${fnName}`);
+  }
+  let camSeekVal: number | null = null;
+  let camEmitted = false;
+  let camResetDispatched = false;
+  const mockCtrlUi: any = {
+    targetStop: 0.5,
+    elements: {},
+    engine: {
+      progress: 0.25,
+      isPlaying: false,
+      cameraOrbit: { yawOffset: 0, pitchOffset: 0, distanceScale: 1 },
+      scene: { cameraStops: [{ id: 'altar', yaw: 30, pitch: -12, scale: 0.85, t: 0.4 }] },
+      seek(v: number) { camSeekVal = v; this.progress = v; },
+      applyBindings() {},
+      emit(evt: string) { if (evt === 'camerachange') camEmitted = true; },
+      dispatchAction(act: string) { if (act === 'sim:reset') camResetDispatched = true; },
+    },
+    update3DStatus() {},
+    updateHeaderPlayUI() {},
+    showToast() {},
+  };
+  const stops = ctrlExports.getSceneCameraStops.call(mockCtrlUi);
+  assert.strictEqual(stops.length, 1, 'getSceneCameraStops must read declarative scene.cameraStops');
+  ctrlExports.applyCameraStop.call(mockCtrlUi, stops[0]);
+  assert.strictEqual(mockCtrlUi.engine.cameraOrbit.yawOffset, 30, 'applyCameraStop must update yawOffset');
+  assert.strictEqual(mockCtrlUi.engine.cameraOrbit.pitchOffset, -12, 'applyCameraStop must update pitchOffset');
+  assert.strictEqual(mockCtrlUi.engine.cameraOrbit.distanceScale, 0.85, 'applyCameraStop must update distanceScale');
+  assert.strictEqual(camSeekVal, 0.4, 'applyCameraStop must seek to stop.t');
+  assert.strictEqual(camEmitted, true, 'applyCameraStop must emit camerachange');
+  ctrlExports.resetSimulation.call(mockCtrlUi);
+  assert.strictEqual(mockCtrlUi.targetStop, null, 'resetSimulation must clear targetStop');
+  assert.strictEqual(camResetDispatched, true, 'resetSimulation must dispatch sim:reset');
 
   // Verify player-ui.js evaluates cleanly in strict mode standalone (without peer UI modules loaded)
   const uiOnlySb: any = {

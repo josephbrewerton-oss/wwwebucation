@@ -48,6 +48,8 @@
     "player-ui-checkpoints.js",
     "player-ui-voice.js",
     "player-ui-broadcast.js",
+    "player-ui-display.js",
+    "player-ui-controls.js",
     "player-ui.js",
     "bytecode",
     "cartridges",

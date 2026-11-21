@@ -26,6 +26,8 @@ function scanAndDigest() {
     'player/player-ui-checkpoints.js',
     'player/player-ui-voice.js',
     'player/player-ui-broadcast.js',
+    'player/player-ui-display.js',
+    'player/player-ui-controls.js',
     'player/player-ui.js',
     'player/ast-profiler.js',
     'player/ast-audio-speech.js',
