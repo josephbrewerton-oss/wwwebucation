@@ -508,7 +508,7 @@ export function generateScenesManifest(options = {}) {
   fs.writeFileSync(legacyConfigPath, playerJsonStr, 'utf8');
   const rootLegacyConfigPath = path.join(rootDir, 'static', 'scenes-config.json');
   fs.writeFileSync(rootLegacyConfigPath, rootJsonStr, 'utf8');
-  
+
   // 2. Output manifest.oak.json
   const oakUnits = [];
   const seenUnits = new Set();
