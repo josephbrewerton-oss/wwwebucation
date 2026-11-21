@@ -20,6 +20,14 @@
     return global.ASTGesturesWhiteboard || (typeof window !== 'undefined' ? window.ASTGesturesWhiteboard : undefined);
   }
 
+  function _getGesturesHud() {
+    return global.ASTGesturesHud || (typeof window !== 'undefined' ? window.ASTGesturesHud : undefined);
+  }
+
+  function _getGesturesActions() {
+    return global.ASTGesturesActions || (typeof window !== 'undefined' ? window.ASTGesturesActions : undefined);
+  }
+
   // Resolve script base URL at load time so player-gestures.ast can be fetched reliably
   const SCRIPT_BASE_URL = (() => {
     try {
@@ -284,12 +292,8 @@
     }
 
     _playNamedTone(eventName) {
-      const _p = _getGesturesProfile();
-      const defaultTones = _p && _p.DEFAULT_TONES ? _p.DEFAULT_TONES : {};
-      const t = (this.playerProfile && this.playerProfile.tones && this.playerProfile.tones[eventName]) || defaultTones[eventName];
-      if (t) {
-        this.playAudioTone(t.freq, t.wave, t.duration, t.gain);
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._playNamedTone === 'function') _a._playNamedTone.call(this, eventName);
     }
 
     _normalizeGesture(g) {
@@ -375,637 +379,142 @@
       }
     }
 
+    // =========================================================================
+    // Declarative Action Engine, Hold Loop & Touch Audio (Delegated to site-gestures-actions.js)
+    // =========================================================================
+
     _resolveVarBounds(scene, g, varName) {
-      const vMeta = scene && scene.vars && scene.vars[varName];
-      const min = typeof g.min === 'number' ? g.min : (vMeta && typeof vMeta.min === 'number' ? vMeta.min : -Infinity);
-      const max = typeof g.max === 'number' ? g.max : (vMeta && typeof vMeta.max === 'number' ? vMeta.max : Infinity);
-      return { min, max };
+      const _a = _getGesturesActions();
+      return _a && typeof _a._resolveVarBounds === 'function'
+        ? _a._resolveVarBounds.call(this, scene, g, varName)
+        : { min: -Infinity, max: Infinity };
     }
 
     _resolveHoldReleaseValue(scene, g, holdVarName) {
-      if (g && g.releaseVal !== undefined) return g.releaseVal;
-      const vMeta = scene && scene.vars && scene.vars[holdVarName];
-      if (vMeta && typeof vMeta === 'object' && vMeta.defaultValue !== undefined) {
-        return vMeta.defaultValue;
-      }
-      const cur = this.engine && this.engine.vars ? this.engine.vars[holdVarName] : undefined;
-      return typeof cur === 'boolean' ? false : 0;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._resolveHoldReleaseValue === 'function'
+        ? _a._resolveHoldReleaseValue.call(this, scene, g, holdVarName)
+        : 0;
     }
 
     _writeEngineVar(varName, value) {
-      if (!this.engine || !varName) return;
-      if (typeof this.engine.setVar === 'function') {
-        this.engine.setVar(varName, value);
-      } else if (this.engine.vars) {
-        this.engine.vars[varName] = value;
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._writeEngineVar === 'function') _a._writeEngineVar.call(this, varName, value);
     }
 
     _speakGestureText(rawText, opts = {}) {
-      if (!this._isControlEnabled('audio')) return;
-      if (!rawText || !this.engine) return;
-      const text = String(rawText).trim();
-      if (!text) return;
-      const speakOpts = Object.assign({ immediate: true }, opts || {});
-      if (typeof this.engine.speak === 'function') {
-        this.engine.speak(text, speakOpts);
-      } else if (typeof this.engine.speakText === 'function') {
-        this.engine.speakText(text, speakOpts);
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._speakGestureText === 'function') _a._speakGestureText.call(this, rawText, opts);
     }
 
     _playToneSpec(toneSpec) {
-      if (!toneSpec || typeof this.playAudioTone !== 'function') return;
-      const freqs = String(toneSpec).split(',');
-      for (let idx = 0; idx < freqs.length; idx++) {
-        const hz = parseFloat(freqs[idx].trim());
-        if (Number.isNaN(hz)) continue;
-        // Play the first note synchronously inside the user-activation stack so
-        // suspended mobile AudioContexts resume cleanly on Android Chrome / PWAs.
-        if (idx === 0) {
-          this.playAudioTone(hz, 'sine', 0.12, 0.2);
-        } else {
-          setTimeout(() => this.playAudioTone(hz, 'sine', 0.12, 0.2), idx * 70);
-        }
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._playToneSpec === 'function') _a._playToneSpec.call(this, toneSpec);
     }
 
     _flushPendingTouchAudio(pointerId = null) {
-      if (!this._pendingTouchAudio || this._pendingTouchAudio.size === 0) return;
-      let queued = null;
-      if (pointerId !== null && pointerId !== undefined && this._pendingTouchAudio.has(pointerId)) {
-        queued = this._pendingTouchAudio.get(pointerId);
-        this._pendingTouchAudio.delete(pointerId);
-      } else if (pointerId === null || pointerId === undefined) {
-        const firstKey = this._pendingTouchAudio.keys().next().value;
-        if (firstKey !== undefined) {
-          queued = this._pendingTouchAudio.get(firstKey);
-          this._pendingTouchAudio.delete(firstKey);
-        }
-      }
-      if (!queued || !queued.length) return;
-
-      try {
-        if (typeof global !== 'undefined' && typeof global.primeMobileAudioAndTts === 'function') {
-          global.primeMobileAudioAndTts(this.engine && this.engine.audioSynth);
-        } else if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
-          this.engine.audioSynth.unlock();
-        }
-      } catch (_) {}
-
-      for (let i = 0; i < queued.length; i++) {
-        const item = queued[i];
-        if (!item) continue;
-        if (item.toneSpec) {
-          this._playToneSpec(item.toneSpec);
-        } else if (item.namedTone) {
-          this._playNamedTone(item.namedTone);
-        }
-        if (item.speakText) {
-          this._speakGestureText(item.speakText, item.speechOpts || {});
-        }
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._flushPendingTouchAudio === 'function') _a._flushPendingTouchAudio.call(this, pointerId);
     }
 
     handleTouchEnd() {
-      this._flushPendingTouchAudio(null);
+      const _a = _getGesturesActions();
+      if (_a && typeof _a.handleTouchEnd === 'function') _a.handleTouchEnd.call(this);
     }
 
     _readMatchedElementAttr(g, matchedEl) {
-      if (matchedEl && g.attr && matchedEl.hasAttribute(g.attr)) {
-        const rawAttr = matchedEl.getAttribute(g.attr);
-        return (rawAttr !== '' && !isNaN(Number(rawAttr))) ? Number(rawAttr) : rawAttr;
-      }
-      return undefined;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._readMatchedElementAttr === 'function'
+        ? _a._readMatchedElementAttr.call(this, g, matchedEl)
+        : undefined;
     }
 
     _evalGestureExpr(exprText, matchedEl, attrVal, asReturnValue = true) {
-      if (!exprText || !this.engine) return undefined;
-      const body = asReturnValue ? `return (${exprText})` : exprText;
-      const fn = new Function('vars', 'el', 'engine', 'computed', '_attr', body);
-      return fn(
-        this.engine.vars || {},
-        matchedEl || null,
-        this.engine,
-        this.engine.computed || {},
-        attrVal
-      );
+      const _a = _getGesturesActions();
+      return _a && typeof _a._evalGestureExpr === 'function'
+        ? _a._evalGestureExpr.call(this, exprText, matchedEl, attrVal, asReturnValue)
+        : undefined;
     }
 
     _evalConditionExpr(condExpr, matchedEl, attrVal) {
-      if (!condExpr) return true;
-      try {
-        return Boolean(this._evalGestureExpr(condExpr, matchedEl, attrVal, true));
-      } catch (err) {
-        console.warn('[SiteGestures] Condition :if error:', condExpr, err);
-        return false;
-      }
+      const _a = _getGesturesActions();
+      return _a && typeof _a._evalConditionExpr === 'function'
+        ? _a._evalConditionExpr.call(this, condExpr, matchedEl, attrVal)
+        : !condExpr;
     }
 
-    /**
-     * Emits a typed, hypervisor-gated SITE_DIRECTIVE upward to the host site shell.
-     * The host Hypervisor (nanoSiteManager.ts) enforces allowlists and route/preset validation.
-     */
     _emitSiteDirective(directive, scene) {
-      if (!directive || typeof directive !== 'object' || !directive.action) return false;
-      const payload = {
-        type: 'SITE_DIRECTIVE',
-        source: 'ast-cartridge',
-        sceneId: (scene && scene.id) || (this.engine && this.engine.scene && this.engine.scene.id) || '',
-        directive
-      };
-      try {
-        if (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.postMessage === 'function') {
-          window.parent.postMessage(payload, '*');
-        } else if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
-          window.dispatchEvent(new CustomEvent('stj:site-directive', { detail: payload }));
-        }
-        return true;
-      } catch {
-        return false;
-      }
+      const _a = _getGesturesActions();
+      return _a && typeof _a._emitSiteDirective === 'function'
+        ? _a._emitSiteDirective.call(this, directive, scene)
+        : false;
     }
 
-    /**
-     * Executes pure declarative AST actions natively in JS (zero inline JS in .ast files).
-     * Returns true if the action was handled so legacy bare-:var fallbacks don't double-apply.
-     */
     _executeDeclarativeAction(g, matchedEl, attrVal, scene) {
-      if (!g || !g.action || !this.engine) return false;
-      const action = g.action;
-
-      // 0. Check extensible Action Registry (instance or global)
-      const customHandler = (this._customActions && this._customActions.get(action))
-        || (ASTDirectGestureSubsystem._customActions && ASTDirectGestureSubsystem._customActions.get(action));
-      if (typeof customHandler === 'function') {
-        return customHandler.call(this, g, scene, this, matchedEl, attrVal) !== false;
-      }
-
-      if (action === 'step-slide' || action === 'goto-slide') {
-        const keyframeCount = scene && Array.isArray(scene.keyframes) && scene.keyframes.length >= 2
-          ? scene.keyframes.length
-          : 2;
-        const parsedCount = Number(g.count);
-        const count = Number.isFinite(parsedCount) && parsedCount >= 2 ? Math.round(parsedCount) : keyframeCount;
-        const maxIdx = Math.max(1, count - 1);
-
-        let targetIdx = 0;
-        if (action === 'step-slide') {
-          const delta = typeof g.delta === 'number' ? g.delta : 1;
-          const rawVarCur = g.var && this.engine.vars ? Number(this.engine.vars[g.var]) : NaN;
-          const curIdx = Number.isFinite(rawVarCur)
-            ? Math.max(0, Math.min(maxIdx, Math.round(rawVarCur)))
-            : Math.max(0, Math.min(maxIdx, Math.floor((this.engine.progress || 0) * count)));
-          targetIdx = Math.max(0, Math.min(maxIdx, curIdx + delta));
-        } else {
-          const rawTarget = attrVal !== undefined ? attrVal : g.val;
-          const numTarget = Number(rawTarget);
-          targetIdx = Math.max(0, Math.min(maxIdx, Number.isFinite(numTarget) ? Math.round(numTarget) : 0));
-        }
-
-        this._syncingTimelineVar = true;
-        try {
-          this._lastSyncedTimelineVal = targetIdx;
-          if (g.var) {
-            this._writeEngineVar(g.var, targetIdx);
-          }
-          if (g.clearVar) {
-            this._writeEngineVar(g.clearVar, '');
-          }
-          if (g.resetVar) {
-            this._writeEngineVar(g.resetVar, g.resetVal !== undefined ? g.resetVal : '');
-          }
-          if (typeof this.engine.seek === 'function') {
-            this.engine.seek(targetIdx / maxIdx);
-          }
-        } finally {
-          this._syncingTimelineVar = false;
-        }
-        return true;
-      }
-
-      // Hypervisor-gated Site Directive Bridge (Cartridge -> Host Site Control Plane)
-      if (action === 'navigate') {
-        const route = String(g.route || attrVal || '').trim();
-        if (!route) return false;
-        return this._emitSiteDirective({ action: 'navigate', route }, scene);
-      }
-
-      if (action === 'load-cartridge') {
-        const presetId = String(g.preset || g.presetId || attrVal || '').trim();
-        if (!presetId) return false;
-        return this._emitSiteDirective({
-          action: 'load_cartridge',
-          presetId,
-          autoplay: Boolean(g.autoplay)
-        }, scene);
-      }
-
-      if (action === 'toggle-bsl') {
-        const directive = { action: 'toggle_bsl' };
-        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
-        return this._emitSiteDirective(directive, scene);
-      }
-
-      if (action === 'toggle-sound') {
-        const directive = { action: 'toggle_sound' };
-        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
-        return this._emitSiteDirective(directive, scene);
-      }
-
-      if (action === 'open-tutor') {
-        let prompt = typeof g.prompt === 'string' ? g.prompt : '';
-        if (!prompt && g.speakVar && this.engine.vars && this.engine.vars[g.speakVar]) {
-          prompt = String(this.engine.vars[g.speakVar]);
-        }
-        if (!prompt && attrVal !== undefined) {
-          prompt = String(attrVal);
-        }
-        return this._emitSiteDirective({ action: 'open_tutor', prompt }, scene);
-      }
-
-      if (action === 'set-render-mode') {
-        const mode = String(g.mode || g.renderMode || attrVal || '').trim();
-        if (!mode) return false;
-        return this._emitSiteDirective({ action: 'set_render_mode', mode }, scene);
-      }
-
-      if (action === 'site-directive') {
-        const subAction = String(g.directive || '').trim().replace(/-/g, '_');
-        if (!subAction) return false;
-        const directive = { action: subAction };
-        if (g.route) directive.route = String(g.route);
-        if (g.preset || g.presetId) directive.presetId = String(g.preset || g.presetId);
-        if (typeof g.enabled === 'boolean') directive.enabled = g.enabled;
-        if (g.mode || g.renderMode) directive.mode = String(g.mode || g.renderMode);
-        if (g.prompt) directive.prompt = String(g.prompt);
-        if (g.selector) directive.selector = String(g.selector);
-        return this._emitSiteDirective(directive, scene);
-      }
-
-      return false;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._executeDeclarativeAction === 'function'
+        ? _a._executeDeclarativeAction.call(this, g, matchedEl, attrVal, scene)
+        : false;
     }
 
     _applyGesturePress(g, matchedEl, scene, audioQueue = null) {
-      if (!this.engine || !this.engine.vars) return false;
-      const attrVal = this._readMatchedElementAttr(g, matchedEl);
-      const condExpr = g.ifExpr !== undefined ? g.ifExpr : g.if;
-      if (condExpr && !this._evalConditionExpr(condExpr, matchedEl, attrVal)) {
-        return false;
-      }
-
-      let changed = false;
-      let exprConsumedBySetVar = false;
-
-      // 1. Native JS execution of pure declarative AST actions (:action "step-slide", "goto-slide", etc.)
-      const actionHandled = this._executeDeclarativeAction(g, matchedEl, attrVal, scene);
-      if (actionHandled) {
-        changed = true;
-      }
-
-      const toggleKey = g.toggleVar || g.toggle;
-      const setKey = g.setVar || g.set || (!actionHandled && g.var && (g.val !== undefined || g.fromAttr !== undefined || g.valExpr !== undefined || g.expr !== undefined || attrVal !== undefined) ? g.var : null);
-      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!actionHandled && !setKey && g.var && g.delta !== undefined ? g.var : null);
-      const holdKey = g.holdVar;
-
-      if (toggleKey) {
-        this._writeEngineVar(toggleKey, !this.engine.vars[toggleKey]);
-        changed = true;
-      }
-      if (setKey) {
-        let val = g.val;
-        if (g.fromAttr && matchedEl && typeof matchedEl.getAttribute === 'function') {
-          const fromVal = matchedEl.getAttribute(g.fromAttr);
-          if (fromVal !== null) val = fromVal;
-        } else if (attrVal !== undefined) {
-          val = attrVal;
-        }
-        if (g.valExpr) {
-          try {
-            val = this._evalGestureExpr(g.valExpr, matchedEl, attrVal, true);
-          } catch (err) {
-            console.warn('[SiteGestures] Gesture :val-expr error:', g.valExpr, err);
-          }
-        } else if (val === undefined && g.expr) {
-          try {
-            val = this._evalGestureExpr(g.expr, matchedEl, attrVal, true);
-            exprConsumedBySetVar = true;
-          } catch (err) {
-            // Fall through to statement execution below if expr wasn't a pure expression
-          }
-        }
-        if (val !== undefined) {
-          this._writeEngineVar(setKey, val);
-          changed = true;
-        }
-      }
-      if (holdKey) {
-        let entry = this._activeHoldVars.get(holdKey);
-        if (!entry) {
-          entry = {
-            gestures: new Set(),
-            releaseVal: this._resolveHoldReleaseValue(scene, g, holdKey)
-          };
-          this._activeHoldVars.set(holdKey, entry);
-        }
-        entry.gestures.add(g);
-        this._writeEngineVar(holdKey, g.val !== undefined ? g.val : true);
-        changed = true;
-      }
-      if (stepKey) {
-        const cur = typeof this.engine.vars[stepKey] === 'number' ? this.engine.vars[stepKey] : 0;
-        const delta = typeof g.delta === 'number' ? g.delta : 1;
-        const { min, max } = this._resolveVarBounds(scene, g, stepKey);
-        const next = Math.max(min, Math.min(max, cur + delta));
-        this._writeEngineVar(stepKey, next);
-        changed = true;
-      }
-      if (changed && typeof this.engine.updateComputedVars === 'function') {
-        this.engine.updateComputedVars(this.engine.progress || 0);
-      }
-      if (g.expr && !exprConsumedBySetVar) {
-        try {
-          new Function('vars', 'el', 'engine', 'computed', '_attr', g.expr)(
-            this.engine.vars,
-            matchedEl,
-            this.engine,
-            this.engine.computed || {},
-            attrVal
-          );
-          if (typeof this.engine.updateComputedVars === 'function') {
-            this.engine.updateComputedVars(this.engine.progress || 0);
-          }
-          changed = true;
-        } catch (err) {
-          console.warn('[SiteGestures] Gesture expr error:', g.expr, err);
-        }
-      }
-
-      let toneSpec = g.tone;
-      if (g.toneExpr) {
-        try {
-          const evaluatedTone = this._evalGestureExpr(g.toneExpr, matchedEl, attrVal, true);
-          if (evaluatedTone !== undefined && evaluatedTone !== null) {
-            toneSpec = String(evaluatedTone);
-          }
-        } catch (err) {
-          console.warn('[SiteGestures] Gesture :tone-expr error:', g.toneExpr, err);
-        }
-      }
-      if (toneSpec) {
-        if (Array.isArray(audioQueue)) {
-          audioQueue.push({ toneSpec });
-        } else {
-          this._playToneSpec(toneSpec);
-        }
-      }
-
-      let speakText = g.speak;
-      if (!speakText && g.speakAttr && matchedEl && typeof matchedEl.getAttribute === 'function') {
-        const attrSpeech = matchedEl.getAttribute(g.speakAttr);
-        if (attrSpeech !== null && String(attrSpeech).trim() !== '') {
-          speakText = String(attrSpeech);
-        }
-      }
-      if (!speakText && g.speakVar) {
-        const vSpeech = this.engine.vars[g.speakVar];
-        if (vSpeech !== undefined && vSpeech !== null && String(vSpeech).trim() !== '') {
-          speakText = String(vSpeech);
-        }
-      }
-      if (!speakText && g.fallbackVar) {
-        const fSpeech = this.engine.vars[g.fallbackVar];
-        if (fSpeech !== undefined && fSpeech !== null && String(fSpeech).trim() !== '') {
-          speakText = String(fSpeech);
-        }
-      }
-      if (g.speakExpr) {
-        try {
-          const evaluatedSpeak = this._evalGestureExpr(g.speakExpr, matchedEl, attrVal, true);
-          if (evaluatedSpeak !== undefined && evaluatedSpeak !== null) {
-            speakText = String(evaluatedSpeak);
-          }
-        } catch (err) {
-          console.warn('[SiteGestures] Gesture :speak-expr error:', g.speakExpr, err);
-        }
-      }
-      if (speakText) {
-        const speechOpts = {};
-        if (g.speakRateVar && typeof this.engine.vars[g.speakRateVar] === 'number') {
-          speechOpts.rate = this.engine.vars[g.speakRateVar];
-        }
-        if (typeof g.speakPitch === 'number') {
-          speechOpts.pitch = g.speakPitch;
-        }
-        if (Array.isArray(audioQueue)) {
-          audioQueue.push({ speakText, speechOpts });
-        } else {
-          this._speakGestureText(speakText, speechOpts);
-        }
-      }
-
-      return changed;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._applyGesturePress === 'function'
+        ? _a._applyGesturePress.call(this, g, matchedEl, scene, audioQueue)
+        : false;
     }
 
     _applyContinuousGestureStep(g, scene, dtSec, matchedEl = null) {
-      if (!this.engine || !this.engine.vars) return false;
-      let changed = false;
-
-      if (g.holdVar) {
-        const holdVal = g.val !== undefined ? g.val : true;
-        if (this.engine.vars[g.holdVar] !== holdVal) {
-          this._writeEngineVar(g.holdVar, holdVal);
-          changed = true;
-        }
-      }
-
-      const stepKey = g.stepVar || (typeof g.step === 'string' ? g.step : null) || (!g.setVar && g.var && g.delta !== undefined ? g.var : null);
-      if (stepKey) {
-        const cur = typeof this.engine.vars[stepKey] === 'number' ? this.engine.vars[stepKey] : 0;
-        const delta = typeof g.delta === 'number' ? g.delta : 1;
-        const stepIncrement = typeof g.rate === 'number' ? (g.rate * dtSec) : (delta * dtSec * 3.5);
-        const { min, max } = this._resolveVarBounds(scene, g, stepKey);
-        const next = Math.max(min, Math.min(max, cur + stepIncrement));
-        if (next !== cur) {
-          this._writeEngineVar(stepKey, next);
-          changed = true;
-        }
-      }
-
-      if (g.expr && (g.type === 'holdable' || g.hold === true)) {
-        try {
-          new Function('vars', 'el', 'engine', 'dt', 'computed', g.expr)(
-            this.engine.vars,
-            matchedEl,
-            this.engine,
-            dtSec,
-            this.engine.computed || {}
-          );
-          if (typeof this.engine.updateComputedVars === 'function') {
-            this.engine.updateComputedVars(this.engine.progress || 0);
-          }
-          changed = true;
-        } catch (err) {
-          console.warn('[SiteGestures] Hold expr error:', g.expr, err);
-        }
-      }
-
-      return changed;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._applyContinuousGestureStep === 'function'
+        ? _a._applyContinuousGestureStep.call(this, g, scene, dtSec, matchedEl)
+        : false;
     }
 
     _releaseHoldForGesture(g) {
-      if (!g || !g.holdVar) return false;
-      const entry = this._activeHoldVars.get(g.holdVar);
-      if (!entry) return false;
-      entry.gestures.delete(g);
-      if (entry.gestures.size === 0) {
-        this._activeHoldVars.delete(g.holdVar);
-        this._writeEngineVar(g.holdVar, entry.releaseVal);
-        return true;
-      }
-      return false;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._releaseHoldForGesture === 'function'
+        ? _a._releaseHoldForGesture.call(this, g)
+        : false;
     }
 
     _releasePointerEntry(pointerId) {
-      const entry = this._heldPointerEntries.get(pointerId);
-      if (!entry) return false;
-      this._heldPointerEntries.delete(pointerId);
-      let resetOccurred = false;
-      for (let i = 0; i < entry.gestures.length; i++) {
-        if (this._releaseHoldForGesture(entry.gestures[i])) {
-          resetOccurred = true;
-        }
-      }
-      if (this._heldKeys.size === 0 && this._heldPointerEntries.size === 0) {
-        this._stopHoldLoop();
-      }
-      return resetOccurred;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._releasePointerEntry === 'function'
+        ? _a._releasePointerEntry.call(this, pointerId)
+        : false;
     }
 
     _releaseAllHeldInputs(resetHoldVars = true) {
-      this._heldKeys.clear();
-      this._heldKeyCodeMap.clear();
-      this._heldPointerEntries.clear();
-
-      let resetOccurred = false;
-      if (resetHoldVars && this._activeHoldVars.size > 0) {
-        for (const [varName, entry] of this._activeHoldVars.entries()) {
-          this._writeEngineVar(varName, entry.releaseVal);
-          resetOccurred = true;
-        }
-      }
-      this._activeHoldVars.clear();
-      this._stopHoldLoop();
-
-      if (resetOccurred && this.engine && typeof this.engine.applyBindings === 'function') {
-        this.engine.applyBindings(this.engine.progress || 0, 0, false);
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._releaseAllHeldInputs === 'function') _a._releaseAllHeldInputs.call(this, resetHoldVars);
     }
 
     _ensureHoldLoop() {
-      if (this._holdRafId !== null) return;
-      if (this._heldKeys.size === 0 && this._heldPointerEntries.size === 0) return;
-      if (typeof requestAnimationFrame === 'undefined') return;
-      this._holdLastTs = typeof performance !== 'undefined' ? performance.now() : Date.now();
-      this._holdRafId = requestAnimationFrame(this._runHoldLoop);
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._ensureHoldLoop === 'function') _a._ensureHoldLoop.call(this);
     }
 
     _stopHoldLoop() {
-      if (this._holdRafId !== null && typeof cancelAnimationFrame !== 'undefined') {
-        cancelAnimationFrame(this._holdRafId);
-      }
-      this._holdRafId = null;
-      this._holdLastTs = 0;
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._stopHoldLoop === 'function') _a._stopHoldLoop.call(this);
     }
 
     _runHoldLoop(ts) {
-      this._holdRafId = null;
-      const now = ts || (typeof performance !== 'undefined' ? performance.now() : Date.now());
-      const dtSec = this._holdLastTs ? Math.min(0.05, Math.max(0.001, (now - this._holdLastTs) / 1000)) : (1 / 60);
-      this._holdLastTs = now;
-
-      if (this._heldKeys.size === 0 && this._heldPointerEntries.size === 0) {
-        return;
-      }
-
-      const scene = this.engine && this.engine.scene;
-      if (!scene || !this.engine || !this.engine.vars) {
-        this._stopHoldLoop();
-        return;
-      }
-
-      let changed = false;
-      const gestures = this._getNormalizedSceneGestures(scene);
-
-      if (this._heldKeys.size > 0) {
-        for (let i = 0; i < gestures.length; i++) {
-          const g = gestures[i];
-          if (g.type !== 'key') continue;
-          const keyMatched = this._heldKeys.has(g.code) ||
-            this._heldKeys.has(g.key) ||
-            (typeof g.key === 'string' && g.key.length === 1 && this._heldKeys.has(g.key.toLowerCase()));
-          if (!keyMatched) continue;
-          const isContinuous = Boolean(g.holdVar || ((g.stepVar || typeof g.step === 'string') && g.hold !== false));
-          if (isContinuous && this._applyContinuousGestureStep(g, scene, dtSec, null)) {
-            changed = true;
-          }
-        }
-      }
-
-      if (this._heldPointerEntries.size > 0) {
-        for (const entry of this._heldPointerEntries.values()) {
-          const heldDuration = now - entry.pressedAt;
-          for (let i = 0; i < entry.gestures.length; i++) {
-            const g = entry.gestures[i];
-            const hasStep = Boolean(g.stepVar || typeof g.step === 'string');
-            const wantsContinuous = Boolean(
-              g.holdVar ||
-              g.type === 'holdable' ||
-              g.hold === true ||
-              (hasStep && g.hold !== false && heldDuration >= 160)
-            );
-            const matchedEl = entry.matchedEls ? entry.matchedEls[i] : null;
-            if (wantsContinuous && this._applyContinuousGestureStep(g, scene, dtSec, matchedEl)) {
-              changed = true;
-            }
-          }
-        }
-      }
-
-      if (changed && typeof this.engine.applyBindings === 'function') {
-        this.engine.applyBindings(this.engine.progress || 0, 0, false);
-      }
-
-      if (this._heldKeys.size > 0 || this._heldPointerEntries.size > 0) {
-        this._holdRafId = requestAnimationFrame(this._runHoldLoop);
-      } else {
-        this._stopHoldLoop();
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._runHoldLoop === 'function') _a._runHoldLoop.call(this, ts);
     }
 
     _gestureMatchesKey(g, e) {
-      if (!g) return false;
-      if (g.code && e.code && g.code === e.code) return true;
-      if (g.key && e.key) {
-        if (g.key === e.key) return true;
-        if (g.key.length === 1 && e.key.length === 1 && g.key.toLowerCase() === e.key.toLowerCase()) {
-          return true;
-        }
-      }
-      return false;
+      const _a = _getGesturesActions();
+      return _a && typeof _a._gestureMatchesKey === 'function'
+        ? _a._gestureMatchesKey.call(this, g, e)
+        : false;
     }
 
     _ensureInteractiveSimPlaying() {
-      if (
-        this.engine &&
-        !this.engine.isPlaying &&
-        this.engine.isContinuousSim &&
-        Array.isArray(this.engine.activeVarBindings) &&
-        this.engine.activeVarBindings.length > 0 &&
-        typeof this.engine.play === 'function'
-      ) {
-        this.engine.play();
-      }
+      const _a = _getGesturesActions();
+      if (_a && typeof _a._ensureInteractiveSimPlaying === 'function') _a._ensureInteractiveSimPlaying.call(this);
     }
 
     // =========================================================================
@@ -2146,627 +1655,68 @@
     }
 
     // =========================================================================
-    // Stage-Embedded Glass HUD Floating Bar (Built from player-gestures.ast)
+    // Stage-Embedded Glass HUD, X-Ray & Touch Ripples (Delegated to site-gestures-hud.js)
     // =========================================================================
 
     _rebuildGlassHud() {
-      const container = this.stageSvg && this.stageSvg.parentNode;
-      if (!container) return;
-      const existing = container.querySelector('#stage-glass-hud-ui');
-      if (existing) existing.remove();
-      this.setupGlassHud();
+      const _h = _getGesturesHud();
+      if (_h && typeof _h._rebuildGlassHud === 'function') _h._rebuildGlassHud.call(this);
     }
 
     setupGlassHud() {
-      const container = this.stageSvg.parentNode;
-      if (!container || container.querySelector('#stage-glass-hud-ui')) return;
-
-      const hud = document.createElement('div');
-      hud.id = 'stage-glass-hud-ui';
-      hud.style.cssText = `
-        position: absolute;
-        bottom: 58px;
-        right: 14px;
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        background: rgba(15, 23, 42, 0.92);
-        backdrop-filter: blur(12px);
-        padding: 5px 8px;
-        border-radius: 9999px;
-        border: 1px solid rgba(255, 255, 255, 0.18);
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-        z-index: 30;
-        user-select: none;
-      `;
-
-      // 1. Tool Selection Pills (from player-gestures.ast :whiteboard :tools)
-      const penTools = document.createElement('div');
-      penTools.id = 'stage-hud-pen-tools';
-      penTools.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
-      const tools = this.playerProfile.whiteboard.tools;
-      const toolBtns = [];
-      tools.forEach(t => {
-        const btn = this.createHudButton(t.icon, t.title || t.id, () => {
-          this.currentTool = t.id;
-          this.currentInkWidth = t.width;
-          this.stageSvg.style.cursor = (t.id === 'eraser') ? 'cell' : 'crosshair';
-          toolBtns.forEach(b => {
-            b.el.style.background = (b.id === t.id) ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.08)';
-            b.el.style.borderColor = (b.id === t.id) ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)';
-          });
-          this.playAudioTone(t.id === 'eraser' ? 330 : 600, 'sine', 0.04);
-        });
-        if (t.id === this.currentTool) {
-          btn.style.background = 'rgba(56, 189, 248, 0.3)';
-          btn.style.borderColor = '#38bdf8';
-        }
-        toolBtns.push({ id: t.id, el: btn });
-        penTools.appendChild(btn);
-      });
-
-      // 2. Stroke Thickness Pills (from player-gestures.ast :whiteboard :widths)
-      const penWidths = document.createElement('div');
-      penWidths.id = 'stage-hud-pen-widths';
-      penWidths.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:3px;';
-      const widthValues = this.playerProfile.whiteboard.widths;
-      const widthLabels = ['•', '●', '■'];
-      const widthTitles = ['Fine Stroke', 'Medium Stroke', 'Broad Stroke'];
-      const widthBtns = [];
-      widthValues.forEach((w, idx) => {
-        const label = widthLabels[idx] || '●';
-        const title = widthTitles[idx] || `Stroke ${w}px`;
-        const btn = this.createHudButton(label, title, () => {
-          this.currentInkWidth = w;
-          widthBtns.forEach(wb => {
-            wb.el.style.borderColor = (wb.w === w) ? '#facc15' : 'rgba(255, 255, 255, 0.12)';
-            wb.el.style.color = (wb.w === w) ? '#facc15' : '#f8fafc';
-          });
-          this.playAudioTone(700, 'triangle', 0.03);
-        });
-        btn.style.fontSize = w > 8 ? '16px' : (w > 4 ? '13px' : '10px');
-        widthBtns.push({ w, el: btn });
-        penWidths.appendChild(btn);
-      });
-
-      // 3. Smartboard Palette Pills (from player-gestures.ast :whiteboard :palette)
-      const penPalette = document.createElement('div');
-      penPalette.id = 'stage-hud-pen-palette';
-      penPalette.style.cssText = 'display:none; align-items:center; gap:4px; margin-right:4px;';
-      const colors = this.playerProfile.whiteboard.palette;
-      colors.forEach(col => {
-        const dot = document.createElement('button');
-        dot.type = 'button';
-        dot.title = col.name || col.hex;
-        dot.style.cssText = `width:18px; height:18px; border-radius:50%; background:${col.hex}; border:1.5px solid rgba(255,255,255,0.45); cursor:pointer; padding:0; transition: transform 0.12s ease;`;
-        dot.onmouseenter = () => dot.style.transform = 'scale(1.25)';
-        dot.onmouseleave = () => dot.style.transform = 'scale(1.0)';
-        dot.onclick = () => {
-          this.currentInkColor = col.hex;
-          if (this.currentTool === 'eraser') {
-            this.currentTool = 'pen';
-            this.stageSvg.style.cursor = 'crosshair';
-            toolBtns.forEach(b => {
-              b.el.style.background = (b.id === 'pen') ? 'rgba(56, 189, 248, 0.3)' : 'rgba(255, 255, 255, 0.08)';
-              b.el.style.borderColor = (b.id === 'pen') ? '#38bdf8' : 'rgba(255, 255, 255, 0.12)';
-            });
-          }
-          this.playAudioTone(587, 'sine', 0.03);
-        };
-        penPalette.appendChild(dot);
-      });
-
-      // 4. Whiteboard Utility Actions
-      const inkExtraActions = document.createElement('div');
-      inkExtraActions.id = 'stage-hud-ink-actions';
-      inkExtraActions.style.cssText = 'display:none; align-items:center; gap:3px; margin-right:4px;';
-
-      const undoBtn = this.createHudButton('↩️', 'Undo Last Stroke (Ctrl+Z)', () => this.undoLastStroke());
-      const redoBtn = this.createHudButton('↪️', 'Redo Stroke (Ctrl+Y)', () => this.redoLastStroke());
-
-      const palmBtn = this.createHudButton('🖐️', 'Stylus-Only Palm Rejection (Ignore Touch Gestures While Writing)', () => {
-        this.stylusOnlyMode = !this.stylusOnlyMode;
-        palmBtn.style.background = this.stylusOnlyMode ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
-        palmBtn.style.color = this.stylusOnlyMode ? '#090d16' : '#ffffff';
-        this.showFloatingNotice(this.stylusOnlyMode ? '🖐️ Stylus-Only Active (Finger Touch Ignored)' : '🖐️ Finger & Stylus Drawing Active');
-        this.playAudioTone(this.stylusOnlyMode ? 784 : 440, 'sine', 0.05);
-      });
-
-      const exportBtn = this.createHudButton('📋', 'Export Ink to AST S-Expression', () => {
-        const ast = this.exportInkToAST();
-        if (navigator.clipboard) {
-          navigator.clipboard.writeText(ast);
-          this.showFloatingNotice('📋 Copied Ink AST S-Expression to Clipboard!');
-          this.playAudioTone(659, 'sine', 0.06);
-        }
-      });
-      const broadcastBtn = this.createHudButton('📡', 'Broadcast Whiteboard Ink to Pupils (WebRTC)', () => {
-        this.broadcastInkSession();
-      });
-
-      inkExtraActions.appendChild(undoBtn);
-      inkExtraActions.appendChild(redoBtn);
-      inkExtraActions.appendChild(palmBtn);
-      inkExtraActions.appendChild(exportBtn);
-      inkExtraActions.appendChild(broadcastBtn);
-
-      // 5. Clear Ink Button
-      const clearBtn = this.createHudButton('🗑️', 'Clear All Whiteboard Ink', () => this.clearWhiteboardInk());
-      clearBtn.id = 'stage-hud-clear-btn';
-      clearBtn.style.display = 'none';
-
-      // 6. Pen Toggle Primary Pill
-      const penBtn = this.createHudButton('🖊️', 'Whiteboard Ink Mode (Draw, Annotate & Highlight) • [W]', () => {
-        this.togglePen();
-      });
-      penBtn.id = 'stage-hud-pen-btn';
-
-      // 7. X-Ray Discovery Button
-      const xrayBtn = this.createHudButton('🔬', 'Pedagogical X-Ray Inspection', () => {
-        if (!this._isControlEnabled('xray')) return;
-        this.isXRayActive = !this.isXRayActive;
-        xrayBtn.style.background = this.isXRayActive ? '#38bdf8' : 'rgba(255, 255, 255, 0.08)';
-        xrayBtn.style.color = this.isXRayActive ? '#090d16' : '#ffffff';
-        if (!this.isXRayActive) this.hideXRayPopup();
-        this.playAudioTone(this.isXRayActive ? 784 : 392, 'sine', 0.08);
-      });
-      xrayBtn.id = 'stage-hud-xray-btn';
-
-      // 8. Audio Sonification Button
-      const soundBtn = this.createHudButton('🔊', 'Multi-sensory Procedural Audio', () => {
-        this.sonificationEnabled = !this.sonificationEnabled;
-        soundBtn.textContent = this.sonificationEnabled ? '🔊' : '🔇';
-        soundBtn.style.opacity = this.sonificationEnabled ? '1.0' : '0.5';
-        if (this.sonificationEnabled) this.playAudioTone(523, 'sine', 0.05);
-      });
-      soundBtn.id = 'stage-hud-sound-btn';
-
-      hud.appendChild(penTools);
-      hud.appendChild(penWidths);
-      hud.appendChild(penPalette);
-      hud.appendChild(inkExtraActions);
-      hud.appendChild(clearBtn);
-      hud.appendChild(penBtn);
-      hud.appendChild(xrayBtn);
-      hud.appendChild(soundBtn);
-      container.appendChild(hud);
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.setupGlassHud === 'function') _h.setupGlassHud.call(this);
     }
 
     createHudButton(icon, title, onClick) {
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.createHudButton === 'function') {
+        return _h.createHudButton.call(this, icon, title, onClick);
+      }
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.title = title;
       btn.textContent = icon;
-      btn.style.cssText = `
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.12);
-        color: #f8fafc;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        cursor: pointer;
-        transition: all 0.15s ease;
-      `;
-      btn.onmouseenter = () => btn.style.transform = 'scale(1.1)';
-      btn.onmouseleave = () => btn.style.transform = 'scale(1.0)';
       btn.onclick = onClick;
       return btn;
     }
 
-    // =========================================================================
-    // X-Ray Pedagogical Knowledge Tooltip
-    // =========================================================================
-
     setupXRayTooltip() {
-      const container = this.stageSvg.parentNode;
-      if (!container || container.querySelector('#stage-xray-tooltip')) return;
-
-      const tip = document.createElement('div');
-      tip.id = 'stage-xray-tooltip';
-      tip.style.cssText = `
-        position: absolute;
-        display: none;
-        background: rgba(15, 23, 42, 0.95);
-        backdrop-filter: blur(12px);
-        border: 1px solid #38bdf8;
-        border-radius: 8px;
-        padding: 8px 12px;
-        color: #f8fafc;
-        font-size: 11px;
-        font-family: system-ui, sans-serif;
-        box-shadow: 0 6px 20px rgba(0,0,0,0.5);
-        pointer-events: none;
-        z-index: 35;
-        max-width: 240px;
-        line-height: 1.4;
-      `;
-      container.appendChild(tip);
-      this.xrayTooltip = tip;
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.setupXRayTooltip === 'function') _h.setupXRayTooltip.call(this);
     }
 
     showXRayPopup(pedId, svgX, svgY, pedNode = null) {
-      if (!this.xrayTooltip || !this._isControlEnabled('xray')) return;
-      let info = null;
-
-      if (pedNode) {
-        const attrTitle = pedNode.getAttribute('data-pedagogical-title') || pedNode.getAttribute('data-pedagogical-label');
-        const attrEq = pedNode.getAttribute('data-pedagogical-eq') || '';
-        const attrDesc = pedNode.getAttribute('data-pedagogical-desc') || '';
-        if (attrTitle || attrDesc) {
-          info = {
-            title: attrTitle || pedId || 'Apparatus Component',
-            eq: attrEq || 'Lumina Vector X-Ray',
-            desc: attrDesc || attrTitle || ''
-          };
-        }
-      }
-
-      if (!info && typeof pedId === 'string' && pedId.includes(':')) {
-        const colonIdx = pedId.indexOf(':');
-        info = {
-          title: pedId.slice(0, colonIdx).trim(),
-          eq: 'Interactive Vector Apparatus',
-          desc: pedId.slice(colonIdx + 1).trim()
-        };
-      }
-
-      if (!info) return;
-
-      this.xrayTooltip.textContent = '';
-      const titleEl = document.createElement('div');
-      titleEl.style.color = '#38bdf8';
-      titleEl.style.fontWeight = '800';
-      titleEl.style.fontSize = '11px';
-      titleEl.style.marginBottom = '2px';
-      titleEl.textContent = info.title;
-
-      const eqEl = document.createElement('div');
-      eqEl.style.color = '#fde047';
-      eqEl.style.fontFamily = 'monospace';
-      eqEl.style.fontWeight = '800';
-      eqEl.style.marginBottom = '3px';
-      eqEl.textContent = info.eq;
-
-      const descEl = document.createElement('div');
-      descEl.style.color = '#cbd5e1';
-      descEl.style.fontSize = '10px';
-      descEl.textContent = info.desc;
-
-      this.xrayTooltip.appendChild(titleEl);
-      this.xrayTooltip.appendChild(eqEl);
-      this.xrayTooltip.appendChild(descEl);
-
-      const rect = this.stageSvg.getBoundingClientRect();
-      const clientX = rect.left + (svgX / 800) * rect.width;
-      const clientY = rect.top + (svgY / 480) * rect.height;
-
-      this.xrayTooltip.style.left = `${Math.min(window.innerWidth - 250, clientX + 15)}px`;
-      this.xrayTooltip.style.top = `${Math.max(10, clientY - 40)}px`;
-      this.xrayTooltip.style.display = 'block';
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.showXRayPopup === 'function') _h.showXRayPopup.call(this, pedId, svgX, svgY, pedNode);
     }
 
     hideXRayPopup() {
-      if (this.xrayTooltip) {
-        this.xrayTooltip.style.display = 'none';
-      }
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.hideXRayPopup === 'function') _h.hideXRayPopup.call(this);
     }
 
     createTouchRipple(x, y) {
-      if (!this.hudRoot) return;
-      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-      circle.setAttribute('cx', x.toFixed(1));
-      circle.setAttribute('cy', y.toFixed(1));
-      circle.setAttribute('r', '8');
-      circle.setAttribute('fill', 'none');
-      circle.setAttribute('stroke', '#38bdf8');
-      circle.setAttribute('stroke-width', '2');
-      circle.style.transition = 'all 0.4s ease-out';
-      this.hudRoot.appendChild(circle);
-
-      requestAnimationFrame(() => {
-        circle.setAttribute('r', '32');
-        circle.setAttribute('opacity', '0');
-        setTimeout(() => circle.remove(), 420);
-      });
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.createTouchRipple === 'function') _h.createTouchRipple.call(this, x, y);
     }
 
     // =========================================================================
-    // Procedural WebAudio Sonification (Gated by :audio switch)
+    // Procedural WebAudio Sonification (Delegated to site-gestures-actions.js)
     // =========================================================================
 
     playAudioTone(frequency = 440, type = 'sine', duration = 0.1, gainVal = 0.15) {
-      if (
-        !this._isControlEnabled('audio') ||
-        !this.sonificationEnabled ||
-        (this.engine && (this.engine.muted || this.engine.volume === 0))
-      ) {
-        return;
-      }
-      const scheduleTone = (ctx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        const now = ctx.currentTime;
-        osc.type = type;
-        osc.frequency.setValueAtTime(frequency, now);
-        gain.gain.setValueAtTime(gainVal, now);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(now);
-        osc.stop(now + duration + 0.01);
-      };
-      try {
-        if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.withRunningContext === 'function') {
-          this.engine.audioSynth.unlock();
-          this.engine.audioSynth.withRunningContext(scheduleTone);
-          return;
-        }
-        if (!this.audioCtx || this.audioCtx.state === 'closed') {
-          const shared = typeof window !== 'undefined' ? window.__astSharedAudioCtx : null;
-          if (shared && shared.state !== 'closed') {
-            this.audioCtx = shared;
-          } else {
-            const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-            if (AudioContextClass) {
-              this.audioCtx = new AudioContextClass();
-              window.__astSharedAudioCtx = this.audioCtx;
-            }
-          }
-        }
-        if (!this.audioCtx) return;
-        if (this.audioCtx.state === 'running') {
-          scheduleTone(this.audioCtx);
-        } else if (this.audioCtx.state === 'suspended' || this.audioCtx.state === 'interrupted') {
-          const ctx = this.audioCtx;
-          ctx.resume().then(() => {
-            if (ctx.state === 'running') scheduleTone(ctx);
-          }).catch(() => {});
-        }
-      } catch {}
+      const _a = _getGesturesActions();
+      if (_a && typeof _a.playAudioTone === 'function') _a.playAudioTone.call(this, frequency, type, duration, gainVal);
     }
 
     // =========================================================================
-    // Live Simulation Parameters & Controls HUD Dock (Gated by :param-hud)
+    // Live Simulation Parameters & Controls HUD Dock (Delegated to site-gestures-hud.js)
     // =========================================================================
 
     setupSimParametersHud() {
-      const container = this.stageSvg && this.stageSvg.parentNode;
-      if (!container || !this.engine) return;
-
-      let hud = container.querySelector('#stage-sim-parameters');
-      const scene = this.engine.scene;
-
-      if (
-        !this._isControlEnabled('param-hud') ||
-        !scene ||
-        (scene.uiControls && scene.uiControls.length > 0) ||
-        container.querySelector('#cartridge-controls-overlay:not(.hidden)') ||
-        container.querySelector('#ast-declarative-hud')
-      ) {
-        if (hud) hud.style.display = 'none';
-        return;
-      }
-
-      let inputs = [];
-      if (typeof this.engine.resolveParameterControls === 'function') {
-        inputs = this.engine.resolveParameterControls(scene).filter(c => c && c.type === 'slider');
-      } else {
-        inputs = Array.isArray(scene.inputs) && scene.inputs.length > 0 ? [...scene.inputs] : [];
-        if (inputs.length === 0 && scene.vars && typeof scene.vars === 'object') {
-          Object.entries(scene.vars).forEach(([k, v]) => {
-            if (v && typeof v === 'object' && v.hasExplicitBounds !== false && typeof v.min === 'number' && typeof v.max === 'number' && v.min < v.max) {
-              inputs.push({
-                type: 'slider',
-                var: k,
-                label: v.label || k,
-                min: v.min,
-                max: v.max,
-                step: v.step || 1,
-                unit: v.unit || ''
-              });
-            }
-          });
-        }
-      }
-
-      if (inputs.length === 0) {
-        if (hud) hud.style.display = 'none';
-        return;
-      }
-
-      if (!hud) {
-        hud = document.createElement('div');
-        hud.id = 'stage-sim-parameters';
-        hud.style.cssText = `
-          position: absolute;
-          top: clamp(58px, 11.5%, 76px);
-          right: 12px;
-          min-width: 230px;
-          max-width: min(270px, calc(100% - 24px));
-          max-height: calc(100% - 136px);
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          background: rgba(15, 23, 42, 0.92);
-          backdrop-filter: blur(12px);
-          border: 1px solid rgba(255, 255, 255, 0.16);
-          border-radius: 12px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
-          padding: 10px 14px;
-          color: #f8fafc;
-          z-index: 45;
-          user-select: none;
-          font-family: ui-sans-serif, system-ui, sans-serif;
-          font-size: 12px;
-          transition: opacity 0.2s ease;
-        `;
-        container.appendChild(hud);
-      } else {
-        hud.style.display = 'flex';
-      }
-
-      const currentVars = this.engine.vars || {};
-
-      const headerRow = document.createElement('div');
-      headerRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:6px; flex-shrink:0;';
-      const titleSpan = document.createElement('span');
-      titleSpan.style.cssText = 'font-weight:800; font-size:12px; color:#38bdf8; display:flex; align-items:center; gap:5px;';
-      const titleIcon = document.createElement('span');
-      titleIcon.textContent = '🎛️';
-      titleSpan.append(titleIcon, document.createTextNode(' Parameters'));
-
-      const btnGroup = document.createElement('div');
-      btnGroup.style.cssText = 'display:flex; gap:6px; align-items:center;';
-      const resetVarsBtn = document.createElement('button');
-      resetVarsBtn.id = 'sim-btn-reset-vars';
-      resetVarsBtn.type = 'button';
-      resetVarsBtn.style.cssText = 'background:rgba(255,255,255,0.08); border:1px solid rgba(255,255,255,0.16); border-radius:6px; color:#94a3b8; font-size:10px; font-weight:700; padding:2px 7px; cursor:pointer;';
-      resetVarsBtn.title = 'Reset variables to defaults';
-      resetVarsBtn.textContent = '↺ Reset';
-
-      const collapseBtn = document.createElement('button');
-      collapseBtn.id = 'sim-btn-collapse';
-      collapseBtn.type = 'button';
-      collapseBtn.style.cssText = 'background:none; border:none; color:#94a3b8; font-size:12px; cursor:pointer; padding:0 3px;';
-      collapseBtn.textContent = '▲';
-
-      btnGroup.append(resetVarsBtn, collapseBtn);
-      headerRow.append(titleSpan, btnGroup);
-
-      const paramBody = document.createElement('div');
-      paramBody.id = 'sim-param-body';
-      paramBody.style.cssText = 'display:flex; flex-direction:column; gap:8px; overflow-y:auto; flex:1 1 auto; min-height:0; overscroll-behavior:contain;';
-
-      inputs.forEach(inp => {
-        const vName = inp.var;
-        const curVal = currentVars[vName] !== undefined ? currentVars[vName] : (inp.min + (inp.max - inp.min) / 2);
-        const unit = inp.unit || '';
-
-        const rowWrap = document.createElement('div');
-        const labelRow = document.createElement('div');
-        labelRow.style.cssText = 'display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;';
-
-        const lblSpan = document.createElement('span');
-        lblSpan.style.cssText = 'font-size:11px; font-weight:600; color:#cbd5e1;';
-        lblSpan.textContent = inp.label || vName;
-
-        const valBox = document.createElement('div');
-        valBox.style.cssText = 'display:flex; align-items:center; gap:4px;';
-
-        const numInput = document.createElement('input');
-        numInput.type = 'number';
-        numInput.min = String(inp.min);
-        numInput.max = String(inp.max);
-        numInput.step = String(inp.step || 1);
-        numInput.value = String(curVal);
-        numInput.setAttribute('data-var', vName);
-        numInput.setAttribute('data-unit', unit);
-        numInput.className = 'sim-param-num-input';
-        numInput.style.cssText = 'width:48px; background:rgba(0,0,0,0.5); border:1px solid rgba(56,189,248,0.4); border-radius:4px; color:#38bdf8; font-family:ui-monospace, monospace; font-size:11px; font-weight:700; text-align:center; padding:1px 2px;';
-        numInput.title = 'Type custom figure';
-        valBox.appendChild(numInput);
-
-        if (unit) {
-          const unitSpan = document.createElement('span');
-          unitSpan.style.cssText = 'font-size:10px; color:#94a3b8;';
-          unitSpan.textContent = unit;
-          valBox.appendChild(unitSpan);
-        }
-
-        labelRow.append(lblSpan, valBox);
-
-        const slider = document.createElement('input');
-        slider.type = 'range';
-        slider.min = String(inp.min);
-        slider.max = String(inp.max);
-        if (inp.step !== undefined) slider.step = String(inp.step);
-        slider.value = String(curVal);
-        slider.setAttribute('data-var', vName);
-        slider.setAttribute('data-unit', unit);
-        slider.className = 'sim-param-slider';
-        slider.style.cssText = 'width:100%; accent-color:#38bdf8; cursor:pointer; height:6px; margin:0; display:block;';
-
-        rowWrap.append(labelRow, slider);
-        paramBody.appendChild(rowWrap);
-      });
-
-      hud.replaceChildren(headerRow, paramBody);
-
-      const applyVal = (vName, val) => {
-        if (this.engine && typeof this.engine.setVar === 'function') {
-          this.engine.setVar(vName, val);
-        }
-        const s = hud.querySelector(`.sim-param-slider[data-var="${vName}"]`);
-        const num = hud.querySelector(`.sim-param-num-input[data-var="${vName}"]`);
-        if (s && Number(s.value) !== val) s.value = val;
-        if (num && Number(num.value) !== val) num.value = val;
-      };
-
-      const sliders = hud.querySelectorAll('.sim-param-slider');
-      sliders.forEach(slider => {
-        slider.addEventListener('input', (e) => {
-          const vName = e.target.getAttribute('data-var');
-          const val = parseFloat(e.target.value);
-          applyVal(vName, val);
-          this.playAudioTone(400 + val * 10, 'sine', 0.02, 0.05);
-        });
-      });
-
-      const numInputs = hud.querySelectorAll('.sim-param-num-input');
-      numInputs.forEach(input => {
-        input.addEventListener('input', (e) => {
-          const vName = e.target.getAttribute('data-var');
-          const val = parseFloat(e.target.value);
-          if (!isNaN(val)) {
-            applyVal(vName, val);
-            this.playAudioTone(440 + val * 12, 'triangle', 0.03, 0.08);
-          }
-        });
-      });
-
-      const btnReset = hud.querySelector('#sim-btn-reset-vars');
-      if (btnReset) {
-        btnReset.addEventListener('click', () => {
-          if (this.engine) this.engine.resetVars();
-          this.setupSimParametersHud();
-          this.playAudioTone(523, 'triangle', 0.08, 0.15);
-        });
-      }
-
-      const btnCollapse = hud.querySelector('#sim-btn-collapse');
-      const body = hud.querySelector('#sim-param-body');
-      if (btnCollapse && body) {
-        btnCollapse.addEventListener('click', () => {
-          const isCollapsed = body.style.display === 'none';
-          body.style.display = isCollapsed ? 'flex' : 'none';
-          btnCollapse.textContent = isCollapsed ? '▲' : '▼';
-        });
-      }
-
-      if (!this._varChangeBound && this.engine && typeof this.engine.on === 'function') {
-        this._varChangeBound = true;
-        this.engine.on('varchange', (data) => {
-          const curHud = document.getElementById('stage-sim-parameters') || (container && container.querySelector('#stage-sim-parameters'));
-          if (curHud && curHud.style.display !== 'none') {
-            const sList = curHud.querySelectorAll('.sim-param-slider');
-            sList.forEach(s => {
-              const vName = s.getAttribute('data-var');
-              if (data.name === '*' || data.name === vName) {
-                const val = (data.vars && data.vars[vName] !== undefined) ? data.vars[vName] : data.value;
-                if (val !== undefined) {
-                  if (Number(s.value) !== Number(val)) s.value = val;
-                  const numInput = curHud.querySelector(`.sim-param-num-input[data-var="${vName}"]`);
-                  if (numInput && Number(numInput.value) !== Number(val)) numInput.value = val;
-                }
-              }
-            });
-          }
-        });
-      }
+      const _h = _getGesturesHud();
+      if (_h && typeof _h.setupSimParametersHud === 'function') _h.setupSimParametersHud.call(this);
     }
 
     /**

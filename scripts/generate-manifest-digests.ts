@@ -44,6 +44,8 @@ function scanAndDigest() {
     'player/ast-compiler.js',
     'player/site-gestures-profile.js',
     'player/site-gestures-whiteboard.js',
+    'player/site-gestures-hud.js',
+    'player/site-gestures-actions.js',
     'player/site-gestures.js',
     'player/player-gestures.ast',
     'player/ast-gestures.js',

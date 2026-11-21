@@ -537,6 +537,8 @@ function loadAstPlayerRuntimeIntoSandbox(sandbox: any, isExistingContext = false
 const SITE_GESTURES_RUNTIME_MODULES = [
   'site-gestures-profile.js',
   'site-gestures-whiteboard.js',
+  'site-gestures-hud.js',
+  'site-gestures-actions.js',
   'site-gestures.js',
 ];
 
@@ -3001,6 +3003,210 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   assert.strictEqual(exportedInkJson.strokeCount, 1, 'exportInkToJSON must report strokeCount 1');
   const importedJsonCount = wbExports.importInkFromJSON.call(mockWbHost, exportedInkJson);
   assert.strictEqual(importedJsonCount, 1, 'importInkFromJSON must round-trip JSON ink session');
+
+  // Verify site-gestures-hud.js exports, glass HUD, X-Ray popup & fallback parameters dock
+  const makeMockDomEl = (tag: string) => {
+    const attrs: Record<string, string> = {};
+    const children: any[] = [];
+    const el: any = {
+      tagName: tag.toUpperCase(),
+      id: '',
+      className: '',
+      type: '',
+      title: '',
+      textContent: '',
+      value: '',
+      style: {} as Record<string, string>,
+      children,
+      parentNode: null as any,
+      setAttribute(k: string, v: string) { attrs[k] = String(v); },
+      getAttribute(k: string) { return attrs[k] !== undefined ? attrs[k] : null; },
+      appendChild(c: any) { c.parentNode = this; children.push(c); return c; },
+      append(...nodes: any[]) { nodes.forEach((n: any) => this.appendChild(n)); },
+      replaceChildren(...nodes: any[]) { children.length = 0; nodes.forEach((n: any) => this.appendChild(n)); },
+      remove() { if (this.parentNode && this.parentNode.children) { const i = this.parentNode.children.indexOf(this); if (i >= 0) this.parentNode.children.splice(i, 1); } },
+      addEventListener() {},
+      querySelector(sel: string) {
+        const find = (node: any): any => {
+          for (const c of node.children || []) {
+            if (sel.startsWith('#') && c.id === sel.slice(1)) return c;
+            if (sel.startsWith('.') && c.className && c.className.includes(sel.slice(1).split('[')[0])) return c;
+            const nested = find(c);
+            if (nested) return nested;
+          }
+          return null;
+        };
+        return find(this);
+      },
+      querySelectorAll(sel: string) {
+        const out: any[] = [];
+        const walk = (node: any) => {
+          for (const c of node.children || []) {
+            if (sel.startsWith('.') && c.className && c.className.includes(sel.slice(1))) out.push(c);
+            walk(c);
+          }
+        };
+        walk(this);
+        return out;
+      },
+    };
+    return el;
+  };
+  const hudSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+    window: { innerWidth: 1024 },
+    document: {
+      createElement: (tag: string) => makeMockDomEl(tag),
+      createElementNS: (_ns: string, tag: string) => makeMockDomEl(tag),
+      createTextNode: (txt: string) => ({ textContent: txt }),
+      getElementById: () => null,
+    },
+  };
+  hudSb.globalThis = hudSb;
+  hudSb.self = hudSb.window;
+  const hudCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-hud.js'), 'utf8');
+  vm.runInNewContext(hudCode, hudSb, { filename: 'static/player/site-gestures-hud.js' });
+  const hudExports = hudSb.ASTGesturesHud || hudSb.window.ASTGesturesHud;
+  assert.ok(hudExports, 'site-gestures-hud.js must export ASTGesturesHud');
+  for (const fnName of [
+    '_rebuildGlassHud', 'setupGlassHud', 'createHudButton', 'setupXRayTooltip',
+    'showXRayPopup', 'hideXRayPopup', 'createTouchRipple', 'setupSimParametersHud',
+  ]) {
+    assert.strictEqual(typeof hudExports[fnName], 'function', `ASTGesturesHud must export function ${fnName}`);
+  }
+  const hudContainer = makeMockDomEl('div');
+  const hudStageSvg = makeMockDomEl('svg');
+  hudStageSvg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 480 });
+  hudContainer.appendChild(hudStageSvg);
+  const mockHudHost: any = {
+    stageSvg: hudStageSvg,
+    hudRoot: makeMockDomEl('g'),
+    xrayTooltip: null,
+    isXRayActive: false,
+    sonificationEnabled: true,
+    currentTool: 'pen',
+    currentInkWidth: 3.5,
+    currentInkColor: '#facc15',
+    playerProfile: {
+      whiteboard: {
+        tools: [{ id: 'pen', icon: '🖊️', width: 3.5, title: 'Pen' }],
+        widths: [2, 4, 8],
+        palette: [{ hex: '#facc15', name: 'Yellow' }],
+      },
+    },
+    engine: {
+      scene: { vars: { speed: { min: 0, max: 10, step: 1, label: 'Speed', unit: 'm/s' } } },
+      vars: { speed: 5 },
+      setVar: () => {},
+      resetVars: () => {},
+      on: () => {},
+    },
+    _isControlEnabled: () => true,
+    playAudioTone: () => {},
+    createHudButton(icon: string, title: string, onClick: any) { return hudExports.createHudButton.call(this, icon, title, onClick); },
+    setupGlassHud() { return hudExports.setupGlassHud.call(this); },
+    hideXRayPopup() { return hudExports.hideXRayPopup.call(this); },
+  };
+  hudExports.setupGlassHud.call(mockHudHost);
+  assert.ok(hudContainer.querySelector('#stage-glass-hud-ui'), 'setupGlassHud must mount #stage-glass-hud-ui');
+  hudExports.setupXRayTooltip.call(mockHudHost);
+  assert.ok(mockHudHost.xrayTooltip, 'setupXRayTooltip must create tooltip');
+  hudExports.showXRayPopup.call(mockHudHost, 'Fulcrum: Pivot point of the lever', 200, 150, null);
+  assert.strictEqual(mockHudHost.xrayTooltip.style.display, 'block', 'showXRayPopup must display parsed pedId tooltip');
+  assert.strictEqual(mockHudHost.xrayTooltip.children[0].textContent, 'Fulcrum', 'showXRayPopup must render parsed title');
+  hudExports.hideXRayPopup.call(mockHudHost);
+  assert.strictEqual(mockHudHost.xrayTooltip.style.display, 'none', 'hideXRayPopup must hide tooltip');
+  hudExports.setupSimParametersHud.call(mockHudHost);
+  const simParamHud = hudContainer.querySelector('#stage-sim-parameters');
+  assert.ok(simParamHud, 'setupSimParametersHud must mount #stage-sim-parameters for bounded vars');
+  assert.strictEqual(simParamHud.querySelectorAll('.sim-param-slider').length, 1, 'setupSimParametersHud must render slider for bounded var');
+
+  // Verify site-gestures-actions.js exports, declarative step-slide, SITE_DIRECTIVE bridge, hold press/release & audio queue
+  const emittedDirectives: any[] = [];
+  const actSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+    window: {
+      parent: {
+        postMessage(msg: any) { emittedDirectives.push(msg); },
+      },
+    },
+  };
+  actSb.globalThis = actSb;
+  actSb.self = actSb.window;
+  const actCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-actions.js'), 'utf8');
+  vm.runInNewContext(actCode, actSb, { filename: 'static/player/site-gestures-actions.js' });
+  const actExports = actSb.ASTGesturesActions || actSb.window.ASTGesturesActions;
+  assert.ok(actExports, 'site-gestures-actions.js must export ASTGesturesActions');
+  for (const fnName of [
+    '_resolveVarBounds', '_resolveHoldReleaseValue', '_writeEngineVar', '_speakGestureText',
+    '_playNamedTone', 'playAudioTone', '_playToneSpec', '_flushPendingTouchAudio', 'handleTouchEnd',
+    '_readMatchedElementAttr', '_evalGestureExpr', '_evalConditionExpr', '_emitSiteDirective',
+    '_executeDeclarativeAction', '_applyGesturePress', '_applyContinuousGestureStep',
+    '_releaseHoldForGesture', '_releasePointerEntry', '_releaseAllHeldInputs', '_ensureHoldLoop',
+    '_stopHoldLoop', '_runHoldLoop', '_gestureMatchesKey', '_ensureInteractiveSimPlaying',
+  ]) {
+    assert.strictEqual(typeof actExports[fnName], 'function', `ASTGesturesActions must export function ${fnName}`);
+  }
+  let seekTarget = -1;
+  const spokenLines: string[] = [];
+  const mockActHost: any = {
+    engine: {
+      vars: { page: 0, boost: false, score: 1 },
+      scene: { id: 'reader-demo', vars: { score: { min: 0, max: 5 }, boost: { defaultValue: false } } },
+      progress: 0,
+      setVar(k: string, v: any) { this.vars[k] = v; },
+      seek(t: number) { seekTarget = t; this.progress = t; },
+      speak(txt: string) { spokenLines.push(txt); },
+    },
+    _customActions: new Map(),
+    _activeHoldVars: new Map(),
+    _heldKeys: new Set(),
+    _heldKeyCodeMap: new Map(),
+    _heldPointerEntries: new Map(),
+    _pendingTouchAudio: new Map(),
+    _holdRafId: null,
+    _isControlEnabled: () => true,
+    sonificationEnabled: true,
+    playAudioTone: () => {},
+  };
+  for (const fnName of Object.keys(actExports)) {
+    if (typeof actExports[fnName] === 'function' && fnName !== 'playAudioTone') {
+      mockActHost[fnName] = actExports[fnName].bind(mockActHost);
+    }
+  }
+  const slideChanged = actExports._applyGesturePress.call(
+    mockActHost,
+    { action: 'step-slide', var: 'page', delta: 1, count: 5 },
+    null,
+    mockActHost.engine.scene
+  );
+  assert.strictEqual(slideChanged, true, '_applyGesturePress must handle declarative step-slide');
+  assert.strictEqual(mockActHost.engine.vars.page, 1, 'step-slide must increment page var');
+  assert.strictEqual(seekTarget, 0.25, 'step-slide must seek timeline to 1 / (5 - 1)');
+
+  const navHandled = actExports._executeDeclarativeAction.call(
+    mockActHost,
+    { action: 'navigate', route: '/library' },
+    null,
+    undefined,
+    mockActHost.engine.scene
+  );
+  assert.strictEqual(navHandled, true, '_executeDeclarativeAction must emit navigate directive');
+  assert.strictEqual(emittedDirectives.length, 1, 'navigate must post SITE_DIRECTIVE to parent');
+  assert.strictEqual(emittedDirectives[0].directive.route, '/library', 'SITE_DIRECTIVE must carry route');
+
+  const holdGesture = { holdVar: 'boost', val: true, speak: 'Boost engaged' };
+  const touchQueue: any[] = [];
+  actExports._applyGesturePress.call(mockActHost, holdGesture, null, mockActHost.engine.scene, touchQueue);
+  assert.strictEqual(mockActHost.engine.vars.boost, true, 'holdVar must engage on press');
+  assert.strictEqual(touchQueue.length, 1, 'audioQueue must defer speech until pointerup/touchend');
+  mockActHost._pendingTouchAudio.set(7, touchQueue);
+  actExports._flushPendingTouchAudio.call(mockActHost, 7);
+  assert.strictEqual(spokenLines[0], 'Boost engaged', '_flushPendingTouchAudio must flush queued TTS');
+  actExports._releaseHoldForGesture.call(mockActHost, holdGesture);
+  assert.strictEqual(mockActHost.engine.vars.boost, false, '_releaseHoldForGesture must restore default releaseVal');
 
   // Verify site-gestures.js evaluates and constructs cleanly standalone (without peer gesture modules loaded)
   const sgOnlySb: any = {
