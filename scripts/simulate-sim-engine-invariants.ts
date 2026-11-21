@@ -1359,9 +1359,11 @@ console.log('\n--- TEST 20: First Holy Communion AST & Sanctuary Routing Invaria
 console.log('\n--- TEST 21: In-Quiz "Ask Nano" Bridge & AI_VISUAL_COMMAND Execution ---');
 {
   const playerUiSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui.js'), 'utf8');
-  assert(playerUiSrc.includes('interactive-ask-nano-btn'), 'Checkpoint overlay must render interactive-ask-nano-btn');
-  assert(playerUiSrc.includes('interactive-mute-popups-btn'), 'Checkpoint overlay must render interactive-mute-popups-btn');
-  assert(playerUiSrc.includes("type: 'ASK_NANO_CHECKPOINT'"), 'PlayerUI must emit ASK_NANO_CHECKPOINT payload to parent host');
+  const playerUiCheckpointsSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-checkpoints.js'), 'utf8');
+  const combinedCheckpointUiSrc = `${playerUiSrc}\n${playerUiCheckpointsSrc}`;
+  assert(combinedCheckpointUiSrc.includes('interactive-ask-nano-btn'), 'Checkpoint overlay must render interactive-ask-nano-btn');
+  assert(combinedCheckpointUiSrc.includes('interactive-mute-popups-btn'), 'Checkpoint overlay must render interactive-mute-popups-btn');
+  assert(combinedCheckpointUiSrc.includes("type: 'ASK_NANO_CHECKPOINT'"), 'PlayerUI must emit ASK_NANO_CHECKPOINT payload to parent host');
   assert(playerUiSrc.includes('askNanoAboutCheckpoint('), 'PlayerUI must expose askNanoAboutCheckpoint method');
 
   const mediaPlayerSrc = fs.readFileSync(path.join(process.cwd(), 'src', 'pages', 'media-player.ts'), 'utf8');
@@ -2626,7 +2628,149 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   const standaloneEng = new StandaloneEngineCtor({});
   assert.ok(standaloneEng, 'Standalone ASTVectorPlayerEngine must construct cleanly without peer modules');
 
-  console.log('[✅ PASS] Sim 27: Modular 12-file AST runtime integrity, load order, exports & standalone safety verified.');
+  // 27d. Verify modular player-ui peer modules (studio, checkpoints, voice, broadcast) plumbing, load order, exports & standalone safety
+  const playerUiPeerModules = ['player-ui-studio.js', 'player-ui-checkpoints.js', 'player-ui-voice.js', 'player-ui-broadcast.js'];
+  const uiIdxRoot = playerHtml.indexOf('player/player-ui.js');
+  const uiIdxStandalone = playerIndexHtml.indexOf('./player-ui.js');
+  assert.ok(uiIdxRoot > -1 && uiIdxStandalone > -1, 'player.html and player/index.html must load player-ui.js');
+
+  for (const mod of playerUiPeerModules) {
+    const modPath = path.join(process.cwd(), 'static', 'player', mod);
+    assert.ok(fs.existsSync(modPath), `Modular UI file static/player/${mod} must exist`);
+    assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+    assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+    assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
+    assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+    assert.ok(playerHtml.indexOf(`player/${mod}`) < uiIdxRoot, `player.html must load ${mod} strictly before player-ui.js`);
+    assert.ok(playerIndexHtml.indexOf(`./${mod}`) < uiIdxStandalone, `player/index.html must load ${mod} strictly before player-ui.js`);
+  }
+
+  const studioSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: {},
+  };
+  studioSb.globalThis = studioSb;
+  studioSb.self = studioSb.window;
+  const studioCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-studio.js'), 'utf8');
+  vm.runInNewContext(studioCode, studioSb, { filename: 'static/player/player-ui-studio.js' });
+  const studioExports = studioSb.ASTPlayerUIStudio || studioSb.window.ASTPlayerUIStudio;
+  assert.ok(studioExports, 'player-ui-studio.js must export ASTPlayerUIStudio');
+  assert.ok(Array.isArray(studioExports.DEFAULT_STARTER_TEMPLATES) && studioExports.DEFAULT_STARTER_TEMPLATES.length >= 3, 'ASTPlayerUIStudio must export DEFAULT_STARTER_TEMPLATES');
+  for (const fnName of [
+    'bindStudioDOMEvents', 'refreshAstSvgMatcher', 'slugifyCartridgeId', 'findClosestSvgId',
+    'extractSvgElementsInfo', 'extractAstTargetsInfo', 'requestNanoRemix', 'downloadStandaloneSvgApplet', 'renderStarterTemplates',
+  ]) {
+    assert.strictEqual(typeof studioExports[fnName], 'function', `ASTPlayerUIStudio must export function ${fnName}`);
+  }
+  assert.strictEqual(studioExports.slugifyCartridgeId('My Cool Sim 101!'), 'my-cool-sim-101', 'slugifyCartridgeId must normalize slug cleanly');
+  const parsedSvgItems = studioExports.extractSvgElementsInfo('<svg><g id="wheel-left-1"></g><rect id="chassis"/></svg>');
+  assert.strictEqual(parsedSvgItems.length, 2, 'extractSvgElementsInfo must extract SVG IDs');
+  assert.strictEqual(studioExports.findClosestSvgId('wheel-left', parsedSvgItems), 'wheel-left-1', 'findClosestSvgId must match closest SVG ID');
+
+  // Verify player-ui-checkpoints.js exports & deterministic stop sorting
+  const checkpointsSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: {},
+  };
+  checkpointsSb.globalThis = checkpointsSb;
+  checkpointsSb.self = checkpointsSb.window;
+  const checkpointsCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-checkpoints.js'), 'utf8');
+  vm.runInNewContext(checkpointsCode, checkpointsSb, { filename: 'static/player/player-ui-checkpoints.js' });
+  const cpExports = checkpointsSb.ASTPlayerUICheckpoints || checkpointsSb.window.ASTPlayerUICheckpoints;
+  assert.ok(cpExports, 'player-ui-checkpoints.js must export ASTPlayerUICheckpoints');
+  for (const fnName of [
+    'minimizeInteractiveCard', 'restoreInteractiveCard', 'closeInteractiveCard', 'toggleCheckpointView',
+    'toggleInteractiveMode', 'setInteractiveMode', 'askNanoAboutCheckpoint', 'triggerCheckpoint',
+    'updateGoalCheckpointProgress', 'handleGoalCheckpointPassed', 'logDataToJotterCsv',
+    'triggerFirstCheckpoint', 'checkInteractiveCheckpoints', 'toggleStepMode', 'getLessonStops',
+    'stepToNextKeyframe', 'stepToPrevKeyframe', 'startQuestMode', 'renderCurrentMission', 'checkMissionAnswer', 'closeQuestMode',
+  ]) {
+    assert.strictEqual(typeof cpExports[fnName], 'function', `ASTPlayerUICheckpoints must export function ${fnName}`);
+  }
+  const mockStopUi = {
+    engine: {
+      scene: {
+        keyframes: [{ t: 0.5 }, { t: 0.25 }],
+        interactive: { checkpoints: [{ t: 0.75 }] },
+      },
+    },
+  };
+  assert.deepStrictEqual(cpExports.getLessonStops.call(mockStopUi), [0, 0.25, 0.5, 0.75, 1], 'getLessonStops must merge and sort keyframes and checkpoints');
+
+  // Verify player-ui-voice.js exports & dynamic catalog voice matching
+  const voiceSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    setTimeout, clearTimeout,
+    window: {},
+  };
+  voiceSb.globalThis = voiceSb;
+  voiceSb.self = voiceSb.window;
+  const voiceCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-voice.js'), 'utf8');
+  vm.runInNewContext(voiceCode, voiceSb, { filename: 'static/player/player-ui-voice.js' });
+  const voiceExports = voiceSb.ASTPlayerUIVoice || voiceSb.window.ASTPlayerUIVoice;
+  assert.ok(voiceExports, 'player-ui-voice.js must export ASTPlayerUIVoice');
+  for (const fnName of [
+    'initVoiceRecognition', 'startVoiceCommands', 'stopVoiceCommands', 'toggleVoiceCommands',
+    'updateVoiceStatusUI', 'updateVoiceOverlayText', 'findSceneByVoiceQuery', 'handleVoiceCommand',
+  ]) {
+    assert.strictEqual(typeof voiceExports[fnName], 'function', `ASTPlayerUIVoice must export function ${fnName}`);
+  }
+  const mockVoiceUi = {
+    _catalogScenes: [
+      { id: 'solar-system', title: 'Solar System Orbits', subject: 'Physics' },
+      { id: 'water-cycle', title: 'The Water Cycle', subject: 'Geography' },
+    ],
+    elements: {},
+  };
+  const matchedVoiceScene = voiceExports.findSceneByVoiceQuery.call(mockVoiceUi, 'please open the solar system simulation');
+  assert.strictEqual(matchedVoiceScene && matchedVoiceScene.id, 'solar-system', 'findSceneByVoiceQuery must match dynamic catalog entries');
+
+  // Verify player-ui-broadcast.js exports & OBS/WebRTC status UI helpers
+  const broadcastSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: {},
+  };
+  broadcastSb.globalThis = broadcastSb;
+  broadcastSb.self = broadcastSb.window;
+  const broadcastCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-broadcast.js'), 'utf8');
+  vm.runInNewContext(broadcastCode, broadcastSb, { filename: 'static/player/player-ui-broadcast.js' });
+  const bcExports = broadcastSb.ASTPlayerUIBroadcast || broadcastSb.window.ASTPlayerUIBroadcast;
+  assert.ok(bcExports, 'player-ui-broadcast.js must export ASTPlayerUIBroadcast');
+  for (const fnName of [
+    'bindBroadcastDOMEvents', 'initObsBroadcast', 'updateObsStatusUI',
+    'toggleWebRtcDrawer', 'closeWebRtcDrawer', 'updateWebRtcStatusUI', 'toggleObsDrawer', 'closeObsDrawer',
+  ]) {
+    assert.strictEqual(typeof bcExports[fnName], 'function', `ASTPlayerUIBroadcast must export function ${fnName}`);
+  }
+  const mockBcUi: any = {
+    elements: {
+      webrtcStatusDot: { className: '', style: {} },
+      webrtcDrawerBadge: { className: '', textContent: '' },
+      webrtcRoleReadout: { textContent: '' },
+    },
+  };
+  bcExports.updateWebRtcStatusUI.call(mockBcUi, true, 'host');
+  assert.strictEqual(mockBcUi.elements.webrtcDrawerBadge.textContent, 'CONNECTED (HOST)', 'updateWebRtcStatusUI must update badge text');
+  assert.strictEqual(mockBcUi.elements.webrtcRoleReadout.textContent, 'HOST', 'updateWebRtcStatusUI must update role readout');
+
+  // Verify player-ui.js evaluates cleanly in strict mode standalone (without peer UI modules loaded)
+  const uiOnlySb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite,
+    window: { location: { origin: 'http://localhost', search: '' }, addEventListener: () => {} },
+    document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {} },
+  };
+  uiOnlySb.globalThis = uiOnlySb;
+  uiOnlySb.self = uiOnlySb.window;
+  const uiCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui.js'), 'utf8');
+  vm.runInNewContext(uiCode, uiOnlySb, { filename: 'static/player/player-ui.js' });
+  assert.strictEqual(typeof (uiOnlySb.ASTPlayerUI || uiOnlySb.window.ASTPlayerUI), 'function', 'player-ui.js must export ASTPlayerUI standalone');
+
+  console.log('[✅ PASS] Sim 27: Modular AST engine & UI peer module integrity, load order, exports & standalone safety verified.');
   passedTests++;
 }
 

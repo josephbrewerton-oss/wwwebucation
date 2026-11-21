@@ -13,6 +13,22 @@
 (function (global) {
   'use strict';
 
+  function _getPlayerUIStudio() {
+    return global.ASTPlayerUIStudio || (typeof window !== 'undefined' ? window.ASTPlayerUIStudio : undefined);
+  }
+
+  function _getPlayerUICheckpoints() {
+    return global.ASTPlayerUICheckpoints || (typeof window !== 'undefined' ? window.ASTPlayerUICheckpoints : undefined);
+  }
+
+  function _getPlayerUIVoice() {
+    return global.ASTPlayerUIVoice || (typeof window !== 'undefined' ? window.ASTPlayerUIVoice : undefined);
+  }
+
+  function _getPlayerUIBroadcast() {
+    return global.ASTPlayerUIBroadcast || (typeof window !== 'undefined' ? window.ASTPlayerUIBroadcast : undefined);
+  }
+
   class ASTPlayerUI {
     constructor(engine, elements = {}) {
       this.engine = engine;
@@ -274,29 +290,10 @@
       this.selectedElementSelector = '';
       this.activeStudioTab = 'compiler';
 
-      this.starterTemplates = [
-        {
-          id: 'simple-orbit',
-          title: '🪐 Simple Planetary Orbit',
-          desc: 'Center star with orbiting planet governed by trigonometry.',
-          svg: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n  <circle cx="400" cy="240" r="140" fill="none" stroke="#334155" stroke-dasharray="4 4" />\n  <circle id="star-sun" cx="400" cy="240" r="32" fill="#f59e0b" filter="url(#glow)" />\n  <circle id="planet-earth" cx="540" cy="240" r="14" fill="#38bdf8" />\n  <text id="orbit-txt" x="400" y="440" fill="#94a3b8" font-size="16" text-anchor="middle">Planetary Orbit Period: 1.0 Cycle</text>\n</svg>`,
-          ast: `(:scene :id "simple-orbit" :title "Simple Planetary Orbit" :stage "KS3 SCIENCE" :duration 6.0\n  (:keyframes (\n    (:t 0.00 :title "Perihelion" :rule "Planet starts at 0 rad")\n    (:t 0.50 :title "Aphelion" :rule "Planet reaches opposite orbital pole")\n  ))\n  (:bindings (\n    (:target "#planet-earth" :attr "cx" :expr "400 + Math.cos(t * Math.PI * 2) * 140")\n    (:target "#planet-earth" :attr "cy" :expr "240 + Math.sin(t * Math.PI * 2) * 140")\n    (:target "#orbit-txt" :attr "textContent" :expr "'Orbit Angle: ' + Math.round(t * 360) + '°'")\n  ))\n)`
-        },
-        {
-          id: 'sine-wave',
-          title: '🌊 Harmonic Sine Wave',
-          desc: 'Continuous wave oscillation with frequency and amplitude.',
-          svg: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n  <line x1="100" y1="240" x2="700" y2="240" stroke="#334155" stroke-width="2" />\n  <path id="harmonic-wave" d="M 100 240 Q 250 140 400 240 T 700 240" fill="none" stroke="#38bdf8" stroke-width="4" />\n  <circle id="wave-tracer" cx="400" cy="240" r="10" fill="#f43f5e" filter="url(#glow)" />\n  <text id="wave-label" x="400" y="80" fill="#38bdf8" font-size="20" font-weight="bold" text-anchor="middle">y = A · sin(ωt + φ)</text>\n</svg>`,
-          ast: `(:scene :id "sine-wave" :title "Harmonic Sine Wave" :stage "KS4 PHYSICS" :duration 4.0\n  (:keyframes (\n    (:t 0.00 :title "Initial Phase" :rule "Zero displacement at origin")\n    (:t 0.25 :title "Crest Amplitude" :rule "Maximum positive displacement +A")\n    (:t 0.75 :title "Trough Amplitude" :rule "Maximum negative displacement -A")\n  ))\n  (:bindings (\n    (:target "#wave-tracer" :attr "cy" :expr "240 - Math.sin(t * Math.PI * 2) * 90")\n    (:target "#wave-tracer" :attr "cx" :expr "100 + (t * 600)")\n    (:target "#wave-label" :attr "textContent" :expr "'Displacement y = ' + (Math.sin(t * Math.PI * 2) * 10).toFixed(1) + ' cm'")\n  ))\n)`
-        },
-        {
-          id: 'physics-pendulum',
-          title: '⏱️ Physics Harmonic Pendulum',
-          desc: 'Conservation of mechanical energy: kinetic vs potential.',
-          svg: `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n  <circle cx="400" cy="80" r="6" fill="#64748b" />\n  <line id="pendulum-rod" x1="400" y1="80" x2="400" y2="340" stroke="#94a3b8" stroke-width="3" />\n  <circle id="pendulum-bob" cx="400" cy="340" r="28" fill="#10b981" stroke="#34d399" stroke-width="2" />\n  <text id="energy-txt" x="400" y="420" fill="#34d399" font-size="16" font-weight="bold" text-anchor="middle">E = Ep + Ek</text>\n</svg>`,
-          ast: `(:scene :id "physics-pendulum" :title "Harmonic Pendulum" :stage "KS3 PHYSICS" :duration 3.0\n  (:keyframes (\n    (:t 0.00 :title "Max Left Amplitude" :rule "Ep is maximal, Ek = 0")\n    (:t 0.25 :title "Equilibrium Pass" :rule "Ek is maximal at center, Ep is minimum")\n    (:t 0.50 :title "Max Right Amplitude" :rule "Ep is maximal, Ek = 0")\n  ))\n  (:bindings (\n    (:target "#pendulum-rod" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 2) * 40) + ' 400 80)'")\n    (:target "#pendulum-bob" :attr "transform" :expr "'rotate(' + (Math.sin(t * Math.PI * 2) * 40) + ' 400 80)'")\n    (:target "#energy-txt" :attr "textContent" :expr "'Potential Energy: ' + (Math.abs(Math.sin(t * Math.PI * 2)) * 100).toFixed(0) + '% | Kinetic: ' + ((1 - Math.abs(Math.sin(t * Math.PI * 2))) * 100).toFixed(0) + '%'")\n  ))\n)`
-        }
-      ];
+      const _studioMod = _getPlayerUIStudio();
+      this.starterTemplates = (_studioMod && Array.isArray(_studioMod.DEFAULT_STARTER_TEMPLATES))
+        ? _studioMod.DEFAULT_STARTER_TEMPLATES.map(t => ({ ...t }))
+        : [];
 
       this.questState = {
         active: false,
@@ -363,192 +360,46 @@
       }, 2200);
     }
 
+    // --- Interactive Checkpoints, Goals, Jotter CSV & Quest Helpers (delegated to player-ui-checkpoints.js) ---
+
     minimizeInteractiveCard() {
-      if (!this.elements.interactiveCard) return;
-      this.elements.interactiveCard.classList.add('hidden');
-      if (this.activeCheckpoint !== null) {
-        this.minimizedCheckpoint = this.activeCheckpoint;
-      }
-      if (this.elements.checkpointMinimizedPill) {
-        this.elements.checkpointMinimizedPill.classList.remove('hidden');
-        this.elements.checkpointMinimizedPill.style.display = 'flex';
-      }
-      this.showToast('👁️ Question minimized. Press [Q] or badge to restore.');
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.minimizeInteractiveCard === 'function') _c.minimizeInteractiveCard.call(this);
     }
 
     restoreInteractiveCard() {
-      if (!this.elements.interactiveCard) return;
-      if (this.minimizedCheckpoint !== null && this.activeCheckpoint === null) {
-        this.activeCheckpoint = this.minimizedCheckpoint;
-      }
-      this.elements.interactiveCard.classList.remove('hidden');
-      if (this.elements.checkpointMinimizedPill) {
-        this.elements.checkpointMinimizedPill.classList.add('hidden');
-        this.elements.checkpointMinimizedPill.style.display = 'none';
-      }
-      this.showToast('🎯 Question restored');
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.restoreInteractiveCard === 'function') _c.restoreInteractiveCard.call(this);
     }
 
     closeInteractiveCard(resumePlayback = false) {
-      if (this._interactiveCloseTimer) {
-        clearTimeout(this._interactiveCloseTimer);
-        this._interactiveCloseTimer = null;
-      }
-      if (this.elements.interactiveCard) {
-        this.elements.interactiveCard.classList.add('hidden');
-        this.elements.interactiveCard.classList.remove('goal-mode');
-      }
-      if (this.elements.checkpointMinimizedPill) {
-        this.elements.checkpointMinimizedPill.classList.add('hidden');
-        this.elements.checkpointMinimizedPill.style.display = 'none';
-      }
-      this.minimizedCheckpoint = null;
-      this.activeCheckpoint = null;
-      this._activeGoalCheckpointIndex = null;
-      if (resumePlayback && this.engine) {
-        this.engine.play();
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.closeInteractiveCard === 'function') _c.closeInteractiveCard.call(this, resumePlayback);
     }
 
     toggleCheckpointView() {
-      if (!this.elements.interactiveCard) return;
-      if (!this.elements.interactiveCard.classList.contains('hidden')) {
-        this.minimizeInteractiveCard();
-      } else if (this.minimizedCheckpoint !== null) {
-        this.restoreInteractiveCard();
-      } else if (this.activeCheckpoint !== null) {
-        this.restoreInteractiveCard();
-      } else {
-        this.triggerFirstCheckpoint();
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.toggleCheckpointView === 'function') _c.toggleCheckpointView.call(this);
     }
 
     toggleInteractiveMode() {
-      this.interactiveMode = !this.interactiveMode;
-      this.displayConfig.showInteractiveCheckpoints = this.interactiveMode;
-      if (this.elements.btnInteractive) {
-        this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
-        this.elements.btnInteractive.title = this.interactiveMode
-          ? '🎯 Checkpoint Questions: ON (Pauses for quizzes) • Shift-click to turn OFF'
-          : '🎯 Checkpoint Questions: OFF (Uninterrupted lecture mode) • Shift-click to turn ON';
-      }
-      if (this.elements.cfgCheckpoints) {
-        this.elements.cfgCheckpoints.checked = this.interactiveMode;
-      }
-      this.saveDisplayConfig(this.displayConfig);
-      this.showToast(this.interactiveMode ? '🎯 Questions Auto-Pause: ON' : '🎯 Questions Auto-Pause: OFF (Lecture Mode)');
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.toggleInteractiveMode === 'function') _c.toggleInteractiveMode.call(this);
     }
 
     setInteractiveMode(enabled) {
-      this.interactiveMode = Boolean(enabled);
-      this.displayConfig.showInteractiveCheckpoints = this.interactiveMode;
-      if (this.elements.btnInteractive) {
-        this.elements.btnInteractive.classList.toggle('active', this.interactiveMode);
-        this.elements.btnInteractive.title = this.interactiveMode
-          ? '🎯 Checkpoint Questions: ON (Pauses for quizzes) • Shift-click to turn OFF'
-          : '🎯 Checkpoint Questions: OFF (Uninterrupted lecture mode) • Shift-click to turn ON';
-      }
-      if (this.elements.cfgCheckpoints) {
-        this.elements.cfgCheckpoints.checked = this.interactiveMode;
-      }
-      if (!this.interactiveMode) {
-        this.closeInteractiveCard(false);
-      }
-      this.saveDisplayConfig(this.displayConfig);
-      this.showToast(this.interactiveMode ? '🎯 Questions: ON' : '🎯 Questions: OFF (Uninterrupted Mode)');
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.setInteractiveMode === 'function') _c.setInteractiveMode.call(this, enabled);
     }
 
     _resolveQuizTargetSelector(checkpoint) {
-      if (checkpoint && typeof checkpoint.target === 'string' && checkpoint.target.trim()) {
-        return checkpoint.target.trim();
-      }
-      const scene = this.engine && this.engine.scene;
-      if (scene && Array.isArray(scene.actors) && scene.actors[0] && scene.actors[0].target) {
-        return scene.actors[0].target;
-      }
-      if (scene && Array.isArray(scene.bindings) && scene.bindings[0] && scene.bindings[0].target) {
-        return scene.bindings[0].target;
-      }
-      return '';
+      const _c = _getPlayerUICheckpoints();
+      return _c && typeof _c._resolveQuizTargetSelector === 'function' ? _c._resolveQuizTargetSelector.call(this, checkpoint) : '';
     }
 
     async askNanoAboutCheckpoint(checkpoint, index, attemptState = {}) {
-      if (this._interactiveCloseTimer) {
-        clearTimeout(this._interactiveCloseTimer);
-        this._interactiveCloseTimer = null;
-      }
-      const scene = this.engine && this.engine.scene;
-      const options = Array.isArray(checkpoint && checkpoint.options) ? checkpoint.options : [];
-      const answerIndex = typeof checkpoint?.answer === 'number' ? checkpoint.answer : 0;
-      const payload = {
-        type: 'ASK_NANO_CHECKPOINT',
-        sceneId: (this.engine && this.engine.activePresetId) || (scene && scene.id) || '',
-        sceneTitle: (scene && scene.title) || '',
-        index,
-        mode: checkpoint && checkpoint.passExpr ? 'pass-expr' : 'multiple-choice',
-        prompt: (checkpoint && checkpoint.prompt) || '',
-        options,
-        chosenIndex: typeof attemptState.chosenOrigIdx === 'number' ? attemptState.chosenOrigIdx : null,
-        chosenText: attemptState.chosenText || '',
-        answerIndex,
-        correctText: options[answerIndex] || '',
-        explanation: (checkpoint && checkpoint.explanation) || '',
-        distractorNudge: attemptState.distractorNudge || '',
-        passExpr: (checkpoint && checkpoint.passExpr) || '',
-        targetSelector: this._resolveQuizTargetSelector(checkpoint),
-        vars: this.engine && this.engine.vars ? { ...this.engine.vars } : {},
-        computed: this.engine && this.engine.computedVars ? { ...this.engine.computedVars } : {},
-        progress: Number((this.engine && this.engine.progress) || 0),
-        autoAsk: true,
-      };
-
-      const nanoBox = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#interactive-nano-response');
-      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
-
-      if (payload.targetSelector && global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.highlightTarget === 'function') {
-        global.ASTSharedRenderBoundary.highlightTarget(payload.targetSelector, 3000, 'player-stage');
-      }
-
-      if (isEmbedded) {
-        try {
-          window.parent.postMessage(payload, '*');
-        } catch (_) {}
-      }
-
-      if (nanoBox) {
-        nanoBox.style.display = 'block';
-        nanoBox.textContent = isEmbedded
-          ? '✨ Opening Gemini Nano Co-Pilot for guided coaching...'
-          : '✨ Thinking on-device with Gemini Nano...';
-      }
-
-      if (!isEmbedded) {
-        let replyText = '';
-        try {
-          const lm = (typeof window !== 'undefined' && window.LanguageModel) || (typeof globalThis !== 'undefined' && globalThis.LanguageModel);
-          if (lm && typeof lm.create === 'function') {
-            const session = await lm.create({
-              systemPrompt: 'You are a concise, encouraging UK curriculum science & maths Socratic tutor. Explain in 2 short sentences without giving away spoilers if avoidable.',
-            });
-            const q = `Scene: ${payload.sceneTitle || payload.sceneId}. Quiz Question: "${payload.prompt}". Student picked: "${payload.chosenText || 'not answered yet'}". Hint: "${payload.distractorNudge || payload.explanation || payload.passExpr}". Current vars: ${JSON.stringify(payload.vars)}. Coach the pupil clearly.`;
-            replyText = await session.prompt(q);
-            if (typeof session.destroy === 'function') session.destroy();
-          }
-        } catch (_) {}
-
-        if (!replyText) {
-          if (payload.distractorNudge) {
-            replyText = `${payload.distractorNudge} ${payload.explanation ? 'Key concept: ' + payload.explanation : ''}`.trim();
-          } else if (payload.passExpr) {
-            replyText = `Focus on adjusting the lab controls toward the goal condition (${payload.passExpr}). ${payload.explanation || 'Watch how the active vector readout responds as you move sliders or drag elements.'}`;
-          } else {
-            replyText = payload.explanation || 'Observe the highlighted apparatus on the vector stage and compare how the active parameters change across the timeline.';
-          }
-        }
-        if (nanoBox) {
-          nanoBox.textContent = `🤖 Nano: ${replyText}`;
-        }
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.askNanoAboutCheckpoint === 'function') return _c.askNanoAboutCheckpoint.call(this, checkpoint, index, attemptState);
     }
 
     _h(tag, opts, ...children) {
@@ -575,488 +426,43 @@
     }
 
     triggerCheckpoint(checkpoint, index) {
-      if (!this.elements.interactiveCard || !this.elements.interactiveBody) return;
-      if (!this.interactiveMode) return;
-      const scene = this.engine && this.engine.scene;
-      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
-      if (!hasCheckpoints) return;
-
-      if (this._interactiveCloseTimer) {
-        clearTimeout(this._interactiveCloseTimer);
-        this._interactiveCloseTimer = null;
-      }
-
-      this.activeCheckpoint = index;
-      this.minimizedCheckpoint = null;
-      this._activeGoalCheckpointIndex = null;
-      this.elements.interactiveCard.classList.remove('goal-mode');
-      if (this.elements.checkpointMinimizedPill) {
-        this.elements.checkpointMinimizedPill.classList.add('hidden');
-        this.elements.checkpointMinimizedPill.style.display = 'none';
-      }
-
-      if (checkpoint.passExpr) {
-        this._activeGoalCheckpointIndex = index;
-        this.elements.interactiveCard.classList.add('goal-mode');
-        if (this.elements.interactiveBadge) {
-          this.elements.interactiveBadge.textContent = checkpoint.title || 'LAB GOAL CHALLENGE';
-        }
-        const holdDur = Number(checkpoint.holdDuration || 0);
-        const holdLabel = holdDur > 0 ? `0.0s / ${holdDur.toFixed(1)}s` : 'Adjust controls to satisfy goal';
-        this.elements.interactiveBody.replaceChildren(
-          this._h('div', { className: 'interactive-prompt', text: checkpoint.prompt }),
-          this._h('div', { className: 'goal-progress-wrap' },
-            this._h('div', { className: 'goal-progress-header' },
-              this._h('span', { text: 'Live Condition Status' }),
-              this._h('span', { id: 'goal-hold-readout', className: 'goal-hold-readout', text: holdLabel })
-            ),
-            this._h('div', { className: 'goal-progress-track' },
-              this._h('div', { id: 'goal-progress-fill', className: 'goal-progress-fill' })
-            )
-          ),
-          this._h('div', { id: 'interactive-result', className: 'interactive-feedback', css: 'display: none;' }),
-          this._h('div', { className: 'interactive-nano-actions' },
-            this._h('button', {
-              type: 'button', id: 'interactive-ask-nano-btn', className: 'interactive-ask-nano-btn',
-              title: 'Ask Gemini Nano Co-Pilot for a guided hint on this lab challenge', text: '🤖 Ask Nano'
-            }),
-            this._h('button', {
-              type: 'button', id: 'interactive-mute-popups-btn', className: 'interactive-dismiss-popups-btn',
-              title: 'Turn off popup questions (re-enable via Interactive button or Settings)', text: '🔕 Turn Off Popups'
-            })
-          ),
-          this._h('div', { id: 'interactive-nano-response', className: 'interactive-nano-response' })
-        );
-        this.elements.interactiveCard.classList.remove('hidden');
-        const askGoalBtn = this.elements.interactiveBody.querySelector('#interactive-ask-nano-btn');
-        const muteGoalBtn = this.elements.interactiveBody.querySelector('#interactive-mute-popups-btn');
-        if (askGoalBtn) {
-          askGoalBtn.addEventListener('click', () => this.askNanoAboutCheckpoint(checkpoint, index, {}));
-        }
-        if (muteGoalBtn) {
-          muteGoalBtn.addEventListener('click', () => {
-            this.setInteractiveMode(false);
-            if (this.engine) this.engine.play();
-          });
-        }
-        this.updateGoalCheckpointProgress();
-        return;
-      }
-
-      const isSlide = scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide');
-      const isContinuousSim = !isSlide && Boolean(this.engine && (this.engine.isContinuousSim || (this.engine.scene && (this.engine.scene.continuous || this.engine.scene.isContinuous || this.engine.scene.type === 'Sim'))));
-      if (!isContinuousSim) {
-        this.engine.pause();
-      }
-
-      if (this.elements.interactiveBadge) {
-        this.elements.interactiveBadge.textContent = checkpoint.title || 'CHECKPOINT CHALLENGE';
-      }
-
-      // Dynamic option shuffling:
-      // Map options with their original indices and shuffle so correct answer is NOT always option A!
-      const rawOptions = Array.isArray(checkpoint.options) && checkpoint.options.length > 0
-        ? checkpoint.options
-        : ['Correct', 'Incorrect'];
-      const correctOriginalIndex = typeof checkpoint.answer === 'number' ? checkpoint.answer : 0;
-
-      const indexedOptions = rawOptions.map((opt, i) => ({
-        text: opt,
-        originalIndex: i,
-        isCorrect: i === correctOriginalIndex
-      }));
-
-      // Fisher-Yates shuffle to randomize placement of options
-      for (let i = indexedOptions.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        const temp = indexedOptions[i];
-        indexedOptions[i] = indexedOptions[j];
-        indexedOptions[j] = temp;
-      }
-
-      const optionsBox = this._h('div', { className: 'interactive-options' },
-        ...indexedOptions.map((item, i) =>
-          this._h('button', {
-            type: 'button',
-            className: 'interactive-opt-btn',
-            attrs: { 'data-opt-idx': item.originalIndex, 'data-is-correct': item.isCorrect }
-          },
-            this._h('span', { css: 'font-weight:700; color:#38bdf8; margin-right:6px;', text: `${String.fromCharCode(65 + i)}.` }),
-            ` ${item.text}`
-          )
-        )
-      );
-
-      this.elements.interactiveBody.replaceChildren(
-        this._h('div', { className: 'interactive-prompt', text: checkpoint.prompt }),
-        optionsBox,
-        this._h('div', { id: 'interactive-result', className: 'interactive-feedback', css: 'display: none;' }),
-        this._h('div', { className: 'interactive-nano-actions' },
-          this._h('button', {
-            type: 'button', id: 'interactive-ask-nano-btn', className: 'interactive-ask-nano-btn',
-            title: 'Ask Gemini Nano Co-Pilot about this question or why an option works', text: '🤖 Ask Nano'
-          }),
-          this._h('div', { css: 'display:flex; gap:6px; align-items:center;' },
-            this._h('button', {
-              type: 'button', id: 'interactive-continue-btn', className: 'interactive-dismiss-popups-btn',
-              css: 'display:none; color:#38bdf8; border-color:#0284c7;', text: 'Continue ▶'
-            }),
-            this._h('button', {
-              type: 'button', id: 'interactive-mute-popups-btn', className: 'interactive-dismiss-popups-btn',
-              title: 'Turn off popup questions (re-enable via Interactive button or Settings)', text: '🔕 Turn Off Popups'
-            })
-          )
-        ),
-        this._h('div', { id: 'interactive-nano-response', className: 'interactive-nano-response' })
-      );
-      this.elements.interactiveCard.classList.remove('hidden');
-
-      const optBtns = this.elements.interactiveBody.querySelectorAll('.interactive-opt-btn');
-      const resultBox = this.elements.interactiveBody.querySelector('#interactive-result');
-      const askNanoBtn = this.elements.interactiveBody.querySelector('#interactive-ask-nano-btn');
-      const mutePopupsBtn = this.elements.interactiveBody.querySelector('#interactive-mute-popups-btn');
-      const continueBtn = this.elements.interactiveBody.querySelector('#interactive-continue-btn');
-      const lastAttempt = { chosenOrigIdx: null, chosenText: '', distractorNudge: '', isCorrect: null };
-
-      if (askNanoBtn) {
-        askNanoBtn.addEventListener('click', () => {
-          askNanoBtn.classList.remove('nudge-highlight');
-          this.askNanoAboutCheckpoint(checkpoint, index, lastAttempt);
-        });
-      }
-      if (mutePopupsBtn) {
-        mutePopupsBtn.addEventListener('click', () => {
-          this.setInteractiveMode(false);
-          if (this.engine) this.engine.play();
-        });
-      }
-      if (continueBtn) {
-        continueBtn.addEventListener('click', () => {
-          this.closeInteractiveCard(true);
-        });
-      }
-
-      optBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const isCorrect = btn.getAttribute('data-is-correct') === 'true';
-          const chosenOrigIdx = parseInt(btn.getAttribute('data-opt-idx'), 10);
-          const selectedOpt = indexedOptions.find(o => o.originalIndex === chosenOrigIdx);
-          const distractorNudge = !isCorrect && checkpoint.onWrong
-            ? (checkpoint.onWrong[chosenOrigIdx] !== undefined ? checkpoint.onWrong[chosenOrigIdx] : checkpoint.onWrong[String(chosenOrigIdx)])
-            : null;
-
-          lastAttempt.chosenOrigIdx = chosenOrigIdx;
-          lastAttempt.chosenText = selectedOpt ? selectedOpt.text : String(chosenOrigIdx);
-          lastAttempt.distractorNudge = distractorNudge || '';
-          lastAttempt.isCorrect = isCorrect;
-
-          if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-            window.parent.postMessage({
-              type: 'CHECKPOINT_ANSWERED',
-              sceneId: (scene && scene.id) || '',
-              sceneTitle: (scene && scene.title) || '',
-              index,
-              chosenIdx: chosenOrigIdx,
-              selectedText: lastAttempt.chosenText,
-              isCorrect,
-              prompt: checkpoint.prompt,
-              options: rawOptions,
-              answer: correctOriginalIndex,
-              explanation: checkpoint.explanation || '',
-              distractorNudge: distractorNudge || '',
-            }, '*');
-          }
-
-          if (isCorrect) {
-            optBtns.forEach(b => { b.disabled = true; });
-            btn.classList.add('correct');
-            this.playChime(784, 'triangle'); // G5 happy chime
-            this.completedCheckpoints.add(index);
-            if (resultBox) {
-              resultBox.style.display = 'block';
-              resultBox.style.color = '#34d399';
-              resultBox.replaceChildren(
-                this._h('strong', { text: '✓ Correct!' }),
-                ` ${checkpoint.explanation || ''}`
-              );
-            }
-            if (this.engine.voiceEnabled) {
-              this.engine.speak(`Correct! ${checkpoint.explanation || ''}`);
-            }
-            if (continueBtn) continueBtn.style.display = 'inline-flex';
-            // Resume after 2.2 seconds unless Ask Nano is invoked
-            this._interactiveCloseTimer = setTimeout(() => {
-              this.closeInteractiveCard(true);
-            }, 2200);
-          } else if (distractorNudge) {
-            // Distractor-specific Socratic nudge: keep remaining choices active for self-correction
-            btn.disabled = true;
-            btn.classList.add('hinted');
-            this.playChime(330, 'triangle');
-            if (resultBox) {
-              resultBox.style.display = 'block';
-              resultBox.style.color = '#fbbf24';
-              resultBox.replaceChildren(
-                this._h('strong', { text: 'Guidance:' }),
-                ` ${distractorNudge}`
-              );
-            }
-            if (askNanoBtn) {
-              askNanoBtn.textContent = '🤖 Ask Nano Why';
-              askNanoBtn.classList.add('nudge-highlight');
-            }
-            if (this.engine.voiceEnabled) {
-              this.engine.speak(distractorNudge);
-            }
-          } else {
-            optBtns.forEach(b => { b.disabled = true; });
-            btn.classList.add('incorrect');
-            const correctBtn = this.elements.interactiveBody.querySelector('[data-is-correct="true"]');
-            if (correctBtn) correctBtn.classList.add('correct');
-            this.playChime(220, 'sawtooth'); // Error buzz
-            if (resultBox) {
-              resultBox.style.display = 'block';
-              resultBox.style.color = '#f87171';
-              resultBox.replaceChildren(
-                this._h('strong', { text: 'Hint:' }),
-                ` ${checkpoint.explanation || 'Try reviewing the simulation parameters!'}`
-              );
-            }
-            if (askNanoBtn) {
-              askNanoBtn.textContent = '🤖 Ask Nano Why';
-              askNanoBtn.classList.add('nudge-highlight');
-            }
-            if (continueBtn) continueBtn.style.display = 'inline-flex';
-            if (this.engine.voiceEnabled) {
-              this.engine.speak(`Remember: ${checkpoint.explanation || ''}`);
-            }
-            // Keep open slightly longer so pupil can click Ask Nano Why or Continue
-            this._interactiveCloseTimer = setTimeout(() => {
-              this.closeInteractiveCard(true);
-            }, 4800);
-          }
-        });
-      });
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.triggerCheckpoint === 'function') _c.triggerCheckpoint.call(this, checkpoint, index);
     }
 
     updateGoalCheckpointProgress() {
-      if (this._activeGoalCheckpointIndex === null || this._activeGoalCheckpointIndex === undefined) return;
-      if (!this.engine || typeof this.engine.getCheckpointGoalStatus !== 'function') return;
-      const fillEl = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#goal-progress-fill');
-      const readoutEl = this.elements.interactiveBody && this.elements.interactiveBody.querySelector('#goal-hold-readout');
-      if (!fillEl && !readoutEl) return;
-      const st = this.engine.getCheckpointGoalStatus(this._activeGoalCheckpointIndex);
-      if (fillEl) {
-        fillEl.style.width = `${Math.round(Math.max(0, Math.min(1, st.holdProgress)) * 100)}%`;
-      }
-      if (readoutEl) {
-        if (st.passed) {
-          readoutEl.textContent = 'Target achieved';
-          readoutEl.style.color = '#34d399';
-        } else if (st.holdDuration > 0) {
-          readoutEl.textContent = `${st.holdElapsed.toFixed(1)}s / ${st.holdDuration.toFixed(1)}s`;
-          readoutEl.style.color = st.holdElapsed > 0 ? '#34d399' : '#38bdf8';
-        } else {
-          readoutEl.textContent = 'Adjust controls to satisfy goal';
-        }
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.updateGoalCheckpointProgress === 'function') _c.updateGoalCheckpointProgress.call(this);
     }
 
     handleGoalCheckpointPassed(data) {
-      if (!data || typeof data.index !== 'number') return;
-      const idx = data.index;
-      const cp = data.checkpoint;
-      this.completedCheckpoints.add(idx);
-      this.playChime(784, 'triangle');
-      const scene = this.engine && this.engine.scene;
-
-      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-        window.parent.postMessage({
-          type: 'CHECKPOINT_ANSWERED',
-          sceneId: (scene && scene.id) || '',
-          sceneTitle: (scene && scene.title) || '',
-          index: idx,
-          chosenIdx: 0,
-          selectedText: cp && cp.passExpr ? cp.passExpr : 'Goal passed',
-          isCorrect: true,
-          prompt: (cp && cp.prompt) || '',
-          answer: 0,
-          mode: 'pass-expr',
-        }, '*');
-      }
-
-      if (this._activeGoalCheckpointIndex === idx && this.elements.interactiveBody) {
-        const fillEl = this.elements.interactiveBody.querySelector('#goal-progress-fill');
-        const readoutEl = this.elements.interactiveBody.querySelector('#goal-hold-readout');
-        const resultBox = this.elements.interactiveBody.querySelector('#interactive-result');
-        if (fillEl) fillEl.style.width = '100%';
-        if (readoutEl) {
-          readoutEl.textContent = 'Target achieved';
-          readoutEl.style.color = '#34d399';
-        }
-        if (resultBox) {
-          resultBox.style.display = 'block';
-          resultBox.style.color = '#34d399';
-          resultBox.replaceChildren(
-            this._h('strong', { text: '✓ Goal Achieved!' }),
-            ` ${(cp && cp.explanation) || ''}`
-          );
-        }
-        if (this.engine.voiceEnabled) {
-          this.engine.speak(`Goal achieved! ${(cp && cp.explanation) || ''}`);
-        }
-        setTimeout(() => {
-          if (this._activeGoalCheckpointIndex === idx) {
-            this.closeInteractiveCard(false);
-          }
-        }, 2600);
-      } else {
-        this.showToast(`✓ Goal Achieved: ${(cp && cp.title) || 'Lab Checkpoint'}`);
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.handleGoalCheckpointPassed === 'function') _c.handleGoalCheckpointPassed.call(this, data);
     }
 
     logDataToJotterCsv(forceDownload = false) {
-      if (!this.engine || typeof this.engine.exportLabCsv !== 'function') {
-        this.showToast('⚠️ Lab CSV logger not ready');
-        return;
-      }
-      const res = this.engine.exportLabCsv();
-      if (!res || !res.csv) {
-        this.showToast('⚠️ No simulation observations sampled yet');
-        return;
-      }
-
-      if (forceDownload && typeof document !== 'undefined') {
-        try {
-          const blob = new Blob([res.csv], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${res.sceneId || 'lab'}-data.csv`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 1000);
-          this.showToast(`📥 Downloaded ${res.rowCount} CSV rows`);
-          return;
-        } catch (_) {}
-      }
-
-      if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
-        window.parent.postMessage({
-          type: 'LOG_JOTTER_CSV',
-          sceneId: res.sceneId,
-          sceneTitle: res.sceneTitle,
-          rowCount: res.rowCount,
-          csv: res.csv,
-          nodePath: `lab/${res.sceneId}`,
-        }, '*');
-        this.showToast(`📊 Logged ${res.rowCount} rows to Jotter (CSV)`);
-        return;
-      }
-
-      if (typeof indexedDB !== 'undefined') {
-        try {
-          const req = indexedDB.open('SchoolAiJotter', 1);
-          req.onupgradeneeded = () => {
-            const db = req.result;
-            if (!db.objectStoreNames.contains('session_events')) {
-              const store = db.createObjectStore('session_events', { autoIncrement: true, keyPath: 'id' });
-              store.createIndex('sessionId', 'sessionId', { unique: false });
-            }
-          };
-          req.onsuccess = () => {
-            try {
-              const db = req.result;
-              const tx = db.transaction('session_events', 'readwrite');
-              tx.objectStore('session_events').add({
-                sessionId: `lab-${res.sceneId}`,
-                timestamp: Date.now(),
-                nodePath: `lab/${res.sceneId}`,
-                actor: 'student',
-                payload: res.csv,
-              });
-              tx.oncomplete = () => {
-                this.showToast(`📊 Logged ${res.rowCount} rows to SchoolAiJotter (CSV)`);
-              };
-            } catch (_) {
-              this.showToast('⚠️ Failed to write CSV to SchoolAiJotter');
-            }
-          };
-          req.onerror = () => this.showToast('⚠️ Unable to open SchoolAiJotter database');
-        } catch (_) {
-          this.showToast('⚠️ IndexedDB unavailable for CSV logging');
-        }
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.logDataToJotterCsv === 'function') _c.logDataToJotterCsv.call(this, forceDownload);
     }
 
     triggerFirstCheckpoint() {
-      // If a question card is currently visible, toggle it minimized
-      if (this.elements.interactiveCard && !this.elements.interactiveCard.classList.contains('hidden')) {
-        this.minimizeInteractiveCard();
-        return;
-      }
-      // If a question was minimized, restore it
-      if (this.minimizedCheckpoint !== null) {
-        this.restoreInteractiveCard();
-        return;
-      }
-      const scene = this.engine && this.engine.scene;
-      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
-
-      if (!hasCheckpoints) {
-        this.showToast('ℹ️ No checkpoint quizzes defined in this cartridge');
-        return;
-      }
-      let targetIdx = 0;
-      for (let i = 0; i < scene.interactive.checkpoints.length; i++) {
-        if (!this.completedCheckpoints.has(i)) {
-          targetIdx = i;
-          break;
-        }
-      }
-      const cp = scene.interactive.checkpoints[targetIdx];
-      this.engine.seek(cp.t);
-      this.triggerCheckpoint(cp, targetIdx);
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.triggerFirstCheckpoint === 'function') _c.triggerFirstCheckpoint.call(this);
     }
 
     checkInteractiveCheckpoints() {
-      if (!this.interactiveMode || this.activeCheckpoint !== null) return;
-      const scene = this.engine && this.engine.scene;
-      const hasCheckpoints = Boolean(scene && scene.interactive && Array.isArray(scene.interactive.checkpoints) && scene.interactive.checkpoints.length > 0 && !scene.interactive.disabled && scene.interactive !== false && scene.type !== 'App' && scene.cartridgeType !== 'App');
-      if (!hasCheckpoints) return;
-
-      const curT = this.engine.progress;
-      const prevT = this._lastCheckedT !== undefined ? this._lastCheckedT : curT;
-      this._lastCheckedT = curT;
-
-      // Rewind detection: allow re-taking checkpoints when seeking backwards
-      if (curT < prevT - 0.05) {
-        scene.interactive.checkpoints.forEach((cp, idx) => {
-          if (cp.t > curT) this.completedCheckpoints.delete(idx);
-        });
-      }
-
-      scene.interactive.checkpoints.forEach((cp, idx) => {
-        if (!this.completedCheckpoints.has(idx)) {
-          // If playback crossed checkpoint or is within 0.018 of trigger point
-          const justCrossed = curT >= cp.t && prevT <= cp.t && (curT - prevT) < 0.15;
-          const isNear = Math.abs(curT - cp.t) < 0.018;
-          if (justCrossed || isNear) {
-            this.triggerCheckpoint(cp, idx);
-          }
-        }
-      });
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.checkInteractiveCheckpoints === 'function') _c.checkInteractiveCheckpoints.call(this);
     }
 
     getSceneQuestsConfig() {
-      return (this.engine && this.engine.scene && this.engine.scene.quests) || null;
+      const _c = _getPlayerUICheckpoints();
+      return _c && typeof _c.getSceneQuestsConfig === 'function' ? _c.getSceneQuestsConfig.call(this) : null;
     }
 
     getSceneQuestMissions() {
-      const qCfg = this.getSceneQuestsConfig();
-      if (qCfg && Array.isArray(qCfg.missions)) return qCfg.missions;
-      return Array.isArray(this.questMissions) ? this.questMissions : [];
+      const _c = _getPlayerUICheckpoints();
+      return _c && typeof _c.getSceneQuestMissions === 'function' ? _c.getSceneQuestMissions.call(this) : [];
     }
 
     getSceneCameraStops() {
@@ -2880,478 +2286,8 @@ window.addEventListener('message', (e) => {
         });
       }
 
-      // --- Developer Inspector & Live Studio Event Bindings ---
-      if (el.btnDevMode) {
-        el.btnDevMode.addEventListener('click', () => this.toggleDevMode());
-      }
-
-      if (el.btnDevStudio) {
-        el.btnDevStudio.addEventListener('click', () => this.toggleDevStudio());
-      }
-
-      if (stage) {
-        stage.addEventListener('mousemove', (e) => {
-          if (!this.devModeActive || !el.sceneRoot || !el.stageSvg) return;
-          if (e.target.closest('.dev-inspector-drawer') || e.target.closest('.dev-studio-drawer') || e.target.closest('header') || e.target.closest('footer')) {
-            if (el.devHoverBox) el.devHoverBox.classList.add('hidden');
-            if (el.devHoverTooltip) el.devHoverTooltip.classList.add('hidden');
-            return;
-          }
-
-          let target = document.elementFromPoint(e.clientX, e.clientY);
-          if (target && target.closest && target.closest('#scene-root') && target !== el.sceneRoot) {
-            if (target.tagName && target.tagName.toLowerCase() === 'g' && target.children.length === 1) {
-              target = target.children[0];
-            }
-            this.updateDevHover(target, e);
-          } else {
-            if (el.devHoverBox) el.devHoverBox.classList.add('hidden');
-            if (el.devHoverTooltip) el.devHoverTooltip.classList.add('hidden');
-          }
-        });
-
-        stage.addEventListener('mouseleave', () => {
-          if (el.devHoverBox) el.devHoverBox.classList.add('hidden');
-          if (el.devHoverTooltip) el.devHoverTooltip.classList.add('hidden');
-        });
-
-        stage.addEventListener('click', (e) => {
-          if (!this.devModeActive) return;
-          if (e.target.closest('.dev-inspector-drawer') || e.target.closest('.dev-studio-drawer') || e.target.closest('button') || e.target.closest('select')) return;
-
-          let target = document.elementFromPoint(e.clientX, e.clientY);
-          if (target && target.closest && target.closest('#scene-root') && target !== el.sceneRoot) {
-            e.stopPropagation();
-            if (target.tagName && target.tagName.toLowerCase() === 'g' && target.children.length === 1) {
-              target = target.children[0];
-            }
-            this.selectElement(target);
-          }
-        });
-      }
-
-      if (el.devInspectorClose) {
-        el.devInspectorClose.addEventListener('click', () => this.closeInspectorDrawer());
-      }
-
-      const syncAttr = (attr, val) => {
-        if (!this.selectedElement) return;
-        this.selectedElement.setAttribute(attr, val);
-        if (this.engine) this.engine._svgDirtyFromInspector = true;
-        this.refreshSelectBox();
-        if (el.devEditorSvg && this.engine && typeof this.engine.getCleanCompanionSvg === 'function') {
-          el.devEditorSvg.value = this.engine.getCleanCompanionSvg();
-          this.refreshAstSvgMatcher();
-        }
-        this.engine.notifyParent({
-          type: 'DEV_ELEMENT_UPDATED',
-          selector: this.selectedElementSelector,
-          attr,
-          value: val
-        });
-      };
-
-      if (el.devColorFill && el.devPropFill) {
-        el.devColorFill.addEventListener('input', (e) => {
-          el.devPropFill.value = e.target.value;
-          syncAttr('fill', e.target.value);
-        });
-        el.devPropFill.addEventListener('change', (e) => {
-          el.devColorFill.value = e.target.value.startsWith('#') && e.target.value.length === 7 ? e.target.value : '#000000';
-          syncAttr('fill', e.target.value);
-        });
-      }
-
-      if (el.devColorStroke && el.devPropStroke) {
-        el.devColorStroke.addEventListener('input', (e) => {
-          el.devPropStroke.value = e.target.value;
-          syncAttr('stroke', e.target.value);
-        });
-        el.devPropStroke.addEventListener('change', (e) => {
-          el.devColorStroke.value = e.target.value.startsWith('#') && e.target.value.length === 7 ? e.target.value : '#000000';
-          syncAttr('stroke', e.target.value);
-        });
-      }
-
-      if (el.devPropStrokew) {
-        el.devPropStrokew.addEventListener('input', (e) => {
-          syncAttr('stroke-width', e.target.value);
-        });
-      }
-
-      if (el.devRangeOpacity && el.devValOpacity) {
-        el.devRangeOpacity.addEventListener('input', (e) => {
-          el.devValOpacity.textContent = parseFloat(e.target.value).toFixed(2);
-          syncAttr('opacity', e.target.value);
-        });
-      }
-
-      if (el.devPropTransform) {
-        el.devPropTransform.addEventListener('input', (e) => {
-          syncAttr('transform', e.target.value);
-        });
-      }
-
-      if (el.btnCopySelector) {
-        el.btnCopySelector.addEventListener('click', () => {
-          if (!this.selectedElementSelector) return;
-          navigator.clipboard?.writeText(this.selectedElementSelector).then(() => {
-            this.showToast(`✓ Selector copied: ${this.selectedElementSelector}`);
-          });
-        });
-      }
-
-      if (el.btnCopyAstRule) {
-        el.btnCopyAstRule.addEventListener('click', () => {
-          if (!this.selectedElementSelector) return;
-          const snippet = `(:target "${this.selectedElementSelector}" :attr "transform" :expr "'rotate(' + (t * 360) + ')'")`;
-          navigator.clipboard?.writeText(snippet).then(() => {
-            this.showToast('✓ AST rule copied');
-          });
-        });
-      }
-
-      if (el.btnBindToStudio) {
-        el.btnBindToStudio.addEventListener('click', () => {
-          if (!this.selectedElement) return;
-          let targetId = this.selectedElement.id;
-          if (!targetId) {
-            targetId = `shape-${Math.random().toString(36).slice(2, 6)}`;
-            this.selectedElement.id = targetId;
-            if (this.engine) this.engine._svgDirtyFromInspector = true;
-            this.selectedElementSelector = `#${targetId}`;
-          }
-          this.openDevStudio('ast');
-          this.insertBindingForSvgId(targetId);
-        });
-      }
-
-      if (el.btnDevDelete) {
-        el.btnDevDelete.addEventListener('click', () => {
-          if (!this.selectedElement) return;
-          const deadSel = this.selectedElementSelector;
-          this.selectedElement.remove();
-          if (this.engine) this.engine._svgDirtyFromInspector = true;
-          this.closeInspectorDrawer();
-          if (el.devEditorSvg && this.engine && typeof this.engine.getCleanCompanionSvg === 'function') {
-            el.devEditorSvg.value = this.engine.getCleanCompanionSvg();
-            this.refreshAstSvgMatcher();
-          }
-          this.showToast(`🗑️ Deleted ${deadSel}`);
-        });
-      }
-
-      if (el.btnCopyNodeXml) {
-        el.btnCopyNodeXml.addEventListener('click', () => {
-          if (!this.selectedElement) return;
-          navigator.clipboard?.writeText(this.selectedElement.outerHTML).then(() => {
-            this.showToast('✓ OuterXML copied');
-          });
-        });
-      }
-
-      if (el.devStudioClose) {
-        el.devStudioClose.addEventListener('click', () => this.closeDevStudio());
-      }
-
-      const studioTabBtns = document.querySelectorAll('.dev-tab-btn');
-      studioTabBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tab = btn.getAttribute('data-tab');
-          this.switchStudioTab(tab);
-        });
-      });
-
-      if (el.btnStudioRun) {
-        el.btnStudioRun.addEventListener('click', () => {
-          if (this.activeStudioTab === 'compiler') {
-            if (global.ASTSlideScriptCompiler && el.devEditorSlideScript) {
-              const scriptText = el.devEditorSlideScript.value;
-              const currentSvg = (typeof this.engine.getCleanCompanionSvg === 'function')
-                ? this.engine.getCleanCompanionSvg()
-                : this.engine.getStageSvgSnapshot();
-              const result = global.ASTSlideScriptCompiler.compile(scriptText, currentSvg);
-              if (result.errors && result.errors.length > 0) {
-                this.playChime(220, 'sawtooth');
-                this.showToast('⚠️ Compiler Notice: ' + result.errors[0]);
-                return;
-              }
-
-              if (el.devEditorSvg) el.devEditorSvg.value = result.svg;
-              if (el.devEditorAst) el.devEditorAst.value = result.ast;
-
-              this.engine.hotReloadSvg(result.svg);
-              this.engine.hotReloadAst(result.ast);
-              this.engine.seek(0.0);
-              this.refreshAstSvgMatcher();
-              this.playChime(784, 'triangle');
-              this.showToast('🚀 SlideScript Compiled & Playing Live!');
-              return;
-            }
-          }
-
-          let svgOk = true, astOk = true;
-          if (el.devEditorSvg && el.devEditorSvg.value) {
-            svgOk = this.engine.hotReloadSvg(el.devEditorSvg.value);
-          }
-          if (el.devEditorAst && el.devEditorAst.value) {
-            astOk = this.engine.hotReloadAst(el.devEditorAst.value);
-          }
-          this.refreshAstSvgMatcher();
-          if (svgOk && astOk) {
-            this.playChime(784, 'triangle');
-            this.showToast('⚡ Live Stage Hot-Reloaded!');
-          } else {
-            this.playChime(220, 'sawtooth');
-            this.showToast('Notice: Syntax issue in SVG or AST');
-          }
-        });
-      }
-
-      // Live .ast <-> .svg Auto-Matcher updates while typing
-      let matcherDebounce = null;
-      const scheduleMatcherRefresh = () => {
-        if (matcherDebounce) clearTimeout(matcherDebounce);
-        matcherDebounce = setTimeout(() => {
-          this.refreshAstSvgMatcher();
-        }, 180);
-      };
-      if (el.devEditorSvg) el.devEditorSvg.addEventListener('input', scheduleMatcherRefresh);
-      if (el.devEditorAst) el.devEditorAst.addEventListener('input', scheduleMatcherRefresh);
-
-      if (el.btnMatcherAutofixAll) {
-        el.btnMatcherAutofixAll.addEventListener('click', () => {
-          this.autoFixAllAstSvgMatches();
-        });
-      }
-
-      if (el.btnMatcherNanoExplain) {
-        el.btnMatcherNanoExplain.addEventListener('click', () => {
-          this.requestNanoRemix('Fix any missing SVG matches or explain why selectors are mismatched');
-        });
-      }
-
-      // Gemini Nano Remix Co-Pilot Wiring
-      if (el.btnStudioNanoAsk) {
-        el.btnStudioNanoAsk.addEventListener('click', () => {
-          this.requestNanoRemix();
-        });
-      }
-      if (el.studioNanoInput) {
-        el.studioNanoInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            this.requestNanoRemix();
-          }
-        });
-      }
-      document.querySelectorAll('.nano-chip-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const promptText = btn.getAttribute('data-nano-prompt') || '';
-          if (el.studioNanoInput) el.studioNanoInput.value = promptText;
-          this.requestNanoRemix(promptText);
-        });
-      });
-      if (el.btnStudioNanoApply) {
-        el.btnStudioNanoApply.addEventListener('click', () => {
-          this.applyPendingNanoProposal();
-        });
-      }
-      if (el.btnStudioNanoDismiss && el.studioNanoPreview) {
-        el.btnStudioNanoDismiss.addEventListener('click', () => {
-          el.studioNanoPreview.classList.add('hidden');
-          this._pendingNanoProposal = null;
-        });
-      }
-      if (el.btnStudioNanoUndo) {
-        el.btnStudioNanoUndo.addEventListener('click', () => {
-          this.undoLastNanoEdit();
-        });
-      }
-
-      // Remix / Save As Bar Wiring
-      if (el.btnStudioSaveAs) {
-        el.btnStudioSaveAs.addEventListener('click', () => {
-          if (el.studioSaveAsBar && !el.studioSaveAsBar.classList.contains('hidden')) {
-            el.studioSaveAsBar.classList.add('hidden');
-          } else {
-            this.openSaveAsBar();
-          }
-        });
-      }
-      if (el.btnRemixCancel && el.studioSaveAsBar) {
-        el.btnRemixCancel.addEventListener('click', () => {
-          el.studioSaveAsBar.classList.add('hidden');
-        });
-      }
-      if (el.remixTitleInput && el.remixIdInput) {
-        el.remixTitleInput.addEventListener('input', () => {
-          if (!el.remixIdInput.dataset.manualEdit) {
-            el.remixIdInput.value = this.slugifyCartridgeId(el.remixTitleInput.value);
-          }
-          this.updateRemixPreviewLabel();
-        });
-        el.remixIdInput.addEventListener('input', () => {
-          el.remixIdInput.dataset.manualEdit = '1';
-          el.remixIdInput.value = this.slugifyCartridgeId(el.remixIdInput.value);
-          this.updateRemixPreviewLabel();
-        });
-      }
-      if (el.btnRemixSaveVault) {
-        el.btnRemixSaveVault.addEventListener('click', () => this.executeSaveRemixAs('vault'));
-      }
-      if (el.btnRemixSaveDuo) {
-        el.btnRemixSaveDuo.addEventListener('click', () => this.executeSaveRemixAs('duo'));
-      }
-      if (el.btnRemixSaveAstb) {
-        el.btnRemixSaveAstb.addEventListener('click', () => this.executeSaveRemixAs('astb'));
-      }
-
-      if (el.btnDecompileAst) {
-        el.btnDecompileAst.addEventListener('click', () => {
-          if (global.ASTSlideScriptCompiler && this.engine.scene) {
-            const script = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
-            if (el.devEditorSlideScript) {
-              el.devEditorSlideScript.value = script;
-            }
-            this.switchStudioTab('compiler');
-            this.playChime(659.25, 'triangle');
-            this.showToast('🔄 Scene Converted to Plain SlideScript');
-          }
-        });
-      }
-
-      // SlideScript Compiler Template Buttons
-      const compilerTplBtns = document.querySelectorAll('.compiler-tpl-btn');
-      compilerTplBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-          const tplKey = btn.getAttribute('data-tpl');
-          if (global.ASTSlideScriptCompiler && global.ASTSlideScriptCompiler.TEMPLATES && global.ASTSlideScriptCompiler.TEMPLATES[tplKey]) {
-            const tpl = global.ASTSlideScriptCompiler.TEMPLATES[tplKey];
-            if (el.devEditorSlideScript) {
-              el.devEditorSlideScript.value = tpl.script;
-            }
-            const res = global.ASTSlideScriptCompiler.compile(tpl.script);
-            if (el.devEditorSvg) el.devEditorSvg.value = res.svg;
-            if (el.devEditorAst) el.devEditorAst.value = res.ast;
-            this.engine.hotReloadSvg(res.svg);
-            this.engine.hotReloadAst(res.ast);
-            this.engine.seek(0.0);
-            this.playChime(784, 'triangle');
-            this.showToast(`✨ Loaded & Compiled ${tpl.title}`);
-          }
-        });
-      });
-
-      // Visual Checkpoint Builder Time Capture
-      if (el.qbBtnCaptureTime) {
-        el.qbBtnCaptureTime.addEventListener('click', () => {
-          const curP = Number(this.engine.progress.toFixed(2));
-          if (el.qbTime) el.qbTime.value = curP;
-          const dur = this.engine.durationSec || 10;
-          if (el.qbTimeSeconds) el.qbTimeSeconds.textContent = `(= ${(curP * dur).toFixed(1)}s)`;
-          this.showToast(`📍 Captured t=${curP}`);
-        });
-      }
-
-      if (el.qbTime) {
-        el.qbTime.addEventListener('input', () => {
-          const curP = parseFloat(el.qbTime.value) || 0;
-          const dur = this.engine.durationSec || 10;
-          if (el.qbTimeSeconds) el.qbTimeSeconds.textContent = `(= ${(curP * dur).toFixed(1)}s)`;
-        });
-      }
-
-      // Visual Checkpoint Builder Ingestion
-      if (el.qbBtnInsert) {
-        el.qbBtnInsert.addEventListener('click', () => {
-          const tVal = parseFloat(el.qbTime ? el.qbTime.value : '0.5') || 0.5;
-          const title = (el.qbTitle && el.qbTitle.value.trim()) || 'Concept Check';
-          const prompt = (el.qbPrompt && el.qbPrompt.value.trim()) || '';
-          if (!prompt) {
-            this.showToast('⚠️ Please enter a question prompt');
-            return;
-          }
-
-          const optInputs = [
-            document.getElementById('qb-opt-0'),
-            document.getElementById('qb-opt-1'),
-            document.getElementById('qb-opt-2'),
-            document.getElementById('qb-opt-3'),
-          ];
-          const options = optInputs.map(inp => inp ? inp.value.trim() : '').filter(Boolean);
-          if (options.length < 2) {
-            this.showToast('⚠️ Please enter at least 2 answer options');
-            return;
-          }
-
-          const correctRadio = document.querySelector('input[name="qb-opt-correct"]:checked');
-          const answerIdx = correctRadio ? parseInt(correctRadio.value, 10) : 0;
-          const explanation = (el.qbExplanation && el.qbExplanation.value.trim()) || '';
-
-          const newCp = {
-            t: Math.min(1.0, Math.max(0.0, tVal)),
-            title: title,
-            prompt: prompt,
-            options: options,
-            answer: Math.min(options.length - 1, answerIdx),
-            explanation: explanation
-          };
-
-          if (!this.engine.scene) this.engine.scene = {};
-          if (!this.engine.scene.interactive) {
-            this.engine.scene.interactive = { checkpoints: [], hotspots: [] };
-          }
-          if (!Array.isArray(this.engine.scene.interactive.checkpoints)) {
-            this.engine.scene.interactive.checkpoints = [];
-          }
-
-          this.engine.scene.interactive.checkpoints.push(newCp);
-          this.engine.scene.interactive.checkpoints.sort((a, b) => a.t - b.t);
-
-          this.completedCheckpoints.delete(this.engine.scene.interactive.checkpoints.length - 1);
-          this.renderQuizBuilderExistingList();
-          this.playChime(784, 'triangle');
-          this.showToast(`🎯 Injected Checkpoint at ${(newCp.t * 100).toFixed(0)}%!`);
-
-          if (global.ASTSlideScriptCompiler && el.devEditorSlideScript) {
-            el.devEditorSlideScript.value = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
-          }
-        });
-      }
-
-      if (el.btnStudioReset) {
-        el.btnStudioReset.addEventListener('click', () => {
-          this.engine.loadScene(this.engine.activePresetId, this.engine.isPlaying);
-          setTimeout(() => {
-            if (el.devEditorSvg) el.devEditorSvg.value = this.engine.getStageSvgSnapshot();
-            if (el.devEditorAst) el.devEditorAst.value = this.engine.getCurrentAstSource();
-            this.showToast('↺ Preset Reset');
-          }, 150);
-        });
-      }
-
-      if (el.btnStudioExport) {
-        el.btnStudioExport.addEventListener('click', () => {
-          const cleanSvg = this.engine.getStageSvgSnapshot();
-          const blob = new Blob([cleanSvg], { type: 'image/svg+xml;charset=utf-8' });
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${this.engine.activePresetId || 'scene'}-export.svg`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
-          this.showToast('💾 Clean Vector SVG Exported');
-        });
-      }
-
-      if (el.btnStudioExportSpa) {
-        el.btnStudioExportSpa.addEventListener('click', () => {
-          this.downloadStandaloneSvgApplet();
-        });
-      }
+      // --- Developer Inspector & Live Studio Event Bindings (delegated to player-ui-studio.js) ---
+      this.bindStudioDOMEvents(stage);
 
       if (el.btnHeaderExportSpa) {
         el.btnHeaderExportSpa.addEventListener('click', () => {
@@ -3366,242 +2302,8 @@ window.addEventListener('message', (e) => {
         });
       }
 
-      // WebRTC P2P Mesh & AI Link Controls
-      if (el.btnWebRtcLink) {
-        el.btnWebRtcLink.addEventListener('click', () => {
-          this.toggleWebRtcDrawer();
-        });
-      }
-
-      if (el.webrtcDrawerClose) {
-        el.webrtcDrawerClose.addEventListener('click', () => {
-          this.closeWebRtcDrawer();
-        });
-      }
-
-      if (el.btnWebRtcLoopback) {
-        el.btnWebRtcLoopback.addEventListener('click', async () => {
-          if (!window.AST_WEBRTC) {
-            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
-          }
-          const bus = window.AST_WEBRTC;
-          this.showToast('⚡ Connecting Local On-Device AI Loopback...');
-          const ok = await bus.initLoopback();
-          if (ok) {
-            this.updateWebRtcStatusUI(true, 'loopback_ai');
-            this.showToast('✅ WebRTC Local Loopback Online');
-            if (el.webrtcAiOutput) {
-              el.webrtcAiOutput.replaceChildren(
-                '✨ ',
-                this._h('strong', { text: 'Loopback Bus Active' }),
-                ' (0 ms UDP). Chrome Prompt API & Gemini Nano linked.'
-              );
-            }
-          }
-        });
-      }
-
-      if (el.btnWebRtcCreateOffer) {
-        el.btnWebRtcCreateOffer.addEventListener('click', async () => {
-          if (!window.AST_WEBRTC) {
-            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
-          }
-          const bus = window.AST_WEBRTC;
-          this.showToast('📡 Gathering ICE candidates for Host Room...');
-          try {
-            const token = await bus.createRoomOffer();
-            if (el.webrtcExchangeArea && el.webrtcTokenBox) {
-              el.webrtcExchangeArea.style.display = 'flex';
-              if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Room Offer Token (Share with follower):';
-              el.webrtcTokenBox.value = token;
-              this.updateWebRtcStatusUI(true, 'host');
-              this.showToast('📋 Room Offer Token Ready — copy to share');
-            }
-          } catch (err) {
-            this.showToast('⚠️ Failed to generate room offer: ' + err.message);
-          }
-        });
-      }
-
-      if (el.btnWebRtcJoinRoom) {
-        el.btnWebRtcJoinRoom.addEventListener('click', () => {
-          if (el.webrtcExchangeArea && el.webrtcTokenBox) {
-            el.webrtcExchangeArea.style.display = 'flex';
-            if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Paste Host Room Token below:';
-            el.webrtcTokenBox.value = '';
-            el.webrtcTokenBox.focus();
-            this.showToast('🔗 Paste host token and click Connect Peer');
-          }
-        });
-      }
-
-      if (el.btnWebRtcCopyToken) {
-        el.btnWebRtcCopyToken.addEventListener('click', () => {
-          if (el.webrtcTokenBox && el.webrtcTokenBox.value) {
-            navigator.clipboard.writeText(el.webrtcTokenBox.value).then(() => {
-              this.showToast('✓ Token Copied to Clipboard!');
-            }).catch(() => {});
-          }
-        });
-      }
-
-      if (el.btnWebRtcConfirmToken) {
-        el.btnWebRtcConfirmToken.addEventListener('click', async () => {
-          if (!window.AST_WEBRTC) {
-            window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
-          }
-          const bus = window.AST_WEBRTC;
-          const rawToken = el.webrtcTokenBox ? el.webrtcTokenBox.value.trim() : '';
-          if (!rawToken) {
-            this.showToast('⚠️ Please paste a connection token first');
-            return;
-          }
-          try {
-            if (bus.role === 'host') {
-              // Consume client's answer
-              await bus.completeHandshake(rawToken);
-              this.updateWebRtcStatusUI(true, 'host');
-              this.showToast('🎉 Peer Handshake Complete! Broadcasting master clock.');
-            } else {
-              // Join as client and generate answer
-              const answer = await bus.acceptOfferAndCreateAnswer(rawToken);
-              if (el.webrtcExchangeLabel) el.webrtcExchangeLabel.textContent = 'Send this Answer Token back to Host:';
-              el.webrtcTokenBox.value = answer;
-              this.updateWebRtcStatusUI(true, 'follower');
-              this.showToast('📋 Answer token generated! Share back with host.');
-            }
-          } catch (err) {
-            this.showToast('⚠️ Handshake error: ' + err.message);
-          }
-        });
-      }
-
-      // Edge AI Query input
-      if (el.btnWebRtcAiAsk && el.webrtcAiInput) {
-        if (!window.AST_WEBRTC) {
-          window.AST_WEBRTC = new window.ASTWebRTCBus(this.engine);
-          const bus = window.AST_WEBRTC;
-          
-          // Register listeners once on the bus lifecycle
-          bus.on('aiToken', ({ token }) => {
-            if (el.webrtcAiOutput) el.webrtcAiOutput.textContent += token;
-          });
-          bus.on('aiComplete', ({ fullText }) => {
-            if (el.webrtcAiOutput) {
-              el.webrtcAiOutput.replaceChildren(
-                '🤖 ',
-                this._h('strong', { text: 'Tutor:' }),
-                ` ${fullText}`
-              );
-            }
-          });
-        }
-
-        const askAiFn = (e) => {
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          const query = el.webrtcAiInput.value.trim();
-          if (!query) return;
-
-          if (el.webrtcAiOutput) {
-            el.webrtcAiOutput.replaceChildren(
-              this._h('span', { className: 'ai-dot-pulse' }),
-              ' ',
-              this._h('em', { text: 'Gemini Nano is evaluating...' })
-            );
-          }
-          
-          window.AST_WEBRTC.processAiPrompt(query);
-          el.webrtcAiInput.value = '';
-        };
-
-        el.btnWebRtcAiAsk.addEventListener('click', askAiFn);
-        el.webrtcAiInput.addEventListener('keydown', (e) => {
-          if (e.key === 'Enter') {
-            e.preventDefault();
-            e.stopPropagation();
-            askAiFn(e);
-          }
-        });
-      }
-
-      if (el.btnObsLink) {
-        el.btnObsLink.addEventListener('click', () => {
-          this.toggleObsDrawer();
-        });
-      }
-
-      if (el.obsDrawerClose) {
-        el.obsDrawerClose.addEventListener('click', () => {
-          this.closeObsDrawer();
-        });
-      }
-
-      if (el.btnObsConnect) {
-        el.btnObsConnect.addEventListener('click', () => {
-          if (!this.obs) return;
-          const url = el.obsInputUrl ? el.obsInputUrl.value.trim() : 'ws://127.0.0.1:4455';
-          const pass = el.obsInputPassword ? el.obsInputPassword.value : '';
-          this.obs.saveSettings({ url, password: pass });
-          this.obs.connect(url, pass);
-        });
-      }
-
-      if (el.btnObsDisconnect) {
-        el.btnObsDisconnect.addEventListener('click', () => {
-          if (this.obs) this.obs.disconnect();
-          this.updateObsStatusUI(false, false);
-          this.showToast('OBS Disconnected');
-        });
-      }
-
-      if (el.obsToggleRecord) {
-        el.obsToggleRecord.addEventListener('change', (e) => {
-          if (this.obs) this.obs.saveSettings({ syncRecording: e.target.checked });
-        });
-      }
-
-      if (el.obsToggleSubtitles) {
-        el.obsToggleSubtitles.addEventListener('change', (e) => {
-          if (this.obs) this.obs.saveSettings({ syncSubtitles: e.target.checked });
-        });
-      }
-
-      if (el.obsInputSource) {
-        el.obsInputSource.addEventListener('change', (e) => {
-          if (this.obs) this.obs.saveSettings({ subtitleSource: e.target.value.trim() });
-        });
-      }
-
-      if (el.obsToggleTransparent) {
-        el.obsToggleTransparent.addEventListener('change', (e) => {
-          const isTransparent = e.target.checked;
-          document.body.classList.toggle('obs-transparent', isTransparent);
-          if (this.obs) this.obs.saveSettings({ transparent: isTransparent });
-          this.showToast(isTransparent ? 'Transparent Backdrop (OBS Mode) Active' : 'Standard Backdrop Restored');
-        });
-      }
-
-      if (el.obsSelectScene) {
-        el.obsSelectScene.addEventListener('change', (e) => {
-          if (this.obs && e.target.value) {
-            this.obs.switchScene(e.target.value);
-          }
-        });
-      }
-
-      if (el.btnObsRecordToggle) {
-        el.btnObsRecordToggle.addEventListener('click', () => {
-          if (!this.obs) return;
-          if (this.obs.isRecording) {
-            this.obs.stopRecord();
-          } else {
-            this.obs.startRecord();
-          }
-        });
-      }
+      // --- WebRTC P2P Mesh & OBS Broadcast Drawer Event Bindings (delegated to player-ui-broadcast.js) ---
+      this.bindBroadcastDOMEvents();
 
       // Studio & Broadcast Control Panel Popover
       if (el.btnStudioPanelToggle) {
@@ -4545,1305 +3247,233 @@ window.addEventListener('message', (e) => {
       }
     }
 
-    // --- Step-by-Step Didactic Mode & Clicker Navigation Methods ---
+    // --- Step-by-Step Didactic Mode & Quest Mode Methods (delegated to player-ui-checkpoints.js) ---
 
     toggleStepMode(force) {
-      this.stepMode = force !== undefined ? Boolean(force) : !this.stepMode;
-      if (this.elements.btnStepMode) {
-        this.elements.btnStepMode.classList.toggle('active', this.stepMode);
-      }
-      if (this.stepMode) {
-        this.targetStop = null;
-        this.engine.pause();
-        this.updateHeaderPlayUI(false);
-        this.playChime(659.25, 'triangle');
-        this.showToast('👣 Clicker / Step Mode ON (Space / Next / Clicker)');
-      } else {
-        this.targetStop = null;
-        this.showToast('▶ Continuous Playback Mode');
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.toggleStepMode === 'function') _c.toggleStepMode.call(this, force);
     }
 
     getLessonStops() {
-      const scene = this.engine.scene;
-      if (!scene) return [0, 1];
-      const set = new Set([0]);
-      if (Array.isArray(scene.keyframes)) {
-        scene.keyframes.forEach(kf => set.add(Number(kf.t.toFixed(3))));
-      }
-      if (scene.interactive && Array.isArray(scene.interactive.checkpoints)) {
-        scene.interactive.checkpoints.forEach(cp => set.add(Number(cp.t.toFixed(3))));
-      }
-      set.add(1.0);
-      return Array.from(set).sort((a, b) => a - b);
+      const _c = _getPlayerUICheckpoints();
+      return _c && typeof _c.getLessonStops === 'function' ? _c.getLessonStops.call(this) : [0, 1];
     }
 
     stepToNextKeyframe() {
-      const stops = this.getLessonStops();
-      const curT = this.engine.progress;
-      const nextStop = stops.find(s => s > curT + 0.015);
-      if (nextStop !== undefined) {
-        this.targetStop = null;
-        this.engine.pause();
-        this.engine.seek(nextStop);
-        this.onStopReached(nextStop);
-        this.updateHeaderPlayUI(false);
-      } else {
-        this.showToast('🏁 End of Lesson Slides');
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.stepToNextKeyframe === 'function') _c.stepToNextKeyframe.call(this);
     }
 
     stepToPrevKeyframe() {
-      const stops = this.getLessonStops();
-      const curT = this.engine.progress;
-      const prevStops = stops.filter(s => s < curT - 0.02);
-      this.targetStop = null;
-      this.engine.pause();
-      this.updateHeaderPlayUI(false);
-      if (prevStops.length > 0) {
-        const prevStop = prevStops[prevStops.length - 1];
-        this.engine.seek(prevStop);
-        this.onStopReached(prevStop);
-      } else {
-        this.engine.seek(0);
-        this.onStopReached(0);
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.stepToPrevKeyframe === 'function') _c.stepToPrevKeyframe.call(this);
     }
 
     onStopReached(t) {
-      const scene = this.engine.scene;
-      if (!scene) return;
-      const kf = (scene.keyframes || []).find(k => Math.abs(k.t - t) < 0.035);
-      const cp = (scene.interactive && scene.interactive.checkpoints || []).find(c => Math.abs(c.t - t) < 0.035);
-
-      this.playChime(784, 'triangle');
-      if (cp) {
-        this.showToast(`🎯 Challenge: ${cp.title}`);
-      } else if (kf) {
-        this.showToast(`📍 ${kf.title}`);
-      } else {
-        this.showToast(`Step at ${Math.round(t * 100)}%`);
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.onStopReached === 'function') _c.onStopReached.call(this, t);
     }
 
     startQuestMode() {
-      const missions = this.getSceneQuestMissions();
-      if (!this.elements.questDrawer || missions.length === 0) return;
-      const qCfg = this.getSceneQuestsConfig();
-      this.questState.active = true;
-      this.questState.tourRunId = (this.questState.tourRunId || 1) + 1;
-      this.elements.questDrawer.classList.remove('hidden');
-      this.engine.pause();
-      this.showToast(`🎮 ${(qCfg && qCfg.title) || 'Interactive Explorer Quest Started!'}`);
-      this.playChime(659.25, 'triangle');
-      this.renderCurrentMission();
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.startQuestMode === 'function') _c.startQuestMode.call(this);
     }
 
     renderCurrentMission() {
-      if (!this.elements.questBody || !this.elements.questScore) return;
-      const qCfg = this.getSceneQuestsConfig();
-      const missions = this.getSceneQuestMissions();
-      const idx = this.questState.missionIndex;
-      const total = missions.length;
-
-      this.elements.questScore.textContent = `⭐ ${this.questState.completedMissions.size}/${total} Stars • ${this.questState.score} Pts`;
-
-      if (idx >= total) {
-        this.elements.questBody.replaceChildren(
-          this._h('div', { css: 'text-align: center; padding: 12px 6px;' },
-            this._h('div', { css: 'font-size: 28px; margin-bottom: 6px;', text: '🏆 ⭐' }),
-            this._h('div', {
-              className: 'quest-mission-title',
-              css: 'color: #facc15; font-size: 15px;',
-              text: (qCfg && qCfg.completionTitle) || 'QUEST COMPLETE!'
-            }),
-            this._h('div', {
-              className: 'quest-mission-desc',
-              css: 'margin: 8px 0 14px 0;',
-              text: (qCfg && qCfg.completionDesc) || 'Congratulations! You have completed all guided missions in this scene.'
-            }),
-            this._h('div', { css: 'display: flex; justify-content: center; gap: 8px;' },
-              this._h('button', { type: 'button', className: 'quest-action-btn', id: 'quest-replay-btn', text: '🔄 Play Again' }),
-              this._h('button', { type: 'button', className: 'quest-action-btn', id: 'quest-finish-btn', css: 'background:#059669; border-color:#10b981;', text: '✓ Complete Quest' })
-            )
-          )
-        );
-        const replayBtn = document.getElementById('quest-replay-btn');
-        if (replayBtn) {
-          replayBtn.addEventListener('click', () => {
-            this.questState.missionIndex = 0;
-            this.questState.score = 0;
-            this.questState.completedMissions.clear();
-            this.questState.tourRunId = (this.questState.tourRunId || 1) + 1;
-            this.renderCurrentMission();
-          });
-        }
-        const finishBtn = document.getElementById('quest-finish-btn');
-        if (finishBtn) finishBtn.addEventListener('click', () => this.closeQuestMode());
-        return;
-      }
-
-      const m = missions[idx];
-
-      if (m.cam) {
-        this.engine.cameraOrbit.yawOffset = m.cam.yaw;
-        this.engine.cameraOrbit.pitchOffset = m.cam.pitch;
-        this.engine.cameraOrbit.distanceScale = m.cam.scale;
-        this.engine.seek(m.targetT);
-        this.engine.applyBindings(m.targetT);
-        this.update3DStatus();
-      }
-
-      // Pick question from pool and shuffle options dynamically for current tour run
-      if (!m.activeQuestion || m._lastTourRunId !== this.questState.tourRunId) {
-        const pool = m.questionPool || [{
-          question: m.question,
-          options: m.options,
-          correct: m.correct,
-          explanation: m.explanation
-        }];
-        const selected = pool[Math.floor(Math.random() * pool.length)];
-
-        // Shuffle options so correct answer is NOT always in the same position
-        const correctText = selected.options[selected.correct];
-        const shuffledOpts = [...selected.options];
-        for (let i = shuffledOpts.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [shuffledOpts[i], shuffledOpts[j]] = [shuffledOpts[j], shuffledOpts[i]];
-        }
-        const newCorrect = shuffledOpts.indexOf(correctText);
-
-        m.activeQuestion = {
-          id: m.id,
-          question: selected.question,
-          options: shuffledOpts,
-          correct: newCorrect,
-          explanation: selected.explanation
-        };
-        m._lastTourRunId = this.questState.tourRunId;
-      }
-
-      const q = m.activeQuestion;
-
-      this.elements.questBody.replaceChildren(
-        this._h('div', { className: 'quest-mission-title', text: m.title }),
-        this._h('div', { className: 'quest-mission-desc', text: m.desc }),
-        this._h('div', { css: 'font-weight: 700; font-size: 12px; color: #f8fafc; margin-bottom: 6px;', text: q.question }),
-        this._h('div', { className: 'quest-options-grid' },
-          ...q.options.map((opt, optIdx) =>
-            this._h('button', { type: 'button', className: 'quest-option-btn', attrs: { 'data-opt': optIdx }, text: opt })
-          )
-        )
-      );
-
-      const optionBtns = this.elements.questBody.querySelectorAll('.quest-option-btn');
-      optionBtns.forEach(btn => {
-        btn.addEventListener('click', (e) => {
-          const optIdx = parseInt(e.currentTarget.getAttribute('data-opt'), 10);
-          this.checkMissionAnswer(m, q, optIdx, optionBtns);
-        });
-      });
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.renderCurrentMission === 'function') _c.renderCurrentMission.call(this);
     }
 
     checkMissionAnswer(mission, activeQ, selectedIdx, optionBtns) {
-      const qCfg = this.getSceneQuestsConfig();
-      const missions = this.getSceneQuestMissions();
-      const isCorrect = selectedIdx === activeQ.correct;
-      optionBtns.forEach((btn, i) => {
-        btn.disabled = true;
-        if (i === activeQ.correct) {
-          btn.classList.add('correct');
-        } else if (i === selectedIdx) {
-          btn.classList.add('incorrect');
-        }
-      });
-
-      if (isCorrect) {
-        this.playChime(784, 'triangle');
-        if (!this.questState.completedMissions.has(mission.id)) {
-          this.questState.score += 100;
-          this.questState.completedMissions.add(mission.id);
-        }
-        this.showToast((qCfg && qCfg.correctToast) || '⭐ Correct! +100 Points');
-      } else {
-        this.playChime(220, 'sawtooth');
-        this.showToast((qCfg && qCfg.wrongToast) || 'Notice: Review the key insight below');
-      }
-
-      this.elements.questScore.textContent = `⭐ ${this.questState.completedMissions.size}/${missions.length} Stars • ${this.questState.score} Pts`;
-
-      const feedbackDiv = document.createElement('div');
-      feedbackDiv.style.marginTop = '10px';
-      feedbackDiv.style.padding = '8px 12px';
-      feedbackDiv.style.borderRadius = '8px';
-      feedbackDiv.style.background = isCorrect ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)';
-      feedbackDiv.style.border = isCorrect ? '1px solid #10b981' : '1px solid #ef4444';
-      feedbackDiv.style.fontSize = '11px';
-      feedbackDiv.style.lineHeight = '1.4';
-      feedbackDiv.replaceChildren(
-        this._h('div', {
-          css: `font-weight: 700; color: ${isCorrect ? '#34d399' : '#f87171'}; margin-bottom: 4px;`,
-          text: isCorrect ? '✓ Well answered!' : ((qCfg && qCfg.feedbackWrong) || 'Key Insight:')
-        }),
-        this._h('div', { css: 'color: #e2e8f0; margin-bottom: 8px;', text: activeQ.explanation }),
-        this._h('button', {
-          type: 'button',
-          className: 'quest-action-btn',
-          id: 'btn-next-mission',
-          text: this.questState.missionIndex + 1 < missions.length ? 'Next Mission ➜' : 'View Results 🏆'
-        })
-      );
-      this.elements.questBody.appendChild(feedbackDiv);
-
-      const nextBtn = document.getElementById('btn-next-mission');
-      if (nextBtn) {
-        nextBtn.addEventListener('click', () => {
-          this.questState.missionIndex++;
-          this.renderCurrentMission();
-        });
-      }
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.checkMissionAnswer === 'function') _c.checkMissionAnswer.call(this, mission, activeQ, selectedIdx, optionBtns);
     }
 
     closeQuestMode() {
-      if (this.elements.questDrawer) {
-        this.elements.questDrawer.classList.add('hidden');
-      }
-      this.questState.active = false;
+      const _c = _getPlayerUICheckpoints();
+      if (_c && typeof _c.closeQuestMode === 'function') _c.closeQuestMode.call(this);
     }
 
-    // --- Developer Inspector & Live Studio Methods ---
+    // --- Developer Inspector & Live Studio Methods (delegated to player-ui-studio.js) ---
+
+    bindStudioDOMEvents(stage) {
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.bindStudioDOMEvents === 'function') _s.bindStudioDOMEvents.call(this, stage);
+    }
 
     setDevMode(enabled) {
-      this.devModeActive = Boolean(enabled);
-      const stage = this.elements.playerStage || this.elements.stageSvg;
-      if (stage) {
-        stage.classList.toggle('dev-mode-active', this.devModeActive);
-      }
-      if (this.elements.btnDevMode) {
-        this.elements.btnDevMode.classList.toggle('active', this.devModeActive);
-      }
-      if (!this.devModeActive) {
-        if (this.elements.devHoverBox) this.elements.devHoverBox.classList.add('hidden');
-        if (this.elements.devHoverTooltip) this.elements.devHoverTooltip.classList.add('hidden');
-        if (this.elements.devSelectBox) this.elements.devSelectBox.classList.add('hidden');
-        this.closeInspectorDrawer();
-      }
-      this.showToast(this.devModeActive ? '🛠️ Inspector Mode: Click SVG node to inspect' : '🛠️ Inspector Mode: OFF');
-      this.engine.notifyParent({
-        type: 'DEV_MODE_CHANGED',
-        enabled: this.devModeActive
-      });
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.setDevMode === 'function') _s.setDevMode.call(this, enabled);
     }
 
     toggleDevMode() {
-      this.setDevMode(!this.devModeActive);
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.toggleDevMode === 'function') _s.toggleDevMode.call(this);
     }
 
     updateDevHover(targetNode, e) {
-      if (!this.elements.devHoverBox || !this.elements.devHoverTooltip || !this.elements.stageSvg) return;
-      try {
-        const svg = this.elements.stageSvg;
-        const bbox = targetNode.getBBox ? targetNode.getBBox() : targetNode.getBoundingClientRect();
-        
-        this.elements.devHoverBox.setAttribute('x', bbox.x);
-        this.elements.devHoverBox.setAttribute('y', bbox.y);
-        this.elements.devHoverBox.setAttribute('width', Math.max(4, bbox.width));
-        this.elements.devHoverBox.setAttribute('height', Math.max(4, bbox.height));
-        this.elements.devHoverBox.classList.remove('hidden');
-
-        const stageRect = svg.getBoundingClientRect();
-        const tooltipX = Math.min(stageRect.width - 220, Math.max(10, e.clientX - stageRect.left + 14));
-        const tooltipY = Math.min(stageRect.height - 40, Math.max(10, e.clientY - stageRect.top + 14));
-        this.elements.devHoverTooltip.style.left = `${tooltipX}px`;
-        this.elements.devHoverTooltip.style.top = `${tooltipY}px`;
-
-        const tag = targetNode.tagName.toLowerCase();
-        const idStr = targetNode.id ? `#${targetNode.id}` : '';
-        const fill = targetNode.getAttribute('fill') || targetNode.style.fill || '';
-        const stroke = targetNode.getAttribute('stroke') || targetNode.style.stroke || '';
-        this.elements.devHoverTooltip.replaceChildren(
-          this._h('strong', { text: `<${tag}${idStr}>` }),
-          ` [${Math.round(bbox.width)}×${Math.round(bbox.height)}]${fill ? ' • fill:' + fill : ''}${stroke ? ' • strk:' + stroke : ''}`
-        );
-        this.elements.devHoverTooltip.classList.remove('hidden');
-      } catch (_) {}
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.updateDevHover === 'function') _s.updateDevHover.call(this, targetNode, e);
     }
 
     selectElement(node) {
-      if (!node) return;
-      this.selectedElement = node;
-      this.selectedElementSelector = this.getSelectorForElement(node);
-
-      this.playChime(660, 'triangle');
-      this.refreshSelectBox();
-
-      const el = this.elements;
-      if (el.devInspectedTag) {
-        el.devInspectedTag.textContent = `<${node.tagName.toLowerCase()}${node.id ? ' #' + node.id : ''}>`;
-      }
-      if (el.devInspectedSel) {
-        el.devInspectedSel.textContent = this.selectedElementSelector;
-      }
-
-      let bbox = { x: 0, y: 0, width: 0, height: 0 };
-      try {
-        bbox = node.getBBox ? node.getBBox() : node.getBoundingClientRect();
-      } catch (_) {}
-
-      if (el.devPropXy) el.devPropXy.value = `x: ${Math.round(bbox.x)}, y: ${Math.round(bbox.y)}`;
-      if (el.devPropWh) el.devPropWh.value = `w: ${Math.round(bbox.width)}, h: ${Math.round(bbox.height)}`;
-
-      const curFill = node.getAttribute('fill') || node.style.fill || '#ffffff';
-      const curStroke = node.getAttribute('stroke') || node.style.stroke || 'none';
-      const curStrokeW = node.getAttribute('stroke-width') || node.style.strokeWidth || '1';
-      const curOpacity = node.getAttribute('opacity') || node.style.opacity || '1';
-      const curTransform = node.getAttribute('transform') || '';
-
-      if (el.devPropFill) el.devPropFill.value = curFill;
-      if (el.devColorFill) el.devColorFill.value = curFill.startsWith('#') && curFill.length === 7 ? curFill : '#38bdf8';
-
-      if (el.devPropStroke) el.devPropStroke.value = curStroke;
-      if (el.devColorStroke) el.devColorStroke.value = curStroke.startsWith('#') && curStroke.length === 7 ? curStroke : '#0284c7';
-
-      if (el.devPropStrokew) el.devPropStrokew.value = curStrokeW;
-      if (el.devRangeOpacity) el.devRangeOpacity.value = curOpacity;
-      if (el.devValOpacity) el.devValOpacity.textContent = parseFloat(curOpacity).toFixed(2);
-      if (el.devPropTransform) el.devPropTransform.value = curTransform;
-
-      // Active AST bindings query
-      if (el.devActiveBindings) {
-        const rawBindings = (this.engine.scene && this.engine.scene.rawBindings) || [];
-        const matched = rawBindings.filter(b => {
-          if (!b.target) return false;
-          if (node.id && b.target === `#${node.id}`) return true;
-          return b.target === this.selectedElementSelector;
-        });
-
-        if (matched.length) {
-          el.devActiveBindings.replaceChildren(
-            ...matched.map(m =>
-              this._h('div', { css: 'margin-bottom:4px; padding:3px 6px; background:#090d16; border-radius:4px; border:1px solid #1e293b;' },
-                this._h('span', { css: 'color:#38bdf8; font-weight:700;', text: `:${m.attr || m.type}` }),
-                ' ',
-                this._h('span', { css: 'color:#94a3b8; font-size:10px;', text: m.expr || '(3D projection)' })
-              )
-            )
-          );
-        } else {
-          el.devActiveBindings.replaceChildren(
-            this._h('span', { css: 'color:#64748b;', text: 'No mathematical AST bindings attached.' })
-          );
-        }
-      }
-
-      if (el.devInspectorDrawer) {
-        el.devInspectorDrawer.classList.remove('hidden');
-      }
-
-      this.engine.notifyParent({
-        type: 'DEV_ELEMENT_SELECTED',
-        selector: this.selectedElementSelector,
-        tag: node.tagName.toLowerCase(),
-        id: node.id || '',
-        bbox: { x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height },
-        attributes: {
-          fill: curFill,
-          stroke: curStroke,
-          strokeWidth: curStrokeW,
-          opacity: curOpacity,
-          transform: curTransform
-        }
-      });
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.selectElement === 'function') _s.selectElement.call(this, node);
     }
 
     refreshSelectBox() {
-      if (!this.selectedElement || !this.elements.devSelectBox) return;
-      try {
-        const bbox = this.selectedElement.getBBox ? this.selectedElement.getBBox() : this.selectedElement.getBoundingClientRect();
-        this.elements.devSelectBox.setAttribute('x', bbox.x);
-        this.elements.devSelectBox.setAttribute('y', bbox.y);
-        this.elements.devSelectBox.setAttribute('width', Math.max(4, bbox.width));
-        this.elements.devSelectBox.setAttribute('height', Math.max(4, bbox.height));
-        this.elements.devSelectBox.classList.remove('hidden');
-      } catch (_) {}
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.refreshSelectBox === 'function') _s.refreshSelectBox.call(this);
     }
 
     closeInspectorDrawer() {
-      if (this.elements.devInspectorDrawer) {
-        this.elements.devInspectorDrawer.classList.add('hidden');
-      }
-      if (this.elements.devSelectBox) {
-        this.elements.devSelectBox.classList.add('hidden');
-      }
-      this.selectedElement = null;
-      this.selectedElementSelector = '';
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.closeInspectorDrawer === 'function') _s.closeInspectorDrawer.call(this);
     }
 
     getSelectorForElement(node) {
-      if (node.id) return `#${node.id}`;
-      let path = [];
-      let cur = node;
-      while (cur && cur.id !== 'scene-root' && cur.tagName.toLowerCase() !== 'svg') {
-        let tag = cur.tagName.toLowerCase();
-        if (cur.id) {
-          path.unshift(`#${cur.id}`);
-          break;
-        } else {
-          let siblingIndex = 1;
-          let sib = cur.previousElementSibling;
-          while (sib) {
-            if (sib.tagName === cur.tagName) siblingIndex++;
-            sib = sib.previousElementSibling;
-          }
-          path.unshift(`${tag}:nth-of-type(${siblingIndex})`);
-        }
-        cur = cur.parentElement;
-      }
-      return path.length ? path.join(' > ') : node.tagName.toLowerCase();
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.getSelectorForElement === 'function' ? _s.getSelectorForElement.call(this, node) : '';
     }
 
     openDevStudio(tab = 'ast') {
-      const el = this.elements;
-      if (!el.devStudioDrawer) return;
-
-      el.devStudioDrawer.classList.remove('hidden');
-      if (el.btnDevStudio) el.btnDevStudio.classList.add('active');
-
-      if (el.devEditorSvg) {
-        el.devEditorSvg.value = (typeof this.engine.getCleanCompanionSvg === 'function')
-          ? this.engine.getCleanCompanionSvg()
-          : this.engine.getStageSvgSnapshot();
-      }
-      if (el.devEditorAst) {
-        el.devEditorAst.value = this.engine.getCurrentAstSource();
-      }
-      if (el.devEditorSlideScript && global.ASTSlideScriptCompiler && this.engine.scene) {
-        el.devEditorSlideScript.value = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
-      }
-
-      this.renderStarterTemplates();
-      this.switchStudioTab(tab);
-      this.refreshAstSvgMatcher();
-      this.showToast('💻 Live SVG & AST Code Studio Ready');
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.openDevStudio === 'function') _s.openDevStudio.call(this, tab);
     }
 
     closeDevStudio() {
-      if (this.elements.devStudioDrawer) {
-        this.elements.devStudioDrawer.classList.add('hidden');
-      }
-      if (this.elements.btnDevStudio) {
-        this.elements.btnDevStudio.classList.remove('active');
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.closeDevStudio === 'function') _s.closeDevStudio.call(this);
     }
 
     toggleDevStudio() {
-      if (this.elements.devStudioDrawer && !this.elements.devStudioDrawer.classList.contains('hidden')) {
-        this.closeDevStudio();
-      } else {
-        this.openDevStudio('ast');
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.toggleDevStudio === 'function') _s.toggleDevStudio.call(this);
     }
 
     slugifyCartridgeId(raw) {
-      return String(raw || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9_-]+/g, '-')
-        .replace(/^-+|-+$/g, '')
-        .slice(0, 48) || 'custom-remix';
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.slugifyCartridgeId === 'function' ? _s.slugifyCartridgeId.call(this, raw) : 'custom-remix';
     }
 
     extractSvgElementsInfo(svgText) {
-      const items = [];
-      const seen = new Set();
-      const skipIds = new Set(['stage-svg', 'scene-root', 'dev-overlay-root', 'dev-hover-box', 'dev-select-box', 'ast-master-defs', 'slidescript-shapes']);
-      if (!svgText || typeof svgText !== 'string') return items;
-
-      const addItem = (id, tag) => {
-        if (!id || seen.has(id) || skipIds.has(id)) return;
-        seen.add(id);
-        items.push({ id, tag: (tag || 'g').toLowerCase() });
-      };
-
-      const rx = /<([a-z0-9:-]+)[^>]*\bid=["']([^"']+)["']/gi;
-      let m;
-      while ((m = rx.exec(svgText)) !== null) {
-        addItem(m[2], m[1]);
-      }
-      return items;
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.extractSvgElementsInfo === 'function' ? _s.extractSvgElementsInfo.call(this, svgText) : [];
     }
 
     extractAstTargetsInfo(astText) {
-      const targets = [];
-      const seen = new Set();
-      if (!astText || typeof astText !== 'string') return targets;
-      const rx = /:(?:target|selector|label)\s+["']#([a-z0-9_-]+)["']/gi;
-      let m;
-      while ((m = rx.exec(astText)) !== null) {
-        const id = m[1];
-        if (!id || seen.has(id)) continue;
-        seen.add(id);
-        targets.push(id);
-      }
-      return targets;
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.extractAstTargetsInfo === 'function' ? _s.extractAstTargetsInfo.call(this, astText) : [];
     }
 
     findClosestSvgId(targetId, svgItems) {
-      if (!targetId || !svgItems || svgItems.length === 0) return null;
-      const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-      const targetNorm = norm(targetId);
-      let best = null;
-      let bestScore = -1;
-
-      for (const item of svgItems) {
-        const candNorm = norm(item.id);
-        if (!candNorm) continue;
-        if (candNorm === targetNorm) return item.id;
-        let score = 0;
-        if (candNorm.includes(targetNorm) || targetNorm.includes(candNorm)) {
-          score += 5;
-        }
-        const tTokens = String(targetId).toLowerCase().split(/[-_]+/).filter(Boolean);
-        const cTokens = item.id.toLowerCase().split(/[-_]+/).filter(Boolean);
-        for (const tok of tTokens) {
-          if (cTokens.includes(tok)) score += 3;
-        }
-        if (score > bestScore) {
-          bestScore = score;
-          best = item.id;
-        }
-      }
-      return bestScore >= 3 ? best : null;
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.findClosestSvgId === 'function' ? _s.findClosestSvgId.call(this, targetId, svgItems) : null;
     }
 
     refreshAstSvgMatcher() {
-      const el = this.elements;
-      if (!el.matcherBody || !el.matcherSummaryBadge) return;
-
-      const svgText = (el.devEditorSvg && el.devEditorSvg.value) ||
-        (this.engine && typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
-      const astText = (el.devEditorAst && el.devEditorAst.value) ||
-        (this.engine && typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
-
-      const svgItems = this.extractSvgElementsInfo(svgText);
-      const svgIdSet = new Set(svgItems.map((i) => i.id));
-      const astTargets = this.extractAstTargetsInfo(astText);
-      const astTargetSet = new Set(astTargets);
-
-      const matchedCount = astTargets.filter((id) => svgIdSet.has(id)).length;
-      const missingTargets = astTargets.filter((id) => !svgIdSet.has(id));
-
-      if (astTargets.length === 0) {
-        el.matcherSummaryBadge.replaceChildren(
-          this._h('span', { css: 'color:#94a3b8;', text: `${svgItems.length} SVG IDs ready · click one to bind` })
-        );
-      } else if (missingTargets.length === 0) {
-        el.matcherSummaryBadge.replaceChildren(
-          this._h('span', { css: 'color:#4ade80; font-weight:700;', text: `✓ ${matchedCount}/${astTargets.length} targets matched` })
-        );
-      } else {
-        el.matcherSummaryBadge.replaceChildren(
-          this._h('span', { css: 'color:#fbbf24; font-weight:700;', text: `⚠ ${missingTargets.length} missing in SVG (${matchedCount}/${astTargets.length} OK)` })
-        );
-      }
-
-      if (el.btnMatcherAutofixAll) {
-        el.btnMatcherAutofixAll.style.display = missingTargets.length > 0 ? 'inline-flex' : 'none';
-      }
-
-      const targetsSection = this._h('div', null,
-        this._h('div', { className: 'matcher-section-label', text: `AST Targets (${astTargets.length})` })
-      );
-      if (astTargets.length === 0) {
-        targetsSection.appendChild(
-          this._h('div', { css: 'color:#64748b; font-size:10px; line-height:1.35;' },
-            'No ',
-            this._h('code', { text: ':target "#id"' }),
-            ' rules yet. Click any SVG shape below to animate it.'
-          )
-        );
-      } else {
-        astTargets.forEach((id) => {
-          const isOk = svgIdSet.has(id);
-          const suggestion = isOk ? null : this.findClosestSvgId(id, svgItems);
-          const actionRow = this._h('div', { css: 'display:flex; gap:4px; flex-wrap:wrap;' });
-          if (isOk) {
-            actionRow.appendChild(this._h('button', {
-              type: 'button', className: 'dev-btn matcher-hl-btn', attrs: { 'data-id': id },
-              css: 'font-size:10px; padding:2px 6px;', text: '👁 Highlight'
-            }));
-          } else {
-            if (suggestion) {
-              actionRow.appendChild(this._h('button', {
-                type: 'button', className: 'dev-btn primary matcher-remap-btn',
-                attrs: { 'data-old': id, 'data-new': suggestion },
-                css: 'font-size:10px; padding:2px 6px;', text: `🔗 Match #${suggestion}`
-              }));
-            }
-            actionRow.appendChild(this._h('button', {
-              type: 'button', className: 'dev-btn matcher-create-btn', attrs: { 'data-id': id },
-              css: 'font-size:10px; padding:2px 6px;', text: '➕ Create Shape'
-            }));
-          }
-          targetsSection.appendChild(
-            this._h('div', { className: `matcher-row ${isOk ? 'matched' : 'missing'}` },
-              this._h('div', { css: 'display:flex; justify-content:space-between; align-items:center; gap:6px;' },
-                this._h('code', { css: `color:${isOk ? '#86efac' : '#fde68a'}; font-weight:700;`, text: `#${id}` }),
-                this._h('span', { css: `font-size:10px; font-weight:700; color:${isOk ? '#4ade80' : '#fbbf24'};`, text: isOk ? '✓ SVG' : '⚠ Missing' })
-              ),
-              actionRow
-            )
-          );
-        });
-      }
-
-      const chipGrid = this._h('div', { className: 'matcher-chip-grid' });
-      if (svgItems.length === 0) {
-        chipGrid.appendChild(
-          this._h('div', { css: 'color:#64748b; font-size:10px;' },
-            'No ',
-            this._h('code', { text: 'id="..."' }),
-            ' nodes detected in SVG yet.'
-          )
-        );
-      } else {
-        svgItems.slice(0, 48).forEach((item) => {
-          const isBound = astTargetSet.has(item.id);
-          chipGrid.appendChild(
-            this._h('button', {
-              type: 'button',
-              className: `matcher-svg-chip ${isBound ? 'bound' : ''}`,
-              attrs: { 'data-svg-id': item.id },
-              title: `<${item.tag} id="${item.id}"> — Click to add AST binding`
-            },
-              this._h('span', { text: isBound ? '✓' : '＋' }),
-              this._h('span', { text: `#${item.id}` })
-            )
-          );
-        });
-      }
-
-      el.matcherBody.replaceChildren(
-        targetsSection,
-        this._h('div', null,
-          this._h('div', { className: 'matcher-section-label', text: `SVG Shape IDs (${svgItems.length}) — Click to Bind` }),
-          chipGrid
-        )
-      );
-
-      el.matcherBody.querySelectorAll('.matcher-hl-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          this.highlightSvgIdOnStage(btn.getAttribute('data-id'));
-        });
-      });
-      el.matcherBody.querySelectorAll('.matcher-remap-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          this.rewriteAstTargetId(btn.getAttribute('data-old'), btn.getAttribute('data-new'));
-        });
-      });
-      el.matcherBody.querySelectorAll('.matcher-create-btn').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          this.injectMissingSvgShape(btn.getAttribute('data-id'));
-        });
-      });
-      el.matcherBody.querySelectorAll('.matcher-svg-chip').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const id = btn.getAttribute('data-svg-id');
-          this.highlightSvgIdOnStage(id);
-          this.insertBindingForSvgId(id);
-        });
-      });
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.refreshAstSvgMatcher === 'function') _s.refreshAstSvgMatcher.call(this);
     }
 
     escapeMatcherHtml(raw) {
-      return String(raw || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.escapeMatcherHtml === 'function' ? _s.escapeMatcherHtml.call(this, raw) : String(raw || '');
     }
 
     highlightSvgIdOnStage(svgId) {
-      if (!svgId || typeof document === 'undefined') return;
-      const target = document.getElementById(svgId);
-      if (!target) return;
-      if (typeof this.selectElement === 'function' && this.devModeActive) {
-        this.selectElement(target);
-        return;
-      }
-      if (this.elements.devHoverBox && target.getBBox) {
-        try {
-          const bb = target.getBBox();
-          this.elements.devHoverBox.setAttribute('x', bb.x);
-          this.elements.devHoverBox.setAttribute('y', bb.y);
-          this.elements.devHoverBox.setAttribute('width', Math.max(6, bb.width));
-          this.elements.devHoverBox.setAttribute('height', Math.max(6, bb.height));
-          this.elements.devHoverBox.classList.remove('hidden');
-          setTimeout(() => {
-            if (!this.devModeActive && this.elements.devHoverBox) {
-              this.elements.devHoverBox.classList.add('hidden');
-            }
-          }, 1400);
-        } catch (_) {}
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.highlightSvgIdOnStage === 'function') _s.highlightSvgIdOnStage.call(this, svgId);
     }
 
     insertBindingForSvgId(svgId) {
-      const el = this.elements;
-      if (!svgId || !el.devEditorAst) return;
-      let astText = el.devEditorAst.value || (this.engine ? this.engine.getCurrentAstSource() : '');
-      const rule = `(:target "#${svgId}" :attr "opacity" :expr "0.45 + 0.55 * Math.abs(Math.sin(t * Math.PI))")`;
-
-      if (astText.includes(`:target "#${svgId}"`)) {
-        this.switchStudioTab('ast');
-        const idx = astText.indexOf(`#${svgId}`);
-        el.devEditorAst.focus();
-        if (idx >= 0 && typeof el.devEditorAst.setSelectionRange === 'function') {
-          el.devEditorAst.setSelectionRange(idx, idx + svgId.length + 1);
-        }
-        this.showToast(`🔍 Found #${svgId} in AST`);
-        return;
-      }
-
-      if (/\(:bindings\s*\(/i.test(astText)) {
-        astText = astText.replace(/(\(:bindings\s*\()/i, `$1\n    ${rule}`);
-      } else {
-        const lastParen = astText.lastIndexOf(')');
-        if (lastParen > 0) {
-          astText = `${astText.slice(0, lastParen)}  (:bindings (\n    ${rule}\n  ))\n)`;
-        } else {
-          astText += `\n(:bindings (\n  ${rule}\n))`;
-        }
-      }
-
-      el.devEditorAst.value = astText;
-      this.engine.hotReloadAst(astText);
-      this.switchStudioTab('ast');
-      this.refreshAstSvgMatcher();
-      this.playChime(740, 'triangle');
-      this.showToast(`🔗 Bound #${svgId} in .ast!`);
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.insertBindingForSvgId === 'function') _s.insertBindingForSvgId.call(this, svgId);
     }
 
     rewriteAstTargetId(oldId, newId) {
-      const el = this.elements;
-      if (!oldId || !newId || !el.devEditorAst) return;
-      const astText = el.devEditorAst.value || '';
-      const escaped = oldId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const nextAst = astText.replace(new RegExp(`#${escaped}(?=["'\\s)])`, 'g'), `#${newId}`);
-      el.devEditorAst.value = nextAst;
-      this.engine.hotReloadAst(nextAst);
-      this.refreshAstSvgMatcher();
-      this.playChime(784, 'triangle');
-      this.showToast(`🔗 Remapped #${oldId} → #${newId}`);
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.rewriteAstTargetId === 'function') _s.rewriteAstTargetId.call(this, oldId, newId);
     }
 
     injectMissingSvgShape(missingId) {
-      const el = this.elements;
-      if (!missingId || !el.devEditorSvg) return;
-      let svgText = el.devEditorSvg.value || (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
-      if (!svgText.includes('</svg>')) {
-        svgText = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n</svg>`;
-      }
-      const shapeXml = `  <g id="${missingId}">\n    <circle cx="400" cy="240" r="34" fill="#38bdf8" fill-opacity="0.28" stroke="#38bdf8" stroke-width="3" />\n    <text x="400" y="245" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">${missingId}</text>\n  </g>\n`;
-      svgText = svgText.replace(/<\/svg>/i, `${shapeXml}</svg>`);
-      el.devEditorSvg.value = svgText;
-      this.engine.hotReloadSvg(svgText);
-      this.refreshAstSvgMatcher();
-      this.playChime(659.25, 'triangle');
-      this.showToast(`➕ Created <g id="${missingId}"> in SVG`);
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.injectMissingSvgShape === 'function') _s.injectMissingSvgShape.call(this, missingId);
     }
 
     autoFixAllAstSvgMatches() {
-      const el = this.elements;
-      const svgText = (el.devEditorSvg && el.devEditorSvg.value) || '';
-      const astText = (el.devEditorAst && el.devEditorAst.value) || '';
-      const svgItems = this.extractSvgElementsInfo(svgText);
-      const svgIdSet = new Set(svgItems.map((i) => i.id));
-      const missing = this.extractAstTargetsInfo(astText).filter((id) => !svgIdSet.has(id));
-      let fixed = 0;
-
-      for (const mId of missing) {
-        const currentSvgItems = this.extractSvgElementsInfo(el.devEditorSvg ? el.devEditorSvg.value : '');
-        const suggestion = this.findClosestSvgId(mId, currentSvgItems);
-        if (suggestion) {
-          this.rewriteAstTargetId(mId, suggestion);
-        } else {
-          this.injectMissingSvgShape(mId);
-        }
-        fixed++;
-      }
-      if (fixed > 0) {
-        this.showToast(`✨ Auto-matched ${fixed} .ast ↔ .svg target(s)!`);
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.autoFixAllAstSvgMatches === 'function') _s.autoFixAllAstSvgMatches.call(this);
     }
 
     requestNanoRemix(promptOverride) {
-      const el = this.elements;
-      const rawPrompt = (typeof promptOverride === 'string' && promptOverride.trim())
-        ? promptOverride.trim()
-        : ((el.studioNanoInput && el.studioNanoInput.value.trim()) || '');
-
-      if (!rawPrompt) {
-        this.showToast('💬 Type what you want Nano to remix (or click a quick chip)');
-        el.studioNanoInput?.focus();
-        return;
-      }
-
-      const svgText = (el.devEditorSvg && el.devEditorSvg.value) ||
-        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
-      const astText = (el.devEditorAst && el.devEditorAst.value) ||
-        (typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
-
-      const svgItems = this.extractSvgElementsInfo(svgText);
-      const svgIdSet = new Set(svgItems.map((i) => i.id));
-      const astTargets = this.extractAstTargetsInfo(astText);
-      const missingTargets = astTargets.filter((id) => !svgIdSet.has(id));
-
-      const requestId = `nano_remix_${Date.now()}`;
-      this._activeNanoRemixRequestId = requestId;
-
-      const ctx = {
-        requestId,
-        sceneId: (this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'custom-remix',
-        sceneTitle: (this.engine.scene && this.engine.scene.title) || 'Custom Remix',
-        stage: (this.engine.scene && this.engine.scene.stage) || 'STEM',
-        activeTab: this.activeStudioTab || 'ast',
-        selectedSvgId: (this.selectedElement && this.selectedElement.id) || null,
-        svgIds: svgItems.slice(0, 40),
-        astTargets,
-        missingTargets,
-        currentAst: astText,
-        currentSlideScript: (el.devEditorSlideScript && el.devEditorSlideScript.value) || '',
-        currentVars: (this.engine && this.engine.vars) ? { ...this.engine.vars } : {},
-        prompt: rawPrompt,
-      };
-
-      if (el.btnStudioNanoAsk) {
-        el.btnStudioNanoAsk.disabled = true;
-        el.btnStudioNanoAsk.textContent = '⏳ Thinking…';
-      }
-      if (el.studioNanoPreview) {
-        el.studioNanoPreview.classList.remove('hidden');
-      }
-      if (el.studioNanoEnginePill) el.studioNanoEnginePill.textContent = 'NANO';
-      if (el.studioNanoExplanation) el.studioNanoExplanation.textContent = 'Inspecting your SVG IDs and AST S-Expression locally…';
-      if (el.studioNanoCheckBadge) el.studioNanoCheckBadge.textContent = '';
-      if (el.btnStudioNanoApply) el.btnStudioNanoApply.style.display = 'none';
-
-      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
-      if (isEmbedded) {
-        this.engine.notifyParent({ type: 'NANO_REMIX_REQUEST', context: ctx });
-        clearTimeout(this._nanoRemixTimeout);
-        this._nanoRemixTimeout = setTimeout(() => {
-          if (this._activeNanoRemixRequestId === requestId) {
-            this.handleNanoRemixResult(this.runStandaloneDeterministicRemix(ctx));
-          }
-        }, 19000);
-      } else {
-        this.runStandaloneNanoRemix(ctx).then((proposal) => {
-          this.handleNanoRemixResult(proposal);
-        });
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.requestNanoRemix === 'function') _s.requestNanoRemix.call(this, promptOverride);
     }
 
-    async runStandaloneNanoRemix(ctx) {
-      try {
-        const lm = (typeof window !== 'undefined' && window.LanguageModel) ||
-          (typeof globalThis !== 'undefined' && globalThis.LanguageModel);
-        if (lm && typeof lm.create === 'function') {
-          const session = await lm.create({
-            initialPrompts: [{
-              role: 'system',
-              content: `You are Gemini Nano remixing an AST + SVG school simulation. Valid SVG IDs: ${ctx.svgIds.map((s) => '#' + s.id).join(', ')}. Reply with JSON {"explanation":"...","mode":"patch_ast","nextAst":"(:scene ...)"}`,
-            }],
-          });
-          const raw = await session.prompt(`Request: ${ctx.prompt}\nAST:\n${(ctx.currentAst || '').slice(0, 3200)}`);
-          session.destroy?.();
-          const m = String(raw || '').match(/\{[\s\S]*\}/);
-          if (m) {
-            const parsed = JSON.parse(m[0]);
-            if (parsed.nextAst && parsed.nextAst.includes('(:scene')) {
-              return {
-                requestId: ctx.requestId,
-                mode: 'patch_ast',
-                nextAst: parsed.nextAst,
-                explanation: parsed.explanation || 'Gemini Nano proposed an AST remix.',
-                engineUsed: 'chrome-builtin-nano',
-              };
-            }
-          }
-        }
-      } catch (_) {}
-      return this.runStandaloneDeterministicRemix(ctx);
+    runStandaloneNanoRemix(ctx) {
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.runStandaloneNanoRemix === 'function' ? _s.runStandaloneNanoRemix.call(this, ctx) : Promise.resolve(null);
     }
 
     runStandaloneDeterministicRemix(ctx) {
-      const targetId = ctx.selectedSvgId || (ctx.svgIds[0] && ctx.svgIds[0].id) || null;
-      const baseAst = ctx.currentAst || `(:scene :id "${ctx.sceneId}" :title "${ctx.sceneTitle}" :stage "${ctx.stage}" :duration 10.0 (:bindings ()))`;
-      if (/mismatch|fix|broken|missing/i.test(ctx.prompt) && ctx.missingTargets.length > 0) {
-        const firstMissing = ctx.missingTargets[0];
-        const shapeXml = `  <g id="${firstMissing}">\n    <circle cx="400" cy="240" r="32" fill="#38bdf8" fill-opacity="0.3" stroke="#38bdf8" stroke-width="3" />\n    <text x="400" y="245" fill="#f8fafc" font-size="12" font-weight="700" text-anchor="middle">${firstMissing}</text>\n  </g>\n`;
-        return {
-          requestId: ctx.requestId,
-          mode: 'patch_svg',
-          appendSvgXml: shapeXml,
-          explanation: `Created missing SVG shape <g id="${firstMissing}"> to match your AST target.`,
-          engineUsed: 'deterministic-remix',
-        };
-      }
-      if (targetId) {
-        const rule = `(:target "#${targetId}" :attr "transform" :expr "'rotate(' + (t * 360).toFixed(1) + ' 400 240)'")`;
-        const nextAst = /\(:bindings\s*\(/i.test(baseAst)
-          ? baseAst.replace(/(\(:bindings\s*\()/i, `$1\n    ${rule}`)
-          : baseAst.replace(/\)\s*$/, `\n  (:bindings (\n    ${rule}\n  ))\n)`);
-        return {
-          requestId: ctx.requestId,
-          mode: 'patch_ast',
-          nextAst,
-          explanation: `Added a smooth live animation binding to #${targetId}.`,
-          engineUsed: 'deterministic-remix',
-        };
-      }
-      return {
-        requestId: ctx.requestId,
-        mode: 'advice_only',
-        explanation: 'Add an id="..." attribute to an SVG shape first, then ask Nano to animate or bind a slider to it.',
-        engineUsed: 'deterministic-remix',
-      };
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.runStandaloneDeterministicRemix === 'function' ? _s.runStandaloneDeterministicRemix.call(this, ctx) : null;
     }
 
     handleNanoRemixResult(proposal) {
-      const el = this.elements;
-      if (proposal.requestId && this._activeNanoRemixRequestId && proposal.requestId !== this._activeNanoRemixRequestId) {
-        return;
-      }
-      clearTimeout(this._nanoRemixTimeout);
-      this._activeNanoRemixRequestId = null;
-
-      if (el.btnStudioNanoAsk) {
-        el.btnStudioNanoAsk.disabled = false;
-        el.btnStudioNanoAsk.textContent = '🤖 Ask Nano';
-      }
-      if (!el.studioNanoPreview) return;
-
-      el.studioNanoPreview.classList.remove('hidden');
-      this._pendingNanoProposal = proposal;
-
-      const engineLabel = proposal.engineUsed === 'chrome-builtin-nano'
-        ? 'GEMINI NANO'
-        : proposal.engineUsed === 'webgpu-webllm'
-        ? 'WEBGPU LLM'
-        : 'OFFLINE CO-PILOT';
-      if (el.studioNanoEnginePill) el.studioNanoEnginePill.textContent = engineLabel;
-      if (el.studioNanoExplanation) el.studioNanoExplanation.textContent = proposal.explanation || 'Remix ready.';
-
-      const hasPatch = Boolean(proposal.nextAst || proposal.appendSvgXml);
-      if (el.studioNanoCheckBadge) {
-        if (hasPatch && typeof proposal.totalTargets === 'number') {
-          const missingLen = (proposal.missingAfterPatch || []).length;
-          el.studioNanoCheckBadge.style.color = missingLen === 0 ? '#4ade80' : '#fbbf24';
-          el.studioNanoCheckBadge.textContent = missingLen === 0
-            ? `✓ ${proposal.matchedCount}/${proposal.totalTargets} SVG targets verified`
-            : `⚠ ${missingLen} ID(s) can be auto-matched after apply`;
-        } else {
-          el.studioNanoCheckBadge.textContent = '';
-        }
-      }
-
-      if (el.btnStudioNanoApply) {
-        el.btnStudioNanoApply.style.display = hasPatch ? 'inline-flex' : 'none';
-      }
-      this.playChime(hasPatch ? 740 : 587, 'triangle');
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.handleNanoRemixResult === 'function') _s.handleNanoRemixResult.call(this, proposal);
     }
 
     applyPendingNanoProposal() {
-      const el = this.elements;
-      const proposal = this._pendingNanoProposal;
-      if (!proposal) return;
-
-      const currentSvg = (el.devEditorSvg && el.devEditorSvg.value) ||
-        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : '');
-      const currentAst = (el.devEditorAst && el.devEditorAst.value) ||
-        (typeof this.engine.getCurrentAstSource === 'function' ? this.engine.getCurrentAstSource() : '');
-
-      this._lastRemixBackupBeforeNano = {
-        svg: currentSvg,
-        ast: currentAst,
-      };
-      if (el.btnStudioNanoUndo) {
-        el.btnStudioNanoUndo.classList.remove('hidden');
-      }
-
-      let nextSvg = currentSvg;
-      if (proposal.appendSvgXml) {
-        if (!nextSvg.includes('</svg>')) {
-          nextSvg = `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg">\n</svg>`;
-        }
-        nextSvg = nextSvg.replace(/<\/svg>/i, `${proposal.appendSvgXml}\n</svg>`);
-        if (el.devEditorSvg) el.devEditorSvg.value = nextSvg;
-        this.engine.hotReloadSvg(nextSvg);
-      }
-
-      if (proposal.nextAst) {
-        if (el.devEditorAst) el.devEditorAst.value = proposal.nextAst;
-        this.engine.hotReloadAst(proposal.nextAst);
-        if (el.devEditorSlideScript && global.ASTSlideScriptCompiler && this.engine.scene) {
-          el.devEditorSlideScript.value = global.ASTSlideScriptCompiler.toSlideScript(this.engine.scene);
-        }
-        this.switchStudioTab('ast');
-      } else if (proposal.appendSvgXml) {
-        this.switchStudioTab('svg');
-      }
-
-      this.refreshAstSvgMatcher();
-      if (el.studioNanoPreview) el.studioNanoPreview.classList.add('hidden');
-      this._pendingNanoProposal = null;
-      this.playChime(880, 'sine');
-      this.showToast('✨ Nano remix applied & running live!');
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.applyPendingNanoProposal === 'function') _s.applyPendingNanoProposal.call(this);
     }
 
     undoLastNanoEdit() {
-      const el = this.elements;
-      const backup = this._lastRemixBackupBeforeNano;
-      if (!backup) return;
-
-      if (el.devEditorSvg && backup.svg) {
-        el.devEditorSvg.value = backup.svg;
-        this.engine.hotReloadSvg(backup.svg);
-      }
-      if (el.devEditorAst && backup.ast) {
-        el.devEditorAst.value = backup.ast;
-        this.engine.hotReloadAst(backup.ast);
-      }
-      this._lastRemixBackupBeforeNano = null;
-      if (el.btnStudioNanoUndo) {
-        el.btnStudioNanoUndo.classList.add('hidden');
-      }
-      this.refreshAstSvgMatcher();
-      this.playChime(523.25, 'triangle');
-      this.showToast('↩ Reverted last Nano remix edit');
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.undoLastNanoEdit === 'function') _s.undoLastNanoEdit.call(this);
     }
 
     syncSceneIdentityInAst(astText, newId, newTitle) {
-      let out = String(astText || '').trim();
-      const safeTitle = String(newTitle || newId).replace(/"/g, "'");
-      if (!out) {
-        return `(:scene :id "${newId}" :title "${safeTitle}" :stage "CUSTOM REMIX" :duration 10.0 (:bindings ()))`;
-      }
-      if (/:id\s+"[^"]*"/i.test(out)) {
-        out = out.replace(/:id\s+"[^"]*"/i, `:id "${newId}"`);
-      } else {
-        out = out.replace(/\(:scene/i, `(:scene :id "${newId}"`);
-      }
-      if (/:title\s+"[^"]*"/i.test(out)) {
-        out = out.replace(/:title\s+"[^"]*"/i, `:title "${safeTitle}"`);
-      } else {
-        out = out.replace(/:id\s+"[^"]*"/i, `:id "${newId}" :title "${safeTitle}"`);
-      }
-      return out;
+      const _s = _getPlayerUIStudio();
+      return _s && typeof _s.syncSceneIdentityInAst === 'function' ? _s.syncSceneIdentityInAst.call(this, astText, newId, newTitle) : String(astText || '');
     }
 
     openSaveAsBar() {
-      const el = this.elements;
-      if (!el.studioSaveAsBar) return;
-      const baseId = this.slugifyCartridgeId((this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'lesson');
-      const baseTitle = (this.engine.scene && this.engine.scene.title) || baseId;
-      const suggestedTitle = /\(Remix\)$/i.test(baseTitle) ? baseTitle : `${baseTitle} (Remix)`;
-      const suggestedId = /-remix$/i.test(baseId) ? `${baseId}-2` : `${baseId}-remix`;
-
-      if (el.remixTitleInput) el.remixTitleInput.value = suggestedTitle;
-      if (el.remixIdInput) {
-        delete el.remixIdInput.dataset.manualEdit;
-        el.remixIdInput.value = suggestedId;
-      }
-      el.studioSaveAsBar.classList.remove('hidden');
-      this.updateRemixPreviewLabel();
-      el.remixTitleInput?.focus();
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.openSaveAsBar === 'function') _s.openSaveAsBar.call(this);
     }
 
     updateRemixPreviewLabel() {
-      const el = this.elements;
-      if (!el.remixFilePreview || !el.remixIdInput) return;
-      const cleanId = this.slugifyCartridgeId(el.remixIdInput.value || 'my-remix');
-      el.remixFilePreview.textContent = `→ ${cleanId}.ast + ${cleanId}.svg`;
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.updateRemixPreviewLabel === 'function') _s.updateRemixPreviewLabel.call(this);
     }
 
     downloadTextFile(filename, content, mimeType) {
-      const blob = new Blob([content], { type: mimeType });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
-        a.remove();
-      }, 450);
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.downloadTextFile === 'function') _s.downloadTextFile.call(this, filename, content, mimeType);
     }
 
     executeSaveRemixAs(exportMode = 'vault') {
-      const el = this.elements;
-      const rawTitle = (el.remixTitleInput && el.remixTitleInput.value.trim()) || 'My Custom Remix';
-      const newId = this.slugifyCartridgeId((el.remixIdInput && el.remixIdInput.value.trim()) || rawTitle);
-
-      let svgMarkup = (el.devEditorSvg && el.devEditorSvg.value.trim()) ||
-        (typeof this.engine.getCleanCompanionSvg === 'function' ? this.engine.getCleanCompanionSvg() : this.engine.getStageSvgSnapshot());
-      let astSource = (el.devEditorAst && el.devEditorAst.value.trim()) || this.engine.getCurrentAstSource();
-
-      astSource = this.syncSceneIdentityInAst(astSource, newId, rawTitle);
-      if (el.devEditorAst) el.devEditorAst.value = astSource;
-      if (el.devEditorSvg) el.devEditorSvg.value = svgMarkup;
-
-      const cartridge = {
-        id: newId,
-        title: rawTitle,
-        stage: (this.engine.scene && this.engine.scene.stage) || 'CUSTOM REMIX',
-        type: (this.engine.scene && this.engine.scene.type) || 'Sim',
-        category: 'Student Remixes',
-        desc: `Student remix forked from ${(this.engine.scene && this.engine.scene.id) || this.engine.activePresetId || 'lesson'}.`,
-        icon: '🧪',
-        source: 'user',
-        svgMarkup,
-        astSource,
-        updatedAt: Date.now(),
-      };
-
-      if (window.ASTSceneRegistry && typeof window.ASTSceneRegistry.register === 'function') {
-        window.ASTSceneRegistry.register(newId, {
-          id: newId,
-          title: rawTitle,
-          stage: cartridge.stage,
-          svgMarkup,
-          astSource,
-        });
-      }
-
-      this.saveToLocalVault(cartridge);
-      if (typeof this.engine.hotReloadSvg === 'function') this.engine.hotReloadSvg(svgMarkup);
-      if (typeof this.engine.hotReloadAst === 'function') this.engine.hotReloadAst(astSource);
-      this.populatePresets();
-      if (el.presetSelector) el.presetSelector.value = newId;
-
-      const isEmbedded = typeof window !== 'undefined' && window.parent && window.parent !== window;
-
-      if (exportMode === 'duo') {
-        this.downloadTextFile(`${newId}.ast`, astSource, 'text/plain;charset=utf-8');
-        setTimeout(() => {
-          this.downloadTextFile(`${newId}.svg`, svgMarkup, 'image/svg+xml;charset=utf-8');
-        }, 200);
-      } else if (exportMode === 'astb' && !isEmbedded) {
-        this.downloadStandaloneSvgApplet();
-      }
-
-      this.engine.notifyParent({
-        type: 'SAVE_REMIX_CARTRIDGE',
-        cartridge,
-        exportMode,
-      });
-
-      if (el.studioSaveAsBar) el.studioSaveAsBar.classList.add('hidden');
-      this.playChime(880, 'sine');
-      this.showToast(
-        exportMode === 'duo'
-          ? `📦 Saved Remix & Matched Pair: ${newId}.ast + ${newId}.svg`
-          : exportMode === 'astb'
-          ? `⚡ Compiling ${newId}.astb…`
-          : `💾 Saved Remix to Vault: ${rawTitle}`
-      );
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.executeSaveRemixAs === 'function') _s.executeSaveRemixAs.call(this, exportMode);
     }
 
     switchStudioTab(tabName) {
-      this.activeStudioTab = tabName;
-      const el = this.elements;
-
-      const tabBtns = document.querySelectorAll('.dev-tab-btn');
-      tabBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.getAttribute('data-tab') === tabName);
-      });
-
-      if (el.devCompilerTab) el.devCompilerTab.style.display = tabName === 'compiler' ? 'flex' : 'none';
-      if (el.devQuizbuilderTab) {
-        el.devQuizbuilderTab.style.display = tabName === 'quizbuilder' ? 'block' : 'none';
-        if (tabName === 'quizbuilder') this.renderQuizBuilderExistingList();
-      }
-      if (el.devEditorSvg) el.devEditorSvg.style.display = tabName === 'svg' ? 'block' : 'none';
-      if (el.devEditorAst) el.devEditorAst.style.display = tabName === 'ast' ? 'block' : 'none';
-      if (el.devTemplateTab) el.devTemplateTab.style.display = tabName === 'templates' ? 'grid' : 'none';
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.switchStudioTab === 'function') _s.switchStudioTab.call(this, tabName);
     }
 
     renderQuizBuilderExistingList() {
-      const el = this.elements;
-      if (!el.qbExistingList) return;
-      const scene = this.engine.scene;
-      const checkpoints = (scene && scene.interactive && scene.interactive.checkpoints) || [];
-      if (checkpoints.length === 0) {
-        el.qbExistingList.replaceChildren(
-          this._h('div', {
-            css: 'font-size:11px; color:#64748b; font-style:italic; padding:6px 0;',
-            text: 'No active checkpoints in this slide yet. Build and inject one above!'
-          })
-        );
-        return;
-      }
-      const dur = this.engine.durationSec || 10;
-      el.qbExistingList.replaceChildren(
-        ...checkpoints.map((cp, idx) =>
-          this._h('div', { className: 'qb-existing-card' },
-            this._h('div', { css: 'display:flex; flex-direction:column; gap:2px; flex:1; margin-right:12px;' },
-              this._h('div', { css: 'display:flex; align-items:center; gap:6px;' },
-                this._h('span', { css: 'font-weight:700; color:#38bdf8;', text: `t=${(cp.t).toFixed(2)} (${(cp.t * dur).toFixed(1)}s)` }),
-                this._h('span', { css: 'color:#f8fafc; font-weight:600;', text: cp.title })
-              ),
-              this._h('div', { css: 'font-size:11px; color:#94a3b8; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;', text: cp.prompt })
-            ),
-            this._h('div', { css: 'display:flex; gap:6px; align-items:center;' },
-              this._h('button', { type: 'button', className: 'dev-btn qb-test-btn', attrs: { 'data-idx': idx }, css: 'font-size:10px; padding:3px 8px;', text: '▶ Test' }),
-              this._h('button', { type: 'button', className: 'dev-btn qb-del-btn', attrs: { 'data-idx': idx }, css: 'font-size:10px; padding:3px 8px; color:#f43f5e;', text: '✕ Remove' })
-            )
-          )
-        )
-      );
-
-      el.qbExistingList.querySelectorAll('.qb-test-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.getAttribute('data-idx'), 10);
-          const cp = checkpoints[idx];
-          if (cp) {
-            this.engine.seek(cp.t);
-            this.triggerCheckpoint(cp, idx);
-          }
-        });
-      });
-
-      el.qbExistingList.querySelectorAll('.qb-del-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.getAttribute('data-idx'), 10);
-          checkpoints.splice(idx, 1);
-          this.renderQuizBuilderExistingList();
-          this.showToast('🗑️ Checkpoint removed');
-        });
-      });
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.renderQuizBuilderExistingList === 'function') _s.renderQuizBuilderExistingList.call(this);
     }
 
     downloadStandaloneSvgApplet() {
-      try {
-        const appletSvg = this.engine.compileAutonomousSvgApplet();
-        if (!appletSvg) {
-          this.showToast('⚠️ Could not compile standalone SVG');
-          return;
-        }
-        const blob = new Blob([appletSvg], { type: 'image/svg+xml;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${this.engine.activePresetId || 'scene'}-standalone-applet.svg`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-        this.playChime(880, 'sine');
-        this.showToast('🚀 Autonomous SVG SPA Exported!');
-      } catch (err) {
-        console.error('Failed to export standalone SVG applet:', err);
-        this.showToast('⚠️ Export failed');
-      }
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.downloadStandaloneSvgApplet === 'function') _s.downloadStandaloneSvgApplet.call(this);
     }
 
     async downloadOfflineSuiteZip() {
@@ -5964,636 +3594,92 @@ window.addEventListener('message', (e) => {
     }
 
     renderStarterTemplates() {
-      const el = this.elements;
-      if (!el.devTemplateTab) return;
-      el.devTemplateTab.replaceChildren(
-        ...this.starterTemplates.map(tpl =>
-          this._h('div', { className: 'dev-template-card', attrs: { 'data-template-id': tpl.id } },
-            this._h('div', { className: 'dev-template-title', text: tpl.title }),
-            this._h('div', { className: 'dev-template-desc', text: tpl.desc }),
-            this._h('button', { type: 'button', className: 'dev-btn primary', css: 'margin-top:8px; width:100%; justify-content:center;', text: 'Load Starter ➜' })
-          )
-        )
-      );
+      const _s = _getPlayerUIStudio();
+      if (_s && typeof _s.renderStarterTemplates === 'function') _s.renderStarterTemplates.call(this);
+    }
 
-      el.devTemplateTab.querySelectorAll('.dev-template-card').forEach(card => {
-        card.addEventListener('click', () => {
-          const tplId = card.getAttribute('data-template-id');
-          const tpl = this.starterTemplates.find(t => t.id === tplId);
-          if (tpl) {
-            if (el.devEditorSvg) el.devEditorSvg.value = tpl.svg;
-            if (el.devEditorAst) el.devEditorAst.value = tpl.ast;
-            this.engine.hotReloadSvg(tpl.svg);
-            this.engine.hotReloadAst(tpl.ast);
-            this.switchStudioTab('svg');
-            this.playChime(784, 'triangle');
-            this.showToast(`🚀 Loaded ${tpl.title}`);
-          }
-        });
-      });
+    // --- OBS Studio WebSocket & WebRTC Classroom Beacon Drawers (delegated to player-ui-broadcast.js) ---
+
+    bindBroadcastDOMEvents() {
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.bindBroadcastDOMEvents === 'function') _b.bindBroadcastDOMEvents.call(this);
     }
 
     initObsBroadcast() {
-      if (typeof window === 'undefined' || !window.OBSBroadcastController) return;
-      this.obs = new window.OBSBroadcastController();
-      const el = this.elements;
-      if (!el.obsDrawer) return;
-
-      // Populate form with saved settings
-      if (el.obsInputUrl) el.obsInputUrl.value = this.obs.settings.url || 'ws://127.0.0.1:4455';
-      if (el.obsInputPassword) el.obsInputPassword.value = this.obs.settings.password || '';
-      if (el.obsToggleRecord) el.obsToggleRecord.checked = Boolean(this.obs.settings.syncRecording);
-      if (el.obsToggleSubtitles) el.obsToggleSubtitles.checked = Boolean(this.obs.settings.syncSubtitles);
-      if (el.obsInputSource) el.obsInputSource.value = this.obs.settings.subtitleSource || 'LessonSubtitles';
-      if (el.obsToggleTransparent) el.obsToggleTransparent.checked = Boolean(this.obs.settings.transparent);
-
-      // Check transparent URL param or setting
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('transparent') === '1' || params.get('transparent') === 'true' || params.get('obs') === '1' || this.obs.settings.transparent) {
-        document.body.classList.add('obs-transparent');
-        if (el.obsToggleTransparent) el.obsToggleTransparent.checked = true;
-      }
-
-      // OBS Event Listeners
-      this.obs.on('connected', (info) => {
-        this.updateObsStatusUI(true, false, info.version);
-        this.showToast(`📡 OBS Studio Connected (${info.version || 'v5'})`);
-        this.playChime(659, 'sine');
-      });
-
-      this.obs.on('disconnected', () => {
-        this.updateObsStatusUI(false, false);
-      });
-
-      this.obs.on('recordingChanged', (data) => {
-        this.updateObsStatusUI(this.obs.isConnected, data.isRecording);
-      });
-
-      this.obs.on('scenesListReceived', (data) => {
-        if (!el.obsSelectScene) return;
-        if (typeof el.obsSelectScene.replaceChildren === 'function') el.obsSelectScene.replaceChildren();
-        else el.obsSelectScene.textContent = '';
-        (data.scenes || []).forEach(sc => {
-          const opt = document.createElement('option');
-          opt.value = sc;
-          opt.textContent = sc;
-          if (sc === data.currentScene) opt.selected = true;
-          el.obsSelectScene.appendChild(opt);
-        });
-      });
-
-      this.obs.on('sceneChanged', (sceneName) => {
-        if (el.obsSelectScene) el.obsSelectScene.value = sceneName;
-      });
-
-      this.obs.on('remoteCommand', (cmd, payload) => {
-        switch (cmd) {
-          case 'play':
-            this.engine.play();
-            break;
-          case 'pause':
-            this.engine.pause();
-            break;
-          case 'togglePlay':
-            this.engine.isPlaying ? this.engine.pause() : this.engine.play();
-            break;
-          case 'seek':
-            if (typeof payload?.progress === 'number') this.engine.seek(payload.progress);
-            break;
-          case 'next':
-            this.engine.step(0.05);
-            break;
-          case 'prev':
-            this.engine.step(-0.05);
-            break;
-          case 'reset':
-            this.engine.seek(0);
-            break;
-          case 'quiz':
-            if (el.btnInteractive) el.btnInteractive.click();
-            break;
-        }
-      });
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.initObsBroadcast === 'function') _b.initObsBroadcast.call(this);
     }
 
     updateObsStatusUI(isConnected, isRecording, version) {
-      const el = this.elements;
-      if (el.obsStatusDot) {
-        el.obsStatusDot.className = 'obs-status-dot ' + (isRecording ? 'recording' : (isConnected ? 'connected' : 'disconnected'));
-      }
-      if (el.obsDrawerBadge) {
-        el.obsDrawerBadge.className = 'obs-drawer-badge ' + (isConnected ? 'connected' : 'disconnected');
-        el.obsDrawerBadge.textContent = isConnected ? `CONNECTED ${version || ''}` : 'DISCONNECTED';
-      }
-      if (el.obsLiveControls) {
-        el.obsLiveControls.style.display = isConnected ? 'block' : 'none';
-      }
-      if (el.btnObsRecordToggle) {
-        el.btnObsRecordToggle.textContent = isRecording ? '⏹ Stop OBS Recording' : '⏺ Start OBS Recording';
-        el.btnObsRecordToggle.className = 'obs-btn ' + (isRecording ? 'danger' : 'primary');
-      }
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.updateObsStatusUI === 'function') _b.updateObsStatusUI.call(this, isConnected, isRecording, version);
     }
 
     toggleWebRtcDrawer() {
-      const el = this.elements;
-      if (!el.webrtcDrawer) return;
-      const isHidden = el.webrtcDrawer.classList.contains('hidden');
-      if (isHidden) {
-        this.closeObsDrawer();
-        this.closeSettingsDrawer();
-        el.webrtcDrawer.classList.remove('hidden');
-        if (el.btnWebRtcLink) el.btnWebRtcLink.classList.add('active');
-      } else {
-        this.closeWebRtcDrawer();
-      }
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.toggleWebRtcDrawer === 'function') _b.toggleWebRtcDrawer.call(this);
     }
 
     closeWebRtcDrawer() {
-      const el = this.elements;
-      if (el.webrtcDrawer) el.webrtcDrawer.classList.add('hidden');
-      if (el.btnWebRtcLink) el.btnWebRtcLink.classList.remove('active');
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.closeWebRtcDrawer === 'function') _b.closeWebRtcDrawer.call(this);
     }
 
     updateWebRtcStatusUI(isConnected, role = 'peer') {
-      const el = this.elements;
-      if (el.webrtcStatusDot) {
-        el.webrtcStatusDot.className = 'obs-status-dot ' + (isConnected ? 'connected' : 'disconnected');
-        el.webrtcStatusDot.style.background = isConnected ? '#10b981' : '#64748b';
-      }
-      if (el.webrtcDrawerBadge) {
-        el.webrtcDrawerBadge.className = 'obs-drawer-badge ' + (isConnected ? 'connected' : 'disconnected');
-        el.webrtcDrawerBadge.textContent = isConnected ? `CONNECTED (${role.toUpperCase()})` : 'DISCONNECTED';
-      }
-      if (el.webrtcRoleReadout) {
-        el.webrtcRoleReadout.textContent = isConnected ? role.toUpperCase() : 'Standalone';
-      }
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.updateWebRtcStatusUI === 'function') _b.updateWebRtcStatusUI.call(this, isConnected, role);
     }
 
     toggleObsDrawer() {
-      const el = this.elements;
-      if (!el.obsDrawer) return;
-      const isHidden = el.obsDrawer.classList.contains('hidden');
-      if (isHidden) {
-        el.obsDrawer.classList.remove('hidden');
-        if (el.btnObsLink) el.btnObsLink.classList.add('active');
-        if (this.obs && this.obs.isConnected) this.obs.refreshScenes();
-      } else {
-        this.closeObsDrawer();
-      }
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.toggleObsDrawer === 'function') _b.toggleObsDrawer.call(this);
     }
 
     closeObsDrawer() {
-      const el = this.elements;
-      if (el.obsDrawer) el.obsDrawer.classList.add('hidden');
-      if (el.btnObsLink) el.btnObsLink.classList.remove('active');
+      const _b = _getPlayerUIBroadcast();
+      if (_b && typeof _b.closeObsDrawer === 'function') _b.closeObsDrawer.call(this);
     }
 
-    /**
-     * Browser SpeechRecognition Voice Control Integration
-     */
+    // --- Browser SpeechRecognition Voice Control Integration (delegated to player-ui-voice.js) ---
+
     initVoiceRecognition() {
-      const SpeechRecognition = typeof window !== 'undefined'
-        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-        : null;
-
-      if (!SpeechRecognition) {
-        return null;
-      }
-
-      try {
-        const recognition = new SpeechRecognition();
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
-
-        const langMap = {
-          en: 'en-US',
-          es: 'es-ES',
-          fr: 'fr-FR',
-          de: 'de-DE',
-          it: 'it-IT',
-          pl: 'pl-PL',
-          pt: 'pt-BR',
-          uk: 'uk-UA',
-          ar: 'ar-SA',
-          la: 'la'
-        };
-        recognition.lang = langMap[this.engine?.lang] || 'en-US';
-
-        recognition.onstart = () => {
-          this.isListeningVoice = true;
-          this.updateVoiceStatusUI(true, '🎙️ Listening for commands... ("play", "pause", "rewind", "open <scene>")');
-          this.showToast('🎙️ Voice Control Active (Speak now)');
-          if (this.engine && typeof this.engine.notifyParent === 'function') {
-            this.engine.notifyParent({ type: 'VOICE_STATUS', isListening: true });
-          }
-        };
-
-        recognition.onresult = (event) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            const result = event.results[i];
-            const text = result[0]?.transcript || '';
-            if (result.isFinal) {
-              finalTranscript += text;
-            } else {
-              interimTranscript += text;
-            }
-          }
-
-          if (interimTranscript) {
-            this.updateVoiceOverlayText(`Hearing: "${interimTranscript.trim()}"...`);
-          }
-
-          if (finalTranscript) {
-            const clean = finalTranscript.trim();
-            this.updateVoiceOverlayText(`Recognized: "${clean}"`);
-            this.handleVoiceCommand(clean);
-          }
-        };
-
-        recognition.onerror = (event) => {
-          console.warn('[AST-PlayerUI] Voice recognition notice:', event.error);
-          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
-            this.isListeningVoice = false;
-            this.updateVoiceStatusUI(false);
-            this.showToast('⚠️ Microphone permission required for Voice Control');
-            if (this.engine && typeof this.engine.notifyParent === 'function') {
-              this.engine.notifyParent({ type: 'VOICE_STATUS', isListening: false, error: event.error });
-            }
-          } else if (event.error === 'no-speech') {
-            if (this.isListeningVoice) {
-              this.updateVoiceOverlayText('🎙️ Listening for commands... ("play", "pause", "open <scene>")');
-            }
-          } else if (event.error !== 'aborted') {
-            this.showToast(`Voice input notice: ${event.error}`);
-          }
-        };
-
-        recognition.onend = () => {
-          if (this.isListeningVoice) {
-            clearTimeout(this._voiceRestartTimeout);
-            this._voiceRestartTimeout = setTimeout(() => {
-              if (this.isListeningVoice && this.recognition) {
-                try {
-                  this.recognition.start();
-                } catch (e) {}
-              }
-            }, 300);
-          } else {
-            this.updateVoiceStatusUI(false);
-            if (this.engine && typeof this.engine.notifyParent === 'function') {
-              this.engine.notifyParent({ type: 'VOICE_STATUS', isListening: false });
-            }
-          }
-        };
-
-        return recognition;
-      } catch (err) {
-        console.warn('[AST-PlayerUI] Error instantiating SpeechRecognition:', err);
-        return null;
-      }
+      const _v = _getPlayerUIVoice();
+      return _v && typeof _v.initVoiceRecognition === 'function' ? _v.initVoiceRecognition.call(this) : null;
     }
 
     startVoiceCommands() {
-      const SpeechRecognition = typeof window !== 'undefined'
-        ? (window.SpeechRecognition || window.webkitSpeechRecognition)
-        : null;
-
-      if (!SpeechRecognition) {
-        this.showToast('⚠️ SpeechRecognition is not supported in this browser (Use Chrome, Edge, or Safari)');
-        return false;
-      }
-
-      if (!this.recognition) {
-        this.recognition = this.initVoiceRecognition();
-      }
-
-      if (!this.recognition) {
-        this.showToast('⚠️ Unable to initialize voice recognition engine');
-        return false;
-      }
-
-      this.isListeningVoice = true;
-      try {
-        this.recognition.start();
-        return true;
-      } catch (err) {
-        // Recognition already active
-        this.updateVoiceStatusUI(true);
-        return true;
-      }
+      const _v = _getPlayerUIVoice();
+      return _v && typeof _v.startVoiceCommands === 'function' ? _v.startVoiceCommands.call(this) : false;
     }
 
     stopVoiceCommands() {
-      this.isListeningVoice = false;
-      clearTimeout(this._voiceRestartTimeout);
-      if (this.recognition) {
-        try {
-          this.recognition.stop();
-        } catch (e) {}
-      }
-      this.updateVoiceStatusUI(false);
-      this.showToast('🎙️ Voice Control Stopped');
-      if (this.engine && typeof this.engine.notifyParent === 'function') {
-        this.engine.notifyParent({ type: 'VOICE_STATUS', isListening: false });
-      }
+      const _v = _getPlayerUIVoice();
+      if (_v && typeof _v.stopVoiceCommands === 'function') _v.stopVoiceCommands.call(this);
     }
 
     toggleVoiceCommands() {
-      if (this.isListeningVoice) {
-        this.stopVoiceCommands();
-      } else {
-        this.startVoiceCommands();
-      }
+      const _v = _getPlayerUIVoice();
+      if (_v && typeof _v.toggleVoiceCommands === 'function') _v.toggleVoiceCommands.call(this);
     }
 
     updateVoiceStatusUI(active, text) {
-      const el = this.elements;
-      if (el.btnVoiceCmd) {
-        el.btnVoiceCmd.classList.toggle('active', active);
-        el.btnVoiceCmd.textContent = active ? '🔴 Listening...' : '🎤 Mic';
-      }
-      if (el.voiceCmdOverlay) {
-        if (active) {
-          el.voiceCmdOverlay.classList.remove('hidden');
-          el.voiceCmdOverlay.style.display = 'flex';
-          if (text) {
-            this.updateVoiceOverlayText(text);
-          }
-        } else {
-          el.voiceCmdOverlay.classList.add('hidden');
-          el.voiceCmdOverlay.style.display = 'none';
-        }
-      }
+      const _v = _getPlayerUIVoice();
+      if (_v && typeof _v.updateVoiceStatusUI === 'function') _v.updateVoiceStatusUI.call(this, active, text);
     }
 
     updateVoiceOverlayText(text) {
-      const el = this.elements;
-      if (el.voiceCmdText) {
-        el.voiceCmdText.textContent = text;
-      }
+      const _v = _getPlayerUIVoice();
+      if (_v && typeof _v.updateVoiceOverlayText === 'function') _v.updateVoiceOverlayText.call(this, text);
     }
 
     findSceneByVoiceQuery(rawQuery) {
-      if (!rawQuery || typeof rawQuery !== 'string') return null;
-      const stopWords = new Set(['show', 'me', 'load', 'open', 'go', 'to', 'switch', 'launch', 'the', 'a', 'an', 'scene', 'simulation', 'sim', 'cartridge', 'model', 'lab', 'please']);
-      const slug = rawQuery.toLowerCase().trim().replace(/[^a-z0-9\s-]/g, ' ').replace(/\s+/g, ' ').trim();
-      if (!slug) return null;
-      const tokens = slug.split(/[\s-]+/).filter(w => w.length > 1 && !stopWords.has(w));
-      if (tokens.length === 0) return null;
-      const joinedHyphen = tokens.join('-');
-
-      const candidatesMap = new Map();
-      const addCand = (item) => {
-        if (!item || !item.id || String(item.id).startsWith('__')) return;
-        if (item.isPlayableScene === false || item.kind === 'data') return;
-        if (!candidatesMap.has(item.id)) {
-          candidatesMap.set(item.id, {
-            id: String(item.id),
-            title: String(item.title || item.id),
-            haystack: `${item.id} ${item.title || ''} ${item.oakUnit || ''} ${item.subject || ''}`.toLowerCase()
-          });
-        }
-      };
-
-      if (Array.isArray(this._catalogScenes)) {
-        this._catalogScenes.forEach(addCand);
-      }
-      if (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.list === 'function') {
-        global.ASTSceneRegistry.list().forEach(addCand);
-      }
-      if (this.elements && this.elements.presetSelector && typeof this.elements.presetSelector.querySelectorAll === 'function') {
-        this.elements.presetSelector.querySelectorAll('option').forEach(opt => {
-          if (opt.value && !opt.value.startsWith('__')) {
-            addCand({ id: opt.value, title: opt.textContent || opt.value });
-          }
-        });
-      }
-
-      if (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function') {
-        const normId = global.ASTSceneRegistry.normalizeId(joinedHyphen);
-        if (candidatesMap.has(normId)) {
-          return candidatesMap.get(normId);
-        }
-      }
-      if (candidatesMap.has(joinedHyphen)) {
-        return candidatesMap.get(joinedHyphen);
-      }
-
-      let best = null;
-      let bestScore = 0;
-      candidatesMap.forEach((cand) => {
-        const idWords = cand.id.toLowerCase().split(/[-_]+/);
-        let score = 0;
-        for (let i = 0; i < tokens.length; i++) {
-          const tk = tokens[i];
-          if (idWords.includes(tk)) score += 6;
-          else if (idWords.some(w => w.startsWith(tk) || tk.startsWith(w))) score += 4;
-          else if (cand.haystack.includes(tk)) score += 2;
-        }
-        if (score > bestScore) {
-          bestScore = score;
-          best = cand;
-        }
-      });
-
-      return bestScore >= 2 ? best : null;
+      const _v = _getPlayerUIVoice();
+      return _v && typeof _v.findSceneByVoiceQuery === 'function' ? _v.findSceneByVoiceQuery.call(this, rawQuery) : null;
     }
 
     handleVoiceCommand(rawTranscript) {
-      if (!rawTranscript || typeof rawTranscript !== 'string') return;
-      const text = rawTranscript.toLowerCase().trim().replace(/[.,!?;:]/g, '');
-      const el = this.elements;
-
-      let executedAction = null;
-      let actionLabel = '';
-      const cameraStops = this.getSceneCameraStops();
-      const matchedCamStop = cameraStops.find(
-        st => text.includes(st.id) || (Array.isArray(st.aliases) && st.aliases.some(a => text.includes(a)))
-      );
-      const explicitSceneMatch = text.match(/^(?:show me|load|open|go to|switch to|launch)\s+(.+)$/);
-      const explicitQuery = explicitSceneMatch ? explicitSceneMatch[1].trim() : '';
-      const exactCamStopQuery = explicitQuery && cameraStops.find(
-        st => explicitQuery === st.id || (Array.isArray(st.aliases) && st.aliases.includes(explicitQuery))
-      );
-
-      // 1. Playback Controls
-      if (/^(play|resume|start|unpause|continue|go)$/.test(text) || text.includes('play video') || text.includes('play model') || text.includes('start playback')) {
-        this.engine.play();
-        executedAction = 'PLAY';
-        actionLabel = '▶ Play';
-      } else if (/^(pause|stop|freeze|halt|wait|hold)$/.test(text) || text.includes('pause video') || text.includes('stop playback')) {
-        this.engine.pause();
-        executedAction = 'PAUSE';
-        actionLabel = '⏸ Pause';
-      } else if (text === 'toggle' || text === 'toggle play' || text === 'toggle playback') {
-        this.engine.togglePlay();
-        executedAction = 'TOGGLE_PLAY';
-        actionLabel = this.engine.isPlaying ? '▶ Play' : '⏸ Pause';
-      }
-      // 2. Rewind / Seek
-      else if (/^(rewind|restart|start over|replay|beginning|back to start|reset)$/.test(text) || text.includes('rewind to start') || text.includes('from the beginning') || text.includes('back to the start')) {
-        this.engine.seek(0);
-        executedAction = 'REWIND';
-        actionLabel = '⏮ Rewound to Beginning';
-      } else if (/^(forward|fast forward|skip forward|step forward|ahead|next)$/.test(text) || text.includes('skip ahead') || text.includes('forward five')) {
-        this.engine.step(0.1);
-        executedAction = 'STEP_FORWARD';
-        actionLabel = '⏩ Stepped Forward';
-      } else if (/^(back|step back|backward|skip back|previous)$/.test(text) || text.includes('go back') || text.includes('step backwards')) {
-        this.engine.step(-0.1);
-        executedAction = 'STEP_BACK';
-        actionLabel = '⏪ Stepped Backward';
-      } else if (text.includes('middle') || text.includes('halfway') || text.includes('fifty percent') || text.includes('50%')) {
-        this.engine.seek(0.5);
-        executedAction = 'SEEK_50';
-        actionLabel = '⏱ Jumped to 50%';
-      }
-      // 3. Exact Active-Scene Camera Stop ("go to high altar", "go to tabernacle")
-      else if (exactCamStopQuery) {
-        this.applyCameraStop(exactCamStopQuery);
-        actionLabel = exactCamStopQuery.toast || `🎯 Camera: ${exactCamStopQuery.id}`;
-        executedAction = `CAMERA_STOP_${exactCamStopQuery.id}`;
-      }
-      // 4. Explicit Curriculum Scene Query ("show me X", "load X", "open X", "go to X", "switch to X")
-      else if (explicitSceneMatch) {
-        const query = explicitQuery;
-        const found = this.findSceneByVoiceQuery(query);
-        const targetId = found ? found.id : (global.ASTSceneRegistry?.normalizeId?.(query) || query.replace(/\s+/g, '-'));
-        if (found || global.ASTSceneRegistry?.getScene?.(targetId)) {
-          this.engine.loadScene(targetId, true);
-          executedAction = `LOAD_SCENE_${targetId}`;
-          actionLabel = `✨ Loaded ${found ? found.title : targetId}`;
-        }
-      }
-      // 4. Playback Speed
-      else if (text.includes('faster') || text.includes('speed up') || text.includes('double speed') || text.includes('2x') || text.includes('two x')) {
-        this.engine.setSpeed(2.0);
-        if (el.speedSelector) el.speedSelector.value = '2';
-        executedAction = 'SET_SPEED_2';
-        actionLabel = '⚡ Speed: 2.0×';
-      } else if (text.includes('slower') || text.includes('slow down') || text.includes('half speed') || text.includes('0.5x') || text.includes('point five')) {
-        this.engine.setSpeed(0.5);
-        if (el.speedSelector) el.speedSelector.value = '0.5';
-        executedAction = 'SET_SPEED_0.5';
-        actionLabel = '🐢 Speed: 0.5×';
-      } else if (text.includes('normal speed') || text.includes('regular speed') || text.includes('1x') || text.includes('one x')) {
-        this.engine.setSpeed(1.0);
-        if (el.speedSelector) el.speedSelector.value = '1';
-        executedAction = 'SET_SPEED_1';
-        actionLabel = '▶ Speed: 1.0×';
-      } else if (text.includes('1.5x') || text.includes('one point five')) {
-        this.engine.setSpeed(1.5);
-        if (el.speedSelector) el.speedSelector.value = '1.5';
-        executedAction = 'SET_SPEED_1.5';
-        actionLabel = '⚡ Speed: 1.5×';
-      }
-      // 5. Sound & Voice Narration
-      else if (text.includes('unmute') || text.includes('sound on') || text.includes('audio on')) {
-        this.engine.setMuted(false);
-        executedAction = 'UNMUTE';
-        actionLabel = '🔊 Audio Unmuted';
-      } else if (text.includes('mute') || text.includes('sound off') || text.includes('quiet') || text.includes('silence')) {
-        this.engine.setMuted(true);
-        executedAction = 'MUTE';
-        actionLabel = '🔇 Audio Muted';
-      } else if (text.includes('voice on') || text.includes('narrat') || text.includes('read to me') || text.includes('enable voice')) {
-        if (!this.engine.voiceEnabled) {
-          const enabled = this.engine.toggleVoice();
-          if (el.btnNarrate) {
-            el.btnNarrate.classList.toggle('active', enabled);
-            el.btnNarrate.textContent = enabled ? '🔊 Voice: ON' : '🔊 Voice';
-          }
-        }
-        executedAction = 'VOICE_NARRATION_ON';
-        actionLabel = '🔊 Voice Narration Enabled';
-      } else if (text.includes('voice off') || text.includes('stop voice') || text.includes('disable voice') || text.includes('stop reading')) {
-        if (this.engine.voiceEnabled) {
-          const enabled = this.engine.toggleVoice();
-          if (el.btnNarrate) {
-            el.btnNarrate.classList.toggle('active', enabled);
-            el.btnNarrate.textContent = enabled ? '🔊 Voice: ON' : '🔊 Voice';
-          }
-        }
-        executedAction = 'VOICE_NARRATION_OFF';
-        actionLabel = '🔇 Voice Narration Disabled';
-      }
-      // 6. Declarative 3D Camera Controls & Stops
-      else if (matchedCamStop) {
-        this.applyCameraStop(matchedCamStop);
-        actionLabel = matchedCamStop.toast || `🎯 Camera: ${matchedCamStop.id}`;
-        executedAction = `CAMERA_STOP_${matchedCamStop.id}`;
-      } else if (text.includes('reset camera') || text.includes('reset 3d') || text.includes('reset view')) {
-        this.engine.resetCamera();
-        executedAction = 'RESET_3D';
-        actionLabel = '🌐 3D Camera Reset';
-      } else if (text.includes('orbit') || text.includes('rotate') || text.includes('spin') || text.includes('turn')) {
-        this.engine.rotateCamera(45, 10);
-        executedAction = 'ORBIT_3D';
-        actionLabel = '🌐 3D Orbit (+45°)';
-      }
-      // 7. Loop & Mode & Fullscreen
-      else if (text.includes('loop') || text.includes('repeat')) {
-        this.engine.toggleLoop();
-        executedAction = 'TOGGLE_LOOP';
-        actionLabel = this.engine.isLooping ? '🔁 Loop ON' : '➡️ Loop OFF';
-      } else if (text.includes('game mode') || text.includes('interactive mode') || text.includes('play game')) {
-        if (el.btnPlayMode) el.btnPlayMode.click();
-        executedAction = 'TOGGLE_PLAY_MODE';
-        actionLabel = '🎮 Toggled Play Mode';
-      } else if (text.includes('fullscreen') || text.includes('full screen')) {
-        if (el.btnFullscreen) el.btnFullscreen.click();
-        executedAction = 'TOGGLE_FULLSCREEN';
-        actionLabel = '⛶ Toggled Fullscreen';
-      } else if (text.includes('pip') || text.includes('picture in picture') || text.includes('float window') || text.includes('floating player') || text.includes('mini player')) {
-        this.togglePictureInPicture();
-        executedAction = 'TOGGLE_PIP';
-        actionLabel = '📺 Toggled Picture-in-Picture';
-      } else if (text.includes('quiz') || text.includes('checkpoint') || text.includes('challenge')) {
-        if (el.btnInteractive) el.btnInteractive.click();
-        executedAction = 'OPEN_QUIZ';
-        actionLabel = '🎯 Opened Interactive Challenge';
-      } else {
-        // 8. Dynamic Catalog Fallback for bare spoken cartridge titles/topics
-        const foundScene = this.findSceneByVoiceQuery(text);
-        if (foundScene) {
-          this.engine.loadScene(foundScene.id, true);
-          executedAction = `LOAD_SCENE_${foundScene.id}`;
-          actionLabel = `✨ Loaded ${foundScene.title}`;
-        }
-      }
-
-      if (executedAction) {
-        this.updateVoiceOverlayText(`✅ Executed: ${actionLabel}`);
-        this.showToast(`🎙️ Voice: ${actionLabel}`);
-
-        if (this.engine && typeof this.engine.notifyParent === 'function') {
-          this.engine.notifyParent({
-            type: 'VOICE_COMMAND_EXECUTED',
-            command: text,
-            action: executedAction,
-            label: actionLabel,
-          });
-        }
-
-        clearTimeout(this._voiceFeedbackTimeout);
-        this._voiceFeedbackTimeout = setTimeout(() => {
-          if (this.isListeningVoice) {
-            this.updateVoiceOverlayText('🎙️ Listening for commands... ("play", "pause", "open <scene>")');
-          }
-        }, 3200);
-      } else {
-        this.updateVoiceOverlayText(`❓ Heard: "${rawTranscript}" (Try "play", "pause", "open <scene>")`);
-        clearTimeout(this._voiceFeedbackTimeout);
-        this._voiceFeedbackTimeout = setTimeout(() => {
-          if (this.isListeningVoice) {
-            this.updateVoiceOverlayText('🎙️ Listening for commands... ("play", "pause", "open <scene>")');
-          }
-        }, 3500);
-      }
+      const _v = _getPlayerUIVoice();
+      if (_v && typeof _v.handleVoiceCommand === 'function') _v.handleVoiceCommand.call(this, rawTranscript);
     }
   }
 
