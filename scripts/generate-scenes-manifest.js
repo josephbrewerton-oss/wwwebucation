@@ -639,7 +639,7 @@ export const PRESET_OPTIONS: ScenePresetOption[] = ${JSON.stringify(presetEntrie
   fs.writeFileSync(tsExportPath, tsContent, 'utf8');
   console.log(`[Manifest Generator] Successfully wrote ${presetEntries.length} typed presets to ${tsExportPath}`);
 
-  return output;
+  return rootOutput;
 }
 
 if (process.argv[1] && process.argv[1].endsWith('generate-scenes-manifest.js')) {
