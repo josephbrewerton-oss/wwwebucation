@@ -107,6 +107,7 @@ export class PersistentAppShellElement extends HTMLElement {
       void this.applyPageTranslation(activeLang);
     }
   };
+    
 
   private handleTranslationStatus = (e: Event) => {
     const detail = (e as CustomEvent).detail as { badge?: string; tooltip?: string; mode?: string } | undefined;
