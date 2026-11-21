@@ -1382,15 +1382,6 @@
       }
     }
 
-    toggleVoice() {
-      this.voiceEnabled = !this.voiceEnabled;
-      if (!this.voiceEnabled) {
-        this.cancelSpeech();
-      }
-      this.notifyParent({ type: 'VOICE_TOGGLE', enabled: this.voiceEnabled });
-      return this.voiceEnabled;
-    }
-
     toggleLoop() {
       this.loop = !this.loop;
       this.emit('statechange', { isPlaying: this.isPlaying, loop: this.loop });
@@ -1408,18 +1399,36 @@
       if (this.volume > 0 && this.muted) {
         this.muted = false;
       }
+      if (this.audioSynth) {
+        this.audioSynth.muted = this.muted || this.volume === 0;
+        if (this.audioSynth.muted && typeof this.audioSynth.stopHum === 'function') {
+          this.audioSynth.stopHum();
+        }
+      }
       this.emit('volumechange', { volume: this.volume, muted: this.muted });
       return this.volume;
     }
 
     toggleMute() {
       this.muted = !this.muted;
+      if (this.audioSynth) {
+        this.audioSynth.muted = this.muted;
+        if (this.muted && typeof this.audioSynth.stopHum === 'function') {
+          this.audioSynth.stopHum();
+        }
+      }
       this.emit('volumechange', { volume: this.volume, muted: this.muted });
       return this.muted;
     }
 
     setMuted(muted) {
       this.muted = Boolean(muted);
+      if (this.audioSynth) {
+        this.audioSynth.muted = this.muted;
+        if (this.muted && typeof this.audioSynth.stopHum === 'function') {
+          this.audioSynth.stopHum();
+        }
+      }
       this.emit('volumechange', { volume: this.volume, muted: this.muted });
       return this.muted;
     }
@@ -1546,13 +1555,13 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     }
 
     _playSceneBootSound(scene) {
-      if (!scene || !scene.bootSound || !this.synth) return;
+      if (!scene || !scene.bootSound || !this.audioSynth) return;
       try {
         const bs = String(scene.bootSound).trim().toLowerCase();
         if (bs === 'bbc-beep') {
-          if (typeof this.synth.playBbcBeep === 'function') this.synth.playBbcBeep();
-        } else if (!isNaN(Number(bs)) && typeof this.synth.playTone === 'function') {
-          this.synth.playTone(Number(bs), 0.25, 'square');
+          if (typeof this.audioSynth.playBbcBeep === 'function') this.audioSynth.playBbcBeep();
+        } else if (!isNaN(Number(bs)) && typeof this.audioSynth.playTone === 'function') {
+          this.audioSynth.playTone(Number(bs), 0.25, 'square');
         }
       } catch (_) {}
     }

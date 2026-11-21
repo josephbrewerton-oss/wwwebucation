@@ -30,19 +30,36 @@
       return window;
     }
 
+    _isLocalContext(ctx) {
+      if (!ctx || typeof window === 'undefined') return true;
+      return ctx === window.__astSharedAudioCtx;
+    }
+
+    _createLocalContext() {
+      const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
+      if (!AudioContextClass) return null;
+      const localCtx = new AudioContextClass();
+      if (typeof window !== 'undefined') window.__astSharedAudioCtx = localCtx;
+      return localCtx;
+    }
+
     init() {
       if (this.ctx && this.ctx.state !== 'closed') return;
       try {
+        // Prefer this frame's own AudioContext so taps inside the cartridge iframe
+        // directly own and resume the context on Android Chrome / Android PWAs.
+        if (typeof window !== 'undefined' && window.__astSharedAudioCtx && window.__astSharedAudioCtx.state !== 'closed') {
+          this.ctx = window.__astSharedAudioCtx;
+          return;
+        }
         const host = this._getSharedHost();
-        if (host && host.__astSharedAudioCtx && host.__astSharedAudioCtx.state !== 'closed') {
+        if (host && host !== window && host.__astSharedAudioCtx && host.__astSharedAudioCtx.state === 'running') {
           this.ctx = host.__astSharedAudioCtx;
           return;
         }
-        const AudioContextClass = typeof window !== 'undefined' && (window.AudioContext || window.webkitAudioContext);
-        if (AudioContextClass) {
-          this.ctx = new AudioContextClass();
-          if (host) host.__astSharedAudioCtx = this.ctx;
-          if (typeof window !== 'undefined') window.__astSharedAudioCtx = this.ctx;
+        const localCtx = this._createLocalContext();
+        if (localCtx) {
+          this.ctx = localCtx;
         }
       } catch (e) {
         console.warn('[AudioSynth] Web Audio not available:', e);
@@ -57,37 +74,72 @@
       } catch (_) {}
       this.init();
       if (!this.ctx) return false;
+
+      // If we previously attached to a window.top context that is now suspended/interrupted
+      // while the user is interacting inside this iframe, switch to an iframe-owned context.
       try {
-        if (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted') {
-          const p = this.ctx.resume();
-          if (p && typeof p.catch === 'function') p.catch(() => {});
-        }
-        if (!this._unlocked) {
-          // 1-sample silent buffer unlock required by iOS Safari / standalone PWAs
-          const silentBuf = this.ctx.createBuffer(1, 1, 22050);
-          const src = this.ctx.createBufferSource();
-          src.buffer = silentBuf;
-          src.connect(this.ctx.destination);
-          if (typeof src.start === 'function') src.start(0);
-          this._unlocked = true;
+        if (this.ctx.state !== 'running' && !this._isLocalContext(this.ctx)) {
+          const localCtx = this._createLocalContext();
+          if (localCtx) {
+            this.ctx = localCtx;
+            this._unlocked = false;
+          }
         }
       } catch (_) {}
-      return true;
+
+      try {
+        const ctx = this.ctx;
+        if (ctx.state === 'suspended' || ctx.state === 'interrupted') {
+          const p = ctx.resume();
+          if (p && typeof p.then === 'function') {
+            p.then(() => {
+              if (ctx.state === 'running') {
+                this._unlocked = true;
+              }
+            }).catch(() => {});
+          }
+        }
+        if (!this._unlocked) {
+          // 1-sample silent buffer unlock required by iOS Safari / standalone PWAs.
+          // Only mark _unlocked = true once ctx.state === 'running' so an early
+          // touchstart/pointerdown (which lacks user activation on Android Chrome)
+          // never prevents a valid touchend/pointerup/click from unlocking audio.
+          const silentBuf = ctx.createBuffer(1, 1, 22050);
+          const src = ctx.createBufferSource();
+          src.buffer = silentBuf;
+          src.connect(ctx.destination);
+          if (typeof src.start === 'function') src.start(0);
+          if (ctx.state === 'running') {
+            this._unlocked = true;
+          }
+        }
+      } catch (_) {}
+      return Boolean(this.ctx && this.ctx.state === 'running');
     }
 
     ensureContext() {
       this.init();
       if (this.ctx && (this.ctx.state === 'suspended' || this.ctx.state === 'interrupted')) {
-        const p = this.ctx.resume();
-        if (p && typeof p.catch === 'function') p.catch(() => {});
+        const ctx = this.ctx;
+        const p = ctx.resume();
+        if (p && typeof p.then === 'function') {
+          p.then(() => {
+            if (ctx.state === 'running') this._unlocked = true;
+          }).catch(() => {});
+        }
       }
       return Boolean(this.ctx);
     }
 
+    _isEffectivelyMuted() {
+      return Boolean(this.muted || (this.engine && (this.engine.muted || this.engine.volume === 0)));
+    }
+
     withRunningContext(fn) {
-      if (this.muted || !this.ensureContext() || !this.ctx) return;
+      if (this._isEffectivelyMuted() || !this.ensureContext() || !this.ctx) return;
       const ctx = this.ctx;
       if (ctx.state === 'running') {
+        this._unlocked = true;
         try { fn(ctx); } catch (_) {}
         return;
       }
@@ -95,12 +147,31 @@
         const res = ctx.resume();
         if (res && typeof res.then === 'function') {
           res.then(() => {
-            if (!this.muted && ctx.state === 'running') {
+            if (!this._isEffectivelyMuted() && ctx.state === 'running') {
+              this._unlocked = true;
               try { fn(ctx); } catch (_) {}
             }
           }).catch(() => {});
         }
       } catch (_) {}
+    }
+
+    playTone(freq = 440, duration = 0.12, type = 'sine', gainVal = 0.18) {
+      this.withRunningContext((ctx) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const now = ctx.currentTime;
+        const safeDur = Math.max(0.02, Number(duration) || 0.12);
+        const safeGain = Math.max(0.002, Math.min(0.5, Number(gainVal) || 0.18));
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(Number(freq) || 440, now);
+        gain.gain.setValueAtTime(safeGain, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + safeDur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + safeDur + 0.01);
+      });
     }
 
     playClick(freq = 900) {
@@ -333,11 +404,25 @@
    */
   let _standaloneSpeakDebounceTimer = null;
   let _standaloneActiveUtterance = null;
+  let _standaloneAndroidSpeakTimer = null;
   let _registeredAudioSynth = null;
   const _primedTargets = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
 
+  function _isAndroidBrowser() {
+    try {
+      return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent || '');
+    } catch (_) {
+      return false;
+    }
+  }
+
   function _getSpeechSynth() {
     if (typeof window === 'undefined') return null;
+    // Prefer the current frame's own speechSynthesis so user activation inside
+    // the cartridge iframe is honoured directly on Android Chrome / Android PWAs.
+    if (window.speechSynthesis) {
+      return window.speechSynthesis;
+    }
     try {
       if (
         window.top &&
@@ -349,11 +434,14 @@
         return window.top.speechSynthesis;
       }
     } catch (_) {}
-    return window.speechSynthesis || null;
+    return null;
   }
 
   function _getSpeechUtteranceCtor() {
     if (typeof window === 'undefined') return null;
+    if (window.SpeechSynthesisUtterance) {
+      return window.SpeechSynthesisUtterance;
+    }
     try {
       if (
         window.top &&
@@ -365,7 +453,39 @@
         return window.top.SpeechSynthesisUtterance;
       }
     } catch (_) {}
-    return window.SpeechSynthesisUtterance || null;
+    return null;
+  }
+
+  function _selectBestVoice(activeSynth, targetLang) {
+    try {
+      const voices = typeof activeSynth.getVoices === 'function' ? activeSynth.getVoices() : [];
+      if (!voices || !voices.length) return null;
+      const lowerTarget = String(targetLang || 'en-GB').toLowerCase();
+      const langPrefix = lowerTarget.slice(0, 2);
+      // Always prefer installed localService voices first so Android Chrome / offline PWAs
+      // never stall or silently fail trying to fetch a network TTS voice.
+      return (
+        voices.find(v => v && v.localService === true && v.lang && v.lang.toLowerCase() === lowerTarget) ||
+        voices.find(v => v && v.localService === true && v.lang && v.lang.toLowerCase().startsWith(langPrefix)) ||
+        voices.find(v => v && v.lang && v.lang.toLowerCase() === lowerTarget) ||
+        voices.find(v => v && v.lang && v.lang.toLowerCase().startsWith(langPrefix)) ||
+        null
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function _clearAndroidSpeakTimer(ctx) {
+    if (ctx) {
+      if (ctx._androidSpeakTimer) {
+        clearTimeout(ctx._androidSpeakTimer);
+        ctx._androidSpeakTimer = null;
+      }
+    } else if (_standaloneAndroidSpeakTimer) {
+      clearTimeout(_standaloneAndroidSpeakTimer);
+      _standaloneAndroidSpeakTimer = null;
+    }
   }
 
   function cancelSpeech(engineArg) {
@@ -381,6 +501,7 @@
       clearTimeout(_standaloneSpeakDebounceTimer);
       _standaloneSpeakDebounceTimer = null;
     }
+    _clearAndroidSpeakTimer(ctx);
     const synth = _getSpeechSynth();
     if (synth) {
       try {
@@ -416,16 +537,19 @@
       clearTimeout(_standaloneSpeakDebounceTimer);
       _standaloneSpeakDebounceTimer = null;
     }
+    _clearAndroidSpeakTimer(ctx);
 
-    const performSpeak = () => {
+    const performSpeak = (skipExplicitVoice = false) => {
       if (ctx && !ctx.voiceEnabled) return;
       const activeSynth = _getSpeechSynth();
       const ActiveUtterance = _getSpeechUtteranceCtor();
       if (!activeSynth || !ActiveUtterance) return;
 
       try {
+        let didCancel = false;
         if (activeSynth.speaking || activeSynth.pending) {
           activeSynth.cancel();
+          didCancel = true;
         }
         if (activeSynth.paused && typeof activeSynth.resume === 'function') {
           activeSynth.resume();
@@ -457,17 +581,14 @@
         const targetLang = langMap[langCode] || 'en-GB';
         utterance.lang = targetLang;
 
-        // Explicitly bind a matching installed voice when loaded (improves iOS Safari & Android PWA reliability)
-        try {
-          const voices = typeof activeSynth.getVoices === 'function' ? activeSynth.getVoices() : [];
-          if (voices && voices.length) {
-            const langPrefix = targetLang.slice(0, 2).toLowerCase();
-            const matched =
-              voices.find(v => v.lang && v.lang.toLowerCase() === targetLang.toLowerCase()) ||
-              voices.find(v => v.lang && v.lang.toLowerCase().startsWith(langPrefix));
-            if (matched) utterance.voice = matched;
+        let boundExplicitVoice = false;
+        if (!skipExplicitVoice) {
+          const matched = _selectBestVoice(activeSynth, targetLang);
+          if (matched) {
+            utterance.voice = matched;
+            boundExplicitVoice = true;
           }
-        } catch (_) {}
+        }
 
         // Retain strong reference until completion so mobile WebKit/Chromium cannot GC the utterance mid-flight
         if (ctx) {
@@ -475,6 +596,7 @@
         } else {
           _standaloneActiveUtterance = utterance;
         }
+        let started = false;
         utterance.onboundary = (e) => {
           if (e.name === 'word') {
             const word = spokenText.slice(e.charIndex).split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
@@ -484,6 +606,7 @@
           }
         };
         utterance.onstart = () => {
+          started = true;
           if (ctx) {
             ctx._speechStartedOnDevice = true;
             if (typeof ctx.notifyParent === 'function') {
@@ -502,6 +625,12 @@
           }
         };
         utterance.onerror = () => {
+          // If an explicit voice failed before starting (common with Android cloud voices offline),
+          // retry once letting the OS pick its native default voice.
+          if (!started && boundExplicitVoice && !skipExplicitVoice) {
+            performSpeak(true);
+            return;
+          }
           if (ctx) {
             if (ctx._activeUtterance === utterance) ctx._activeUtterance = null;
             if (typeof ctx.notifyParent === 'function') {
@@ -511,10 +640,37 @@
             _standaloneActiveUtterance = null;
           }
         };
-        if (ctx && typeof ctx.notifyParent === 'function') {
+        if (!skipExplicitVoice && ctx && typeof ctx.notifyParent === 'function') {
           ctx.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
         }
-        activeSynth.speak(utterance);
+
+        // On Android Chrome, calling speak() synchronously in the same tick as cancel()
+        // frequently causes Android System TTS to cancel the newly queued utterance.
+        // A tiny 25ms handoff stays well inside Chromium's 5s transient user-activation window.
+        if (didCancel && _isAndroidBrowser()) {
+          const timerId = setTimeout(() => {
+            if (ctx) {
+              ctx._androidSpeakTimer = null;
+              if (!ctx.voiceEnabled || ctx._activeUtterance !== utterance) return;
+            } else {
+              _standaloneAndroidSpeakTimer = null;
+              if (_standaloneActiveUtterance !== utterance) return;
+            }
+            try {
+              if (activeSynth.paused && typeof activeSynth.resume === 'function') {
+                activeSynth.resume();
+              }
+              activeSynth.speak(utterance);
+            } catch (_) {}
+          }, 25);
+          if (ctx) {
+            ctx._androidSpeakTimer = timerId;
+          } else {
+            _standaloneAndroidSpeakTimer = timerId;
+          }
+        } else {
+          activeSynth.speak(utterance);
+        }
       } catch (err) {
         console.warn('SpeechSynthesis error:', err);
       }
@@ -527,7 +683,7 @@
       (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive)
     );
     if (hasUserActivation) {
-      performSpeak();
+      performSpeak(false);
     } else {
       const timerId = setTimeout(() => {
         if (ctx) {
@@ -535,7 +691,7 @@
         } else {
           _standaloneSpeakDebounceTimer = null;
         }
-        performSpeak();
+        performSpeak(false);
       }, 80);
       if (ctx) {
         ctx._speakDebounceTimer = timerId;
@@ -550,15 +706,7 @@
     const ctx = (this && this !== global && typeof this === 'object' && ('currentLang' in this || 'speechRate' in this || 'uiController' in this))
       ? this
       : null;
-    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
-      try {
-        window.speechSynthesis.cancel();
-        const utter = new SpeechSynthesisUtterance(text);
-        utter.lang = language || (ctx && ctx.currentLang) || 'en';
-        utter.rate = (ctx && ctx.speechRate) || 0.95;
-        window.speechSynthesis.speak(utter);
-      } catch (_) {}
-    }
+    speakText.call(ctx, text, { lang: language || (ctx && ctx.currentLang) || 'en', immediate: true });
     if (ctx && ctx.uiController && typeof ctx.uiController.showToast === 'function') {
       ctx.uiController.showToast(`✨ Nano Co-Pilot: "${text}"`, 4500);
     }
@@ -590,6 +738,7 @@
     const unlockHandler = () => primeMobileAudioAndTts();
     try {
       win.addEventListener('pointerdown', unlockHandler, { passive: true, capture: true });
+      win.addEventListener('pointerup', unlockHandler, { passive: true, capture: true });
       win.addEventListener('touchstart', unlockHandler, { passive: true, capture: true });
       win.addEventListener('touchend', unlockHandler, { passive: true, capture: true });
       win.addEventListener('click', unlockHandler, { passive: true, capture: true });
