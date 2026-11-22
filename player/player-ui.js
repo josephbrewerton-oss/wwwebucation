@@ -41,6 +41,10 @@
     return global.ASTPlayerUIEvents || (typeof window !== 'undefined' ? window.ASTPlayerUIEvents : undefined);
   }
 
+  function _getLazyLoader() {
+    return global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+  }
+
   class ASTPlayerUI {
     constructor(engine, elements = {}) {
       this.engine = engine;
@@ -780,12 +784,31 @@
 
     setDevMode(enabled) {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.setDevMode === 'function') _s.setDevMode.call(this, enabled);
+      if (_s && typeof _s.setDevMode === 'function') {
+        _s.setDevMode.call(this, enabled);
+        return;
+      }
+      if (!enabled) return;
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.setDevMode === 'function') m.setDevMode.call(this, enabled);
+        }).catch(() => {});
+      }
     }
 
     toggleDevMode() {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.toggleDevMode === 'function') _s.toggleDevMode.call(this);
+      if (_s && typeof _s.toggleDevMode === 'function') {
+        _s.toggleDevMode.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.toggleDevMode === 'function') m.toggleDevMode.call(this);
+        }).catch(() => {});
+      }
     }
 
     updateDevHover(targetNode, e) {
@@ -815,7 +838,16 @@
 
     openDevStudio(tab = 'ast') {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.openDevStudio === 'function') _s.openDevStudio.call(this, tab);
+      if (_s && typeof _s.openDevStudio === 'function') {
+        _s.openDevStudio.call(this, tab);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.openDevStudio === 'function') m.openDevStudio.call(this, tab);
+        }).catch(() => {});
+      }
     }
 
     closeDevStudio() {
@@ -825,7 +857,16 @@
 
     toggleDevStudio() {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.toggleDevStudio === 'function') _s.toggleDevStudio.call(this);
+      if (_s && typeof _s.toggleDevStudio === 'function') {
+        _s.toggleDevStudio.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.toggleDevStudio === 'function') m.toggleDevStudio.call(this);
+        }).catch(() => {});
+      }
     }
 
     slugifyCartridgeId(raw) {
@@ -885,7 +926,16 @@
 
     requestNanoRemix(promptOverride) {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.requestNanoRemix === 'function') _s.requestNanoRemix.call(this, promptOverride);
+      if (_s && typeof _s.requestNanoRemix === 'function') {
+        _s.requestNanoRemix.call(this, promptOverride);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.requestNanoRemix === 'function') m.requestNanoRemix.call(this, promptOverride);
+        }).catch(() => {});
+      }
     }
 
     runStandaloneNanoRemix(ctx) {
@@ -900,7 +950,16 @@
 
     handleNanoRemixResult(proposal) {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.handleNanoRemixResult === 'function') _s.handleNanoRemixResult.call(this, proposal);
+      if (_s && typeof _s.handleNanoRemixResult === 'function') {
+        _s.handleNanoRemixResult.call(this, proposal);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.handleNanoRemixResult === 'function') m.handleNanoRemixResult.call(this, proposal);
+        }).catch(() => {});
+      }
     }
 
     applyPendingNanoProposal() {
@@ -950,7 +1009,17 @@
 
     downloadStandaloneSvgApplet() {
       const _s = _getPlayerUIStudio();
-      if (_s && typeof _s.downloadStandaloneSvgApplet === 'function') _s.downloadStandaloneSvgApplet.call(this);
+      if (_s && typeof _s.downloadStandaloneSvgApplet === 'function') {
+        _s.downloadStandaloneSvgApplet.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureStudio === 'function') {
+        this.showToast('🚀 Loading Applet Exporter...');
+        _ll.ensureStudio(this).then((m) => {
+          if (m && typeof m.downloadStandaloneSvgApplet === 'function') m.downloadStandaloneSvgApplet.call(this);
+        }).catch(() => {});
+      }
     }
 
     async downloadOfflineSuiteZip() {
@@ -1084,7 +1153,22 @@
 
     initObsBroadcast() {
       const _b = _getPlayerUIBroadcast();
-      if (_b && typeof _b.initObsBroadcast === 'function') _b.initObsBroadcast.call(this);
+      if (_b && typeof _b.initObsBroadcast === 'function') {
+        this._obsBroadcastInitialized = true;
+        _b.initObsBroadcast.call(this);
+        return;
+      }
+      try {
+        const params = typeof window !== 'undefined' && window.location ? new URLSearchParams(window.location.search) : null;
+        const wantsObs = params && (params.get('transparent') === '1' || params.get('transparent') === 'true' || params.get('obs') === '1');
+        if (wantsObs) {
+          if (typeof document !== 'undefined' && document.body) document.body.classList.add('obs-transparent');
+          const _ll = _getLazyLoader();
+          if (_ll && typeof _ll.ensureBroadcast === 'function') {
+            _ll.ensureBroadcast(this).catch(() => {});
+          }
+        }
+      } catch (_) {}
     }
 
     updateObsStatusUI(isConnected, isRecording, version) {
@@ -1094,7 +1178,16 @@
 
     toggleWebRtcDrawer() {
       const _b = _getPlayerUIBroadcast();
-      if (_b && typeof _b.toggleWebRtcDrawer === 'function') _b.toggleWebRtcDrawer.call(this);
+      if (_b && typeof _b.toggleWebRtcDrawer === 'function') {
+        _b.toggleWebRtcDrawer.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureBroadcast === 'function') {
+        _ll.ensureBroadcast(this).then((m) => {
+          if (m && typeof m.toggleWebRtcDrawer === 'function') m.toggleWebRtcDrawer.call(this);
+        }).catch(() => {});
+      }
     }
 
     closeWebRtcDrawer() {
@@ -1109,7 +1202,16 @@
 
     toggleObsDrawer() {
       const _b = _getPlayerUIBroadcast();
-      if (_b && typeof _b.toggleObsDrawer === 'function') _b.toggleObsDrawer.call(this);
+      if (_b && typeof _b.toggleObsDrawer === 'function') {
+        _b.toggleObsDrawer.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureBroadcast === 'function') {
+        _ll.ensureBroadcast(this).then((m) => {
+          if (m && typeof m.toggleObsDrawer === 'function') m.toggleObsDrawer.call(this);
+        }).catch(() => {});
+      }
     }
 
     closeObsDrawer() {
@@ -1126,7 +1228,14 @@
 
     startVoiceCommands() {
       const _v = _getPlayerUIVoice();
-      return _v && typeof _v.startVoiceCommands === 'function' ? _v.startVoiceCommands.call(this) : false;
+      if (_v && typeof _v.startVoiceCommands === 'function') return _v.startVoiceCommands.call(this);
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureVoice === 'function') {
+        _ll.ensureVoice().then((m) => {
+          if (m && typeof m.startVoiceCommands === 'function') m.startVoiceCommands.call(this);
+        }).catch(() => {});
+      }
+      return false;
     }
 
     stopVoiceCommands() {
@@ -1136,7 +1245,16 @@
 
     toggleVoiceCommands() {
       const _v = _getPlayerUIVoice();
-      if (_v && typeof _v.toggleVoiceCommands === 'function') _v.toggleVoiceCommands.call(this);
+      if (_v && typeof _v.toggleVoiceCommands === 'function') {
+        _v.toggleVoiceCommands.call(this);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureVoice === 'function') {
+        _ll.ensureVoice().then((m) => {
+          if (m && typeof m.toggleVoiceCommands === 'function') m.toggleVoiceCommands.call(this);
+        }).catch(() => {});
+      }
     }
 
     updateVoiceStatusUI(active, text) {
@@ -1156,7 +1274,16 @@
 
     handleVoiceCommand(rawTranscript) {
       const _v = _getPlayerUIVoice();
-      if (_v && typeof _v.handleVoiceCommand === 'function') _v.handleVoiceCommand.call(this, rawTranscript);
+      if (_v && typeof _v.handleVoiceCommand === 'function') {
+        _v.handleVoiceCommand.call(this, rawTranscript);
+        return;
+      }
+      const _ll = _getLazyLoader();
+      if (_ll && typeof _ll.ensureVoice === 'function') {
+        _ll.ensureVoice().then((m) => {
+          if (m && typeof m.handleVoiceCommand === 'function') m.handleVoiceCommand.call(this, rawTranscript);
+        }).catch(() => {});
+      }
     }
   }
 

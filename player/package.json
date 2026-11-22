@@ -23,6 +23,7 @@
   "files": [
     "index.html",
     "player.css",
+    "ast-lazy-loader.js",
     "ast-profiler.js",
     "ast-audio-speech.js",
     "ast-physics.js",

@@ -524,13 +524,11 @@
     </div>
   </footer>
 
-  <!-- Modular Scripts -->
+  <!-- Modular Core Scripts (optional Studio, Broadcast, Voice, Exporter, Profiler, AI Director, Compiler & PhET modules load on demand via ast-lazy-loader.js) -->
+  <script src="./player/ast-lazy-loader.js"></script>
   <script src="./player/ast-local-store.js"></script>
   <script src="./player/ast-render-boundary.js"></script>
-  <script src="./player/ast-compiler.js"></script>
-  <script src="./player/ast-phet-bridge.js"></script>
   <script src="./player/ast-registry.js"></script>
-  <script src="./player/ast-profiler.js"></script>
   <script src="./player/ast-audio-speech.js"></script>
   <script src="./player/ast-physics.js"></script>
   <script src="./player/ast-expr.js"></script>
@@ -538,20 +536,13 @@
   <script src="./player/ast-parser.js"></script>
   <script src="./player/ast-3d.js"></script>
   <script src="./player/ast-bridge.js"></script>
-  <script src="./player/ast-exporter.js"></script>
   <script src="./player/ast-hud-controls.js"></script>
-  <script src="./player/ast-ai-director.js"></script>
   <script src="./player/ast-file-ingest.js"></script>
   <script src="./player/ast-svg-integrity.js"></script>
   <script src="./player/ast-loader.js"></script>
   <script src="./player/ast-state-scorm.js"></script>
   <script src="./player/ast-engine.js"></script>
-  <script src="./player/ast-webrtc-bus.js"></script>
-  <script src="./player/obs-controller.js"></script>
-  <script src="./player/player-ui-studio.js"></script>
   <script src="./player/player-ui-checkpoints.js"></script>
-  <script src="./player/player-ui-voice.js"></script>
-  <script src="./player/player-ui-broadcast.js"></script>
   <script src="./player/player-ui-display.js"></script>
   <script src="./player/player-ui-controls.js"></script>
   <script src="./player/player-ui-events.js"></script>
@@ -610,7 +601,14 @@
       if (astPayload) {
         try { engine.loadFromPayload(astPayload, autoplay); } catch (e) { console.warn(e); }
       } else if (scriptPayload) {
-        try { engine.loadFromPayload(scriptPayload, autoplay); } catch (e) { console.warn(e); }
+        const runScriptPayload = () => {
+          try { engine.loadFromPayload(scriptPayload, autoplay); } catch (e) { console.warn(e); }
+        };
+        if (!window.ASTSlideScriptCompiler && window.ASTLazyLoader) {
+          window.ASTLazyLoader.ensureCompiler().then(runScriptPayload).catch(console.warn);
+        } else {
+          runScriptPayload();
+        }
       } else if (dataPayload) {
         try { engine.loadFromPayload(dataPayload, autoplay); } catch (e) { console.warn(e); }
       } else if (src) {

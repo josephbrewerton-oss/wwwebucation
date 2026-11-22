@@ -35,14 +35,16 @@
   ];
 
   function bindStudioDOMEvents(stage) {
+    if (this._studioEventsBound) return;
+    this._studioEventsBound = true;
     const el = this.elements;
 
     // --- Developer Inspector & Live Studio Event Bindings ---
-    if (el.btnDevMode) {
+    if (el.btnDevMode && !this._studioLazyTriggersBound) {
       el.btnDevMode.addEventListener('click', () => this.toggleDevMode());
     }
 
-    if (el.btnDevStudio) {
+    if (el.btnDevStudio && !this._studioLazyTriggersBound) {
       el.btnDevStudio.addEventListener('click', () => this.toggleDevStudio());
     }
 

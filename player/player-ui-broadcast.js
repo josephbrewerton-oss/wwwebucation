@@ -14,10 +14,12 @@
   'use strict';
 
   function bindBroadcastDOMEvents() {
+    if (this._broadcastEventsBound) return;
+    this._broadcastEventsBound = true;
     const el = this.elements;
 
     // WebRTC P2P Mesh & AI Link Controls
-    if (el.btnWebRtcLink) {
+    if (el.btnWebRtcLink && !this._broadcastLazyTriggersBound) {
       el.btnWebRtcLink.addEventListener('click', () => {
         this.toggleWebRtcDrawer();
       });
@@ -178,7 +180,7 @@
     }
 
     // OBS Studio WebSocket Drawer Controls
-    if (el.btnObsLink) {
+    if (el.btnObsLink && !this._broadcastLazyTriggersBound) {
       el.btnObsLink.addEventListener('click', () => {
         this.toggleObsDrawer();
       });

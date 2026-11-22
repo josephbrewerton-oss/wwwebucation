@@ -701,8 +701,18 @@
       });
     }
 
-    // --- Developer Inspector & Live Studio Event Bindings (delegated to player-ui-studio.js) ---
-    this.bindStudioDOMEvents(stage);
+    // --- Developer Inspector & Live Studio Event Bindings (delegated to player-ui-studio.js; lazy-loaded on demand) ---
+    if (global.ASTPlayerUIStudio || (typeof window !== 'undefined' && window.ASTPlayerUIStudio)) {
+      this.bindStudioDOMEvents(stage);
+    } else {
+      if (el.btnDevMode && !this._studioLazyTriggersBound) {
+        el.btnDevMode.addEventListener('click', () => this.toggleDevMode());
+      }
+      if (el.btnDevStudio && !this._studioLazyTriggersBound) {
+        el.btnDevStudio.addEventListener('click', () => this.toggleDevStudio());
+      }
+      this._studioLazyTriggersBound = true;
+    }
 
     if (el.btnHeaderExportSpa) {
       el.btnHeaderExportSpa.addEventListener('click', () => {
@@ -717,8 +727,18 @@
       });
     }
 
-    // --- WebRTC P2P Mesh & OBS Broadcast Drawer Event Bindings (delegated to player-ui-broadcast.js) ---
-    this.bindBroadcastDOMEvents();
+    // --- WebRTC P2P Mesh & OBS Broadcast Drawer Event Bindings (delegated to player-ui-broadcast.js; lazy-loaded on demand) ---
+    if (global.ASTPlayerUIBroadcast || (typeof window !== 'undefined' && window.ASTPlayerUIBroadcast)) {
+      this.bindBroadcastDOMEvents();
+    } else {
+      if (el.btnWebRtcLink && !this._broadcastLazyTriggersBound) {
+        el.btnWebRtcLink.addEventListener('click', () => this.toggleWebRtcDrawer());
+      }
+      if (el.btnObsLink && !this._broadcastLazyTriggersBound) {
+        el.btnObsLink.addEventListener('click', () => this.toggleObsDrawer());
+      }
+      this._broadcastLazyTriggersBound = true;
+    }
 
     // --- Display Presets, Studio Panel & Settings Drawer Event Bindings (delegated to player-ui-display.js) ---
     this.bindDisplayDOMEvents();
