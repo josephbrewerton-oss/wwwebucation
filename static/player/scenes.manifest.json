@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-22T14:22:17.835Z",
+  "generatedAt": "2026-11-22T16:22:07.909Z",
   "totalScenes": 79,
   "inputDirs": [
     "static/cartridges"
@@ -876,7 +876,7 @@
       "section": "Mathematics & Geometry",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 29,
+      "bindingsCount": 32,
       "hasCheckpoints": true,
       "checkpointCount": 1
     },

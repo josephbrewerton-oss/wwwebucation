@@ -31,6 +31,9 @@
   (:computed (
     (:name "offCenter" :expr "(abs (- sigma 0.5))")
     (:name "isLocked" :expr "(if (< (abs (- sigma 0.5)) 0.015) 1 0)")
+    (:name "maxSigma" :expr "(max sigma (- 1 sigma))")
+    (:name "tuningPct" :expr "(round (* (/ zeroHarmonics 15) 100))")
+    (:name "residualErr" :expr "(- 1 (/ zeroHarmonics 15))")
     (:name "brickX" :expr "(map sigma 0.1 0.9 80 320)")
     (:name "brickY" :expr "(clamp (- 440 (* tHeight 4.2)) 88 436)")
   ))
@@ -45,7 +48,7 @@
     (:t 0.00 :title "The Critical Strip" :rule "All non-trivial Riemann zeta zeros sit inside 0 < σ < 1, centered on the σ = 0.5 Critical Line.")
     (:t 0.35 :title "Jacob's Ladder of Zeros" :rule "The 15 zeta-zero rungs act like musical harmonics governing prime brick rhythm.")
     (:t 0.70 :title "Prime Staircase π(x) & Li(x)" :rule "Keeping σ = 0.5 locks the prime brick staircase tightly to the smooth Li(x) ramp.")
-    (:t 1.00 :title "Lean Formal Proof (Nov 2026)" :rule "Every zero on σ = 0.5 guarantees optimal error bounds for all prime numbers.")
+    (:t 1.00 :title "Lean Formalization (Nov 2026)" :rule "A ~17M-line Lean formalization was announced Nov 2026 (under mathematical review); every zero on σ = 0.5 guarantees optimal O(√x) prime error bounds.")
   ))
 
   (:subtitles (
@@ -78,6 +81,22 @@
       (:seq
         (:step-var "zeroHarmonics" :delta -1 :min 0 :max 15)
         (:tone "392.00")))
+    ;; Direct tap/click on any of the 15 Jacob's Ladder zeta-zero rungs
+    (:clickable :target "#ladder-rung-group-0"  (:seq (:set-var "tHeight" :val 14.13) (:set-var "zeroHarmonics" :val 1)  (:tone "261.63")))
+    (:clickable :target "#ladder-rung-group-1"  (:seq (:set-var "tHeight" :val 21.02) (:set-var "zeroHarmonics" :val 2)  (:tone "293.66")))
+    (:clickable :target "#ladder-rung-group-2"  (:seq (:set-var "tHeight" :val 25.01) (:set-var "zeroHarmonics" :val 3)  (:tone "329.63")))
+    (:clickable :target "#ladder-rung-group-3"  (:seq (:set-var "tHeight" :val 30.42) (:set-var "zeroHarmonics" :val 4)  (:tone "349.23")))
+    (:clickable :target "#ladder-rung-group-4"  (:seq (:set-var "tHeight" :val 32.94) (:set-var "zeroHarmonics" :val 5)  (:tone "392.00")))
+    (:clickable :target "#ladder-rung-group-5"  (:seq (:set-var "tHeight" :val 37.59) (:set-var "zeroHarmonics" :val 6)  (:tone "440.00")))
+    (:clickable :target "#ladder-rung-group-6"  (:seq (:set-var "tHeight" :val 40.92) (:set-var "zeroHarmonics" :val 7)  (:tone "493.88")))
+    (:clickable :target "#ladder-rung-group-7"  (:seq (:set-var "tHeight" :val 43.33) (:set-var "zeroHarmonics" :val 8)  (:tone "523.25")))
+    (:clickable :target "#ladder-rung-group-8"  (:seq (:set-var "tHeight" :val 48.01) (:set-var "zeroHarmonics" :val 9)  (:tone "587.33")))
+    (:clickable :target "#ladder-rung-group-9"  (:seq (:set-var "tHeight" :val 49.77) (:set-var "zeroHarmonics" :val 10) (:tone "659.25")))
+    (:clickable :target "#ladder-rung-group-10" (:seq (:set-var "tHeight" :val 52.97) (:set-var "zeroHarmonics" :val 11) (:tone "698.46")))
+    (:clickable :target "#ladder-rung-group-11" (:seq (:set-var "tHeight" :val 56.45) (:set-var "zeroHarmonics" :val 12) (:tone "783.99")))
+    (:clickable :target "#ladder-rung-group-12" (:seq (:set-var "tHeight" :val 59.35) (:set-var "zeroHarmonics" :val 13) (:tone "880.00")))
+    (:clickable :target "#ladder-rung-group-13" (:seq (:set-var "tHeight" :val 60.83) (:set-var "zeroHarmonics" :val 14) (:tone "987.77")))
+    (:clickable :target "#ladder-rung-group-14" (:seq (:set-var "tHeight" :val 65.11) (:set-var "zeroHarmonics" :val 15) (:tone "1046.50")))
   ))
 
   (:bindings (
@@ -123,8 +142,15 @@
     (:target "#scope-offcenter-text"
       (:attr "fill" "(if (= isLocked 1) '#22c55e' '#f97316')")
       (:text "(concat 'Δσ = ' (fixed offCenter 3))"))
+    (:target "#zeta-wave-scope"
+      (:attr "stroke" "(if (= isLocked 1) '#38bdf8' '#f97316')"))
     (:target "#harmonics-readout"
       (:text "(let ((zh (round zeroHarmonics)) (sp (round brickSpin))) (concat 'Rungs: ' zh '/15 • Spin: ' sp '°'))"))
+    (:target "#error-bound-pill"
+      (:attr "stroke" "(if (= isLocked 1) '#22c55e' '#f97316')"))
+    (:target "#riemann-error-bound-text"
+      (:attr "fill" "(if (= isLocked 1) '#4ade80' '#fdba74')")
+      (:text "(let ((ms (fixed maxSigma 2)) (tp (round tuningPct))) (if (= isLocked 1) (concat 'Err O(√x) • ' tp '%') (concat 'Err O(x^' ms ')!')))"))
 
     ;; 3. Compile-Time (:for ...) Loop: 15 Jacob's Ladder Non-Trivial Zeta Zero Rungs
     (:for i (0 14)
@@ -140,9 +166,10 @@
         (:attr "fill" "(if (and (= isLocked 1) (< {{i}} zeroHarmonics)) '#4ade80' '#64748b')")))
 
     ;; 4. Compile-Time (:for ...) Loop: 10 Prime Brick Columns (2, 3, 5, 7, 11, 13, 17, 19, 23, 29)
+    ;; Horizontal wobble scales with off-line drift Δσ; vertical residual harmonic ripple settles to 0 as rungs climb 0 → 15.
     (:for p (0 9)
       (:target "#prime-brick-{{p}}"
-        (:attr "transform" "(let ((phase (+ (* t 20) (* {{p}} 1.1))) (dx (if (= isLocked 1) 0 (* (sin phase) offCenter 26)))) (translate dx 0))"))
+        (:attr "transform" "(let ((phase (+ (* t 20) (* {{p}} 1.1))) (dx (if (= isLocked 1) 0 (* (sin phase) offCenter 26))) (dy (* (cos (+ (* {{p}} 1.7) (* t 6))) residualErr 7))) (translate dx dy))"))
       (:target "#prime-brick-bar-{{p}}"
         (:attr "fill" "(if (= isLocked 1) '#38bdf8' '#f97316')")
         (:attr "stroke" "(if (= isLocked 1) '#7dd3fc' '#fdba74')")))

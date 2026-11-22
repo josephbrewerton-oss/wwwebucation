@@ -65,7 +65,7 @@
     </g>
 
     <text x="40" y="19" fill="#f8fafc" font-size="12.5" font-weight="800" letter-spacing="0.5">JACOB&apos;S LADDER OF PRIME BRICKS</text>
-    <text x="40" y="31" fill="#94a3b8" font-size="9" font-weight="600">Riemann Hypothesis (Lean Verified Nov 2026) • Critical Line σ = 0.5 • Prime Staircase π(x)</text>
+    <text x="40" y="31" fill="#94a3b8" font-size="9" font-weight="600">Riemann Hypothesis (Nov 2026 Lean Formalization • Under Review) • Critical Line σ = 0.5 • Prime Staircase π(x)</text>
 
     <!-- Live Lock Telemetry Pill -->
     <g transform="translate(556, 7)">
@@ -105,77 +105,92 @@
 
     <!-- 15 Jacob's Ladder Non-Trivial Zeta Zero Rungs (y = 440 - h * 4.2) -->
     <g id="jacobs-ladder-rungs">
-      <g id="ladder-rung-group-0" transform="translate(0, 380.65)" data-pedagogical="Zeta Zero #1 (γ₁ = 14.13): First harmonic rung of Jacob's Ladder on σ = 0.5.">
+      <g id="ladder-rung-group-0" transform="translate(0, 380.65)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 1 at height 14.13 and activate 1 harmonic rung" data-pedagogical="Zeta Zero #1 (γ₁ = 14.13): First harmonic rung of Jacob's Ladder on σ = 0.5. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-0" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
         <circle id="ladder-node-0" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-0" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ1=14.13</text>
       </g>
-      <g id="ladder-rung-group-1" transform="translate(0, 351.72)" data-pedagogical="Zeta Zero #2 (γ₂ = 21.02): Second harmonic frequency tuning prime distribution.">
+      <g id="ladder-rung-group-1" transform="translate(0, 351.72)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 2 at height 21.02 and activate 2 harmonic rungs" data-pedagogical="Zeta Zero #2 (γ₂ = 21.02): Second harmonic frequency tuning prime distribution. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-1" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
         <circle id="ladder-node-1" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-1" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ2=21.02</text>
       </g>
-      <g id="ladder-rung-group-2" transform="translate(0, 334.96)" data-pedagogical="Zeta Zero #3 (γ₃ = 25.01): Third non-trivial zero on the Critical Line.">
+      <g id="ladder-rung-group-2" transform="translate(0, 334.96)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 3 at height 25.01 and activate 3 harmonic rungs" data-pedagogical="Zeta Zero #3 (γ₃ = 25.01): Third non-trivial zero on the Critical Line. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-2" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
         <circle id="ladder-node-2" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-2" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ3=25.01</text>
       </g>
-      <g id="ladder-rung-group-3" transform="translate(0, 312.24)" data-pedagogical="Zeta Zero #4 (γ₄ = 30.42): Fourth harmonic zero locking prime wave interference.">
+      <g id="ladder-rung-group-3" transform="translate(0, 312.24)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 4 at height 30.42 and activate 4 harmonic rungs" data-pedagogical="Zeta Zero #4 (γ₄ = 30.42): Fourth harmonic zero locking prime wave interference. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-3" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
         <circle id="ladder-node-3" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-3" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ4=30.42</text>
       </g>
-      <g id="ladder-rung-group-4" transform="translate(0, 301.65)" data-pedagogical="Zeta Zero #5 (γ₅ = 32.94): Fifth harmonic rung on Jacob's Ladder.">
+      <g id="ladder-rung-group-4" transform="translate(0, 301.65)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 5 at height 32.94 and activate 5 harmonic rungs" data-pedagogical="Zeta Zero #5 (γ₅ = 32.94): Fifth harmonic rung on Jacob's Ladder. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-4" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
         <circle id="ladder-node-4" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-4" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ5=32.94</text>
       </g>
-      <g id="ladder-rung-group-5" transform="translate(0, 282.12)" data-pedagogical="Zeta Zero #6 (γ₆ = 37.59): Sixth harmonic zero on σ = 0.5.">
+      <g id="ladder-rung-group-5" transform="translate(0, 282.12)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 6 at height 37.59 and activate 6 harmonic rungs" data-pedagogical="Zeta Zero #6 (γ₆ = 37.59): Sixth harmonic zero on σ = 0.5. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-5" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-5" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-5" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ6=37.59</text>
       </g>
-      <g id="ladder-rung-group-6" transform="translate(0, 268.14)" data-pedagogical="Zeta Zero #7 (γ₇ = 40.92): Seventh harmonic zero on σ = 0.5.">
+      <g id="ladder-rung-group-6" transform="translate(0, 268.14)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 7 at height 40.92 and activate 7 harmonic rungs" data-pedagogical="Zeta Zero #7 (γ₇ = 40.92): Seventh harmonic zero on σ = 0.5. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-6" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-6" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-6" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ7=40.92</text>
       </g>
-      <g id="ladder-rung-group-7" transform="translate(0, 258.01)" data-pedagogical="Zeta Zero #8 (γ₈ = 43.33): Eighth harmonic zero sharpening prime jumps.">
+      <g id="ladder-rung-group-7" transform="translate(0, 258.01)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 8 at height 43.33 and activate 8 harmonic rungs" data-pedagogical="Zeta Zero #8 (γ₈ = 43.33): Eighth harmonic zero sharpening prime jumps. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-7" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-7" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-7" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ8=43.33</text>
       </g>
-      <g id="ladder-rung-group-8" transform="translate(0, 238.36)" data-pedagogical="Zeta Zero #9 (γ₉ = 48.01): Ninth harmonic rung on the Critical Line.">
+      <g id="ladder-rung-group-8" transform="translate(0, 238.36)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 9 at height 48.01 and activate 9 harmonic rungs" data-pedagogical="Zeta Zero #9 (γ₉ = 48.01): Ninth harmonic rung on the Critical Line. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-8" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-8" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-8" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ9=48.01</text>
       </g>
-      <g id="ladder-rung-group-9" transform="translate(0, 230.97)" data-pedagogical="Zeta Zero #10 (γ₁₀ = 49.77): Tenth rung — unlock 10+ harmonics at σ = 0.5 for mastery!">
+      <g id="ladder-rung-group-9" transform="translate(0, 230.97)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 10 at height 49.77 and activate 10 harmonic rungs" data-pedagogical="Zeta Zero #10 (γ₁₀ = 49.77): Tenth rung — unlock 10+ harmonics at σ = 0.5 for mastery! Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-9" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-9" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-9" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ10=49.77</text>
       </g>
-      <g id="ladder-rung-group-10" transform="translate(0, 217.53)" data-pedagogical="Zeta Zero #11 (γ₁₁ = 52.97): Eleventh harmonic rung on Jacob's Ladder.">
+      <g id="ladder-rung-group-10" transform="translate(0, 217.53)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 11 at height 52.97 and activate 11 harmonic rungs" data-pedagogical="Zeta Zero #11 (γ₁₁ = 52.97): Eleventh harmonic rung on Jacob's Ladder. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-10" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-10" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-10" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ11=52.97</text>
       </g>
-      <g id="ladder-rung-group-11" transform="translate(0, 202.91)" data-pedagogical="Zeta Zero #12 (γ₁₂ = 56.45): Twelfth harmonic rung on σ = 0.5.">
+      <g id="ladder-rung-group-11" transform="translate(0, 202.91)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 12 at height 56.45 and activate 12 harmonic rungs" data-pedagogical="Zeta Zero #12 (γ₁₂ = 56.45): Twelfth harmonic rung on σ = 0.5. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-11" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-11" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-11" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ12=56.45</text>
       </g>
-      <g id="ladder-rung-group-12" transform="translate(0, 190.73)" data-pedagogical="Zeta Zero #13 (γ₁₃ = 59.35): Thirteenth harmonic zero.">
+      <g id="ladder-rung-group-12" transform="translate(0, 190.73)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 13 at height 59.35 and activate 13 harmonic rungs" data-pedagogical="Zeta Zero #13 (γ₁₃ = 59.35): Thirteenth harmonic zero. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-12" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-12" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-12" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ13=59.35</text>
       </g>
-      <g id="ladder-rung-group-13" transform="translate(0, 184.51)" data-pedagogical="Zeta Zero #14 (γ₁₄ = 60.83): Fourteenth harmonic zero.">
+      <g id="ladder-rung-group-13" transform="translate(0, 184.51)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 14 at height 60.83 and activate 14 harmonic rungs" data-pedagogical="Zeta Zero #14 (γ₁₄ = 60.83): Fourteenth harmonic zero. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-13" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-13" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-13" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ14=60.83</text>
       </g>
-      <g id="ladder-rung-group-14" transform="translate(0, 166.54)" data-pedagogical="Zeta Zero #15 (γ₁₅ = 65.11): Fifteenth harmonic zero at the top of our Jacob's Ladder.">
+      <g id="ladder-rung-group-14" transform="translate(0, 166.54)" role="button" tabindex="0" cursor="pointer" aria-label="Jump to Zeta Zero 15 at height 65.11 and activate all 15 harmonic rungs" data-pedagogical="Zeta Zero #15 (γ₁₅ = 65.11): Fifteenth harmonic zero at the top of our Jacob's Ladder. Click to jump here!">
+        <rect x="94" y="-6" width="274" height="12" fill="#000000" fill-opacity="0.001" pointer-events="all" aria-hidden="true" />
         <line id="ladder-rung-14" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
         <circle id="ladder-node-14" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
         <text id="ladder-label-14" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ15=65.11</text>
@@ -242,6 +257,12 @@
     <g id="wobble-warning-badge" display="none" transform="translate(406, 80)">
       <rect id="wobble-warning-rect" width="218" height="20" rx="5" fill="#431407" stroke="#f97316" stroke-width="1.1" />
       <text id="wobble-warning-text" x="109" y="13.5" fill="#fdba74" font-size="8.2" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">⚠ OFF-LINE DRIFT • PRIMES WOBBLING</text>
+    </g>
+
+    <!-- Live Riemann Explicit Error Bound Telemetry -->
+    <g id="riemann-error-bound-group" transform="translate(632, 80)" data-pedagogical="Riemann Explicit Error Bound: When every zero sits on σ = 0.5, |π(x) − Li(x)| is bounded by O(√x · ln x). Off-line zeros inflate the error exponent to O(x^max(σ, 1−σ))!">
+      <rect id="error-bound-pill" width="136" height="20" rx="5" fill="#020617" stroke="#22c55e" stroke-width="1.1" />
+      <text id="riemann-error-bound-text" x="68" y="13.5" fill="#4ade80" font-size="8" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">Err O(√x) • 33%</text>
     </g>
 
     <!-- Staircase Baseline & Horizontal Guides -->
@@ -339,8 +360,8 @@
         <line x1="414" y1="428" x2="622" y2="428" stroke="#334155" stroke-dasharray="none" />
       </g>
 
-      <!-- Live Ring-Buffer Oscilloscope Path Driven by (:scope ...) -->
-      <path id="zeta-wave-scope" d="M 414 428 L 622 428" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <!-- Live Ring-Buffer Oscilloscope Polyline Driven by (:scope ...) -->
+      <polyline id="zeta-wave-scope" points="414,428 622,428" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
 
       <text id="harmonics-readout" x="414" y="449" fill="#cbd5e1" font-size="8.2" font-weight="700" font-family="ui-monospace, monospace">Rungs: 5/15 • Spin: 0°</text>
     </g>

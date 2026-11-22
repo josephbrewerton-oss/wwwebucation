@@ -20,6 +20,57 @@ export function renderBlogPage(): HTMLElement {
       </p>
     </div>
 
+    <!-- Lead Dispatch: 22 November 2026 (Jacob's Ladder of Prime Bricks & Riemann Hypothesis) -->
+    <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
+      <div style="margin-bottom: 1.25rem;">
+        <span style="display: inline-block; padding: 0.25rem 0.65rem; border-radius: 9999px; font-size: 0.78rem; font-weight: 700; background: #dbeafe; color: #1d4ed8; margin-bottom: 0.75rem;">
+          ★ NEW INTERACTIVE LAB &bull; 22 NOVEMBER 2026
+        </span>
+        <h2 style="font-size: 2rem; font-weight: 800; color: #0f172a; line-height: 1.25; margin: 0 0 0.5rem 0;">
+          Jacob's Ladder of Prime Bricks: Hands-On Riemann Hypothesis Lab Following the November 2026 Lean Formalization
+        </h2>
+        <p style="color: #64748b; font-size: 0.92rem; margin: 0;">
+          Published 22 November 2026 &bull; By St Joseph's Mathematics &amp; Curriculum Engineering Lab
+        </p>
+      </div>
+
+      <div style="line-height: 1.75; font-size: 1.02rem; color: #334155;">
+        <p style="font-size: 1.1rem; color: #1e293b; font-weight: 500; margin-bottom: 1.25rem;">
+          Following the landmark <strong>20 November 2026</strong> announcement of a ~17-million-line Lean formalization of the 
+          <strong>Riemann Hypothesis</strong>—currently undergoing independent mathematical review and Clay Mathematics Institute verification—we 
+          have published <strong>Jacob's Ladder of Prime Bricks</strong>, a live, zero-bloat interactive vector lab that makes the core 
+          geometry of prime number distribution tangible for KS2/KS3 pupils and curious learners worldwide.
+        </p>
+        <p style="margin-bottom: 1.5rem;">
+          Rather than treating the Critical Line (&sigma; = 0.5) and Riemann zeta zeros as abstract university notation, pupils drag a 
+          spinning prime brick across the Critical Strip (0 &lt; &sigma; &lt; 1), tap any of the first <strong>15 real non-trivial zeta zeros</strong> 
+          (&gamma;<sub>1</sub> = 14.13 through &gamma;<sub>15</sub> = 65.11), and watch the prime counting staircase &pi;(x) tighten onto the smooth 
+          logarithmic integral curve Li(x) in real time at 60 FPS—all packaged into a single deterministic offline cartridge with zero external dependencies.
+        </p>
+
+        <div style="background: #eff6ff; border-left: 4px solid #2563eb; padding: 1.25rem 1.5rem; margin-bottom: 2rem; border-radius: 0 8px 8px 0;">
+          <h3 style="font-size: 1rem; font-weight: 700; color: #1e40af; margin: 0 0 0.5rem 0;">
+            What Pupils Explore Inside the Lab
+          </h3>
+          <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #1d4ed8; line-height: 1.6;">
+            <li><strong>The Critical Strip &amp; Line (&sigma; = 0.5):</strong> Drag the prime brick off-axis to see prime harmonics wobble and the live error exponent grow from <code style="background:#dbeafe; padding:1px 4px; border-radius:4px;">O(&radic;x)</code> toward <code style="background:#dbeafe; padding:1px 4px; border-radius:4px;">O(x^0.90)</code>, then snap it back to &sigma; = 0.5.</li>
+            <li><strong>15 Clickable Zeta-Zero Rungs:</strong> Tap any rung from &gamma;<sub>1</sub> = 14.13 to &gamma;<sub>15</sub> = 65.11 to climb Jacob's Ladder, hear ascending harmonic tones, and watch the prime brick columns settle into harmonic alignment.</li>
+            <li><strong>Live Zeta Drift Oscilloscope &amp; Mastery Check:</strong> Monitor |&sigma; &minus; 0.5| in real time and lock &sigma; = 0.5 with at least 10 active harmonic rungs to complete the built-in checkpoint.</li>
+            <li><strong>Offline &amp; Air-Gap Ready:</strong> Compiles to binary <code style="background:#dbeafe; padding:1px 4px; border-radius:4px;">.astb</code> bytecode for instant classroom, low-bandwidth, and smartboard use—no cloud servers or video streams required.</li>
+          </ul>
+        </div>
+
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="${base}?app=jacobs-ladder-primes" style="padding: 10px 20px; background: #2563eb; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Launch Jacob's Ladder Lab &rarr;
+          </a>
+          <a href="${base}learning-zone" style="padding: 10px 20px; background: #0f172a; color: #fff; border-radius: 8px; font-weight: 700; text-decoration: none;">
+            Explore All 79 Offline Labs &rarr;
+          </a>
+        </div>
+      </div>
+    </article>
+
     <!-- Dispatch 0: November 2026 (SlideScript & Child Authoring) -->
     <article style="margin-bottom: 3.5rem; padding-bottom: 2.5rem; border-bottom: 2px solid #e2e8f0;">
       <div style="margin-bottom: 1.25rem;">
@@ -47,7 +98,7 @@ export function renderBlogPage(): HTMLElement {
           </h3>
           <ul style="margin: 0; padding-left: 1.25rem; font-size: 0.95rem; color: #047857; line-height: 1.6;">
             <li><strong>Plain-English Markdown Syntax:</strong> Simple directives (<code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">Shape: circle</code>, <code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">## Step 1:</code>, <code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">Question:</code>) compile automatically into hardware-accelerated vector graphics and physical invariants.</li>
-            <li><strong>Remix Any Existing Cartridge:</strong> With one click, pupils can de-compile any of the 61 production cartridges (from Pythagoras to Kinetic Gas) back into human SlideScript, modify variables, and run their remixes instantly.</li>
+            <li><strong>Remix Any Existing Cartridge:</strong> With one click, pupils can de-compile any of the 79 production cartridges (from Pythagoras to Jacob's Ladder of Prime Bricks) back into human SlideScript, modify variables, and run their remixes instantly.</li>
             <li><strong>Local AI Co-Authoring:</strong> Pupils can prompt local Gemini Nano (<code style="background:#d1fae5; padding:1px 4px; border-radius:4px;">"Create a simulation of photosynthesis with moving sunlight"</code>), which synthesizes mathematically valid AST specifications in ~500 ms with zero cloud data egress.</li>
             <li><strong>Zero Setup or Toolchains:</strong> Runs entirely client-side in the browser on standard school Chromebooks with zero build tools or dependencies.</li>
           </ul>
