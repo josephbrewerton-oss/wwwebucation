@@ -100,14 +100,49 @@
         (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25")))
     (:skill :id "stage-timeline"
       :frames 2
+      :fps 60
       :start-playing 1
       (:vars
-        (:var :name "swf_frame"   :val 1 :min 1 :max "{{frames}}")
-        (:var :name "swf_playing" :val "{{startPlaying}}" :min 0 :max 1)
-        (:var :name "swf_tick"    :val 0 :min 0 :max 1000000))
+        (:var :name "swf_frame"      :val 1 :min 1 :max "{{frames}}")
+        (:var :name "swf_playing"    :val "{{startPlaying}}" :min 0 :max 1)
+        (:var :name "swf_tick"       :val 0 :min 0 :max 1000000)
+        (:var :name "stage_anim_acc" :val 0 :min 0 :max 10))
       (:rules
-        (:rule :var "swf_frame" :when "(= swf_playing 1)" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
-        (:rule :var "swf_tick"  :expr "(+ swf_tick 1)")))
+        (:rule :var "stage_anim_acc" :when "(= swf_playing 1)" :expr "(+ stage_anim_acc sim_dt)")
+        (:rule :var "swf_frame"      :when "(and (= swf_playing 1) (>= stage_anim_acc (- (/ 1 {{fps}}) 0.0001)))" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
+        (:rule :var "stage_anim_acc" :when "(and (= swf_playing 1) (>= stage_anim_acc (- (/ 1 {{fps}}) 0.0001)))" :expr "(- stage_anim_acc (- (/ 1 {{fps}}) 0.0001))")
+        (:rule :var "swf_tick"       :expr "(+ swf_tick 1)")))
+    (:skill :id "mode-screens"
+      :mode-var "mode"
+      :initial-mode 1
+      :max-mode 4
+      :screen1 "#screen-1"
+      :screen2 "#screen-2"
+      :screen3 "#screen-3"
+      :screen4 "#screen-4"
+      (:vars
+        (:var :name "{{modeVar}}" :val "{{initialMode}}" :min 1 :max "{{maxMode}}" :step 1))
+      (:bindings
+        (:target "{{screen1}}" :attr "display" :expr "(if (= {{modeVar}} 1) 'inline' 'none')")
+        (:target "{{screen2}}" :attr "display" :expr "(if (= {{modeVar}} 2) 'inline' 'none')")
+        (:target "{{screen3}}" :attr "display" :expr "(if (= {{modeVar}} 3) 'inline' 'none')")
+        (:target "{{screen4}}" :attr "display" :expr "(if (= {{modeVar}} 4) 'inline' 'none')")))
+    (:skill :id "hover-button"
+      :btn "btn"
+      :target "#{{btn}}"
+      :up-target "#{{btn}}-up"
+      :over-target "#{{btn}}-over"
+      :down-target "#{{btn}}-down"
+      :hover-tone 660
+      (:vars
+        (:var :name "{{btn}}_hover" :val 0 :min 0 :max 1)
+        (:var :name "{{btn}}_press" :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "{{upTarget}}"   :attr "display" :expr "(if (and (= {{btn}}_hover 0) (= {{btn}}_press 0)) 'inline' 'none')")
+        (:target "{{overTarget}}" :attr "display" :expr "(if (and (> {{btn}}_hover 0) (= {{btn}}_press 0)) 'inline' 'none')")
+        (:target "{{downTarget}}" :attr "display" :expr "(if (> {{btn}}_press 0) 'inline' 'none')"))
+      (:gestures
+        (:hoverable :target "{{target}}" :hover-var "{{btn}}_hover" :press-var "{{btn}}_press" :val 1 :leave-val 0 :hover-tone "{{hoverTone}}")))
     (:skill :id "actor-2d"
       :actor "player"
       :target "#{{actor}}"
@@ -138,10 +173,10 @@
         (:var :name "key_s" :val 0 :min 0 :max 1)
         (:var :name "key_d" :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
-        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})"))
       (:gestures
         (:on-key :code "KeyA" :hold-var "key_a" :val 1 :release-val 0)
         (:on-key :code "KeyD" :hold-var "key_d" :val 1 :release-val 0)
@@ -157,10 +192,10 @@
         (:var :name "key_up"    :val 0 :min 0 :max 1)
         (:var :name "key_down"  :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
-        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})"))
       (:gestures
         (:on-key :code "ArrowLeft"  :hold-var "key_left"  :val 1 :release-val 0)
         (:on-key :code "ArrowRight" :hold-var "key_right" :val 1 :release-val 0)
@@ -178,9 +213,9 @@
         (:var :name "{{hpVar}}" :val "{{maxHp}}" :min -100 :max "{{maxHp}}")
         (:var :name "{{koVar}}" :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{koVar}}"   :when "(< {{hpVar}} 1)" :expr "1")
-        (:rule :var "swf_frame"   :when "(< {{hpVar}} 1)" :expr "{{koFrame}}")
-        (:rule :var "swf_playing" :when "(< {{hpVar}} 1)" :expr "0"))
+        (:rule :var "{{koVar}}"   :on-enter "(< {{hpVar}} 1)" :expr "1")
+        (:rule :var "swf_frame"   :on-enter "(< {{hpVar}} 1)" :expr "{{koFrame}}")
+        (:rule :var "swf_playing" :on-enter "(< {{hpVar}} 1)" :expr "0"))
       (:gestures
         (:on-click :target "{{attackBtn}}" :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")
         (:on-key   :code "{{attackKey}}"   :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")))
@@ -207,12 +242,84 @@
         (:rule :var "{{proj}}_x"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_x")
         (:rule :var "{{proj}}_y"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_y")
         (:rule :var "{{proj}}_visible" :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "1")
-        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y {{projSpeed}})")
+        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y (* {{projSpeed}} sim_scale))")
         (:rule :var "{{proj}}_visible" :when "(< {{proj}}_y -10)"     :expr "0")
         (:rule :var "{{scoreVar}}"     :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
         (:rule :var "{{proj}}_visible" :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
       (:gestures
         (:on-key :code "{{fireKey}}" :hold-var "key_fire" :val 1 :release-val 0)))
+    (:skill :id "entity-pool"
+      :actor "ship"
+      :pool "shot"
+      :enemy "enemy"
+      :speed 14
+      :hit-radius 32
+      :score-var "score"
+      :points 10
+      :fire-key "Space"
+      :cooldown 0.15
+      (:vars
+        (:var :name "{{pool}}_idx"       :val 0 :min 0 :max 3)
+        (:var :name "{{pool}}_cd"        :val 0 :min 0 :max 10)
+        (:var :name "{{pool}}_fire_now"  :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_0_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_0_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_0_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_1_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_1_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_1_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_2_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_2_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_2_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_3_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_3_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_3_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{scoreVar}}"       :val 0 :min 0 :max 999999)
+        (:var :name "key_pool_fire"      :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "#{{pool}}_0" :attr "transform" :expr "(str 'translate(' {{pool}}_0_x ', ' {{pool}}_0_y ')')")
+        (:target "#{{pool}}_0" :attr "display"   :expr "(if (> {{pool}}_0_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_1" :attr "transform" :expr "(str 'translate(' {{pool}}_1_x ', ' {{pool}}_1_y ')')")
+        (:target "#{{pool}}_1" :attr "display"   :expr "(if (> {{pool}}_1_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_2" :attr "transform" :expr "(str 'translate(' {{pool}}_2_x ', ' {{pool}}_2_y ')')")
+        (:target "#{{pool}}_2" :attr "display"   :expr "(if (> {{pool}}_2_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_3" :attr "transform" :expr "(str 'translate(' {{pool}}_3_x ', ' {{pool}}_3_y ')')")
+        (:target "#{{pool}}_3" :attr "display"   :expr "(if (> {{pool}}_3_visible 0) 'inline' 'none')"))
+      (:rules
+        (:rule :var "{{pool}}_cd"        :when "(> {{pool}}_cd 0)" :expr "(max 0 (- {{pool}}_cd sim_dt))")
+        (:rule :var "{{pool}}_fire_now"  :expr "(if (and (= key_pool_fire 1) (<= {{pool}}_cd 0.0001)) 1 0)")
+        (:rule :var "{{pool}}_0_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_0_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_0_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "1")
+        (:rule :var "{{pool}}_1_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_1_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_1_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "1")
+        (:rule :var "{{pool}}_2_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_2_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_2_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "1")
+        (:rule :var "{{pool}}_3_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_3_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_3_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "1")
+        (:rule :var "{{pool}}_idx"       :when "(= {{pool}}_fire_now 1)" :expr "(% (+ {{pool}}_idx 1) 4)")
+        (:rule :var "{{pool}}_cd"        :when "(= {{pool}}_fire_now 1)" :expr "{{cooldown}}")
+        (:rule :var "{{pool}}_0_y"       :when "(> {{pool}}_0_visible 0)" :expr "(- {{pool}}_0_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_1_y"       :when "(> {{pool}}_1_visible 0)" :expr "(- {{pool}}_1_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_2_y"       :when "(> {{pool}}_2_visible 0)" :expr "(- {{pool}}_2_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_3_y"       :when "(> {{pool}}_3_visible 0)" :expr "(- {{pool}}_3_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_0_visible" :when "(< {{pool}}_0_y -10)" :expr "0")
+        (:rule :var "{{pool}}_1_visible" :when "(< {{pool}}_1_y -10)" :expr "0")
+        (:rule :var "{{pool}}_2_visible" :when "(< {{pool}}_2_y -10)" :expr "0")
+        (:rule :var "{{pool}}_3_visible" :when "(< {{pool}}_3_y -10)" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_0_visible 0) (< (abs (- {{pool}}_0_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_0_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_0_visible" :when "(and (> {{pool}}_0_visible 0) (< (abs (- {{pool}}_0_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_0_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_1_visible 0) (< (abs (- {{pool}}_1_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_1_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_1_visible" :when "(and (> {{pool}}_1_visible 0) (< (abs (- {{pool}}_1_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_1_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_2_visible 0) (< (abs (- {{pool}}_2_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_2_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_2_visible" :when "(and (> {{pool}}_2_visible 0) (< (abs (- {{pool}}_2_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_2_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_3_visible 0) (< (abs (- {{pool}}_3_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_3_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_3_visible" :when "(and (> {{pool}}_3_visible 0) (< (abs (- {{pool}}_3_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_3_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
+      (:gestures
+        (:on-key :code "{{fireKey}}" :hold-var "key_pool_fire" :val 1 :release-val 0)))
     (:skill :id "arcade-shooter"
       :extends ("stage-timeline" "arrow-mover" "projectile-shooter")
       :actor "ship"
@@ -705,19 +812,20 @@
           } else if (/^\(\s*:(?:var|rule)(?:\s|$)/i.test(bSexp)) {
             const rAttrs = this._parseKeywordAttrs(bSexp);
             const varName = rAttrs.var || rAttrs.name;
+            const onEnter = rAttrs['on-enter'] || rAttrs.onEnter;
             if (varName && rAttrs.expr !== undefined) {
               bindings.push({
                 type: 'var-update',
                 varName,
                 expr: String(rAttrs.expr),
-                ...(rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {})
+                ...(onEnter ? { onEnter: String(onEnter) } : (rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {}))
               });
             }
           }
         }
       }
 
-      // Parse (:rules (:rule :var "..." :expr "..." [:when "..."]))
+      // Parse (:rules (:rule :var "..." :expr "..." [:when "..." | :on-enter "..."]))
       const rules = [];
       const rulesBlock = this._extractSexpBlock(skillSexp, '(:rules');
       if (rulesBlock) {
@@ -725,12 +833,13 @@
           if (!/^\(\s*:(?:rule|var)(?:\s|$)/i.test(rSexp)) continue;
           const rAttrs = this._parseKeywordAttrs(rSexp);
           const varName = rAttrs.var || rAttrs.name;
+          const onEnter = rAttrs['on-enter'] || rAttrs.onEnter;
           if (varName && rAttrs.expr !== undefined) {
             rules.push({
               type: 'var-update',
               varName,
               expr: String(rAttrs.expr),
-              ...(rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {})
+              ...(onEnter ? { onEnter: String(onEnter) } : (rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {}))
             });
           }
         }
@@ -938,9 +1047,10 @@
           if (bDef.type === 'var-update') {
             const varName = String(host._expandSkillTemplate(bDef.varName, params, false)).trim();
             const expr = String(host._expandSkillTemplate(bDef.expr, params, false));
+            const onEnter = bDef.onEnter ? String(host._expandSkillTemplate(bDef.onEnter, params, false)) : undefined;
             const when = bDef.when ? String(host._expandSkillTemplate(bDef.when, params, false)) : undefined;
             if (varName && expr) {
-              prependedRules.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+              prependedRules.push({ type: 'var-update', varName, expr, ...(onEnter ? { onEnter } : (when ? { when } : {})) });
               mutated = true;
             }
           } else {
@@ -961,9 +1071,10 @@
         for (const rDef of resolvedDef.rules) {
           const varName = String(host._expandSkillTemplate(rDef.varName, params, false)).trim();
           const expr = String(host._expandSkillTemplate(rDef.expr, params, false));
+          const onEnter = rDef.onEnter ? String(host._expandSkillTemplate(rDef.onEnter, params, false)) : undefined;
           const when = rDef.when ? String(host._expandSkillTemplate(rDef.when, params, false)) : undefined;
           if (varName && expr) {
-            prependedRules.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+            prependedRules.push({ type: 'var-update', varName, expr, ...(onEnter ? { onEnter } : (when ? { when } : {})) });
             mutated = true;
           }
         }
@@ -1429,6 +1540,8 @@
       norm.type = 'clickable';
     } else if (norm.type === 'on-key') {
       norm.type = 'key';
+    } else if (norm.type === 'on-hover') {
+      norm.type = 'hoverable';
     }
     if (norm.action === 'set-var') {
       if (!norm.setVar && norm.var) norm.setVar = norm.var;
@@ -1451,6 +1564,10 @@
     if (norm.stepVar === undefined && norm['step-var'] !== undefined) norm.stepVar = norm['step-var'];
     if (norm.holdVar === undefined && norm['hold-var'] !== undefined) norm.holdVar = norm['hold-var'];
     if (norm.holdVar && norm.hold === undefined) norm.hold = true;
+    if (norm.hoverVar === undefined && norm['hover-var'] !== undefined) norm.hoverVar = norm['hover-var'];
+    if (norm.pressVar === undefined && norm['press-var'] !== undefined) norm.pressVar = norm['press-var'];
+    if (norm.leaveVal === undefined && norm['leave-val'] !== undefined) norm.leaveVal = norm['leave-val'];
+    if (norm.hoverTone === undefined && norm['hover-tone'] !== undefined) norm.hoverTone = norm['hover-tone'];
     if (norm.releaseVal === undefined && norm['release-val'] !== undefined) norm.releaseVal = norm['release-val'];
     if (norm.yawVar === undefined && norm['yaw-var'] !== undefined) norm.yawVar = norm['yaw-var'];
     if (norm.pitchVar === undefined && norm['pitch-var'] !== undefined) norm.pitchVar = norm['pitch-var'];

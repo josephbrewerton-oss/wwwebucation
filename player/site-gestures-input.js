@@ -333,10 +333,104 @@
   }
 
   function handleWindowBlur() {
+    _clearActiveHoverVars.call(this, false);
+    _clearActivePressVars.call(this, false);
     this._releaseAllHeldInputs(true);
   }
 
+  function _clearActivePressVars(apply = true) {
+    if (!this._activePressVars || this._activePressVars.size === 0) return false;
+    let changed = false;
+    this._activePressVars.forEach((resetVal, varName) => {
+      if (this.engine && this.engine.vars && this.engine.vars[varName] !== resetVal) {
+        this._writeEngineVar(varName, resetVal);
+        changed = true;
+      }
+    });
+    this._activePressVars.clear();
+    if (changed && apply && this.engine && typeof this.engine.applyBindings === 'function') {
+      this.engine.applyBindings(this.engine.progress || 0, 0, false);
+    }
+    return changed;
+  }
+
+  function _clearActiveHoverVars(apply = true) {
+    if (!this._activeHoverVars || this._activeHoverVars.size === 0) return false;
+    let changed = false;
+    this._activeHoverVars.forEach((leaveVal, varName) => {
+      if (this.engine && this.engine.vars && this.engine.vars[varName] !== leaveVal) {
+        this._writeEngineVar(varName, leaveVal);
+        changed = true;
+      }
+    });
+    this._activeHoverVars.clear();
+    if (changed && apply && this.engine && typeof this.engine.applyBindings === 'function') {
+      this.engine.applyBindings(this.engine.progress || 0, 0, false);
+    }
+    return changed;
+  }
+
+  function _updateHoverStates(targetEl, scene) {
+    if (!this.engine || !this.engine.vars || !scene) return false;
+    const gestures = this._getNormalizedSceneGestures(scene);
+    if (!gestures || gestures.length === 0) return false;
+    if (!this._activeHoverVars) this._activeHoverVars = new Map();
+
+    // Collect currently hovered vars without allocating if no hoverable gestures exist
+    let hasAnyHoverGesture = false;
+    let matchedHoverMap = null;
+    for (let i = 0; i < gestures.length; i++) {
+      const g = gestures[i];
+      const hv = g.type === 'hoverable' ? (g.hoverVar || g.var || g.setVar) : g.hoverVar;
+      if (!hv || !g.target) continue;
+      hasAnyHoverGesture = true;
+      const hitEl = targetEl && typeof targetEl.closest === 'function' ? targetEl.closest(g.target) : null;
+      if (hitEl) {
+        if (!matchedHoverMap) matchedHoverMap = new Map();
+        const enterVal = g.type === 'hoverable' && g.val !== undefined ? g.val : 1;
+        const leaveVal = g.leaveVal !== undefined ? g.leaveVal : 0;
+        matchedHoverMap.set(hv, { enterVal, leaveVal, tone: g.hoverTone || (g.type === 'hoverable' ? g.tone : null) });
+      }
+    }
+    if (!hasAnyHoverGesture) return false;
+
+    let changed = false;
+    // Leave previously hovered vars that are no longer hovered
+    this._activeHoverVars.forEach((leaveVal, varName) => {
+      if (!matchedHoverMap || !matchedHoverMap.has(varName)) {
+        if (this.engine.vars[varName] !== leaveVal) {
+          this._writeEngineVar(varName, leaveVal);
+          changed = true;
+        }
+        this._activeHoverVars.delete(varName);
+      }
+    });
+
+    // Enter newly hovered vars
+    if (matchedHoverMap) {
+      matchedHoverMap.forEach((spec, varName) => {
+        const wasHovered = this._activeHoverVars.has(varName);
+        this._activeHoverVars.set(varName, spec.leaveVal);
+        if (this.engine.vars[varName] !== spec.enterVal) {
+          this._writeEngineVar(varName, spec.enterVal);
+          changed = true;
+        }
+        if (!wasHovered && spec.tone && typeof this.playAudioTone === 'function') {
+          const hz = parseFloat(String(spec.tone));
+          if (!Number.isNaN(hz)) this.playAudioTone(hz, 'sine', 0.03, 0.08);
+        }
+      });
+    }
+
+    if (changed && typeof this.engine.applyBindings === 'function') {
+      this.engine.applyBindings(this.engine.progress || 0, 0, false);
+    }
+    return changed;
+  }
+
   function handlePointerLeave(e) {
+    _clearActiveHoverVars.call(this, true);
+    _clearActivePressVars.call(this, true);
     if (this._heldPointerEntries.size === 0) return;
     const pointerId = e && e.pointerId !== undefined ? e.pointerId : 'mouse';
     if (this._heldPointerEntries.has(pointerId)) {
@@ -398,9 +492,16 @@
           || (globalSkills && globalSkills.get(g.type));
         if (customSkill && typeof customSkill.enhance === 'function') {
           customSkill.enhance.call(this, el, g, scene, this);
-        } else if (g.type === 'clickable' || g.type === 'holdable') {
+        } else if (g.type === 'clickable' || g.type === 'holdable' || g.type === 'hoverable') {
           el.style.cursor = 'pointer';
-          el.setAttribute(g.type === 'holdable' ? 'data-declarative-holdable' : 'data-declarative-clickable', 'true');
+          if (g.type === 'hoverable' || g.hoverVar) {
+            el.setAttribute('data-declarative-hoverable', 'true');
+          }
+          if (g.type === 'holdable') {
+            el.setAttribute('data-declarative-holdable', 'true');
+          } else if (g.type === 'clickable') {
+            el.setAttribute('data-declarative-clickable', 'true');
+          }
         } else if (g.type === 'trackball' || g.axis === 'trackball') {
           if (el !== this.stageSvg) el.style.cursor = scrubAllowed ? 'grab' : 'default';
           el.setAttribute('data-declarative-trackball', 'true');
@@ -531,6 +632,11 @@
       const pendingAudio = deferTouchAudio ? [] : null;
       for (let i = 0; i < matchedPointerGestures.length; i++) {
         const g = matchedPointerGestures[i];
+        if (g.pressVar && this.engine && this.engine.vars) {
+          if (!this._activePressVars) this._activePressVars = new Map();
+          this._activePressVars.set(g.pressVar, 0);
+          this._writeEngineVar(g.pressVar, 1);
+        }
         this._applyGesturePress(g, matchedEls[i], scene, pendingAudio);
       }
 
@@ -734,12 +840,17 @@
       } else if (this.dragMode === 'trackball') {
         this.handleTrackballDrag(e);
       }
-    } else if (this.isXRayActive && this._isControlEnabled('xray')) {
-      const pedNode = e.target.closest('[data-pedagogical]');
-      if (pedNode) {
-        this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
-      } else {
-        this.hideXRayPopup();
+    } else {
+      if (this.engine && this.engine.scene) {
+        _updateHoverStates.call(this, e.target, this.engine.scene);
+      }
+      if (this.isXRayActive && this._isControlEnabled('xray')) {
+        const pedNode = e.target && typeof e.target.closest === 'function' ? e.target.closest('[data-pedagogical]') : null;
+        if (pedNode) {
+          this.showXRayPopup(pedNode.getAttribute('data-pedagogical'), svgPt.x, svgPt.y, pedNode);
+        } else {
+          this.hideXRayPopup();
+        }
       }
     }
 
@@ -755,8 +866,9 @@
   function handlePointerUp(e) {
     const pointerId = e && e.pointerId !== undefined ? e.pointerId : 'mouse';
     this._flushPendingTouchAudio(pointerId);
+    const didResetPress = _clearActivePressVars.call(this, false);
     const didResetHold = this._releasePointerEntry(pointerId);
-    if (didResetHold && this.engine && typeof this.engine.applyBindings === 'function') {
+    if ((didResetHold || didResetPress) && this.engine && typeof this.engine.applyBindings === 'function') {
       this.engine.applyBindings(this.engine.progress || 0, 0, false);
     }
     if (e && e.pointerId !== undefined && this.stageSvg && typeof this.stageSvg.releasePointerCapture === 'function') {
