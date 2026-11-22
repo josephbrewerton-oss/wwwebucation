@@ -21,6 +21,8 @@
     aiDirector: { file: 'ast-ai-director.js', check: () => Boolean(global.ASTAiDirector) },
     webrtc: { file: 'ast-webrtc-bus.js', check: () => Boolean(global.ASTWebRTCBus) },
     obs: { file: 'obs-controller.js', check: () => Boolean(global.OBSBroadcastController) },
+    studioMatcher: { file: 'player-ui-studio-matcher.js', check: () => Boolean(global.ASTPlayerUIStudioMatcher) },
+    studioRemix: { file: 'player-ui-studio-remix.js', check: () => Boolean(global.ASTPlayerUIStudioRemix) },
     studio: { file: 'player-ui-studio.js', check: () => Boolean(global.ASTPlayerUIStudio) },
     voice: { file: 'player-ui-voice.js', check: () => Boolean(global.ASTPlayerUIVoice) },
     broadcast: { file: 'player-ui-broadcast.js', check: () => Boolean(global.ASTPlayerUIBroadcast) },
@@ -81,7 +83,7 @@
   }
 
   async function ensureStudio(ui) {
-    await loadKeys(['compiler', 'exporter', 'studio']);
+    await loadKeys(['compiler', 'exporter', 'studioMatcher', 'studioRemix', 'studio']);
     if (ui) {
       const studioMod = global.ASTPlayerUIStudio || (typeof window !== 'undefined' ? window.ASTPlayerUIStudio : null);
       if (studioMod && Array.isArray(studioMod.DEFAULT_STARTER_TEMPLATES) && (!ui.starterTemplates || ui.starterTemplates.length === 0)) {
