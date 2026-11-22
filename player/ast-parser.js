@@ -219,7 +219,25 @@
     const duration = durationStr ? parseFloat(durationStr) : 10.0;
     const bootSound = extractQuoted(astContent, 'boot-sound') || extractQuoted(astContent, 'bootSound') || null;
 
-    // Helper to extract S-expression blocks with balanced parentheses and string quote protection
+    const skipWsAndComments = (text, pos) => {
+      let idx = pos;
+      while (idx < text.length) {
+        if (text[idx] === ';') {
+          const nl = text.indexOf('\n', idx);
+          idx = nl === -1 ? text.length : nl + 1;
+        } else if (text[idx] === '<' && text.startsWith('<!--', idx)) {
+          const endC = text.indexOf('-->', idx + 4);
+          idx = endC === -1 ? text.length : endC + 3;
+        } else if (/\s/.test(text[idx])) {
+          idx++;
+        } else {
+          break;
+        }
+      }
+      return idx;
+    };
+
+    // Helper to extract S-expression blocks with balanced parentheses and string/comment protection
     const extractSexprBlocks = (text, tag) => {
       const blocks = [];
       const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -232,6 +250,18 @@
         let endIdx = -1;
         for (let i = startIdx; i < text.length; i++) {
           const char = text[i];
+          if (!inString && char === ';') {
+            const nl = text.indexOf('\n', i);
+            if (nl === -1) break;
+            i = nl;
+            continue;
+          }
+          if (!inString && char === '<' && text.startsWith('<!--', i)) {
+            const endC = text.indexOf('-->', i + 4);
+            if (endC === -1) break;
+            i = endC + 2;
+            continue;
+          }
           if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
             inString = !inString;
           } else if (!inString) {
@@ -268,6 +298,18 @@
         let endIdx = -1;
         for (let i = openIdx; i < text.length; i++) {
           const char = text[i];
+          if (!inString && char === ';') {
+            const nl = text.indexOf('\n', i);
+            if (nl === -1) break;
+            i = nl;
+            continue;
+          }
+          if (!inString && char === '<' && text.startsWith('<!--', i)) {
+            const endC = text.indexOf('-->', i + 4);
+            if (endC === -1) break;
+            i = endC + 2;
+            continue;
+          }
           if (char === '"' && (i === 0 || text[i - 1] !== '\\')) {
             inString = !inString;
           } else if (!inString) {
@@ -300,27 +342,9 @@
       let innerStart = 1;
       const tagMatch = trimmed.match(/^\(\s*:[a-zA-Z0-9_-]+/);
       if (tagMatch) {
-        let p = tagMatch[0].length;
-        while (p < trimmed.length) {
-          if (trimmed[p] === ';') {
-            while (p < trimmed.length && trimmed[p] !== '\n') p++;
-          } else if (/\s/.test(trimmed[p])) {
-            p++;
-          } else {
-            break;
-          }
-        }
+        const p = skipWsAndComments(trimmed, tagMatch[0].length);
         if (trimmed[p] === '(') {
-          let q = p + 1;
-          while (q < trimmed.length) {
-            if (trimmed[q] === ';') {
-              while (q < trimmed.length && trimmed[q] !== '\n') q++;
-            } else if (/\s/.test(trimmed[q])) {
-              q++;
-            } else {
-              break;
-            }
-          }
+          const q = skipWsAndComments(trimmed, p + 1);
           if (trimmed[q] === '(' || trimmed[q] === ')') {
             innerStart = p + 1;
           }
@@ -331,6 +355,11 @@
         const ch = trimmed[i];
         if (ch === ';') {
           while (i < trimmed.length && trimmed[i] !== '\n') i++;
+          continue;
+        }
+        if (ch === '<' && trimmed.startsWith('<!--', i)) {
+          const endC = trimmed.indexOf('-->', i + 4);
+          i = endC === -1 ? trimmed.length : endC + 3;
           continue;
         }
         if (ch === '"') {
@@ -349,6 +378,18 @@
           let fEnd = -1;
           for (; i < trimmed.length; i++) {
             const c = trimmed[i];
+            if (!inStr && c === ';') {
+              const nl = trimmed.indexOf('\n', i);
+              if (nl === -1) { i = trimmed.length; break; }
+              i = nl;
+              continue;
+            }
+            if (!inStr && c === '<' && trimmed.startsWith('<!--', i)) {
+              const endC = trimmed.indexOf('-->', i + 4);
+              if (endC === -1) { i = trimmed.length; break; }
+              i = endC + 2;
+              continue;
+            }
             if (c === '"' && (i === 0 || trimmed[i - 1] !== '\\')) {
               inStr = !inStr;
             } else if (!inStr) {
@@ -586,6 +627,12 @@
         return;
       }
       if (/^\(\s*:group\b/i.test(form)) {
+        const children = extractChildForms(form);
+        children.forEach(cf => walkBindingForm(cf, inheritedWhen, inheritedTarget));
+        return;
+      }
+      // Unwrap anonymous list wrappers like ( <!-- comment --> (:target ...) ... )
+      if (!/^\(\s*:[a-zA-Z]/i.test(form)) {
         const children = extractChildForms(form);
         children.forEach(cf => walkBindingForm(cf, inheritedWhen, inheritedTarget));
         return;

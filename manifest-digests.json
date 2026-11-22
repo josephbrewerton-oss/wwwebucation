@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "compositeHash": "9bea9c388c3b",
-  "generatedAt": "2026-11-22T13:21:05.076Z",
+  "compositeHash": "8f2c56e61446",
+  "generatedAt": "2026-11-22T13:55:14.088Z",
   "files": {
     "nano-map.ast": "568a99c10f2f08b8",
     "manifest.json": "5b581a737ccec74d",
@@ -19,7 +19,7 @@
     "player/ast-physics.js": "d864e5c7ae2f7a5e",
     "player/ast-expr.js": "54f4cb9190b7160c",
     "player/ast-bytecode-decoder.js": "6d8c05b014857219",
-    "player/ast-parser.js": "df33dd9ede4a69a1",
+    "player/ast-parser.js": "851d5545d76698f1",
     "player/ast-3d.js": "2818edf7a4398c9e",
     "player/ast-bridge.js": "4e5a8d2cf49c003b",
     "player/ast-exporter.js": "bf41b09100749738",
