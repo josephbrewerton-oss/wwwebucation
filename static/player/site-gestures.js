@@ -99,6 +99,8 @@
       this._heldPointerEntries = new Map();
       this._pendingTouchAudio = new Map();
       this._activeHoldVars = new Map();
+      this._activeHoverVars = new Map();
+      this._activePressVars = new Map();
       this._holdRafId = null;
       this._holdLastTs = 0;
       // Bound listeners & extension registries
@@ -157,6 +159,8 @@
         this._presetListenerBound = true;
         this.engine.on('presetchange', () => {
           this._releaseAllHeldInputs(false);
+          if (this._activeHoverVars) this._activeHoverVars.clear();
+          if (this._activePressVars) this._activePressVars.clear();
           this._lastSyncedTimelineVal = null;
           this.isDragging = false;
           this.dragTarget = null;

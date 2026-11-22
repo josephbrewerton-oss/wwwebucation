@@ -989,9 +989,9 @@ async function runSimulations() {
 
     const gestures = new sandbox.ASTDirectGestureSubsystem(engine, container);
 
-    const tick = (frames = 1) => {
+    const tick = (frames = 1, dtSec = 1 / 60) => {
       for (let i = 0; i < frames; i++) {
-        engine.applyBindings(0, 1 / 60, true);
+        engine.applyBindings(0, dtSec, true);
       }
     };
     const keyDown = (code: string, key = code) => {
@@ -1522,6 +1522,24 @@ async function runSimulations() {
       } catch (e: any) {
         errors.push(`preloader-game AST S-expression parse error: ${e.message}`);
       }
+      if (result.metadata?.strippedPreloaderFrames !== 1) {
+        errors.push(`Expected strippedPreloaderFrames=1, got ${result.metadata?.strippedPreloaderFrames}`);
+      }
+      if (result.metadata?.executionModel !== 'sim-modal') {
+        errors.push(`Expected executionModel='sim-modal', got ${result.metadata?.executionModel}`);
+      }
+      if (result.svgMarkup.includes('id="swf-place-1-c1"') || result.svgMarkup.includes('id="swf-inst-preloader"')) {
+        errors.push('Compile-time preloader stripping failed: preloader nodes (#swf-place-1-c1 / #swf-inst-preloader) still present in SVG');
+      }
+      if (result.astSource.includes('(:slider :var "swf_frame"')) {
+        errors.push('Imported :Sim cartridge should not expose a raw frame-driven SWF Frame :slider');
+      }
+      if (result.astSource.includes('swf_cur_entry') || result.astSource.includes('swf_last_frame')) {
+        errors.push('SWF transpiler should use native player :on-enter rules instead of swf_cur_entry/swf_last_frame boilerplate');
+      }
+      if (!result.astSource.includes(':on-enter')) {
+        errors.push('Expected native player :on-enter rules in multi-mode SWF .ast output');
+      }
       if (!result.svgMarkup.includes('opacity="0" pointer-events="all"')) {
         errors.push('HitTest-only button state record did not emit invisible clickable SVG layer');
       }
@@ -1529,33 +1547,24 @@ async function runSimulations() {
       if (!isAstBytecode(rt.astbBytes)) errors.push('preloader-game .astb binary missing ASTB magic header');
       const initialNodes = rt.getNodeCount();
 
-      // Tick 1: Preloader sprite detects getBytesLoaded() >= getBytesTotal() & _framesloaded >= _totalframes -> jumps to Frame 2 ("menu")
-      rt.tick(1);
-      if (rt.engine.vars.swf_frame !== 2) {
-        errors.push(`Expected preloader to auto-advance from Frame 1 to Frame 2 ("menu"), got swf_frame=${rt.engine.vars.swf_frame}`);
-      }
-      // Tick 2: Enters Frame 2 -> Frame 2 stop() pauses cleanly, Depth 1 swaps Loading -> Menu, playBtn becomes visible
-      rt.tick(1);
+      // Before any tick (t = 0): :Sim boots straight onto Frame 2 ("menu") with preloader stripped
       if (rt.engine.vars.swf_frame !== 2 || rt.engine.vars.swf_playing !== 0) {
-        errors.push(`Expected clean pause on Frame 2 ("menu"), got frame=${rt.engine.vars.swf_frame}, playing=${rt.engine.vars.swf_playing}`);
-      }
-      if (rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display') !== 'none') {
-        errors.push(`Expected Depth 1 Loading screen (#swf-place-1-c1) hidden on Frame 2, got "${rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display')}"`);
+        errors.push(`Expected immediate mount on Frame 2 ("menu") paused, got frame=${rt.engine.vars.swf_frame}, playing=${rt.engine.vars.swf_playing}`);
       }
       if (rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display') !== 'inline') {
-        errors.push(`Expected Depth 1 Menu screen (#swf-place-1-c2) visible on Frame 2, got "${rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display')}"`);
+        errors.push(`Expected Depth 1 Menu screen (#swf-place-1-c2) visible immediately on mount, got "${rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display')}"`);
       }
       if (rt.engine.vars.playBtn_visible !== 1) {
-        errors.push(`Expected named playBtn_visible=1 on Frame 2, got ${rt.engine.vars.playBtn_visible}`);
+        errors.push(`Expected named playBtn_visible=1 immediately on mount, got ${rt.engine.vars.playBtn_visible}`);
       }
 
       // Remain paused calmly on Frame 2 across idle ticks
       rt.tick(5);
       if (rt.engine.vars.swf_frame !== 2) {
-        errors.push(`Expected SWF to remain paused on Frame 2 ("menu") until Play click, got frame=${rt.engine.vars.swf_frame}`);
+        errors.push(`Expected SWF :Sim to remain on Frame 2 ("menu") until Play click, got frame=${rt.engine.vars.swf_frame}`);
       }
 
-      // Click playBtn (ActionDefineFunction onRelease -> _root.play()) -> must advance to Frame 3 ("game") without re-trapping on Frame 2's stop()
+      // Click playBtn (ActionDefineFunction onRelease -> _root.play()) -> must advance immediately to Frame 3 ("game") with 0 latency
       const playHits = rt.clickButton('swf-inst-playBtn');
       if (playHits < 1) errors.push('ActionDefineFunction playBtn.onRelease click handler not registered on #swf-inst-playBtn');
       rt.tick(2);
@@ -1584,16 +1593,16 @@ async function runSimulations() {
 
     const duration = performance.now() - start;
     reports.push({
-      name: 'Sim 14: Flash Preloader (getBytesLoaded/_framesloaded, Depth-1 Char Swap, ActionDefineFunction onRelease & HitTest)',
+      name: 'Sim 14: :Sim-First Preloader Stripping (Zero Preloader Nodes, Instant Menu Mount, ActionDefineFunction & HitTest)',
       passed: errors.length === 0,
       durationMs: duration,
-      details: 'Verified preloader auto-leaves Frame 1 to Frame 2 ("menu"), swaps Depth-1 graphics cleanly, pauses without re-trapping on stop(), and advances to Frame 3 ("game") on playBtn.onRelease with 0 DOM allocations.',
+      details: 'Verified Frame-1 network preloader is stripped at compile time, :Sim boots straight into Frame 2 ("menu") on mount, and playBtn.onRelease transitions immediately to Frame 3 ("game") with 0 DOM allocations.',
       errors,
     });
   }
 
   // --------------------------------------------------------------------------
-  // Simulation 15: Stuck-Preloader Auto-Recovery (Dead-End Frame-1 stop() -> Auto-Starts on Frame 2 "menu")
+  // Simulation 15: Dead-End Preloader Stripping (Frame-1 stop() Stripped at Compile Time -> Boots on Frame 2 "menu")
   // --------------------------------------------------------------------------
   {
     const start = performance.now();
@@ -1657,18 +1666,21 @@ async function runSimulations() {
       } catch (e: any) {
         errors.push(`stuck-preloader-recovery AST S-expression parse error: ${e.message}`);
       }
-      if (!result.astSource.includes('(:slider :var "swf_frame"')) {
-        errors.push('Expected declarative SWF Frame :slider input control in .ast');
+      if (result.metadata?.strippedPreloaderFrames !== 1) {
+        errors.push(`Expected strippedPreloaderFrames=1 for dead-end preloader, got ${result.metadata?.strippedPreloaderFrames}`);
+      }
+      if (result.svgMarkup.includes('id="swf-place-1-c1"')) {
+        errors.push('Dead-end Frame 1 loading screen (#swf-place-1-c1) should be stripped at compile time');
+      }
+      if (result.astSource.includes('(:slider :var "swf_frame"')) {
+        errors.push('Imported :Sim cartridge should not expose a raw SWF Frame :slider');
       }
       const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
       if (rt.engine.vars.swf_frame !== 2) {
-        errors.push(`Expected stuck-preloader recovery to start on Frame 2 ("menu"), got swf_frame=${rt.engine.vars.swf_frame}`);
-      }
-      if (rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display') !== 'none') {
-        errors.push('Expected dead-end Frame 1 loading screen to be hidden immediately on recovery');
+        errors.push(`Expected stripped preloader to boot directly on Frame 2 ("menu"), got swf_frame=${rt.engine.vars.swf_frame}`);
       }
       if (rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display') !== 'inline') {
-        errors.push('Expected Frame 2 menu screen to be visible immediately on recovery');
+        errors.push('Expected Frame 2 menu screen to be visible immediately on mount');
       }
 
       // Clicking Frame 2's button transitions cleanly to Frame 3 ("play")
@@ -1684,10 +1696,215 @@ async function runSimulations() {
 
     const duration = performance.now() - start;
     reports.push({
-      name: 'Sim 15: Stuck-Preloader Auto-Recovery & Declarative SWF Frame Slider',
+      name: 'Sim 15: Dead-End Frame-1 Preloader Compile-Time Stripping & Clean :Sim Mode Transition',
       passed: errors.length === 0,
       durationMs: duration,
-      details: 'Verified dead-end Frame-1 preloader auto-recovers to Frame 2 ("menu"), exposes SWF Frame slider, and transitions cleanly to Frame 3 on button click.',
+      details: 'Verified dead-end Frame-1 preloader is stripped out of SVG/AST at compile time, :Sim boots straight onto Frame 2 ("menu") with no raw frame slider, and button click transitions cleanly to Frame 3.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 16: Continuous sim_dt Native-FPS Refresh-Rate Independence (60 Hz vs 120 Hz Parity)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes 1..3
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 40, 40, [56, 189, 248, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 24, 24, [244, 63, 94, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 24, 24, [16, 185, 129, 255], 3));
+
+    // DefineSprite 10: 2-frame looping sprite
+    const spTags = new BitWriter();
+    writeTag(spTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2 }));
+    writeTag(spTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(spTags, 28, buildRemoveObject2Tag(1));
+    writeTag(spTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3 }));
+    writeTag(spTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(spTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(10, 2, spTags.toByteArray()));
+
+    // 4-frame continuous 12 FPS main timeline (no stop()) with moving shape + animated sprite
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1, matrix: { txPx: 20, tyPx: 80 } }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 10, matrix: { txPx: 200, tyPx: 80 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, isMove: true, matrix: { txPx: 60, tyPx: 80 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, isMove: true, matrix: { txPx: 100, tyPx: 80 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, isMove: true, matrix: { txPx: 140, tyPx: 80 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(400, 240, 12, 4, tagWriter.toByteArray(), 8);
+    const result = await transpileSwfToAst(swfBinary, 'continuous-sim-dt-12fps');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`continuous-sim-dt-12fps transpilation failed: ${result.error}`);
+    } else {
+      try {
+        parseSExpr(result.astSource);
+      } catch (e: any) {
+        errors.push(`continuous-sim-dt-12fps AST parse error: ${e.message}`);
+      }
+      if (result.metadata?.executionModel !== 'sim-continuous') {
+        errors.push(`Expected executionModel='sim-continuous', got ${result.metadata?.executionModel}`);
+      }
+      if (result.metadata?.strippedPreloaderFrames !== 0) {
+        errors.push(`Expected strippedPreloaderFrames=0 on clean continuous SWF, got ${result.metadata?.strippedPreloaderFrames}`);
+      }
+
+      const measureOneSecond = (hz: number) => {
+        const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+        const initialNodes = rt.getNodeCount();
+        let mainTransitions = 0;
+        let spriteTransitions = 0;
+        let prevMain = rt.engine.vars.swf_frame;
+        let prevSprite = rt.engine.vars.sprite_10_frame;
+        const dt = 1 / hz;
+        for (let i = 0; i < hz; i++) {
+          rt.tick(1, dt);
+          if (rt.engine.vars.swf_frame !== prevMain) {
+            mainTransitions++;
+            prevMain = rt.engine.vars.swf_frame;
+          }
+          if (rt.engine.vars.sprite_10_frame !== prevSprite) {
+            spriteTransitions++;
+            prevSprite = rt.engine.vars.sprite_10_frame;
+          }
+        }
+        return {
+          mainTransitions,
+          spriteTransitions,
+          finalMain: rt.engine.vars.swf_frame,
+          finalSprite: rt.engine.vars.sprite_10_frame,
+          domAllocs: rt.getPostMountDomAllocs(),
+          nodeDelta: rt.getNodeCount() - initialNodes,
+        };
+      };
+
+      const run60 = measureOneSecond(60);
+      const run120 = measureOneSecond(120);
+
+      if (run60.mainTransitions !== 12 || run120.mainTransitions !== 12) {
+        errors.push(`Expected 12 main timeline steps/sec at both 60Hz & 120Hz (12 FPS native), got 60Hz=${run60.mainTransitions}, 120Hz=${run120.mainTransitions}`);
+      }
+      if (run60.spriteTransitions !== 12 || run120.spriteTransitions !== 12) {
+        errors.push(`Expected 12 DefineSprite steps/sec at both 60Hz & 120Hz (12 FPS native), got 60Hz=${run60.spriteTransitions}, 120Hz=${run120.spriteTransitions}`);
+      }
+      if (run60.finalMain !== run120.finalMain || run60.finalSprite !== run120.finalSprite) {
+        errors.push(`60Hz vs 120Hz end-state mismatch: 60Hz=(${run60.finalMain},${run60.finalSprite}), 120Hz=(${run120.finalMain},${run120.finalSprite})`);
+      }
+      if (run60.domAllocs !== 0 || run120.domAllocs !== 0 || run60.nodeDelta !== 0 || run120.nodeDelta !== 0) {
+        errors.push(`Zero-GC DOM invariant violated: 60Hz allocs=${run60.domAllocs}, 120Hz allocs=${run120.domAllocs}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 16: Continuous sim_dt Native-FPS Pacing (12 FPS SWF Parity Across 60 Hz & 120 Hz Displays)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified continuous :Sim main timeline and nested DefineSprite advance identically at 12 steps/sec on both 60 Hz and 120 Hz clocks via sim_dt with 0 DOM allocations.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 17: Flash DefineButton2 Up/Over/Down States Powered by Native :hoverable / :press-var
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Distinct Up (blue), Over (amber), Down (emerald), Hit (invisible) button shapes
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 140, 48, [59, 130, 246, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 140, 48, [245, 158, 11, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 140, 48, [16, 185, 129, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 140, 48, [255, 255, 255, 255], 3));
+
+    const clickAct = new Avm1Builder()
+      .setVar('btn_clicks', (b) => b.getVar('btn_clicks').pushInt(1).add2())
+      .toByteArray();
+
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      40,
+      [
+        { states: 0x01, characterId: 1, depth: 1 }, // Up
+        { states: 0x02, characterId: 2, depth: 2 }, // Over
+        { states: 0x04, characterId: 3, depth: 3 }, // Down
+        { states: 0x08, characterId: 4, depth: 4 }, // HitTest-only
+      ],
+      [{ condFlags: 0x0008, actions: clickAct }]
+    ));
+
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().setVar('btn_clicks', (b) => b.pushInt(0)).toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 40, matrix: { txPx: 250, tyPx: 200 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 30, 1, tagWriter.toByteArray(), 8);
+    const result = await transpileSwfToAst(swfBinary, 'swf-hover-button');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`swf-hover-button transpilation failed: ${result.error}`);
+    } else {
+      if (!result.astSource.includes(':hoverable')) {
+        errors.push('Expected native :hoverable gesture emitted for Flash DefineButton2 with Over/Down states');
+      }
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      if (rt.mockNodes.get('swf-btn-40-up')?.getAttribute('display') !== 'inline') {
+        errors.push('Expected #swf-btn-40-up inline initially');
+      }
+      if (rt.mockNodes.get('swf-btn-40-over')?.getAttribute('display') !== 'none') {
+        errors.push('Expected #swf-btn-40-over hidden initially');
+      }
+
+      rt.hover('swf-btn-40');
+      if (rt.mockNodes.get('swf-btn-40-over')?.getAttribute('display') !== 'inline' || rt.mockNodes.get('swf-btn-40-up')?.getAttribute('display') !== 'none') {
+        errors.push('Expected hover over #swf-btn-40 to reveal Over layer and hide Up layer');
+      }
+
+      rt.pointerDown('swf-btn-40');
+      if (rt.mockNodes.get('swf-btn-40-down')?.getAttribute('display') !== 'inline' || rt.engine.vars.btn_clicks !== 1) {
+        errors.push(`Expected pointerDown on #swf-btn-40 to show Down layer and increment btn_clicks=1 (got clicks=${rt.engine.vars.btn_clicks})`);
+      }
+
+      rt.pointerUp();
+      if (rt.mockNodes.get('swf-btn-40-over')?.getAttribute('display') !== 'inline' || rt.mockNodes.get('swf-btn-40-down')?.getAttribute('display') !== 'none') {
+        errors.push('Expected pointerUp to return button to Over state');
+      }
+
+      rt.pointerLeave();
+      if (rt.mockNodes.get('swf-btn-40-up')?.getAttribute('display') !== 'inline' || rt.mockNodes.get('swf-btn-40-over')?.getAttribute('display') !== 'none') {
+        errors.push('Expected pointerLeave to return button to Up state');
+      }
+      if (rt.getPostMountDomAllocs() !== 0) {
+        errors.push(`Zero-GC DOM invariant violated during SWF hover/press: allocs=${rt.getPostMountDomAllocs()}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 17: Flash DefineButton2 Up/Over/Down States Powered by Native :hoverable & :press-var',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified Flash DefineButton2 Up/Over/Down visual states compile onto the native player :hoverable/:press-var primitives with 0 post-mount DOM allocations.',
       errors,
     });
   }

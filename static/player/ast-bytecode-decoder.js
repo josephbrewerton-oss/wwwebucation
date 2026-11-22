@@ -268,7 +268,10 @@
             varName,
             expr: exprStr
           };
-          if (whenStr) entry.when = whenStr;
+          if (whenStr) {
+            if (whenStr.startsWith('@enter:')) entry.onEnter = whenStr.slice(7);
+            else entry.when = whenStr;
+          }
           scene.bindings.push(entry);
           break;
         }

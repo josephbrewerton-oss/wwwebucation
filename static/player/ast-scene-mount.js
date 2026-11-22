@@ -302,17 +302,25 @@
               console.warn('[AST Engine] Failed compiling var binding:', b.varName, b.expr, e);
             }
             let varWhenFn = null;
-            if (b.when) {
+            let edgeMode = null;
+            let rawGuard = b.onEnter ? String(b.onEnter).trim() : (b.when ? String(b.when).trim() : '');
+            if (b.onEnter || rawGuard.startsWith('@enter:')) {
+              edgeMode = 'enter';
+              if (rawGuard.startsWith('@enter:')) rawGuard = rawGuard.slice(7).trim();
+            }
+            if (rawGuard) {
               try {
-                varWhenFn = this.compileAstFn(String(b.when).trim());
+                varWhenFn = this.compileAstFn(rawGuard);
               } catch (e) {
-                console.warn('[AST Engine] Failed compiling var when-guard:', b.varName, b.when, e);
+                console.warn('[AST Engine] Failed compiling var when-guard:', b.varName, rawGuard, e);
               }
             }
             this.activeVarBindings.push({
               varName: b.varName,
               evalFn: varEvalFn,
-              whenFn: varWhenFn
+              whenFn: varWhenFn,
+              edge: edgeMode,
+              lastEdge: false
             });
           } else {
             const node = hasDomQuery ? container.querySelector(b.target) : null;

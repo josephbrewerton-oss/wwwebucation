@@ -672,16 +672,36 @@
         }
         return;
       }
+      if (/^\(\s*:on-enter\b/i.test(form)) {
+        const innerForms = extractChildForms(form);
+        let hdr = form;
+        for (let hi = 0; hi < innerForms.length; hi++) hdr = hdr.replace(innerForms[hi], ' ');
+        const explicitWhen = extractQuoted(hdr, 'when') || extractQuoted(hdr, 'if');
+        const eqVar = extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        const eqVal = extractSlotValue(hdr, 'val');
+        const enterGuard = explicitWhen || (eqVar && eqVal !== undefined ? `(= ${eqVar} ${typeof eqVal === 'string' ? `'${eqVal}'` : eqVal})` : null);
+        const combinedEnter = composeWhen(inheritedWhen, enterGuard);
+        const taggedWhen = combinedEnter ? `@enter:${combinedEnter.replace(/^@enter:/, '')}` : inheritedWhen;
+        innerForms.forEach(child => walkBindingForm(child, inheritedTarget, taggedWhen));
+        return;
+      }
       if (/^\(\s*:(?:var|rule)\b/i.test(form)) {
         const vMatch = form.match(/^\(\s*:(?:var|rule)\s+(?::(?:name|var)\s+)?"((?:[^"\\]|\\.)*)"/i)
           || form.match(/:(?:name|var)\s+"((?:[^"\\]|\\.)*)"/i)
           || form.match(/^\(\s*:var\s+([^\s\)]+)/i);
         const varName = vMatch ? vMatch[1].replace(/\\"/g, '"') : null;
         const expr = extractQuoted(form, 'expr');
-        const when = composeWhen(inheritedWhen, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
+        const onEnterRaw = extractQuoted(form, 'on-enter') || extractQuoted(form, 'onEnter');
+        const inheritedIsEnter = typeof inheritedWhen === 'string' && inheritedWhen.startsWith('@enter:');
+        const cleanInherited = inheritedIsEnter ? inheritedWhen.slice(7) : inheritedWhen;
+        const when = composeWhen(cleanInherited, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
+        const onEnter = onEnterRaw
+          ? composeWhen(cleanInherited, onEnterRaw)
+          : (inheritedIsEnter ? (when || cleanInherited) : null);
         if (varName && expr) {
           const entry = { type: 'var-update', varName, expr };
-          if (when) entry.when = when;
+          if (onEnter) entry.onEnter = onEnter;
+          else if (when) entry.when = when;
           bindings.push(entry);
         }
       }
@@ -1317,8 +1337,9 @@
     }
     const topLevelOnClick = extractSexprBlocks(astContent, ':on-click');
     const topLevelOnKey = extractSexprBlocks(astContent, ':on-key');
+    const topLevelHoverable = extractSexprBlocks(astContent, ':hoverable');
     const seenGestureTexts = new Set(gestureEntries);
-    topLevelOnClick.concat(topLevelOnKey).forEach(entry => {
+    topLevelOnClick.concat(topLevelOnKey, topLevelHoverable).forEach(entry => {
       if (!seenGestureTexts.has(entry)) {
         seenGestureTexts.add(entry);
         gestureEntries.push(entry);
@@ -1332,9 +1353,10 @@
         const isTrackball = /^\(\s*:trackball\b/i.test(gText);
         const isClickable = /^\(\s*:(?:clickable|on-click)\b/i.test(gText);
         const isHoldable = /^\(\s*:holdable\b/i.test(gText);
+        const isHoverable = /^\(\s*:(?:hoverable|on-hover)\b/i.test(gText);
         const isKey = /^\(\s*:(?:key|on-key)\b/i.test(gText);
         const isInteractive = /^\(\s*:interactive\b/i.test(gText);
-        if (!isDraggable && !isRotatable && !isTrackball && !isClickable && !isHoldable && !isKey && !isInteractive) return;
+        if (!isDraggable && !isRotatable && !isTrackball && !isClickable && !isHoldable && !isHoverable && !isKey && !isInteractive) return;
 
         // Extract nested step forms (:seq, :if, :set-var, etc.) and strip them from header before parsing flat attrs
         const nestedStepForms = extractChildForms(gText);
@@ -1418,6 +1440,11 @@
 
         const val = extractSlotValue(bodyText, 'val');
         const releaseVal = extractSlotValue(bodyText, 'release-val');
+        const hoverVar = extractQuoted(bodyText, 'hover-var') || extractQuoted(bodyText, 'hoverVar');
+        const pressVar = extractQuoted(bodyText, 'press-var') || extractQuoted(bodyText, 'pressVar');
+        const leaveVal = extractSlotValue(bodyText, 'leave-val');
+        const hoverToneRaw = extractSlotValue(bodyText, 'hover-tone');
+        const hoverTone = hoverToneRaw !== undefined && hoverToneRaw !== null ? String(hoverToneRaw) : null;
         const holdRaw = extractSlotValue(bodyText, 'hold');
         const hold = (isHoldable || holdRaw === true || Boolean(holdVar))
           ? true
@@ -1434,6 +1461,7 @@
         if ((isKey && (code || key)) || target) {
           let gestureType = 'draggable';
           if (isKey) gestureType = 'key';
+          else if (isHoverable) gestureType = 'hoverable';
           else if (isHoldable) gestureType = 'holdable';
           else if (isClickable) gestureType = 'clickable';
           else if (isTrackball) gestureType = 'trackball';
@@ -1467,6 +1495,10 @@
             stepVar,
             step,
             holdVar,
+            hoverVar,
+            pressVar,
+            leaveVal,
+            hoverTone,
             expr,
             ifExpr: condExpr,
             valExpr,

@@ -25,11 +25,26 @@
 
     if (isTickStep && this.isPlaying && this.activeVarBindings && this.activeVarBindings.length > 0 && this.vars) {
       const v = this.vars;
+      const clampedDt = (typeof dt === 'number' && dt > 0) ? (dt > 0.1 ? 0.1 : dt) : 0.016666666666666666;
+      v.sim_dt = clampedDt;
+      v.sim_scale = clampedDt * 60;
       let varChanged = false;
       for (let i = 0; i < this.activeVarBindings.length; i++) {
         const vb = this.activeVarBindings[i];
         try {
-          if (vb.whenFn && !vb.whenFn(effectiveT, v, v, Math)) continue;
+          if (vb.whenFn) {
+            const cond = Boolean(vb.whenFn(effectiveT, v, v, Math));
+            if (vb.edge === 'enter') {
+              if (!cond) {
+                vb.lastEdge = false;
+                continue;
+              }
+              if (vb.lastEdge) continue;
+              vb.lastEdge = true;
+            } else if (!cond) {
+              continue;
+            }
+          }
           const nextVal = vb.evalFn(effectiveT, v, v, Math);
           if (nextVal !== undefined && (typeof nextVal !== 'number' || Number.isFinite(nextVal))) {
             if (v[vb.varName] !== nextVal) {

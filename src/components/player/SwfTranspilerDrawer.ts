@@ -275,6 +275,12 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     resBox.appendChild(resHeader);
 
     // Meta chips grid
+    const modeLabel = meta.executionModel === 'sim-modal'
+      ? 'Interactive :Sim (Modes)'
+      : (meta.executionModel === 'sim-continuous' ? 'Continuous :Sim (sim_dt)' : 'Vector Stage');
+    const preloaderNote = (meta.strippedPreloaderFrames && meta.strippedPreloaderFrames > 0)
+      ? ` · ${meta.strippedPreloaderFrames} preloader stripped`
+      : '';
     const chipsGrid = document.createElement('div');
     chipsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;';
     chipsGrid.innerHTML = `
@@ -283,12 +289,12 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
         <strong style="color: var(--stj-text, #f8fafc);">${meta.width} × ${meta.height} px</strong>
       </div>
       <div style="padding: 6px 10px; background: var(--stj-surface, #1e293b); border-radius: 6px; border: 1px solid var(--stj-border, #334155); font-size: 0.72rem;">
-        <span style="color: var(--stj-text-muted, #94a3b8); display: block;">Timeline &amp; Speed</span>
-        <strong style="color: var(--stj-text, #f8fafc);">${meta.frameCount} Frames @ ${meta.frameRate} FPS</strong>
+        <span style="color: var(--stj-text-muted, #94a3b8); display: block;">Execution Model</span>
+        <strong style="color: var(--stj-text, #f8fafc);">${modeLabel}${preloaderNote}</strong>
       </div>
       <div style="padding: 6px 10px; background: var(--stj-surface, #1e293b); border-radius: 6px; border: 1px solid var(--stj-border, #334155); font-size: 0.72rem;">
         <span style="color: var(--stj-text-muted, #94a3b8); display: block;">Shapes Extracted</span>
-        <strong style="color: var(--stj-text, #f8fafc);">${meta.shapeCount} Vector Paths</strong>
+        <strong style="color: var(--stj-text, #f8fafc);">${meta.shapeCount} Vector Paths (${Math.round(meta.frameRate)} FPS)</strong>
       </div>
       <div style="padding: 6px 10px; background: var(--stj-surface, #1e293b); border-radius: 6px; border: 1px solid var(--stj-border, #334155); font-size: 0.72rem;">
         <span style="color: var(--stj-text-muted, #94a3b8); display: block;">Background</span>

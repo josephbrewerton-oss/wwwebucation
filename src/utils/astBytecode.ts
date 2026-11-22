@@ -428,7 +428,10 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
         appendU8(OP_BINDING_VAR);
         appendU16(strTable.intern(b.varName));
         appendU16(strTable.intern(b.expr || '0'));
-        appendU16(strTable.intern(b.when ? String(b.when) : ''));
+        const encodedGuard = b.onEnter
+          ? `@enter:${String(b.onEnter).replace(/^@enter:/, '')}`
+          : (b.when ? String(b.when) : '');
+        appendU16(strTable.intern(encodedGuard));
         continue;
       }
       if (b.type === '3d-line') {
@@ -991,7 +994,7 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           type: 'var-update',
           varName,
           expr,
-          ...(when ? { when } : {}),
+          ...(when ? (when.startsWith('@enter:') ? { onEnter: when.slice(7) } : { when }) : {}),
         });
         break;
       }
@@ -1787,15 +1790,44 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       }
       return;
     }
+    if (/^\(\s*:on-enter\b/i.test(form)) {
+      const innerForms = extractChildFormsTs(form);
+      let hdr = form;
+      for (const inf of innerForms) hdr = hdr.replace(inf, ' ');
+      const explicitWhen = extractQuoted(hdr, 'when') || extractQuoted(hdr, 'if');
+      const eqVar = extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+      const eqValMatch = hdr.match(/:val\s+("(?:[^"\\]|\\.)*"|true|false|-?\d+(?:\.\d+)?)/i);
+      let eqValExpr: string | null = null;
+      if (eqValMatch) {
+        const raw = eqValMatch[1];
+        eqValExpr = raw.startsWith('"') ? `'${raw.slice(1, -1)}'` : raw;
+      }
+      const enterGuard = explicitWhen || (eqVar && eqValExpr !== null ? `(= ${eqVar} ${eqValExpr})` : undefined);
+      const combinedEnter = composeWhenTs(inheritedWhen, enterGuard);
+      const taggedWhen = combinedEnter ? `@enter:${combinedEnter.replace(/^@enter:/, '')}` : inheritedWhen;
+      innerForms.forEach((child) => walkBindingTs(child, inheritedTarget, taggedWhen));
+      return;
+    }
     if (/^\(\s*:(?:var|rule)\b/i.test(form)) {
       const nameMatch = form.match(/^\(\s*:(?:var|rule)\s+(?::(?:name|var)\s+)?"([^"]+)"/i)
         || form.match(/:(?:name|var)\s+"([^"]+)"/i)
         || form.match(/^\(\s*:var\s+([a-zA-Z_$][a-zA-Z0-9_$-]*)/i);
       const varName = nameMatch ? nameMatch[1] : null;
       const expr = extractQuoted(form, 'expr');
-      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
+      const onEnterRaw = extractQuoted(form, 'on-enter') || extractQuoted(form, 'onEnter');
+      const inheritedIsEnter = typeof inheritedWhen === 'string' && inheritedWhen.startsWith('@enter:');
+      const cleanInherited = inheritedIsEnter ? inheritedWhen.slice(7) : inheritedWhen;
+      const when = composeWhenTs(cleanInherited, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
+      const onEnter = onEnterRaw
+        ? composeWhenTs(cleanInherited, onEnterRaw)
+        : (inheritedIsEnter ? (when || cleanInherited) : undefined);
       if (varName && expr) {
-        bindings.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+        bindings.push({
+          type: 'var-update',
+          varName,
+          expr,
+          ...(onEnter ? { onEnter } : (when ? { when } : {})),
+        });
       }
       return;
     }
@@ -2106,10 +2138,11 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
   gestureRootBlocks.forEach((gb) => {
     extractChildFormsTs(gb).forEach((f) => rawGestureForms.push(f));
   });
-  if (astText.includes(':on-click') || astText.includes(':on-key')) {
+  if (astText.includes(':on-click') || astText.includes(':on-key') || astText.includes(':hoverable')) {
     const seenG = new Set(rawGestureForms);
     const extras = (astText.includes(':on-click') ? extractSexprBlocks(astText, ':on-click') : [])
-      .concat(astText.includes(':on-key') ? extractSexprBlocks(astText, ':on-key') : []);
+      .concat(astText.includes(':on-key') ? extractSexprBlocks(astText, ':on-key') : [])
+      .concat(astText.includes(':hoverable') ? extractSexprBlocks(astText, ':hoverable') : []);
     for (const extra of extras) {
       if (!seenG.has(extra)) {
         seenG.add(extra);
@@ -2123,7 +2156,8 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     const isClickable = /^\(\s*:(?:clickable|on-click)\b/i.test(gText);
     const isKey = /^\(\s*:(?:key|on-key)\b/i.test(gText);
     const isHoldable = /^\(\s*:holdable\b/i.test(gText);
-    if (!isDraggable && !isClickable && !isKey && !isHoldable) continue;
+    const isHoverable = /^\(\s*:(?:hoverable|on-hover)\b/i.test(gText);
+    if (!isDraggable && !isClickable && !isKey && !isHoldable && !isHoverable) continue;
     const nestedForms = extractChildFormsTs(gText);
     const steps = nestedForms.map(parseStepTs).filter(Boolean);
     let hdr = gText;
@@ -2135,18 +2169,23 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     const axis = extractQuoted(body, 'axis') || 'xy';
     const min = parseGestureValTs(body, 'min');
     const max = parseGestureValTs(body, 'max');
+    const varName = extractQuoted(body, 'var') || extractQuoted(body, 'bind-var');
     const setVar = extractQuoted(body, 'set-var') || extractQuoted(body, 'set');
     const toggleVar = extractQuoted(body, 'toggle-var') || extractQuoted(body, 'toggle');
     const stepVar = extractQuoted(body, 'step-var');
     const holdVar = extractQuoted(body, 'hold-var');
+    const hoverVar = extractQuoted(body, 'hover-var') || extractQuoted(body, 'hoverVar');
+    const pressVar = extractQuoted(body, 'press-var') || extractQuoted(body, 'pressVar');
     const val = parseGestureValTs(body, 'val');
     const releaseVal = parseGestureValTs(body, 'release-val');
+    const leaveVal = parseGestureValTs(body, 'leave-val');
+    const hoverTone = parseGestureValTs(body, 'hover-tone');
     const valExpr = extractQuoted(body, 'val-expr') || extractQuoted(body, 'valExpr');
     const ifExpr = extractQuoted(body, 'if');
     const delta = parseGestureValTs(body, 'delta');
-    const gType = isKey ? 'key' : (isClickable ? 'clickable' : (isHoldable ? 'holdable' : 'draggable'));
-    const isExplicitEventGesture = /^\(\s*:on-(?:click|key)\b/i.test(gText);
-    if (isExplicitEventGesture || steps.length > 0 || holdVar) hasRichGestures = true;
+    const gType = isKey ? 'key' : (isHoverable ? 'hoverable' : (isClickable ? 'clickable' : (isHoldable ? 'holdable' : 'draggable')));
+    const isExplicitEventGesture = /^\(\s*:(?:on-click|on-key|hoverable|on-hover)\b/i.test(gText);
+    if (isExplicitEventGesture || steps.length > 0 || holdVar || hoverVar || pressVar) hasRichGestures = true;
     if ((isKey && (code || key)) || target) {
       gestures.push({
         type: gType,
@@ -2154,12 +2193,17 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         ...(code ? { code } : {}),
         ...(key ? { key } : {}),
         ...(isDraggable ? { axis, min: typeof min === 'number' ? min : 0, max: typeof max === 'number' ? max : 100 } : {}),
+        ...(varName ? { var: varName } : {}),
         ...(setVar ? { setVar } : {}),
         ...(toggleVar ? { toggleVar } : {}),
         ...(stepVar ? { stepVar } : {}),
         ...(holdVar ? { holdVar, hold: true } : {}),
+        ...(hoverVar ? { hoverVar } : {}),
+        ...(pressVar ? { pressVar } : {}),
         ...(val !== undefined ? { val } : {}),
         ...(releaseVal !== undefined ? { releaseVal } : {}),
+        ...(leaveVal !== undefined ? { leaveVal } : {}),
+        ...(hoverTone !== undefined ? { hoverTone: String(hoverTone) } : {}),
         ...(valExpr ? { valExpr } : {}),
         ...(ifExpr ? { ifExpr } : {}),
         ...(typeof delta === 'number' ? { delta } : {}),

@@ -18,8 +18,9 @@
   ;; 2. Supported Declarative Gesture Primitives (Extracted from ASTDirectGestureSubsystem)
   ;; Zero-JS declarative actions handled natively by site-gestures.js so Nano can reason in pure AST.
   (:primitives
-    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "navigate" "load-cartridge" "toggle-bsl" "toggle-sound" "open-tutor" "set-render-mode" "site-directive" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak"))
-    (:primitive :type "holdable"  :actions ("hold-var" "step-var") :hold-delay-ms 160)
+    (:primitive :type "clickable" :actions ("step-slide" "goto-slide" "navigate" "load-cartridge" "toggle-bsl" "toggle-sound" "open-tutor" "set-render-mode" "site-directive" "set-var" "toggle-var" "step-var" "from-attr" "speak-var" "fallback-var" "speak-attr" "tone" "speak") :attrs ("hover-var" "press-var" "leave-val" "hover-tone"))
+    (:primitive :type "holdable"  :actions ("hold-var" "step-var") :hold-delay-ms 160 :attrs ("hover-var" "press-var"))
+    (:primitive :type "hoverable" :attrs ("target" "var" "hover-var" "press-var" "val" "leave-val" "hover-tone" "tone"))
     (:primitive :type "draggable" :axes ("x" "y" "xy") :modes ("generic" "bind-input") :attrs ("minX" "maxX" "minY" "maxY" "step" "invert" "relative" "seek" "tone"))
     (:primitive :type "rotatable" :attrs ("cx" "cy" "var"))
     (:primitive :type "trackball" :attrs ("yawVar" "pitchVar" "pitchMin" "pitchMax") :default-pitch-min -65 :default-pitch-max 65)
@@ -102,17 +103,56 @@
         (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
         (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25")))
 
-    ;; Base frame-clock timeline skill (looping frame counter + play/stop flag)
+    ;; Native sim_dt-paced stage clock skill (refresh-rate independent across 30/60/120 Hz)
     (:skill :id "stage-timeline"
       :frames 2
+      :fps 60
       :start-playing 1
       (:vars
-        (:var :name "swf_frame"   :val 1 :min 1 :max "{{frames}}")
-        (:var :name "swf_playing" :val "{{startPlaying}}" :min 0 :max 1)
-        (:var :name "swf_tick"    :val 0 :min 0 :max 1000000))
+        (:var :name "swf_frame"      :val 1 :min 1 :max "{{frames}}")
+        (:var :name "swf_playing"    :val "{{startPlaying}}" :min 0 :max 1)
+        (:var :name "swf_tick"       :val 0 :min 0 :max 1000000)
+        (:var :name "stage_anim_acc" :val 0 :min 0 :max 10))
       (:rules
-        (:rule :var "swf_frame" :when "(= swf_playing 1)" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
-        (:rule :var "swf_tick"  :expr "(+ swf_tick 1)")))
+        (:rule :var "stage_anim_acc" :when "(= swf_playing 1)" :expr "(+ stage_anim_acc sim_dt)")
+        (:rule :var "swf_frame"      :when "(and (= swf_playing 1) (>= stage_anim_acc (- (/ 1 {{fps}}) 0.0001)))" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
+        (:rule :var "stage_anim_acc" :when "(and (= swf_playing 1) (>= stage_anim_acc (- (/ 1 {{fps}}) 0.0001)))" :expr "(- stage_anim_acc (- (/ 1 {{fps}}) 0.0001))")
+        (:rule :var "swf_tick"       :expr "(+ swf_tick 1)")))
+
+    ;; Multi-screen modal state machine skill (Menu -> Play -> Win -> Over with clean display gating)
+    (:skill :id "mode-screens"
+      :mode-var "mode"
+      :initial-mode 1
+      :max-mode 4
+      :screen1 "#screen-1"
+      :screen2 "#screen-2"
+      :screen3 "#screen-3"
+      :screen4 "#screen-4"
+      (:vars
+        (:var :name "{{modeVar}}" :val "{{initialMode}}" :min 1 :max "{{maxMode}}" :step 1))
+      (:bindings
+        (:target "{{screen1}}" :attr "display" :expr "(if (= {{modeVar}} 1) 'inline' 'none')")
+        (:target "{{screen2}}" :attr "display" :expr "(if (= {{modeVar}} 2) 'inline' 'none')")
+        (:target "{{screen3}}" :attr "display" :expr "(if (= {{modeVar}} 3) 'inline' 'none')")
+        (:target "{{screen4}}" :attr "display" :expr "(if (= {{modeVar}} 4) 'inline' 'none')")))
+
+    ;; Tactile hover/press SVG button skill (Up / Over / Down states via native :hoverable)
+    (:skill :id "hover-button"
+      :btn "btn"
+      :target "#{{btn}}"
+      :up-target "#{{btn}}-up"
+      :over-target "#{{btn}}-over"
+      :down-target "#{{btn}}-down"
+      :hover-tone 660
+      (:vars
+        (:var :name "{{btn}}_hover" :val 0 :min 0 :max 1)
+        (:var :name "{{btn}}_press" :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "{{upTarget}}"   :attr "display" :expr "(if (and (= {{btn}}_hover 0) (= {{btn}}_press 0)) 'inline' 'none')")
+        (:target "{{overTarget}}" :attr "display" :expr "(if (and (> {{btn}}_hover 0) (= {{btn}}_press 0)) 'inline' 'none')")
+        (:target "{{downTarget}}" :attr "display" :expr "(if (> {{btn}}_press 0) 'inline' 'none')"))
+      (:gestures
+        (:hoverable :target "{{target}}" :hover-var "{{btn}}_hover" :press-var "{{btn}}_press" :val 1 :leave-val 0 :hover-tone "{{hoverTone}}")))
 
     ;; Base 2D SVG actor skill (x, y, rotation, scale, alpha, visible -> zero-GC SVG bindings)
     (:skill :id "actor-2d"
@@ -136,7 +176,7 @@
         (:target "{{target}}" :attr "opacity"   :expr "(/ {{actor}}_alpha 100)")
         (:target "{{target}}" :attr "display"   :expr "(if (> {{actor}}_visible 0) 'inline' 'none')")))
 
-    ;; WASD real-time movement skill (inherits actor-2d)
+    ;; WASD real-time movement skill (inherits actor-2d, sim_scale refresh-rate independent)
     (:skill :id "wasd-mover"
       :extends "actor-2d"
       :speed 6
@@ -147,17 +187,17 @@
         (:var :name "key_s" :val 0 :min 0 :max 1)
         (:var :name "key_d" :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
-        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})"))
       (:gestures
         (:on-key :code "KeyA" :hold-var "key_a" :val 1 :release-val 0)
         (:on-key :code "KeyD" :hold-var "key_d" :val 1 :release-val 0)
         (:on-key :code "KeyW" :hold-var "key_w" :val 1 :release-val 0)
         (:on-key :code "KeyS" :hold-var "key_s" :val 1 :release-val 0)))
 
-    ;; Arrow-key real-time movement skill (inherits actor-2d)
+    ;; Arrow-key real-time movement skill (inherits actor-2d, sim_scale refresh-rate independent)
     (:skill :id "arrow-mover"
       :extends "actor-2d"
       :speed 8
@@ -168,17 +208,17 @@
         (:var :name "key_up"    :val 0 :min 0 :max 1)
         (:var :name "key_down"  :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
-        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
-        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x (* {{speed}} sim_scale)) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y (* {{speed}} sim_scale)) {{minY}} {{maxY}})"))
       (:gestures
         (:on-key :code "ArrowLeft"  :hold-var "key_left"  :val 1 :release-val 0)
         (:on-key :code "ArrowRight" :hold-var "key_right" :val 1 :release-val 0)
         (:on-key :code "ArrowUp"    :hold-var "key_up"    :val 1 :release-val 0)
         (:on-key :code "ArrowDown"  :hold-var "key_down"  :val 1 :release-val 0)))
 
-    ;; Health & combat KO skill (damage trigger + automatic KO state transition)
+    ;; Health & combat KO skill (damage trigger + one-shot :on-enter KO transition)
     (:skill :id "health-combat"
       :hp-var "enemy_hp"
       :ko-var "ko"
@@ -191,14 +231,14 @@
         (:var :name "{{hpVar}}" :val "{{maxHp}}" :min -100 :max "{{maxHp}}")
         (:var :name "{{koVar}}" :val 0 :min 0 :max 1))
       (:rules
-        (:rule :var "{{koVar}}"   :when "(< {{hpVar}} 1)" :expr "1")
-        (:rule :var "swf_frame"   :when "(< {{hpVar}} 1)" :expr "{{koFrame}}")
-        (:rule :var "swf_playing" :when "(< {{hpVar}} 1)" :expr "0"))
+        (:rule :var "{{koVar}}"   :on-enter "(< {{hpVar}} 1)" :expr "1")
+        (:rule :var "swf_frame"   :on-enter "(< {{hpVar}} 1)" :expr "{{koFrame}}")
+        (:rule :var "swf_playing" :on-enter "(< {{hpVar}} 1)" :expr "0"))
       (:gestures
         (:on-click :target "{{attackBtn}}" :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")
         (:on-key   :code "{{attackKey}}"   :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")))
 
-    ;; Zero-GC projectile & AABB hitTest scoring skill
+    ;; Zero-GC single-projectile & AABB hitTest scoring skill (sim_scale paced)
     (:skill :id "projectile-shooter"
       :actor "ship"
       :proj "bullet"
@@ -222,12 +262,86 @@
         (:rule :var "{{proj}}_x"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_x")
         (:rule :var "{{proj}}_y"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_y")
         (:rule :var "{{proj}}_visible" :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "1")
-        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y {{projSpeed}})")
+        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y (* {{projSpeed}} sim_scale))")
         (:rule :var "{{proj}}_visible" :when "(< {{proj}}_y -10)"     :expr "0")
         (:rule :var "{{scoreVar}}"     :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
         (:rule :var "{{proj}}_visible" :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
       (:gestures
         (:on-key :code "{{fireKey}}" :hold-var "key_fire" :val 1 :release-val 0)))
+
+    ;; Zero-GC 4-slot pre-allocated entity pool skill (multi-projectile / particle / falling-word spawning with 0 DOM allocs)
+    (:skill :id "entity-pool"
+      :actor "ship"
+      :pool "shot"
+      :enemy "enemy"
+      :speed 14
+      :hit-radius 32
+      :score-var "score"
+      :points 10
+      :fire-key "Space"
+      :cooldown 0.15
+      (:vars
+        (:var :name "{{pool}}_idx"       :val 0 :min 0 :max 3)
+        (:var :name "{{pool}}_cd"        :val 0 :min 0 :max 10)
+        (:var :name "{{pool}}_fire_now"  :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_0_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_0_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_0_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_1_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_1_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_1_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_2_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_2_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_2_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{pool}}_3_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{pool}}_3_y"       :val -100 :min -200 :max 1000)
+        (:var :name "{{pool}}_3_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{scoreVar}}"       :val 0 :min 0 :max 999999)
+        (:var :name "key_pool_fire"      :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "#{{pool}}_0" :attr "transform" :expr "(str 'translate(' {{pool}}_0_x ', ' {{pool}}_0_y ')')")
+        (:target "#{{pool}}_0" :attr "display"   :expr "(if (> {{pool}}_0_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_1" :attr "transform" :expr "(str 'translate(' {{pool}}_1_x ', ' {{pool}}_1_y ')')")
+        (:target "#{{pool}}_1" :attr "display"   :expr "(if (> {{pool}}_1_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_2" :attr "transform" :expr "(str 'translate(' {{pool}}_2_x ', ' {{pool}}_2_y ')')")
+        (:target "#{{pool}}_2" :attr "display"   :expr "(if (> {{pool}}_2_visible 0) 'inline' 'none')")
+        (:target "#{{pool}}_3" :attr "transform" :expr "(str 'translate(' {{pool}}_3_x ', ' {{pool}}_3_y ')')")
+        (:target "#{{pool}}_3" :attr "display"   :expr "(if (> {{pool}}_3_visible 0) 'inline' 'none')"))
+      (:rules
+        (:rule :var "{{pool}}_cd"        :when "(> {{pool}}_cd 0)" :expr "(max 0 (- {{pool}}_cd sim_dt))")
+        (:rule :var "{{pool}}_fire_now"  :expr "(if (and (= key_pool_fire 1) (<= {{pool}}_cd 0.0001)) 1 0)")
+        (:rule :var "{{pool}}_0_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_0_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_0_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 0))" :expr "1")
+        (:rule :var "{{pool}}_1_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_1_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_1_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 1))" :expr "1")
+        (:rule :var "{{pool}}_2_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_2_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_2_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 2))" :expr "1")
+        (:rule :var "{{pool}}_3_x"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "{{actor}}_x")
+        (:rule :var "{{pool}}_3_y"       :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "{{actor}}_y")
+        (:rule :var "{{pool}}_3_visible" :when "(and (= {{pool}}_fire_now 1) (= {{pool}}_idx 3))" :expr "1")
+        (:rule :var "{{pool}}_idx"       :when "(= {{pool}}_fire_now 1)" :expr "(% (+ {{pool}}_idx 1) 4)")
+        (:rule :var "{{pool}}_cd"        :when "(= {{pool}}_fire_now 1)" :expr "{{cooldown}}")
+        (:rule :var "{{pool}}_0_y"       :when "(> {{pool}}_0_visible 0)" :expr "(- {{pool}}_0_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_1_y"       :when "(> {{pool}}_1_visible 0)" :expr "(- {{pool}}_1_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_2_y"       :when "(> {{pool}}_2_visible 0)" :expr "(- {{pool}}_2_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_3_y"       :when "(> {{pool}}_3_visible 0)" :expr "(- {{pool}}_3_y (* {{speed}} sim_scale))")
+        (:rule :var "{{pool}}_0_visible" :when "(< {{pool}}_0_y -10)" :expr "0")
+        (:rule :var "{{pool}}_1_visible" :when "(< {{pool}}_1_y -10)" :expr "0")
+        (:rule :var "{{pool}}_2_visible" :when "(< {{pool}}_2_y -10)" :expr "0")
+        (:rule :var "{{pool}}_3_visible" :when "(< {{pool}}_3_y -10)" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_0_visible 0) (< (abs (- {{pool}}_0_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_0_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_0_visible" :when "(and (> {{pool}}_0_visible 0) (< (abs (- {{pool}}_0_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_0_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_1_visible 0) (< (abs (- {{pool}}_1_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_1_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_1_visible" :when "(and (> {{pool}}_1_visible 0) (< (abs (- {{pool}}_1_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_1_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_2_visible 0) (< (abs (- {{pool}}_2_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_2_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_2_visible" :when "(and (> {{pool}}_2_visible 0) (< (abs (- {{pool}}_2_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_2_y {{enemy}}_y)) {{hitRadius}}))" :expr "0")
+        (:rule :var "{{scoreVar}}"       :when "(and (> {{pool}}_3_visible 0) (< (abs (- {{pool}}_3_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_3_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{pool}}_3_visible" :when "(and (> {{pool}}_3_visible 0) (< (abs (- {{pool}}_3_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{pool}}_3_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
+      (:gestures
+        (:on-key :code "{{fireKey}}" :hold-var "key_pool_fire" :val 1 :release-val 0)))
 
     ;; Composed multi-inheritance Arcade Shooter skill
     (:skill :id "arcade-shooter"

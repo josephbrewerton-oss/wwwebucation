@@ -185,9 +185,9 @@ function createHeadlessPlayer(astSource: string, svgMarkup: string) {
   engine.applyBindings(0, 1 / 60, false);
   mounted = true;
 
-  const tick = (frames = 1) => {
+  const tick = (frames = 1, dtSec = 1 / 60) => {
     for (let i = 0; i < frames; i++) {
-      engine.applyBindings(0, 1 / 60, true);
+      engine.applyBindings(0, dtSec, true);
     }
   };
   const keyDown = (code: string, key = code) => {
@@ -217,6 +217,37 @@ function createHeadlessPlayer(astSource: string, svgMarkup: string) {
     engine.applyBindings(0, 0, false);
     return matches.length;
   };
+  const hover = (domId: string | null) => {
+    const el = domId ? mockNodes.get(domId) : { closest: () => null };
+    gestures.handlePointerMove({
+      target: el || { closest: () => null },
+      clientX: 100,
+      clientY: 100,
+      buttons: 0,
+      preventDefault() {},
+    });
+  };
+  const pointerDown = (domId: string) => {
+    const el = mockNodes.get(domId);
+    gestures.handlePointerDown({
+      target: el || { closest: () => null },
+      pointerId: 1,
+      pointerType: 'mouse',
+      clientX: 100,
+      clientY: 100,
+      preventDefault() {},
+    });
+  };
+  const pointerUp = () => {
+    gestures.handlePointerUp({
+      pointerId: 1,
+      pointerType: 'mouse',
+      preventDefault() {},
+    });
+  };
+  const pointerLeave = () => {
+    gestures.handlePointerLeave({ pointerId: 1 });
+  };
 
   return {
     sandbox,
@@ -230,6 +261,10 @@ function createHeadlessPlayer(astSource: string, svgMarkup: string) {
     keyDown,
     keyUp,
     click,
+    hover,
+    pointerDown,
+    pointerUp,
+    pointerLeave,
   };
 }
 
@@ -399,6 +434,196 @@ console.log('\n4. Testing Diamond Deduplication & Cyclic :extends Safety:');
   const resolvedCycle = rt.gestures._resolveSkillDefinition('cycle-x', reg);
   assert(Boolean(resolvedCycle && resolvedCycle.chain.includes('cycle-x') && resolvedCycle.chain.includes('cycle-y')),
     `Cyclic :extends terminated safely without infinite recursion: ${JSON.stringify(resolvedCycle?.chain)}`);
+}
+
+// 5. Native :on-enter Rising-Edge Rules & mode-screens Skill
+console.log('\n5. Testing Native :on-enter Rising-Edge Rules & "mode-screens" Skill via .astb:');
+{
+  const modeAst = `(:scene
+    :id "mode-screens-demo"
+    :type "Sim"
+    :title "Multi-Screen Mode Machine"
+    :duration 10
+    (:use-skill "mode-screens" :initial-mode 1 :max-mode 3)
+    (:vars
+      (:var :name "wave_count" :val 0 :min 0 :max 99)
+      (:var :name "score" :val 50 :min 0 :max 999))
+    (:rules
+      (:on-enter :var "mode" :val 2
+        (:rule :var "wave_count" :expr "(+ wave_count 1)")
+        (:rule :var "score" :expr "0")))
+    (:gestures
+      (:on-click :target "#btn-play" :set-var "mode" :val 2)
+      (:on-click :target "#btn-menu" :set-var "mode" :val 1))
+  )`;
+  const modeSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+    <g id="screen-1"><g id="btn-play"></g></g>
+    <g id="screen-2" display="none"><g id="btn-menu"></g></g>
+    <g id="screen-3" display="none"></g>
+    <g id="screen-4" display="none"></g>
+  </svg>`;
+
+  const rt = createHeadlessPlayer(modeAst, modeSvg);
+  assert(rt.mockNodes.get('screen-1')?.getAttribute('display') === 'inline', 'mode-screens shows #screen-1 on initial mode=1');
+  assert(rt.mockNodes.get('screen-2')?.getAttribute('display') === 'none', 'mode-screens hides #screen-2 on initial mode=1');
+
+  // Click Play -> enters mode 2 -> :on-enter fires ONCE (wave_count=1, score=0)
+  rt.click('btn-play');
+  rt.tick(1);
+  assert(rt.engine.vars.mode === 2 && rt.mockNodes.get('screen-2')?.getAttribute('display') === 'inline', 'Play click transitioned to mode 2 (#screen-2 inline)');
+  assert(rt.engine.vars.wave_count === 1 && rt.engine.vars.score === 0, `Native :on-enter fired once on entering mode 2 (wave_count=${rt.engine.vars.wave_count}, score=${rt.engine.vars.score})`);
+
+  // Mutate score and run 20 ticks on mode 2 -> :on-enter must NOT re-fire!
+  rt.engine.vars.score = 75;
+  rt.tick(20);
+  assert(rt.engine.vars.wave_count === 1 && rt.engine.vars.score === 75, `Native :on-enter did not re-fire across 20 steady ticks (wave=${rt.engine.vars.wave_count}, score=${rt.engine.vars.score})`);
+
+  // Leave mode 2 -> mode 1 -> re-enter mode 2 -> :on-enter must re-arm and fire again!
+  rt.click('btn-menu');
+  rt.tick(1);
+  rt.click('btn-play');
+  rt.tick(1);
+  assert(rt.engine.vars.wave_count === 2 && rt.engine.vars.score === 0, `Native :on-enter re-armed on exit/re-entry (wave=${rt.engine.vars.wave_count}, score=${rt.engine.vars.score})`);
+  assert(rt.getPostMountDomAllocs() === 0, 'Zero post-mount DOM allocations for mode-screens + :on-enter');
+}
+
+// 6. Refresh-Rate Parity (sim_scale & stage-timeline :fps 12) Across 60 Hz & 120 Hz
+console.log('\n6. Testing Refresh-Rate Independence (60 Hz vs 120 Hz) for arrow-mover & stage-timeline:');
+{
+  const paceAst = `(:scene
+    :id "refresh-rate-parity"
+    :type "Sim"
+    :duration 10
+    (:use-skill "stage-timeline" :frames 4 :fps 12)
+    (:use-skill "arrow-mover" :actor "hero" :start-x 100 :start-y 200 :speed 6)
+  )`;
+  const paceSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480"><g id="hero"></g></svg>`;
+
+  const runHalfSecond = (hz: number) => {
+    const rt = createHeadlessPlayer(paceAst, paceSvg);
+    let frameSteps = 0;
+    let prevFrame = rt.engine.vars.swf_frame;
+    rt.keyDown('ArrowRight', 'ArrowRight');
+    const ticks = Math.round(hz * 0.5);
+    for (let i = 0; i < ticks; i++) {
+      rt.tick(1, 1 / hz);
+      if (rt.engine.vars.swf_frame !== prevFrame) {
+        frameSteps++;
+        prevFrame = rt.engine.vars.swf_frame;
+      }
+    }
+    rt.keyUp('ArrowRight', 'ArrowRight');
+    return { x: Number(rt.engine.vars.hero_x.toFixed(3)), frameSteps, allocs: rt.getPostMountDomAllocs() };
+  };
+
+  const r60 = runHalfSecond(60);
+  const r120 = runHalfSecond(120);
+  assert(r60.x === 280 && r120.x === 280, `arrow-mover sim_scale moved hero identically in 0.5s: 60Hz=${r60.x}, 120Hz=${r120.x}`);
+  assert(r60.frameSteps === 6 && r120.frameSteps === 6, `stage-timeline :fps 12 stepped identically in 0.5s: 60Hz=${r60.frameSteps}, 120Hz=${r120.frameSteps}`);
+  assert(r60.allocs === 0 && r120.allocs === 0, 'Zero post-mount DOM allocations on both 60Hz and 120Hz runs');
+}
+
+// 7. Zero-GC 4-Slot entity-pool Skill (Multi-Projectile Spawning)
+console.log('\n7. Testing Zero-GC 4-Slot "entity-pool" Skill via .astb:');
+{
+  const poolAst = `(:scene
+    :id "pooled-shooter"
+    :type "Sim"
+    :duration 10
+    (:use-skill "arrow-mover" :actor "ship" :start-x 240 :start-y 360 :speed 8)
+    (:use-skill "entity-pool" :actor "ship" :pool "shot" :enemy "enemy" :speed 10 :cooldown 0.1)
+    (:vars
+      (:var :name "enemy_x" :val 240 :min 0 :max 640)
+      (:var :name "enemy_y" :val 160 :min 0 :max 480))
+  )`;
+  const poolSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+    <g id="ship"></g>
+    <g id="enemy"></g>
+    <g id="shot_0" display="none"></g>
+    <g id="shot_1" display="none"></g>
+    <g id="shot_2" display="none"></g>
+    <g id="shot_3" display="none"></g>
+  </svg>`;
+
+  const rt = createHeadlessPlayer(poolAst, poolSvg);
+  rt.keyDown('Space', ' ');
+  // Hold Space for 20 ticks (~0.33s at 60Hz with 0.1s cooldown -> should spawn multiple concurrent slots!)
+  rt.tick(18, 1 / 60);
+  rt.keyUp('Space', ' ');
+  const activeCount = [0, 1, 2, 3].filter((i) => rt.engine.vars[`shot_${i}_visible`] === 1).length;
+  assert(activeCount >= 2, `entity-pool spawned multiple concurrent shots simultaneously (active=${activeCount}, idx=${rt.engine.vars.shot_idx})`);
+  // Advance until shots reach enemy at y=160 -> score increments multiple times!
+  rt.tick(30, 1 / 60);
+  assert(rt.engine.vars.score >= 20, `entity-pool scored multiple AABB collisions against enemy (score=${rt.engine.vars.score})`);
+  rt.tick(120, 1 / 60);
+  assert(rt.getPostMountDomAllocs() === 0, 'Zero post-mount DOM allocations across 168 pooled simulation ticks');
+}
+
+// 8. Native :hoverable & hover-button Skill (Up / Over / Down Visual States)
+console.log('\n8. Testing Native ":hoverable" & "hover-button" Skill (Up / Over / Down) via .astb:');
+{
+  const hoverAst = `(:scene
+    :id "tactile-button-demo"
+    :type "Sim"
+    :duration 10
+    (:use-skill "hover-button" :btn "play")
+    (:vars (:var :name "clicked" :val 0 :min 0 :max 10))
+    (:gestures
+      (:on-click :target "#play" :hover-var "play_hover" :press-var "play_press" :step-var "clicked" :delta 1))
+  )`;
+  const hoverSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 480">
+    <g id="play">
+      <g id="play-up"></g>
+      <g id="play-over" display="none"></g>
+      <g id="play-down" display="none"></g>
+    </g>
+  </svg>`;
+
+  const rt = createHeadlessPlayer(hoverAst, hoverSvg);
+  assert(
+    rt.mockNodes.get('play-up')?.getAttribute('display') === 'inline' &&
+    rt.mockNodes.get('play-over')?.getAttribute('display') === 'none' &&
+    rt.mockNodes.get('play-down')?.getAttribute('display') === 'none',
+    'hover-button starts cleanly in Up state'
+  );
+
+  // Hover enter -> Over state
+  rt.hover('play');
+  assert(
+    rt.engine.vars.play_hover === 1 &&
+    rt.mockNodes.get('play-up')?.getAttribute('display') === 'none' &&
+    rt.mockNodes.get('play-over')?.getAttribute('display') === 'inline',
+    'Pointer move over #play activates Over state via :hoverable'
+  );
+
+  // Pointer down -> Down state + click increments clicked=1
+  rt.pointerDown('play');
+  assert(
+    rt.engine.vars.play_press === 1 &&
+    rt.engine.vars.clicked === 1 &&
+    rt.mockNodes.get('play-down')?.getAttribute('display') === 'inline' &&
+    rt.mockNodes.get('play-over')?.getAttribute('display') === 'none',
+    'Pointer down activates Down state (:press-var) and fires click action'
+  );
+
+  // Pointer up -> returns to Over state
+  rt.pointerUp();
+  assert(
+    rt.engine.vars.play_press === 0 &&
+    rt.mockNodes.get('play-over')?.getAttribute('display') === 'inline' &&
+    rt.mockNodes.get('play-down')?.getAttribute('display') === 'none',
+    'Pointer up clears Down state and returns to Over'
+  );
+
+  // Pointer leave -> returns to Up state
+  rt.pointerLeave();
+  assert(
+    rt.engine.vars.play_hover === 0 &&
+    rt.mockNodes.get('play-up')?.getAttribute('display') === 'inline' &&
+    rt.mockNodes.get('play-over')?.getAttribute('display') === 'none',
+    'Pointer leave clears Over state and returns to Up'
+  );
+  assert(rt.getPostMountDomAllocs() === 0, 'Zero post-mount DOM allocations during hover/press transitions');
 }
 
 console.log('\n=============================================================');
