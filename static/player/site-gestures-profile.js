@@ -75,7 +75,7 @@
     redo:    { freq: 523, wave: 'sine',     duration: 0.05, gain: 0.15 }
   };
 
-  // Offline / file:// AST fallback for declarative player skills (100% pure AST — zero inline JS;
+  // Offline / file:// AST fallback for declarative & inheritable player skills (100% pure AST — zero inline JS;
   // parsed by the exact same generic _parseSkillsBlock AST parser as static/player/player-gestures.ast).
   const DEFAULT_SKILLS_AST = `(:skills
     (:skill :id "storybook-reader"
@@ -97,7 +97,138 @@
         (:clickable :target "#btn-read-page" :speak-var "pageText" :tone "523.25,659.25")
         (:clickable :target ".book-word"   :set-var "activeWord" :from-attr "data-hint" :speak-attr "data-word" :tone "523.25")
         (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
-        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25"))))`;
+        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25")))
+    (:skill :id "stage-timeline"
+      :frames 2
+      :start-playing 1
+      (:vars
+        (:var :name "swf_frame"   :val 1 :min 1 :max "{{frames}}")
+        (:var :name "swf_playing" :val "{{startPlaying}}" :min 0 :max 1)
+        (:var :name "swf_tick"    :val 0 :min 0 :max 1000000))
+      (:rules
+        (:rule :var "swf_frame" :when "(= swf_playing 1)" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
+        (:rule :var "swf_tick"  :expr "(+ swf_tick 1)")))
+    (:skill :id "actor-2d"
+      :actor "player"
+      :target "#{{actor}}"
+      :start-x 320
+      :start-y 240
+      :min-x 20
+      :max-x 780
+      :min-y 20
+      :max-y 460
+      (:vars
+        (:var :name "{{actor}}_x"        :val "{{startX}}" :min "{{minX}}" :max "{{maxX}}")
+        (:var :name "{{actor}}_y"        :val "{{startY}}" :min "{{minY}}" :max "{{maxY}}")
+        (:var :name "{{actor}}_rotation" :val 0 :min -3600 :max 3600)
+        (:var :name "{{actor}}_scale"    :val 1 :min 0.05 :max 10)
+        (:var :name "{{actor}}_alpha"    :val 100 :min 0 :max 100)
+        (:var :name "{{actor}}_visible"  :val 1 :min 0 :max 1))
+      (:bindings
+        (:target "{{target}}" :attr "transform" :expr "(str 'translate(' {{actor}}_x ', ' {{actor}}_y ') rotate(' {{actor}}_rotation ') scale(' {{actor}}_scale ')')")
+        (:target "{{target}}" :attr "opacity"   :expr "(/ {{actor}}_alpha 100)")
+        (:target "{{target}}" :attr "display"   :expr "(if (> {{actor}}_visible 0) 'inline' 'none')")))
+    (:skill :id "wasd-mover"
+      :extends "actor-2d"
+      :speed 6
+      (:controls (:space-play :off))
+      (:vars
+        (:var :name "key_w" :val 0 :min 0 :max 1)
+        (:var :name "key_a" :val 0 :min 0 :max 1)
+        (:var :name "key_s" :val 0 :min 0 :max 1)
+        (:var :name "key_d" :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+      (:gestures
+        (:on-key :code "KeyA" :hold-var "key_a" :val 1 :release-val 0)
+        (:on-key :code "KeyD" :hold-var "key_d" :val 1 :release-val 0)
+        (:on-key :code "KeyW" :hold-var "key_w" :val 1 :release-val 0)
+        (:on-key :code "KeyS" :hold-var "key_s" :val 1 :release-val 0)))
+    (:skill :id "arrow-mover"
+      :extends "actor-2d"
+      :speed 8
+      (:controls (:arrow-step :off) (:space-play :off))
+      (:vars
+        (:var :name "key_left"  :val 0 :min 0 :max 1)
+        (:var :name "key_right" :val 0 :min 0 :max 1)
+        (:var :name "key_up"    :val 0 :min 0 :max 1)
+        (:var :name "key_down"  :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+      (:gestures
+        (:on-key :code "ArrowLeft"  :hold-var "key_left"  :val 1 :release-val 0)
+        (:on-key :code "ArrowRight" :hold-var "key_right" :val 1 :release-val 0)
+        (:on-key :code "ArrowUp"    :hold-var "key_up"    :val 1 :release-val 0)
+        (:on-key :code "ArrowDown"  :hold-var "key_down"  :val 1 :release-val 0)))
+    (:skill :id "health-combat"
+      :hp-var "enemy_hp"
+      :ko-var "ko"
+      :max-hp 100
+      :damage 25
+      :attack-btn "#btn-attack"
+      :attack-key "KeyJ"
+      :ko-frame 3
+      (:vars
+        (:var :name "{{hpVar}}" :val "{{maxHp}}" :min -100 :max "{{maxHp}}")
+        (:var :name "{{koVar}}" :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{koVar}}"   :when "(< {{hpVar}} 1)" :expr "1")
+        (:rule :var "swf_frame"   :when "(< {{hpVar}} 1)" :expr "{{koFrame}}")
+        (:rule :var "swf_playing" :when "(< {{hpVar}} 1)" :expr "0"))
+      (:gestures
+        (:on-click :target "{{attackBtn}}" :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")
+        (:on-key   :code "{{attackKey}}"   :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")))
+    (:skill :id "projectile-shooter"
+      :actor "ship"
+      :proj "bullet"
+      :proj-target "#{{proj}}"
+      :enemy "enemy"
+      :proj-speed 18
+      :hit-radius 32
+      :score-var "score"
+      :points 10
+      :fire-key "Space"
+      (:vars
+        (:var :name "{{proj}}_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{proj}}_y"       :val 0 :min -200 :max 1000)
+        (:var :name "{{proj}}_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{scoreVar}}"     :val 0 :min 0 :max 999999)
+        (:var :name "key_fire"         :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "{{projTarget}}" :attr "transform" :expr "(str 'translate(' {{proj}}_x ', ' {{proj}}_y ')')")
+        (:target "{{projTarget}}" :attr "display"   :expr "(if (> {{proj}}_visible 0) 'inline' 'none')"))
+      (:rules
+        (:rule :var "{{proj}}_x"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_x")
+        (:rule :var "{{proj}}_y"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_y")
+        (:rule :var "{{proj}}_visible" :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "1")
+        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y {{projSpeed}})")
+        (:rule :var "{{proj}}_visible" :when "(< {{proj}}_y -10)"     :expr "0")
+        (:rule :var "{{scoreVar}}"     :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{proj}}_visible" :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
+      (:gestures
+        (:on-key :code "{{fireKey}}" :hold-var "key_fire" :val 1 :release-val 0)))
+    (:skill :id "arcade-shooter"
+      :extends ("stage-timeline" "arrow-mover" "projectile-shooter")
+      :actor "ship"
+      :target "#ship"
+      :start-x 320
+      :start-y 400
+      :speed 8)
+    (:skill :id "arena-fighter"
+      :extends ("stage-timeline" "wasd-mover" "health-combat")
+      :actor "fighter1"
+      :target "#fighter1"
+      :start-x 180
+      :start-y 300
+      :speed 10
+      :hp-var "p2_hp"
+      :damage 35))`;
 
   // Resolve script base URL at load time so player-gestures.ast can be fetched reliably
   const PROFILE_SCRIPT_BASE_URL = (() => {
@@ -383,6 +514,21 @@
         }
       }
     }
+    // Resolve chained parameter templates (e.g. :target "#{{actor}}" -> "#ship") in 2 bounded passes
+    for (let pass = 0; pass < 2; pass++) {
+      let changed = false;
+      Object.keys(resolved).forEach((k) => {
+        const v = resolved[k];
+        if (typeof v === 'string' && v.includes('{{')) {
+          const next = this._expandSkillTemplate(v, resolved, false);
+          if (next !== v) {
+            resolved[k] = next;
+            changed = true;
+          }
+        }
+      });
+      if (!changed) break;
+    }
     return resolved;
   }
 
@@ -409,6 +555,64 @@
     });
   }
 
+  function _parseSkillStepSexp(stepSexp) {
+    if (!stepSexp || typeof stepSexp !== 'string') return null;
+    const headM = stepSexp.match(/^\(\s*:([a-zA-Z0-9_-]+)/i);
+    if (!headM) return null;
+    const kind = headM[1].toLowerCase();
+    const children = this._extractChildSexps(stepSexp);
+    const topAttrs = this._parseKeywordAttrs(this._stripChildSexps(stepSexp));
+    if (kind === 'seq') {
+      const steps = children.map(c => this._parseSkillStepSexp(c)).filter(Boolean);
+      return steps.length > 0 ? { type: 'seq', steps } : null;
+    }
+    if (kind === 'if') {
+      const topOnly = this._stripChildSexps(stepSexp);
+      const condM = topOnly.match(/^\(\s*:if\s+(?::(?:cond|expr)\s+)?"((?:[^"\\]|\\.)*)"/i);
+      const cond = condM ? condM[1].replace(/\\"/g, '"') : (topAttrs.cond || topAttrs.expr);
+      const thenStep = children[0] ? this._parseSkillStepSexp(children[0]) : null;
+      const elseStep = children[1] ? this._parseSkillStepSexp(children[1]) : null;
+      return cond && thenStep ? { type: 'if', cond, then: thenStep, ...(elseStep ? { else: elseStep } : {}) } : null;
+    }
+    if (kind === 'set-var') {
+      const posM = stepSexp.match(/^\(\s*:set-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const setVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || topAttrs.var || topAttrs.name;
+      const val = topAttrs.val;
+      const valExpr = topAttrs['val-expr'] || topAttrs.valExpr || topAttrs.expr;
+      return setVar ? { type: 'set-var', setVar, ...(val !== undefined ? { val } : {}), ...(valExpr !== undefined ? { valExpr } : {}) } : null;
+    }
+    if (kind === 'step-var') {
+      const posM = stepSexp.match(/^\(\s*:step-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const stepVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || topAttrs.var || topAttrs.name;
+      const delta = topAttrs.delta !== undefined ? topAttrs.delta : 1;
+      return stepVar ? { type: 'step-var', stepVar, delta } : null;
+    }
+    if (kind === 'toggle-var') {
+      const posM = stepSexp.match(/^\(\s*:toggle-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const toggleVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || topAttrs.var || topAttrs.name;
+      return toggleVar ? { type: 'toggle-var', toggleVar } : null;
+    }
+    return null;
+  }
+
+  function _expandSkillStep(step, params) {
+    if (!step || typeof step !== 'object') return step;
+    const out = {};
+    Object.entries(step).forEach(([k, v]) => {
+      if (k === 'steps' && Array.isArray(v)) {
+        out.steps = v.map(s => this._expandSkillStep(s, params));
+      } else if ((k === 'then' || k === 'else') && v && typeof v === 'object') {
+        out[k] = this._expandSkillStep(v, params);
+      } else if (typeof v === 'string') {
+        const isExpr = k === 'cond' || k === 'valExpr' || k === 'expr';
+        out[k] = this._expandSkillTemplate(v, params, isExpr);
+      } else {
+        out[k] = v;
+      }
+    });
+    return out;
+  }
+
   function _parseSkillsBlock(skillsBlock) {
     const skillsMap = new Map();
     if (!skillsBlock) return skillsMap;
@@ -418,41 +622,367 @@
       : this._extractSexpBlock(clean, '(:skills');
     if (!rootBlock) return skillsMap;
 
-    const skillItems = this._extractChildSexps(rootBlock);
+    const unwrapChildren = (block) => {
+      let children = this._extractChildSexps(block);
+      if (children.length === 1 && !/^\(\s*:/i.test(children[0])) {
+        children = this._extractChildSexps(children[0]);
+      }
+      return children;
+    };
+
+    const skillItems = unwrapChildren(rootBlock);
     for (const skillSexp of skillItems) {
       if (!/^\(\s*:skill(?:\s|$)/i.test(skillSexp)) continue;
-      const topOnly = this._stripChildSexps(skillSexp);
+
+      // Extract :extends / :inherits BEFORE stripping child sexps (supports single "id" or list ("a" "b"))
+      const extendsList = [];
+      const extListM = skillSexp.match(/:(?:extends|inherits)\s*\(([^)]+)\)/i);
+      if (extListM) {
+        const strRe = /"([^"]+)"|([a-zA-Z0-9_-]+)/g;
+        let sm;
+        while ((sm = strRe.exec(extListM[1])) !== null) {
+          const parentId = sm[1] || sm[2];
+          if (parentId && !extendsList.includes(parentId)) extendsList.push(parentId);
+        }
+      } else {
+        const extSingleM = skillSexp.match(/:(?:extends|inherits)\s+"([^"]+)"/i);
+        if (extSingleM && extSingleM[1]) extendsList.push(extSingleM[1]);
+      }
+
+      const withoutExtends = skillSexp.replace(/:(?:extends|inherits)\s*(?:\([^)]+\)|"[^"]*")/gi, ' ');
+      const topOnly = this._stripChildSexps(withoutExtends);
       const topAttrs = this._parseKeywordAttrs(topOnly);
       const id = topAttrs.id;
       if (!id || typeof id !== 'string') continue;
 
       const defaults = {};
       Object.entries(topAttrs).forEach(([k, v]) => {
-        if (k !== 'id') defaults[k] = v;
+        if (k !== 'id' && k !== 'extends' && k !== 'inherits') defaults[k] = v;
       });
 
       const ctrlBlock = this._extractSexpBlock(skillSexp, '(:controls');
       const controls = ctrlBlock ? this._parseControlsBlock(ctrlBlock) : {};
 
+      // Parse (:vars (:var :name "..." :val ... :min ... :max ... :step ...))
+      const vars = [];
+      const varsBlock = this._extractSexpBlock(skillSexp, '(:vars');
+      if (varsBlock) {
+        for (const vSexp of unwrapChildren(varsBlock)) {
+          if (!/^\(\s*:var(?:\s|$)/i.test(vSexp)) continue;
+          const vAttrs = this._parseKeywordAttrs(vSexp);
+          if (vAttrs.name) {
+            vars.push({
+              name: vAttrs.name,
+              val: vAttrs.val !== undefined ? vAttrs.val : 0,
+              ...(vAttrs.min !== undefined ? { min: vAttrs.min } : {}),
+              ...(vAttrs.max !== undefined ? { max: vAttrs.max } : {}),
+              ...(vAttrs.step !== undefined ? { step: vAttrs.step } : {}),
+              ...(vAttrs.unit !== undefined ? { unit: vAttrs.unit } : {}),
+              ...(vAttrs.label !== undefined ? { label: vAttrs.label } : {})
+            });
+          }
+        }
+      }
+
+      // Parse (:bindings (:target "..." :attr "..." :expr "..." [:when "..."]))
+      const bindings = [];
+      const bindingsBlock = this._extractSexpBlock(skillSexp, '(:bindings');
+      if (bindingsBlock) {
+        for (const bSexp of unwrapChildren(bindingsBlock)) {
+          if (/^\(\s*:target(?:\s|$)/i.test(bSexp)) {
+            const targetM = bSexp.match(/^\(\s*:target\s+"((?:[^"\\]|\\.)*)"/i);
+            const bAttrs = this._parseKeywordAttrs(bSexp);
+            const target = (targetM ? targetM[1].replace(/\\"/g, '"') : null) || bAttrs.target;
+            if (target && bAttrs.attr && bAttrs.expr !== undefined) {
+              bindings.push({
+                type: '2d-attr',
+                target,
+                attr: bAttrs.attr,
+                expr: String(bAttrs.expr),
+                ...(bAttrs.when || bAttrs.if ? { when: String(bAttrs.when || bAttrs.if) } : {})
+              });
+            }
+          } else if (/^\(\s*:(?:var|rule)(?:\s|$)/i.test(bSexp)) {
+            const rAttrs = this._parseKeywordAttrs(bSexp);
+            const varName = rAttrs.var || rAttrs.name;
+            if (varName && rAttrs.expr !== undefined) {
+              bindings.push({
+                type: 'var-update',
+                varName,
+                expr: String(rAttrs.expr),
+                ...(rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {})
+              });
+            }
+          }
+        }
+      }
+
+      // Parse (:rules (:rule :var "..." :expr "..." [:when "..."]))
+      const rules = [];
+      const rulesBlock = this._extractSexpBlock(skillSexp, '(:rules');
+      if (rulesBlock) {
+        for (const rSexp of unwrapChildren(rulesBlock)) {
+          if (!/^\(\s*:(?:rule|var)(?:\s|$)/i.test(rSexp)) continue;
+          const rAttrs = this._parseKeywordAttrs(rSexp);
+          const varName = rAttrs.var || rAttrs.name;
+          if (varName && rAttrs.expr !== undefined) {
+            rules.push({
+              type: 'var-update',
+              varName,
+              expr: String(rAttrs.expr),
+              ...(rAttrs.when || rAttrs.if ? { when: String(rAttrs.when || rAttrs.if) } : {})
+            });
+          }
+        }
+      }
+
+      // Parse (:gestures ...) including nested :seq/:if/:set-var/:step-var/:toggle-var steps
       const gestures = [];
       const gesturesBlock = this._extractSexpBlock(skillSexp, '(:gestures');
       if (gesturesBlock) {
-        let gestureChildren = this._extractChildSexps(gesturesBlock);
-        if (gestureChildren.length === 1 && !/^\(\s*:/i.test(gestureChildren[0])) {
-          gestureChildren = this._extractChildSexps(gestureChildren[0]);
-        }
+        const gestureChildren = unwrapChildren(gesturesBlock);
         for (const gSexp of gestureChildren) {
           const typeMatch = gSexp.match(/^\(\s*:([a-zA-Z0-9_-]+)/);
           if (!typeMatch) continue;
-          const gAttrs = this._parseKeywordAttrs(gSexp);
+          const nestedSexps = this._extractChildSexps(gSexp);
+          const steps = nestedSexps.map(ns => this._parseSkillStepSexp(ns)).filter(Boolean);
+          const gAttrs = this._parseKeywordAttrs(this._stripChildSexps(gSexp));
           gAttrs.type = typeMatch[1];
+          if (steps.length > 0) gAttrs.steps = steps;
           gestures.push(gAttrs);
         }
       }
 
-      skillsMap.set(id, { id, defaults, controls, gestures });
+      skillsMap.set(id, { id, extends: extendsList, defaults, controls, vars, bindings, rules, gestures });
     }
     return skillsMap;
+  }
+
+  /**
+   * Builds a merged skill registry combining global player skills + any cartridge-local (:skills ...) definitions.
+   */
+  function _buildSceneSkillRegistry(scene, baseSkills) {
+    const registry = new Map();
+    const fallbackBase = baseSkills instanceof Map
+      ? baseSkills
+      : (this && this.playerProfile && this.playerProfile.skills instanceof Map
+        ? this.playerProfile.skills
+        : _parseSkillsBlock.call(ASTGesturesProfile, DEFAULT_SKILLS_AST));
+
+    fallbackBase.forEach((def, k) => registry.set(k, def));
+
+    if (scene && scene.definedSkills) {
+      if (typeof scene.definedSkills === 'string') {
+        const localMap = _parseSkillsBlock.call(ASTGesturesProfile, scene.definedSkills);
+        localMap.forEach((def, k) => registry.set(k, def));
+      } else if (scene.definedSkills instanceof Map) {
+        scene.definedSkills.forEach((def, k) => registry.set(k, def));
+      } else if (Array.isArray(scene.definedSkills)) {
+        for (const def of scene.definedSkills) {
+          if (def && def.id) registry.set(def.id, def);
+        }
+      }
+    }
+    return registry;
+  }
+
+  /**
+   * Resolves full skill inheritance chain (single, multiple, or diamond :extends) deterministically
+   * with cycle protection and diamond deduplication. Every ancestor merges exactly once, base -> derived.
+   */
+  function _resolveSkillDefinition(skillId, registry) {
+    if (!skillId || !(registry instanceof Map) || !registry.has(skillId)) return null;
+
+    const chain = [];
+    const finalized = new Set();
+    const visiting = new Set();
+
+    const visit = (id) => {
+      if (!id || finalized.has(id) || visiting.has(id)) return;
+      const def = registry.get(id);
+      if (!def) return;
+      visiting.add(id);
+      const parents = Array.isArray(def.extends) ? def.extends : (def.extends ? [def.extends] : []);
+      for (const pid of parents) {
+        visit(pid);
+      }
+      visiting.delete(id);
+      finalized.add(id);
+      chain.push(id);
+    };
+
+    visit(skillId);
+    if (chain.length === 0) return null;
+
+    const defaults = {};
+    const controls = {};
+    const varsByName = new Map();
+    const bindings = [];
+    const rules = [];
+    const gestures = [];
+
+    for (const cid of chain) {
+      const def = registry.get(cid);
+      if (!def) continue;
+      if (def.defaults) Object.assign(defaults, def.defaults);
+      if (def.controls) Object.assign(controls, def.controls);
+      if (Array.isArray(def.vars)) {
+        for (const v of def.vars) {
+          if (v && v.name) varsByName.set(v.name, { ...v });
+        }
+      }
+      if (Array.isArray(def.bindings)) {
+        for (const b of def.bindings) bindings.push({ ...b });
+      }
+      if (Array.isArray(def.rules)) {
+        for (const r of def.rules) rules.push({ ...r });
+      }
+      if (Array.isArray(def.gestures)) {
+        for (const g of def.gestures) gestures.push({ ...g });
+      }
+    }
+
+    const rawSelf = registry.get(skillId);
+    const selfParents = rawSelf && Array.isArray(rawSelf.extends) ? rawSelf.extends : [];
+    return {
+      id: skillId,
+      extends: selfParents,
+      chain,
+      defaults,
+      controls,
+      vars: Array.from(varsByName.values()),
+      bindings,
+      rules,
+      gestures
+    };
+  }
+
+  /**
+   * Expands all (:use-skill ...) declarations on a scene into scene.vars, scene.bindings (2D + var-update rules),
+   * and scene.controls idempotently. Cartridge-explicit vars and controls always win over inherited skill defaults.
+   */
+  function expandSceneSkills(scene, baseSkills) {
+    if (!scene || typeof scene !== 'object') return false;
+    const host = (this && typeof this._expandSkillTemplate === 'function') ? this : ASTGesturesProfile;
+    const usages = host._resolveSceneSkillUsages(scene);
+    if (!Array.isArray(usages) || usages.length === 0) return false;
+
+    const registry = host._buildSceneSkillRegistry(scene, baseSkills);
+    if (!(scene._expandedSkillKeys instanceof Set)) {
+      scene._expandedSkillKeys = new Set();
+    }
+
+    const coerceNumberIfNumeric = (val) => {
+      if (typeof val === 'number') return val;
+      if (typeof val === 'string' && /^-?\d+(?:\.\d+)?$/.test(val.trim())) {
+        const n = Number(val.trim());
+        return Number.isFinite(n) ? n : val;
+      }
+      return val;
+    };
+
+    let mutated = false;
+    const prependedBindings = [];
+    const prependedRules = [];
+    const inheritedControls = {};
+
+    for (let idx = 0; idx < usages.length; idx++) {
+      const usage = usages[idx];
+      if (!usage || !usage.id) continue;
+      const usageKey = `${idx}:${usage.id}`;
+      if (scene._expandedSkillKeys.has(usageKey)) continue;
+
+      const resolvedDef = host._resolveSkillDefinition(usage.id, registry);
+      if (!resolvedDef) continue;
+
+      scene._expandedSkillKeys.add(usageKey);
+      const params = host._resolveSkillParams(resolvedDef, usage.params);
+
+      // 1. Merge inherited controls (cartridge controls override later)
+      if (resolvedDef.controls) {
+        Object.assign(inheritedControls, resolvedDef.controls);
+      }
+
+      // 2. Inject inherited :vars (do NOT overwrite cartridge-explicit vars)
+      if (Array.isArray(resolvedDef.vars) && resolvedDef.vars.length > 0) {
+        if (!scene.vars || typeof scene.vars !== 'object') scene.vars = {};
+        for (const vDef of resolvedDef.vars) {
+          const vName = String(host._expandSkillTemplate(vDef.name, params, false)).trim();
+          if (!vName || Object.prototype.hasOwnProperty.call(scene.vars, vName)) continue;
+
+          const val = coerceNumberIfNumeric(host._expandSkillTemplate(vDef.val, params, false));
+          const hasMin = vDef.min !== undefined;
+          const hasMax = vDef.max !== undefined;
+          if (hasMin && hasMax) {
+            const minNum = Number(coerceNumberIfNumeric(host._expandSkillTemplate(vDef.min, params, false)));
+            const maxNum = Number(coerceNumberIfNumeric(host._expandSkillTemplate(vDef.max, params, false)));
+            const stepNum = vDef.step !== undefined ? Number(coerceNumberIfNumeric(host._expandSkillTemplate(vDef.step, params, false))) : 1;
+            scene.vars[vName] = {
+              val,
+              min: Number.isFinite(minNum) ? minNum : -10000,
+              max: Number.isFinite(maxNum) ? maxNum : 10000,
+              step: Number.isFinite(stepNum) ? stepNum : 1,
+              unit: vDef.unit ? String(host._expandSkillTemplate(vDef.unit, params, false)) : '',
+              label: vDef.label ? String(host._expandSkillTemplate(vDef.label, params, false)) : vName
+            };
+          } else {
+            scene.vars[vName] = val;
+          }
+          mutated = true;
+        }
+      }
+
+      // 3. Expand inherited 2D SVG attribute bindings
+      if (Array.isArray(resolvedDef.bindings) && resolvedDef.bindings.length > 0) {
+        for (const bDef of resolvedDef.bindings) {
+          if (bDef.type === 'var-update') {
+            const varName = String(host._expandSkillTemplate(bDef.varName, params, false)).trim();
+            const expr = String(host._expandSkillTemplate(bDef.expr, params, false));
+            const when = bDef.when ? String(host._expandSkillTemplate(bDef.when, params, false)) : undefined;
+            if (varName && expr) {
+              prependedRules.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+              mutated = true;
+            }
+          } else {
+            const target = String(host._expandSkillTemplate(bDef.target, params, false)).trim();
+            const attr = String(host._expandSkillTemplate(bDef.attr, params, false)).trim();
+            const expr = String(host._expandSkillTemplate(bDef.expr, params, false));
+            const when = bDef.when ? String(host._expandSkillTemplate(bDef.when, params, false)) : undefined;
+            if (target && attr && expr) {
+              prependedBindings.push({ type: '2d-attr', target, attr, expr, ...(when ? { when } : {}) });
+              mutated = true;
+            }
+          }
+        }
+      }
+
+      // 4. Expand inherited :rules (var-update bindings)
+      if (Array.isArray(resolvedDef.rules) && resolvedDef.rules.length > 0) {
+        for (const rDef of resolvedDef.rules) {
+          const varName = String(host._expandSkillTemplate(rDef.varName, params, false)).trim();
+          const expr = String(host._expandSkillTemplate(rDef.expr, params, false));
+          const when = rDef.when ? String(host._expandSkillTemplate(rDef.when, params, false)) : undefined;
+          if (varName && expr) {
+            prependedRules.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+            mutated = true;
+          }
+        }
+      }
+    }
+
+    if (Object.keys(inheritedControls).length > 0) {
+      scene.controls = { ...inheritedControls, ...(scene.controls || {}) };
+    }
+
+    if (prependedBindings.length > 0 || prependedRules.length > 0) {
+      const existing = Array.isArray(scene.bindings) ? scene.bindings : [];
+      scene.bindings = [...prependedBindings, ...prependedRules, ...existing];
+      if (Array.isArray(scene.rawBindings) && scene.rawBindings.length > 0) {
+        scene.rawBindings = [...prependedBindings, ...prependedRules, ...scene.rawBindings];
+      }
+    }
+
+    return mutated;
   }
 
   function _parseKeywordAttrs(sexp) {
@@ -624,21 +1154,26 @@
   }
 
   function _resolveSkillGestures(scene) {
-    if (!scene || !this.playerProfile || !(this.playerProfile.skills instanceof Map)) return [];
+    if (!scene) return [];
     const usages = this._resolveSceneSkillUsages(scene);
     if (usages.length === 0) return [];
+    const registry = this._buildSceneSkillRegistry(scene, this.playerProfile && this.playerProfile.skills);
 
     const expanded = [];
     for (const usage of usages) {
       if (!usage || !usage.id) continue;
-      const skillDef = this.playerProfile.skills.get(usage.id);
+      const skillDef = this._resolveSkillDefinition(usage.id, registry);
       if (!skillDef || !Array.isArray(skillDef.gestures)) continue;
       const resolvedParams = this._resolveSkillParams(skillDef, usage.params);
       for (const rawGesture of skillDef.gestures) {
         const clone = {};
         Object.entries(rawGesture).forEach(([k, v]) => {
-          const isJsExpr = k === 'expr' || k === 'if' || k === 'ifExpr' || k.endsWith('Expr') || k.endsWith('-expr');
-          clone[k] = typeof v === 'string' ? this._expandSkillTemplate(v, resolvedParams, isJsExpr) : v;
+          if (k === 'steps' && Array.isArray(v)) {
+            clone.steps = v.map(st => this._expandSkillStep(st, resolvedParams));
+          } else {
+            const isJsExpr = k === 'expr' || k === 'if' || k === 'ifExpr' || k.endsWith('Expr') || k.endsWith('-expr');
+            clone[k] = typeof v === 'string' ? this._expandSkillTemplate(v, resolvedParams, isJsExpr) : v;
+          }
         });
         expanded.push(this._normalizeGesture(clone));
       }
@@ -651,11 +1186,13 @@
    * (e.g. :sync-timeline-var "page" :sync-count "{{pages}}"). Purely generic; zero hardcoded scene IDs.
    */
   function _getActiveTimelineSyncSpec(scene) {
-    if (!scene || !this.playerProfile || !(this.playerProfile.skills instanceof Map)) return null;
+    if (!scene) return null;
     const usages = this._resolveSceneSkillUsages(scene);
+    if (usages.length === 0) return null;
+    const registry = this._buildSceneSkillRegistry(scene, this.playerProfile && this.playerProfile.skills);
     for (const usage of usages) {
       if (!usage || !usage.id) continue;
-      const skillDef = this.playerProfile.skills.get(usage.id);
+      const skillDef = this._resolveSkillDefinition(usage.id, registry);
       if (!skillDef) continue;
       const resolvedParams = this._resolveSkillParams(skillDef, usage.params);
       const rawVar = resolvedParams.syncTimelineVar || resolvedParams['sync-timeline-var'];
@@ -774,12 +1311,15 @@
     const merged = { ...this.playerProfile.defaults };
     const scene = this.engine && this.engine.scene;
 
-    // 1. Apply active AST skill controls before cartridge-level overrides
+    // 1. Apply active AST skill controls (walking inherited skill chain) before cartridge-level overrides
     const skillUsages = this._resolveSceneSkillUsages(scene);
-    for (const usage of skillUsages) {
-      const skillDef = this.playerProfile.skills && this.playerProfile.skills.get(usage.id);
-      if (skillDef && skillDef.controls) {
-        Object.assign(merged, skillDef.controls);
+    if (skillUsages.length > 0) {
+      const registry = this._buildSceneSkillRegistry(scene, this.playerProfile && this.playerProfile.skills);
+      for (const usage of skillUsages) {
+        const skillDef = this._resolveSkillDefinition(usage.id, registry);
+        if (skillDef && skillDef.controls) {
+          Object.assign(merged, skillDef.controls);
+        }
       }
     }
 
@@ -885,8 +1425,10 @@
     if (!g || typeof g !== 'object') return g;
     const norm = { ...g };
 
-    if (norm.type === 'interactive') {
+    if (norm.type === 'interactive' || norm.type === 'on-click') {
       norm.type = 'clickable';
+    } else if (norm.type === 'on-key') {
+      norm.type = 'key';
     }
     if (norm.action === 'set-var') {
       if (!norm.setVar && norm.var) norm.setVar = norm.var;
@@ -908,6 +1450,7 @@
     if (norm.toggleVar === undefined && norm['toggle-var'] !== undefined) norm.toggleVar = norm['toggle-var'];
     if (norm.stepVar === undefined && norm['step-var'] !== undefined) norm.stepVar = norm['step-var'];
     if (norm.holdVar === undefined && norm['hold-var'] !== undefined) norm.holdVar = norm['hold-var'];
+    if (norm.holdVar && norm.hold === undefined) norm.hold = true;
     if (norm.releaseVal === undefined && norm['release-val'] !== undefined) norm.releaseVal = norm['release-val'];
     if (norm.yawVar === undefined && norm['yaw-var'] !== undefined) norm.yawVar = norm['yaw-var'];
     if (norm.pitchVar === undefined && norm['pitch-var'] !== undefined) norm.pitchVar = norm['pitch-var'];
@@ -985,7 +1528,12 @@
     _escapeTemplateValue,
     _resolveSkillParams,
     _expandSkillTemplate,
+    _parseSkillStepSexp,
+    _expandSkillStep,
     _parseSkillsBlock,
+    _buildSceneSkillRegistry,
+    _resolveSkillDefinition,
+    expandSceneSkills,
     _parseKeywordAttrs,
     _parseControlsBlock,
     _parsePlayerGesturesAST,

@@ -77,9 +77,9 @@
     (:tone :event "undo"    :freq 330 :wave "sine"     :duration 0.05 :gain 0.15)
     (:tone :event "redo"    :freq 523 :wave "sine"     :duration 0.05 :gain 0.15))
 
-  ;; 6. Declarative Reusable Player Skills (Activated by any cartridge via (:use-skill "<id>" ...))
-  ;; 100% pure AST intent — ZERO inline JavaScript. site-gestures.js executes every action
-  ;; natively so Gemini Nano can read, reason about, and author skills/cartridges cleanly.
+  ;; 6. Declarative Reusable & Inheritable Player Skills (Activated via (:use-skill "<id>" ...))
+  ;; Skills support single or multiple inheritance (:extends "parent" | :extends ("a" "b"))
+  ;; and bundle :vars, :bindings, :rules, :controls, and :gestures in 100% pure AST (zero inline JS).
   (:skills
     (:skill :id "storybook-reader"
       :pages 5
@@ -100,5 +100,152 @@
         (:clickable :target "#btn-read-page" :speak-var "pageText" :tone "523.25,659.25")
         (:clickable :target ".book-word"   :set-var "activeWord" :from-attr "data-hint" :speak-attr "data-word" :tone "523.25")
         (:clickable :target ".book-word"   :set-var "activePhonemes" :from-attr "data-phonemes")
-        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25"))))
+        (:clickable :target "#btn-sound-out" :speak-var "activePhonemes" :fallback-var "pageText" :tone "440,523.25,659.25")))
+
+    ;; Base frame-clock timeline skill (looping frame counter + play/stop flag)
+    (:skill :id "stage-timeline"
+      :frames 2
+      :start-playing 1
+      (:vars
+        (:var :name "swf_frame"   :val 1 :min 1 :max "{{frames}}")
+        (:var :name "swf_playing" :val "{{startPlaying}}" :min 0 :max 1)
+        (:var :name "swf_tick"    :val 0 :min 0 :max 1000000))
+      (:rules
+        (:rule :var "swf_frame" :when "(= swf_playing 1)" :expr "(if (>= swf_frame {{frames}}) 1 (+ swf_frame 1))")
+        (:rule :var "swf_tick"  :expr "(+ swf_tick 1)")))
+
+    ;; Base 2D SVG actor skill (x, y, rotation, scale, alpha, visible -> zero-GC SVG bindings)
+    (:skill :id "actor-2d"
+      :actor "player"
+      :target "#{{actor}}"
+      :start-x 320
+      :start-y 240
+      :min-x 20
+      :max-x 780
+      :min-y 20
+      :max-y 460
+      (:vars
+        (:var :name "{{actor}}_x"        :val "{{startX}}" :min "{{minX}}" :max "{{maxX}}")
+        (:var :name "{{actor}}_y"        :val "{{startY}}" :min "{{minY}}" :max "{{maxY}}")
+        (:var :name "{{actor}}_rotation" :val 0 :min -3600 :max 3600)
+        (:var :name "{{actor}}_scale"    :val 1 :min 0.05 :max 10)
+        (:var :name "{{actor}}_alpha"    :val 100 :min 0 :max 100)
+        (:var :name "{{actor}}_visible"  :val 1 :min 0 :max 1))
+      (:bindings
+        (:target "{{target}}" :attr "transform" :expr "(str 'translate(' {{actor}}_x ', ' {{actor}}_y ') rotate(' {{actor}}_rotation ') scale(' {{actor}}_scale ')')")
+        (:target "{{target}}" :attr "opacity"   :expr "(/ {{actor}}_alpha 100)")
+        (:target "{{target}}" :attr "display"   :expr "(if (> {{actor}}_visible 0) 'inline' 'none')")))
+
+    ;; WASD real-time movement skill (inherits actor-2d)
+    (:skill :id "wasd-mover"
+      :extends "actor-2d"
+      :speed 6
+      (:controls (:space-play :off))
+      (:vars
+        (:var :name "key_w" :val 0 :min 0 :max 1)
+        (:var :name "key_a" :val 0 :min 0 :max 1)
+        (:var :name "key_s" :val 0 :min 0 :max 1)
+        (:var :name "key_d" :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{actor}}_x" :when "(= key_a 1)" :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_d 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_w 1)" :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_s 1)" :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+      (:gestures
+        (:on-key :code "KeyA" :hold-var "key_a" :val 1 :release-val 0)
+        (:on-key :code "KeyD" :hold-var "key_d" :val 1 :release-val 0)
+        (:on-key :code "KeyW" :hold-var "key_w" :val 1 :release-val 0)
+        (:on-key :code "KeyS" :hold-var "key_s" :val 1 :release-val 0)))
+
+    ;; Arrow-key real-time movement skill (inherits actor-2d)
+    (:skill :id "arrow-mover"
+      :extends "actor-2d"
+      :speed 8
+      (:controls (:arrow-step :off) (:space-play :off))
+      (:vars
+        (:var :name "key_left"  :val 0 :min 0 :max 1)
+        (:var :name "key_right" :val 0 :min 0 :max 1)
+        (:var :name "key_up"    :val 0 :min 0 :max 1)
+        (:var :name "key_down"  :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{actor}}_x" :when "(= key_left 1)"  :expr "(clamp (- {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_x" :when "(= key_right 1)" :expr "(clamp (+ {{actor}}_x {{speed}}) {{minX}} {{maxX}})")
+        (:rule :var "{{actor}}_y" :when "(= key_up 1)"    :expr "(clamp (- {{actor}}_y {{speed}}) {{minY}} {{maxY}})")
+        (:rule :var "{{actor}}_y" :when "(= key_down 1)"  :expr "(clamp (+ {{actor}}_y {{speed}}) {{minY}} {{maxY}})"))
+      (:gestures
+        (:on-key :code "ArrowLeft"  :hold-var "key_left"  :val 1 :release-val 0)
+        (:on-key :code "ArrowRight" :hold-var "key_right" :val 1 :release-val 0)
+        (:on-key :code "ArrowUp"    :hold-var "key_up"    :val 1 :release-val 0)
+        (:on-key :code "ArrowDown"  :hold-var "key_down"  :val 1 :release-val 0)))
+
+    ;; Health & combat KO skill (damage trigger + automatic KO state transition)
+    (:skill :id "health-combat"
+      :hp-var "enemy_hp"
+      :ko-var "ko"
+      :max-hp 100
+      :damage 25
+      :attack-btn "#btn-attack"
+      :attack-key "KeyJ"
+      :ko-frame 3
+      (:vars
+        (:var :name "{{hpVar}}" :val "{{maxHp}}" :min -100 :max "{{maxHp}}")
+        (:var :name "{{koVar}}" :val 0 :min 0 :max 1))
+      (:rules
+        (:rule :var "{{koVar}}"   :when "(< {{hpVar}} 1)" :expr "1")
+        (:rule :var "swf_frame"   :when "(< {{hpVar}} 1)" :expr "{{koFrame}}")
+        (:rule :var "swf_playing" :when "(< {{hpVar}} 1)" :expr "0"))
+      (:gestures
+        (:on-click :target "{{attackBtn}}" :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")
+        (:on-key   :code "{{attackKey}}"   :set-var "{{hpVar}}" :val-expr "(- {{hpVar}} {{damage}})")))
+
+    ;; Zero-GC projectile & AABB hitTest scoring skill
+    (:skill :id "projectile-shooter"
+      :actor "ship"
+      :proj "bullet"
+      :proj-target "#{{proj}}"
+      :enemy "enemy"
+      :proj-speed 18
+      :hit-radius 32
+      :score-var "score"
+      :points 10
+      :fire-key "Space"
+      (:vars
+        (:var :name "{{proj}}_x"       :val 0 :min -200 :max 1000)
+        (:var :name "{{proj}}_y"       :val 0 :min -200 :max 1000)
+        (:var :name "{{proj}}_visible" :val 0 :min 0 :max 1)
+        (:var :name "{{scoreVar}}"     :val 0 :min 0 :max 999999)
+        (:var :name "key_fire"         :val 0 :min 0 :max 1))
+      (:bindings
+        (:target "{{projTarget}}" :attr "transform" :expr "(str 'translate(' {{proj}}_x ', ' {{proj}}_y ')')")
+        (:target "{{projTarget}}" :attr "display"   :expr "(if (> {{proj}}_visible 0) 'inline' 'none')"))
+      (:rules
+        (:rule :var "{{proj}}_x"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_x")
+        (:rule :var "{{proj}}_y"       :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "{{actor}}_y")
+        (:rule :var "{{proj}}_visible" :when "(and (= key_fire 1) (= {{proj}}_visible 0))" :expr "1")
+        (:rule :var "{{proj}}_y"       :when "(> {{proj}}_visible 0)" :expr "(- {{proj}}_y {{projSpeed}})")
+        (:rule :var "{{proj}}_visible" :when "(< {{proj}}_y -10)"     :expr "0")
+        (:rule :var "{{scoreVar}}"     :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "(+ {{scoreVar}} {{points}})")
+        (:rule :var "{{proj}}_visible" :when "(and (> {{proj}}_visible 0) (< (abs (- {{proj}}_x {{enemy}}_x)) {{hitRadius}}) (< (abs (- {{proj}}_y {{enemy}}_y)) {{hitRadius}}))" :expr "0"))
+      (:gestures
+        (:on-key :code "{{fireKey}}" :hold-var "key_fire" :val 1 :release-val 0)))
+
+    ;; Composed multi-inheritance Arcade Shooter skill
+    (:skill :id "arcade-shooter"
+      :extends ("stage-timeline" "arrow-mover" "projectile-shooter")
+      :actor "ship"
+      :target "#ship"
+      :start-x 320
+      :start-y 400
+      :speed 8)
+
+    ;; Composed multi-inheritance Arena Fighter skill
+    (:skill :id "arena-fighter"
+      :extends ("stage-timeline" "wasd-mover" "health-combat")
+      :actor "fighter1"
+      :target "#fighter1"
+      :start-x 180
+      :start-y 300
+      :speed 10
+      :hp-var "p2_hp"
+      :damage 35))
 )

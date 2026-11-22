@@ -201,6 +201,25 @@
 
   function _evalGestureExpr(exprText, matchedEl, attrVal, asReturnValue = true) {
     if (!exprText || !this.engine) return undefined;
+    const trimmed = String(exprText).trim();
+    if (asReturnValue && trimmed.startsWith('(') && trimmed.endsWith(')')) {
+      const compileFn = (typeof this.engine.compileAstFn === 'function')
+        ? this.engine.compileAstFn.bind(this.engine)
+        : (typeof global !== 'undefined' && typeof global.compileAstFn === 'function' ? global.compileAstFn : null);
+      if (compileFn) {
+        try {
+          const fn = compileFn(trimmed);
+          if (typeof fn === 'function') {
+            return fn(
+              (this.engine && this.engine.progress) || 0,
+              (this.engine && this.engine.vars) || {},
+              (this.engine && this.engine.computed) || (this.engine && this.engine.vars) || {},
+              Math
+            );
+          }
+        } catch (_) {}
+      }
+    }
     const body = asReturnValue ? `return (${exprText})` : exprText;
     const fn = new Function('vars', 'el', 'engine', 'computed', '_attr', body);
     return fn(
@@ -478,7 +497,7 @@
         };
         this._activeHoldVars.set(holdKey, entry);
       }
-      entry.gestures.add(g);
+      entry.gestures.add(_gestureHoldId(g));
       this._writeEngineVar(holdKey, g.val !== undefined ? g.val : true);
       changed = true;
     }
@@ -634,11 +653,16 @@
     return changed;
   }
 
+  function _gestureHoldId(g) {
+    if (!g) return '';
+    return `${g.type || ''}|${g.code || ''}|${g.key || ''}|${g.target || ''}|${g.holdVar || ''}|${g.val !== undefined ? String(g.val) : ''}`;
+  }
+
   function _releaseHoldForGesture(g) {
     if (!g || !g.holdVar) return false;
     const entry = this._activeHoldVars.get(g.holdVar);
     if (!entry) return false;
-    entry.gestures.delete(g);
+    entry.gestures.delete(_gestureHoldId(g));
     if (entry.gestures.size === 0) {
       this._activeHoldVars.delete(g.holdVar);
       this._writeEngineVar(g.holdVar, entry.releaseVal);

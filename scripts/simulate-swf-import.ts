@@ -8,8 +8,12 @@
  * Verifies XML/SVG validity, AST S-Expression parseability, and performance metrics.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
 import { transpileSwfToAst } from '../src/utils/swfAstParser';
 import { parseSExpr } from '../src/utils/sexprParser';
+import { compileSceneToBytecode, isAstBytecode } from '../src/utils/astBytecode';
 import {
   BitWriter,
   assembleFwsSwf,
@@ -19,6 +23,11 @@ import {
   buildCurvedShapeTag,
   buildMorphShapeTag,
   buildDoActionTag,
+  Avm1Builder,
+  buildPlaceObject2Tag,
+  buildRemoveObject2Tag,
+  buildDefineSpriteTag,
+  buildDefineButton2Tag,
   SwfTagCode,
 } from '../test/utils/swfBinaryBuilder';
 
@@ -809,6 +818,600 @@ async function runSimulations() {
       durationMs: duration,
       details: 'Verified empty <g id="swf-shape-11" /> without fallback rects and exact SVG matrix() transforms on PlaceObject2 & PlaceObject3.',
       errors
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Headless AST/.astb Runtime Harness for Live SWF Execution Verification
+  // --------------------------------------------------------------------------
+  function createHeadlessSwfRuntime(astSource: string, svgMarkup: string) {
+    const playerDir = path.resolve(process.cwd(), 'static/player');
+    const mockNodes = new Map<string, any>();
+    let totalNodesCreated = 0;
+
+    // Parse all id="..." elements from SVG into lightweight mock DOM nodes
+    const idRe = /<([a-zA-Z0-9_-]+)((?:\s+[^>]*?)?\s+)id="([^"]+)"([^>]*)>/g;
+    let m: RegExpExecArray | null;
+    while ((m = idRe.exec(svgMarkup)) !== null) {
+      const tag = m[1];
+      const attrChunk = `${m[2]} id="${m[3]}" ${m[4]}`;
+      const id = m[3];
+      const attrs = new Map<string, string>();
+      const aRe = /([a-zA-Z0-9_:-]+)="([^"]*)"/g;
+      let am: RegExpExecArray | null;
+      while ((am = aRe.exec(attrChunk)) !== null) {
+        attrs.set(am[1], am[2]);
+      }
+      totalNodesCreated++;
+      const node: any = {
+        tagName: tag.toUpperCase(),
+        id,
+        attrs,
+        style: {},
+        textContent: '',
+        setAttribute(k: string, v: any) { attrs.set(k, String(v)); },
+        getAttribute(k: string) { return attrs.has(k) ? attrs.get(k)! : null; },
+        removeAttribute(k: string) { attrs.delete(k); },
+        hasAttribute(k: string) { return attrs.has(k); },
+        matches(sel: string) { return sel === `#${id}`; },
+        closest(sel: string) { return sel === `#${id}` ? node : null; },
+        getBoundingClientRect() { return { left: 0, top: 0, width: 40, height: 40 }; },
+      };
+      mockNodes.set(id, node);
+    }
+
+    const container: any = {
+      style: {},
+      querySelector(sel: string) {
+        if (!sel || !sel.startsWith('#')) return null;
+        return mockNodes.get(sel.slice(1)) || null;
+      },
+      querySelectorAll(sel: string) {
+        const el = this.querySelector(sel);
+        return el ? [el] : [];
+      },
+      addEventListener() {},
+      removeEventListener() {},
+      appendChild(c: any) { return c; },
+      insertBefore(c: any) { return c; },
+      removeChild(c: any) { return c; },
+      contains() { return true; },
+    };
+
+    let mounted = false;
+    let postMountDomAllocs = 0;
+    const makeStubEl = (tag: string) => {
+      if (mounted) postMountDomAllocs++;
+      return {
+        tagName: String(tag || 'DIV').toUpperCase(),
+        style: {},
+        attrs: new Map<string, string>(),
+        setAttribute(k: string, v: any) { this.attrs.set(k, String(v)); },
+        getAttribute(k: string) { return this.attrs.get(k) ?? null; },
+        removeAttribute(k: string) { this.attrs.delete(k); },
+        hasAttribute(k: string) { return this.attrs.has(k); },
+        appendChild(c: any) { return c; },
+        remove() {},
+        pause() {},
+        play() { return Promise.resolve(); },
+        load() {},
+        addEventListener() {},
+        removeEventListener() {},
+      };
+    };
+
+    const listeners = new Map<string, Function[]>();
+    const sandbox: any = {
+      console,
+      Math,
+      Number,
+      String,
+      Boolean,
+      Array,
+      Object,
+      Map,
+      Set,
+      RegExp,
+      JSON,
+      Date,
+      Float32Array,
+      Float64Array,
+      Uint8Array,
+      Int32Array,
+      Uint16Array,
+      DataView,
+      ArrayBuffer,
+      TextDecoder,
+      TextEncoder,
+      performance,
+      setTimeout,
+      clearTimeout,
+      requestAnimationFrame: () => 0,
+      cancelAnimationFrame: () => {},
+      document: {
+        activeElement: null,
+        getElementById(id: string) { return mockNodes.get(id) || null; },
+        querySelector(sel: string) { return container.querySelector(sel); },
+        querySelectorAll(sel: string) { return container.querySelectorAll(sel); },
+        createElement(tag: string) { return makeStubEl(tag); },
+        createElementNS(_ns: string, tag: string) { return makeStubEl(tag); },
+        addEventListener(ev: string, fn: Function) {
+          if (!listeners.has(ev)) listeners.set(ev, []);
+          listeners.get(ev)!.push(fn);
+        },
+        removeEventListener() {},
+      },
+    };
+    sandbox.window = sandbox;
+    sandbox.self = sandbox;
+    sandbox.globalThis = sandbox;
+    sandbox.addEventListener = sandbox.document.addEventListener;
+    sandbox.removeEventListener = () => {};
+
+    const ctx = vm.createContext(sandbox);
+    const loadScript = (name: string) => {
+      const code = fs.readFileSync(path.join(playerDir, name), 'utf8');
+      vm.runInContext(code, ctx, { filename: name });
+    };
+
+    loadScript('ast-expr.js');
+    loadScript('ast-parser.js');
+    loadScript('ast-bytecode-decoder.js');
+    loadScript('ast-binding-runtime.js');
+    loadScript('ast-scene-mount.js');
+    loadScript('ast-engine.js');
+    loadScript('site-gestures-actions.js');
+    loadScript('site-gestures-input.js');
+    loadScript('site-gestures.js');
+
+    // 1. Parse .ast -> Compile to binary .astb -> Decode back from .astb!
+    const parsedScene = sandbox.parseAst(astSource);
+    const astbBytes = compileSceneToBytecode({
+      ...parsedScene,
+      completeBinary: true,
+      svgMarkup,
+    });
+    const decodedScene = sandbox.decompileBytecode(astbBytes);
+
+    // 2. Boot engine + gesture subsystem against the decoded .astb scene
+    const engine = new sandbox.ASTVectorPlayerEngine({ container });
+    // Clear svgText/svgMarkup on the runtime copy since our mock container already holds the pre-parsed SVG DOM
+    const runtimeScene = { ...decodedScene, svgMarkup: undefined, svgText: undefined };
+    engine.scene = runtimeScene;
+    engine.activePresetId = runtimeScene.id;
+    engine.isContinuousSim = true;
+    engine.isPlaying = true;
+    engine.mountSceneAsset(runtimeScene, container);
+    engine._mountedSceneId = runtimeScene.id;
+    engine._mountedContainer = container;
+    engine.applyBindings(0, 1 / 60, false);
+    mounted = true;
+
+    const gestures = new sandbox.ASTDirectGestureSubsystem(engine, container);
+
+    const tick = (frames = 1) => {
+      for (let i = 0; i < frames; i++) {
+        engine.applyBindings(0, 1 / 60, true);
+      }
+    };
+    const keyDown = (code: string, key = code) => {
+      gestures.handleKeyDown({
+        code,
+        key,
+        repeat: false,
+        preventDefault() {},
+        stopImmediatePropagation() {},
+      });
+    };
+    const keyUp = (code: string, key = code) => {
+      gestures.handleKeyUp({
+        code,
+        key,
+        preventDefault() {},
+        stopImmediatePropagation() {},
+      });
+    };
+    const clickButton = (domId: string) => {
+      const el = mockNodes.get(domId);
+      const list = gestures._getNormalizedSceneGestures(engine.scene);
+      const matches = list.filter((g: any) => g.type === 'clickable' && g.target === `#${domId}`);
+      for (const g of matches) {
+        gestures._applyGesturePress(g, el || null, engine.scene);
+      }
+      engine.applyBindings(0, 0, false);
+      return matches.length;
+    };
+
+    return {
+      astbBytes,
+      decodedScene,
+      engine,
+      gestures,
+      mockNodes,
+      getNodeCount: () => mockNodes.size,
+      getPostMountDomAllocs: () => postMountDomAllocs,
+      totalNodesCreated,
+      tick,
+      keyDown,
+      keyUp,
+      clickButton,
+    };
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 12: ablast (Arcade Shooter — DefineSprite, Key.isDown, hitTest, DefineButton2, Zero-GC Pool)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(10); bg.writeUI8(15); bg.writeUI8(30);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes: 1=Ship, 2=Enemy, 3=Bullet, 4=StartBtn
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, -15, -15, 30, 30, [56, 189, 248, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, -16, -16, 32, 32, [244, 63, 94, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, -4, -10, 8, 20, [250, 204, 21, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 120, 40, [34, 197, 94, 255], 3));
+
+    // DefineSprite 5: Animated Enemy (2 frames: moves + pulses alpha)
+    const enemySpriteTags = new BitWriter();
+    writeTag(enemySpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2, matrix: { txPx: 0, tyPx: 0 }, alpha: 1.0 }));
+    writeTag(enemySpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(enemySpriteTags, 26, buildPlaceObject2Tag({ depth: 1, move: true, matrix: { txPx: 8, tyPx: -4 }, alpha: 0.75 }));
+    writeTag(enemySpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(enemySpriteTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(5, 2, enemySpriteTags.toByteArray()));
+
+    // DefineButton2 10: Start button -> on(release) { game_active = 1; gotoAndPlay("play"); }
+    const startBtnAction = new Avm1Builder()
+      .setVar('game_active', (b) => b.pushInt(1))
+      .callFunction('gotoAndPlay', [(b) => b.pushStr('play')])
+      .pop()
+      .toByteArray();
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      10,
+      [{ states: 0x0F, characterId: 4, depth: 1, matrix: { txPx: 260, tyPx: 200 } }],
+      [{ condFlags: 0x0008, actions: startBtnAction }]
+    ));
+
+    // Frame 1: "title" with stop() and Start button
+    const lbl1 = new BitWriter(); lbl1.writeString('title');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, lbl1.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().setVar('game_active', (b) => b.pushInt(0)).stop().toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 10 }));
+
+    // Ship with onClipEvent(load) + onClipEvent(enterFrame): Key.isDown(37/39/32) + duplicateMovieClip
+    const shipLoad = new Avm1Builder()
+      .setVar('score', (b) => b.pushInt(0))
+      .setVar('speed', (b) => b.pushInt(8))
+      .toByteArray();
+    const shipEnter = new Avm1Builder()
+      .ifBlock(
+        (b) => b.callMethod('Key', 'isDown', [(a) => a.pushInt(37)]),
+        (b) => b.setMember('this', '_x', (v) => v.getMember('this', '_x').getVar('speed').sub())
+      )
+      .ifBlock(
+        (b) => b.callMethod('Key', 'isDown', [(a) => a.pushInt(39)]),
+        (b) => b.setMember('this', '_x', (v) => v.getMember('this', '_x').getVar('speed').add2())
+      )
+      .ifBlock(
+        (b) => b.callMethod('Key', 'isDown', [(a) => a.pushInt(32)]),
+        (b) => {
+          b.setMember('bullet', '_x', (v) => v.getMember('this', '_x'));
+          b.setMember('bullet', '_y', (v) => v.getMember('this', '_y'));
+          b.setMember('bullet', '_visible', (v) => v.pushInt(1));
+          b.callFunction('duplicateMovieClip', [(a) => a.pushStr('bullet'), (a) => a.pushStr('shot'), (a) => a.pushInt(100)]).pop();
+        }
+      )
+      .toByteArray();
+
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({
+      depth: 2,
+      characterId: 1,
+      matrix: { txPx: 200, tyPx: 200 },
+      name: 'ship',
+      clipActions: [
+        { eventFlags: 0x0001, actions: shipLoad },
+        { eventFlags: 0x0002, actions: shipEnter },
+      ],
+    }));
+
+    // Enemy sprite placed at (200, 120)
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({
+      depth: 3,
+      characterId: 5,
+      matrix: { txPx: 200, tyPx: 120 },
+      name: 'enemy',
+    }));
+
+    // Bullet clip with enterFrame upward movement + hitTest(enemy) -> score += 10
+    const bulletLoad = new Avm1Builder()
+      .setMember('this', '_visible', (v) => v.pushInt(0))
+      .toByteArray();
+    const bulletEnter = new Avm1Builder()
+      .ifBlock(
+        (b) => b.pushInt(0).getMember('this', '_visible').less2(),
+        (b) => b.setMember('this', '_y', (v) => v.getMember('this', '_y').pushInt(20).sub())
+      )
+      .ifBlock(
+        (b) => b.callMethod('this', 'hitTest', [(a) => a.getVar('enemy')]),
+        (b) => {
+          b.setMember('_root', 'score', (v) => v.getMember('_root', 'score').pushInt(10).add2());
+          b.setMember('this', '_visible', (v) => v.pushInt(0));
+        }
+      )
+      .toByteArray();
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({
+      depth: 4,
+      characterId: 3,
+      matrix: { txPx: 200, tyPx: 200 },
+      name: 'bullet',
+      clipActions: [
+        { eventFlags: 0x0001, actions: bulletLoad },
+        { eventFlags: 0x0002, actions: bulletEnter },
+      ],
+    }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: "play" (Remove Start button, gameplay active)
+    const lbl2 = new BitWriter(); lbl2.writeString('play');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, lbl2.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(1));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 30, 2, tagWriter.toByteArray(), 7);
+    const result = await transpileSwfToAst(swfBinary, 'ablast');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`ablast transpilation failed: ${result.error}`);
+    } else {
+      try {
+        parseSExpr(result.astSource);
+      } catch (e: any) {
+        errors.push(`ablast AST S-expression parse error: ${e.message}`);
+      }
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      if (!isAstBytecode(rt.astbBytes)) errors.push('ablast .astb binary missing ASTB magic header');
+      const initialNodes = rt.getNodeCount();
+
+      // Verify initial state (stopped on frame 1 "title")
+      if (rt.engine.vars.swf_frame !== 1) errors.push(`Expected initial swf_frame=1, got ${rt.engine.vars.swf_frame}`);
+      if (rt.engine.vars.swf_playing !== 0) errors.push(`Expected initial swf_playing=0, got ${rt.engine.vars.swf_playing}`);
+      if (rt.engine.vars.ship_x !== 200) errors.push(`Expected initial ship_x=200, got ${rt.engine.vars.ship_x}`);
+
+      // Click DefineButton2 Start button -> jumps to frame 2 ("play") & sets game_active = 1
+      const btnHits = rt.clickButton('swf-btn-10');
+      if (btnHits < 1) errors.push('DefineButton2 #swf-btn-10 click handler not registered');
+      if (rt.engine.vars.game_active !== 1) errors.push(`Expected game_active=1 after click, got ${rt.engine.vars.game_active}`);
+      if (rt.engine.vars.swf_frame !== 2) errors.push(`Expected swf_frame=2 after gotoAndPlay("play"), got ${rt.engine.vars.swf_frame}`);
+
+      // Hold ArrowRight for 5 ticks -> ship_x: 200 -> 240, then release -> stays 240
+      rt.keyDown('ArrowRight', 'ArrowRight');
+      rt.tick(5);
+      rt.keyUp('ArrowRight', 'ArrowRight');
+      if (rt.engine.vars.ship_x !== 240) errors.push(`Expected ship_x=240 after 5 ArrowRight ticks, got ${rt.engine.vars.ship_x}`);
+      const shipTransformAfterRight = rt.mockNodes.get('swf-inst-ship')?.getAttribute('transform') || '';
+      if (!shipTransformAfterRight.includes('translate(240, 200)')) {
+        errors.push(`Expected #swf-inst-ship transform to contain translate(240, 200), got "${shipTransformAfterRight}"`);
+      }
+      rt.tick(3);
+      if (rt.engine.vars.ship_x !== 240) errors.push(`ship_x drifted after ArrowRight keyup: ${rt.engine.vars.ship_x}`);
+
+      // Hold ArrowLeft for 5 ticks -> ship_x returns to 200 (aligned under enemy)
+      rt.keyDown('ArrowLeft', 'ArrowLeft');
+      rt.tick(5);
+      rt.keyUp('ArrowLeft', 'ArrowLeft');
+      if (rt.engine.vars.ship_x !== 200) errors.push(`Expected ship_x=200 after ArrowLeft return, got ${rt.engine.vars.ship_x}`);
+
+      // Fire with Space -> bullet activates, pool slot activates, travels up & hits enemy -> score = 10
+      rt.keyDown('Space', ' ');
+      rt.tick(1);
+      rt.keyUp('Space', ' ');
+      if (rt.engine.vars.shot_0_visible !== 1) errors.push(`Expected pre-allocated shot_0 pool slot visible=1, got ${rt.engine.vars.shot_0_visible}`);
+      rt.tick(6);
+      if (rt.engine.vars.score !== 10) errors.push(`Expected score=10 after bullet.hitTest(enemy), got ${rt.engine.vars.score}`);
+      if (rt.engine.vars.bullet_visible !== 0) errors.push(`Expected bullet_visible=0 after hitTest, got ${rt.engine.vars.bullet_visible}`);
+
+      // Verify animated enemy DefineSprite frame advancement & matrix/opacity mutation
+      const enemyFramesSeen = new Set<number>();
+      const enemyChild = rt.mockNodes.get('swf-inst-enemy-d1');
+      const enemyOpacities = new Set<string>();
+      for (let f = 0; f < 10; f++) {
+        rt.tick(1);
+        enemyFramesSeen.add(rt.engine.vars.enemy_frame);
+        if (enemyChild) enemyOpacities.add(enemyChild.getAttribute('opacity') || '1');
+      }
+      if (!enemyFramesSeen.has(1) || !enemyFramesSeen.has(2)) {
+        errors.push(`Expected enemy DefineSprite to cycle frames 1 & 2, saw: ${Array.from(enemyFramesSeen).join(',')}`);
+      }
+      if (enemyOpacities.size < 2) {
+        errors.push(`Expected enemy DefineSprite CXForm alpha animation, saw opacities: ${Array.from(enemyOpacities).join(',')}`);
+      }
+
+      // Zero-GC / zero DOM allocation check over 120 frames
+      rt.tick(120);
+      if (rt.getNodeCount() !== initialNodes || rt.getPostMountDomAllocs() !== 0) {
+        errors.push(`Zero-GC DOM invariant violated: nodes ${initialNodes}->${rt.getNodeCount()}, postMountDomAllocs=${rt.getPostMountDomAllocs()}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 12: ablast Arcade Shooter (DefineSprite, Key.isDown, hitTest, DefineButton2, .astb & Zero-GC Pool)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: `Executed ablast in .astb VM (${result.metadata?.spriteCount} sprites, ${result.metadata?.buttonCount} buttons, ${result.metadata?.ruleCount} rules, ${result.metadata?.poolSlotCount} pre-allocated pool slots) with live input, hitTest scoring & 0 DOM allocations across 120 ticks.`,
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 13: 2dknockout (2D Fighter — Sprite Timelines, RemoveObject2, WASD/KeyPress, ActionIf KO)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes: 1=Fighter1, 2=Fighter2, 3=HitSpark, 4=PunchBtn, 5=Banner
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, -20, -40, 40, 80, [59, 130, 246, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, -20, -40, 40, 80, [239, 68, 68, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, -10, -10, 20, 20, [250, 204, 21, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 100, 36, [249, 115, 22, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(5, 0, 0, 180, 24, [168, 85, 247, 255], 3));
+
+    // DefineSprite 6: Fighter1 3-frame animation (frame 1 idle, frame 2 strike + HitSpark, frame 3 RemoveObject2 HitSpark)
+    const f1Tags = new BitWriter();
+    writeTag(f1Tags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1, matrix: { txPx: 0, tyPx: 0 } }));
+    writeTag(f1Tags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(f1Tags, 26, buildPlaceObject2Tag({ depth: 1, move: true, matrix: { txPx: 14, tyPx: 0 } }));
+    writeTag(f1Tags, 26, buildPlaceObject2Tag({ depth: 2, characterId: 3, matrix: { txPx: 30, tyPx: -10 } }));
+    writeTag(f1Tags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(f1Tags, 26, buildPlaceObject2Tag({ depth: 1, move: true, matrix: { txPx: 4, tyPx: 0 } }));
+    writeTag(f1Tags, 28, buildRemoveObject2Tag(2));
+    writeTag(f1Tags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(f1Tags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(6, 3, f1Tags.toByteArray()));
+
+    // DefineButton2 20: Punch button with BOTH on(release) click AND on(keyPress 'j' = 106)
+    const punchAct = new Avm1Builder()
+      .setVar('p2_hp', (b) => b.getVar('p2_hp').pushInt(35).sub())
+      .toByteArray();
+    const condReleaseAndKeyJ = 0x0008 | ((106 & 0x7F) << 9);
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      20,
+      [{ states: 0x0F, characterId: 4, depth: 1, matrix: { txPx: 20, tyPx: 400 } }],
+      [{ condFlags: condReleaseAndKeyJ, actions: punchAct }]
+    ));
+
+    // Frame 1: "fight"
+    const fLbl1 = new BitWriter(); fLbl1.writeString('fight');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, fLbl1.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder()
+      .setVar('p2_hp', (b) => b.pushInt(100))
+      .setVar('ko', (b) => b.pushInt(0))
+      .toByteArray());
+
+    // Place Fighter1 with WASD Key.isDown(68 'D') lunge & KO check (p2_hp < 1 -> ko = 1; _root.gotoAndStop("ko"))
+    const f1Enter = new Avm1Builder()
+      .ifBlock(
+        (b) => b.callMethod('Key', 'isDown', [(a) => a.pushInt(68)]),
+        (b) => b.setMember('this', '_x', (v) => v.getMember('this', '_x').pushInt(10).add2())
+      )
+      .ifBlock(
+        (b) => b.getVar('p2_hp').pushInt(1).less2(),
+        (b) => {
+          b.setVar('ko', (v) => v.pushInt(1));
+          b.callMethod('_root', 'gotoAndStop', [(a) => a.pushStr('ko')]).pop();
+        }
+      )
+      .toByteArray();
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({
+      depth: 1,
+      characterId: 6,
+      matrix: { txPx: 160, tyPx: 300 },
+      name: 'fighter1',
+      clipActions: [{ eventFlags: 0x0002, actions: f1Enter }],
+    }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({
+      depth: 2,
+      characterId: 2,
+      matrix: { txPx: 420, tyPx: 300 },
+      name: 'fighter2',
+    }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 3, characterId: 20 }));
+    // Animated non-named display-list banner: present on frames 1 & 2 (moving + alpha), removed on frame 3 ("ko")
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 4, characterId: 5, matrix: { txPx: 100, tyPx: 30 }, alpha: 1.0 }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: "round2" (banner moves & fades)
+    const fLbl2 = new BitWriter(); fLbl2.writeString('round2');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, fLbl2.toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 4, move: true, matrix: { txPx: 150, tyPx: 30 }, alpha: 0.5 }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 3: "ko" (RemoveObject2 removes depth 4 banner)
+    const fLbl3 = new BitWriter(); fLbl3.writeString('ko');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, fLbl3.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(4));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 30, 3, tagWriter.toByteArray(), 7);
+    const result = await transpileSwfToAst(swfBinary, '2dknockout');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`2dknockout transpilation failed: ${result.error}`);
+    } else {
+      try {
+        parseSExpr(result.astSource);
+      } catch (e: any) {
+        errors.push(`2dknockout AST S-expression parse error: ${e.message}`);
+      }
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      if (!isAstBytecode(rt.astbBytes)) errors.push('2dknockout .astb binary missing ASTB magic header');
+      const initialNodes = rt.getNodeCount();
+
+      // Verify WASD KeyD lunge
+      rt.keyDown('KeyD', 'd');
+      rt.tick(3);
+      rt.keyUp('KeyD', 'd');
+      if (rt.engine.vars.fighter1_x !== 190) {
+        errors.push(`Expected fighter1_x=190 after 3 KeyD ticks, got ${rt.engine.vars.fighter1_x}`);
+      }
+
+      // Verify Fighter1 DefineSprite 3-frame animation & HitSpark RemoveObject2 display toggle
+      const hitSparkNode = rt.mockNodes.get('swf-inst-fighter1-d2');
+      const sparkDisplays = new Set<string>();
+      for (let f = 0; f < 6; f++) {
+        rt.tick(1);
+        if (hitSparkNode) sparkDisplays.add(hitSparkNode.getAttribute('display') || 'inline');
+      }
+      if (!sparkDisplays.has('inline') || !sparkDisplays.has('none')) {
+        errors.push(`Expected Fighter1 HitSpark RemoveObject2 display toggling inline/none, saw: ${Array.from(sparkDisplays).join(',')}`);
+      }
+
+      // Verify DefineButton2 click + on(keyPress "j") deducts p2_hp and triggers KO branch!
+      if (rt.engine.vars.p2_hp !== 100) errors.push(`Expected initial p2_hp=100, got ${rt.engine.vars.p2_hp}`);
+      rt.clickButton('swf-btn-20');
+      if (rt.engine.vars.p2_hp !== 65) errors.push(`Expected p2_hp=65 after button click, got ${rt.engine.vars.p2_hp}`);
+      rt.keyDown('KeyJ', 'j');
+      rt.keyUp('KeyJ', 'j');
+      if (rt.engine.vars.p2_hp !== 30) errors.push(`Expected p2_hp=30 after KeyJ press, got ${rt.engine.vars.p2_hp}`);
+      rt.keyDown('KeyJ', 'j');
+      rt.keyUp('KeyJ', 'j');
+      if (rt.engine.vars.p2_hp !== -5) errors.push(`Expected p2_hp=-5 after second KeyJ press, got ${rt.engine.vars.p2_hp}`);
+
+      // Step 2 ticks so ActionIf (p2_hp < 1) triggers ko = 1, swf_frame = 3 ("ko"), swf_playing = 0, and banner hides
+      rt.tick(2);
+      if (rt.engine.vars.ko !== 1) errors.push(`Expected ko=1 after p2_hp < 1, got ${rt.engine.vars.ko}`);
+      if (rt.engine.vars.swf_frame !== 3) errors.push(`Expected swf_frame=3 ("ko"), got ${rt.engine.vars.swf_frame}`);
+      if (rt.engine.vars.swf_playing !== 0) errors.push(`Expected swf_playing=0 after gotoAndStop("ko"), got ${rt.engine.vars.swf_playing}`);
+      const bannerDisp = rt.mockNodes.get('swf-place-4')?.getAttribute('display');
+      if (bannerDisp !== 'none') errors.push(`Expected depth-4 banner display="none" on frame 3 after RemoveObject2, got "${bannerDisp}"`);
+
+      // Zero-GC / zero DOM allocation check over 120 frames
+      rt.tick(120);
+      if (rt.getNodeCount() !== initialNodes || rt.getPostMountDomAllocs() !== 0) {
+        errors.push(`Zero-GC DOM invariant violated: nodes ${initialNodes}->${rt.getNodeCount()}, postMountDomAllocs=${rt.getPostMountDomAllocs()}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 13: 2dknockout Fighter (Sprite Timelines, RemoveObject2, WASD/KeyPress, ActionIf KO & Zero-GC)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: `Executed 2dknockout in .astb VM (${result.metadata?.spriteCount} sprites, ${result.metadata?.buttonCount} buttons, ${result.metadata?.ruleCount} rules) with live sprite frame display-list toggling, WASD + KeyJ + button combat, ActionIf KO transition & 0 DOM allocations.`,
+      errors,
     });
   }
 

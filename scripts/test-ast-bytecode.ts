@@ -12,12 +12,15 @@
 
 import * as fs from 'fs';
 import * as path from 'path';
+import * as vm from 'vm';
 import {
   compileAstTextToBytecode,
   decompileBytecodeToScene,
   isAstBytecode,
   ASTB_MAGIC,
   FLAG_HAS_SVG,
+  OP_CAMERA,
+  OP_3D_LINE,
 } from '../src/utils/astBytecode';
 import {
   EverymanBios,
@@ -312,6 +315,97 @@ async function runTests() {
       Object.defineProperty(globalThis, 'navigator', { value: prevNav, configurable: true });
     }
   }
+
+  // Test 10: Native Binary :camera (0x80) & :3d-line (0x33) Opcodes, splineIndex Deduplication & Bit-Exact 3D Parity
+  console.log('\n10. Testing Native Binary :camera & :3d-line Records (dna-helix.astb):');
+  const dnaAstText = fs.readFileSync(path.join(CARTRIDGES_DIR, 'dna-helix.ast'), 'utf8');
+  const dnaAstbBin = new Uint8Array(fs.readFileSync(path.join(BYTECODE_DIR, 'dna-helix.astb')));
+  assert(dnaAstbBin.byteLength < 8600, `dna-helix.astb size (${dnaAstbBin.byteLength} B) dropped >35% from 13,199 B baseline`);
+
+  // Verify zero JSON blobs for :camera or :3d-line in string table & zero JSON.parse on those opcodes
+  const dnaView = new DataView(dnaAstbBin.buffer, dnaAstbBin.byteOffset, dnaAstbBin.byteLength);
+  const dnaStrCount = dnaView.getUint16(8, true);
+  const dnaStrByteLen = dnaView.getUint32(10, true);
+  const dnaDecoder = new TextDecoder('utf-8');
+  const dnaStrings: string[] = [];
+  let sOff = 16;
+  for (let i = 0; i < dnaStrCount && sOff < 16 + dnaStrByteLen; i++) {
+    const sLen = dnaView.getUint16(sOff, true);
+    sOff += 2;
+    dnaStrings.push(dnaDecoder.decode(dnaAstbBin.subarray(sOff, sOff + sLen)));
+    sOff += sLen;
+  }
+  assert(!dnaStrings.some(s => s.includes('"x1":') || s.includes('"splitExpr":')), 'String table contains zero JSON-serialized :3d-line blobs');
+  assert(!dnaStrings.some(s => s.includes('"yaw":') && s.includes('"fov":')), 'String table contains zero JSON-serialized :camera blobs');
+  const splineIdxExprs = dnaStrings.filter(s => s.includes('splineIndex'));
+  assert(splineIdxExprs.length === 6, `All 18 DNA rungs share exactly 6 deduplicated splineIndex expressions (found ${splineIdxExprs.length})`);
+
+  // Verify OP_CAMERA (0x80) and OP_3D_LINE (0x33) emit zero JSON.parse during non-ext hydration
+  const dnaCoreBin = compileAstTextToBytecode(dnaAstText);
+  const origJsonParse = JSON.parse;
+  let jsonParseCalls = 0;
+  (JSON as any).parse = (...args: any[]) => {
+    jsonParseCalls++;
+    return (origJsonParse as any).apply(JSON, args);
+  };
+  let dnaCoreDec: any;
+  let dnaJsDec: any;
+  try {
+    dnaCoreDec = decompileBytecodeToScene(dnaCoreBin);
+    const jsDecoderCtx: any = { console, window: {}, globalThis: {}, TextDecoder };
+    vm.createContext(jsDecoderCtx);
+    vm.runInContext(fs.readFileSync(path.join(ROOT_DIR, 'static', 'player', 'ast-bytecode-decoder.js'), 'utf8'), jsDecoderCtx);
+    const jsDecompile = jsDecoderCtx.decompileBytecode || jsDecoderCtx.window.decompileBytecode || jsDecoderCtx.globalThis.decompileBytecode;
+    dnaJsDec = jsDecompile(dnaCoreBin);
+  } finally {
+    JSON.parse = origJsonParse;
+  }
+  assert(jsonParseCalls === 0, `Zero JSON.parse calls during TS & JS hydration of native OP_CAMERA/OP_3D_LINE .astb (calls: ${jsonParseCalls})`);
+  assert(typeof dnaCoreDec.camera?.yaw === 'string' && dnaCoreDec.camera.yaw === dnaJsDec.camera?.yaw, 'OP_CAMERA (0x80) yaw expression matches across TS & JS decoders');
+  assert(dnaCoreDec.camera?.pitch === 18 && dnaCoreDec.camera?.distance === 440 && dnaCoreDec.camera?.fov === 60, 'OP_CAMERA float32 pitch/distance/fov round-tripped exactly');
+
+  // Verify bit-exact 3D rung coordinates & helicase unzipping between .ast source parser and .astb binary decoder
+  const runtimeCtx: any = { console, window: {}, globalThis: {}, TextDecoder, Math };
+  vm.createContext(runtimeCtx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT_DIR, 'static', 'player', 'ast-parser.js'), 'utf8'), runtimeCtx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT_DIR, 'static', 'player', 'ast-expr.js'), 'utf8'), runtimeCtx);
+  vm.runInContext(fs.readFileSync(path.join(ROOT_DIR, 'static', 'player', 'ast-bytecode-decoder.js'), 'utf8'), runtimeCtx);
+
+  const parseAstFn = runtimeCtx.parseAst || runtimeCtx.window.parseAst || runtimeCtx.globalThis.parseAst;
+  const decompileFn = runtimeCtx.decompileBytecode || runtimeCtx.window.decompileBytecode || runtimeCtx.globalThis.decompileBytecode;
+  const compileAstFn = runtimeCtx.compileAstFn || runtimeCtx.window.compileAstFn || runtimeCtx.globalThis.compileAstFn;
+
+  const srcParsed = parseAstFn(dnaAstText);
+  const binDecoded = decompileFn(dnaAstbBin);
+
+  const srcLines = srcParsed.bindings.filter((b: any) => b.type === '3d-line');
+  const binLines = binDecoded.bindings.filter((b: any) => b.type === '3d-line');
+  assert(srcLines.length === 18 && binLines.length === 18, `All 18 :3d-line rungs decoded from dna-helix.astb (got ${binLines.length})`);
+
+  let parityMismatch = 0;
+  for (const unzipProgress of [0.0, 0.5, 1.0]) {
+    for (let i = 0; i < 18; i++) {
+      const sLine = srcLines[i];
+      const bLine = binLines[i];
+      const varsSrc = { unzipProgress, rotSpeed: 1.0 };
+      const varsBin = { unzipProgress, rotSpeed: 1.0, splineIndex: bLine.splineIndex };
+      for (const prop of ['x1', 'y1', 'z1', 'x2', 'y2', 'z2', 'splitExpr']) {
+        const sVal = compileAstFn(sLine[prop])(0.5, varsSrc, varsSrc, Math);
+        const bVal = compileAstFn(bLine[prop])(0.5, varsBin, varsBin, Math);
+        if (sVal !== bVal) parityMismatch++;
+      }
+    }
+  }
+  assert(parityMismatch === 0, `Bit-exact 3D geometry & helicase unzipping parity across all 18 rungs × 3 unzip states (mismatches: ${parityMismatch})`);
+
+  // Verify camera yaw expression parity
+  const srcYaw = compileAstFn(srcParsed.camera.yaw)(0.42, { rotSpeed: 2.0, clock: 5.04 }, {}, Math);
+  const binYaw = compileAstFn(binDecoded.camera.yaw)(0.42, { rotSpeed: 2.0, clock: 5.04 }, {}, Math);
+  assert(srcYaw === binYaw, `Bit-exact :camera yaw expression parity (${binYaw})`);
+
+  // Verify WASM Everyman BIOS boots dna-helix.astb cleanly with new OP_CAMERA & OP_3D_LINE opcodes
+  const dnaBoot = bios.bootCartridge(dnaAstbBin);
+  assert(dnaBoot.status === 0 && dnaBoot.manifest.length > 0, `WASM Everyman BIOS booted dna-helix.astb cleanly (${dnaBoot.manifest.length} manifest rows, OP_CAMERA=${OP_CAMERA}, OP_3D_LINE=${OP_3D_LINE})`);
 
   console.log('\n==================================================');
   console.log(`Results: ${passedCount} passed, ${failedCount} failed.`);

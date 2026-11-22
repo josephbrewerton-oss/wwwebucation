@@ -680,14 +680,14 @@
           br $opLoop
         end
 
-        ;; 0x80 OP_CAMERA: 4 * f32 (16 B)
+        ;; 0x80 OP_CAMERA: yaw_str(2) pitch(4) distance(4) fov(4) = 14 B
         local.get $op i32.const 128 i32.eq
         if
-          global.get $MCB_BASE local.get $cur f32.load offset=0 align=1 f32.store offset=88 align=1
-          global.get $MCB_BASE local.get $cur f32.load offset=4 align=1 f32.store offset=96 align=1
-          global.get $MCB_BASE local.get $cur f32.load offset=8 align=1 f32.store offset=92 align=1
-          global.get $MCB_BASE local.get $cur f32.load offset=12 align=1 f32.store offset=100 align=1
-          local.get $cur i32.const 16 i32.add local.set $cur
+          global.get $MCB_BASE local.get $cur f32.load offset=6 align=1 f32.store offset=88 align=1
+          global.get $MCB_BASE local.get $cur f32.load offset=2 align=1 f32.store offset=96 align=1
+          global.get $MCB_BASE f32.const 0.0 f32.store offset=92 align=1
+          global.get $MCB_BASE local.get $cur f32.load offset=10 align=1 f32.store offset=100 align=1
+          local.get $cur i32.const 14 i32.add local.set $cur
           br $opLoop
         end
 
@@ -744,6 +744,22 @@
         local.get $op i32.const 50 i32.eq
         if
           local.get $cur i32.const 6 i32.add local.set $cur
+          br $opLoop
+        end
+
+        ;; 0x33 OP_3D_LINE: 13*u16(26) + baseR(4) + splineIndex(2) + flags(1) = 33 B (+4 if flags&2, +4 if flags&4)
+        local.get $op i32.const 51 i32.eq
+        if
+          local.get $cur i32.load8_u offset=32 local.set $cnt
+          local.get $cur i32.const 33 i32.add local.set $cur
+          local.get $cnt i32.const 2 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
+          local.get $cnt i32.const 4 i32.and
+          if
+            local.get $cur i32.const 4 i32.add local.set $cur
+          end
           br $opLoop
         end
 

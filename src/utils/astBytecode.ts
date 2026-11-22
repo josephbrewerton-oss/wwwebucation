@@ -47,13 +47,14 @@ export const OP_SUBTITLE   = 0x20; // [start_u16] [end_u16] [lang_count: u8] { [
 export const OP_BINDING    = 0x30; // [target_str: u16] [attr_str: u16] [expr_str: u16]
 export const OP_BINDING_WHEN = 0x31; // [target_str: u16] [attr_str: u16] [expr_str: u16] [when_str: u16]
 export const OP_BINDING_VAR  = 0x32; // [var_str: u16] [expr_str: u16] [when_str: u16]
+export const OP_3D_LINE      = 0x33; // [target,x1,y1,z1,x2,y2,z2,cap1,cap2,splitExpr,splineA,splineB,sortAfter: 13*u16] [baseR: f32] [splineIndex: u16 (0xFFFF=none)] [flags: u8] [zLayer?: f32] [zBias?: f32]
 export const OP_CHECKPOINT      = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
 export const OP_CHECKPOINT_GOAL = 0x41; // [cp_idx: u16] [title_str: u16] [pass_expr_str: u16] [hold_dur: f32] [wrong_count: u8] { [opt_idx: u8] [hint_str: u16] }*
 export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
 export const OP_VAR             = 0x60; // [name_str: u16] [type_u8 (1:num, 2:str, 3:bool)] [num_val: f32 / str_val: u16] [min_f32] [max_f32] [step_f32] [label_str: u16]
 export const OP_COMPUTED        = 0x61; // [name_str: u16] [expr_str: u16]
 export const OP_INPUT           = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
-export const OP_CAMERA          = 0x80; // [dist_f32] [pitch_f32] [yaw_f32] [fov_f32]
+export const OP_CAMERA          = 0x80; // [yaw_str: u16] [pitch: f32] [distance: f32] [fov: f32]
 export const OP_SVG_COMPANION   = 0x81; // [svg_str: u16] (optional embedded Duo SVG stage vector)
 export const OP_SCOPE           = 0x90; // [target_str: u16] [x_expr_str: u16] [y_expr_str: u16] [samples: u16] [x_min: f32] [x_max: f32] [y_min: f32] [y_max: f32] [plot_x: f32] [plot_y: f32] [plot_w: f32] [plot_h: f32]
 export const OP_LEDGER          = 0x91; // [id_str: u16] [target_str: u16] [unit_str: u16] [max_expr_str: u16] [x: f32] [y: f32] [w: f32] [h: f32] [term_count: u8] { [label_str: u16] [expr_str: u16] [color_str: u16] }*
@@ -131,6 +132,7 @@ export interface BytecodeCompiledScene {
   stateMachines?: Array<any>;
   controls?: Record<string, any> | null;
   skills?: Array<any>;
+  definedSkills?: string | Array<any>;
   cameraStops?: Array<any> | null;
   quests?: any;
   bootSound?: string | null;
@@ -223,6 +225,25 @@ class StringTableReader {
 }
 
 /**
+ * Normalizes unrolled loop index division literals inside :3d-line expressions
+ * (e.g. `(/ 0 18)`..`(/ 17 18)` -> `(/ splineIndex 18)` or `(0/18)` -> `(splineIndex / 18)`)
+ * when `splineIndex` is present so all rungs share a single deduplicated expression
+ * string in the .astb string table.
+ */
+function normalizeSplineIndexExpr(expr: any, splineIndex: number | undefined, fallback = '0'): string {
+  if (expr === null || expr === undefined || expr === '') return fallback;
+  const raw = String(expr);
+  if (splineIndex === undefined || splineIndex === null || !Number.isFinite(splineIndex)) {
+    return raw;
+  }
+  const idx = Math.trunc(splineIndex);
+  if (idx < 0 || idx >= 0xffff) return raw;
+  return raw
+    .replace(new RegExp(`\\(\\s*\\/\\s*${idx}\\s+(\\d+(?:\\.\\d+)?)\\s*\\)`, 'g'), '(/ splineIndex $1)')
+    .replace(new RegExp(`\\(\\s*${idx}\\s*\\/\\s*(\\d+(?:\\.\\d+)?)\\s*\\)`, 'g'), '(splineIndex / $1)');
+}
+
+/**
  * Compiles a structured scene or parsed AST string into a compact binary .astb buffer
  */
 export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array {
@@ -279,24 +300,27 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     appendU16(strTable.intern(scene.svgMarkup));
   }
 
-  // 2. Camera (if 3D)
+  // 2. Camera (if 3D) — native binary record: [yaw_str: u16] [pitch: f32] [distance: f32] [fov: f32]
   if (scene.camera) {
-    appendU8(OP_CAMERA);
-    appendF32(scene.camera.distance || 500);
-    appendF32(typeof scene.camera.pitch === 'number' ? scene.camera.pitch : 20);
-    appendF32(typeof scene.camera.yaw === 'number' ? scene.camera.yaw : 0);
-    appendF32(scene.camera.fov || 60);
+    const rawYaw = scene.camera.yaw !== undefined && scene.camera.yaw !== null ? String(scene.camera.yaw) : '0';
+    const pitchIsNumStr = typeof scene.camera.pitch === 'string' && /^-?\d+(?:\.\d+)?$/.test(scene.camera.pitch.trim());
+    const pitchNum = typeof scene.camera.pitch === 'number' && Number.isFinite(scene.camera.pitch)
+      ? scene.camera.pitch
+      : (pitchIsNumStr ? parseFloat(scene.camera.pitch as string) : 20);
+    const distNum = typeof scene.camera.distance === 'number' && Number.isFinite(scene.camera.distance) ? scene.camera.distance : 500;
+    const fovNum = typeof scene.camera.fov === 'number' && Number.isFinite(scene.camera.fov) ? scene.camera.fov : 60;
 
-    if (typeof scene.camera.yaw === 'string' || typeof scene.camera.pitch === 'string') {
+    appendU8(OP_CAMERA);
+    appendU16(strTable.intern(rawYaw));
+    appendF32(pitchNum);
+    appendF32(distNum);
+    appendF32(fovNum);
+
+    if (typeof scene.camera.pitch === 'string' && !pitchIsNumStr) {
       appendU8(OP_BINDING);
       appendU16(strTable.intern(':camera'));
-      appendU16(strTable.intern('camera'));
-      appendU16(strTable.intern(JSON.stringify({
-        yaw: scene.camera.yaw,
-        pitch: scene.camera.pitch,
-        distance: scene.camera.distance,
-        fov: scene.camera.fov,
-      })));
+      appendU16(strTable.intern('pitch'));
+      appendU16(strTable.intern(scene.camera.pitch));
     }
   }
 
@@ -407,7 +431,44 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
         appendU16(strTable.intern(b.when ? String(b.when) : ''));
         continue;
       }
-      if (b.type !== '3d-node' && b.type !== '3d-ring' && b.type !== '3d-line' && b.type !== '3d-polygon' && b.when) {
+      if (b.type === '3d-line') {
+        const hasSplineIndex =
+          b.splineIndex !== undefined &&
+          b.splineIndex !== null &&
+          Number.isFinite(Number(b.splineIndex)) &&
+          Number(b.splineIndex) >= 0 &&
+          Number(b.splineIndex) < 0xffff;
+        const splineIdxNum = hasSplineIndex ? Math.trunc(Number(b.splineIndex)) : 0xffff;
+        const normIdx = hasSplineIndex ? splineIdxNum : undefined;
+        const hasZLayer = b.zLayer !== undefined && b.zLayer !== null && Number.isFinite(Number(b.zLayer));
+        const hasZBias = b.zBias !== undefined && b.zBias !== null && Number.isFinite(Number(b.zBias));
+        const lineFlags =
+          (b.depthFog !== false ? 0x01 : 0) |
+          (hasZLayer ? 0x02 : 0) |
+          (hasZBias ? 0x04 : 0);
+
+        appendU8(OP_3D_LINE);
+        appendU16(strTable.intern(b.target));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.x1, normIdx, '0')));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.y1, normIdx, '0')));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.z1, normIdx, '0')));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.x2, normIdx, '0')));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.y2, normIdx, '0')));
+        appendU16(strTable.intern(normalizeSplineIndexExpr(b.z2, normIdx, '0')));
+        appendU16(strTable.intern(b.cap1 || ''));
+        appendU16(strTable.intern(b.cap2 || ''));
+        appendU16(strTable.intern(b.splitExpr ? normalizeSplineIndexExpr(b.splitExpr, normIdx, '') : ''));
+        appendU16(strTable.intern(b.splineA || ''));
+        appendU16(strTable.intern(b.splineB || ''));
+        appendU16(strTable.intern(b.sortAfter || ''));
+        appendF32(Number.isFinite(Number(b.baseR)) ? Number(b.baseR) : 8);
+        appendU16(splineIdxNum);
+        appendU8(lineFlags);
+        if (hasZLayer) appendF32(Number(b.zLayer));
+        if (hasZBias) appendF32(Number(b.zBias));
+        continue;
+      }
+      if (b.type !== '3d-node' && b.type !== '3d-ring' && b.type !== '3d-polygon' && b.when) {
         appendU8(OP_BINDING_WHEN);
         appendU16(strTable.intern(b.target));
         appendU16(strTable.intern(b.attr || 'attr'));
@@ -442,26 +503,6 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
           tiltZ: b.tiltZ || 0,
           segments: b.segments || 24,
           depthFog: b.depthFog !== false,
-          ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
-          ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
-          ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
-        })));
-      } else if (b.type === '3d-line') {
-        appendU16(strTable.intern(':3d-line'));
-        appendU16(strTable.intern(JSON.stringify({
-          x1: b.x1,
-          y1: b.y1,
-          z1: b.z1,
-          x2: b.x2,
-          y2: b.y2,
-          z2: b.z2,
-          cap1: b.cap1 || '',
-          cap2: b.cap2 || '',
-          baseR: b.baseR || 8,
-          ...(b.splitExpr ? { splitExpr: b.splitExpr } : {}),
-          ...(b.splineA ? { splineA: b.splineA } : {}),
-          ...(b.splineB ? { splineB: b.splineB } : {}),
-          ...(b.splineIndex !== undefined ? { splineIndex: b.splineIndex } : {}),
           ...(b.zLayer !== undefined ? { zLayer: b.zLayer } : {}),
           ...(b.sortAfter ? { sortAfter: b.sortAfter } : {}),
           ...(b.zBias !== undefined ? { zBias: b.zBias } : {}),
@@ -659,6 +700,9 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     if (Array.isArray(scene.skills) && scene.skills.length > 0) {
       appendExt('skills', scene.skills);
     }
+    if (scene.definedSkills && (typeof scene.definedSkills === 'string' || (Array.isArray(scene.definedSkills) && scene.definedSkills.length > 0))) {
+      appendExt('definedSkills', scene.definedSkills);
+    }
     if (Array.isArray(scene.cameraStops) && scene.cameraStops.length > 0) {
       appendExt('cameraStops', scene.cameraStops);
     }
@@ -785,10 +829,12 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         break;
       }
       case OP_CAMERA: {
-        const dist = view.getFloat32(offset, true); offset += 4;
+        const yawStr = strTable.get(view.getUint16(offset, true)); offset += 2;
         const pitch = view.getFloat32(offset, true); offset += 4;
-        const yaw = view.getFloat32(offset, true); offset += 4;
+        const dist = view.getFloat32(offset, true); offset += 4;
         const fov = view.getFloat32(offset, true); offset += 4;
+        const yawTrim = yawStr.trim();
+        const yaw: number | string = yawTrim === '' ? 0 : (/^-?\d+(?:\.\d+)?$/.test(yawTrim) ? Number(yawTrim) : yawStr);
         scene.camera = { distance: dist, pitch, yaw, fov };
         scene.has3D = true;
         break;
@@ -835,7 +881,10 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         const attr = strTable.get(attrIdx);
         const expr = strTable.get(exprIdx);
 
-        if (target === ':camera' && attr === 'camera') {
+        if (target === ':camera' && attr === 'pitch') {
+          scene.camera = { ...(scene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }), pitch: expr };
+          scene.has3D = true;
+        } else if (target === ':camera' && attr === 'camera') {
           try {
             const camData = expr.startsWith('{') ? JSON.parse(expr) : null;
             if (camData) {
@@ -944,6 +993,48 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           expr,
           ...(when ? { when } : {}),
         });
+        break;
+      }
+      case OP_3D_LINE: {
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const x1 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const y1 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const z1 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const x2 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const y2 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const z2 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const cap1 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const cap2 = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const splitExpr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const splineA = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const splineB = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const sortAfter = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const baseR = view.getFloat32(offset, true); offset += 4;
+        const rawSplineIdx = view.getUint16(offset, true); offset += 2;
+        const lineFlags = bytes[offset++];
+        let zLayer: number | undefined;
+        let zBias: number | undefined;
+        if (lineFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+        if (lineFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+
+        const lineBinding: any = {
+          type: '3d-line',
+          target,
+          x1, y1, z1,
+          x2, y2, z2,
+          cap1: cap1 || '',
+          cap2: cap2 || '',
+          baseR,
+          depthFog: Boolean(lineFlags & 0x01),
+        };
+        if (splitExpr) lineBinding.splitExpr = splitExpr;
+        if (splineA) lineBinding.splineA = splineA;
+        if (splineB) lineBinding.splineB = splineB;
+        if (rawSplineIdx !== 0xffff) lineBinding.splineIndex = rawSplineIdx;
+        if (sortAfter) lineBinding.sortAfter = sortAfter;
+        if (zLayer !== undefined) lineBinding.zLayer = zLayer;
+        if (zBias !== undefined) lineBinding.zBias = zBias;
+        scene.bindings.push(lineBinding);
         break;
       }
       case OP_CHECKPOINT: {
@@ -1168,6 +1259,7 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           else if (extKey === 'stateMachines' && Array.isArray(parsed)) scene.stateMachines = parsed;
           else if (extKey === 'controls' && parsed && typeof parsed === 'object') scene.controls = parsed;
           else if (extKey === 'skills' && Array.isArray(parsed)) scene.skills = parsed;
+          else if (extKey === 'definedSkills' && (typeof parsed === 'string' || Array.isArray(parsed))) scene.definedSkills = parsed;
           else if (extKey === 'cameraStops' && Array.isArray(parsed)) scene.cameraStops = parsed;
           else if (extKey === 'quests') scene.quests = parsed;
           else if (extKey === 'bootSound') scene.bootSound = String(parsed);
@@ -1444,6 +1536,42 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
   }
   astText = expandForMacrosTs(astText, 0);
 
+  // Extract cartridge-local (:skills (:skill ...)) definitions BEFORE scanning root :vars/:bindings/:rules/:gestures
+  let definedSkills: string | undefined;
+  if (astText.includes(':skills')) {
+    const localSkillBlocks = extractSexprBlocks(astText, ':skills');
+    if (localSkillBlocks.length > 0) {
+      definedSkills = localSkillBlocks.join('\n');
+      for (const lsb of localSkillBlocks) {
+        astText = astText.replace(lsb, ' ');
+      }
+    }
+  }
+
+  // Extract (:use-skill "skill-id" :param val ...) activations
+  const skills: Array<{ id: string; params: Record<string, any> }> = [];
+  if (astText.includes(':use-skill')) {
+    const useSkillBlocks = extractSexprBlocks(astText, ':use-skill');
+    for (const sb of useSkillBlocks) {
+      const sidMatch = sb.match(/^\(\s*:use-skill\s+"([^"]+)"/i) || sb.match(/:id\s+"([^"]+)"/i);
+      const skillId = sidMatch ? sidMatch[1] : null;
+      if (!skillId) continue;
+      const params: Record<string, any> = {};
+      const attrRe = /:([a-zA-Z0-9_-]+)\s+("(?:[^"\\]|\\.)*"|true|false|-?\d+(?:\.\d+)?)/gi;
+      let am: RegExpExecArray | null;
+      while ((am = attrRe.exec(sb)) !== null) {
+        const k = am[1];
+        if (k === 'id' || k === 'use-skill') continue;
+        const raw = am[2];
+        if (raw.startsWith('"')) params[k] = raw.slice(1, -1).replace(/\\([\\"])/g, '$1');
+        else if (raw === 'true') params[k] = true;
+        else if (raw === 'false') params[k] = false;
+        else params[k] = Number(raw);
+      }
+      skills.push({ id: skillId, params });
+    }
+  }
+
   const idMatch = astText.match(/\(:id\s+("([^"]+)"|([^\s\)]+))\)/i)
     || astText.match(/:id\s+("([^"]+)"|([^\s\)]+))/i)
     || astText.match(/\(id\s+("([^"]+)"|([^\s\)]+))\)/i)
@@ -1573,6 +1701,8 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       const splineB = extractQuoted(block, 'spline-b') || extractQuoted(block, 'splineB') || undefined;
       const splineIdxStr = extractSlot(block, /:spline-?index\s+(\d+)/i);
       const splineIndex = splineIdxStr !== null ? parseInt(splineIdxStr, 10) : undefined;
+      const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
+      const depthFog = depthFogStr !== 'false';
       bindings.push({
         type: '3d-line', target,
         x1: extractSlot(block, /:x1\s+"([^"]+)"/i) || '0',
@@ -1584,7 +1714,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         cap1: extractSlot(block, /:cap1\s+"([^"]+)"/i),
         cap2: extractSlot(block, /:cap2\s+"([^"]+)"/i),
         baseR: parseFloat(extractSlot(block, /:base-r\s+([\d\.]+)/i) || '8'),
-        splitExpr, splineA, splineB, splineIndex, zLayer, sortAfter, zBias,
+        depthFog, splitExpr, splineA, splineB, splineIndex, zLayer, sortAfter, zBias,
       });
     } else if (nodeType === '3d-ring') {
       const rStr = extractSlot(block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
@@ -1657,11 +1787,13 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       }
       return;
     }
-    if (/^\(\s*:var\b/i.test(form)) {
-      const nameMatch = form.match(/^\(\s*:var\s+"([^"]+)"/i) || form.match(/:name\s+"([^"]+)"/i) || form.match(/^\(\s*:var\s+([a-zA-Z_$][a-zA-Z0-9_$-]*)/i);
+    if (/^\(\s*:(?:var|rule)\b/i.test(form)) {
+      const nameMatch = form.match(/^\(\s*:(?:var|rule)\s+(?::(?:name|var)\s+)?"([^"]+)"/i)
+        || form.match(/:(?:name|var)\s+"([^"]+)"/i)
+        || form.match(/^\(\s*:var\s+([a-zA-Z_$][a-zA-Z0-9_$-]*)/i);
       const varName = nameMatch ? nameMatch[1] : null;
       const expr = extractQuoted(form, 'expr');
-      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when'));
+      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
       if (varName && expr) {
         bindings.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
       }
@@ -1681,6 +1813,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     }
   };
   const extractKeywordBlocksTs = (text: string, tag: string): string[] => {
+    if (text.indexOf(tag) === -1 && text.toLowerCase().indexOf(tag.toLowerCase()) === -1) return [];
     const parenBlocks = extractSexprBlocks(text, tag);
     if (parenBlocks.length > 0) return parenBlocks;
     const out: string[] = [];
@@ -1727,6 +1860,12 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     });
   } else {
     extractSexprBlocks(astText, ':target').forEach((block) => parseTargetTs(block, undefined));
+  }
+  const rulesRootBlocks = extractKeywordBlocksTs(astText, ':rules');
+  if (rulesRootBlocks.length > 0) {
+    rulesRootBlocks.forEach((rb) => {
+      extractChildFormsTs(rb).forEach((form) => walkBindingTs(form, undefined, null));
+    });
   }
 
   // Fallback for flat 2D bindings
@@ -1913,17 +2052,133 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     }
   }
 
-  // Gestures
-  const gestures: Array<{ target: string; axis: string; min: number; max: number }> = [];
-  const gestRegex = /\(:draggable\s+:target\s+"([^"]+)"\s+:axis\s+"([^"]+)"\s+:min\s+([\d\.\-]+)\s+:max\s+([\d\.\-]+)\)/gi;
-  let gm: RegExpExecArray | null;
-  while ((gm = gestRegex.exec(astText)) !== null) {
-    gestures.push({
-      target: gm[1],
-      axis: gm[2],
-      min: parseFloat(gm[3]),
-      max: parseFloat(gm[4]),
-    });
+  // Gestures (:draggable, :clickable, :on-click, :key, :on-key, :holdable)
+  const gestures: Array<any> = [];
+  const parseGestureValTs = (text: string, key: string): any => {
+    const m = text.match(new RegExp(`:${key}\\s+("((?:[^"\\\\]|\\\\.)*)"|true|false|-?\\d+(?:\\.\\d+)?)`, 'i'));
+    if (!m) return undefined;
+    if (m[2] !== undefined) return m[2].replace(/\\"/g, '"');
+    if (m[1] === 'true') return true;
+    if (m[1] === 'false') return false;
+    const n = Number(m[1]);
+    return Number.isFinite(n) ? n : m[1];
+  };
+  const parseStepTs = (stepText: string): any => {
+    const headM = stepText.match(/^\(\s*:([a-zA-Z0-9_-]+)/i);
+    if (!headM) return null;
+    const kind = headM[1].toLowerCase();
+    const children = extractChildFormsTs(stepText);
+    if (kind === 'seq') {
+      const steps = children.map(parseStepTs).filter(Boolean);
+      return steps.length > 0 ? { type: 'seq', steps } : null;
+    }
+    if (kind === 'if') {
+      let hdr = stepText;
+      for (const cf of children) hdr = hdr.replace(cf, ' ');
+      const condM = hdr.match(/^\(\s*:if\s+(?::(?:cond|expr)\s+)?"((?:[^"\\]|\\.)*)"/i);
+      const cond = condM ? condM[1].replace(/\\"/g, '"') : extractQuoted(hdr, 'cond');
+      const thenStep = children[0] ? parseStepTs(children[0]) : null;
+      const elseStep = children[1] ? parseStepTs(children[1]) : null;
+      return cond && thenStep ? { type: 'if', cond, then: thenStep, ...(elseStep ? { else: elseStep } : {}) } : null;
+    }
+    if (kind === 'set-var') {
+      const posM = stepText.match(/^\(\s*:set-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const setVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || extractQuoted(stepText, 'var') || extractQuoted(stepText, 'name');
+      const val = parseGestureValTs(stepText, 'val');
+      const valExpr = extractQuoted(stepText, 'val-expr') || extractQuoted(stepText, 'valExpr') || extractQuoted(stepText, 'expr');
+      return setVar ? { type: 'set-var', setVar, ...(val !== undefined ? { val } : {}), ...(valExpr ? { valExpr } : {}) } : null;
+    }
+    if (kind === 'step-var') {
+      const posM = stepText.match(/^\(\s*:step-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const stepVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || extractQuoted(stepText, 'var') || extractQuoted(stepText, 'name');
+      const delta = parseGestureValTs(stepText, 'delta');
+      return stepVar ? { type: 'step-var', stepVar, delta: typeof delta === 'number' ? delta : 1 } : null;
+    }
+    if (kind === 'toggle-var') {
+      const posM = stepText.match(/^\(\s*:toggle-var\s+"((?:[^"\\]|\\.)*)"/i);
+      const toggleVar = (posM ? posM[1].replace(/\\"/g, '"') : null) || extractQuoted(stepText, 'var') || extractQuoted(stepText, 'name');
+      return toggleVar ? { type: 'toggle-var', toggleVar } : null;
+    }
+    return null;
+  };
+  const gestureRootBlocks = extractKeywordBlocksTs(astText, ':gestures');
+  const rawGestureForms: string[] = [];
+  gestureRootBlocks.forEach((gb) => {
+    extractChildFormsTs(gb).forEach((f) => rawGestureForms.push(f));
+  });
+  if (astText.includes(':on-click') || astText.includes(':on-key')) {
+    const seenG = new Set(rawGestureForms);
+    const extras = (astText.includes(':on-click') ? extractSexprBlocks(astText, ':on-click') : [])
+      .concat(astText.includes(':on-key') ? extractSexprBlocks(astText, ':on-key') : []);
+    for (const extra of extras) {
+      if (!seenG.has(extra)) {
+        seenG.add(extra);
+        rawGestureForms.push(extra);
+      }
+    }
+  }
+  let hasRichGestures = false;
+  for (const gText of rawGestureForms) {
+    const isDraggable = /^\(\s*:draggable\b/i.test(gText);
+    const isClickable = /^\(\s*:(?:clickable|on-click)\b/i.test(gText);
+    const isKey = /^\(\s*:(?:key|on-key)\b/i.test(gText);
+    const isHoldable = /^\(\s*:holdable\b/i.test(gText);
+    if (!isDraggable && !isClickable && !isKey && !isHoldable) continue;
+    const nestedForms = extractChildFormsTs(gText);
+    const steps = nestedForms.map(parseStepTs).filter(Boolean);
+    let hdr = gText;
+    for (const nf of nestedForms) hdr = hdr.replace(nf, ' ');
+    const body = hdr.replace(/^\(\s*:[a-zA-Z0-9_-]+/, '(');
+    const target = extractQuoted(body, 'target');
+    const code = extractQuoted(body, 'code');
+    const key = extractQuoted(body, 'key');
+    const axis = extractQuoted(body, 'axis') || 'xy';
+    const min = parseGestureValTs(body, 'min');
+    const max = parseGestureValTs(body, 'max');
+    const setVar = extractQuoted(body, 'set-var') || extractQuoted(body, 'set');
+    const toggleVar = extractQuoted(body, 'toggle-var') || extractQuoted(body, 'toggle');
+    const stepVar = extractQuoted(body, 'step-var');
+    const holdVar = extractQuoted(body, 'hold-var');
+    const val = parseGestureValTs(body, 'val');
+    const releaseVal = parseGestureValTs(body, 'release-val');
+    const valExpr = extractQuoted(body, 'val-expr') || extractQuoted(body, 'valExpr');
+    const ifExpr = extractQuoted(body, 'if');
+    const delta = parseGestureValTs(body, 'delta');
+    const gType = isKey ? 'key' : (isClickable ? 'clickable' : (isHoldable ? 'holdable' : 'draggable'));
+    const isExplicitEventGesture = /^\(\s*:on-(?:click|key)\b/i.test(gText);
+    if (isExplicitEventGesture || steps.length > 0 || holdVar) hasRichGestures = true;
+    if ((isKey && (code || key)) || target) {
+      gestures.push({
+        type: gType,
+        ...(target ? { target } : {}),
+        ...(code ? { code } : {}),
+        ...(key ? { key } : {}),
+        ...(isDraggable ? { axis, min: typeof min === 'number' ? min : 0, max: typeof max === 'number' ? max : 100 } : {}),
+        ...(setVar ? { setVar } : {}),
+        ...(toggleVar ? { toggleVar } : {}),
+        ...(stepVar ? { stepVar } : {}),
+        ...(holdVar ? { holdVar, hold: true } : {}),
+        ...(val !== undefined ? { val } : {}),
+        ...(releaseVal !== undefined ? { releaseVal } : {}),
+        ...(valExpr ? { valExpr } : {}),
+        ...(ifExpr ? { ifExpr } : {}),
+        ...(typeof delta === 'number' ? { delta } : {}),
+        ...(steps.length > 0 ? { steps } : {}),
+      });
+    }
+  }
+  if (gestures.length === 0) {
+    const gestRegex = /\(:draggable\s+:target\s+"([^"]+)"\s+:axis\s+"([^"]+)"\s+:min\s+([\d\.\-]+)\s+:max\s+([\d\.\-]+)\)/gi;
+    let gm: RegExpExecArray | null;
+    while ((gm = gestRegex.exec(astText)) !== null) {
+      gestures.push({
+        type: 'draggable',
+        target: gm[1],
+        axis: gm[2],
+        min: parseFloat(gm[3]),
+        max: parseFloat(gm[4]),
+      });
+    }
   }
 
   // Variables & Inputs
@@ -2115,6 +2370,9 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     vars,
     inputs,
     uiControls,
+    ...(skills.length > 0 ? { skills } : {}),
+    ...(definedSkills ? { definedSkills } : {}),
+    ...(hasRichGestures || skills.length > 0 || definedSkills ? { completeBinary: true } : {}),
     ...(options?.svgMarkup ? { svgMarkup: options.svgMarkup } : {}),
   });
 }

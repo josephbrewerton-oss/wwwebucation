@@ -514,3 +514,304 @@ export function buildDoActionTag(actions: {
   wtr.writeUI8(0x00); // ActionEnd
   return wtr.toByteArray();
 }
+
+/**
+ * Fluent AVM1 (ActionScript 1.0/2.0) bytecode assembler for SWF test fixtures (ablast, 2dknockout, etc.)
+ */
+export class Avm1Builder {
+  private bytes: number[] = [];
+
+  private pushU8(v: number) { this.bytes.push(v & 0xff); }
+  private pushU16(v: number) { this.bytes.push(v & 0xff, (v >> 8) & 0xff); }
+  private pushSI16(v: number) {
+    const u = v < 0 ? 0x10000 + v : v;
+    this.pushU16(u);
+  }
+  private pushU32(v: number) {
+    this.bytes.push(v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff);
+  }
+  private pushRaw(arr: Uint8Array | number[]) {
+    for (let i = 0; i < arr.length; i++) this.bytes.push(arr[i] & 0xff);
+  }
+
+  pushStr(s: string): this {
+    const len = s.length + 2;
+    this.pushU8(0x96);
+    this.pushU16(len);
+    this.pushU8(0); // string type
+    for (let i = 0; i < s.length; i++) this.pushU8(s.charCodeAt(i));
+    this.pushU8(0);
+    return this;
+  }
+
+  pushInt(n: number): this {
+    this.pushU8(0x96);
+    this.pushU16(5);
+    this.pushU8(7); // SI32 type
+    this.pushU32(n | 0);
+    return this;
+  }
+
+  pushBool(b: boolean): this {
+    this.pushU8(0x96);
+    this.pushU16(2);
+    this.pushU8(5);
+    this.pushU8(b ? 1 : 0);
+    return this;
+  }
+
+  getVar(name: string): this {
+    return this.pushStr(name).op(0x1C);
+  }
+
+  setVar(name: string, emitVal: (b: Avm1Builder) => void): this {
+    this.pushStr(name);
+    emitVal(this);
+    return this.op(0x1D);
+  }
+
+  getMember(objName: string, prop: string): this {
+    return this.getVar(objName).pushStr(prop).op(0x4E);
+  }
+
+  setMember(objName: string, prop: string, emitVal: (b: Avm1Builder) => void): this {
+    this.getVar(objName);
+    this.pushStr(prop);
+    emitVal(this);
+    return this.op(0x4F);
+  }
+
+  callMethod(objName: string, method: string, emitArgs: Array<(b: Avm1Builder) => void>): this {
+    // AVM1 spec: push args in reverse order so arg0 is popped first, then numArgs, then scriptObj, then methodName
+    for (let i = emitArgs.length - 1; i >= 0; i--) {
+      emitArgs[i](this);
+    }
+    this.pushInt(emitArgs.length);
+    this.getVar(objName);
+    this.pushStr(method);
+    return this.op(0x52);
+  }
+
+  callFunction(funcName: string, emitArgs: Array<(b: Avm1Builder) => void>): this {
+    for (let i = emitArgs.length - 1; i >= 0; i--) {
+      emitArgs[i](this);
+    }
+    this.pushInt(emitArgs.length);
+    this.pushStr(funcName);
+    return this.op(0x3D);
+  }
+
+  /**
+   * Emits structured AVM1 if (cond) { thenFn } [else { elseFn }] using ActionNot + ActionIf + ActionJump
+   */
+  ifBlock(
+    emitCond: (b: Avm1Builder) => void,
+    emitThen: (b: Avm1Builder) => void,
+    emitElse?: (b: Avm1Builder) => void
+  ): this {
+    emitCond(this);
+    this.op(0x12); // ActionNot (jump over then-block when cond is false)
+
+    const thenSub = new Avm1Builder();
+    emitThen(thenSub);
+    const thenBytes = thenSub.toRawBytes();
+
+    const elseSub = emitElse ? new Avm1Builder() : null;
+    if (elseSub && emitElse) emitElse(elseSub);
+    const elseBytes = elseSub ? elseSub.toRawBytes() : new Uint8Array(0);
+
+    // ActionIf offset skips over thenBytes (+5 bytes if trailing ActionJump is emitted for else)
+    const jumpSize = elseBytes.length > 0 ? 5 : 0;
+    this.pushU8(0x99); // ActionIf
+    this.pushU16(2);
+    this.pushSI16(thenBytes.length + jumpSize);
+    this.pushRaw(thenBytes);
+
+    if (elseBytes.length > 0) {
+      this.pushU8(0x9D); // ActionJump
+      this.pushU16(2);
+      this.pushSI16(elseBytes.length);
+      this.pushRaw(elseBytes);
+    }
+    return this;
+  }
+
+  op(code: number): this {
+    this.pushU8(code);
+    return this;
+  }
+
+  play(): this { return this.op(0x06); }
+  stop(): this { return this.op(0x07); }
+  pop(): this { return this.op(0x17); }
+  add2(): this { return this.op(0x47); }
+  sub(): this { return this.op(0x0B); }
+  mul(): this { return this.op(0x0C); }
+  div(): this { return this.op(0x0D); }
+  equals2(): this { return this.op(0x49); }
+  less2(): this { return this.op(0x48); }
+  and(): this { return this.op(0x10); }
+  or(): this { return this.op(0x11); }
+  not(): this { return this.op(0x12); }
+
+  gotoLabel(label: string): this {
+    this.pushU8(0x8C); // ActionGoToLabel
+    this.pushU16(label.length + 1);
+    for (let i = 0; i < label.length; i++) this.pushU8(label.charCodeAt(i));
+    this.pushU8(0);
+    return this;
+  }
+
+  toRawBytes(): Uint8Array {
+    return new Uint8Array(this.bytes);
+  }
+
+  toByteArray(): Uint8Array {
+    const out = new Uint8Array(this.bytes.length + 1);
+    out.set(this.bytes, 0);
+    out[this.bytes.length] = 0x00; // ActionEnd
+    return out;
+  }
+}
+
+export function writeSwfMatrix(
+  w: BitWriter,
+  opts: { scaleX?: number; scaleY?: number; rot0?: number; rot1?: number; txPx?: number; tyPx?: number }
+): void {
+  w.syncBits();
+  if (opts.scaleX !== undefined || opts.scaleY !== undefined) {
+    w.writeUBits(1, 1);
+    w.writeUBits(20, 5);
+    w.writeSBits(Math.round((opts.scaleX ?? 1) * 65536), 20);
+    w.writeSBits(Math.round((opts.scaleY ?? 1) * 65536), 20);
+  } else {
+    w.writeUBits(0, 1);
+  }
+  if (opts.rot0 !== undefined || opts.rot1 !== undefined) {
+    w.writeUBits(1, 1);
+    w.writeUBits(20, 5);
+    w.writeSBits(Math.round((opts.rot0 ?? 0) * 65536), 20);
+    w.writeSBits(Math.round((opts.rot1 ?? 0) * 65536), 20);
+  } else {
+    w.writeUBits(0, 1);
+  }
+  const txTwips = Math.round((opts.txPx ?? 0) * 20);
+  const tyTwips = Math.round((opts.tyPx ?? 0) * 20);
+  w.writeUBits(16, 5);
+  w.writeSBits(txTwips, 16);
+  w.writeSBits(tyTwips, 16);
+  w.syncBits();
+}
+
+export function writeCXFormWithAlpha(w: BitWriter, alpha: number): void {
+  w.syncBits();
+  w.writeUBits(0, 1); // HasAddTerms = 0
+  w.writeUBits(1, 1); // HasMultTerms = 1
+  w.writeUBits(10, 4); // Nbits = 10 signed (-512..511)
+  w.writeSBits(256, 10); // R mult = 1.0
+  w.writeSBits(256, 10); // G mult = 1.0
+  w.writeSBits(256, 10); // B mult = 1.0
+  w.writeSBits(Math.round(Math.max(0, Math.min(1, alpha)) * 256), 10); // A mult
+  w.syncBits();
+}
+
+export function buildPlaceObject2Tag(opts: {
+  depth: number;
+  move?: boolean;
+  characterId?: number;
+  matrix?: { scaleX?: number; scaleY?: number; rot0?: number; rot1?: number; txPx?: number; tyPx?: number };
+  alpha?: number;
+  name?: string;
+  clipActions?: Array<{ eventFlags: number; actions: Uint8Array; keyCode?: number }>;
+  swfVersion?: number;
+}): Uint8Array {
+  const w = new BitWriter();
+  const ver = opts.swfVersion ?? 7;
+  let flags = 0;
+  if (opts.move) flags |= 0x01;
+  if (opts.characterId !== undefined) flags |= 0x02;
+  if (opts.matrix) flags |= 0x04;
+  if (opts.alpha !== undefined) flags |= 0x08;
+  if (opts.name) flags |= 0x20;
+  if (opts.clipActions && opts.clipActions.length > 0) flags |= 0x80;
+
+  w.writeUI8(flags);
+  w.writeUI16(opts.depth);
+  if (opts.characterId !== undefined) w.writeUI16(opts.characterId);
+  if (opts.matrix) writeSwfMatrix(w, opts.matrix);
+  if (opts.alpha !== undefined) writeCXFormWithAlpha(w, opts.alpha);
+  if (opts.name) w.writeString(opts.name);
+
+  if (opts.clipActions && opts.clipActions.length > 0) {
+    w.writeUI16(0); // Reserved
+    const allFlags = opts.clipActions.reduce((a, c) => a | c.eventFlags, 0);
+    if (ver >= 6) w.writeUI32(allFlags);
+    else w.writeUI16(allFlags);
+
+    for (const ca of opts.clipActions) {
+      if (ver >= 6) w.writeUI32(ca.eventFlags);
+      else w.writeUI16(ca.eventFlags);
+      const hasKeyCode = ver >= 6 && (ca.eventFlags & 0x20000) !== 0;
+      w.writeUI32(ca.actions.length + (hasKeyCode ? 1 : 0));
+      if (hasKeyCode) w.writeUI8(ca.keyCode ?? 32);
+      for (let i = 0; i < ca.actions.length; i++) w.writeUI8(ca.actions[i]);
+    }
+    if (ver >= 6) w.writeUI32(0); // ClipActionEndFlag
+    else w.writeUI16(0);
+  }
+
+  return w.toByteArray();
+}
+
+export function buildRemoveObject2Tag(depth: number): Uint8Array {
+  const w = new BitWriter();
+  w.writeUI16(depth);
+  return w.toByteArray();
+}
+
+export function buildDefineSpriteTag(spriteId: number, frameCount: number, childTags: Uint8Array): Uint8Array {
+  const w = new BitWriter();
+  w.writeUI16(spriteId);
+  w.writeUI16(frameCount);
+  const head = w.toByteArray();
+  const out = new Uint8Array(head.length + childTags.length);
+  out.set(head, 0);
+  out.set(childTags, head.length);
+  return out;
+}
+
+export function buildDefineButton2Tag(
+  buttonId: number,
+  records: Array<{ states: number; characterId: number; depth: number; matrix?: { txPx?: number; tyPx?: number }; alpha?: number }>,
+  condActions: Array<{ condFlags: number; actions: Uint8Array }>
+): Uint8Array {
+  const recW = new BitWriter();
+  for (const r of records) {
+    recW.writeUI8(r.states & 0x0f);
+    recW.writeUI16(r.characterId);
+    recW.writeUI16(r.depth);
+    writeSwfMatrix(recW, r.matrix || {});
+    writeCXFormWithAlpha(recW, r.alpha ?? 1);
+  }
+  recW.writeUI8(0); // ButtonEndFlag
+  const recBytes = recW.toByteArray();
+
+  const w = new BitWriter();
+  w.writeUI16(buttonId);
+  w.writeUI8(0); // Flags
+  // ActionOffset is measured from the ActionOffset UI16 itself (so 2 + recBytes.length)
+  w.writeUI16(condActions.length > 0 ? 2 + recBytes.length : 0);
+  for (let i = 0; i < recBytes.length; i++) w.writeUI8(recBytes[i]);
+
+  for (let i = 0; i < condActions.length; i++) {
+    const ca = condActions[i];
+    const isLast = i === condActions.length - 1;
+    const size = isLast ? 0 : (4 + ca.actions.length);
+    w.writeUI16(size);
+    w.writeUI16(ca.condFlags);
+    for (let j = 0; j < ca.actions.length; j++) w.writeUI8(ca.actions[j]);
+  }
+
+  return w.toByteArray();
+}
+
