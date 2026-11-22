@@ -191,6 +191,12 @@
     let expr = String(rawExpr).trim();
     if (!expr) return '0';
 
+    const FORBIDDEN_EXPR_KEYS = new Set(['__proto__', 'constructor', 'prototype', 'Function', 'eval']);
+    const escapeJsString = (val) =>
+      JSON.stringify(String(val)).replace(/[<>&/\u2028\u2029]/g, (ch) =>
+        '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0')
+      );
+
     if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(expr)) {
       if (
         expr === 't' || expr === 'true' || expr === 'false' ||
@@ -199,7 +205,8 @@
       ) {
         return expr;
       }
-      return `vars[${JSON.stringify(expr)}]`;
+      if (FORBIDDEN_EXPR_KEYS.has(expr)) return 'undefined';
+      return `vars[${escapeJsString(expr)}]`;
     }
 
     if (expr.startsWith('(') && expr.endsWith(')')) {
@@ -240,7 +247,6 @@
         return tokens;
       };
 
-      
       const tokens = tokenizeLisp(expr);
       if (tokens.length >= 3 && tokens[0].type === '(') {
         let pos = 0;
@@ -275,7 +281,7 @@
             if (LISP_OPS.has(head)) {
               const emitNode = (node, locals) => {
                 if (!Array.isArray(node)) {
-                  if (node.type === 'str') return JSON.stringify(node.val);
+                  if (node.type === 'str') return escapeJsString(node.val);
                   const a = node.val;
                   if (locals && locals.has(a)) return locals.get(a);
                   if (a === 'true' || a === 'false' || a === 'null' || a === 't' || a === 'Math.PI' || a === 'Math.E') return a;
@@ -284,32 +290,30 @@
                   if (/^-?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(a)) return a;
                   if (/^(?:vars|computed)\.[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
                     const prop = a.split('.')[1];
-                    return `vars[${JSON.stringify(prop)}]`;
+                    if (FORBIDDEN_EXPR_KEYS.has(prop)) return 'undefined';
+                    return `vars[${escapeJsString(prop)}]`;
                   }
                   if (/^[a-zA-Z_$][a-zA-Z0-9_$-]*$/.test(a)) {
-                    return `vars[${JSON.stringify(a)}]`;
+                    if (FORBIDDEN_EXPR_KEYS.has(a)) return 'undefined';
+                    return `vars[${escapeJsString(a)}]`;
                   }
-                  return a;
+                  return 'undefined';
                 }
                 if (node.length === 0) return 'undefined';
                 const op = node[0].type === 'atom' ? node[0].val : '';
                 if (op === 'let' || op === 'let*') {
                   const bindingsNode = Array.isArray(node[1]) ? node[1] : [];
                   const nextLocals = new Map(locals || []);
-                  const decls = [];
                   for (let bi = 0; bi < bindingsNode.length; bi++) {
                     const pair = bindingsNode[bi];
                     if (Array.isArray(pair) && pair.length >= 2 && pair[0] && pair[0].type === 'atom') {
                       const rawName = pair[0].val;
-                      const safeId = `_l_${rawName.replace(/[^a-zA-Z0-9_$]/g, '_')}_${bi}`;
                       const rhs = emitNode(pair[1], nextLocals);
-                      decls.push(`const ${safeId} = (${rhs});`);
-                      nextLocals.set(rawName, safeId);
+                      nextLocals.set(rawName, rhs.length <= 4096 ? `(${rhs})` : 'undefined');
                     }
                   }
                   const bodyNodes = node.slice(2);
-                  const bodyExpr = bodyNodes.length > 0 ? emitNode(bodyNodes[bodyNodes.length - 1], nextLocals) : 'undefined';
-                  return `(() => { ${decls.join(' ')} return (${bodyExpr}); })()`;
+                  return bodyNodes.length > 0 ? emitNode(bodyNodes[bodyNodes.length - 1], nextLocals) : 'undefined';
                 }
                 if (op === 'cond') {
                   const clauses = node.slice(1);
@@ -339,13 +343,13 @@
                     if (isElse) {
                       out = `(${valCode})`;
                     } else if (Array.isArray(keyNode)) {
-                      const checks = keyNode.map(k => `(_v === (${emitNode(k, locals)}))`).join(' || ');
+                      const checks = keyNode.map(k => `((${targetCode}) === (${emitNode(k, locals)}))`).join(' || ');
                       out = `((${checks}) ? (${valCode}) : (${out}))`;
                     } else {
-                      out = `((_v === (${emitNode(keyNode, locals)})) ? (${valCode}) : (${out}))`;
+                      out = `(((${targetCode}) === (${emitNode(keyNode, locals)})) ? (${valCode}) : (${out}))`;
                     }
                   }
-                  return `((_v) => (${out}))(${targetCode})`;
+                  return out;
                 }
                 if (op === 'nth' || op === 'pick') {
                   const idxCode = emitNode(node[1], locals);
@@ -378,7 +382,7 @@
                   case 'sqrt': case 'abs': case 'round': case 'floor': case 'ceil': case 'min': case 'max': case 'pow': case 'exp': case 'log':
                     return `Math.${op}(${args.join(', ')})`;
                   default:
-                    return `${op}(${args.join(', ')})`;
+                    return '0';
                 }
               };
               return emitNode(ast, null);
