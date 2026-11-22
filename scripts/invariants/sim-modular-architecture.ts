@@ -1,0 +1,890 @@
+// scripts/invariants/sim-modular-architecture.ts
+import assert from 'assert';
+import fs from 'fs';
+import path from 'path';
+import vm from 'vm';
+import {
+  AST_PLAYER_RUNTIME_MODULES,
+  SITE_GESTURES_RUNTIME_MODULES,
+  loadAstPlayerRuntimeIntoSandbox,
+} from './harness';
+
+export async function runModularArchitectureInvariants(): Promise<number> {
+  let passedTests = 0;
+
+  // =========================================================================
+  // 27. Modular 12-File AST Engine Integrity, Load Order & Standalone Contract
+  // =========================================================================
+  {
+    // 27a. Every peer module must exist, be non-empty, be precached in sw.js & listed in package.json;
+    // eager core modules must load before ast-engine.js, while lazy optional modules must be deferred via ast-lazy-loader.js
+    const playerHtml = fs.readFileSync(path.join(process.cwd(), 'static', 'player.html'), 'utf8');
+    const playerIndexHtml = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'index.html'), 'utf8');
+    const swJs = fs.readFileSync(path.join(process.cwd(), 'static', 'sw.js'), 'utf8');
+    const playerPkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'package.json'), 'utf8'));
+    const lazyLoaderSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-lazy-loader.js'), 'utf8');
+
+    const LAZY_PLAYER_MODULES = new Set([
+      'ast-compiler.js',
+      'ast-phet-bridge.js',
+      'ast-profiler.js',
+      'ast-exporter.js',
+      'ast-ai-director.js',
+      'ast-webrtc-bus.js',
+      'obs-controller.js',
+      'player-ui-studio-matcher.js',
+      'player-ui-studio-remix.js',
+      'player-ui-studio.js',
+      'player-ui-voice.js',
+      'player-ui-broadcast.js',
+    ]);
+
+    assert.ok(playerHtml.includes('player/ast-lazy-loader.js'), 'static/player.html must load player/ast-lazy-loader.js');
+    assert.ok(playerIndexHtml.includes('./ast-lazy-loader.js'), 'static/player/index.html must load ./ast-lazy-loader.js');
+    assert.ok(swJs.includes('player/ast-lazy-loader.js'), 'static/sw.js must precache player/ast-lazy-loader.js');
+    assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes('ast-lazy-loader.js'), 'static/player/package.json files[] must list ast-lazy-loader.js');
+
+    for (const mod of AST_PLAYER_RUNTIME_MODULES) {
+      const modPath = path.join(process.cwd(), 'static', 'player', mod);
+      assert.ok(fs.existsSync(modPath), `Modular runtime file static/player/${mod} must exist`);
+      assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
+      assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+      if (LAZY_PLAYER_MODULES.has(mod)) {
+        assert.ok(!playerHtml.includes(`player/${mod}`), `static/player.html must lazy-load player/${mod} rather than blocking boot`);
+        assert.ok(!playerIndexHtml.includes(`./${mod}`), `static/player/index.html must lazy-load ./${mod} rather than blocking boot`);
+        assert.ok(lazyLoaderSrc.includes(mod), `static/player/ast-lazy-loader.js must register lazy module ${mod}`);
+      } else {
+        assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+        assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+      }
+    }
+
+    // Verify load order: every eager peer module must appear strictly before ast-engine.js in player.html and player/index.html
+    const engineIdxRoot = playerHtml.indexOf('player/ast-engine.js');
+    const engineIdxStandalone = playerIndexHtml.indexOf('./ast-engine.js');
+    assert.ok(playerHtml.indexOf('player/ast-lazy-loader.js') < engineIdxRoot, 'player.html must load ast-lazy-loader.js before ast-engine.js');
+    assert.ok(playerIndexHtml.indexOf('./ast-lazy-loader.js') < engineIdxStandalone, 'player/index.html must load ast-lazy-loader.js before ast-engine.js');
+    for (const mod of AST_PLAYER_RUNTIME_MODULES) {
+      if (mod === 'ast-engine.js' || LAZY_PLAYER_MODULES.has(mod)) continue;
+      assert.ok(playerHtml.indexOf(`player/${mod}`) < engineIdxRoot, `player.html must load ${mod} before ast-engine.js`);
+      assert.ok(playerIndexHtml.indexOf(`./${mod}`) < engineIdxStandalone, `player/index.html must load ${mod} before ast-engine.js`);
+    }
+    const loaderIdxRoot = playerHtml.indexOf('player/ast-loader.js');
+    const loaderIdxStandalone = playerIndexHtml.indexOf('./ast-loader.js');
+    for (const loaderPeer of ['ast-file-ingest.js', 'ast-svg-integrity.js']) {
+      assert.ok(playerHtml.indexOf(`player/${loaderPeer}`) < loaderIdxRoot, `player.html must load ${loaderPeer} strictly before ast-loader.js`);
+      assert.ok(playerIndexHtml.indexOf(`./${loaderPeer}`) < loaderIdxStandalone, `player/index.html must load ${loaderPeer} strictly before ast-loader.js`);
+    }
+
+    // Verify all lazy modules exist, are precached, registered in ast-lazy-loader.js, and not blocking initial player HTML
+    for (const lazyMod of LAZY_PLAYER_MODULES) {
+      const modPath = path.join(process.cwd(), 'static', 'player', lazyMod);
+      assert.ok(fs.existsSync(modPath), `Lazy module static/player/${lazyMod} must exist`);
+      assert.ok(lazyLoaderSrc.includes(lazyMod), `ast-lazy-loader.js must register ${lazyMod}`);
+      assert.ok(swJs.includes(`player/${lazyMod}`), `static/sw.js must precache lazy module player/${lazyMod}`);
+      assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(lazyMod), `static/player/package.json files[] must list lazy module ${lazyMod}`);
+      assert.ok(!playerHtml.includes(`player/${lazyMod}`), `static/player.html must NOT eagerly load ${lazyMod}`);
+      assert.ok(!playerIndexHtml.includes(`./${lazyMod}`), `static/player/index.html must NOT eagerly load ${lazyMod}`);
+    }
+
+    // Verify ast-lazy-loader.js sandbox contract
+    const llSb: any = { console, Promise, Map, Object, Boolean, Error, window: { location: { pathname: '/player.html' } } };
+    llSb.globalThis = llSb;
+    vm.runInNewContext(lazyLoaderSrc, llSb, { filename: 'static/player/ast-lazy-loader.js' });
+    const ll = llSb.ASTLazyLoader || llSb.window.ASTLazyLoader;
+    assert.ok(ll && typeof ll.ensureStudio === 'function' && typeof ll.ensureBroadcast === 'function' && typeof ll.ensureProfiler === 'function', 'ast-lazy-loader.js must export ASTLazyLoader bundle helpers');
+    assert.strictEqual(Object.keys(ll.LAZY_MODULES).length, 12, 'ASTLazyLoader.LAZY_MODULES must declare all 12 deferred modules');
+
+    // 27b. Verify all public module exports exist on the loaded runtime sandbox
+    const modSandbox: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet,
+      ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+      TextDecoder, TextEncoder, RegExp, Error, JSON, URLSearchParams, Date, Function,
+      parseInt, parseFloat, isNaN, isFinite,
+      setTimeout, clearTimeout,
+      performance: { now: () => Date.now() },
+      location: { search: '', origin: 'http://localhost', href: 'http://localhost/player.html', pathname: '/player.html' },
+      window: { location: { origin: 'http://localhost', search: '' }, addEventListener: () => {} },
+      navigator: { userAgent: 'NodeInvariantRunner' },
+    };
+    modSandbox.globalThis = modSandbox;
+    modSandbox.self = modSandbox.window;
+    loadAstPlayerRuntimeIntoSandbox(modSandbox);
+
+    const requiredGlobals = [
+      'ASTProfiler',
+      'ASTAudioSpeech', 'VectorProceduralAudioSynth', 'speakText', 'cancelSpeech', 'narrateText', 'primeMobileAudioAndTts', 'initMobileAudioTtsPriming',
+      'VectorVerletPhysics',
+      'AstMath', 'astMorphPath', 'parseAst', 'compileAstExpr', 'compileAstFn', 'decompileBytecode', 'isAstBytecode',
+      'AST3DEngine',
+      'setupPostMessageBridge',
+      'ASTExporter',
+      'ASTHudControls',
+      'ASTAiDirector',
+      'ASTFileIngest',
+      'ASTSvgIntegrity',
+      'ASTSceneLoader',
+      'MicroSCORMBridge', 'ASTStateMachine',
+      'ASTLabTelemetry', 'ASTSceneMount', 'ASTBindingRuntime',
+      'ASTVectorPlayerEngine',
+    ];
+    for (const sym of requiredGlobals) {
+      assert.ok(modSandbox[sym] !== undefined || modSandbox.window[sym] !== undefined, `Modular runtime must export global "${sym}"`);
+    }
+
+    // 27c. Verify ast-engine.js degrades gracefully in strict mode even if loaded standalone without peers
+    const standaloneSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet,
+      ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+      TextDecoder, TextEncoder, RegExp, Error, JSON, URLSearchParams, Date, Function,
+      parseInt, parseFloat, isNaN, isFinite,
+      performance: { now: () => Date.now() },
+      location: { search: '', origin: 'http://localhost' },
+      window: { location: { origin: 'http://localhost', search: '' }, addEventListener: () => {} },
+    };
+    standaloneSb.globalThis = standaloneSb;
+    standaloneSb.self = standaloneSb.window;
+    const engineOnlyCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-engine.js'), 'utf8');
+    vm.runInNewContext(engineOnlyCode, standaloneSb, { filename: 'static/player/ast-engine.js' });
+    const StandaloneEngineCtor = standaloneSb.ASTVectorPlayerEngine || standaloneSb.window.ASTVectorPlayerEngine;
+    const standaloneEng = new StandaloneEngineCtor({});
+    assert.ok(standaloneEng, 'Standalone ASTVectorPlayerEngine must construct cleanly without peer modules');
+
+    // 27d. Verify modular player-ui peer modules (studio-matcher, studio-remix, studio, checkpoints, voice, broadcast, display, controls, events) plumbing, load order, exports & standalone safety
+    const playerUiPeerModules = [
+      'player-ui-studio-matcher.js',
+      'player-ui-studio-remix.js',
+      'player-ui-studio.js',
+      'player-ui-checkpoints.js',
+      'player-ui-voice.js',
+      'player-ui-broadcast.js',
+      'player-ui-display.js',
+      'player-ui-controls.js',
+      'player-ui-events.js',
+    ];
+    const uiIdxRoot = playerHtml.indexOf('player/player-ui.js');
+    const uiIdxStandalone = playerIndexHtml.indexOf('./player-ui.js');
+    assert.ok(uiIdxRoot > -1 && uiIdxStandalone > -1, 'player.html and player/index.html must load player-ui.js');
+
+    for (const mod of playerUiPeerModules) {
+      const modPath = path.join(process.cwd(), 'static', 'player', mod);
+      assert.ok(fs.existsSync(modPath), `Modular UI file static/player/${mod} must exist`);
+      assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
+      assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+      if (LAZY_PLAYER_MODULES.has(mod)) {
+        assert.ok(!playerHtml.includes(`player/${mod}`), `static/player.html must lazy-load player/${mod}`);
+        assert.ok(!playerIndexHtml.includes(`./${mod}`), `static/player/index.html must lazy-load ./${mod}`);
+      } else {
+        assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+        assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+        assert.ok(playerHtml.indexOf(`player/${mod}`) < uiIdxRoot, `player.html must load ${mod} strictly before player-ui.js`);
+        assert.ok(playerIndexHtml.indexOf(`./${mod}`) < uiIdxStandalone, `player/index.html must load ${mod} strictly before player-ui.js`);
+      }
+    }
+
+    const studioSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: {},
+    };
+    studioSb.globalThis = studioSb;
+    studioSb.self = studioSb.window;
+    for (const studioFile of ['player-ui-studio-matcher.js', 'player-ui-studio-remix.js', 'player-ui-studio.js']) {
+      const code = fs.readFileSync(path.join(process.cwd(), 'static', 'player', studioFile), 'utf8');
+      vm.runInNewContext(code, studioSb, { filename: `static/player/${studioFile}` });
+    }
+    const studioMatcherExports = studioSb.ASTPlayerUIStudioMatcher || studioSb.window.ASTPlayerUIStudioMatcher;
+    const studioRemixExports = studioSb.ASTPlayerUIStudioRemix || studioSb.window.ASTPlayerUIStudioRemix;
+    const studioExports = studioSb.ASTPlayerUIStudio || studioSb.window.ASTPlayerUIStudio;
+    assert.ok(studioMatcherExports, 'player-ui-studio-matcher.js must export ASTPlayerUIStudioMatcher');
+    assert.ok(studioRemixExports, 'player-ui-studio-remix.js must export ASTPlayerUIStudioRemix');
+    assert.ok(studioExports, 'player-ui-studio.js must export ASTPlayerUIStudio');
+    assert.ok(Array.isArray(studioExports.DEFAULT_STARTER_TEMPLATES) && studioExports.DEFAULT_STARTER_TEMPLATES.length >= 3, 'ASTPlayerUIStudio must export DEFAULT_STARTER_TEMPLATES');
+    for (const fnName of [
+      'bindStudioDOMEvents', 'refreshAstSvgMatcher', 'slugifyCartridgeId', 'findClosestSvgId',
+      'extractSvgElementsInfo', 'extractAstTargetsInfo', 'requestNanoRemix', 'syncSceneIdentityInAst',
+      'downloadStandaloneSvgApplet', 'renderStarterTemplates',
+    ]) {
+      assert.strictEqual(typeof studioExports[fnName], 'function', `ASTPlayerUIStudio must export function ${fnName}`);
+    }
+    assert.strictEqual(studioExports.slugifyCartridgeId('My Cool Sim 101!'), 'my-cool-sim-101', 'slugifyCartridgeId must normalize slug cleanly');
+    const parsedSvgItems = studioExports.extractSvgElementsInfo('<svg><g id="wheel-left-1"></g><rect id="chassis"/></svg>');
+    assert.strictEqual(parsedSvgItems.length, 2, 'extractSvgElementsInfo must extract SVG IDs');
+    assert.strictEqual(studioExports.findClosestSvgId('wheel-left', parsedSvgItems), 'wheel-left-1', 'findClosestSvgId must match closest SVG ID');
+    const syncedAst = studioExports.syncSceneIdentityInAst('(:scene :id "old" :title "Old Title" (:bindings ()))', 'my-remix', 'My Remix');
+    assert.ok(syncedAst.includes(':id "my-remix"') && syncedAst.includes(':title "My Remix"'), 'syncSceneIdentityInAst must update scene id and title cleanly');
+
+    // Verify player-ui-checkpoints.js exports & deterministic stop sorting
+    const checkpointsSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: {},
+    };
+    checkpointsSb.globalThis = checkpointsSb;
+    checkpointsSb.self = checkpointsSb.window;
+    const checkpointsCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-checkpoints.js'), 'utf8');
+    vm.runInNewContext(checkpointsCode, checkpointsSb, { filename: 'static/player/player-ui-checkpoints.js' });
+    const cpExports = checkpointsSb.ASTPlayerUICheckpoints || checkpointsSb.window.ASTPlayerUICheckpoints;
+    assert.ok(cpExports, 'player-ui-checkpoints.js must export ASTPlayerUICheckpoints');
+    for (const fnName of [
+      'minimizeInteractiveCard', 'restoreInteractiveCard', 'closeInteractiveCard', 'toggleCheckpointView',
+      'toggleInteractiveMode', 'setInteractiveMode', 'askNanoAboutCheckpoint', 'triggerCheckpoint',
+      'updateGoalCheckpointProgress', 'handleGoalCheckpointPassed', 'logDataToJotterCsv',
+      'triggerFirstCheckpoint', 'checkInteractiveCheckpoints', 'toggleStepMode', 'getLessonStops',
+      'stepToNextKeyframe', 'stepToPrevKeyframe', 'startQuestMode', 'renderCurrentMission', 'checkMissionAnswer', 'closeQuestMode',
+    ]) {
+      assert.strictEqual(typeof cpExports[fnName], 'function', `ASTPlayerUICheckpoints must export function ${fnName}`);
+    }
+    const mockStopUi = {
+      engine: {
+        scene: {
+          keyframes: [{ t: 0.5 }, { t: 0.25 }],
+          interactive: { checkpoints: [{ t: 0.75 }] },
+        },
+      },
+    };
+    assert.deepStrictEqual(cpExports.getLessonStops.call(mockStopUi), [0, 0.25, 0.5, 0.75, 1], 'getLessonStops must merge and sort keyframes and checkpoints');
+
+    // Verify player-ui-voice.js exports & dynamic catalog voice matching
+    const voiceSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      setTimeout, clearTimeout,
+      window: {},
+    };
+    voiceSb.globalThis = voiceSb;
+    voiceSb.self = voiceSb.window;
+    const voiceCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-voice.js'), 'utf8');
+    vm.runInNewContext(voiceCode, voiceSb, { filename: 'static/player/player-ui-voice.js' });
+    const voiceExports = voiceSb.ASTPlayerUIVoice || voiceSb.window.ASTPlayerUIVoice;
+    assert.ok(voiceExports, 'player-ui-voice.js must export ASTPlayerUIVoice');
+    for (const fnName of [
+      'initVoiceRecognition', 'startVoiceCommands', 'stopVoiceCommands', 'toggleVoiceCommands',
+      'updateVoiceStatusUI', 'updateVoiceOverlayText', 'findSceneByVoiceQuery', 'handleVoiceCommand',
+    ]) {
+      assert.strictEqual(typeof voiceExports[fnName], 'function', `ASTPlayerUIVoice must export function ${fnName}`);
+    }
+    const mockVoiceUi = {
+      _catalogScenes: [
+        { id: 'solar-system', title: 'Solar System Orbits', subject: 'Physics' },
+        { id: 'water-cycle', title: 'The Water Cycle', subject: 'Geography' },
+      ],
+      elements: {},
+    };
+    const matchedVoiceScene = voiceExports.findSceneByVoiceQuery.call(mockVoiceUi, 'please open the solar system simulation');
+    assert.strictEqual(matchedVoiceScene && matchedVoiceScene.id, 'solar-system', 'findSceneByVoiceQuery must match dynamic catalog entries');
+
+    // Verify player-ui-broadcast.js exports & OBS/WebRTC status UI helpers
+    const broadcastSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: {},
+    };
+    broadcastSb.globalThis = broadcastSb;
+    broadcastSb.self = broadcastSb.window;
+    const broadcastCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-broadcast.js'), 'utf8');
+    vm.runInNewContext(broadcastCode, broadcastSb, { filename: 'static/player/player-ui-broadcast.js' });
+    const bcExports = broadcastSb.ASTPlayerUIBroadcast || broadcastSb.window.ASTPlayerUIBroadcast;
+    assert.ok(bcExports, 'player-ui-broadcast.js must export ASTPlayerUIBroadcast');
+    for (const fnName of [
+      'bindBroadcastDOMEvents', 'initObsBroadcast', 'updateObsStatusUI',
+      'toggleWebRtcDrawer', 'closeWebRtcDrawer', 'updateWebRtcStatusUI', 'toggleObsDrawer', 'closeObsDrawer',
+    ]) {
+      assert.strictEqual(typeof bcExports[fnName], 'function', `ASTPlayerUIBroadcast must export function ${fnName}`);
+    }
+    const mockBcUi: any = {
+      elements: {
+        webrtcStatusDot: { className: '', style: {} },
+        webrtcDrawerBadge: { className: '', textContent: '' },
+        webrtcRoleReadout: { textContent: '' },
+      },
+    };
+    bcExports.updateWebRtcStatusUI.call(mockBcUi, true, 'host');
+    assert.strictEqual(mockBcUi.elements.webrtcDrawerBadge.textContent, 'CONNECTED (HOST)', 'updateWebRtcStatusUI must update badge text');
+    assert.strictEqual(mockBcUi.elements.webrtcRoleReadout.textContent, 'HOST', 'updateWebRtcStatusUI must update role readout');
+
+    // Verify player-ui-display.js exports & display preset profile generation
+    const displaySb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date, URLSearchParams,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: { self: null, top: null },
+    };
+    displaySb.window.self = displaySb.window;
+    displaySb.window.top = displaySb.window;
+    displaySb.globalThis = displaySb;
+    displaySb.self = displaySb.window;
+    const displayCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-display.js'), 'utf8');
+    vm.runInNewContext(displayCode, displaySb, { filename: 'static/player/player-ui-display.js' });
+    const dispExports = displaySb.ASTPlayerUIDisplay || displaySb.window.ASTPlayerUIDisplay;
+    assert.ok(dispExports, 'player-ui-display.js must export ASTPlayerUIDisplay');
+    for (const fnName of [
+      'bindDisplayDOMEvents', 'setTheme', 'toggleTheme', 'toggleBsl', 'updateBslButton',
+      'initDisplayConfig', 'getPresetProfile', 'setDisplayMode', 'saveDisplayConfig', 'applyDisplayConfig',
+      'toggleShortcutsModal', 'closeShortcutsModal', 'syncSettingsDrawerUI',
+      'toggleStudioPanel', 'openStudioPanel', 'closeStudioPanel', 'toggleSettingsDrawer', 'closeSettingsDrawer', 'togglePictureInPicture',
+    ]) {
+      assert.strictEqual(typeof dispExports[fnName], 'function', `ASTPlayerUIDisplay must export function ${fnName}`);
+    }
+    const suiteProfile = dispExports.getPresetProfile('suite');
+    assert.strictEqual(suiteProfile.mode, 'suite', 'getPresetProfile("suite") must return suite mode');
+    assert.strictEqual(suiteProfile.showTimelineScrubber, false, 'suite mode must hide timeline scrubber');
+    const minimalProfile = dispExports.getPresetProfile('minimal');
+    assert.strictEqual(minimalProfile.showDevStudio, false, 'minimal mode must hide dev studio');
+
+    // Verify player-ui-controls.js exports, 3D camera stop application & simulation reset delegation
+    const controlsSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date, URLSearchParams,
+      parseInt, parseFloat, isNaN, isFinite,
+      setTimeout, clearTimeout,
+      window: {},
+    };
+    controlsSb.globalThis = controlsSb;
+    controlsSb.self = controlsSb.window;
+    const controlsCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-controls.js'), 'utf8');
+    vm.runInNewContext(controlsCode, controlsSb, { filename: 'static/player/player-ui-controls.js' });
+    const ctrlExports = controlsSb.ASTPlayerUIControls || controlsSb.window.ASTPlayerUIControls;
+    assert.ok(ctrlExports, 'player-ui-controls.js must export ASTPlayerUIControls');
+    for (const fnName of [
+      'getSceneCameraStops', 'applyCameraStop', 'update3DStatus',
+      'populatePresets', 'saveToLocalVault', 'setupKeyframeMarkers',
+      'projectControls', 'syncProjectedControls', 'resetSimulation', 'bindControlsDOMEvents',
+    ]) {
+      assert.strictEqual(typeof ctrlExports[fnName], 'function', `ASTPlayerUIControls must export function ${fnName}`);
+    }
+    let camSeekVal: number | null = null;
+    let camEmitted = false;
+    let camResetDispatched = false;
+    const mockCtrlUi: any = {
+      targetStop: 0.5,
+      elements: {},
+      engine: {
+        progress: 0.25,
+        isPlaying: false,
+        cameraOrbit: { yawOffset: 0, pitchOffset: 0, distanceScale: 1 },
+        scene: { cameraStops: [{ id: 'altar', yaw: 30, pitch: -12, scale: 0.85, t: 0.4 }] },
+        seek(v: number) { camSeekVal = v; this.progress = v; },
+        applyBindings() {},
+        emit(evt: string) { if (evt === 'camerachange') camEmitted = true; },
+        dispatchAction(act: string) { if (act === 'sim:reset') camResetDispatched = true; },
+      },
+      update3DStatus() {},
+      updateHeaderPlayUI() {},
+      showToast() {},
+    };
+    const stops = ctrlExports.getSceneCameraStops.call(mockCtrlUi);
+    assert.strictEqual(stops.length, 1, 'getSceneCameraStops must read declarative scene.cameraStops');
+    ctrlExports.applyCameraStop.call(mockCtrlUi, stops[0]);
+    assert.strictEqual(mockCtrlUi.engine.cameraOrbit.yawOffset, 30, 'applyCameraStop must update yawOffset');
+    assert.strictEqual(mockCtrlUi.engine.cameraOrbit.pitchOffset, -12, 'applyCameraStop must update pitchOffset');
+    assert.strictEqual(mockCtrlUi.engine.cameraOrbit.distanceScale, 0.85, 'applyCameraStop must update distanceScale');
+    assert.strictEqual(camSeekVal, 0.4, 'applyCameraStop must seek to stop.t');
+    assert.strictEqual(camEmitted, true, 'applyCameraStop must emit camerachange');
+    ctrlExports.resetSimulation.call(mockCtrlUi);
+    assert.strictEqual(mockCtrlUi.targetStop, null, 'resetSimulation must clear targetStop');
+    assert.strictEqual(camResetDispatched, true, 'resetSimulation must dispatch sim:reset');
+
+    // Verify player-ui.js evaluates cleanly in strict mode standalone (without peer UI modules loaded)
+    const uiOnlySb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: { location: { origin: 'http://localhost', search: '' }, addEventListener: () => {} },
+      document: { getElementById: () => null, querySelector: () => null, querySelectorAll: () => [], addEventListener: () => {} },
+    };
+    uiOnlySb.globalThis = uiOnlySb;
+    uiOnlySb.self = uiOnlySb.window;
+    const uiCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui.js'), 'utf8');
+    vm.runInNewContext(uiCode, uiOnlySb, { filename: 'static/player/player-ui.js' });
+    assert.strictEqual(typeof (uiOnlySb.ASTPlayerUI || uiOnlySb.window.ASTPlayerUI), 'function', 'player-ui.js must export ASTPlayerUI standalone');
+
+    // 27e. Verify modular site-gestures peer modules plumbing, load order, exports, pure-VM invariant & standalone safety
+    const siteGesturesPeerModules = SITE_GESTURES_RUNTIME_MODULES.filter((m) => m !== 'site-gestures.js');
+    const sgIdxRoot = playerHtml.indexOf('player/site-gestures.js');
+    const sgIdxStandalone = playerIndexHtml.indexOf('./site-gestures.js');
+    assert.ok(sgIdxRoot > -1 && sgIdxStandalone > -1, 'player.html and player/index.html must load site-gestures.js');
+
+    for (const mod of siteGesturesPeerModules) {
+      const modPath = path.join(process.cwd(), 'static', 'player', mod);
+      assert.ok(fs.existsSync(modPath), `Modular gesture file static/player/${mod} must exist`);
+      assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+      assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+      assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
+      assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+      assert.ok(playerHtml.indexOf(`player/${mod}`) < sgIdxRoot, `player.html must load ${mod} strictly before site-gestures.js`);
+      assert.ok(playerIndexHtml.indexOf(`./${mod}`) < sgIdxStandalone, `player/index.html must load ${mod} strictly before site-gestures.js`);
+
+      // Pure Generic VM check: zero hardcoded cartridge/scene hacks in any gesture module
+      const modSrc = fs.readFileSync(modPath, 'utf8');
+      assert.ok(!modSrc.includes("activePresetId === 'algebra-balance'"), `${mod} must remain 100% generic (no algebra-balance hack)`);
+      assert.ok(!modSrc.includes("varName === 'selectedRite'"), `${mod} must remain 100% generic (no selectedRite hack)`);
+      assert.ok(!modSrc.includes('flipUnderside'), `${mod} must remain 100% generic (no flipUnderside hack)`);
+    }
+
+    // Verify site-gestures-profile.js exports, AST controls parser, skill compiler & gesture normalization
+    const profileSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: {},
+    };
+    profileSb.globalThis = profileSb;
+    profileSb.self = profileSb.window;
+    const profileCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-profile.js'), 'utf8');
+    vm.runInNewContext(profileCode, profileSb, { filename: 'static/player/site-gestures-profile.js' });
+    const profExports = profileSb.ASTGesturesProfile || profileSb.window.ASTGesturesProfile;
+    assert.ok(profExports, 'site-gestures-profile.js must export ASTGesturesProfile');
+    for (const fnName of [
+      'createDefaultProfile', 'loadPlayerGesturesProfile', '_stripSexpComments', '_extractSexpBlock',
+      '_extractChildSexps', '_extractAllSexpBlocks', '_stripChildSexps', '_parseSkillsBlock',
+      '_parseKeywordAttrs', '_parseControlsBlock', '_parsePlayerGesturesAST', '_resolveSceneSkillUsages',
+      '_resolveSkillGestures', '_getActiveTimelineSyncSpec', '_bindTimelineVarSync', '_syncCartridgeControls',
+      '_isControlEnabled', '_applyControlVisibility', '_normalizeGesture', '_getNormalizedSceneGestures', '_findPrimarySteppedVar',
+    ]) {
+      assert.strictEqual(typeof profExports[fnName], 'function', `ASTGesturesProfile must export function ${fnName}`);
+    }
+    const parsedCtrls = profExports._parseControlsBlock.call(profExports, '(:controls (:param-hud :off) (:whiteboard :on))');
+    assert.strictEqual(parsedCtrls['param-hud'], false, '_parseControlsBlock must parse :off as false');
+    assert.strictEqual(parsedCtrls.whiteboard, true, '_parseControlsBlock must parse :on as true');
+    const defaultProf = profExports.createDefaultProfile.call(profExports);
+    assert.ok(defaultProf.skills instanceof Map && defaultProf.skills.has('storybook-reader'), 'createDefaultProfile must compile storybook-reader skill from AST');
+    const normG = profExports._normalizeGesture({ type: 'interactive', action: 'set-var', var: 'step', value: 3, 'speak-attr': 'data-word' });
+    assert.strictEqual(normG.type, 'clickable', '_normalizeGesture must map interactive -> clickable');
+    assert.strictEqual(normG.setVar, 'step', '_normalizeGesture must map set-var :var -> setVar');
+    assert.strictEqual(normG.val, 3, '_normalizeGesture must map :value -> val');
+    assert.strictEqual(normG.speakAttr, 'data-word', '_normalizeGesture must normalize kebab-case speak-attr');
+
+    // Verify site-gestures-whiteboard.js exports, Bézier stroke drawing, undo/redo & AST/JSON round-trip serialization
+    const wbCreatedPaths: any[] = [];
+    const wbMockInkRoot: any = {
+      children: [] as any[],
+      appendChild(el: any) { el.parentNode = this; this.children.push(el); return el; },
+      removeChild(el: any) { const idx = this.children.indexOf(el); if (idx >= 0) this.children.splice(idx, 1); el.parentNode = null; return el; },
+      replaceChildren() { this.children.forEach((c: any) => { c.parentNode = null; }); this.children = []; },
+    };
+    const wbSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      window: { dispatchEvent: () => {} },
+      document: {
+        createElementNS(_ns: string, tag: string) {
+          const attrs: Record<string, string> = {};
+          const el = {
+            tagName: tag,
+            style: {} as Record<string, string>,
+            parentNode: null as any,
+            setAttribute(k: string, v: string) { attrs[k] = String(v); },
+            getAttribute(k: string) { return attrs[k] !== undefined ? attrs[k] : null; },
+          };
+          wbCreatedPaths.push(el);
+          return el;
+        },
+        getElementById: () => null,
+        body: null,
+      },
+    };
+    wbSb.globalThis = wbSb;
+    wbSb.self = wbSb.window;
+    const wbCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-whiteboard.js'), 'utf8');
+    vm.runInNewContext(wbCode, wbSb, { filename: 'static/player/site-gestures-whiteboard.js' });
+    const wbExports = wbSb.ASTGesturesWhiteboard || wbSb.window.ASTGesturesWhiteboard;
+    assert.ok(wbExports, 'site-gestures-whiteboard.js must export ASTGesturesWhiteboard');
+    for (const fnName of [
+      'handleWhiteboardMessage', 'startInkStroke', 'continueInkStroke', 'endInkStroke', 'eraseStrokeAt',
+      'undoLastStroke', 'redoLastStroke', 'clearWhiteboardInk', 'exportInkToAST', 'importInkFromAST',
+      'exportInkToJSON', 'importInkFromJSON', 'broadcastInkSession', 'persistInkToSession',
+      'restoreInkFromSession', 'showFloatingNotice', 'togglePen',
+    ]) {
+      assert.strictEqual(typeof wbExports[fnName], 'function', `ASTGesturesWhiteboard must export function ${fnName}`);
+    }
+    const mockWbHost: any = {
+      engine: { activePresetId: 'fractions' },
+      inkRoot: wbMockInkRoot,
+      stageSvg: { style: {}, parentNode: null },
+      playerProfile: { whiteboard: { tools: [{ id: 'pen', opacity: 1.0, cap: 'round' }] } },
+      isPenActive: false,
+      currentTool: 'pen',
+      currentInkColor: '#38bdf8',
+      currentInkWidth: 4,
+      currentStroke: null,
+      strokes: [],
+      _undoStack: [],
+      _isControlEnabled: () => true,
+      _playNamedTone: () => {},
+      playAudioTone: () => {},
+      persistInkToSession: () => {},
+      showFloatingNotice: () => {},
+      setupDomLayers: () => {},
+    };
+    wbExports.startInkStroke.call(mockWbHost, { x: 10, y: 20 });
+    wbExports.continueInkStroke.call(mockWbHost, { x: 30, y: 50 });
+    wbExports.endInkStroke.call(mockWbHost);
+    assert.strictEqual(mockWbHost.strokes.length, 1, 'start/continue/endInkStroke must record 1 Bézier stroke');
+    assert.ok(mockWbHost.strokes[0].d.includes('Q 10.0 20.0, 20.0 35.0'), 'continueInkStroke must generate quadratic Bézier path');
+    const exportedInkAst = wbExports.exportInkToAST.call(mockWbHost);
+    assert.ok(exportedInkAst.includes('(:ink-session') && exportedInkAst.includes('#38bdf8'), 'exportInkToAST must serialize stroke color and session');
+    wbExports.undoLastStroke.call(mockWbHost);
+    assert.strictEqual(mockWbHost.strokes.length, 0, 'undoLastStroke must pop stroke');
+    wbExports.redoLastStroke.call(mockWbHost);
+    assert.strictEqual(mockWbHost.strokes.length, 1, 'redoLastStroke must restore stroke');
+    const importedAstCount = wbExports.importInkFromAST.call(mockWbHost, exportedInkAst);
+    assert.strictEqual(importedAstCount, 1, 'importInkFromAST must round-trip exported ink session');
+    assert.strictEqual(mockWbHost.strokes[0].color, '#38bdf8', 'importInkFromAST must preserve stroke color');
+    const exportedInkJson = wbExports.exportInkToJSON.call(mockWbHost);
+    assert.strictEqual(exportedInkJson.strokeCount, 1, 'exportInkToJSON must report strokeCount 1');
+    const importedJsonCount = wbExports.importInkFromJSON.call(mockWbHost, exportedInkJson);
+    assert.strictEqual(importedJsonCount, 1, 'importInkFromJSON must round-trip JSON ink session');
+
+    // Verify site-gestures-hud.js exports, glass HUD, X-Ray popup & fallback parameters dock
+    const makeMockDomEl = (tag: string) => {
+      const attrs: Record<string, string> = {};
+      const children: any[] = [];
+      const el: any = {
+        tagName: tag.toUpperCase(),
+        id: '',
+        className: '',
+        type: '',
+        title: '',
+        textContent: '',
+        value: '',
+        style: {} as Record<string, string>,
+        children,
+        parentNode: null as any,
+        setAttribute(k: string, v: string) { attrs[k] = String(v); },
+        getAttribute(k: string) { return attrs[k] !== undefined ? attrs[k] : null; },
+        appendChild(c: any) { c.parentNode = this; children.push(c); return c; },
+        append(...nodes: any[]) { nodes.forEach((n: any) => this.appendChild(n)); },
+        replaceChildren(...nodes: any[]) { children.length = 0; nodes.forEach((n: any) => this.appendChild(n)); },
+        remove() { if (this.parentNode && this.parentNode.children) { const i = this.parentNode.children.indexOf(this); if (i >= 0) this.parentNode.children.splice(i, 1); } },
+        addEventListener() {},
+        querySelector(sel: string) {
+          const find = (node: any): any => {
+            for (const c of node.children || []) {
+              if (sel.startsWith('#') && c.id === sel.slice(1)) return c;
+              if (sel.startsWith('.') && c.className && c.className.includes(sel.slice(1).split('[')[0])) return c;
+              const nested = find(c);
+              if (nested) return nested;
+            }
+            return null;
+          };
+          return find(this);
+        },
+        querySelectorAll(sel: string) {
+          const out: any[] = [];
+          const walk = (node: any) => {
+            for (const c of node.children || []) {
+              if (sel.startsWith('.') && c.className && c.className.includes(sel.slice(1))) out.push(c);
+              walk(c);
+            }
+          };
+          walk(this);
+          return out;
+        },
+      };
+      return el;
+    };
+    const hudSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      window: { innerWidth: 1024 },
+      document: {
+        createElement: (tag: string) => makeMockDomEl(tag),
+        createElementNS: (_ns: string, tag: string) => makeMockDomEl(tag),
+        createTextNode: (txt: string) => ({ textContent: txt }),
+        getElementById: () => null,
+      },
+    };
+    hudSb.globalThis = hudSb;
+    hudSb.self = hudSb.window;
+    const hudCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-hud.js'), 'utf8');
+    vm.runInNewContext(hudCode, hudSb, { filename: 'static/player/site-gestures-hud.js' });
+    const hudExports = hudSb.ASTGesturesHud || hudSb.window.ASTGesturesHud;
+    assert.ok(hudExports, 'site-gestures-hud.js must export ASTGesturesHud');
+    for (const fnName of [
+      '_rebuildGlassHud', 'setupGlassHud', 'createHudButton', 'setupXRayTooltip',
+      'showXRayPopup', 'hideXRayPopup', 'createTouchRipple', 'setupSimParametersHud',
+    ]) {
+      assert.strictEqual(typeof hudExports[fnName], 'function', `ASTGesturesHud must export function ${fnName}`);
+    }
+    const hudContainer = makeMockDomEl('div');
+    const hudStageSvg = makeMockDomEl('svg');
+    hudStageSvg.getBoundingClientRect = () => ({ left: 0, top: 0, width: 800, height: 480 });
+    hudContainer.appendChild(hudStageSvg);
+    const mockHudHost: any = {
+      stageSvg: hudStageSvg,
+      hudRoot: makeMockDomEl('g'),
+      xrayTooltip: null,
+      isXRayActive: false,
+      sonificationEnabled: true,
+      currentTool: 'pen',
+      currentInkWidth: 3.5,
+      currentInkColor: '#facc15',
+      playerProfile: {
+        whiteboard: {
+          tools: [{ id: 'pen', icon: '🖊️', width: 3.5, title: 'Pen' }],
+          widths: [2, 4, 8],
+          palette: [{ hex: '#facc15', name: 'Yellow' }],
+        },
+      },
+      engine: {
+        scene: { vars: { speed: { min: 0, max: 10, step: 1, label: 'Speed', unit: 'm/s' } } },
+        vars: { speed: 5 },
+        setVar: () => {},
+        resetVars: () => {},
+        on: () => {},
+      },
+      _isControlEnabled: () => true,
+      playAudioTone: () => {},
+      createHudButton(icon: string, title: string, onClick: any) { return hudExports.createHudButton.call(this, icon, title, onClick); },
+      setupGlassHud() { return hudExports.setupGlassHud.call(this); },
+      hideXRayPopup() { return hudExports.hideXRayPopup.call(this); },
+    };
+    hudExports.setupGlassHud.call(mockHudHost);
+    assert.ok(hudContainer.querySelector('#stage-glass-hud-ui'), 'setupGlassHud must mount #stage-glass-hud-ui');
+    hudExports.setupXRayTooltip.call(mockHudHost);
+    assert.ok(mockHudHost.xrayTooltip, 'setupXRayTooltip must create tooltip');
+    hudExports.showXRayPopup.call(mockHudHost, 'Fulcrum: Pivot point of the lever', 200, 150, null);
+    assert.strictEqual(mockHudHost.xrayTooltip.style.display, 'block', 'showXRayPopup must display parsed pedId tooltip');
+    assert.strictEqual(mockHudHost.xrayTooltip.children[0].textContent, 'Fulcrum', 'showXRayPopup must render parsed title');
+    hudExports.hideXRayPopup.call(mockHudHost);
+    assert.strictEqual(mockHudHost.xrayTooltip.style.display, 'none', 'hideXRayPopup must hide tooltip');
+    hudExports.setupSimParametersHud.call(mockHudHost);
+    const simParamHud = hudContainer.querySelector('#stage-sim-parameters');
+    assert.ok(simParamHud, 'setupSimParametersHud must mount #stage-sim-parameters for bounded vars');
+    assert.strictEqual(simParamHud.querySelectorAll('.sim-param-slider').length, 1, 'setupSimParametersHud must render slider for bounded var');
+
+    // Verify site-gestures-actions.js exports, declarative step-slide, SITE_DIRECTIVE bridge, hold press/release & audio queue
+    const emittedDirectives: any[] = [];
+    const actSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      window: {
+        parent: {
+          postMessage(msg: any) { emittedDirectives.push(msg); },
+        },
+      },
+    };
+    actSb.globalThis = actSb;
+    actSb.self = actSb.window;
+    const actCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-actions.js'), 'utf8');
+    vm.runInNewContext(actCode, actSb, { filename: 'static/player/site-gestures-actions.js' });
+    const actExports = actSb.ASTGesturesActions || actSb.window.ASTGesturesActions;
+    assert.ok(actExports, 'site-gestures-actions.js must export ASTGesturesActions');
+    for (const fnName of [
+      '_resolveVarBounds', '_resolveHoldReleaseValue', '_writeEngineVar', '_speakGestureText',
+      '_playNamedTone', 'playAudioTone', '_playToneSpec', '_flushPendingTouchAudio', 'handleTouchEnd',
+      '_readMatchedElementAttr', '_evalGestureExpr', '_evalConditionExpr', '_emitSiteDirective',
+      '_executeDeclarativeAction', '_applyGesturePress', '_applyContinuousGestureStep',
+      '_releaseHoldForGesture', '_releasePointerEntry', '_releaseAllHeldInputs', '_ensureHoldLoop',
+      '_stopHoldLoop', '_runHoldLoop', '_gestureMatchesKey', '_ensureInteractiveSimPlaying',
+    ]) {
+      assert.strictEqual(typeof actExports[fnName], 'function', `ASTGesturesActions must export function ${fnName}`);
+    }
+    let seekTarget = -1;
+    const spokenLines: string[] = [];
+    const mockActHost: any = {
+      engine: {
+        vars: { page: 0, boost: false, score: 1 },
+        scene: { id: 'reader-demo', vars: { score: { min: 0, max: 5 }, boost: { defaultValue: false } } },
+        progress: 0,
+        setVar(k: string, v: any) { this.vars[k] = v; },
+        seek(t: number) { seekTarget = t; this.progress = t; },
+        speak(txt: string) { spokenLines.push(txt); },
+      },
+      _customActions: new Map(),
+      _activeHoldVars: new Map(),
+      _heldKeys: new Set(),
+      _heldKeyCodeMap: new Map(),
+      _heldPointerEntries: new Map(),
+      _pendingTouchAudio: new Map(),
+      _holdRafId: null,
+      _isControlEnabled: () => true,
+      sonificationEnabled: true,
+      playAudioTone: () => {},
+    };
+    for (const fnName of Object.keys(actExports)) {
+      if (typeof actExports[fnName] === 'function' && fnName !== 'playAudioTone') {
+        mockActHost[fnName] = actExports[fnName].bind(mockActHost);
+      }
+    }
+    const slideChanged = actExports._applyGesturePress.call(
+      mockActHost,
+      { action: 'step-slide', var: 'page', delta: 1, count: 5 },
+      null,
+      mockActHost.engine.scene
+    );
+    assert.strictEqual(slideChanged, true, '_applyGesturePress must handle declarative step-slide');
+    assert.strictEqual(mockActHost.engine.vars.page, 1, 'step-slide must increment page var');
+    assert.strictEqual(seekTarget, 0.25, 'step-slide must seek timeline to 1 / (5 - 1)');
+
+    const navHandled = actExports._executeDeclarativeAction.call(
+      mockActHost,
+      { action: 'navigate', route: '/library' },
+      null,
+      undefined,
+      mockActHost.engine.scene
+    );
+    assert.strictEqual(navHandled, true, '_executeDeclarativeAction must emit navigate directive');
+    assert.strictEqual(emittedDirectives.length, 1, 'navigate must post SITE_DIRECTIVE to parent');
+    assert.strictEqual(emittedDirectives[0].directive.route, '/library', 'SITE_DIRECTIVE must carry route');
+
+    const holdGesture = { holdVar: 'boost', val: true, speak: 'Boost engaged' };
+    const touchQueue: any[] = [];
+    actExports._applyGesturePress.call(mockActHost, holdGesture, null, mockActHost.engine.scene, touchQueue);
+    assert.strictEqual(mockActHost.engine.vars.boost, true, 'holdVar must engage on press');
+    assert.strictEqual(touchQueue.length, 1, 'audioQueue must defer speech until pointerup/touchend');
+    mockActHost._pendingTouchAudio.set(7, touchQueue);
+    actExports._flushPendingTouchAudio.call(mockActHost, 7);
+    assert.strictEqual(spokenLines[0], 'Boost engaged', '_flushPendingTouchAudio must flush queued TTS');
+    actExports._releaseHoldForGesture.call(mockActHost, holdGesture);
+    assert.strictEqual(mockActHost.engine.vars.boost, false, '_releaseHoldForGesture must restore default releaseVal');
+
+    // Verify site-gestures-input.js exports, universal key execution, generic/rotate/trackball drag & stage enhancement
+    const inpSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      performance: { now: () => 1000 },
+      window: { focus: () => {} },
+      document: { getElementById: () => null, querySelector: () => null },
+    };
+    inpSb.globalThis = inpSb;
+    inpSb.self = inpSb.window;
+    const inpCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-input.js'), 'utf8');
+    vm.runInNewContext(inpCode, inpSb, { filename: 'static/player/site-gestures-input.js' });
+    const inpExports = inpSb.ASTGesturesInput || inpSb.window.ASTGesturesInput;
+    assert.ok(inpExports, 'site-gestures-input.js must export ASTGesturesInput');
+    for (const fnName of [
+      '_handleCheckpointModalKeys', '_executeUniversalKeyRule', 'handleKeyDown', 'handleKeyUp',
+      'handleWindowBlur', 'handlePointerLeave', 'screenToSvg', 'enhanceSceneInteractivity',
+      'handlePointerDown', 'handlePointerMove', 'handlePointerUp', 'handlePointerCancel',
+      'handleTrackballDrag', 'handleGenericDrag', 'handleRotateDrag', 'handleBindInputDrag',
+    ]) {
+      assert.strictEqual(typeof inpExports[fnName], 'function', `ASTGesturesInput must export function ${fnName}`);
+    }
+    const inpAttrs: Record<string, string> = {
+      'data-gesture-axis': 'x',
+      'data-gesture-min-x': '0',
+      'data-gesture-max-x': '100',
+      'data-gesture-var': 'temp',
+      'data-gesture-cx': '100',
+      'data-gesture-cy': '100',
+    };
+    const mockDragTarget: any = {
+      style: {},
+      getAttribute(k: string) { return inpAttrs[k] !== undefined ? inpAttrs[k] : null; },
+      setAttribute(k: string, v: string) { inpAttrs[k] = String(v); },
+    };
+    const mockInpHost: any = {
+      engine: {
+        vars: { temp: 0, angle: 0, yaw: 0, pitch: 20 },
+        scene: { vars: { temp: { min: 0, max: 100 }, yaw: { min: 0, max: 360 } }, inputs: [] },
+        progress: 0,
+        setVar(k: string, v: any) { this.vars[k] = v; },
+        applyBindings() {},
+        togglePlay() { this._toggled = true; },
+      },
+      _customActions: new Map(),
+      _customGestureSkills: new Map(),
+      _isControlEnabled: () => true,
+      _writeEngineVar(k: string, v: any) { this.engine.setVar(k, v); },
+      _resolveVarBounds: () => ({ min: 0, max: 360 }),
+      dragStart: { x: 0, y: 0 },
+      targetInitial: { initTx: 0, initTy: 0, x: 0, y: 0 },
+      trackballYawVar: 'yaw',
+      trackballPitchVar: 'pitch',
+      trackballPitchMin: -65,
+      trackballPitchMax: 65,
+      trackballStartYaw: 0,
+      trackballStartPitch: 20,
+    };
+    assert.strictEqual(inpExports._executeUniversalKeyRule.call(mockInpHost, { action: 'toggle-play' }, mockInpHost.engine.scene), true, '_executeUniversalKeyRule must dispatch toggle-play');
+    assert.strictEqual(mockInpHost.engine._toggled, true, 'toggle-play must invoke engine.togglePlay');
+    inpExports.handleGenericDrag.call(mockInpHost, mockDragTarget, { x: 50, y: 0 });
+    assert.strictEqual(mockInpHost.engine.vars.temp, 50, 'handleGenericDrag must map SVG drag coordinate into bounded var');
+    inpExports.handleRotateDrag.call(mockInpHost, mockDragTarget, { x: 100, y: 200 });
+    assert.strictEqual(mockInpHost.engine.vars.temp, 90, 'handleRotateDrag must compute 90 deg rotation around (100,100)');
+    inpExports.handleTrackballDrag.call(mockInpHost, { clientX: 50, clientY: -20 });
+    assert.strictEqual(mockInpHost.engine.vars.yaw, 40, 'handleTrackballDrag must update yaw var');
+    assert.strictEqual(mockInpHost.engine.vars.pitch, 30, 'handleTrackballDrag must update clamped pitch var');
+
+    // Verify ast-expr.js, ast-bytecode-decoder.js, and ast-parser.js standalone modular exports
+    const exprSb: any = { console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, parseInt, parseFloat, isNaN, isFinite };
+    exprSb.globalThis = exprSb;
+    exprSb.window = exprSb;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-expr.js'), 'utf8'), exprSb, { filename: 'static/player/ast-expr.js' });
+    assert.strictEqual(typeof exprSb.compileAstFn, 'function', 'ast-expr.js must export compileAstFn');
+    assert.strictEqual(typeof exprSb.compileAstExpr, 'function', 'ast-expr.js must export compileAstExpr');
+    assert.ok(exprSb.AstMath && typeof exprSb.AstMath.lerp === 'function', 'ast-expr.js must export AstMath.lerp');
+    const compiledExprFn = exprSb.compileAstFn('vars.a + vars.b * 2');
+    assert.strictEqual(compiledExprFn(0, { a: 3, b: 4 }, {}, Math), 11, 'compileAstFn must evaluate reactive arithmetic');
+
+    const bcSb: any = { console, Math, Number, String, Boolean, Array, Object, Uint8Array, ArrayBuffer, DataView, TextDecoder, TextEncoder };
+    bcSb.globalThis = bcSb;
+    bcSb.window = bcSb;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-bytecode-decoder.js'), 'utf8'), bcSb, { filename: 'static/player/ast-bytecode-decoder.js' });
+    assert.strictEqual(typeof bcSb.isAstBytecode, 'function', 'ast-bytecode-decoder.js must export isAstBytecode');
+    assert.strictEqual(typeof bcSb.decompileBytecode, 'function', 'ast-bytecode-decoder.js must export decompileBytecode');
+    const pythAstb = fs.readFileSync(path.join(process.cwd(), 'static', 'bytecode', 'pythagoras.astb'));
+    assert.strictEqual(bcSb.isAstBytecode(pythAstb), true, 'isAstBytecode must detect compiled pythagoras.astb');
+    const decodedPyth = bcSb.decompileBytecode(pythAstb);
+    assert.strictEqual(decodedPyth?.id, 'pythagoras', 'decompileBytecode must decode pythagoras.astb standalone');
+
+    const parserSb: any = { console, Math, Number, String, Boolean, Array, Object, RegExp, parseInt, parseFloat, isNaN, isFinite, Uint8Array, ArrayBuffer, TextEncoder };
+    parserSb.globalThis = parserSb;
+    parserSb.window = parserSb;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-parser.js'), 'utf8'), parserSb, { filename: 'static/player/ast-parser.js' });
+    assert.strictEqual(typeof parserSb.parseAst, 'function', 'ast-parser.js must export parseAst standalone');
+    const parsedMini = parserSb.parseAst('(:scene :id "mini-test" :title "Mini Test" :duration 8.0)');
+    assert.strictEqual(parsedMini?.id, 'mini-test', 'parseAst must parse S-expression scene standalone');
+
+    // Verify ast-file-ingest.js, ast-svg-integrity.js, and player-ui-events.js standalone modular exports
+    const ingestSb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, window: {} };
+    ingestSb.globalThis = ingestSb;
+    ingestSb.self = ingestSb.window;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-file-ingest.js'), 'utf8'), ingestSb, { filename: 'static/player/ast-file-ingest.js' });
+    const ingestExports = ingestSb.ASTFileIngest || ingestSb.window.ASTFileIngest;
+    assert.ok(ingestExports, 'ast-file-ingest.js must export ASTFileIngest standalone');
+    for (const fnName of ['loadFromFile', 'readFileAsText', 'loadFiles', 'loadFromPayload', 'loadFromUrl', 'renderErrorPlaceholder']) {
+      assert.strictEqual(typeof ingestExports[fnName], 'function', `ASTFileIngest must export function ${fnName}`);
+    }
+
+    const integritySb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, Uint8Array, ArrayBuffer, TextEncoder, window: {} };
+    integritySb.globalThis = integritySb;
+    integritySb.self = integritySb.window;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-svg-integrity.js'), 'utf8'), integritySb, { filename: 'static/player/ast-svg-integrity.js' });
+    const integrityExports = integritySb.ASTSvgIntegrity || integritySb.window.ASTSvgIntegrity;
+    assert.ok(integrityExports, 'ast-svg-integrity.js must export ASTSvgIntegrity standalone');
+    for (const fnName of ['sanitizeSvg', 'sanitizeSvgElement', '_buildSafeSvgTree', 'ensureMasterDefs', '_computeSha256Hex', '_resolveChecksumBaseUrl', '_loadChecksumRegistry', 'verifyLoadedCartridge']) {
+      assert.strictEqual(typeof integrityExports[fnName], 'function', `ASTSvgIntegrity must export function ${fnName}`);
+    }
+    assert.ok(integrityExports.sanitizeSvg('<!DOCTYPE svg><svg></svg>').includes('DOCTYPE disabled'), 'ASTSvgIntegrity.sanitizeSvg must neutralize DOCTYPE standalone');
+
+    const uiEventsSb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, parseInt, parseFloat, isNaN, isFinite, window: {} };
+    uiEventsSb.globalThis = uiEventsSb;
+    uiEventsSb.self = uiEventsSb.window;
+    vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-events.js'), 'utf8'), uiEventsSb, { filename: 'static/player/player-ui-events.js' });
+    const uiEventsExports = uiEventsSb.ASTPlayerUIEvents || uiEventsSb.window.ASTPlayerUIEvents;
+    assert.ok(uiEventsExports, 'player-ui-events.js must export ASTPlayerUIEvents standalone');
+    for (const fnName of ['updateView', 'bindDOMEvents', 'bindEngineEvents', 'updateIntegrityBadge']) {
+      assert.strictEqual(typeof uiEventsExports[fnName], 'function', `ASTPlayerUIEvents must export function ${fnName}`);
+    }
+
+    // Verify site-gestures.js evaluates and constructs cleanly standalone (without peer gesture modules loaded)
+    const sgOnlySb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite,
+      window: { addEventListener: () => {} },
+      document: { getElementById: () => null, querySelector: () => null },
+    };
+    sgOnlySb.globalThis = sgOnlySb;
+    sgOnlySb.self = sgOnlySb.window;
+    const sgStandaloneCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures.js'), 'utf8');
+    vm.runInNewContext(sgStandaloneCode, sgOnlySb, { filename: 'static/player/site-gestures.js' });
+    const StandaloneGesturesCtor = sgOnlySb.ASTDirectGestureSubsystem || sgOnlySb.window.ASTDirectGestureSubsystem;
+    assert.strictEqual(typeof StandaloneGesturesCtor, 'function', 'site-gestures.js must export ASTDirectGestureSubsystem standalone');
+    const standaloneSg = new StandaloneGesturesCtor({});
+    assert.ok(standaloneSg, 'Standalone ASTDirectGestureSubsystem must construct cleanly without peer gesture modules');
+
+    console.log('[✅ PASS] Sim 27: Modular AST engine, UI & gesture peer module integrity, load order, exports & standalone safety verified.');
+    passedTests++;
+  }
+
+  return passedTests;
+}
