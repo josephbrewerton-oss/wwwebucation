@@ -185,16 +185,29 @@
       const isHudWindow = typeof window !== 'undefined' && window.__AST_PERF_HUD__ === true;
       const perfHudEnabled = isHudParam || isHudStorage || isHudWindow;
 
+      const attachProfiler = (verbosity, strictAlarm) => {
+        const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
+        if (_ASTProfiler) {
+          this.profiler = new _ASTProfiler({ mode: verbosity, strictAlarm });
+          const st = this.getStageSvg && this.getStageSvg();
+          if (st) this.profiler.mount(st);
+          return;
+        }
+        const _ll = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+        if (_ll && typeof _ll.ensureProfiler === 'function') {
+          _ll.ensureProfiler().then((ProfCtor) => {
+            if (!ProfCtor || this.profiler) return;
+            this.profiler = new ProfCtor({ mode: verbosity, strictAlarm });
+            const st = this.getStageSvg && this.getStageSvg();
+            if (st) this.profiler.mount(st);
+          }).catch(() => {});
+        }
+      };
+
       if (perfHudEnabled) {
         const verbosity = (urlParams && urlParams.get('hud_verbosity')) || (_store && _store.getItem('app_hud_verbosity')) || 'minimal';
         const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || Boolean(_store && _store.getItem('app_frame_budget_alert') === 'true');
-
-        // Initialize profiler; UI overlay attaches once container/SVG mounts
-        const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
-        this.profiler = _ASTProfiler ? new _ASTProfiler({
-          mode: verbosity,
-          strictAlarm: strictAlarm
-        }) : null;
+        attachProfiler(verbosity, strictAlarm);
       }
 
       // Optional Framerate / Power Gating (0 = Adaptive VSync, 30 = Eco, 60 = Standard, 120/240 = Ultra)
@@ -211,10 +224,7 @@
           if (!this.profiler && (isHudParam || isHudWindow || _store.getItem('app_perf_hud_enabled') === 'true')) {
             const verbosity = (urlParams && urlParams.get('hud_verbosity')) || _store.getItem('app_hud_verbosity') || 'minimal';
             const strictAlarm = (urlParams && urlParams.get('budget_alert') === '1') || _store.getItem('app_frame_budget_alert') === 'true';
-            const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
-            this.profiler = _ASTProfiler ? new _ASTProfiler({ mode: verbosity, strictAlarm }) : null;
-            const st = this.getStageSvg && this.getStageSvg();
-            if (st && this.profiler) this.profiler.mount(st);
+            attachProfiler(verbosity, strictAlarm);
           }
         });
       }
@@ -588,16 +598,32 @@
       return telemetry;
     }
 
-    /** Edge AI Visual Director Delegators (implemented in static/player/ast-ai-director.js) */
+    /** Edge AI Visual Director Delegators (implemented in static/player/ast-ai-director.js; lazy-loaded on demand) */
+    async _ensureAiDirectorMod() {
+      const existing = _getASTAiDirector();
+      if (existing) return existing;
+      const _ll = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+      if (_ll && typeof _ll.ensureAiDirector === 'function') {
+        try { return await _ll.ensureAiDirector(); } catch (_) {}
+      }
+      return _getASTAiDirector();
+    }
     ensureAiSpotlightStyles() { const _ai = _getASTAiDirector(); if (_ai && typeof _ai.ensureAiSpotlightStyles === 'function') _ai.ensureAiSpotlightStyles.call(this); }
-    async executeAiVisualCommand(packet) { const _ai = _getASTAiDirector(); return _ai && typeof _ai.executeAiVisualCommand === 'function' ? _ai.executeAiVisualCommand.call(this, packet) : undefined; }
-    async _runSingleAiAction(action) { const _ai = _getASTAiDirector(); return _ai && typeof _ai._runSingleAiAction === 'function' ? _ai._runSingleAiAction.call(this, action) : undefined; }
-    tweenProgress(targetProgress, durationMs = 800) { const _ai = _getASTAiDirector(); return _ai && typeof _ai.tweenProgress === 'function' ? _ai.tweenProgress.call(this, targetProgress, durationMs) : Promise.resolve(); }
-    applyAiHighlight(selector, pulseColor = '#38bdf8', durationMs = 4500) { const _ai = _getASTAiDirector(); if (_ai && typeof _ai.applyAiHighlight === 'function') _ai.applyAiHighlight.call(this, selector, pulseColor, durationMs); }
+    async executeAiVisualCommand(packet) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai.executeAiVisualCommand === 'function' ? _ai.executeAiVisualCommand.call(this, packet) : undefined; }
+    async _runSingleAiAction(action) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai._runSingleAiAction === 'function' ? _ai._runSingleAiAction.call(this, action) : undefined; }
+    async tweenProgress(targetProgress, durationMs = 800) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai.tweenProgress === 'function' ? _ai.tweenProgress.call(this, targetProgress, durationMs) : undefined; }
+    applyAiHighlight(selector, pulseColor = '#38bdf8', durationMs = 4500) {
+      const _ai = _getASTAiDirector();
+      if (_ai && typeof _ai.applyAiHighlight === 'function') {
+        _ai.applyAiHighlight.call(this, selector, pulseColor, durationMs);
+      } else {
+        this._ensureAiDirectorMod().then((m) => { if (m && typeof m.applyAiHighlight === 'function') m.applyAiHighlight.call(this, selector, pulseColor, durationMs); }).catch(() => {});
+      }
+    }
     clearAiSpotlights() { const _ai = _getASTAiDirector(); if (_ai && typeof _ai.clearAiSpotlights === 'function') _ai.clearAiSpotlights.call(this); }
-    zoomToElement(selector, durationMs = 700) { const _ai = _getASTAiDirector(); return _ai && typeof _ai.zoomToElement === 'function' ? _ai.zoomToElement.call(this, selector, durationMs) : Promise.resolve(); }
-    resetViewBox(durationMs = 600) { const _ai = _getASTAiDirector(); return _ai && typeof _ai.resetViewBox === 'function' ? _ai.resetViewBox.call(this, durationMs) : Promise.resolve(); }
-    tweenViewBox(targetX, targetY, targetW, targetH, durationMs = 600) { const _ai = _getASTAiDirector(); return _ai && typeof _ai.tweenViewBox === 'function' ? _ai.tweenViewBox.call(this, targetX, targetY, targetW, targetH, durationMs) : Promise.resolve(); }
+    async zoomToElement(selector, durationMs = 700) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai.zoomToElement === 'function' ? _ai.zoomToElement.call(this, selector, durationMs) : undefined; }
+    async resetViewBox(durationMs = 600) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai.resetViewBox === 'function' ? _ai.resetViewBox.call(this, durationMs) : undefined; }
+    async tweenViewBox(targetX, targetY, targetW, targetH, durationMs = 600) { const _ai = await this._ensureAiDirectorMod(); return _ai && typeof _ai.tweenViewBox === 'function' ? _ai.tweenViewBox.call(this, targetX, targetY, targetW, targetH, durationMs) : undefined; }
 
     narrateText(text, language) {
       const _narrateText = global.narrateText || (typeof window !== 'undefined' ? window.narrateText : undefined);

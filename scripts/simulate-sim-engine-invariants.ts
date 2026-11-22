@@ -2575,26 +2575,54 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
 // 27. Modular 12-File AST Engine Integrity, Load Order & Standalone Contract
 // =========================================================================
 {
-  // 27a. Every peer module must exist, be non-empty, and be wired into player.html, player/index.html, sw.js & package.json
+  // 27a. Every peer module must exist, be non-empty, be precached in sw.js & listed in package.json;
+  // eager core modules must load before ast-engine.js, while lazy optional modules must be deferred via ast-lazy-loader.js
   const playerHtml = fs.readFileSync(path.join(process.cwd(), 'static', 'player.html'), 'utf8');
   const playerIndexHtml = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'index.html'), 'utf8');
   const swJs = fs.readFileSync(path.join(process.cwd(), 'static', 'sw.js'), 'utf8');
   const playerPkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'package.json'), 'utf8'));
+  const lazyLoaderSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-lazy-loader.js'), 'utf8');
+
+  const LAZY_PLAYER_MODULES = new Set([
+    'ast-compiler.js',
+    'ast-phet-bridge.js',
+    'ast-profiler.js',
+    'ast-exporter.js',
+    'ast-ai-director.js',
+    'ast-webrtc-bus.js',
+    'obs-controller.js',
+    'player-ui-studio.js',
+    'player-ui-voice.js',
+    'player-ui-broadcast.js',
+  ]);
+
+  assert.ok(playerHtml.includes('player/ast-lazy-loader.js'), 'static/player.html must load player/ast-lazy-loader.js');
+  assert.ok(playerIndexHtml.includes('./ast-lazy-loader.js'), 'static/player/index.html must load ./ast-lazy-loader.js');
+  assert.ok(swJs.includes('player/ast-lazy-loader.js'), 'static/sw.js must precache player/ast-lazy-loader.js');
+  assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes('ast-lazy-loader.js'), 'static/player/package.json files[] must list ast-lazy-loader.js');
 
   for (const mod of AST_PLAYER_RUNTIME_MODULES) {
     const modPath = path.join(process.cwd(), 'static', 'player', mod);
     assert.ok(fs.existsSync(modPath), `Modular runtime file static/player/${mod} must exist`);
-    assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
-    assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
     assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
     assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
+    if (LAZY_PLAYER_MODULES.has(mod)) {
+      assert.ok(!playerHtml.includes(`player/${mod}`), `static/player.html must lazy-load player/${mod} rather than blocking boot`);
+      assert.ok(!playerIndexHtml.includes(`./${mod}`), `static/player/index.html must lazy-load ./${mod} rather than blocking boot`);
+      assert.ok(lazyLoaderSrc.includes(mod), `static/player/ast-lazy-loader.js must register lazy module ${mod}`);
+    } else {
+      assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+      assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+    }
   }
 
-  // Verify load order: every peer module must appear strictly before ast-engine.js in player.html and player/index.html
+  // Verify load order: every eager peer module must appear strictly before ast-engine.js in player.html and player/index.html
   const engineIdxRoot = playerHtml.indexOf('player/ast-engine.js');
   const engineIdxStandalone = playerIndexHtml.indexOf('./ast-engine.js');
+  assert.ok(playerHtml.indexOf('player/ast-lazy-loader.js') < engineIdxRoot, 'player.html must load ast-lazy-loader.js before ast-engine.js');
+  assert.ok(playerIndexHtml.indexOf('./ast-lazy-loader.js') < engineIdxStandalone, 'player/index.html must load ast-lazy-loader.js before ast-engine.js');
   for (const mod of AST_PLAYER_RUNTIME_MODULES) {
-    if (mod === 'ast-engine.js') continue;
+    if (mod === 'ast-engine.js' || LAZY_PLAYER_MODULES.has(mod)) continue;
     assert.ok(playerHtml.indexOf(`player/${mod}`) < engineIdxRoot, `player.html must load ${mod} before ast-engine.js`);
     assert.ok(playerIndexHtml.indexOf(`./${mod}`) < engineIdxStandalone, `player/index.html must load ${mod} before ast-engine.js`);
   }
@@ -2604,6 +2632,25 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
     assert.ok(playerHtml.indexOf(`player/${loaderPeer}`) < loaderIdxRoot, `player.html must load ${loaderPeer} strictly before ast-loader.js`);
     assert.ok(playerIndexHtml.indexOf(`./${loaderPeer}`) < loaderIdxStandalone, `player/index.html must load ${loaderPeer} strictly before ast-loader.js`);
   }
+
+  // Verify all lazy modules exist, are precached, registered in ast-lazy-loader.js, and not blocking initial player HTML
+  for (const lazyMod of LAZY_PLAYER_MODULES) {
+    const modPath = path.join(process.cwd(), 'static', 'player', lazyMod);
+    assert.ok(fs.existsSync(modPath), `Lazy module static/player/${lazyMod} must exist`);
+    assert.ok(lazyLoaderSrc.includes(lazyMod), `ast-lazy-loader.js must register ${lazyMod}`);
+    assert.ok(swJs.includes(`player/${lazyMod}`), `static/sw.js must precache lazy module player/${lazyMod}`);
+    assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(lazyMod), `static/player/package.json files[] must list lazy module ${lazyMod}`);
+    assert.ok(!playerHtml.includes(`player/${lazyMod}`), `static/player.html must NOT eagerly load ${lazyMod}`);
+    assert.ok(!playerIndexHtml.includes(`./${lazyMod}`), `static/player/index.html must NOT eagerly load ${lazyMod}`);
+  }
+
+  // Verify ast-lazy-loader.js sandbox contract
+  const llSb: any = { console, Promise, Map, Object, Boolean, Error, window: { location: { pathname: '/player.html' } } };
+  llSb.globalThis = llSb;
+  vm.runInNewContext(lazyLoaderSrc, llSb, { filename: 'static/player/ast-lazy-loader.js' });
+  const ll = llSb.ASTLazyLoader || llSb.window.ASTLazyLoader;
+  assert.ok(ll && typeof ll.ensureStudio === 'function' && typeof ll.ensureBroadcast === 'function' && typeof ll.ensureProfiler === 'function', 'ast-lazy-loader.js must export ASTLazyLoader bundle helpers');
+  assert.strictEqual(Object.keys(ll.LAZY_MODULES).length, 10, 'ASTLazyLoader.LAZY_MODULES must declare all 10 deferred modules');
 
   // 27b. Verify all public module exports exist on the loaded runtime sandbox
   const modSandbox: any = {
@@ -2668,12 +2715,17 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   for (const mod of playerUiPeerModules) {
     const modPath = path.join(process.cwd(), 'static', 'player', mod);
     assert.ok(fs.existsSync(modPath), `Modular UI file static/player/${mod} must exist`);
-    assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
-    assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
     assert.ok(swJs.includes(`player/${mod}`), `static/sw.js must precache player/${mod}`);
     assert.ok(Array.isArray(playerPkg.files) && playerPkg.files.includes(mod), `static/player/package.json files[] must list ${mod}`);
-    assert.ok(playerHtml.indexOf(`player/${mod}`) < uiIdxRoot, `player.html must load ${mod} strictly before player-ui.js`);
-    assert.ok(playerIndexHtml.indexOf(`./${mod}`) < uiIdxStandalone, `player/index.html must load ${mod} strictly before player-ui.js`);
+    if (LAZY_PLAYER_MODULES.has(mod)) {
+      assert.ok(!playerHtml.includes(`player/${mod}`), `static/player.html must lazy-load player/${mod}`);
+      assert.ok(!playerIndexHtml.includes(`./${mod}`), `static/player/index.html must lazy-load ./${mod}`);
+    } else {
+      assert.ok(playerHtml.includes(`player/${mod}`), `static/player.html must load player/${mod}`);
+      assert.ok(playerIndexHtml.includes(`./${mod}`), `static/player/index.html must load ./${mod}`);
+      assert.ok(playerHtml.indexOf(`player/${mod}`) < uiIdxRoot, `player.html must load ${mod} strictly before player-ui.js`);
+      assert.ok(playerIndexHtml.indexOf(`./${mod}`) < uiIdxStandalone, `player/index.html must load ${mod} strictly before player-ui.js`);
+    }
   }
 
   const studioSb: any = {

@@ -425,7 +425,12 @@
           break;
         case 'EXPORT_STANDALONE_APPLET':
           if (typeof engine.exportStandaloneApplet === 'function') {
-            engine.exportStandaloneApplet();
+            const _llExp = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+            if (!global.ASTExporter && _llExp && typeof _llExp.ensureExporter === 'function') {
+              _llExp.ensureExporter().then(() => engine.exportStandaloneApplet()).catch(() => {});
+            } else {
+              engine.exportStandaloneApplet();
+            }
           }
           break;
         case 'ACTUATE_OPCODE':
@@ -488,52 +493,72 @@
         case 'UPDATE_PERF_HUD': {
           const _hudStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
           const enabled = typeof data.enabled === 'boolean' ? data.enabled : (!engine.profiler || engine.profiler.silent);
+          const finishHud = () => {
+            if (_hudStore) {
+              try {
+                _hudStore.setItem('app_perf_hud_enabled', String(enabled));
+                if (data.mode) _hudStore.setItem('app_hud_verbosity', data.mode);
+                if (typeof data.strictAlarm === 'boolean') _hudStore.setItem('app_frame_budget_alert', String(data.strictAlarm));
+              } catch (_) {}
+            }
+            engine.notifyParent({
+              type: 'PERF_HUD_UPDATED',
+              enabled: Boolean(engine.profiler && !engine.profiler.silent),
+              mode: engine.profiler ? engine.profiler.mode : 'minimal'
+            });
+          };
           if (enabled) {
             const mode = data.mode || (_hudStore && _hudStore.getItem('app_hud_verbosity')) || 'minimal';
             const strictAlarm = typeof data.strictAlarm === 'boolean' ? data.strictAlarm : Boolean(_hudStore && _hudStore.getItem('app_frame_budget_alert') === 'true');
-            if (!engine.profiler) {
-              const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
-              engine.profiler = _ASTProfiler ? new _ASTProfiler({ mode, strictAlarm, silent: false }) : null;
+            const mountHud = (ProfCtor) => {
+              if (!engine.profiler) {
+                engine.profiler = ProfCtor ? new ProfCtor({ mode, strictAlarm, silent: false }) : null;
+              } else {
+                engine.profiler.silent = false;
+                engine.profiler.mode = mode;
+                engine.profiler.strictAlarm = strictAlarm;
+              }
+              const stage = engine.getStageSvg();
+              if (stage && engine.profiler) engine.profiler.mount(stage);
+              finishHud();
+            };
+            const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
+            const _llProf = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+            if (!_ASTProfiler && _llProf && typeof _llProf.ensureProfiler === 'function') {
+              _llProf.ensureProfiler().then(mountHud).catch(() => finishHud());
             } else {
-              engine.profiler.silent = false;
-              engine.profiler.mode = mode;
-              engine.profiler.strictAlarm = strictAlarm;
+              mountHud(_ASTProfiler);
             }
-            const stage = engine.getStageSvg();
-            if (stage && engine.profiler) engine.profiler.mount(stage);
           } else {
             if (engine.profiler) {
               engine.profiler.destroy();
               engine.profiler = null;
             }
+            finishHud();
           }
-          if (_hudStore) {
-            try {
-              _hudStore.setItem('app_perf_hud_enabled', String(enabled));
-              if (data.mode) _hudStore.setItem('app_hud_verbosity', data.mode);
-              if (typeof data.strictAlarm === 'boolean') _hudStore.setItem('app_frame_budget_alert', String(data.strictAlarm));
-            } catch (_) {}
-          }
-          engine.notifyParent({
-            type: 'PERF_HUD_UPDATED',
-            enabled: Boolean(engine.profiler && !engine.profiler.silent),
-            mode: engine.profiler ? engine.profiler.mode : 'minimal'
-          });
           break;
         }
         case 'START_PROF_CAPTURE': {
-          if (!engine.profiler) {
-            const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
-            engine.profiler = _ASTProfiler ? new _ASTProfiler({ mode: 'minimal', strictAlarm: false, silent: true }) : null;
+          const beginCapture = (ProfCtor) => {
+            if (!engine.profiler) {
+              engine.profiler = ProfCtor ? new ProfCtor({ mode: 'minimal', strictAlarm: false, silent: true }) : null;
+            }
+            if (engine.profiler) engine.profiler.startCapture();
+            if (data.ensurePlaying !== false && !engine.isPlaying && typeof engine.play === 'function') {
+              engine.play();
+            }
+            engine.notifyParent({
+              type: 'PROF_CAPTURE_STARTED',
+              requestId: data.requestId || null
+            });
+          };
+          const _ASTProfiler = global.ASTProfiler || (typeof window !== 'undefined' ? window.ASTProfiler : undefined);
+          const _llProf = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : undefined);
+          if (!_ASTProfiler && _llProf && typeof _llProf.ensureProfiler === 'function') {
+            _llProf.ensureProfiler().then(beginCapture).catch(() => beginCapture(null));
+          } else {
+            beginCapture(_ASTProfiler);
           }
-          if (engine.profiler) engine.profiler.startCapture();
-          if (data.ensurePlaying !== false && !engine.isPlaying && typeof engine.play === 'function') {
-            engine.play();
-          }
-          engine.notifyParent({
-            type: 'PROF_CAPTURE_STARTED',
-            requestId: data.requestId || null
-          });
           break;
         }
         case 'STOP_PROF_CAPTURE': {

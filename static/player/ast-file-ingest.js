@@ -42,7 +42,7 @@
           }
           reject(err);
         };
-        reader.onload = () => {
+        reader.onload = async () => {
           try {
             const id = filename.replace(/\.[^/.]+$/, '').toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
@@ -168,6 +168,9 @@
               } else if (content.includes('<svg')) {
                 resolve(this.loadSceneData({ id, title: filename, svgText: content }, shouldPlay));
               } else if (content.startsWith('#') || content.includes('Stage:') || content.includes('Shape:')) {
+                if (!global.ASTSlideScriptCompiler && global.ASTLazyLoader && typeof global.ASTLazyLoader.ensureCompiler === 'function') {
+                  await global.ASTLazyLoader.ensureCompiler();
+                }
                 if (global.ASTSlideScriptCompiler) {
                   const compiled = global.ASTSlideScriptCompiler.compile(content);
                   resolve(this.loadSceneData(compiled.scene, shouldPlay));
@@ -175,6 +178,9 @@
                   throw new Error(`SlideScript detected but compiler is not loaded.`);
                 }
               } else if (ext === 'html' || ext === 'htm' || ext === 'phet' || (global.ASTPhetBridge && global.ASTPhetBridge.isPhetBundle(content))) {
+                if (!global.ASTPhetBridge && global.ASTLazyLoader && typeof global.ASTLazyLoader.ensurePhetBridge === 'function') {
+                  await global.ASTLazyLoader.ensurePhetBridge();
+                }
                 if (global.ASTPhetBridge) {
                   const result = global.ASTPhetBridge.transpilePhet(content, filename);
                   const parsed = this.parseAst(result.astSource);
@@ -301,6 +307,9 @@
           emitters = json.emitters || null;
           bindInputs = json.bindInputs || null;
         } else if (astExt === 'slidescript') {
+          if (!global.ASTSlideScriptCompiler && global.ASTLazyLoader && typeof global.ASTLazyLoader.ensureCompiler === 'function') {
+            await global.ASTLazyLoader.ensureCompiler();
+          }
           if (global.ASTSlideScriptCompiler) {
             const compiled = global.ASTSlideScriptCompiler.compile(astContent);
             parsed = compiled.scene;
@@ -433,6 +442,9 @@
           const loaded = this.loadSceneData(compiled.scene, shouldPlay);
           this.emit('fileloaded', { filename: `${compiled.scene.id || id}.slidescript`, type: 'slidescript-payload', id: compiled.scene.id || id });
           return loaded;
+        }
+        if (global.ASTLazyLoader && typeof global.ASTLazyLoader.ensureCompiler === 'function') {
+          return global.ASTLazyLoader.ensureCompiler().then(() => this.loadFromPayload(content, shouldPlay));
         }
       }
 
