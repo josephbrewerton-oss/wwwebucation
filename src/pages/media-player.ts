@@ -128,6 +128,12 @@ export function renderPlayerPage(): HTMLElement {
   const breadcrumbSepEl = container.querySelector<HTMLElement>('#player-breadcrumb-sep');
   const breadcrumbActiveEl = container.querySelector<HTMLElement>('#player-breadcrumb-active');
   const launcherImportBtn = container.querySelector<HTMLButtonElement>('#launcher-btn-import');
+  const launcherPhetBtn = container.querySelector<HTMLButtonElement>('#launcher-btn-phet-import');
+  const launcherSwfBtn = container.querySelector<HTMLButtonElement>('#launcher-btn-swf-import');
+  const launcherSwfMount = container.querySelector<HTMLDivElement>('#launcher-swf-mount-point');
+  const importStatusEl = container.querySelector<HTMLDivElement>('#player-import-status');
+  const importStatusTextEl = container.querySelector<HTMLSpanElement>('#player-import-status-text');
+  const importStatusCloseBtn = container.querySelector<HTMLButtonElement>('#player-import-status-close');
   const iframe = container.querySelector<HTMLIFrameElement>('#ast-player-iframe')!;
   const select = container.querySelector<HTMLSelectElement>('#player-sim-selector')!;
   const titleEl = container.querySelector<HTMLElement>('#player-active-title')!;
@@ -151,6 +157,8 @@ export function renderPlayerPage(): HTMLElement {
   const teacherToolsGroup = container.querySelector<HTMLDivElement>('#player-teacher-tools-group');
   const logCsvBtn = container.querySelector<HTMLButtonElement>('#player-btn-log-csv');
   const openBtn = container.querySelector<HTMLButtonElement>('#player-btn-open')!;
+  const phetImportBtn = container.querySelector<HTMLButtonElement>('#player-btn-phet-import');
+  const swfImportBtn = container.querySelector<HTMLButtonElement>('#player-btn-swf-import');
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
   const drawerMount = container.querySelector<HTMLDivElement>('#player-drawer-mount-point');
@@ -368,7 +376,17 @@ export function renderPlayerPage(): HTMLElement {
     }
   }
 
-  let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | 'diagnostics' | null = null;
+  let activeDrawer: 'embed' | 'ai-tutor' | 'lab' | 'diagnostics' | 'swf' | 'phet' | null = null;
+  const importParam = params.get('import');
+  let launcherImportPanel: 'swf' | 'phet' | null =
+    !isStageOpen && (importParam === 'swf' || importParam === 'phet') ? importParam : null;
+  let swfResult: any = null;
+  let swfFileName = 'imported-swf';
+  let isParsingSwf = false;
+  let swfError: string | null = null;
+  let swfDragActive = false;
+  let swfDrawerModulePromise: Promise<typeof import('../components/player/SwfTranspilerDrawer')> | null = null;
+  let phetDrawerModulePromise: Promise<typeof import('../components/player/PhetTranspilerDrawer')> | null = null;
   let latestTelemetry: PlayerTelemetryEvent | null = null;
   let activeQuizContext: QuizCheckpointContext | null = null;
   let isAiDemonstrating = false;
@@ -380,6 +398,224 @@ export function renderPlayerPage(): HTMLElement {
   let mountedAiTutorEl: HTMLElement | null = null;
   let mountedAiTutorHandle: NanoAiTutorDrawerHandle | null = null;
   let mountedAiTutorPreset = '';
+
+  function showImportStatus(message: string, kind: 'success' | 'error' = 'success') {
+    if (!importStatusEl || !importStatusTextEl) return;
+    importStatusTextEl.textContent = message;
+    importStatusEl.style.display = 'flex';
+    if (kind === 'error') {
+      importStatusEl.style.background = '#fef2f2';
+      importStatusEl.style.border = '1px solid #fca5a5';
+      importStatusEl.style.color = '#991b1b';
+    } else {
+      importStatusEl.style.background = '#f0fdf4';
+      importStatusEl.style.border = '1px solid #86efac';
+      importStatusEl.style.color = '#166534';
+    }
+  }
+
+  function clearImportStatus() {
+    if (importStatusEl) importStatusEl.style.display = 'none';
+  }
+
+  importStatusCloseBtn?.addEventListener('click', clearImportStatus);
+
+  function loadSwfDrawerModule() {
+    if (!swfDrawerModulePromise) {
+      swfDrawerModulePromise = import('../components/player/SwfTranspilerDrawer');
+    }
+    return swfDrawerModulePromise;
+  }
+
+  function loadPhetDrawerModule() {
+    if (!phetDrawerModulePromise) {
+      phetDrawerModulePromise = import('../components/player/PhetTranspilerDrawer');
+    }
+    return phetDrawerModulePromise;
+  }
+
+  function saveAndLaunchTranspiledPhet(res: any) {
+    const phetMeta = res?.metadata;
+    const rawId = phetMeta?.simName || `phet-${Date.now().toString(36)}`;
+    const cleanId = rawId
+      .replace(/\.(html|htm|json|phet|swf)$/i, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-') || `phet-${Date.now().toString(36)}`;
+    const cleanTitle = phetMeta?.title || `PhET: ${cleanId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}`;
+    const isLegacySwf = Boolean(phetMeta?.isFlashSwf);
+    const cart: CartridgeDefinition = {
+      id: cleanId.startsWith('phet-') || isLegacySwf ? cleanId : `phet-${cleanId}`,
+      title: cleanTitle,
+      stage: isLegacySwf ? 'FLASH TRANSLATED' : 'PHET INTERACTIVE',
+      category: isLegacySwf ? 'Imported Flash' : 'Science',
+      type: 'Sim',
+      desc: phetMeta
+        ? `Distilled from ${((phetMeta.originalSizeBytes || 0) / 1024).toFixed(0)} KB PhET bundle to ${(phetMeta.distilledSizeBytes / 1024).toFixed(1)} KB native SVG + AST (${phetMeta.compressionRatio}).`
+        : 'Distilled PhET simulation running 100% offline as native SVG + AST.',
+      icon: isLegacySwf ? '⚡' : '⚛️',
+      source: isLegacySwf ? 'imported' : 'phet',
+      svgMarkup: res.svgMarkup,
+      astSource: res.astSource,
+      author: 'University of Colorado Boulder (PhET)',
+      version: phetMeta?.version || '1.0.0',
+      invariants: phetMeta?.detectedInvariants || ['Physical Conservation Law'],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    saveCustomCartridge(cart);
+    launcherImportPanel = null;
+    renderLauncherImportPanel();
+    if (activeDrawer === 'phet') {
+      activeDrawer = null;
+      renderActiveDrawer();
+    }
+    refreshDropdown();
+    launchCustomCartridge(cart);
+    showImportStatus(
+      `⚛️ Distilled "${cart.title}"${phetMeta?.compressionRatio ? ` (${phetMeta.compressionRatio})` : ''} — saved to Local Vault & launched on stage.`,
+      'success'
+    );
+  }
+
+  function saveAndLaunchTranspiledSwf(res: any, rawName: string) {
+    const cleanId = (rawName || 'imported-swf')
+      .replace(/\.swf$/i, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]/g, '-') || `flash-${Date.now().toString(36)}`;
+    const cleanTitle = cleanId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const swfMeta = res?.metadata;
+    const cart: CartridgeDefinition = {
+      id: cleanId,
+      title: `Flash: ${cleanTitle}`,
+      stage: 'FLASH TRANSLATED',
+      category: 'Imported Flash',
+      type: 'Sim',
+      desc: swfMeta
+        ? `Transpiled from Flash SWF v${swfMeta.version} (${swfMeta.signature}, ${swfMeta.width}×${swfMeta.height}, ${swfMeta.shapeCount} vector shapes, ${swfMeta.frameCount} frames) into 60 FPS native SVG + AST.`
+        : 'Transpiled from legacy Adobe Flash SWF into 60 FPS deterministic vector SVG + AST.',
+      icon: '⚡',
+      source: 'imported',
+      svgMarkup: res.svgMarkup,
+      astSource: res.astSource,
+      author: 'Flash Archive',
+      version: `Flash v${swfMeta?.version || 9}`,
+      invariants: ['Legacy Vector Timeline', 'ActionScript Translation'],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    saveCustomCartridge(cart);
+    launcherImportPanel = null;
+    renderLauncherImportPanel();
+    if (activeDrawer === 'swf') {
+      activeDrawer = null;
+      renderActiveDrawer();
+    }
+    refreshDropdown();
+    launchCustomCartridge(cart);
+    showImportStatus(`⚡ Imported "${cart.title}" into Local Vault & launched on stage.`, 'success');
+  }
+
+  function renderPhetPanelInto(targetEl: HTMLElement, onClosePanel: () => void) {
+    targetEl.innerHTML = '<div style="padding:12px; font-size:0.8rem; color:#94a3b8;">⏳ Loading Full PhET Simulation Transpiler...</div>';
+    loadPhetDrawerModule()
+      .then(({ renderPhetTranspilerDrawer }) => {
+        if (pageDisposed || !targetEl.isConnected) return;
+        const drawerEl = renderPhetTranspilerDrawer({
+          setCustomSvgCode: () => {},
+          setCustomAstCode: () => {},
+          postToPlayer: (payload) => postToPlayer(payload),
+          setHotReloadFlash: () => {},
+          onLaunchCartridge: (res) => saveAndLaunchTranspiledPhet(res),
+          onClose: onClosePanel,
+        });
+        targetEl.replaceChildren(drawerEl);
+      })
+      .catch((err) => {
+        targetEl.textContent = `Could not load PhET Importer: ${err?.message || 'offline error'}`;
+      });
+  }
+
+  function renderSwfPanelInto(targetEl: HTMLElement, mode: 'launcher' | 'stage', onClosePanel: () => void) {
+    targetEl.innerHTML = '<div style="padding:12px; font-size:0.8rem; color:#94a3b8;">⏳ Loading Historic Flash (.swf) Transpiler...</div>';
+    loadSwfDrawerModule()
+      .then(({ renderSwfTranspilerDrawer }) => {
+        if (pageDisposed || !targetEl.isConnected) return;
+        const rerender = () => {
+          if (mode === 'launcher' && launcherImportPanel === 'swf') {
+            renderLauncherImportPanel();
+          } else if (mode === 'stage' && activeDrawer === 'swf') {
+            renderActiveDrawer(true);
+          }
+        };
+        const drawerEl = renderSwfTranspilerDrawer({
+          swfResult,
+          setSwfResult: (val) => {
+            swfResult = val;
+            rerender();
+          },
+          isParsingSwf,
+          setIsParsingSwf: (val) => {
+            isParsingSwf = val;
+            rerender();
+          },
+          swfError,
+          setSwfError: (err) => {
+            swfError = err;
+            rerender();
+          },
+          swfDragActive,
+          setSwfDragActive: (val) => {
+            if (swfDragActive !== val) {
+              swfDragActive = val;
+              rerender();
+            }
+          },
+          swfFileName,
+          setSwfFileName: (name) => {
+            swfFileName = name;
+          },
+          setCustomSvgCode: () => {},
+          setCustomAstCode: () => {},
+          postToPlayer: (payload) => postToPlayer(payload),
+          setHotReloadFlash: () => {},
+          onLaunchCartridge: (res, name) => saveAndLaunchTranspiledSwf(res, name),
+          onClose: onClosePanel,
+        });
+        targetEl.replaceChildren(drawerEl);
+      })
+      .catch((err) => {
+        targetEl.textContent = `Could not load Flash (.swf) Importer: ${err?.message || 'offline error'}`;
+      });
+  }
+
+  function renderLauncherImportPanel() {
+    if (!launcherSwfMount) return;
+    if (launcherSwfBtn) {
+      launcherSwfBtn.setAttribute('aria-expanded', String(launcherImportPanel === 'swf'));
+      launcherSwfBtn.style.background = launcherImportPanel === 'swf' ? '#fef3c7' : '#fffbeb';
+      launcherSwfBtn.style.borderColor = launcherImportPanel === 'swf' ? '#b45309' : '#d97706';
+    }
+    if (launcherPhetBtn) {
+      launcherPhetBtn.setAttribute('aria-expanded', String(launcherImportPanel === 'phet'));
+      launcherPhetBtn.style.background = launcherImportPanel === 'phet' ? '#bae6fd' : '#e0f2fe';
+      launcherPhetBtn.style.borderColor = launcherImportPanel === 'phet' ? '#0369a1' : '#0284c7';
+    }
+    if (!launcherImportPanel) {
+      launcherSwfMount.style.display = 'none';
+      launcherSwfMount.replaceChildren();
+      return;
+    }
+    launcherSwfMount.style.display = 'block';
+    const closePanel = () => {
+      launcherImportPanel = null;
+      renderLauncherImportPanel();
+    };
+    if (launcherImportPanel === 'phet') {
+      renderPhetPanelInto(launcherSwfMount, closePanel);
+    } else {
+      renderSwfPanelInto(launcherSwfMount, 'launcher', closePanel);
+    }
+  }
 
   function renderActiveDrawer(forceRebuild = false) {
     if (!drawerMount) return;
@@ -433,6 +669,14 @@ export function renderPlayerPage(): HTMLElement {
     if (diagnosticsBtn) {
       diagnosticsBtn.style.background = activeDrawer === 'diagnostics' ? '#14532d' : '#1e293b';
       diagnosticsBtn.style.borderColor = activeDrawer === 'diagnostics' ? '#4ade80' : '#16a34a';
+    }
+    if (swfImportBtn) {
+      swfImportBtn.style.background = activeDrawer === 'swf' ? '#78350f' : '#1e293b';
+      swfImportBtn.style.borderColor = activeDrawer === 'swf' ? '#fbbf24' : '#d97706';
+    }
+    if (phetImportBtn) {
+      phetImportBtn.style.background = activeDrawer === 'phet' ? '#075985' : '#1e293b';
+      phetImportBtn.style.borderColor = activeDrawer === 'phet' ? '#38bdf8' : '#0284c7';
     }
 
     if (!activeDrawer) {
@@ -531,6 +775,22 @@ export function renderPlayerPage(): HTMLElement {
       if (drawerEl) {
         drawerMount.appendChild(drawerEl);
       }
+    } else if (activeDrawer === 'swf') {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'padding:16px 18px; color:#f8fafc;';
+      drawerMount.appendChild(wrap);
+      renderSwfPanelInto(wrap, 'stage', () => {
+        activeDrawer = null;
+        renderActiveDrawer();
+      });
+    } else if (activeDrawer === 'phet') {
+      const wrap = document.createElement('div');
+      wrap.style.cssText = 'padding:16px 18px; color:#f8fafc;';
+      drawerMount.appendChild(wrap);
+      renderPhetPanelInto(wrap, () => {
+        activeDrawer = null;
+        renderActiveDrawer();
+      });
     }
   }
 
@@ -663,6 +923,17 @@ export function renderPlayerPage(): HTMLElement {
   launcherImportBtn?.addEventListener('click', () => {
     fileInputHidden?.click();
   });
+  launcherPhetBtn?.addEventListener('click', () => {
+    launcherImportPanel = launcherImportPanel === 'phet' ? null : 'phet';
+    renderLauncherImportPanel();
+  });
+  launcherSwfBtn?.addEventListener('click', () => {
+    launcherImportPanel = launcherImportPanel === 'swf' ? null : 'swf';
+    renderLauncherImportPanel();
+  });
+  if (launcherImportPanel) {
+    renderLauncherImportPanel();
+  }
 
   function updatePreset(presetId: string, skipPostMessage = false, pushHistoryIfOpening = true) {
     if (presetId === '__custom_find__' || presetId === '__open_local__') return;
@@ -757,14 +1028,22 @@ export function renderPlayerPage(): HTMLElement {
   }
 
   async function handleUploadedFiles(files: File[]) {
+    clearImportStatus();
     try {
       const cart = await ingestUploadedCartridgeFiles(files);
       if (cart) {
         refreshDropdown();
         launchCustomCartridge(cart);
+        showImportStatus(`✓ Imported "${cart.title}" into Local Vault & launched on stage.`, 'success');
+      } else {
+        showImportStatus(
+          'Unsupported file format. Drop or choose a Flash (.swf), PhET (.html / .phet), Cartridge (.json), .ast, or .svg file.',
+          'error'
+        );
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('[media-player] Error ingesting uploaded files:', err);
+      showImportStatus(`Import failed: ${err?.message || 'Could not parse the selected file.'}`, 'error');
     }
   }
 
@@ -1366,6 +1645,16 @@ export function renderPlayerPage(): HTMLElement {
 
   embedBtn?.addEventListener('click', () => {
     activeDrawer = activeDrawer === 'embed' ? null : 'embed';
+    renderActiveDrawer();
+  });
+
+  phetImportBtn?.addEventListener('click', () => {
+    activeDrawer = activeDrawer === 'phet' ? null : 'phet';
+    renderActiveDrawer();
+  });
+
+  swfImportBtn?.addEventListener('click', () => {
+    activeDrawer = activeDrawer === 'swf' ? null : 'swf';
     renderActiveDrawer();
   });
 

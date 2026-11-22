@@ -20,6 +20,10 @@ export interface SwfTranspilerDrawerProps {
   setCustomAstCode: (code: string) => void;
   postToPlayer: (payload: Record<string, any>) => void;
   setHotReloadFlash: (val: boolean) => void;
+  swfFileName?: string;
+  setSwfFileName?: (name: string) => void;
+  onLaunchCartridge?: (res: SwfTranspileResult, cleanName: string) => void;
+  onClose?: () => void;
 }
 
 export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTMLElement {
@@ -36,11 +40,36 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     setCustomAstCode,
     postToPlayer,
     setHotReloadFlash,
+    swfFileName = 'imported-swf',
+    setSwfFileName,
+    onLaunchCartridge,
+    onClose,
   } = props;
 
   const root = document.createElement('div');
   root.className = 'ast-swf-transpiler-drawer';
   root.style.cssText = 'display: flex; flex-direction: column; gap: 14px;';
+
+  if (onClose) {
+    const topBar = document.createElement('div');
+    topBar.style.cssText = 'display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;';
+    topBar.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span style="font-size: 1.15rem;">⚡</span>
+        <div>
+          <strong style="font-size: 0.92rem; color: var(--stj-text, #f8fafc); display: block;">Historic Adobe Flash (.swf) Importer &amp; Decompiler</strong>
+          <span style="font-size: 0.74rem; color: var(--stj-text-muted, #94a3b8);">100% offline local binary transpiler — converts FWS/CWS vector shapes, morphs &amp; ActionScript into native 60 FPS SVG + AST cartridges.</span>
+        </div>
+      </div>
+    `;
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.style.cssText = 'padding: 4px 10px; border-radius: 6px; background: #1e293b; color: #cbd5e1; border: 1px solid #334155; font-size: 0.76rem; font-weight: 700; cursor: pointer;';
+    closeBtn.textContent = 'Close ✕';
+    closeBtn.onclick = () => onClose();
+    topBar.appendChild(closeBtn);
+    root.appendChild(topBar);
+  }
 
   // 1. Drag & Drop Upload Zone
   const dropZone = document.createElement('div');
@@ -74,6 +103,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
   const processBuffer = async (buf: ArrayBuffer, cleanName: string) => {
     setIsParsingSwf(true);
     setSwfError(null);
+    setSwfFileName?.(cleanName);
     try {
       const res = await transpileSwfToAst(buf, cleanName);
       if (res.success) {
@@ -92,11 +122,16 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
   dropZone.ondragover = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setSwfDragActive(true);
   };
-  dropZone.ondragleave = () => setSwfDragActive(false);
+  dropZone.ondragleave = (e) => {
+    e.stopPropagation();
+    setSwfDragActive(false);
+  };
   dropZone.ondrop = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     setSwfDragActive(false);
     const file = e.dataTransfer?.files?.[0];
     if (!file) return;
@@ -205,12 +240,16 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     playBtn.type = 'button';
     playBtn.className = 'stj-btn stj-btn-primary stj-btn-sm';
     playBtn.style.cssText = 'font-size: 0.75rem; font-weight: 700;';
-    playBtn.innerHTML = '⚡ Test &amp; Play in Stage';
+    playBtn.textContent = onLaunchCartridge ? '⚡ Save & Play in Stage' : '⚡ Test & Play in Stage';
     playBtn.onclick = () => {
-      postToPlayer({ type: 'HOT_RELOAD_SVG', svg: swfResult.svgMarkup });
-      postToPlayer({ type: 'HOT_RELOAD_AST', ast: swfResult.astSource });
-      postToPlayer({ type: 'SEEK', progress: 0 });
-      postToPlayer({ type: 'PLAY' });
+      if (onLaunchCartridge) {
+        onLaunchCartridge(swfResult, swfFileName);
+      } else {
+        postToPlayer({ type: 'HOT_RELOAD_SVG', svg: swfResult.svgMarkup });
+        postToPlayer({ type: 'HOT_RELOAD_AST', ast: swfResult.astSource });
+        postToPlayer({ type: 'SEEK', progress: 0 });
+        postToPlayer({ type: 'PLAY' });
+      }
       setHotReloadFlash(true);
       setTimeout(() => setHotReloadFlash(false), 2200);
     };
@@ -226,7 +265,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `transpiled-${meta.signature.toLowerCase() || 'swf'}.svg`;
+      a.download = `${swfFileName || 'transpiled-swf'}.svg`;
       a.click();
       URL.revokeObjectURL(url);
     };
@@ -261,7 +300,7 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     `;
     resBox.appendChild(chipsGrid);
 
-    // AST Preview
+    // AST Preview (use textContent to prevent HTML injection from transpiled strings)
     const previewWrap = document.createElement('div');
     previewWrap.innerHTML = `
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -270,10 +309,12 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
           📋 Copy AST
         </button>
       </div>
-      <pre style="margin: 0; padding: 8px; background: var(--stj-surface, #1e293b); border: 1px solid var(--stj-border, #334155); border-radius: 6px; font-size: 0.72rem; color: var(--stj-text-muted, #94a3b8); max-height: 110px; overflow-y: auto; font-family: monospace;">${swfResult.astSource}</pre>
+      <pre id="ast-swf-preview-pre" style="margin: 0; padding: 8px; background: var(--stj-surface, #1e293b); border: 1px solid var(--stj-border, #334155); border-radius: 6px; font-size: 0.72rem; color: var(--stj-text-muted, #94a3b8); max-height: 110px; overflow-y: auto; font-family: monospace;"></pre>
     `;
+    const preEl = previewWrap.querySelector<HTMLPreElement>('#ast-swf-preview-pre');
+    if (preEl) preEl.textContent = swfResult.astSource;
     previewWrap.querySelector('#ast-copy-code-btn')?.addEventListener('click', () => {
-      navigator.clipboard.writeText(swfResult.astSource);
+      navigator.clipboard?.writeText(swfResult.astSource);
     });
     resBox.appendChild(previewWrap);
 

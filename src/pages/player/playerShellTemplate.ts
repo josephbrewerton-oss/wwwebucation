@@ -91,6 +91,12 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
       </div>
     </div>
 
+    <!-- Inline File / Flash Import Feedback Banner -->
+    <div id="player-import-status" role="status" aria-live="polite" style="display:none; margin-bottom:1rem; padding:10px 14px; border-radius:10px; font-size:0.82rem; font-weight:600; align-items:center; justify-content:space-between; gap:10px;">
+      <span id="player-import-status-text"></span>
+      <button type="button" id="player-import-status-close" style="background:transparent; border:1px solid currentColor; color:inherit; border-radius:5px; padding:2px 8px; font-size:0.74rem; font-weight:700; cursor:pointer;">Dismiss</button>
+    </div>
+
     <!-- Main Interactive Stage Frame (Mounted on demand when a lab is launched or deep-linked) -->
     <div id="player-stage-shell" style="display:${isStageOpen ? 'block' : 'none'}; background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
       <!-- Stage Toolbar: Row 1 (Header & Primary Simulation Controls) -->
@@ -186,10 +192,16 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
           </button>
 
           <div id="player-teacher-tools-group" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; padding-left:6px; border-left:1px solid #334155;">
-            <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local activity files or import a PhET / HTML simulation">
+            <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local .ast / .svg / .json activity files or import a PhET / Flash (.swf) simulation">
               📂 Import Activity
             </button>
-            <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
+            <button type="button" id="player-btn-phet-import" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#7dd3fc; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open the Full PhET Simulation Transpiler &amp; Distiller (HTML5, PhET-iO JSON &amp; Legacy Flash)">
+              ⚛️ Import PhET
+            </button>
+            <button type="button" id="player-btn-swf-import" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fbbf24; border:1px solid #d97706; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open the Historic Adobe Flash (.swf) Binary Decompiler &amp; Importer">
+              ⚡ Import Flash (.swf)
+            </button>
+            <input type="file" id="media-player-file-input" accept=".phet,.html,.htm,.swf,.json,.ast,.svg" multiple style="display:none;" />
 
             <button type="button" id="player-btn-embed" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
               🔗 Embed in Class
@@ -259,14 +271,23 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
             <option value="KS3">Key Stage 3</option>
             <option value="KS4">KS4 / GCSE &amp; A-Level</option>
           </select>
-          <button type="button" id="launcher-btn-import" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#f0f9ff; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Open local .ast / .svg cartridge or import a PhET / HTML simulation">
+          <button type="button" id="launcher-btn-import" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#f0f9ff; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Open local .ast / .svg / .json cartridge or import a PhET / Flash (.swf) simulation">
             📂 Open File
+          </button>
+          <button type="button" id="launcher-btn-phet-import" aria-expanded="false" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#e0f2fe; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Distill &amp; import full PhET HTML5, PhET-iO JSON, or Legacy Flash simulations into ~3.5 KB offline cartridges">
+            ⚛️ Import PhET
+          </button>
+          <button type="button" id="launcher-btn-swf-import" aria-expanded="false" style="padding:7px 12px; border-radius:8px; border:1px solid #d97706; background:#fffbeb; color:#b45309; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Import &amp; decompile historic Adobe Flash (.swf) files into 60 FPS native SVG + AST cartridges">
+            ⚡ Import Flash (.swf)
           </button>
           <button type="button" id="btn-clear-catalog-filters" style="display:none; padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">
             Reset Filters
           </button>
         </div>
       </div>
+
+      <!-- On-Demand PhET / Historic Flash (.swf) Importer Panel (Launcher Mode) -->
+      <div id="launcher-swf-mount-point" style="display:none; background:#0f172a; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:14px; color:#f8fafc;"></div>
 
       <!-- Subject Tabs -->
       <div style="display:flex; gap:4px; flex-wrap:wrap; padding:4px; background:#f1f5f9; border-radius:10px; margin-bottom:10px;" id="subject-filter-buttons">

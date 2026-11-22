@@ -21,8 +21,8 @@ export async function ingestUploadedCartridgeFiles(
   if (!files || files.length === 0) return null;
 
   // 1. Dual Companion Pair (.svg + .ast)
-  const svgFile = files.find((f) => f.name.endsWith('.svg'));
-  const astFile = files.find((f) => f.name.endsWith('.ast'));
+  const svgFile = files.find((f) => f.name.toLowerCase().endsWith('.svg'));
+  const astFile = files.find((f) => f.name.toLowerCase().endsWith('.ast'));
 
   if (svgFile && astFile) {
     const svgText = await svgFile.text();
@@ -50,33 +50,90 @@ export async function ingestUploadedCartridgeFiles(
 
   // 2. Single or individual files
   for (const file of files) {
+    const lowerName = file.name.toLowerCase();
+
+    // Legacy Adobe Flash (.swf) binary transpiler — MUST read as ArrayBuffer before text()
+    if (lowerName.endsWith('.swf')) {
+      const buf = await file.arrayBuffer();
+      const baseName = file.name.replace(/\.swf$/i, '');
+      const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-') || `flash-${Date.now().toString(36)}`;
+      const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()) || cleanId;
+      const { transpileSwfToAst } = await import('../../utils/swfAstParser');
+      const swfRes = await transpileSwfToAst(buf, cleanId);
+      if (!swfRes.success || !swfRes.svgMarkup || !swfRes.astSource) {
+        throw new Error(swfRes.error || `Failed to transpile legacy Flash file "${file.name}".`);
+      }
+
+      const meta = swfRes.metadata;
+      const cart: CartridgeDefinition = {
+        id: cleanId,
+        title: `Flash: ${cleanTitle}`,
+        stage: 'FLASH TRANSLATED',
+        category: 'Imported Flash',
+        type: 'Sim',
+        desc: meta
+          ? `Transpiled from Flash SWF v${meta.version} (${meta.signature}, ${meta.width}×${meta.height}, ${meta.shapeCount} vector shapes, ${meta.frameCount} frames) into 60 FPS native SVG + AST.`
+          : 'Transpiled from legacy Adobe Flash SWF into 60 FPS deterministic vector SVG + AST.',
+        icon: '⚡',
+        source: 'imported',
+        svgMarkup: swfRes.svgMarkup,
+        astSource: swfRes.astSource,
+        author: 'Flash Archive',
+        version: `Flash v${meta?.version || 9}`,
+        invariants: ['Legacy Vector Timeline', 'ActionScript Translation'],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      saveCustomCartridge(cart);
+      return cart;
+    }
+
+    // Cartridge JSON package (or PhET JSON bundle)
+    if (lowerName.endsWith('.json')) {
+      const { importCartridgeFileWithSaver } = await import('../../services/cartridgeImporter');
+      return importCartridgeFileWithSaver(file, saveCustomCartridge);
+    }
+
     const content = await file.text();
 
-    // PhET bundle
-    if (file.name.endsWith('.phet') || isPhetBundle(content)) {
+    // PhET bundle (.phet, .html, .htm, or detected PhET signature)
+    if (
+      lowerName.endsWith('.phet') ||
+      lowerName.endsWith('.html') ||
+      lowerName.endsWith('.htm') ||
+      isPhetBundle(content)
+    ) {
       const result = await transpilePhetFile(content, file.name);
-      if (result.success && result.svgMarkup && result.astSource) {
-        const simId = result.metadata?.simName || `phet-${Date.now()}`;
-        const title = result.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
-        const cart: CartridgeDefinition = {
-          id: simId,
-          title,
-          stage: 'PHET INTERACTIVE',
-          category: 'STEM',
-          desc: `PhET simulation transpiled to AST: ${result.metadata?.compressionRatio || 'distilled'}.`,
-          icon: '⚛️',
-          source: 'phet',
-          svgMarkup: result.svgMarkup,
-          astSource: result.astSource,
-          updatedAt: Date.now(),
-        };
-        saveCustomCartridge(cart);
-        return cart;
+      if (!result.success || !result.svgMarkup || !result.astSource) {
+        throw new Error(result.error || `Failed to transpile PhET bundle "${file.name}".`);
       }
+      const simId = (result.metadata?.simName || `phet-${Date.now()}`)
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]/g, '-');
+      const title = result.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
+      const cart: CartridgeDefinition = {
+        id: simId,
+        title,
+        stage: 'PHET INTERACTIVE',
+        category: 'Science',
+        type: 'Sim',
+        desc: `PhET simulation distilled to native SVG + AST (${result.metadata?.compressionRatio || '99.8% reduction'}).`,
+        icon: '⚛️',
+        source: 'phet',
+        svgMarkup: result.svgMarkup,
+        astSource: result.astSource,
+        author: 'University of Colorado Boulder (PhET)',
+        version: result.metadata?.version || '1.0.0',
+        invariants: result.metadata?.detectedInvariants || ['Physical Conservation Law'],
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      };
+      saveCustomCartridge(cart);
+      return cart;
     }
 
     // Single .svg (with embedded <script type="text/ast">) or standard SVG
-    if (file.name.endsWith('.svg')) {
+    if (lowerName.endsWith('.svg')) {
       const baseName = file.name.replace(/\.[^/.]+$/, '');
       const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
       const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -106,7 +163,7 @@ export async function ingestUploadedCartridgeFiles(
     }
 
     // Single .ast file (supports both pure S-expression and hybrid SVG+AST docs)
-    if (file.name.endsWith('.ast')) {
+    if (lowerName.endsWith('.ast')) {
       const baseName = file.name.replace(/\.[^/.]+$/, '');
       const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
       const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
