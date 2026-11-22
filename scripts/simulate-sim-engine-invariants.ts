@@ -521,6 +521,8 @@ const AST_PLAYER_RUNTIME_MODULES = [
   'ast-exporter.js',
   'ast-hud-controls.js',
   'ast-ai-director.js',
+  'ast-file-ingest.js',
+  'ast-svg-integrity.js',
   'ast-loader.js',
   'ast-state-scorm.js',
   'ast-engine.js',
@@ -2596,6 +2598,12 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
     assert.ok(playerHtml.indexOf(`player/${mod}`) < engineIdxRoot, `player.html must load ${mod} before ast-engine.js`);
     assert.ok(playerIndexHtml.indexOf(`./${mod}`) < engineIdxStandalone, `player/index.html must load ${mod} before ast-engine.js`);
   }
+  const loaderIdxRoot = playerHtml.indexOf('player/ast-loader.js');
+  const loaderIdxStandalone = playerIndexHtml.indexOf('./ast-loader.js');
+  for (const loaderPeer of ['ast-file-ingest.js', 'ast-svg-integrity.js']) {
+    assert.ok(playerHtml.indexOf(`player/${loaderPeer}`) < loaderIdxRoot, `player.html must load ${loaderPeer} strictly before ast-loader.js`);
+    assert.ok(playerIndexHtml.indexOf(`./${loaderPeer}`) < loaderIdxStandalone, `player/index.html must load ${loaderPeer} strictly before ast-loader.js`);
+  }
 
   // 27b. Verify all public module exports exist on the loaded runtime sandbox
   const modSandbox: any = {
@@ -2623,6 +2631,8 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
     'ASTExporter',
     'ASTHudControls',
     'ASTAiDirector',
+    'ASTFileIngest',
+    'ASTSvgIntegrity',
     'ASTSceneLoader',
     'MicroSCORMBridge', 'ASTStateMachine',
     'ASTVectorPlayerEngine',
@@ -2649,8 +2659,8 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   const standaloneEng = new StandaloneEngineCtor({});
   assert.ok(standaloneEng, 'Standalone ASTVectorPlayerEngine must construct cleanly without peer modules');
 
-  // 27d. Verify modular player-ui peer modules (studio, checkpoints, voice, broadcast, display, controls) plumbing, load order, exports & standalone safety
-  const playerUiPeerModules = ['player-ui-studio.js', 'player-ui-checkpoints.js', 'player-ui-voice.js', 'player-ui-broadcast.js', 'player-ui-display.js', 'player-ui-controls.js'];
+  // 27d. Verify modular player-ui peer modules (studio, checkpoints, voice, broadcast, display, controls, events) plumbing, load order, exports & standalone safety
+  const playerUiPeerModules = ['player-ui-studio.js', 'player-ui-checkpoints.js', 'player-ui-voice.js', 'player-ui-broadcast.js', 'player-ui-display.js', 'player-ui-controls.js', 'player-ui-events.js'];
   const uiIdxRoot = playerHtml.indexOf('player/player-ui.js');
   const uiIdxStandalone = playerIndexHtml.indexOf('./player-ui.js');
   assert.ok(uiIdxRoot > -1 && uiIdxStandalone > -1, 'player.html and player/index.html must load player-ui.js');
@@ -3308,6 +3318,38 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   assert.strictEqual(typeof parserSb.parseAst, 'function', 'ast-parser.js must export parseAst standalone');
   const parsedMini = parserSb.parseAst('(:scene :id "mini-test" :title "Mini Test" :duration 8.0)');
   assert.strictEqual(parsedMini?.id, 'mini-test', 'parseAst must parse S-expression scene standalone');
+
+  // Verify ast-file-ingest.js, ast-svg-integrity.js, and player-ui-events.js standalone modular exports
+  const ingestSb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, window: {} };
+  ingestSb.globalThis = ingestSb;
+  ingestSb.self = ingestSb.window;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-file-ingest.js'), 'utf8'), ingestSb, { filename: 'static/player/ast-file-ingest.js' });
+  const ingestExports = ingestSb.ASTFileIngest || ingestSb.window.ASTFileIngest;
+  assert.ok(ingestExports, 'ast-file-ingest.js must export ASTFileIngest standalone');
+  for (const fnName of ['loadFromFile', 'readFileAsText', 'loadFiles', 'loadFromPayload', 'loadFromUrl', 'renderErrorPlaceholder']) {
+    assert.strictEqual(typeof ingestExports[fnName], 'function', `ASTFileIngest must export function ${fnName}`);
+  }
+
+  const integritySb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, Uint8Array, ArrayBuffer, TextEncoder, window: {} };
+  integritySb.globalThis = integritySb;
+  integritySb.self = integritySb.window;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-svg-integrity.js'), 'utf8'), integritySb, { filename: 'static/player/ast-svg-integrity.js' });
+  const integrityExports = integritySb.ASTSvgIntegrity || integritySb.window.ASTSvgIntegrity;
+  assert.ok(integrityExports, 'ast-svg-integrity.js must export ASTSvgIntegrity standalone');
+  for (const fnName of ['sanitizeSvg', 'sanitizeSvgElement', '_buildSafeSvgTree', 'ensureMasterDefs', '_computeSha256Hex', '_resolveChecksumBaseUrl', '_loadChecksumRegistry', 'verifyLoadedCartridge']) {
+    assert.strictEqual(typeof integrityExports[fnName], 'function', `ASTSvgIntegrity must export function ${fnName}`);
+  }
+  assert.ok(integrityExports.sanitizeSvg('<!DOCTYPE svg><svg></svg>').includes('DOCTYPE disabled'), 'ASTSvgIntegrity.sanitizeSvg must neutralize DOCTYPE standalone');
+
+  const uiEventsSb: any = { console, Math, Number, String, Boolean, Array, Object, Set, Map, RegExp, Error, JSON, Date, parseInt, parseFloat, isNaN, isFinite, window: {} };
+  uiEventsSb.globalThis = uiEventsSb;
+  uiEventsSb.self = uiEventsSb.window;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-events.js'), 'utf8'), uiEventsSb, { filename: 'static/player/player-ui-events.js' });
+  const uiEventsExports = uiEventsSb.ASTPlayerUIEvents || uiEventsSb.window.ASTPlayerUIEvents;
+  assert.ok(uiEventsExports, 'player-ui-events.js must export ASTPlayerUIEvents standalone');
+  for (const fnName of ['updateView', 'bindDOMEvents', 'bindEngineEvents', 'updateIntegrityBadge']) {
+    assert.strictEqual(typeof uiEventsExports[fnName], 'function', `ASTPlayerUIEvents must export function ${fnName}`);
+  }
 
   // Verify site-gestures.js evaluates and constructs cleanly standalone (without peer gesture modules loaded)
   const sgOnlySb: any = {
