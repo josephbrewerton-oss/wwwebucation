@@ -18,11 +18,11 @@
   function parseAst(astContent) {
     if (!astContent) return null;
     if (astContent instanceof ArrayBuffer || (typeof Uint8Array !== 'undefined' && astContent instanceof Uint8Array)) {
-      return _decompileBytecode();
+      return _decompileBytecode(astContent);
     }
     if (typeof astContent === 'string' && astContent.startsWith('ASTB')) {
       const u8 = typeof TextEncoder !== 'undefined' ? new TextEncoder().encode(astContent) : null;
-      if (u8) return _decompileBytecode();
+      if (u8) return _decompileBytecode(u8);
     }
     if (typeof astContent !== 'string') return null;
 
@@ -1006,6 +1006,15 @@
         const toneExpr = extractQuoted(bodyText, 'tone-expr') || extractQuoted(bodyText, 'toneExpr');
         const speak = extractQuoted(bodyText, 'speak');
         const speakExpr = extractQuoted(bodyText, 'speak-expr') || extractQuoted(bodyText, 'speakExpr');
+        const speakAttr = extractQuoted(bodyText, 'speak-attr') || extractQuoted(bodyText, 'speakAttr');
+        const speakVar = extractQuoted(bodyText, 'speak-var') || extractQuoted(bodyText, 'speakVar');
+        const fallbackVar = extractQuoted(bodyText, 'fallback-var') || extractQuoted(bodyText, 'fallbackVar');
+        const fromAttr = extractQuoted(bodyText, 'from-attr') || extractQuoted(bodyText, 'fromAttr');
+        const clearVar = extractQuoted(bodyText, 'clear-var') || extractQuoted(bodyText, 'clearVar');
+        const resetVar = extractQuoted(bodyText, 'reset-var') || extractQuoted(bodyText, 'resetVar');
+        const resetVal = extractSlotValue(bodyText, 'reset-val');
+        const countRaw = extractSlotValue(bodyText, 'count');
+        const count = typeof countRaw === 'number' ? countRaw : undefined;
         const speakRateVar = extractQuoted(bodyText, 'speak-rate-var') || extractQuoted(bodyText, 'speakRateVar');
         const speakPitchRaw = extractSlotValue(bodyText, 'speak-pitch');
         const speakPitchAlt = speakPitchRaw === undefined ? extractSlotValue(bodyText, 'speakPitch') : speakPitchRaw;
@@ -1069,6 +1078,14 @@
             toneExpr,
             speak,
             speakExpr,
+            speakAttr,
+            speakVar,
+            fallbackVar,
+            fromAttr,
+            clearVar,
+            resetVar,
+            resetVal,
+            count,
             speakRateVar,
             speakPitch,
             val,

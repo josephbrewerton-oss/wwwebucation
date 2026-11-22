@@ -550,22 +550,24 @@
         if (el.presetSelector && el.presetSelector.value !== safePreset) {
           el.presetSelector.value = safePreset;
         }
-        if (this.engine) {
+        // When ast-bridge.js is active it owns SET_PRESET/PLAY/PAUSE/TOGGLE_PLAY dispatch;
+        // executing both caused double-toggle bugs that immediately cancelled host Play clicks.
+        if (!window.__astBridgeActive && this.engine) {
           this.engine.setPreset(safePreset, Boolean(data.play));
           this.updateHeaderPlayUI(Boolean(data.play));
         }
       } else if (data.type === 'PLAY') {
-        if (this.engine) {
+        if (!window.__astBridgeActive && this.engine) {
           this.engine.play();
           this.updateHeaderPlayUI(true, true);
         }
       } else if (data.type === 'PAUSE') {
-        if (this.engine) {
+        if (!window.__astBridgeActive && this.engine) {
           this.engine.pause();
           this.updateHeaderPlayUI(false, true);
         }
       } else if (data.type === 'TOGGLE_PLAY') {
-        if (this.engine) {
+        if (!window.__astBridgeActive && this.engine) {
           const playing = this.engine.togglePlay();
           this.updateHeaderPlayUI(playing, true);
         }

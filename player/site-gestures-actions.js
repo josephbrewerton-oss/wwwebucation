@@ -84,13 +84,17 @@
     ) {
       return;
     }
+    const volScale = this.engine && typeof this.engine.volume === 'number' && Number.isFinite(this.engine.volume)
+      ? Math.max(0, Math.min(1.0, this.engine.volume))
+      : 1.0;
+    const scaledGain = Math.max(0.002, Math.min(0.6, (Number(gainVal) || 0.15) * volScale));
     const scheduleTone = (ctx) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       const now = ctx.currentTime;
       osc.type = type;
       osc.frequency.setValueAtTime(frequency, now);
-      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.setValueAtTime(scaledGain, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
       osc.connect(gain);
       gain.connect(ctx.destination);

@@ -117,6 +117,7 @@
       this.handlePointerCancel = this.handlePointerCancel.bind(this);
       this.handlePointerLeave = this.handlePointerLeave.bind(this);
       this.handleTouchEnd = this.handleTouchEnd.bind(this);
+      this.handleStageClick = this.handleStageClick.bind(this);
       this.handleKeyDown = this.handleKeyDown.bind(this);
       this.handleKeyUp = this.handleKeyUp.bind(this);
       this.handleWindowBlur = this.handleWindowBlur.bind(this);
@@ -353,9 +354,11 @@
         if (this._boundStageSvg) {
           this._boundStageSvg.removeEventListener('pointerdown', this.handlePointerDown);
           this._boundStageSvg.removeEventListener('pointerleave', this.handlePointerLeave);
+          this._boundStageSvg.removeEventListener('click', this.handleStageClick);
         }
         this.stageSvg.addEventListener('pointerdown', this.handlePointerDown, { passive: false });
         this.stageSvg.addEventListener('pointerleave', this.handlePointerLeave);
+        this.stageSvg.addEventListener('click', this.handleStageClick, { passive: true });
         this._boundStageSvg = this.stageSvg;
       }
 
@@ -424,6 +427,20 @@
     handleTouchEnd() {
       const _a = _getGesturesActions();
       if (_a && typeof _a.handleTouchEnd === 'function') _a.handleTouchEnd.call(this);
+    }
+
+    handleStageClick() {
+      try {
+        const primeFn = (typeof window !== 'undefined' && typeof window.primeMobileAudioAndTts === 'function')
+          ? window.primeMobileAudioAndTts
+          : (typeof global !== 'undefined' && typeof global.primeMobileAudioAndTts === 'function' ? global.primeMobileAudioAndTts : null);
+        if (primeFn) {
+          primeFn(this.engine && this.engine.audioSynth);
+        } else if (this.engine && this.engine.audioSynth && typeof this.engine.audioSynth.unlock === 'function') {
+          this.engine.audioSynth.unlock();
+        }
+      } catch (_) {}
+      this._flushPendingTouchAudio(null);
     }
 
     _readMatchedElementAttr(g, matchedEl) {
