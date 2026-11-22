@@ -104,7 +104,9 @@ export async function handleRouteChange() {
   const outlet = document.getElementById('page-outlet');
   if (!outlet) return;
 
-  let handler = routes[normalized];
+  const searchParams = new URLSearchParams(window.location.search);
+  const launcherCartridge = normalized === '/' ? (searchParams.get('app') || searchParams.get('preset')) : null;
+  let handler = launcherCartridge ? routes['/player'] : routes[normalized];
 
   if (!handler) {
     // 1. Check if route matches a declared cartridge mount address (e.g. /curriculum/geometry/pythagoras)
@@ -136,8 +138,19 @@ export async function handleRouteChange() {
       outlet.appendChild(view);
     }
 
+    // Keep <link rel="canonical"> synchronized with the active URL for search engine crawlers
+    try {
+      const canonicalEl = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+      if (canonicalEl) {
+        const cleanOrigin = window.location.origin;
+        const cleanPath = window.location.pathname;
+        const cleanQuery = launcherCartridge ? `?app=${encodeURIComponent(launcherCartridge)}` : '';
+        canonicalEl.href = `${cleanOrigin}${cleanPath}${cleanQuery}`;
+      }
+    } catch (_) {}
+
     // Notify PersistentAppShell (universal translator, iframe language sync, etc.)
-    window.dispatchEvent(new CustomEvent('spa:route-rendered', { detail: { path: normalized } }));
+    window.dispatchEvent(new CustomEvent('spa:route-rendered', { detail: { path: launcherCartridge ? '/player' : normalized } }));
 
     // Zero-Forced-Reflow Guarantee:
     // Avoid synchronous layout queries (querySelector + scrollIntoView / scrollTo) immediately after mutating outlet DOM.
