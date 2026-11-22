@@ -1,0 +1,166 @@
+(:scene
+  :id "jacobs-ladder-primes"
+  :title "Jacob's Ladder of Prime Bricks"
+  :type "Sim"
+  :oak-id "OAK-KS3-MAT-099"
+  :oak-unit "ks3-maths-number-theory-prime-distribution"
+  :stage "KS2/KS3 MATHEMATICS"
+  :duration 16.0
+  :boot-sound "chime"
+
+  (:controls
+    :whiteboard true
+    :xray true
+    :audio true
+    :param-hud true)
+
+  (:vars (
+    (:var :name "sigma" :val 0.5 :min 0.1 :max 0.9 :step 0.005 :label "Critical Strip Real Part (σ)")
+    (:var :name "tHeight" :val 14.13 :min 0.0 :max 90.0 :step 0.25 :label "Imaginary Height (t)")
+    (:var :name "zeroHarmonics" :val 5 :min 0 :max 15 :step 1 :label "Active Zeta Zero Rungs")
+    (:var :name "brickSpin" :val 0 :min 0 :max 360 :step 1 :unit "deg" :label "Prime Brick Spin Angle")
+  ))
+
+  (:inputs (
+    (:slider :var "sigma" :label "Real Part σ (Critical Line = 0.5)" :min 0.1 :max 0.9 :step 0.005)
+    (:slider :var "tHeight" :label "Imaginary Height t" :min 0.0 :max 90.0 :step 0.25)
+    (:slider :var "zeroHarmonics" :label "Zeta Zero Harmonics (Rungs)" :min 0 :max 15 :step 1)
+    (:button :id "snap-critical-line" :label "Snap to 0.5 Line" :action "(set-var sigma 0.5)")
+  ))
+
+  (:computed (
+    (:name "offCenter" :expr "(abs (- sigma 0.5))")
+    (:name "isLocked" :expr "(if (< (abs (- sigma 0.5)) 0.015) 1 0)")
+    (:name "brickX" :expr "(map sigma 0.1 0.9 80 320)")
+    (:name "brickY" :expr "(clamp (- 440 (* tHeight 4.2)) 88 436)")
+  ))
+
+  (:physics :gravity 0.0 :substeps 4
+    (:body :id "spinny-brick" :target "#spinny-brick-spring-halo" :x 200 :y 380.65 :mass 1.0 :restitution 0.7)
+    (:spring :id "critical-spring" :a "critical-anchor" :b "spinny-brick" :anchor-x 200 :anchor-y 380.65 :k 24.0 :rest-length 0 :damping 0.2))
+
+  (:scope :target "#zeta-wave-scope" :var "offCenter" :x-expr "t" :y-expr "offCenter" :samples 120 :min 0 :max 0.5 :x-range (0 1) :y-range (0 0.5) :plot (414 364 208 64))
+
+  (:keyframes (
+    (:t 0.00 :title "The Critical Strip" :rule "All non-trivial Riemann zeta zeros sit inside 0 < σ < 1, centered on the σ = 0.5 Critical Line.")
+    (:t 0.35 :title "Jacob's Ladder of Zeros" :rule "The 15 zeta-zero rungs act like musical harmonics governing prime brick rhythm.")
+    (:t 0.70 :title "Prime Staircase π(x) & Li(x)" :rule "Keeping σ = 0.5 locks the prime brick staircase tightly to the smooth Li(x) ramp.")
+    (:t 1.00 :title "Lean Formal Proof (Nov 2026)" :rule "Every zero on σ = 0.5 guarantees optimal error bounds for all prime numbers.")
+  ))
+
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "Welcome to Jacob's Ladder of Prime Bricks! Drag the spinning brick off σ = 0.5 to see prime harmonics wobble." :es "¡Bienvenido a la Escalera de Jacob de los Ladrillos Primos! Arrastra el bloque fuera de σ = 0.5 para ver oscilar los primos.")
+    (:start 0.35 :end 0.70 :en "Each glowing green rung is a Riemann zeta zero on the Critical Line, tuning the rhythm of indivisible prime bricks." :es "Cada peldaño verde brillante es un cero de la función zeta en la línea crítica σ = 0.5.")
+    (:start 0.70 :end 1.00 :en "Lock the brick on σ = 0.5 and climb to at least 10 zero harmonics to complete the Riemann mastery challenge!" :es "¡Bloquea el ladrillo en σ = 0.5 y activa al menos 10 armónicos para completar el desafío!")
+  ))
+
+  (:interactive (
+    (:checkpoint :t 0.50
+      :title "Lock the Critical Line"
+      :prompt "Lock the spinning brick onto the σ = 0.5 Critical Line and activate at least 10 Jacob's Ladder zeta-zero rungs."
+      :pass-expr "(and (< (abs (- sigma 0.5)) 0.015) (>= zeroHarmonics 10))"
+      :hold-duration 1.0
+      :explanation "With σ locked at 0.5 and 10+ zeta-zero harmonics active, every non-trivial zero contributes pure harmonic balance, keeping the prime staircase π(x) aligned to Li(x).")
+  ))
+
+  (:gestures (
+    (:draggable :target "#spinny-brick" :var "sigma" :axis "x" :min 0.1 :max 0.9 :min-x 80 :max-x 320)
+    (:clickable :target "#snap-btn"
+      (:seq
+        (:reset-var "sigma" :val 0.5)
+        (:tone "523.25")
+        (:speak "Critical line locked at zero point five.")))
+    (:clickable :target "#rungs-plus-btn"
+      (:seq
+        (:step-var "zeroHarmonics" :delta 1 :min 0 :max 15)
+        (:tone "659.25")))
+    (:clickable :target "#rungs-minus-btn"
+      (:seq
+        (:step-var "zeroHarmonics" :delta -1 :min 0 :max 15)
+        (:tone "392.00")))
+  ))
+
+  (:bindings (
+    ;; Per-tick continuous spin accumulation (smooth on σ = 0.5, faster off-axis)
+    (:var :name "brickSpin" :expr "(% (+ brickSpin (if (= isLocked 1) 2.2 (+ 4.8 (* offCenter 16)))) 360)")
+
+    ;; 1. Spinning Interlocking Brick Probe & Spring Tether
+    (:target "#spinny-brick"
+      (:attr "transform" "(let ((wobble (if (= isLocked 1) 0 (* (sin (* t 26)) offCenter 18)))) (translate (+ brickX wobble) brickY))"))
+    (:target "#spinny-brick-rot"
+      (:attr "transform" "(let ((spinDeg (+ brickSpin (* t (if (= isLocked 1) 360 1080))))) (rotate (% spinDeg 360) 0 0))"))
+
+    (:target "#brick-spring-line"
+      (:attr "x1" "200")
+      (:attr "y1" "brickY")
+      (:attr "x2" "brickX")
+      (:attr "y2" "brickY")
+      (:attr "stroke" "(if (= isLocked 1) '#22c55e' '#f97316')"))
+
+    (:target "#spin-grad-top-0" :attr "stop-color" :expr "(if (= isLocked 1) '#4ade80' '#fb923c')")
+    (:target "#spin-grad-top-1" :attr "stop-color" :expr "(if (= isLocked 1) '#16a34a' '#ea580c')")
+    (:target "#spin-grad-left-0" :attr "stop-color" :expr "(if (= isLocked 1) '#15803d' '#c2410c')")
+    (:target "#spin-grad-right-0" :attr "stop-color" :expr "(if (= isLocked 1) '#22c55e' '#f97316')")
+    (:target "#prime-stud-top" :attr "fill" :expr "(if (= isLocked 1) '#4ade80' '#fb923c')")
+    (:target "#prime-stud-wall" :attr "fill" :expr "(if (= isLocked 1) '#15803d' '#c2410c')")
+
+    ;; 2. Critical Line Beam & Header Telemetry
+    (:target "#critical-line-core" :attr "stroke" :expr "(if (= isLocked 1) '#22c55e' '#f97316')")
+    (:target "#critical-line-glow"
+      (:attr "stroke" "(if (= isLocked 1) '#22c55e' '#f97316')")
+      (:attr "stroke-opacity" "(if (= isLocked 1) 0.28 0.10)"))
+
+    (:target "#header-brick-emblem" :attr "fill" :expr "(if (= isLocked 1) '#22c55e' '#f97316')")
+    (:target "#header-lock-pill"
+      (:attr "fill" "(if (= isLocked 1) '#052e16' '#431407')")
+      (:attr "stroke" "(if (= isLocked 1) '#22c55e' '#f97316')"))
+    (:target "#header-lock-text"
+      (:attr "fill" "(if (= isLocked 1) '#4ade80' '#fdba74')")
+      (:text "(let ((s (fixed sigma 3)) (d (fixed offCenter 3))) (if (= isLocked 1) (concat '● σ = ' s ' LOCKED') (concat '▲ DRIFT Δσ = ' d)))"))
+
+    (:target "#ladder-height-readout"
+      (:text "(let ((th (fixed tHeight 2)) (zh (round zeroHarmonics))) (concat 't = ' th ' • ' zh '/15 Rungs'))"))
+    (:target "#scope-offcenter-text"
+      (:attr "fill" "(if (= isLocked 1) '#22c55e' '#f97316')")
+      (:text "(concat 'Δσ = ' (fixed offCenter 3))"))
+    (:target "#harmonics-readout"
+      (:text "(let ((zh (round zeroHarmonics)) (sp (round brickSpin))) (concat 'Rungs: ' zh '/15 • Spin: ' sp '°'))"))
+
+    ;; 3. Compile-Time (:for ...) Loop: 15 Jacob's Ladder Non-Trivial Zeta Zero Rungs
+    (:for i (0 14)
+      (:target "#ladder-rung-group-{{i}}"
+        (:attr "transform" "(let ((h (nth {{i}} 14.13 21.02 25.01 30.42 32.94 37.59 40.92 43.33 48.01 49.77 52.97 56.45 59.35 60.83 65.11))) (translate 0 (- 440 (* h 4.2))))"))
+      (:target "#ladder-rung-{{i}}"
+        (:attr "stroke" "(let ((lit (and (= isLocked 1) (< {{i}} zeroHarmonics)))) (if lit '#22c55e' (if (< {{i}} zeroHarmonics) '#f97316' '#334155')))")
+        (:attr "stroke-opacity" "(if (< {{i}} zeroHarmonics) (if (= isLocked 1) 0.95 0.65) 0.35)"))
+      (:target "#ladder-node-{{i}}"
+        (:attr "r" "(if (and (= isLocked 1) (< {{i}} zeroHarmonics)) 4.4 2.8)")
+        (:attr "fill" "(if (and (= isLocked 1) (< {{i}} zeroHarmonics)) '#22c55e' (if (< {{i}} zeroHarmonics) '#f97316' '#475569'))"))
+      (:target "#ladder-label-{{i}}"
+        (:attr "fill" "(if (and (= isLocked 1) (< {{i}} zeroHarmonics)) '#4ade80' '#64748b')")))
+
+    ;; 4. Compile-Time (:for ...) Loop: 10 Prime Brick Columns (2, 3, 5, 7, 11, 13, 17, 19, 23, 29)
+    (:for p (0 9)
+      (:target "#prime-brick-{{p}}"
+        (:attr "transform" "(let ((phase (+ (* t 20) (* {{p}} 1.1))) (dx (if (= isLocked 1) 0 (* (sin phase) offCenter 26)))) (translate dx 0))"))
+      (:target "#prime-brick-bar-{{p}}"
+        (:attr "fill" "(if (= isLocked 1) '#38bdf8' '#f97316')")
+        (:attr "stroke" "(if (= isLocked 1) '#7dd3fc' '#fdba74')")))
+
+    ;; 5. Screen-Reader Safe Visibility Toggles + Guarded (:when ...) Subtrees (OP_BINDING_WHEN = 0x31)
+    (:target "#locked-harmony-badge" :attr "display" :expr "(if (= isLocked 1) 'inline' 'none')")
+    (:target "#wobble-warning-badge" :attr "display" :expr "(if (= isLocked 0) 'inline' 'none')")
+
+    (:when "(= isLocked 1)"
+      (:target "#locked-harmony-text"
+        (:text "(let ((zh (round zeroHarmonics))) (concat '✓ HARMONIC LOCK: ' zh '/15 ZETA RUNGS'))"))
+      (:target "#locked-harmony-rect"
+        (:attr "stroke-width" "(+ 1.1 (* (abs (sin (* t 6.283))) 0.9))")))
+
+    (:when "(= isLocked 0)"
+      (:target "#wobble-warning-text"
+        (:text "(concat '⚠ OFF-LINE Δσ = ' (fixed offCenter 3) ' • PRIMES WOBBLING')"))
+      (:target "#wobble-warning-rect"
+        (:attr "stroke-width" "(+ 1.1 (* (abs (sin (* t 14))) 1.2))")))
+  ))
+)

@@ -44,6 +44,7 @@ export const OP_SCENE_META = 0x01; // [id_str: u16] [title_str: u16] [stage_str:
 export const OP_KEYFRAME   = 0x10; // [t_u16 (normalized 0..65535)] [title_str: u16] [rule_str: u16]
 export const OP_SUBTITLE   = 0x20; // [start_u16] [end_u16] [lang_count: u8] { [lang_str: u16] [text_str: u16] }*
 export const OP_BINDING    = 0x30; // [target_str: u16] [attr_str: u16] [expr_str: u16]
+export const OP_BINDING_WHEN = 0x31; // [target_str: u16] [attr_str: u16] [expr_str: u16] [when_str: u16]
 export const OP_CHECKPOINT      = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
 export const OP_CHECKPOINT_GOAL = 0x41; // [cp_idx: u16] [title_str: u16] [pass_expr_str: u16] [hold_dur: f32] [wrong_count: u8] { [opt_idx: u8] [hint_str: u16] }*
 export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
@@ -370,6 +371,14 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   // 6. Bindings
   if (Array.isArray(scene.bindings)) {
     for (const b of scene.bindings) {
+      if (b.type !== '3d-node' && b.type !== '3d-ring' && b.type !== '3d-line' && b.type !== '3d-polygon' && b.when) {
+        appendU8(OP_BINDING_WHEN);
+        appendU16(strTable.intern(b.target));
+        appendU16(strTable.intern(b.attr || 'attr'));
+        appendU16(strTable.intern(b.expr || ''));
+        appendU16(strTable.intern(String(b.when)));
+        continue;
+      }
       appendU8(OP_BINDING);
       appendU16(strTable.intern(b.target));
       if (b.type === '3d-node') {
@@ -766,6 +775,20 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         }
         break;
       }
+      case OP_BINDING_WHEN: {
+        const target = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const attr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const expr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const when = strTable.get(view.getUint16(offset, true)); offset += 2;
+        scene.bindings.push({
+          type: '2d-attr',
+          target,
+          attr,
+          expr,
+          ...(when ? { when } : {}),
+        });
+        break;
+      }
       case OP_CHECKPOINT: {
         const normT = view.getUint16(offset, true); offset += 2;
         const promptIdx = view.getUint16(offset, true); offset += 2;
@@ -984,6 +1007,187 @@ export interface AstBytecodeCompileOptions {
   stageOverride?: string;
 }
 
+function expandForMacrosTs(src: string, depth = 0): string {
+  if (!src || depth > 6 || !/\(\s*:(?:for|repeat)\b/i.test(src)) return src;
+  const MAX_ITERS = 512;
+  let out = '';
+  let i = 0;
+  const n = src.length;
+  let inStr = false;
+  while (i < n) {
+    const ch = src[i];
+    if (ch === ';' && !inStr) {
+      const nl = src.indexOf('\n', i);
+      if (nl === -1) { out += src.slice(i); break; }
+      out += src.slice(i, nl + 1);
+      i = nl + 1;
+      continue;
+    }
+    if (ch === '"' && (i === 0 || src[i - 1] !== '\\')) {
+      inStr = !inStr;
+      out += ch;
+      i++;
+      continue;
+    }
+    if (!inStr && ch === '(' && /^\(\s*:(?:for|repeat)\s+/i.test(src.slice(i, i + 16))) {
+      let d = 0;
+      let sIn = false;
+      let endIdx = -1;
+      for (let j = i; j < n; j++) {
+        const c = src[j];
+        if (c === '"' && (j === 0 || src[j - 1] !== '\\')) sIn = !sIn;
+        else if (!sIn) {
+          if (c === '(') d++;
+          else if (c === ')') {
+            d--;
+            if (d === 0) { endIdx = j + 1; break; }
+          }
+        }
+      }
+      if (endIdx !== -1) {
+        const form = src.slice(i, endIdx);
+        const hdrMatch = form.match(/^\(\s*:(?:for|repeat)\s+([a-zA-Z_][a-zA-Z0-9_-]*)\s+\(/i);
+        if (hdrMatch) {
+          const varName = hdrMatch[1];
+          const specOpen = hdrMatch[0].length - 1;
+          let sd = 0;
+          let sStr = false;
+          let specEnd = -1;
+          for (let j = specOpen; j < form.length; j++) {
+            const c = form[j];
+            if (c === '"' && (j === 0 || form[j - 1] !== '\\')) sStr = !sStr;
+            else if (!sStr) {
+              if (c === '(') sd++;
+              else if (c === ')') {
+                sd--;
+                if (sd === 0) { specEnd = j; break; }
+              }
+            }
+          }
+          if (specEnd !== -1) {
+            const specInside = form.slice(specOpen + 1, specEnd).trim();
+            const bodyRaw = form.slice(specEnd + 1, form.length - 1);
+            const values: string[] = [];
+            const rangeMatch = specInside.match(/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?$/);
+            if (rangeMatch) {
+              const start = Number(rangeMatch[1]);
+              const end = Number(rangeMatch[2]);
+              let step = rangeMatch[3] !== undefined ? Number(rangeMatch[3]) : (end >= start ? 1 : -1);
+              if (!Number.isFinite(step) || step === 0) step = end >= start ? 1 : -1;
+              let iter = 0;
+              for (let cur = start; step > 0 ? cur <= end + 1e-9 : cur >= end - 1e-9; cur += step) {
+                if (++iter > MAX_ITERS) break;
+                values.push(Number.isInteger(cur) ? String(cur) : String(Number(cur.toFixed(6))));
+              }
+            } else {
+              const tokRe = /"((?:[^"\\]|\\.)*)"|([^\s()]+)/g;
+              let tm: RegExpExecArray | null;
+              let iter = 0;
+              while ((tm = tokRe.exec(specInside)) !== null && ++iter <= MAX_ITERS) {
+                values.push(tm[1] !== undefined ? tm[1].replace(/\\"/g, '"') : tm[2]);
+              }
+            }
+            const safeVar = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const tplRe = new RegExp(`\\{\\{\\s*${safeVar}(?:\\s*([+\\-*])\\s*(-?\\d+(?:\\.\\d+)?))?\\s*\\}\\}`, 'g');
+            let expanded = '';
+            for (const vStr of values) {
+              const vNum = Number(vStr);
+              const substituted = bodyRaw.replace(tplRe, (_all, op, operandStr) => {
+                if (!op || !Number.isFinite(vNum)) return vStr;
+                const rhs = Number(operandStr);
+                const res = op === '+' ? vNum + rhs : (op === '-' ? vNum - rhs : vNum * rhs);
+                return Number.isInteger(res) ? String(res) : String(Number(res.toFixed(6)));
+              });
+              expanded += '\n' + expandForMacrosTs(substituted, depth + 1);
+            }
+            out += expanded;
+            i = endIdx;
+            continue;
+          }
+        }
+      }
+    }
+    out += ch;
+    i++;
+  }
+  return out;
+}
+
+function extractChildFormsTs(blockText: string): string[] {
+  const forms: string[] = [];
+  if (!blockText) return forms;
+  const searchStart = blockText.indexOf('(');
+  if (searchStart === -1) return forms;
+  const trimmed = blockText.slice(searchStart).trim();
+  let innerStart = 1;
+  const tagMatch = trimmed.match(/^\(\s*:[a-zA-Z0-9_-]+/);
+  if (tagMatch) {
+    let p = tagMatch[0].length;
+    while (p < trimmed.length) {
+      if (trimmed[p] === ';') {
+        while (p < trimmed.length && trimmed[p] !== '\n') p++;
+      } else if (/\s/.test(trimmed[p])) {
+        p++;
+      } else {
+        break;
+      }
+    }
+    if (trimmed[p] === '(') {
+      let q = p + 1;
+      while (q < trimmed.length) {
+        if (trimmed[q] === ';') {
+          while (q < trimmed.length && trimmed[q] !== '\n') q++;
+        } else if (/\s/.test(trimmed[q])) {
+          q++;
+        } else {
+          break;
+        }
+      }
+      if (trimmed[q] === '(' || trimmed[q] === ')') {
+        innerStart = p + 1;
+      }
+    }
+  }
+  let i = innerStart;
+  while (i < trimmed.length) {
+    const ch = trimmed[i];
+    if (ch === ';') {
+      while (i < trimmed.length && trimmed[i] !== '\n') i++;
+      continue;
+    }
+    if (ch === '"') {
+      i++;
+      while (i < trimmed.length) {
+        if (trimmed[i] === '\\') { i += 2; continue; }
+        if (trimmed[i] === '"') { i++; break; }
+        i++;
+      }
+      continue;
+    }
+    if (ch === '(') {
+      let depth = 0;
+      let inStr = false;
+      const fStart = i;
+      let fEnd = -1;
+      for (; i < trimmed.length; i++) {
+        const c = trimmed[i];
+        if (c === '"' && (i === 0 || trimmed[i - 1] !== '\\')) inStr = !inStr;
+        else if (!inStr) {
+          if (c === '(') depth++;
+          else if (c === ')') {
+            depth--;
+            if (depth === 0) { fEnd = i + 1; i++; break; }
+          }
+        }
+      }
+      if (fEnd !== -1) { forms.push(trimmed.slice(fStart, fEnd)); continue; }
+    }
+    if (ch === ')' && i === trimmed.length - 1) break;
+    i++;
+  }
+  return forms;
+}
+
 /**
  * Compiles S-Expression text (and optional paired SVG vector stage) directly into a compact .astb buffer
  */
@@ -991,6 +1195,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
   if (!astText || typeof astText !== 'string') {
     throw new Error('Empty or invalid AST content for bytecode compilation');
   }
+  astText = expandForMacrosTs(astText, 0);
 
   const idMatch = astText.match(/\(:id\s+("([^"]+)"|([^\s\)]+))\)/i)
     || astText.match(/:id\s+("([^"]+)"|([^\s\)]+))/i)
@@ -1081,19 +1286,28 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
     return fb ? fb[1].replace(/^"|"$/g, '') : null;
   };
 
-  // Bindings (Supports 2D and 3D nodes, rings, lines, and polygons)
+  // Bindings (Supports 2D, 3D, plus nested (:when ...), (:group ...), and multi-attr (:target "#id" (:attr ...) (:text ...)))
   const bindings: Array<any> = [];
-  const bindBlocks = extractSexprBlocks(astText, ':target');
-  bindBlocks.forEach((block) => {
-    const target = extractQuoted(block, 'target') || extractSlot(block, /:target\s+"([^"]+)"/i);
-    const nodeType = extractSlot(block, /:type\s+"([^"]+)"/i);
-    const attr = extractQuoted(block, 'attr') || extractSlot(block, /:attr\s+"([^"]+)"/i);
-    const expr = extractQuoted(block, 'expr') || extractSlot(block, /:expr\s+"([^"]+)"/i);
+  const composeWhenTs = (outerW?: string, innerW?: string | null): string | undefined => {
+    if (!outerW) return innerW || undefined;
+    if (!innerW) return outerW;
+    return `(and ${outerW} ${innerW})`;
+  };
+  const parseTargetTs = (block: string, inheritedWhen?: string) => {
+    const childForms = extractChildFormsTs(block);
+    let headerBlock = block;
+    for (const cf of childForms) headerBlock = headerBlock.replace(cf, ' ');
 
-    const zLayerStr = extractSlot(block, /:z-?layer\s+([\d\.\-]+)/i);
+    const target = extractQuoted(headerBlock, 'target') || extractSlot(headerBlock, /:target\s+"([^"]+)"/i);
+    const nodeType = extractSlot(headerBlock, /:type\s+"([^"]+)"/i);
+    const attr = extractQuoted(headerBlock, 'attr') || extractSlot(headerBlock, /:attr\s+"([^"]+)"/i);
+    const expr = extractQuoted(headerBlock, 'expr') || extractSlot(headerBlock, /:expr\s+"([^"]+)"/i);
+    const when = composeWhenTs(inheritedWhen, extractQuoted(headerBlock, 'when'));
+
+    const zLayerStr = extractSlot(headerBlock, /:z-?layer\s+([\d\.\-]+)/i);
     const zLayer = zLayerStr !== null ? parseFloat(zLayerStr) : undefined;
-    const sortAfter = extractQuoted(block, 'sort-after') || extractQuoted(block, 'sortAfter') || undefined;
-    const zBiasStr = extractSlot(block, /:z-?bias\s+([\d\.\-]+)/i);
+    const sortAfter = extractQuoted(headerBlock, 'sort-after') || extractQuoted(headerBlock, 'sortAfter') || undefined;
+    const zBiasStr = extractSlot(headerBlock, /:z-?bias\s+([\d\.\-]+)/i);
     const zBias = zBiasStr !== null ? parseFloat(zBiasStr) : undefined;
 
     if (nodeType === '3d-node') {
@@ -1105,20 +1319,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       const label = extractSlot(block, /:label\s+"([^"]+)"/i);
       const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
       const depthFog = depthFogStr !== 'false';
-
-      bindings.push({
-        type: '3d-node',
-        target,
-        x,
-        y,
-        z,
-        baseR,
-        label,
-        depthFog,
-        zLayer,
-        sortAfter,
-        zBias,
-      });
+      bindings.push({ type: '3d-node', target, x, y, z, baseR, label, depthFog, zLayer, sortAfter, zBias });
     } else if (nodeType === '3d-line') {
       const splitExpr = extractQuoted(block, 'split-expr') || extractQuoted(block, 'splitExpr') || undefined;
       const splineA = extractQuoted(block, 'spline-a') || extractQuoted(block, 'splineA') || undefined;
@@ -1126,8 +1327,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       const splineIdxStr = extractSlot(block, /:spline-?index\s+(\d+)/i);
       const splineIndex = splineIdxStr !== null ? parseInt(splineIdxStr, 10) : undefined;
       bindings.push({
-        type: '3d-line',
-        target,
+        type: '3d-line', target,
         x1: extractSlot(block, /:x1\s+"([^"]+)"/i) || '0',
         y1: extractSlot(block, /:y1\s+"([^"]+)"/i) || '0',
         z1: extractSlot(block, /:z1\s+"([^"]+)"/i) || '0',
@@ -1137,13 +1337,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
         cap1: extractSlot(block, /:cap1\s+"([^"]+)"/i),
         cap2: extractSlot(block, /:cap2\s+"([^"]+)"/i),
         baseR: parseFloat(extractSlot(block, /:base-r\s+([\d\.]+)/i) || '8'),
-        splitExpr,
-        splineA,
-        splineB,
-        splineIndex,
-        zLayer,
-        sortAfter,
-        zBias,
+        splitExpr, splineA, splineB, splineIndex, zLayer, sortAfter, zBias,
       });
     } else if (nodeType === '3d-ring') {
       const rStr = extractSlot(block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
@@ -1157,49 +1351,80 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       const segments = segsStr ? parseInt(segsStr, 10) : 24;
       const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
       const depthFog = depthFogStr !== 'false';
-
-      bindings.push({
-        type: '3d-ring',
-        target,
-        r: rStr,
-        cx,
-        cy,
-        cz,
-        tiltX,
-        tiltY,
-        tiltZ,
-        segments,
-        depthFog,
-        zLayer,
-        sortAfter,
-        zBias,
-      });
+      bindings.push({ type: '3d-ring', target, r: rStr, cx, cy, cz, tiltX, tiltY, tiltZ, segments, depthFog, zLayer, sortAfter, zBias });
     } else if (nodeType === '3d-polygon') {
       const ptsStr = extractSlot(block, /:points\s+"([^"]+)"/i) || extractSlot(block, /:pts\s+"([^"]+)"/i);
       const depthFogStr = extractSlot(block, /:depth-fog\s+([^\s\)]+)/i);
       const depthFog = depthFogStr !== 'false';
       const cullBackfaceStr = extractSlot(block, /:cull-backface\s+([^\s\)]+)/i);
       const cullBackface = cullBackfaceStr === 'true';
-
-      bindings.push({
-        type: '3d-polygon',
-        target,
-        pointsExpr: ptsStr,
-        depthFog,
-        cullBackface,
-        zLayer,
-        sortAfter,
-        zBias,
-      });
-    } else if (target && attr && expr) {
-      bindings.push({
-        type: '2d-attr',
-        target,
-        attr,
-        expr,
-      });
+      bindings.push({ type: '3d-polygon', target, pointsExpr: ptsStr, depthFog, cullBackface, zLayer, sortAfter, zBias });
+    } else {
+      if (target && attr && expr) {
+        bindings.push({ type: '2d-attr', target, attr, expr, ...(when ? { when } : {}) });
+      }
+      if (target && childForms.length > 0) {
+        childForms.forEach((cf) => walkBindingTs(cf, when, target));
+      }
     }
-  });
+  };
+  const walkBindingTs = (form: string, inheritedWhen?: string, inheritedTarget?: string | null) => {
+    if (/^\(\s*:when\b/i.test(form)) {
+      const children = extractChildFormsTs(form);
+      let hdr = form;
+      for (const cf of children) hdr = hdr.replace(cf, ' ');
+      const condM = hdr.match(/^\(\s*:when\s+(?::(?:if|cond|expr)\s+)?"((?:[^"\\]|\\.)*)"/i);
+      const cond = condM ? condM[1].replace(/\\"/g, '"') : (extractQuoted(hdr, 'if') || extractQuoted(hdr, 'cond') || extractQuoted(hdr, 'expr'));
+      const nextWhen = composeWhenTs(inheritedWhen, cond);
+      children.forEach((cf) => walkBindingTs(cf, nextWhen, inheritedTarget));
+      return;
+    }
+    if (/^\(\s*:group\b/i.test(form)) {
+      extractChildFormsTs(form).forEach((cf) => walkBindingTs(cf, inheritedWhen, inheritedTarget));
+      return;
+    }
+    if (/^\(\s*:target\b/i.test(form)) {
+      parseTargetTs(form, inheritedWhen);
+      return;
+    }
+    if (/^\(\s*:attr\b/i.test(form)) {
+      const target = extractQuoted(form, 'target') || inheritedTarget;
+      let attrName = extractQuoted(form, 'name') || extractQuoted(form, 'attr');
+      let expr = extractQuoted(form, 'expr');
+      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when'));
+      if (!attrName || !expr) {
+        const posM = form.match(/^\(\s*:attr\s+"((?:[^"\\]|\\.)*)"(?:\s+"((?:[^"\\]|\\.)*)")?/i);
+        if (posM) {
+          if (!attrName) attrName = posM[1].replace(/\\"/g, '"');
+          if (!expr && posM[2] !== undefined) expr = posM[2].replace(/\\"/g, '"');
+        }
+      }
+      if (target && attrName && expr) {
+        bindings.push({ type: '2d-attr', target, attr: attrName, expr, ...(when ? { when } : {}) });
+      }
+      return;
+    }
+    if (/^\(\s*:text\b/i.test(form)) {
+      const target = extractQuoted(form, 'target') || inheritedTarget;
+      let expr = extractQuoted(form, 'expr');
+      if (!expr) {
+        const posM = form.match(/^\(\s*:text\s+"((?:[^"\\]|\\.)*)"/i);
+        if (posM) expr = posM[1].replace(/\\"/g, '"');
+      }
+      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when'));
+      if (target && expr) {
+        bindings.push({ type: '2d-attr', target, attr: 'textContent', expr, ...(when ? { when } : {}) });
+      }
+    }
+  };
+  const bindingsRootBlocks = extractSexprBlocks(astText, ':bindings');
+  if (bindingsRootBlocks.length > 0) {
+    bindingsRootBlocks.forEach((bb) => {
+      extractChildFormsTs(bb).forEach((form) => walkBindingTs(form, undefined, null));
+    });
+  } else {
+    extractSexprBlocks(astText, ':target').forEach((block) => parseTargetTs(block, undefined));
+  }
 
   // Fallback for flat 2D bindings
   if (bindings.length === 0) {

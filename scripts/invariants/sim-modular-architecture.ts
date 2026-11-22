@@ -8,6 +8,10 @@ import {
   SITE_GESTURES_RUNTIME_MODULES,
   loadAstPlayerRuntimeIntoSandbox,
 } from './harness';
+import {
+  compileAstTextToBytecode,
+  decompileBytecodeToScene,
+} from '../../src/utils/astBytecode';
 
 export async function runModularArchitectureInvariants(): Promise<number> {
   let passedTests = 0;
@@ -883,6 +887,246 @@ export async function runModularArchitectureInvariants(): Promise<number> {
     assert.ok(standaloneSg, 'Standalone ASTDirectGestureSubsystem must construct cleanly without peer gesture modules');
 
     console.log('[✅ PASS] Sim 27: Modular AST engine, UI & gesture peer module integrity, load order, exports & standalone safety verified.');
+    passedTests++;
+  }
+
+  // =========================================================================
+  // 29. Nested AST Tuples, Pure-Lisp Control Flow, Guarded Bindings & .astb Parity
+  // =========================================================================
+  {
+    // 29a. Pure-Lisp (let ...), (let* ...), (cond ...), (case ...), (nth ...), (fixed ...)
+    const exprSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON,
+      parseInt, parseFloat, isNaN, isFinite,
+    };
+    exprSb.globalThis = exprSb;
+    exprSb.window = exprSb;
+    vm.runInNewContext(
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-expr.js'), 'utf8'),
+      exprSb,
+      { filename: 'static/player/ast-expr.js' }
+    );
+
+    const letFn = exprSb.compileAstFn('(let ((p (clamp (round page) 0 4)) (p1 (+ p 1))) (concat "Page " p1 " (" (fixed (* p1 20) 1) "%)"))');
+    assert.strictEqual(letFn(0, { page: 2.2 }, {}, Math), 'Page 3 (60.0%)', 'compileAstFn (let ...) must evaluate sequential slots and fixed');
+    assert.strictEqual(letFn(0, { page: 9 }, {}, Math), 'Page 5 (100.0%)', 'compileAstFn (let ...) must reuse slots deterministically across frames');
+
+    const condFn = exprSb.compileAstFn('(cond ((< ph 6.5) "acid") ((> ph 7.5) "alkali") (else "neutral"))');
+    assert.strictEqual(condFn(0, { ph: 3 }, {}, Math), 'acid', '(cond ...) must match first branch');
+    assert.strictEqual(condFn(0, { ph: 7 }, {}, Math), 'neutral', '(cond ...) must match else branch');
+    assert.strictEqual(condFn(0, { ph: 11 }, {}, Math), 'alkali', '(cond ...) must match second branch');
+
+    const caseFn = exprSb.compileAstFn('(case state (0 "idle") (1 "active") (else "done"))');
+    assert.strictEqual(caseFn(0, { state: 0 }, {}, Math), 'idle', '(case ...) must match 0');
+    assert.strictEqual(caseFn(0, { state: 1 }, {}, Math), 'active', '(case ...) must match 1');
+    assert.strictEqual(caseFn(0, { state: 9 }, {}, Math), 'done', '(case ...) must match else');
+
+    const nthFn = exprSb.compileAstFn('(nth idx "alpha" "beta" "gamma")');
+    assert.strictEqual(nthFn(0, { idx: 0 }, {}, Math), 'alpha', '(nth ...) must index 0');
+    assert.strictEqual(nthFn(0, { idx: 2 }, {}, Math), 'gamma', '(nth ...) must index 2');
+    assert.strictEqual(nthFn(0, { idx: 99 }, {}, Math), 'gamma', '(nth ...) must clamp upper bound');
+
+    const exprStr = exprSb.compileAstExpr('(let ((a (+ x 1))) (case a (2 "two") (else "other")))');
+    assert.ok(typeof exprStr === 'string' && exprStr.length > 0, 'compileAstExpr must emit JS expression for nested Lisp forms');
+
+    // 29b. Nested parser forms: :for, nested 2D :for, list :for, :repeat, grouped :target, nested :when, :group, gesture :seq/:if
+    const parserSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, RegExp,
+      parseInt, parseFloat, isNaN, isFinite, Uint8Array, ArrayBuffer, TextEncoder,
+    };
+    parserSb.globalThis = parserSb;
+    parserSb.window = parserSb;
+    vm.runInNewContext(
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-parser.js'), 'utf8'),
+      parserSb,
+      { filename: 'static/player/ast-parser.js' }
+    );
+
+    const nestedAst = `
+      (:scene :id "nested-demo" :title "Nested Demo" :type "Slide" :duration 5.0
+        (:vars
+          (:var :name "page" :initial 0 :min 0 :max 2)
+          (:var :name "active" :initial 1 :min 0 :max 1)
+          (:var :name "score" :initial 0 :min 0 :max 10)
+          (:var :name "mode" :initial 1 :min 0 :max 1)
+          (:var :name "flag" :initial 0 :min 0 :max 1)
+          (:var :name "w" :initial ""))
+        (:bindings
+          (:for i (0 2)
+            (:target "#page-{{i}}"
+              (:attr "display" "(if (= page {{i}}) 'inline' 'none')")
+              (:attr "data-idx" "{{i+1}}")))
+          (:for r (0 1)
+            (:for c (0 1)
+              (:target "#grid-{{r}}-{{c}}" :attr "x" :expr "{{c*10}}")))
+          (:repeat col ("red" "blue")
+            (:target "#dot-{{col}}" :attr "opacity" :expr "1"))
+          (:when "(= active 1)"
+            (:group
+              (:target "#card"
+                (:attr "opacity" :expr "1")
+                (:text :expr "'Hi'")))
+            (:when "(> score 0)"
+              (:target "#badge" :attr "display" :expr "'inline'"))))
+        (:gestures
+          (:clickable :target ".word"
+            (:seq
+              (:set-var "w" :from-attr "data-word")
+              (:if "(= mode 1)"
+                (:step-var "score" :delta 1 :min 0 :max 10)
+                (:toggle-var "flag"))
+              (:tone "523.25")))))
+    `;
+
+    const parsedNested = parserSb.parseAst(nestedAst);
+    assert.ok(parsedNested, 'parseAst must parse nested tuple scene');
+    assert.strictEqual(parsedNested.id, 'nested-demo', 'parseAst must preserve scene id after macro expansion');
+
+    const page0Display = parsedNested.bindings.find((b: any) => b.target === '#page-0' && b.attr === 'display');
+    const page2Idx = parsedNested.bindings.find((b: any) => b.target === '#page-2' && b.attr === 'data-idx');
+    assert.ok(page0Display && page0Display.expr.includes('= page 0'), ':for macro must expand {{i}} inside grouped :target');
+    assert.ok(page2Idx && page2Idx.expr === '3', ':for macro must evaluate {{i+1}} arithmetic');
+
+    const grid11 = parsedNested.bindings.find((b: any) => b.target === '#grid-1-1' && b.attr === 'x');
+    assert.ok(grid11 && grid11.expr === '10', 'nested 2D :for must expand {{r}}, {{c}}, and {{c*10}}');
+
+    const dotBlue = parsedNested.bindings.find((b: any) => b.target === '#dot-blue' && b.attr === 'opacity');
+    assert.ok(dotBlue, ':repeat list macro must expand string list items');
+
+    const cardText = parsedNested.bindings.find((b: any) => b.target === '#card' && b.attr === 'textContent');
+    assert.ok(cardText && cardText.when === '(= active 1)', 'grouped :target (:text ...) inside :when/:group must inherit guard');
+
+    const badgeBinding = parsedNested.bindings.find((b: any) => b.target === '#badge' && b.attr === 'display');
+    assert.ok(
+      badgeBinding && badgeBinding.when && badgeBinding.when.includes('and') && badgeBinding.when.includes('= active 1') && badgeBinding.when.includes('> score 0'),
+      'nested :when guards must compose via logical (and outer inner)'
+    );
+
+    assert.strictEqual(parsedNested.gestures.length, 1, 'parseAst must parse gesture containing nested :seq/:if steps');
+    const clickGesture = parsedNested.gestures[0];
+    assert.ok(Array.isArray(clickGesture.steps) && clickGesture.steps.length === 1 && clickGesture.steps[0].type === 'seq', 'gesture must carry parsed :seq step tree');
+    assert.strictEqual(clickGesture.steps[0].steps.length, 3, ':seq must preserve all 3 child steps');
+    assert.strictEqual(clickGesture.steps[0].steps[1].type, 'if', ':seq must preserve nested :if step');
+
+    // 29c. Runtime guard evaluation in ast-scene-mount.js + ast-binding-runtime.js
+    const runtimeSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet,
+      ArrayBuffer, DataView, Float32Array, Float64Array, Int32Array, Uint8Array,
+      TextDecoder, TextEncoder, RegExp, Error, JSON, URLSearchParams, Date, Function,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      performance: { now: () => Date.now() },
+      location: { search: '', origin: 'http://localhost', href: 'http://localhost/player.html', pathname: '/player.html' },
+      window: { location: { origin: 'http://localhost', search: '' }, addEventListener: () => {} },
+      navigator: { userAgent: 'NodeInvariantRunner' },
+    };
+    runtimeSb.globalThis = runtimeSb;
+    runtimeSb.self = runtimeSb.window;
+    loadAstPlayerRuntimeIntoSandbox(runtimeSb);
+
+    const badgeAttrs: Record<string, string> = { display: 'none' };
+    const badgeEl = {
+      tagName: 'g',
+      setAttribute(k: string, v: string) { badgeAttrs[k] = String(v); },
+      getAttribute(k: string) { return badgeAttrs[k] ?? null; },
+    };
+    const mockBindingEngine: any = {
+      scene: { id: 'guard-test', duration: 1, bindings: [badgeBinding], vars: {} },
+      vars: { active: 0, score: 5 },
+      progress: 0,
+      stageEl: { querySelector: (sel: string) => (sel === '#badge' ? badgeEl : null), querySelectorAll: () => [] },
+      activeBindings: [
+        {
+          node: badgeEl,
+          attr: 'display',
+          evalFn: runtimeSb.compileAstFn(badgeBinding.expr),
+          whenFn: runtimeSb.compileAstFn(badgeBinding.when),
+          lastVal: null,
+        },
+      ],
+      active3DItems: [],
+      activeVarBindings: [],
+      updateComputedVars() {},
+      updateEmitters() {},
+      updateScopes() {},
+      updateLedgers() {},
+      emit() {},
+    };
+    const bindingRuntime = runtimeSb.ASTBindingRuntime || runtimeSb.window.ASTBindingRuntime;
+    bindingRuntime.applyBindings.call(mockBindingEngine, 0);
+    assert.strictEqual(badgeAttrs.display, 'none', ':when guard must skip DOM mutation when predicate is falsy');
+    mockBindingEngine.vars.active = 1;
+    bindingRuntime.applyBindings.call(mockBindingEngine, 0);
+    assert.strictEqual(badgeAttrs.display, 'inline', ':when guard must apply DOM mutation once predicate becomes truthy');
+
+    // 29d. Nested gesture pipeline (:seq + :if with Pure-Lisp condition) in site-gestures-actions.js
+    const actNestedSb: any = {
+      console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+      parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+      compileAstFn: exprSb.compileAstFn,
+      window: { parent: { postMessage() {} } },
+    };
+    actNestedSb.globalThis = actNestedSb;
+    actNestedSb.self = actNestedSb.window;
+    vm.runInNewContext(
+      fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-actions.js'), 'utf8'),
+      actNestedSb,
+      { filename: 'static/player/site-gestures-actions.js' }
+    );
+    const actNestedExports = actNestedSb.ASTGesturesActions || actNestedSb.window.ASTGesturesActions;
+    const playedTones: any[] = [];
+    const nestedActHost: any = {
+      engine: {
+        vars: { w: '', mode: 1, score: 0, flag: false },
+        scene: { id: 'nested-demo', vars: { score: { min: 0, max: 10 } } },
+        progress: 0,
+        compileAstFn: exprSb.compileAstFn,
+        setVar(k: string, v: any) { this.vars[k] = v; },
+      },
+      _customActions: new Map(),
+      _activeHoldVars: new Map(),
+      _heldKeys: new Set(),
+      _heldKeyCodeMap: new Map(),
+      _heldPointerEntries: new Map(),
+      _pendingTouchAudio: new Map(),
+      _isControlEnabled: () => true,
+      sonificationEnabled: true,
+      playAudioTone(freq: any) { playedTones.push(freq); },
+    };
+    for (const fnName of Object.keys(actNestedExports)) {
+      if (typeof actNestedExports[fnName] === 'function' && fnName !== 'playAudioTone') {
+        nestedActHost[fnName] = actNestedExports[fnName].bind(nestedActHost);
+      }
+    }
+    const mockWordEl = { getAttribute: (k: string) => (k === 'data-word' ? 'cat' : null) };
+    actNestedExports._applyGesturePress.call(nestedActHost, clickGesture, mockWordEl, nestedActHost.engine.scene);
+    assert.strictEqual(nestedActHost.engine.vars.w, 'cat', 'nested :seq :set-var :from-attr must set active word');
+    assert.strictEqual(nestedActHost.engine.vars.score, 1, 'nested :if true branch must increment score');
+    assert.strictEqual(nestedActHost.engine.vars.flag, false, 'nested :if false branch must not run when condition is true');
+    assert.strictEqual(playedTones.length, 1, 'nested :seq :tone must fire procedural audio cue');
+
+    nestedActHost.engine.vars.mode = 0;
+    actNestedExports._applyGesturePress.call(nestedActHost, clickGesture, mockWordEl, nestedActHost.engine.scene);
+    assert.strictEqual(nestedActHost.engine.vars.score, 1, 'nested :if true branch must not run when mode=0');
+    assert.strictEqual(nestedActHost.engine.vars.flag, true, 'nested :if false branch must toggle flag when mode=0');
+
+    // 29e. .astb Bytecode parity for :for, grouped :target, and OP_BINDING_WHEN (0x31)
+    const compiledBytes = compileAstTextToBytecode(nestedAst);
+    const tsDecoded = decompileBytecodeToScene(compiledBytes);
+    const jsDecoded = runtimeSb.decompileBytecode(compiledBytes);
+    const tsBadge = tsDecoded.bindings.find((b) => b.target === '#badge' && b.attr === 'display');
+    const jsBadge = jsDecoded.bindings.find((b: any) => b.target === '#badge' && b.attr === 'display');
+    assert.ok(tsBadge && tsBadge.when && tsBadge.when.includes('active'), 'TS decompileBytecodeToScene must round-trip OP_BINDING_WHEN guard');
+    assert.ok(jsBadge && jsBadge.when === tsBadge.when, 'JS decompileBytecode must match TS decoded OP_BINDING_WHEN guard');
+    const jsGrid11 = jsDecoded.bindings.find((b: any) => b.target === '#grid-1-1' && b.attr === 'x');
+    assert.ok(jsGrid11 && jsGrid11.expr === '10', 'compileAstTextToBytecode must expand nested :for macros into .astb');
+
+    // 29f. Authoritative tuples.md specification coverage
+    const tuplesDoc = fs.readFileSync(path.join(process.cwd(), 'static', 'cartridges', 'tuples.md'), 'utf8');
+    for (const token of ['(:for', '(:when', '(:group', '(:seq', '(let', '(cond', '(case', '(nth', 'OP_BINDING_WHEN']) {
+      assert.ok(tuplesDoc.includes(token), `static/cartridges/tuples.md must document ${token}`);
+    }
+
+    console.log('[✅ PASS] Sim 29: Nested AST tuples (:for, grouped :target, :when, :seq/:if), Pure-Lisp forms & OP_BINDING_WHEN bytecode parity verified.');
     passedTests++;
   }
 

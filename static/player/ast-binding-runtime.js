@@ -112,6 +112,9 @@
         const b = this.activeBindings[i];
         if (b.node) {
           try {
+            if (b.whenFn && !b.whenFn(effectiveT, v, v, Math)) {
+              continue;
+            }
             let val;
             if (b.affine) {
               const num = b.affine.m * effectiveT + b.affine.c;

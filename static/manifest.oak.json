@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-22T10:56:34.766Z",
-  "totalCartridges": 77,
+  "generatedAt": "2026-11-22T12:07:44.765Z",
+  "totalCartridges": 78,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -246,6 +246,15 @@
       "stage": "KS2/KS3 MATHS",
       "title": "⚖️ Algebraic Balance Scale: Preserving Equality (2x + 5 = 15)",
       "cartridgeId": "algebra-balance"
+    },
+    {
+      "unit": "ks3-maths-number-theory-prime-distribution",
+      "oakId": "OAK-KS3-MAT-099",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "stage": "KS2/KS3 MATHEMATICS",
+      "title": "Jacob's Ladder of Prime Bricks",
+      "cartridgeId": "jacobs-ladder-primes"
     },
     {
       "unit": "ks4-maths-calculus-tangents",
@@ -1202,6 +1211,26 @@
       "tier": "core",
       "hasCheckpoints": true,
       "checkpointCount": 2
+    },
+    {
+      "id": "jacobs-ladder-primes",
+      "base": "jacobs-ladder-primes",
+      "type": "Sim",
+      "title": "Jacob's Ladder of Prime Bricks",
+      "stage": "KS2/KS3 MATHEMATICS",
+      "oakId": "OAK-KS3-MAT-099",
+      "oakUnit": "ks3-maths-number-theory-prime-distribution",
+      "subject": "Mathematics",
+      "section": "Mathematics & Geometry",
+      "mount": "/curriculum/mathematics/jacobs-ladder-primes",
+      "duration": 16,
+      "svgFile": "cartridges/jacobs-ladder-primes.svg",
+      "astFile": "cartridges/jacobs-ladder-primes.ast",
+      "astbFile": "bytecode/jacobs-ladder-primes.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 1
     },
     {
       "id": "calculus-curves",

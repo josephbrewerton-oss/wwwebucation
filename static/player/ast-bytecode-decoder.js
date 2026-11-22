@@ -236,6 +236,22 @@
           }
           break;
         }
+        case 0x31: { // OP_BINDING_WHEN (guarded 2D binding)
+          const targetIdx = view.getUint16(offset, true); offset += 2;
+          const attrIdx = view.getUint16(offset, true); offset += 2;
+          const exprIdx = view.getUint16(offset, true); offset += 2;
+          const whenIdx = view.getUint16(offset, true); offset += 2;
+          const whenStr = getStr(whenIdx);
+          const entry = {
+            type: '2d-attr',
+            target: getStr(targetIdx),
+            attr: getStr(attrIdx),
+            expr: getStr(exprIdx)
+          };
+          if (whenStr) entry.when = whenStr;
+          scene.bindings.push(entry);
+          break;
+        }
         case 0x40: { // OP_CHECKPOINT
           const normT = view.getUint16(offset, true); offset += 2;
           const promptIdx = view.getUint16(offset, true); offset += 2;

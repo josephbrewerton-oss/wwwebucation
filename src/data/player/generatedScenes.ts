@@ -567,6 +567,26 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 2
   },
   {
+    "id": "jacobs-ladder-primes",
+    "base": "jacobs-ladder-primes",
+    "type": "Sim",
+    "kind": "lab",
+    "isPlayableScene": true,
+    "has3D": false,
+    "label": "Jacob's Ladder of Prime Bricks",
+    "stage": "KS2/KS3 MATHEMATICS",
+    "oakId": "OAK-KS3-MAT-099",
+    "oakUnit": "ks3-maths-number-theory-prime-distribution",
+    "subject": "Mathematics",
+    "isCore": true,
+    "featured": false,
+    "tier": "core",
+    "mount": "/curriculum/mathematics/jacobs-ladder-primes",
+    "section": "Mathematics & Geometry",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
+  },
+  {
     "id": "calculus-curves",
     "base": "calculus-curves",
     "type": "Sim",

@@ -214,12 +214,61 @@
 
   function _evalConditionExpr(condExpr, matchedEl, attrVal) {
     if (!condExpr) return true;
+    const trimmed = String(condExpr).trim();
     try {
-      return Boolean(this._evalGestureExpr(condExpr, matchedEl, attrVal, true));
+      // Pure Lisp S-expression predicates (e.g. "(= score 10)", "(and showButtons (> page 0))")
+      const compileFn = (this.engine && typeof this.engine.compileAstFn === 'function')
+        ? this.engine.compileAstFn.bind(this.engine)
+        : (typeof global !== 'undefined' && typeof global.compileAstFn === 'function' ? global.compileAstFn : null);
+      if (compileFn && trimmed.startsWith('(') && trimmed.endsWith(')')) {
+        const fn = compileFn(trimmed);
+        if (typeof fn === 'function') {
+          return Boolean(fn(
+            (this.engine && this.engine.progress) || 0,
+            (this.engine && this.engine.vars) || {},
+            (this.engine && this.engine.computed) || (this.engine && this.engine.vars) || {},
+            Math
+          ));
+        }
+      }
+      return Boolean(this._evalGestureExpr(trimmed, matchedEl, attrVal, true));
     } catch (err) {
       console.warn('[SiteGestures] Condition :if error:', condExpr, err);
       return false;
     }
+  }
+
+  /**
+   * Recursively executes a nested pure-AST gesture action step:
+   * :seq, :if, :set-var, :toggle-var, :step-var, :clear-var, :reset-var, :action, :tone, :speak, :speak-var, :speak-attr.
+   */
+  function _executeGestureStep(step, matchedEl, attrVal, scene, audioQueue = null) {
+    if (!step || !this.engine || !this.engine.vars) return false;
+    if (step.type === 'seq') {
+      let anyChanged = false;
+      const list = Array.isArray(step.steps) ? step.steps : [];
+      for (let i = 0; i < list.length; i++) {
+        if (_executeGestureStep.call(this, list[i], matchedEl, attrVal, scene, audioQueue)) {
+          anyChanged = true;
+        }
+      }
+      return anyChanged;
+    }
+    if (step.type === 'if') {
+      const pass = this._evalConditionExpr(step.cond, matchedEl, attrVal);
+      const branch = pass ? step.then : step.else;
+      return branch ? _executeGestureStep.call(this, branch, matchedEl, attrVal, scene, audioQueue) : false;
+    }
+    if (step.type === 'clear-var' && step.var) {
+      this._writeEngineVar(step.var, '');
+      return true;
+    }
+    if (step.type === 'reset-var' && step.var) {
+      this._writeEngineVar(step.var, step.val !== undefined ? step.val : '');
+      return true;
+    }
+    // Delegate leaf step forms (:set-var, :toggle-var, :step-var, :action, :tone, :speak, :speak-var, :speak-attr)
+    return this._applyGesturePress(step, matchedEl, scene, audioQueue);
   }
 
   /**
@@ -525,6 +574,17 @@
       }
     }
 
+    if (Array.isArray(g.steps) && g.steps.length > 0) {
+      for (let si = 0; si < g.steps.length; si++) {
+        if (_executeGestureStep.call(this, g.steps[si], matchedEl, attrVal, scene, audioQueue)) {
+          changed = true;
+        }
+      }
+      if (changed && typeof this.engine.updateComputedVars === 'function') {
+        this.engine.updateComputedVars(this.engine.progress || 0);
+      }
+    }
+
     return changed;
   }
 
@@ -742,6 +802,7 @@
     _readMatchedElementAttr,
     _evalGestureExpr,
     _evalConditionExpr,
+    _executeGestureStep,
     _emitSiteDirective,
     _executeDeclarativeAction,
     _applyGesturePress,
