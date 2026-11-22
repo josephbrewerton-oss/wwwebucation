@@ -470,6 +470,7 @@ export function getDefaultMountForCartridge(id: string): string {
     'pythagoras': '/curriculum/maths/geometry/pythagoras',
     'kinetic-gas': '/curriculum/science/physics/kinetic-gas',
     'electric-circuits': '/curriculum/science/physics/electric-circuits',
+    'breadboard-components': '/curriculum/science/physics/breadboard-components',
     'church-tour': '/curriculum/catholic-life/church-tour',
     'altar-anatomy': '/curriculum/catholic-life/altar-anatomy',
     'stations-of-the-cross': '/curriculum/catholic-life/stations-of-the-cross',

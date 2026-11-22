@@ -987,6 +987,26 @@ export const PRESET_OPTIONS: ScenePresetOption[] = [
     "checkpointCount": 2
   },
   {
+    "id": "breadboard-components",
+    "base": "breadboard-components",
+    "type": "Sim",
+    "kind": "lab",
+    "isPlayableScene": true,
+    "has3D": false,
+    "label": "Solderless Breadboard & Ohm's Law Lab",
+    "stage": "KS3/GCSE PHYSICS & D&T",
+    "oakId": "OAK-KS3-PHY-048",
+    "oakUnit": "ks3-physics-electricity-breadboard-circuits",
+    "subject": "Science",
+    "isCore": true,
+    "featured": false,
+    "tier": "core",
+    "mount": "/curriculum/science/breadboard-components",
+    "section": "Natural Sciences & Physics",
+    "hasCheckpoints": true,
+    "checkpointCount": 1
+  },
+  {
     "id": "enzyme-denaturation",
     "base": "enzyme-denaturation",
     "type": "Sim",

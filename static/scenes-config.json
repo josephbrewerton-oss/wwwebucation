@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-22T12:07:44.757Z",
-  "totalScenes": 78,
+  "generatedAt": "2026-11-22T12:19:42.664Z",
+  "totalScenes": 79,
   "inputDirs": [
     "static/cartridges"
   ],
@@ -1499,6 +1499,37 @@
       "bindingsCount": 119,
       "hasCheckpoints": true,
       "checkpointCount": 2
+    },
+    {
+      "id": "breadboard-components",
+      "base": "breadboard-components",
+      "type": "Sim",
+      "kind": "lab",
+      "isPlayableScene": true,
+      "title": "Solderless Breadboard & Ohm's Law Lab",
+      "stage": "KS3/GCSE PHYSICS & D&T",
+      "duration": 12,
+      "oakId": "OAK-KS3-PHY-048",
+      "oakUnit": "ks3-physics-electricity-breadboard-circuits",
+      "subject": "Science",
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/breadboard-components.svg",
+      "astFile": "cartridges/breadboard-components.ast",
+      "astbFile": "bytecode/breadboard-components.astb",
+      "video": null,
+      "videoFit": "contain",
+      "hasVideo": false,
+      "isCore": true,
+      "featured": false,
+      "tier": "core",
+      "mount": "/curriculum/science/breadboard-components",
+      "section": "Natural Sciences & Physics",
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 37,
+      "hasCheckpoints": true,
+      "checkpointCount": 1
     },
     {
       "id": "enzyme-denaturation",

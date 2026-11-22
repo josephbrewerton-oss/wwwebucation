@@ -1,8 +1,8 @@
 {
   "version": "2.6.0",
   "authority": "St Joseph's Curriculum Portal & Oak National Academy Standards Alignment",
-  "generatedAt": "2026-11-22T12:07:44.765Z",
-  "totalCartridges": 78,
+  "generatedAt": "2026-11-22T12:19:42.669Z",
+  "totalCartridges": 79,
   "units": [
     {
       "unit": "portal-apparatus-showcase",
@@ -417,6 +417,15 @@
       "stage": "KS2/KS3 DESIGN & TECH",
       "title": "Modular Brick Engineering & 3D Spatial Geometry",
       "cartridgeId": "lego-blocks"
+    },
+    {
+      "unit": "ks3-physics-electricity-breadboard-circuits",
+      "oakId": "OAK-KS3-PHY-048",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "stage": "KS3/GCSE PHYSICS & D&T",
+      "title": "Solderless Breadboard & Ohm's Law Lab",
+      "cartridgeId": "breadboard-components"
     },
     {
       "unit": "cm³",
@@ -1631,6 +1640,26 @@
       "tier": "core",
       "hasCheckpoints": true,
       "checkpointCount": 2
+    },
+    {
+      "id": "breadboard-components",
+      "base": "breadboard-components",
+      "type": "Sim",
+      "title": "Solderless Breadboard & Ohm's Law Lab",
+      "stage": "KS3/GCSE PHYSICS & D&T",
+      "oakId": "OAK-KS3-PHY-048",
+      "oakUnit": "ks3-physics-electricity-breadboard-circuits",
+      "subject": "Science",
+      "section": "Natural Sciences & Physics",
+      "mount": "/curriculum/science/breadboard-components",
+      "duration": 12,
+      "svgFile": "cartridges/breadboard-components.svg",
+      "astFile": "cartridges/breadboard-components.ast",
+      "astbFile": "bytecode/breadboard-components.astb",
+      "isCore": true,
+      "tier": "core",
+      "hasCheckpoints": true,
+      "checkpointCount": 1
     },
     {
       "id": "enzyme-denaturation",

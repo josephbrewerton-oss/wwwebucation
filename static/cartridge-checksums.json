@@ -1,9 +1,9 @@
 {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-22T12:07:46.013Z",
-  "totalCartridges": 78,
-  "masterChecksum": "e0986200cdbf04b1a87bf1238a10849e06bc8d8073347a58d2bcd9f3934f2626",
+  "generatedAt": "2026-11-22T12:19:43.895Z",
+  "totalCartridges": 79,
+  "masterChecksum": "37e7c1b0f1ca6088e657e1bbc1e75b60e44c3d482f85e2f750a414e4f2b4c1af",
   "cartridges": {
     "acid-alkali-titration": {
       "id": "acid-alkali-titration",
@@ -115,6 +115,22 @@
       "tier": "native",
       "authority": "St Joseph's Catholic Primary School Curriculum Authority",
       "seal": "6be016a5c0aed9bc1cd6d8c7ac96f6a29748e30bf7ee4d632d19e309a1efcd28",
+      "certified": true
+    },
+    "breadboard-components": {
+      "id": "breadboard-components",
+      "title": "Solderless Breadboard & Ohm's Law Lab",
+      "stage": "KS3/GCSE PHYSICS & D&T",
+      "type": "Sim",
+      "astSha256": "2c65b10ab9f29cf2fe6b98b61363dac6fcd5fe94a7321288db01580f81f96660",
+      "svgSha256": "d9acfde0b79921d907af44cd36a5421fc9f0b53ea555c828b973f6f29f3bf3fa",
+      "astbSha256": "17aee6d0b0d583cc0992cc70937b55bf76e8742f7a24042dbc1c0c469b8e9256",
+      "astbBytes": 11745,
+      "astBytes": 14444,
+      "svgBytes": 16409,
+      "tier": "native",
+      "authority": "St Joseph's Catholic Primary School Curriculum Authority",
+      "seal": "355db6f1574c64513b2b938be4dae64348573ed31ac2b81a102581cd0276d6d9",
       "certified": true
     },
     "bsl-fingerspelling": {
