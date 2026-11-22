@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 77
+  :count 78
   (:cartridges (
     (:cartridge
       :id "acid-alkali-titration"
@@ -180,6 +180,14 @@
       :stage "CATHOLIC LIFE"
       :oak-id "OAK-KS2-RE-004"
       :bytecode "bytecode/holy-water-thurifer.astb")
+
+    (:cartridge
+      :id "jacobs-ladder-primes"
+      :type "Sim"
+      :title "Jacob's Ladder of Prime Bricks"
+      :stage "KS2/KS3 MATHEMATICS"
+      :oak-id "OAK-KS3-MAT-099"
+      :bytecode "bytecode/jacobs-ladder-primes.astb")
 
     (:cartridge
       :id "kinetic-gas"

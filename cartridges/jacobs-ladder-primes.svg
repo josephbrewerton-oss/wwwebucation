@@ -1,0 +1,378 @@
+<svg viewBox="0 0 800 480" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Jacob's Ladder of Prime Bricks: Riemann Hypothesis Critical Line and Prime Staircase">
+  <defs>
+    <!-- Deep Observatory Background Gradient -->
+    <radialGradient id="jl-bg" cx="48%" cy="42%" r="78%">
+      <stop offset="0%" stop-color="#1e293b" />
+      <stop offset="58%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </radialGradient>
+
+    <!-- Blueprint Coordinate Grid -->
+    <pattern id="jl-grid" width="24" height="24" patternUnits="userSpaceOnUse">
+      <path d="M 24 0 L 0 0 0 24" fill="none" stroke="#334155" stroke-width="0.7" stroke-opacity="0.32" />
+      <circle cx="24" cy="24" r="0.9" fill="#475569" fill-opacity="0.45" />
+    </pattern>
+
+    <!-- Critical Strip Interior Tint -->
+    <linearGradient id="critical-strip-grad" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#0f172a" stop-opacity="0.35" />
+      <stop offset="50%" stop-color="#1e3a5f" stop-opacity="0.38" />
+      <stop offset="100%" stop-color="#0f172a" stop-opacity="0.35" />
+    </linearGradient>
+
+    <!-- Spinning Interlocking Brick Gradients (Matching lego-blocks.svg ABS Style) -->
+    <linearGradient id="spin-brick-top-grad" x1="0" y1="0" x2="1" y2="1">
+      <stop id="spin-grad-top-0" offset="0%" stop-color="#4ade80" />
+      <stop id="spin-grad-top-1" offset="100%" stop-color="#16a34a" />
+    </linearGradient>
+    <linearGradient id="spin-brick-left-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop id="spin-grad-left-0" offset="0%" stop-color="#15803d" />
+      <stop id="spin-grad-left-1" offset="100%" stop-color="#14532d" />
+    </linearGradient>
+    <linearGradient id="spin-brick-right-grad" x1="0" y1="0" x2="0" y2="1">
+      <stop id="spin-grad-right-0" offset="0%" stop-color="#22c55e" />
+      <stop id="spin-grad-right-1" offset="100%" stop-color="#166534" />
+    </linearGradient>
+
+    <!-- Subtle Elevation Shadow -->
+    <filter id="jl-shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="5" stdDeviation="5" flood-color="#000000" flood-opacity="0.65" />
+    </filter>
+
+    <!-- Master Miniature Cylindrical Stud for Spinning Interlocking Brick -->
+    <g id="prime-stud">
+      <path id="prime-stud-wall" d="M -4.2 0 A 4.2 2.1 0 0 0 4.2 0 L 4.2 -3.2 A 4.2 2.1 0 0 1 -4.2 -3.2 Z" fill="#15803d" />
+      <ellipse id="prime-stud-top" cx="0" cy="-3.2" rx="4.2" ry="2.1" fill="#4ade80" stroke="#bbf7d0" stroke-width="0.5" />
+      <ellipse cx="-1" cy="-3.7" rx="1.2" ry="0.55" fill="#ffffff" fill-opacity="0.55" />
+    </g>
+  </defs>
+
+  <!-- 1. Workshop / Observatory Backdrop -->
+  <rect width="800" height="480" fill="url(#jl-bg)" aria-hidden="true" />
+  <rect width="800" height="480" fill="url(#jl-grid)" aria-hidden="true" />
+
+  <!-- 2. Header Status & Title Bar -->
+  <g id="jl-header" transform="translate(18, 10)">
+    <rect width="764" height="38" rx="8" fill="#0b1120" stroke="#1e293b" stroke-width="1.4" aria-hidden="true" />
+
+    <!-- Interlocking Brick Emblem -->
+    <g transform="translate(12, 10)" aria-hidden="true">
+      <rect id="header-brick-emblem" x="0" y="0" width="18" height="18" rx="3" fill="#22c55e" />
+      <circle cx="5.5" cy="5.5" r="2.2" fill="#ffffff" fill-opacity="0.4" />
+      <circle cx="12.5" cy="5.5" r="2.2" fill="#ffffff" fill-opacity="0.4" />
+      <circle cx="5.5" cy="12.5" r="2.2" fill="#000000" fill-opacity="0.25" />
+      <circle cx="12.5" cy="12.5" r="2.2" fill="#000000" fill-opacity="0.25" />
+    </g>
+
+    <text x="40" y="19" fill="#f8fafc" font-size="12.5" font-weight="800" letter-spacing="0.5">JACOB&apos;S LADDER OF PRIME BRICKS</text>
+    <text x="40" y="31" fill="#94a3b8" font-size="9" font-weight="600">Riemann Hypothesis (Lean Verified Nov 2026) &bull; Critical Line &sigma; = 0.5 &bull; Prime Staircase &pi;(x)</text>
+
+    <!-- Live Lock Telemetry Pill -->
+    <g transform="translate(556, 7)">
+      <rect id="header-lock-pill" width="196" height="24" rx="5" fill="#052e16" stroke="#22c55e" stroke-width="1.2" />
+      <text id="header-lock-text" x="98" y="15.5" fill="#4ade80" font-size="9.5" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">● σ = 0.500 LOCKED</text>
+    </g>
+  </g>
+
+  <!-- 3. LEFT PANEL: The Critical Strip (0 < σ < 1) & Jacob's Ladder of 15 Zeta Zeros -->
+  <g id="critical-strip-panel">
+    <rect x="18" y="54" width="364" height="416" rx="10" fill="#0b1120" fill-opacity="0.92" stroke="#1e293b" stroke-width="1.4" aria-hidden="true" />
+    <text x="32" y="72" fill="#38bdf8" font-size="9.5" font-weight="800" letter-spacing="0.5">CRITICAL STRIP (0 &lt; &sigma; &lt; 1) &bull; JACOB&apos;S LADDER</text>
+    <text id="ladder-height-readout" x="368" y="72" fill="#cbd5e1" font-size="9" font-weight="700" text-anchor="end" font-family="ui-monospace, monospace">t = 14.13 • 5/15 Rungs</text>
+
+    <!-- Shaded Critical Strip Box (σ ∈ [0.1, 0.9] -> x ∈ [80, 320]) -->
+    <rect x="80" y="80" width="240" height="364" rx="4" fill="url(#critical-strip-grad)" stroke="#334155" stroke-width="1" aria-hidden="true" />
+
+    <!-- Vertical Reference Rails (σ = 0.1, 0.3, 0.7, 0.9) -->
+    <g stroke="#334155" stroke-width="0.9" stroke-dasharray="3 4" aria-hidden="true">
+      <line x1="80" y1="80" x2="80" y2="444" />
+      <line x1="140" y1="80" x2="140" y2="444" />
+      <line x1="260" y1="80" x2="260" y2="444" />
+      <line x1="320" y1="80" x2="320" y2="444" />
+    </g>
+
+    <!-- Vertical Ladder Side Rails -->
+    <g stroke="#475569" stroke-width="2" stroke-opacity="0.55" aria-hidden="true">
+      <line x1="94" y1="84" x2="94" y2="440" />
+      <line x1="306" y1="84" x2="306" y2="440" />
+    </g>
+
+    <!-- Glowing Critical Line at σ = 0.5 (x = 200) -->
+    <g id="critical-line-group" data-pedagogical="Critical Line (σ = 0.5): Every non-trivial zero of ζ(s) lies along this exact axis, keeping prime bricks in rhythm.">
+      <line id="critical-line-glow" x1="200" y1="80" x2="200" y2="444" stroke="#22c55e" stroke-width="10" stroke-opacity="0.22" aria-hidden="true" />
+      <line id="critical-line-core" x1="200" y1="80" x2="200" y2="444" stroke="#22c55e" stroke-width="2.2" />
+    </g>
+
+    <!-- 15 Jacob's Ladder Non-Trivial Zeta Zero Rungs (y = 440 - h * 4.2) -->
+    <g id="jacobs-ladder-rungs">
+      <g id="ladder-rung-group-0" transform="translate(0, 380.65)" data-pedagogical="Zeta Zero #1 (γ₁ = 14.13): First harmonic rung of Jacob's Ladder on σ = 0.5.">
+        <line id="ladder-rung-0" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
+        <circle id="ladder-node-0" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-0" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ1=14.13</text>
+      </g>
+      <g id="ladder-rung-group-1" transform="translate(0, 351.72)" data-pedagogical="Zeta Zero #2 (γ₂ = 21.02): Second harmonic frequency tuning prime distribution.">
+        <line id="ladder-rung-1" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
+        <circle id="ladder-node-1" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-1" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ2=21.02</text>
+      </g>
+      <g id="ladder-rung-group-2" transform="translate(0, 334.96)" data-pedagogical="Zeta Zero #3 (γ₃ = 25.01): Third non-trivial zero on the Critical Line.">
+        <line id="ladder-rung-2" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
+        <circle id="ladder-node-2" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-2" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ3=25.01</text>
+      </g>
+      <g id="ladder-rung-group-3" transform="translate(0, 312.24)" data-pedagogical="Zeta Zero #4 (γ₄ = 30.42): Fourth harmonic zero locking prime wave interference.">
+        <line id="ladder-rung-3" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
+        <circle id="ladder-node-3" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-3" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ4=30.42</text>
+      </g>
+      <g id="ladder-rung-group-4" transform="translate(0, 301.65)" data-pedagogical="Zeta Zero #5 (γ₅ = 32.94): Fifth harmonic rung on Jacob's Ladder.">
+        <line id="ladder-rung-4" x1="94" y1="0" x2="306" y2="0" stroke="#22c55e" stroke-width="2.2" stroke-opacity="0.92" />
+        <circle id="ladder-node-4" cx="200" cy="0" r="4.2" fill="#22c55e" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-4" x="325" y="3" fill="#4ade80" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ5=32.94</text>
+      </g>
+      <g id="ladder-rung-group-5" transform="translate(0, 282.12)" data-pedagogical="Zeta Zero #6 (γ₆ = 37.59): Sixth harmonic zero on σ = 0.5.">
+        <line id="ladder-rung-5" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-5" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-5" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ6=37.59</text>
+      </g>
+      <g id="ladder-rung-group-6" transform="translate(0, 268.14)" data-pedagogical="Zeta Zero #7 (γ₇ = 40.92): Seventh harmonic zero on σ = 0.5.">
+        <line id="ladder-rung-6" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-6" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-6" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ7=40.92</text>
+      </g>
+      <g id="ladder-rung-group-7" transform="translate(0, 258.01)" data-pedagogical="Zeta Zero #8 (γ₈ = 43.33): Eighth harmonic zero sharpening prime jumps.">
+        <line id="ladder-rung-7" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-7" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-7" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ8=43.33</text>
+      </g>
+      <g id="ladder-rung-group-8" transform="translate(0, 238.36)" data-pedagogical="Zeta Zero #9 (γ₉ = 48.01): Ninth harmonic rung on the Critical Line.">
+        <line id="ladder-rung-8" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-8" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-8" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ9=48.01</text>
+      </g>
+      <g id="ladder-rung-group-9" transform="translate(0, 230.97)" data-pedagogical="Zeta Zero #10 (γ₁₀ = 49.77): Tenth rung — unlock 10+ harmonics at σ = 0.5 for mastery!">
+        <line id="ladder-rung-9" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-9" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-9" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ10=49.77</text>
+      </g>
+      <g id="ladder-rung-group-10" transform="translate(0, 217.53)" data-pedagogical="Zeta Zero #11 (γ₁₁ = 52.97): Eleventh harmonic rung on Jacob's Ladder.">
+        <line id="ladder-rung-10" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-10" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-10" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ11=52.97</text>
+      </g>
+      <g id="ladder-rung-group-11" transform="translate(0, 202.91)" data-pedagogical="Zeta Zero #12 (γ₁₂ = 56.45): Twelfth harmonic rung on σ = 0.5.">
+        <line id="ladder-rung-11" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-11" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-11" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ12=56.45</text>
+      </g>
+      <g id="ladder-rung-group-12" transform="translate(0, 190.73)" data-pedagogical="Zeta Zero #13 (γ₁₃ = 59.35): Thirteenth harmonic zero.">
+        <line id="ladder-rung-12" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-12" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-12" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ13=59.35</text>
+      </g>
+      <g id="ladder-rung-group-13" transform="translate(0, 184.51)" data-pedagogical="Zeta Zero #14 (γ₁₄ = 60.83): Fourteenth harmonic zero.">
+        <line id="ladder-rung-13" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-13" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-13" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ14=60.83</text>
+      </g>
+      <g id="ladder-rung-group-14" transform="translate(0, 166.54)" data-pedagogical="Zeta Zero #15 (γ₁₅ = 65.11): Fifteenth harmonic zero at the top of our Jacob's Ladder.">
+        <line id="ladder-rung-14" x1="94" y1="0" x2="306" y2="0" stroke="#334155" stroke-width="1.4" stroke-opacity="0.45" />
+        <circle id="ladder-node-14" cx="200" cy="0" r="3" fill="#475569" stroke="#020617" stroke-width="1" />
+        <text id="ladder-label-14" x="325" y="3" fill="#64748b" font-size="8" font-weight="700" font-family="ui-monospace, monospace">γ15=65.11</text>
+      </g>
+    </g>
+
+    <!-- Hooke Spring Tether & Physics Anchor Ring -->
+    <line id="brick-spring-line" x1="200" y1="380.65" x2="200" y2="380.65" stroke="#38bdf8" stroke-width="2" stroke-dasharray="4 3" aria-hidden="true" />
+    <g id="spinny-brick-spring-halo" aria-hidden="true">
+      <circle cx="0" cy="0" r="22" fill="none" stroke="#38bdf8" stroke-width="1" stroke-opacity="0.35" stroke-dasharray="3 3" />
+    </g>
+
+    <!-- Spinning Generic Interlocking Brick Probe (Reusing lego-blocks.svg 2×2 Isometric Brick Style) -->
+    <g id="spinny-brick" transform="translate(200, 380.65)" role="button" tabindex="0" cursor="ew-resize"
+       aria-label="Draggable spinning prime brick on the Critical Strip. Drag horizontally to vary sigma from 0.1 to 0.9."
+       data-pedagogical="Spinning Prime Brick Probe: Drag horizontally across the Critical Strip. On σ = 0.5 it locks smoothly and lights Jacob's Ladder!"
+       filter="url(#jl-shadow)">
+      <!-- Invisible Generous Touch Hitbox -->
+      <circle cx="0" cy="0" r="28" fill="#000000" fill-opacity="0.001" pointer-events="all" />
+      <g id="spinny-brick-rot" transform="rotate(0 0 0)">
+        <!-- Isometric 2×2 Interlocking Brick Faces -->
+        <polygon id="spinny-brick-left" points="-20,-2 0,8 0,21 -20,11" fill="url(#spin-brick-left-grad)" stroke="#020617" stroke-opacity="0.6" stroke-width="1" stroke-linejoin="round" />
+        <polygon id="spinny-brick-right" points="0,8 20,-2 20,11 0,21" fill="url(#spin-brick-right-grad)" stroke="#020617" stroke-opacity="0.55" stroke-width="1" stroke-linejoin="round" />
+        <polygon id="spinny-brick-top" points="-20,-2 0,-12 20,-2 0,8" fill="url(#spin-brick-top-grad)" stroke="#ffffff" stroke-opacity="0.45" stroke-width="0.9" stroke-linejoin="round" />
+        <line x1="-20" y1="-2" x2="0" y2="8" stroke="#ffffff" stroke-width="1" stroke-opacity="0.4" aria-hidden="true" />
+        <line x1="0" y1="8" x2="20" y2="-2" stroke="#ffffff" stroke-width="1" stroke-opacity="0.3" aria-hidden="true" />
+        <!-- 4 Modular Cylindrical Studs -->
+        <use href="#prime-stud" x="0" y="-7" aria-hidden="true" />
+        <use href="#prime-stud" x="-9.5" y="-2" aria-hidden="true" />
+        <use href="#prime-stud" x="9.5" y="-2" aria-hidden="true" />
+        <use href="#prime-stud" x="0" y="3" aria-hidden="true" />
+      </g>
+    </g>
+
+    <!-- Strip Bottom Axis Labels -->
+    <g font-size="8.5" font-weight="700" font-family="ui-monospace, monospace" text-anchor="middle">
+      <text x="80" y="458" fill="#64748b">0.1</text>
+      <text x="140" y="458" fill="#64748b">0.3</text>
+      <text x="200" y="458" fill="#22c55e" font-weight="800">&sigma; = 0.5</text>
+      <text x="260" y="458" fill="#64748b">0.7</text>
+      <text x="320" y="458" fill="#64748b">0.9</text>
+    </g>
+    <text x="48" y="264" fill="#64748b" font-size="8.5" font-weight="700" transform="rotate(-90 48 264)" text-anchor="middle" aria-hidden="true">IMAGINARY HEIGHT (t)</text>
+  </g>
+
+  <!-- 4. RIGHT TOP PANEL: The Prime Brick Tower (π(x) Staircase vs Li(x)) -->
+  <g id="prime-tower-panel">
+    <rect x="392" y="54" width="390" height="262" rx="10" fill="#0b1120" fill-opacity="0.92" stroke="#1e293b" stroke-width="1.4" aria-hidden="true" />
+    <text x="406" y="72" fill="#38bdf8" font-size="9.5" font-weight="800" letter-spacing="0.5">PRIME BRICK TOWER &pi;(x) vs Li(x)</text>
+
+    <!-- Legend -->
+    <g transform="translate(612, 62)" font-size="8" font-weight="700" aria-hidden="true">
+      <line x1="0" y1="6" x2="18" y2="6" stroke="#facc15" stroke-width="2" stroke-dasharray="4 2" />
+      <text x="22" y="9" fill="#fde047">Li(x) Ramp</text>
+      <rect x="86" y="1" width="10" height="10" rx="2" fill="#38bdf8" />
+      <text x="100" y="9" fill="#7dd3fc">&pi;(x) Primes</text>
+    </g>
+
+    <!-- Guarded Alignment Status Badges (Controlled by (:when ...) -> OP_BINDING_WHEN 0x31) -->
+    <g id="locked-harmony-badge" display="inline" transform="translate(406, 80)">
+      <rect id="locked-harmony-rect" width="218" height="20" rx="5" fill="#052e16" stroke="#22c55e" stroke-width="1.1" />
+      <text id="locked-harmony-text" x="109" y="13.5" fill="#4ade80" font-size="8.2" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">✓ HARMONIC LOCK: 5/15 ZETA RUNGS</text>
+    </g>
+    <g id="wobble-warning-badge" display="none" transform="translate(406, 80)">
+      <rect id="wobble-warning-rect" width="218" height="20" rx="5" fill="#431407" stroke="#f97316" stroke-width="1.1" />
+      <text id="wobble-warning-text" x="109" y="13.5" fill="#fdba74" font-size="8.2" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">⚠ OFF-LINE DRIFT • PRIMES WOBBLING</text>
+    </g>
+
+    <!-- Staircase Baseline & Horizontal Guides -->
+    <g stroke="#1e293b" stroke-width="0.9" aria-hidden="true">
+      <line x1="418" y1="286" x2="766" y2="286" stroke="#475569" stroke-width="1.4" />
+      <line x1="418" y1="238" x2="766" y2="238" stroke-dasharray="3 4" />
+      <line x1="418" y1="190" x2="766" y2="190" stroke-dasharray="3 4" />
+      <line x1="418" y1="142" x2="766" y2="142" stroke-dasharray="3 4" />
+    </g>
+
+    <!-- 10 Stepped Prime Brick Columns (Primes: 2, 3, 5, 7, 11, 13, 17, 19, 23, 29) -->
+    <g id="prime-brick-columns" data-pedagogical="Prime Counting Staircase π(x): Each column adds 1 indivisible prime brick. Keeping zeta zeros on σ = 0.5 locks the staircase tightly to Li(x)!">
+      <g id="prime-brick-0" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-0" x="424" y="270" width="26" height="16" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="428" y="266" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="440" y="266" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="437" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">2</text>
+      </g>
+      <g id="prime-brick-1" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-1" x="458" y="254" width="26" height="32" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="462" y="250" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="474" y="250" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="471" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">3</text>
+      </g>
+      <g id="prime-brick-2" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-2" x="492" y="238" width="26" height="48" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="496" y="234" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="508" y="234" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="505" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">5</text>
+      </g>
+      <g id="prime-brick-3" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-3" x="526" y="222" width="26" height="64" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="530" y="218" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="542" y="218" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="539" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">7</text>
+      </g>
+      <g id="prime-brick-4" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-4" x="560" y="206" width="26" height="80" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="564" y="202" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="576" y="202" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="573" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">11</text>
+      </g>
+      <g id="prime-brick-5" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-5" x="594" y="190" width="26" height="96" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="598" y="186" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="610" y="186" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="607" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">13</text>
+      </g>
+      <g id="prime-brick-6" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-6" x="628" y="174" width="26" height="112" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="632" y="170" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="644" y="170" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="641" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">17</text>
+      </g>
+      <g id="prime-brick-7" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-7" x="662" y="158" width="26" height="128" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="666" y="154" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="678" y="154" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="675" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">19</text>
+      </g>
+      <g id="prime-brick-8" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-8" x="696" y="142" width="26" height="144" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="700" y="138" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="712" y="138" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="709" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">23</text>
+      </g>
+      <g id="prime-brick-9" transform="translate(0, 0)">
+        <rect id="prime-brick-bar-9" x="730" y="126" width="26" height="160" rx="2" fill="#38bdf8" stroke="#7dd3fc" stroke-width="1" />
+        <rect x="734" y="122" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <rect x="746" y="122" width="6" height="4" rx="1" fill="#7dd3fc" aria-hidden="true" />
+        <text x="743" y="300" fill="#e2e8f0" font-size="9" font-weight="800" text-anchor="middle" font-family="ui-monospace, monospace">29</text>
+      </g>
+    </g>
+
+    <!-- Smooth Logarithmic Integral Ramp Li(x) -->
+    <path id="li-curve-path" d="M 424 272 C 495 236, 610 174, 756 112" fill="none" stroke="#facc15" stroke-width="2.4" stroke-dasharray="6 3" stroke-linecap="round"
+          data-pedagogical="Logarithmic Integral Li(x): The smooth curve predicting how many prime bricks appear up to x." />
+    <text x="592" y="312" fill="#64748b" font-size="8" font-weight="700" text-anchor="middle">INDIVISIBLE PRIME BRICKS (2, 3, 5, 7, 11, 13, 17, 19, 23, 29)</text>
+  </g>
+
+  <!-- 5. RIGHT BOTTOM PANEL: Live Zeta Drift Scope (:scope) & Interactive Smartboard Deck -->
+  <g id="telemetry-controls-panel">
+    <rect x="392" y="324" width="390" height="146" rx="10" fill="#0b1120" fill-opacity="0.92" stroke="#1e293b" stroke-width="1.4" aria-hidden="true" />
+
+    <!-- Live Oscilloscope Container -->
+    <g id="scope-container" data-pedagogical="Zeta Drift Oscilloscope: Plots |σ - 0.5| over time. Flat at 0 means every prime harmonic is locked!">
+      <rect x="404" y="336" width="228" height="122" rx="7" fill="#020617" stroke="#1e293b" stroke-width="1.2" aria-hidden="true" />
+      <text x="414" y="350" fill="#94a3b8" font-size="8.2" font-weight="800" letter-spacing="0.4">ZETA DRIFT SCOPE |&sigma; &minus; 0.5|</text>
+      <text id="scope-offcenter-text" x="624" y="350" fill="#22c55e" font-size="8.5" font-weight="800" text-anchor="end" font-family="ui-monospace, monospace">Δσ = 0.000</text>
+
+      <!-- Scope Gridlines -->
+      <g stroke="#1e293b" stroke-width="0.8" stroke-dasharray="2 3" aria-hidden="true">
+        <line x1="414" y1="364" x2="622" y2="364" />
+        <line x1="414" y1="396" x2="622" y2="396" />
+        <line x1="414" y1="428" x2="622" y2="428" stroke="#334155" stroke-dasharray="none" />
+      </g>
+
+      <!-- Live Ring-Buffer Oscilloscope Path Driven by (:scope ...) -->
+      <path id="zeta-wave-scope" d="M 414 428 L 622 428" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+
+      <text id="harmonics-readout" x="414" y="449" fill="#cbd5e1" font-size="8.2" font-weight="700" font-family="ui-monospace, monospace">Rungs: 5/15 • Spin: 0°</text>
+    </g>
+
+    <!-- Smartboard Interactive Action Controls -->
+    <g transform="translate(642, 336)">
+      <!-- Snap to 0.5 Critical Line Button -->
+      <g id="snap-btn" role="button" tabindex="0" cursor="pointer"
+         aria-label="Snap spinning brick to the 0.5 Critical Line"
+         data-pedagogical="Snap Button: Resets σ directly to 0.5 and locks the prime brick staircase into harmonic rhythm.">
+        <rect id="snap-btn-rect" x="0" y="0" width="128" height="44" rx="7" fill="#052e16" stroke="#22c55e" stroke-width="1.6" />
+        <text x="64" y="19" fill="#4ade80" font-size="9.5" font-weight="800" text-anchor="middle">SNAP TO &sigma; = 0.5</text>
+        <text x="64" y="33" fill="#86efac" font-size="7.8" font-weight="700" text-anchor="middle">Lock Critical Line</text>
+      </g>
+
+      <!-- Harmonic Rung Stepper Controls -->
+      <g id="rungs-minus-btn" transform="translate(0, 52)" role="button" tabindex="0" cursor="pointer"
+         aria-label="Decrease active zeta zero harmonic rungs by one">
+        <rect width="60" height="32" rx="6" fill="#0f172a" stroke="#334155" stroke-width="1.2" />
+        <text x="30" y="20" fill="#cbd5e1" font-size="9" font-weight="800" text-anchor="middle">&minus;1 Rung</text>
+      </g>
+
+      <g id="rungs-plus-btn" transform="translate(68, 52)" role="button" tabindex="0" cursor="pointer"
+         aria-label="Increase active zeta zero harmonic rungs by one">
+        <rect width="60" height="32" rx="6" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
+        <text x="30" y="20" fill="#38bdf8" font-size="9" font-weight="800" text-anchor="middle">+1 Rung</text>
+      </g>
+
+      <!-- Mastery Goal Indicator -->
+      <rect x="0" y="92" width="128" height="30" rx="6" fill="#020617" stroke="#1e293b" stroke-width="1" aria-hidden="true" />
+      <text id="checkpoint-hint-text" x="64" y="105" fill="#facc15" font-size="7.6" font-weight="800" text-anchor="middle">GOAL: LOCK &sigma; = 0.5</text>
+      <text id="checkpoint-sub-text" x="64" y="116" fill="#94a3b8" font-size="7.4" font-weight="700" text-anchor="middle">&amp; ACTIVATE &ge; 10 RUNGS</text>
+    </g>
+  </g>
+</svg>

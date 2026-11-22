@@ -267,15 +267,17 @@
               '+', '-', '*', '/', '%', 'mod',
               '>', '<', '>=', '<=', '=', '==', '===', '!=', '!==',
               'and', 'or', 'not', 'if', ':if',
+              'let', 'let*', 'cond', 'case', 'match', 'nth', 'pick',
               'clamp', 'lerp', 'map', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
               'sqrt', 'abs', 'round', 'floor', 'ceil', 'min', 'max', 'pow', 'exp', 'log',
-              'concat', 'str', 'rad', 'deg', 'dist', 'sineWave', 'smoothstep'
+              'concat', 'str', 'rad', 'deg', 'dist', 'sineWave', 'smoothstep', 'fixed'
             ]);
             if (LISP_OPS.has(head)) {
-              const emitNode = (node) => {
+              const emitNode = (node, locals) => {
                 if (!Array.isArray(node)) {
                   if (node.type === 'str') return JSON.stringify(node.val);
                   const a = node.val;
+                  if (locals && locals.has(a)) return locals.get(a);
                   if (a === 'true' || a === 'false' || a === 'null' || a === 't' || a === 'Math.PI' || a === 'Math.E') return a;
                   if (a === 'PI') return 'Math.PI';
                   if (a === 'E') return 'Math.E';
@@ -291,7 +293,67 @@
                 }
                 if (node.length === 0) return 'undefined';
                 const op = node[0].type === 'atom' ? node[0].val : '';
-                const args = node.slice(1).map(emitNode);
+                if (op === 'let' || op === 'let*') {
+                  const bindingsNode = Array.isArray(node[1]) ? node[1] : [];
+                  const nextLocals = new Map(locals || []);
+                  const decls = [];
+                  for (let bi = 0; bi < bindingsNode.length; bi++) {
+                    const pair = bindingsNode[bi];
+                    if (Array.isArray(pair) && pair.length >= 2 && pair[0] && pair[0].type === 'atom') {
+                      const rawName = pair[0].val;
+                      const safeId = `_l_${rawName.replace(/[^a-zA-Z0-9_$]/g, '_')}_${bi}`;
+                      const rhs = emitNode(pair[1], nextLocals);
+                      decls.push(`const ${safeId} = (${rhs});`);
+                      nextLocals.set(rawName, safeId);
+                    }
+                  }
+                  const bodyNodes = node.slice(2);
+                  const bodyExpr = bodyNodes.length > 0 ? emitNode(bodyNodes[bodyNodes.length - 1], nextLocals) : 'undefined';
+                  return `(() => { ${decls.join(' ')} return (${bodyExpr}); })()`;
+                }
+                if (op === 'cond') {
+                  const clauses = node.slice(1);
+                  let out = 'undefined';
+                  for (let ci = clauses.length - 1; ci >= 0; ci--) {
+                    const cl = clauses[ci];
+                    if (!Array.isArray(cl) || cl.length < 2) continue;
+                    const testNode = cl[0];
+                    const valCode = emitNode(cl[1], locals);
+                    const isElse = !Array.isArray(testNode) && testNode.type === 'atom' &&
+                      (testNode.val === 'else' || testNode.val === ':else' || testNode.val === 'true' || testNode.val === 'default' || testNode.val === ':default');
+                    out = isElse ? `(${valCode})` : `((${emitNode(testNode, locals)}) ? (${valCode}) : (${out}))`;
+                  }
+                  return out;
+                }
+                if (op === 'case' || op === 'match') {
+                  const targetCode = emitNode(node[1], locals);
+                  const clauses = node.slice(2);
+                  let out = 'undefined';
+                  for (let ci = clauses.length - 1; ci >= 0; ci--) {
+                    const cl = clauses[ci];
+                    if (!Array.isArray(cl) || cl.length < 2) continue;
+                    const keyNode = cl[0];
+                    const valCode = emitNode(cl[1], locals);
+                    const isElse = !Array.isArray(keyNode) && keyNode.type === 'atom' &&
+                      (keyNode.val === 'else' || keyNode.val === ':else' || keyNode.val === 'default' || keyNode.val === ':default');
+                    if (isElse) {
+                      out = `(${valCode})`;
+                    } else if (Array.isArray(keyNode)) {
+                      const checks = keyNode.map(k => `(_v === (${emitNode(k, locals)}))`).join(' || ');
+                      out = `((${checks}) ? (${valCode}) : (${out}))`;
+                    } else {
+                      out = `((_v === (${emitNode(keyNode, locals)})) ? (${valCode}) : (${out}))`;
+                    }
+                  }
+                  return `((_v) => (${out}))(${targetCode})`;
+                }
+                if (op === 'nth' || op === 'pick') {
+                  const idxCode = emitNode(node[1], locals);
+                  const items = node.slice(2).map(n => emitNode(n, locals));
+                  if (items.length === 0) return '""';
+                  return `([${items.join(', ')}][Math.max(0, Math.min(${items.length - 1}, Math.round(Number(${idxCode}) || 0)))])`;
+                }
+                const args = node.slice(1).map(n => emitNode(n, locals));
                 switch (op) {
                   case '+': return args.length === 1 ? `(+${args[0]})` : `(${args.join(' + ')})`;
                   case '-': return args.length === 1 ? `(-${args[0]})` : `(${args.join(' - ')})`;
@@ -310,7 +372,7 @@
                     return `((${args[0]}) ? (${args[1] !== undefined ? args[1] : 'undefined'}) : (${args[2] !== undefined ? args[2] : 'undefined'}))`;
                   case 'concat': case 'str':
                     return `("" + ${args.map(a => `(${a})`).join(' + ')})`;
-                  case 'clamp': case 'lerp': case 'map': case 'rad': case 'deg': case 'dist': case 'sineWave': case 'smoothstep':
+                  case 'clamp': case 'lerp': case 'map': case 'rad': case 'deg': case 'dist': case 'sineWave': case 'smoothstep': case 'fixed':
                     return `${op}(${args.join(', ')})`;
                   case 'sin': case 'cos': case 'tan': case 'asin': case 'acos': case 'atan': case 'atan2':
                   case 'sqrt': case 'abs': case 'round': case 'floor': case 'ceil': case 'min': case 'max': case 'pow': case 'exp': case 'log':
@@ -319,7 +381,7 @@
                     return `${op}(${args.join(', ')})`;
                 }
               };
-              return emitNode(ast);
+              return emitNode(ast, null);
             }
           }
         } catch (_) {}
@@ -386,6 +448,7 @@
       scale: AstMath.scale,
       sineWave: AstMath.sineWave,
       smoothstep: AstMath.smoothstep,
+      fixed: AstMath.fixed,
       astMorphPath,
       astMorphColor,
       astEaseBack,
@@ -483,10 +546,16 @@
         try {
           const ast = parseForm();
           if (pos === tokens.length && Array.isArray(ast) && ast.length >= 1 && ast[0]?.type === 'atom') {
-            const compileNode = (node) => {
+            // Pre-allocated zero-GC lexical local slots for nested (let ...) forms
+            const localSlots = [];
+            const compileNode = (node, env) => {
               if (!Array.isArray(node)) {
                 if (node.type === 'str') { const val = node.val; return () => val; }
                 const a = node.val;
+                if (env && env.has(a)) {
+                  const slotIdx = env.get(a);
+                  return () => localSlots[slotIdx];
+                }
                 if (a === 't') return (t) => t;
                 if (a === 'true') return () => true;
                 if (a === 'false') return () => false;
@@ -506,7 +575,108 @@
               }
               if (node.length === 0) return () => undefined;
               const op = node[0].type === 'atom' ? node[0].val : '';
-              const fns = node.slice(1).map(compileNode);
+
+              // Special forms with lazy / scoped compilation (zero per-frame allocations)
+              if (op === 'let' || op === 'let*') {
+                const bindingsNode = Array.isArray(node[1]) ? node[1] : [];
+                const nextEnv = new Map(env || []);
+                const compiledPairs = [];
+                for (let bi = 0; bi < bindingsNode.length; bi++) {
+                  const pair = bindingsNode[bi];
+                  if (Array.isArray(pair) && pair.length >= 2 && pair[0] && pair[0].type === 'atom') {
+                    const initFn = compileNode(pair[1], nextEnv);
+                    const slotIdx = localSlots.length;
+                    localSlots.push(undefined);
+                    nextEnv.set(pair[0].val, slotIdx);
+                    compiledPairs.push({ slotIdx, initFn });
+                  }
+                }
+                const bodyFns = node.slice(2).map(b => compileNode(b, nextEnv));
+                const pairCount = compiledPairs.length;
+                const bodyCount = bodyFns.length;
+                if (bodyCount === 0) return () => undefined;
+                const lastBody = bodyFns[bodyCount - 1];
+                return (t, v, c, M) => {
+                  for (let k = 0; k < pairCount; k++) {
+                    const p = compiledPairs[k];
+                    localSlots[p.slotIdx] = p.initFn(t, v, c, M);
+                  }
+                  for (let k = 0; k < bodyCount - 1; k++) bodyFns[k](t, v, c, M);
+                  return lastBody(t, v, c, M);
+                };
+              }
+
+              if (op === 'cond') {
+                const clauses = [];
+                let elseFn = null;
+                for (let ci = 1; ci < node.length; ci++) {
+                  const cl = node[ci];
+                  if (!Array.isArray(cl) || cl.length < 2) continue;
+                  const testNode = cl[0];
+                  const valFn = compileNode(cl[1], env);
+                  const isElse = !Array.isArray(testNode) && testNode.type === 'atom' &&
+                    (testNode.val === 'else' || testNode.val === ':else' || testNode.val === 'true' || testNode.val === 'default' || testNode.val === ':default');
+                  if (isElse) {
+                    elseFn = valFn;
+                    break;
+                  }
+                  clauses.push({ testFn: compileNode(testNode, env), valFn });
+                }
+                const clLen = clauses.length;
+                return (t, v, c, M) => {
+                  for (let k = 0; k < clLen; k++) {
+                    if (clauses[k].testFn(t, v, c, M)) return clauses[k].valFn(t, v, c, M);
+                  }
+                  return elseFn ? elseFn(t, v, c, M) : undefined;
+                };
+              }
+
+              if (op === 'case' || op === 'match') {
+                const targetFn = compileNode(node[1], env);
+                const clauses = [];
+                let elseFn = null;
+                for (let ci = 2; ci < node.length; ci++) {
+                  const cl = node[ci];
+                  if (!Array.isArray(cl) || cl.length < 2) continue;
+                  const keyNode = cl[0];
+                  const valFn = compileNode(cl[1], env);
+                  const isElse = !Array.isArray(keyNode) && keyNode.type === 'atom' &&
+                    (keyNode.val === 'else' || keyNode.val === ':else' || keyNode.val === 'default' || keyNode.val === ':default');
+                  if (isElse) {
+                    elseFn = valFn;
+                    break;
+                  }
+                  const keyFns = Array.isArray(keyNode) ? keyNode.map(k => compileNode(k, env)) : [compileNode(keyNode, env)];
+                  clauses.push({ keyFns, valFn });
+                }
+                const clLen = clauses.length;
+                return (t, v, c, M) => {
+                  const tv = targetFn(t, v, c, M);
+                  for (let k = 0; k < clLen; k++) {
+                    const kf = clauses[k].keyFns;
+                    for (let j = 0; j < kf.length; j++) {
+                      if (tv === kf[j](t, v, c, M)) return clauses[k].valFn(t, v, c, M);
+                    }
+                  }
+                  return elseFn ? elseFn(t, v, c, M) : undefined;
+                };
+              }
+
+              if (op === 'nth' || op === 'pick') {
+                const idxFn = compileNode(node[1], env);
+                const itemFns = node.slice(2).map(n => compileNode(n, env));
+                const itemCount = itemFns.length;
+                if (itemCount === 0) return () => '';
+                const maxIdx = itemCount - 1;
+                return (t, v, c, M) => {
+                  let i = Math.round(Number(idxFn(t, v, c, M)) || 0);
+                  if (i < 0) i = 0;
+                  else if (i > maxIdx) i = maxIdx;
+                  return itemFns[i](t, v, c, M);
+                };
+              }
+
+              const fns = node.slice(1).map(n => compileNode(n, env));
               const len = fns.length;
               const f0 = fns[0], f1 = fns[1], f2 = fns[2];
               switch (op) {
@@ -548,7 +718,7 @@
                   return makeHelperCall(op, fns);
               }
             };
-            return storeAndReturn(compileNode(ast));
+            return storeAndReturn(compileNode(ast, null));
           }
         } catch (_) {}
       }

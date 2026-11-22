@@ -342,12 +342,22 @@
                     }
                   };
 
+              let whenFn = null;
+              if (b.when) {
+                try {
+                  whenFn = this.compileAstFn(String(b.when).replace(/\\\\'/g, "\\'"));
+                } catch (_) {
+                  whenFn = null;
+                }
+              }
+
               this.activeBindings.push({
                 target: b.target,
                 attr: b.attr,
                 node,
                 affine,
                 matrixBuf: affine && (affine.transform === 'translateX' || affine.transform === 'translateY' || affine.transform === 'rotate') ? new Float32Array(6) : null,
+                whenFn,
                 evalFn: boundEval
               });
             }

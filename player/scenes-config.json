@@ -1,7 +1,7 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-22T11:06:31.635Z",
-  "totalScenes": 77,
+  "generatedAt": "2026-11-22T12:16:48.664Z",
+  "totalScenes": 78,
   "scenes": [
     {
       "id": "acid-alkali-titration",
@@ -332,6 +332,21 @@
       "keyframeCount": 4,
       "subtitleCount": 4,
       "bindingsCount": 5
+    },
+    {
+      "id": "jacobs-ladder-primes",
+      "type": "Sim",
+      "title": "Jacob's Ladder of Prime Bricks",
+      "stage": "KS2/KS3 MATHEMATICS",
+      "duration": 16,
+      "has3D": false,
+      "nodes3DCount": 0,
+      "svgFile": "cartridges/jacobs-ladder-primes.svg",
+      "astFile": "cartridges/jacobs-ladder-primes.ast",
+      "astbFile": "bytecode/jacobs-ladder-primes.astb",
+      "keyframeCount": 4,
+      "subtitleCount": 3,
+      "bindingsCount": 29
     },
     {
       "id": "kinetic-gas",

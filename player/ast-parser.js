@@ -53,6 +53,121 @@
       }
     }
 
+    // Compile-time (:for <var> (<start> <end> [<step>]) body...) / (:for <var> ("a" "b") body...)
+    // and (:repeat ...) macro expander — supports nested loops and {{i}} / {{i+N}} / {{i-N}} / {{i*N}} placeholders.
+    const expandForMacros = (src, depth = 0) => {
+      if (!src || depth > 6 || !/\(\s*:(?:for|repeat)\b/i.test(src)) return src;
+      const MAX_ITERS = 512;
+      let out = '';
+      let i = 0;
+      const n = src.length;
+      let inStr = false;
+      while (i < n) {
+        const ch = src[i];
+        if (ch === ';' && !inStr) {
+          const nl = src.indexOf('\n', i);
+          if (nl === -1) { out += src.slice(i); break; }
+          out += src.slice(i, nl + 1);
+          i = nl + 1;
+          continue;
+        }
+        if (ch === '"' && (i === 0 || src[i - 1] !== '\\')) {
+          inStr = !inStr;
+          out += ch;
+          i++;
+          continue;
+        }
+        if (!inStr && ch === '(') {
+          const headSlice = src.slice(i, i + 16);
+          if (/^\(\s*:(?:for|repeat)\s+/i.test(headSlice)) {
+            let d = 0;
+            let sIn = false;
+            let endIdx = -1;
+            for (let j = i; j < n; j++) {
+              const c = src[j];
+              if (c === '"' && (j === 0 || src[j - 1] !== '\\')) sIn = !sIn;
+              else if (!sIn) {
+                if (c === '(') d++;
+                else if (c === ')') {
+                  d--;
+                  if (d === 0) { endIdx = j + 1; break; }
+                }
+              }
+            }
+            if (endIdx !== -1) {
+              const form = src.slice(i, endIdx);
+              const hdrMatch = form.match(/^\(\s*:(?:for|repeat)\s+([a-zA-Z_][a-zA-Z0-9_-]*)\s+\(/i);
+              if (hdrMatch) {
+                const varName = hdrMatch[1];
+                const specOpen = hdrMatch[0].length - 1;
+                let sd = 0;
+                let sStr = false;
+                let specEnd = -1;
+                for (let j = specOpen; j < form.length; j++) {
+                  const c = form[j];
+                  if (c === '"' && (j === 0 || form[j - 1] !== '\\')) sStr = !sStr;
+                  else if (!sStr) {
+                    if (c === '(') sd++;
+                    else if (c === ')') {
+                      sd--;
+                      if (sd === 0) { specEnd = j; break; }
+                    }
+                  }
+                }
+                if (specEnd !== -1) {
+                  const specInside = form.slice(specOpen + 1, specEnd).trim();
+                  const bodyRaw = form.slice(specEnd + 1, form.length - 1);
+                  const values = [];
+                  const rangeMatch = specInside.match(/^(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)(?:\s+(-?\d+(?:\.\d+)?))?$/);
+                  if (rangeMatch) {
+                    const start = Number(rangeMatch[1]);
+                    const end = Number(rangeMatch[2]);
+                    let step = rangeMatch[3] !== undefined ? Number(rangeMatch[3]) : (end >= start ? 1 : -1);
+                    if (!Number.isFinite(step) || step === 0) step = end >= start ? 1 : -1;
+                    let iter = 0;
+                    for (let cur = start; step > 0 ? cur <= end + 1e-9 : cur >= end - 1e-9; cur += step) {
+                      if (++iter > MAX_ITERS) break;
+                      values.push(Number.isInteger(cur) ? String(cur) : String(Number(cur.toFixed(6))));
+                    }
+                  } else {
+                    const tokRe = /"((?:[^"\\]|\\.)*)"|([^\s()]+)/g;
+                    let tm;
+                    let iter = 0;
+                    while ((tm = tokRe.exec(specInside)) !== null && ++iter <= MAX_ITERS) {
+                      values.push(tm[1] !== undefined ? tm[1].replace(/\\"/g, '"') : tm[2]);
+                    }
+                  }
+                  const safeVar = varName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                  const tplRe = new RegExp(`\\{\\{\\s*${safeVar}(?:\\s*([+\\-*])\\s*(-?\\d+(?:\\.\\d+)?))?\\s*\\}\\}`, 'g');
+                  let expanded = '';
+                  for (let vi = 0; vi < values.length; vi++) {
+                    const vStr = values[vi];
+                    const vNum = Number(vStr);
+                    const substituted = bodyRaw.replace(tplRe, (_all, op, operandStr) => {
+                      if (!op) return vStr;
+                      if (!Number.isFinite(vNum)) return vStr;
+                      const rhs = Number(operandStr);
+                      const res = op === '+' ? vNum + rhs : (op === '-' ? vNum - rhs : vNum * rhs);
+                      return Number.isInteger(res) ? String(res) : String(Number(res.toFixed(6)));
+                    });
+                    expanded += '\n' + expandForMacros(substituted, depth + 1);
+                  }
+                  out += expanded;
+                  i = endIdx;
+                  continue;
+                }
+              }
+            }
+          }
+        }
+        out += ch;
+        i++;
+      }
+      return out;
+    };
+
+    astContent = expandForMacros(astContent, 0);
+
     const extractSlot = (a, b) => {
       const text = b ? a : astContent;
       const reg = b ? b : a;
@@ -179,11 +294,37 @@
       if (!blockText) return forms;
       let searchStart = blockText.indexOf('(');
       if (searchStart === -1) return forms;
-      // If wrapped as (:tag (...)), unwrap outer form to inner list
+      // If wrapped as (:tag ((...) ...)) or (:tag ()), unwrap outer form to inner list.
+      // Do NOT unwrap when the first paren is itself a child form like (:bindings (:target ...)).
       const trimmed = blockText.slice(searchStart).trim();
       let innerStart = 1;
-      if (/^\(:[a-zA-Z0-9_-]+\s+\(/.test(trimmed)) {
-        innerStart = trimmed.indexOf('(', 1) + 1;
+      const tagMatch = trimmed.match(/^\(\s*:[a-zA-Z0-9_-]+/);
+      if (tagMatch) {
+        let p = tagMatch[0].length;
+        while (p < trimmed.length) {
+          if (trimmed[p] === ';') {
+            while (p < trimmed.length && trimmed[p] !== '\n') p++;
+          } else if (/\s/.test(trimmed[p])) {
+            p++;
+          } else {
+            break;
+          }
+        }
+        if (trimmed[p] === '(') {
+          let q = p + 1;
+          while (q < trimmed.length) {
+            if (trimmed[q] === ';') {
+              while (q < trimmed.length && trimmed[q] !== '\n') q++;
+            } else if (/\s/.test(trimmed[q])) {
+              q++;
+            } else {
+              break;
+            }
+          }
+          if (trimmed[q] === '(' || trimmed[q] === ')') {
+            innerStart = p + 1;
+          }
+        }
       }
       let i = innerStart;
       while (i < trimmed.length) {
@@ -295,23 +436,58 @@
       subtitles.push(subObj);
     }
 
-    // Bindings (2D, Text, Var integration, 3D nodes, 3D lines, 3D rings, 3D polygons)
+    // Bindings (2D, Text, Var integration, 3D nodes/lines/rings/polygons,
+    // plus nested (:when "<cond>" ...), (:group ...), and multi-attr (:target "#id" (:attr ...) (:text ...)))
     const bindings = [];
-    const bindBlocks = extractSexprBlocks(astContent, ':target');
+    const composeWhen = (outerWhen, innerWhen) => {
+      if (!outerWhen) return innerWhen || undefined;
+      if (!innerWhen) return outerWhen;
+      return `(and ${outerWhen} ${innerWhen})`;
+    };
 
-    bindBlocks.forEach(block => {
-      const target = extractQuoted(block, 'target') || extractSlot.call(null, block, /:target\s+"([^"]+)"/i);
-      const type = extractSlot.call(null, block, /:type\s+"([^"]+)"/i);
-      const attr = extractQuoted(block, 'attr') || extractSlot.call(null, block, /:attr\s+"([^"]+)"/i);
-      const expr = extractQuoted(block, 'expr') || extractSlot.call(null, block, /:expr\s+"([^"]+)"/i);
+    const parseAttrShorthand = (form, inheritedTarget, inheritedWhen) => {
+      const target = extractQuoted(form, 'target') || inheritedTarget;
+      let attrName = extractQuoted(form, 'name') || extractQuoted(form, 'attr');
+      let expr = extractQuoted(form, 'expr');
+      const localWhen = extractQuoted(form, 'when');
+      const when = composeWhen(inheritedWhen, localWhen);
+      if (!attrName || !expr) {
+        const posM = form.match(/^\(\s*:attr\s+"((?:[^"\\]|\\.)*)"(?:\s+"((?:[^"\\]|\\.)*)")?/i);
+        if (posM) {
+          if (!attrName) attrName = posM[1].replace(/\\"/g, '"');
+          if (!expr && posM[2] !== undefined) expr = posM[2].replace(/\\"/g, '"');
+        }
+      }
+      if (target && attrName && expr) {
+        const entry = { type: '2d-attr', target, attr: attrName, expr };
+        if (when) entry.when = when;
+        bindings.push(entry);
+      }
+    };
 
-      const zLayerStr = extractSlot.call(null, block, /:z-layer\s+([\d\.\-]+)/i);
+    const parseTargetForm = (block, inheritedWhen) => {
+      const childForms = extractChildForms(block);
+      // Strip nested child forms when reading header attributes on grouped (:target "#id" (:attr ...) ...)
+      let headerBlock = block;
+      if (childForms.length > 0) {
+        for (let ci = 0; ci < childForms.length; ci++) {
+          headerBlock = headerBlock.replace(childForms[ci], ' ');
+        }
+      }
+      const target = extractQuoted(headerBlock, 'target') || extractSlot.call(null, headerBlock, /:target\s+"([^"]+)"/i);
+      const nodeType = extractSlot.call(null, headerBlock, /:type\s+"([^"]+)"/i);
+      const attr = extractQuoted(headerBlock, 'attr') || extractSlot.call(null, headerBlock, /:attr\s+"([^"]+)"/i);
+      const expr = extractQuoted(headerBlock, 'expr') || extractSlot.call(null, headerBlock, /:expr\s+"([^"]+)"/i);
+      const localWhen = extractQuoted(headerBlock, 'when');
+      const when = composeWhen(inheritedWhen, localWhen);
+
+      const zLayerStr = extractSlot.call(null, headerBlock, /:z-layer\s+([\d\.\-]+)/i);
       const zLayer = zLayerStr !== null ? parseFloat(zLayerStr) : undefined;
-      const zBiasStr = extractSlot.call(null, block, /:z-bias\s+([\d\.\-]+)/i);
+      const zBiasStr = extractSlot.call(null, headerBlock, /:z-bias\s+([\d\.\-]+)/i);
       const zBias = zBiasStr !== null ? parseFloat(zBiasStr) : undefined;
-      const sortAfter = extractQuoted(block, 'sort-after') || extractQuoted(block, 'sortAfter') || undefined;
+      const sortAfter = extractQuoted(headerBlock, 'sort-after') || extractQuoted(headerBlock, 'sortAfter') || undefined;
 
-      if (type === '3d-node') {
+      if (nodeType === '3d-node') {
         const x = extractSlot.call(null, block, /:x\s+"([^"]+)"/i) || '0';
         const y = extractSlot.call(null, block, /:y\s+"([^"]+)"/i) || '0';
         const z = extractSlot.call(null, block, /:z\s+"([^"]+)"/i) || '0';
@@ -320,22 +496,13 @@
         const label = extractSlot.call(null, block, /:label\s+"([^"]+)"/i);
         const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
         const depthFog = depthFogStr !== 'false';
-
-        const entry = {
-          type: '3d-node',
-          target,
-          x,
-          y,
-          z,
-          baseR,
-          label,
-          depthFog
-        };
+        const entry = { type: '3d-node', target, x, y, z, baseR, label, depthFog };
         if (zLayer !== undefined) entry.zLayer = zLayer;
         if (zBias !== undefined) entry.zBias = zBias;
         if (sortAfter) entry.sortAfter = sortAfter;
+        if (when) entry.when = when;
         bindings.push(entry);
-      } else if (type === '3d-line') {
+      } else if (nodeType === '3d-line') {
         const splitExpr = extractQuoted(block, 'split-expr') || extractQuoted(block, 'splitExpr') || undefined;
         const splineA = extractQuoted(block, 'spline-a') || extractQuoted(block, 'splineA') || undefined;
         const splineB = extractQuoted(block, 'spline-b') || extractQuoted(block, 'splineB') || undefined;
@@ -361,8 +528,9 @@
         if (splineA) entry.splineA = splineA;
         if (splineB) entry.splineB = splineB;
         if (splineIndex !== undefined) entry.splineIndex = splineIndex;
+        if (when) entry.when = when;
         bindings.push(entry);
-      } else if (type === '3d-ring') {
+      } else if (nodeType === '3d-ring') {
         const rStr = extractSlot.call(null, block, /:r\s+("[^"]+"|[\d\.]+)/i) || '100';
         const cx = extractSlot.call(null, block, /:cx\s+"([^"]+)"/i) || '0';
         const cy = extractSlot.call(null, block, /:cy\s+"([^"]+)"/i) || '0';
@@ -374,76 +542,100 @@
         const segments = segsStr ? parseInt(segsStr, 10) : 24;
         const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
         const depthFog = depthFogStr !== 'false';
-
-        const entry = {
-          type: '3d-ring',
-          target,
-          r: rStr,
-          cx, cy, cz,
-          tiltX, tiltY, tiltZ,
-          segments,
-          depthFog
-        };
+        const entry = { type: '3d-ring', target, r: rStr, cx, cy, cz, tiltX, tiltY, tiltZ, segments, depthFog };
         if (zLayer !== undefined) entry.zLayer = zLayer;
         if (zBias !== undefined) entry.zBias = zBias;
         if (sortAfter) entry.sortAfter = sortAfter;
+        if (when) entry.when = when;
         bindings.push(entry);
-      } else if (type === '3d-polygon') {
+      } else if (nodeType === '3d-polygon') {
         const ptsStr = extractSlot.call(null, block, /:points\s+"([^"]+)"/i) || extractSlot.call(null, block, /:pts\s+"([^"]+)"/i);
         const depthFogStr = extractSlot.call(null, block, /:depth-fog\s+([^\s\)]+)/i);
         const depthFog = depthFogStr !== 'false';
         const cullBackfaceStr = extractSlot.call(null, block, /:cull-backface\s+([^\s\)]+)/i);
         const cullBackface = cullBackfaceStr === 'true';
-
-        const entry = {
-          type: '3d-polygon',
-          target,
-          pointsExpr: ptsStr,
-          depthFog,
-          cullBackface
-        };
+        const entry = { type: '3d-polygon', target, pointsExpr: ptsStr, depthFog, cullBackface };
         if (zLayer !== undefined) entry.zLayer = zLayer;
         if (zBias !== undefined) entry.zBias = zBias;
         if (sortAfter) entry.sortAfter = sortAfter;
+        if (when) entry.when = when;
         bindings.push(entry);
-      } else if (target && attr && expr) {
-        bindings.push({
-          type: '2d-attr',
-          target,
-          attr,
-          expr
-        });
+      } else {
+        if (target && attr && expr) {
+          const entry = { type: '2d-attr', target, attr, expr };
+          if (when) entry.when = when;
+          bindings.push(entry);
+        }
+        // Grouped multi-attribute child forms inside (:target "#id" (:attr ...) (:text ...) (:when ...))
+        if (target && childForms.length > 0) {
+          childForms.forEach(cf => walkBindingForm(cf, when, target));
+        }
       }
-    });
+    };
 
-    // Also parse (:attr ...), (:text ...), and (:var ...) forms inside :bindings (...)
+    const walkBindingForm = (form, inheritedWhen, inheritedTarget) => {
+      if (!form) return;
+      if (/^\(\s*:when\b/i.test(form)) {
+        const children = extractChildForms(form);
+        let hdr = form;
+        for (let ci = 0; ci < children.length; ci++) hdr = hdr.replace(children[ci], ' ');
+        const condMatch = hdr.match(/^\(\s*:when\s+(?::(?:if|cond|expr)\s+)?"((?:[^"\\]|\\.)*)"/i);
+        const cond = condMatch ? condMatch[1].replace(/\\"/g, '"') : (extractQuoted(hdr, 'if') || extractQuoted(hdr, 'cond') || extractQuoted(hdr, 'expr'));
+        const nextWhen = composeWhen(inheritedWhen, cond);
+        children.forEach(cf => walkBindingForm(cf, nextWhen, inheritedTarget));
+        return;
+      }
+      if (/^\(\s*:group\b/i.test(form)) {
+        const children = extractChildForms(form);
+        children.forEach(cf => walkBindingForm(cf, inheritedWhen, inheritedTarget));
+        return;
+      }
+      if (/^\(\s*:target\b/i.test(form)) {
+        parseTargetForm(form, inheritedWhen);
+        return;
+      }
+      if (/^\(\s*:attr\b/i.test(form)) {
+        parseAttrShorthand(form, inheritedTarget, inheritedWhen);
+        return;
+      }
+      if (/^\(\s*:text\b/i.test(form)) {
+        const target = extractQuoted(form, 'target') || inheritedTarget;
+        let expr = extractQuoted(form, 'expr');
+        if (!expr) {
+          const posM = form.match(/^\(\s*:text\s+"((?:[^"\\]|\\.)*)"/i);
+          if (posM) expr = posM[1].replace(/\\"/g, '"');
+        }
+        const when = composeWhen(inheritedWhen, extractQuoted(form, 'when'));
+        if (target && expr) {
+          const entry = { type: '2d-attr', target, attr: 'textContent', expr };
+          if (when) entry.when = when;
+          bindings.push(entry);
+        }
+        return;
+      }
+      if (/^\(\s*:var\b/i.test(form)) {
+        const vMatch = form.match(/^\(\s*:var\s+(?::name\s+)?"((?:[^"\\]|\\.)*)"/i)
+          || form.match(/^\(\s*:var\s+([^\s\)]+)/i);
+        const varName = vMatch ? vMatch[1].replace(/\\"/g, '"') : null;
+        const expr = extractQuoted(form, 'expr');
+        if (varName && expr) {
+          const entry = { type: 'var-update', varName, expr };
+          if (inheritedWhen) entry.when = inheritedWhen;
+          bindings.push(entry);
+        }
+      }
+    };
+
     const bindListBlocks = extractKeywordBlocks(astContent, ':bindings');
     if (bindListBlocks.length > 0) {
-      const bindForms = extractChildForms(bindListBlocks[0]);
-      bindForms.forEach(form => {
-        if (/^\(\s*:attr\b/i.test(form)) {
-          const target = extractQuoted(form, 'target');
-          const attrName = extractQuoted(form, 'name') || extractQuoted(form, 'attr');
-          const expr = extractQuoted(form, 'expr');
-          if (target && attrName && expr) {
-            bindings.push({ type: '2d-attr', target, attr: attrName, expr });
-          }
-        } else if (/^\(\s*:text\b/i.test(form)) {
-          const target = extractQuoted(form, 'target');
-          const expr = extractQuoted(form, 'expr');
-          if (target && expr) {
-            bindings.push({ type: '2d-attr', target, attr: 'textContent', expr });
-          }
-        } else if (/^\(\s*:var\b/i.test(form)) {
-          const vMatch = form.match(/^\(\s*:var\s+(?::name\s+)?"((?:[^"\\]|\\.)*)"/i)
-            || form.match(/^\(\s*:var\s+([^\s\)]+)/i);
-          const varName = vMatch ? vMatch[1].replace(/\\"/g, '"') : null;
-          const expr = extractQuoted(form, 'expr');
-          if (varName && expr) {
-            bindings.push({ type: 'var-update', varName, expr });
-          }
-        }
+      bindListBlocks.forEach(bBlock => {
+        const bindForms = extractChildForms(bBlock);
+        bindForms.forEach(form => walkBindingForm(form, undefined, null));
       });
+    } else {
+      // Backwards compatibility for legacy scenes with bare top-level (:target ...) outside (:bindings ...)
+      const bindBlocks = extractSexprBlocks(astContent, ':target');
+      bindBlocks.forEach(block => parseTargetForm(block, undefined));
     }
 
     // Checkpoints (Interactive Formative Assessment)
@@ -931,6 +1123,121 @@
 
     // Direct Manipulation & Keyboard Gestures (100% Declarative S-Expression VM)
     // Supports :draggable, :interactive, :clickable, :holdable, :trackball, :rotatable, :key
+    // Plus nested pure-AST action trees: (:seq ...), (:if "<cond>" <then> [<else>]), (:set-var ...), (:step-var ...), (:toggle-var ...), (:action ...), (:tone ...), (:speak ...)
+    const parseGestureStepForm = (stepForm) => {
+      if (!stepForm || typeof stepForm !== 'string') return null;
+      const headM = stepForm.match(/^\(\s*:([a-zA-Z0-9_-]+)/);
+      if (!headM) return null;
+      const kind = headM[1].toLowerCase();
+      const subForms = extractChildForms(stepForm);
+      let hdr = stepForm;
+      for (let si = 0; si < subForms.length; si++) hdr = hdr.replace(subForms[si], ' ');
+
+      if (kind === 'seq') {
+        const steps = subForms.map(parseGestureStepForm).filter(Boolean);
+        return steps.length > 0 ? { type: 'seq', steps } : null;
+      }
+      if (kind === 'if') {
+        const condM = hdr.match(/^\(\s*:if\s+(?::(?:cond|expr)\s+)?"((?:[^"\\]|\\.)*)"/i);
+        const cond = condM ? condM[1].replace(/\\"/g, '"') : (extractQuoted(hdr, 'cond') || extractQuoted(hdr, 'expr'));
+        const thenStep = subForms[0] ? parseGestureStepForm(subForms[0]) : null;
+        const elseStep = subForms[1] ? parseGestureStepForm(subForms[1]) : null;
+        if (!cond || !thenStep) return null;
+        return { type: 'if', cond, then: thenStep, else: elseStep || null };
+      }
+
+      const firstArgM = hdr.match(/^\(\s*:[a-zA-Z0-9_-]+\s+"((?:[^"\\]|\\.)*)"/i);
+      const firstStr = firstArgM ? firstArgM[1].replace(/\\"/g, '"') : null;
+      const firstNumM = !firstStr ? hdr.match(/^\(\s*:[a-zA-Z0-9_-]+\s+(-?\d+(?:\.\d+)?)\b/) : null;
+      const firstVal = firstStr !== null ? firstStr : (firstNumM ? Number(firstNumM[1]) : undefined);
+
+      if (kind === 'set-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        if (!varName) return null;
+        return {
+          type: 'set-var',
+          setVar: varName,
+          val: extractSlotValue(hdr, 'val'),
+          fromAttr: extractQuoted(hdr, 'from-attr') || extractQuoted(hdr, 'fromAttr') || undefined,
+          attr: extractQuoted(hdr, 'attr') || undefined,
+          valExpr: extractQuoted(hdr, 'val-expr') || extractQuoted(hdr, 'valExpr') || undefined,
+          expr: extractQuoted(hdr, 'expr') || undefined,
+        };
+      }
+      if (kind === 'toggle-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        return varName ? { type: 'toggle-var', toggleVar: varName } : null;
+      }
+      if (kind === 'step-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        if (!varName) return null;
+        const deltaStr = extractSlot.call(null, hdr, /:delta\s+([\d\.\-]+)/i);
+        const minStr = extractSlot.call(null, hdr, /:min\s+([\d\.\-]+)/i);
+        const maxStr = extractSlot.call(null, hdr, /:max\s+([\d\.\-]+)/i);
+        return {
+          type: 'step-var',
+          stepVar: varName,
+          delta: deltaStr !== null ? parseFloat(deltaStr) : 1,
+          min: minStr !== null ? parseFloat(minStr) : undefined,
+          max: maxStr !== null ? parseFloat(maxStr) : undefined,
+        };
+      }
+      if (kind === 'clear-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        return varName ? { type: 'clear-var', var: varName } : null;
+      }
+      if (kind === 'reset-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        return varName ? { type: 'reset-var', var: varName, val: extractSlotValue(hdr, 'val') } : null;
+      }
+      if (kind === 'action') {
+        const actionName = firstStr || extractQuoted(hdr, 'name') || extractQuoted(hdr, 'id');
+        if (!actionName) return null;
+        const deltaStr = extractSlot.call(null, hdr, /:delta\s+([\d\.\-]+)/i);
+        const countRaw = extractSlotValue(hdr, 'count');
+        return {
+          type: 'action',
+          action: actionName,
+          var: extractQuoted(hdr, 'var') || undefined,
+          delta: deltaStr !== null ? parseFloat(deltaStr) : undefined,
+          count: typeof countRaw === 'number' ? countRaw : undefined,
+          val: extractSlotValue(hdr, 'val'),
+          attr: extractQuoted(hdr, 'attr') || undefined,
+          clearVar: extractQuoted(hdr, 'clear-var') || undefined,
+          resetVar: extractQuoted(hdr, 'reset-var') || undefined,
+          resetVal: extractSlotValue(hdr, 'reset-val'),
+          route: extractQuoted(hdr, 'route') || undefined,
+          preset: extractQuoted(hdr, 'preset') || undefined,
+          prompt: extractQuoted(hdr, 'prompt') || undefined,
+          mode: extractQuoted(hdr, 'mode') || undefined,
+          enabled: extractSlotValue(hdr, 'enabled'),
+          directive: extractQuoted(hdr, 'directive') || undefined,
+        };
+      }
+      if (kind === 'tone') {
+        const toneVal = firstVal !== undefined ? String(firstVal) : (extractSlotValue(hdr, 'val') !== undefined ? String(extractSlotValue(hdr, 'val')) : null);
+        const toneExpr = extractQuoted(hdr, 'expr') || extractQuoted(hdr, 'tone-expr') || undefined;
+        return (toneVal || toneExpr) ? { type: 'tone', tone: toneVal, toneExpr } : null;
+      }
+      if (kind === 'speak') {
+        const text = firstStr || extractQuoted(hdr, 'text') || extractQuoted(hdr, 'val');
+        const speakExpr = extractQuoted(hdr, 'expr') || undefined;
+        const speakRateVar = extractQuoted(hdr, 'rate-var') || extractQuoted(hdr, 'speak-rate-var') || undefined;
+        const speakPitchRaw = extractSlotValue(hdr, 'pitch');
+        return (text || speakExpr) ? { type: 'speak', speak: text, speakExpr, speakRateVar, speakPitch: typeof speakPitchRaw === 'number' ? speakPitchRaw : undefined } : null;
+      }
+      if (kind === 'speak-var') {
+        const varName = firstStr || extractQuoted(hdr, 'var') || extractQuoted(hdr, 'name');
+        const fallbackVar = extractQuoted(hdr, 'fallback-var') || extractQuoted(hdr, 'fallback') || undefined;
+        return varName ? { type: 'speak-var', speakVar: varName, fallbackVar } : null;
+      }
+      if (kind === 'speak-attr') {
+        const attrName = firstStr || extractQuoted(hdr, 'attr') || extractQuoted(hdr, 'name');
+        return attrName ? { type: 'speak-attr', speakAttr: attrName } : null;
+      }
+      return null;
+    };
+
     const gestures = [];
     const gestureBlocks = extractKeywordBlocks(astContent, ':gestures');
     if (gestureBlocks.length > 0) {
@@ -948,7 +1255,15 @@
         const isInteractive = /^\(\s*:interactive\b/i.test(gText);
         if (!isDraggable && !isRotatable && !isTrackball && !isClickable && !isHoldable && !isKey && !isInteractive) return;
 
-        const bodyText = gText.replace(/^\(\s*:[a-zA-Z0-9_-]+/, '(');
+        // Extract nested step forms (:seq, :if, :set-var, etc.) and strip them from header before parsing flat attrs
+        const nestedStepForms = extractChildForms(gText);
+        const steps = nestedStepForms.map(parseGestureStepForm).filter(Boolean);
+        let headerText = gText;
+        for (let si = 0; si < nestedStepForms.length; si++) {
+          headerText = headerText.replace(nestedStepForms[si], ' ');
+        }
+
+        const bodyText = headerText.replace(/^\(\s*:[a-zA-Z0-9_-]+/, '(');
         const target = extractSlot.call(null, bodyText, /:target\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:target\s+([^\s\)]+)/i);
         const code = extractSlot.call(null, bodyText, /:code\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:code\s+([^\s\)]+)/i);
         const key = extractSlot.call(null, bodyText, /:key\s+"([^"]+)"/i) || extractSlot.call(null, bodyText, /:key\s+([^\s\)]+)/i);
@@ -1044,7 +1359,7 @@
           else if (isRotatable) gestureType = 'rotatable';
           else if (!isDraggable) gestureType = 'interactive';
 
-          gestures.push({
+          const gObj = {
             type: gestureType,
             target,
             code,
@@ -1097,7 +1412,11 @@
             delta,
             rate,
             attr
-          });
+          };
+          if (steps.length > 0) {
+            gObj.steps = steps;
+          }
+          gestures.push(gObj);
         }
       });
     }
