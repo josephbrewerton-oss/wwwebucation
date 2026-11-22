@@ -399,6 +399,420 @@ async function runSimulations() {
   }
 
   // --------------------------------------------------------------------------
+  // SIMULATION 8: Multi-Fill Half-Edge Chaining (FillStyle0, FillStyle1, LineStyle + Shared Curve)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+    const wtr = new BitWriter();
+
+    const shapeId = 8;
+    wtr.writeUI16(shapeId);
+    wtr.writeRect(0, 200 * 20, 0, 100 * 20);
+
+    // 2 solid fills (DefineShape3 RGBA): #ef4444 (fill 1) and #3b82f6 (fill 2)
+    wtr.writeUI8(2);
+    wtr.writeUI8(0); wtr.writeUI8(0xef); wtr.writeUI8(0x44); wtr.writeUI8(0x44); wtr.writeUI8(0xff);
+    wtr.writeUI8(0); wtr.writeUI8(0x3b); wtr.writeUI8(0x82); wtr.writeUI8(0xf6); wtr.writeUI8(0xff);
+
+    // 1 line style: 3px #facc15
+    wtr.writeUI8(1);
+    wtr.writeUI16(3 * 20);
+    wtr.writeUI8(0xfa); wtr.writeUI8(0xcc); wtr.writeUI8(0x15); wtr.writeUI8(0xff);
+
+    // NumFillBits = 2, NumLineBits = 1
+    wtr.writeUBits(2, 4);
+    wtr.writeUBits(1, 4);
+
+    const edgeBits = 14;
+    const writeStraight = (dxPx: number, dyPx: number) => {
+      wtr.writeUBits(1, 1); // edge
+      wtr.writeUBits(1, 1); // straight
+      wtr.writeUBits(edgeBits - 2, 4);
+      wtr.writeUBits(1, 1); // general
+      wtr.writeSBits(dxPx * 20, edgeBits);
+      wtr.writeSBits(dyPx * 20, edgeBits);
+    };
+
+    // Left half outer boundary (0,100) -> (0,0) -> (100,0) with Fill1 = 1 (right side = inside left region), Line = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x01 | 0x04 | 0x08, 5); // MoveTo, Fill1, Line
+    wtr.writeUBits(14, 5);
+    wtr.writeSBits(0, 14);
+    wtr.writeSBits(100 * 20, 14);
+    wtr.writeUBits(1, 2); // Fill1 = 1
+    wtr.writeUBits(1, 1); // Line = 1
+    writeStraight(0, -100);  // (0,100) -> (0,0)
+    writeStraight(100, 0);   // (0,0) -> (100,0)
+
+    // Shared curved divider (100,0) -> (100,100) via control (120,50):
+    // Fill0 = 2 (left side = right half), Fill1 = 1 (right side = left half), Line = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x02 | 0x04, 5); // Fill0 = 2, Fill1 = 1
+    wtr.writeUBits(2, 2); // Fill0 = 2
+    wtr.writeUBits(1, 2); // Fill1 = 1
+    wtr.writeUBits(1, 1); // edge
+    wtr.writeUBits(0, 1); // curved
+    wtr.writeUBits(edgeBits - 2, 4);
+    wtr.writeSBits(20 * 20, edgeBits);  // ctrl dx (+20 -> 120)
+    wtr.writeSBits(50 * 20, edgeBits);  // ctrl dy (+50 -> 50)
+    wtr.writeSBits(-20 * 20, edgeBits); // anchor dx (-20 -> 100)
+    wtr.writeSBits(50 * 20, edgeBits);  // anchor dy (+50 -> 100)
+
+    // Left half bottom edge (100,100) -> (0,100) with Fill0 = 0, Fill1 = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x02, 5); // Fill0 = 0
+    wtr.writeUBits(0, 2);
+    writeStraight(-100, 0); // (100,100) -> (0,100)
+
+    // Right half outer boundary (100,0) -> (200,0) -> (200,100) -> (100,100) with Fill1 = 2, Line = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x01 | 0x04, 5); // MoveTo (100,0), Fill1 = 2
+    wtr.writeUBits(14, 5);
+    wtr.writeSBits(100 * 20, 14);
+    wtr.writeSBits(0, 14);
+    wtr.writeUBits(2, 2); // Fill1 = 2
+    writeStraight(100, 0);   // (100,0) -> (200,0)
+    writeStraight(0, 100);   // (200,0) -> (200,100)
+    writeStraight(-100, 0);  // (200,100) -> (100,100)
+
+    // End shape
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 5);
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, wtr.toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(400, 300, 24, 1, tagWriter.toByteArray(), 9);
+    const result = await transpileSwfToAst(swfBinary, 'sim-multifill-halfedge');
+    const duration = performance.now() - start;
+
+    const errors: string[] = [];
+    if (!result.success) errors.push(`Transpilation failed: ${result.error}`);
+    if (!result.svgMarkup.includes('<g id="swf-shape-8">')) errors.push('Missing <g id="swf-shape-8"> wrapper');
+    if (!result.svgMarkup.includes('fill="#ef4444" stroke="none"')) errors.push('Missing distinct fill #ef4444 path');
+    if (!result.svgMarkup.includes('fill="#3b82f6" stroke="none"')) errors.push('Missing distinct fill #3b82f6 path');
+    if (!result.svgMarkup.includes('Q 120.0 50.0 100.0 100.0')) errors.push('Missing forward curve Q 120.0 50.0 100.0 100.0 for fill1');
+    if (!result.svgMarkup.includes('Q 120.0 50.0 100.0 0.0')) errors.push('Missing reversed curve Q 120.0 50.0 100.0 0.0 for fill0 (control point preserved)');
+    if (!result.svgMarkup.includes('fill="none" stroke="#facc15" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"')) {
+      errors.push('Missing separate stroke path with round linecap/linejoin');
+    }
+    const fillPathCount = (result.svgMarkup.match(/stroke="none"/g) || []).length;
+    if (fillPathCount !== 2) errors.push(`Expected 2 distinct fill paths, got ${fillPathCount}`);
+
+    reports.push({
+      name: 'Sim 8: Multi-Fill Half-Edge Chaining (Fill0/Fill1 Reversal + Shared Curve)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Chained two adjacent fills sharing a quadratic Bézier edge into 2 closed per-fill paths + 1 separate stroke path.',
+      errors
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 9: In-Place NewStyles (flags & 0x10) Continuation
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+    const wtr = new BitWriter();
+
+    const shapeId = 9;
+    wtr.writeUI16(shapeId);
+    wtr.writeRect(0, 300 * 20, 0, 120 * 20);
+
+    // Layer 1 styles: 1 fill (#22c55e), 0 lines
+    wtr.writeUI8(1);
+    wtr.writeUI8(0); wtr.writeUI8(0x22); wtr.writeUI8(0xc5); wtr.writeUI8(0x5e); wtr.writeUI8(0xff);
+    wtr.writeUI8(0);
+
+    wtr.writeUBits(1, 4); // numFillBits = 1
+    wtr.writeUBits(0, 4); // numLineBits = 0
+
+    const edgeBits = 14;
+    const writeRectEdges = (wPx: number, hPx: number) => {
+      const segs = [[wPx, 0], [0, hPx], [-wPx, 0], [0, -hPx]];
+      for (const [dx, dy] of segs) {
+        wtr.writeUBits(1, 1);
+        wtr.writeUBits(1, 1);
+        wtr.writeUBits(edgeBits - 2, 4);
+        wtr.writeUBits(1, 1);
+        wtr.writeSBits(dx * 20, edgeBits);
+        wtr.writeSBits(dy * 20, edgeBits);
+      }
+    };
+
+    // Layer 1 rect at (10, 10) 80x80 with Fill1 = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x01 | 0x04, 5); // MoveTo + Fill1
+    wtr.writeUBits(14, 5);
+    wtr.writeSBits(10 * 20, 14);
+    wtr.writeSBits(10 * 20, 14);
+    wtr.writeUBits(1, 1);
+    writeRectEdges(80, 80);
+
+    // In-place StateNewStyles (flags & 0x10)
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x10, 5); // StateNewStyles only
+    wtr.syncBits();
+
+    // Layer 2 styles: 2 fills (#f59e0b, #ec4899), 1 line (#ffffff)
+    wtr.writeUI8(2);
+    wtr.writeUI8(0); wtr.writeUI8(0xf5); wtr.writeUI8(0x9e); wtr.writeUI8(0x0b); wtr.writeUI8(0xff);
+    wtr.writeUI8(0); wtr.writeUI8(0xec); wtr.writeUI8(0x48); wtr.writeUI8(0x99); wtr.writeUI8(0xff);
+    wtr.writeUI8(1);
+    wtr.writeUI16(2 * 20);
+    wtr.writeUI8(0xff); wtr.writeUI8(0xff); wtr.writeUI8(0xff); wtr.writeUI8(0xff);
+
+    wtr.writeUBits(2, 4); // new numFillBits = 2
+    wtr.writeUBits(1, 4); // new numLineBits = 1
+
+    // Layer 2 rect at (150, 20) 90x70 with Fill1 = 2 (#ec4899), Line = 1 (#ffffff)
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x01 | 0x04 | 0x08, 5); // MoveTo + Fill1 + Line
+    wtr.writeUBits(14, 5);
+    wtr.writeSBits(150 * 20, 14);
+    wtr.writeSBits(20 * 20, 14);
+    wtr.writeUBits(2, 2); // Fill1 = 2
+    wtr.writeUBits(1, 1); // Line = 1
+    writeRectEdges(90, 70);
+
+    // End shape
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 5);
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, wtr.toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(400, 300, 24, 1, tagWriter.toByteArray(), 9);
+    const result = await transpileSwfToAst(swfBinary, 'sim-newstyles');
+    const duration = performance.now() - start;
+
+    const errors: string[] = [];
+    if (!result.success) errors.push(`Transpilation failed: ${result.error}`);
+    if (!result.svgMarkup.includes('fill="#22c55e" stroke="none"')) errors.push('Layer 1 fill #22c55e missing');
+    if (!result.svgMarkup.includes('fill="#ec4899" stroke="none"')) errors.push('Layer 2 fill #ec4899 missing (NewStyles 0x10 truncated)');
+    if (!result.svgMarkup.includes('stroke="#ffffff" stroke-width="2"')) errors.push('Layer 2 stroke #ffffff missing');
+
+    reports.push({
+      name: 'Sim 9: In-Place NewStyles (flags & 0x10) Multi-Layer Parsing',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Flushed Layer 1 (#22c55e), synced bitstream, re-read updated Fill/Line tables, and parsed Layer 2 (#ec4899 + #ffffff).',
+      errors
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 10: DefineShape4 (Tag 83) LineStyle2 Bit-Stream Alignment
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+    const wtr = new BitWriter();
+
+    const shapeId = 10;
+    wtr.writeUI16(shapeId);
+    wtr.writeRect(0, 200 * 20, 0, 150 * 20); // ShapeBounds
+    wtr.writeRect(0, 200 * 20, 0, 150 * 20); // EdgeBounds
+    wtr.writeUI8(0x01); // UsesScalingStrokes flag
+
+    // FillStyles: 1 solid fill (#14b8a6)
+    wtr.writeUI8(1);
+    wtr.writeUI8(0); wtr.writeUI8(0x14); wtr.writeUI8(0xb8); wtr.writeUI8(0xa6); wtr.writeUI8(0xff);
+
+    // LineStyles2: 2 entries
+    wtr.writeUI8(2);
+    // Entry 1: Width 4px, StartCap=0, JoinStyle=2 (Miter -> reads MiterLimitFactor UI16), HasFillFlag=0 (RGBA #f97316)
+    wtr.writeUI16(4 * 20);
+    wtr.writeUBits(0, 2); // StartCapStyle
+    wtr.writeUBits(2, 2); // JoinStyle = 2 (Miter)
+    wtr.writeUBits(0, 1); // HasFillFlag = 0
+    wtr.writeUBits(0, 1); // NoHScaleFlag
+    wtr.writeUBits(0, 1); // NoVScaleFlag
+    wtr.writeUBits(1, 1); // PixelHintingFlag
+    wtr.writeUBits(0, 5); // Reserved
+    wtr.writeUBits(0, 1); // NoClose
+    wtr.writeUBits(0, 2); // EndCapStyle
+    wtr.writeUI16(3 * 256); // MiterLimitFactor = 3.0 (8.8 fixed)
+    wtr.writeUI8(0xf9); wtr.writeUI8(0x73); wtr.writeUI8(0x16); wtr.writeUI8(0xff);
+
+    // Entry 2: Width 2px, StartCap=1, JoinStyle=0 (Round), HasFillFlag=1 (FILLSTYLE solid #a855f7)
+    wtr.writeUI16(2 * 20);
+    wtr.writeUBits(1, 2); // StartCapStyle
+    wtr.writeUBits(0, 2); // JoinStyle = 0
+    wtr.writeUBits(1, 1); // HasFillFlag = 1
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 5);
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(1, 2);
+    // Embedded FILLSTYLE (solid #a855f7)
+    wtr.writeUI8(0);
+    wtr.writeUI8(0xa8); wtr.writeUI8(0x55); wtr.writeUI8(0xf7); wtr.writeUI8(0xff);
+
+    // NumFillBits = 1, NumLineBits = 2
+    wtr.writeUBits(1, 4);
+    wtr.writeUBits(2, 4);
+
+    const edgeBits = 14;
+    const writeLine = (dxPx: number, dyPx: number) => {
+      wtr.writeUBits(1, 1);
+      wtr.writeUBits(1, 1);
+      wtr.writeUBits(edgeBits - 2, 4);
+      wtr.writeUBits(1, 1);
+      wtr.writeSBits(dxPx * 20, edgeBits);
+      wtr.writeSBits(dyPx * 20, edgeBits);
+    };
+
+    // Draw triangle with Fill1 = 1 (#14b8a6), Line 1 (#f97316) on 2 edges and Line 2 (#a855f7) on 1 edge
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x01 | 0x04 | 0x08, 5);
+    wtr.writeUBits(14, 5);
+    wtr.writeSBits(20 * 20, 14);
+    wtr.writeSBits(20 * 20, 14);
+    wtr.writeUBits(1, 1); // Fill1 = 1
+    wtr.writeUBits(1, 2); // Line = 1
+    writeLine(100, 0);
+    writeLine(-50, 80);
+
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0x08, 5); // Switch to Line = 2
+    wtr.writeUBits(2, 2);
+    writeLine(-50, -80);
+
+    wtr.writeUBits(0, 1);
+    wtr.writeUBits(0, 5); // End
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE4, wtr.toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(400, 300, 24, 1, tagWriter.toByteArray(), 9);
+    const result = await transpileSwfToAst(swfBinary, 'sim-defineshape4-linestyle2');
+    const duration = performance.now() - start;
+
+    const errors: string[] = [];
+    if (!result.success) errors.push(`Transpilation failed: ${result.error}`);
+    if (!result.svgMarkup.includes('fill="#14b8a6" stroke="none"')) errors.push('DefineShape4 fill #14b8a6 missing (bitstream misaligned)');
+    if (!result.svgMarkup.includes('stroke="#f97316" stroke-width="4"')) errors.push('LineStyle2 entry 1 (MiterLimit + RGBA #f97316) missing');
+    if (!result.svgMarkup.includes('stroke="#a855f7" stroke-width="2"')) errors.push('LineStyle2 entry 2 (HasFillFlag=1 FILLSTYLE #a855f7) missing');
+
+    reports.push({
+      name: 'Sim 10: DefineShape4 LineStyle2 Alignment (MiterLimit + HasFillFlag)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Aligned DefineShape4 LineStyle2 (MiterLimitFactor + embedded FILLSTYLE) with zero bitstream drift.',
+      errors
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 11: Empty Shape (Zero Bounding-Box Artifact) & PlaceObject2/3 Matrices
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    // Shape 11: Empty DefineShape2 (bounds 0..200 x 0..100, zero edges)
+    const emptyWtr = new BitWriter();
+    emptyWtr.writeUI16(11);
+    emptyWtr.writeRect(0, 200 * 20, 0, 100 * 20);
+    emptyWtr.writeUI8(1); // 1 fill style defined, never drawn
+    emptyWtr.writeUI8(0); emptyWtr.writeUI8(0xff); emptyWtr.writeUI8(0x00); emptyWtr.writeUI8(0x00);
+    emptyWtr.writeUI8(0); // 0 line styles
+    emptyWtr.writeUBits(1, 4);
+    emptyWtr.writeUBits(0, 4);
+    emptyWtr.writeUBits(0, 1);
+    emptyWtr.writeUBits(0, 5); // EndShapeRecord immediately
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE2, emptyWtr.toByteArray());
+
+    // Shape 12: Solid rect placed with PlaceObject2 scale + translate matrix
+    const rect12 = buildRectShapeTag(12, 0, 0, 40, 20, [56, 189, 248, 255], 2);
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE2, rect12);
+
+    // Helper to write a SWF MATRIX
+    const writeSwfMatrix = (
+      w: BitWriter,
+      opts: { scaleX?: number; scaleY?: number; rot0?: number; rot1?: number; txPx?: number; tyPx?: number }
+    ) => {
+      w.syncBits();
+      if (opts.scaleX !== undefined && opts.scaleY !== undefined) {
+        w.writeUBits(1, 1); // HasScale
+        w.writeUBits(20, 5);
+        w.writeSBits(Math.round(opts.scaleX * 65536), 20);
+        w.writeSBits(Math.round(opts.scaleY * 65536), 20);
+      } else {
+        w.writeUBits(0, 1);
+      }
+      if (opts.rot0 !== undefined && opts.rot1 !== undefined) {
+        w.writeUBits(1, 1); // HasRotate
+        w.writeUBits(20, 5);
+        w.writeSBits(Math.round(opts.rot0 * 65536), 20);
+        w.writeSBits(Math.round(opts.rot1 * 65536), 20);
+      } else {
+        w.writeUBits(0, 1);
+      }
+      const txTwips = Math.round((opts.txPx || 0) * 20);
+      const tyTwips = Math.round((opts.tyPx || 0) * 20);
+      w.writeUBits(16, 5);
+      w.writeSBits(txTwips, 16);
+      w.writeSBits(tyTwips, 16);
+      w.syncBits();
+    };
+
+    // Tag 26: PlaceObject2 for Shape 12 at depth 1 (scale 2x, 1.5y, translate 120, 75)
+    const place2 = new BitWriter();
+    place2.writeUI8(0x02 | 0x04); // HasCharacter | HasMatrix
+    place2.writeUI16(1); // depth 1
+    place2.writeUI16(12); // charId 12
+    writeSwfMatrix(place2, { scaleX: 2, scaleY: 1.5, txPx: 120, tyPx: 75 });
+    writeTag(tagWriter, 26, place2.toByteArray());
+
+    // Tag 70: PlaceObject3 for Shape 12 at depth 2 (rotate/skew + translate 260, 140)
+    const place3 = new BitWriter();
+    place3.writeUI8(0x02 | 0x04); // flags1: HasCharacter | HasMatrix
+    place3.writeUI8(0x00);        // flags2
+    place3.writeUI16(2);          // depth 2
+    place3.writeUI16(12);         // charId 12
+    writeSwfMatrix(place3, { scaleX: 1, scaleY: 1, rot0: 0.5, rot1: -0.5, txPx: 260, tyPx: 140 });
+    writeTag(tagWriter, 70, place3.toByteArray());
+
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 24, 1, tagWriter.toByteArray(), 9);
+    const result = await transpileSwfToAst(swfBinary, 'sim-empty-and-matrices');
+    const duration = performance.now() - start;
+
+    const errors: string[] = [];
+    if (!result.success) errors.push(`Transpilation failed: ${result.error}`);
+    if (!result.svgMarkup.includes('<g id="swf-shape-11" />')) {
+      errors.push('Empty shape 11 did not emit clean self-closing <g id="swf-shape-11" />');
+    }
+    if (result.svgMarkup.includes('#ff0000')) {
+      errors.push('Empty shape 11 emitted a solid bounding-box artifact (#ff0000)');
+    }
+    if (!result.svgMarkup.includes('transform="matrix(2 0 0 1.5 120 75)"')) {
+      errors.push('PlaceObject2 transform="matrix(2 0 0 1.5 120 75)" missing');
+    }
+    if (!result.svgMarkup.includes('transform="matrix(1 0.5 -0.5 1 260 140)"')) {
+      errors.push('PlaceObject3 transform="matrix(1 0.5 -0.5 1 260 140)" missing');
+    }
+
+    reports.push({
+      name: 'Sim 11: Empty Shape (No Bounding-Box Artifact) & PlaceObject2/3 Matrices',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified empty <g id="swf-shape-11" /> without fallback rects and exact SVG matrix() transforms on PlaceObject2 & PlaceObject3.',
+      errors
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // Summary Presentation
   // --------------------------------------------------------------------------
   console.log('RESULTS BREAKDOWN:\n');
