@@ -1,14 +1,14 @@
 import { getSavedLanguage } from '../engine/operational-language';
 import { getBaseUrl } from '../utils/url';
-import { getLocalState, setLocalState } from '../services/localStateStore';
-import { PRESET_OPTIONS, ScenePresetOption } from '../data/player/generatedScenes';
+import { getLocalState } from '../services/localStateStore';
+import type { ScenePresetOption } from '../data/player/generatedScenes';
 import {
   saveCustomCartridge,
   getCustomCartridges,
   inflateCartridgeToVault,
   type CartridgeDefinition,
 } from '../services/cartridgeStore';
-import { isPhetBundle, transpilePhetFile, PHET_BUILTIN_MODELS, type SupportedPhetPreset } from '../utils/phetBridge';
+import type { SupportedPhetPreset } from '../utils/phetBridge';
 import {
   toggleBsl,
   setBslEnabled,
@@ -47,82 +47,33 @@ import {
   formatShortHash,
   getMasterRegistryChecksum,
   getTotalCertifiedCartridges,
-  CURRICULUM_AUTHORITY_NAME,
 } from '../utils/cartridgeIntegrity';
-
-const DEFAULT_PRESET_ID =
-  PRESET_OPTIONS.find((p) => p.kind === 'lab' && p.isPlayableScene !== false)?.id || 'welcome';
-const EXTRA_DOC_PRESETS: ScenePresetOption[] = [
-  {
-    id: 'lumina-architecture',
-    label: 'Lumina: Sovereign Architectural Manifesto (4-Chapter Show & Tell)',
-    type: 'Slide',
-    kind: 'doc',
-    isPlayableScene: true,
-    stage: 'FOUNDATIONAL SYSTEM ARCHITECTURE',
-    subject: 'System Architecture',
-    section: 'System Architecture & Docs',
-  },
-];
-const ALL_BUILTIN_PRESETS: ScenePresetOption[] = [...PRESET_OPTIONS, ...EXTRA_DOC_PRESETS];
-const VALID_PRESET_IDS = new Set(ALL_BUILTIN_PRESETS.map((p) => p.id));
-
-type SubjectFilterId = 'All' | 'Science' | 'Maths' | 'Catholic' | 'English' | 'Computing' | 'Languages' | 'Geography';
-type FormatFilterId = 'All' | 'Sim' | 'Slide' | 'App' | 'Film' | '3D';
-type StageFilterId = 'All' | 'KS1' | 'KS2' | 'KS3' | 'KS4';
-
-const RECENT_PRESETS_STORAGE_KEY = 'stj_player_recent_presets_v1';
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-}
-
-function normalizePresetId(raw: string | null | undefined): string {
-  if (!raw) return DEFAULT_PRESET_ID;
-  if (raw === 'lumina-architecture-manifesto') return 'lumina-architecture';
-  if (VALID_PRESET_IDS.has(raw)) return raw;
-  try {
-    const custom = getCustomCartridges();
-    if (custom.some((c) => c.id === raw)) return raw;
-  } catch (_) {}
-  return DEFAULT_PRESET_ID;
-}
-
-function buildPlayerSrc(base: string, presetId: string, bslActive: boolean, externalSrc?: string | null): string {
-  const perfHud = getLocalState('app_perf_hud_enabled') === 'true';
-  const verbosity = getLocalState('app_hud_verbosity') || 'minimal';
-  const budgetAlert = getLocalState('app_frame_budget_alert') === 'true';
-
-  const params = new URLSearchParams({
-    bsl: bslActive ? '1' : '0',
-    mode: 'suite',
-    tools: '1',
-    all: '1',
-  });
-  if (externalSrc) {
-    params.set('src', externalSrc);
-  } else {
-    params.set('preset', presetId);
-  }
-
-  if (perfHud) {
-    params.set('hud', '1');
-    params.set('hud_verbosity', verbosity);
-    if (budgetAlert) params.set('budget_alert', '1');
-  }
-
-  const activeLang = getSavedLanguage();
-  if (activeLang && activeLang !== 'en') {
-    params.set('lang', activeLang);
-  }
-
-  return `${base}player.html?${params.toString()}`;
-}
+import {
+  ALL_BUILTIN_PRESETS,
+  buildCatalogGridHtml,
+  buildIntegrityReadoutHtml,
+  buildOptionsHtml,
+  buildPlayerSrc,
+  escapeHtml,
+  getAllAvailablePresets,
+  getNormalizedSubject,
+  getPresetMeta,
+  getRecentPresetIds,
+  isCatholicPreset,
+  isNonMediaOrUtility,
+  matchesKeyStage,
+  normalizePresetId,
+  recordRecentPreset,
+  type FormatFilterId,
+  type StageFilterId,
+  type SubjectFilterId,
+} from './player/playerCatalog';
+import { renderPlayerShellHtml } from './player/playerShellTemplate';
+import {
+  buildBuiltinPhetCartridge,
+  ingestUploadedCartridgeFiles,
+  unlockMobilePwaAudioForIframe,
+} from './player/playerFileIngestion';
 
 export function renderPlayerPage(): HTMLElement {
   const base = getBaseUrl();
@@ -154,461 +105,18 @@ export function renderPlayerPage(): HTMLElement {
   let bslActive = getBslEnabled();
   let isMuted = !getVoiceEnabled();
 
-  // Presets are loaded declaratively from generatedScenes + architectural Show & Tell docs
-  const presets: ScenePresetOption[] = ALL_BUILTIN_PRESETS;
-
-  function isNonMediaOrUtility(p: ScenePresetOption): boolean {
-    if (p.kind === 'data' || p.kind === 'benchmark' || p.kind === 'doc') return true;
-    if (p.isPlayableScene === false) return true;
-    return p.subject === 'System Architecture';
-  }
-
-  function isCatholicPreset(p: ScenePresetOption): boolean {
-    const subj = (p.subject || '').toLowerCase();
-    return (
-      subj.includes('religious') ||
-      subj === 'catholic life' ||
-      p.stage === 'CATHOLIC LIFE' ||
-      Boolean(p.section && p.section.includes('Catholic'))
-    );
-  }
-
-  function getNormalizedSubject(p: ScenePresetOption): SubjectFilterId {
-    if (isCatholicPreset(p)) return 'Catholic';
-    const subj = (p.subject || '').toLowerCase();
-    if (subj.includes('science') || subj.includes('physics') || subj.includes('chem') || subj.includes('bio')) return 'Science';
-    if (subj.includes('math')) return 'Maths';
-    if (subj.includes('english') || subj.includes('phonics')) return 'English';
-    if (subj.includes('comput') || subj.includes('design')) return 'Computing';
-    if (subj.includes('language') || subj.includes('spanish') || subj.includes('french') || subj.includes('latin') || subj.includes('bsl') || subj.includes('sign')) return 'Languages';
-    if (subj.includes('geograph')) return 'Geography';
-    return 'All';
-  }
-
-  function matchesKeyStage(p: ScenePresetOption, stageFilter: StageFilterId): boolean {
-    if (stageFilter === 'All') return true;
-    const raw = `${p.stage || ''} ${p.oakId || ''}`.toUpperCase();
-    if (stageFilter === 'KS1') return raw.includes('EYFS') || raw.includes('KS1') || raw.includes('KEY STAGE 1') || raw.includes('EARLY YEARS');
-    if (stageFilter === 'KS2') return raw.includes('KS2') || raw.includes('KEY STAGE 2') || raw.includes('WHOLE SCHOOL');
-    if (stageFilter === 'KS3') return raw.includes('KS3') || raw.includes('KEY STAGE 3');
-    if (stageFilter === 'KS4') return raw.includes('KS4') || raw.includes('GCSE') || raw.includes('A-LEVEL') || raw.includes('KEY STAGE 4');
-    return true;
-  }
-
-  function getRecentPresetIds(): string[] {
-    try {
-      const raw = getLocalState(RECENT_PRESETS_STORAGE_KEY);
-      if (!raw) return [];
-      const arr = JSON.parse(raw);
-      return Array.isArray(arr) ? arr.filter((id) => typeof id === 'string') : [];
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function recordRecentPreset(id: string) {
-    if (!id || id.startsWith('__')) return;
-    try {
-      const prev = getRecentPresetIds().filter((x) => x !== id);
-      const next = [id, ...prev].slice(0, 5);
-      setLocalState(RECENT_PRESETS_STORAGE_KEY, JSON.stringify(next));
-    } catch (_) {}
-  }
-
-  function getCustomCartridgesList(): CartridgeDefinition[] {
-    try {
-      const custom = getCustomCartridges();
-      return custom.filter((c) => !VALID_PRESET_IDS.has(c.id));
-    } catch (_) {
-      return [];
-    }
-  }
-
-  function getPresetMeta(id: string): ScenePresetOption {
-    const found = presets.find((p) => p.id === id);
-    if (found) return found;
-    try {
-      const custom = getCustomCartridges().find((c) => c.id === id);
-      if (custom) {
-        return {
-          id: custom.id,
-          label: custom.title,
-          stage: custom.stage || 'LOCAL VAULT',
-          type: (custom.type as any) || 'Sim',
-          kind: 'lab',
-          isPlayableScene: true,
-          subject: custom.subject || 'Custom Ingestion',
-        };
-      }
-    } catch (_) {}
-    return presets[0];
-  }
-
-  // Playable visual curriculum labs (excludes non-media data packs & utility benchmarks by default)
-  const corePlayableLabs = presets.filter((p) => !isNonMediaOrUtility(p));
-  const hiddenExtrasCount = presets.length - corePlayableLabs.length;
-
-  function buildOptionsHtml(selectedId: string): string {
-    const customList = getCustomCartridgesList();
-    const customGroupHtml = customList.length > 0 ? `
-      <optgroup label="💾 Local Ingested Cartridges" style="background:#0f172a; color:#a78bfa;">
-        ${customList.map(c => `<option value="${escapeHtml(c.id)}" ${c.id === selectedId ? 'selected' : ''}>${escapeHtml(c.title)} (${escapeHtml(c.stage || 'LOCAL')})</option>`).join('')}
-      </optgroup>
-    ` : '';
-
-    const dropdownLabs = corePlayableLabs.filter((p) => !p.id.startsWith('phet-'));
-    const phetLabs = corePlayableLabs.filter((p) => p.id.startsWith('phet-'));
-
-    const scienceOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Science');
-    const mathOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Maths');
-    const catholicOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Catholic');
-    const englishOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'English');
-    const computingOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Computing');
-    const languageOpts = dropdownLabs.filter((p) => getNormalizedSubject(p) === 'Languages');
-    const geoOtherOpts = dropdownLabs.filter((p) => {
-      const s = getNormalizedSubject(p);
-      return s === 'Geography' || s === 'All';
-    });
-
-    const renderOpts = (arr: ScenePresetOption[]) =>
-      arr.map((p) => `<option value="${escapeHtml(p.id)}" ${p.id === selectedId ? 'selected' : ''}>${escapeHtml(p.label)} · ${escapeHtml(p.type)} (${escapeHtml(p.stage)})</option>`).join('');
-
-    // Preserve deep-linked utility/data preset in dropdown if directly selected via URL
-    const selectedPreset = presets.find((p) => p.id === selectedId);
-    const activeExtraHtml = selectedPreset && isNonMediaOrUtility(selectedPreset)
-      ? `<optgroup label="📎 Active Reference / Benchmark" style="background:#0f172a; color:#cbd5e1;">
-          <option value="${escapeHtml(selectedPreset.id)}" selected>${escapeHtml(selectedPreset.label)} (${escapeHtml(selectedPreset.stage)})</option>
-        </optgroup>`
-      : '';
-
-    return `
-      ${customGroupHtml}
-      ${activeExtraHtml}
-      <optgroup label="🔬 Sciences (Physics, Chemistry &amp; Biology)" style="background:#0f172a; color:#38bdf8;">
-        ${renderOpts(scienceOpts)}
-      </optgroup>
-      <optgroup label="📐 Mathematics &amp; Geometry" style="background:#0f172a; color:#34d399;">
-        ${renderOpts(mathOpts)}
-      </optgroup>
-      <optgroup label="✝️ Catholic Faith &amp; Liturgy" style="background:#0f172a; color:#fde047;">
-        ${renderOpts(catholicOpts)}
-      </optgroup>
-      <optgroup label="📖 English, Literature &amp; Phonics" style="background:#0f172a; color:#fbbf24;">
-        ${renderOpts(englishOpts)}
-      </optgroup>
-      <optgroup label="💻 Computing &amp; Design Technology" style="background:#0f172a; color:#c084fc;">
-        ${renderOpts(computingOpts)}
-      </optgroup>
-      <optgroup label="🗣️ Languages &amp; BSL" style="background:#0f172a; color:#f472b6;">
-        ${renderOpts(languageOpts)}
-      </optgroup>
-      <optgroup label="🌍 Geography &amp; Portal Showcase" style="background:#0f172a; color:#60a5fa;">
-        ${renderOpts(geoOtherOpts)}
-      </optgroup>
-      <optgroup label="⚛️ PhET Distillations" style="background:#0f172a; color:#38bdf8;">
-        ${renderOpts(phetLabs)}
-        <option value="__open_local__">📥 Import Local PhET (.html / .phet) or SWF...</option>
-      </optgroup>
-      <optgroup label="🔍 Discovery" style="background:#0f172a; color:#94a3b8;">
-        <option value="__custom_find__">🔍 Search &amp; Filter All Labs Below...</option>
-      </optgroup>
-    `;
-  }
-
-  const optionsHtml = buildOptionsHtml(activePreset);
-
   const meta = getPresetMeta(activePreset);
-  const safeBase = escapeHtml(base);
-  const safeStage = escapeHtml(meta.stage || '');
-  const safeType = escapeHtml(meta.type || 'Sim');
-  const safeLabel = escapeHtml(meta.label || '');
-  const safePlayerSrc = isStageOpen
-    ? escapeHtml(buildPlayerSrc(base, activePreset, bslActive, initialExternalSrc))
-    : 'about:blank';
-  const initialRecord = getRegisteredRecord(activePreset);
-  const initialSealCode = initialRecord?.seal ? initialRecord.seal.slice(0, 6) : '';
-  const initialSealLabel = initialRecord
-    ? `🛡️ St Joseph's Curriculum • ${initialSealCode}`
-    : '◈ Custom / External';
-  const initialSealTitle = initialRecord
-    ? `Verified St Joseph's Curriculum Cartridge (${initialRecord.title}) • Authority: ${CURRICULUM_AUTHORITY_NAME} • Seal: ${formatShortHash(initialRecord.seal)} — Click to view SHA-256 digests`
-    : 'Custom, imported, or documentation cartridge — Click to inspect SHA-256 provenance';
-
-  container.innerHTML = `
-    <!-- Top Breadcrumbs -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem; flex-wrap:wrap; gap:0.75rem;">
-      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-        <a href="${safeBase}" style="font-size:0.84rem; color:#64748b; text-decoration:none; font-weight:600;">&larr; Home</a>
-        <span style="color:#cbd5e1;">/</span>
-        <button type="button" id="player-breadcrumb-labs" style="background:none; border:none; padding:0; font-size:0.84rem; color:#0284c7; font-weight:700; cursor:${isStageOpen ? 'pointer' : 'default'};">
-          🔬 Interactive Labs
-        </button>
-        <span id="player-breadcrumb-sep" style="display:${isStageOpen ? 'inline' : 'none'}; color:#cbd5e1;">/</span>
-        <span id="player-breadcrumb-active" style="display:${isStageOpen ? 'inline' : 'none'}; font-size:0.84rem; color:#0f172a; font-weight:700;">
-          ${safeLabel}
-        </span>
-      </div>
-
-      <div style="display:flex; gap:8px; align-items:center;">
-        <a href="${safeBase}catholic-life" style="padding:6px 12px; border-radius:8px; background:#f8fafc; border:1px solid #e2e8f0; color:#334155; font-size:0.8rem; font-weight:600; text-decoration:none;">
-          ⛪ Catholic Sanctuary
-        </a>
-        <a href="${safeBase}practice-lab" style="padding:6px 12px; border-radius:8px; background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; font-size:0.8rem; font-weight:600; text-decoration:none;">
-          ⚡ Practice Lab
-        </a>
-      </div>
-    </div>
-
-    <!-- Main Interactive Stage Frame (Mounted on demand when a lab is launched or deep-linked) -->
-    <div id="player-stage-shell" style="display:${isStageOpen ? 'block' : 'none'}; background:#090d16; border-radius:16px; border:1px solid #1e293b; overflow:hidden; box-shadow:0 12px 36px rgba(0,0,0,0.35); margin-bottom:2rem;">
-      <!-- Stage Toolbar: Row 1 (Header & Primary Simulation Controls) -->
-      <div style="padding:10px 18px; background:linear-gradient(90deg, #0f172a 0%, #1e293b 100%); border-bottom:1px solid #334155; display:flex; justify-content:space-between; align-items:center; min-height:48px; box-sizing:border-box; flex-wrap:wrap; gap:8px;">
-        <div style="display:flex; align-items:center; gap:10px; min-width:0;">
-          <button
-            type="button"
-            id="player-btn-back-to-grid"
-            title="Close activity and return to the Interactive Labs grid"
-            style="padding:5px 11px; border-radius:7px; background:#0f172a; color:#e2e8f0; border:1px solid #475569; font-size:0.76rem; font-weight:800; cursor:pointer; white-space:nowrap; flex-shrink:0; min-height:28px;">
-            &larr; All Labs
-          </button>
-          <div style="min-width:0;">
-            <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-              <span id="player-active-stage-badge" style="font-size:0.7rem; font-weight:800; padding:2px 7px; border-radius:9999px; background:#0369a1; color:#ffffff; letter-spacing:0.04em; white-space:nowrap;">
-                ${safeStage}
-              </span>
-              <span id="player-active-type-badge" style="font-size:0.68rem; font-weight:800; padding:2px 7px; border-radius:4px; background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.35); font-family:monospace; white-space:nowrap;">
-                ${safeType}
-              </span>
-              <button
-                type="button"
-                id="player-integrity-badge"
-                title="${escapeHtml(initialSealTitle)}"
-                style="font-size:0.68rem; font-weight:800; padding:2px 8px; border-radius:4px; background:${initialRecord ? 'rgba(16,185,129,0.16)' : 'rgba(148,163,184,0.16)'}; color:${initialRecord ? '#34d399' : '#cbd5e1'}; border:1px solid ${initialRecord ? 'rgba(16,185,129,0.45)' : 'rgba(148,163,184,0.4)'}; font-family:monospace; white-space:nowrap; cursor:pointer; line-height:1.3;">
-                ${escapeHtml(initialSealLabel)}
-              </button>
-            </div>
-            <h2 id="player-active-title" style="font-size:1.1rem; font-weight:800; color:#f8fafc; margin:2px 0 0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-              ${safeLabel}
-            </h2>
-          </div>
-        </div>
-
-        <!-- Primary Execution Actions (Locked Dimensions to Eliminate Any Layout Shift) -->
-        <div style="display:flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
-          <button type="button" id="player-btn-play" style="padding:5px 14px; border-radius:6px; background:#16a34a; color:#ffffff; border:1px solid #22c55e; font-size:0.78rem; font-weight:800; cursor:pointer; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; min-height:28px;" title="Play / Pause activity (Spacebar)">
-            <span id="player-play-icon">▶</span>
-            <span id="player-play-text">Play</span>
-          </button>
-          <button type="button" id="player-btn-reset" style="padding:5px 12px; border-radius:6px; background:#1e293b; color:#cbd5e1; border:1px solid #334155; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px;" title="Reset activity to starting position">
-            ↺ Reset
-          </button>
-          <button type="button" id="player-btn-mute" style="padding:5px 12px; border-radius:6px; background:${isMuted ? '#451a03' : '#1e293b'}; color:#ffffff; border:1px solid ${isMuted ? '#d97706' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; min-height:28px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Mute / Unmute simulation audio and voice narration (M)">
-            <span id="player-mute-icon">${isMuted ? '🔇' : '🔊'}</span>
-            <span id="player-mute-text">${isMuted ? 'Muted' : 'Audio ON'}</span>
-          </button>
-          <button type="button" id="player-btn-bsl" style="padding:5px 12px; border-radius:6px; background:${bslActive ? '#0284c7' : '#1e293b'}; color:#ffffff; border:1px solid ${bslActive ? '#38bdf8' : '#334155'}; font-size:0.78rem; font-weight:700; cursor:pointer; width:142px; text-align:center; flex-shrink:0; min-height:28px;" title="Toggle British Sign Language In-Vision Interpreter (Shift+B)">
-            🖐️ BSL Signing: ${bslActive ? 'ON' : 'OFF'}
-          </button>
-          <button type="button" id="player-btn-fullscreen" style="padding:5px 12px; border-radius:6px; background:#0284c7; color:#ffffff; border:none; font-size:0.78rem; font-weight:700; cursor:pointer; white-space:nowrap; min-height:28px;" title="Toggle Fullscreen">
-            ⛶ Fullscreen
-          </button>
-        </div>
-      </div>
-
-      <!-- Collapsible Cryptographic Cartridge Provenance & SHA-256 Readout -->
-      <div id="player-integrity-readout" style="display:none; padding:8px 18px; background:#07101f; border-bottom:1px solid #1e293b; font-size:0.73rem; color:#cbd5e1; font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-        <div id="player-integrity-readout-body" style="display:flex; align-items:center; flex-wrap:wrap; gap:12px;"></div>
-        <button type="button" id="player-integrity-readout-close" style="background:transparent; border:1px solid #334155; color:#94a3b8; border-radius:4px; padding:1px 7px; font-size:0.7rem; cursor:pointer;">Close &times;</button>
-      </div>
-
-      <!-- Stage Toolbar: Row 2 (Activity Selector, Pupil Study Tools & Collapsible Teacher Tools) -->
-      <div style="padding:8px 18px; background:#0b1120; border-bottom:1px solid #1e293b; display:flex; justify-content:space-between; align-items:center; gap:10px; min-height:42px; box-sizing:border-box; overflow-x:auto; flex-wrap:wrap;">
-        <div style="display:inline-flex; align-items:center; gap:6px; flex-shrink:0;">
-          <label for="player-sim-selector" style="font-size:0.76rem; font-weight:800; color:#94a3b8; white-space:nowrap;">
-            📚 Activity:
-          </label>
-          <select id="player-sim-selector" style="padding:4px 10px; border-radius:6px; background:#0f172a; color:#ffffff; border:1px solid #0284c7; font-size:0.8rem; font-weight:700; cursor:pointer; outline:none; max-width:280px;">
-            ${optionsHtml}
-          </select>
-        </div>
-
-        <div style="display:inline-flex; align-items:center; gap:8px; flex-shrink:0; flex-wrap:wrap;">
-          <button type="button" id="player-btn-ai-tutor" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#c084fc; border:1px solid #9333ea; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Ask your on-device study tutor for hints, worked steps, and explanations">
-            🤖 Ask Nano
-          </button>
-
-          <button type="button" id="player-btn-lab-drawer" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Adjust activity sliders, values, and experiment controls">
-            🎛️ Lab Controls
-          </button>
-
-          <button type="button" id="player-btn-remix-code" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#86efac; border:1px solid #16a34a; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open Code &amp; Remix Studio: inspect SVG shapes, edit AST/SlideScript, auto-match IDs, and Save As a new file">
-            💻 Remix &amp; Code
-          </button>
-
-          <button type="button" id="player-btn-log-csv" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Save your lab results table to your local Jotter • Shift+Click to download as CSV">
-            📊 Save Results to Jotter
-          </button>
-
-          <button type="button" id="player-btn-teacher-tools" aria-expanded="false" style="padding:4px 10px; border-radius:6px; background:#0f172a; color:#94a3b8; border:1px solid #334155; font-size:0.74rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Show or hide teacher &amp; technical authoring tools">
-            🧰 Teacher Tools ▾
-          </button>
-
-          <div id="player-teacher-tools-group" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; padding-left:6px; border-left:1px solid #334155;">
-            <button type="button" id="player-btn-open" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#38bdf8; border:1px solid #0284c7; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Open local activity files or import a PhET / HTML simulation">
-              📂 Import Activity
-            </button>
-            <input type="file" id="media-player-file-input" accept=".ast,.svg,.json,.html,.phet" multiple style="display:none;" />
-
-            <button type="button" id="player-btn-embed" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#34d399; border:1px solid #059669; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Get Responsive LMS Embed Snippet (Canvas, Moodle, Google Classroom)">
-              🔗 Embed in Class
-            </button>
-
-            <button type="button" id="player-btn-export-airgap" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#fde047; border:1px solid #ca8a04; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Save a standalone single-file HTML lesson that runs completely offline">
-              💾 Offline HTML
-            </button>
-
-            <button type="button" id="player-btn-diagnostics" style="padding:4px 10px; border-radius:6px; background:#1e293b; color:#4ade80; border:1px solid #16a34a; font-size:0.76rem; font-weight:700; cursor:pointer; display:inline-flex; align-items:center; gap:4px; white-space:nowrap;" title="Inspect Engine Telemetry, FPS, 16.6ms Budget &amp; Vector HUD">
-              ⚡ Diagnostics
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- In-Page Drawer & Modal Mount Point -->
-      <div id="player-drawer-mount-point" style="display:none; background:#0f172a; border-bottom:1px solid #334155;"></div>
-
-      <!-- Live Stage iFrame -->
-      <div id="player-iframe-wrapper" style="position:relative; width:100%; height:540px; background:#000000;">
-        <iframe
-          id="ast-player-iframe"
-          src="${safePlayerSrc}"
-          style="width:100%; height:100%; border:none; display:block;"
-          allow="autoplay; fullscreen"
-          title="AST Interactive Vector Stage">
-        </iframe>
-      </div>
-    </div>
-
-    <!-- Catholic Sanctuary Linkage Banner -->
-    <div id="catholic-sanctuary-banner" style="display:${isStageOpen && isCatholicPreset(meta) ? 'flex' : 'none'}; background:linear-gradient(90deg, #1e1b4b 0%, #0f172a 100%); border:1.5px solid #ca8a04; border-radius:10px; padding:10px 16px; margin-bottom:1.5rem; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; color:#ffffff; box-shadow:0 4px 14px rgba(202,138,4,0.15);">
-      <div style="display:flex; align-items:center; gap:8px;">
-        <span style="font-size:1.3rem;">✝️</span>
-        <div>
-          <span style="font-size:0.86rem; color:#fde047; font-weight:800;">St Joseph's Catholic Sanctuary:</span>
-          <span style="font-size:0.82rem; color:#cbd5e1; margin-left:4px;">This simulation is part of our Catholic faith formation and sacred liturgical curriculum.</span>
-        </div>
-      </div>
-      <a href="${base}catholic-life?tab=altar-anatomy" style="padding:5px 12px; border-radius:6px; background:#ca8a04; color:#ffffff; text-decoration:none; font-weight:700; font-size:0.78rem;">
-        Open High Altar &amp; Latin Chapel &rarr;
-      </a>
-    </div>
-
-    <!-- Interactive Labs Grid Launcher & Multi-Facet Filter -->
-    <section id="labs-catalog-section" style="display:${isStageOpen ? 'none' : 'block'}; background:#ffffff; border:1px solid #e2e8f0; border-radius:14px; padding:1.35rem; margin-bottom:1.75rem; box-shadow:0 4px 18px rgba(15,23,42,0.04);">
-      <div style="display:flex; justify-content:space-between; align-items:flex-end; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
-        <div>
-          <h1 style="margin:0; font-size:1.35rem; font-weight:800; color:#0f172a; letter-spacing:-0.01em;">Interactive Labs &amp; Lessons</h1>
-          <p id="catalog-results-summary" style="margin:3px 0 0; font-size:0.82rem; color:#64748b; font-variant-numeric:tabular-nums;">
-            Select any verified cartridge to launch the interactive stage
-          </p>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-          <input
-            type="search"
-            id="cartridge-search-input"
-            placeholder="Search by title, topic, stage, or ID (e.g. titration, altar, ks2)..."
-            style="padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.84rem; min-width:260px; outline:none; color:#0f172a; background:#ffffff;"
-          />
-          <select id="stage-filter-select" aria-label="Filter by Key Stage" style="padding:7px 10px; border-radius:8px; border:1px solid #cbd5e1; font-size:0.82rem; font-weight:600; color:#334155; background:#f8fafc; cursor:pointer;">
-            <option value="All">All Key Stages</option>
-            <option value="KS1">EYFS &amp; KS1</option>
-            <option value="KS2">Key Stage 2</option>
-            <option value="KS3">Key Stage 3</option>
-            <option value="KS4">KS4 / GCSE &amp; A-Level</option>
-          </select>
-          <button type="button" id="launcher-btn-import" style="padding:7px 12px; border-radius:8px; border:1px solid #0284c7; background:#f0f9ff; color:#0369a1; font-size:0.8rem; font-weight:700; cursor:pointer; white-space:nowrap;" title="Open local .ast / .svg cartridge or import a PhET / HTML simulation">
-            📂 Open File
-          </button>
-          <button type="button" id="btn-clear-catalog-filters" style="display:none; padding:7px 12px; border-radius:8px; border:1px solid #cbd5e1; background:#ffffff; color:#475569; font-size:0.8rem; font-weight:600; cursor:pointer; white-space:nowrap;">
-            Reset Filters
-          </button>
-        </div>
-      </div>
-
-      <!-- Subject Tabs -->
-      <div style="display:flex; gap:4px; flex-wrap:wrap; padding:4px; background:#f1f5f9; border-radius:10px; margin-bottom:10px;" id="subject-filter-buttons">
-        ${([
-          { id: 'All', label: 'All Labs' },
-          { id: 'Science', label: 'Science' },
-          { id: 'Maths', label: 'Mathematics' },
-          { id: 'Catholic', label: 'Catholic Faith' },
-          { id: 'English', label: 'English & Phonics' },
-          { id: 'Computing', label: 'Computing & D&T' },
-          { id: 'Languages', label: 'Languages & BSL' },
-          { id: 'Geography', label: 'Geography' },
-        ] as { id: SubjectFilterId; label: string }[]).map((cat) => {
-          const count = cat.id === 'All'
-            ? corePlayableLabs.length
-            : corePlayableLabs.filter((p) => getNormalizedSubject(p) === cat.id).length;
-          const isAct = cat.id === activeSubject;
-          return `
-            <button type="button" class="cat-pill-btn" data-cat="${cat.id}" style="padding:6px 12px; border-radius:7px; font-size:0.8rem; font-weight:700; cursor:pointer; border:none; white-space:nowrap; font-variant-numeric:tabular-nums; background:${isAct ? '#ffffff' : 'transparent'}; color:${isAct ? '#0f172a' : '#475569'}; box-shadow:${isAct ? '0 1px 3px rgba(15,23,42,0.1)' : 'none'};">
-              ${cat.label} <span style="opacity:0.65; font-weight:600;">(${count})</span>
-            </button>
-          `;
-        }).join('')}
-      </div>
-
-      <!-- Format & Scope Bar -->
-      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; padding-bottom:12px; margin-bottom:12px; border-bottom:1px solid #e2e8f0;">
-        <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;" id="format-filter-buttons">
-          <span style="font-size:0.76rem; font-weight:700; color:#64748b; margin-right:2px;">Format:</span>
-          ${([
-            { id: 'All', label: 'All Formats' },
-            { id: 'Sim', label: 'Interactive Labs (Sim)' },
-            { id: 'Slide', label: 'Guided Lessons (Slide)' },
-            { id: 'App', label: 'Games & Studios (App)' },
-            { id: 'Film', label: 'Films' },
-            { id: '3D', label: '3D Models' },
-          ] as { id: FormatFilterId; label: string }[]).map((fmt) => {
-            const isAct = fmt.id === activeFormat;
-            return `
-              <button type="button" class="format-filter-btn" data-format="${fmt.id}" style="padding:4px 10px; border-radius:6px; font-size:0.76rem; font-weight:700; cursor:pointer; white-space:nowrap; border:1px solid ${isAct ? '#0284c7' : '#e2e8f0'}; background:${isAct ? '#e0f2fe' : '#f8fafc'}; color:${isAct ? '#0369a1' : '#475569'};">
-                ${fmt.label}
-              </button>
-            `;
-          }).join('')}
-        </div>
-
-        <label style="display:inline-flex; align-items:center; gap:6px; font-size:0.78rem; color:#475569; font-weight:600; cursor:pointer; user-select:none;" title="Recall data packs belong primarily in Practice Lab and Revision Suite">
-          <input type="checkbox" id="toggle-include-nonmedia" style="cursor:pointer; accent-color:#0284c7;" />
-          <span>Include recall data packs, benchmarks &amp; docs (${hiddenExtrasCount})</span>
-        </label>
-      </div>
-
-      <!-- Recent Quick-Switch Strip -->
-      <div id="recent-labs-strip" style="display:none; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:12px; font-size:0.78rem;"></div>
-
-      <!-- Subject Breakdown Grid Container (Full-page launcher grouped by curriculum subject) -->
-      <div id="cartridges-grid" style="display:flex; flex-direction:column; gap:18px;">
-      </div>
-    </section>
-
-    <!-- Classroom Offline Guarantee Card -->
-    <div style="background:#0f172a; border:1px solid #1e293b; border-radius:12px; padding:1.25rem 1.5rem; color:#cbd5e1; font-size:0.85rem; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
-      <div style="display:flex; align-items:center; gap:10px;">
-        <span style="font-size:1.5rem;">🏫</span>
-        <div>
-          <strong style="color:#38bdf8; display:block;">100% Offline Classroom Lab</strong>
-          <span>Works without internet, saves results privately to your device, and includes British Sign Language &amp; smartboard annotation.</span>
-        </div>
-      </div>
-      <div style="display:flex; gap:8px;">
-        <a href="${base}news" style="padding:6px 12px; border-radius:6px; background:#1e293b; border:1px solid #334155; color:#f8fafc; font-size:0.78rem; font-weight:700; text-decoration:none;">Portal Updates &amp; Notes &rarr;</a>
-      </div>
-    </div>
-  `;
+  container.innerHTML = renderPlayerShellHtml({
+    base,
+    activePreset,
+    meta,
+    isStageOpen,
+    bslActive,
+    isMuted,
+    initialExternalSrc,
+    activeSubject,
+    activeFormat,
+  });
 
   // Attach DOM Listeners
   const stageShell = container.querySelector<HTMLDivElement>('#player-stage-shell')!;
@@ -1031,20 +539,6 @@ export function renderPlayerPage(): HTMLElement {
     }
   }
 
-  function getAllAvailablePresets(): ScenePresetOption[] {
-    const customList: ScenePresetOption[] = getCustomCartridgesList().map((c) => ({
-      id: c.id,
-      label: c.title,
-      stage: c.stage || 'LOCAL VAULT',
-      type: (c.type as any) || 'Sim',
-      kind: 'lab',
-      isPlayableScene: true,
-      subject: c.subject || 'Custom Ingested',
-    }));
-    const baseList = includeNonMediaExtras ? presets : corePlayableLabs;
-    return [...customList, ...baseList];
-  }
-
   let isIframeReady = false;
   iframe?.addEventListener('load', () => {
     isIframeReady = true;
@@ -1060,37 +554,7 @@ export function renderPlayerPage(): HTMLElement {
 
   function renderIntegrityReadoutContent(presetId: string, liveInfo?: Record<string, any> | null) {
     if (!integrityReadoutBodyEl) return;
-    const rec = getRegisteredRecord(presetId);
-    const status = liveInfo?.status || (rec ? 'verified-native' : 'unverified-external');
-    const astbHash = liveInfo?.computedAstbSha256 || rec?.astbSha256 || '';
-    const astHash = liveInfo?.computedAstSha256 || rec?.astSha256 || '';
-    const svgHash = liveInfo?.computedSvgSha256 || rec?.svgSha256 || '';
-    const sealHash = liveInfo?.seal || rec?.seal || '';
-
-    if (status === 'verified-native') {
-      integrityReadoutBodyEl.innerHTML = `
-        <span style="color:#34d399; font-weight:800;">🛡️ VERIFIED • ST JOSEPH'S CURRICULUM</span>
-        <span>Authority: <strong style="color:#f8fafc;">${escapeHtml(liveInfo?.authority || CURRICULUM_AUTHORITY_NAME)}</strong></span>
-        ${sealHash ? `<span>Seal: <code style="color:#38bdf8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
-        ${astbHash ? `<span>.astb: <code style="color:#a7f3d0;">${escapeHtml(formatShortHash(astbHash))}</code></span>` : ''}
-        ${astHash ? `<span>.ast: <code style="color:#cbd5e1;">${escapeHtml(formatShortHash(astHash))}</code></span>` : ''}
-        ${svgHash ? `<span>.svg: <code style="color:#cbd5e1;">${escapeHtml(formatShortHash(svgHash))}</code></span>` : ''}
-      `;
-    } else if (status === 'tampered') {
-      integrityReadoutBodyEl.innerHTML = `
-        <span style="color:#fbbf24; font-weight:800;">✎ ALTERED / REMIXED CARTRIDGE</span>
-        <span>Live SHA-256: <code style="color:#fde68a;">${escapeHtml(liveInfo?.shortHash || 'modified')}</code></span>
-        ${sealHash ? `<span>Original Seal: <code style="color:#94a3b8;">${escapeHtml(formatShortHash(sealHash))}</code></span>` : ''}
-        <span style="color:#94a3b8;">Content differs from signed St Joseph's Curriculum pair</span>
-      `;
-    } else {
-      integrityReadoutBodyEl.innerHTML = `
-        <span style="color:#cbd5e1; font-weight:800;">◈ CUSTOM / EXTERNAL CARTRIDGE</span>
-        <span>ID: <code style="color:#38bdf8;">${escapeHtml(presetId)}</code></span>
-        ${liveInfo?.shortHash ? `<span>SHA-256: <code style="color:#cbd5e1;">${escapeHtml(String(liveInfo.shortHash))}</code></span>` : ''}
-        <span style="color:#94a3b8;">Not in St Joseph's Curriculum signed registry (${getTotalCertifiedCartridges()} certified)</span>
-      `;
-    }
+    integrityReadoutBodyEl.innerHTML = buildIntegrityReadoutHtml(presetId, liveInfo);
   }
 
   function updateHostIntegrityBadge(presetId: string, liveInfo?: Record<string, any> | null) {
@@ -1291,126 +755,11 @@ export function renderPlayerPage(): HTMLElement {
   }
 
   async function handleUploadedFiles(files: File[]) {
-    if (!files || files.length === 0) return;
-
     try {
-      // 1. Dual Companion Pair (.svg + .ast)
-      const svgFile = files.find((f) => f.name.endsWith('.svg'));
-      const astFile = files.find((f) => f.name.endsWith('.ast'));
-
-      if (svgFile && astFile) {
-        const svgText = await svgFile.text();
-        const astText = await astFile.text();
-        const baseName = svgFile.name.replace(/\.[^/.]+$/, '');
-        const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-        const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-        const cart: CartridgeDefinition = {
-          id: cleanId,
-          title: cleanTitle,
-          stage: 'LOCAL VAULT',
-          category: 'Custom Files',
-          desc: `Locally ingested companion pair: ${svgFile.name} + ${astFile.name}.`,
-          icon: '💾',
-          source: 'imported',
-          svgMarkup: svgText,
-          astSource: astText,
-          updatedAt: Date.now(),
-        };
-
-        saveCustomCartridge(cart);
+      const cart = await ingestUploadedCartridgeFiles(files);
+      if (cart) {
         refreshDropdown();
         launchCustomCartridge(cart);
-        return;
-      }
-
-      // 2. Single or individual files
-      for (const file of files) {
-        const content = await file.text();
-
-        // PhET bundle
-        if (file.name.endsWith('.phet') || isPhetBundle(content)) {
-          const result = await transpilePhetFile(content, file.name);
-          if (result.success && result.svgMarkup && result.astSource) {
-            const simId = result.metadata?.simName || `phet-${Date.now()}`;
-            const title = result.metadata?.title || file.name.replace(/\.[^/.]+$/, '');
-            const cart: CartridgeDefinition = {
-              id: simId,
-              title,
-              stage: 'PHET INTERACTIVE',
-              category: 'STEM',
-              desc: `PhET simulation transpiled to AST: ${result.metadata?.compressionRatio || 'distilled'}.`,
-              icon: '⚛️',
-              source: 'phet',
-              svgMarkup: result.svgMarkup,
-              astSource: result.astSource,
-              updatedAt: Date.now(),
-            };
-            saveCustomCartridge(cart);
-            refreshDropdown();
-            launchCustomCartridge(cart);
-            return;
-          }
-        }
-
-        // Single .svg (with embedded <script type="text/ast">) or standard SVG
-        if (file.name.endsWith('.svg')) {
-          const baseName = file.name.replace(/\.[^/.]+$/, '');
-          const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-          const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-
-          let astSource = '';
-          const match = content.match(/<script\s+type=["']text\/ast["'][^>]*>([\s\S]*?)<\/script>/i);
-          if (match && match[1]) {
-            astSource = match[1].trim();
-          } else {
-            astSource = `(:scene :id "${cleanId}" :title "${cleanTitle}" :stage "CUSTOM" :duration 10.0 (:bindings ()))`;
-          }
-
-          const cart: CartridgeDefinition = {
-            id: cleanId,
-            title: cleanTitle,
-            stage: 'LOCAL VAULT',
-            category: 'Custom Files',
-            desc: `Locally ingested vector cartridge: ${file.name}.`,
-            icon: '🎨',
-            source: 'imported',
-            svgMarkup: content,
-            astSource,
-            updatedAt: Date.now(),
-          };
-          saveCustomCartridge(cart);
-          refreshDropdown();
-          launchCustomCartridge(cart);
-          return;
-        }
-
-        // Single .ast file (supports both pure S-expression and hybrid SVG+AST docs)
-        if (file.name.endsWith('.ast')) {
-          const baseName = file.name.replace(/\.[^/.]+$/, '');
-          const cleanId = baseName.toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-          const cleanTitle = baseName.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-          const svgMarkup = content.includes('<svg')
-            ? content
-            : `<svg viewBox="0 0 800 480" xmlns="http://www.w3.org/2000/svg"><rect width="800" height="480" fill="#090d16"/><g id="scene-root"></g></svg>`;
-
-          const cart: CartridgeDefinition = {
-            id: cleanId,
-            title: cleanTitle,
-            stage: 'LOCAL VAULT',
-            category: 'Custom Files',
-            desc: `Locally ingested AST logic: ${file.name}.`,
-            icon: '📜',
-            source: 'imported',
-            svgMarkup,
-            astSource: content,
-            updatedAt: Date.now(),
-          };
-          saveCustomCartridge(cart);
-          refreshDropdown();
-          launchCustomCartridge(cart);
-          return;
-        }
       }
     } catch (err) {
       console.error('[media-player] Error ingesting uploaded files:', err);
@@ -1421,7 +770,7 @@ export function renderPlayerPage(): HTMLElement {
     if (!recentStripEl) return;
     const recentIds = getRecentPresetIds().filter((id) => !isStageOpen || id !== activePreset);
     const items = recentIds
-      .map((id) => presets.find((p) => p.id === id))
+      .map((id) => ALL_BUILTIN_PRESETS.find((p) => p.id === id))
       .filter((p): p is ScenePresetOption => Boolean(p))
       .slice(0, 4);
 
@@ -1453,7 +802,7 @@ export function renderPlayerPage(): HTMLElement {
     renderRecentStrip();
 
     const q = searchQuery.toLowerCase().trim();
-    const allAvailable = getAllAvailablePresets();
+    const allAvailable = getAllAvailablePresets(includeNonMediaExtras);
     const filtered = allAvailable.filter((p) => {
       const matchSubject = activeSubject === 'All' || getNormalizedSubject(p) === activeSubject;
       let matchFormat = true;
@@ -1480,127 +829,14 @@ export function renderPlayerPage(): HTMLElement {
       resultsSummaryEl.textContent = `Showing ${filtered.length} of ${allAvailable.length} ${scopeLabel} · 🛡️ ${getTotalCertifiedCartridges()} Verified to St Joseph's Curriculum (Master SHA-256: ${masterShort}…)`;
     }
 
-    if (filtered.length === 0) {
-      gridContainer.innerHTML = `<div style="text-align:center; padding:2.5rem 1rem; color:#64748b; border:1px dashed #cbd5e1; border-radius:12px;">No matching labs found for your active filters.</div>`;
-      return;
-    }
+    gridContainer.innerHTML = buildCatalogGridHtml({
+      filtered,
+      isStageOpen,
+      activePreset,
+      activeSubject,
+    });
 
-    const customIds = new Set(
-      getCustomCartridges()
-        .filter((c) => c.source !== 'builtin')
-        .map((c) => c.id)
-    );
-
-    const renderCardHtml = (p: ScenePresetOption) => {
-      const isSelected = isStageOpen && p.id === activePreset;
-      const subjLabel = p.subject || 'Curriculum';
-      const kindSuffix = p.kind === 'data' ? ' · Recall Data Pack' : p.kind === 'benchmark' ? ' · Benchmark' : p.kind === 'doc' ? ' · Architecture Doc' : '';
-      const formatLabel = p.has3D ? `${p.type || 'Sim'} (3D)` : (p.type || 'Sim');
-      const officialRec = getRegisteredRecord(p.id);
-      const isModifiedCustom = Boolean(officialRec && customIds.has(p.id));
-      const sealBadgeHtml = isModifiedCustom
-        ? `<span title="Altered local remix of St Joseph's Curriculum cartridge (${escapeHtml(p.id)})" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#fef3c7; color:#92400e; border:1px solid #fcd34d;">✎ Remix</span>`
-        : officialRec
-        ? `<span title="Verified St Joseph's Curriculum Cartridge • Seal SHA-256: ${escapeHtml(officialRec.seal)}" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#ecfdf5; color:#047857; border:1px solid #a7f3d0;">🛡️ St Joseph's • ${escapeHtml(officialRec.seal.slice(0, 6))}</span>`
-        : `<span title="Custom or Architecture Cartridge" style="font-family:monospace; font-size:0.68rem; font-weight:700; padding:1px 6px; border-radius:4px; background:#f1f5f9; color:#475569; border:1px solid #cbd5e1;">◈ Custom</span>`;
-      return `
-        <div
-          class="cartridge-card"
-          role="button"
-          tabindex="0"
-          data-id="${escapeHtml(p.id)}"
-          style="padding:13px 15px; border-radius:10px; border:1px solid ${isSelected ? '#0284c7' : '#e2e8f0'}; background:${isSelected ? '#f0f9ff' : '#ffffff'}; cursor:pointer; display:flex; flex-direction:column; justify-content:space-between; gap:10px; transition:border-color 0.15s ease, box-shadow 0.15s ease;">
-          <div>
-            <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; margin-bottom:5px;">
-              <div style="font-size:0.72rem; color:#64748b; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
-                ${escapeHtml(formatLabel)} &middot; ${escapeHtml(subjLabel)} &middot; ${escapeHtml(p.stage)}${escapeHtml(kindSuffix)}
-              </div>
-              ${sealBadgeHtml}
-            </div>
-            <strong style="display:block; font-size:0.9rem; color:#0f172a; line-height:1.35;">${escapeHtml(p.label)}</strong>
-          </div>
-          <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.76rem;">
-            <span style="color:${isSelected ? '#0369a1' : '#0284c7'}; font-weight:700;">${isSelected ? '▶ Currently Loaded' : 'Launch Lab &rarr;'}</span>
-            ${p.hasCheckpoints && p.checkpointCount ? `<span style="color:#64748b; font-variant-numeric:tabular-nums;">${p.checkpointCount} checks</span>` : ''}
-          </div>
-        </div>
-      `;
-    };
-
-    type SubjectBucketKey = Exclude<SubjectFilterId, 'All'> | 'Custom' | 'Other';
-    const SUBJECT_SECTIONS: {
-      key: SubjectBucketKey;
-      filterId?: SubjectFilterId;
-      icon: string;
-      title: string;
-      subtitle: string;
-      accent: string;
-      bg: string;
-      border: string;
-    }[] = [
-      { key: 'Science', filterId: 'Science', icon: '🔬', title: 'Science', subtitle: 'Physics, Chemistry & Biology', accent: '#0369a1', bg: '#f0f9ff', border: '#bae6fd' },
-      { key: 'Maths', filterId: 'Maths', icon: '📐', title: 'Mathematics', subtitle: 'Number, Algebra & Geometry', accent: '#047857', bg: '#ecfdf5', border: '#a7f3d0' },
-      { key: 'Catholic', filterId: 'Catholic', icon: '✝️', title: 'Catholic Faith & Liturgy', subtitle: 'Sacraments, Scripture & Formation', accent: '#b45309', bg: '#fffbeb', border: '#fde68a' },
-      { key: 'English', filterId: 'English', icon: '📖', title: 'English & Phonics', subtitle: 'Decodable Readers, Phonics & Literature', accent: '#c2410c', bg: '#fff7ed', border: '#fed7aa' },
-      { key: 'Computing', filterId: 'Computing', icon: '💻', title: 'Computing & D&T', subtitle: 'Systems, Engineering & Logic', accent: '#6d28d9', bg: '#f5f3ff', border: '#ddd6fe' },
-      { key: 'Languages', filterId: 'Languages', icon: '🗣️', title: 'Languages & BSL', subtitle: 'Modern Languages & British Sign Language', accent: '#be185d', bg: '#fdf2f8', border: '#fbcfe8' },
-      { key: 'Geography', filterId: 'Geography', icon: '🌍', title: 'Geography', subtitle: 'Earth, Elevation & Water Systems', accent: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' },
-      { key: 'Custom', icon: '💾', title: 'Local Vault & Imported Files', subtitle: 'Your locally loaded cartridges', accent: '#334155', bg: '#f8fafc', border: '#cbd5e1' },
-      { key: 'Other', icon: '📎', title: 'Portal Showcase, Benchmarks & Docs', subtitle: 'Architecture, recall packs & utilities', accent: '#475569', bg: '#f8fafc', border: '#cbd5e1' },
-    ];
-
-    const grouped = new Map<SubjectBucketKey, ScenePresetOption[]>();
-    for (const p of filtered) {
-      let bucket: SubjectBucketKey;
-      if (!VALID_PRESET_IDS.has(p.id)) {
-        bucket = 'Custom';
-      } else {
-        const norm = getNormalizedSubject(p);
-        bucket = norm === 'All' ? 'Other' : norm;
-      }
-      const list = grouped.get(bucket);
-      if (list) list.push(p);
-      else grouped.set(bucket, [p]);
-    }
-
-    const visibleSections = SUBJECT_SECTIONS.filter((sec) => (grouped.get(sec.key)?.length || 0) > 0);
-    const isSingleSubjectFocus = activeSubject !== 'All';
-
-    gridContainer.innerHTML = visibleSections.map((sec) => {
-      const items = grouped.get(sec.key) || [];
-      const countLabel = `${items.length} ${items.length === 1 ? 'lab' : 'labs'}`;
-      const actionBtnHtml = !isSingleSubjectFocus && sec.filterId
-        ? `<button type="button" class="subject-focus-btn" data-focus-subject="${sec.filterId}" style="padding:4px 10px; border-radius:6px; border:1px solid ${sec.border}; background:#ffffff; color:${sec.accent}; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;">Focus Subject &rarr;</button>`
-        : isSingleSubjectFocus
-        ? `<button type="button" class="subject-focus-btn" data-focus-subject="All" style="padding:4px 10px; border-radius:6px; border:1px solid #cbd5e1; background:#ffffff; color:#334155; font-size:0.74rem; font-weight:700; cursor:pointer; white-space:nowrap;">&larr; All Subjects</button>`
-        : '';
-
-      return `
-        <details open class="subject-breakdown-group" data-subject-group="${sec.key}" style="border:1px solid #e2e8f0; border-radius:12px; background:#ffffff; overflow:hidden;">
-          <summary style="list-style:none; cursor:pointer; padding:11px 15px; background:${sec.bg}; border-bottom:1px solid ${sec.border}; border-left:4px solid ${sec.accent}; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; user-select:none;">
-            <div style="display:flex; align-items:center; gap:9px; min-width:0;">
-              <span style="font-size:1.15rem; line-height:1;" aria-hidden="true">${sec.icon}</span>
-              <div>
-                <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
-                  <strong style="font-size:0.95rem; color:#0f172a;">${escapeHtml(sec.title)}</strong>
-                  <span style="font-size:0.72rem; font-weight:800; padding:1px 8px; border-radius:9999px; background:#ffffff; color:${sec.accent}; border:1px solid ${sec.border}; font-variant-numeric:tabular-nums;">
-                    ${countLabel}
-                  </span>
-                </div>
-                <div style="font-size:0.76rem; color:#64748b; margin-top:1px;">${escapeHtml(sec.subtitle)}</div>
-              </div>
-            </div>
-            <div style="display:flex; align-items:center; gap:8px;">
-              ${actionBtnHtml}
-              <span style="font-size:0.72rem; color:#64748b; font-weight:700;" aria-hidden="true">▾</span>
-            </div>
-          </summary>
-          <div style="padding:14px; display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px; background:#f8fafc;">
-            ${items.map(renderCardHtml).join('')}
-          </div>
-        </details>
-      `;
-    }).join('');
+    if (filtered.length === 0) return;
 
     gridContainer.querySelectorAll<HTMLButtonElement>('.subject-focus-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -1615,7 +851,7 @@ export function renderPlayerPage(): HTMLElement {
 
     gridContainer.querySelectorAll<HTMLElement>('.cartridge-card').forEach((card) => {
       const launchCard = () => {
-        unlockMobilePwaAudio();
+        unlockMobilePwaAudioForIframe(iframe);
         const id = card.getAttribute('data-id');
         if (id) updatePreset(id);
       };
@@ -1630,27 +866,13 @@ export function renderPlayerPage(): HTMLElement {
   }
 
   function loadBuiltinPhetModel(key: SupportedPhetPreset) {
-    const model = PHET_BUILTIN_MODELS[key];
-    const simId = `phet-${key}`;
-    if (model) {
-      const cart: CartridgeDefinition = {
-        id: simId,
-        title: model.title,
-        stage: model.stage || 'PHET DISTILLED',
-        category: model.subject || 'Physics',
-        desc: `PhET simulation transpiled to AST & hardware-accelerated SVG (< 4 KB payload). Invariants: ${model.invariants.join(', ')}.`,
-        icon: '⚛️',
-        source: 'phet',
-        svgMarkup: model.generateSvg(),
-        astSource: model.generateAst(),
-        updatedAt: Date.now(),
-      };
-      saveCustomCartridge(cart);
+    const cart = buildBuiltinPhetCartridge(key);
+    if (cart) {
       refreshDropdown();
       launchCustomCartridge(cart);
       return;
     }
-    updatePreset(simId);
+    updatePreset(`phet-${key}`);
   }
 
   // Preset selector change
@@ -1715,68 +937,15 @@ export function renderPlayerPage(): HTMLElement {
     });
   });
 
-  // Unlock shared Web Audio & SpeechSynthesis synchronously inside host tap gestures
-  // so mobile PWAs (iOS Safari & Android Chrome) inherit audio permission inside the player iframe.
-  function unlockMobilePwaAudio(): void {
-    try {
-      const navAny = navigator as Navigator & { audioSession?: { type: string } };
-      if (navAny.audioSession && navAny.audioSession.type !== 'playback') {
-        navAny.audioSession.type = 'playback';
-      }
-    } catch (_) {}
-
-    try {
-      const winAny = window as Window & {
-        __astSharedAudioCtx?: AudioContext;
-        webkitAudioContext?: typeof AudioContext;
-      };
-      const AudioCtx = window.AudioContext || winAny.webkitAudioContext;
-      if (AudioCtx) {
-        let ctx = winAny.__astSharedAudioCtx;
-        if (!ctx || ctx.state === 'closed') {
-          ctx = new AudioCtx();
-          winAny.__astSharedAudioCtx = ctx;
-        }
-        if (ctx.state !== 'running') {
-          ctx.resume().catch(() => {});
-        }
-        const silentBuf = ctx.createBuffer(1, 1, 22050);
-        const src = ctx.createBufferSource();
-        src.buffer = silentBuf;
-        src.connect(ctx.destination);
-        src.start(0);
-      }
-    } catch (_) {}
-
-    try {
-      if ('speechSynthesis' in window && window.speechSynthesis) {
-        if (typeof window.speechSynthesis.getVoices === 'function') {
-          window.speechSynthesis.getVoices();
-        }
-        if (window.speechSynthesis.paused && typeof window.speechSynthesis.resume === 'function') {
-          window.speechSynthesis.resume();
-        }
-      }
-    } catch (_) {}
-
-    // Also prime the player iframe's own local AudioContext & SpeechSynthesis inside this tap gesture
-    try {
-      const iframeWin = iframe?.contentWindow as (Window & { primeMobileAudioAndTts?: () => void }) | null | undefined;
-      if (iframeWin && typeof iframeWin.primeMobileAudioAndTts === 'function') {
-        iframeWin.primeMobileAudioAndTts();
-      }
-    } catch (_) {}
-  }
-
   // Wire Play, Reset & BSL Toolbar buttons
   playBtn?.addEventListener('click', () => {
-    unlockMobilePwaAudio();
+    unlockMobilePwaAudioForIframe(iframe);
     postToPlayer({ type: 'TOGGLE_PLAY' });
     focusPlayerStage();
   });
 
   resetBtn?.addEventListener('click', () => {
-    unlockMobilePwaAudio();
+    unlockMobilePwaAudioForIframe(iframe);
     postToPlayer({ type: 'RESET_SIM' });
     focusPlayerStage();
   });
@@ -1797,7 +966,7 @@ export function renderPlayerPage(): HTMLElement {
     const nextVoice = toggleVoice();
     const muted = !nextVoice;
     if (nextVoice) {
-      unlockMobilePwaAudio();
+      unlockMobilePwaAudioForIframe(iframe);
     }
     isMuted = muted;
     updateMuteUi(muted);

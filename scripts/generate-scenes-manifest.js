@@ -262,6 +262,7 @@ function parseAstHeader(astContent, filename, base) {
 
   const tierMatch = extractSlot(astContent, /:tier\s+("Core"|"core"|"phet"|"user"|"[^"]+"|[^\s\)]+)/i);
   const coreExplicit = /:core\s+(true|t)\b/i.test(astContent);
+  const featured = /:featured\s+(true|t)\b/i.test(astContent);
   const tier = isCartridgeData ? 'recall' : (tierMatch ? tierMatch.toLowerCase() : 'core');
   const isCore = !isCartridgeData && (coreExplicit || tier === 'core');
 
@@ -286,6 +287,7 @@ function parseAstHeader(astContent, filename, base) {
     has3D,
     nodes3DCount,
     isCore,
+    featured,
     tier,
     mount: curriculumMeta.mount,
     section: curriculumMeta.section,
@@ -424,6 +426,7 @@ export function generateScenesManifest(options = {}) {
         videoFit: meta.videoFit || 'contain',
         hasVideo: Boolean(meta.video),
         isCore: Boolean(meta.isCore),
+        featured: Boolean(meta.featured),
         tier: meta.tier || 'core',
         mount: meta.mount,
         section: meta.section,
@@ -600,6 +603,7 @@ export function generateScenesManifest(options = {}) {
     oakUnit: m.oakUnit,
     subject: m.subject,
     isCore: m.isCore ?? true,
+    featured: Boolean(m.featured),
     tier: m.tier || 'core',
     mount: m.mount,
     section: m.section,
@@ -626,6 +630,7 @@ export interface ScenePresetOption {
   oakUnit?: string;
   subject?: string;
   isCore?: boolean;
+  featured?: boolean;
   tier?: string;
   mount?: string;
   section?: string;

@@ -513,6 +513,8 @@ const AST_PLAYER_RUNTIME_MODULES = [
   'ast-profiler.js',
   'ast-audio-speech.js',
   'ast-physics.js',
+  'ast-expr.js',
+  'ast-bytecode-decoder.js',
   'ast-parser.js',
   'ast-3d.js',
   'ast-bridge.js',
@@ -539,6 +541,7 @@ const SITE_GESTURES_RUNTIME_MODULES = [
   'site-gestures-whiteboard.js',
   'site-gestures-hud.js',
   'site-gestures-actions.js',
+  'site-gestures-input.js',
   'site-gestures.js',
 ];
 
@@ -3207,6 +3210,104 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   assert.strictEqual(spokenLines[0], 'Boost engaged', '_flushPendingTouchAudio must flush queued TTS');
   actExports._releaseHoldForGesture.call(mockActHost, holdGesture);
   assert.strictEqual(mockActHost.engine.vars.boost, false, '_releaseHoldForGesture must restore default releaseVal');
+
+  // Verify site-gestures-input.js exports, universal key execution, generic/rotate/trackball drag & stage enhancement
+  const inpSb: any = {
+    console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, Date,
+    parseInt, parseFloat, isNaN, isFinite, setTimeout, clearTimeout,
+    performance: { now: () => 1000 },
+    window: { focus: () => {} },
+    document: { getElementById: () => null, querySelector: () => null },
+  };
+  inpSb.globalThis = inpSb;
+  inpSb.self = inpSb.window;
+  const inpCode = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'site-gestures-input.js'), 'utf8');
+  vm.runInNewContext(inpCode, inpSb, { filename: 'static/player/site-gestures-input.js' });
+  const inpExports = inpSb.ASTGesturesInput || inpSb.window.ASTGesturesInput;
+  assert.ok(inpExports, 'site-gestures-input.js must export ASTGesturesInput');
+  for (const fnName of [
+    '_handleCheckpointModalKeys', '_executeUniversalKeyRule', 'handleKeyDown', 'handleKeyUp',
+    'handleWindowBlur', 'handlePointerLeave', 'screenToSvg', 'enhanceSceneInteractivity',
+    'handlePointerDown', 'handlePointerMove', 'handlePointerUp', 'handlePointerCancel',
+    'handleTrackballDrag', 'handleGenericDrag', 'handleRotateDrag', 'handleBindInputDrag',
+  ]) {
+    assert.strictEqual(typeof inpExports[fnName], 'function', `ASTGesturesInput must export function ${fnName}`);
+  }
+  const inpAttrs: Record<string, string> = {
+    'data-gesture-axis': 'x',
+    'data-gesture-min-x': '0',
+    'data-gesture-max-x': '100',
+    'data-gesture-var': 'temp',
+    'data-gesture-cx': '100',
+    'data-gesture-cy': '100',
+  };
+  const mockDragTarget: any = {
+    style: {},
+    getAttribute(k: string) { return inpAttrs[k] !== undefined ? inpAttrs[k] : null; },
+    setAttribute(k: string, v: string) { inpAttrs[k] = String(v); },
+  };
+  const mockInpHost: any = {
+    engine: {
+      vars: { temp: 0, angle: 0, yaw: 0, pitch: 20 },
+      scene: { vars: { temp: { min: 0, max: 100 }, yaw: { min: 0, max: 360 } }, inputs: [] },
+      progress: 0,
+      setVar(k: string, v: any) { this.vars[k] = v; },
+      applyBindings() {},
+      togglePlay() { this._toggled = true; },
+    },
+    _customActions: new Map(),
+    _customGestureSkills: new Map(),
+    _isControlEnabled: () => true,
+    _writeEngineVar(k: string, v: any) { this.engine.setVar(k, v); },
+    _resolveVarBounds: () => ({ min: 0, max: 360 }),
+    dragStart: { x: 0, y: 0 },
+    targetInitial: { initTx: 0, initTy: 0, x: 0, y: 0 },
+    trackballYawVar: 'yaw',
+    trackballPitchVar: 'pitch',
+    trackballPitchMin: -65,
+    trackballPitchMax: 65,
+    trackballStartYaw: 0,
+    trackballStartPitch: 20,
+  };
+  assert.strictEqual(inpExports._executeUniversalKeyRule.call(mockInpHost, { action: 'toggle-play' }, mockInpHost.engine.scene), true, '_executeUniversalKeyRule must dispatch toggle-play');
+  assert.strictEqual(mockInpHost.engine._toggled, true, 'toggle-play must invoke engine.togglePlay');
+  inpExports.handleGenericDrag.call(mockInpHost, mockDragTarget, { x: 50, y: 0 });
+  assert.strictEqual(mockInpHost.engine.vars.temp, 50, 'handleGenericDrag must map SVG drag coordinate into bounded var');
+  inpExports.handleRotateDrag.call(mockInpHost, mockDragTarget, { x: 100, y: 200 });
+  assert.strictEqual(mockInpHost.engine.vars.temp, 90, 'handleRotateDrag must compute 90 deg rotation around (100,100)');
+  inpExports.handleTrackballDrag.call(mockInpHost, { clientX: 50, clientY: -20 });
+  assert.strictEqual(mockInpHost.engine.vars.yaw, 40, 'handleTrackballDrag must update yaw var');
+  assert.strictEqual(mockInpHost.engine.vars.pitch, 30, 'handleTrackballDrag must update clamped pitch var');
+
+  // Verify ast-expr.js, ast-bytecode-decoder.js, and ast-parser.js standalone modular exports
+  const exprSb: any = { console, Math, Number, String, Boolean, Array, Object, Map, Set, RegExp, Error, JSON, parseInt, parseFloat, isNaN, isFinite };
+  exprSb.globalThis = exprSb;
+  exprSb.window = exprSb;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-expr.js'), 'utf8'), exprSb, { filename: 'static/player/ast-expr.js' });
+  assert.strictEqual(typeof exprSb.compileAstFn, 'function', 'ast-expr.js must export compileAstFn');
+  assert.strictEqual(typeof exprSb.compileAstExpr, 'function', 'ast-expr.js must export compileAstExpr');
+  assert.ok(exprSb.AstMath && typeof exprSb.AstMath.lerp === 'function', 'ast-expr.js must export AstMath.lerp');
+  const compiledExprFn = exprSb.compileAstFn('vars.a + vars.b * 2');
+  assert.strictEqual(compiledExprFn(0, { a: 3, b: 4 }, {}, Math), 11, 'compileAstFn must evaluate reactive arithmetic');
+
+  const bcSb: any = { console, Math, Number, String, Boolean, Array, Object, Uint8Array, ArrayBuffer, DataView, TextDecoder, TextEncoder };
+  bcSb.globalThis = bcSb;
+  bcSb.window = bcSb;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-bytecode-decoder.js'), 'utf8'), bcSb, { filename: 'static/player/ast-bytecode-decoder.js' });
+  assert.strictEqual(typeof bcSb.isAstBytecode, 'function', 'ast-bytecode-decoder.js must export isAstBytecode');
+  assert.strictEqual(typeof bcSb.decompileBytecode, 'function', 'ast-bytecode-decoder.js must export decompileBytecode');
+  const pythAstb = fs.readFileSync(path.join(process.cwd(), 'static', 'bytecode', 'pythagoras.astb'));
+  assert.strictEqual(bcSb.isAstBytecode(pythAstb), true, 'isAstBytecode must detect compiled pythagoras.astb');
+  const decodedPyth = bcSb.decompileBytecode(pythAstb);
+  assert.strictEqual(decodedPyth?.id, 'pythagoras', 'decompileBytecode must decode pythagoras.astb standalone');
+
+  const parserSb: any = { console, Math, Number, String, Boolean, Array, Object, RegExp, parseInt, parseFloat, isNaN, isFinite, Uint8Array, ArrayBuffer, TextEncoder };
+  parserSb.globalThis = parserSb;
+  parserSb.window = parserSb;
+  vm.runInNewContext(fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-parser.js'), 'utf8'), parserSb, { filename: 'static/player/ast-parser.js' });
+  assert.strictEqual(typeof parserSb.parseAst, 'function', 'ast-parser.js must export parseAst standalone');
+  const parsedMini = parserSb.parseAst('(:scene :id "mini-test" :title "Mini Test" :duration 8.0)');
+  assert.strictEqual(parsedMini?.id, 'mini-test', 'parseAst must parse S-expression scene standalone');
 
   // Verify site-gestures.js evaluates and constructs cleanly standalone (without peer gesture modules loaded)
   const sgOnlySb: any = {

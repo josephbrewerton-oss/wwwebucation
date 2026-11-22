@@ -1,0 +1,1081 @@
+// src/pages/phonics/phonicsStageViews.ts
+/**
+ * Pure HTML Stage Views for the Learn to Read Phonics Studio.
+ *
+ * Extracted from src/pages/phonics-suite.ts so markup templates are decoupled
+ * from DOM event wiring and Web Speech state management.
+ */
+
+import {
+  PHONICS_GRAPHEMES,
+  TRICKY_WORDS,
+  OFFICIAL_SCREENING_POOL,
+  type PhonicGrapheme,
+  type SoundSegment,
+  type TrickyWord,
+} from '../../data/phonicsCurriculumData';
+import {
+  PRE_READER_GAMES,
+  CUMULATIVE_SOUND_GROUPS,
+  ALL_DECODABLE_WORDS,
+  DECODABLE_MINI_BOOKS,
+} from '../../data/earlyReaderLadderData';
+import {
+  escHtml as esc,
+  getWordsForFilter,
+  totalReaderStars,
+  type PhonicsStudioState,
+  type StudioStage,
+} from './phonicsSpeech';
+
+// Sound button visual glyph (DfE dot / bar / split-digraph arc)
+export function renderSoundButtonGlyph(seg: SoundSegment, active: boolean): string {
+  const color = active
+    ? 'bg-sky-600 dark:bg-sky-400'
+    : 'bg-slate-800 dark:bg-slate-200';
+  if (seg.type === 'single') {
+    return `<span class="inline-block w-3 h-3 rounded-full ${color} transition-transform ${active ? 'scale-125' : ''}" aria-hidden="true"></span>`;
+  }
+  if (seg.type === 'split') {
+    return `<span class="inline-flex items-center gap-1 text-xs font-bold ${active ? 'text-sky-600 dark:text-sky-400' : 'text-slate-600 dark:text-slate-300'}" aria-hidden="true">⌒ split</span>`;
+  }
+  const width = seg.type === 'trigraph' ? 'w-12' : 'w-9';
+  return `<span class="inline-block ${width} h-2 rounded-full ${color} transition-transform ${active ? 'scale-110' : ''}" aria-hidden="true"></span>`;
+}
+
+// Highlight tricky part inside a tricky word
+export function renderTrickyWordMarkup(tw: TrickyWord): string {
+  const lowerWord = tw.word.toLowerCase();
+  const lowerPart = tw.trickyPart.toLowerCase();
+  const idx = lowerWord.indexOf(lowerPart);
+  if (idx === -1) {
+    return `<span class="text-rose-600 dark:text-rose-400 underline decoration-2 underline-offset-4">${esc(tw.word)}</span>`;
+  }
+  const before = tw.word.slice(0, idx);
+  const match = tw.word.slice(idx, idx + tw.trickyPart.length);
+  const after = tw.word.slice(idx + tw.trickyPart.length);
+  return `${esc(before)}<span class="inline-flex flex-col items-center align-baseline mx-0.5"><span class="text-[0.65rem] leading-none text-rose-500 select-none" aria-hidden="true">♥</span><span class="text-rose-600 dark:text-rose-400 underline decoration-rose-400 decoration-2 underline-offset-4">${esc(match)}</span></span>${esc(after)}`;
+}
+
+export function renderStage0EarWarmUp(state: PhonicsStudioState): string {
+  const filtered =
+    state.earFilter === 'all'
+      ? PRE_READER_GAMES
+      : PRE_READER_GAMES.filter((g) => g.mode === state.earFilter);
+  const prompt = filtered[state.earIndex % filtered.length] || PRE_READER_GAMES[0];
+  const safeIdx = state.earIndex % filtered.length;
+
+  return `
+    <section aria-label="Stage 0: Ear and Picture Warm-Up" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 0. Ear &amp; Picture Warm-Up</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+            Zero reading needed. Tap the big speaker, listen to the sound, and pick the matching picture.
+          </p>
+        </div>
+        <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+          ${(
+            [
+              ['all', 'All Games'],
+              ['initial-sound', 'First Sound'],
+              ['rhyme', 'Rhyme Time'],
+              ['oral-blend', 'Robot Talk'],
+            ] as const
+          )
+            .map(
+              ([key, label]) => `
+              <button type="button" data-ear-filter="${key}" class="px-3 py-2 min-h-[40px] text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                state.earFilter === key
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }">${label}</button>
+            `
+            )
+            .join('')}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+            <span class="font-semibold text-sky-700 dark:text-sky-400">${esc(prompt.badge)}</span>
+            <span aria-hidden="true">·</span>
+            <span>Activity ${safeIdx + 1} of ${filtered.length}</span>
+            <span aria-hidden="true">·</span>
+            <span>${state.progress.earStars.length} stars earned</span>
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+            <input type="checkbox" id="ear-toggle-labels" ${state.earShowLabels ? 'checked' : ''} class="w-4 h-4 accent-sky-600 rounded" />
+            <span>Show word labels</span>
+          </label>
+        </div>
+
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-5 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-5">
+          <div class="text-center sm:text-left">
+            <div class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">${esc(prompt.displayCue)}</div>
+            <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 mt-1">${esc(prompt.spokenPrompt)}</p>
+          </div>
+          <button
+            type="button"
+            id="ear-play-prompt-btn"
+            class="px-6 py-3.5 min-h-[52px] rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white font-bold text-base transition-all whitespace-nowrap shrink-0 cursor-pointer shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600">
+            🔊 Listen
+          </button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          ${prompt.options
+            .map((opt) => {
+              const isSelected = state.earChosenLabel === opt.label;
+              let stateClass =
+                'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-sky-400 hover:bg-sky-50/50 dark:hover:bg-sky-950/30';
+              if (state.earStatus === 'correct' && opt.isCorrect) {
+                stateClass =
+                  'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500/30';
+              } else if (state.earStatus === 'retry' && isSelected && !opt.isCorrect) {
+                stateClass = 'border-amber-400 bg-amber-50 dark:bg-amber-950/30';
+              }
+              return `
+                <button
+                  type="button"
+                  data-ear-option="${esc(opt.label)}"
+                  data-ear-correct="${opt.isCorrect ? 'true' : 'false'}"
+                  class="flex flex-col items-center justify-center gap-3 min-h-[164px] p-6 rounded-2xl border-2 transition-all active:scale-[0.98] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${stateClass}">
+                  <span class="text-6xl leading-none select-none" aria-hidden="true">${opt.icon}</span>
+                  <span class="text-base font-bold text-slate-800 dark:text-slate-100 ${state.earShowLabels || (state.earStatus === 'correct' && opt.isCorrect) ? '' : 'sr-only'}">${esc(opt.label)}</span>
+                  ${
+                    state.earStatus === 'correct' && opt.isCorrect
+                      ? `<span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">✓ Correct!</span>`
+                      : ''
+                  }
+                </button>
+              `;
+            })
+            .join('')}
+        </div>
+
+        <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+          <div class="text-sm font-semibold ${
+            state.earStatus === 'correct'
+              ? 'text-emerald-700 dark:text-emerald-400'
+              : state.earStatus === 'retry'
+                ? 'text-amber-700 dark:text-amber-400'
+                : 'text-slate-500 dark:text-slate-400'
+          }">
+            ${
+              state.earStatus === 'correct'
+                ? `★ ${esc(prompt.successPraise)}`
+                : state.earStatus === 'retry'
+                  ? 'Good try — tap Listen and have another go!'
+                  : 'Tap Listen above, then tap the matching picture.'
+            }
+          </div>
+          <div class="flex items-center gap-2">
+            <button type="button" id="ear-prev-btn" class="px-4 py-2.5 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer whitespace-nowrap">
+              Previous
+            </button>
+            <button type="button" id="ear-next-btn" class="px-5 py-2.5 min-h-[44px] rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold hover:opacity-90 cursor-pointer whitespace-nowrap">
+              Next Activity &rarr;
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStage1PureSounds(state: PhonicsStudioState): string {
+  const activeGroup =
+    CUMULATIVE_SOUND_GROUPS.find((g) => g.id === state.activeSoundGroupId) ||
+    CUMULATIVE_SOUND_GROUPS[0];
+  const groupGraphemes: PhonicGrapheme[] = activeGroup.graphemes
+    .map((gr) => PHONICS_GRAPHEMES.find((p) => p.grapheme === gr))
+    .filter((x): x is PhonicGrapheme => Boolean(x));
+
+  const selected =
+    groupGraphemes.find((g) => g.id === state.selectedGraphemeId) ||
+    groupGraphemes[0] ||
+    PHONICS_GRAPHEMES[0];
+  state.selectedGraphemeId = selected.id;
+
+  return `
+    <section aria-label="Stage 1: Learn Pure Sounds" class="space-y-6">
+      <div>
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 1. Learn Pure Sounds (Step by Step)</h2>
+        <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+          Start with Set 1 (s, a, t, p). Always use pure phonics sounds ("ssss", "tuh") instead of alphabet letter names.
+        </p>
+      </div>
+
+      <!-- Cumulative Set Selector -->
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1">
+        ${CUMULATIVE_SOUND_GROUPS.map(
+          (grp) => `
+            <button
+              type="button"
+              data-sound-group="${grp.id}"
+              class="px-3.5 py-2 min-h-[42px] rounded-lg text-xs font-semibold border transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                grp.id === activeGroup.id
+                  ? 'bg-sky-600 border-sky-600 text-white'
+                  : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-sky-400'
+              }">
+              ${esc(grp.title)}
+            </button>
+          `
+        ).join('')}
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left: Interactive Sound Tiles -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+          <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+            <div class="text-sm font-bold text-slate-900 dark:text-white">${esc(activeGroup.title)}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${esc(activeGroup.unlocksHint)}</div>
+          </div>
+
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            ${groupGraphemes
+              .map((g) => {
+                const isSel = g.id === selected.id;
+                const heard = state.progress.soundsHeard.includes(g.id);
+                const segType: SoundSegment['type'] =
+                  g.type === 'split-digraph'
+                    ? 'split'
+                    : g.type === 'trigraph'
+                      ? 'trigraph'
+                      : g.type === 'digraph'
+                        ? 'digraph'
+                        : 'single';
+                return `
+                  <button
+                    type="button"
+                    data-grapheme-id="${g.id}"
+                    class="flex flex-col items-center justify-center gap-2 min-h-[112px] p-4 rounded-xl border-2 transition-all active:scale-[0.97] cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                      isSel
+                        ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 hover:border-sky-400'
+                    }">
+                    <span class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${esc(g.grapheme.replace(' (short)', '').replace(' (long)', ''))}</span>
+                    ${renderSoundButtonGlyph({ letters: g.grapheme, type: segType, soundHint: g.soundAudioText }, isSel)}
+                    <span class="text-xs text-slate-500 dark:text-slate-400">${g.exampleIcon} ${esc(g.exampleWord)}${heard ? ' · ✓' : ''}</span>
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-2 text-xs text-slate-500 dark:text-slate-400">
+            <span>Legend: ● single sound · ━━ digraph / trigraph · ⌒ split digraph</span>
+            <button type="button" id="stage1-goto-blend" class="text-sky-700 dark:text-sky-400 font-bold hover:underline cursor-pointer">
+              Ready to blend these into words? Go to Stage 2 &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Phoneme Spotlight & Mouth Guide -->
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+          <div class="flex items-center justify-between gap-4">
+            <div>
+              <div class="text-xs font-medium text-slate-500 dark:text-slate-400">
+                Phase ${selected.phase} · ${esc(selected.set)} · ${esc(selected.phonemeIPA)}
+              </div>
+              <div class="text-5xl font-extrabold text-sky-700 dark:text-sky-400 mt-1 tracking-tight">
+                ${esc(selected.grapheme)}
+              </div>
+            </div>
+            <div class="text-center">
+              <div class="text-5xl leading-none select-none" aria-hidden="true">${selected.exampleIcon}</div>
+              <div class="text-sm font-bold text-slate-800 dark:text-slate-200 mt-1">${esc(selected.exampleWord)}</div>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-4">
+            <div class="text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">Mouth Position Tip</div>
+            <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">${esc(selected.mouthTip)}</p>
+          </div>
+
+          <div class="flex flex-wrap gap-3">
+            <button
+              type="button"
+              id="spotlight-play-pure"
+              class="flex-1 px-4 py-3 min-h-[48px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm cursor-pointer transition-colors whitespace-nowrap">
+              🔊 Hear Pure Sound
+            </button>
+            <button
+              type="button"
+              id="spotlight-play-word"
+              class="flex-1 px-4 py-3 min-h-[48px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-900 dark:text-white font-bold text-sm cursor-pointer transition-colors whitespace-nowrap">
+              🔊 Hear in "${esc(selected.exampleWord)}"
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStage2BlendWords(state: PhonicsStudioState): string {
+  const words = getWordsForFilter(state.blendPhaseFilter);
+  const word = words[state.blendWordIndex % Math.max(1, words.length)] || ALL_DECODABLE_WORDS[0];
+  const safeIdx = state.blendWordIndex % Math.max(1, words.length);
+  const isBlendedBefore = state.progress.wordsBlended.includes(word.word);
+  const showPic = !state.blendHidePictureFirst || state.blendPictureRevealed;
+
+  return `
+    <section aria-label="Stage 2: Sound-Button Blending Mat" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 2. Sound-Button Blending Mat</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+            Tap each sound button left-to-right, then press Blend Word to slide the pure sounds together.
+          </p>
+        </div>
+        <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+          ${(
+            [
+              ['starter', 'SATPIN Starter'],
+              [2, 'Phase 2'],
+              [3, 'Phase 3'],
+              [4, 'Phase 4'],
+              [5, 'Phase 5'],
+            ] as const
+          )
+            .map(
+              ([key, label]) => `
+              <button type="button" data-blend-phase="${key}" class="px-3 py-2 min-h-[40px] text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                state.blendPhaseFilter === key
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }">${label}</button>
+            `
+            )
+            .join('')}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+            <span>${esc(word.category)}</span>
+            <span aria-hidden="true">·</span>
+            <span>Word ${safeIdx + 1} of ${words.length}</span>
+            ${isBlendedBefore ? `<span aria-hidden="true">·</span><span class="text-emerald-700 dark:text-emerald-400 font-semibold">★ Blended</span>` : ''}
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+            <input type="checkbox" id="blend-hide-pic-toggle" ${state.blendHidePictureFirst ? 'checked' : ''} class="w-4 h-4 accent-sky-600 rounded" />
+            <span>Hide picture until blended (prevents guessing)</span>
+          </label>
+        </div>
+
+        <!-- Blending Stage -->
+        <div class="flex flex-col items-center justify-center gap-6 py-4">
+          <!-- Sound Button Tiles -->
+          <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4">
+            ${word.segments
+              .map((seg, idx) => {
+                const isActive = state.blendHighlightIdx === idx;
+                return `
+                  <button
+                    type="button"
+                    data-blend-seg="${idx}"
+                    class="flex flex-col items-center justify-center gap-3 min-w-[78px] sm:min-w-[96px] min-h-[112px] px-4 py-4 rounded-2xl border-2 transition-all active:scale-95 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                      isActive
+                        ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/50 -translate-y-1 shadow-md'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-sky-400'
+                    }">
+                    <span class="text-4xl sm:text-5xl font-extrabold tracking-tight text-slate-900 dark:text-white leading-none">${esc(seg.letters)}</span>
+                    ${renderSoundButtonGlyph(seg, isActive)}
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
+
+          <!-- Picture Reveal Box -->
+          <div class="min-h-[84px] flex items-center justify-center">
+            ${
+              showPic
+                ? `<div class="flex items-center gap-4 px-6 py-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800">
+                    <span class="text-5xl leading-none" aria-hidden="true">${word.icon || '📖'}</span>
+                    <div>
+                      <div class="text-2xl font-extrabold text-emerald-900 dark:text-emerald-200">${esc(word.word)}</div>
+                      <div class="text-xs font-medium text-emerald-700 dark:text-emerald-400">${word.segments.length} sounds blended</div>
+                    </div>
+                  </div>`
+                : `<div class="text-sm text-slate-500 dark:text-slate-400">
+                    Tap each sound button, then press <strong>Blend Word</strong> to reveal the picture.
+                  </div>`
+            }
+          </div>
+
+          <!-- Controls -->
+          <div class="flex flex-wrap items-center justify-center gap-3">
+            <button
+              type="button"
+              id="blend-animate-btn"
+              class="px-7 py-3.5 min-h-[52px] rounded-xl bg-sky-600 hover:bg-sky-700 active:scale-[0.98] text-white font-bold text-base transition-all cursor-pointer shadow-sm whitespace-nowrap">
+              🌊 Blend Word
+            </button>
+            <button
+              type="button"
+              id="blend-say-whole-btn"
+              class="px-5 py-3.5 min-h-[52px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-bold text-sm cursor-pointer whitespace-nowrap">
+              🔊 Say Whole Word
+            </button>
+            <button
+              type="button"
+              id="blend-next-btn"
+              class="px-5 py-3.5 min-h-[52px] rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm hover:opacity-90 cursor-pointer whitespace-nowrap">
+              Next Word &rarr;
+            </button>
+          </div>
+        </div>
+
+        <!-- Quick Word Picker Strip -->
+        <div class="pt-4 border-t border-slate-100 dark:border-slate-800">
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Pick a word in this level:</div>
+          <div class="flex flex-wrap gap-2">
+            ${words
+              .map(
+                (w, idx) => `
+                <button
+                  type="button"
+                  data-blend-pick="${idx}"
+                  class="px-3.5 py-2 min-h-[40px] rounded-lg text-sm font-bold border transition-colors cursor-pointer ${
+                    idx === safeIdx
+                      ? 'bg-sky-600 border-sky-600 text-white'
+                      : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-sky-400'
+                  }">
+                  ${esc(w.word)}${state.progress.wordsBlended.includes(w.word) ? ' ★' : ''}
+                </button>
+              `
+              )
+              .join('')}
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStage3BuildWords(state: PhonicsStudioState): string {
+  const words = getWordsForFilter(state.buildPhaseFilter);
+  const word = words[state.buildWordIndex % Math.max(1, words.length)] || ALL_DECODABLE_WORDS[0];
+  const safeIdx = state.buildWordIndex % Math.max(1, words.length);
+  const usedTileIds = new Set(state.buildSlots.filter(Boolean).map((s) => s!.tileId));
+
+  return `
+    <section aria-label="Stage 3: Elkonin Sound Boxes Word Builder" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 3. Build Words (Sound Boxes)</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+            Hear the word, listen for each sound in order, and tap tiles to fill the boxes left-to-right.
+          </p>
+        </div>
+        <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+          ${(
+            [
+              ['starter', 'SATPIN Starter'],
+              [2, 'Phase 2'],
+              [3, 'Phase 3'],
+              [4, 'Phase 4'],
+              [5, 'Phase 5'],
+            ] as const
+          )
+            .map(
+              ([key, label]) => `
+              <button type="button" data-build-phase="${key}" class="px-3 py-2 min-h-[40px] text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                state.buildPhaseFilter === key
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }">${label}</button>
+            `
+            )
+            .join('')}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div class="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+            <span>${esc(word.category)}</span>
+            <span aria-hidden="true">·</span>
+            <span>Puzzle ${safeIdx + 1} of ${words.length}</span>
+            <span aria-hidden="true">·</span>
+            <span>${word.segments.length} sound boxes</span>
+          </div>
+          <span class="text-xs font-semibold text-amber-600 dark:text-amber-400 tabular-nums">★ ${state.progress.wordsBuilt.length} words built</span>
+        </div>
+
+        <!-- Picture & Audio Prompt -->
+        <div class="flex flex-col sm:flex-row items-center justify-center gap-5 bg-slate-50 dark:bg-slate-800/60 rounded-xl p-5">
+          <span class="text-6xl leading-none select-none" aria-hidden="true">${word.icon || '🔤'}</span>
+          <div class="text-center sm:text-left">
+            <div class="text-sm font-semibold text-slate-600 dark:text-slate-300">Tap Hear Word and spell what you hear:</div>
+            <div class="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
+              <button
+                type="button"
+                id="build-hear-word-btn"
+                class="px-5 py-2.5 min-h-[46px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+                🔊 Hear Word
+              </button>
+              <button
+                type="button"
+                id="build-hint-btn"
+                class="px-4 py-2.5 min-h-[46px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer whitespace-nowrap">
+                💡 Sound Hint
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Elkonin Sound Boxes -->
+        <div class="flex flex-wrap items-center justify-center gap-3 py-2">
+          ${state.buildSlots
+            .map((slot, idx) => {
+              const boxState =
+                state.buildStatus === 'correct'
+                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200'
+                  : state.buildStatus === 'wrong'
+                    ? 'border-amber-400 bg-amber-50 dark:bg-amber-950/30 text-slate-900 dark:text-white'
+                    : slot
+                      ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 text-slate-900 dark:text-white'
+                      : 'border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800/40 text-slate-400';
+              return `
+                <button
+                  type="button"
+                  data-build-slot="${idx}"
+                  aria-label="Sound box ${idx + 1}: ${slot ? slot.letters : 'empty'}"
+                  class="flex flex-col items-center justify-center min-w-[78px] sm:min-w-[92px] min-h-[96px] px-3 rounded-2xl border-2 transition-all cursor-pointer ${boxState}">
+                  <span class="text-3xl sm:text-4xl font-extrabold leading-none">${slot ? esc(slot.letters) : '?'}</span>
+                  <span class="text-[0.7rem] font-semibold mt-2 opacity-70">${slot ? 'tap to clear' : `sound ${idx + 1}`}</span>
+                </button>
+              `;
+            })
+            .join('')}
+        </div>
+
+        <!-- Feedback Line -->
+        <div class="text-center min-h-[28px]">
+          ${
+            state.buildStatus === 'correct'
+              ? `<div class="text-base font-bold text-emerald-700 dark:text-emerald-400">✓ Brilliant spelling! You built "${esc(word.word)}"!</div>`
+              : state.buildStatus === 'wrong'
+                ? `<div class="text-sm font-semibold text-amber-700 dark:text-amber-400">Almost! Listen to each sound again, or tap a box to change it.</div>`
+                : state.buildHintText
+                  ? `<div class="text-sm font-semibold text-sky-700 dark:text-sky-400">${esc(state.buildHintText)}</div>`
+                  : `<div class="text-xs text-slate-500 dark:text-slate-400">Tap sound tiles below to place them in the boxes.</div>`
+          }
+        </div>
+
+        <!-- Shuffled Sound Tile Tray -->
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+          ${state.buildTray
+            .map((tile) => {
+              const used = usedTileIds.has(tile.tileId);
+              return `
+                <button
+                  type="button"
+                  data-build-tile="${esc(tile.tileId)}"
+                  ${used ? 'disabled' : ''}
+                  class="min-w-[68px] min-h-[60px] px-4 py-2.5 rounded-xl border-2 text-2xl font-extrabold transition-all cursor-pointer ${
+                    used
+                      ? 'opacity-30 border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800 cursor-not-allowed'
+                      : 'border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white hover:border-sky-500 active:scale-95 shadow-sm'
+                  }">
+                  ${esc(tile.letters)}
+                </button>
+              `;
+            })
+            .join('')}
+        </div>
+
+        <!-- Action Row -->
+        <div class="flex flex-wrap items-center justify-center gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" id="build-check-btn" class="px-6 py-3 min-h-[48px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+            ✓ Check My Word
+          </button>
+          <button type="button" id="build-clear-btn" class="px-4 py-3 min-h-[48px] rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer whitespace-nowrap">
+            Clear Boxes
+          </button>
+          <button type="button" id="build-next-btn" class="px-5 py-3 min-h-[48px] rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-bold text-sm hover:opacity-90 cursor-pointer whitespace-nowrap">
+            Next Word &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStage4TrickyWords(state: PhonicsStudioState): string {
+  const filtered =
+    state.trickyPhaseFilter === 'all'
+      ? TRICKY_WORDS
+      : TRICKY_WORDS.filter((tw) => tw.phase === state.trickyPhaseFilter);
+  const selected =
+    filtered.find((tw) => tw.id === state.selectedTrickyId) || filtered[0] || TRICKY_WORDS[0];
+  state.selectedTrickyId = selected.id;
+  const isKnown = state.progress.trickyKnown.includes(selected.id);
+
+  return `
+    <section aria-label="Stage 4: Tricky Heart Words" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 4. Tricky "Heart" Words</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+            Common English words with one tricky part (marked with ♥) that we learn by heart.
+          </p>
+        </div>
+        <div class="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-lg overflow-x-auto">
+          ${(['all', 2, 3, 4, 5] as const)
+            .map(
+              (ph) => `
+              <button type="button" data-tricky-phase="${ph}" class="px-3 py-2 min-h-[40px] text-xs font-semibold rounded-md transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                state.trickyPhaseFilter === ph
+                  ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }">${ph === 'all' ? 'All' : `Phase ${ph}`}</button>
+            `
+            )
+            .join('')}
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <!-- Left: Heart Word Tiles -->
+        <div class="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6">
+          <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800 text-xs text-slate-500 dark:text-slate-400">
+            <span>Tap any word to hear it and see its tricky heart part</span>
+            <span class="tabular-nums font-semibold text-rose-600 dark:text-rose-400">♥ ${state.progress.trickyKnown.length} / ${TRICKY_WORDS.length} known</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            ${filtered
+              .map((tw) => {
+                const sel = tw.id === selected.id;
+                const known = state.progress.trickyKnown.includes(tw.id);
+                return `
+                  <button
+                    type="button"
+                    data-tricky-id="${tw.id}"
+                    class="flex flex-col items-center justify-center min-h-[68px] px-3 py-3 rounded-xl border-2 transition-all cursor-pointer ${
+                      sel
+                        ? 'border-rose-500 bg-rose-50 dark:bg-rose-950/40 text-rose-900 dark:text-rose-100'
+                        : 'border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-800/50 text-slate-900 dark:text-white hover:border-rose-400'
+                    }">
+                    <span class="text-xl font-extrabold">${esc(tw.word)}</span>
+                    <span class="text-[0.7rem] text-slate-500 dark:text-slate-400 mt-0.5">${known ? '✓ Known' : `Phase ${tw.phase}`}</span>
+                  </button>
+                `;
+              })
+              .join('')}
+          </div>
+        </div>
+
+        <!-- Right: Heart Word Spotlight -->
+        <div class="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+          <div class="text-center py-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl">
+            <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2">
+              Phase ${selected.phase} Tricky Word · Tricky part: "${esc(selected.trickyPart)}"
+            </div>
+            <div class="text-5xl font-extrabold tracking-wide text-slate-900 dark:text-white">
+              ${renderTrickyWordMarkup(selected)}
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <div class="text-xs font-bold text-slate-700 dark:text-slate-300">Why is it tricky?</div>
+              <p class="text-sm text-slate-700 dark:text-slate-300 mt-0.5 leading-relaxed">${esc(selected.trickyExplanation)}</p>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60">
+              <div class="text-xs font-bold text-slate-500 dark:text-slate-400 mb-1">In a sentence</div>
+              <p class="text-base font-semibold text-slate-900 dark:text-white">"${esc(selected.exampleSentence)}"</p>
+            </div>
+          </div>
+
+          <div class="flex flex-wrap gap-2.5">
+            <button type="button" id="tricky-hear-word" class="flex-1 px-4 py-3 min-h-[48px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+              🔊 Hear Word
+            </button>
+            <button type="button" id="tricky-hear-sentence" class="flex-1 px-4 py-3 min-h-[48px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer whitespace-nowrap">
+              🔊 Hear Sentence
+            </button>
+          </div>
+          <button
+            type="button"
+            id="tricky-mark-known"
+            class="w-full px-4 py-3 min-h-[46px] rounded-xl border font-bold text-sm transition-colors cursor-pointer ${
+              isKnown
+                ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300'
+                : 'border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800'
+            }">
+            ${isKnown ? '✓ I Know This Tricky Word' : '♥ Mark as Known (+1 Star)'}
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderStage5MiniBooks(state: PhonicsStudioState): string {
+  const { base } = state;
+  // Book Shelf View — launches native AST Vector Player storybook cartridges
+  if (!state.openBookId) {
+    return `
+      <section aria-label="Stage 5: Decodable Vector Mini-Books" class="space-y-6">
+        <div class="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">Stage 5. Illustrated Decodable Mini-Books (Vector Player)</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+              Every book is a native AST Vector Player cartridge with custom illustrations, toggleable DfE sound buttons, tap-any-word sound-out, smartboard ink, and BSL signing.
+            </p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          ${DECODABLE_MINI_BOOKS.map((book) => {
+            const completed = state.progress.booksCompleted.includes(book.id);
+            return `
+              <article class="flex flex-col justify-between bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-5">
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                    <span class="font-semibold text-sky-700 dark:text-sky-400">${esc(book.levelLabel)}</span>
+                    <span>${completed ? '★ Finished' : `${book.pages.length} illustrated spreads`}</span>
+                  </div>
+                  <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-4xl shrink-0" aria-hidden="true">
+                      ${book.coverEmoji}
+                    </div>
+                    <div>
+                      <h3 class="text-lg font-extrabold text-slate-900 dark:text-white">${esc(book.title)}</h3>
+                      <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5 leading-relaxed">${esc(book.subtitle)}</p>
+                    </div>
+                  </div>
+                  <div class="text-xs text-slate-500 dark:text-slate-400 pt-1">
+                    <span class="font-semibold text-slate-700 dark:text-slate-300">Focus sounds:</span> ${esc(book.targetSounds.join(' · '))}
+                  </div>
+                </div>
+
+                <div class="flex flex-col gap-2">
+                  <a
+                    href="${base}player?preset=${encodeURIComponent(book.cartridgeId)}"
+                    class="w-full px-4 py-3 min-h-[46px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm transition-colors text-center inline-flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <span>📖 Open in Vector Player</span>
+                    <span aria-hidden="true">&rarr;</span>
+                  </a>
+                  <button
+                    type="button"
+                    data-open-book="${book.id}"
+                    class="w-full px-4 py-2.5 min-h-[42px] rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-100 font-semibold text-xs transition-colors cursor-pointer whitespace-nowrap">
+                    ▶ Read Right Here &amp; Take Story Check
+                  </button>
+                </div>
+              </article>
+            `;
+          }).join('')}
+        </div>
+      </section>
+    `;
+  }
+
+  // Active Book View — live embedded AST Vector Player + Picture Comprehension Check
+  const book = DECODABLE_MINI_BOOKS.find((b) => b.id === state.openBookId) || DECODABLE_MINI_BOOKS[0];
+
+  if (state.bookQuizMode) {
+    const allCorrect = book.quiz.every((q) => state.bookQuizAnswers[q.id] === true);
+    return `
+      <section aria-label="Story Comprehension Check" class="space-y-6">
+        <div class="flex items-center justify-between gap-3">
+          <button type="button" id="book-back-to-pages" class="px-4 py-2 min-h-[42px] rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+            &larr; Back to Book Player
+          </button>
+          <div class="text-xs font-medium text-slate-500 dark:text-slate-400">${esc(book.title)} · Story Check</div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900 dark:text-white">Did you understand "${esc(book.title)}"?</h2>
+            <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">Tap the speaker to hear each question, then tap the right picture.</p>
+          </div>
+
+          <div class="space-y-6">
+            ${book.quiz
+              .map((q, qIdx) => {
+                const answeredCorrect = state.bookQuizAnswers[q.id] === true;
+                return `
+                  <div class="p-5 rounded-xl bg-slate-50 dark:bg-slate-800/50 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                      <div class="text-base font-bold text-slate-900 dark:text-white">${qIdx + 1}. ${esc(q.question)}</div>
+                      <button type="button" data-quiz-speak="${esc(q.question)}" class="px-3 py-1.5 min-h-[38px] rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs font-bold text-sky-700 dark:text-sky-400 cursor-pointer">
+                        🔊 Hear Question
+                      </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      ${q.options
+                        .map((opt) => {
+                          const showWin = answeredCorrect && opt.isCorrect;
+                          return `
+                            <button
+                              type="button"
+                              data-quiz-qid="${q.id}"
+                              data-quiz-correct="${opt.isCorrect ? 'true' : 'false'}"
+                              class="flex items-center gap-3 p-4 min-h-[68px] rounded-xl border-2 text-left transition-all cursor-pointer ${
+                                showWin
+                                  ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40'
+                                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 hover:border-sky-400'
+                              }">
+                              <span class="text-3xl leading-none shrink-0" aria-hidden="true">${opt.icon}</span>
+                              <span class="text-sm font-bold text-slate-900 dark:text-white">${esc(opt.label)}</span>
+                            </button>
+                          `;
+                        })
+                        .join('')}
+                    </div>
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>
+
+          ${
+            allCorrect
+              ? `<div class="p-5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <div class="text-lg font-extrabold text-emerald-900 dark:text-emerald-200">★ Reader Star Unlocked!</div>
+                    <p class="text-sm text-emerald-800 dark:text-emerald-300">You read and understood "${esc(book.title)}" all by yourself!</p>
+                  </div>
+                  <button type="button" id="book-finish-to-shelf" class="px-5 py-3 min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+                    Back to Book Shelf &rarr;
+                  </button>
+                </div>`
+              : ''
+          }
+        </div>
+      </section>
+    `;
+  }
+
+  return `
+    <section aria-label="Vector Player Storybook: ${esc(book.title)}" class="space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button type="button" id="book-back-shelf" class="px-4 py-2 min-h-[42px] rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer whitespace-nowrap">
+            &larr; Book Shelf
+          </button>
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 dark:text-white">${esc(book.title)}</h2>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${esc(book.levelLabel)} · AST Vector Storybook Cartridge</div>
+          </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <button type="button" id="book-open-quiz" class="px-4 py-2.5 min-h-[44px] rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold text-xs sm:text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/50 cursor-pointer whitespace-nowrap">
+            ★ Story Comprehension Check
+          </button>
+          <a
+            href="${base}player?preset=${encodeURIComponent(book.cartridgeId)}"
+            class="px-4 py-2.5 min-h-[44px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs sm:text-sm inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span>Open Fullscreen in Player</span>
+            <span aria-hidden="true">&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden shadow-sm">
+        <iframe
+          src="${base}player.html?preset=${encodeURIComponent(book.cartridgeId)}"
+          title="${esc(book.title)} — Interactive Vector Storybook"
+          class="w-full block border-0"
+          style="aspect-ratio: 16 / 10; min-height: 460px;"
+          allowfullscreen></iframe>
+      </div>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Tip: Tap any word inside the book to see its phoneme breakdown and press <strong>Sound Out</strong>. Use <strong>Open Fullscreen in Player</strong> for Smartboard stylus ink, BSL signing, and classroom P2P sync.
+      </p>
+    </section>
+  `;
+}
+
+export function renderScreeningCheck(state: PhonicsStudioState): string {
+  const item = OFFICIAL_SCREENING_POOL[state.screeningIndex % OFFICIAL_SCREENING_POOL.length];
+  const safeIdx = state.screeningIndex % OFFICIAL_SCREENING_POOL.length;
+  const passedCount = Object.values(state.screeningScores).filter((v) => v === 'pass').length;
+  const attemptedCount = Object.keys(state.screeningScores).length;
+
+  return `
+    <section aria-label="Year 1 Phonics Screening Check Practice" class="space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 class="text-xl font-bold text-slate-900 dark:text-white">Year 1 Phonics Screening Check</h2>
+          <p class="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+            Practise decoding both real words and alien pseudo-words using pure phonics (40 statutory items).
+          </p>
+        </div>
+        <div class="text-xs font-semibold text-slate-600 dark:text-slate-300 tabular-nums">
+          Section ${item.section} · Card ${safeIdx + 1} of ${OFFICIAL_SCREENING_POOL.length} · Score ${passedCount}/${attemptedCount}
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <div class="text-sm font-bold ${item.isAlien ? 'text-indigo-700 dark:text-indigo-300' : 'text-emerald-700 dark:text-emerald-300'}">
+            ${item.isAlien ? `${item.alienAvatar || '👾'} Alien Word (${esc(item.alienName || 'Pseudo-word')})` : '📖 Real English Word'}
+          </div>
+          <label class="inline-flex items-center gap-2 text-xs font-medium text-slate-600 dark:text-slate-300 cursor-pointer select-none">
+            <input type="checkbox" id="screen-toggle-buttons" ${state.screeningShowButtons ? 'checked' : ''} class="w-4 h-4 accent-sky-600 rounded" />
+            <span>Show sound buttons</span>
+          </label>
+        </div>
+
+        <div class="flex flex-col items-center justify-center py-6 gap-5">
+          ${
+            state.screeningShowButtons
+              ? `<div class="flex flex-wrap items-center justify-center gap-3">
+                  ${item.segments
+                    .map(
+                      (seg, idx) => `
+                      <button
+                        type="button"
+                        data-screen-seg="${idx}"
+                        class="flex flex-col items-center justify-center gap-2.5 min-w-[72px] min-h-[104px] px-4 py-3 rounded-2xl border-2 transition-all cursor-pointer ${
+                          state.screeningHighlightIdx === idx
+                            ? 'border-sky-600 bg-sky-50 dark:bg-sky-950/40 -translate-y-1'
+                            : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-sky-400'
+                        }">
+                        <span class="text-4xl font-extrabold text-slate-900 dark:text-white leading-none">${esc(seg.letters)}</span>
+                        ${renderSoundButtonGlyph(seg, state.screeningHighlightIdx === idx)}
+                      </button>
+                    `
+                    )
+                    .join('')}
+                </div>`
+              : `<div class="text-6xl font-extrabold tracking-wide text-slate-900 dark:text-white py-4">${esc(item.word)}</div>`
+          }
+
+          <div class="flex flex-wrap items-center justify-center gap-3 pt-2">
+            <button type="button" id="screen-blend-btn" class="px-5 py-3 min-h-[48px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+              🌊 Sound Out &amp; Check
+            </button>
+            <button type="button" id="screen-mark-pass" class="px-5 py-3 min-h-[48px] rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm cursor-pointer whitespace-nowrap">
+              ✓ Read Correctly
+            </button>
+            <button type="button" id="screen-mark-retry" class="px-5 py-3 min-h-[48px] rounded-xl border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer whitespace-nowrap">
+              ↻ Practise Again
+            </button>
+          </div>
+        </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" id="screen-prev-btn" class="px-4 py-2.5 min-h-[44px] rounded-lg border border-slate-300 dark:border-slate-700 text-sm font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
+            &larr; Previous Card
+          </button>
+          <button type="button" id="screen-next-btn" class="px-4 py-2.5 min-h-[44px] rounded-lg bg-slate-900 dark:bg-white text-white dark:text-slate-900 text-sm font-bold hover:opacity-90 cursor-pointer">
+            Next Card &rarr;
+          </button>
+        </div>
+      </div>
+    </section>
+  `;
+}
+
+export function renderPhonicsShellHtml(state: PhonicsStudioState): string {
+  const stageButtons: Array<{ id: StudioStage; label: string }> = [
+    { id: 'ear-warmup', label: '0. Ear Warm-Up' },
+    { id: 'pure-sounds', label: '1. Pure Sounds' },
+    { id: 'blend-words', label: '2. Blend Words' },
+    { id: 'build-words', label: '3. Build Words' },
+    { id: 'tricky-words', label: '4. Tricky Words' },
+    { id: 'mini-books', label: '5. Mini-Books' },
+    { id: 'screening', label: 'Year 1 Check' },
+  ];
+
+  let stageHtml = '';
+  switch (state.activeStage) {
+    case 'ear-warmup':
+      stageHtml = renderStage0EarWarmUp(state);
+      break;
+    case 'pure-sounds':
+      stageHtml = renderStage1PureSounds(state);
+      break;
+    case 'blend-words':
+      stageHtml = renderStage2BlendWords(state);
+      break;
+    case 'build-words':
+      stageHtml = renderStage3BuildWords(state);
+      break;
+    case 'tricky-words':
+      stageHtml = renderStage4TrickyWords(state);
+      break;
+    case 'mini-books':
+      stageHtml = renderStage5MiniBooks(state);
+      break;
+    case 'screening':
+      stageHtml = renderScreeningCheck(state);
+      break;
+  }
+
+  return `
+    <!-- Header -->
+    <header class="space-y-4 mb-6">
+      <div class="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <div class="flex items-center gap-2">
+          <a href="${state.base}" class="font-semibold hover:text-slate-900 dark:hover:text-white transition-colors">&larr; Home</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-semibold text-sky-700 dark:text-sky-400">Learn to Read Studio</span>
+        </div>
+        <div class="flex items-center gap-2 tabular-nums">
+          <span class="font-semibold text-amber-600 dark:text-amber-400">★ ${totalReaderStars(state.progress)} stars</span>
+          <span aria-hidden="true">·</span>
+          <span>${state.progress.booksCompleted.length}/${DECODABLE_MINI_BOOKS.length} mini-books read</span>
+          <span aria-hidden="true">·</span>
+          <span>100% offline</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="max-w-2xl">
+          <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white" style="text-wrap: balance;">
+            Learn to Read Studio
+          </h1>
+          <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-1">
+            A step-by-step phonics journey from first sounds to reading full illustrated books independently.
+          </p>
+        </div>
+        <a
+          href="${state.base}player?preset=phonics-lab"
+          class="px-4 py-2.5 min-h-[44px] rounded-xl bg-sky-600 hover:bg-sky-700 text-white font-bold text-sm inline-flex items-center gap-2 transition-colors whitespace-nowrap shrink-0">
+          <span>Launch Vector Phonics Sim</span>
+          <span aria-hidden="true">&rarr;</span>
+        </a>
+      </div>
+
+      <!-- 6-Stage Reading Ladder Navigation -->
+      <nav aria-label="Reading progression stages" class="flex items-center gap-1.5 p-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-xl overflow-x-auto">
+        ${stageButtons
+          .map(
+            (st) => `
+            <button
+              type="button"
+              data-stage-tab="${st.id}"
+              aria-current="${state.activeStage === st.id ? 'step' : 'false'}"
+              class="px-3.5 py-2.5 min-h-[44px] rounded-lg text-xs sm:text-sm font-bold transition-all whitespace-nowrap shrink-0 cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 ${
+                state.activeStage === st.id
+                  ? 'bg-white dark:bg-slate-900 text-sky-700 dark:text-sky-400 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+              }">
+              ${st.label}
+            </button>
+          `
+          )
+          .join('')}
+      </nav>
+    </header>
+
+    <!-- Active Stage Content -->
+    <main>
+      ${stageHtml}
+    </main>
+  `;
+}

@@ -16,9 +16,20 @@ export function renderHomePage(): HTMLElement {
   container.className = 'home-landing-stage';
   container.style.cssText = 'padding: 2.5rem 1rem 4rem; max-width: 1200px; margin: 0 auto; color: #0f172a;';
 
-  // 1. Dynamic Cartridge Feed from Canonical Scenes Manifest
-  let activePreset = 'welcome';
-  let cartridges: CartridgeRoute[] = PRESET_OPTIONS.slice(0, 24).map((p) => ({
+  // 1. Dynamic Curated Featured Feed from Canonical Scenes Manifest (prefers :featured markers, falls back to balanced cross-subject core highlights)
+  const playableCore = PRESET_OPTIONS.filter((p) => p.isPlayableScene && p.isCore);
+  const markedFeatured = playableCore.filter((p) => p.featured);
+  const curatedPool = markedFeatured.length > 0
+    ? markedFeatured
+    : [
+        ...playableCore.filter((p) => p.id === 'welcome').slice(0, 1),
+        ...playableCore.filter((p) => p.section === 'Catholic Life & Faith Formation').slice(0, 4),
+        ...playableCore.filter((p) => p.section === 'Mathematics & Geometry').slice(0, 4),
+        ...playableCore.filter((p) => p.section === 'Natural Sciences & Physics').slice(0, 3),
+      ];
+  const featuredPresets = curatedPool.length > 0 ? curatedPool : playableCore.slice(0, 12);
+  let activePreset = featuredPresets[0]?.id || 'welcome';
+  const cartridges: CartridgeRoute[] = featuredPresets.map((p) => ({
     id: p.id,
     title: p.label,
     mount: p.mount || `/curriculum/${p.id}`,
@@ -74,7 +85,7 @@ export function renderHomePage(): HTMLElement {
         <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
           <select id="sim-selector" aria-label="Select Curriculum Simulation" style="padding: 8px 14px; border-radius: 8px; background: #1e293b; color: #fff; border: 1.5px solid #0284c7; font-weight: 700; font-size: 0.86rem; cursor: pointer;">
           </select>
-          <a href="${base}player" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Open Full Activity</a>
+          <a id="open-full-activity" href="${base}player?preset=${encodeURIComponent(activePreset)}" style="padding: 8px 14px; font-size: 0.82rem; background: #334155; color: #ffffff; border-radius: 6px; text-decoration: none; font-weight: 700;">↗ Open Full Activity</a>
         </div>
       </div>
 
@@ -86,7 +97,7 @@ export function renderHomePage(): HTMLElement {
         <iframe 
           id="stage-viewport"
           src="about:blank"
-          data-initial-src="${base}player/player.html?preset=welcome&embed=1"
+          data-initial-src="${base}player.html?preset=${encodeURIComponent(activePreset)}"
           loading="lazy"
           style="width: 100%; height: 500px; border: none; display: block;" 
           title="Featured Interactive Simulation">
@@ -345,12 +356,14 @@ export function renderHomePage(): HTMLElement {
   const iframe = container.querySelector<HTMLIFrameElement>('#stage-viewport');
   const select = container.querySelector<HTMLSelectElement>('#sim-selector');
   const pillNav = container.querySelector<HTMLElement>('#sim-pill-nav');
+  const openFullLink = container.querySelector<HTMLAnchorElement>('#open-full-activity');
 
   function updateActivePreset(id: string) {
     const cleanId = String(id || '').replace(/[^a-zA-Z0-9_-]/g, '');
     activePreset = cleanId;
-    if (iframe) iframe.src = `${base}player/player.html?preset=${encodeURIComponent(cleanId)}&embed=1`;
+    if (iframe) iframe.src = `${base}player.html?preset=${encodeURIComponent(cleanId)}`;
     if (select) select.value = cleanId;
+    if (openFullLink) openFullLink.href = `${base}player?preset=${encodeURIComponent(cleanId)}`;
     
     // Update pill buttons visual state
     pillNav?.querySelectorAll<HTMLButtonElement>('.sim-pill').forEach((btn) => {

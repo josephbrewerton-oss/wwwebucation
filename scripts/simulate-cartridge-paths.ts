@@ -70,8 +70,9 @@ async function runSimulation() {
     const fileBase = scene.base || id;
 
     // 1. Check Canonical Source Pair Store (static/cartridges/)
-    const authoringAst = path.join(ROOT_DIR, 'static', scene.astFile || `cartridges/${fileBase}.ast`);
-    const authoringSvg = path.join(ROOT_DIR, 'static', scene.svgFile || `cartridges/${fileBase}.svg`);
+    const manifestDir = path.dirname(MANIFEST_PATH);
+    const authoringAst = path.resolve(manifestDir, scene.astFile || `../cartridges/${fileBase}.ast`);
+    const authoringSvg = path.resolve(manifestDir, scene.svgFile || `../cartridges/${fileBase}.svg`);
     assert(fs.existsSync(authoringAst), `Missing authoring AST for ${id}: ${authoringAst}`);
     assert(fs.existsSync(authoringSvg), `Missing authoring SVG for ${id}: ${authoringSvg}`);
     stats.diskAstVerified++;
@@ -82,7 +83,7 @@ async function runSimulation() {
     stats.diskSvgVerified++;
 
     // 2. Check Canonical Bytecode Store (static/bytecode/ — .astb binaries ONLY)
-    const runtimeAstb = path.join(ROOT_DIR, 'static', scene.astbFile || `bytecode/${fileBase}.astb`);
+    const runtimeAstb = path.resolve(manifestDir, scene.astbFile || `../bytecode/${fileBase}.astb`);
     assert(fs.existsSync(runtimeAstb), `Missing runtime ASTB for ${id}: ${runtimeAstb}`);
     assert(!fs.existsSync(path.join(ROOT_DIR, 'static', 'bytecode', `${fileBase}.svg`)), `Duplicate SVG should not exist in static/bytecode/ for ${id}`);
 
