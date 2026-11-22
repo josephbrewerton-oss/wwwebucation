@@ -403,13 +403,15 @@
             }
             if (
               !parsedAst ||
-              (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0)) ||
-              (parsedAst.inputs && parsedAst.inputs.some(i => i && ((i.type === 'select' && (!i.options || i.options.length === 0)) || (i.min === 0 && i.max === 0 && !i.options)))) ||
-              (parsedAst.vars && Object.values(parsedAst.vars).some(v => typeof v === 'string')) ||
-              !parsedAst.bindings || parsedAst.bindings.length === 0 ||
-              !parsedAst.computed || parsedAst.computed.length === 0 ||
-              !parsedAst.gestures || parsedAst.gestures.length === 0 ||
-              parsedAst.gestures.some(g => g && g.fromBytecode)
+              (!parsedAst.completeBinary && (
+                (!parsedAst.uiControls && (!parsedAst.inputs || parsedAst.inputs.length === 0)) ||
+                (parsedAst.inputs && parsedAst.inputs.some(i => i && ((i.type === 'select' && (!i.options || i.options.length === 0)) || (i.min === 0 && i.max === 0 && !i.options)))) ||
+                (parsedAst.vars && Object.values(parsedAst.vars).some(v => typeof v === 'string')) ||
+                !parsedAst.bindings || parsedAst.bindings.length === 0 ||
+                !parsedAst.computed || parsedAst.computed.length === 0 ||
+                !parsedAst.gestures || parsedAst.gestures.length === 0 ||
+                parsedAst.gestures.some(g => g && g.fromBytecode)
+              ))
             ) {
               const foundAst = await fetchAsset('ast');
               if (foundAst) {
@@ -530,12 +532,12 @@
           (parsedAst && parsedAst.camera) ||
           (registryScene && registryScene.has3D)
         );
-        const isInteractiveExplicitlyDisabled = astText ? (
+        const isInteractiveExplicitlyDisabled = Boolean(parsedAst && parsedAst.interactiveDisabled) || (astText ? (
           /:interactive\s+(false|nil|none)\b/i.test(astText) ||
           /:questions\s+(false|nil|none)\b/i.test(astText) ||
           /:type\s+"App"/i.test(astText) ||
           (/:enabled\s+(false|nil)\b/i.test(astText) && /:interactive/i.test(astText))
-        ) : false;
+        ) : false);
 
        const resolvedType = (parsedAst && (parsedAst.type || parsedAst.cartridgeType)) || registryScene.type || 'Sim';
         const hasAstCheckpoints = Boolean(

@@ -38,6 +38,7 @@ export const FLAG_HAS_VIDEO = 0x0002;
 export const FLAG_HAS_CHECKPOINTS = 0x0004;
 export const FLAG_HAS_SUBTITLES = 0x0008;
 export const FLAG_HAS_SVG = 0x0010;
+export const FLAG_COMPLETE_BINARY = 0x0020;
 
 // Opcodes
 export const OP_SCENE_META = 0x01; // [id_str: u16] [title_str: u16] [stage_str: u16] [video_str: u16] [video_fit_u8]
@@ -45,15 +46,18 @@ export const OP_KEYFRAME   = 0x10; // [t_u16 (normalized 0..65535)] [title_str: 
 export const OP_SUBTITLE   = 0x20; // [start_u16] [end_u16] [lang_count: u8] { [lang_str: u16] [text_str: u16] }*
 export const OP_BINDING    = 0x30; // [target_str: u16] [attr_str: u16] [expr_str: u16]
 export const OP_BINDING_WHEN = 0x31; // [target_str: u16] [attr_str: u16] [expr_str: u16] [when_str: u16]
+export const OP_BINDING_VAR  = 0x32; // [var_str: u16] [expr_str: u16] [when_str: u16]
 export const OP_CHECKPOINT      = 0x40; // [t_u16] [prompt_str: u16] [correct_idx: u8] [expl_str: u16] [opt_count: u8] { [opt_str: u16] }*
 export const OP_CHECKPOINT_GOAL = 0x41; // [cp_idx: u16] [title_str: u16] [pass_expr_str: u16] [hold_dur: f32] [wrong_count: u8] { [opt_idx: u8] [hint_str: u16] }*
 export const OP_GESTURE         = 0x50; // [target_str: u16] [axis_u8 (1:x, 2:y, 3:xy)] [min_f32] [max_f32]
 export const OP_VAR             = 0x60; // [name_str: u16] [type_u8 (1:num, 2:str, 3:bool)] [num_val: f32 / str_val: u16] [min_f32] [max_f32] [step_f32] [label_str: u16]
+export const OP_COMPUTED        = 0x61; // [name_str: u16] [expr_str: u16]
 export const OP_INPUT           = 0x70; // [kind_u8 (1:slider, 2:switch, 3:btn)] [var_str: u16] [label_str: u16] [min_f32] [max_f32] [step_f32]
 export const OP_CAMERA          = 0x80; // [dist_f32] [pitch_f32] [yaw_f32] [fov_f32]
 export const OP_SVG_COMPANION   = 0x81; // [svg_str: u16] (optional embedded Duo SVG stage vector)
 export const OP_SCOPE           = 0x90; // [target_str: u16] [x_expr_str: u16] [y_expr_str: u16] [samples: u16] [x_min: f32] [x_max: f32] [y_min: f32] [y_max: f32] [plot_x: f32] [plot_y: f32] [plot_w: f32] [plot_h: f32]
 export const OP_LEDGER          = 0x91; // [id_str: u16] [target_str: u16] [unit_str: u16] [max_expr_str: u16] [x: f32] [y: f32] [w: f32] [h: f32] [term_count: u8] { [label_str: u16] [expr_str: u16] [color_str: u16] }*
+export const OP_SCENE_EXT       = 0xA0; // [section_key_str: u16] [json_payload_str: u16]
 export const OP_EOF             = 0xFF;
 
 const textEncoder = new TextEncoder();
@@ -116,10 +120,24 @@ export interface BytecodeCompiledScene {
   checkpoints: AstCheckpointConfig[];
   scopes?: AstScopeConfig[];
   ledgers?: AstLedgerConfig[];
-  gestures?: Array<{ target: string; axis: string; min: number; max: number }>;
+  gestures?: Array<any>;
   vars?: Record<string, any>;
+  computed?: Array<{ name: string; expr: string }>;
   inputs?: Array<any>;
   uiControls?: Array<any>;
+  bindInputs?: Array<any>;
+  physics?: any;
+  emitters?: Array<any>;
+  stateMachines?: Array<any>;
+  controls?: Record<string, any> | null;
+  skills?: Array<any>;
+  cameraStops?: Array<any> | null;
+  quests?: any;
+  bootSound?: string | null;
+  interactiveDisabled?: boolean;
+  actors?: Array<any>;
+  staticElements?: Array<any>;
+  completeBinary?: boolean;
   svgMarkup?: string;
 }
 
@@ -228,6 +246,7 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   if (scene.checkpoints && scene.checkpoints.length > 0) flags |= FLAG_HAS_CHECKPOINTS;
   if (scene.subtitles && scene.subtitles.length > 0) flags |= FLAG_HAS_SUBTITLES;
   if (scene.svgMarkup && scene.svgMarkup.trim().length > 0) flags |= FLAG_HAS_SVG;
+  if (scene.completeBinary) flags |= FLAG_COMPLETE_BINARY;
 
   // Stream buffer for instructions
   const ops: number[] = [];
@@ -288,7 +307,7 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       appendU8(OP_VAR);
       appendU16(strTable.intern(k));
       const isObj = v && typeof v === 'object';
-      const actualVal = isObj ? v.val : v;
+      const actualVal = isObj ? (v.val !== undefined ? v.val : (v.defaultValue !== undefined ? v.defaultValue : v.value)) : v;
       if (typeof actualVal === 'boolean') {
         appendU8(3);
         appendF32(actualVal ? 1 : 0);
@@ -303,6 +322,16 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
       appendF32(isObj && typeof v.max === 'number' ? v.max : 100); // max
       appendF32(isObj && typeof v.step === 'number' ? v.step : 1); // step
       appendU16(strTable.intern((isObj && v.label) ? v.label : k));
+    }
+  }
+
+  // 3a. Computed Reactive Variables (OP_COMPUTED = 0x61)
+  if (Array.isArray(scene.computed)) {
+    for (const comp of scene.computed) {
+      if (!comp || !comp.name) continue;
+      appendU8(OP_COMPUTED);
+      appendU16(strTable.intern(comp.name));
+      appendU16(strTable.intern(comp.expr || '0'));
     }
   }
 
@@ -371,6 +400,13 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
   // 6. Bindings
   if (Array.isArray(scene.bindings)) {
     for (const b of scene.bindings) {
+      if (b.type === 'var-update' && b.varName) {
+        appendU8(OP_BINDING_VAR);
+        appendU16(strTable.intern(b.varName));
+        appendU16(strTable.intern(b.expr || '0'));
+        appendU16(strTable.intern(b.when ? String(b.when) : ''));
+        continue;
+      }
       if (b.type !== '3d-node' && b.type !== '3d-ring' && b.type !== '3d-line' && b.type !== '3d-polygon' && b.when) {
         appendU8(OP_BINDING_WHEN);
         appendU16(strTable.intern(b.target));
@@ -480,15 +516,17 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
     }
   }
 
-  // 8. Gestures
+  // 8. Gestures (emit legacy OP_GESTURE for WASM hitboxes on draggables)
   if (Array.isArray(scene.gestures)) {
     for (const g of scene.gestures) {
+      if (!g || !g.target) continue;
+      if (g.type && g.type !== 'draggable') continue;
       appendU8(OP_GESTURE);
       appendU16(strTable.intern(g.target));
       const axisVal = g.axis === 'y' ? 2 : g.axis === 'xy' ? 3 : 1;
       appendU8(axisVal);
-      appendF32(g.min || 0);
-      appendF32(g.max || 100);
+      appendF32(typeof g.min === 'number' ? g.min : 0);
+      appendF32(typeof g.max === 'number' ? g.max : 100);
     }
   }
 
@@ -533,6 +571,111 @@ export function compileSceneToBytecode(scene: BytecodeCompiledScene): Uint8Array
         appendU16(strTable.intern(term.expr || '0'));
         appendU16(strTable.intern(term.color || '#38bdf8'));
       }
+    }
+  }
+
+  // 8d. Binary-Complete Scene Extensions (OP_SCENE_EXT = 0xA0)
+  // Strip null/undefined/default fields before serialization to keep every .astb compact and < 64 KB WASM-bootable.
+  const compactGesture = (g: any) => {
+    if (!g || typeof g !== 'object') return g;
+    const out: Record<string, any> = {};
+    const isDraggable = !g.type || g.type === 'draggable';
+    for (const [k, v] of Object.entries(g)) {
+      if (v === null || v === undefined) continue;
+      if ((k === 'invert' || k === 'relative' || k === 'seek') && v === false) continue;
+      if (k === 'pitchMin' && v === -65) continue;
+      if (k === 'pitchMax' && v === 65) continue;
+      if (k === 'axis' && v === 'xy' && !isDraggable) continue;
+      if (k === 'delta' && v === 1 && !g.var && !g.stepVar) continue;
+      out[k] = v;
+    }
+    return out;
+  };
+  const compactVarMap = (vars: Record<string, any>) => {
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(vars)) {
+      if (k.startsWith('_')) continue;
+      if (!v || typeof v !== 'object') {
+        out[k] = v;
+        continue;
+      }
+      const val = v.value !== undefined ? v.value : (v.val !== undefined ? v.val : v.defaultValue);
+      const entry: Record<string, any> = { value: val };
+      if (v.defaultValue !== undefined && v.defaultValue !== val) entry.defaultValue = v.defaultValue;
+      if (v.hasMin && typeof v.min === 'number') entry.min = v.min;
+      if (v.hasMax && typeof v.max === 'number') entry.max = v.max;
+      if (v.hasStep && typeof v.step === 'number') entry.step = v.step;
+      if (v.unit) entry.unit = v.unit;
+      if (v.label && v.label !== k) entry.label = v.label;
+      out[k] = entry;
+    }
+    return out;
+  };
+  const compactControl = (c: any) => {
+    if (!c || typeof c !== 'object') return c;
+    const out: Record<string, any> = {};
+    for (const [k, v] of Object.entries(c)) {
+      if (v === null || v === undefined) continue;
+      if (k === 'rawBind' && v === c.bind) continue;
+      out[k] = v;
+    }
+    return out;
+  };
+  const appendExt = (key: string, value: any) => {
+    appendU8(OP_SCENE_EXT);
+    appendU16(strTable.intern(key));
+    appendU16(strTable.intern(JSON.stringify(value)));
+  };
+  if (scene.completeBinary) {
+    if (scene.vars && Object.keys(scene.vars).length > 0 && Object.values(scene.vars).some(v => v && typeof v === 'object')) {
+      appendExt('vars', compactVarMap(scene.vars));
+    }
+    const compInputs = Array.isArray(scene.inputs) && scene.inputs.length > 0 ? scene.inputs.map(compactControl) : null;
+    const compUi = Array.isArray(scene.uiControls) && scene.uiControls.length > 0 ? scene.uiControls.map(compactControl) : null;
+    if (compInputs) {
+      appendExt('inputs', compInputs);
+    }
+    if (compUi && (!compInputs || JSON.stringify(compUi) !== JSON.stringify(compInputs))) {
+      appendExt('uiControls', compUi);
+    }
+    if (Array.isArray(scene.gestures) && scene.gestures.length > 0) {
+      appendExt('gestures', scene.gestures.map(compactGesture));
+    }
+    if (Array.isArray(scene.bindInputs) && scene.bindInputs.length > 0) {
+      appendExt('bindInputs', scene.bindInputs);
+    }
+    if (scene.physics) {
+      appendExt('physics', scene.physics);
+    }
+    if (Array.isArray(scene.emitters) && scene.emitters.length > 0) {
+      appendExt('emitters', scene.emitters);
+    }
+    if (Array.isArray(scene.stateMachines) && scene.stateMachines.length > 0) {
+      appendExt('stateMachines', scene.stateMachines);
+    }
+    if (scene.controls && Object.keys(scene.controls).length > 0) {
+      appendExt('controls', scene.controls);
+    }
+    if (Array.isArray(scene.skills) && scene.skills.length > 0) {
+      appendExt('skills', scene.skills);
+    }
+    if (Array.isArray(scene.cameraStops) && scene.cameraStops.length > 0) {
+      appendExt('cameraStops', scene.cameraStops);
+    }
+    if (scene.quests) {
+      appendExt('quests', scene.quests);
+    }
+    if (scene.bootSound) {
+      appendExt('bootSound', scene.bootSound);
+    }
+    if (scene.interactiveDisabled) {
+      appendExt('interactiveDisabled', true);
+    }
+    if (Array.isArray(scene.actors) && scene.actors.length > 0) {
+      appendExt('actors', scene.actors);
+    }
+    if (Array.isArray(scene.staticElements) && scene.staticElements.length > 0) {
+      appendExt('staticElements', scene.staticElements);
     }
   }
 
@@ -605,6 +748,7 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
     duration,
     has3D: Boolean(flags & FLAG_HAS_3D),
     hasVideo: Boolean(flags & FLAG_HAS_VIDEO),
+    completeBinary: Boolean(flags & FLAG_COMPLETE_BINARY),
     keyframes: [],
     subtitles: [],
     bindings: [],
@@ -613,6 +757,7 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
     ledgers: [],
     gestures: [],
     vars: {},
+    computed: [],
     inputs: [],
   };
 
@@ -789,6 +934,18 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
         });
         break;
       }
+      case OP_BINDING_VAR: {
+        const varName = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const expr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const when = strTable.get(view.getUint16(offset, true)); offset += 2;
+        scene.bindings.push({
+          type: 'var-update',
+          varName,
+          expr,
+          ...(when ? { when } : {}),
+        });
+        break;
+      }
       case OP_CHECKPOINT: {
         const normT = view.getUint16(offset, true); offset += 2;
         const promptIdx = view.getUint16(offset, true); offset += 2;
@@ -957,6 +1114,67 @@ export function decompileBytecodeToScene(buffer: ArrayBuffer | Uint8Array): Byte
           step: stepVal,
           default: minVal,
         });
+        break;
+      }
+      case OP_COMPUTED: {
+        const name = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const expr = strTable.get(view.getUint16(offset, true)); offset += 2;
+        if (!scene.computed) scene.computed = [];
+        scene.computed.push({ name, expr });
+        break;
+      }
+      case OP_SCENE_EXT: {
+        const extKey = strTable.get(view.getUint16(offset, true)); offset += 2;
+        const extJson = strTable.get(view.getUint16(offset, true)); offset += 2;
+        try {
+          const parsed = JSON.parse(extJson);
+          if (extKey === 'vars' && parsed && typeof parsed === 'object') {
+            const hydratedVars: Record<string, any> = {};
+            for (const [vk, vv] of Object.entries(parsed)) {
+              if (vv && typeof vv === 'object') {
+                const vo = vv as Record<string, any>;
+                const isNum = typeof vo.value === 'number';
+                const hasMin = typeof vo.min === 'number';
+                const hasMax = typeof vo.max === 'number';
+                const hasStep = typeof vo.step === 'number';
+                hydratedVars[vk] = {
+                  name: vo.name || vk,
+                  value: vo.value,
+                  defaultValue: vo.defaultValue !== undefined ? vo.defaultValue : vo.value,
+                  min: hasMin ? vo.min : (isNum ? 0 : undefined),
+                  max: hasMax ? vo.max : (isNum ? 100 : undefined),
+                  step: hasStep ? vo.step : (isNum ? 1 : undefined),
+                  hasMin,
+                  hasMax,
+                  hasStep,
+                  hasExplicitBounds: hasMin && hasMax,
+                  label: vo.label || vk,
+                  ...(vo.unit ? { unit: vo.unit } : {}),
+                };
+              } else {
+                hydratedVars[vk] = vv;
+              }
+            }
+            scene.vars = hydratedVars;
+          } else if (extKey === 'uiControls' && Array.isArray(parsed)) {
+            scene.uiControls = parsed;
+          } else if (extKey === 'inputs' && Array.isArray(parsed)) {
+            scene.inputs = parsed;
+            scene.uiControls = parsed;
+          } else if (extKey === 'gestures' && Array.isArray(parsed)) scene.gestures = parsed;
+          else if (extKey === 'bindInputs' && Array.isArray(parsed)) scene.bindInputs = parsed;
+          else if (extKey === 'physics') scene.physics = parsed;
+          else if (extKey === 'emitters' && Array.isArray(parsed)) scene.emitters = parsed;
+          else if (extKey === 'stateMachines' && Array.isArray(parsed)) scene.stateMachines = parsed;
+          else if (extKey === 'controls' && parsed && typeof parsed === 'object') scene.controls = parsed;
+          else if (extKey === 'skills' && Array.isArray(parsed)) scene.skills = parsed;
+          else if (extKey === 'cameraStops' && Array.isArray(parsed)) scene.cameraStops = parsed;
+          else if (extKey === 'quests') scene.quests = parsed;
+          else if (extKey === 'bootSound') scene.bootSound = String(parsed);
+          else if (extKey === 'interactiveDisabled') scene.interactiveDisabled = Boolean(parsed);
+          else if (extKey === 'actors' && Array.isArray(parsed)) scene.actors = parsed;
+          else if (extKey === 'staticElements' && Array.isArray(parsed)) scene.staticElements = parsed;
+        } catch {}
         break;
       }
       default:
@@ -1439,6 +1657,16 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       }
       return;
     }
+    if (/^\(\s*:var\b/i.test(form)) {
+      const nameMatch = form.match(/^\(\s*:var\s+"([^"]+)"/i) || form.match(/:name\s+"([^"]+)"/i) || form.match(/^\(\s*:var\s+([a-zA-Z_$][a-zA-Z0-9_$-]*)/i);
+      const varName = nameMatch ? nameMatch[1] : null;
+      const expr = extractQuoted(form, 'expr');
+      const when = composeWhenTs(inheritedWhen, extractQuoted(form, 'when'));
+      if (varName && expr) {
+        bindings.push({ type: 'var-update', varName, expr, ...(when ? { when } : {}) });
+      }
+      return;
+    }
     if (/^\(\s*:text\b/i.test(form)) {
       const target = extractQuoted(form, 'target') || inheritedTarget;
       let expr = extractQuoted(form, 'expr');
@@ -1452,7 +1680,47 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       }
     }
   };
-  const bindingsRootBlocks = extractSexprBlocks(astText, ':bindings');
+  const extractKeywordBlocksTs = (text: string, tag: string): string[] => {
+    const parenBlocks = extractSexprBlocks(text, tag);
+    if (parenBlocks.length > 0) return parenBlocks;
+    const out: string[] = [];
+    const safeTag = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rx = new RegExp('(?:^|[\\s(])' + safeTag + '\\s*\\(', 'gi');
+    let m: RegExpExecArray | null;
+    while ((m = rx.exec(text)) !== null) {
+      const openIdx = text.indexOf('(', m.index + (m[0].startsWith('(') ? 1 : 0));
+      if (openIdx === -1) continue;
+      let depth = 0;
+      let inStr = false;
+      let endIdx = -1;
+      for (let i = openIdx; i < text.length; i++) {
+        const ch = text[i];
+        if (ch === '"' && (i === 0 || text[i - 1] !== '\\')) {
+          inStr = !inStr;
+        } else if (!inStr) {
+          if (ch === ';') {
+            while (i < text.length && text[i] !== '\n') i++;
+            continue;
+          }
+          if (ch === '<' && text.startsWith('<!--', i)) {
+            const closeIdx = text.indexOf('-->', i + 4);
+            if (closeIdx !== -1) { i = closeIdx + 2; continue; }
+          }
+          if (ch === '(') depth++;
+          else if (ch === ')') {
+            depth--;
+            if (depth === 0) { endIdx = i; break; }
+          }
+        }
+      }
+      if (endIdx !== -1) {
+        out.push(`(${tag} ${text.slice(openIdx, endIdx + 1)})`);
+        rx.lastIndex = endIdx + 1;
+      }
+    }
+    return out;
+  };
+  const bindingsRootBlocks = extractKeywordBlocksTs(astText, ':bindings');
   if (bindingsRootBlocks.length > 0) {
     bindingsRootBlocks.forEach((bb) => {
       extractChildFormsTs(bb).forEach((form) => walkBindingTs(form, undefined, null));

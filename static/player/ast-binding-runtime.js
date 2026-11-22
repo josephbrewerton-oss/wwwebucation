@@ -108,12 +108,27 @@
       const renderBoundary = global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.commitBindingValue === 'function'
         ? global.ASTSharedRenderBoundary
         : null;
+      const whenCache = this._whenEvalCache;
+      if (whenCache) whenCache.fill(-1);
       for (let i = 0; i < this.activeBindings.length; i++) {
         const b = this.activeBindings[i];
         if (b.node) {
           try {
-            if (b.whenFn && !b.whenFn(effectiveT, v, v, Math)) {
-              continue;
+            if (b.whenFn) {
+              const wgId = b.whenGroupId;
+              let allowed;
+              if (whenCache && wgId >= 0 && wgId < whenCache.length) {
+                const cached = whenCache[wgId];
+                if (cached !== -1) {
+                  allowed = cached === 1;
+                } else {
+                  allowed = Boolean(b.whenFn(effectiveT, v, v, Math));
+                  whenCache[wgId] = allowed ? 1 : 0;
+                }
+              } else {
+                allowed = Boolean(b.whenFn(effectiveT, v, v, Math));
+              }
+              if (!allowed) continue;
             }
             let val;
             if (b.affine) {

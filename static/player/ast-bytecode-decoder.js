@@ -63,6 +63,7 @@
       duration: duration,
       has3D: Boolean(flags & 0x0001),
       hasVideo: Boolean(flags & 0x0002),
+      completeBinary: Boolean(flags & 0x0020),
       video: null,
       videoFit: 'contain',
       keyframes: [],
@@ -73,6 +74,7 @@
       ledgers: [],
       gestures: [],
       vars: {},
+      computed: [],
       inputs: []
     };
 
@@ -252,6 +254,19 @@
           scene.bindings.push(entry);
           break;
         }
+        case 0x32: { // OP_BINDING_VAR (reactive var-update binding)
+          const varName = getStr(view.getUint16(offset, true)); offset += 2;
+          const exprStr = getStr(view.getUint16(offset, true)); offset += 2;
+          const whenStr = getStr(view.getUint16(offset, true)); offset += 2;
+          const entry = {
+            type: 'var-update',
+            varName,
+            expr: exprStr
+          };
+          if (whenStr) entry.when = whenStr;
+          scene.bindings.push(entry);
+          break;
+        }
         case 0x40: { // OP_CHECKPOINT
           const normT = view.getUint16(offset, true); offset += 2;
           const promptIdx = view.getUint16(offset, true); offset += 2;
@@ -421,6 +436,66 @@
             step: stepVal,
             default: minVal
           });
+          break;
+        }
+        case 0x61: { // OP_COMPUTED
+          const cName = getStr(view.getUint16(offset, true)); offset += 2;
+          const cExpr = getStr(view.getUint16(offset, true)); offset += 2;
+          if (!scene.computed) scene.computed = [];
+          scene.computed.push({ name: cName, expr: cExpr });
+          break;
+        }
+        case 0xA0: { // OP_SCENE_EXT (binary-complete scene extension sections)
+          const extKey = getStr(view.getUint16(offset, true)); offset += 2;
+          const extJson = getStr(view.getUint16(offset, true)); offset += 2;
+          try {
+            const parsed = JSON.parse(extJson);
+            if (extKey === 'vars' && parsed && typeof parsed === 'object') {
+              const hydratedVars = {};
+              for (const [vk, vv] of Object.entries(parsed)) {
+                if (vv && typeof vv === 'object') {
+                  const isNum = typeof vv.value === 'number';
+                  const hasMin = typeof vv.min === 'number';
+                  const hasMax = typeof vv.max === 'number';
+                  const hasStep = typeof vv.step === 'number';
+                  hydratedVars[vk] = {
+                    name: vv.name || vk,
+                    value: vv.value,
+                    defaultValue: vv.defaultValue !== undefined ? vv.defaultValue : vv.value,
+                    min: hasMin ? vv.min : (isNum ? 0 : undefined),
+                    max: hasMax ? vv.max : (isNum ? 100 : undefined),
+                    step: hasStep ? vv.step : (isNum ? 1 : undefined),
+                    hasMin,
+                    hasMax,
+                    hasStep,
+                    hasExplicitBounds: hasMin && hasMax,
+                    label: vv.label || vk,
+                    ...(vv.unit ? { unit: vv.unit } : {}),
+                  };
+                } else {
+                  hydratedVars[vk] = vv;
+                }
+              }
+              scene.vars = hydratedVars;
+            } else if (extKey === 'uiControls' && Array.isArray(parsed)) {
+              scene.uiControls = parsed;
+            } else if (extKey === 'inputs' && Array.isArray(parsed)) {
+              scene.inputs = parsed;
+              scene.uiControls = parsed;
+            } else if (extKey === 'gestures' && Array.isArray(parsed)) scene.gestures = parsed;
+            else if (extKey === 'bindInputs' && Array.isArray(parsed)) scene.bindInputs = parsed;
+            else if (extKey === 'physics') scene.physics = parsed;
+            else if (extKey === 'emitters' && Array.isArray(parsed)) scene.emitters = parsed;
+            else if (extKey === 'stateMachines' && Array.isArray(parsed)) scene.stateMachines = parsed;
+            else if (extKey === 'controls' && parsed && typeof parsed === 'object') scene.controls = parsed;
+            else if (extKey === 'skills' && Array.isArray(parsed)) scene.skills = parsed;
+            else if (extKey === 'cameraStops' && Array.isArray(parsed)) scene.cameraStops = parsed;
+            else if (extKey === 'quests') scene.quests = parsed;
+            else if (extKey === 'bootSound') scene.bootSound = String(parsed);
+            else if (extKey === 'interactiveDisabled') scene.interactiveDisabled = Boolean(parsed);
+            else if (extKey === 'actors' && Array.isArray(parsed)) scene.actors = parsed;
+            else if (extKey === 'staticElements' && Array.isArray(parsed)) scene.staticElements = parsed;
+          } catch {}
           break;
         }
         default:

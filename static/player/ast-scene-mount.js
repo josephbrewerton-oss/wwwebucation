@@ -270,6 +270,8 @@
 
       const hasDomQuery = Boolean(container && typeof container.querySelector === 'function');
       const bindingsList = (scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []);
+      const whenGroupMap = new Map();
+      this._whenEvalCache = null;
       if (bindingsList && bindingsList.length) {
         bindingsList.forEach(b => {
           if (b.type === '3d-node' || b.type === '3d-line' || b.type === '3d-ring' || b.type === '3d-polygon') {
@@ -343,12 +345,22 @@
                   };
 
               let whenFn = null;
+              let whenGroupId = -1;
               if (b.when) {
-                try {
-                  whenFn = this.compileAstFn(String(b.when).replace(/\\\\'/g, "\\'"));
-                } catch (_) {
-                  whenFn = null;
+                const normalizedWhen = String(b.when).replace(/\\\\'/g, "\\'").trim();
+                let groupEntry = whenGroupMap.get(normalizedWhen);
+                if (!groupEntry) {
+                  let compiledWhen = null;
+                  try {
+                    compiledWhen = this.compileAstFn(normalizedWhen);
+                  } catch (_) {
+                    compiledWhen = null;
+                  }
+                  groupEntry = { id: whenGroupMap.size, fn: compiledWhen };
+                  whenGroupMap.set(normalizedWhen, groupEntry);
                 }
+                whenFn = groupEntry.fn;
+                whenGroupId = whenFn ? groupEntry.id : -1;
               }
 
               this.activeBindings.push({
@@ -358,11 +370,15 @@
                 affine,
                 matrixBuf: affine && (affine.transform === 'translateX' || affine.transform === 'translateY' || affine.transform === 'rotate') ? new Float32Array(6) : null,
                 whenFn,
+                whenGroupId,
                 evalFn: boundEval
               });
             }
           }
         });
+      }
+      if (whenGroupMap.size > 0) {
+        this._whenEvalCache = new Int8Array(whenGroupMap.size);
       }
 
       this._applyScenePhysics(scene);
