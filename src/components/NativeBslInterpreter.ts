@@ -49,6 +49,7 @@ import {
 } from './bsl/bslAvatarSvgRenderer';
 import {
   subscribeBslSpeech,
+  getLastBslSpeech,
   setBslEnabled,
   getSignLanguage,
   setSignLanguage,
@@ -102,6 +103,8 @@ export class NativeBslInterpreterElement extends HTMLElement {
   // Animation Loop State
   private animationFrameId: number | null = null;
   private animationFrameWindow: Window | null = null;
+  private pipWatchdogId: number | null = null;
+  private lastFrameTimestamp = 0;
   private currentPose: BslHandPose;
   private targetPose: BslHandPose;
   private poseQueue: BslHandPose[] = [];
@@ -171,6 +174,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this.dataset.reparenting === '1') {
+      delete this.dataset.reparenting;
+      this.applyPipLayout();
+      if (this.animationFrameId === null) {
+        this.startAnimationLoop();
+      }
+      return;
+    }
     this.voiceEnabled = getVoiceEnabled();
     this.grammarMode = getSignLanguage() === 'MAKATON' ? 'makaton' : 'bsl-natural';
     this.loadSavedLayout();
@@ -179,9 +190,18 @@ export class NativeBslInterpreterElement extends HTMLElement {
     this.bindDomEvents();
     this.subscribeStores();
     this.startAnimationLoop();
+    const recentSpeech = getLastBslSpeech(12000);
+    if (recentSpeech?.subtitle && !recentSpeech.stopSigning) {
+      this.lastSpokenSubtitle = recentSpeech.subtitle;
+      this.processUtterance(recentSpeech.subtitle, false);
+    }
   }
 
   disconnectedCallback() {
+    if (this.dataset.reparenting === '1') {
+      return;
+    }
+    this.stopPipWatchdog();
     this.stopAnimationLoop();
     this.unsubscribeSpeech?.();
     this.unsubscribeVoice?.();
@@ -260,11 +280,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   private computeClampedFloatingCoords(rawLeft: number, rawTop: number): { left: number; top: number } {
     const isCompact = this.layoutState.compact;
+    const floatingCard = this.querySelector<HTMLElement>('#bsl-floating-card');
     const cardW = isCompact ? 224 : 300;
+    const estimatedCardH = isCompact ? 252 : 420;
+    const measuredH = floatingCard && floatingCard.offsetHeight > 40 ? floatingCard.offsetHeight : estimatedCardH;
     const vw = typeof window !== 'undefined' ? window.innerWidth : 1280;
     const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
     const maxLeft = Math.max(8, vw - cardW - 8);
-    const maxTop = Math.max(56, vh - 160);
+    const maxTop = Math.max(56, vh - Math.min(measuredH, vh - 68) - 12);
     return {
       left: Math.max(8, Math.min(maxLeft, rawLeft)),
       top: Math.max(56, Math.min(maxTop, rawTop)),
@@ -284,8 +307,10 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     const isCompact = this.layoutState.compact;
     const isPoppedOut = Boolean(this.pipWindow && !this.pipWindow.closed);
+    const vh = typeof window !== 'undefined' ? window.innerHeight : 720;
     const cardW = isCompact ? 224 : 300;
-    const stageH = isCompact ? 210 : 308;
+    const maxAllowedStageH = Math.max(160, vh - (isCompact ? 110 : 190));
+    const stageH = Math.min(isCompact ? 210 : 308, maxAllowedStageH);
 
     if (floatingCard) {
       floatingCard.style.width = `${cardW}px`;
@@ -427,9 +452,9 @@ export class NativeBslInterpreterElement extends HTMLElement {
     const isMakaton = mode === 'makaton';
     const isSpell = mode === 'fingerspell';
 
+    const isCompact = this.layoutState.compact && !(this.pipWindow && !this.pipWindow.closed);
     const titleEl = this.querySelector<HTMLElement>('#bsl-header-title');
     if (titleEl) {
-      const isCompact = this.layoutState.compact && !(this.pipWindow && !this.pipWindow.closed);
       titleEl.textContent = isMakaton
         ? (isCompact ? '🤝 MAKATON' : '🤝 MAKATON (KEY WORD)')
         : isSpell
@@ -438,6 +463,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       titleEl.style.color = isMakaton ? '#34d399' : isSpell ? '#fbbf24' : '#38bdf8';
       titleEl.style.borderColor = isMakaton ? 'rgba(52,211,153,0.45)' : isSpell ? 'rgba(251,191,36,0.45)' : 'rgba(56,189,248,0.45)';
     }
+    this.syncPipHeaderControls();
 
     const hudMode = this.queryAvatarElement<HTMLSpanElement>('#bsl-hud-mode');
     if (hudMode) {
@@ -499,14 +525,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
     // POV toggle
     const btnPov = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
     btnPov?.addEventListener('click', () => {
-      this.cameraMode = this.cameraMode === 'receiver' ? 'signer' : 'receiver';
-      this.orbitYawOffset = 0;
-      this.orbitPitchOffset = 0;
-      if (btnPov) {
-        btnPov.textContent = this.cameraMode === 'receiver'
-          ? (this.layoutState.compact ? 'POV' : 'POV: Front')
-          : (this.layoutState.compact ? '1P' : 'POV: Signer');
-      }
+      this.toggleCameraPov();
     });
 
     // Compact / Expanded toggle
@@ -760,6 +779,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
         btnVoice.style.background = enabled ? '#0284c7' : '#1e293b';
         btnVoice.style.borderColor = enabled ? '#38bdf8' : '#334155';
       }
+      this.syncPipHeaderControls();
     });
 
     this.unsubscribeSignLang = subscribeSignLanguage((code) => {
@@ -771,13 +791,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
     });
 
     this.unsubscribeSpeech = subscribeBslSpeech((payload: BslSpeechPayload) => {
+      this.pulseConnectionIndicator();
       if (payload.stopSigning) {
         this.lastSpokenSubtitle = '';
         this.returnToRest();
         return;
       }
       if (payload.subtitle) {
-        if (payload.subtitle !== this.lastSpokenSubtitle) {
+        if (payload.subtitle !== this.lastSpokenSubtitle || this.isIdle) {
           this.lastSpokenSubtitle = payload.subtitle;
           this.processUtterance(payload.subtitle, false);
         }
@@ -798,6 +819,65 @@ export class NativeBslInterpreterElement extends HTMLElement {
         }
       }
     });
+  }
+
+  private toggleCameraPov() {
+    this.cameraMode = this.cameraMode === 'receiver' ? 'signer' : 'receiver';
+    this.orbitYawOffset = 0;
+    this.orbitPitchOffset = 0;
+    const btnPov = this.querySelector<HTMLButtonElement>('#bsl-btn-pov');
+    if (btnPov) {
+      btnPov.textContent = this.cameraMode === 'receiver'
+        ? (this.layoutState.compact ? 'POV' : 'POV: Front')
+        : (this.layoutState.compact ? '1P' : 'POV: Signer');
+    }
+    this.syncPipHeaderControls();
+  }
+
+  private syncPipHeaderControls() {
+    if (!this.pipWindow || this.pipWindow.closed || !this.pipWindow.document) return;
+    const pipTitle = this.pipWindow.document.querySelector<HTMLButtonElement>('#pip-header-title');
+    if (pipTitle) {
+      const isMakaton = this.grammarMode === 'makaton';
+      const isSpell = this.grammarMode === 'fingerspell';
+      pipTitle.textContent = isMakaton ? '🤝 MAKATON' : isSpell ? '🔤 A–Z' : '🇬🇧 BSL L6';
+      pipTitle.style.color = isMakaton ? '#34d399' : isSpell ? '#fbbf24' : '#38bdf8';
+      pipTitle.style.borderColor = isMakaton ? 'rgba(52,211,153,0.45)' : isSpell ? 'rgba(251,191,36,0.45)' : 'rgba(56,189,248,0.45)';
+    }
+    const pipPov = this.pipWindow.document.querySelector<HTMLButtonElement>('#pip-btn-pov');
+    if (pipPov) {
+      pipPov.textContent = this.cameraMode === 'receiver' ? 'POV' : '1P';
+    }
+    const pipVoice = this.pipWindow.document.querySelector<HTMLButtonElement>('#pip-btn-voice');
+    if (pipVoice) {
+      pipVoice.textContent = this.voiceEnabled ? '🔊' : '🔇';
+      pipVoice.style.background = this.voiceEnabled ? '#0284c7' : '#1e293b';
+      pipVoice.style.borderColor = this.voiceEnabled ? '#38bdf8' : '#334155';
+    }
+  }
+
+  private pulseConnectionIndicator() {
+    if (!this.pipWindow || this.pipWindow.closed || !this.pipWindow.document) return;
+    const dot = this.pipWindow.document.querySelector<HTMLElement>('#pip-live-badge');
+    if (!dot) return;
+    dot.textContent = '● SYNCED';
+    dot.style.color = '#4ade80';
+  }
+
+  private stopPipWatchdog() {
+    if (this.pipWatchdogId !== null) {
+      window.clearInterval(this.pipWatchdogId);
+      this.pipWatchdogId = null;
+    }
+  }
+
+  private startPipWatchdog() {
+    this.stopPipWatchdog();
+    this.pipWatchdogId = window.setInterval(() => {
+      if (this.pipWindow && this.pipWindow.closed) {
+        this.dockBackFromPiP(false);
+      }
+    }, 800);
   }
 
   /**
@@ -1045,24 +1125,42 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   /**
    * Main 60 FPS Skeletal Kinematic Animation Loop.
-   * Dynamically tracks PiP window vs main window requestAnimationFrame.
+   * Dynamically tracks PiP window vs main window requestAnimationFrame
+   * and recovers automatically if a PiP window closes or an intermediate frame throws.
    */
   private startAnimationLoop() {
     this.stopAnimationLoop();
+    this.lastFrameTimestamp = performance.now();
     const scheduleNext = (cb: FrameRequestCallback) => {
+      if (this.pipWindow && this.pipWindow.closed) {
+        this.dockBackFromPiP(false);
+        return;
+      }
       const usePip = Boolean(this.pipWindow && !this.pipWindow.closed && typeof this.pipWindow.requestAnimationFrame === 'function');
       const win = usePip ? this.pipWindow! : window;
       this.animationFrameWindow = win;
-      this.animationFrameId = win.requestAnimationFrame(cb);
+      try {
+        this.animationFrameId = win.requestAnimationFrame(cb);
+      } catch (_) {
+        this.animationFrameWindow = window;
+        this.animationFrameId = window.requestAnimationFrame(cb);
+      }
     };
     const loop = () => {
-      this.updateAvatar(performance.now());
+      try {
+        this.updateAvatar(performance.now());
+      } catch (err) {
+        console.warn('[BSL Interpreter] Frame update recovered:', err);
+      }
       scheduleNext(loop);
     };
     scheduleNext(loop);
   }
 
   private updateAvatar(now: number) {
+    const dt = this.lastFrameTimestamp > 0 ? Math.min(64, Math.max(4, now - this.lastFrameTimestamp)) : 16.6;
+    this.lastFrameTimestamp = now;
+
     const svg = this.queryAvatarElement<SVGSVGElement>('#bsl-avatar-svg');
     if (!svg) return;
 
@@ -1091,7 +1189,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     if (progress >= 1.0 && !this.isIdle) {
       if (this.holdRemaining > 0) {
-        this.holdRemaining -= 16.6;
+        this.holdRemaining -= dt;
       } else {
         this.advanceToNextPose();
         progress = 0.0;
@@ -1279,8 +1377,19 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
   private dockBackFromPiP(closeWindow = false) {
     const pipWin = this.pipWindow;
+    this.stopPipWatchdog();
     this.stopAnimationLoop();
     this.pipWindow = null;
+
+    if (this.avatarWrapper && this.stageHostContainer && this.avatarWrapper.parentElement !== this.stageHostContainer) {
+      this.avatarWrapper.style.flex = '';
+      this.avatarWrapper.style.minHeight = '';
+      this.avatarWrapper.style.height = '100%';
+      try {
+        document.adoptNode(this.avatarWrapper);
+      } catch (_) {}
+      this.stageHostContainer.appendChild(this.avatarWrapper);
+    }
 
     if (closeWindow && pipWin && !pipWin.closed) {
       try {
@@ -1288,22 +1397,18 @@ export class NativeBslInterpreterElement extends HTMLElement {
       } catch (_) {}
     }
 
-    if (this.avatarWrapper && this.stageHostContainer && this.avatarWrapper.parentElement !== this.stageHostContainer) {
-      try {
-        document.adoptNode(this.avatarWrapper);
-      } catch (_) {}
-      this.stageHostContainer.appendChild(this.avatarWrapper);
-    }
-
     const pipBtn = this.querySelector<HTMLButtonElement>('#bsl-btn-pip');
     if (pipBtn) {
       pipBtn.style.background = '#1e293b';
       pipBtn.style.color = '#38bdf8';
-      pipBtn.title = 'Pop-out Window (Document Picture-in-Picture)';
+      pipBtn.title = 'Pop-out / Undock BSL Window';
     }
 
     this.applyPipLayout();
     if (this.isConnected) {
+      try {
+        this.updateAvatar(performance.now());
+      } catch (_) {}
       this.startAnimationLoop();
     }
   }
@@ -1328,14 +1433,14 @@ export class NativeBslInterpreterElement extends HTMLElement {
 
     const hudNmf = this.queryAvatarElement('#bsl-hud-nmf');
     if (hudNmf && this.isIdle) {
-      hudNmf.textContent = 'Undocked window • Drag header to move';
+      hudNmf.textContent = 'Undocked • Connected to Player';
     }
   }
 
   /**
    * Native Browser Document Picture-in-Picture Uncoupling
-   * Pops out the entire live 60 FPS vector avatar into an always-on-top desktop window,
-   * with automatic in-viewport floating window fallback when running inside an iframe.
+   * Pops out the entire live 60 FPS vector avatar into an always-on-top desktop window
+   * while preserving live player sync, controls, and automatic in-viewport fallback in iframes.
    */
   public async toggleDocumentPiP() {
     // 1. If already popped out in native OS PiP, close PiP and dock back cleanly
@@ -1361,7 +1466,7 @@ export class NativeBslInterpreterElement extends HTMLElement {
       // 3. Request native always-on-top Document PiP window
       const pipWin: Window = await (window as any).documentPictureInPicture.requestWindow({
         width: 340,
-        height: 480,
+        height: 490,
         disallowReturnToOpener: false,
       });
 
@@ -1369,51 +1474,82 @@ export class NativeBslInterpreterElement extends HTMLElement {
       this.pipWindow = pipWin;
       this.isFloatingPopout = false;
 
-      // 4. Copy styles to PiP window
+      // 4. Copy stylesheets safely to PiP window (skip empty hrefs)
       [...document.styleSheets].forEach((styleSheet) => {
         try {
           const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
-          const style = pipWin.document.createElement('style');
-          style.textContent = cssRules;
-          pipWin.document.head.appendChild(style);
+          if (cssRules) {
+            const style = pipWin.document.createElement('style');
+            style.textContent = cssRules;
+            pipWin.document.head.appendChild(style);
+          }
         } catch (_) {
-          const link = pipWin.document.createElement('link');
-          link.rel = 'stylesheet';
-          link.type = styleSheet.type;
-          link.href = (styleSheet as CSSStyleSheet).href || '';
-          pipWin.document.head.appendChild(link);
+          const href = (styleSheet as CSSStyleSheet).href;
+          if (href) {
+            const link = pipWin.document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = styleSheet.type || 'text/css';
+            link.href = href;
+            pipWin.document.head.appendChild(link);
+          }
         }
       });
 
-      // 5. Setup PiP body styles as flex column so avatar fills remaining height cleanly
+      // 5. Setup PiP body styles as flex column so avatar & deck fit cleanly without overflow
+      pipWin.document.title = 'BSL In-Vision Interpreter (Live)';
       pipWin.document.body.style.cssText = 'margin:0; padding:0; width:100vw; height:100vh; display:flex; flex-direction:column; background:#020617; color:#f8fafc; font-family:system-ui, -apple-system, sans-serif; overflow:hidden;';
 
-      // 5b. Header Bar for PiP window with prominent Dock button
+      // 5b. Full-control Header Bar for PiP window (Mode, POV, Audio, Live Sync Badge, Dock)
       const pipHeader = pipWin.document.createElement('div');
-      pipHeader.style.cssText = 'background:#0f172a; padding:6px 12px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; user-select:none; flex-shrink:0;';
+      pipHeader.style.cssText = 'background:#0f172a; padding:6px 10px; border-bottom:1px solid #1e293b; display:flex; align-items:center; justify-content:space-between; gap:6px; user-select:none; flex-shrink:0;';
       pipHeader.innerHTML = `
-        <div style="display:flex; align-items:center; gap:6px;">
-          <span style="font-size:0.9rem;">🧏</span>
-          <span style="font-size:0.72rem; font-weight:800; color:#38bdf8; letter-spacing:0.5px;">BSL IN-VISION (ALWAYS ON TOP)</span>
+        <div style="display:flex; align-items:center; gap:6px; min-width:0;">
+          <button type="button" id="pip-header-title" style="background:rgba(15,23,42,0.9); border:1px solid rgba(56,189,248,0.45); border-radius:4px; padding:2px 6px; font-size:0.68rem; font-weight:800; color:#38bdf8; cursor:pointer; white-space:nowrap;" title="Switch BSL / Makaton">🇬🇧 BSL L6</button>
+          <span id="pip-live-badge" style="font-size:0.62rem; font-weight:800; color:#4ade80; letter-spacing:0.3px; white-space:nowrap;">● LIVE</span>
         </div>
-        <button type="button" id="pip-btn-redock" style="background:#0284c7; border:none; color:#ffffff; border-radius:4px; font-size:0.7rem; font-weight:700; padding:2px 8px; cursor:pointer;" title="Dock back to webpage">
-          ⚓ Dock to Page
-        </button>
+        <div style="display:flex; align-items:center; gap:4px; flex-shrink:0;">
+          <button type="button" id="pip-btn-pov" style="background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:4px; font-size:0.66rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Toggle Front / Signer POV">POV</button>
+          <button type="button" id="pip-btn-voice" style="background:${this.voiceEnabled ? '#0284c7' : '#1e293b'}; border:1px solid ${this.voiceEnabled ? '#38bdf8' : '#334155'}; color:#f8fafc; border-radius:4px; font-size:0.66rem; font-weight:700; padding:2px 6px; cursor:pointer;" title="Toggle Voice Narration">${this.voiceEnabled ? '🔊' : '🔇'}</button>
+          <button type="button" id="pip-btn-redock" style="background:#0284c7; border:none; color:#ffffff; border-radius:4px; font-size:0.68rem; font-weight:700; padding:2px 8px; cursor:pointer;" title="Dock back to webpage">⚓ Dock</button>
+        </div>
       `;
       pipWin.document.body.appendChild(pipHeader);
+
+      pipHeader.querySelector('#pip-header-title')?.addEventListener('click', () => {
+        const nextMode: BslGrammarMode = this.grammarMode === 'makaton' ? 'bsl-natural' : 'makaton';
+        this.applyModeUI(nextMode, true);
+        setSignLanguage(nextMode === 'makaton' ? 'MAKATON' : 'BSL');
+      });
+      pipHeader.querySelector('#pip-btn-pov')?.addEventListener('click', () => {
+        this.toggleCameraPov();
+      });
+      pipHeader.querySelector('#pip-btn-voice')?.addEventListener('click', () => {
+        toggleVoice();
+      });
       pipHeader.querySelector('#pip-btn-redock')?.addEventListener('click', () => {
         this.dockBackFromPiP(true);
       });
 
-      // 6. Transfer live avatar wrapper and re-bind animation loop to PiP
+      // 6. Explicitly adopt live avatar wrapper into PiP document and size as flex child
       const deck = this.avatarWrapper.querySelector<HTMLElement>('#bsl-interactive-deck');
       if (deck) deck.style.display = 'flex';
+      this.avatarWrapper.style.flex = '1';
+      this.avatarWrapper.style.minHeight = '0';
+      this.avatarWrapper.style.height = 'auto';
+      try {
+        pipWin.document.adoptNode(this.avatarWrapper);
+      } catch (_) {}
       pipWin.document.body.appendChild(this.avatarWrapper);
 
       this.applyPipLayout();
+      this.syncPipHeaderControls();
+      this.startPipWatchdog();
+      try {
+        this.updateAvatar(performance.now());
+      } catch (_) {}
       this.startAnimationLoop();
 
-      // 7. Dock back home on PiP window close (pagehide + unload fallback)
+      // 7. Dock back home cleanly on PiP window close (pagehide + unload fallback)
       const onPipClosed = () => {
         if (this.pipWindow === pipWin) {
           this.dockBackFromPiP(false);

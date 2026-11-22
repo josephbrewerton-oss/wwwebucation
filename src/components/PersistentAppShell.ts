@@ -758,6 +758,9 @@ export class PersistentAppShellElement extends HTMLElement {
     // Global Keyboard Shortcuts
     window.addEventListener('keydown', this.handleKeyDown);
 
+    // Keep BSL overlay visible inside fullscreen player without disconnecting/re-creating the avatar
+    document.addEventListener('fullscreenchange', this.handleFullscreenChange);
+
     // BSL / Makaton on-demand lazy subscriber + immediate boot hydration when persisted ON
     const bslSlot = this.querySelector('#bsl-overlay-slot')!;
     const updateTopSignButtons = (enabled: boolean, code: SignLanguageCode) => {
@@ -887,6 +890,24 @@ export class PersistentAppShellElement extends HTMLElement {
     );
   }
 
+  private handleFullscreenChange = () => {
+    const bslSlot = document.getElementById('bsl-overlay-slot');
+    const shellRoot = this.querySelector<HTMLElement>('.shell-root');
+    if (!bslSlot || !shellRoot) return;
+    const bslEl = bslSlot.querySelector<HTMLElement>('native-bsl-interpreter');
+    const fsEl = document.fullscreenElement;
+    const targetParent = fsEl && fsEl !== document.documentElement && fsEl !== document.body ? fsEl : shellRoot;
+    if (bslSlot.parentElement === targetParent) return;
+    if (bslEl) bslEl.dataset.reparenting = '1';
+    try {
+      targetParent.appendChild(bslSlot);
+    } finally {
+      if (bslEl && bslEl.dataset.reparenting === '1') {
+        delete bslEl.dataset.reparenting;
+      }
+    }
+  };
+
   disconnectedCallback() {
     // 1. Reactive store unsubscribes
     this.unsubscribeBsl?.();
@@ -904,6 +925,7 @@ export class PersistentAppShellElement extends HTMLElement {
 
     // 3. Detach global window and document listeners
     document.removeEventListener('click', this.handleDocumentClick);
+    document.removeEventListener('fullscreenchange', this.handleFullscreenChange);
     window.removeEventListener('stj_sound_haptics_updated', this.handleSoundUpdated);
     window.removeEventListener('keydown', this.handleKeyDown);
     window.removeEventListener('message', this.handleWindowMessage);

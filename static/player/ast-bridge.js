@@ -178,6 +178,22 @@
             uiController.toggleBsl(typeof data.enabled === 'boolean' ? data.enabled : undefined, false);
           }
           break;
+        case 'REQUEST_SUBTITLE': {
+          const curSub = typeof engine.getCurrentSubtitle === 'function' ? engine.getCurrentSubtitle() : '';
+          let subText = typeof curSub === 'string' ? curSub : (curSub && (curSub.en || curSub.localized) ? (curSub.en || curSub.localized) : '');
+          if (!subText && engine.scene && Array.isArray(engine.scene.keyframes) && engine.scene.keyframes.length > 0) {
+            const p = engine.progress || 0;
+            let activeKf = engine.scene.keyframes[0];
+            for (let i = 0; i < engine.scene.keyframes.length; i++) {
+              if (p >= (engine.scene.keyframes[i].t || 0)) activeKf = engine.scene.keyframes[i];
+            }
+            if (activeKf) subText = [activeKf.title, activeKf.rule].filter(Boolean).join('. ');
+          }
+          if (subText && typeof engine.notifyParent === 'function') {
+            engine.notifyParent({ type: 'SUBTITLE_UPDATE', text: subText });
+          }
+          break;
+        }
         case 'TRIGGER_CHECKPOINT':
         case 'TAKE_QUIZ':
         case 'TOGGLE_CHECKPOINT':

@@ -188,6 +188,7 @@ export function renderPlayerPage(): HTMLElement {
     | { type: 'SET_MUTED'; muted: boolean }
     | { type: 'SET_BSL'; enabled: boolean }
     | { type: 'TOGGLE_BSL' }
+    | { type: 'REQUEST_SUBTITLE' }
     | { type: 'RESET_SIM' }
     | { type: 'PLAY' }
     | { type: 'PAUSE' }
@@ -1280,6 +1281,9 @@ export function renderPlayerPage(): HTMLElement {
       bslActive = enabled;
       updateBslUi(enabled);
       postToPlayer({ type: 'SET_BSL', enabled });
+      if (enabled && isStageOpen) {
+        postToPlayer({ type: 'REQUEST_SUBTITLE' });
+      }
     }
   });
 
@@ -1325,6 +1329,10 @@ export function renderPlayerPage(): HTMLElement {
       isIframeReady = true;
       postToPlayer({ type: 'SET_VOICE', enabled: !isMuted });
       postToPlayer({ type: 'SET_MUTED', muted: isMuted });
+      if (bslActive) {
+        postToPlayer({ type: 'SET_BSL', enabled: true });
+        postToPlayer({ type: 'REQUEST_SUBTITLE' });
+      }
       if (pendingCustomCartridge) {
         const queued = pendingCustomCartridge;
         pendingCustomCartridge = null;

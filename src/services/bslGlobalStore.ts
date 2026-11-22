@@ -345,15 +345,56 @@ export function subscribeVoice(callback: (enabled: boolean) => void): () => void
   };
 }
 
+const BSL_SPEECH_CHANNEL = 'stj_bsl_speech_bus';
+const BSL_TAB_ID = `bsl_${Math.random().toString(36).slice(2, 10)}`;
+let bslSpeechChannel: BroadcastChannel | null = null;
+let lastBroadcastSpeech: { payload: BslSpeechPayload; timestamp: number } | null = null;
+
+function ensureBslSpeechChannel(): BroadcastChannel | null {
+  if (typeof window === 'undefined' || typeof BroadcastChannel === 'undefined') return null;
+  if (!bslSpeechChannel) {
+    try {
+      bslSpeechChannel = new BroadcastChannel(BSL_SPEECH_CHANNEL);
+      bslSpeechChannel.onmessage = (event: MessageEvent) => {
+        const data = event.data;
+        if (!data || data.sender === BSL_TAB_ID || !data.payload) return;
+        const payload = data.payload as BslSpeechPayload;
+        if (payload.subtitle || payload.stopSigning) {
+          lastBroadcastSpeech = { payload, timestamp: Date.now() };
+        }
+        try {
+          window.dispatchEvent(new CustomEvent(SPEECH_EVENT, { detail: payload }));
+        } catch (_) {}
+      };
+    } catch (_) {
+      bslSpeechChannel = null;
+    }
+  }
+  return bslSpeechChannel;
+}
+
+export function getLastBslSpeech(maxAgeMs = 15000): BslSpeechPayload | null {
+  if (!lastBroadcastSpeech) return null;
+  if (Date.now() - lastBroadcastSpeech.timestamp > maxAgeMs) return null;
+  return lastBroadcastSpeech.payload;
+}
+
 export function broadcastBslSpeech(payload: BslSpeechPayload): void {
   if (typeof window === 'undefined') return;
+  if (payload.subtitle || payload.stopSigning) {
+    lastBroadcastSpeech = { payload, timestamp: Date.now() };
+  }
   try {
     window.dispatchEvent(new CustomEvent(SPEECH_EVENT, { detail: payload }));
+  } catch (_) {}
+  try {
+    ensureBslSpeechChannel()?.postMessage({ sender: BSL_TAB_ID, payload });
   } catch (_) {}
 }
 
 export function subscribeBslSpeech(callback: (payload: BslSpeechPayload) => void): () => void {
   if (typeof window === 'undefined') return () => {};
+  ensureBslSpeechChannel();
 
   const handler = (e: Event) => {
     const custom = e as CustomEvent<BslSpeechPayload>;
