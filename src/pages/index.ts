@@ -23,9 +23,11 @@ export function renderHomePage(): HTMLElement {
     ? markedFeatured
     : [
         ...playableCore.filter((p) => p.id === 'welcome').slice(0, 1),
+        ...playableCore.filter((p) => p.id === 'jacobs-ladder-primes').slice(0, 1),
+        ...playableCore.filter((p) => p.id === 'breadboard-components').slice(0, 1),
         ...playableCore.filter((p) => p.section === 'Catholic Life & Faith Formation').slice(0, 4),
-        ...playableCore.filter((p) => p.section === 'Mathematics & Geometry').slice(0, 4),
-        ...playableCore.filter((p) => p.section === 'Natural Sciences & Physics').slice(0, 3),
+        ...playableCore.filter((p) => p.section === 'Mathematics & Geometry' && p.id !== 'jacobs-ladder-primes').slice(0, 3),
+        ...playableCore.filter((p) => p.section === 'Natural Sciences & Physics' && p.id !== 'breadboard-components').slice(0, 3),
       ];
   const featuredPresets = curatedPool.length > 0 ? curatedPool : playableCore.slice(0, 12);
   let activePreset = featuredPresets[0]?.id || 'welcome';

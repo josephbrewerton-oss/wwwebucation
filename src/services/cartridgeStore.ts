@@ -488,6 +488,7 @@ export function getDefaultMountForCartridge(id: string): string {
     'math-fishing': '/curriculum/maths/arithmetic/number-bonds',
     'fractions': '/curriculum/maths/arithmetic/fractions',
     'calculus-curves': '/curriculum/maths/calculus/tangent-slopes',
+    'jacobs-ladder-primes': '/curriculum/mathematics/jacobs-ladder-primes',
     'algebra-balance': '/curriculum/maths/algebra/balance-scale',
     'atom': '/curriculum/science/chemistry/atomic-structure',
     'photosynthesis': '/curriculum/science/biology/photosynthesis',
