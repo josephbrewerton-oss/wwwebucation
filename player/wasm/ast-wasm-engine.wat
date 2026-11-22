@@ -733,6 +733,20 @@
           br $opLoop
         end
 
+        ;; 0x31 OP_BINDING_WHEN: target(2) attr(2) expr(2) when(2)
+        local.get $op i32.const 49 i32.eq
+        if
+          local.get $cur i32.const 8 i32.add local.set $cur
+          br $opLoop
+        end
+
+        ;; 0x32 OP_BINDING_VAR: var(2) expr(2) when(2)
+        local.get $op i32.const 50 i32.eq
+        if
+          local.get $cur i32.const 6 i32.add local.set $cur
+          br $opLoop
+        end
+
         ;; 0x40 OP_CHECKPOINT: t(2) prompt(2) ans(1) expl(2) opt_count(1) + opt_count * 2
         local.get $op i32.const 64 i32.eq
         if
@@ -862,6 +876,20 @@
         if
           local.get $cur i32.load8_u offset=24 local.set $cnt
           local.get $cur i32.const 25 i32.add local.get $cnt i32.const 6 i32.mul i32.add local.set $cur
+          br $opLoop
+        end
+
+        ;; 0x61 OP_COMPUTED: name(2) expr(2)
+        local.get $op i32.const 97 i32.eq
+        if
+          local.get $cur i32.const 4 i32.add local.set $cur
+          br $opLoop
+        end
+
+        ;; 0xA0 OP_SCENE_EXT: key(2) payload(2)
+        local.get $op i32.const 160 i32.eq
+        if
+          local.get $cur i32.const 4 i32.add local.set $cur
           br $opLoop
         end
 

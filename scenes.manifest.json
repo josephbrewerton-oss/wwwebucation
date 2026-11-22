@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-22T14:02:15.015Z",
+  "generatedAt": "2026-11-22T14:29:40.088Z",
   "totalScenes": 79,
   "inputDirs": [
     "static/cartridges"
@@ -955,7 +955,7 @@
       "oakUnit": "protons",
       "subject": "Science",
       "has3D": true,
-      "nodes3DCount": 59,
+      "nodes3DCount": 45,
       "svgFile": "cartridges/atom.svg",
       "astFile": "cartridges/atom.ast",
       "astbFile": "bytecode/atom.astb",
@@ -969,7 +969,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 123,
+      "bindingsCount": 59,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },
@@ -1017,7 +1017,7 @@
       "oakUnit": "ks3-biology-genetics-dna-transcription",
       "subject": "Science",
       "has3D": true,
-      "nodes3DCount": 18,
+      "nodes3DCount": 1,
       "svgFile": "cartridges/dna-helix.svg",
       "astFile": "cartridges/dna-helix.ast",
       "astbFile": "bytecode/dna-helix.astb",
@@ -1031,7 +1031,7 @@
       "section": "Natural Sciences & Physics",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 118,
+      "bindingsCount": 16,
       "hasCheckpoints": true,
       "checkpointCount": 2
     },

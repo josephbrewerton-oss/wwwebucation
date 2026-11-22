@@ -1,6 +1,6 @@
 {
   "version": "2.6.0",
-  "generatedAt": "2026-11-22T14:02:16.751Z",
+  "generatedAt": "2026-11-22T14:29:41.783Z",
   "totalScenes": 79,
   "scenes": [
     {
@@ -76,7 +76,7 @@
       "astbFile": "bytecode/atom.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 123
+      "bindingsCount": 59
     },
     {
       "id": "bbc-model-b",
@@ -211,7 +211,7 @@
       "astbFile": "bytecode/dna-helix.astb",
       "keyframeCount": 4,
       "subtitleCount": 3,
-      "bindingsCount": 118
+      "bindingsCount": 16
     },
     {
       "id": "domino-multiplication",
