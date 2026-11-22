@@ -119,7 +119,7 @@
       });
     }
 
-    async loadScene(presetId, shouldPlay = false) {
+    async loadScene(presetId, shouldPlay = false, forceReload = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
         ? global.ASTSceneRegistry.normalizeId(presetId)
@@ -128,7 +128,7 @@
 
       // Deduplication Guard: If this exact preset is already mounted and ready, avoid re-fetching or wiping container
       const hasRenderableContent = this.scene && (this.scene.svgText || this.scene.render || this.scene.mount || (this.scene.keyframes && this.scene.keyframes.length));
-      if (this.activePresetId === presetId && this._mountedSceneId === presetId && hasRenderableContent) {
+      if (!forceReload && this.activePresetId === presetId && this._mountedSceneId === presetId && hasRenderableContent) {
         if (shouldPlay && !this.isPlaying) {
           this.play();
         } else if (shouldPlay === false && this.isPlaying) {
@@ -138,7 +138,7 @@
       }
 
       // In-flight Load Guard: If this exact preset is already being fetched, await the existing promise
-      if (this._inFlightLoadPresetId === presetId && this._inFlightLoadPromise) {
+      if (!forceReload && this._inFlightLoadPresetId === presetId && this._inFlightLoadPromise) {
         const existingScene = await this._inFlightLoadPromise;
         if (shouldPlay && !this.isPlaying) {
           this.play();
@@ -148,6 +148,7 @@
         return existingScene;
       }
 
+      const loadSeq = (this._loadSequence = (this._loadSequence || 0) + 1);
       this._inFlightLoadPresetId = presetId;
       const loadPromise = (async () => {
         // Fast-path for built-in Welcome Simulator (Zero Network Overhead)
@@ -444,6 +445,9 @@
           }
         }
 
+        if (this._loadSequence !== loadSeq) {
+          return this.scene;
+        }
         const isNotFound = !svgText && !astText && !parsedAst && !registryScene.mount && !registryScene.render && (!registryScene.keyframes || !registryScene.keyframes.length);
         if (isNotFound) {
           console.warn(`[AST Engine] Scene "${presetId}" could not be located in registry or fetched from asset path. Gracefully falling back to built-in Welcome Simulator.`);
@@ -739,7 +743,7 @@
       const res = await loadPromise;
       return res;
     } finally {
-      if (this._inFlightLoadPresetId === presetId) {
+      if (this._loadSequence === loadSeq && this._inFlightLoadPresetId === presetId) {
         this._inFlightLoadPromise = null;
         this._inFlightLoadPresetId = null;
       }
@@ -806,6 +810,8 @@
       uiControls: sceneData.uiControls || (parsedAst && parsedAst.uiControls) || sceneData.inputs || (parsedAst && parsedAst.inputs) || null,
       computed: sceneData.computed || (parsedAst && parsedAst.computed) || null,
       gestures: sceneData.gestures || (parsedAst && parsedAst.gestures) || null,
+      skills: sceneData.skills || (parsedAst && parsedAst.skills) || [],
+      definedSkills: sceneData.definedSkills || (parsedAst && parsedAst.definedSkills) || null,
       controls: sceneData.controls || (parsedAst && parsedAst.controls) || null,
       physics: sceneData.physics || (parsedAst && parsedAst.physics) || null,
       scopes: sceneData.scopes || (parsedAst && parsedAst.scopes) || [],
@@ -829,7 +835,7 @@
       updatedAt: Date.now()
     });
 
-    return this.loadScene(id, shouldPlay);
+    return this.loadScene(id, shouldPlay, true);
   }
 
   /**
