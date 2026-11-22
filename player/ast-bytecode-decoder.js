@@ -102,11 +102,13 @@
           scene.videoFit = fitVal === 2 ? 'cover' : fitVal === 3 ? 'fill' : 'contain';
           break;
         }
-        case 0x80: { // OP_CAMERA
-          const dist = view.getFloat32(offset, true); offset += 4;
+        case 0x80: { // OP_CAMERA: [yaw_str: u16] [pitch: f32] [distance: f32] [fov: f32]
+          const yawStr = getStr(view.getUint16(offset, true)); offset += 2;
           const pitch = view.getFloat32(offset, true); offset += 4;
-          const yaw = view.getFloat32(offset, true); offset += 4;
+          const dist = view.getFloat32(offset, true); offset += 4;
           const fov = view.getFloat32(offset, true); offset += 4;
+          const yawTrim = yawStr.trim();
+          const yaw = yawTrim === '' ? 0 : (/^-?\d+(?:\.\d+)?$/.test(yawTrim) ? Number(yawTrim) : yawStr);
           scene.camera = { distance: dist, pitch, yaw, fov };
           scene.has3D = true;
           break;
@@ -153,7 +155,10 @@
           const attr = getStr(attrIdx);
           const expr = getStr(exprIdx);
 
-          if (target === ':camera' && attr === 'camera') {
+          if (target === ':camera' && attr === 'pitch') {
+            scene.camera = Object.assign(scene.camera || { distance: 500, pitch: 20, yaw: 0, fov: 60 }, { pitch: expr });
+            scene.has3D = true;
+          } else if (target === ':camera' && attr === 'camera') {
             try {
               const camData = expr.startsWith('{') ? JSON.parse(expr) : null;
               if (camData) {
@@ -265,6 +270,48 @@
           };
           if (whenStr) entry.when = whenStr;
           scene.bindings.push(entry);
+          break;
+        }
+        case 0x33: { // OP_3D_LINE (native binary descriptor, zero JSON.parse)
+          const target = getStr(view.getUint16(offset, true)); offset += 2;
+          const x1 = getStr(view.getUint16(offset, true)); offset += 2;
+          const y1 = getStr(view.getUint16(offset, true)); offset += 2;
+          const z1 = getStr(view.getUint16(offset, true)); offset += 2;
+          const x2 = getStr(view.getUint16(offset, true)); offset += 2;
+          const y2 = getStr(view.getUint16(offset, true)); offset += 2;
+          const z2 = getStr(view.getUint16(offset, true)); offset += 2;
+          const cap1 = getStr(view.getUint16(offset, true)); offset += 2;
+          const cap2 = getStr(view.getUint16(offset, true)); offset += 2;
+          const splitExpr = getStr(view.getUint16(offset, true)); offset += 2;
+          const splineA = getStr(view.getUint16(offset, true)); offset += 2;
+          const splineB = getStr(view.getUint16(offset, true)); offset += 2;
+          const sortAfter = getStr(view.getUint16(offset, true)); offset += 2;
+          const baseR = view.getFloat32(offset, true); offset += 4;
+          const rawSplineIdx = view.getUint16(offset, true); offset += 2;
+          const lineFlags = bytes[offset++];
+          let zLayer;
+          let zBias;
+          if (lineFlags & 0x02) { zLayer = view.getFloat32(offset, true); offset += 4; }
+          if (lineFlags & 0x04) { zBias = view.getFloat32(offset, true); offset += 4; }
+
+          const lineBinding = {
+            type: '3d-line',
+            target,
+            x1, y1, z1,
+            x2, y2, z2,
+            cap1: cap1 || '',
+            cap2: cap2 || '',
+            baseR,
+            depthFog: Boolean(lineFlags & 0x01)
+          };
+          if (splitExpr) lineBinding.splitExpr = splitExpr;
+          if (splineA) lineBinding.splineA = splineA;
+          if (splineB) lineBinding.splineB = splineB;
+          if (rawSplineIdx !== 0xffff) lineBinding.splineIndex = rawSplineIdx;
+          if (sortAfter) lineBinding.sortAfter = sortAfter;
+          if (zLayer !== undefined) lineBinding.zLayer = zLayer;
+          if (zBias !== undefined) lineBinding.zBias = zBias;
+          scene.bindings.push(lineBinding);
           break;
         }
         case 0x40: { // OP_CHECKPOINT
@@ -489,6 +536,7 @@
             else if (extKey === 'stateMachines' && Array.isArray(parsed)) scene.stateMachines = parsed;
             else if (extKey === 'controls' && parsed && typeof parsed === 'object') scene.controls = parsed;
             else if (extKey === 'skills' && Array.isArray(parsed)) scene.skills = parsed;
+            else if (extKey === 'definedSkills' && (typeof parsed === 'string' || Array.isArray(parsed))) scene.definedSkills = parsed;
             else if (extKey === 'cameraStops' && Array.isArray(parsed)) scene.cameraStops = parsed;
             else if (extKey === 'quests') scene.quests = parsed;
             else if (extKey === 'bootSound') scene.bootSound = String(parsed);

@@ -181,7 +181,15 @@
 
     async loadPlayerGesturesProfile() {
       const _p = _getGesturesProfile();
-      return _p && typeof _p.loadPlayerGesturesProfile === 'function' ? _p.loadPlayerGesturesProfile.call(this) : this.playerProfile;
+      const prof = _p && typeof _p.loadPlayerGesturesProfile === 'function' ? await _p.loadPlayerGesturesProfile.call(this) : this.playerProfile;
+      if (this.engine && this.engine.scene && _p && typeof _p.expandSceneSkills === 'function') {
+        const expanded = _p.expandSceneSkills.call(this, this.engine.scene, this.playerProfile && this.playerProfile.skills);
+        if (expanded && typeof this.engine.mountSceneAsset === 'function' && this.container) {
+          this.engine.mountSceneAsset(this.engine.scene, this.container);
+          this._syncCartridgeControls();
+        }
+      }
+      return prof;
     }
 
     _stripSexpComments(source) {
@@ -232,6 +240,31 @@
     _parseSkillsBlock(skillsBlock) {
       const _p = _getGesturesProfile();
       return _p && typeof _p._parseSkillsBlock === 'function' ? _p._parseSkillsBlock.call(this, skillsBlock) : new Map();
+    }
+
+    _parseSkillStepSexp(stepSexp) {
+      const _p = _getGesturesProfile();
+      return _p && typeof _p._parseSkillStepSexp === 'function' ? _p._parseSkillStepSexp.call(this, stepSexp) : null;
+    }
+
+    _expandSkillStep(step, params) {
+      const _p = _getGesturesProfile();
+      return _p && typeof _p._expandSkillStep === 'function' ? _p._expandSkillStep.call(this, step, params) : step;
+    }
+
+    _buildSceneSkillRegistry(scene, baseSkills) {
+      const _p = _getGesturesProfile();
+      return _p && typeof _p._buildSceneSkillRegistry === 'function' ? _p._buildSceneSkillRegistry.call(this, scene, baseSkills) : new Map();
+    }
+
+    _resolveSkillDefinition(skillId, registry) {
+      const _p = _getGesturesProfile();
+      return _p && typeof _p._resolveSkillDefinition === 'function' ? _p._resolveSkillDefinition.call(this, skillId, registry) : null;
+    }
+
+    expandSceneSkills(scene, baseSkills) {
+      const _p = _getGesturesProfile();
+      return _p && typeof _p.expandSceneSkills === 'function' ? _p.expandSceneSkills.call(this, scene, baseSkills) : false;
     }
 
     _parseKeywordAttrs(sexp) {
@@ -831,6 +864,16 @@
         ])),
         astSkills: this.playerProfile && this.playerProfile.skills instanceof Map
           ? Array.from(this.playerProfile.skills.keys())
+          : [],
+        astSkillGraph: this.playerProfile && this.playerProfile.skills instanceof Map
+          ? Array.from(this.playerProfile.skills.keys()).map((id) => {
+              const resolved = this._resolveSkillDefinition(id, this.playerProfile.skills);
+              return {
+                id,
+                extends: resolved ? resolved.extends : [],
+                chain: resolved ? resolved.chain : [id]
+              };
+            })
           : []
       };
     }

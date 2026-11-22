@@ -282,6 +282,18 @@
       return blocks;
     };
 
+    // Extract cartridge-local (:skills (:skill ...)) definitions before root :vars/:bindings/:rules/:gestures scanning
+    let definedSkills = null;
+    if (astContent.includes('(:skills') || /\(\s*:skills\b/i.test(astContent)) {
+      const localSkillBlocks = extractSexprBlocks(astContent, ':skills');
+      if (localSkillBlocks.length > 0) {
+        definedSkills = localSkillBlocks.join('\n');
+        for (const lsb of localSkillBlocks) {
+          astContent = astContent.replace(lsb, ' ');
+        }
+      }
+    }
+
     // Extract either (:tag ( ... )) or plist-style :tag ( ... )
     const extractKeywordBlocks = (text, tag) => {
       const direct = extractSexprBlocks(text, tag);
@@ -660,14 +672,16 @@
         }
         return;
       }
-      if (/^\(\s*:var\b/i.test(form)) {
-        const vMatch = form.match(/^\(\s*:var\s+(?::name\s+)?"((?:[^"\\]|\\.)*)"/i)
+      if (/^\(\s*:(?:var|rule)\b/i.test(form)) {
+        const vMatch = form.match(/^\(\s*:(?:var|rule)\s+(?::(?:name|var)\s+)?"((?:[^"\\]|\\.)*)"/i)
+          || form.match(/:(?:name|var)\s+"((?:[^"\\]|\\.)*)"/i)
           || form.match(/^\(\s*:var\s+([^\s\)]+)/i);
         const varName = vMatch ? vMatch[1].replace(/\\"/g, '"') : null;
         const expr = extractQuoted(form, 'expr');
+        const when = composeWhen(inheritedWhen, extractQuoted(form, 'when') || extractQuoted(form, 'if'));
         if (varName && expr) {
           const entry = { type: 'var-update', varName, expr };
-          if (inheritedWhen) entry.when = inheritedWhen;
+          if (when) entry.when = when;
           bindings.push(entry);
         }
       }
@@ -683,6 +697,14 @@
       // Backwards compatibility for legacy scenes with bare top-level (:target ...) outside (:bindings ...)
       const bindBlocks = extractSexprBlocks(astContent, ':target');
       bindBlocks.forEach(block => parseTargetForm(block, undefined));
+    }
+
+    const ruleListBlocks = extractKeywordBlocks(astContent, ':rules');
+    if (ruleListBlocks.length > 0) {
+      ruleListBlocks.forEach(rBlock => {
+        const ruleForms = extractChildForms(rBlock);
+        ruleForms.forEach(form => walkBindingForm(form, undefined, null));
+      });
     }
 
     // Checkpoints (Interactive Formative Assessment)
@@ -1287,18 +1309,30 @@
 
     const gestures = [];
     const gestureBlocks = extractKeywordBlocks(astContent, ':gestures');
+    const gestureEntries = [];
     if (gestureBlocks.length > 0) {
-      const gBlock = gestureBlocks[0];
-      const gEntries = extractChildForms(gBlock);
-
-      gEntries.forEach(gText => {
+      gestureBlocks.forEach(gBlock => {
+        extractChildForms(gBlock).forEach(entry => gestureEntries.push(entry));
+      });
+    }
+    const topLevelOnClick = extractSexprBlocks(astContent, ':on-click');
+    const topLevelOnKey = extractSexprBlocks(astContent, ':on-key');
+    const seenGestureTexts = new Set(gestureEntries);
+    topLevelOnClick.concat(topLevelOnKey).forEach(entry => {
+      if (!seenGestureTexts.has(entry)) {
+        seenGestureTexts.add(entry);
+        gestureEntries.push(entry);
+      }
+    });
+    if (gestureEntries.length > 0) {
+      gestureEntries.forEach(gText => {
         if (gText.startsWith('(:interactive (') || gText.startsWith('(:interactive\n')) return;
         const isDraggable = /^\(\s*:draggable\b/i.test(gText);
         const isRotatable = /^\(\s*:rotatable\b/i.test(gText);
         const isTrackball = /^\(\s*:trackball\b/i.test(gText);
-        const isClickable = /^\(\s*:clickable\b/i.test(gText);
+        const isClickable = /^\(\s*:(?:clickable|on-click)\b/i.test(gText);
         const isHoldable = /^\(\s*:holdable\b/i.test(gText);
-        const isKey = /^\(\s*:key\b/i.test(gText);
+        const isKey = /^\(\s*:(?:key|on-key)\b/i.test(gText);
         const isInteractive = /^\(\s*:interactive\b/i.test(gText);
         if (!isDraggable && !isRotatable && !isTrackball && !isClickable && !isHoldable && !isKey && !isInteractive) return;
 
@@ -1929,6 +1963,7 @@
       actors,
       gestures,
       skills,
+      ...(definedSkills ? { definedSkills } : {}),
       controls,
       interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
     };

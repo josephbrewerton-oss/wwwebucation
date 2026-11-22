@@ -162,6 +162,7 @@
       this.active3DRings = [];
       this.active3DPolygons = [];
       this.active3DItems = [];
+      if (this._splineChains) this._splineChains.clear();
       this.activeScopes = [];
       this.activeLedgers = [];
       if (this._cpHoldTimers) this._cpHoldTimers.fill(0);
@@ -268,6 +269,20 @@
         this._cachedElements = scene.mount(container);
       }
 
+      if (
+        scene &&
+        ((Array.isArray(scene.skills) && scene.skills.length > 0) || scene.definedSkills) &&
+        global.ASTGesturesProfile &&
+        typeof global.ASTGesturesProfile.expandSceneSkills === 'function'
+      ) {
+        try {
+          const activeSkillsMap = (this.gestures && this.gestures.playerProfile && this.gestures.playerProfile.skills) || null;
+          global.ASTGesturesProfile.expandSceneSkills(scene, activeSkillsMap);
+        } catch (err) {
+          console.warn('[AST Engine] Failed expanding scene skills:', err);
+        }
+      }
+
       const hasDomQuery = Boolean(container && typeof container.querySelector === 'function');
       const bindingsList = (scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []);
       const whenGroupMap = new Map();
@@ -286,9 +301,18 @@
             } catch (e) {
               console.warn('[AST Engine] Failed compiling var binding:', b.varName, b.expr, e);
             }
+            let varWhenFn = null;
+            if (b.when) {
+              try {
+                varWhenFn = this.compileAstFn(String(b.when).trim());
+              } catch (e) {
+                console.warn('[AST Engine] Failed compiling var when-guard:', b.varName, b.when, e);
+              }
+            }
             this.activeVarBindings.push({
               varName: b.varName,
-              evalFn: varEvalFn
+              evalFn: varEvalFn,
+              whenFn: varWhenFn
             });
           } else {
             const node = hasDomQuery ? container.querySelector(b.target) : null;

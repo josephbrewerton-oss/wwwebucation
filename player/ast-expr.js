@@ -276,6 +276,7 @@
               'let', 'let*', 'cond', 'case', 'match', 'nth', 'pick',
               'clamp', 'lerp', 'map', 'sin', 'cos', 'tan', 'asin', 'acos', 'atan', 'atan2',
               'sqrt', 'abs', 'round', 'floor', 'ceil', 'min', 'max', 'pow', 'exp', 'log',
+              'random', 'bitand', 'bitor', 'bitxor',
               'concat', 'str', 'rad', 'deg', 'dist', 'sineWave', 'smoothstep', 'fixed'
             ]);
             if (LISP_OPS.has(head)) {
@@ -381,6 +382,14 @@
                   case 'sin': case 'cos': case 'tan': case 'asin': case 'acos': case 'atan': case 'atan2':
                   case 'sqrt': case 'abs': case 'round': case 'floor': case 'ceil': case 'min': case 'max': case 'pow': case 'exp': case 'log':
                     return `Math.${op}(${args.join(', ')})`;
+                  case 'random':
+                    return args.length === 0 ? 'Math.random()' : `Math.floor(Math.random() * (${args[0]}))`;
+                  case 'bitand':
+                    return `((${args[0]}) & (${args[1]}))`;
+                  case 'bitor':
+                    return `((${args[0]}) | (${args[1]}))`;
+                  case 'bitxor':
+                    return `((${args[0]}) ^ (${args[1]}))`;
                   default:
                     return '0';
                 }
@@ -718,6 +727,12 @@
                   }
                   return s;
                 };
+                case 'random':
+                  if (len === 0) return () => Math.random();
+                  return (t, v, c, M) => Math.floor(Math.random() * Number(f0(t, v, c, M)));
+                case 'bitand': return (t, v, c, M) => (f0(t, v, c, M) & f1(t, v, c, M));
+                case 'bitor': return (t, v, c, M) => (f0(t, v, c, M) | f1(t, v, c, M));
+                case 'bitxor': return (t, v, c, M) => (f0(t, v, c, M) ^ f1(t, v, c, M));
                 default:
                   return makeHelperCall(op, fns);
               }

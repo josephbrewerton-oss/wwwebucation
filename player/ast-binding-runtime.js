@@ -29,6 +29,7 @@
       for (let i = 0; i < this.activeVarBindings.length; i++) {
         const vb = this.activeVarBindings[i];
         try {
+          if (vb.whenFn && !vb.whenFn(effectiveT, v, v, Math)) continue;
           const nextVal = vb.evalFn(effectiveT, v, v, Math);
           if (nextVal !== undefined && (typeof nextVal !== 'number' || Number.isFinite(nextVal))) {
             if (v[vb.varName] !== nextVal) {

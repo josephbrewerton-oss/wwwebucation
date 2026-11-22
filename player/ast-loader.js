@@ -508,6 +508,9 @@
                 if (textParsed.skills && textParsed.skills.length > 0) {
                   parsedAst.skills = textParsed.skills;
                 }
+                if (textParsed.definedSkills && !parsedAst.definedSkills) {
+                  parsedAst.definedSkills = textParsed.definedSkills;
+                }
                 if (textParsed.controls && !parsedAst.controls) {
                   parsedAst.controls = textParsed.controls;
                 }
@@ -577,6 +580,7 @@
           computed: (parsedAst && parsedAst.computed) || registryScene.computed || [],
           gestures: (parsedAst && parsedAst.gestures) || registryScene.gestures || [],
           skills: (parsedAst && parsedAst.skills) || registryScene.skills || [],
+          definedSkills: (parsedAst && parsedAst.definedSkills) || registryScene.definedSkills || null,
           controls: (parsedAst && parsedAst.controls) || registryScene.controls || null,
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
           scopes: (parsedAst && parsedAst.scopes) || registryScene.scopes || [],

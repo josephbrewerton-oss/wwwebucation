@@ -762,7 +762,12 @@
      */
     _pointsToSpline(pts) {
       if (!pts || pts.length < 2) return "";
-      const valid = pts.filter(p => p && typeof p.x === "number" && typeof p.y === "number");
+      const valid = this._splineValidScratch || (this._splineValidScratch = []);
+      valid.length = 0;
+      for (let i = 0; i < pts.length; i++) {
+        const p = pts[i];
+        if (p && typeof p.x === "number" && typeof p.y === "number") valid.push(p);
+      }
       if (valid.length < 2) return "";
       let d = `M ${valid[0].x.toFixed(1)} ${valid[0].y.toFixed(1)}`;
       for (let i = 0; i < valid.length - 1; i++) {
@@ -829,6 +834,9 @@
           const splineANode = (b.splineA && hasDomQuery) ? container.querySelector(b.splineA) : null;
           const splineBNode = (b.splineB && hasDomQuery) ? container.querySelector(b.splineB) : null;
           const splineIndex = (b.splineIndex !== undefined && b.splineIndex !== null) ? Number(b.splineIndex) : null;
+          if (splineIndex !== null && this.vars && !('splineIndex' in this.vars)) {
+            this.vars.splineIndex = 0;
+          }
 
           const item = {
             type: '3d-line',
@@ -842,6 +850,8 @@
             splineANode,
             splineBNode,
             splineIndex,
+            _spA: splineANode ? { x: 0, y: 0 } : null,
+            _spB: splineBNode ? { x: 0, y: 0 } : null,
             zLayer: b.zLayer !== undefined ? Number(b.zLayer) : 0,
             zBias: b.zBias !== undefined ? Number(b.zBias) : 0,
             sortAfter: b.sortAfter || null,
@@ -920,7 +930,11 @@
      * Zero-GC hot loop: reuses pre-allocated scratch buffers on `this`.
      */
     renderSoftware3D(effectiveT, camera) {
-      let splineChains = null;
+      let hasSplines = false;
+      const splineChains = this._splineChains || null;
+      if (splineChains && splineChains.size > 0) {
+        splineChains.forEach((arr) => { arr.length = 0; });
+      }
       const v = this.vars || {};
       const comp = v;
       const basis = this._prepareCameraBasis(camera);
@@ -989,6 +1003,12 @@
             }
           }
         } else if (item.type === '3d-line') {
+          const hasSplineIdx = item.splineIndex !== null && item.splineIndex !== undefined;
+          let prevSplineIdx;
+          if (hasSplineIdx) {
+            prevSplineIdx = v.splineIndex;
+            v.splineIndex = item.splineIndex;
+          }
           let x1 = Number(item.evalX1(effectiveT, v, Math, comp)) || 0;
           let y1 = Number(item.evalY1(effectiveT, v, Math, comp)) || 0;
           let z1 = Number(item.evalZ1(effectiveT, v, Math, comp)) || 0;
@@ -1009,6 +1029,9 @@
           if (item.evalSplit) {
             splitOffset = Number(item.evalSplit(effectiveT, v, Math, comp)) || 0;
           }
+          if (hasSplineIdx) {
+            v.splineIndex = prevSplineIdx;
+          }
           const isSplit = splitOffset > 0;
 
           const p1 = this._project3DInto(x1 - splitOffset, y1, z1, camera, basis, 400, 240, projA);
@@ -1018,16 +1041,21 @@
           item.meanZ = (z1Val + z2Val) / 2;
 
           if (Number.isFinite(item.splineIndex) && (item.splineANode || item.splineBNode)) {
-            if (!splineChains) splineChains = new Map();
+            hasSplines = true;
+            const chains = this._splineChains || (this._splineChains = new Map());
             if (item.splineANode) {
-              let arrA = splineChains.get(item.splineANode);
-              if (!arrA) { arrA = []; splineChains.set(item.splineANode, arrA); }
-              arrA[item.splineIndex] = { x: p1.x, y: p1.y };
+              let arrA = chains.get(item.splineANode);
+              if (!arrA) { arrA = []; chains.set(item.splineANode, arrA); }
+              const spA = item._spA || (item._spA = { x: 0, y: 0 });
+              spA.x = p1.x; spA.y = p1.y;
+              arrA[item.splineIndex] = spA;
             }
             if (item.splineBNode) {
-              let arrB = splineChains.get(item.splineBNode);
-              if (!arrB) { arrB = []; splineChains.set(item.splineBNode, arrB); }
-              arrB[item.splineIndex] = { x: p2.x, y: p2.y };
+              let arrB = chains.get(item.splineBNode);
+              if (!arrB) { arrB = []; chains.set(item.splineBNode, arrB); }
+              const spB = item._spB || (item._spB = { x: 0, y: 0 });
+              spB.x = p2.x; spB.y = p2.y;
+              arrB[item.splineIndex] = spB;
             }
           }
 
@@ -1196,16 +1224,13 @@
         }
       }
 
-      if (splineChains) {
-        splineChains.forEach((pts, node) => {
+      if (hasSplines && this._splineChains) {
+        this._splineChains.forEach((pts, node) => {
           if (node && pts && pts.length > 1) {
-            const dense = pts.filter(Boolean);
-            if (dense.length > 1) {
-              const splineD = this._pointsToSpline(dense);
-              if (node._astLastSplineD !== splineD) {
-                node._astLastSplineD = splineD;
-                node.setAttribute('d', splineD);
-              }
+            const splineD = this._pointsToSpline(pts);
+            if (splineD && node._astLastSplineD !== splineD) {
+              node._astLastSplineD = splineD;
+              node.setAttribute('d', splineD);
             }
           }
         });
