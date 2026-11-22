@@ -43,6 +43,15 @@
     [/&mdash;/g, '—'],
     [/&ne;/g, '≠'],
     [/&deg;/g, '°'],
+    [/&sigma;/g, 'σ'],
+    [/&pi;/g, 'π'],
+    [/&minus;/g, '−'],
+    [/&ge;/g, '≥'],
+    [/&le;/g, '≤'],
+    [/&Delta;/g, 'Δ'],
+    [/&theta;/g, 'θ'],
+    [/&alpha;/g, 'α'],
+    [/&beta;/g, 'β'],
   ];
 
   const DANGEROUS_TAGS = ['script', 'foreignobject', 'iframe', 'embed', 'object', 'link', 'meta', 'style'];
