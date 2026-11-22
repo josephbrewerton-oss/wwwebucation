@@ -1416,6 +1416,283 @@ async function runSimulations() {
   }
 
   // --------------------------------------------------------------------------
+  // Simulation 14: Real-World Flash Preloader + Depth-1 Char Swap + ActionDefineFunction onRelease + HitTest Button
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes: 1=LoadingScreen, 2=MenuScreen, 3=GameArena, 4=HitRect(HitTest-only), 5=PlayBtnFace
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 640, 480, [30, 41, 59, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 640, 480, [30, 58, 138, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 640, 480, [6, 95, 70, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 180, 60, [255, 255, 255, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(5, 10, 10, 160, 40, [34, 197, 94, 255], 3));
+
+    // DefineSprite 10: Preloader MovieClip checking:
+    //   var loaded = _root.getBytesLoaded(); (via ActionStoreRegister 1)
+    //   if (loaded >= _root.getBytesTotal() && _root._framesloaded >= _root._totalframes) { _root.gotoAndPlay("menu"); }
+    const preloaderAct = new Avm1Builder()
+      .callMethod('_root', 'getBytesLoaded', [])
+      .storeRegister(1)
+      .pop()
+      .ifBlock(
+        (b) =>
+          b.pushRegister(1)
+            .callMethod('_root', 'getBytesTotal', [])
+            .less2()
+            .not()
+            .getMember('_root', '_framesloaded')
+            .getMember('_root', '_totalframes')
+            .less2()
+            .not()
+            .and(),
+        (b) => b.callMethod('_root', 'gotoAndPlay', [(a) => a.pushStr('menu')]).pop()
+      )
+      .toByteArray();
+    const preloaderTags = new BitWriter();
+    writeTag(preloaderTags, SwfTagCode.DO_ACTION, preloaderAct);
+    writeTag(preloaderTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(preloaderTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(10, 1, preloaderTags.toByteArray()));
+
+    // DefineButton2 20: Play button with Up face (0x01) AND separate HitTest-only hitbox (0x08)
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      20,
+      [
+        { states: 0x01, characterId: 5, depth: 1, matrix: { txPx: 0, tyPx: 0 } },
+        { states: 0x08, characterId: 4, depth: 2, matrix: { txPx: 0, tyPx: 0 } },
+      ],
+      []
+    ));
+
+    // Frame 1: "loading" — Depth 1 = LoadingScreen(1), Depth 2 = PreloaderSprite(10), stop()
+    const pLbl1 = new BitWriter(); pLbl1.writeString('loading');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, pLbl1.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1 }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 10, name: 'preloader' }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: "menu" — REPLACES Depth 1 with MenuScreen(2), removes Preloader(2), places named PlayBtn(20),
+    // and attaches playBtn.onRelease = function() { _root.play(); } via ActionDefineFunction (0x9B) + stop()
+    const pLbl2 = new BitWriter(); pLbl2.writeString('menu');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, pLbl2.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(1));
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(2));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2 }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 20, name: 'playBtn', matrix: { txPx: 230, tyPx: 210 } }));
+    const menuDoAction = new Avm1Builder()
+      .stop()
+      .setMember('playBtn', 'onRelease', (b) => {
+        b.defineFunction('', (fn) => {
+          fn.callMethod('_root', 'play', []).pop();
+        });
+      })
+      .toByteArray();
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, menuDoAction);
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 3: "game" — REPLACES Depth 1 with GameArena(3), removes playBtn(2), stop(); game_started = 1;
+    const pLbl3 = new BitWriter(); pLbl3.writeString('game');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, pLbl3.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(1));
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(2));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3 }));
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder()
+      .stop()
+      .setVar('game_started', (b) => b.pushInt(1))
+      .toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 30, 3, tagWriter.toByteArray(), 7);
+    const result = await transpileSwfToAst(swfBinary, 'preloader-game');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`preloader-game transpilation failed: ${result.error}`);
+    } else {
+      try {
+        parseSExpr(result.astSource);
+      } catch (e: any) {
+        errors.push(`preloader-game AST S-expression parse error: ${e.message}`);
+      }
+      if (!result.svgMarkup.includes('opacity="0" pointer-events="all"')) {
+        errors.push('HitTest-only button state record did not emit invisible clickable SVG layer');
+      }
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      if (!isAstBytecode(rt.astbBytes)) errors.push('preloader-game .astb binary missing ASTB magic header');
+      const initialNodes = rt.getNodeCount();
+
+      // Tick 1: Preloader sprite detects getBytesLoaded() >= getBytesTotal() & _framesloaded >= _totalframes -> jumps to Frame 2 ("menu")
+      rt.tick(1);
+      if (rt.engine.vars.swf_frame !== 2) {
+        errors.push(`Expected preloader to auto-advance from Frame 1 to Frame 2 ("menu"), got swf_frame=${rt.engine.vars.swf_frame}`);
+      }
+      // Tick 2: Enters Frame 2 -> Frame 2 stop() pauses cleanly, Depth 1 swaps Loading -> Menu, playBtn becomes visible
+      rt.tick(1);
+      if (rt.engine.vars.swf_frame !== 2 || rt.engine.vars.swf_playing !== 0) {
+        errors.push(`Expected clean pause on Frame 2 ("menu"), got frame=${rt.engine.vars.swf_frame}, playing=${rt.engine.vars.swf_playing}`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display') !== 'none') {
+        errors.push(`Expected Depth 1 Loading screen (#swf-place-1-c1) hidden on Frame 2, got "${rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display')}"`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display') !== 'inline') {
+        errors.push(`Expected Depth 1 Menu screen (#swf-place-1-c2) visible on Frame 2, got "${rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display')}"`);
+      }
+      if (rt.engine.vars.playBtn_visible !== 1) {
+        errors.push(`Expected named playBtn_visible=1 on Frame 2, got ${rt.engine.vars.playBtn_visible}`);
+      }
+
+      // Remain paused calmly on Frame 2 across idle ticks
+      rt.tick(5);
+      if (rt.engine.vars.swf_frame !== 2) {
+        errors.push(`Expected SWF to remain paused on Frame 2 ("menu") until Play click, got frame=${rt.engine.vars.swf_frame}`);
+      }
+
+      // Click playBtn (ActionDefineFunction onRelease -> _root.play()) -> must advance to Frame 3 ("game") without re-trapping on Frame 2's stop()
+      const playHits = rt.clickButton('swf-inst-playBtn');
+      if (playHits < 1) errors.push('ActionDefineFunction playBtn.onRelease click handler not registered on #swf-inst-playBtn');
+      rt.tick(2);
+      if (rt.engine.vars.swf_frame !== 3) {
+        errors.push(`Expected playBtn.onRelease -> _root.play() to advance to Frame 3 ("game"), got frame=${rt.engine.vars.swf_frame}`);
+      }
+      if (rt.engine.vars.game_started !== 1) {
+        errors.push(`Expected Frame 3 DoAction game_started=1, got ${rt.engine.vars.game_started}`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display') !== 'none') {
+        errors.push(`Expected Depth 1 Menu (#swf-place-1-c2) hidden on Frame 3, got "${rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display')}"`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c3')?.getAttribute('display') !== 'inline') {
+        errors.push(`Expected Depth 1 Game Arena (#swf-place-1-c3) visible on Frame 3, got "${rt.mockNodes.get('swf-place-1-c3')?.getAttribute('display')}"`);
+      }
+      if (rt.engine.vars.playBtn_visible !== 0) {
+        errors.push(`Expected playBtn_visible=0 after leaving Frame 2, got ${rt.engine.vars.playBtn_visible}`);
+      }
+
+      // Zero-GC / zero DOM allocation check over 120 frames
+      rt.tick(120);
+      if (rt.getNodeCount() !== initialNodes || rt.getPostMountDomAllocs() !== 0) {
+        errors.push(`Zero-GC DOM invariant violated: nodes ${initialNodes}->${rt.getNodeCount()}, postMountDomAllocs=${rt.getPostMountDomAllocs()}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 14: Flash Preloader (getBytesLoaded/_framesloaded, Depth-1 Char Swap, ActionDefineFunction onRelease & HitTest)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified preloader auto-leaves Frame 1 to Frame 2 ("menu"), swaps Depth-1 graphics cleanly, pauses without re-trapping on stop(), and advances to Frame 3 ("game") on playBtn.onRelease with 0 DOM allocations.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 15: Stuck-Preloader Auto-Recovery (Dead-End Frame-1 stop() -> Auto-Starts on Frame 2 "menu")
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 640, 480, [51, 65, 85, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 640, 480, [37, 99, 235, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 640, 480, [16, 185, 129, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 120, 40, [245, 158, 11, 255], 3));
+
+    // DefineButton2 30 (placed on Frame 2 ONLY): goes to Frame 3 ("play")
+    const goPlayAct = new Avm1Builder()
+      .callFunction('gotoAndStop', [(b) => b.pushInt(3)])
+      .pop()
+      .toByteArray();
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      30,
+      [{ states: 0x0F, characterId: 4, depth: 1, matrix: { txPx: 260, tyPx: 220 } }],
+      [{ condFlags: 0x0008, actions: goPlayAct }]
+    ));
+
+    // Frame 1: "preloader" — dead-end stop() with NO Frame-1 exit script or button
+    const sLbl1 = new BitWriter(); sLbl1.writeString('preloader');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, sLbl1.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1 }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: "menu" — Menu screen + Start button + stop()
+    const sLbl2 = new BitWriter(); sLbl2.writeString('menu');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, sLbl2.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(1));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2 }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 30 }));
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 3: "play" — Active game screen + stop()
+    const sLbl3 = new BitWriter(); sLbl3.writeString('play');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, sLbl3.toByteArray());
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(1));
+    writeTag(tagWriter, 28, buildRemoveObject2Tag(2));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3 }));
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBinary = assembleFwsSwf(640, 480, 30, 3, tagWriter.toByteArray(), 9);
+    const result = await transpileSwfToAst(swfBinary, 'stuck-preloader-recovery');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`stuck-preloader-recovery transpilation failed: ${result.error}`);
+    } else {
+      try {
+        parseSExpr(result.astSource);
+      } catch (e: any) {
+        errors.push(`stuck-preloader-recovery AST S-expression parse error: ${e.message}`);
+      }
+      if (!result.astSource.includes('(:slider :var "swf_frame"')) {
+        errors.push('Expected declarative SWF Frame :slider input control in .ast');
+      }
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      if (rt.engine.vars.swf_frame !== 2) {
+        errors.push(`Expected stuck-preloader recovery to start on Frame 2 ("menu"), got swf_frame=${rt.engine.vars.swf_frame}`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c1')?.getAttribute('display') !== 'none') {
+        errors.push('Expected dead-end Frame 1 loading screen to be hidden immediately on recovery');
+      }
+      if (rt.mockNodes.get('swf-place-1-c2')?.getAttribute('display') !== 'inline') {
+        errors.push('Expected Frame 2 menu screen to be visible immediately on recovery');
+      }
+
+      // Clicking Frame 2's button transitions cleanly to Frame 3 ("play")
+      rt.clickButton('swf-btn-30');
+      rt.tick(2);
+      if (rt.engine.vars.swf_frame !== 3) {
+        errors.push(`Expected click on #swf-btn-30 to jump to Frame 3 ("play"), got swf_frame=${rt.engine.vars.swf_frame}`);
+      }
+      if (rt.mockNodes.get('swf-place-1-c3')?.getAttribute('display') !== 'inline') {
+        errors.push('Expected Frame 3 game screen to be visible after clicking Start button');
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 15: Stuck-Preloader Auto-Recovery & Declarative SWF Frame Slider',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified dead-end Frame-1 preloader auto-recovers to Frame 2 ("menu"), exposes SWF Frame slider, and transitions cleanly to Frame 3 on button click.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // Summary Presentation
   // --------------------------------------------------------------------------
   console.log('RESULTS BREAKDOWN:\n');

@@ -990,6 +990,8 @@ export interface SwfActionRecord {
   setVariables?: { name: string; value: any }[];
   branches?: { condition: string; target: string | number }[];
   statements?: Avm1LiftedStatement[];
+  enterFrameStatements?: Avm1LiftedStatement[];
+  eventHandlers?: { target: string; event: string; statements: Avm1LiftedStatement[] }[];
   usedKeys?: SwfKeyBindingSpec[];
   referencedProps?: Set<string>;
   poolRequests?: { sourceClip: string; poolBase: string }[];
@@ -1061,6 +1063,7 @@ const FLASH_PROP_INDEX_MAP: Record<number, string> = {
   8: '_width',
   9: '_height',
   10: '_rotation',
+  12: '_framesloaded',
 };
 
 const FLASH_PROP_SUFFIX_MAP: Record<string, string> = {
@@ -1073,6 +1076,7 @@ const FLASH_PROP_SUFFIX_MAP: Record<string, string> = {
   _visible: 'visible',
   _currentframe: 'frame',
   _totalframes: 'totalframes',
+  _framesloaded: 'framesloaded',
   _width: 'width',
   _height: 'height',
 };
@@ -1125,7 +1129,7 @@ function mapSwfButtonKeyCode(btnKeyCode: number): SwfKeyBindingSpec {
 }
 
 interface Avm1StackVal {
-  kind: 'num' | 'str' | 'bool' | 'var' | 'member' | 'sexpr' | 'null';
+  kind: 'num' | 'str' | 'bool' | 'var' | 'member' | 'sexpr' | 'null' | 'func';
   numVal?: number;
   strVal?: string;
   boolVal?: boolean;
@@ -1133,6 +1137,9 @@ interface Avm1StackVal {
   obj?: Avm1StackVal;
   prop?: string;
   code?: string;
+  bodyStartIdx?: number;
+  bodyEndIdx?: number;
+  funcName?: string;
 }
 
 interface Avm1DecodedIns {
@@ -1161,7 +1168,7 @@ function resolvePropVarName(targetPrefix: string, rawProp: string): string | nul
   const lower = rawProp.toLowerCase();
   const suffix = FLASH_PROP_SUFFIX_MAP[lower];
   if (!suffix) return null;
-  if (!targetPrefix || targetPrefix === '_root' || targetPrefix === 'root') {
+  if (!targetPrefix || targetPrefix === '__root__' || targetPrefix === '_root' || targetPrefix === 'root' || targetPrefix === '_level0' || targetPrefix === '_parent' || targetPrefix === '/') {
     return `swf_${suffix}`;
   }
   return `${sanitizeAstIdent(targetPrefix)}_${suffix}`;
@@ -1170,11 +1177,11 @@ function resolvePropVarName(targetPrefix: string, rawProp: string): string | nul
 function resolveMemberTargetName(obj: Avm1StackVal, propName: string, defaultClipPrefix: string): string {
   const pLower = propName.toLowerCase();
   const objName = obj.kind === 'var' ? (obj.varName || '') : (obj.kind === 'str' ? (obj.strVal || '') : '');
-  const isRoot = objName === '_root' || objName === '_level0' || objName === 'root';
-  const isThis = objName === 'this' || objName === '' || objName === '_parent';
+  const isRoot = objName === '_root' || objName === '_level0' || objName === 'root' || objName === '_parent' || objName === '/' || objName === '../';
+  const isThis = objName === 'this' || objName === '';
 
   if (FLASH_PROP_SUFFIX_MAP[pLower]) {
-    const clipPrefix = isThis ? defaultClipPrefix : (isRoot ? '' : objName);
+    const clipPrefix = isThis ? defaultClipPrefix : (isRoot ? '__root__' : objName);
     return resolvePropVarName(clipPrefix, pLower) || sanitizeAstIdent(propName);
   }
   if (isRoot || isThis) {
@@ -1232,6 +1239,44 @@ function avm1ValToRawLiteral(val: Avm1StackVal | undefined): any {
 }
 
 /**
+ * Skips Flash 8+ SurfaceFilterList cleanly without bitstream drift (used by DefineButton2 and PlaceObject3).
+ */
+function skipSwfFilterList(reader: BitReader, tagEndOffset: number): void {
+  if (reader.offset >= tagEndOffset) return;
+  const count = reader.readUI8();
+  for (let i = 0; i < count && reader.offset < tagEndOffset; i++) {
+    const filterId = reader.readUI8();
+    if (filterId === 0) {
+      // DropShadowFilter: RGBA(4)+BlurX(4)+BlurY(4)+Angle(4)+Dist(4)+Strength(2)+Flags(1) = 23
+      reader.readBytes(23);
+    } else if (filterId === 1) {
+      // BlurFilter: BlurX(4)+BlurY(4)+Flags(1) = 9
+      reader.readBytes(9);
+    } else if (filterId === 2) {
+      // GlowFilter: RGBA(4)+BlurX(4)+BlurY(4)+Strength(2)+Flags(1) = 15
+      reader.readBytes(15);
+    } else if (filterId === 3) {
+      // BevelFilter: RGBA(4)+RGBA(4)+BlurX(4)+BlurY(4)+Angle(4)+Dist(4)+Strength(2)+Flags(1) = 27
+      reader.readBytes(27);
+    } else if (filterId === 4 || filterId === 7) {
+      // GradientGlowFilter / GradientBevelFilter: NumColors(1) + colors(N*4) + ratios(N) + 19 bytes
+      const numColors = reader.readUI8();
+      reader.readBytes(numColors * 5 + 19);
+    } else if (filterId === 5) {
+      // ConvolutionFilter: MatrixX(1)+MatrixY(1)+Divisor(4)+Bias(4)+Matrix(X*Y*4)+DefaultColor(4)+Flags(1)
+      const mx = reader.readUI8();
+      const my = reader.readUI8();
+      reader.readBytes(8 + mx * my * 4 + 5);
+    } else if (filterId === 6) {
+      // ColorMatrixFilter: 20 float32 = 80 bytes
+      reader.readBytes(80);
+    } else {
+      break;
+    }
+  }
+}
+
+/**
  * Full AVM1 (ActionScript 1.0 / 2.0) bytecode lifter for DoAction (Tag 12), DoInitAction (Tag 59),
  * PlaceObject2 ClipActions, and DefineButton / DefineButton2 actions.
  */
@@ -1241,10 +1286,12 @@ function parseDoAction(
   currentFrame: number,
   context: {
     clipPrefix?: string;
+    fileLength?: number;
     instanceHalfSizes?: Map<string, { hw: number; hh: number }>;
   } = {}
 ): SwfActionRecord {
   const defaultClipPrefix = context.clipPrefix || '';
+  const loadedByteCount = Math.max(1024, context.fileLength || 4096);
   const record: SwfActionRecord = {
     frame: currentFrame,
     gotoFrames: [],
@@ -1252,12 +1299,14 @@ function parseDoAction(
     setVariables: [],
     branches: [],
     statements: [],
+    enterFrameStatements: [],
+    eventHandlers: [],
     usedKeys: [],
     referencedProps: new Set<string>(),
     poolRequests: [],
   };
 
-  // Pass 1: Decode instruction stream with exact byte offsets for ActionIf / ActionJump resolution
+  // Pass 1: Decode instruction stream with exact byte offsets for ActionIf / ActionJump / ActionDefineFunction resolution
   const instrs: Avm1DecodedIns[] = [];
   const offsetToIdx = new Map<number, number>();
   while (reader.offset < tagEndOffset) {
@@ -1276,6 +1325,7 @@ function parseDoAction(
   }
 
   const constantPool: string[] = [];
+  const definedFunctions = new Map<string, { startIdx: number; endIdx: number }>();
   const seenKeys = new Map<number, SwfKeyBindingSpec>();
   const registerKey = (kc: number): SwfKeyBindingSpec => {
     const existing = seenKeys.get(kc);
@@ -1292,28 +1342,57 @@ function parseDoAction(
     return found || { hw: 20, hh: 20 };
   };
 
-  const resolveClipNameFromVal = (val: Avm1StackVal | undefined): string => {
-    if (!val) return defaultClipPrefix;
+  const isRootTargetName = (raw: string): boolean => {
+    const s = raw.trim();
+    return s === '_root' || s === '_level0' || s === 'root' || s === '/' || s === '../' || s === '_parent';
+  };
+
+  const resolveClipNameFromVal = (val: Avm1StackVal | undefined, curTarget: string): string => {
+    if (!val) return curTarget;
     if (val.kind === 'str') {
       const s = (val.strVal || '').trim();
-      if (!s || s === 'this') return defaultClipPrefix;
+      if (!s || s === 'this') return curTarget;
+      if (isRootTargetName(s)) return '__root__';
       return sanitizeAstIdent(s.replace(/^_root\.|^\/+/, ''));
     }
     if (val.kind === 'var') {
-      const v = val.varName || '';
-      if (!v || v === 'this') return defaultClipPrefix;
-      if (v === '_root' || v === '_level0') return '';
+      const v = (val.varName || '').trim();
+      if (!v || v === 'this') return curTarget;
+      if (isRootTargetName(v)) return '__root__';
       return sanitizeAstIdent(v);
     }
     if (val.kind === 'member' && val.prop) {
       return sanitizeAstIdent(val.prop);
     }
-    return defaultClipPrefix;
+    return curTarget;
   };
 
+  const resolveByteOffsetToIdx = (targetOffset: number, fallbackIdx: number): number => {
+    const direct = offsetToIdx.get(targetOffset);
+    if (direct !== undefined) return direct;
+    const found = instrs.findIndex((x) => x.offset >= targetOffset);
+    return found === -1 ? fallbackIdx : found;
+  };
+
+  let callInlineDepth = 0;
+
   // Pass 2: Structured control-flow + symbolic stack evaluation
-  const evalRange = (startIdx: number, endIdx: number, activeGuard: string | undefined, stack: Avm1StackVal[]) => {
+  const evalRange = (
+    startIdx: number,
+    endIdx: number,
+    activeGuard: string | undefined,
+    stack: Avm1StackVal[],
+    outStmts: Avm1LiftedStatement[] = record.statements!,
+    initialTargetPrefix: string = defaultClipPrefix,
+    registers: Map<number, Avm1StackVal> = new Map()
+  ) => {
     let i = startIdx;
+    let curTarget = initialTargetPrefix;
+
+    const pushStmt = (st: Avm1LiftedStatement) => {
+      outStmts.push(st);
+    };
+
     while (i < endIdx && i < instrs.length) {
       const ins = instrs[i];
       const code = ins.code;
@@ -1321,29 +1400,47 @@ function parseDoAction(
 
       if (code === 0x07) {
         // ActionStop
-        record.stops = true;
-        record.statements!.push({ kind: 'stop', targetPrefix: defaultClipPrefix, when: activeGuard });
+        if (!activeGuard && outStmts === record.statements) record.stops = true;
+        pushStmt({ kind: 'stop', targetPrefix: curTarget || undefined, when: activeGuard });
       } else if (code === 0x06) {
         // ActionPlay
-        record.plays = true;
-        record.statements!.push({ kind: 'play', targetPrefix: defaultClipPrefix, when: activeGuard });
+        if (outStmts === record.statements) record.plays = true;
+        pushStmt({ kind: 'play', targetPrefix: curTarget || undefined, when: activeGuard });
       } else if (code === 0x04) {
         // ActionNextFrame
-        record.statements!.push({ kind: 'nextFrame', targetPrefix: defaultClipPrefix, when: activeGuard });
+        pushStmt({ kind: 'nextFrame', targetPrefix: curTarget || undefined, when: activeGuard });
       } else if (code === 0x05) {
         // ActionPreviousFrame
-        record.statements!.push({ kind: 'prevFrame', targetPrefix: defaultClipPrefix, when: activeGuard });
+        pushStmt({ kind: 'prevFrame', targetPrefix: curTarget || undefined, when: activeGuard });
+      } else if (code === 0x8A) {
+        // ActionWaitForFrame (ifFrameLoaded): entire local SWF is already 100% loaded — never skip!
+      } else if (code === 0x8D) {
+        // ActionWaitForFrame2: pop frame expression; entire local SWF is already 100% loaded — never skip!
+        stack.pop();
+      } else if (code === 0x8B && pReader) {
+        // ActionSetTarget (tellTarget)
+        const targetStr = pReader.readString().trim();
+        if (!targetStr) curTarget = defaultClipPrefix;
+        else if (isRootTargetName(targetStr)) curTarget = '__root__';
+        else curTarget = sanitizeAstIdent(targetStr.replace(/^\/+|^_root\./, ''));
+      } else if (code === 0x20) {
+        // ActionSetTarget2
+        const targetVal = stack.pop();
+        const rawT = targetVal?.kind === 'str' ? (targetVal.strVal || '').trim() : (targetVal?.varName || '').trim();
+        if (!rawT) curTarget = defaultClipPrefix;
+        else if (isRootTargetName(rawT)) curTarget = '__root__';
+        else curTarget = sanitizeAstIdent(rawT.replace(/^\/+|^_root\./, ''));
       } else if (code === 0x81 && pReader) {
         // ActionGotoFrame (0-based in SWF -> 1-based frame)
         const frameNum = pReader.readUI16() + 1;
         record.gotoFrames!.push(frameNum);
-        record.statements!.push({ kind: 'gotoFrame', targetPrefix: defaultClipPrefix, frame: frameNum, play: false, when: activeGuard });
+        pushStmt({ kind: 'gotoFrame', targetPrefix: curTarget || undefined, frame: frameNum, play: false, when: activeGuard });
       } else if (code === 0x8C && pReader) {
         // ActionGoToLabel (spec 0x8C)
         const lbl = pReader.readString();
         if (lbl) {
           record.gotoLabels!.push(lbl);
-          record.statements!.push({ kind: 'gotoLabel', targetPrefix: defaultClipPrefix, label: lbl, play: false, when: activeGuard });
+          pushStmt({ kind: 'gotoLabel', targetPrefix: curTarget || undefined, label: lbl, play: false, when: activeGuard });
         }
       } else if (code === 0x9F && pReader) {
         // ActionGotoFrame2 (spec 0x9F) OR legacy null-terminated label string (Sim 7 compatibility)
@@ -1355,7 +1452,7 @@ function parseDoAction(
           const lbl = pReader.readString();
           if (lbl) {
             record.gotoLabels!.push(lbl);
-            record.statements!.push({ kind: 'gotoLabel', targetPrefix: defaultClipPrefix, label: lbl, play: true, when: activeGuard });
+            pushStmt({ kind: 'gotoLabel', targetPrefix: curTarget || undefined, label: lbl, play: true, when: activeGuard });
           }
         } else {
           const flags = pReader.readUI8();
@@ -1365,11 +1462,11 @@ function parseDoAction(
           const targetVal = stack.pop();
           if (targetVal?.kind === 'str' && targetVal.strVal) {
             record.gotoLabels!.push(targetVal.strVal);
-            record.statements!.push({ kind: 'gotoLabel', targetPrefix: defaultClipPrefix, label: targetVal.strVal, play: playFlag, when: activeGuard });
+            pushStmt({ kind: 'gotoLabel', targetPrefix: curTarget || undefined, label: targetVal.strVal, play: playFlag, when: activeGuard });
           } else if (targetVal?.kind === 'num') {
             const frameNum = Math.max(1, Math.round((targetVal.numVal || 1) + sceneBias));
             record.gotoFrames!.push(frameNum);
-            record.statements!.push({ kind: 'gotoFrame', targetPrefix: defaultClipPrefix, frame: frameNum, play: playFlag, when: activeGuard });
+            pushStmt({ kind: 'gotoFrame', targetPrefix: curTarget || undefined, frame: frameNum, play: playFlag, when: activeGuard });
           }
         }
       } else if (code === 0x88 && pReader) {
@@ -1378,6 +1475,12 @@ function parseDoAction(
         constantPool.length = 0;
         for (let c = 0; c < count && pReader.offset < ins.payload.length; c++) {
           constantPool.push(pReader.readString());
+        }
+      } else if (code === 0x87 && pReader) {
+        // ActionStoreRegister: peek top of stack and store into symbolic register (does not pop)
+        const regNum = pReader.readUI8();
+        if (stack.length > 0) {
+          registers.set(regNum, { ...stack[stack.length - 1] });
         }
       } else if (code === 0x96 && pReader) {
         // ActionPush (types 0..9)
@@ -1391,7 +1494,11 @@ function parseDoAction(
             stack.push({ kind: 'null' });
           } else if (pType === 4) {
             const regNum = pReader.readUI8();
-            stack.push({ kind: 'var', varName: `reg_${regNum}` });
+            if (registers.has(regNum)) {
+              stack.push({ ...registers.get(regNum)! });
+            } else {
+              stack.push({ kind: 'var', varName: `reg_${regNum}` });
+            }
           } else if (pType === 5) {
             stack.push({ kind: 'bool', boolVal: pReader.readUI8() !== 0 });
           } else if (pType === 6) {
@@ -1408,6 +1515,31 @@ function parseDoAction(
             break;
           }
         }
+      } else if ((code === 0x9B && ins.payload.length >= 4 && pReader) || (code === 0x8E && pReader)) {
+        // ActionDefineFunction (0x9B) / ActionDefineFunction2 (0x8E)
+        const funcName = pReader.readString();
+        const numParams = pReader.readUI16();
+        if (code === 0x8E) {
+          pReader.readUI8(); // RegisterCount
+          pReader.readUI16(); // Flags
+          for (let p = 0; p < numParams && pReader.offset < ins.payload.length; p++) {
+            pReader.readUI8(); // Register
+            pReader.readString(); // ParamName
+          }
+        } else {
+          for (let p = 0; p < numParams && pReader.offset < ins.payload.length; p++) {
+            pReader.readString(); // ParamName
+          }
+        }
+        const codeSize = pReader.readUI16();
+        const bodyEndIdx = Math.min(endIdx, resolveByteOffsetToIdx(ins.endOffset + codeSize, endIdx));
+        if (funcName) {
+          definedFunctions.set(funcName, { startIdx: i + 1, endIdx: bodyEndIdx });
+        } else {
+          stack.push({ kind: 'func', bodyStartIdx: i + 1, bodyEndIdx, funcName });
+        }
+        i = Math.max(i + 1, bodyEndIdx);
+        continue;
       } else if (code === 0x17) {
         // ActionPop
         stack.pop();
@@ -1424,20 +1556,33 @@ function parseDoAction(
         const val = stack.pop();
         const nameVal = stack.pop();
         const rawName = nameVal?.kind === 'str' ? (nameVal.strVal || '') : (nameVal?.varName || '');
-        if (rawName) {
+        if (rawName && val?.kind === 'func' && val.bodyStartIdx !== undefined && val.bodyEndIdx !== undefined) {
+          const lowerFn = rawName.toLowerCase();
+          if (lowerFn === 'onenterframe') {
+            evalRange(val.bodyStartIdx, val.bodyEndIdx, undefined, [], record.enterFrameStatements!, curTarget, new Map());
+          } else if (lowerFn === 'onrelease' || lowerFn === 'onpress' || lowerFn === 'onreleaseoutside' || lowerFn === 'onmousedown') {
+            const lifted: Avm1LiftedStatement[] = [];
+            evalRange(val.bodyStartIdx, val.bodyEndIdx, undefined, [], lifted, curTarget, new Map());
+            if (lifted.length > 0) {
+              record.eventHandlers!.push({ target: curTarget || '__stage__', event: lowerFn, statements: lifted });
+            }
+          } else {
+            definedFunctions.set(rawName, { startIdx: val.bodyStartIdx, endIdx: val.bodyEndIdx });
+          }
+        } else if (rawName) {
           const propVar = FLASH_PROP_SUFFIX_MAP[rawName.toLowerCase()]
-            ? resolvePropVarName(defaultClipPrefix, rawName.toLowerCase())
+            ? resolvePropVarName(curTarget, rawName.toLowerCase())
             : null;
           const astVar = propVar || sanitizeAstIdent(rawName);
           if (propVar) record.referencedProps!.add(propVar);
-          const expr = avm1ValToSexpr(val, defaultClipPrefix, record.referencedProps!);
+          const expr = avm1ValToSexpr(val, curTarget, record.referencedProps!);
           const rawLit = avm1ValToRawLiteral(val);
-          if (!activeGuard) {
+          if (!activeGuard && outStmts === record.statements) {
             record.setVariables!.push({ name: astVar, value: rawLit !== undefined ? rawLit : 0 });
           } else if (!record.setVariables!.some((sv) => sv.name === astVar)) {
             record.setVariables!.push({ name: astVar, value: 0 });
           }
-          record.statements!.push({
+          pushStmt({
             kind: 'setVar',
             varName: astVar,
             expr,
@@ -1467,15 +1612,31 @@ function parseDoAction(
         const memberVal = stack.pop();
         const objVal = stack.pop() || { kind: 'var', varName: 'this' };
         const propName = memberVal?.kind === 'str' ? (memberVal.strVal || '') : (memberVal?.varName || '');
-        if (propName) {
-          const astVar = resolveMemberTargetName(objVal, propName, defaultClipPrefix);
+        if (propName && val?.kind === 'func' && val.bodyStartIdx !== undefined && val.bodyEndIdx !== undefined) {
+          const lowerProp = propName.toLowerCase();
+          const targetClip = resolveClipNameFromVal(objVal, curTarget);
+          const bodyTarget = targetClip === '__root__' ? '__root__' : (targetClip || curTarget);
+          if (lowerProp === 'onenterframe') {
+            evalRange(val.bodyStartIdx, val.bodyEndIdx, undefined, [], record.enterFrameStatements!, bodyTarget, new Map());
+          } else if (lowerProp === 'onrelease' || lowerProp === 'onpress' || lowerProp === 'onreleaseoutside' || lowerProp === 'onmousedown') {
+            const lifted: Avm1LiftedStatement[] = [];
+            evalRange(val.bodyStartIdx, val.bodyEndIdx, undefined, [], lifted, curTarget, new Map());
+            if (lifted.length > 0) {
+              const handlerTarget = (targetClip && targetClip !== '__root__') ? targetClip : '__stage__';
+              record.eventHandlers!.push({ target: handlerTarget, event: lowerProp, statements: lifted });
+            }
+          } else {
+            definedFunctions.set(propName, { startIdx: val.bodyStartIdx, endIdx: val.bodyEndIdx });
+          }
+        } else if (propName) {
+          const astVar = resolveMemberTargetName(objVal, propName, curTarget);
           record.referencedProps!.add(astVar);
-          const expr = avm1ValToSexpr(val, defaultClipPrefix, record.referencedProps!);
+          const expr = avm1ValToSexpr(val, curTarget, record.referencedProps!);
           const rawLit = avm1ValToRawLiteral(val);
-          if (!activeGuard && !record.setVariables!.some((sv) => sv.name === astVar)) {
+          if (!activeGuard && outStmts === record.statements && !record.setVariables!.some((sv) => sv.name === astVar)) {
             record.setVariables!.push({ name: astVar, value: rawLit !== undefined ? rawLit : 0 });
           }
-          record.statements!.push({
+          pushStmt({
             kind: 'setVar',
             varName: astVar,
             expr,
@@ -1489,7 +1650,7 @@ function parseDoAction(
         const targetVal = stack.pop();
         const idxNum = idxVal?.kind === 'num' ? Math.round(idxVal.numVal || 0) : parseInt(String(idxVal?.strVal || '0'), 10);
         const propName = FLASH_PROP_INDEX_MAP[idxNum] || '_x';
-        const clipPrefix = resolveClipNameFromVal(targetVal);
+        const clipPrefix = resolveClipNameFromVal(targetVal, curTarget);
         const mapped = resolvePropVarName(clipPrefix, propName) || `${sanitizeAstIdent(clipPrefix)}_x`;
         record.referencedProps!.add(mapped);
         stack.push({ kind: 'sexpr', code: mapped });
@@ -1500,11 +1661,11 @@ function parseDoAction(
         const targetVal = stack.pop();
         const idxNum = idxVal?.kind === 'num' ? Math.round(idxVal.numVal || 0) : parseInt(String(idxVal?.strVal || '0'), 10);
         const propName = FLASH_PROP_INDEX_MAP[idxNum] || '_x';
-        const clipPrefix = resolveClipNameFromVal(targetVal);
+        const clipPrefix = resolveClipNameFromVal(targetVal, curTarget);
         const mapped = resolvePropVarName(clipPrefix, propName) || `${sanitizeAstIdent(clipPrefix)}_x`;
         record.referencedProps!.add(mapped);
-        const expr = avm1ValToSexpr(val, defaultClipPrefix, record.referencedProps!);
-        record.statements!.push({
+        const expr = avm1ValToSexpr(val, curTarget, record.referencedProps!);
+        pushStmt({
           kind: 'setVar',
           varName: mapped,
           expr,
@@ -1517,23 +1678,24 @@ function parseDoAction(
         code === 0x0C || // Multiply
         code === 0x0D || // Divide
         code === 0x3F || // Modulo
-        code === 0x0E || code === 0x49 || code === 0x13 || // Equals / Equals2 / StringEquals
+        code === 0x0E || code === 0x49 || code === 0x13 || code === 0x66 || // Equals / Equals2 / StringEquals / StrictEquals
         code === 0x0F || code === 0x48 || // Less / Less2
         code === 0x67 || // Greater
         code === 0x10 || // And
         code === 0x11 || // Or
-        code === 0x60 || code === 0x61 || code === 0x62 // BitAnd / BitOr / BitXor
+        code === 0x60 || code === 0x61 || code === 0x62 || // BitAnd / BitOr / BitXor
+        code === 0x21 // StringAdd
       ) {
         const rhs = stack.pop();
         const lhs = stack.pop();
-        const a = avm1ValToSexpr(lhs, defaultClipPrefix, record.referencedProps!);
-        const b = avm1ValToSexpr(rhs, defaultClipPrefix, record.referencedProps!);
+        const a = avm1ValToSexpr(lhs, curTarget, record.referencedProps!);
+        const b = avm1ValToSexpr(rhs, curTarget, record.referencedProps!);
         let op = '+';
         if (code === 0x0B) op = '-';
         else if (code === 0x0C) op = '*';
         else if (code === 0x0D) op = '/';
         else if (code === 0x3F) op = '%';
-        else if (code === 0x0E || code === 0x49 || code === 0x13) op = '=';
+        else if (code === 0x0E || code === 0x49 || code === 0x13 || code === 0x66) op = '=';
         else if (code === 0x0F || code === 0x48) op = '<';
         else if (code === 0x67) op = '>';
         else if (code === 0x10) op = 'and';
@@ -1541,38 +1703,46 @@ function parseDoAction(
         else if (code === 0x60) op = 'bitand';
         else if (code === 0x61) op = 'bitor';
         else if (code === 0x62) op = 'bitxor';
+        else if (code === 0x21) op = 'str';
         stack.push({ kind: 'sexpr', code: `(${op} ${a} ${b})` });
       } else if (code === 0x12) {
         // ActionNot
         const operand = stack.pop();
-        const a = avm1ValToSexpr(operand, defaultClipPrefix, record.referencedProps!);
+        const a = avm1ValToSexpr(operand, curTarget, record.referencedProps!);
         stack.push({ kind: 'sexpr', code: negateAvm1Cond(a) });
+      } else if (code === 0x18) {
+        // ActionToInteger
+        const operand = stack.pop();
+        const a = avm1ValToSexpr(operand, curTarget, record.referencedProps!);
+        stack.push({ kind: 'sexpr', code: `(floor ${a})` });
+      } else if (code === 0x4A) {
+        // ActionToNumber (pass-through on symbolic stack)
       } else if (code === 0x50 || code === 0x51) {
         // ActionIncrement (0x50) / ActionDecrement (0x51)
         const operand = stack.pop();
-        const a = avm1ValToSexpr(operand, defaultClipPrefix, record.referencedProps!);
+        const a = avm1ValToSexpr(operand, curTarget, record.referencedProps!);
         stack.push({ kind: 'sexpr', code: `(${code === 0x50 ? '+' : '-'} ${a} 1)` });
       } else if (code === 0x30) {
         // ActionRandomNumber: pop max, push random(max)
         const maxVal = stack.pop();
-        const mExpr = avm1ValToSexpr(maxVal, defaultClipPrefix, record.referencedProps!);
+        const mExpr = avm1ValToSexpr(maxVal, curTarget, record.referencedProps!);
         stack.push({ kind: 'sexpr', code: `(random ${mExpr})` });
       } else if (code === 0x24) {
         // ActionDuplicateClip (0x24): pop depth, pop target, pop source
         stack.pop(); // depth
         const targetVal = stack.pop();
         const sourceVal = stack.pop();
-        const srcClip = resolveClipNameFromVal(sourceVal);
-        const poolBase = resolveClipNameFromVal(targetVal) || `${srcClip || 'clip'}_pool`;
+        const srcClip = resolveClipNameFromVal(sourceVal, curTarget);
+        const poolBase = resolveClipNameFromVal(targetVal, curTarget) || `${srcClip || 'clip'}_pool`;
         record.poolRequests!.push({ sourceClip: srcClip, poolBase });
-        record.statements!.push({ kind: 'spawnPool', sourceClip: srcClip, poolBase, when: activeGuard });
+        pushStmt({ kind: 'spawnPool', sourceClip: srcClip, poolBase, when: activeGuard });
       } else if (code === 0x25) {
         // ActionRemoveClip (0x25): pop target
         const targetVal = stack.pop();
-        const clipName = resolveClipNameFromVal(targetVal);
-        record.statements!.push({ kind: 'removePool', poolBase: clipName, when: activeGuard });
-      } else if (code === 0x3D || code === 0x9B) {
-        // ActionCallFunction (spec 0x3D; legacy 0x9B compat): pop funcName, pop numArgs, pop args[0..N-1]
+        const clipName = resolveClipNameFromVal(targetVal, curTarget);
+        pushStmt({ kind: 'removePool', poolBase: clipName, when: activeGuard });
+      } else if (code === 0x3D || (code === 0x9B && ins.payload.length === 0)) {
+        // ActionCallFunction (spec 0x3D; zero-length 0x9B legacy compat): pop funcName, pop numArgs, pop args[0..N-1]
         const funcVal = stack.pop();
         const numArgsVal = stack.pop();
         const funcName = funcVal?.kind === 'str' ? (funcVal.strVal || '') : (funcVal?.varName || '');
@@ -1581,7 +1751,7 @@ function parseDoAction(
         for (let a = 0; a < numArgs; a++) {
           args.push(stack.pop() || { kind: 'num', numVal: 0 });
         }
-        handleAvm1Call(funcName, undefined, args, defaultClipPrefix, activeGuard, stack);
+        handleAvm1Call(funcName, undefined, args, curTarget, activeGuard, stack, outStmts);
       } else if (code === 0x52) {
         // ActionCallMethod (spec 0x52): pop methodName, pop scriptObj, pop numArgs, pop args[0..N-1]
         const methodVal = stack.pop();
@@ -1593,14 +1763,14 @@ function parseDoAction(
         for (let a = 0; a < numArgs; a++) {
           args.push(stack.pop() || { kind: 'num', numVal: 0 });
         }
-        handleAvm1Call(methodName, objVal, args, defaultClipPrefix, activeGuard, stack);
+        handleAvm1Call(methodName, objVal, args, curTarget, activeGuard, stack, outStmts);
       } else if (code === 0x99 && pReader) {
         // ActionIf: pop cond, read signed 16-bit relative byte offset
         const branchOffset = pReader.readSI16();
         const condVal = stack.pop();
         const condStr = condVal?.kind === 'str'
           ? (condVal.strVal || 'true')
-          : avm1ValToSexpr(condVal, defaultClipPrefix, record.referencedProps!);
+          : avm1ValToSexpr(condVal, curTarget, record.referencedProps!);
         record.branches!.push({
           condition: condStr,
           target: branchOffset,
@@ -1608,12 +1778,7 @@ function parseDoAction(
 
         const targetOffset = ins.endOffset + branchOffset;
         if (branchOffset > 0) {
-          let targetIdx = offsetToIdx.get(targetOffset);
-          if (targetIdx === undefined) {
-            targetIdx = instrs.findIndex((x) => x.offset >= targetOffset);
-            if (targetIdx === -1) targetIdx = endIdx;
-          }
-          targetIdx = Math.min(endIdx, targetIdx);
+          let targetIdx = Math.min(endIdx, resolveByteOffsetToIdx(targetOffset, endIdx));
 
           // Check if instruction immediately before targetIdx is a forward ActionJump (if/else pattern)
           let elseEndIdx = targetIdx;
@@ -1623,13 +1788,8 @@ function parseDoAction(
             const jmpOff = new BitReader(jmpIns.payload, 0).readSI16();
             if (jmpOff > 0) {
               const afterElseOffset = jmpIns.endOffset + jmpOff;
-              let resolvedAfter = offsetToIdx.get(afterElseOffset);
-              if (resolvedAfter === undefined) {
-                resolvedAfter = instrs.findIndex((x) => x.offset >= afterElseOffset);
-                if (resolvedAfter === -1) resolvedAfter = endIdx;
-              }
               thenEndIdx = targetIdx - 1;
-              elseEndIdx = Math.min(endIdx, resolvedAfter);
+              elseEndIdx = Math.min(endIdx, resolveByteOffsetToIdx(afterElseOffset, endIdx));
             }
           }
 
@@ -1637,10 +1797,10 @@ function parseDoAction(
           const isExecutableCond = condVal && condVal.kind !== 'str';
           if (isExecutableCond) {
             const thenGuard = composeAvm1When(activeGuard, negateAvm1Cond(condStr));
-            evalRange(i + 1, thenEndIdx, thenGuard, [...stack]);
+            evalRange(i + 1, thenEndIdx, thenGuard, [...stack], outStmts, curTarget, new Map(registers));
             if (elseEndIdx > targetIdx) {
               const elseGuard = composeAvm1When(activeGuard, condStr);
-              evalRange(targetIdx, elseEndIdx, elseGuard, [...stack]);
+              evalRange(targetIdx, elseEndIdx, elseGuard, [...stack], outStmts, curTarget, new Map(registers));
             }
             i = elseEndIdx;
             continue;
@@ -1669,10 +1829,17 @@ function parseDoAction(
     args: Avm1StackVal[],
     clipPrefix: string,
     activeGuard: string | undefined,
-    stack: Avm1StackVal[]
+    stack: Avm1StackVal[],
+    outStmts: Avm1LiftedStatement[]
   ) => {
     const objName = objVal?.kind === 'var' ? (objVal.varName || '') : (objVal?.kind === 'str' ? (objVal.strVal || '') : '');
-    const fullTarget = objVal ? resolveClipNameFromVal(objVal) : clipPrefix;
+    const fullTarget = objVal ? resolveClipNameFromVal(objVal, clipPrefix) : clipPrefix;
+
+    // 0. Preloader byte-count queries: entire SWF binary is already 100% loaded offline in memory!
+    if (name === 'getBytesLoaded' || name === 'getBytesTotal') {
+      stack.push({ kind: 'num', numVal: loadedByteCount });
+      return;
+    }
 
     // 1. Key.isDown(keyCode)
     if ((objName === 'Key' && name === 'isDown') || name === 'Key.isDown') {
@@ -1709,9 +1876,9 @@ function parseDoAction(
 
     // 4. hitTest(otherClip) -> pure zero-GC AABB overlap check
     if (name === 'hitTest') {
-      const clipA = fullTarget || clipPrefix;
-      const clipB = resolveClipNameFromVal(args[0]);
-      if (clipA && clipB) {
+      const clipA = (fullTarget && fullTarget !== '__root__') ? fullTarget : clipPrefix;
+      const clipB = resolveClipNameFromVal(args[0], clipPrefix);
+      if (clipA && clipB && clipB !== '__root__') {
         const hsA = getHalfSize(clipA);
         const hsB = getHalfSize(clipB);
         const dxThresh = Math.max(12, Math.round(hsA.hw + hsB.hw));
@@ -1738,49 +1905,59 @@ function parseDoAction(
       const target = args[0];
       if (target?.kind === 'str' && target.strVal) {
         record.gotoLabels!.push(target.strVal);
-        record.statements!.push({ kind: 'gotoLabel', targetPrefix: fullTarget, label: target.strVal, play: playFlag, when: activeGuard });
+        outStmts.push({ kind: 'gotoLabel', targetPrefix: fullTarget || undefined, label: target.strVal, play: playFlag, when: activeGuard });
       } else if (target?.kind === 'num') {
         const frameNum = Math.max(1, Math.round(target.numVal || 1));
         record.gotoFrames!.push(frameNum);
-        record.statements!.push({ kind: 'gotoFrame', targetPrefix: fullTarget, frame: frameNum, play: playFlag, when: activeGuard });
+        outStmts.push({ kind: 'gotoFrame', targetPrefix: fullTarget || undefined, frame: frameNum, play: playFlag, when: activeGuard });
       }
       stack.push({ kind: 'null' });
       return;
     }
     if (name === 'play') {
-      record.plays = true;
-      record.statements!.push({ kind: 'play', targetPrefix: fullTarget, when: activeGuard });
+      if (outStmts === record.statements) record.plays = true;
+      outStmts.push({ kind: 'play', targetPrefix: fullTarget || undefined, when: activeGuard });
       stack.push({ kind: 'null' });
       return;
     }
     if (name === 'stop') {
-      record.stops = true;
-      record.statements!.push({ kind: 'stop', targetPrefix: fullTarget, when: activeGuard });
+      if (!activeGuard && outStmts === record.statements) record.stops = true;
+      outStmts.push({ kind: 'stop', targetPrefix: fullTarget || undefined, when: activeGuard });
       stack.push({ kind: 'null' });
       return;
     }
     if (name === 'nextFrame') {
-      record.statements!.push({ kind: 'nextFrame', targetPrefix: fullTarget, when: activeGuard });
+      outStmts.push({ kind: 'nextFrame', targetPrefix: fullTarget || undefined, when: activeGuard });
       stack.push({ kind: 'null' });
       return;
     }
     if (name === 'prevFrame') {
-      record.statements!.push({ kind: 'prevFrame', targetPrefix: fullTarget, when: activeGuard });
+      outStmts.push({ kind: 'prevFrame', targetPrefix: fullTarget || undefined, when: activeGuard });
       stack.push({ kind: 'null' });
       return;
     }
 
     // 6. duplicateMovieClip / attachMovie -> zero-GC compile-time clip pool
     if (name === 'duplicateMovieClip' || name === 'attachMovie') {
-      const srcClip = resolveClipNameFromVal(args[0]);
-      const poolBase = resolveClipNameFromVal(args[1]) || `${srcClip || 'proj'}_pool`;
+      const srcClip = resolveClipNameFromVal(args[0], clipPrefix);
+      const poolBase = resolveClipNameFromVal(args[1], clipPrefix) || `${srcClip || 'proj'}_pool`;
       record.poolRequests!.push({ sourceClip: srcClip, poolBase });
-      record.statements!.push({ kind: 'spawnPool', sourceClip: srcClip, poolBase, when: activeGuard });
+      outStmts.push({ kind: 'spawnPool', sourceClip: srcClip, poolBase, when: activeGuard });
       stack.push({ kind: 'null' });
       return;
     }
     if (name === 'removeMovieClip') {
-      record.statements!.push({ kind: 'removePool', poolBase: fullTarget, when: activeGuard });
+      outStmts.push({ kind: 'removePool', poolBase: fullTarget, when: activeGuard });
+      stack.push({ kind: 'null' });
+      return;
+    }
+
+    // 7. Inline-lift user-defined AVM1 functions (e.g. function checkLoaded() { ... })
+    const userFn = definedFunctions.get(name);
+    if (userFn && callInlineDepth < 4) {
+      callInlineDepth++;
+      evalRange(userFn.startIdx, userFn.endIdx, activeGuard, [], outStmts, fullTarget || clipPrefix, new Map());
+      callInlineDepth--;
       stack.push({ kind: 'null' });
       return;
     }
@@ -1788,7 +1965,7 @@ function parseDoAction(
     stack.push({ kind: 'num', numVal: 0 });
   };
 
-  evalRange(0, instrs.length, undefined, []);
+  evalRange(0, instrs.length, undefined, [], record.statements!, defaultClipPrefix, new Map());
   return record;
 }
 
@@ -1800,7 +1977,8 @@ function parseClipActions(
   tagEndOffset: number,
   swfVersion: number,
   currentFrame: number,
-  clipPrefix: string
+  clipPrefix: string,
+  fileLength?: number
 ): SwfClipAction[] {
   const actions: SwfClipAction[] = [];
   if (reader.offset + 4 > tagEndOffset) return actions;
@@ -1832,7 +2010,7 @@ function parseClipActions(
     if (eventFlags & 0x0080) events.push('keyUp');
     if (eventFlags & 0x20000) events.push('keyPress');
 
-    const actionRecord = parseDoAction(reader, recordEnd, currentFrame, { clipPrefix });
+    const actionRecord = parseDoAction(reader, recordEnd, currentFrame, { clipPrefix, fileLength });
     actions.push({ events, keyCode, actionRecord });
     reader.offset = recordEnd;
   }
@@ -1846,7 +2024,8 @@ function parseDefineButton(
   reader: BitReader,
   tagEndOffset: number,
   isButton2: boolean,
-  currentFrame: number
+  currentFrame: number,
+  fileLength?: number
 ): SwfButtonDefinition {
   const buttonId = reader.readUI16();
   let actionOffset = 0;
@@ -1870,11 +2049,7 @@ function parseDefineButton(
       cxform = reader.readCXForm(true);
     }
     if (isButton2 && (stateFlags & 0x10)) {
-      // HasFilterList: skip cleanly if present
-      const filterCount = reader.readUI8();
-      for (let f = 0; f < filterCount && reader.offset < tagEndOffset; f++) {
-        reader.readUI8();
-      }
+      skipSwfFilterList(reader, tagEndOffset);
     }
     if (isButton2 && (stateFlags & 0x20)) {
       reader.readUI8(); // BlendMode
@@ -1886,7 +2061,7 @@ function parseDefineButton(
   if (!isButton2) {
     // DefineButton (Tag 7): remaining bytes until EndAction are click actions
     if (reader.offset < tagEndOffset) {
-      const actionRecord = parseDoAction(reader, tagEndOffset, currentFrame);
+      const actionRecord = parseDoAction(reader, tagEndOffset, currentFrame, { fileLength });
       actions.push({
         conditionFlags: 0x0008, // OverDownToOverUp (Release)
         keyCode: 0,
@@ -1908,7 +2083,7 @@ function parseDefineButton(
       const keyCode = (condFlags >> 9) & 0x7F;
       const isClick = (condFlags & 0x000C) !== 0 || (keyCode === 0 && (condFlags & 0x01FF) !== 0);
       const isOver = (condFlags & 0x0001) !== 0;
-      const actionRecord = parseDoAction(reader, condEnd, currentFrame);
+      const actionRecord = parseDoAction(reader, condEnd, currentFrame, { fileLength });
       actions.push({
         conditionFlags: condFlags,
         keyCode,
@@ -1930,7 +2105,8 @@ function parseDefineButton(
 function parseDefineSprite(
   reader: BitReader,
   tagEndOffset: number,
-  swfVersion: number
+  swfVersion: number,
+  fileLength?: number
 ): SwfSpriteDefinition {
   const spriteId = reader.readUI16();
   const declaredFrames = Math.max(1, reader.readUI16());
@@ -1965,9 +2141,9 @@ function parseDefineSprite(
       if (lbl) labels.push({ frame: currentFrame, name: lbl });
     } else if (tagType === 12 || tagType === 59) {
       if (tagType === 59) reader.readUI16(); // DoInitAction SpriteID
-      actions.push(parseDoAction(reader, nextTagOffset, currentFrame));
+      actions.push(parseDoAction(reader, nextTagOffset, currentFrame, { fileLength }));
     } else if (tagType === 4 || tagType === 26 || tagType === 70) {
-      const placed = parsePlaceObjectTag(reader, tagType, nextTagOffset, swfVersion, currentFrame);
+      const placed = parsePlaceObjectTag(reader, tagType, nextTagOffset, swfVersion, currentFrame, fileLength);
       if (placed) {
         applyPlaceToDisplayMap(activeDisplay, placed);
         if (currentFrame > 1) sawFrameMutation = true;
@@ -2019,7 +2195,8 @@ function parsePlaceObjectTag(
   tagType: number,
   tagEndOffset: number,
   swfVersion: number,
-  currentFrame: number
+  currentFrame: number,
+  fileLength?: number
 ): ParsedPlaceTag | null {
   if (tagType === 4) {
     const characterId = reader.readUI16();
@@ -2051,7 +2228,7 @@ function parsePlaceObjectTag(
     const name = hasName ? reader.readString() : undefined;
     const clipDepth = hasClipDepth ? reader.readUI16() : undefined;
     const clipPrefix = name ? sanitizeAstIdent(name) : `depth_${depth}`;
-    const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix) : undefined;
+    const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix, fileLength) : undefined;
 
     return { depth, hasMove, characterId, matrix, cxform, ratio, name, clipDepth, clipActions };
   }
@@ -2068,6 +2245,9 @@ function parsePlaceObjectTag(
     const hasName = (flags1 & 0x20) !== 0;
     const hasClipDepth = (flags1 & 0x40) !== 0;
     const hasClipActions = (flags1 & 0x80) !== 0;
+    const hasFilterList = (flags2 & 0x01) !== 0;
+    const hasBlendMode = (flags2 & 0x02) !== 0;
+    const hasCacheAsBitmap = (flags2 & 0x04) !== 0;
     const hasClassName = (flags2 & 0x08) !== 0;
     const hasImage = (flags2 & 0x10) !== 0;
 
@@ -2080,8 +2260,11 @@ function parsePlaceObjectTag(
     const ratio = hasRatio ? reader.readUI16() : undefined;
     const name = hasName ? reader.readString() : undefined;
     const clipDepth = hasClipDepth ? reader.readUI16() : undefined;
+    if (hasFilterList) skipSwfFilterList(reader, tagEndOffset);
+    if (hasBlendMode) reader.readUI8();
+    if (hasCacheAsBitmap) reader.readUI8();
     const clipPrefix = name ? sanitizeAstIdent(name) : `depth_${depth}`;
-    const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix) : undefined;
+    const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix, fileLength) : undefined;
 
     return { depth, hasMove, characterId, matrix, cxform, ratio, name, clipDepth, clipActions };
   }
@@ -2127,6 +2310,8 @@ function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: numbe
     setVariables: [],
     branches: [],
     statements: [],
+    enterFrameStatements: [],
+    eventHandlers: [],
     usedKeys: [],
     referencedProps: new Set<string>(),
     poolRequests: [],
@@ -2156,13 +2341,6 @@ function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: numbe
         record.gotoLabels!.push(s);
       } else if (['score', 'level', 'count', 'energy', 'velocity', 'temp', 'time'].includes(s.toLowerCase())) {
         record.setVariables!.push({ name: s, value: 0 });
-      }
-    }
-
-    for (let i = 0; i < remainingBytes.length; i++) {
-      if (remainingBytes[i] === 0x12) {
-        record.stops = true;
-        break;
       }
     }
   } catch {}
@@ -2224,6 +2402,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     let currentFrame = 1;
 
+    const effectiveFileLength = Math.max(1024, fileLength || payload.length);
+
     // Parse SWF tags
     while (reader.offset < payload.length) {
       const tagCodeAndLength = reader.readUI16();
@@ -2276,20 +2456,20 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       } else if (tagType === 39) {
         // DefineSprite (Tag 39)
         try {
-          const spriteDef = parseDefineSprite(reader, nextTagOffset, version);
+          const spriteDef = parseDefineSprite(reader, nextTagOffset, version, effectiveFileLength);
           sprites.set(spriteDef.spriteId, spriteDef);
         } catch {}
       } else if (tagType === 7 || tagType === 34) {
         // DefineButton (Tag 7) / DefineButton2 (Tag 34)
         try {
-          const btnDef = parseDefineButton(reader, nextTagOffset, tagType === 34, currentFrame);
+          const btnDef = parseDefineButton(reader, nextTagOffset, tagType === 34, currentFrame, effectiveFileLength);
           buttons.set(btnDef.buttonId, btnDef);
         } catch {}
       } else if (tagType === 12 || tagType === 59) {
         // DoAction (12) / DoInitAction (59)
         try {
           if (tagType === 59) reader.readUI16(); // SpriteID
-          const act = parseDoAction(reader, nextTagOffset, currentFrame);
+          const act = parseDoAction(reader, nextTagOffset, currentFrame, { fileLength: effectiveFileLength });
           actionBlocks.push(act);
         } catch {}
       } else if (tagType === 82) {
@@ -2299,7 +2479,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         } catch {}
       } else if (tagType === 4 || tagType === 26 || tagType === 70) {
         try {
-          const placed = parsePlaceObjectTag(reader, tagType, nextTagOffset, version, currentFrame);
+          const placed = parsePlaceObjectTag(reader, tagType, nextTagOffset, version, currentFrame, effectiveFileLength);
           if (placed) {
             applyPlaceToDisplayMap(activeDisplay, placed);
             if (currentFrame > 1) sawFrameMutation = true;
@@ -2399,49 +2579,60 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const morphByCharId = new Map<number, SwfMorphShape>();
     for (const m of morphShapes) morphByCharId.set(m.shapeId, m);
 
-    // Collect all depth slots appearing on any frame of the main timeline
-    const allMainDepths = new Map<number, {
+    // Collect all (depth, characterId) visual tracks across all frames so character swaps at the same depth
+    // (e.g., Loading screen at Depth 1 on Frame 1 replaced by Menu/Game at Depth 1 on Frame 2+) render cleanly.
+    interface MainDisplayTrack {
+      key: string;
       depth: number;
+      characterId: number;
       firstFrame: number;
       firstEntry: SwfDisplayEntry;
       name?: string;
-      charIds: Set<number>;
       frameStates: Map<number, SwfDisplayEntry>;
       clipActions: SwfClipAction[];
-    }>();
+    }
+    const depthCharSets = new Map<number, Set<number>>();
+    const allMainTracks = new Map<string, MainDisplayTrack>();
 
     for (const snap of timelineFrames) {
       snap.entries.forEach((entry, depth) => {
-        let slot = allMainDepths.get(depth);
-        if (!slot) {
-          slot = {
+        if (!depthCharSets.has(depth)) depthCharSets.set(depth, new Set<number>());
+        depthCharSets.get(depth)!.add(entry.characterId);
+
+        const trackKey = `${depth}:${entry.characterId}`;
+        let track = allMainTracks.get(trackKey);
+        if (!track) {
+          track = {
+            key: trackKey,
             depth,
+            characterId: entry.characterId,
             firstFrame: snap.frame,
             firstEntry: entry,
             name: entry.name,
-            charIds: new Set<number>(),
             frameStates: new Map<number, SwfDisplayEntry>(),
             clipActions: [],
           };
-          allMainDepths.set(depth, slot);
+          allMainTracks.set(trackKey, track);
         }
-        if (entry.name && !slot.name) slot.name = entry.name;
-        slot.charIds.add(entry.characterId);
-        slot.frameStates.set(snap.frame, entry);
-        if (entry.clipActions && entry.clipActions.length > 0 && slot.clipActions.length === 0) {
-          slot.clipActions = entry.clipActions;
+        if (entry.name && !track.name) track.name = entry.name;
+        track.frameStates.set(snap.frame, entry);
+        if (entry.clipActions && entry.clipActions.length > 0 && track.clipActions.length === 0) {
+          track.clipActions = entry.clipActions;
         }
       });
     }
 
     // Determine whether this SWF has dynamic timelines, sprites, buttons, named clips, or executable AVM1
-    const hasClipActions = Array.from(allMainDepths.values()).some((d) => d.clipActions.length > 0);
-    const hasNamedInstances = Array.from(allMainDepths.values()).some((d) => Boolean(d.name));
+    const mainTrackList = Array.from(allMainTracks.values());
+    const hasClipActions = mainTrackList.some((t) => t.clipActions.length > 0);
+    const hasNamedInstances = mainTrackList.some((t) => Boolean(t.name));
     const hasExecutableMainActions = actionBlocks.some((ab) =>
       (ab.usedKeys && ab.usedKeys.length > 0) ||
       (ab.poolRequests && ab.poolRequests.length > 0) ||
       (ab.referencedProps && ab.referencedProps.size > 0) ||
-      (ab.statements || []).some((st) => st.when || st.kind === 'nextFrame' || st.kind === 'prevFrame' || st.kind === 'spawnPool')
+      (ab.enterFrameStatements && ab.enterFrameStatements.length > 0) ||
+      (ab.eventHandlers && ab.eventHandlers.length > 0) ||
+      (ab.statements || []).some((st) => st.when || st.kind === 'nextFrame' || st.kind === 'prevFrame' || st.kind === 'spawnPool' || st.kind === 'gotoFrame' || st.kind === 'gotoLabel')
     );
     const isDynamicSwf =
       sprites.size > 0 ||
@@ -2461,6 +2652,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       return m;
     };
     const mainLabelMap = buildLabelMap(labels);
+
+    // Helper: build frame-presence guard when a clip is only active on a subset of main frames
+    const buildMainPresenceGuard = (frameStates: Map<number, SwfDisplayEntry>): string | undefined => {
+      if (totalFrames <= 1 || frameStates.size >= totalFrames || frameStates.size === 0) return undefined;
+      const frames = Array.from(frameStates.keys()).sort((a, b) => a - b);
+      if (frames.length === 1) return `(= swf_frame ${frames[0]})`;
+      return `(or ${frames.map((f) => `(= swf_frame ${f})`).join(' ')})`;
+    };
 
     // Helper: render raw SVG geometry for a character ID (shape, morph, sprite, or button) with unique instance prefix
     const usedCharIds = new Set<number>();
@@ -2492,40 +2691,46 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const emitStatementToRules = (
       st: Avm1LiftedStatement,
       labelMap: Map<string, number>,
-      extraWhen?: string
+      extraWhen?: string,
+      outRules: string[] = dynamicRules
     ) => {
       const when = composeAvm1When(extraWhen, st.when);
       const whenAttr = when ? ` :when "${when}"` : '';
-      const targetPfx = st.targetPrefix ? sanitizeAstIdent(st.targetPrefix) : 'swf';
+      const targetPfx = (!st.targetPrefix || st.targetPrefix === '__root__') ? 'swf' : sanitizeAstIdent(st.targetPrefix);
       const frameVar = targetPfx === 'swf' ? 'swf_frame' : `${targetPfx}_frame`;
       const playVar = targetPfx === 'swf' ? 'swf_playing' : `${targetPfx}_playing`;
 
       if (st.kind === 'setVar' && st.varName && st.expr) {
         ensureVar(st.varName, st.rawVal !== undefined ? st.rawVal : 0);
-        dynamicRules.push(`    (:rule :var "${st.varName}"${whenAttr} :expr "${st.expr}")`);
+        outRules.push(`    (:rule :var "${st.varName}"${whenAttr} :expr "${st.expr}")`);
       } else if (st.kind === 'stop') {
         ensureVar(playVar, 1, 0, 1);
-        dynamicRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "0")`);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "0")`);
       } else if (st.kind === 'play') {
         ensureVar(playVar, 1, 0, 1);
-        dynamicRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "1")`);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "1")`);
       } else if (st.kind === 'gotoFrame' && st.frame) {
         ensureVar(frameVar, 1, 1, Math.max(totalFrames, st.frame));
         ensureVar(playVar, 1, 0, 1);
-        dynamicRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${st.frame}")`);
-        dynamicRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${st.frame}")`);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
       } else if (st.kind === 'gotoLabel' && st.label) {
-        const targetFrame = labelMap.get(st.label) ?? labelMap.get(st.label.toLowerCase()) ?? 1;
+        const targetFrame =
+          labelMap.get(st.label) ??
+          labelMap.get(st.label.toLowerCase()) ??
+          mainLabelMap.get(st.label) ??
+          mainLabelMap.get(st.label.toLowerCase()) ??
+          1;
         ensureVar(frameVar, 1, 1, Math.max(totalFrames, targetFrame));
         ensureVar(playVar, 1, 0, 1);
-        dynamicRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${targetFrame}")`);
-        dynamicRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${targetFrame}")`);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
       } else if (st.kind === 'nextFrame') {
         ensureVar(frameVar, 1, 1, totalFrames);
-        dynamicRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(min ${totalFrames} (+ ${frameVar} 1))")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(min ${totalFrames} (+ ${frameVar} 1))")`);
       } else if (st.kind === 'prevFrame') {
         ensureVar(frameVar, 1, 1, totalFrames);
-        dynamicRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(max 1 (- ${frameVar} 1))")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(max 1 (- ${frameVar} 1))")`);
       } else if (st.kind === 'spawnPool' && st.poolBase) {
         const base = sanitizeAstIdent(st.poolBase);
         const src = sanitizeAstIdent(st.sourceClip || 'ship');
@@ -2541,15 +2746,15 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           ensureVar(`${slotPfx}_x`, 0);
           ensureVar(`${slotPfx}_y`, 0);
           ensureVar(`${slotPfx}_visible`, 0, 0, 1);
-          dynamicRules.push(`    (:rule :var "${slotPfx}_x"${sgAttr} :expr "${src}_x")`);
-          dynamicRules.push(`    (:rule :var "${slotPfx}_y"${sgAttr} :expr "${src}_y")`);
-          dynamicRules.push(`    (:rule :var "${slotPfx}_visible"${sgAttr} :expr "1")`);
+          outRules.push(`    (:rule :var "${slotPfx}_x"${sgAttr} :expr "${src}_x")`);
+          outRules.push(`    (:rule :var "${slotPfx}_y"${sgAttr} :expr "${src}_y")`);
+          outRules.push(`    (:rule :var "${slotPfx}_visible"${sgAttr} :expr "1")`);
         }
-        dynamicRules.push(`    (:rule :var "${base}_pool_idx"${whenAttr} :expr "(% (+ ${base}_pool_idx 1) ${poolCount})")`);
+        outRules.push(`    (:rule :var "${base}_pool_idx"${whenAttr} :expr "(% (+ ${base}_pool_idx 1) ${poolCount})")`);
       } else if (st.kind === 'removePool' && st.poolBase) {
         const base = sanitizeAstIdent(st.poolBase);
         ensureVar(`${base}_visible`, 1, 0, 1);
-        dynamicRules.push(`    (:rule :var "${base}_visible"${whenAttr} :expr "0")`);
+        outRules.push(`    (:rule :var "${base}_visible"${whenAttr} :expr "0")`);
       }
     };
 
@@ -2558,7 +2763,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       labelMap: Map<string, number>
     ): string[] => {
       const wrapIf = (inner: string): string => (st.when ? `(:if "${st.when}" ${inner})` : inner);
-      const targetPfx = st.targetPrefix ? sanitizeAstIdent(st.targetPrefix) : 'swf';
+      const targetPfx = (!st.targetPrefix || st.targetPrefix === '__root__') ? 'swf' : sanitizeAstIdent(st.targetPrefix);
       const frameVar = targetPfx === 'swf' ? 'swf_frame' : `${targetPfx}_frame`;
       const playVar = targetPfx === 'swf' ? 'swf_playing' : `${targetPfx}_playing`;
 
@@ -2583,7 +2788,12 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         return [wrapIf(`(:seq (:set-var "${frameVar}" :val ${st.frame}) (:set-var "${playVar}" :val ${st.play ? 1 : 0}))`)];
       }
       if (st.kind === 'gotoLabel' && st.label) {
-        const targetFrame = labelMap.get(st.label) ?? labelMap.get(st.label.toLowerCase()) ?? 1;
+        const targetFrame =
+          labelMap.get(st.label) ??
+          labelMap.get(st.label.toLowerCase()) ??
+          mainLabelMap.get(st.label) ??
+          mainLabelMap.get(st.label.toLowerCase()) ??
+          1;
         ensureVar(frameVar, 1, 1, Math.max(totalFrames, targetFrame));
         ensureVar(playVar, 1, 0, 1);
         return [wrapIf(`(:seq (:set-var "${frameVar}" :val ${targetFrame}) (:set-var "${playVar}" :val ${st.play ? 1 : 0}))`)];
@@ -2599,10 +2809,28 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       return [];
     };
 
+    const emitEventHandlersToGestures = (
+      handlers: { target: string; event: string; statements: Avm1LiftedStatement[] }[] | undefined,
+      labelMap: Map<string, number>
+    ) => {
+      if (!handlers || handlers.length === 0) return;
+      for (const h of handlers) {
+        const steps: string[] = [];
+        for (const st of h.statements || []) {
+          steps.push(...emitStatementToGestureSteps(st, labelMap));
+        }
+        if (steps.length === 0) continue;
+        const bodySteps = steps.length === 1 ? steps[0] : `(:seq ${steps.join(' ')})`;
+        const targetSel = h.target === '__stage__' ? '#scene-root' : `#swf-inst-${sanitizeAstIdent(h.target)}`;
+        dynamicGestures.push(`    (:on-click :target "${targetSel}" ${bodySteps})`);
+      }
+    };
+
     const renderCharacterSvg = (
       charId: number,
       instanceDomPrefix: string,
-      instanceVarPrefix?: string
+      instanceVarPrefix?: string,
+      parentActiveWhen?: string
     ): string => {
       const shape = shapeByCharId.get(charId);
       if (shape) {
@@ -2632,13 +2860,22 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const spFrameVar = `${spPrefix}_frame`;
         const spPlayVar = `${spPrefix}_playing`;
         const spTotalVar = `${spPrefix}_totalframes`;
+        const spLoadedVar = `${spPrefix}_framesloaded`;
 
-        // Collect all depths inside this sprite
-        const spDepths = new Map<number, Map<number, SwfDisplayEntry>>();
+        // Collect all (depth, characterId) tracks inside this sprite so swapped depth characters work cleanly
+        const spDepthCharSets = new Map<number, Set<number>>();
+        const spTracks = new Map<string, { depth: number; characterId: number; firstFrame: number; frameMap: Map<number, SwfDisplayEntry> }>();
         for (const snap of sprite.frames) {
           snap.entries.forEach((e, d) => {
-            if (!spDepths.has(d)) spDepths.set(d, new Map());
-            spDepths.get(d)!.set(snap.frame, e);
+            if (!spDepthCharSets.has(d)) spDepthCharSets.set(d, new Set<number>());
+            spDepthCharSets.get(d)!.add(e.characterId);
+            const tKey = `${d}:${e.characterId}`;
+            let tr = spTracks.get(tKey);
+            if (!tr) {
+              tr = { depth: d, characterId: e.characterId, firstFrame: snap.frame, frameMap: new Map() };
+              spTracks.set(tKey, tr);
+            }
+            tr.frameMap.set(snap.frame, e);
           });
         }
 
@@ -2648,31 +2885,45 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           ensureVar(spFrameVar, 1, 1, sprite.frameCount);
           ensureVar(spPlayVar, stopsOnFrame1 ? 0 : 1, 0, 1);
           ensureVar(spTotalVar, sprite.frameCount, 1, sprite.frameCount);
+          ensureVar(spLoadedVar, sprite.frameCount, 1, sprite.frameCount);
           if (sprite.frameCount > 1) {
+            const spAdvanceGuard = composeAvm1When(parentActiveWhen, `(= ${spPlayVar} 1)`);
             dynamicRules.push(
-              `    (:rule :var "${spFrameVar}" :when "(= ${spPlayVar} 1)" :expr "(if (>= ${spFrameVar} ${sprite.frameCount}) 1 (+ ${spFrameVar} 1))")`
+              `    (:rule :var "${spFrameVar}" :when "${spAdvanceGuard}" :expr "(if (>= ${spFrameVar} ${sprite.frameCount}) 1 (+ ${spFrameVar} 1))")`
             );
           }
           for (const act of sprite.actions) {
             registerUsedKeys(act.usedKeys);
+            const spFrameGuard = composeAvm1When(parentActiveWhen, sprite.frameCount > 1 ? `(= ${spFrameVar} ${act.frame})` : undefined);
             for (const st of act.statements || []) {
               const scopedSt: Avm1LiftedStatement = {
                 ...st,
-                targetPrefix: st.targetPrefix || spPrefix,
+                targetPrefix: st.targetPrefix === '__root__' ? '__root__' : (st.targetPrefix ? st.targetPrefix : spPrefix),
               };
-              if (act.frame === 1 && st.kind === 'stop' && !st.when) continue;
-              emitStatementToRules(scopedSt, spLabelMap, sprite.frameCount > 1 ? `(= ${spFrameVar} ${act.frame})` : undefined);
+              if (act.frame === 1 && st.kind === 'stop' && !st.when && scopedSt.targetPrefix === spPrefix) continue;
+              const targetLabels = scopedSt.targetPrefix === '__root__' ? mainLabelMap : spLabelMap;
+              emitStatementToRules(scopedSt, targetLabels, spFrameGuard);
             }
+            for (const st of act.enterFrameStatements || []) {
+              const scopedSt: Avm1LiftedStatement = {
+                ...st,
+                targetPrefix: st.targetPrefix === '__root__' ? '__root__' : (st.targetPrefix ? st.targetPrefix : spPrefix),
+              };
+              const targetLabels = scopedSt.targetPrefix === '__root__' ? mainLabelMap : spLabelMap;
+              emitStatementToRules(scopedSt, targetLabels, parentActiveWhen);
+            }
+            emitEventHandlersToGestures(act.eventHandlers, mainLabelMap);
           }
         }
 
         const childParts: string[] = [];
-        const sortedSpDepths = Array.from(spDepths.keys()).sort((a, b) => a - b);
-        for (const d of sortedSpDepths) {
-          const frameMap = spDepths.get(d)!;
+        const sortedSpTracks = Array.from(spTracks.values()).sort((a, b) => a.depth - b.depth || a.firstFrame - b.firstFrame);
+        for (const tr of sortedSpTracks) {
+          const { depth: d, characterId: cid, frameMap } = tr;
           const firstSnapEntry = Array.from(frameMap.values())[0];
-          const childDomId = `${instanceDomPrefix}-d${d}`;
-          const childInner = renderCharacterSvg(firstSnapEntry.characterId, childDomId);
+          const swapsAtDepth = (spDepthCharSets.get(d)?.size || 1) > 1;
+          const childDomId = swapsAtDepth ? `${instanceDomPrefix}-d${d}-c${cid}` : `${instanceDomPrefix}-d${d}`;
+          const childInner = renderCharacterSvg(cid, childDomId, undefined, parentActiveWhen);
           const initMat = firstSnapEntry.matrix ? ` transform="${formatMatrixAttr(firstSnapEntry.matrix)}"` : '';
           const initAlpha = firstSnapEntry.cxform ? ` opacity="${formatNum(firstSnapEntry.cxform.alpha)}"` : '';
           const visibleOn1 = frameMap.has(1);
@@ -2724,19 +2975,34 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       const btn = buttons.get(charId);
       if (btn) {
         usedCharIds.add(charId);
-        const btnDomId = `swf-btn-${btn.buttonId}`;
-        // Render Up state records (or fallback to any state)
+        const bc = (charRenderCount.get(charId) || 0) + 1;
+        charRenderCount.set(charId, bc);
+        const btnDomId = bc === 1 ? `swf-btn-${btn.buttonId}` : `${instanceDomPrefix}-btn-${btn.buttonId}`;
+        // Render Up state records (or fallback to Over/Down/Hit if Up is empty) + invisible HitTest-only areas
         const upRecords = btn.records.filter((r) => (r.states & 0x01) !== 0);
-        const displayRecords = upRecords.length > 0 ? upRecords : btn.records.slice(0, 1);
-        const btnChildren = displayRecords
-          .sort((a, b) => a.depth - b.depth)
-          .map((rec) => {
-            const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`);
-            const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
-            const opAttr = rec.cxform ? ` opacity="${formatNum(rec.cxform.alpha)}"` : '';
-            return `<g id="${btnDomId}-s${rec.depth}"${matAttr}${opAttr}>${inner}</g>`;
-          })
-          .join('\n        ');
+        const hitOnlyRecords = btn.records.filter((r) => (r.states & 0x08) !== 0 && (r.states & 0x01) === 0);
+        const displayRecords = upRecords.length > 0 ? upRecords : btn.records.filter((r) => (r.states & 0x07) !== 0);
+
+        const childGroups: string[] = [];
+        for (const rec of displayRecords.sort((a, b) => a.depth - b.depth)) {
+          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`);
+          const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
+          const opAttr = rec.cxform ? ` opacity="${formatNum(rec.cxform.alpha)}"` : '';
+          childGroups.push(`<g id="${btnDomId}-s${rec.depth}"${matAttr}${opAttr}>${inner}</g>`);
+        }
+        // Render invisible HitTest-only regions with pointer-events="all" so transparent Flash buttons remain clickable
+        for (const rec of hitOnlyRecords.sort((a, b) => a.depth - b.depth)) {
+          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-hit-d${rec.depth}`);
+          const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
+          childGroups.push(`<g id="${btnDomId}-hit-${rec.depth}" opacity="0" pointer-events="all"${matAttr}>${inner}</g>`);
+        }
+        if (childGroups.length === 0 && btn.records.length > 0) {
+          const rec = btn.records[0];
+          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`);
+          const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
+          childGroups.push(`<g id="${btnDomId}-s${rec.depth}" pointer-events="all"${matAttr}>${inner}</g>`);
+        }
+        const btnChildren = childGroups.join('\n        ');
 
         // Compile DefineButton / DefineButton2 actions into :on-click and :on-key gestures
         for (const ba of btn.actions) {
@@ -2757,7 +3023,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           }
         }
 
-        return `<g id="${btnDomId}" role="button" tabindex="0" aria-label="SWF Button ${btn.buttonId}" style="cursor:pointer">\n        ${btnChildren}\n      </g>`;
+        return `<g id="${btnDomId}" role="button" tabindex="0" aria-label="SWF Button ${btn.buttonId}" pointer-events="all" style="cursor:pointer">\n        ${btnChildren}\n      </g>`;
       }
 
       return '';
@@ -2797,6 +3063,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       ensureVar('swf_frame', 1, 1, totalFrames);
       ensureVar('swf_playing', mainStopsFrame1 ? 0 : 1, 0, 1);
       ensureVar('swf_totalframes', totalFrames, 1, totalFrames);
+      ensureVar('swf_framesloaded', totalFrames, 1, totalFrames);
+      if (totalFrames > 1) {
+        ensureVar('swf_last_frame', 0, 0, totalFrames);
+        ensureVar('swf_cur_entry', 0, 0, totalFrames);
+      }
       ensureVar('swf_tick', 0, 0, 1000000);
 
       // Process frame-1 DoAction initial variable assignments before clip rules
@@ -2807,39 +3078,83 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
       }
 
-      // Main timeline frame advancement rule
+      // Frame-entry edge detector rules run FIRST on every tick so frame scripts fire ONCE on frame entry
+      // (preventing stop() on a frame from re-trapping play() clicks on the next tick).
       if (totalFrames > 1) {
         dynamicRules.push(
-          `    (:rule :var "swf_frame" :when "(= swf_playing 1)" :expr "(if (>= swf_frame ${totalFrames}) 1 (+ swf_frame 1))")`
+          `    (:rule :var "swf_cur_entry" :expr "(if (!= swf_frame swf_last_frame) swf_frame 0)")`
+        );
+        dynamicRules.push(
+          `    (:rule :var "swf_last_frame" :expr "swf_frame")`
         );
       }
 
-      // Emit pre-allocated <g> wrappers for every main timeline depth slot
-      const sortedDepthSlots = Array.from(allMainDepths.values()).sort((a, b) => a.depth - b.depth);
-      const instanceSourceCharMap = new Map<string, number>();
+      // Emit main timeline DoAction statements (edge-triggered on frame entry when multi-frame) BEFORE sprite/clip rules
+      const mainActionRules: string[] = [];
+      for (const ab of actionBlocks) {
+        const entryGuard = totalFrames > 1 ? `(= swf_cur_entry ${ab.frame})` : undefined;
+        const activeFrameGuard = totalFrames > 1 ? `(= swf_frame ${ab.frame})` : undefined;
+        for (const st of ab.statements || []) {
+          if (ab.frame === 1 && st.kind === 'stop' && !st.when) continue; // Already folded into swf_playing = 0
+          if (ab.frame === 1 && st.kind === 'setVar' && !st.when && st.rawVal !== undefined) continue; // Already folded into :vars initial values
+          emitStatementToRules(st, mainLabelMap, entryGuard, mainActionRules);
+        }
+        // Continuous onEnterFrame = function() { ... } lifted from frame DoAction
+        for (const st of ab.enterFrameStatements || []) {
+          emitStatementToRules(st, mainLabelMap, activeFrameGuard, mainActionRules);
+        }
+        // Button/clip event handlers (e.g. playBtn.onRelease = function() { ... })
+        emitEventHandlersToGestures(ab.eventHandlers, mainLabelMap);
+      }
+      dynamicRules.push(...mainActionRules);
 
-      for (const slot of sortedDepthSlots) {
-        const safeName = slot.name ? sanitizeAstIdent(slot.name) : '';
-        const domId = safeName ? `swf-inst-${safeName}` : `swf-place-${slot.depth}`;
-        const firstEntry = slot.firstEntry;
+      // Emit pre-allocated <g> wrappers for every main timeline (depth, characterId) track
+      const sortedTracks = mainTrackList.sort((a, b) => a.depth - b.depth || a.firstFrame - b.firstFrame);
+      const instanceSourceCharMap = new Map<string, number>();
+      const usedMainDomIds = new Set<string>();
+      const frame1DomIds = new Set<string>();
+      const namedTrackMeta: { safeName: string; domId: string; track: MainDisplayTrack }[] = [];
+
+      for (const track of sortedTracks) {
+        const safeName = track.name ? sanitizeAstIdent(track.name) : '';
+        const swapsAtDepth = (depthCharSets.get(track.depth)?.size || 1) > 1;
+        let domId = safeName
+          ? `swf-inst-${safeName}`
+          : (swapsAtDepth ? `swf-place-${track.depth}-c${track.characterId}` : `swf-place-${track.depth}`);
+        if (usedMainDomIds.has(domId)) {
+          domId = `${domId}-d${track.depth}-c${track.characterId}`;
+        }
+        usedMainDomIds.add(domId);
+
+        const firstEntry = track.firstEntry;
         if (safeName) instanceSourceCharMap.set(safeName, firstEntry.characterId);
 
         const initMat = firstEntry.matrix || { scaleX: 1, scaleY: 1, rotateSkew0: 0, rotateSkew1: 0, transX: 0, transY: 0 };
         const initAlpha = firstEntry.cxform ? firstEntry.cxform.alpha : 1;
-        const visibleOn1 = slot.frameStates.has(1);
+        const visibleOn1 = track.frameStates.has(1);
+        const parentActiveWhen = buildMainPresenceGuard(track.frameStates);
 
-        const innerSvg = renderCharacterSvg(firstEntry.characterId, domId, safeName || undefined);
+        const innerSvg = renderCharacterSvg(firstEntry.characterId, domId, safeName || undefined, parentActiveWhen);
+        if (visibleOn1) {
+          frame1DomIds.add(domId);
+          const idMatchRe = /\bid="([^"]+)"/g;
+          let idm: RegExpExecArray | null;
+          while ((idm = idMatchRe.exec(innerSvg)) !== null) {
+            frame1DomIds.add(idm[1]);
+          }
+        }
         const transformAttr = firstEntry.matrix ? ` transform="${formatMatrixAttr(initMat)}"` : '';
         const opacityAttr = initAlpha < 1 ? ` opacity="${formatNum(initAlpha)}"` : '';
         const displayAttr = !visibleOn1 ? ' display="none"' : '';
-        const nameAttr = slot.name ? ` data-swf-name="${slot.name}"` : '';
+        const nameAttr = track.name ? ` data-swf-name="${track.name}"` : '';
 
         placedSvgElements.push(
-          `<g id="${domId}" data-character-id="${firstEntry.characterId}" data-depth="${slot.depth}"${nameAttr}${transformAttr}${opacityAttr}${displayAttr}>\n      ${innerSvg}\n    </g>`
+          `<g id="${domId}" data-character-id="${firstEntry.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${displayAttr}>\n      ${innerSvg}\n    </g>`
         );
 
-        // If this is a named MovieClip instance, bind Flash properties (_x, _y, _xscale, _yscale, _rotation, _alpha, _visible)
+        // If this is a named MovieClip/Button instance, bind Flash properties (_x, _y, _xscale, _yscale, _rotation, _alpha, _visible)
         if (safeName) {
+          namedTrackMeta.push({ safeName, domId, track });
           const rotDeg = Math.atan2(initMat.rotateSkew0, initMat.scaleX) * (180 / Math.PI);
           const scaleXLen = Math.hypot(initMat.scaleX, initMat.rotateSkew0) || 1;
           const scaleYLen = Math.hypot(initMat.rotateSkew1, initMat.scaleY) || 1;
@@ -2861,8 +3176,19 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           dynamicBindings.push(
             `    (:target "#${domId}" :attr "display" :expr "(if (> ${safeName}_visible 0) 'inline' 'none')")`
           );
+
+          // Sync frame-presence visibility on frame entry when a named instance only lives on a subset of frames
+          if (totalFrames > 1 && track.frameStates.size < totalFrames) {
+            const visCases: string[] = [];
+            for (let f = 1; f <= totalFrames; f++) {
+              visCases.push(`(${f} ${track.frameStates.has(f) ? 1 : 0})`);
+            }
+            dynamicRules.push(
+              `    (:rule :var "${safeName}_visible" :when "(> swf_cur_entry 0)" :expr "(case swf_cur_entry ${visCases.join(' ')} (else 0))")`
+            );
+          }
         } else if (totalFrames > 1) {
-          // Pure display-list keyframe animation across ShowFrame boundaries (PlaceObject2 Move / CXForm / RemoveObject2)
+          // Pure display-list keyframe animation across ShowFrame boundaries (PlaceObject2 Move / CXForm / RemoveObject2 / Char Swap)
           const matClauses: string[] = [];
           const alphaClauses: string[] = [];
           const dispClauses: string[] = [];
@@ -2873,7 +3199,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           let prevAlpha: string | null = null;
 
           for (let f = 1; f <= totalFrames; f++) {
-            const fe = slot.frameStates.get(f);
+            const fe = track.frameStates.get(f);
             if (fe) {
               dispClauses.push(`(${f} 'inline')`);
               const mStr = fe.matrix ? formatMatrixAttr(fe.matrix) : 'matrix(1 0 0 1 0 0)';
@@ -2909,22 +3235,23 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
 
         // Lift PlaceObject2 ClipActions (onClipEvent(load), enterFrame, keyDown, mouseDown)
-        for (const ca of slot.clipActions) {
+        for (const ca of track.clipActions) {
           registerUsedKeys(ca.actionRecord.usedKeys);
           const stmts = ca.actionRecord.statements || [];
 
           if (ca.events.includes('load')) {
+            const loadGuard = track.firstFrame === 1 ? '(= swf_tick 0)' : `(= swf_cur_entry ${track.firstFrame})`;
             for (const st of stmts) {
-              if (st.kind === 'setVar' && st.varName && st.rawVal !== undefined && !st.when) {
+              if (track.firstFrame === 1 && st.kind === 'setVar' && st.varName && st.rawVal !== undefined && !st.when) {
                 reactiveVars.set(st.varName, { val: st.rawVal });
               } else {
-                emitStatementToRules(st, mainLabelMap, '(= swf_tick 0)');
+                emitStatementToRules(st, mainLabelMap, loadGuard);
               }
             }
           }
           if (ca.events.includes('enterFrame')) {
             for (const st of stmts) {
-              emitStatementToRules(st, mainLabelMap);
+              emitStatementToRules(st, mainLabelMap, parentActiveWhen);
             }
           }
           if (ca.events.includes('mouseDown')) {
@@ -2947,14 +3274,51 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
       }
 
-      // Emit main timeline DoAction statements (frame-guarded when multi-frame)
-      for (const ab of actionBlocks) {
-        const frameGuard = totalFrames > 1 ? `(= swf_frame ${ab.frame})` : undefined;
-        for (const st of ab.statements || []) {
-          if (ab.frame === 1 && st.kind === 'stop' && !st.when) continue; // Already folded into swf_playing = 0
-          if (ab.frame === 1 && st.kind === 'setVar' && !st.when && st.rawVal !== undefined) continue; // Already folded into :vars initial values
-          emitStatementToRules(st, mainLabelMap, frameGuard);
+      // Stuck-preloader auto-recovery: if Frame 1 has an unconditional stop() and NO Frame-1-reachable rule or
+      // Frame-1 button/key ever mutates swf_frame or swf_playing (e.g., an obfuscated or AS3 preloader),
+      // start cleanly on the first post-preloader frame.
+      if (totalFrames > 1 && mainStopsFrame1) {
+        const hasFrame1ExitRule = dynamicRules.some((r) => {
+          const writesFrame = r.includes(':var "swf_frame"');
+          const writesPlay = r.includes(':var "swf_playing"') && !r.includes(':expr "0"');
+          if (!writesFrame && !writesPlay) return false;
+          // Exclude rules guarded exclusively for Frame 2+
+          const nonFrame1Guard = /(?::when "\(= swf_(?:frame|cur_entry) (?:[2-9]|\d{2,})\)"|\(and \(= swf_(?:frame|cur_entry) (?:[2-9]|\d{2,})\))/.test(r);
+          return !nonFrame1Guard;
+        });
+        const hasFrame1ExitGesture = dynamicGestures.some((g) => {
+          if (!g.includes('"swf_frame"') && !g.includes('"swf_playing"')) return false;
+          if (g.includes('(:on-key ')) return true;
+          const tMatch = g.match(/:target "#([^"]+)"/);
+          if (!tMatch) return true;
+          const targetId = tMatch[1];
+          return targetId === 'scene-root' || frame1DomIds.has(targetId);
+        });
+        if (!hasFrame1ExitRule && !hasFrame1ExitGesture) {
+          const menuLabel = labels.find(
+            (l) => l.frame >= 2 && /^(menu|title|start|main|game|play|intro|home)/i.test(l.name.trim())
+          );
+          const recoveryFrame = menuLabel ? menuLabel.frame : 2;
+          const recoveryStops = actionBlocks.some((ab) => ab.frame === recoveryFrame && ab.stops);
+          reactiveVars.set('swf_frame', { val: recoveryFrame, min: 1, max: totalFrames });
+          reactiveVars.set('swf_playing', { val: recoveryStops ? 0 : 1, min: 0, max: 1 });
+          // Update initial visibility of named instances for recoveryFrame
+          for (const nm of namedTrackMeta) {
+            reactiveVars.set(`${nm.safeName}_visible`, {
+              val: nm.track.frameStates.has(recoveryFrame) ? 1 : 0,
+              min: 0,
+              max: 1,
+            });
+          }
         }
+      }
+
+      // Main timeline frame advancement rule runs AFTER frame/sprite/clip rules and only advances when
+      // swf_frame was NOT already jumped during this tick (prevents skipping the destination frame's entry actions).
+      if (totalFrames > 1) {
+        dynamicRules.push(
+          `    (:rule :var "swf_frame" :when "(and (= swf_playing 1) (= swf_frame swf_last_frame))" :expr "(if (>= swf_frame ${totalFrames}) 1 (+ swf_frame 1))")`
+        );
       }
 
       // Emit pre-allocated zero-GC projectile / clone pool SVG <g> nodes & bindings
@@ -2987,10 +3351,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       dynamicRules.push(`    (:rule :var "swf_tick" :expr "(+ swf_tick 1)")`);
     }
 
-    const unplacedSvgElements = [
-      ...shapes.filter((s) => !usedCharIds.has(s.charId)).map((s) => s.svg),
-      ...morphShapes.filter((m) => !usedCharIds.has(m.shapeId)).map((m) => m.svg),
-    ];
+    // For dynamic multi-frame SWFs, do NOT dump unplaced library shapes onto the stage (they cover active frames);
+    // keep unplaced shapes only for static single-frame SWFs (Sims 1–11 compatibility).
+    const unplacedSvgElements = !isDynamicSwf
+      ? [
+          ...shapes.filter((s) => !usedCharIds.has(s.charId)).map((s) => s.svg),
+          ...morphShapes.filter((m) => !usedCharIds.has(m.shapeId)).map((m) => m.svg),
+        ]
+      : [];
 
     const allSvgElements = [...placedSvgElements, ...unplacedSvgElements];
     let finalSvgInner = allSvgElements.join('\n    ');
@@ -3071,6 +3439,10 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       varsAst = `\n  (:vars (\n${varLines.join('\n')}\n  ))\n`;
     }
 
+    const inputsAst = isDynamicSwf && totalFrames > 1
+      ? `\n  (:inputs (\n    (:slider :var "swf_frame" :label "SWF Frame" :min 1 :max ${totalFrames} :step 1)\n  ))\n`
+      : '';
+
     // Synthesize Declarative State Machine from ActionScript and Frame Labels
     let stateMachinesAst = '';
     let smMeta: any = undefined;
@@ -3141,7 +3513,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
   :fps ${Math.round(frameRate) || 24}
   :stageWidth ${width}
   :stageHeight ${height}
-${varsAst}
+${varsAst}${inputsAst}
   (:static (
     (:element :target "#bg" :cache true)
     (:element :target "#swf-bg-card" :cache true)

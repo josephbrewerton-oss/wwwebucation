@@ -654,6 +654,36 @@ export class Avm1Builder {
   or(): this { return this.op(0x11); }
   not(): this { return this.op(0x12); }
 
+  pushRegister(regNum: number): this {
+    this.pushU8(0x96);
+    this.pushU16(2);
+    this.pushU8(4); // register type
+    this.pushU8(regNum & 0xff);
+    return this;
+  }
+
+  storeRegister(regNum: number): this {
+    this.pushU8(0x87); // ActionStoreRegister
+    this.pushU16(1);
+    this.pushU8(regNum & 0xff);
+    return this;
+  }
+
+  defineFunction(name: string, emitBody: (b: Avm1Builder) => void): this {
+    const bodySub = new Avm1Builder();
+    emitBody(bodySub);
+    const bodyBytes = bodySub.toRawBytes();
+    const headerLen = name.length + 1 + 2 + 2; // name + NUL + numParams(UI16) + codeSize(UI16)
+    this.pushU8(0x9B); // ActionDefineFunction
+    this.pushU16(headerLen);
+    for (let i = 0; i < name.length; i++) this.pushU8(name.charCodeAt(i));
+    this.pushU8(0);
+    this.pushU16(0); // 0 params
+    this.pushU16(bodyBytes.length);
+    this.pushRaw(bodyBytes);
+    return this;
+  }
+
   gotoLabel(label: string): this {
     this.pushU8(0x8C); // ActionGoToLabel
     this.pushU16(label.length + 1);
