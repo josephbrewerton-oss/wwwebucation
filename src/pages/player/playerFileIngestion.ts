@@ -203,11 +203,102 @@ export function unlockMobilePwaAudioForIframe(iframe: HTMLIFrameElement | null):
   // Also prime the player iframe's own local AudioContext & SpeechSynthesis inside this tap gesture
   try {
     const iframeWin = iframe?.contentWindow as
-      | (Window & { primeMobileAudioAndTts?: () => void })
+      | (Window & {
+          primeMobileAudioAndTts?: () => void;
+          AST_ENGINE?: { audioSynth?: { unlock?: () => boolean } };
+        })
       | null
       | undefined;
-    if (iframeWin && typeof iframeWin.primeMobileAudioAndTts === 'function') {
-      iframeWin.primeMobileAudioAndTts();
+    if (iframeWin) {
+      if (typeof iframeWin.primeMobileAudioAndTts === 'function') {
+        iframeWin.primeMobileAudioAndTts();
+      } else if (typeof iframeWin.AST_ENGINE?.audioSynth?.unlock === 'function') {
+        iframeWin.AST_ENGINE.audioSynth.unlock();
+      }
     }
   } catch (_) {}
+}
+
+/**
+ * Synchronously invokes a playback/audio command directly on a same-origin player iframe
+ * inside the host click handler so Chromium (Desktop/Android/PWA) and WebKit (iOS/macOS)
+ * preserve transient user activation for Web Audio & Web Speech synthesis.
+ * Returns true if handled synchronously, false if caller should fall back to postMessage.
+ */
+export function invokeSameOriginPlayerAction(
+  iframe: HTMLIFrameElement | null,
+  action: 'togglePlay' | 'reset' | 'setAudioState',
+  opts?: { voiceEnabled?: boolean; muted?: boolean }
+): boolean {
+  try {
+    const iframeWin = iframe?.contentWindow as
+      | (Window & {
+          AST_ENGINE?: {
+            togglePlay?: () => boolean;
+            setMuted?: (muted: boolean) => boolean;
+            toggleVoice?: (force?: boolean) => boolean;
+            voiceEnabled?: boolean;
+            muted?: boolean;
+            getCurrentSubtitle?: () => string | { en?: string; localized?: string };
+            speakText?: (text: any, opts?: any) => void;
+            scene?: { title?: string };
+            audioSynth?: { unlock?: () => boolean };
+          };
+          AST_UI?: {
+            updateHeaderPlayUI?: (playing: boolean, showRipple?: boolean) => void;
+            resetSimulation?: () => void;
+            elements?: { btnNarrate?: HTMLElement | null };
+          };
+        })
+      | null
+      | undefined;
+    const engine = iframeWin?.AST_ENGINE;
+    if (!engine) return false;
+
+    if (action === 'togglePlay' && typeof engine.togglePlay === 'function') {
+      const playing = engine.togglePlay();
+      iframeWin?.AST_UI?.updateHeaderPlayUI?.(playing, true);
+      return true;
+    }
+
+    if (action === 'reset') {
+      if (typeof iframeWin?.AST_UI?.resetSimulation === 'function') {
+        iframeWin.AST_UI.resetSimulation();
+        return true;
+      }
+      return false;
+    }
+
+    if (action === 'setAudioState') {
+      const muted = Boolean(opts?.muted);
+      const voiceEnabled = opts?.voiceEnabled !== undefined ? Boolean(opts.voiceEnabled) : !muted;
+      if (!muted && typeof engine.audioSynth?.unlock === 'function') {
+        engine.audioSynth.unlock();
+      }
+      if (typeof engine.setMuted === 'function') {
+        engine.setMuted(muted);
+      } else {
+        engine.muted = muted;
+      }
+      if (typeof engine.toggleVoice === 'function') {
+        engine.toggleVoice(voiceEnabled);
+      } else {
+        engine.voiceEnabled = voiceEnabled;
+      }
+      const btnNarrate = iframeWin?.AST_UI?.elements?.btnNarrate;
+      if (btnNarrate) {
+        btnNarrate.classList.toggle('active', voiceEnabled);
+        btnNarrate.textContent = voiceEnabled ? '🔊 Voice: ON' : '🔊 Voice';
+      }
+      if (voiceEnabled && !muted && typeof engine.speakText === 'function') {
+        const sub = typeof engine.getCurrentSubtitle === 'function' ? engine.getCurrentSubtitle() : '';
+        const textToSpeak = sub || engine.scene?.title || '';
+        if (textToSpeak) {
+          engine.speakText(textToSpeak, { immediate: true, allowTopFallback: true });
+        }
+      }
+      return true;
+    }
+  } catch (_) {}
+  return false;
 }

@@ -17,6 +17,7 @@
   // Setup postMessage Gateway with Origin Validation
   function setupPostMessageBridge(engine, uiController) {
     if (typeof window === 'undefined') return;
+    window.__astBridgeActive = true;
 
     window.addEventListener('message', (event) => {
       const expectedOrigin = engine.targetOrigin;
@@ -43,13 +44,23 @@
           break;
         case 'PLAY':
           engine.play();
+          if (uiController && typeof uiController.updateHeaderPlayUI === 'function') {
+            uiController.updateHeaderPlayUI(true, true);
+          }
           break;
         case 'PAUSE':
           engine.pause();
+          if (uiController && typeof uiController.updateHeaderPlayUI === 'function') {
+            uiController.updateHeaderPlayUI(false, true);
+          }
           break;
-        case 'TOGGLE_PLAY':
-          engine.togglePlay();
+        case 'TOGGLE_PLAY': {
+          const playing = engine.togglePlay();
+          if (uiController && typeof uiController.updateHeaderPlayUI === 'function') {
+            uiController.updateHeaderPlayUI(playing, true);
+          }
           break;
+        }
         case 'SET_LOOP':
           if (typeof data.loop === 'boolean') engine.setLoop(data.loop);
           break;

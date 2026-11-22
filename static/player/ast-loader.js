@@ -688,7 +688,19 @@
         keyframes: this.scene.keyframes || []
       });
 
-// 3. Notify parent host that cartridge DOM is mounted and ready
+      this._speechStartedOnDevice = false;
+      this._pendingAutoSpeech = null;
+      this.lastSpokenIndex = -1;
+
+      this.seek(0, true, true);
+      if (shouldPlay || isContinuousSim) {
+        this.play();
+      } else if ((isSlide || !shouldPlay) && this.isPlaying) {
+        this.pause();
+      }
+      this._mountedSceneId = presetId;
+
+      // 3. Notify parent host that cartridge DOM is mounted and ready (with true isPlaying state)
       this.notifyParent({
         type: 'PLAYER_READY',
         preset: this.activePresetId,
@@ -698,23 +710,15 @@
         has3D: this.has3D(),
         hasInteractive: Boolean(this.scene && this.scene.interactive && this.scene.interactive.checkpoints && this.scene.interactive.checkpoints.length),
         keyframes: this.scene.keyframes || [],
-        isPlaying: this.isPlaying
+        isPlaying: Boolean(this.isPlaying)
       });
-
-      this.seek(0);
-      if (shouldPlay || isContinuousSim) {
-        this.play();
-      } else if ((isSlide || !shouldPlay) && this.isPlaying) {
-        this.pause();
-      }
-      this._mountedSceneId = presetId;
 
       // Broadcast initial scene subtitle & narration to parent and BSL engine
       const initialSub = this.getCurrentSubtitle() || (this.scene && (this.scene.title + (this.scene.stage ? ` - ${this.scene.stage}` : ''))) || '';
       if (initialSub) {
         this.notifyParent({ type: 'SUBTITLE_UPDATE', text: initialSub });
-        if (this.voiceEnabled) {
-          this.speakText(initialSub);
+        if (this.voiceEnabled && !this.muted && this.lastSpokenIndex < 0) {
+          this.speakText(initialSub, { isAutoLoad: true });
         }
       }
 

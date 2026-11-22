@@ -18,6 +18,32 @@
       this.humOsc = null;
       this.humGain = null;
       this._unlocked = false;
+      this._pendingSounds = [];
+    }
+
+    _volScale() {
+      const v = this.engine && typeof this.engine.volume === 'number' && Number.isFinite(this.engine.volume)
+        ? this.engine.volume
+        : 1.0;
+      return Math.max(0, Math.min(1.0, v));
+    }
+
+    _scaledGain(baseGain, minGain = 0.001) {
+      const scaled = (Number(baseGain) || 0.15) * this._volScale();
+      return Math.max(minGain, Math.min(0.6, scaled));
+    }
+
+    _flushPendingSounds() {
+      if (!this._pendingSounds || !this._pendingSounds.length) return;
+      if (!this.ctx || this.ctx.state !== 'running' || this._isEffectivelyMuted()) return;
+      const nowMs = Date.now();
+      const queue = this._pendingSounds.splice(0, this._pendingSounds.length);
+      for (let i = 0; i < queue.length; i++) {
+        const entry = queue[i];
+        if (!entry || entry.played || nowMs > entry.expiresAt) continue;
+        entry.played = true;
+        try { entry.fn(this.ctx); } catch (_) {}
+      }
     }
 
     _getSharedHost() {
@@ -95,6 +121,7 @@
             p.then(() => {
               if (ctx.state === 'running') {
                 this._unlocked = true;
+                this._flushPendingSounds();
               }
             }).catch(() => {});
           }
@@ -113,6 +140,9 @@
             this._unlocked = true;
           }
         }
+        if (ctx.state === 'running') {
+          this._flushPendingSounds();
+        }
       } catch (_) {}
       return Boolean(this.ctx && this.ctx.state === 'running');
     }
@@ -124,7 +154,10 @@
         const p = ctx.resume();
         if (p && typeof p.then === 'function') {
           p.then(() => {
-            if (ctx.state === 'running') this._unlocked = true;
+            if (ctx.state === 'running') {
+              this._unlocked = true;
+              this._flushPendingSounds();
+            }
           }).catch(() => {});
         }
       }
@@ -135,7 +168,7 @@
       return Boolean(this.muted || (this.engine && (this.engine.muted || this.engine.volume === 0)));
     }
 
-    withRunningContext(fn) {
+    withRunningContext(fn, opts = null) {
       if (this._isEffectivelyMuted() || !this.ensureContext() || !this.ctx) return;
       const ctx = this.ctx;
       if (ctx.state === 'running') {
@@ -143,26 +176,33 @@
         try { fn(ctx); } catch (_) {}
         return;
       }
+      const ttlMs = opts && typeof opts.ttlMs === 'number' ? opts.ttlMs : 1800;
+      const entry = { fn, played: false, expiresAt: Date.now() + Math.max(250, ttlMs) };
+      if (!this._pendingSounds) this._pendingSounds = [];
+      if (this._pendingSounds.length >= 3) this._pendingSounds.shift();
+      this._pendingSounds.push(entry);
       try {
         const res = ctx.resume();
         if (res && typeof res.then === 'function') {
           res.then(() => {
-            if (!this._isEffectivelyMuted() && ctx.state === 'running') {
+            if (!entry.played && !this._isEffectivelyMuted() && ctx.state === 'running') {
               this._unlocked = true;
+              entry.played = true;
               try { fn(ctx); } catch (_) {}
+              this._flushPendingSounds();
             }
           }).catch(() => {});
         }
       } catch (_) {}
     }
 
-    playTone(freq = 440, duration = 0.12, type = 'sine', gainVal = 0.18) {
+    playTone(freq = 440, duration = 0.12, type = 'sine', gainVal = 0.18, opts = null) {
       this.withRunningContext((ctx) => {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         const now = ctx.currentTime;
         const safeDur = Math.max(0.02, Number(duration) || 0.12);
-        const safeGain = Math.max(0.002, Math.min(0.5, Number(gainVal) || 0.18));
+        const safeGain = this._scaledGain(Math.max(0.002, Math.min(0.5, Number(gainVal) || 0.18)), 0.002);
         osc.type = type || 'sine';
         osc.frequency.setValueAtTime(Number(freq) || 440, now);
         gain.gain.setValueAtTime(safeGain, now);
@@ -171,7 +211,7 @@
         gain.connect(ctx.destination);
         osc.start(now);
         osc.stop(now + safeDur + 0.01);
-      });
+      }, opts);
     }
 
     playClick(freq = 900) {
@@ -182,7 +222,7 @@
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(120, now + 0.03);
-        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.setValueAtTime(this._scaledGain(0.15, 0.002), now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -195,6 +235,7 @@
       this.withRunningContext((ctx) => {
         const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
         const now = ctx.currentTime;
+        const peak = this._scaledGain(0.18, 0.002);
         notes.forEach((freq, idx) => {
           const osc = ctx.createOscillator();
           const gain = ctx.createGain();
@@ -202,7 +243,7 @@
           osc.type = 'sine';
           osc.frequency.setValueAtTime(freq, noteTime);
           gain.gain.setValueAtTime(0.001, noteTime);
-          gain.gain.linearRampToValueAtTime(0.18, noteTime + 0.02);
+          gain.gain.linearRampToValueAtTime(peak, noteTime + 0.02);
           gain.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
           osc.connect(gain);
           gain.connect(ctx.destination);
@@ -220,7 +261,7 @@
         osc.type = 'sawtooth';
         osc.frequency.setValueAtTime(140, now);
         osc.frequency.linearRampToValueAtTime(90, now + 0.2);
-        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.setValueAtTime(this._scaledGain(0.12, 0.002), now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -237,7 +278,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.25);
-        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.setValueAtTime(this._scaledGain(0.18, 0.002), now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -248,19 +289,20 @@
 
     setHum(freq = 60, volume = 0.05) {
       this.withRunningContext((ctx) => {
+        const targetVol = this._scaledGain(volume, 0.001);
         if (!this.humOsc) {
           this.humOsc = ctx.createOscillator();
           this.humGain = ctx.createGain();
           this.humOsc.type = 'sine';
           this.humOsc.frequency.setValueAtTime(freq, ctx.currentTime);
           this.humGain.gain.setValueAtTime(0.001, ctx.currentTime);
-          this.humGain.gain.linearRampToValueAtTime(volume, ctx.currentTime + 0.1);
+          this.humGain.gain.linearRampToValueAtTime(targetVol, ctx.currentTime + 0.1);
           this.humOsc.connect(this.humGain);
           this.humGain.connect(ctx.destination);
           this.humOsc.start();
         } else {
           this.humOsc.frequency.setValueAtTime(freq, ctx.currentTime);
-          this.humGain.gain.setValueAtTime(volume, ctx.currentTime);
+          this.humGain.gain.setValueAtTime(targetVol, ctx.currentTime);
         }
       });
     }
@@ -294,7 +336,7 @@
         osc.frequency.setValueAtTime(baseFreq, now);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 2.4, now + 0.12);
         osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.6, now + 0.28);
-        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.setValueAtTime(this._scaledGain(0.2, 0.002), now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -308,12 +350,13 @@
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         const now = ctx.currentTime;
+        const peak = this._scaledGain(0.16, 0.002);
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(startFreq, now);
         osc.frequency.exponentialRampToValueAtTime(endFreq, now + duration);
         gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(0.16, now + 0.03);
-        gain.gain.setValueAtTime(0.16, now + duration - 0.04);
+        gain.gain.linearRampToValueAtTime(peak, now + 0.03);
+        gain.gain.setValueAtTime(peak, now + duration - 0.04);
         gain.gain.linearRampToValueAtTime(0.001, now + duration);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -330,7 +373,7 @@
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, now);
         osc.frequency.exponentialRampToValueAtTime(freq * 0.25, now + 0.04);
-        gain.gain.setValueAtTime(0.22, now);
+        gain.gain.setValueAtTime(this._scaledGain(0.22, 0.002), now);
         gain.gain.exponentialRampToValueAtTime(0.001, now + 0.04);
         osc.connect(gain);
         gain.connect(ctx.destination);
@@ -358,7 +401,7 @@
         filter.frequency.exponentialRampToValueAtTime(300, now + 0.24);
         const gain = ctx.createGain();
         gain.gain.setValueAtTime(0.001, now);
-        gain.gain.linearRampToValueAtTime(0.25, now + 0.1);
+        gain.gain.linearRampToValueAtTime(this._scaledGain(0.25, 0.002), now + 0.1);
         gain.gain.linearRampToValueAtTime(0.001, now + 0.24);
         noise.connect(filter);
         filter.connect(gain);
@@ -368,15 +411,16 @@
       });
     }
 
-    playBbcBeep() {
+    playBbcBeep(opts = null) {
       this.withRunningContext((ctx) => {
         const now = ctx.currentTime;
+        const peak = this._scaledGain(0.08, 0.002);
         const osc1 = ctx.createOscillator();
         const gain1 = ctx.createGain();
         osc1.type = 'square';
         osc1.frequency.setValueAtTime(1200, now);
-        gain1.gain.setValueAtTime(0.08, now);
-        gain1.gain.setValueAtTime(0.08, now + 0.08);
+        gain1.gain.setValueAtTime(peak, now);
+        gain1.gain.setValueAtTime(peak, now + 0.08);
         gain1.gain.linearRampToValueAtTime(0.0001, now + 0.09);
         osc1.connect(gain1);
         gain1.connect(ctx.destination);
@@ -388,14 +432,14 @@
         const t2 = now + 0.095;
         osc2.type = 'square';
         osc2.frequency.setValueAtTime(800, t2);
-        gain2.gain.setValueAtTime(0.08, t2);
-        gain2.gain.setValueAtTime(0.08, t2 + 0.12);
+        gain2.gain.setValueAtTime(peak, t2);
+        gain2.gain.setValueAtTime(peak, t2 + 0.12);
         gain2.gain.linearRampToValueAtTime(0.0001, t2 + 0.135);
         osc2.connect(gain2);
         gain2.connect(ctx.destination);
         osc2.start(t2);
         osc2.stop(t2 + 0.14);
-      });
+      }, opts);
     }
   }
 
@@ -416,6 +460,36 @@
     }
   }
 
+  function _needsPostCancelSpeakHandoff() {
+    try {
+      if (typeof navigator === 'undefined') return false;
+      const ua = navigator.userAgent || '';
+      if (/Android/i.test(ua)) return true;
+      // Chromium Desktop (Chrome/Edge/Opera/Brave) shares the cancel()->speak() same-tick drop bug,
+      // while Safari/iOS WebKit requires synchronous speak() inside the user gesture stack.
+      const isAppleMobile = /iPad|iPhone|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1);
+      if (isAppleMobile) return false;
+      return /Chrome|Chromium|CriOS|Edg|OPR/i.test(ua);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function _getSameOriginTopWindow() {
+    if (typeof window === 'undefined') return null;
+    try {
+      if (
+        window.top &&
+        window.top !== window &&
+        window.top.location &&
+        window.top.location.origin === window.location.origin
+      ) {
+        return window.top;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   function _getSpeechSynth() {
     if (typeof window === 'undefined') return null;
     // Prefer the current frame's own speechSynthesis so user activation inside
@@ -423,17 +497,10 @@
     if (window.speechSynthesis) {
       return window.speechSynthesis;
     }
-    try {
-      if (
-        window.top &&
-        window.top !== window &&
-        window.top.location &&
-        window.top.location.origin === window.location.origin &&
-        window.top.speechSynthesis
-      ) {
-        return window.top.speechSynthesis;
-      }
-    } catch (_) {}
+    const topWin = _getSameOriginTopWindow();
+    if (topWin && topWin.speechSynthesis) {
+      return topWin.speechSynthesis;
+    }
     return null;
   }
 
@@ -442,17 +509,10 @@
     if (window.SpeechSynthesisUtterance) {
       return window.SpeechSynthesisUtterance;
     }
-    try {
-      if (
-        window.top &&
-        window.top !== window &&
-        window.top.location &&
-        window.top.location.origin === window.location.origin &&
-        window.top.SpeechSynthesisUtterance
-      ) {
-        return window.top.SpeechSynthesisUtterance;
-      }
-    } catch (_) {}
+    const topWin = _getSameOriginTopWindow();
+    if (topWin && topWin.SpeechSynthesisUtterance) {
+      return topWin.SpeechSynthesisUtterance;
+    }
     return null;
   }
 
@@ -497,6 +557,10 @@
         clearTimeout(ctx._speakDebounceTimer);
         ctx._speakDebounceTimer = null;
       }
+      if (ctx._speechStallTimer) {
+        clearTimeout(ctx._speechStallTimer);
+        ctx._speechStallTimer = null;
+      }
     } else if (_standaloneSpeakDebounceTimer) {
       clearTimeout(_standaloneSpeakDebounceTimer);
       _standaloneSpeakDebounceTimer = null;
@@ -507,6 +571,14 @@
       try {
         if (synth.speaking || synth.pending) synth.cancel();
       } catch (err) {}
+    }
+    const topWin = _getSameOriginTopWindow();
+    if (topWin && topWin.speechSynthesis && topWin.speechSynthesis !== synth) {
+      try {
+        if (topWin.speechSynthesis.speaking || topWin.speechSynthesis.pending) {
+          topWin.speechSynthesis.cancel();
+        }
+      } catch (_) {}
     }
     if (ctx) {
       ctx._activeUtterance = null;
@@ -528,10 +600,23 @@
     const voiceEnabled = ctx ? ctx.voiceEnabled : true;
     if (!synth || !UtteranceCtor || !voiceEnabled || !spokenText) return;
 
+    const isMuted = ctx ? Boolean(ctx.muted) : false;
+    const vol = ctx && typeof ctx.volume === 'number' ? ctx.volume : 1.0;
+    if (isMuted || vol <= 0) {
+      if (ctx && typeof ctx.notifyParent === 'function') {
+        ctx.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
+      }
+      return;
+    }
+
     if (ctx) {
       if (ctx._speakDebounceTimer) {
         clearTimeout(ctx._speakDebounceTimer);
         ctx._speakDebounceTimer = null;
+      }
+      if (ctx._speechStallTimer) {
+        clearTimeout(ctx._speechStallTimer);
+        ctx._speechStallTimer = null;
       }
     } else if (_standaloneSpeakDebounceTimer) {
       clearTimeout(_standaloneSpeakDebounceTimer);
@@ -539,10 +624,11 @@
     }
     _clearAndroidSpeakTimer(ctx);
 
-    const performSpeak = (skipExplicitVoice = false) => {
-      if (ctx && !ctx.voiceEnabled) return;
-      const activeSynth = _getSpeechSynth();
-      const ActiveUtterance = _getSpeechUtteranceCtor();
+    const performSpeak = (skipExplicitVoice = false, useTopFallback = false) => {
+      if (ctx && (!ctx.voiceEnabled || ctx.muted || ctx.volume === 0)) return;
+      const topWin = useTopFallback ? _getSameOriginTopWindow() : null;
+      const activeSynth = (useTopFallback && topWin && topWin.speechSynthesis) ? topWin.speechSynthesis : _getSpeechSynth();
+      const ActiveUtterance = (useTopFallback && topWin && topWin.SpeechSynthesisUtterance) ? topWin.SpeechSynthesisUtterance : _getSpeechUtteranceCtor();
       if (!activeSynth || !ActiveUtterance) return;
 
       try {
@@ -562,9 +648,7 @@
         if (customPitch !== null) {
           utterance.pitch = Math.max(0.0, Math.min(2.0, customPitch));
         }
-        const isMuted = ctx ? Boolean(ctx.muted) : false;
-        const vol = ctx && typeof ctx.volume === 'number' ? ctx.volume : 1.0;
-        utterance.volume = isMuted ? 0.0 : Math.max(0, Math.min(1.0, vol));
+        utterance.volume = Math.max(0.01, Math.min(1.0, vol));
         const langMap = {
           es: 'es-ES',
           fr: 'fr-FR',
@@ -597,6 +681,13 @@
           _standaloneActiveUtterance = utterance;
         }
         let started = false;
+        let settled = false;
+        const clearStallTimer = () => {
+          if (ctx && ctx._speechStallTimer) {
+            clearTimeout(ctx._speechStallTimer);
+            ctx._speechStallTimer = null;
+          }
+        };
         utterance.onboundary = (e) => {
           if (e.name === 'word') {
             const word = spokenText.slice(e.charIndex).split(/\s+/)[0].replace(/[^a-zA-Z]/g, '');
@@ -607,14 +698,18 @@
         };
         utterance.onstart = () => {
           started = true;
+          clearStallTimer();
           if (ctx) {
             ctx._speechStartedOnDevice = true;
+            ctx._pendingAutoSpeech = null;
             if (typeof ctx.notifyParent === 'function') {
               ctx.notifyParent({ type: 'SPEECH_START', text: spokenText });
             }
           }
         };
         utterance.onend = () => {
+          settled = true;
+          clearStallTimer();
           if (ctx) {
             if (ctx._activeUtterance === utterance) ctx._activeUtterance = null;
             if (typeof ctx.notifyParent === 'function') {
@@ -624,11 +719,32 @@
             _standaloneActiveUtterance = null;
           }
         };
-        utterance.onerror = () => {
-          // If an explicit voice failed before starting (common with Android cloud voices offline),
+        utterance.onerror = (errEv) => {
+          settled = true;
+          clearStallTimer();
+          const errCode = errEv && errEv.error ? String(errEv.error) : '';
+          // If blocked by autoplay/user-activation inside the iframe while the parent host frame
+          // owns the active click gesture (e.g. host Play toolbar click), retry once via same-origin top.
+          if (!started && errCode === 'not-allowed') {
+            const parentTop = !useTopFallback ? _getSameOriginTopWindow() : null;
+            const parentHasActivation = Boolean(
+              parentTop &&
+              parentTop.speechSynthesis &&
+              parentTop.speechSynthesis !== activeSynth &&
+              ((opts && opts.allowTopFallback) || (parentTop.navigator && parentTop.navigator.userActivation && parentTop.navigator.userActivation.isActive))
+            );
+            if (parentHasActivation) {
+              performSpeak(false, true);
+              return;
+            }
+            if (ctx && opts && opts.isAutoLoad) {
+              ctx._pendingAutoSpeech = { text: spokenText, opts: Object.assign({}, opts, { isAutoLoad: false, immediate: true }), queuedAt: Date.now() };
+            }
+          }
+          // If an explicit voice failed before starting (common with Android/Desktop cloud voices offline),
           // retry once letting the OS pick its native default voice.
-          if (!started && boundExplicitVoice && !skipExplicitVoice) {
-            performSpeak(true);
+          if (!started && errCode !== 'not-allowed' && errCode !== 'canceled' && errCode !== 'interrupted' && boundExplicitVoice && !skipExplicitVoice) {
+            performSpeak(true, useTopFallback);
             return;
           }
           if (ctx) {
@@ -640,18 +756,28 @@
             _standaloneActiveUtterance = null;
           }
         };
-        if (!skipExplicitVoice && ctx && typeof ctx.notifyParent === 'function') {
+        if (!skipExplicitVoice && !useTopFallback && ctx && typeof ctx.notifyParent === 'function') {
           ctx.notifyParent({ type: 'SUBTITLE_UPDATE', text: spokenText });
         }
 
-        // On Android Chrome, calling speak() synchronously in the same tick as cancel()
-        // frequently causes Android System TTS to cancel the newly queued utterance.
+        const startStallWatchdog = () => {
+          if (!boundExplicitVoice || skipExplicitVoice || !ctx) return;
+          ctx._speechStallTimer = setTimeout(() => {
+            ctx._speechStallTimer = null;
+            if (!started && !settled && ctx._activeUtterance === utterance && !activeSynth.speaking) {
+              performSpeak(true, useTopFallback);
+            }
+          }, 750);
+        };
+
+        // On Android Chrome & Chromium Desktop, calling speak() synchronously in the same tick as cancel()
+        // frequently causes System TTS to cancel the newly queued utterance.
         // A tiny 25ms handoff stays well inside Chromium's 5s transient user-activation window.
-        if (didCancel && _isAndroidBrowser()) {
+        if (didCancel && _needsPostCancelSpeakHandoff()) {
           const timerId = setTimeout(() => {
             if (ctx) {
               ctx._androidSpeakTimer = null;
-              if (!ctx.voiceEnabled || ctx._activeUtterance !== utterance) return;
+              if (!ctx.voiceEnabled || ctx.muted || ctx._activeUtterance !== utterance) return;
             } else {
               _standaloneAndroidSpeakTimer = null;
               if (_standaloneActiveUtterance !== utterance) return;
@@ -661,6 +787,7 @@
                 activeSynth.resume();
               }
               activeSynth.speak(utterance);
+              startStallWatchdog();
             } catch (_) {}
           }, 25);
           if (ctx) {
@@ -670,6 +797,7 @@
           }
         } else {
           activeSynth.speak(utterance);
+          startStallWatchdog();
         }
       } catch (err) {
         console.warn('SpeechSynthesis error:', err);
@@ -683,7 +811,7 @@
       (typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive)
     );
     if (hasUserActivation) {
-      performSpeak(false);
+      performSpeak(false, false);
     } else {
       const timerId = setTimeout(() => {
         if (ctx) {
@@ -691,7 +819,7 @@
         } else {
           _standaloneSpeakDebounceTimer = null;
         }
-        performSpeak(false);
+        performSpeak(false, false);
       }, 80);
       if (ctx) {
         ctx._speakDebounceTimer = timerId;
@@ -706,7 +834,7 @@
     const ctx = (this && this !== global && typeof this === 'object' && ('currentLang' in this || 'speechRate' in this || 'uiController' in this))
       ? this
       : null;
-    speakText.call(ctx, text, { lang: language || (ctx && ctx.currentLang) || 'en', immediate: true });
+    speakText.call(ctx, text, { lang: language || (ctx && ctx.currentLang) || 'en', immediate: true, allowTopFallback: true });
     if (ctx && ctx.uiController && typeof ctx.uiController.showToast === 'function') {
       ctx.uiController.showToast(`✨ Nano Co-Pilot: "${text}"`, 4500);
     }
@@ -736,13 +864,22 @@
       try { win.__astMobileTtsPrimed = true; } catch (_) {}
     }
     const unlockHandler = () => primeMobileAudioAndTts();
+    const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown'];
     try {
-      win.addEventListener('pointerdown', unlockHandler, { passive: true, capture: true });
-      win.addEventListener('pointerup', unlockHandler, { passive: true, capture: true });
-      win.addEventListener('touchstart', unlockHandler, { passive: true, capture: true });
-      win.addEventListener('touchend', unlockHandler, { passive: true, capture: true });
-      win.addEventListener('click', unlockHandler, { passive: true, capture: true });
-      win.addEventListener('keydown', unlockHandler, { passive: true, capture: true });
+      for (let i = 0; i < events.length; i++) {
+        win.addEventListener(events[i], unlockHandler, { passive: true, capture: true });
+      }
+      // Clean up parent-window listeners when this iframe unloads so detached closures never accumulate
+      if (typeof window !== 'undefined' && win !== window && typeof window.addEventListener === 'function') {
+        window.addEventListener('pagehide', () => {
+          try {
+            for (let i = 0; i < events.length; i++) {
+              win.removeEventListener(events[i], unlockHandler, true);
+            }
+            if (_primedTargets) _primedTargets.delete(win);
+          } catch (_) {}
+        }, { once: true });
+      }
     } catch (_) {}
   }
 
@@ -750,14 +887,15 @@
     if (audioSynth) _registeredAudioSynth = audioSynth;
     if (typeof window === 'undefined') return;
     _attachGesturePrimingToWindow(window);
+    const topWin = _getSameOriginTopWindow();
+    if (topWin) {
+      _attachGesturePrimingToWindow(topWin);
+    }
+    // Pre-warm voices list early so Chrome Desktop / Android getVoices() is populated before first tap
     try {
-      if (
-        window.top &&
-        window.top !== window &&
-        window.top.location &&
-        window.top.location.origin === window.location.origin
-      ) {
-        _attachGesturePrimingToWindow(window.top);
+      const synth = _getSpeechSynth();
+      if (synth && typeof synth.getVoices === 'function') {
+        synth.getVoices();
       }
     } catch (_) {}
   }

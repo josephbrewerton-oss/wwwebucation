@@ -167,6 +167,16 @@ export class PersistentAppShellElement extends HTMLElement {
     this.updateSoundUi(next);
     if (next) {
       playSuccessChime();
+      try {
+        const playerIframe = document.querySelector<HTMLIFrameElement>('#ast-player-iframe');
+        const iframeWin = playerIframe?.contentWindow as
+          | (Window & { primeMobileAudioAndTts?: () => void })
+          | null
+          | undefined;
+        if (iframeWin && typeof iframeWin.primeMobileAudioAndTts === 'function') {
+          iframeWin.primeMobileAudioAndTts();
+        }
+      } catch (_) {}
     }
   };
 

@@ -20,6 +20,7 @@ import {
   getVoiceEnabled,
   toggleVoice,
 } from '../services/bslGlobalStore';
+import { isSoundEnabled, setSoundEnabled } from '../services/soundHaptics';
 import {
   renderPlayerEmbedModal,
   renderNanoAiTutorDrawer,
@@ -72,6 +73,7 @@ import { renderPlayerShellHtml } from './player/playerShellTemplate';
 import {
   buildBuiltinPhetCartridge,
   ingestUploadedCartridgeFiles,
+  invokeSameOriginPlayerAction,
   unlockMobilePwaAudioForIframe,
 } from './player/playerFileIngestion';
 
@@ -103,7 +105,7 @@ export function renderPlayerPage(): HTMLElement {
     setBslEnabled(true);
   }
   let bslActive = getBslEnabled();
-  let isMuted = !getVoiceEnabled();
+  let isMuted = !(getVoiceEnabled() && isSoundEnabled());
 
   const meta = getPresetMeta(activePreset);
   container.innerHTML = renderPlayerShellHtml({
@@ -937,16 +939,20 @@ export function renderPlayerPage(): HTMLElement {
     });
   });
 
-  // Wire Play, Reset & BSL Toolbar buttons
+  // Wire Play, Reset & BSL Toolbar buttons (invoke same-origin iframe synchronously to preserve user activation)
   playBtn?.addEventListener('click', () => {
     unlockMobilePwaAudioForIframe(iframe);
-    postToPlayer({ type: 'TOGGLE_PLAY' });
+    if (!invokeSameOriginPlayerAction(iframe, 'togglePlay')) {
+      postToPlayer({ type: 'TOGGLE_PLAY' });
+    }
     focusPlayerStage();
   });
 
   resetBtn?.addEventListener('click', () => {
     unlockMobilePwaAudioForIframe(iframe);
-    postToPlayer({ type: 'RESET_SIM' });
+    if (!invokeSameOriginPlayerAction(iframe, 'reset')) {
+      postToPlayer({ type: 'RESET_SIM' });
+    }
     focusPlayerStage();
   });
 
@@ -964,14 +970,17 @@ export function renderPlayerPage(): HTMLElement {
 
   muteBtn?.addEventListener('click', () => {
     const nextVoice = toggleVoice();
+    setSoundEnabled(nextVoice);
     const muted = !nextVoice;
     if (nextVoice) {
       unlockMobilePwaAudioForIframe(iframe);
     }
     isMuted = muted;
     updateMuteUi(muted);
-    postToPlayer({ type: 'SET_VOICE', enabled: nextVoice });
-    postToPlayer({ type: 'SET_MUTED', muted });
+    if (!invokeSameOriginPlayerAction(iframe, 'setAudioState', { voiceEnabled: nextVoice, muted })) {
+      postToPlayer({ type: 'SET_VOICE', enabled: nextVoice });
+      postToPlayer({ type: 'SET_MUTED', muted });
+    }
   });
 
   bslBtn?.addEventListener('click', () => {
@@ -1046,7 +1055,7 @@ export function renderPlayerPage(): HTMLElement {
       } else if (activePreset && (!e.data.preset || e.data.preset !== activePreset)) {
         postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
       }
-      updatePlayButtonUI(false);
+      updatePlayButtonUI(Boolean(e.data.isPlaying));
 
       if (pendingAutoEppBench && (!e.data.preset || e.data.preset === activePreset)) {
         pendingAutoEppBench = false;

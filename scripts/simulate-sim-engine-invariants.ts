@@ -3649,7 +3649,88 @@ console.log('\n--- TEST 23: Batch 1 Pure Cartridge Migration (4 RE Slider Cartri
   sg.handleTouchEnd();
   assert.strictEqual(siteSpoken.length, 1, 'Subsequent touchend must not double-fire already flushed audio/TTS');
 
-  console.log('[✅ PASS] Sim 28: Mobile / Android PWA cartridge audio unlock, iframe-local TTS, localService priority & touch pointerup activation verified.');
+  // 28c. Verify pending boot-sound replay on first unlock, muted speech skip, not-allowed top fallback,
+  // Chromium desktop cancel->speak handoff, no double TOGGLE_PLAY, and parser gesture/bytecode fixes
+  let oscStartedCount = 0;
+  class ReplayAudioContext extends MockAudioContext {
+    createOscillator() {
+      return {
+        type: 'square',
+        frequency: { setValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+        start() { oscStartedCount++; },
+        stop() {},
+      };
+    }
+    createGain() {
+      return {
+        gain: { setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
+        connect() {},
+      };
+    }
+  }
+  allowResumeToRun = false;
+  audioWin.AudioContext = ReplayAudioContext;
+  delete audioWin.__astSharedAudioCtx;
+  const replayEngine = new MobileEngineCtor({ muted: false, voiceEnabled: true });
+  replayEngine._playSceneBootSound({ bootSound: 'bbc-beep' });
+  assert.strictEqual(oscStartedCount, 0, 'Boot sound must wait while AudioContext is suspended');
+  allowResumeToRun = true;
+  replayEngine.audioSynth.unlock();
+  assert.strictEqual(oscStartedCount, 2, 'Queued BBC boot beep (2 oscillators) must replay once AudioContext unlocks');
+  replayEngine.audioSynth.unlock();
+  assert.strictEqual(oscStartedCount, 2, 'Replayed boot sound must not fire twice on subsequent unlock()');
+
+  // Muted engine must skip queuing silent SpeechSynthesis utterances
+  const spokenBeforeMute = spokenOnIframe.length;
+  replayEngine.setMuted(true);
+  replayEngine.speak('Should remain silent', { immediate: true });
+  assert.strictEqual(spokenOnIframe.length, spokenBeforeMute, 'Muted engine must not enqueue silent SpeechSynthesis utterances');
+  replayEngine.setMuted(false);
+
+  // not-allowed error inside iframe with allowTopFallback must retry once on same-origin window.top.speechSynthesis
+  const topSpokenBefore = spokenOnTop.length;
+  replayEngine.speak('Host Play Narration', { immediate: true, allowTopFallback: true });
+  const lastIframeUtt = spokenOnIframe[spokenOnIframe.length - 1];
+  assert.ok(lastIframeUtt && typeof lastIframeUtt.onerror === 'function', 'Utterance must attach onerror handler');
+  lastIframeUtt.onerror({ error: 'not-allowed' });
+  assert.strictEqual(spokenOnTop.length, topSpokenBefore + 1, 'not-allowed iframe speech with parent activation must fall back to same-origin window.top.speechSynthesis');
+  assert.strictEqual(spokenOnTop[spokenOnTop.length - 1].text, 'Host Play Narration', 'Fallback utterance text must match');
+
+  // Desktop Chrome UA must also receive 25ms cancel->speak handoff
+  audioSb.navigator.userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36';
+  iframeSpeechSynth.speaking = true;
+  scheduledTimeouts.length = 0;
+  const spokenBeforeDesk = spokenOnIframe.length;
+  replayEngine.speak('Desktop Chrome phrase', { immediate: true });
+  assert.strictEqual(spokenOnIframe.length, spokenBeforeDesk, 'Desktop Chrome must defer speak() by 25ms after cancel() to avoid Chromium silent drop');
+  const deskHandoff = scheduledTimeouts.find((t) => t.ms === 25);
+  assert.ok(deskHandoff, 'Desktop Chrome cancel->speak handoff must schedule a 25ms timeout');
+  deskHandoff!.fn();
+  assert.strictEqual(spokenOnIframe.length, spokenBeforeDesk + 1, 'Desktop Chrome 25ms handoff must execute speak()');
+
+  // Verify ast-parser.js extracts zero-JS gesture speech/attr slots on cartridge-level :gestures
+  const parsedGestureScene = audioSb.parseAst(`(:scene :id "g-test" :type "Slide" :title "G"
+    (:gestures (
+      (:clickable :target ".word" :set-var "activeWord" :from-attr "data-word" :speak-attr "data-word" :speak-var "activeWord" :fallback-var "pageText" :clear-var "tmp" :count 5)
+    ))
+  )`);
+  assert.ok(parsedGestureScene && parsedGestureScene.gestures && parsedGestureScene.gestures.length === 1, 'parseAst must parse cartridge-level :gestures');
+  const g0 = parsedGestureScene.gestures[0];
+  assert.strictEqual(g0.fromAttr, 'data-word', 'parseAst must extract :from-attr');
+  assert.strictEqual(g0.speakAttr, 'data-word', 'parseAst must extract :speak-attr');
+  assert.strictEqual(g0.speakVar, 'activeWord', 'parseAst must extract :speak-var');
+  assert.strictEqual(g0.fallbackVar, 'pageText', 'parseAst must extract :fallback-var');
+  assert.strictEqual(g0.clearVar, 'tmp', 'parseAst must extract :clear-var');
+  assert.strictEqual(g0.count, 5, 'parseAst must extract :count');
+
+  // Verify player-ui-events.js guards TOGGLE_PLAY when ast-bridge.js is active (no double-toggle)
+  const uiEventsSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'player-ui-events.js'), 'utf8');
+  assert.ok(uiEventsSrc.includes('!window.__astBridgeActive'), 'player-ui-events.js must guard TOGGLE_PLAY/PLAY/PAUSE against double execution when ast-bridge.js is active');
+  const bridgeSrc = fs.readFileSync(path.join(process.cwd(), 'static', 'player', 'ast-bridge.js'), 'utf8');
+  assert.ok(bridgeSrc.includes('window.__astBridgeActive = true'), 'ast-bridge.js must mark window.__astBridgeActive = true on setup');
+
+  console.log('[✅ PASS] Sim 28: Desktop, Android & iOS/PWA cartridge audio unlock, boot-sound replay, TTS fallbacks, no double TOGGLE_PLAY & touch activation verified.');
   passedTests++;
 }
 

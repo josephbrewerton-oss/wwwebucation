@@ -655,7 +655,10 @@
     }
 
    play() {
-      if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
+      const _prime = global.primeMobileAudioAndTts || (typeof window !== 'undefined' ? window.primeMobileAudioAndTts : undefined);
+      if (typeof _prime === 'function') {
+        _prime(this.audioSynth);
+      } else if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
         this.audioSynth.unlock();
       }
       const wasPlaying = this.isPlaying;
@@ -668,15 +671,16 @@
         this.emit('statechange', { isPlaying: true, speed: this.speed });
       }
 
-      // On mobile PWAs, initial scene load speech is often blocked before the first user tap.
+      // On desktop, Android, and iOS PWAs, initial scene load speech is often blocked before the first user tap.
       // Speaking the current subtitle synchronously inside play() unlocks SpeechSynthesis and plays keyframe 0.
-      if (!wasPlaying && this.voiceEnabled && !this.muted && this.scene) {
+      const hasActiveUserGesture = Boolean(typeof navigator !== 'undefined' && navigator.userActivation && navigator.userActivation.isActive);
+      if ((!wasPlaying || (!this._speechStartedOnDevice && hasActiveUserGesture)) && this.voiceEnabled && !this.muted && this.scene) {
         const synth = this._getSpeechSynth ? this._getSpeechSynth() : null;
         const notCurrentlySpeaking = !synth || (!synth.speaking && !synth.pending);
         if (notCurrentlySpeaking && (!this._speechStartedOnDevice || this.progress <= 0.01)) {
           const currentSub = this.getCurrentSubtitle() || (this.scene.keyframes && this.scene.keyframes[0] ? `${this.scene.keyframes[0].title}. ${this.scene.keyframes[0].rule}` : '');
           if (currentSub) {
-            this.speakText(currentSub, { immediate: true });
+            this.speakText(currentSub, { immediate: true, allowTopFallback: true });
           }
         }
       }
@@ -711,7 +715,7 @@
       return this.isPlaying;
     }
 
-    seek(newProgress, skipTelemetry = false) {
+    seek(newProgress, skipTelemetry = false, isAutoLoad = false) {
       this.progress = Math.max(0, Math.min(1, newProgress));
       if (this.backdropVideo && this.scene && (this.scene.video || this.scene.hasVideo)) {
         const vDur = (Number.isFinite(this.backdropVideo.duration) && this.backdropVideo.duration > 0)
@@ -721,7 +725,7 @@
           this.backdropVideo.currentTime = this.progress * vDur;
         }
       }
-      this.updateActiveKeyframeAndSpeech(true);
+      this.updateActiveKeyframeAndSpeech(!isAutoLoad);
       if (!this.vars) this.vars = {};
       const currentSec = this.progress * (this.durationSec || 10.0);
       this.vars.simClock = currentSec;
@@ -1259,6 +1263,8 @@
       this.voiceEnabled = next;
       if (!this.voiceEnabled) {
         this.cancelSpeech();
+      } else if (this.audioSynth && typeof this.audioSynth.unlock === 'function') {
+        this.audioSynth.unlock();
       }
       this.notifyParent({ type: 'VOICE_TOGGLE', enabled: next });
       this.emit('voicetoggle', { enabled: next });
@@ -1497,8 +1503,8 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         const subText = this.getCurrentSubtitle() || `${kf.title}. ${kf.rule}`;
         this.notifyParent({ type: 'SUBTITLE_UPDATE', text: subText });
 
-        if (this.voiceEnabled && (this.isPlaying || userSeeking)) {
-          this.speakText(subText);
+        if (this.voiceEnabled && !this.muted && (this.isPlaying || userSeeking)) {
+          this.speakText(subText, { immediate: Boolean(userSeeking), allowTopFallback: Boolean(userSeeking) });
         }
 
         this.lastSpokenIndex = activeIndex;
@@ -1558,10 +1564,11 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
       if (!scene || !scene.bootSound || !this.audioSynth) return;
       try {
         const bs = String(scene.bootSound).trim().toLowerCase();
+        const bootOpts = { ttlMs: 15000 };
         if (bs === 'bbc-beep') {
-          if (typeof this.audioSynth.playBbcBeep === 'function') this.audioSynth.playBbcBeep();
+          if (typeof this.audioSynth.playBbcBeep === 'function') this.audioSynth.playBbcBeep(bootOpts);
         } else if (!isNaN(Number(bs)) && typeof this.audioSynth.playTone === 'function') {
-          this.audioSynth.playTone(Number(bs), 0.25, 'square');
+          this.audioSynth.playTone(Number(bs), 0.25, 'square', 0.16, bootOpts);
         }
       } catch (_) {}
     }
