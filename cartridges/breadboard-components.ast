@@ -1,0 +1,245 @@
+(:scene
+  :id "breadboard-components"
+  :title "Solderless Breadboard & Ohm's Law Lab"
+  :type "Sim"
+  :oak-id "OAK-KS3-PHY-048"
+  :oak-unit "ks3-physics-electricity-breadboard-circuits"
+  :stage "KS3/GCSE PHYSICS & D&T"
+  :duration 12.0
+  :boot-sound "chime"
+
+  (:controls
+    :whiteboard true
+    :xray true
+    :audio true
+    :param-hud true)
+
+  (:vars (
+    (:var :name "supplyV" :val 5.0 :min 1.5 :max 9.0 :step 0.5 :unit "V" :label "Supply Voltage (Vs)")
+    (:var :name "resistance" :val 220 :min 100 :max 1000 :step 10 :unit "Ω" :label "Resistor Value (R)")
+    (:var :name "ledVf" :val 2.0 :min 1.6 :max 3.4 :step 0.2 :unit "V" :label "LED Forward Voltage (Vf)")
+    (:var :name "switchClosed" :val 0 :min 0 :max 1 :step 1 :label "Tactile Switch (0=Open, 1=Closed)")
+    (:var :name "resX" :val 460 :min 40 :max 620 :step 1 :label "Resistor X")
+    (:var :name "resY" :val 90 :min 48 :max 420 :step 1 :label "Resistor Y")
+    (:var :name "ledX" :val 460 :min 40 :max 620 :step 1 :label "LED X")
+    (:var :name "ledY" :val 190 :min 48 :max 420 :step 1 :label "LED Y")
+    (:var :name "swX" :val 460 :min 40 :max 620 :step 1 :label "Switch X")
+    (:var :name "swY" :val 290 :min 48 :max 420 :step 1 :label "Switch Y")
+  ))
+
+  (:inputs (
+    (:slider :var "supplyV" :label "Supply Voltage (Vs)" :min 1.5 :max 9.0 :step 0.5 :unit "V")
+    (:slider :var "resistance" :label "Resistor Value (R)" :min 100 :max 1000 :step 10 :unit "Ω")
+    (:slider :var "ledVf" :label "LED Forward Voltage (Vf)" :min 1.6 :max 3.4 :step 0.2 :unit "V")
+    (:toggle :var "switchClosed" :label "Tactile Switch Closed")
+    (:button :id "autowire-btn" :label "Auto-Wire Circuit" :action "(set-var resX 150)")
+  ))
+
+  (:computed (
+    (:name "resPlaced" :expr "(if (and (>= resX 40) (<= resX 360) (>= resY 48) (<= resY 420)) 1 0)")
+    (:name "ledPlaced" :expr "(if (and (>= ledX 40) (<= ledX 360) (>= ledY 48) (<= ledY 420)) 1 0)")
+    (:name "swPlaced" :expr "(if (and (>= swX 40) (<= swX 360) (>= swY 48) (<= swY 420)) 1 0)")
+    (:name "placedCount" :expr "(+ resPlaced ledPlaced swPlaced)")
+    (:name "circuitClosed" :expr "(if (and (= resPlaced 1) (= ledPlaced 1) (= swPlaced 1) (= switchClosed 1)) 1 0)")
+    (:name "netV" :expr "(max 0 (- supplyV ledVf))")
+    (:name "currentMa" :expr "(if (= circuitClosed 1) (* (/ netV (max 1 resistance)) 1000) 0)")
+    (:name "ledBrightness" :expr "(clamp (/ currentMa 20) 0 1)")
+    (:name "isOverCurrent" :expr "(if (> currentMa 25) 1 0)")
+    (:name "isSafeLit" :expr "(if (and (= circuitClosed 1) (>= currentMa 5) (<= currentMa 25)) 1 0)")
+  ))
+
+  (:scope :target "#current-scope-path" :var "currentMa" :x-expr "t" :y-expr "currentMa" :samples 120 :min 0 :max 40 :x-range (0 1) :y-range (0 40) :plot (668 380 86 40))
+
+  (:keyframes (
+    (:t 0.00 :title "Solderless Breadboard Rails" :rule "Red (+) and blue (−) vertical rails carry power; horizontal 5-hole tie strips connect component legs.")
+    (:t 0.35 :title "Current-Limiting Resistor" :rule "A 220Ω resistor (Red-Red-Brown) limits LED current via Ohm's Law: I = (Vs − Vf) / R.")
+    (:t 0.70 :title "Forward-Biased LED & Switch" :rule "Closing the tactile switch completes the series loop from +5V through the resistor and LED to GND.")
+    (:t 1.00 :title "Safe Operating Envelope" :rule "Keep series LED current between 5 mA and 25 mA to illuminate brightly without thermal damage.")
+  ))
+
+  (:subtitles (
+    (:start 0.00 :end 0.35 :en "Drag the 220Ω resistor, red LED, and tactile switch from the palette onto the breadboard tie-points." :es "Arrastra la resistencia de 220Ω, el LED rojo y el interruptor táctil a la protoboard.")
+    (:start 0.35 :end 0.70 :en "Press the tactile switch plunger (or tap Space) to close the series loop and measure Ohm's Law current." :es "Presiona el interruptor táctil (o pulsa Espacio) para cerrar el circuito y medir la corriente.")
+    (:start 0.70 :end 1.00 :en "Adjust supply voltage and resistance to keep LED current safely between 5 mA and 25 mA!" :es "¡Ajusta el voltaje y la resistencia para mantener la corriente del LED entre 5 mA y 25 mA!")
+  ))
+
+  (:interactive (
+    (:checkpoint :t 0.50
+      :title "Build a Safe Series LED Circuit"
+      :prompt "Place the resistor, LED, and tactile switch on the breadboard, close the switch, and hold safe series current between 5 mA and 25 mA."
+      :pass-expr "(and (= resPlaced 1) (= ledPlaced 1) (= swPlaced 1) (= switchClosed 1) (>= currentMa 5) (<= currentMa 25))"
+      :hold-duration 1.0
+      :explanation "With all three series components seated on the breadboard and the tactile switch closed, Ohm's Law I = (Vs − Vf) / R yields safe illumination current (13.6 mA at 5.0V, 220Ω, 2.0V Vf).")
+  ))
+
+  (:gestures (
+    ;; 2D Draggable Electronic Components (Palette <-> Breadboard)
+    (:draggable :target "#comp-resistor" :axis "xy" :var-x "resX" :var-y "resY" :min-x 40 :max-x 620 :min-y 48 :max-y 420)
+    (:draggable :target "#comp-led" :axis "xy" :var-x "ledX" :var-y "ledY" :min-x 40 :max-x 620 :min-y 48 :max-y 420)
+    (:draggable :target "#comp-switch" :axis "xy" :var-x "swX" :var-y "swY" :min-x 40 :max-x 620 :min-y 48 :max-y 420)
+
+    ;; Clickable Tactile Switch Plunger (Nested :seq + :if declarative pipeline)
+    (:clickable :target "#switch-plunger"
+      (:seq
+        (:toggle-var "switchClosed")
+        (:if "(= switchClosed 1)"
+          (:seq (:tone "659.25") (:speak "Tactile switch closed."))
+          (:seq (:tone "330.00") (:speak "Tactile switch open.")))))
+
+    ;; Quick Workbench Controls
+    (:clickable :target "#btn-toggle-switch"
+      (:seq
+        (:toggle-var "switchClosed")
+        (:if "(= switchClosed 1)"
+          (:seq (:tone "659.25") (:speak "Switch closed."))
+          (:seq (:tone "330.00") (:speak "Switch open.")))))
+
+    (:clickable :target "#btn-autowire"
+      (:seq
+        (:set-var "resX" :val 150)
+        (:set-var "resY" :val 110)
+        (:set-var "ledX" :val 238)
+        (:set-var "ledY" :val 190)
+        (:set-var "swX" :val 160)
+        (:set-var "swY" :val 310)
+        (:set-var "switchClosed" :val 1)
+        (:tone "523.25")
+        (:speak "Circuit auto-wired on breadboard.")))
+
+    (:clickable :target "#btn-reset-board"
+      (:seq
+        (:reset-var "resX" :val 460)
+        (:reset-var "resY" :val 90)
+        (:reset-var "ledX" :val 460)
+        (:reset-var "ledY" :val 190)
+        (:reset-var "swX" :val 460)
+        (:reset-var "swY" :val 290)
+        (:reset-var "switchClosed" :val 0)
+        (:tone "293.66")
+        (:speak "Components returned to palette.")))
+
+    ;; Keyboard Shortcut: Space toggles the tactile switch
+    (:key :code "Space"
+      (:seq
+        (:toggle-var "switchClosed")
+        (:if "(= switchClosed 1)"
+          (:tone "659.25")
+          (:tone "330.00"))))
+  ))
+
+  (:bindings (
+    ;; 1. Draggable Component Transforms (Snap cleanly to 10px breadboard tie-grid when seated)
+    (:target "#comp-resistor"
+      (:attr "transform" "(let ((sx (if (= resPlaced 1) (* (round (/ resX 10)) 10) resX)) (sy (if (= resPlaced 1) (* (round (/ resY 10)) 10) resY))) (translate sx sy))"))
+    (:target "#comp-led"
+      (:attr "transform" "(let ((sx (if (= ledPlaced 1) (* (round (/ ledX 10)) 10) ledX)) (sy (if (= ledPlaced 1) (* (round (/ ledY 10)) 10) ledY))) (translate sx sy))"))
+    (:target "#comp-switch"
+      (:attr "transform" "(let ((sx (if (= swPlaced 1) (* (round (/ swX 10)) 10) swX)) (sy (if (= swPlaced 1) (* (round (/ swY 10)) 10) swY))) (translate sx sy))"))
+
+    ;; 2. Live IEC 4-Band Resistor Color Coding via (let ...) + (case ...)
+    (:target "#res-band-1"
+      (:attr "fill" "(let ((r (round resistance)) (d1 (if (>= r 1000) 1 (floor (/ r 100))))) (case d1 (0 '#0f172a') (1 '#78350f') (2 '#dc2626') (3 '#ea580c') (4 '#eab308') (5 '#16a34a') (6 '#2563eb') (7 '#7c3aed') (8 '#64748b') (else '#f8fafc')))"))
+    (:target "#res-band-2"
+      (:attr "fill" "(let ((r (round resistance)) (d2 (if (>= r 1000) 0 (% (floor (/ r 10)) 10)))) (case d2 (0 '#0f172a') (1 '#78350f') (2 '#dc2626') (3 '#ea580c') (4 '#eab308') (5 '#16a34a') (6 '#2563eb') (7 '#7c3aed') (8 '#64748b') (else '#f8fafc')))"))
+    (:target "#res-band-3"
+      (:attr "fill" "(if (>= resistance 1000) '#dc2626' '#78350f')"))
+
+    ;; 3. LED Color, Radiance & Glow (Adapts to Forward Voltage Vf + Live Current)
+    (:target "#led-dome"
+      (:attr "fill" "(cond ((<= ledVf 2.0) '#ef4444') ((<= ledVf 2.4) '#22c55e') (else '#38bdf8'))"))
+    (:target "#led-base"
+      (:attr "fill" "(cond ((<= ledVf 2.0) '#b91c1c') ((<= ledVf 2.4) '#15803d') (else '#0284c7'))"))
+    (:target "#led-glow-stop-0"
+      (:attr "stop-color" "(cond ((<= ledVf 2.0) '#ef4444') ((<= ledVf 2.4) '#22c55e') (else '#38bdf8'))"))
+    (:target "#led-glow-stop-1"
+      (:attr "stop-color" "(cond ((<= ledVf 2.0) '#ef4444') ((<= ledVf 2.4) '#22c55e') (else '#38bdf8'))"))
+    (:target "#led-glow"
+      (:attr "fill" "(cond ((<= ledVf 2.0) '#ef4444') ((<= ledVf 2.4) '#22c55e') (else '#38bdf8'))")
+      (:attr "opacity" "(if (= circuitClosed 1) (* ledBrightness 0.72) 0)"))
+    (:target "#led-halo"
+      (:attr "opacity" "(if (= circuitClosed 1) (* ledBrightness 0.92) 0)")
+      (:attr "r" "(+ 28 (* ledBrightness 16))"))
+
+    ;; 4. Tactile Switch Plunger State & Workbench Button Feedback
+    (:target "#switch-plunger"
+      (:attr "fill" "(if (= switchClosed 1) '#059669' '#334155')")
+      (:attr "stroke" "(if (= switchClosed 1) '#6ee7b7' '#94a3b8')")
+      (:attr "r" "(if (= switchClosed 1) 9.8 11)"))
+    (:target "#switch-led-dot"
+      (:attr "fill" "(if (= switchClosed 1) '#4ade80' '#64748b')"))
+    (:target "#btn-toggle-switch-bg"
+      (:attr "fill" "(if (= switchClosed 1) '#064e3b' '#1e293b')")
+      (:attr "stroke" "(if (= switchClosed 1) '#10b981' '#64748b')"))
+    (:target "#btn-toggle-switch-text"
+      (:text "(if (= switchClosed 1) 'Switch: CLOSED [Space]' 'Press Switch [Space]')"))
+
+    ;; 5. Compile-Time (:for ...) Loop: Breadboard Bus Row Highlights (3 internal strips)
+    (:for r (0 2)
+      (:target "#bus-row-{{r}}"
+        (:attr "opacity" "(let ((seated (nth {{r}} resPlaced ledPlaced swPlaced))) (if (= circuitClosed 1) 0.34 (if (= seated 1) 0.20 0.06)))")
+        (:attr "fill" "(if (= isOverCurrent 1) '#ef4444' '#22c55e')")))
+
+    ;; 6. Breadboard Drop Guide Visual Feedback
+    (:target "#slot-resistor-box"
+      (:attr "stroke" "(if (= resPlaced 1) '#22c55e' '#0284c7')")
+      (:attr "fill-opacity" "(if (= resPlaced 1) 0.02 0.08)"))
+    (:target "#slot-led-box"
+      (:attr "stroke" "(if (= ledPlaced 1) '#22c55e' '#dc2626')")
+      (:attr "fill-opacity" "(if (= ledPlaced 1) 0.02 0.08)"))
+    (:target "#slot-switch-box"
+      (:attr "stroke" "(if (= swPlaced 1) '#22c55e' '#059669')")
+      (:attr "fill-opacity" "(if (= swPlaced 1) 0.02 0.08)"))
+
+    ;; 7. Compile-Time (:for ...) Loop: Palette Placement Check Badges
+    (:for b (0 2)
+      (:target "#palette-check-{{b}}"
+        (:attr "fill" "(let ((ok (nth {{b}} resPlaced ledPlaced swPlaced))) (if (= ok 1) '#4ade80' '#64748b'))")
+        (:text "(let ((ok (nth {{b}} resPlaced ledPlaced swPlaced))) (if (= {{b}} 2) (if (= ok 1) (if (= switchClosed 1) '✓ Seated • CLOSED' '✓ Seated • OPEN') (if (= switchClosed 1) '○ In Palette • CLOSED' '○ In Palette • OPEN')) (if (= ok 1) '✓ Seated on Board' '○ In Palette')))")))
+
+    ;; 8. Dynamic Palette & Multimeter Telemetry Readouts
+    (:target "#palette-res-label"
+      (:text "(concat (round resistance) 'Ω Resistor')"))
+    (:target "#palette-led-label"
+      (:text "(let ((col (cond ((<= ledVf 2.0) 'Red') ((<= ledVf 2.4) 'Green') (else 'Blue')))) (concat col ' LED (' (fixed ledVf 1) 'V Vf)'))"))
+    (:target "#hud-volts"
+      (:text "(concat (fixed supplyV 1) ' V')"))
+    (:target "#hud-current"
+      (:attr "fill" "(cond ((= isOverCurrent 1) '#ef4444') ((= isSafeLit 1) '#10b981') (else '#64748b'))")
+      (:text "(concat (fixed currentMa 1) ' mA')"))
+    (:target "#current-scope-path"
+      (:attr "stroke" "(if (= isOverCurrent 1) '#ef4444' '#10b981')"))
+    (:target "#hud-ohms-law"
+      (:text "(let ((vs (fixed supplyV 1)) (vf (fixed ledVf 1)) (r (round resistance)) (im (fixed currentMa 1))) (concat 'I = (' vs 'V − ' vf 'V) / ' r 'Ω = ' im ' mA'))"))
+
+    ;; 9. Screen-Reader Safe Visibility Toggles + Guarded (:when ...) Subtrees (OP_BINDING_WHEN = 0x31)
+    (:target "#current-flow-layer" :attr "display" :expr "(if (= circuitClosed 1) 'inline' 'none')")
+    (:target "#status-open-badge" :attr "display" :expr "(if (and (= isSafeLit 0) (= isOverCurrent 0)) 'inline' 'none')")
+    (:target "#status-safe-badge" :attr "display" :expr "(if (= isSafeLit 1) 'inline' 'none')")
+    (:target "#status-warn-badge" :attr "display" :expr "(if (= isOverCurrent 1) 'inline' 'none')")
+
+    (:target "#status-open-text"
+      (:text "(let ((n (round placedCount))) (cond ((< n 3) (concat n '/3 PARTS SEATED • DRAG PARTS TO BOARD')) ((= switchClosed 0) '3/3 SEATED • PRESS SWITCH TO CLOSE CIRCUIT') (else 'LOW VOLTAGE • RAISE Vs ABOVE LED Vf')))"))
+
+    ;; Guarded Subtree 1: Animate 8 Current-Flow Beads ONLY while circuit is closed (OP_BINDING_WHEN)
+    (:when "(= circuitClosed 1)"
+      (:for c (0 7)
+        (:target "#electron-dot-{{c}}"
+          (:attr "cx" "(let ((spd (+ 0.5 (* ledBrightness 2.2))) (u (% (+ (* t spd) (* {{c}} 0.125)) 1))) (cond ((< u 0.30) (lerp 52 348 (/ u 0.30))) ((< u 0.55) 348) ((< u 0.85) (lerp 348 72 (/ (- u 0.55) 0.30))) (else 62)))")
+          (:attr "cy" "(let ((spd (+ 0.5 (* ledBrightness 2.2))) (u (% (+ (* t spd) (* {{c}} 0.125)) 1))) (cond ((< u 0.30) 110) ((< u 0.55) (lerp 110 310 (/ (- u 0.30) 0.25))) ((< u 0.85) 310) (else (lerp 310 110 (/ (- u 0.85) 0.15)))))")
+          (:attr "fill" "(if (= isOverCurrent 1) '#f97316' '#38bdf8')"))))
+
+    ;; Guarded Subtree 2: Safe Illumination Status Pulse (OP_BINDING_WHEN)
+    (:when "(= isSafeLit 1)"
+      (:target "#status-safe-text"
+        (:text "(concat '✓ SAFE LED FLOW: ' (fixed currentMa 1) ' mA • OHM LAW BALANCED')"))
+      (:target "#status-safe-rect"
+        (:attr "stroke-width" "(+ 1.2 (* (abs (sin (* t 6.283))) 0.9))")))
+
+    ;; Guarded Subtree 3: Over-Current Warning Pulse (OP_BINDING_WHEN)
+    (:when "(= isOverCurrent 1)"
+      (:target "#status-warn-text"
+        (:text "(concat '⚠ OVER-CURRENT: ' (fixed currentMa 1) ' mA (>25 mA) • RAISE R')"))
+      (:target "#status-warn-rect"
+        (:attr "stroke-width" "(+ 1.4 (* (abs (sin (* t 14))) 1.1))")))
+  ))
+)

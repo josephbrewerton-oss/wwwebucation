@@ -3,7 +3,7 @@
 ;; Zero-Alloc Linear WASM Registry
 (:manifest
   :registry "Cartridge Bytecode Registry"
-  :count 78
+  :count 79
   (:cartridges (
     (:cartridge
       :id "acid-alkali-titration"
@@ -60,6 +60,14 @@
       :stage "KS2/KS3 MATHS"
       :oak-id "OAK-KS2-MAT-004"
       :bytecode "bytecode/bodmas.astb")
+
+    (:cartridge
+      :id "breadboard-components"
+      :type "Sim"
+      :title "Solderless Breadboard & Ohm's Law Lab"
+      :stage "KS3/GCSE PHYSICS & D&T"
+      :oak-id "OAK-KS3-PHY-048"
+      :bytecode "bytecode/breadboard-components.astb")
 
     (:cartridge
       :id "bsl-fingerspelling"

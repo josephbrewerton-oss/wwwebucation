@@ -1,0 +1,230 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 480" width="800" height="480" role="img" aria-label="Interactive Solderless Breadboard and Ohm's Law Circuit Lab">
+  <defs>
+    <pattern id="tie-grid-left" width="20" height="20" patternUnits="userSpaceOnUse">
+      <rect x="6" y="6" width="8" height="8" rx="1.5" fill="#1e293b" />
+      <rect x="8" y="8" width="4" height="4" fill="#0f172a" />
+    </pattern>
+    <radialGradient id="led-glow-grad" cx="50%" cy="50%" r="50%">
+      <stop id="led-glow-stop-0" offset="0%" stop-color="#ef4444" stop-opacity="0.95" />
+      <stop id="led-glow-stop-1" offset="55%" stop-color="#ef4444" stop-opacity="0.35" />
+      <stop offset="100%" stop-color="#ef4444" stop-opacity="0" />
+    </radialGradient>
+  </defs>
+
+  <!-- Dark Navy Workbench Backdrop -->
+  <rect width="800" height="480" fill="#0b1320" aria-hidden="true" />
+
+  <!-- ========================================================= -->
+  <!-- LEFT PANEL: SOLDERLESS BREADBOARD                         -->
+  <!-- ========================================================= -->
+  <g id="breadboard-panel">
+    <rect x="30" y="30" width="350" height="420" rx="12" fill="#f1ede4" stroke="#cbd5e1" stroke-width="2"
+          data-pedagogical="Solderless Breadboard: Vertical side rails distribute +5V power (red) and Ground (blue). Horizontal 5-hole strips connect component legs internally across each row." />
+
+    <!-- Power Rail Polarity Labels & Column Coordinates -->
+    <g font-family="monospace" font-size="9" font-weight="700" text-anchor="middle" aria-hidden="true">
+      <text x="52" y="44" fill="#dc2626">+</text>
+      <text x="72" y="44" fill="#2563eb">−</text>
+      <text x="102" y="44" fill="#94a3b8">a</text>
+      <text x="122" y="44" fill="#94a3b8">b</text>
+      <text x="142" y="44" fill="#94a3b8">c</text>
+      <text x="162" y="44" fill="#94a3b8">d</text>
+      <text x="182" y="44" fill="#94a3b8">e</text>
+      <text x="236" y="44" fill="#94a3b8">f</text>
+      <text x="256" y="44" fill="#94a3b8">g</text>
+      <text x="276" y="44" fill="#94a3b8">h</text>
+      <text x="296" y="44" fill="#94a3b8">i</text>
+      <text x="316" y="44" fill="#94a3b8">j</text>
+    </g>
+
+    <!-- Power Rail Bus Lines -->
+    <line x1="52" y1="48" x2="52" y2="424" stroke="#ef4444" stroke-width="2.5" aria-hidden="true" />
+    <line x1="72" y1="48" x2="72" y2="424" stroke="#3b82f6" stroke-width="2.5" aria-hidden="true" />
+
+    <!-- Center DIP Isolation Trench -->
+    <rect x="200" y="32" width="18" height="394" fill="#dfd9ce" aria-hidden="true" />
+
+    <!-- Internal Copper Strip Highlights (Bound via :for r (0 2)) -->
+    <g id="bus-highlights" aria-hidden="true">
+      <rect id="bus-row-0" x="92" y="102" width="234" height="16" rx="4" fill="#22c55e" opacity="0.08" />
+      <rect id="bus-row-1" x="226" y="202" width="100" height="16" rx="4" fill="#22c55e" opacity="0.08" />
+      <rect id="bus-row-2" x="92" y="302" width="234" height="16" rx="4" fill="#22c55e" opacity="0.08" />
+    </g>
+
+    <!-- Tie-Point Hole Matrices -->
+    <rect x="42" y="50" width="40" height="372" fill="url(#tie-grid-left)" aria-hidden="true" />
+    <rect x="92" y="50" width="100" height="372" fill="url(#tie-grid-left)" aria-hidden="true" />
+    <rect x="226" y="50" width="100" height="372" fill="url(#tie-grid-left)" aria-hidden="true" />
+
+    <!-- Pre-Wired Breadboard Jumper Traces -->
+    <g id="jumper-wires" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <!-- +5V rail to Row 4 left bus -->
+      <path id="wire-pos" d="M 52 110 L 150 110" stroke="#ef4444" stroke-width="3.5" opacity="0.9" />
+      <circle cx="52" cy="110" r="3.5" fill="#dc2626" />
+      <circle cx="150" cy="110" r="3" fill="#dc2626" />
+
+      <!-- Row 4 right bus down to Row 9 LED anode bus -->
+      <path id="wire-mid-1" d="M 250 110 L 348 110 L 348 210 L 250 210" stroke="#f59e0b" stroke-width="3.5" opacity="0.88" />
+      <circle cx="250" cy="110" r="3" fill="#d97706" />
+      <circle cx="250" cy="210" r="3" fill="#d97706" />
+
+      <!-- Row 10 LED cathode bus down to Row 14 switch right bus -->
+      <path id="wire-mid-2" d="M 266 226 L 348 226 L 348 310 L 240 310" stroke="#10b981" stroke-width="3.5" opacity="0.88" />
+      <circle cx="266" cy="226" r="3" fill="#059669" />
+      <circle cx="240" cy="310" r="3" fill="#059669" />
+
+      <!-- Row 14 switch left bus back to Blue GND rail -->
+      <path id="wire-gnd" d="M 160 310 L 72 310" stroke="#3b82f6" stroke-width="3.5" opacity="0.9" />
+      <circle cx="160" cy="310" r="3" fill="#2563eb" />
+      <circle cx="72" cy="310" r="3.5" fill="#2563eb" />
+    </g>
+
+    <!-- Target Drop Guides for the 3 Series Components -->
+    <g id="drop-guides" font-family="monospace" font-size="9" font-weight="700" text-anchor="middle" aria-hidden="true">
+      <g id="slot-resistor">
+        <rect id="slot-resistor-box" x="142" y="92" width="116" height="36" rx="6" fill="#0ea5e9" fill-opacity="0.08" stroke="#0284c7" stroke-width="1.5" stroke-dasharray="4 3" />
+        <text x="200" y="87" fill="#475569">1. RESISTOR</text>
+      </g>
+      <g id="slot-led">
+        <rect id="slot-led-box" x="230" y="160" width="56" height="74" rx="6" fill="#ef4444" fill-opacity="0.08" stroke="#dc2626" stroke-width="1.5" stroke-dasharray="4 3" />
+        <text x="258" y="154" fill="#475569">2. LED</text>
+      </g>
+      <g id="slot-switch">
+        <rect id="slot-switch-box" x="152" y="286" width="96" height="48" rx="6" fill="#10b981" fill-opacity="0.08" stroke="#059669" stroke-width="1.5" stroke-dasharray="4 3" />
+        <text x="200" y="346" fill="#475569">3. SWITCH</text>
+      </g>
+    </g>
+
+    <!-- Animated Current Flow Beads (Active only when circuitClosed = 1 via :when + :for) -->
+    <g id="current-flow-layer" display="none" aria-hidden="true">
+      <circle id="electron-dot-0" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-1" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-2" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-3" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-4" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-5" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-6" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+      <circle id="electron-dot-7" cx="52" cy="110" r="4" fill="#38bdf8" stroke="#0b1320" stroke-width="1" />
+    </g>
+
+    <!-- Bottom Board Status Banners (Screen-Reader Safe display toggling + :when guards) -->
+    <g id="status-open-badge" display="inline">
+      <rect x="44" y="424" width="322" height="20" rx="5" fill="#e2e8f0" stroke="#94a3b8" stroke-width="1" />
+      <text id="status-open-text" x="205" y="438" font-family="monospace" font-size="10.5" font-weight="700" text-anchor="middle" fill="#334155">0/3 PARTS SEATED • DRAG PARTS TO BOARD</text>
+    </g>
+    <g id="status-safe-badge" display="none">
+      <rect id="status-safe-rect" x="44" y="424" width="322" height="20" rx="5" fill="#052e16" stroke="#22c55e" stroke-width="1.5" />
+      <text id="status-safe-text" x="205" y="438" font-family="monospace" font-size="10.5" font-weight="700" text-anchor="middle" fill="#4ade80">✓ SAFE CIRCUIT • LED GLOWING</text>
+    </g>
+    <g id="status-warn-badge" display="none">
+      <rect id="status-warn-rect" x="44" y="424" width="322" height="20" rx="5" fill="#450a0a" stroke="#ef4444" stroke-width="1.5" />
+      <text id="status-warn-text" x="205" y="438" font-family="monospace" font-size="10.5" font-weight="700" text-anchor="middle" fill="#fca5a5">⚠ OVER-CURRENT (&gt;25 mA) • RAISE R</text>
+    </g>
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- RIGHT TOP PANEL: COMPONENT PALETTE                        -->
+  <!-- ========================================================= -->
+  <g id="palette-panel">
+    <rect x="415" y="30" width="355" height="310" rx="12" fill="#131c2e" stroke="#1e293b" stroke-width="2" />
+    <text x="435" y="56" font-family="system-ui, sans-serif" font-size="12.5" font-weight="700" letter-spacing="0.9" fill="#94a3b8">COMPONENT PALETTE (DRAG TO BOARD)</text>
+
+    <!-- Subtle Home Bay Wells -->
+    <g fill="#0f172a" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3" aria-hidden="true">
+      <rect x="445" y="68" width="122" height="44" rx="6" />
+      <rect x="445" y="156" width="122" height="76" rx="6" />
+      <rect x="445" y="256" width="122" height="48" rx="6" />
+    </g>
+
+    <!-- Dynamic Palette Labels & Placement Badges (Bound via :for b (0 2)) -->
+    <text id="palette-res-label" x="580" y="88" font-family="monospace" font-size="13" font-weight="700" fill="#cbd5e1">220Ω Resistor</text>
+    <text id="palette-check-0" x="580" y="104" font-family="monospace" font-size="10.5" fill="#64748b">○ In Palette</text>
+
+    <text id="palette-led-label" x="580" y="188" font-family="monospace" font-size="13" font-weight="700" fill="#cbd5e1">Red LED (2.0V Vf)</text>
+    <text id="palette-check-1" x="580" y="204" font-family="monospace" font-size="10.5" fill="#64748b">○ In Palette</text>
+
+    <text id="palette-sw-label" x="580" y="278" font-family="monospace" font-size="13" font-weight="700" fill="#cbd5e1">Tactile Switch</text>
+    <text id="palette-check-2" x="580" y="294" font-family="monospace" font-size="10.5" fill="#64748b">○ In Palette • OPEN</text>
+
+    <!-- Quick Interactive Workbench Controls -->
+    <g id="btn-autowire" role="button" tabindex="0" aria-label="Auto-wire all components onto the breadboard and close switch" style="cursor:pointer">
+      <rect x="435" y="311" width="102" height="22" rx="5" fill="#0f2942" stroke="#38bdf8" stroke-width="1.2" />
+      <text x="486" y="325.5" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" text-anchor="middle" fill="#7dd3fc">⚡ Auto-Wire</text>
+    </g>
+    <g id="btn-toggle-switch" role="button" tabindex="0" aria-label="Toggle tactile switch open or closed" style="cursor:pointer">
+      <rect id="btn-toggle-switch-bg" x="545" y="311" width="124" height="22" rx="5" fill="#1e293b" stroke="#64748b" stroke-width="1.2" />
+      <text id="btn-toggle-switch-text" x="607" y="325.5" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" text-anchor="middle" fill="#e2e8f0">Press Switch [Space]</text>
+    </g>
+    <g id="btn-reset-board" role="button" tabindex="0" aria-label="Reset all components back to palette" style="cursor:pointer">
+      <rect x="677" y="311" width="76" height="22" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1.2" />
+      <text x="715" y="325.5" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" text-anchor="middle" fill="#cbd5e1">↺ Reset</text>
+    </g>
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- RIGHT BOTTOM PANEL: MULTIMETER & LIVE CURRENT SCOPE       -->
+  <!-- ========================================================= -->
+  <g id="telemetry-panel">
+    <rect x="415" y="355" width="355" height="95" rx="12" fill="#131c2e" stroke="#1e293b" stroke-width="2"
+          data-pedagogical="Ohm's Law Telemetry: Series current equals (Supply Voltage − LED Forward Voltage) divided by Resistance. Keep current between 5 mA and 25 mA for safe LED operation." />
+
+    <text x="433" y="378" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" letter-spacing="0.6" fill="#64748b">SUPPLY VOLTAGE</text>
+    <text id="hud-volts" x="433" y="410" font-family="monospace" font-size="22" font-weight="700" fill="#38bdf8">5.0 V</text>
+
+    <text x="546" y="378" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" letter-spacing="0.6" fill="#64748b">SERIES CURRENT</text>
+    <text id="hud-current" x="546" y="410" font-family="monospace" font-size="22" font-weight="700" fill="#10b981">0.0 mA</text>
+
+    <!-- Compact Live Oscilloscope Window (Bound via :scope) -->
+    <rect x="664" y="366" width="94" height="58" rx="6" fill="#0b1320" stroke="#1e293b" stroke-width="1" aria-hidden="true" />
+    <line x1="664" y1="395" x2="758" y2="395" stroke="#1e293b" stroke-width="1" stroke-dasharray="2 2" aria-hidden="true" />
+    <text x="669" y="376" font-family="monospace" font-size="8" font-weight="700" fill="#64748b" aria-hidden="true">I(t) SCOPE</text>
+    <path id="current-scope-path" d="M 668 418 L 754 418" fill="none" stroke="#10b981" stroke-width="1.8" stroke-linecap="round" aria-hidden="true" />
+
+    <!-- Live Ohm's Law Formula Line -->
+    <text id="hud-ohms-law" x="433" y="438" font-family="monospace" font-size="10.5" fill="#94a3b8">I = (5.0V − 2.0V) / 220Ω = 0.0 mA</text>
+  </g>
+
+  <!-- ========================================================= -->
+  <!-- DRAGGABLE ELECTRONIC COMPONENTS (TOP LAYER)               -->
+  <!-- ========================================================= -->
+
+  <!-- 1. 4-Band Carbon Film Resistor -->
+  <g id="comp-resistor" transform="translate(460, 90)" style="cursor:grab"
+     role="button" tabindex="0" aria-label="Draggable resistor component. Drag onto breadboard row 4."
+     data-pedagogical="4-Band Resistor: Limits current through the LED using Ohm's Law I = (Vs − Vf) / R. Color bands update automatically as you change resistance.">
+    <rect x="-10" y="-16" width="120" height="32" fill="transparent" />
+    <line x1="0" y1="0" x2="100" y2="0" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" />
+    <rect x="22" y="-10" width="56" height="20" rx="6" fill="#e6cfa7" stroke="#8d6e63" stroke-width="1.5" />
+    <rect id="res-band-1" x="31" y="-10" width="5" height="20" fill="#dc2626" />
+    <rect id="res-band-2" x="41" y="-10" width="5" height="20" fill="#dc2626" />
+    <rect id="res-band-3" x="51" y="-10" width="5" height="20" fill="#78350f" />
+    <rect id="res-band-4" x="65" y="-10" width="5" height="20" fill="#eab308" />
+  </g>
+
+  <!-- 2. Light-Emitting Diode (LED) -->
+  <g id="comp-led" transform="translate(460, 190)" style="cursor:grab"
+     role="button" tabindex="0" aria-label="Draggable LED component. Drag onto breadboard row 9."
+     data-pedagogical="Light-Emitting Diode (LED): Emits photons when forward-biased above its forward voltage Vf (2.0V for Red). Long lead is anode (+), short lead is cathode (−).">
+    <rect x="-10" y="-30" width="60" height="75" fill="transparent" />
+    <circle id="led-halo" cx="20" cy="-10" r="36" fill="url(#led-glow-grad)" opacity="0" aria-hidden="true" />
+    <circle id="led-glow" cx="20" cy="-12" r="24" fill="#ef4444" opacity="0" aria-hidden="true" />
+    <line x1="12" y1="8" x2="12" y2="40" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" />
+    <line x1="28" y1="8" x2="28" y2="32" stroke="#94a3b8" stroke-width="3" stroke-linecap="round" />
+    <path id="led-dome" d="M6,8 L6,-10 A14,14 0 0,1 34,-10 L34,8 Z" fill="#ef4444" stroke="#991b1b" stroke-width="1.5" />
+    <rect id="led-base" x="4" y="5" width="32" height="4" rx="1" fill="#b91c1c" />
+    <ellipse cx="15" cy="-12" rx="3" ry="5" fill="#ffffff" opacity="0.35" aria-hidden="true" />
+  </g>
+
+  <!-- 3. Tactile Push-Button Switch -->
+  <g id="comp-switch" transform="translate(460, 290)" style="cursor:grab"
+     role="button" tabindex="0" aria-label="Draggable tactile switch component. Drag onto breadboard row 14 and click center plunger to close circuit."
+     data-pedagogical="Tactile Switch: Bridges the center trench when pressed, closing the series path so current can flow through the resistor and LED.">
+    <rect x="-10" y="-22" width="100" height="44" fill="transparent" />
+    <line x1="0" y1="0" x2="18" y2="0" stroke="#94a3b8" stroke-width="3" />
+    <line x1="62" y1="0" x2="80" y2="0" stroke="#94a3b8" stroke-width="3" />
+    <rect x="18" y="-18" width="44" height="36" rx="5" fill="#1e293b" stroke="#475569" stroke-width="1.5" />
+    <circle id="switch-plunger" cx="40" cy="0" r="11" fill="#334155" stroke="#94a3b8" stroke-width="1.5"
+            role="button" tabindex="0" aria-label="Press tactile switch plunger" style="cursor:pointer" />
+    <circle id="switch-led-dot" cx="40" cy="0" r="3.5" fill="#64748b" aria-hidden="true" />
+  </g>
+</svg>
