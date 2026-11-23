@@ -59,6 +59,6 @@
     "node": ">=20.0"
   },
   "dependencies": {
-    "@mlc-ai/web-llm": "^0.2.87"
+    "@mlc-ai/web-llm": "^0.2.89"
   }
 }
