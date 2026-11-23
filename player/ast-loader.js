@@ -291,7 +291,9 @@
           let isLocalVaultCustom = false;
           let resolvedVaultSource = 'builtin';
 
-          const hostVaultHit = this.getFromHostOrLocalIndex(presetId);
+          const hostVaultHit = (typeof this.getFromHostOrLocalIndex === 'function'
+            ? this.getFromHostOrLocalIndex(presetId)
+            : ASTSceneLoaderMethods.prototype.getFromHostOrLocalIndex.call(this, presetId));
           if (hostVaultHit && (hostVaultHit.svgMarkup || hostVaultHit.svgText || hostVaultHit.astSource || hostVaultHit.astText)) {
             svgText = hostVaultHit.svgMarkup || hostVaultHit.svgText || svgText;
             astText = hostVaultHit.astSource || hostVaultHit.astText || astText;
@@ -354,7 +356,9 @@
 
           const isVaultOnlyPreset = Boolean(
             isLocalVaultCustom ||
-            this._isVaultUrlHint(presetId) ||
+            (typeof this._isVaultUrlHint === 'function'
+              ? this._isVaultUrlHint(presetId)
+              : ASTSceneLoaderMethods.prototype._isVaultUrlHint.call(this, presetId)) ||
             (!officialRegistryRecord && /^(?:swf|flash|custom|local)-/i.test(String(presetId)))
           );
 
