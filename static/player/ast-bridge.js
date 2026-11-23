@@ -432,7 +432,7 @@
             if (uiController && typeof uiController.updateView === 'function') uiController.updateView();
           }
           break;
-        ccase 'LOAD_CARTRIDGE':
+        case 'LOAD_CARTRIDGE':
         case 'LOAD_CUSTOM_CARTRIDGE': {
           if (data && typeof data === 'object' && data.cartridge) {
             const handled = global.__astHandledCustomCartridgeEvents || (global.__astHandledCustomCartridgeEvents = new WeakSet());
@@ -458,10 +458,12 @@
           }
           break;
         }
+        case 'SET_DEV_MODE':
           if (typeof engine.setDevMode === 'function') {
             engine.setDevMode(Boolean(data.enabled));
           }
-          break;
+          break;        
+      
         case 'GET_STAGE_SVG':
           if (typeof engine.getStageSvg === 'function') {
             const svgMarkup = engine.getStageSvg();
