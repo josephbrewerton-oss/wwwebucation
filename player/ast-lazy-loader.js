@@ -26,6 +26,7 @@
     studio: { file: 'player-ui-studio.js', check: () => Boolean(global.ASTPlayerUIStudio) },
     voice: { file: 'player-ui-voice.js', check: () => Boolean(global.ASTPlayerUIVoice) },
     broadcast: { file: 'player-ui-broadcast.js', check: () => Boolean(global.ASTPlayerUIBroadcast) },
+    avm1Vm: { file: 'ast-avm1-vm.js', check: () => Boolean(global.ASTAVM1Runtime) },
   });
 
   const SCRIPT_BASE_URL = (() => {
@@ -140,6 +141,11 @@
     return global.ASTPhetBridge || null;
   }
 
+  async function ensureAvm1Vm() {
+    await loadKeys(['avm1Vm']);
+    return global.ASTAVM1Runtime || null;
+  }
+
   const ASTLazyLoader = {
     LAZY_MODULES,
     SCRIPT_BASE_URL,
@@ -153,6 +159,7 @@
     ensureProfiler,
     ensureCompiler,
     ensurePhetBridge,
+    ensureAvm1Vm,
   };
 
   global.ASTLazyLoader = ASTLazyLoader;

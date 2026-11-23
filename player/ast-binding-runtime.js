@@ -19,6 +19,14 @@
 
   class ASTBindingRuntimeMethods {
   applyBindings(t, dt = 0.016, isTickStep = false) {
+    // When the lazy-loaded pure-SVG AVM1 Micro-VM is driving an SWF cartridge, delegate frame stepping cleanly to it
+    if (this._avm1Vm && this._avm1Vm._mounted) {
+      if (isTickStep && this.isPlaying) {
+        this._avm1Vm.step(dt);
+      }
+      return;
+    }
+
     const isSim = Boolean(this.isContinuousSim || (this.scene && (this.scene.type === 'Sim' || this.scene.cartridgeType === 'Sim')));
     const effectiveT = (isSim && this.vars && typeof this.vars.simClock === 'number') ? this.vars.simClock : t;
     this.updateComputedVars(effectiveT);

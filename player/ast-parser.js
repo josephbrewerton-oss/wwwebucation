@@ -53,6 +53,23 @@
       }
     }
 
+    // Extract & strip optional embedded AVM1 Micro-VM payload (:swf-vm "<base64-json>") BEFORE regex/macro scans
+    // so multi-hundred-KB SWF payloads parse in O(N) with zero regex overhead or accidental token collisions.
+    let swfVmPayload = null;
+    const swfVmMarker = '(:swf-vm "';
+    const swfVmIdx = astContent.indexOf(swfVmMarker);
+    if (swfVmIdx !== -1) {
+      const valStart = swfVmIdx + swfVmMarker.length;
+      const valEnd = astContent.indexOf('"', valStart);
+      if (valEnd > valStart) {
+        swfVmPayload = astContent.slice(valStart, valEnd);
+        const closeParen = astContent.indexOf(')', valEnd + 1);
+        if (closeParen !== -1) {
+          astContent = astContent.slice(0, swfVmIdx) + astContent.slice(closeParen + 1);
+        }
+      }
+    }
+
     // Compile-time (:for <var> (<start> <end> [<step>]) body...) / (:for <var> ("a" "b") body...)
     // and (:repeat ...) macro expander — supports nested loops and {{i}} / {{i+N}} / {{i-N}} / {{i*N}} placeholders.
     const expandForMacros = (src, depth = 0) => {
@@ -1997,6 +2014,7 @@
       skills,
       ...(definedSkills ? { definedSkills } : {}),
       controls,
+      ...(swfVmPayload ? { swfVmPayload } : {}),
       interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
     };
   }

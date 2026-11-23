@@ -1106,6 +1106,9 @@
           }
         }
       }
+      if (this._avm1Vm && typeof this._avm1Vm.reset === 'function' && !this._isMounting && (this._avm1Vm._tickCount > 0 || this._avm1Vm._elapsedMs > 0)) {
+        this._avm1Vm.reset();
+      }
       this.updateComputedVars();
       this.applyBindings(this.progress);
       this.emit('varchange', { name: '*', vars: { ...this.vars } });

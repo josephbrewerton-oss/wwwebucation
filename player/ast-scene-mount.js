@@ -144,6 +144,11 @@
     if (!scene || this._isMounting) return;
     this._isMounting = true;
     try {
+      if (this._avm1Vm) {
+        try { this._avm1Vm.destroy(); } catch (_) {}
+        this._avm1Vm = null;
+      }
+      const mountGen = (this._mountGeneration = (this._mountGeneration || 0) + 1);
       this._mountedContainer = container || null;
       this._mountedSceneId = scene.id;
       this.setupBackdropVideo(scene);
@@ -851,6 +856,39 @@
 
       this.applyBindings(this.progress);
       this.translateInStageLabels();
+
+      // Lazy-mount pure-SVG AVM1 Micro-VM when the scene carries an embedded (:swf-vm "...") program
+      if (scene.swfVmPayload && container) {
+        const payload = scene.swfVmPayload;
+        const stageSvgEl = this.getStageSvg();
+        const bootAvm1 = (RuntimeCtor) => {
+          if (!RuntimeCtor || this._mountGeneration !== mountGen || this._mountedContainer !== container) return;
+          if (this._avm1Vm) {
+            try { this._avm1Vm.destroy(); } catch (_) {}
+            this._avm1Vm = null;
+          }
+          try {
+            const vm = new RuntimeCtor(payload, { engine: this, container, stageSvg: stageSvgEl });
+            vm.mount(container, stageSvgEl);
+            this._avm1Vm = vm;
+            this.emit('avm1mounted', { id: scene.id, swfVer: vm.swfVer, frameCount: vm.totalFrames });
+          } catch (avmErr) {
+            console.warn('[AST Engine] AVM1 Micro-VM boot fallback to declarative AST:', avmErr);
+          }
+        };
+        const existingCtor = global.ASTAVM1Runtime || (typeof window !== 'undefined' ? window.ASTAVM1Runtime : null);
+        if (existingCtor) {
+          bootAvm1(existingCtor);
+        } else {
+          const lazy = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : null);
+          if (lazy && typeof lazy.ensureAvm1Vm === 'function') {
+            lazy.ensureAvm1Vm().then(bootAvm1).catch((loadErr) => {
+              console.warn('[AST Engine] Failed lazy-loading ast-avm1-vm.js:', loadErr);
+            });
+          }
+        }
+      }
+
       if (this.profiler) {
         this.profiler.mount(this.getStageSvg());
       }
@@ -907,6 +945,7 @@
       if (parsed.computed) this.scene.computed = parsed.computed;
       if (parsed.gestures) this.scene.gestures = parsed.gestures;
       if (parsed.controls) this.scene.controls = parsed.controls;
+      this.scene.swfVmPayload = parsed.swfVmPayload || null;
       this.scene.keyframes = parsed.keyframes || [];
       this.scene.subtitles = parsed.subtitles || [];
       this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];
