@@ -434,12 +434,12 @@
           break;
         case 'LOAD_CARTRIDGE':
         case 'LOAD_CUSTOM_CARTRIDGE':
-          if (data.cartridge) {
+          if (data && typeof data === 'object' && data.cartridge) {
             const handled = global.__astHandledCustomCartridgeEvents || (global.__astHandledCustomCartridgeEvents = new WeakSet());
-            if (!handled.has(e)) {
-              handled.add(e);
-              engine.loadSceneData(data.cartridge, data.play !== false);
-            }
+          if (handled.has(data)) return;
+            handled.add(data);
+            loadSceneData(data.cartridge, data.play !== false);
+          }
           }
           break;
         case 'SET_DEV_MODE':
