@@ -1805,7 +1805,7 @@ export function compileAstTextToBytecode(astText: string, options?: AstBytecodeC
       const enterGuard = explicitWhen || (eqVar && eqValExpr !== null ? `(= ${eqVar} ${eqValExpr})` : undefined);
       const combinedEnter = composeWhenTs(inheritedWhen, enterGuard);
       const taggedWhen = combinedEnter ? `@enter:${combinedEnter.replace(/^@enter:/, '')}` : inheritedWhen;
-      innerForms.forEach((child) => walkBindingTs(child, inheritedTarget, taggedWhen));
+      innerForms.forEach((child) => walkBindingTs(child, taggedWhen, inheritedTarget));
       return;
     }
     if (/^\(\s*:(?:var|rule)\b/i.test(form)) {

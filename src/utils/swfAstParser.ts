@@ -1540,6 +1540,16 @@ function parseDoAction(
         const bodyEndIdx = Math.min(endIdx, resolveByteOffsetToIdx(ins.endOffset + codeSize, endIdx));
         if (funcName) {
           definedFunctions.set(funcName, { startIdx: i + 1, endIdx: bodyEndIdx });
+          const lowerFn = funcName.toLowerCase();
+          if (lowerFn === 'onenterframe') {
+            evalRange(i + 1, bodyEndIdx, undefined, [], record.enterFrameStatements!, curTarget, new Map());
+          } else if (lowerFn === 'onrelease' || lowerFn === 'onpress' || lowerFn === 'onreleaseoutside' || lowerFn === 'onmousedown') {
+            const lifted: Avm1LiftedStatement[] = [];
+            evalRange(i + 1, bodyEndIdx, undefined, [], lifted, curTarget, new Map());
+            if (lifted.length > 0) {
+              record.eventHandlers!.push({ target: curTarget || '__stage__', event: lowerFn, statements: lifted });
+            }
+          }
         } else {
           stack.push({ kind: 'func', bodyStartIdx: i + 1, bodyEndIdx, funcName });
         }

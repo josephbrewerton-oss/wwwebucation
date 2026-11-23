@@ -521,7 +521,16 @@
             if (node && node.style) {
               node.style.willChange = 'transform';
               node.setAttribute('data-kinematic', 'true');
-              node.style.pointerEvents = 'auto';
+              const isHiddenOrBlocked =
+                (typeof node.getAttribute === 'function' && (
+                  node.getAttribute('visibility') === 'hidden' ||
+                  node.getAttribute('pointer-events') === 'none' ||
+                  node.getAttribute('display') === 'none'
+                )) ||
+                node.style.visibility === 'hidden' ||
+                node.style.pointerEvents === 'none' ||
+                node.style.display === 'none';
+              node.style.pointerEvents = isHiddenOrBlocked ? 'none' : 'auto';
             }
           });
 

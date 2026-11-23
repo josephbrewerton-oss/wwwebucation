@@ -879,6 +879,7 @@ async function runSimulations() {
       },
       addEventListener() {},
       removeEventListener() {},
+      replaceChildren() {},
       appendChild(c: any) { return c; },
       insertBefore(c: any) { return c; },
       removeChild(c: any) { return c; },
@@ -2055,9 +2056,9 @@ async function runSimulations() {
       errors.push(`swf-stage-clip-visible-ef transpilation failed: ${result.error}`);
     } else {
       // Assertion 1: Root stage <clipPath> matching SWF header bounds (0, 0, 550, 400)
-      const expectedClipDef = `<clipPath id="swf-stage-clip"><rect x="0" y="0" width="${stageW}" height="${stageH}" /></clipPath>`;
-      if (!result.svgMarkup.includes(expectedClipDef)) {
-        errors.push(`Expected root stage clipPath "${expectedClipDef}" in SVG markup`);
+      const clipRe = new RegExp(`<clipPath\\s+id="swf-stage-clip">\\s*<rect\\s+x="0"\\s+y="0"\\s+width="${stageW}"\\s+height="${stageH}"\\s*/>\\s*</clipPath>`);
+      if (!clipRe.test(result.svgMarkup)) {
+        errors.push(`Expected root stage clipPath with bounds (0, 0, ${stageW}, ${stageH}) in SVG markup`);
       }
       if (!result.svgMarkup.includes('<g id="scene-root" clip-path="url(#swf-stage-clip)">')) {
         errors.push('Expected <g id="scene-root" clip-path="url(#swf-stage-clip)"> wrapper in SVG markup');
@@ -2107,7 +2108,9 @@ async function runSimulations() {
       }
       const startTick = Number(rt.engine.vars.swf_tick || 0);
       const startEf = Number(rt.engine.vars.ef_ticks || 0);
-      const spriteFrameKey = Object.keys(rt.engine.vars).find((k) => /^sprite_\d+_frame$/.test(k));
+      const spriteFrameKey = 'animSprite_frame' in rt.engine.vars
+        ? 'animSprite_frame'
+        : Object.keys(rt.engine.vars).find((k) => k !== 'swf_frame' && /_frame$/.test(k));
       const seenSpriteFrames = new Set<number>();
       if (spriteFrameKey) seenSpriteFrames.add(Number(rt.engine.vars[spriteFrameKey]));
 
@@ -2187,6 +2190,7 @@ async function runSimulations() {
         return { ok: false, status: 404, text: async () => '', arrayBuffer: async () => new ArrayBuffer(0) };
       },
       ASTSceneRegistry: {
+        get: () => null,
         getSceneMeta: () => null,
       },
       ASTLocalStore: {
@@ -2213,8 +2217,9 @@ async function runSimulations() {
     const mountedScenes: string[] = [];
     const fakeEngine: any = {
       scene: null,
+      sceneCache: {},
       activePresetId: null,
-      container: {},
+      container: { replaceChildren() {}, querySelector: () => null },
       vars: {},
       inputs: [],
       progress: 0,
@@ -2225,8 +2230,25 @@ async function runSimulations() {
       triggeredCheckpoints: new Set(),
       history: [],
       sceneMeta: null,
+      _mountedSceneId: null,
       getStageSvg: () => null,
+      getBuiltinWelcomeScene: () => ({ id: 'welcome', title: 'Welcome Simulator', duration: 16, svgText: '<svg></svg>', keyframes: [] }),
+      parseAst: (src: string) => loaderSandbox.parseAst(src),
+      cancelSpeech() {},
+      resetCamera() {},
+      resetVars() {},
+      updateComputedVars() {},
+      _applyScenePhysics() {},
+      mountDeclarativeHud() {},
+      _playSceneBootSound() {},
+      has3D: () => false,
+      getCurrentSubtitle: () => null,
+      verifyLoadedCartridge: async () => ({ ok: true }),
+      seek() {},
+      render() {},
+      notifyParent() {},
       mountSceneAsset(sc: any) {
+        this._mountedSceneId = sc.id;
         mountedScenes.push(sc.id);
       },
       applyBindings() {},
@@ -2234,7 +2256,7 @@ async function runSimulations() {
       play() { this.isPlaying = true; },
       pause() { this.isPlaying = false; },
     };
-    Object.assign(fakeEngine, loaderSandbox.ASTLoaderMethods);
+    Object.assign(fakeEngine, loaderSandbox.ASTSceneLoader);
 
     // 1. Load custom SWF preset from Local Vault lookup — must make 0 remote HTTP fetches
     const loaded = await fakeEngine.loadScene('custom-swf-ablast');
@@ -2246,7 +2268,12 @@ async function runSimulations() {
     }
 
     // 2. Direct postMessage mount via loadSceneData followed immediately by stale loadScene('welcome') must NOT overwrite
-    fakeEngine.loadSceneData(customSwfCartridge.astSource, customSwfCartridge.svgMarkup, 'custom-swf-ablast', true);
+    const directSceneObj = {
+      ...loaderSandbox.parseAst(customSwfCartridge.astSource),
+      id: 'custom-swf-ablast',
+      svgText: customSwfCartridge.svgMarkup,
+    };
+    fakeEngine.loadSceneData(directSceneObj, true);
     const afterWelcomeAttempt = await fakeEngine.loadScene('welcome');
     if (!afterWelcomeAttempt || afterWelcomeAttempt.id !== 'custom-swf-ablast' || fakeEngine.activePresetId !== 'custom-swf-ablast') {
       errors.push(`Stale loadScene('welcome') overwrote freshly mounted custom SWF (activePresetId=${fakeEngine.activePresetId})`);
