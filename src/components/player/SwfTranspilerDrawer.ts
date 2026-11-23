@@ -6,6 +6,7 @@
  */
 
 import { transpileSwfToAst, type SwfTranspileResult } from '../../utils/swfAstParser';
+import { buildFlashArcadeSampleSwf, buildFlashPendulumSampleSwf } from '../../utils/swfSampleBuilder';
 
 export interface SwfTranspilerDrawerProps {
   swfResult: SwfTranspileResult | null;
@@ -161,28 +162,16 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
 
   const samples = [
     {
-      id: 'flash-pendulum',
-      title: '⚖️ Physics Harmonic Pendulum',
-      desc: 'Classic legacy science lab animation with angle sweep & potential energy.',
-      mockBytes: () => new Uint8Array([
-        0x46, 0x57, 0x53, 0x08,
-        0x40, 0x00, 0x00, 0x00,
-        0x78, 0x00, 0x07, 0xd0, 0x00, 0x00, 0x04, 0xb0,
-        0x18, 0x00, 0x3c, 0x00,
-        0x43, 0x02, 0x0f, 0x17, 0x2a,
-      ]),
+      id: 'flash-arcade-target',
+      title: '🎯 Flash AVM1 Arcade Target',
+      desc: 'Live binary SWF v8 demo with Start button, mouse/arrow controls, hitTest scoring, and attachMovie sparks.',
+      mockBytes: () => buildFlashArcadeSampleSwf(),
     },
     {
-      id: 'flash-circuit',
-      title: '💡 Ohm’s Law Circuit Switch',
-      desc: 'Bistable switch and resistor wire animation from 2004 Flash science kits.',
-      mockBytes: () => new Uint8Array([
-        0x46, 0x57, 0x53, 0x08,
-        0x40, 0x00, 0x00, 0x00,
-        0x78, 0x00, 0x07, 0xd0, 0x00, 0x00, 0x04, 0xb0,
-        0x18, 0x00, 0x3c, 0x00,
-        0x43, 0x02, 0x0f, 0x17, 0x2a,
-      ]),
+      id: 'flash-pendulum',
+      title: '⚖️ Flash Harmonic Pendulum',
+      desc: 'Live binary SWF v8 physics demo using AVM1 Math.sin/cos, Flash Drawing API rod, and Pause/Resume button.',
+      mockBytes: () => buildFlashPendulumSampleSwf(),
     },
   ];
 
@@ -194,7 +183,8 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     btn.title = sample.desc;
     btn.textContent = sample.title;
     btn.onclick = () => {
-      processBuffer(sample.mockBytes().buffer, sample.id);
+      const bytes = sample.mockBytes();
+      processBuffer(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer, sample.id);
     };
     samplesWrap.appendChild(btn);
   });

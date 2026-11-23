@@ -165,6 +165,12 @@ class BitReader {
     return sub;
   }
 
+  sliceBytes(start: number, end: number): Uint8Array {
+    const s = Math.max(0, Math.min(start, this.buffer.length));
+    const e = Math.max(s, Math.min(end, this.buffer.length));
+    return this.buffer.subarray(s, e);
+  }
+
   syncBits(): void {
     if (this.bitPos > 0) {
       this.bytePos++;
@@ -998,12 +1004,60 @@ export interface SwfActionRecord {
   referencedProps?: Set<string>;
   poolRequests?: { sourceClip: string; poolBase: string }[];
   usesPreloaderApi?: boolean;
+  rawBytecodeB64?: string;
 }
 
 export interface SwfClipAction {
   events: string[];
+  eventFlags?: number;
   keyCode?: number;
   actionRecord: SwfActionRecord;
+}
+
+export interface SwfEditTextDef {
+  charId: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  fontSize: number;
+  color: string;
+  align: number;
+  varName: string;
+  text: string;
+  isHtml: boolean;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  if (!bytes || bytes.length === 0) return '';
+  if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+    return Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength).toString('base64');
+  }
+  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  let out = '';
+  const len = bytes.length;
+  for (let i = 0; i < len; i += 3) {
+    const b0 = bytes[i];
+    const b1 = i + 1 < len ? bytes[i + 1] : 0;
+    const b2 = i + 2 < len ? bytes[i + 2] : 0;
+    out += alphabet[b0 >> 2];
+    out += alphabet[((b0 & 3) << 4) | (b1 >> 4)];
+    out += i + 1 < len ? alphabet[((b1 & 15) << 2) | (b2 >> 6)] : '=';
+    out += i + 2 < len ? alphabet[b2 & 63] : '=';
+  }
+  return out;
+}
+
+function utf8ToBase64(str: string): string {
+  if (typeof Buffer !== 'undefined' && typeof Buffer.from === 'function') {
+    return Buffer.from(str, 'utf8').toString('base64');
+  }
+  if (typeof TextEncoder !== 'undefined') {
+    return bytesToBase64(new TextEncoder().encode(str));
+  }
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) bytes[i] = str.charCodeAt(i) & 0xff;
+  return bytesToBase64(bytes);
 }
 
 export interface SwfDisplayEntry {
@@ -1310,6 +1364,7 @@ function parseDoAction(
   };
 
   // Pass 1: Decode instruction stream with exact byte offsets for ActionIf / ActionJump / ActionDefineFunction resolution
+  const rawActionStart = reader.offset;
   const instrs: Avm1DecodedIns[] = [];
   const offsetToIdx = new Map<number, number>();
   while (reader.offset < tagEndOffset) {
@@ -1325,6 +1380,12 @@ function parseDoAction(
     offsetToIdx.set(startOff, instrs.length);
     instrs.push({ offset: startOff, endOffset: endOff, code, payload });
     reader.offset = endOff;
+  }
+  if (instrs.length > 0) {
+    const rawSlice = reader.sliceBytes(rawActionStart, Math.min(tagEndOffset, reader.offset));
+    if (rawSlice.length > 0) {
+      record.rawBytecodeB64 = bytesToBase64(rawSlice);
+    }
   }
 
   const constantPool: string[] = [];
@@ -2046,7 +2107,7 @@ function parseClipActions(
     if (eventFlags & 0x20000) events.push('keyPress');
 
     const actionRecord = parseDoAction(reader, recordEnd, currentFrame, { clipPrefix, fileLength });
-    actions.push({ events, keyCode, actionRecord });
+    actions.push({ events, eventFlags, keyCode, actionRecord });
     reader.offset = recordEnd;
   }
   return actions;
@@ -2427,6 +2488,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const morphShapes: SwfMorphShape[] = [];
     const sprites = new Map<number, SwfSpriteDefinition>();
     const buttons = new Map<number, SwfButtonDefinition>();
+    const editTexts = new Map<number, SwfEditTextDef>();
+    const exportsMap: Record<string, number> = {};
+    const initActions: { c: number; b64: string }[] = [];
     const actionBlocks: SwfActionRecord[] = [];
     const labels: { frame: number; name: string }[] = [];
 
@@ -2503,9 +2567,22 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       } else if (tagType === 12 || tagType === 59) {
         // DoAction (12) / DoInitAction (59)
         try {
-          if (tagType === 59) reader.readUI16(); // SpriteID
+          const initSpriteId = tagType === 59 ? reader.readUI16() : 0;
           const act = parseDoAction(reader, nextTagOffset, currentFrame, { fileLength: effectiveFileLength });
+          if (tagType === 59 && act.rawBytecodeB64) {
+            initActions.push({ c: initSpriteId, b64: act.rawBytecodeB64 });
+          }
           actionBlocks.push(act);
+        } catch {}
+      } else if (tagType === 56) {
+        // ExportAssets (Tag 56): linkage names for attachMovie()
+        try {
+          const count = reader.readUI16();
+          for (let ei = 0; ei < count && reader.offset < nextTagOffset; ei++) {
+            const expCharId = reader.readUI16();
+            const expName = reader.readString();
+            if (expName) exportsMap[expName] = expCharId;
+          }
         } catch {}
       } else if (tagType === 82) {
         try {
@@ -2542,6 +2619,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const labelName = reader.readString();
         labels.push({ frame: currentFrame, name: labelName });
       } else if (tagType === 37) {
+        // DefineEditText (Tag 37): dynamic/input text fields with live variableName binding
         try {
           const charId = reader.readUI16();
           const bounds = reader.readRect();
@@ -2552,11 +2630,20 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const hasMaxLength = (flags1 & 0x02) !== 0;
           const hasTextColor = (flags1 & 0x04) !== 0;
           const hasText = (flags1 & 0x80) !== 0;
+          const hasFontClass = (flags2 & 0x80) !== 0;
           const hasLayout = (flags2 & 0x20) !== 0;
+          const isHtml = (flags2 & 0x02) !== 0;
 
+          let fontSize = 14;
           if (hasFont) {
-            reader.readUI16();
-            reader.readUI16();
+            reader.readUI16(); // FontID
+          }
+          if (hasFontClass) {
+            reader.readString(); // FontClass
+          }
+          if (hasFont) {
+            const fontHeightTwips = reader.readUI16();
+            if (fontHeightTwips > 0) fontSize = Math.max(8, Math.min(96, Math.round(fontHeightTwips / 20)));
           }
           let textColor = '#ffffff';
           if (hasTextColor) {
@@ -2565,25 +2652,45 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           if (hasMaxLength) {
             reader.readUI16();
           }
+          let align = 0;
           if (hasLayout) {
-            reader.readUI8();
+            align = reader.readUI8();
             reader.readUI16();
             reader.readUI16();
             reader.readUI16();
             reader.readSI16();
           }
-          reader.readString(); // variableName
-          if (hasText) {
-            const initialText = reader.readString();
-            if (initialText && initialText.trim()) {
-              const textSvg = `<text id="swf-text-${charId}" x="${bounds.xMin.toFixed(1)}" y="${(bounds.yMin + Math.max(14, bounds.height * 0.75)).toFixed(1)}" fill="${textColor}" font-size="14" font-family="system-ui, sans-serif" font-weight="600">${initialText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</text>`;
-              shapes.push({
-                id: `swf-text-${charId}`,
-                charId,
-                svg: textSvg,
-                bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
-              });
-            }
+          const variableName = reader.readString();
+          const initialText = hasText ? reader.readString() : '';
+          const plainText = isHtml ? initialText.replace(/<[^>]+>/g, '') : initialText;
+
+          editTexts.set(charId, {
+            charId,
+            x: Number(bounds.xMin.toFixed(2)),
+            y: Number(bounds.yMin.toFixed(2)),
+            w: Number(bounds.width.toFixed(2)),
+            h: Number(bounds.height.toFixed(2)),
+            fontSize,
+            color: textColor,
+            align,
+            varName: variableName || '',
+            text: plainText,
+            isHtml,
+          });
+
+          if (plainText.trim() || variableName) {
+            const anchor = align === 1 ? 'end' : (align === 2 ? 'middle' : 'start');
+            const tx = align === 1 ? bounds.xMax : (align === 2 ? (bounds.xMin + bounds.xMax) / 2 : bounds.xMin);
+            const ty = bounds.yMin + Math.min(bounds.height, Math.max(fontSize, bounds.height * 0.72));
+            const escapedText = plainText.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const varAttr = variableName ? ` data-swf-var="${variableName.replace(/"/g, '&quot;')}"` : '';
+            const textSvg = `<text id="swf-text-${charId}" x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" fill="${textColor}" font-size="${fontSize}" text-anchor="${anchor}" font-family="system-ui, sans-serif" font-weight="600"${varAttr}>${escapedText}</text>`;
+            shapes.push({
+              id: `swf-text-${charId}`,
+              charId,
+              svg: textSvg,
+              bbox: { x: bounds.xMin, y: bounds.yMin, w: bounds.width, h: bounds.height },
+            });
           }
         } catch {}
       }
@@ -3860,6 +3967,170 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     const controlsAst = `\n  (:controls (:param-hud :off) (:arrow-step :off) (:num-jump :off) (:space-play :off) (:scrub :off))\n`;
 
+    // Compact AVM1 Micro-VM Program Payload (Option 2: lazy-loaded pure-SVG AVM1 runtime)
+    let swfVmAst = '';
+    const hasAvm1Content =
+      isDynamicSwf ||
+      actionBlocks.some((a) => Boolean(a.rawBytecodeB64)) ||
+      sprites.size > 0 ||
+      buttons.size > 0 ||
+      editTexts.size > 0 ||
+      Object.keys(exportsMap).length > 0 ||
+      timelineFrames.length > 1;
+
+    if (hasAvm1Content) {
+      const compactMat = (m?: SwfMatrix | null): number[] | undefined => {
+        if (!m) return undefined;
+        const arr = [
+          Number(formatNum(m.scaleX)),
+          Number(formatNum(m.rotateSkew0)),
+          Number(formatNum(m.rotateSkew1)),
+          Number(formatNum(m.scaleY)),
+          Number(formatNum(m.transX)),
+          Number(formatNum(m.transY)),
+        ];
+        if (arr[0] === 1 && arr[1] === 0 && arr[2] === 0 && arr[3] === 1 && arr[4] === 0 && arr[5] === 0) {
+          return undefined;
+        }
+        return arr;
+      };
+      const serializeFrameList = (frameSnaps: SwfFrameSnapshot[], count: number) => {
+        const out: any[][] = [];
+        for (let f = 1; f <= count; f++) {
+          const snap = frameSnaps.find((s) => s.frame === f) || frameSnaps[frameSnaps.length - 1];
+          if (!snap) {
+            out.push([]);
+            continue;
+          }
+          const entries: any[] = [];
+          const sortedDepths = Array.from(snap.entries.keys()).sort((a, b) => a - b);
+          for (const d of sortedDepths) {
+            const e = snap.entries.get(d)!;
+            const item: any = { d, c: e.characterId };
+            const cm = compactMat(e.matrix);
+            if (cm) item.m = cm;
+            if (e.cxform && Math.abs(e.cxform.alpha - 1) > 0.001) {
+              item.a = Number(formatNum(e.cxform.alpha));
+            }
+            if (e.name) item.n = e.name;
+            if (e.clipDepth && e.clipDepth > d) item.cd = e.clipDepth;
+            if (e.ratio !== undefined && e.ratio > 0) item.r = e.ratio;
+            if (e.clipActions && e.clipActions.length > 0) {
+              const cas = e.clipActions
+                .filter((ca) => ca.actionRecord && ca.actionRecord.rawBytecodeB64)
+                .map((ca) => {
+                  const o: any = { f: ca.eventFlags || 0, b64: ca.actionRecord.rawBytecodeB64 };
+                  if (ca.keyCode !== undefined) o.k = ca.keyCode;
+                  return o;
+                });
+              if (cas.length > 0) item.ca = cas;
+            }
+            entries.push(item);
+          }
+          out.push(entries);
+        }
+        return out;
+      };
+
+      const vmShapes: Record<number, { svg: string; bb: number[] }> = {};
+      for (const s of shapes) {
+        if (!editTexts.has(s.charId)) {
+          vmShapes[s.charId] = {
+            svg: s.svg,
+            bb: [
+              Number(formatNum(s.bbox.x)),
+              Number(formatNum(s.bbox.y)),
+              Number(formatNum(s.bbox.w)),
+              Number(formatNum(s.bbox.h)),
+            ],
+          };
+        }
+      }
+      const vmMorphs: Record<number, any> = {};
+      for (const m of morphShapes) {
+        vmMorphs[m.shapeId] = {
+          s: m.startD,
+          e: m.endD,
+          sf: m.startFill,
+          ef: m.endFill,
+          st: m.stroke,
+          sw: m.strokeWidth,
+          bb: [
+            Number(formatNum(m.bbox.x)),
+            Number(formatNum(m.bbox.y)),
+            Number(formatNum(m.bbox.w)),
+            Number(formatNum(m.bbox.h)),
+          ],
+        };
+      }
+      const vmEditTexts: Record<number, any> = {};
+      editTexts.forEach((et, cid) => {
+        vmEditTexts[cid] = {
+          x: et.x,
+          y: et.y,
+          w: et.w,
+          h: et.h,
+          fs: et.fontSize,
+          col: et.color,
+          al: et.align,
+          v: et.varName,
+          t: et.text,
+          html: et.isHtml ? 1 : 0,
+        };
+      });
+      const vmButtons: Record<number, any> = {};
+      buttons.forEach((btn, bid) => {
+        vmButtons[bid] = {
+          r: btn.records.map((rec) => {
+            const o: any = { s: rec.states, c: rec.characterId, d: rec.depth };
+            const cm = compactMat(rec.matrix);
+            if (cm) o.m = cm;
+            if (rec.cxform && Math.abs(rec.cxform.alpha - 1) > 0.001) o.a = Number(formatNum(rec.cxform.alpha));
+            return o;
+          }),
+          a: btn.actions
+            .filter((a) => a.actionRecord && a.actionRecord.rawBytecodeB64)
+            .map((a) => ({ f: a.conditionFlags, k: a.keyCode || 0, b64: a.actionRecord.rawBytecodeB64 })),
+        };
+      });
+      const vmSprites: Record<number, any> = {};
+      sprites.forEach((sp, sid) => {
+        vmSprites[sid] = {
+          fc: sp.frameCount,
+          l: sp.labels,
+          fr: serializeFrameList(sp.frames, sp.frameCount),
+          ac: sp.actions
+            .filter((a) => Boolean(a.rawBytecodeB64))
+            .map((a) => ({ f: a.frame, b64: a.rawBytecodeB64 })),
+        };
+      });
+
+      const vmProgram = {
+        v: 1,
+        swfVer: version,
+        w: width,
+        h: height,
+        fps: nativeFps,
+        bg: backgroundColor,
+        fl: effectiveFileLength,
+        fc: totalFrames,
+        exp: exportsMap,
+        l: labels,
+        sh: vmShapes,
+        mo: vmMorphs,
+        et: vmEditTexts,
+        bt: vmButtons,
+        sp: vmSprites,
+        ia: initActions,
+        fr: serializeFrameList(timelineFrames, totalFrames),
+        ac: actionBlocks
+          .filter((a) => Boolean(a.rawBytecodeB64))
+          .map((a) => ({ f: a.frame, b64: a.rawBytecodeB64 })),
+      };
+      const vmB64 = utf8ToBase64(JSON.stringify(vmProgram));
+      swfVmAst = `\n  (:swf-vm "${vmB64}")\n`;
+    }
+
     const astSource = `(:scene
   :id "${sceneId}"
   :type "Sim"
@@ -3869,7 +4140,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
   :fps ${Math.round(frameRate) || 24}
   :stageWidth ${width}
   :stageHeight ${height}
-${controlsAst}${varsAst}${inputsAst}
+${controlsAst}${swfVmAst}${varsAst}${inputsAst}
   (:static (
     (:element :target "#bg" :cache true)
     (:element :target "#swf-bg-card" :cache true)

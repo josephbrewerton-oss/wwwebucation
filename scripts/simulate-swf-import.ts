@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
 import { transpileSwfToAst } from '../src/utils/swfAstParser';
+import { buildFlashArcadeSampleSwf, buildFlashPendulumSampleSwf } from '../src/utils/swfSampleBuilder';
 import { parseSExpr } from '../src/utils/sexprParser';
 import { compileSceneToBytecode, isAstBytecode } from '../src/utils/astBytecode';
 import {
@@ -2478,6 +2479,660 @@ async function runSimulations() {
       passed: errors.length === 0,
       durationMs: duration,
       details: 'Verified intro sprite _root.gotoAndPlay(2) keeps swf_playing=1 across transition and Frame 3 gotoAndStop(4) stops cleanly on Frame 4.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 22: Lazy-Loaded Pure-SVG AVM1 Micro-VM Core
+  //                (Loops, Arrays, DefineFunction2, ExportAssets + attachMovie,
+  //                 DefineEditText live HUD, _xmouse/_ymouse, Key.isDown, hitTest)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+
+    // Raw SWF v8 bytecode assembler helpers (spec-exact: 0x99 = ActionJump, 0x9D = ActionIf)
+    const writePushStr = (out: number[], s: string) => {
+      const payload = [0x00, ...Array.from(s).map((c) => c.charCodeAt(0)), 0x00];
+      out.push(0x96, payload.length & 0xff, (payload.length >> 8) & 0xff, ...payload);
+    };
+    const writePushInt = (out: number[], n: number) => {
+      const v = n | 0;
+      out.push(0x96, 5, 0, 0x07, v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff);
+    };
+    const writePushReg = (out: number[], r: number) => {
+      out.push(0x96, 2, 0, 0x04, r & 0xff);
+    };
+
+    // Build DefineEditText (Tag 37) helper
+    const buildDefineEditTextTag = (charId: number, x: number, y: number, w: number, h: number, varName: string, initText: string): Uint8Array => {
+      const bw = new BitWriter();
+      bw.writeUI16(charId);
+      bw.writeRect(x, x + w, y, y + h);
+      bw.syncBits();
+      // flags1: HasText(0x80) | HasTextColor(0x04) | HasFont(0x01)
+      bw.writeUI8(0x85);
+      // flags2: HasLayout(0x20)
+      bw.writeUI8(0x20);
+      bw.writeUI16(1); // fontId
+      bw.writeUI16(16 * 20); // fontHeight 16px
+      bw.writeUI8(255); bw.writeUI8(255); bw.writeUI8(255); bw.writeUI8(255); // white RGBA
+      bw.writeUI8(0); // align left
+      bw.writeUI16(0); bw.writeUI16(0); bw.writeUI16(0); bw.writeUI16(0); // layout margins/leading
+      bw.writeString(varName);
+      bw.writeString(initText);
+      return bw.toByteArray();
+    };
+
+    // Build ExportAssets (Tag 56) helper
+    const buildExportAssetsTag = (entries: { charId: number; name: string }[]): Uint8Array => {
+      const bw = new BitWriter();
+      bw.writeUI16(entries.length);
+      for (const e of entries) {
+        bw.writeUI16(e.charId);
+        bw.writeString(e.name);
+      }
+      return bw.toByteArray();
+    };
+
+    const tagWriter = new BitWriter();
+    const bg = new BitWriter();
+    bg.writeUI8(10); bg.writeUI8(15); bg.writeUI8(30);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes: 1 = ship (30x30), 2 = bullet (10x10), 3 = enemy (30x30)
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 30, 30, [56, 189, 248, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 10, 10, [250, 204, 21, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 30, 30, [239, 68, 68, 255], 3));
+
+    // Sprites: 10 = bullet_mc, 11 = ship_mc, 12 = enemy_mc
+    const makeSimpleSprite = (charId: number, shapeId: number) => {
+      const st = new BitWriter();
+      writeTag(st, 26, buildPlaceObject2Tag({ depth: 1, characterId: shapeId }));
+      writeTag(st, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+      writeTag(st, SwfTagCode.END, new Uint8Array(0));
+      writeTag(tagWriter, 39, buildDefineSpriteTag(charId, 1, st.toByteArray()));
+    };
+    makeSimpleSprite(10, 2);
+    makeSimpleSprite(11, 1);
+    makeSimpleSprite(12, 3);
+
+    // ExportAssets (Tag 56): "bulletLink" -> Sprite 10
+    writeTag(tagWriter, 56, buildExportAssetsTag([{ charId: 10, name: 'bulletLink' }]));
+
+    // DefineEditText (Tag 37): charId 20 bound to variable "score"
+    writeTag(tagWriter, 37, buildDefineEditTextTag(20, 10, 10, 120, 24, 'score', '0'));
+
+    // Place ship (50,100), enemy (180,100), score HUD
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 11, name: 'ship', matrix: { txPx: 50, tyPx: 100 } }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 12, name: 'enemy', matrix: { txPx: 180, tyPx: 100 } }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 3, characterId: 20, name: 'scoreField' }));
+
+    // Frame 1 DoAction:
+    // 1) stop(); score = 0;
+    // 2) DefineFunction2 addBonus(r1=a, r2=b) { return r1 * 2 + r2; }
+    // 3) for (i = 0; i < 3; i++) { _root.attachMovie("bulletLink", "b" + i, 100 + i, {_x: 100 + i * 40, _y: 100}); }
+    // 4) onEnterFrame = function() {
+    //      if (Key.isDown(39)) { ship._x = ship._x + 20; }
+    //      if (b2.hitTest(enemy)) { score = score + addBonus(10, 5); b2.removeMovieClip(); }
+    //      aimX = _root._xmouse;
+    //    }
+    const act: number[] = [];
+    act.push(0x07); // stop()
+    writePushStr(act, 'score');
+    writePushInt(act, 0);
+    act.push(0x1D); // SetVariable score = 0
+
+    // DefineFunction2 addBonus(a->reg1, b->reg2) { return reg1 * 2 + reg2; }
+    const fnBody: number[] = [];
+    writePushReg(fnBody, 1);
+    writePushInt(fnBody, 2);
+    fnBody.push(0x0C); // Multiply
+    writePushReg(fnBody, 2);
+    fnBody.push(0x47); // Add2
+    fnBody.push(0x3E); // Return
+    const fnHdr: number[] = [];
+    for (const ch of 'addBonus') fnHdr.push(ch.charCodeAt(0));
+    fnHdr.push(0x00);
+    fnHdr.push(2, 0); // numParams = 2
+    fnHdr.push(4);    // registerCount = 4
+    fnHdr.push(0x00, 0x00); // flags1, flags2
+    fnHdr.push(1, 'a'.charCodeAt(0), 0x00); // param1 -> reg1
+    fnHdr.push(2, 'b'.charCodeAt(0), 0x00); // param2 -> reg2
+    fnHdr.push(fnBody.length & 0xff, (fnBody.length >> 8) & 0xff); // codeSize
+    act.push(0x8E, fnHdr.length & 0xff, (fnHdr.length >> 8) & 0xff, ...fnHdr, ...fnBody);
+
+    // Loop: i = 0; while (i < 3) { attachMovie("bulletLink", "b" + i, 100 + i, {_x: 100 + i*40, _y: 100}); i++; }
+    writePushStr(act, 'i');
+    writePushInt(act, 0);
+    act.push(0x1D); // i = 0
+
+    const loopHeadOff = act.length;
+    writePushStr(act, 'i');
+    act.push(0x1C); // GetVariable i
+    writePushInt(act, 3);
+    act.push(0x48); // Less2 (i < 3)
+    act.push(0x12); // Not (!(i < 3))
+    const ifPatchPos = act.length;
+    act.push(0x9D, 2, 0, 0, 0); // ActionIf -> jump past loop end if !(i < 3)
+
+    // Build initObj = {_x: 100 + i * 40, _y: 100}
+    writePushStr(act, '_x');
+    writePushInt(act, 100);
+    writePushStr(act, 'i');
+    act.push(0x1C);
+    writePushInt(act, 40);
+    act.push(0x0C);
+    act.push(0x47); // 100 + i * 40
+    writePushStr(act, '_y');
+    writePushInt(act, 100);
+    writePushInt(act, 2);
+    act.push(0x43); // InitObject -> arg3 (initObj)
+    // arg2: depth = 100 + i
+    writePushInt(act, 100);
+    writePushStr(act, 'i');
+    act.push(0x1C);
+    act.push(0x47);
+    // arg1: name = "b" + i
+    writePushStr(act, 'b');
+    writePushStr(act, 'i');
+    act.push(0x1C);
+    act.push(0x47);
+    // arg0: linkage = "bulletLink"
+    writePushStr(act, 'bulletLink');
+    writePushInt(act, 4); // numArgs = 4
+    writePushStr(act, '_root');
+    act.push(0x1C);
+    writePushStr(act, 'attachMovie');
+    act.push(0x52); // CallMethod
+    act.push(0x17); // Pop return value
+
+    // i = i + 1
+    writePushStr(act, 'i');
+    writePushStr(act, 'i');
+    act.push(0x1C);
+    act.push(0x50); // Increment
+    act.push(0x1D); // SetVariable
+
+    // ActionJump back to loopHeadOff
+    const backRel = loopHeadOff - (act.length + 5);
+    act.push(0x99, 2, 0, backRel & 0xff, (backRel >> 8) & 0xff);
+    // Patch ActionIf forward jump offset
+    const fwdRel = act.length - (ifPatchPos + 5);
+    act[ifPatchPos + 3] = fwdRel & 0xff;
+    act[ifPatchPos + 4] = (fwdRel >> 8) & 0xff;
+
+    // onEnterFrame anonymous function (DefineFunction 0x9B)
+    const efBody: number[] = [];
+    // if (Key.isDown(39)) { ship._x = ship._x + 20; }
+    writePushInt(efBody, 39);
+    writePushInt(efBody, 1);
+    writePushStr(efBody, 'Key');
+    efBody.push(0x1C);
+    writePushStr(efBody, 'isDown');
+    efBody.push(0x52);
+    efBody.push(0x12); // Not
+    const kSkipPos = efBody.length;
+    efBody.push(0x9D, 2, 0, 0, 0);
+    writePushStr(efBody, 'ship');
+    efBody.push(0x1C);
+    writePushStr(efBody, '_x');
+    writePushStr(efBody, 'ship');
+    efBody.push(0x1C);
+    writePushStr(efBody, '_x');
+    efBody.push(0x4E);
+    writePushInt(efBody, 20);
+    efBody.push(0x47);
+    efBody.push(0x4F); // ship._x = ship._x + 20
+    const kRel = efBody.length - (kSkipPos + 5);
+    efBody[kSkipPos + 3] = kRel & 0xff;
+    efBody[kSkipPos + 4] = (kRel >> 8) & 0xff;
+
+    // if (b2.hitTest(enemy)) { score = score + addBonus(10, 5); b2.removeMovieClip(); }
+    writePushStr(efBody, 'enemy');
+    efBody.push(0x1C);
+    writePushInt(efBody, 1);
+    writePushStr(efBody, 'b2');
+    efBody.push(0x1C);
+    writePushStr(efBody, 'hitTest');
+    efBody.push(0x52);
+    efBody.push(0x12); // Not
+    const hSkipPos = efBody.length;
+    efBody.push(0x9D, 2, 0, 0, 0);
+    writePushStr(efBody, 'score');
+    writePushStr(efBody, 'score');
+    efBody.push(0x1C);
+    // CallFunction addBonus(10, 5): push args in reverse (5, 10, numArgs=2, "addBonus")
+    writePushInt(efBody, 5);
+    writePushInt(efBody, 10);
+    writePushInt(efBody, 2);
+    writePushStr(efBody, 'addBonus');
+    efBody.push(0x3D);
+    efBody.push(0x47); // score + addBonus(10, 5)
+    efBody.push(0x1D);
+    // b2.removeMovieClip()
+    writePushInt(efBody, 0);
+    writePushStr(efBody, 'b2');
+    efBody.push(0x1C);
+    writePushStr(efBody, 'removeMovieClip');
+    efBody.push(0x52);
+    efBody.push(0x17);
+    const hRel = efBody.length - (hSkipPos + 5);
+    efBody[hSkipPos + 3] = hRel & 0xff;
+    efBody[hSkipPos + 4] = (hRel >> 8) & 0xff;
+
+    // aimX = _root._xmouse
+    writePushStr(efBody, 'aimX');
+    writePushStr(efBody, '_root');
+    efBody.push(0x1C);
+    writePushStr(efBody, '_xmouse');
+    efBody.push(0x4E);
+    efBody.push(0x1D);
+
+    // Push "onEnterFrame", anonymous DefineFunction(efBody), SetVariable
+    writePushStr(act, 'onEnterFrame');
+    const efHdr = [0x00, 0, 0, efBody.length & 0xff, (efBody.length >> 8) & 0xff];
+    act.push(0x9B, efHdr.length & 0xff, (efHdr.length >> 8) & 0xff, ...efHdr, ...efBody);
+    act.push(0x1D); // SetVariable onEnterFrame = fn
+    act.push(0x00); // ActionEnd
+
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Uint8Array(act));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBytes = assembleFwsSwf(550, 400, 30, 1, tagWriter.toByteArray(), 8);
+    const res = await transpileSwfToAst(swfBytes, 'avm1-microvm-core');
+    if (!res.success) {
+      errors.push(`Transpilation failed: ${res.error}`);
+    } else {
+      // Load parseAst + ASTAVM1Runtime directly in isolated sandbox
+      const playerDir = path.resolve(process.cwd(), 'static/player');
+      const avmSandbox: any = { console, Math, Date, performance, Uint8Array, ArrayBuffer, DataView, Map, Set, Number, String, Boolean, Array, Object, JSON, Buffer, TextDecoder, atob };
+      avmSandbox.globalThis = avmSandbox;
+      vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), avmSandbox);
+      vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-avm1-vm.js'), 'utf8'), avmSandbox);
+      const parsed = avmSandbox.parseAst(res.astSource);
+      if (!parsed || !parsed.swfVmPayload) {
+        errors.push('parseAst did not extract (:swf-vm "...") payload');
+      } else {
+        const vmInst = new avmSandbox.ASTAVM1Runtime(parsed.swfVmPayload, {});
+        // Create lightweight mock SVG container
+        const mockContainer = {
+          childNodes: [] as any[],
+          firstChild: null as any,
+          appendChild(c: any) { this.childNodes.push(c); this.firstChild = this.childNodes[0]; return c; },
+          removeChild(c: any) { const idx = this.childNodes.indexOf(c); if (idx !== -1) this.childNodes.splice(idx, 1); this.firstChild = this.childNodes[0] || null; return c; },
+          replaceChildren(...nodes: any[]) { this.childNodes = nodes.slice(); this.firstChild = this.childNodes[0] || null; },
+          setAttribute() {},
+          addEventListener() {},
+          removeEventListener() {},
+        };
+        vmInst.mount(mockContainer, mockContainer);
+
+        // Verify attachMovie created b0 (x=100), b1 (x=140), b2 (x=180)
+        const b0 = vmInst.rootClip.getChildByName('b0');
+        const b1 = vmInst.rootClip.getChildByName('b1');
+        const b2 = vmInst.rootClip.getChildByName('b2');
+        const enemy = vmInst.rootClip.getChildByName('enemy');
+        const ship = vmInst.rootClip.getChildByName('ship');
+        const scoreField = vmInst.rootClip.getChildByName('scoreField');
+        if (!b0 || !b1 || !b2) {
+          errors.push(`attachMovie loop failed: b0=${Boolean(b0)}, b1=${Boolean(b1)}, b2=${Boolean(b2)}`);
+        } else {
+          if (b0._x !== 100 || b1._x !== 140 || b2._x !== 180) {
+            errors.push(`Unexpected attachMovie positions: b0=${b0._x}, b1=${b1._x}, b2=${b2._x}`);
+          }
+          if (!b2.hitTest(enemy)) errors.push('Expected b2.hitTest(enemy) === true');
+          if (b0.hitTest(enemy)) errors.push('Expected b0.hitTest(enemy) === false');
+          if (!b2.hitTest(185, 105, true)) errors.push('Expected b2.hitTest(185, 105, true) === true');
+        }
+
+        // Hold Right Arrow (39), move mouse to (320, 210), and step 1 SWF frame
+        vmInst.triggerKeyDown(39);
+        vmInst.setMousePosition(320, 210);
+        vmInst.stepOneSwfFrame();
+
+        if (!ship || ship._x !== 70) {
+          errors.push(`Expected ship._x === 70 after Key.isDown(39), got ${ship && ship._x}`);
+        }
+        if (vmInst.rootClip._vars.score !== 25) {
+          errors.push(`Expected score === 25 from DefineFunction2 addBonus(10,5), got ${vmInst.rootClip._vars.score}`);
+        }
+        if (vmInst.rootClip.getChildByName('b2') !== undefined) {
+          errors.push('Expected b2 to be removed by removeMovieClip() after hitTest');
+        }
+        if (!scoreField || scoreField.textEl.textContent !== '25') {
+          errors.push(`Expected DefineEditText live <text> textContent === "25", got "${scoreField && scoreField.textEl.textContent}"`);
+        }
+        if (vmInst.rootClip._vars.aimX !== 320) {
+          errors.push(`Expected aimX === 320 from _root._xmouse, got ${vmInst.rootClip._vars.aimX}`);
+        }
+        vmInst.destroy();
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 22: Pure-SVG AVM1 Micro-VM (Loops, DefineFunction2, ExportAssets/attachMovie, DefineEditText, hitTest)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified authentic AVM1 bytecode execution: for-loop attachMovie via ExportAssets, DefineFunction2 register args, hitTest, Key.isDown, _xmouse, and live DefineEditText SVG <text> sync.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 23: Pure-SVG AVM1 Micro-VM — Multi-Frame Intro -> Menu Button -> Play,
+  //                Drawing API, startDrag/stopDrag, Reset & 60 FPS Budget
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+
+    const writePushStr = (out: number[], s: string) => {
+      const payload = [0x00, ...Array.from(s).map((c) => c.charCodeAt(0)), 0x00];
+      out.push(0x96, payload.length & 0xff, (payload.length >> 8) & 0xff, ...payload);
+    };
+    const writePushInt = (out: number[], n: number) => {
+      const v = n | 0;
+      out.push(0x96, 5, 0, 0x07, v & 0xff, (v >> 8) & 0xff, (v >> 16) & 0xff, (v >> 24) & 0xff);
+    };
+
+    const tagWriter = new BitWriter();
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 100, 40, [34, 197, 94, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 40, 40, [56, 189, 248, 255], 3));
+
+    // Intro Sprite (char 10): 2 frames; Frame 2 calls _root.gotoAndStop("menu")
+    const introTags = new BitWriter();
+    writeTag(introTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2 }));
+    writeTag(introTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    const introAct: number[] = [];
+    writePushStr(introAct, 'menu');
+    writePushInt(introAct, 1);
+    writePushStr(introAct, '_root');
+    introAct.push(0x1C);
+    writePushStr(introAct, 'gotoAndStop');
+    introAct.push(0x52, 0x17, 0x00);
+    writeTag(introTags, SwfTagCode.DO_ACTION, new Uint8Array(introAct));
+    writeTag(introTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(introTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(10, 2, introTags.toByteArray()));
+
+    // Hero Sprite (char 11)
+    const heroTags = new BitWriter();
+    writeTag(heroTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2 }));
+    writeTag(heroTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(heroTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(11, 1, heroTags.toByteArray()));
+
+    // DefineButton2 (char 20): Release (0x0008) sets started=1 and _root.gotoAndStop("play")
+    const btnAct: number[] = [];
+    writePushStr(btnAct, 'started');
+    writePushInt(btnAct, 1);
+    btnAct.push(0x1D);
+    writePushStr(btnAct, 'play');
+    writePushInt(btnAct, 1);
+    writePushStr(btnAct, '_root');
+    btnAct.push(0x1C);
+    writePushStr(btnAct, 'gotoAndStop');
+    btnAct.push(0x52, 0x17, 0x00);
+    writeTag(
+      tagWriter,
+      34,
+      buildDefineButton2Tag(
+        20,
+        [{ states: 0x0F, characterId: 1, depth: 1, matrix: { txPx: 0, tyPx: 0 } }],
+        [{ condFlags: 0x0008, actions: new Uint8Array(btnAct) }]
+      )
+    );
+
+    // Frame 1 ("intro"): stop() + introSprite
+    const lbl1 = new BitWriter(); lbl1.writeString('intro');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, lbl1.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Uint8Array([0x07, 0x00]));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 10, name: 'introMc' }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2 ("menu"): remove intro, place Start Button
+    const lbl2 = new BitWriter(); lbl2.writeString('menu');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, lbl2.toByteArray());
+    const rm1 = new BitWriter(); rm1.writeUI16(1);
+    writeTag(tagWriter, 28, rm1.toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 20, name: 'startBtn', matrix: { txPx: 200, tyPx: 160 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 3 ("play"): remove button, place hero, draw laser with Drawing API, tick framesRun++
+    const lbl3 = new BitWriter(); lbl3.writeString('play');
+    writeTag(tagWriter, SwfTagCode.FRAME_LABEL, lbl3.toByteArray());
+    const rm2 = new BitWriter(); rm2.writeUI16(2);
+    writeTag(tagWriter, 28, rm2.toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 3, characterId: 11, name: 'hero', matrix: { txPx: 100, tyPx: 100 } }));
+    const playAct: number[] = [];
+    // hero.lineStyle(2, 0x38bdf8, 100); hero.moveTo(0, 0); hero.lineTo(60, 40);
+    writePushInt(playAct, 100); writePushInt(playAct, 0x38bdf8); writePushInt(playAct, 2); writePushInt(playAct, 3);
+    writePushStr(playAct, 'hero'); playAct.push(0x1C); writePushStr(playAct, 'lineStyle'); playAct.push(0x52, 0x17);
+    writePushInt(playAct, 0); writePushInt(playAct, 0); writePushInt(playAct, 2);
+    writePushStr(playAct, 'hero'); playAct.push(0x1C); writePushStr(playAct, 'moveTo'); playAct.push(0x52, 0x17);
+    writePushInt(playAct, 40); writePushInt(playAct, 60); writePushInt(playAct, 2);
+    writePushStr(playAct, 'hero'); playAct.push(0x1C); writePushStr(playAct, 'lineTo'); playAct.push(0x52, 0x17);
+    // framesRun = 0; onEnterFrame = function() { framesRun = framesRun + 1; }
+    writePushStr(playAct, 'framesRun'); writePushInt(playAct, 0); playAct.push(0x1D);
+    const tickBody: number[] = [];
+    writePushStr(tickBody, 'framesRun');
+    writePushStr(tickBody, 'framesRun'); tickBody.push(0x1C, 0x50, 0x1D);
+    writePushStr(playAct, 'onEnterFrame');
+    const tickHdr = [0x00, 0, 0, tickBody.length & 0xff, (tickBody.length >> 8) & 0xff];
+    playAct.push(0x9B, tickHdr.length & 0xff, (tickHdr.length >> 8) & 0xff, ...tickHdr, ...tickBody, 0x1D, 0x00);
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Uint8Array(playAct));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBytes = assembleFwsSwf(550, 400, 30, 3, tagWriter.toByteArray(), 7);
+    const res = await transpileSwfToAst(swfBytes, 'avm1-lifecycle-test');
+    if (!res.success) {
+      errors.push(`Transpilation failed: ${res.error}`);
+    } else {
+      const playerDir = path.resolve(process.cwd(), 'static/player');
+      const avmSandbox: any = { console, Math, Date, performance, Uint8Array, ArrayBuffer, DataView, Map, Set, Number, String, Boolean, Array, Object, JSON, Buffer, TextDecoder, atob };
+      avmSandbox.globalThis = avmSandbox;
+      vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), avmSandbox);
+      vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-avm1-vm.js'), 'utf8'), avmSandbox);
+      const parsed = avmSandbox.parseAst(res.astSource);
+      const vmInst = new avmSandbox.ASTAVM1Runtime(parsed.swfVmPayload, {});
+      const mockContainer = {
+        childNodes: [] as any[],
+        firstChild: null as any,
+        appendChild(c: any) { this.childNodes.push(c); this.firstChild = this.childNodes[0]; return c; },
+        removeChild(c: any) { const idx = this.childNodes.indexOf(c); if (idx !== -1) this.childNodes.splice(idx, 1); this.firstChild = this.childNodes[0] || null; return c; },
+        replaceChildren(...nodes: any[]) { this.childNodes = nodes.slice(); this.firstChild = this.childNodes[0] || null; },
+        setAttribute() {},
+        addEventListener() {},
+        removeEventListener() {},
+      };
+      vmInst.mount(mockContainer, mockContainer);
+
+      if (vmInst.rootClip._currentframe !== 1) errors.push(`Expected initial frame 1, got ${vmInst.rootClip._currentframe}`);
+
+      // Step 2 SWF frames -> introMc hits Frame 2 -> _root.gotoAndStop("menu") (Frame 2)
+      vmInst.stepOneSwfFrame();
+      vmInst.stepOneSwfFrame();
+      if (vmInst.rootClip._currentframe !== 2) {
+        errors.push(`Expected introMc to jump _root to Frame 2 ("menu"), got ${vmInst.rootClip._currentframe}`);
+      }
+
+      // Click DefineButton2 startBtn -> transitions to Frame 3 ("play") & sets started=1
+      const startBtn = vmInst.rootClip.getChildByName('startBtn');
+      if (!startBtn) {
+        errors.push('startBtn not mounted on Frame 2');
+      } else {
+        startBtn.triggerClick();
+        if (vmInst.rootClip._currentframe !== 3 || vmInst.rootClip._vars.started !== 1) {
+          errors.push(`Expected startBtn click to jump to Frame 3 with started=1, got frame=${vmInst.rootClip._currentframe}, started=${vmInst.rootClip._vars.started}`);
+        }
+      }
+
+      // Verify Flash Drawing API generated a pure SVG <path> on hero
+      const hero = vmInst.rootClip.getChildByName('hero');
+      if (!hero || !hero._drawGroup || hero._drawGroup.children.length === 0) {
+        errors.push('Expected Flash Drawing API (lineStyle/moveTo/lineTo) to render a pure SVG <path>');
+      } else {
+        // Test startDrag / stopDrag
+        vmInst.startDragClip(hero, true, 0, 0, 500, 350);
+        vmInst.setMousePosition(240, 180);
+        if (hero._x !== 240 || hero._y !== 180) {
+          errors.push(`Expected startDragClip to move hero to (240,180), got (${hero._x},${hero._y})`);
+        }
+        vmInst.stopDragClip();
+        vmInst.setMousePosition(400, 300);
+        if (hero._x !== 240 || hero._y !== 180) {
+          errors.push('Expected stopDragClip to release hero');
+        }
+      }
+
+      // Benchmark 120 render ticks (2 seconds @ 60Hz -> 60 SWF frames @ 30fps)
+      const tBench0 = performance.now();
+      for (let i = 0; i < 120; i++) vmInst.step(1 / 60);
+      const benchMs = performance.now() - tBench0;
+      if ((vmInst.rootClip._vars.framesRun || 0) < 55) {
+        errors.push(`Expected ~60 SWF framesRun over 2s @ 30fps, got ${vmInst.rootClip._vars.framesRun}`);
+      }
+      if (benchMs > 100) {
+        errors.push(`120-tick AVM1 benchmark exceeded 100ms budget (${benchMs.toFixed(2)}ms)`);
+      }
+
+      // Verify reset() cleanly returns to Frame 1
+      vmInst.reset();
+      if (vmInst.rootClip._currentframe !== 1) {
+        errors.push(`Expected reset() to return to Frame 1, got ${vmInst.rootClip._currentframe}`);
+      }
+      vmInst.destroy();
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 23: Pure-SVG AVM1 Micro-VM (Intro->Menu->Play, DefineButton2, Drawing API, Drag, Reset & 60 FPS)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified full SWF lifecycle: intro sprite label jump, DefineButton2 release transition, SVG Drawing API paths, startDrag/stopDrag, reset(), and 120-tick 60 FPS frame budget.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 24: Built-in Live Binary SWF v8 Samples (Arcade Target & Harmonic Pendulum)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+    const { parseAst } = loadPlayerModule('ast-parser.js');
+    const { ASTAVM1Runtime } = loadPlayerModule('ast-avm1-vm.js');
+
+    // 1. Arcade Target SWF v8 sample
+    const arcadeBytes = buildFlashArcadeSampleSwf();
+    const arcadeRes = await transpileSwfToAst(arcadeBytes, 'flash-arcade-target');
+    if (!arcadeRes.success) {
+      errors.push(`flash-arcade-target transpile failed: ${arcadeRes.error}`);
+    } else {
+      const parsed = parseAst(arcadeRes.astSource);
+      if (!parsed || !parsed.swfVmPayload) {
+        errors.push('flash-arcade-target missing swfVmPayload');
+      } else {
+        const container = createAvm1MockContainer();
+        const vmInst = new ASTAVM1Runtime(parsed.swfVmPayload, {});
+        vmInst.mount(container, container);
+        if (vmInst.rootClip._currentframe !== 1) {
+          errors.push(`Arcade sample expected boot on Frame 1 ("menu"), got ${vmInst.rootClip._currentframe}`);
+        }
+        // Click Start button on Frame 1 -> Frame 2 ("play")
+        const startBtn = Array.from(vmInst._liveButtons)[0] as any;
+        if (!startBtn) {
+          errors.push('Arcade sample Start DefineButton2 not mounted on Frame 1');
+        } else {
+          startBtn._onPointerDown();
+          startBtn._onPointerUp(true);
+        }
+        if (vmInst.rootClip._currentframe !== 2) {
+          errors.push(`Arcade Start button click failed to enter Frame 2 ("play"), got ${vmInst.rootClip._currentframe}`);
+        }
+        const targetClip = vmInst.rootClip.getChildByName('target');
+        const playerClip = vmInst.rootClip.getChildByName('player');
+        if (!targetClip || !playerClip) {
+          errors.push('Arcade sample missing target or player MovieClip on Frame 2');
+        } else {
+          const x0 = targetClip._x;
+          vmInst.step(1 / 30);
+          if (targetClip._x === x0) errors.push('Arcade target did not move onEnterFrame');
+          // Move player directly onto target and step -> hitTest must score +10 and attachMovie("spark")
+          playerClip._x = targetClip._x;
+          playerClip._y = targetClip._y;
+          vmInst.setMousePosition(0, 0);
+          vmInst.step(1 / 30);
+          if (vmInst.rootClip._vars.score !== 10) {
+            errors.push(`Arcade hitTest expected score=10, got ${vmInst.rootClip._vars.score}`);
+          }
+          if (!vmInst.rootClip.getChildByName('sp')) {
+            errors.push('Arcade hitTest did not spawn "sp" via attachMovie("spark", ...)');
+          }
+          const hudText = vmInst.rootClip._vars.hudText;
+          if (hudText !== 'SCORE: 10') {
+            errors.push(`Arcade HUD text expected "SCORE: 10", got "${hudText}"`);
+          }
+        }
+        vmInst.destroy();
+      }
+    }
+
+    // 2. Harmonic Pendulum SWF v8 sample
+    const pendBytes = buildFlashPendulumSampleSwf();
+    const pendRes = await transpileSwfToAst(pendBytes, 'flash-pendulum');
+    if (!pendRes.success) {
+      errors.push(`flash-pendulum transpile failed: ${pendRes.error}`);
+    } else {
+      const parsed = parseAst(pendRes.astSource);
+      if (!parsed || !parsed.swfVmPayload) {
+        errors.push('flash-pendulum missing swfVmPayload');
+      } else {
+        const container = createAvm1MockContainer();
+        const vmInst = new ASTAVM1Runtime(parsed.swfVmPayload, {});
+        vmInst.mount(container, container);
+        const bob = vmInst.rootClip.getChildByName('bob');
+        if (!bob) {
+          errors.push('Pendulum sample missing "bob" MovieClip');
+        } else {
+          for (let i = 0; i < 6; i++) vmInst.step(1 / 30);
+          if (Math.abs(bob._x - 300) < 5) {
+            errors.push(`Pendulum bob did not swing via AVM1 Math.sin, _x=${bob._x}`);
+          }
+          if (!vmInst.rootClip._graphicsPaths || vmInst.rootClip._graphicsPaths.length < 1) {
+            errors.push('Pendulum sample did not draw SVG rod path via Flash Drawing API');
+          }
+          // Click Pause/Resume button -> freezes bob
+          const toggleBtn = Array.from(vmInst._liveButtons)[0] as any;
+          if (toggleBtn) {
+            toggleBtn._onPointerDown();
+            toggleBtn._onPointerUp(true);
+            const frozenX = bob._x;
+            vmInst.step(1 / 30);
+            if (bob._x !== frozenX) {
+              errors.push(`Pendulum Pause button failed to freeze bob (${frozenX} -> ${bob._x})`);
+            }
+          }
+        }
+        vmInst.destroy();
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 24: Built-in Live Binary SWF v8 Samples (Arcade Target & Harmonic Pendulum on AVM1 VM)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified both built-in SWF v8 drawer samples transpile, boot in pure-SVG AVM1 Micro-VM, respond to DefineButton2 clicks, execute hitTest/attachMovie/Math.sin/Drawing API, and update live HUD text.',
       errors,
     });
   }

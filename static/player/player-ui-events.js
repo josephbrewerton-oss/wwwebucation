@@ -243,20 +243,35 @@
         stageWrap.classList.remove('drag-drop-active');
       });
 
+      const handleLocalFiles = (filesList) => {
+        if (!filesList || !filesList.length) return;
+        const arr = Array.from(filesList);
+        const swfFile = arr.find((f) => f && typeof f.name === 'string' && /\.swf$/i.test(f.name));
+        if (swfFile && window.parent && window.parent !== window) {
+          this.showToast(`⚡ Transpiling Flash file "${swfFile.name}"...`, 3500);
+          swfFile.arrayBuffer().then((buf) => {
+            window.parent.postMessage({ type: 'INGEST_SWF_FILE', name: swfFile.name, buffer: buf }, '*', [buf]);
+          }).catch((err) => {
+            this.showToast('❌ Could not read Flash file: ' + (err?.message || 'read error'), 4500);
+          });
+          return;
+        }
+        const loader = (this.engine.loadFiles ? this.engine.loadFiles(filesList, true) : this.engine.loadFromFile(filesList[0], true));
+        loader.then((scene) => {
+          if (filesList.length > 1) {
+            this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
+          }
+        }).catch((err) => {
+          this.showToast('❌ ' + err.message, 4500);
+        });
+      };
+
       stageWrap.addEventListener('drop', (e) => {
         e.preventDefault();
         e.stopPropagation();
         stageWrap.classList.remove('drag-drop-active');
         if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-          const files = e.dataTransfer.files;
-          const loader = (this.engine.loadFiles ? this.engine.loadFiles(files, true) : this.engine.loadFromFile(files[0], true));
-          loader.then((scene) => {
-            if (files.length > 1) {
-              this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
-            }
-          }).catch((err) => {
-            this.showToast('❌ ' + err.message, 4500);
-          });
+          handleLocalFiles(e.dataTransfer.files);
         }
       });
     }
@@ -271,14 +286,24 @@
       fileInput.addEventListener('change', (e) => {
         if (e.target.files && e.target.files.length) {
           const files = e.target.files;
-          const loader = (this.engine.loadFiles ? this.engine.loadFiles(files, true) : this.engine.loadFromFile(files[0], true));
-          loader.then((scene) => {
-            if (files.length > 1) {
-              this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
-            }
-          }).catch((err) => {
-            this.showToast('❌ ' + err.message, 4500);
-          });
+          const swfFile = Array.from(files).find((f) => f && typeof f.name === 'string' && /\.swf$/i.test(f.name));
+          if (swfFile && window.parent && window.parent !== window) {
+            this.showToast(`⚡ Transpiling Flash file "${swfFile.name}"...`, 3500);
+            swfFile.arrayBuffer().then((buf) => {
+              window.parent.postMessage({ type: 'INGEST_SWF_FILE', name: swfFile.name, buffer: buf }, '*', [buf]);
+            }).catch((err) => {
+              this.showToast('❌ Could not read Flash file: ' + (err?.message || 'read error'), 4500);
+            });
+          } else {
+            const loader = (this.engine.loadFiles ? this.engine.loadFiles(files, true) : this.engine.loadFromFile(files[0], true));
+            loader.then((scene) => {
+              if (files.length > 1) {
+                this.showToast(`✨ Merged Dual Cartridge: ${scene?.title || 'Pair Loaded'}`);
+              }
+            }).catch((err) => {
+              this.showToast('❌ ' + err.message, 4500);
+            });
+          }
           fileInput.value = '';
         }
       });
@@ -615,11 +640,13 @@
         }
         this.saveToLocalVault(c);
         this.populatePresets();
-        if (this.engine && c.svgMarkup && c.astSource) {
+        const handled = window.__astHandledCustomCartridgeEvents || (window.__astHandledCustomCartridgeEvents = new WeakSet());
+        if (this.engine && c.svgMarkup && c.astSource && !handled.has(e)) {
+          handled.add(e);
           if (typeof this.engine.loadSceneData === 'function') {
-            this.engine.loadSceneData(c, true);
+            this.engine.loadSceneData(c, data.play !== false);
           } else {
-            this.engine.loadScene(c.id, true);
+            this.engine.loadScene(c.id, data.play !== false);
           }
           this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
         }

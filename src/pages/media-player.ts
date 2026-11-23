@@ -91,7 +91,9 @@ export function renderPlayerPage(): HTMLElement {
     ? 'lumina-architecture'
     : normalizePresetId(requestedPresetParam);
   let activePreset = resolvedInitialPreset;
-  let initialExternalSrc = requestedPresetParam ? null : initialSrcParam;
+  const isSwfExternalUrl = (u: string | null): boolean => Boolean(u && /^[^?#]+\.swf(?:[?#].*)?$/i.test(u.trim()));
+  let pendingExternalSwfUrl: string | null = !requestedPresetParam && isSwfExternalUrl(initialSrcParam) ? initialSrcParam : null;
+  let initialExternalSrc = requestedPresetParam || pendingExternalSwfUrl ? null : initialSrcParam;
   let pendingAutoEppBench = params.get('epp-bench') === '1' || params.get('epp-bench') === 'true';
   // Launcher-First Grid: keep player iframe unloaded (0 KB engine download, 0% CPU) until a lab is selected or deep-linked
   let isStageOpen = Boolean(requestedPresetParam || initialSrcParam || pendingAutoEppBench);
@@ -114,7 +116,7 @@ export function renderPlayerPage(): HTMLElement {
     base,
     activePreset,
     meta,
-    isStageOpen,
+    isStageOpen: isStageOpen && !pendingExternalSwfUrl,
     bslActive,
     isMuted,
     initialExternalSrc,
@@ -1064,6 +1066,25 @@ export function renderPlayerPage(): HTMLElement {
     }
   }
 
+  async function loadExternalSwfUrl(swfUrl: string) {
+    try {
+      const safeUrl = swfUrl.trim();
+      if (!safeUrl || /^javascript:/i.test(safeUrl)) return;
+      showImportStatus(`⚡ Fetching & transpiling Flash SWF (${safeUrl})...`, 'success');
+      const res = await fetch(safeUrl);
+      if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${safeUrl}`);
+      const buf = await res.arrayBuffer();
+      const rawFile = safeUrl.split(/[?#]/)[0].split('/').pop() || 'imported.swf';
+      const file = new File([buf], rawFile.endsWith('.swf') ? rawFile : `${rawFile}.swf`, {
+        type: 'application/x-shockwave-flash',
+      });
+      await handleUploadedFiles([file]);
+    } catch (err: any) {
+      console.error('[media-player] Failed loading external SWF URL:', swfUrl, err);
+      showImportStatus(`Could not load Flash SWF from URL: ${err?.message || 'fetch error'}`, 'error');
+    }
+  }
+
   function renderRecentStrip() {
     if (!recentStripEl) return;
     const recentIds = getRecentPresetIds().filter((id) => !isStageOpen || id !== activePreset);
@@ -1403,6 +1424,12 @@ export function renderPlayerPage(): HTMLElement {
       if (!isStaleWelcomeOverwrite && incomingId !== activePreset) {
         updatePreset(incomingId, true);
       }
+    }
+    if (e.data.type === 'INGEST_SWF_FILE' && e.data.buffer) {
+      const rawName = typeof e.data.name === 'string' && e.data.name ? e.data.name : 'imported.swf';
+      const file = new File([e.data.buffer], rawName, { type: 'application/x-shockwave-flash' });
+      void handleUploadedFiles([file]);
+      return;
     }
     if (e.data.type === 'CARTRIDGE_INGESTED') {
       refreshDropdown();
@@ -1783,6 +1810,13 @@ export function renderPlayerPage(): HTMLElement {
 
   // Initial grid render
   renderGrid();
+
+  // If deep-linked with ?src=path/to/game.swf, fetch, transpile via AVM1 importer, and launch directly
+  if (pendingExternalSwfUrl) {
+    const swfUrl = pendingExternalSwfUrl;
+    pendingExternalSwfUrl = null;
+    void loadExternalSwfUrl(swfUrl);
+  }
 
   return container;
 }
