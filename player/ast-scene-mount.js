@@ -503,11 +503,14 @@
             });
           }
 
-          dynamicTargets.forEach(el => {
-            if (el && el.style && typeof el.style.setProperty === 'function') {
-              el.style.setProperty('will-change', 'transform, opacity');
-            }
-          });
+          const allowLayerHint = dynamicTargets.size <= 32;
+          if (allowLayerHint) {
+            dynamicTargets.forEach(el => {
+              if (el && el.style && typeof el.style.setProperty === 'function') {
+                el.style.setProperty('will-change', 'transform, opacity');
+              }
+            });
+          }
 
           if (scene.gestures && Array.isArray(scene.gestures)) {
             scene.gestures.forEach(g => {
@@ -519,7 +522,9 @@
 
           dynamicTargets.forEach(node => {
             if (node && node.style) {
-              node.style.willChange = 'transform';
+              if (allowLayerHint) {
+                node.style.willChange = 'transform';
+              }
               node.setAttribute('data-kinematic', 'true');
               const isHiddenOrBlocked =
                 (typeof node.getAttribute === 'function' && (

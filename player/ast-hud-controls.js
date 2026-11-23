@@ -24,12 +24,37 @@
     resolveParameterControls(scene = this.scene) {
       if (!scene || typeof scene !== 'object') return [];
 
+      const paramHudOff = scene.controls && (
+        scene.controls['param-hud'] === false ||
+        scene.controls[':param-hud'] === false ||
+        scene.controls['param-hud'] === ':off' ||
+        scene.controls['param-hud'] === 'off' ||
+        scene.controls.paramHud === false
+      );
+      if (paramHudOff) return [];
+
       const rawExplicit = (Array.isArray(scene.uiControls) && scene.uiControls.length > 0)
         ? scene.uiControls
         : (Array.isArray(scene.inputs) ? scene.inputs : []);
       const sceneVars = (scene.vars && typeof scene.vars === 'object' && !Array.isArray(scene.vars))
         ? scene.vars
         : {};
+
+      // Transpiled Flash/SWF cartridges run directly via stage clicks, keys, and rules —
+      // never dump internal SWF frame/MovieClip state variables into a floating manual slider overlay.
+      const isSwfScene = Boolean(
+        sceneVars && (
+          'swf_frame' in sceneVars ||
+          'swf_tick' in sceneVars ||
+          'swf_playing' in sceneVars
+        )
+      );
+      if (isSwfScene && rawExplicit.length === 0) return [];
+
+      const INTERNAL_RUNTIME_VARS = new Set([
+        'simClock', 'clock', 'sim_dt', 'sim_scale',
+        'swf_frame', 'swf_playing', 'swf_totalframes', 'swf_framesloaded', 'swf_anim_acc', 'swf_tick'
+      ]);
 
       const findVarMeta = (varName) => {
         if (!varName) return null;
@@ -129,10 +154,12 @@
         });
       }
 
+      if (isSwfScene) return resolved;
+
       const varEntries = Object.entries(sceneVars);
       for (let i = 0; i < varEntries.length; i++) {
         const [vName, vDef] = varEntries[i];
-        if (!vName || vName.startsWith('_') || vName === 'simClock' || vName === 'clock') continue;
+        if (!vName || vName.startsWith('_') || INTERNAL_RUNTIME_VARS.has(vName)) continue;
         if (hasExplicitVar(vName)) continue;
 
         const isObj = vDef && typeof vDef === 'object' && !Array.isArray(vDef);

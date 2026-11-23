@@ -14,115 +14,135 @@
 (function (global) {
   'use strict';
 
-  function updateView() {
+  function updateView(skipVectorRender = false) {
     const scene = this.engine?.scene;
-    if (this.elements.badgeStage) {
-      this.elements.badgeStage.textContent = (scene && scene.stage) ? scene.stage : 'CURRICULUM';
-    }
-    this.updateBslButton();
-
-    // Highlight active slide pill
-    if (this.elements.slideDeckPills && scene && Array.isArray(scene.keyframes)) {
-      const curT = this.engine.progress;
-      let activeIdx = 0;
-      scene.keyframes.forEach((kf, idx) => {
-        if (kf.t <= curT + 0.02) activeIdx = idx;
-      });
-      const pills = this.elements.slideDeckPills.querySelectorAll('.slide-pill-btn');
-      pills.forEach((p, idx) => {
-        if (idx === activeIdx) {
-          p.style.background = '#0284c7';
-          p.style.borderColor = '#38bdf8';
-          p.style.color = '#ffffff';
-          p.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.5)';
-        } else {
-          p.style.background = 'rgba(30, 41, 59, 0.85)';
-          p.style.borderColor = 'rgba(255, 255, 255, 0.15)';
-          p.style.color = '#cbd5e1';
-          p.style.boxShadow = 'none';
-        }
-      });
-    }
-
-    // Render vector SVG via direct element attribute patching (zero DOM thrashing, 60 FPS)
-    if (this.elements.sceneRoot) {
-      this.engine.renderCurrentVector(this.elements.sceneRoot);
-    }
-
-    // Subtitles
-    if (this.elements.subtitleOverlay) {
-      const sub = this.engine.getCurrentSubtitle();
-      if (sub) {
-        this.elements.subtitleOverlay.style.opacity = '1';
-        if (typeof sub === 'object' && sub !== null && sub.localized && sub.en) {
-          this.elements.subtitleOverlay.replaceChildren(
-            this._h('div', { css: 'font-size: 0.95em; color: #f8fafc; font-weight: 700; line-height: 1.3;', text: sub.en }),
-            this._h('div', { css: 'font-size: 0.84em; color: #38bdf8; font-weight: 600; line-height: 1.3; margin-top: 3px;', text: `🌐 ${sub.localized}` })
-          );
-        } else {
-          this.elements.subtitleOverlay.textContent = typeof sub === 'string' ? sub : (sub.localized || sub.en || '');
-        }
-        if (this.obs && this.obs.isConnected && this.obs.settings.syncSubtitles) {
-          const obsText = typeof sub === 'object' && sub !== null ? `${sub.en}\n(${sub.localized})` : String(sub);
-          if (obsText !== this._lastSentObsSubtitle) {
-            this._lastSentObsSubtitle = obsText;
-            this.obs.updateTextSource(this.obs.settings.subtitleSource, obsText);
-          }
-        }
-      } else {
-        this.elements.subtitleOverlay.style.opacity = '0.7';
-        this.elements.subtitleOverlay.textContent = (scene && scene.title) ? scene.title : 'AST Vector Media Player';
-      }
-    }
-
-    // Ambient Hairline and Legacy Scrubber
+    const cache = this._viewCache || (this._viewCache = {});
+    const sceneChanged = cache.scene !== scene;
     const pct = (this.engine.progress * 100).toFixed(1);
-    if (this.elements.ambientTimelineFill) {
-      this.elements.ambientTimelineFill.style.width = `${pct}%`;
+    const pctChanged = cache.pct !== pct;
+
+    if (sceneChanged) {
+      cache.scene = scene;
+      if (this.elements.badgeStage) {
+        this.elements.badgeStage.textContent = (scene && scene.stage) ? scene.stage : 'CURRICULUM';
+      }
+      this.updateBslButton();
     }
-    if (this.elements.ambientTimelineThumb) {
-      this.elements.ambientTimelineThumb.style.left = `${pct}%`;
-    }
-    if (this.elements.timelineFill) {
-      this.elements.timelineFill.style.width = `${pct}%`;
-    }
-    if (this.elements.timelineThumb) {
-      this.elements.timelineThumb.style.left = `${pct}%`;
-    }
-    const isSlide = Boolean(
+
+    // Explicit Sim / App scenes must never be misclassified as Slides simply because they include :keyframes metadata
+    const explicitType = scene && (scene.type || scene.cartridgeType);
+    const isExplicitSim = explicitType === 'Sim' || explicitType === 'App';
+    const isSlide = !isExplicitSim && Boolean(
       scene && (
-        scene.type === 'Slide' ||
-        scene.cartridgeType === 'Slide' ||
-        scene.type === 'Film' ||
-        scene.cartridgeType === 'Film' ||
+        explicitType === 'Slide' ||
+        explicitType === 'Film' ||
         (Array.isArray(scene.keyframes) && scene.keyframes.length > 0)
       )
     );
 
     const isContinuousSim = !isSlide && Boolean(
       this.engine.isContinuousSim ||
-      (scene && (
-        scene.type === 'Sim' ||
-        scene.cartridgeType === 'Sim' ||
-        scene.type === 'App' ||
-        scene.cartridgeType === 'App'
-      ))
+      isExplicitSim
     );
 
-    // On simulations, switch off the timeline scrubber and step buttons
-    if (this.elements.scrubberBox) {
-      this.elements.scrubberBox.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showTimelineScrubber !== false ? '' : 'none');
-    }
-    if (this.elements.btnPrev) {
-      this.elements.btnPrev.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
-    }
-    if (this.elements.btnNext) {
-      this.elements.btnNext.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
+    // Highlight active slide pill only when scene or active keyframe index actually changes
+    if (this.elements.slideDeckPills && scene && Array.isArray(scene.keyframes) && !isContinuousSim) {
+      const curT = this.engine.progress;
+      let activeIdx = 0;
+      scene.keyframes.forEach((kf, idx) => {
+        if (kf.t <= curT + 0.02) activeIdx = idx;
+      });
+      if (sceneChanged || cache.activePillIdx !== activeIdx) {
+        cache.activePillIdx = activeIdx;
+        const pills = this.elements.slideDeckPills.querySelectorAll('.slide-pill-btn');
+        pills.forEach((p, idx) => {
+          if (idx === activeIdx) {
+            p.style.background = '#0284c7';
+            p.style.borderColor = '#38bdf8';
+            p.style.color = '#ffffff';
+            p.style.boxShadow = '0 0 10px rgba(56, 189, 248, 0.5)';
+          } else {
+            p.style.background = 'rgba(30, 41, 59, 0.85)';
+            p.style.borderColor = 'rgba(255, 255, 255, 0.15)';
+            p.style.color = '#cbd5e1';
+            p.style.boxShadow = 'none';
+          }
+        });
+      }
     }
 
-    if (this.elements.timeReadout) {
+    // Render vector SVG via direct element attribute patching (skip during engine tick where applyBindings runs immediately after timeupdate)
+    if (!skipVectorRender && this.elements.sceneRoot) {
+      this.engine.renderCurrentVector(this.elements.sceneRoot);
+    }
+
+    // Subtitles (skip redundant DOM writes when unchanged)
+    if (this.elements.subtitleOverlay && (sceneChanged || pctChanged || !isContinuousSim)) {
+      const sub = this.engine.getCurrentSubtitle();
+      const subKey = sub
+        ? (typeof sub === 'object' ? `${sub.en || ''}\u0000${sub.localized || ''}` : String(sub))
+        : `__title__:${(scene && scene.title) ? scene.title : 'AST Vector Media Player'}`;
+      if (cache.subKey !== subKey) {
+        cache.subKey = subKey;
+        if (sub) {
+          this.elements.subtitleOverlay.style.opacity = '1';
+          if (typeof sub === 'object' && sub !== null && sub.localized && sub.en) {
+            this.elements.subtitleOverlay.replaceChildren(
+              this._h('div', { css: 'font-size: 0.95em; color: #f8fafc; font-weight: 700; line-height: 1.3;', text: sub.en }),
+              this._h('div', { css: 'font-size: 0.84em; color: #38bdf8; font-weight: 600; line-height: 1.3; margin-top: 3px;', text: `🌐 ${sub.localized}` })
+            );
+          } else {
+            this.elements.subtitleOverlay.textContent = typeof sub === 'string' ? sub : (sub.localized || sub.en || '');
+          }
+          if (this.obs && this.obs.isConnected && this.obs.settings.syncSubtitles) {
+            const obsText = typeof sub === 'object' && sub !== null ? `${sub.en}\n(${sub.localized})` : String(sub);
+            if (obsText !== this._lastSentObsSubtitle) {
+              this._lastSentObsSubtitle = obsText;
+              this.obs.updateTextSource(this.obs.settings.subtitleSource, obsText);
+            }
+          }
+        } else {
+          this.elements.subtitleOverlay.style.opacity = '0.7';
+          this.elements.subtitleOverlay.textContent = (scene && scene.title) ? scene.title : 'AST Vector Media Player';
+        }
+      }
+    }
+
+    // Ambient Hairline and Legacy Scrubber (only touch DOM when percentage changes)
+    if (sceneChanged || pctChanged) {
+      cache.pct = pct;
+      if (this.elements.ambientTimelineFill) {
+        this.elements.ambientTimelineFill.style.width = `${pct}%`;
+      }
+      if (this.elements.ambientTimelineThumb) {
+        this.elements.ambientTimelineThumb.style.left = `${pct}%`;
+      }
+      if (this.elements.timelineFill) {
+        this.elements.timelineFill.style.width = `${pct}%`;
+      }
+      if (this.elements.timelineThumb) {
+        this.elements.timelineThumb.style.left = `${pct}%`;
+      }
+    }
+
+    // On simulations, switch off the timeline scrubber and step buttons (only update on mode/scene change)
+    if (sceneChanged || cache.isContinuousSim !== isContinuousSim) {
+      cache.isContinuousSim = isContinuousSim;
+      if (this.elements.scrubberBox) {
+        this.elements.scrubberBox.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showTimelineScrubber !== false ? '' : 'none');
+      }
+      if (this.elements.btnPrev) {
+        this.elements.btnPrev.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
+      }
+      if (this.elements.btnNext) {
+        this.elements.btnNext.style.display = isContinuousSim ? 'none' : (this.displayConfig?.showPlaybackControls !== false ? '' : 'none');
+      }
+    }
+
+    if (this.elements.timeReadout && (sceneChanged || pctChanged)) {
+      let nextReadout = '';
       if (isContinuousSim) {
-        this.elements.timeReadout.textContent = '⚡ 60 FPS Interactive Lab';
+        nextReadout = '⚡ 60 FPS Interactive Lab';
       } else {
         const kfs = (scene && scene.keyframes) || [];
         if (kfs.length > 0) {
@@ -133,12 +153,16 @@
           });
           const curKf = kfs[activeIdx];
           const cleanTitle = (curKf && curKf.title) ? curKf.title.replace(/^\d+[\.\s]*/, '') : 'Interactive Slide';
-          this.elements.timeReadout.textContent = `Slide ${activeIdx + 1} of ${kfs.length}: ${cleanTitle}`;
+          nextReadout = `Slide ${activeIdx + 1} of ${kfs.length}: ${cleanTitle}`;
         } else {
           const curSec = Math.floor(this.engine.progress * (this.engine.durationSec || 10));
           const totalSec = Math.floor(this.engine.durationSec || 10);
-          this.elements.timeReadout.textContent = `${this.formatTime(curSec)} / ${this.formatTime(totalSec)} (${pct}%)`;
+          nextReadout = `${this.formatTime(curSec)} / ${this.formatTime(totalSec)} (${pct}%)`;
         }
+      }
+      if (cache.timeReadout !== nextReadout) {
+        cache.timeReadout = nextReadout;
+        this.elements.timeReadout.textContent = nextReadout;
       }
     }
   }
@@ -895,7 +919,8 @@
     this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
 
     this.engine.on('timeupdate', () => {
-      this.updateView();
+      // Skip duplicate renderCurrentVector() here because ASTVectorPlayerEngine.tick() executes applyBindings() right after timeupdate
+      this.updateView(true);
       this.checkInteractiveCheckpoints();
       this.updateGoalCheckpointProgress();
 
