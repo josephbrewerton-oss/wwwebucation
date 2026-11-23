@@ -436,9 +436,9 @@
         case 'LOAD_CUSTOM_CARTRIDGE':
           if (data && typeof data === 'object' && data.cartridge) {
             const handled = global.__astHandledCustomCartridgeEvents || (global.__astHandledCustomCartridgeEvents = new WeakSet());
-          if (handled.has(data)) return;
-            handled.add(data);
-            loadSceneData(data.cartridge, data.play !== false);
+          if (typeof engine.loadSceneData === 'function') {
+            engine.loadSceneData(data.cartridge, data.play !== false);
+}
           }
           break;
         case 'SET_DEV_MODE':
