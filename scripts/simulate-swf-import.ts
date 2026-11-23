@@ -2290,6 +2290,199 @@ async function runSimulations() {
   }
 
   // --------------------------------------------------------------------------
+  // SIMULATION 20: Zero-Slider Direct Play (:controls :param-hud :off),
+  //                Retroactive Cached SWF Slider Suppression, & clipDepth Masks
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+
+    // Build a 3-frame SWF with a PlaceObject2 clipDepth=2 mask at depth 1 clipping depth 2 (not depth 3)
+    const tagWriter = new BitWriter();
+    const bg = new BitWriter();
+    bg.writeUI8(0); bg.writeUI8(0); bg.writeUI8(16);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(10, 0, 0, 200, 120, [59, 130, 246, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(11, 0, 0, 400, 300, [34, 197, 94, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(12, 0, 0, 100, 30, [250, 204, 21, 255], 3));
+
+    // PlaceObject2 with HasClipDepth (0x40) | HasCharacter (0x02)
+    const maskPlace = new BitWriter();
+    maskPlace.writeUI8(0x40 | 0x02);
+    maskPlace.writeUI16(1); // depth 1
+    maskPlace.writeUI16(10); // characterId 10
+    maskPlace.writeUI16(2); // clipDepth = 2
+    writeTag(tagWriter, 26, maskPlace.toByteArray());
+
+    // Depth 2: masked viewport graphic (moves across frames 1..3 so SWF exercises dynamic :Sim path)
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 11, matrix: { txPx: 0, tyPx: 0 } }));
+    // Depth 3: unmasked HUD graphic (outside clipDepth 2)
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 3, characterId: 12, matrix: { txPx: 10, tyPx: 10 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, move: true, matrix: { txPx: 25, tyPx: 0 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, move: true, matrix: { txPx: 50, tyPx: 0 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBytes = assembleFwsSwf(600, 400, 24, 3, tagWriter.toByteArray(), 8);
+    const res = await transpileSwfToAst(swfBytes, 'flashtrek-mask-test');
+    if (!res.success) {
+      errors.push(`SWF parse failed: ${res.error}`);
+    } else {
+      // 1. Verify :controls disables param-hud and conflicting portal keyboard shortcuts
+      if (!res.astSource.includes('(:controls (:param-hud :off) (:arrow-step :off) (:num-jump :off) (:space-play :off) (:scrub :off))')) {
+        errors.push('Transpiled SWF AST missing (:controls (:param-hud :off) (:arrow-step :off) (:num-jump :off) (:space-play :off) (:scrub :off))');
+      }
+
+      // 2. Verify clipDepth mask compiles to <clipPath id="swf-mask-..."> instead of an opaque solid <g>
+      if (!res.svgMarkup.includes('<clipPath id="swf-mask-swf_place_1">')) {
+        errors.push('Expected clipDepth mask at depth 1 to emit <clipPath id="swf-mask-swf_place_1"> inside <defs>');
+      }
+      if (res.svgMarkup.includes('id="swf-place-1"')) {
+        errors.push('Mask layer at depth 1 was rendered as a visible <g id="swf-place-1"> instead of an invisible <clipPath>');
+      }
+      if (!res.svgMarkup.includes('<g clip-path="url(#swf-mask-swf_place_1)">')) {
+        errors.push('Expected depth 2 graphic (#swf-place-2) to be wrapped in an un-transformed <g clip-path="url(#swf-mask-swf_place_1)">');
+      }
+      const place2Tag = res.svgMarkup.match(/<g id="swf-place-2"[^>]*>/);
+      if (!place2Tag || place2Tag[0].includes('clip-path=')) {
+        errors.push('Expected clip-path NOT to be placed directly on the transformed <g id="swf-place-2"> (must be on outer un-transformed wrapper)');
+      }
+      const hudGroupMatch = res.svgMarkup.match(/<g id="swf-place-3"[^>]*>/);
+      if (!hudGroupMatch || hudGroupMatch[0].includes('clip-path=')) {
+        errors.push('Expected depth 3 graphic (#swf-place-3, outside clipDepth 2) NOT to inherit the depth 1..2 clipPath');
+      }
+
+      // 3. Verify ASTHudControls.resolveParameterControls returns [] for both new SWFs and legacy cached SWFs without :controls
+      const playerDir = path.resolve(process.cwd(), 'static/player');
+      const hudSandbox: any = { console, Math, Number, String, Boolean, Object, Array, Set, Map, JSON };
+      hudSandbox.window = hudSandbox;
+      hudSandbox.globalThis = hudSandbox;
+      const hudCtx = vm.createContext(hudSandbox);
+      vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), hudCtx, { filename: 'ast-parser.js' });
+      vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-hud-controls.js'), 'utf8'), hudCtx, { filename: 'ast-hud-controls.js' });
+
+      const parsedScene = hudSandbox.parseAst(res.astSource);
+      const fakeHudEngine = {
+        scene: parsedScene,
+        normalizeVarName: (s: string) => String(s || '').trim().replace(/^\*|\*$/g, ''),
+      };
+      const controlsNew = hudSandbox.ASTHudControls.resolveParameterControls.call(fakeHudEngine, parsedScene);
+      if (!Array.isArray(controlsNew) || controlsNew.length !== 0) {
+        errors.push(`Expected 0 auto-generated parameter sliders on transpiled SWF, got ${controlsNew && controlsNew.length}`);
+      }
+
+      // Simulate legacy cached Local Vault SWF without (:controls ...)
+      const legacyCachedSwf = { ...parsedScene, controls: null };
+      const controlsLegacy = hudSandbox.ASTHudControls.resolveParameterControls.call(fakeHudEngine, legacyCachedSwf);
+      if (!Array.isArray(controlsLegacy) || controlsLegacy.length !== 0) {
+        errors.push(`Expected 0 auto-generated parameter sliders on legacy cached SWF without :controls, got ${controlsLegacy && controlsLegacy.length}`);
+      }
+
+      // 4. Verify autonomous ticking advances swf_tick & swf_frame without touching any manual sliders
+      const rt = createHeadlessSwfRuntime(res.astSource, res.svgMarkup);
+      const initFrame = rt.engine.vars.swf_frame;
+      const t0 = performance.now();
+      for (let i = 0; i < 6; i++) rt.tick(1 / 60);
+      const elapsedMs = performance.now() - t0;
+      if (!(rt.engine.vars.swf_tick >= 6)) {
+        errors.push(`Expected autonomous swf_tick >= 6 after 6 ticks, got ${rt.engine.vars.swf_tick}`);
+      }
+      if (rt.engine.vars.swf_frame === initFrame) {
+        errors.push(`Expected autonomous swf_frame to advance from ${initFrame} without manual slider input (stayed at ${rt.engine.vars.swf_frame})`);
+      }
+      if (elapsedMs > 25) {
+        errors.push(`Expected 6 SWF frames to compute in < 25ms, took ${elapsedMs.toFixed(2)}ms`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 20: Zero-Slider Direct Play, Retroactive SWF HUD Suppression & clipDepth SVG Masks',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified SWFs disable manual Parameters sliders (both new & cached), convert Flash clipDepth mask layers into parent-space <clipPath> wrappers, and tick autonomously.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // SIMULATION 21: AVM1 ActionGotoFrame+ActionPlay Fusion & playVar-First Rule Order
+  //                (2DARCADE-style Intro Splash Sprite -> _root.gotoAndPlay -> Menu Stop)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+
+    const tagWriter = new BitWriter();
+    const bg = new BitWriter();
+    bg.writeUI8(0); bg.writeUI8(0); bg.writeUI8(0);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, 0, 0, 80, 80, [239, 68, 68, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 120, 40, [34, 197, 94, 255], 3));
+
+    // Intro splash DefineSprite (char 10): 2 frames; on Frame 2 executes tellTarget("/") + ActionGotoFrame(1 -> Frame 2) + ActionPlay()
+    const introSpriteTags = new BitWriter();
+    writeTag(introSpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1, matrix: { txPx: 100, tyPx: 100 } }));
+    writeTag(introSpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    // Raw AVM1: ActionSetTarget("/") [0x8B, len=2, '/', 0], ActionGotoFrame(1) [0x81, len=2, 1, 0], ActionPlay [0x06], End [0x00]
+    const gotoAndPlayRoot = new Uint8Array([0x8B, 0x02, 0x00, 0x2F, 0x00, 0x81, 0x02, 0x00, 0x01, 0x00, 0x06, 0x00]);
+    writeTag(introSpriteTags, SwfTagCode.DO_ACTION, gotoAndPlayRoot);
+    writeTag(introSpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(introSpriteTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(10, 2, introSpriteTags.toByteArray()));
+
+    // Frame 1: stop() while intro splash sprite plays
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 10, name: 'introSplash' }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: plays automatically into Frame 3 (verifies ActionGotoFrame+ActionPlay kept swf_playing = 1!)
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 2, matrix: { txPx: 200, tyPx: 150 } }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 3: gotoAndStop(4) via ActionGotoFrame(3) with NO ActionPlay (verifies playVar=0 fires BEFORE swf_frame=4!)
+    const gotoAndStop4 = new Uint8Array([0x81, 0x02, 0x00, 0x03, 0x00, 0x00]);
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, gotoAndStop4);
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 4: menu target frame (has NO stop() of its own — relies solely on Frame 3's gotoAndStop(4)!)
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const swfBytes = assembleFwsSwf(550, 400, 30, 4, tagWriter.toByteArray(), 8);
+    const res = await transpileSwfToAst(swfBytes, 'intro-gotoandplay-test');
+    if (!res.success) {
+      errors.push(`Transpilation failed: ${res.error}`);
+    } else {
+      const rt = createHeadlessSwfRuntime(res.astSource, res.svgMarkup);
+      // Starts stopped on Frame 1 while introSplash runs
+      if (rt.engine.vars.swf_frame !== 1 || rt.engine.vars.swf_playing !== 0) {
+        errors.push(`Expected Frame 1 stopped initially, got frame=${rt.engine.vars.swf_frame}, playing=${rt.engine.vars.swf_playing}`);
+      }
+      // Step 25 ticks (~0.42s @ 30fps -> introSplash hits Frame 2 -> _root.gotoAndPlay(2) -> advances to 3 -> gotoAndStop(4))
+      for (let i = 0; i < 25; i++) rt.tick(1 / 60);
+      if (rt.engine.vars.swf_frame !== 4) {
+        errors.push(`Expected introSplash -> gotoAndPlay(2) -> Frame 3 -> gotoAndStop(4) to reach Frame 4, got swf_frame=${rt.engine.vars.swf_frame}, swf_playing=${rt.engine.vars.swf_playing}`);
+      }
+      if (rt.engine.vars.swf_playing !== 0) {
+        errors.push(`Expected Frame 3 gotoAndStop(4) to leave swf_playing=0 on Frame 4, got swf_playing=${rt.engine.vars.swf_playing}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 21: AVM1 ActionGotoFrame+ActionPlay Fusion & Intro Sprite -> Menu Transition',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified intro sprite _root.gotoAndPlay(2) keeps swf_playing=1 across transition and Frame 3 gotoAndStop(4) stops cleanly on Frame 4.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
   // Summary Presentation
   // --------------------------------------------------------------------------
   console.log('RESULTS BREAKDOWN:\n');

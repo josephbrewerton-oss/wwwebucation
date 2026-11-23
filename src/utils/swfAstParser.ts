@@ -1436,16 +1436,27 @@ function parseDoAction(
         else if (isRootTargetName(rawT)) curTarget = '__root__';
         else curTarget = sanitizeAstIdent(rawT.replace(/^\/+|^_root\./, ''));
       } else if (code === 0x81 && pReader) {
-        // ActionGotoFrame (0-based in SWF -> 1-based frame)
+        // ActionGotoFrame (0-based in SWF -> 1-based frame).
+        // Flash AVM1 compiles gotoAndPlay(N) as ActionGotoFrame(N-1) immediately followed by ActionPlay (0x06) — fuse them!
         const frameNum = pReader.readUI16() + 1;
+        const followedByPlay = (i + 1 < endIdx && i + 1 < instrs.length && instrs[i + 1].code === 0x06);
+        if (followedByPlay) {
+          if (outStmts === record.statements) record.plays = true;
+          i++; // consume paired ActionPlay
+        }
         record.gotoFrames!.push(frameNum);
-        pushStmt({ kind: 'gotoFrame', targetPrefix: curTarget || undefined, frame: frameNum, play: false, when: activeGuard });
+        pushStmt({ kind: 'gotoFrame', targetPrefix: curTarget || undefined, frame: frameNum, play: followedByPlay, when: activeGuard });
       } else if (code === 0x8C && pReader) {
-        // ActionGoToLabel (spec 0x8C)
+        // ActionGoToLabel (spec 0x8C). Fuse immediately following ActionPlay (0x06) for gotoAndPlay("label").
         const lbl = pReader.readString();
+        const followedByPlay = (i + 1 < endIdx && i + 1 < instrs.length && instrs[i + 1].code === 0x06);
+        if (followedByPlay) {
+          if (outStmts === record.statements) record.plays = true;
+          i++; // consume paired ActionPlay
+        }
         if (lbl) {
           record.gotoLabels!.push(lbl);
-          pushStmt({ kind: 'gotoLabel', targetPrefix: curTarget || undefined, label: lbl, play: false, when: activeGuard });
+          pushStmt({ kind: 'gotoLabel', targetPrefix: curTarget || undefined, label: lbl, play: followedByPlay, when: activeGuard });
         }
       } else if (code === 0x9F && pReader) {
         // ActionGotoFrame2 (spec 0x9F) OR legacy null-terminated label string (Sim 7 compatibility)
@@ -2733,8 +2744,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       } else if (st.kind === 'gotoFrame' && st.frame) {
         ensureVar(frameVar, 1, 1, Math.max(totalFrames, st.frame));
         ensureVar(playVar, 1, 0, 1);
-        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${st.frame}")`);
+        // Emit playVar BEFORE frameVar so mutating frameVar never invalidates the (= frameVar X) guard on playVar!
         outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${st.frame}")`);
       } else if (st.kind === 'gotoLabel' && st.label) {
         const targetFrame =
           labelMap.get(st.label) ??
@@ -2744,13 +2756,18 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           1;
         ensureVar(frameVar, 1, 1, Math.max(totalFrames, targetFrame));
         ensureVar(playVar, 1, 0, 1);
-        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${targetFrame}")`);
+        // Emit playVar BEFORE frameVar so mutating frameVar never invalidates the (= frameVar X) guard on playVar!
         outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "${st.play ? 1 : 0}")`);
+        outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "${targetFrame}")`);
       } else if (st.kind === 'nextFrame') {
         ensureVar(frameVar, 1, 1, totalFrames);
+        ensureVar(playVar, 1, 0, 1);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "0")`);
         outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(min ${totalFrames} (+ ${frameVar} 1))")`);
       } else if (st.kind === 'prevFrame') {
         ensureVar(frameVar, 1, 1, totalFrames);
+        ensureVar(playVar, 1, 0, 1);
+        outRules.push(`    (:rule :var "${playVar}"${whenAttr} :expr "0")`);
         outRules.push(`    (:rule :var "${frameVar}"${whenAttr} :expr "(max 1 (- ${frameVar} 1))")`);
       } else if (st.kind === 'spawnPool' && st.poolBase) {
         const base = sanitizeAstIdent(st.poolBase);
@@ -2845,6 +2862,44 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const targetSel = h.target === '__stage__' ? '#scene-root' : `#swf-inst-${sanitizeAstIdent(h.target)}`;
         dynamicGestures.push(`    (:on-click :target "${targetSel}" ${bodySteps})`);
       }
+    };
+
+    const maskClipDefs: string[] = [];
+
+    // Extracts SVG geometry primitives allowed inside <clipPath>, preserving nested <g transform="..."> chains
+    const extractSvgClipPrimitives = (innerSvg: string, matrix?: SwfMatrix | null): string => {
+      const rootMat = matrix ? formatMatrixAttr(matrix) : '';
+      const transformStack: string[] = rootMat ? [rootMat] : [];
+      const out: string[] = [];
+      const tokenRe = /<(\/?)(g|path|rect|circle|ellipse|polygon|polyline)\b([^>]*?)(\/?)>/gi;
+      let match: RegExpExecArray | null;
+      while ((match = tokenRe.exec(innerSvg)) !== null) {
+        const isClose = match[1] === '/';
+        const tagName = match[2].toLowerCase();
+        const attrs = match[3] || '';
+        const isSelfClose = match[4] === '/';
+        if (tagName === 'g') {
+          if (isClose) {
+            if (transformStack.length > (rootMat ? 1 : 0)) transformStack.pop();
+          } else if (!isSelfClose) {
+            const tm = attrs.match(/\btransform="([^"]*)"/i);
+            transformStack.push(tm ? tm[1] : '');
+          }
+          continue;
+        }
+        if (isClose) continue;
+        let cleanAttrs = attrs
+          .replace(/\s+id="[^"]*"/gi, '')
+          .replace(/\s+fill="[^"]*"/gi, '')
+          .replace(/\s+stroke="[^"]*"/gi, '');
+        const selfTm = cleanAttrs.match(/\btransform="([^"]*)"/i);
+        const chain = transformStack.filter(Boolean);
+        if (selfTm && selfTm[1]) chain.push(selfTm[1]);
+        cleanAttrs = cleanAttrs.replace(/\s+transform="[^"]*"/gi, '');
+        const finalTransform = chain.length > 0 ? ` transform="${chain.join(' ')}"` : '';
+        out.push(`<${tagName}${cleanAttrs}${finalTransform} />`);
+      }
+      return out.join('\n      ');
     };
 
     const renderCharacterSvg = (
@@ -2948,17 +3003,42 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
         const childParts: string[] = [];
         const sortedSpTracks = Array.from(spTracks.values()).sort((a, b) => a.depth - b.depth || a.firstFrame - b.firstFrame);
+        const activeSpMasks: Array<{ clipDepth: number; maskId: string; frames: Set<number> }> = [];
         for (const tr of sortedSpTracks) {
           const { depth: d, characterId: cid, frameMap } = tr;
           const firstSnapEntry = Array.from(frameMap.values())[0];
           const swapsAtDepth = (spDepthCharSets.get(d)?.size || 1) > 1;
           const childDomId = swapsAtDepth ? `${instanceDomPrefix}-d${d}-c${cid}` : `${instanceDomPrefix}-d${d}`;
-          const childInner = renderCharacterSvg(cid, childDomId, undefined, parentActiveWhen);
+          const nestedName = firstSnapEntry.name ? sanitizeAstIdent(firstSnapEntry.name) : undefined;
+          const childInner = renderCharacterSvg(cid, childDomId, nestedName, parentActiveWhen);
+
+          // Flash PlaceObject2/3 clipDepth > 0 defines an invisible clipping mask for depths (d+1..clipDepth]
+          const spClipDepth = Array.from(frameMap.values()).find((fe) => fe.clipDepth && fe.clipDepth > d)?.clipDepth;
+          if (spClipDepth && spClipDepth > d) {
+            const maskId = `swf-mask-${sanitizeAstIdent(childDomId)}`;
+            const geom = extractSvgClipPrimitives(childInner, firstSnapEntry.matrix);
+            if (geom) {
+              maskClipDefs.push(`    <clipPath id="${maskId}">\n      ${geom}\n    </clipPath>`);
+              activeSpMasks.push({ clipDepth: spClipDepth, maskId, frames: new Set(frameMap.keys()) });
+            }
+            continue;
+          }
+
+          // Only apply a mask if the child track's active frames are covered by that mask;
+          // wrap in an UN-TRANSFORMED outer <g clip-path="..."> so the clipPath stays in parent coordinates!
+          const matchingSpMask = activeSpMasks.find((m) => {
+            if (d > m.clipDepth) return false;
+            for (const f of frameMap.keys()) {
+              if (!m.frames.has(f)) return false;
+            }
+            return true;
+          });
           const initMat = firstSnapEntry.matrix ? ` transform="${formatMatrixAttr(firstSnapEntry.matrix)}"` : '';
           const initAlpha = firstSnapEntry.cxform ? ` opacity="${formatNum(firstSnapEntry.cxform.alpha)}"` : '';
           const visibleOn1 = frameMap.has(1);
           const initDisp = !visibleOn1 ? ' display="none"' : '';
-          childParts.push(`<g id="${childDomId}" data-sprite-depth="${d}"${initMat}${initAlpha}${initDisp}>${childInner}</g>`);
+          const childGroup = `<g id="${childDomId}" data-sprite-depth="${d}"${initMat}${initAlpha}${initDisp}>${childInner}</g>`;
+          childParts.push(matchingSpMask ? `<g clip-path="url(#${matchingSpMask.maskId})">${childGroup}</g>` : childGroup);
 
           if (sprite.frameCount > 1) {
             const matClauses: string[] = [];
@@ -3111,6 +3191,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     if (!isDynamicSwf) {
       // Static single-frame SWF path (100% compatible with Sims 1–11)
       const sortedDisplayList = Array.from(activeDisplay.values()).sort((a, b) => a.depth - b.depth);
+      const activeStaticMasks: Array<{ clipDepth: number; maskId: string }> = [];
       for (const entry of sortedDisplayList) {
         const targetItem = shapeByCharId.get(entry.characterId) || morphByCharId.get(entry.characterId);
         if (!targetItem) continue;
@@ -3119,19 +3200,29 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const count = (charRenderCount.get(entry.characterId) || 0) + 1;
         charRenderCount.set(entry.characterId, count);
 
+        if (entry.clipDepth && entry.clipDepth > entry.depth) {
+          const maskId = `swf-mask-d${entry.depth}-c${entry.characterId}`;
+          const geom = extractSvgClipPrimitives(targetItem.svg, entry.matrix);
+          if (geom) {
+            maskClipDefs.push(`    <clipPath id="${maskId}">\n      ${geom}\n    </clipPath>`);
+            activeStaticMasks.push({ clipDepth: entry.clipDepth, maskId });
+          }
+          continue;
+        }
+
         let innerSvg = targetItem.svg;
         if (count > 1) {
           innerSvg = innerSvg.replace(`id="${targetItem.id}"`, `id="${targetItem.id}-d${entry.depth}"`);
         }
 
-        if (entry.matrix) {
-          const transformVal = formatMatrixAttr(entry.matrix);
-          const opAttr = entry.cxform && entry.cxform.alpha < 1 ? ` opacity="${formatNum(entry.cxform.alpha)}"` : '';
-          placedSvgElements.push(
-            `<g id="swf-place-${entry.depth}" data-character-id="${entry.characterId}" transform="${transformVal}"${opAttr}>\n      ${innerSvg}\n    </g>`
-          );
+        const matchingMask = activeStaticMasks.find((m) => entry.depth <= m.clipDepth);
+        const innerPlaced = entry.matrix
+          ? `<g id="swf-place-${entry.depth}" data-character-id="${entry.characterId}" transform="${formatMatrixAttr(entry.matrix)}"${entry.cxform && entry.cxform.alpha < 1 ? ` opacity="${formatNum(entry.cxform.alpha)}"` : ''}>\n      ${innerSvg}\n    </g>`
+          : innerSvg;
+        if (matchingMask) {
+          placedSvgElements.push(`<g clip-path="url(#${matchingMask.maskId})">\n      ${innerPlaced}\n    </g>`);
         } else {
-          placedSvgElements.push(innerSvg);
+          placedSvgElements.push(innerPlaced);
         }
       }
     } else {
@@ -3330,6 +3421,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       const sortedTracks = activeTracks.sort((a, b) => a.depth - b.depth || a.firstFrame - b.firstFrame);
       const instanceSourceCharMap = new Map<string, number>();
       const usedMainDomIds = new Set<string>();
+      const activeMainMasks: Array<{ clipDepth: number; maskId: string; frames: Set<number> }> = [];
 
       for (const track of sortedTracks) {
         const safeName = track.name ? sanitizeAstIdent(track.name) : '';
@@ -3350,6 +3442,25 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const visibleOnEntry = track.frameStates.has(entryFrame);
         const parentActiveWhen = buildActivePresenceGuard(track.frameStates);
         const trackFirstActiveFrame = Math.max(entryFrame, track.firstFrame);
+
+        // Flash PlaceObject2/3 clipDepth > 0 marks an invisible mask layer clipping depths (track.depth+1..clipDepth]
+        const trackClipDepth =
+          entryState.clipDepth ||
+          Array.from(track.frameStates.values()).find((fe) => fe.clipDepth && fe.clipDepth > track.depth)?.clipDepth;
+        if (trackClipDepth && trackClipDepth > track.depth) {
+          const maskInner = renderCharacterSvg(entryState.characterId, domId, undefined, parentActiveWhen);
+          const maskId = `swf-mask-${sanitizeAstIdent(domId)}`;
+          const geom = extractSvgClipPrimitives(maskInner, entryState.matrix);
+          if (geom) {
+            const maskFrames = new Set<number>();
+            for (const f of track.frameStates.keys()) {
+              if (f >= entryFrame) maskFrames.add(f);
+            }
+            maskClipDefs.push(`    <clipPath id="${maskId}">\n      ${geom}\n    </clipPath>`);
+            activeMainMasks.push({ clipDepth: trackClipDepth, maskId, frames: maskFrames });
+          }
+          continue;
+        }
 
         // Pre-apply entry-frame onClipEvent(load) _visible overrides so initial SVG attributes match runtime state
         let initVisibleVal = visibleOnEntry ? 1 : 0;
@@ -3373,6 +3484,18 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const startsVisible = visibleOnEntry && initVisibleVal > 0;
 
         const innerSvg = renderCharacterSvg(entryState.characterId, domId, safeName || undefined, parentActiveWhen);
+        // Only apply a mask when every active frame of this track is covered by that mask,
+        // and place clip-path on an UN-TRANSFORMED outer <g> so the clipPath evaluates in stage coordinates!
+        const matchingMask = activeMainMasks.find((m) => {
+          if (track.depth > m.clipDepth) return false;
+          let hasActiveFrame = false;
+          for (const f of track.frameStates.keys()) {
+            if (f < entryFrame) continue;
+            hasActiveFrame = true;
+            if (!m.frames.has(f)) return false;
+          }
+          return hasActiveFrame;
+        });
         const transformAttr = entryState.matrix ? ` transform="${formatMatrixAttr(initMat)}"` : '';
         const opacityAttr = initAlpha < 1 ? ` opacity="${formatNum(initAlpha)}"` : '';
         const visibilityAttr = safeName
@@ -3380,8 +3503,11 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           : (!visibleOnEntry ? ' display="none"' : '');
         const nameAttr = track.name ? ` data-swf-name="${track.name}"` : '';
 
+        const trackGroup = `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${visibilityAttr}>\n      ${innerSvg}\n    </g>`;
         placedSvgElements.push(
-          `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${visibilityAttr}>\n      ${innerSvg}\n    </g>`
+          matchingMask
+            ? `<g clip-path="url(#${matchingMask.maskId})">\n      ${trackGroup}\n    </g>`
+            : trackGroup
         );
 
         // If this is a named MovieClip/Button instance, bind Flash properties (_x, _y, _xscale, _yscale, _rotation, _alpha, _visible)
@@ -3596,11 +3722,12 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     </g>`;
     }
 
+    const maskDefsXml = maskClipDefs.length > 0 ? `\n${maskClipDefs.join('\n')}` : '';
     const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
   <defs>
     <clipPath id="swf-stage-clip">
       <rect x="0" y="0" width="${width}" height="${height}" />
-    </clipPath>
+    </clipPath>${maskDefsXml}
   </defs>
   <rect id="bg" width="${width}" height="${height}" fill="${backgroundColor}" />
   <g id="scene-root" clip-path="url(#swf-stage-clip)">
@@ -3731,6 +3858,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     (:t 0.5 :title "Midpoint" :rule "Active Simulation Phase")
     (:t 1.0 :title "Conclusion" :rule "Loop Reset")`;
 
+    const controlsAst = `\n  (:controls (:param-hud :off) (:arrow-step :off) (:num-jump :off) (:space-play :off) (:scrub :off))\n`;
+
     const astSource = `(:scene
   :id "${sceneId}"
   :type "Sim"
@@ -3740,7 +3869,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
   :fps ${Math.round(frameRate) || 24}
   :stageWidth ${width}
   :stageHeight ${height}
-${varsAst}${inputsAst}
+${controlsAst}${varsAst}${inputsAst}
   (:static (
     (:element :target "#bg" :cache true)
     (:element :target "#swf-bg-card" :cache true)

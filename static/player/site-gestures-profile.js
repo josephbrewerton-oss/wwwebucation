@@ -1422,6 +1422,17 @@
     const merged = { ...this.playerProfile.defaults };
     const scene = this.engine && this.engine.scene;
 
+    // 0. For transpiled SWF cartridges (including previously cached Local Vault imports),
+    // disable manual Parameters HUD and conflicting slide/scrub shortcuts by default so keys & clicks go straight to the SWF.
+    const sceneVars = scene && scene.vars && typeof scene.vars === 'object' ? scene.vars : null;
+    if (sceneVars && ('swf_frame' in sceneVars || 'swf_tick' in sceneVars || 'swf_playing' in sceneVars)) {
+      merged['param-hud'] = false;
+      merged['arrow-step'] = false;
+      merged['num-jump'] = false;
+      merged['space-play'] = false;
+      merged['scrub'] = false;
+    }
+
     // 1. Apply active AST skill controls (walking inherited skill chain) before cartridge-level overrides
     const skillUsages = this._resolveSceneSkillUsages(scene);
     if (skillUsages.length > 0) {
@@ -1526,6 +1537,10 @@
     const paramHud = document.getElementById('stage-sim-parameters');
     if (paramHud && !paramHudOn) {
       paramHud.style.display = 'none';
+    }
+    const projectedOverlay = document.getElementById('cartridge-controls-overlay');
+    if (projectedOverlay && !paramHudOn) {
+      projectedOverlay.classList.add('hidden');
     }
   }
 

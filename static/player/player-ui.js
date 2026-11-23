@@ -540,9 +540,9 @@
       if (_ctrl && typeof _ctrl.setupKeyframeMarkers === 'function') _ctrl.setupKeyframeMarkers.call(this);
     }
 
-    updateView() {
+    updateView(skipVectorRender = false) {
       const _e = _getPlayerUIEvents();
-      if (_e && typeof _e.updateView === 'function') _e.updateView.call(this);
+      if (_e && typeof _e.updateView === 'function') _e.updateView.call(this, skipVectorRender);
     }
 
     setTheme(theme) {
