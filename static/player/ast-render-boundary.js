@@ -654,8 +654,16 @@
       return;
     }
     const safeVal = typeof val === 'number' && !Number.isFinite(val) ? 0 : val;
+    const strVal = String(safeVal);
     if (typeof node.setAttribute === 'function') {
-      node.setAttribute(attr, String(safeVal));
+      node.setAttribute(attr, strVal);
+    }
+    if (node.style) {
+      if (attr === 'visibility') {
+        node.style.visibility = strVal;
+      } else if (attr === 'pointer-events') {
+        node.style.pointerEvents = strVal;
+      }
     }
   }
 

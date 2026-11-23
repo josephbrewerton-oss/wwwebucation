@@ -334,9 +334,19 @@ export async function inflateCartridgeToVault(
   return null;
 }
 
-// Auto-bootstrap vault in browser environments
+// Auto-bootstrap vault in browser environments & expose synchronous same-origin RAM lookup for player iframe
 if (typeof window !== 'undefined') {
   initCartridgeVault().catch(() => {});
+  (window as any).__AST_CARTRIDGE_VAULT_LOOKUP__ = (id: string): CartridgeDefinition | null => {
+    if (!id) return null;
+    const target = String(id).trim();
+    const targetLower = target.toLowerCase();
+    const custom = getCustomCartridges();
+    const hit = custom.find(
+      (c) => c && (c.id === target || String(c.id || '').toLowerCase() === targetLower)
+    );
+    return hit && (hit.svgMarkup || hit.astSource) ? hit : null;
+  };
 }
 
 /**

@@ -1674,11 +1674,15 @@ function parseDoAction(
         const mapped = resolvePropVarName(clipPrefix, propName) || `${sanitizeAstIdent(clipPrefix)}_x`;
         record.referencedProps!.add(mapped);
         const expr = avm1ValToSexpr(val, curTarget, record.referencedProps!);
+        const rawLit = avm1ValToRawLiteral(val);
+        if (!activeGuard && outStmts === record.statements && !record.setVariables!.some((sv) => sv.name === mapped)) {
+          record.setVariables!.push({ name: mapped, value: rawLit !== undefined ? rawLit : 0 });
+        }
         pushStmt({
           kind: 'setVar',
           varName: mapped,
           expr,
-          rawVal: avm1ValToRawLiteral(val),
+          rawVal: rawLit,
           when: activeGuard,
         });
       } else if (
@@ -2918,7 +2922,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
               };
               if (act.frame === 1 && st.kind === 'stop' && !st.when && scopedSt.targetPrefix === spPrefix) continue;
               const targetLabels = scopedSt.targetPrefix === '__root__' ? mainLabelMap : spLabelMap;
-              emitStatementToRules(scopedSt, targetLabels, spFrameGuard);
+              emitStatementToRules(scopedSt, targetLabels, spFrameGuard, dynamicRules, sprite.frameCount > 1);
             }
             for (const st of act.enterFrameStatements || []) {
               const scopedSt: Avm1LiftedStatement = {
@@ -2926,7 +2930,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
                 targetPrefix: st.targetPrefix === '__root__' ? '__root__' : (st.targetPrefix ? st.targetPrefix : spPrefix),
               };
               const targetLabels = scopedSt.targetPrefix === '__root__' ? mainLabelMap : spLabelMap;
-              emitStatementToRules(scopedSt, targetLabels, parentActiveWhen);
+              emitStatementToRules(scopedSt, targetLabels, parentActiveWhen, dynamicRules, false);
             }
             emitEventHandlersToGestures(act.eventHandlers, mainLabelMap);
           }
@@ -3140,11 +3144,31 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         return false;
       };
 
+      const spriteHasInteractiveControl = (charId: number, visited = new Set<number>()): boolean => {
+        if (visited.has(charId)) return false;
+        visited.add(charId);
+        if (buttons.has(charId)) return true;
+        const sp = sprites.get(charId);
+        if (!sp) return false;
+        if (sp.actions.some((a) => (a.eventHandlers && a.eventHandlers.length > 0) || (a.usedKeys && a.usedKeys.length > 0))) {
+          return true;
+        }
+        for (const snap of sp.frames) {
+          for (const e of snap.entries.values()) {
+            if (e.clipActions?.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
+              return true;
+            }
+            if (spriteHasInteractiveControl(e.characterId, visited)) return true;
+          }
+        }
+        return false;
+      };
+
       const frameHasInteractiveControl = (frameNum: number): boolean => {
-        // Any DefineButton placed on this frame?
+        // Any DefineButton (direct or nested in a DefineSprite) placed on this frame?
         for (const tr of mainTrackList) {
           if (!tr.frameStates.has(frameNum)) continue;
-          if (buttons.has(tr.characterId)) return true;
+          if (buttons.has(tr.characterId) || spriteHasInteractiveControl(tr.characterId)) return true;
           if (tr.clipActions.some((ca) => ca.events.includes('mouseDown') || ca.events.includes('keyDown') || ca.events.includes('keyPress'))) {
             return true;
           }
@@ -3248,10 +3272,19 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       ensureVar('swf_tick', 0, 0, 1000000);
 
       // Process entry-frame DoAction initial variable assignments before clip rules
+      // (strictly apply literal values from entryFrame only so later frames never clobber entry visibility/state)
       for (const ab of activeActionBlocks) {
         registerUsedKeys(ab.usedKeys);
-        for (const sv of ab.setVariables || []) {
-          ensureVar(sv.name, sv.value);
+        if (ab.frame === entryFrame) {
+          for (const sv of ab.setVariables || []) {
+            reactiveVars.set(sv.name, { val: sv.value });
+          }
+        } else {
+          for (const sv of ab.setVariables || []) {
+            if (!sv.name.endsWith('_visible')) {
+              ensureVar(sv.name, 0);
+            }
+          }
         }
       }
 
@@ -3306,15 +3339,39 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const initAlpha = entryState.cxform ? entryState.cxform.alpha : 1;
         const visibleOnEntry = track.frameStates.has(entryFrame);
         const parentActiveWhen = buildActivePresenceGuard(track.frameStates);
+        const trackFirstActiveFrame = Math.max(entryFrame, track.firstFrame);
+
+        // Pre-apply entry-frame onClipEvent(load) _visible overrides so initial SVG attributes match runtime state
+        let initVisibleVal = visibleOnEntry ? 1 : 0;
+        if (safeName) {
+          const visVarKey = `${safeName}_visible`;
+          if (reactiveVars.has(visVarKey)) {
+            const rawInit = reactiveVars.get(visVarKey)!.val;
+            initVisibleVal = rawInit && Number(rawInit) > 0 ? 1 : 0;
+          }
+          if (trackFirstActiveFrame === entryFrame) {
+            for (const ca of track.clipActions) {
+              if (!ca.events.includes('load')) continue;
+              for (const st of ca.actionRecord.statements || []) {
+                if (st.kind === 'setVar' && st.varName === visVarKey && st.rawVal !== undefined && !st.when) {
+                  initVisibleVal = st.rawVal && Number(st.rawVal) > 0 ? 1 : 0;
+                }
+              }
+            }
+          }
+        }
+        const startsVisible = visibleOnEntry && initVisibleVal > 0;
 
         const innerSvg = renderCharacterSvg(entryState.characterId, domId, safeName || undefined, parentActiveWhen);
         const transformAttr = entryState.matrix ? ` transform="${formatMatrixAttr(initMat)}"` : '';
         const opacityAttr = initAlpha < 1 ? ` opacity="${formatNum(initAlpha)}"` : '';
-        const displayAttr = !visibleOnEntry ? ' display="none"' : '';
+        const visibilityAttr = safeName
+          ? (startsVisible ? ' visibility="visible" pointer-events="auto"' : ' visibility="hidden" pointer-events="none" display="none"')
+          : (!visibleOnEntry ? ' display="none"' : '');
         const nameAttr = track.name ? ` data-swf-name="${track.name}"` : '';
 
         placedSvgElements.push(
-          `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${displayAttr}>\n      ${innerSvg}\n    </g>`
+          `<g id="${domId}" data-character-id="${entryState.characterId}" data-depth="${track.depth}"${nameAttr}${transformAttr}${opacityAttr}${visibilityAttr}>\n      ${innerSvg}\n    </g>`
         );
 
         // If this is a named MovieClip/Button instance, bind Flash properties (_x, _y, _xscale, _yscale, _rotation, _alpha, _visible)
@@ -3329,13 +3386,19 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           ensureVar(`${safeName}_yscale`, Number(formatNum(scaleYLen * 100)), -1000, 1000);
           ensureVar(`${safeName}_rotation`, Number(formatNum(rotDeg)), -3600, 3600);
           ensureVar(`${safeName}_alpha`, Number(formatNum(initAlpha * 100)), 0, 100);
-          ensureVar(`${safeName}_visible`, visibleOnEntry ? 1 : 0, 0, 1);
+          reactiveVars.set(`${safeName}_visible`, { val: startsVisible ? 1 : 0, min: 0, max: 1 });
 
           dynamicBindings.push(
             `    (:target "#${domId}" :attr "transform" :expr "(str 'translate(' ${safeName}_x ', ' ${safeName}_y ') rotate(' ${safeName}_rotation ') scale(' (/ ${safeName}_xscale 100) ', ' (/ ${safeName}_yscale 100) ')')")`
           );
           dynamicBindings.push(
             `    (:target "#${domId}" :attr "opacity" :expr "(/ ${safeName}_alpha 100)")`
+          );
+          dynamicBindings.push(
+            `    (:target "#${domId}" :attr "visibility" :expr "(if (> ${safeName}_visible 0) 'visible' 'hidden')")`
+          );
+          dynamicBindings.push(
+            `    (:target "#${domId}" :attr "pointer-events" :expr "(if (> ${safeName}_visible 0) 'auto' 'none')")`
           );
           dynamicBindings.push(
             `    (:target "#${domId}" :attr "display" :expr "(if (> ${safeName}_visible 0) 'inline' 'none')")`
@@ -3406,7 +3469,6 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
 
         // Lift PlaceObject2 ClipActions (onClipEvent(load), enterFrame, keyDown, mouseDown)
-        const trackFirstActiveFrame = Math.max(entryFrame, track.firstFrame);
         for (const ca of track.clipActions) {
           registerUsedKeys(ca.actionRecord.usedKeys);
           const stmts = ca.actionRecord.statements || [];
@@ -3474,10 +3536,16 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const poolDomId = `swf-pool-${slotPfx}`;
           const inner = srcCharId ? renderCharacterSvg(srcCharId, poolDomId) : `<circle id="${poolDomId}-dot" r="4" fill="#38bdf8" />`;
           placedSvgElements.push(
-            `<g id="${poolDomId}" data-pool-base="${pool.poolBase}" data-pool-slot="${si}" display="none">\n      ${inner}\n    </g>`
+            `<g id="${poolDomId}" data-pool-base="${pool.poolBase}" data-pool-slot="${si}" visibility="hidden" pointer-events="none" display="none">\n      ${inner}\n    </g>`
           );
           dynamicBindings.push(
             `    (:target "#${poolDomId}" :attr "transform" :expr "(str 'translate(' ${slotPfx}_x ', ' ${slotPfx}_y ')')")`
+          );
+          dynamicBindings.push(
+            `    (:target "#${poolDomId}" :attr "visibility" :expr "(if (> ${slotPfx}_visible 0) 'visible' 'hidden')")`
+          );
+          dynamicBindings.push(
+            `    (:target "#${poolDomId}" :attr "pointer-events" :expr "(if (> ${slotPfx}_visible 0) 'auto' 'none')")`
           );
           dynamicBindings.push(
             `    (:target "#${poolDomId}" :attr "display" :expr "(if (> ${slotPfx}_visible 0) 'inline' 'none')")`
@@ -3519,8 +3587,13 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     }
 
     const svgMarkup = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="100%" height="100%">
+  <defs>
+    <clipPath id="swf-stage-clip">
+      <rect x="0" y="0" width="${width}" height="${height}" />
+    </clipPath>
+  </defs>
   <rect id="bg" width="${width}" height="${height}" fill="${backgroundColor}" />
-  <g id="scene-root">
+  <g id="scene-root" clip-path="url(#swf-stage-clip)">
     ${finalSvgInner}
   </g>
 </svg>`;

@@ -119,6 +119,58 @@
       });
     }
 
+    getFromHostOrLocalIndex(presetId) {
+      if (!presetId) return null;
+      const target = String(presetId).trim();
+      const targetLower = target.toLowerCase();
+      // 1. Check same-origin host cartridgeStore RAM cache (zero latency, zero IDB race)
+      try {
+        const lookup =
+          (typeof window !== 'undefined' && window.parent && window.parent !== window && typeof window.parent.__AST_CARTRIDGE_VAULT_LOOKUP__ === 'function'
+            ? window.parent.__AST_CARTRIDGE_VAULT_LOOKUP__
+            : null) ||
+          (typeof window !== 'undefined' && typeof window.__AST_CARTRIDGE_VAULT_LOOKUP__ === 'function'
+            ? window.__AST_CARTRIDGE_VAULT_LOOKUP__
+            : null);
+        if (lookup) {
+          const hit = lookup(target);
+          if (hit && (hit.svgMarkup || hit.svgText || hit.astSource || hit.astText)) {
+            return hit;
+          }
+        }
+      } catch (_) {}
+      // 2. Check ASTLocalStore compact custom cartridge index (app_state)
+      try {
+        const store = global.ASTLocalStore || (typeof window !== 'undefined' ? window.ASTLocalStore : null);
+        if (store && typeof store.getItem === 'function') {
+          const raw = store.getItem('stj_custom_cartridges_v1');
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              const hit = list.find((c) => c && (c.id === target || String(c.id || '').toLowerCase() === targetLower));
+              if (hit && (hit.svgMarkup || hit.svgText || hit.astSource || hit.astText)) {
+                return hit;
+              }
+            }
+          }
+        }
+      } catch (_) {}
+      return null;
+    }
+
+    _isVaultUrlHint(presetId) {
+      try {
+        if (typeof window === 'undefined' || !window.location || !window.location.search) return false;
+        const p = new URLSearchParams(window.location.search);
+        const isVaultFlag = p.get('vault') === '1' || p.get('custom') === '1';
+        if (!isVaultFlag) return false;
+        const urlPreset = p.get('preset') || p.get('app');
+        return !urlPreset || urlPreset === presetId;
+      } catch (_) {
+        return false;
+      }
+    }
+
     async loadScene(presetId, shouldPlay = false, forceReload = false) {
       this.cancelSpeech();
       const normalizedId = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
@@ -126,12 +178,26 @@
         : presetId;
       presetId = normalizedId;
 
-      // Deduplication Guard: If this exact preset is already mounted and ready, avoid re-fetching or wiping container
+      // Custom Cartridge Protection Guard: do not allow a stale boot fallback ('welcome') or duplicate preset lookup
+      // to overwrite a custom SWF / Local Vault cartridge just mounted directly via postMessage (LOAD_CUSTOM_CARTRIDGE)
       const hasRenderableContent = this.scene && (this.scene.svgText || this.scene.render || this.scene.mount || (this.scene.keyframes && this.scene.keyframes.length));
+      if (!forceReload && this._customMountedPresetId && this._mountedSceneId === this._customMountedPresetId && hasRenderableContent) {
+        if (presetId === this._customMountedPresetId) {
+          if ((shouldPlay || this.isContinuousSim) && !this.isPlaying) {
+            this.play();
+          }
+          return this.scene;
+        }
+        if (presetId === 'welcome' && (Date.now() - (this._customMountedAt || 0)) < 5000) {
+          return this.scene;
+        }
+      }
+
+      // Deduplication Guard: If this exact preset is already mounted and ready, avoid re-fetching or wiping container
       if (!forceReload && this.activePresetId === presetId && this._mountedSceneId === presetId && hasRenderableContent) {
-        if (shouldPlay && !this.isPlaying) {
+        if ((shouldPlay || this.isContinuousSim) && !this.isPlaying) {
           this.play();
-        } else if (shouldPlay === false && this.isPlaying) {
+        } else if (shouldPlay === false && !this.isContinuousSim && this.isPlaying) {
           this.pause();
         }
         return this.scene;
@@ -140,9 +206,9 @@
       // In-flight Load Guard: If this exact preset is already being fetched, await the existing promise
       if (!forceReload && this._inFlightLoadPresetId === presetId && this._inFlightLoadPromise) {
         const existingScene = await this._inFlightLoadPromise;
-        if (shouldPlay && !this.isPlaying) {
+        if ((shouldPlay || this.isContinuousSim) && !this.isPlaying) {
           this.play();
-        } else if (shouldPlay === false && this.isPlaying) {
+        } else if (shouldPlay === false && !this.isContinuousSim && this.isPlaying) {
           this.pause();
         }
         return existingScene;
@@ -219,20 +285,41 @@
           let astText = registryScene.astSource || registryScene.astText || '';
           let parsedAst = null;
 
-          // 1. Check decentralized IndexedDB Cartridge Vault first (Zero Network Overhead & Zero 404s)
+          // 1. Check host cartridgeStore RAM cache & IndexedDB Cartridge Vault FIRST (Zero Network Overhead & Zero 404s)
           let offlineVaultFallback = null;
           let officialRegistryRecord = null;
-          try {
-            const reg = await this._loadChecksumRegistry();
-            if (reg && reg.cartridges) {
-              officialRegistryRecord = reg.cartridges[String(presetId).trim().toLowerCase()] || null;
+          let isLocalVaultCustom = false;
+          let resolvedVaultSource = 'builtin';
+
+          const hostVaultHit = this.getFromHostOrLocalIndex(presetId);
+          if (hostVaultHit && (hostVaultHit.svgMarkup || hostVaultHit.svgText || hostVaultHit.astSource || hostVaultHit.astText)) {
+            svgText = hostVaultHit.svgMarkup || hostVaultHit.svgText || svgText;
+            astText = hostVaultHit.astSource || hostVaultHit.astText || astText;
+            if (!astText && svgText && (svgText.includes('(:scene') || svgText.includes('(:cartridge'))) {
+              astText = svgText;
             }
-          } catch (_) {}
+            if (hostVaultHit.source && hostVaultHit.source !== 'builtin') {
+              isLocalVaultCustom = true;
+              resolvedVaultSource = hostVaultHit.source;
+            }
+            if (!registryScene.title && hostVaultHit.title) {
+              registryScene = { ...registryScene, ...hostVaultHit };
+            }
+          }
+
+          if (!isLocalVaultCustom) {
+            try {
+              const reg = await this._loadChecksumRegistry();
+              if (reg && reg.cartridges) {
+                officialRegistryRecord = reg.cartridges[String(presetId).trim().toLowerCase()] || null;
+              }
+            } catch (_) {}
+          }
 
           if (!svgText || !astText) {
             try {
               const vaultItem = await this.getFromVaultIndexedDb(presetId);
-              if (vaultItem && (vaultItem.svgMarkup || vaultItem.svgText)) {
+              if (vaultItem && (vaultItem.svgMarkup || vaultItem.svgText || vaultItem.astSource || vaultItem.astText)) {
                 const isBuiltinCache = !vaultItem.source || vaultItem.source === 'builtin';
                 const isStaleBuiltin = Boolean(
                   isBuiltinCache &&
@@ -244,8 +331,15 @@
                   // Keep as offline fallback only; allow fresh signed fetch below to refresh stale builtin copy
                   offlineVaultFallback = vaultItem;
                 } else {
-                  svgText = vaultItem.svgMarkup || vaultItem.svgText;
-                  astText = vaultItem.astSource || vaultItem.astText || '';
+                  svgText = vaultItem.svgMarkup || vaultItem.svgText || svgText;
+                  astText = vaultItem.astSource || vaultItem.astText || astText;
+                  if (!astText && svgText && (svgText.includes('(:scene') || svgText.includes('(:cartridge'))) {
+                    astText = svgText;
+                  }
+                  if (!isBuiltinCache) {
+                    isLocalVaultCustom = true;
+                    resolvedVaultSource = vaultItem.source;
+                  }
                   if (!registryScene.title && vaultItem.title) {
                     registryScene = { ...registryScene, ...vaultItem };
                   }
@@ -254,8 +348,18 @@
             } catch (_) {}
           }
 
-          // 2. If not already in registry or vault, fetch dynamically
-          if ((!svgText || !astText) && typeof fetch !== 'undefined') {
+          if (this._loadSequence !== loadSeq) {
+            return this.scene;
+          }
+
+          const isVaultOnlyPreset = Boolean(
+            isLocalVaultCustom ||
+            this._isVaultUrlHint(presetId) ||
+            (!officialRegistryRecord && /^(?:swf|flash|custom|local)-/i.test(String(presetId)))
+          );
+
+          // 2. If not in registry or Local Vault (and NOT a Local Vault / custom SWF preset), fetch dynamically
+          if (!isVaultOnlyPreset && (!svgText || !astText) && typeof fetch !== 'undefined') {
             const currentDir = (typeof window !== 'undefined' && window.location && window.location.pathname)
               ? window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)
               : './';
@@ -450,6 +554,11 @@
         }
         const isNotFound = !svgText && !astText && !parsedAst && !registryScene.mount && !registryScene.render && (!registryScene.keyframes || !registryScene.keyframes.length);
         if (isNotFound) {
+          // If the host signaled this preset is arriving from Local Vault via LOAD_CUSTOM_CARTRIDGE,
+          // wait cleanly without overwriting the stage with Welcome Simulator.
+          if (isVaultOnlyPreset) {
+            return this.scene;
+          }
           console.warn(`[AST Engine] Scene "${presetId}" could not be located in registry or fetched from asset path. Gracefully falling back to built-in Welcome Simulator.`);
           return this.loadScene('welcome', shouldPlay);
         }
@@ -606,13 +715,13 @@
           type: scene.type || 'Sim',
           svgMarkup: svgText,
           astSource: astText || '',
-          source: 'builtin',
-          seal: (officialRegistryRecord && officialRegistryRecord.seal) || '',
+          source: isLocalVaultCustom ? resolvedVaultSource : 'builtin',
+          seal: isLocalVaultCustom ? '' : ((officialRegistryRecord && officialRegistryRecord.seal) || ''),
           updatedAt: Date.now()
         });
 
-        // Auto-register dynamically found scene so teacher does not have to reprocess index
-        if (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.register === 'function') {
+        // Auto-register dynamically found built-in scene (skip fake remote paths for Local Vault / custom SWF presets)
+        if (!isLocalVaultCustom && global.ASTSceneRegistry && typeof global.ASTSceneRegistry.register === 'function') {
           global.ASTSceneRegistry.register(presetId, {
             id: presetId,
             title: scene.title,
@@ -822,6 +931,10 @@
       update: sceneData.update,
       render: sceneData.render
     };
+
+    // Mark this custom cartridge as directly mounted so stale boot/preset lookups cannot overwrite it with welcome
+    this._customMountedPresetId = id;
+    this._customMountedAt = Date.now();
 
     // Auto-inflate directly into user's IndexedDB vault
     this.putIntoVaultIndexedDb({

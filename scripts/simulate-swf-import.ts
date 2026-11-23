@@ -863,8 +863,15 @@ async function runSimulations() {
     const container: any = {
       style: {},
       querySelector(sel: string) {
-        if (!sel || !sel.startsWith('#')) return null;
-        return mockNodes.get(sel.slice(1)) || null;
+        if (!sel) return null;
+        if (sel.startsWith('#')) return mockNodes.get(sel.slice(1)) || null;
+        const attrM = /^\[data-swf-name="([^"]+)"\]$/.exec(sel);
+        if (attrM) {
+          for (const n of mockNodes.values()) {
+            if (n.getAttribute('data-swf-name') === attrM[1]) return n;
+          }
+        }
+        return null;
       },
       querySelectorAll(sel: string) {
         const el = this.querySelector(sel);
@@ -886,11 +893,18 @@ async function runSimulations() {
         tagName: String(tag || 'DIV').toUpperCase(),
         style: {},
         attrs: new Map<string, string>(),
+        childNodes: [] as any[],
+        get firstChild() { return this.childNodes[0] || null; },
         setAttribute(k: string, v: any) { this.attrs.set(k, String(v)); },
         getAttribute(k: string) { return this.attrs.get(k) ?? null; },
         removeAttribute(k: string) { this.attrs.delete(k); },
         hasAttribute(k: string) { return this.attrs.has(k); },
-        appendChild(c: any) { return c; },
+        appendChild(c: any) { this.childNodes.push(c); return c; },
+        removeChild(c: any) {
+          const idx = this.childNodes.indexOf(c);
+          if (idx >= 0) this.childNodes.splice(idx, 1);
+          return c;
+        },
         remove() {},
         pause() {},
         play() { return Promise.resolve(); },
@@ -935,6 +949,7 @@ async function runSimulations() {
         querySelectorAll(sel: string) { return container.querySelectorAll(sel); },
         createElement(tag: string) { return makeStubEl(tag); },
         createElementNS(_ns: string, tag: string) { return makeStubEl(tag); },
+        createTextNode(text: string) { return { nodeType: 3, textContent: String(text || '') }; },
         addEventListener(ev: string, fn: Function) {
           if (!listeners.has(ev)) listeners.set(ev, []);
           listeners.get(ev)!.push(fn);
@@ -954,6 +969,7 @@ async function runSimulations() {
       vm.runInContext(code, ctx, { filename: name });
     };
 
+    loadScript('ast-render-boundary.js');
     loadScript('ast-expr.js');
     loadScript('ast-parser.js');
     loadScript('ast-bytecode-decoder.js');
@@ -988,6 +1004,10 @@ async function runSimulations() {
     mounted = true;
 
     const gestures = new sandbox.ASTDirectGestureSubsystem(engine, container);
+    gestures.stageSvg = container;
+    gestures.sceneRoot = container;
+    gestures.screenToSvg = () => ({ x: 0, y: 0 });
+    gestures.createTouchRipple = () => {};
 
     const tick = (frames = 1, dtSec = 1 / 60) => {
       for (let i = 0; i < frames; i++) {
@@ -1010,6 +1030,51 @@ async function runSimulations() {
         preventDefault() {},
         stopImmediatePropagation() {},
       });
+    };
+    const hover = (domId: string) => {
+      const el = mockNodes.get(domId);
+      gestures.handlePointerMove({
+        target: el || container,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        pointerType: 'mouse',
+        buttons: 0,
+        preventDefault() {},
+      });
+      engine.applyBindings(0, 0, false);
+    };
+    const pointerDown = (domId: string) => {
+      const el = mockNodes.get(domId);
+      gestures.handlePointerDown({
+        target: el || container,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        pointerType: 'mouse',
+        button: 0,
+        buttons: 1,
+        preventDefault() {},
+      });
+      engine.applyBindings(0, 0, false);
+    };
+    const pointerUp = () => {
+      gestures.handlePointerUp({
+        target: container,
+        clientX: 0,
+        clientY: 0,
+        pointerId: 1,
+        pointerType: 'mouse',
+        preventDefault() {},
+      });
+      engine.applyBindings(0, 0, false);
+    };
+    const pointerLeave = () => {
+      gestures.handlePointerLeave({
+        target: container,
+        pointerId: 1,
+      });
+      engine.applyBindings(0, 0, false);
     };
     const clickButton = (domId: string) => {
       const el = mockNodes.get(domId);
@@ -1034,6 +1099,10 @@ async function runSimulations() {
       tick,
       keyDown,
       keyUp,
+      hover,
+      pointerDown,
+      pointerUp,
+      pointerLeave,
       clickButton,
     };
   }
@@ -1905,6 +1974,302 @@ async function runSimulations() {
       passed: errors.length === 0,
       durationMs: duration,
       details: 'Verified Flash DefineButton2 Up/Over/Down visual states compile onto the native player :hoverable/:press-var primitives with 0 post-mount DOM allocations.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 18: Stage ClipPath Bounds, MovieClip _visible SVG Toggling, & Stopped-Frame onEnterFrame Ticking
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const tagWriter = new BitWriter();
+
+    const bg = new BitWriter();
+    bg.writeUI8(15); bg.writeUI8(23); bg.writeUI8(42);
+    writeTag(tagWriter, SwfTagCode.SET_BACKGROUND_COLOR, bg.toByteArray());
+
+    // Shapes: 1=Playfield bg (intentionally overhangs stage bounds), 2=Overlay ("KNOCK-OUT" / playagain), 3=Nested animated sprite shape, 4=Start/Show button
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(1, -80, -40, 720, 480, [22, 163, 74, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(2, 0, 0, 260, 120, [220, 38, 38, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(3, 0, 0, 40, 40, [56, 189, 248, 255], 3));
+    writeTag(tagWriter, SwfTagCode.DEFINE_SHAPE3, buildRectShapeTag(4, 0, 0, 120, 40, [234, 179, 8, 255], 3));
+
+    // DefineSprite 10: 3-frame animated fighter/radar sprite that must keep ticking even when main timeline calls stop()
+    const nestedSpriteTags = new BitWriter();
+    writeTag(nestedSpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3, matrix: { txPx: 0, tyPx: 0 } }));
+    writeTag(nestedSpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(nestedSpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3, matrix: { txPx: 12, tyPx: 0 }, move: true }));
+    writeTag(nestedSpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(nestedSpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 3, matrix: { txPx: 24, tyPx: 0 }, move: true }));
+    writeTag(nestedSpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(nestedSpriteTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(10, 3, nestedSpriteTags.toByteArray()));
+
+    // DefineSprite 11: Named overlay MovieClip "playagain" (starts hidden via Frame 1 DoAction playagain._visible = 0)
+    const overlaySpriteTags = new BitWriter();
+    writeTag(overlaySpriteTags, 26, buildPlaceObject2Tag({ depth: 1, characterId: 2, matrix: { txPx: 0, tyPx: 0 } }));
+    writeTag(overlaySpriteTags, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(overlaySpriteTags, SwfTagCode.END, new Uint8Array(0));
+    writeTag(tagWriter, 39, buildDefineSpriteTag(11, 1, overlaySpriteTags.toByteArray()));
+
+    // DefineButton2 20: Click reveals playagain overlay (playagain._visible = 1)
+    const showOverlayAct = new Avm1Builder()
+      .setMember('playagain', '_visible', (b) => b.pushInt(1))
+      .toByteArray();
+    writeTag(tagWriter, 34, buildDefineButton2Tag(
+      20,
+      [{ states: 0x0F, characterId: 4, depth: 1 }],
+      [{ condFlags: 0x0008, actions: showOverlayAct }]
+    ));
+
+    // Frame 1: stop() on main timeline, playagain._visible = false (0), ef_ticks = 0, onEnterFrame increments ef_ticks
+    const frame1Actions = new Avm1Builder()
+      .stop()
+      .setVar('ef_ticks', (b) => b.pushInt(0))
+      .setMember('playagain', '_visible', (b) => b.pushBool(false))
+      .defineFunction('onEnterFrame', (fn) => {
+        fn.setVar('ef_ticks', (b) => b.getVar('ef_ticks').pushInt(1).add2());
+      })
+      .toByteArray();
+
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, frame1Actions);
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 1, characterId: 1, matrix: { txPx: 0, tyPx: 0 } }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 2, characterId: 10, matrix: { txPx: 60, tyPx: 180 }, name: 'animSprite' }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 3, characterId: 20, matrix: { txPx: 200, tyPx: 300 } }));
+    writeTag(tagWriter, 26, buildPlaceObject2Tag({ depth: 4, characterId: 11, matrix: { txPx: 140, tyPx: 120 }, name: 'playagain' }));
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+
+    // Frame 2: Secondary frame so main timeline has >1 frames and stop() on Frame 1 is genuinely tested
+    writeTag(tagWriter, SwfTagCode.DO_ACTION, new Avm1Builder().stop().toByteArray());
+    writeTag(tagWriter, SwfTagCode.SHOW_FRAME, new Uint8Array(0));
+    writeTag(tagWriter, SwfTagCode.END, new Uint8Array(0));
+
+    const stageW = 550;
+    const stageH = 400;
+    const swfBinary = assembleFwsSwf(stageW, stageH, 60, 2, tagWriter.toByteArray(), 8);
+    const result = await transpileSwfToAst(swfBinary, 'swf-stage-clip-visible-ef');
+    const errors: string[] = [];
+
+    if (!result.success) {
+      errors.push(`swf-stage-clip-visible-ef transpilation failed: ${result.error}`);
+    } else {
+      // Assertion 1: Root stage <clipPath> matching SWF header bounds (0, 0, 550, 400)
+      const expectedClipDef = `<clipPath id="swf-stage-clip"><rect x="0" y="0" width="${stageW}" height="${stageH}" /></clipPath>`;
+      if (!result.svgMarkup.includes(expectedClipDef)) {
+        errors.push(`Expected root stage clipPath "${expectedClipDef}" in SVG markup`);
+      }
+      if (!result.svgMarkup.includes('<g id="scene-root" clip-path="url(#swf-stage-clip)">')) {
+        errors.push('Expected <g id="scene-root" clip-path="url(#swf-stage-clip)"> wrapper in SVG markup');
+      }
+
+      const rt = createHeadlessSwfRuntime(result.astSource, result.svgMarkup);
+      const overlayNode = rt.mockNodes.get('swf-inst-playagain');
+
+      // Assertion 2: MovieClip _visible == 0 / false binds to visibility="hidden" & pointer-events="none"
+      if (!overlayNode) {
+        errors.push('Missing #swf-inst-playagain SVG node');
+      } else {
+        if (rt.engine.vars.playagain_visible !== 0) {
+          errors.push(`Expected playagain_visible === 0 initially (got ${rt.engine.vars.playagain_visible})`);
+        }
+        if (overlayNode.getAttribute('visibility') !== 'hidden' || overlayNode.getAttribute('pointer-events') !== 'none') {
+          errors.push(`Expected #swf-inst-playagain hidden & non-interactive initially (got visibility=${overlayNode.getAttribute('visibility')}, pointer-events=${overlayNode.getAttribute('pointer-events')})`);
+        }
+        if (overlayNode.style.visibility !== 'hidden' || overlayNode.style.pointerEvents !== 'none') {
+          errors.push(`Expected #swf-inst-playagain style mirrored to hidden/none (got style.visibility=${overlayNode.style.visibility}, style.pointerEvents=${overlayNode.style.pointerEvents})`);
+        }
+
+        // Click button to reveal playagain overlay (_visible = 1)
+        rt.pointerDown('swf-btn-20');
+        rt.pointerUp();
+        if (rt.engine.vars.playagain_visible !== 1) {
+          errors.push(`Expected button click to set playagain_visible = 1 (got ${rt.engine.vars.playagain_visible})`);
+        }
+        if (overlayNode.getAttribute('visibility') !== 'visible' || overlayNode.getAttribute('pointer-events') !== 'auto') {
+          errors.push(`Expected #swf-inst-playagain visible & pointer-events="auto" when playagain_visible=1 (got visibility=${overlayNode.getAttribute('visibility')}, pointer-events=${overlayNode.getAttribute('pointer-events')})`);
+        }
+        if (overlayNode.style.visibility !== 'visible' || overlayNode.style.pointerEvents !== 'auto') {
+          errors.push(`Expected #swf-inst-playagain style mirrored to visible/auto (got style.visibility=${overlayNode.style.visibility}, style.pointerEvents=${overlayNode.style.pointerEvents})`);
+        }
+
+        // Hide again via _visible = false (boolean) and verify hidden/none restored
+        rt.engine.vars.playagain_visible = false;
+        rt.engine.applyBindings(0, 0, false);
+        if (overlayNode.getAttribute('visibility') !== 'hidden' || overlayNode.getAttribute('pointer-events') !== 'none') {
+          errors.push(`Expected playagain_visible=false to restore visibility="hidden" & pointer-events="none" (got visibility=${overlayNode.getAttribute('visibility')}, pointer-events=${overlayNode.getAttribute('pointer-events')})`);
+        }
+      }
+
+      // Assertion 3: Main timeline stop() keeps swf_tick, onEnterFrame, and nested DefineSprite ticking at 60 FPS
+      if (rt.engine.vars.swf_playing !== 0) {
+        errors.push(`Expected main timeline stopped (swf_playing === 0) on Frame 1 (got ${rt.engine.vars.swf_playing})`);
+      }
+      const startTick = Number(rt.engine.vars.swf_tick || 0);
+      const startEf = Number(rt.engine.vars.ef_ticks || 0);
+      const spriteFrameKey = Object.keys(rt.engine.vars).find((k) => /^sprite_\d+_frame$/.test(k));
+      const seenSpriteFrames = new Set<number>();
+      if (spriteFrameKey) seenSpriteFrames.add(Number(rt.engine.vars[spriteFrameKey]));
+
+      for (let i = 0; i < 15; i++) {
+        rt.tick(1, 1 / 60);
+        if (spriteFrameKey) seenSpriteFrames.add(Number(rt.engine.vars[spriteFrameKey]));
+      }
+
+      const endTick = Number(rt.engine.vars.swf_tick || 0);
+      const endEf = Number(rt.engine.vars.ef_ticks || 0);
+      if (rt.engine.vars.swf_frame !== 1 || rt.engine.vars.swf_playing !== 0) {
+        errors.push(`Expected main timeline to remain stopped on Frame 1 (got swf_frame=${rt.engine.vars.swf_frame}, swf_playing=${rt.engine.vars.swf_playing})`);
+      }
+      if (endTick - startTick < 15) {
+        errors.push(`Expected swf_tick to advance independently while main timeline stopped (delta=${endTick - startTick})`);
+      }
+      if (endEf - startEf < 15) {
+        errors.push(`Expected onEnterFrame ef_ticks to advance every frame while main timeline stopped (delta=${endEf - startEf})`);
+      }
+      if (!spriteFrameKey || seenSpriteFrames.size < 2) {
+        errors.push(`Expected nested DefineSprite (${spriteFrameKey || 'missing'}) to advance while main timeline stopped (seen frames: ${Array.from(seenSpriteFrames).join(',')})`);
+      }
+      if (rt.getPostMountDomAllocs() !== 0) {
+        errors.push(`Zero-GC DOM invariant violated during stopped-frame ticking & _visible toggling: allocs=${rt.getPostMountDomAllocs()}`);
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 18: Stage ClipPath Bounds, MovieClip _visible SVG Toggling, & Stopped-Frame onEnterFrame Ticking',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified root <clipPath id="swf-stage-clip"> bounds, _visible=0/false -> visibility="hidden" & pointer-events="none", and 60 FPS swf_tick + onEnterFrame + nested DefineSprite ticking during main timeline stop() with 0 DOM allocations.',
+      errors,
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Simulation 19: ast-loader Local Vault Zero-404 Fetch Skip & Welcome Overwrite Protection
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+    const playerDir = path.resolve(process.cwd(), 'static/player');
+    const fetchedUrls: string[] = [];
+
+    const customSwfCartridge = {
+      id: 'custom-swf-ablast',
+      title: 'Ablast SWF',
+      source: 'custom',
+      astSource: '(scene :id "custom-swf-ablast" :title "Ablast SWF" :type "Sim" :duration 60 (vars (swf_playing 0)))',
+      svgMarkup: '<svg viewBox="0 0 550 400"><defs><clipPath id="swf-stage-clip"><rect x="0" y="0" width="550" height="400" /></clipPath></defs><g id="scene-root" clip-path="url(#swf-stage-clip)"></g></svg>',
+    };
+
+    const vaultMap = new Map<string, any>([[customSwfCartridge.id, customSwfCartridge]]);
+    const loaderSandbox: any = {
+      console,
+      Math,
+      Number,
+      String,
+      Boolean,
+      Array,
+      Object,
+      Map,
+      Set,
+      RegExp,
+      JSON,
+      Date,
+      Promise,
+      URLSearchParams,
+      performance,
+      setTimeout,
+      clearTimeout,
+      location: { search: '?preset=custom-swf-ablast&vault=1' },
+      fetch: async (url: string) => {
+        fetchedUrls.push(String(url));
+        return { ok: false, status: 404, text: async () => '', arrayBuffer: async () => new ArrayBuffer(0) };
+      },
+      ASTSceneRegistry: {
+        getSceneMeta: () => null,
+      },
+      ASTLocalStore: {
+        getItem: () => null,
+        setItem: () => {},
+      },
+      document: {
+        getElementById: () => null,
+        querySelector: () => null,
+        querySelectorAll: () => [],
+      },
+    };
+    loaderSandbox.window = loaderSandbox;
+    loaderSandbox.self = loaderSandbox;
+    loaderSandbox.globalThis = loaderSandbox;
+    loaderSandbox.parent = {
+      __AST_CARTRIDGE_VAULT_LOOKUP__: (id: string) => vaultMap.get(id) || null,
+    };
+
+    const ctx = vm.createContext(loaderSandbox);
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), ctx, { filename: 'ast-parser.js' });
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-loader.js'), 'utf8'), ctx, { filename: 'ast-loader.js' });
+
+    const mountedScenes: string[] = [];
+    const fakeEngine: any = {
+      scene: null,
+      activePresetId: null,
+      container: {},
+      vars: {},
+      inputs: [],
+      progress: 0,
+      isPlaying: false,
+      isContinuousSim: true,
+      durationSec: 60,
+      activeCheckpoints: [],
+      triggeredCheckpoints: new Set(),
+      history: [],
+      sceneMeta: null,
+      getStageSvg: () => null,
+      mountSceneAsset(sc: any) {
+        mountedScenes.push(sc.id);
+      },
+      applyBindings() {},
+      emit() {},
+      play() { this.isPlaying = true; },
+      pause() { this.isPlaying = false; },
+    };
+    Object.assign(fakeEngine, loaderSandbox.ASTLoaderMethods);
+
+    // 1. Load custom SWF preset from Local Vault lookup — must make 0 remote HTTP fetches
+    const loaded = await fakeEngine.loadScene('custom-swf-ablast');
+    if (!loaded || loaded.id !== 'custom-swf-ablast') {
+      errors.push(`Expected custom-swf-ablast to resolve from host Local Vault cache (got ${loaded && loaded.id})`);
+    }
+    if (fetchedUrls.length !== 0) {
+      errors.push(`Expected 0 remote HTTP fetches for Local Vault custom SWF, got ${fetchedUrls.length}: ${fetchedUrls.join(', ')}`);
+    }
+
+    // 2. Direct postMessage mount via loadSceneData followed immediately by stale loadScene('welcome') must NOT overwrite
+    fakeEngine.loadSceneData(customSwfCartridge.astSource, customSwfCartridge.svgMarkup, 'custom-swf-ablast', true);
+    const afterWelcomeAttempt = await fakeEngine.loadScene('welcome');
+    if (!afterWelcomeAttempt || afterWelcomeAttempt.id !== 'custom-swf-ablast' || fakeEngine.activePresetId !== 'custom-swf-ablast') {
+      errors.push(`Stale loadScene('welcome') overwrote freshly mounted custom SWF (activePresetId=${fakeEngine.activePresetId})`);
+    }
+    if (fetchedUrls.length !== 0) {
+      errors.push(`Expected 0 remote HTTP fetches after guarded welcome call, got ${fetchedUrls.length}: ${fetchedUrls.join(', ')}`);
+    }
+
+    // 3. Uncached vault=1 custom SWF preset must skip remote HTTP fetches (0 404s) and NOT overwrite with welcome
+    const pendingRes = await fakeEngine.loadScene('custom-swf-pending');
+    if (fetchedUrls.length !== 0) {
+      errors.push(`Expected 0 remote HTTP fetches for uncached custom-swf-pending with vault=1, got ${fetchedUrls.length}: ${fetchedUrls.join(', ')}`);
+    }
+    if (pendingRes && pendingRes.id === 'welcome') {
+      errors.push('Uncached custom SWF fell back to Welcome Simulator instead of waiting for LOAD_CUSTOM_CARTRIDGE');
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 19: ast-loader Local Vault Zero-404 Fetch Skip & Welcome Overwrite Protection',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified Local Vault custom SWF loads with 0 remote HTTP fetches (no 404s) and resists stale Welcome Simulator overwrites.',
       errors,
     });
   }

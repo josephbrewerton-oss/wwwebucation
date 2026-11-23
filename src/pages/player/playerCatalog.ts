@@ -76,7 +76,8 @@ export function buildPlayerSrc(
   base: string,
   presetId: string,
   bslActive: boolean,
-  externalSrc?: string | null
+  externalSrc?: string | null,
+  isLocalVaultCustom?: boolean
 ): string {
   const perfHud = getLocalState('app_perf_hud_enabled') === 'true';
   const verbosity = getLocalState('app_hud_verbosity') || 'minimal';
@@ -92,6 +93,13 @@ export function buildPlayerSrc(
     params.set('src', externalSrc);
   } else {
     params.set('preset', presetId);
+    const isCustomVault =
+      Boolean(isLocalVaultCustom) ||
+      (!VALID_PRESET_IDS.has(presetId) &&
+        getCustomCartridges().some((c) => c.id === presetId && c.source !== 'builtin'));
+    if (isCustomVault) {
+      params.set('vault', '1');
+    }
   }
 
   if (perfHud) {

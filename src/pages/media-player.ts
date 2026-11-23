@@ -96,6 +96,8 @@ export function renderPlayerPage(): HTMLElement {
   // Launcher-First Grid: keep player iframe unloaded (0 KB engine download, 0% CPU) until a lab is selected or deep-linked
   let isStageOpen = Boolean(requestedPresetParam || initialSrcParam || pendingAutoEppBench);
   let pendingCustomCartridge: CartridgeDefinition | null = null;
+  let lastMountedCustomPresetId: string | null = null;
+  let lastMountedCustomAt = 0;
   let activeSubject: SubjectFilterId = 'All';
   let activeFormat: FormatFilterId = 'All';
   let activeStage: StageFilterId = 'All';
@@ -178,7 +180,7 @@ export function renderPlayerPage(): HTMLElement {
   // Strict Typed postMessage Protocol between Host Chassis & Unified Cartridge Player Kernel
   type HostToPlayerMessage =
     | { type: 'SET_PRESET'; preset: string; play?: boolean }
-    | { type: 'LOAD_CUSTOM_CARTRIDGE'; cartridge: CartridgeDefinition }
+    | { type: 'LOAD_CUSTOM_CARTRIDGE'; cartridge: CartridgeDefinition; play?: boolean }
     | { type: 'OPEN_STUDIO'; tab?: string; openSaveAs?: boolean }
     | { type: 'REMIX_SAVED_ACK'; message: string }
     | { type: 'NANO_REMIX_RESULT'; proposal: any }
@@ -956,17 +958,29 @@ export function renderPlayerPage(): HTMLElement {
     syncLauncherStageVisibility(item);
 
     initialExternalSrc = null;
-    // Lazily inflate requested curriculum/data cartridge into native IndexedDB on-demand (zero background polling, zero 404s)
-    if (safePresetId !== 'lumina-architecture') {
+    const localCustomCart = getCustomCartridges().find(
+      (c) => c.id === safePresetId && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
+    ) || null;
+    // Lazily inflate requested built-in curriculum/data cartridge into native IndexedDB (skip for Local Vault custom cartridges)
+    if (!localCustomCart && safePresetId !== 'lumina-architecture') {
       inflateCartridgeToVault(safePresetId, getRegisteredRecord(safePresetId)?.seal).catch(() => {});
     }
     const iframeIsUnloaded = !iframe || !iframe.src || iframe.src === 'about:blank' || iframe.getAttribute('src') === 'about:blank';
     if (!skipPostMessage && isIframeReady && !iframeIsUnloaded && iframe && iframe.contentWindow) {
-      postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
+      if (localCustomCart) {
+        lastMountedCustomPresetId = localCustomCart.id;
+        lastMountedCustomAt = Date.now();
+        postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: localCustomCart, play: true });
+      } else {
+        postToPlayer({ type: 'SET_PRESET', preset: safePresetId, play: true });
+      }
       focusPlayerStage();
     } else if (iframe && (iframeIsUnloaded || !isIframeReady)) {
       isIframeReady = false;
-      iframe.src = buildPlayerSrc(base, safePresetId, bslActive);
+      if (localCustomCart && !pendingCustomCartridge) {
+        pendingCustomCartridge = localCustomCart;
+      }
+      iframe.src = buildPlayerSrc(base, safePresetId, bslActive, null, Boolean(localCustomCart || pendingCustomCartridge));
     }
 
     // Broadcast lesson change to BSL interpreter
@@ -1018,12 +1032,14 @@ export function renderPlayerPage(): HTMLElement {
 
   function launchCustomCartridge(cart: CartridgeDefinition) {
     const alreadyLive = Boolean(isIframeReady && iframe?.contentWindow && iframe.getAttribute('src') !== 'about:blank');
+    lastMountedCustomPresetId = cart.id;
+    lastMountedCustomAt = Date.now();
     if (!alreadyLive) {
       pendingCustomCartridge = cart;
     }
     updatePreset(cart.id, true);
     if (alreadyLive && iframe?.contentWindow) {
-      iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: cart }, '*');
+      iframe.contentWindow.postMessage({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: cart, play: true }, '*');
       focusPlayerStage();
     }
   }
@@ -1336,11 +1352,22 @@ export function renderPlayerPage(): HTMLElement {
       if (pendingCustomCartridge) {
         const queued = pendingCustomCartridge;
         pendingCustomCartridge = null;
-        postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: queued });
+        lastMountedCustomPresetId = queued.id;
+        lastMountedCustomAt = Date.now();
+        postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: queued, play: true });
       } else if (initialExternalSrc) {
         initialExternalSrc = null;
       } else if (activePreset && (!e.data.preset || e.data.preset !== activePreset)) {
-        postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
+        const activeCustomCart = getCustomCartridges().find(
+          (c) => c.id === activePreset && c.source !== 'builtin' && Boolean(c.svgMarkup || c.astSource)
+        );
+        if (activeCustomCart) {
+          lastMountedCustomPresetId = activeCustomCart.id;
+          lastMountedCustomAt = Date.now();
+          postToPlayer({ type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: activeCustomCart, play: true });
+        } else {
+          postToPlayer({ type: 'SET_PRESET', preset: activePreset, play: false });
+        }
       }
       updatePlayButtonUI(Boolean(e.data.isPlaying));
 
@@ -1369,7 +1396,11 @@ export function renderPlayerPage(): HTMLElement {
     }
     if ((e.data.type === 'PRESETCHANGE' || e.data.type === 'PLAYER_PRESET_CHANGED') && typeof e.data.preset === 'string') {
       const incomingId = normalizePresetId(e.data.preset);
-      if (incomingId !== activePreset) {
+      const isStaleWelcomeOverwrite =
+        incomingId === 'welcome' &&
+        (Boolean(pendingCustomCartridge) ||
+          (lastMountedCustomPresetId === activePreset && Date.now() - lastMountedCustomAt < 5000));
+      if (!isStaleWelcomeOverwrite && incomingId !== activePreset) {
         updatePreset(incomingId, true);
       }
     }

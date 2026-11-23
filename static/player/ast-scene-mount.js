@@ -413,6 +413,56 @@
         this._whenEvalCache = new Int8Array(whenGroupMap.size);
       }
 
+      // Auto-bind SWF MovieClip <instance>_visible variables to visibility & pointer-events on mount (zero post-mount allocations)
+      if (hasDomQuery && scene.vars && typeof scene.vars === 'object') {
+        const varKeys = Array.isArray(scene.vars)
+          ? scene.vars.map((v) => v && v.name).filter(Boolean)
+          : Object.keys(scene.vars);
+        for (let i = 0; i < varKeys.length; i++) {
+          const vk = varKeys[i];
+          if (typeof vk !== 'string' || !vk.endsWith('_visible') || vk.length <= 8) continue;
+          const instName = vk.slice(0, -8);
+          const targetSel = '#swf-inst-' + instName;
+          let node = container.querySelector(targetSel);
+          if (!node) {
+            node = container.querySelector('[data-swf-name="' + instName + '"]');
+          }
+          if (!node) continue;
+          const hasVis = this.activeBindings.some((ab) => ab.node === node && ab.attr === 'visibility');
+          const hasPe = this.activeBindings.some((ab) => ab.node === node && ab.attr === 'pointer-events');
+          if (!hasVis) {
+            this.activeBindings.push({
+              target: targetSel,
+              attr: 'visibility',
+              node,
+              affine: null,
+              matrixBuf: null,
+              whenFn: null,
+              whenGroupId: -1,
+              evalFn: (t, vars) => {
+                const raw = vars ? vars[vk] : 0;
+                return (raw && raw !== false && Number(raw) > 0) ? 'visible' : 'hidden';
+              }
+            });
+          }
+          if (!hasPe) {
+            this.activeBindings.push({
+              target: targetSel,
+              attr: 'pointer-events',
+              node,
+              affine: null,
+              matrixBuf: null,
+              whenFn: null,
+              whenGroupId: -1,
+              evalFn: (t, vars) => {
+                const raw = vars ? vars[vk] : 0;
+                return (raw && raw !== false && Number(raw) > 0) ? 'auto' : 'none';
+              }
+            });
+          }
+        }
+      }
+
       this._applyScenePhysics(scene);
 
       this.resetVars();
