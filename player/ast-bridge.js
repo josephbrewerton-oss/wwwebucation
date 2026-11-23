@@ -432,16 +432,32 @@
             if (uiController && typeof uiController.updateView === 'function') uiController.updateView();
           }
           break;
-        case 'LOAD_CARTRIDGE':
-        case 'LOAD_CUSTOM_CARTRIDGE':
+        ccase 'LOAD_CARTRIDGE':
+        case 'LOAD_CUSTOM_CARTRIDGE': {
           if (data && typeof data === 'object' && data.cartridge) {
             const handled = global.__astHandledCustomCartridgeEvents || (global.__astHandledCustomCartridgeEvents = new WeakSet());
-          if (typeof engine.loadSceneData === 'function') {
-            engine.loadSceneData(data.cartridge, data.play !== false);
-}
+            if (handled.has(data.cartridge)) break;
+            handled.add(data.cartridge);
+            const cartridge = data.cartridge;
+            const shouldPlay = data.play !== false;
+            setTimeout(() => {
+              try {
+                if (typeof engine.loadSceneData === 'function') {
+                  engine.loadSceneData(cartridge, shouldPlay);
+                }
+              } catch (err) {
+                console.error('[AST-Bridge] Failed to load cartridge:', err);
+                if (typeof engine.notifyParent === 'function') {
+                  engine.notifyParent({
+                    type: 'CARTRIDGE_LOAD_ERROR',
+                    message: err && err.message ? err.message : String(err)
+                  });
+                }
+              }
+            }, 0);
           }
           break;
-        case 'SET_DEV_MODE':
+        }
           if (typeof engine.setDevMode === 'function') {
             engine.setDevMode(Boolean(data.enabled));
           }
