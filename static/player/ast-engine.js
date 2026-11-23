@@ -1434,7 +1434,9 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
     /** Cartridge Loader, Vault & SVG Sanitizer Delegators (implemented in static/player/ast-loader.js) */
     async getFromVaultIndexedDb(presetId) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.getFromVaultIndexedDb === 'function' ? _ld.getFromVaultIndexedDb.call(this, presetId) : null; }
     async putIntoVaultIndexedDb(record) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.putIntoVaultIndexedDb === 'function' ? _ld.putIntoVaultIndexedDb.call(this, record) : false; }
-    async loadScene(presetId, shouldPlay = false) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.loadScene === 'function' ? _ld.loadScene.call(this, presetId, shouldPlay) : false; }
+    getFromHostOrLocalIndex(presetId) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.getFromHostOrLocalIndex === 'function' ? _ld.getFromHostOrLocalIndex.call(this, presetId) : null; }
+    _isVaultUrlHint(presetId) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld._isVaultUrlHint === 'function' ? _ld._isVaultUrlHint.call(this, presetId) : false; }
+    async loadScene(presetId, shouldPlay = false, forceReload = false) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.loadScene === 'function' ? _ld.loadScene.call(this, presetId, shouldPlay, forceReload) : false; }
     setPreset(presetId, shouldPlay = false) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.setPreset === 'function' ? _ld.setPreset.call(this, presetId, shouldPlay) : undefined; }
     loadSceneData(sceneData, shouldPlay = false) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.loadSceneData === 'function' ? _ld.loadSceneData.call(this, sceneData, shouldPlay) : false; }
     mountCartridge(cartridge) { const _ld = _getASTSceneLoader(); return _ld && typeof _ld.mountCartridge === 'function' ? _ld.mountCartridge.call(this, cartridge) : false; }

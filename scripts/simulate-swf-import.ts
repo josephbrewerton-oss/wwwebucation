@@ -2181,9 +2181,18 @@ async function runSimulations() {
       Date,
       Promise,
       URLSearchParams,
+      Float32Array,
+      Float64Array,
+      Int8Array,
+      Uint8Array,
+      Int32Array,
       performance,
       setTimeout,
       clearTimeout,
+      requestAnimationFrame: () => 0,
+      cancelAnimationFrame: () => {},
+      addEventListener: () => {},
+      removeEventListener: () => {},
       location: { search: '?preset=custom-swf-ablast&vault=1' },
       fetch: async (url: string) => {
         fetchedUrls.push(String(url));
@@ -2201,62 +2210,41 @@ async function runSimulations() {
         getElementById: () => null,
         querySelector: () => null,
         querySelectorAll: () => [],
+        addEventListener: () => {},
+        removeEventListener: () => {},
+        createElement: () => ({ style: {}, setAttribute() {}, getAttribute: () => null, removeAttribute() {}, appendChild() {}, remove() {}, pause() {}, load() {} }),
+        createElementNS: () => ({ style: {}, setAttribute() {}, getAttribute: () => null, appendChild() {}, remove() {} }),
+        createTextNode: (t: string) => ({ nodeType: 3, textContent: t }),
       },
     };
     loaderSandbox.window = loaderSandbox;
     loaderSandbox.self = loaderSandbox;
     loaderSandbox.globalThis = loaderSandbox;
     loaderSandbox.parent = {
+      postMessage() {},
       __AST_CARTRIDGE_VAULT_LOOKUP__: (id: string) => vaultMap.get(id) || null,
     };
 
     const ctx = vm.createContext(loaderSandbox);
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-expr.js'), 'utf8'), ctx, { filename: 'ast-expr.js' });
     vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), ctx, { filename: 'ast-parser.js' });
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-scene-mount.js'), 'utf8'), ctx, { filename: 'ast-scene-mount.js' });
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-binding-runtime.js'), 'utf8'), ctx, { filename: 'ast-binding-runtime.js' });
     vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-loader.js'), 'utf8'), ctx, { filename: 'ast-loader.js' });
+    vm.runInContext(fs.readFileSync(path.join(playerDir, 'ast-engine.js'), 'utf8'), ctx, { filename: 'ast-engine.js' });
 
-    const mountedScenes: string[] = [];
-    const fakeEngine: any = {
-      scene: null,
-      sceneCache: {},
-      activePresetId: null,
-      container: { replaceChildren() {}, querySelector: () => null },
-      vars: {},
-      inputs: [],
-      progress: 0,
-      isPlaying: false,
-      isContinuousSim: true,
-      durationSec: 60,
-      activeCheckpoints: [],
-      triggeredCheckpoints: new Set(),
-      history: [],
-      sceneMeta: null,
-      _mountedSceneId: null,
-      getStageSvg: () => null,
-      getBuiltinWelcomeScene: () => ({ id: 'welcome', title: 'Welcome Simulator', duration: 16, svgText: '<svg></svg>', keyframes: [] }),
-      parseAst: (src: string) => loaderSandbox.parseAst(src),
-      cancelSpeech() {},
-      resetCamera() {},
-      resetVars() {},
-      updateComputedVars() {},
-      _applyScenePhysics() {},
-      mountDeclarativeHud() {},
-      _playSceneBootSound() {},
-      has3D: () => false,
-      getCurrentSubtitle: () => null,
-      verifyLoadedCartridge: async () => ({ ok: true }),
-      seek() {},
-      render() {},
-      notifyParent() {},
-      mountSceneAsset(sc: any) {
-        this._mountedSceneId = sc.id;
-        mountedScenes.push(sc.id);
-      },
-      applyBindings() {},
-      emit() {},
-      play() { this.isPlaying = true; },
-      pause() { this.isPlaying = false; },
-    };
-    Object.assign(fakeEngine, loaderSandbox.ASTSceneLoader);
+    if (typeof loaderSandbox.ASTVectorPlayerEngine.prototype.getFromHostOrLocalIndex !== 'function') {
+      errors.push('ASTVectorPlayerEngine.prototype.getFromHostOrLocalIndex delegator is missing');
+    }
+    if (typeof loaderSandbox.ASTVectorPlayerEngine.prototype._isVaultUrlHint !== 'function') {
+      errors.push('ASTVectorPlayerEngine.prototype._isVaultUrlHint delegator is missing');
+    }
+
+    const fakeEngine = new loaderSandbox.ASTVectorPlayerEngine({ container: null });
+    fakeEngine.container = { replaceChildren() {}, querySelector: () => null, querySelectorAll: () => [], appendChild() {}, insertBefore() {} };
+    fakeEngine.verifyLoadedCartridge = async () => ({ ok: true });
+    fakeEngine.putIntoVaultIndexedDb = async () => true;
+    fakeEngine.getFromVaultIndexedDb = async () => null;
 
     // 1. Load custom SWF preset from Local Vault lookup — must make 0 remote HTTP fetches
     const loaded = await fakeEngine.loadScene('custom-swf-ablast');
