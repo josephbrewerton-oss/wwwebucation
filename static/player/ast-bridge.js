@@ -440,7 +440,6 @@
             handled.add(data);
             loadSceneData(data.cartridge, data.play !== false);
           }
-          }
           break;
         case 'SET_DEV_MODE':
           if (typeof engine.setDevMode === 'function') {
