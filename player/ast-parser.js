@@ -682,7 +682,7 @@
         const enterGuard = explicitWhen || (eqVar && eqVal !== undefined ? `(= ${eqVar} ${typeof eqVal === 'string' ? `'${eqVal}'` : eqVal})` : null);
         const combinedEnter = composeWhen(inheritedWhen, enterGuard);
         const taggedWhen = combinedEnter ? `@enter:${combinedEnter.replace(/^@enter:/, '')}` : inheritedWhen;
-        innerForms.forEach(child => walkBindingForm(child, inheritedTarget, taggedWhen));
+        innerForms.forEach(child => walkBindingForm(child, taggedWhen, inheritedTarget));
         return;
       }
       if (/^\(\s*:(?:var|rule)\b/i.test(form)) {

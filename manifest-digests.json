@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "compositeHash": "5df98dc40e7e",
-  "generatedAt": "2026-11-23T08:20:27.388Z",
+  "compositeHash": "7ca8a6fa46e6",
+  "generatedAt": "2026-11-23T08:33:44.736Z",
   "files": {
     "nano-map.ast": "568a99c10f2f08b8",
     "manifest.json": "5b581a737ccec74d",
@@ -19,7 +19,7 @@
     "player/ast-physics.js": "d864e5c7ae2f7a5e",
     "player/ast-expr.js": "7357b1b9d5d10a49",
     "player/ast-bytecode-decoder.js": "dbe465c9360defdc",
-    "player/ast-parser.js": "4a95c526e87f1742",
+    "player/ast-parser.js": "580fe9a5d3e127db",
     "player/ast-3d.js": "e042ca7a0e3ce8e3",
     "player/ast-bridge.js": "a7f66c7a29002f20",
     "player/ast-exporter.js": "bf41b09100749738",
@@ -31,7 +31,7 @@
     "player/ast-state-scorm.js": "fc13ba22a49e3609",
     "player/ast-engine.js": "35c4344b157bce90",
     "player/ast-compiler.js": "aa790f6c38d5681a",
-    "player/site-gestures-profile.js": "9cfce4be268ebc9b",
+    "player/site-gestures-profile.js": "f60906d394d1caa8",
     "player/site-gestures-whiteboard.js": "8ae8a95ae0c61890",
     "player/site-gestures-hud.js": "43007c8ee0b3008f",
     "player/site-gestures-actions.js": "d34ec365d055ad25",

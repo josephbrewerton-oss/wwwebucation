@@ -1462,7 +1462,8 @@
   }
 
   function _setElementControlVisibility(el, enabled) {
-    if (!el) return;
+    if (!el || !el.style) return;
+    if (!el.dataset) el.dataset = {};
     if (!enabled) {
       if (el.dataset.astCtlHidden !== '1') {
         el.dataset.astPrevDisplay = el.style.display || '';
