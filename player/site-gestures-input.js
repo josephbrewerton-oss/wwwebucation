@@ -480,11 +480,18 @@
       this.stageSvg.querySelectorAll(g.target).forEach(node => matchedList.push(node));
 
       matchedList.forEach(el => {
-        el.style.pointerEvents = 'auto';
+        const isHiddenInit =
+          (typeof el.getAttribute === 'function' && (el.getAttribute('visibility') === 'hidden' || el.getAttribute('pointer-events') === 'none' || el.getAttribute('display') === 'none')) ||
+          (el.style && (el.style.visibility === 'hidden' || el.style.pointerEvents === 'none' || el.style.display === 'none'));
+        if (!isHiddenInit) {
+          el.style.pointerEvents = 'auto';
+        }
         el.style.touchAction = 'none';
-        if (el !== this.stageSvg && g.type !== 'trackball' && g.axis !== 'trackball') {
+        if (el !== this.stageSvg && g.type !== 'trackball' && g.axis !== 'trackball' && !isHiddenInit) {
           el.querySelectorAll('*').forEach(child => {
-            if (child && child.style) child.style.pointerEvents = 'auto';
+            if (!child || !child.style) return;
+            const childHidden = typeof child.getAttribute === 'function' && (child.getAttribute('visibility') === 'hidden' || child.getAttribute('pointer-events') === 'none');
+            if (!childHidden) child.style.pointerEvents = 'auto';
           });
         }
 
@@ -578,6 +585,24 @@
     const gestures = this._getNormalizedSceneGestures(scene);
     const globalSkills = _resolveGlobalCustomGestureSkills(this);
 
+    const isNodeBlocked = (node) => {
+      let cur = node;
+      while (cur && cur !== this.stageSvg) {
+        if (typeof cur.getAttribute === 'function') {
+          if (cur.getAttribute('visibility') === 'hidden' || cur.getAttribute('pointer-events') === 'none' || cur.getAttribute('display') === 'none') {
+            return true;
+          }
+        }
+        if (cur.style) {
+          if (cur.style.visibility === 'hidden' || cur.style.pointerEvents === 'none' || cur.style.display === 'none') {
+            return true;
+          }
+        }
+        cur = cur.parentNode;
+      }
+      return false;
+    };
+
     // B0. Custom Registered Gesture Skills
     for (let i = 0; i < gestures.length; i++) {
       const g = gestures[i];
@@ -585,7 +610,7 @@
         || (globalSkills && globalSkills.get(g.type));
       if (customSkill && typeof customSkill.onPointerDown === 'function' && g.target) {
         const hitEl = e.target.closest(g.target);
-        if (hitEl && customSkill.onPointerDown.call(this, e, g, hitEl, svgPt, scene, this) === true) {
+        if (hitEl && !isNodeBlocked(hitEl) && customSkill.onPointerDown.call(this, e, g, hitEl, svgPt, scene, this) === true) {
           return;
         }
       }
@@ -602,7 +627,7 @@
       const g = gestures[i];
       if ((g.type !== 'clickable' && g.type !== 'holdable') || !g.target) continue;
       const hitEl = e.target.closest(g.target);
-      if (!hitEl) continue;
+      if (!hitEl || isNodeBlocked(hitEl)) continue;
       matchedPointerGestures.push(g);
       matchedEls.push(hitEl);
     }

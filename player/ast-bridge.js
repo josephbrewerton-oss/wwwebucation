@@ -133,10 +133,19 @@
             const canonicalPreset = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
               ? global.ASTSceneRegistry.normalizeId(data.preset)
               : data.preset;
+            // Guard against a stale boot preset lookup overwriting a freshly mounted custom SWF / Local Vault cartridge
+            if (
+              canonicalPreset === 'welcome' &&
+              engine._customMountedPresetId &&
+              engine._mountedSceneId === engine._customMountedPresetId &&
+              (Date.now() - (engine._customMountedAt || 0)) < 5000
+            ) {
+              break;
+            }
             if (engine.activePresetId === canonicalPreset && engine._mountedSceneId === canonicalPreset && engine.scene) {
               if (data.play === true && !engine.isPlaying) {
                 engine.play();
-              } else if (data.play === false && engine.isPlaying) {
+              } else if (data.play === false && !engine.isContinuousSim && engine.isPlaying) {
                 engine.pause();
               }
             } else {
@@ -424,6 +433,7 @@
           }
           break;
         case 'LOAD_CARTRIDGE':
+        case 'LOAD_CUSTOM_CARTRIDGE':
           if (data.cartridge) {
             engine.loadSceneData(data.cartridge, data.play !== false);
           }
