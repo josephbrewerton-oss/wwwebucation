@@ -110,7 +110,7 @@
         fn({ engine, uiController, data, event: event || null, global });
         return true;
       } catch (err) {
-        console.error(`[AST-Bridge] Handler error for "${msgType}":`, err);
+        console.error('[AST-Bridge] Handler error for "%s":', msgType, err);
         if (data.requestId && engine && typeof engine.notifyParent === 'function') {
           try {
             engine.notifyParent({
