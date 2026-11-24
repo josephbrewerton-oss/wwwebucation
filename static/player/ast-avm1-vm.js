@@ -393,17 +393,23 @@
   }
 
   const _FLAT_SVG_SHAPE_RE = /^(?:\s*<(path|rect|circle|ellipse|polygon|polyline|line)\b([^>]*?)\/>\s*)+$/i;
+  const _OUTER_G_WRAP_RE = /^\s*<g\b[^>]*>([\s\S]*?)<\/g>\s*$/i;
+  const _EMPTY_G_RE = /^\s*<g\b[^>]*\/>\s*$/i;
   const _SINGLE_TAG_RE = /<(path|rect|circle|ellipse|polygon|polyline|line)\b([^>]*?)\/>/gi;
   const _ATTR_RE = /([a-zA-Z0-9_:-]+)="([^"]*)"/g;
 
   function parseSvgSnippetToNode(doc, svgSnippet) {
     if (!svgSnippet) return createSvgEl(doc, 'g');
+    if (_EMPTY_G_RE.test(svgSnippet)) return createSvgEl(doc, 'g');
+    let candidate = svgSnippet;
+    const gWrap = _OUTER_G_WRAP_RE.exec(candidate);
+    if (gWrap) candidate = gWrap[1];
     // Fast zero-DOMParser path for flat self-closing vector primitives emitted by swfAstParser
-    if (!svgSnippet.includes('&') && _FLAT_SVG_SHAPE_RE.test(svgSnippet)) {
+    if (!candidate.includes('&') && _FLAT_SVG_SHAPE_RE.test(candidate)) {
       const g = createSvgEl(doc, 'g');
       _SINGLE_TAG_RE.lastIndex = 0;
       let m;
-      while ((m = _SINGLE_TAG_RE.exec(svgSnippet)) !== null) {
+      while ((m = _SINGLE_TAG_RE.exec(candidate)) !== null) {
         const node = createSvgEl(doc, m[1].toLowerCase());
         _ATTR_RE.lastIndex = 0;
         let am;
@@ -728,8 +734,9 @@
       const acts = this.def.a || [];
       for (let i = 0; i < acts.length; i++) {
         const a = acts[i];
-        if ((a.f & mask) !== 0 && a.b64) {
-          this._vm.execBytecode(a.b64, this._parent || this._vm.rootClip);
+        if ((a.f & mask) !== 0) {
+          const b64 = this._vm._resolveB64(a);
+          if (b64) this._vm.execBytecode(b64, this._parent || this._vm.rootClip);
         }
       }
     }
@@ -739,10 +746,12 @@
       const acts = this.def.a || [];
       for (let i = 0; i < acts.length; i++) {
         const a = acts[i];
-        if (!a.k || !a.b64) continue;
+        if (!a.k) continue;
+        const b64 = this._vm._resolveB64(a);
+        if (!b64) continue;
         const mapped = BTN_KEY_TO_FLASH_CODE[a.k] || a.k;
         if (mapped === flashKeyCode || (a.k >= 97 && a.k <= 122 && (a.k - 32) === flashKeyCode)) {
-          this._vm.execBytecode(a.b64, this._parent || this._vm.rootClip);
+          this._vm.execBytecode(b64, this._parent || this._vm.rootClip);
         }
       }
     }
@@ -813,6 +822,7 @@
       this.charId = charId;
       this._def = timelineDef || { fc: 1, l: [], fr: [[]], ac: [] };
       this._parent = parentClip || null;
+      this._clipDepth = parentClip ? (parentClip._clipDepth || 0) + 1 : 0;
       this._depth = depth;
       this._name = instName || (parentClip ? `instance${++vm._instCounter}` : '');
       this._clipActions = clipActions || [];
@@ -821,8 +831,27 @@
       this._removed = false;
       vm._liveClipCount = (vm._liveClipCount || 0) + 1;
 
+      // Expand deduplicated "=" hold-frame markers once into shared direct array references (O(F), 0 per-frame GC)
+      const rawFrames = this._def.fr || [[]];
+      if (!this._def._expandedFr) {
+        const expanded = new Array(rawFrames.length);
+        let prevArr = [];
+        for (let fi = 0; fi < rawFrames.length; fi++) {
+          const cur = rawFrames[fi];
+          if (cur === '=' || cur == null) {
+            expanded[fi] = prevArr;
+          } else {
+            expanded[fi] = cur;
+            prevArr = cur;
+          }
+        }
+        this._def._expandedFr = expanded;
+      }
+      this._frames = this._def._expandedFr;
+      this._lastReconciledEntries = null;
+
       // Timeline state
-      this._totalframes = Math.max(1, this._def.fc || (this._def.fr ? this._def.fr.length : 1));
+      this._totalframes = Math.max(1, this._def.fc || (this._frames ? this._frames.length : 1));
       this._currentframe = 1;
       this._playing = this._totalframes > 1;
       this._justSpawned = true;
@@ -1080,7 +1109,7 @@
       try {
         this._currentframe = nextFrame;
         this._frameChangedThisTick = true;
-        this.reconcileDisplayList(this._currentframe);
+        this.reconcileDisplayList(this._currentframe, true);
         this.runFrameActions(this._currentframe);
       } finally {
         this._jumpDepth = depth;
@@ -1133,8 +1162,9 @@
           const mapped = BTN_KEY_TO_FLASH_CODE[ca.k] || ca.k;
           if (mapped !== keyCode) continue;
         }
-        if (ca.b64) {
-          this._vm.execBytecode(ca.b64, this);
+        const b64 = this._vm._resolveB64(ca);
+        if (b64) {
+          this._vm.execBytecode(b64, this);
         }
       }
     }
@@ -1144,10 +1174,14 @@
      * Preserves dynamic script-created depths (>= 16384 or created via attachMovie/duplicateMovieClip)
      * and preserves script-modified transforms on continuing timeline instances.
      */
-    reconcileDisplayList(frameNum) {
-      const frames = this._def.fr || [];
+    reconcileDisplayList(frameNum, force = false) {
+      if (this._clipDepth > 24) return;
+      const frames = this._frames || [];
       const idx = Math.max(0, Math.min(frames.length - 1, frameNum - 1));
       const entries = frames[idx] || [];
+      // True Flash hold frame (identical display list array reference) -> 0-cost skip on sequential playback
+      if (!force && this._lastReconciledEntries === entries) return;
+      this._lastReconciledEntries = entries;
       const wantedByDepth = new Map();
       for (let i = 0; i < entries.length; i++) {
         wantedByDepth.set(entries[i].d, entries[i]);
@@ -1218,10 +1252,14 @@
 
         let slot = this._childrenByDepth.get(depth);
         if (!slot) {
-          slot = this._createSlot(depth, e.c, e.m || null, e.a !== undefined ? e.a : 1, e.n || '', e.ca || [], false, maskId);
-          childrenMutated = true;
-          if (slot && slot.obj && slot.obj._isMovieClip) {
-            newlySpawnedClips.push(slot.obj);
+          if (this._clipDepth > 0 && this._vm._isOverBudget()) break;
+          const resolvedCa = this._vm._resolveClipActions(e);
+          slot = this._createSlot(depth, e.c, e.m || null, e.a !== undefined ? e.a : 1, e.n || '', resolvedCa, false, maskId);
+          if (slot) {
+            childrenMutated = true;
+            if (slot.obj && slot.obj._isMovieClip) {
+              newlySpawnedClips.push(slot.obj);
+            }
           }
         } else {
           // Update transform & alpha only when changed
@@ -1258,14 +1296,15 @@
 
       // Initialize newly spawned MovieClips (reconcile frame 1, fire DoInitAction, registered AS2 class, onClipEvent(load), frame 1 DoAction)
       for (let i = 0; i < newlySpawnedClips.length; i++) {
+        if (this._vm._isOverBudget()) break;
         const mc = newlySpawnedClips[i];
         if (mc._removed) continue;
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
         this._vm._applyRegisteredClass(mc);
-        mc.reconcileDisplayList(1);
-        mc._fireClipEvents(CE_LOAD);
-        if (!mc._removed && mc._currentframe === 1) {
+        mc.reconcileDisplayList(1, true);
+        if (!this._vm._isOverBudget()) mc._fireClipEvents(CE_LOAD);
+        if (!mc._removed && !this._vm._isOverBudget() && mc._currentframe === 1) {
           mc.runFrameActions(1);
         }
       }
@@ -1278,6 +1317,9 @@
       let bbox = null;
 
       if (prog.sp && prog.sp[charId]) {
+        if ((this._vm._liveClipCount || 0) >= MAX_LIVE_CLIPS || this._clipDepth >= 24) {
+          return null;
+        }
         obj = new AVM1MovieClip(this._vm, charId, prog.sp[charId], this, depth, instName, clipActions);
         obj.applyMatrix(matrix, alpha);
         svgEl = obj.svgEl;
@@ -1363,9 +1405,12 @@
     runFrameActions(frameNum) {
       const acts = this._def.ac || [];
       for (let i = 0; i < acts.length; i++) {
-        if (acts[i].f === frameNum && acts[i].b64) {
-          this._vm.execBytecode(acts[i].b64, this);
-          if (this._removed) return;
+        if (acts[i].f === frameNum) {
+          const b64 = this._vm._resolveB64(acts[i]);
+          if (b64) {
+            this._vm.execBytecode(b64, this);
+            if (this._removed) return;
+          }
         }
       }
     }
@@ -2161,12 +2206,50 @@
       return false;
     }
 
+    _resolveB64(entry) {
+      if (!entry) return null;
+      if (entry.b64) return entry.b64;
+      if (entry.bi !== undefined && this.program && this.program.bc) {
+        return this.program.bc[entry.bi] || null;
+      }
+      return null;
+    }
+
+    _resolveClipActions(entry) {
+      if (!entry) return [];
+      if (entry.ca) return entry.ca;
+      if (entry.ci !== undefined && this.program && this.program.cat) {
+        return this.program.cat[entry.ci] || [];
+      }
+      return [];
+    }
+
     _instantiateStaticCharSvg(charId, visited = null, depth = 0) {
       if (depth > 16) return null;
       if (this._shapeTemplateCache.has(charId)) {
         return this._shapeTemplateCache.get(charId).cloneNode(true);
       }
       const sh = this.program.sh && this.program.sh[charId];
+      if (sh && Array.isArray(sh.p)) {
+        // Zero-DOMParser, zero-regex direct SVG <path> primitive instantiation (v2 compact format)
+        const g = createSvgEl(this.doc, 'g');
+        const prims = sh.p;
+        for (let i = 0; i < prims.length; i++) {
+          const pr = prims[i];
+          const pEl = createSvgEl(this.doc, 'path');
+          pEl.setAttribute('d', pr[0]);
+          pEl.setAttribute('fill', pr[1]);
+          pEl.setAttribute('stroke', pr[2]);
+          if (pr[2] !== 'none') {
+            pEl.setAttribute('stroke-width', String(pr[3] || 1));
+            pEl.setAttribute('stroke-linecap', 'round');
+            pEl.setAttribute('stroke-linejoin', 'round');
+          }
+          g.appendChild(pEl);
+        }
+        this._shapeTemplateCache.set(charId, g);
+        return g.cloneNode(true);
+      }
       if (sh && sh.svg) {
         const tpl = parseSvgSnippetToNode(this.doc, sh.svg);
         this._shapeTemplateCache.set(charId, tpl);
@@ -2183,7 +2266,7 @@
         return p.cloneNode(true);
       }
       const sp = this.program.sp && this.program.sp[charId];
-      if (sp && sp.fr && sp.fr[0]) {
+      if (sp && sp.fr && Array.isArray(sp.fr[0])) {
         const seen = visited ? new Set(visited) : new Set();
         if (seen.has(charId)) return null;
         seen.add(charId);
@@ -2235,8 +2318,9 @@
       this._initedSprites.add(charId);
       const ias = this.program.ia || [];
       for (let i = 0; i < ias.length; i++) {
-        if (ias[i].c === charId && ias[i].b64) {
-          this.execBytecode(ias[i].b64, targetClip || this.rootClip);
+        if (ias[i].c === charId) {
+          const b64 = this._resolveB64(ias[i]);
+          if (b64) this.execBytecode(b64, targetClip || this.rootClip);
         }
       }
     }
@@ -2325,12 +2409,15 @@
       const ias = this.program.ia || [];
       for (let i = 0; i < ias.length; i++) {
         if (this._isOverBudget()) break;
-        if (!this._initedSprites.has(ias[i].c) && ias[i].b64) {
-          this._initedSprites.add(ias[i].c);
-          this.execBytecode(ias[i].b64, this.rootClip);
+        if (!this._initedSprites.has(ias[i].c)) {
+          const b64 = this._resolveB64(ias[i]);
+          if (b64) {
+            this._initedSprites.add(ias[i].c);
+            this.execBytecode(b64, this.rootClip);
+          }
         }
       }
-      this.rootClip.reconcileDisplayList(1);
+      this.rootClip.reconcileDisplayList(1, true);
       if (!this._isOverBudget() && this.rootClip._currentframe === 1) {
         this.rootClip.runFrameActions(1);
       }

@@ -637,6 +637,8 @@ function readLineStyleArray(reader: BitReader, tagVersion: number): SwfLineStyle
   return lineStyles;
 }
 
+export type SwfShapePrimitive = [string, string, string, number]; // [d, fill, stroke, strokeWidth]
+
 /**
  * Parses SWF DefineShape (1-4) tags into multi-path W3C SVG primitives grouped under <g id="swf-shape-${shapeId}">.
  */
@@ -645,7 +647,7 @@ function parseSwfShape(
   shapeId: number,
   tagVersion: number,
   tagEndOffset?: number
-): { id: string; charId: number; svg: string; bbox: { x: number; y: number; w: number; h: number } } {
+): { id: string; charId: number; svg: string; primitives?: SwfShapePrimitive[]; bbox: { x: number; y: number; w: number; h: number } } {
   const shapeBounds = reader.readRect();
   if (tagVersion === 4) {
     reader.readRect(); // EdgeBounds in DefineShape4
@@ -676,6 +678,7 @@ function parseSwfShape(
     id: `swf-shape-${shapeId}`,
     charId: shapeId,
     svg: shapeSvg,
+    primitives: shapeRecords.primitives,
     bbox: {
       x: shapeBounds.xMin,
       y: shapeBounds.yMin,
@@ -703,11 +706,12 @@ function parseShapeRecords(
   numFillBits: number,
   numLineBits: number,
   options: ParseShapeRecordsOptions = {}
-): { pathCommands: string[]; svgPaths: string[]; curFill0: number; curFill1: number; curLine: number } {
+): { pathCommands: string[]; svgPaths: string[]; primitives: SwfShapePrimitive[]; curFill0: number; curFill1: number; curLine: number } {
   let curXTwips = Math.round((options.initialX || 0) * 20);
   let curYTwips = Math.round((options.initialY || 0) * 20);
   const pathCommands: string[] = [];
   const svgPaths: string[] = [];
+  const primitives: SwfShapePrimitive[] = [];
 
   let curNumFillBits = numFillBits;
   let curNumLineBits = numLineBits;
@@ -733,6 +737,7 @@ function parseShapeRecords(
       const d = chainFillEdges(edges);
       if (d) {
         svgPaths.push(`<path d="${d}" fill="${fillColor}" stroke="none" />`);
+        primitives.push([d, fillColor, 'none', 0]);
       }
     }
 
@@ -745,6 +750,7 @@ function parseShapeRecords(
       const d = chainStrokeEdges(edges);
       if (d) {
         svgPaths.push(`<path d="${d}" fill="none" stroke="${lineStyle.color}" stroke-width="${lineStyle.width}" stroke-linecap="round" stroke-linejoin="round" />`);
+        primitives.push([d, 'none', lineStyle.color, lineStyle.width]);
       }
     }
 
@@ -865,7 +871,7 @@ function parseShapeRecords(
 
   flushStyleBuckets();
 
-  return { pathCommands, svgPaths, curFill0, curFill1, curLine };
+  return { pathCommands, svgPaths, primitives, curFill0, curFill1, curLine };
 }
 
 export interface SwfMorphShape {
@@ -1365,6 +1371,8 @@ function skipSwfFilterList(reader: BitReader, tagEndOffset: number): void {
   }
 }
 
+let _activeSymbolicLiftRemaining = 25000;
+
 /**
  * Full AVM1 (ActionScript 1.0 / 2.0) bytecode lifter for DoAction (Tag 12), DoInitAction (Tag 59),
  * PlaceObject2 ClipActions, and DefineButton / DefineButton2 actions.
@@ -1377,6 +1385,7 @@ function parseDoAction(
     clipPrefix?: string;
     fileLength?: number;
     instanceHalfSizes?: Map<string, { hw: number; hh: number }>;
+    skipSymbolicLift?: boolean;
   } = {}
 ): SwfActionRecord {
   const defaultClipPrefix = context.clipPrefix || '';
@@ -1397,6 +1406,29 @@ function parseDoAction(
 
   // Pass 1: Decode instruction stream with exact byte offsets for ActionIf / ActionJump / ActionDefineFunction resolution
   const rawActionStart = reader.offset;
+  if (context.skipSymbolicLift || _activeSymbolicLiftRemaining <= 0) {
+    let hasAnyIns = false;
+    while (reader.offset < tagEndOffset) {
+      const code = reader.readUI8();
+      if (code === 0) break; // ActionEnd
+      hasAnyIns = true;
+      if (code === 0x07) record.stops = true;
+      else if (code === 0x06) record.plays = true;
+      else if (code === 0x8A || code === 0x8D) record.usesPreloaderApi = true;
+      if (code >= 0x80) {
+        const length = reader.readUI16();
+        reader.offset = Math.min(tagEndOffset, reader.offset + length);
+      }
+    }
+    if (hasAnyIns) {
+      const rawSlice = reader.sliceBytes(rawActionStart, Math.min(tagEndOffset, reader.offset));
+      if (rawSlice.length > 0) {
+        record.rawBytecodeB64 = bytesToBase64(rawSlice);
+      }
+    }
+    return record;
+  }
+
   const instrs: Avm1DecodedIns[] = [];
   const offsetToIdx = new Map<number, number>();
   while (reader.offset < tagEndOffset) {
@@ -1471,7 +1503,8 @@ function parseDoAction(
   };
 
   let callInlineDepth = 0;
-  let evalStepBudget = 12000;
+  let evalStepBudget = Math.min(4000, Math.max(0, _activeSymbolicLiftRemaining));
+  const initialEvalStepBudget = evalStepBudget;
   let evalDepth = 0;
 
   // Pass 2: Structured control-flow + symbolic stack evaluation
@@ -1927,7 +1960,7 @@ function parseDoAction(
 
           // Only structure into guarded rules if condStr is an S-expression / variable (not Sim 7 raw text string)
           const isExecutableCond = condVal && condVal.kind !== 'str';
-          if (isExecutableCond && targetIdx > i && elseEndIdx > i && (!activeGuard || activeGuard.length < 2048)) {
+          if (isExecutableCond && targetIdx > i && elseEndIdx > i && (!activeGuard || activeGuard.length < 1024)) {
             const thenGuard = composeAvm1When(activeGuard, negateAvm1Cond(condStr));
             evalRange(i + 1, thenEndIdx, thenGuard, [...stack], outStmts, curTarget, new Map(registers));
             if (elseEndIdx > targetIdx) {
@@ -2102,6 +2135,8 @@ function parseDoAction(
   };
 
   evalRange(0, instrs.length, undefined, [], record.statements!, defaultClipPrefix, new Map());
+  const usedSteps = Math.max(1, initialEvalStepBudget - Math.max(0, evalStepBudget));
+  _activeSymbolicLiftRemaining = Math.max(0, _activeSymbolicLiftRemaining - usedSteps);
   return record;
 }
 
@@ -2268,10 +2303,14 @@ function parseDefineSprite(
     if (tagType === 0) {
       break;
     } else if (tagType === 1) {
-      // ShowFrame: snapshot current display list
-      const snap = new Map<number, SwfDisplayEntry>();
-      activeDisplay.forEach((v, k) => snap.set(k, { ...v }));
-      frames.push({ frame: currentFrame, entries: snap });
+      // ShowFrame: reuse previous snapshot Map on unchanged hold frames (zero allocations)
+      if (!sawFrameMutation && frames.length > 0) {
+        frames.push({ frame: currentFrame, entries: frames[frames.length - 1].entries });
+      } else {
+        const snap = new Map<number, SwfDisplayEntry>();
+        activeDisplay.forEach((v, k) => snap.set(k, { ...v }));
+        frames.push({ frame: currentFrame, entries: snap });
+      }
       if (currentFrame > 1 && sawFrameMutation) hasTimelineMotion = true;
       sawFrameMutation = false;
       currentFrame++;
@@ -2496,6 +2535,7 @@ function parseDoABC(reader: BitReader, tagEndOffset: number, currentFrame: numbe
  * Main Entry Point: Transpiles SWF file binary array into modern SVG + executable AST S-Expressions.
  */
 export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, sceneId = 'imported-swf'): Promise<SwfTranspileResult> {
+  _activeSymbolicLiftRemaining = 25000;
   try {
     const rawBytes = fileData instanceof Uint8Array ? fileData : new Uint8Array(fileData);
     if (rawBytes.length < 8) {
@@ -2532,7 +2572,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const frameCount = reader.readUI16();
 
     let backgroundColor = '#0f172a';
-    const shapes: { id: string; charId: number; svg: string; bbox: { x: number; y: number; w: number; h: number } }[] = [];
+    const shapes: { id: string; charId: number; svg: string; primitives?: SwfShapePrimitive[]; bbox: { x: number; y: number; w: number; h: number } }[] = [];
     const morphShapes: SwfMorphShape[] = [];
     const sprites = new Map<number, SwfSpriteDefinition>();
     const buttons = new Map<number, SwfButtonDefinition>();
@@ -2626,7 +2666,10 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         // DoAction (12) / DoInitAction (59)
         try {
           const initSpriteId = tagType === 59 ? reader.readUI16() : 0;
-          const act = parseDoAction(reader, nextTagOffset, currentFrame, { fileLength: effectiveFileLength });
+          const act = parseDoAction(reader, nextTagOffset, currentFrame, {
+            fileLength: effectiveFileLength,
+            skipSymbolicLift: tagType === 59,
+          });
           if (tagType === 59) {
             if (act.rawBytecodeB64) {
               initActions.push({ c: initSpriteId, b64: act.rawBytecodeB64 });
@@ -2684,10 +2727,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         activeDisplay.delete(depth);
         if (currentFrame > 1) sawFrameMutation = true;
       } else if (tagType === 1) {
-        // ShowFrame (Tag 1)
-        const snap = new Map<number, SwfDisplayEntry>();
-        activeDisplay.forEach((v, k) => snap.set(k, { ...v }));
-        timelineFrames.push({ frame: currentFrame, entries: snap });
+        // ShowFrame (Tag 1): reuse previous snapshot Map on unchanged hold frames (zero allocations)
+        if (!sawFrameMutation && timelineFrames.length > 0) {
+          timelineFrames.push({ frame: currentFrame, entries: timelineFrames[timelineFrames.length - 1].entries });
+        } else {
+          const snap = new Map<number, SwfDisplayEntry>();
+          activeDisplay.forEach((v, k) => snap.set(k, { ...v }));
+          timelineFrames.push({ frame: currentFrame, entries: snap });
+        }
         if (currentFrame > 1 && sawFrameMutation) hasMainTimelineMutations = true;
         sawFrameMutation = false;
         currentFrame++;
@@ -2793,7 +2840,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const formatMatrixAttr = (m: SwfMatrix): string =>
       `matrix(${formatNum(m.scaleX)} ${formatNum(m.rotateSkew0)} ${formatNum(m.rotateSkew1)} ${formatNum(m.scaleY)} ${formatNum(m.transX)} ${formatNum(m.transY)})`;
 
-    const shapeByCharId = new Map<number, { id: string; charId: number; svg: string; bbox: { x: number; y: number; w: number; h: number } }>();
+    const shapeByCharId = new Map<number, { id: string; charId: number; svg: string; primitives?: SwfShapePrimitive[]; bbox: { x: number; y: number; w: number; h: number } }>();
     for (const s of shapes) shapeByCharId.set(s.charId, s);
     const morphByCharId = new Map<number, SwfMorphShape>();
     for (const m of morphShapes) morphByCharId.set(m.shapeId, m);
@@ -3086,35 +3133,46 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       return out.join('\n      ');
     };
 
+    let legacySvgChars = 0;
+    const MAX_LEGACY_SVG_CHARS = 350000;
+
     const renderCharacterSvg = (
       charId: number,
       instanceDomPrefix: string,
       instanceVarPrefix?: string,
-      parentActiveWhen?: string
+      parentActiveWhen?: string,
+      depth = 0,
+      ancestors: Set<number> = new Set()
     ): string => {
+      if (depth > 12 || legacySvgChars >= MAX_LEGACY_SVG_CHARS) return '';
       const shape = shapeByCharId.get(charId);
       if (shape) {
         usedCharIds.add(charId);
         const c = (charRenderCount.get(charId) || 0) + 1;
         charRenderCount.set(charId, c);
-        if (c > 1) {
-          return shape.svg.replace(`id="${shape.id}"`, `id="${instanceDomPrefix}-${shape.id}"`);
-        }
-        return shape.svg;
+        const out = c > 1
+          ? shape.svg.replace(`id="${shape.id}"`, `id="${instanceDomPrefix}-${shape.id}"`)
+          : shape.svg;
+        legacySvgChars += out.length;
+        return out;
       }
       const morph = morphByCharId.get(charId);
       if (morph) {
         usedCharIds.add(charId);
         const c = (charRenderCount.get(charId) || 0) + 1;
         charRenderCount.set(charId, c);
-        if (c > 1) {
-          return morph.svg.replace(`id="${morph.id}"`, `id="${instanceDomPrefix}-${morph.id}"`);
-        }
-        return morph.svg;
+        const out = c > 1
+          ? morph.svg.replace(`id="${morph.id}"`, `id="${instanceDomPrefix}-${morph.id}"`)
+          : morph.svg;
+        legacySvgChars += out.length;
+        return out;
       }
 
       const sprite = sprites.get(charId);
       if (sprite) {
+        if (ancestors.has(charId)) return '';
+        const nextAncestors = new Set(ancestors);
+        nextAncestors.add(charId);
         usedCharIds.add(charId);
         const spPrefix = instanceVarPrefix || `sprite_${charId}`;
         const spFrameVar = `${spPrefix}_frame`;
@@ -3194,7 +3252,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const swapsAtDepth = (spDepthCharSets.get(d)?.size || 1) > 1;
           const childDomId = swapsAtDepth ? `${instanceDomPrefix}-d${d}-c${cid}` : `${instanceDomPrefix}-d${d}`;
           const nestedName = firstSnapEntry.name ? sanitizeAstIdent(firstSnapEntry.name) : undefined;
-          const childInner = renderCharacterSvg(cid, childDomId, nestedName, parentActiveWhen);
+          const childInner = renderCharacterSvg(cid, childDomId, nestedName, parentActiveWhen, depth + 1, nextAncestors);
 
           // Flash PlaceObject2/3 clipDepth > 0 defines an invisible clipping mask for depths (d+1..clipDepth]
           const spClipDepth = Array.from(frameMap.values()).find((fe) => fe.clipDepth && fe.clipDepth > d)?.clipDepth;
@@ -3280,12 +3338,14 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         const hasInteractiveVisualStates = upRecords.length > 0 && (overOnlyRecords.length > 0 || downOnlyRecords.length > 0);
         const displayRecords = upRecords.length > 0 ? upRecords : btn.records.filter((r) => (r.states & 0x07) !== 0);
 
+        const btnAncestors = new Set(ancestors);
+        btnAncestors.add(charId);
         const renderBtnStateList = (recs: SwfButtonRecord[], tag: string) =>
           recs
             .slice()
             .sort((a, b) => a.depth - b.depth)
             .map((rec) => {
-              const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-${tag}-d${rec.depth}`);
+              const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-${tag}-d${rec.depth}`, undefined, undefined, depth + 1, btnAncestors);
               const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
               const opAttr = rec.cxform ? ` opacity="${formatNum(rec.cxform.alpha)}"` : '';
               return `<g id="${btnDomId}-${tag}-${rec.depth}"${matAttr}${opAttr}>${inner}</g>`;
@@ -3319,7 +3379,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           );
         } else {
           for (const rec of displayRecords.sort((a, b) => a.depth - b.depth)) {
-            const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`);
+            const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`, undefined, undefined, depth + 1, btnAncestors);
             const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
             const opAttr = rec.cxform ? ` opacity="${formatNum(rec.cxform.alpha)}"` : '';
             childGroups.push(`<g id="${btnDomId}-s${rec.depth}"${matAttr}${opAttr}>${inner}</g>`);
@@ -3327,13 +3387,13 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
         // Render invisible HitTest-only regions with pointer-events="all" so transparent Flash buttons remain clickable
         for (const rec of hitOnlyRecords.sort((a, b) => a.depth - b.depth)) {
-          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-hit-d${rec.depth}`);
+          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-hit-d${rec.depth}`, undefined, undefined, depth + 1, btnAncestors);
           const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
           childGroups.push(`<g id="${btnDomId}-hit-${rec.depth}" opacity="0" pointer-events="all"${matAttr}>${inner}</g>`);
         }
         if (childGroups.length === 0 && btn.records.length > 0) {
           const rec = btn.records[0];
-          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`);
+          const inner = renderCharacterSvg(rec.characterId, `${btnDomId}-d${rec.depth}`, undefined, undefined, depth + 1, btnAncestors);
           const matAttr = rec.matrix ? ` transform="${formatMatrixAttr(rec.matrix)}"` : '';
           childGroups.push(`<g id="${btnDomId}-s${rec.depth}" pointer-events="all"${matAttr}>${inner}</g>`);
         }
@@ -3546,6 +3606,15 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         ? 'sim-modal'
         : 'sim-continuous';
 
+      // Complex real-world SWFs run directly on the pure-SVG AVM1 Micro-VM (:swf-vm);
+      // bypass multi-MB throwaway legacy SVG unrolling and per-frame (case swf_frame ...) bindings.
+      const isComplexVmSwf =
+        totalFrames > 60 ||
+        shapes.length > 80 ||
+        sprites.size > 20 ||
+        activeTracks.length > 40 ||
+        activeActionBlocks.length > 25;
+
       ensureVar('sim_dt', 0.0167, 0, 0.2);
       ensureVar('swf_frame', entryFrame, entryFrame, totalFrames);
       ensureVar('swf_playing', entryStops ? 0 : 1, 0, 1);
@@ -3557,6 +3626,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
       }
       ensureVar('swf_tick', 0, 0, 1000000);
 
+      if (!isComplexVmSwf) {
       // Process entry-frame DoAction initial variable assignments before clip rules
       // (strictly apply literal values from entryFrame only so later frames never clobber entry visibility/state)
       for (const ab of activeActionBlocks) {
@@ -3883,6 +3953,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
       // Advance swf_tick at end of each frame tick
       dynamicRules.push(`    (:rule :var "swf_tick" :expr "(+ swf_tick 1)")`);
+      } // end !isComplexVmSwf
     }
 
     // For dynamic multi-frame SWFs, do NOT dump unplaced library shapes onto the stage (they cover active frames);
@@ -4084,6 +4155,42 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
         return arr;
       };
+
+      // Deduplicated AVM1 bytecode pool (eliminates repeating multi-KB ActionScript blocks across frames/clips)
+      const vmBytecodePool: string[] = [];
+      const vmBytecodeIndex = new Map<string, number>();
+      const internBytecode = (b64: string): number => {
+        const hit = vmBytecodeIndex.get(b64);
+        if (hit !== undefined) return hit;
+        const idx = vmBytecodePool.length;
+        vmBytecodePool.push(b64);
+        vmBytecodeIndex.set(b64, idx);
+        return idx;
+      };
+
+      // Deduplicated ClipActions table (prevents duplicating clipActions on every frame a clip remains on stage)
+      const vmClipActionTable: any[][] = [];
+      const vmClipActionIndex = new Map<string, number>();
+      const internClipActions = (clipActions: SwfClipAction[]): number | undefined => {
+        const cas: any[] = [];
+        for (let i = 0; i < clipActions.length; i++) {
+          const ca = clipActions[i];
+          if (ca.actionRecord && ca.actionRecord.rawBytecodeB64) {
+            const o: any = { f: ca.eventFlags || 0, bi: internBytecode(ca.actionRecord.rawBytecodeB64) };
+            if (ca.keyCode !== undefined) o.k = ca.keyCode;
+            cas.push(o);
+          }
+        }
+        if (cas.length === 0) return undefined;
+        const key = JSON.stringify(cas);
+        const hit = vmClipActionIndex.get(key);
+        if (hit !== undefined) return hit;
+        const idx = vmClipActionTable.length;
+        vmClipActionTable.push(cas);
+        vmClipActionIndex.set(key, idx);
+        return idx;
+      };
+
       const serializeFrameList = (frameSnaps: SwfFrameSnapshot[], count: number) => {
         const snapByFrame = new Map<number, SwfFrameSnapshot>();
         let maxSnapFrame = 1;
@@ -4094,11 +4201,24 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         }
         const fallbackSnap = frameSnaps[frameSnaps.length - 1];
         const limit = Math.min(Math.max(1, count), Math.max(1, maxSnapFrame), 2400);
-        const out: any[][] = [];
+        const out: any[] = [];
+        let prevJson = '';
+        let prevEntriesMap: Map<number, SwfDisplayEntry> | null = null;
         for (let f = 1; f <= limit; f++) {
           const snap = snapByFrame.get(f) || fallbackSnap;
           if (!snap) {
-            out.push([]);
+            if (f > 1 && prevJson === '[]') {
+              out.push('=');
+            } else {
+              prevJson = '[]';
+              prevEntriesMap = null;
+              out.push([]);
+            }
+            continue;
+          }
+          if (f > 1 && prevEntriesMap !== null && snap.entries === prevEntriesMap) {
+            // Instant O(1) hold-frame dedup (same Map reference -> zero serialization cost!)
+            out.push('=');
             continue;
           }
           const entries: any[] = [];
@@ -4115,34 +4235,38 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             if (e.clipDepth && e.clipDepth > d) item.cd = e.clipDepth;
             if (e.ratio !== undefined && e.ratio > 0) item.r = e.ratio;
             if (e.clipActions && e.clipActions.length > 0) {
-              const cas = e.clipActions
-                .filter((ca) => ca.actionRecord && ca.actionRecord.rawBytecodeB64)
-                .map((ca) => {
-                  const o: any = { f: ca.eventFlags || 0, b64: ca.actionRecord.rawBytecodeB64 };
-                  if (ca.keyCode !== undefined) o.k = ca.keyCode;
-                  return o;
-                });
-              if (cas.length > 0) item.ca = cas;
+              const ci = internClipActions(e.clipActions);
+              if (ci !== undefined) item.ci = ci;
             }
             entries.push(item);
           }
-          out.push(entries);
+          prevEntriesMap = snap.entries;
+          const frameJson = JSON.stringify(entries);
+          if (f > 1 && frameJson === prevJson) {
+            // Identical hold frame marker -> decoded to direct shared array reference in AVM1MovieClip
+            out.push('=');
+          } else {
+            prevJson = frameJson;
+            out.push(entries);
+          }
         }
         return out;
       };
 
-      const vmShapes: Record<number, { svg: string; bb: number[] }> = {};
+      const vmShapes: Record<number, { p?: SwfShapePrimitive[]; svg?: string; bb: number[] }> = {};
       for (const s of shapes) {
         if (!editTexts.has(s.charId)) {
-          vmShapes[s.charId] = {
-            svg: s.svg,
-            bb: [
-              Number(formatNum(s.bbox.x)),
-              Number(formatNum(s.bbox.y)),
-              Number(formatNum(s.bbox.w)),
-              Number(formatNum(s.bbox.h)),
-            ],
-          };
+          const bb = [
+            Number(formatNum(s.bbox.x)),
+            Number(formatNum(s.bbox.y)),
+            Number(formatNum(s.bbox.w)),
+            Number(formatNum(s.bbox.h)),
+          ];
+          if (s.primitives) {
+            vmShapes[s.charId] = { p: s.primitives, bb };
+          } else {
+            vmShapes[s.charId] = { svg: s.svg, bb };
+          }
         }
       }
       const vmMorphs: Record<number, any> = {};
@@ -4189,7 +4313,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           }),
           a: btn.actions
             .filter((a) => a.actionRecord && a.actionRecord.rawBytecodeB64)
-            .map((a) => ({ f: a.conditionFlags, k: a.keyCode || 0, b64: a.actionRecord.rawBytecodeB64 })),
+            .map((a) => ({ f: a.conditionFlags, k: a.keyCode || 0, bi: internBytecode(a.actionRecord.rawBytecodeB64!) })),
         };
       });
       const vmSprites: Record<number, any> = {};
@@ -4200,12 +4324,21 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           fr: serializeFrameList(sp.frames, sp.frameCount),
           ac: sp.actions
             .filter((a) => Boolean(a.rawBytecodeB64))
-            .map((a) => ({ f: a.frame, b64: a.rawBytecodeB64 })),
+            .map((a) => ({ f: a.frame, bi: internBytecode(a.rawBytecodeB64!) })),
         };
       });
 
+      const vmInitActions = initActions.map((ia) => ({
+        c: ia.c,
+        bi: internBytecode(ia.b64),
+      }));
+
+      const vmMainActions = actionBlocks
+        .filter((a) => Boolean(a.rawBytecodeB64))
+        .map((a) => ({ f: a.frame, bi: internBytecode(a.rawBytecodeB64!) }));
+
       const vmProgram: Record<string, any> = {
-        v: 1,
+        v: 2,
         swfVer: version,
         w: width,
         h: height,
@@ -4218,16 +4351,16 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         as3: isActionScript3 ? 1 : 0,
         exp: exportsMap,
         l: labels,
+        bc: vmBytecodePool,
+        cat: vmClipActionTable,
         sh: vmShapes,
         mo: vmMorphs,
         et: vmEditTexts,
         bt: vmButtons,
         sp: vmSprites,
-        ia: initActions,
+        ia: vmInitActions,
         fr: serializeFrameList(timelineFrames, totalFrames),
-        ac: actionBlocks
-          .filter((a) => Boolean(a.rawBytecodeB64))
-          .map((a) => ({ f: a.frame, b64: a.rawBytecodeB64 })),
+        ac: vmMainActions,
       };
       if (documentClass) vmProgram.dc = documentClass;
       const vmB64 = utf8ToBase64(JSON.stringify(vmProgram));
