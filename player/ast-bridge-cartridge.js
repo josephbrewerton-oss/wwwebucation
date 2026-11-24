@@ -282,6 +282,109 @@
     engine.notifyParent({ type: 'STAGE_SVG_RESPONSE', svg: svgMarkup });
   };
 
+  function buildFallbackStageSnapshot(engine) {
+    const stageSvg = typeof engine.getStageSvg === 'function' ? engine.getStageSvg() : null;
+    if (!stageSvg) return null;
+    const vb = (stageSvg.getAttribute && stageSvg.getAttribute('viewBox')) || '0 0 800 480';
+    const vbParts = vb.trim().split(/[\s,]+/).map(Number);
+    const width = (vbParts.length >= 4 && vbParts[2] > 0) ? vbParts[2] : 800;
+    const height = (vbParts.length >= 4 && vbParts[3] > 0) ? vbParts[3] : 480;
+    const observedTexts = [];
+    const seen = new Set();
+    if (typeof stageSvg.querySelectorAll === 'function') {
+      const textEls = stageSvg.querySelectorAll('text');
+      for (let i = 0; i < textEls.length && observedTexts.length < 24; i++) {
+        const t = String(textEls[i].textContent || '').replace(/\s+/g, ' ').trim();
+        if (t && !seen.has(t)) {
+          seen.add(t);
+          observedTexts.push(t);
+        }
+      }
+    }
+    const rawSvg = serializeStageSvg(stageSvg);
+    const innerMatch = rawSvg.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+    const svgMarkup = (innerMatch ? innerMatch[1] : rawSvg).slice(0, 56000);
+    return {
+      frameNumber: Math.max(1, Math.round(Number(engine.vars && engine.vars.swf_frame) || 1)),
+      totalFrames: Math.max(1, Math.round(Number(engine.vars && engine.vars.swf_totalframes) || 1)),
+      frameLabel: '',
+      width,
+      height,
+      bg: '#0f172a',
+      svgMarkup,
+      nodeCount: (svgMarkup.match(/<(?:path|rect|circle|ellipse|polygon|line|text)\b/gi) || []).length,
+      pathCount: (svgMarkup.match(/<path\b/gi) || []).length,
+      truncated: rawSvg.length > 56000,
+      observedTexts,
+      observedButtons: [],
+      observedVars: {},
+      fingerprint: `fb_${svgMarkup.length}_${observedTexts.length}`,
+    };
+  }
+
+  handlers.CAPTURE_SWF_STATE = ({ engine, data }) => {
+    if (typeof engine.notifyParent !== 'function') return;
+    const requestId = data && data.requestId ? data.requestId : undefined;
+    try {
+      let snapshot = null;
+      if (engine._avm1Vm && typeof engine._avm1Vm.captureDistillationSnapshot === 'function') {
+        snapshot = engine._avm1Vm.captureDistillationSnapshot({
+          maxNodes: data && data.maxNodes,
+          maxChars: data && data.maxChars,
+        });
+      } else {
+        snapshot = buildFallbackStageSnapshot(engine);
+      }
+      engine.notifyParent({
+        type: 'SWF_STATE_CAPTURED',
+        requestId,
+        ok: Boolean(snapshot && snapshot.svgMarkup),
+        snapshot,
+        error: snapshot && snapshot.svgMarkup ? undefined : 'No visible vector geometry detected on the current stage frame.',
+      });
+    } catch (err) {
+      engine.notifyParent({
+        type: 'SWF_STATE_CAPTURED',
+        requestId,
+        ok: false,
+        snapshot: null,
+        error: err && err.message ? err.message : String(err),
+      });
+    }
+  };
+
+  handlers.SWEEP_SWF_STATES = ({ engine, data }) => {
+    if (typeof engine.notifyParent !== 'function') return;
+    const requestId = data && data.requestId ? data.requestId : undefined;
+    try {
+      let snapshots = [];
+      if (engine._avm1Vm && typeof engine._avm1Vm.sweepDistillationStates === 'function') {
+        snapshots = engine._avm1Vm.sweepDistillationStates({
+          maxStates: data && data.maxStates,
+          budgetMs: data && data.budgetMs,
+        });
+      } else {
+        const fb = buildFallbackStageSnapshot(engine);
+        if (fb && fb.svgMarkup) snapshots = [fb];
+      }
+      engine.notifyParent({
+        type: 'SWF_STATES_SWEPT',
+        requestId,
+        ok: snapshots.length > 0,
+        snapshots,
+        error: snapshots.length > 0 ? undefined : 'Could not detect visible vector keyframes in this SWF.',
+      });
+    } catch (err) {
+      engine.notifyParent({
+        type: 'SWF_STATES_SWEPT',
+        requestId,
+        ok: false,
+        snapshots: [],
+        error: err && err.message ? err.message : String(err),
+      });
+    }
+  };
+
   handlers.DOWNLOAD_OFFLINE_ZIP = ({ engine }) => {
     if (typeof engine.downloadOfflineZipSuite === 'function') {
       engine.downloadOfflineZipSuite();
