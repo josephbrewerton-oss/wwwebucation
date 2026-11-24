@@ -148,9 +148,10 @@
         try { this._avm1Vm.destroy(); } catch (_) {}
         this._avm1Vm = null;
       }
+      this._avm1VmPending = false;
       const mountGen = (this._mountGeneration = (this._mountGeneration || 0) + 1);
       this._mountedContainer = container || null;
-      this._mountedSceneId = scene.id;
+      this._mountedSceneId = this.activePresetId || scene.id;
       this.setupBackdropVideo(scene);
       const stage = this.getStageSvg();
       if (stage) {
@@ -842,9 +843,10 @@
       }
 
       // Pre-classify scene execution mode once per mount (eliminates per-frame Object.keys allocation in tick)
+      const swfVm = (scene && (scene.swfVm || scene.swfVmPayload)) || null;
       this._isSlideScene = Boolean(scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide'));
       this._isDynamicScene = !this._isSlideScene && Boolean(
-        this.isContinuousSim || this.isDynamicSim || (scene && (
+        this.isContinuousSim || this.isDynamicSim || swfVm || (scene && (
           scene.continuous || scene.isContinuous || scene.type === 'Sim' || scene.cartridgeType === 'Sim' ||
           (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
           typeof scene.mount === 'function'
@@ -858,17 +860,24 @@
       this.translateInStageLabels();
 
       // Lazy-mount pure-SVG AVM1 Micro-VM when the scene carries an embedded (:swf-vm "...") program
-      if (scene.swfVmPayload && container) {
-        const payload = scene.swfVmPayload;
+      if (swfVm && container) {
         const stageSvgEl = this.getStageSvg();
+        const docRef = typeof document !== 'undefined' ? document : null;
         const bootAvm1 = (RuntimeCtor) => {
-          if (!RuntimeCtor || this._mountGeneration !== mountGen || this._mountedContainer !== container) return;
+          if (this._mountGeneration !== mountGen || this._mountedContainer !== container) return;
+          this._avm1VmPending = false;
+          if (!RuntimeCtor) return;
           if (this._avm1Vm) {
             try { this._avm1Vm.destroy(); } catch (_) {}
             this._avm1Vm = null;
           }
           try {
-            const vm = new RuntimeCtor(payload, { engine: this, container, stageSvg: stageSvgEl });
+            const vm = new RuntimeCtor(swfVm, {
+              engine: this,
+              doc: docRef,
+              stageSvg: stageSvgEl,
+              container
+            });
             vm.mount(container, stageSvgEl);
             this._avm1Vm = vm;
             this.emit('avm1mounted', { id: scene.id, swfVer: vm.swfVer, frameCount: vm.totalFrames });
@@ -882,7 +891,11 @@
         } else {
           const lazy = global.ASTLazyLoader || (typeof window !== 'undefined' ? window.ASTLazyLoader : null);
           if (lazy && typeof lazy.ensureAvm1Vm === 'function') {
+            this._avm1VmPending = true;
             lazy.ensureAvm1Vm().then(bootAvm1).catch((loadErr) => {
+              if (this._mountGeneration === mountGen) {
+                this._avm1VmPending = false;
+              }
               console.warn('[AST Engine] Failed lazy-loading ast-avm1-vm.js:', loadErr);
             });
           }
@@ -945,7 +958,8 @@
       if (parsed.computed) this.scene.computed = parsed.computed;
       if (parsed.gestures) this.scene.gestures = parsed.gestures;
       if (parsed.controls) this.scene.controls = parsed.controls;
-      this.scene.swfVmPayload = parsed.swfVmPayload || null;
+      this.scene.swfVm = parsed.swfVm || parsed.swfVmPayload || null;
+      this.scene.swfVmPayload = this.scene.swfVm;
       this.scene.keyframes = parsed.keyframes || [];
       this.scene.subtitles = parsed.subtitles || [];
       this.scene.rawBindings = parsed.bindings || parsed.rawBindings || [];
@@ -967,6 +981,14 @@
 
       this.activePresetId = this.scene.id || this.activePresetId;
       this.durationSec = this.scene.duration;
+      const isSlideHot = Boolean(this.scene.type === 'Slide' || this.scene.cartridgeType === 'Slide');
+      this.isContinuousSim = !isSlideHot && Boolean(
+        this.scene.swfVm ||
+        this.scene.swfVmPayload ||
+        this.scene.type === 'Sim' ||
+        this.scene.cartridgeType === 'Sim' ||
+        (this.scene.vars && (Array.isArray(this.scene.vars) ? this.scene.vars.length > 0 : Object.keys(this.scene.vars).length > 0))
+      );
       this.resetVars();
       this.updateComputedVars();
 

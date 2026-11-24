@@ -372,43 +372,94 @@
         savedAt: new Date().toISOString()
       };
 
-      // 1. Commit full payload to IndexedDB 'cartridges_vault'
-      if (typeof indexedDB !== 'undefined') {
-        const openReq = indexedDB.open('EdgeLearningEngineDB', 5);
+      // 1. Commit full payload to IndexedDB 'cartridges_vault' (version 7 aligned, non-blocking)
+      const _saveStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      if (_saveStore && typeof _saveStore.putVaultCartridge === 'function') {
+        Promise.resolve(_saveStore.putVaultCartridge(item)).catch((idbErr) => {
+          console.warn('[Player UI] IndexedDB vault write warning:', idbErr);
+        });
+      } else if (typeof indexedDB !== 'undefined') {
+        const openReq = indexedDB.open('EdgeLearningEngineDB', 7);
         openReq.onupgradeneeded = () => {
           const db = openReq.result;
           if (!db.objectStoreNames.contains('cartridges_vault')) {
             db.createObjectStore('cartridges_vault', { keyPath: 'id' });
           }
+          if (!db.objectStoreNames.contains('app_state')) {
+            db.createObjectStore('app_state', { keyPath: 'key' });
+          }
+          if (!db.objectStoreNames.contains('curriculum_packs')) {
+            db.createObjectStore('curriculum_packs', { keyPath: 'id' });
+          }
+          if (!db.objectStoreNames.contains('fs_handles')) {
+            db.createObjectStore('fs_handles', { keyPath: 'id' });
+          }
         };
         openReq.onsuccess = () => {
+          const db = openReq.result;
+          db.onversionchange = () => { try { db.close(); } catch (_) {} };
           try {
-            const db = openReq.result;
             if (db.objectStoreNames.contains('cartridges_vault')) {
               const tx = db.transaction('cartridges_vault', 'readwrite');
               tx.objectStore('cartridges_vault').put(item);
+              tx.oncomplete = () => { try { db.close(); } catch (_) {} };
+              tx.onerror = () => { try { db.close(); } catch (_) {} };
+            } else {
+              db.close();
             }
           } catch (idbErr) {
+            try { db.close(); } catch (_) {}
             console.warn('[Player UI] IndexedDB write warning:', idbErr);
           }
         };
       }
 
-      // 2. Synchronize index to IndexedDB-backed ASTLocalStore
-      const _saveStore = typeof globalThis !== 'undefined' ? globalThis.ASTLocalStore : null;
+      // 2. Synchronize compact index to IndexedDB-backed ASTLocalStore (strip multi-KB/MB SWF blobs from app_state index)
       if (_saveStore) {
         try {
+          const isHeavyPayload = (svgMarkup.length + astSource.length) > 32768;
+          const indexEntry = isHeavyPayload
+            ? {
+                id,
+                title,
+                stage,
+                category: item.category,
+                source: item.source,
+                tier: item.tier,
+                updatedAt: item.updatedAt,
+                savedAt: item.savedAt,
+                vaultBacked: true
+              }
+            : item;
           let customList = [];
           const rawCustom = _saveStore.getItem('stj_custom_cartridges_v1');
           if (rawCustom) customList = JSON.parse(rawCustom) || [];
-          const filteredCustom = customList.filter(c => c.id !== id);
-          filteredCustom.unshift(item);
+          const filteredCustom = customList
+            .filter(c => c && c.id !== id)
+            .map(c => {
+              const sz = (c.svgMarkup ? c.svgMarkup.length : 0) + (c.astSource ? c.astSource.length : 0);
+              if (sz > 32768) {
+                return {
+                  id: c.id,
+                  title: c.title,
+                  stage: c.stage,
+                  category: c.category,
+                  source: c.source,
+                  tier: c.tier,
+                  updatedAt: c.updatedAt,
+                  savedAt: c.savedAt,
+                  vaultBacked: true
+                };
+              }
+              return c;
+            });
+          filteredCustom.unshift(indexEntry);
           _saveStore.setItem('stj_custom_cartridges_v1', JSON.stringify(filteredCustom.slice(0, 50)));
 
           let vaultStubs = [];
           const rawVault = _saveStore.getItem('ast_local_vault');
           if (rawVault) vaultStubs = JSON.parse(rawVault) || [];
-          const filteredStubs = vaultStubs.filter(v => v.id !== id);
+          const filteredStubs = vaultStubs.filter(v => v && v.id !== id);
           filteredStubs.unshift({ id, title, stage, savedAt: item.savedAt });
           _saveStore.setItem('ast_local_vault', JSON.stringify(filteredStubs.slice(0, 50)));
         } catch (_) {}
@@ -428,13 +479,13 @@
       this.showToast(`💾 Saved to Local Vault: ${title}`);
       this.populatePresets();
 
-      // 4. Notify parent window if running inside an iframe
+      // 4. Notify parent window with lightweight metadata only (avoids multi-MB postMessage echo on SWF cartridges)
       if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
         try {
           window.parent.postMessage({
             source: 'ast-vector-player',
             type: 'CARTRIDGE_INGESTED',
-            cartridge: { id, title, stage, svgMarkup, astSource }
+            cartridge: { id, title, stage }
           }, '*');
         } catch (_) {}
       }

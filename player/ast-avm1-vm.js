@@ -1006,10 +1006,17 @@
 
     _jumpToFrame(nextFrame) {
       if (nextFrame === this._currentframe && !this._justSpawned) return;
-      this._currentframe = nextFrame;
-      this._frameChangedThisTick = true;
-      this.reconcileDisplayList(this._currentframe);
-      this.runFrameActions(this._currentframe);
+      const depth = (this._jumpDepth || 0);
+      if (depth >= 12) return;
+      this._jumpDepth = depth + 1;
+      try {
+        this._currentframe = nextFrame;
+        this._frameChangedThisTick = true;
+        this.reconcileDisplayList(this._currentframe);
+        this.runFrameActions(this._currentframe);
+      } finally {
+        this._jumpDepth = depth;
+      }
     }
 
     applyMatrix(m, alpha) {

@@ -20,10 +20,14 @@
   class ASTBindingRuntimeMethods {
   applyBindings(t, dt = 0.016, isTickStep = false) {
     // When the lazy-loaded pure-SVG AVM1 Micro-VM is driving an SWF cartridge, delegate frame stepping cleanly to it
+    // and bypass static declarative DOM binding overwrites so ASTAVM1Runtime owns #avm1-root.
     if (this._avm1Vm && this._avm1Vm._mounted) {
       if (isTickStep && this.isPlaying) {
-        this._avm1Vm.step(dt);
+        this._avm1Vm.step(dt * (this.speed || 1.0));
       }
+      return;
+    }
+    if (this._avm1VmPending) {
       return;
     }
 
