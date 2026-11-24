@@ -186,7 +186,24 @@
         });
       }
 
-      if (container && scene.svgText) {
+      const hasSwfVm = Boolean(scene && (scene._swfProgram || scene.swfVm || scene.swfVmPayload));
+
+      if (hasSwfVm && container) {
+        // AVM1 Micro-VM owns the stage DOM directly — skip expensive throwaway mountSvgStage/DOMParser parse!
+        if (scene.svgText && stage) {
+          const head = String(scene.svgText).slice(0, 512);
+          const vbMatch = head.match(/\bviewBox=["']([^"']+)["']/i);
+          if (vbMatch && vbMatch[1]) {
+            stage.setAttribute('viewBox', vbMatch[1]);
+            this._defaultViewBox = vbMatch[1];
+          }
+        }
+        if (typeof container.replaceChildren === 'function') {
+          container.replaceChildren();
+        } else {
+          while (container.firstChild) container.removeChild(container.firstChild);
+        }
+      } else if (container && scene.svgText) {
         try {
           if (global.ASTSharedRenderBoundary && typeof global.ASTSharedRenderBoundary.mountSvgStage === 'function') {
             const mountRes = global.ASTSharedRenderBoundary.mountSvgStage({
@@ -289,7 +306,6 @@
         }
       }
 
-      const hasSwfVm = Boolean(scene && (scene._swfProgram || scene.swfVm || scene.swfVmPayload));
       const hasDomQuery = Boolean(container && typeof container.querySelector === 'function');
       const bindingsList = !hasSwfVm
         ? ((scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []))
@@ -834,12 +850,12 @@
       // Initialize zero-GC Lab CSV log columnar buffers
       this._initLabLogBuffers();
 
-      if (scene.bindInputs && Array.isArray(scene.bindInputs)) {
+      if (!hasSwfVm && scene.bindInputs && Array.isArray(scene.bindInputs)) {
         scene.bindInputs.forEach(bi => this.registerBindInput(bi));
       }
 
       this.stateMachines.clear();
-      if (scene.stateMachines && Array.isArray(scene.stateMachines)) {
+      if (!hasSwfVm && scene.stateMachines && Array.isArray(scene.stateMachines)) {
         scene.stateMachines.forEach(smConfig => {
           this.addStateMachine(smConfig);
         });
