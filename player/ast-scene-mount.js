@@ -289,8 +289,11 @@
         }
       }
 
+      const hasSwfVm = Boolean(scene && (scene._swfProgram || scene.swfVm || scene.swfVmPayload));
       const hasDomQuery = Boolean(container && typeof container.querySelector === 'function');
-      const bindingsList = (scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []);
+      const bindingsList = !hasSwfVm
+        ? ((scene.rawBindings && scene.rawBindings.length) ? scene.rawBindings : (scene.bindings || []))
+        : [];
       const whenGroupMap = new Map();
       this._whenEvalCache = null;
       if (bindingsList && bindingsList.length) {
@@ -419,8 +422,8 @@
         this._whenEvalCache = new Int8Array(whenGroupMap.size);
       }
 
-      // Auto-bind SWF MovieClip <instance>_visible variables to visibility & pointer-events on mount (zero post-mount allocations)
-      if (hasDomQuery && scene.vars && typeof scene.vars === 'object') {
+      // Auto-bind SWF MovieClip <instance>_visible variables to visibility & pointer-events on mount (skipped when AVM1 VM owns stage)
+      if (!hasSwfVm && hasDomQuery && scene.vars && typeof scene.vars === 'object') {
         const varKeys = Array.isArray(scene.vars)
           ? scene.vars.map((v) => v && v.name).filter(Boolean)
           : Object.keys(scene.vars);
@@ -475,7 +478,7 @@
       this.updateComputedVars();
 
       try {
-        if (container) {
+        if (container && !hasSwfVm) {
           const dynamicTargets = new Set();
 
           if (Array.isArray(this.activeBindings)) {
@@ -843,7 +846,7 @@
       }
 
       // Pre-classify scene execution mode once per mount (eliminates per-frame Object.keys allocation in tick)
-      const swfVm = (scene && (scene.swfVm || scene.swfVmPayload)) || null;
+      const swfVm = (scene && (scene._swfProgram || scene.swfVm || scene.swfVmPayload)) || null;
       this._isSlideScene = Boolean(scene && (scene.type === 'Slide' || scene.cartridgeType === 'Slide'));
       this._isDynamicScene = !this._isSlideScene && Boolean(
         this.isContinuousSim || this.isDynamicSim || swfVm || (scene && (
@@ -856,8 +859,10 @@
       this._lastOrbitTransition = '';
       this._last3DSortKeys = null;
 
-      this.applyBindings(this.progress);
-      this.translateInStageLabels();
+      if (!swfVm) {
+        this.applyBindings(this.progress);
+        this.translateInStageLabels();
+      }
 
       // Lazy-mount pure-SVG AVM1 Micro-VM when the scene carries an embedded (:swf-vm "...") program
       if (swfVm && container) {
@@ -878,9 +883,18 @@
               stageSvg: stageSvgEl,
               container
             });
+            if (scene && vm.program) {
+              scene._swfProgram = vm.program;
+            }
             vm.mount(container, stageSvgEl);
             this._avm1Vm = vm;
-            this.emit('avm1mounted', { id: scene.id, swfVer: vm.swfVer, frameCount: vm.totalFrames });
+            this.emit('avm1mounted', {
+              id: scene.id,
+              swfVer: vm.swfVer,
+              frameCount: vm.rootClip ? vm.rootClip._totalframes : 1,
+              entryFrame: (vm.program && vm.program.ef) || 1,
+              isAs3: Boolean(vm.program && vm.program.as3)
+            });
           } catch (avmErr) {
             console.warn('[AST Engine] AVM1 Micro-VM boot fallback to declarative AST:', avmErr);
           }
