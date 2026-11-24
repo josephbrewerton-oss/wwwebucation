@@ -166,6 +166,7 @@ export function renderPlayerPage(): HTMLElement {
   const embedBtn = container.querySelector<HTMLButtonElement>('#player-btn-embed');
   const exportAirgapBtn = container.querySelector<HTMLButtonElement>('#player-btn-export-airgap');
   const drawerMount = container.querySelector<HTMLDivElement>('#player-drawer-mount-point');
+  const swfDistillerStripMount = container.querySelector<HTMLDivElement>('#player-swf-distiller-strip');
   const fileInputHidden = container.querySelector<HTMLInputElement>('#media-player-file-input')!;
   const fullscreenBtn = container.querySelector<HTMLButtonElement>('#player-btn-fullscreen')!;
   const searchInput = container.querySelector<HTMLInputElement>('#cartridge-search-input')!;
@@ -387,11 +388,45 @@ export function renderPlayerPage(): HTMLElement {
     !isStageOpen && (importParam === 'swf' || importParam === 'phet') ? importParam : null;
   let swfResult: any = null;
   let swfFileName = 'imported-swf';
+  let swfSelectedMode: 'run' | 'run-to-convert' | 'quick-transform' = 'run-to-convert';
   let isParsingSwf = false;
   let swfError: string | null = null;
   let swfDragActive = false;
   let swfDrawerModulePromise: Promise<typeof import('../components/player/SwfTranspilerDrawer')> | null = null;
+  let swfDistillerStripModulePromise: Promise<typeof import('../components/player/SwfDistillerStrip')> | null = null;
+  let swfNativeDistillerModulePromise: Promise<typeof import('../utils/swfNativeDistiller')> | null = null;
   let phetDrawerModulePromise: Promise<typeof import('../components/player/PhetTranspilerDrawer')> | null = null;
+  let swfDistillSession: {
+    active: boolean;
+    reviewOpen: boolean;
+    lessonTitle: string;
+    stageTag: string;
+    format: 'Slide' | 'Sim';
+    originalSwfBytes: number;
+    states: any[];
+    checkpoints: any[];
+    isCapturing: boolean;
+    isSweeping: boolean;
+    isPolishing: boolean;
+    statusNote: string | null;
+    polishNote: string | null;
+    pendingAutoAction: null | 'capture' | 'sweep';
+  } = {
+    active: false,
+    reviewOpen: false,
+    lessonTitle: 'Native Lesson',
+    stageTag: 'KS3 CURRICULUM',
+    format: 'Slide',
+    originalSwfBytes: 0,
+    states: [],
+    checkpoints: [],
+    isCapturing: false,
+    isSweeping: false,
+    isPolishing: false,
+    statusNote: null,
+    polishNote: null,
+    pendingAutoAction: null,
+  };
   let latestTelemetry: PlayerTelemetryEvent | null = null;
   let activeQuizContext: QuizCheckpointContext | null = null;
   let isAiDemonstrating = false;
@@ -432,11 +467,236 @@ export function renderPlayerPage(): HTMLElement {
     return swfDrawerModulePromise;
   }
 
+  function loadSwfDistillerStripModule() {
+    if (!swfDistillerStripModulePromise) {
+      swfDistillerStripModulePromise = import('../components/player/SwfDistillerStrip');
+    }
+    return swfDistillerStripModulePromise;
+  }
+
+  function loadSwfNativeDistillerModule() {
+    if (!swfNativeDistillerModulePromise) {
+      swfNativeDistillerModulePromise = import('../utils/swfNativeDistiller');
+    }
+    return swfNativeDistillerModulePromise;
+  }
+
   function loadPhetDrawerModule() {
     if (!phetDrawerModulePromise) {
       phetDrawerModulePromise = import('../components/player/PhetTranspilerDrawer');
     }
     return phetDrawerModulePromise;
+  }
+
+  function resetSwfDistillSession() {
+    swfDistillSession.active = false;
+    swfDistillSession.reviewOpen = false;
+    swfDistillSession.states = [];
+    swfDistillSession.checkpoints = [];
+    swfDistillSession.isCapturing = false;
+    swfDistillSession.isSweeping = false;
+    swfDistillSession.isPolishing = false;
+    swfDistillSession.statusNote = null;
+    swfDistillSession.polishNote = null;
+    swfDistillSession.pendingAutoAction = null;
+    renderSwfDistillerStripPanel();
+  }
+
+  function renderSwfDistillerStripPanel() {
+    if (!swfDistillerStripMount) return;
+    if (!swfDistillSession.active || !isStageOpen) {
+      swfDistillerStripMount.style.display = 'none';
+      swfDistillerStripMount.replaceChildren();
+      return;
+    }
+    swfDistillerStripMount.style.display = 'block';
+    loadSwfDistillerStripModule()
+      .then(({ renderSwfDistillerStrip }) => {
+        if (pageDisposed || !swfDistillerStripMount.isConnected || !swfDistillSession.active) return;
+        const stripEl = renderSwfDistillerStrip({
+          lessonTitle: swfDistillSession.lessonTitle,
+          originalSwfBytes: swfDistillSession.originalSwfBytes,
+          capturedStates: swfDistillSession.states,
+          isCapturing: swfDistillSession.isCapturing,
+          isSweeping: swfDistillSession.isSweeping,
+          statusNote: swfDistillSession.statusNote,
+          onCaptureState: () => {
+            void captureCurrentSwfState(false);
+          },
+          onAutoSweep: () => {
+            void sweepSwfStates(false);
+          },
+          onMoveState: (idx, delta) => {
+            const target = idx + delta;
+            if (target < 0 || target >= swfDistillSession.states.length) return;
+            const next = swfDistillSession.states.slice();
+            const [item] = next.splice(idx, 1);
+            next.splice(target, 0, item);
+            swfDistillSession.states = next;
+            renderSwfDistillerStripPanel();
+          },
+          onRemoveState: (idx) => {
+            swfDistillSession.states = swfDistillSession.states.filter((_, i) => i !== idx);
+            swfDistillSession.statusNote = `Removed View ${idx + 1}.`;
+            renderSwfDistillerStripPanel();
+          },
+          onOpenPromoteReview: () => {
+            if (swfDistillSession.states.length === 0) return;
+            swfDistillSession.reviewOpen = true;
+            activeDrawer = 'swf';
+            renderActiveDrawer(true);
+          },
+          onExitConvertMode: () => {
+            resetSwfDistillSession();
+            if (activeDrawer === 'swf') {
+              activeDrawer = null;
+              renderActiveDrawer();
+            }
+          },
+        });
+        swfDistillerStripMount.replaceChildren(stripEl);
+      })
+      .catch(() => {});
+  }
+
+  async function captureCurrentSwfState(silentIfDuplicate = false) {
+    if (swfDistillSession.isCapturing || !isStageOpen) return;
+    swfDistillSession.isCapturing = true;
+    swfDistillSession.statusNote = null;
+    renderSwfDistillerStripPanel();
+    try {
+      const [res, distiller] = await Promise.all([
+        postToPlayerWithAck<any>({ type: 'CAPTURE_SWF_STATE' }, 'SWF_STATE_CAPTURED', 6000),
+        loadSwfNativeDistillerModule(),
+      ]);
+      if (!res?.ok || !res.snapshot) {
+        swfDistillSession.statusNote = res?.error || 'No visible vector shapes detected on the current frame.';
+      } else {
+        const snap = distiller.normalizeCapturedSnapshot(
+          res.snapshot,
+          swfDistillSession.states.length,
+          swfDistillSession.lessonTitle
+        );
+        const isDup = swfDistillSession.states.some((s) => s.fingerprint === snap.fingerprint);
+        if (isDup) {
+          if (!silentIfDuplicate) {
+            swfDistillSession.statusNote = `View already captured (Frame ${snap.frameNumber}) — interact with the SWF to reach a new screen first.`;
+          }
+        } else if (swfDistillSession.states.length >= 24) {
+          swfDistillSession.statusNote = 'Reached the 24-view cap so your native cartridge stays ultra-light.';
+        } else {
+          swfDistillSession.states = [...swfDistillSession.states, snap];
+          if (swfDistillSession.states.length === 1) {
+            swfDistillSession.format = distiller.inferRecommendedFormat(swfDistillSession.states);
+          }
+          swfDistillSession.checkpoints = distiller.generateEcoCheckpoints(
+            swfDistillSession.states,
+            swfDistillSession.lessonTitle
+          );
+          swfDistillSession.statusNote = `Captured View ${swfDistillSession.states.length} (Frame ${snap.frameNumber}, ${snap.nodeCount} vector nodes).`;
+        }
+      }
+    } catch (err: any) {
+      swfDistillSession.statusNote = err?.message || 'Could not capture current stage state yet — try again once the Flash stage renders.';
+    } finally {
+      swfDistillSession.isCapturing = false;
+      renderSwfDistillerStripPanel();
+    }
+  }
+
+  async function sweepSwfStates(openReviewAfter = false) {
+    if (swfDistillSession.isSweeping || !isStageOpen) return;
+    swfDistillSession.isSweeping = true;
+    swfDistillSession.statusNote = 'Auto-sweeping labeled frames and keyframes within a safe time budget...';
+    renderSwfDistillerStripPanel();
+    try {
+      const [res, distiller] = await Promise.all([
+        postToPlayerWithAck<any>(
+          { type: 'SWEEP_SWF_STATES', maxStates: 10, budgetMs: 900 },
+          'SWF_STATES_SWEPT',
+          8000
+        ),
+        loadSwfNativeDistillerModule(),
+      ]);
+      const rawList = Array.isArray(res?.snapshots) ? res.snapshots : [];
+      if (!res?.ok || rawList.length === 0) {
+        swfDistillSession.statusNote = res?.error || 'Could not auto-detect additional frames; interact with the stage and click Capture State.';
+      } else {
+        const existingFps = new Set(swfDistillSession.states.map((s) => s.fingerprint));
+        const added: any[] = [];
+        for (const raw of rawList) {
+          if (swfDistillSession.states.length + added.length >= 24) break;
+          const norm = distiller.normalizeCapturedSnapshot(
+            raw,
+            swfDistillSession.states.length + added.length,
+            swfDistillSession.lessonTitle
+          );
+          if (!existingFps.has(norm.fingerprint)) {
+            existingFps.add(norm.fingerprint);
+            added.push(norm);
+          }
+        }
+        swfDistillSession.states = [...swfDistillSession.states, ...added];
+        swfDistillSession.format = distiller.inferRecommendedFormat(swfDistillSession.states);
+        swfDistillSession.checkpoints = distiller.generateEcoCheckpoints(
+          swfDistillSession.states,
+          swfDistillSession.lessonTitle
+        );
+        swfDistillSession.statusNote =
+          added.length > 0
+            ? `Auto-sweep captured ${added.length} distinct view${added.length === 1 ? '' : 's'} (${swfDistillSession.states.length} total).`
+            : 'All swept frames were already captured. Interact with buttons on stage to reach new screens.';
+
+        if (openReviewAfter && swfDistillSession.states.length > 0) {
+          swfDistillSession.reviewOpen = true;
+          activeDrawer = 'swf';
+          renderActiveDrawer(true);
+        }
+      }
+    } catch (err: any) {
+      swfDistillSession.statusNote = err?.message || 'Auto-sweep timed out — use Capture State while interacting live.';
+    } finally {
+      swfDistillSession.isSweeping = false;
+      renderSwfDistillerStripPanel();
+    }
+  }
+
+  function saveAndLaunchPromotedNativeCartridge(distilled: any) {
+    const m = distilled?.metrics;
+    const kbText = m ? `${(m.nativeTotalBytes / 1024).toFixed(1)} KB` : 'compact';
+    const savedHint = m && m.savedPercent > 0 ? ` (${m.savedPercent}% smaller than source SWF)` : '';
+    const cart: CartridgeDefinition = {
+      id: distilled.id,
+      title: distilled.title,
+      stage: distilled.stage || 'NATIVE DISTILLED',
+      category: 'Distilled Native Lessons',
+      type: distilled.type === 'Sim' ? 'Sim' : 'Slide',
+      desc: `Promoted from legacy Flash into pure W3C SVG + bytecode-free AST (${kbText}, ${m?.stateCount || 1} views, 0 B Flash bytecode).`,
+      icon: distilled.type === 'Sim' ? '🎮' : '📑',
+      source: 'user',
+      svgMarkup: distilled.svgMarkup,
+      astSource: distilled.astSource,
+      author: 'Run-to-Convert Distiller',
+      version: 'Native AST 1.0',
+      invariants: ['Pure W3C SVG', 'Zero Flash Bytecode', 'BSL & Subtitles Ready'],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    saveCustomCartridge(cart);
+    resetSwfDistillSession();
+    launcherImportPanel = null;
+    renderLauncherImportPanel();
+    if (activeDrawer === 'swf') {
+      activeDrawer = null;
+      renderActiveDrawer();
+    }
+    refreshDropdown();
+    renderGrid();
+    launchCustomCartridge(cart);
+    showImportStatus(
+      `✓ Promoted "${cart.title}" to Native AST (${kbText}${savedHint}, 0 B Flash bytecode) — saved to Local Vault with BSL, subtitles & checkpoints active.`,
+      'success'
+    );
   }
 
   function saveAndLaunchTranspiledPhet(res: any) {
@@ -482,13 +742,18 @@ export function renderPlayerPage(): HTMLElement {
     );
   }
 
-  function saveAndLaunchTranspiledSwf(res: any, rawName: string) {
+  function saveAndLaunchTranspiledSwf(
+    res: any,
+    rawName: string,
+    mode: 'run' | 'run-to-convert' | 'quick-transform' = 'run'
+  ) {
     const cleanId = (rawName || 'imported-swf')
       .replace(/\.swf$/i, '')
       .toLowerCase()
       .replace(/[^a-z0-9_-]/g, '-') || `flash-${Date.now().toString(36)}`;
     const cleanTitle = cleanId.replace(/[-_]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
     const swfMeta = res?.metadata;
+    const originalBytes = (res?.svgMarkup?.length || 0) + (res?.astSource?.length || 0);
     const cart: CartridgeDefinition = {
       id: cleanId,
       title: `Flash: ${cleanTitle}`,
@@ -517,9 +782,57 @@ export function renderPlayerPage(): HTMLElement {
     }
     refreshDropdown();
     launchCustomCartridge(cart);
+
+    if (mode === 'run-to-convert' || mode === 'quick-transform') {
+      swfDistillSession = {
+        active: true,
+        reviewOpen: false,
+        lessonTitle: cleanTitle,
+        stageTag: 'KS3 CURRICULUM',
+        format: swfMeta?.isActionScript3 ? 'Slide' : 'Sim',
+        originalSwfBytes: originalBytes,
+        states: [],
+        checkpoints: [],
+        isCapturing: false,
+        isSweeping: false,
+        isPolishing: false,
+        statusNote:
+          mode === 'quick-transform'
+            ? 'Mounting SWF stage and running bounded Quick Transform frame sweep...'
+            : 'Live Flash stage mounted — capturing initial view. Interact with the SWF and capture each screen you want to promote.',
+        polishNote: null,
+        pendingAutoAction: mode === 'quick-transform' ? 'sweep' : 'capture',
+      };
+      renderSwfDistillerStripPanel();
+      if (isIframeReady) {
+        setTimeout(() => {
+          if (pageDisposed || !swfDistillSession.active || !isStageOpen) return;
+          const action = swfDistillSession.pendingAutoAction;
+          swfDistillSession.pendingAutoAction = null;
+          if (action === 'sweep') {
+            void sweepSwfStates(true);
+          } else if (action === 'capture') {
+            void captureCurrentSwfState(true);
+          }
+        }, 550);
+      }
+    } else {
+      resetSwfDistillSession();
+    }
+
     if (swfMeta?.isActionScript3) {
       showImportStatus(
         `⚡ Imported "${cart.title}" — Note: this SWF uses ActionScript 3.0 (AVM2/DoABC); vector graphics & timelines render in pure SVG, while interactive scripts require ActionScript 1.0/2.0 (AVM1).`,
+        'success'
+      );
+    } else if (mode === 'run-to-convert') {
+      showImportStatus(
+        `Run-to-Convert active for "${cleanTitle}" — play the live stage below and click Capture State on each screen to promote to Native AST.`,
+        'success'
+      );
+    } else if (mode === 'quick-transform') {
+      showImportStatus(
+        `Quick Transform started for "${cleanTitle}" — sweeping visible vector frames into a Native AST draft.`,
         'success'
       );
     } else {
@@ -589,11 +902,42 @@ export function renderPlayerPage(): HTMLElement {
           setSwfFileName: (name) => {
             swfFileName = name;
           },
+          selectedMode: swfSelectedMode,
+          setSelectedMode: (m) => {
+            swfSelectedMode = m;
+          },
           setCustomSvgCode: () => {},
           setCustomAstCode: () => {},
           postToPlayer: (payload) => postToPlayer(payload),
           setHotReloadFlash: () => {},
-          onLaunchCartridge: (res, name) => saveAndLaunchTranspiledSwf(res, name),
+          onLaunchCartridge: (res, name, launchMode) => saveAndLaunchTranspiledSwf(res, name, launchMode || swfSelectedMode),
+          distillReview: swfDistillSession.reviewOpen
+            ? {
+                reviewOpen: true,
+                lessonTitle: swfDistillSession.lessonTitle,
+                stageTag: swfDistillSession.stageTag,
+                format: swfDistillSession.format,
+                states: swfDistillSession.states,
+                checkpoints: swfDistillSession.checkpoints,
+                originalSwfBytes: swfDistillSession.originalSwfBytes,
+                isPolishing: swfDistillSession.isPolishing,
+                polishNote: swfDistillSession.polishNote,
+              }
+            : null,
+          onUpdateDistillReview: (patch) => {
+            Object.assign(swfDistillSession, patch);
+            rerender();
+            renderSwfDistillerStripPanel();
+          },
+          onBackToLiveCapture: () => {
+            swfDistillSession.reviewOpen = false;
+            if (activeDrawer === 'swf') {
+              activeDrawer = null;
+              renderActiveDrawer();
+            }
+            renderSwfDistillerStripPanel();
+          },
+          onSavePromotedCartridge: (distilled) => saveAndLaunchPromotedNativeCartridge(distilled),
           onClose: onClosePanel,
         });
         targetEl.replaceChildren(drawerEl);
@@ -910,6 +1254,7 @@ export function renderPlayerPage(): HTMLElement {
     initialExternalSrc = null;
     activeDrawer = null;
     renderActiveDrawer();
+    resetSwfDistillSession();
     if (integrityReadoutEl) integrityReadoutEl.style.display = 'none';
     // Unload the stage iframe completely to stop audio/physics loops and free RAM on low-spec hardware
     if (iframe) {
@@ -1409,6 +1754,19 @@ export function renderPlayerPage(): HTMLElement {
         }
       }
       updatePlayButtonUI(Boolean(e.data.isPlaying));
+
+      if (swfDistillSession.active && swfDistillSession.pendingAutoAction) {
+        setTimeout(() => {
+          if (pageDisposed || !swfDistillSession.active || !isStageOpen) return;
+          const action = swfDistillSession.pendingAutoAction;
+          swfDistillSession.pendingAutoAction = null;
+          if (action === 'sweep') {
+            void sweepSwfStates(true);
+          } else if (action === 'capture') {
+            void captureCurrentSwfState(true);
+          }
+        }, 550);
+      }
 
       if (pendingAutoEppBench && (!e.data.preset || e.data.preset === activePreset)) {
         pendingAutoEppBench = false;

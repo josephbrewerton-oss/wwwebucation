@@ -231,6 +231,9 @@ export function renderPlayerShellHtml(params: PlayerShellTemplateParams): string
           title="AST Interactive Vector Stage">
         </iframe>
       </div>
+
+      <!-- Docked Run-to-Convert Flash Distiller Strip -->
+      <div id="player-swf-distiller-strip" style="display:none;"></div>
     </div>
 
     <!-- Catholic Sanctuary Linkage Banner -->
