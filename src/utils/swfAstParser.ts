@@ -2785,8 +2785,15 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           }
           const variableName = reader.readString();
           const initialText = hasText ? reader.readString() : '';
-          const plainText = isHtml ? initialText.replace(/<[^>]+>/g, '') : initialText;
-
+          let plainText = String(initialText ?? '');
+          if (isHtml) {
+            let prev: string;
+            do {
+          prev = plainText;
+            plainText = plainText.replace(/<[^>]*>/g, '');
+            } while (plainText !== prev);
+              plainText = plainText.replace(/[<>]/g, '');
+            }
           editTexts.set(charId, {
             charId,
             x: Number(bounds.xMin.toFixed(2)),
