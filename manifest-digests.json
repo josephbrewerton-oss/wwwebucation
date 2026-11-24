@@ -1,7 +1,7 @@
 {
   "version": "1.0.0",
-  "compositeHash": "a91f8dadab7f",
-  "generatedAt": "2026-11-24T11:50:38.101Z",
+  "compositeHash": "57e1220b891d",
+  "generatedAt": "2026-11-24T11:52:19.707Z",
   "files": {
     "nano-map.ast": "568a99c10f2f08b8",
     "manifest.json": "5b581a737ccec74d",
@@ -22,7 +22,7 @@
     "player/ast-parser.js": "a5256a47344c8fc5",
     "player/ast-3d.js": "e042ca7a0e3ce8e3",
     "player/ast-bridge-playback.js": "120987d9f0485f76",
-    "player/ast-bridge-cartridge.js": "2c372b6fce4fca0d",
+    "player/ast-bridge-cartridge.js": "2bdfa932825285ad",
     "player/ast-bridge-telemetry.js": "95e21102b90ac33e",
     "player/ast-bridge.js": "51b8ca945879e843",
     "player/ast-exporter.js": "bf41b09100749738",
