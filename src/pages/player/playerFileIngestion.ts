@@ -80,7 +80,9 @@ export async function ingestUploadedCartridgeFiles(
         astSource: swfRes.astSource,
         author: 'Flash Archive',
         version: `Flash v${meta?.version || 9}`,
-        invariants: ['Legacy Vector Timeline', 'ActionScript Translation'],
+        invariants: meta?.isActionScript3
+          ? ['Legacy Vector Timeline', 'ActionScript 3.0 (AVM2 — Vector Stage Mode)']
+          : ['Legacy Vector Timeline', 'ActionScript AVM1 Runtime'],
         createdAt: Date.now(),
         updatedAt: Date.now(),
       };

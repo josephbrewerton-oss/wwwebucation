@@ -17,8 +17,31 @@
   'use strict';
 
   const SVG_NS = 'http://www.w3.org/2000/svg';
-  const MAX_OPS_PER_EXEC = 200000;
+  const MAX_OPS_PER_EXEC = 60000;
+  const TICK_OPS_BUDGET = 45000;
+  const BOOT_OPS_BUDGET = 150000;
+  const TICK_TIME_BUDGET_MS = 10;
+  const BOOT_TIME_BUDGET_MS = 35;
   const MAX_CALL_DEPTH = 64;
+  const MAX_LIVE_CLIPS = 512;
+  const MAX_CHILDREN_PER_CLIP = 256;
+  const MAX_DRAW_PATHS = 512;
+  const MAX_TRACES = 200;
+
+  let _sharedDomParser = null;
+  function _nowMs() {
+    return typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  }
+  function matEquals(a, b) {
+    if (a === b) return true;
+    if (!a || !b || a.length < 6 || b.length < 6) return false;
+    return (
+      a[0] === b[0] && a[1] === b[1] && a[2] === b[2] &&
+      a[3] === b[3] && a[4] === b[4] && a[5] === b[5]
+    );
+  }
 
   // ClipEventFlags bitmasks (SWF 5/6+)
   const CE_LOAD = 0x0001;
@@ -369,13 +392,33 @@
     return el;
   }
 
+  const _FLAT_SVG_SHAPE_RE = /^(?:\s*<(path|rect|circle|ellipse|polygon|polyline|line)\b([^>]*?)\/>\s*)+$/i;
+  const _SINGLE_TAG_RE = /<(path|rect|circle|ellipse|polygon|polyline|line)\b([^>]*?)\/>/gi;
+  const _ATTR_RE = /([a-zA-Z0-9_:-]+)="([^"]*)"/g;
+
   function parseSvgSnippetToNode(doc, svgSnippet) {
     if (!svgSnippet) return createSvgEl(doc, 'g');
+    // Fast zero-DOMParser path for flat self-closing vector primitives emitted by swfAstParser
+    if (!svgSnippet.includes('&') && _FLAT_SVG_SHAPE_RE.test(svgSnippet)) {
+      const g = createSvgEl(doc, 'g');
+      _SINGLE_TAG_RE.lastIndex = 0;
+      let m;
+      while ((m = _SINGLE_TAG_RE.exec(svgSnippet)) !== null) {
+        const node = createSvgEl(doc, m[1].toLowerCase());
+        _ATTR_RE.lastIndex = 0;
+        let am;
+        while ((am = _ATTR_RE.exec(m[2])) !== null) {
+          if (!/^on/i.test(am[1])) node.setAttribute(am[1], am[2]);
+        }
+        g.appendChild(node);
+      }
+      return g;
+    }
     const wrapped = `<svg xmlns="${SVG_NS}">${svgSnippet}</svg>`;
     if (typeof DOMParser !== 'undefined' && doc && typeof doc.importNode === 'function') {
       try {
-        const parser = new DOMParser();
-        const parsed = parser.parseFromString(wrapped, 'image/svg+xml');
+        if (!_sharedDomParser) _sharedDomParser = new DOMParser();
+        const parsed = _sharedDomParser.parseFromString(wrapped, 'image/svg+xml');
         const root = parsed && parsed.documentElement;
         if (root && !root.querySelector('parsererror')) {
           // Strip unsafe elements/attrs defensively
@@ -580,6 +623,9 @@
       this._overGroup = createSvgEl(vm.doc, 'g');
       this._downGroup = createSvgEl(vm.doc, 'g');
       this._hitGroup = createSvgEl(vm.doc, 'g');
+      this._upGroup.setAttribute('pointer-events', 'all');
+      this._overGroup.setAttribute('pointer-events', 'all');
+      this._downGroup.setAttribute('pointer-events', 'all');
       this._hitGroup.setAttribute('opacity', '0');
       this._hitGroup.setAttribute('pointer-events', 'all');
 
@@ -602,9 +648,7 @@
         if (rec.s & 0x01) { this._upGroup.appendChild(buildRecEl()); hasUp = true; }
         if (rec.s & 0x02) { this._overGroup.appendChild(buildRecEl()); hasOver = true; }
         if (rec.s & 0x04) { this._downGroup.appendChild(buildRecEl()); hasDown = true; }
-        if ((rec.s & 0x08) && !(rec.s & 0x07)) {
-          this._hitGroup.appendChild(buildRecEl());
-        }
+        if (rec.s & 0x08) { this._hitGroup.appendChild(buildRecEl()); }
       }
       if (!hasUp && recs.length > 0) {
         const wrap = createSvgEl(vm.doc, 'g');
@@ -624,12 +668,14 @@
 
       this._onEnter = () => {
         if (!this.enabled || this._removed) return;
+        this._vm._beginEventBudget();
         this._setState('over');
         this._fireCondition(BTN_IDLE_TO_OVER_UP);
         if (typeof this.onRollOver === 'function') this._vm._invokeValue(this.onRollOver, this, []);
       };
       this._onLeave = () => {
         if (!this.enabled || this._removed) return;
+        this._vm._beginEventBudget();
         const wasDown = this._state === 'down';
         this._setState('up');
         this._fireCondition(wasDown ? BTN_OVER_DOWN_TO_OUT_DOWN : BTN_OVER_UP_TO_IDLE);
@@ -638,6 +684,7 @@
       this._onDown = (e) => {
         if (!this.enabled || this._removed) return;
         if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        this._vm._beginEventBudget();
         this._setState('down');
         this._fireCondition(BTN_OVER_UP_TO_OVER_DOWN | BTN_IDLE_TO_OVER_DOWN);
         if (typeof this.onPress === 'function') this._vm._invokeValue(this.onPress, this, []);
@@ -645,15 +692,25 @@
       this._onUp = (e) => {
         if (!this.enabled || this._removed) return;
         if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+        this._vm._beginEventBudget();
         this._setState('over');
         this._fireCondition(BTN_OVER_DOWN_TO_OVER_UP);
         if (typeof this.onRelease === 'function') this._vm._invokeValue(this.onRelease, this, []);
+      };
+      this._onKeyActivate = (e) => {
+        if (!this.enabled || this._removed) return;
+        if (e && (e.key === 'Enter' || e.key === ' ' || e.key === 'Spacebar')) {
+          if (typeof e.preventDefault === 'function') e.preventDefault();
+          if (typeof e.stopPropagation === 'function') e.stopPropagation();
+          this.triggerClick();
+        }
       };
 
       this.svgEl.addEventListener('pointerenter', this._onEnter);
       this.svgEl.addEventListener('pointerleave', this._onLeave);
       this.svgEl.addEventListener('pointerdown', this._onDown);
       this.svgEl.addEventListener('pointerup', this._onUp);
+      this.svgEl.addEventListener('keydown', this._onKeyActivate);
       vm._liveButtons.add(this);
     }
 
@@ -741,6 +798,7 @@
       this.svgEl.removeEventListener('pointerleave', this._onLeave);
       this.svgEl.removeEventListener('pointerdown', this._onDown);
       this.svgEl.removeEventListener('pointerup', this._onUp);
+      if (this._onKeyActivate) this.svgEl.removeEventListener('keydown', this._onKeyActivate);
     }
   }
 
@@ -761,6 +819,7 @@
       this._vars = Object.create(null);
       this._childrenByDepth = new Map(); // depth -> { charId, obj, svgWrap, clipDepth, maskId }
       this._removed = false;
+      vm._liveClipCount = (vm._liveClipCount || 0) + 1;
 
       // Timeline state
       this._totalframes = Math.max(1, this._def.fc || (this._def.fr ? this._def.fr.length : 1));
@@ -803,10 +862,14 @@
       this._drawGroup = null;
       this._drawState = null;
 
-      // Pointer handlers for script-assigned onPress / onRelease / onRollOver / onRollOut
+      // Pointer handlers for script-assigned onPress / onRelease / onRollOver / onRollOut and clipActions
       this._pointerBound = false;
       this._isMouseOver = false;
       this._isMouseDown = false;
+      this._proto = null;
+      if (this._clipActions.some((ca) => (ca.f & (CE_PRESS | CE_RELEASE | CE_RELEASE_OUTSIDE | CE_ROLL_OVER | CE_ROLL_OUT)) !== 0)) {
+        this._ensurePointerListeners();
+      }
     }
 
     _ensurePointerListeners() {
@@ -815,6 +878,7 @@
       this.svgEl.style.cursor = this.useHandCursor ? 'pointer' : '';
       this._onPtrDown = (e) => {
         if (!this.enabled || !this._visible || this._removed) return;
+        this._vm._beginEventBudget();
         this._isMouseDown = true;
         if (typeof this._vars.onPress === 'function') {
           if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
@@ -824,6 +888,7 @@
       };
       this._onPtrUp = (e) => {
         if (!this.enabled || !this._visible || this._removed) return;
+        this._vm._beginEventBudget();
         const wasDown = this._isMouseDown;
         this._isMouseDown = false;
         if (wasDown) {
@@ -836,6 +901,7 @@
       };
       this._onPtrEnter = () => {
         if (!this.enabled || !this._visible || this._removed) return;
+        this._vm._beginEventBudget();
         this._isMouseOver = true;
         if (typeof this._vars.onRollOver === 'function') {
           this._vm._invokeValue(this._vars.onRollOver, this, []);
@@ -844,6 +910,7 @@
       };
       this._onPtrLeave = () => {
         if (!this.enabled || this._removed) return;
+        this._vm._beginEventBudget();
         this._isMouseOver = false;
         if (typeof this._vars.onRollOut === 'function') {
           this._vm._invokeValue(this._vars.onRollOut, this, []);
@@ -869,7 +936,8 @@
       return mulMat(this._parent.getWorldMatrix(), local);
     }
 
-    getLocalBBox() {
+    getLocalBBox(depth = 0) {
+      if (depth > 24) return { x: 0, y: 0, w: 0, h: 0 };
       let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
       const includeRect = (x, y, w, h, m) => {
         if (w <= 0 && h <= 0) return;
@@ -892,7 +960,7 @@
         const obj = slot.obj;
         if (obj && obj._isMovieClip) {
           if (!obj._visible) return;
-          const bb = obj.getLocalBBox();
+          const bb = obj.getLocalBBox(depth + 1);
           if (bb.w > 0 || bb.h > 0) {
             includeRect(bb.x, bb.y, bb.w, bb.h, obj.getLocalMatrix());
           }
@@ -1078,7 +1146,8 @@
      */
     reconcileDisplayList(frameNum) {
       const frames = this._def.fr || [];
-      const entries = frames[frameNum - 1] || [];
+      const idx = Math.max(0, Math.min(frames.length - 1, frameNum - 1));
+      const entries = frames[idx] || [];
       const wantedByDepth = new Map();
       for (let i = 0; i < entries.length; i++) {
         wantedByDepth.set(entries[i].d, entries[i]);
@@ -1096,6 +1165,8 @@
       for (let i = 0; i < toRemove.length; i++) {
         this._removeSlotAtDepth(toRemove[i]);
       }
+
+      let childrenMutated = toRemove.length > 0;
 
       // 2. Active masks for this frame (clipDepth)
       const activeMasks = [];
@@ -1125,11 +1196,11 @@
               matrix: e.m || null,
             };
             this._childrenByDepth.set(depth, slot);
-          } else if (e.m && JSON.stringify(e.m) !== JSON.stringify(slot.matrix)) {
-            slot.matrix = e.m;
+          } else if (!matEquals(e.m || null, slot.matrix)) {
+            slot.matrix = e.m || null;
             if (slot.maskEl) {
               slot.maskEl.replaceChildren();
-              this._vm._populateClipPath(slot.maskEl, e.c, e.m);
+              this._vm._populateClipPath(slot.maskEl, e.c, e.m || null);
             }
           }
           activeMasks.push({ clipDepth: e.cd, maskId: slot.maskId });
@@ -1148,18 +1219,29 @@
         let slot = this._childrenByDepth.get(depth);
         if (!slot) {
           slot = this._createSlot(depth, e.c, e.m || null, e.a !== undefined ? e.a : 1, e.n || '', e.ca || [], false, maskId);
+          childrenMutated = true;
           if (slot && slot.obj && slot.obj._isMovieClip) {
             newlySpawnedClips.push(slot.obj);
           }
         } else {
-          // Update transform & alpha if continuing instance
+          // Update transform & alpha only when changed
           if (slot.obj && typeof slot.obj.applyMatrix === 'function') {
             slot.obj.applyMatrix(e.m || null, e.a !== undefined ? e.a : 1);
           } else if (slot.svgEl) {
-            slot.matrix = e.m || null;
-            const mat = e.m || [1, 0, 0, 1, 0, 0];
-            slot.svgEl.setAttribute('transform', `matrix(${mat.map(fmtNum).join(' ')})`);
-            if (e.a !== undefined) slot.svgEl.setAttribute('opacity', fmtNum(e.a));
+            if (!matEquals(e.m || null, slot.matrix)) {
+              slot.matrix = e.m || null;
+              const mat = e.m || [1, 0, 0, 1, 0, 0];
+              const tStr = `matrix(${fmtNum(mat[0])} ${fmtNum(mat[1])} ${fmtNum(mat[2])} ${fmtNum(mat[3])} ${fmtNum(mat[4])} ${fmtNum(mat[5])})`;
+              if (tStr !== slot._lastTransform) {
+                slot._lastTransform = tStr;
+                slot.svgEl.setAttribute('transform', tStr);
+              }
+            }
+            const nextAlpha = e.a !== undefined ? fmtNum(e.a) : '1';
+            if (nextAlpha !== slot._lastOpacity) {
+              slot._lastOpacity = nextAlpha;
+              slot.svgEl.setAttribute('opacity', nextAlpha);
+            }
           }
           // Update mask wrapper if mask assignment changed
           if (slot.maskId !== maskId) {
@@ -1170,17 +1252,22 @@
         }
       }
 
-      this._reorderSvgChildren();
+      if (childrenMutated) {
+        this._reorderSvgChildren();
+      }
 
-      // Initialize newly spawned MovieClips (reconcile frame 1, fire DoInitAction, onClipEvent(load), frame 1 DoAction)
+      // Initialize newly spawned MovieClips (reconcile frame 1, fire DoInitAction, registered AS2 class, onClipEvent(load), frame 1 DoAction)
       for (let i = 0; i < newlySpawnedClips.length; i++) {
         const mc = newlySpawnedClips[i];
         if (mc._removed) continue;
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
+        this._vm._applyRegisteredClass(mc);
         mc.reconcileDisplayList(1);
         mc._fireClipEvents(CE_LOAD);
-        mc.runFrameActions(1);
+        if (!mc._removed && mc._currentframe === 1) {
+          mc.runFrameActions(1);
+        }
       }
     }
 
@@ -1222,6 +1309,9 @@
         svgOuter.appendChild(svgEl);
       }
 
+      const initMat = matrix || [1, 0, 0, 1, 0, 0];
+      const initTStr = obj ? '' : `matrix(${fmtNum(initMat[0])} ${fmtNum(initMat[1])} ${fmtNum(initMat[2])} ${fmtNum(initMat[3])} ${fmtNum(initMat[4])} ${fmtNum(initMat[5])})`;
+      const initOpStr = obj ? '' : (alpha !== undefined ? fmtNum(alpha) : '1');
       const slot = {
         depth,
         charId,
@@ -1232,6 +1322,8 @@
         matrix: matrix || null,
         bbox,
         maskId: maskId || null,
+        _lastTransform: initTStr,
+        _lastOpacity: initOpStr,
       };
       this._childrenByDepth.set(depth, slot);
       this.svgEl.appendChild(svgOuter);
@@ -1279,7 +1371,7 @@
     }
 
     stepFrame() {
-      if (this._removed) return;
+      if (this._removed || this._vm._isOverBudget()) return;
       this._frameChangedThisTick = false;
 
       // 1. Advance timeline if playing and multi-frame
@@ -1287,27 +1379,34 @@
         const next = this._currentframe >= this._totalframes ? 1 : this._currentframe + 1;
         this._currentframe = next;
         this.reconcileDisplayList(this._currentframe);
-        this.runFrameActions(this._currentframe);
+        if (!this._vm._isOverBudget()) {
+          this.runFrameActions(this._currentframe);
+        }
         if (this._removed) return;
       }
 
-      // 2. Fire onClipEvent(enterFrame) and clip.onEnterFrame()
-      this._fireClipEvents(CE_ENTER_FRAME);
-      if (this._removed) return;
-      if (typeof this._vars.onEnterFrame === 'function') {
-        this._vm._invokeValue(this._vars.onEnterFrame, this, []);
+      // 2. Fire onClipEvent(enterFrame) and clip.onEnterFrame() (respect runaway-script throttle)
+      if (!this._vm._skipBgScriptsThisTick && !this._vm._isOverBudget()) {
+        this._fireClipEvents(CE_ENTER_FRAME);
         if (this._removed) return;
+        if (!this._vm._isOverBudget() && typeof this._vars.onEnterFrame === 'function') {
+          this._vm._invokeValue(this._vars.onEnterFrame, this, []);
+          if (this._removed) return;
+        }
       }
 
       // 3. Step live child MovieClips and sync DefineEditText fields
-      const snapshot = Array.from(this._childrenByDepth.values());
-      for (let i = 0; i < snapshot.length; i++) {
-        const obj = snapshot[i].obj;
-        if (!obj) continue;
-        if (obj._isMovieClip && !obj._removed) {
-          obj.stepFrame();
-        } else if (obj._isTextField) {
-          obj.syncVariableFromScope();
+      if (this._childrenByDepth.size > 0) {
+        const snapshot = Array.from(this._childrenByDepth.values());
+        for (let i = 0; i < snapshot.length; i++) {
+          if (this._vm._isOverBudget()) break;
+          const obj = snapshot[i].obj;
+          if (!obj) continue;
+          if (obj._isMovieClip && !obj._removed) {
+            obj.stepFrame();
+          } else if (obj._isTextField) {
+            obj.syncVariableFromScope();
+          }
         }
       }
       this.commitSvg();
@@ -1319,6 +1418,11 @@
       const charId = this._vm._lookupExport(linkageName);
       if (charId === undefined) return undefined;
       const d = Math.floor(Number(depth) || 0);
+      if (!this._childrenByDepth.has(d)) {
+        if ((this._vm._liveClipCount || 0) >= MAX_LIVE_CLIPS || this._childrenByDepth.size >= MAX_CHILDREN_PER_CLIP) {
+          return undefined;
+        }
+      }
       this._removeSlotAtDepth(d);
       const slot = this._createSlot(d, charId, null, 1, String(newName || ''), [], true, null);
       this._reorderSvgChildren();
@@ -1331,9 +1435,12 @@
         }
         mc._justSpawned = false;
         this._vm._ensureSpriteInitAction(mc.charId, mc);
+        this._vm._applyRegisteredClass(mc, linkageName);
         mc.reconcileDisplayList(1);
         mc._fireClipEvents(CE_LOAD);
-        mc.runFrameActions(1);
+        if (!mc._removed && mc._currentframe === 1) {
+          mc.runFrameActions(1);
+        }
         mc.commitSvg();
       }
       return mc;
@@ -1342,6 +1449,11 @@
     duplicateMovieClip(newName, depth, initObj) {
       if (!this._parent) return undefined;
       const d = Math.floor(Number(depth) || 0);
+      if (!this._parent._childrenByDepth.has(d)) {
+        if ((this._vm._liveClipCount || 0) >= MAX_LIVE_CLIPS || this._parent._childrenByDepth.size >= MAX_CHILDREN_PER_CLIP) {
+          return undefined;
+        }
+      }
       this._parent._removeSlotAtDepth(d);
       const slot = this._parent._createSlot(
         d,
@@ -1380,6 +1492,11 @@
 
     createEmptyMovieClip(newName, depth) {
       const d = Math.floor(Number(depth) || 0);
+      if (!this._childrenByDepth.has(d)) {
+        if ((this._vm._liveClipCount || 0) >= MAX_LIVE_CLIPS || this._childrenByDepth.size >= MAX_CHILDREN_PER_CLIP) {
+          return undefined;
+        }
+      }
       this._removeSlotAtDepth(d);
       const mc = new AVM1MovieClip(this._vm, 0, { fc: 1, l: [], fr: [[]], ac: [] }, this, d, String(newName || ''), []);
       mc._justSpawned = false;
@@ -1526,6 +1643,17 @@
     _flushDrawPath() {
       if (!this._drawState || !this._drawState.pathD) return;
       const st = this._drawState;
+      if (st.pathEl) {
+        st.pathEl.setAttribute('d', st.pathD);
+        st.pathEl = null;
+        st.pathD = '';
+        return;
+      }
+      const existingCount = (this._drawGroup.children && this._drawGroup.children.length) || 0;
+      if (existingCount >= MAX_DRAW_PATHS) {
+        st.pathD = '';
+        return;
+      }
       const p = createSvgEl(this._vm.doc, 'path');
       p.setAttribute('d', st.pathD);
       p.setAttribute('fill', st.fill);
@@ -1539,6 +1667,34 @@
       }
       this._drawGroup.appendChild(p);
       st.pathD = '';
+    }
+
+    _syncLiveStrokePath() {
+      const st = this._drawState;
+      if (!st || !st.pathD) return;
+      if (!st.pathEl) {
+        const existingCount = (this._drawGroup.children && this._drawGroup.children.length) || 0;
+        if (existingCount >= MAX_DRAW_PATHS) {
+          st.pathD = '';
+          return;
+        }
+        const p = createSvgEl(this._vm.doc, 'path');
+        p.setAttribute('fill', 'none');
+        p.setAttribute('stroke', st.stroke);
+        if (st.stroke !== 'none') {
+          p.setAttribute('stroke-width', fmtNum(st.strokeWidth || 1));
+          p.setAttribute('stroke-linecap', 'round');
+          p.setAttribute('stroke-linejoin', 'round');
+          if (st.strokeAlpha < 1) p.setAttribute('stroke-opacity', fmtNum(st.strokeAlpha));
+        }
+        this._drawGroup.appendChild(p);
+        st.pathEl = p;
+      }
+      st.pathEl.setAttribute('d', st.pathD);
+      if (st.pathD.length > 16384) {
+        st.pathEl = null;
+        st.pathD = '';
+      }
     }
 
     clear() {
@@ -1594,7 +1750,7 @@
       this._drawState.curX = nx;
       this._drawState.curY = ny;
       this._expandDrawBBox(nx, ny);
-      if (this._drawState.fill === 'none') this._flushDrawPath();
+      if (this._drawState.fill === 'none') this._syncLiveStrokePath();
     }
 
     curveTo(cx, cy, ax, ay) {
@@ -1609,12 +1765,13 @@
       this._drawState.curY = nay;
       this._expandDrawBBox(ncx, ncy);
       this._expandDrawBBox(nax, nay);
-      if (this._drawState.fill === 'none') this._flushDrawPath();
+      if (this._drawState.fill === 'none') this._syncLiveStrokePath();
     }
 
     destroy() {
       if (this._removed) return;
       this._removed = true;
+      this._vm._liveClipCount = Math.max(0, (this._vm._liveClipCount || 1) - 1);
       this._fireClipEvents(CE_UNLOAD);
       if (typeof this._vars.onUnload === 'function') {
         try { this._vm._invokeValue(this._vars.onUnload, this, []); } catch (_) {}
@@ -1661,10 +1818,16 @@
       this._liveButtons = new Set();
 
       // Build export linkage lookup (exact + case-insensitive)
+      this._exportByCharId = new Map();
+      this._registeredClasses = new Map();
+      this._mcProto = Object.create(null);
       const exps = this.program.exp || {};
       for (const k of Object.keys(exps)) {
         this._exportLookup.set(k, exps[k]);
         this._exportLookup.set(k.toLowerCase(), exps[k]);
+        if (!this._exportByCharId.has(exps[k])) {
+          this._exportByCharId.set(exps[k], k.toLowerCase());
+        }
       }
 
       // Runtime clock, input, drag, timers
@@ -1686,6 +1849,15 @@
       this._nextIntervalId = 1;
       this._callDepth = 0;
       this._traces = [];
+      this._liveClipCount = 0;
+      this._tickOpsRemaining = BOOT_OPS_BUDGET;
+      this._tickDeadlineMs = Infinity;
+      this._budgetExceededThisTick = false;
+      this._consecutiveBudgetExceeds = 0;
+      this._scriptThrottled = false;
+      this._throttleCounter = 0;
+      this._skipBgScriptsThisTick = false;
+      this._warnedThrottle = false;
 
       // Built-in Flash globals
       this._global = this._createFlashGlobals();
@@ -1806,20 +1978,118 @@
         },
       };
 
+      // VM-isolated Object & MovieClip constructors (supports AS2 Object.registerClass & MovieClip.prototype safely)
+      function FlashObject(val) {
+        return val !== undefined ? Object(val) : {};
+      }
+      FlashObject.prototype = Object.prototype;
+      FlashObject.registerClass = function (linkageId, ctor) {
+        if (!linkageId) return false;
+        const key = String(linkageId).toLowerCase();
+        if (typeof ctor === 'function') {
+          vm._registeredClasses.set(key, ctor);
+          return true;
+        }
+        vm._registeredClasses.delete(key);
+        return true;
+      };
+
+      function FlashMovieClip() {}
+      FlashMovieClip.prototype = vm._mcProto;
+
+      // Flash ASBroadcaster (used widely by Flash MX/8 preloaders and UI components)
+      const ASBroadcasterObj = {
+        initialize(obj) {
+          if (!obj || (typeof obj !== 'object' && typeof obj !== 'function')) return;
+          obj._listeners = [];
+          obj.addListener = function (listener) {
+            if (!listener) return false;
+            this.removeListener(listener);
+            this._listeners.push(listener);
+            return true;
+          };
+          obj.removeListener = function (listener) {
+            const idx = this._listeners.indexOf(listener);
+            if (idx !== -1) {
+              this._listeners.splice(idx, 1);
+              return true;
+            }
+            return false;
+          };
+          obj.broadcastMessage = function (eventName, ...bArgs) {
+            const list = this._listeners ? this._listeners.slice() : [];
+            for (let i = 0; i < list.length; i++) {
+              const fn = vm._getMember(list[i], eventName);
+              if (typeof fn === 'function') vm._invokeValue(fn, list[i], bArgs);
+            }
+          };
+        },
+      };
+
+      const SystemObj = {
+        capabilities: {
+          version: 'LNX 10,0,0,0',
+          playerType: 'PlugIn',
+          language: 'en',
+          os: 'Web',
+          screenResolutionX: vm.stageWidth,
+          screenResolutionY: vm.stageHeight,
+        },
+        security: {
+          allowDomain() {},
+          allowInsecureDomain() {},
+        },
+        useCodepage: false,
+      };
+
+      function FlashMovieClipLoader() {
+        this._listeners = [];
+      }
+      FlashMovieClipLoader.prototype.addListener = function (l) {
+        if (l && this._listeners.indexOf(l) === -1) this._listeners.push(l);
+        return true;
+      };
+      FlashMovieClipLoader.prototype.removeListener = function (l) {
+        const i = this._listeners.indexOf(l);
+        if (i !== -1) this._listeners.splice(i, 1);
+        return i !== -1;
+      };
+      FlashMovieClipLoader.prototype.getProgress = function () {
+        const fl = vm.program.fl || 4096;
+        return { bytesLoaded: fl, bytesTotal: fl };
+      };
+      FlashMovieClipLoader.prototype.loadClip = function (_url, target) {
+        const tgt = vm._resolveTargetPath(target, vm.rootClip) || target;
+        const fl = vm.program.fl || 4096;
+        const list = this._listeners.slice();
+        for (let i = 0; i < list.length; i++) {
+          const l = list[i];
+          if (l && typeof l.onLoadStart === 'function') vm._invokeValue(l.onLoadStart, l, [tgt]);
+          if (l && typeof l.onLoadProgress === 'function') vm._invokeValue(l.onLoadProgress, l, [tgt, fl, fl]);
+          if (l && typeof l.onLoadComplete === 'function') vm._invokeValue(l.onLoadComplete, l, [tgt, 200]);
+          if (l && typeof l.onLoadInit === 'function') vm._invokeValue(l.onLoadInit, l, [tgt]);
+        }
+        return true;
+      };
+      FlashMovieClipLoader.prototype.unloadClip = function () { return true; };
+
       g.Math = Math;
       g.Key = KeyObj;
       g.Mouse = MouseObj;
       g.Stage = StageObj;
+      g.System = SystemObj;
+      g.ASBroadcaster = ASBroadcasterObj;
+      g.MovieClipLoader = FlashMovieClipLoader;
       g.Color = FlashColor;
       g.Sound = FlashSound;
       g.SharedObject = SharedObjectObj;
       g.Array = Array;
-      g.Object = Object;
+      g.Object = FlashObject;
       g.String = String;
       g.Number = Number;
       g.Boolean = Boolean;
       g.Date = Date;
-      g.MovieClip = AVM1MovieClip;
+      g.MovieClip = FlashMovieClip;
       g.TextField = AVM1TextField;
       g.NaN = NaN;
       g.Infinity = Infinity;
@@ -1832,7 +2102,7 @@
       g.int = (v) => Math.trunc(vm._toNum(v));
       g.random = (n) => Math.floor(Math.random() * Math.max(1, Math.floor(vm._toNum(n))));
       g.getTimer = () => Math.round(vm._elapsedMs);
-      g.trace = (m) => { vm._traces.push(String(m)); };
+      g.trace = (m) => { vm._pushTrace(String(m)); };
       g.updateAfterEvent = () => {};
       g.fscommand = () => {};
       g.getURL = () => {};
@@ -1862,7 +2132,37 @@
       return g;
     }
 
-    _instantiateStaticCharSvg(charId) {
+    _pushTrace(msg) {
+      if (this._traces.length >= MAX_TRACES) {
+        this._traces.shift();
+      }
+      this._traces.push(msg);
+    }
+
+    _beginTickBudget(opsBudget, timeBudgetMs) {
+      this._tickOpsRemaining = opsBudget;
+      this._tickDeadlineMs = _nowMs() + timeBudgetMs;
+      this._budgetExceededThisTick = false;
+    }
+
+    _beginEventBudget() {
+      this._scriptThrottled = false;
+      this._consecutiveBudgetExceeds = 0;
+      this._skipBgScriptsThisTick = false;
+      this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
+    }
+
+    _isOverBudget() {
+      if (this._budgetExceededThisTick) return true;
+      if (this._tickOpsRemaining <= 0 || _nowMs() > this._tickDeadlineMs) {
+        this._budgetExceededThisTick = true;
+        return true;
+      }
+      return false;
+    }
+
+    _instantiateStaticCharSvg(charId, visited = null, depth = 0) {
+      if (depth > 16) return null;
       if (this._shapeTemplateCache.has(charId)) {
         return this._shapeTemplateCache.get(charId).cloneNode(true);
       }
@@ -1884,6 +2184,9 @@
       }
       const sp = this.program.sp && this.program.sp[charId];
       if (sp && sp.fr && sp.fr[0]) {
+        const seen = visited ? new Set(visited) : new Set();
+        if (seen.has(charId)) return null;
+        seen.add(charId);
         const g = createSvgEl(this.doc, 'g');
         const entries = sp.fr[0];
         for (let i = 0; i < entries.length; i++) {
@@ -1891,11 +2194,12 @@
           if (e.cd) continue;
           const childWrap = createSvgEl(this.doc, 'g');
           if (e.m) childWrap.setAttribute('transform', `matrix(${e.m.map(fmtNum).join(' ')})`);
-          const sub = this._instantiateStaticCharSvg(e.c);
+          const sub = this._instantiateStaticCharSvg(e.c, seen, depth + 1);
           if (sub) childWrap.appendChild(sub);
           g.appendChild(childWrap);
         }
-        return g;
+        this._shapeTemplateCache.set(charId, g);
+        return g.cloneNode(true);
       }
       return null;
     }
@@ -1934,6 +2238,19 @@
         if (ias[i].c === charId && ias[i].b64) {
           this.execBytecode(ias[i].b64, targetClip || this.rootClip);
         }
+      }
+    }
+
+    _applyRegisteredClass(mc, explicitLinkage) {
+      if (!mc || !this._registeredClasses || this._registeredClasses.size === 0) return;
+      const key = explicitLinkage
+        ? String(explicitLinkage).toLowerCase()
+        : (mc.charId ? this._exportByCharId.get(mc.charId) : null);
+      if (!key) return;
+      const ctor = this._registeredClasses.get(key);
+      if (typeof ctor === 'function') {
+        mc._proto = ctor.prototype || null;
+        this._invokeValue(ctor, mc, []);
       }
     }
 
@@ -2001,18 +2318,32 @@
       this._bindStageInputs();
       this._mounted = true;
 
-      // Boot frame 1!
+      // Boot frame 1 with a bounded wall-clock & op budget so runaway SWF boot scripts cannot freeze the tab
+      this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
       this.rootClip._justSpawned = false;
       // Run any top-level DoInitAction tags first
       const ias = this.program.ia || [];
       for (let i = 0; i < ias.length; i++) {
+        if (this._isOverBudget()) break;
         if (!this._initedSprites.has(ias[i].c) && ias[i].b64) {
           this._initedSprites.add(ias[i].c);
           this.execBytecode(ias[i].b64, this.rootClip);
         }
       }
       this.rootClip.reconcileDisplayList(1);
-      this.rootClip.runFrameActions(1);
+      if (!this._isOverBudget() && this.rootClip._currentframe === 1) {
+        this.rootClip.runFrameActions(1);
+      }
+      // If the transpiler detected leading network/dead-end preloader frames (program.ef > 1)
+      // and Frame 1 scripts left _root stuck before entryFrame, advance cleanly into the main body.
+      const entryFrame = Number(this.program.ef) || 1;
+      if (entryFrame > 1 && entryFrame <= this.rootClip._totalframes && !this._isOverBudget()) {
+        const stuckBeforeEntry = this.rootClip._currentframe < entryFrame && !this.rootClip._playing;
+        const preloaderStripped = Boolean(this.program.ps) && this.rootClip._currentframe < entryFrame;
+        if (stuckBeforeEntry || preloaderStripped) {
+          this.rootClip.gotoAndPlay(entryFrame);
+        }
+      }
       this.rootClip.commitSvg();
       this._syncTelemetry();
       return true;
@@ -2050,7 +2381,11 @@
       const target = this.stageSvg || this.container;
       const win = typeof window !== 'undefined' ? window : null;
 
+      this._lastPointerMoveMs = 0;
       this._onPointerMove = (e) => {
+        const now = _nowMs();
+        if (now - this._lastPointerMoveMs < 15) return;
+        this._lastPointerMoveMs = now;
         const pt = this._clientToStage(e.clientX, e.clientY);
         this.setMousePosition(pt.x, pt.y);
       };
@@ -2101,8 +2436,10 @@
       this._mouseX = Number(x) || 0;
       this._mouseY = Number(y) || 0;
       this._updateDrag();
+      this._beginTickBudget(TICK_OPS_BUDGET, TICK_TIME_BUDGET_MS);
       this._broadcastClipEvent(this.rootClip, CE_MOUSE_MOVE, 'onMouseMove');
       for (let i = 0; i < this._mouseListeners.length; i++) {
+        if (this._isOverBudget()) break;
         const l = this._mouseListeners[i];
         if (l && typeof l.onMouseMove === 'function') this._invokeValue(l.onMouseMove, l, []);
       }
@@ -2110,8 +2447,10 @@
 
     triggerMouseDown() {
       this._mouseDown = true;
+      this._beginEventBudget();
       this._broadcastClipEvent(this.rootClip, CE_MOUSE_DOWN, 'onMouseDown');
       for (let i = 0; i < this._mouseListeners.length; i++) {
+        if (this._isOverBudget()) break;
         const l = this._mouseListeners[i];
         if (l && typeof l.onMouseDown === 'function') this._invokeValue(l.onMouseDown, l, []);
       }
@@ -2119,8 +2458,10 @@
 
     triggerMouseUp() {
       this._mouseDown = false;
+      this._beginEventBudget();
       this._broadcastClipEvent(this.rootClip, CE_MOUSE_UP, 'onMouseUp');
       for (let i = 0; i < this._mouseListeners.length; i++) {
+        if (this._isOverBudget()) break;
         const l = this._mouseListeners[i];
         if (l && typeof l.onMouseUp === 'function') this._invokeValue(l.onMouseUp, l, []);
       }
@@ -2131,10 +2472,12 @@
       this._keysDown.add(kc);
       this._lastKeyCode = kc;
       this._lastKeyAscii = ascii !== undefined ? ascii : kc;
+      this._beginEventBudget();
       this._broadcastClipEvent(this.rootClip, CE_KEY_DOWN, 'onKeyDown');
       this._broadcastClipEvent(this.rootClip, CE_KEY_PRESS, null, kc);
-      this._liveButtons.forEach((btn) => btn._fireKeyPress(kc));
+      this._liveButtons.forEach((btn) => { if (!this._isOverBudget()) btn._fireKeyPress(kc); });
       for (let i = 0; i < this._keyListeners.length; i++) {
+        if (this._isOverBudget()) break;
         const l = this._keyListeners[i];
         if (l && typeof l.onKeyDown === 'function') this._invokeValue(l.onKeyDown, l, []);
       }
@@ -2143,21 +2486,26 @@
     triggerKeyUp(flashKeyCode) {
       const kc = Number(flashKeyCode) | 0;
       this._keysDown.delete(kc);
+      this._beginEventBudget();
       this._broadcastClipEvent(this.rootClip, CE_KEY_UP, 'onKeyUp');
       for (let i = 0; i < this._keyListeners.length; i++) {
+        if (this._isOverBudget()) break;
         const l = this._keyListeners[i];
         if (l && typeof l.onKeyUp === 'function') this._invokeValue(l.onKeyUp, l, []);
       }
     }
 
     _broadcastClipEvent(clip, flagMask, handlerProp, keyCode) {
-      if (!clip || clip._removed) return;
+      if (!clip || clip._removed || this._isOverBudget()) return;
       clip._fireClipEvents(flagMask, keyCode);
+      if (clip._removed || this._isOverBudget()) return;
       if (handlerProp && typeof clip._vars[handlerProp] === 'function') {
         this._invokeValue(clip._vars[handlerProp], clip, []);
       }
+      if (clip._childrenByDepth.size === 0) return;
       const kids = Array.from(clip._childrenByDepth.values());
       for (let i = 0; i < kids.length; i++) {
+        if (this._isOverBudget()) break;
         if (kids[i].obj && kids[i].obj._isMovieClip) {
           this._broadcastClipEvent(kids[i].obj, flagMask, handlerProp, keyCode);
         }
@@ -2210,49 +2558,84 @@
 
     /**
      * Advances the SWF runtime by `dtSec` (called from AST engine 60 FPS tick loop).
-     * Paces Flash frames at the SWF's exact native FPS independently of monitor refresh rate.
+     * Paces Flash frames at the SWF's exact native FPS independently of monitor refresh rate,
+     * with a strict shared op + wall-clock budget so runaway SWF scripts can never hang the browser.
      */
     step(dtSec) {
       if (!this._mounted) return;
-      const dt = Math.max(0, Math.min(0.1, Number(dtSec) || 0.0166667));
-      this._elapsedMs += dt * 1000;
+      try {
+        const dt = Math.max(0, Math.min(0.1, Number(dtSec) || 0.0166667));
+        this._elapsedMs += dt * 1000;
+        this._beginTickBudget(TICK_OPS_BUDGET, TICK_TIME_BUDGET_MS);
 
-      // Run setInterval timers
-      if (this._intervals.size > 0) {
-        const dtMs = dt * 1000;
-        const entries = Array.from(this._intervals.entries());
-        for (let i = 0; i < entries.length; i++) {
-          const [id, rec] = entries[i];
-          if (!this._intervals.has(id)) continue;
-          rec.acc += dtMs;
-          if (rec.acc >= rec.ms) {
-            rec.acc -= rec.ms;
-            if (rec.once) this._intervals.delete(id);
-            if (rec.fn) {
-              this._invokeValue(rec.fn, rec.thisObj, rec.args);
-            } else if (rec.obj && rec.methodName) {
-              const m = this._getMember(rec.obj, rec.methodName);
-              if (typeof m === 'function') this._invokeValue(m, rec.obj, rec.args);
+        if (this._scriptThrottled) {
+          this._throttleCounter = (this._throttleCounter + 1) % 15;
+          this._skipBgScriptsThisTick = this._throttleCounter !== 0;
+        } else {
+          this._skipBgScriptsThisTick = false;
+        }
+
+        // Run setInterval timers (respect runaway-script throttle & per-tick budget)
+        if (!this._skipBgScriptsThisTick && this._intervals.size > 0) {
+          const dtMs = dt * 1000;
+          const entries = Array.from(this._intervals.entries());
+          for (let i = 0; i < entries.length; i++) {
+            if (this._isOverBudget()) break;
+            const [id, rec] = entries[i];
+            if (!this._intervals.has(id)) continue;
+            rec.acc += dtMs;
+            if (rec.acc >= rec.ms) {
+              rec.acc %= rec.ms;
+              if (rec.once) this._intervals.delete(id);
+              if (rec.fn) {
+                this._invokeValue(rec.fn, rec.thisObj, rec.args);
+              } else if (rec.obj && rec.methodName) {
+                const m = this._getMember(rec.obj, rec.methodName);
+                if (typeof m === 'function') this._invokeValue(m, rec.obj, rec.args);
+              }
             }
           }
         }
-      }
 
-      this._updateDrag();
+        this._updateDrag();
 
-      // Native-FPS frame pacing (cap catchup to 2 SWF frames per render tick)
-      this._frameAcc += dt;
-      let steps = 0;
-      while (this._frameAcc >= this.frameStepSec - 1e-5 && steps < 2) {
-        this._frameAcc -= this.frameStepSec;
-        this._tickCount++;
-        this.rootClip.stepFrame();
-        steps++;
+        // Native-FPS frame pacing (cap catchup to 2 SWF frames per render tick; abort immediately on budget overrun)
+        this._frameAcc += dt;
+        let steps = 0;
+        while (this._frameAcc >= this.frameStepSec - 1e-5 && steps < 2) {
+          if (this._isOverBudget()) {
+            this._frameAcc = 0;
+            break;
+          }
+          this._frameAcc -= this.frameStepSec;
+          this._tickCount++;
+          this.rootClip.stepFrame();
+          steps++;
+        }
+        if (this._frameAcc > this.frameStepSec * 2) {
+          this._frameAcc = 0;
+        }
+
+        if (this._budgetExceededThisTick) {
+          this._consecutiveBudgetExceeds++;
+          if (this._consecutiveBudgetExceeds >= 10 && !this._scriptThrottled) {
+            this._scriptThrottled = true;
+            if (!this._warnedThrottle) {
+              this._warnedThrottle = true;
+              console.warn('[AST AVM1] Runaway ActionScript loop detected; throttling background scripts to keep browser responsive.');
+            }
+          }
+        } else if (steps > 0) {
+          this._consecutiveBudgetExceeds = 0;
+        }
+
+        this._syncTelemetry();
+      } catch (err) {
+        if (!this._warnedStepErr) {
+          this._warnedStepErr = true;
+          console.warn('[AST AVM1] Non-fatal frame step exception:', err);
+        }
       }
-      if (this._frameAcc > this.frameStepSec * 2) {
-        this._frameAcc = 0;
-      }
-      this._syncTelemetry();
     }
 
     /**
@@ -2262,6 +2645,8 @@
       if (!this._mounted) return;
       this._elapsedMs += this.frameStepSec * 1000;
       this._tickCount++;
+      this._skipBgScriptsThisTick = false;
+      this._beginTickBudget(BOOT_OPS_BUDGET, BOOT_TIME_BUDGET_MS);
       this._updateDrag();
       this.rootClip.stepFrame();
       this._syncTelemetry();
@@ -2280,7 +2665,7 @@
     reset() {
       const container = this.container;
       const stageSvg = this.stageSvg;
-      this.destroy();
+      this.destroy(true);
       this._initedSprites.clear();
       this._liveButtons.clear();
       this._intervals.clear();
@@ -2290,6 +2675,11 @@
       this._tickCount = 0;
       this._instCounter = 0;
       this._maskCounter = 0;
+      this._liveClipCount = 0;
+      this._consecutiveBudgetExceeds = 0;
+      this._scriptThrottled = false;
+      this._skipBgScriptsThisTick = false;
+      this._warnedThrottle = false;
       this.rootClip = new AVM1MovieClip(
         this,
         0,
@@ -2307,7 +2697,7 @@
       if (container) this.mount(container, stageSvg);
     }
 
-    destroy() {
+    destroy(keepCaches = false) {
       this._mounted = false;
       this._intervals.clear();
       this._dragClip = null;
@@ -2324,6 +2714,11 @@
       }
       if (this.rootClip) this.rootClip.destroy();
       this._liveButtons.clear();
+      if (!keepCaches) {
+        this._shapeTemplateCache.clear();
+        this._decodedCache.clear();
+        this._traces.length = 0;
+      }
     }
 
     // =========================================================================
@@ -2431,6 +2826,8 @@
         case '_currentframe': return clip._currentframe || 1;
         case '_totalframes': return clip._totalframes || 1;
         case '_framesloaded': return clip._totalframes || 1;
+        case '_bytesloaded':
+        case '_bytestotal': return this.program.fl || 4096;
         case '_name': return clip._name || '';
         case '_target': return clip._isMovieClip ? clip.getTargetPath() : '';
         case '_parent': return clip._parent || undefined;
@@ -2498,8 +2895,14 @@
       switch (name) {
         case 'play': return () => clip.play();
         case 'stop': return () => clip.stop();
-        case 'gotoAndPlay': return (f) => clip.gotoAndPlay(f);
-        case 'gotoAndStop': return (f) => clip.gotoAndStop(f);
+        case 'gotoAndPlay': return (a, b) => {
+          const target = b !== undefined && !clip._labelMap.has(String(a == null ? '' : a).trim().toLowerCase()) ? b : a;
+          clip.gotoAndPlay(target);
+        };
+        case 'gotoAndStop': return (a, b) => {
+          const target = b !== undefined && !clip._labelMap.has(String(a == null ? '' : a).trim().toLowerCase()) ? b : a;
+          clip.gotoAndStop(target);
+        };
         case 'nextFrame': return () => clip.nextFrame();
         case 'prevFrame': return () => clip.prevFrame();
         case 'attachMovie': return (lnk, nm, d, init) => clip.attachMovie(lnk, nm, d, init);
@@ -2507,6 +2910,8 @@
         case 'createEmptyMovieClip': return (nm, d) => clip.createEmptyMovieClip(nm, d);
         case 'removeMovieClip': return () => clip.removeMovieClip();
         case 'unloadMovie': return () => clip.removeMovieClip();
+        case 'loadMovie': return () => {};
+        case 'loadVariables': return () => {};
         case 'swapDepths': return (t) => clip.swapDepths(t);
         case 'getNextHighestDepth': return () => clip.getNextHighestDepth();
         case 'getDepth': return () => clip.getDepth();
@@ -2566,6 +2971,25 @@
           ];
           for (let i = 0; i < mcMethods.length; i++) {
             if (mcMethods[i].toLowerCase() === kl) return this._getClipMethod(obj, mcMethods[i]);
+          }
+        }
+        // Registered AS2 class prototype (Object.registerClass) and MovieClip.prototype
+        if (obj._proto && typeof obj._proto === 'object') {
+          if (key in obj._proto) return obj._proto[key];
+          if (this.caseInsensitive) {
+            const kl = key.toLowerCase();
+            for (const k in obj._proto) {
+              if (k.toLowerCase() === kl) return obj._proto[k];
+            }
+          }
+        }
+        if (this._mcProto) {
+          if (key in this._mcProto) return this._mcProto[key];
+          if (this.caseInsensitive) {
+            const kl = key.toLowerCase();
+            for (const k in this._mcProto) {
+              if (k.toLowerCase() === kl) return this._mcProto[k];
+            }
           }
         }
         return undefined;
@@ -2643,7 +3067,7 @@
       }
     }
 
-    _getVariable(name, targetClip, scopes, withStack) {
+    _getVariable(name, targetClip, scopes, withStack, thisObj) {
       const key = String(name || '');
       if (!key) return undefined;
 
@@ -2655,7 +3079,7 @@
       const kl = key.toLowerCase();
       if (kl === '_root' || kl === '_level0') return this.rootClip;
       if (kl === '_global') return this._global;
-      if (kl === 'this') return targetClip;
+      if (kl === 'this') return (thisObj !== undefined && thisObj !== null) ? thisObj : targetClip;
       if (kl === '_parent') return targetClip ? targetClip._parent : undefined;
 
       // 1. With stack (innermost first)
@@ -2680,24 +3104,35 @@
         }
       }
 
-      // 3. Target clip vars, children, special props, methods
+      // 3. Active non-MovieClip thisObj members (AS2 class/listener methods)
+      if (thisObj && thisObj !== targetClip && typeof thisObj === 'object') {
+        const tv = this._getMember(thisObj, key);
+        if (tv !== undefined) return tv;
+      }
+
+      // 4. Target clip vars, children, special props, methods
       if (targetClip) {
         const v = this._getMember(targetClip, key);
         if (v !== undefined) return v;
       }
 
-      // 4. _root (if different from targetClip)
+      // 5. _root (if different from targetClip)
       if (targetClip !== this.rootClip) {
         const rv = this._getMember(this.rootClip, key);
         if (rv !== undefined) return rv;
       }
 
-      // 5. _global built-ins
+      // 6. _global built-ins
       if (key in this._global) return this._global[key];
       if (this.caseInsensitive) {
         for (const k in this._global) {
           if (k.toLowerCase() === kl) return this._global[k];
         }
+      }
+
+      // 7. Fallback for dot-path variable names (e.g. "_root.preloader.pct")
+      if (key.includes('.')) {
+        return this._resolveVariablePath(key, targetClip);
       }
 
       return undefined;
@@ -2783,7 +3218,7 @@
         else if (!fn._suppressThis) localScope.this = thisObj;
         if (fn._preloadArguments) regs[r++] = argsObj;
         else if (!fn._suppressArguments) localScope.arguments = argsObj;
-        if (fn._preloadSuper) regs[r++] = undefined;
+        if (fn._preloadSuper) regs[r++] = (thisObj && typeof thisObj === 'object') ? Object.getPrototypeOf(thisObj) : undefined;
         if (fn._preloadRoot) regs[r++] = this.rootClip;
         if (fn._preloadParent) regs[r++] = targetClip ? targetClip._parent : undefined;
         if (fn._preloadGlobal) regs[r++] = this._global;
@@ -2849,7 +3284,14 @@
       };
 
       while (pc < total) {
-        if (++ops > MAX_OPS_PER_EXEC) break;
+        if (++ops > MAX_OPS_PER_EXEC || --this._tickOpsRemaining <= 0) {
+          this._budgetExceededThisTick = true;
+          break;
+        }
+        if ((ops & 511) === 0 && _nowMs() > this._tickDeadlineMs) {
+          this._budgetExceededThisTick = true;
+          break;
+        }
         const ins = instrs[pc];
 
         // Pop expired With scopes
@@ -2878,14 +3320,24 @@
           case 0x08: // ActionToggleQuality
           case 0x09: // ActionStopSounds
             break;
-          case 0x81: { // ActionGotoFrame (0-based UI16)
+          case 0x81: { // ActionGotoFrame (0-based UI16); fuse trailing 0x06 ActionPlay into gotoAndPlay
             const frame0 = readUI16(bytes, ins.pStart);
-            if (curTarget && curTarget._isMovieClip) curTarget.gotoAndStop(frame0 + 1);
+            const fusePlay = pc < total && instrs[pc].code === 0x06;
+            if (fusePlay) pc++;
+            if (curTarget && curTarget._isMovieClip) {
+              if (fusePlay) curTarget.gotoAndPlay(frame0 + 1);
+              else curTarget.gotoAndStop(frame0 + 1);
+            }
             break;
           }
-          case 0x8C: { // ActionGoToLabel
+          case 0x8C: { // ActionGoToLabel; fuse trailing 0x06 ActionPlay into gotoAndPlay
             const lbl = readCString(bytes, ins.pStart, ins.pEnd).value;
-            if (curTarget && curTarget._isMovieClip) curTarget.gotoAndStop(lbl);
+            const fusePlay = pc < total && instrs[pc].code === 0x06;
+            if (fusePlay) pc++;
+            if (curTarget && curTarget._isMovieClip) {
+              if (fusePlay) curTarget.gotoAndPlay(lbl);
+              else curTarget.gotoAndStop(lbl);
+            }
             break;
           }
           case 0x9F: { // ActionGotoFrame2
@@ -3079,7 +3531,7 @@
           // --- Variables, Members, Properties, Objects, Arrays ---
           case 0x1C: { // ActionGetVariable
             const name = this._toStr(stack.pop());
-            stack.push(this._getVariable(name, curTarget, scopes, withStack));
+            stack.push(this._getVariable(name, curTarget, scopes, withStack, thisObj));
             break;
           }
           case 0x1D: { // ActionSetVariable
@@ -3164,7 +3616,7 @@
           }
           case 0x46: { // ActionEnumerate
             const name = this._toStr(stack.pop());
-            const obj = this._getVariable(name, curTarget, scopes, withStack);
+            const obj = this._getVariable(name, curTarget, scopes, withStack, thisObj);
             stack.push(null);
             if (obj && typeof obj === 'object') {
               const keys = obj._isMovieClip ? Object.keys(obj._vars) : Object.keys(obj);
@@ -3246,7 +3698,7 @@
             break;
           }
           case 0x26: { // ActionTrace
-            this._traces.push(this._toStr(stack.pop()));
+            this._pushTrace(this._toStr(stack.pop()));
             break;
           }
           case 0x27: { // ActionStartDrag
@@ -3438,7 +3890,7 @@
                 res = this._resolveVariablePath(String(args[0]), curTarget);
               }
             } else {
-              const fn = this._getVariable(fnName, curTarget, scopes, withStack);
+              const fn = this._getVariable(fnName, curTarget, scopes, withStack, thisObj);
               res = this._invokeValue(fn, curTarget, args);
             }
             stack.push(res);
@@ -3465,7 +3917,7 @@
             const numArgs = Math.max(0, Math.floor(this._toNum(stack.pop())));
             const args = new Array(numArgs);
             for (let i = 0; i < numArgs; i++) args[i] = stack.pop();
-            const ctor = this._getVariable(ctorName, curTarget, scopes, withStack);
+            const ctor = this._getVariable(ctorName, curTarget, scopes, withStack, thisObj);
             let instance;
             if (typeof ctor === 'function') {
               if (ctor._isAvm1Fn) {

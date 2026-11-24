@@ -505,6 +505,10 @@
           try { cb(data); } catch (err) { console.error('Engine event listener error:', err); }
         });
       }
+      // Skip 60 FPS TIMEUPDATE postMessage flooding on continuous simulations & AVM1 SWF stages
+      if (event === 'timeupdate' && (this._isDynamicScene || (this._avm1Vm && this._avm1Vm._mounted))) {
+        return;
+      }
       // Also notify parent iframe
       this.notifyParent({ type: event.toUpperCase(), ...data });
     }
@@ -1106,7 +1110,7 @@
           }
         }
       }
-      if (this._avm1Vm && typeof this._avm1Vm.reset === 'function' && !this._isMounting && (this._avm1Vm._tickCount > 0 || this._avm1Vm._elapsedMs > 0)) {
+      if (this._avm1Vm && typeof this._avm1Vm.reset === 'function' && !this._isMounting && (this._isResetting || this._avm1Vm._tickCount > 0 || this._avm1Vm._elapsedMs > 0)) {
         this._avm1Vm.reset();
       }
       this.updateComputedVars();
@@ -1569,7 +1573,14 @@ updateActiveKeyframeAndSpeech(userSeeking = false) {
         }
       }
 
-      this.applyBindings(this.progress, deltaSec, true);
+      try {
+        this.applyBindings(this.progress, deltaSec, true);
+      } catch (tickErr) {
+        if (!this._warnedTickErr) {
+          this._warnedTickErr = true;
+          console.warn('[AST Engine] Frame tick exception recovered:', tickErr);
+        }
+      }
 
       // 3. Record raw AST/SVG compute duration (excludes compositor idle time)
       if (this.profiler && t0 > 0) {

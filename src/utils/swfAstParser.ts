@@ -27,6 +27,9 @@ export interface SwfMetadata {
   keyBindingCount?: number;
   poolSlotCount?: number;
   strippedPreloaderFrames?: number;
+  entryFrame?: number;
+  isActionScript3?: boolean;
+  hasAvm1Bytecode?: boolean;
   executionModel?: 'sim-continuous' | 'sim-modal' | 'static-vector';
   labels: { frame: number; name: string }[];
   stateMachines?: { id: string; initial: string; states: string[]; transitionsCount: number }[];
@@ -2387,6 +2390,8 @@ function parsePlaceObjectTag(
     const hasCacheAsBitmap = (flags2 & 0x04) !== 0;
     const hasClassName = (flags2 & 0x08) !== 0;
     const hasImage = (flags2 & 0x10) !== 0;
+    const hasVisible = (flags2 & 0x20) !== 0;
+    const hasOpaqueBg = (flags2 & 0x40) !== 0;
 
     if (hasClassName || (hasImage && hasChar)) {
       reader.readString(); // ClassName
@@ -2400,6 +2405,8 @@ function parsePlaceObjectTag(
     if (hasFilterList) skipSwfFilterList(reader, tagEndOffset);
     if (hasBlendMode) reader.readUI8();
     if (hasCacheAsBitmap) reader.readUI8();
+    if (hasVisible) reader.readUI8();
+    if (hasOpaqueBg) reader.readRGBA(true);
     const clipPrefix = name ? sanitizeAstIdent(name) : `depth_${depth}`;
     const clipActions = hasClipActions ? parseClipActions(reader, tagEndOffset, swfVersion, currentFrame, clipPrefix, fileLength) : undefined;
 
@@ -2539,6 +2546,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const timelineFrames: SwfFrameSnapshot[] = [];
     let hasMainTimelineMutations = false;
     let sawFrameMutation = false;
+    let isAs3Flag = false;
+    let hasDoAbcTag = false;
+    let documentClass = '';
 
     let currentFrame = 1;
 
@@ -2606,15 +2616,24 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           const btnDef = parseDefineButton(reader, nextTagOffset, tagType === 34, currentFrame, effectiveFileLength);
           buttons.set(btnDef.buttonId, btnDef);
         } catch {}
+      } else if (tagType === 69) {
+        // FileAttributes (Tag 69): bit 3 (0x08) indicates ActionScript 3.0 (AVM2)
+        try {
+          const attrFlags = reader.readUI32();
+          if ((attrFlags & 0x08) !== 0) isAs3Flag = true;
+        } catch {}
       } else if (tagType === 12 || tagType === 59) {
         // DoAction (12) / DoInitAction (59)
         try {
           const initSpriteId = tagType === 59 ? reader.readUI16() : 0;
           const act = parseDoAction(reader, nextTagOffset, currentFrame, { fileLength: effectiveFileLength });
-          if (tagType === 59 && act.rawBytecodeB64) {
-            initActions.push({ c: initSpriteId, b64: act.rawBytecodeB64 });
+          if (tagType === 59) {
+            if (act.rawBytecodeB64) {
+              initActions.push({ c: initSpriteId, b64: act.rawBytecodeB64 });
+            }
+          } else {
+            actionBlocks.push(act);
           }
-          actionBlocks.push(act);
         } catch {}
       } else if (tagType === 56) {
         // ExportAssets (Tag 56): linkage names for attachMovie()
@@ -2626,7 +2645,22 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
             if (expName) exportsMap[expName] = expCharId;
           }
         } catch {}
-      } else if (tagType === 82) {
+      } else if (tagType === 76) {
+        // SymbolClass (Tag 76): AS3 linkage names + Document Class (charId === 0)
+        try {
+          const count = reader.readUI16();
+          for (let si = 0; si < count && reader.offset < nextTagOffset; si++) {
+            const symCharId = reader.readUI16();
+            const symName = reader.readString();
+            if (symName) {
+              if (symCharId === 0) documentClass = symName;
+              else exportsMap[symName] = symCharId;
+            }
+          }
+        } catch {}
+      } else if (tagType === 72 || tagType === 82) {
+        // DoABCDefine (72) / DoABC (82): ActionScript 3.0 (AVM2) bytecode
+        hasDoAbcTag = true;
         try {
           const act = parseDoABC(reader, nextTagOffset, currentFrame);
           actionBlocks.push(act);
@@ -3336,6 +3370,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const placedSvgElements: string[] = [];
 
     let strippedPreloaderFrames = 0;
+    let entryFrame = 1;
     let executionModel: 'sim-continuous' | 'sim-modal' | 'static-vector' = 'static-vector';
 
     if (!isDynamicSwf) {
@@ -3470,7 +3505,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         return false;
       };
 
-      let entryFrame = 1;
+      entryFrame = 1;
       while (entryFrame < totalFrames && isPreloaderFrame(entryFrame)) {
         entryFrame++;
       }
@@ -4010,11 +4045,23 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
 
     const controlsAst = `\n  (:controls (:param-hud :off) (:arrow-step :off) (:num-jump :off) (:space-play :off) (:scrub :off))\n`;
 
+    const hasAvm1Bytecode =
+      actionBlocks.some((a) => Boolean(a.rawBytecodeB64)) ||
+      initActions.length > 0 ||
+      Array.from(sprites.values()).some((sp) => sp.actions.some((a) => Boolean(a.rawBytecodeB64))) ||
+      Array.from(buttons.values()).some((b) => b.actions.some((a) => Boolean(a.actionRecord?.rawBytecodeB64))) ||
+      timelineFrames.some((tf) =>
+        Array.from(tf.entries.values()).some((e) =>
+          Boolean(e.clipActions?.some((ca) => Boolean(ca.actionRecord?.rawBytecodeB64)))
+        )
+      );
+    const isActionScript3 = Boolean(isAs3Flag || (hasDoAbcTag && !hasAvm1Bytecode));
+
     // Compact AVM1 Micro-VM Program Payload (Option 2: lazy-loaded pure-SVG AVM1 runtime)
     let swfVmAst = '';
     const hasAvm1Content =
       isDynamicSwf ||
-      actionBlocks.some((a) => Boolean(a.rawBytecodeB64)) ||
+      hasAvm1Bytecode ||
       sprites.size > 0 ||
       buttons.size > 0 ||
       editTexts.size > 0 ||
@@ -4038,9 +4085,18 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         return arr;
       };
       const serializeFrameList = (frameSnaps: SwfFrameSnapshot[], count: number) => {
+        const snapByFrame = new Map<number, SwfFrameSnapshot>();
+        let maxSnapFrame = 1;
+        for (let si = 0; si < frameSnaps.length; si++) {
+          const s = frameSnaps[si];
+          snapByFrame.set(s.frame, s);
+          if (s.frame > maxSnapFrame) maxSnapFrame = s.frame;
+        }
+        const fallbackSnap = frameSnaps[frameSnaps.length - 1];
+        const limit = Math.min(Math.max(1, count), Math.max(1, maxSnapFrame), 2400);
         const out: any[][] = [];
-        for (let f = 1; f <= count; f++) {
-          const snap = frameSnaps.find((s) => s.frame === f) || frameSnaps[frameSnaps.length - 1];
+        for (let f = 1; f <= limit; f++) {
+          const snap = snapByFrame.get(f) || fallbackSnap;
           if (!snap) {
             out.push([]);
             continue;
@@ -4148,7 +4204,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         };
       });
 
-      const vmProgram = {
+      const vmProgram: Record<string, any> = {
         v: 1,
         swfVer: version,
         w: width,
@@ -4157,6 +4213,9 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         bg: backgroundColor,
         fl: effectiveFileLength,
         fc: totalFrames,
+        ef: entryFrame,
+        ps: strippedPreloaderFrames > 0 ? 1 : 0,
+        as3: isActionScript3 ? 1 : 0,
         exp: exportsMap,
         l: labels,
         sh: vmShapes,
@@ -4170,6 +4229,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
           .filter((a) => Boolean(a.rawBytecodeB64))
           .map((a) => ({ f: a.frame, b64: a.rawBytecodeB64 })),
       };
+      if (documentClass) vmProgram.dc = documentClass;
       const vmB64 = utf8ToBase64(JSON.stringify(vmProgram));
       swfVmAst = `\n  (:swf-vm "${vmB64}")\n`;
     }
@@ -4229,6 +4289,9 @@ ${keyframesAst}
       keyBindingCount: allUsedKeys.size,
       poolSlotCount: totalPoolSlots,
       strippedPreloaderFrames,
+      entryFrame,
+      isActionScript3,
+      hasAvm1Bytecode,
       executionModel,
       labels,
       stateMachines: smMeta,

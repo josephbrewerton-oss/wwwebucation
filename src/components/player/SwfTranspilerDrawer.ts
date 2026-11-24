@@ -265,11 +265,13 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
     resBox.appendChild(resHeader);
 
     // Meta chips grid
-    const modeLabel = meta.executionModel === 'sim-modal'
-      ? 'Interactive :Sim (Modes)'
-      : (meta.executionModel === 'sim-continuous' ? 'Continuous :Sim (sim_dt)' : 'Vector Stage');
+    const modeLabel = meta.isActionScript3
+      ? 'AS3 / AVM2 (Vector Timeline)'
+      : (meta.executionModel === 'sim-modal'
+          ? 'AVM1 Interactive :Sim'
+          : (meta.executionModel === 'sim-continuous' ? 'AVM1 Continuous :Sim' : 'Vector Stage'));
     const preloaderNote = (meta.strippedPreloaderFrames && meta.strippedPreloaderFrames > 0)
-      ? ` · ${meta.strippedPreloaderFrames} preloader stripped`
+      ? ` · skipped ${meta.strippedPreloaderFrames} preloader frame(s) → F${meta.entryFrame || (meta.strippedPreloaderFrames + 1)}`
       : '';
     const chipsGrid = document.createElement('div');
     chipsGrid.style.cssText = 'display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px;';
@@ -295,6 +297,13 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       </div>
     `;
     resBox.appendChild(chipsGrid);
+
+    if (meta.isActionScript3) {
+      const as3Note = document.createElement('div');
+      as3Note.style.cssText = 'padding: 8px 10px; border-radius: 6px; background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.45); color: #fcd34d; font-size: 0.74rem; line-height: 1.4;';
+      as3Note.textContent = 'Note: This SWF uses ActionScript 3.0 (AVM2 / DoABC bytecode). Vector shapes and timelines render in pure SVG, while interactive script execution currently supports ActionScript 1.0 / 2.0 (AVM1) SWF files.';
+      resBox.appendChild(as3Note);
+    }
 
     // AST Preview (use textContent to prevent HTML injection from transpiled strings)
     const previewWrap = document.createElement('div');

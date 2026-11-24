@@ -517,7 +517,17 @@ export function renderPlayerPage(): HTMLElement {
     }
     refreshDropdown();
     launchCustomCartridge(cart);
-    showImportStatus(`⚡ Imported "${cart.title}" into Local Vault & launched on stage.`, 'success');
+    if (swfMeta?.isActionScript3) {
+      showImportStatus(
+        `⚡ Imported "${cart.title}" — Note: this SWF uses ActionScript 3.0 (AVM2/DoABC); vector graphics & timelines render in pure SVG, while interactive scripts require ActionScript 1.0/2.0 (AVM1).`,
+        'success'
+      );
+    } else {
+      const skipHint = swfMeta?.strippedPreloaderFrames
+        ? ` (skipped ${swfMeta.strippedPreloaderFrames} preloader frame(s) → Frame ${swfMeta.entryFrame || (swfMeta.strippedPreloaderFrames + 1)})`
+        : '';
+      showImportStatus(`⚡ Imported "${cart.title}" into Local Vault & launched on stage${skipHint}.`, 'success');
+    }
   }
 
   function renderPhetPanelInto(targetEl: HTMLElement, onClosePanel: () => void) {
@@ -1053,7 +1063,15 @@ export function renderPlayerPage(): HTMLElement {
       if (cart) {
         refreshDropdown();
         launchCustomCartridge(cart);
-        showImportStatus(`✓ Imported "${cart.title}" into Local Vault & launched on stage.`, 'success');
+        const isAs3Swf = Array.isArray(cart.invariants) && cart.invariants.some((inv) => inv.includes('ActionScript 3.0'));
+        if (isAs3Swf) {
+          showImportStatus(
+            `⚡ Imported "${cart.title}" — Note: this SWF uses ActionScript 3.0 (AVM2/DoABC); vector graphics & timelines render in pure SVG, while interactive scripts require ActionScript 1.0/2.0 (AVM1).`,
+            'success'
+          );
+        } else {
+          showImportStatus(`✓ Imported "${cart.title}" into Local Vault & launched on stage.`, 'success');
+        }
       } else {
         showImportStatus(
           'Unsupported file format. Drop or choose a Flash (.swf), PhET (.html / .phet), Cartridge (.json), .ast, or .svg file.',
