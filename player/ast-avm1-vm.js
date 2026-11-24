@@ -526,10 +526,15 @@
     }
 
     get htmlText() { return this._text; }
-    set htmlText(v) {
-      const plain = String(v == null ? '' : v).replace(/<[^>]+>/g, '');
-      this.text = plain;
-    }
+set htmlText(v) {
+  let plain = String(v == null ? '' : v);
+  let prev;
+  do {
+    prev = plain;
+    plain = plain.replace(/<[^>]*>/g, '');
+  } while (plain !== prev);
+  this.text = plain.replace(/[<>]/g, '');
+}
 
     get variable() { return this._variable; }
     set variable(v) { this._variable = String(v || ''); }
