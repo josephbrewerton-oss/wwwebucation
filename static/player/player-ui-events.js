@@ -626,8 +626,11 @@
       } else if (data.type === 'REFRESH_PRESETS') {
         this.populatePresets();
       } else if (data.type === 'RESET_SIM') {
-        this.resetSimulation();
+        if (!window.__astBridgeActive) {
+          this.resetSimulation();
+        }
       } else if (data.type === 'LOAD_CUSTOM_CARTRIDGE' && data.cartridge) {
+        if (window.__astBridgeActive) return;
         const c = data.cartridge;
         if (window.ASTSceneRegistry && typeof window.ASTSceneRegistry.register === 'function') {
           window.ASTSceneRegistry.register(c.id, {
@@ -638,17 +641,31 @@
             astSource: c.astSource,
           });
         }
-        this.saveToLocalVault(c);
+        try { this.saveToLocalVault(c); } catch (_) {}
         this.populatePresets();
         const handled = window.__astHandledCustomCartridgeEvents || (window.__astHandledCustomCartridgeEvents = new WeakSet());
-        if (this.engine && c.svgMarkup && c.astSource && !handled.has(e)) {
+        if (this.engine && c.svgMarkup && c.astSource && !handled.has(e) && !handled.has(c)) {
           handled.add(e);
-          if (typeof this.engine.loadSceneData === 'function') {
-            this.engine.loadSceneData(c, data.play !== false);
-          } else {
-            this.engine.loadScene(c.id, data.play !== false);
-          }
-          this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
+          handled.add(c);
+          Promise.resolve()
+            .then(() => {
+              if (typeof this.engine.loadSceneData === 'function') {
+                return this.engine.loadSceneData(c, data.play !== false);
+              }
+              return this.engine.loadScene(c.id, data.play !== false);
+            })
+            .then(() => {
+              this.updateHeaderPlayUI(Boolean(this.engine?.isPlaying));
+            })
+            .catch((err) => {
+              console.error('[PlayerUI] Failed to load custom cartridge:', err);
+              if (typeof this.engine.notifyParent === 'function') {
+                this.engine.notifyParent({
+                  type: 'CARTRIDGE_LOAD_ERROR',
+                  message: err && err.message ? err.message : String(err)
+                });
+              }
+            });
         }
       } else if (data.type === 'OPEN_STUDIO') {
         const requestedTab = typeof data.tab === 'string' ? data.tab : 'ast';

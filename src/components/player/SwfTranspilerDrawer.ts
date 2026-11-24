@@ -308,7 +308,26 @@ export function renderSwfTranspilerDrawer(props: SwfTranspilerDrawerProps): HTML
       <pre id="ast-swf-preview-pre" style="margin: 0; padding: 8px; background: var(--stj-surface, #1e293b); border: 1px solid var(--stj-border, #334155); border-radius: 6px; font-size: 0.72rem; color: var(--stj-text-muted, #94a3b8); max-height: 110px; overflow-y: auto; font-family: monospace;"></pre>
     `;
     const preEl = previewWrap.querySelector<HTMLPreElement>('#ast-swf-preview-pre');
-    if (preEl) preEl.textContent = swfResult.astSource;
+    if (preEl) {
+      let previewText = swfResult.astSource || '';
+      const vmMarker = '(:swf-vm "';
+      const vmIdx = previewText.indexOf(vmMarker);
+      if (vmIdx !== -1) {
+        const valStart = vmIdx + vmMarker.length;
+        const valEnd = previewText.indexOf('"', valStart);
+        if (valEnd > valStart && (valEnd - valStart) > 256) {
+          const kb = ((valEnd - valStart) / 1024).toFixed(1);
+          previewText =
+            previewText.slice(0, valStart) +
+            `[AVM1 micro-VM bytecode: ${kb} KB omitted from preview — full payload included on Launch/Copy]` +
+            previewText.slice(valEnd);
+        }
+      }
+      if (previewText.length > 16384) {
+        previewText = previewText.slice(0, 16384) + `\n; ... (${((previewText.length - 16384) / 1024).toFixed(1)} KB more omitted from preview)`;
+      }
+      preEl.textContent = previewText;
+    }
     previewWrap.querySelector('#ast-copy-code-btn')?.addEventListener('click', () => {
       navigator.clipboard?.writeText(swfResult.astSource);
     });

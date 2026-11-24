@@ -80,6 +80,12 @@ export async function runModularArchitectureInvariants(): Promise<number> {
       assert.ok(playerHtml.indexOf(`player/${loaderPeer}`) < loaderIdxRoot, `player.html must load ${loaderPeer} strictly before ast-loader.js`);
       assert.ok(playerIndexHtml.indexOf(`./${loaderPeer}`) < loaderIdxStandalone, `player/index.html must load ${loaderPeer} strictly before ast-loader.js`);
     }
+    const bridgeIdxRoot = playerHtml.indexOf('player/ast-bridge.js');
+    const bridgeIdxStandalone = playerIndexHtml.indexOf('./ast-bridge.js');
+    for (const bridgePeer of ['ast-bridge-playback.js', 'ast-bridge-cartridge.js', 'ast-bridge-telemetry.js']) {
+      assert.ok(playerHtml.indexOf(`player/${bridgePeer}`) < bridgeIdxRoot, `player.html must load ${bridgePeer} strictly before ast-bridge.js`);
+      assert.ok(playerIndexHtml.indexOf(`./${bridgePeer}`) < bridgeIdxStandalone, `player/index.html must load ${bridgePeer} strictly before ast-bridge.js`);
+    }
 
     // Verify all lazy modules exist, are precached, registered in ast-lazy-loader.js, and not blocking initial player HTML
     for (const lazyMod of LAZY_PLAYER_MODULES) {
@@ -122,7 +128,8 @@ export async function runModularArchitectureInvariants(): Promise<number> {
       'VectorVerletPhysics',
       'AstMath', 'astMorphPath', 'parseAst', 'compileAstExpr', 'compileAstFn', 'decompileBytecode', 'isAstBytecode',
       'AST3DEngine',
-      'setupPostMessageBridge',
+      'ASTBridgePlaybackHandlers', 'ASTBridgeCartridgeHandlers', 'ASTBridgeTelemetryHandlers',
+      'ASTPostMessageBridge', 'setupPostMessageBridge',
       'ASTExporter',
       'ASTHudControls',
       'ASTAiDirector',
@@ -1128,6 +1135,110 @@ export async function runModularArchitectureInvariants(): Promise<number> {
     }
 
     console.log('[✅ PASS] Sim 29: Nested AST tuples (:for, grouped :target, :when, :seq/:if), Pure-Lisp forms & OP_BINDING_WHEN bytecode parity verified.');
+    passedTests++;
+  }
+
+  // =========================================================================
+  // 30. Modular ast-bridge Resilience: Idempotency, Fault Isolation, Origin & SVG Serialization
+  // =========================================================================
+  {
+    const listeners: Array<(e: any) => void> = [];
+    const parentMsgs: any[] = [];
+    const brSb: any = {
+      console: { warn: () => {}, error: () => {}, log: () => {} },
+      Math, Number, String, Boolean, Array, Object, Map, Set, WeakSet, RegExp, Error, JSON, Date, Promise,
+      parseFloat, parseInt, isNaN, isFinite,
+      setTimeout, clearTimeout,
+      location: { origin: 'https://portal.local', search: '' },
+      addEventListener: (t: string, fn: (e: any) => void) => { if (t === 'message') listeners.push(fn); },
+      removeEventListener: (t: string, fn: (e: any) => void) => {
+        if (t !== 'message') return;
+        const idx = listeners.indexOf(fn);
+        if (idx !== -1) listeners.splice(idx, 1);
+      },
+    };
+    brSb.window = brSb;
+    brSb.globalThis = brSb;
+    brSb.self = brSb;
+
+    for (const f of ['ast-bridge-playback.js', 'ast-bridge-cartridge.js', 'ast-bridge-telemetry.js', 'ast-bridge.js']) {
+      const code = fs.readFileSync(path.join(process.cwd(), 'static', 'player', f), 'utf8');
+      vm.runInNewContext(code, brSb, { filename: `static/player/${f}` });
+    }
+
+    let playCalls = 0;
+    const mockEngine: any = {
+      targetOrigin: 'https://portal.local',
+      progress: 0,
+      isPlaying: false,
+      scene: { vars: { speed: { min: 1, max: 10 } } },
+      play() { playCalls++; this.isPlaying = true; },
+      pause() { this.isPlaying = false; },
+      getStageSvg() { return { outerHTML: '<svg id="stage-svg"><rect/></svg>' }; },
+      hotReloadSvg(svg: string) { this._reloadedSvg = svg; return true; },
+      hotReloadAst(ast: string) { this._reloadedAst = ast; return true; },
+      notifyParent(msg: any) { parentMsgs.push(msg); },
+      loadSceneData() { return Promise.reject(new Error('Simulated async SWF load error')); },
+      setMemoryVar(name: string, val: any) { this._lastVar = { name, val }; },
+      normalizeVarName(name: string) { return String(name); },
+      getEngineStateSummary() { return { ok: true }; },
+    };
+
+    // 30a. Idempotent registration: calling setupPostMessageBridge twice keeps exactly 1 active listener
+    const handle1 = brSb.setupPostMessageBridge(mockEngine, null);
+    assert.strictEqual(listeners.length, 1, 'setupPostMessageBridge must attach exactly 1 message listener');
+    const handle2 = brSb.setupPostMessageBridge(mockEngine, null);
+    assert.strictEqual(listeners.length, 1, 'Re-calling setupPostMessageBridge must replace prior listener without leaking duplicates');
+    assert.ok(handle1 && handle2 && typeof handle2.destroy === 'function', 'setupPostMessageBridge must return a destroyable handle');
+
+    // 30b. Cross-origin rejection
+    listeners[0]({ origin: 'https://evil.example', data: { type: 'PLAY' } });
+    assert.strictEqual(playCalls, 0, 'Cross-origin PLAY message must be rejected');
+
+    // 30c. Valid origin dispatches once
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'PLAY' } });
+    assert.strictEqual(playCalls, 1, 'Authorized PLAY message must execute exactly once');
+
+    // 30d. Prototype-key safety (command lookup + SET_VAR)
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'constructor' } });
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'toString' } });
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'SET_VAR', name: '__proto__', value: 42 } });
+    assert.strictEqual(mockEngine._lastVar, undefined, 'SET_VAR must reject __proto__ keys');
+
+    // 30e. GET_STAGE_SVG serializes SVGElement to string (no DataCloneError)
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'GET_STAGE_SVG' } });
+    const svgResp = parentMsgs.find((m) => m.type === 'STAGE_SVG_RESPONSE');
+    assert.ok(svgResp && typeof svgResp.svg === 'string' && svgResp.svg.includes('<svg id="stage-svg">'), 'GET_STAGE_SVG must serialize SVGElement to outerHTML string');
+
+    // 30f. Per-message fault isolation emits BRIDGE_COMMAND_ERROR and keeps bridge alive
+    brSb.ASTPostMessageBridge.registerHandlers({
+      TEST_THROW: () => { throw new Error('Boom handler'); },
+    });
+    const handle3 = brSb.setupPostMessageBridge(mockEngine, null);
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'TEST_THROW', requestId: 'req-err-1' } });
+    const errAck = parentMsgs.find((m) => m.type === 'BRIDGE_COMMAND_ERROR' && m.requestId === 'req-err-1');
+    assert.ok(errAck && errAck.message.includes('Boom handler'), 'Fault-isolated handler error must emit BRIDGE_COMMAND_ERROR when requestId is present');
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'PLAY' } });
+    assert.strictEqual(playCalls, 2, 'Bridge must remain operational after an isolated handler failure');
+
+    // 30g. HOT_RELOAD_SVG & HOT_RELOAD_AST dispatch cleanly (used by Dev Studio Flash/PhET/Template tabs)
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'HOT_RELOAD_SVG', svg: '<svg id="swf-hot"/>' } });
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'HOT_RELOAD_AST', ast: '(:scene :id "swf-hot" (:swf-vm "e30="))' } });
+    assert.strictEqual(mockEngine._reloadedSvg, '<svg id="swf-hot"/>', 'HOT_RELOAD_SVG must call engine.hotReloadSvg');
+    assert.strictEqual(mockEngine._reloadedAst, '(:scene :id "swf-hot" (:swf-vm "e30="))', 'HOT_RELOAD_AST must call engine.hotReloadAst');
+
+    // 30h. Async Promise rejection inside LOAD_CUSTOM_CARTRIDGE reports CARTRIDGE_LOAD_ERROR
+    listeners[0]({ origin: 'https://portal.local', data: { type: 'LOAD_CUSTOM_CARTRIDGE', cartridge: { id: 'bad-swf' } } });
+    await new Promise((r) => setTimeout(r, 20));
+    const cartErr = parentMsgs.find((m) => m.type === 'CARTRIDGE_LOAD_ERROR');
+    assert.ok(cartErr && cartErr.message.includes('Simulated async SWF load error'), 'LOAD_CUSTOM_CARTRIDGE must catch async loadSceneData rejections and emit CARTRIDGE_LOAD_ERROR');
+
+    // 30i. Clean teardown
+    handle3.destroy();
+    assert.strictEqual(listeners.length, 0, 'handle.destroy() must remove message listener cleanly');
+    assert.strictEqual(brSb.window.__astBridgeActive, false, 'handle.destroy() must clear __astBridgeActive');
+
+    console.log('[✅ PASS] Sim 30: Modular ast-bridge (playback/cartridge/telemetry) idempotency, fault isolation, prototype safety, SVG serialization & async error reporting verified.');
     passedTests++;
   }
 

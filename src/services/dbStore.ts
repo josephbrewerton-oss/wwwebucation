@@ -120,6 +120,17 @@ export function openLocalDB(): Promise<IDBDatabase> {
     return Promise.reject(new Error('IndexedDB is not supported in this runtime environment.'));
   }
   return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (fn: () => void) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      fn();
+    };
+    const timer = setTimeout(() => {
+      finish(() => reject(new Error('IndexedDB open timed out (connection blocked).')));
+    }, 2500);
+
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
     request.onupgradeneeded = () => {
@@ -189,8 +200,17 @@ export function openLocalDB(): Promise<IDBDatabase> {
       }
     };
 
-    request.onsuccess = () => resolve(request.result);
-    request.onerror = () => reject(request.error);
+    request.onblocked = () => {
+      console.warn('[dbStore] IndexedDB open blocked by another tab/iframe connection.');
+    };
+    request.onsuccess = () => {
+      const db = request.result;
+      db.onversionchange = () => {
+        try { db.close(); } catch {}
+      };
+      finish(() => resolve(db));
+    };
+    request.onerror = () => finish(() => reject(request.error));
   });
 }
 

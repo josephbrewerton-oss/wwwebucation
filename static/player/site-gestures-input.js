@@ -214,6 +214,11 @@
     const scene = this.engine && this.engine.scene;
     if (!scene || !this.engine.vars) return;
 
+    // When the pure-SVG AVM1 Micro-VM owns an SWF stage, yield keyboard input directly to ASTAVM1Runtime
+    if ((this.engine._avm1Vm && this.engine._avm1Vm._mounted) || this.engine._avm1VmPending) {
+      return;
+    }
+
     // Priority 2: Cartridge Explicit (:key ...) Rules
     const gestures = this._getNormalizedSceneGestures(scene);
     const matchingKeys = gestures.filter(g => g.type === 'key' && this._gestureMatchesKey(g, e));
@@ -579,6 +584,11 @@
         this.startInkStroke(svgPt);
         return;
       }
+    }
+
+    // When the pure-SVG AVM1 Micro-VM owns an SWF stage, yield non-whiteboard pointer input directly to AVM1Button / MovieClip listeners
+    if (this.engine && ((this.engine._avm1Vm && this.engine._avm1Vm._mounted) || this.engine._avm1VmPending)) {
+      return;
     }
 
     const scene = this.engine && this.engine.scene;

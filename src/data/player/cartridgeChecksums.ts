@@ -30,7 +30,7 @@ export interface CartridgeRegistryManifest {
 export const CARTRIDGE_CHECKSUMS: CartridgeRegistryManifest = {
   "version": "1.0.0",
   "issuer": "St Joseph's Catholic Primary School Curriculum Authority",
-  "generatedAt": "2026-11-23T10:13:29.901Z",
+  "generatedAt": "2026-11-24T08:29:48.351Z",
   "totalCartridges": 79,
   "masterChecksum": "a71afbd6a698e347c5092204266925f3b1b5b176e287632fbd119c586bd8b355",
   "cartridges": {

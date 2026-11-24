@@ -512,10 +512,17 @@
       this.applyDisplayConfig(this.displayConfig);
       this.updateView();
 
-      // Ensure immediate render of initial scene onto stage
+      // Ensure immediate render of initial scene onto stage without tearing down an already-mounted AVM1 SWF scene
       if (this.engine && this.engine.scene && this.engine.container) {
-        this.engine.mountSceneAsset(this.engine.scene, this.engine.container);
-        this.engine.applyBindings(this.engine.progress);
+        const curSceneId = this.engine.activePresetId || this.engine.scene.id;
+        const alreadyMountedSame =
+          this.engine._mountedSceneId === curSceneId &&
+          this.engine._mountedContainer === this.engine.container &&
+          Boolean(this.engine._avm1Vm || this.engine._avm1VmPending);
+        if (!alreadyMountedSame) {
+          this.engine.mountSceneAsset(this.engine.scene, this.engine.container);
+          this.engine.applyBindings(this.engine.progress);
+        }
       }
     }
 

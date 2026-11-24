@@ -3029,8 +3029,22 @@ async function runSimulations() {
   {
     const start = performance.now();
     const errors: string[] = [];
-    const { parseAst } = loadPlayerModule('ast-parser.js');
-    const { ASTAVM1Runtime } = loadPlayerModule('ast-avm1-vm.js');
+    const playerDir = path.resolve(process.cwd(), 'static/player');
+    const avmSandbox: any = { console, Math, Date, performance, Uint8Array, ArrayBuffer, DataView, Map, Set, Number, String, Boolean, Array, Object, JSON, Buffer, TextDecoder, atob };
+    avmSandbox.globalThis = avmSandbox;
+    vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-parser.js'), 'utf8'), avmSandbox);
+    vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-avm1-vm.js'), 'utf8'), avmSandbox);
+    const { parseAst, ASTAVM1Runtime } = avmSandbox;
+    const makeMockContainer = () => ({
+      childNodes: [] as any[],
+      firstChild: null as any,
+      appendChild(c: any) { this.childNodes.push(c); this.firstChild = this.childNodes[0]; return c; },
+      removeChild(c: any) { const idx = this.childNodes.indexOf(c); if (idx !== -1) this.childNodes.splice(idx, 1); this.firstChild = this.childNodes[0] || null; return c; },
+      replaceChildren(...nodes: any[]) { this.childNodes = nodes.slice(); this.firstChild = this.childNodes[0] || null; },
+      setAttribute() {},
+      addEventListener() {},
+      removeEventListener() {},
+    });
 
     // 1. Arcade Target SWF v8 sample
     const arcadeBytes = buildFlashArcadeSampleSwf();
@@ -3039,11 +3053,11 @@ async function runSimulations() {
       errors.push(`flash-arcade-target transpile failed: ${arcadeRes.error}`);
     } else {
       const parsed = parseAst(arcadeRes.astSource);
-      if (!parsed || !parsed.swfVmPayload) {
-        errors.push('flash-arcade-target missing swfVmPayload');
+      if (!parsed || !parsed.swfVm || !parsed.swfVmPayload) {
+        errors.push('flash-arcade-target missing parsed.swfVm / parsed.swfVmPayload');
       } else {
-        const container = createAvm1MockContainer();
-        const vmInst = new ASTAVM1Runtime(parsed.swfVmPayload, {});
+        const container = makeMockContainer();
+        const vmInst = new ASTAVM1Runtime(parsed.swfVm, {});
         vmInst.mount(container, container);
         if (vmInst.rootClip._currentframe !== 1) {
           errors.push(`Arcade sample expected boot on Frame 1 ("menu"), got ${vmInst.rootClip._currentframe}`);
@@ -3053,8 +3067,7 @@ async function runSimulations() {
         if (!startBtn) {
           errors.push('Arcade sample Start DefineButton2 not mounted on Frame 1');
         } else {
-          startBtn._onPointerDown();
-          startBtn._onPointerUp(true);
+          startBtn.triggerClick();
         }
         if (vmInst.rootClip._currentframe !== 2) {
           errors.push(`Arcade Start button click failed to enter Frame 2 ("play"), got ${vmInst.rootClip._currentframe}`);
@@ -3067,9 +3080,9 @@ async function runSimulations() {
           const x0 = targetClip._x;
           vmInst.step(1 / 30);
           if (targetClip._x === x0) errors.push('Arcade target did not move onEnterFrame');
-          // Move player directly onto target and step -> hitTest must score +10 and attachMovie("spark")
-          playerClip._x = targetClip._x;
-          playerClip._y = targetClip._y;
+          // Move player directly onto target via AVM1 property setter and step -> hitTest must score +10 and attachMovie("spark")
+          vmInst._setMember(playerClip, '_x', targetClip._x);
+          vmInst._setMember(playerClip, '_y', targetClip._y);
           vmInst.setMousePosition(0, 0);
           vmInst.step(1 / 30);
           if (vmInst.rootClip._vars.score !== 10) {
@@ -3094,11 +3107,11 @@ async function runSimulations() {
       errors.push(`flash-pendulum transpile failed: ${pendRes.error}`);
     } else {
       const parsed = parseAst(pendRes.astSource);
-      if (!parsed || !parsed.swfVmPayload) {
-        errors.push('flash-pendulum missing swfVmPayload');
+      if (!parsed || !parsed.swfVm) {
+        errors.push('flash-pendulum missing parsed.swfVm');
       } else {
-        const container = createAvm1MockContainer();
-        const vmInst = new ASTAVM1Runtime(parsed.swfVmPayload, {});
+        const container = makeMockContainer();
+        const vmInst = new ASTAVM1Runtime(parsed.swfVm, {});
         vmInst.mount(container, container);
         const bob = vmInst.rootClip.getChildByName('bob');
         if (!bob) {
@@ -3108,14 +3121,13 @@ async function runSimulations() {
           if (Math.abs(bob._x - 300) < 5) {
             errors.push(`Pendulum bob did not swing via AVM1 Math.sin, _x=${bob._x}`);
           }
-          if (!vmInst.rootClip._graphicsPaths || vmInst.rootClip._graphicsPaths.length < 1) {
+          if (!vmInst.rootClip._drawGroup || vmInst.rootClip._drawGroup.children.length < 1) {
             errors.push('Pendulum sample did not draw SVG rod path via Flash Drawing API');
           }
           // Click Pause/Resume button -> freezes bob
           const toggleBtn = Array.from(vmInst._liveButtons)[0] as any;
           if (toggleBtn) {
-            toggleBtn._onPointerDown();
-            toggleBtn._onPointerUp(true);
+            toggleBtn.triggerClick();
             const frozenX = bob._x;
             vmInst.step(1 / 30);
             if (bob._x !== frozenX) {
@@ -3136,6 +3148,252 @@ async function runSimulations() {
       errors,
     });
   }
+
+  // --------------------------------------------------------------------------
+  // Simulation 25: Full Modular Player Glue (ast-parser -> ast-loader -> ast-scene-mount -> ast-binding-runtime -> ast-avm1-vm)
+  // --------------------------------------------------------------------------
+  {
+    const start = performance.now();
+    const errors: string[] = [];
+    const playerDir = path.resolve(process.cwd(), 'static/player');
+
+    const makeEl = (tag: string): any => {
+      const el: any = {
+        tagName: tag,
+        nodeType: 1,
+        attrs: {} as Record<string, string>,
+        style: {} as Record<string, string>,
+        children: [] as any[],
+        childNodes: [] as any[],
+        firstChild: null as any,
+        parentNode: null as any,
+        textContent: '',
+        setAttribute(k: string, v: string) { this.attrs[k] = String(v); if (k === 'id') this.id = String(v); },
+        getAttribute(k: string) { return this.attrs[k] ?? null; },
+        removeAttribute(k: string) { delete this.attrs[k]; },
+        appendChild(c: any) {
+          if (c.parentNode && c.parentNode.removeChild) c.parentNode.removeChild(c);
+          c.parentNode = this;
+          this.children.push(c);
+          this.childNodes.push(c);
+          this.firstChild = this.childNodes[0] || null;
+          return c;
+        },
+        insertBefore(c: any, ref: any) {
+          if (c.parentNode && c.parentNode.removeChild) c.parentNode.removeChild(c);
+          c.parentNode = this;
+          const idx = ref ? this.childNodes.indexOf(ref) : -1;
+          if (idx === -1) {
+            this.children.push(c);
+            this.childNodes.push(c);
+          } else {
+            this.children.splice(idx, 0, c);
+            this.childNodes.splice(idx, 0, c);
+          }
+          this.firstChild = this.childNodes[0] || null;
+          return c;
+        },
+        removeChild(c: any) {
+          const i = this.childNodes.indexOf(c);
+          if (i !== -1) this.childNodes.splice(i, 1);
+          const j = this.children.indexOf(c);
+          if (j !== -1) this.children.splice(j, 1);
+          c.parentNode = null;
+          this.firstChild = this.childNodes[0] || null;
+          return c;
+        },
+        replaceChildren(...nodes: any[]) {
+          this.children = [];
+          this.childNodes = [];
+          for (const n of nodes) this.appendChild(n);
+        },
+        querySelector(sel: string): any {
+          if (sel.startsWith('#')) {
+            const targetId = sel.slice(1);
+            const walk = (n: any): any => {
+              if (n.id === targetId || (n.attrs && n.attrs.id === targetId)) return n;
+              for (const ch of (n.children || [])) {
+                const found = walk(ch);
+                if (found) return found;
+              }
+              return null;
+            };
+            return walk(this);
+          }
+          if (sel === 'svg') {
+            return this.tagName === 'svg' ? this : null;
+          }
+          return null;
+        },
+        querySelectorAll() { return []; },
+        closest() { return null; },
+        contains(n: any) {
+          let cur = n;
+          while (cur) { if (cur === this) return true; cur = cur.parentNode; }
+          return false;
+        },
+        pause() {},
+        play() { return Promise.resolve(); },
+        remove() { if (this.parentNode && this.parentNode.removeChild) this.parentNode.removeChild(this); },
+        addEventListener() {},
+        removeEventListener() {},
+        cloneNode() { return makeEl(this.tagName); },
+      };
+      return el;
+    };
+
+    const stageSvg = makeEl('svg');
+    stageSvg.setAttribute('id', 'stage-svg');
+    const sceneRoot = makeEl('g');
+    sceneRoot.setAttribute('id', 'scene-root');
+    stageSvg.appendChild(sceneRoot);
+
+    const mockDoc: any = {
+      createElementNS(_ns: string, tag: string) { return makeEl(tag); },
+      createElement(tag: string) { return makeEl(tag); },
+      getElementById(id: string) {
+        if (id === 'scene-root') return sceneRoot;
+        if (id === 'stage-svg') return stageSvg;
+        return stageSvg.querySelector('#' + id);
+      },
+      querySelector(sel: string) { return stageSvg.querySelector(sel); },
+      addEventListener() {},
+      removeEventListener() {},
+      head: makeEl('head'),
+      body: makeEl('body'),
+      documentElement: makeEl('html'),
+    };
+
+    const sandbox: any = {
+      console, Math, Date, performance, setTimeout, clearTimeout, URL, URLSearchParams,
+      Uint8Array, Uint32Array, Int32Array, Float32Array, Float64Array, ArrayBuffer, DataView, Map, Set, WeakSet, Number, String, Boolean, Array, Object, JSON, Buffer, TextDecoder, atob, btoa, Promise,
+      document: mockDoc,
+      requestAnimationFrame: () => 1,
+      cancelAnimationFrame: () => {},
+    };
+    sandbox.window = sandbox;
+    sandbox.globalThis = sandbox;
+    sandbox.self = sandbox;
+    sandbox.addEventListener = () => {};
+    sandbox.removeEventListener = () => {};
+    sandbox.location = { origin: 'http://localhost:3000', pathname: '/player.html', search: '' };
+
+    // Load modular player runtime stack (excluding ast-avm1-vm.js initially to test ASTLazyLoader path!)
+    for (const file of [
+      'ast-registry.js',
+      'ast-lazy-loader.js',
+      'ast-parser.js',
+      'ast-loader.js',
+      'ast-scene-mount.js',
+      'ast-binding-runtime.js',
+      'ast-engine.js',
+    ]) {
+      vm.runInNewContext(fs.readFileSync(path.join(playerDir, file), 'utf8'), sandbox);
+    }
+
+    // Stub ASTLazyLoader.ensureAvm1Vm to resolve asynchronously by loading real ast-avm1-vm.js
+    let lazyLoadCalls = 0;
+    let resolveLazyLoad!: () => void;
+    const lazyGate = new Promise<void>((res) => { resolveLazyLoad = res; });
+    sandbox.ASTLazyLoader.ensureAvm1Vm = async () => {
+      lazyLoadCalls++;
+      await lazyGate;
+      if (!sandbox.ASTAVM1Runtime) {
+        vm.runInNewContext(fs.readFileSync(path.join(playerDir, 'ast-avm1-vm.js'), 'utf8'), sandbox);
+      }
+      return sandbox.ASTAVM1Runtime;
+    };
+
+    const engine = new sandbox.ASTVectorPlayerEngine({ container: sceneRoot, autoBoot: false });
+    engine.getStageSvg = () => stageSvg;
+
+    // Transpile Flash AVM1 Arcade Target with a mixed-case ID ("Pol") to test ID normalization + lazy boot
+    const arcadeBytes = buildFlashArcadeSampleSwf();
+    const arcadeRes = await transpileSwfToAst(arcadeBytes, 'Pol');
+    if (!arcadeRes.success) {
+      errors.push(`Sim 25 transpile failed: ${arcadeRes.error}`);
+    } else {
+      await engine.loadSceneData({
+        id: 'Pol',
+        title: 'Pol Arcade Test',
+        svgMarkup: arcadeRes.svgMarkup,
+        astSource: arcadeRes.astSource,
+      }, true);
+
+      if (engine.activePresetId !== 'pol') {
+        errors.push(`Expected normalized activePresetId="pol", got "${engine.activePresetId}"`);
+      }
+      if (!engine._avm1VmPending) {
+        errors.push('Expected engine._avm1VmPending=true while ASTLazyLoader.ensureAvm1Vm() is in flight');
+      }
+      if (lazyLoadCalls !== 1) {
+        errors.push(`Expected ASTLazyLoader.ensureAvm1Vm() to be invoked exactly once, got ${lazyLoadCalls}`);
+      }
+
+      // Resolve lazy load and wait for microtasks
+      resolveLazyLoad();
+      await new Promise((r) => setTimeout(r, 10));
+
+      if (engine._avm1VmPending) {
+        errors.push('Expected engine._avm1VmPending=false after lazy mount completed');
+      }
+      if (!engine._avm1Vm || !engine._avm1Vm._mounted) {
+        errors.push('Expected engine._avm1Vm to be mounted after ASTLazyLoader.ensureAvm1Vm() resolved');
+      } else {
+        const avm1RootEl = sceneRoot.querySelector('#avm1-root');
+        if (!avm1RootEl) {
+          errors.push('Expected #avm1-root mounted inside #scene-root');
+        }
+        if (engine._avm1Vm.rootClip._currentframe !== 1) {
+          errors.push(`Expected Frame 1 on boot, got ${engine._avm1Vm.rootClip._currentframe}`);
+        }
+        // Click START GAME button -> Frame 2
+        const startBtn = Array.from(engine._avm1Vm._liveButtons)[0] as any;
+        if (!startBtn) {
+          errors.push('START GAME AVM1Button missing from mounted engine._avm1Vm');
+        } else {
+          startBtn.triggerClick();
+        }
+        if (engine._avm1Vm.rootClip._currentframe !== 2) {
+          errors.push(`Clicking START GAME did not advance to Frame 2, got ${engine._avm1Vm.rootClip._currentframe}`);
+        }
+
+        // Verify 60 FPS tick forwarding scales dt by engine.speed and bypasses static bindings
+        const targetClip = engine._avm1Vm.rootClip.getChildByName('target');
+        const xBefore = targetClip ? targetClip._x : 0;
+        engine.isPlaying = true;
+        engine.speed = 2.0;
+        engine.applyBindings(0, 1 / 60, true); // 2x speed -> 1/30s -> 1 SWF frame at 30fps!
+        if (!targetClip || targetClip._x === xBefore) {
+          errors.push('engine.applyBindings(t, dt, true) failed to forward dt * speed to this._avm1Vm.step()');
+        }
+
+        // Verify switching to a non-SWF scene destroys prior _avm1Vm cleanly
+        let destroyed = false;
+        const origDestroy = engine._avm1Vm.destroy.bind(engine._avm1Vm);
+        engine._avm1Vm.destroy = () => { destroyed = true; origDestroy(); };
+        await engine.loadSceneData({
+          id: 'plain-svg-scene',
+          title: 'Plain Scene',
+          svgMarkup: '<svg viewBox="0 0 800 480"><rect id="r1" width="10" height="10"/></svg>',
+          astSource: '(:scene :id "plain-svg-scene" :title "Plain Scene")',
+        }, false);
+        if (!destroyed || engine._avm1Vm !== null) {
+          errors.push(`Expected prior _avm1Vm.destroy() and null clear on scene switch (destroyed=${destroyed}, _avm1Vm=${Boolean(engine._avm1Vm)})`);
+        }
+      }
+    }
+
+    const duration = performance.now() - start;
+    reports.push({
+      name: 'Sim 25: Full Modular Player Glue (parseAst.swfVm -> loadSceneData -> ASTLazyLoader -> mount -> step(dt*speed) -> destroy)',
+      passed: errors.length === 0,
+      durationMs: duration,
+      details: 'Verified full ASTVectorPlayerEngine modular glue: mixed-case ID normalization, async ASTLazyLoader.ensureAvm1Vm(), #avm1-root mount inside #scene-root, START GAME button -> Frame 2, speed-scaled applyBindings() step forwarding, and clean destroy() on scene switch.',
+      errors,
+    });
+  }
+
 
   // --------------------------------------------------------------------------
   // Summary Presentation

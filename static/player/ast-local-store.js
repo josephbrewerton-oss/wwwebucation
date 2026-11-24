@@ -9,7 +9,7 @@
   'use strict';
 
   const DB_NAME = 'EdgeLearningEngineDB';
-  const DB_VERSION = 6;
+  const DB_VERSION = 7;
   const STORE_APP_STATE = 'app_state';
   const STORE_CARTRIDGES_VAULT = 'cartridges_vault';
   const BROADCAST_CHANNEL_NAME = 'stj_local_state_channel';
@@ -49,6 +49,15 @@
     }
 
     dbPromise = new Promise(function (resolve) {
+      let settled = false;
+      const done = function (val) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        if (!val) dbPromise = null;
+        resolve(val);
+      };
+      const timer = setTimeout(function () { done(null); }, 1500);
       try {
         const req = indexedDB.open(DB_NAME, DB_VERSION);
         req.onupgradeneeded = function () {
@@ -87,11 +96,22 @@
           if (!db.objectStoreNames.contains('curriculum_packs')) {
             db.createObjectStore('curriculum_packs', { keyPath: 'id' });
           }
+          if (!db.objectStoreNames.contains('fs_handles')) {
+            db.createObjectStore('fs_handles', { keyPath: 'id' });
+          }
         };
-        req.onsuccess = function () { resolve(req.result); };
-        req.onerror = function () { resolve(null); };
+        req.onblocked = function () { done(null); };
+        req.onsuccess = function () {
+          const db = req.result;
+          db.onversionchange = function () {
+            try { db.close(); } catch (_) {}
+            dbPromise = null;
+          };
+          done(db);
+        };
+        req.onerror = function () { done(null); };
       } catch (_) {
-        resolve(null);
+        done(null);
       }
     });
 

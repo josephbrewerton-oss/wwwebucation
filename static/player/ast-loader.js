@@ -29,9 +29,18 @@
       }
       if (typeof indexedDB === 'undefined') return null;
       return new Promise((resolve) => {
+        let settled = false;
+        const done = (val) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve(val);
+        };
+        const timer = setTimeout(() => done(null), 1500);
         try {
-          const req = indexedDB.open('EdgeLearningEngineDB', 6);
-          req.onerror = () => resolve(null);
+          const req = indexedDB.open('EdgeLearningEngineDB', 7);
+          req.onerror = () => done(null);
+          req.onblocked = () => done(null);
           req.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('cartridges_vault')) {
@@ -43,12 +52,16 @@
             if (!db.objectStoreNames.contains('curriculum_packs')) {
               db.createObjectStore('curriculum_packs', { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains('fs_handles')) {
+              db.createObjectStore('fs_handles', { keyPath: 'id' });
+            }
           };
           req.onsuccess = () => {
             const db = req.result;
+            db.onversionchange = () => { try { db.close(); } catch (_) {} };
             if (!db.objectStoreNames.contains('cartridges_vault')) {
               db.close();
-              return resolve(null);
+              return done(null);
             }
             const tx = db.transaction('cartridges_vault', 'readonly');
             const store = tx.objectStore('cartridges_vault');
@@ -56,15 +69,15 @@
             getReq.onsuccess = () => {
               const res = getReq.result;
               db.close();
-              resolve(res || null);
+              done(res || null);
             };
             getReq.onerror = () => {
               db.close();
-              resolve(null);
+              done(null);
             };
           };
         } catch {
-          resolve(null);
+          done(null);
         }
       });
     }
@@ -80,9 +93,18 @@
       }
       if (typeof indexedDB === 'undefined') return;
       return new Promise((resolve) => {
+        let settled = false;
+        const done = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve();
+        };
+        const timer = setTimeout(done, 1500);
         try {
-          const req = indexedDB.open('EdgeLearningEngineDB', 6);
-          req.onerror = () => resolve();
+          const req = indexedDB.open('EdgeLearningEngineDB', 7);
+          req.onerror = done;
+          req.onblocked = done;
           req.onupgradeneeded = (e) => {
             const db = e.target.result;
             if (!db.objectStoreNames.contains('cartridges_vault')) {
@@ -94,27 +116,31 @@
             if (!db.objectStoreNames.contains('curriculum_packs')) {
               db.createObjectStore('curriculum_packs', { keyPath: 'id' });
             }
+            if (!db.objectStoreNames.contains('fs_handles')) {
+              db.createObjectStore('fs_handles', { keyPath: 'id' });
+            }
           };
           req.onsuccess = () => {
             const db = req.result;
+            db.onversionchange = () => { try { db.close(); } catch (_) {} };
             if (!db.objectStoreNames.contains('cartridges_vault')) {
               db.close();
-              return resolve();
+              return done();
             }
             const tx = db.transaction('cartridges_vault', 'readwrite');
             const store = tx.objectStore('cartridges_vault');
             store.put(payload);
             tx.oncomplete = () => {
               db.close();
-              resolve();
+              done();
             };
             tx.onerror = () => {
               db.close();
-              resolve();
+              done();
             };
           };
         } catch {
-          resolve();
+          done();
         }
       });
     }
@@ -180,7 +206,7 @@
 
       // Custom Cartridge Protection Guard: do not allow a stale boot fallback ('welcome') or duplicate preset lookup
       // to overwrite a custom SWF / Local Vault cartridge just mounted directly via postMessage (LOAD_CUSTOM_CARTRIDGE)
-      const hasRenderableContent = this.scene && (this.scene.svgText || this.scene.render || this.scene.mount || (this.scene.keyframes && this.scene.keyframes.length));
+      const hasRenderableContent = this.scene && (this.scene.svgText || this.scene.swfVm || this.scene.swfVmPayload || this.scene.render || this.scene.mount || (this.scene.keyframes && this.scene.keyframes.length));
       if (!forceReload && this._customMountedPresetId && this._mountedSceneId === this._customMountedPresetId && hasRenderableContent) {
         if (presetId === this._customMountedPresetId) {
           if ((shouldPlay || this.isContinuousSim) && !this.isPlaying) {
@@ -561,6 +587,12 @@
           // If the host signaled this preset is arriving from Local Vault via LOAD_CUSTOM_CARTRIDGE,
           // wait cleanly without overwriting the stage with Welcome Simulator.
           if (isVaultOnlyPreset) {
+            if (typeof document !== 'undefined') {
+              const subEl = document.getElementById('subtitle-overlay');
+              if (subEl && /loading ast vector scene/i.test(subEl.textContent || '')) {
+                subEl.textContent = `⏳ Receiving cartridge "${presetId}" from host vault...`;
+              }
+            }
             return this.scene;
           }
           console.warn(`[AST Engine] Scene "${presetId}" could not be located in registry or fetched from asset path. Gracefully falling back to built-in Welcome Simulator.`);
@@ -699,7 +731,8 @@
           skills: (parsedAst && parsedAst.skills) || registryScene.skills || [],
           definedSkills: (parsedAst && parsedAst.definedSkills) || registryScene.definedSkills || null,
           controls: (parsedAst && parsedAst.controls) || registryScene.controls || null,
-          swfVmPayload: (parsedAst && parsedAst.swfVmPayload) || registryScene.swfVmPayload || null,
+          swfVm: (parsedAst && (parsedAst.swfVm || parsedAst.swfVmPayload)) || registryScene.swfVm || registryScene.swfVmPayload || null,
+          swfVmPayload: (parsedAst && (parsedAst.swfVm || parsedAst.swfVmPayload)) || registryScene.swfVm || registryScene.swfVmPayload || null,
           physics: (parsedAst && parsedAst.physics) || registryScene.physics || null,
           scopes: (parsedAst && parsedAst.scopes) || registryScene.scopes || [],
           ledgers: (parsedAst && parsedAst.ledgers) || registryScene.ledgers || [],
@@ -750,6 +783,7 @@
         (scene.vars && (Array.isArray(scene.vars) ? scene.vars.length > 0 : Object.keys(scene.vars).length > 0)) ||
         (scene.bindings && scene.bindings.some(b => b.type === '3d-node')) ||
         (scene.rawBindings && scene.rawBindings.some(b => b.type === '3d-node')) ||
+        Boolean(scene.swfVm || scene.swfVmPayload) ||
         scene.continuous ||
         scene.isContinuous ||
         typeof scene.mount === 'function'
@@ -879,10 +913,13 @@
       this.emit('error', { type: 'INVALID_SCENE_DATA', message: err.message });
       throw err;
     }
-    let id = String(sceneData.id || `custom-${Date.now()}`);
-    if (id === '__proto__' || id === 'constructor' || id === 'prototype') {
-      id = `custom-${Date.now()}`;
+    let rawId = String(sceneData.id || `custom-${Date.now()}`);
+    if (rawId === '__proto__' || rawId === 'constructor' || rawId === 'prototype') {
+      rawId = `custom-${Date.now()}`;
     }
+    const id = (global.ASTSceneRegistry && typeof global.ASTSceneRegistry.normalizeId === 'function')
+      ? global.ASTSceneRegistry.normalizeId(rawId)
+      : rawId;
     const svgText = sceneData.svgText || sceneData.svgMarkup || sceneData.svg || '';
     let astText = sceneData.astSource || sceneData.astText || sceneData.ast || '';
     if (!astText && svgText && (svgText.includes('(:scene') || svgText.includes('(:cartridge'))) {
@@ -900,6 +937,22 @@
     const resolvedTitle = sceneData.title || (parsedAst && parsedAst.title) || id;
     const resolvedStage = sceneData.stage || (parsedAst && parsedAst.stage) || 'CUSTOM';
     const resolvedType = sceneData.type || (parsedAst && parsedAst.type) || 'Sim';
+
+    // Deduplicate cold-start race: if the exact same SWF cartridge was just booted from IndexedDB
+    // during iframe init and is already mounted or pending lazy-load, avoid wiping #scene-root twice.
+    if (
+      this.scene &&
+      this.activePresetId === id &&
+      this._mountedSceneId === id &&
+      this.scene.svgText === svgText &&
+      this.scene.astSource === (astText || '') &&
+      (this._avm1Vm || this._avm1VmPending)
+    ) {
+      if (shouldPlay && !this.isPlaying && typeof this.play === 'function') {
+        this.play();
+      }
+      return Promise.resolve(this.scene);
+    }
 
     this.sceneCache[id] = {
       id,
@@ -927,7 +980,8 @@
       skills: sceneData.skills || (parsedAst && parsedAst.skills) || [],
       definedSkills: sceneData.definedSkills || (parsedAst && parsedAst.definedSkills) || null,
       controls: sceneData.controls || (parsedAst && parsedAst.controls) || null,
-      swfVmPayload: sceneData.swfVmPayload || (parsedAst && parsedAst.swfVmPayload) || null,
+      swfVm: sceneData.swfVm || sceneData.swfVmPayload || (parsedAst && (parsedAst.swfVm || parsedAst.swfVmPayload)) || null,
+      swfVmPayload: sceneData.swfVm || sceneData.swfVmPayload || (parsedAst && (parsedAst.swfVm || parsedAst.swfVmPayload)) || null,
       physics: sceneData.physics || (parsedAst && parsedAst.physics) || null,
       scopes: sceneData.scopes || (parsedAst && parsedAst.scopes) || [],
       ledgers: sceneData.ledgers || (parsedAst && parsedAst.ledgers) || [],

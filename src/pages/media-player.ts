@@ -1435,6 +1435,12 @@ export function renderPlayerPage(): HTMLElement {
       refreshDropdown();
       renderGrid();
     }
+    if (e.data.type === 'CARTRIDGE_LOAD_ERROR' && e.data.message) {
+      showImportStatus(`⚠️ Stage failed to load cartridge: ${String(e.data.message)}`, 'error');
+    }
+    if (e.data.type === 'BRIDGE_COMMAND_ERROR' && e.data.message) {
+      console.warn('[media-player] Player bridge command error:', e.data.command, e.data.message);
+    }
     if (e.data.type === 'CARTRIDGE_INTEGRITY' && e.data.integrity) {
       const targetId = typeof e.data.preset === 'string' && e.data.preset ? e.data.preset : activePreset;
       if (normalizePresetId(targetId) === normalizePresetId(activePreset)) {

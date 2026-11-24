@@ -731,6 +731,26 @@ export function exportDataCartridgeAsAst(cartridgeId: string): string | null {
   return null;
 }
 
+function toCompactCartridgeIndex(list: CartridgeDefinition[]): Partial<CartridgeDefinition>[] {
+  return list.slice(0, 60).map((c) => {
+    const payloadSize = (c.svgMarkup ? c.svgMarkup.length : 0) + (c.astSource ? c.astSource.length : 0);
+    if (payloadSize <= 32768) return c;
+    return {
+      id: c.id,
+      title: c.title,
+      stage: c.stage,
+      category: c.category,
+      type: c.type,
+      desc: c.desc,
+      icon: c.icon,
+      source: c.source,
+      tier: c.tier,
+      isCore: c.isCore,
+      updatedAt: c.updatedAt,
+    };
+  });
+}
+
 /**
  * Saves or updates a cartridge to decentralized storage (IndexedDB Vault + RAM)
  */
@@ -743,14 +763,14 @@ export function saveCustomCartridge(cartridge: CartridgeDefinition): void {
   // 1. Update Tier 0 in-memory cache instantly
   inMemoryCartridgesCache = updated;
 
-  // 2. Asynchronously persist to IndexedDB Vault (non-blocking)
+  // 2. Asynchronously persist full payload to IndexedDB Vault (non-blocking)
   putVaultCartridge(updatedItem as VaultCartridgeRecord).catch((err) => {
     console.warn('[cartridgeStore] IndexedDB vault save error:', err);
   });
 
-  // 3. Synchronize compact index to IndexedDB app_state
+  // 3. Synchronize compact metadata index to IndexedDB app_state (never serialize multi-MB SWF blobs over BroadcastChannel)
   try {
-    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(updated));
+    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(toCompactCartridgeIndex(updated)));
   } catch {}
 
   // 4. Synchronize into runtime ASTSceneRegistry if available
@@ -784,9 +804,9 @@ export function deleteCustomCartridge(cartridgeId: string): void {
     console.warn('[cartridgeStore] IndexedDB vault delete error:', err);
   });
 
-  // 3. Synchronize compact index to IndexedDB app_state
+  // 3. Synchronize compact metadata index to IndexedDB app_state
   try {
-    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(filtered));
+    setLocalState(STORAGE_KEY_CUSTOM_CARTRIDGES, JSON.stringify(toCompactCartridgeIndex(filtered)));
   } catch (err) {
     console.error('[cartridgeStore] Failed to update cartridge state:', err);
   }

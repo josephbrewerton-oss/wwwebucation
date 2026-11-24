@@ -305,31 +305,60 @@ async function decompressSwfPayload(compressed: Uint8Array): Promise<Uint8Array>
     } catch (_) {}
   }
 
-  // 2. Try native Web DecompressionStream API in browser
+  // 2. Try native Web DecompressionStream API in browser (with timeout guard against trailing-byte stalls)
   if (typeof DecompressionStream !== 'undefined') {
-    try {
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.enqueue(compressed);
-          controller.close();
-        }
-      }).pipeThrough(new DecompressionStream('deflate'));
+    const inflateWithStream = async (bytes: Uint8Array, format: 'deflate' | 'deflate-raw'): Promise<Uint8Array> => {
+      const ds = new DecompressionStream(format);
+      const writer = ds.writable.getWriter();
+      const reader = ds.readable.getReader();
+      const chunks: Uint8Array[] = [];
+      let totalLen = 0;
 
-      const response = new Response(stream);
-      const arrayBuffer = await response.arrayBuffer();
-      return new Uint8Array(arrayBuffer);
+      const writePromise = writer.write(bytes as unknown as BufferSource).then(() => writer.close()).catch(() => {});
+      let timedOut = false;
+      const timer = setTimeout(() => {
+        timedOut = true;
+        reader.cancel().catch(() => {});
+      }, 4000);
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (value && value.byteLength > 0) {
+            chunks.push(value);
+            totalLen += value.byteLength;
+          }
+        }
+      } catch (readErr) {
+        if (totalLen === 0 || timedOut) {
+          clearTimeout(timer);
+          throw readErr;
+        }
+        // Tolerate trailing garbage bytes after a valid zlib stream end (common in real Flash CWS files)
+      } finally {
+        clearTimeout(timer);
+        await writePromise;
+      }
+
+      if (timedOut && totalLen === 0) {
+        throw new Error(`DecompressionStream(${format}) timed out.`);
+      }
+      const out = new Uint8Array(totalLen);
+      let off = 0;
+      for (const c of chunks) {
+        out.set(c, off);
+        off += c.byteLength;
+      }
+      return out;
+    };
+
+    try {
+      return await inflateWithStream(compressed, 'deflate');
     } catch {
       try {
-        const rawDeflate = compressed.slice(2, compressed.length - 4);
-        const stream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(rawDeflate);
-            controller.close();
-          }
-        }).pipeThrough(new DecompressionStream('deflate-raw'));
-        const response = new Response(stream);
-        const arrayBuffer = await response.arrayBuffer();
-        return new Uint8Array(arrayBuffer);
+        const rawDeflate = compressed.length > 6 ? compressed.slice(2, compressed.length - 4) : compressed.slice(2);
+        return await inflateWithStream(rawDeflate, 'deflate-raw');
       } catch (err) {
         console.warn('[SWF-Parser] DecompressionStream error, trying fallback:', err);
       }
@@ -1439,6 +1468,8 @@ function parseDoAction(
   };
 
   let callInlineDepth = 0;
+  let evalStepBudget = 12000;
+  let evalDepth = 0;
 
   // Pass 2: Structured control-flow + symbolic stack evaluation
   const evalRange = (
@@ -1450,6 +1481,8 @@ function parseDoAction(
     initialTargetPrefix: string = defaultClipPrefix,
     registers: Map<number, Avm1StackVal> = new Map()
   ) => {
+    if (evalDepth >= 14 || evalStepBudget <= 0 || startIdx >= endIdx) return;
+    evalDepth++;
     let i = startIdx;
     let curTarget = initialTargetPrefix;
 
@@ -1457,7 +1490,8 @@ function parseDoAction(
       outStmts.push(st);
     };
 
-    while (i < endIdx && i < instrs.length) {
+    try {
+    while (i < endIdx && i < instrs.length && evalStepBudget-- > 0) {
       const ins = instrs[i];
       const code = ins.code;
       const pReader = ins.payload.length > 0 ? new BitReader(ins.payload, 0) : null;
@@ -1890,14 +1924,14 @@ function parseDoAction(
 
           // Only structure into guarded rules if condStr is an S-expression / variable (not Sim 7 raw text string)
           const isExecutableCond = condVal && condVal.kind !== 'str';
-          if (isExecutableCond) {
+          if (isExecutableCond && targetIdx > i && elseEndIdx > i && (!activeGuard || activeGuard.length < 2048)) {
             const thenGuard = composeAvm1When(activeGuard, negateAvm1Cond(condStr));
             evalRange(i + 1, thenEndIdx, thenGuard, [...stack], outStmts, curTarget, new Map(registers));
             if (elseEndIdx > targetIdx) {
               const elseGuard = composeAvm1When(activeGuard, condStr);
               evalRange(targetIdx, elseEndIdx, elseGuard, [...stack], outStmts, curTarget, new Map(registers));
             }
-            i = elseEndIdx;
+            i = Math.max(i + 1, elseEndIdx);
             continue;
           }
         }
@@ -1915,6 +1949,9 @@ function parseDoAction(
       }
 
       i++;
+    }
+    } finally {
+      evalDepth--;
     }
   };
 
@@ -2084,6 +2121,7 @@ function parseClipActions(
   else reader.readUI16(); // AllEventFlags (16-bit in SWF 5)
 
   while (reader.offset < tagEndOffset) {
+    const prevOffset = reader.offset;
     const eventFlags = swfVersion >= 6 ? reader.readUI32() : reader.readUI16();
     if (eventFlags === 0) break;
     if (reader.offset + 4 > tagEndOffset) break;
@@ -2108,6 +2146,7 @@ function parseClipActions(
 
     const actionRecord = parseDoAction(reader, recordEnd, currentFrame, { clipPrefix, fileLength });
     actions.push({ events, eventFlags, keyCode, actionRecord });
+    if (recordEnd <= prevOffset) break;
     reader.offset = recordEnd;
   }
   return actions;
@@ -2187,7 +2226,7 @@ function parseDefineButton(
         isOver,
         actionRecord,
       });
-      if (condActionSize === 0) break;
+      if (condActionSize === 0 || condEnd <= condStart) break;
       reader.offset = condEnd;
     }
   }
@@ -2215,7 +2254,8 @@ function parseDefineSprite(
   let hasTimelineMotion = false;
   let sawFrameMutation = false;
 
-  while (reader.offset < tagEndOffset) {
+  while (reader.offset + 2 <= tagEndOffset) {
+    const tagStartOffset = reader.offset;
     const tagCodeAndLength = reader.readUI16();
     const tagType = tagCodeAndLength >> 6;
     let tagLength = tagCodeAndLength & 0x3F;
@@ -2255,6 +2295,7 @@ function parseDefineSprite(
       if (currentFrame > 1) sawFrameMutation = true;
     }
 
+    if (nextTagOffset <= tagStartOffset) break;
     reader.offset = nextTagOffset;
   }
 
@@ -2504,7 +2545,8 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
     const effectiveFileLength = Math.max(1024, fileLength || payload.length);
 
     // Parse SWF tags
-    while (reader.offset < payload.length) {
+    while (reader.offset + 2 <= payload.length) {
+      const tagStartOffset = reader.offset;
       const tagCodeAndLength = reader.readUI16();
       const tagType = tagCodeAndLength >> 6;
       let tagLength = tagCodeAndLength & 0x3F;
@@ -2695,6 +2737,7 @@ export async function transpileSwfToAst(fileData: ArrayBuffer | Uint8Array, scen
         } catch {}
       }
 
+      if (nextTagOffset <= tagStartOffset) break;
       reader.offset = nextTagOffset;
     }
 

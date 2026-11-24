@@ -2014,7 +2014,7 @@
       skills,
       ...(definedSkills ? { definedSkills } : {}),
       controls,
-      ...(swfVmPayload ? { swfVmPayload } : {}),
+      ...(swfVmPayload ? { swfVm: swfVmPayload, swfVmPayload } : {}),
       interactive: checkpoints.length > 0 ? { checkpoints, hotspots: [] } : null
     };
   }
